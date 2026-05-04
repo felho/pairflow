@@ -5,7 +5,7 @@ task_family_id: card-placement-ui-integration
 sequence_key: "2"
 task_id: 2-card-placement-ui-integration
 title: "Card Placement UI Integration"
-status: in_progress
+status: archived
 phase: phase2
 target_files:
   - "ui/src/state/useBubbleStore.ts"
@@ -13,7 +13,7 @@ target_files:
   - "ui/src/components/canvas/BubbleCanvas.tsx"
   - "ui/src/components/canvas/BubbleCanvas.test.tsx"
 prd_ref: docs/pairflow-ui-prd.md
-plan_ref: plans/ui-card-placement-determinism-plan-v1.md
+plan_ref: plans/archive/plans/2026-05-04-ui-card-placement-determinism-plan-v1.md
 system_context_ref: docs/pairflow-ui-prd.md
 owners:
   - "felho"
@@ -22,6 +22,7 @@ impl_bubble_id: 2-card-placement-ui-integration-impl
 supersedes: []
 superseded_by: null
 archive_group: 2026-05-04-ui-card-placement-determinism-plan-v1
+archive_path: plans/archive/tasks/2026-05-04-ui-card-placement-determinism-plan-v1/2-card-placement-ui-integration.md
 ---
 
 # Task: Card Placement UI Integration
@@ -85,7 +86,7 @@ Pairflow core or rewrite existing explicit user positions.
 ### Canonical Contract Anchors
 
 1. Source-of-truth anchors:
-   - `plans/ui-card-placement-determinism-plan-v1.md`
+   - `plans/archive/plans/2026-05-04-ui-card-placement-determinism-plan-v1.md`
    - `docs/pairflow-ui-prd.md`
    - `ui/src/lib/canvasLayout.ts`
    - `ui/src/state/useBubbleStore.ts`

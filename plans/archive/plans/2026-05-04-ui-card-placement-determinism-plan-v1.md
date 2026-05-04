@@ -5,22 +5,22 @@ plan_id: ui-card-placement-determinism-plan-v1
 created_on: "2026-05-04"
 title: "UI Card Placement Determinism Plan"
 status: approved
-plan_status: in_progress
+plan_status: done
 prd_ref: docs/pairflow-ui-prd.md
 owners:
   - "felho"
 task_order:
   - 1-card-placement-policy
   - 2-card-placement-ui-integration
-active_task_id: 2-card-placement-ui-integration
+active_task_id: null
 archive_group: 2026-05-04-ui-card-placement-determinism-plan-v1
 task_tracker:
   - task_id: 1-card-placement-policy
     task_path: plans/archive/tasks/2026-05-04-ui-card-placement-determinism-plan-v1/1-card-placement-policy.md
     status: archived
   - task_id: 2-card-placement-ui-integration
-    task_path: plans/tasks/2-card-placement-ui-integration.md
-    status: in_progress
+    task_path: plans/archive/tasks/2026-05-04-ui-card-placement-determinism-plan-v1/2-card-placement-ui-integration.md
+    status: archived
 ---
 
 # Plan: UI Card Placement Determinism
@@ -59,7 +59,7 @@ remains the source of truth for bubble existence and state.
 
 | Capability Claim | Closure Classification | Activation Path | Repo-Provided Boundary | External Prerequisites | Last-Mile Proof |
 |---|---|---|---|---|---|
-| The browser UI places newly discovered bubble cards in the most useful visible empty grid slot. | end_to_end | `pairflow ui` browser canvas, initial `GET /api/bubbles`, and SSE `bubble.updated` events. | `ui/src/lib/canvasLayout.ts`, `ui/src/state/useBubbleStore.ts`, canvas/store tests, and a viewport-measured canvas proof. | Browser viewport measurements are available in the running UI; tests may provide deterministic viewport geometry through the canvas DOM boundary. | Planned in task `2-card-placement-ui-integration`: prove the same browser canvas path with measured/mocked viewport bounds for initial load and realtime-created bubble insertion. |
+| The browser UI places newly discovered bubble cards in the most useful visible empty grid slot. | end_to_end | `pairflow ui` browser canvas, initial `GET /api/bubbles`, and SSE `bubble.updated` events. | `ui/src/lib/canvasLayout.ts`, `ui/src/state/useBubbleStore.ts`, canvas/store tests, and a viewport-measured canvas proof. | Browser viewport measurements are available in the running UI; tests may provide deterministic viewport geometry through the canvas DOM boundary. | Completed by archived task `2-card-placement-ui-integration`: store/canvas tests prove measured viewport bounds for initial load, realtime insertion, fallback replacement, and persisted/manual precedence. |
 
 ## Guiding Principles
 
@@ -168,17 +168,16 @@ remains the source of truth for bubble existence and state.
    positions, and non-overlap resolution.
 3. `ui/src/state/useBubbleStore.ts` already fills missing positions on initial
    load and realtime bubble events.
+4. `ui/src/lib/canvasLayout.ts` now ranks viewport-intersecting candidates by
+   full visibility, visible area, and row-major tie-breaks.
+5. `ui/src/state/useBubbleStore.ts` now passes measured viewport geometry into
+   missing-position assignment while preserving explicit user/manual positions.
+6. `ui/src/components/canvas/BubbleCanvas.tsx` now reports measured scroll
+   viewport bounds through the same canvas boundary used by the running UI.
 
 ### Open Work
 
-1. The current default position starts from sorted bubble index, so a newly
-   discovered bubble can be assigned a slot that is deterministic but not the
-   most visible empty slot.
-2. The existing non-overlap resolver prefers rightward slots for collision
-   avoidance, but it does not rank all open grid slots by viewport visibility.
-3. Store-level placement does not pass explicit viewport geometry into the
-   missing-position assignment path.
-4. Tests do not yet encode the desired visible-grid ranking rule.
+None for V1.
 
 ### Deferred / Future Work
 
@@ -190,17 +189,17 @@ remains the source of truth for bubble existence and state.
 
 ## Progress / Phase Summary
 
-1. Phase 1: extract a pure viewport-aware placement policy and cover the slot
-   ranking rules with focused layout tests.
-2. Phase 2: integrate the policy into missing-position assignment for initial
-   load and SSE-created bubbles, then cover canvas/store behavior.
+1. Phase 1: extracted a pure viewport-aware placement policy and covered the
+   slot ranking rules with focused layout tests.
+2. Phase 2: integrated the policy into missing-position assignment for initial
+   load and SSE-created bubbles, then covered canvas/store behavior.
 
 ## Open Task List
 
 | Task ID | Task Path | Purpose | Depends On | Closes Gap | Status |
 |---|---|---|---|---|---|
 | `1-card-placement-policy` | `plans/archive/tasks/2026-05-04-ui-card-placement-determinism-plan-v1/1-card-placement-policy.md` | Define the pure placement policy in `ui/src/lib/canvasLayout.ts`: grid candidate generation, occupied footprint filtering, full-visibility preference, visible-area ranking, and row-major tie-breaks. | N/A | Missing viewport-aware deterministic placement policy. | archived |
-| `2-card-placement-ui-integration` | `plans/tasks/2-card-placement-ui-integration.md` | Wire the placement policy into store/canvas missing-position assignment for initial load and realtime-created bubbles without rewriting persisted/manual positions, prevent geometry-unavailable fallback positions from becoming durable manual/user authority, and prove the viewport-measured browser canvas path. | `1-card-placement-policy` | New bubbles still use the old index-first placement path in the running UI, and early generated fallback positions can be persisted before viewport geometry is known. | approved |
+| `2-card-placement-ui-integration` | `plans/archive/tasks/2026-05-04-ui-card-placement-determinism-plan-v1/2-card-placement-ui-integration.md` | Wire the placement policy into store/canvas missing-position assignment for initial load and realtime-created bubbles without rewriting persisted/manual positions, prevent geometry-unavailable fallback positions from becoming durable manual/user authority, and prove the viewport-measured browser canvas path. | `1-card-placement-policy` | New bubbles still use the old index-first placement path in the running UI, and early generated fallback positions can be persisted before viewport geometry is known. | archived |
 
 ## Coverage Map
 
