@@ -366,7 +366,7 @@ surfaces in the same refinement:
 
 | ID | File | Function/Entry | Exact Signature (args -> return) | Insertion Point | Expected Behavior | Priority | Timing | Evidence |
 |---|---|---|---|---|---|---|---|---|
-| CS1 | `ui/src/lib/canvasLayout.ts` | new viewport-aware placement helper | Accepts desired fallback position, occupied `PositionedBubble[]`, new bubble `expanded`, optional viewport rectangle; returns `{ position: BubblePosition; source: "viewport" \| "generated-fallback" }`. Exact names may vary, but fields and source variants are required. | near existing placement helpers | Computes ranked viewport candidate or generated fallback. | P1 | required-now | unit tests |
+| CS1 | `ui/src/lib/canvasLayout.ts` | `resolveViewportAwarePosition(...)` | `(fallbackPosition: BubblePosition, occupied: PositionedBubble[], expanded: boolean, viewport?: ViewportRectangle \| null) -> PlacementResult`, where `PlacementResult` is `{ position: BubblePosition; source: "viewport" \| "generated-fallback" }`. | near existing placement helpers | Computes ranked viewport candidate or generated fallback. | P1 | required-now | unit tests |
 | CS2 | `ui/src/lib/canvasLayout.ts` | existing `defaultPosition(index)` | unchanged `(index: number) -> BubblePosition` | existing export | Existing fallback/default grid behavior remains. | P1 | required-now | existing tests |
 | CS3 | `ui/src/lib/canvasLayout.ts` | existing `resolveNonOverlappingPosition(...)` | unchanged or compat equivalent | existing export | Existing non-overlap fallback remains callable or equivalently covered. | P1 | required-now | existing tests |
 
