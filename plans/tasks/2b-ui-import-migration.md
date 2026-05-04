@@ -26,7 +26,7 @@ normative_refs:
   - plans/archive/tasks/2026-05-04-ui-contract-boundary-hardening-plan-v1/2a-contract-entrypoint.md
 owners:
   - "felho"
-doc_bubble_id: null
+doc_bubble_id: 2b-ui-import-migration-doc
 impl_bubble_id: null
 supersedes: []
 superseded_by: null
