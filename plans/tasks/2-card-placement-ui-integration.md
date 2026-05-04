@@ -5,7 +5,7 @@ task_family_id: card-placement-ui-integration
 sequence_key: "2"
 task_id: 2-card-placement-ui-integration
 title: "Card Placement UI Integration"
-status: implementable
+status: in_progress
 phase: phase2
 target_files:
   - "ui/src/state/useBubbleStore.ts"
@@ -18,7 +18,7 @@ system_context_ref: docs/pairflow-ui-prd.md
 owners:
   - "felho"
 doc_bubble_id: 2-card-placement-ui-integration-doc
-impl_bubble_id: null
+impl_bubble_id: 2-card-placement-ui-integration-impl
 supersedes: []
 superseded_by: null
 archive_group: 2026-05-04-ui-card-placement-determinism-plan-v1
