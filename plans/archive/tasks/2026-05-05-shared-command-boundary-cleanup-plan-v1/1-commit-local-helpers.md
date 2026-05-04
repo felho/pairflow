@@ -5,7 +5,7 @@ task_family_id: commit-local-helpers
 sequence_key: "1"
 task_id: 1-commit-local-helpers
 title: "Commit Local Helpers"
-status: in_progress
+status: archived
 phase: phase1
 target_files:
   - src/v11/application/commit/commitCommandError.ts
