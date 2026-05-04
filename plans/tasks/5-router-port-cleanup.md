@@ -5,7 +5,7 @@ task_family_id: router-port-cleanup
 sequence_key: "5"
 task_id: 5-router-port-cleanup
 title: "Router Port Cleanup"
-status: implementable
+status: in_progress
 phase: phase5
 target_files:
   - src/v11/shared/ports/uiRouter.ts
@@ -31,7 +31,7 @@ system_context_ref: docs/pairflow-initial-design.md
 owners:
   - "felho"
 doc_bubble_id: 5-router-port-cleanup-doc
-impl_bubble_id: null
+impl_bubble_id: 5-router-port-cleanup-impl
 supersedes: []
 superseded_by: null
 archive_group: 2026-05-03-ui-router-port-closure-plan-v1

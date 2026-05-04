@@ -37,8 +37,8 @@ task_tracker:
     notes: "Completed via implementation bubble 4-ui-readmodel-port-closure-impl; merged at f0eae134 and archived."
   - task_id: 5-router-port-cleanup
     task_path: plans/tasks/5-router-port-cleanup.md
-    status: implementable
-    notes: "Document refinement bubble 5-router-port-cleanup-doc merged at 8174d460; ready for implementation."
+    status: in_progress
+    notes: "Implementation bubble 5-router-port-cleanup-impl started from implementable task after doc refinement merge 8174d460."
 ---
 
 # Plan: UI Router Port Closure
