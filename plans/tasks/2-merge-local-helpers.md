@@ -5,7 +5,7 @@ task_family_id: merge-local-helpers
 sequence_key: "2"
 task_id: 2-merge-local-helpers
 title: "Merge Local Helpers"
-status: implementable
+status: in_progress
 phase: phase1
 target_files:
   - src/v11/application/merge/mergeCommandErrorRuntime.ts
@@ -37,7 +37,7 @@ normative_refs:
 owners:
   - "felho"
 doc_bubble_id: 2-merge-local-helpers-doc
-impl_bubble_id: null
+impl_bubble_id: 2-merge-local-helpers-impl
 supersedes: []
 superseded_by: null
 archive_group: 2026-05-05-shared-command-boundary-cleanup-plan-v1
