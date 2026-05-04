@@ -4,8 +4,8 @@ artifact_id: plan_pre_kickoff_admin_phase_v1
 plan_id: pre-kickoff-admin-phase-plan-v1
 created_on: "2026-05-04"
 title: "Pre-Kickoff Admin Phase Plan"
-status: approved
-plan_status: approved
+status: in_progress
+plan_status: in_progress
 prd_ref: null
 owners:
   - "felho"
@@ -15,12 +15,13 @@ task_order:
   - 3-doc-bubble-start-integration
   - 4-impl-bubble-start-integration
   - 5-close-admin-verifier
-active_task_id: 1-prep-admin-contract
+active_task_id: 2-prep-admin-publish
+last_completed_task_id: 1-prep-admin-contract
 archive_group: 2026-05-04-pre-kickoff-admin-phase-plan-v1
 task_tracker:
   - task_id: 1-prep-admin-contract
     task_path: plans/tasks/1-prep-admin-contract.md
-    status: implementable
+    status: done
   - task_id: 2-prep-admin-publish
     task_path: null
     status: not_created
