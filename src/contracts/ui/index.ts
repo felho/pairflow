@@ -86,6 +86,7 @@ export {
   uiApprovalRequestGateRoutes
 } from "./uiReadModel.js";
 export type {
+  ProtocolMessageType,
   UiApprovalRequestGateRoute,
   UiBubbleAttention,
   UiBubbleAttentionCode,

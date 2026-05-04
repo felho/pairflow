@@ -67,6 +67,40 @@ function expectTypeDeclaration(source: string, symbol: string): void {
   );
 }
 
+function expectExportTypeBlockContains(
+  source: string,
+  input: {
+    symbol: string;
+    moduleSpecifier?: string;
+  }
+): void {
+  const moduleClause =
+    input.moduleSpecifier === undefined
+      ? "\\s*;"
+      : `\\s+from\\s+["']${input.moduleSpecifier.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}["']\\s*;`;
+  expect(source).toMatch(
+    new RegExp(
+      `export\\s+type\\s+\\{[^}]*\\b${input.symbol}\\b[^}]*\\}${moduleClause}`,
+      "u"
+    )
+  );
+}
+
+function expectModuleSpecifierCount(
+  source: string,
+  moduleSpecifier: string,
+  expectedCount: number
+): void {
+  const escapedModuleSpecifier = moduleSpecifier.replace(
+    /[.*+?^${}()|[\]\\]/g,
+    "\\$&"
+  );
+  const matches = source.match(
+    new RegExp(`from\\s+["']${escapedModuleSpecifier}["']`, "gu")
+  );
+  expect(matches ?? []).toHaveLength(expectedCount);
+}
+
 function extractInterfaceBody(source: string, symbol: string): string {
   const match = new RegExp(`export interface ${symbol}\\b[^\\{]*\\{`, "u").exec(
     source
@@ -229,6 +263,7 @@ describe("UI contract transit source guards", () => {
 
   it("keeps broad read-model DTOs in the canonical UI read-model contract", async () => {
     const canonical = await readSource("src/contracts/ui/uiReadModel.ts");
+    const uiBarrel = await readSource("src/contracts/ui/index.ts");
     const backendCompat = await readSource("src/types/ui.ts");
     const uiTypes = await readSource("ui/src/lib/types.ts");
     const uiCompat = await readSource("ui/src/lib/contracts/uiReadModel.ts");
@@ -262,6 +297,14 @@ describe("UI contract transit source guards", () => {
     }
 
     expect(canonical).toContain("ProtocolEnvelopePayload");
+    expectExportTypeBlockContains(canonical, {
+      symbol: "ProtocolMessageType"
+    });
+    expectModuleSpecifierCount(canonical, "../../types/protocol.js", 1);
+    expectExportTypeBlockContains(uiBarrel, {
+      symbol: "ProtocolMessageType",
+      moduleSpecifier: "./uiReadModel.js"
+    });
     expect(canonical).not.toContain("src/v11");
     expect(canonical).not.toContain("../v11");
     expect(canonical).not.toContain("node:");
@@ -272,7 +315,8 @@ describe("UI contract transit source guards", () => {
     );
     expect(uiTypes).toContain("from \"../../../src/contracts/ui/uiReadModel.js\"");
     expect(uiTypes).not.toContain("from \"./contracts/uiReadModel.js\"");
-    expect(uiTypes).toContain("from \"../../../src/types/protocol.js\"");
+    expect(uiTypes).not.toContain("from \"../../../src/types/protocol.js\"");
+    expectNoTypeDeclaration(uiTypes, "ProtocolMessageType");
     expect(uiTypes).not.toContain("UiTimelineEntry[\"type\"]");
     expect(presenter).toContain("from \"../../../../contracts/ui/uiReadModel.js\"");
     expect(timelinePresenter).toContain(

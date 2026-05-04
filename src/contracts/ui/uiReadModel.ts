@@ -23,6 +23,8 @@ import type {
   UiBubbleStatusRemoteExecution
 } from "./uiRemoteExecution.js";
 
+export type { ProtocolMessageType };
+
 export interface UiBubbleStateCounts {
   CREATED: number;
   PREPARING_WORKSPACE: number;

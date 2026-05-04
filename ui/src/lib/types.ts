@@ -59,9 +59,6 @@ export type {
  */
 export type AttachActionResult = CanonicalUiAttachBubbleResult;
 export type {
-  ProtocolMessageType
-} from "../../../src/types/protocol.js";
-export type {
   UiBubbleRemovedEvent,
   UiBubbleUpdatedEvent,
   UiEvent,
@@ -95,6 +92,7 @@ export type {
   UiPendingInboxCounts,
   UiPendingInboxItemSource,
   UiPendingInboxItemType,
+  ProtocolMessageType,
   UiRepoSummary,
   UiReviewVerificationState,
   UiRuntimeHealth,

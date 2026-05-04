@@ -85,6 +85,7 @@ import type {
   UiBubbleSummary as CanonicalUiBubbleSummary,
   UiBubbleWatchdog as CanonicalUiBubbleWatchdog,
   UiPendingInboxItemSource as CanonicalUiPendingInboxItemSource,
+  ProtocolMessageType as CanonicalProtocolMessageType,
   UiRepoSummary as CanonicalUiRepoSummary,
   UiRuntimeSessionRecord as CanonicalUiRuntimeSessionRecord,
   UiTimelineEntry as CanonicalUiTimelineEntry
@@ -202,7 +203,8 @@ import type {
   ActiveMetaReviewRuntimeDeliveryView
 } from "../../src/v11/shared/metaReview/metaReviewSnapshot.js";
 import type {
-  ProtocolEnvelopePayload
+  ProtocolEnvelopePayload,
+  ProtocolMessageType as RuntimeProtocolMessageType
 } from "../../src/types/protocol.js";
 import type {
   BubbleLifecycleState as UiBubbleLifecycleState
@@ -296,6 +298,9 @@ import type {
 import type {
   PairflowApiClient
 } from "../../ui/src/lib/api.js";
+import type {
+  ProtocolMessageType as UiProtocolMessageType
+} from "../../ui/src/lib/types.js";
 
 type Assert<T extends true> = T;
 
@@ -530,6 +535,12 @@ type _uiTimelineParity =
   Assert<Equal<CanonicalUiTimelineEntry, UiTimelineEntry>>;
 type _timelinePayloadProtocolTransit =
   Assert<Equal<CanonicalUiTimelineEntry["payload"], ProtocolEnvelopePayload>>;
+type _canonicalProtocolMessageTypeTransit =
+  Assert<Equal<CanonicalProtocolMessageType, RuntimeProtocolMessageType>>;
+type _timelineTypeProtocolTransit =
+  Assert<Equal<CanonicalUiTimelineEntry["type"], CanonicalProtocolMessageType>>;
+type _uiProtocolMessageTypeParity =
+  Assert<Equal<CanonicalProtocolMessageType, UiProtocolMessageType>>;
 type _backendWatchdogParity =
   Assert<Equal<CanonicalUiBubbleWatchdog, BackendUiBubbleWatchdog>>;
 type _uiWatchdogParity =
