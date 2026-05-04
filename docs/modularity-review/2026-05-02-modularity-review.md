@@ -175,10 +175,25 @@ Introduce one explicit [contract](https://coupling.dev/posts/dimensions-of-coupl
 
 Trade-off: introduces one boundary the UI must respect; replaces the "keep aligned" comment with a real compile-time contract. The cost is small (a few hundred lines of wiring); the benefit is that the highest-volatility action result schemas (commit, merge, delete, meta-review-gate) become single-source. Skip this only if you're confident the UI surface will stop evolving — given the active meta-review and plan-watch work, that does not seem to be the case.
 
-## Issue: `UiRouterDependencies` is a broad capability-bag port
+## Resolved: `UiRouterDependencies` broad capability-bag leaf use
 
 **Integration**: `src/v11/shared/ports/uiRouter.ts` -> `application/**` (14 different commands)
 **Severity**: Minor
+**Status**: Closed by `5-router-port-cleanup`; the full aggregate is retained
+only for UI router composition and test override wiring.
+
+### Closure Note
+
+`src/v11/shared/ports/uiRouter.ts` now defines direct leaf-facing capability
+slices for list, timeline, detail loading, conflict enrichment, and action
+dispatch. `UiRouterDependencies` is assembled from those slices for
+composition-only use in `router.ts`, `routerContracts.ts`, and
+`routerDependencies.ts`.
+
+The `ui_router_port_boundary` fitness check now runs with
+`exceptions_configured=0` and rejects both broad `UiRouterDependencies` use in
+router leaf modules and normal aggregate-derived leaf aliases such as
+`Pick<UiRouterDependencies, ...>`.
 
 ### Knowledge Leakage
 
@@ -200,7 +215,7 @@ Today this does not cause cascading change because the port consumer (`infrastru
 - Adding a new bubble action (e.g., a future "snapshot" action) would by reflex extend the bag rather than introduce a focused port. Each extension makes the bag harder to refactor later.
 - A rename in `BubbleStatusView` propagates through the port to the UI router, even though the port's purpose is to *insulate* the UI runtime from such churn.
 
-### Recommended Improvement
+### Historical Recommended Improvement
 
 Split `UiRouterDependencies` into capability-shaped ports — at minimum: a query bag (`UiBubbleQueryDependencies` for read-only operations), a mutation bag (`UiBubbleMutationDependencies` for emits), and standalone narrow ports for the more weakly-related capabilities (`AttachBubblePort`, `RuntimeSessionsRegistryPort` already exists). Replace the rich return types (`BubbleStateSnapshot`, `ProtocolEnvelope`) with explicit UI-facing DTOs in `shared/ports/uiRouter.ts` so the port describes what the UI needs, not what the orchestration internally produces.
 
@@ -231,7 +246,8 @@ No urgent action. Address opportunistically: when refactoring `shared/state/` ne
 2. **Significant — split `bubbleConfig.ts`.** Internal decomposition of the 1683-line module into parser/schema/normalize/render/compat. No new ports needed.
 3. **Significant — promote backend-owned UI contracts.** Single-source the manually-mirrored UI types and add a runtime schema check at the HTTP router seam.
 4. **Significant — sweep `shared/<command>/` parking lots into `application/<command>/**`.** Mechanical migration; tighten the Shared Promotion Rule afterwards in fitness.
-5. **Minor — reshape `UiRouterDependencies` into narrow ports** when item 3 lands.
+5. **Closed — reshape `UiRouterDependencies` into narrow ports.** Leaf-facing
+   router slices are direct contracts and the aggregate is composition-only.
 6. **Watch, don't act — `domain/` population.** Migrate opportunistically when the relevant `shared/**` modules are touched.
 
 The remaining structures — the load-bearing application/ports/infrastructure path, the canonical transcript/state-as-authority [contract](https://coupling.dev/posts/dimensions-of-coupling/integration-strength/) boundary, the shared kernel under `src/types/**`, and the architecture-fitness toolkit — are balanced and should not be perturbed.

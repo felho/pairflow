@@ -104,6 +104,74 @@ describe("UI router port boundary fitness check", () => {
     expect(report.status).toBe("pass");
   });
 
+  it("fails on aggregate-derived leaf aliases", async () => {
+    const repoRoot = await createTempRoot();
+    await writeRepoFile(
+      repoRoot,
+      "src/v11/shared/ports/uiRouter.ts",
+      [
+        "export interface UiRouterDependencies {",
+        "  listBubbles: () => void;",
+        "  startBubble: () => void;",
+        "}",
+        "type LocalRouterDependencies = UiRouterDependencies;",
+        "type LocalListDependencies = Pick<LocalRouterDependencies, 'listBubbles'>;",
+        "export type UiBubbleListDependencies = Pick<UiRouterDependencies, 'listBubbles'>;",
+        "export interface UiBubbleActionDependencies extends Pick<UiRouterDependencies, 'startBubble'> {}",
+        "export interface UiBubbleDetailDependencies extends UiRouterDependencies {}",
+        "export type UiBubbleLocalAliasDependencies = LocalListDependencies;"
+      ].join("\n")
+    );
+    await writeRepoFile(
+      repoRoot,
+      "src/v11/infrastructure/ui/routerLeafAlias.ts",
+      [
+        "import type { UiRouterDependencies } from '../../shared/ports/uiRouter.js';",
+        "type LocalRouterDependencies = UiRouterDependencies;",
+        "export type UiBubbleInfrastructureAliasDependencies = Pick<LocalRouterDependencies, 'listBubbles'>;"
+      ].join("\n")
+    );
+
+    const report = await buildUiRouterPortBoundaryCheckReport({
+      check: defaultCheck({
+        scope: [
+          "src/v11/shared/ports/*.ts",
+          "src/v11/infrastructure/ui/*.ts"
+        ]
+      }),
+      repoRoot,
+      fallbackMode: "hard-fail"
+    });
+
+    expect(report.status).toBe("fail");
+    expect(report.details).toContainEqual(
+      expect.stringContaining("AGGREGATE_DERIVED_UI_ROUTER_SLICE_ALIAS")
+    );
+    expect(report.details).toContainEqual(
+      expect.stringContaining("src/v11/shared/ports/uiRouter.ts#UiBubbleListDependencies")
+    );
+    expect(report.details).toContainEqual(
+      expect.stringContaining(
+        "src/v11/shared/ports/uiRouter.ts#UiBubbleActionDependencies"
+      )
+    );
+    expect(report.details).toContainEqual(
+      expect.stringContaining(
+        "src/v11/shared/ports/uiRouter.ts#UiBubbleDetailDependencies"
+      )
+    );
+    expect(report.details).toContainEqual(
+      expect.stringContaining(
+        "src/v11/shared/ports/uiRouter.ts#UiBubbleLocalAliasDependencies"
+      )
+    );
+    expect(report.details).toContainEqual(
+      expect.stringContaining(
+        "src/v11/infrastructure/ui/routerLeafAlias.ts#UiBubbleInfrastructureAliasDependencies"
+      )
+    );
+  });
+
   it("fails on command-owned imports from any shared port file", async () => {
     const repoRoot = await createTempRoot();
     await writeRepoFile(

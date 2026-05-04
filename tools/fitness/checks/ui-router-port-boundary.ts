@@ -12,6 +12,7 @@ import type {
 
 type RouterPortViolationKind =
   | "full-dependency-bag"
+  | "aggregate-derived-leaf-alias"
   | "command-owned-ui-port-import";
 
 interface RouterPortViolation {
@@ -21,6 +22,7 @@ interface RouterPortViolation {
   line: number;
   reasonCode:
     | "FULL_UI_ROUTER_DEPENDENCY_BAG_USAGE"
+    | "AGGREGATE_DERIVED_UI_ROUTER_SLICE_ALIAS"
     | "COMMAND_OWNED_UI_PORT_IMPORT";
   detail: string;
 }
@@ -453,6 +455,13 @@ function typeNodeReferences(
   typeNode: ts.TypeNode | undefined,
   typeName: string
 ): boolean {
+  return typeNodeReferencesAny(typeNode, new Set([typeName]));
+}
+
+function typeNodeReferencesAny(
+  typeNode: ts.TypeNode | undefined,
+  typeNames: ReadonlySet<string>
+): boolean {
   if (typeNode === undefined) {
     return false;
   }
@@ -464,7 +473,7 @@ function typeNodeReferences(
     if (
       ts.isTypeReferenceNode(node) &&
       ts.isIdentifier(node.typeName) &&
-      node.typeName.text === typeName
+      typeNames.has(node.typeName.text)
     ) {
       found = true;
       return;
@@ -473,6 +482,67 @@ function typeNodeReferences(
   };
   visit(typeNode);
   return found;
+}
+
+function isNodeExported(node: ts.Node): boolean {
+  return ts.canHaveModifiers(node) &&
+    (ts.getModifiers(node)?.some((modifier) => modifier.kind === ts.SyntaxKind.ExportKeyword) ??
+      false);
+}
+
+function heritageClauseReferencesAny(
+  clauses: ts.NodeArray<ts.HeritageClause> | undefined,
+  typeNames: ReadonlySet<string>
+): boolean {
+  if (clauses === undefined) {
+    return false;
+  }
+  return clauses.some((clause) =>
+    clause.types.some((heritageType) => {
+      if (
+        ts.isIdentifier(heritageType.expression) &&
+        typeNames.has(heritageType.expression.text)
+      ) {
+        return true;
+      }
+      return heritageType.typeArguments?.some((typeArgument) =>
+        typeNodeReferencesAny(typeArgument, typeNames)
+      ) ?? false;
+    })
+  );
+}
+
+function collectAggregateDerivedTypeNames(sourceFile: ts.SourceFile): Set<string> {
+  const derivedTypeNames = new Set(["UiRouterDependencies"]);
+  let changed = true;
+
+  while (changed) {
+    changed = false;
+    for (const statement of sourceFile.statements) {
+      const candidateName =
+        (ts.isTypeAliasDeclaration(statement) ||
+          ts.isInterfaceDeclaration(statement)) &&
+        statement.name.text !== "UiRouterDependencies"
+          ? statement.name.text
+          : undefined;
+      if (candidateName === undefined || derivedTypeNames.has(candidateName)) {
+        continue;
+      }
+      const isDerived = ts.isTypeAliasDeclaration(statement)
+        ? typeNodeReferencesAny(statement.type, derivedTypeNames)
+        : ts.isInterfaceDeclaration(statement) &&
+          heritageClauseReferencesAny(
+            statement.heritageClauses,
+            derivedTypeNames
+          );
+      if (isDerived) {
+        derivedTypeNames.add(candidateName);
+        changed = true;
+      }
+    }
+  }
+
+  return derivedTypeNames;
 }
 
 function typeNodeHasPropertyReference(
@@ -505,6 +575,62 @@ function typeNodeHasPropertyReference(
   };
   visit(typeNode);
   return found;
+}
+
+function collectAggregateDerivedLeafAliasViolations(input: {
+  sourceFile: ts.SourceFile;
+  fromRelative: string;
+}): RouterPortViolation[] {
+  if (
+    !(
+      input.fromRelative.startsWith("src/v11/shared/ports/") ||
+      input.fromRelative.startsWith("src/v11/infrastructure/ui/")
+    ) ||
+    !input.fromRelative.endsWith(".ts")
+  ) {
+    return [];
+  }
+
+  const violations: RouterPortViolation[] = [];
+  const aggregateDerivedTypeNames = collectAggregateDerivedTypeNames(
+    input.sourceFile
+  );
+  const visit = (node: ts.Node): void => {
+    if (
+      ts.isTypeAliasDeclaration(node) &&
+      isNodeExported(node) &&
+      node.name.text !== "UiRouterDependencies" &&
+      aggregateDerivedTypeNames.has(node.name.text)
+    ) {
+      violations.push({
+        kind: "aggregate-derived-leaf-alias",
+        fromRelative: input.fromRelative,
+        target: `${input.fromRelative}#${node.name.text}`,
+        line: lineForNode(input.sourceFile, node),
+        reasonCode: "AGGREGATE_DERIVED_UI_ROUTER_SLICE_ALIAS",
+        detail:
+          "aggregate_derived_leaf_alias: shared UI router leaf-facing slices must declare direct members instead of deriving from UiRouterDependencies"
+      });
+    } else if (
+      ts.isInterfaceDeclaration(node) &&
+      isNodeExported(node) &&
+      node.name.text !== "UiRouterDependencies" &&
+      aggregateDerivedTypeNames.has(node.name.text)
+    ) {
+      violations.push({
+        kind: "aggregate-derived-leaf-alias",
+        fromRelative: input.fromRelative,
+        target: `${input.fromRelative}#${node.name.text}`,
+        line: lineForNode(input.sourceFile, node),
+        reasonCode: "AGGREGATE_DERIVED_UI_ROUTER_SLICE_ALIAS",
+        detail:
+          "aggregate_derived_leaf_alias: shared UI router leaf-facing slices must declare direct members instead of deriving from UiRouterDependencies"
+      });
+    }
+    node.forEachChild(visit);
+  };
+  visit(input.sourceFile);
+  return violations;
 }
 
 function hasEnvironmentDependenciesAccess(sourceFile: ts.SourceFile): {
@@ -722,6 +848,10 @@ async function collectViolations(input: {
       continue;
     }
     violations.push(
+      ...collectAggregateDerivedLeafAliasViolations({
+        sourceFile,
+        fromRelative
+      }),
       ...collectFullBagViolations({
         sourceFile,
         fromRelative,
