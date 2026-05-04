@@ -27,7 +27,7 @@ archive_group: 2026-05-05-shared-command-boundary-cleanup-plan-v1
 task_tracker:
   - task_id: 1-commit-local-helpers
     task_path: plans/tasks/1-commit-local-helpers.md
-    status: approved
+    status: implementable
   - task_id: 2-merge-local-helpers
     task_path: null
     status: not_created
@@ -202,7 +202,7 @@ This plan covers the current residual command-named shared directories:
 
 | Task ID | Task Path | Purpose | Depends On | Closes Gap | Status |
 |---|---|---|---|---|---|
-| `1-commit-local-helpers` | `plans/tasks/1-commit-local-helpers.md` | Move only proven command-local commit helper/error/finalization files from `shared/commit` to `application/commit`, leaving remote commit contracts untouched. | N/A | `shared/commit` mixes command-local helpers with remote contract shape. | approved |
+| `1-commit-local-helpers` | `plans/tasks/1-commit-local-helpers.md` | Move only proven command-local commit helper/error/finalization files from `shared/commit` to `application/commit`, leaving remote commit contracts untouched. | N/A | `shared/commit` mixes command-local helpers with remote contract shape. | implementable |
 | `2-merge-local-helpers` | `null` | Move only proven command-local merge helper/error/input/routing files from `shared/merge` to `application/merge`, leaving `remoteMergeContract` untouched. | N/A | `shared/merge` mixes command-local helpers with remote contract shape. | not_created |
 | `3-remote-commit-rename` | `null` | Rename the retained remote commit contract module into a command-neutral shared location and update imports without behavior changes. | `1-commit-local-helpers` | True shared remote commit contract remains under a command-named directory. | not_created |
 | `4-remote-merge-rename` | `null` | Rename the retained remote merge contract module into a command-neutral shared location and update imports without behavior changes. | `2-merge-local-helpers` | True shared remote merge contract remains under a command-named directory. | not_created |
