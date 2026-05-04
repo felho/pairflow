@@ -360,8 +360,10 @@ All mirrored prose and test expectations must remain subordinate to these rows.
 
 1. `task_id`, `sequence_key`, filename, and parent tracker row all match
    `1-ui-contract-guard-cleanup`.
-2. `doc_bubble_id` and `impl_bubble_id` remain `null` until lifecycle commands
-   create/link bubbles.
+2. `doc_bubble_id` records the linked document-refinement bubble
+   `1-ui-contract-guard-cleanup-doc`; `impl_bubble_id` remains `null` until
+   document refinement is approved, closed, and merged, and a later
+   implementation bubble is created.
 3. No product/source files outside the target surface were changed unless the
    implementation proves they are narrow affected imports/tests for task 1.
 4. No runtime validation, entrypoint alias, broad UI import migration, or final
@@ -374,7 +376,11 @@ All mirrored prose and test expectations must remain subordinate to these rows.
 
 1. Created as planned task `1-ui-contract-guard-cleanup` from
    `plans/ui-contract-boundary-hardening-plan-v1.md`.
-2. Status is `under_review`; it is not approved or implementable.
-3. Fresh metadata uses `doc_bubble_id: null`, `impl_bubble_id: null`,
+2. Status is `approved`; it is ready for document-refinement routing but is not
+   yet `implementable` until the linked document bubble is approved, closed, and
+   merged.
+3. Current metadata uses
+   `doc_bubble_id: 1-ui-contract-guard-cleanup-doc`, `impl_bubble_id: null`,
    `supersedes: []`, `superseded_by: null`, and the parent plan
-   `archive_group`.
+   `archive_group`; `impl_bubble_id` remains `null` until document refinement is
+   approved, closed, and merged, and a later implementation bubble is created.
