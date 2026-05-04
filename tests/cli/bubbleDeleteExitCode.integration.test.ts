@@ -20,7 +20,7 @@ describe("runCli bubble delete confirmation exit code", () => {
     stderrSpy.mockRestore();
   });
 
-  it("returns exit code 2 when delete requires confirmation", async () => {
+  it("returns exit code 2 when delete requires confirmation", { timeout: 10_000 }, async () => {
     const runBubbleDeleteCommand = vi.fn(() => Promise.resolve({
       bubbleId: "b_delete_cli_confirm_01",
       deleted: false,

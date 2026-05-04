@@ -22,6 +22,7 @@ export default function App(): JSX.Element {
   const toggleRepo = useBubbleStore((state) => state.toggleRepo);
   const setPosition = useBubbleStore((state) => state.setPosition);
   const persistPositions = useBubbleStore((state) => state.persistPositions);
+  const setCanvasViewport = useBubbleStore((state) => state.setCanvasViewport);
   const toggleBubbleExpanded = useBubbleStore((state) => state.toggleBubbleExpanded);
   const deleteBubble = useBubbleStore((state) => state.deleteBubble);
   const visibleBubbles = useBubbleStore(useShallow(selectVisibleBubbles));
@@ -66,9 +67,10 @@ export default function App(): JSX.Element {
         onPositionChange={(bubbleId, position) => {
           setPosition(bubbleId, position);
         }}
-        onPositionCommit={() => {
-          persistPositions();
+        onPositionCommit={(bubbleId) => {
+          persistPositions(bubbleId);
         }}
+        onViewportChange={setCanvasViewport}
         onToggleExpand={(bubbleId) => {
           void toggleBubbleExpanded(bubbleId);
         }}

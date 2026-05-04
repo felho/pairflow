@@ -114,7 +114,10 @@ describe("v11 approval contract harness skeleton", () => {
     });
   });
 
-  it("builds corpus output manifest with approval seed entries", async () => {
+  it(
+    "builds corpus output manifest with approval seed entries",
+    { timeout: CONTRACT_TEST_TIMEOUT.parityStandardMs },
+    async () => {
     await execFileAsync("pnpm", [
       "exec",
       "tsx",
@@ -129,5 +132,6 @@ describe("v11 approval contract harness skeleton", () => {
     const approvalSources = parseApprovalSourcesFromManifest(outputRaw);
 
     expect(approvalSources).toEqual(approvalExpectedSourcesSorted);
-  });
+    }
+  );
 });

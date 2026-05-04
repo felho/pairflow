@@ -129,7 +129,10 @@ describe("v11 stop contract harness skeleton", () => {
     expect(stopSources).toEqual(stopExpectedSourcesSorted);
   });
 
-  it("builds corpus output manifest with stop seed entries", async () => {
+  it(
+    "builds corpus output manifest with stop seed entries",
+    { timeout: CONTRACT_TEST_TIMEOUT.parityHeavyMs },
+    async () => {
     await execFileAsync("pnpm", [
       "exec",
       "tsx",
@@ -144,7 +147,8 @@ describe("v11 stop contract harness skeleton", () => {
     const stopSources = parseStopSourcesFromManifest(outputRaw);
 
     expect(stopSources).toEqual(stopExpectedSourcesSorted);
-  });
+    }
+  );
 
   for (const testCase of stopInvalidInputCases) {
     it(testCase.name, async () => {

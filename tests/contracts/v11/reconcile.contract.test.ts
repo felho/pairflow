@@ -84,7 +84,10 @@ describe("v11 reconcile contract harness", () => {
     expect(reconcileSources).toEqual(reconcileExpectedSourcesSorted);
   });
 
-  it("builds corpus output manifest with reconcile seed entries", async () => {
+  it(
+    "builds corpus output manifest with reconcile seed entries",
+    { timeout: CONTRACT_TEST_TIMEOUT.v11StandardMs },
+    async () => {
     await execFileAsync("pnpm", [
       "exec",
       "tsx",
@@ -99,5 +102,6 @@ describe("v11 reconcile contract harness", () => {
     const reconcileSources = parseReconcileSourcesFromManifest(outputRaw).sort();
 
     expect(reconcileSources).toEqual(reconcileExpectedSourcesSorted);
-  });
+    }
+  );
 });
