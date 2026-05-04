@@ -16,7 +16,7 @@ task_order:
   - 3a-action-response-validation
   - 3b-read-event-validation
   - 4-contract-drift-tests
-active_task_id: 3b-read-event-validation
+active_task_id: 4-contract-drift-tests
 archive_group: 2026-05-04-ui-contract-boundary-hardening-plan-v1
 task_tracker:
   - task_id: 1-ui-contract-guard-cleanup
@@ -32,11 +32,11 @@ task_tracker:
     task_path: plans/archive/tasks/2026-05-04-ui-contract-boundary-hardening-plan-v1/3a-action-response-validation.md
     status: archived
   - task_id: 3b-read-event-validation
-    task_path: plans/tasks/3b-read-event-validation.md
-    status: in_progress
+    task_path: plans/archive/tasks/2026-05-04-ui-contract-boundary-hardening-plan-v1/3b-read-event-validation.md
+    status: archived
   - task_id: 4-contract-drift-tests
-    task_path: null
-    status: not_created
+    task_path: plans/tasks/4-contract-drift-tests.md
+    status: approved
 ---
 
 # Plan: UI Contract Boundary Hardening
@@ -197,8 +197,8 @@ through the task sequence below after each task artifact is created and reviewed
 | `2a-contract-entrypoint` | `plans/archive/tasks/2026-05-04-ui-contract-boundary-hardening-plan-v1/2a-contract-entrypoint.md` | Implement `@pairflow/ui-contracts` as the smallest intentional in-repo UI contract entrypoint, with enough TS/Vite proof that both root and UI tooling can resolve it. A standalone package boundary remains rejected for this slice; resolver failure must be reported as a blocker. | `1-ui-contract-guard-cleanup` | Unclear public entrypoint and config-level uncertainty. | archived |
 | `2b-ui-import-migration` | `plans/archive/tasks/2026-05-04-ui-contract-boundary-hardening-plan-v1/2b-ui-import-migration.md` | Mechanically migrate UI contract imports away from scattered relative `../../../src/...` paths to the entrypoint from `2a`, without changing contract shapes. | `2a-contract-entrypoint` | Fragile high-distance relative imports. | archived |
 | `3a-action-response-validation` | `plans/archive/tasks/2026-05-04-ui-contract-boundary-hardening-plan-v1/3a-action-response-validation.md` | Add runtime validation for selected mutation/action result payloads, starting with delete, commit, and merge, plus same-dispatch siblings only if they share the exact validation adapter shape. | `2b-ui-import-migration` | Action result wire-shape drift can still silently pass through `unknown` dispatch paths. | archived |
-| `3b-read-event-validation` | `plans/tasks/3b-read-event-validation.md` | Add runtime validation for selected read/status/detail and SSE event payloads, separately from mutation actions because read models and event streams have different failure semantics. | `3a-action-response-validation` | Read/event wire-shape drift can still silently pass through JSON/event paths. | approved |
-| `4-contract-drift-tests` | `null` | Extend tests/fitness to enforce the new entrypoint rule, protocol export rule, stale-exception cleanup, and representative runtime validation failures for action and read/event seams. | `3b-read-event-validation` | Drift prevention is incomplete after hardening changes. | not_created |
+| `3b-read-event-validation` | `plans/archive/tasks/2026-05-04-ui-contract-boundary-hardening-plan-v1/3b-read-event-validation.md` | Add runtime validation for selected read/status/detail and SSE event payloads, separately from mutation actions because read models and event streams have different failure semantics. | `3a-action-response-validation` | Read/event wire-shape drift can still silently pass through JSON/event paths. | archived |
+| `4-contract-drift-tests` | `plans/tasks/4-contract-drift-tests.md` | Extend tests/fitness to enforce the new entrypoint rule, protocol export rule, stale-exception cleanup, and representative runtime validation failures for action and read/event seams. | `3b-read-event-validation` | Drift prevention is incomplete after hardening changes. | approved |
 
 ## Task Acceptance Contracts
 

@@ -5,7 +5,7 @@ task_family_id: read-event-validation
 sequence_key: "3b"
 task_id: 3b-read-event-validation
 title: "Read and Event Response Validation"
-status: in_progress
+status: archived
 phase: phase3b
 target_files:
   - src/v11/infrastructure/ui/routerActions.ts
@@ -33,6 +33,7 @@ impl_bubble_id: 3b-read-event-validation-impl
 supersedes: []
 superseded_by: null
 archive_group: 2026-05-04-ui-contract-boundary-hardening-plan-v1
+archive_path: plans/archive/tasks/2026-05-04-ui-contract-boundary-hardening-plan-v1/3b-read-event-validation.md
 ---
 
 # Task: Read and Event Response Validation
