@@ -17,7 +17,7 @@ archive_group: 2026-05-04-ui-card-placement-determinism-plan-v1
 task_tracker:
   - task_id: 1-card-placement-policy
     task_path: plans/tasks/1-card-placement-policy.md
-    status: implementable
+    status: in_progress
   - task_id: 2-card-placement-ui-integration
     task_path: null
     status: not_created

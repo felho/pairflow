@@ -5,7 +5,7 @@ task_family_id: card-placement-policy
 sequence_key: "1"
 task_id: 1-card-placement-policy
 title: "Card Placement Policy"
-status: implementable
+status: in_progress
 phase: phase1
 target_files:
   - "ui/src/lib/canvasLayout.ts"
@@ -16,7 +16,7 @@ system_context_ref: docs/pairflow-ui-prd.md
 owners:
   - "felho"
 doc_bubble_id: 1-card-placement-policy-doc
-impl_bubble_id: null
+impl_bubble_id: card-placement-policy-impl
 supersedes: []
 superseded_by: null
 archive_group: 2026-05-04-ui-card-placement-determinism-plan-v1
