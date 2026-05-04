@@ -171,6 +171,12 @@ Avoid:
   reason,
 - broad “capability bags” with unrelated methods.
 
+For UI router ports, leaf modules must consume direct capability slices such as
+list, timeline, detail-loading, conflict-enrichment, or action-dispatch
+dependencies. A full `UiRouterDependencies` aggregate may exist only as a
+composition/wiring contract and must be assembled from the direct slices rather
+than used as the source for leaf-facing aliases.
+
 ## Anti-Circumvention Rule
 
 The following are not valid ports:

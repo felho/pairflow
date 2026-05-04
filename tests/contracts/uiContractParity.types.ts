@@ -170,7 +170,8 @@ import type {
   UiStopBubbleResult as RouterUiStopBubbleResult,
   UiUpdateBubbleReviewPolicyInput as RouterUiUpdateBubbleReviewPolicyInput,
   UiUpdateBubbleReviewPolicyResult as RouterUiUpdateBubbleReviewPolicyResult,
-  UiRouterDependencies
+  UiBubbleConflictEnrichmentDependencies,
+  UiBubbleDetailLoadingDependencies
 } from "../../src/v11/shared/ports/uiRouter.js";
 import type {
   UiApiErrorBody as BackendUiApiErrorBody,
@@ -194,6 +195,7 @@ import type {
   UiTimelineEntry as BackendUiTimelineEntry
 } from "../../src/types/ui.js";
 import type {
+  ReadRuntimeSessionsRegistryPort,
   RuntimeSessionRecord as RuntimeSessionRecord
 } from "../../src/v11/shared/ports/runtimeSessions.js";
 import type {
@@ -477,29 +479,45 @@ type _uiBubbleInboxViewParity =
 type _routerStatusDependencyInputParity =
   Assert<
     Equal<
-      Parameters<UiRouterDependencies["getBubbleStatus"]>[0],
+      Parameters<UiBubbleDetailLoadingDependencies["getBubbleStatus"]>[0],
       CanonicalUiBubbleStatusInput
     >
   >;
 type _routerStatusDependencyResultParity =
   Assert<
     Equal<
-      Awaited<ReturnType<UiRouterDependencies["getBubbleStatus"]>>,
+      Awaited<ReturnType<UiBubbleDetailLoadingDependencies["getBubbleStatus"]>>,
       CanonicalUiBubbleStatusView
     >
   >;
 type _routerInboxDependencyInputParity =
   Assert<
     Equal<
-      Parameters<UiRouterDependencies["getBubbleInbox"]>[0],
+      Parameters<UiBubbleDetailLoadingDependencies["getBubbleInbox"]>[0],
       CanonicalUiBubbleInboxInput
     >
   >;
 type _routerInboxDependencyResultParity =
   Assert<
     Equal<
-      Awaited<ReturnType<UiRouterDependencies["getBubbleInbox"]>>,
+      Awaited<ReturnType<UiBubbleDetailLoadingDependencies["getBubbleInbox"]>>,
       CanonicalUiBubbleInboxView
+    >
+  >;
+interface ExpectedUiBubbleConflictEnrichmentDependencies {
+  getBubbleStatus: (
+    input: CanonicalUiBubbleStatusInput
+  ) => Promise<CanonicalUiBubbleStatusView>;
+  getBubbleInbox: (
+    input: CanonicalUiBubbleInboxInput
+  ) => Promise<CanonicalUiBubbleInboxView>;
+  readRuntimeSessionsRegistry: ReadRuntimeSessionsRegistryPort;
+}
+type _routerConflictEnrichmentDependencyParity =
+  Assert<
+    Equal<
+      UiBubbleConflictEnrichmentDependencies,
+      ExpectedUiBubbleConflictEnrichmentDependencies
     >
   >;
 type _backendRepoSummaryParity =

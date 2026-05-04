@@ -103,8 +103,17 @@ export interface UiBubbleTimelineInput {
   cwd?: string | undefined;
 }
 
-export interface UiRouterDependencies {
+export interface UiBubbleListDependencies {
   listBubbles: (input?: UiBubbleListInput) => Promise<UiBubbleListView>;
+}
+
+export interface UiBubbleTimelineDependencies {
+  readBubbleTimeline: (
+    input: UiBubbleTimelineInput
+  ) => Promise<UiTimelineEntry[]>;
+}
+
+export interface UiBubbleDetailLoadingDependencies {
   getBubbleStatus: (
     input: UiBubbleStatusInput
   ) => Promise<UiBubbleStatusView>;
@@ -112,9 +121,14 @@ export interface UiRouterDependencies {
     input: UiBubbleInboxInput
   ) => Promise<UiBubbleInboxView>;
   readRuntimeSessionsRegistry: ReadRuntimeSessionsRegistryPort;
-  readBubbleTimeline: (
-    input: UiBubbleTimelineInput
-  ) => Promise<UiTimelineEntry[]>;
+}
+
+export type UiBubbleDetailDependencies = UiBubbleDetailLoadingDependencies;
+
+export type UiBubbleConflictEnrichmentDependencies =
+  UiBubbleDetailLoadingDependencies;
+
+export interface UiBubbleActionDispatchDependencies {
   startBubble: (
     input: UiBubbleMutationInput
   ) => Promise<UiStartBubbleResult>;
@@ -156,41 +170,8 @@ export interface UiRouterDependencies {
   ) => Promise<UiDeleteBubbleResult>;
 }
 
-export type UiBubbleListDependencies = Pick<
-  UiRouterDependencies,
-  "listBubbles"
->;
-
-export type UiBubbleTimelineDependencies = Pick<
-  UiRouterDependencies,
-  "readBubbleTimeline"
->;
-
-export interface UiBubbleDetailLoadingDependencies {
-  getBubbleStatus: UiRouterDependencies["getBubbleStatus"];
-  getBubbleInbox: UiRouterDependencies["getBubbleInbox"];
-  readRuntimeSessionsRegistry:
-    UiRouterDependencies["readRuntimeSessionsRegistry"];
-}
-
-export type UiBubbleDetailDependencies = UiBubbleDetailLoadingDependencies;
-
-export type UiBubbleConflictEnrichmentDependencies =
-  UiBubbleDetailLoadingDependencies;
-
-export type UiBubbleActionDispatchDependencies = Pick<
-  UiRouterDependencies,
-  | "attachBubble"
-  | "commitBubble"
-  | "deleteBubble"
-  | "emitApprove"
-  | "emitHumanReply"
-  | "emitRequestRework"
-  | "mergeBubble"
-  | "openBubble"
-  | "restartBubble"
-  | "resumeBubble"
-  | "startBubble"
-  | "stopBubble"
-  | "updateBubbleReviewPolicy"
->;
+export interface UiRouterDependencies
+  extends UiBubbleListDependencies,
+    UiBubbleTimelineDependencies,
+    UiBubbleDetailLoadingDependencies,
+    UiBubbleActionDispatchDependencies {}

@@ -247,19 +247,20 @@ describe("fitness:check:ci", () => {
       const report = JSON.parse(await readFile(reportPath, "utf8")) as {
         checks: Array<{ id: string; status: string; details?: string[] }>;
       };
-      const expectedExceptionCount = routerPortPolicy?.exceptions?.length ?? 0;
       const routerPort = report.checks.find(
         (check) => check.id === "ui_router_port_boundary"
       );
       expect(routerPort?.status).toBe("pass");
+      expect(routerPortPolicy?.exceptions ?? []).toHaveLength(0);
       expect(routerPort?.details).toContainEqual(
-        expect.stringContaining(`exceptions_applied=${String(expectedExceptionCount)}`)
+        expect.stringContaining("exceptions_configured=0")
       );
-      if (expectedExceptionCount > 0) {
-        expect(routerPort?.details).toContainEqual(
-          expect.stringContaining("TRANSITIONAL_EXCEPTION_APPLIED")
-        );
-      }
+      expect(routerPort?.details).toContainEqual(
+        expect.stringContaining("exceptions_applied=0")
+      );
+      expect(routerPort?.details).not.toContainEqual(
+        expect.stringContaining("TRANSITIONAL_EXCEPTION_APPLIED")
+      );
     },
     60_000
   );
@@ -333,7 +334,7 @@ describe("fitness:check:ci", () => {
   );
 
   it(
-    "blocks current-repo router-port inventory drift for both violation families",
+    "blocks current-repo router-port inventory drift for all violation families",
     async () => {
       const root = await createTempRoot();
       const fixtureRepoRoot = await createTempRoot();
@@ -343,6 +344,7 @@ describe("fitness:check:ci", () => {
       const broadBagPath =
         "src/v11/infrastructure/ui/.fitnessRouterPortBroadBagDrift.ts";
       const portPath = "src/v11/shared/ports/.fitnessRouterPortCommandDrift.ts";
+      const aliasPath = "src/v11/shared/ports/.fitnessRouterPortAliasDrift.ts";
       const commandPath = "src/v11/shared/list/.fitnessListCommandContract.ts";
 
       await writeFixtureFile(
@@ -360,6 +362,15 @@ describe("fitness:check:ci", () => {
         portPath,
         "import type { FitnessListCommandContract } from '../list/.fitnessListCommandContract.js';\nexport type Drift = FitnessListCommandContract;\n"
       );
+      await writeFixtureFile(
+        fixtureRepoRoot,
+        aliasPath,
+        [
+          "export interface UiRouterDependencies { listBubbles: () => void; }",
+          "type LocalRouterDependencies = UiRouterDependencies;",
+          "export type UiBubbleListDependencies = Pick<LocalRouterDependencies, 'listBubbles'>;"
+        ].join("\n")
+      );
       await writeFile(
         policyPath,
         JSON.stringify(
@@ -373,7 +384,7 @@ describe("fitness:check:ci", () => {
                   "UI router port full-composite and command-owned import leakage",
                 mode: "hard-fail",
                 owner: "architecture/ui-router",
-                scope: [broadBagPath, portPath],
+                scope: [broadBagPath, portPath, aliasPath],
                 exceptions: []
               }
             ]
@@ -408,6 +419,9 @@ describe("fitness:check:ci", () => {
       );
       expect(routerPort?.details).toContainEqual(
         expect.stringContaining("COMMAND_OWNED_UI_PORT_IMPORT")
+      );
+      expect(routerPort?.details).toContainEqual(
+        expect.stringContaining("AGGREGATE_DERIVED_UI_ROUTER_SLICE_ALIAS")
       );
     },
     30_000
