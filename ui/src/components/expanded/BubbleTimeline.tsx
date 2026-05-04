@@ -385,6 +385,10 @@ function resolveRole(entry: UiTimelineEntry): RoleKind {
     typeof metadata === "object" && metadata !== null
       ? (metadata as { actor?: unknown }).actor
       : undefined;
+  const deliveryTargetRole =
+    typeof metadata === "object" && metadata !== null
+      ? (metadata as { delivery_target_role?: unknown }).delivery_target_role
+      : undefined;
   const metaReviewHandoffId =
     typeof metadata === "object" && metadata !== null
       ? (metadata as { meta_review_handoff_id?: unknown }).meta_review_handoff_id
@@ -401,6 +405,14 @@ function resolveRole(entry: UiTimelineEntry): RoleKind {
   }
   if (type === "CONVERGENCE") {
     return "system";
+  }
+  if (type === "PASS") {
+    if (deliveryTargetRole === "implementer") {
+      return "review";
+    }
+    if (deliveryTargetRole === "reviewer" || deliveryTargetRole === "meta_reviewer") {
+      return "impl";
+    }
   }
   const sender = entry.sender.toLowerCase();
   if (sender === "human") {

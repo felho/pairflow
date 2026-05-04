@@ -73,6 +73,49 @@ describe("BubbleTimeline", () => {
     ).not.toBeInTheDocument();
   });
 
+  it("uses PASS delivery target role instead of agent name for reviewer fix requests", () => {
+    render(
+      <BubbleTimeline
+        entries={[
+          timelineEntry({
+            id: "env-reviewer-fix-request",
+            type: "PASS",
+            sender: "codex",
+            recipient: "codex",
+            payload: {
+              summary: "Please fix the reviewer findings.",
+              pass_intent: "fix_request",
+              metadata: {
+                delivery_target_role: "implementer"
+              },
+              findings: [
+                {
+                  severity: "P2",
+                  title: "Finding title",
+                  refs: []
+                }
+              ]
+            }
+          })
+        ]}
+        isLoading={false}
+        error={null}
+        compact
+      />
+    );
+
+    const actorLabel = screen.getByText("reviewer", {
+      selector: "span.font-medium"
+    });
+
+    expect(actorLabel).toHaveTextContent(/reviewer/u);
+    expect(actorLabel).toHaveTextContent(/\(codex\)/u);
+    expect(
+      screen.queryByText("implementer", { selector: "span.font-medium" })
+    ).not.toBeInTheDocument();
+    expect(screen.getByText("P2")).toBeInTheDocument();
+  });
+
   it("renders only rerun meta-review gate handoffs as clean-run progress", () => {
     render(
       <BubbleTimeline
