@@ -8,8 +8,8 @@ import {
   BubbleCommitError,
   createBubbleCommitError,
   isBubbleCommitError
-} from "../../../../src/v11/shared/commit/commitCommandError.js";
-import { normalizeBubbleCommitError } from "../../../../src/v11/shared/commit/commitCommandErrorNormalization.js";
+} from "../../../../src/v11/application/commit/commitCommandError.js";
+import { normalizeBubbleCommitError } from "../../../../src/v11/application/commit/commitCommandErrorNormalization.js";
 
 describe("commitCommandErrorNormalization", () => {
   it("preserves BubbleCommitError instances", () => {

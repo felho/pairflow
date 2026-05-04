@@ -1,7 +1,7 @@
 import { join } from "node:path";
 
 import { applyStateTransition } from "../../domain/state/machine.js";
-import { normalizeStringList } from "../normalization/stringNormalization.js";
+import { normalizeStringList } from "../../shared/normalization/stringNormalization.js";
 import { BubbleCommitError } from "./commitCommandError.js";
 import type { BubbleStateSnapshot } from "../../../types/bubble.js";
 import type {
@@ -54,7 +54,8 @@ export async function appendCommitResultEnvelopeMutation(input: {
     input.context.bubblePaths.locksDir,
     `${input.context.bubbleId}.lock`
   );
-  return input.appendProtocolEnvelope({
+  const appendEnvelope = input.appendProtocolEnvelope;
+  return appendEnvelope({
     transcriptPath: input.context.bubblePaths.transcriptPath,
     lockPath,
     now: input.now,
@@ -94,11 +95,12 @@ export async function persistCommittedThenDoneStateMutation(input: {
     }
   ) => Promise<CommitFinalizationLoadedState>;
 }): Promise<CommitFinalizationLoadedState> {
+  const writeSnapshot = input.writeStateSnapshot;
   const committed = applyStateTransition(input.context.state, {
     to: "COMMITTED",
     lastCommandAt: input.nowIso
   });
-  const committedWritten = await input.writeStateSnapshot(
+  const committedWritten = await writeSnapshot(
     input.context.statePath,
     committed,
     {
@@ -116,7 +118,7 @@ export async function persistCommittedThenDoneStateMutation(input: {
   });
 
   try {
-    return await input.writeStateSnapshot(input.context.statePath, done, {
+    return await writeSnapshot(input.context.statePath, done, {
       expectedFingerprint: committedWritten.fingerprint,
       expectedState: "COMMITTED"
     });
