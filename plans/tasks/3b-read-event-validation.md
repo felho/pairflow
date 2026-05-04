@@ -67,8 +67,13 @@ not authorize implementation inside this document creation pass.
    optional or nullable fields remain accepted only where canonical contract
    shape allows them.
 7. Phase boundary:
-   - read-model closure: selected list/detail/timeline response validation.
-   - event-stream closure: selected SSE snapshot and bubble update validation.
+   - read-model closure: selected list/detail/timeline response validation;
+     the plan-level `status` wording is represented here by the current
+     detail response because `GET /api/bubbles/:bubbleId` embeds the live
+     status view inside `UiBubbleDetail` rather than exposing a separate
+     status route.
+   - event-stream closure: selected connected, snapshot, bubble, and repo SSE
+     payload validation.
    - action closure: out of scope and already handled by task `3a`.
    - final drift/fitness hardening: out of scope and owned by task `4`.
 
@@ -118,7 +123,10 @@ not authorize implementation inside this document creation pass.
    - do not change read-model DTO fields or SSE event names unless required to
      expose an already-canonical shape through `src/contracts/ui/**`;
    - do not treat action nested event DTOs from task `3a` as SSE stream events;
-   - do not add browser-side fallback parsing in this task.
+   - do not add browser-side fallback parsing in this task;
+   - do not create a second DTO hierarchy for validators; validator type guards
+     must reference the canonical `src/contracts/ui/**` types and may live in
+     backend UI infrastructure only as guard code.
 
 ### Scope Reality / Shape Proof
 
@@ -139,7 +147,7 @@ not authorize implementation inside this document creation pass.
    - `GET /api/bubbles/:bubbleId`
    - `GET /api/bubbles/:bubbleId/timeline`
 4. Event entrypoints in scope:
-   - `GET /api/events` connected payload and initial `snapshot`
+   - `GET /api/events` `UiEventsConnectedPayload` and initial `snapshot`
    - emitted `bubble.updated`, `bubble.removed`, `repo.updated`, and
      `repo.removed` events.
 5. Hidden scope ruled out: mutation/action response validation, browser client
@@ -151,6 +159,10 @@ not authorize implementation inside this document creation pass.
 7. Why the declared task shape matches reality: these selected payloads are
    emitted through router JSON or SSE write boundaries after existing
    projection/read logic has already produced UI-facing values.
+8. Status/detail clarification: there is no separate selected status endpoint
+   in this task. Status fields are validated only through the selected
+   `UiBubbleDetail` response shape unless implementation review discovers an
+   already-public HTTP status response under the same router boundary.
 
 ### Authority Boundary Map
 
@@ -164,6 +176,13 @@ not authorize implementation inside this document creation pass.
 5. Export surfaces closed in this phase: selected backend read/event validation
    helpers may be introduced only behind the existing canonical UI contract
    boundary.
+6. Preferred helper placement: follow the existing task `3a` precedent by
+   adding backend-local guard modules adjacent to the router/event seams, for
+   example `src/v11/infrastructure/ui/routerReadResponseValidation.ts` and
+   `src/v11/infrastructure/ui/routerEventPayloadValidation.ts`, unless the
+   implementation proves a narrower existing file is clearer. Any event helper
+   used by both `routerEvents.ts` and `eventsLog.ts` remains backend-local guard
+   code, not a new contract authority or public DTO surface.
 
 ### Baseline Preservation
 
@@ -208,10 +227,12 @@ not authorize implementation inside this document creation pass.
 4. Side effects forbidden before preconditions pass: existing repo-scope errors
    must still block before read execution.
 5. Invalid payload behavior: invalid selected read response becomes a
-   fail-closed router error; invalid selected SSE event is not emitted as a
-   trusted event and must surface through the existing event error/logging path
-   or an explicit fail-closed stream handling decision documented by the
-   implementation.
+   fail-closed router error; invalid selected SSE event payloads are dropped
+   before trusted SSE event emission and before replay history storage where
+   the event-log seam is used. Connected/snapshot validation must stop the
+   initial stream setup before writing malformed trusted event data, because
+   those payloads are generated during connection setup rather than through the
+   event log.
 6. Coordination primitives in scope: none.
 
 ### In Scope
@@ -299,6 +320,7 @@ not authorize implementation inside this document creation pass.
 | `UiSnapshotEvent` | `src/contracts/ui/uiEvents.ts` | Canonical snapshot SSE payload. | Preserve and validate before snapshot emission. | P1 | required-now |
 | `UiBubbleUpdatedEvent` / `UiBubbleRemovedEvent` | `src/contracts/ui/uiEvents.ts` | Canonical bubble SSE payloads. | Preserve and validate selected emitted events. | P1 | required-now |
 | `UiRepoUpdatedEvent` / `UiRepoRemovedEvent` | `src/contracts/ui/uiEvents.ts` | Canonical repo SSE payloads. | Preserve and validate selected emitted events. | P1 | required-now |
+| `UiEvent` | `src/contracts/ui/uiEvents.ts` | Canonical union for replayable/stored SSE events only. | Preserve and validate event-log payload variants without treating connected or heartbeat frames as `UiEvent`. | P1 | required-now |
 | `UiEventsConnectedPayload` | `src/contracts/ui/uiEvents.ts` | Connected payload is SSE setup data, not a snapshot. | Preserve current shape and validate. | P1 | required-now |
 
 ### 0b) Scope Reality and Shape Proof
@@ -325,7 +347,7 @@ not authorize implementation inside this document creation pass.
 | Shared Contract | Current Consumers | Change Type (`additive|breaking|N/A`) | This Task Action | Deferred Alignment |
 |---|---|---|---|---|
 | `UiBubbleListView` / `UiBubbleDetail` / `UiTimelineEntry` | backend UI router, UI API/client types, router tests | additive | Add runtime validation for existing shape. | Broad drift fitness in task `4`. |
-| `UiEvent` / `UiSnapshotEvent` / connected payload | backend UI events broker, SSE route, UI event consumers, events tests | additive | Add runtime validation for existing shape. | Browser parser validation remains out of scope. |
+| `UiEvent` / `UiSnapshotEvent` / `UiEventsConnectedPayload` | backend UI events broker, backend `eventsLog`, SSE route, UI event consumers, events tests | additive | Add runtime validation for existing shape. | Browser parser validation remains out of scope. |
 
 ### 0e) Baseline Preservation
 
@@ -354,21 +376,21 @@ not authorize implementation inside this document creation pass.
 |---|---|---|---|---|---|
 | Invalid repo query or bubble id | Existing request/repo-scope parsing | Read dependency call | Existing 4xx/404 behavior. | P1 | required-now |
 | Valid request, invalid selected read result | HTTP 2xx response emission | Emitting partial successful read body | Fail closed with router error; no successful result body. | P1 | required-now |
-| Valid stream, invalid selected event payload | SSE trusted event write | Emitting malformed trusted event | Drop/fail closed through explicit stream handling and test the chosen behavior. | P1 | required-now |
+| Valid stream, invalid selected event payload | SSE trusted event write or event-log storage | Emitting or replay-storing malformed trusted event data | Stop connected/snapshot setup before trusted data write, or drop replayable event-log payload before history insertion and subscriber callbacks. | P1 | required-now |
 
 ### 0h) Canonical Contract Matrix
 
 | ID | Condition / Input | Owner | Output / Status | Reason / Error Code | Retained / Dropped Data | Side Effects | Required Test |
 |---|---|---|---|---|---|---|---|
 | CCM1 | Valid list response matches selected `UiBubbleListView` envelope. | current task | HTTP 200 with unchanged `repo` and `bubbles` body. | N/A | Retain canonical fields. | Read only. | T1 |
-| CCM2 | List response missing or malforms required selected fields. | current task | Fail-closed router error, not 2xx. | `internal_error` with `details.reasonCode: "UI_READ_RESPONSE_INVALID"` and response family. | Drop malformed success body. | Read attempt may have completed. | T2 |
+| CCM2 | List response missing or malforms required selected fields. | current task | Fail-closed router error, not 2xx. | `internal_error` with `details.reasonCode: "UI_READ_RESPONSE_INVALID"` and `details.responseFamily: "bubble_list"`. | Drop malformed success body. | Read attempt may have completed. | T2 |
 | CCM3 | Valid detail response matches selected `UiBubbleDetail` envelope. | current task | HTTP 200 with unchanged `bubble` body. | N/A | Retain canonical fields. | Read only. | T3 |
-| CCM4 | Detail response missing or malforms required selected fields. | current task | Fail-closed router error, not 2xx. | `internal_error` with `details.reasonCode: "UI_READ_RESPONSE_INVALID"` and response family. | Drop malformed success body. | Read attempt may have completed. | T4 |
+| CCM4 | Detail response missing or malforms required selected fields. | current task | Fail-closed router error, not 2xx. | `internal_error` with `details.reasonCode: "UI_READ_RESPONSE_INVALID"` and `details.responseFamily: "bubble_detail"`. | Drop malformed success body. | Read attempt may have completed. | T4 |
 | CCM5 | Valid timeline response entries match `UiTimelineEntry`. | current task | HTTP 200 with unchanged `timeline` body. | N/A | Retain canonical fields. | Read only. | T5 |
-| CCM6 | Timeline entry missing or malforms required selected fields. | current task | Fail-closed router error, not 2xx. | `internal_error` with `details.reasonCode: "UI_READ_RESPONSE_INVALID"` and response family. | Drop malformed success body. | Read attempt may have completed. | T6 |
+| CCM6 | Timeline entry missing or malforms required selected fields. | current task | Fail-closed router error, not 2xx. | `internal_error` with `details.reasonCode: "UI_READ_RESPONSE_INVALID"` and `details.responseFamily: "bubble_timeline"`. | Drop malformed success body. | Read attempt may have completed. | T6 |
 | CCM7 | Valid connected/snapshot SSE payload. | current task | Stream writes current event names and data shape. | N/A | Retain canonical fields. | SSE connection remains open per current behavior. | T7 |
 | CCM8 | Valid bubble/repo SSE update or removal event. | current task | Stream writes current event name and data shape. | N/A | Retain canonical fields. | Event notification already occurred. | T8 |
-| CCM9 | Selected SSE event payload is malformed. | current task | Malformed trusted event is not emitted; chosen fail-closed stream behavior is explicit. | `UI_EVENT_PAYLOAD_INVALID` or documented equivalent. | Drop malformed trusted event payload. | No extra runtime mutation. | T9 |
+| CCM9 | Selected SSE event payload is malformed. | current task | Event-log update/removal payloads are not stored for replay and are not emitted to subscribers; connected/snapshot setup failures end before malformed trusted event data is written. | `UI_EVENT_PAYLOAD_INVALID` with stable event family/type diagnostic. | Drop malformed trusted event payload. | No extra runtime mutation. | T9a/T9b |
 | CCM10 | Mutation/action response is encountered. | predecessor task `3a` | No validation change in this task. | N/A | N/A | N/A | T10 |
 
 ### 0i) Ownership and Deferred Semantics
@@ -388,14 +410,17 @@ not authorize implementation inside this document creation pass.
 | List response envelope | `repo`, `bubbles` | none unless already canonical | current router body fields only | missing/wrong-type required selected fields fail | valid fields retained; invalid body not emitted as success | `UI_READ_RESPONSE_INVALID` | P1 | required-now |
 | Detail response envelope | `bubble` | none unless already canonical | current router body fields only | missing/wrong-type selected detail fields fail | valid fields retained; invalid body not emitted as success | `UI_READ_RESPONSE_INVALID` | P1 | required-now |
 | Timeline response envelope | `bubbleId`, `repoPath`, `timeline` | none unless already canonical | current router body fields only | malformed selected timeline entries fail | valid entries retained; invalid body not emitted as success | `UI_READ_RESPONSE_INVALID` | P1 | required-now |
-| `UiEvent` SSE payloads | event-specific required fields from `uiEvents.ts` | event-specific canonical optionals only | `connected`, `snapshot`, `bubble.updated`, `bubble.removed`, `repo.updated`, `repo.removed`, `heartbeat` | selected malformed payloads fail or are dropped by explicit behavior; heartbeat remains payload-free | valid event data retained; malformed trusted event not emitted | `UI_EVENT_PAYLOAD_INVALID` or documented equivalent | P1 | required-now |
+| `UiEventsConnectedPayload` setup frame | `now`, `repos` | none unless already canonical | `connected` SSE frame only | missing/wrong-type setup fields stop setup before trusted connected data is written | valid setup data retained; invalid setup frame not emitted as trusted data | `UI_EVENT_PAYLOAD_INVALID` | P1 | required-now |
+| `UiSnapshotEvent` setup frame | `id`, `ts`, `type`, `repos`, `bubbles` | none unless already canonical | `snapshot` SSE frame only | missing/wrong-type snapshot fields stop setup before trusted snapshot data is written | valid snapshot retained; invalid setup frame not emitted as trusted data | `UI_EVENT_PAYLOAD_INVALID` | P1 | required-now |
+| Replayable `UiEvent` payloads | event-specific required fields from `uiEvents.ts` | event-specific canonical optionals only | `snapshot`, `bubble.updated`, `bubble.removed`, `repo.updated`, `repo.removed` | selected malformed event-log payloads are dropped before trusted event storage/emission | valid event data retained; malformed trusted event not stored or emitted | `UI_EVENT_PAYLOAD_INVALID` | P1 | required-now |
+| Heartbeat SSE frame | none | none | `heartbeat` SSE frame only | heartbeat remains payload-free and is not validated as a contract payload | current heartbeat cadence retained | N/A | P1 | required-now |
 
 ### 0k) Mirrored Surface Checklist
 
 | Canonical Matrix Row | Mirrored Surfaces | Required Alignment Rule | Summary-Only Surface? | Verification |
 |---|---|---|---|---|
-| CCM1-CCM6 | L0 goal/scope, L1 data/error contract, tests, L2 acceptance | Read valid/invalid behavior must stay aligned with selected read contracts. | L0 is summary-only. | T1-T6, L2 A1-A4 |
-| CCM7-CCM9 | L0 event scope, L1 structured rules, tests, L2 acceptance | SSE valid/invalid behavior must stay aligned with selected event contracts. | L0 is summary-only. | T7-T9, L2 A5-A6 |
+| CCM1-CCM6 | L0 goal/scope, L1 data/error contract, tests, L2 acceptance | Read valid/invalid behavior must stay aligned with selected read contracts. | L0 is summary-only. | T1-T6, L2 A1/A3/A4/A6/A8 |
+| CCM7-CCM9 | L0 event scope, L1 structured rules, tests, L2 acceptance | SSE valid/invalid behavior must stay aligned with selected event contracts. | L0 is summary-only. | T7-T9b, L2 A2/A3/A5/A6/A8 |
 | CCM10 | L0 out-of-scope, L1 ownership/deferred semantics | Mutation/action validation remains owned by 3a. | yes | T10, L2 A7 |
 
 ### 1) Call-Site Matrix
@@ -403,9 +428,9 @@ not authorize implementation inside this document creation pass.
 | Entrypoint / File | Current Role | Required Change | Priority | Timing |
 |---|---|---|---|---|
 | `src/v11/infrastructure/ui/routerActions.ts` | Builds list/detail/timeline response bodies. | Validate selected read response bodies before returning HTTP success. | P1 | required-now |
-| `src/v11/infrastructure/ui/routerEvents.ts` | Writes connected, snapshot, event, and heartbeat SSE frames. | Validate selected event payloads before writing trusted event data. | P1 | required-now |
+| `src/v11/infrastructure/ui/routerEvents.ts` | Writes connected, snapshot, event, and heartbeat SSE frames. | Validate connected and snapshot payloads before writing trusted setup event data; keep heartbeat payload-free. | P1 | required-now |
 | `src/v11/infrastructure/ui/eventsSnapshot.ts` | Builds initial snapshot payload. | Preserve snapshot shape; add validation only if this is the narrowest seam. | P1 | required-now |
-| `src/v11/infrastructure/ui/eventsLog.ts` | Stores and replays UI events. | Preserve replay order and filter behavior while validating selected emitted payloads. | P2 | conditional |
+| `src/v11/infrastructure/ui/eventsLog.ts` | Stores, replays, and fans out UI events. | Validate selected `UiEvent` payloads before history insertion and listener callback so malformed trusted events cannot be replayed later. | P1 | required-now |
 | `src/v11/shared/ports/uiRouter.ts` | Types read dependencies. | Preserve port shape unless a validator helper needs a typed boundary. | P2 | conditional |
 | `src/contracts/ui/uiReadModel.ts` | Canonical selected read contracts. | Preserve shape; export validator-adjacent types only if needed. | P1 | required-now |
 | `src/contracts/ui/uiEvents.ts` | Canonical selected SSE contracts. | Preserve event names and payload shapes. | P1 | required-now |
@@ -427,6 +452,16 @@ not authorize implementation inside this document creation pass.
 6. SSE validation must not alter event ordering, replay filtering, or heartbeat
    cadence.
 7. Any helper public within backend code must have an explicit typed boundary.
+8. Read response validators should be exact for the selected response envelopes
+   (`repo`/`bubbles`, `bubble`, `bubbleId`/`repoPath`/`timeline`) and validate
+   required selected nested contract fields without promoting fixture-only
+   fields to canonical authority.
+9. Event validators should validate closed event `type` literals and the
+   event-specific identity fields before any nested summary/detail validation:
+   `UiEventsConnectedPayload` validates `repos` but has no event `id`, `ts`, or
+   `repoPath`; `UiSnapshotEvent` validates `id`, `ts`, and `type`; replayable
+   `UiEvent` update/removal variants validate `id`, `ts`, `repoPath`, and
+   `bubbleId` only where the canonical variant defines it.
 
 ### 3) Side Effects Contract
 
@@ -445,11 +480,13 @@ not authorize implementation inside this document creation pass.
    2xx.
 2. Invalid selected read payloads should use HTTP `internal_error` with stable
    `details.reasonCode: "UI_READ_RESPONSE_INVALID"` and a stable selected
-   response family.
+   `details.responseFamily` of `bubble_list`, `bubble_detail`, or
+   `bubble_timeline`.
 3. Invalid selected SSE event payload behavior must be explicit and tested:
-   either fail the stream before writing a trusted malformed event, or drop the
-   malformed trusted event with a stable diagnostic reason such as
-   `UI_EVENT_PAYLOAD_INVALID`.
+   event-log payloads must be dropped before history insertion and subscriber
+   callbacks with stable diagnostic reason `UI_EVENT_PAYLOAD_INVALID`; initial
+   connected/snapshot payload failures must not write malformed trusted event
+   data to the stream.
 4. Existing request/repo-scope/not-found failures must keep their current
    behavior.
 5. Browser parsing/casting is not a fallback validation layer.
@@ -477,8 +514,9 @@ not authorize implementation inside this document creation pass.
 | T6 | Timeline response missing/malforming selected entry field. | Non-2xx fail-closed router error with `UI_READ_RESPONSE_INVALID`. | P1 | required-now |
 | T7 | Valid connected and snapshot SSE payloads. | Current event names and payload shape preserved. | P1 | required-now |
 | T8 | Valid bubble/repo update or removal event. | Current event name and payload shape preserved. | P1 | required-now |
-| T9 | Malformed selected SSE event payload. | Malformed trusted event is not emitted; stable failure/drop diagnostic is asserted. | P1 | required-now |
-| T10 | Action response path. | Existing 3a tests remain green; no new action validation scope here. | P1 | required-now |
+| T9a | Malformed connected or snapshot setup payload. | No malformed trusted setup event data is written; stable `UI_EVENT_PAYLOAD_INVALID` diagnostic is asserted. | P1 | required-now |
+| T9b | Malformed replayable bubble/repo event-log payload. | Malformed event is not stored in replay history and is not emitted to subscribers; stable `UI_EVENT_PAYLOAD_INVALID` diagnostic is asserted. | P1 | required-now |
+| T10 | Action response path. | Existing 3a tests remain green as inherited proof; no new action validation scope here. | P2 | inherited-proof |
 
 ## L2 - Acceptance Contract
 
@@ -494,15 +532,17 @@ not authorize implementation inside this document creation pass.
 4. Invalid selected read payloads fail closed with HTTP `internal_error`, stable
    `details.reasonCode: "UI_READ_RESPONSE_INVALID"`, and do not return 2xx.
 5. Invalid selected SSE event payload behavior is explicit, tested, and does not
-   emit malformed data as a trusted event.
+   store malformed data in replay history or emit malformed data as a trusted
+   event.
 6. The task preserves the UI contract boundary: canonical UI contract shapes
    stay under `src/contracts/ui/**`, and no UI-local DTO/schema mirror is
    introduced.
 7. Mutation/action response validation is not implemented here and remains the
    completed responsibility of task `3a`.
 8. Focused tests cover valid and invalid selected response paths, including at
-   least one invalid response per selected read family and one invalid selected
-   SSE event family.
+   least one invalid response per selected read family, one invalid
+   connected/snapshot setup path, and one invalid replayable bubble/repo
+   event-log path.
 
 ### Verification Commands
 
@@ -529,8 +569,9 @@ not authorize implementation inside this document creation pass.
 
 1. The selected read/event validation scope starts with list, detail, timeline,
    connected, snapshot, bubble update/removal, and repo update/removal payloads.
-2. The implementation may choose whether malformed SSE event data closes the
-   stream or is dropped with diagnostics, but it must not be emitted as trusted
+2. Malformed connected/snapshot setup data must stop trusted setup emission, and
+   malformed replayable bubble/repo event-log data must be dropped before replay
+   storage and subscriber callbacks; neither path may emit malformed trusted
    event data.
 
 ### Open Questions
