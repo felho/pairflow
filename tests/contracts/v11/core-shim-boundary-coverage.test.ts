@@ -3,6 +3,8 @@ import { dirname, extname, relative, resolve } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
+import { CONTRACT_TEST_TIMEOUT } from "./contractTestTimeouts.js";
+
 const coreShimBoundaryCoverageMode: "warn" | "fail" = "fail";
 const maxWarningSampleSize = 20;
 
@@ -138,7 +140,10 @@ function expectOrWarn(input: {
 }
 
 describe("v11 residual core shim boundary coverage", () => {
-  it("keeps retired core shims and temporary foundation bridges out of src/v11 imports", async () => {
+  it(
+    "keeps retired core shims and temporary foundation bridges out of src/v11 imports",
+    { timeout: CONTRACT_TEST_TIMEOUT.parityStandardMs },
+    async () => {
     const repoRoot = process.cwd();
     const v11Root = resolve(repoRoot, "src/v11");
     const files = await listTypeScriptFiles(v11Root);
@@ -156,9 +161,13 @@ describe("v11 residual core shim boundary coverage", () => {
       label: "retired core shim imports detected under src/v11",
       violations
     });
-  });
+    }
+  );
 
-  it("locks src/v11 and src/cli direct core imports to the final explicit bridge inventory", async () => {
+  it(
+    "locks src/v11 and src/cli direct core imports to the final explicit bridge inventory",
+    { timeout: CONTRACT_TEST_TIMEOUT.parityStandardMs },
+    async () => {
     const repoRoot = process.cwd();
     const v11Files = await listTypeScriptFiles(resolve(repoRoot, "src/v11"));
     const cliFiles = await listTypeScriptFiles(resolve(repoRoot, "src/cli"));
@@ -174,7 +183,8 @@ describe("v11 residual core shim boundary coverage", () => {
       label: "unexpected direct src/v11/src/cli -> src/core imports detected",
       violations: unexpectedImports
     });
-  });
+    }
+  );
 
   it("keeps the public src/index.ts surface off core shim re-exports", async () => {
     const repoRoot = process.cwd();

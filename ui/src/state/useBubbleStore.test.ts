@@ -1051,6 +1051,178 @@ describe("createBubbleStore", () => {
     });
   });
 
+  it("uses measured viewport slots for initial missing-position bubbles", async () => {
+    const store = createBubbleStore({
+      api: createApiStub({
+        getRepos: vi.fn(async () => ["/repo-a"]),
+        getBubbles: vi.fn(async () => ({
+          repo: repoSummary("/repo-a"),
+          bubbles: [bubbleSummary({ bubbleId: "b-a", repoPath: "/repo-a" })]
+        }))
+      }),
+      createEventsClient: () => ({
+        start: () => undefined,
+        stop: () => undefined,
+        refresh: () => undefined
+      })
+    });
+
+    store.getState().setCanvasViewport({
+      x: 0,
+      y: 190,
+      width: 620,
+      height: 220
+    });
+    await store.getState().initialize();
+
+    expect(store.getState().positions["b-a"]).toEqual({ x: 22, y: 200 });
+    expect(store.getState().positionSources["b-a"]).toBe("viewport");
+  });
+
+  it("uses measured viewport slots for realtime missing-position insertion", async () => {
+    const bubbleA = bubbleSummary({ bubbleId: "b-a", repoPath: "/repo-a" });
+    const bubbleB = bubbleSummary({ bubbleId: "b-b", repoPath: "/repo-a" });
+    let emitEvent: (event: UiEvent) => void = () => undefined;
+    const store = createBubbleStore({
+      api: createApiStub({
+        getRepos: vi.fn(async () => ["/repo-a"]),
+        getBubbles: vi.fn(async () => ({
+          repo: repoSummary("/repo-a"),
+          bubbles: [bubbleA]
+        }))
+      }),
+      createEventsClient: (input) => {
+        emitEvent = input.onEvent;
+        return {
+          start: () => undefined,
+          stop: () => undefined,
+          refresh: () => undefined
+        };
+      }
+    });
+
+    store.getState().setCanvasViewport({
+      x: 0,
+      y: 190,
+      width: 620,
+      height: 220
+    });
+    await store.getState().initialize();
+
+    emitEvent({
+      id: 42,
+      ts: "2026-02-24T12:42:00.000Z",
+      type: "bubble.updated",
+      repoPath: "/repo-a",
+      bubbleId: "b-b",
+      bubble: bubbleB
+    });
+
+    expect(store.getState().positions["b-a"]).toEqual({ x: 22, y: 200 });
+    expect(store.getState().positions["b-b"]).toEqual({ x: 308, y: 200 });
+    expect(store.getState().positionSources["b-b"]).toBe("viewport");
+  });
+
+  it("keeps generated fallback replaceable and out of persisted storage", async () => {
+    const storage = new MemoryStorage();
+    const store = createBubbleStore({
+      api: createApiStub({
+        getRepos: vi.fn(async () => ["/repo-a"]),
+        getBubbles: vi.fn(async () => ({
+          repo: repoSummary("/repo-a"),
+          bubbles: [bubbleSummary({ bubbleId: "b-a", repoPath: "/repo-a" })]
+        }))
+      }),
+      storage,
+      createEventsClient: () => ({
+        start: () => undefined,
+        stop: () => undefined,
+        refresh: () => undefined
+      })
+    });
+
+    await store.getState().initialize();
+
+    expect(store.getState().positions["b-a"]).toEqual(defaultPosition(0));
+    expect(store.getState().positionSources["b-a"]).toBe("generated-fallback");
+    expect(JSON.parse(storage.getItem("pairflow.ui.canvas.positions.v1") ?? "{}")).toEqual({});
+
+    store.getState().setCanvasViewport({
+      x: 0,
+      y: 190,
+      width: 620,
+      height: 220
+    });
+
+    expect(store.getState().positions["b-a"]).toEqual({ x: 22, y: 200 });
+    expect(store.getState().positionSources["b-a"]).toBe("viewport");
+  });
+
+  it("preserves explicit stored and committed fallback positions over viewport replacement", async () => {
+    const stored = new MemoryStorage();
+    stored.setItem(
+      "pairflow.ui.canvas.positions.v1",
+      JSON.stringify({
+        "b-stored": { x: 900, y: 900 }
+      })
+    );
+    const storedStore = createBubbleStore({
+      api: createApiStub({
+        getRepos: vi.fn(async () => ["/repo-a"]),
+        getBubbles: vi.fn(async () => ({
+          repo: repoSummary("/repo-a"),
+          bubbles: [bubbleSummary({ bubbleId: "b-stored", repoPath: "/repo-a" })]
+        }))
+      }),
+      storage: stored,
+      createEventsClient: () => ({
+        start: () => undefined,
+        stop: () => undefined,
+        refresh: () => undefined
+      })
+    });
+
+    storedStore.getState().setCanvasViewport({
+      x: 0,
+      y: 190,
+      width: 620,
+      height: 220
+    });
+    await storedStore.getState().initialize();
+
+    expect(storedStore.getState().positions["b-stored"]).toEqual({ x: 900, y: 900 });
+    expect(storedStore.getState().positionSources["b-stored"]).toBe("explicit");
+
+    const committed = new MemoryStorage();
+    const committedStore = createBubbleStore({
+      api: createApiStub({
+        getRepos: vi.fn(async () => ["/repo-a"]),
+        getBubbles: vi.fn(async () => ({
+          repo: repoSummary("/repo-a"),
+          bubbles: [bubbleSummary({ bubbleId: "b-committed", repoPath: "/repo-a" })]
+        }))
+      }),
+      storage: committed,
+      createEventsClient: () => ({
+        start: () => undefined,
+        stop: () => undefined,
+        refresh: () => undefined
+      })
+    });
+
+    await committedStore.getState().initialize();
+    committedStore.getState().persistPositions("b-committed");
+    committedStore.getState().setCanvasViewport({
+      x: 0,
+      y: 190,
+      width: 620,
+      height: 220
+    });
+
+    expect(committedStore.getState().positions["b-committed"]).toEqual(defaultPosition(0));
+    expect(committedStore.getState().positionSources["b-committed"]).toBe("explicit");
+  });
+
   it("clears stale error immediately when toggling repo", async () => {
     const deferredRepoLoad = createDeferred<{
       repo: UiRepoSummary;

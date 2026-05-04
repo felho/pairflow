@@ -71,7 +71,10 @@ describe("v11 restart contract harness skeleton", () => {
     expect(restartSources).toEqual(restartExpectedSourcesSorted);
   });
 
-  it("builds corpus output manifest with restart seed entries", async () => {
+  it(
+    "builds corpus output manifest with restart seed entries",
+    { timeout: CONTRACT_TEST_TIMEOUT.parityStandardMs },
+    async () => {
     await execFileAsync("pnpm", [
       "exec",
       "tsx",
@@ -86,5 +89,6 @@ describe("v11 restart contract harness skeleton", () => {
     const restartSources = parseRestartSourcesFromManifest(outputRaw);
 
     expect(restartSources).toEqual(restartExpectedSourcesSorted);
-  });
+    }
+  );
 });
