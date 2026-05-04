@@ -9,10 +9,14 @@ status: approved
 phase: phase2b
 target_files:
   - ui/src/lib/types.ts
-  - ui/src/lib/contracts/**
+  - ui/src/lib/contracts/bubbleLifecycle.ts
+  - ui/src/lib/contracts/stateValidation.ts
+  - ui/src/lib/contracts/uiActions.ts
+  - ui/src/lib/contracts/uiErrors.ts
+  - ui/src/lib/contracts/uiEvents.ts
+  - ui/src/lib/contracts/uiReadModel.ts
+  - ui/src/lib/contracts/uiRemoteExecution.ts
   - tests/contracts/uiContractTransitSource.test.ts
-  - tests/contracts/uiContractEntrypointResolution.test.ts
-  - ui/src/lib/contracts/uiContractEntrypoint.test.ts
   - tests/tools/fitness/uiContractBoundary.test.ts
 prd_ref: null
 plan_ref: plans/ui-contract-boundary-hardening-plan-v1.md
@@ -23,6 +27,7 @@ normative_refs:
   - docs/architecture/v11-placement-and-extraction-governance.md
   - plans/ui-contract-boundary-hardening-plan-v1.md
   - plans/archive/plans/2026-05-02-ui-contract-boundary-plan-v1.md
+  - plans/archive/tasks/2026-05-04-ui-contract-boundary-hardening-plan-v1/1-ui-contract-guard-cleanup.md
   - plans/archive/tasks/2026-05-04-ui-contract-boundary-hardening-plan-v1/2a-contract-entrypoint.md
 owners:
   - "felho"
@@ -54,15 +59,20 @@ canonical contract source under `src/contracts/ui/**`.
    surface.
 2. Control model: `src/contracts/ui/index.ts` remains canonical authority;
    `@pairflow/ui-contracts` is the approved in-repo entrypoint; UI-local files
-   are consumers or compatibility barrels only.
+   are consumers or compatibility barrels only. A compatibility barrel may
+   re-export imported canonical symbols or define a direct alias of one imported
+   canonical symbol, but it must not derive a new shape with `Pick`, `Omit`,
+   intersections, unions, mapped types, conditional types, indexed access
+   derivations, local object literals, or interfaces.
 3. Read-path rule: browser package code must read shared UI contracts through
    `@pairflow/ui-contracts` during this task.
 4. Forbidden fallback: do not keep or add direct browser imports from
    `src/v11/**`, `src/types/**`, or relative `src/contracts/ui/**` paths as
    alternate contract truth.
-5. Allowed resolution path: update import specifiers to the already-proven
-   entrypoint and adjust transit/fitness assertions to check that the entrypoint
-   remains mapped to canonical `src/contracts/ui/index.ts`.
+5. Allowed resolution path: update import and re-export specifiers in the UI
+   consumer surface to the already-proven entrypoint and adjust transit/fitness
+   assertions to check that the entrypoint remains mapped to canonical
+   `src/contracts/ui/index.ts`.
 6. Missing-data rule: N/A; this task does not parse or validate runtime wire
    data.
 7. Phase boundary:
@@ -77,7 +87,9 @@ canonical contract source under `src/contracts/ui/**`.
 ### Plan Linkage
 
 1. Parent plan gap closed: fragile high-distance relative UI contract imports.
-2. Depends on: archived task `2a-contract-entrypoint`.
+2. Depends on: archived task `1-ui-contract-guard-cleanup` for the closed
+   protocol export baseline and archived task `2a-contract-entrypoint` for the
+   `@pairflow/ui-contracts` resolver baseline.
 3. Unlocks / impacts successors: tasks `3a` and `3b` can add validation on top
    of the stable entrypoint; task `4` can harden final import guardrails.
 4. Task-list impact: creates planned task `2b-ui-import-migration`; it does not
@@ -114,6 +126,7 @@ canonical contract source under `src/contracts/ui/**`.
    - `ui/src/lib/contracts/**`
    - root and UI entrypoint proof tests from task `2a`
    - transit and fitness tests that currently mention relative contract paths
+   - root contract parity tests that import canonical contract modules directly
 2. Actual touched scope: consumer-family alignment.
 3. Mutation entrypoints in scope: N/A.
 4. Hidden scope ruled out: backend router/action/read/event validation and DTO
@@ -152,13 +165,22 @@ canonical contract source under `src/contracts/ui/**`.
 4. Replacement proof required if removed: any removed relative-path assertion
    must be replaced with proof that the same symbol is consumed through
    `@pairflow/ui-contracts` and still originates from the canonical barrel.
+5. Negative-path proof required: transit or fitness assertions must fail when a
+   UI browser file keeps importing `../../../src/contracts/ui/**` directly or
+   replaces the import with a UI-local DTO mirror that does not consume
+   `@pairflow/ui-contracts`. Bind this proof to
+   `tests/contracts/uiContractTransitSource.test.ts` for source-origin/string
+   assertions and `tests/tools/fitness/uiContractBoundary.test.ts` for the
+   browser-import policy fixture.
 
 ### Success / Completion Proof Boundary
 
 1. Current canonical success proof source: relative imports compile and task
    `2a` proves the entrypoint mapping.
 2. Target canonical success proof source: migrated UI imports compile through
-   `@pairflow/ui-contracts` and entrypoint/transit tests prove canonical origin.
+   `@pairflow/ui-contracts`; entrypoint/transit tests prove canonical origin;
+   and the fitness proof rejects direct browser relative imports from
+   `src/contracts/ui/**`.
 3. Current canonical completion proof source: N/A.
 4. Target canonical completion proof source: N/A.
 5. Reused proof contract: task `2a` resolver proof and existing contract transit
@@ -177,8 +199,10 @@ canonical contract source under `src/contracts/ui/**`.
 3. Update tests that intentionally assert the UI contract transit source so they
    expect the new entrypoint while still proving canonical contract authority.
 4. Preserve task `2a` root and UI resolver proof tests.
-5. Leave backend/root non-browser test imports alone unless a narrow assertion
-   must change to keep proof parity.
+5. Update only the narrow fitness test expectations needed to express the new
+   browser import rule for the entrypoint.
+6. Leave backend/root non-browser contract tests that import canonical modules
+   directly alone unless a narrow assertion must change to keep proof parity.
 
 ### Out of Scope
 
@@ -189,6 +213,11 @@ canonical contract source under `src/contracts/ui/**`.
 5. UI component behavior or visual changes.
 6. Final guardrail tightening that would reject all transitional paths outside
    this import sweep; task `4` owns final drift hardening.
+7. Broad test migration from direct canonical contract imports to
+   `@pairflow/ui-contracts` outside the UI browser consumer proof surface. The
+   only allowed exception is a direct assertion update in a root proof test when
+   that assertion reads a UI browser file changed by this task and would
+   otherwise keep requiring the obsolete relative import string.
 
 ### Canonical Contract Matrix
 
@@ -209,6 +238,46 @@ Structured contract rules:
 3. UI-local barrels may continue to exist only as pass-through consumers.
 4. Tests must continue to prove that the entrypoint maps back to canonical
    `src/contracts/ui/index.ts`.
+5. A pass-through UI-local barrel may contain import/export statements and
+   direct aliases of imported canonical symbols. A direct alias means
+   `export type Local = ImportedCanonicalSymbol`; it does not include
+   `Pick`, `Omit`, intersections, unions, mapped types, conditional types,
+   indexed access derivations, or local interface/object literal declarations.
+   Any derived local type is a new shape and is forbidden in this task.
+6. For this task, the new fitness rule is limited to UI browser source:
+   `ui/src/**` must not import canonical UI contracts through relative
+   `src/contracts/ui/**` paths and must use `@pairflow/ui-contracts` instead.
+   This does not tighten backend/root test imports or every non-browser
+   transitional path; task `4` owns the later broad drift hardening.
+7. UI compatibility barrels must not import from each other during this
+   migration. Each barrel should import or re-export from
+   `@pairflow/ui-contracts` directly so the migration cannot introduce a
+   circular UI-local contract graph.
+
+### File Classification
+
+| File / Pattern | Classification | Required Treatment |
+|---|---|---|
+| `ui/src/lib/types.ts` | browser consumer surface | replace direct relative `src/contracts/ui/**` imports with `@pairflow/ui-contracts`; preserve exports |
+| `ui/src/lib/contracts/{bubbleLifecycle,stateValidation,uiActions,uiErrors,uiEvents,uiReadModel,uiRemoteExecution}.ts` | UI compatibility barrels | replace direct relative `src/contracts/ui/**` re-exports/imports with `@pairflow/ui-contracts`; do not redeclare shapes |
+| `tests/contracts/uiContractTransitSource.test.ts` | proof test | replace expectations for UI relative contract imports with expectations for `@pairflow/ui-contracts`; retain canonical source/export proof |
+| `tests/contracts/uiContractEntrypointResolution.test.ts` | reference-only root resolver proof | do not list as a direct target; run or preserve to prove the task-2a resolver contract still holds |
+| `ui/src/lib/contracts/uiContractEntrypoint.test.ts` | reference-only UI resolver proof | do not list as a direct target; run or preserve to prove the task-2a UI/Vite/Vitest resolver contract still holds |
+| `tests/tools/fitness/uiContractBoundary.test.ts` | policy unit proof | update only narrow fixtures/assertions that encode the browser import rule: relative UI imports from `src/contracts/ui/**` fail; `@pairflow/ui-contracts` remains the allowed browser path |
+| `tests/contracts/uiContractParity.types.ts` and other root contract parity tests | reference-only canonical contract proof | do not list as a direct target; leave direct canonical imports in place unless a specific assertion reads UI browser source and would otherwise require an obsolete relative import string |
+
+### UI Contract Barrel Disposition
+
+| File | Current Role | Required Disposition |
+|---|---|---|
+| `ui/src/lib/contracts/bubbleLifecycle.ts` | compatibility barrel for lifecycle contract values/types | re-export from `@pairflow/ui-contracts`; no UI-local aliases or derived shapes |
+| `ui/src/lib/contracts/stateValidation.ts` | compatibility barrel for validation diagnostic types | re-export from `@pairflow/ui-contracts`; no UI-local aliases or derived shapes |
+| `ui/src/lib/contracts/uiActions.ts` | compatibility barrel for action/result DTO types | re-export from `@pairflow/ui-contracts`; no UI-local aliases or derived shapes |
+| `ui/src/lib/contracts/uiErrors.ts` | compatibility barrel for UI error DTO types | re-export from `@pairflow/ui-contracts`; no UI-local aliases or derived shapes |
+| `ui/src/lib/contracts/uiEvents.ts` | compatibility barrel for event names and event DTO types | re-export from `@pairflow/ui-contracts`; no UI-local aliases or derived shapes |
+| `ui/src/lib/contracts/uiReadModel.ts` | compatibility barrel for read-model values/types | re-export from `@pairflow/ui-contracts`; no UI-local aliases or derived shapes |
+| `ui/src/lib/contracts/uiRemoteExecution.ts` | compatibility barrel for remote-execution DTO types | re-export from `@pairflow/ui-contracts`; no UI-local aliases or derived shapes |
+| `ui/src/lib/contracts/uiContractEntrypoint.test.ts` | UI resolver proof, not a compatibility barrel | preserve task-2a proof unless resolver behavior changes; keep out of barrel migration edits |
 
 ### Ownership and Deferred Semantics
 
@@ -228,7 +297,8 @@ When changing the consumer import rule, keep these surfaces aligned:
 2. L1 Canonical Contract Matrix and Structured Contract Rules.
 3. UI source import specifiers.
 4. Transit/source tests that check canonical authority.
-5. Validation matrix and acceptance criteria.
+5. Browser-source fitness rule and policy fixtures.
+6. Validation matrix and acceptance criteria.
 
 ### Branch / Failure Inventory
 
@@ -237,6 +307,9 @@ When changing the consumer import rule, keep these surfaces aligned:
 | Migrated imports resolve | UI barrels/types import from `@pairflow/ui-contracts` and compile | `pnpm typecheck`, `pnpm --dir ui test` |
 | Canonical source drifts | tests fail if `@pairflow/ui-contracts` no longer maps to `src/contracts/ui/index.ts` | entrypoint proof tests |
 | DTO shape accidentally changes | type/transit tests fail or diff shows non-import changes | contract tests and review of changed files |
+| Browser relative import remains | transit or fitness proof identifies remaining direct UI import from `src/contracts/ui/**` | `tests/contracts/uiContractTransitSource.test.ts`, `pnpm fitness:check:ci` |
+| TS and Vite/Vitest resolver mappings drift apart | root typecheck or UI test path fails even if one resolver still works | root and UI entrypoint proof tests, `pnpm typecheck`, `pnpm --dir ui test` |
+| UI barrel circular import introduced | compatibility barrels import each other instead of the canonical entrypoint | source review plus transit/source assertions for direct `@pairflow/ui-contracts` use |
 | Runtime validation is needed | leave unchanged and defer to tasks `3a`/`3b` | no router/API changes in diff |
 
 ### Implementation Decision
@@ -251,13 +324,25 @@ When changing the consumer import rule, keep these surfaces aligned:
 
 ### Validation Matrix
 
-Run the narrowest relevant checks after implementation:
+Run the required Pairflow PASS checks after implementation:
 
-1. `pnpm typecheck`
-2. `pnpm --dir ui test`
-3. `pnpm fitness:check:ci`
-4. `pnpm test` if root contract tests were changed beyond string assertions.
-5. `pnpm --dir ui build` if Vite/UI build-time import behavior is affected.
+1. VM1: `pnpm typecheck`
+2. VM2: `pnpm lint`
+3. VM3: `pnpm fitness:check:ci`
+
+Run these additional required narrow checks for this task's expected
+implementation surfaces:
+
+1. VM4: `pnpm --dir ui test` is required for the implementation pass because this
+   task changes UI compatibility barrels and UI type imports.
+2. VM5: `pnpm vitest run tests/contracts/uiContractTransitSource.test.ts tests/contracts/uiContractEntrypointResolution.test.ts tests/tools/fitness/uiContractBoundary.test.ts`
+   is required for the implementation pass because this task changes transit
+   and fitness proof assertions and must preserve root resolver proof.
+3. VM6: `pnpm test` only if root contract tests were changed beyond import-string or
+   fixture assertions.
+4. VM7: `pnpm --dir ui build` is not part of the normal proof for this import-only
+   task; run it only if the implementation changes Vite/build configuration or
+   reports a resolver mismatch that is visible only in the build path.
 
 If broader checks are skipped, the implementation summary must name the
 narrower proof and explain the skip.
@@ -269,10 +354,25 @@ narrower proof and explain the skip.
 2. The same exported UI-local types remain available to existing UI consumers.
 3. `@pairflow/ui-contracts` remains mapped to canonical
    `src/contracts/ui/index.ts`.
-4. Transit/entrypoint tests fail if the migration is replaced by a UI-local DTO
-   mirror.
+4. Negative-path proof is split and explicit:
+   `tests/contracts/uiContractTransitSource.test.ts` fails if a migrated UI
+   browser file keeps a relative `src/contracts/ui/**` import or replaces
+   canonical consumption with a UI-local DTO mirror, and
+   `tests/tools/fitness/uiContractBoundary.test.ts` fails for a browser-source
+   fixture that imports canonical UI contracts through a relative
+   `src/contracts/ui/**` path instead of `@pairflow/ui-contracts`.
 5. No DTO fields, literal unions, runtime validation behavior, or backend
    router/API behavior changes in this task.
+6. Root contract parity tests may continue importing canonical
+   `src/contracts/ui/**` modules directly; this is not a violation because they
+   are canonical proof tests, not browser package source.
+7. The implementation handoff includes evidence for Validation Matrix items
+   VM1-VM3, the required Pairflow PASS validation triad: `pnpm typecheck`,
+   `pnpm lint`, and `pnpm fitness:check:ci`.
+8. The implementation handoff also includes results for Validation Matrix items
+   VM4 and VM5, the required narrow UI/proof checks, or reports the exact
+   blocker that prevented them. VM6 and VM7 are conditional and must be named
+   only when their trigger condition is met or explicitly skipped with rationale.
 
 ### Downstream Inheritance
 
@@ -290,8 +390,19 @@ narrower proof and explain the skip.
 2. Prefer grouped imports from `@pairflow/ui-contracts` when this keeps the diff
    readable; do not split DTO ownership across UI-local definitions.
 3. Keep type-only imports as type-only imports where they are currently types.
-4. Update `tests/contracts/uiContractTransitSource.test.ts` assertions from
-   relative import strings to `@pairflow/ui-contracts` while preserving checks
-   that the canonical barrel exports the expected symbols.
-5. Do not edit backend router code or add validators in this task.
-6. Review the final diff for import-only behavior before running validation.
+4. Update `tests/contracts/uiContractTransitSource.test.ts` assertions that
+   currently look for `from "../../../src/contracts/ui/...` or
+   `from "../../../../src/contracts/ui/...` in UI browser files so they expect
+   `from "@pairflow/ui-contracts"` instead, while preserving checks that the
+   canonical barrel exports the expected symbols.
+5. Add or retain negative-path proof that a UI browser file with a direct
+   relative `src/contracts/ui/**` import is rejected, and that replacing an
+   import with a UI-local DTO mirror would not satisfy canonical-origin proof.
+   Implement this through `tests/contracts/uiContractTransitSource.test.ts` for
+   source assertions and `tests/tools/fitness/uiContractBoundary.test.ts` for
+   browser-import policy fixtures.
+6. Do not edit backend router code or add validators in this task.
+7. Review the final diff for import-only behavior before running validation.
+8. Do not update root contract parity imports simply to use the entrypoint;
+   those tests prove canonical contract compatibility and are not browser
+   consumer drift.
