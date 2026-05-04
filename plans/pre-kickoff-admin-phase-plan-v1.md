@@ -20,7 +20,7 @@ archive_group: 2026-05-04-pre-kickoff-admin-phase-plan-v1
 task_tracker:
   - task_id: 1-prep-admin-contract
     task_path: plans/tasks/1-prep-admin-contract.md
-    status: approved
+    status: implementable
   - task_id: 2-prep-admin-publish
     task_path: null
     status: not_created
