@@ -5,7 +5,7 @@ task_family_id: ui-import-migration
 sequence_key: "2b"
 task_id: 2b-ui-import-migration
 title: "UI Contract Import Migration"
-status: implementable
+status: in_progress
 phase: phase2b
 target_files:
   - ui/src/lib/types.ts
@@ -32,7 +32,7 @@ normative_refs:
 owners:
   - "felho"
 doc_bubble_id: 2b-ui-import-migration-doc
-impl_bubble_id: null
+impl_bubble_id: 2b-ui-import-migration-impl
 supersedes: []
 superseded_by: null
 archive_group: 2026-05-04-ui-contract-boundary-hardening-plan-v1

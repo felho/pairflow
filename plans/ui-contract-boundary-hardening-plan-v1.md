@@ -27,7 +27,7 @@ task_tracker:
     status: archived
   - task_id: 2b-ui-import-migration
     task_path: plans/tasks/2b-ui-import-migration.md
-    status: implementable
+    status: in_progress
   - task_id: 3a-action-response-validation
     task_path: null
     status: not_created
