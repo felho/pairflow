@@ -5,7 +5,7 @@ task_family_id: card-placement-policy
 sequence_key: "1"
 task_id: 1-card-placement-policy
 title: "Card Placement Policy"
-status: approved
+status: implementable
 phase: phase1
 target_files:
   - "ui/src/lib/canvasLayout.ts"
