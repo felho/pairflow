@@ -76,6 +76,45 @@ Route-surface rule:
    - `route_class` values returned by `ResolvePlanState` stay in snake_case
    - example: `route_class=troubleshoot_bubble` targets `TroubleshootBubble`
 
+### Optional Pre-Kickoff Admin Route Contract
+
+`ExecutePairflowPlan` owns route selection for any future workflow that uses an
+ideation-created bubble as a bounded pre-kickoff admin container. This is a
+route contract only; existing document and implementation bubble routes remain
+valid until a successor task explicitly adopts the pattern for one route at a
+time.
+
+Baseline dependency:
+
+1. `UsePairflow` remains the owner of the existing `create --ideation`,
+   start/round-0 hold, `ideation.task_pending=true`, and kickoff primitives.
+2. This skill may rely on those primitives, but it must not redefine ideation,
+   rename mode flags, or move lifecycle ownership into `ExecutePairflowPlan`.
+3. The optional route sequence is:
+   `create --ideation -> start/round-0 hold -> bounded admin in bubble worktree -> commit -> publish to main -> verify -> kickoff`.
+
+Admin scope:
+
+1. allowed admin edits are bounded to plan/task/progress metadata and directly
+   related docs or admin notes needed for the selected route
+2. product/source implementation, runtime behavior changes, new Pairflow
+   commands, and `UsePairflow` edits are forbidden during pre-kickoff admin
+3. every successor task that adopts or extends this route must leave the skill
+   operational after it lands; it must not make current routes depend on
+   unimplemented future workflows
+
+Publish proof:
+
+1. future integrated routes must prove the bounded admin commit was published
+   to `main` and then re-read refreshed metadata before kickoff
+2. an unmerged bubble-worktree commit, transcript prose, operator memory, or
+   stale pre-publish metadata is never proof that lifecycle-relevant admin state
+   reached `main`
+3. if proof of admin scope, commit identity, publish result, or refreshed
+   postcondition is absent or ambiguous, the workflow must stop before kickoff
+4. failed admin publish, partial publish, or unknown publish state must not be
+   converted into kickoff by fallback reasoning
+
 ## Delegation Enforcement Contract
 
 `ExecutePairflowPlan` is an orchestrator, not a substitute implementation of the
