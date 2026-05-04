@@ -5,7 +5,7 @@ task_family_id: action-response-validation
 sequence_key: "3a"
 task_id: 3a-action-response-validation
 title: "Action Response Validation"
-status: in_progress
+status: archived
 phase: phase3a
 target_files:
   - src/v11/infrastructure/ui/routerActionDispatch.ts
@@ -31,6 +31,8 @@ impl_bubble_id: 3a-action-response-validation-impl
 supersedes: []
 superseded_by: null
 archive_group: 2026-05-04-ui-contract-boundary-hardening-plan-v1
+archive_path: plans/archive/tasks/2026-05-04-ui-contract-boundary-hardening-plan-v1/3a-action-response-validation.md
+closed_at: "2026-05-04T17:10:17Z"
 ---
 
 # Task: Action Response Validation
