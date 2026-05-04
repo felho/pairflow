@@ -23,7 +23,7 @@ normative_refs:
   - docs/architecture/v11-placement-and-extraction-governance.md
 owners:
   - "felho"
-doc_bubble_id: null
+doc_bubble_id: 1-commit-local-helpers-doc
 impl_bubble_id: null
 supersedes: []
 superseded_by: null
@@ -283,3 +283,13 @@ CreatePairflowSpec `ReviewSpec` task-mode approval:
 3. Target-file reality check passed: the task is a bounded commit-local helper
    ownership move, and the retained remote contract remains explicitly deferred
    to task `3-remote-commit-rename`.
+
+ExecutePairflowPlan document-bubble create result:
+
+1. Bubble `1-commit-local-helpers-doc` was created and started from committed
+   base `85437e8723522645ec7c3b0a7749bbebd7a5140b`.
+2. Review artifact type: `document`.
+3. Required bootstrap command was supplied:
+   `pnpm install --frozen-lockfile && pnpm --dir ui install --frozen-lockfile && pnpm build`.
+4. Status after start: `RUNNING`, round `1`, active role `implementer`,
+   active agent `codex`.
