@@ -5,7 +5,7 @@ task_family_id: ui-contract-guard-cleanup
 sequence_key: "1"
 task_id: 1-ui-contract-guard-cleanup
 title: "UI Contract Guard Cleanup"
-status: in_progress
+status: archived
 phase: phase1
 target_files:
   - tools/fitness/policy.json
@@ -32,6 +32,7 @@ impl_bubble_id: 1-ui-contract-guard-cleanup-impl
 supersedes: []
 superseded_by: null
 archive_group: 2026-05-04-ui-contract-boundary-hardening-plan-v1
+archive_path: plans/archive/tasks/2026-05-04-ui-contract-boundary-hardening-plan-v1/1-ui-contract-guard-cleanup.md
 ---
 
 # Task: UI Contract Guard Cleanup

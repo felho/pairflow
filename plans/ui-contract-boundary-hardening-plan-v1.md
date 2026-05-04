@@ -5,7 +5,7 @@ plan_id: ui-contract-boundary-hardening-plan-v1
 created_on: "2026-05-04"
 title: "UI Contract Boundary Hardening Plan"
 status: approved
-plan_status: approved
+plan_status: in_progress
 prd_ref: null
 owners:
   - "felho"
@@ -16,15 +16,15 @@ task_order:
   - 3a-action-response-validation
   - 3b-read-event-validation
   - 4-contract-drift-tests
-active_task_id: 1-ui-contract-guard-cleanup
+active_task_id: 2a-contract-entrypoint
 archive_group: 2026-05-04-ui-contract-boundary-hardening-plan-v1
 task_tracker:
   - task_id: 1-ui-contract-guard-cleanup
-    task_path: plans/tasks/1-ui-contract-guard-cleanup.md
-    status: in_progress
+    task_path: plans/archive/tasks/2026-05-04-ui-contract-boundary-hardening-plan-v1/1-ui-contract-guard-cleanup.md
+    status: archived
   - task_id: 2a-contract-entrypoint
-    task_path: null
-    status: not_created
+    task_path: plans/tasks/2a-contract-entrypoint.md
+    status: approved
   - task_id: 2b-ui-import-migration
     task_path: null
     status: not_created
