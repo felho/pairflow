@@ -5,7 +5,7 @@ task_family_id: extract-path-selection
 sequence_key: "2"
 task_id: 2-extract-path-selection
 title: "Extract Path Selection"
-status: in_progress
+status: archived
 phase: phase2
 target_files:
   - src/v11/application/extract/extractCommandContract.ts
@@ -28,6 +28,8 @@ impl_bubble_id: 2-extract-path-selection-impl
 supersedes: []
 superseded_by: null
 archive_group: 2026-05-04-ideation-bubble-extract-plan-v1
+archive_path: plans/archive/tasks/2026-05-04-ideation-bubble-extract-plan-v1/2-extract-path-selection.md
+closed_at: "2026-05-04"
 ---
 
 # Task: Extract Path Selection
