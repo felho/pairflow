@@ -26,7 +26,6 @@ import {
 import {
   isAgentName,
   isAttachLauncher,
-  isBubbleExecutorType,
   isLocalOverlayMode,
   isPairflowCommandProfile,
   isQualityMode,
@@ -46,10 +45,8 @@ import {
   normalizeValidationTargetCwd,
   normalizeValidationTargetPathSelector
 } from "../v11/shared/validation/validationTargetPaths.js";
-import {
-  BUBBLE_EXECUTOR_INVALID,
-  SEVERITY_GATE_ROUND_INVALID
-} from "./bubbleConfig/errors.js";
+import { SEVERITY_GATE_ROUND_INVALID } from "./bubbleConfig/errors.js";
+import { validateBubbleExecutor } from "./bubbleConfig/executor.js";
 import { parseToml } from "./bubbleConfig/parser.js";
 import {
   describeUnknownValue,
@@ -544,62 +541,7 @@ export function validateBubbleConfig(input: unknown): ValidationResult<BubbleCon
 
   const validatedReviewPolicy = validateBubbleReviewPolicy(reviewPolicy, errors);
 
-  let validatedExecutor: BubbleConfig["executor"] | undefined;
-  if (executor !== undefined) {
-    const allowedKeys = new Set(["type", "remote"]);
-    for (const key of Object.keys(executor)) {
-      if (allowedKeys.has(key)) {
-        continue;
-      }
-
-      const duplicationKeys = new Set([
-        "host",
-        "user",
-        "repo_base",
-        "pairflow_command",
-        "default_port_forwards"
-      ]);
-      errors.push({
-        path: `executor.${key}`,
-        message: duplicationKeys.has(key)
-          ? `${BUBBLE_EXECUTOR_INVALID}: Inline remote host details are not allowed in [executor]; use [remotes.<name>] in the global config and keep only executor.remote in bubble.toml.`
-          : `${BUBBLE_EXECUTOR_INVALID}: Unknown executor field "${key}"`
-      });
-    }
-
-    const executorType = readString(
-      executor,
-      "type",
-      "executor.type",
-      errors,
-      true
-    );
-    const executorRemote = readString(
-      executor,
-      "remote",
-      "executor.remote",
-      errors,
-      true
-    );
-
-    if (executorType !== undefined && !isBubbleExecutorType(executorType)) {
-      errors.push({
-        path: "executor.type",
-        message: `${BUBBLE_EXECUTOR_INVALID}: Must be "ssh" when [executor] is present`
-      });
-    }
-
-    if (
-      executorType !== undefined
-      && executorRemote !== undefined
-      && isBubbleExecutorType(executorType)
-    ) {
-      validatedExecutor = {
-        type: executorType,
-        remote: executorRemote
-      };
-    }
-  }
+  const validatedExecutor = validateBubbleExecutor(executor, errors);
 
   if (errors.length > 0) {
     return validationFail(errors);
