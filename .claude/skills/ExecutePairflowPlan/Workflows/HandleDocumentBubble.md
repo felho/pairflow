@@ -272,6 +272,23 @@ Choose create when:
 1. the active task is approved
 2. `doc_bubble_id=null`
 
+Future pre-kickoff admin note:
+
+1. the current create route remains valid after this task and does not require
+   pre-kickoff admin publish
+2. a successor `ExecutePairflowPlan` route-integration task may choose to back
+   this document-bubble create route with the optional ideation round-0 admin
+   container pattern
+3. when that future route is adopted, kickoff must wait until bounded admin
+   scope, commit identity, publish-to-`main`, and refreshed metadata
+   postconditions are proven
+4. failed, partial, or ambiguous admin publish must stop before kickoff rather
+   than falling back to unmerged worktree state, transcript prose, or operator
+   memory
+5. admin scope remains limited to plan/task/progress metadata and directly
+   related docs/admin notes; product/source implementation and `UsePairflow`
+   edits remain forbidden
+
 Delegation:
 
 1. delegate create/start through `UsePairflow` `CreateBubble`
