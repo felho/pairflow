@@ -5,7 +5,7 @@ task_family_id: ui-readmodel-port-closure
 sequence_key: "4"
 task_id: 4-ui-readmodel-port-closure
 title: "UI Read-Model Port Closure"
-status: in_progress
+status: archived
 phase: phase4
 target_files:
   - src/contracts/ui/uiReadModel.ts

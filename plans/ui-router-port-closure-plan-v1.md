@@ -15,8 +15,8 @@ task_order:
   - 3-ui-action-dto-closure
   - 4-ui-readmodel-port-closure
   - 5-router-port-cleanup
-active_task_id: 4-ui-readmodel-port-closure
-last_completed_task_id: 3-ui-action-dto-closure
+active_task_id: 5-router-port-cleanup
+last_completed_task_id: 4-ui-readmodel-port-closure
 archive_group: 2026-05-03-ui-router-port-closure-plan-v1
 task_tracker:
   - task_id: 1-router-fitness-guards
@@ -32,9 +32,9 @@ task_tracker:
     status: archived
     notes: "Completed via implementation bubble 3-ui-action-dto-closure-impl; merged at d31df79 and archived."
   - task_id: 4-ui-readmodel-port-closure
-    task_path: plans/tasks/4-ui-readmodel-port-closure.md
-    status: in_progress
-    notes: "Implementation bubble 4-ui-readmodel-port-closure-impl started after document bubble merge 79109f64."
+    task_path: plans/archive/tasks/2026-05-03-ui-router-port-closure-plan-v1/4-ui-readmodel-port-closure.md
+    status: archived
+    notes: "Completed via implementation bubble 4-ui-readmodel-port-closure-impl; merged at f0eae134 and archived."
   - task_id: 5-router-port-cleanup
     task_path: null
     status: not_created
@@ -183,6 +183,11 @@ Progress update (2026-05-03): implementation bubble
 `3-ui-action-dto-closure-impl` closed and merged at `d31df79`; task
 `3-ui-action-dto-closure` is archived and the active task advanced to
 `4-ui-readmodel-port-closure`.
+
+Progress update (2026-05-04): implementation bubble
+`4-ui-readmodel-port-closure-impl` closed and merged at `f0eae134`; task
+`4-ui-readmodel-port-closure` is archived and the active task advanced to
+`5-router-port-cleanup`.
 
 ### Deferred / Future Work
 
