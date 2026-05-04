@@ -21,7 +21,7 @@ archive_group: 2026-05-04-ui-contract-boundary-hardening-plan-v1
 task_tracker:
   - task_id: 1-ui-contract-guard-cleanup
     task_path: plans/tasks/1-ui-contract-guard-cleanup.md
-    status: implementable
+    status: in_progress
   - task_id: 2a-contract-entrypoint
     task_path: null
     status: not_created
@@ -194,7 +194,7 @@ through the task sequence below after each task artifact is created and reviewed
 
 | Task ID | Task Path | Purpose | Depends On | Closes Gap | Status |
 |---|---|---|---|---|---|
-| `1-ui-contract-guard-cleanup` | `plans/tasks/1-ui-contract-guard-cleanup.md` | Remove stale `ui_contract_boundary` exception, move UI-visible `ProtocolMessageType` behind `src/contracts/ui/**`, and update the narrow affected imports/tests. | N/A | Stale policy exception and direct `src/types/protocol.js` UI import. | implementable |
+| `1-ui-contract-guard-cleanup` | `plans/tasks/1-ui-contract-guard-cleanup.md` | Remove stale `ui_contract_boundary` exception, move UI-visible `ProtocolMessageType` behind `src/contracts/ui/**`, and update the narrow affected imports/tests. | N/A | Stale policy exception and direct `src/types/protocol.js` UI import. | in_progress |
 | `2a-contract-entrypoint` | `null` | Choose and implement the smallest intentional in-repo UI contract entrypoint or alias, with enough TS/Vite proof that both root and UI tooling can resolve it. Workspace packaging remains deferred unless this task proves an alias cannot satisfy the boundary. | `1-ui-contract-guard-cleanup` | Unclear public entrypoint and config-level uncertainty. | not_created |
 | `2b-ui-import-migration` | `null` | Mechanically migrate UI contract imports away from scattered relative `../../../src/...` paths to the entrypoint from `2a`, without changing contract shapes. | `2a-contract-entrypoint` | Fragile high-distance relative imports. | not_created |
 | `3a-action-response-validation` | `null` | Add runtime validation for selected mutation/action result payloads, starting with delete, commit, and merge, plus same-dispatch siblings only if they share the exact validation adapter shape. | `2b-ui-import-migration` | Action result wire-shape drift can still silently pass through `unknown` dispatch paths. | not_created |

@@ -5,7 +5,7 @@ task_family_id: ui-contract-guard-cleanup
 sequence_key: "1"
 task_id: 1-ui-contract-guard-cleanup
 title: "UI Contract Guard Cleanup"
-status: implementable
+status: in_progress
 phase: phase1
 target_files:
   - tools/fitness/policy.json
@@ -28,7 +28,7 @@ normative_refs:
 owners:
   - "felho"
 doc_bubble_id: 1-ui-contract-guard-cleanup-doc
-impl_bubble_id: null
+impl_bubble_id: 1-ui-contract-guard-cleanup-impl
 supersedes: []
 superseded_by: null
 archive_group: 2026-05-04-ui-contract-boundary-hardening-plan-v1
@@ -361,9 +361,8 @@ All mirrored prose and test expectations must remain subordinate to these rows.
 1. `task_id`, `sequence_key`, filename, and parent tracker row all match
    `1-ui-contract-guard-cleanup`.
 2. `doc_bubble_id` records the linked document-refinement bubble
-   `1-ui-contract-guard-cleanup-doc`; `impl_bubble_id` remains `null` until
-   document refinement is approved, closed, and merged, and a later
-   implementation bubble is created.
+   `1-ui-contract-guard-cleanup-doc`; `impl_bubble_id` records the linked
+   implementation bubble `1-ui-contract-guard-cleanup-impl`.
 3. No product/source files outside the target surface were changed unless the
    implementation proves they are narrow affected imports/tests for task 1.
 4. No runtime validation, entrypoint alias, broad UI import migration, or final
@@ -376,11 +375,10 @@ All mirrored prose and test expectations must remain subordinate to these rows.
 
 1. Created as planned task `1-ui-contract-guard-cleanup` from
    `plans/ui-contract-boundary-hardening-plan-v1.md`.
-2. Status is `approved`; it is ready for document-refinement routing but is not
-   yet `implementable` until the linked document bubble is approved, closed, and
-   merged.
+2. Status is `in_progress`; document refinement has been approved, closed, and
+   merged, and the linked implementation bubble has been created.
 3. Current metadata uses
-   `doc_bubble_id: 1-ui-contract-guard-cleanup-doc`, `impl_bubble_id: null`,
+   `doc_bubble_id: 1-ui-contract-guard-cleanup-doc`,
+   `impl_bubble_id: 1-ui-contract-guard-cleanup-impl`,
    `supersedes: []`, `superseded_by: null`, and the parent plan
-   `archive_group`; `impl_bubble_id` remains `null` until document refinement is
-   approved, closed, and merged, and a later implementation bubble is created.
+   `archive_group`.
