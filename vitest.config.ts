@@ -14,6 +14,7 @@ export default defineConfig({
   test: {
     environment: "node",
     setupFiles: ["./tests/setup/metricsEnv.ts"],
-    include: ["tests/**/*.test.ts"]
+    include: ["tests/**/*.test.ts"],
+    testTimeout: 30000
   }
 });

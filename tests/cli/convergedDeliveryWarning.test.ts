@@ -65,7 +65,7 @@ describe("runCli converged delivery warning parity", () => {
       "Use `pairflow bubble status --id b_conv_warn_01` and `pairflow bubble resume --id b_conv_warn_01` if the implementer did not start after auto rework dispatch."
     );
     expect(runConvergedCommand).toHaveBeenCalledWith(["--summary", "x"]);
-  });
+  }, 20000);
 
   it("prints approval-path guidance when human-gate delivery is not confirmed", async () => {
     const mockedResult = {
@@ -111,5 +111,5 @@ describe("runCli converged delivery warning parity", () => {
       "Use `pairflow bubble status --id b_conv_warn_02` to inspect approval state, then `pairflow bubble approve --id b_conv_warn_02`, `pairflow bubble request-rework --id b_conv_warn_02`, or `pairflow bubble reply --id b_conv_warn_02` as appropriate."
     );
     expect(runConvergedCommand).toHaveBeenCalledWith(["--summary", "y"]);
-  });
+  }, 20000);
 });

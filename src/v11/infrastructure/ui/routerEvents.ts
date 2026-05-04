@@ -10,10 +10,19 @@ import { UiRepoScopeError, resolveScopedRepoPath } from "./repoScope.js";
 import {
   asArrayHeaderValue,
   badRequest,
+  internalError,
   notFound,
   sseContentType,
   throwApiError
 } from "./routerHttp.js";
+import {
+  UiEventPayloadValidationError,
+  logInvalidUiEventPayload,
+  logUiEventPayloadDropLimitReached,
+  validateUiEventsConnectedPayload,
+  validateReplayableUiEvent,
+  validateUiSnapshotEvent
+} from "./routerEventPayloadValidation.js";
 
 interface HandleUiEventsInput {
   req: IncomingMessage;
@@ -24,6 +33,8 @@ interface HandleUiEventsInput {
   keepAliveIntervalMs: number;
   events: UiEventsBroker;
 }
+
+const invalidSubscriberEventDropLimit = 10;
 
 async function resolveRequestedRepos(input: {
   repoScope: UiRepoScope;
@@ -70,6 +81,22 @@ function resolveLastEventId(req: IncomingMessage, url: URL): number | undefined 
     : undefined;
 }
 
+function throwInvalidUiEventPayload(error: UiEventPayloadValidationError): never {
+  throwApiError(
+    internalError("UI event payload failed contract validation.", {
+      reasonCode: error.reasonCode,
+      eventFamily: error.eventFamily
+    })
+  );
+}
+
+function logUiEventSubscriberCallbackFailure(error: unknown): void {
+  console.warn("UI_EVENT_SUBSCRIBER_CALLBACK_FAILED", {
+    reasonCode: "UI_EVENT_SUBSCRIBER_CALLBACK_FAILED",
+    error: error instanceof Error ? error.message : String(error)
+  });
+}
+
 export async function handleUiEvents(
   input: HandleUiEventsInput
 ): Promise<void> {
@@ -81,21 +108,33 @@ export async function handleUiEvents(
   const bubbleIdParam = input.url.searchParams.get("bubbleId") ?? undefined;
   const lastEventId = resolveLastEventId(input.req, input.url);
 
+  let connectedPayload: UiEventsConnectedPayload;
+  let initialSnapshot: UiEvent;
+  try {
+    const rawConnectedPayload: unknown = {
+      now: new Date().toISOString(),
+      repos
+    };
+    connectedPayload = validateUiEventsConnectedPayload(rawConnectedPayload);
+    initialSnapshot = validateUiSnapshotEvent(
+      input.events.getSnapshot({
+        repos,
+        ...(bubbleIdParam !== undefined ? { bubbleId: bubbleIdParam } : {})
+      })
+    );
+  } catch (error) {
+    if (error instanceof UiEventPayloadValidationError) {
+      throwInvalidUiEventPayload(error);
+    }
+    throw error;
+  }
+
   input.res.writeHead(200, {
     "content-type": sseContentType,
     "cache-control": "no-cache, no-transform",
     connection: "keep-alive"
   });
   input.res.write(": connected\n\n");
-
-  const connectedPayload: UiEventsConnectedPayload = {
-    now: new Date().toISOString(),
-    repos
-  };
-  const initialSnapshot = input.events.getSnapshot({
-    repos,
-    ...(bubbleIdParam !== undefined ? { bubbleId: bubbleIdParam } : {})
-  });
   input.res.write(
     `event: connected\ndata: ${JSON.stringify(connectedPayload)}\n\n`
   );
@@ -104,6 +143,7 @@ export async function handleUiEvents(
   );
 
   let cleanedUp = false;
+  let invalidSubscriberEventDropCount = 0;
   let unsubscribe = (): void => undefined;
   let keepAliveTimer: NodeJS.Timeout | null = null;
   const cleanup = (): void => {
@@ -130,16 +170,30 @@ export async function handleUiEvents(
       ...(bubbleIdParam !== undefined ? { bubbleId: bubbleIdParam } : {}),
       ...(lastEventId !== undefined ? { lastEventId } : {})
     },
-    (event: UiEvent) => {
+    (rawEvent: UiEvent) => {
       if (cleanedUp || !input.res.writable || input.res.writableEnded) {
         cleanup();
         return;
       }
       try {
+        const event = validateReplayableUiEvent(rawEvent);
         input.res.write(
           `id: ${event.id}\nevent: ${event.type}\ndata: ${JSON.stringify(event)}\n\n`
         );
-      } catch {
+      } catch (error) {
+        if (error instanceof UiEventPayloadValidationError) {
+          invalidSubscriberEventDropCount += 1;
+          logInvalidUiEventPayload(error);
+          if (invalidSubscriberEventDropCount >= invalidSubscriberEventDropLimit) {
+            logUiEventPayloadDropLimitReached({
+              source: "sse_subscriber",
+              invalidDropCount: invalidSubscriberEventDropCount
+            });
+            cleanup();
+          }
+          return;
+        }
+        logUiEventSubscriberCallbackFailure(error);
         cleanup();
       }
     }

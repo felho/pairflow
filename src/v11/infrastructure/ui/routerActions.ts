@@ -18,6 +18,11 @@ import {
   readJsonBody,
   throwApiError
 } from "./routerHttp.js";
+import {
+  validateUiBubbleDetailResponseBody,
+  validateUiBubbleListResponseBody,
+  validateUiBubbleTimelineResponseBody
+} from "./routerReadResponseValidation.js";
 
 interface RouterActionEnvironment {
   requestContext: UiRouterRequestContext;
@@ -117,29 +122,31 @@ export async function handleBubbleResourceRequest(input: {
         ? { cwd: input.environment.requestContext.cwd }
         : {})
     });
+    const body = validateUiBubbleTimelineResponseBody({
+      bubbleId: input.bubbleId,
+      repoPath,
+      timeline
+    });
     return {
       status: 200,
-      body: {
-        bubbleId: input.bubbleId,
-        repoPath,
-        timeline
-      }
+      body
     };
   }
+  const body = validateUiBubbleDetailResponseBody({
+    bubble: await loadBubbleDetail({
+      environment: {
+        requestContext: {
+          cwd: input.environment.requestContext.cwd
+        },
+        dependencies: input.environment.dependencies
+      },
+      repoPath,
+      bubbleId: input.bubbleId
+    })
+  });
   return {
     status: 200,
-    body: {
-      bubble: await loadBubbleDetail({
-        environment: {
-          requestContext: {
-            cwd: input.environment.requestContext.cwd
-          },
-          dependencies: input.environment.dependencies
-        },
-        repoPath,
-        bubbleId: input.bubbleId
-      })
-    }
+    body
   };
 }
 
@@ -157,11 +164,12 @@ export async function handleBubbleListRequest(input: {
       : {})
   });
   const presented = presentBubbleList(view);
+  const body = validateUiBubbleListResponseBody({
+    repo: presented.repo,
+    bubbles: presented.bubbles
+  });
   return {
     status: 200,
-    body: {
-      repo: presented.repo,
-      bubbles: presented.bubbles
-    }
+    body
   };
 }

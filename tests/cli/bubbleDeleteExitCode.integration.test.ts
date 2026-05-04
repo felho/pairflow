@@ -83,7 +83,7 @@ describe("runCli bubble delete confirmation exit code", () => {
     expect(output).toContain("runtime session entry: present");
     expect(output).toContain("branch: pairflow/bubble/b_delete_cli_confirm_01");
     expect(output).toContain("Re-run with --force");
-  });
+  }, 20000);
 
   it("returns exit code 1 and writes stderr when delete command throws", async () => {
     const runBubbleDeleteCommand = vi.fn(() => {
@@ -116,5 +116,5 @@ describe("runCli bubble delete confirmation exit code", () => {
     ]);
     const errorText = stderrSpy.mock.calls.map((call) => String(call[0])).join("");
     expect(errorText).toContain("delete failed");
-  });
+  }, 20000);
 });

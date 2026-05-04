@@ -1,3 +1,4 @@
+import { EventEmitter } from "node:events";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { createServer, type Server } from "node:http";
 import { tmpdir } from "node:os";
@@ -30,6 +31,7 @@ import {
   UiBubbleReviewPolicyStateConflictError
 } from "../../../src/v11/defaults/ui/updateBubbleReviewPolicyForUi.js";
 import { createUiRouter, resolveStaticAssetPath } from "../../../src/v11/infrastructure/ui/router.js";
+import { handleUiEvents } from "../../../src/v11/infrastructure/ui/routerEvents.js";
 import type { UiEventsBroker } from "../../../src/v11/infrastructure/ui/events.js";
 import type { UiRepoScope } from "../../../src/v11/infrastructure/ui/repoScope.js";
 import type { BubbleInboxView } from "../../../src/v11/shared/inbox/inboxCommandApi.js";
@@ -46,6 +48,21 @@ import type {
   UiDeleteBubbleResult,
   UiMergeBubbleResult
 } from "../../../src/v11/shared/ports/uiRouter.js";
+import {
+  validateUiBubbleDetailResponseBody,
+  validateUiBubbleListResponseBody,
+  validateUiBubbleTimelineResponseBody
+} from "../../../src/v11/infrastructure/ui/routerReadResponseValidation.js";
+import type {
+  UiBubbleDetail,
+  UiBubbleSummary,
+  UiRepoSummary,
+  UiTimelineEntry
+} from "../../../src/contracts/ui/uiReadModel.js";
+import type {
+  UiEvent,
+  UiSnapshotEvent
+} from "../../../src/contracts/ui/uiEvents.js";
 import type { BubbleStatusView } from "../../../src/v11/shared/status/statusCommandApi.js";
 
 function createDeferred<T>(): {
@@ -109,6 +126,31 @@ async function startRouterServer(router: ReturnType<typeof createUiRouter>): Pro
       });
     }
   };
+}
+
+async function readStreamUntil(
+  reader: ReadableStreamDefaultReader<Uint8Array>,
+  expected: string,
+  timeoutMs = 1_000
+): Promise<string> {
+  const decoder = new TextDecoder();
+  let body = "";
+  while (!body.includes(expected)) {
+    const result = await Promise.race([
+      reader.read(),
+      new Promise<"timeout">((resolve) => {
+        setTimeout(() => resolve("timeout"), timeoutMs);
+      })
+    ]);
+    if (result === "timeout") {
+      throw new Error(`Timed out waiting for stream chunk containing ${expected}.`);
+    }
+    if (result.done) {
+      throw new Error(`Stream ended before chunk containing ${expected}.`);
+    }
+    body += decoder.decode(result.value, { stream: true });
+  }
+  return body;
 }
 
 const tempDirs: string[] = [];
@@ -1212,6 +1254,1007 @@ describe("createUiRouter bubble list resource", () => {
       });
     } finally {
       await server.close();
+    }
+  });
+});
+
+describe("UI read response validation", () => {
+  const repo: UiRepoSummary = {
+    repoPath: "/tmp/pairflow-ui-read-validation",
+    total: 1,
+    byState: {
+      CREATED: 0,
+      PREPARING_WORKSPACE: 0,
+      RUNNING: 1,
+      WAITING_HUMAN: 0,
+      READY_FOR_HUMAN_APPROVAL: 0,
+      APPROVED_FOR_COMMIT: 0,
+      COMMITTED: 0,
+      DONE: 0,
+      FAILED: 0,
+      CANCELLED: 0
+    },
+    runtimeSessions: {
+      registered: 1,
+      stale: 0
+    }
+  };
+
+  const bubble: UiBubbleSummary = {
+    bubbleId: "b-router-read-validation",
+    repoPath: repo.repoPath,
+    worktreePath: "/tmp/worktree",
+    state: "RUNNING",
+    round: 1,
+    activeAgent: "codex",
+    activeRole: "implementer",
+    activeSince: "2026-02-25T00:00:00.000Z",
+    lastCommandAt: null,
+    stateValidation: null,
+    runtimeSession: null,
+    runtime: {
+      expected: true,
+      present: false,
+      stale: true
+    },
+    attention: null,
+    reviewPolicy: null,
+    metaReview: {
+      actor: "meta-reviewer",
+      authorityActive: false,
+      consecutiveCleanRuns: 0,
+      runtimeDelivery: null
+    }
+  };
+
+  function expectInvalidReadResponse(
+    action: () => unknown,
+    responseFamily: string
+  ): void {
+    try {
+      action();
+      throw new Error("Expected UI read response validation to fail.");
+    } catch (error) {
+      expect(error).toMatchObject({
+        apiError: {
+          status: 500,
+          body: {
+            error: {
+              code: "internal_error",
+              details: {
+                reasonCode: "UI_READ_RESPONSE_INVALID",
+                responseFamily
+              }
+            }
+          }
+        }
+      });
+    }
+  }
+
+  it("preserves valid list responses and rejects malformed list envelopes", () => {
+    expect(
+      validateUiBubbleListResponseBody({
+        repo,
+        bubbles: [bubble]
+      })
+    ).toStrictEqual({
+      repo,
+      bubbles: [bubble]
+    });
+
+    expectInvalidReadResponse(
+      () =>
+        validateUiBubbleListResponseBody({
+          repo: {
+            ...repo,
+            repoPath: 42
+          },
+          bubbles: [bubble]
+        }),
+      "bubble_list"
+    );
+
+    expectInvalidReadResponse(
+      () =>
+        validateUiBubbleListResponseBody({
+          repo: {
+            ...repo,
+            byState: {
+              ...repo.byState,
+              EXTRA_STATE: 1
+            }
+          },
+          bubbles: [bubble]
+        }),
+      "bubble_list"
+    );
+
+    expectInvalidReadResponse(
+      () =>
+        validateUiBubbleListResponseBody({
+          repo: {
+            ...repo,
+            remoteExecutionSummary: {
+              createdNotStarted: 0,
+              unavailableStarted: 0,
+              unexpected: true
+            }
+          },
+          bubbles: [bubble]
+        }),
+      "bubble_list"
+    );
+  });
+
+  it("preserves valid detail responses and rejects malformed detail envelopes", () => {
+    const detail: UiBubbleDetail = {
+      ...bubble,
+      bubbleToml: null,
+      watchdog: {
+        monitored: false,
+        monitoredAgent: null,
+        timeoutMinutes: 30,
+        referenceTimestamp: null,
+        deadlineTimestamp: null,
+        remainingSeconds: null,
+        expired: false
+      },
+      pendingInboxItems: {
+        humanQuestions: 0,
+        approvalRequests: 0,
+        total: 0
+      },
+      inbox: {
+        pending: {
+          humanQuestions: 0,
+          approvalRequests: 0,
+          total: 0
+        },
+        items: []
+      },
+      transcript: {
+        totalMessages: 0,
+        lastMessageType: null,
+        lastMessageTs: null,
+        lastMessageId: null
+      }
+    };
+
+    expect(
+      validateUiBubbleDetailResponseBody({
+        bubble: detail
+      })
+    ).toStrictEqual({
+      bubble: detail
+    });
+
+    expectInvalidReadResponse(
+      () =>
+        validateUiBubbleDetailResponseBody({
+          bubble: {
+            ...detail,
+            state: "DRIFTED"
+          }
+        }),
+      "bubble_detail"
+    );
+
+    expectInvalidReadResponse(
+      () =>
+        validateUiBubbleDetailResponseBody({
+          bubble: {
+            ...detail,
+            unexpected: true
+          }
+        }),
+      "bubble_detail"
+    );
+
+    expectInvalidReadResponse(
+      () =>
+        validateUiBubbleDetailResponseBody({
+          bubble: {
+            ...detail,
+            watchdog: {
+              ...detail.watchdog,
+              expired: "false"
+            }
+          }
+        }),
+      "bubble_detail"
+    );
+
+    expectInvalidReadResponse(
+      () =>
+        validateUiBubbleDetailResponseBody({
+          bubble: {
+            ...detail,
+            metaReview: {
+              ...detail.metaReview,
+              runtimeDelivery: {
+                status: "confirmed"
+              }
+            }
+          }
+        }),
+      "bubble_detail"
+    );
+
+    expectInvalidReadResponse(
+      () =>
+        validateUiBubbleDetailResponseBody({
+          bubble: {
+            ...detail,
+            reviewPolicy: {
+              requested_loop_mode: "full",
+              effective_loop_mode: "full",
+              support_status: "enabled",
+              reviewer_blocking_min_severity: "P3",
+              meta_review_auto_rework_min_severity: "P3",
+              meta_review_consecutive_clean_runs_required: 2,
+              unexpected: true
+            }
+          }
+        }),
+      "bubble_detail"
+    );
+
+    expectInvalidReadResponse(
+      () =>
+        validateUiBubbleDetailResponseBody({
+          bubble: {
+            ...detail,
+            runtimeSession: {
+              bubbleId: detail.bubbleId,
+              repoPath: detail.repoPath,
+              worktreePath: detail.worktreePath,
+              tmuxSessionName: "pf-detail",
+              updatedAt: "2026-02-25T00:00:00.000Z",
+              workspaceKind: "invalid"
+            }
+          }
+        }),
+      "bubble_detail"
+    );
+
+    expectInvalidReadResponse(
+      () =>
+        validateUiBubbleDetailResponseBody({
+          bubble: {
+            ...detail,
+            inbox: {
+              ...detail.inbox,
+              items: [
+                {
+                  envelopeId: "msg-invalid-inbox-item",
+                  type: "APPROVAL_REQUEST",
+                  ts: "2026-02-25T00:00:00.000Z",
+                  round: 1,
+                  sender: "orchestrator",
+                  summary: "Approval required.",
+                  refs: "not-array"
+                }
+              ]
+            }
+          }
+        }),
+      "bubble_detail"
+    );
+
+    expectInvalidReadResponse(
+      () =>
+        validateUiBubbleDetailResponseBody({
+          bubble: {
+            ...detail,
+            inbox: {
+              ...detail.inbox,
+              items: [
+                {
+                  envelopeId: "msg-invalid-gate-route",
+                  type: "APPROVAL_REQUEST",
+                  ts: "2026-02-25T00:00:00.000Z",
+                  round: 1,
+                  sender: "orchestrator",
+                  summary: "Approval required.",
+                  refs: [],
+                  gateRoute: "not_a_gate_route"
+                }
+              ]
+            }
+          }
+        }),
+      "bubble_detail"
+    );
+  });
+
+  it("preserves valid timeline responses and rejects malformed entries", () => {
+    const entry: UiTimelineEntry = {
+      id: "env-router-read-validation",
+      ts: "2026-02-25T00:00:00.000Z",
+      round: 1,
+      type: "PASS",
+      sender: "codex",
+      recipient: "human",
+      payload: {
+        summary: "Validated."
+      },
+      refs: []
+    };
+
+    expect(
+      validateUiBubbleTimelineResponseBody({
+        bubbleId: bubble.bubbleId,
+        repoPath: repo.repoPath,
+        timeline: [entry]
+      })
+    ).toStrictEqual({
+      bubbleId: bubble.bubbleId,
+      repoPath: repo.repoPath,
+      timeline: [entry]
+    });
+
+    expectInvalidReadResponse(
+      () =>
+        validateUiBubbleTimelineResponseBody({
+          bubbleId: bubble.bubbleId,
+          repoPath: repo.repoPath,
+          timeline: [
+            {
+              ...entry,
+              refs: "not-array"
+            }
+          ]
+        }),
+      "bubble_timeline"
+    );
+  });
+});
+
+describe("createUiRouter read response validation failures", () => {
+  it("returns internal_error when the list route dependency returns malformed read data", async () => {
+    const repoPath = "/tmp/pairflow-ui-router-invalid-read";
+    const router = createUiRouter({
+      repoScope: {
+        repos: [repoPath],
+        has: (value: string) => Promise.resolve(value === repoPath)
+      },
+      events: {
+        subscribe: () => () => undefined,
+        getSnapshot: () => ({
+          id: 1,
+          ts: "2026-02-25T00:00:00.000Z",
+          type: "snapshot",
+          repos: [],
+          bubbles: []
+        }),
+        refreshNow: () => Promise.resolve(undefined),
+        addRepo: () => Promise.resolve(false),
+        removeRepo: () => Promise.resolve(false),
+        close: () => Promise.resolve(undefined)
+      },
+      dependencies: {
+        listBubbles: vi.fn(
+          async () =>
+            ({
+              repoPath,
+              total: 1,
+              byState: {
+                RUNNING: 1
+              },
+              runtimeSessions: {
+                registered: 0,
+                stale: 0
+              },
+              bubbles: []
+            }) as unknown as UiBubbleListView
+        )
+      }
+    });
+    const server = await startRouterServer(router);
+
+    try {
+      const response = await fetch(
+        `${server.url}/api/bubbles?repo=${encodeURIComponent(repoPath)}`
+      );
+      const payload = (await response.json()) as {
+        error: {
+          code: string;
+          details?: Record<string, unknown>;
+        };
+      };
+
+      expect(response.status).toBe(500);
+      expect(payload.error.code).toBe("internal_error");
+      expect(payload.error.details).toMatchObject({
+        reasonCode: "UI_READ_RESPONSE_INVALID",
+        responseFamily: "bubble_list"
+      });
+    } finally {
+      await server.close();
+    }
+  });
+
+  it("returns internal_error when the detail route dependency returns malformed read data", async () => {
+    const repoPath = "/tmp/pairflow-ui-router-invalid-detail";
+    const bubbleId = "b-router-invalid-detail";
+    const status = {
+      bubbleId,
+      repoPath,
+      worktreePath: "/tmp/worktree",
+      bubbleStartedAt: "2026-02-25T00:00:00.000Z",
+      state: "RUNNING",
+      round: 1,
+      activeAgent: "codex",
+      activeRole: "implementer",
+      activeSince: "2026-02-25T00:00:00.000Z",
+      lastCommandAt: null,
+      paneActivity: {
+        readStatus: "missing",
+        lastChangedAt: null,
+        sampledAt: null,
+        sinceLastChangedSeconds: null,
+        sinceSampledSeconds: null,
+        lastSampleStatus: null,
+        lastSampleError: null,
+        sessionName: null,
+        targetPane: null
+      },
+      executionContext: null,
+      watchdog: {
+        monitored: false,
+        monitoredAgent: null,
+        timeoutMinutes: 30,
+        referenceTimestamp: null,
+        deadlineTimestamp: null,
+        remainingSeconds: null,
+        expired: false
+      },
+      pendingInboxItems: {
+        humanQuestions: 0,
+        approvalRequests: 0,
+        total: "0"
+      },
+      transcript: {
+        totalMessages: 0,
+        lastMessageType: null,
+        lastMessageTs: null,
+        lastMessageId: null
+      },
+      metaReview: {
+        actor: "meta-reviewer",
+        authorityActive: false,
+        consecutiveCleanRuns: 0,
+        runtimeDelivery: null
+      },
+      commandPath: {
+        status: "external",
+        profile: "external",
+        localEntrypoint: "/tmp/pairflow/dist/cli/index.js",
+        activeEntrypoint: "/tmp/pairflow/dist/cli/index.js",
+        message: "external",
+        pinnedCommand: "pairflow"
+      },
+      accuracy_critical: false,
+      last_review_verification: "missing",
+      failing_gates: [],
+      spec_lock_state: {
+        state: "IMPLEMENTABLE",
+        open_blocker_count: 0,
+        open_required_now_count: 0
+      },
+      round_gate_state: {
+        applies: false,
+        violated: false,
+        round: 1
+      },
+      stateValidation: null
+    } as unknown as BubbleStatusView;
+    const router = createUiRouter({
+      repoScope: {
+        repos: [repoPath],
+        has: (value: string) => Promise.resolve(value === repoPath)
+      },
+      events: {
+        subscribe: () => () => undefined,
+        getSnapshot: () => ({
+          id: 1,
+          ts: "2026-02-25T00:00:00.000Z",
+          type: "snapshot",
+          repos: [],
+          bubbles: []
+        }),
+        refreshNow: () => Promise.resolve(undefined),
+        addRepo: () => Promise.resolve(false),
+        removeRepo: () => Promise.resolve(false),
+        close: () => Promise.resolve(undefined)
+      },
+      dependencies: {
+        getBubbleStatus: vi.fn(async () => status),
+        getBubbleInbox: vi.fn(async () => ({
+          bubbleId,
+          repoPath,
+          state: "RUNNING" as const,
+          pending: {
+            humanQuestions: 0,
+            approvalRequests: 0,
+            total: 0
+          },
+          items: []
+        })),
+        readRuntimeSessionsRegistry: vi.fn(async () => ({}))
+      }
+    });
+    const server = await startRouterServer(router);
+
+    try {
+      const response = await fetch(
+        `${server.url}/api/bubbles/${bubbleId}?repo=${encodeURIComponent(repoPath)}`
+      );
+      const payload = (await response.json()) as {
+        error: {
+          code: string;
+          details?: Record<string, unknown>;
+        };
+      };
+
+      expect(response.status).toBe(500);
+      expect(payload.error.code).toBe("internal_error");
+      expect(payload.error.details).toMatchObject({
+        reasonCode: "UI_READ_RESPONSE_INVALID",
+        responseFamily: "bubble_detail"
+      });
+    } finally {
+      await server.close();
+    }
+  });
+
+  it("returns internal_error when the timeline route dependency returns malformed read data", async () => {
+    const repoPath = "/tmp/pairflow-ui-router-invalid-timeline";
+    const bubbleId = "b-router-invalid-timeline";
+    const router = createUiRouter({
+      repoScope: {
+        repos: [repoPath],
+        has: (value: string) => Promise.resolve(value === repoPath)
+      },
+      events: {
+        subscribe: () => () => undefined,
+        getSnapshot: () => ({
+          id: 1,
+          ts: "2026-02-25T00:00:00.000Z",
+          type: "snapshot",
+          repos: [],
+          bubbles: []
+        }),
+        refreshNow: () => Promise.resolve(undefined),
+        addRepo: () => Promise.resolve(false),
+        removeRepo: () => Promise.resolve(false),
+        close: () => Promise.resolve(undefined)
+      },
+      dependencies: {
+        readBubbleTimeline: vi.fn(
+          async () =>
+            ([
+              {
+                id: "env-invalid-timeline",
+                ts: "2026-02-25T00:00:00.000Z",
+                round: 1,
+                type: "PASS",
+                sender: "codex",
+                recipient: "claude",
+                payload: {
+                  summary: "Invalid."
+                },
+                refs: "not-array"
+              }
+            ]) as unknown as UiTimelineEntry[]
+        )
+      }
+    });
+    const server = await startRouterServer(router);
+
+    try {
+      const response = await fetch(
+        `${server.url}/api/bubbles/${bubbleId}/timeline?repo=${encodeURIComponent(repoPath)}`
+      );
+      const payload = (await response.json()) as {
+        error: {
+          code: string;
+          details?: Record<string, unknown>;
+        };
+      };
+
+      expect(response.status).toBe(500);
+      expect(payload.error.code).toBe("internal_error");
+      expect(payload.error.details).toMatchObject({
+        reasonCode: "UI_READ_RESPONSE_INVALID",
+        responseFamily: "bubble_timeline"
+      });
+    } finally {
+      await server.close();
+    }
+  });
+});
+
+describe("createUiRouter event payload validation failures", () => {
+  const repoPath = "/tmp/pairflow-ui-router-event-validation";
+  const repo: UiRepoSummary = {
+    repoPath,
+    total: 1,
+    byState: {
+      CREATED: 0,
+      PREPARING_WORKSPACE: 0,
+      RUNNING: 1,
+      WAITING_HUMAN: 0,
+      READY_FOR_HUMAN_APPROVAL: 0,
+      APPROVED_FOR_COMMIT: 0,
+      COMMITTED: 0,
+      DONE: 0,
+      FAILED: 0,
+      CANCELLED: 0
+    },
+    runtimeSessions: {
+      registered: 0,
+      stale: 0
+    }
+  };
+  const bubble: UiBubbleSummary = {
+    bubbleId: "b-router-event-validation",
+    repoPath,
+    worktreePath: "/tmp/worktree",
+    state: "RUNNING",
+    round: 1,
+    activeAgent: "codex",
+    activeRole: "implementer",
+    activeSince: "2026-02-25T00:00:00.000Z",
+    lastCommandAt: null,
+    stateValidation: null,
+    runtimeSession: null,
+    runtime: {
+      expected: true,
+      present: true,
+      stale: false
+    },
+    attention: null,
+    reviewPolicy: null,
+    metaReview: {
+      actor: "meta-reviewer",
+      authorityActive: false,
+      consecutiveCleanRuns: 0,
+      runtimeDelivery: null
+    }
+  };
+
+  it("returns internal_error when SSE connected payload validation fails", async () => {
+    const router = createUiRouter({
+      repoScope: {
+        repos: [repoPath, 42] as unknown as string[],
+        has: (value: string) => Promise.resolve(value === repoPath)
+      },
+      events: {
+        subscribe: () => () => undefined,
+        getSnapshot: () => ({
+          id: 1,
+          ts: "2026-02-25T00:00:00.000Z",
+          type: "snapshot",
+          repos: [repo],
+          bubbles: [bubble]
+        }),
+        refreshNow: () => Promise.resolve(undefined),
+        addRepo: () => Promise.resolve(false),
+        removeRepo: () => Promise.resolve(false),
+        close: () => Promise.resolve(undefined)
+      }
+    });
+    const server = await startRouterServer(router);
+
+    try {
+      const response = await fetch(`${server.url}/api/events`);
+      const payload = (await response.json()) as {
+        error: {
+          code: string;
+          details?: Record<string, unknown>;
+        };
+      };
+
+      expect(response.status).toBe(500);
+      expect(payload.error.code).toBe("internal_error");
+      expect(payload.error.details).toMatchObject({
+        reasonCode: "UI_EVENT_PAYLOAD_INVALID",
+        eventFamily: "connected"
+      });
+    } finally {
+      await server.close();
+    }
+  });
+
+  it("returns internal_error when SSE connect snapshot payload validation fails", async () => {
+    const subscribe = vi.fn(() => () => undefined);
+    const router = createUiRouter({
+      repoScope: {
+        repos: [repoPath],
+        has: (value: string) => Promise.resolve(value === repoPath)
+      },
+      events: {
+        subscribe,
+        getSnapshot: () =>
+          ({
+            id: 1,
+            ts: "2026-02-25T00:00:00.000Z",
+            type: "snapshot",
+            repos: [repo],
+            bubbles: [
+              {
+                ...bubble,
+                state: "DRIFTED"
+              }
+            ]
+          }) as unknown as UiSnapshotEvent,
+        refreshNow: () => Promise.resolve(undefined),
+        addRepo: () => Promise.resolve(false),
+        removeRepo: () => Promise.resolve(false),
+        close: () => Promise.resolve(undefined)
+      }
+    });
+    const server = await startRouterServer(router);
+
+    try {
+      const response = await fetch(
+        `${server.url}/api/events?repo=${encodeURIComponent(repoPath)}`
+      );
+      const payload = (await response.json()) as {
+        error: {
+          code: string;
+          details?: Record<string, unknown>;
+        };
+      };
+
+      expect(response.status).toBe(500);
+      expect(payload.error.code).toBe("internal_error");
+      expect(payload.error.details).toMatchObject({
+        reasonCode: "UI_EVENT_PAYLOAD_INVALID",
+        eventFamily: "snapshot"
+      });
+      expect(subscribe).not.toHaveBeenCalled();
+    } finally {
+      await server.close();
+    }
+  });
+
+  it("drops malformed subscriber events without writing trusted SSE data", async () => {
+    const subscribers: Array<(event: UiEvent) => void> = [];
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const router = createUiRouter({
+      repoScope: {
+        repos: [repoPath],
+        has: (value: string) => Promise.resolve(value === repoPath)
+      },
+      events: {
+        subscribe: (_input, callback) => {
+          subscribers.push(callback);
+          return () => {
+            subscribers.splice(subscribers.indexOf(callback), 1);
+          };
+        },
+        getSnapshot: () => ({
+          id: 1,
+          ts: "2026-02-25T00:00:00.000Z",
+          type: "snapshot",
+          repos: [repo],
+          bubbles: [bubble]
+        }),
+        refreshNow: () => Promise.resolve(undefined),
+        addRepo: () => Promise.resolve(false),
+        removeRepo: () => Promise.resolve(false),
+        close: () => Promise.resolve(undefined)
+      },
+      keepAliveIntervalMs: 25
+    });
+    const server = await startRouterServer(router);
+
+    try {
+      const response = await fetch(
+        `${server.url}/api/events?repo=${encodeURIComponent(repoPath)}`
+      );
+      expect(response.status).toBe(200);
+      expect(response.body).not.toBeNull();
+      const reader = response.body!.getReader();
+      try {
+        await readStreamUntil(reader, "event: snapshot");
+        const subscriber = subscribers[0];
+        if (subscriber === undefined) {
+          throw new Error("Expected SSE subscriber callback to be registered.");
+        }
+        subscriber({
+          id: 2,
+          ts: "2026-02-25T00:00:01.000Z",
+          type: "bubble.updated",
+          repoPath,
+          bubbleId: bubble.bubbleId,
+          bubble: {
+            ...bubble,
+            state: "DRIFTED"
+          }
+        } as unknown as UiEvent);
+
+        const heartbeat = await readStreamUntil(reader, "event: heartbeat");
+        expect(heartbeat).not.toContain("event: bubble.updated");
+        expect(warn).toHaveBeenCalledWith(
+          "UI_EVENT_PAYLOAD_INVALID",
+          expect.objectContaining({
+            reasonCode: "UI_EVENT_PAYLOAD_INVALID",
+            eventFamily: "bubble.updated"
+          })
+        );
+      } finally {
+        await reader.cancel();
+      }
+    } finally {
+      warn.mockRestore();
+      await server.close();
+    }
+  });
+
+  it("logs non-validation subscriber callback failures before stream cleanup", async () => {
+    const subscribers: Array<(event: UiEvent) => void> = [];
+    let unsubscribed = false;
+    let ended = false;
+    let writeCalls = 0;
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const req = Object.assign(new EventEmitter(), { headers: {} });
+    const res = Object.assign(new EventEmitter(), {
+      writable: true,
+      writableEnded: false,
+      writeHead: vi.fn(),
+      write: vi.fn(() => {
+        writeCalls += 1;
+        if (writeCalls > 3) {
+          throw new Error("simulated subscriber write failure");
+        }
+        return true;
+      }),
+      end: vi.fn(() => {
+        ended = true;
+        res.writableEnded = true;
+      })
+    });
+
+    try {
+      await handleUiEvents({
+        req: req as never,
+        res: res as never,
+        url: new URL(
+          `/api/events?repo=${encodeURIComponent(repoPath)}`,
+          "http://127.0.0.1"
+        ),
+        repoScope: {
+          repos: [repoPath],
+          has: (value: string) => Promise.resolve(value === repoPath)
+        },
+        routerCwd: process.cwd(),
+        keepAliveIntervalMs: 1_000,
+        events: {
+          subscribe: (_input, callback) => {
+            subscribers.push(callback);
+            return () => {
+              unsubscribed = true;
+            };
+          },
+          getSnapshot: () => ({
+            id: 1,
+            ts: "2026-02-25T00:00:00.000Z",
+            type: "snapshot",
+            repos: [repo],
+            bubbles: [bubble]
+          }),
+          refreshNow: () => Promise.resolve(undefined),
+          addRepo: () => Promise.resolve(false),
+          removeRepo: () => Promise.resolve(false),
+          close: () => Promise.resolve(undefined)
+        }
+      });
+      const subscriber = subscribers[0];
+      if (subscriber === undefined) {
+        throw new Error("Expected SSE subscriber callback to be registered.");
+      }
+      subscriber({
+        id: 2,
+        ts: "2026-02-25T00:00:01.000Z",
+        type: "repo.removed",
+        repoPath
+      });
+
+      expect(warn).toHaveBeenCalledWith(
+        "UI_EVENT_SUBSCRIBER_CALLBACK_FAILED",
+        expect.objectContaining({
+          reasonCode: "UI_EVENT_SUBSCRIBER_CALLBACK_FAILED",
+          error: "simulated subscriber write failure"
+        })
+      );
+      expect(unsubscribed).toBe(true);
+      expect(ended).toBe(true);
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
+  it("closes the stream after repeated malformed subscriber events reach the drop limit", async () => {
+    const subscribers: Array<(event: UiEvent) => void> = [];
+    let unsubscribed = false;
+    let ended = false;
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const req = Object.assign(new EventEmitter(), { headers: {} });
+    const res = Object.assign(new EventEmitter(), {
+      writable: true,
+      writableEnded: false,
+      writeHead: vi.fn(),
+      write: vi.fn(() => true),
+      end: vi.fn(() => {
+        ended = true;
+        res.writableEnded = true;
+      })
+    });
+
+    try {
+      await handleUiEvents({
+        req: req as never,
+        res: res as never,
+        url: new URL(
+          `/api/events?repo=${encodeURIComponent(repoPath)}`,
+          "http://127.0.0.1"
+        ),
+        repoScope: {
+          repos: [repoPath],
+          has: (value: string) => Promise.resolve(value === repoPath)
+        },
+        routerCwd: process.cwd(),
+        keepAliveIntervalMs: 1_000,
+        events: {
+          subscribe: (_input, callback) => {
+            subscribers.push(callback);
+            return () => {
+              unsubscribed = true;
+            };
+          },
+          getSnapshot: () => ({
+            id: 1,
+            ts: "2026-02-25T00:00:00.000Z",
+            type: "snapshot",
+            repos: [repo],
+            bubbles: [bubble]
+          }),
+          refreshNow: () => Promise.resolve(undefined),
+          addRepo: () => Promise.resolve(false),
+          removeRepo: () => Promise.resolve(false),
+          close: () => Promise.resolve(undefined)
+        }
+      });
+      const subscriber = subscribers[0];
+      if (subscriber === undefined) {
+        throw new Error("Expected SSE subscriber callback to be registered.");
+      }
+      for (let index = 0; index < 10; index += 1) {
+        subscriber({
+          id: index + 2,
+          ts: `2026-02-25T00:00:${String(index + 10).padStart(2, "0")}.000Z`,
+          type: "repo.removed",
+          repoPath,
+          extra: true
+        } as unknown as UiEvent);
+      }
+
+      expect(warn).toHaveBeenCalledWith(
+        "UI_EVENT_PAYLOAD_DROP_LIMIT_REACHED",
+        expect.objectContaining({
+          reasonCode: "UI_EVENT_PAYLOAD_DROP_LIMIT_REACHED",
+          source: "sse_subscriber",
+          invalidDropCount: 10
+        })
+      );
+      expect(unsubscribed).toBe(true);
+      expect(ended).toBe(true);
+    } finally {
+      warn.mockRestore();
     }
   });
 });

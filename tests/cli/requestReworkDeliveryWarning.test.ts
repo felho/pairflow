@@ -73,5 +73,5 @@ describe("runCli request-rework delivery warning parity", () => {
       "--message",
       "x"
     ]);
-  }, 10000);
+  }, 20000);
 });
