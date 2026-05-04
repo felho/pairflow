@@ -26,7 +26,7 @@ normative_refs:
   - plans/archive/tasks/2026-05-04-ui-contract-boundary-hardening-plan-v1/2b-ui-import-migration.md
 owners:
   - "felho"
-doc_bubble_id: null
+doc_bubble_id: 3a-action-response-validation-doc
 impl_bubble_id: null
 supersedes: []
 superseded_by: null
@@ -117,13 +117,18 @@ not authorize implementation inside this document creation pass.
 2. Canonical elements:
    - `UiCommitBubbleResult`
    - `UiMergeBubbleResult`
-   - `UiDeleteBubbleResult`
+   - `UiDeleteBubbleResult` as the UI action alias for
+     `DeleteBubbleResult`
+   - `DeleteBubbleArtifacts`
    - shared nested action DTOs used by selected action results:
      `UiActionEvent`, `UiActionBubbleState`, and
      `UiActionExecutionContextRef`
 3. Guard elements:
    - runtime validators and validation adapters prove boundary conformance but
      do not become a second contract authority;
+   - delete validation must validate the canonical `DeleteBubbleResult`
+     structure through the exported `UiDeleteBubbleResult` alias, not by
+     inventing a parallel delete DTO;
    - HTTP status selection for delete confirmation remains a router guard over
      `requiresConfirmation` and `deleted`.
 4. Compat-only elements:
@@ -350,7 +355,7 @@ not authorize implementation inside this document creation pass.
 |---|---|---|---|---|---|
 | `UiCommitBubbleResult` | `src/contracts/ui/uiActions.ts` | Canonical UI commit response shape. | Preserve and validate. | P1 | required-now |
 | `UiMergeBubbleResult` | `src/contracts/ui/uiActions.ts` | Canonical UI merge response shape. | Preserve and validate. | P1 | required-now |
-| `UiDeleteBubbleResult` | `src/contracts/ui/uiActions.ts`, `src/contracts/ui/deleteBubble.ts` | Canonical UI delete response shape. | Preserve and validate. | P1 | required-now |
+| `UiDeleteBubbleResult` / `DeleteBubbleResult` | `src/contracts/ui/uiActions.ts`, `src/contracts/ui/deleteBubble.ts` | Canonical UI delete response shape; `UiDeleteBubbleResult` is the UI action alias for `DeleteBubbleResult`. | Preserve and validate the aliased canonical structure, including `DeleteBubbleArtifacts`. | P1 | required-now |
 | `UiActionEvent` / `UiActionBubbleState` | `src/contracts/ui/uiActions.ts` | Nested canonical action DTOs for action-producing results. | Preserve and validate when present in selected result shape. | P1 | required-now |
 | `state` / `envelope` command fields | `src/v11/defaults/ui/routerDefaults.ts`, `tests/core/ui/router.test.ts` | Command internals, not UI response fields after projection. | Keep absent from successful UI action responses. | P1 | required-now |
 
@@ -381,7 +386,7 @@ not authorize implementation inside this document creation pass.
 |---|---|---|---|---|
 | `UiCommitBubbleResult` | backend UI router, `uiRouter.ts`, UI API/client types, router tests | additive | Add runtime validation for existing shape. | Broad drift fitness in task `4`. |
 | `UiMergeBubbleResult` | backend UI router, `uiRouter.ts`, UI API/client types, router tests | additive | Add runtime validation for existing shape. | Read/event validation in task `3b`; broad drift fitness in task `4`. |
-| `UiDeleteBubbleResult` | backend UI router, `uiRouter.ts`, UI API/client types, delete contract tests, router tests | additive | Add runtime validation for existing shape and 202/200 status guard preservation. | Broad drift fitness in task `4`. |
+| `UiDeleteBubbleResult` / `DeleteBubbleResult` | backend UI router, `uiRouter.ts`, UI API/client types, delete contract tests, router tests | additive | Add runtime validation for the existing aliased shape and 202/200 status guard preservation. | Broad drift fitness in task `4`. |
 | Same-dispatch sibling action result | backend UI router and UI API/client types | N/A until exact adapter shape is proven | Include only if the exact same validator adapter applies without extra semantics. | Otherwise document exclusion in implementation summary. |
 
 ### 0e) Baseline Preservation
@@ -400,7 +405,7 @@ not authorize implementation inside this document creation pass.
 |---|---|---|---|---|---|---|
 | Commit HTTP action result | dependency returns value; router forwards result | runtime validation passes for `UiCommitBubbleResult` | canonical result guarded by validator | no | P1 | required-now |
 | Merge HTTP action result | dependency returns value; router forwards result | runtime validation passes for `UiMergeBubbleResult` | canonical result guarded by validator | no | P1 | required-now |
-| Delete HTTP action result | dependency returns value; router derives 202/200 from result | runtime validation passes for `UiDeleteBubbleResult` before status/result emission | canonical result guarded by validator | no | P1 | required-now |
+| Delete HTTP action result | dependency returns value; router derives 202/200 from result | runtime validation passes for `UiDeleteBubbleResult` / `DeleteBubbleResult` before status/result emission | canonical result guarded by validator | no | P1 | required-now |
 | Command completion | command/application side effects | unchanged command/application side effects | out-of-scope canonical runtime truth | no | P1 | required-now |
 
 ### 0g) Precondition and Side-Effect Boundary
@@ -419,12 +424,12 @@ summarize these rows but must not define conflicting behavior.
 | ID | Condition / Input | Owner | Output / Status | Reason / Error Code | Retained / Dropped Data | Side Effects | Required Test |
 |---|---|---|---|---|---|---|---|
 | CCM1 | Valid commit action result matches `UiCommitBubbleResult`. | current task | HTTP 200 with unchanged `result`. | N/A | Retain all canonical fields; drop command internals if projection already excludes them. | Command side effects already occurred; no extra side effects. | T1 |
-| CCM2 | Commit action result missing or malforms required canonical fields. | current task | Fail-closed router error, not 2xx. | Stable validation failure code/message chosen by implementation. | Drop malformed result from success response. | No additional side effects beyond already-completed command attempt. | T2 |
+| CCM2 | Commit action result missing or malforms required canonical fields. | current task | Fail-closed router error, not 2xx. | HTTP `internal_error` with stable details `reasonCode: "UI_ACTION_RESPONSE_INVALID"` and selected action name. | Drop malformed result from success response. | No additional side effects beyond already-completed command attempt. | T2 |
 | CCM3 | Valid merge action result matches `UiMergeBubbleResult`. | current task | HTTP 200 with unchanged `result`. | N/A | Retain canonical merge/cleanup fields. | Command side effects already occurred; no extra side effects. | T3 |
-| CCM4 | Merge action result missing or malforms required canonical fields. | current task | Fail-closed router error, not 2xx. | Stable validation failure code/message chosen by implementation. | Drop malformed result from success response. | No additional side effects beyond already-completed command attempt. | T4 |
+| CCM4 | Merge action result missing or malforms required canonical fields. | current task | Fail-closed router error, not 2xx. | HTTP `internal_error` with stable details `reasonCode: "UI_ACTION_RESPONSE_INVALID"` and selected action name. | Drop malformed result from success response. | No additional side effects beyond already-completed command attempt. | T4 |
 | CCM5 | Valid delete result with `requiresConfirmation=true` and `deleted=false`. | current task | HTTP 202 with unchanged `result`. | N/A | Retain canonical delete fields. | Delete command side effects as currently defined. | T5 |
 | CCM6 | Valid delete result in all other accepted selected delete cases. | current task | HTTP 200 with unchanged `result`. | N/A | Retain canonical delete fields. | Delete command side effects as currently defined. | T6 |
-| CCM7 | Delete result missing or malforms required canonical fields used by status selection or result body. | current task | Fail-closed router error, not 2xx/202. | Stable validation failure code/message chosen by implementation. | Drop malformed result from success response. | No additional side effects beyond already-completed command attempt. | T7 |
+| CCM7 | Delete result missing or malforms required canonical fields used by status selection or result body. | current task | Fail-closed router error, not 2xx/202. | HTTP `internal_error` with stable details `reasonCode: "UI_ACTION_RESPONSE_INVALID"` and selected action name. | Drop malformed result from success response. | No additional side effects beyond already-completed command attempt. | T7 |
 | CCM8 | Same-dispatch sibling result has exact same adapter shape as one selected action. | current task if proven | Same behavior as the matched selected adapter row. | Same as matched row. | Same as matched row. | Same as matched row. | T8 |
 | CCM9 | Same-dispatch sibling requires different fields, variants, status, fallback, or nested validation semantics. | successor/deferred | Excluded from this task and documented. | N/A | N/A | N/A | T9 |
 | CCM10 | Read/status/detail/timeline/SSE payload is encountered. | successor `3b` | No validation change in this task. | N/A | N/A | N/A | T10 |
@@ -444,11 +449,11 @@ summarize these rows but must not define conflicting behavior.
 
 | Structured Contract | Required Fields | Optional Fields | Allowed Top-Level Fields / Variants | Unknown / Malformed / Duplicate Behavior | Retention / Drop Rule | Fallback Status / Reason | Priority | Timing |
 |---|---|---|---|---|---|---|---|---|
-| `UiCommitBubbleResult` | `bubbleId`, `sequence`, `event`, `actionState`, `commitSha`, `commitMessage`, `stagedFiles` | none unless already canonical | exactly canonical selected result fields; unknown top-level extras are rejected as validation failures | missing/wrong-type required fields fail validation; duplicate keys follow JSON parser behavior before validation | valid fields retained; invalid result not emitted as success | fail-closed router error | P1 | required-now |
-| `UiMergeBubbleResult` | `bubbleId`, `baseBranch`, `bubbleBranch`, `mergeCommitSha`, `presentationRoute`, `pushedBaseBranch`, `deletedRemoteBranch`, `tmuxSessionName`, `tmuxSessionExisted`, `runtimeSessionRemoved`, `removedWorktree`, `removedBubbleBranch` | none unless already canonical | exactly canonical selected result fields; `presentationRoute` must be `local` or `started_remote`; booleans remain booleans; unknown top-level extras are rejected | missing/wrong-type/unsupported literal/unknown top-level field fails validation | valid fields retained; invalid result not emitted as success | fail-closed router error | P1 | required-now |
-| `UiDeleteBubbleResult` | `bubbleId`, `deleted`, `requiresConfirmation`, `artifacts`, `tmuxSessionTerminated`, `runtimeSessionRemoved`, `removedWorktree`, `removedBubbleBranch`; nested artifact groups require `exists` and path/name fields from `DeleteBubbleArtifacts` | `runtimeSession.sessionName` is `string | null` | exactly canonical delete result object and nested artifact groups; unknown top-level and validator-owned nested artifact extras are rejected | missing/wrong-type/unknown top-level or validator-owned nested artifact field fails before status selection | valid fields retained; invalid result not emitted as success | fail-closed router error | P1 | required-now |
-| `UiActionEvent` nested in commit | `id`, `timestamp`, `bubbleId`, `sender`, `recipient`, `type`, `round`, `refs` | `summary`, `question`, `message`, `decision`, `passIntent`, `findingsClaimState`, `findingsClaimSource` | exactly canonical event fields; canonical participant/type/literal unions; unknown extras are rejected | missing/wrong-type required fields, unsupported literals, or unknown fields fail validation | valid nested event retained; invalid parent result not emitted | fail-closed router error | P1 | required-now |
-| `UiActionBubbleState` nested in commit | `bubbleId`, `lifecycleState`, `round`, `activeAgent`, `activeRole`, `activeSince`, `lastCommandAt`, `executionContext` | N/A; nullable fields must accept only canonical null/value shape | exactly canonical action state fields; canonical lifecycle/agent/role and execution-context reference shape; unknown extras are rejected | missing/wrong-type required fields, unsupported literals, or unknown fields fail validation | valid nested state retained; invalid parent result not emitted | fail-closed router error | P1 | required-now |
+| `UiCommitBubbleResult` | `bubbleId`, `sequence`, `event`, `actionState`, `commitSha`, `commitMessage`, `stagedFiles` | none unless already canonical | exactly canonical selected result fields; unknown top-level extras are rejected as validation failures | missing/wrong-type required fields fail validation; duplicate keys follow JSON parser behavior before validation | valid fields retained; invalid result not emitted as success | fail-closed router error with `reasonCode: "UI_ACTION_RESPONSE_INVALID"` and selected action name | P1 | required-now |
+| `UiMergeBubbleResult` | `bubbleId`, `baseBranch`, `bubbleBranch`, `mergeCommitSha`, `presentationRoute`, `pushedBaseBranch`, `deletedRemoteBranch`, `tmuxSessionName`, `tmuxSessionExisted`, `runtimeSessionRemoved`, `removedWorktree`, `removedBubbleBranch` | none unless already canonical | exactly canonical selected result fields; `presentationRoute` must be `local` or `started_remote`; booleans remain booleans; unknown top-level extras are rejected | missing/wrong-type/unsupported literal/unknown top-level field fails validation | valid fields retained; invalid result not emitted as success | fail-closed router error with `reasonCode: "UI_ACTION_RESPONSE_INVALID"` and selected action name | P1 | required-now |
+| `UiDeleteBubbleResult` / `DeleteBubbleResult` | `bubbleId`, `deleted`, `requiresConfirmation`, `artifacts`, `tmuxSessionTerminated`, `runtimeSessionRemoved`, `removedWorktree`, `removedBubbleBranch`; nested artifact groups require `exists` and path/name fields from `DeleteBubbleArtifacts` | `runtimeSession.sessionName` is `string | null` | exactly canonical aliased delete result object and nested artifact groups; unknown top-level and validator-owned nested artifact extras are rejected | missing/wrong-type/unknown top-level or validator-owned nested artifact field fails before status selection | valid fields retained; invalid result not emitted as success | fail-closed router error with `reasonCode: "UI_ACTION_RESPONSE_INVALID"` and selected action name | P1 | required-now |
+| `UiActionEvent` nested in commit | `id`, `timestamp`, `bubbleId`, `sender`, `recipient`, `type`, `round`, `refs` | `summary`, `question`, `message`, `decision`, `passIntent`, `findingsClaimState`, `findingsClaimSource` | exactly canonical event fields; canonical participant/type/literal unions; unknown extras are rejected | missing/wrong-type required fields, unsupported literals, or unknown fields fail validation | valid nested event retained; invalid parent result not emitted | parent commit fails closed with `reasonCode: "UI_ACTION_RESPONSE_INVALID"` and selected action name | P1 | required-now |
+| `UiActionBubbleState` nested in commit | `bubbleId`, `lifecycleState`, `round`, `activeAgent`, `activeRole`, `activeSince`, `lastCommandAt`, `executionContext` | N/A; nullable fields must accept only canonical null/value shape | exactly canonical action state fields; canonical lifecycle/agent/role and execution-context reference shape; unknown extras are rejected | missing/wrong-type required fields, unsupported literals, or unknown fields fail validation | valid nested state retained; invalid parent result not emitted | parent commit fails closed with `reasonCode: "UI_ACTION_RESPONSE_INVALID"` and selected action name | P1 | required-now |
 
 ### 0k) Mirrored Surface Checklist
 
@@ -507,8 +512,10 @@ summarize these rows but must not define conflicting behavior.
 
 1. Invalid selected action response payloads must fail closed and must not return
    HTTP 2xx/202.
-2. Validation failures should use a stable router/API error code or reason code
-   that tests can assert without depending on incidental stack traces.
+2. Validation failures should use HTTP `internal_error` with a stable
+   `details.reasonCode` of `UI_ACTION_RESPONSE_INVALID` and enough stable
+   detail to identify the selected action family without depending on
+   incidental stack traces.
 3. Existing command/dependency failures must keep their current
    `mapActionErrorToApiError` behavior.
 4. Browser client parsing/casting is not a fallback validation layer.
@@ -534,12 +541,12 @@ summarize these rows but must not define conflicting behavior.
 | ID | Scenario | Expected Proof | Priority | Timing |
 |---|---|---|---|---|
 | T1 | Valid commit action response. | HTTP 200 and exact current `UiCommitBubbleResult` JSON shape. | P1 | required-now |
-| T2 | Commit action response missing or malforming a required field. | Non-2xx fail-closed router error with stable validation reason. | P1 | required-now |
+| T2 | Commit action response missing or malforming a required field. | Non-2xx fail-closed router error with `details.reasonCode: "UI_ACTION_RESPONSE_INVALID"` and selected action name. | P1 | required-now |
 | T3 | Valid merge action response. | HTTP 200 and exact current `UiMergeBubbleResult` JSON shape. | P1 | required-now |
-| T4 | Merge action response missing or malforming a required field. | Non-2xx fail-closed router error with stable validation reason. | P1 | required-now |
+| T4 | Merge action response missing or malforming a required field. | Non-2xx fail-closed router error with `details.reasonCode: "UI_ACTION_RESPONSE_INVALID"` and selected action name. | P1 | required-now |
 | T5 | Delete confirmation-required response. | HTTP 202 preserved when `requiresConfirmation=true` and `deleted=false`. | P1 | required-now |
 | T6 | Delete completed/no-confirmation response. | HTTP 200 preserved for valid non-confirmation selected delete result. | P1 | required-now |
-| T7 | Delete response malformed in a field needed for result/status. | Non-2xx fail-closed router error, no partial success body. | P1 | required-now |
+| T7 | Delete response malformed in a field needed for result/status. | Non-2xx fail-closed router error with `details.reasonCode: "UI_ACTION_RESPONSE_INVALID"`, selected action name, and no partial success body. | P1 | required-now |
 | T8 | Same-dispatch sibling with exact selected adapter shape, if included. | Same valid/invalid tests as the matched adapter row. | P2 | conditional |
 | T9 | Same-dispatch sibling excluded. | Implementation summary or test note states why exact adapter shape does not match. | P2 | conditional |
 | T10 | Read/status/detail/SSE route unaffected. | Existing tests remain green; no new read/event validation tests in this task. | P1 | required-now |
@@ -553,8 +560,9 @@ summarize these rows but must not define conflicting behavior.
    emitted.
 2. Valid selected action responses preserve the current JSON payload shape and
    status behavior.
-3. Invalid selected action response payloads fail closed with a stable router
-   error expectation and do not return 2xx/202.
+3. Invalid selected action response payloads fail closed with HTTP
+   `internal_error`, stable `details.reasonCode` value
+   `UI_ACTION_RESPONSE_INVALID`, and do not return 2xx/202.
 4. Delete confirmation-required behavior still returns HTTP 202 only for a
    validated result where `requiresConfirmation=true` and `deleted=false`.
 5. The task preserves the UI contract boundary: canonical UI contract shapes
