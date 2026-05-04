@@ -38,7 +38,7 @@ task_tracker:
   - task_id: 5-router-port-cleanup
     task_path: plans/tasks/5-router-port-cleanup.md
     status: approved
-    notes: "Approved task created after task 4 archive aftermath; ready for document bubble."
+    notes: "Document bubble 5-router-port-cleanup-doc started after task 4 archive aftermath."
 ---
 
 # Plan: UI Router Port Closure
