@@ -577,87 +577,20 @@ describe("fitness:check:ci", () => {
     30_000
   );
 
-  it("keeps the §2a router-port exception inventory synchronized with policy", async () => {
-    const task = await readFile(
-      resolve(
-        process.cwd(),
-        "plans/archive/tasks/1-router-fitness-guards.md"
-      ),
-      "utf8"
-    );
+  it("keeps the current router-port policy free of transitional exceptions", async () => {
     const policy = JSON.parse(
       await readFile(resolve(process.cwd(), "tools/fitness/policy.json"), "utf8")
     ) as {
       checks: Array<{
         id: string;
-        exceptions?: Array<{
-          id: string;
-          kind: string;
-          paths?: string[];
-          from?: string;
-          to?: string;
-        }>;
+        exceptions?: unknown[];
       }>;
     };
-
-    const lines = task.split("\n");
-    const headerIndex = lines.findIndex((line) =>
-      line.includes("| Exception ID | Kind | Exact Match |")
-    );
-    expect(headerIndex).toBeGreaterThanOrEqual(0);
-    const headers = lines[headerIndex]
-      ?.split("|")
-      .slice(1, -1)
-      .map((cell) => cell.trim());
-    expect(headers).toContain("Exception ID");
-    expect(headers).toContain("Kind");
-    expect(headers).toContain("Exact Match");
-    const idIndex = headers?.indexOf("Exception ID") ?? -1;
-    const kindIndex = headers?.indexOf("Kind") ?? -1;
-    const exactMatchIndex = headers?.indexOf("Exact Match") ?? -1;
-    const inventoryRows = lines
-      .slice(headerIndex + 2)
-      .filter((line) => line.startsWith("| `router-port-"))
-      .map((line) => {
-        const cells = line
-          .split("|")
-          .slice(1, -1)
-          .map((cell) => cell.trim().replaceAll("`", ""));
-        expect(cells.length).toBeGreaterThan(
-          Math.max(idIndex, kindIndex, exactMatchIndex)
-        );
-        const id = cells[idIndex];
-        const kind = cells[kindIndex];
-        const exactMatch = cells[exactMatchIndex];
-        expect(id).toMatch(/^router-port-/u);
-        expect(kind).toMatch(
-          /^allow-(?:full-dependency-bag|command-owned-ui-port-import)$/u
-        );
-        expect(exactMatch).toBeTruthy();
-        return { id, kind, exactMatch };
-      })
-      .sort((left, right) => String(left.id).localeCompare(String(right.id)));
 
     const routerPortPolicy = policy.checks.find(
       (check) => check.id === "ui_router_port_boundary"
     );
-    const policyRows = (routerPortPolicy?.exceptions ?? [])
-      .map((exception) => ({
-        id: exception.id,
-        kind: exception.kind,
-        exactMatch:
-          exception.kind === "allow-full-dependency-bag"
-            ? exception.paths?.[0]
-            : `${exception.from ?? ""} -> ${exception.to ?? ""}`
-      }))
-      .sort((left, right) => left.id.localeCompare(right.id));
 
-    if (inventoryRows.length === 0 && policyRows.length === 0) {
-      expect(task).toContain(
-        "No router-port exceptions remain after `4-ui-readmodel-port-closure`"
-      );
-    }
-
-    expect(policyRows).toEqual(inventoryRows);
+    expect(routerPortPolicy?.exceptions ?? []).toEqual([]);
   });
 });
