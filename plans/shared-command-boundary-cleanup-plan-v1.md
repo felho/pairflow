@@ -4,8 +4,8 @@ artifact_id: plan_shared_command_boundary_cleanup_v1
 plan_id: shared-command-boundary-cleanup-plan-v1
 created_on: "2026-05-05"
 title: "Shared Command Boundary Cleanup Plan"
-status: draft
-plan_status: draft
+status: approved
+plan_status: approved
 prd_ref: null
 owners:
   - "felho"
