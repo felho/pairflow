@@ -9,6 +9,12 @@
     "forceConsistentCasingInFileNames": true,
     "isolatedModules": true,
     "resolveJsonModule": true,
+    "baseUrl": ".",
+    "paths": {
+      "@pairflow/ui-contracts": [
+        "src/contracts/ui/index.ts"
+      ]
+    },
     "skipLibCheck": true,
     "noEmit": true,
     "sourceMap": true,
