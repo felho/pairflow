@@ -74,9 +74,9 @@ through the task sequence below after each task artifact is created and reviewed
 
 ## Non-Goals
 
-1. Do not introduce a standalone published `pairflow-contracts` package unless
-   task 2a proves the in-repo alias/entrypoint path cannot satisfy root and UI
-   tooling.
+1. Do not introduce a standalone package boundary in this plan slice; if task
+   2a proves the in-repo alias path cannot satisfy root and UI tooling, report
+   the resolver blocker instead of widening scope.
 2. Do not reopen DTO ownership or duplicate contract shapes in `ui/src/**`.
 3. Do not add broad runtime schemas for every UI DTO in this plan; validation
    starts with the named highest-risk action/read/event seams.
@@ -118,9 +118,9 @@ through the task sequence below after each task artifact is created and reviewed
      would reject the current UI relative imports.
    - downstream consume families that remain separate: backend router
      production, browser API consumption, UI event handling, and fitness/tests.
-   - cleanup/recovery timing: included now for stale policy exceptions; broader
-     workspace package extraction remains deferred unless task 2 proves it is
-     the smallest stable entrypoint.
+   - cleanup/recovery timing: included now for stale policy exceptions;
+     standalone package boundary extraction remains out of scope for this plan
+     slice.
 
 ## Canonical Contract Anchors
 
@@ -173,9 +173,8 @@ through the task sequence below after each task artifact is created and reviewed
 
 ### Deferred / Future Work
 
-1. A standalone published `pairflow-contracts` package is deferred unless the
-   repository needs external consumers or the local alias approach proves
-   insufficient.
+1. A standalone package boundary remains future work for external consumers or
+   a later dedicated extraction task, not a fallback inside task `2a`.
 2. Full schema coverage for every UI DTO is deferred; this plan starts with the
    highest-risk action/status/detail/event seams.
 
@@ -194,8 +193,8 @@ through the task sequence below after each task artifact is created and reviewed
 
 | Task ID | Task Path | Purpose | Depends On | Closes Gap | Status |
 |---|---|---|---|---|---|
-| `1-ui-contract-guard-cleanup` | `plans/tasks/1-ui-contract-guard-cleanup.md` | Remove stale `ui_contract_boundary` exception, move UI-visible `ProtocolMessageType` behind `src/contracts/ui/**`, and update the narrow affected imports/tests. | N/A | Stale policy exception and direct `src/types/protocol.js` UI import. | in_progress |
-| `2a-contract-entrypoint` | `null` | Choose and implement the smallest intentional in-repo UI contract entrypoint or alias, with enough TS/Vite proof that both root and UI tooling can resolve it. Workspace packaging remains deferred unless this task proves an alias cannot satisfy the boundary. | `1-ui-contract-guard-cleanup` | Unclear public entrypoint and config-level uncertainty. | not_created |
+| `1-ui-contract-guard-cleanup` | `plans/archive/tasks/2026-05-04-ui-contract-boundary-hardening-plan-v1/1-ui-contract-guard-cleanup.md` | Remove stale `ui_contract_boundary` exception, move UI-visible `ProtocolMessageType` behind `src/contracts/ui/**`, and update the narrow affected imports/tests. | N/A | Stale policy exception and direct `src/types/protocol.js` UI import. | archived |
+| `2a-contract-entrypoint` | `plans/tasks/2a-contract-entrypoint.md` | Implement `@pairflow/ui-contracts` as the smallest intentional in-repo UI contract entrypoint, with enough TS/Vite proof that both root and UI tooling can resolve it. A standalone package boundary remains rejected for this slice; resolver failure must be reported as a blocker. | `1-ui-contract-guard-cleanup` | Unclear public entrypoint and config-level uncertainty. | approved |
 | `2b-ui-import-migration` | `null` | Mechanically migrate UI contract imports away from scattered relative `../../../src/...` paths to the entrypoint from `2a`, without changing contract shapes. | `2a-contract-entrypoint` | Fragile high-distance relative imports. | not_created |
 | `3a-action-response-validation` | `null` | Add runtime validation for selected mutation/action result payloads, starting with delete, commit, and merge, plus same-dispatch siblings only if they share the exact validation adapter shape. | `2b-ui-import-migration` | Action result wire-shape drift can still silently pass through `unknown` dispatch paths. | not_created |
 | `3b-read-event-validation` | `null` | Add runtime validation for selected read/status/detail and SSE event payloads, separately from mutation actions because read models and event streams have different failure semantics. | `3a-action-response-validation` | Read/event wire-shape drift can still silently pass through JSON/event paths. | not_created |
@@ -210,8 +209,8 @@ through the task sequence below after each task artifact is created and reviewed
    - Leaves runtime/lifecycle authority in `src/types/bubble.ts` and
      `src/types/protocol.js`; browser code consumes only the UI contract view.
 2. `2a-contract-entrypoint`
-   - Records the selected entrypoint shape and the rejected alternative if a
-     workspace package is not used.
+   - Records the `@pairflow/ui-contracts` entrypoint shape and records the
+     standalone package boundary alternative as rejected for this slice.
    - Proves resolution in both root TypeScript tooling and the UI build/test
      path before broader import migration begins.
 3. `2b-ui-import-migration`
@@ -240,7 +239,7 @@ through the task sequence below after each task artifact is created and reviewed
 |---|---|---|
 | Stale policy exception remains after migration. | `1-ui-contract-guard-cleanup` | The exception is currently configured but not applied. |
 | Browser code imports shared-kernel protocol type directly. | `1-ui-contract-guard-cleanup` | Export the UI-visible protocol type from `src/contracts/ui/**`. |
-| UI contract entrypoint is not explicit enough. | `2a-contract-entrypoint` | Choose the smallest entrypoint that works with current root/UI TS configs; defer workspace packaging unless necessary. |
+| UI contract entrypoint is not explicit enough. | `2a-contract-entrypoint` | Implement `@pairflow/ui-contracts` as the smallest entrypoint that works with current root/UI TS configs; keep standalone package boundary extraction out of scope for this slice. |
 | UI imports canonical contracts through brittle relative paths. | `2b-ui-import-migration` | Mechanical migration only; no DTO shape changes. |
 | Mutation/action responses lack explicit validation at key seams. | `3a-action-response-validation` | Start with delete, commit, and merge action result payloads. |
 | Read/status/detail/event responses lack explicit validation at key seams. | `3b-read-event-validation` | Keep read/event failure semantics separate from action validation. |
@@ -265,7 +264,8 @@ through the task sequence below after each task artifact is created and reviewed
 ## Risks and Assumptions
 
 1. Assumption: the current UI package remains private and in-repo, so a TS path
-   alias or internal entrypoint is likely cheaper than a new workspace package.
+   alias or internal entrypoint is the smallest current boundary; standalone
+   package boundary extraction remains future work.
 2. Risk: Vite/TypeScript config changes for aliases can create build drift
    between root and UI packages; task 2a must verify both root and UI builds
    before task 2b performs the broader import migration.
