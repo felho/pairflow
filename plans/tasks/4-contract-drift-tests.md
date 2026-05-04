@@ -5,7 +5,7 @@ task_family_id: contract-drift-tests
 sequence_key: "4"
 task_id: 4-contract-drift-tests
 title: "Contract Drift Tests"
-status: implementable
+status: in_progress
 phase: phase4
 target_files:
   - tools/fitness/checks/ui-contract-boundary.ts
@@ -31,7 +31,7 @@ normative_refs:
 owners:
   - "felho"
 doc_bubble_id: 4-contract-drift-tests-doc
-impl_bubble_id: null
+impl_bubble_id: 4-contract-drift-tests-impl
 supersedes: []
 superseded_by: null
 archive_group: 2026-05-04-ui-contract-boundary-hardening-plan-v1
