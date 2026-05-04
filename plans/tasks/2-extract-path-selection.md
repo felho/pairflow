@@ -5,7 +5,7 @@ task_family_id: extract-path-selection
 sequence_key: "2"
 task_id: 2-extract-path-selection
 title: "Extract Path Selection"
-status: implementable
+status: in_progress
 phase: phase2
 target_files:
   - src/v11/application/extract/extractCommandContract.ts
@@ -24,7 +24,7 @@ normative_refs:
 owners:
   - "felho"
 doc_bubble_id: 2-extract-path-selection-doc
-impl_bubble_id: null
+impl_bubble_id: 2-extract-path-selection-impl
 supersedes: []
 superseded_by: null
 archive_group: 2026-05-04-ideation-bubble-extract-plan-v1

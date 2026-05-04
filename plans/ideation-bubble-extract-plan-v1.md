@@ -23,7 +23,7 @@ task_tracker:
     status: archived
   - task_id: 2-extract-path-selection
     task_path: plans/tasks/2-extract-path-selection.md
-    status: implementable
+    status: in_progress
   - task_id: 3-extract-copy-commit
     task_path: null
     status: not_created
@@ -187,12 +187,17 @@ Progress update (2026-05-04): document bubble
 meta-review auto-approval proof. Task `2-extract-path-selection` is now
 implementable and ready for implementation-bubble routing.
 
+Progress update (2026-05-04): implementation bubble
+`2-extract-path-selection-impl` was created and started from clean `main` with
+the repository bootstrap command; task metadata now records the implementation
+bubble linkage and in-progress state.
+
 ## Open Task List
 
 | Task ID | Task Path | Purpose | Depends On | Closes Gap | Status |
 |---|---|---|---|---|---|
 | `1-extract-command-contract` | `plans/archive/tasks/2026-05-04-ideation-bubble-extract-plan-v1/1-extract-command-contract.md` | Define `pairflow bubble extract` CLI contract, option parser/help, result shape, ideation eligibility rules, `--repo`/cwd target repository resolution, repo mismatch fail-closed behavior, no-overwrite v1 contract, commit intent including optional message, and target checkout preconditions. | N/A | No official command contract exists. | archived |
-| `2-extract-path-selection` | `plans/tasks/2-extract-path-selection.md` | Implement explicit repeated `--path` validation with no glob support, repo-relative normalization, `plans/**`/`docs/**`/`progress/**` allowlist checks, source file existence checks, and target conflict detection. | `1-extract-command-contract` | No safe multi-path artifact selector exists. | implementable |
+| `2-extract-path-selection` | `plans/tasks/2-extract-path-selection.md` | Implement explicit repeated `--path` validation with no glob support, repo-relative normalization, `plans/**`/`docs/**`/`progress/**` allowlist checks, source file existence checks, and target conflict detection. | `1-extract-command-contract` | No safe multi-path artifact selector exists. | in_progress |
 | `3-extract-copy-commit` | `null` | Copy selected files from bubble worktree to the clean `main` checkout and optionally stage/commit exactly those paths with an explicit selected-path commit result. | `2-extract-path-selection` | No official extract transfer/commit flow exists. | not_created |
 | `4-extract-docs-validation` | `null` | Add operator docs, targeted tests, and final validation for success, multi-path, forbidden path, target conflict, repo mismatch, non-main/dirty target checkout, staged-scope, selected-path commit result, and source-bubble lifecycle non-mutation. | `3-extract-copy-commit` | Extract behavior would remain undocumented and regression-prone. | not_created |
 
