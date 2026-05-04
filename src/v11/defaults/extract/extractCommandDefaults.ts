@@ -1,5 +1,4 @@
-import { access } from "node:fs/promises";
-import { constants as fsConstants } from "node:fs";
+import { lstat } from "node:fs/promises";
 
 import { resolveRepoPath } from "../../infrastructure/executor/workspace/repoResolution.js";
 import { runGit } from "../../infrastructure/workspace/git.js";
@@ -8,9 +7,22 @@ import type { ExtractCommandDependencies } from "../../application/extract/extra
 
 export const extractCommandDependencyDefaults: ExtractCommandDependencies = {
   fileExists: async (path) =>
-    access(path, fsConstants.F_OK)
+    lstat(path)
       .then(() => true)
       .catch(() => false),
+  fileInfo: async (path) =>
+    lstat(path)
+      .then((stats) => ({
+        exists: true,
+        isFile: stats.isFile(),
+        isDirectory: stats.isDirectory()
+      }))
+      .catch((error: NodeJS.ErrnoException) => ({
+        exists: false,
+        isFile: false,
+        isDirectory: false,
+        ...(error.code !== undefined ? { errorCode: error.code } : {})
+      })),
   resolveBubbleById,
   resolveRepoPath,
   runGit

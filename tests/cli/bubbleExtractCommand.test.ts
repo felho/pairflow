@@ -12,19 +12,32 @@ import {
 } from "../../src/v11/application/extract/extractCommandPreconditions.js";
 import type {
   ExtractCommandDependencies,
+  ExtractFileInfo,
   ExtractCommandInput
 } from "../../src/v11/application/extract/extractCommandContract.js";
 import type { ResolvedBubbleById } from "../../src/v11/shared/ports/bubbleLookup.js";
 import type { RunGitPort } from "../../src/v11/shared/ports/git.js";
 import type { ResolveRepoPathInput } from "../../src/v11/shared/ports/repoResolution.js";
 
+function defaultFileInfo(path: string): ExtractFileInfo {
+  if (path.startsWith("/worktrees/")) {
+    return path.endsWith(".md")
+      ? { exists: true, isFile: true, isDirectory: false }
+      : { exists: true, isFile: false, isDirectory: true };
+  }
+
+  return { exists: false, isFile: false, isDirectory: false, errorCode: "ENOENT" };
+}
+
 function resolvedBubble(input: {
   bubbleId?: string;
   repoPath?: string;
+  worktreePath?: string;
   ideation?: { mode?: boolean; task_pending?: boolean; parse_warning?: string };
 } = {}): ResolvedBubbleById {
   const bubbleId = input.bubbleId ?? "b_extract_01";
   const repoPath = input.repoPath ?? "/repo";
+  const worktreePath = input.worktreePath ?? `/worktrees/${bubbleId}`;
   return {
     bubbleId,
     bubbleConfig: {
@@ -32,10 +45,10 @@ function resolvedBubble(input: {
       repo_path: repoPath,
       base_branch: "main",
       bubble_branch: `bubble/${bubbleId}`,
-      worktree_path: `/worktrees/${bubbleId}`,
+      worktree_path: worktreePath,
       ...(input.ideation !== undefined ? { ideation: input.ideation } : {})
     },
-    bubblePaths: {},
+    bubblePaths: { worktreePath },
     repoPath
   } as unknown as ResolvedBubbleById;
 }
@@ -65,6 +78,7 @@ function dependencies(input: {
   repoError?: Error;
   runGit?: RunGitPort;
   fileExists?: (path: string) => Promise<boolean>;
+  fileInfo?: (path: string) => Promise<ExtractFileInfo>;
 } = {}): ExtractCommandDependencies {
   return {
     resolveBubbleById: vi.fn(async () => {
@@ -83,7 +97,8 @@ function dependencies(input: {
       return input.repoPath ?? "/repo";
     }),
     runGit: input.runGit ?? cleanMainRunGit(),
-    fileExists: input.fileExists ?? vi.fn(async () => false)
+    fileExists: input.fileExists ?? vi.fn(async () => false),
+    fileInfo: input.fileInfo ?? vi.fn(async (path: string) => defaultFileInfo(path))
   };
 }
 
@@ -322,11 +337,11 @@ describe("checkTargetCheckoutPreconditions", () => {
 });
 
 describe("extractBubbleV11", () => {
-  it("returns implementation-deferred after valid preconditions and no copied-file fields", async () => {
+  it("returns implementation-deferred after valid path selection and no copied-file fields", async () => {
     const result = await extractBubbleV11(
       {
         ...baseCommand,
-        paths: ["one.md", "one.md", "two.md"],
+        paths: ["docs/one.md", "docs/one.md", "plans/two.md"],
         commit: true
       },
       dependencies()
@@ -335,19 +350,316 @@ describe("extractBubbleV11", () => {
     expect(result).toMatchObject({
       status: "implementation_deferred",
       reasonCode: "EXTRACT_TRANSFER_NOT_IMPLEMENTED",
-      paths: ["one.md", "one.md", "two.md"],
+      paths: ["docs/one.md", "docs/one.md", "plans/two.md"],
       commitRequested: true,
+      selectedPaths: [
+        {
+          rawPath: "docs/one.md",
+          normalizedPath: "docs/one.md",
+          sourcePath: "/worktrees/b_extract_01/docs/one.md",
+          targetPath: "/repo/docs/one.md"
+        },
+        {
+          rawPath: "docs/one.md",
+          normalizedPath: "docs/one.md",
+          sourcePath: "/worktrees/b_extract_01/docs/one.md",
+          targetPath: "/repo/docs/one.md"
+        },
+        {
+          rawPath: "plans/two.md",
+          normalizedPath: "plans/two.md",
+          sourcePath: "/worktrees/b_extract_01/plans/two.md",
+          targetPath: "/repo/plans/two.md"
+        }
+      ],
       diagnostics: {
-        duplicatePaths: ["one.md"],
+        duplicatePaths: ["docs/one.md"],
         successorContract: "no_overwrite_target_conflict_check"
       }
     });
     expect(result).not.toHaveProperty("copiedFiles");
+    expect(result).not.toHaveProperty("stagedFiles");
     expect(result).not.toHaveProperty("commitSha");
+  });
+
+  it("accepts valid selected paths under each v1 scope in explicit order", async () => {
+    const result = await extractBubbleV11(
+      {
+        ...baseCommand,
+        paths: [
+          "plans/new-plan.md",
+          "docs/reference.md",
+          "progress/extract-note.md"
+        ]
+      },
+      dependencies()
+    );
+
+    expect(result).toMatchObject({
+      status: "implementation_deferred",
+      selectedPaths: [
+        { normalizedPath: "plans/new-plan.md" },
+        { normalizedPath: "docs/reference.md" },
+        { normalizedPath: "progress/extract-note.md" }
+      ]
+    });
+  });
+
+  it.each([
+    ["/tmp/idea.md", "EXTRACT_PATH_UNSAFE"],
+    ["../plans/idea.md", "EXTRACT_PATH_UNSAFE"],
+    ["plans/../docs/idea.md", "EXTRACT_PATH_UNSAFE"],
+    ["plans\\idea.md", "EXTRACT_PATH_UNSAFE"],
+    ["docs//idea.md", "EXTRACT_PATH_UNSAFE"],
+    ["docs/idea.md/", "EXTRACT_PATH_UNSAFE"],
+    ["", "EXTRACT_PATH_UNSAFE"],
+    [".", "EXTRACT_PATH_UNSAFE"]
+  ])("fails closed for unsafe selected path %s", async (path, reasonCode) => {
+    const result = await extractBubbleV11(
+      {
+        ...baseCommand,
+        paths: [path]
+      },
+      dependencies()
+    );
+
+    expect(result).toMatchObject({
+      status: "failed",
+      reasonCode,
+      diagnostics: {
+        path
+      }
+    });
+  });
+
+  it("fails closed for glob-like selected paths", async () => {
+    const result = await extractBubbleV11(
+      {
+        ...baseCommand,
+        paths: ["plans/*.md"]
+      },
+      dependencies()
+    );
+
+    expect(result).toMatchObject({
+      status: "failed",
+      reasonCode: "EXTRACT_PATH_GLOB_UNSUPPORTED",
+      diagnostics: {
+        path: "plans/*.md"
+      }
+    });
+  });
+
+  it("fails closed for paths outside the v1 extraction scope", async () => {
+    const result = await extractBubbleV11(
+      {
+        ...baseCommand,
+        paths: ["src/foo.ts"]
+      },
+      dependencies()
+    );
+
+    expect(result).toMatchObject({
+      status: "failed",
+      reasonCode: "EXTRACT_PATH_SCOPE_FORBIDDEN",
+      diagnostics: {
+        path: "src/foo.ts",
+        normalizedPath: "src/foo.ts"
+      }
+    });
+  });
+
+  it("fails closed when the selected source file is missing", async () => {
+    const result = await extractBubbleV11(
+      {
+        ...baseCommand,
+        paths: ["docs/missing.md"]
+      },
+      dependencies({
+        fileInfo: async () => ({ exists: false, isFile: false, isDirectory: false })
+      })
+    );
+
+    expect(result).toMatchObject({
+      status: "failed",
+      reasonCode: "EXTRACT_SOURCE_PATH_MISSING",
+      diagnostics: {
+        normalizedPath: "docs/missing.md",
+        sourcePath: "/worktrees/b_extract_01/docs/missing.md",
+        targetPath: "/repo/docs/missing.md"
+      }
+    });
+  });
+
+  it("fails closed when the selected source is a directory", async () => {
+    const result = await extractBubbleV11(
+      {
+        ...baseCommand,
+        paths: ["docs/ideas"]
+      },
+      dependencies({
+        fileInfo: async () => ({ exists: true, isFile: false, isDirectory: true })
+      })
+    );
+
+    expect(result).toMatchObject({
+      status: "failed",
+      reasonCode: "EXTRACT_SOURCE_PATH_NOT_FILE",
+      diagnostics: {
+        normalizedPath: "docs/ideas"
+      }
+    });
+  });
+
+  it("fails closed when the target path already exists", async () => {
+    const result = await extractBubbleV11(
+      {
+        ...baseCommand,
+        paths: ["docs/existing.md"]
+      },
+      dependencies({
+        fileInfo: async (path: string) =>
+          path.startsWith("/worktrees/")
+            ? defaultFileInfo(path)
+            : {
+                exists: path === "/repo/docs/existing.md",
+                isFile: path === "/repo/docs/existing.md",
+                isDirectory: false,
+                ...(path === "/repo/docs/existing.md" ? {} : { errorCode: "ENOENT" })
+              }
+      })
+    );
+
+    expect(result).toMatchObject({
+      status: "failed",
+      reasonCode: "EXTRACT_TARGET_PATH_EXISTS",
+      diagnostics: {
+        normalizedPath: "docs/existing.md",
+        sourcePath: "/worktrees/b_extract_01/docs/existing.md",
+        targetPath: "/repo/docs/existing.md"
+      }
+    });
+  });
+
+  it("fails closed when the target path is occupied by a dangling symlink", async () => {
+    const result = await extractBubbleV11(
+      {
+        ...baseCommand,
+        paths: ["docs/dangling.md"]
+      },
+      dependencies({
+        fileInfo: async (path: string) =>
+          path.startsWith("/worktrees/")
+            ? defaultFileInfo(path)
+            : {
+                exists: path === "/repo/docs/dangling.md",
+                isFile: false,
+                isDirectory: false,
+                ...(path === "/repo/docs/dangling.md" ? {} : { errorCode: "ENOENT" })
+              }
+      })
+    );
+
+    expect(result).toMatchObject({
+      status: "failed",
+      reasonCode: "EXTRACT_TARGET_PATH_EXISTS",
+      diagnostics: {
+        normalizedPath: "docs/dangling.md",
+        targetPath: "/repo/docs/dangling.md"
+      }
+    });
+  });
+
+  it("fails closed when a source parent path is a symlink or non-directory", async () => {
+    const result = await extractBubbleV11(
+      {
+        ...baseCommand,
+        paths: ["docs/idea.md"]
+      },
+      dependencies({
+        fileInfo: async (path: string) => {
+          if (path === "/worktrees/b_extract_01/docs") {
+            return { exists: true, isFile: false, isDirectory: false };
+          }
+          return defaultFileInfo(path);
+        }
+      })
+    );
+
+    expect(result).toMatchObject({
+      status: "failed",
+      reasonCode: "EXTRACT_SOURCE_PATH_NOT_FILE",
+      diagnostics: {
+        normalizedPath: "docs/idea.md",
+        sourcePath: "/worktrees/b_extract_01/docs"
+      }
+    });
+  });
+
+  it("fails closed when target path metadata cannot be verified", async () => {
+    const result = await extractBubbleV11(
+      {
+        ...baseCommand,
+        paths: ["docs/locked.md"]
+      },
+      dependencies({
+        fileInfo: async (path: string) =>
+          path.startsWith("/worktrees/")
+            ? defaultFileInfo(path)
+            : {
+                exists: false,
+                isFile: false,
+                isDirectory: false,
+                errorCode: path === "/repo/docs/locked.md" ? "EACCES" : "ENOENT"
+              }
+      })
+    );
+
+    expect(result).toMatchObject({
+      status: "failed",
+      reasonCode: "EXTRACT_TARGET_PATH_EXISTS",
+      diagnostics: {
+        normalizedPath: "docs/locked.md",
+        targetPath: "/repo/docs/locked.md"
+      }
+    });
+  });
+
+  it("fails closed when a target parent path is an existing file", async () => {
+    const result = await extractBubbleV11(
+      {
+        ...baseCommand,
+        paths: ["docs/idea/note.md"]
+      },
+      dependencies({
+        fileInfo: async (path: string) => {
+          if (path.startsWith("/worktrees/")) {
+            return defaultFileInfo(path);
+          }
+          if (path === "/repo/docs") {
+            return { exists: true, isFile: false, isDirectory: true };
+          }
+          if (path === "/repo/docs/idea") {
+            return { exists: true, isFile: true, isDirectory: false };
+          }
+          return { exists: false, isFile: false, isDirectory: false, errorCode: "ENOENT" };
+        }
+      })
+    );
+
+    expect(result).toMatchObject({
+      status: "failed",
+      reasonCode: "EXTRACT_TARGET_PATH_EXISTS",
+      diagnostics: {
+        normalizedPath: "docs/idea/note.md",
+        targetPath: "/repo/docs/idea"
+      }
+    });
   });
 
   it("exports default dependencies from the public API", () => {
     expect(typeof extractCommandDependencyDefaults.fileExists).toBe("function");
+    expect(typeof extractCommandDependencyDefaults.fileInfo).toBe("function");
     expect(typeof extractCommandDependencyDefaults.resolveBubbleById).toBe("function");
     expect(typeof extractCommandDependencyDefaults.resolveRepoPath).toBe("function");
     expect(typeof extractCommandDependencyDefaults.runGit).toBe("function");

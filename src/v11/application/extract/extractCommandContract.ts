@@ -9,6 +9,12 @@ export type ExtractCommandFailureReasonCode =
   | "EXTRACT_IDEATION_METADATA_INVALID"
   | "EXTRACT_REPO_MISMATCH"
   | "EXTRACT_TARGET_CHECKOUT_INVALID"
+  | "EXTRACT_PATH_UNSAFE"
+  | "EXTRACT_PATH_GLOB_UNSUPPORTED"
+  | "EXTRACT_PATH_SCOPE_FORBIDDEN"
+  | "EXTRACT_SOURCE_PATH_MISSING"
+  | "EXTRACT_SOURCE_PATH_NOT_FILE"
+  | "EXTRACT_TARGET_PATH_EXISTS"
   | "EXTRACT_TRANSFER_NOT_IMPLEMENTED";
 
 export type ExtractTargetCheckoutFailureReason =
@@ -41,7 +47,25 @@ export interface ExtractCommandDiagnostics {
   checkoutFailureReason?: ExtractTargetCheckoutFailureReason;
   checkoutDetails?: string;
   duplicatePaths?: string[];
+  path?: string;
+  normalizedPath?: string;
+  sourcePath?: string;
+  targetPath?: string;
   successorContract?: "no_overwrite_target_conflict_check";
+}
+
+export interface ExtractSelectedPath {
+  rawPath: string;
+  normalizedPath: string;
+  sourcePath: string;
+  targetPath: string;
+}
+
+export interface ExtractFileInfo {
+  exists: boolean;
+  isFile: boolean;
+  isDirectory?: boolean;
+  errorCode?: string;
 }
 
 export interface ExtractCommandResultBase {
@@ -65,6 +89,7 @@ export interface ExtractCommandImplementationDeferredResult
   extends ExtractCommandResultBase {
   status: "implementation_deferred";
   reasonCode: "EXTRACT_TRANSFER_NOT_IMPLEMENTED";
+  selectedPaths: ExtractSelectedPath[];
 }
 
 export type ExtractCommandResult =
@@ -76,4 +101,5 @@ export interface ExtractCommandDependencies {
   resolveRepoPath: ResolveRepoPathPort;
   runGit: RunGitPort;
   fileExists: (path: string) => Promise<boolean>;
+  fileInfo: (path: string) => Promise<ExtractFileInfo>;
 }
