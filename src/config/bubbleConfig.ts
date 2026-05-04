@@ -10,7 +10,6 @@ import {
 } from "../v11/shared/validation/primitives.js";
 import {
   DEFAULT_COMMIT_REQUIRES_APPROVAL,
-  DEFAULT_DOC_CONTRACT_ROUND_GATE_APPLIES_AFTER,
   DEFAULT_MAX_ROUNDS,
   DEFAULT_PAIRFLOW_COMMAND_PROFILE,
   DEFAULT_QUALITY_MODE,
@@ -43,6 +42,7 @@ import {
 } from "../v11/shared/validation/validationTargetPaths.js";
 import { SEVERITY_GATE_ROUND_INVALID } from "./bubbleConfig/errors.js";
 import { validateBubbleExecutor } from "./bubbleConfig/executor.js";
+import { validateBubbleDocContractGates } from "./bubbleConfig/docContractGates.js";
 import { parseToml } from "./bubbleConfig/parser.js";
 import {
   describeUnknownValue,
@@ -402,27 +402,10 @@ export function validateBubbleConfig(input: unknown): ValidationResult<BubbleCon
 
   const validatedLocalOverlay = validateBubbleLocalOverlay(localOverlay, errors);
 
-  const docContractGateWarnings: string[] = [];
-  const existingDocContractGateParseWarning = docContractGates
-    ? readString(
-        docContractGates,
-        "parse_warning",
-        "doc_contract_gates.parse_warning",
-        errors,
-        false
-      )
-    : undefined;
-  const roundGateAppliesAfterCandidate = docContractGates?.round_gate_applies_after;
-  let roundGateAppliesAfter = DEFAULT_DOC_CONTRACT_ROUND_GATE_APPLIES_AFTER;
-  if (roundGateAppliesAfterCandidate !== undefined) {
-    if (isInteger(roundGateAppliesAfterCandidate) && roundGateAppliesAfterCandidate >= 0) {
-      roundGateAppliesAfter = roundGateAppliesAfterCandidate;
-    } else {
-      docContractGateWarnings.push(
-        `doc_contract_gates.round_gate_applies_after must be a non-negative integer. Received ${describeUnknownValue(roundGateAppliesAfterCandidate)}.`
-      );
-    }
-  }
+  const validatedDocContractGates = validateBubbleDocContractGates(
+    docContractGates,
+    errors
+  );
 
   const ideationWarnings: string[] = [];
   const existingIdeationParseWarning = ideation
@@ -541,21 +524,7 @@ export function validateBubbleConfig(input: unknown): ValidationResult<BubbleCon
     commands: validatedCommands as BubbleConfig["commands"],
     notifications: validatedNotifications,
     local_overlay: validatedLocalOverlay,
-    doc_contract_gates: {
-      round_gate_applies_after: roundGateAppliesAfter,
-      ...((existingDocContractGateParseWarning !== undefined || docContractGateWarnings.length > 0)
-        ? {
-            parse_warning: [
-              existingDocContractGateParseWarning,
-              ...(docContractGateWarnings.length > 0
-                ? [docContractGateWarnings.join(" ")]
-                : [])
-            ]
-              .filter((entry): entry is string => entry !== undefined)
-              .join(" ")
-          }
-        : {})
-    },
+    doc_contract_gates: validatedDocContractGates,
     ...(
       ideationMode ||
       ideationTaskPending ||
