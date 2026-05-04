@@ -38,7 +38,7 @@ task_tracker:
   - task_id: 5-router-port-cleanup
     task_path: plans/tasks/5-router-port-cleanup.md
     status: approved
-    notes: "Approved task created after task 4 archive aftermath; ready for document bubble."
+    notes: "Approved task created after task 4 archive aftermath; document refinement prepares it for implementation."
 ---
 
 # Plan: UI Router Port Closure
@@ -60,26 +60,43 @@ The plan closes the issue in two layers:
 ## Done Definition
 
 1. Router leaf modules do not import or type against the full
-   `UiRouterDependencies` composite.
+   `UiRouterDependencies` composite; RCM1 and T1 enforce this with
+   `FULL_UI_ROUTER_DEPENDENCY_BAG_USAGE`.
 2. Any remaining full router dependency composite is restricted to
    composition/wiring files such as router contracts, dependency resolution, or
-   top-level router creation.
+   top-level router creation; RCM1, the structured allowed-path rule, T1, and
+   T3 prove the composition-only boundary.
 3. `src/v11/shared/ports/uiRouter.ts` no longer imports command-owned
-   list/status/inbox view contracts from `src/v11/shared/{list,status,inbox}/**`.
+   list/status/inbox view contracts from `src/v11/shared/{list,status,inbox}/**`
+   and task 5 continues enforcing that inherited closure from
+   `4-ui-readmodel-port-closure` through `COMMAND_OWNED_UI_PORT_IMPORT`.
 4. UI action result contracts no longer expose raw `BubbleStateSnapshot` or full
-   `ProtocolEnvelope` where the UI only needs projected action state/event DTOs.
-5. Fitness/source guards fail if the broad bag or command-owned type leakage is
-   reintroduced.
-6. The final guard state has zero transitional exceptions or allowlisted current
-   violations for the UI router port closure rules.
-7. Existing UI router behavior, API request/response behavior, frontend type
-   parity, and UI store/API behavior remain covered by targeted tests.
+   `ProtocolEnvelope` where the UI only needs projected action state/event DTOs,
+   and task 5 preserves that inherited closure from `3-ui-action-dto-closure`
+   through contract parity and router behavior tests.
+5. Fitness/source guards fail with canonical reason codes:
+   `FULL_UI_ROUTER_DEPENDENCY_BAG_USAGE` for broad-bag and wrapper broad-bag
+   leaf access, `COMMAND_OWNED_UI_PORT_IMPORT` for command-owned UI port
+   imports, and `AGGREGATE_DERIVED_UI_ROUTER_SLICE_ALIAS` for normal
+   aggregate-derived leaf aliases.
+6. The final UI router port guard state is unified and exception-free:
+   `exceptions_configured=0`, `exceptions_applied=0`, no broad-bag leaf
+   violations, no wrapper broad-bag leaf access, no command-owned UI port
+   imports, and no normal aggregate-derived leaf aliases.
+7. Any retained aggregate-derived compatibility-only alias satisfies RCM2, T7,
+   Structured Contract Rule 5, and the Capability Closure proof: source-boundary
+   coverage proves no in-scope router leaf imports, re-exports, or consumes it,
+   and the negative fixture proves the same alias shape would fail as a normal
+   leaf-facing contract.
+8. Existing UI router behavior, API request/response behavior, frontend type
+   parity, and UI store/API behavior remain covered by targeted tests,
+   especially T4/T5 and the validation strategy below.
 
 ## Capability Closure
 
-| Capability Claim | Closure Classification | Activation Path | Repo-Provided Boundary | External Prerequisites | Last-Mile Proof |
-|---|---|---|---|---|---|
-| The UI router dependency boundary is guarded against broad-bag regression. | foundation_only | `pnpm fitness:check:ci` and targeted fitness/source tests | Repo ships tests/fitness rules and refactored TypeScript surfaces | None | `1-router-fitness-guards` introduces ratcheting guards that pass with explicit known exceptions; `5-router-port-cleanup` proves zero remaining exceptions. |
+| Capability Claim | Closure Classification | Activation Path | Repo-Provided Boundary | External Prerequisites | Last-Mile Proof | Failure Surface |
+|---|---|---|---|---|---|---|
+| The UI router dependency boundary is guarded against broad-bag regression. | foundation_only | `pnpm fitness:check:ci` and targeted fitness/source tests | Repo ships tests/fitness rules and refactored TypeScript surfaces | None | `1-router-fitness-guards` introduces ratcheting guards that pass with explicit known exceptions; `5-router-port-cleanup` proves `exceptions_configured=0`, `exceptions_applied=0`, no broad-bag leaf violations, no wrapper broad-bag leaf access, no command-owned UI port imports, and no normal aggregate-derived leaf aliases. | Broad-bag and wrapper broad-bag leaf access fail with `FULL_UI_ROUTER_DEPENDENCY_BAG_USAGE`; aggregate-derived leaf aliases fail with `AGGREGATE_DERIVED_UI_ROUTER_SLICE_ALIAS`; command-owned UI port imports fail with `COMMAND_OWNED_UI_PORT_IMPORT`. |
 
 ## Guiding Principles
 
@@ -125,8 +142,11 @@ The plan closes the issue in two layers:
    - `src/v11/shared/ports/uiRouter.ts`
    - `src/contracts/ui/uiActions.ts`
    - `src/contracts/ui/uiReadModel.ts`
+   - `src/v11/infrastructure/ui/router.ts`
    - `src/v11/infrastructure/ui/routerDependencies.ts`
    - `src/v11/infrastructure/ui/routerContracts.ts`
+   - `tools/fitness/checks/ui-router-port-boundary.ts`
+   - `tools/fitness/policy.json`
    - `tests/contracts/uiContractParity.types.ts`
    - `tests/contracts/uiContractTransitSource.test.ts`
    - `tests/tools/fitness/uiContractBoundary.test.ts`
@@ -164,20 +184,26 @@ The plan closes the issue in two layers:
    archived after merge.
 6. `3-ui-action-dto-closure` replaced raw action result exposure with UI action
    DTOs and archived after merge.
+7. `4-ui-readmodel-port-closure` moved list/status/inbox router-facing shapes
+   to canonical UI read-model ownership and archived after merge.
 
 ### Open Work
 
-1. `src/v11/shared/ports/uiRouter.ts` still imports list/status/inbox
-   command-owned view/input types.
-2. The retained router composite and remaining transitional aliases still need
-   final cleanup after DTO/read-model closure lands.
-3. Transitional fitness exceptions remain for known current violations; later
-   tasks must reduce that exception set to zero.
+1. The retained router composite and remaining aggregate-derived slice aliases
+   still need final cleanup after DTO/read-model closure has landed.
+2. The final task must prove the UI router port boundary remains
+   exception-free, has no stale broad-bag or wrapper broad-bag leaf path, and
+   has no normal aggregate-derived leaf aliases.
 
 Progress update (2026-05-03): implementation bubble `1-router-fitness-guards-impl`
 closed and merged after satisfying the configured review gate. Task
 `1-router-fitness-guards` is archived and the active task advanced to
 `2-router-dependency-slices`.
+
+Progress update (2026-05-03): implementation bubble
+`2-router-dependency-slices-impl` closed and merged at `a4890b2f`; task
+`2-router-dependency-slices` is archived and the active task advanced to
+`3-ui-action-dto-closure`.
 
 Progress update (2026-05-03): implementation bubble
 `3-ui-action-dto-closure-impl` closed and merged at `d31df79`; task
@@ -210,8 +236,8 @@ Progress update (2026-05-04): implementation bubble
 | `1-router-fitness-guards` | `plans/archive/tasks/1-router-fitness-guards.md` | Add ratcheting architectural guards that focus on consumer slicing and forbidden type imports, not an arbitrary method-count threshold; the guards must pass initially with explicit known transitional exceptions. | N/A | G1, G5 | archived |
 | `2-router-dependency-slices` | `plans/archive/tasks/2026-05-03-ui-router-port-closure-plan-v1/2-router-dependency-slices.md` | Introduce narrow dependency slice types for router leaf modules and keep any composite only at composition/wiring boundaries. | `1-router-fitness-guards` | G1, G2 | archived |
 | `3-ui-action-dto-closure` | `plans/archive/tasks/2026-05-03-ui-router-port-closure-plan-v1/3-ui-action-dto-closure.md` | Replace raw action result `BubbleStateSnapshot`/`ProtocolEnvelope` exposure with explicit UI-facing action state/event DTOs and projection tests. | `2-router-dependency-slices` | G4 | archived |
-| `4-ui-readmodel-port-closure` | `plans/tasks/4-ui-readmodel-port-closure.md` | Move list/status/inbox router-facing shapes to canonical UI read-model ownership and remove command-owned imports from the UI router port. | `2-router-dependency-slices` | G3 | in_progress |
-| `5-router-port-cleanup` | `null` | Remove or localize transitional composite aliases, tighten guard allowlists, update modularity-review status, and verify no stale broad-bag path remains. | `3-ui-action-dto-closure`, `4-ui-readmodel-port-closure` | G1-G5 | not_created |
+| `4-ui-readmodel-port-closure` | `plans/archive/tasks/2026-05-03-ui-router-port-closure-plan-v1/4-ui-readmodel-port-closure.md` | Move list/status/inbox router-facing shapes to canonical UI read-model ownership and remove command-owned imports from the UI router port. | `2-router-dependency-slices` | G3 | archived |
+| `5-router-port-cleanup` | `plans/tasks/5-router-port-cleanup.md` | Remove or localize transitional composite aliases, tighten guard allowlists, update modularity-review status, and verify no stale broad-bag, wrapper broad-bag, or normal aggregate-derived alias path remains. | `3-ui-action-dto-closure`, `4-ui-readmodel-port-closure` | G1, G2, G5 | approved |
 
 ## Coverage Map
 
@@ -221,7 +247,7 @@ Progress update (2026-05-04): implementation bubble
 | G2: The dependency interface mixes unrelated query, mutation, workspace, runtime-session, timeline, and close capabilities. | `2-router-dependency-slices`, `5-router-port-cleanup` | The real proof is consumer slices, not method-count reduction alone. |
 | G3: `uiRouter.ts` imports command-owned list/status/inbox types. | `1-router-fitness-guards`, `4-ui-readmodel-port-closure` | Guard should initially pass with explicit known exceptions or be introduced as fixture-only until the closure task; final state must have no exceptions. |
 | G4: UI action contracts expose raw internal model/event shapes. | `3-ui-action-dto-closure` | Requires projection tests and frontend/API/store parity updates. |
-| G5: No regression guard encodes the intended port shape. | `1-router-fitness-guards`, `5-router-port-cleanup` | First guard should avoid arbitrary numeric thresholds and keep CI green via named transitional exceptions; final guard must prove exception_count=0. |
+| G5: No regression guard encodes the intended port shape. | `1-router-fitness-guards`, `5-router-port-cleanup` | First guard should avoid arbitrary numeric thresholds and keep CI green via named transitional exceptions; final guard must prove `exceptions_configured=0`, `exceptions_applied=0`, no broad-bag leaf violations, no wrapper broad-bag leaf access, no command-owned UI port imports, and no normal aggregate-derived leaf aliases. |
 
 ## Dependencies and Order
 
@@ -241,6 +267,10 @@ Progress update (2026-05-04): implementation bubble
    aliases and tightens guard allowlists only after all consumers have migrated.
    The plan is not done until this task proves there are no transitional
    exceptions left for the router-port closure guards.
+5. In the final cleanup task, migrate or localize aggregate-derived aliases
+   before enabling stricter aggregate-derived alias guard expectations; the
+   final state must pass both the repo scan and the negative fixture without an
+   intentionally red intermediate suite.
 
 ## Risks and Assumptions
 
@@ -269,6 +299,11 @@ Progress update (2026-05-04): implementation bubble
    - `pnpm fitness:check:ci`
 2. For router dependency and endpoint behavior changes:
    - `pnpm exec vitest run tests/core/ui/router.test.ts tests/core/ui/server.integration.test.ts tests/core/ui/eventsScan.test.ts`
+   - `pnpm exec vitest run tests/tools/fitness/uiRouterPortBoundary.test.ts`
+     with dedicated coverage for the wrapper broad-bag fixture `fails on wrapper
+     broad-bag access without literal UiRouterDependencies` or a renamed
+     equivalent kept in sync with task T1/L2, plus `fails on aggregate-derived
+     leaf aliases`
 3. For UI contract ownership and parity changes:
    - `pnpm exec vitest run tests/contracts/uiContractParity.types.ts tests/contracts/uiContractTransitSource.test.ts tests/tools/fitness/uiContractBoundary.test.ts`
 4. For frontend contract consumers:
