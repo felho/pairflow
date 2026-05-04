@@ -5,7 +5,7 @@ task_family_id: router-port-cleanup
 sequence_key: "5"
 task_id: 5-router-port-cleanup
 title: "Router Port Cleanup"
-status: approved
+status: implementable
 phase: phase5
 target_files:
   - src/v11/shared/ports/uiRouter.ts
