@@ -24,7 +24,7 @@ task_tracker:
     status: archived
   - task_id: 2a-contract-entrypoint
     task_path: plans/tasks/2a-contract-entrypoint.md
-    status: implementable
+    status: in_progress
   - task_id: 2b-ui-import-migration
     task_path: null
     status: not_created

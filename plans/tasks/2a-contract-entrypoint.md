@@ -5,7 +5,7 @@ task_family_id: contract-entrypoint
 sequence_key: "2a"
 task_id: 2a-contract-entrypoint
 title: "UI Contract Entrypoint"
-status: implementable
+status: in_progress
 phase: phase2a
 target_files:
   - package.json
@@ -31,7 +31,7 @@ normative_refs:
 owners:
   - "felho"
 doc_bubble_id: 2a-contract-entrypoint-doc
-impl_bubble_id: null
+impl_bubble_id: 2a-contract-entrypoint-impl
 supersedes: []
 superseded_by: null
 archive_group: 2026-05-04-ui-contract-boundary-hardening-plan-v1
