@@ -5,7 +5,7 @@ task_family_id: card-placement-ui-integration
 sequence_key: "2"
 task_id: 2-card-placement-ui-integration
 title: "Card Placement UI Integration"
-status: approved
+status: implementable
 phase: phase2
 target_files:
   - "ui/src/state/useBubbleStore.ts"

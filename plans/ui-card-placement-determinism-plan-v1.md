@@ -20,7 +20,7 @@ task_tracker:
     status: archived
   - task_id: 2-card-placement-ui-integration
     task_path: plans/tasks/2-card-placement-ui-integration.md
-    status: approved
+    status: implementable
 ---
 
 # Plan: UI Card Placement Determinism
