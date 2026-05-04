@@ -9,6 +9,8 @@ status: approved
 phase: phase3
 target_files:
   - src/v11/application/extract/extractCommandContract.ts
+  - src/v11/application/extract/extractPathSelection.ts
+  - src/v11/application/extract/extractTransfer.ts
   - src/v11/application/extract/emitExtractV11.ts
   - src/v11/application/extract/extractCliCommand.ts
   - src/v11/defaults/extract/extractCommandDefaults.ts
@@ -63,9 +65,11 @@ checkout, and optionally stage and commit exactly those selected target paths.
    to the matching target path, and in commit mode stage exactly the normalized
    selected target paths before verifying staged scope and committing.
 6. Missing-data rule: any read/write/stat/git failure returns a structured
-   failed extract result after preserving the source bubble lifecycle; partial
-   target files may exist only if a copy operation fails after earlier selected
-   paths were written, and commit mode must not commit unless staged scope is
+   failed extract result after preserving the source bubble lifecycle. Partial
+   target files may exist after copy, stage, commit, or SHA-resolution failures;
+   staged selected paths may remain after stage or commit execution failures;
+   and a target commit may already exist if only post-commit SHA resolution
+   fails. Commit mode must not attempt commit execution unless staged scope is
    exactly the selected normalized paths.
 7. Phase boundary: this task closes transfer and optional commit execution. It
    does not add operator docs, final end-to-end validation coverage, overwrite
@@ -92,6 +96,7 @@ checkout, and optionally stage and commit exactly those selected target paths.
 1. Source-of-truth anchors:
    - `src/v11/application/extract/extractCommandContract.ts`
    - `src/v11/application/extract/extractPathSelection.ts`
+   - `src/v11/application/extract/extractTransfer.ts`
    - `src/v11/application/extract/emitExtractV11.ts`
    - `src/v11/application/extract/extractCliCommand.ts`
    - `src/v11/defaults/extract/extractCommandDefaults.ts`
@@ -99,17 +104,21 @@ checkout, and optionally stage and commit exactly those selected target paths.
    - `tests/cli/index.test.ts`
 2. Canonical elements:
    - `selectedPaths` is the only transfer authority.
+   - normalized selected-path uniqueness is required before any filesystem or
+     git side effect.
    - `commitRequested=true` authorizes only selected-path staging and commit.
-   - success must expose copied paths; commit success must expose staged paths
-     and commit SHA.
+   - success must expose copied paths; commit success must expose staged paths,
+     commit SHA, and effective `commitMessage`.
 3. Guard elements:
    - checkout preconditions and target no-conflict checks remain upstream guards.
-   - duplicate-path diagnostics remain advisory unless staged-scope exactness
-     would be violated.
+   - raw duplicate diagnostics from upstream tasks remain advisory; this task's
+     hard duplicate gate is based on normalized selected target paths.
 4. Compat elements:
    - existing failure reason codes from tasks 1 and 2 must keep their meanings.
    - `EXTRACT_TRANSFER_NOT_IMPLEMENTED` is removed from the success path by this
      task, but may be deleted or retained only if no public consumer requires it.
+   - the existing input-level `message` field remains the requested message;
+     success records the effective message as `commitMessage`.
 5. Forbidden reinterpretations:
    - Accepted selected paths do not authorize overwrite.
    - Copy success does not imply source-bubble lifecycle completion.
@@ -137,7 +146,12 @@ checkout, and optionally stage and commit exactly those selected target paths.
 5. Dependency reality: this task likely needs dependency ports for copying files,
    creating target parent directories, and reading/validating staged paths and
    commit SHA through `runGit`.
-6. Why the declared task shape matches reality: transfer and selected-path
+6. Baseline duplicate reality: `extractBubbleV11` currently reports duplicate
+   raw `input.paths` only as diagnostics after successful path validation. This
+   task must add a deterministic normalized duplicate check over the validated
+   `selectedPaths` and make it fail before target parent creation, copy,
+   staging, or commit.
+7. Why the declared task shape matches reality: transfer and selected-path
    commit share the same already-validated selected-path authority and the same
    final result surface; docs and final end-to-end coverage are separate
    consumer/activation polish.
@@ -176,8 +190,8 @@ checkout, and optionally stage and commit exactly those selected target paths.
 | configuration_owner | Repo defaults plus operator-supplied CLI flags; no new config owner. |
 | repo_provided_parts | CLI command, extract application flow, filesystem dependency defaults, git dependency defaults, targeted tests. |
 | external_prerequisites | Existing ideation bubble, source files at selected paths, clean target checkout on `main`, local git availability. |
-| success_output_contract | Copy-only result records `status=success`, `copiedPaths`, and no commit SHA; commit result records `status=success`, `copiedPaths`, exact `stagedPaths`, and `commitSha`. |
-| failure_output_contract | Structured `status=failed` with reason code and diagnostics; no source-bubble lifecycle mutation; no commit unless staged scope exactly matches selected paths. |
+| success_output_contract | Copy-only result records `status=success`, `copiedPaths`, and no commit SHA; commit result records `status=success`, `copiedPaths`, exact `stagedPaths`, `commitSha`, and effective `commitMessage`. |
+| failure_output_contract | Structured `status=failed` with reason code and diagnostics; no source-bubble lifecycle mutation; no commit unless staged scope exactly matches selected paths, and commit-SHA resolution failure may leave an already-created target commit. |
 | operator_or_user_path | CLI command above, with output text or JSON showing copy/commit result. |
 | last_mile_proof | Targeted CLI/app tests that exercise copy-only and commit mode through the real command path in temporary git repositories. |
 | closure_classification | `end_to_end` for copy/commit execution slice; final docs and broad regression matrix remain task 4. |
@@ -193,11 +207,13 @@ checkout, and optionally stage and commit exactly those selected target paths.
    committed files.
 5. In commit mode, stage exactly the normalized selected target paths, verify the
    staged file list exactly matches those normalized paths, commit with the
-   supplied message or deterministic default, and return commit SHA evidence.
+   supplied message or deterministic default, and return commit SHA plus
+   effective commit-message evidence.
 6. Update CLI text/JSON-facing result behavior to report real copy/commit
    success rather than implementation-deferred transfer.
-7. Add targeted tests for copy-only, multi-path copy, commit mode, default commit
-   message, staged-scope mismatch failure, copy failure, git commit failure, and
+7. Add targeted tests for copy-only, multi-path copy, normalized duplicate
+   failure, commit mode, default commit message, staged-scope mismatch failure,
+   copy failure, git stage failure, git commit/SHA resolution failure, and
    source-bubble lifecycle non-mutation at this slice's boundary.
 
 ### Out of Scope
@@ -233,13 +249,14 @@ checkout, and optionally stage and commit exactly those selected target paths.
 | CCM3 | Two raw paths normalize to the same path | current task | `status=failed` before parent directory creation, copy, staging, or commit | `EXTRACT_DUPLICATE_SELECTED_PATH` | none | T3 |
 | CCM4 | Parent directory missing on target | current task | parent directory created then file copied | N/A | selected target parent dirs/files only | T4 |
 | CCM5 | Copy operation fails | current task | `status=failed` | `EXTRACT_COPY_FAILED` | no commit; prior copied selected files may remain if already written | T5 |
-| CCM6 | `--commit` with explicit message | current task | `status=success`, staged paths and commit SHA recorded | N/A | selected files copied, staged, committed | T6 |
-| CCM7 | `--commit` without message | current task | deterministic default message used | N/A | selected files copied, staged, committed | T7 |
-| CCM8 | Staged list differs from normalized selected paths | current task | `status=failed` | `EXTRACT_STAGED_SCOPE_MISMATCH` | no commit | T8 |
-| CCM9 | Git add fails | current task | `status=failed` | `EXTRACT_STAGE_FAILED` | copied selected files may remain; no commit | T9 |
-| CCM10 | Git commit fails | current task | `status=failed` | `EXTRACT_COMMIT_FAILED` | copied files and staged selected paths may remain; no commit SHA | T10 |
-| CCM11 | Precondition/path-selection failure | upstream tasks | existing failed result preserved | existing reason | no copy, stage, commit, or lifecycle mutation | T11 |
-| CCM12 | Successful extract | current task | source bubble remains present and lifecycle state unchanged by extract | N/A | target copy/optional target commit only | T12 |
+| CCM6 | `--commit` with explicit message | current task | `status=success`, staged paths, commit SHA, and effective `commitMessage` recorded | N/A | selected files copied, staged, committed | T6 |
+| CCM7 | `--commit` without message | current task | `status=success`, deterministic default `commitMessage`, staged paths, and commit SHA recorded | N/A | selected files copied, staged, committed | T7 |
+| CCM8 | Staged list differs from normalized selected paths | current task | `status=failed` | `EXTRACT_STAGED_SCOPE_MISMATCH` | no commit; selected staged paths and mismatch-causing staged entries may remain for operator inspection | T8 |
+| CCM9 | Git add fails | current task | `status=failed` | `EXTRACT_STAGE_FAILED` | copied selected files and partially staged selected paths may remain; no commit | T9 |
+| CCM10 | Git commit execution fails | current task | `status=failed` | `EXTRACT_COMMIT_FAILED` | copied files and staged selected paths may remain; no commit SHA | T10 |
+| CCM11 | Post-commit SHA resolution fails | current task | `status=failed` | `EXTRACT_COMMIT_FAILED` | target commit may already exist and staged paths may be clean; no success result because commit SHA evidence is incomplete | T11 |
+| CCM12 | Precondition/path-selection failure | upstream tasks | existing failed result preserved | existing reason | no copy, stage, commit, or lifecycle mutation | T12 |
+| CCM13 | Successful extract | current task | source bubble remains present and lifecycle state unchanged by extract | N/A | target copy/optional target commit only | T13 |
 
 ### 0b) Ownership and Deferred Semantics
 
@@ -278,6 +295,8 @@ checkout, and optionally stage and commit exactly those selected target paths.
    - diagnostics must include the duplicate normalized path and the raw paths
      that produced it.
    - `selectedPaths` order is preserved only for unique normalized paths.
+   - this rule is evaluated after path-selection normalization succeeds and
+     before any transfer helper is invoked.
 6. Commit message:
    - use supplied `--message` when present.
    - otherwise use a deterministic default that includes the bubble id and
@@ -314,15 +333,17 @@ checkout, and optionally stage and commit exactly those selected target paths.
 1. Run existing command preconditions first.
 2. Run existing path selection second.
 3. Resolve deterministic selected transfer set according to duplicate policy.
-4. Create target parent directories and copy files.
+4. Create target parent directories and copy files in selected-path order.
 5. If `commit=false`, return success immediately with copied evidence.
 6. If `commit=true`:
-   - stage selected normalized paths only.
+   - stage selected normalized paths only, using repo-relative pathspecs from
+     the target repository root.
    - read staged paths.
    - compare staged paths to selected normalized paths.
    - commit with explicit or default message.
    - read or capture commit SHA.
-   - return success with staged/commit evidence.
+   - return success with staged, commit SHA, and effective commit-message
+     evidence.
 
 ### 3) Branch / Failure Inventory
 
@@ -330,11 +351,20 @@ checkout, and optionally stage and commit exactly those selected target paths.
    staging, commit, or lifecycle side effects.
 2. `EXTRACT_DUPLICATE_SELECTED_PATH`: two or more raw paths normalize to the same
    selected target path; fail before filesystem or git side effects.
-3. `EXTRACT_COPY_FAILED`: target parent creation or file copy failed.
-4. `EXTRACT_STAGE_FAILED`: selected-path `git add` failed.
+3. `EXTRACT_COPY_FAILED`: target parent creation or file copy failed; diagnostics
+   identify the selected path and failing filesystem step where available.
+4. `EXTRACT_STAGE_FAILED`: selected-path `git add` failed; diagnostics identify
+   the git step and selected paths; copied selected files and partially staged
+   selected paths may remain.
 5. `EXTRACT_STAGED_SCOPE_MISMATCH`: staged paths differ from selected normalized
-   paths after staging.
+   paths after staging; selected staged paths and mismatch-causing staged entries
+   may remain for operator inspection, but no commit is created.
 6. `EXTRACT_COMMIT_FAILED`: git commit or commit SHA resolution failed.
+   Diagnostics must identify whether the failing step was commit execution or
+   post-commit SHA resolution. If commit execution failed, staged selected paths
+   may remain for operator inspection. If commit execution succeeded but SHA
+   resolution failed, a target commit may already exist and staged paths may be
+   clean; the result still fails because success evidence is incomplete.
 7. Every current-task failure must leave source bubble lifecycle untouched.
 
 ### 4) Acceptance Criteria
@@ -343,32 +373,55 @@ checkout, and optionally stage and commit exactly those selected target paths.
    success result with `copiedPaths`.
 2. Multi-path extract preserves explicit selected order in result evidence when
    normalized paths are unique.
-3. Duplicate normalized selected paths fail before copy, staging, or commit.
+3. Duplicate normalized selected paths fail before parent directory creation,
+   copy, staging, or commit.
 4. Commit mode stages and commits exactly the selected normalized paths.
 5. Commit mode records `stagedPaths`, `commitSha`, and effective
    `commitMessage`.
-6. Staged-scope mismatch fails before commit.
-7. Existing precondition/path validation failures still prevent copy, staging,
+6. Staged-scope mismatch fails before commit and records that selected staged
+   paths plus mismatch-causing staged entries may remain for operator inspection.
+7. Copy failure returns `EXTRACT_COPY_FAILED` with selected path and filesystem
+   step diagnostics where available, and never commits.
+8. Git stage failure returns `EXTRACT_STAGE_FAILED` with git-step and selected
+   path diagnostics; copied selected files and partially staged selected paths
+   may remain, but it never commits.
+9. Git commit failure returns `EXTRACT_COMMIT_FAILED`; copied files and staged
+   selected paths may remain for operator inspection, and no commit SHA is
+   reported as success evidence.
+10. Post-commit SHA resolution failure returns `EXTRACT_COMMIT_FAILED` with
+   diagnostics for the SHA-resolution step; a target commit may already exist
+   and staged paths may be clean, but the result is not success because commit
+   SHA evidence is incomplete.
+11. Existing precondition/path validation failures still prevent copy, staging,
    and commit.
-8. CLI text no longer says transfer is unimplemented on successful extract.
-9. Tests prove the source bubble artifact/lifecycle is not deleted, approved,
+12. CLI text no longer says transfer is unimplemented on successful extract.
+13. Tests prove the source bubble artifact/lifecycle is not deleted, approved,
    committed, merged, or otherwise closed by extract.
 
 ## L2 - Implementation Notes
 
 1. Prefer adding small helper functions under `src/v11/application/extract/**`
-   rather than expanding `emitExtractV11.ts` into a large mixed flow.
+   rather than expanding `emitExtractV11.ts` into a large mixed flow. If a new
+   helper file is added, `extractTransfer.ts` is the expected first location for
+   copy/commit orchestration.
 2. Use dependency ports for filesystem mutation so unit tests can cover failure
    branches without real writes.
-3. Use `runGit` with explicit cwd/working-directory options consistent with the
+3. Extend `ExtractCommandDependencies` and the default extract dependencies with
+   parent-directory creation and file-copy ports; keep existing metadata ports
+   unchanged.
+4. Use `runGit` with explicit cwd/working-directory options consistent with the
    existing git port usage.
-4. Normalize staged path comparison to POSIX repo-relative paths.
-5. Keep `renderBubbleExtractText` concise: copy success should report copied
-   count; commit success should also report commit SHA.
-6. When adding real-repo CLI tests, use temporary repositories and existing test
+5. Normalize staged path comparison to POSIX repo-relative paths.
+6. Keep `renderBubbleExtractText` concise: copy success should report copied
+   count; commit success should also report commit SHA and effective
+   commit-message evidence without implying broader lifecycle cleanup.
+7. When adding real-repo CLI tests, use temporary repositories and existing test
    helpers; avoid relying on the developer checkout state.
-7. Do not add docs in this task unless a test-facing help line must change to
+8. Do not add docs in this task unless a test-facing help line must change to
    avoid lying about the result.
+9. Do not require the final operator documentation matrix here; task
+   `4-extract-docs-validation` owns broad docs and final end-to-end activation
+   proof after this implementation has settled.
 
 ## Validation Strategy
 
@@ -378,7 +431,15 @@ checkout, and optionally stage and commit exactly those selected target paths.
 4. Targeted tests:
    - `pnpm vitest run tests/cli/bubbleExtractCommand.test.ts`
    - `pnpm vitest run tests/cli/index.test.ts`
+   - cover every Canonical Contract Matrix test row T1-T13, including copy-only
+     success, multi-path ordering, parent directory creation, explicit commit
+     message success, deterministic default commit-message success, copy failure,
+     git stage failure, staged-scope mismatch with retained staged-side-effect
+     expectations, git commit failure, post-commit SHA resolution failure,
+     upstream precondition/path-selection preservation, and source-bubble
+     lifecycle non-mutation.
    - include duplicate-normalized-path failure coverage for
-     `EXTRACT_DUPLICATE_SELECTED_PATH`.
+     `EXTRACT_DUPLICATE_SELECTED_PATH`, including proof that no target parent
+     directory is created before this failure.
 5. `pnpm test`
 6. `pnpm build`
