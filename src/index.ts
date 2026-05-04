@@ -323,6 +323,7 @@ export type {
   ExtractCommandInput,
   ExtractCommandOptions,
   ExtractCommandResult,
+  ExtractSelectedPath,
   ExtractTargetCheckoutFailureReason
 } from "./v11/application/extract/extractCommandContract.js";
 export {

@@ -5,6 +5,7 @@ import type {
 } from "./extractCommandContract.js";
 import { extractCommandDependencyDefaults } from "../../defaults/extract/extractCommandDefaults.js";
 import { validateExtractCommandPreconditions } from "./extractCommandPreconditions.js";
+import { validateExtractPathSelection } from "./extractPathSelection.js";
 
 function findDuplicatePaths(paths: string[]): string[] {
   const seen = new Set<string>();
@@ -31,6 +32,16 @@ export async function extractBubbleV11(
     return preconditions;
   }
 
+  const pathSelection = await validateExtractPathSelection({
+    command: input,
+    resolvedBubble: preconditions.resolvedBubble,
+    targetRepoPath: preconditions.targetRepoPath,
+    dependencies
+  });
+  if (pathSelection.status !== "path_selection_passed") {
+    return pathSelection;
+  }
+
   return {
     bubbleId: preconditions.resolvedBubble.bubbleId,
     repoPath: preconditions.targetRepoPath,
@@ -39,6 +50,7 @@ export async function extractBubbleV11(
     ...(input.message !== undefined ? { message: input.message } : {}),
     status: "implementation_deferred",
     reasonCode: "EXTRACT_TRANSFER_NOT_IMPLEMENTED",
+    selectedPaths: pathSelection.selectedPaths,
     diagnostics: {
       resolvedBubbleRepoPath: preconditions.resolvedBubble.repoPath,
       targetRepoPath: preconditions.targetRepoPath,

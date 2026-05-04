@@ -1,4 +1,4 @@
-import { mkdtemp, rm, writeFile, chmod } from "node:fs/promises";
+import { chmod, mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -225,6 +225,11 @@ describe("runCli", () => {
       ideation: true,
       cwd: repoPath
     });
+    await mkdir(join(bubble.paths.worktreePath, "docs"), { recursive: true });
+    await writeFile(
+      join(bubble.paths.worktreePath, "docs", "idea.md"),
+      "# Extracted idea\n"
+    );
     await runGit(repoPath, ["add", ".pairflow"]);
     await runGit(repoPath, ["commit", "-m", "test: add ideation bubble"]);
 
@@ -262,6 +267,11 @@ describe("runCli", () => {
       ideation: true,
       cwd: repoPath
     });
+    await mkdir(join(bubble.paths.worktreePath, "docs"), { recursive: true });
+    await writeFile(
+      join(bubble.paths.worktreePath, "docs", "idea.md"),
+      "# Extracted idea\n"
+    );
     await runGit(repoPath, ["add", ".pairflow"]);
     await runGit(repoPath, ["commit", "-m", "test: add ideation bubble"]);
 
