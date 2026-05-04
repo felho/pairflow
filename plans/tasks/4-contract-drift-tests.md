@@ -59,7 +59,9 @@ not authorize implementation inside this document creation pass.
    backend router/event validators remain guard code over canonical contracts.
 3. Read-path rule: `ui/src/**` imports shared UI contracts through
    `@pairflow/ui-contracts`, not relative `src/contracts/ui/**`, `src/v11/**`,
-   or `src/types/**` paths.
+   or `src/types/**` paths. Existing UI compatibility barrels under
+   `ui/src/lib/contracts/**` are legacy transit surfaces to verify, not
+   alternative entrypoints for new shared-contract consumption.
 4. Forbidden fallback: do not reintroduce allowlist exceptions, UI-local DTO
    mirrors, comment-only "keep in sync" checks, or tests that only assert happy
    paths while malformed required fields still pass.
@@ -69,7 +71,11 @@ not authorize implementation inside this document creation pass.
    ownership.
 6. Missing-data rule: representative malformed required action/read/event fields
    must remain covered by fail-closed tests with stable reason codes.
-7. Phase boundary:
+7. Documentation-pass boundary: this document refinement is the primary artifact
+   for the docs-only bubble. It must make the later code implementation
+   mechanically checkable, but it must not substitute a standalone synthesis
+   document for this source task file.
+8. Phase boundary:
    - import-boundary closure: enforce final UI entrypoint usage and forbidden
      backend imports.
    - protocol-export closure: prove browser-visible `ProtocolMessageType` flows
@@ -120,8 +126,10 @@ not authorize implementation inside this document creation pass.
    - runtime validators prove selected payload conformance but do not become a
      second DTO hierarchy.
 4. Compat-only elements:
-   - UI local contract barrels under `ui/src/lib/contracts/**` are convenience
-     consumers only.
+   - UI local contract barrels under `ui/src/lib/contracts/**` are compatibility
+     transit surfaces only: they may re-export from `@pairflow/ui-contracts`,
+     but they must not redeclare DTOs and this task must not encourage other UI
+     source to treat them as the shared-contract entrypoint.
    - Type-level parity tests may compare canonical and runtime types but must
      not make runtime internals browser import targets.
 5. Forbidden reinterpretations:
@@ -137,6 +145,12 @@ not authorize implementation inside this document creation pass.
    - `tests/tools/fitness/uiContractBoundary.test.ts`
    - `tests/contracts/uiContractTransitSource.test.ts`
    - `tests/contracts/uiContractEntrypointResolution.test.ts`
+   - `src/contracts/ui/index.ts`
+   - `src/contracts/ui/uiReadModel.ts`
+   - `ui/src/lib/contracts/**`
+   - `ui/src/lib/types.ts`
+   - `tsconfig.json`
+   - `vitest.config.ts`
    - `tests/core/ui/router.test.ts`
    - `tests/core/ui/events.test.ts`
 2. Actual touched scope: tests and fitness guardrails only, plus policy updates
@@ -163,6 +177,9 @@ not authorize implementation inside this document creation pass.
      checker;
    - add contract-transit assertions that forbid direct browser imports from
      `src/types/protocol.js`;
+   - assert the live `tools/fitness/policy.json` check has an empty
+     `ui_contract_boundary` exception list and that the report details include
+     `exceptions_configured=0` and `exceptions_applied=0`;
    - add or tighten representative failure-path tests only where current
      runtime validators already own the boundary.
 3. Forbidden regression interpretations:
@@ -178,7 +195,7 @@ not authorize implementation inside this document creation pass.
 |---|---|---|---|
 | UI contract entrypoint | `ui/src/**` shared contract imports use `@pairflow/ui-contracts`. | Relative import to `src/contracts/ui/**` or direct `src/v11/**`/`src/types/**`. | Fitness fixture/test fails on forbidden import and passes on entrypoint import. |
 | Protocol export | Browser-visible `ProtocolMessageType` comes through canonical UI contracts. | UI source imports `src/types/protocol.js` or declares local protocol literals. | Contract transit/source test asserts canonical export and no UI-local declaration/import leak. |
-| Policy exceptions | No stale `ui_contract_boundary` exception is needed for the final graph. | Reintroduced known-drift exception or configured exception not applied. | Fitness/policy test asserts no stale exception id and no applied exception. |
+| Policy exceptions | No stale `ui_contract_boundary` exception is needed for the final graph. | Reintroduced stale exception id `ui-contract-boundary-known-meta-review-drift-001`, non-empty live exception list, or configured exception not applied. | Fitness/policy test asserts the stale exception id is absent, live policy exceptions are empty, and the live report records zero configured/applied exceptions. |
 | Action validation | Representative malformed delete/commit/merge response fails closed. | Malformed selected action result returns 2xx. | Router tests keep `UI_ACTION_RESPONSE_INVALID` coverage. |
 | Read validation | Representative malformed list/detail/timeline response fails closed. | Malformed selected read response returns 2xx. | Router tests keep `UI_READ_RESPONSE_INVALID` and `responseFamily` coverage. |
 | Event validation | Representative malformed connected/snapshot/replayable event payload fails closed or is dropped before trusted emission/storage. | Malformed selected event reaches trusted SSE/history path. | Router/events tests keep `UI_EVENT_PAYLOAD_INVALID` coverage. |
@@ -199,10 +216,25 @@ not authorize implementation inside this document creation pass.
    the existing stable reason code for that family.
 2. Optional/null fields remain accepted only where already accepted by the
    canonical contracts and validators.
-3. Policy exceptions are allowed only when explicitly configured and applied to
-   an intentional transitional import. The known stale exception must remain
-   absent.
+3. Live `ui_contract_boundary` policy exceptions are not allowed for the final
+   graph in this task. The known stale exception must remain absent from live
+   policy and from test fixtures that represent the final graph; the live check
+   must report `exceptions_configured=0` and `exceptions_applied=0`. Unit
+   fixtures may still verify generic exception mechanics with neutral ids such
+   as `fixture-allow-import-neutral`, but those fixtures must not reuse the
+   stale exception id and must not be cited as final-boundary acceptance proof.
 4. Fitness fixtures must cover both violation and allowed-entrypoint cases.
+5. Source scans for UI protocol leaks must inspect TypeScript AST declarations
+   under `ui/src/**`, not only hand-picked compatibility files. The scan must
+   cover import declarations, export declarations, local type/interface/enum
+   declarations named `ProtocolMessageType`, and local protocol literal arrays
+   or const objects that recreate protocol message names. Test files may remain
+   outside this browser-source restriction unless the configured fitness scope
+   intentionally includes them.
+6. Compatibility-barrel proof means `ui/src/lib/contracts/**` remains a
+   re-export-only transit layer over `@pairflow/ui-contracts`; it does not
+   permit other UI source to bypass the `@pairflow/ui-contracts` entrypoint for
+   shared contracts.
 
 ### Acceptance Criteria
 
@@ -210,25 +242,41 @@ not authorize implementation inside this document creation pass.
    `src/contracts/ui/**`, `src/v11/**`, or `src/types/**` and passes for
    `@pairflow/ui-contracts`.
 2. Tests prove the stale `ui-contract-boundary-known-meta-review-drift-001`
-   exception is not present or cannot silently return.
+   exception is absent and the live `ui_contract_boundary` policy has no
+   configured exceptions. The live fitness report proof must include
+   `exceptions_configured=0` and `exceptions_applied=0`.
 3. Contract transit tests prove `ProtocolMessageType` is exported through
    canonical UI contracts and not declared or imported directly in UI source.
+   The proof must include `src/contracts/ui/uiReadModel.ts`,
+   `src/contracts/ui/index.ts`, `ui/src/lib/types.ts`, and UI compatibility
+   barrels that re-export from `@pairflow/ui-contracts`; it must also fail on a
+   local `ProtocolMessageType` declaration or local protocol literal mirror in
+   non-test UI source.
 4. Representative invalid action/read/event validation failure tests remain
    present and assert stable reason codes.
 5. No DTO shape, router behavior, or UI component behavior changes are made
    except as required to keep existing guardrails compiling.
+6. Existing fixture tests for generic exception application remain allowed only
+   as mechanics coverage; the acceptance proof for the final graph must come
+   from the live policy check with no configured exceptions.
 
 ## L2 - Implementation Notes
 
 1. Start with the existing fitness checker and tests; prefer adding fixtures to
    broadening production scanner logic.
-2. Search for the final forbidden import classes before editing:
-   - `../../../src/contracts/ui`
-   - `src/types/protocol`
+2. Search for the final forbidden import classes before editing. Cover both
+   relative and bare specifier forms for the full banned surface:
+   - `src/contracts/ui`
+   - `src/types`
    - `src/v11`
-3. Keep validation coverage representative; do not add broad schema tests for
+   - representative relative UI forms such as `../../../src/contracts/ui`,
+     `../../../src/types`, and `../../../src/v11`
+3. When tightening protocol leak coverage, prefer the TypeScript parser or the
+   existing source-reading helpers over broad substring checks that can be
+   fooled by comments or unrelated prose.
+4. Keep validation coverage representative; do not add broad schema tests for
    every DTO in this slice.
-4. Suggested narrow checks:
+5. Suggested narrow checks:
    - `pnpm exec vitest run tests/tools/fitness/uiContractBoundary.test.ts`
    - `pnpm exec vitest run tests/contracts/uiContractTransitSource.test.ts tests/contracts/uiContractEntrypointResolution.test.ts`
    - `pnpm exec vitest run tests/core/ui/router.test.ts tests/core/ui/events.test.ts`
