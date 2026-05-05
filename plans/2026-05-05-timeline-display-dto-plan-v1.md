@@ -4,8 +4,8 @@ artifact_id: plan_timeline_display_dto_v1
 plan_id: timeline-display-dto-plan-v1
 created_on: "2026-05-05"
 title: "Timeline Display DTO Plan"
-status: draft
-plan_status: draft
+status: approved
+plan_status: approved
 prd_ref: null
 owners:
   - "felho"
