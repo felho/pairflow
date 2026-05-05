@@ -548,6 +548,9 @@ describe("UI contract transit source guards", () => {
     const routerBubbleDetail = await readSource(
       "src/v11/infrastructure/ui/routerBubbleDetail.ts"
     );
+    const routerDependencies = await readSource(
+      "src/v11/infrastructure/ui/routerDependencies.ts"
+    );
     const eventsScanTest = await readSource("tests/core/ui/eventsScan.test.ts");
     const eventsFingerprintTest = await readSource(
       "tests/core/ui/eventsFingerprint.test.ts"
@@ -595,7 +598,8 @@ describe("UI contract transit source guards", () => {
       eventsScanTest,
       eventsFingerprintTest,
       presenter,
-      routerBubbleDetail
+      routerBubbleDetail,
+      routerDependencies
     ]) {
       for (const marker of forbiddenCommandOwnedMarkers) {
         expect(source).not.toContain(marker);
@@ -617,6 +621,12 @@ describe("UI contract transit source guards", () => {
     expect(routerPort).not.toContain("from \"../list/listCommandContract.js\"");
     expect(routerPort).not.toContain("from \"../inbox/inboxCommandApi.js\"");
     expect(routerPort).not.toContain("from \"../status/statusCommandApi.js\"");
+    expect(routerDependencies).toContain(
+      "from \"../../shared/bubbleInbox/bubbleInboxReadModel.js\""
+    );
+    expect(routerDependencies).not.toContain(
+      "from \"../../shared/inbox/inboxCommandApi.js\""
+    );
     expect(eventsScan).toContain("from \"../../../contracts/ui/uiReadModel.js\"");
     expect(eventsFingerprint).toContain(
       "from \"../../../contracts/ui/uiReadModel.js\""

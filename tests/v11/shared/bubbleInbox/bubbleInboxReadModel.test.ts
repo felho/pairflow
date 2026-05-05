@@ -3,10 +3,10 @@ import { describe, expect, it } from "vitest";
 import {
   asBubbleInboxError,
   BubbleInboxError
-} from "../../../../src/v11/shared/inbox/inboxCommandApi.js";
+} from "../../../../src/v11/shared/bubbleInbox/bubbleInboxReadModel.js";
 import { BubbleLookupError } from "../../../../src/v11/infrastructure/executor/workspace/bubbleLookup.js";
 
-describe("inboxCommandApi", () => {
+describe("bubbleInboxReadModel", () => {
   it("normalizes bubble lookup failures with caller context", () => {
     const input = new BubbleLookupError("missing bubble");
 

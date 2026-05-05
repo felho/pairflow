@@ -1,4 +1,4 @@
-import { getBubbleInbox } from "../../shared/inbox/inboxCommandApi.js";
+import { getBubbleInbox } from "../../shared/bubbleInbox/bubbleInboxReadModel.js";
 import { readRuntimeSessionsRegistry } from "../executor/sessionRuntime/runtimeSessionsRegistry.js";
 import { readBubbleTimeline } from "./presenters/timelinePresenter.js";
 import { attachBubble } from "../executor/command/pairflowCommandAttach.js";
