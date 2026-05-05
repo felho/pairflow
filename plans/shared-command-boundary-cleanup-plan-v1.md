@@ -49,7 +49,7 @@ task_tracker:
     status: archived
   - task_id: 8-list-inventory
     task_path: plans/tasks/8-list-inventory.md
-    status: implementable
+    status: in_progress
   - task_id: 9-list-local-move-a
     task_path: null
     status: not_created

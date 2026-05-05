@@ -5,7 +5,7 @@ task_family_id: list-inventory
 sequence_key: "8"
 task_id: 8-list-inventory
 title: "List Inventory"
-status: implementable
+status: in_progress
 phase: phase4
 target_files:
   - src/v11/shared/list/listCommandApi.ts
@@ -34,7 +34,7 @@ normative_refs:
 owners:
   - "felho"
 doc_bubble_id: 8-list-inventory-doc
-impl_bubble_id: null
+impl_bubble_id: 8-list-inventory-impl
 supersedes: []
 superseded_by: null
 archive_group: 2026-05-05-shared-command-boundary-cleanup-plan-v1
