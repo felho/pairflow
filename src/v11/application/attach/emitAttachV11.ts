@@ -2,6 +2,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 
 import { loadPairflowGlobalConfig } from "../../../config/pairflowConfig.js";
+import { processSpawn } from "../../shared/process/processSpawnDefaults.js";
 import { buildCheckLauncherAvailabilityDefault } from "./attachBubbleLauncherAvailability.js";
 import {
   buildAttachCommand,
@@ -20,7 +21,6 @@ import {
   type AttachCommandExecutionResult,
   type AttachCommandExecutor
 } from "./attachBubbleContract.js";
-import { processSpawnDefault } from "../../defaults/process/processSpawnDefaults.js";
 
 export type {
   AttachBubbleDependencies,
@@ -46,7 +46,7 @@ export const executeAttachCommand: AttachCommandExecutor = async (
   input: AttachCommandExecutionInput
 ): Promise<AttachCommandExecutionResult> =>
   new Promise((resolvePromise, rejectPromise) => {
-    const child = processSpawnDefault("bash", ["-lc", input.command], {
+    const child = processSpawn("bash", ["-lc", input.command], {
       cwd: input.cwd,
       stdio: ["ignore", "pipe", "pipe"]
     });
@@ -83,7 +83,7 @@ export const executeAttachCommand: AttachCommandExecutor = async (
 
 async function checkTmuxSessionExistsDefault(sessionName: string): Promise<boolean> {
   return new Promise((resolvePromise) => {
-    const child = processSpawnDefault("tmux", ["has-session", "-t", sessionName], {
+    const child = processSpawn("tmux", ["has-session", "-t", sessionName], {
       stdio: ["ignore", "ignore", "ignore"]
     });
 

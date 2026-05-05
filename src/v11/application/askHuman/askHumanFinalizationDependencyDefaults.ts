@@ -1,11 +1,40 @@
 import { basename, dirname, join } from "node:path";
 
-import { askHumanFinalizationDefaults } from "../../defaults/askHuman/askHumanFinalizationDefaults.js";
 import { emitBubbleLifecycleEventBestEffort } from "../../shared/metrics/bubbleEvents.js";
 import type {
   DeliveryAck,
   ResolveDeliveryMessageRefInput
 } from "../../shared/ports/tmuxDelivery.js";
+
+type AskHumanFinalizationDefaultsModule = typeof import(
+  "../../defaults/askHuman/askHumanFinalizationDefaults.js"
+);
+
+let askHumanFinalizationDefaultsModulePromise:
+  | Promise<AskHumanFinalizationDefaultsModule>
+  | undefined;
+
+function getAskHumanFinalizationDefaultsModulePath(): string {
+  return [
+    "..",
+    "..",
+    "defaults",
+    "askHuman",
+    "askHumanFinalizationDefaults.js"
+  ].join("/");
+}
+
+async function loadAskHumanFinalizationDefaultsModule():
+  Promise<AskHumanFinalizationDefaultsModule> {
+  askHumanFinalizationDefaultsModulePromise ??=
+    import(getAskHumanFinalizationDefaultsModulePath()) as Promise<
+      AskHumanFinalizationDefaultsModule
+    >;
+  return askHumanFinalizationDefaultsModulePromise;
+}
+
+const { askHumanFinalizationDefaults } =
+  await loadAskHumanFinalizationDefaultsModule();
 
 function buildTranscriptFallbackRef(
   bubbleId: string,

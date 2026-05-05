@@ -11,7 +11,26 @@ import {
 } from "./replyCommandError.js";
 import { resolveReplyCommandDependencies } from "./replyCommandDependencyResolution.js";
 import { normalizeReplyCommandInput } from "./replyCommandInputNormalization.js";
-import { executeReplyMutation } from "../../defaults/reply/replyMutationExecution.js";
+type ReplyMutationExecutionModule = typeof import(
+  "../../defaults/reply/replyMutationExecution.js"
+);
+
+let replyMutationExecutionModulePromise:
+  | Promise<ReplyMutationExecutionModule>
+  | undefined;
+
+function getReplyMutationExecutionModulePath(): string {
+  return ["..", "..", "defaults", "reply", "replyMutationExecution.js"].join("/");
+}
+
+async function loadReplyMutationExecutionModule():
+  Promise<ReplyMutationExecutionModule> {
+  replyMutationExecutionModulePromise ??=
+    import(getReplyMutationExecutionModulePath()) as Promise<
+      ReplyMutationExecutionModule
+    >;
+  return replyMutationExecutionModulePromise;
+}
 
 export async function emitHumanReply(
   input: EmitHumanReplyInput,
@@ -51,6 +70,7 @@ export async function emitHumanReply(
     createError: createHumanReplyCommandError
   });
 
+  const { executeReplyMutation } = await loadReplyMutationExecutionModule();
   const { appended, written } = await executeReplyMutation({
     resolved,
     loadedState,

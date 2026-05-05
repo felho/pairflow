@@ -19,7 +19,7 @@ import {
 import {
   createOpenBubbleError
 } from "./openBubbleError.js";
-import { processSpawnDefault } from "../../defaults/process/processSpawnDefaults.js";
+import { processSpawn } from "../../shared/process/processSpawnDefaults.js";
 import {
   enrichRemoteOpenContext,
   resolveOpenCommandTemplate,
@@ -61,7 +61,7 @@ export const executeOpenCommand: OpenCommandExecutor = async (
   input: OpenCommandExecutionInput
 ): Promise<OpenCommandExecutionResult> =>
   new Promise((resolvePromise, rejectPromise) => {
-    const child = processSpawnDefault("bash", ["-lc", input.command], {
+    const child = processSpawn("bash", ["-lc", input.command], {
       cwd: input.cwd,
       stdio: ["ignore", "pipe", "pipe"]
     });
