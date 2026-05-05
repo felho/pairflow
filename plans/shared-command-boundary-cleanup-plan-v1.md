@@ -22,8 +22,8 @@ task_order:
   - 10-list-local-move-b
   - 11-list-boundary-closeout
   - 12-shared-command-fitness
-last_completed_task_id: 4-remote-merge-rename
-active_task_id: 5-inbox-api-rename
+last_completed_task_id: 5-inbox-api-rename
+active_task_id: 6-attach-inventory-extract
 archive_group: 2026-05-05-shared-command-boundary-cleanup-plan-v1
 task_tracker:
   - task_id: 1-commit-local-helpers
@@ -39,11 +39,11 @@ task_tracker:
     task_path: plans/archive/tasks/2026-05-05-shared-command-boundary-cleanup-plan-v1/4-remote-merge-rename.md
     status: archived
   - task_id: 5-inbox-api-rename
-    task_path: plans/tasks/5-inbox-api-rename.md
-    status: in_progress
+    task_path: plans/archive/tasks/2026-05-05-shared-command-boundary-cleanup-plan-v1/5-inbox-api-rename.md
+    status: archived
   - task_id: 6-attach-inventory-extract
-    task_path: null
-    status: not_created
+    task_path: plans/tasks/6-attach-inventory-extract.md
+    status: approved
   - task_id: 7-attach-boundary-closeout
     task_path: null
     status: not_created

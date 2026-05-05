@@ -5,7 +5,7 @@ task_family_id: inbox-api-rename
 sequence_key: "5"
 task_id: 5-inbox-api-rename
 title: "Inbox API Rename"
-status: in_progress
+status: archived
 phase: phase3
 target_files:
   - src/v11/shared/inbox/inboxCommandApi.ts
@@ -29,6 +29,7 @@ impl_bubble_id: 5-inbox-api-rename-impl
 supersedes: []
 superseded_by: null
 archive_group: 2026-05-05-shared-command-boundary-cleanup-plan-v1
+archive_path: plans/archive/tasks/2026-05-05-shared-command-boundary-cleanup-plan-v1/5-inbox-api-rename.md
 ---
 
 # Task: Inbox API Rename
