@@ -35,13 +35,13 @@ import { validateBubbleExecutor } from "./bubbleConfig/executor.js";
 import { validateBubbleDocContractGates } from "./bubbleConfig/docContractGates.js";
 import { parseToml } from "./bubbleConfig/parser.js";
 import {
-  readBoolean,
   readObject,
   readString
 } from "./bubbleConfig/readers.js";
 import { validateBubbleCommands } from "./bubbleConfig/commands.js";
 import { validateBubbleIdeation } from "./bubbleConfig/ideation.js";
 import { validateBubbleLocalOverlay } from "./bubbleConfig/localOverlay.js";
+import { validateBubbleNotifications } from "./bubbleConfig/notifications.js";
 import { assertValidBubbleConfigRemoteReferences } from "./bubbleConfig/remoteReferences.js";
 import { validateBubbleReviewPolicy } from "./bubbleConfig/reviewPolicy.js";
 import { validateBubbleValidationTarget } from "./bubbleConfig/validationTarget.js";
@@ -303,33 +303,10 @@ export function validateBubbleConfig(input: unknown): ValidationResult<BubbleCon
     errors
   );
 
-  const notificationsEnabled = notifications
-    ? (readBoolean(
-        notifications,
-        "enabled",
-        "notifications.enabled",
-        errors,
-        false
-      ) ?? true)
-    : true;
-  const waitingHumanSound = notifications
-    ? readString(
-        notifications,
-        "waiting_human_sound",
-        "notifications.waiting_human_sound",
-        errors,
-        false
-      )
-    : undefined;
-  const convergedSound = notifications
-    ? readString(
-        notifications,
-        "converged_sound",
-        "notifications.converged_sound",
-        errors,
-        false
-      )
-    : undefined;
+  const validatedNotifications = validateBubbleNotifications(
+    notifications,
+    errors
+  );
 
   const validatedLocalOverlay = validateBubbleLocalOverlay(localOverlay, errors);
 
@@ -346,16 +323,6 @@ export function validateBubbleConfig(input: unknown): ValidationResult<BubbleCon
 
   if (errors.length > 0) {
     return validationFail(errors);
-  }
-
-  const validatedNotifications: BubbleConfig["notifications"] = {
-    enabled: notificationsEnabled
-  };
-  if (waitingHumanSound !== undefined) {
-    validatedNotifications.waiting_human_sound = waitingHumanSound;
-  }
-  if (convergedSound !== undefined) {
-    validatedNotifications.converged_sound = convergedSound;
   }
 
   const validatedConfig: BubbleConfig = {
