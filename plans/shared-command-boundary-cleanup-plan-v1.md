@@ -48,8 +48,8 @@ task_tracker:
     task_path: plans/archive/tasks/2026-05-05-shared-command-boundary-cleanup-plan-v1/7-attach-boundary-closeout.md
     status: archived
   - task_id: 8-list-inventory
-    task_path: null
-    status: not_created
+    task_path: plans/tasks/8-list-inventory.md
+    status: under_review
   - task_id: 9-list-local-move-a
     task_path: null
     status: not_created
@@ -210,7 +210,7 @@ This plan covers the current residual command-named shared directories:
 | `5-inbox-api-rename` | `plans/tasks/5-inbox-api-rename.md` | Rename or relocate the UI/CLI-consumed inbox API to a command-neutral boundary, without redesigning the read model. | `3-remote-commit-rename`, `4-remote-merge-rename` | `inboxCommandApi` is shared by UI/router code but named as a command-local API. | in_progress |
 | `6-attach-inventory-extract` | `plans/archive/tasks/2026-05-05-shared-command-boundary-cleanup-plan-v1/6-attach-inventory-extract.md` | Produce source-backed ownership inventory for `resolveAttachBubbleExecution.ts` and extract only one smallest behavior-preserving slice if clearly owned. | `5-inbox-api-rename` | `shared/attach` is large and mixed; full decomposition is too broad for one bubble. | archived |
 | `7-attach-boundary-closeout` | `plans/archive/tasks/2026-05-05-shared-command-boundary-cleanup-plan-v1/7-attach-boundary-closeout.md` | Remove or rename the remaining command-named `shared/attach` boundary, or record an explicit source-anchored deferral if the inventory proves closure is unsafe now. | `6-attach-inventory-extract` | The attach gap needs explicit closeout ownership after inventory. | archived |
-| `8-list-inventory` | `null` | Produce source-backed ownership inventory for every `shared/list` file and classify each as CLI-local, UI/read-model shared, or deferred. | `7-attach-boundary-closeout` | `shared/list` is too large to move safely without inventory. | not_created |
+| `8-list-inventory` | `plans/tasks/8-list-inventory.md` | Produce source-backed ownership inventory for every `shared/list` file and classify each as CLI-local, UI/read-model shared, or deferred. | `7-attach-boundary-closeout` | `shared/list` is too large to move safely without inventory. | under_review |
 | `9-list-local-move-a` | `null` | Move the first small set of inventory-proven CLI-local `shared/list` files to `application/list`, capped at a few files. | `8-list-inventory` | Begins reducing `shared/list` without broad read-model redesign. | not_created |
 | `10-list-local-move-b` | `null` | Move the next small set of inventory-proven CLI-local `shared/list` files, or explicitly mark the remaining local files for closeout if no second move is needed. | `9-list-local-move-a` | Continues reducing `shared/list` in a bounded bubble-friendly slice. | not_created |
 | `11-list-boundary-closeout` | `null` | Remove or rename the remaining command-named `shared/list` boundary, or record explicit source-anchored deferrals for any residual shared read-model modules. | `10-list-local-move-b` | The list gap needs explicit closeout ownership after incremental moves. | not_created |
