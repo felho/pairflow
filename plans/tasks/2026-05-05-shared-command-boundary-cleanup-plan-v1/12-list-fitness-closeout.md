@@ -5,7 +5,7 @@ task_family_id: list-fitness-closeout
 sequence_key: "12"
 task_id: 12-list-fitness-closeout
 title: "List Fitness Closeout"
-status: implementable
+status: in_progress
 phase: phase4
 target_files:
   - tests/contracts/uiContractTransitSource.test.ts
@@ -27,7 +27,7 @@ normative_refs:
 owners:
   - "felho"
 doc_bubble_id: 12-list-fitness-closeout-doc
-impl_bubble_id: null
+impl_bubble_id: 12-list-fitness-closeout-impl
 supersedes: []
 superseded_by: null
 archive_group: 2026-05-05-shared-command-boundary-cleanup-plan-v1
