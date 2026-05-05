@@ -1,9 +1,6 @@
 import { applyStateTransition } from "../../../domain/state/machine.js";
 import { assertValidBubbleStateSnapshot } from "../../state/stateSchema.js";
 import type { BubbleStateSnapshot } from "../../../../types/bubble.js";
-import {
-  normalizeMetaReviewSnapshot
-} from "./metaReviewGateSnapshotHelpers.js";
 import { clearLiveMetaReviewSnapshot } from "../../metaReview/metaReviewSnapshot.js";
 export {
   buildHumanGateSummary,
@@ -11,6 +8,10 @@ export {
   resolveMetaReviewerAgent,
   resolveFindingsParityMetadataForEnvelope
 } from "./metaReviewGateSnapshotHelpers.js";
+export {
+  incrementAutoReworkCount,
+  setMetaReviewConsecutiveCleanRuns
+} from "../../../domain/metaReviewGate/snapshotState.js";
 export {
   metaReviewGateAutoReworkRetryRunIdentityInvariantReasonCode,
   resolveAutoReworkRetryInvariantViolation
@@ -59,31 +60,6 @@ export function transitionToGateState(input: {
       ...(input.consecutiveCleanRuns !== undefined
         ? { consecutive_clean_runs: input.consecutiveCleanRuns }
         : {})
-    }
-  };
-}
-
-export function incrementAutoReworkCount(input: BubbleStateSnapshot): BubbleStateSnapshot {
-  const metaReview = normalizeMetaReviewSnapshot(input.meta_review);
-  return {
-    ...input,
-    meta_review: {
-      ...metaReview,
-      auto_rework_count: metaReview.auto_rework_count + 1
-    }
-  };
-}
-
-export function setMetaReviewConsecutiveCleanRuns(
-  input: BubbleStateSnapshot,
-  consecutiveCleanRuns: number
-): BubbleStateSnapshot {
-  const metaReview = normalizeMetaReviewSnapshot(input.meta_review);
-  return {
-    ...input,
-    meta_review: {
-      ...metaReview,
-      consecutive_clean_runs: consecutiveCleanRuns
     }
   };
 }

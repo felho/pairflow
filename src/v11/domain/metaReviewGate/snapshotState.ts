@@ -1,4 +1,5 @@
 import {
+  type BubbleStateSnapshot,
   DEFAULT_META_REVIEW_AUTO_REWORK_LIMIT,
   type BubbleMetaReviewSnapshotState
 } from "../../../types/bubble.js";
@@ -24,5 +25,30 @@ export function normalizeMetaReviewSnapshot(
     auto_rework_limit: DEFAULT_META_REVIEW_AUTO_REWORK_LIMIT,
     sticky_human_gate: false,
     consecutive_clean_runs: 0
+  };
+}
+
+export function incrementAutoReworkCount(input: BubbleStateSnapshot): BubbleStateSnapshot {
+  const metaReview = normalizeMetaReviewSnapshot(input.meta_review);
+  return {
+    ...input,
+    meta_review: {
+      ...metaReview,
+      auto_rework_count: metaReview.auto_rework_count + 1
+    }
+  };
+}
+
+export function setMetaReviewConsecutiveCleanRuns(
+  input: BubbleStateSnapshot,
+  consecutiveCleanRuns: number
+): BubbleStateSnapshot {
+  const metaReview = normalizeMetaReviewSnapshot(input.meta_review);
+  return {
+    ...input,
+    meta_review: {
+      ...metaReview,
+      consecutive_clean_runs: consecutiveCleanRuns
+    }
   };
 }
