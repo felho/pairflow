@@ -5,14 +5,19 @@ task_family_id: timeline-rules-fixtures
 sequence_key: "1"
 task_id: 1-timeline-rules-fixtures
 title: "Timeline Rules and Fixtures"
-status: approved
+status: implementable
 phase: phase1
 target_files:
+  - ui/src/components/expanded/BubbleTimeline.test.tsx
+  - ui/src/test/fixtures.ts
+target_files_role: write_targets_only
+target_write_files:
+  - ui/src/components/expanded/BubbleTimeline.test.tsx
+  - ui/src/test/fixtures.ts
+target_read_only_anchors:
   - src/v11/infrastructure/ui/presenters/timelinePresenter.ts
   - src/contracts/ui/uiReadModel.ts
   - ui/src/components/expanded/BubbleTimeline.tsx
-  - ui/src/components/expanded/BubbleTimeline.test.tsx
-  - ui/src/test/fixtures.ts
 prd_ref: null
 plan_ref: plans/2026-05-05-timeline-display-dto-plan-v1.md
 system_context_ref: docs/pairflow-initial-design.md
@@ -50,9 +55,9 @@ presenter without accidental visual or semantic drift.
    existing `BubbleTimeline.tsx` read path for this task.
 4. Forbidden fallback: do not add a new UI fallback, alternate presenter output,
    compatibility branch, or DTO-shaped render path in this task.
-5. Allowed resolution path: deterministic same-authority extraction of existing
-   React helper behavior into test-visible fixture builders is allowed only when
-   it is test-only or preserves production behavior exactly.
+5. Allowed resolution path: deterministic same-authority characterization of
+   existing React helper behavior in tests or fixture builders is allowed only
+   when it does not require production/source changes.
 6. Missing-data rule: preserve current neutral output for missing summaries,
    metadata, findings, decisions, and refs; if a current behavior is ambiguous,
    document it in the test name or fixture note instead of inventing a new rule.
@@ -114,8 +119,7 @@ presenter without accidental visual or semantic drift.
    - `BubbleTimeline.test.tsx` already covers some high-risk rows with
      protocol-shaped fixtures.
 2. Actual touched scope: consumer-family fixture/test freeze; production code
-   changes are out of scope except test-only extraction required to make the
-   existing behavior observable.
+   changes are out of scope for task 1.
 3. Mutation entrypoints in scope: N/A.
 4. Hidden scope ruled out: no API shape, presenter DTO, lifecycle, persistence,
    or command mutation is required to freeze current UI behavior.
@@ -171,14 +175,14 @@ N/A. This task does not modify mutation flows or coordination primitives.
 
 ### In Scope
 
-1. Add a concise inventory of current timeline display rules in tests, fixture
-   names, or a directly related docs/admin note if tests alone cannot carry the
-   rule names clearly.
+1. Add a concise inventory of current timeline display rules in focused tests,
+   test names, fixture names, or fixture comments within the declared
+   `target_write_files` only.
 2. Add or adjust focused `BubbleTimeline` tests for current behavior gaps named
    by the parent plan.
 3. Add or adjust UI fixture helpers only as needed to make current protocol-
    shaped inputs explicit and reusable.
-4. Keep production behavior unchanged.
+4. Keep production behavior unchanged by not modifying production/source files.
 
 ### Out of Scope
 
@@ -188,7 +192,10 @@ N/A. This task does not modify mutation flows or coordination primitives.
 4. Deleting UI payload helper logic.
 5. Adding no-legacy guards.
 6. Redesigning timeline layout or styling.
-7. Product/runtime/source implementation unrelated to test-only fixture support.
+7. Product/runtime/source implementation.
+8. Modifying `BubbleTimeline.tsx`, `timelinePresenter.ts`, `uiReadModel.ts`, or
+   any other production/source file; these files are read-only anchors for
+   observed current behavior in this task.
 
 ### Safety Defaults
 
@@ -252,7 +259,7 @@ N/A. This task does not modify mutation flows or coordination primitives.
 | Control model | Current `BubbleTimeline.tsx` behavior is baseline only for this freeze task. | Do not introduce producer-owned DTO semantics yet. | P1 | required-now |
 | Read-path rule | Tests may use protocol-shaped `UiTimelineEntry` fixtures. | Keep fixtures explicit about raw payload baseline. | P1 | required-now |
 | Forbidden fallback | No new production fallback or dual render path. | Production render code should remain behaviorally unchanged. | P1 | required-now |
-| Allowed resolution path | Test-only fixture/helper extraction may name existing rules. | Shared fixture helpers must not become production interpretation code. | P2 | required-now |
+| Allowed resolution path | Test-only fixture/helper extraction may name existing rules. | Shared fixture helpers must not become production interpretation code and must not require production/source edits. | P2 | required-now |
 | Missing-data rule | Preserve existing neutral/missing display output. | Add a missing-summary characterization when coverage is absent. | P2 | required-now |
 | Phase boundary | Freeze only; successor tasks own DTO, producer, cutover, cleanup. | Do not pull migration work into task 1. | P1 | required-now |
 
@@ -262,7 +269,7 @@ N/A. This task does not modify mutation flows or coordination primitives.
 |---|---|---|---|---|---|
 | `ProtocolEnvelope` | `src/types/protocol.ts` | Backend protocol input, not target UI display contract. | Use only as current fixture baseline. | P1 | required-now |
 | `UiTimelineEntry.payload` | `src/contracts/ui/uiReadModel.ts` | Existing protocol-shaped UI payload until successor contract task. | Preserve shape; test it. | P1 | required-now |
-| Timeline display helpers | `BubbleTimeline.tsx` | Current behavior to freeze, not final authority. | Characterize with tests. | P1 | required-now |
+| Timeline display helpers | `BubbleTimeline.tsx` | Current behavior to freeze, not final authority. | Read only; characterize with tests. | P1 | required-now |
 | No-legacy target | parent plan | Final cleanup still removes raw-payload normal rendering. | Do not weaken or pre-implement cleanup. | P1 | required-now |
 
 ### 0b) Scope Reality and Shape Proof
@@ -270,11 +277,11 @@ N/A. This task does not modify mutation flows or coordination primitives.
 | Item | Rule | Implementation / Review Consequence | Priority | Timing |
 |---|---|---|---|---|
 | Inspected entrypoints / call-sites | `timelinePresenter.ts`, `uiReadModel.ts`, `BubbleTimeline.tsx`, existing tests. | Scope is current display behavior capture. | P1 | required-now |
-| Actual touched scope | Consumer-family fixture/test freeze. | Avoid producer/API changes. | P1 | required-now |
+| Actual touched scope | Consumer-family fixture/test freeze. | Avoid all production/source changes. | P1 | required-now |
 | Mutation entrypoints in scope | N/A. | No side-effect semantics. | P1 | required-now |
 | Hidden scope ruled out | Existing presenter is pass-through; UI component owns current interpretation. | Do not change backend presenter yet. | P1 | required-now |
 | Branch inventory note | Cover fallback, role, badge, meta-review, gate-failure, synthetic-row branches. | Tests should map to these branches. | P1 | required-now |
-| Shape proof | A behavior-freeze task can be completed with tests/fixtures only. | Production code changes require explicit test-only justification. | P1 | required-now |
+| Shape proof | A behavior-freeze task can be completed with tests/fixtures only. | If rendered behavior cannot be characterized without production changes, route back to the plan. | P1 | required-now |
 
 ### 0c) Plan Linkage and Successor Impact
 
@@ -349,8 +356,8 @@ N/A.
 |---|---|---|---|---|---|---|
 | CS1 | `ui/src/components/expanded/BubbleTimeline.test.tsx` | test cases | Freeze current display rules with focused assertions. | P1 | required-now | T1-T6 |
 | CS2 | `ui/src/test/fixtures.ts` | `timelineEntry` helper | Support explicit protocol-shaped baseline fixtures without hiding fields. | P2 | required-now | T1-T6 |
-| CS3 | `ui/src/components/expanded/BubbleTimeline.tsx` | display helpers | Preserve production behavior; change only if test-only extraction is unavoidable. | P1 | required-now | focused UI test |
-| CS4 | `src/v11/infrastructure/ui/presenters/timelinePresenter.ts` | `presentTimeline` | No DTO output changes in this task. | P1 | required-now | no presenter contract diff unless test-only import requires none |
+| CS3 | `ui/src/components/expanded/BubbleTimeline.tsx` | display helpers | Read-only anchor for observed behavior; do not modify in this task. | P1 | required-now | focused UI test |
+| CS4 | `src/v11/infrastructure/ui/presenters/timelinePresenter.ts` | `presentTimeline` | Read-only anchor; no DTO output changes in this task. | P1 | required-now | no presenter contract diff |
 | CS5 | `src/contracts/ui/uiReadModel.ts` | `UiTimelineEntry` | No payload type change in this task. | P1 | required-now | no contract diff |
 
 ### 2) Data and Interface Contract
@@ -368,7 +375,7 @@ N/A.
 |---|---|---|---|---|---|
 | UI tests | add/adjust focused behavior tests | broad snapshot-only assertions | Prefer visible output assertions. | P1 | required-now |
 | UI fixtures | add explicit helper data | hiding current raw payload dependence | Fixtures are temporary migration baseline. | P2 | required-now |
-| Production UI | no behavior change | DTO cutover, helper deletion, fallback redesign | Production edits require clear test-only extraction justification. | P1 | required-now |
+| Production UI | no changes | DTO cutover, helper deletion, fallback redesign, test-only extraction into production files | Production files are read-only anchors in task 1. | P1 | required-now |
 | Backend presenter/contracts | no changes | DTO contract or payload type change | Successor task owns this. | P1 | required-now |
 
 ### 4) Error and Fallback Contract
@@ -404,30 +411,37 @@ N/A.
 ## L2 - Implementation Notes
 
 1. Start with `ui/src/components/expanded/BubbleTimeline.test.tsx`; add named
-   tests before touching production code.
+   tests before adjusting fixture helpers.
 2. Prefer existing `timelineEntry` fixture and local arrays over a new fixture
    system unless duplication becomes confusing.
 3. Run the focused UI test first:
    `pnpm --dir ui test -- BubbleTimeline.test.tsx`.
-4. If production code is touched only to expose behavior for tests, keep the
-   change local to `BubbleTimeline.tsx` and prove rendered output is unchanged.
-5. Do not update `presentTimeline`, `UiTimelineEntry`, or API client typing in
-   this task unless ReviewSpec routes back to the plan.
+4. Do not touch production/source files to expose behavior for tests. If current
+   behavior cannot be characterized from rendered output and fixture inputs,
+   route back to the plan instead of widening task 1.
+5. If the implementation would require changing `presentTimeline`,
+   `UiTimelineEntry`, API client typing, or any other production/source file,
+   stop this task and route back to the plan; do not make that change inside
+   task 1.
 
 ## Acceptance Criteria
 
 1. AC1: Current summary fallback behavior is explicitly covered by focused UI
-   tests or an equivalent behavior inventory plus assertions.
+   tests or an equivalent behavior inventory plus assertions in the declared
+   `target_write_files`.
 2. AC2: Current role/sender behavior for meta-reviewer, implementer, reviewer,
    and orchestrator/system-like rows is covered.
 3. AC3: Current findings, decision, and meta-review recommendation badge
    behavior is covered.
 4. AC4: Current meta-review handoff, clean-run progress, approve-gate failure,
    and synthetic approval-row behavior is covered.
-5. AC5: `timelinePresenter.ts` and `UiTimelineEntry` production contract are not
+5. AC5: `BubbleTimeline.tsx`, `timelinePresenter.ts`, `uiReadModel.ts`, and all
+   other production/source files are unchanged in this task; they are read-only
+   anchors for observed behavior.
+6. AC6: `timelinePresenter.ts` and `UiTimelineEntry` production contract are not
    changed to the future DTO in this task.
-6. AC6: No production fallback, dual render path, or legacy cleanup is added.
-7. AC7: Focused UI validation for `BubbleTimeline` is run and its result is
+7. AC7: No production fallback, dual render path, or legacy cleanup is added.
+8. AC8: Focused UI validation for `BubbleTimeline` is run and its result is
    recorded in the bubble handoff evidence.
 
 ## Review Control
