@@ -25,7 +25,9 @@ This workflow owns only:
 This workflow does not own:
 
 1. ideation create/start/kickoff semantics, which remain owned by `UsePairflow`
-2. implementation-bubble route adoption
+2. deciding which route adopts the pre-kickoff admin pattern; route adoption is
+   owned by the consuming handler, while this workflow owns the bounded publish
+   contract for adopted consumers including `CreateImplementationBubble`
 3. automatic merge-conflict recovery
 4. remote publish support
 5. new Pairflow CLI commands or runtime behavior
@@ -102,7 +104,7 @@ Input rules:
 
 ## Document-Route Consumption Contract
 
-`CreateDocumentBubble` is the currently adopted route consumer for this
+`CreateDocumentBubble` is an adopted route consumer for this
 workflow. For that route only, the selected admin publish must prove the
 document-bubble linkage/admin state reached `main` before the document task
 payload is kicked off.
@@ -138,8 +140,47 @@ Consumer rules:
 3. `HandleDocumentBubble` must re-read refreshed `main` task metadata and
    Pairflow hold status after consuming this result; the success packet is not a
    substitute for that local route check.
-4. Implementation-bubble create/start remains outside this adoption and must not
-   require this workflow until a successor task explicitly changes that route.
+
+## Implementation-Route Consumption Contract
+
+`CreateImplementationBubble` is also an adopted route consumer for this
+workflow. For that route only, the selected admin publish must prove the
+implementation-bubble linkage/admin state reached `main` before the
+implementation task payload is kicked off.
+
+Required `CreateImplementationBubble` selected admin inputs:
+
+1. `BUBBLE_ID` must equal the canonical derived implementation bubble id
+   `<task_id>-impl`.
+2. `CURRENT_TASK_OR_ROUTE_CONTEXT.route_context` must name
+   `CreateImplementationBubble`.
+3. `SELECTED_ADMIN_PATHS` must include the active task artifact when
+   `impl_bubble_id` or `status=in_progress` is being persisted.
+4. Additional selected paths are allowed only when they are directly required
+   by the same implementation-route admin task and pass the allowed admin
+   scope.
+
+Required `CreateImplementationBubble` named postconditions after publish:
+
+1. refreshed `main` task metadata has `impl_bubble_id=<task_id>-impl`
+2. refreshed `main` task metadata has `status=in_progress`
+3. `published_main_ref` equals the exact selected-scope `admin_commit`
+
+Required `CreateImplementationBubble` refreshed hold evidence after publish:
+
+1. refreshed Pairflow status for `<task_id>-impl` still proves `RUNNING` round
+   `0` with `ideation.task_pending=true`
+
+Consumer rules:
+
+1. This workflow returns `kickoff_allowed=true` only as publish proof; it never
+   performs the kickoff.
+2. `HandleImplementationBubble` must reject a success packet whose `bubble_id`
+   does not equal `<task_id>-impl`.
+3. `HandleImplementationBubble` must re-read refreshed `main` task metadata and
+   Pairflow hold status after consuming this result; the success packet is not a
+   substitute for that local route check.
+4. Implementation close/review behavior is not changed by this adoption.
 
 ## Allowed Admin Scope
 
@@ -220,7 +261,10 @@ authorized_side_effects:
 If the gate cannot prove those fields, return `ADMIN_AUTHORIZATION_MISSING`
 before any selected admin edit, staging, commit, publish, or kickoff. This
 pre-side-effect authorization record is not the final workflow result and must
-not require the final publish/checkpoint result to already exist.
+not require the final publish/checkpoint result to already exist. Because this
+checkpoint occurs before an authorization record exists, consumers must not
+expect a retained recovery context with `authorization_record_ref`,
+`admin_commit`, or selected-path publish evidence for this checkpoint.
 
 Result:
 
@@ -677,8 +721,10 @@ Manual review or successor tests must prove:
     second admin commit
 17. `CreateDocumentBubble` success names `doc_bubble_id=<task_id>-doc`,
     `status=approved`, matching `bubble_id`, and refreshed round-0 hold proof
-18. implementation-bubble create/start has no new dependency on this workflow in
-    the current slice
+18. `PublishPreKickoffAdmin` success consumed by `CreateImplementationBubble`
+    names `impl_bubble_id=<task_id>-impl`, `status=in_progress`, matching
+    `bubble_id`, and refreshed round-0 hold proof before any later kickoff; it
+    is publish proof, not final implementation create/kickoff success
 19. `.pairflow/**` is rejected unless a successor task explicitly expands the
     parent route contract
 20. Pairflow ideation hold status is re-read before staging/commit and again
@@ -715,11 +761,13 @@ Manual review or successor tests must prove:
 
 Validation for this documentation workflow should also verify:
 
-1. `CreateDocumentBubble` consumes this workflow before kickoff, while
-   implementation-bubble create/start remains valid without this workflow
+1. `CreateDocumentBubble` and `CreateImplementationBubble` both consume this
+   workflow's publish success proof before kickoff, with route-specific
+   postconditions; final create/kickoff success remains owned by the consuming
+   handler
 2. no `UsePairflow` files changed
 3. no product/source implementation files changed
 4. every checkpoint result has `kickoff_allowed=false`
 5. this workflow itself does not run `pairflow bubble kickoff`; only the
-   consuming document route may delegate kickoff after success and refreshed
-   postcondition proof
+   consuming document or implementation route may delegate kickoff after success
+   and refreshed postcondition proof

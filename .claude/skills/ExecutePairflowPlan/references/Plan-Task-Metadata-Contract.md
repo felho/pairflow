@@ -157,9 +157,28 @@ Document-refinement lifecycle:
 
 Implementation lifecycle:
 
-1. `CreateImplementationBubble` may start only from `status=implementable` with `impl_bubble_id=null`.
-2. `CreateImplementationBubble` persists `impl_bubble_id` after successful create/start and moves task status to `in_progress`.
+1. Fresh `CreateImplementationBubble` may start only from
+   `status=implementable` with `impl_bubble_id=null`.
+2. `CreateImplementationBubble` writes `impl_bubble_id` and `status=in_progress`
+   as bounded pre-kickoff admin in the ideation bubble worktree, publishes them
+   to clean `main` through `PublishPreKickoffAdmin`, verifies refreshed `main`
+   metadata, and then kicks off the same implementation bubble.
 3. `impl_bubble_id` alone never proves implementation completion.
+4. If publish proof, refreshed `impl_bubble_id`, refreshed
+   `status=in_progress`, or refreshed same-bubble ideation hold proof is missing
+   or ambiguous, kickoff must not run and the implementation create route must
+   stop at a human checkpoint.
+5. If `impl_bubble_id=<task_id>-impl` and `status=in_progress` have already
+   reached `main` but the same implementation bubble is still a round-0
+   ideation hold, the implementation handler may resume only by consuming or
+   idempotently recovering structured `PublishPreKickoffAdmin` success proof,
+   using the handler-defined `PUBLISH_PRE_KICKOFF_ADMIN_RECOVERY_CONTEXT` as
+   recovery input when needed, rechecking refreshed `main` metadata and
+   same-bubble hold status, and then kicking off that same bubble. Recovery
+   context alone never authorizes kickoff.
+6. If the linked implementation bubble is already active beyond the pre-kickoff
+   round-0 hold, `status=in_progress` plus `impl_bubble_id` routes to linked
+   lifecycle handling, not to a new create/kickoff promise.
 
 Plan-completion rule:
 
