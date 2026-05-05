@@ -3,6 +3,12 @@ export {
   metaReviewGateThresholdIsMet,
   resolveMetaReviewGateThresholdAuthority
 } from "./metaReviewGateThresholdAuthority.js";
+export {
+  resolveReworkFindingsParityInput
+} from "./metaReviewGateFindingsParityInput.js";
+export {
+  validateFindingsArtifactParity
+} from "./metaReviewGateFindingsParityHelpers.js";
 export type {
   MetaReviewGateThresholdAuthorityResolution,
   ResolveMetaReviewGateThresholdAuthorityInput
