@@ -2,7 +2,7 @@ import type {
   MetricsMetaReviewRouteCounts,
   MetricsReportEvent
 } from "./types.js";
-import type { MetaReviewGateRoute } from "../../metaReviewGate/metaReviewGateCommandContract.js";
+import type { MetaReviewGateRoute } from "../../metaReviewGate/index.js";
 
 export interface ReviewerFindingMetadata {
   hasFindings: boolean;

@@ -1,5 +1,6 @@
 export * from "./metaReviewGateCommandApi.js";
 export {
+  metaReviewGateRoutes,
   resolveMetaReviewGateNotifyTmuxCapabilities,
   resolveMetaReviewGatePaneBindingTmuxCapabilities
 } from "./metaReviewGateTypes.js";

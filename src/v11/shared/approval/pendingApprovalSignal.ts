@@ -1,6 +1,6 @@
 import type { ProtocolEnvelope } from "../../../types/protocol.js";
 import type { MetaReviewRecommendation } from "../../../types/bubble.js";
-import type { MetaReviewGateRoute } from "../metaReviewGate/metaReviewGateTypes.js";
+import type { MetaReviewGateRoute } from "../metaReviewGate/index.js";
 import {
   isHumanApprovalRequest,
   resolveApprovalGateRouteFromRequest,

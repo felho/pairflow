@@ -14,7 +14,7 @@ import type {
 } from "./metaReviewCommandContract.js";
 import type {
   MetaReviewGateResult
-} from "../metaReviewGate/metaReviewGateCommandApi.js";
+} from "../metaReviewGate/index.js";
 import { finalizeCurrentRunMetaReviewGate } from "../metaReviewGate/metaReviewGateCurrentRunFinalization.js";
 type ResolvedBubble = Awaited<ReturnType<ResolveBubbleByIdPort>>;
 
