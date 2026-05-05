@@ -15,7 +15,9 @@ import type {
 import type {
   MetaReviewGateResult
 } from "../metaReviewGate/index.js";
-import { finalizeCurrentRunMetaReviewGate } from "../metaReviewGate/metaReviewGateCurrentRunFinalization.js";
+import {
+  finalizeCurrentRunMetaReviewGate
+} from "../metaReviewGate/metaReviewGateCurrentRunApi.js";
 type ResolvedBubble = Awaited<ReturnType<ResolveBubbleByIdPort>>;
 
 async function emitSubmitAutoReworkDelivery(input: {
