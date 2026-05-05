@@ -45,8 +45,8 @@ This skill does not own:
 | `FixPlanMetadata` | bootstrap or repair missing plan metadata before normal execution | repo-local `Workflows/FixPlanMetadata.md` |
 | `ResolvePlanState` | assess current state and choose the next normalized route | repo-local `Workflows/ResolvePlanState.md` |
 | `ReviewPlan` | review or refine plan-level readiness before task progression | `CreatePairflowSpec` `ReviewSpec` in `plan-mode` |
-| `CreateTask` | create the next executable task from the plan | `CreatePairflowSpec` `CreateTask` |
-| `ReviewTask` | review/refine the active task before bubble work | `CreatePairflowSpec` `ReviewSpec` in `task-mode` |
+| `CreateTask` | create, review, and settle the next executable task inside a pre-kickoff ideation admin carrier | `HandleTaskAdminBubble` -> `UsePairflow` `CreateBubble` + `CreatePairflowSpec` `CreateTask` / `ReviewSpec` + `PublishPreKickoffAdmin` + `UsePairflow` `InterveneBubble` |
+| `ReviewTask` | review/refine an existing active task inside a pre-kickoff ideation admin carrier before document refinement | `HandleTaskAdminBubble` -> `UsePairflow` `CreateBubble` + `CreatePairflowSpec` `ReviewSpec` + `PublishPreKickoffAdmin` + `UsePairflow` `InterveneBubble` |
 | `CreateDocumentBubble` | stable route surface for document-bubble create/start, pre-kickoff admin publish, and same-bubble kickoff | `HandleDocumentBubble` -> `UsePairflow` `CreateBubble` + `PublishPreKickoffAdmin` + `UsePairflow` `InterveneBubble` |
 | `ReviewDocumentBubble` | stable route surface for document-bubble deep review at the approval gate | `HandleDocumentBubble` -> `UsePairflow` `ReviewBubble` |
 | `CloseDocumentBubble` | stable route surface for document-bubble approve/merge/cleanup after approval is already satisfied | `HandleDocumentBubble` -> `UsePairflow` `CloseBubble` |
@@ -60,6 +60,7 @@ This skill does not own:
 
 | Repo-local Backing Workflow | Role in This Skill | Returned As `target_workflow_surface`? |
 |---|---|---|
+| `HandleTaskAdminBubble` | repo-local owner for task creation/review admin inside a document ideation carrier, including same-carrier document kickoff after publish | no; it backs `CreateTask` and `ReviewTask` route surfaces |
 | `HandleDocumentBubble` | repo-local owner for document-bubble lifecycle interpretation, `UsePairflow` delegation, and normalized bubble outputs | no; it backs document-bubble route surfaces |
 | `HandleImplementationBubble` | repo-local owner for implementation-bubble lifecycle interpretation, `UsePairflow` delegation, and normalized bubble outputs | no; it backs implementation-bubble route surfaces |
 | `PublishPreKickoffAdmin` | repo-local manual operator workflow for publishing bounded ideation bubble admin changes to clean `main` and returning structured no-kickoff publish proof | no; the document-bubble and implementation-bubble create routes consume it before kickoff |
@@ -93,8 +94,31 @@ Baseline dependency:
 2. This skill may rely on those primitives, but it must not redefine ideation,
    rename mode flags, or move lifecycle ownership into `ExecutePairflowPlan`.
 3. The adopted create-route sequence for both document and implementation
-   bubbles is:
+   bubbles, and task-admin document carriers is:
    `create --ideation -> start/round-0 hold -> bounded admin in bubble worktree -> commit -> publish to main -> verify -> kickoff`.
+
+Task-admin adoption:
+
+1. `CreateTask` and `ReviewTask` are adopted pre-kickoff admin routes. They must
+   create or safely reuse the canonical document ideation carrier
+   `<task_id>-doc` before modifying task, plan, progress, or directly related
+   docs/admin artifacts.
+2. Task creation, task refinement, task splitting, task metadata updates, plan
+   tracker updates, and `ReviewSpec task-mode` approval all occur in the
+   carrier worktree, not directly on `main`.
+3. The carrier must remain a round-0 ideation hold while task admin is being
+   prepared and reviewed.
+4. After the latest task artifact is approved, the bounded admin commit must be
+   fast-forward-published to clean `main` through
+   `PublishPreKickoffAdmin`.
+5. Only after refreshed `main` proves the selected plan/task/admin
+   postconditions and refreshed Pairflow status proves the same round-0 hold may
+   the workflow kickoff the same `<task_id>-doc` carrier for document
+   refinement.
+6. A task-admin route that produces route-back-to-plan, split-task, or
+   block-not-ready output publishes only the bounded settled admin state that is
+   explicitly authorized, then stops at the appropriate checkpoint instead of
+   kicking off document refinement.
 
 Admin scope:
 
@@ -114,16 +138,18 @@ Publish proof:
    operator path for proving a bounded admin commit was published to clean
    `main`, refreshed metadata or selected artifact-content postconditions were
    re-read, and refreshed ideation hold evidence still allows later kickoff
-2. the integrated `CreateDocumentBubble` route must consume that structured
+2. the integrated `CreateTask` and `ReviewTask` routes must consume that
+   structured proof before document kickoff
+3. the integrated `CreateDocumentBubble` route must consume that structured
    proof before kickoff
-3. the integrated `CreateImplementationBubble` route must consume that
+4. the integrated `CreateImplementationBubble` route must consume that
    structured proof before kickoff
-4. an unmerged bubble-worktree commit, transcript prose, operator memory, or
+5. an unmerged bubble-worktree commit, transcript prose, operator memory, or
    stale pre-publish metadata is never proof that lifecycle-relevant admin state
    reached `main`
-5. if proof of admin scope, commit identity, publish result, or refreshed
+6. if proof of admin scope, commit identity, publish result, or refreshed
    postcondition is absent or ambiguous, the workflow must stop before kickoff
-6. failed admin publish, partial publish, or unknown publish state must not be
+7. failed admin publish, partial publish, or unknown publish state must not be
    converted into kickoff by fallback reasoning
 
 ## Delegation Enforcement Contract
@@ -146,8 +172,8 @@ Mandatory route-to-delegation mapping:
 |---|---|---|
 | `FixPlanMetadata` | repo-local `Workflows/FixPlanMetadata.md` | repaired metadata or fail-closed checkpoint |
 | `ReviewPlan` | `CreatePairflowSpec` `ReviewSpec` in `plan-mode` | `approve_plan`, `refine_plan`, `split_plan`, or `block_not_ready`; if `refine_plan` changes the plan, rerun `ReviewSpec` in fresh `plan-mode` context before any downstream route may advance |
-| `CreateTask` | `CreatePairflowSpec` `CreateTask` | created/refined task path plus task metadata status |
-| `ReviewTask` | `CreatePairflowSpec` `ReviewSpec` in `task-mode` | `approve_task`, `refine_task`, `route_back_to_plan`, or `block_not_ready`; if `refine_task` changes the task, rerun `ReviewSpec` in fresh `task-mode` context before any downstream route may advance |
+| `CreateTask` | repo-local `HandleTaskAdminBubble` delegating create/start to `UsePairflow` `CreateBubble`, task creation/review to `CreatePairflowSpec`, admin publish to `PublishPreKickoffAdmin`, and same-carrier document kickoff to `UsePairflow` `InterveneBubble` only after approval and refreshed proof | created or safely reused `<task_id>-doc` ideation carrier, created/refined task artifact, `ReviewSpec task-mode decision=approve_task` for the latest artifact when kickoff runs, persisted `doc_bubble_id=<task_id>-doc` and approved task/plan tracker metadata on refreshed `main`, structured publish success, audited same-bubble kickoff result, or a truthful checkpoint for split/route-back/block output |
+| `ReviewTask` | repo-local `HandleTaskAdminBubble` delegating task review/refinement to `CreatePairflowSpec`, admin publish to `PublishPreKickoffAdmin`, and same-carrier document kickoff to `UsePairflow` `InterveneBubble` only after approval and refreshed proof | `approve_task`, `refine_task`, `route_back_to_plan`, `split_task`, or `block_not_ready` result handled inside the carrier worktree; if approved, refreshed `main` proves approved task metadata, plan tracker state, `doc_bubble_id=<task_id>-doc`, structured publish success, and audited same-bubble kickoff |
 | `CreateDocumentBubble` | repo-local `HandleDocumentBubble` delegating create/start to `UsePairflow` `CreateBubble`, consuming `PublishPreKickoffAdmin` proof, and delegating same-bubble ideation kickoff to `UsePairflow` `InterveneBubble` after refreshed postconditions | created/started ideation document bubble id, persisted `doc_bubble_id` linkage on `main`, structured publish success with refreshed postconditions, audited same-bubble kickoff result, and boundary status |
 | `ReviewDocumentBubble` | repo-local `HandleDocumentBubble` delegating to `UsePairflow` `ReviewBubble` | review result and human approval/rework checkpoint; skipped when the handler emits a close route from trusted multi-clean-meta-review auto-approval proof |
 | `CloseDocumentBubble` | repo-local `HandleDocumentBubble` delegating to `UsePairflow` `CloseBubble` | close/merge result, including `merge_conflict_recovered` when CloseBubble safely resolved and retried a bounded merge conflict; `status=implementable` metadata applied in the bubble worktree before lifecycle commit and verified on refreshed `main`; and bubble artifact deletion or explicit retained-bubble reason |
@@ -161,12 +187,16 @@ Plan/task review gates:
 
 1. `plan_review` is not satisfied by the orchestrator reading the plan and deciding it looks ready
 2. `task_review` is not satisfied by the orchestrator creating a task with `status=approved`
-3. `CreateTask` output may leave a task in `draft`, `under_review`, or another workflow-defined state; any transition to bubble-ready status must come from the delegated task review result or an explicitly delegated task-creation contract that says the task is already approved
-4. no bubble route may be executed unless every upstream plan/task route in the current execution chain has a route-ledger entry with a delegated result
-5. if a delegated `ReviewSpec` returns `refine_plan` or `refine_task` and the artifact is modified, the same review mode must be delegated again from a fresh context using the refreshed artifact before the route can be considered approved
-6. a refinement loop is settled only by `approve_plan`, `approve_task`, `split_plan`, `route_back_to_plan`, `block_not_ready`, or a real blocker; the orchestrator must not treat its own post-edit inspection as a replacement for the repeated `ReviewSpec` result
-7. for `ReviewPlan` and `ReviewTask`, sub-agent delegation is mandatory whenever the runtime supports it; if unavailable, the substitute must be an explicitly separate compact workflow step, not blended local reasoning
-8. `status=approved` may be written or committed only after the route ledger contains `ReviewSpec task-mode decision=approve_task` for the latest task artifact
+3. `CreateTask` and `ReviewTask` may not mutate task or plan artifacts
+   directly on `main`; their route-caused admin edits are made in the
+   `<task_id>-doc` ideation carrier worktree and then published through
+   `PublishPreKickoffAdmin`
+4. `CreateTask` output may leave a task in `draft`, `under_review`, or another workflow-defined state; any transition to bubble-ready status must come from the delegated task review result or an explicitly delegated task-creation contract that says the task is already approved
+5. no bubble route may be executed unless every upstream plan/task route in the current execution chain has a route-ledger entry with a delegated result
+6. if a delegated `ReviewSpec` returns `refine_plan` or `refine_task` and the artifact is modified, the same review mode must be delegated again from a fresh context using the refreshed artifact before the route can be considered approved
+7. a refinement loop is settled only by `approve_plan`, `approve_task`, `split_plan`, `route_back_to_plan`, `block_not_ready`, or a real blocker; the orchestrator must not treat its own post-edit inspection as a replacement for the repeated `ReviewSpec` result
+8. for `ReviewPlan` and `ReviewTask`, sub-agent delegation is mandatory whenever the runtime supports it; if unavailable, the substitute must be an explicitly separate compact workflow step, not blended local reasoning
+9. `status=approved` may be written or committed only after the route ledger contains `ReviewSpec task-mode decision=approve_task` for the latest task artifact
 
 Fresh-context requirement:
 
@@ -216,10 +246,16 @@ Ledger rules:
 2. if the same route repeats with no material new state recorded in the ledger, stop at `HumanCheckpoint` or troubleshooting
 3. final reports must include the route ledger summary when any route was delegated
 4. if a bubble lifecycle action is attempted without ledger proof of prior plan/task review gates, treat that as a workflow violation and stop
-5. for `ReviewPlan` and `ReviewTask`, `next_resolution_allowed=true` after `refine_plan` or `refine_task` only authorizes rerunning the same ReviewSpec route from refreshed artifacts; it does not authorize task creation, bubble creation, or lifecycle actions
-6. after a repeated ReviewSpec pass returns `approve_plan` or `approve_task`, the ledger entry must mention the latest reviewed artifact version or commit/evidence summary so downstream routing is tied to the approved content, not an older pre-refinement version
-7. route-caused plan/task/progress metadata edits may not be committed while `mutation_allowed=false`
-8. before committing route-caused metadata changes, cite the delegated workflow decision that authorized each staged mutation; if no decision exists, unstage or stop at `HumanCheckpoint`
+5. for `ReviewPlan`, `next_resolution_allowed=true` after `refine_plan`
+   only authorizes rerunning the same ReviewSpec route from refreshed
+   artifacts; it does not authorize task creation, bubble creation, or
+   lifecycle actions
+6. for `ReviewTask`, repeated `refine_task` review loops must remain inside the
+   active `HandleTaskAdminBubble` carrier workflow; they do not authorize
+   direct main edits or top-level lifecycle shortcuts outside that carrier
+7. after a repeated ReviewSpec pass returns `approve_plan` or `approve_task`, the ledger entry must mention the latest reviewed artifact version or commit/evidence summary so downstream routing is tied to the approved content, not an older pre-refinement version
+8. route-caused plan/task/progress metadata edits may not be committed while `mutation_allowed=false`
+9. before committing route-caused metadata changes, cite the delegated workflow decision that authorized each staged mutation; if no decision exists, unstage or stop at `HumanCheckpoint`
 
 ## Orchestrator Execution Style
 
@@ -297,14 +333,21 @@ Practical rule:
 
 Continuation-mode classification is intentional across the full V1 route taxonomy:
 
-1. `auto_continue`: `metadata_bootstrap`, `plan_review`, `task_create`, `task_review`, `document_bubble_close` only with `approval_gate_state=already_satisfied`, `implementation_bubble_close` only with `approval_gate_state=already_satisfied`, `normalized_replanning`
-2. `stop_at_settled_checkpoint`: `document_bubble_create`, `implementation_bubble_create`, `plan_complete`
+1. `auto_continue`: `metadata_bootstrap`, `plan_review`, `document_bubble_close` only with `approval_gate_state=already_satisfied`, `implementation_bubble_close` only with `approval_gate_state=already_satisfied`, `normalized_replanning`
+2. `stop_at_settled_checkpoint`: `task_create`, `task_review`, `document_bubble_create`, `implementation_bubble_create`, `plan_complete`
 3. `stop_at_human_checkpoint`: `document_bubble_review`, `implementation_bubble_review`, `troubleshoot_bubble`, `human_checkpoint`
 
 Policy notes:
 
-1. `ReviewPlan` and `ReviewTask` remain `auto_continue` routes because their outputs can often be consumed mechanically inside the same artifact-refinement loop without crossing a human approval gate
-2. `CreateTask` remains `auto_continue` because task creation extends the same plan/task artifact loop and usually leaves the orchestrator with enough trusted local state to continue directly into task review
+1. `ReviewPlan` remains an `auto_continue` route because its outputs can often
+   be consumed mechanically inside the same artifact-refinement loop without
+   crossing a human approval gate.
+2. `CreateTask` and `ReviewTask` stop at a settled checkpoint because their
+   adopted route now creates or reuses the document ideation carrier, performs
+   task admin in that carrier, publishes bounded admin to `main`, and kicks off
+   the same carrier for document refinement only after refreshed proof. If task
+   review returns split, route-back, or block output, the route stops at that
+   checkpoint instead of falling through to direct main edits.
 3. `CreateDocumentBubble` stops at a settled checkpoint only after the document
    route has created or reused the ideation carrier, published required admin
    linkage to `main`, verified refreshed postconditions, and kicked off the same

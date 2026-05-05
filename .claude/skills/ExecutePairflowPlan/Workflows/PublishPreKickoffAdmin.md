@@ -27,7 +27,8 @@ This workflow does not own:
 1. ideation create/start/kickoff semantics, which remain owned by `UsePairflow`
 2. deciding which route adopts the pre-kickoff admin pattern; route adoption is
    owned by the consuming handler, while this workflow owns the bounded publish
-   contract for adopted consumers including `CreateImplementationBubble`
+   contract for adopted consumers including `CreateTask`, `ReviewTask`,
+   `CreateDocumentBubble`, and `CreateImplementationBubble`
 3. automatic merge-conflict recovery
 4. remote publish support
 5. new Pairflow CLI commands or runtime behavior
@@ -101,6 +102,68 @@ Input rules:
 7. Transcript prose, operator memory, branch-name guesses, unmerged bubble
    commits, raw changed-file globs outside the selected scope, and stale
    pre-publish metadata are never publish proof.
+
+## Task-Admin Route Consumption Contract
+
+`CreateTask` and `ReviewTask` are adopted route consumers for this workflow.
+For those routes, the selected admin publish must prove the task creation or
+task review admin state reached `main` before the same document carrier is
+kicked off for document refinement.
+
+Required task-admin selected admin inputs:
+
+1. `BUBBLE_ID` must equal the canonical derived document bubble id
+   `<task_id>-doc`.
+2. `CURRENT_TASK_OR_ROUTE_CONTEXT.route_context` must name `CreateTask` or
+   `ReviewTask`.
+3. `SELECTED_ADMIN_PATHS` must include the parent plan artifact and every
+   created, refined, split, superseding, or directly affected task artifact.
+4. Additional selected paths are allowed only when they are directly required
+   by the same task-admin route and pass the allowed admin scope.
+5. Product/source implementation paths remain forbidden, even if the task body
+   names target source files or implementation tests.
+
+Required task-admin named postconditions after publish when the latest task is
+approved and document kickoff is intended:
+
+1. refreshed `main` plan metadata has the expected `active_task_id`
+2. refreshed `main` tracker row for `<task_id>` has the expected `task_path`
+   and `status=approved`
+3. refreshed `main` latest task metadata has `task_id=<task_id>`
+4. refreshed `main` latest task metadata has `status=approved`
+5. refreshed `main` latest task metadata has `doc_bubble_id=<task_id>-doc`
+6. `published_main_ref` equals the exact selected-scope `admin_commit`
+
+Required task-admin named postconditions after publish when the delegated task
+review returns `split_task`, `route_back_to_plan`, or `block_not_ready`:
+
+1. refreshed `main` plan/task metadata matches the explicit delegated decision
+   and selected admin paths
+2. any created or superseding task artifacts named by the delegated decision are
+   present on refreshed `main`
+3. no document kickoff is authorized unless a latest task artifact is approved
+   and all approval postconditions above are proven
+4. `published_main_ref` equals the exact selected-scope `admin_commit` when a
+   publish occurred
+
+Required task-admin refreshed hold evidence after publish when kickoff is
+intended:
+
+1. refreshed Pairflow status for `<task_id>-doc` still proves `RUNNING` round
+   `0` with `ideation.task_pending=true`
+
+Consumer rules:
+
+1. This workflow returns `kickoff_allowed=true` only as publish proof; it never
+   performs the kickoff.
+2. `HandleTaskAdminBubble` must reject a success packet whose `bubble_id` does
+   not equal `<task_id>-doc`.
+3. `HandleTaskAdminBubble` must re-read refreshed `main` plan/task metadata and
+   Pairflow hold status after consuming this result; the success packet is not a
+   substitute for that local route check.
+4. If the delegated task review did not approve the latest task artifact,
+   `HandleTaskAdminBubble` must not convert publish success into document
+   kickoff.
 
 ## Document-Route Consumption Contract
 

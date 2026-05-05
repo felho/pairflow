@@ -159,8 +159,8 @@ Field rules:
 |---|---|---|---|---|---|---|---|---|
 | `metadata_bootstrap` | `FixPlanMetadata` | repo-local workflow | `auto_continue` | `plan` | `not_applicable` | `not_applicable` | required plan metadata missing or non-trustworthy | repair metadata only, then return to normal resolution |
 | `plan_review` | `ReviewPlan` | `CreatePairflowSpec` | `auto_continue` | `plan` | `not_applicable` | `not_applicable` | plan exists but is not execution-ready for task progression | delegate plan review/refinement only; do not create or mutate task execution state here |
-| `task_create` | `CreateTask` | `CreatePairflowSpec` | `auto_continue` | `task` | `not_applicable` | `not_applicable` | next canonical task is planned but no task artifact exists yet | create the next task only; do not start bubble work here |
-| `task_review` | `ReviewTask` | `CreatePairflowSpec` | `auto_continue` | `task` | `not_applicable` | `not_applicable` | active task exists but is not yet ready for bubble routing | review/refine task only; do not invent plan/bubble mutations here |
+| `task_create` | `CreateTask` | repo-local task-admin bubble handler -> `UsePairflow` + `CreatePairflowSpec` | `stop_at_settled_checkpoint` | `task` | `not_applicable` | `not_applicable` | next canonical task is planned but no task artifact exists yet | create or safely reuse the canonical `<task_id>-doc` ideation carrier, create/review/split/refine task admin in that carrier worktree, publish bounded plan/task/admin proof to `main`, kickoff the same carrier for document refinement only after approval and refreshed proof, and stop at that boundary |
+| `task_review` | `ReviewTask` | repo-local task-admin bubble handler -> `UsePairflow` + `CreatePairflowSpec` | `stop_at_settled_checkpoint` | `task` | `not_applicable` | `not_applicable` | active task exists but is not yet ready for bubble routing | review/refine/split task admin inside the canonical `<task_id>-doc` ideation carrier, publish bounded approved or checkpoint admin state to `main`, kickoff the same carrier for document refinement only after approval and refreshed proof, and stop at that boundary |
 | `document_bubble_create` | `CreateDocumentBubble` | repo-local bubble handler -> `UsePairflow` | `stop_at_settled_checkpoint` | `document_bubble` | `not_applicable` | `not_applicable` | approved task has no document bubble linkage yet | create/start the ideation doc bubble, publish bounded admin linkage to `main`, verify refreshed postconditions, kickoff the same bubble, and stop at the kicked-off boundary |
 | `document_bubble_review` | `ReviewDocumentBubble` | `UsePairflow` | `stop_at_human_checkpoint` | `document_bubble` | `not_applicable` | `review_required` | normalized bubble signal says the doc bubble reached its review gate and no trusted multi-clean-meta-review auto-approval proof is present | produce deep-review output for human approval/rework; do not close the bubble here |
 | `document_bubble_close` | `CloseDocumentBubble` | `UsePairflow` | `auto_continue` | `document_bubble` | `not_applicable` | `already_satisfied` | normalized bubble signal says doc bubble is approved and ready to close after the separate review/approval path has already been satisfied, including trusted multi-clean-meta-review auto-approval proof when configured | close/merge cleanup only; on successful return the same-run owner goes back to top-level `ResolvePlanState` for fresh route selection |
@@ -299,6 +299,26 @@ Reason code:
 
 1. `TASK_CREATION_REQUIRED`
 
+Execution note:
+
+1. `CreateTask` remains the stable route surface, but the actual admin carrier
+   work is owned by repo-local `HandleTaskAdminBubble`.
+2. The handler must create or safely reuse the canonical document ideation
+   carrier `<task_id>-doc` before creating the task artifact or modifying plan
+   tracker metadata.
+3. Task creation, task review, task splitting, task refinement, status updates,
+   `doc_bubble_id` persistence, and any directly related plan/progress/docs
+   admin all occur in the carrier worktree.
+4. The route is settled only when either:
+   - the latest task is approved, the bounded admin commit is published to
+     clean `main`, refreshed `main` proves the named plan/task postconditions,
+     refreshed Pairflow status proves the same round-0 hold, and the same
+     carrier is kicked off for document refinement; or
+   - a delegated split, route-back-to-plan, block-not-ready, or real blocker
+     checkpoint is returned with bounded admin state handled by the same
+     carrier contract.
+5. Direct task/plan metadata mutation on `main` is forbidden for this route.
+
 If Rule 7 would otherwise match but the planned task lacks an explicit canonical `task_id`, select `human_checkpoint` instead with `PLAN_TASK_ID_REQUIRED_FOR_NOT_CREATED`.
 
 ### 8. Task review path
@@ -315,6 +335,23 @@ Reason codes:
 
 1. `TASK_REVIEW_REQUIRED`
 2. `AUTHORITY_PRECEDENCE_APPLIED`
+
+Execution note:
+
+1. `ReviewTask` remains the stable route surface, but the actual review/admin
+   carrier work is owned by repo-local `HandleTaskAdminBubble`.
+2. If the active task has no `doc_bubble_id`, the handler must create or safely
+   reuse the canonical `<task_id>-doc` ideation carrier before route-caused
+   task or plan mutations.
+3. `ReviewSpec task-mode`, any task refinement, task splitting, route-back
+   metadata, plan tracker updates, status changes, and `doc_bubble_id`
+   persistence occur in the carrier worktree.
+4. `status=approved` and document kickoff are valid only after the latest task
+   artifact has a delegated `ReviewSpec task-mode decision=approve_task`,
+   bounded admin publish proof reaches clean `main`, refreshed postconditions
+   are re-read from `main`, refreshed Pairflow status proves the same round-0
+   hold, and the same carrier is kicked off for document refinement.
+5. Direct task/plan metadata mutation on `main` is forbidden for this route.
 
 Precedence source note:
 
@@ -478,11 +515,9 @@ These routes may continue automatically after the delegated workflow returns a t
 
 1. `metadata_bootstrap`
 2. `plan_review`
-3. `task_create`
-4. `task_review`
-5. `document_bubble_close`
-6. `implementation_bubble_close`
-7. `normalized_replanning`
+3. `document_bubble_close`
+4. `implementation_bubble_close`
+5. `normalized_replanning`
 
 Why:
 
@@ -495,7 +530,9 @@ These routes should stop after a stable execution boundary even when no human de
 
 1. `document_bubble_create`
 2. `implementation_bubble_create`
-3. `plan_complete`
+3. `task_create`
+4. `task_review`
+5. `plan_complete`
 
 ### Human-checkpoint routes
 
@@ -547,12 +584,12 @@ Output:
 ```yaml
 route_class: task_create
 target_workflow_surface: CreateTask
-continuation_mode: auto_continue
+continuation_mode: stop_at_settled_checkpoint
 route_scope: task
 source_scope: not_applicable
 approval_gate_state: not_applicable
 reason_code: TASK_CREATION_REQUIRED
-handoff_boundary_note: Delegate task creation to CreatePairflowSpec; do not start bubble work here.
+handoff_boundary_note: Create or reuse the canonical <task_id>-doc ideation carrier, create/review task admin inside that carrier, publish bounded approved admin proof to main, kickoff the same carrier for document refinement only after refreshed proof, and stop at the kicked-off boundary.
 ```
 
 ### Example 3: Existing task still needs review
@@ -568,12 +605,12 @@ Output:
 ```yaml
 route_class: task_review
 target_workflow_surface: ReviewTask
-continuation_mode: auto_continue
+continuation_mode: stop_at_settled_checkpoint
 route_scope: task
 source_scope: not_applicable
 approval_gate_state: not_applicable
 reason_code: TASK_REVIEW_REQUIRED
-handoff_boundary_note: Delegate task review/refinement only; route-back-to-plan, if produced later, returns as normalized replanning.
+handoff_boundary_note: Review/refine/split task admin inside the canonical <task_id>-doc ideation carrier, publish bounded approved or checkpoint admin state to main, kickoff the same carrier for document refinement only after refreshed proof, and stop at that boundary.
 ```
 
 ### Example 4: Approved task with no document bubble
@@ -631,12 +668,12 @@ Output:
 ```yaml
 route_class: task_review
 target_workflow_surface: ReviewTask
-continuation_mode: auto_continue
+continuation_mode: stop_at_settled_checkpoint
 route_scope: task
 source_scope: not_applicable
 approval_gate_state: not_applicable
 reason_code: AUTHORITY_PRECEDENCE_APPLIED
-handoff_boundary_note: Treat task-local status as the detailed authority and continue through task review; reconcile the stale plan summary later.
+handoff_boundary_note: Treat task-local status as the detailed authority and route through the canonical <task_id>-doc ideation carrier; reconcile stale plan summary inside that carrier, publish bounded proof to main, and kickoff only after approval and refreshed proof.
 ```
 
 ### Example 7: Normalized replanning after task review

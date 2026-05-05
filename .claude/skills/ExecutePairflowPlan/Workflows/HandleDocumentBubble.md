@@ -15,13 +15,17 @@ This workflow owns only:
 1. reading document-bubble linkage from task metadata
 2. reading raw Pairflow lifecycle truth for the linked document bubble when one exists
 3. delegating document-bubble create, review, close, or troubleshooting work through `UsePairflow`
-4. emitting normalized document-bubble outputs that `ResolvePlanState` can consume later without reinterpretation
-5. stopping at the correct settled checkpoint or human checkpoint for the delegated action
+4. accepting already-published task-admin carrier handoff state from
+   `HandleTaskAdminBubble` after the same `<task_id>-doc` carrier was kicked
+   off for document refinement
+5. emitting normalized document-bubble outputs that `ResolvePlanState` can consume later without reinterpretation
+6. stopping at the correct settled checkpoint or human checkpoint for the delegated action
 
 This workflow does not own:
 
 1. plan sequencing or active-task selection
-2. plan/task artifact refinement that belongs to `CreatePairflowSpec`
+2. task creation/review/splitting admin that belongs to `HandleTaskAdminBubble`
+   and `CreatePairflowSpec`
 3. plan/task follow-through after normalized replanning
 4. progress/archive aftermath
 5. remote execution support
@@ -91,6 +95,9 @@ Run this workflow only when the active task has entered the document-bubble rout
 1. the task is approved and no document bubble linkage exists yet
 2. a persisted `doc_bubble_id` exists
 3. an explicit operator hint refers to an already-linked document bubble that needs troubleshooting or bubble-origin replanning review
+4. `HandleTaskAdminBubble` has already published `doc_bubble_id=<task_id>-doc`
+   and kicked off the same carrier, and this workflow is reading the linked
+   document-bubble lifecycle on a later pass
 
 If the task is not approved and there is no persisted `doc_bubble_id`, do not start document-bubble handling here. Route back to top-level task planning/review instead.
 
@@ -338,9 +345,10 @@ Choose create when:
 
 Document-route pre-kickoff admin contract:
 
-1. `CreateDocumentBubble` uses the pre-kickoff admin pattern now; this adoption
-   is limited to the document route and does not change implementation-bubble
-   create/start routing
+1. `CreateDocumentBubble` uses the pre-kickoff admin pattern for the legacy
+   approved-task-without-linkage route. New task-create/task-review admin uses
+   `HandleTaskAdminBubble` first and reaches this workflow only after the same
+   `<task_id>-doc` carrier was published and kicked off.
 2. create or reuse only the canonical derived bubble id `<task_id>-doc`
 3. create/start must produce an ideation carrier that remains in `RUNNING`
    round `0` with `ideation.task_pending=true` before any admin publish or
