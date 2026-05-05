@@ -6,14 +6,14 @@ import {
 } from "../actorProtocol/roleDescriptorRegistry.js";
 import type {
   ResolveMetaReviewerPaneWarning
-} from "../../shared/metaReviewGate/metaReviewGateTypes.js";
+} from "../../shared/metaReviewGate/index.js";
 import type {
   AgentName,
   PairflowCommandProfile
 } from "../../../types/bubble.js";
 import {
   resolveMetaReviewGatePaneBindingTmuxCapabilities
-} from "../../shared/metaReviewGate/metaReviewGateTypes.js";
+} from "../../shared/metaReviewGate/index.js";
 import {
   resolveRuntimeSessionWorkspaceAuthority
 } from "../../shared/runtimeSessionWorkspaceAuthority.js";

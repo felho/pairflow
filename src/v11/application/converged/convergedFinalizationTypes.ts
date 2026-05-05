@@ -9,7 +9,7 @@ import type {
 } from "../../shared/ports/pairflowCommand.js";
 import { type SummaryVerifierConsistencyGateDecisionRecord } from "../../../v11/shared/reviewer/summaryVerifierConsistencyGate.js";
 import { type emitBubbleLifecycleEventBestEffort } from "../../../v11/shared/metrics/bubbleEvents.js";
-import { type MetaReviewGateRoute } from "../../shared/metaReviewGate/metaReviewGateCommandContract.js";
+import { type MetaReviewGateRoute } from "../../shared/metaReviewGate/index.js";
 import type {
   BubbleRoundGateState,
   BubbleSpecLockState,

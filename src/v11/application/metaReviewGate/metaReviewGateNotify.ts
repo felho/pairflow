@@ -5,10 +5,10 @@ import type {
   MetaReviewRuntimeDeliveryObservation,
   NotifyMetaReviewerSubmissionRequestDependencies,
   NotifyMetaReviewerSubmissionRequestInput
-} from "../../shared/metaReviewGate/metaReviewGateTypes.js";
+} from "../../shared/metaReviewGate/index.js";
 import {
   resolveMetaReviewGateNotifyTmuxCapabilities
-} from "../../shared/metaReviewGate/metaReviewGateTypes.js";
+} from "../../shared/metaReviewGate/index.js";
 
 const metaReviewerPaneExitedReasonCode = "META_REVIEWER_PANE_EXITED";
 const metaReviewRequestDeliveryUnconfirmedReasonCode =

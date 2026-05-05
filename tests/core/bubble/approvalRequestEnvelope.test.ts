@@ -18,7 +18,7 @@ import {
   type AppendProtocolEnvelopeInput
 } from "../../../src/v11/infrastructure/artifact/transcript/transcriptStore.js";
 import { buildMetaReviewSubmitAdvisoryOnlyCorrectionNote } from "../../../src/v11/shared/metaReview/metaReviewSubmitGuidance.js";
-import type { MetaReviewGateThresholdMetadata } from "../../../src/v11/shared/metaReviewGate/metaReviewGateTypes.js";
+import type { MetaReviewGateThresholdMetadata } from "../../../src/v11/shared/metaReviewGate/index.js";
 
 const tempDirs: string[] = [];
 
