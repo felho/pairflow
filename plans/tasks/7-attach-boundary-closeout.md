@@ -5,7 +5,7 @@ task_family_id: attach-boundary-closeout
 sequence_key: "7"
 task_id: 7-attach-boundary-closeout
 title: "Attach Boundary Closeout"
-status: approved
+status: implementable
 phase: phase3
 target_files:
   - src/v11/shared/attach/resolveAttachBubbleExecution.ts
