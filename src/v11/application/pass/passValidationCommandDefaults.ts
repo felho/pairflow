@@ -1,5 +1,5 @@
 export {
   passValidationDefaults,
   PassValidationRunnerExecutionError
-} from "../../defaults/pass/passValidationCommandDefaults.js";
-export type { PassValidationCommandResult } from "../../defaults/pass/passValidationCommandDefaults.js";
+} from "../../shared/validation/passValidationCommandDefaults.js";
+export type { PassValidationCommandResult } from "../../shared/validation/passValidationCommandDefaults.js";

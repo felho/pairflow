@@ -1,4 +1,4 @@
 export {
   readReviewerBriefArtifact,
   readReviewerFocusArtifact
-} from "../../shared/reviewer/reviewerArtifactDefaults.js";
+} from "../../defaults/reviewer/reviewerArtifactDefaults.js";

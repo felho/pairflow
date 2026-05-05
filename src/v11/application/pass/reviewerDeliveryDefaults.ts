@@ -19,7 +19,7 @@ async function loadReviewerDeliveryDefaults(): Promise<{
   refreshReviewerContext: RefreshReviewerContextPort;
 }> {
   reviewerDeliveryDefaultsPromise ??= import(
-    "../../defaults/reviewer/reviewerDeliveryDefaults.js"
+    "../../shared/reviewer/reviewerDeliveryDefaults.js"
   ).then(({ reviewerDeliveryDefaults }) => reviewerDeliveryDefaults);
   return reviewerDeliveryDefaultsPromise;
 }

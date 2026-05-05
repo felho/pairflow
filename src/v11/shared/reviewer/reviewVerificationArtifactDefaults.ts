@@ -1,4 +1,4 @@
 export {
   resolveReviewVerificationInputFromRefs,
   writeReviewVerificationArtifactAtomic
-} from "../../shared/reviewer/reviewVerificationArtifactDefaults.js";
+} from "../../defaults/reviewer/reviewVerificationArtifactDefaults.js";
