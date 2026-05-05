@@ -89,6 +89,16 @@
       "exceptions": []
     },
     {
+      "id": "internal_module_boundary",
+      "metric": "internal module implementation privacy boundary",
+      "scope": [
+        "src/v11/**"
+      ],
+      "mode": "hard-fail",
+      "owner": "architecture/runtime",
+      "exceptions": []
+    },
+    {
       "id": "critical_side_effect",
       "metric": "critical command side-effect invariant coverage",
       "scope": [

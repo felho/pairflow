@@ -5,6 +5,7 @@ import { buildContractTimeoutPolicyCheckReport } from "./contract-timeout-policy
 import { buildCriticalSideEffectCheckReport } from "./critical-side-effect.js";
 import { buildDependencyCheckReport } from "./dependency.js";
 import { buildErrorCheckReport } from "./error.js";
+import { buildInternalModuleBoundaryCheckReport } from "./internal-module-boundary.js";
 import { buildMutationCheckReport } from "./mutation.js";
 import { createNotImplementedCheckReport } from "./not-implemented.js";
 import { buildTransitionCheckReport } from "./transition.js";
@@ -36,6 +37,13 @@ export async function buildCheckReport({
   }
   if (effectiveCheck.id === "application_defaults_boundary") {
     return buildApplicationDefaultsBoundaryCheckReport({
+      check: effectiveCheck,
+      repoRoot,
+      fallbackMode
+    });
+  }
+  if (effectiveCheck.id === "internal_module_boundary") {
+    return buildInternalModuleBoundaryCheckReport({
       check: effectiveCheck,
       repoRoot,
       fallbackMode

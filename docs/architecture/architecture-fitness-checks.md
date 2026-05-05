@@ -44,7 +44,11 @@ The current posture is:
 - `complexity`: hard-fail
 - `contract_timeout_policy`: hard-fail
 - `dependency`: hard-fail
+- `application_defaults_boundary`: hard-fail
+- `internal_module_boundary`: hard-fail
 - `critical_side_effect`: hard-fail
+- `ui_contract_boundary`: hard-fail
+- `ui_router_port_boundary`: hard-fail
 
 This means the system is already operating as an enforcement gate, not only as advisory reporting.
 
@@ -129,6 +133,38 @@ Rules:
 - intent: parity is not enough; critical runtime effects must have explicit regression coverage
 - owner: architecture/runtime
 
+### 9) Application Defaults Boundary
+
+- metric: application layer must not import default runtime wiring
+- scope: `src/v11/**`
+- intent: preserve composition ownership by preventing application code from
+  depending directly on `src/v11/defaults/**`
+- owner: architecture/composition
+
+### 10) Internal Module Boundary
+
+- metric: internal module implementation privacy boundary
+- scope: `src/v11/**`
+- intent: enforce the `internal/` module privacy convention described in
+  [v11-internal-module-boundaries.md](/Users/felho/dev/pairflow/docs/architecture/v11-internal-module-boundaries.md)
+- owner: architecture/runtime
+
+### 11) UI Contract Boundary
+
+- metric: UI/backend contract boundary import direction
+- scope: `ui/src/**`, `src/contracts/ui/**`
+- intent: keep browser-safe UI DTO contracts owned by `src/contracts/ui/**`
+  and prevent browser/runtime ownership leakage
+- owner: architecture/ui-contracts
+
+### 12) UI Router Port Boundary
+
+- metric: UI router port full-composite and command-owned import leakage
+- scope: `src/v11/shared/ports/**`, `src/v11/infrastructure/ui/**`
+- intent: keep UI router leaf modules on narrow capability slices and prevent
+  command-owned runtime imports from leaking into UI routing ports
+- owner: architecture/ui-router
+
 ## Current Implementation Status
 
 All policy-declared checks are currently wired to executable runners in
@@ -156,6 +192,12 @@ Implementation maturity by check:
   - report-only Shared Promotion warnings for `shared/<name>/**` directories
     consumed by exactly one `application/<lane>/**` lane and no infrastructure
   - still limited by relative import resolution and heuristic ownership detection
+- `application_defaults_boundary`: AST-based relative import check for
+  `application/** -> defaults/**` composition inversions with explicit
+  temporary exceptions
+- `internal_module_boundary`: AST-based relative import check for external
+  imports into any `/internal/` path; the directory immediately above
+  `internal/` is treated as the module root
 - `critical_side_effect`: AST-based invariant scan with:
   - explicit command matrix for the seed command set `kickoff`, `pass`,
     `converged`, `approval`, `reply`, `askHuman`
