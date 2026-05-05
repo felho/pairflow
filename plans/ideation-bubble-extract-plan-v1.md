@@ -219,6 +219,11 @@ meta-review auto-approval proof. Task `3-extract-copy-commit` is archived under
 the plan archive group, and task `4-extract-docs-validation` is now the active
 next task for creation.
 
+Progress update (2026-05-05): task `4-extract-docs-validation` was created,
+reviewed through task-mode ReviewSpec, approved for document-bubble routing, and
+document bubble `4-extract-docs-validation-doc` was created and started with the
+repository bootstrap command.
+
 ## Open Task List
 
 | Task ID | Task Path | Purpose | Depends On | Closes Gap | Status |
