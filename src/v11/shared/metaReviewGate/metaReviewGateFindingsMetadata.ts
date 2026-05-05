@@ -8,7 +8,7 @@ import {
 import {
   resolveFindingsCountFromMetaReviewReportJson as resolveFindingsCountFromMetaReviewReportJsonImpl,
   resolveNonNegativeIntegerField as resolveNonNegativeIntegerFieldImpl
-} from "./metaReviewGateFindingsClaimParsing.js";
+} from "../../domain/metaReviewGate/findingsClaimParsing.js";
 import {
   deriveFindingsOpenSplit,
   resolveFindingsOpenSplitFromReportJson
@@ -28,10 +28,10 @@ export {
 export {
   resolveFindingsCountFromMetaReviewReportJson,
   resolveNonNegativeIntegerField
-} from "./metaReviewGateFindingsClaimParsing.js";
+} from "../../domain/metaReviewGate/findingsClaimParsing.js";
 export {
   resolveStructuredMetaReviewClaimFromReportJson
-} from "./metaReviewGateFindingsClaimParsing.js";
+} from "../../domain/metaReviewGate/findingsClaimParsing.js";
 
 function isNonNegativeInteger(value: unknown): value is number {
   return typeof value === "number" && Number.isInteger(value) && value >= 0;

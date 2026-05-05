@@ -1,4 +1,4 @@
-import { resolveNonNegativeIntegerField } from "../metaReviewGateFindingsClaimParsing.js";
+import { resolveNonNegativeIntegerField } from "../../../domain/metaReviewGate/findingsClaimParsing.js";
 
 export const metaReviewApproveAdvisorySplitRequiredReasonCode =
   "META_REVIEW_APPROVE_ADVISORY_SPLIT_REQUIRED";

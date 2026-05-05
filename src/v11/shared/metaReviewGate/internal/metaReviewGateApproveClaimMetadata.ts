@@ -1,5 +1,5 @@
 import type { FindingsParityMetadata } from "../../../../types/protocol.js";
-import { resolveNonNegativeIntegerField } from "../metaReviewGateFindingsClaimParsing.js";
+import { resolveNonNegativeIntegerField } from "../../../domain/metaReviewGate/findingsClaimParsing.js";
 import {
   resolveFindingsArtifactStatus,
   resolveFindingsDigestSha256,

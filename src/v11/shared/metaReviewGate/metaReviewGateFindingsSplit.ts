@@ -1,6 +1,6 @@
 import { isRecord } from "../validation/primitives.js";
 import { resolveFindingPriority } from "../../../types/findings.js";
-import { resolveNonNegativeIntegerField } from "./metaReviewGateFindingsClaimParsing.js";
+import { resolveNonNegativeIntegerField } from "../../domain/metaReviewGate/findingsClaimParsing.js";
 
 export interface FindingsOpenSplit {
   blockingOpenTotal: number;
