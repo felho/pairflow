@@ -4,6 +4,40 @@ Status: temporary ideation inventory
 Scope: `src/v11/shared/metaReviewGate/**`  
 Bubble: `meta-review-internal-boundary`  
 Created: 2026-05-05
+Last updated: 2026-05-06
+
+## Current Progress Snapshot
+
+The first boundary pass has established `shared/metaReviewGate/index.ts` as the
+public import door for the meta-review submit side wherever it can be done
+without creating dependency cycles.
+
+Completed in the bubble:
+
+- domain-owned policy slices extracted under `src/v11/domain/metaReviewGate/**`
+  for threshold policy, findings split/parity metadata, approve-claim policy,
+  reviewer snapshot policy, human-gate routing, snapshot state, auto-rework
+  retry invariants, run-result parity, snapshot counters, and findings
+  projection.
+- `shared/metaReviewGate/internal/**` introduced for implementation details.
+- `internal_module_boundary` fitness rule added and passing.
+- external meta-review submit imports now route through `../metaReviewGate/index.js`
+  for threshold authority, runtime parity snapshot/metadata helpers, and
+  rework findings parity validation.
+
+Known deliberate exception:
+
+- `shared/metaReview/metaReviewCommandSubmitRouting.ts` still imports
+  `../metaReviewGate/metaReviewGateCurrentRunFinalization.js` directly.
+  Exporting `finalizeCurrentRunMetaReviewGate` through
+  `shared/metaReviewGate/index.ts` was tested and rejected because
+  `pnpm fitness:check:ci` detected an import cycle:
+  `metaReviewCommandSubmitValidation.ts <-> metaReviewGate/index.ts <->
+  metaReviewGateCurrentRunFinalization.ts`.
+
+This means the remaining work is no longer a simple index-routing cleanup. The
+current-run finalization boundary needs a structural split before it can become
+a clean public API export.
 
 ## Purpose
 
