@@ -267,6 +267,76 @@ describe("runCli", () => {
     }
   });
 
+  it("prints ordered JSON evidence for multi-path bubble extract without closing the source bubble", async () => {
+    const repoPath = await mkdtemp(join(tmpdir(), "pairflow-cli-extract-multi-"));
+    tempDirs.push(repoPath);
+    await initGitRepository(repoPath);
+    const bubble = await createBubble({
+      repoPath,
+      id: "b_cli_extract_multi_01",
+      baseBranch: "main",
+      reviewArtifactType: "code",
+      ideation: true,
+      cwd: repoPath
+    });
+    await mkdir(join(bubble.paths.worktreePath, "docs"), { recursive: true });
+    await mkdir(join(bubble.paths.worktreePath, "progress"), { recursive: true });
+    await writeFile(
+      join(bubble.paths.worktreePath, "docs", "idea.md"),
+      "# Extracted idea\n",
+      "utf8"
+    );
+    await writeFile(
+      join(bubble.paths.worktreePath, "progress", "note.md"),
+      "done\n",
+      "utf8"
+    );
+    await runGit(repoPath, ["add", ".pairflow"]);
+    await runGit(repoPath, ["commit", "-m", "test: add multi-path ideation bubble"]);
+    const beforeConfig = await readFile(bubble.paths.bubbleTomlPath, "utf8");
+    const beforeState = await readFile(bubble.paths.statePath, "utf8");
+
+    const previousCwd = process.cwd();
+    try {
+      process.chdir(repoPath);
+      const exitCode = await runCli([
+        "bubble",
+        "extract",
+        "--id",
+        bubble.bubbleId,
+        "--path",
+        "progress/note.md",
+        "--path",
+        "docs/idea.md",
+        "--json"
+      ]);
+
+      expect(exitCode).toBe(0);
+      const output = stdoutSpy.mock.calls.map((call) => String(call[0])).join("");
+      const result = JSON.parse(output) as {
+        status: string;
+        selectedPaths: Array<{ normalizedPath: string }>;
+        copiedPaths: string[];
+      };
+      expect(result.status).toBe("success");
+      expect(result.selectedPaths.map((path) => path.normalizedPath)).toEqual([
+        "progress/note.md",
+        "docs/idea.md"
+      ]);
+      expect(result.copiedPaths).toEqual(["progress/note.md", "docs/idea.md"]);
+      await expect(readFile(join(repoPath, "docs", "idea.md"), "utf8"))
+        .resolves.toBe("# Extracted idea\n");
+      await expect(readFile(join(repoPath, "progress", "note.md"), "utf8"))
+        .resolves.toBe("done\n");
+      await expect(readFile(bubble.paths.bubbleTomlPath, "utf8"))
+        .resolves.toBe(beforeConfig);
+      await expect(readFile(bubble.paths.statePath, "utf8"))
+        .resolves.toBe(beforeState);
+    } finally {
+      process.chdir(previousCwd);
+    }
+  });
+
   it("fails bubble extract for forbidden source paths without mutating source bubble lifecycle artifacts", async () => {
     const repoPath = await mkdtemp(join(tmpdir(), "pairflow-cli-extract-forbidden-"));
     tempDirs.push(repoPath);
@@ -308,6 +378,86 @@ describe("runCli", () => {
         .resolves.toBe(beforeState);
       await expect(runGit(repoPath, ["status", "--porcelain"]))
         .resolves.toMatchObject({ stdout: "" });
+    } finally {
+      process.chdir(previousCwd);
+    }
+  });
+
+  it("prints selected-path commit evidence as JSON", async () => {
+    const repoPath = await mkdtemp(join(tmpdir(), "pairflow-cli-extract-json-commit-"));
+    tempDirs.push(repoPath);
+    await initGitRepository(repoPath);
+    const bubble = await createBubble({
+      repoPath,
+      id: "b_cli_extract_json_commit_01",
+      baseBranch: "main",
+      reviewArtifactType: "code",
+      ideation: true,
+      cwd: repoPath
+    });
+    await mkdir(join(bubble.paths.worktreePath, "docs"), { recursive: true });
+    await writeFile(
+      join(bubble.paths.worktreePath, "docs", "idea.md"),
+      "# JSON committed idea\n",
+      "utf8"
+    );
+    await mkdir(join(bubble.paths.worktreePath, "progress"), { recursive: true });
+    await writeFile(
+      join(bubble.paths.worktreePath, "progress", "unselected.md"),
+      "do not commit me\n",
+      "utf8"
+    );
+    await runGit(repoPath, ["add", ".pairflow"]);
+    await runGit(repoPath, ["commit", "-m", "test: add JSON commit ideation bubble"]);
+    const beforeConfig = await readFile(bubble.paths.bubbleTomlPath, "utf8");
+    const beforeState = await readFile(bubble.paths.statePath, "utf8");
+
+    const previousCwd = process.cwd();
+    try {
+      process.chdir(repoPath);
+      const exitCode = await runCli([
+        "bubble",
+        "extract",
+        "--id",
+        bubble.bubbleId,
+        "--path",
+        "docs/idea.md",
+        "--commit",
+        "--message",
+        "docs: extract JSON committed idea",
+        "--json"
+      ]);
+
+      expect(exitCode).toBe(0);
+      const output = stdoutSpy.mock.calls.map((call) => String(call[0])).join("");
+      const result = JSON.parse(output) as {
+        status: string;
+        selectedPaths: Array<{ normalizedPath: string }>;
+        copiedPaths: string[];
+        stagedPaths: string[];
+        commitSha: string;
+        commitMessage: string;
+      };
+      expect(result).toMatchObject({
+        status: "success",
+        copiedPaths: ["docs/idea.md"],
+        stagedPaths: ["docs/idea.md"],
+        commitMessage: "docs: extract JSON committed idea"
+      });
+      expect(result.selectedPaths.map((path) => path.normalizedPath))
+        .toEqual(["docs/idea.md"]);
+      const headSha = (await runGit(repoPath, ["rev-parse", "HEAD"])).stdout.trim();
+      expect(result.commitSha).toBe(headSha);
+      await expect(runGit(repoPath, ["log", "-1", "--format=%s"]))
+        .resolves.toMatchObject({ stdout: "docs: extract JSON committed idea\n" });
+      await expect(runGit(repoPath, ["show", "--format=", "--name-only", "HEAD"]))
+        .resolves.toMatchObject({ stdout: "docs/idea.md\n" });
+      await expect(runGit(repoPath, ["status", "--porcelain"]))
+        .resolves.toMatchObject({ stdout: "" });
+      await expect(readFile(bubble.paths.bubbleTomlPath, "utf8"))
+        .resolves.toBe(beforeConfig);
+      await expect(readFile(bubble.paths.statePath, "utf8"))
+        .resolves.toBe(beforeState);
     } finally {
       process.chdir(previousCwd);
     }
