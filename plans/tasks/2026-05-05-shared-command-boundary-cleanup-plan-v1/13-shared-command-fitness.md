@@ -5,7 +5,7 @@ task_family_id: shared-command-fitness
 sequence_key: "13"
 task_id: 13-shared-command-fitness
 title: "Shared Command Fitness"
-status: implementable
+status: in_progress
 phase: phase5
 target_files:
   - tools/fitness/checks/dependency.ts
@@ -21,7 +21,7 @@ normative_refs:
 owners:
   - "felho"
 doc_bubble_id: 13-shared-command-fitness-doc
-impl_bubble_id: null
+impl_bubble_id: 13-shared-command-fitness-impl
 supersedes: []
 superseded_by: null
 archive_group: 2026-05-05-shared-command-boundary-cleanup-plan-v1
