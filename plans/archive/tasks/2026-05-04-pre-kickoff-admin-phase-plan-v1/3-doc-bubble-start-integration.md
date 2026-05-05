@@ -5,7 +5,7 @@ task_family_id: doc-bubble-start-integration
 sequence_key: "3"
 task_id: 3-doc-bubble-start-integration
 title: "Document Bubble Start Admin Publish Integration"
-status: approved
+status: archived
 phase: phase3
 target_files:
   - .claude/skills/ExecutePairflowPlan/SKILL.md
@@ -28,10 +28,12 @@ normative_refs:
 owners:
   - "felho"
 doc_bubble_id: 3-doc-bubble-start-integration-doc
-impl_bubble_id: null
+impl_bubble_id: 3-doc-bubble-start-integration-doc
 supersedes: []
 superseded_by: null
 archive_group: 2026-05-04-pre-kickoff-admin-phase-plan-v1
+archive_path: plans/archive/tasks/2026-05-04-pre-kickoff-admin-phase-plan-v1/3-doc-bubble-start-integration.md
+closed_at: "2026-05-05T11:12:05+02:00"
 ---
 
 # Task: Document Bubble Start Admin Publish Integration
