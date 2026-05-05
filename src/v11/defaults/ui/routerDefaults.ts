@@ -13,7 +13,7 @@ import { resumeBubbleV11 as resumeBubble } from "../../application/resume/emitRe
 import { startBubbleV11 as startBubble } from "../../application/start/emitStartV11.js";
 import { getBubbleStatusV11 as getBubbleStatus } from "../../application/status/emitStatusV11.js";
 import { stopBubbleV11 as stopBubble } from "../../application/stop/emitStopV11.js";
-import { listBubbles } from "../../shared/list/listCommandApi.js";
+import { listBubbles } from "../../shared/read-model/list/listReadModelApi.js";
 import { updateBubbleReviewPolicyForUi } from "./updateBubbleReviewPolicyForUi.js";
 import type {
   UiCommitBubbleResult,
