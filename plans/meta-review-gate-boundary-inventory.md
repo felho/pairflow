@@ -24,20 +24,22 @@ Completed in the bubble:
 - external meta-review submit imports now route through `../metaReviewGate/index.js`
   for threshold authority, runtime parity snapshot/metadata helpers, and
   rework findings parity validation.
+- current-run finalization now routes through
+  `../metaReviewGate/metaReviewGateCurrentRunApi.js`, a narrow public API file
+  that avoids importing the aggregate index.
 
-Known deliberate exception:
+Known aggregate-index exception:
 
-- `shared/metaReview/metaReviewCommandSubmitRouting.ts` still imports
-  `../metaReviewGate/metaReviewGateCurrentRunFinalization.js` directly.
-  Exporting `finalizeCurrentRunMetaReviewGate` through
-  `shared/metaReviewGate/index.ts` was tested and rejected because
+- `finalizeCurrentRunMetaReviewGate` is intentionally not exported from
+  `shared/metaReviewGate/index.ts`. Exporting it through the aggregate index was
+  tested and rejected because
   `pnpm fitness:check:ci` detected an import cycle:
   `metaReviewCommandSubmitValidation.ts <-> metaReviewGate/index.ts <->
   metaReviewGateCurrentRunFinalization.ts`.
 
-This means the remaining work is no longer a simple index-routing cleanup. The
-current-run finalization boundary needs a structural split before it can become
-a clean public API export.
+This leaves the aggregate `index.ts` as the public door for policy/read helpers
+and `metaReviewGateCurrentRunApi.ts` as the narrower public door for the
+current-run finalization entrypoint.
 
 ## Purpose
 
