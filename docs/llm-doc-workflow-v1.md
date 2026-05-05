@@ -116,6 +116,20 @@ pairflow bubble start --id <id> --repo <abs_repo_path>
 pairflow bubble kickoff --id <id> --repo <abs_repo_path> --task-file <abs_task_path>
 ```
 
+Ideation artifact extraction is a separate operator read-model path, not bubble
+close lifecycle. Use repeated explicit repo-relative `--path` values under
+`plans/**`, `docs/**`, or `progress/**`; the target repo must match bubble
+metadata and be a clean `main` checkout. Existing target files, globs,
+directories, product source paths, mismatched repos, dirty/non-main checkouts,
+or in-progress merge/rebase/cherry-pick state fail closed. `--commit` stages and
+creates a target-repo extract commit containing exactly the selected paths. Text
+output reports the commit SHA and message; JSON output includes selected paths,
+and commit-mode JSON also includes staged paths. Extraction never approves,
+runs the source-bubble lifecycle commit, merges, deletes, closes, or cleans up
+the source bubble; use normal lifecycle commands separately after reviewing the
+extracted files. See
+[README: Extract selected ideation artifacts](../README.md#extract-selected-ideation-artifacts).
+
 `pairflow bubble create` requires `--review-artifact-type <document|code>`.
 `auto` is not available as a create-time ownership option.
 Ideation Phase-1 uses no new lifecycle state: bubble runs as `RUNNING round=0` until explicit kickoff.
