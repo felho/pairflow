@@ -41,8 +41,16 @@ Allowed mutations require an authorizing delegated result:
    requires a successful `CreateDocumentBubble` handler result with the
    created/started bubble id, structured `PublishPreKickoffAdmin` success,
    refreshed `main` metadata proof, and same-bubble kickoff proof.
-5. `impl_bubble_id` linkage and `status=in_progress` require a successful
-   `CreateImplementationBubble` handler result.
+5. implementation-route `impl_bubble_id` linkage and `status=in_progress`
+   metadata editing in the bubble worktree requires a
+   `PublishPreKickoffAdmin` pre-side-effect authorization record before the file
+   edit occurs. Final linkage/status recognition then requires a successful
+   `CreateImplementationBubble` handler result with the created, safely reused,
+   or pre-kickoff-resumed bubble id as applicable, structured
+   `PublishPreKickoffAdmin` success, refreshed `main` metadata proof, and
+   same-bubble kickoff proof when kickoff runs. Linked active-hold
+   classification after kickoff is a lifecycle boundary, not final
+   linkage/status recognition for a new admin mutation.
 6. `status=implementable` requires a successful `CloseDocumentBubble` handler
    result.
 7. task archive/progress aftermath requires a successful `UpdateProgress` result.
@@ -60,6 +68,11 @@ Allowed mutations require an authorizing delegated result:
    that `main` task metadata contains `doc_bubble_id=<task_id>-doc` with
    `status=approved`, and that Pairflow still reports the same bubble in
    round-0 ideation hold.
+10. implementation-bubble kickoff after pre-kickoff admin publish requires the
+    final `PublishPreKickoffAdmin` success result plus refreshed handler-side
+    proof that `main` task metadata contains `impl_bubble_id=<task_id>-impl`
+    with `status=in_progress`, and that Pairflow still reports the same bubble
+    in round-0 ideation hold.
 
 Do not commit route-caused metadata changes unless the staged mutation is covered
 by one of these authorizations.

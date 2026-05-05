@@ -95,7 +95,7 @@ Acceptance rules:
 6. for `route_class` values other than `normalized_replanning`, `source_scope` must be `not_applicable`
 7. create/start and troubleshooting outputs remain terminal execution boundaries in the bubble-handler layer and are not reinterpreted here as continuation input
 8. extra handler-local fields such as `delegated_use_pairflow_surface`, `boundary_status`, or other non-taxonomy reporting fields may be present and must be ignored for route selection
-9. in this Task 3 slice, bubble-origin replanning must travel through `NORMALIZED_BUBBLE_ROUTE`, not through `NORMALIZED_REPLANNING_SIGNAL`
+9. bubble-origin replanning must travel through `NORMALIZED_BUBBLE_ROUTE`, not through `NORMALIZED_REPLANNING_SIGNAL`
 10. if the normalized bubble input is absent, partial, or inconsistent, this workflow must not classify raw bubble detail on its own
 
 ### Normalized replanning-input acceptance contract
@@ -114,7 +114,7 @@ approval_gate_state: not_applicable
 Acceptance rules:
 
 1. task-origin replanning must use `source_scope=task`
-2. bubble-origin replanning belongs in `NORMALIZED_BUBBLE_ROUTE` during this Task 3 slice and must not be duplicated here
+2. bubble-origin replanning belongs in `NORMALIZED_BUBBLE_ROUTE` and must not be duplicated here
 3. the signal must tell `ResolvePlanState` that replanning supersedes same-source continuation for this routing decision
 4. the signal authorizes routing only; it does not authorize supersede/archive execution here
 5. if the normalized replanning signal is absent, partial, or inconsistent, this workflow must not treat replanning as selected
@@ -164,7 +164,7 @@ Field rules:
 | `document_bubble_create` | `CreateDocumentBubble` | repo-local bubble handler -> `UsePairflow` | `stop_at_settled_checkpoint` | `document_bubble` | `not_applicable` | `not_applicable` | approved task has no document bubble linkage yet | create/start the ideation doc bubble, publish bounded admin linkage to `main`, verify refreshed postconditions, kickoff the same bubble, and stop at the kicked-off boundary |
 | `document_bubble_review` | `ReviewDocumentBubble` | `UsePairflow` | `stop_at_human_checkpoint` | `document_bubble` | `not_applicable` | `review_required` | normalized bubble signal says the doc bubble reached its review gate and no trusted multi-clean-meta-review auto-approval proof is present | produce deep-review output for human approval/rework; do not close the bubble here |
 | `document_bubble_close` | `CloseDocumentBubble` | `UsePairflow` | `auto_continue` | `document_bubble` | `not_applicable` | `already_satisfied` | normalized bubble signal says doc bubble is approved and ready to close after the separate review/approval path has already been satisfied, including trusted multi-clean-meta-review auto-approval proof when configured | close/merge cleanup only; on successful return the same-run owner goes back to top-level `ResolvePlanState` for fresh route selection |
-| `implementation_bubble_create` | `CreateImplementationBubble` | `UsePairflow` | `stop_at_settled_checkpoint` | `implementation_bubble` | `not_applicable` | `not_applicable` | task status is `implementable` and no impl bubble linkage exists yet | create/start the impl bubble, persist `impl_bubble_id`, and move task status to `in_progress`; raw lifecycle follow-up stays with successor bubble routing |
+| `implementation_bubble_create` | `CreateImplementationBubble` | repo-local bubble handler -> `UsePairflow` when lifecycle delegation is actually needed | `stop_at_settled_checkpoint` | `implementation_bubble` | `not_applicable` | `not_applicable` | task status is `implementable` with no impl linkage, or task status is `in_progress` with canonical impl linkage that may be a pre-kickoff resume candidate or linked active-hold classification candidate | create/start or safely reuse the ideation impl carrier when needed, publish or recover bounded `impl_bubble_id` and `status=in_progress` admin proof on `main`, verify refreshed postconditions, kickoff the same bubble when still pre-kickoff, or stop at a truthful active-bubble/human-checkpoint boundary when no create/kickoff delegation applies |
 | `implementation_bubble_review` | `ReviewImplementationBubble` | `UsePairflow` | `stop_at_human_checkpoint` | `implementation_bubble` | `not_applicable` | `review_required` | normalized bubble signal says the impl bubble reached its review gate and no trusted multi-clean-meta-review auto-approval proof is present | produce deep-review output for human approval/rework; do not close the bubble here |
 | `implementation_bubble_close` | `CloseImplementationBubble` | `UsePairflow` | `auto_continue` | `implementation_bubble` | `not_applicable` | `already_satisfied` | normalized bubble signal says impl bubble is approved and ready to close after the separate review/approval path has already been satisfied, including trusted multi-clean-meta-review auto-approval proof when configured | close/merge cleanup only; on successful return the top-level auto-continue handoff goes to repo-local `UpdateProgress` |
 | `normalized_replanning` | `HandleNormalizedReplan` | repo-local `Workflows/HandleNormalizedReplan.md` | `auto_continue` | `task`, `document_bubble`, or `implementation_bubble` according to normalized source authority | `task` or bubble-origin `document_bubble` / `implementation_bubble` | `not_applicable` | task review or bubble layer produced a normalized replanning signal | consume the normalized signal only; repo-local follow-through may delegate `CreatePairflowSpec` work and prepare supersede/archive handoff, but raw bubble detail and normal aftermath remain out of scope here |
@@ -371,16 +371,45 @@ Select `implementation_bubble_create` when:
 2. no implementation bubble linkage exists yet
 3. implementation readiness is not inferred from `doc_bubble_id`, bubble absence, filename guesses, or raw Pairflow lifecycle detail alone
 
+Also select `implementation_bubble_create` as a handler-local linked
+implementation route when:
+
+1. active task metadata has `status=in_progress`
+2. `impl_bubble_id` equals the canonical derived id `<task_id>-impl`
+3. no normalized implementation-bubble review, close, or replanning input is
+   already present for the same routing decision
+4. this route only hands control to `HandleImplementationBubble`; it does not
+   authorize `ResolvePlanState` to interpret raw lifecycle state
+5. if the handler proves the linked bubble is beyond the pre-kickoff round-0
+   resume state and still actively running, it may return its handler-local
+   active-bubble hold without create/kickoff delegation
+6. if the handler cannot prove structured publish success plus same-bubble
+   round-0 hold for a pre-kickoff resume candidate, it must return its own
+   human checkpoint
+
 Execution note:
 
-1. `CreateImplementationBubble` remains the stable route surface, but the actual create/start delegation is owned by repo-local `HandleImplementationBubble`, which then calls `UsePairflow`
+1. `CreateImplementationBubble` remains the stable route surface, but actual
+   create/start, reuse, pre-kickoff resume, and active-hold classification are
+   owned by repo-local `HandleImplementationBubble`, which calls `UsePairflow`
+   only for lifecycle actions that actually run
 2. `HandleImplementationBubble` must use the canonical derived id
    `<task_id>-impl` for fresh implementation bubble creation; before creating,
    it must read status for that id, reuse only a safe existing create carrier
    state, and fail closed rather than creating an alternate id
-3. successful create/start is not settled until the handler has persisted the
-   derived/created bubble id into task metadata as `impl_bubble_id` and moved
-   task status to `in_progress`
+3. successful create/start is not settled until the handler has published the
+   derived/created bubble id into refreshed `main` task metadata as
+   `impl_bubble_id`, consumed `PublishPreKickoffAdmin` success proof, verified
+   refreshed `status=in_progress`, rechecked the same ideation hold, and
+   delegated same-bubble kickoff
+4. resumed create/start is not settled until the handler has consumed or
+   idempotently recovered the same structured publish proof, rechecked
+   refreshed `main` metadata, rechecked the same ideation hold, and delegated
+   same-bubble kickoff
+5. linked active-hold classification is settled without create/kickoff
+   delegation only when Pairflow lifecycle truth proves the implementation
+   bubble is already active beyond the pre-kickoff resume state and no review,
+   close, replanning, or troubleshooting boundary applies
 
 Reason code:
 
@@ -389,6 +418,22 @@ Reason code:
 ### 12. Normalized implementation-bubble continuation
 
 Consume only normalized bubble-route input here, already emitted by `HandleImplementationBubble`.
+
+Linked implementation-bubble note:
+
+1. when task metadata already has `impl_bubble_id`, raw lifecycle reading still
+   belongs to `HandleImplementationBubble`
+2. if the linked task is `status=in_progress` and the handler proves the same
+   bubble is still a round-0 ideation hold after pre-kickoff admin was
+   published, the handler may return its handler-local `CreateImplementationBubble`
+   resume/kickoff action result rather than a normalized continuation route
+3. if that same canonical round-0 hold lacks consumable or recoverable
+   `PublishPreKickoffAdmin` proof, the handler must return its native
+   `IMPL_BUBBLE_PUBLISH_PROOF_INVALID` human checkpoint instead of allowing a
+   generic active-bubble hold
+4. `ResolvePlanState` must not reinterpret the linked round-0 hold as generic
+   active-bubble completion or create a second implementation bubble under a
+   different id
 
 Select:
 
