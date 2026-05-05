@@ -79,6 +79,16 @@
       "exceptions": []
     },
     {
+      "id": "application_defaults_boundary",
+      "metric": "application layer must not import default runtime wiring",
+      "scope": [
+        "src/v11/**"
+      ],
+      "mode": "report-only",
+      "owner": "architecture/composition",
+      "exceptions": []
+    },
+    {
       "id": "critical_side_effect",
       "metric": "critical command side-effect invariant coverage",
       "scope": [
