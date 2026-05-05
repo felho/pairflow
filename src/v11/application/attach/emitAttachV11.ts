@@ -8,7 +8,7 @@ import {
   buildRemoteAttachCommand,
   resolveAttachLauncher
 } from "./attachBubbleLauncherRuntime.js";
-import { resolveAttachBubbleExecution } from "../../shared/attach/resolveAttachBubbleExecution.js";
+import { resolveAttachBubbleExecution } from "../../shared/bubbleAttachment/resolveAttachBubbleExecution.js";
 import { statusCommandDependencyDefaults } from "../../shared/status/statusCommandDependencyDefaults.js";
 import {
   AttachBubbleError,
