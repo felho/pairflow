@@ -86,6 +86,74 @@ describe("startCommandImplementerPrompts", () => {
     );
   });
 
+  it("renders document-scope kickoff as docs refinement instead of code implementation", () => {
+    const kickoffMessage = buildImplementerKickoffMessage({
+      bubbleId: "bubble_prompt_doc_kickoff_01",
+      workspacePath: "/tmp/worktree",
+      taskArtifactPath: "/tmp/worktree/.pairflow/bubbles/bubble_prompt_doc_kickoff_01/artifacts/task.md",
+      reviewArtifactType: "document",
+      pairflowCommandProfile: "external"
+    });
+
+    expect(kickoffMessage).toContain(
+      "Document refinement mode (`review_artifact_type=document`)"
+    );
+    expect(kickoffMessage).toContain(
+      "Do not implement product/runtime/source-code changes in this bubble"
+    );
+    expect(kickoffMessage).toContain(
+      "emit a blocker or route-back/replan request"
+    );
+    expect(kickoffMessage).not.toContain("Start implementation immediately");
+  });
+
+  it("keeps document-scope startup and resume prompts out of code implementation mode", () => {
+    const state: BubbleStateSnapshot = {
+      bubble_id: "bubble_prompt_doc_resume_01",
+      state: "RUNNING",
+      round: 1,
+      active_agent: "codex",
+      active_since: "2026-04-25T21:00:42.033Z",
+      active_role: "implementer",
+      execution_context: null,
+      round_role_history: [],
+      last_command_at: "2026-04-25T21:00:42.033Z"
+    };
+
+    const startup = buildImplementerStartupPrompt({
+      bubbleId: "bubble_prompt_doc_start_01",
+      repoPath: "/tmp/repo",
+      workspacePath: "/tmp/worktree",
+      taskArtifactPath: "/tmp/worktree/task.md",
+      reviewArtifactType: "document",
+      pairflowCommandProfile: "external",
+      ideationPending: false
+    });
+    const resume = buildResumeImplementerStartupPrompt({
+      bubbleId: "bubble_prompt_doc_resume_01",
+      repoPath: "/tmp/repo",
+      workspacePath: "/tmp/worktree",
+      taskArtifactPath: "/tmp/worktree/task.md",
+      reviewArtifactType: "document",
+      pairflowCommandProfile: "external",
+      state,
+      transcriptSummary: "resume"
+    });
+
+    expect(startup).toContain("Refine document/task/spec artifacts");
+    expect(startup).toContain(
+      "Do not implement product/runtime/source-code changes"
+    );
+    expect(resume).toContain("Continue document/task/spec refinement now");
+    expect(resume).toContain(
+      "do not edit product/runtime source code in document scope"
+    );
+    expect(startup).not.toContain(
+      "Implement in this launch workspace and run relevant validation before handoff."
+    );
+    expect(resume).not.toContain("Continue implementation now");
+  });
+
   it("lists required validation commands in startup, kickoff, and resume prompts", () => {
     const validationCommands = {
       test: "pnpm test",

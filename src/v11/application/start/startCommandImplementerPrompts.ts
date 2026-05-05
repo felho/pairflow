@@ -38,7 +38,7 @@ export function buildImplementerKickoffMessage(input: {
   return [
     `# [pairflow] bubble=${input.bubbleId} kickoff.`,
     `Read task file now: ${input.taskArtifactPath}.`,
-    "Start implementation immediately in this launch workspace (Phase 1C1 no-split worktree root).",
+    buildImplementerKickoffScopeInstruction(input.reviewArtifactType),
     buildPairflowCommandGuidance(
       input.workspacePath,
       input.pairflowCommandProfile
@@ -53,6 +53,20 @@ export function buildImplementerKickoffMessage(input: {
     }),
     "When done with validation, hand off with `pairflow agent emit --kind pass --repo <repo> --bubble-id <id> --handoff-id <handoff-id> --execution-id <execution-id> --summary \"<what changed + validation>\"` and include available evidence `--ref` log paths."
   ].join(" ");
+}
+
+export function buildImplementerKickoffScopeInstruction(
+  reviewArtifactType: ReviewArtifactType
+): string {
+  if (reviewArtifactType === "document") {
+    return [
+      "Document refinement mode (`review_artifact_type=document`): refine only the task/spec/progress/docs artifacts required by the task.",
+      "Do not implement product/runtime/source-code changes in this bubble, even if the task describes an eventual implementation.",
+      "If the requested outcome cannot be completed without product/source edits, stop and emit a blocker or route-back/replan request instead of making those code changes."
+    ].join(" ");
+  }
+
+  return "Start implementation immediately in this launch workspace (Phase 1C1 no-split worktree root).";
 }
 
 export function buildImplementerIdeationKickoffMessage(input: {

@@ -35,6 +35,10 @@ import {
   getStartupPromptConcernsForRole
 } from "./rolePromptConcernIds.js";
 import {
+  buildImplementerStartActionLine,
+  resolveImplementerRoleInstruction
+} from "./rolePromptImplementerScope.js";
+import {
   buildIdeationPendingImplementerResumeLines,
   buildIdeationPendingImplementerStartupLines,
   isIdeationPendingImplementerResumeContext,
@@ -107,7 +111,7 @@ function buildImplementerStartActivationContract(
   return [
     `Pairflow implementer start for bubble ${input.bubbleId}.`,
     `Read task: ${requirePromptValue(input.taskArtifactPath, "taskArtifactPath", "implementer_start_activation_contract")}.`,
-    "Implement in this launch workspace and run relevant validation before handoff."
+    buildImplementerStartActionLine(input.reviewArtifactType)
   ];
 }
 
@@ -176,15 +180,6 @@ function buildImplementerResumeArtifactContext(
     `Pairflow implementer resume for bubble ${input.bubbleId}.`,
     `Task: ${requirePromptValue(input.taskArtifactPath, "taskArtifactPath", "implementer_resume_artifact_context")}.`
   ];
-}
-
-function resolveImplementerRoleInstruction(
-  state: BubbleStateSnapshot
-): string {
-  if (state.state === "RUNNING" && state.active_role === "implementer") {
-    return "You are currently active. Continue implementation now.";
-  }
-  return "Continue implementation when you become active; otherwise stand by.";
 }
 
 function buildReviewerStartActivationContract(
@@ -313,9 +308,10 @@ const promptConcernCatalog: Readonly<
     "Use `pairflow agent emit --kind human_question --repo <repo> --bubble-id <id> --handoff-id <handoff-id> --execution-id <execution-id> --question \"...\"` only for blockers."
   ],
   implementer_resume_role_instruction: (input) =>
-    resolveImplementerRoleInstruction(
-      requirePromptState(input.state, "implementer_resume_role_instruction")
-    ),
+    resolveImplementerRoleInstruction({
+      reviewArtifactType: input.reviewArtifactType,
+      state: requirePromptState(input.state, "implementer_resume_role_instruction")
+    }),
   reviewer_start_activation_contract: (input) =>
     buildReviewerStartActivationContract(input),
   reviewer_resume_artifact_context: (input) =>

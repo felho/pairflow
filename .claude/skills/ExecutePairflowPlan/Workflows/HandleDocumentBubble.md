@@ -394,8 +394,17 @@ Delegation:
    round-0 hold still exists before kickoff
 12. delegate kickoff of the same bubble through `UsePairflow` `InterveneBubble`,
    which owns `pairflow bubble kickoff` for `RUNNING` round-0 ideation holds,
-   and pass the approved document task payload only after the publish and
-   refreshed postcondition proof is present
+   and pass a document-refinement payload only after the publish and refreshed
+   postcondition proof is present
+   - the payload must explicitly say `review_artifact_type=document`
+   - allowed edits are the active task/spec/plan/progress/docs artifacts needed
+     to refine the document contract
+   - product/runtime/source implementation edits are forbidden, even when the
+     task body contains L2 implementation notes, target source files, or test
+     commands for a later implementation bubble
+   - if the document agent concludes the requested outcome cannot be completed
+     without code changes, it must emit a blocker or normalized replanning
+     request instead of editing source
 13. capture the kickoff result in `kickoff_result` with the delegated surface,
    bubble id, task payload source, and success status
 14. preserve the document-bubble quality model and stop after the same-bubble

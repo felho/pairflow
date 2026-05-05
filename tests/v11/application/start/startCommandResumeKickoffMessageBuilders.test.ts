@@ -169,6 +169,30 @@ describe("startCommandResumeKickoffMessageBuilders", () => {
     );
   });
 
+  it("renders document-scope implementer resume kickoff as refinement, not source implementation", () => {
+    const message = buildResumeImplementerKickoffMessage({
+      bubbleId: "b_start_resume_doc_scope_01",
+      repoPath: "/tmp/repo",
+      workspacePath: "/tmp/worktree",
+      taskArtifactPath: "/tmp/worktree/.pairflow/task.md",
+      round: 2,
+      reviewArtifactType: "document",
+      pairflowCommandProfile: "external"
+    });
+
+    expect(message).toContain(
+      "Document refinement mode (`review_artifact_type=document`)"
+    );
+    expect(message).toContain(
+      "Do not implement product/runtime/source-code changes in this bubble"
+    );
+    expect(message).toContain(
+      "emit a blocker or route-back/replan request"
+    );
+    expect(message).toContain("Continue active refinement");
+    expect(message).not.toContain("Continue active implementation");
+  });
+
   it("renders meta-reviewer kickoff guidance with canonical --repo authority lookup", () => {
     const bubbleId = "b_start_resume_projection_04";
     const repoPath = "/tmp/repo";

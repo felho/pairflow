@@ -89,6 +89,7 @@ This skill exists to avoid lifecycle mistakes (wrong command in wrong state, los
 - `CREATED` -> `pairflow bubble start`
 - `RUNNING` with ideation pending (`round=0` and `[ideation].task_pending=true`) -> `pairflow bubble kickoff --id <id> (--task <text> | --task-file <path>)`
 - `RUNNING` with ideation pending and no kickoff request yet -> hold in round-0; report status and wait for explicit kickoff decision
+- `RUNNING` document bubble kickoff (`review_artifact_type=document`) -> use a docs/spec refinement task payload. The payload must forbid product/runtime/source-code implementation and must instruct the agent to ask for replanning or a human decision if the requested outcome cannot be completed without code edits.
 - `RUNNING` (active round, typically `round>=1`) -> no approve/rework yet; use normal loop commands (`pass`, `converged`) in agent panes
 - Runtime-health issue in non-final active states (for example stalled pane, refreshed agent login/session) -> `pairflow bubble restart --id <id> [--repo <path>]`
 - Remote started-pointer runtime loss (`remoteExecution.pointerKind="started"` with runtime unavailable/missing) -> inspect `pairflow bubble status --id <id> --repo <path> --json` or `pairflow bubble list --refresh`; report preserved-state fail-closed and do not imply that `start`/`restart` is already the supported recovery path

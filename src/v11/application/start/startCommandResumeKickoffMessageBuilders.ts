@@ -66,6 +66,7 @@ export function buildResumeImplementerKickoffMessage(input: {
     `# [pairflow] bubble=${input.bubbleId} resume kickoff (implementer).`,
     `State is RUNNING at round ${input.round}.`,
     `Re-open task context: ${input.taskArtifactPath}.`,
+    buildResumeImplementerScopeInstruction(input.reviewArtifactType),
     buildPairflowCommandGuidance(
       input.workspacePath,
       input.pairflowCommandProfile
@@ -75,8 +76,30 @@ export function buildResumeImplementerKickoffMessage(input: {
       repoPath: input.repoPath
     }),
     buildImplementerEvidenceHandoffGuidance(input.reviewArtifactType),
-    "Continue active implementation and hand off with `pairflow agent emit --kind pass --repo <repo> --bubble-id <id> --handoff-id <handoff-id> --execution-id <execution-id> --summary \"<what changed + validation>\"` plus available evidence `--ref` logs when ready."
+    buildResumeImplementerHandoffInstruction(input.reviewArtifactType)
   ].join(" ");
+}
+
+export function buildResumeImplementerScopeInstruction(
+  reviewArtifactType: ReviewArtifactType
+): string {
+  if (reviewArtifactType === "document") {
+    return [
+      "Document refinement mode (`review_artifact_type=document`): continue only task/spec/progress/docs refinement.",
+      "Do not implement product/runtime/source-code changes in this bubble.",
+      "If the remaining work requires code changes, stop and emit a blocker or route-back/replan request instead of editing source."
+    ].join(" ");
+  }
+
+  return "Continue active implementation.";
+}
+
+export function buildResumeImplementerHandoffInstruction(
+  reviewArtifactType: ReviewArtifactType
+): string {
+  const scopeNoun =
+    reviewArtifactType === "document" ? "refinement" : "implementation";
+  return `Continue active ${scopeNoun} and hand off with \`pairflow agent emit --kind pass --repo <repo> --bubble-id <id> --handoff-id <handoff-id> --execution-id <execution-id> --summary "<what changed + validation>"\` plus available evidence \`--ref\` logs when ready.`;
 }
 
 export function buildResumeReviewerKickoffMessage(input: {
