@@ -61,8 +61,8 @@ task_tracker:
     task_path: plans/archive/tasks/2026-05-05-shared-command-boundary-cleanup-plan-v1/11-list-api-cleanup.md
     status: archived
   - task_id: 12-list-fitness-closeout
-    task_path: null
-    status: not_created
+    task_path: plans/tasks/2026-05-05-shared-command-boundary-cleanup-plan-v1/12-list-fitness-closeout.md
+    status: approved
   - task_id: 13-shared-command-fitness
     task_path: null
     status: not_created
