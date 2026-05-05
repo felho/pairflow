@@ -176,13 +176,13 @@ describe("UI router port boundary fitness check", () => {
     const repoRoot = await createTempRoot();
     await writeRepoFile(
       repoRoot,
-      "src/v11/shared/list/listCommandContract.ts",
-      "export interface BubbleListEntry { id: string; }\n"
+      "src/v11/shared/workflow/workflowCommandContract.ts",
+      "export interface WorkflowCommandContract { id: string; }\n"
     );
     await writeRepoFile(
       repoRoot,
       "src/v11/shared/ports/futureUiPort.ts",
-      "import type { BubbleListEntry } from '../list/listCommandContract.js';\nexport type Future = BubbleListEntry;\n"
+      "import type { WorkflowCommandContract } from '../workflow/workflowCommandContract.js';\nexport type Future = WorkflowCommandContract;\n"
     );
 
     const report = await buildUiRouterPortBoundaryCheckReport({
@@ -256,13 +256,13 @@ describe("UI router port boundary fitness check", () => {
     );
     await writeRepoFile(
       repoRoot,
-      "src/v11/shared/list/listCommandContract.ts",
-      "export interface BubbleListEntry { id: string; }\n"
+      "src/v11/shared/workflow/workflowCommandContract.ts",
+      "export interface WorkflowCommandContract { id: string; }\n"
     );
     await writeRepoFile(
       repoRoot,
       "src/v11/shared/ports/uiRouter.ts",
-      "import type { BubbleListEntry } from '../list/listCommandContract.js';\nexport type View = BubbleListEntry;\n"
+      "import type { WorkflowCommandContract } from '../workflow/workflowCommandContract.js';\nexport type View = WorkflowCommandContract;\n"
     );
 
     const report = await buildUiRouterPortBoundaryCheckReport({
@@ -284,12 +284,12 @@ describe("UI router port boundary fitness check", () => {
             to: undefined
           },
           {
-            id: "router-port-command-task4-list-entry-001",
+            id: "router-port-command-task4-workflow-001",
             kind: "allow-command-owned-ui-port-import",
             owner: "architecture/ui-contracts",
             reason: "temporary command-owned import",
             from: "src/v11/shared/ports/uiRouter.ts",
-            to: "src/v11/shared/list/listCommandContract.ts",
+            to: "src/v11/shared/workflow/workflowCommandContract.ts",
             paths: undefined
           }
         ]
@@ -309,7 +309,7 @@ describe("UI router port boundary fitness check", () => {
       )
     );
     expect(report.details).toContainEqual(
-      expect.stringContaining("router-port-command-task4-list-entry-001")
+      expect.stringContaining("router-port-command-task4-workflow-001")
     );
   });
 
@@ -349,7 +349,7 @@ describe("UI router port boundary fitness check", () => {
             owner: "architecture/ui-router",
             reason: "duplicate exception id",
             from: "src/v11/shared/ports/uiRouter.ts",
-            to: "src/v11/shared/list/listCommandContract.ts",
+            to: "src/v11/shared/workflow/workflowCommandContract.ts",
             paths: undefined
           },
           {
@@ -358,7 +358,7 @@ describe("UI router port boundary fitness check", () => {
             owner: "",
             reason: "",
             from: "src/v11/shared/ports/uiRouter.ts",
-            to: "src/v11/shared/list/listCommandContract.ts",
+            to: "src/v11/shared/workflow/workflowCommandContract.ts",
             paths: undefined
           }
         ]
@@ -378,13 +378,13 @@ describe("UI router port boundary fitness check", () => {
     const repoRoot = await createTempRoot();
     await writeRepoFile(
       repoRoot,
-      "src/v11/shared/list/listCommandContract.ts",
-      "export interface BubbleListEntry { id: string; }\n"
+      "src/v11/shared/workflow/workflowCommandContract.ts",
+      "export interface WorkflowCommandContract { id: string; }\n"
     );
     await writeRepoFile(
       repoRoot,
       "src/v11/shared/ports/uiRouter.ts",
-      "import type { BubbleListEntry } from '../list/listCommandContract.js';\nexport type View = BubbleListEntry;\n"
+      "import type { WorkflowCommandContract } from '../workflow/workflowCommandContract.js';\nexport type View = WorkflowCommandContract;\n"
     );
 
     const report = await buildUiRouterPortBoundaryCheckReport({
@@ -397,7 +397,7 @@ describe("UI router port boundary fitness check", () => {
             owner: "architecture/ui-contracts",
             reason: "would otherwise match",
             from: "src/v11/shared/ports/uiRouter.ts",
-            to: "src/v11/shared/list/listCommandContract.ts",
+            to: "src/v11/shared/workflow/workflowCommandContract.ts",
             paths: undefined
           },
           {
@@ -406,7 +406,7 @@ describe("UI router port boundary fitness check", () => {
             owner: "architecture/ui-contracts",
             reason: "duplicate",
             from: "src/v11/shared/ports/uiRouter.ts",
-            to: "src/v11/shared/list/listCommandContract.ts",
+            to: "src/v11/shared/workflow/workflowCommandContract.ts",
             paths: undefined
           }
         ]
@@ -443,7 +443,7 @@ describe("UI router port boundary fitness check", () => {
             owner: "architecture/ui-contracts",
             reason: "invalid non-source exception",
             from: "src/v11/shared/ports/uiRouter.js",
-            to: "src/v11/shared/list/listCommandContract.ts",
+            to: "src/v11/shared/workflow/workflowCommandContract.ts",
             paths: undefined
           }
         ]
@@ -480,7 +480,7 @@ describe("UI router port boundary fitness check", () => {
             owner: "architecture/ui-contracts",
             reason: "invalid missing source file",
             from: "src/v11/shared/ports/uiRouter.ts",
-            to: "src/v11/shared/list/missingListCommandContract.ts",
+            to: "src/v11/shared/workflow/missingWorkflowCommandContract.ts",
             paths: undefined
           }
         ]
@@ -493,7 +493,7 @@ describe("UI router port boundary fitness check", () => {
     expect(report.details).toContainEqual(expect.stringContaining("exceptions_invalid=1"));
     expect(report.details).toContainEqual(
       expect.stringContaining(
-        "allow-command-owned-ui-port-import from/to must exist: src/v11/shared/list/missingListCommandContract.ts"
+        "allow-command-owned-ui-port-import from/to must exist: src/v11/shared/workflow/missingWorkflowCommandContract.ts"
       )
     );
   });
@@ -507,13 +507,13 @@ describe("UI router port boundary fitness check", () => {
     );
     await writeRepoFile(
       repoRoot,
-      "src/v11/shared/list/listCommandContract.ts",
-      "export interface BubbleListEntry { id: string; }\n"
+      "src/v11/shared/workflow/workflowCommandContract.ts",
+      "export interface WorkflowCommandContract { id: string; }\n"
     );
     await writeRepoFile(
       repoRoot,
-      "src/v11/shared/list/listCommandContract.tsx",
-      "export interface BubbleListEntryView { id: string; }\n"
+      "src/v11/shared/workflow/workflowCommandContract.tsx",
+      "export interface WorkflowCommandContractView { id: string; }\n"
     );
 
     const report = await buildUiRouterPortBoundaryCheckReport({
@@ -526,7 +526,7 @@ describe("UI router port boundary fitness check", () => {
             owner: "architecture/ui-contracts",
             reason: "invalid ambiguous source import encoding",
             from: "src/v11/shared/ports/uiRouter.ts",
-            to: "src/v11/shared/list/listCommandContract.js",
+            to: "src/v11/shared/workflow/workflowCommandContract.js",
             paths: undefined
           }
         ]
@@ -560,7 +560,7 @@ describe("UI router port boundary fitness check", () => {
             owner: "architecture/ui-contracts",
             reason: "invalid null fields",
             from: null,
-            to: "src/v11/shared/list/listCommandContract.ts",
+            to: "src/v11/shared/workflow/workflowCommandContract.ts",
             paths: undefined
           } as unknown as FitnessPolicyException,
           {
@@ -605,7 +605,7 @@ describe("UI router port boundary fitness check", () => {
           owner: "architecture/ui-contracts",
           reason: "invalid null fields",
           from: null,
-          to: "src/v11/shared/list/listCommandContract.ts",
+          to: "src/v11/shared/workflow/workflowCommandContract.ts",
           paths: undefined
         })) as unknown as FitnessPolicyException[]
       }),
@@ -717,17 +717,17 @@ describe("UI router port boundary fitness check", () => {
     );
     await writeRepoFile(
       repoRoot,
-      "src/v11/shared/list/listCommandContract.ts",
-      "export interface BubbleListEntry { id: string; }\n"
+      "src/v11/shared/workflow/workflowCommandContract.ts",
+      "export interface WorkflowCommandContract { id: string; }\n"
     );
     await writeRepoFile(
       repoRoot,
       "src/v11/shared/ports/uiRouter.ts",
       [
         "import type { LocalCommandContract } from './localCommandContract.js';",
-        "import type { BubbleListEntry } from '../list/listCommandContract.js';",
+        "import type { WorkflowCommandContract } from '../workflow/workflowCommandContract.js';",
         "export type LocalView = LocalCommandContract;",
-        "export type ListView = BubbleListEntry;"
+        "export type ListView = WorkflowCommandContract;"
       ].join("\n")
     );
 
@@ -745,12 +745,12 @@ describe("UI router port boundary fitness check", () => {
             paths: undefined
           },
           {
-            id: "router-port-list-command",
+            id: "router-port-workflow-command",
             kind: "allow-command-owned-ui-port-import",
             owner: "architecture/ui-contracts",
             reason: "temporary cross-directory command-owned import",
             from: "src/v11/shared/ports/uiRouter.ts",
-            to: "src/v11/shared/list/listCommandContract.ts",
+            to: "src/v11/shared/workflow/workflowCommandContract.ts",
             paths: undefined
           }
         ]
@@ -762,7 +762,7 @@ describe("UI router port boundary fitness check", () => {
     expect(report.status).toBe("pass");
     expect(report.details).toContainEqual(expect.stringContaining("exceptions_applied=2"));
     expect(report.details).toContainEqual(
-      expect.stringContaining("router-port-list-command, router-port-local-command")
+      expect.stringContaining("router-port-local-command, router-port-workflow-command")
     );
   });
 
@@ -835,7 +835,7 @@ describe("UI router port boundary fitness check", () => {
     await writeRepoFile(
       repoRoot,
       "src/v11/shared/ports/uiRouter.ts",
-      "import type { BubbleListEntry } from '../list/listCommandContract';\nexport type View = BubbleListEntry;\n"
+      "import type { WorkflowCommandContract } from '../workflow/workflowCommandContract';\nexport type View = WorkflowCommandContract;\n"
     );
 
     const report = await buildUiRouterPortBoundaryCheckReport({
@@ -855,13 +855,13 @@ describe("UI router port boundary fitness check", () => {
     const repoRoot = await createTempRoot();
     await writeRepoFile(
       repoRoot,
-      "src/v11/shared/list/listCommandContract.ts",
-      "export interface BubbleListEntry { id: string; }\n"
+      "src/v11/shared/workflow/workflowCommandContract.ts",
+      "export interface WorkflowCommandContract { id: string; }\n"
     );
     await writeRepoFile(
       repoRoot,
       "src/v11/shared/ports/uiRouter.ts",
-      "import type { BubbleListEntry } from '../list/listCommandContract';\nexport type View = BubbleListEntry;\n"
+      "import type { WorkflowCommandContract } from '../workflow/workflowCommandContract';\nexport type View = WorkflowCommandContract;\n"
     );
 
     const report = await buildUiRouterPortBoundaryCheckReport({
@@ -874,7 +874,7 @@ describe("UI router port boundary fitness check", () => {
             owner: "architecture/ui-contracts",
             reason: "temporary command-owned import",
             from: "src/v11/shared/ports/uiRouter.ts",
-            to: "src/v11/shared/list/listCommandContract.ts",
+            to: "src/v11/shared/workflow/workflowCommandContract.ts",
             paths: undefined
           }
         ]

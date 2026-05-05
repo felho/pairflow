@@ -559,27 +559,27 @@ describe("UI contract transit source guards", () => {
     const uiTypes = await readSource("ui/src/lib/types.ts");
     const uiCompat = await readSource("ui/src/lib/contracts/uiReadModel.ts");
     const forbiddenMarkers = [
-      "list/listCommandContract",
+      "read-model/list/listReadModelContract",
       "inbox/inboxCommandApi",
       "status/statusCommandApi",
-      "src/v11/shared/list",
+      "src/v11/shared/read-model/list",
       "src/v11/shared/inbox",
       "src/v11/shared/status"
     ];
     const forbiddenCommandOwnedMarkers = [
-      "listCommandContract",
+      "listReadModelContract",
       "inboxCommandApi",
       "statusCommandApi",
-      "src/v11/shared/list",
+      "src/v11/shared/read-model/list",
       "src/v11/shared/inbox",
       "src/v11/shared/status",
-      "../list/listCommandContract",
+      "../read-model/list/listReadModelContract",
       "../inbox/inboxCommandApi",
       "../status/statusCommandApi",
-      "../../shared/list/listCommandContract",
+      "../../shared/read-model/list/listReadModelContract",
       "../../shared/inbox/inboxCommandApi",
       "../../shared/status/statusCommandApi",
-      "../../../shared/list/listCommandContract",
+      "../../../shared/read-model/list/listReadModelContract",
       "../../../shared/inbox/inboxCommandApi",
       "../../../shared/status/statusCommandApi"
     ];
@@ -618,7 +618,7 @@ describe("UI contract transit source guards", () => {
     }
 
     expect(routerPort).toContain("from \"../../../contracts/ui/uiReadModel.js\"");
-    expect(routerPort).not.toContain("from \"../list/listCommandContract.js\"");
+    expect(routerPort).not.toContain("from \"../read-model/list/listReadModelContract.js\"");
     expect(routerPort).not.toContain("from \"../inbox/inboxCommandApi.js\"");
     expect(routerPort).not.toContain("from \"../status/statusCommandApi.js\"");
     expect(routerDependencies).toContain(
@@ -636,8 +636,8 @@ describe("UI contract transit source guards", () => {
     );
     expect(eventsScan).not.toContain("shared/ports/uiRouter");
     expect(eventsFingerprint).not.toContain("shared/ports/uiRouter");
-    expect(eventsScan).not.toContain("listCommandContract");
-    expect(eventsFingerprint).not.toContain("listCommandContract");
+    expect(eventsScan).not.toContain("listReadModelContract");
+    expect(eventsFingerprint).not.toContain("listReadModelContract");
     expect(eventsScanTest).toContain("from \"../../../src/contracts/ui/uiReadModel.js\"");
     expect(eventsFingerprintTest).toContain(
       "from \"../../../src/contracts/ui/uiReadModel.js\""
