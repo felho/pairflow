@@ -5,7 +5,7 @@ task_family_id: extract-docs-validation
 sequence_key: "4"
 task_id: 4-extract-docs-validation
 title: "Extract Docs And Validation"
-status: approved
+status: implementable
 phase: phase4
 target_files:
   - README.md
