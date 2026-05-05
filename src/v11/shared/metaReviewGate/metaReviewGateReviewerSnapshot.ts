@@ -7,7 +7,7 @@ import {
   deriveFindingsOpenSplit,
   resolveAdvisoryFindingsFromFindings,
   type MetaReviewGateAdvisoryFinding
-} from "./metaReviewGateFindingsSplit.js";
+} from "../../domain/metaReviewGate/findingsSplit.js";
 
 function isNonNegativeInteger(value: unknown): value is number {
   return typeof value === "number" && Number.isInteger(value) && value >= 0;

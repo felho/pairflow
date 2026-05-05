@@ -19,7 +19,7 @@ import {
 } from "../metaReviewGate/metaReviewGateFindingsMetadata.js";
 import {
   resolveFindingsOpenSplitFromReportJson
-} from "../metaReviewGate/metaReviewGateFindingsSplit.js";
+} from "../../domain/metaReviewGate/findingsSplit.js";
 import {
   evaluateNoFindingsSummaryFindingsAssertion,
   hasGlobalNoFindingsSummaryAssertion

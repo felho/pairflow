@@ -5,7 +5,7 @@ import {
 import type { MetaReviewRecommendation } from "../../../types/bubble.js";
 import {
   resolveFindingsOpenSplitFromReportJson
-} from "../metaReviewGate/metaReviewGateFindingsSplit.js";
+} from "../../domain/metaReviewGate/findingsSplit.js";
 import { isNonEmptyString } from "../validation/primitives.js";
 
 function resolveClaimStateFromRecommendation(

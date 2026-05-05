@@ -13,7 +13,7 @@ import { type FindingsParityMetadata, type FindingsParityStatus } from "../../..
 import {
   deriveFindingsOpenSplit as deriveFindingsOpenSplitFromMetadata,
   type FindingsOpenSplit
-} from "./metaReviewGateFindingsSplit.js";
+} from "../../domain/metaReviewGate/findingsSplit.js";
 import {
   resolveFindingsArtifactOpenTotalFromArtifact
 } from "./metaReviewGateFindingsMetadata.js";

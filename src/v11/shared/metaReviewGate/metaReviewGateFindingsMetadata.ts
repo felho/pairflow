@@ -12,7 +12,7 @@ import {
 import {
   deriveFindingsOpenSplit,
   resolveFindingsOpenSplitFromReportJson
-} from "./metaReviewGateFindingsSplit.js";
+} from "../../domain/metaReviewGate/findingsSplit.js";
 export type MetaReviewGateArtifactReadFn = (
   artifactPath: string,
   encoding: "utf8"

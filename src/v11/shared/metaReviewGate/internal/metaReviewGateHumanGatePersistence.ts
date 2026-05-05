@@ -31,7 +31,7 @@ import {
 import {
   resolveAdvisoryFindingsFromReportJson,
   type MetaReviewGateAdvisoryFinding
-} from "../metaReviewGateFindingsSplit.js";
+} from "../../../domain/metaReviewGate/findingsSplit.js";
 import { isNamedError } from "../../errors/namedError.js";
 
 export {

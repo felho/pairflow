@@ -6,7 +6,7 @@ import {
   resolveAdvisoryFindingsFromReportJson,
   resolveFindingsOpenSplitFromFindings,
   resolveFindingsOpenSplitFromReportJson
-} from "../../../../src/v11/shared/metaReviewGate/metaReviewGateFindingsSplit.js";
+} from "../../../../src/v11/domain/metaReviewGate/findingsSplit.js";
 
 describe("deriveFindingsOpenSplit", () => {
   it("derives blocking and advisory totals from mixed findings", () => {
