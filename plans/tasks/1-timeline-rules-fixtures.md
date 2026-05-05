@@ -5,7 +5,7 @@ task_family_id: timeline-rules-fixtures
 sequence_key: "1"
 task_id: 1-timeline-rules-fixtures
 title: "Timeline Rules and Fixtures"
-status: implementable
+status: in_progress
 phase: phase1
 target_files:
   - ui/src/components/expanded/BubbleTimeline.test.tsx
@@ -24,7 +24,7 @@ system_context_ref: docs/pairflow-initial-design.md
 owners:
   - "felho"
 doc_bubble_id: 1-timeline-rules-fixtures-doc
-impl_bubble_id: null
+impl_bubble_id: 1-timeline-rules-fixtures-impl
 supersedes: []
 superseded_by: null
 archive_group: 2026-05-05-timeline-display-dto-plan-v1
