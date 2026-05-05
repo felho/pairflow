@@ -5,7 +5,7 @@ task_family_id: timeline-display-contract
 sequence_key: "2"
 task_id: 2-timeline-display-contract
 title: "Timeline Display Contract"
-status: implementable
+status: in_progress
 phase: phase2
 target_files:
   - src/contracts/ui/uiReadModel.ts
@@ -30,7 +30,7 @@ system_context_ref: docs/pairflow-initial-design.md
 owners:
   - "felho"
 doc_bubble_id: 2-timeline-display-contract-doc
-impl_bubble_id: null
+impl_bubble_id: 2-timeline-display-contract-impl
 supersedes: []
 superseded_by: null
 archive_group: 2026-05-05-timeline-display-dto-plan-v1
