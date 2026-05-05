@@ -10,7 +10,7 @@ import {
 import {
   emitPassFromWorkspaceV11 as emitPassFromWorkspace
 } from "../../../src/v11/application/pass/emitPassV11.js";
-import { listBubbles } from "../../../src/v11/shared/list/listCommandApi.js";
+import { listBubbles } from "../../../src/v11/shared/read-model/list/listReadModelApi.js";
 import { emitHumanReplyV11 as emitHumanReply } from "../../../src/v11/application/reply/emitReplyV11.js";
 import { readTranscriptEnvelopes } from "../../../src/v11/infrastructure/artifact/transcript/transcriptStore.js";
 import { readStateSnapshot } from "../../../src/v11/infrastructure/state/stateStore.js";

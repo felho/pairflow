@@ -21,7 +21,7 @@ import { upsertRuntimeSession } from "../../../src/v11/infrastructure/executor/s
 import { metaReviewExecutionContextToRunningContext } from "../../../src/v11/shared/state/executionContext.js";
 import { applyStateTransition } from "../../../src/v11/domain/state/machine.js";
 import { readStateSnapshot, writeStateSnapshot } from "../../../src/v11/infrastructure/state/stateStore.js";
-import { listCommandDefaults } from "../../../src/v11/shared/list/listCommandDefaults.js";
+import { listReadModelDefaults } from "../../../src/v11/shared/read-model/list/listReadModelDefaults.js";
 import { writeWatchdogPaneActivity } from "../../../src/v11/infrastructure/artifact/watchdog/watchdogPaneActivityStore.js";
 import { initGitRepository } from "../../helpers/git.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
@@ -296,7 +296,7 @@ describe("listBubbles", () => {
     });
 
     await rm(deletedBubble.paths.bubbleDir, { recursive: true, force: true });
-    vi.spyOn(listCommandDefaults, "listBubbleIds").mockResolvedValue([
+    vi.spyOn(listReadModelDefaults, "listBubbleIds").mockResolvedValue([
       keptBubble.bubbleId,
       deletedBubble.bubbleId
     ]);
@@ -911,7 +911,7 @@ describe("listBubbles", () => {
     });
 
     const remoteStatusSpy = vi.spyOn(
-      listCommandDefaults,
+      listReadModelDefaults,
       "executeRemoteBubbleStatus"
     );
 
@@ -964,7 +964,7 @@ describe("listBubbles", () => {
     });
 
     const remoteStatusSpy = vi.spyOn(
-      listCommandDefaults,
+      listReadModelDefaults,
       "executeRemoteBubbleStatus"
     );
 
@@ -1077,7 +1077,7 @@ describe("listBubbles", () => {
     });
 
     const remoteStatusSpy = vi.spyOn(
-      listCommandDefaults,
+      listReadModelDefaults,
       "executeRemoteBubbleStatus"
     );
 
@@ -1158,7 +1158,7 @@ describe("listBubbles", () => {
     await setBubbleExecutorRemoteAlias(bubbleB.paths.bubbleTomlPath);
 
     vi.spyOn(
-      listCommandDefaults,
+      listReadModelDefaults,
       "resolveRemoteBubbleStatusTarget"
     ).mockImplementation(async ({ bubbleId }) => ({
       alias: "lab",
@@ -1167,7 +1167,7 @@ describe("listBubbles", () => {
       ...(bubbleId === bubbleA.bubbleId ? { user: "pairflow" } : {})
     }));
     vi.spyOn(
-      listCommandDefaults,
+      listReadModelDefaults,
       "executeRemoteBubbleStatus"
     ).mockImplementation(async ({ bubbleId }) => {
       if (bubbleId === bubbleB.bubbleId) {
@@ -1306,7 +1306,7 @@ describe("listBubbles", () => {
     );
 
     vi.spyOn(
-      listCommandDefaults,
+      listReadModelDefaults,
       "resolveRemoteBubbleStatusTarget"
     ).mockResolvedValue({
       alias: "lab",
@@ -1315,7 +1315,7 @@ describe("listBubbles", () => {
       pairflowCommand: "pairflow"
     });
     vi.spyOn(
-      listCommandDefaults,
+      listReadModelDefaults,
       "executeRemoteBubbleStatus"
     ).mockResolvedValue({
       bubbleStartedAt: "2026-04-16T09:40:00.000Z",
@@ -1437,7 +1437,7 @@ describe("listBubbles", () => {
     });
     await setBubbleExecutorRemoteAlias(bubble.paths.bubbleTomlPath);
     vi.spyOn(
-      listCommandDefaults,
+      listReadModelDefaults,
       "resolveRemoteBubbleStatusTarget"
     ).mockResolvedValue({
       alias: "lab",
@@ -1446,7 +1446,7 @@ describe("listBubbles", () => {
       pairflowCommand: "pairflow"
     });
     vi.spyOn(
-      listCommandDefaults,
+      listReadModelDefaults,
       "executeRemoteBubbleStatus"
     ).mockResolvedValue({
       bubbleStartedAt: "2026-04-16T09:45:00.000Z",
@@ -1554,7 +1554,7 @@ describe("listBubbles", () => {
     });
     await setBubbleExecutorRemoteAlias(bubble.paths.bubbleTomlPath);
     vi.spyOn(
-      listCommandDefaults,
+      listReadModelDefaults,
       "resolveRemoteBubbleStatusTarget"
     ).mockResolvedValue({
       alias: "lab",
@@ -1563,7 +1563,7 @@ describe("listBubbles", () => {
       pairflowCommand: "pairflow"
     });
     vi.spyOn(
-      listCommandDefaults,
+      listReadModelDefaults,
       "executeRemoteBubbleStatus"
     ).mockResolvedValue({
       bubbleStartedAt: "2026-04-16T09:45:00.000Z",
@@ -1673,7 +1673,7 @@ describe("listBubbles", () => {
     });
 
     vi.spyOn(
-      listCommandDefaults,
+      listReadModelDefaults,
       "resolveRemoteBubbleStatusTarget"
     ).mockResolvedValue({
       alias: "lab",
@@ -1681,7 +1681,7 @@ describe("listBubbles", () => {
       pairflowCommand: "pairflow"
     });
     vi.spyOn(
-      listCommandDefaults,
+      listReadModelDefaults,
       "executeRemoteBubbleStatus"
     ).mockResolvedValue({
       bubbleStartedAt: "2026-04-16T09:40:00.000Z",
@@ -1747,7 +1747,7 @@ describe("listBubbles", () => {
       lastCheckedAt: "2026-04-16T10:01:00.000Z"
     });
     vi.spyOn(
-      listCommandDefaults,
+      listReadModelDefaults,
       "writeRemoteStateCache"
     ).mockRejectedValue(new Error("disk full"));
 
@@ -1801,7 +1801,7 @@ describe("listBubbles", () => {
     });
 
     vi.spyOn(
-      listCommandDefaults,
+      listReadModelDefaults,
       "resolveRemoteBubbleStatusTarget"
     ).mockResolvedValue({
       alias: "lab",
@@ -1809,7 +1809,7 @@ describe("listBubbles", () => {
       pairflowCommand: "pairflow"
     });
     vi.spyOn(
-      listCommandDefaults,
+      listReadModelDefaults,
       "executeRemoteBubbleStatus"
     ).mockResolvedValue({
       bubbleStartedAt: "2026-04-16T09:40:00.000Z",
@@ -1875,7 +1875,7 @@ describe("listBubbles", () => {
       lastCheckedAt: "2026-04-16T10:01:00.000Z"
     });
     vi.spyOn(
-      listCommandDefaults,
+      listReadModelDefaults,
       "writeRemoteStateCache"
     ).mockRejectedValue(new Error("disk full"));
 
@@ -1931,7 +1931,7 @@ describe("listBubbles", () => {
     });
 
     vi.spyOn(
-      listCommandDefaults,
+      listReadModelDefaults,
       "resolveRemoteBubbleStatusTarget"
     ).mockResolvedValue({
       alias: "lab",
@@ -1939,7 +1939,7 @@ describe("listBubbles", () => {
       pairflowCommand: "pairflow"
     });
     vi.spyOn(
-      listCommandDefaults,
+      listReadModelDefaults,
       "executeRemoteBubbleStatus"
     ).mockResolvedValue({
       bubbleStartedAt: "2026-04-16T09:40:00.000Z",
@@ -2005,12 +2005,12 @@ describe("listBubbles", () => {
       lastCheckedAt: "2026-04-16T10:01:00.000Z"
     });
     vi.spyOn(
-      listCommandDefaults,
+      listReadModelDefaults,
       "writeRemoteStateCache"
     ).mockRejectedValue(new Error("disk full"));
 
     const readRemoteStateCacheSpy = vi.spyOn(
-      listCommandDefaults,
+      listReadModelDefaults,
       "readRemoteStateCache"
     );
     let readCount = 0;
@@ -2066,7 +2066,7 @@ describe("listBubbles", () => {
     await setBubbleExecutorRemoteAlias(bubble.paths.bubbleTomlPath);
 
     vi.spyOn(
-      listCommandDefaults,
+      listReadModelDefaults,
       "resolveRemoteBubbleStatusTarget"
     ).mockResolvedValue({
       alias: "lab",
@@ -2074,7 +2074,7 @@ describe("listBubbles", () => {
       pairflowCommand: "pairflow"
     });
     vi.spyOn(
-      listCommandDefaults,
+      listReadModelDefaults,
       "executeRemoteBubbleStatus"
     ).mockResolvedValue({
       bubbleStartedAt: "2026-04-16T09:40:00.000Z",
@@ -2190,7 +2190,7 @@ describe("listBubbles", () => {
     await setBubbleExecutorRemoteAlias(bubble.paths.bubbleTomlPath);
 
     vi.spyOn(
-      listCommandDefaults,
+      listReadModelDefaults,
       "resolveRemoteBubbleStatusTarget"
     ).mockResolvedValue({
       alias: "lab",
@@ -2198,7 +2198,7 @@ describe("listBubbles", () => {
       pairflowCommand: "pairflow"
     });
     vi.spyOn(
-      listCommandDefaults,
+      listReadModelDefaults,
       "executeRemoteBubbleStatus"
     ).mockResolvedValue({
       bubbleStartedAt: "2026-04-16T09:40:00.000Z",
@@ -2307,7 +2307,7 @@ describe("listBubbles", () => {
     await setBubbleExecutorRemoteAlias(bubble.paths.bubbleTomlPath);
 
     vi.spyOn(
-      listCommandDefaults,
+      listReadModelDefaults,
       "resolveRemoteBubbleStatusTarget"
     ).mockResolvedValue({
       alias: "lab",
@@ -2315,7 +2315,7 @@ describe("listBubbles", () => {
       pairflowCommand: "pairflow"
     });
     vi.spyOn(
-      listCommandDefaults,
+      listReadModelDefaults,
       "executeRemoteBubbleStatus"
     ).mockResolvedValue({
       bubbleStartedAt: "2026-04-16T09:40:00.000Z",
@@ -2414,7 +2414,7 @@ describe("listBubbles", () => {
     });
 
     const resolveTargetSpy = vi.spyOn(
-      listCommandDefaults,
+      listReadModelDefaults,
       "resolveRemoteBubbleStatusTarget"
     );
 
@@ -2460,7 +2460,7 @@ describe("listBubbles", () => {
     });
 
     vi.spyOn(
-      listCommandDefaults,
+      listReadModelDefaults,
       "resolveRemoteBubbleStatusTarget"
     ).mockImplementation(async () => {
       throw new TypeError("unexpected resolver bug");
@@ -2507,7 +2507,7 @@ describe("listBubbles", () => {
     await setBubbleExecutorRemoteAlias(bubble.paths.bubbleTomlPath);
 
     vi.spyOn(
-      listCommandDefaults,
+      listReadModelDefaults,
       "resolveRemoteBubbleStatusTarget"
     ).mockResolvedValue({
       alias: "lab",
@@ -2515,7 +2515,7 @@ describe("listBubbles", () => {
       pairflowCommand: "pairflow"
     });
     vi.spyOn(
-      listCommandDefaults,
+      listReadModelDefaults,
       "executeRemoteBubbleStatus"
     ).mockRejectedValue(
       new RemoteBubbleStatusError({

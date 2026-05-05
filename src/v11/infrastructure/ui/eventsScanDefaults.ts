@@ -1,5 +1,5 @@
 const eventsScanDefaultsPromise = import(
-  "../../shared/list/listCommandApi.js"
+  "../../shared/read-model/list/listReadModelApi.js"
 ).then(({ listBubbles }) => listBubbles);
 
 export const listBubbles = await eventsScanDefaultsPromise;
