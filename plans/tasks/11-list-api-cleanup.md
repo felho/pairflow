@@ -5,7 +5,7 @@ task_family_id: list-api-cleanup
 sequence_key: "11"
 task_id: 11-list-api-cleanup
 title: "List API Cleanup"
-status: approved
+status: implementable
 phase: phase4
 target_files:
   - src/v11/application/list/listCommandApi.ts
@@ -106,7 +106,7 @@ by removing the application compatibility aliases.
      `listCommand*` application API aliases.
    - `13-shared-command-fitness` can harden governance after source and tests no
      longer encode the old active shape.
-4. Task-list impact: creates planned task `11-list-api-cleanup`; it does not
+4. Task-list impact: tracks approved task `11-list-api-cleanup`; it does not
    replace or supersede another task id.
 5. Inherited validation / exit expectation: active source imports should no
    longer require command-shaped application API re-export modules after this
