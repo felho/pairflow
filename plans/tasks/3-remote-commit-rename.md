@@ -39,6 +39,14 @@ Rename the retained shared remote commit contract out of the command-named
 `src/v11/shared/commit/**` boundary and into a command-neutral shared remote
 boundary, then update imports without changing behavior.
 
+### Current Review Boundary
+
+This document may be refined in a `review_artifact_type=document` bubble before
+the source rename is executed. In that docs-only review round, edits are limited
+to this task specification as the primary artifact. The runtime/source rename
+described below remains the responsibility of a later implementation bubble or
+direct implementation pass with source-edit authority.
+
 ### Domain / Control Model Summary
 
 1. Business invariant: shared boundary names must communicate real ownership.
@@ -147,6 +155,11 @@ boundary, then update imports without changing behavior.
    remains.
 5. Verify no imports or source files remain under `src/v11/shared/commit/**`.
 
+For a docs-only review bubble over this task, the in-scope work is limited to
+refining this task document so the later implementation can execute the rename
+without ambiguity. The docs-only bubble must not perform the `src/**` move or
+import rewrites.
+
 ### Out of Scope
 
 1. Renaming `src/v11/shared/merge/remoteMergeContract.ts`.
@@ -156,6 +169,8 @@ boundary, then update imports without changing behavior.
 4. Changing UI/router contracts or tests beyond compile-required import updates.
 5. Tightening `shared_promotion_single_lane` or adding new architecture fitness
    failures.
+6. Performing source/runtime edits when this task is being reviewed inside a
+   docs-only bubble.
 
 ## L1 - Change Contract
 
@@ -181,6 +196,18 @@ boundary, then update imports without changing behavior.
 
 ### 2) Acceptance Criteria
 
+Docs-only review acceptance:
+
+1. The task document explicitly separates the docs-only review boundary from the
+   later source/runtime implementation boundary.
+2. The docs-only review boundary names this task specification as the primary
+   artifact and does not authorize `src/**` moves, import rewrites, runtime
+   behavior changes, or implementation test claims.
+3. The implementation acceptance criteria below remain intact as the target for
+   the later source rename pass.
+
+Implementation acceptance after the source rename:
+
 1. `src/v11/shared/commit` no longer exists.
 2. `src/v11/shared/remote/commitRemoteExecution.ts` contains the retained remote
    commit contract with unchanged exported names and field shapes.
@@ -192,7 +219,17 @@ boundary, then update imports without changing behavior.
 
 ### 3) Validation
 
-Required narrow checks:
+Docs-only review validation:
+
+1. If no runtime/source files are changed, runtime checks are intentionally not
+   required for the docs-only PASS. The PASS summary should state that runtime
+   checks were not executed because the round only refined the task document.
+2. If local feedback checks are executed anyway, run the bubble-configured
+   validation commands that were actually used and attach only their
+   PASS-owned evidence refs. Do not claim checks were intentionally skipped in
+   the same PASS.
+
+Implementation validation after the source rename:
 
 1. `pnpm typecheck`
 2. `pnpm lint`
