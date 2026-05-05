@@ -5,7 +5,7 @@ task_family_id: attach-boundary-closeout
 sequence_key: "7"
 task_id: 7-attach-boundary-closeout
 title: "Attach Boundary Closeout"
-status: in_progress
+status: archived
 phase: phase3
 target_files:
   - src/v11/shared/attach/resolveAttachBubbleExecution.ts
@@ -29,6 +29,7 @@ impl_bubble_id: 7-attach-boundary-closeout-impl
 supersedes: []
 superseded_by: null
 archive_group: 2026-05-05-shared-command-boundary-cleanup-plan-v1
+archive_path: plans/archive/tasks/2026-05-05-shared-command-boundary-cleanup-plan-v1/7-attach-boundary-closeout.md
 ---
 
 # Task: Attach Boundary Closeout
