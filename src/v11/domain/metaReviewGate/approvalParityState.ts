@@ -1,8 +1,8 @@
-import type { MetaReviewRecommendation } from "../../../../types/bubble.js";
+import type { MetaReviewRecommendation } from "../../../types/bubble.js";
 import {
   hasApproveFindingsSplitMetadata,
   type FindingsParityMetadata
-} from "../../../../types/protocol.js";
+} from "../../../types/protocol.js";
 
 export interface ApprovalAdvisoryFinding {
   severity: "P2" | "P3";

@@ -7,13 +7,13 @@ import {
   type ApprovalAdvisoryFinding,
   resolveAdvisoryContractInvariant,
   resolveStructuredParityMetadataSnapshot
-} from "./metaReviewGateApprovalParityState.js";
+} from "../../../domain/metaReviewGate/approvalParityState.js";
 export {
   type ApprovalAdvisoryFinding,
   hasConsistentApproveAdvisoryOnlySplit,
   resolveAdvisoryContractInvariant,
   resolveStructuredParityMetadataSnapshot
-} from "./metaReviewGateApprovalParityState.js";
+} from "../../../domain/metaReviewGate/approvalParityState.js";
 
 const convergedAdvisoryMetadataRequiredReasonCode =
   "CONVERGED_ADVISORY_METADATA_REQUIRED";
