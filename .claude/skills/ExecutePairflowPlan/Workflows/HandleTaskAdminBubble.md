@@ -93,16 +93,23 @@ lifecycle routing belongs to `HandleDocumentBubble`.
 Use exactly `<task_id>-doc`.
 
 1. Before create, read Pairflow status for `<task_id>-doc`.
-2. Reuse only a safe round-0 ideation hold:
+2. If status proves a bubble with that exact id already exists, reuse it only
+   when it is a safe round-0 ideation hold:
    - lifecycle state is `RUNNING`
    - active round is `0`
    - `ideation.task_pending=true`
-3. If no such bubble exists, delegate create/start through `UsePairflow`
+3. If status proves a bubble with that exact id already exists but it is not
+   that safe round-0 ideation hold, stop at a human checkpoint. Do not attempt
+   create/start for the same id, because the id is already occupied and the
+   existing lifecycle state needs operator judgment.
+4. If status proves no bubble exists with that id, delegate create/start through
+   `UsePairflow`
    `CreateBubble` with `--ideation`, the canonical id, and document review
    artifact type.
-4. If create reports the id already exists, re-read status for the same id and
-   reuse only the safe round-0 ideation hold.
-5. Never create an alternate id for the same task.
+5. If create reports the id already exists despite the pre-create absence read,
+   re-read status for the same id and reuse only the safe round-0 ideation hold;
+   otherwise stop at a human checkpoint.
+6. Never create an alternate id for the same task.
 
 ### 2. Run Task Admin In The Carrier Worktree
 
