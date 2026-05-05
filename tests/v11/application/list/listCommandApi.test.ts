@@ -6,7 +6,7 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import { createBubble } from "../../../../src/v11/application/create/createCommandApi.js";
 import { upsertRuntimeSession } from "../../../../src/v11/infrastructure/executor/sessionRuntime/runtimeSessionsRegistry.js";
-import { listBubbles } from "../../../../src/v11/application/list/listCommandApi.js";
+import { listBubbles } from "../../../../src/v11/shared/read-model/list/listReadModelApi.js";
 import { initGitRepository } from "../../../helpers/git.js";
 import { setupRunningBubbleFixture } from "../../../helpers/bubble.js";
 
