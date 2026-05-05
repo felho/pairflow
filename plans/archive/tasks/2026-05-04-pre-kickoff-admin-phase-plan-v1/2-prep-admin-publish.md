@@ -5,7 +5,7 @@ task_family_id: prep-admin-publish
 sequence_key: "2"
 task_id: 2-prep-admin-publish
 title: "Pre-Kickoff Admin Publish Workflow"
-status: approved
+status: archived
 phase: phase2
 target_files:
   - .claude/skills/ExecutePairflowPlan/SKILL.md
@@ -26,10 +26,12 @@ normative_refs:
 owners:
   - "felho"
 doc_bubble_id: 2-prep-admin-publish-doc
-impl_bubble_id: null
+impl_bubble_id: 2-prep-admin-publish-doc
 supersedes: []
 superseded_by: null
 archive_group: 2026-05-04-pre-kickoff-admin-phase-plan-v1
+archive_path: plans/archive/tasks/2026-05-04-pre-kickoff-admin-phase-plan-v1/2-prep-admin-publish.md
+closed_at: "2026-05-05T05:38:25+02:00"
 ---
 
 # Task: Pre-Kickoff Admin Publish Workflow
