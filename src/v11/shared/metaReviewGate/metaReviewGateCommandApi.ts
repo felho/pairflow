@@ -7,7 +7,9 @@ export {
 export type {
   ApplyMetaReviewGateOnConvergenceDependencies,
   ApplyMetaReviewGateOnConvergenceInput,
+  FinalizeCurrentRunMetaReviewGateInput,
   MetaReviewRuntimeDeliveryObservation,
+  MetaReviewApproveValidationCommandRunInput,
   MetaReviewGateNotifyRuntimeCapabilities,
   MetaReviewGatePaneBindingRuntimeCapabilities,
   MetaReviewGateReasonCode,

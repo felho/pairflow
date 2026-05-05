@@ -28,9 +28,9 @@ import type {
 import type {
   MetaReviewGateRuntimeCapabilities,
   NotifyMetaReviewerSubmissionRequest,
-  ResolveMetaReviewerPaneWarning
+  ResolveMetaReviewerPaneWarning,
+  FinalizeCurrentRunMetaReviewGateInput
 } from "../metaReviewGate/index.js";
-import type { FinalizeCurrentRunMetaReviewGateInput } from "../metaReviewGate/metaReviewGateCurrentRunTypes.js";
 
 export type { MetaReviewResult, MetaReviewRunWarning } from "./metaReviewTypes.js";
 

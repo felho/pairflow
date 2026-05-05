@@ -13,3 +13,7 @@ export type {
   NotifyMetaReviewerSubmissionRequestInput,
   ResolveMetaReviewerPaneWarning
 } from "./metaReviewGateTypes.js";
+export type {
+  FinalizeCurrentRunMetaReviewGateInput,
+  MetaReviewApproveValidationCommandRunInput
+} from "./metaReviewGateCurrentRunTypes.js";
