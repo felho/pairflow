@@ -16,7 +16,7 @@ import { createStartBubbleError } from "./startCommandRuntime.js";
 import { startCliDependencyDefaults } from "./startCommandDependencyDefaults.js";
 import { parseBubbleStartCommandOptions } from "./startCliOptions.js";
 import type { ResolvedBubbleById } from "../../shared/ports/bubbleLookup.js";
-import { processSpawnDefault } from "../../defaults/process/processSpawnDefaults.js";
+import { processSpawn as processSpawnDefault } from "../../shared/process/processSpawnDefaults.js";
 import type { ProcessSpawnPort } from "../../shared/ports/processSpawn.js";
 
 export interface BubbleStartCommandDependencies {

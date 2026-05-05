@@ -7,7 +7,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import {
   applyMetaReviewGateOnConvergenceV11,
   notifyMetaReviewerSubmissionRequestV11
-} from "../../../../src/v11/application/metaReviewGate/emitMetaReviewGateV11.js";
+} from "../../../../src/v11/defaults/metaReviewGate/metaReviewGateApi.js";
 import type {
   MetaReviewGateRuntimeCapabilities,
   MetaReviewRuntimeDeliveryObservation,

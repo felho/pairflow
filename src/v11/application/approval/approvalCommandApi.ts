@@ -27,7 +27,7 @@ import {
   readTranscriptEnvelopes
 } from "../../shared/transcript/transcriptDependencyDefaults.js";
 import { readStateSnapshot, writeStateSnapshot } from "../../shared/state/stateStoreDefaults.js";
-import { resolveBubbleFromWorkspaceCwd } from "../../defaults/workspace/workspaceResolutionDefaults.js";
+import { resolveBubbleFromWorkspaceCwd } from "../../shared/workspace/workspaceResolutionDefaults.js";
 
 let approvalDependencyDefaultsPromise:
   | Promise<ApprovalCommandDefaultDependencies>

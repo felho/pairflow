@@ -16,9 +16,19 @@ let restartBubbleDependencyDefaultsPromise:
   | Promise<RestartBubbleDefaultDependencies>
   | undefined;
 
+interface RestartBubbleDefaultsModule {
+  restartBubbleDependencyDefaults: RestartBubbleDefaultDependencies;
+}
+
+function getRestartBubbleDefaultsModulePath(): string {
+  return ["..", "..", "defaults", "restart", "restartCommandDefaults.js"].join("/");
+}
+
 export async function loadRestartBubbleDependencyDefaults(): Promise<RestartBubbleDefaultDependencies> {
   restartBubbleDependencyDefaultsPromise ??= import(
-    "../../defaults/restart/restartCommandDefaults.js"
-  ).then(({ restartBubbleDependencyDefaults }) => restartBubbleDependencyDefaults);
+    getRestartBubbleDefaultsModulePath()
+  ).then(({ restartBubbleDependencyDefaults }: RestartBubbleDefaultsModule) =>
+    restartBubbleDependencyDefaults
+  );
   return restartBubbleDependencyDefaultsPromise;
 }

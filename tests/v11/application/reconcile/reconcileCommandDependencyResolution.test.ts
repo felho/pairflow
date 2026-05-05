@@ -28,7 +28,8 @@ describe("reconcileCommandDependencyResolution", () => {
       }),
       readStateSnapshot: async () => {
         throw new Error("not used");
-      }
+      },
+      isTmuxSessionAlive: async () => false
     };
 
     const resolved = resolveReconcileRuntimeSessionsDependencies({

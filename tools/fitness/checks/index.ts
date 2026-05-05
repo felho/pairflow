@@ -1,3 +1,4 @@
+import { buildApplicationDefaultsBoundaryCheckReport } from "./application-defaults-boundary.js";
 import { buildBoundaryCheckReport } from "./boundary.js";
 import { buildComplexityCheckReport } from "./complexity.js";
 import { buildContractTimeoutPolicyCheckReport } from "./contract-timeout-policy.js";
@@ -28,6 +29,13 @@ export async function buildCheckReport({
 
   if (effectiveCheck.id === "boundary") {
     return buildBoundaryCheckReport({
+      check: effectiveCheck,
+      repoRoot,
+      fallbackMode
+    });
+  }
+  if (effectiveCheck.id === "application_defaults_boundary") {
+    return buildApplicationDefaultsBoundaryCheckReport({
       check: effectiveCheck,
       repoRoot,
       fallbackMode

@@ -2,9 +2,10 @@ import {
   emitApproveV11 as emitApprove,
   emitRequestReworkV11 as emitRequestRework
 } from "../../application/approval/emitApprovalV11.js";
-import { commitBubbleDependencyDefaults } from "../../application/commit/commitCommandDefaults.js";
+import { commitBubbleDependencyDefaults } from "../commit/commitCommandDefaults.js";
 import { commitBubbleV11 } from "../../application/commit/emitCommitV11.js";
 import { deleteBubble } from "../../application/delete/deleteBubble.js";
+import { mergeBubbleDependencyDefaults } from "../merge/mergeCommandDefaults.js";
 import { mergeBubbleV11 as mergeBubble } from "../../application/merge/emitMergeV11.js";
 import { openBubble } from "../../application/open/emitOpenV11.js";
 import { restartBubble } from "../../application/restart/restartCommandApi.js";
@@ -350,7 +351,7 @@ export const uiRouterDependencyDefaults = {
   getBubbleStatus,
   listBubbles,
   async mergeBubble(input) {
-    return mergeBubble(projectUiInputNowToCommandNow(input));
+    return mergeBubble(projectUiInputNowToCommandNow(input), mergeBubbleDependencyDefaults);
   },
   openBubble,
   async restartBubble(input) {

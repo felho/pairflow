@@ -8,7 +8,7 @@ import {
   emitConvergedFromWorkspaceV11
 } from "../../../src/v11/application/converged/emitConvergedV11.js";
 import { emitPassFromWorkspaceV11 } from "../../../src/v11/application/pass/emitPassV11.js";
-import { submitMetaReviewResultV11 } from "../../../src/v11/application/metaReview/emitMetaReviewV11.js";
+import { submitMetaReviewResult as submitMetaReviewResultV11 } from "../../../src/v11/defaults/metaReview/metaReviewApi.js";
 import { emitApproveV11 } from "../../../src/v11/application/approval/emitApprovalV11.js";
 import { commitBubbleV11 } from "../../../src/v11/application/commit/emitCommitV11.js";
 import { buildCommitBubbleDependencies } from "../../helpers/commit.js";

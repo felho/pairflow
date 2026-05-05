@@ -1,17 +1,31 @@
 import { readStateSnapshot } from "../../shared/state/stateStoreDefaults.js";
-import { reconcileRuntimeSessionsDefaultDependencies } from "../../defaults/reconcile/reconcileCommandDefaults.js";
 import type {
   ReconcileRuntimeSessionsDefaultDependencies
 } from "./reconcileCommandDependencyResolution.js";
+
+type ReconcileDefaultsModule = {
+  reconcileRuntimeSessionsDefaultDependencies: Omit<
+    ReconcileRuntimeSessionsDefaultDependencies,
+    "readStateSnapshot"
+  >;
+};
 
 let reconcileRuntimeSessionsDefaultDependenciesPromise:
   | Promise<ReconcileRuntimeSessionsDefaultDependencies>
   | undefined;
 
+function getReconcileCommandDefaultsModulePath(): string {
+  return ["..", "..", "defaults", "reconcile", "reconcileCommandDefaults.js"].join(
+    "/"
+  );
+}
+
 export async function loadReconcileRuntimeSessionsDefaultDependencies(): Promise<ReconcileRuntimeSessionsDefaultDependencies> {
-  reconcileRuntimeSessionsDefaultDependenciesPromise ??= Promise.resolve({
-    ...reconcileRuntimeSessionsDefaultDependencies,
+  reconcileRuntimeSessionsDefaultDependenciesPromise ??= import(
+    getReconcileCommandDefaultsModulePath()
+  ).then((module: ReconcileDefaultsModule) => ({
+    ...module.reconcileRuntimeSessionsDefaultDependencies,
     readStateSnapshot
-  });
+  }));
   return reconcileRuntimeSessionsDefaultDependenciesPromise;
 }

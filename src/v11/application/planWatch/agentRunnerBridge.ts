@@ -20,7 +20,6 @@ import {
 } from "./codexAgentRunnerBridge.js";
 import { classifyCodexJsonProcessResult } from "./codexAgentRunnerBridgeResult.js";
 import { parseStructuredAgentRunnerOutput } from "./agentRunnerBridgeResult.js";
-import { agentRunnerBridgeDefaults } from "../../defaults/planWatch/agentRunnerBridgeDefaults.js";
 const DEFAULT_TIMEOUT_MS = 30 * 60 * 1000;
 type PreconditionResolution =
   | { ok: true; config: RequiredAgentRunnerCommandConfig; payload: AgentRunnerContinuationPayload }
@@ -42,7 +41,7 @@ export function buildAgentRunnerContinuationPayload(
 export async function runExecutePairflowPlanContinuation(
   input: AgentRunnerBridgeInput,
   config: AgentRunnerCommandConfig,
-  dependencies: AgentRunnerBridgeDependencies = agentRunnerBridgeDefaults
+  dependencies: AgentRunnerBridgeDependencies
 ): Promise<AgentRunnerBridgeResult> {
   const clock = dependencies.now ?? (() => input.now ?? new Date());
   const startedAtDate = clock();
