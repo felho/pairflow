@@ -411,15 +411,15 @@ describe("dependency fitness check", () => {
     const repoRoot = await createTempRoot();
     await writeRepoFile(
       repoRoot,
-      "src/v11/shared/pass/passCommandInputNormalization.ts",
-      "export const normalizePassInput = (value: string): string => value.trim();\n"
+      "src/v11/shared/inbox/inboxCommandApi.ts",
+      "export const normalizeInboxInput = (value: string): string => value.trim();\n"
     );
     await writeRepoFile(
       repoRoot,
-      "src/v11/application/pass/emitPassV11.ts",
+      "src/v11/application/inbox/emitInboxV11.ts",
       [
-        "import { normalizePassInput } from '../../shared/pass/passCommandInputNormalization.js';",
-        "export const emit = (value: string): string => normalizePassInput(value);",
+        "import { normalizeInboxInput } from '../../shared/inbox/inboxCommandApi.js';",
+        "export const emit = (value: string): string => normalizeInboxInput(value);",
         ""
       ].join("\n")
     );
@@ -441,28 +441,66 @@ describe("dependency fitness check", () => {
     expect(
       report.details?.some((detail) =>
         detail.includes(
-          "src/v11/shared/pass: shared-promotion warning: imported only by application lane pass"
+          "src/v11/shared/inbox: shared-promotion warning: command-shaped shared directory imported only by application lane inbox"
         )
       )
     ).toBe(true);
+  });
+
+  it("does not warn when a command-neutral shared directory has one application consumer", async () => {
+    const repoRoot = await createTempRoot();
+    await writeRepoFile(
+      repoRoot,
+      "src/v11/shared/read-model/list/listReadModel.ts",
+      "export const listReadModel = 'read-model';\n"
+    );
+    await writeRepoFile(
+      repoRoot,
+      "src/v11/application/list/listCommandApi.ts",
+      [
+        "import { listReadModel } from '../../shared/read-model/list/listReadModel.js';",
+        "export const list = listReadModel;",
+        ""
+      ].join("\n")
+    );
+
+    const report = await buildDependencyCheckReport({
+      check: {
+        id: "dependency",
+        metric: "cycle and forbidden import direction detection",
+        mode: "report-only",
+        owner: "architecture",
+        scope: ["src/v11/**"],
+        exceptions: []
+      },
+      repoRoot,
+      fallbackMode: "report-only",
+    });
+
+    expect(report.status).toBe("pass");
+    expect(
+      report.details?.some((detail) =>
+        detail.includes("shared-promotion warning")
+      )
+    ).toBe(false);
   });
 
   it("does not warn when a shared directory is consumed by multiple application lanes", async () => {
     const repoRoot = await createTempRoot();
     await writeRepoFile(
       repoRoot,
-      "src/v11/shared/state/stateSchema.ts",
-      "export const stateSchema = 'state';\n"
+      "src/v11/shared/approval/approvalSchema.ts",
+      "export const approvalSchema = 'approval';\n"
     );
     await writeRepoFile(
       repoRoot,
       "src/v11/application/approval/approvalCommandApi.ts",
-      "import { stateSchema } from '../../shared/state/stateSchema.js';\nexport const approval = stateSchema;\n"
+      "import { approvalSchema } from '../../shared/approval/approvalSchema.js';\nexport const approval = approvalSchema;\n"
     );
     await writeRepoFile(
       repoRoot,
       "src/v11/application/pass/passWorkspaceContextDefaults.ts",
-      "import { stateSchema } from '../../shared/state/stateSchema.js';\nexport const pass = stateSchema;\n"
+      "import { approvalSchema } from '../../shared/approval/approvalSchema.js';\nexport const pass = approvalSchema;\n"
     );
 
     const report = await buildDependencyCheckReport({
@@ -490,18 +528,18 @@ describe("dependency fitness check", () => {
     const repoRoot = await createTempRoot();
     await writeRepoFile(
       repoRoot,
-      "src/v11/shared/state/stateSchema.ts",
-      "export const stateSchema = 'state';\n"
+      "src/v11/shared/approval/approvalSchema.ts",
+      "export const approvalSchema = 'approval';\n"
     );
     await writeRepoFile(
       repoRoot,
       "src/v11/application/approval/approvalCommandApi.ts",
-      "import { stateSchema } from '../../shared/state/stateSchema.js';\nexport const approval = stateSchema;\n"
+      "import { approvalSchema } from '../../shared/approval/approvalSchema.js';\nexport const approval = approvalSchema;\n"
     );
     await writeRepoFile(
       repoRoot,
-      "src/v11/infrastructure/state/stateStore.ts",
-      "import { stateSchema } from '../../shared/state/stateSchema.js';\nexport const store = stateSchema;\n"
+      "src/v11/infrastructure/approval/approvalStore.ts",
+      "import { approvalSchema } from '../../shared/approval/approvalSchema.js';\nexport const store = approvalSchema;\n"
     );
 
     const report = await buildDependencyCheckReport({
