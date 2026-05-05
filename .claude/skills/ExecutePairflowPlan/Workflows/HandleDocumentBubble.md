@@ -293,10 +293,35 @@ Future pre-kickoff admin note:
 
 Delegation:
 
-1. delegate create/start through `UsePairflow` `CreateBubble`
-2. persist the created bubble id into task metadata as `doc_bubble_id`
-3. preserve `status=approved`; the created id is linkage only and does not prove refinement completion
-4. preserve the document-bubble quality model and stop after the bubble-started boundary
+1. derive the intended document bubble id mechanically as `<task_id>-doc` from
+   the current task metadata contract; do not invent an alternate id and do not
+   add a separate recovery-key abstraction
+2. before create, read `pairflow bubble status --id <task_id>-doc`; if an
+   existing bubble with that id is in the expected document create carrier state,
+   reuse that bubble instead of creating a second one
+3. if no bubble exists with the derived id, delegate create/start through
+   `UsePairflow` `CreateBubble` using exactly that derived id
+4. if create fails because the derived id already exists, re-read status for the
+   same id; reuse only when the state is the expected document create carrier
+   state, otherwise stop at a human checkpoint
+5. if a bubble exists with the derived id but is not in a safe reusable state,
+   stop at a human checkpoint; never create the same task's document bubble under
+   a different id
+6. persist the derived/created bubble id into task metadata as `doc_bubble_id`
+7. preserve `status=approved`; the created id is linkage only and does not prove refinement completion
+8. preserve the document-bubble quality model and stop after the bubble-started boundary
+
+Safe reusable state:
+
+1. the status bubble id must equal the derived id exactly
+2. the observed state must be route-compatible with the document create branch
+   being executed
+3. when the pre-kickoff admin pattern is adopted for this document route, the
+   reusable state is specifically `RUNNING` round `0` with
+   `ideation.task_pending=true`
+4. a completed, cancelled, approval-ready, wrong-artifact-type, wrong-task, or
+   otherwise ambiguous bubble with the derived id is not reusable and must stop
+   the route instead of triggering alternate id creation
 
 Output:
 
@@ -314,7 +339,10 @@ handoff_boundary_note: Start the document-refinement bubble through UsePairflow,
 Fail-closed rule:
 
 1. if create/start succeeds but task metadata cannot be updated with `doc_bubble_id`, the handler must not report a settled create boundary
-2. return a human checkpoint or troubleshooting result that names the missing linkage persistence as the blocker
+2. if the derived id is over-budget, invalid, already bound to an unsafe state,
+   or cannot be checked with Pairflow status, return a human checkpoint rather
+   than creating an alternate id
+3. return a human checkpoint or troubleshooting result that names the missing linkage persistence or unsafe canonical-id state as the blocker
 
 ### 4. Read the linked bubble and classify only document-owned routes
 

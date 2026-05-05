@@ -64,7 +64,11 @@ and kickoff only after that proof is present.
    `PublishPreKickoffAdmin`, re-read `main`, then kickoff that same bubble.
 6. Missing-data rule: missing bubble id, worktree, admin commit, publish result,
    refreshed metadata postcondition, or ideation hold proof stops before kickoff.
-7. Phase boundary:
+7. Canonical identity rule: the intended document bubble id is the existing
+   metadata-contract derived id `<task_id>-doc`; this id is also the only
+   recovery key for interrupted create/start. Do not introduce a separate
+   recovery-key field or Pairflow query surface.
+8. Phase boundary:
    - contract closure: owned here for the document route only
    - producer closure: owned here for document-route publish proof consumption
    - internal execution closure: successor task 4 for implementation route
@@ -94,9 +98,10 @@ and kickoff only after that proof is present.
    - `.claude/skills/ExecutePairflowPlan/Workflows/HandleDocumentBubble.md`
    - `.claude/skills/ExecutePairflowPlan/Workflows/PublishPreKickoffAdmin.md`
    - `.claude/skills/ExecutePairflowPlan/references/Plan-Task-Metadata-Contract.md`
-2. Canonical elements: `--ideation`, `ideation.task_pending=true`,
-   `doc_bubble_id` as linkage only, `status=approved` during document work,
-   and `status=implementable` only after document close.
+2. Canonical elements: canonical derived document bubble id `<task_id>-doc`,
+   `--ideation`, `ideation.task_pending=true`, `doc_bubble_id` as linkage only,
+   `status=approved` during document work, and `status=implementable` only
+   after document close.
 3. Guard elements: clean main, selected admin scope, admin commit id,
    refreshed metadata postconditions, and refreshed ideation hold proof.
 4. Compat-only elements: pre-contract bubble ids may be persisted as concrete
@@ -226,7 +231,8 @@ and kickoff only after that proof is present.
    - canonical identity path: active task id -> derived `doc_bubble_id` ->
      Pairflow status bubble id -> publish result bubble id
    - competing identifiers or fallback identities: branch names, transcript
-     prose, stale task metadata, and unmerged worktree commits
+     prose, stale task metadata, unmerged worktree commits, and any separate
+     recovery-key abstraction
 11. Authority/source-of-truth note:
    - canonical source: Pairflow status, publish result, Git main ref, refreshed
      task metadata
@@ -260,6 +266,7 @@ and kickoff only after that proof is present.
 | Document-only adoption | Only `CreateDocumentBubble` adopts pre-kickoff admin publish. | Do not change implementation-bubble create/start routing. | P1 | required-now |
 | Publish before kickoff | Kickoff requires successful publish proof and refreshed postconditions. | No kickoff from unmerged bubble worktree or stale metadata. | P1 | required-now |
 | Linkage authority | `doc_bubble_id` remains linkage only. | Do not treat it as document completion or approval proof. | P1 | required-now |
+| Canonical create identity | Fresh document create must use `<task_id>-doc`; that id is the only recovery key. | Status-check the derived id before create, reuse only a safe existing round-0 hold, and never create an alternate id. | P1 | required-now |
 | Fail closed | Missing publish proof, missing refreshed linkage, or failed kickoff stops the route. | Return checkpoint/hold; do not report settled create. | P1 | required-now |
 | Lifecycle ownership | `UsePairflow` owns create/start/kickoff. | Use existing lifecycle commands and round-0 hold semantics. | P1 | required-now |
 
@@ -267,7 +274,9 @@ and kickoff only after that proof is present.
 
 | ID | Condition / Input | Owner | Output / Status | Reason / Error Code | Retained / Dropped Data | Side Effects | Required Test |
 |---|---|---|---|---|---|---|---|
-| DCM1 | Approved task has no `doc_bubble_id` | HandleDocumentBubble | create ideation document bubble | `DOC_BUBBLE_CREATE_REQUIRED` | retain bubble id/worktree | create/start only | T1 |
+| DCM1 | Approved task has no `doc_bubble_id`, and no safe existing `<task_id>-doc` carrier exists | HandleDocumentBubble | create ideation document bubble with id `<task_id>-doc` | `DOC_BUBBLE_CREATE_REQUIRED` | retain bubble id/worktree | create/start only | T1 |
+| DCM1a | Approved task has no `doc_bubble_id`, but `<task_id>-doc` already exists in safe round-0 ideation hold | HandleDocumentBubble | reuse existing ideation document bubble | `DOC_BUBBLE_CREATE_REQUIRED` | retain existing bubble id/worktree | no second create | T1a |
+| DCM1b | `<task_id>-doc` exists but is not in safe reusable create state | HandleDocumentBubble | human checkpoint | `NO_TRUSTWORTHY_ROUTE` | retain observed status | no alternate create | T1b |
 | DCM2 | Ideation bubble not in round-0 hold before publish/kickoff | HandleDocumentBubble | human checkpoint | `PRE_KICKOFF_HOLD_NOT_PROVEN` | retain diagnostics | no kickoff | T2 |
 | DCM3 | Admin publish fails or lacks proof | PublishPreKickoffAdmin/HandleDocumentBubble | human checkpoint | publish workflow reason code | retain publish diagnostics | no kickoff | T3 |
 | DCM4 | Publish succeeds but refreshed metadata lacks `doc_bubble_id` linkage | HandleDocumentBubble | human checkpoint | `DOC_BUBBLE_ADMIN_POSTCONDITION_MISSING` | retain refreshed mismatch | no kickoff | T4 |
@@ -307,7 +316,7 @@ and kickoff only after that proof is present.
 
 | Side Effect | Allowed When | Forbidden When | Priority | Timing |
 |---|---|---|---|---|
-| create/start ideation document bubble | task approved and `doc_bubble_id=null` | task not approved or linkage exists | P1 | required-now |
+| create/start ideation document bubble | task approved, `doc_bubble_id=null`, and no safe existing `<task_id>-doc` carrier exists | task not approved, linkage exists, derived id invalid, or derived id already exists in unsafe state | P1 | required-now |
 | publish selected admin paths to `main` | `PublishPreKickoffAdmin` authorization record exists | scope invalid, main dirty, hold missing | P1 | required-now |
 | kickoff document task payload | publish success and refreshed linkage/hold proof are present | publish failed or ambiguous | P1 | required-now |
 | report settled create boundary | kickoff succeeded and `doc_bubble_id` persisted | stale or missing metadata | P1 | required-now |
@@ -316,6 +325,8 @@ and kickoff only after that proof is present.
 
 | Case | Required Result | Forbidden Fallback | Priority | Timing |
 |---|---|---|---|---|
+| Derived document id already exists in safe round-0 hold | reuse existing `<task_id>-doc` carrier | create second bubble or invent alternate id | P1 | required-now |
+| Derived document id exists in unsafe state | human checkpoint | create same task under another id | P1 | required-now |
 | Publish fails | human checkpoint before kickoff | kickoff from worktree state | P1 | required-now |
 | Refreshed metadata missing linkage | human checkpoint | reuse stale pre-publish task read | P1 | required-now |
 | Existing `doc_bubble_id` present | linked-bubble continuation path | create second bubble | P1 | required-now |
@@ -325,7 +336,9 @@ and kickoff only after that proof is present.
 
 | Test ID | Scenario | Expected Result | Priority | Timing |
 |---|---|---|---|---|
-| T1 | Approved task without `doc_bubble_id` enters document create | ideation document bubble is created/started and publish workflow is invoked before kickoff | P1 | required-now |
+| T1 | Approved task without `doc_bubble_id` enters document create and `<task_id>-doc` is absent | ideation document bubble is created/started with id `<task_id>-doc` and publish workflow is invoked before kickoff | P1 | required-now |
+| T1a | Approved task without `doc_bubble_id` enters document create and `<task_id>-doc` already exists in round-0 ideation hold | existing bubble is reused; no second create or alternate id is attempted | P1 | required-now |
+| T1b | Approved task without `doc_bubble_id` enters document create and `<task_id>-doc` exists in unsafe state | no alternate id is created; checkpoint names the unsafe canonical-id state | P1 | required-now |
 | T2 | Ideation hold cannot be proven | no kickoff; checkpoint names hold proof failure | P1 | required-now |
 | T3 | Publish workflow returns checkpoint | no kickoff; document create route does not settle | P1 | required-now |
 | T4 | Publish succeeds but refreshed task lacks expected `doc_bubble_id` | no kickoff; checkpoint names missing postcondition | P1 | required-now |
@@ -349,7 +362,11 @@ and kickoff only after that proof is present.
    `HandleDocumentBubble.md` rather than adding a new top-level route surface.
 2. Keep `PublishPreKickoffAdmin` as a backing workflow; do not make it a
    `target_workflow_surface` returned by `ResolvePlanState`.
-3. Later hardening can add a compact example result packet for document-route
+3. Use the canonical derived bubble id `<task_id>-doc` as the only interrupted
+   create/start recovery key. Do not add a separate recovery-key field,
+   separate Pairflow query surface, or alternate bubble-id generation path for
+   this task.
+4. Later hardening can add a compact example result packet for document-route
    success if review finds ambiguity.
 
 ## Hardening Backlog

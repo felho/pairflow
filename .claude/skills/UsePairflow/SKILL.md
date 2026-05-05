@@ -139,7 +139,7 @@ This skill exists to avoid lifecycle mistakes (wrong command in wrong state, los
   - Do not auto-kickoff immediately after create/start unless the user explicitly asks for kickoff now.
 - Bubble ID gate for create:
   - `pairflow bubble create --id <id>` accepts only `3-40` chars.
-  - Pattern: start with lowercase letter, then lowercase letters, digits, `_` or `-`.
+  - Pattern: start with lowercase letter or digit, then lowercase letters, digits, `_` or `-`.
   - This validation is create-time only; do not block lifecycle operations for already existing bubbles that may have longer IDs.
 - CloseBubble post-merge completion for `code` bubbles:
   - Delete the finalized bubble artifact after successful merge unless there is a concrete retained-bubble reason.

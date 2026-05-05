@@ -330,8 +330,14 @@ Select `document_bubble_create` when:
 Execution note:
 
 1. `CreateDocumentBubble` remains the stable route surface, but the actual create/start delegation is owned by repo-local `HandleDocumentBubble`, which then calls `UsePairflow`
-2. successful create/start is not settled until the handler has persisted the created bubble id into task metadata as `doc_bubble_id`
-3. task status remains `approved`; the document bubble id is linkage only and does not prove document refinement
+2. `HandleDocumentBubble` must use the canonical derived id `<task_id>-doc` for
+   fresh document bubble creation; before creating, it must read status for that
+   id, reuse only a safe existing create carrier state, and fail closed rather
+   than creating an alternate id
+3. successful create/start is not settled until the handler has persisted the
+   derived/created bubble id into task metadata as `doc_bubble_id`
+4. task status remains `approved`; the document bubble id is linkage only and
+   does not prove document refinement
 
 Reason code:
 
@@ -366,7 +372,13 @@ Select `implementation_bubble_create` when:
 Execution note:
 
 1. `CreateImplementationBubble` remains the stable route surface, but the actual create/start delegation is owned by repo-local `HandleImplementationBubble`, which then calls `UsePairflow`
-2. successful create/start is not settled until the handler has persisted the created bubble id into task metadata as `impl_bubble_id` and moved task status to `in_progress`
+2. `HandleImplementationBubble` must use the canonical derived id
+   `<task_id>-impl` for fresh implementation bubble creation; before creating,
+   it must read status for that id, reuse only a safe existing create carrier
+   state, and fail closed rather than creating an alternate id
+3. successful create/start is not settled until the handler has persisted the
+   derived/created bubble id into task metadata as `impl_bubble_id` and moved
+   task status to `in_progress`
 
 Reason code:
 
