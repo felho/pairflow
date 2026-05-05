@@ -39,6 +39,14 @@ interface CoreWatchdogPendingReworkDefaults {
   resolveDeliveryMessageRef: ResolveDeliveryMessageRefPort;
 }
 
+type WatchdogCommandDefaultsModule = {
+  watchdogCommandDefaults: CoreWatchdogCommandDefaults;
+};
+
+type WatchdogPendingReworkDefaultsModule = {
+  watchdogPendingReworkDefaults: CoreWatchdogPendingReworkDefaults;
+};
+
 let watchdogCommandDefaultsPromise:
   | Promise<CoreWatchdogCommandDefaults>
   | undefined;
@@ -47,18 +55,38 @@ let watchdogPendingReworkDefaultsPromise:
   | Promise<CoreWatchdogPendingReworkDefaults>
   | undefined;
 
+function getWatchdogCommandDefaultsModulePath(): string {
+  return ["..", "..", "defaults", "watchdog", "watchdogCommandDefaults.js"].join(
+    "/"
+  );
+}
+
+function getWatchdogPendingReworkDefaultsModulePath(): string {
+  return [
+    "..",
+    "..",
+    "defaults",
+    "watchdog",
+    "watchdogPendingReworkDefaults.js"
+  ].join("/");
+}
+
 export async function loadWatchdogCommandDefaults(): Promise<CoreWatchdogCommandDefaults> {
   const defaultsPromise =
-    watchdogCommandDefaultsPromise ??= import(
-    "../../defaults/watchdog/watchdogCommandDefaults.js"
-  ).then(({ watchdogCommandDefaults }) => watchdogCommandDefaults);
+    watchdogCommandDefaultsPromise ??= (
+      import(getWatchdogCommandDefaultsModulePath()) as Promise<
+        WatchdogCommandDefaultsModule
+      >
+    ).then(({ watchdogCommandDefaults }) => watchdogCommandDefaults);
   return defaultsPromise;
 }
 
 export async function loadWatchdogPendingReworkDefaults(): Promise<CoreWatchdogPendingReworkDefaults> {
   const defaultsPromise =
-    watchdogPendingReworkDefaultsPromise ??= import(
-    "../../defaults/watchdog/watchdogPendingReworkDefaults.js"
-  ).then(({ watchdogPendingReworkDefaults }) => watchdogPendingReworkDefaults);
+    watchdogPendingReworkDefaultsPromise ??= (
+      import(getWatchdogPendingReworkDefaultsModulePath()) as Promise<
+        WatchdogPendingReworkDefaultsModule
+      >
+    ).then(({ watchdogPendingReworkDefaults }) => watchdogPendingReworkDefaults);
   return defaultsPromise;
 }

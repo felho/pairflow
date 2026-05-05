@@ -18,7 +18,9 @@ export async function reconcileRuntimeSessionsCommandOrchestration(
   input: ReconcileRuntimeSessionsInput = {},
   dependencies: ResolvedReconcileRuntimeSessionsDependencies
 ): Promise<ReconcileRuntimeSessionsReport> {
-  const normalizedInput = normalizeReconcileRuntimeSessionsInput(input);
+  const normalizedInput = normalizeReconcileRuntimeSessionsInput(input, {
+    isTmuxSessionAlive: dependencies.isTmuxSessionAlive
+  });
 
   let repoPath: string;
   try {

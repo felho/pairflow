@@ -11,7 +11,8 @@ import type { ReadStateSnapshotPort } from "../../shared/ports/stateSnapshots.js
 import { isFinalState } from "../../domain/state/transitions.js";
 import type {
   ListBubbleIdSet,
-  ReconcileRuntimeSessionsDependencies
+  ReconcileRuntimeSessionsDependencies,
+  TmuxSessionLivenessProbe
 } from "./reconcileCommandContract.js";
 
 export interface ResolvedReconcileRuntimeSessionsDependencies {
@@ -21,6 +22,7 @@ export interface ResolvedReconcileRuntimeSessionsDependencies {
   removeRuntimeSessions: RemoveRuntimeSessionsPort;
   persistPassValidationRecoveryMarker: PersistPassValidationRecoveryMarkerPort;
   readStateSnapshot: ReadStateSnapshotPort;
+  isTmuxSessionAlive: TmuxSessionLivenessProbe;
   isFinalState: typeof isFinalState;
   countRegistryEntries: (registry: RuntimeSessionsRegistry) => number;
 }
@@ -31,6 +33,7 @@ export interface ReconcileRuntimeSessionsDefaultDependencies {
   removeRuntimeSessions: RemoveRuntimeSessionsPort;
   persistPassValidationRecoveryMarker: PersistPassValidationRecoveryMarkerPort;
   readStateSnapshot: ReadStateSnapshotPort;
+  isTmuxSessionAlive: TmuxSessionLivenessProbe;
 }
 
 export const listBubbleIdSetDefault: ListBubbleIdSet = async (
@@ -73,6 +76,8 @@ export function resolveReconcileRuntimeSessionsDependencies(
       dependencies.persistPassValidationRecoveryMarker ??
       defaults.persistPassValidationRecoveryMarker,
     readStateSnapshot: dependencies.readStateSnapshot ?? defaults.readStateSnapshot,
+    isTmuxSessionAlive:
+      dependencies.isTmuxSessionAlive ?? defaults.isTmuxSessionAlive,
     isFinalState: dependencies.isFinalState ?? isFinalState,
     countRegistryEntries:
       dependencies.countRegistryEntries ?? countRegistryEntriesDefault

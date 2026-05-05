@@ -5,7 +5,6 @@ import type {
   StopBubbleResult
 } from "./stopCommandContract.js";
 import { stopCommandDefaults } from "./stopCommandDefaults.js";
-import { executeStopCancellationMutation } from "../../defaults/stop/stopCancellationMutation.js";
 import {
   StopBubbleError,
   createStopBubbleError,
@@ -54,7 +53,7 @@ export async function stopBubbleCommandOrchestration(
 
   let written;
   try {
-    written = await executeStopCancellationMutation({
+    written = await stopCommandDefaults.executeStopCancellationMutation({
       statePath: resolved.bubblePaths.statePath,
       loadedState: loaded,
       nowIso,

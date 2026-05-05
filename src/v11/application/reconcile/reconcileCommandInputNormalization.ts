@@ -2,7 +2,6 @@ import type {
   ReconcileRuntimeSessionsInput,
   TmuxSessionLivenessProbe
 } from "./reconcileCommandContract.js";
-import { runTmux } from "../../defaults/tmux/tmuxRunnerDefaults.js";
 
 export interface NormalizedReconcileRuntimeSessionsInput {
   repoPath?: string;
@@ -11,26 +10,16 @@ export interface NormalizedReconcileRuntimeSessionsInput {
   isTmuxSessionAlive: TmuxSessionLivenessProbe;
 }
 
-export const isTmuxSessionAliveDefault: TmuxSessionLivenessProbe = async (
-  sessionName: string
-): Promise<boolean> => {
-  try {
-    const result = await runTmux(["has-session", "-t", sessionName], {
-      allowFailure: true
-    });
-    return result.exitCode === 0;
-  } catch {
-    return false;
-  }
-};
-
 export function normalizeReconcileRuntimeSessionsInput(
-  input: ReconcileRuntimeSessionsInput
+  input: ReconcileRuntimeSessionsInput,
+  defaults: {
+    isTmuxSessionAlive: TmuxSessionLivenessProbe;
+  }
 ): NormalizedReconcileRuntimeSessionsInput {
   return {
     ...(input.repoPath !== undefined ? { repoPath: input.repoPath } : {}),
     ...(input.cwd !== undefined ? { cwd: input.cwd } : {}),
     dryRun: input.dryRun ?? false,
-    isTmuxSessionAlive: input.isTmuxSessionAlive ?? isTmuxSessionAliveDefault
+    isTmuxSessionAlive: input.isTmuxSessionAlive ?? defaults.isTmuxSessionAlive
   };
 }

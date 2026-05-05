@@ -38,6 +38,7 @@ function createDependencies(
     readStateSnapshot: async () => {
       throw new Error("not used")
     },
+    isTmuxSessionAlive: async () => false,
     isFinalState: () => false,
     countRegistryEntries: (registry) => Object.keys(registry).length,
     ...overrides
