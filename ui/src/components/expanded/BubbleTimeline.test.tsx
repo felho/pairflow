@@ -1,10 +1,62 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
-import { timelineEntry } from "../../test/fixtures";
+import { protocolTimelineEntry, timelineEntry } from "../../test/fixtures";
 import { BubbleTimeline } from "./BubbleTimeline";
 
 describe("BubbleTimeline", () => {
+  it("freezes current protocol payload summary fallback order", () => {
+    render(
+      <BubbleTimeline
+        entries={[
+          protocolTimelineEntry({
+            id: "env-summary-wins",
+            payload: {
+              summary: "Summary wins.",
+              question: "Question loses.",
+              message: "Message loses.",
+              decision: "rework"
+            }
+          }),
+          protocolTimelineEntry({
+            id: "env-question-fallback",
+            payload: {
+              question: "Question fallback."
+            }
+          }),
+          protocolTimelineEntry({
+            id: "env-message-fallback",
+            payload: {
+              message: "Message fallback."
+            }
+          }),
+          protocolTimelineEntry({
+            id: "env-decision-fallback",
+            type: "APPROVAL_DECISION",
+            payload: {
+              decision: "approve"
+            }
+          }),
+          protocolTimelineEntry({
+            id: "env-missing-fallback",
+            payload: {}
+          })
+        ]}
+        isLoading={false}
+        error={null}
+        compact={false}
+      />
+    );
+
+    expect(screen.getByText("Summary wins.")).toBeInTheDocument();
+    expect(screen.queryByText("Question loses.")).not.toBeInTheDocument();
+    expect(screen.queryByText("Message loses.")).not.toBeInTheDocument();
+    expect(screen.getByText("Question fallback.")).toBeInTheDocument();
+    expect(screen.getByText("Message fallback.")).toBeInTheDocument();
+    expect(screen.getByText("decision=approve")).toBeInTheDocument();
+    expect(screen.getByText("(no summary payload)")).toBeInTheDocument();
+  });
+
   it("renders meta-reviewer actor as first-class role", () => {
     render(
       <BubbleTimeline
@@ -114,6 +166,46 @@ describe("BubbleTimeline", () => {
       screen.queryByText("implementer", { selector: "span.font-medium" })
     ).not.toBeInTheDocument();
     expect(screen.getByText("P2")).toBeInTheDocument();
+  });
+
+  it("keeps current orchestrator and convergence labels for system-like rows", () => {
+    render(
+      <BubbleTimeline
+        entries={[
+          protocolTimelineEntry({
+            id: "env-orchestrator-task",
+            type: "TASK",
+            sender: "orchestrator",
+            recipient: "codex",
+            payload: {
+              summary: "Task sent."
+            }
+          }),
+          protocolTimelineEntry({
+            id: "env-convergence",
+            type: "CONVERGENCE",
+            sender: "orchestrator",
+            recipient: "human",
+            payload: {
+              summary: "Converged."
+            }
+          })
+        ]}
+        isLoading={false}
+        error={null}
+        compact={false}
+      />
+    );
+
+    const taskRow = screen.getByText("Task sent.").closest("div.flex.items-start");
+    expect(taskRow).not.toBeNull();
+    expect(within(taskRow as HTMLElement).getByText("orchestrator")).toBeInTheDocument();
+
+    const convergenceRow = screen.getByText("Converged.").closest("div.flex.items-start");
+    expect(convergenceRow).not.toBeNull();
+    expect(
+      within(convergenceRow as HTMLElement).getByText("CONVERGENCE")
+    ).toBeInTheDocument();
   });
 
   it("renders only rerun meta-review gate handoffs as clean-run progress", () => {
@@ -442,6 +534,91 @@ describe("BubbleTimeline", () => {
     expect(screen.getByText("P3")).toBeInTheDocument();
   });
 
+  it("deduplicates finding severities and preserves fallback styling for unknown severity tags", () => {
+    render(
+      <BubbleTimeline
+        entries={[
+          protocolTimelineEntry({
+            id: "env-unknown-severity",
+            type: "APPROVAL_DECISION",
+            sender: "orchestrator",
+            recipient: "codex",
+            payload: {
+              decision: "rework",
+              message: "Apply rework.",
+              findings: [
+                { title: "blocking", severity: "P1" },
+                { title: "duplicate blocking", severity: "P1" },
+                { title: "future severity", severity: "PX" as never }
+              ]
+            }
+          })
+        ]}
+        isLoading={false}
+        error={null}
+        compact={false}
+      />
+    );
+
+    const p1Badges = screen
+      .getAllByText("P1")
+      .filter((node) => node.className.includes("inline-block"));
+    expect(p1Badges).toHaveLength(1);
+
+    const unknownBadge = screen.getByText("PX");
+    expect(unknownBadge).toBeInTheDocument();
+    expect(unknownBadge.className).toContain("text-slate-400");
+  });
+
+  it("renders current meta-review recommendation badge variants", () => {
+    render(
+      <BubbleTimeline
+        entries={[
+          protocolTimelineEntry({
+            id: "env-recommend-approve",
+            type: "APPROVAL_REQUEST",
+            payload: {
+              summary: "Approve recommendation.",
+              metadata: {
+                actor: "meta-reviewer",
+                latest_recommendation: "approve"
+              }
+            }
+          }),
+          protocolTimelineEntry({
+            id: "env-recommend-rework",
+            type: "APPROVAL_REQUEST",
+            payload: {
+              summary: "Rework recommendation.",
+              metadata: {
+                actor: "meta-reviewer",
+                latest_recommendation: "rework"
+              }
+            }
+          }),
+          protocolTimelineEntry({
+            id: "env-recommend-inconclusive",
+            type: "APPROVAL_REQUEST",
+            payload: {
+              summary: "Inconclusive recommendation.",
+              metadata: {
+                actor: "meta-reviewer",
+                latest_recommendation: "inconclusive"
+              }
+            }
+          })
+        ]}
+        isLoading={false}
+        error={null}
+        compact={false}
+      />
+    );
+
+    expect(screen.getByText("approve")).toBeInTheDocument();
+    expect(screen.getByText("rework")).toBeInTheDocument();
+    expect(screen.getByText("inconclusive")).toBeInTheDocument();
+  });
+
   it("renders clean-run count instead of approve until the required streak is met", () => {
     render(
       <BubbleTimeline
@@ -539,6 +716,36 @@ describe("BubbleTimeline", () => {
     expect(screen.getByText("clean 1")).toBeInTheDocument();
     expect(screen.getByText("clean 2")).toBeInTheDocument();
     expect(screen.getByText("approve")).toBeInTheDocument();
+  });
+
+  it("uses explicit meta-review clean-run metadata before the approval streak is complete", () => {
+    render(
+      <BubbleTimeline
+        entries={[
+          protocolTimelineEntry({
+            id: "env-explicit-clean-runs",
+            type: "APPROVAL_REQUEST",
+            sender: "orchestrator",
+            recipient: "human",
+            payload: {
+              summary: "Second explicit clean meta-review.",
+              metadata: {
+                actor: "meta-reviewer",
+                latest_recommendation: "approve",
+                consecutive_clean_runs: 2
+              }
+            }
+          })
+        ]}
+        isLoading={false}
+        error={null}
+        compact={false}
+        metaReviewCleanRunsRequired={3}
+      />
+    );
+
+    expect(screen.getByText("clean 2")).toBeInTheDocument();
+    expect(screen.queryByText("approve")).not.toBeInTheDocument();
   });
 
   it("resets clean-run count after a meta-review rework recommendation", () => {

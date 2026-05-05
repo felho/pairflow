@@ -5,7 +5,7 @@ task_family_id: timeline-rules-fixtures
 sequence_key: "1"
 task_id: 1-timeline-rules-fixtures
 title: "Timeline Rules and Fixtures"
-status: in_progress
+status: archived
 phase: phase1
 target_files:
   - ui/src/components/expanded/BubbleTimeline.test.tsx

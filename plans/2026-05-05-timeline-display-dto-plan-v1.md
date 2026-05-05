@@ -16,12 +16,13 @@ task_order:
   - 4-timeline-display-badges
   - 5-timeline-display-meta
   - 6-timeline-legacy-cleanup
-active_task_id: 1-timeline-rules-fixtures
+active_task_id: 2-timeline-display-contract
+last_completed_task_id: 1-timeline-rules-fixtures
 archive_group: 2026-05-05-timeline-display-dto-plan-v1
 task_tracker:
   - task_id: 1-timeline-rules-fixtures
-    task_path: plans/tasks/1-timeline-rules-fixtures.md
-    status: in_progress
+    task_path: plans/archive/tasks/2026-05-05-timeline-display-dto-plan-v1/1-timeline-rules-fixtures.md
+    status: archived
     notes: "Freeze current timeline display behavior and document the existing protocol-derived rendering rules before contract migration."
   - task_id: 2-timeline-display-contract
     task_path: null
@@ -197,7 +198,7 @@ React render only.
 
 | Task ID | Task Path | Purpose | Depends On | Closes Gap | Status |
 |---|---|---|---|---|---|
-| `1-timeline-rules-fixtures` | `plans/tasks/1-timeline-rules-fixtures.md` | Inventory the current timeline display rules and add/adjust golden fixtures so the existing behavior is testable before migration. Production/source files are read-only anchors; write scope is limited to focused UI tests and fixture helpers. | N/A | The current behavior is implicit inside React helpers and can regress during migration. | in_progress |
+| `1-timeline-rules-fixtures` | `plans/archive/tasks/2026-05-05-timeline-display-dto-plan-v1/1-timeline-rules-fixtures.md` | Inventory the current timeline display rules and add/adjust golden fixtures so the existing behavior is testable before migration. Production/source files are read-only anchors; write scope is limited to focused UI tests and fixture helpers. | N/A | The current behavior is implicit inside React helpers and can regress during migration. | archived |
 | `2-timeline-display-contract` | `null` | Introduce a UI-specific display DTO under `src/contracts/ui/**` and make `timelinePresenter.ts` emit it in parallel, with presenter tests. React render remains legacy in this task. | `1-timeline-rules-fixtures` | There is no explicit display-ready timeline contract. | not_created |
 | `3-timeline-display-basics` | `null` | Switch React title, sender label, role, base row state, and blocked/neutral state rendering to the display DTO, then delete the replaced UI payload helpers. | `2-timeline-display-contract` | Basic rendering still reads raw protocol payload and sender metadata. | not_created |
 | `4-timeline-display-badges` | `null` | Switch findings severity, decision, recommendation, and dedupe badge rendering to the display DTO, then delete the replaced UI payload helpers and fixtures. | `3-timeline-display-basics` | Badge rendering still depends on protocol findings/decision/recommendation fields in React. | not_created |
