@@ -1,7 +1,7 @@
 import type {
   ImportRemoteBubbleCommitContinuityInput,
   ImportRemoteBubbleCommitContinuityResult
-} from "../../../shared/commit/commitRemoteExecution.js";
+} from "../../../shared/remote/commitRemoteExecution.js";
 import { shellQuote } from "../../../shared/foundation/shellQuote.js";
 import { parseEnvelopeLine } from "../../../shared/protocol/envelope.js";
 import {
