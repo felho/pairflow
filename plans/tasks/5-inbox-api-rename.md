@@ -5,7 +5,7 @@ task_family_id: inbox-api-rename
 sequence_key: "5"
 task_id: 5-inbox-api-rename
 title: "Inbox API Rename"
-status: approved
+status: implementable
 phase: phase3
 target_files:
   - src/v11/shared/inbox/inboxCommandApi.ts
