@@ -161,7 +161,7 @@ Field rules:
 | `plan_review` | `ReviewPlan` | `CreatePairflowSpec` | `auto_continue` | `plan` | `not_applicable` | `not_applicable` | plan exists but is not execution-ready for task progression | delegate plan review/refinement only; do not create or mutate task execution state here |
 | `task_create` | `CreateTask` | `CreatePairflowSpec` | `auto_continue` | `task` | `not_applicable` | `not_applicable` | next canonical task is planned but no task artifact exists yet | create the next task only; do not start bubble work here |
 | `task_review` | `ReviewTask` | `CreatePairflowSpec` | `auto_continue` | `task` | `not_applicable` | `not_applicable` | active task exists but is not yet ready for bubble routing | review/refine task only; do not invent plan/bubble mutations here |
-| `document_bubble_create` | `CreateDocumentBubble` | `UsePairflow` | `stop_at_settled_checkpoint` | `document_bubble` | `not_applicable` | `not_applicable` | approved task has no document bubble linkage yet | create/start the doc bubble and persist `doc_bubble_id`; raw lifecycle follow-up stays with successor bubble routing |
+| `document_bubble_create` | `CreateDocumentBubble` | repo-local bubble handler -> `UsePairflow` | `stop_at_settled_checkpoint` | `document_bubble` | `not_applicable` | `not_applicable` | approved task has no document bubble linkage yet | create/start the ideation doc bubble, publish bounded admin linkage to `main`, verify refreshed postconditions, kickoff the same bubble, and stop at the kicked-off boundary |
 | `document_bubble_review` | `ReviewDocumentBubble` | `UsePairflow` | `stop_at_human_checkpoint` | `document_bubble` | `not_applicable` | `review_required` | normalized bubble signal says the doc bubble reached its review gate and no trusted multi-clean-meta-review auto-approval proof is present | produce deep-review output for human approval/rework; do not close the bubble here |
 | `document_bubble_close` | `CloseDocumentBubble` | `UsePairflow` | `auto_continue` | `document_bubble` | `not_applicable` | `already_satisfied` | normalized bubble signal says doc bubble is approved and ready to close after the separate review/approval path has already been satisfied, including trusted multi-clean-meta-review auto-approval proof when configured | close/merge cleanup only; on successful return the same-run owner goes back to top-level `ResolvePlanState` for fresh route selection |
 | `implementation_bubble_create` | `CreateImplementationBubble` | `UsePairflow` | `stop_at_settled_checkpoint` | `implementation_bubble` | `not_applicable` | `not_applicable` | task status is `implementable` and no impl bubble linkage exists yet | create/start the impl bubble, persist `impl_bubble_id`, and move task status to `in_progress`; raw lifecycle follow-up stays with successor bubble routing |
@@ -334,8 +334,10 @@ Execution note:
    fresh document bubble creation; before creating, it must read status for that
    id, reuse only a safe existing create carrier state, and fail closed rather
    than creating an alternate id
-3. successful create/start is not settled until the handler has persisted the
-   derived/created bubble id into task metadata as `doc_bubble_id`
+3. successful create/start is not settled until the handler has published the
+   derived/created bubble id into refreshed `main` task metadata as
+   `doc_bubble_id`, consumed `PublishPreKickoffAdmin` success proof, rechecked
+   the same ideation hold, and delegated same-bubble kickoff
 4. task status remains `approved`; the document bubble id is linkage only and
    does not prove document refinement
 
@@ -547,7 +549,7 @@ route_scope: document_bubble
 source_scope: not_applicable
 approval_gate_state: not_applicable
 reason_code: DOC_BUBBLE_CREATE_REQUIRED
-handoff_boundary_note: Start the doc bubble through UsePairflow, persist doc_bubble_id, and stop at the bubble-started boundary.
+handoff_boundary_note: Start or reuse the ideation doc bubble, publish bounded admin linkage to main through PublishPreKickoffAdmin, verify refreshed postconditions, kickoff the same bubble, and stop at the kicked-off boundary.
 ```
 
 ### Example 5: Bubble layer already normalized a review gate

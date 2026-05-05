@@ -147,7 +147,10 @@ draft -> under_review -> approved -> implementable -> in_progress -> done -> arc
 
 Document-refinement lifecycle:
 
-1. `CreateDocumentBubble` persists `doc_bubble_id` immediately after successful create/start while leaving `status=approved`.
+1. `CreateDocumentBubble` writes `doc_bubble_id` as bounded pre-kickoff admin
+   in the ideation bubble worktree, publishes it to clean `main` through
+   `PublishPreKickoffAdmin`, verifies refreshed `main` metadata, and then
+   kicks off the same document bubble while leaving `status=approved`.
 2. `doc_bubble_id` alone never authorizes implementation-bubble creation.
 3. `CloseDocumentBubble` sets `status=implementable` only after the document bubble's approval path is satisfied and close/merge cleanup succeeds.
 4. If a linked document bubble is missing or unreadable while `status=approved`, route to troubleshooting or a human checkpoint. Do not infer document refinement from bubble absence.

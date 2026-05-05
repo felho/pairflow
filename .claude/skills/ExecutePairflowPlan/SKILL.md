@@ -47,7 +47,7 @@ This skill does not own:
 | `ReviewPlan` | review or refine plan-level readiness before task progression | `CreatePairflowSpec` `ReviewSpec` in `plan-mode` |
 | `CreateTask` | create the next executable task from the plan | `CreatePairflowSpec` `CreateTask` |
 | `ReviewTask` | review/refine the active task before bubble work | `CreatePairflowSpec` `ReviewSpec` in `task-mode` |
-| `CreateDocumentBubble` | stable route surface for document-bubble create/start | `HandleDocumentBubble` -> `UsePairflow` `CreateBubble` |
+| `CreateDocumentBubble` | stable route surface for document-bubble create/start, pre-kickoff admin publish, and same-bubble kickoff | `HandleDocumentBubble` -> `UsePairflow` `CreateBubble` + `PublishPreKickoffAdmin` + `UsePairflow` `InterveneBubble` |
 | `ReviewDocumentBubble` | stable route surface for document-bubble deep review at the approval gate | `HandleDocumentBubble` -> `UsePairflow` `ReviewBubble` |
 | `CloseDocumentBubble` | stable route surface for document-bubble approve/merge/cleanup after approval is already satisfied | `HandleDocumentBubble` -> `UsePairflow` `CloseBubble` |
 | `CreateImplementationBubble` | stable route surface for implementation-bubble create/start | `HandleImplementationBubble` -> `UsePairflow` `CreateBubble` |
@@ -62,7 +62,7 @@ This skill does not own:
 |---|---|---|
 | `HandleDocumentBubble` | repo-local owner for document-bubble lifecycle interpretation, `UsePairflow` delegation, and normalized bubble outputs | no; it backs document-bubble route surfaces |
 | `HandleImplementationBubble` | repo-local owner for implementation-bubble lifecycle interpretation, `UsePairflow` delegation, and normalized bubble outputs | no; it backs implementation-bubble route surfaces |
-| `PublishPreKickoffAdmin` | repo-local manual operator workflow for publishing bounded ideation bubble admin changes to clean `main` and returning structured no-kickoff publish proof | no; successor route-integration tasks may call it before kickoff |
+| `PublishPreKickoffAdmin` | repo-local manual operator workflow for publishing bounded ideation bubble admin changes to clean `main` and returning structured no-kickoff publish proof | no; the document-bubble create route consumes it before kickoff, and successor route-integration tasks may adopt it for other routes later |
 | `UpdateProgress` | repo-local owner for normal post-implementation progress reconciliation, canonical archive aftermath, and local pilot proof after successful `CloseImplementationBubble` return | no; it is entered only after the existing close route returns settled success |
 
 Route-surface rule:
@@ -79,13 +79,14 @@ Route-surface rule:
    - `route_class` values returned by `ResolvePlanState` stay in snake_case
    - example: `route_class=troubleshoot_bubble` targets `TroubleshootBubble`
 
-### Optional Pre-Kickoff Admin Route Contract
+### Pre-Kickoff Admin Route Contract
 
-`ExecutePairflowPlan` owns route selection for any future workflow that uses an
+`ExecutePairflowPlan` owns route selection for workflow slices that use an
 ideation-created bubble as a bounded pre-kickoff admin container. This is a
-route contract only; existing document and implementation bubble routes remain
-valid until a successor task explicitly adopts the pattern for one route at a
-time.
+route contract only. In the current slice, only `CreateDocumentBubble` has
+adopted the pattern; the implementation-bubble create/start route remains on
+its existing path until a successor task explicitly adopts the same pattern for
+that route.
 
 Baseline dependency:
 
@@ -93,7 +94,7 @@ Baseline dependency:
    start/round-0 hold, `ideation.task_pending=true`, and kickoff primitives.
 2. This skill may rely on those primitives, but it must not redefine ideation,
    rename mode flags, or move lifecycle ownership into `ExecutePairflowPlan`.
-3. The optional route sequence is:
+3. The adopted document-route sequence is:
    `create --ideation -> start/round-0 hold -> bounded admin in bubble worktree -> commit -> publish to main -> verify -> kickoff`.
 
 Admin scope:
@@ -114,14 +115,16 @@ Publish proof:
    operator path for proving a bounded admin commit was published to clean
    `main`, refreshed metadata or selected artifact-content postconditions were
    re-read, and refreshed ideation hold evidence still allows later kickoff
-2. future integrated routes must consume that structured proof, or an explicit
+2. the integrated `CreateDocumentBubble` route must consume that structured
+   proof before kickoff
+3. future integrated routes must consume that structured proof, or an explicit
    successor-owned equivalent, before kickoff
-3. an unmerged bubble-worktree commit, transcript prose, operator memory, or
+4. an unmerged bubble-worktree commit, transcript prose, operator memory, or
    stale pre-publish metadata is never proof that lifecycle-relevant admin state
    reached `main`
-4. if proof of admin scope, commit identity, publish result, or refreshed
+5. if proof of admin scope, commit identity, publish result, or refreshed
    postcondition is absent or ambiguous, the workflow must stop before kickoff
-5. failed admin publish, partial publish, or unknown publish state must not be
+6. failed admin publish, partial publish, or unknown publish state must not be
    converted into kickoff by fallback reasoning
 
 ## Delegation Enforcement Contract
@@ -146,7 +149,7 @@ Mandatory route-to-delegation mapping:
 | `ReviewPlan` | `CreatePairflowSpec` `ReviewSpec` in `plan-mode` | `approve_plan`, `refine_plan`, `split_plan`, or `block_not_ready`; if `refine_plan` changes the plan, rerun `ReviewSpec` in fresh `plan-mode` context before any downstream route may advance |
 | `CreateTask` | `CreatePairflowSpec` `CreateTask` | created/refined task path plus task metadata status |
 | `ReviewTask` | `CreatePairflowSpec` `ReviewSpec` in `task-mode` | `approve_task`, `refine_task`, `route_back_to_plan`, or `block_not_ready`; if `refine_task` changes the task, rerun `ReviewSpec` in fresh `task-mode` context before any downstream route may advance |
-| `CreateDocumentBubble` | repo-local `HandleDocumentBubble` delegating to `UsePairflow` `CreateBubble` | created/started document bubble id, persisted `doc_bubble_id` linkage, and boundary status |
+| `CreateDocumentBubble` | repo-local `HandleDocumentBubble` delegating create/start to `UsePairflow` `CreateBubble`, consuming `PublishPreKickoffAdmin` proof, and delegating same-bubble ideation kickoff to `UsePairflow` `InterveneBubble` after refreshed postconditions | created/started ideation document bubble id, persisted `doc_bubble_id` linkage on `main`, structured publish success with refreshed postconditions, audited same-bubble kickoff result, and boundary status |
 | `ReviewDocumentBubble` | repo-local `HandleDocumentBubble` delegating to `UsePairflow` `ReviewBubble` | review result and human approval/rework checkpoint; skipped when the handler emits a close route from trusted multi-clean-meta-review auto-approval proof |
 | `CloseDocumentBubble` | repo-local `HandleDocumentBubble` delegating to `UsePairflow` `CloseBubble` | close/merge result, including `merge_conflict_recovered` when CloseBubble safely resolved and retried a bounded merge conflict; bubble artifact deletion or explicit retained-bubble reason; and refreshed task status evidence proving `status=implementable` |
 | `CreateImplementationBubble` | repo-local `HandleImplementationBubble` delegating to `UsePairflow` `CreateBubble` | created/started implementation bubble id, persisted `impl_bubble_id` linkage, `status=in_progress`, and boundary status |
@@ -303,7 +306,13 @@ Policy notes:
 
 1. `ReviewPlan` and `ReviewTask` remain `auto_continue` routes because their outputs can often be consumed mechanically inside the same artifact-refinement loop without crossing a human approval gate
 2. `CreateTask` remains `auto_continue` because task creation extends the same plan/task artifact loop and usually leaves the orchestrator with enough trusted local state to continue directly into task review
-3. `CreateDocumentBubble` and `CreateImplementationBubble` stop at a settled checkpoint because bubble creation hands control into the Pairflow lifecycle layer after required task-metadata linkage/status postconditions are persisted; later review/close routing depends on successor-owned normalized bubble outputs rather than immediate top-level continuation
+3. `CreateDocumentBubble` stops at a settled checkpoint only after the document
+   route has created or reused the ideation carrier, published required admin
+   linkage to `main`, verified refreshed postconditions, and kicked off the same
+   bubble. `CreateImplementationBubble` keeps the previous settled checkpoint
+   rule after required task-metadata linkage/status postconditions are
+   persisted. Later review/close routing depends on successor-owned normalized
+   bubble outputs rather than immediate top-level continuation.
 4. `ReviewDocumentBubble` and `ReviewImplementationBubble` stop at a human checkpoint when the bubble handler emits a review route; however, if the handler proves the bubble reached `READY_FOR_HUMAN_APPROVAL` with `reviewPolicy.meta_review_consecutive_clean_runs_required > 1` and `metaReview.consecutiveCleanRuns` meeting that threshold, it should emit the corresponding close route instead of a review route
 5. `document_bubble_close` and `implementation_bubble_close` may auto-continue only when `ResolvePlanState` returns them with `approval_gate_state=already_satisfied`; the top-level skill must never infer approval from raw Pairflow state, but it may consume a bubble handler's normalized auto-approval proof as part of the close route
 6. a close route is not settled merely because merge succeeded; the delegated close result must also prove bubble artifact deletion/cleanup or provide an explicit retained-bubble reason that is safe to carry forward
