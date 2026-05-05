@@ -5,7 +5,7 @@ task_family_id: list-runtime-cutover
 sequence_key: "10"
 task_id: 10-list-runtime-cutover
 title: "List Runtime Consumer Cutover"
-status: implementable
+status: in_progress
 phase: phase4
 target_files:
   # Runtime transition boundary to remove after consumer proof.
@@ -50,7 +50,7 @@ normative_refs:
 owners:
   - "felho"
 doc_bubble_id: 10-list-runtime-cutover-doc
-impl_bubble_id: null
+impl_bubble_id: 10-list-runtime-cutover-impl
 supersedes: []
 superseded_by: null
 archive_group: 2026-05-05-shared-command-boundary-cleanup-plan-v1
