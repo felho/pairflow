@@ -1,11 +1,14 @@
-import type { FindingsParityMetadata } from "../../../../types/protocol.js";
-import type { MetaReviewResult } from "../../metaReview/metaReviewTypes.js";
+import type { FindingsParityMetadata } from "../../../types/protocol.js";
 
-export function mergeRunResultWithParityResolution(input: {
-  runResult: MetaReviewResult;
+interface RunResultWithReportJson {
+  report_json?: Record<string, unknown>;
+}
+
+export function mergeRunResultWithParityResolution<Result extends RunResultWithReportJson>(input: {
+  runResult: Result;
   metadata: FindingsParityMetadata | null;
   diagnostics: string[];
-}): MetaReviewResult {
+}): Result {
   if (input.metadata === null && input.diagnostics.length === 0) {
     return input.runResult;
   }
