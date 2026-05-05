@@ -23,6 +23,7 @@ The fitness system is a guardrail, not the architecture itself.
 - executable checks: `tools/fitness/checks/**`
 - placement policy: [v11-placement-and-extraction-governance.md](/Users/felho/dev/pairflow/docs/architecture/v11-placement-and-extraction-governance.md)
 - ports policy: [v11-ports-governance.md](/Users/felho/dev/pairflow/docs/architecture/v11-ports-governance.md)
+- internal module boundary policy: [v11-internal-module-boundaries.md](/Users/felho/dev/pairflow/docs/architecture/v11-internal-module-boundaries.md)
 
 ## Enforcement Modes
 

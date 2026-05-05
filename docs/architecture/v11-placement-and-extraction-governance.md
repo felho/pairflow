@@ -111,6 +111,10 @@ Do not create `infrastructure/protocol/**` by default only because a module ment
 For explicit capability-boundary rules between `application` and
 `infrastructure`, see [v11-ports-governance.md](/Users/felho/dev/pairflow/docs/architecture/v11-ports-governance.md).
 
+For explicit public/private module boundaries inside `v11`, including the
+`internal/` directory convention, see
+[v11-internal-module-boundaries.md](/Users/felho/dev/pairflow/docs/architecture/v11-internal-module-boundaries.md).
+
 ## Default Placement Rule
 
 When extracting code into `v11`, place it in the narrowest correct scope first.
@@ -127,6 +131,12 @@ Do not move code directly into `shared` only because:
 - it is called a helper,
 - it might be reused later,
 - the correct owner is not yet clear.
+
+If a `shared/**` directory has grown into a real bounded module, do not treat
+`shared` placement as proof that every file in that directory is a public shared
+contract. Use an explicit public surface and `internal/` boundary where needed,
+then move pure policy or orchestration slices to their correct `domain` or
+`application` owner when their placement is clear.
 
 ## Shared Promotion Rule
 
