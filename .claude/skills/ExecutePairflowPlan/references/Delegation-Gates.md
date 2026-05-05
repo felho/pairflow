@@ -112,13 +112,30 @@ by one of these authorizations.
 
 ## ReviewSpec Hard Stop
 
-For `ReviewPlan` and `ReviewTask`, local inspection is never sufficient.
+For `ReviewPlan`, `CreateTask` approval, and `ReviewTask`, local inspection is
+never sufficient.
 
-1. If sub-agents are available, fresh sub-agent delegation is mandatory.
-2. If sub-agents are unavailable, create a distinct compact workflow step that
+1. Invoking `ExecutePairflowPlan` explicitly authorizes every mandatory
+   downstream delegation required by this skill, including fresh sub-agent
+   `CreatePairflowSpec ReviewSpec` passes for `ReviewPlan`, `CreateTask`, and
+   `ReviewTask` when the runtime exposes a sub-agent tool.
+2. If sub-agents are available, fresh sub-agent delegation is mandatory.
+3. If sub-agents are unavailable, create a distinct compact workflow step that
    rereads the refreshed artifact and returns an explicit ReviewSpec decision.
-3. Reading `ReviewSpec.md` and applying its rules in the orchestrator context
+4. Reading `ReviewSpec.md` and applying its rules in the orchestrator context
    does not satisfy the gate.
+5. A "separate local step" is valid only when the runtime lacks sub-agent
+   support. If sub-agents are available and no sub-agent id/result is recorded,
+   stop with `REVIEW_SPEC_DELEGATION_MISSING`.
+6. `CreateTask` routes inherit this hard stop before any
+   `status=approved` write: the initial task may be drafted or proposed, but
+   approval requires a fresh sub-agent `ReviewSpec task-mode` decision over the
+   exact refreshed task artifact and parent plan.
+7. If a ReviewSpec pass returns `refine_task` or `refine_plan` and any artifact
+   changes, rerun the same ReviewSpec mode in a new fresh sub-agent over the
+   refreshed artifact until the decision is `approve_task`, `approve_plan`,
+   `route_back_to_plan`, `split_task`, `split_plan`, `block_not_ready`, or a
+   real blocker.
 
 ## Common Violation
 
@@ -138,8 +155,8 @@ Correct:
 ```text
 Resolve route=task_review.
 Append route ledger entry with delegated_result=null.
-Delegate CreatePairflowSpec ReviewSpec task-mode in fresh context.
-Record the returned decision in the route ledger.
+Delegate CreatePairflowSpec ReviewSpec task-mode in fresh sub-agent context.
+Record the sub-agent id and returned decision in the route ledger.
 Only if decision=approve_task, update status=approved and continue.
 ```
 

@@ -207,15 +207,39 @@ Plan/task review gates:
 5. no bubble route may be executed unless every upstream plan/task route in the current execution chain has a route-ledger entry with a delegated result
 6. if a delegated `ReviewSpec` returns `refine_plan` or `refine_task` and the artifact is modified, the same review mode must be delegated again from a fresh context using the refreshed artifact before the route can be considered approved
 7. a refinement loop is settled only by `approve_plan`, `approve_task`, `split_plan`, `route_back_to_plan`, `block_not_ready`, or a real blocker; the orchestrator must not treat its own post-edit inspection as a replacement for the repeated `ReviewSpec` result
-8. for `ReviewPlan` and `ReviewTask`, sub-agent delegation is mandatory whenever the runtime supports it; if unavailable, the substitute must be an explicitly separate compact workflow step, not blended local reasoning
-9. `status=approved` may be written or committed only after the route ledger contains `ReviewSpec task-mode decision=approve_task` for the latest task artifact
+8. invoking `ExecutePairflowPlan` explicitly authorizes mandatory downstream
+   delegation required by this skill; this includes fresh sub-agent
+   `CreatePairflowSpec ReviewSpec` passes for `ReviewPlan`, `CreateTask`, and
+   `ReviewTask` whenever the runtime supports sub-agents
+9. for `ReviewPlan`, `CreateTask`, and `ReviewTask`, sub-agent delegation is
+   mandatory whenever the runtime supports it; if unavailable, the substitute
+   must be an explicitly separate compact workflow step, not blended local
+   reasoning
+10. `CreateTask` may draft or propose the initial task artifact, but any
+   transition to `status=approved` requires a fresh sub-agent `ReviewSpec
+   task-mode` result for the exact refreshed task artifact and parent plan
+11. if a `ReviewSpec` pass returns `refine_plan` or `refine_task` and any
+   artifact changes, rerun the same mode in a new fresh sub-agent over the
+   refreshed artifact; repeat until the result is `approve_plan`,
+   `approve_task`, `route_back_to_plan`, `split_plan`, `split_task`,
+   `block_not_ready`, or a real blocker
+12. if sub-agents are available and no sub-agent id/result is recorded for a
+   required ReviewSpec pass, stop with `REVIEW_SPEC_DELEGATION_MISSING`
+13. `status=approved` may be written or committed only after the route ledger contains `ReviewSpec task-mode decision=approve_task` for the latest task artifact
 
 Fresh-context requirement:
 
 1. downstream specialized workflows must run in fresh context whenever feasible
 2. if the execution environment cannot spawn a fresh context, the orchestrator must still create a distinct workflow step with a compact input packet and a compact returned result
 3. the returned result, not the orchestrator's private reasoning, is the authority for the next routing decision
-4. every repeated `ReviewSpec` pass after a refinement must use a fresh context whenever feasible; if a fresh sub-agent is unavailable, create a distinct compact workflow step that rereads the refreshed artifact and returns a new explicit ReviewSpec decision
+4. every repeated `ReviewSpec` pass after a refinement must use a fresh
+   sub-agent context whenever the runtime supports it; if a fresh sub-agent is
+   unavailable, create a distinct compact workflow step that rereads the
+   refreshed artifact and returns a new explicit ReviewSpec decision
+5. route-ledger evidence for sub-agent ReviewSpec passes must record the
+   sub-agent id or explicit unavailability reason, the reviewed artifact path or
+   refreshed content version, the decision, and any required refinement loop
+   continuation
 
 ### Route Ledger
 
@@ -337,9 +361,16 @@ Practical rule:
 
 1. keep only orchestration state in the top-level context
 2. pass the minimum correct artifact context to the delegated workflow
-3. use a fresh sub-agent execution whenever the runtime supports it and the user has authorized delegated/sub-agent workflow execution
-4. when fresh sub-agent execution is unavailable or not authorized, create a distinct local workflow step with a compact input packet and a compact returned result instead of blending the downstream workflow into orchestration reasoning
-5. do not advance from `ReviewPlan`, `CreateTask`, `ReviewTask`, bubble handler, or aftermath routes without a route-ledger result from that distinct workflow step
+3. treat invocation of `ExecutePairflowPlan` as authorization for mandatory
+   downstream delegation required by this skill, including fresh sub-agent
+   ReviewSpec passes
+4. use a fresh sub-agent execution whenever the runtime supports it
+5. when fresh sub-agent execution is unavailable, create a distinct local
+   workflow step with a compact input packet and a compact returned result
+   instead of blending the downstream workflow into orchestration reasoning
+6. do not advance from `ReviewPlan`, `CreateTask`, `ReviewTask`, bubble handler,
+   or aftermath routes without a route-ledger result from that distinct workflow
+   step
 
 ### 4. Continuation-mode policy
 
