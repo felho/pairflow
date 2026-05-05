@@ -96,7 +96,7 @@ export async function validateExtractPathSelection(input: {
   command: ExtractCommandInput;
   resolvedBubble: ResolvedBubbleById;
   targetRepoPath: string;
-  dependencies: Pick<ExtractCommandDependencies, "fileInfo">;
+  dependencies: Pick<ExtractCommandDependencies, "fileInfo" | "runGit">;
 }): Promise<
   | { status: "path_selection_passed"; selectedPaths: ExtractSelectedPath[] }
   | ExtractCommandResult
@@ -124,7 +124,7 @@ async function validateSingleSelectedPath(input: {
   command: ExtractCommandInput;
   resolvedBubble: ResolvedBubbleById;
   targetRepoPath: string;
-  dependencies: Pick<ExtractCommandDependencies, "fileInfo">;
+  dependencies: Pick<ExtractCommandDependencies, "fileInfo" | "runGit">;
   rawPath: string;
 }): Promise<ExtractSelectedPath | ExtractCommandResult> {
   const normalized = normalizeSelectedPath(input.rawPath);
@@ -235,7 +235,7 @@ async function validateTargetPath(input: {
   command: ExtractCommandInput;
   resolvedBubble: ResolvedBubbleById;
   targetRepoPath: string;
-  dependencies: Pick<ExtractCommandDependencies, "fileInfo">;
+  dependencies: Pick<ExtractCommandDependencies, "fileInfo" | "runGit">;
   rawPath: string;
   normalizedPath: string;
   sourcePath: string;
@@ -246,6 +246,16 @@ async function validateTargetPath(input: {
     return buildTargetPathFailure(input, input.targetPath);
   }
 
+  const trackedTargetFailure = await validateTargetPathIsNotTracked(input);
+  if (trackedTargetFailure !== null) {
+    return trackedTargetFailure;
+  }
+
+  const trackedParentCollision = await findTrackedTargetParentCollision(input);
+  if (trackedParentCollision !== null) {
+    return buildTargetPathFailure(input, trackedParentCollision);
+  }
+
   const parentCollision = await findTargetParentCollision({
     targetRepoPath: input.targetRepoPath,
     normalizedPath: input.normalizedPath,
@@ -254,6 +264,55 @@ async function validateTargetPath(input: {
   return parentCollision === null
     ? null
     : buildTargetPathFailure(input, parentCollision);
+}
+
+async function validateTargetPathIsNotTracked(input: {
+  command: ExtractCommandInput;
+  resolvedBubble: ResolvedBubbleById;
+  targetRepoPath: string;
+  dependencies: Pick<ExtractCommandDependencies, "runGit">;
+  rawPath: string;
+  normalizedPath: string;
+  sourcePath: string;
+  targetPath: string;
+}): Promise<ExtractCommandResult | null> {
+  try {
+    const result = await input.dependencies.runGit(
+      ["cat-file", "-e", `HEAD:${input.normalizedPath}`],
+      { cwd: input.targetRepoPath, allowFailure: true }
+    );
+    if (result.exitCode === 0) {
+      return buildTargetPathFailure(input, input.targetPath);
+    }
+    return null;
+  } catch {
+    return buildTargetPathFailure(input, input.targetPath);
+  }
+}
+
+async function findTrackedTargetParentCollision(input: {
+  targetRepoPath: string;
+  normalizedPath: string;
+  dependencies: Pick<ExtractCommandDependencies, "runGit">;
+}): Promise<string | null> {
+  const parentSegments = input.normalizedPath.split("/").slice(0, -1);
+
+  for (let index = 1; index <= parentSegments.length; index += 1) {
+    const normalizedParentPath = parentSegments.slice(0, index).join("/");
+    try {
+      const result = await input.dependencies.runGit(
+        ["cat-file", "-t", `HEAD:${normalizedParentPath}`],
+        { cwd: input.targetRepoPath, allowFailure: true }
+      );
+      if (result.exitCode === 0 && result.stdout.trim() !== "tree") {
+        return join(input.targetRepoPath, normalizedParentPath);
+      }
+    } catch {
+      return join(input.targetRepoPath, normalizedParentPath);
+    }
+  }
+
+  return null;
 }
 
 function isConfirmedSourceReadable(info: {

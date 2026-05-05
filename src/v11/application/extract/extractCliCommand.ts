@@ -30,15 +30,15 @@ export function getBubbleExtractHelpText(): string {
     "  --id <id>             Ideation bubble id",
     "  --path <path>         Explicit selected artifact path (repeatable)",
     "  --repo <path>         Optional target repository path (defaults to cwd ancestry lookup)",
-    "  --commit              Record intent to commit selected paths in a later implementation phase",
+    "  --commit              Stage and commit exactly the selected paths after copying",
     "  --message <text>      Optional commit message intent; requires --commit",
     "  --json                Print structured JSON output",
     "  -h, --help            Show this help",
     "",
     "Notes:",
     "  Requires ideation.mode=true in bubble metadata.",
-    "  This contract validates command and checkout preconditions only; file transfer and git commit execution are not implemented in this phase.",
-    "  Existing target-path conflicts are fail-closed successor validation owned by the path-selection phase."
+    "  Requires explicit paths under plans/, docs/, or progress/.",
+    "  Existing target-path conflicts fail closed; extract does not close, merge, or delete the source bubble."
   ].join("\n");
 }
 
@@ -113,18 +113,41 @@ export function parseBubbleExtractCommandOptions(
 }
 
 export function renderBubbleExtractText(result: ExtractCommandResult): string {
-  const pathCount = result.paths.length;
-  if (result.status === "implementation_deferred") {
-    return [
-      `Extract preconditions passed for ${result.bubbleId}: ${pathCount} selected path(s).`,
-      "Transfer is not implemented in this phase; no files were copied, staged, or committed.",
-      `reason=${result.reasonCode}`
-    ].join(" ");
+  if (result.status === "success") {
+    const copied = `Extracted ${result.bubbleId}: copied ${result.copiedPaths.length} selected path(s).`;
+    if (result.commitSha !== undefined) {
+      return [
+        copied,
+        `Committed ${result.commitSha} with message: ${result.commitMessage ?? ""}`
+      ].join(" ");
+    }
+    return copied;
   }
+
+  const copiedCount = result.diagnostics?.copiedPaths?.length ?? 0;
+  const stagedCount = result.diagnostics?.stagedPaths?.length ?? 0;
+  const sideEffects: string[] = [];
+  if (copiedCount > 0) {
+    sideEffects.push(`copied ${copiedCount} selected path(s)`);
+  }
+  if (stagedCount > 0) {
+    sideEffects.push(`staged ${stagedCount} path(s)`);
+  }
+  if (
+    result.diagnostics?.gitStep === "resolve_commit_sha"
+    || result.diagnostics?.gitStep === "update_head"
+  ) {
+    sideEffects.push("a commit may already exist");
+  }
+
+  const sideEffectText =
+    sideEffects.length === 0
+      ? "No files were copied, staged, or committed."
+      : `Partial side effects may remain: ${sideEffects.join(", ")}.`;
 
   return [
     `Extract failed for ${result.bubbleId}: ${result.reasonCode}.`,
-    "No files were copied, staged, or committed."
+    sideEffectText
   ].join(" ");
 }
 

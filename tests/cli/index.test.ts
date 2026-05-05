@@ -1,4 +1,4 @@
-import { chmod, mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { chmod, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -213,7 +213,7 @@ describe("runCli", () => {
     expect(output).not.toContain("--delete-bubble");
   });
 
-  it("returns zero for bubble extract when preconditions pass and transfer is deferred", async () => {
+  it("returns zero for bubble extract when selected files are copied without closing the source bubble", async () => {
     const repoPath = await mkdtemp(join(tmpdir(), "pairflow-cli-extract-"));
     tempDirs.push(repoPath);
     await initGitRepository(repoPath);
@@ -247,8 +247,112 @@ describe("runCli", () => {
 
       expect(exitCode).toBe(0);
       const output = stdoutSpy.mock.calls.map((call) => String(call[0])).join("");
-      expect(output).toContain(`Extract preconditions passed for ${bubble.bubbleId}`);
-      expect(output).toContain("Transfer is not implemented");
+      expect(output).toContain(`Extracted ${bubble.bubbleId}: copied 1 selected path(s).`);
+      await expect(readFile(join(repoPath, "docs", "idea.md"), "utf8"))
+        .resolves.toBe("# Extracted idea\n");
+      await expect(readFile(bubble.paths.bubbleTomlPath, "utf8"))
+        .resolves.toContain(`id = "${bubble.bubbleId}"`);
+    } finally {
+      process.chdir(previousCwd);
+    }
+  });
+
+  it("commits selected files through bubble extract --commit using real git side effects", async () => {
+    const repoPath = await mkdtemp(join(tmpdir(), "pairflow-cli-extract-commit-"));
+    tempDirs.push(repoPath);
+    await initGitRepository(repoPath);
+    const bubble = await createBubble({
+      repoPath,
+      id: "b_cli_extract_commit_01",
+      baseBranch: "main",
+      reviewArtifactType: "code",
+      ideation: true,
+      cwd: repoPath
+    });
+    await mkdir(join(bubble.paths.worktreePath, "docs"), { recursive: true });
+    await writeFile(
+      join(bubble.paths.worktreePath, "docs", "idea.md"),
+      "# Committed idea\n",
+      "utf8"
+    );
+    await runGit(repoPath, ["add", ".pairflow"]);
+    await runGit(repoPath, ["commit", "-m", "test: add commit ideation bubble"]);
+
+    const previousCwd = process.cwd();
+    try {
+      process.chdir(repoPath);
+      const exitCode = await runCli([
+        "bubble",
+        "extract",
+        "--id",
+        bubble.bubbleId,
+        "--path",
+        "docs/idea.md",
+        "--commit",
+        "--message",
+        "docs: extract committed idea"
+      ]);
+
+      expect(exitCode).toBe(0);
+      const output = stdoutSpy.mock.calls.map((call) => String(call[0])).join("");
+      expect(output).toContain(`Extracted ${bubble.bubbleId}: copied 1 selected path(s).`);
+      expect(output).toContain("Committed ");
+      expect(output).toContain("with message: docs: extract committed idea");
+      await expect(readFile(join(repoPath, "docs", "idea.md"), "utf8"))
+        .resolves.toBe("# Committed idea\n");
+      await expect(runGit(repoPath, ["log", "-1", "--format=%s"]))
+        .resolves.toMatchObject({ stdout: "docs: extract committed idea\n" });
+      await expect(runGit(repoPath, ["show", "HEAD:docs/idea.md"]))
+        .resolves.toMatchObject({ stdout: "# Committed idea\n" });
+      await expect(runGit(repoPath, ["status", "--porcelain"]))
+        .resolves.toMatchObject({ stdout: "" });
+    } finally {
+      process.chdir(previousCwd);
+    }
+  });
+
+  it("commits explicitly selected ignored files through bubble extract --commit", async () => {
+    const repoPath = await mkdtemp(join(tmpdir(), "pairflow-cli-extract-ignored-"));
+    tempDirs.push(repoPath);
+    await initGitRepository(repoPath);
+    await writeFile(join(repoPath, ".gitignore"), "docs/ignored.md\n", "utf8");
+    const bubble = await createBubble({
+      repoPath,
+      id: "b_cli_extract_ignored_01",
+      baseBranch: "main",
+      reviewArtifactType: "code",
+      ideation: true,
+      cwd: repoPath
+    });
+    await mkdir(join(bubble.paths.worktreePath, "docs"), { recursive: true });
+    await writeFile(
+      join(bubble.paths.worktreePath, "docs", "ignored.md"),
+      "# Ignored but selected\n",
+      "utf8"
+    );
+    await runGit(repoPath, ["add", ".gitignore", ".pairflow"]);
+    await runGit(repoPath, ["commit", "-m", "test: add ignored ideation bubble"]);
+
+    const previousCwd = process.cwd();
+    try {
+      process.chdir(repoPath);
+      const exitCode = await runCli([
+        "bubble",
+        "extract",
+        "--id",
+        bubble.bubbleId,
+        "--path",
+        "docs/ignored.md",
+        "--commit",
+        "--message",
+        "docs: extract ignored artifact"
+      ]);
+
+      expect(exitCode).toBe(0);
+      await expect(runGit(repoPath, ["show", "HEAD:docs/ignored.md"]))
+        .resolves.toMatchObject({ stdout: "# Ignored but selected\n" });
+      await expect(runGit(repoPath, ["status", "--porcelain"]))
+        .resolves.toMatchObject({ stdout: "" });
     } finally {
       process.chdir(previousCwd);
     }
@@ -291,7 +395,7 @@ describe("runCli", () => {
 
       expect(exitCode).toBe(0);
       const output = stdoutSpy.mock.calls.map((call) => String(call[0])).join("");
-      expect(output).toContain(`Extract preconditions passed for ${bubble.bubbleId}`);
+      expect(output).toContain(`Extracted ${bubble.bubbleId}: copied 1 selected path(s).`);
       expect(output).not.toContain("EXTRACT_BUBBLE_NOT_FOUND");
     } finally {
       process.chdir(previousCwd);
