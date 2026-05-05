@@ -5,7 +5,7 @@ task_family_id: shared-command-fitness
 sequence_key: "13"
 task_id: 13-shared-command-fitness
 title: "Shared Command Fitness"
-status: approved
+status: implementable
 phase: phase5
 target_files:
   - tools/fitness/checks/dependency.ts
@@ -143,6 +143,13 @@ under `src/v11/shared/<command>/**`.
 6. Why the declared task shape matches reality: prior tasks completed source
    cleanup first; this slice can now update guardrails without working around
    transitional source paths.
+7. Document-bubble inventory refinement: if the focused old-path search finds
+   active test strings such as `src/v11/shared/inbox` or
+   `../../shared/inbox/inboxCommandApi`, classify whether they are negative
+   assertions that forbid the old boundary or positive fixtures that still
+   accept it. Negative assertions are closure evidence and should remain unless
+   their surrounding contract changes; positive fixtures or governance prose
+   that treats the old paths as valid terminal shapes must be updated.
 
 ### Authority Boundary Map
 
@@ -217,6 +224,7 @@ under `src/v11/shared/<command>/**`.
 | Current-tree inventory | The task verifies whether old command-named shared directories remain and records any explicit deferral if they do. | P1 | required-now |
 | Warning preservation | `shared_promotion_single_lane` remains active and visible for command-local shared parking-lot fixtures. | P1 | required-now |
 | Stale terminal-shape closure | Active dependency-fitness tests/governance do not bless `shared/attach`, `shared/commit`, `shared/inbox`, `shared/list`, or `shared/merge` as acceptable terminal boundaries. | P1 | required-now |
+| Negative assertion evidence | Any active old-path hit retained because it is a negative assertion must be recorded in the implementation handoff as closure evidence, including the file path and why it rejects rather than accepts the old boundary. | P1 | required-now |
 | Command-neutral protection | Command-neutral shared replacements remain valid; the task does not hard-fail them solely for current single-lane consumption. | P1 | required-now |
 | Runtime non-goal | Runtime source behavior and public API contracts are unchanged. | P1 | required-now |
 
@@ -236,6 +244,8 @@ under `src/v11/shared/<command>/**`.
    `rg -n "shared/(attach|commit|inbox|list|merge)|shared_promotion_single_lane" tests tools docs src/v11`.
 2. Classify hits:
    - active fitness/governance references: update in this task.
+   - active negative contract assertions that reject old command-shaped shared
+     paths: leave unchanged and record them as closure evidence.
    - command-neutral current runtime/source names: leave unchanged.
    - historical archived prose: leave unchanged.
    - unrelated attach/list command terminology outside shared-boundary naming:
@@ -247,11 +257,16 @@ under `src/v11/shared/<command>/**`.
 5. Update placement governance text only if it still permits ambiguous terminal
    command-shaped shared parking lots.
 6. Re-run focused search and confirm remaining old-path hits are historical,
-   unrelated command terminology, or explicitly allowed command-neutral names.
-7. Run focused validation:
+   unrelated command terminology, explicitly allowed command-neutral names, or
+   negative assertions that reject the old terminal boundary.
+7. Record any retained active negative old-path assertions in the handoff or
+   final implementation evidence, with file path and rejection rationale. This
+   recording step is required even when no source/test change is needed for the
+   negative assertion itself.
+8. Run focused validation:
    - `pnpm vitest run tests/tools/fitness/dependency.test.ts`
    - `pnpm fitness:check:ci`
-8. Run repository-required verification for direct source/test changes before
+9. Run repository-required verification for direct source/test changes before
    completion:
    - `pnpm typecheck`
    - `pnpm lint`
@@ -274,17 +289,21 @@ under `src/v11/shared/<command>/**`.
    shared ownership from command-local helper parking lots.
 5. Command-neutral shared directories and read-model/remote replacements remain
    valid.
-6. No runtime source relocation, API behavior, DTO shape, or UI behavior change
+6. Any retained active negative old-path assertion is explicitly recorded as
+   closure evidence with its path and rejection rationale.
+7. No runtime source relocation, API behavior, DTO shape, or UI behavior change
    is introduced.
 
 ### Validation
 
 1. `pnpm vitest run tests/tools/fitness/dependency.test.ts`
 2. `pnpm fitness:check:ci`
-3. `pnpm typecheck`
-4. `pnpm lint`
-5. `pnpm test`
-6. `pnpm build` if `tools/fitness/checks/dependency.ts` or other runtime/tool
+3. Focused old-path search evidence showing each remaining active hit is
+   historical, unrelated, command-neutral, or a recorded negative assertion.
+4. `pnpm typecheck`
+5. `pnpm lint`
+6. `pnpm test`
+7. `pnpm build` if `tools/fitness/checks/dependency.ts` or other runtime/tool
    source changes.
 
 ### Non-Goals
