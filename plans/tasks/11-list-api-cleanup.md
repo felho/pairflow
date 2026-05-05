@@ -5,7 +5,7 @@ task_family_id: list-api-cleanup
 sequence_key: "11"
 task_id: 11-list-api-cleanup
 title: "List API Cleanup"
-status: implementable
+status: in_progress
 phase: phase4
 target_files:
   - src/v11/application/list/listCommandApi.ts
@@ -35,7 +35,7 @@ normative_refs:
 owners:
   - "felho"
 doc_bubble_id: 11-list-api-cleanup-doc
-impl_bubble_id: null
+impl_bubble_id: 11-list-api-cleanup-impl
 supersedes: []
 superseded_by: null
 archive_group: 2026-05-05-shared-command-boundary-cleanup-plan-v1
