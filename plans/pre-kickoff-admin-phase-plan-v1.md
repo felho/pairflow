@@ -15,8 +15,8 @@ task_order:
   - 3-doc-bubble-start-integration
   - 4-impl-bubble-start-integration
   - 5-close-admin-verifier
-active_task_id: 4-impl-bubble-start-integration
-last_completed_task_id: 3-doc-bubble-start-integration
+active_task_id: 5-close-admin-verifier
+last_completed_task_id: 4-impl-bubble-start-integration
 archive_group: 2026-05-04-pre-kickoff-admin-phase-plan-v1
 task_tracker:
   - task_id: 1-prep-admin-contract
@@ -29,11 +29,11 @@ task_tracker:
     task_path: plans/archive/tasks/2026-05-04-pre-kickoff-admin-phase-plan-v1/3-doc-bubble-start-integration.md
     status: archived
   - task_id: 4-impl-bubble-start-integration
-    task_path: plans/tasks/4-impl-bubble-start-integration.md
-    status: approved
+    task_path: plans/archive/tasks/2026-05-04-pre-kickoff-admin-phase-plan-v1/4-impl-bubble-start-integration.md
+    status: archived
   - task_id: 5-close-admin-verifier
-    task_path: null
-    status: not_created
+    task_path: plans/tasks/5-close-admin-verifier.md
+    status: approved
 ---
 
 # Plan: Pre-Kickoff Admin Phase
@@ -229,6 +229,14 @@ the implementation close aftermath used the same bubble id, archived the task,
 and advanced `active_task_id` to `4-impl-bubble-start-integration`; no separate
 implementation bubble was created.
 
+Progress update (2026-05-05): task `4-impl-bubble-start-integration` was
+completed by document bubble `4-impl-bubble-start-integration-doc` and merged to
+`main` at `fe30373fe8fc6b53f609ad2ca41723d7b9abab22`. Because the document
+bubble carried the complete implementation work for this workflow-only slice,
+the implementation close aftermath used the same bubble id, archived the task,
+and advanced `active_task_id` to `5-close-admin-verifier`; no separate
+implementation bubble was created.
+
 ## Open Task List
 
 | Task ID | Task Path | Purpose | Depends On | Closes Gap | Status |
@@ -236,8 +244,8 @@ implementation bubble was created.
 | `1-prep-admin-contract` | `plans/tasks/1-prep-admin-contract.md` | Document the `ExecutePairflowPlan` route pattern that uses ideation bubbles as pre-kickoff admin containers, relying on existing `UsePairflow` round-0 hold semantics and without changing default behavior. | N/A | `ExecutePairflowPlan` has no explicit contract for bounded admin before kickoff. | done |
 | `2-prep-admin-publish` | `plans/archive/tasks/2026-05-04-pre-kickoff-admin-phase-plan-v1/2-prep-admin-publish.md` | Add a manual pre-kickoff admin publish workflow: status check, scope check, bubble-worktree commit, short main publish, postcondition verification, and fail-closed no-kickoff behavior. Keep the owner in `ExecutePairflowPlan` unless the task proves a generic `UsePairflow` lifecycle workflow is required. | `1-prep-admin-contract` | Operators cannot run the pattern through a first-class workflow. | archived |
 | `3-doc-bubble-start-integration` | `plans/archive/tasks/2026-05-04-pre-kickoff-admin-phase-plan-v1/3-doc-bubble-start-integration.md` | Integrate only `CreateDocumentBubble` with the pre-kickoff admin publish workflow while leaving implementation-bubble creation on the existing path. | `2-prep-admin-publish` | Document-bubble start still needs main-side admin/linkage handling. | archived |
-| `4-impl-bubble-start-integration` | `plans/tasks/4-impl-bubble-start-integration.md` | Integrate only `CreateImplementationBubble` with the pre-kickoff admin publish workflow after the document path is proven. | `3-doc-bubble-start-integration` | Implementation-bubble start still needs main-side admin/linkage handling. | approved |
-| `5-close-admin-verifier` | `null` | Make close aftermath verifier-first: accept scoped admin already carried by the bubble branch, and reconcile on `main` only when deterministic postconditions are missing. | `4-impl-bubble-start-integration` | Close aftermath can still spend unnecessary time editing `main`. | not_created |
+| `4-impl-bubble-start-integration` | `plans/archive/tasks/2026-05-04-pre-kickoff-admin-phase-plan-v1/4-impl-bubble-start-integration.md` | Integrate only `CreateImplementationBubble` with the pre-kickoff admin publish workflow after the document path is proven. | `3-doc-bubble-start-integration` | Implementation-bubble start still needs main-side admin/linkage handling. | archived |
+| `5-close-admin-verifier` | `plans/tasks/5-close-admin-verifier.md` | Make close aftermath verifier-first: accept scoped admin already carried by the bubble branch, and reconcile on `main` only when deterministic postconditions are missing. | `4-impl-bubble-start-integration` | Close aftermath can still spend unnecessary time editing `main`. | approved |
 
 ## Task Acceptance Contracts
 

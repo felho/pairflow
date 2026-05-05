@@ -5,7 +5,7 @@ task_family_id: impl-bubble-start-integration
 sequence_key: "4"
 task_id: 4-impl-bubble-start-integration
 title: "Implementation Bubble Start Admin Publish Integration"
-status: approved
+status: archived
 phase: phase4
 target_files:
   - .claude/skills/ExecutePairflowPlan/SKILL.md
@@ -31,10 +31,12 @@ normative_refs:
 owners:
   - "felho"
 doc_bubble_id: 4-impl-bubble-start-integration-doc
-impl_bubble_id: null
+impl_bubble_id: 4-impl-bubble-start-integration-doc
 supersedes: []
 superseded_by: null
 archive_group: 2026-05-04-pre-kickoff-admin-phase-plan-v1
+archive_path: plans/archive/tasks/2026-05-04-pre-kickoff-admin-phase-plan-v1/4-impl-bubble-start-integration.md
+closed_at: "2026-05-05"
 ---
 
 # Task: Implementation Bubble Start Admin Publish Integration
