@@ -196,3 +196,9 @@ export function timelineEntry(overrides: Partial<UiTimelineEntry> = {}): UiTimel
     ...overrides
   };
 }
+
+export function protocolTimelineEntry(
+  overrides: Partial<UiTimelineEntry> = {}
+): UiTimelineEntry {
+  return timelineEntry(overrides);
+}
