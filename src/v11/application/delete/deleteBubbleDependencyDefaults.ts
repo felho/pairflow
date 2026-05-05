@@ -1,6 +1,6 @@
-type DeleteBubbleDefaultsModule = typeof import(
-  "../../defaults/delete/deleteBubbleDefaults.js"
-);
+import type * as DeleteBubbleDefaultsModuleExports from "../../defaults/delete/deleteBubbleDefaults.js";
+
+type DeleteBubbleDefaultsModule = typeof DeleteBubbleDefaultsModuleExports;
 
 let deleteBubbleDefaultsModulePromise:
   | Promise<DeleteBubbleDefaultsModule>

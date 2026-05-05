@@ -5,10 +5,10 @@ import type {
   DeliveryAck,
   ResolveDeliveryMessageRefInput
 } from "../../shared/ports/tmuxDelivery.js";
+import type * as AskHumanFinalizationDefaultsModuleExports from "../../defaults/askHuman/askHumanFinalizationDefaults.js";
 
-type AskHumanFinalizationDefaultsModule = typeof import(
-  "../../defaults/askHuman/askHumanFinalizationDefaults.js"
-);
+type AskHumanFinalizationDefaultsModule =
+  typeof AskHumanFinalizationDefaultsModuleExports;
 
 let askHumanFinalizationDefaultsModulePromise:
   | Promise<AskHumanFinalizationDefaultsModule>

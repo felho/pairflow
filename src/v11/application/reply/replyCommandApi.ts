@@ -11,9 +11,9 @@ import {
 } from "./replyCommandError.js";
 import { resolveReplyCommandDependencies } from "./replyCommandDependencyResolution.js";
 import { normalizeReplyCommandInput } from "./replyCommandInputNormalization.js";
-type ReplyMutationExecutionModule = typeof import(
-  "../../defaults/reply/replyMutationExecution.js"
-);
+import type * as ReplyMutationExecutionModuleExports from "../../defaults/reply/replyMutationExecution.js";
+
+type ReplyMutationExecutionModule = typeof ReplyMutationExecutionModuleExports;
 
 let replyMutationExecutionModulePromise:
   | Promise<ReplyMutationExecutionModule>

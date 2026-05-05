@@ -1,6 +1,6 @@
-type CreateBubbleDefaultsModule = typeof import(
-  "../../defaults/create/createBubbleDefaults.js"
-);
+import type * as CreateBubbleDefaultsModuleExports from "../../defaults/create/createBubbleDefaults.js";
+
+type CreateBubbleDefaultsModule = typeof CreateBubbleDefaultsModuleExports;
 
 let createBubbleDefaultsModulePromise:
   | Promise<CreateBubbleDefaultsModule>
