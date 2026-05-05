@@ -107,12 +107,26 @@ source-anchored deferral instead of moving code speculatively.
 ### Scope Reality / Shape Proof
 
 1. `rg "shared/attach|resolveAttachBubbleExecution" src/v11 tests` currently
-   shows two production imports and no direct test imports.
-2. Task 6's inventory classifies every exported and internal resolver area as
+   shows the old shared path in the two production import call sites and the
+   current resolver module path; it also shows the two production caller
+   invocations and the resolver export by symbol name. It shows no direct test
+   imports.
+2. Fresh source anchors for those imports are
+   `src/v11/application/attach/emitAttachV11.ts:11` and
+   `src/v11/infrastructure/executor/command/pairflowCommandAttach.ts:26`.
+3. Both consumers immediately call the resolver with lane-local dependencies
+   and error adapters at `src/v11/application/attach/emitAttachV11.ts:139` and
+   `src/v11/infrastructure/executor/command/pairflowCommandAttach.ts:117`;
+   no caller-side result mapping is part of the intended change.
+4. The resolver's shared export surface remains anchored at
+   `src/v11/shared/attach/resolveAttachBubbleExecution.ts:12`,
+   `src/v11/shared/attach/resolveAttachBubbleExecution.ts:53`, and
+   `src/v11/shared/attach/resolveAttachBubbleExecution.ts:383`.
+5. Task 6's inventory classifies every exported and internal resolver area as
    `shared_contract` with `movement_decision: defer` for lane-local extraction.
-3. The bounded closeout shape is therefore a path/name cleanup of the shared
+6. The bounded closeout shape is therefore a path/name cleanup of the shared
    boundary, not an extraction or runtime redesign.
-4. Hidden scope ruled out: changing attach CLI options, remote pointer storage,
+7. Hidden scope ruled out: changing attach CLI options, remote pointer storage,
    launcher availability, UI router behavior, and final governance hardening.
 
 ### Boundary Classification
@@ -133,8 +147,12 @@ source-anchored deferral instead of moving code speculatively.
 2. Rename the residual `src/v11/shared/attach/**` module to a
    command-neutral shared boundary if current source still supports that move.
 3. Update direct production imports.
-4. Run focused attach reference checks and relevant attach tests.
-5. If the move is unsafe, leave source unchanged and add a source-anchored
+4. For a successful rename outcome, run focused attach reference checks and
+   relevant attach tests.
+5. For a valid deferral outcome, run source review sufficient to prove the
+   blocker and record exact `Deferral Evidence` anchors; focused attach tests are
+   not required when no source move or import update is performed.
+6. If the move is unsafe, leave source unchanged and add a source-anchored
    deferral note to this task.
 
 ### Out of Scope
@@ -232,6 +250,17 @@ Broader completion checks inherited from repo policy for direct source changes:
 2. Preserve existing resolver semantics exactly.
 3. Replace only the command-named shared directory with a command-neutral
    shared capability boundary.
+4. The reference sweep baseline is the same shape described in Scope Reality:
+   before the rename it should contain old shared-path references only in the
+   two production import call sites and the current resolver module path, plus
+   symbol-name matches for the two caller invocations and resolver export. It
+   should contain no direct test imports.
+5. After a successful rename outcome, the same sweep should contain no
+   `src/v11/shared/attach` path in `src/v11` or `tests`; symbol-name matches for
+   updated imports, caller invocations, and the resolver export may remain.
+6. After a valid deferral outcome, the same sweep may still contain the old path
+   only when a `Deferral Evidence` section in this task records exact source
+   blockers.
 
 ### 9) Closure-Budget Summary
 
@@ -265,8 +294,40 @@ src/v11/shared/bubbleAttachment/resolveAttachBubbleExecution.ts
 
 3. Update both direct imports.
 4. Verify no `src/v11/shared/attach` directory remains after the rename.
-5. If source review blocks the rename, add a `Deferral Evidence` section to
+5. The code implementation bubble should be `review_artifact_type=code`; this
+   task document is the source of truth for that code change, not a substitute
+   for the move itself.
+6. In a docs-only review bubble for this task, refine this file in place and do
+   not emit a standalone synthesis artifact as the primary output.
+7. If source review blocks the rename, add a `Deferral Evidence` section to
    this task with exact source anchors and leave `shared/attach` unchanged.
+
+## Acceptance Criteria
+
+1. Successful rename outcome: `src/v11/shared/bubbleAttachment/resolveAttachBubbleExecution.ts`
+   is the only resolver module path after the code implementation.
+2. Successful rename outcome: `src/v11/shared/attach/**` does not exist after
+   the implementation.
+3. Valid deferral outcome: source files remain unchanged only when a
+   `Deferral Evidence` section in this task records exact source blockers; this
+   explicitly supersedes AC1 and AC2 for that deferral outcome.
+4. Successful rename outcome: `src/v11/application/attach/emitAttachV11.ts` and
+   `src/v11/infrastructure/executor/command/pairflowCommandAttach.ts` import
+   the resolver from the renamed shared boundary.
+5. Exported names, reason codes, diagnostics, launcher precedence, tmux lookup,
+   remote pointer validation, and remote attach command construction are
+   behavior-preserved.
+6. No compatibility barrel, alias file, duplicate resolver, or lane-local copy is
+   introduced under either consumer lane or under the old
+   `src/v11/shared/attach/**` path.
+7. Successful rename outcome validation evidence covers the reference sweep,
+   focused attach tests, `pnpm typecheck`, `pnpm lint`, and
+   `pnpm fitness:check:ci`; broader `pnpm test` and `pnpm build` are required
+   for direct source-code completion under repo policy.
+8. Valid deferral outcome validation evidence covers the source review that
+   proves the blocker and the exact `Deferral Evidence` anchors; source-change
+   checks from AC7 are not required when no source move or import update is
+   performed.
 
 ## Assumptions
 
