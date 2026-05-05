@@ -5,7 +5,7 @@ task_family_id: timeline-display-basics
 sequence_key: "3"
 task_id: 3-timeline-display-basics
 title: "Timeline Display Basics"
-status: approved
+status: implementable
 phase: phase3
 target_files:
   - ui/src/components/expanded/BubbleTimeline.tsx
@@ -14,6 +14,8 @@ target_files:
   - src/v11/infrastructure/ui/routerReadResponseValidation.ts
   - src/v11/infrastructure/ui/presenters/timelineDisplayPresenter.ts
   - src/v11/infrastructure/ui/presenters/timelinePresenter.ts
+  - tests/v11/infrastructure/ui/presenters/timelineDisplayPresenter.test.ts
+  - tests/core/ui/router.test.ts
   - ui/src/test/fixtures.ts
   - ui/src/lib/contracts/uiReadModel.ts
 target_files_role: ui_cutover_slice_and_focused_tests
@@ -25,11 +27,13 @@ target_write_files:
   - ui/src/test/fixtures.ts
   - ui/src/lib/contracts/uiReadModel.ts
   - src/v11/infrastructure/ui/presenters/timelineDisplayPresenter.ts
+  - src/v11/infrastructure/ui/presenters/timelinePresenter.ts
+  - tests/v11/infrastructure/ui/presenters/timelineDisplayPresenter.test.ts
+  - tests/core/ui/router.test.ts
 target_read_only_anchors:
   - plans/2026-05-05-timeline-display-dto-plan-v1.md
   - plans/archive/tasks/2026-05-05-timeline-display-dto-plan-v1/1-timeline-rules-fixtures.md
   - plans/archive/tasks/2026-05-05-timeline-display-dto-plan-v1/2-timeline-display-contract.md
-  - src/v11/infrastructure/ui/presenters/timelinePresenter.ts
 prd_ref: null
 plan_ref: plans/2026-05-05-timeline-display-dto-plan-v1.md
 system_context_ref: docs/pairflow-initial-design.md
@@ -52,22 +56,31 @@ Switch the basic timeline row rendering in `BubbleTimeline.tsx` from raw
 protocol payload interpretation to the backend-produced display DTO fields added
 by task 2.
 
-This task owns only title/summary, sender label, role, row kind, and base tone
-rendering. Findings, decision/recommendation badges, meta-review progress,
-gate-failure display, and synthetic approval rows remain on the existing legacy
-path for later tasks.
+This task owns only the existing basic text display (`summaryText` plus any
+current title-equivalent use of `title`), sender label, role, row kind, and base
+tone rendering. It must not add a new visible title/header row solely to consume
+`display.title`; frozen layout and visible behavior remain the baseline.
+Findings, decision/recommendation badges, meta-review progress, gate-failure
+display, and synthetic approval rows remain on the existing legacy path for
+later tasks.
 
 ### Domain / Control Model Summary
 
 1. Business invariant: the operator-visible basic row text and base row state
    must match the task-1 frozen behavior unless this task explicitly names a
    difference.
-2. Control model: `timelinePresenter.ts` remains the producer for display
-   interpretation; `BubbleTimeline.tsx` consumes only `entry.display` for the
-   basic field families in this task.
+2. Control model: `timelinePresenter.ts` remains the timeline entry assembly
+   producer and call-through owner for display attachment, while
+   `timelineDisplayPresenter.ts` owns display interpretation for the in-scope
+   basic fields and the narrow blocked-row producer adjustment.
+   `BubbleTimeline.tsx` consumes only `entry.display` for the basic field
+   families in this task.
 3. Read-path rule: for the in-scope families, React must read
-   `entry.display.title`, `summaryText`, `summarySource`, `senderLabel`,
-   `role`, `rowKind`, and `tone`.
+   `entry.display.summaryText`, `summarySource`, `senderLabel`, `role`,
+   `rowKind`, and `tone`; it may read `entry.display.title` only for an
+   existing title/title-equivalent call site. If no such call site exists,
+   `title` remains a DTO field verified through producer/contract tests, not a
+   new React rendering requirement.
 4. Forbidden fallback: do not add a React fallback that reads `entry.payload`,
    `payload.metadata`, `payload.question`, `payload.message`, or
    `payload.decision` for the in-scope basic rendering families.
@@ -75,13 +88,16 @@ path for later tasks.
    the backend presenter/contract output or test fixture construction rather
    than reconstructing protocol meaning in React.
 6. Missing-data rule: React renders the neutral/unknown display values emitted
-   by the DTO; it does not recover missing title, sender, role, row kind, or
-   tone from raw payload.
+   by the DTO; it does not recover missing summary text, title-equivalent text,
+   sender, role, row kind, or tone from raw payload.
 7. Phase boundary:
-   - contract closure: already introduced by task 2.
+   - baseline contract closure: task 2 introduced the display DTO foundation.
+   - narrow contract extension: this task owns only the additive
+     `UiTimelineRowKind += "blocked"` contract and validator update required
+     for the blocked basic row state.
    - producer closure: task 2 owns the display DTO producer baseline; this task
-     may make narrow producer/test adjustments only when needed to keep basic
-     fields complete.
+     owns the narrow `blocked`/`warning` producer adjustment and may make only
+     mechanical presenter wiring updates needed by that contract extension.
    - read-model closure: this task cuts over the basic React read path.
    - cleanup/recovery closure: delete only the React helpers replaced by this
      basic cutover; final broad no-legacy cleanup remains task 6.
@@ -99,14 +115,15 @@ path for later tasks.
    - task 6 removes remaining transitional compatibility.
 4. Task-list impact: creates executable task `3-timeline-display-basics`.
 5. Inherited validation / exit expectation: focused UI tests prove current
-   title, sender, role, and base row state behavior remains stable while the
-   in-scope React reads come from `display`.
+   summary/title-equivalent text, sender, role, and base row state behavior
+   remains stable while the in-scope React reads come from `display`.
 
 ### Canonical Contract Anchors
 
 1. Source-of-truth anchors:
    - `src/contracts/ui/uiReadModel.ts`
    - `src/v11/infrastructure/ui/presenters/timelinePresenter.ts`
+   - `src/v11/infrastructure/ui/presenters/timelineDisplayPresenter.ts`
    - `ui/src/components/expanded/BubbleTimeline.tsx`
    - `ui/src/components/expanded/BubbleTimeline.test.tsx`
    - archived task 2 display contract.
@@ -127,10 +144,16 @@ path for later tasks.
      still owns legacy badge/meta helpers.
    - `BubbleTimeline.test.tsx` and UI fixtures are the focused proof surface for
      current visible behavior.
-   - task 2 presenter output provides the required display fields.
+   - task 2 presenter output provides the required display fields through the
+     `timelinePresenter.ts` assembly path.
+   - `timelineDisplayPresenter.ts` owns the narrow blocked-row display
+     producer adjustment for `rowKind="blocked"` / `tone="warning"`.
+   - router read-response validation owns the browser-facing allowlist proof
+     that accepts `blocked` and still rejects unsupported row kinds.
 2. Actual touched scope: React basic display reads, deleted/reduced basic
-   payload helper logic, focused UI tests and fixtures, and narrow contract
-   import/type updates if needed.
+   payload helper logic, focused UI tests and fixtures, the narrow `blocked`
+   row-kind contract/validator extension, focused presenter/router validation
+   proof, and narrow contract import/type updates if needed.
 3. Mutation entrypoints in scope: no Pairflow lifecycle, transcript storage,
    backend protocol semantics, or API route redesign.
 4. Hidden scope ruled out: badge cutover, meta-review progress/synthetic rows,
@@ -141,7 +164,11 @@ path for later tasks.
 This task is complete when `BubbleTimeline.tsx` no longer reads raw payload or
 payload metadata for title/summary, sender label, role, row kind, or base tone;
 the replaced basic helpers are removed or narrowed; and focused UI tests prove
-the frozen behavior for those families still passes.
+the frozen behavior for those families still passes. Completion also requires
+focused backend proof that `timelineDisplayPresenter.ts` emits
+`rowKind="blocked"` / `tone="warning"` for the existing human-question blocked
+row family, plus router read-response validation proof that `blocked` is
+accepted while unsupported row kinds are still rejected.
 
 ### Capability Closure
 
@@ -161,7 +188,9 @@ the frozen behavior for those families still passes.
 7. External prerequisites: none beyond the existing local app/test runtime.
 8. Success output contract: visible timeline rows render the producer-emitted
    basic display fields, including conflicting-payload guard cases where
-   `entry.display` wins.
+   `entry.display` wins. For the current component, `summaryText` is the
+   visible basic text proof; `title` must stay available in the DTO and be used
+   only where an existing title/title-equivalent call site exists.
 9. Failure output contract: incomplete basic fields render the explicit
    producer-emitted neutral/unknown display values; React does not recover by
    reading raw payload.
@@ -187,7 +216,7 @@ runtime command behavior.
 
 | Basic Display Field | Producer Authority | React Read Rule | Missing / Malformed Rule | Legacy Source Replaced | Successor Boundary |
 |---|---|---|---|---|---|
-| `display.title` | `timelineDisplayPresenter.ts`, reached through `timelinePresenter.ts` output | Use as the row heading/title source for in-scope rows. | Render the producer-emitted neutral title; do not inspect payload for recovery. | `payload.summary`, `payload.question`, `payload.message`, `payload.decision` title fallback helpers. | Badge/meta/synthetic tasks must not redefine row title fallback. |
+| `display.title` | `timelineDisplayPresenter.ts`, reached through `timelinePresenter.ts` output | Use as the row heading/title source only for existing in-scope title/title-equivalent call sites; do not introduce a new visible title row as part of this cutover. | Render the producer-emitted neutral title when an existing call site renders title-equivalent text; do not inspect payload for recovery. | `payload.summary`, `payload.question`, `payload.message`, `payload.decision` title fallback helpers. | Badge/meta/synthetic tasks must not redefine row title fallback. |
 | `display.summaryText` | `timelineDisplayPresenter.ts` | Use as the basic body/summary text for normal row summary display. | Render the producer-emitted neutral summary text. | UI-local summary/question/message/decision fallback chain. | Later tasks may render badges/progress around this text but not reconstruct it. |
 | `display.summarySource` | `timelineDisplayPresenter.ts` | Use only for display/test semantics and any existing source-specific basic styling that remains in scope. | Unknown source must already be normalized by producer to an allowlisted value. | UI-local checks for which payload field supplied the summary. | Later tasks inherit the source taxonomy from task 2. |
 | `display.senderLabel` | `timelineDisplayPresenter.ts` | Use as the visible sender label. | Render the producer-emitted `Unknown` or equivalent neutral label. | Sender/author metadata and protocol sender label helpers. | Badge/meta tasks may not derive sender labels from payload metadata. |
@@ -211,7 +240,7 @@ Mirrored Surface Checklist:
    full timeline payload removal.
 
 1. In-scope React rendering reads from `entry.display` only:
-   - `title`
+   - `title` only where an existing title/title-equivalent call site exists
    - `summaryText`
    - `summarySource`
    - `senderLabel`
@@ -224,18 +253,25 @@ Mirrored Surface Checklist:
 4. If fixture overrides mutate basic row source fields, fixture helpers must
    derive or require matching `display` values instead of producing stale
    type-valid rows.
-5. `src/contracts/ui/uiReadModel.ts` and
-   `src/v11/infrastructure/ui/routerReadResponseValidation.ts` are writable
+   For `HUMAN_QUESTION` fixtures, the derived default must match the task-3
+   contract by using `rowKind="blocked"` and `tone="warning"` unless a test
+   intentionally overrides `display` to prove display-over-protocol precedence.
+5. `src/contracts/ui/uiReadModel.ts`, `ui/src/lib/contracts/uiReadModel.ts`,
+   and `src/v11/infrastructure/ui/routerReadResponseValidation.ts` are writable
    only for the narrow `UiTimelineRowKind` extension that adds `blocked` and
    validates it. `src/v11/infrastructure/ui/presenters/timelinePresenter.ts`
-   remains a read-only anchor unless it needs a mechanical import/export update
-   caused by that contract adjustment.
+   is writable only for a mechanical import/export or call-through update
+   caused by that contract adjustment; it must not gain new display
+   interpretation logic in this task.
 6. `timelineDisplayPresenter.ts` must emit `rowKind="blocked"` and
    `tone="warning"` for the existing human-question blocked row family.
 
 ### 2) React Contract
 
-1. Replace basic title/summary fallback helpers with display DTO consumption.
+1. Replace basic summary fallback helpers with display DTO consumption, and
+   replace title fallback helpers only where an existing title/title-equivalent
+   call site exists. Do not create new title rendering solely to consume
+   `display.title`.
 2. Replace sender/role label derivation with display DTO consumption.
 3. Replace base row kind/tone decisions with display DTO consumption,
    including blocked label/state rendering from `display.rowKind` and
@@ -257,7 +293,12 @@ Mirrored Surface Checklist:
    `display`.
 3. Add a blocked-state guard where `entry.type` and `display.rowKind` conflict,
    proving React follows the display DTO for the basic blocked state.
-4. Existing badge/meta tests should continue to pass without requiring their
+4. Add focused backend proof that `timelineDisplayPresenter.ts` emits
+   `rowKind="blocked"` and `tone="warning"` for the existing human-question
+   blocked row family.
+5. Add or update router read-response validation proof so `blocked` is accepted
+   in `display.rowKind` and an unsupported row kind is still rejected.
+6. Existing badge/meta tests should continue to pass without requiring their
    cutover in this task.
 
 ### 4) Validation Contract
@@ -268,10 +309,12 @@ Run the narrowest useful checks during implementation, then run:
 2. `pnpm lint`
 3. `pnpm fitness:check:ci`
 4. focused UI tests for `BubbleTimeline`
-5. broader affected UI test suite when needed
-6. `pnpm test`
-7. `pnpm build`
-8. `pnpm --dir ui build`
+5. focused presenter/router validation tests for the `blocked` row-kind
+   contract
+6. broader affected UI test suite when needed
+7. `pnpm test`
+8. `pnpm build`
+9. `pnpm --dir ui build`
 
 If a check is skipped, the implementation bubble must explain why with the
 exact replacement evidence.
@@ -362,19 +405,30 @@ exact replacement evidence.
 3. Replace basic render call sites with display reads.
 4. Remove or shrink obsolete basic payload helper logic after the call sites no
    longer need it.
-5. Update UI fixtures/tests so display is the expected source for basic fields.
-6. Run focused UI tests early, then the validation contract before convergence.
+5. Update UI fixtures/tests so display is the expected source for basic fields,
+   including `HUMAN_QUESTION` default fixture display values.
+6. Add focused presenter/router validation coverage for the additive `blocked`
+   row-kind contract.
+7. Run focused UI tests early, then the validation contract before convergence.
 
 ## Acceptance Criteria
 
 1. `BubbleTimeline.tsx` does not read `entry.payload.*` or
-   `payload.metadata.*` for the in-scope basic rendering families.
-2. React basic title/summary, sender label, role, row kind, blocked state, and
-   tone rendering come from `entry.display`.
+   `payload.metadata.*` for the in-scope basic rendering families, and it does
+   not recover those families through a local `payload` alias such as
+   `payload.question`, `payload.message`, or `payload.decision`.
+2. React basic summary/title-equivalent text, sender label, role, row kind,
+   blocked state, and tone rendering come from `entry.display`; `display.title`
+   is a React requirement only for an existing title/title-equivalent call site.
 3. Existing visible behavior for the basic families is preserved by tests.
-4. Badge/meta/synthetic legacy reads are not expanded and remain explicitly
+4. `timelineDisplayPresenter.ts` and router read-response validation have
+   focused proof for the additive `blocked` row-kind contract.
+5. Badge/meta/synthetic legacy reads are not expanded and remain explicitly
    deferred to successor tasks.
-5. No product/runtime behavior outside timeline rendering is changed.
+6. No product/runtime behavior outside timeline rendering is changed, except
+   for the bounded browser read-model contract/validation changes already
+   required by this task: the additive `blocked` row-kind contract, presenter
+   emission, and router read-response validation.
 
 ## Hardening Backlog
 
