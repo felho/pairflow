@@ -53,7 +53,7 @@ runtime behavior.
    CLI command owner; `src/v11/infrastructure/ui/**` remains the UI router
    adapter owner.
 3. Read-path rule: CLI and UI consumers import the pending inbox read-model
-   contract from the new command-neutral shared location.
+   contract from `src/v11/shared/bubbleInbox/bubbleInboxReadModel.ts`.
 4. Forbidden fallback: do not leave a compatibility barrel under
    `src/v11/shared/inbox/**`, do not duplicate the read-model types in UI or CLI
    code, and do not redesign pending inbox semantics as part of this rename.
@@ -139,8 +139,8 @@ runtime behavior.
 
 ### In Scope
 
-1. Move `src/v11/shared/inbox/inboxCommandApi.ts` to a command-neutral shared
-   path such as `src/v11/shared/bubbleInbox/bubbleInboxReadModel.ts`.
+1. Move `src/v11/shared/inbox/inboxCommandApi.ts` to
+   `src/v11/shared/bubbleInbox/bubbleInboxReadModel.ts`.
 2. Update CLI application, UI router, and test imports to the new path.
 3. Preserve all exported type names, function names, field shapes,
    discriminants, sort order, and runtime semantics.
@@ -148,7 +148,9 @@ runtime behavior.
    remains.
 5. Update contract guard tests so `src/v11/shared/inbox` and
    `inboxCommandApi` remain forbidden as shared UI/router dependency markers.
-6. Verify no source or test import references `src/v11/shared/inbox`.
+6. Verify no source or test import references `src/v11/shared/inbox`; only
+   source-scanning forbidden-marker strings in contract tests may retain the
+   old path/name.
 
 ### Out of Scope
 
@@ -189,10 +191,11 @@ runtime behavior.
 
 1. `src/v11/shared/inbox` no longer exists.
 2. The retained bubble inbox read-model API lives at
-   `src/v11/shared/bubbleInbox/bubbleInboxReadModel.ts` or an equally
-   command-neutral shared path.
+   `src/v11/shared/bubbleInbox/bubbleInboxReadModel.ts`.
 3. CLI application and UI router code import from the new shared path.
-4. No source or normal test import references `src/v11/shared/inbox`.
+4. No source or normal test import references `src/v11/shared/inbox`; remaining
+   `shared/inbox` or `inboxCommandApi` text is limited to contract guard
+   forbidden-marker assertions or historical archived plan/task prose.
 5. `BubbleInboxView`, `PendingInboxItem`, `BubbleInboxError`, `getBubbleInbox`,
    and `asBubbleInboxError` behavior and public shapes remain unchanged.
 6. Contract transit tests continue to prevent UI router/read-model ownership
