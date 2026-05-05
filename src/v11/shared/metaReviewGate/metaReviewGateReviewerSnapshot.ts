@@ -1,5 +1,5 @@
 import { isRecord } from "../validation/primitives.js";
-import { readTranscriptEnvelopes } from "./metaReviewGateTranscriptDefaults.js";
+import { readTranscriptEnvelopes } from "./internal/metaReviewGateTranscriptDefaults.js";
 import {
   type ProtocolEnvelope
 } from "../../../types/protocol.js";

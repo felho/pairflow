@@ -1,7 +1,7 @@
 import {
   assertRunningConvergenceState,
   buildGateLockPath
-} from "./metaReviewGateShared.js";
+} from "./internal/metaReviewGateShared.js";
 import type { MetaReviewArtifactReadPort } from "../metaReview/metaReviewArtifactIo.js";
 import type { ResolveBubbleByIdPort } from "../ports/bubbleLookup.js";
 import type {

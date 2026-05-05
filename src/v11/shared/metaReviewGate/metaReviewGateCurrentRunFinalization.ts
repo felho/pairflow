@@ -3,12 +3,12 @@ import type { Finding } from "../../../types/findings.js";
 import type { FindingsParityMetadata } from "../../../types/protocol.js";
 import {
   normalizeMetaReviewSnapshot,
-} from "./metaReviewGateShared.js";
+} from "./internal/metaReviewGateShared.js";
 import {
   type MetaReviewGateResult
 } from "./metaReviewGateTypes.js";
-import { dispatchAutoRework } from "./metaReviewGateAutoRework.js";
-import { validateStructuredMetaReviewPositiveClaim } from "./metaReviewGateFindingsValidation.js";
+import { dispatchAutoRework } from "./internal/metaReviewGateAutoRework.js";
+import { validateStructuredMetaReviewPositiveClaim } from "./internal/metaReviewGateFindingsValidation.js";
 import type { MetaReviewGateArtifactReadFn } from "./metaReviewGateFindingsMetadata.js";
 import {
   metaReviewGateThresholdIsMet,
@@ -21,14 +21,14 @@ import {
   persistDispatchFailedHumanRoute,
   persistResolvedHumanRoute,
   persistRunFailedHumanRoute
-} from "./metaReviewGateCurrentRunRoutePersistence.js";
+} from "./internal/metaReviewGateCurrentRunRoutePersistence.js";
 import type { FinalizeCurrentRunMetaReviewGateInput } from "./metaReviewGateCurrentRunTypes.js";
-import { mergeRunResultWithParityResolution } from "./metaReviewGateRunResultParity.js";
-import { routeCleanMetaReviewRerun } from "./metaReviewGateCurrentRunCleanRerun.js";
+import { mergeRunResultWithParityResolution } from "./internal/metaReviewGateRunResultParity.js";
+import { routeCleanMetaReviewRerun } from "./internal/metaReviewGateCurrentRunCleanRerun.js";
 import {
   META_REVIEW_APPROVE_VALIDATION_FAILED,
   runMetaReviewApproveValidationGate
-} from "./metaReviewApproveValidationGate.js";
+} from "./internal/metaReviewApproveValidationGate.js";
 
 export const META_REVIEW_APPROVE_THRESHOLD_BACKSTOP =
   "META_REVIEW_APPROVE_THRESHOLD_BACKSTOP" as const;

@@ -20,7 +20,7 @@ import {
 import {
   formatReadErrorDetail,
   readFindingsArtifactWithRetry
-} from "./metaReviewGateFindingsArtifactReadRetry.js";
+} from "./internal/metaReviewGateFindingsArtifactReadRetry.js";
 import type {
   MetaReviewGateArtifactReadFn
 } from "./metaReviewGateFindingsMetadata.js";
