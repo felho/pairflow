@@ -113,10 +113,13 @@ Task-admin adoption:
    `main`, and write a `PublishPreKickoffAdmin` pre-side-effect authorization
    record naming selected admin paths, expected postconditions, ideation hold
    proof, and changed-path coverage.
-5. Any delegated `CreatePairflowSpec` task-admin step that can write files must
-   execute in the proven carrier worktree. If that execution root cannot be
-   guaranteed, it may return only proposed content or a review decision for the
-   handler to apply inside the carrier.
+5. `CreateTask` drafting may be performed directly by the handler after the
+   carrier guard succeeds, or by `CreatePairflowSpec CreateTask` as a distinct
+   helper step. A helper step is not required merely to draft the initial task.
+   Any delegated task-admin step that can write files must execute in the
+   proven carrier worktree. If that execution root cannot be guaranteed, it may
+   return only proposed content or a review decision for the handler to apply
+   inside the carrier.
 6. After every task-admin edit, the handler must prove `main` is still clean and
    all changed/untracked carrier paths are selected-scope admin paths. A dirty
    `main` is a hard stop, not a cleanup opportunity.
@@ -184,7 +187,7 @@ Mandatory route-to-delegation mapping:
 |---|---|---|
 | `FixPlanMetadata` | repo-local `Workflows/FixPlanMetadata.md` | repaired metadata or fail-closed checkpoint |
 | `ReviewPlan` | `CreatePairflowSpec` `ReviewSpec` in `plan-mode` | `approve_plan`, `refine_plan`, `split_plan`, or `block_not_ready`; if `refine_plan` changes the plan, rerun `ReviewSpec` in fresh `plan-mode` context before any downstream route may advance |
-| `CreateTask` | repo-local `HandleTaskAdminBubble` delegating create/start to `UsePairflow` `CreateBubble`, task creation/review to `CreatePairflowSpec`, admin publish to `PublishPreKickoffAdmin`, and same-carrier document kickoff to `UsePairflow` `InterveneBubble` only after approval and refreshed proof | created or safely reused `<task_id>-doc` ideation carrier, created/refined task artifact, `ReviewSpec task-mode decision=approve_task` for the latest artifact when kickoff runs, persisted `doc_bubble_id=<task_id>-doc` and approved task/plan tracker metadata on refreshed `main`, structured publish success, audited same-bubble kickoff result, or a truthful checkpoint for split/route-back/block output |
+| `CreateTask` | repo-local `HandleTaskAdminBubble` delegating create/start to `UsePairflow` `CreateBubble`; drafting the initial task directly in the handler or through `CreatePairflowSpec CreateTask`; delegating approval/review to `CreatePairflowSpec ReviewSpec`; admin publish to `PublishPreKickoffAdmin`; and same-carrier document kickoff to `UsePairflow` `InterveneBubble` only after approval and refreshed proof | created or safely reused `<task_id>-doc` ideation carrier, created/refined task artifact, `ReviewSpec task-mode decision=approve_task` for the latest artifact when kickoff runs, persisted `doc_bubble_id=<task_id>-doc` and approved task/plan tracker metadata on refreshed `main`, structured publish success, audited same-bubble kickoff result, or a truthful checkpoint for split/route-back/block output |
 | `ReviewTask` | repo-local `HandleTaskAdminBubble` delegating task review/refinement to `CreatePairflowSpec`, admin publish to `PublishPreKickoffAdmin`, and same-carrier document kickoff to `UsePairflow` `InterveneBubble` only after approval and refreshed proof | `approve_task`, `refine_task`, `route_back_to_plan`, `split_task`, or `block_not_ready` result handled inside the carrier worktree; if approved, refreshed `main` proves approved task metadata, plan tracker state, `doc_bubble_id=<task_id>-doc`, structured publish success, and audited same-bubble kickoff |
 | `CreateDocumentBubble` | repo-local `HandleDocumentBubble` delegating create/start to `UsePairflow` `CreateBubble`, consuming `PublishPreKickoffAdmin` proof, and delegating same-bubble ideation kickoff to `UsePairflow` `InterveneBubble` after refreshed postconditions | created/started ideation document bubble id, persisted `doc_bubble_id` linkage on `main`, structured publish success with refreshed postconditions, audited same-bubble kickoff result, and boundary status |
 | `ReviewDocumentBubble` | repo-local `HandleDocumentBubble` delegating to `UsePairflow` `ReviewBubble` | review result and human approval/rework checkpoint; skipped when the handler emits a close route from trusted multi-clean-meta-review auto-approval proof |
@@ -209,12 +212,13 @@ Plan/task review gates:
 7. a refinement loop is settled only by `approve_plan`, `approve_task`, `split_plan`, `route_back_to_plan`, `block_not_ready`, or a real blocker; the orchestrator must not treat its own post-edit inspection as a replacement for the repeated `ReviewSpec` result
 8. invoking `ExecutePairflowPlan` explicitly authorizes mandatory downstream
    delegation required by this skill; this includes fresh sub-agent
-   `CreatePairflowSpec ReviewSpec` passes for `ReviewPlan`, `CreateTask`, and
-   `ReviewTask` whenever the runtime supports sub-agents
-9. for `ReviewPlan`, `CreateTask`, and `ReviewTask`, sub-agent delegation is
-   mandatory whenever the runtime supports it; if unavailable, the substitute
-   must be an explicitly separate compact workflow step, not blended local
-   reasoning
+   `CreatePairflowSpec ReviewSpec` passes for `ReviewPlan`, `CreateTask`
+   approval, and `ReviewTask` whenever the runtime supports sub-agents
+9. for `ReviewPlan`, `CreateTask` approval, and `ReviewTask`, sub-agent
+   delegation is mandatory whenever the runtime supports it; if unavailable,
+   the substitute must be an explicitly separate compact workflow step, not
+   blended local reasoning. Initial `CreateTask` drafting itself may be
+   handler-local after the carrier guard succeeds.
 10. `CreateTask` may draft or propose the initial task artifact, but any
    transition to `status=approved` requires a fresh sub-agent `ReviewSpec
    task-mode` result for the exact refreshed task artifact and parent plan

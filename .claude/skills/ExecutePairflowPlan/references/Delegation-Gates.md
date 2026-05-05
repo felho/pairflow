@@ -117,8 +117,8 @@ never sufficient.
 
 1. Invoking `ExecutePairflowPlan` explicitly authorizes every mandatory
    downstream delegation required by this skill, including fresh sub-agent
-   `CreatePairflowSpec ReviewSpec` passes for `ReviewPlan`, `CreateTask`, and
-   `ReviewTask` when the runtime exposes a sub-agent tool.
+   `CreatePairflowSpec ReviewSpec` passes for `ReviewPlan`, `CreateTask`
+   approval, and `ReviewTask` when the runtime exposes a sub-agent tool.
 2. If sub-agents are available, fresh sub-agent delegation is mandatory.
 3. If sub-agents are unavailable, create a distinct compact workflow step that
    rereads the refreshed artifact and returns an explicit ReviewSpec decision.
@@ -128,7 +128,8 @@ never sufficient.
    support. If sub-agents are available and no sub-agent id/result is recorded,
    stop with `REVIEW_SPEC_DELEGATION_MISSING`.
 6. `CreateTask` routes inherit this hard stop before any
-   `status=approved` write: the initial task may be drafted or proposed, but
+   `status=approved` write: the initial task may be drafted directly by the
+   handler in the proven carrier worktree, or proposed by a helper step, but
    approval requires a fresh sub-agent `ReviewSpec task-mode` decision over the
    exact refreshed task artifact and parent plan.
 7. If a ReviewSpec pass returns `refine_task` or `refine_plan` and any artifact

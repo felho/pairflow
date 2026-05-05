@@ -163,28 +163,34 @@ Mandatory pre-edit carrier guard:
 7. If any proof is missing or ambiguous, stop at a human checkpoint. Do not
    create or repair task/plan artifacts directly on `main`.
 
-Delegated task-creation/review execution guard:
+Task-creation/review execution guard:
 
 1. Invoking `ExecutePairflowPlan` authorizes the mandatory fresh sub-agent
    delegation required by this handler for `CreatePairflowSpec ReviewSpec`
    passes. Do not downgrade to local ReviewSpec reasoning while a sub-agent
    tool is available.
-2. Any `CreatePairflowSpec CreateTask` or `ReviewSpec task-mode` delegate that
-   can write files must receive `BUBBLE_WORKTREE_PATH` as its execution root and
-   must be told that writing anywhere else is a workflow violation.
-3. If the runtime cannot force the delegate's working directory to
+2. `CreateTask` drafting may be performed directly by this handler after the
+   carrier guard and pre-side-effect authorization record succeed. The handler
+   may also call `CreatePairflowSpec CreateTask` as a distinct helper step, but
+   helper delegation is optional for the initial draft and must not be used as
+   a substitute for the carrier guard.
+3. Any `CreatePairflowSpec CreateTask` helper or `ReviewSpec task-mode`
+   delegate that can write files must receive `BUBBLE_WORKTREE_PATH` as its
+   execution root and must be told that writing anywhere else is a workflow
+   violation.
+4. If the runtime cannot force the delegate's working directory to
    `BUBBLE_WORKTREE_PATH`, the delegate may return only a proposed artifact body
    or review decision. The parent handler must apply any file edits itself in
    `BUBBLE_WORKTREE_PATH` after the carrier guard succeeds.
-4. A fresh-context delegate result is not sufficient authorization to edit
+5. A fresh-context delegate result is not sufficient authorization to edit
    `main`; it authorizes only the selected admin edits inside
    `BUBBLE_WORKTREE_PATH`.
-5. Before writing `status=approved`, record a fresh sub-agent
+6. Before writing `status=approved`, record a fresh sub-agent
    `ReviewSpec task-mode` result for the exact refreshed task artifact and
    parent plan. The ledger entry must include the sub-agent id, decision, and
    reviewed artifact evidence. If no sub-agent id is available while sub-agents
    are supported, stop with `REVIEW_SPEC_DELEGATION_MISSING`.
-6. If `ReviewSpec task-mode` returns `refine_task` and the task is changed,
+7. If `ReviewSpec task-mode` returns `refine_task` and the task is changed,
    rerun `ReviewSpec task-mode` in a new fresh sub-agent over the refreshed task
    and parent plan. Repeat until the decision is `approve_task`,
    `route_back_to_plan`, `split_task`, `block_not_ready`, or a real blocker.
@@ -211,7 +217,9 @@ Task-admin edit tooling guard:
 
 For `CreateTask`:
 
-1. delegate task creation to `CreatePairflowSpec CreateTask`
+1. draft the initial task artifact directly in the handler, or use
+   `CreatePairflowSpec CreateTask` as an optional helper that may return
+   proposed content
 2. write the created task artifact, plan tracker row, and any directly related
    plan/progress/docs admin in the carrier worktree
 3. delegate `CreatePairflowSpec ReviewSpec` in `task-mode` for the latest
