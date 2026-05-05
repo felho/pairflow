@@ -30,7 +30,7 @@ normative_refs:
   - .claude/skills/ExecutePairflowPlan/references/Plan-Task-Metadata-Contract.md
 owners:
   - "felho"
-doc_bubble_id: null
+doc_bubble_id: 4-impl-bubble-start-integration-doc
 impl_bubble_id: null
 supersedes: []
 superseded_by: null
