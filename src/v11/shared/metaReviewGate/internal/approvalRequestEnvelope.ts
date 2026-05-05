@@ -21,7 +21,7 @@ import {
   normalizeApprovalAdvisoryFindings,
   type ApprovalAdvisoryFinding
 } from "./metaReviewGateApprovalReviewerConsistency.js";
-import { resolveApprovalRequestSummaryConsistency } from "./metaReviewGateApprovalSummaryNormalization.js";
+import { resolveApprovalRequestSummaryConsistency } from "../../../domain/metaReviewGate/approvalSummaryNormalization.js";
 import {
   MetaReviewGateError,
   type MetaReviewGateThresholdMetadata

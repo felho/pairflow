@@ -1,16 +1,16 @@
-import type { MetaReviewRecommendation } from "../../../../types/bubble.js";
+import type { MetaReviewRecommendation } from "../../../types/bubble.js";
 import {
   evaluateNoFindingsSummaryFindingsAssertion,
   hasGlobalNoFindingsSummaryAssertion,
   evaluatePositiveSummaryFindingsAssertion
-} from "../../../domain/convergence/policy.js";
+} from "../convergence/policy.js";
 import {
   hasConsistentApproveAdvisoryOnlySplit,
   resolveAdvisoryContractInvariant,
   resolveStructuredParityMetadataSnapshot,
   type ApprovalAdvisoryFinding
-} from "../../../domain/metaReviewGate/approvalParitySnapshot.js";
-import type { FindingsParityMetadata } from "../../../../types/protocol.js";
+} from "./approvalParitySnapshot.js";
+import type { FindingsParityMetadata } from "../../../types/protocol.js";
 
 const approvalSummaryMetadataMismatchReasonCode =
   "META_REVIEW_GATE_APPROVAL_SUMMARY_METADATA_MISMATCH";
