@@ -4,7 +4,7 @@ import { type FindingsParityMetadata } from "../../../../types/protocol.js";
 import type { MetaReviewGateArtifactReadFn } from "../metaReviewGateFindingsMetadata.js";
 import {
   validateApproveStructuredMetaReviewClaim
-} from "./metaReviewGateApproveClaimValidation.js";
+} from "../../../domain/metaReviewGate/approveClaimValidation.js";
 import {
   validateStructuredMetaReviewClaimPreflight
 } from "./metaReviewGateFindingsValidationPreflight.js";
@@ -18,7 +18,7 @@ export {
   metaReviewApproveAdvisoryOnlyReasonCode,
   metaReviewApproveAdvisorySplitRequiredReasonCode,
   metaReviewApproveAdvisorySplitFormatInvalidReasonCode
-} from "./metaReviewGateApproveClaimValidation.js";
+} from "../../../domain/metaReviewGate/approveClaimValidation.js";
 
 type PositiveMetaReviewClaimValidationSuccess =
   | {

@@ -1,5 +1,4 @@
-import type { MetaReviewResult } from "../../metaReview/metaReviewTypes.js";
-import type { FindingsParityMetadata } from "../../../../types/protocol.js";
+import type { FindingsParityMetadata } from "../../../types/protocol.js";
 import {
   buildApproveGuardFailedMetadata,
   buildApproveParityMetadata,
@@ -7,18 +6,18 @@ import {
   resolveApproveArtifactOpenTotal,
   resolveApproveDiagnostics,
   resolveApproveInvariantViolation
-} from "../../../domain/metaReviewGate/approveClaimMetadata.js";
+} from "./approveClaimMetadata.js";
 import {
   metaReviewApproveAdvisoryOnlyReasonCode,
   metaReviewApproveAdvisorySplitFormatInvalidReasonCode,
   metaReviewApproveAdvisorySplitRequiredReasonCode,
   metaReviewApproveBlockingFindingsPresentReasonCode,
   resolveApproveSplitTriplet
-} from "../../../domain/metaReviewGate/approveClaimSplit.js";
+} from "./approveClaimSplit.js";
 import {
   metaReviewSummaryStructuredMismatchReasonCode,
   resolveApproveSummaryStructuredMismatch
-} from "../../../domain/metaReviewGate/approveClaimSummaryMismatch.js";
+} from "./approveClaimSummaryMismatch.js";
 
 export {
   metaReviewApproveAdvisoryOnlyReasonCode,
@@ -33,7 +32,7 @@ type ApproveClaimValidationResult =
   | { ok: false; reason: string; metadata: FindingsParityMetadata };
 
 export function validateApproveStructuredMetaReviewClaim(input: {
-  runResult: MetaReviewResult;
+  runResult: { summary: string | null | undefined };
   reportJson: Record<string, unknown>;
   claimState: "clean" | "open_findings";
 }): ApproveClaimValidationResult {
