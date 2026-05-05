@@ -5,7 +5,7 @@ task_family_id: attach-boundary-closeout
 sequence_key: "7"
 task_id: 7-attach-boundary-closeout
 title: "Attach Boundary Closeout"
-status: implementable
+status: in_progress
 phase: phase3
 target_files:
   - src/v11/shared/attach/resolveAttachBubbleExecution.ts
@@ -25,7 +25,7 @@ normative_refs:
 owners:
   - "felho"
 doc_bubble_id: 7-attach-boundary-closeout-doc
-impl_bubble_id: null
+impl_bubble_id: 7-attach-boundary-closeout-impl
 supersedes: []
 superseded_by: null
 archive_group: 2026-05-05-shared-command-boundary-cleanup-plan-v1
