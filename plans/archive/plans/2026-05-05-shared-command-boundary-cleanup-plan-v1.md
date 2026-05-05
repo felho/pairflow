@@ -4,8 +4,8 @@ artifact_id: plan_shared_command_boundary_cleanup_v1
 plan_id: shared-command-boundary-cleanup-plan-v1
 created_on: "2026-05-05"
 title: "Shared Command Boundary Cleanup Plan"
-status: in_progress
-plan_status: in_progress
+status: done
+plan_status: done
 prd_ref: null
 owners:
   - "felho"
@@ -23,8 +23,8 @@ task_order:
   - 11-list-api-cleanup
   - 12-list-fitness-closeout
   - 13-shared-command-fitness
-last_completed_task_id: 12-list-fitness-closeout
-active_task_id: 13-shared-command-fitness
+last_completed_task_id: 13-shared-command-fitness
+active_task_id: null
 archive_group: 2026-05-05-shared-command-boundary-cleanup-plan-v1
 task_tracker:
   - task_id: 1-commit-local-helpers
@@ -64,8 +64,8 @@ task_tracker:
     task_path: plans/archive/tasks/2026-05-05-shared-command-boundary-cleanup-plan-v1/12-list-fitness-closeout.md
     status: archived
   - task_id: 13-shared-command-fitness
-    task_path: plans/tasks/2026-05-05-shared-command-boundary-cleanup-plan-v1/13-shared-command-fitness.md
-    status: in_progress
+    task_path: plans/archive/tasks/2026-05-05-shared-command-boundary-cleanup-plan-v1/13-shared-command-fitness.md
+    status: archived
 ---
 
 # Plan: Shared Command Boundary Cleanup
@@ -223,7 +223,7 @@ This plan covers the current residual command-named shared directories:
 | `10-list-runtime-cutover` | `plans/archive/tasks/2026-05-05-shared-command-boundary-cleanup-plan-v1/10-list-runtime-cutover.md` | Cut runtime consumers that currently reach through `shared/list` to the command-neutral boundary: UI router defaults, events scan defaults, direct shared-list tests, and other non-application source imports. | `9-list-readmodel-introduce` | Runtime consumers must stop depending on command-shaped shared list paths before wrapper cleanup. | archived |
 | `11-list-api-cleanup` | `plans/archive/tasks/2026-05-05-shared-command-boundary-cleanup-plan-v1/11-list-api-cleanup.md` | Remove command-shaped application compatibility re-exports and stale list API aliases; keep command-owned CLI rendering/parsing files only where they are first-principle application/list ownership. | `10-list-runtime-cutover` | Public/application-facing compatibility leftovers must not survive as a terminal state. | archived |
 | `12-list-fitness-closeout` | `plans/archive/tasks/2026-05-05-shared-command-boundary-cleanup-plan-v1/12-list-fitness-closeout.md` | Update list-related contract transit tests, fitness fixtures, and source assertions so no test or governance surface preserves the old `shared/list/listCommand*` path as an allowed shape. | `11-list-api-cleanup` | Fitness/test fixtures can otherwise keep the removed boundary alive as implicit documentation. | archived |
-| `13-shared-command-fitness` | `plans/tasks/2026-05-05-shared-command-boundary-cleanup-plan-v1/13-shared-command-fitness.md` | Update governance and, if the remaining tree permits it, add or tighten command-named shared directory fitness warnings. | `12-list-fitness-closeout` | Regression guardrails should reflect the post-cleanup boundary. | in_progress |
+| `13-shared-command-fitness` | `plans/archive/tasks/2026-05-05-shared-command-boundary-cleanup-plan-v1/13-shared-command-fitness.md` | Update governance and, if the remaining tree permits it, add or tighten command-named shared directory fitness warnings. | `12-list-fitness-closeout` | Regression guardrails should reflect the post-cleanup boundary. | archived |
 
 ## Coverage Map
 

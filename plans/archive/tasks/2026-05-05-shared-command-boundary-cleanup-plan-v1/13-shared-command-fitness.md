@@ -5,7 +5,7 @@ task_family_id: shared-command-fitness
 sequence_key: "13"
 task_id: 13-shared-command-fitness
 title: "Shared Command Fitness"
-status: in_progress
+status: archived
 phase: phase5
 target_files:
   - tools/fitness/checks/dependency.ts

@@ -861,11 +861,15 @@ function detectSharedPromotionViolations(input: {
     }
 
     const [applicationLane] = consumers.applicationLanes;
+    if (sharedDirectory !== applicationLane) {
+      continue;
+    }
+
     violations.push({
       kind: "shared_promotion_single_lane",
       severity: "warn",
       message:
-        `src/v11/shared/${sharedDirectory}: shared-promotion warning: imported only by application lane ${applicationLane}; command-local helpers should live under src/v11/application/${applicationLane}`,
+        `src/v11/shared/${sharedDirectory}: shared-promotion warning: command-shaped shared directory imported only by application lane ${applicationLane}; command-local helpers should live under src/v11/application/${applicationLane} or provide explicit multi-lane/infrastructure ownership proof`,
       fromRelative: `src/v11/shared/${sharedDirectory}`,
       toRelative: undefined,
       cycleNodes: undefined

@@ -140,12 +140,16 @@ A module may be placed in `src/v11/shared/**` only if all are true:
 If these conditions are not met, keep the code local.
 
 The dependency fitness check includes a report-only Shared Promotion warning for
-the most obvious parking-lot shape: a `src/v11/shared/<name>/**` directory that
-is imported by exactly one `src/v11/application/<lane>/**` lane and has no
-infrastructure consumer. Treat that warning as triage evidence, not automatic
-proof. The usual fix is to move command-local helpers back under the owning
-`application/<lane>/**` directory; promote only the portions that have a real
-multi-lane or infrastructure-facing consumer.
+the most obvious command-local parking-lot shape: a
+`src/v11/shared/<lane>/**` directory whose top-level shared directory name
+matches a `src/v11/application/<lane>/**` lane, is imported by exactly that one
+application lane, and has no infrastructure consumer. Treat that warning as
+triage evidence, not automatic proof. The usual fix is to move command-local
+helpers back under the owning `application/<lane>/**` directory; promote only
+the portions that have a real multi-lane or infrastructure-facing consumer.
+Command-neutral shared directories, such as read models, ports, protocols, or
+foundation-style contracts, are not automatically wrong only because they have
+one current application consumer.
 
 ## Contract Rule
 
