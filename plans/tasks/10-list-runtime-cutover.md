@@ -5,7 +5,7 @@ task_family_id: list-runtime-cutover
 sequence_key: "10"
 task_id: 10-list-runtime-cutover
 title: "List Runtime Consumer Cutover"
-status: in_progress
+status: archived
 phase: phase4
 target_files:
   # Runtime transition boundary to remove after consumer proof.
