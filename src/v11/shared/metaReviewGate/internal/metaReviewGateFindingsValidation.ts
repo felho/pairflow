@@ -7,7 +7,7 @@ import {
 } from "../../../domain/metaReviewGate/approveClaimValidation.js";
 import {
   validateStructuredMetaReviewClaimPreflight
-} from "./metaReviewGateFindingsValidationPreflight.js";
+} from "../../../domain/metaReviewGate/findingsValidationPreflight.js";
 import {
   validateStructuredMetaReviewPositiveClaimReworkPath
 } from "./metaReviewGateFindingsValidationParity.js";

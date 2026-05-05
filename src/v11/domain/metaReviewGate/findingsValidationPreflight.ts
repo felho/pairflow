@@ -1,13 +1,13 @@
-import type { MetaReviewRecommendation } from "../../../../types/bubble.js";
-import { resolveStructuredMetaReviewClaimFromReportJson } from "../metaReviewGateFindingsMetadata.js";
+import type { MetaReviewRecommendation } from "../../../types/bubble.js";
+import { resolveStructuredMetaReviewClaimFromReportJson } from "./findingsClaimParsing.js";
 import {
   metaReviewApproveAdvisorySplitRequiredReasonCode
-} from "../../../domain/metaReviewGate/approveClaimSplit.js";
+} from "./approveClaimSplit.js";
 import {
   claimSourceInvalidReasonCode,
   claimStateRequiredReasonCode,
   metaReviewFindingsArtifactRequiredReasonCode
-} from "../metaReviewGateFindingsParityHelpers.js";
+} from "./findingsParityMetadata.js";
 
 export type StructuredClaimValidationPreflight =
   | { kind: "pass" }
