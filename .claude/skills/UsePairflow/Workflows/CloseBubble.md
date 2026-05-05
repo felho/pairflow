@@ -8,7 +8,7 @@ allowed-tools: Bash, Read, AskUserQuestion
 
 ## Purpose
 
-Finalize a bubble after review using pairflow state-transition commands in strict order: approve -> commit -> merge -> delete finalized bubble artifacts. Skip steps that are already complete. For implementation bubbles, also perform post-merge doc/progress checks and archive the source task file.
+Finalize a bubble after review using pairflow state-transition commands in strict order: approve -> required pre-commit admin -> commit -> merge -> delete finalized bubble artifacts. Skip steps that are already complete. For implementation bubbles, also perform post-merge doc/progress checks and archive the source task file.
 
 ## Variables
 
@@ -19,6 +19,7 @@ DELETE_REMOTE: `true` if `--delete-remote` flag is present, default `false`
 REVIEW_ARTIFACT_TYPE: read from bubble metadata (`document` or `code`) before merge
 TASK_SOURCE_PATH: absolute task source file path extracted from bubble artifact metadata before merge
 BASE_BRANCH: base branch read from bubble metadata before merge when available
+DOCUMENT_PRE_COMMIT_ADMIN_REQUIRED: true only when the caller contract explicitly requires a document-close metadata postcondition such as `task_status_implementable`
 
 ## Instructions
 
@@ -36,6 +37,7 @@ BASE_BRANCH: base branch read from bubble metadata before merge when available
   1. merge-conflict recovery commits on the bubble branch inside the bubble worktree after the confidence gates pass
   2. post-merge follow-up changes on `main` (README/docs/progress/task archive)
   It is not allowed for normal lifecycle approve/commit/merge state transitions.
+- Document close metadata postconditions must be applied before the lifecycle commit when the caller contract requires them. Do not merge a document bubble and then create a direct `main` admin commit for `status=implementable`; that metadata must be part of the bubble branch commit that `pairflow bubble commit --stage-all` records.
 - After successful merge, delete the finalized local bubble artifact with `pairflow bubble delete --force` unless a concrete safety blocker requires retaining it. A retained DONE/merged bubble is not a normal settled close result; report the explicit retained-bubble reason and stop or checkpoint according to the caller contract.
 
 ## Workflow
@@ -71,10 +73,13 @@ pairflow bubble status --id <BUBBLE_ID> --repo <REPO_PATH> --json
 - Before merge, capture `REVIEW_ARTIFACT_TYPE` from:
   - `<REPO_PATH>/.pairflow/bubbles/<BUBBLE_ID>/bubble.toml` (`review_artifact_type`)
 - Also capture `BASE_BRANCH` from the same `bubble.toml` when available.
-- If `REVIEW_ARTIFACT_TYPE` is `code`, try to capture `TASK_SOURCE_PATH` from:
+- Try to capture `TASK_SOURCE_PATH` from:
   - `<REPO_PATH>/.pairflow/bubbles/<BUBBLE_ID>/artifacts/task.md`
   - Expected first-line format: `Source: file (<ABSOLUTE_PATH>)`
-- If task source cannot be parsed, continue close flow but report warning and skip automatic task archive.
+- If task source cannot be parsed:
+  - for `REVIEW_ARTIFACT_TYPE=document` with `DOCUMENT_PRE_COMMIT_ADMIN_REQUIRED=true`, STOP before commit and report that the required document admin postcondition cannot be applied safely
+  - for `REVIEW_ARTIFACT_TYPE=code`, continue close flow but report warning and skip automatic task archive
+  - otherwise continue when no caller-required task metadata postcondition depends on it
 
 ### 4. Sequential close with skip-if-already-done
 
@@ -98,11 +103,23 @@ pairflow bubble status --id <BUBBLE_ID> --repo <REPO_PATH> --json
 
 - Re-read status.
 - If state is `APPROVED_FOR_COMMIT`:
+  1. If `REVIEW_ARTIFACT_TYPE=document` and `DOCUMENT_PRE_COMMIT_ADMIN_REQUIRED=true`, apply the document-close pre-commit admin hook before running the lifecycle commit:
+     - Work in `PAIRFLOW_STATUS.worktreePath`, not on `main`.
+     - Verify the worktree is on `bubble/<BUBBLE_ID>`.
+     - Re-read `TASK_SOURCE_PATH` in that worktree and set task frontmatter `status` to `implementable`.
+     - Preserve the existing `doc_bubble_id`; do not clear or rewrite it.
+     - If `plan_ref` resolves to a parent plan in the same worktree, update the matching `task_tracker` row and task-list table status for the same `task_id` to `implementable`.
+     - Keep the diff limited to the active task artifact and its parent plan metadata/table status. Product/source/runtime edits are forbidden in this hook.
+     - Verify the changed file list before continuing. If any changed file is outside that admin scope, STOP before commit and report the out-of-scope paths.
+     - If the task path, `task_id`, `plan_ref`, or matching parent plan row cannot be resolved deterministically, STOP before commit rather than falling back to a post-merge `main` commit.
+  2. Run the lifecycle commit:
   ```bash
   pairflow bubble commit --id <BUBBLE_ID> --repo <REPO_PATH> --stage-all
   ```
   Remote bubble note: still run this from the laptop/local repo; do not commit lifecycle state by manually invoking Pairflow inside the remote clone.
-- Else if state is already `COMMITTED` or `DONE`, skip commit.
+- Else if state is already `COMMITTED` or `DONE`:
+  - If `REVIEW_ARTIFACT_TYPE=document` and `DOCUMENT_PRE_COMMIT_ADMIN_REQUIRED=true`, first verify the already-committed bubble content contains the required document metadata postcondition. If it does not, STOP and report that the close is past the safe pre-commit admin point.
+  - Otherwise skip commit.
 
 #### C) Merge step
 
@@ -230,6 +247,7 @@ Recovery result reporting:
 - If delete fails for any other reason, STOP and report the retained-bubble reason. Do not report a fully settled close unless the caller explicitly accepts the retained bubble.
 - Verify bubble no longer appears in `pairflow bubble list --repo <REPO_PATH>`.
 - Verify repository is clean and no leftover merge/rebase/cherry-pick state exists.
+- For `REVIEW_ARTIFACT_TYPE=document` with `DOCUMENT_PRE_COMMIT_ADMIN_REQUIRED=true`, verify refreshed `main` task metadata proves `status=implementable` and the parent plan tracker/table row agrees. If this proof is missing, STOP and report the close as unsettled; do not repair it with a direct `main` admin commit.
 
 ### 6. Implementation follow-up (only for `REVIEW_ARTIFACT_TYPE=code`)
 
@@ -268,6 +286,7 @@ Bubble <BUBBLE_ID> close summary:
 
 - Initial state: <STATE>
 - Approved: <yes / skipped (state was <STATE>)>
+- Document pre-commit admin: <n/a / applied in bubble commit / skipped with reason / blocked with reason>
 - Committed: <yes (--stage-all) / skipped (state was <STATE>)>
 - Merged: <yes / yes after merge_conflict_recovered / no>
 - Merge target: bubble/<BUBBLE_ID> -> <base-branch or n/a>

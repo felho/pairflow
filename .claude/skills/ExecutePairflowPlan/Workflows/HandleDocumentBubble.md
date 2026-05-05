@@ -515,13 +515,18 @@ Required proof:
 
 Delegation:
 
-1. delegate approve/commit/merge/cleanup through `UsePairflow` `CloseBubble`
-2. require the returned close result to prove finalized bubble artifact deletion,
+1. delegate approve, document-close pre-commit admin, commit, merge, and cleanup
+   through `UsePairflow` `CloseBubble`
+2. require `UsePairflow` `CloseBubble` to apply the required
+   `status=implementable` task/plan metadata postcondition in the bubble
+   worktree after approval but before `pairflow bubble commit --stage-all`
+3. require the returned close result to prove finalized bubble artifact deletion,
    or to provide an explicit retained-bubble reason that prevents reporting a
    settled close
-3. after successful close/merge cleanup, update task metadata to
-   `status=implementable`
-4. preserve the existing `doc_bubble_id` as historical linkage; do not clear it
+4. after successful close/merge cleanup, re-read refreshed `main` metadata and
+   prove `status=implementable`; do not create a direct post-merge `main` admin
+   commit to repair missing close metadata
+5. preserve the existing `doc_bubble_id` as historical linkage; do not clear it
 
 Output:
 
@@ -536,11 +541,12 @@ approval_gate_state: already_satisfied
 reason_code: DOC_BUBBLE_AUTO_APPROVAL_CLOSE_REQUIRED
 delegated_use_pairflow_surface: CloseBubble
 metadata_postcondition: task_status_implementable
+metadata_commit_timing: pre_lifecycle_commit_in_bubble_worktree
 cleanup_postcondition: <bubble_deleted|retained_with_reason>
 auto_approval_proof:
   required_clean_runs: <reviewPolicy.meta_review_consecutive_clean_runs_required>
   observed_clean_runs: <metaReview.consecutiveCleanRuns>
-handoff_boundary_note: Auto-approve through UsePairflow CloseBubble because Pairflow already satisfied the configured multi-clean-meta-review gate; persist status=implementable and then allow fresh route selection.
+handoff_boundary_note: Auto-approve through UsePairflow CloseBubble because Pairflow already satisfied the configured multi-clean-meta-review gate; persist status=implementable inside the bubble before lifecycle commit, verify it on main after merge, and then allow fresh route selection.
 ```
 
 ### 6. Review-gate path
@@ -586,10 +592,16 @@ Authoritative trigger anchors:
 
 Delegation:
 
-1. delegate close/merge/cleanup through `UsePairflow` `CloseBubble`
-2. require the returned close result to prove finalized bubble artifact deletion, or to provide an explicit retained-bubble reason that prevents reporting a settled close
-3. after successful close/merge cleanup, update task metadata to `status=implementable`
-3. preserve the existing `doc_bubble_id` as historical linkage; do not clear it
+1. delegate document-close pre-commit admin, commit, merge, and cleanup through
+   `UsePairflow` `CloseBubble`
+2. require `UsePairflow` `CloseBubble` to apply the required
+   `status=implementable` task/plan metadata postcondition in the bubble
+   worktree before `pairflow bubble commit --stage-all`
+3. require the returned close result to prove finalized bubble artifact deletion, or to provide an explicit retained-bubble reason that prevents reporting a settled close
+4. after successful close/merge cleanup, re-read refreshed `main` metadata and
+   prove `status=implementable`; do not create a direct post-merge `main` admin
+   commit to repair missing close metadata
+5. preserve the existing `doc_bubble_id` as historical linkage; do not clear it
 
 Output:
 
@@ -604,15 +616,21 @@ approval_gate_state: already_satisfied
 reason_code: DOC_BUBBLE_CLOSE_REQUIRED
 delegated_use_pairflow_surface: CloseBubble
 metadata_postcondition: task_status_implementable
+metadata_commit_timing: pre_lifecycle_commit_in_bubble_worktree
 cleanup_postcondition: <bubble_deleted|retained_with_reason>
-handoff_boundary_note: Close the approved document bubble, persist status=implementable, and then allow fresh route selection.
+handoff_boundary_note: Close the approved document bubble, persist status=implementable inside the bubble before lifecycle commit, verify it on main after merge, and then allow fresh route selection.
 ```
 
 Fail-closed rule:
 
-1. if close/merge succeeds but task metadata cannot be updated to `status=implementable`, the handler must not emit an auto-continuable close result
-2. if close/merge succeeds but the finalized bubble artifact remains present without an explicit retained-bubble reason, the handler must not emit an auto-continuable close result
-3. later implementation-bubble routing must never infer document completion from `doc_bubble_id`, deleted bubble artifacts, or prose-only memory
+1. if `UsePairflow` `CloseBubble` cannot persist `status=implementable` in the
+   bubble worktree before lifecycle commit, the handler must stop before merge
+   rather than relying on a direct `main` repair commit
+2. if close/merge succeeds but refreshed `main` task metadata does not prove
+   `status=implementable`, the handler must not emit an auto-continuable close
+   result
+3. if close/merge succeeds but the finalized bubble artifact remains present without an explicit retained-bubble reason, the handler must not emit an auto-continuable close result
+4. later implementation-bubble routing must never infer document completion from `doc_bubble_id`, deleted bubble artifacts, or prose-only memory
 
 ### 8. Normalized replanning path
 

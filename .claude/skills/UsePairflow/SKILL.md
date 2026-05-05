@@ -45,24 +45,25 @@ This skill exists to avoid lifecycle mistakes (wrong command in wrong state, los
 6. For any bubble message payload (`reply`, `request-rework`, `ask-human`), use shell-safe message passing. Never inline raw text containing backticks or `$` directly in `--message "..."`.
 7. For bubble creation, always include `--review-artifact-type <document|code>` in `pairflow bubble create`.
 8. For implementation bubbles (`review_artifact_type=code`), `CloseBubble` includes mandatory post-merge completion: finalized bubble artifact deletion, README/docs/progress check + required updates, and task archival under `plans/archive/tasks/` with mirrored relative path.
-9. In `ReviewBubble` outputs, every finding must include source label: `[Bubble]` (from bubble transcript/tool output, e.g. reviewer findings) or `[MetaReview]` (from meta-reviewer artifacts already present in bubble context).
-10. `ReviewBubble` uses the surviving direct review contract only; do not expose or suggest any removed source-selection flag.
-11. Hard rule: do not route `ReviewBubble` through `pairflow bubble meta-review *` read-model commands as an operator source-selection path.
-12. Decision separation: `--decide approve|rework` controls lifecycle action only (`bubble approve` / `bubble request-rework`) and is independent from review content gathering.
-13. Ideation lifecycle is explicit: if a bubble was created with `--ideation`, run `pairflow bubble kickoff` before any `pass`/`converged` loop command.
-14. If runtime is unhealthy (agent pane unresponsive, tmux/session mismatch, token/login refresh needed), prefer `pairflow bubble restart --id <id> [--repo <path>]` over manual tmux kill/start steps.
-15. Remote exception: if a started remote bubble reports runtime loss (`remoteExecution.pointerKind="started"` with runtime unavailable/missing), treat that fail-closed. Do not assume `bubble start` or `bubble restart` is the supported recovery contract on top of preserved remote state in this phase.
-16. For remote bubble creation, use `pairflow bubble create --remote <host> ...`; execution still begins only at `bubble start`.
-17. Remote attach is a separate operator step. `bubble attach` for remote bubbles uses the persisted started pointer plus optional `--port-forward`, not local tmux attach.
-18. Do not add `--attach` to `pairflow bubble start` unless the user explicitly asks for an interactive attach/switch step right now.
-19. `RUNNING round=0` ideation state is a valid hold state. Do not auto-kickoff. Exception: if the user asks for a loop action (`pass`/`converged`) while still in round-0 ideation, run kickoff first because loop actions require an active round.
-20. Pre-kickoff manual preparation in the bubble worktree is allowed when explicitly requested by the user. In this pattern, kickoff text should summarize already-applied work and define expected first handoff behavior.
-21. `ReviewBubble` should explain findings in business-technical language by default, not just reviewer shorthand:
+9. For document bubbles whose caller requires a close metadata postcondition, `CloseBubble` applies that admin metadata in the bubble worktree before `pairflow bubble commit --stage-all`; do not repair missing document-close status with a direct post-merge `main` commit.
+10. In `ReviewBubble` outputs, every finding must include source label: `[Bubble]` (from bubble transcript/tool output, e.g. reviewer findings) or `[MetaReview]` (from meta-reviewer artifacts already present in bubble context).
+11. `ReviewBubble` uses the surviving direct review contract only; do not expose or suggest any removed source-selection flag.
+12. Hard rule: do not route `ReviewBubble` through `pairflow bubble meta-review *` read-model commands as an operator source-selection path.
+13. Decision separation: `--decide approve|rework` controls lifecycle action only (`bubble approve` / `bubble request-rework`) and is independent from review content gathering.
+14. Ideation lifecycle is explicit: if a bubble was created with `--ideation`, run `pairflow bubble kickoff` before any `pass`/`converged` loop command.
+15. If runtime is unhealthy (agent pane unresponsive, tmux/session mismatch, token/login refresh needed), prefer `pairflow bubble restart --id <id> [--repo <path>]` over manual tmux kill/start steps.
+16. Remote exception: if a started remote bubble reports runtime loss (`remoteExecution.pointerKind="started"` with runtime unavailable/missing), treat that fail-closed. Do not assume `bubble start` or `bubble restart` is the supported recovery contract on top of preserved remote state in this phase.
+17. For remote bubble creation, use `pairflow bubble create --remote <host> ...`; execution still begins only at `bubble start`.
+18. Remote attach is a separate operator step. `bubble attach` for remote bubbles uses the persisted started pointer plus optional `--port-forward`, not local tmux attach.
+19. Do not add `--attach` to `pairflow bubble start` unless the user explicitly asks for an interactive attach/switch step right now.
+20. `RUNNING round=0` ideation state is a valid hold state. Do not auto-kickoff. Exception: if the user asks for a loop action (`pass`/`converged`) while still in round-0 ideation, run kickoff first because loop actions require an active round.
+21. Pre-kickoff manual preparation in the bubble worktree is allowed when explicitly requested by the user. In this pattern, kickoff text should summarize already-applied work and define expected first handoff behavior.
+22. `ReviewBubble` should explain findings in business-technical language by default, not just reviewer shorthand:
   - explain the technical issue,
   - explain why it matters in practical terms,
   - state whether it is blocking now or only future hardening debt.
-22. For started remote bubbles, the laptop/local repo remains the operator control plane. Run lifecycle commands from the local repo so Pairflow can use the retained pointer/cache state and SSH routing; do not SSH into the remote clone and run `approve`, `reply`, `commit`, `merge`, or `delete` there manually.
-23. The only bounded remote-clone local-parity exception in this design slice is `request-rework`, and only when Pairflow can prove the verified remote clone workspace context and no retained clone-local `remote.json` pointer artifacts are present. Default to the laptop-routed path unless that exception is explicitly known to apply.
+23. For started remote bubbles, the laptop/local repo remains the operator control plane. Run lifecycle commands from the local repo so Pairflow can use the retained pointer/cache state and SSH routing; do not SSH into the remote clone and run `approve`, `reply`, `commit`, `merge`, or `delete` there manually.
+24. The only bounded remote-clone local-parity exception in this design slice is `request-rework`, and only when Pairflow can prove the verified remote clone workspace context and no retained clone-local `remote.json` pointer artifacts are present. Default to the laptop-routed path unless that exception is explicitly known to apply.
 
 ## Execution Modes (Mandatory)
 

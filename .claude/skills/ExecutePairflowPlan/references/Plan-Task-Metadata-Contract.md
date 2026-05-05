@@ -152,7 +152,7 @@ Document-refinement lifecycle:
    `PublishPreKickoffAdmin`, verifies refreshed `main` metadata, and then
    kicks off the same document bubble while leaving `status=approved`.
 2. `doc_bubble_id` alone never authorizes implementation-bubble creation.
-3. `CloseDocumentBubble` sets `status=implementable` only after the document bubble's approval path is satisfied and close/merge cleanup succeeds.
+3. `CloseDocumentBubble` sets `status=implementable` only after the document bubble's approval path is satisfied; the metadata change must be applied in the bubble worktree before lifecycle commit and then verified on refreshed `main` after close/merge cleanup succeeds.
 4. If a linked document bubble is missing or unreadable while `status=approved`, route to troubleshooting or a human checkpoint. Do not infer document refinement from bubble absence.
 
 Implementation lifecycle:
