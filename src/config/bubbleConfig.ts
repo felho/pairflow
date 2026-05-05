@@ -1,7 +1,6 @@
 import {
   assertValidation,
   isInteger,
-  isIsoTimestamp,
   isRecord,
   validationFail,
   validationOk,
@@ -10,10 +9,6 @@ import {
 } from "../v11/shared/validation/primitives.js";
 import {
   DEFAULT_COMMIT_REQUIRES_APPROVAL,
-  DEFAULT_DOC_CONTRACT_ROUND_GATE_APPLIES_AFTER,
-  DEFAULT_LOCAL_OVERLAY_ENABLED,
-  DEFAULT_LOCAL_OVERLAY_ENTRIES,
-  DEFAULT_LOCAL_OVERLAY_MODE,
   DEFAULT_MAX_ROUNDS,
   DEFAULT_PAIRFLOW_COMMAND_PROFILE,
   DEFAULT_QUALITY_MODE,
@@ -24,9 +19,7 @@ import {
   DEFAULT_WORK_MODE
 } from "./defaults.js";
 import {
-  isAgentName,
   isAttachLauncher,
-  isLocalOverlayMode,
   isPairflowCommandProfile,
   isQualityMode,
   isReviewArtifactType,
@@ -36,28 +29,22 @@ import {
   type BubbleConfig
 } from "../types/bubble.js";
 import type { PairflowGlobalConfig } from "./pairflowConfig.js";
-import { IDEATION_METADATA_PARSE_WARNING } from "../v11/shared/ideation/ideationReasonCodes.js";
-import {
-  describeValidationTargetIdRule,
-  isValidationTargetId
-} from "../v11/shared/validation/validationTargetId.js";
-import {
-  normalizeValidationTargetCwd,
-  normalizeValidationTargetPathSelector
-} from "../v11/shared/validation/validationTargetPaths.js";
+import { validateBubbleAgents } from "./bubbleConfig/agents.js";
 import { SEVERITY_GATE_ROUND_INVALID } from "./bubbleConfig/errors.js";
 import { validateBubbleExecutor } from "./bubbleConfig/executor.js";
+import { validateBubbleDocContractGates } from "./bubbleConfig/docContractGates.js";
 import { parseToml } from "./bubbleConfig/parser.js";
 import {
-  describeUnknownValue,
-  readBoolean,
   readObject,
-  readString,
-  readStringArray
+  readString
 } from "./bubbleConfig/readers.js";
 import { validateBubbleCommands } from "./bubbleConfig/commands.js";
+import { validateBubbleIdeation } from "./bubbleConfig/ideation.js";
+import { validateBubbleLocalOverlay } from "./bubbleConfig/localOverlay.js";
+import { validateBubbleNotifications } from "./bubbleConfig/notifications.js";
 import { assertValidBubbleConfigRemoteReferences } from "./bubbleConfig/remoteReferences.js";
 import { validateBubbleReviewPolicy } from "./bubbleConfig/reviewPolicy.js";
+import { validateBubbleValidationTarget } from "./bubbleConfig/validationTarget.js";
 
 export {
   assertCreateReviewArtifactType,
@@ -80,15 +67,6 @@ export {
   validateBubbleConfigRemoteReferences
 } from "./bubbleConfig/remoteReferences.js";
 export { renderBubbleConfigToml } from "./bubbleConfig/render.js";
-
-function isSafeLocalOverlayEntry(value: string): boolean {
-  const normalized = value.replaceAll("\\", "/");
-  if (normalized.startsWith("/") || normalized.includes("//")) {
-    return false;
-  }
-  const segments = normalized.split("/");
-  return segments.every((segment) => segment.length > 0 && segment !== ".." && segment !== ".");
-}
 
 export function validateBubbleConfig(input: unknown): ValidationResult<BubbleConfig> {
   const errors: ValidationError[] = [];
@@ -279,265 +257,28 @@ export function validateBubbleConfig(input: unknown): ValidationResult<BubbleCon
     false
   );
 
-  const implementer = agents
-    ? readString(agents, "implementer", "agents.implementer", errors, true)
-    : undefined;
-  if (implementer !== undefined && !isAgentName(implementer)) {
-    errors.push({
-      path: "agents.implementer",
-      message: "Must be one of: codex, claude"
-    });
-  }
-
-  const reviewer = agents
-    ? readString(agents, "reviewer", "agents.reviewer", errors, true)
-    : undefined;
-  if (reviewer !== undefined && !isAgentName(reviewer)) {
-    errors.push({
-      path: "agents.reviewer",
-      message: "Must be one of: codex, claude"
-    });
-  }
-
-  const metaReviewerCandidate = agents
-    ? readString(
-        agents,
-        "meta_reviewer",
-        "agents.meta_reviewer",
-        errors,
-        false
-      )
-    : undefined;
-  // Legacy two-agent bubble.toml files normalize here so downstream runtime
-  // consumers never need their own role-specific meta-reviewer fallback.
-  const metaReviewer = metaReviewerCandidate ?? "codex";
-  if (metaReviewerCandidate !== undefined && !isAgentName(metaReviewerCandidate)) {
-    errors.push({
-      path: "agents.meta_reviewer",
-      message: "Must be one of: codex, claude"
-    });
-  }
+  const validatedAgents = validateBubbleAgents(agents, errors);
 
   const validatedCommands = validateBubbleCommands(commands, errors);
 
-  let validatedValidationTarget: BubbleConfig["validation_target"] | undefined;
-  if (validationTarget !== undefined) {
-    const targetId = readString(
-      validationTarget,
-      "id",
-      "validation_target.id",
-      errors,
-      true
-    );
-    const targetCwd = readString(
-      validationTarget,
-      "cwd",
-      "validation_target.cwd",
-      errors,
-      false
-    );
-    const targetPaths = readStringArray(
-      validationTarget,
-      "paths",
-      "validation_target.paths",
-      errors,
-      false
-    );
-    if (
-      targetId !== undefined &&
-      !isValidationTargetId(targetId)
-    ) {
-      errors.push({
-        path: "validation_target.id",
-        message: describeValidationTargetIdRule()
-      });
-    }
-    const normalizedCwd =
-      targetCwd !== undefined
-        ? normalizeValidationTargetCwd(targetCwd)
-        : undefined;
-    if (targetCwd !== undefined && normalizedCwd === undefined) {
-      errors.push({
-        path: "validation_target.cwd",
-        message: "Must be a normalized relative path"
-      });
-    }
-    const normalizedPaths: string[] | undefined =
-      targetPaths !== undefined ? [] : undefined;
-    targetPaths?.forEach((path, index) => {
-      const normalizedPath = normalizeValidationTargetPathSelector(path);
-      if (normalizedPath === undefined) {
-        errors.push({
-          path: `validation_target.paths[${index}]`,
-          message: "Must be a normalized relative path selector"
-        });
-        return;
-      }
-      normalizedPaths?.push(normalizedPath);
-    });
-    if (targetId !== undefined) {
-      validatedValidationTarget = {
-        id: targetId,
-        ...(normalizedCwd !== undefined ? { cwd: normalizedCwd } : {}),
-        ...(normalizedPaths !== undefined ? { paths: normalizedPaths } : {})
-      };
-    }
-  }
+  const validatedValidationTarget = validateBubbleValidationTarget(
+    validationTarget,
+    errors
+  );
 
-  const notificationsEnabled = notifications
-    ? (readBoolean(
-        notifications,
-        "enabled",
-        "notifications.enabled",
-        errors,
-        false
-      ) ?? true)
-    : true;
-  const waitingHumanSound = notifications
-    ? readString(
-        notifications,
-        "waiting_human_sound",
-        "notifications.waiting_human_sound",
-        errors,
-        false
-      )
-    : undefined;
-  const convergedSound = notifications
-    ? readString(
-        notifications,
-        "converged_sound",
-        "notifications.converged_sound",
-        errors,
-        false
-      )
-    : undefined;
+  const validatedNotifications = validateBubbleNotifications(
+    notifications,
+    errors
+  );
 
-  const localOverlayEnabled = localOverlay
-    ? (readBoolean(
-        localOverlay,
-        "enabled",
-        "local_overlay.enabled",
-        errors,
-        false
-      ) ?? DEFAULT_LOCAL_OVERLAY_ENABLED)
-    : DEFAULT_LOCAL_OVERLAY_ENABLED;
-  const localOverlayModeCandidate =
-    localOverlay?.mode ?? DEFAULT_LOCAL_OVERLAY_MODE;
-  if (!isLocalOverlayMode(localOverlayModeCandidate)) {
-    errors.push({
-      path: "local_overlay.mode",
-      message: "Must be one of: symlink, copy"
-    });
-  }
-  const localOverlayMode = isLocalOverlayMode(localOverlayModeCandidate)
-    ? localOverlayModeCandidate
-    : DEFAULT_LOCAL_OVERLAY_MODE;
+  const validatedLocalOverlay = validateBubbleLocalOverlay(localOverlay, errors);
 
-  const localOverlayEntriesInput = localOverlay
-    ? readStringArray(
-        localOverlay,
-        "entries",
-        "local_overlay.entries",
-        errors,
-        false
-      )
-    : undefined;
-  const localOverlayEntries =
-    localOverlayEntriesInput === undefined
-      ? [...DEFAULT_LOCAL_OVERLAY_ENTRIES]
-      : localOverlayEntriesInput;
-  for (const entry of localOverlayEntries) {
-    if (!isSafeLocalOverlayEntry(entry)) {
-      errors.push({
-        path: "local_overlay.entries",
-        message:
-          "Entries must be normalized relative paths without '.'/'..' segments"
-      });
-    }
-  }
+  const validatedDocContractGates = validateBubbleDocContractGates(
+    docContractGates,
+    errors
+  );
 
-  const docContractGateWarnings: string[] = [];
-  const existingDocContractGateParseWarning = docContractGates
-    ? readString(
-        docContractGates,
-        "parse_warning",
-        "doc_contract_gates.parse_warning",
-        errors,
-        false
-      )
-    : undefined;
-  const roundGateAppliesAfterCandidate = docContractGates?.round_gate_applies_after;
-  let roundGateAppliesAfter = DEFAULT_DOC_CONTRACT_ROUND_GATE_APPLIES_AFTER;
-  if (roundGateAppliesAfterCandidate !== undefined) {
-    if (isInteger(roundGateAppliesAfterCandidate) && roundGateAppliesAfterCandidate >= 0) {
-      roundGateAppliesAfter = roundGateAppliesAfterCandidate;
-    } else {
-      docContractGateWarnings.push(
-        `doc_contract_gates.round_gate_applies_after must be a non-negative integer. Received ${describeUnknownValue(roundGateAppliesAfterCandidate)}.`
-      );
-    }
-  }
-
-  const ideationWarnings: string[] = [];
-  const existingIdeationParseWarning = ideation
-    ? readString(
-        ideation,
-        "parse_warning",
-        "ideation.parse_warning",
-        errors,
-        false
-      )
-    : undefined;
-  const ideationModeCandidate = ideation?.mode;
-  let ideationMode = false;
-  if (ideationModeCandidate !== undefined) {
-    if (typeof ideationModeCandidate === "boolean") {
-      ideationMode = ideationModeCandidate;
-    } else {
-      ideationWarnings.push(
-        `${IDEATION_METADATA_PARSE_WARNING}: ideation.mode must be boolean. Received ${describeUnknownValue(ideationModeCandidate)}.`
-      );
-    }
-  }
-  const ideationTaskPendingCandidate = ideation?.task_pending;
-  let ideationTaskPending = false;
-  if (ideationTaskPendingCandidate !== undefined) {
-    if (typeof ideationTaskPendingCandidate === "boolean") {
-      ideationTaskPending = ideationTaskPendingCandidate;
-    } else {
-      ideationWarnings.push(
-        `${IDEATION_METADATA_PARSE_WARNING}: ideation.task_pending must be boolean. Received ${describeUnknownValue(ideationTaskPendingCandidate)}.`
-      );
-    }
-  }
-  const ideationStartedAtCandidate = ideation?.started_at;
-  let ideationStartedAt: string | undefined;
-  if (ideationStartedAtCandidate !== undefined) {
-    if (isIsoTimestamp(ideationStartedAtCandidate)) {
-      ideationStartedAt = ideationStartedAtCandidate;
-    } else {
-      ideationWarnings.push(
-        `${IDEATION_METADATA_PARSE_WARNING}: ideation.started_at must be an ISO timestamp. Received ${describeUnknownValue(ideationStartedAtCandidate)}.`
-      );
-    }
-  }
-  const ideationKickedOffAtCandidate = ideation?.kicked_off_at;
-  let ideationKickedOffAt: string | undefined;
-  if (ideationKickedOffAtCandidate !== undefined) {
-    if (isIsoTimestamp(ideationKickedOffAtCandidate)) {
-      ideationKickedOffAt = ideationKickedOffAtCandidate;
-    } else {
-      ideationWarnings.push(
-        `${IDEATION_METADATA_PARSE_WARNING}: ideation.kicked_off_at must be an ISO timestamp. Received ${describeUnknownValue(ideationKickedOffAtCandidate)}.`
-      );
-    }
-  }
-  if (!ideationMode && ideationTaskPending) {
-    ideationWarnings.push(
-      `${IDEATION_METADATA_PARSE_WARNING}: ideation.task_pending=true is invalid when ideation.mode=false; normalized to false.`
-    );
-    ideationTaskPending = false;
-  }
+  const validatedIdeation = validateBubbleIdeation(ideation, errors);
 
   const validatedReviewPolicy = validateBubbleReviewPolicy(reviewPolicy, errors);
 
@@ -545,16 +286,6 @@ export function validateBubbleConfig(input: unknown): ValidationResult<BubbleCon
 
   if (errors.length > 0) {
     return validationFail(errors);
-  }
-
-  const validatedNotifications: BubbleConfig["notifications"] = {
-    enabled: notificationsEnabled
-  };
-  if (waitingHumanSound !== undefined) {
-    validatedNotifications.waiting_human_sound = waitingHumanSound;
-  }
-  if (convergedSound !== undefined) {
-    validatedNotifications.converged_sound = convergedSound;
   }
 
   const validatedConfig: BubbleConfig = {
@@ -587,66 +318,14 @@ export function validateBubbleConfig(input: unknown): ValidationResult<BubbleCon
     ...(validatedValidationTarget !== undefined
       ? { validation_target: validatedValidationTarget }
       : {}),
-    agents: {
-      implementer: implementer as "codex" | "claude",
-      reviewer: reviewer as "codex" | "claude",
-      meta_reviewer: metaReviewer as "codex" | "claude"
-    },
+    agents: validatedAgents,
     commands: validatedCommands as BubbleConfig["commands"],
     notifications: validatedNotifications,
-    local_overlay: {
-      enabled: localOverlayEnabled,
-      mode: localOverlayMode,
-      entries: localOverlayEntries
-    },
-    doc_contract_gates: {
-      round_gate_applies_after: roundGateAppliesAfter,
-      ...((existingDocContractGateParseWarning !== undefined || docContractGateWarnings.length > 0)
-        ? {
-            parse_warning: [
-              existingDocContractGateParseWarning,
-              ...(docContractGateWarnings.length > 0
-                ? [docContractGateWarnings.join(" ")]
-                : [])
-            ]
-              .filter((entry): entry is string => entry !== undefined)
-              .join(" ")
-          }
-        : {})
-    },
-    ...(
-      ideationMode ||
-      ideationTaskPending ||
-      ideationStartedAt !== undefined ||
-      ideationKickedOffAt !== undefined ||
-      existingIdeationParseWarning !== undefined ||
-      ideationWarnings.length > 0
-        ? {
-            ideation: {
-              mode: ideationMode,
-              task_pending: ideationTaskPending,
-              ...(ideationStartedAt !== undefined
-                ? { started_at: ideationStartedAt }
-                : {}),
-              ...(ideationKickedOffAt !== undefined
-                ? { kicked_off_at: ideationKickedOffAt }
-                : {}),
-              ...((existingIdeationParseWarning !== undefined || ideationWarnings.length > 0)
-                ? {
-                    parse_warning: [
-                      existingIdeationParseWarning,
-                      ...(ideationWarnings.length > 0
-                        ? [ideationWarnings.join(" ")]
-                        : [])
-                    ]
-                      .filter((entry): entry is string => entry !== undefined)
-                      .join(" ")
-                  }
-                : {})
-            }
-          }
-        : {}
-    ),
+    local_overlay: validatedLocalOverlay,
+    doc_contract_gates: validatedDocContractGates,
+    ...(validatedIdeation !== undefined
+      ? { ideation: validatedIdeation }
+      : {}),
     ...(validatedExecutor !== undefined
       ? { executor: validatedExecutor }
       : {})
