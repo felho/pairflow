@@ -33,7 +33,7 @@ task_tracker:
     status: archived
   - task_id: 3-remote-commit-rename
     task_path: plans/tasks/3-remote-commit-rename.md
-    status: approved
+    status: implementable
   - task_id: 4-remote-merge-rename
     task_path: null
     status: not_created

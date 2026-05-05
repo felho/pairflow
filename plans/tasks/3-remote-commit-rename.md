@@ -5,7 +5,7 @@ task_family_id: remote-commit-rename
 sequence_key: "3"
 task_id: 3-remote-commit-rename
 title: "Remote Commit Rename"
-status: approved
+status: implementable
 phase: phase2
 target_files:
   - src/v11/shared/commit/commitRemoteExecution.ts
