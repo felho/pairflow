@@ -5,7 +5,7 @@ task_family_id: close-admin-verifier
 sequence_key: "5"
 task_id: 5-close-admin-verifier
 title: "Close Aftermath Verifier-First Admin Reconciliation"
-status: approved
+status: archived
 phase: phase5
 target_files:
   - .claude/skills/ExecutePairflowPlan/Workflows/UpdateProgress.md
@@ -28,10 +28,12 @@ normative_refs:
 owners:
   - "felho"
 doc_bubble_id: 5-close-admin-verifier-doc
-impl_bubble_id: null
+impl_bubble_id: 5-close-admin-verifier-doc
 supersedes: []
 superseded_by: null
 archive_group: 2026-05-04-pre-kickoff-admin-phase-plan-v1
+archive_path: plans/archive/tasks/2026-05-04-pre-kickoff-admin-phase-plan-v1/5-close-admin-verifier.md
+closed_at: "2026-05-05"
 ---
 
 # Task: Close Aftermath Verifier-First Admin Reconciliation
