@@ -52,8 +52,8 @@ task_tracker:
     task_path: plans/archive/tasks/2026-05-05-shared-command-boundary-cleanup-plan-v1/8-list-inventory.md
     status: archived
   - task_id: 9-list-readmodel-introduce
-    task_path: null
-    status: not_created
+    task_path: plans/tasks/9-list-readmodel-introduce.md
+    status: approved
   - task_id: 10-list-runtime-cutover
     task_path: null
     status: not_created
