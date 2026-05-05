@@ -18,7 +18,7 @@ import {
 import {
   metaReviewSummaryStructuredMismatchReasonCode,
   resolveApproveSummaryStructuredMismatch
-} from "./metaReviewGateApproveClaimSummaryMismatch.js";
+} from "../../../domain/metaReviewGate/approveClaimSummaryMismatch.js";
 
 export {
   metaReviewApproveAdvisoryOnlyReasonCode,
