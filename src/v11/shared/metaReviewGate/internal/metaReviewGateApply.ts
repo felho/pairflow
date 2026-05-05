@@ -11,7 +11,7 @@ import { setMetaReviewConsecutiveCleanRuns } from "./metaReviewGateShared.js";
 import { routeMetaReviewKickoffOrRunFailed } from "./metaReviewGateApplyRunRouting.js";
 import {
   initializeApplyMetaReviewGateExecutionContext
-} from "../metaReviewGateApplyContext.js";
+} from "./metaReviewGateApplyContext.js";
 import { reconcileObservedGateResult } from "./metaReviewGateApplyObservation.js";
 import { persistRuntimeDeliveryObservation } from "./metaReviewGateApplyPersistence.js";
 import type {
