@@ -23,7 +23,7 @@ import {
   persistRunFailedHumanRoute
 } from "./internal/metaReviewGateCurrentRunRoutePersistence.js";
 import type { FinalizeCurrentRunMetaReviewGateInput } from "./metaReviewGateCurrentRunTypes.js";
-import { mergeRunResultWithParityResolution } from "./internal/metaReviewGateRunResultParity.js";
+import { mergeRunResultWithParityResolution } from "../../domain/metaReviewGate/runResultParity.js";
 import { routeCleanMetaReviewRerun } from "./internal/metaReviewGateCurrentRunCleanRerun.js";
 import {
   META_REVIEW_APPROVE_VALIDATION_FAILED,
