@@ -3,7 +3,7 @@ import type {
   ExecuteRemoteBubbleMergeCommandResult,
   RemoteMergeCleanupArtifacts,
   RemoteMergeImportSource
-} from "../../../shared/merge/remoteMergeContract.js";
+} from "../../../shared/remote/remoteMergeContract.js";
 import { RemoteBubbleMergeCommandError } from "./sshBubbleMergeCommandError.js";
 
 function parseJsonObjectPayload(input: {

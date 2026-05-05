@@ -2,8 +2,8 @@ import { shellQuote } from "../../../shared/foundation/shellQuote.js";
 import type {
   ExecuteRemoteBubbleMergeCleanupCommandInput,
   ExecuteRemoteBubbleMergeCommandInput
-} from "../../../shared/merge/remoteMergeContract.js";
-import { buildMergeImportRef } from "../../../shared/merge/remoteMergeContract.js";
+} from "../../../shared/remote/remoteMergeContract.js";
+import { buildMergeImportRef } from "../../../shared/remote/remoteMergeContract.js";
 import {
   remoteMergeCleanupExitStatusEndMarker,
   remoteMergeCleanupExitStatusStartMarker,

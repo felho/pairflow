@@ -3,7 +3,7 @@ import type {
   ExecuteRemoteBubbleMergeCleanupCommandResult,
   ExecuteRemoteBubbleMergeCommandInput,
   ExecuteRemoteBubbleMergeCommandResult
-} from "../../../shared/merge/remoteMergeContract.js";
+} from "../../../shared/remote/remoteMergeContract.js";
 import { runCommandDefault } from "./sshBubbleStatus.js";
 import { buildSshCommandArgs } from "./sshBubbleStart.js";
 import {
