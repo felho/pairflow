@@ -108,14 +108,26 @@ Task-admin adoption:
    carrier worktree, not directly on `main`.
 3. The carrier must remain a round-0 ideation hold while task admin is being
    prepared and reviewed.
-4. After the latest task artifact is approved, the bounded admin commit must be
+4. Before task-admin files are created or edited, the handler must prove the
+   exact carrier worktree path from refreshed Pairflow status, prove clean
+   `main`, and write a `PublishPreKickoffAdmin` pre-side-effect authorization
+   record naming selected admin paths, expected postconditions, ideation hold
+   proof, and changed-path coverage.
+5. Any delegated `CreatePairflowSpec` task-admin step that can write files must
+   execute in the proven carrier worktree. If that execution root cannot be
+   guaranteed, it may return only proposed content or a review decision for the
+   handler to apply inside the carrier.
+6. After every task-admin edit, the handler must prove `main` is still clean and
+   all changed/untracked carrier paths are selected-scope admin paths. A dirty
+   `main` is a hard stop, not a cleanup opportunity.
+7. After the latest task artifact is approved, the bounded admin commit must be
    fast-forward-published to clean `main` through
    `PublishPreKickoffAdmin`.
-5. Only after refreshed `main` proves the selected plan/task/admin
+8. Only after refreshed `main` proves the selected plan/task/admin
    postconditions and refreshed Pairflow status proves the same round-0 hold may
    the workflow kickoff the same `<task_id>-doc` carrier for document
    refinement.
-6. A task-admin route that produces route-back-to-plan, split-task, or
+9. A task-admin route that produces route-back-to-plan, split-task, or
    block-not-ready output publishes only the bounded settled admin state that is
    explicitly authorized, then stops at the appropriate checkpoint instead of
    kicking off document refinement.

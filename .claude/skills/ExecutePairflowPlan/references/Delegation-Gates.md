@@ -35,13 +35,22 @@ Allowed mutations require an authorizing delegated result:
    for the latest plan artifact.
 3. task creation requires a `CreateTask` result that names the created/refined
    task path and status.
-4. document-route `doc_bubble_id` metadata editing in the bubble worktree
+4. task-admin artifact editing for `CreateTask` or `ReviewTask` requires a
+   `PublishPreKickoffAdmin` pre-side-effect authorization record before the file
+   edit occurs. The record must name the route context, exact carrier
+   `BUBBLE_WORKTREE_PATH` from Pairflow status, selected admin paths, clean
+   `main` proof, ideation hold proof, selected-route scope proof, named
+   postconditions, and changed-path coverage including untracked files. The edit
+   must occur in that carrier worktree; if the delegate cannot prove its
+   execution root equals `BUBBLE_WORKTREE_PATH`, it may return only proposed
+   content or a review decision.
+5. document-route `doc_bubble_id` metadata editing in the bubble worktree
    requires a `PublishPreKickoffAdmin` pre-side-effect authorization record
    before the file edit occurs. Final `doc_bubble_id` linkage recognition then
    requires a successful `CreateDocumentBubble` handler result with the
    created/started bubble id, structured `PublishPreKickoffAdmin` success,
    refreshed `main` metadata proof, and same-bubble kickoff proof.
-5. implementation-route `impl_bubble_id` linkage and `status=in_progress`
+6. implementation-route `impl_bubble_id` linkage and `status=in_progress`
    metadata editing in the bubble worktree requires a
    `PublishPreKickoffAdmin` pre-side-effect authorization record before the file
    edit occurs. Final linkage/status recognition then requires a successful
@@ -51,10 +60,10 @@ Allowed mutations require an authorizing delegated result:
    same-bubble kickoff proof when kickoff runs. Linked active-hold
    classification after kickoff is a lifecycle boundary, not final
    linkage/status recognition for a new admin mutation.
-6. `status=implementable` requires a successful `CloseDocumentBubble` handler
+7. `status=implementable` requires a successful `CloseDocumentBubble` handler
    result.
-7. task archive/progress aftermath requires a successful `UpdateProgress` result.
-8. bounded pre-kickoff admin editing/staging/commit/publish requires a
+8. task archive/progress aftermath requires a successful `UpdateProgress` result.
+9. bounded pre-kickoff admin editing/staging/commit/publish requires a
    `PublishPreKickoffAdmin` pre-side-effect authorization record, written before
    editing, staging, committing, or publishing in the operator route ledger or
    workflow notes for the current run, that names
@@ -63,16 +72,26 @@ Allowed mutations require an authorizing delegated result:
    including untracked files. The final `PublishPreKickoffAdmin` workflow result
    is produced after the publish or checkpoint path; it is not required before
    the workflow can perform its own authorized side effects.
-9. document-bubble kickoff after pre-kickoff admin publish requires the final
+10. document-bubble kickoff after pre-kickoff admin publish requires the final
    `PublishPreKickoffAdmin` success result plus refreshed handler-side proof
    that `main` task metadata contains `doc_bubble_id=<task_id>-doc` with
    `status=approved`, and that Pairflow still reports the same bubble in
    round-0 ideation hold.
-10. implementation-bubble kickoff after pre-kickoff admin publish requires the
+11. implementation-bubble kickoff after pre-kickoff admin publish requires the
     final `PublishPreKickoffAdmin` success result plus refreshed handler-side
     proof that `main` task metadata contains `impl_bubble_id=<task_id>-impl`
     with `status=in_progress`, and that Pairflow still reports the same bubble
     in round-0 ideation hold.
+
+Task-admin post-edit guard:
+
+1. After any task-admin edit, `REPO_PATH` must still have empty
+   `git status --porcelain=v1`.
+2. All changed, staged, and untracked files in `BUBBLE_WORKTREE_PATH` must be
+   covered by the selected admin paths or by the explicit changed-path coverage
+   in the authorization record.
+3. If `main` becomes dirty during task admin, stop with
+   `MAIN_DIRTY_DURING_TASK_ADMIN`; do not continue to publish or kickoff.
 
 Do not commit route-caused metadata changes unless the staged mutation is covered
 by one of these authorizations.

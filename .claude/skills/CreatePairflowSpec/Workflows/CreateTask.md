@@ -7,6 +7,9 @@ Create or refine a Pairflow task file using `L0 -> L1 -> L2`.
 - `USER_REQUEST`: user goal and available context
 - `TARGET_PATH`: optional task file path to refine
 - `REFERENCES`: optional refs (`prd_ref`, `plan_ref`, context docs)
+- `EXECUTION_ROOT`: optional absolute path where file edits are permitted
+- `CALLER_ROUTE_CONTEXT`: optional route context such as
+  `ExecutePairflowPlan CreateTask` / `ReviewTask`
 
 ## Workflow
 
@@ -71,6 +74,29 @@ Create or refine a Pairflow task file using `L0 -> L1 -> L2`.
    - shared contract consumers and compatibility risk,
    - prerequisite milestones,
    - distinct acceptance goals.
+
+### 1.0) Enforce caller execution root for task-admin routes
+
+When this workflow is invoked by `ExecutePairflowPlan` task-admin routing
+(`CreateTask` or `ReviewTask`) and it may write or update files:
+
+1. Require an explicit absolute `EXECUTION_ROOT` equal to the canonical
+   `<task_id>-doc` carrier worktree path supplied by
+   `HandleTaskAdminBubble`.
+2. Verify the current repository root equals `EXECUTION_ROOT` before writing.
+   If the current root is the `main` checkout or any other path, stop with
+   `TASK_ADMIN_EXECUTION_ROOT_MISMATCH`.
+3. Treat `plan_ref`, `TARGET_PATH`, and any task path as paths inside
+   `EXECUTION_ROOT` unless they are explicitly absolute paths under
+   `EXECUTION_ROOT`.
+4. Do not create, update, stage, or commit files in the `main` checkout during
+   task-admin creation or review.
+5. If the runtime cannot guarantee that writes happen under `EXECUTION_ROOT`,
+   return only proposed artifact content, selected paths, status, and any
+   blocker/review decision. The caller must apply file edits in the carrier
+   worktree after its own pre-side-effect authorization gate succeeds.
+6. Include the verified `EXECUTION_ROOT` and whether files were written or only
+   proposed in the workflow result.
 
 ### 1.0a) Establish execution metadata
 

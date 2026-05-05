@@ -61,6 +61,12 @@ Read only the minimum authoritative inputs needed for the route:
 11. `PUBLISH_PRE_KICKOFF_ADMIN_RESULT`
 12. `REFRESHED_MAIN_PLAN_AND_TASK_METADATA`
 13. `REFRESHED_IDEATION_HOLD_STATUS`
+14. `BUBBLE_WORKTREE_PATH`, from refreshed Pairflow status for the exact
+    `<task_id>-doc` carrier
+15. `TASK_ADMIN_PRE_SIDE_EFFECT_AUTHORIZATION_RECORD`
+16. `MAIN_CLEAN_PRE_EDIT_PROOF`
+17. `POST_EDIT_MAIN_CLEAN_PROOF`
+18. `POST_EDIT_CARRIER_CHANGED_PATH_PROOF`
 
 Input rules:
 
@@ -73,6 +79,13 @@ Input rules:
    published
 6. transcript prose, operator memory, unmerged carrier commits, and stale
    pre-publish reads are not publish proof
+7. the carrier worktree path must come from Pairflow status; branch names,
+   relative paths, shell current directory, and operator memory are forbidden as
+   carrier-location proof
+8. task-admin edits may begin only after a written pre-side-effect
+   authorization record names the selected admin paths, clean `main` authority,
+   ideation hold proof, selected-route scope proof, and expected changed-path
+   coverage
 
 ## Entry Conditions
 
@@ -116,6 +129,53 @@ Use exactly `<task_id>-doc`.
 Before editing, apply `references/Delegation-Gates.md` and record a route-ledger
 entry tying the mutation to `CreateTask` or `ReviewTask`.
 
+Mandatory pre-edit carrier guard:
+
+1. Re-run `pairflow bubble status --id <task_id>-doc --repo <repo-path> --json`
+   immediately before any task-admin edit.
+2. Extract `BUBBLE_WORKTREE_PATH` from that status payload. Do not infer it from
+   `.pairflow` paths, branch names, or the shell working directory.
+3. Verify the status still proves the safe ideation hold:
+   - state is `RUNNING`
+   - active round is `0`
+   - `ideation.task_pending=true`
+4. Verify `REPO_PATH` is the clean `main` checkout:
+   - branch is `main`
+   - `git status --porcelain=v1` is empty
+   - no merge, rebase, or cherry-pick state is active
+5. Verify `BUBBLE_WORKTREE_PATH` is a Git worktree for branch
+   `bubble/<task_id>-doc` and starts from the expected clean base unless a
+   previous selected-scope admin edit for this same route is intentionally being
+   resumed.
+6. Write or update the route ledger/workflow notes with a
+   `PublishPreKickoffAdmin` pre-side-effect authorization record before editing.
+   The record must name:
+   - route context (`CreateTask` or `ReviewTask`)
+   - `REPO_PATH`
+   - `BUBBLE_WORKTREE_PATH`
+   - selected admin paths, including the parent plan and every task artifact
+     that may be created or refined
+   - named postconditions expected after publish
+   - clean `main` proof
+   - ideation hold proof
+   - selected-route scope proof
+   - expected changed-path coverage, including untracked files
+7. If any proof is missing or ambiguous, stop at a human checkpoint. Do not
+   create or repair task/plan artifacts directly on `main`.
+
+Delegated task-creation/review execution guard:
+
+1. Any `CreatePairflowSpec CreateTask` or `ReviewSpec task-mode` delegate that
+   can write files must receive `BUBBLE_WORKTREE_PATH` as its execution root and
+   must be told that writing anywhere else is a workflow violation.
+2. If the runtime cannot force the delegate's working directory to
+   `BUBBLE_WORKTREE_PATH`, the delegate may return only a proposed artifact body
+   or review decision. The parent handler must apply any file edits itself in
+   `BUBBLE_WORKTREE_PATH` after the carrier guard succeeds.
+3. A fresh-context delegate result is not sufficient authorization to edit
+   `main`; it authorizes only the selected admin edits inside
+   `BUBBLE_WORKTREE_PATH`.
+
 For `CreateTask`:
 
 1. delegate task creation to `CreatePairflowSpec CreateTask`
@@ -140,6 +200,21 @@ Approval rules:
 2. `doc_bubble_id=<task_id>-doc` may be written in the same selected admin
    change set only when document kickoff is intended
 3. direct `main` edits are forbidden
+
+Mandatory post-edit verification:
+
+1. Immediately after every task-admin edit or delegated write, re-check
+   `REPO_PATH`:
+   - `git status --porcelain=v1` must still be empty
+   - no selected admin file may appear as modified, staged, or untracked on
+     `main`
+2. Re-check `BUBBLE_WORKTREE_PATH` and prove every changed, staged, and
+   untracked path is covered by the selected admin paths or by the explicit
+   authorization record's changed-path coverage.
+3. If `main` is dirty, stop immediately with `MAIN_DIRTY_DURING_TASK_ADMIN`.
+   Do not continue to review, publish, kickoff, or attempt silent cleanup.
+4. If the carrier contains out-of-scope changes, stop with
+   `OUT_OF_SCOPE_BUBBLE_CHANGES` through the publish/checkpoint path.
 
 ### 3. Publish Bounded Admin
 
