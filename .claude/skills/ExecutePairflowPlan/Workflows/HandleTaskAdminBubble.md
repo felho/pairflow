@@ -176,6 +176,26 @@ Delegated task-creation/review execution guard:
    `main`; it authorizes only the selected admin edits inside
    `BUBBLE_WORKTREE_PATH`.
 
+Task-admin edit tooling guard:
+
+1. Before any file-edit tool call for task-admin selected paths, prove the edit
+   target is rooted in `BUBBLE_WORKTREE_PATH`, not merely that a prior shell
+   command used `workdir=BUBBLE_WORKTREE_PATH`.
+2. If the edit tool cannot set its execution root to `BUBBLE_WORKTREE_PATH`,
+   relative edit paths are forbidden. Use absolute edit paths under
+   `BUBBLE_WORKTREE_PATH` when the tool supports them, or stop and return only
+   proposed content for a delegate that can run in the carrier worktree.
+3. In Codex-style environments where `apply_patch` has no `workdir` parameter,
+   never call `apply_patch` with repo-relative paths for task-admin selected
+   paths unless the current editable workspace root is already
+   `BUBBLE_WORKTREE_PATH`. A repo-relative patch from `REPO_PATH` is a
+   workflow violation even if the surrounding authorization record names the
+   carrier.
+4. After every edit tool call, verify both:
+   - `REPO_PATH` still has empty `git status --porcelain=v1`
+   - `BUBBLE_WORKTREE_PATH` contains exactly the expected selected admin path
+     changes, including untracked files
+
 For `CreateTask`:
 
 1. delegate task creation to `CreatePairflowSpec CreateTask`

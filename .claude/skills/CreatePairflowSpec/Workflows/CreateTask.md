@@ -97,6 +97,15 @@ When this workflow is invoked by `ExecutePairflowPlan` task-admin routing
    worktree after its own pre-side-effect authorization gate succeeds.
 6. Include the verified `EXECUTION_ROOT` and whether files were written or only
    proposed in the workflow result.
+7. Tooling root guard: a shell command's `workdir=EXECUTION_ROOT` does not prove
+   later file-edit tools will write there. Before any edit, prove the edit tool
+   itself is rooted at `EXECUTION_ROOT` or that every edited filename is an
+   absolute path under `EXECUTION_ROOT`.
+8. In Codex-style environments where `apply_patch` has no `workdir` parameter,
+   do not use repo-relative `apply_patch` paths for task-admin writes unless the
+   editable workspace root is already `EXECUTION_ROOT`. If that cannot be
+   proven, return proposed content only; do not write the task, plan, progress,
+   or docs/admin files.
 
 ### 1.0a) Establish execution metadata
 

@@ -93,6 +93,20 @@ Task-admin post-edit guard:
 3. If `main` becomes dirty during task admin, stop with
    `MAIN_DIRTY_DURING_TASK_ADMIN`; do not continue to publish or kickoff.
 
+Task-admin edit-tool root guard:
+
+1. Authorization records that name `BUBBLE_WORKTREE_PATH` are not enough by
+   themselves; the concrete edit tool must also be proven to write under that
+   path.
+2. A prior read or shell command using `workdir=BUBBLE_WORKTREE_PATH` does not
+   authorize a later edit tool that lacks an execution-root parameter.
+3. For edit tools without a `workdir` parameter, repo-relative paths are
+   forbidden for task-admin selected paths unless the editable workspace root is
+   already `BUBBLE_WORKTREE_PATH`.
+4. If absolute edit paths are supported, every edited path must be an absolute
+   path under `BUBBLE_WORKTREE_PATH`; otherwise the workflow must return
+   proposed content only or stop before side effects.
+
 Do not commit route-caused metadata changes unless the staged mutation is covered
 by one of these authorizations.
 
