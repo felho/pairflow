@@ -210,7 +210,13 @@ describe("runCli", () => {
     expect(stdoutSpy).toHaveBeenCalled();
     const output = stdoutSpy.mock.calls.map((call) => String(call[0])).join("");
     expect(output).toContain("pairflow bubble extract");
+    expect(output).toContain("--path <artifact-path> [--path <artifact-path>...]");
+    expect(output).toContain("--path <path>         Explicit selected artifact path");
+    expect(output).toContain("--repo <path>");
+    expect(output).toContain("--commit");
+    expect(output).toContain("--json");
     expect(output).not.toContain("--delete-bubble");
+    expect(output).not.toMatch(/all changed files|overwrite|glob support|glob expansion/u);
   });
 
   it("returns zero for bubble extract when selected files are copied without closing the source bubble", async () => {
@@ -232,6 +238,8 @@ describe("runCli", () => {
     );
     await runGit(repoPath, ["add", ".pairflow"]);
     await runGit(repoPath, ["commit", "-m", "test: add ideation bubble"]);
+    const beforeConfig = await readFile(bubble.paths.bubbleTomlPath, "utf8");
+    const beforeState = await readFile(bubble.paths.statePath, "utf8");
 
     const previousCwd = process.cwd();
     try {
@@ -251,7 +259,55 @@ describe("runCli", () => {
       await expect(readFile(join(repoPath, "docs", "idea.md"), "utf8"))
         .resolves.toBe("# Extracted idea\n");
       await expect(readFile(bubble.paths.bubbleTomlPath, "utf8"))
-        .resolves.toContain(`id = "${bubble.bubbleId}"`);
+        .resolves.toBe(beforeConfig);
+      await expect(readFile(bubble.paths.statePath, "utf8"))
+        .resolves.toBe(beforeState);
+    } finally {
+      process.chdir(previousCwd);
+    }
+  });
+
+  it("fails bubble extract for forbidden source paths without mutating source bubble lifecycle artifacts", async () => {
+    const repoPath = await mkdtemp(join(tmpdir(), "pairflow-cli-extract-forbidden-"));
+    tempDirs.push(repoPath);
+    await initGitRepository(repoPath);
+    const bubble = await createBubble({
+      repoPath,
+      id: "b_cli_extract_forbidden_01",
+      baseBranch: "main",
+      reviewArtifactType: "code",
+      ideation: true,
+      cwd: repoPath
+    });
+    const beforeConfig = await readFile(bubble.paths.bubbleTomlPath, "utf8");
+    const beforeState = await readFile(bubble.paths.statePath, "utf8");
+    await runGit(repoPath, ["add", ".pairflow"]);
+    await runGit(repoPath, ["commit", "-m", "test: add ideation bubble"]);
+
+    const previousCwd = process.cwd();
+    try {
+      process.chdir(repoPath);
+      const exitCode = await runCli([
+        "bubble",
+        "extract",
+        "--id",
+        bubble.bubbleId,
+        "--path",
+        "src/idea.ts"
+      ]);
+
+      expect(exitCode).toBe(1);
+      const output = [
+        ...stdoutSpy.mock.calls,
+        ...stderrSpy.mock.calls
+      ].map((call) => String(call[0])).join("");
+      expect(output).toContain("EXTRACT_PATH_SCOPE_FORBIDDEN");
+      await expect(readFile(bubble.paths.bubbleTomlPath, "utf8"))
+        .resolves.toBe(beforeConfig);
+      await expect(readFile(bubble.paths.statePath, "utf8"))
+        .resolves.toBe(beforeState);
+      await expect(runGit(repoPath, ["status", "--porcelain"]))
+        .resolves.toMatchObject({ stdout: "" });
     } finally {
       process.chdir(previousCwd);
     }

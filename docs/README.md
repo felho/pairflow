@@ -38,6 +38,7 @@ These are feature documents whose status is mixed. Prefer current code/README
 or the linked active governance document when they disagree with an implemented
 historical PRD.
 
+- [Pairflow README: Extract selected ideation artifacts](../README.md#extract-selected-ideation-artifacts) - current operator runbook for `pairflow bubble extract`.
 - [meta-review-gate-prd.md](./meta-review-gate-prd.md)
 - [meta-review-governance.md](./meta-review-governance.md)
 - [pairflow-ui-prd.md](./pairflow-ui-prd.md)
