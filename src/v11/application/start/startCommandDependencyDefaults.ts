@@ -1,47 +1,16 @@
 import { readTranscriptEnvelopes } from "../../shared/transcript/transcriptDependencyDefaults.js";
-import { runTmux as runTmuxDefaults } from "../../defaults/tmux/tmuxRunnerDefaults.js";
-import type { EnsureBubbleInstanceIdForMutationPort } from "../../shared/ports/bubbleIdentity.js";
-import type { RegisterRepoInRegistryPort } from "../../shared/ports/repoRegistry.js";
-import type { ReadStateSnapshotPort } from "../../shared/ports/stateSnapshots.js";
-import type { TmuxRunner } from "../../shared/ports/tmuxSessions.js";
+import { ensureBubbleInstanceIdForMutation } from "../../shared/bubbleIdentity/bubbleIdentityDefaults.js";
+import { runTmux as runTmuxDefaults } from "../../shared/tmux/tmuxRunnerDefaults.js";
+import { readStateSnapshot } from "../../shared/state/stateStoreDefaults.js";
 import {
   resolveBubbleById
 } from "../../shared/bubbleLookup/bubbleLookupDefaults.js";
-
-interface StartCliDependencyDefaults {
-  registerRepoInRegistry: RegisterRepoInRegistryPort;
-}
-
-interface StartCommandContextDefaults {
-  ensureBubbleInstanceIdForMutation: EnsureBubbleInstanceIdForMutationPort;
-  readStateSnapshot: ReadStateSnapshotPort;
-}
+import {
+  registerRepoInRegistry
+} from "../../shared/repoRegistry/repoRegistryDefaults.js";
+import type { TmuxRunner } from "../../shared/ports/tmuxSessions.js";
 
 type RunTmuxPort = TmuxRunner;
-
-let startCliDependencyDefaultsPromise:
-  | Promise<StartCliDependencyDefaults>
-  | undefined;
-let startCommandContextDefaultsPromise:
-  | Promise<StartCommandContextDefaults>
-  | undefined;
-async function loadStartCliDependencyDefaults(): Promise<
-  StartCliDependencyDefaults
-> {
-  startCliDependencyDefaultsPromise ??= import(
-    "../../defaults/start/startCliDefaults.js"
-  ).then(({ startCliDependencyDefaults }) => startCliDependencyDefaults);
-  return startCliDependencyDefaultsPromise;
-}
-
-async function loadStartCommandContextDefaults(): Promise<
-  StartCommandContextDefaults
-> {
-  startCommandContextDefaultsPromise ??= import(
-    "../../defaults/start/startCommandContextDefaults.js"
-  ).then(({ startCommandContextDefaults }) => startCommandContextDefaults);
-  return startCommandContextDefaultsPromise;
-}
 
 export async function runTmux(
   ...args: Parameters<RunTmuxPort>
@@ -51,28 +20,13 @@ export async function runTmux(
 
 export const startCliDependencyDefaults = {
   resolveBubbleById,
-  async registerRepoInRegistry(
-    ...args: Parameters<StartCliDependencyDefaults["registerRepoInRegistry"]>
-  ) {
-    const defaults = await loadStartCliDependencyDefaults();
-    return defaults.registerRepoInRegistry(...args);
-  }
+  registerRepoInRegistry
 } as const;
 
 export const startCommandContextDefaults = {
   resolveBubbleById,
-  async ensureBubbleInstanceIdForMutation(
-    ...args: Parameters<StartCommandContextDefaults["ensureBubbleInstanceIdForMutation"]>
-  ) {
-    const defaults = await loadStartCommandContextDefaults();
-    return defaults.ensureBubbleInstanceIdForMutation(...args);
-  },
-  async readStateSnapshot(
-    ...args: Parameters<StartCommandContextDefaults["readStateSnapshot"]>
-  ) {
-    const defaults = await loadStartCommandContextDefaults();
-    return defaults.readStateSnapshot(...args);
-  }
+  ensureBubbleInstanceIdForMutation,
+  readStateSnapshot
 } as const;
 
 export { readTranscriptEnvelopes };

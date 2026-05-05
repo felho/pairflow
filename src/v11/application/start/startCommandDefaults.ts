@@ -1,7 +1,7 @@
 import type { RunWorktreeBootstrapCommandInput } from "./startCommandContract.js";
 import { runTmux } from "./startCommandDependencyDefaults.js";
 import { StartBubbleError } from "./startCommandRuntime.js";
-import { processSpawnDefault } from "../../defaults/process/processSpawnDefaults.js";
+import { processSpawn as processSpawnDefault } from "../../shared/process/processSpawnDefaults.js";
 
 function truncateCommandOutput(raw: string, maxChars: number = 1200): string {
   const normalized = raw.trim();
