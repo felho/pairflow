@@ -8,6 +8,7 @@ title: "List Runtime Consumer Cutover"
 status: approved
 phase: phase4
 target_files:
+  # Runtime transition boundary to remove after consumer proof.
   - src/v11/shared/list/listCommandApi.ts
   - src/v11/shared/list/listCommandContext.ts
   - src/v11/shared/list/listCommandContract.ts
@@ -16,11 +17,27 @@ target_files:
   - src/v11/shared/list/listCommandEntryProjection.ts
   - src/v11/shared/list/listCommandErrors.ts
   - src/v11/shared/list/listRemotePaneActivityRead.ts
+  # In-scope runtime/read-model consumers and proof harnesses.
   - src/v11/defaults/ui/routerDefaults.ts
   - src/v11/infrastructure/ui/eventsScanDefaults.ts
   - tests/core/bubble/listBubbles.test.ts
   - tests/core/bubble/parallelBubblesSmoke.test.ts
   - tests/core/bubble/parallelBubblesSoak.test.ts
+  # Application-facade compatibility proof only; do not remove these facades
+  # in task 10.
+  - src/v11/application/list/listCommandApi.ts
+  - src/v11/application/list/listCommandContract.ts
+  - src/v11/application/list/listCommandDefaults.ts
+  - tests/v11/application/list/listCommandApi.test.ts
+  - tests/v11/application/list/listCommandApiError.test.ts
+  # Conditional narrow unblocker scope only: edit these only if wrapper deletion
+  # directly breaks compile/typecheck or pnpm fitness:check:ci.
+  - tests/contracts/uiContractTransitSource.test.ts
+  - tests/tools/fitness/uiRouterPortBoundary.test.ts
+  - tests/tools/fitness/fitnessCheckCi.test.ts
+  # Defaults surface proof only; no semantic move in task 10.
+  - src/v11/defaults/list/listCommandDefaults.ts
+  - src/v11/shared/status/statusCommandDependencyDefaults.ts
 prd_ref: null
 plan_ref: plans/shared-command-boundary-cleanup-plan-v1.md
 system_context_ref: docs/pairflow-initial-design.md
@@ -50,7 +67,9 @@ Remove the remaining runtime dependency on the command-shaped
 `src/v11/shared/read-model/list/**` as the canonical shared list producer.
 Delete the `shared/list` transition wrappers only after proving runtime,
 UI-default, events-scan, and core list consumers import the command-neutral
-read-model boundary or an explicitly deferred application facade.
+read-model boundary. Application/list command facades are compatibility proof
+only in this task; they must not be treated as a reason to keep
+`src/v11/shared/list/**` or as permission to do task 11 cleanup early.
 
 ### Domain / Control Model Summary
 
@@ -67,10 +86,15 @@ read-model boundary or an explicitly deferred application facade.
 5. Allowed resolution path: update any remaining runtime source import to the
    command-neutral read-model path; if no runtime source imports remain, remove
    the `shared/list` transition wrappers and prove no source consumer breaks.
-6. Missing-data rule: if a remaining consumer cannot be classified as runtime
+6. Classification rule: a source consumer is in scope only when it is a
+   runtime/defaults/events/core list read path. Application/list command facade
+   imports are explicitly deferred compatibility surfaces for task 11, and
+   fixture/source-string references are explicitly deferred evidence for task
+   12.
+7. Missing-data rule: if a remaining consumer cannot be classified as runtime
    versus application facade/test-fixture ownership, leave it unchanged and
    route the ambiguity to task 11 or task 12 rather than widening this slice.
-7. Phase boundary:
+8. Phase boundary:
    - contract closure: producer contract already closed by task 9.
    - producer closure: already closed by task 9.
    - internal execution closure: owned here for runtime/defaults/events/core
@@ -120,6 +144,8 @@ read-model boundary or an explicitly deferred application facade.
    - `src/v11/application/list/listCommandApi.ts`
    - `src/v11/application/list/listCommandContract.ts`
    - `src/v11/application/list/listCommandDefaults.ts`
+   - these application facades may import the canonical read-model boundary but
+     must not import `src/v11/shared/list/**` after task 10.
 5. Forbidden reinterpretations:
    - do not change list output fields, count semantics, remote refresh/cache
      fallback behavior, attention/review policy/meta-review semantics, or error
@@ -140,8 +166,10 @@ read-model boundary or an explicitly deferred application facade.
 3. Mutation entrypoints in scope: N/A; this task only changes module paths and
    removes compatibility wrappers.
 4. Hidden scope ruled out: application/list public facade cleanup, UI/router
-   payload redesign, events payload redesign, and fitness/governance fixture
-   cleanup are successor work.
+   payload redesign, events payload redesign, and broad fitness/governance
+   fixture cleanup are successor work. Task 10 may touch contract/fitness
+   fixtures only as a narrow unblocker when deleting `src/v11/shared/list/**`
+   directly breaks compile/typecheck or `pnpm fitness:check:ci`.
 5. Branch inventory note: preserve existing local, remote, refresh-fallback,
    dependency-error, stale-runtime-count, attention, review policy, and
    meta-review branches by import-path-only changes.
@@ -149,6 +177,19 @@ read-model boundary or an explicitly deferred application facade.
    canonical producer, and current source consumers already point at the new
    boundary; this task closes the runtime transition wrapper without changing
    behavior.
+7. Current-tree evidence at document refinement time:
+   - UI router defaults, events scan defaults, and core list tests already
+     import `src/v11/shared/read-model/list/**`.
+   - `src/v11/shared/list/**` still exists as transition-wrapper source and is
+     the deletion candidate for this task.
+   - Application/list command facade files already delegate to
+     `shared/read-model/list`; task 10 must keep them as compatibility proof
+     and leave their removal or rename to task 11.
+   - Contract transit and fitness tests still contain old
+     `shared/list/listCommand*` fixture/source strings; task 10 must leave that
+     wording to task 12 unless a compile/typecheck failure or
+     `pnpm fitness:check:ci` failure proves the specific reference is an active
+     blocker caused by deleting `src/v11/shared/list/**`.
 
 ### Authority Boundary Map
 
@@ -201,16 +242,20 @@ N/A. This task does not introduce runtime mutations or coordination primitives.
    consumer imports them.
 3. Keep `src/v11/application/list/**` compatibility facade files unchanged for
    task 11.
-4. Leave contract/fitness old-path fixture strings to task 12 unless they block
-   compile or source deletion.
+4. Leave contract/fitness old-path fixture strings to task 12 by default.
+   Exception: task 10 may make the smallest fixture/source-assertion edit
+   needed to unblock compile/typecheck or `pnpm fitness:check:ci` after
+   deleting `src/v11/shared/list/**`, but only when the failure is directly
+   caused by that deletion and does not require governance policy tightening.
 5. Preserve list behavior and error/result semantics.
 
 ### Out of Scope
 
 1. Removing application/list command facade wrappers.
 2. Renaming public CLI command types or list CLI formatting.
-3. Updating contract transit source fixtures or fitness fixture paths unless
-   required by compile failure.
+3. Broad contract transit source fixture or fitness fixture cleanup. Narrow
+   unblocker edits are allowed only under the compile/typecheck/fitness
+   unblocker decision rule below.
 4. Tightening governance warnings or policy.
 5. Changing remote execution refresh/cache behavior.
 
@@ -281,6 +326,8 @@ N/A. This task does not introduce runtime mutations or coordination primitives.
 | Business invariant | Runtime list consumers must not depend on `src/v11/shared/list/**`. | Delete the transition wrapper only after runtime imports point to `shared/read-model/list`. | P1 | required-now |
 | Control model | `shared/read-model/list` owns shared list producer truth. | Runtime consumers import the canonical boundary directly. | P1 | required-now |
 | Read-path rule | UI defaults, events scan defaults, and core list tests read from the command-neutral boundary. | No runtime path should import `shared/list/listCommand*`. | P1 | required-now |
+| Application facade boundary | `application/list/listCommand*` is successor-owned compatibility. | Prove it still works, but do not delete or rename it here. | P1 | required-now |
+| Fixture boundary | Contract transit and fitness old-path strings are successor-owned evidence. | Do not edit them unless compile/typecheck or `pnpm fitness:check:ci` proves a narrow stale reference is directly blocking `shared/list/**` wrapper deletion. | P1 | required-now |
 | Forbidden fallback | Old path fixture strings are not authority to keep source wrappers. | Do not retain `shared/list/**` for tests that intentionally model old paths. | P1 | required-now |
 | Missing-data rule | Ambiguous consumer ownership routes to successor tasks. | Do not absorb application/list facade or fitness cleanup. | P1 | required-now |
 | Phase boundary | Runtime cutover now; application facade and fitness cleanup later. | Keep task 11 and 12 scopes intact. | P1 | required-now |
@@ -304,6 +351,7 @@ N/A. This task does not introduce runtime mutations or coordination primitives.
 | Hidden scope ruled out | Application facade and fitness fixture cleanup are successor tasks. | Do not rename CLI/application exports or fitness policy here. | P1 | required-now |
 | Branch inventory note | Existing list behavior branches must remain covered. | Run focused list/core tests. | P1 | required-now |
 | Shape proof | The only source boundary being removed is a wrapper delegating to the canonical producer. | Deletion is safe if typecheck and focused tests pass. | P1 | required-now |
+| Current source proof | Existing runtime/defaults/events/core consumers already point at `shared/read-model/list`; the old shared/list directory remains as wrapper source. | Task 10 implementation should be mostly wrapper deletion plus verification unless a fresh search finds a new runtime import. | P1 | required-now |
 
 ### 0c) Plan Linkage and Successor Impact
 
@@ -321,6 +369,7 @@ N/A. This task does not introduce runtime mutations or coordination primitives.
 |---|---|---|---|---|
 | `shared/list/**` wrapper module paths | Runtime consumers should no longer use them; fixture strings may still mention them. | breaking for direct old-path imports. | Remove wrapper source files after proving runtime imports are cut over. | Task 12 updates fixture/governance references. |
 | `shared/read-model/list/**` module paths | UI defaults, events scan, core tests, application facade. | compatible. | Preserve and use as canonical runtime import. | Task 11 may adjust application facade consumers. |
+| `application/list/listCommand*.ts` facade paths | CLI/application callers and application compatibility tests. | compatible. | Preserve unchanged, except only if compile forces import maintenance without facade removal. | Task 11 owns facade alias deletion/rename. |
 
 ### 1) Canonical Contract Matrix
 
@@ -329,6 +378,7 @@ N/A. This task does not introduce runtime mutations or coordination primitives.
 | LRC-RUNTIME | `src/v11/shared/list/**` transition wrappers | `src/v11/shared/read-model/list/**` | remove runtime dependency and wrapper source | contract/fitness fixture string cleanup | behavior must be identical |
 | LRC-APP-FACADE | `src/v11/application/list/listCommand*.ts` | successor-owned application facade cleanup | no | task 11 | do not remove in this task |
 | LRC-FITNESS | old path fixture strings in tests | successor-owned fixture/governance wording | no | task 12 | may remain as non-runtime fixture evidence |
+| LRC-DEFAULTS | `src/v11/defaults/list/listCommandDefaults.ts` and status dependency defaults using it | existing defaults provider outside `shared/list` | no semantic move | later naming cleanup only if separately planned | not a reason to keep `shared/list/**` |
 
 ### 2) Data and Interface Contract
 
@@ -344,6 +394,10 @@ N/A. This task does not introduce runtime mutations or coordination primitives.
 | Case | Required Behavior | Forbidden Behavior | Test Expectation |
 |---|---|---|---|
 | Runtime import missing after wrapper deletion | Compile fails and task must update the runtime import to `shared/read-model/list`. | Restore wrappers as hidden fallback. | typecheck |
+| Application facade import remains after wrapper deletion | Application facade compiles by importing `shared/read-model/list`. | Remove the facade because it still has command-shaped names. | application list tests |
+| Fixture old path remains after wrapper deletion | Fixture remains as successor-owned regression evidence. | Edit broad contract/fitness fixtures just to erase strings in task 10. | task 12 owns fixture cleanup |
+| Compile/typecheck/fitness fails because deleted `shared/list/**` path is still treated as an active allowed/source path | Task 10 may apply the smallest direct fixture/source-assertion update needed for compile/typecheck or `pnpm fitness:check:ci` to reflect the deleted wrapper boundary. | Broaden into task 12 cleanup, tighten governance policy, or rewrite unrelated command-name fixtures. | typecheck/fitness |
+| Compile/typecheck/fitness fails for a broader task-12/governance reason | Stop for replanning or a human decision. | Hide the failure by restoring `shared/list/**` or doing broad fixture cleanup in task 10. | human checkpoint |
 | Remote refresh fallback | Existing cached/unavailable semantics remain. | Treat remote failures differently because path changed. | list behavior tests |
 | Application facade still imports canonical producer | Leave unchanged here. | Delete command facade aliases in task 10. | application list tests remain green |
 
@@ -378,13 +432,57 @@ N/A. This task does not introduce runtime mutations or coordination primitives.
 
 ## L2 - Implementation Notes
 
-1. Start by running `rg "shared/list|listCommand" src/v11 tests/core/bubble` to
-   find runtime/source consumers.
-2. Update any runtime import to `src/v11/shared/read-model/list/**`.
-3. Delete `src/v11/shared/list/**` wrappers after runtime consumers are clear.
-4. Leave `src/v11/application/list/**` wrappers in place.
-5. Do not update fitness or contract fixture strings unless compile requires it.
-6. Run focused list tests before broad verification.
+1. Start with source import evidence, not broad string cleanup:
+   `rg -n "shared/list|shared/read-model/list|application/list/listCommand|listCommand" src/v11 tests/core/bubble tests/v11/application/list tests/contracts tests/tools/fitness`.
+2. Classify each hit before editing:
+   - runtime/defaults/events/core source import from `shared/list/**`:
+     update to `shared/read-model/list/**`.
+   - `src/v11/application/list/listCommand*.ts`: leave facade files in place;
+     verify the source files still delegate to `shared/read-model/list`, and
+     make only compile-forced import maintenance if wrapper deletion exposes a
+     broken facade import.
+   - contract/fitness/source-fixture strings: leave to task 12 unless a
+     compile/typecheck or `pnpm fitness:check:ci` failure proves the specific
+     string is an active blocker caused by deleting `src/v11/shared/list/**`.
+   - unrelated archived plans/tasks: ignore as historical evidence.
+3. If the only current-tree source files under `src/v11/shared/list/**` are
+   transition wrappers, delete that directory's wrapper files. Do not replace
+   them with a new alias layer.
+4. Re-run the search after deletion. The acceptable remaining old-path or
+   `listCommand` hits are application facade command names, defaults/status
+   proof-only surfaces named by `LRC-DEFAULTS`, contract/fitness fixtures,
+   archived documentation, and other explicitly deferred successor evidence.
+   Any active runtime source import from `shared/list/**` is a task-10 blocker.
+5. Leave `src/v11/application/list/**` wrappers in place.
+6. Apply the compile/typecheck/fitness unblocker decision rule:
+   - if the failing assertion is a narrow stale reference to the deleted
+     `src/v11/shared/list/**` wrapper boundary, update only that reference so it
+     points at `shared/read-model/list` or no longer treats `shared/list` as an
+     active source shape.
+   - if the failure asks for broader fixture wording, governance tightening, or
+     task-12 source assertion cleanup, stop and ask for replanning or a human
+     decision.
+7. Run focused list tests before broad verification.
+
+## Acceptance Criteria
+
+1. No active runtime/defaults/events/core source file imports
+   `src/v11/shared/list/**` or a relative equivalent after implementation.
+2. `src/v11/shared/list/**` source wrappers are deleted, not retained as a
+   hidden compatibility boundary.
+3. `src/v11/application/list/listCommandApi.ts`,
+   `src/v11/application/list/listCommandContract.ts`, and
+   `src/v11/application/list/listCommandDefaults.ts` still exist and continue
+   to delegate to `shared/read-model/list`.
+4. Any compile/typecheck or fitness failure caused directly by deleting
+   `src/v11/shared/list/**` is either fixed with a narrow unblocker edit or
+   escalated as a replanning/human checkpoint if it requires task-12 cleanup.
+5. Old `shared/list/listCommand*` strings may remain in contract transit,
+   fitness, and archived documentation surfaces only as task-12 or historical
+   evidence.
+6. The focused runtime and application compatibility tests in the L1 test
+   matrix pass, followed by the repository-required verification for source
+   changes.
 
 ## Assumptions
 
