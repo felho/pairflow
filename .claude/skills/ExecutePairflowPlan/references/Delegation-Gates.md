@@ -35,22 +35,31 @@ Allowed mutations require an authorizing delegated result:
    for the latest plan artifact.
 3. task creation requires a `CreateTask` result that names the created/refined
    task path and status.
-4. `doc_bubble_id` linkage requires a successful `CreateDocumentBubble`
-   handler result with the created/started bubble id.
+4. document-route `doc_bubble_id` metadata editing in the bubble worktree
+   requires a `PublishPreKickoffAdmin` pre-side-effect authorization record
+   before the file edit occurs. Final `doc_bubble_id` linkage recognition then
+   requires a successful `CreateDocumentBubble` handler result with the
+   created/started bubble id, structured `PublishPreKickoffAdmin` success,
+   refreshed `main` metadata proof, and same-bubble kickoff proof.
 5. `impl_bubble_id` linkage and `status=in_progress` require a successful
    `CreateImplementationBubble` handler result.
 6. `status=implementable` requires a successful `CloseDocumentBubble` handler
    result.
 7. task archive/progress aftermath requires a successful `UpdateProgress` result.
-8. bounded pre-kickoff admin staging/commit/publish requires a
+8. bounded pre-kickoff admin editing/staging/commit/publish requires a
    `PublishPreKickoffAdmin` pre-side-effect authorization record, written before
-   staging/commit/publish in the operator route ledger or workflow notes for the
-   current run, that names
+   editing, staging, committing, or publishing in the operator route ledger or
+   workflow notes for the current run, that names
    selected explicit admin paths, named postconditions, clean main authority,
    ideation hold proof, selected-route scope proof, and changed-path coverage
    including untracked files. The final `PublishPreKickoffAdmin` workflow result
    is produced after the publish or checkpoint path; it is not required before
    the workflow can perform its own authorized side effects.
+9. document-bubble kickoff after pre-kickoff admin publish requires the final
+   `PublishPreKickoffAdmin` success result plus refreshed handler-side proof
+   that `main` task metadata contains `doc_bubble_id=<task_id>-doc` with
+   `status=approved`, and that Pairflow still reports the same bubble in
+   round-0 ideation hold.
 
 Do not commit route-caused metadata changes unless the staged mutation is covered
 by one of these authorizations.

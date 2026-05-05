@@ -25,11 +25,13 @@ This workflow owns only:
 This workflow does not own:
 
 1. ideation create/start/kickoff semantics, which remain owned by `UsePairflow`
-2. document-bubble or implementation-bubble route adoption
+2. implementation-bubble route adoption
 3. automatic merge-conflict recovery
 4. remote publish support
 5. new Pairflow CLI commands or runtime behavior
 6. product/source implementation during pre-kickoff admin
+7. deciding that a publish success is enough to kickoff; the consuming route
+   must still re-check its own postconditions and then delegate kickoff
 
 ## Inputs
 
@@ -86,14 +88,58 @@ Input rules:
    state.
 3. Git state is the only authority for commit and publish proof.
 4. Refreshed `main` metadata or selected refreshed `main` artifact content is
-   the only authority for postcondition proof.
-5. `ADMIN_COMMIT_CANDIDATE` is usable only when Git proves it is a single
+   the only authority for `NAMED_POSTCONDITIONS` proof.
+5. Refreshed Pairflow lifecycle status is separate hold evidence, not a named
+   admin postcondition. Hold failures must use `PRE_KICKOFF_HOLD_NOT_PROVEN`,
+   not `ADMIN_POSTCONDITION_MISSING`.
+6. `ADMIN_COMMIT_CANDIDATE` is usable only when Git proves it is a single
    selected-scope admin commit. New publication additionally requires that
    commit to be based directly on `MAIN_BASE_REF`; already-published recovery
    requires refreshed `main` ref to equal the candidate.
-6. Transcript prose, operator memory, branch-name guesses, unmerged bubble
+7. Transcript prose, operator memory, branch-name guesses, unmerged bubble
    commits, raw changed-file globs outside the selected scope, and stale
    pre-publish metadata are never publish proof.
+
+## Document-Route Consumption Contract
+
+`CreateDocumentBubble` is the currently adopted route consumer for this
+workflow. For that route only, the selected admin publish must prove the
+document-bubble linkage/admin state reached `main` before the document task
+payload is kicked off.
+
+Required `CreateDocumentBubble` selected admin inputs:
+
+1. `BUBBLE_ID` must equal the canonical derived document bubble id
+   `<task_id>-doc`.
+2. `CURRENT_TASK_OR_ROUTE_CONTEXT.route_context` must name
+   `CreateDocumentBubble`.
+3. `SELECTED_ADMIN_PATHS` must include the active task artifact when
+   `doc_bubble_id` is being persisted.
+4. Additional selected paths are allowed only when they are directly required
+   by the same document-route admin task and pass the allowed admin scope.
+
+Required `CreateDocumentBubble` named postconditions after publish:
+
+1. refreshed `main` task metadata has `doc_bubble_id=<task_id>-doc`
+2. refreshed `main` task metadata still has `status=approved`
+3. `published_main_ref` equals the exact selected-scope `admin_commit`
+
+Required `CreateDocumentBubble` refreshed hold evidence after publish:
+
+1. refreshed Pairflow status for `<task_id>-doc` still proves `RUNNING` round
+   `0` with `ideation.task_pending=true`
+
+Consumer rules:
+
+1. This workflow returns `kickoff_allowed=true` only as publish proof; it never
+   performs the kickoff.
+2. `HandleDocumentBubble` must reject a success packet whose `bubble_id` does
+   not equal `<task_id>-doc`.
+3. `HandleDocumentBubble` must re-read refreshed `main` task metadata and
+   Pairflow hold status after consuming this result; the success packet is not a
+   substitute for that local route check.
+4. Implementation-bubble create/start remains outside this adoption and must not
+   require this workflow until a successor task explicitly changes that route.
 
 ## Allowed Admin Scope
 
@@ -123,8 +169,9 @@ If a path is ambiguous, treat it as forbidden and return a checkpoint.
 
 ## Delegation Gate
 
-Before staging, committing, publishing, or mutating any main-side admin state,
-apply `references/Delegation-Gates.md` by recording a
+Before editing selected bubble-worktree admin artifacts, staging, committing,
+publishing, or mutating any main-side admin state, apply
+`references/Delegation-Gates.md` by recording a
 `PublishPreKickoffAdmin` pre-side-effect authorization record. Because this is a
 manual backing workflow rather than a `ResolvePlanState` route surface, the gate
 must be answered with the explicit `PublishPreKickoffAdmin` invocation, current
@@ -164,15 +211,16 @@ clean_main_authority:
   status: clean
 ideation_hold_proof: <pairflow-round-0-task-pending-proof>
 authorized_side_effects:
+  - edit_selected_admin_paths
   - stage_selected_admin_paths
   - create_or_reuse_admin_commit
   - publish_admin_commit_to_main
 ```
 
 If the gate cannot prove those fields, return `ADMIN_AUTHORIZATION_MISSING`
-before any staging, commit, publish, or kickoff. This pre-side-effect
-authorization record is not the final workflow result and must not require the
-final publish/checkpoint result to already exist.
+before any selected admin edit, staging, commit, publish, or kickoff. This
+pre-side-effect authorization record is not the final workflow result and must
+not require the final publish/checkpoint result to already exist.
 
 Result:
 
@@ -287,7 +335,8 @@ kickoff_allowed: false
 
 Read the complete bubble worktree changed-path set from tracked changes, staged
 changes, and untracked files. If any path from that combined set is outside
-`SELECTED_ADMIN_PATHS`, stop before commit or publish.
+`SELECTED_ADMIN_PATHS`, stop before selected admin editing, staging, commit, or
+publish.
 
 Result:
 
@@ -355,6 +404,14 @@ Candidate coverage proof:
    bubble worktree, do not reuse the candidate; either create a new selected
    admin commit from the current state when all other guards pass, or return the
    narrow checkpoint for the failed guard
+
+Immediately before staging, re-read the complete bubble worktree changed-path
+set after all authorized selected-admin edits have been applied, including
+tracked changes, staged changes, and untracked files. If any path from that
+refreshed combined set is outside `SELECTED_ADMIN_PATHS`, return
+`OUT_OF_SCOPE_BUBBLE_CHANGES` before staging, committing, publishing, or
+kickoff. This refreshed coverage proof replaces any earlier pre-edit changed
+path read for staging authority.
 
 Immediately before staging, re-read Pairflow status for `BUBBLE_ID` and prove
 the bubble is still an ideation pending hold. If the refreshed status cannot
@@ -618,44 +675,51 @@ Manual review or successor tests must prove:
     retains `admin_commit` when commit creation or reuse already happened
 16. reruns can recover an already-published `admin_commit` without creating a
     second admin commit
-17. `.pairflow/**` is rejected unless a successor task explicitly expands the
+17. `CreateDocumentBubble` success names `doc_bubble_id=<task_id>-doc`,
+    `status=approved`, matching `bubble_id`, and refreshed round-0 hold proof
+18. implementation-bubble create/start has no new dependency on this workflow in
+    the current slice
+19. `.pairflow/**` is rejected unless a successor task explicitly expands the
     parent route contract
-18. Pairflow ideation hold status is re-read before staging/commit and again
+20. Pairflow ideation hold status is re-read before staging/commit and again
     before publish
-19. the immediate pre-publish Git refresh proves `REPO_PATH` is still on `main`
-20. reruns can reuse an unpublished `ADMIN_COMMIT_CANDIDATE` instead of creating
+21. the immediate pre-publish Git refresh proves `REPO_PATH` is still on `main`
+22. reruns can reuse an unpublished `ADMIN_COMMIT_CANDIDATE` instead of creating
     a second admin commit only while its parent equals the current
     `MAIN_BASE_REF`; after base drift, the retained unpublished candidate is
     diagnostic rather than publishable
-21. post-publish hold failure retains `admin_commit`, `published_main_ref`, and
+23. post-publish hold failure retains `admin_commit`, `published_main_ref`, and
     failed hold evidence for idempotent recovery
-22. success returns refreshed hold evidence as part of the structured publish
+24. success returns refreshed hold evidence as part of the structured publish
     proof consumed before later kickoff
-23. candidate reuse proves the candidate covers the current selected admin state
+25. candidate reuse proves the candidate covers the current selected admin state
     and does not ignore newer selected-path worktree edits
-24. missing or ambiguous `NAMED_POSTCONDITIONS` returns
+26. missing or ambiguous `NAMED_POSTCONDITIONS` returns
     `ADMIN_POSTCONDITION_MISSING` before staging, commit, publish, or kickoff
-25. `PublishPreKickoffAdmin` staging/commit/publish mutation is covered by a
-    pre-side-effect authorization record under `references/Delegation-Gates.md`,
-    with an auditable structured shape and without requiring the final workflow
-    result before its own side effects
-26. allowed `plans/**` and `progress/**` paths are limited to files directly
+27. `PublishPreKickoffAdmin` selected admin editing/staging/commit/publish
+    mutation is covered by a pre-side-effect authorization record under
+    `references/Delegation-Gates.md`, with an auditable structured shape and
+    without requiring the final workflow result before its own side effects
+28. allowed `plans/**` and `progress/**` paths are limited to files directly
     needed for the selected route
-27. `ADMIN_PUBLISH_FAILED` retains `admin_commit` for both created and reused
+29. `ADMIN_PUBLISH_FAILED` retains `admin_commit` for both created and reused
     admin commits
-28. success requires refreshed `main` ref to equal the exact `admin_commit`,
+30. success requires refreshed `main` ref to equal the exact `admin_commit`,
     not merely contain it
-29. bubble scope proof includes tracked changes, staged paths, and untracked
-    files before allowing staging, commit, or publish
-30. the new-commit path proves bubble worktree `HEAD` equals `MAIN_BASE_REF`
+31. bubble scope proof is refreshed after authorized selected-admin edits and
+    includes tracked changes, staged paths, and untracked files immediately
+    before allowing staging, commit, or publish
+32. the new-commit path proves bubble worktree `HEAD` equals `MAIN_BASE_REF`
     before staging, so an ancestry failure cannot be discovered only after
     creating a non-publishable commit
 
 Validation for this documentation workflow should also verify:
 
-1. current document and implementation create routes remain valid without this
-   workflow
+1. `CreateDocumentBubble` consumes this workflow before kickoff, while
+   implementation-bubble create/start remains valid without this workflow
 2. no `UsePairflow` files changed
 3. no product/source implementation files changed
 4. every checkpoint result has `kickoff_allowed=false`
-5. no step runs or implies `pairflow bubble kickoff`
+5. this workflow itself does not run `pairflow bubble kickoff`; only the
+   consuming document route may delegate kickoff after success and refreshed
+   postcondition proof

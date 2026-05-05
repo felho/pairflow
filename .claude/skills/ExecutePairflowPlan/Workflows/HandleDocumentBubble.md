@@ -63,6 +63,16 @@ Read only the minimum authoritative inputs needed for the document-bubble decisi
    - `references/Plan-Task-Metadata-Contract.md`
 10. `PAIRFLOW_STATUS`
    - `pairflow bubble status --id <doc_bubble_id> --repo <repo-path> --json` when `DOC_BUBBLE_ID` is present
+11. `DERIVED_DOC_BUBBLE_ID`
+   - canonical document bubble id derived mechanically as `<task_id>-doc` when `DOC_BUBBLE_ID` is absent
+12. `DERIVED_DOC_BUBBLE_STATUS`
+   - `pairflow bubble status --id <task_id>-doc --repo <repo-path> --json` before any create attempt
+13. `PUBLISH_PRE_KICKOFF_ADMIN_RESULT`
+   - structured result returned by `PublishPreKickoffAdmin` for the same derived document bubble before kickoff
+14. `REFRESHED_MAIN_TASK_METADATA`
+   - active task metadata re-read from clean `main` after publish and before kickoff
+15. `REFRESHED_IDEATION_HOLD_STATUS`
+   - Pairflow status re-read after publish and before kickoff for the same derived document bubble
 
 Input rules:
 
@@ -71,6 +81,8 @@ Input rules:
 3. `TOP_LEVEL_ROUTE_CONTEXT` narrows this workflow to the document-bubble branch only; it does not authorize plan/task routing here
 4. this workflow may use `OPERATOR_HINT` only to choose among already-authorized troubleshooting or replanning branches; it must not invent new lifecycle meaning
 5. this workflow must preserve the merged Task 1 / Task 2 baseline as sufficient unless a concrete blocker proves otherwise
+6. create/start recovery identity for new document bubbles is only the canonical `DERIVED_DOC_BUBBLE_ID`; do not add a separate recovery key, fallback id, or Pairflow query surface
+7. kickoff decisions in the create branch may consume only `PUBLISH_PRE_KICKOFF_ADMIN_RESULT`, `REFRESHED_MAIN_TASK_METADATA`, and `REFRESHED_IDEATION_HOLD_STATUS`
 
 ## Entry Conditions
 
@@ -84,7 +96,8 @@ If the task is not approved and there is no persisted `doc_bubble_id`, do not st
 
 Status model:
 
-1. `doc_bubble_id` is linkage only and must be persisted as soon as create/start succeeds.
+1. `doc_bubble_id` is linkage only and, for fresh document create, must be
+   published to `main` through the pre-kickoff admin path before kickoff.
 2. `doc_bubble_id` never proves document-refinement completion.
 3. `status=approved` means the task is eligible for document-bubble routing.
 4. `status=implementable` is the durable task-local proof that document refinement was approved, closed, and merged; it is written only by the document close path.
@@ -134,9 +147,21 @@ action_surface: <CreateDocumentBubble|TroubleshootBubble>
 continuation_mode: <stop_at_settled_checkpoint|stop_at_human_checkpoint>
 source_owner: bubble_routing_layer
 scope: document
-reason_code: <DOC_BUBBLE_CREATE_REQUIRED|OPERATOR_TROUBLESHOOT_HINT|PAIRFLOW_STATUS_UNAVAILABLE>
+reason_code: <DOC_BUBBLE_CREATE_REQUIRED|OPERATOR_TROUBLESHOOT_HINT|PAIRFLOW_STATUS_UNAVAILABLE|PRE_KICKOFF_HOLD_NOT_PROVEN|DOC_BUBBLE_ADMIN_POSTCONDITION_MISSING|DOC_BUBBLE_KICKOFF_FAILED>
+publish_checkpoint_reason_code: <imported-PublishPreKickoffAdmin-checkpoint-code|not_applicable>
 delegated_use_pairflow_surface: <CreateBubble|TroubleshootBubble>
+delegated_use_pairflow_actions:
+  - <bubble_create_start|troubleshoot>
+  - <bubble_kickoff|not_applicable>
 metadata_postcondition: <doc_bubble_id_persisted|not_applicable>
+publish_postcondition: <admin_publish_succeeded|not_applicable>
+kickoff_postcondition: <same_bubble_kicked_off|not_applicable>
+kickoff_result:
+  delegated_use_pairflow_surface: <InterveneBubble|not_applicable>
+  lifecycle_command: <pairflow bubble kickoff|not_applicable>
+  bubble_id: <task_id>-doc
+  task_payload_source: <task-path>
+  result: <success|not_applicable>
 handoff_boundary_note: <short note describing why the handler stops here>
 ```
 
@@ -144,7 +169,8 @@ Normalization note:
 
 1. `ResolvePlanState` consumes only normalized continuation or replanning outputs from this workflow
 2. create/start and troubleshooting results are terminal execution boundaries for the current pass and must remain handler-local action results rather than normalized continuation routes
-3. create/start may return a settled boundary only after `metadata_postcondition=doc_bubble_id_persisted`
+3. create/start may return a settled boundary only after `metadata_postcondition=doc_bubble_id_persisted`, `publish_postcondition=admin_publish_succeeded`, `kickoff_postcondition=same_bubble_kicked_off`, and `kickoff_result.result=success`
+4. when both create/start and kickoff occur in this create route, `delegated_use_pairflow_surface` remains the primary route owner for backward compatibility and `delegated_use_pairflow_actions` records the full audited lifecycle sequence
 
 ### Structured Local Boundary Report
 
@@ -155,7 +181,7 @@ boundary_status: <active_bubble_hold|human_checkpoint>
 continuation_mode: <stop_at_settled_checkpoint|stop_at_human_checkpoint>
 source_owner: bubble_routing_layer
 scope: document
-boundary_reason: <bubble_still_running|preconditions_not_met|normalization_unsafe>
+boundary_reason: <bubble_still_running|preconditions_not_met|normalization_unsafe|admin_publish_failed|admin_postcondition_missing|kickoff_failed>
 escalation_reason_code: <optional-anchored-human-checkpoint-code>
 handoff_boundary_note: <short note describing why the pass stops here>
 ```
@@ -167,7 +193,11 @@ Boundary rules:
 3. this report is for local pass reporting only; it is not a normalized continuation route for `ResolvePlanState`
 4. `boundary_status=human_checkpoint` must hand control back upward as a top-level `HumanCheckpoint` stop rather than as a synthetic bubble route
 5. `escalation_reason_code` is optional and should be present only when the handler is handing an already-anchored human-checkpoint reason back upward
-6. allowed `escalation_reason_code` values in this workflow are exactly `BUBBLE_ROUTE_NORMALIZATION_REQUIRED` or `NO_TRUSTWORTHY_ROUTE`
+6. allowed `escalation_reason_code` values in this workflow are exactly `BUBBLE_ROUTE_NORMALIZATION_REQUIRED`, `NO_TRUSTWORTHY_ROUTE`, `PRE_KICKOFF_HOLD_NOT_PROVEN`, `DOC_BUBBLE_ADMIN_POSTCONDITION_MISSING`, `DOC_BUBBLE_KICKOFF_FAILED`, or one of the imported `PublishPreKickoffAdmin` checkpoint reason codes listed in the reason-code anchor set
+7. use `boundary_reason=admin_publish_failed` when `PublishPreKickoffAdmin` returns a checkpoint or malformed success before kickoff
+8. use `boundary_reason=admin_postcondition_missing` when publish succeeded but refreshed handler-side `main` metadata is missing or mismatched
+9. use `boundary_reason=preconditions_not_met` when the post-publish Pairflow hold recheck fails before kickoff
+10. use `boundary_reason=kickoff_failed` when all publish and refreshed postconditions passed but same-bubble kickoff failed
 
 ### Auto-approval Gate Proof
 
@@ -203,6 +233,27 @@ This workflow may emit only the already-anchored document-scope reason codes:
 7. `PAIRFLOW_STATUS_UNAVAILABLE`
 8. `OPERATOR_TROUBLESHOOT_HINT`
 9. `NO_TRUSTWORTHY_ROUTE`
+10. `PRE_KICKOFF_HOLD_NOT_PROVEN`
+11. `DOC_BUBBLE_ADMIN_POSTCONDITION_MISSING`
+12. `DOC_BUBBLE_KICKOFF_FAILED`
+
+Imported `PublishPreKickoffAdmin` checkpoint codes must be retained in
+`publish_checkpoint_reason_code` on the handler-local action result and in
+`escalation_reason_code` on the structured local boundary report when this
+workflow is reporting that workflow's checkpoint without reinterpretation.
+Do not copy imported publish checkpoint codes into the primary `reason_code`;
+use `reason_code=DOC_BUBBLE_CREATE_REQUIRED` for the create branch plus
+`boundary_reason=admin_publish_failed`.
+
+1. `MAIN_NOT_CLEAN`
+2. `MAIN_BASE_REF_CHANGED`
+3. `ADMIN_AUTHORIZATION_MISSING`
+4. `ADMIN_SCOPE_INVALID`
+5. `OUT_OF_SCOPE_BUBBLE_CHANGES`
+6. `ADMIN_COMMIT_FAILED`
+7. `ADMIN_PUBLISH_FAILED`
+8. `ADMIN_POSTCONDITION_MISSING`
+9. `PRE_KICKOFF_HOLD_NOT_PROVEN`
 
 ## Decision Order
 
@@ -256,7 +307,20 @@ continuation_mode: stop_at_human_checkpoint
 source_owner: bubble_routing_layer
 scope: document
 reason_code: <OPERATOR_TROUBLESHOOT_HINT-or-PAIRFLOW_STATUS_UNAVAILABLE>
+publish_checkpoint_reason_code: not_applicable
 delegated_use_pairflow_surface: TroubleshootBubble
+delegated_use_pairflow_actions:
+  - troubleshoot
+  - not_applicable
+metadata_postcondition: not_applicable
+publish_postcondition: not_applicable
+kickoff_postcondition: not_applicable
+kickoff_result:
+  delegated_use_pairflow_surface: not_applicable
+  lifecycle_command: not_applicable
+  bubble_id: not_applicable
+  task_payload_source: not_applicable
+  result: not_applicable
 handoff_boundary_note: Troubleshoot the linked document bubble only; do not continue normal orchestration from the same raw lifecycle read.
 ```
 
@@ -272,20 +336,22 @@ Choose create when:
 1. the active task is approved
 2. `doc_bubble_id=null`
 
-Future pre-kickoff admin note:
+Document-route pre-kickoff admin contract:
 
-1. the current create route remains valid after this task and does not require
-   pre-kickoff admin publish
-2. a successor `ExecutePairflowPlan` route-integration task may choose to back
-   this document-bubble create route with the optional ideation round-0 admin
-   container pattern and the manual `PublishPreKickoffAdmin` proof workflow
-3. when that future route is adopted, kickoff must wait until bounded admin
-   scope, commit identity, publish-to-`main`, and refreshed metadata or selected
-   artifact-content postconditions are proven
-4. failed, partial, or ambiguous admin publish must stop before kickoff rather
-   than falling back to unmerged worktree state, transcript prose, or operator
-   memory
-5. admin scope remains limited to plan/task/progress metadata and directly
+1. `CreateDocumentBubble` uses the pre-kickoff admin pattern now; this adoption
+   is limited to the document route and does not change implementation-bubble
+   create/start routing
+2. create or reuse only the canonical derived bubble id `<task_id>-doc`
+3. create/start must produce an ideation carrier that remains in `RUNNING`
+   round `0` with `ideation.task_pending=true` before any admin publish or
+   kickoff decision
+4. kickoff must wait until bounded admin scope, commit identity,
+   publish-to-`main`, refreshed task metadata, and refreshed hold evidence are
+   proven by `PublishPreKickoffAdmin` success
+5. failed, partial, malformed, or ambiguous admin publish must stop before
+   kickoff rather than falling back to unmerged worktree state, transcript
+   prose, stale task metadata, or operator memory
+6. admin scope remains limited to plan/task/progress metadata and directly
    related docs/admin notes; repo-local `ExecutePairflowPlan` skill/workflow
    documentation is allowed only when the selected admin task itself changes
    that orchestration contract; product/source implementation and `UsePairflow`
@@ -297,19 +363,43 @@ Delegation:
    the current task metadata contract; do not invent an alternate id and do not
    add a separate recovery-key abstraction
 2. before create, read `pairflow bubble status --id <task_id>-doc`; if an
-   existing bubble with that id is in the expected document create carrier state,
-   reuse that bubble instead of creating a second one
+   existing bubble with that id is in the expected document create carrier
+   state, reuse that bubble instead of creating a second one
 3. if no bubble exists with the derived id, delegate create/start through
-   `UsePairflow` `CreateBubble` using exactly that derived id
+   `UsePairflow` `CreateBubble` using exactly that derived id, `--ideation`,
+   and document review artifact type
 4. if create fails because the derived id already exists, re-read status for the
    same id; reuse only when the state is the expected document create carrier
    state, otherwise stop at a human checkpoint
 5. if a bubble exists with the derived id but is not in a safe reusable state,
    stop at a human checkpoint; never create the same task's document bubble under
    a different id
-6. persist the derived/created bubble id into task metadata as `doc_bubble_id`
-7. preserve `status=approved`; the created id is linkage only and does not prove refinement completion
-8. preserve the document-bubble quality model and stop after the bubble-started boundary
+6. before editing the task artifact in the bubble worktree, invoke
+   `PublishPreKickoffAdmin` as the backing manual workflow through its
+   pre-side-effect authorization gate, with selected admin paths that include
+   the active task artifact and any directly required document-route workflow
+   metadata
+7. only after that authorization record exists, persist the derived/created
+   bubble id into task metadata as `doc_bubble_id` in the bubble worktree admin
+   change set, preserving `status=approved`
+8. continue the same `PublishPreKickoffAdmin` workflow to stage, commit, publish,
+   and verify the selected admin paths
+9. require `PublishPreKickoffAdmin` to return `publish_result=success`,
+   `bubble_id=<task_id>-doc`, `kickoff_allowed=true`, `admin_commit`,
+   `published_main_ref`, selected admin paths, authorization evidence,
+   refreshed postcondition evidence, and refreshed hold evidence
+10. after publish success, re-read the active task metadata from `main` and prove
+   `doc_bubble_id=<task_id>-doc` while `status=approved` remains unchanged
+11. re-read Pairflow status for the same derived id and prove the ideation
+   round-0 hold still exists before kickoff
+12. delegate kickoff of the same bubble through `UsePairflow` `InterveneBubble`,
+   which owns `pairflow bubble kickoff` for `RUNNING` round-0 ideation holds,
+   and pass the approved document task payload only after the publish and
+   refreshed postcondition proof is present
+13. capture the kickoff result in `kickoff_result` with the delegated surface,
+   bubble id, task payload source, and success status
+14. preserve the document-bubble quality model and stop after the same-bubble
+   kickoff boundary
 
 Safe reusable state:
 
@@ -331,9 +421,33 @@ continuation_mode: stop_at_settled_checkpoint
 source_owner: bubble_routing_layer
 scope: document
 reason_code: DOC_BUBBLE_CREATE_REQUIRED
+publish_checkpoint_reason_code: not_applicable
 delegated_use_pairflow_surface: CreateBubble
+delegated_use_pairflow_actions:
+  - bubble_create_start
+  - bubble_kickoff
 metadata_postcondition: doc_bubble_id_persisted
-handoff_boundary_note: Start the document-refinement bubble through UsePairflow, persist doc_bubble_id, and stop at the settled bubble-started boundary.
+publish_postcondition: admin_publish_succeeded
+kickoff_postcondition: same_bubble_kicked_off
+publish_proof:
+  workflow: PublishPreKickoffAdmin
+  publish_result: success
+  bubble_id: <task_id>-doc
+  admin_commit: <admin-commit-id>
+  published_main_ref: <refreshed-main-ref>
+  selected_admin_paths:
+    - <selected-admin-path>
+  postcondition_evidence:
+    doc_bubble_id: <task_id>-doc
+    task_status: approved
+  refreshed_hold_evidence: <post-publish-round-0-hold-summary>
+kickoff_result:
+  delegated_use_pairflow_surface: InterveneBubble
+  lifecycle_command: pairflow bubble kickoff
+  bubble_id: <task_id>-doc
+  task_payload_source: <task-path>
+  result: success
+handoff_boundary_note: Start or reuse the ideation document bubble through UsePairflow, publish bounded admin to main through PublishPreKickoffAdmin, kickoff the same bubble only after refreshed proof, and stop at the settled kicked-off boundary.
 ```
 
 Fail-closed rule:
@@ -342,7 +456,28 @@ Fail-closed rule:
 2. if the derived id is over-budget, invalid, already bound to an unsafe state,
    or cannot be checked with Pairflow status, return a human checkpoint rather
    than creating an alternate id
-3. return a human checkpoint or troubleshooting result that names the missing linkage persistence or unsafe canonical-id state as the blocker
+3. if the created or reused bubble cannot be proven to be `RUNNING` round `0`
+   with `ideation.task_pending=true`, return a human checkpoint with
+   `PRE_KICKOFF_HOLD_NOT_PROVEN` before publish or kickoff
+4. if `PublishPreKickoffAdmin` returns any checkpoint, malformed success, wrong
+   bubble id, missing publish proof, or `kickoff_allowed=false`, return a human
+   checkpoint before kickoff with `boundary_reason=admin_publish_failed` and
+   retain its reason code in `publish_checkpoint_reason_code` plus
+   `escalation_reason_code`; do not copy the imported publish code into the
+   primary `reason_code`
+5. if refreshed `main` task metadata does not prove `doc_bubble_id=<task_id>-doc`
+   and `status=approved`, return a human checkpoint with
+   `DOC_BUBBLE_ADMIN_POSTCONDITION_MISSING` and
+   `boundary_reason=admin_postcondition_missing` before kickoff
+6. if refreshed Pairflow status after publish no longer proves the same
+   round-0 ideation hold, return a human checkpoint with
+   `PRE_KICKOFF_HOLD_NOT_PROVEN` and
+   `boundary_reason=preconditions_not_met` before kickoff; do not classify
+   lifecycle hold failure as an admin postcondition mismatch
+7. if kickoff fails or targets any bubble other than `<task_id>-doc`, return a
+   human checkpoint with `DOC_BUBBLE_KICKOFF_FAILED` and
+   `boundary_reason=kickoff_failed`; do not report a settled create boundary
+8. return a human checkpoint or troubleshooting result that names the missing linkage persistence, unsafe canonical-id state, publish failure, missing refreshed postcondition, or failed kickoff as the blocker
 
 ### 4. Read the linked bubble and classify only document-owned routes
 
