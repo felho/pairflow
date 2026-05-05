@@ -345,7 +345,7 @@ describe("fitness:check:ci", () => {
         "src/v11/infrastructure/ui/.fitnessRouterPortBroadBagDrift.ts";
       const portPath = "src/v11/shared/ports/.fitnessRouterPortCommandDrift.ts";
       const aliasPath = "src/v11/shared/ports/.fitnessRouterPortAliasDrift.ts";
-      const commandPath = "src/v11/shared/list/.fitnessListCommandContract.ts";
+      const commandPath = "src/v11/shared/workflow/.fitnessWorkflowCommandContract.ts";
 
       await writeFixtureFile(
         fixtureRepoRoot,
@@ -355,12 +355,12 @@ describe("fitness:check:ci", () => {
       await writeFixtureFile(
         fixtureRepoRoot,
         commandPath,
-        "export interface FitnessListCommandContract { id: string; }\n"
+        "export interface FitnessWorkflowCommandContract { id: string; }\n"
       );
       await writeFixtureFile(
         fixtureRepoRoot,
         portPath,
-        "import type { FitnessListCommandContract } from '../list/.fitnessListCommandContract.js';\nexport type Drift = FitnessListCommandContract;\n"
+        "import type { FitnessWorkflowCommandContract } from '../workflow/.fitnessWorkflowCommandContract.js';\nexport type Drift = FitnessWorkflowCommandContract;\n"
       );
       await writeFixtureFile(
         fixtureRepoRoot,
