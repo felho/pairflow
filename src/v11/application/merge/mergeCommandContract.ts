@@ -26,7 +26,7 @@ import type {
   ExecuteRemoteBubbleMergeCommandInput,
   ExecuteRemoteBubbleMergeCommandResult,
   RemoteMergeStatusTarget
-} from "../../shared/merge/remoteMergeContract.js";
+} from "../../shared/remote/remoteMergeContract.js";
 import type { ImportRemoteBubbleCommitContinuityPort } from "../commit/commitRemotePorts.js";
 export type {
   ExecuteRemoteBubbleMergeCleanupCommandInput,
@@ -36,8 +36,8 @@ export type {
   RemoteMergeCleanupArtifacts,
   RemoteMergeImportSource,
   RemoteMergeStatusTarget
-} from "../../shared/merge/remoteMergeContract.js";
-export { buildMergeImportRef } from "../../shared/merge/remoteMergeContract.js";
+} from "../../shared/remote/remoteMergeContract.js";
+export { buildMergeImportRef } from "../../shared/remote/remoteMergeContract.js";
 
 export interface MergeCleanupOutcome {
   tmuxSessionName: string;
