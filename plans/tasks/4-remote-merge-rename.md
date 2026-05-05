@@ -5,7 +5,7 @@ task_family_id: remote-merge-rename
 sequence_key: "4"
 task_id: 4-remote-merge-rename
 title: "Remote Merge Rename"
-status: approved
+status: implementable
 phase: phase2
 target_files:
   - src/v11/shared/merge/remoteMergeContract.ts
