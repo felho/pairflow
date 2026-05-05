@@ -3,12 +3,19 @@ import { basename, dirname, join } from "node:path";
 import { emitBubbleLifecycleEventBestEffort } from "../../shared/metrics/bubbleEvents.js";
 import type {
   DeliveryAck,
+  EmitDeliveryNotificationAckPort,
   ResolveDeliveryMessageRefInput
 } from "../../shared/ports/tmuxDelivery.js";
-import type * as AskHumanFinalizationDefaultsModuleExports from "../../defaults/askHuman/askHumanFinalizationDefaults.js";
+import type {
+  EmitAskHumanBubbleNotificationPort
+} from "./askHumanDeliveryPortsContract.js";
 
-type AskHumanFinalizationDefaultsModule =
-  typeof AskHumanFinalizationDefaultsModuleExports;
+interface AskHumanFinalizationDefaultsModule {
+  askHumanFinalizationDefaults: {
+    emitDeliveryNotificationAck: EmitDeliveryNotificationAckPort;
+    emitBubbleNotification: EmitAskHumanBubbleNotificationPort;
+  };
+}
 
 let askHumanFinalizationDefaultsModulePromise:
   | Promise<AskHumanFinalizationDefaultsModule>

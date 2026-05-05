@@ -1,6 +1,18 @@
-import type * as CreateBubbleDefaultsModuleExports from "../../defaults/create/createBubbleDefaults.js";
+import type { BubbleCreateDependencies } from "./createCommandContract.js";
 
-type CreateBubbleDefaultsModule = typeof CreateBubbleDefaultsModuleExports;
+type CreateBubbleDependencyDefaults = Required<
+  Pick<
+    BubbleCreateDependencies,
+    | "appendProtocolEnvelope"
+    | "assertGitRepository"
+    | "loadPairflowGlobalConfig"
+    | "writeRemotePointer"
+  >
+>;
+
+interface CreateBubbleDefaultsModule {
+  createBubbleDependencyDefaults: CreateBubbleDependencyDefaults;
+}
 
 let createBubbleDefaultsModulePromise:
   | Promise<CreateBubbleDefaultsModule>

@@ -9,11 +9,18 @@ import {
   createHumanReplyCommandError,
   throwAsHumanReplyCommandError
 } from "./replyCommandError.js";
+import type {
+  ExecuteReplyMutationInput,
+  ExecuteReplyMutationResult
+} from "./replyMutationExecutionContract.js";
 import { resolveReplyCommandDependencies } from "./replyCommandDependencyResolution.js";
 import { normalizeReplyCommandInput } from "./replyCommandInputNormalization.js";
-import type * as ReplyMutationExecutionModuleExports from "../../defaults/reply/replyMutationExecution.js";
 
-type ReplyMutationExecutionModule = typeof ReplyMutationExecutionModuleExports;
+interface ReplyMutationExecutionModule {
+  executeReplyMutation: (
+    input: ExecuteReplyMutationInput
+  ) => Promise<ExecuteReplyMutationResult>;
+}
 
 let replyMutationExecutionModulePromise:
   | Promise<ReplyMutationExecutionModule>

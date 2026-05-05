@@ -3,7 +3,6 @@ import type { PersistPassValidationRecoveryMarkerPort } from "../../shared/ports
 import type { RemoveRuntimeSessionPort } from "../../shared/ports/runtimeSessions.js";
 import type { TerminateBubbleTmuxSessionPort } from "../../shared/ports/tmuxSessions.js";
 import type { BubbleRemotePointer } from "../../../types/bubble.js";
-import type * as RestartBubbleDefaultsModuleExports from "../../defaults/restart/restartCommandDefaults.js";
 
 export interface RestartBubbleDefaultDependencies {
   resolveBubbleById: ResolveBubbleByIdPort;
@@ -17,7 +16,9 @@ let restartBubbleDependencyDefaultsPromise:
   | Promise<RestartBubbleDefaultDependencies>
   | undefined;
 
-type RestartBubbleDefaultsModule = typeof RestartBubbleDefaultsModuleExports;
+interface RestartBubbleDefaultsModule {
+  restartBubbleDependencyDefaults: RestartBubbleDefaultDependencies;
+}
 
 function getRestartBubbleDefaultsModulePath(): string {
   return ["..", "..", "defaults", "restart", "restartCommandDefaults.js"].join("/");
