@@ -23,7 +23,7 @@ import {
   buildRemoteAttachCommand,
   resolveAttachLauncher
 } from "./pairflowCommandAttachLauncher.js";
-import { resolveAttachBubbleExecution } from "../../../shared/attach/resolveAttachBubbleExecution.js";
+import { resolveAttachBubbleExecution } from "../../../shared/bubbleAttachment/resolveAttachBubbleExecution.js";
 
 export const executeAttachCommand: AttachCommandExecutor = async (
   input: AttachCommandExecutionInput
