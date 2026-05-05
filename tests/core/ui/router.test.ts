@@ -1576,6 +1576,19 @@ describe("UI read response validation", () => {
       type: "PASS",
       sender: "codex",
       recipient: "human",
+      display: {
+        title: "Validated.",
+        summaryText: "Validated.",
+        summarySource: "summary",
+        senderLabel: "codex",
+        role: "implementer",
+        rowKind: "normal",
+        tone: "neutral",
+        badges: [],
+        progress: null,
+        validationFailure: null,
+        syntheticApproval: null
+      },
       payload: {
         summary: "Validated."
       },
@@ -1608,6 +1621,50 @@ describe("UI read response validation", () => {
         }),
       "bubble_timeline"
     );
+
+    for (const progress of [
+      {
+        kind: "meta_review_handoff",
+        label: "handoff 1.5",
+        handoffAttempt: 1.5
+      },
+      {
+        kind: "clean_run",
+        label: "clean NaN",
+        cleanRunCount: Number.NaN,
+        cleanRunsRequired: 2
+      },
+      {
+        kind: "clean_run",
+        label: "clean Infinity",
+        cleanRunCount: 1,
+        cleanRunsRequired: Number.POSITIVE_INFINITY
+      },
+      {
+        kind: "clean_run",
+        label: "clean negative",
+        cleanRunCount: -1,
+        cleanRunsRequired: null
+      }
+    ]) {
+      expectInvalidReadResponse(
+        () =>
+          validateUiBubbleTimelineResponseBody({
+            bubbleId: bubble.bubbleId,
+            repoPath: repo.repoPath,
+            timeline: [
+              {
+                ...entry,
+                display: {
+                  ...entry.display,
+                  progress
+                }
+              }
+            ]
+          }),
+        "bubble_timeline"
+      );
+    }
   });
 });
 

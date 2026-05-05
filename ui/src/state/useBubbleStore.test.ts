@@ -2706,7 +2706,7 @@ describe("createBubbleStore", () => {
   it("toggleBubbleExpanded expands and fetches detail, collapseBubble removes from list", async () => {
     const detail = bubbleDetail({ bubbleId: "b-a", repoPath: "/repo-a" });
     const timeline = [
-      {
+      timelineEntry({
         id: "env-1",
         ts: "2026-02-24T12:01:00.000Z",
         round: 3,
@@ -2715,7 +2715,7 @@ describe("createBubbleStore", () => {
         recipient: "codex",
         payload: { question: "Can you proceed?" },
         refs: []
-      }
+      })
     ];
 
     const api = createApiStub({
@@ -3722,7 +3722,7 @@ describe("deleteBubble store method", () => {
     const staleDetailDeferred = createDeferred<typeof initialReviewerMetaDetail>();
     const staleTimelineDeferred = createDeferred<UiTimelineEntry[]>();
     const latestTimeline: UiTimelineEntry[] = [
-      {
+      timelineEntry({
         id: "env-approval",
         ts: "2026-04-19T19:26:48.011Z",
         round: 2,
@@ -3733,7 +3733,7 @@ describe("deleteBubble store method", () => {
           summary: "Bubble is ready for approval."
         },
         refs: []
-      }
+      })
     ];
 
     const getBubble = vi
@@ -3818,7 +3818,7 @@ describe("deleteBubble store method", () => {
 
     staleDetailDeferred.resolve(initialReviewerMetaDetail);
     staleTimelineDeferred.resolve([
-      {
+      timelineEntry({
         id: "env-pass",
         ts: "2026-04-19T19:20:59.424Z",
         round: 1,
@@ -3829,7 +3829,7 @@ describe("deleteBubble store method", () => {
           summary: "stale pass only"
         },
         refs: []
-      }
+      })
     ]);
     await Promise.resolve();
     await Promise.resolve();

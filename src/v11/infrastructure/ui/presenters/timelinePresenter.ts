@@ -30,6 +30,10 @@ import {
   isRecord
 } from "../../../shared/validation/primitives.js";
 import { shellQuote } from "../../../shared/foundation/shellQuote.js";
+import {
+  attachTimelineDisplay,
+  type TimelineEntryWithoutDisplay
+} from "./timelineDisplayPresenter.js";
 
 export interface ReadBubbleTimelineInput {
   bubbleId: string;
@@ -84,7 +88,7 @@ class RemoteTimelineReadError extends Error {
 }
 
 export function presentTimeline(envelopes: ProtocolEnvelope[]): UiTimelineEntry[] {
-  return envelopes.map((envelope) => ({
+  return attachTimelineDisplay(envelopes.map((envelope) => ({
     id: envelope.id,
     ts: envelope.ts,
     round: envelope.round,
@@ -93,7 +97,7 @@ export function presentTimeline(envelopes: ProtocolEnvelope[]): UiTimelineEntry[
     recipient: envelope.recipient,
     payload: envelope.payload,
     refs: envelope.refs
-  }));
+  })));
 }
 
 function isFinding(value: unknown): value is Finding {
@@ -171,7 +175,7 @@ function normalizePayloadForUi(raw: unknown): UiTimelineEntry["payload"] {
   return payload;
 }
 
-function presentTimelineEntryLenient(input: unknown): UiTimelineEntry | null {
+function presentTimelineEntryLenient(input: unknown): TimelineEntryWithoutDisplay | null {
   if (!isRecord(input)) {
     return null;
   }
@@ -219,7 +223,7 @@ async function readTimelineLenientFromTranscriptPath(
     throw error;
   });
 
-  const entries: UiTimelineEntry[] = [];
+  const entries: TimelineEntryWithoutDisplay[] = [];
   for (const line of raw.split(/\r?\n/u)) {
     if (line.trim().length === 0) {
       continue;
@@ -235,13 +239,13 @@ async function readTimelineLenientFromTranscriptPath(
     }
   }
 
-  return entries;
+  return attachTimelineDisplay(entries);
 }
 
 export function readBubbleTimelineFromTranscriptText(
   raw: string
 ): UiTimelineEntry[] {
-  const entries: UiTimelineEntry[] = [];
+  const entries: TimelineEntryWithoutDisplay[] = [];
   for (const line of raw.split(/\r?\n/u)) {
     if (line.trim().length === 0) {
       continue;
@@ -257,7 +261,7 @@ export function readBubbleTimelineFromTranscriptText(
     }
   }
 
-  return entries;
+  return attachTimelineDisplay(entries);
 }
 
 export async function readBubbleTimelineFromTranscriptPath(

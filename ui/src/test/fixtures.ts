@@ -3,6 +3,7 @@ import type {
   UiBubbleDetail,
   UiBubbleSummary,
   UiRepoSummary,
+  UiTimelineEntryDisplay,
   UiTimelineEntry
 } from "../lib/types";
 
@@ -181,8 +182,50 @@ export function bubbleDetail(input: {
   };
 }
 
-export function timelineEntry(overrides: Partial<UiTimelineEntry> = {}): UiTimelineEntry {
+function timelineEntryDisplay(entry: Omit<UiTimelineEntry, "display">): UiTimelineEntryDisplay {
+  const summary =
+    entry.payload.summary ??
+    entry.payload.question ??
+    entry.payload.message ??
+    (entry.payload.decision !== undefined ? `decision=${entry.payload.decision}` : undefined) ??
+    "(no summary payload)";
+  const summarySource =
+    entry.payload.summary !== undefined
+      ? "summary"
+      : entry.payload.question !== undefined
+        ? "question"
+        : entry.payload.message !== undefined
+          ? "message"
+          : entry.payload.decision !== undefined
+            ? "decision"
+            : "neutral";
+  const role =
+    entry.type === "HUMAN_QUESTION" || entry.type === "HUMAN_REPLY"
+      ? "human"
+      : entry.sender === "orchestrator"
+        ? "system"
+        : "implementer";
+
   return {
+    title: summary,
+    summaryText: summary,
+    summarySource,
+    senderLabel: entry.sender,
+    role,
+    rowKind:
+      entry.type === "APPROVAL_REQUEST" || entry.type === "APPROVAL_DECISION"
+        ? "approval"
+        : "normal",
+    tone: "neutral",
+    badges: [],
+    progress: null,
+    validationFailure: null,
+    syntheticApproval: null
+  };
+}
+
+export function timelineEntry(overrides: Partial<UiTimelineEntry> = {}): UiTimelineEntry {
+  const entryWithoutDisplay: Omit<UiTimelineEntry, "display"> = {
     id: "env-1",
     ts: "2026-02-24T12:01:00.000Z",
     round: 3,
@@ -194,6 +237,10 @@ export function timelineEntry(overrides: Partial<UiTimelineEntry> = {}): UiTimel
     },
     refs: [],
     ...overrides
+  };
+  return {
+    ...entryWithoutDisplay,
+    display: overrides.display ?? timelineEntryDisplay(entryWithoutDisplay)
   };
 }
 

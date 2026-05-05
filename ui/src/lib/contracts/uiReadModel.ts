@@ -33,5 +33,14 @@ export type {
   UiStatusCommandPathView,
   UiStatusExecutionContextView,
   UiStatusPaneActivityView,
-  UiTimelineEntry
+  UiTimelineBadge,
+  UiTimelineDisplayRole,
+  UiTimelineEntry,
+  UiTimelineEntryDisplay,
+  UiTimelineProgress,
+  UiTimelineRowKind,
+  UiTimelineSummarySource,
+  UiTimelineSyntheticApproval,
+  UiTimelineTone,
+  UiTimelineValidationFailure
 } from "@pairflow/ui-contracts";
