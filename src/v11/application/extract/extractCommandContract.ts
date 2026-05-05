@@ -15,6 +15,11 @@ export type ExtractCommandFailureReasonCode =
   | "EXTRACT_SOURCE_PATH_MISSING"
   | "EXTRACT_SOURCE_PATH_NOT_FILE"
   | "EXTRACT_TARGET_PATH_EXISTS"
+  | "EXTRACT_DUPLICATE_SELECTED_PATH"
+  | "EXTRACT_COPY_FAILED"
+  | "EXTRACT_STAGE_FAILED"
+  | "EXTRACT_STAGED_SCOPE_MISMATCH"
+  | "EXTRACT_COMMIT_FAILED"
   | "EXTRACT_TRANSFER_NOT_IMPLEMENTED";
 
 export type ExtractTargetCheckoutFailureReason =
@@ -51,6 +56,24 @@ export interface ExtractCommandDiagnostics {
   normalizedPath?: string;
   sourcePath?: string;
   targetPath?: string;
+  copiedPaths?: string[];
+  stagedPaths?: string[];
+  expectedStagedPaths?: string[];
+  commitSha?: string;
+  duplicateRawPaths?: string[];
+  gitStep?:
+    | "stage"
+    | "read_staged_paths"
+    | "resolve_base_head"
+    | "write_commit_tree"
+    | "verify_commit_tree_scope"
+    | "create_commit"
+    | "update_head"
+    | "resolve_commit_sha";
+  filesystemStep?: "create_parent_directory" | "copy_file";
+  exitCode?: number;
+  stdout?: string;
+  stderr?: string;
   successorContract?: "no_overwrite_target_conflict_check";
 }
 
@@ -85,16 +108,19 @@ export interface ExtractCommandFailedResult extends ExtractCommandResultBase {
   >;
 }
 
-export interface ExtractCommandImplementationDeferredResult
+export interface ExtractCommandSuccessResult
   extends ExtractCommandResultBase {
-  status: "implementation_deferred";
-  reasonCode: "EXTRACT_TRANSFER_NOT_IMPLEMENTED";
+  status: "success";
   selectedPaths: ExtractSelectedPath[];
+  copiedPaths: string[];
+  stagedPaths?: string[];
+  commitSha?: string;
+  commitMessage?: string;
 }
 
 export type ExtractCommandResult =
   | ExtractCommandFailedResult
-  | ExtractCommandImplementationDeferredResult;
+  | ExtractCommandSuccessResult;
 
 export interface ExtractCommandDependencies {
   resolveBubbleById: ResolveBubbleByIdPort;
@@ -102,4 +128,18 @@ export interface ExtractCommandDependencies {
   runGit: RunGitPort;
   fileExists: (path: string) => Promise<boolean>;
   fileInfo: (path: string) => Promise<ExtractFileInfo>;
+  createDirectory: (path: string) => Promise<void>;
+  copyFile: (sourcePath: string, targetPath: string) => Promise<void>;
+}
+
+export interface ExtractTransferInput {
+  command: ExtractCommandInput;
+  bubbleId: string;
+  targetRepoPath: string;
+  resolvedBubbleRepoPath: string;
+  selectedPaths: ExtractSelectedPath[];
+  dependencies: Pick<
+    ExtractCommandDependencies,
+    "copyFile" | "createDirectory" | "fileInfo" | "runGit"
+  >;
 }
