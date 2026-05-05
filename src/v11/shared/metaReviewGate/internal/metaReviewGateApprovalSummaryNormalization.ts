@@ -9,7 +9,7 @@ import {
   resolveAdvisoryContractInvariant,
   resolveStructuredParityMetadataSnapshot,
   type ApprovalAdvisoryFinding
-} from "./metaReviewGateApprovalParitySnapshot.js";
+} from "../../../domain/metaReviewGate/approvalParitySnapshot.js";
 import type { FindingsParityMetadata } from "../../../../types/protocol.js";
 
 const approvalSummaryMetadataMismatchReasonCode =

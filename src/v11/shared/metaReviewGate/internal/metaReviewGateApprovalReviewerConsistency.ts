@@ -21,7 +21,7 @@ import {
   resolveAdvisoryContractInvariant,
   resolveStructuredParityMetadataSnapshot,
   type ApprovalAdvisoryFinding
-} from "./metaReviewGateApprovalParitySnapshot.js";
+} from "../../../domain/metaReviewGate/approvalParitySnapshot.js";
 
 const metaReviewGateReviewerConvergenceConflictReasonCode =
   "META_REVIEW_GATE_REVIEWER_CONVERGENCE_CONFLICT";

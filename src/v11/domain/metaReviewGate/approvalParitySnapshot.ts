@@ -1,19 +1,19 @@
-import type { MetaReviewRecommendation } from "../../../../types/bubble.js";
+import type { MetaReviewRecommendation } from "../../../types/bubble.js";
 import {
   hasApproveFindingsSplitMetadata,
   type FindingsParityMetadata
-} from "../../../../types/protocol.js";
+} from "../../../types/protocol.js";
 import {
   type ApprovalAdvisoryFinding,
   resolveAdvisoryContractInvariant,
   resolveStructuredParityMetadataSnapshot
-} from "../../../domain/metaReviewGate/approvalParityState.js";
+} from "./approvalParityState.js";
 export {
   type ApprovalAdvisoryFinding,
   hasConsistentApproveAdvisoryOnlySplit,
   resolveAdvisoryContractInvariant,
   resolveStructuredParityMetadataSnapshot
-} from "../../../domain/metaReviewGate/approvalParityState.js";
+} from "./approvalParityState.js";
 
 const convergedAdvisoryMetadataRequiredReasonCode =
   "CONVERGED_ADVISORY_METADATA_REQUIRED";
