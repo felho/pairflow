@@ -16,6 +16,7 @@ describe("parseBubbleCommitCommandOptions", () => {
       "--message",
       "feat: finalize",
       "--stage-all",
+      "--force",
       "--ref",
       ".pairflow/evidence/typecheck.log"
     ]);
@@ -29,6 +30,7 @@ describe("parseBubbleCommitCommandOptions", () => {
     expect(parsed.repo).toBe("/tmp/repo");
     expect(parsed.message).toBe("feat: finalize");
     expect(parsed.stageAll).toBe(true);
+    expect(parsed.force).toBe(true);
     expect(parsed.refs).toEqual([".pairflow/evidence/typecheck.log"]);
   });
 
@@ -49,6 +51,7 @@ describe("parseBubbleCommitCommandOptions", () => {
     expect(parsed.help).toBe(true);
     expect(getBubbleCommitHelpText()).toContain("pairflow bubble commit");
     expect(getBubbleCommitHelpText()).toContain("--stage-all");
+    expect(getBubbleCommitHelpText()).toContain("--force");
     expect(getBubbleCommitHelpText()).not.toContain("--auto");
     expect(getBubbleCommitHelpText()).not.toMatch(/done-package|auto-generate/u);
   });

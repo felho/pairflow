@@ -440,6 +440,9 @@ pairflow bubble request-rework --id <id> --repo <repo> --message "<rework>"
 
 # Finalize
 pairflow bubble commit --id <id> --repo <repo> --stage-all
+# If an already-approved bubble has no remaining worktree diff but still needs
+# lifecycle finalization, use an explicit empty finalize commit:
+pairflow bubble commit --id <id> --repo <repo> --force
 pairflow bubble merge --id <id> --repo <repo> --push --delete-remote [--json]
 ```
 
@@ -585,6 +588,10 @@ pairflow bubble approve --id feat_login --repo /path/to/myapp
 #    Fast path: stage all worktree changes before committing
 pairflow bubble commit --id feat_login --repo /path/to/myapp --stage-all
 #    → State becomes DONE
+
+#    Recovery path: when approved work was already merged elsewhere and the
+#    bubble has no remaining diff, create an explicit empty finalize commit:
+pairflow bubble commit --id feat_login --repo /path/to/myapp --force
 
 #    Strict/manual path (if you prefer full manual control):
 #    - stage files yourself
@@ -1053,7 +1060,7 @@ Unsupported pairs such as `(P2, 2)` must display as custom/unsupported rather th
 | `bubble reply --id <id> --message <text> [--repo <path>] [--ref <path>]...` | Answer a human question |
 | `bubble approve --id <id> [--override-non-approve] [--override-reason <text>] [--repo <path>] [--ref <path>]...` | Approve for commit from `READY_FOR_HUMAN_APPROVAL` |
 | `bubble request-rework --id <id> --message <text> [--repo <path>] [--ref <path>]...` | Send back for rework (`READY_FOR_HUMAN_APPROVAL`: immediate; `WAITING_HUMAN`: queues deferred deterministic rework intent) |
-| `bubble commit --id <id> [--repo <path>] [--message <text>] [--ref <path>]... [--stage-all]` | Commit and finalize; `--stage-all` stages all worktree changes before staged-file validation |
+| `bubble commit --id <id> [--repo <path>] [--message <text>] [--ref <path>]... [--stage-all] [--force]` | Commit and finalize; `--stage-all` stages all worktree changes before staged-file validation, while `--force` allows an explicit empty finalize commit |
 | `bubble merge --id <id> [--repo <path>] [--push] [--delete-remote] [--json]` | Merge bubble branch and clean up. `--push` / `--delete-remote` stay local-route only; started-remote merge completes the durable merge in the local repo and rejects those flags. |
 | `bubble reconcile [--repo <path>] [--dry-run] [--json]` | Clean up stale sessions |
 | `bubble watchdog --id <id> [--repo <path>] [--json]` | Check for stuck agents |

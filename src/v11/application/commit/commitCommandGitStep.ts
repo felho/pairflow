@@ -305,6 +305,7 @@ export async function runCommitGitStep(input: {
   command: CommitBubbleInput;
   context: CommitRuntimeContext;
   stageAll: boolean;
+  force: boolean;
   runGit: RunGitPort;
 }): Promise<CommitGitResult> {
   if (input.stageAll) {
@@ -318,6 +319,27 @@ export async function runCommitGitStep(input: {
     input.runGit
   );
   if (stagedFiles.length === 0) {
+    if (input.force) {
+      const commitMessage =
+        input.command.message ?? `bubble(${input.context.resolved.bubbleId}): finalize`;
+      await input.runGit(["commit", "--allow-empty", "-m", commitMessage], {
+        cwd: input.context.resolved.bubblePaths.worktreePath
+      });
+      const commitSha = (
+        await input.runGit(["rev-parse", "HEAD"], {
+          cwd: input.context.resolved.bubblePaths.worktreePath
+        })
+      ).stdout.trim();
+
+      await syncCloneSourceBranch({
+        context: input.context,
+        commitSha,
+        runGit: input.runGit
+      });
+
+      return { stagedFiles, commitMessage, commitSha };
+    }
+
     const reusableCloneCommit = await maybeReuseCommittedCloneHead({
       command: input.command,
       context: input.context,

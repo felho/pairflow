@@ -308,11 +308,13 @@ async function commitLocalExecutionRoute(input: {
   now: Date;
   nowIso: string;
   stageAll: boolean;
+  force: boolean;
 }): Promise<CommitBubbleResult> {
   const { stagedFiles, commitMessage, commitSha } = await runCommitGitStep({
     command: input.command,
     context: input.context,
     stageAll: input.stageAll,
+    force: input.force,
     runGit: input.dependencies.runGit
   });
 
@@ -366,6 +368,7 @@ export async function commitBubble(
     const stageAll = input.stageAll !== undefined
       ? input.stageAll
       : input.auto ?? false;
+    const force = input.force ?? false;
     const refs = normalizeStringList(input.refs ?? []);
 
     const context = await prepareCommitExecutionContext({
@@ -392,7 +395,8 @@ export async function commitBubble(
       refs,
       now,
       nowIso,
-      stageAll
+      stageAll,
+      force
     });
   } catch (error) {
     return throwAsBubbleCommitError(error);

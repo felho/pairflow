@@ -6,6 +6,7 @@ export interface CommitBubbleInput {
   refs?: string[] | undefined;
   message?: string | undefined;
   stageAll?: boolean | undefined;
+  force?: boolean | undefined;
   /**
    * Temporary internal compatibility for first-party callers not yet migrated to
    * stageAll. Public CLI use of --auto is removed.

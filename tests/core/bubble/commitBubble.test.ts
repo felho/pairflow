@@ -340,6 +340,36 @@ describe("commitBubble", () => {
     ).rejects.toMatchObject({ code: "ENOENT" });
   });
 
+  it("supports forced empty finalize commits", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupApprovedBubble(repoPath, "b_commit_empty_force");
+
+    const result = await commitBubble({
+      bubbleId: bubble.bubbleId,
+      cwd: repoPath,
+      force: true,
+      now: new Date("2026-02-22T15:25:00.000Z")
+    });
+
+    expect(result.state.state).toBe("DONE");
+    expect(result.stagedFiles).toEqual([]);
+    expect(result.envelope.type).toBe("COMMIT_RESULT");
+    expect(result.envelope.payload).toEqual({
+      metadata: {
+        commit_message: "bubble(b_commit_empty_force): finalize",
+        commit_sha: result.commitSha,
+        staged_files: []
+      }
+    });
+
+    const log = await runGit(bubble.paths.worktreePath, [
+      "log",
+      "-1",
+      "--pretty=%s"
+    ]);
+    expect(log.stdout.trim()).toBe("bubble(b_commit_empty_force): finalize");
+  });
+
   it("keeps temporary auto compatibility as staging-only", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupApprovedBubble(repoPath, "b_commit_04_compat");

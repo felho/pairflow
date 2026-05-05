@@ -13,6 +13,7 @@ export interface BubbleCommitCommandOptions {
   repo?: string;
   message?: string;
   stageAll: boolean;
+  force: boolean;
   help: false;
 }
 
@@ -28,7 +29,7 @@ export type ParsedBubbleCommitCommandOptions =
 export function getBubbleCommitHelpText(): string {
   return [
     "Usage:",
-    '  pairflow bubble commit --id <id> [--repo <path>] [--message "<text>"] [--ref <artifact-path>]... [--stage-all]',
+    '  pairflow bubble commit --id <id> [--repo <path>] [--message "<text>"] [--ref <artifact-path>]... [--stage-all] [--force]',
     "",
     "Options:",
     "  --id <id>             Bubble id",
@@ -36,6 +37,7 @@ export function getBubbleCommitHelpText(): string {
     "  --message <text>      Optional git commit message override",
     "  --ref <path>          Optional artifact reference (repeatable)",
     "  --stage-all           Stage all worktree changes before validating staged files",
+    "  --force               Allow an empty finalize commit when no files are staged",
     "  -h, --help            Show this help",
     "",
     "Notes:",
@@ -74,6 +76,9 @@ export function parseBubbleCommitCommandOptions(
       "stage-all": {
         type: "boolean"
       },
+      force: {
+        type: "boolean"
+      },
       ref: {
         type: "string",
         multiple: true
@@ -108,6 +113,7 @@ export function parseBubbleCommitCommandOptions(
     ...(parsed.values.repo !== undefined ? { repo: parsed.values.repo } : {}),
     ...(parsed.values.message !== undefined ? { message: parsed.values.message } : {}),
     stageAll: parsed.values["stage-all"] ?? false,
+    force: parsed.values.force ?? false,
     help: false
   };
 }
@@ -128,6 +134,7 @@ export async function runBubbleCommitCommand(
       repoPath: options.repo,
       message: options.message,
       stageAll: options.stageAll,
+      force: options.force,
       cwd
     }, commitBubbleDependencyDefaults);
   } catch (error) {
