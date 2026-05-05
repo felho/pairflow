@@ -62,6 +62,7 @@ This skill does not own:
 |---|---|---|
 | `HandleDocumentBubble` | repo-local owner for document-bubble lifecycle interpretation, `UsePairflow` delegation, and normalized bubble outputs | no; it backs document-bubble route surfaces |
 | `HandleImplementationBubble` | repo-local owner for implementation-bubble lifecycle interpretation, `UsePairflow` delegation, and normalized bubble outputs | no; it backs implementation-bubble route surfaces |
+| `PublishPreKickoffAdmin` | repo-local manual operator workflow for publishing bounded ideation bubble admin changes to clean `main` and returning structured no-kickoff publish proof | no; successor route-integration tasks may call it before kickoff |
 | `UpdateProgress` | repo-local owner for normal post-implementation progress reconciliation, canonical archive aftermath, and local pilot proof after successful `CloseImplementationBubble` return | no; it is entered only after the existing close route returns settled success |
 
 Route-surface rule:
@@ -69,7 +70,9 @@ Route-surface rule:
 1. the names above are stable routing labels and workflow targets only
 2. they do not authorize this top-level skill to inline downstream workflow bodies
 3. successor tasks may implement their internals, but they must not silently rename or reinterpret the route surfaces
-4. `HandleDocumentBubble` and `HandleImplementationBubble` are backing workflows, not `target_workflow_surface` values returned by `ResolvePlanState`
+4. `HandleDocumentBubble`, `HandleImplementationBubble`, and
+   `PublishPreKickoffAdmin` are backing workflows, not
+   `target_workflow_surface` values returned by `ResolvePlanState`
 5. raw Pairflow lifecycle truth is never classified directly by this top-level skill; repo-local bubble handlers own that read-path and then delegate into `UsePairflow`
 6. naming convention is deliberate:
    - `target_workflow_surface` names stay in PascalCase
@@ -97,22 +100,28 @@ Admin scope:
 
 1. allowed admin edits are bounded to plan/task/progress metadata and directly
    related docs or admin notes needed for the selected route
-2. product/source implementation, runtime behavior changes, new Pairflow
+2. repo-local `ExecutePairflowPlan` skill/workflow documentation is allowed
+   only when the selected admin task itself changes that orchestration contract
+3. product/source implementation, runtime behavior changes, new Pairflow
    commands, and `UsePairflow` edits are forbidden during pre-kickoff admin
-3. every successor task that adopts or extends this route must leave the skill
+4. every successor task that adopts or extends this route must leave the skill
    operational after it lands; it must not make current routes depend on
    unimplemented future workflows
 
 Publish proof:
 
-1. future integrated routes must prove the bounded admin commit was published
-   to `main` and then re-read refreshed metadata before kickoff
-2. an unmerged bubble-worktree commit, transcript prose, operator memory, or
+1. the repo-local `Workflows/PublishPreKickoffAdmin.md` workflow is the manual
+   operator path for proving a bounded admin commit was published to clean
+   `main`, refreshed metadata or selected artifact-content postconditions were
+   re-read, and refreshed ideation hold evidence still allows later kickoff
+2. future integrated routes must consume that structured proof, or an explicit
+   successor-owned equivalent, before kickoff
+3. an unmerged bubble-worktree commit, transcript prose, operator memory, or
    stale pre-publish metadata is never proof that lifecycle-relevant admin state
    reached `main`
-3. if proof of admin scope, commit identity, publish result, or refreshed
+4. if proof of admin scope, commit identity, publish result, or refreshed
    postcondition is absent or ambiguous, the workflow must stop before kickoff
-4. failed admin publish, partial publish, or unknown publish state must not be
+5. failed admin publish, partial publish, or unknown publish state must not be
    converted into kickoff by fallback reasoning
 
 ## Delegation Enforcement Contract

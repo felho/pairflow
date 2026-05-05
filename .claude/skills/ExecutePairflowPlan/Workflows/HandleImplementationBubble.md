@@ -287,15 +287,18 @@ Future pre-kickoff admin note:
    pre-kickoff admin publish
 2. a successor `ExecutePairflowPlan` route-integration task may choose to back
    this implementation-bubble create route with the optional ideation round-0
-   admin container pattern
+   admin container pattern and the manual `PublishPreKickoffAdmin` proof
+   workflow
 3. when that future route is adopted, kickoff must wait until bounded admin
-   scope, commit identity, publish-to-`main`, and refreshed metadata
-   postconditions are proven
+   scope, commit identity, publish-to-`main`, and refreshed metadata or selected
+   artifact-content postconditions are proven
 4. failed, partial, or ambiguous admin publish must stop before kickoff rather
    than falling back to unmerged worktree state, transcript prose, or operator
    memory
 5. admin scope remains limited to plan/task/progress metadata and directly
-   related docs/admin notes; product/source implementation and `UsePairflow`
+   related docs/admin notes; repo-local `ExecutePairflowPlan` skill/workflow
+   documentation is allowed only when the selected admin task itself changes
+   that orchestration contract; product/source implementation and `UsePairflow`
    edits remain forbidden
 
 Delegation:

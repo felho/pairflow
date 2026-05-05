@@ -3,11 +3,20 @@
 Use these gates before any `ExecutePairflowPlan` route mutates plan, task, bubble,
 progress, or archive state.
 
+Manual backing workflow exception: when a repo-local backing workflow is invoked
+directly by an explicit operator step and is not a `ResolvePlanState`
+`target_workflow_surface`, answer the Pre-Action Gate with the named workflow
+invocation, current task/route context, and that workflow's own authorization
+record. Missing `ResolvePlanState` route output alone must not block the manual
+workflow; missing workflow invocation, task/route context, or authorization proof
+still stops the action.
+
 ## Pre-Action Gate
 
 Before mutating any artifact or running any lifecycle command, answer:
 
-1. What route did `ResolvePlanState` return?
+1. What route did `ResolvePlanState` return, or what explicit manual backing
+   workflow invocation is being executed?
 2. Is the route owned by another workflow surface?
 3. If yes, what delegated workflow result authorizes the next action?
 4. Did that result come from a fresh sub-agent context, or from an explicitly
@@ -33,6 +42,15 @@ Allowed mutations require an authorizing delegated result:
 6. `status=implementable` requires a successful `CloseDocumentBubble` handler
    result.
 7. task archive/progress aftermath requires a successful `UpdateProgress` result.
+8. bounded pre-kickoff admin staging/commit/publish requires a
+   `PublishPreKickoffAdmin` pre-side-effect authorization record, written before
+   staging/commit/publish in the operator route ledger or workflow notes for the
+   current run, that names
+   selected explicit admin paths, named postconditions, clean main authority,
+   ideation hold proof, selected-route scope proof, and changed-path coverage
+   including untracked files. The final `PublishPreKickoffAdmin` workflow result
+   is produced after the publish or checkpoint path; it is not required before
+   the workflow can perform its own authorized side effects.
 
 Do not commit route-caused metadata changes unless the staged mutation is covered
 by one of these authorizations.
