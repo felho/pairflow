@@ -5,7 +5,7 @@ task_family_id: list-inventory
 sequence_key: "8"
 task_id: 8-list-inventory
 title: "List Inventory"
-status: approved
+status: implementable
 phase: phase4
 target_files:
   - src/v11/shared/list/listCommandApi.ts
