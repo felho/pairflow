@@ -84,7 +84,7 @@
       "scope": [
         "src/v11/**"
       ],
-      "mode": "report-only",
+      "mode": "hard-fail",
       "owner": "architecture/composition",
       "exceptions": []
     },
