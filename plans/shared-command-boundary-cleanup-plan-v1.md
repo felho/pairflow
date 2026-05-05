@@ -22,8 +22,8 @@ task_order:
   - 10-list-local-move-b
   - 11-list-boundary-closeout
   - 12-shared-command-fitness
-last_completed_task_id: 7-attach-boundary-closeout
-active_task_id: 8-list-inventory
+last_completed_task_id: 8-list-inventory
+active_task_id: 9-list-local-move-a
 archive_group: 2026-05-05-shared-command-boundary-cleanup-plan-v1
 task_tracker:
   - task_id: 1-commit-local-helpers
@@ -48,8 +48,8 @@ task_tracker:
     task_path: plans/archive/tasks/2026-05-05-shared-command-boundary-cleanup-plan-v1/7-attach-boundary-closeout.md
     status: archived
   - task_id: 8-list-inventory
-    task_path: plans/tasks/8-list-inventory.md
-    status: in_progress
+    task_path: plans/archive/tasks/2026-05-05-shared-command-boundary-cleanup-plan-v1/8-list-inventory.md
+    status: archived
   - task_id: 9-list-local-move-a
     task_path: null
     status: not_created
