@@ -1,4 +1,4 @@
-import { resolveFindingPriority, type FindingPriority } from "../../../types/findings.js";
+import type { FindingPriority } from "../../../types/findings.js";
 import type { FindingsParityMetadata } from "../../../types/protocol.js";
 import { isRecord } from "../validation/primitives.js";
 import type { MetaReviewResult } from "../metaReview/metaReviewTypes.js";
@@ -6,19 +6,23 @@ import {
   resolveFindingsParityMetadataFromReportJson
 } from "./metaReviewGateFindingsMetadata.js";
 import {
-  buildFindingsParityMetadata,
   resolveReworkFindingsParityInput
 } from "./metaReviewGateFindingsParityInput.js";
 import {
   validateFindingsArtifactParity
 } from "./metaReviewGateFindingsParityHelpers.js";
-
-export const REVIEW_POLICY_THRESHOLD_SOURCE_UNRESOLVED =
-  "REVIEW_POLICY_THRESHOLD_SOURCE_UNRESOLVED" as const;
-export const REVIEW_POLICY_THRESHOLD_CONTEXT_INCOMPLETE =
-  "REVIEW_POLICY_THRESHOLD_CONTEXT_INCOMPLETE" as const;
-
-const findingPriorityOrder: FindingPriority[] = ["P0", "P1", "P2", "P3"];
+import {
+  buildVerifiedThresholdParityMetadata,
+  resolveHighestOpenSeverity,
+  resolveVerifiedThresholdOpenSplitTotals,
+  REVIEW_POLICY_THRESHOLD_CONTEXT_INCOMPLETE,
+  REVIEW_POLICY_THRESHOLD_SOURCE_UNRESOLVED
+} from "../../domain/metaReviewGate/thresholdAuthority.js";
+export {
+  metaReviewGateThresholdIsMet,
+  REVIEW_POLICY_THRESHOLD_CONTEXT_INCOMPLETE,
+  REVIEW_POLICY_THRESHOLD_SOURCE_UNRESOLVED
+} from "../../domain/metaReviewGate/thresholdAuthority.js";
 
 export interface ResolveMetaReviewGateThresholdAuthorityInput {
   runResult: MetaReviewResult;
@@ -55,101 +59,6 @@ export type MetaReviewGateThresholdAuthorityResolution =
 
 function prefixDiagnostic(reasonCode: string, detail: string): string {
   return `${reasonCode}: ${detail}`;
-}
-
-function buildVerifiedParityMetadata(input: {
-  findingsCount: number;
-  artifactOpenTotal: number;
-  artifactStatus: string;
-  digest: string;
-  metaReviewRunId: string;
-  artifactSplit:
-    | {
-        blockingOpenTotal: number;
-        advisoryOpenTotal: number;
-      }
-    | null;
-}): FindingsParityMetadata {
-  return {
-    ...buildFindingsParityMetadata({
-      findingsCount: input.findingsCount,
-      artifactOpenTotal: input.artifactOpenTotal,
-      artifactStatus: input.artifactStatus,
-      digest: input.digest,
-      metaReviewRunId: input.metaReviewRunId,
-      parityStatus: "ok"
-    }),
-    findings_blocking_open_total:
-      input.artifactSplit?.blockingOpenTotal ?? null,
-    findings_advisory_open_total:
-      input.artifactSplit?.advisoryOpenTotal ?? null
-  };
-}
-
-function resolveVerifiedOpenSplitTotals(input: {
-  parityMetadata: FindingsParityMetadata | null;
-  artifactSplit:
-    | {
-        blockingOpenTotal: number;
-        advisoryOpenTotal: number;
-      }
-    | null;
-}): {
-  blocking: number | null;
-  advisory: number | null;
-} {
-  return {
-    blocking:
-      input.artifactSplit?.blockingOpenTotal
-      ?? input.parityMetadata?.findings_blocking_open_total
-      ?? null,
-    advisory:
-      input.artifactSplit?.advisoryOpenTotal
-      ?? input.parityMetadata?.findings_advisory_open_total
-      ?? null
-  };
-}
-
-function resolveHighestOpenSeverity(findings: unknown): FindingPriority | null {
-  if (!Array.isArray(findings)) {
-    return null;
-  }
-
-  let highestIndex: number | null = null;
-
-  for (const entry of findings) {
-    if (!isRecord(entry)) {
-      continue;
-    }
-    const priority = resolveFindingPriority({
-      priority: entry.priority,
-      severity: entry.severity
-    });
-    if (priority === undefined) {
-      continue;
-    }
-    const index = findingPriorityOrder.indexOf(priority);
-    if (index === -1) {
-      continue;
-    }
-    if (highestIndex === null || index < highestIndex) {
-      highestIndex = index;
-    }
-  }
-
-  return highestIndex === null
-    ? null
-    : (findingPriorityOrder[highestIndex] ?? null);
-}
-
-export function metaReviewGateThresholdIsMet(input: {
-  highestOpenSeverity: FindingPriority;
-  minSeverity: FindingPriority;
-}): boolean {
-  return (
-    findingPriorityOrder.indexOf(input.highestOpenSeverity)
-    <= findingPriorityOrder.indexOf(input.minSeverity)
-  );
 }
 
 function buildThresholdAuthorityUnresolved(input: {
@@ -276,7 +185,7 @@ export async function resolveMetaReviewGateThresholdAuthority(
 
   const artifactParsed = parity.artifact;
   const artifactSplit = parity.split;
-  const verifiedParityMetadata = buildVerifiedParityMetadata({
+  const verifiedParityMetadata = buildVerifiedThresholdParityMetadata({
     findingsCount: parityInput.value.findingsCount,
     artifactOpenTotal: parity.artifactOpenTotal,
     artifactStatus: parityInput.value.artifactStatus,
@@ -284,7 +193,7 @@ export async function resolveMetaReviewGateThresholdAuthority(
     metaReviewRunId: parityInput.value.metaReviewRunId,
     artifactSplit
   });
-  const verifiedOpenSplit = resolveVerifiedOpenSplitTotals({
+  const verifiedOpenSplit = resolveVerifiedThresholdOpenSplitTotals({
     parityMetadata: verifiedParityMetadata,
     artifactSplit
   });
