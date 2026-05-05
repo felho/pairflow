@@ -5,7 +5,7 @@ task_family_id: list-readmodel-introduce
 sequence_key: "9"
 task_id: 9-list-readmodel-introduce
 title: "List Read Model Boundary Introduction"
-status: in_progress
+status: archived
 phase: phase4
 target_files:
   - src/v11/shared/list/listCommandApi.ts

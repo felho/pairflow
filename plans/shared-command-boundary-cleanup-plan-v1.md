@@ -23,8 +23,8 @@ task_order:
   - 11-list-api-cleanup
   - 12-list-fitness-closeout
   - 13-shared-command-fitness
-last_completed_task_id: 8-list-inventory
-active_task_id: 9-list-readmodel-introduce
+last_completed_task_id: 9-list-readmodel-introduce
+active_task_id: 10-list-runtime-cutover
 archive_group: 2026-05-05-shared-command-boundary-cleanup-plan-v1
 task_tracker:
   - task_id: 1-commit-local-helpers
@@ -52,8 +52,8 @@ task_tracker:
     task_path: plans/archive/tasks/2026-05-05-shared-command-boundary-cleanup-plan-v1/8-list-inventory.md
     status: archived
   - task_id: 9-list-readmodel-introduce
-    task_path: plans/tasks/9-list-readmodel-introduce.md
-    status: in_progress
+    task_path: plans/archive/tasks/2026-05-05-shared-command-boundary-cleanup-plan-v1/9-list-readmodel-introduce.md
+    status: archived
   - task_id: 10-list-runtime-cutover
     task_path: null
     status: not_created
@@ -219,7 +219,7 @@ This plan covers the current residual command-named shared directories:
 | `6-attach-inventory-extract` | `plans/archive/tasks/2026-05-05-shared-command-boundary-cleanup-plan-v1/6-attach-inventory-extract.md` | Produce source-backed ownership inventory for `resolveAttachBubbleExecution.ts` and extract only one smallest behavior-preserving slice if clearly owned. | `5-inbox-api-rename` | `shared/attach` is large and mixed; full decomposition is too broad for one bubble. | archived |
 | `7-attach-boundary-closeout` | `plans/archive/tasks/2026-05-05-shared-command-boundary-cleanup-plan-v1/7-attach-boundary-closeout.md` | Remove or rename the remaining command-named `shared/attach` boundary, or record an explicit source-anchored deferral if the inventory proves closure is unsafe now. | `6-attach-inventory-extract` | The attach gap needs explicit closeout ownership after inventory. | archived |
 | `8-list-inventory` | `plans/archive/tasks/2026-05-05-shared-command-boundary-cleanup-plan-v1/8-list-inventory.md` | Produce source-backed ownership inventory for every `shared/list` file and classify each as CLI-local, UI/read-model shared, or deferred. | `7-attach-boundary-closeout` | `shared/list` is too large to move safely without inventory. | archived |
-| `9-list-readmodel-introduce` | `null` | Introduce the command-neutral list read-model producer boundary, move/rename the existing `shared/list` implementation files into it, and keep only the minimum tracked transition needed for existing consumers to keep compiling. | `8-list-inventory` | Inventory proved the list surface is shared read-model ownership, not CLI-local ownership. | not_created |
+| `9-list-readmodel-introduce` | `plans/archive/tasks/2026-05-05-shared-command-boundary-cleanup-plan-v1/9-list-readmodel-introduce.md` | Introduce the command-neutral list read-model producer boundary, move/rename the existing `shared/list` implementation files into it, and keep only the minimum tracked transition needed for existing consumers to keep compiling. | `8-list-inventory` | Inventory proved the list surface is shared read-model ownership, not CLI-local ownership. | archived |
 | `10-list-runtime-cutover` | `null` | Cut runtime consumers that currently reach through `shared/list` to the command-neutral boundary: UI router defaults, events scan defaults, direct shared-list tests, and other non-application source imports. | `9-list-readmodel-introduce` | Runtime consumers must stop depending on command-shaped shared list paths before wrapper cleanup. | not_created |
 | `11-list-api-cleanup` | `null` | Remove command-shaped application compatibility re-exports and stale list API aliases; keep command-owned CLI rendering/parsing files only where they are first-principle application/list ownership. | `10-list-runtime-cutover` | Public/application-facing compatibility leftovers must not survive as a terminal state. | not_created |
 | `12-list-fitness-closeout` | `null` | Update list-related contract transit tests, fitness fixtures, and source assertions so no test or governance surface preserves the old `shared/list/listCommand*` path as an allowed shape. | `11-list-api-cleanup` | Fitness/test fixtures can otherwise keep the removed boundary alive as implicit documentation. | not_created |
