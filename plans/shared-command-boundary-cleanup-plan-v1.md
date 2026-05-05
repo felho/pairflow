@@ -18,12 +18,13 @@ task_order:
   - 6-attach-inventory-extract
   - 7-attach-boundary-closeout
   - 8-list-inventory
-  - 9-list-readmodel-boundary
-  - 10-list-consumer-cutover
-  - 11-list-residual-cleanup
-  - 12-shared-command-fitness
+  - 9-list-readmodel-introduce
+  - 10-list-runtime-cutover
+  - 11-list-api-cleanup
+  - 12-list-fitness-closeout
+  - 13-shared-command-fitness
 last_completed_task_id: 8-list-inventory
-active_task_id: 9-list-readmodel-boundary
+active_task_id: 9-list-readmodel-introduce
 archive_group: 2026-05-05-shared-command-boundary-cleanup-plan-v1
 task_tracker:
   - task_id: 1-commit-local-helpers
@@ -50,16 +51,19 @@ task_tracker:
   - task_id: 8-list-inventory
     task_path: plans/archive/tasks/2026-05-05-shared-command-boundary-cleanup-plan-v1/8-list-inventory.md
     status: archived
-  - task_id: 9-list-readmodel-boundary
+  - task_id: 9-list-readmodel-introduce
     task_path: null
     status: not_created
-  - task_id: 10-list-consumer-cutover
+  - task_id: 10-list-runtime-cutover
     task_path: null
     status: not_created
-  - task_id: 11-list-residual-cleanup
+  - task_id: 11-list-api-cleanup
     task_path: null
     status: not_created
-  - task_id: 12-shared-command-fitness
+  - task_id: 12-list-fitness-closeout
+    task_path: null
+    status: not_created
+  - task_id: 13-shared-command-fitness
     task_path: null
     status: not_created
 ---
@@ -172,15 +176,16 @@ This plan covers the current residual command-named shared directories:
 6. `shared/list/**` has been inventoried and is not CLI-local. It is a shared
    list/read-model producer with a command-shaped directory name.
 7. Fitness/governance can be tightened only after the list read-model boundary
-   is command-neutral and transitional list command wrappers are removed.
+   is command-neutral, runtime consumers no longer import command-shaped list
+   paths, and transitional list wrappers are removed.
 
 ### Deferred / Future Work
 
 1. A full `list` read-model redesign is deferred. This plan should still remove
    the command-named `shared/list` directory by moving the existing producer to
    a command-neutral read-model boundary. Temporary compatibility wrappers may
-   exist only inside an in-progress task and must be removed before that task is
-   accepted.
+   exist only as explicitly tracked in-plan transition points and must be
+   removed before list closeout is accepted.
 2. A full `attach` runtime redesign is deferred. This plan should still remove
    or explicitly source-anchor any remaining command-named `shared/attach`
    directory through closeout, but it must not rewrite the attach runtime model.
@@ -197,7 +202,8 @@ This plan covers the current residual command-named shared directories:
    attach closeout separated from attach inventory.
 4. Phase 4: use the completed list inventory to replace the invalid
    CLI-local-move assumption with a command-neutral list read-model boundary,
-   cut consumers over, and remove transitional wrappers.
+   cut runtime consumers over, remove command-shaped application/API wrappers,
+   and close test/fitness references.
 5. Phase 5: add or tighten fitness/governance guardrails after the code shape is
    no longer transitional.
 
@@ -213,10 +219,11 @@ This plan covers the current residual command-named shared directories:
 | `6-attach-inventory-extract` | `plans/archive/tasks/2026-05-05-shared-command-boundary-cleanup-plan-v1/6-attach-inventory-extract.md` | Produce source-backed ownership inventory for `resolveAttachBubbleExecution.ts` and extract only one smallest behavior-preserving slice if clearly owned. | `5-inbox-api-rename` | `shared/attach` is large and mixed; full decomposition is too broad for one bubble. | archived |
 | `7-attach-boundary-closeout` | `plans/archive/tasks/2026-05-05-shared-command-boundary-cleanup-plan-v1/7-attach-boundary-closeout.md` | Remove or rename the remaining command-named `shared/attach` boundary, or record an explicit source-anchored deferral if the inventory proves closure is unsafe now. | `6-attach-inventory-extract` | The attach gap needs explicit closeout ownership after inventory. | archived |
 | `8-list-inventory` | `plans/archive/tasks/2026-05-05-shared-command-boundary-cleanup-plan-v1/8-list-inventory.md` | Produce source-backed ownership inventory for every `shared/list` file and classify each as CLI-local, UI/read-model shared, or deferred. | `7-attach-boundary-closeout` | `shared/list` is too large to move safely without inventory. | archived |
-| `9-list-readmodel-boundary` | `null` | Move the existing `shared/list` read-model producer into a command-neutral boundary such as `src/v11/shared/bubbleListReadModel/**`, preserving behavior and avoiding accepted compatibility wrappers. | `8-list-inventory` | Inventory proved the list surface is shared read-model ownership, not CLI-local ownership. | not_created |
-| `10-list-consumer-cutover` | `null` | Cut application list, UI router defaults, events scan defaults, tests, and fitness transit references over to the command-neutral list read-model boundary and canonical UI DTO types. | `9-list-readmodel-boundary` | Consumers must stop depending on command-shaped `listCommand*` paths or transitional wrappers. | not_created |
-| `11-list-residual-cleanup` | `null` | Remove remaining `shared/list` files, command-shaped application compatibility re-exports, stale aliases, and any temporary shims; split `defaults`/`errors` only where first-principle ownership requires it. | `10-list-consumer-cutover` | Final cleanup must leave no backward-compatibility leftovers that only preserve old command-shaped paths. | not_created |
-| `12-shared-command-fitness` | `null` | Update governance and, if the remaining tree permits it, add or tighten command-named shared directory fitness warnings. | `11-list-residual-cleanup` | Regression guardrails should reflect the post-cleanup boundary. | not_created |
+| `9-list-readmodel-introduce` | `null` | Introduce the command-neutral list read-model producer boundary, move/rename the existing `shared/list` implementation files into it, and keep only the minimum tracked transition needed for existing consumers to keep compiling. | `8-list-inventory` | Inventory proved the list surface is shared read-model ownership, not CLI-local ownership. | not_created |
+| `10-list-runtime-cutover` | `null` | Cut runtime consumers that currently reach through `shared/list` to the command-neutral boundary: UI router defaults, events scan defaults, direct shared-list tests, and other non-application source imports. | `9-list-readmodel-introduce` | Runtime consumers must stop depending on command-shaped shared list paths before wrapper cleanup. | not_created |
+| `11-list-api-cleanup` | `null` | Remove command-shaped application compatibility re-exports and stale list API aliases; keep command-owned CLI rendering/parsing files only where they are first-principle application/list ownership. | `10-list-runtime-cutover` | Public/application-facing compatibility leftovers must not survive as a terminal state. | not_created |
+| `12-list-fitness-closeout` | `null` | Update list-related contract transit tests, fitness fixtures, and source assertions so no test or governance surface preserves the old `shared/list/listCommand*` path as an allowed shape. | `11-list-api-cleanup` | Fitness/test fixtures can otherwise keep the removed boundary alive as implicit documentation. | not_created |
+| `13-shared-command-fitness` | `null` | Update governance and, if the remaining tree permits it, add or tighten command-named shared directory fitness warnings. | `12-list-fitness-closeout` | Regression guardrails should reflect the post-cleanup boundary. | not_created |
 
 ## Coverage Map
 
@@ -228,8 +235,8 @@ This plan covers the current residual command-named shared directories:
 | True shared remote merge contract still lives under a command-named folder. | `4-remote-merge-rename` | Runs after merge local-helper moves so the rename task is mostly import fanout. |
 | Inbox shared API has command-shaped naming despite UI/router consumption. | `5-inbox-api-rename` | Naming/boundary cleanup only; read-model redesign deferred. |
 | Attach shared file is too broad for direct cleanup. | `6-attach-inventory-extract`, `7-attach-boundary-closeout` | Inventory first; closeout must either remove/rename the boundary or record explicit deferral. |
-| List shared directory is command-named but actually shared read-model ownership. | `8-list-inventory`, `9-list-readmodel-boundary`, `10-list-consumer-cutover`, `11-list-residual-cleanup` | Inventory rejected CLI-local movement; successor tasks rename the boundary, cut consumers over, and remove transitional leftovers. |
-| Future regressions can recreate command-local shared parking lots. | `12-shared-command-fitness` | Guardrails follow code cleanup rather than blocking transitional work. |
+| List shared directory is command-named but actually shared read-model ownership. | `8-list-inventory`, `9-list-readmodel-introduce`, `10-list-runtime-cutover`, `11-list-api-cleanup`, `12-list-fitness-closeout` | Inventory rejected CLI-local movement; successor tasks introduce the new boundary, cut runtime consumers over, remove API compatibility leftovers, and close test/fitness references. |
+| Future regressions can recreate command-local shared parking lots. | `13-shared-command-fitness` | Guardrails follow code cleanup rather than blocking transitional work. |
 
 ## Dependencies and Order
 
@@ -245,14 +252,22 @@ This plan covers the current residual command-named shared directories:
    read-model semantics.
 5. `6-attach-inventory-extract` must run before `7-attach-boundary-closeout`
    because attach ownership is currently too mixed for a confident full move.
-6. `8-list-inventory` must run before `9-list-readmodel-boundary`,
-   `10-list-consumer-cutover`, and `11-list-residual-cleanup`.
-7. `9-list-readmodel-boundary` establishes the command-neutral producer
-   location first; `10-list-consumer-cutover` moves consumers to that producer;
-   `11-list-residual-cleanup` removes stale command-shaped wrappers and shims.
-   Compatibility leftovers are not an acceptable terminal state.
-8. `12-shared-command-fitness` runs last so it can encode the final boundary
-   shape instead of the current transitional one.
+6. `8-list-inventory` must run before `9-list-readmodel-introduce`,
+   `10-list-runtime-cutover`, `11-list-api-cleanup`, and
+   `12-list-fitness-closeout`.
+7. `9-list-readmodel-introduce` establishes the command-neutral producer
+   location first. It may leave only an explicit, tracked transition surface for
+   existing imports; that surface is not a final compatibility promise.
+8. `10-list-runtime-cutover` moves runtime consumers to the new producer while
+   avoiding application/public API cleanup.
+9. `11-list-api-cleanup` removes command-shaped application re-export wrappers
+   and stale aliases. First-principle command-owned CLI parsing/rendering files
+   may remain under `application/list`; compatibility-only wrappers may not.
+10. `12-list-fitness-closeout` updates test and governance references after the
+    source shape is final, so fixtures do not preserve the old path as an
+    allowed example.
+11. `13-shared-command-fitness` runs last so it can encode the final boundary
+    shape instead of the current transitional one.
 
 ## Risks and Assumptions
 
