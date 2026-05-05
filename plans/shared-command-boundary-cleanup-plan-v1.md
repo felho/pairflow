@@ -22,7 +22,7 @@ task_order:
   - 10-list-local-move-b
   - 11-list-boundary-closeout
   - 12-shared-command-fitness
-active_task_id: 3-remote-commit-rename
+active_task_id: 4-remote-merge-rename
 archive_group: 2026-05-05-shared-command-boundary-cleanup-plan-v1
 task_tracker:
   - task_id: 1-commit-local-helpers
@@ -32,8 +32,8 @@ task_tracker:
     task_path: plans/archive/tasks/2026-05-05-shared-command-boundary-cleanup-plan-v1/2-merge-local-helpers.md
     status: archived
   - task_id: 3-remote-commit-rename
-    task_path: plans/tasks/3-remote-commit-rename.md
-    status: in_progress
+    task_path: plans/archive/tasks/2026-05-05-shared-command-boundary-cleanup-plan-v1/3-remote-commit-rename.md
+    status: archived
   - task_id: 4-remote-merge-rename
     task_path: null
     status: not_created
