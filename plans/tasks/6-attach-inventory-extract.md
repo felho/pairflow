@@ -5,7 +5,7 @@ task_family_id: attach-inventory-extract
 sequence_key: "6"
 task_id: 6-attach-inventory-extract
 title: "Attach Inventory Extract"
-status: implementable
+status: in_progress
 phase: phase3
 target_files:
   - src/v11/shared/attach/resolveAttachBubbleExecution.ts
@@ -23,7 +23,7 @@ normative_refs:
 owners:
   - "felho"
 doc_bubble_id: 6-attach-inventory-extract-doc
-impl_bubble_id: null
+impl_bubble_id: 6-attach-inventory-extract-impl
 supersedes: []
 superseded_by: null
 archive_group: 2026-05-05-shared-command-boundary-cleanup-plan-v1
