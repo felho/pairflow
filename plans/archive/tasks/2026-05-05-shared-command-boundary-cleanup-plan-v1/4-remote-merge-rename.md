@@ -5,7 +5,7 @@ task_family_id: remote-merge-rename
 sequence_key: "4"
 task_id: 4-remote-merge-rename
 title: "Remote Merge Rename"
-status: in_progress
+status: archived
 phase: phase2
 target_files:
   - src/v11/shared/merge/remoteMergeContract.ts
@@ -31,6 +31,7 @@ impl_bubble_id: 4-remote-merge-rename-impl
 supersedes: []
 superseded_by: null
 archive_group: 2026-05-05-shared-command-boundary-cleanup-plan-v1
+archive_path: plans/archive/tasks/2026-05-05-shared-command-boundary-cleanup-plan-v1/4-remote-merge-rename.md
 ---
 
 # Task: Remote Merge Rename
