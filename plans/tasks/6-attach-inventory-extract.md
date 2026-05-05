@@ -282,15 +282,13 @@ Implementation decision for task 6:
 
 1. Treat the table below as the implementation inventory baseline.
 2. Current source evidence does not prove a single-owner slice for extraction.
-3. The default implementation result for this task is therefore docs/inventory
-   only: make no source move, preserve the shared resolver import in both
+3. The implementation result for this task is therefore docs/inventory only:
+   make no source move, preserve the shared resolver import in both
    current callers, and let task `7-attach-boundary-closeout` decide whether the
    residual `shared/attach` boundary is removed, renamed to a command-neutral
    shared location, or explicitly deferred.
-4. A source extraction is allowed only if the implementer finds new
-   source-backed evidence before editing that proves one smallest slice has a
-   single owner. In that case, the implementer must update this inventory row
-   first, then move only that slice.
+4. No source-backed single-owner slice was found during implementation review,
+   so no TypeScript source was moved in this task.
 
 | Source | Current Consumers | Classification | Movement Decision | Evidence |
 |---|---|---|---|---|
