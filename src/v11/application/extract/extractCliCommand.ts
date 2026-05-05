@@ -1,7 +1,38 @@
 import { parseArgs } from "node:util";
 
 import { extractBubbleV11 } from "./emitExtractV11.js";
-import type { ExtractCommandResult } from "./extractCommandContract.js";
+import type {
+  ExtractCommandDependencies,
+  ExtractCommandResult
+} from "./extractCommandContract.js";
+
+type ExtractCommandDefaultsModule = {
+  extractCommandDependencyDefaults: ExtractCommandDependencies;
+};
+
+let extractCommandDefaultsModulePromise:
+  | Promise<ExtractCommandDefaultsModule>
+  | undefined;
+
+function getExtractCommandDefaultsModulePath(): string {
+  return [
+    "..",
+    "..",
+    "defaults",
+    "extract",
+    "extractCommandDefaults.js"
+  ].join("/");
+}
+
+async function loadExtractCommandDependencyDefaults(): Promise<
+  ExtractCommandDependencies
+> {
+  extractCommandDefaultsModulePromise ??= import(
+    getExtractCommandDefaultsModulePath()
+  ) as Promise<ExtractCommandDefaultsModule>;
+  const module = await extractCommandDefaultsModulePromise;
+  return module.extractCommandDependencyDefaults;
+}
 
 export interface BubbleExtractCommandOptions {
   id: string;
@@ -153,13 +184,16 @@ export function renderBubbleExtractText(result: ExtractCommandResult): string {
 
 export async function runBubbleExtractCommand(
   args: string[],
-  cwd: string = process.cwd()
+  cwd: string = process.cwd(),
+  dependencies?: ExtractCommandDependencies
 ): Promise<ExtractCommandResult | null> {
   const options = parseBubbleExtractCommandOptions(args);
   if (options.help) {
     return null;
   }
 
+  const resolvedDependencies =
+    dependencies ?? await loadExtractCommandDependencyDefaults();
   return extractBubbleV11({
     id: options.id,
     paths: options.paths,
@@ -168,5 +202,5 @@ export async function runBubbleExtractCommand(
     ...(options.message !== undefined ? { message: options.message } : {}),
     json: options.json,
     cwd
-  });
+  }, resolvedDependencies);
 }

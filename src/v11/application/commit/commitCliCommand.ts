@@ -1,11 +1,39 @@
 import { parseArgs } from "node:util";
 
-import { commitBubbleDependencyDefaults } from "./commitCommandDefaults.js";
 import {
   commitBubble,
   asBubbleCommitError
 } from "./commitCommandApi.js";
 import type { CommitBubbleResult } from "./commitCommandContract.js";
+import type { CommitBubbleDependencies } from "./commitCommandApiContract.js";
+
+type CommitCommandDefaultsModule = {
+  commitBubbleDependencyDefaults: CommitBubbleDependencies;
+};
+
+let commitCommandDefaultsModulePromise:
+  | Promise<CommitCommandDefaultsModule>
+  | undefined;
+
+function getCommitCommandDefaultsModulePath(): string {
+  return [
+    "..",
+    "..",
+    "defaults",
+    "commit",
+    "commitCommandDefaults.js"
+  ].join("/");
+}
+
+async function loadCommitBubbleDependencyDefaults(): Promise<
+  CommitBubbleDependencies
+> {
+  commitCommandDefaultsModulePromise ??= import(
+    getCommitCommandDefaultsModulePath()
+  ) as Promise<CommitCommandDefaultsModule>;
+  const module = await commitCommandDefaultsModulePromise;
+  return module.commitBubbleDependencyDefaults;
+}
 
 export interface BubbleCommitCommandOptions {
   id: string;
@@ -120,7 +148,8 @@ export function parseBubbleCommitCommandOptions(
 
 export async function runBubbleCommitCommand(
   args: string[],
-  cwd: string = process.cwd()
+  cwd: string = process.cwd(),
+  dependencies?: CommitBubbleDependencies
 ): Promise<CommitBubbleResult | null> {
   const options = parseBubbleCommitCommandOptions(args);
   if (options.help) {
@@ -128,6 +157,8 @@ export async function runBubbleCommitCommand(
   }
 
   try {
+    const resolvedDependencies =
+      dependencies ?? await loadCommitBubbleDependencyDefaults();
     return await commitBubble({
       bubbleId: options.id,
       refs: options.refs,
@@ -136,7 +167,7 @@ export async function runBubbleCommitCommand(
       stageAll: options.stageAll,
       force: options.force,
       cwd
-    }, commitBubbleDependencyDefaults);
+    }, resolvedDependencies);
   } catch (error) {
     asBubbleCommitError(error);
   }

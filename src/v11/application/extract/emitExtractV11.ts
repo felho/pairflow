@@ -3,14 +3,13 @@ import type {
   ExtractCommandInput,
   ExtractCommandResult
 } from "./extractCommandContract.js";
-import { extractCommandDependencyDefaults } from "../../defaults/extract/extractCommandDefaults.js";
 import { validateExtractCommandPreconditions } from "./extractCommandPreconditions.js";
 import { validateExtractPathSelection } from "./extractPathSelection.js";
 import { transferExtractSelectedPaths } from "./extractTransfer.js";
 
 export async function extractBubbleV11(
   input: ExtractCommandInput,
-  dependencies: ExtractCommandDependencies = extractCommandDependencyDefaults
+  dependencies: ExtractCommandDependencies
 ): Promise<ExtractCommandResult> {
   const preconditions = await validateExtractCommandPreconditions({
     command: input,
