@@ -33,7 +33,7 @@ This skill does not own:
 2. bubble lifecycle workflow body text that belongs to `UsePairflow`
 3. raw bubble-detail interpretation or lifecycle-to-route classification
 4. task supersede/archive execution
-5. direct progress/archive aftermath execution details, which are delegated to repo-local `Workflows/UpdateProgress.md`
+5. direct progress/archive aftermath verification details, which are delegated to repo-local `Workflows/UpdateProgress.md` after close-side admin has landed in the bubble commit
 6. remote execution support in V1
 
 ## Workflow Routing
@@ -63,7 +63,7 @@ This skill does not own:
 | `HandleDocumentBubble` | repo-local owner for document-bubble lifecycle interpretation, `UsePairflow` delegation, and normalized bubble outputs | no; it backs document-bubble route surfaces |
 | `HandleImplementationBubble` | repo-local owner for implementation-bubble lifecycle interpretation, `UsePairflow` delegation, and normalized bubble outputs | no; it backs implementation-bubble route surfaces |
 | `PublishPreKickoffAdmin` | repo-local manual operator workflow for publishing bounded ideation bubble admin changes to clean `main` and returning structured no-kickoff publish proof | no; the document-bubble and implementation-bubble create routes consume it before kickoff |
-| `UpdateProgress` | repo-local owner for normal post-implementation progress reconciliation, canonical archive aftermath, and local pilot proof after successful `CloseImplementationBubble` return | no; it is entered only after the existing close route returns settled success |
+| `UpdateProgress` | repo-local owner for normal post-implementation progress/archive verification and local pilot proof after successful `CloseImplementationBubble` return; required implementation task/progress/archive mutations are owned by `CloseBubble` before lifecycle commit | no; it is entered only after the existing close route returns settled success |
 
 Route-surface rule:
 
@@ -153,7 +153,7 @@ Mandatory route-to-delegation mapping:
 | `CloseDocumentBubble` | repo-local `HandleDocumentBubble` delegating to `UsePairflow` `CloseBubble` | close/merge result, including `merge_conflict_recovered` when CloseBubble safely resolved and retried a bounded merge conflict; `status=implementable` metadata applied in the bubble worktree before lifecycle commit and verified on refreshed `main`; and bubble artifact deletion or explicit retained-bubble reason |
 | `CreateImplementationBubble` | repo-local `HandleImplementationBubble` for fresh create/start, safe same-id carrier reuse, pre-kickoff resume/kickoff, or linked active-hold classification; it delegates create/start to `UsePairflow` `CreateBubble` only when a new carrier is needed, consumes `PublishPreKickoffAdmin` proof before kickoff, and delegates same-bubble ideation kickoff to `UsePairflow` `InterveneBubble` only after refreshed postconditions | created or safely reused ideation implementation bubble id when kickoff runs, persisted `impl_bubble_id` linkage on `main`, `status=in_progress` on `main`, structured publish success with refreshed postconditions, audited same-bubble kickoff result when applicable, or a truthful active-bubble/human-checkpoint boundary when no create/kickoff delegation applies |
 | `ReviewImplementationBubble` | repo-local `HandleImplementationBubble` delegating to `UsePairflow` `ReviewBubble` | review result and human approval/rework checkpoint; skipped when the handler emits a close route from trusted multi-clean-meta-review auto-approval proof |
-| `CloseImplementationBubble` | repo-local `HandleImplementationBubble` delegating to `UsePairflow` `CloseBubble` | close/merge result, including `merge_conflict_recovered` when CloseBubble safely resolved and retried a bounded merge conflict; plus bubble artifact deletion or explicit retained-bubble reason before `UpdateProgress` aftermath |
+| `CloseImplementationBubble` | repo-local `HandleImplementationBubble` delegating to `UsePairflow` `CloseBubble` | close/merge result, including `merge_conflict_recovered` when CloseBubble safely resolved and retried a bounded merge conflict; implementation task/progress/archive admin applied in the bubble worktree before lifecycle commit and verified on refreshed `main`; plus bubble artifact deletion or explicit retained-bubble reason before `UpdateProgress` verification |
 | `HandleNormalizedReplan` | repo-local `Workflows/HandleNormalizedReplan.md` | normalized replanning follow-through result |
 | `TroubleshootBubble` | active bubble handler delegating to `UsePairflow` troubleshooting surface | troubleshooting result and explicit stop boundary |
 
@@ -317,7 +317,7 @@ Policy notes:
 4. `ReviewDocumentBubble` and `ReviewImplementationBubble` stop at a human checkpoint when the bubble handler emits a review route; however, if the handler proves the bubble reached `READY_FOR_HUMAN_APPROVAL` with `reviewPolicy.meta_review_consecutive_clean_runs_required > 1` and `metaReview.consecutiveCleanRuns` meeting that threshold, it should emit the corresponding close route instead of a review route
 5. `document_bubble_close` and `implementation_bubble_close` may auto-continue only when `ResolvePlanState` returns them with `approval_gate_state=already_satisfied`; the top-level skill must never infer approval from raw Pairflow state, but it may consume a bubble handler's normalized auto-approval proof as part of the close route
 6. a close route is not settled merely because merge succeeded; the delegated close result must also prove bubble artifact deletion/cleanup or provide an explicit retained-bubble reason that is safe to carry forward
-7. after successful `implementation_bubble_close`, the next same-run owner is repo-local `UpdateProgress`; only the refreshed aftermath result may then rerun `ResolvePlanState`, stop at `PlanComplete`, or fail closed to `HumanCheckpoint`
+7. after successful `implementation_bubble_close`, the next same-run owner is repo-local `UpdateProgress`; `CloseBubble` must already have carried required implementation task/progress/archive admin inside the bubble commit, and only the refreshed verification result may then rerun `ResolvePlanState`, stop at `PlanComplete`, or fail closed to `HumanCheckpoint`
 8. `normalized_replanning` remains `auto_continue` because it hands control to repo-local `HandleNormalizedReplan` follow-through while preserving the normalized source scope rather than dropping back to heuristic routing
 
 See `Workflows/ResolvePlanState.md` for the canonical per-route output fields, including `route_scope`, `source_scope`, `approval_gate_state`, and the full `Auto-Continue vs Checkpoint Rules`.
@@ -352,4 +352,4 @@ Out-of-scope route ownership remains explicit:
 
 1. Task 3 owns raw bubble lifecycle interpretation inside `HandleDocumentBubble` and `HandleImplementationBubble`, then maps it into the normalized route taxonomy
 2. Task 4 ownership is encoded in repo-local `HandleNormalizedReplan`, which owns plan/task follow-through after review loops or normalized replanning signals
-3. Task 5 ownership is encoded in repo-local `UpdateProgress`, which owns normal progress reconciliation, canonical archive aftermath, and local pilot evidence after successful implementation close
+3. Task 5 ownership is encoded in repo-local `UpdateProgress`, which owns normal progress/archive verification and local pilot evidence after successful implementation close; mutation of implementation task/progress/archive closeout belongs to `UsePairflow` `CloseBubble` before lifecycle commit

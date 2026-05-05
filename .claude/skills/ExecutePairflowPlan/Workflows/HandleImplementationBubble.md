@@ -860,8 +860,12 @@ Required proof:
 
 Delegation:
 
-1. delegate approve/commit/merge/cleanup through `UsePairflow` `CloseBubble`
-2. require the returned close result to prove finalized bubble artifact deletion,
+1. delegate approve/pre-commit admin/commit/merge/cleanup through `UsePairflow`
+   `CloseBubble`
+2. require the returned close result to prove implementation task/progress/archive
+   admin was applied in the bubble worktree before lifecycle commit when task
+   source metadata is available
+3. require the returned close result to prove finalized bubble artifact deletion,
    or to provide an explicit retained-bubble reason that prevents reporting a
    settled close
 
@@ -878,10 +882,11 @@ approval_gate_state: already_satisfied
 reason_code: IMPL_BUBBLE_AUTO_APPROVAL_CLOSE_REQUIRED
 delegated_use_pairflow_surface: CloseBubble
 cleanup_postcondition: <bubble_deleted|retained_with_reason>
+implementation_admin_postcondition: <task_archived_in_bubble_commit|not_applicable>
 auto_approval_proof:
   required_clean_runs: <reviewPolicy.meta_review_consecutive_clean_runs_required>
   observed_clean_runs: <metaReview.consecutiveCleanRuns>
-handoff_boundary_note: Auto-approve through UsePairflow CloseBubble because Pairflow already satisfied the configured multi-clean-meta-review gate; the caller may continue orchestration after authoritative close state returns.
+handoff_boundary_note: Auto-approve through UsePairflow CloseBubble because Pairflow already satisfied the configured multi-clean-meta-review gate; CloseBubble must apply required implementation task/progress/archive admin before lifecycle commit, and the caller may continue orchestration after authoritative close state returns.
 ```
 
 ### 6. Review-gate path
@@ -927,8 +932,12 @@ Authoritative trigger anchors:
 
 Delegation:
 
-1. delegate close/merge/cleanup through `UsePairflow` `CloseBubble`
-2. require the returned close result to prove finalized bubble artifact deletion, or to provide an explicit retained-bubble reason that prevents reporting a settled close
+1. delegate close/pre-commit admin/merge/cleanup through `UsePairflow`
+   `CloseBubble`
+2. require the returned close result to prove implementation task/progress/archive
+   admin was applied in the bubble worktree before lifecycle commit when task
+   source metadata is available
+3. require the returned close result to prove finalized bubble artifact deletion, or to provide an explicit retained-bubble reason that prevents reporting a settled close
 
 Output:
 
@@ -943,13 +952,15 @@ approval_gate_state: already_satisfied
 reason_code: IMPL_BUBBLE_CLOSE_REQUIRED
 delegated_use_pairflow_surface: CloseBubble
 cleanup_postcondition: <bubble_deleted|retained_with_reason>
-handoff_boundary_note: Close the approved implementation bubble only; the caller may continue orchestration after authoritative close state returns.
+implementation_admin_postcondition: <task_archived_in_bubble_commit|not_applicable>
+handoff_boundary_note: Close the approved implementation bubble only; required implementation task/progress/archive admin must be in the bubble commit before merge, and the caller may continue orchestration after authoritative close state returns.
 ```
 
 Fail-closed rule:
 
 1. if close/merge succeeds but the finalized bubble artifact remains present without an explicit retained-bubble reason, do not emit an auto-continuable close result
-2. return a human checkpoint or cleanup blocker instead; `UpdateProgress` must not run from a close result that still leaves the closed implementation bubble as an ordinary `DONE` artifact
+2. if close/merge succeeds but required implementation task/progress/archive admin was not applied in the bubble commit, do not emit an auto-continuable close result and do not repair it with a direct `main` aftermath commit
+3. return a human checkpoint or cleanup blocker instead; `UpdateProgress` must not run from a close result that still leaves the closed implementation bubble as an ordinary `DONE` artifact or lacks required implementation admin proof
 
 ### 8. Normalized replanning path
 

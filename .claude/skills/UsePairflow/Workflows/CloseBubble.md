@@ -8,7 +8,7 @@ allowed-tools: Bash, Read, AskUserQuestion
 
 ## Purpose
 
-Finalize a bubble after review using pairflow state-transition commands in strict order: approve -> required pre-commit admin -> commit -> merge -> delete finalized bubble artifacts. Skip steps that are already complete. For implementation bubbles, also perform post-merge doc/progress checks and archive the source task file.
+Finalize a bubble after review using pairflow state-transition commands in strict order: approve -> required pre-commit admin -> commit -> merge -> delete finalized bubble artifacts. Skip steps that are already complete. For implementation bubbles, required task/progress/archive admin is also a pre-commit hook in the bubble worktree, not a post-merge `main` follow-up.
 
 ## Variables
 
@@ -20,6 +20,7 @@ REVIEW_ARTIFACT_TYPE: read from bubble metadata (`document` or `code`) before me
 TASK_SOURCE_PATH: absolute task source file path extracted from bubble artifact metadata before merge
 BASE_BRANCH: base branch read from bubble metadata before merge when available
 DOCUMENT_PRE_COMMIT_ADMIN_REQUIRED: true only when the caller contract explicitly requires a document-close metadata postcondition such as `task_status_implementable`
+IMPLEMENTATION_PRE_COMMIT_ADMIN_REQUIRED: true for code/implementation bubbles when TASK_SOURCE_PATH is known and the source task belongs under `<REPO_PATH>/plans/tasks/`
 
 ## Instructions
 
@@ -35,9 +36,10 @@ DOCUMENT_PRE_COMMIT_ADMIN_REQUIRED: true only when the caller contract explicitl
 - Do not pass `--push` / `--delete-remote` unless explicitly requested.
 - Raw `git commit` is allowed only for:
   1. merge-conflict recovery commits on the bubble branch inside the bubble worktree after the confidence gates pass
-  2. post-merge follow-up changes on `main` (README/docs/progress/task archive)
+  2. explicitly requested operator-facing follow-up changes on `main` after close, excluding task/progress/archive completion admin that belongs in the bubble pre-commit hook
   It is not allowed for normal lifecycle approve/commit/merge state transitions.
 - Document close metadata postconditions must be applied before the lifecycle commit when the caller contract requires them. Do not merge a document bubble and then create a direct `main` admin commit for `status=implementable`; that metadata must be part of the bubble branch commit that `pairflow bubble commit --stage-all` records.
+- Implementation close task/progress/archive postconditions must be applied before the lifecycle commit when TASK_SOURCE_PATH is known and the task lives under `plans/tasks/`. Do not merge an implementation bubble and then create a direct `main` admin commit for task `status=archived`, parent-plan tracker advancement, or canonical task archive movement; that metadata/archive update must be part of the bubble branch commit that `pairflow bubble commit --stage-all` records.
 - After successful merge, delete the finalized local bubble artifact with `pairflow bubble delete --force` unless a concrete safety blocker requires retaining it. A retained DONE/merged bubble is not a normal settled close result; report the explicit retained-bubble reason and stop or checkpoint according to the caller contract.
 
 ## Workflow
@@ -78,7 +80,7 @@ pairflow bubble status --id <BUBBLE_ID> --repo <REPO_PATH> --json
   - Expected first-line format: `Source: file (<ABSOLUTE_PATH>)`
 - If task source cannot be parsed:
   - for `REVIEW_ARTIFACT_TYPE=document` with `DOCUMENT_PRE_COMMIT_ADMIN_REQUIRED=true`, STOP before commit and report that the required document admin postcondition cannot be applied safely
-  - for `REVIEW_ARTIFACT_TYPE=code`, continue close flow but report warning and skip automatic task archive
+  - for `REVIEW_ARTIFACT_TYPE=code`, continue close flow only when the caller explicitly accepts that implementation task/progress/archive admin cannot be applied in this close; otherwise STOP before commit and report that the required implementation admin postcondition cannot be applied safely
   - otherwise continue when no caller-required task metadata postcondition depends on it
 
 ### 4. Sequential close with skip-if-already-done
@@ -112,7 +114,22 @@ pairflow bubble status --id <BUBBLE_ID> --repo <REPO_PATH> --json
      - Keep the diff limited to the active task artifact and its parent plan metadata/table status. Product/source/runtime edits are forbidden in this hook.
      - Verify the changed file list before continuing. If any changed file is outside that admin scope, STOP before commit and report the out-of-scope paths.
      - If the task path, `task_id`, `plan_ref`, or matching parent plan row cannot be resolved deterministically, STOP before commit rather than falling back to a post-merge `main` commit.
-  2. Run the lifecycle commit:
+  2. If `REVIEW_ARTIFACT_TYPE=code` and `IMPLEMENTATION_PRE_COMMIT_ADMIN_REQUIRED=true`, apply the implementation-close pre-commit admin hook before running the lifecycle commit:
+     - Work in `PAIRFLOW_STATUS.worktreePath`, not on `main`.
+     - Verify the worktree is on `bubble/<BUBBLE_ID>`.
+     - Re-read `TASK_SOURCE_PATH` in that worktree and verify it is under `<REPO_PATH>/plans/tasks/`.
+     - Resolve `task_id`, `archive_group`, and `plan_ref` from the task frontmatter and parent plan metadata.
+     - Derive the canonical archive target as `plans/archive/tasks/<archive_group>/<task_id>.md`; do not use the old mirror-layout destination for Pairflow V1 task-plan artifacts.
+     - If the canonical archive target already exists, STOP before commit; do not overwrite or create a direct `main` repair commit.
+     - Set the task frontmatter `status` to `archived`.
+     - Move the task file to the canonical archive target using `git mv` inside the bubble worktree.
+     - Update the parent plan in the same worktree: set the matching `task_tracker` row to `status=archived` and the canonical archive path, set `last_completed_task_id` to the closed task id, and advance `active_task_id` to the next `not_created` task in `task_order`; if no tasks remain, set `active_task_id=null` and `plan_status=done` only when all tracker rows are archive-settled.
+     - Update the plan's task-list table row for the closed task to the same archived path/status.
+     - If the closed task completes the full plan, derive the canonical plan archive target as `plans/archive/plans/<created_on>-<live-plan-filename-stem>.md`, move the parent plan there with `git mv`, and remove the now-empty live task grouping directory only with empty-directory semantics. If the target exists or the live task grouping directory is non-empty, STOP before commit.
+     - Keep the diff limited to the archived task artifact, its parent plan metadata/table status, and the parent plan archive move when the plan is fully complete. Product/source/runtime edits are forbidden in this hook.
+     - Verify the changed file list before continuing. If any changed file is outside that admin/archive scope, STOP before commit and report the out-of-scope paths.
+     - If the task path, `task_id`, `archive_group`, `plan_ref`, canonical archive destination, or matching parent plan row cannot be resolved deterministically, STOP before commit rather than falling back to a post-merge `main` commit.
+  3. Run the lifecycle commit:
   ```bash
   pairflow bubble commit --id <BUBBLE_ID> --repo <REPO_PATH> --stage-all
   ```
@@ -248,6 +265,7 @@ Recovery result reporting:
 - Verify bubble no longer appears in `pairflow bubble list --repo <REPO_PATH>`.
 - Verify repository is clean and no leftover merge/rebase/cherry-pick state exists.
 - For `REVIEW_ARTIFACT_TYPE=document` with `DOCUMENT_PRE_COMMIT_ADMIN_REQUIRED=true`, verify refreshed `main` task metadata proves `status=implementable` and the parent plan tracker/table row agrees. If this proof is missing, STOP and report the close as unsettled; do not repair it with a direct `main` admin commit.
+- For `REVIEW_ARTIFACT_TYPE=code` with `IMPLEMENTATION_PRE_COMMIT_ADMIN_REQUIRED=true`, verify refreshed `main` state proves the task is archived at `plans/archive/tasks/<archive_group>/<task_id>.md`, the archived task frontmatter has `status=archived`, and the parent plan tracker/table row agrees. If this proof is missing, STOP and report the close as unsettled; do not repair it with a direct `main` admin commit.
 
 ### 6. Implementation follow-up (only for `REVIEW_ARTIFACT_TYPE=code`)
 
@@ -256,19 +274,12 @@ Apply only if merge succeeded.
 1. Check whether operator-facing docs must change:
    - `README.md`: update when CLI behavior, flags, UX flow, or user-visible runtime behavior changed.
    - `docs/` content: update when workflow/policy/spec behavior changed beyond README-level notes.
-   - Progress tracker: if repository has a relevant tracker (for example under `docs/` or `progress/`), update implementation status/evidence pointers.
+   - Progress tracker: update only when it is not the closed task's canonical task/progress/archive completion admin; that completion admin belongs in the pre-commit hook above.
 2. If other clones/checkouts also need the merged base branch after a remote bubble merge, sync those explicitly:
    - use a project-safe fast-forward update flow (for example `git pull --ff-only origin <BASE_BRANCH>`) for those other checkouts.
    - Do not assume the current local checkout needs this after started-remote merge; it is already the durable merge target on the retained routed path.
-3. Apply required updates immediately on `main`.
-4. Archive the source task file (mirror layout) if `TASK_SOURCE_PATH` is known:
-   - Source root must be: `<REPO_PATH>/plans/tasks/`
-   - Relative task path: `<REL_PATH> = TASK_SOURCE_PATH minus <REPO_PATH>/plans/tasks/`
-   - Archive destination: `<REPO_PATH>/plans/archive/tasks/<REL_PATH>`
-   - Keep directory structure mirrored (root task stays at archive root; nested task keeps nested folder path).
-   - Use `git mv` (create archive parent directories first if needed).
-   - If destination already exists, STOP and ask user (no overwrite).
-5. If follow-up edits or archive move were made, commit them on `main` with a clear message describing docs/progress/archive completion.
+3. Do not apply closed-task status/archive/progress completion updates on `main`; if they were not included in the bubble commit, report the close as unsettled and route to recovery or a human checkpoint.
+4. If explicitly requested non-task aftermath edits are made on `main`, commit them separately with a clear message. This exception must not be used for task archive movement, task status, parent plan tracker, or progress completion admin.
 
 ### 7. Special cases
 
@@ -287,12 +298,13 @@ Bubble <BUBBLE_ID> close summary:
 - Initial state: <STATE>
 - Approved: <yes / skipped (state was <STATE>)>
 - Document pre-commit admin: <n/a / applied in bubble commit / skipped with reason / blocked with reason>
+- Implementation pre-commit admin: <n/a / applied in bubble commit / skipped with reason / blocked with reason>
 - Committed: <yes (--stage-all) / skipped (state was <STATE>)>
 - Merged: <yes / yes after merge_conflict_recovered / no>
 - Merge target: bubble/<BUBBLE_ID> -> <base-branch or n/a>
 - Cleanup: <deleted finalized bubble / already absent / retained with reason / skipped because merge did not complete>
-- Implementation follow-up: <n/a (document bubble) / completed / skipped with reason>
-- Task archive: <n/a / moved to plans/archive/tasks/... / skipped with reason>
+- Implementation follow-up: <n/a (document bubble) / completed non-task follow-up / skipped with reason>
+- Task archive: <n/a / moved in bubble commit to plans/archive/tasks/... / skipped with reason / blocked with reason>
 - Follow-up commit on main: <yes / no>
 - Final state: <STATE>
 - Notes: <warnings, recovery evidence, or none>

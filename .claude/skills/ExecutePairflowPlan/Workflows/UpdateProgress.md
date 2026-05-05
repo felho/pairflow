@@ -1,5 +1,5 @@
 ---
-description: Reconcile normal post-implementation aftermath for ExecutePairflowPlan from a settled implementation-close result and refreshed authoritative plan/task metadata into canonical archive resolution and the next trustworthy owner
+description: Verify normal post-implementation aftermath for ExecutePairflowPlan from a settled implementation-close result and refreshed authoritative plan/task metadata after CloseBubble has carried required implementation admin inside the bubble commit
 argument-hint: <plan-path>
 allowed-tools: Read, Edit, Bash
 ---
@@ -8,14 +8,14 @@ allowed-tools: Read, Edit, Bash
 
 ## Purpose
 
-Own the normal completion aftermath layer for `ExecutePairflowPlan`.
+Own the normal completion aftermath verification layer for `ExecutePairflowPlan`.
 
 This workflow owns only:
 
 1. consuming the settled aftermath boundary after a successful `CloseImplementationBubble` return
-2. reconciling refreshed plan summary and task-local terminal truth under the existing Task 1 authority split
-3. reconciling completed-task archive aftermath onto the canonical Task 1 archive path when that is deterministic
-4. reconciling completed-plan archive aftermath onto the canonical plan archive path when all tasks are settled
+2. verifying refreshed plan summary and task-local terminal truth under the existing Task 1 authority split
+3. verifying completed-task archive aftermath at the canonical Task 1 archive path after `CloseBubble` applied it inside the bubble commit
+4. verifying completed-plan archive aftermath at the canonical plan archive path when all tasks are settled after `CloseBubble` carried the plan archive move inside the bubble commit
 5. deciding whether the next trustworthy owner is a fresh `ResolvePlanState` pass, `PlanComplete`, or `HumanCheckpoint`
 6. defining the lightweight workflow-local pilot proof boundary for a first trustworthy local V1 run
 
@@ -35,7 +35,7 @@ Execution boundary:
 
 1. `ResolvePlanState` may return `implementation_bubble_close`
 2. `UsePairflow` `CloseBubble` owns the lifecycle close/merge path behind `CloseImplementationBubble`
-3. only after that close path returns a successful settled result may the top-level orchestrator enter `UpdateProgress`
+3. only after that close path returns a successful settled result, including the required implementation pre-commit admin proof when applicable, may the top-level orchestrator enter `UpdateProgress`
 4. this workflow consumes the close result after the fact; it never re-reads raw bubble state to decide whether close succeeded
 
 ## Inputs
@@ -45,13 +45,13 @@ Read only the minimum authoritative inputs needed for normal completion aftermat
 1. `PLAN_PATH`
    - parent plan artifact
 2. refreshed `PLAN_METADATA`
-   - plan frontmatter after the successful implementation close returned
+   - plan frontmatter after the successful implementation close returned and merged the pre-commit admin hook
 3. refreshed `ACTIVE_TASK_PATH`
-   - the just-completed task artifact, either at its live task path or already at its canonical archive path
+   - the just-completed task artifact, expected at its canonical archive path for normal implementation closes
 4. refreshed `TASK_METADATA`
-   - task frontmatter after close-side follow-up and any deterministic archive move already performed
+   - task frontmatter after `CloseBubble` applied the implementation pre-commit admin hook inside the bubble worktree and merged it
 5. `SETTLED_IMPLEMENTATION_CLOSE_RESULT`
-   - proof that `CloseImplementationBubble` already returned a successful close/merge outcome for the active implementation task
+   - proof that `CloseImplementationBubble` already returned a successful close/merge outcome for the active implementation task, with required implementation admin included in the bubble commit
 6. `METADATA_AUTHORITY_CONTRACT`
    - `references/Plan-Task-Metadata-Contract.md`
 7. `RESOLVE_PLAN_STATE_CONTRACT`
@@ -64,7 +64,7 @@ Input rules:
 1. refreshed plan metadata remains canonical for sequencing, `active_task_id`, plan terminality, and canonical `archive_group`
 2. refreshed task metadata remains canonical for task-local terminal status and persisted archive fields when present
 3. `SETTLED_IMPLEMENTATION_CLOSE_RESULT` is a boundary proof only; it does not authorize reopening raw Pairflow status
-4. stale pre-close assumptions, operator memory, generic "merged means done" shortcuts, and metadata-expansion wishlists are forbidden as aftermath authority
+4. stale pre-close assumptions, operator memory, generic "merged means done" shortcuts, post-merge direct-`main` repairs, and metadata-expansion wishlists are forbidden as aftermath authority
 5. this workflow must not mark a task `superseded`; that ownership remains with `HandleNormalizedReplan`
 6. if `created_on` is missing, do not derive it from `archive_group`; route to metadata repair first, where committed first-added history or explicit creation metadata must prove the date
 7. if a candidate archive date equals the current date, verify its source before moving files; archive aftermath must not turn today's date into plan creation truth by default
@@ -84,6 +84,7 @@ close_result: success
 closed_bubble_id: <persisted implementation bubble id or null>
 closed_task_id: <canonical task id>
 cleanup_postcondition: <bubble_deleted|retained_with_explicit_reason>
+implementation_admin_postcondition: <task_archived_in_bubble_commit|not_applicable>
 reentry_identity_key: <closed_task_id>::<closed_bubble_id-or-null>
 ```
 
@@ -95,7 +96,8 @@ Validation rules:
 4. `closed_bubble_id` must match the persisted implementation linkage when that linkage exists; otherwise it must be `null`
 5. `reentry_identity_key` must use the deterministic format `<closed_task_id>::<closed_bubble_id-or-null>`
 6. the close result must include `cleanup_postcondition=bubble_deleted` or an explicit retained-bubble reason accepted by the close workflow; a plain merged/DONE bubble artifact is not settled enough for aftermath
-7. extra diagnostics may be present, but they are not routing authority here
+7. for code/implementation bubbles whose task source path was known under `plans/tasks/`, the close result must include `implementation_admin_postcondition=task_archived_in_bubble_commit`; otherwise this workflow stops before route continuation instead of repairing task/archive metadata directly on `main`
+8. extra diagnostics may be present, but they are not routing authority here
 
 ## Entry Conditions
 
@@ -121,6 +123,7 @@ Additional entry rules:
 3. do not treat a failed merge, retained DONE bubble artifact, or unresolved cleanup warning as settled success; that belongs to the close workflow or a human checkpoint first
 4. if refreshed plan/task artifacts are absent after close returns, fail closed instead of reconstructing the aftermath from memory
 5. `SETTLED_IMPLEMENTATION_CLOSE_RESULT` and the required upstream route shape must agree on `route_class=implementation_bubble_close`, `target_workflow_surface=CloseImplementationBubble`, `continuation_mode=auto_continue`, `route_scope=implementation_bubble`, `source_scope=not_applicable`, and `approval_gate_state=already_satisfied`
+6. do not perform task status, parent-plan tracker, progress, or task archive mutations in this workflow; those are required implementation-close pre-commit admin when closing the bubble
 
 ## Output Contract
 
@@ -155,13 +158,13 @@ Field rules:
 5. `task_terminal_status=archived` is the preferred completed-state result once canonical archive placement is already true or has been deterministically reconciled
 6. `task_terminal_status=done` is a fail-closed terminal-detail value for the just-closed task artifact only; it is allowed only when refreshed task metadata still proves that specific task reached terminal completion but canonical archive settlement or a wider plan-terminality gate remains unresolved and the result explains why
 7. `archive_resolution=already_canonical` means the task already sits at `plans/archive/tasks/<archive_group>/<task_id>.md`
-8. `archive_resolution=reconciled_to_canonical` means a non-canonical but deterministic aftermath was normalized to the canonical Task 1 target
+8. `archive_resolution=reconciled_to_canonical` is retained only for legacy/idempotent reporting when a prior close-side follow-up already normalized the task before this verification pass; new implementation closes must not use this workflow to mutate the archive
 9. `archive_resolution=checkpoint_required` means canonical archive aftermath could not be derived deterministically on the current baseline
 10. `canonical_archive_path`, when present, must equal `plans/archive/tasks/<archive_group>/<task_id>.md`
 11. `canonical_archive_path` is required when `archive_resolution=reconciled_to_canonical`
 12. `plan_archive_resolution=not_applicable` is valid only when the plan still has remaining non-terminal work
 13. `plan_archive_resolution=already_canonical` means `PLAN_PATH` already equals `plans/archive/plans/<created_on>-<live-plan-filename-stem>.md`
-14. `plan_archive_resolution=reconciled_to_canonical` means the completed plan was moved from its live path to the canonical archived plan path during this aftermath step
+14. `plan_archive_resolution=reconciled_to_canonical` is retained only for legacy/idempotent reporting when the completed plan was already moved from its live path to the canonical archived plan path before this verification workflow; new implementation closes must not use this workflow to mutate the plan archive
 15. `plan_archive_resolution=checkpoint_required` is valid only with `aftermath_action=human_checkpoint`
 16. `canonical_plan_archive_path`, when present, must equal `plans/archive/plans/<created_on>-<live-plan-filename-stem>.md`
 17. `canonical_plan_archive_path` is required when `plan_archive_resolution=reconciled_to_canonical`
@@ -187,7 +190,7 @@ Field rules:
 Terminal-settlement rule:
 
 1. `done` is task-execution terminal only
-2. `archived` is the normal settled task state after successful post-close aftermath
+2. `archived` is the normal settled task state after successful implementation pre-commit admin in the bubble close
 3. `PlanComplete` and `rerun_resolve_plan_state` outputs require `task_terminal_status=archived`
 4. `task_terminal_status=done` may appear only in fail-closed `human_checkpoint` output to show that implementation work finished but archive settlement did not
 
@@ -217,7 +220,7 @@ Cross-workflow disambiguation:
 
 1. in `UpdateProgress`, `AUTHORITY_PRECEDENCE_APPLIED` means a post-close aftermath reconciliation corrected stale plan-summary interpretation while preserving the same authoritative field split
 2. in `ResolvePlanState`, the same reason code is route-selection output for refreshed artifact precedence before any implementation-close aftermath layer exists
-3. the shared label does not imply shared ownership: `ResolvePlanState` owns pre-close route selection, while `UpdateProgress` owns post-close aftermath reconciliation only
+3. the shared label does not imply shared ownership: `ResolvePlanState` owns pre-close route selection, `CloseBubble` owns implementation pre-commit admin mutation, and `UpdateProgress` owns post-close verification only
 
 Action mapping:
 
@@ -243,7 +246,7 @@ If the refreshed task artifact proves terminal completion while the plan tracker
 
 1. treat the task as authoritative for detailed terminal truth
 2. treat the plan tracker as stale summary rather than as a new blocker
-3. reconcile the summary under `AUTHORITY_PRECEDENCE_APPLIED`
+3. do not repair the summary on `main`; the close is unsettled unless the lag is already resolved by the bubble commit or is explicitly accepted as a legacy/idempotent aftermath condition
 4. continue only after the refreshed plan/task view is trustworthy again
 
 ### 3. Normal completion is not supersession
@@ -263,11 +266,11 @@ plans/archive/tasks/<archive_group>/<task_id>.md
 Rules:
 
 1. if the refreshed task already sits at the canonical path, return `archive_resolution=already_canonical`
-2. if a generic close-flow side effect or close-side follow-up owned by `CloseImplementationBubble` left the task at a different but deterministic completed-task location, move the task artifact to the canonical Task 1 target, update task metadata to `status=archived`, update the plan tracker row to `status=archived` and the canonical `task_path`, then return `archive_resolution=reconciled_to_canonical`
+2. if a generic close-flow side effect or close-side follow-up owned by `CloseImplementationBubble` already left the task at a different but deterministic completed-task location, legacy/idempotent runs may report `archive_resolution=reconciled_to_canonical` only when no mutation is needed in this workflow
 3. if `archive_group` plus canonical `task_id` cannot determine a unique canonical archive path, return `human_checkpoint` with `NON_DETERMINISTIC_TASK_IDENTITY`
-4. do not widen metadata just because a generic close flow used a mirrored path that differs from the Task 1 canonical rule
+4. do not widen metadata or repair `main` just because a generic close flow used a mirrored path that differs from the Task 1 canonical rule
 5. when refreshed task metadata already persists `archive_path`, accept it only if it equals the canonical derived path
-6. never emit `PlanComplete` from a `done` task at a live task path; complete the deterministic archive reconciliation first or stop at `HumanCheckpoint`
+6. never emit `PlanComplete` from a `done` task at a live task path; the implementation close should have archived it inside the bubble commit, otherwise stop at `HumanCheckpoint`
 7. when task archive reconciliation leaves behind the live task grouping directory under `plans/tasks/<plan-or-task-group>/`, remove that directory only if it is empty; if it is non-empty, stop at `HumanCheckpoint` because an unarchived or unclassified artifact remains
 
 Canonical plan archive target:
@@ -280,15 +283,15 @@ Plan archive rules:
 
 1. `created_on` is the plan creation date and must not be replaced with the date when archive aftermath runs.
 2. `archive_group` must equal `<created_on>-<plan_id>`.
-3. once all tasks are terminal and archive-settled, move the completed plan artifact from its live path to the canonical plan archive target when deterministic.
+3. once all tasks are terminal and archive-settled, the completed plan artifact should already have been moved to the canonical plan archive target by `CloseBubble` before lifecycle commit.
 4. the archived plan filename must include `created_on` as the leading date prefix.
 5. if the plan already sits at the canonical plan archive target, return `plan_archive_resolution=already_canonical`.
-6. if the plan remains at a live `plans/*.md` path and `created_on` plus the live filename stem determine a unique archive target, move it and return `plan_archive_resolution=reconciled_to_canonical`.
+6. if the plan remains at a live `plans/*.md` path after all tasks are settled, return `human_checkpoint`; do not move it on `main` in this workflow.
 7. if `created_on` is missing, ambiguous, contradicted by `archive_group`, or would produce a colliding archive path, return `human_checkpoint` with `NON_DETERMINISTIC_TASK_IDENTITY` or `PLAN_COMPLETE_STATE_STALE` as the narrower reason.
 8. never emit `PlanComplete` while the completed plan artifact remains only at its live path.
 9. an `archive_group` prefix may confirm a previously proven `created_on`, but it must not create or overwrite `created_on` during archive aftermath.
 10. if committed first-added history proves a different date than `archive_group`, stop and repair metadata before archive moves rather than archiving under the stale group.
-11. when the completed plan is moved to its canonical archive path, the matching live task grouping directory under `plans/tasks/` must already be absent or be removed with empty-directory semantics; a non-empty live task grouping directory blocks `PlanComplete`.
+11. when the completed plan is at its canonical archive path, the matching live task grouping directory under `plans/tasks/` must already be absent after close-side empty-directory cleanup; a non-empty live task grouping directory blocks `PlanComplete`.
 12. never use recursive deletion for this cleanup; the safe operation is equivalent to `rmdir <live-task-group-dir>`, so unexpected files force an explicit checkpoint instead of being deleted.
 
 ## Plan-Completion Gate
@@ -441,31 +444,30 @@ branch_handoff_boundary_note: Canonical archive aftermath is already settled; th
 branch_pilot_evidence_note: Local pilot proof stays lightweight here because canonical archive settlement is already visible in refreshed authoritative artifacts.
 ```
 
-### 4. Reconcile deterministic non-canonical archive aftermath
+### 4. Reject non-canonical archive aftermath for new implementation closes
 
 Choose this branch when:
 
 1. refreshed task metadata proves normal completion
 2. the task is not yet at the canonical Task 1 archive path
 3. `archive_group` plus `task_id` still determine a unique canonical archive target
-4. no new metadata is required to normalize the aftermath
-5. the archive move and metadata updates can be performed as the normal aftermath step without crossing ownership boundaries
+4. the close result did not already carry a legacy/idempotent proof that the canonical archive move was completed before this verification workflow
 
 Output rules:
 
-1. `archive_resolution=reconciled_to_canonical`
-2. `canonical_archive_path` must equal the Task 1 derived target
-3. set `task_terminal_status=archived` once the deterministic reconciliation is complete
-4. keep the explanation explicit that this is normal completion aftermath, not Task 4 supersession logic
-5. continue into Rule 5 or Rule 6 based on refreshed plan terminality after the deterministic reconciliation outcome is written and re-read
+1. return `aftermath_action=human_checkpoint`
+2. set `archive_resolution=checkpoint_required`
+3. set `reason_code=NO_TRUSTWORTHY_ROUTE` unless a narrower metadata identity reason applies
+4. do not move the task, edit task status, or update the parent plan on `main`
+5. explain that implementation task/progress/archive admin must be recovered through a bubble-side lifecycle path, not through post-merge direct edits
 
 Intermediate branch state (not returned workflow output):
 
 ```yaml
-branch_task_terminal_status: archived
-branch_archive_resolution: reconciled_to_canonical
-branch_handoff_boundary_note: Deterministic canonical archive reconciliation is complete; this intermediate branch passes control to Rule 5 or Rule 6 for final owner selection.
-branch_pilot_evidence_note: Local pilot proof remains lightweight here because the workflow can point to a deterministic canonical archive target without widening the metadata contract.
+branch_task_terminal_status: done
+branch_archive_resolution: checkpoint_required
+branch_handoff_boundary_note: Stop because the implementation close returned without canonical archive proof from the bubble commit; do not repair this by editing main.
+branch_pilot_evidence_note: Local pilot proof remains lightweight here because the workflow proves trust by refusing post-merge archive mutation.
 branch_canonical_archive_path: plans/archive/tasks/<archive_group>/<task_id>.md
 ```
 
@@ -661,13 +663,13 @@ pilot_evidence_note: Local pilot proof remains lightweight here too: the workflo
 reentry_identity_key: <closed_task_id>::<closed_bubble_id-or-null>
 ```
 
-### Example 5: Deterministic non-canonical archive aftermath before final owner selection
+### Example 5: Non-canonical implementation archive aftermath fails closed
 
 ```yaml
-branch_task_terminal_status: archived
-branch_archive_resolution: reconciled_to_canonical
-branch_handoff_boundary_note: Deterministic canonical task archive reconciliation is complete; this intermediate branch passes control to plan archive settlement before final owner selection.
-branch_pilot_evidence_note: Local pilot proof remains lightweight here because the workflow can point to a deterministic canonical archive target without widening the metadata contract.
+branch_task_terminal_status: done
+branch_archive_resolution: checkpoint_required
+branch_handoff_boundary_note: Stop because the implementation close returned without canonical archive proof from the bubble commit; do not repair this by editing main.
+branch_pilot_evidence_note: Local pilot proof remains lightweight here because the workflow proves trust by refusing post-merge archive mutation.
 branch_canonical_archive_path: plans/archive/tasks/<archive_group>/<task_id>.md
 ```
 
