@@ -5,7 +5,7 @@ import { join } from "node:path";
 import {
   applyMetaReviewGateOnConvergenceV11,
   type MetaReviewGateResultV11
-} from "../../../src/v11/application/metaReviewGate/emitMetaReviewGateV11.js";
+} from "../../../src/v11/defaults/metaReviewGate/metaReviewGateApi.js";
 import { readStateSnapshot, writeStateSnapshot } from "../../../src/v11/infrastructure/state/stateStore.js";
 import { normalizeMetaReviewSnapshot } from "../../../src/v11/shared/metaReviewGate/metaReviewGateSnapshotHelpers.js";
 import type { MetaReviewGateTmuxRunner } from "../../../src/v11/shared/metaReviewGate/metaReviewGateTmuxCapabilities.js";

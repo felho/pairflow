@@ -5,7 +5,7 @@ import { createHash } from "node:crypto";
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import { submitMetaReviewResultV11 as submitMetaReviewResult } from "../../../src/v11/application/metaReview/emitMetaReviewV11.js";
+import { submitMetaReviewResult } from "../../../src/v11/defaults/metaReview/metaReviewApi.js";
 import { buildMetaReviewExecutionContext } from "../../../src/v11/shared/metaReview/metaReviewExecutionContext.js";
 import { MetaReviewError } from "../../../src/v11/shared/metaReview/metaReviewError.js";
 import {

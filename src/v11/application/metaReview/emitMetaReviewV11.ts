@@ -19,8 +19,8 @@ import type {
   MetaReviewSubmitResult
 } from "../../shared/metaReview/metaReviewCommandContract.js";
 
-let metaReviewDefaultsPromise:
-  | Promise<{
+interface MetaReviewDefaultsModule {
+  metaReviewDefaults: {
     emitDeliveryNotificationAck: NonNullable<
       MetaReviewCommandDependencies["emitDeliveryNotification"]
     >;
@@ -30,16 +30,25 @@ let metaReviewDefaultsPromise:
     runPassValidationCommand: NonNullable<
       MetaReviewCommandDependencies["runMetaReviewApproveValidationCommand"]
     >;
-  }>
-  | undefined;
+  };
+}
 
-async function loadMetaReviewDefaults(): Promise<NonNullable<
-  Awaited<typeof metaReviewDefaultsPromise>
->> {
-  metaReviewDefaultsPromise ??= import(
-    "../../defaults/metaReview/metaReviewDefaults.js"
-  ).then(({ metaReviewDefaults }) => metaReviewDefaults);
-  return metaReviewDefaultsPromise;
+async function loadMetaReviewDefaults(): Promise<{
+  emitDeliveryNotificationAck: NonNullable<
+    MetaReviewCommandDependencies["emitDeliveryNotification"]
+  >;
+  resolveDeliveryMessageRef: NonNullable<
+    MetaReviewCommandDependencies["buildDeliveryMessageRef"]
+  >;
+  runPassValidationCommand: NonNullable<
+    MetaReviewCommandDependencies["runMetaReviewApproveValidationCommand"]
+  >;
+}> {
+  const defaultsModulePath = "../../defaults/metaReview/metaReviewDefaults.js";
+  const { metaReviewDefaults } = await import(
+    defaultsModulePath
+  ) as MetaReviewDefaultsModule;
+  return metaReviewDefaults;
 }
 
 async function withMetaReviewDefaults(

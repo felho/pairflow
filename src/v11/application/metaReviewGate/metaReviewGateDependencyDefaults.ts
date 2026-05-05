@@ -3,7 +3,7 @@ import {
 } from "./metaReviewGateCommandDefaults.js";
 import type {
   MetaReviewGateDependencyDefaults
-} from "../../defaults/metaReviewGate/metaReviewGateCommandDefaults.js";
+} from "./metaReviewGateCommandDefaults.js";
 
 export async function resolveMetaReviewGateDependencyDefaults(): Promise<
   MetaReviewGateDependencyDefaults

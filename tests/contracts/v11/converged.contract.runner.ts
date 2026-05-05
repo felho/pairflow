@@ -9,7 +9,7 @@ import {
   type EmitConvergedV11Result as EmitConvergedResult
 } from "../../../src/v11/application/converged/emitConvergedV11.js";
 import { resolveConvergedSummaryFindingsContradiction } from "../../../src/v11/domain/convergence/policy.js";
-import { applyMetaReviewGateOnConvergenceV11 } from "../../../src/v11/application/metaReviewGate/emitMetaReviewGateV11.js";
+import { applyMetaReviewGateOnConvergenceV11 } from "../../../src/v11/defaults/metaReviewGate/metaReviewGateApi.js";
 import {
   isConvergedStructuredFindingSeverity,
   type ConvergedStructuredFinding

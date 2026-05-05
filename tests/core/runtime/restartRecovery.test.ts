@@ -9,8 +9,8 @@ import { emitConvergedFromWorkspaceV11 as emitConvergedFromWorkspace } from "../
 import { emitPassFromWorkspaceV11 as emitPassFromWorkspace } from "../../../src/v11/application/pass/emitPassV11.js";
 import { runAgentEmitCommand } from "../../../src/cli/commands/agent/emit.js";
 import { createBubble } from "../../../src/v11/application/create/createBubble.js";
-import { submitMetaReviewResultV11 as submitMetaReviewResult } from "../../../src/v11/application/metaReview/emitMetaReviewV11.js";
-import { applyMetaReviewGateOnConvergenceV11 as applyMetaReviewGateOnConvergence } from "../../../src/v11/application/metaReviewGate/emitMetaReviewGateV11.js";
+import { submitMetaReviewResultV11 as submitMetaReviewResult } from "../../../src/v11/defaults/metaReview/metaReviewApi.js";
+import { applyMetaReviewGateOnConvergenceV11 as applyMetaReviewGateOnConvergence } from "../../../src/v11/defaults/metaReviewGate/metaReviewGateApi.js";
 import { startBubbleV11 as startBubble } from "../../../src/v11/application/start/emitStartV11.js";
 import { buildMetaReviewExecutionContext } from "../../../src/v11/shared/metaReview/metaReviewExecutionContext.js";
 import { normalizeBubbleReviewPolicy } from "../../../src/v11/shared/reviewPolicy/reviewPolicyRuntime.js";

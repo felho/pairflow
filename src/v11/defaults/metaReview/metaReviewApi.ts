@@ -1,3 +1,5 @@
+import { readFile } from "node:fs/promises";
+
 import {
   clearLiveMetaReviewSnapshot,
   normalizeMetaReviewSnapshot,
@@ -13,10 +15,35 @@ export type {
   MetaReviewSubmitInput,
   MetaReviewSubmitResult
 } from "../../shared/metaReview/metaReviewCommandContract.js";
+import type {
+  MetaReviewCommandDependencies,
+  MetaReviewSubmitInput,
+  MetaReviewSubmitResult
+} from "../../shared/metaReview/metaReviewCommandContract.js";
+import {
+  resolveMetaReviewerPaneWarning
+} from "../../application/metaReviewGate/metaReviewGatePaneBinding.js";
+import {
+  submitMetaReviewResultV11,
+  toMetaReviewErrorV11
+} from "../../application/metaReview/emitMetaReviewV11.js";
+import {
+  notifyMetaReviewerSubmissionRequestV11
+} from "../metaReviewGate/metaReviewGateApi.js";
+import {
+  metaReviewGateDependencyDefaults
+} from "../metaReviewGate/metaReviewGateCommandDefaults.js";
+import {
+  metaReviewDefaults
+} from "./metaReviewDefaults.js";
 
 export {
-  submitMetaReviewResultV11 as submitMetaReviewResult,
+  submitMetaReviewResult as submitMetaReviewResultV11,
   toMetaReviewErrorV11 as toMetaReviewError
+};
+export { toMetaReviewErrorV11 };
+export type {
+  MetaReviewSubmitResultV11
 } from "../../application/metaReview/emitMetaReviewV11.js";
 export {
   clearLiveMetaReviewSnapshot,
@@ -24,3 +51,30 @@ export {
   normalizeMetaReviewSnapshot,
   resolveActiveMetaReviewRuntimeDelivery
 };
+
+function withMetaReviewDefaults(
+  dependencies: MetaReviewCommandDependencies = {}
+): MetaReviewCommandDependencies {
+  return {
+    readFile,
+    emitDeliveryNotification: metaReviewDefaults.emitDeliveryNotificationAck,
+    buildDeliveryMessageRef: metaReviewDefaults.resolveDeliveryMessageRef,
+    readTranscriptEnvelopes: metaReviewGateDependencyDefaults.readTranscriptEnvelopes,
+    setMetaReviewerPaneBinding:
+      metaReviewGateDependencyDefaults.setMetaReviewerPaneBinding,
+    notifyMetaReviewerSubmissionRequest:
+      notifyMetaReviewerSubmissionRequestV11,
+    resolveMetaReviewerPaneWarning,
+    runMetaReviewApproveValidationCommand:
+      metaReviewDefaults.runPassValidationCommand,
+    runtime: metaReviewGateDependencyDefaults.runtime,
+    ...dependencies
+  };
+}
+
+export async function submitMetaReviewResult(
+  input: MetaReviewSubmitInput,
+  dependencies: MetaReviewCommandDependencies = {}
+): Promise<MetaReviewSubmitResult> {
+  return submitMetaReviewResultV11(input, withMetaReviewDefaults(dependencies));
+}
