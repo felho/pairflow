@@ -5,7 +5,7 @@ task_family_id: remote-merge-rename
 sequence_key: "4"
 task_id: 4-remote-merge-rename
 title: "Remote Merge Rename"
-status: implementable
+status: in_progress
 phase: phase2
 target_files:
   - src/v11/shared/merge/remoteMergeContract.ts
@@ -27,7 +27,7 @@ normative_refs:
 owners:
   - "felho"
 doc_bubble_id: 4-remote-merge-rename-doc
-impl_bubble_id: null
+impl_bubble_id: 4-remote-merge-rename-impl
 supersedes: []
 superseded_by: null
 archive_group: 2026-05-05-shared-command-boundary-cleanup-plan-v1
