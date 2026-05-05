@@ -5,7 +5,7 @@ task_family_id: list-readmodel-introduce
 sequence_key: "9"
 task_id: 9-list-readmodel-introduce
 title: "List Read Model Boundary Introduction"
-status: implementable
+status: in_progress
 phase: phase4
 target_files:
   - src/v11/shared/list/listCommandApi.ts
@@ -45,7 +45,7 @@ normative_refs:
 owners:
   - "felho"
 doc_bubble_id: 9-list-readmodel-introduce-doc
-impl_bubble_id: null
+impl_bubble_id: 9-list-readmodel-introduce-impl
 supersedes: []
 superseded_by: null
 archive_group: 2026-05-05-shared-command-boundary-cleanup-plan-v1

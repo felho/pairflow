@@ -53,7 +53,7 @@ task_tracker:
     status: archived
   - task_id: 9-list-readmodel-introduce
     task_path: plans/tasks/9-list-readmodel-introduce.md
-    status: implementable
+    status: in_progress
   - task_id: 10-list-runtime-cutover
     task_path: null
     status: not_created
