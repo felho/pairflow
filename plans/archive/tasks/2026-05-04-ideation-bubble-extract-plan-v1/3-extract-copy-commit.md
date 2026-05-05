@@ -5,7 +5,7 @@ task_family_id: extract-copy-commit
 sequence_key: "3"
 task_id: 3-extract-copy-commit
 title: "Extract Copy And Commit"
-status: in_progress
+status: archived
 phase: phase3
 target_files:
   - src/v11/application/extract/extractCommandContract.ts
@@ -31,6 +31,7 @@ impl_bubble_id: 3-extract-copy-commit-impl
 supersedes: []
 superseded_by: null
 archive_group: 2026-05-04-ideation-bubble-extract-plan-v1
+archive_path: plans/archive/tasks/2026-05-04-ideation-bubble-extract-plan-v1/3-extract-copy-commit.md
 ---
 
 # Task: Extract Copy And Commit
