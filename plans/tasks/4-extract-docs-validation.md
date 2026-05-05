@@ -5,7 +5,7 @@ task_family_id: extract-docs-validation
 sequence_key: "4"
 task_id: 4-extract-docs-validation
 title: "Extract Docs And Validation"
-status: implementable
+status: in_progress
 phase: phase4
 target_files:
   - README.md
@@ -26,7 +26,7 @@ normative_refs:
 owners:
   - "felho"
 doc_bubble_id: 4-extract-docs-validation-doc
-impl_bubble_id: null
+impl_bubble_id: 4-extract-docs-validation-impl
 supersedes: []
 superseded_by: null
 archive_group: 2026-05-04-ideation-bubble-extract-plan-v1
