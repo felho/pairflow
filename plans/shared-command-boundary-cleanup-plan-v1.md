@@ -58,8 +58,8 @@ task_tracker:
     task_path: plans/archive/tasks/2026-05-05-shared-command-boundary-cleanup-plan-v1/10-list-runtime-cutover.md
     status: archived
   - task_id: 11-list-api-cleanup
-    task_path: null
-    status: not_created
+    task_path: plans/tasks/11-list-api-cleanup.md
+    status: approved
   - task_id: 12-list-fitness-closeout
     task_path: null
     status: not_created
