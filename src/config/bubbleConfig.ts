@@ -30,14 +30,6 @@ import {
   type BubbleConfig
 } from "../types/bubble.js";
 import type { PairflowGlobalConfig } from "./pairflowConfig.js";
-import {
-  describeValidationTargetIdRule,
-  isValidationTargetId
-} from "../v11/shared/validation/validationTargetId.js";
-import {
-  normalizeValidationTargetCwd,
-  normalizeValidationTargetPathSelector
-} from "../v11/shared/validation/validationTargetPaths.js";
 import { SEVERITY_GATE_ROUND_INVALID } from "./bubbleConfig/errors.js";
 import { validateBubbleExecutor } from "./bubbleConfig/executor.js";
 import { validateBubbleDocContractGates } from "./bubbleConfig/docContractGates.js";
@@ -45,14 +37,14 @@ import { parseToml } from "./bubbleConfig/parser.js";
 import {
   readBoolean,
   readObject,
-  readString,
-  readStringArray
+  readString
 } from "./bubbleConfig/readers.js";
 import { validateBubbleCommands } from "./bubbleConfig/commands.js";
 import { validateBubbleIdeation } from "./bubbleConfig/ideation.js";
 import { validateBubbleLocalOverlay } from "./bubbleConfig/localOverlay.js";
 import { assertValidBubbleConfigRemoteReferences } from "./bubbleConfig/remoteReferences.js";
 import { validateBubbleReviewPolicy } from "./bubbleConfig/reviewPolicy.js";
+import { validateBubbleValidationTarget } from "./bubbleConfig/validationTarget.js";
 
 export {
   assertCreateReviewArtifactType,
@@ -306,69 +298,10 @@ export function validateBubbleConfig(input: unknown): ValidationResult<BubbleCon
 
   const validatedCommands = validateBubbleCommands(commands, errors);
 
-  let validatedValidationTarget: BubbleConfig["validation_target"] | undefined;
-  if (validationTarget !== undefined) {
-    const targetId = readString(
-      validationTarget,
-      "id",
-      "validation_target.id",
-      errors,
-      true
-    );
-    const targetCwd = readString(
-      validationTarget,
-      "cwd",
-      "validation_target.cwd",
-      errors,
-      false
-    );
-    const targetPaths = readStringArray(
-      validationTarget,
-      "paths",
-      "validation_target.paths",
-      errors,
-      false
-    );
-    if (
-      targetId !== undefined &&
-      !isValidationTargetId(targetId)
-    ) {
-      errors.push({
-        path: "validation_target.id",
-        message: describeValidationTargetIdRule()
-      });
-    }
-    const normalizedCwd =
-      targetCwd !== undefined
-        ? normalizeValidationTargetCwd(targetCwd)
-        : undefined;
-    if (targetCwd !== undefined && normalizedCwd === undefined) {
-      errors.push({
-        path: "validation_target.cwd",
-        message: "Must be a normalized relative path"
-      });
-    }
-    const normalizedPaths: string[] | undefined =
-      targetPaths !== undefined ? [] : undefined;
-    targetPaths?.forEach((path, index) => {
-      const normalizedPath = normalizeValidationTargetPathSelector(path);
-      if (normalizedPath === undefined) {
-        errors.push({
-          path: `validation_target.paths[${index}]`,
-          message: "Must be a normalized relative path selector"
-        });
-        return;
-      }
-      normalizedPaths?.push(normalizedPath);
-    });
-    if (targetId !== undefined) {
-      validatedValidationTarget = {
-        id: targetId,
-        ...(normalizedCwd !== undefined ? { cwd: normalizedCwd } : {}),
-        ...(normalizedPaths !== undefined ? { paths: normalizedPaths } : {})
-      };
-    }
-  }
+  const validatedValidationTarget = validateBubbleValidationTarget(
+    validationTarget,
+    errors
+  );
 
   const notificationsEnabled = notifications
     ? (readBoolean(
