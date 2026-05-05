@@ -2,9 +2,13 @@ import { access, appendFile } from "node:fs/promises";
 
 import type {
   AgentRunnerBridgeDependencies,
+  AgentRunnerBridgeInput,
+  AgentRunnerBridgeResult,
+  AgentRunnerCommandConfig,
   AgentRunnerProcessInvocation,
   AgentRunnerProcessResult
 } from "../../application/planWatch/agentRunnerBridgeContract.js";
+import { runExecutePairflowPlanContinuation } from "../../application/planWatch/agentRunnerBridge.js";
 import {
   prepareCodexRunnerFiles
 } from "../../application/planWatch/codexAgentRunnerBridge.js";
@@ -305,6 +309,17 @@ export const agentRunnerBridgeDefaults: AgentRunnerBridgeDependencies = {
   runCommand: runAgentRunnerCommand,
   prepareCodexRunnerFiles
 };
+
+export function runExecutePairflowPlanContinuationWithDefaults(
+  input: AgentRunnerBridgeInput,
+  config: AgentRunnerCommandConfig
+): Promise<AgentRunnerBridgeResult> {
+  return runExecutePairflowPlanContinuation(
+    input,
+    config,
+    agentRunnerBridgeDefaults
+  );
+}
 
 function appendCapturedOutput(
   current: CapturedOutput,

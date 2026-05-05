@@ -1,7 +1,6 @@
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 
-import { runExecutePairflowPlanContinuation } from "../../application/planWatch/agentRunnerBridge.js";
 import {
   resolveLinkedBubbleTriggerIndex
 } from "../../application/planWatch/linkedBubbleTriggerIndex.js";
@@ -29,6 +28,9 @@ import {
   withFileLock
 } from "../../infrastructure/foundation/fs/fileLock.js";
 import { linkedBubbleTriggerIndexDefaults } from "./linkedBubbleTriggerIndexDefaults.js";
+import {
+  runExecutePairflowPlanContinuationWithDefaults
+} from "./agentRunnerBridgeDefaults.js";
 
 const LEDGER_LOCK_TIMEOUT_MS = 5_000;
 
@@ -60,7 +62,8 @@ export function createDefaultPlanWatchLoopDependencies(
         getBubbleStatus: localBubbleStatusPort
       }),
     ledger: createFilePlanWatchLedgerPort(resolvePlanWatchLedgerPath(repoPath)),
-    runExecutePairflowPlanContinuation
+    runExecutePairflowPlanContinuation:
+      runExecutePairflowPlanContinuationWithDefaults
   };
 }
 
