@@ -253,12 +253,54 @@ Broader completion checks inherited from repo policy for direct source changes:
 5. If moving one slice, update only the minimal imports and tests required for
    that slice.
 
-## Initial Attach Ownership Inventory
+## Attach Ownership Inventory
+
+Source review performed for:
+
+1. `src/v11/shared/attach/resolveAttachBubbleExecution.ts`
+2. `src/v11/application/attach/emitAttachV11.ts`
+3. `src/v11/infrastructure/executor/command/pairflowCommandAttach.ts`
+4. `rg "resolveAttachBubbleExecution|shared/attach" src/v11 tests`
+
+Current reference proof:
+
+1. `emitAttachV11.ts` imports the shared resolver and adapts it to
+   `AttachBubbleError`, application attach launcher runtime helpers, and the
+   application dependency surface.
+2. `pairflowCommandAttach.ts` imports the same shared resolver and adapts it to
+   the retained executor-command `AttachBubbleError`, launcher helpers, and
+   remote pointer artifact reader.
+3. `rg` finds no direct test or third caller import of `shared/attach`; all
+   external behavior currently flows through the two attach entrypoints above.
+4. The shared resolver owns a cross-lane execution decision, not only one
+   caller's local helper: it reads remote pointer state, resolves the requested
+   attach launcher, chooses local versus remote attach, builds the attach
+   command through caller-supplied command builders, and normalizes shared
+   context/result shape for both adapters.
+
+Implementation decision for task 6:
+
+1. Treat the table below as the implementation inventory baseline.
+2. Current source evidence does not prove a single-owner slice for extraction.
+3. The default implementation result for this task is therefore docs/inventory
+   only: make no source move, preserve the shared resolver import in both
+   current callers, and let task `7-attach-boundary-closeout` decide whether the
+   residual `shared/attach` boundary is removed, renamed to a command-neutral
+   shared location, or explicitly deferred.
+4. A source extraction is allowed only if the implementer finds new
+   source-backed evidence before editing that proves one smallest slice has a
+   single owner. In that case, the implementer must update this inventory row
+   first, then move only that slice.
 
 | Source | Current Consumers | Classification | Movement Decision | Evidence |
 |---|---|---|---|---|
-| `resolveAttachBubbleExecution.ts` whole resolver | `application/attach/emitAttachV11.ts`, `infrastructure/executor/command/pairflowCommandAttach.ts` | `defer` | inventory required before move | Both current consumers import the top-level resolver from `shared/attach`; the file mixes remote pointer, launcher, local tmux, and error-context behavior. |
-| `resolveRequestedPortForwards` | internal resolver only | `defer` | inspect during implementation | Ownership depends on whether remote attach command resolution stays shared or moves to a specific owner. |
-| `validateRemoteStartedPointer` | internal resolver only | `shared_contract` candidate | inspect during implementation | Both current consumers need remote started pointer validation through the shared resolver path. |
-| `resolveRemoteAttachConfig` | internal resolver only | `shared_contract` candidate | inspect during implementation | Current behavior intentionally tolerates schema/global-config failures differently for remote attach supplement loading. |
-| `resolveRequestedAttachLauncher` | internal resolver only | `shared_contract` candidate | inspect during implementation | Current behavior combines bubble config, global config, remote pointer, and attach launcher defaults for both consumers. |
+| `src/v11/shared/attach/resolveAttachBubbleExecution.ts:12` `AttachBubbleErrorContextShape` export | Indirectly consumed through `createAttachError` callbacks in `src/v11/application/attach/emitAttachV11.ts:147` and `src/v11/infrastructure/executor/command/pairflowCommandAttach.ts:125`; emitted in resolver diagnostics. | `shared_contract` | defer | Both callers map the resolver's context into lane-local `AttachBubbleError` types. The fields cover shared attach diagnostics: bubble id, cwd/repo, tmux session, remote alias/host/clone path, and reason. |
+| `src/v11/shared/attach/resolveAttachBubbleExecution.ts:53` `ResolvedAttachBubbleExecution` export | Returned to both current callers at `src/v11/application/attach/emitAttachV11.ts:139` and `src/v11/infrastructure/executor/command/pairflowCommandAttach.ts:117`, then converted to each lane's `AttachBubbleResult`. | `shared_contract` | defer | Both callers read `launcherRequested`, `tmuxSessionName`, `attachCommand`, and optional diagnostics before running their lane-local launcher availability path. Moving this type to one lane would create cross-lane dependency in the other caller. |
+| `src/v11/shared/attach/resolveAttachBubbleExecution.ts:64` `resolveRequestedPortForwards` | Internal to `resolveRemoteAttachExecution`; reachable from both callers through shared resolver. | `shared_contract` | defer | The helper chooses CLI/request port forwards over remote pointer port forwards for remote attach command construction at `src/v11/shared/attach/resolveAttachBubbleExecution.ts:358`. The CLI/application caller supplies request `portForwards`, while the executor-command caller uses the same request contract and remote pointer data. No single owner is proven. |
+| `src/v11/shared/attach/resolveAttachBubbleExecution.ts:71` `validateRemoteStartedPointer` | Internal to remote attach branch; errors are adapted by both callers through their `createAttachError` callbacks. | `shared_contract` | defer | It validates started pointer host, remote clone path, and tmux session, and emits `REMOTE_ATTACH_POINTER_INVALID` at `src/v11/shared/attach/resolveAttachBubbleExecution.ts:95`. Both attach paths require identical remote started pointer semantics. |
+| `src/v11/shared/attach/resolveAttachBubbleExecution.ts:110` `resolveRemoteAttachConfig` | Internal to remote attach branch; uses caller-supplied global config loader and returns shared diagnostics consumed by both callers. | `shared_contract` | defer | It supplements remote attach user data from global config, ignores schema validation errors for supplement loading at `src/v11/shared/attach/resolveAttachBubbleExecution.ts:139`, and emits `REMOTE_ATTACH_CONFIG_SUPPLEMENT_UNAVAILABLE` diagnostics at `src/v11/shared/attach/resolveAttachBubbleExecution.ts:147`. Both callers expose these diagnostics through their attach result. |
+| `src/v11/shared/attach/resolveAttachBubbleExecution.ts:179` `readRemotePointerOrThrow` | Internal to top-level resolver; reads remote pointer via caller-supplied dependency from application status defaults or executor artifact reader. | `shared_contract` | defer | The storage dependency differs by caller (`src/v11/application/attach/emitAttachV11.ts:130`, `src/v11/infrastructure/executor/command/pairflowCommandAttach.ts:108`), but schema-error wrapping and `REMOTE_ATTACH_POINTER_INVALID` behavior are common. Moving it into one lane would duplicate or couple the other lane to that lane's error adapter. |
+| `src/v11/shared/attach/resolveAttachBubbleExecution.ts:210` `resolveRequestedAttachLauncher` | Internal to top-level resolver; uses bubble config, global config, `DEFAULT_ATTACH_LAUNCHER`, and remote pointer state. | `shared_contract` | defer | The same launcher precedence applies to both callers. The function also preserves the remote-started fallback that suppresses global config errors for remote attach at `src/v11/shared/attach/resolveAttachBubbleExecution.ts:227`; changing owner risks diverging application and executor-command behavior. |
+| `src/v11/shared/attach/resolveAttachBubbleExecution.ts:249` `resolveLocalAttachExecution` | Internal local branch; uses shared bubble lookup result, tmux session naming, caller-supplied tmux checker, caller-supplied local attach command builder, and shared error context. | `shared_contract` | defer | Although local tmux attach is command-facing behavior, both application and executor-command callers need the same local branch and error normalization. The only lane-local pieces are injected dependencies from `src/v11/application/attach/emitAttachV11.ts:142`/`:145` and `src/v11/infrastructure/executor/command/pairflowCommandAttach.ts:120`/`:123`, not the helper itself. |
+| `src/v11/shared/attach/resolveAttachBubbleExecution.ts:300` `resolveRemoteAttachExecution` | Internal remote branch; uses shared bubble lookup result, remote pointer, caller-supplied remote command builder, global config loader, and shared error context/diagnostics. | `shared_contract` | defer | Remote attach start-required, executor validation, started pointer validation, config supplement, port-forward selection, and remote command input assembly are shared by both callers. No sub-branch has a single consumer in current source. |
+| `src/v11/shared/attach/resolveAttachBubbleExecution.ts:383` `resolveAttachBubbleExecution` export | Directly imported by `src/v11/application/attach/emitAttachV11.ts:11` and `src/v11/infrastructure/executor/command/pairflowCommandAttach.ts:26`. | `shared_contract` | defer | This is the current cross-lane resolver boundary. Both callers provide lane-local dependencies and error constructors, then consume the same result shape. A whole-file move to either caller would invert ownership for the other caller. |
