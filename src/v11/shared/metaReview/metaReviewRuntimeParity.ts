@@ -12,11 +12,9 @@ import {
 import {
   readLatestSameRoundReviewerSnapshotFromTranscript,
   isAdvisoryOnlyReviewerSnapshot,
+  resolveFindingsParityMetadataFromReportJson,
   type LatestSameRoundReviewerSnapshot
-} from "../metaReviewGate/metaReviewGateReviewerSnapshot.js";
-import {
-  resolveFindingsParityMetadataFromReportJson
-} from "../metaReviewGate/metaReviewGateFindingsMetadata.js";
+} from "../metaReviewGate/index.js";
 import {
   resolveFindingsOpenSplitFromReportJson
 } from "../../domain/metaReviewGate/findingsSplit.js";

@@ -8,6 +8,16 @@ export type {
   ResolveMetaReviewGateThresholdAuthorityInput
 } from "./metaReviewGateThresholdAuthority.js";
 export {
+  resolveFindingsParityMetadataFromReportJson
+} from "./metaReviewGateFindingsMetadata.js";
+export {
+  isAdvisoryOnlyReviewerSnapshot,
+  readLatestSameRoundReviewerSnapshotFromTranscript
+} from "./metaReviewGateReviewerSnapshot.js";
+export type {
+  LatestSameRoundReviewerSnapshot
+} from "./metaReviewGateReviewerSnapshot.js";
+export {
   metaReviewGateRoutes,
   resolveMetaReviewGateNotifyTmuxCapabilities,
   resolveMetaReviewGatePaneBindingTmuxCapabilities
