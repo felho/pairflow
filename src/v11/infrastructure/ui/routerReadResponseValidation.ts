@@ -2,6 +2,7 @@ import type {
   UiBubbleDetail,
   UiBubbleSummary,
   UiRepoSummary,
+  UiTimelineBadge,
   UiTimelineEntry
 } from "../../../contracts/ui/uiReadModel.js";
 import { uiApprovalRequestGateRoutes } from "../../../contracts/ui/uiReadModel.js";
@@ -37,6 +38,33 @@ export interface BubbleTimelineResponseBody {
   bubbleId: string;
   repoPath: string;
   timeline: UiTimelineEntry[];
+}
+
+const timelineTones = ["neutral", "success", "warning", "danger", "info"] as const;
+const timelineSummarySources = [
+  "summary",
+  "question",
+  "message",
+  "decision",
+  "neutral"
+] as const;
+const timelineRoles = [
+  "implementer",
+  "reviewer",
+  "meta_reviewer",
+  "human",
+  "system",
+  "unknown"
+] as const;
+const timelineRowKinds = ["normal", "handoff", "approval", "gate_failure"] as const;
+const validationFailureTones = ["neutral", "warning", "danger"] as const;
+const timelineBadgeKinds = ["finding", "decision", "recommendation"] as const;
+
+function isOneOf(
+  value: unknown,
+  allowed: readonly string[]
+): value is string {
+  return typeof value === "string" && allowed.includes(value);
 }
 
 function isPendingInboxCounts(value: unknown): boolean {
@@ -144,6 +172,7 @@ function isUiTimelineEntry(value: unknown): value is UiTimelineEntry {
       "type",
       "sender",
       "recipient",
+      "display",
       "payload",
       "refs"
     ]) &&
@@ -153,8 +182,119 @@ function isUiTimelineEntry(value: unknown): value is UiTimelineEntry {
     isProtocolMessageType(value.type) &&
     typeof value.sender === "string" &&
     typeof value.recipient === "string" &&
+    isUiTimelineEntryDisplay(value.display) &&
     isRecord(value.payload) &&
     isStringArray(value.refs)
+  );
+}
+
+function isUiTimelineTone(value: unknown): boolean {
+  return isOneOf(value, timelineTones);
+}
+
+function isNonNegativeInteger(value: unknown): value is number {
+  return typeof value === "number" && Number.isInteger(value) && value >= 0;
+}
+
+function isUiTimelineBadge(value: unknown): value is UiTimelineBadge {
+  return (
+    isRecord(value) &&
+    hasExactKeys(value, ["kind", "label", "tone"]) &&
+    isOneOf(value.kind, timelineBadgeKinds) &&
+    typeof value.label === "string" &&
+    isUiTimelineTone(value.tone)
+  );
+}
+
+function isUiTimelineProgress(value: unknown): boolean {
+  if (!isRecord(value)) {
+    return false;
+  }
+  if (value.kind === "meta_review_handoff") {
+    return (
+      hasExactKeys(value, ["kind", "label", "handoffAttempt"]) &&
+      typeof value.label === "string" &&
+      isNonNegativeInteger(value.handoffAttempt)
+    );
+  }
+  if (value.kind === "clean_run") {
+    return (
+      hasExactKeys(value, [
+        "kind",
+        "label",
+        "cleanRunCount",
+        "cleanRunsRequired"
+      ]) &&
+      typeof value.label === "string" &&
+      isNonNegativeInteger(value.cleanRunCount) &&
+      (value.cleanRunsRequired === null ||
+        isNonNegativeInteger(value.cleanRunsRequired))
+    );
+  }
+  return false;
+}
+
+function isUiTimelineValidationFailure(value: unknown): boolean {
+  return (
+    isRecord(value) &&
+    hasExactKeys(value, ["summaryText", "tone"]) &&
+    typeof value.summaryText === "string" &&
+    isOneOf(value.tone, validationFailureTones)
+  );
+}
+
+function isUiTimelineSyntheticApproval(value: unknown): boolean {
+  return (
+    isRecord(value) &&
+    hasExactKeys(value, [
+      "kind",
+      "sourceEntryId",
+      "syntheticEntryId",
+      "label",
+      "tone"
+    ]) &&
+    value.kind === "meta_review_approval" &&
+    typeof value.sourceEntryId === "string" &&
+    typeof value.syntheticEntryId === "string" &&
+    typeof value.label === "string" &&
+    value.tone === "success"
+  );
+}
+
+function isUiTimelineEntryDisplay(value: unknown): boolean {
+  return (
+    isRecord(value) &&
+    hasExactKeys(value, [
+      "title",
+      "summaryText",
+      "summarySource",
+      "senderLabel",
+      "role",
+      "rowKind",
+      "tone",
+      "badges",
+      "progress",
+      "validationFailure",
+      "syntheticApproval"
+    ]) &&
+    typeof value.title === "string" &&
+    typeof value.summaryText === "string" &&
+    isOneOf(value.summarySource, timelineSummarySources) &&
+    typeof value.senderLabel === "string" &&
+    isOneOf(value.role, timelineRoles) &&
+    isOneOf(value.rowKind, timelineRowKinds) &&
+    isUiTimelineTone(value.tone) &&
+    Array.isArray(value.badges) &&
+    value.badges.every(isUiTimelineBadge) &&
+    (value.progress === null || isUiTimelineProgress(value.progress)) &&
+    (
+      value.validationFailure === null ||
+      isUiTimelineValidationFailure(value.validationFailure)
+    ) &&
+    (
+      value.syntheticApproval === null ||
+      isUiTimelineSyntheticApproval(value.syntheticApproval)
+    )
   );
 }
 

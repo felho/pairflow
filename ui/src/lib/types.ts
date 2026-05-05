@@ -75,7 +75,16 @@ import type {
   UiStatusExecutionContextView,
   UiStatusPaneActivityView,
   UiStopBubbleResult,
+  UiTimelineBadge,
+  UiTimelineDisplayRole,
   UiTimelineEntry,
+  UiTimelineEntryDisplay,
+  UiTimelineProgress,
+  UiTimelineRowKind,
+  UiTimelineSummarySource,
+  UiTimelineSyntheticApproval,
+  UiTimelineTone,
+  UiTimelineValidationFailure,
   UiUpdateBubbleReviewPolicyInput,
   UiUpdateBubbleReviewPolicyResult as UpdateReviewPolicyActionResult
 } from "@pairflow/ui-contracts";
@@ -164,7 +173,16 @@ export type {
   UiStatusCommandPathView,
   UiStatusExecutionContextView,
   UiStatusPaneActivityView,
-  UiTimelineEntry
+  UiTimelineBadge,
+  UiTimelineDisplayRole,
+  UiTimelineEntry,
+  UiTimelineEntryDisplay,
+  UiTimelineProgress,
+  UiTimelineRowKind,
+  UiTimelineSummarySource,
+  UiTimelineSyntheticApproval,
+  UiTimelineTone,
+  UiTimelineValidationFailure
 };
 
 export const bubbleActionKinds = [

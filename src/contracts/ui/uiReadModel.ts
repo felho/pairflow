@@ -345,6 +345,80 @@ export interface UiRepoSummary {
   };
 }
 
+export type UiTimelineTone =
+  | "neutral"
+  | "success"
+  | "warning"
+  | "danger"
+  | "info";
+
+export type UiTimelineSummarySource =
+  | "summary"
+  | "question"
+  | "message"
+  | "decision"
+  | "neutral";
+
+export type UiTimelineDisplayRole =
+  | "implementer"
+  | "reviewer"
+  | "meta_reviewer"
+  | "human"
+  | "system"
+  | "unknown";
+
+export type UiTimelineRowKind =
+  | "normal"
+  | "handoff"
+  | "approval"
+  | "gate_failure";
+
+export interface UiTimelineBadge {
+  kind: "finding" | "decision" | "recommendation";
+  label: string;
+  tone: UiTimelineTone;
+}
+
+export type UiTimelineProgress =
+  | {
+      kind: "meta_review_handoff";
+      label: string;
+      handoffAttempt: number;
+    }
+  | {
+      kind: "clean_run";
+      label: string;
+      cleanRunCount: number;
+      cleanRunsRequired: number | null;
+    };
+
+export interface UiTimelineValidationFailure {
+  summaryText: string;
+  tone: "neutral" | "warning" | "danger";
+}
+
+export interface UiTimelineSyntheticApproval {
+  kind: "meta_review_approval";
+  sourceEntryId: string;
+  syntheticEntryId: string;
+  label: string;
+  tone: "success";
+}
+
+export interface UiTimelineEntryDisplay {
+  title: string;
+  summaryText: string;
+  summarySource: UiTimelineSummarySource;
+  senderLabel: string;
+  role: UiTimelineDisplayRole;
+  rowKind: UiTimelineRowKind;
+  tone: UiTimelineTone;
+  badges: UiTimelineBadge[];
+  progress: UiTimelineProgress | null;
+  validationFailure: UiTimelineValidationFailure | null;
+  syntheticApproval: UiTimelineSyntheticApproval | null;
+}
+
 export interface UiTimelineEntry {
   id: string;
   ts: string;
@@ -352,6 +426,8 @@ export interface UiTimelineEntry {
   type: ProtocolMessageType;
   sender: string;
   recipient: string;
+  display: UiTimelineEntryDisplay;
+  /** Transitional migration payload; task 6 owns final legacy cleanup. */
   payload: ProtocolEnvelopePayload;
   refs: string[];
 }

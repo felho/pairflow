@@ -5,7 +5,7 @@ task_family_id: timeline-display-contract
 sequence_key: "2"
 task_id: 2-timeline-display-contract
 title: "Timeline Display Contract"
-status: in_progress
+status: archived
 phase: phase2
 target_files:
   - src/contracts/ui/uiReadModel.ts

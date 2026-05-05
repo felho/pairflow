@@ -118,5 +118,14 @@ export type {
   UiStatusCommandPathView,
   UiStatusExecutionContextView,
   UiStatusPaneActivityView,
-  UiTimelineEntry
+  UiTimelineBadge,
+  UiTimelineDisplayRole,
+  UiTimelineEntry,
+  UiTimelineEntryDisplay,
+  UiTimelineProgress,
+  UiTimelineRowKind,
+  UiTimelineSummarySource,
+  UiTimelineSyntheticApproval,
+  UiTimelineTone,
+  UiTimelineValidationFailure
 } from "./uiReadModel.js";
