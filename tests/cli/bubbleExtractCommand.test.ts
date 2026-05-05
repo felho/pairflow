@@ -252,13 +252,15 @@ describe("parseBubbleExtractCommandOptions", () => {
     expect(parseBubbleExtractCommandOptions(["--help"]).help).toBe(true);
     expect(help).toContain("pairflow bubble extract");
     expect(help).toContain("--id <id>");
-    expect(help).toContain("--path <path>");
+    expect(help).toContain("--path <artifact-path> [--path <artifact-path>...]");
+    expect(help).toContain("--path <path>         Explicit selected artifact path");
     expect(help).toContain("--repo <path>");
     expect(help).toContain("--commit");
     expect(help).toContain("--message <text>");
     expect(help).toContain("--json");
     expect(help).not.toContain("--delete-bubble");
-    expect(help).not.toMatch(/glob|all changed files|overwrite/u);
+    expect(help).not.toMatch(/all changed files|overwrite/u);
+    expect(help).not.toMatch(/glob support|glob expansion/u);
   });
 });
 
@@ -385,6 +387,7 @@ describe("validateExtractCommandPreconditions", () => {
       }
     });
   });
+
 });
 
 describe("checkTargetCheckoutPreconditions", () => {
@@ -413,6 +416,37 @@ describe("checkTargetCheckoutPreconditions", () => {
 });
 
 describe("extractBubbleV11", () => {
+  it("fails closed on dirty target checkout before transfer", async () => {
+    const copyFile = vi.fn(async () => undefined);
+    const runGit: RunGitPort = async (args: string[]) => {
+      if (args.join(" ") === "rev-parse --is-inside-work-tree") {
+        return { stdout: "true\n", stderr: "", exitCode: 0 };
+      }
+      if (args.join(" ") === "rev-parse --abbrev-ref HEAD") {
+        return { stdout: "main\n", stderr: "", exitCode: 0 };
+      }
+      if (args.join(" ") === "status --porcelain") {
+        return { stdout: "M  docs/existing.md\n?? docs/new.md\n", stderr: "", exitCode: 0 };
+      }
+      return cleanMainRunGit()(args, { cwd: "/repo", allowFailure: true });
+    };
+
+    const result = await extractBubbleV11(
+      baseCommand,
+      dependencies({ runGit, copyFile })
+    );
+
+    expect(result).toMatchObject({
+      status: "failed",
+      reasonCode: "EXTRACT_TARGET_CHECKOUT_INVALID",
+      diagnostics: {
+        checkoutFailureReason: "dirty_worktree",
+        checkoutDetails: "M  docs/existing.md\n?? docs/new.md"
+      }
+    });
+    expect(copyFile).not.toHaveBeenCalled();
+  });
+
   it("keeps default copy exclusive when a target appears after validation", async () => {
     const tempDir = await mkdtemp(join(tmpdir(), "pairflow-extract-copy-"));
     const sourcePath = join(tempDir, "source.md");

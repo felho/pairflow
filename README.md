@@ -455,6 +455,44 @@ pairflow agent emit --kind convergence --repo /path/to/repo --bubble-id <id> --h
 
 Direct `pairflow agent emit` requires the active authority snapshot. Resolve it first with `pairflow bubble status --id <id> --repo /path/to/repo --json` and copy both `executionContext.handoffId` and `executionContext.executionId` from the JSON output. If no current handoff is available yet, refresh status and wait for the orchestrated handoff instead of guessing context.
 
+### Extract selected ideation artifacts
+
+`pairflow bubble extract` copies explicitly selected documentation artifacts from
+an ideation bubble into the target repository without running the normal bubble
+close lifecycle.
+
+```bash
+pairflow bubble extract --id <id> --path <artifact-path> [--path <artifact-path>]... [--repo <path>] [--json]
+pairflow bubble extract --id <id> --path <artifact-path> [--path <artifact-path>]... [--repo <path>] --commit [--message "<text>"] [--json]
+```
+
+Use `--path` once per selected file. Each path is repo-relative and v1 accepts
+only files under `plans/**`, `docs/**`, or `progress/**`. Globs, directories,
+overwrite/replace, product source extraction, and inferred "all changed files"
+selection are not supported.
+
+Current CLI help uses a compact repeat marker for the second `--path` value;
+the operator contract remains repeated `--path` flags. Help text normalization is
+left to a follow-up runtime/read-model task because this slice does not change
+extract source behavior.
+
+`--repo` selects the target repository when supplied; otherwise Pairflow resolves
+the target from cwd ancestry. The resolved target must match the source bubble
+metadata, be on a clean `main` checkout, and have no merge, rebase, or
+cherry-pick operation in progress. Missing, unsafe, conflicting, dirty,
+non-main, or mismatched inputs fail closed before copy, stage, or commit
+whenever that guard can run before side effects.
+
+Without `--commit`, default text output reports the bubble id and copied selected
+path count. With `--commit`, text output also reports the commit SHA and
+effective commit message. Use `--json` when you need the structured result,
+including `selectedPaths`, `copiedPaths`, `stagedPaths`, `commitSha`, and
+`commitMessage` when those fields apply.
+
+Extract does not approve, commit, merge, delete, close, or clean up the source
+bubble. After inspecting the extracted files, use the normal lifecycle commands
+separately when you want to close or remove the source bubble.
+
 ---
 
 ### CLI scenarios (feature showcase)
@@ -1007,6 +1045,7 @@ Unsupported pairs such as `(P2, 2)` must display as custom/unsupported rather th
 | `bubble resume --id <id> [--repo <path>]` | Resume from WAITING_HUMAN with default reply |
 | `bubble open --id <id> [--repo <path>]` | Open worktree in editor |
 | `bubble attach --id <id> [--repo <path>] [--port-forward <port>]...` | Attach via configured macOS launcher; local bubbles use tmux, remote bubbles use the persisted started pointer and optional per-attach port-forward overrides |
+| `bubble extract --id <id> --path <artifact-path> [--path <artifact-path>]... [--repo <path>] [--commit] [--message <text>] [--json]` | Copy explicit `plans/**`, `docs/**`, or `progress/**` files from an ideation bubble into the matching clean `main` repo; optional commit stages exactly those selected paths and never closes the source bubble |
 | `bubble status --id <id> [--repo <path>] [--json]` | Show current state |
 | `bubble list [--repo <path>] [--json]` | List all bubbles |
 | `bubble inbox --id <id> [--repo <path>] [--json]` | Show pending human actions |
