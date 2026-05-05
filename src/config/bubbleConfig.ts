@@ -19,7 +19,6 @@ import {
   DEFAULT_WORK_MODE
 } from "./defaults.js";
 import {
-  isAgentName,
   isAttachLauncher,
   isPairflowCommandProfile,
   isQualityMode,
@@ -30,6 +29,7 @@ import {
   type BubbleConfig
 } from "../types/bubble.js";
 import type { PairflowGlobalConfig } from "./pairflowConfig.js";
+import { validateBubbleAgents } from "./bubbleConfig/agents.js";
 import { SEVERITY_GATE_ROUND_INVALID } from "./bubbleConfig/errors.js";
 import { validateBubbleExecutor } from "./bubbleConfig/executor.js";
 import { validateBubbleDocContractGates } from "./bubbleConfig/docContractGates.js";
@@ -257,44 +257,7 @@ export function validateBubbleConfig(input: unknown): ValidationResult<BubbleCon
     false
   );
 
-  const implementer = agents
-    ? readString(agents, "implementer", "agents.implementer", errors, true)
-    : undefined;
-  if (implementer !== undefined && !isAgentName(implementer)) {
-    errors.push({
-      path: "agents.implementer",
-      message: "Must be one of: codex, claude"
-    });
-  }
-
-  const reviewer = agents
-    ? readString(agents, "reviewer", "agents.reviewer", errors, true)
-    : undefined;
-  if (reviewer !== undefined && !isAgentName(reviewer)) {
-    errors.push({
-      path: "agents.reviewer",
-      message: "Must be one of: codex, claude"
-    });
-  }
-
-  const metaReviewerCandidate = agents
-    ? readString(
-        agents,
-        "meta_reviewer",
-        "agents.meta_reviewer",
-        errors,
-        false
-      )
-    : undefined;
-  // Legacy two-agent bubble.toml files normalize here so downstream runtime
-  // consumers never need their own role-specific meta-reviewer fallback.
-  const metaReviewer = metaReviewerCandidate ?? "codex";
-  if (metaReviewerCandidate !== undefined && !isAgentName(metaReviewerCandidate)) {
-    errors.push({
-      path: "agents.meta_reviewer",
-      message: "Must be one of: codex, claude"
-    });
-  }
+  const validatedAgents = validateBubbleAgents(agents, errors);
 
   const validatedCommands = validateBubbleCommands(commands, errors);
 
@@ -355,11 +318,7 @@ export function validateBubbleConfig(input: unknown): ValidationResult<BubbleCon
     ...(validatedValidationTarget !== undefined
       ? { validation_target: validatedValidationTarget }
       : {}),
-    agents: {
-      implementer: implementer as "codex" | "claude",
-      reviewer: reviewer as "codex" | "claude",
-      meta_reviewer: metaReviewer as "codex" | "claude"
-    },
+    agents: validatedAgents,
     commands: validatedCommands as BubbleConfig["commands"],
     notifications: validatedNotifications,
     local_overlay: validatedLocalOverlay,
