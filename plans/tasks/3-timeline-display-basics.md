@@ -5,7 +5,7 @@ task_family_id: timeline-display-basics
 sequence_key: "3"
 task_id: 3-timeline-display-basics
 title: "Timeline Display Basics"
-status: implementable
+status: in_progress
 phase: phase3
 target_files:
   - ui/src/components/expanded/BubbleTimeline.tsx
@@ -40,7 +40,7 @@ system_context_ref: docs/pairflow-initial-design.md
 owners:
   - "felho"
 doc_bubble_id: 3-timeline-display-basics-doc
-impl_bubble_id: null
+impl_bubble_id: 3-timeline-display-basics-impl
 supersedes: []
 superseded_by: null
 archive_group: 2026-05-05-timeline-display-dto-plan-v1
