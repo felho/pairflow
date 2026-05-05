@@ -1,16 +1,16 @@
-import type { FindingsParityMetadata } from "../../../../types/protocol.js";
-import { resolveNonNegativeIntegerField } from "../../../domain/metaReviewGate/findingsClaimParsing.js";
+import type { FindingsParityMetadata } from "../../../types/protocol.js";
+import { resolveNonNegativeIntegerField } from "./findingsClaimParsing.js";
 import {
   resolveFindingsArtifactStatus,
   resolveFindingsDigestSha256,
   resolveMetaReviewRunId
-} from "../metaReviewGateFindingsMetadata.js";
-import type { ApproveSplitTriplet } from "./metaReviewGateApproveClaimSplit.js";
+} from "./findingsParityMetadata.js";
+import type { ApproveSplitTriplet } from "./approveClaimSplit.js";
 import {
   metaReviewApproveAdvisoryOnlyReasonCode,
   metaReviewApproveBlockingFindingsPresentReasonCode
-} from "./metaReviewGateApproveClaimSplit.js";
-import { metaReviewFindingsParityGuardReasonCode } from "../metaReviewGateFindingsParityHelpers.js";
+} from "./approveClaimSplit.js";
+import { metaReviewFindingsParityGuardReasonCode } from "./findingsParityMetadata.js";
 
 export function buildApproveParityMetadata(input: {
   reportJson: Record<string, unknown>;

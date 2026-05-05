@@ -2,7 +2,7 @@ import type { MetaReviewRecommendation } from "../../../../types/bubble.js";
 import { resolveStructuredMetaReviewClaimFromReportJson } from "../metaReviewGateFindingsMetadata.js";
 import {
   metaReviewApproveAdvisorySplitRequiredReasonCode
-} from "./metaReviewGateApproveClaimSplit.js";
+} from "../../../domain/metaReviewGate/approveClaimSplit.js";
 import {
   claimSourceInvalidReasonCode,
   claimStateRequiredReasonCode,

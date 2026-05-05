@@ -3,7 +3,7 @@ import {
   evaluatePositiveSummaryFindingsAssertion,
   hasGlobalNoFindingsSummaryAssertion
 } from "../../../domain/convergence/policy.js";
-import type { ApproveSplitTriplet } from "./metaReviewGateApproveClaimSplit.js";
+import type { ApproveSplitTriplet } from "../../../domain/metaReviewGate/approveClaimSplit.js";
 
 export const metaReviewSummaryStructuredMismatchReasonCode =
   "META_REVIEW_SUMMARY_STRUCTURED_MISMATCH";

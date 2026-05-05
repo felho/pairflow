@@ -7,14 +7,14 @@ import {
   resolveApproveArtifactOpenTotal,
   resolveApproveDiagnostics,
   resolveApproveInvariantViolation
-} from "./metaReviewGateApproveClaimMetadata.js";
+} from "../../../domain/metaReviewGate/approveClaimMetadata.js";
 import {
   metaReviewApproveAdvisoryOnlyReasonCode,
   metaReviewApproveAdvisorySplitFormatInvalidReasonCode,
   metaReviewApproveAdvisorySplitRequiredReasonCode,
   metaReviewApproveBlockingFindingsPresentReasonCode,
   resolveApproveSplitTriplet
-} from "./metaReviewGateApproveClaimSplit.js";
+} from "../../../domain/metaReviewGate/approveClaimSplit.js";
 import {
   metaReviewSummaryStructuredMismatchReasonCode,
   resolveApproveSummaryStructuredMismatch
