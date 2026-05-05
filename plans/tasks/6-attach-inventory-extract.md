@@ -5,7 +5,7 @@ task_family_id: attach-inventory-extract
 sequence_key: "6"
 task_id: 6-attach-inventory-extract
 title: "Attach Inventory Extract"
-status: approved
+status: implementable
 phase: phase3
 target_files:
   - src/v11/shared/attach/resolveAttachBubbleExecution.ts

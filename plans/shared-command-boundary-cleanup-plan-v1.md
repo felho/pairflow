@@ -43,7 +43,7 @@ task_tracker:
     status: archived
   - task_id: 6-attach-inventory-extract
     task_path: plans/tasks/6-attach-inventory-extract.md
-    status: approved
+    status: implementable
   - task_id: 7-attach-boundary-closeout
     task_path: null
     status: not_created
@@ -208,7 +208,7 @@ This plan covers the current residual command-named shared directories:
 | `3-remote-commit-rename` | `plans/archive/tasks/2026-05-05-shared-command-boundary-cleanup-plan-v1/3-remote-commit-rename.md` | Rename the retained remote commit contract module into a command-neutral shared location and update imports without behavior changes. | `1-commit-local-helpers` | True shared remote commit contract remains under a command-named directory. | archived |
 | `4-remote-merge-rename` | `plans/archive/tasks/2026-05-05-shared-command-boundary-cleanup-plan-v1/4-remote-merge-rename.md` | Rename the retained remote merge contract module into a command-neutral shared location and update imports without behavior changes. | `2-merge-local-helpers` | True shared remote merge contract remains under a command-named directory. | archived |
 | `5-inbox-api-rename` | `plans/tasks/5-inbox-api-rename.md` | Rename or relocate the UI/CLI-consumed inbox API to a command-neutral boundary, without redesigning the read model. | `3-remote-commit-rename`, `4-remote-merge-rename` | `inboxCommandApi` is shared by UI/router code but named as a command-local API. | in_progress |
-| `6-attach-inventory-extract` | `null` | Produce source-backed ownership inventory for `resolveAttachBubbleExecution.ts` and extract only one smallest behavior-preserving slice if clearly owned. | `5-inbox-api-rename` | `shared/attach` is large and mixed; full decomposition is too broad for one bubble. | not_created |
+| `6-attach-inventory-extract` | `plans/tasks/6-attach-inventory-extract.md` | Produce source-backed ownership inventory for `resolveAttachBubbleExecution.ts` and extract only one smallest behavior-preserving slice if clearly owned. | `5-inbox-api-rename` | `shared/attach` is large and mixed; full decomposition is too broad for one bubble. | implementable |
 | `7-attach-boundary-closeout` | `null` | Remove or rename the remaining command-named `shared/attach` boundary, or record an explicit source-anchored deferral if the inventory proves closure is unsafe now. | `6-attach-inventory-extract` | The attach gap needs explicit closeout ownership after inventory. | not_created |
 | `8-list-inventory` | `null` | Produce source-backed ownership inventory for every `shared/list` file and classify each as CLI-local, UI/read-model shared, or deferred. | `7-attach-boundary-closeout` | `shared/list` is too large to move safely without inventory. | not_created |
 | `9-list-local-move-a` | `null` | Move the first small set of inventory-proven CLI-local `shared/list` files to `application/list`, capped at a few files. | `8-list-inventory` | Begins reducing `shared/list` without broad read-model redesign. | not_created |
