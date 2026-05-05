@@ -9,7 +9,7 @@ import {
   ensureOriginRemote,
   hasOriginRemoteError,
   remoteBranchExists
-} from "../../shared/merge/mergeRoutingEligibility.js";
+} from "./mergeRoutingEligibility.js";
 import { initializeMergeFlowExecutionContext } from "./mergeFlowContext.js";
 import { finalizeMergeFlow } from "./mergeFlowFinalization.js";
 import type { RunMergeFlowInput } from "./mergeFlowTypes.js";

@@ -6,9 +6,9 @@ import type {
 import {
   BubbleMergeError,
   createBubbleMergeError
-} from "../../shared/merge/mergeCommandErrorRuntime.js";
+} from "./mergeCommandErrorRuntime.js";
 import { throwAsBubbleMergeError } from "./mergeCommandErrorClassification.js";
-import { normalizeMergeBubbleInput } from "../../shared/merge/mergeCommandInputNormalization.js";
+import { normalizeMergeBubbleInput } from "./mergeCommandInputNormalization.js";
 import { resolveMergeCommandDependencies } from "./mergeCommandDependencyResolution.js";
 import { runMergeFlow } from "./runMergeFlow.js";
 

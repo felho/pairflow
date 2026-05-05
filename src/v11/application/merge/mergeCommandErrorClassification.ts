@@ -1,8 +1,8 @@
 import {
   BubbleMergeError,
   createBubbleMergeError
-} from "../../shared/merge/mergeCommandErrorRuntime.js";
-import { normalizeBubbleMergeError } from "../../shared/merge/mergeCommandErrorNormalization.js";
+} from "./mergeCommandErrorRuntime.js";
+import { normalizeBubbleMergeError } from "./mergeCommandErrorNormalization.js";
 import { isNamedError } from "../../shared/errors/namedError.js";
 
 export function throwAsBubbleMergeError(error: unknown): never {
