@@ -7,7 +7,7 @@ import {
   assertCleanRepoWorkingTree,
   assertMergeBranchEligibility,
   assertMergeStateEligibility
-} from "../../shared/merge/mergeRoutingEligibility.js";
+} from "./mergeRoutingEligibility.js";
 import { syncRemoteCommitContinuityArtifacts } from "../commit/commitCommandFinalization.js";
 import {
   buildMergeImportRef,

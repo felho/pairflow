@@ -5,8 +5,8 @@ import { RemoteBubbleStatusError } from "../../../../src/v11/infrastructure/exec
 import {
   BubbleMergeError,
   createBubbleMergeError
-} from "../../../../src/v11/shared/merge/mergeCommandErrorRuntime.js";
-import { normalizeBubbleMergeError } from "../../../../src/v11/shared/merge/mergeCommandErrorNormalization.js";
+} from "../../../../src/v11/application/merge/mergeCommandErrorRuntime.js";
+import { normalizeBubbleMergeError } from "../../../../src/v11/application/merge/mergeCommandErrorNormalization.js";
 
 describe("mergeCommandErrorNormalization", () => {
   it("preserves bubble merge errors", () => {
