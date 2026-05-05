@@ -7,7 +7,6 @@ import type {
   BubbleStateSnapshot,
   MetaReviewRecommendation
 } from "../../../../types/bubble.js";
-import type { MetaReviewResult } from "../../metaReview/metaReviewTypes.js";
 import type { FindingsParityMetadata } from "../../../../types/protocol.js";
 import type {
   AppendProtocolEnvelopePort,
@@ -42,15 +41,7 @@ export interface ResolveRollbackAfterGateAppendFailureResult {
   rollbackReasonCode: "META_REVIEW_GATE_TRANSITION_INVALID" | "META_REVIEW_GATE_STATE_CONFLICT";
 }
 
-export function resolveHumanGateRecommendation(input: {
-  metaReviewRun?: MetaReviewResult;
-  fallbackRecommendation?: MetaReviewRecommendation;
-}): MetaReviewRecommendation | undefined {
-  if (input.metaReviewRun !== undefined) {
-    return input.metaReviewRun.recommendation;
-  }
-  return input.fallbackRecommendation;
-}
+export { resolveHumanGateRecommendation } from "../../../domain/metaReviewGate/humanGatePolicy.js";
 
 export type AppendHumanGateApprovalRequestInput = {
   appendEnvelope: AppendProtocolEnvelopePort;
