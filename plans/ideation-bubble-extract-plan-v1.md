@@ -28,8 +28,8 @@ task_tracker:
     task_path: plans/archive/tasks/2026-05-04-ideation-bubble-extract-plan-v1/3-extract-copy-commit.md
     status: archived
   - task_id: 4-extract-docs-validation
-    task_path: null
-    status: not_created
+    task_path: plans/tasks/4-extract-docs-validation.md
+    status: approved
 ---
 
 # Plan: Ideation Bubble Extract
@@ -226,7 +226,7 @@ next task for creation.
 | `1-extract-command-contract` | `plans/archive/tasks/2026-05-04-ideation-bubble-extract-plan-v1/1-extract-command-contract.md` | Define `pairflow bubble extract` CLI contract, option parser/help, result shape, ideation eligibility rules, `--repo`/cwd target repository resolution, repo mismatch fail-closed behavior, no-overwrite v1 contract, commit intent including optional message, and target checkout preconditions. | N/A | No official command contract exists. | archived |
 | `2-extract-path-selection` | `plans/archive/tasks/2026-05-04-ideation-bubble-extract-plan-v1/2-extract-path-selection.md` | Implement explicit repeated `--path` validation with no glob support, repo-relative normalization, `plans/**`/`docs/**`/`progress/**` allowlist checks, source file existence checks, and target conflict detection. | `1-extract-command-contract` | No safe multi-path artifact selector exists. | archived |
 | `3-extract-copy-commit` | `plans/archive/tasks/2026-05-04-ideation-bubble-extract-plan-v1/3-extract-copy-commit.md` | Copy selected files from bubble worktree to the clean `main` checkout and optionally stage/commit exactly those paths with an explicit selected-path commit result. | `2-extract-path-selection` | No official extract transfer/commit flow exists. | archived |
-| `4-extract-docs-validation` | `null` | Add operator docs, targeted tests, and final validation for success, multi-path, forbidden path, target conflict, repo mismatch, non-main/dirty target checkout, staged-scope, selected-path commit result, and source-bubble lifecycle non-mutation. | `3-extract-copy-commit` | Extract behavior would remain undocumented and regression-prone. | not_created |
+| `4-extract-docs-validation` | `plans/tasks/4-extract-docs-validation.md` | Add operator docs, targeted tests, and final validation for success, multi-path, forbidden path, target conflict, repo mismatch, non-main/dirty target checkout, staged-scope, selected-path commit result, and source-bubble lifecycle non-mutation. | `3-extract-copy-commit` | Extract behavior would remain undocumented and regression-prone. | approved |
 
 ## Coverage Map
 
