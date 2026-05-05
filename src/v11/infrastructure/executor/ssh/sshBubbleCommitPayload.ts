@@ -2,7 +2,7 @@ import type { BubbleStateSnapshot } from "../../../../types/bubble.js";
 import type { ProtocolEnvelope } from "../../../../types/protocol.js";
 import type {
   ExecuteRemoteBubbleCommitCommandResult
-} from "../../../shared/commit/commitRemoteExecution.js";
+} from "../../../shared/remote/commitRemoteExecution.js";
 import { parseEnvelopeLine } from "../../../shared/protocol/envelope.js";
 import { assertValidBubbleStateSnapshot } from "../../../shared/state/stateSchema.js";
 

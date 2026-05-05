@@ -2,7 +2,7 @@ import { shellQuote } from "../../../shared/foundation/shellQuote.js";
 import type {
   ExecuteRemoteBubbleCommitCommandInput,
   ExecuteRemoteBubbleCommitCommandResult
-} from "../../../shared/commit/commitRemoteExecution.js";
+} from "../../../shared/remote/commitRemoteExecution.js";
 import { runCommandDefault } from "./sshBubbleStatus.js";
 import {
   assertSingleTokenPairflowCommand,

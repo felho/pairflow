@@ -1,1 +1,1 @@
-export * from "../../shared/commit/commitRemoteExecution.js";
+export * from "../../shared/remote/commitRemoteExecution.js";
