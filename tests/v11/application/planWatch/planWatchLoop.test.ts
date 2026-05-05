@@ -12,7 +12,8 @@ import {
   runPlanWatchLoop
 } from "../../../../src/v11/application/planWatch/planWatchLoop.js";
 import {
-  buildPlanWatchDedupeKey
+  buildPlanWatchDedupeKey,
+  buildPlanWatchRunNowDedupeKey
 } from "../../../../src/v11/application/planWatch/planWatchLoopMapping.js";
 import {
   createFilePlanWatchLedgerPort
@@ -377,6 +378,72 @@ describe("planWatchLoop", () => {
     expect(result.status).toBe("duplicate_skipped");
     expect(ledger.records).toHaveLength(1);
     expect(dependencies.runExecutePairflowPlanContinuation).not.toHaveBeenCalled();
+  });
+
+  it("falls back to explicit run-now when all linked candidates are duplicate", async () => {
+    const existingCandidate = candidate();
+    const key = buildPlanWatchDedupeKey({
+      repoPath: "/repo",
+      planPath: "/repo/plans/local-plan-watch-plan-v1.md",
+      candidate: existingCandidate
+    });
+    const ledger = memoryLedger([
+      {
+        schemaVersion: PLAN_WATCH_LEDGER_SCHEMA_VERSION,
+        key,
+        mode: "run",
+        recordState: "completed",
+        invocationId: "old",
+        triggerEvidence: {
+          planPath: existingCandidate.planPath,
+          taskId: existingCandidate.taskId,
+          taskPath: existingCandidate.taskPath,
+          bubbleId: existingCandidate.bubbleId,
+          bubbleRole: existingCandidate.bubbleRole,
+          observedState: existingCandidate.observedState
+        },
+        attemptedAt: "2026-05-01T09:00:00.000Z",
+        completedAt: "2026-05-01T09:01:00.000Z",
+        runnerStatus: "settled_checkpoint",
+        runnerReasonCode: asAgentRunnerBridgeRunnerReasonCode("DONE")
+      }
+    ]);
+    const dependencies = deps({ candidates: [existingCandidate], ledger });
+
+    const result = await runPlanWatchIteration(
+      {
+        repoPath: "/repo",
+        planPath: "plans/local-plan-watch-plan-v1.md",
+        once: true,
+        runNow: true,
+        forceRun: true,
+        runnerConfig: { command: "agent" }
+      },
+      dependencies
+    );
+
+    expect(result.status).toBe("runner_settled_checkpoint");
+    expect(result.selectedCandidate).toBeUndefined();
+    expect(result.dedupeKey).toBe(
+      buildPlanWatchRunNowDedupeKey({
+        repoPath: "/repo",
+        planPath: "/repo/plans/local-plan-watch-plan-v1.md",
+        now: new Date("2026-05-01T10:00:00.000Z"),
+        forceRun: true
+      })
+    );
+    expect(
+      vi.mocked(dependencies.runExecutePairflowPlanContinuation).mock.calls[0]?.[0]
+        .trigger
+    ).toMatchObject({
+      source: "plan_watch",
+      reason: "operator_run_now"
+    });
+    expect(ledger.records).toHaveLength(2);
+    expect(ledger.records[1]?.triggerEvidence).toMatchObject({
+      triggerKind: "operator_run_now",
+      forceRun: true
+    });
   });
 
   it("skips a completed duplicate and launches the next eligible candidate", async () => {

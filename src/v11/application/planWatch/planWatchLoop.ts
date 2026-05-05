@@ -86,6 +86,17 @@ export async function runPlanWatchIteration(
       }
       duplicateResult = result;
     }
+    if (input.runNow === true) {
+      return executePlanWatchRunNow({
+        input,
+        dependencies,
+        now,
+        onceExit,
+        repoPath: normalized.repoPath,
+        planPath: normalized.planPath,
+        diagnostics: indexResult.diagnostics
+      });
+    }
     return duplicateResult ?? {
       status: "idle",
       repoPath: normalized.repoPath,

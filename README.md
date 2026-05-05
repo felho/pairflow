@@ -902,7 +902,8 @@ Runner configuration:
 - `--runner-command`, `--runner-arg`, and `--runner-input-mode` are retained as
   legacy/internal escape hatches, not the primary V1 automation contract.
 - `--run-now` invokes the configured runner once with an operator nudge trigger
-  when no linked approval-ready bubble is present. Use it to start or resume
+  when no linked approval-ready bubble is present, or when all linked candidates
+  are already completed duplicate trigger evidence. Use it to start or resume
   plan orchestration from `ExecutePairflowPlan` without waiting for a bubble
   transition.
 - `--force-run` makes an explicit `--run-now` nudge produce fresh ledger evidence
