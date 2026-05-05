@@ -47,9 +47,15 @@ boundary, then update imports without changing behavior.
 
 This document may be refined in a `review_artifact_type=document` bubble before
 the source rename is executed. In that docs-only review round, edits are limited
-to this task specification as the primary artifact. The runtime/source rename
-described below remains the responsibility of a later implementation bubble or
-direct implementation pass with source-edit authority.
+to this task specification as the primary artifact at
+`plans/tasks/4-remote-merge-rename.md`. The runtime/source rename described
+below remains the responsibility of a later implementation bubble or direct
+implementation pass with source-edit authority. A docs-only PASS must not claim
+the source rename, import rewrites, runtime behavior validation, or implementation
+test evidence. If bubble-configured checks are executed during the docs-only
+round, their evidence may only support the document-refinement PASS itself; it
+does not satisfy the later implementation validation for the future source
+rename.
 
 ### Domain / Control Model Summary
 
@@ -166,7 +172,8 @@ direct implementation pass with source-edit authority.
 For a docs-only review bubble over this task, the in-scope work is limited to
 refining this task document so the later implementation can execute the rename
 without ambiguity. The docs-only bubble must not perform the `src/**` move or
-import rewrites.
+import rewrites, must not create a replacement synthesis document, and must keep
+the implementation acceptance criteria below as future-source-change criteria.
 
 ### Out of Scope
 
@@ -209,8 +216,14 @@ Docs-only review acceptance:
    later source/runtime implementation boundary.
 2. The docs-only review boundary names this task specification as the primary
    artifact and does not authorize `src/**` moves, import rewrites, runtime
-   behavior changes, or implementation test claims.
-3. The implementation acceptance criteria below remain intact as the target for
+   behavior changes, replacement handoff artifacts, or implementation test
+   claims.
+3. The docs-only PASS summary uses one consistent validation mode:
+   - skipped runtime/source checks with no evidence refs, or
+   - executed bubble-configured checks with refs only for commands actually run,
+     framed as local feedback for the document change rather than evidence that
+     the future source rename is implemented or validated.
+4. The implementation acceptance criteria below remain intact as the target for
    the later source rename pass.
 
 Implementation acceptance after the source rename:
@@ -228,13 +241,16 @@ Implementation acceptance after the source rename:
 
 Docs-only review validation:
 
-1. If no runtime/source files are changed, runtime checks are intentionally not
-   required for the docs-only PASS. The PASS summary should state that runtime
-   checks were not executed because the round only refined the task document.
-2. If local feedback checks are executed anyway, run the bubble-configured
-   validation commands that were actually used and attach only their PASS-owned
-   evidence refs. Do not claim checks were intentionally skipped in the same
-   PASS.
+1. Mode A, skipped checks: if the docs-only PASS does not execute validation
+   commands, the PASS summary should state that runtime checks were not executed
+   because the round only refined the task document, and should attach no
+   `.pairflow/evidence/*.log` refs.
+2. Mode B, executed local feedback checks: if the docs-only PASS executes
+   checks despite not changing runtime/source files, run only the
+   bubble-configured validation commands that were actually used and attach only
+   their PASS-owned evidence refs. Do not claim checks were intentionally skipped
+   in the same PASS, and do not describe those refs as satisfying the
+   implementation validation section below.
 
 Implementation validation after the source rename:
 
