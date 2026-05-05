@@ -5,7 +5,7 @@ task_family_id: list-fitness-closeout
 sequence_key: "12"
 task_id: 12-list-fitness-closeout
 title: "List Fitness Closeout"
-status: approved
+status: implementable
 phase: phase4
 target_files:
   - tests/contracts/uiContractTransitSource.test.ts
