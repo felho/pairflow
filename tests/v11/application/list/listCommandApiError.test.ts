@@ -4,9 +4,9 @@ import { RepoResolutionError } from "../../../../src/v11/infrastructure/executor
 import {
   asBubbleListError,
   BubbleListError
-} from "../../../../src/v11/application/list/listCommandApi.js";
+} from "../../../../src/v11/shared/read-model/list/listReadModelApi.js";
 
-describe("listCommandApi error normalization", () => {
+describe("listReadModelApi error normalization", () => {
   it("preserves repo resolution context", () => {
     const input = new RepoResolutionError("repo missing");
 

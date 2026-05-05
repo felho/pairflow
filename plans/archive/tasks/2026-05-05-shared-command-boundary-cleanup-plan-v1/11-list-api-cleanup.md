@@ -5,7 +5,7 @@ task_family_id: list-api-cleanup
 sequence_key: "11"
 task_id: 11-list-api-cleanup
 title: "List API Cleanup"
-status: in_progress
+status: archived
 phase: phase4
 target_files:
   - src/v11/application/list/listCommandApi.ts

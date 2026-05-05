@@ -3,8 +3,8 @@ import { parseArgs } from "node:util";
 import {
   asBubbleListError,
   listBubbles
-} from "./listCommandApi.js";
-import type { BubbleListView } from "./listCommandContract.js";
+} from "../../shared/read-model/list/listReadModelApi.js";
+import type { BubbleListView } from "../../shared/read-model/list/listReadModelContract.js";
 
 export interface BubbleListCommandOptions {
   repo?: string;
