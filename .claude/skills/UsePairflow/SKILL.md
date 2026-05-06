@@ -44,7 +44,7 @@ This skill exists to avoid lifecycle mistakes (wrong command in wrong state, los
 5. Treat workflow boundaries as strict contracts: do only what the selected workflow is for.
 6. For any bubble message payload (`reply`, `request-rework`, `ask-human`), use shell-safe message passing. Never inline raw text containing backticks or `$` directly in `--message "..."`.
 7. For bubble creation, always include `--review-artifact-type <document|code>` in `pairflow bubble create`.
-8. For implementation bubbles (`review_artifact_type=code`), `CloseBubble` includes mandatory post-merge completion: finalized bubble artifact deletion, README/docs/progress check + required updates, and task archival under `plans/archive/tasks/` with mirrored relative path.
+8. For implementation bubbles (`review_artifact_type=code`), `CloseBubble` includes mandatory close completion: task/progress/archive admin is a pre-commit hook in the bubble worktree, then finalized bubble artifact deletion and any non-task follow-up after merge. Do not repair missing closed-task archive/status/progress with a direct post-merge `main` commit.
 9. For document bubbles whose caller requires a close metadata postcondition, `CloseBubble` applies that admin metadata in the bubble worktree before `pairflow bubble commit --stage-all`; do not repair missing document-close status with a direct post-merge `main` commit.
 10. In `ReviewBubble` outputs, every finding must include source label: `[Bubble]` (from bubble transcript/tool output, e.g. reviewer findings) or `[MetaReview]` (from meta-reviewer artifacts already present in bubble context).
 11. `ReviewBubble` uses the surviving direct review contract only; do not expose or suggest any removed source-selection flag.
@@ -100,9 +100,13 @@ This skill exists to avoid lifecycle mistakes (wrong command in wrong state, los
   - For remote bubbles, this still means the laptop-side routed command from the local repo by default, not manual lifecycle mutation inside the remote clone.
   - `pairflow bubble approve` enforces override requirements from transcript context.
   - If approve fails with `APPROVAL_OVERRIDE_REQUIRED` or `APPROVAL_PARITY_OVERRIDE_REQUIRED`, rerun only with explicit human justification via `--override-non-approve --override-reason "<reason>"`.
-- `APPROVED_FOR_COMMIT` -> `pairflow bubble commit --stage-all`
+- `APPROVED_FOR_COMMIT` -> run `CloseBubble`; do not shortcut directly to `pairflow bubble commit --stage-all`.
+  - For `review_artifact_type=code`, `CloseBubble` must first prove the implementation pre-commit admin/archive hook in the bubble worktree when the task source is under `plans/tasks/`.
+  - If that proof is missing, STOP before commit. Do not commit first and inspect later.
   - For remote bubbles, run the routed command from the laptop/local repo; do not `ssh` into the remote clone and commit manually.
-- `DONE` -> `pairflow bubble merge`
+- `DONE` -> run `CloseBubble`; do not shortcut directly to `pairflow bubble merge`.
+  - For `review_artifact_type=code`, `CloseBubble` must first prove the already-committed bubble content contains the implementation task archive/status/parent-plan admin postcondition.
+  - If that proof is missing, STOP before merge. Do not repair the missing closed-task admin directly on `main`.
   - For remote bubbles, run the routed command from the laptop/local repo; Pairflow imports the started-remote merge handoff, completes the durable merge in the local repo, then performs remote cleanup.
   - After successful merge, run finalized bubble cleanup through `pairflow bubble delete --force` unless the close workflow reports a concrete retained-bubble reason.
 - `CANCELLED` with needed changes -> recovery workflow (manual git path from bubble worktree)
@@ -143,10 +147,12 @@ This skill exists to avoid lifecycle mistakes (wrong command in wrong state, los
   - `pairflow bubble create --id <id>` accepts only `3-40` chars.
   - Pattern: start with lowercase letter or digit, then lowercase letters, digits, `_` or `-`.
   - This validation is create-time only; do not block lifecycle operations for already existing bubbles that may have longer IDs.
-- CloseBubble post-merge completion for `code` bubbles:
+- CloseBubble completion for `code` bubbles:
+  - Before lifecycle commit, archive the completed task from `plans/tasks/...` into the canonical `plans/archive/tasks/<archive_group>/<task_id>.md`, set archived status, and update the parent plan tracker/table rows inside the bubble worktree.
+  - Lifecycle commit is forbidden until that pre-commit admin proof is collected when the task source is known under `plans/tasks/`.
+  - Before merge from `DONE`, verify the already-committed bubble content contains that same admin/archive proof.
   - Delete the finalized bubble artifact after successful merge unless there is a concrete retained-bubble reason.
-  - Determine whether `README.md`, relevant `docs/`, or progress tracker files must be updated based on merged behavior changes, then apply required updates.
-  - Archive the completed task from `plans/tasks/...` into `plans/archive/tasks/...` while preserving subdirectory structure (`plans/tasks/FOO/x.md` -> `plans/archive/tasks/FOO/x.md`).
+  - Determine whether `README.md`, relevant `docs/`, or other non-task follow-up files must be updated based on merged behavior changes, then apply required updates separately when allowed. Closed-task archive/status/progress completion is not a post-merge follow-up.
 
 ### Shell-safe message pattern (mandatory)
 

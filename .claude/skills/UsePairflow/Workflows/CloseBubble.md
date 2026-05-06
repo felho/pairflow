@@ -40,6 +40,8 @@ IMPLEMENTATION_PRE_COMMIT_ADMIN_REQUIRED: true for code/implementation bubbles w
   It is not allowed for normal lifecycle approve/commit/merge state transitions.
 - Document close metadata postconditions must be applied before the lifecycle commit when the caller contract requires them. Do not merge a document bubble and then create a direct `main` admin commit for `status=implementable`; that metadata must be part of the bubble branch commit that `pairflow bubble commit --stage-all` records.
 - Implementation close task/progress/archive postconditions must be applied before the lifecycle commit when TASK_SOURCE_PATH is known and the task lives under `plans/tasks/`. Do not merge an implementation bubble and then create a direct `main` admin commit for task `status=archived`, parent-plan tracker advancement, or canonical task archive movement; that metadata/archive update must be part of the bubble branch commit that `pairflow bubble commit --stage-all` records.
+- For code bubbles with an implementation task source under `plans/tasks/`, `pairflow bubble commit --stage-all` is forbidden until the implementation pre-commit admin proof below has been collected from the bubble worktree. Do not treat this as a best-effort instruction; missing proof is a STOP before commit.
+- For code bubbles already in `COMMITTED` or `DONE`, `pairflow bubble merge` is forbidden until the already-committed bubble content proves that same implementation admin/archive postcondition. If proof is missing, STOP and report that the close is past the safe pre-commit admin point.
 - After successful merge, delete the finalized local bubble artifact with `pairflow bubble delete --force` unless a concrete safety blocker requires retaining it. A retained DONE/merged bubble is not a normal settled close result; report the explicit retained-bubble reason and stop or checkpoint according to the caller contract.
 
 ## Workflow
@@ -129,19 +131,35 @@ pairflow bubble status --id <BUBBLE_ID> --repo <REPO_PATH> --json
      - Keep the diff limited to the archived task artifact, its parent plan metadata/table status, and the parent plan archive move when the plan is fully complete. Product/source/runtime edits are forbidden in this hook.
      - Verify the changed file list before continuing. If any changed file is outside that admin/archive scope, STOP before commit and report the out-of-scope paths.
      - If the task path, `task_id`, `archive_group`, `plan_ref`, canonical archive destination, or matching parent plan row cannot be resolved deterministically, STOP before commit rather than falling back to a post-merge `main` commit.
-  3. Run the lifecycle commit:
+     - Collect the implementation pre-commit admin proof before continuing:
+       - `git status --short --branch` in `PAIRFLOW_STATUS.worktreePath` proves the worktree is on `bubble/<BUBBLE_ID>`.
+       - the live task path under `plans/tasks/` is gone from the worktree after `git mv`.
+       - `plans/archive/tasks/<archive_group>/<task_id>.md` exists in the worktree.
+       - the archived task frontmatter has `status=archived`.
+       - the parent plan has the matching tracker row set to `status=archived` with the canonical archive path.
+       - the parent plan task-list table has the same archived status/path for the closed task.
+       - `git diff --name-status` includes the task move plus parent plan update, and no path outside the allowed admin/archive scope.
+     - If any proof item is missing, STOP before `pairflow bubble commit --stage-all`; do not commit and do not repair later on `main`.
+  3. Run the lifecycle commit only after every required pre-commit admin hook above is either proven applied or proven not applicable:
   ```bash
   pairflow bubble commit --id <BUBBLE_ID> --repo <REPO_PATH> --stage-all
   ```
   Remote bubble note: still run this from the laptop/local repo; do not commit lifecycle state by manually invoking Pairflow inside the remote clone.
 - Else if state is already `COMMITTED` or `DONE`:
   - If `REVIEW_ARTIFACT_TYPE=document` and `DOCUMENT_PRE_COMMIT_ADMIN_REQUIRED=true`, first verify the already-committed bubble content contains the required document metadata postcondition. If it does not, STOP and report that the close is past the safe pre-commit admin point.
+  - If `REVIEW_ARTIFACT_TYPE=code` and `IMPLEMENTATION_PRE_COMMIT_ADMIN_REQUIRED=true`, first verify the already-committed bubble content contains the required implementation metadata/archive postcondition:
+    - the bubble branch commit contains the canonical task move from `plans/tasks/<...>/<task_id>.md` to `plans/archive/tasks/<archive_group>/<task_id>.md`;
+    - the archived task has `status=archived`;
+    - the parent plan tracker row and task-list table row both reference the canonical archived task path with archived status;
+    - if the plan is complete, the committed content also contains the canonical plan archive move required by the implementation pre-commit hook.
+    If any proof is missing, STOP before merge and report that the close is past the safe pre-commit admin point. Do not merge and do not repair with a direct `main` commit.
   - Otherwise skip commit.
 
 #### C) Merge step
 
 - Re-read status.
 - If state is `DONE`:
+  - Before running merge for a code bubble with `IMPLEMENTATION_PRE_COMMIT_ADMIN_REQUIRED=true`, re-assert the already-committed implementation admin proof from section `4B`. Missing proof is a STOP before merge.
   - Base command:
     ```bash
     pairflow bubble merge --id <BUBBLE_ID> --repo <REPO_PATH>

@@ -868,6 +868,13 @@ Delegation:
 3. require the returned close result to prove finalized bubble artifact deletion,
    or to provide an explicit retained-bubble reason that prevents reporting a
    settled close
+4. do not treat a lifecycle `COMMIT_RESULT`, bubble state `DONE`, or a new
+   bubble branch commit as a successful delegated close result unless the
+   `CloseBubble` report explicitly proves the required implementation admin
+   postcondition
+5. if `CloseBubble` reports that the bubble is already past the safe pre-commit
+   admin point, return a human checkpoint/blocker and do not run merge/delete
+   or `UpdateProgress`
 
 Output:
 
@@ -883,6 +890,11 @@ reason_code: IMPL_BUBBLE_AUTO_APPROVAL_CLOSE_REQUIRED
 delegated_use_pairflow_surface: CloseBubble
 cleanup_postcondition: <bubble_deleted|retained_with_reason>
 implementation_admin_postcondition: <task_archived_in_bubble_commit|not_applicable>
+close_result_proof:
+  merged: <yes>
+  implementation_admin_postcondition: <task_archived_in_bubble_commit|not_applicable>
+  cleanup_postcondition: <bubble_deleted|retained_with_reason>
+  refreshed_main_archive_proof: <verified|not_applicable>
 auto_approval_proof:
   required_clean_runs: <reviewPolicy.meta_review_consecutive_clean_runs_required>
   observed_clean_runs: <metaReview.consecutiveCleanRuns>
@@ -938,6 +950,13 @@ Delegation:
    admin was applied in the bubble worktree before lifecycle commit when task
    source metadata is available
 3. require the returned close result to prove finalized bubble artifact deletion, or to provide an explicit retained-bubble reason that prevents reporting a settled close
+4. do not treat `APPROVED_FOR_COMMIT`, `COMMITTED`, or `DONE` as sufficient by
+   itself; the delegated `CloseBubble` result must carry the explicit close
+   proof before this workflow may emit an auto-continuable close result
+5. if the delegated close reaches `COMMITTED` or `DONE` and then discovers the
+   required implementation admin/archive proof is missing, stop at a human
+   checkpoint/blocker; do not run merge/delete and do not repair the closed
+   task admin on `main`
 
 Output:
 
@@ -953,14 +972,23 @@ reason_code: IMPL_BUBBLE_CLOSE_REQUIRED
 delegated_use_pairflow_surface: CloseBubble
 cleanup_postcondition: <bubble_deleted|retained_with_reason>
 implementation_admin_postcondition: <task_archived_in_bubble_commit|not_applicable>
+close_result_proof:
+  merged: <yes>
+  implementation_admin_postcondition: <task_archived_in_bubble_commit|not_applicable>
+  cleanup_postcondition: <bubble_deleted|retained_with_reason>
+  refreshed_main_archive_proof: <verified|not_applicable>
 handoff_boundary_note: Close the approved implementation bubble only; required implementation task/progress/archive admin must be in the bubble commit before merge, and the caller may continue orchestration after authoritative close state returns.
 ```
 
 Fail-closed rule:
 
-1. if close/merge succeeds but the finalized bubble artifact remains present without an explicit retained-bubble reason, do not emit an auto-continuable close result
-2. if close/merge succeeds but required implementation task/progress/archive admin was not applied in the bubble commit, do not emit an auto-continuable close result and do not repair it with a direct `main` aftermath commit
-3. return a human checkpoint or cleanup blocker instead; `UpdateProgress` must not run from a close result that still leaves the closed implementation bubble as an ordinary `DONE` artifact or lacks required implementation admin proof
+1. if delegated close returns only approve/commit lifecycle progress, including
+   `COMMIT_RESULT`, but has not merged and cleaned up the bubble, do not emit an
+   auto-continuable close result
+2. if close/merge succeeds but the finalized bubble artifact remains present without an explicit retained-bubble reason, do not emit an auto-continuable close result
+3. if close/merge succeeds but required implementation task/progress/archive admin was not applied in the bubble commit, do not emit an auto-continuable close result and do not repair it with a direct `main` aftermath commit
+4. if the bubble is already `COMMITTED` or `DONE` before the required implementation admin/archive proof exists, report the close as past the safe pre-commit admin point and stop before merge/delete
+5. return a human checkpoint or cleanup blocker instead; `UpdateProgress` must not run from a close result that still leaves the closed implementation bubble as an ordinary `DONE` artifact or lacks required implementation admin proof
 
 ### 8. Normalized replanning path
 
