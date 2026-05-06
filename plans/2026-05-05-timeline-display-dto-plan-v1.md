@@ -16,8 +16,8 @@ task_order:
   - 4-timeline-display-badges
   - 5-timeline-display-meta
   - 6-timeline-legacy-cleanup
-active_task_id: 5-timeline-display-meta
-last_completed_task_id: 4-timeline-display-badges
+active_task_id: null
+last_completed_task_id: 5-timeline-display-meta
 archive_group: 2026-05-05-timeline-display-dto-plan-v1
 task_tracker:
   - task_id: 1-timeline-rules-fixtures
@@ -37,9 +37,9 @@ task_tracker:
     status: archived
     notes: "Move findings, decision, and recommendation badge rendering to the display DTO and delete the replaced UI payload readers."
   - task_id: 5-timeline-display-meta
-    task_path: plans/tasks/5-timeline-display-meta.md
-    status: in_progress
-    notes: "Move meta-review handoff, clean-run, gate-failure, and synthetic-row behavior to the presenter and delete the replaced UI state reconstruction."
+    task_path: plans/archive/tasks/2026-05-05-timeline-display-dto-plan-v1/5-timeline-display-meta.md
+    status: archived
+    notes: "Completed via implementation bubble 5-timeline-display-meta-impl and archived."
   - task_id: 6-timeline-legacy-cleanup
     task_path: null
     status: not_created
@@ -202,7 +202,7 @@ React render only.
 | `2-timeline-display-contract` | `plans/archive/tasks/2026-05-05-timeline-display-dto-plan-v1/2-timeline-display-contract.md` | Introduce a UI-specific display DTO under `src/contracts/ui/**` and make `timelinePresenter.ts` emit it in parallel, with presenter tests. React render remains legacy in this task. | `1-timeline-rules-fixtures` | There is no explicit display-ready timeline contract. | archived |
 | `3-timeline-display-basics` | `plans/archive/tasks/2026-05-05-timeline-display-dto-plan-v1/3-timeline-display-basics.md` | Switch React title, sender label, role, base row state, and blocked/neutral state rendering to the display DTO, then delete the replaced UI payload helpers. | `2-timeline-display-contract` | Basic rendering still reads raw protocol payload and sender metadata. | archived |
 | `4-timeline-display-badges` | `plans/archive/tasks/2026-05-05-timeline-display-dto-plan-v1/4-timeline-display-badges.md` | Switch findings severity, decision, recommendation, and dedupe badge rendering to the display DTO, then delete the replaced UI payload helpers and fixtures. | `3-timeline-display-basics` | Badge rendering still depends on protocol findings/decision/recommendation fields in React. | archived |
-| `5-timeline-display-meta` | `plans/tasks/5-timeline-display-meta.md` | Switch meta-review handoff attempt, clean-run progress, approve-gate validation failure, and synthetic display rows to presenter-owned output, then delete the replaced React state reconstruction. | `4-timeline-display-badges` | The most fragile meta-review timeline behavior is still reconstructed in React. | in_progress |
+| `5-timeline-display-meta` | `plans/archive/tasks/2026-05-05-timeline-display-dto-plan-v1/5-timeline-display-meta.md` | Switch meta-review handoff attempt, clean-run progress, approve-gate validation failure, and synthetic display rows to presenter-owned output, then delete the replaced React state reconstruction. | `4-timeline-display-badges` | The most fragile meta-review timeline behavior is still reconstructed in React. | archived |
 | `6-timeline-legacy-cleanup` | `null` | Remove transitional dual-shape support, raw payload normal-render access, obsolete helpers, obsolete tests/fixtures, and add no-legacy guards. | `5-timeline-display-meta` | Migration residue could leave permanent compatibility code and allow the coupling to return. | not_created |
 
 ## Coverage Map
