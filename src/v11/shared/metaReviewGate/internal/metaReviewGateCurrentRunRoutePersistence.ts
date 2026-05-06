@@ -16,6 +16,22 @@ import type { MetaReviewGateThresholdMetadata } from "../metaReviewGateRouteCont
 import type { MetaReviewGateResult } from "../metaReviewGateResultContract.js";
 import { resolveFindingsParityMetadataFromReportJson } from "./metaReviewGateFindingsMetadata.js";
 import type { FinalizeCurrentRunMetaReviewGateInput } from "../metaReviewGateCurrentRunTypes.js";
+import type { PersistHumanGateRouteInput } from "./metaReviewGateHumanGatePersistenceContract.js";
+
+type CurrentRunHumanGatePersistenceBase = Pick<
+  PersistHumanGateRouteInput,
+  | "appendEnvelope"
+  | "writeState"
+  | "statePath"
+  | "transcriptPath"
+  | "inboxPath"
+  | "lockPath"
+  | "now"
+  | "nowIso"
+  | "bubbleId"
+  | "refs"
+  | "metaReviewerAgent"
+>;
 
 function resolveHumanGatePersistenceDecision(input: {
   forceStickyHumanGateBypass: boolean;
@@ -34,10 +50,10 @@ function resolveHumanGatePersistenceDecision(input: {
   });
 }
 
-export async function persistRunFailedHumanRoute(
+function buildCurrentRunHumanGatePersistenceBase(
   input: FinalizeCurrentRunMetaReviewGateInput
-): Promise<MetaReviewGateResult> {
-  return persistHumanGateRoute({
+): CurrentRunHumanGatePersistenceBase {
+  return {
     appendEnvelope: input.appendEnvelope,
     writeState: input.writeState,
     statePath: input.resolved.bubblePaths.statePath,
@@ -50,12 +66,20 @@ export async function persistRunFailedHumanRoute(
     now: input.now,
     nowIso: input.now.toISOString(),
     bubbleId: input.resolved.bubbleId,
+    refs: input.refs,
+    metaReviewerAgent: input.resolved.bubbleConfig.agents.meta_reviewer
+  };
+}
+
+export async function persistRunFailedHumanRoute(
+  input: FinalizeCurrentRunMetaReviewGateInput
+): Promise<MetaReviewGateResult> {
+  return persistHumanGateRoute({
+    ...buildCurrentRunHumanGatePersistenceBase(input),
     summary: buildHumanGateSummary({
       convergenceSummary: input.summary,
       metaReviewRun: input.runResult
     }),
-    refs: input.refs,
-    metaReviewerAgent: input.resolved.bubbleConfig.agents.meta_reviewer,
     loaded: input.loaded,
     expectedState: "RUNNING",
     route: "human_gate_run_failed",
@@ -79,24 +103,11 @@ export async function persistDispatchFailedHumanRoute(input: {
 }): Promise<MetaReviewGateResult> {
   const finalizeInput = input.finalizeInput;
   return persistHumanGateRoute({
-    appendEnvelope: finalizeInput.appendEnvelope,
-    writeState: finalizeInput.writeState,
-    statePath: finalizeInput.resolved.bubblePaths.statePath,
-    transcriptPath: finalizeInput.resolved.bubblePaths.transcriptPath,
-    inboxPath: finalizeInput.resolved.bubblePaths.inboxPath,
-    lockPath: buildGateLockPath({
-      locksDir: finalizeInput.resolved.bubblePaths.locksDir,
-      bubbleId: finalizeInput.resolved.bubbleId
-    }),
-    now: finalizeInput.now,
-    nowIso: finalizeInput.now.toISOString(),
-    bubbleId: finalizeInput.resolved.bubbleId,
+    ...buildCurrentRunHumanGatePersistenceBase(finalizeInput),
     summary: buildHumanGateSummary({
       convergenceSummary: finalizeInput.summary,
       fallbackReason: input.fallbackReason
     }),
-    refs: finalizeInput.refs,
-    metaReviewerAgent: finalizeInput.resolved.bubbleConfig.agents.meta_reviewer,
     loaded: input.loaded,
     expectedState: input.expectedState,
     route: "human_gate_dispatch_failed",
@@ -137,18 +148,7 @@ export async function persistResolvedHumanRoute(input: {
       : {})
   });
   return persistHumanGateRoute({
-    appendEnvelope: finalizeInput.appendEnvelope,
-    writeState: finalizeInput.writeState,
-    statePath: finalizeInput.resolved.bubblePaths.statePath,
-    transcriptPath: finalizeInput.resolved.bubblePaths.transcriptPath,
-    inboxPath: finalizeInput.resolved.bubblePaths.inboxPath,
-    lockPath: buildGateLockPath({
-      locksDir: finalizeInput.resolved.bubblePaths.locksDir,
-      bubbleId: finalizeInput.resolved.bubbleId
-    }),
-    now: finalizeInput.now,
-    nowIso: finalizeInput.now.toISOString(),
-    bubbleId: finalizeInput.resolved.bubbleId,
+    ...buildCurrentRunHumanGatePersistenceBase(finalizeInput),
     summary: buildHumanGateSummary({
       convergenceSummary: finalizeInput.summary,
       metaReviewRun: input.runResultForRouting,
@@ -156,8 +156,6 @@ export async function persistResolvedHumanRoute(input: {
         ? { fallbackReason: input.fallbackReason }
         : {})
     }),
-    refs: finalizeInput.refs,
-    metaReviewerAgent: finalizeInput.resolved.bubbleConfig.agents.meta_reviewer,
     loaded: finalizeInput.loaded,
     expectedState: "RUNNING",
     route: humanGateDecision,
