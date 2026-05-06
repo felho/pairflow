@@ -17,8 +17,9 @@ Completed in the bubble:
 - domain-owned policy slices extracted under `src/v11/domain/metaReviewGate/**`
   for threshold policy, findings split/parity metadata, approve-claim policy,
   reviewer snapshot policy, human-gate routing, snapshot state, auto-rework
-  retry invariants, run-result parity, snapshot counters, and findings
-  projection.
+  retry invariants, run-result parity, snapshot counters, findings projection,
+  current-run approve validation rework, clean approval, approve-threshold
+  backstop, and gate route/error language.
 - `shared/metaReviewGate/internal/**` introduced for implementation details.
 - `internal_module_boundary` fitness rule added and passing.
 - external meta-review submit imports now route through `../metaReviewGate/index.js`
@@ -27,6 +28,9 @@ Completed in the bubble:
 - current-run finalization now routes through
   `../metaReviewGate/metaReviewGateCurrentRunApi.js`, a narrow public API file
   that avoids importing the aggregate index.
+- `domain/metaReviewGate/**` no longer imports back from
+  `shared/metaReviewGate/**`; route/error language is owned in domain and
+  re-exported by the shared public contract for compatibility.
 
 Known aggregate-index exception:
 
@@ -119,7 +123,7 @@ Avoid making these directly public unless transitional:
 | `metaReviewGateCommandContract.ts` | 15 | Re-exports command input/result/dependency contract types. | Keep public, but verify it does not re-export internal-only dependency bags. |
 | `metaReviewGateCommandApi.ts` | 21 | Public command API re-export surface, including error conversion. | Keep public entrypoint. Consider routing external consumers through `index.ts`. |
 | `metaReviewGateCommandRuntime.ts` | 18 | Runtime API exports for apply/error helpers. | Likely public or public-adjacent; verify whether runtime naming leaks implementation. |
-| `metaReviewGateTypes.ts` | 261 | Route/result/error types plus notify/runtime capability contracts. | Split stable shared language from runtime capability/dependency types. |
+| `metaReviewGateTypes.ts` | 189 | Result types plus notify/runtime capability contracts; route/error language is now re-exported from domain. | Continue splitting runtime capability/dependency types closer to application/defaults. |
 | `metaReviewGateTmuxCapabilities.ts` | 15 | Tmux runner result/options function type. | Likely not public shared language; move near runtime/defaults or keep internal until split. |
 
 ### Domain Candidates
@@ -145,6 +149,10 @@ dependencies remain pure and they do not perform I/O.
 | `metaReviewGateFindingsValidationPreflight.ts` | 103 | Preflight structured meta-review claim validation. | no direct external | Domain candidate. |
 | `metaReviewGateFindingsValidationParity.ts` | 92 | Rework path positive-claim validation with parity. | no direct external | Domain candidate, verify convergence policy dependency. |
 | `metaReviewGateFindingsValidation.ts` | 95 | Top-level positive-claim validation orchestration over policy helpers. | no direct external | Domain/application boundary candidate; inspect I/O through artifact read callback. |
+| `gateRoutingTypes.ts` | 84 | Gate route union, threshold status metadata, and gate error language. | via shared re-export | Domain-owned shared language; keep public through `metaReviewGateTypes.ts` compatibility export. |
+| `approveValidationRework.ts` | 24 | Classify approve-validation command failures and build auto-rework message. | no | Done: extracted from current-run finalization. |
+| `cleanApprovalPolicy.ts` | 92 | Decide clean approval vs threshold-required/fallback route policy. | no | Done: extracted from current-run finalization. |
+| `approveThresholdBackstopPolicy.ts` | 100 | Block invalid approve-with-open-findings human-gate routes against configured threshold. | no | Done: extracted from current-run finalization. |
 
 ### Application / Orchestration Candidates
 
@@ -159,7 +167,7 @@ runtime delivery. They should not be moved wholesale to `domain`.
 | `metaReviewGateApplyObservation.ts` | 130 | Reconcile observed gate result with persisted state. | no direct external | Application internal with state semantics. |
 | `metaReviewGateApplyPersistence.ts` | 96 | Persist runtime delivery observation. | no direct external | Application/infrastructure boundary candidate. |
 | `metaReviewGateApplyHelpers.ts` | 107 | Append kickoff envelope and persist run-failed route. | no direct external | Application internal; uses transcript/state helpers. |
-| `metaReviewGateCurrentRunFinalization.ts` | 499 | Current-run route resolution, threshold backstop, approve/rework/human routing. | yes, 1 | High-priority application candidate; split out pure policy first. |
+| `metaReviewGateCurrentRunFinalization.ts` | 480 | Current-run route resolution, parity I/O, threshold authority reads, approve/rework/human routing. | yes, 1 | Application candidate; pure approve-validation, clean-approval, and approve-threshold backstop policies have been split out. |
 | `metaReviewGateCurrentRunCleanRerun.ts` | 496 | Clean rerun routing, delivery, pane binding, observation persistence. | no direct external | Application/internal first; likely later split runtime delivery pieces. |
 | `metaReviewGateCurrentRunRoutePersistence.ts` | 175 | Persist run-failed/dispatch/resolved human routes. | no direct external | Application/infrastructure boundary candidate. |
 | `metaReviewGateAutoRework.ts` | 327 | Auto-rework state transition, transcript append, rollback handling. | no direct external | Application candidate with ports; do not domain-move wholesale. |
