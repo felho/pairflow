@@ -6,7 +6,7 @@ import {
   type AttachBubbleV11Dependencies,
   type AttachBubbleV11Result
 } from "./emitAttachV11.js";
-import { resolveBubbleById } from "../../shared/bubbleLookup/bubbleLookupDefaults.js";
+import { resolveBubbleById } from "../bubbleLookup/bubbleLookupDependencyDefaults.js";
 
 export interface BubbleAttachCommandOptions {
   id: string;

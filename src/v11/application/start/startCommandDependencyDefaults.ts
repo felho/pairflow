@@ -4,7 +4,7 @@ import { runTmux as runTmuxDefaults } from "../../shared/tmux/tmuxRunnerDefaults
 import { readStateSnapshot } from "../../shared/state/stateStoreDefaults.js";
 import {
   resolveBubbleById
-} from "../../shared/bubbleLookup/bubbleLookupDefaults.js";
+} from "../bubbleLookup/bubbleLookupDependencyDefaults.js";
 import {
   registerRepoInRegistry
 } from "../../shared/repoRegistry/repoRegistryDefaults.js";
