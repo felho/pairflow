@@ -8,14 +8,6 @@ export {
   resolveMetaReviewerAgent,
   resolveFindingsParityMetadataForEnvelope
 } from "./metaReviewGateSnapshotHelpers.js";
-export {
-  incrementAutoReworkCount,
-  setMetaReviewConsecutiveCleanRuns
-} from "../../../domain/metaReviewGate/snapshotState.js";
-export {
-  metaReviewGateAutoReworkRetryRunIdentityInvariantReasonCode,
-  resolveAutoReworkRetryInvariantViolation
-} from "../../../domain/metaReviewGate/autoReworkRetryInvariant.js";
 
 export function transitionToGateState(input: {
   current: BubbleStateSnapshot;

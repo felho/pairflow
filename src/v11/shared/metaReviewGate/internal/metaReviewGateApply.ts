@@ -7,7 +7,7 @@ import {
   stageMetaReviewRunningState,
   throwMetaReviewRunningStageFailure
 } from "./metaReviewGateApplyHelpers.js";
-import { setMetaReviewConsecutiveCleanRuns } from "./metaReviewGateShared.js";
+import { setMetaReviewConsecutiveCleanRuns } from "../../../domain/metaReviewGate/snapshotState.js";
 import { routeMetaReviewKickoffOrRunFailed } from "./metaReviewGateApplyRunRouting.js";
 import {
   initializeApplyMetaReviewGateExecutionContext

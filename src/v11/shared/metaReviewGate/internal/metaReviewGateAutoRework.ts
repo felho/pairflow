@@ -21,11 +21,13 @@ import {
 } from "../../../../types/protocol.js";
 import {
   buildGateLockPath,
-  incrementAutoReworkCount,
   normalizeMetaReviewSnapshot,
-  resolveFindingsParityMetadataForEnvelope,
-  setMetaReviewConsecutiveCleanRuns
+  resolveFindingsParityMetadataForEnvelope
 } from "./metaReviewGateShared.js";
+import {
+  incrementAutoReworkCount,
+  setMetaReviewConsecutiveCleanRuns
+} from "../../../domain/metaReviewGate/snapshotState.js";
 import { MetaReviewGateError } from "../metaReviewGateRouteContract.js";
 import type { MetaReviewGateResult } from "../metaReviewGateResultContract.js";
 import {

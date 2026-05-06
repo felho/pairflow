@@ -8,7 +8,8 @@ import { reconcileObservedGateResult } from "./metaReviewGateApplyObservation.js
 import { persistRuntimeDeliveryObservation } from "./metaReviewGateApplyPersistence.js";
 import { persistDispatchFailedHumanRoute } from "./metaReviewGateCurrentRunRoutePersistence.js";
 import type { FinalizeCurrentRunMetaReviewGateInput } from "../metaReviewGateCurrentRunTypes.js";
-import { buildGateLockPath, setMetaReviewConsecutiveCleanRuns } from "./metaReviewGateShared.js";
+import { buildGateLockPath } from "./metaReviewGateShared.js";
+import { setMetaReviewConsecutiveCleanRuns } from "../../../domain/metaReviewGate/snapshotState.js";
 import type { MetaReviewGateResult } from "../metaReviewGateResultContract.js";
 
 type MetaReviewPaneWarningResult = Awaited<

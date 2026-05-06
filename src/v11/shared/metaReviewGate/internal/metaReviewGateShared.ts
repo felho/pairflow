@@ -22,13 +22,9 @@ export {
 } from "./metaReviewGateHumanGatePersistence.js";
 export {
   buildHumanGateSummary,
-  incrementAutoReworkCount,
-  metaReviewGateAutoReworkRetryRunIdentityInvariantReasonCode,
   normalizeMetaReviewSnapshot,
   resolveMetaReviewerAgent,
-  resolveAutoReworkRetryInvariantViolation,
   resolveFindingsParityMetadataForEnvelope,
-  setMetaReviewConsecutiveCleanRuns,
   transitionToGateState
 } from "./metaReviewGateStateHelpers.js";
 
