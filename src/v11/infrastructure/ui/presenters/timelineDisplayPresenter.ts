@@ -5,12 +5,11 @@ import type {
   UiTimelineProgress,
   UiTimelineTone
 } from "../../../../contracts/ui/uiReadModel.js";
-import {
-  isNonEmptyString,
-  isRecord
-} from "../../../shared/validation/primitives.js";
+import { isNonEmptyString, isRecord } from "../../../shared/validation/primitives.js";
 
 export type TimelineEntryWithoutDisplay = Omit<UiTimelineEntry, "display">;
+
+export type AttachTimelineDisplayOptions = { cleanRunsRequired?: number | null | undefined };
 
 function sanitizeLabel(value: string): string {
   const normalized = value.trim().replace(/\s+/gu, " ");
@@ -65,6 +64,9 @@ function resolveDisplaySender(entry: TimelineEntryWithoutDisplay): string {
   }
   if (metadata !== null && isNonEmptyString(metadata.actor_agent)) {
     return metadata.actor_agent;
+  }
+  if (metadata?.actor === "meta-reviewer") {
+    return "unknown";
   }
   return entry.sender;
 }
@@ -248,7 +250,7 @@ function logicalProgressKey(entry: TimelineEntryWithoutDisplay): string | null {
   }
   const handoffId = metadata?.meta_review_handoff_id;
   if (typeof handoffId === "string") {
-    return `handoff:${handoffId.replace(/:attempt:\d+$/u, "")}`;
+    return `handoff:${handoffId}`;
   }
   const progressSourceId = metadata?.progress_source_id;
   if (typeof progressSourceId === "string" || typeof progressSourceId === "number") {
@@ -426,10 +428,11 @@ function calculateCleanRunCounts(
 }
 
 export function attachTimelineDisplay(
-  entries: TimelineEntryWithoutDisplay[]
+  entries: TimelineEntryWithoutDisplay[], options: AttachTimelineDisplayOptions = {}
 ): UiTimelineEntry[] {
   const markerIndexes = collectLatestMarkerIndexes(entries);
   const cleanRunCounts = calculateCleanRunCounts(entries, markerIndexes);
+  const cleanRunsRequired = options.cleanRunsRequired ?? null;
 
   return entries.map((entry, index) => {
     const summary = readSummaryDisplay(entry);
@@ -451,7 +454,7 @@ export function attachTimelineDisplay(
       : baseProgressForEntry({
           entry,
           cleanRunCount: cleanRunCounts.get(index) ?? null,
-          cleanRunsRequired: null
+          cleanRunsRequired
         });
     const baseState = resolveBaseState({
       entry,

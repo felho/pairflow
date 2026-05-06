@@ -3,12 +3,9 @@ import type {
   UiTimelineBadge,
   UiTimelineDisplayRole,
   UiTimelineEntry,
-  UiTimelineEntryDisplay
+  UiTimelineEntryDisplay,
+  UiTimelineSyntheticApproval
 } from "../../lib/types";
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
 
 interface DisplayTag {
   label: string;
@@ -33,233 +30,53 @@ function badgeToneClass(badge: UiTimelineBadge): string {
   return "border-slate-500/20 bg-slate-500/10 text-slate-400";
 }
 
-function readDisplayBadgeLabel(
-  entry: UiTimelineEntry,
-  kind: UiTimelineBadge["kind"]
-): string | null {
-  const badge = entry.display.badges.find((candidate) => candidate.kind === kind);
-  return badge?.label ?? null;
+function validationFailureSummaryClass(
+  tone: NonNullable<UiTimelineEntryDisplay["validationFailure"]>["tone"]
+): string {
+  if (tone === "danger") return "leading-relaxed text-rose-400";
+  if (tone === "warning") return "leading-relaxed text-amber-400";
+  return "leading-relaxed text-[#666]";
 }
 
 function hasDisplayGateFailureSplit(entry: UiTimelineEntry): boolean {
   return entry.display.validationFailure !== null && entry.display.syntheticApproval !== null;
 }
 
-function buildSyntheticMetaApprovalEntry(entry: UiTimelineEntry): UiTimelineEntry {
-  const syntheticApproval = entry.display.syntheticApproval;
-  if (syntheticApproval === null) {
-    return entry;
-  }
-  const metadata = isRecord(entry.payload.metadata) ? entry.payload.metadata : {};
-  const sender =
-    typeof metadata.actor_agent === "string" ? metadata.actor_agent : entry.recipient;
-  const summaryText = syntheticApproval.label;
-  return {
-    ...entry,
-    id: syntheticApproval.syntheticEntryId,
-    type: "APPROVAL_REQUEST",
-    sender,
-    recipient: "orchestrator",
-    display: {
-      ...entry.display,
-      title: summaryText,
-      summaryText,
-      summarySource: "summary",
-      senderLabel: sender,
-      role: "meta_reviewer",
-      rowKind: "approval",
-      tone: syntheticApproval.tone,
-      badges: [
-        {
-          kind: "recommendation",
-          label: "approve",
-          tone: "success"
-        }
-      ],
-      progress: null,
-      validationFailure: null,
-      syntheticApproval: null
-    },
-    payload: {
-      summary: summaryText,
-      metadata: {
-        actor: "meta-reviewer",
-        ...(typeof metadata.actor_agent === "string"
-          ? { actor_agent: metadata.actor_agent }
-          : {}),
-        recommendation: "approve"
-      }
-    },
-    refs: []
-  };
-}
-
-function readMetadataInteger(
-  metadata: Record<string, unknown>,
-  keys: string[]
-): number | null {
-  for (const key of keys) {
-    const value = metadata[key];
-    if (Number.isInteger(value) && (value as number) >= 0) {
-      return value as number;
-    }
-  }
-  return null;
-}
-
-function extractMetaReviewHandoffAttempt(entry: UiTimelineEntry): number | null {
-  const metadata = entry.payload.metadata;
-  if (!isRecord(metadata)) {
-    return null;
-  }
-  const handoffId = metadata.meta_review_handoff_id;
-  if (typeof handoffId !== "string") {
-    return null;
-  }
-  const match = /:attempt:(\d+)$/u.exec(handoffId);
-  if (match === null) {
-    return null;
-  }
-  const attempt = Number.parseInt(match[1] ?? "", 10);
-  return Number.isInteger(attempt) && attempt > 0 ? attempt : null;
-}
-
-function isMetaReviewHandoff(entry: UiTimelineEntry): boolean {
-  return entry.type === "TASK" && extractMetaReviewHandoffAttempt(entry) !== null;
-}
-
 interface DisplayTimelineItem {
   entry: UiTimelineEntry;
-  metaReviewRerunCleanRunCount: number | null;
   gateFailed: boolean;
+  syntheticApproval: UiTimelineSyntheticApproval | null;
 }
 
 function buildDisplayTimelineItems(input: {
   entries: UiTimelineEntry[];
-  cleanRunsRequired: number | null | undefined;
 }): DisplayTimelineItem[] {
-  let cleanRunsRequired =
-    input.cleanRunsRequired !== null && input.cleanRunsRequired !== undefined
-      ? input.cleanRunsRequired
-      : 1;
   const items: DisplayTimelineItem[] = [];
-  let metaCleanRuns = 0;
-  let metaRunPending = false;
 
   for (const entry of input.entries) {
     if (hasDisplayGateFailureSplit(entry)) {
       items.push({
-        entry: buildSyntheticMetaApprovalEntry(entry),
-        metaReviewRerunCleanRunCount: null,
-        gateFailed: false
+        entry,
+        gateFailed: false,
+        syntheticApproval: entry.display.syntheticApproval
       });
-      metaCleanRuns += 1;
-      metaRunPending = false;
 
       items.push({
         entry,
-        metaReviewRerunCleanRunCount: null,
-        gateFailed: true
+        gateFailed: true,
+        syntheticApproval: null
       });
-      metaCleanRuns = 0;
       continue;
-    }
-
-    const metaRecommendation = readDisplayBadgeLabel(entry, "recommendation");
-    const displayDecision = readDisplayBadgeLabel(entry, "decision");
-    const displayCleanRunCount =
-      entry.display.progress?.kind === "clean_run"
-        ? entry.display.progress.cleanRunCount
-        : null;
-    const displayCleanRunsRequired =
-      entry.display.progress?.kind === "clean_run"
-        ? entry.display.progress.cleanRunsRequired
-        : null;
-
-    if (isMetaReviewHandoff(entry)) {
-      const handoffAttempt = extractMetaReviewHandoffAttempt(entry);
-      if (!metaRunPending) {
-        if (handoffAttempt !== null && handoffAttempt > 1) {
-          const nextCleanRunCount = Math.max(metaCleanRuns + 1, handoffAttempt - 1);
-          if (cleanRunsRequired > 1 && nextCleanRunCount < cleanRunsRequired) {
-            metaCleanRuns = nextCleanRunCount;
-            metaRunPending = true;
-            items.push({
-              entry,
-              metaReviewRerunCleanRunCount: nextCleanRunCount,
-              gateFailed: false
-            });
-          }
-          continue;
-        }
-        metaRunPending = true;
-        continue;
-      }
-
-      const nextCleanRunCount = Math.max(
-        metaCleanRuns + 1,
-        handoffAttempt !== null ? handoffAttempt - 1 : 0
-      );
-      if (cleanRunsRequired > 1 && nextCleanRunCount < cleanRunsRequired) {
-        metaCleanRuns = nextCleanRunCount;
-        metaRunPending = true;
-        items.push({
-          entry,
-          metaReviewRerunCleanRunCount: nextCleanRunCount,
-          gateFailed: false
-        });
-      }
-      continue;
-    }
-
-    if (displayCleanRunCount !== null) {
-      metaCleanRuns = displayCleanRunCount;
-      if (displayCleanRunsRequired !== null) {
-        cleanRunsRequired = displayCleanRunsRequired;
-      }
-      metaRunPending = false;
-    } else if (metaRecommendation === "approve") {
-      const metadata = isRecord(entry.payload.metadata)
-        ? entry.payload.metadata
-        : null;
-      const explicitCleanRunCount =
-        metadata === null
-          ? null
-          : readMetadataInteger(metadata, [
-              "consecutive_clean_runs",
-              "consecutiveCleanRuns",
-              "meta_review_consecutive_clean_runs"
-            ]);
-      metaCleanRuns = explicitCleanRunCount ?? metaCleanRuns + 1;
-      metaRunPending = false;
-    } else if (
-      metaRecommendation === "rework"
-      || metaRecommendation === "inconclusive"
-      || displayDecision === "rework"
-    ) {
-      metaCleanRuns = 0;
-      metaRunPending = false;
     }
 
     items.push({
       entry,
-      metaReviewRerunCleanRunCount: null,
-      gateFailed: false
+      gateFailed: false,
+      syntheticApproval: null
     });
   }
 
   return items;
-}
-
-function isCleanPass(entry: UiTimelineEntry): boolean {
-  if (entry.type !== "PASS") {
-    return false;
-  }
-  const findings = entry.payload.findings;
-  if (Array.isArray(findings) && findings.length === 0) {
-    return true;
-  }
-  return false;
 }
 
 function formatTime(timestamp: string): string {
@@ -318,7 +135,6 @@ export interface BubbleTimelineProps {
   error: string | null;
   compact: boolean;
   extras?: ReactNode;
-  metaReviewCleanRunsRequired?: number | null;
 }
 
 export function BubbleTimeline(props: BubbleTimelineProps): JSX.Element {
@@ -334,10 +150,7 @@ export function BubbleTimeline(props: BubbleTimelineProps): JSX.Element {
   const displayItems =
     props.entries === null
       ? null
-      : buildDisplayTimelineItems({
-          entries: props.entries,
-          cleanRunsRequired: props.metaReviewCleanRunsRequired
-        });
+      : buildDisplayTimelineItems({ entries: props.entries });
 
   useEffect(() => {
     const el = scrollRef.current;
@@ -349,8 +162,6 @@ export function BubbleTimeline(props: BubbleTimelineProps): JSX.Element {
   const hasEntries =
     !showError && displayItems !== null && displayItems.length > 0;
   const showScrollable = hasEntries || hasEmptyState || hasExtras;
-  let metaCleanRuns = 0;
-  let metaCleanRunsRequired = props.metaReviewCleanRunsRequired;
 
   return (
     <div className="flex flex-1 flex-col overflow-hidden">
@@ -387,74 +198,51 @@ export function BubbleTimeline(props: BubbleTimelineProps): JSX.Element {
             <>
           {displayItems.map((item) => {
             const entry = item.entry;
-            const role = item.gateFailed ? "system" : resolveRole(entry.display.role);
+            const role = item.gateFailed
+              ? "system"
+              : item.syntheticApproval !== null
+                ? "meta"
+                : resolveRole(entry.display.role);
             const displaySender = item.gateFailed
               ? "orchestrator"
-              : entry.display.senderLabel;
-            const isConvergence = entry.type === "CONVERGENCE";
-            const blocked = !item.gateFailed && entry.display.rowKind === "blocked";
-            const metadata = isRecord(entry.payload.metadata)
-              ? entry.payload.metadata
-              : null;
-            const metaRecommendation = item.gateFailed
-              ? null
-              : readDisplayBadgeLabel(entry, "recommendation");
-            const displayDecision = item.gateFailed
-              ? null
-              : readDisplayBadgeLabel(entry, "decision");
+              : item.syntheticApproval !== null
+                ? entry.display.senderLabel
+                : entry.display.senderLabel;
+            const isConvergence =
+              item.syntheticApproval === null && entry.type === "CONVERGENCE";
+            const blocked =
+              !item.gateFailed
+              && item.syntheticApproval === null
+              && entry.display.rowKind === "blocked";
             const displayCleanRunProgress =
-              !item.gateFailed && entry.display.progress?.kind === "clean_run"
+              !item.gateFailed
+              && item.syntheticApproval === null
+              && entry.display.progress?.kind === "clean_run"
                 ? entry.display.progress
                 : null;
-            const displayCleanRunCount = displayCleanRunProgress?.cleanRunCount ?? null;
-            const displayCleanRunsRequired =
-              displayCleanRunProgress?.cleanRunsRequired ?? null;
-            let cleanRunCount: number | null = null;
-            if (item.metaReviewRerunCleanRunCount !== null) {
-              metaCleanRuns = item.metaReviewRerunCleanRunCount;
-              cleanRunCount = item.metaReviewRerunCleanRunCount;
-            } else if (displayCleanRunCount !== null) {
-              metaCleanRuns = displayCleanRunCount;
-              if (displayCleanRunsRequired !== null) {
-                metaCleanRunsRequired = displayCleanRunsRequired;
-              }
-              cleanRunCount = displayCleanRunCount;
-            } else if (metaRecommendation === "approve") {
-              const explicitCleanRunCount =
-                metadata === null
-                  ? null
-                  : readMetadataInteger(metadata, [
-                      "consecutive_clean_runs",
-                      "consecutiveCleanRuns",
-                      "meta_review_consecutive_clean_runs"
-                    ]);
-              metaCleanRuns = explicitCleanRunCount ?? metaCleanRuns + 1;
-              cleanRunCount = metaCleanRuns;
-            } else if (
-              item.gateFailed
-              || metaRecommendation === "rework"
-              || metaRecommendation === "inconclusive"
-              || displayDecision === "rework"
-            ) {
-              metaCleanRuns = 0;
-            }
-            const cleanRunsRequired =
-              displayCleanRunsRequired ?? metaCleanRunsRequired;
+            const displayHandoffProgress =
+              !item.gateFailed
+              && item.syntheticApproval === null
+              && entry.display.progress?.kind === "meta_review_handoff"
+                ? entry.display.progress
+                : null;
+            const cleanRunsRequired = displayCleanRunProgress?.cleanRunsRequired ?? null;
             const replaceApproveWithCleanRun =
-              cleanRunCount !== null &&
+              displayCleanRunProgress !== null &&
               cleanRunsRequired !== null &&
-              cleanRunsRequired !== undefined &&
-              cleanRunCount < cleanRunsRequired;
+              displayCleanRunProgress.cleanRunCount < cleanRunsRequired;
             const cleanRunTag: DisplayTag | null =
-              (
-                (item.metaReviewRerunCleanRunCount !== null || replaceApproveWithCleanRun) &&
-                cleanRunCount !== null
-              )
+              displayHandoffProgress !== null
                 ? {
-                    label: displayCleanRunProgress?.label ?? `clean ${cleanRunCount}`,
+                    label: displayHandoffProgress.label,
+                    style: "border-blue-500/20 bg-blue-500/10 text-blue-500"
+                  }
+                : replaceApproveWithCleanRun && displayCleanRunProgress !== null
+                ? {
+                    label: displayCleanRunProgress.label,
                     style: "border-emerald-500/20 bg-emerald-500/10 text-emerald-500"
                   }
-                : null;
+                  : null;
             const displayBadges = entry.display.badges.filter((badge) => {
               return !(
                 replaceApproveWithCleanRun &&
@@ -462,10 +250,28 @@ export function BubbleTimeline(props: BubbleTimelineProps): JSX.Element {
                 badge.label === "approve"
               );
             });
-            const cleanPass = isCleanPass(entry);
+            const renderedBadges =
+              item.syntheticApproval === null
+                ? displayBadges
+                : [
+                    {
+                      kind: "recommendation",
+                      label: "approve",
+                      tone: "success"
+                    } satisfies UiTimelineBadge
+                  ];
+            const renderedSummary =
+              item.gateFailed && entry.display.validationFailure !== null
+                ? entry.display.validationFailure.summaryText
+                : item.syntheticApproval?.label ?? entry.display.summaryText;
+            const renderedSummaryClass =
+              item.gateFailed && entry.display.validationFailure !== null
+                ? validationFailureSummaryClass(entry.display.validationFailure.tone)
+                : "leading-relaxed text-[#666]";
+            const renderedKey = item.syntheticApproval?.syntheticEntryId ?? entry.id;
             return (
               <div
-                key={entry.id}
+                key={renderedKey}
                 className="flex items-start border-b border-[#1a1a1a] py-1 text-[10px] last:border-b-0"
               >
                 <span className="min-w-[20px] pt-px pr-2 text-right font-mono text-[9px] text-[#555]">
@@ -497,7 +303,7 @@ export function BubbleTimeline(props: BubbleTimelineProps): JSX.Element {
                         <span className="text-[#555]">({displaySender})</span>
                       </span>
                     )}
-                    {displayBadges.map((badge, index) => (
+                    {renderedBadges.map((badge, index) => (
                       <span
                         key={`${badge.kind}:${badge.label}:${index}`}
                         className={`inline-block rounded px-1 text-[9px] font-semibold leading-tight border ${badgeToneClass(badge)}`}
@@ -512,16 +318,9 @@ export function BubbleTimeline(props: BubbleTimelineProps): JSX.Element {
                         {cleanRunTag.label}
                       </span>
                     ) : null}
-                    {cleanPass ? (
-                      <span className="inline-block rounded border border-emerald-500/20 bg-emerald-500/10 px-1 text-[9px] font-semibold leading-tight text-emerald-500">
-                        &#x2713; clean
-                      </span>
-                    ) : null}
                   </div>
                   {compact ? null : (
-                    <div className="leading-relaxed text-[#666]">
-                      {entry.display.summaryText}
-                    </div>
+                    <div className={renderedSummaryClass}>{renderedSummary}</div>
                   )}
                 </div>
                 <span className="flex-shrink-0 pt-px font-mono text-[9px] text-[#444]">
