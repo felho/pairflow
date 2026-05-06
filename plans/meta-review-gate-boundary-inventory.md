@@ -19,7 +19,8 @@ Completed in the bubble:
   reviewer snapshot policy, human-gate routing, snapshot state, auto-rework
   retry invariants, run-result parity, snapshot counters, findings projection,
   current-run approve validation rework, clean approval, approve-threshold
-  backstop, and gate route/error language.
+  backstop, threshold authority resolution language, and gate route/error
+  language.
 - `shared/metaReviewGate/internal/**` introduced for implementation details.
 - `internal_module_boundary` fitness rule added and passing.
 - external meta-review submit imports now route through `../metaReviewGate/index.js`
@@ -138,7 +139,7 @@ dependencies remain pure and they do not perform I/O.
 
 | File | Lines | Responsibility | External import? | Suggested action |
 | --- | ---: | --- | --- | --- |
-| `metaReviewGateThresholdAuthority.ts` | 312 | Threshold authority, highest severity/open split, threshold decision metadata. | yes, 2 | High-priority direct domain candidate; review dependency on artifact read callback before move. |
+| `metaReviewGateThresholdAuthority.ts` | 159 | Threshold authority resolver wrapper around artifact/parity I/O and domain threshold helpers. | yes, 2 | Keep as transitional shared API; next split should move verified parity-to-authority result construction into domain, leaving I/O orchestration here. |
 | `metaReviewGateFindingsClaimParsing.ts` | 91 | Structured findings claim parsing from report JSON. | yes, 1 | Domain candidate. |
 | `metaReviewGateFindingsParityInput.ts` | 157 | Build/resolve rework findings parity input and reason codes. | yes, 1 | Domain candidate, likely after claim parsing. |
 | `metaReviewGateFindingsSplit.ts` | 162 | Blocking/advisory split derivation from findings/report JSON. | yes, 3 | Domain candidate or shared model helper; resolve whether it is gate-specific. |
