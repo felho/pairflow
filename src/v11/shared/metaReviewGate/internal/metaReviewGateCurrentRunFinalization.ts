@@ -1,38 +1,38 @@
-import type { MetaReviewResult } from "../metaReview/metaReviewTypes.js";
-import type { Finding } from "../../../types/findings.js";
-import type { FindingsParityMetadata } from "../../../types/protocol.js";
-import { normalizeMetaReviewSnapshot } from "../../domain/metaReviewGate/snapshotState.js";
-import type { MetaReviewGateResult } from "./metaReviewGateResultContract.js";
-import { dispatchAutoRework } from "./internal/metaReviewGateAutoRework.js";
-import { validateStructuredMetaReviewPositiveClaim } from "./internal/metaReviewGateFindingsValidation.js";
-import type { MetaReviewGateArtifactReadFn } from "./metaReviewGateFindingsMetadata.js";
+import type { MetaReviewResult } from "../../metaReview/metaReviewTypes.js";
+import type { Finding } from "../../../../types/findings.js";
+import type { FindingsParityMetadata } from "../../../../types/protocol.js";
+import { normalizeMetaReviewSnapshot } from "../../../domain/metaReviewGate/snapshotState.js";
+import type { MetaReviewGateResult } from "../metaReviewGateResultContract.js";
+import { dispatchAutoRework } from "./metaReviewGateAutoRework.js";
+import { validateStructuredMetaReviewPositiveClaim } from "./metaReviewGateFindingsValidation.js";
+import type { MetaReviewGateArtifactReadFn } from "../metaReviewGateFindingsMetadata.js";
 import {
   type MetaReviewGateThresholdAuthorityResolution,
   resolveMetaReviewGateThresholdAuthority
-} from "./metaReviewGateThresholdAuthority.js";
-import { metaReviewApproveClaimsOpenFindings } from "../metaReview/metaReviewCommandSubmitValidation.js";
-import { normalizeBubbleReviewPolicy } from "../reviewPolicy/reviewPolicyRuntime.js";
+} from "../metaReviewGateThresholdAuthority.js";
+import { metaReviewApproveClaimsOpenFindings } from "../../metaReview/metaReviewCommandSubmitValidation.js";
+import { normalizeBubbleReviewPolicy } from "../../reviewPolicy/reviewPolicyRuntime.js";
 import {
   persistDispatchFailedHumanRoute,
   persistResolvedHumanRoute,
   persistRunFailedHumanRoute
-} from "./internal/metaReviewGateCurrentRunRoutePersistence.js";
-import type { FinalizeCurrentRunMetaReviewGateInput } from "./metaReviewGateCurrentRunTypes.js";
+} from "./metaReviewGateCurrentRunRoutePersistence.js";
+import type { FinalizeCurrentRunMetaReviewGateInput } from "../metaReviewGateCurrentRunTypes.js";
 import {
   buildApproveValidationReworkMessage,
   isApproveValidationCommandFailure
-} from "../../domain/metaReviewGate/approveValidationRework.js";
+} from "../../../domain/metaReviewGate/approveValidationRework.js";
 import {
   META_REVIEW_APPROVE_THRESHOLD_BACKSTOP,
   resolveApproveThresholdBackstopPolicy
-} from "../../domain/metaReviewGate/approveThresholdBackstopPolicy.js";
-import { resolveThresholdCleanApprovalPolicy } from "../../domain/metaReviewGate/cleanApprovalPolicy.js";
-import { mergeRunResultWithParityResolution } from "../../domain/metaReviewGate/runResultParity.js";
-import { routeCleanMetaReviewRerun } from "./internal/metaReviewGateCurrentRunCleanRerun.js";
+} from "../../../domain/metaReviewGate/approveThresholdBackstopPolicy.js";
+import { resolveThresholdCleanApprovalPolicy } from "../../../domain/metaReviewGate/cleanApprovalPolicy.js";
+import { mergeRunResultWithParityResolution } from "../../../domain/metaReviewGate/runResultParity.js";
+import { routeCleanMetaReviewRerun } from "./metaReviewGateCurrentRunCleanRerun.js";
 import {
   META_REVIEW_APPROVE_VALIDATION_FAILED,
   runMetaReviewApproveValidationGate
-} from "./internal/metaReviewApproveValidationGate.js";
+} from "./metaReviewApproveValidationGate.js";
 
 function callMetaReviewGateArtifactReadFn(
   readFileFn: MetaReviewGateArtifactReadFn,

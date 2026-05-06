@@ -5,7 +5,7 @@ import { join } from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import { finalizeCurrentRunMetaReviewGate } from "../../../../src/v11/shared/metaReviewGate/metaReviewGateCurrentRunFinalization.js";
+import { finalizeCurrentRunMetaReviewGate } from "../../../../src/v11/shared/metaReviewGate/metaReviewGateCurrentRunApi.js";
 import {
   assertActiveMetaReviewExecutionContext,
   assertMetaReviewSubmitStaleGuard

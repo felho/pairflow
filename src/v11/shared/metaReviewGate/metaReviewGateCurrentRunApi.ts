@@ -1,6 +1,6 @@
 export {
   finalizeCurrentRunMetaReviewGate
-} from "./metaReviewGateCurrentRunFinalization.js";
+} from "./internal/metaReviewGateCurrentRunFinalization.js";
 export type {
   FinalizeCurrentRunMetaReviewGateInput,
   MetaReviewApproveValidationCommandRunInput
