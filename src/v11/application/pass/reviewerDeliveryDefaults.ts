@@ -7,6 +7,13 @@ import type {
 } from "../../shared/ports/tmuxDelivery.js";
 import type { RefreshReviewerContextPort } from "../../shared/ports/reviewerContext.js";
 
+interface ReviewerDeliveryDefaultsModule {
+  reviewerDeliveryDefaults: {
+    emitDeliveryNotificationAck: EmitDeliveryNotificationAckPort;
+    refreshReviewerContext: RefreshReviewerContextPort;
+  };
+}
+
 let reviewerDeliveryDefaultsPromise:
   | Promise<{
       emitDeliveryNotificationAck: EmitDeliveryNotificationAckPort;
@@ -14,13 +21,20 @@ let reviewerDeliveryDefaultsPromise:
     }>
   | undefined;
 
+function getReviewerDeliveryDefaultsModulePath(): string {
+  return "../../defaults/reviewer/reviewerDeliveryDefaults.js";
+}
+
 async function loadReviewerDeliveryDefaults(): Promise<{
   emitDeliveryNotificationAck: EmitDeliveryNotificationAckPort;
   refreshReviewerContext: RefreshReviewerContextPort;
 }> {
   reviewerDeliveryDefaultsPromise ??= import(
-    "../../shared/reviewer/reviewerDeliveryDefaults.js"
-  ).then(({ reviewerDeliveryDefaults }) => reviewerDeliveryDefaults);
+    getReviewerDeliveryDefaultsModulePath()
+  ).then(
+    (module) =>
+      (module as ReviewerDeliveryDefaultsModule).reviewerDeliveryDefaults
+  );
   return reviewerDeliveryDefaultsPromise;
 }
 
