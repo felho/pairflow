@@ -42,8 +42,8 @@ task_tracker:
     notes: "Completed via implementation bubble 5-timeline-display-meta-impl and archived."
   - task_id: 6-timeline-legacy-cleanup
     task_path: plans/tasks/6-timeline-legacy-cleanup.md
-    status: approved
-    notes: "Remove transitional dual-shape support, raw payload render access, obsolete helpers, obsolete fixtures, and guard against recurrence."
+    status: implementable
+    notes: "Document refinement closed; ready for implementation cleanup of transitional dual-shape support, raw payload render access, obsolete helpers, obsolete fixtures, and recurrence guards."
 ---
 
 # Plan: Timeline Display DTO
@@ -203,7 +203,7 @@ React render only.
 | `3-timeline-display-basics` | `plans/archive/tasks/2026-05-05-timeline-display-dto-plan-v1/3-timeline-display-basics.md` | Switch React title, sender label, role, base row state, and blocked/neutral state rendering to the display DTO, then delete the replaced UI payload helpers. | `2-timeline-display-contract` | Basic rendering still reads raw protocol payload and sender metadata. | archived |
 | `4-timeline-display-badges` | `plans/archive/tasks/2026-05-05-timeline-display-dto-plan-v1/4-timeline-display-badges.md` | Switch findings severity, decision, recommendation, and dedupe badge rendering to the display DTO, then delete the replaced UI payload helpers and fixtures. | `3-timeline-display-basics` | Badge rendering still depends on protocol findings/decision/recommendation fields in React. | archived |
 | `5-timeline-display-meta` | `plans/archive/tasks/2026-05-05-timeline-display-dto-plan-v1/5-timeline-display-meta.md` | Switch meta-review handoff attempt, clean-run progress, approve-gate validation failure, and synthetic display rows to presenter-owned output, then delete the replaced React state reconstruction. | `4-timeline-display-badges` | The most fragile meta-review timeline behavior is still reconstructed in React. | archived |
-| `6-timeline-legacy-cleanup` | `null` | Remove transitional dual-shape support, raw payload normal-render access, obsolete helpers, obsolete tests/fixtures, and add no-legacy guards. | `5-timeline-display-meta` | Migration residue could leave permanent compatibility code and allow the coupling to return. | not_created |
+| `6-timeline-legacy-cleanup` | `plans/tasks/6-timeline-legacy-cleanup.md` | Remove transitional dual-shape support, raw payload normal-render access, obsolete helpers, obsolete tests/fixtures, and add no-legacy guards. | `5-timeline-display-meta` | Migration residue could leave permanent compatibility code and allow the coupling to return. | implementable |
 
 ## Coverage Map
 
@@ -252,10 +252,12 @@ React render only.
    rg "latest_recommendation|meta_review_handoff_id|delivery_target_role|actor_agent" ui/src/components/expanded
    ```
 
-   Expected result for normal render code: zero matches. If a term remains in a
-   backend presenter, debug-only contract, or non-render test assertion, the task
-   must justify the ownership explicitly and prove `BubbleTimeline.tsx` does not
-   consume it.
+   Expected result for normal render code: zero matches. Because `rg` exits `1`
+   when it finds no matches, task 6 must capture no-legacy check output and exit
+   status explicitly, treating empty output with exit code `1` as the expected
+   zero-match pass condition. If a term remains in a backend presenter,
+   debug-only contract, or non-render test assertion, the task must justify the
+   ownership explicitly and prove `BubbleTimeline.tsx` does not consume it.
 
 ## Risks and Assumptions
 
