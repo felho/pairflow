@@ -6,10 +6,10 @@ import type {
   EmitDeliveryNotificationAckPort
 } from "../ports/tmuxDelivery.js";
 import type { ProtocolEnvelope } from "../../../types/protocol.js";
-import type {
-  applyMetaReviewGateOnConvergence
-} from "../metaReviewGate/metaReviewGateCommandApi.js";
 import type { MetaReviewGateRoute } from "../metaReviewGate/index.js";
+import type {
+  ApplyMetaReviewGateOnConvergencePort
+} from "../metaReviewGate/metaReviewGateCommandContract.js";
 import type {
   ResolveReviewerTestExecutionDirectivePort
 } from "../ports/reviewerTestEvidenceArtifacts.js";
@@ -48,7 +48,7 @@ export interface EmitConvergedInput {
 export interface EmitConvergedDependencies {
   emitDeliveryNotificationAck?: EmitDeliveryNotificationAckPort;
   emitBubbleNotification?: EmitBubbleNotification;
-  applyMetaReviewGateOnConvergence?: typeof applyMetaReviewGateOnConvergence;
+  applyMetaReviewGateOnConvergence?: ApplyMetaReviewGateOnConvergencePort;
   resolveReviewerTestExecutionDirective?:
     ResolveReviewerTestExecutionDirectivePort;
 }

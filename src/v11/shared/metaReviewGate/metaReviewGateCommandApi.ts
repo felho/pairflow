@@ -10,7 +10,8 @@ import {
 } from "./metaReviewGateRouteContract.js";
 import type {
   ApplyMetaReviewGateOnConvergenceDependencies,
-  ApplyMetaReviewGateOnConvergenceInput
+  ApplyMetaReviewGateOnConvergenceInput,
+  ApplyMetaReviewGateOnConvergencePort
 } from "./metaReviewGateCommandContract.js";
 import type {
   MetaReviewGateResult
@@ -18,12 +19,12 @@ import type {
 
 export { MetaReviewGateError };
 
-export async function applyMetaReviewGateOnConvergence(
+export const applyMetaReviewGateOnConvergence: ApplyMetaReviewGateOnConvergencePort = async (
   input: ApplyMetaReviewGateOnConvergenceInput,
   dependencies: ApplyMetaReviewGateOnConvergenceDependencies = {}
-): Promise<MetaReviewGateResult> {
+): Promise<MetaReviewGateResult> => {
   return applyMetaReviewGateOnConvergenceInternal(input, dependencies);
-}
+};
 
 export function toMetaReviewGateError(error: unknown): MetaReviewGateError {
   return toMetaReviewGateErrorInternal(error);

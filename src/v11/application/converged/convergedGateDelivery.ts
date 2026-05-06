@@ -4,7 +4,7 @@ import type {
   DeliveryAckStatus,
   EmitDeliveryNotificationAckPort
 } from "../../shared/ports/tmuxDelivery.js";
-import type { applyMetaReviewGateOnConvergence } from "../../shared/metaReviewGate/metaReviewGateCommandApi.js";
+import type { ApplyMetaReviewGateOnConvergencePort } from "../../shared/metaReviewGate/metaReviewGateCommandContract.js";
 import type { ResolvedBubbleWorkspace } from "../../shared/ports/workspaceResolution.js";
 import {
   isAgentName,
@@ -180,7 +180,7 @@ export async function executeGateDelivery(input: {
   resolved: ResolvedBubbleWorkspace;
   implementer: AgentName;
   reviewer: AgentName;
-  gateResult: Awaited<ReturnType<typeof applyMetaReviewGateOnConvergence>>;
+  gateResult: Awaited<ReturnType<ApplyMetaReviewGateOnConvergencePort>>;
   emitDelivery: EmitDeliveryNotificationAckPort;
   resolveMessageRef: ResolvedConvergedGateDeliveryDependencies["resolveDeliveryMessageRef"];
 }): Promise<ConvergedDeliveryResult> {
