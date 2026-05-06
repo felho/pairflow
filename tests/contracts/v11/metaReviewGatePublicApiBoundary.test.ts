@@ -113,6 +113,12 @@ describe("meta-review gate public API boundary", () => {
     expect(metaReviewGatePublicApi).not.toHaveProperty(
       "toMetaReviewGateError"
     );
+    expect(metaReviewGatePublicApi).not.toHaveProperty(
+      "resolveMetaReviewGateNotifyTmuxCapabilities"
+    );
+    expect(metaReviewGatePublicApi).not.toHaveProperty(
+      "resolveMetaReviewGatePaneBindingTmuxCapabilities"
+    );
   });
 
   it("keeps command runtime on its narrow public API", () => {

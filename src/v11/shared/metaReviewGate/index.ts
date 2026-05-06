@@ -1,8 +1,4 @@
 export {
-  resolveMetaReviewGateNotifyTmuxCapabilities,
-  resolveMetaReviewGatePaneBindingTmuxCapabilities
-} from "./metaReviewGateRuntimeCapabilities.js";
-export {
   MetaReviewGateError,
   metaReviewGateRoutes
 } from "./metaReviewGateRouteContract.js";
