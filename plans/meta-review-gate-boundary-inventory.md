@@ -139,7 +139,7 @@ dependencies remain pure and they do not perform I/O.
 
 | File | Lines | Responsibility | External import? | Suggested action |
 | --- | ---: | --- | --- | --- |
-| `metaReviewGateThresholdAuthority.ts` | 159 | Threshold authority resolver wrapper around artifact/parity I/O and domain threshold helpers. | yes, 2 | Keep as transitional shared API; next split should move verified parity-to-authority result construction into domain, leaving I/O orchestration here. |
+| `metaReviewGateThresholdAuthority.ts` | 131 | Threshold authority resolver wrapper around artifact/parity I/O and domain threshold helpers. | yes, 2 | Keep as transitional shared API; verified parity-to-authority result construction now lives in domain. |
 | `metaReviewGateFindingsClaimParsing.ts` | 91 | Structured findings claim parsing from report JSON. | yes, 1 | Domain candidate. |
 | `metaReviewGateFindingsParityInput.ts` | 157 | Build/resolve rework findings parity input and reason codes. | yes, 1 | Domain candidate, likely after claim parsing. |
 | `metaReviewGateFindingsSplit.ts` | 162 | Blocking/advisory split derivation from findings/report JSON. | yes, 3 | Domain candidate or shared model helper; resolve whether it is gate-specific. |
