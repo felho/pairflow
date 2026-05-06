@@ -2,7 +2,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 
 import { loadPairflowGlobalConfig } from "../../../config/pairflowConfig.js";
-import { processSpawn } from "../../shared/process/processSpawnDefaults.js";
+import { processSpawnDefault as processSpawn } from "../process/processSpawnDependencyDefaults.js";
 import { buildCheckLauncherAvailabilityDefault } from "./attachBubbleLauncherAvailability.js";
 import {
   buildAttachCommand,

@@ -19,7 +19,7 @@ import {
 import {
   createOpenBubbleError
 } from "./openBubbleError.js";
-import { processSpawn } from "../../shared/process/processSpawnDefaults.js";
+import { processSpawnDefault as processSpawn } from "../process/processSpawnDependencyDefaults.js";
 import {
   enrichRemoteOpenContext,
   resolveOpenCommandTemplate,
