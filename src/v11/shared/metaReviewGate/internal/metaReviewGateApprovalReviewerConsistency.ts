@@ -1,6 +1,6 @@
 import type { MetaReviewRecommendation } from "../../../../types/bubble.js";
 import type { FindingsParityMetadata } from "../../../../types/protocol.js";
-import type { LatestSameRoundReviewerSnapshot } from "../metaReviewGateReviewerSnapshot.js";
+import type { LatestSameRoundReviewerSnapshot } from "./metaReviewGateReviewerSnapshot.js";
 import {
   buildMetaReviewSubmitAdvisoryOnlyCorrectionNote
 } from "../../metaReview/metaReviewSubmitGuidance.js";

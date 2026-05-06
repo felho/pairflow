@@ -19,10 +19,10 @@ export {
 export {
   isAdvisoryOnlyReviewerSnapshot,
   readLatestSameRoundReviewerSnapshotFromTranscript
-} from "./metaReviewGateReviewerSnapshot.js";
+} from "./internal/metaReviewGateReviewerSnapshot.js";
 export type {
   LatestSameRoundReviewerSnapshot
-} from "./metaReviewGateReviewerSnapshot.js";
+} from "./internal/metaReviewGateReviewerSnapshot.js";
 export {
   resolveMetaReviewGateNotifyTmuxCapabilities,
   resolveMetaReviewGatePaneBindingTmuxCapabilities

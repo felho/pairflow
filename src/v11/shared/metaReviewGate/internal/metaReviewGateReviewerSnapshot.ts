@@ -1,8 +1,8 @@
-import { readTranscriptEnvelopes } from "../transcript/transcriptDependencyDefaults.js";
+import { readTranscriptEnvelopes } from "../../transcript/transcriptDependencyDefaults.js";
 import {
   resolveLatestSameRoundReviewerSnapshot,
   type LatestSameRoundReviewerSnapshot
-} from "../../domain/metaReviewGate/reviewerSnapshot.js";
+} from "../../../domain/metaReviewGate/reviewerSnapshot.js";
 
 export {
   isAdvisoryOnlyReviewerSnapshot,
@@ -11,7 +11,7 @@ export {
   resolveReviewerSnapshotMetadataAdvisoryOpenTotal,
   resolveSameRoundReviewerSnapshotFromEnvelope,
   type LatestSameRoundReviewerSnapshot
-} from "../../domain/metaReviewGate/reviewerSnapshot.js";
+} from "../../../domain/metaReviewGate/reviewerSnapshot.js";
 
 export async function readLatestSameRoundReviewerSnapshotFromTranscript(
   transcriptPath: string,
