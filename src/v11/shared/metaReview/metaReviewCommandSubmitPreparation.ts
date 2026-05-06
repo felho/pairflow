@@ -36,7 +36,7 @@ import {
 } from "./metaReviewCommandSubmitLink.js";
 import {
   resolveMetaReviewGateThresholdAuthority
-} from "../metaReviewGate/metaReviewGateThresholdAuthority.js";
+} from "../metaReviewGate/index.js";
 import { normalizeBubbleReviewPolicy } from "../reviewPolicy/reviewPolicyRuntime.js";
 import type {
   MetaReviewCommandDependencies,

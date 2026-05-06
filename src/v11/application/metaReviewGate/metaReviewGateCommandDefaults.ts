@@ -1,10 +1,10 @@
 import type {
   ApplyMetaReviewGateOnConvergenceDependencies
-} from "../../shared/metaReviewGate/metaReviewGateCommandContract.js";
+} from "../../shared/metaReviewGate/index.js";
 import type {
   MetaReviewGateNotifyRuntimeCapabilities,
   MetaReviewGatePaneBindingRuntimeCapabilities
-} from "../../shared/metaReviewGate/metaReviewGateTypes.js";
+} from "../../shared/metaReviewGate/index.js";
 
 export interface MetaReviewGateDependencyDefaults {
   appendProtocolEnvelope:

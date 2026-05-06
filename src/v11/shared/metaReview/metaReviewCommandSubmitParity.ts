@@ -4,10 +4,10 @@ import {
 import { MetaReviewError } from "./metaReviewError.js";
 import {
   resolveStructuredMetaReviewClaimFromReportJson
-} from "../metaReviewGate/metaReviewGateFindingsClaimParsing.js";
+} from "../../domain/metaReviewGate/findingsClaimParsing.js";
 import {
   resolveFindingsOpenSplitFromReportJson
-} from "../metaReviewGate/metaReviewGateFindingsSplit.js";
+} from "../../domain/metaReviewGate/findingsSplit.js";
 import {
   evaluateNoFindingsSummaryFindingsAssertion,
   evaluatePositiveSummaryFindingsAssertion,

@@ -4,7 +4,7 @@ import { join } from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import { appendHumanApprovalRequestEnvelope as appendHumanApprovalRequestEnvelopeImpl } from "../../../src/v11/shared/metaReviewGate/approvalRequestEnvelope.js";
+import { appendHumanApprovalRequestEnvelope as appendHumanApprovalRequestEnvelopeImpl } from "../../../src/v11/shared/metaReviewGate/internal/approvalRequestEnvelope.js";
 import type { Finding } from "../../../src/types/findings.js";
 import type { AgentName } from "../../../src/types/bubble.js";
 import {
@@ -18,7 +18,7 @@ import {
   type AppendProtocolEnvelopeInput
 } from "../../../src/v11/infrastructure/artifact/transcript/transcriptStore.js";
 import { buildMetaReviewSubmitAdvisoryOnlyCorrectionNote } from "../../../src/v11/shared/metaReview/metaReviewSubmitGuidance.js";
-import type { MetaReviewGateThresholdMetadata } from "../../../src/v11/shared/metaReviewGate/metaReviewGateTypes.js";
+import type { MetaReviewGateThresholdMetadata } from "../../../src/v11/shared/metaReviewGate/index.js";
 
 const tempDirs: string[] = [];
 

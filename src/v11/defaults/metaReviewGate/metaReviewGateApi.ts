@@ -10,13 +10,13 @@ import type {
   NotifyMetaReviewerSubmissionRequestDependencies,
   NotifyMetaReviewerSubmissionRequestInput,
   ResolveMetaReviewerPaneWarning
-} from "../../shared/metaReviewGate/metaReviewGateCommandContract.js";
+} from "../../shared/metaReviewGate/index.js";
 import {
   type MetaReviewGateNotifyTmuxCapabilities,
   type MetaReviewGatePaneBindingTmuxCapabilities,
   resolveMetaReviewGateNotifyTmuxCapabilities,
   resolveMetaReviewGatePaneBindingTmuxCapabilities
-} from "../../shared/metaReviewGate/metaReviewGateTypes.js";
+} from "../../shared/metaReviewGate/index.js";
 import {
   applyMetaReviewGateOnConvergenceV11 as applyMetaReviewGateOnConvergenceBase
 } from "../../application/metaReviewGate/emitMetaReviewGateV11.js";

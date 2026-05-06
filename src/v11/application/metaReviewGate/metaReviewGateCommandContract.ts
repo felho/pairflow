@@ -12,4 +12,4 @@ export type {
   NotifyMetaReviewerSubmissionRequestDependencies,
   NotifyMetaReviewerSubmissionRequestInput,
   ResolveMetaReviewerPaneWarning
-} from "../../shared/metaReviewGate/metaReviewGateCommandContract.js";
+} from "../../shared/metaReviewGate/index.js";

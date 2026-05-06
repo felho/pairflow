@@ -3,7 +3,7 @@ import type {
   BubbleLifecycleState,
   MetaReviewRecommendation
 } from "../../../types/bubble.js";
-import type { MetaReviewGateRoute } from "../metaReviewGate/metaReviewGateTypes.js";
+import type { MetaReviewGateRoute } from "../metaReviewGate/index.js";
 import { resolveCanonicalPendingApprovalSignal } from "../approval/pendingApprovalSignal.js";
 import { isNamedError } from "../errors/namedError.js";
 

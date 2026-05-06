@@ -50,4 +50,30 @@ describe("fitness check mode resolution", () => {
     expect(checks).toHaveLength(1);
     expect(checks[0]?.mode).toBe("hard-fail");
   });
+
+  it("routes internal module boundary check to its implementation", async () => {
+    const checks = await buildReportChecks(
+      {
+        defaults: {
+          mode: "hard-fail"
+        },
+        checks: [
+          {
+            id: "internal_module_boundary",
+            metric: "internal module implementation privacy boundary",
+            mode: "report-only",
+            owner: "architecture/runtime",
+            scope: ["src/v11/no-files-here/**"],
+            exceptions: []
+          }
+        ]
+      },
+      process.cwd()
+    );
+
+    expect(checks).toHaveLength(1);
+    expect(checks[0]?.id).toBe("internal_module_boundary");
+    expect(checks[0]?.status).toBe("pass");
+    expect(checks[0]?.summary).toContain("Internal module boundary check");
+  });
 });

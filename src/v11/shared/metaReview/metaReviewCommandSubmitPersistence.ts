@@ -133,12 +133,10 @@ export async function assertSubmitReworkFindingsArtifactContract(input: {
   reportJson: Record<string, unknown>;
   readFileFn: MetaReviewArtifactReadPort;
 }): Promise<void> {
-  const { resolveReworkFindingsParityInput } = await import(
-    "../metaReviewGate/metaReviewGateFindingsParityInput.js"
-  );
-  const { validateFindingsArtifactParity } = await import(
-    "../metaReviewGate/metaReviewGateFindingsParityHelpers.js"
-  );
+  const {
+    resolveReworkFindingsParityInput,
+    validateFindingsArtifactParity
+  } = await import("../metaReviewGate/index.js");
 
   if (input.runResult.recommendation !== "rework") {
     return;

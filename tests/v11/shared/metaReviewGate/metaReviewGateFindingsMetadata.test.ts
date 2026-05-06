@@ -1,166 +1,57 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  resolveFindingsArtifactOpenTotalFromArtifact,
-  resolveFindingsParityMetadataFromReportJson
-} from "../../../../src/v11/shared/metaReviewGate/metaReviewGateFindingsMetadata.js";
-import {
-  resolveLatestSameRoundReviewerSnapshot,
-  resolveSameRoundReviewerSnapshotFromEnvelope
-} from "../../../../src/v11/shared/metaReviewGate/metaReviewGateReviewerSnapshot.js";
-
-describe("resolveFindingsArtifactOpenTotalFromArtifact", () => {
-  it("derives open_total from findings when explicit totals are absent", () => {
-    const openTotal = resolveFindingsArtifactOpenTotalFromArtifact({
-      findings: [
-        { severity: "blocking", title: "blocking-a" },
-        { priority: "P2", title: "advisory-a" },
-        { severity: "P3", title: "advisory-b" }
-      ]
-    });
-
-    expect(openTotal).toBe(3);
+  resolveFindingsArtifactPath
+} from "../../../../src/v11/shared/metaReviewGate/internal/metaReviewGateFindingsMetadata.js";
+describe("resolveFindingsArtifactPath", () => {
+  it("resolves artifact refs under artifacts", () => {
+    expect(
+      resolveFindingsArtifactPath({
+        bubbleDir: "/repo/.pairflow/bubbles/b-1",
+        artifactsDir: "/repo/.pairflow/bubbles/b-1/artifacts",
+        artifactRef: "artifacts/findings.json"
+      })
+    ).toBe("/repo/.pairflow/bubbles/b-1/artifacts/findings.json");
   });
 
-  it("accepts advisory severity alias when deriving open_total from findings artifacts", () => {
-    const openTotal = resolveFindingsArtifactOpenTotalFromArtifact({
-      findings: [
-        { severity: "blocking", title: "blocking-a" },
-        { severity: "advisory", title: "advisory-alias-a" },
-        { severity: "advisory", title: "advisory-alias-b" }
-      ]
-    });
-
-    expect(openTotal).toBe(3);
-  });
-});
-
-describe("resolveFindingsParityMetadataFromReportJson", () => {
-  it("prefers explicit findings_claimed_open_total over derived findings_count", () => {
-    const metadata = resolveFindingsParityMetadataFromReportJson({
-      findings_count: 5,
-      findings_claimed_open_total: 2,
-      findings_blocking_open_total: 0,
-      findings_advisory_open_total: 2
-    });
-
-    expect(metadata).toMatchObject({
-      findings_claimed_open_total: 2,
-      findings_blocking_open_total: 0,
-      findings_advisory_open_total: 2
-    });
-  });
-
-  it("includes advisory/blocking split fields in parity metadata", () => {
-    const metadata = resolveFindingsParityMetadataFromReportJson({
-      findings_count: 2,
-      findings_artifact_open_total: 2,
-      findings_blocking_open_total: 0,
-      findings_advisory_open_total: 2,
-      findings_artifact_status: "available",
-      findings_digest_sha256:
-        "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-      meta_review_run_id: "run_meta_01",
-      findings_parity_status: "ok"
-    });
-
-    expect(metadata).toMatchObject({
-      findings_claimed_open_total: 2,
-      findings_artifact_open_total: 2,
-      findings_blocking_open_total: 0,
-      findings_advisory_open_total: 2,
-      findings_artifact_status: "available",
-      findings_parity_status: "ok"
-    });
-  });
-});
-
-describe("reviewer same-round snapshot helpers", () => {
-  it("prefers metadata advisory open total over explicit empty findings list", () => {
-    const snapshot = resolveSameRoundReviewerSnapshotFromEnvelope({
-      id: "msg_conv_latest_01",
-      ts: "2026-03-28T10:00:00.000Z",
-      bubble_id: "b_meta_snapshot_01",
-      sender: "claude",
-      recipient: "orchestrator",
-      type: "CONVERGENCE",
-      round: 4,
-      payload: {
-        summary: "Converged.",
-        findings: [],
-        metadata: {
-          advisory_findings_open_total: 2
-        }
-      },
-      refs: []
-    });
-
-    expect(snapshot).toMatchObject({
-      envelopeId: "msg_conv_latest_01",
-      round: 4,
-      findings_blocking_open_total: 0,
-      findings_advisory_open_total: 2,
-      findings_open_total: 2,
-      advisoryFindings: []
-    });
+  it("rejects refs outside artifacts", () => {
+    expect(
+      resolveFindingsArtifactPath({
+        bubbleDir: "/repo/.pairflow/bubbles/b-1",
+        artifactsDir: "/repo/.pairflow/bubbles/b-1/artifacts",
+        artifactRef: "logs/findings.json"
+      })
+    ).toBeUndefined();
+    expect(
+      resolveFindingsArtifactPath({
+        bubbleDir: "/repo/.pairflow/bubbles/b-1",
+        artifactsDir: "/repo/.pairflow/bubbles/b-1/artifacts",
+        artifactRef: "artifacts/../state.json"
+      })
+    ).toBeUndefined();
+    expect(
+      resolveFindingsArtifactPath({
+        bubbleDir: "/repo/.pairflow/bubbles/b-1",
+        artifactsDir: "/repo/.pairflow/bubbles/b-1/artifacts",
+        artifactRef: "artifacts\\findings.json"
+      })
+    ).toBeUndefined();
+    expect(
+      resolveFindingsArtifactPath({
+        bubbleDir: "/repo/.pairflow/bubbles/b-1",
+        artifactsDir: "/repo/.pairflow/bubbles/b-1/artifacts",
+        artifactRef: "artifacts/findings.json\0"
+      })
+    ).toBeUndefined();
   });
 
-  it("returns the latest same-round reviewer snapshot and ignores older or cross-round entries", () => {
-    const snapshot = resolveLatestSameRoundReviewerSnapshot(
-      [
-        {
-          id: "msg_conv_round3_old",
-          ts: "2026-03-28T09:55:00.000Z",
-          bubble_id: "b_meta_snapshot_02",
-          sender: "claude",
-          recipient: "orchestrator",
-          type: "CONVERGENCE",
-          round: 3,
-          payload: {
-            summary: "Older round.",
-            metadata: {
-              advisory_findings_open_total: 3
-            }
-          },
-          refs: []
-        },
-        {
-          id: "msg_conv_round4_old",
-          ts: "2026-03-28T09:56:00.000Z",
-          bubble_id: "b_meta_snapshot_02",
-          sender: "claude",
-          recipient: "orchestrator",
-          type: "CONVERGENCE",
-          round: 4,
-          payload: {
-            summary: "Older same round.",
-            metadata: {
-              advisory_findings_open_total: 2
-            }
-          },
-          refs: []
-        },
-        {
-          id: "msg_conv_round4_latest",
-          ts: "2026-03-28T09:57:00.000Z",
-          bubble_id: "b_meta_snapshot_02",
-          sender: "claude",
-          recipient: "orchestrator",
-          type: "CONVERGENCE",
-          round: 4,
-          payload: {
-            summary: "Latest same round.",
-            findings: []
-          },
-          refs: []
-        }
-      ],
-      4
-    );
-
-    expect(snapshot).toMatchObject({
-      envelopeId: "msg_conv_round4_latest",
-      findings_open_total: 0
-    });
+  it("rejects resolved paths that escape the configured artifacts directory", () => {
+    expect(
+      resolveFindingsArtifactPath({
+        bubbleDir: "/repo/.pairflow/other-bubble",
+        artifactsDir: "/repo/.pairflow/bubbles/b-1/artifacts",
+        artifactRef: "artifacts/findings.json"
+      })
+    ).toBeUndefined();
   });
 });

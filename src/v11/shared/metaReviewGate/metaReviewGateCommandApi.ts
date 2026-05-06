@@ -3,11 +3,13 @@ export {
   asMetaReviewGateError,
   MetaReviewGateError,
   toMetaReviewGateError
-} from "./metaReviewGateCommandRuntime.js";
+} from "./internal/metaReviewGateCommandRuntime.js";
 export type {
   ApplyMetaReviewGateOnConvergenceDependencies,
   ApplyMetaReviewGateOnConvergenceInput,
+  FinalizeCurrentRunMetaReviewGateInput,
   MetaReviewRuntimeDeliveryObservation,
+  MetaReviewApproveValidationCommandRunInput,
   MetaReviewGateNotifyRuntimeCapabilities,
   MetaReviewGatePaneBindingRuntimeCapabilities,
   MetaReviewGateReasonCode,

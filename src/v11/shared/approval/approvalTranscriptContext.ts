@@ -3,7 +3,7 @@ import type { ProtocolEnvelope } from "../../../types/protocol.js";
 import {
   metaReviewGateRoutes,
   type MetaReviewGateRoute
-} from "../metaReviewGate/metaReviewGateTypes.js";
+} from "../metaReviewGate/index.js";
 import type { ReadTranscriptEnvelopesPort } from "../ports/transcript.js";
 
 const approvalSummaryConsistencyStatusMetadataKey =

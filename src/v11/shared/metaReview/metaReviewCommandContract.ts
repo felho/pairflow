@@ -3,7 +3,7 @@ import type {
   MetaReviewSubmissionPayload,
   ProtocolEnvelope
 } from "../../../types/protocol.js";
-import type { MetaReviewGateRoute } from "../metaReviewGate/metaReviewGateTypes.js";
+import type { MetaReviewGateRoute } from "../metaReviewGate/index.js";
 import type {
   MetaReviewDeliveryEmitter,
   MetaReviewDeliveryMessageRefBuilder
@@ -28,9 +28,9 @@ import type {
 import type {
   MetaReviewGateRuntimeCapabilities,
   NotifyMetaReviewerSubmissionRequest,
-  ResolveMetaReviewerPaneWarning
-} from "../metaReviewGate/metaReviewGateTypes.js";
-import type { FinalizeCurrentRunMetaReviewGateInput } from "../metaReviewGate/metaReviewGateCurrentRunTypes.js";
+  ResolveMetaReviewerPaneWarning,
+  FinalizeCurrentRunMetaReviewGateInput
+} from "../metaReviewGate/index.js";
 
 export type { MetaReviewResult, MetaReviewRunWarning } from "./metaReviewTypes.js";
 
