@@ -11,7 +11,7 @@ import type {
 } from "../../../../types/bubble.js";
 import { toMetaReviewGateError } from "./metaReviewGateErrorConversion.js";
 import { MetaReviewGateError } from "../metaReviewGateRouteContract.js";
-import { normalizeMetaReviewSnapshot } from "./metaReviewGateSnapshotHelpers.js";
+import { normalizeMetaReviewSnapshot } from "../../../domain/metaReviewGate/snapshotState.js";
 
 export function throwMetaReviewRunningStageFailure(input: {
   rootError: unknown;

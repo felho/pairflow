@@ -1,9 +1,7 @@
 import type { MetaReviewResult } from "../metaReview/metaReviewTypes.js";
 import type { Finding } from "../../../types/findings.js";
 import type { FindingsParityMetadata } from "../../../types/protocol.js";
-import {
-  normalizeMetaReviewSnapshot,
-} from "./internal/metaReviewGateShared.js";
+import { normalizeMetaReviewSnapshot } from "../../domain/metaReviewGate/snapshotState.js";
 import type { MetaReviewGateResult } from "./metaReviewGateResultContract.js";
 import { dispatchAutoRework } from "./internal/metaReviewGateAutoRework.js";
 import { validateStructuredMetaReviewPositiveClaim } from "./internal/metaReviewGateFindingsValidation.js";

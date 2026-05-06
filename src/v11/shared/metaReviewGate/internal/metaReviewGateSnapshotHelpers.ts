@@ -12,9 +12,6 @@ export function resolveMetaReviewerAgent(agents: BubbleAgentsConfig) {
   });
 }
 
-export { normalizeMetaReviewSnapshot } from "../../../domain/metaReviewGate/snapshotState.js";
-export { buildHumanGateSummary } from "../../../domain/metaReviewGate/humanGatePolicy.js";
-
 export function resolveFindingsParityMetadataForEnvelope(
   metadata: FindingsParityMetadata | null | undefined
 ): Record<string, unknown> {

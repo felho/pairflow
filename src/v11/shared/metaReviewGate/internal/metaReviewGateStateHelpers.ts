@@ -3,8 +3,6 @@ import { assertValidBubbleStateSnapshot } from "../../state/stateSchema.js";
 import type { BubbleStateSnapshot } from "../../../../types/bubble.js";
 import { clearLiveMetaReviewSnapshot } from "../../metaReview/metaReviewSnapshot.js";
 export {
-  buildHumanGateSummary,
-  normalizeMetaReviewSnapshot,
   resolveMetaReviewerAgent,
   resolveFindingsParityMetadataForEnvelope
 } from "./metaReviewGateSnapshotHelpers.js";

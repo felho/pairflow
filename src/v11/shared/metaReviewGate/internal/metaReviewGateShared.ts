@@ -21,8 +21,6 @@ export {
   type PersistHumanGateRouteInput
 } from "./metaReviewGateHumanGatePersistence.js";
 export {
-  buildHumanGateSummary,
-  normalizeMetaReviewSnapshot,
   resolveMetaReviewerAgent,
   resolveFindingsParityMetadataForEnvelope,
   transitionToGateState

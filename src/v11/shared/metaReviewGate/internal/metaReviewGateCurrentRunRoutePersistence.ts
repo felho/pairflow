@@ -6,9 +6,9 @@ import type { MetaReviewResult } from "../../metaReview/metaReviewTypes.js";
 import type { LoadedStateSnapshot } from "../../ports/stateSnapshots.js";
 import {
   buildGateLockPath,
-  buildHumanGateSummary,
   persistHumanGateRoute
 } from "./metaReviewGateShared.js";
+import { buildHumanGateSummary } from "../../../domain/metaReviewGate/humanGatePolicy.js";
 import {
   resolveHumanGateRoute
 } from "../../../domain/metaReviewGate/humanGateRouting.js";

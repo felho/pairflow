@@ -11,14 +11,12 @@ import {
 import {
   deliveryTargetRoleMetadataKey
 } from "../../../../types/protocol.js";
+import { buildHumanGateSummary } from "../../../domain/metaReviewGate/humanGatePolicy.js";
 export {
   stageMetaReviewRunningState,
   throwMetaReviewRunningStageFailure
 } from "./metaReviewGateStateStaging.js";
-import {
-  buildHumanGateSummary,
-  persistHumanGateRoute
-} from "./metaReviewGateShared.js";
+import { persistHumanGateRoute } from "./metaReviewGateShared.js";
 import type { MetaReviewGateResult } from "../metaReviewGateResultContract.js";
 
 export async function appendMetaReviewKickoffEnvelope(input: {
