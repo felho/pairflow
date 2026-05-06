@@ -110,6 +110,67 @@ describe("timelinePresenter display DTO", () => {
     });
   });
 
+  it("emits badge tones and producer-owned decision recommendation dedupe", () => {
+    const entries = presentTimeline([
+      envelope({
+        id: "finding-tones",
+        payload: {
+          summary: "Findings.",
+          findings: [
+            { title: "Critical", severity: "P0" },
+            { title: "Duplicate critical", severity: "P0" },
+            { title: "Blocking", severity: "P1" },
+            { title: "Warning", severity: "P2" },
+            { title: "Advisory", severity: "P3" }
+          ]
+        }
+      }),
+      envelope({
+        id: "decision-approve",
+        type: "APPROVAL_DECISION",
+        payload: {
+          decision: "approve"
+        }
+      }),
+      envelope({
+        id: "recommendation-variants",
+        type: "APPROVAL_REQUEST",
+        payload: {
+          summary: "Meta review.",
+          metadata: {
+            latest_recommendation: "inconclusive"
+          }
+        }
+      }),
+      envelope({
+        id: "decision-wins",
+        type: "APPROVAL_DECISION",
+        payload: {
+          decision: "rework",
+          metadata: {
+            recommendation: "rework"
+          }
+        }
+      })
+    ]);
+
+    expect(entries[0]?.display.badges).toEqual([
+      { kind: "finding", label: "P0", tone: "danger" },
+      { kind: "finding", label: "P1", tone: "danger" },
+      { kind: "finding", label: "P2", tone: "warning" },
+      { kind: "finding", label: "P3", tone: "neutral" }
+    ]);
+    expect(entries[1]?.display.badges).toEqual([
+      { kind: "decision", label: "approve", tone: "success" }
+    ]);
+    expect(entries[2]?.display.badges).toEqual([
+      { kind: "recommendation", label: "inconclusive", tone: "warning" }
+    ]);
+    expect(entries[3]?.display.badges).toEqual([
+      { kind: "decision", label: "rework", tone: "danger" }
+    ]);
+  });
+
   it("emits handoff and clean-run progress while nullable non-applicable families stay present", () => {
     const entries = presentTimeline([
       envelope({
