@@ -1,6 +1,6 @@
 # Meta-Review Gate Boundary Inventory
 
-Status: temporary ideation inventory  
+Status: checkpointed ideation inventory  
 Scope: `src/v11/shared/metaReviewGate/**`  
 Bubble: `meta-review-internal-boundary`  
 Created: 2026-05-05
@@ -109,6 +109,8 @@ Completed in the bubble:
 - `metaReviewGateTypes.ts` is now a compatibility aggregator only; route/error,
   result, runtime capability, and tmux runner contracts each have narrower
   public contract files.
+- `metaReviewGateCurrentRunTypes.ts` owns the public artifact read function type
+  directly; it no longer imports that type from an internal metadata helper.
 
 Known aggregate-index exception:
 
@@ -125,10 +127,10 @@ current-run finalization entrypoint.
 
 ## Purpose
 
-This inventory supports the first `internal/` module-boundary migration pilot.
-It is not a task spec and not a refactor plan. It records the current
-`shared/metaReviewGate` file surface, likely ownership, and the safest first
-movement for each slice.
+This inventory records the checkpoint reached by the first `internal/`
+module-boundary migration pilot. It is not a task spec and not a refactor plan.
+It records the current `shared/metaReviewGate` file surface, current ownership,
+and remaining follow-up decisions.
 
 Use this with:
 
@@ -176,6 +178,8 @@ Current source-facing public surface:
 - `metaReviewGateCommandContract.ts`: stable command/result contracts.
 - `metaReviewGateCurrentRunApi.ts`: narrow current-run finalization entrypoint
   kept outside the aggregate index to avoid the known cycle.
+- `metaReviewGateCurrentRunTypes.ts`: public current-run finalization input and
+  artifact-read function contracts.
 - `metaReviewGateRouteContract.ts`: route/error/threshold-status language.
 - `metaReviewGateResultContract.ts`: gate result DTO.
 - `metaReviewGateRuntimeCapabilities.ts`: runtime dependency/capability
@@ -290,40 +294,32 @@ the final owner should not be domain policy.
 | `metaReviewGateFindingsArtifactReadRetry.ts` | 90 | Retry policy around findings artifact read. | no direct external | Infrastructure/port-adjacent or application internal. |
 | `internal/metaReviewGateReviewerSnapshot.ts` | 29 | Transcript read wrapper plus compatibility re-exports for domain reviewer snapshot policy. | public via aggregate index only | Done split; pure snapshot derivation is domain-owned. |
 
-## Suggested First Pass
+## Checkpoint Summary
 
-1. Add `src/v11/shared/metaReviewGate/index.ts` as the public module door.
-2. Route obvious public imports through `index.ts` or stable contract files:
-   `metaReviewGateCommandApi.ts`, `metaReviewGateCommandContract.ts`, trimmed
-   `metaReviewGateTypes.ts`.
-3. Move files with no external imports and unclear final placement under
-   `shared/metaReviewGate/internal/**`.
-4. For obvious policy files, prefer direct domain ownership instead of an
-   `internal/` detour. This is now done for threshold policy, findings
-   claim/split/parity metadata, approve-claim policy, reviewer snapshot policy,
-   and current-run approval subpolicies.
-5. Do not move these wholesale to domain:
-   - `metaReviewGateCurrentRunFinalization.ts`
-   - `metaReviewGateCurrentRunCleanRerun.ts`
-   - `metaReviewGateAutoRework.ts`
-   - `approvalRequestEnvelope.ts`
-   - `metaReviewApproveValidationGate.ts`
-6. Keep `metaReviewGateTypes.ts` as a compatibility aggregator only; new source
-   imports should prefer the narrower route/result/runtime contract files.
+The first pass is complete for the original meta-review gate boundary problem:
+
+1. `src/v11/shared/metaReviewGate/index.ts` is the broad public module door.
+2. `metaReviewGateCurrentRunApi.ts` is the narrow current-run public door kept
+   separate from the aggregate index because of the known cycle.
+3. Implementation details now live under
+   `src/v11/shared/metaReviewGate/internal/**`.
+4. Obvious pure policy and language moved to `src/v11/domain/metaReviewGate/**`.
+5. Large orchestration files were reduced to named internal slices rather than
+   moved wholesale to domain.
+6. `metaReviewGateTypes.ts` remains a compatibility aggregator; new source
+   imports should prefer narrower route/result/runtime/current-run contract
+   files.
 
 ## Open Questions
 
 1. Should `shared/metaReview/**` be treated as inside the same broader
    meta-review bounded context, or as an external consumer for the `internal/`
    rule pilot?
-2. Should `internal/metaReviewGateFindingsParityHelpers.ts` remain the shared
-   artifact read/hash/parse adapter, or should its parsing/hash pieces move
-   behind a narrower infrastructure port?
-3. Should `finalizeCurrentRunMetaReviewGate` remain public on the narrow
-   `metaReviewGateCurrentRunApi.ts` door during migration, or should callers be
-   moved immediately to a higher-level command API?
-4. Should `metaReviewGateTypes.ts` remain indefinitely as compatibility public
+2. Should `finalizeCurrentRunMetaReviewGate` remain public on the narrow
+   `metaReviewGateCurrentRunApi.ts` door long-term, or should callers eventually
+   move to a higher-level command API?
+3. Should `metaReviewGateTypes.ts` remain indefinitely as compatibility public
    surface, or should a later major cleanup remove it once external callers have
    migrated to narrower contract files?
-5. Should the first fitness rule hard-fail only `/internal/` import violations,
-   while a separate report-only radar finds large unprotected module candidates?
+4. Should artifact read/hash/parse helpers later move behind a narrower
+   infrastructure port, or is the current shared/internal adapter sufficient?
