@@ -8,7 +8,7 @@ import type { BubbleReviewAutoReworkSeverity } from "../../../types/bubble.js";
 import {
   type MetaReviewGateThresholdAuthorityResolution,
   metaReviewGateThresholdIsMet
-} from "../metaReviewGate/index.js";
+} from "../../domain/metaReviewGate/index.js";
 
 export type SubmitRunStatus = "success";
 

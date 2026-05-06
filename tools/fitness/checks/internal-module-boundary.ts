@@ -167,6 +167,13 @@ function isWithinOwnerRoot(input: {
   );
 }
 
+function isOwnerRootIndex(input: {
+  fromRelative: string;
+  ownerRoot: string;
+}): boolean {
+  return input.fromRelative === `${input.ownerRoot}/index.ts`;
+}
+
 function filterViolationsByExceptions(input: {
   violations: readonly InternalImportViolation[];
   allowlist: readonly InternalImportException[];
@@ -221,6 +228,15 @@ async function collectViolations(input: {
       const toRelative = normalizePathToPosix(relative(input.repoRoot, target));
       const ownerRoot = resolveInternalOwnerRoot(toRelative);
       if (ownerRoot === undefined) {
+        continue;
+      }
+      if (isOwnerRootIndex({ fromRelative, ownerRoot })) {
+        violations.push({
+          fromRelative,
+          toRelative,
+          ownerRoot,
+          line: imported.line
+        });
         continue;
       }
       if (isWithinOwnerRoot({ fromRelative, ownerRoot })) {

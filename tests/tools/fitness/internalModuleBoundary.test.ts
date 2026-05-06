@@ -83,7 +83,7 @@ describe("internal module boundary fitness check", () => {
     );
     await writeRepoFile(
       repoRoot,
-      "src/v11/shared/metaReviewGate/index.ts",
+      "src/v11/shared/metaReviewGate/policyApi.ts",
       "export { policy } from './internal/policy.js';\n"
     );
     await writeRepoFile(
@@ -101,7 +101,7 @@ describe("internal module boundary fitness check", () => {
     expect(report.status).toBe("pass");
   });
 
-  it("allows external imports of the module public surface", async () => {
+  it("fails when a module aggregate index re-exports internal files", async () => {
     const repoRoot = await createTempRoot();
     await writeRepoFile(
       repoRoot,
@@ -112,6 +112,36 @@ describe("internal module boundary fitness check", () => {
       repoRoot,
       "src/v11/shared/metaReviewGate/index.ts",
       "export { policy } from './internal/policy.js';\n"
+    );
+    await writeRepoFile(
+      repoRoot,
+      "src/v11/application/converged/use-case.ts",
+      "import { policy } from '../../shared/metaReviewGate/index.js';\nexport const value = policy;\n"
+    );
+
+    const report = await buildInternalModuleBoundaryCheckReport({
+      check: checkInput(),
+      repoRoot,
+      fallbackMode: "hard-fail"
+    });
+
+    expect(report.status).toBe("fail");
+    expect(report.details?.some((detail) => detail.includes("index.ts:1"))).toBe(
+      true
+    );
+    expect(
+      report.details?.some((detail) =>
+        detail.includes("imports private internal module")
+      )
+    ).toBe(true);
+  });
+
+  it("allows external imports of the module public surface", async () => {
+    const repoRoot = await createTempRoot();
+    await writeRepoFile(
+      repoRoot,
+      "src/v11/shared/metaReviewGate/index.ts",
+      "export const policy = 1;\n"
     );
     await writeRepoFile(
       repoRoot,

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { reconcileObservedGateResult } from "../../../../src/v11/shared/metaReviewGate/internal/metaReviewGateApplyObservation.js";
-import type { ApplyMetaReviewGateExecutionContext } from "../../../../src/v11/shared/metaReviewGate/internal/metaReviewGateApplyContext.js";
+import { reconcileObservedGateResult } from "../../../../src/v11/application/metaReviewGate/internal/metaReviewGateApplyObservation.js";
+import type { ApplyMetaReviewGateExecutionContext } from "../../../../src/v11/application/metaReviewGate/internal/metaReviewGateApplyContext.js";
 import { getBubblePaths } from "../../../../src/v11/shared/bubble/bubblePaths.js";
 import type { MetaReviewRuntimeDeliveryObservation } from "../../../../src/v11/shared/metaReviewGate/index.js";
 import type { LoadedStateSnapshot } from "../../../../src/v11/shared/ports/stateSnapshots.js";

@@ -3,7 +3,7 @@ import {
   asMetaReviewGateError,
   MetaReviewGateError,
   toMetaReviewGateError
-} from "../../shared/metaReviewGate/index.js";
+} from "./metaReviewGateCommandApi.js";
 import type {
   ApplyMetaReviewGateOnConvergenceDependencies,
   ApplyMetaReviewGateOnConvergenceInput,
@@ -11,7 +11,7 @@ import type {
   MetaReviewGateResult,
   NotifyMetaReviewerSubmissionRequestDependencies,
   NotifyMetaReviewerSubmissionRequestInput
-} from "../../shared/metaReviewGate/index.js";
+} from "./metaReviewGateCommandApi.js";
 import { notifyMetaReviewerSubmissionRequest } from "./metaReviewGateNotify.js";
 import { resolveMetaReviewerPaneWarning } from "./metaReviewGatePaneBinding.js";
 import { resolveMetaReviewGateDependencyDefaults } from "./metaReviewGateDependencyDefaults.js";

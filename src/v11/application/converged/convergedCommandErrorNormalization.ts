@@ -1,4 +1,4 @@
-import { toMetaReviewGateError } from "../../shared/metaReviewGate/index.js";
+import { toMetaReviewGateError } from "../../shared/metaReviewGate/metaReviewGateErrorConversion.js";
 import { isNamedError } from "../../shared/errors/namedError.js";
 
 export interface NormalizeConvergedCommandErrorInput {

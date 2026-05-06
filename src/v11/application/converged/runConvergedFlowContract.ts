@@ -10,10 +10,10 @@ import type {
 import type { ResolveReviewerTestExecutionDirectivePort } from "../../shared/ports/reviewerTestEvidenceArtifacts.js";
 import type { SummaryVerifierConsistencyGateDecisionRecord } from "../../../v11/shared/reviewer/summaryVerifierConsistencyGate.js";
 import type { ConvergedStructuredFinding } from "../../shared/converged/convergedCommandTypes.js";
-import type {
-  applyMetaReviewGateOnConvergence
-} from "../../shared/metaReviewGate/index.js";
 import type { MetaReviewGateRoute } from "../../shared/metaReviewGate/index.js";
+import type {
+  ApplyMetaReviewGateOnConvergencePort
+} from "../../shared/metaReviewGate/metaReviewGateCommandContract.js";
 import type {
   AgentName,
   BubbleRoundGateState,
@@ -26,7 +26,7 @@ import type { PrepareConvergedValidationResult } from "./convergedValidationPrep
 export interface ExecuteConvergedExecutionDependencies {
   emitDeliveryNotificationAck?: EmitDeliveryNotificationAckPort;
   emitBubbleNotification?: EmitBubbleNotificationPort;
-  applyMetaReviewGateOnConvergence?: typeof applyMetaReviewGateOnConvergence;
+  applyMetaReviewGateOnConvergence?: ApplyMetaReviewGateOnConvergencePort;
 }
 
 export interface RunConvergedFlowInput {

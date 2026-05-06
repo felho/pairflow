@@ -3,22 +3,30 @@ import { relative, resolve } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
+import * as metaReviewGatePublicApi from "../../../src/v11/shared/metaReviewGate/index.js";
 import {
-  metaReviewGateRoutes,
-  metaReviewGateThresholdIsMet,
-  readLatestSameRoundReviewerSnapshotFromTranscript,
-  resolveFindingsParityMetadataFromReportJson,
-  resolveMetaReviewGateThresholdAuthority,
-  resolveReworkFindingsParityInput,
-  validateFindingsArtifactParity
+  metaReviewGateRoutes
 } from "../../../src/v11/shared/metaReviewGate/index.js";
 import {
+  applyMetaReviewGateOnConvergence,
+  toMetaReviewGateError
+} from "../../../src/v11/application/metaReviewGate/metaReviewGateCommandApi.js";
+import {
+  resolveReworkFindingsParityInput,
+  validateFindingsArtifactParity
+} from "../../../src/v11/application/metaReviewGate/metaReviewGateFindingsParityApi.js";
+import {
+  readLatestSameRoundReviewerSnapshotFromTranscript
+} from "../../../src/v11/application/metaReviewGate/metaReviewGateReviewerSnapshotApi.js";
+import {
+  resolveMetaReviewGateThresholdAuthority
+} from "../../../src/v11/application/metaReviewGate/metaReviewGateThresholdAuthorityApi.js";
+import {
   finalizeCurrentRunMetaReviewGate
-} from "../../../src/v11/shared/metaReviewGate/metaReviewGateCurrentRunApi.js";
+} from "../../../src/v11/application/metaReviewGate/metaReviewGateCurrentRunApi.js";
 
 const allowedSharedMetaReviewGateImports = new Set([
-  "../metaReviewGate/index.js",
-  "../metaReviewGate/metaReviewGateCurrentRunApi.js"
+  "../metaReviewGate/index.js"
 ]);
 
 async function listTypeScriptFiles(root: string): Promise<string[]> {
@@ -66,13 +74,64 @@ describe("meta-review gate public API boundary", () => {
     expect(violations).toEqual([]);
   });
 
-  it("exports meta-review gate policy/read helpers from the aggregate index", () => {
+  it("exports orchestration contracts without domain-only policy helpers", () => {
     expect(metaReviewGateRoutes).toContain("human_gate_approve");
-    expect(metaReviewGateThresholdIsMet).toBeTypeOf("function");
     expect(resolveMetaReviewGateThresholdAuthority).toBeTypeOf("function");
     expect(resolveReworkFindingsParityInput).toBeTypeOf("function");
     expect(validateFindingsArtifactParity).toBeTypeOf("function");
-    expect(resolveFindingsParityMetadataFromReportJson).toBeTypeOf("function");
+    expect(readLatestSameRoundReviewerSnapshotFromTranscript).toBeTypeOf(
+      "function"
+    );
+    expect(metaReviewGatePublicApi).not.toHaveProperty(
+      "metaReviewGateThresholdIsMet"
+    );
+    expect(metaReviewGatePublicApi).not.toHaveProperty(
+      "resolveFindingsParityMetadataFromReportJson"
+    );
+    expect(metaReviewGatePublicApi).not.toHaveProperty(
+      "isAdvisoryOnlyReviewerSnapshot"
+    );
+    expect(metaReviewGatePublicApi).not.toHaveProperty(
+      "resolveReworkFindingsParityInput"
+    );
+    expect(metaReviewGatePublicApi).not.toHaveProperty(
+      "validateFindingsArtifactParity"
+    );
+    expect(metaReviewGatePublicApi).not.toHaveProperty(
+      "resolveMetaReviewGateThresholdAuthority"
+    );
+    expect(metaReviewGatePublicApi).not.toHaveProperty(
+      "readLatestSameRoundReviewerSnapshotFromTranscript"
+    );
+    expect(metaReviewGatePublicApi).not.toHaveProperty(
+      "applyMetaReviewGateOnConvergence"
+    );
+    expect(metaReviewGatePublicApi).not.toHaveProperty(
+      "toMetaReviewGateError"
+    );
+    expect(metaReviewGatePublicApi).not.toHaveProperty(
+      "resolveMetaReviewGateNotifyTmuxCapabilities"
+    );
+    expect(metaReviewGatePublicApi).not.toHaveProperty(
+      "resolveMetaReviewGatePaneBindingTmuxCapabilities"
+    );
+  });
+
+  it("keeps command runtime on its narrow public API", () => {
+    expect(applyMetaReviewGateOnConvergence).toBeTypeOf("function");
+    expect(toMetaReviewGateError).toBeTypeOf("function");
+  });
+
+  it("keeps findings artifact parity on its narrow public API", () => {
+    expect(resolveReworkFindingsParityInput).toBeTypeOf("function");
+    expect(validateFindingsArtifactParity).toBeTypeOf("function");
+  });
+
+  it("keeps threshold authority resolution on its narrow public API", () => {
+    expect(resolveMetaReviewGateThresholdAuthority).toBeTypeOf("function");
+  });
+
+  it("keeps reviewer snapshot lookup on its narrow public API", () => {
     expect(readLatestSameRoundReviewerSnapshotFromTranscript).toBeTypeOf(
       "function"
     );

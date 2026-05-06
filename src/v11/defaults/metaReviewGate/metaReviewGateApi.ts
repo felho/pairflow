@@ -13,10 +13,12 @@ import type {
 } from "../../shared/metaReviewGate/index.js";
 import {
   type MetaReviewGateNotifyTmuxCapabilities,
-  type MetaReviewGatePaneBindingTmuxCapabilities,
+  type MetaReviewGatePaneBindingTmuxCapabilities
+} from "../../shared/metaReviewGate/index.js";
+import {
   resolveMetaReviewGateNotifyTmuxCapabilities,
   resolveMetaReviewGatePaneBindingTmuxCapabilities
-} from "../../shared/metaReviewGate/index.js";
+} from "../../application/metaReviewGate/metaReviewGateRuntimeCapabilityResolution.js";
 import {
   applyMetaReviewGateOnConvergenceV11 as applyMetaReviewGateOnConvergenceBase
 } from "../../application/metaReviewGate/emitMetaReviewGateV11.js";
