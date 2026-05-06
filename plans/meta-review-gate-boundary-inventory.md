@@ -193,7 +193,6 @@ the final owner should not be domain policy.
 | `metaReviewGateFindingsMetadata.ts` | 47 | Artifact path resolution plus compatibility re-exports for domain parity metadata helpers. | yes, 1 | Done split; keep path resolution here while public callers migrate to narrower imports. |
 | `metaReviewGateFindingsArtifactReadRetry.ts` | 90 | Retry policy around findings artifact read. | no direct external | Infrastructure/port-adjacent or application internal. |
 | `metaReviewGateReviewerSnapshot.ts` | 29 | Transcript read wrapper plus compatibility re-exports for domain reviewer snapshot policy. | yes, 1 | Done split; pure snapshot derivation is domain-owned. |
-| `metaReviewGateTranscriptDefaults.ts` | 11 | Re-export transcript read default. | no direct external | Likely remove or move to defaults/application wiring; avoid shared camouflage. |
 
 ## Suggested First Pass
 
