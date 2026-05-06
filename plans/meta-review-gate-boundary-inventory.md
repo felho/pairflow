@@ -32,6 +32,9 @@ Completed in the bubble:
 - `domain/metaReviewGate/**` no longer imports back from
   `shared/metaReviewGate/**`; route/error language is owned in domain and
   re-exported by the shared public contract for compatibility.
+- human-gate routing policy is owned in `domain/metaReviewGate/humanGateRouting.ts`;
+  shared internal persistence imports it directly instead of re-exporting it
+  through state helpers.
 - `metaReviewGateTypes.ts` is now a compatibility aggregator only; route/error,
   result, runtime capability, and tmux runner contracts each have narrower
   public contract files.
@@ -150,6 +153,7 @@ dependencies remain pure and they do not perform I/O.
 | `runResultParity.ts` | 38 | Merge run result with parity resolution. | no direct external | Done: domain-owned. |
 | `findingsValidationPreflight.ts` | 103 | Preflight structured meta-review claim validation. | no direct external | Done: domain-owned. |
 | `findingsValidationParity.ts` + `metaReviewGateFindingsValidationParity.ts` | 53 + 69 | Domain builds verified rework parity success/diagnostics; shared internal wrapper performs parity input, artifact read/hash/parse validation. | no direct external | Done split; keep artifact I/O in shared/internal. |
+| `humanGateRouting.ts` | 70 | Resolve human-gate route decisions and default sticky-human-gate behavior. | imported directly from shared/internal persistence | Done: domain-owned; shared no longer re-exports it through state helpers. |
 | `gateRoutingTypes.ts` | 84 | Gate route union, threshold status metadata, and gate error language. | via shared re-export | Domain-owned shared language; keep public through `metaReviewGateTypes.ts` compatibility export. |
 | `approveValidationRework.ts` | 24 | Classify approve-validation command failures and build auto-rework message. | no | Done: extracted from current-run finalization. |
 | `cleanApprovalPolicy.ts` | 92 | Decide clean approval vs threshold-required/fallback route policy. | no | Done: extracted from current-run finalization. |
@@ -177,7 +181,7 @@ runtime delivery. They should not be moved wholesale to `domain`.
 | `metaReviewGateHumanGatePersistenceHelpers.ts` | 180 | Human gate recommendation, request append, rollback handling. | no direct external | Application internal; split pure recommendation from append/rollback later. |
 | `approvalRequestEnvelope.ts` | 273 | Build/append human approval request envelope with route metadata. | no direct external | Application/internal first; possible presenter/DTO extraction later. |
 | `metaReviewApproveValidationGate.ts` | 347 | Run sticky approve validation commands and map failures. | no direct external | Application candidate; validation runtime orchestration. |
-| `metaReviewGateStateHelpers.ts` | 191 | State transitions, auto-rework count, clean-run count, route defaults. | no direct external | Mixed: pure route defaults may be domain; state mutation helpers application/internal. |
+| `metaReviewGateStateHelpers.ts` | 61 | State transition coordination plus compatibility re-exports for snapshot state and auto-rework retry invariants. | no direct external | Application/internal helper; route defaults are now domain-owned in `humanGateRouting.ts`. |
 | `metaReviewGateStateStaging.ts` | 78 | Stage meta-review running state with execution context. | no direct external | Application internal. |
 | `metaReviewGateSnapshotHelpers.ts` | 71 | Normalize meta-review snapshot and derive envelope metadata. | no direct external | Mixed; likely application/domain helper split. |
 | `metaReviewGateShared.ts` | 67 | Shared reason codes, conflict/transition mapping, gate lock path. | no direct external | Mixed utility; keep internal first and split path/error pieces later. |
