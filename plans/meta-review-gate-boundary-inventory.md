@@ -83,19 +83,14 @@ public, wrapped by a higher-level API, or migrated with callers.
 
 | File | External importer count | Current external importers | Initial read |
 | --- | ---: | --- | --- |
-| `metaReviewGateCommandContract.ts` | 11 | `defaults/metaReviewGate`, `shared/converged`, `shared/metrics`, `application/metaReviewGate`, `application/converged` | legitimate public contract candidate |
-| `metaReviewGateTypes.ts` | 8 | `shared/approval`, `shared/bubbleInbox`, `defaults/metaReviewGate`, `shared/metaReview`, `application/metaReviewGate` | mixed: public route/result language plus runtime capability types |
-| `metaReviewGateCommandApi.ts` | 6 | `shared/metaReview`, `application/converged`, `application/metaReviewGate`, `shared/converged` | public entrypoint candidate, but may be too broad |
-| `metaReviewGateFindingsSplit.ts` | 3 | `shared/metaReview` submit/parity/runtime/canonicalization paths | likely domain/shared model helper; caller intent must be reviewed |
-| `metaReviewGateThresholdAuthority.ts` | 2 | `shared/metaReview` submit preparation/validation | likely direct domain move if dependencies stay pure |
-| `metaReviewGateApplyContext.ts` | 1 | `application/metaReviewGate/metaReviewGateApplyContext.ts` | compatibility/wiring seam; likely application/internal cleanup |
-| `metaReviewGateCurrentRunFinalization.ts` | 1 | `shared/metaReview/metaReviewCommandSubmitRouting.ts` | orchestration; should not remain directly public long-term |
-| `metaReviewGateCurrentRunTypes.ts` | 1 | `shared/metaReview/metaReviewCommandContract.ts` | mixed contract/dependency bag; split likely needed |
-| `metaReviewGateFindingsClaimParsing.ts` | 1 | `shared/metaReview/metaReviewCommandSubmitParity.ts` | pure parsing/policy helper; domain candidate |
-| `metaReviewGateFindingsMetadata.ts` | 1 | `shared/metaReview/metaReviewRuntimeParity.ts` | mixed artifact metadata/path handling; split likely needed |
-| `metaReviewGateFindingsParityHelpers.ts` | 1 | `shared/metaReview/metaReviewCommandSubmitPersistence.ts` | mixed parity policy plus artifact read/hash behavior |
-| `metaReviewGateFindingsParityInput.ts` | 1 | `shared/metaReview/metaReviewCommandSubmitPersistence.ts` | likely domain policy input builder |
-| `metaReviewGateReviewerSnapshot.ts` | 1 | `shared/metaReview/metaReviewRuntimeParity.ts` | transcript read + snapshot derivation; split or internal first |
+| `index.ts` | 24 | `defaults/metaReviewGate`, `shared/approval`, `shared/bubbleInbox`, `shared/converged`, `shared/metaReview`, `shared/metrics`, `application/converged`, `application/metaReviewGate` | primary public module door; most former deep imports now route here |
+| `metaReviewGateCurrentRunApi.ts` | 1 | `shared/metaReview/metaReviewCommandSubmitRouting.ts` | narrow public door for current-run finalization; kept separate from aggregate index to avoid the known cycle |
+
+Source imports no longer reach directly into the former deep policy files
+(`metaReviewGateFindingsSplit.ts`, `metaReviewGateFindingsMetadata.ts`,
+`metaReviewGateFindingsParityInput.ts`, `metaReviewGateReviewerSnapshot.ts`, or
+`metaReviewGateThresholdAuthority.ts`). Remaining direct imports of those files
+are test-local coverage of their public wrappers.
 
 ## Proposed Public Surface
 
