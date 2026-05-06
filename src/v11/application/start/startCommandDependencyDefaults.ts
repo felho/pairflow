@@ -1,6 +1,6 @@
 import { readTranscriptEnvelopes } from "../transcript/transcriptDependencyDefaults.js";
 import { ensureBubbleInstanceIdForMutation } from "../bubbleIdentity/bubbleIdentityDependencyDefaults.js";
-import { runTmux as runTmuxDefaults } from "../../shared/tmux/tmuxRunnerDefaults.js";
+import { runTmux as runTmuxDefaults } from "../tmux/tmuxRunnerDependencyDefaults.js";
 import { readStateSnapshot } from "../state/stateStoreDependencyDefaults.js";
 import {
   resolveBubbleById
