@@ -8,7 +8,7 @@ import {
 } from "./metaReviewGateFindingsParityInput.js";
 import {
   validateFindingsArtifactParity
-} from "../metaReviewGateFindingsParityHelpers.js";
+} from "./metaReviewGateFindingsParityHelpers.js";
 import {
   resolveVerifiedThresholdAuthority
 } from "../../../domain/metaReviewGate/thresholdAuthority.js";

@@ -8,7 +8,7 @@ export {
 } from "./internal/metaReviewGateFindingsParityInput.js";
 export {
   validateFindingsArtifactParity
-} from "./metaReviewGateFindingsParityHelpers.js";
+} from "./internal/metaReviewGateFindingsParityHelpers.js";
 export type {
   MetaReviewGateThresholdAuthorityResolution,
   ResolveMetaReviewGateThresholdAuthorityInput

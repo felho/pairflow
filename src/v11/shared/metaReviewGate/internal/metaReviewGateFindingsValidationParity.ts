@@ -5,7 +5,7 @@ import type { MetaReviewGateArtifactReadFn } from "./metaReviewGateFindingsMetad
 import {
   resolveReworkFindingsParityInput,
   validateFindingsArtifactParity
-} from "../metaReviewGateFindingsParityHelpers.js";
+} from "./metaReviewGateFindingsParityHelpers.js";
 import {
   buildVerifiedReworkFindingsParityValidation
 } from "../../../domain/metaReviewGate/findingsValidationParity.js";

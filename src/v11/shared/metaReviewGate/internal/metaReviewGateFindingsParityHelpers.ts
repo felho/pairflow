@@ -1,28 +1,28 @@
 import { createHash } from "node:crypto";
 
-import { isRecord } from "../validation/primitives.js";
-import type { MetaReviewRecommendation } from "../../../types/bubble.js";
-import { type FindingsParityMetadata, type FindingsParityStatus } from "../../../types/protocol.js";
+import { isRecord } from "../../validation/primitives.js";
+import type { MetaReviewRecommendation } from "../../../../types/bubble.js";
+import { type FindingsParityMetadata, type FindingsParityStatus } from "../../../../types/protocol.js";
 import {
   deriveFindingsOpenSplit as deriveFindingsOpenSplitFromMetadata,
   type FindingsOpenSplit
-} from "../../domain/metaReviewGate/findingsSplit.js";
-export { projectDisplayableFindingsFromArtifact } from "../../domain/metaReviewGate/findingsProjection.js";
+} from "../../../domain/metaReviewGate/findingsSplit.js";
+export { projectDisplayableFindingsFromArtifact } from "../../../domain/metaReviewGate/findingsProjection.js";
 import {
   resolveFindingsArtifactOpenTotalFromArtifact
-} from "./internal/metaReviewGateFindingsMetadata.js";
+} from "./metaReviewGateFindingsMetadata.js";
 import {
   formatReadErrorDetail,
   readFindingsArtifactWithRetry
-} from "./internal/metaReviewGateFindingsArtifactReadRetry.js";
+} from "./metaReviewGateFindingsArtifactReadRetry.js";
 import type {
   MetaReviewGateArtifactReadFn
-} from "./internal/metaReviewGateFindingsMetadata.js";
+} from "./metaReviewGateFindingsMetadata.js";
 import {
   buildFindingsParityMetadata,
   metaReviewFindingsCountMismatchReasonCode,
   metaReviewFindingsParityGuardReasonCode
-} from "./internal/metaReviewGateFindingsParityInput.js";
+} from "./metaReviewGateFindingsParityInput.js";
 export {
   buildFindingsParityMetadata,
   claimSourceInvalidReasonCode,
@@ -33,7 +33,7 @@ export {
   metaReviewFindingsRunLinkMissingReasonCode,
   resolveReworkFindingsParityInput,
   type ReworkFindingsParityInput
-} from "./internal/metaReviewGateFindingsParityInput.js";
+} from "./metaReviewGateFindingsParityInput.js";
 
 export function deriveFindingsOpenSplit(
   findings: unknown
