@@ -355,6 +355,10 @@ export function BubbleExpandedCard(props: BubbleExpandedCardProps): JSX.Element 
             isLoading={props.timelineLoading}
             error={props.timelineError}
             compact={timelineCompact}
+            metaReviewCleanRunsRequired={
+              attachSource.reviewPolicy?.meta_review_consecutive_clean_runs_required
+              ?? null
+            }
           />
         </div>
       </div>

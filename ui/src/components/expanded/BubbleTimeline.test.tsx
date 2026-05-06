@@ -322,7 +322,7 @@ describe("BubbleTimeline", () => {
     ).toBeInTheDocument();
   });
 
-  it("renders meta-review handoff progress from display data", () => {
+  it("renders only rerun meta-review gate handoffs as clean-run progress", () => {
     render(
       <BubbleTimeline
         entries={[
@@ -332,21 +332,15 @@ describe("BubbleTimeline", () => {
             sender: "orchestrator",
             recipient: "codex",
             payload: {
-              summary: "Payload handoff 1 must not drive display."
-            },
-            display: display({
-              title: "Meta-review gate opened.",
-              summaryText: "Meta-review gate opened.",
-              senderLabel: "codex",
-              role: "meta_reviewer",
-              rowKind: "handoff",
-              tone: "info",
-              progress: {
-                kind: "meta_review_handoff",
-                label: "handoff 1",
-                handoffAttempt: 1
+              summary: "Meta-review gate opened.",
+              metadata: {
+                delivery_target_role: "meta_reviewer",
+                actor: "meta-review-gate",
+                actor_agent: "orchestrator",
+                meta_review_handoff_id:
+                  "meta_review:b-meta-gate:round:4:attempt:1"
               }
-            })
+            }
           }),
           timelineEntry({
             id: "env-meta-gate-2",
@@ -354,21 +348,15 @@ describe("BubbleTimeline", () => {
             sender: "orchestrator",
             recipient: "codex",
             payload: {
-              summary: "Payload handoff 2 must not drive display."
-            },
-            display: display({
-              title: "Meta-review gate opened again.",
-              summaryText: "Meta-review gate opened again.",
-              senderLabel: "codex",
-              role: "meta_reviewer",
-              rowKind: "handoff",
-              tone: "info",
-              progress: {
-                kind: "meta_review_handoff",
-                label: "handoff 2",
-                handoffAttempt: 2
+              summary: "Meta-review gate opened again.",
+              metadata: {
+                delivery_target_role: "meta_reviewer",
+                actor: "meta-review-gate",
+                actor_agent: "orchestrator",
+                meta_review_handoff_id:
+                  "meta_review:b-meta-gate:round:4:attempt:2"
               }
-            })
+            }
           }),
           timelineEntry({
             id: "env-meta-approve-2",
@@ -388,18 +376,19 @@ describe("BubbleTimeline", () => {
         isLoading={false}
         error={null}
         compact
+        metaReviewCleanRunsRequired={2}
       />
     );
 
     const metaRows = screen.getAllByText("meta-reviewer", {
       selector: "span.font-medium"
     });
-    expect(metaRows).toHaveLength(3);
+    expect(metaRows).toHaveLength(2);
     expect(metaRows[0]).toHaveTextContent(/\(codex\)/u);
     expect(metaRows[1]).toHaveTextContent(/\(codex\)/u);
-    expect(screen.getByText("handoff 1")).toBeInTheDocument();
-    expect(screen.getByText("handoff 2")).toBeInTheDocument();
+    expect(screen.getByText("clean 1")).toBeInTheDocument();
     expect(screen.getByText("approve")).toBeInTheDocument();
+    expect(screen.queryByText("Meta-review gate opened.")).not.toBeInTheDocument();
   });
 
   it("uses meta-review handoff attempt when the first kickoff row is absent", () => {
@@ -424,21 +413,15 @@ describe("BubbleTimeline", () => {
             sender: "orchestrator",
             recipient: "codex",
             payload: {
-              summary: "Payload handoff must not drive display."
-            },
-            display: display({
-              title: "Meta-review gate opened again.",
-              summaryText: "Meta-review gate opened again.",
-              senderLabel: "codex",
-              role: "meta_reviewer",
-              rowKind: "handoff",
-              tone: "info",
-              progress: {
-                kind: "meta_review_handoff",
-                label: "handoff 2",
-                handoffAttempt: 2
+              summary: "Meta-review gate opened again.",
+              metadata: {
+                delivery_target_role: "meta_reviewer",
+                actor: "meta-review-gate",
+                actor_agent: "orchestrator",
+                meta_review_handoff_id:
+                  "meta_review:b-meta-gate:round:4:attempt:2"
               }
-            })
+            }
           }),
           timelineEntry({
             id: "env-meta-approve-2",
@@ -458,10 +441,11 @@ describe("BubbleTimeline", () => {
         isLoading={false}
         error={null}
         compact
+        metaReviewCleanRunsRequired={2}
       />
     );
 
-    expect(screen.getByText("handoff 2")).toBeInTheDocument();
+    expect(screen.getByText("clean 1")).toBeInTheDocument();
     expect(screen.getByText("approve")).toBeInTheDocument();
   });
 
@@ -491,21 +475,15 @@ describe("BubbleTimeline", () => {
             sender: "orchestrator",
             recipient: "codex",
             payload: {
-              summary: "Payload handoff after rework must not drive display."
-            },
-            display: display({
-              title: "Meta-review gate opened after rework.",
-              summaryText: "Meta-review gate opened after rework.",
-              senderLabel: "codex",
-              role: "meta_reviewer",
-              rowKind: "handoff",
-              tone: "info",
-              progress: {
-                kind: "meta_review_handoff",
-                label: "handoff 2",
-                handoffAttempt: 2
+              summary: "Meta-review gate opened after rework.",
+              metadata: {
+                delivery_target_role: "meta_reviewer",
+                actor: "meta-review-gate",
+                actor_agent: "orchestrator",
+                meta_review_handoff_id:
+                  "meta_review:b-meta-gate:round:6:attempt:2"
               }
-            })
+            }
           }),
           timelineEntry({
             id: "env-meta-approve",
@@ -526,18 +504,18 @@ describe("BubbleTimeline", () => {
         isLoading={false}
         error={null}
         compact={false}
+        metaReviewCleanRunsRequired={1}
       />
     );
 
     const metaRows = screen.getAllByText("meta-reviewer", {
       selector: "span.font-medium"
     });
-    expect(metaRows).toHaveLength(3);
+    expect(metaRows).toHaveLength(2);
     expect(screen.getByText("rework")).toBeInTheDocument();
-    expect(screen.getByText("handoff 2")).toBeInTheDocument();
     expect(screen.getByText("approve")).toBeInTheDocument();
     expect(screen.queryByText("clean 1")).not.toBeInTheDocument();
-    expect(screen.getByText("Meta-review gate opened after rework.")).toBeInTheDocument();
+    expect(screen.queryByText("Meta-review gate opened after rework.")).not.toBeInTheDocument();
   });
 
   it("shows empty-state text when no timeline entries exist", () => {
@@ -631,6 +609,7 @@ describe("BubbleTimeline", () => {
         isLoading={false}
         error={null}
         compact={false}
+        metaReviewCleanRunsRequired={3}
       />
     );
 
@@ -667,7 +646,8 @@ describe("BubbleTimeline", () => {
             display: {
               title:
                 "Meta-review approved the current change, but the required approve-gate validation failed.",
-              summaryText: "Entry summary must not render in the gate-failure row.",
+              summaryText:
+                "Meta-review approved the current change, but the required approve-gate validation failed.",
               summarySource: "message",
               senderLabel: "codex",
               role: "meta_reviewer",
@@ -682,7 +662,8 @@ describe("BubbleTimeline", () => {
               ],
               progress: null,
               validationFailure: {
-                summaryText: "Validation failure DTO summary.",
+                summaryText:
+                  "Meta-review approved the current change, but the required approve-gate validation failed.",
                 tone: "danger"
               },
               syntheticApproval: {
@@ -721,14 +702,9 @@ describe("BubbleTimeline", () => {
     expect(orchestratorRow).not.toBeNull();
     expect(
       within(orchestratorRow as HTMLElement).getByText(
-        "Validation failure DTO summary."
+        "Meta-review approved the current change, but the required approve-gate validation failed."
       )
     ).toBeInTheDocument();
-    expect(
-      within(orchestratorRow as HTMLElement).queryByText(
-        "Entry summary must not render in the gate-failure row."
-      )
-    ).not.toBeInTheDocument();
     expect(
       within(orchestratorRow as HTMLElement).queryByText(
         "Payload text does not contain the legacy gate failure marker."
@@ -736,118 +712,6 @@ describe("BubbleTimeline", () => {
     ).not.toBeInTheDocument();
     expect(within(orchestratorRow as HTMLElement).getByText("rework")).toBeInTheDocument();
     expect(within(orchestratorRow as HTMLElement).queryByText("approve")).not.toBeInTheDocument();
-  });
-
-  it("renders synthetic approval rows from display sender without payload fallback", () => {
-    render(
-      <BubbleTimeline
-        entries={[
-          protocolTimelineEntry({
-            id: "env-gate-failed-orchestrator-sender",
-            type: "APPROVAL_DECISION",
-            round: 2,
-            sender: "orchestrator",
-            recipient: "codex",
-            payload: {
-              decision: "rework",
-              message: "Payload gate failure text must not drive synthetic sender."
-            },
-            display: display({
-              title:
-                "Meta-review approved the current change, but the required approve-gate validation failed.",
-              summaryText:
-                "Meta-review approved the current change, but the required approve-gate validation failed.",
-              summarySource: "message",
-              senderLabel: "codex",
-              role: "meta_reviewer",
-              rowKind: "gate_failure",
-              tone: "danger",
-              badges: [
-                { kind: "decision", label: "rework", tone: "danger" }
-              ],
-              validationFailure: {
-                summaryText:
-                  "Meta-review approved the current change, but the required approve-gate validation failed.",
-                tone: "danger"
-              },
-              syntheticApproval: {
-                kind: "meta_review_approval",
-                sourceEntryId: "env-gate-failed-orchestrator-sender",
-                syntheticEntryId:
-                  "env-gate-failed-orchestrator-sender:meta-review-approve",
-                label: "Meta-review approved the current change.",
-                tone: "success"
-              }
-            })
-          })
-        ]}
-        isLoading={false}
-        error={null}
-        compact={false}
-      />
-    );
-
-    const metaLabel = screen.getByText("meta-reviewer", {
-      selector: "span.font-medium"
-    });
-    expect(metaLabel).toHaveTextContent(/\(codex\)/u);
-    expect(metaLabel).not.toHaveTextContent(/\(orchestrator\)/u);
-  });
-
-  it("renders synthetic approval sender from display even when recipient is the implementer", () => {
-    render(
-      <BubbleTimeline
-        entries={[
-          protocolTimelineEntry({
-            id: "env-gate-failed-implementer-recipient",
-            type: "APPROVAL_DECISION",
-            sender: "orchestrator",
-            recipient: "implementer",
-            payload: {
-              decision: "rework",
-              message: "Payload gate failure text must not drive synthetic sender.",
-              metadata: {
-                actor: "meta-reviewer",
-                actor_agent: "meta-review-codex"
-              }
-            },
-            display: display({
-              title:
-                "Meta-review approved the current change, but the required approve-gate validation failed.",
-              summaryText:
-                "Meta-review approved the current change, but the required approve-gate validation failed.",
-              summarySource: "message",
-              senderLabel: "meta-review-codex",
-              role: "meta_reviewer",
-              rowKind: "gate_failure",
-              tone: "danger",
-              validationFailure: {
-                summaryText:
-                  "Meta-review approved the current change, but the required approve-gate validation failed.",
-                tone: "danger"
-              },
-              syntheticApproval: {
-                kind: "meta_review_approval",
-                sourceEntryId: "env-gate-failed-implementer-recipient",
-                syntheticEntryId:
-                  "env-gate-failed-implementer-recipient:meta-review-approve",
-                label: "Meta-review approved the current change.",
-                tone: "success"
-              }
-            })
-          })
-        ]}
-        isLoading={false}
-        error={null}
-        compact={false}
-      />
-    );
-
-    const metaLabel = screen.getByText("meta-reviewer", {
-      selector: "span.font-medium"
-    });
-    expect(metaLabel).toHaveTextContent(/\(meta-review-codex\)/u);
-    expect(metaLabel).not.toHaveTextContent(/\(implementer\)/u);
   });
 
   it("renders severity tags from payload findings on meta-review auto-rework rows", () => {
@@ -989,23 +853,7 @@ describe("BubbleTimeline", () => {
                 actor: "meta-reviewer",
                 latest_recommendation: "approve"
               }
-            },
-            display: display({
-              title: "First clean meta-review.",
-              summaryText: "First clean meta-review.",
-              senderLabel: "orchestrator",
-              role: "meta_reviewer",
-              rowKind: "approval",
-              badges: [
-                { kind: "recommendation", label: "approve", tone: "success" }
-              ],
-              progress: {
-                kind: "clean_run",
-                label: "clean 1",
-                cleanRunCount: 1,
-                cleanRunsRequired: 2
-              }
-            })
+            }
           }),
           timelineEntry({
             id: "env-meta-clean-2",
@@ -1024,6 +872,7 @@ describe("BubbleTimeline", () => {
         isLoading={false}
         error={null}
         compact={false}
+        metaReviewCleanRunsRequired={2}
       />
     );
 
@@ -1047,23 +896,7 @@ describe("BubbleTimeline", () => {
                 actor: "meta-reviewer",
                 latest_recommendation: "approve"
               }
-            },
-            display: display({
-              title: "First clean meta-review.",
-              summaryText: "First clean meta-review.",
-              senderLabel: "orchestrator",
-              role: "meta_reviewer",
-              rowKind: "approval",
-              badges: [
-                { kind: "recommendation", label: "approve", tone: "success" }
-              ],
-              progress: {
-                kind: "clean_run",
-                label: "clean 1",
-                cleanRunCount: 1,
-                cleanRunsRequired: 3
-              }
-            })
+            }
           }),
           timelineEntry({
             id: "env-meta-clean-2",
@@ -1076,23 +909,7 @@ describe("BubbleTimeline", () => {
                 actor: "meta-reviewer",
                 latest_recommendation: "approve"
               }
-            },
-            display: display({
-              title: "Second clean meta-review.",
-              summaryText: "Second clean meta-review.",
-              senderLabel: "orchestrator",
-              role: "meta_reviewer",
-              rowKind: "approval",
-              badges: [
-                { kind: "recommendation", label: "approve", tone: "success" }
-              ],
-              progress: {
-                kind: "clean_run",
-                label: "clean 2",
-                cleanRunCount: 2,
-                cleanRunsRequired: 3
-              }
-            })
+            }
           }),
           timelineEntry({
             id: "env-meta-clean-3",
@@ -1111,6 +928,7 @@ describe("BubbleTimeline", () => {
         isLoading={false}
         error={null}
         compact={false}
+        metaReviewCleanRunsRequired={3}
       />
     );
 
@@ -1119,7 +937,7 @@ describe("BubbleTimeline", () => {
     expect(screen.getByText("approve")).toBeInTheDocument();
   });
 
-  it("uses explicit meta-review clean-run display before the approval streak is complete", () => {
+  it("uses explicit meta-review clean-run metadata before the approval streak is complete", () => {
     render(
       <BubbleTimeline
         entries={[
@@ -1135,28 +953,13 @@ describe("BubbleTimeline", () => {
                 latest_recommendation: "approve",
                 consecutive_clean_runs: 2
               }
-            },
-            display: display({
-              title: "Second explicit clean meta-review.",
-              summaryText: "Second explicit clean meta-review.",
-              senderLabel: "orchestrator",
-              role: "meta_reviewer",
-              rowKind: "approval",
-              badges: [
-                { kind: "recommendation", label: "approve", tone: "success" }
-              ],
-              progress: {
-                kind: "clean_run",
-                label: "clean 2",
-                cleanRunCount: 2,
-                cleanRunsRequired: 3
-              }
-            })
+            }
           })
         ]}
         isLoading={false}
         error={null}
         compact={false}
+        metaReviewCleanRunsRequired={3}
       />
     );
 
@@ -1205,7 +1008,7 @@ describe("BubbleTimeline", () => {
     expect(screen.queryByText("approve")).not.toBeInTheDocument();
   });
 
-  it("renders handoff display independently after clean-run progress", () => {
+  it("uses display clean-run progress when sequencing rerun handoff rows", () => {
     render(
       <BubbleTimeline
         entries={[
@@ -1240,21 +1043,15 @@ describe("BubbleTimeline", () => {
             sender: "orchestrator",
             recipient: "codex",
             payload: {
-              summary: "Payload handoff must not drive display."
-            },
-            display: display({
-              title: "Meta-review gate opened again.",
-              summaryText: "Meta-review gate opened again.",
-              senderLabel: "codex",
-              role: "meta_reviewer",
-              rowKind: "handoff",
-              tone: "info",
-              progress: {
-                kind: "meta_review_handoff",
-                label: "handoff 2",
-                handoffAttempt: 2
+              summary: "Meta-review gate opened again.",
+              metadata: {
+                delivery_target_role: "meta_reviewer",
+                actor: "meta-review-gate",
+                actor_agent: "orchestrator",
+                meta_review_handoff_id:
+                  "meta_review:b-meta-gate:round:4:attempt:2"
               }
-            })
+            }
           })
         ]}
         isLoading={false}
@@ -1264,7 +1061,7 @@ describe("BubbleTimeline", () => {
     );
 
     expect(screen.getByText("producer clean label")).toBeInTheDocument();
-    expect(screen.getByText("handoff 2")).toBeInTheDocument();
+    expect(screen.getByText("clean 2")).toBeInTheDocument();
   });
 
   it("does not synthesize clean-run chips from stale payload recommendations", () => {
@@ -1296,53 +1093,13 @@ describe("BubbleTimeline", () => {
         isLoading={false}
         error={null}
         compact={false}
+        metaReviewCleanRunsRequired={2}
       />
     );
 
     expect(screen.getByText("Display omits approve.")).toBeInTheDocument();
     expect(screen.queryByText("clean 1")).not.toBeInTheDocument();
     expect(screen.queryByText("approve")).not.toBeInTheDocument();
-  });
-
-  it("does not complete missing clean-run display data from component props", () => {
-    render(
-      <BubbleTimeline
-        entries={[
-          protocolTimelineEntry({
-            id: "env-display-clean-run-missing-required",
-            type: "APPROVAL_REQUEST",
-            sender: "orchestrator",
-            recipient: "human",
-            payload: {
-              summary: "Display clean-run with incomplete progress data."
-            },
-            display: display({
-              title: "Display clean-run with incomplete progress data.",
-              summaryText: "Display clean-run with incomplete progress data.",
-              senderLabel: "codex",
-              role: "meta_reviewer",
-              rowKind: "approval",
-              badges: [
-                { kind: "recommendation", label: "approve", tone: "success" }
-              ],
-              progress: {
-                kind: "clean_run",
-                label: "producer clean label",
-                cleanRunCount: 1,
-                cleanRunsRequired: null
-              }
-            })
-          })
-        ]}
-        isLoading={false}
-        error={null}
-        compact={false}
-      />
-    );
-
-    expect(screen.getByText("approve")).toBeInTheDocument();
-    expect(screen.queryByText("producer clean label")).not.toBeInTheDocument();
-    expect(screen.queryByText("clean 1")).not.toBeInTheDocument();
   });
 
   it("does not reset clean-run sequencing from stale payload rework decisions", () => {
@@ -1365,13 +1122,7 @@ describe("BubbleTimeline", () => {
               rowKind: "approval",
               badges: [
                 { kind: "recommendation", label: "approve", tone: "success" }
-              ],
-              progress: {
-                kind: "clean_run",
-                label: "clean 1",
-                cleanRunCount: 1,
-                cleanRunsRequired: 3
-              }
+              ]
             })
           }),
           protocolTimelineEntry({
@@ -1410,19 +1161,14 @@ describe("BubbleTimeline", () => {
               rowKind: "approval",
               badges: [
                 { kind: "recommendation", label: "approve", tone: "success" }
-              ],
-              progress: {
-                kind: "clean_run",
-                label: "clean 2",
-                cleanRunCount: 2,
-                cleanRunsRequired: 3
-              }
+              ]
             })
           })
         ]}
         isLoading={false}
         error={null}
         compact={false}
+        metaReviewCleanRunsRequired={3}
       />
     );
 
@@ -1446,23 +1192,7 @@ describe("BubbleTimeline", () => {
                 actor: "meta-reviewer",
                 latest_recommendation: "approve"
               }
-            },
-            display: display({
-              title: "First clean meta-review.",
-              summaryText: "First clean meta-review.",
-              senderLabel: "orchestrator",
-              role: "meta_reviewer",
-              rowKind: "approval",
-              badges: [
-                { kind: "recommendation", label: "approve", tone: "success" }
-              ],
-              progress: {
-                kind: "clean_run",
-                label: "clean 1",
-                cleanRunCount: 1,
-                cleanRunsRequired: 2
-              }
-            })
+            }
           }),
           timelineEntry({
             id: "env-meta-rework",
@@ -1488,28 +1218,13 @@ describe("BubbleTimeline", () => {
                 actor: "meta-reviewer",
                 latest_recommendation: "approve"
               }
-            },
-            display: display({
-              title: "Clean after rework.",
-              summaryText: "Clean after rework.",
-              senderLabel: "orchestrator",
-              role: "meta_reviewer",
-              rowKind: "approval",
-              badges: [
-                { kind: "recommendation", label: "approve", tone: "success" }
-              ],
-              progress: {
-                kind: "clean_run",
-                label: "clean 1",
-                cleanRunCount: 1,
-                cleanRunsRequired: 2
-              }
-            })
+            }
           })
         ]}
         isLoading={false}
         error={null}
         compact={false}
+        metaReviewCleanRunsRequired={2}
       />
     );
 

@@ -171,48 +171,6 @@ describe("timelinePresenter display DTO", () => {
     ]);
   });
 
-  it("keeps clean reviewer PASS rows within the existing badge contract", () => {
-    const entries = presentTimeline([
-      envelope({
-        id: "clean-pass",
-        type: "PASS",
-        payload: {
-          summary: "Reviewer clean.",
-          findings: [],
-          findings_claim_state: "clean",
-          findings_claim_source: "payload_flags",
-          metadata: { delivery_target_role: "implementer" }
-        }
-      }),
-      envelope({
-        id: "unknown-pass",
-        type: "PASS",
-        payload: {
-          summary: "Reviewer claim unknown.",
-          findings: [],
-          findings_claim_state: "unknown",
-          findings_claim_source: "payload_findings_count",
-          metadata: { delivery_target_role: "implementer" }
-        }
-      }),
-      envelope({
-        id: "implementer-clean-claim-pass",
-        type: "PASS",
-        payload: {
-          summary: "Implementer claim must not render as reviewer clean.",
-          findings: [],
-          findings_claim_state: "clean",
-          findings_claim_source: "payload_flags",
-          metadata: { delivery_target_role: "reviewer" }
-        }
-      })
-    ]);
-
-    expect(entries[0]?.display.badges).toEqual([]);
-    expect(entries[1]?.display.badges).toEqual([]);
-    expect(entries[2]?.display.badges).toEqual([]);
-  });
-
   it("emits handoff and clean-run progress while nullable non-applicable families stay present", () => {
     const entries = presentTimeline([
       envelope({
@@ -255,11 +213,7 @@ describe("timelinePresenter display DTO", () => {
       })
     ]);
 
-    expect(entries[0]?.display.progress).toEqual({
-      kind: "meta_review_handoff",
-      label: "handoff 1",
-      handoffAttempt: 1
-    });
+    expect(entries[0]?.display.progress).toBeNull();
     expect(entries[1]?.display.progress).toEqual({
       kind: "meta_review_handoff",
       label: "handoff 2",
@@ -307,7 +261,6 @@ describe("timelinePresenter display DTO", () => {
             "Meta-review approved the current change, but the required approve-gate validation failed.",
           metadata: {
             actor: "meta-reviewer",
-            actor_agent: "meta-review-codex",
             recommendation: "approve",
             validation_failure_id: "same-gate"
           }
@@ -349,7 +302,6 @@ describe("timelinePresenter display DTO", () => {
         "Meta-review approved the current change, but the required approve-gate validation failed.",
       tone: "danger"
     });
-    expect(entries[1]?.display.senderLabel).toBe("meta-review-codex");
     expect(entries[1]?.display.syntheticApproval).toEqual({
       kind: "meta_review_approval",
       sourceEntryId: "gate-duplicate-new",
@@ -362,7 +314,6 @@ describe("timelinePresenter display DTO", () => {
     ]);
     expect(entries[1]?.display.progress).toBeNull();
     expect(entries[2]?.display.syntheticApproval?.sourceEntryId).toBe("gate-separate");
-    expect(entries[2]?.display.senderLabel).toBe("unknown");
     expect(entries[2]?.display.badges).toEqual([
       { kind: "decision", label: "rework", tone: "danger" }
     ]);
@@ -510,67 +461,6 @@ describe("timelinePresenter display DTO", () => {
       progress: null,
       validationFailure: null,
       syntheticApproval: null
-    });
-  });
-
-  it("injects configured clean-run requirement into live timeline display output", async () => {
-    const entries = await readBubbleTimeline(
-      {
-        bubbleId: "b-remote",
-        repoPath: "/repo"
-      },
-      {
-        resolveBubbleById: vi.fn(async () => ({
-          bubblePaths: {
-            remotePointerPath: "/repo/.pairflow/bubbles/b-remote/remote.json",
-            transcriptPath: "/repo/.pairflow/bubbles/b-remote/transcript.ndjson"
-          },
-          bubbleConfig: {
-            review_policy: {
-              meta_review_consecutive_clean_runs_required: 3
-            },
-            executor: {
-              type: "ssh",
-              remote: "dev"
-            }
-          }
-        })) as never,
-        readRemotePointer: vi.fn(async () => ({
-          kind: "started",
-          remoteClonePath: "/remote/repo",
-          host: "example.test"
-        })) as never,
-        resolveRemoteBubbleStatusTarget: vi.fn(async () => ({
-          host: "example.test"
-        })) as never,
-        runCommand: vi.fn(async () => ({
-          exitCode: 0,
-          stdout: `${JSON.stringify({
-            id: "remote-clean-1",
-            ts: "2026-05-05T10:00:00.000Z",
-            round: 2,
-            type: "APPROVAL_REQUEST",
-            sender: "orchestrator",
-            recipient: "human",
-            payload: {
-              summary: "Remote clean run.",
-              metadata: {
-                actor: "meta-reviewer",
-                latest_recommendation: "approve"
-              }
-            },
-            refs: []
-          })}\n`,
-          stderr: ""
-        })) as never
-      }
-    );
-
-    expect(entries[0]?.display.progress).toEqual({
-      kind: "clean_run",
-      label: "clean 1",
-      cleanRunCount: 1,
-      cleanRunsRequired: 3
     });
   });
 });
