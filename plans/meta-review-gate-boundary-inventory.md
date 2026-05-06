@@ -140,19 +140,19 @@ dependencies remain pure and they do not perform I/O.
 | File | Lines | Responsibility | External import? | Suggested action |
 | --- | ---: | --- | --- | --- |
 | `metaReviewGateThresholdAuthority.ts` | 131 | Threshold authority resolver wrapper around artifact/parity I/O and domain threshold helpers. | yes, 2 | Keep as transitional shared API; verified parity-to-authority result construction now lives in domain. |
-| `metaReviewGateFindingsClaimParsing.ts` | 91 | Structured findings claim parsing from report JSON. | yes, 1 | Domain candidate. |
-| `metaReviewGateFindingsParityInput.ts` | 157 | Build/resolve rework findings parity input and reason codes. | yes, 1 | Domain candidate, likely after claim parsing. |
-| `metaReviewGateFindingsSplit.ts` | 162 | Blocking/advisory split derivation from findings/report JSON. | yes, 3 | Domain candidate or shared model helper; resolve whether it is gate-specific. |
-| `metaReviewGateApproveClaimSplit.ts` | 79 | Approve split triplet and approve reason codes. | no direct external | Domain candidate. |
-| `metaReviewGateApproveClaimMetadata.ts` | 118 | Approve parity metadata and diagnostics. | no direct external | Domain candidate after split helpers. |
-| `metaReviewGateApproveClaimSummaryMismatch.ts` | 44 | Structured approve-summary mismatch detection. | no direct external | Domain candidate. |
-| `metaReviewGateApproveClaimValidation.ts` | 85 | Validate structured positive approve claim. | no direct external | Domain candidate, possibly grouped with approve claim policy. |
-| `metaReviewGateApprovalParityState.ts` | 168 | Structured parity metadata snapshot and advisory contract invariant. | no direct external | Domain candidate. |
-| `metaReviewGateApprovalParitySnapshot.ts` | 106 | Normalize approval advisory findings and required split metadata. | no direct external | Domain candidate. |
-| `metaReviewGateApprovalReviewerConsistency.ts` | 137 | Approval path consistency against reviewer snapshot. | no direct external | Domain candidate if transcript read stays outside. |
-| `metaReviewGateApprovalSummaryNormalization.ts` | 202 | Approval request summary consistency/normalization. | no direct external | Domain candidate with possible application naming. |
-| `metaReviewGateRunResultParity.ts` | 35 | Merge run result with parity resolution. | no direct external | Domain candidate. |
-| `metaReviewGateFindingsValidationPreflight.ts` | 103 | Preflight structured meta-review claim validation. | no direct external | Domain candidate. |
+| `findingsClaimParsing.ts` | 91 | Structured findings claim parsing from report JSON. | imported directly from domain | Done: domain-owned. |
+| `findingsParityInput.ts` + `metaReviewGateFindingsParityInput.ts` | 114 + 71 | Domain resolves rework findings parity input candidate; shared wrapper adds artifact path resolution. | yes, via shared public wrapper | Done split; keep path/topology resolution in shared wrapper. |
+| `findingsSplit.ts` | 162 | Blocking/advisory split derivation from findings/report JSON. | imported directly from domain | Done: domain-owned. |
+| `approveClaimSplit.ts` | 79 | Approve split triplet and approve reason codes. | no direct external | Done: domain-owned. |
+| `approveClaimMetadata.ts` | 118 | Approve parity metadata and diagnostics. | no direct external | Done: domain-owned. |
+| `approveClaimSummaryMismatch.ts` | 44 | Structured approve-summary mismatch detection. | no direct external | Done: domain-owned. |
+| `approveClaimValidation.ts` | 84 | Validate structured positive approve claim. | no direct external | Done: domain-owned. |
+| `approvalParityState.ts` | 168 | Structured parity metadata snapshot and advisory contract invariant. | no direct external | Done: domain-owned. |
+| `approvalParitySnapshot.ts` | 106 | Normalize approval advisory findings and required split metadata. | no direct external | Done: domain-owned. |
+| `approvalReviewerConsistency.ts` | 145 | Approval path consistency against reviewer snapshot. | no direct external | Done: domain-owned. Transcript read stays outside. |
+| `approvalSummaryNormalization.ts` | 202 | Approval request summary consistency/normalization. | no direct external | Done: domain-owned. |
+| `runResultParity.ts` | 38 | Merge run result with parity resolution. | no direct external | Done: domain-owned. |
+| `findingsValidationPreflight.ts` | 103 | Preflight structured meta-review claim validation. | no direct external | Done: domain-owned. |
 | `metaReviewGateFindingsValidationParity.ts` | 92 | Rework path positive-claim validation with parity. | no direct external | Domain candidate, verify convergence policy dependency. |
 | `metaReviewGateFindingsValidation.ts` | 95 | Top-level positive-claim validation orchestration over policy helpers. | no direct external | Domain/application boundary candidate; inspect I/O through artifact read callback. |
 | `gateRoutingTypes.ts` | 84 | Gate route union, threshold status metadata, and gate error language. | via shared re-export | Domain-owned shared language; keep public through `metaReviewGateTypes.ts` compatibility export. |
@@ -194,9 +194,9 @@ the final owner should not be domain policy.
 
 | File | Lines | Responsibility | External import? | Suggested action |
 | --- | ---: | --- | --- | --- |
-| `metaReviewGateFindingsMetadata.ts` | 184 | Artifact path/status/digest/open-total/parity metadata from report JSON. | yes, 1 | Split path/artifact concerns from pure metadata derivation. |
+| `metaReviewGateFindingsMetadata.ts` | 47 | Artifact path resolution plus compatibility re-exports for domain parity metadata helpers. | yes, 1 | Done split; keep path resolution here while public callers migrate to narrower imports. |
 | `metaReviewGateFindingsArtifactReadRetry.ts` | 90 | Retry policy around findings artifact read. | no direct external | Infrastructure/port-adjacent or application internal. |
-| `metaReviewGateReviewerSnapshot.ts` | 117 | Read/derive latest same-round reviewer snapshot from transcript. | yes, 1 | Split pure snapshot derivation from transcript read default. |
+| `metaReviewGateReviewerSnapshot.ts` | 29 | Transcript read wrapper plus compatibility re-exports for domain reviewer snapshot policy. | yes, 1 | Done split; pure snapshot derivation is domain-owned. |
 | `metaReviewGateTranscriptDefaults.ts` | 11 | Re-export transcript read default. | no direct external | Likely remove or move to defaults/application wiring; avoid shared camouflage. |
 
 ## Suggested First Pass
@@ -207,12 +207,10 @@ the final owner should not be domain policy.
    `metaReviewGateTypes.ts`.
 3. Move files with no external imports and unclear final placement under
    `shared/metaReviewGate/internal/**`.
-4. For obvious policy files, consider direct move instead of an `internal/`
-   detour:
-   - `metaReviewGateThresholdAuthority.ts`
-   - `metaReviewGateFindingsClaimParsing.ts`
-   - `metaReviewGateFindingsParityInput.ts`
-   - `metaReviewGateFindingsSplit.ts` if gate-specific ownership is confirmed
+4. For obvious policy files, prefer direct domain ownership instead of an
+   `internal/` detour. This is now done for threshold policy, findings
+   claim/split/parity metadata, approve-claim policy, reviewer snapshot policy,
+   and current-run approval subpolicies.
 5. Do not move these wholesale to domain:
    - `metaReviewGateCurrentRunFinalization.ts`
    - `metaReviewGateCurrentRunCleanRerun.ts`
@@ -228,8 +226,9 @@ the final owner should not be domain policy.
 1. Should `shared/metaReview/**` be treated as inside the same broader
    meta-review bounded context, or as an external consumer for the `internal/`
    rule pilot?
-2. Should `metaReviewGateFindingsSplit.ts` be gate-specific domain policy or a
-   broader review/findings shared model helper?
+2. Should `metaReviewGateFindingsParityHelpers.ts` remain the shared artifact
+   read/hash/parse adapter, or should its parsing/hash pieces move behind a
+   narrower infrastructure port?
 3. Is `finalizeCurrentRunMetaReviewGate` a public API during migration, or
    should callers be moved immediately to a higher-level command API?
 4. Should `metaReviewGateTypes.ts` be split before or after the first
