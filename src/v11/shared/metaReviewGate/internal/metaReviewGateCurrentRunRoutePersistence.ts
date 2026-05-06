@@ -7,9 +7,11 @@ import type { LoadedStateSnapshot } from "../../ports/stateSnapshots.js";
 import {
   buildGateLockPath,
   buildHumanGateSummary,
-  persistHumanGateRoute,
-  resolveHumanGateRoute
+  persistHumanGateRoute
 } from "./metaReviewGateShared.js";
+import {
+  resolveHumanGateRoute
+} from "../../../domain/metaReviewGate/humanGateRouting.js";
 import type { MetaReviewGateThresholdMetadata } from "../metaReviewGateRouteContract.js";
 import type { MetaReviewGateResult } from "../metaReviewGateResultContract.js";
 import { resolveFindingsParityMetadataFromReportJson } from "../metaReviewGateFindingsMetadata.js";

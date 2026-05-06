@@ -16,10 +16,6 @@ export {
   metaReviewGateAutoReworkRetryRunIdentityInvariantReasonCode,
   resolveAutoReworkRetryInvariantViolation
 } from "../../../domain/metaReviewGate/autoReworkRetryInvariant.js";
-export {
-  resolveDefaultStickyHumanGateForRoute,
-  resolveHumanGateRoute
-} from "../../../domain/metaReviewGate/humanGateRouting.js";
 
 export function transitionToGateState(input: {
   current: BubbleStateSnapshot;

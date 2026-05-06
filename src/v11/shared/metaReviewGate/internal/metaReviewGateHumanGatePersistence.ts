@@ -19,10 +19,10 @@ import {
   type MetaReviewGateThresholdMetadata
 } from "../metaReviewGateRouteContract.js";
 import type { MetaReviewGateResult } from "../metaReviewGateResultContract.js";
+import { transitionToGateState } from "./metaReviewGateStateHelpers.js";
 import {
-  resolveDefaultStickyHumanGateForRoute,
-  transitionToGateState
-} from "./metaReviewGateStateHelpers.js";
+  resolveDefaultStickyHumanGateForRoute
+} from "../../../domain/metaReviewGate/humanGateRouting.js";
 import {
   appendHumanGateApprovalRequest,
   resolveHumanGateRecommendation,

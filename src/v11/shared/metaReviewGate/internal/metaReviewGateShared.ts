@@ -27,9 +27,7 @@ export {
   normalizeMetaReviewSnapshot,
   resolveMetaReviewerAgent,
   resolveAutoReworkRetryInvariantViolation,
-  resolveDefaultStickyHumanGateForRoute,
   resolveFindingsParityMetadataForEnvelope,
-  resolveHumanGateRoute,
   setMetaReviewConsecutiveCleanRuns,
   transitionToGateState
 } from "./metaReviewGateStateHelpers.js";
