@@ -1,14 +1,14 @@
 export {
   MetaReviewGateError,
   metaReviewGateRoutes
-} from "../../domain/metaReviewGate/gateRoutingTypes.js";
+} from "./metaReviewGateRouteContract.js";
 export type {
   MetaReviewGateErrorDiagnostics,
   MetaReviewGateReasonCode,
   MetaReviewGateRoute,
   MetaReviewGateThresholdMetadata,
   MetaReviewGateThresholdStatus
-} from "../../domain/metaReviewGate/gateRoutingTypes.js";
+} from "./metaReviewGateRouteContract.js";
 export {
   resolveMetaReviewGateNotifyTmuxCapabilities,
   resolveMetaReviewGatePaneBindingTmuxCapabilities
