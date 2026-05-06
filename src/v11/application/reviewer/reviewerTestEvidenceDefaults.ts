@@ -15,6 +15,10 @@ let reviewerTestEvidenceModulePromise:
     }>
   | undefined;
 
+function getReviewerTestEvidenceDefaultsModulePath(): string {
+  return "../../defaults/reviewer/reviewerTestEvidenceDefaults.js";
+}
+
 async function loadReviewerTestEvidenceModule(): Promise<{
   resolveReviewerTestExecutionDirective: ResolveReviewerTestExecutionDirectivePort;
   resolveReviewerTestExecutionDirectiveFromArtifact:
@@ -23,8 +27,14 @@ async function loadReviewerTestEvidenceModule(): Promise<{
   writeReviewerTestEvidenceArtifact: WriteReviewerTestEvidenceArtifactPort;
 }> {
   reviewerTestEvidenceModulePromise ??= import(
-    "../../shared/reviewer/reviewerTestEvidenceDefaults.js"
-  );
+    getReviewerTestEvidenceDefaultsModulePath()
+  ) as Promise<{
+    resolveReviewerTestExecutionDirective: ResolveReviewerTestExecutionDirectivePort;
+    resolveReviewerTestExecutionDirectiveFromArtifact:
+      ResolveReviewerTestExecutionDirectiveFromArtifactPort;
+    verifyImplementerTestEvidence: VerifyImplementerTestEvidencePort;
+    writeReviewerTestEvidenceArtifact: WriteReviewerTestEvidenceArtifactPort;
+  }>;
   return reviewerTestEvidenceModulePromise;
 }
 
