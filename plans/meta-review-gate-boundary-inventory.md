@@ -139,11 +139,10 @@ Current source-facing public surface:
   contracts.
 - `metaReviewGateTypes.ts`: compatibility aggregator for older imports.
 
-Avoid making these directly public unless transitional:
-
-- `metaReviewGateThresholdAuthority.ts`
-- `metaReviewGateFindingsMetadata.ts`
-- `metaReviewGateReviewerSnapshot.ts`
+The former root-level policy/wrapper files for threshold authority, findings
+metadata/parity, reviewer snapshot, and current-run finalization are now
+internal implementation files. External source should use `index.ts` or
+`metaReviewGateCurrentRunApi.ts`.
 
 ## Slice Inventory
 
