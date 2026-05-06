@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises";
 
 import { renderBubbleConfigToml } from "../../../config/bubbleConfig.js";
-import { resolveDocContractGateArtifactPath } from "../../shared/gates/docContractGateArtifactDefaults.js";
+import { resolveDocContractGateArtifactPath } from "../gates/docContractGateArtifactDependencyDefaults.js";
 import { reviewerPolicySnapshotFileName } from "../../shared/reviewer/reviewerPolicySnapshot.js";
 import type { RemoteStartControlFile } from "./startCommandContract.js";
 import type { StartExecutionContext } from "./startCommandContext.js";
