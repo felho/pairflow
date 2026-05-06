@@ -229,7 +229,7 @@ the final owner should not be domain policy.
    narrower infrastructure port?
 3. Is `finalizeCurrentRunMetaReviewGate` a public API during migration, or
    should callers be moved immediately to a higher-level command API?
-4. Should `metaReviewGateTypes.ts` be split before or after the first
-   `internal/` move?
+4. Should `metaReviewGateTypes.ts` now split further into route/result language
+   versus runtime capability compatibility exports?
 5. Should the first fitness rule hard-fail only `/internal/` import violations,
    while a separate report-only radar finds large unprotected module candidates?
