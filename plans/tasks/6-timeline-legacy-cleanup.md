@@ -5,7 +5,7 @@ task_family_id: timeline-legacy-cleanup
 sequence_key: "6"
 task_id: 6-timeline-legacy-cleanup
 title: "Timeline Legacy Cleanup"
-status: implementable
+status: in_progress
 phase: phase4
 target_files:
   - ui/src/components/expanded/BubbleTimeline.tsx
@@ -41,7 +41,7 @@ system_context_ref: docs/pairflow-initial-design.md
 owners:
   - "felho"
 doc_bubble_id: 6-timeline-legacy-cleanup-doc
-impl_bubble_id: null
+impl_bubble_id: 6-timeline-legacy-cleanup-impl
 supersedes: []
 superseded_by: null
 archive_group: 2026-05-05-timeline-display-dto-plan-v1
