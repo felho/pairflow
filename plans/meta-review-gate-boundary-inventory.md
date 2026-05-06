@@ -31,6 +31,10 @@ Completed in the bubble:
 - `domain/metaReviewGate/**` no longer imports back from
   `shared/metaReviewGate/**`; route/error language is owned in domain and
   re-exported by the shared public contract for compatibility.
+- `metaReviewGateTypes.ts` has been narrowed to result/compatibility exports;
+  runtime capability contracts now live in
+  `metaReviewGateRuntimeCapabilities.ts`, and tmux runner types live in
+  `metaReviewGateTmuxCapabilities.ts`.
 
 Known aggregate-index exception:
 
@@ -123,8 +127,9 @@ Avoid making these directly public unless transitional:
 | `metaReviewGateCommandContract.ts` | 15 | Re-exports command input/result/dependency contract types. | Keep public, but verify it does not re-export internal-only dependency bags. |
 | `metaReviewGateCommandApi.ts` | 21 | Public command API re-export surface, including error conversion. | Keep public entrypoint. Consider routing external consumers through `index.ts`. |
 | `metaReviewGateCommandRuntime.ts` | 18 | Runtime API exports for apply/error helpers. | Likely public or public-adjacent; verify whether runtime naming leaks implementation. |
-| `metaReviewGateTypes.ts` | 189 | Result types plus notify/runtime capability contracts; route/error language is now re-exported from domain. | Continue splitting runtime capability/dependency types closer to application/defaults. |
-| `metaReviewGateTmuxCapabilities.ts` | 15 | Tmux runner result/options function type. | Likely not public shared language; move near runtime/defaults or keep internal until split. |
+| `metaReviewGateTypes.ts` | 47 | Result type plus compatibility re-exports for route/error/runtime contract language. | Keep public while consumers migrate to narrower contract files. |
+| `metaReviewGateRuntimeCapabilities.ts` | 172 | Notify, pane-binding, apply dependency, and runtime capability contracts. | Public contract split from the broad type file; later review whether defaults/application should own more of it. |
+| `metaReviewGateTmuxCapabilities.ts` | 15 | Tmux runner result/options function type. | Public type because runtime capability contracts expose the runner shape; internal path now re-exports for compatibility only. |
 
 ### Domain Candidates
 
