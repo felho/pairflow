@@ -1,6 +1,3 @@
-import { applyStateTransition } from "../../../domain/state/machine.js";
-import { assertValidBubbleStateSnapshot } from "../../state/stateSchema.js";
-import { clearLiveMetaReviewSnapshot } from "../../metaReview/metaReviewSnapshot.js";
 import type { MetaReviewResult } from "../../metaReview/metaReviewTypes.js";
 import type {
   AppendProtocolEnvelopePort
@@ -24,15 +21,11 @@ import {
   buildGateLockPath
 } from "./metaReviewGateShared.js";
 import {
-  incrementAutoReworkCount,
-  normalizeMetaReviewSnapshot,
-  setMetaReviewConsecutiveCleanRuns
-} from "../../../domain/metaReviewGate/snapshotState.js";
+  buildAutoReworkResumedState,
+  buildRestoredReadyState
+} from "./metaReviewGateAutoReworkState.js";
 import { MetaReviewGateError } from "../metaReviewGateRouteContract.js";
 import type { MetaReviewGateResult } from "../metaReviewGateResultContract.js";
-import {
-  resolveRuntimeAlignedNextRoundContinuation
-} from "../../reviewPolicy/reviewPolicyRuntime.js";
 
 interface AutoReworkFinalizeInput {
   resolved: {
@@ -101,55 +94,6 @@ function toGateTransitionError(error: unknown): MetaReviewGateError {
   );
 }
 
-function buildAutoReworkResumedState(
-  finalizeInput: AutoReworkFinalizeInput
-): { resumed: BubbleStateSnapshot; nowIso: string } {
-  const nowIso = finalizeInput.now.toISOString();
-  const streakResetState = setMetaReviewConsecutiveCleanRuns(
-    finalizeInput.loaded.state,
-    0
-  );
-  const continuation = resolveRuntimeAlignedNextRoundContinuation({
-    bubbleId: finalizeInput.loaded.state.bubble_id,
-    currentRound: finalizeInput.loaded.state.round,
-    roundRoleHistory: finalizeInput.loaded.state.round_role_history,
-    implementer: finalizeInput.resolved.bubbleConfig.agents.implementer,
-    reviewer: finalizeInput.resolved.bubbleConfig.agents.reviewer,
-    nowIso,
-    watchdogTimeoutMinutes:
-      finalizeInput.resolved.bubbleConfig.watchdog_timeout_minutes
-  });
-  const resumedBase = assertValidBubbleStateSnapshot({
-    ...streakResetState,
-    state: "RUNNING",
-    round: continuation.nextRound,
-    active_agent: continuation.activeAgent,
-    active_role: continuation.activeRole,
-    execution_context: continuation.executionContext,
-    active_since: nowIso,
-    last_command_at: nowIso,
-    round_role_history:
-      continuation.appendRoundRoleEntry === undefined
-        ? streakResetState.round_role_history
-        : [
-            ...streakResetState.round_role_history,
-            continuation.appendRoundRoleEntry
-          ],
-    meta_review: clearLiveMetaReviewSnapshot(
-      streakResetState.meta_review
-    )
-  });
-  return {
-    nowIso,
-    resumed: assertValidBubbleStateSnapshot({
-      ...resumedBase,
-      meta_review: normalizeMetaReviewSnapshot(
-        incrementAutoReworkCount(resumedBase).meta_review
-      )
-    })
-  };
-}
-
 async function writeAutoReworkResumedState(input: {
   finalizeInput: AutoReworkFinalizeInput;
   resumed: BubbleStateSnapshot;
@@ -216,26 +160,6 @@ async function appendAutoReworkDecision(input: {
       refs: input.finalizeInput.refs
     }
   });
-}
-
-function buildRestoredReadyState(input: {
-  resumedState: BubbleStateSnapshot;
-  loadedState: BubbleStateSnapshot;
-  nowIso: string;
-}): BubbleStateSnapshot {
-  const restoredReady = applyStateTransition(input.resumedState, {
-    to: "READY_FOR_HUMAN_APPROVAL",
-    activeAgent: null,
-    activeRole: null,
-    activeSince: null,
-    lastCommandAt: input.nowIso
-  });
-  return {
-    ...restoredReady,
-    round: input.loadedState.round,
-    round_role_history: input.loadedState.round_role_history,
-    meta_review: normalizeMetaReviewSnapshot(input.loadedState.meta_review)
-  };
 }
 
 async function restoreReadyStateAfterAppendFailure(input: {
