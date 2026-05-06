@@ -9,7 +9,7 @@ import type { MetaReviewGateArtifactReadFn } from "../metaReviewGateFindingsMeta
 import {
   type MetaReviewGateThresholdAuthorityResolution,
   resolveMetaReviewGateThresholdAuthority
-} from "../metaReviewGateThresholdAuthority.js";
+} from "./metaReviewGateThresholdAuthority.js";
 import { metaReviewApproveClaimsOpenFindings } from "../../metaReview/metaReviewCommandSubmitValidation.js";
 import { normalizeBubbleReviewPolicy } from "../../reviewPolicy/reviewPolicyRuntime.js";
 import {

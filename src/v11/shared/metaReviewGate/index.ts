@@ -2,7 +2,7 @@ export * from "./metaReviewGateCommandApi.js";
 export {
   metaReviewGateThresholdIsMet,
   resolveMetaReviewGateThresholdAuthority
-} from "./metaReviewGateThresholdAuthority.js";
+} from "./internal/metaReviewGateThresholdAuthority.js";
 export {
   resolveReworkFindingsParityInput
 } from "./internal/metaReviewGateFindingsParityInput.js";
@@ -12,7 +12,7 @@ export {
 export type {
   MetaReviewGateThresholdAuthorityResolution,
   ResolveMetaReviewGateThresholdAuthorityInput
-} from "./metaReviewGateThresholdAuthority.js";
+} from "./internal/metaReviewGateThresholdAuthority.js";
 export {
   resolveFindingsParityMetadataFromReportJson
 } from "./metaReviewGateFindingsMetadata.js";
