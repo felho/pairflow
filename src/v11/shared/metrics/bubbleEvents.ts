@@ -1,9 +1,9 @@
 import { resolve } from "node:path";
 
 import { type MetricsActorRole } from "../../../types/metrics.js";
-import { bubbleEventsDefaults } from "../../defaults/metrics/bubbleEventsDefaults.js";
 import { createMetricsEvent } from "./events.js";
 import {
+  type AppendMetricsEventPort,
   type AppendMetricsEventResult
 } from "./eventsStorePort.js";
 
@@ -40,6 +40,30 @@ const defaultBestEffortStaleLockRecoveryAfterMs = 100;
 const reportedWarningKeyFlushThreshold = 512;
 const reportedWarningKeys = new Set<string>();
 
+interface BubbleEventsDefaultsModule {
+  bubbleEventsDefaults: {
+    normalizeRepoPath: (path: string) => Promise<string>;
+    resolveDefaultMetricsEventStorePort:
+      () => Promise<AppendMetricsEventPort>;
+  };
+}
+
+let bubbleEventsDefaultsModulePromise:
+  | Promise<BubbleEventsDefaultsModule>
+  | undefined;
+
+function getBubbleEventsDefaultsModulePath(): string {
+  return "../../defaults/metrics/bubbleEventsDefaults.js";
+}
+
+async function loadBubbleEventsDefaultsModule():
+  Promise<BubbleEventsDefaultsModule> {
+  bubbleEventsDefaultsModulePromise ??= import(
+    getBubbleEventsDefaultsModulePath()
+  ) as Promise<BubbleEventsDefaultsModule>;
+  return bubbleEventsDefaultsModulePromise;
+}
+
 export function clearReportedBubbleEventWarnings(): void {
   reportedWarningKeys.clear();
 }
@@ -47,6 +71,7 @@ export function clearReportedBubbleEventWarnings(): void {
 export async function emitBubbleLifecycleEvent(
   input: EmitBubbleLifecycleEventInput
 ): Promise<AppendMetricsEventResult> {
+  const { bubbleEventsDefaults } = await loadBubbleEventsDefaultsModule();
   const normalizedRepoPath = await bubbleEventsDefaults.normalizeRepoPath(
     resolve(input.repoPath)
   );
