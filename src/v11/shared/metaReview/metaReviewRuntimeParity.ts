@@ -10,10 +10,12 @@ import {
   type FindingsParityStatus
 } from "../../../types/protocol.js";
 import {
-  readLatestSameRoundReviewerSnapshotFromTranscript,
   isAdvisoryOnlyReviewerSnapshot,
   resolveFindingsParityMetadataFromReportJson,
   type LatestSameRoundReviewerSnapshot
+} from "../../domain/metaReviewGate/index.js";
+import {
+  readLatestSameRoundReviewerSnapshotFromTranscript
 } from "../metaReviewGate/index.js";
 import {
   resolveFindingsOpenSplitFromReportJson
