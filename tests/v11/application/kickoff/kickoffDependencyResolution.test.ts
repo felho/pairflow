@@ -4,8 +4,7 @@ import { describe, expect, it } from "vitest";
 
 import { openBubbleDefaults } from "../../../../src/v11/application/open/openBubbleDefaults.js";
 import { reviewerDeliveryDefaults } from "../../../../src/v11/application/pass/reviewerDeliveryDefaults.js";
-import { appendProtocolEnvelope } from "../../../../src/v11/shared/transcript/transcriptDependencyDefaults.js";
-import { readStateSnapshot, writeStateSnapshot } from "../../../../src/v11/shared/state/stateStoreDefaults.js";
+import { kickoffDefaults } from "../../../../src/v11/application/kickoff/kickoffDependencyDefaults.js";
 import { resolveKickoffDependencies } from "../../../../src/v11/application/kickoff/kickoffDependencyResolution.js";
 
 describe("kickoffDependencyResolution", () => {
@@ -13,11 +12,11 @@ describe("kickoffDependencyResolution", () => {
     const resolved = resolveKickoffDependencies({});
 
     expect(resolved.resolveBubble).toBe(openBubbleDefaults.resolveBubbleById);
-    expect(resolved.readState).toBe(readStateSnapshot);
-    expect(resolved.writeState).toBe(writeStateSnapshot);
+    expect(resolved.readState).toBe(kickoffDefaults.readStateSnapshot);
+    expect(resolved.writeState).toBe(kickoffDefaults.writeStateSnapshot);
     expect(resolved.readFileFn).toBe(readFile);
     expect(resolved.writeFileFn).toBe(writeFile);
-    expect(resolved.appendEnvelope).toBe(appendProtocolEnvelope);
+    expect(resolved.appendEnvelope).toBe(kickoffDefaults.appendProtocolEnvelope);
     expect(resolved.emitDelivery).toBe(
       reviewerDeliveryDefaults.emitDeliveryNotificationAck
     );
