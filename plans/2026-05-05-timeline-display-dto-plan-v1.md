@@ -4,8 +4,8 @@ artifact_id: plan_timeline_display_dto_v1
 plan_id: timeline-display-dto-plan-v1
 created_on: "2026-05-05"
 title: "Timeline Display DTO Plan"
-status: approved
-plan_status: approved
+status: in_progress
+plan_status: in_progress
 prd_ref: null
 owners:
   - "felho"
@@ -16,7 +16,7 @@ task_order:
   - 4-timeline-display-badges
   - 5-timeline-display-meta
   - 6-timeline-legacy-cleanup
-active_task_id: null
+active_task_id: 6-timeline-legacy-cleanup
 last_completed_task_id: 5-timeline-display-meta
 archive_group: 2026-05-05-timeline-display-dto-plan-v1
 task_tracker:
