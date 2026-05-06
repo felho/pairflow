@@ -63,6 +63,8 @@ Completed in the bubble:
   remains in `metaReviewGateCurrentRunCleanRerun.ts`.
 - clean-rerun delivery telemetry/runtime-delivery helpers now live in
   `internal/metaReviewGateCleanRerunDelivery.ts`.
+- clean-rerun route/capability types and delivery capability guard now live in
+  `internal/metaReviewGateCleanRerunContract.ts`.
 - `domain/metaReviewGate/**` no longer imports back from
   `shared/metaReviewGate/**`; route/error language is owned in domain and
   re-exported by the shared public contract for compatibility.
@@ -220,7 +222,8 @@ runtime delivery. They should not be moved wholesale to `domain`.
 | `metaReviewGateApplyHelpers.ts` | 107 | Append kickoff envelope and persist run-failed route. | no direct external | Application internal; uses transcript/state helpers. |
 | `metaReviewGateFindingsValidation.ts` | 95 | Top-level positive-claim validation orchestration over preflight, approve policy, and rework artifact validation adapter. | no direct external | Application/internal wrapper; do not move wholesale to domain. |
 | `internal/metaReviewGateCurrentRunFinalization.ts` | 476 | Current-run route resolution, parity I/O, threshold authority reads, approve/rework/human routing. | no direct external; public door is `metaReviewGateCurrentRunApi.ts` | Application candidate; pure approve-validation, clean-approval, and approve-threshold backstop policies have been split out. |
-| `metaReviewGateCurrentRunCleanRerun.ts` | 445 | Clean rerun routing, pane binding, observation persistence, and route reconciliation. | no direct external | Application/internal first; dispatch-failure rollback state and delivery telemetry/runtime-delivery helpers have been split out. |
+| `metaReviewGateCurrentRunCleanRerun.ts` | 410 | Clean rerun routing, pane binding, observation persistence, and route reconciliation. | no direct external | Application/internal first; dispatch-failure rollback state, delivery helpers, and internal route/capability contract have been split out. |
+| `internal/metaReviewGateCleanRerunContract.ts` | 47 | Clean-rerun internal route input, pane warning result, delivery-capable input, and capability guard. | no direct external | Shared/internal contract; keep private unless another internal clean-rerun slice needs the same capability language. |
 | `internal/metaReviewGateCleanRerunDelivery.ts` | 54 | Clean-rerun deactivate telemetry, pane delivery annotation, and runtime-delivery state projection. | no direct external | Shared/internal helper; later placement depends on final runtime-delivery ownership. |
 | `internal/metaReviewGateCleanRerunFailureState.ts` | 16 | Build clean-rerun dispatch-failure rollback state by resetting clean-run streak and runtime delivery. | no direct external | Shared/internal helper; keep behind clean-rerun orchestration unless reused by adjacent route persistence. |
 | `metaReviewGateCurrentRunRoutePersistence.ts` | 175 | Persist run-failed/dispatch/resolved human routes. | no direct external | Application/infrastructure boundary candidate. |
