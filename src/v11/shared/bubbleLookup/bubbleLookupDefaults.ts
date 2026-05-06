@@ -1,7 +1,27 @@
-import {
-  resolveBubbleById as resolveBubbleByIdDefaults
-} from "../../defaults/bubbleLookup/bubbleLookupDefaults.js";
 import type { ResolveBubbleByIdPort } from "../ports/bubbleLookup.js";
 
-export const resolveBubbleById: ResolveBubbleByIdPort = async (...args) =>
-  resolveBubbleByIdDefaults(...args);
+interface BubbleLookupDefaultsModule {
+  resolveBubbleById: ResolveBubbleByIdPort;
+}
+
+let bubbleLookupDefaultsModulePromise:
+  | Promise<BubbleLookupDefaultsModule>
+  | undefined;
+
+function getBubbleLookupDefaultsModulePath(): string {
+  return "../../defaults/bubbleLookup/bubbleLookupDefaults.js";
+}
+
+async function loadBubbleLookupDefaultsModule():
+  Promise<BubbleLookupDefaultsModule> {
+  bubbleLookupDefaultsModulePromise ??= import(
+    getBubbleLookupDefaultsModulePath()
+  ) as Promise<BubbleLookupDefaultsModule>;
+  return bubbleLookupDefaultsModulePromise;
+}
+
+export const resolveBubbleById: ResolveBubbleByIdPort = async (...args) => {
+  const { resolveBubbleById: resolveBubbleByIdDefault } =
+    await loadBubbleLookupDefaultsModule();
+  return resolveBubbleByIdDefault(...args);
+};
