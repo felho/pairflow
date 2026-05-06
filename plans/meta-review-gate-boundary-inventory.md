@@ -47,6 +47,9 @@ Completed in the bubble:
 - reviewer snapshot transcript wrapper now lives under
   `shared/metaReviewGate/internal/**`; the aggregate index still exports the
   public read helper and snapshot type.
+- approval request route metadata policy now lives in
+  `domain/metaReviewGate/approvalRequestRouteMetadata.ts`; the envelope builder
+  only applies the resolved metadata.
 - `domain/metaReviewGate/**` no longer imports back from
   `shared/metaReviewGate/**`; route/error language is owned in domain and
   re-exported by the shared public contract for compatibility.
@@ -187,6 +190,7 @@ dependencies remain pure and they do not perform I/O.
 | `cleanApprovalPolicy.ts` | 92 | Decide clean approval vs threshold-required/fallback route policy. | no | Done: extracted from current-run finalization. |
 | `approveThresholdBackstopPolicy.ts` | 100 | Block invalid approve-with-open-findings human-gate routes against configured threshold. | no | Done: extracted from current-run finalization. |
 | `snapshotState.ts` | 54 | Normalize meta-review snapshot state and update auto-rework/clean-run counters. | imported directly from shared/internal orchestration | Done: domain-owned; shared no longer re-exports counter helpers through state helpers. |
+| `approvalRequestRouteMetadata.ts` | 130 | Resolve approval request gate route metadata and threshold-route diagnostics. | imported by shared/internal envelope builder | Done: domain-owned. |
 
 ### Application / Orchestration Candidates
 
@@ -208,7 +212,7 @@ runtime delivery. They should not be moved wholesale to `domain`.
 | `metaReviewGateAutoRework.ts` | 327 | Auto-rework state transition, transcript append, rollback handling. | no direct external | Application candidate with ports; do not domain-move wholesale. |
 | `metaReviewGateHumanGatePersistence.ts` | 237 | Persist human gate route and append approval request. | no direct external | Application/infrastructure boundary candidate. |
 | `metaReviewGateHumanGatePersistenceHelpers.ts` | 180 | Human gate recommendation, request append, rollback handling. | no direct external | Application internal; split pure recommendation from append/rollback later. |
-| `approvalRequestEnvelope.ts` | 273 | Build/append human approval request envelope with route metadata. | no direct external | Application/internal first; possible presenter/DTO extraction later. |
+| `approvalRequestEnvelope.ts` | 149 | Build/append human approval request envelope with domain-resolved route metadata. | no direct external | Application/internal first; possible presenter/DTO extraction later. |
 | `metaReviewApproveValidationGate.ts` | 347 | Run sticky approve validation commands and map failures. | no direct external | Application candidate; validation runtime orchestration. |
 | `metaReviewGateStateHelpers.ts` | 47 | State transition coordination for human-gate state persistence. | no direct external | Application/internal helper; route defaults, summaries, and snapshot state are now domain-owned. |
 | `metaReviewGateStateStaging.ts` | 78 | Stage meta-review running state with execution context. | no direct external | Application internal. |
