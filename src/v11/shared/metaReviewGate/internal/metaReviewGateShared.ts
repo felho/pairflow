@@ -12,14 +12,6 @@ export const metaReviewGateStagedReadyRestoreTransitionInvalidReasonCode =
 export const metaReviewGatePaneDeactivationUnavoidableReasonCode =
   "META_REVIEW_GATE_PANE_DEACTIVATION_UNAVOIDABLE";
 
-export {
-  metaReviewGateRollbackAppliedReasonCode,
-  metaReviewGateRollbackNotAttemptedReasonCode,
-  metaReviewGateRollbackStateConflictReasonCode,
-  metaReviewGateRollbackTransitionInvalidReasonCode,
-  persistHumanGateRoute,
-  type PersistHumanGateRouteInput
-} from "./metaReviewGateHumanGatePersistence.js";
 export function toConflictError(error: unknown): MetaReviewGateError {
   const reason = error instanceof Error ? error.message : String(error);
   return new MetaReviewGateError(

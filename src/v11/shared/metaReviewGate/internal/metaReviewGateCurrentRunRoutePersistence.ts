@@ -5,9 +5,9 @@ import type { FindingsParityMetadata } from "../../../../types/protocol.js";
 import type { MetaReviewResult } from "../../metaReview/metaReviewTypes.js";
 import type { LoadedStateSnapshot } from "../../ports/stateSnapshots.js";
 import {
-  buildGateLockPath,
-  persistHumanGateRoute
+  buildGateLockPath
 } from "./metaReviewGateShared.js";
+import { persistHumanGateRoute } from "./metaReviewGateHumanGatePersistence.js";
 import { buildHumanGateSummary } from "../../../domain/metaReviewGate/humanGatePolicy.js";
 import {
   resolveHumanGateRoute

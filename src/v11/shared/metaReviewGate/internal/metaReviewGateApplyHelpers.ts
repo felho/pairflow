@@ -16,7 +16,7 @@ export {
   stageMetaReviewRunningState,
   throwMetaReviewRunningStageFailure
 } from "./metaReviewGateStateStaging.js";
-import { persistHumanGateRoute } from "./metaReviewGateShared.js";
+import { persistHumanGateRoute } from "./metaReviewGateHumanGatePersistence.js";
 import type { MetaReviewGateResult } from "../metaReviewGateResultContract.js";
 
 export async function appendMetaReviewKickoffEnvelope(input: {
