@@ -44,6 +44,9 @@ Completed in the bubble:
 - findings parity artifact validation helpers now live under
   `shared/metaReviewGate/internal/**`; the aggregate index still exports the
   public validation helper.
+- reviewer snapshot transcript wrapper now lives under
+  `shared/metaReviewGate/internal/**`; the aggregate index still exports the
+  public read helper and snapshot type.
 - `domain/metaReviewGate/**` no longer imports back from
   `shared/metaReviewGate/**`; route/error language is owned in domain and
   re-exported by the shared public contract for compatibility.
@@ -222,7 +225,7 @@ the final owner should not be domain policy.
 | --- | ---: | --- | --- | --- |
 | `internal/metaReviewGateFindingsMetadata.ts` | 47 | Artifact path resolution plus compatibility re-exports for domain parity metadata helpers. | public via aggregate index only | Done split; keep path resolution behind shared public API while pure metadata stays domain-owned. |
 | `metaReviewGateFindingsArtifactReadRetry.ts` | 90 | Retry policy around findings artifact read. | no direct external | Infrastructure/port-adjacent or application internal. |
-| `metaReviewGateReviewerSnapshot.ts` | 29 | Transcript read wrapper plus compatibility re-exports for domain reviewer snapshot policy. | yes, 1 | Done split; pure snapshot derivation is domain-owned. |
+| `internal/metaReviewGateReviewerSnapshot.ts` | 29 | Transcript read wrapper plus compatibility re-exports for domain reviewer snapshot policy. | public via aggregate index only | Done split; pure snapshot derivation is domain-owned. |
 
 ## Suggested First Pass
 
