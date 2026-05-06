@@ -22,7 +22,7 @@ import {
   buildFindingsParityMetadata,
   metaReviewFindingsCountMismatchReasonCode,
   metaReviewFindingsParityGuardReasonCode
-} from "./metaReviewGateFindingsParityInput.js";
+} from "./internal/metaReviewGateFindingsParityInput.js";
 export {
   buildFindingsParityMetadata,
   claimSourceInvalidReasonCode,
@@ -33,7 +33,7 @@ export {
   metaReviewFindingsRunLinkMissingReasonCode,
   resolveReworkFindingsParityInput,
   type ReworkFindingsParityInput
-} from "./metaReviewGateFindingsParityInput.js";
+} from "./internal/metaReviewGateFindingsParityInput.js";
 
 export function deriveFindingsOpenSplit(
   findings: unknown

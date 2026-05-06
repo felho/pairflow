@@ -5,7 +5,7 @@ import {
 } from "./metaReviewGateFindingsMetadata.js";
 import {
   resolveReworkFindingsParityInput
-} from "./metaReviewGateFindingsParityInput.js";
+} from "./internal/metaReviewGateFindingsParityInput.js";
 import {
   validateFindingsArtifactParity
 } from "./metaReviewGateFindingsParityHelpers.js";

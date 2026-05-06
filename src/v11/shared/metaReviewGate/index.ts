@@ -5,7 +5,7 @@ export {
 } from "./metaReviewGateThresholdAuthority.js";
 export {
   resolveReworkFindingsParityInput
-} from "./metaReviewGateFindingsParityInput.js";
+} from "./internal/metaReviewGateFindingsParityInput.js";
 export {
   validateFindingsArtifactParity
 } from "./metaReviewGateFindingsParityHelpers.js";
