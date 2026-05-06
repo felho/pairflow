@@ -30,42 +30,10 @@ import type {
 import type {
   ResolveReviewerTestExecutionDirectivePort
 } from "../../shared/ports/reviewerTestEvidenceArtifacts.js";
-import { loadStartBubbleDependencyDefaults } from "../../shared/bubble/startBubbleDependencyDefaults.js";
-
-interface StartBubbleDependencyDefaults {
-  bootstrapWorktreeWorkspace:
-    NonNullable<StartBubbleDependencies["bootstrapWorktreeWorkspace"]>;
-  cleanupWorktreeWorkspace:
-    NonNullable<StartBubbleDependencies["cleanupWorktreeWorkspace"]>;
-  launchBubbleSessionAck:
-    NonNullable<StartBubbleDependencies["launchBubbleSessionAck"]>;
-  terminateBubbleTmuxSession:
-    NonNullable<StartBubbleDependencies["terminateBubbleTmuxSession"]>;
-  readRuntimeSessionsRegistry:
-    NonNullable<StartBubbleDependencies["readRuntimeSessionsRegistry"]>;
-  claimRuntimeSession:
-    NonNullable<StartBubbleDependencies["claimRuntimeSession"]>;
-  upsertRuntimeSession:
-    NonNullable<StartBubbleDependencies["upsertRuntimeSession"]>;
-  removeRuntimeSession:
-    NonNullable<StartBubbleDependencies["removeRuntimeSession"]>;
-  writeStateSnapshot:
-    NonNullable<StartBubbleDependencies["writeStateSnapshot"]>;
-  loadPairflowGlobalConfig:
-    NonNullable<StartBubbleDependencies["loadPairflowGlobalConfig"]>;
-  runGitCommand:
-    NonNullable<StartBubbleDependencies["runGitCommand"]>;
-  readRemotePointer:
-    NonNullable<StartBubbleDependencies["readRemotePointer"]>;
-  writeRemotePointer:
-    NonNullable<StartBubbleDependencies["writeRemotePointer"]>;
-  writeRemoteStateCache:
-    NonNullable<StartBubbleDependencies["writeRemoteStateCache"]>;
-  removeRemoteStateCache:
-    NonNullable<StartBubbleDependencies["removeRemoteStateCache"]>;
-  executeRemoteBubbleStart:
-    NonNullable<StartBubbleDependencies["executeRemoteBubbleStart"]>;
-}
+import {
+  loadStartBubbleDependencyDefaults,
+  type StartBubbleDependencyDefaults
+} from "./startBubbleDependencyDefaults.js";
 
 export type StartBubbleMode = "fresh" | "resume";
 
