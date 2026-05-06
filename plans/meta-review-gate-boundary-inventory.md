@@ -150,7 +150,6 @@ dependencies remain pure and they do not perform I/O.
 | `runResultParity.ts` | 38 | Merge run result with parity resolution. | no direct external | Done: domain-owned. |
 | `findingsValidationPreflight.ts` | 103 | Preflight structured meta-review claim validation. | no direct external | Done: domain-owned. |
 | `findingsValidationParity.ts` + `metaReviewGateFindingsValidationParity.ts` | 53 + 69 | Domain builds verified rework parity success/diagnostics; shared internal wrapper performs parity input, artifact read/hash/parse validation. | no direct external | Done split; keep artifact I/O in shared/internal. |
-| `metaReviewGateFindingsValidation.ts` | 95 | Top-level positive-claim validation orchestration over policy helpers. | no direct external | Domain/application boundary candidate; inspect I/O through artifact read callback. |
 | `gateRoutingTypes.ts` | 84 | Gate route union, threshold status metadata, and gate error language. | via shared re-export | Domain-owned shared language; keep public through `metaReviewGateTypes.ts` compatibility export. |
 | `approveValidationRework.ts` | 24 | Classify approve-validation command failures and build auto-rework message. | no | Done: extracted from current-run finalization. |
 | `cleanApprovalPolicy.ts` | 92 | Decide clean approval vs threshold-required/fallback route policy. | no | Done: extracted from current-run finalization. |
@@ -169,6 +168,7 @@ runtime delivery. They should not be moved wholesale to `domain`.
 | `metaReviewGateApplyObservation.ts` | 130 | Reconcile observed gate result with persisted state. | no direct external | Application internal with state semantics. |
 | `metaReviewGateApplyPersistence.ts` | 96 | Persist runtime delivery observation. | no direct external | Application/infrastructure boundary candidate. |
 | `metaReviewGateApplyHelpers.ts` | 107 | Append kickoff envelope and persist run-failed route. | no direct external | Application internal; uses transcript/state helpers. |
+| `metaReviewGateFindingsValidation.ts` | 95 | Top-level positive-claim validation orchestration over preflight, approve policy, and rework artifact validation adapter. | no direct external | Application/internal wrapper; do not move wholesale to domain. |
 | `metaReviewGateCurrentRunFinalization.ts` | 480 | Current-run route resolution, parity I/O, threshold authority reads, approve/rework/human routing. | yes, 1 | Application candidate; pure approve-validation, clean-approval, and approve-threshold backstop policies have been split out. |
 | `metaReviewGateCurrentRunCleanRerun.ts` | 496 | Clean rerun routing, delivery, pane binding, observation persistence. | no direct external | Application/internal first; likely later split runtime delivery pieces. |
 | `metaReviewGateCurrentRunRoutePersistence.ts` | 175 | Persist run-failed/dispatch/resolved human routes. | no direct external | Application/infrastructure boundary candidate. |
