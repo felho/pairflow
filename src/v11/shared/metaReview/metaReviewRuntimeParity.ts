@@ -16,7 +16,7 @@ import {
 } from "../../domain/metaReviewGate/index.js";
 import {
   readLatestSameRoundReviewerSnapshotFromTranscript
-} from "../metaReviewGate/index.js";
+} from "../metaReviewGate/metaReviewGateReviewerSnapshotApi.js";
 import {
   resolveFindingsOpenSplitFromReportJson
 } from "../../domain/metaReviewGate/findingsSplit.js";

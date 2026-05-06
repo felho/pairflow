@@ -1,8 +1,5 @@
 export * from "./metaReviewGateCommandApi.js";
 export {
-  readLatestSameRoundReviewerSnapshotFromTranscript
-} from "./internal/metaReviewGateReviewerSnapshot.js";
-export {
   resolveMetaReviewGateNotifyTmuxCapabilities,
   resolveMetaReviewGatePaneBindingTmuxCapabilities
 } from "./metaReviewGateRuntimeCapabilities.js";
