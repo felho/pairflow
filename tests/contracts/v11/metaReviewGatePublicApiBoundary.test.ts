@@ -10,7 +10,7 @@ import {
 import {
   applyMetaReviewGateOnConvergence,
   toMetaReviewGateError
-} from "../../../src/v11/shared/metaReviewGate/metaReviewGateCommandApi.js";
+} from "../../../src/v11/application/metaReviewGate/metaReviewGateCommandApi.js";
 import {
   resolveReworkFindingsParityInput,
   validateFindingsArtifactParity
@@ -23,7 +23,7 @@ import {
 } from "../../../src/v11/shared/metaReviewGate/metaReviewGateThresholdAuthorityApi.js";
 import {
   finalizeCurrentRunMetaReviewGate
-} from "../../../src/v11/shared/metaReviewGate/metaReviewGateCurrentRunApi.js";
+} from "../../../src/v11/application/metaReviewGate/metaReviewGateCurrentRunApi.js";
 
 const allowedSharedMetaReviewGateImports = new Set([
   "../metaReviewGate/index.js",

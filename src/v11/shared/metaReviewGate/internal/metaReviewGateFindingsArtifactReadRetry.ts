@@ -1,4 +1,4 @@
-import type { MetaReviewGateArtifactReadFn } from "./metaReviewGateFindingsMetadata.js";
+import type { MetaReviewGateArtifactReadFn } from "../metaReviewGateFindingsMetadata.js";
 
 const findingsArtifactReadRetryableErrorCodes = new Set([
   "ENOENT",

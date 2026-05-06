@@ -4,7 +4,7 @@ import {
   MetaReviewError,
   submitMetaReviewResult,
   toMetaReviewError
-} from "../../shared/metaReview/metaReviewCommandApi.js";
+} from "./metaReviewCommandApi.js";
 import { resolveMetaReviewGateDependencyDefaults } from "../metaReviewGate/metaReviewGateDependencyDefaults.js";
 import { resolveMetaReviewerPaneWarning } from "../metaReviewGate/metaReviewGatePaneBinding.js";
 import {

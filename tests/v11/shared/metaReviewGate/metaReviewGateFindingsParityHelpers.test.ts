@@ -6,7 +6,7 @@ import {
   deriveFindingsOpenSplit,
   projectDisplayableFindingsFromArtifact,
   validateFindingsArtifactParity
-} from "../../../../src/v11/shared/metaReviewGate/internal/metaReviewGateFindingsParityHelpers.js";
+} from "../../../../src/v11/shared/metaReviewGate/metaReviewGateFindingsParityHelpers.js";
 
 describe("deriveFindingsOpenSplit", () => {
   it("derives blocking and advisory totals from mixed findings", () => {

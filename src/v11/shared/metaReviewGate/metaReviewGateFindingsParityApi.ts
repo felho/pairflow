@@ -27,7 +27,7 @@ import {
 import {
   resolveFindingsArtifactPath,
   type MetaReviewGateArtifactReadFn
-} from "./internal/metaReviewGateFindingsMetadata.js";
+} from "./metaReviewGateFindingsMetadata.js";
 
 export {
   buildFindingsParityMetadata,

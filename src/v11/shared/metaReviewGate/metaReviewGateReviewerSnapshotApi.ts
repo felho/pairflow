@@ -4,6 +4,10 @@ import {
   type LatestSameRoundReviewerSnapshot
 } from "../../domain/metaReviewGate/reviewerSnapshot.js";
 
+export type {
+  LatestSameRoundReviewerSnapshot
+} from "../../domain/metaReviewGate/reviewerSnapshot.js";
+
 export async function readLatestSameRoundReviewerSnapshotFromTranscript(
   transcriptPath: string,
   round: number,
