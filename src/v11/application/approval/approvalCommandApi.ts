@@ -21,7 +21,7 @@ import type { ApprovalCommandDefaultDependencies } from "./approvalCommandDepend
 import { ApprovalCommandError } from "../../shared/approval/approvalCommandError.js";
 import { startCommandContextDefaults } from "../start/startCommandDependencyDefaults.js";
 import { reviewerDeliveryDefaults } from "../pass/reviewerDeliveryDefaults.js";
-import { statusCommandDependencyDefaults } from "../../shared/status/statusCommandDependencyDefaults.js";
+import { statusCommandDependencyDefaults } from "../status/statusCommandDependencyDefaults.js";
 import {
   appendProtocolEnvelope,
   readTranscriptEnvelopes

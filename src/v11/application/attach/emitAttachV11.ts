@@ -10,7 +10,7 @@ import {
   resolveAttachLauncher
 } from "./attachBubbleLauncherRuntime.js";
 import { resolveAttachBubbleExecution } from "../../shared/bubbleAttachment/resolveAttachBubbleExecution.js";
-import { statusCommandDependencyDefaults } from "../../shared/status/statusCommandDependencyDefaults.js";
+import { statusCommandDependencyDefaults } from "../status/statusCommandDependencyDefaults.js";
 import {
   AttachBubbleError,
   type AttachBubbleReasonCode,
