@@ -6,7 +6,6 @@ import type {
   WriteStateSnapshotPort
 } from "../ports/stateSnapshots.js";
 import type { BubbleConfig } from "../../../types/bubble.js";
-import type { MetaReviewGateArtifactReadFn } from "./internal/metaReviewGateFindingsMetadata.js";
 import type {
   NotifyMetaReviewerSubmissionRequest,
   ResolveMetaReviewerPaneWarning,
@@ -15,6 +14,11 @@ import type {
 import type { SetMetaReviewerPaneBindingPort } from "../ports/runtimeSessions.js";
 import type { ReadTranscriptEnvelopesPort } from "../ports/transcript.js";
 import type { ValidationCommandId } from "../validation/validationCommandId.js";
+
+export type MetaReviewGateArtifactReadFn = (
+  artifactPath: string,
+  encoding: "utf8"
+) => Promise<string>;
 
 export interface MetaReviewApproveValidationCommandRunInput {
   kind: ValidationCommandId;
