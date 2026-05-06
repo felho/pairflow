@@ -55,6 +55,9 @@ Completed in the bubble:
   `metaReviewGateAutoRework.ts`.
 - auto-rework approval-decision envelope append now lives in
   `internal/metaReviewGateAutoReworkEnvelope.ts`.
+- approve-validation command policy resolution now lives in
+  `internal/metaReviewApproveValidationPolicy.ts`; runner orchestration remains
+  in `metaReviewApproveValidationGate.ts`.
 - `domain/metaReviewGate/**` no longer imports back from
   `shared/metaReviewGate/**`; route/error language is owned in domain and
   re-exported by the shared public contract for compatibility.
@@ -220,7 +223,8 @@ runtime delivery. They should not be moved wholesale to `domain`.
 | `metaReviewGateHumanGatePersistence.ts` | 237 | Persist human gate route and append approval request. | no direct external | Application/infrastructure boundary candidate. |
 | `metaReviewGateHumanGatePersistenceHelpers.ts` | 180 | Human gate recommendation, request append, rollback handling. | no direct external | Application internal; split pure recommendation from append/rollback later. |
 | `approvalRequestEnvelope.ts` | 149 | Build/append human approval request envelope with domain-resolved route metadata. | no direct external | Application/internal first; possible presenter/DTO extraction later. |
-| `metaReviewApproveValidationGate.ts` | 347 | Run sticky approve validation commands and map failures. | no direct external | Application candidate; validation runtime orchestration. |
+| `metaReviewApproveValidationGate.ts` | 221 | Run sticky approve validation commands and map failures. | no direct external | Application candidate; validation runtime orchestration. |
+| `metaReviewApproveValidationPolicy.ts` | 130 | Resolve configured meta-review approve validation command policy. | no direct external | Application/internal policy resolver; depends on shared validation command IDs. |
 | `metaReviewGateStateHelpers.ts` | 47 | State transition coordination for human-gate state persistence. | no direct external | Application/internal helper; route defaults, summaries, and snapshot state are now domain-owned. |
 | `metaReviewGateStateStaging.ts` | 78 | Stage meta-review running state with execution context. | no direct external | Application internal. |
 | `metaReviewGateShared.ts` | 20 | Gate lock path and running-state assertion shared by apply/current-run routing. | no direct external | Small application/internal utility; consider splitting lock path if path construction gets another owner. |
