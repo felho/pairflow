@@ -1,157 +1,21 @@
-import type { MetaReviewResult } from "../../metaReview/metaReviewTypes.js";
-import type { FindingsParityMetadata } from "../../../../types/protocol.js";
 import { normalizeMetaReviewSnapshot } from "../../../domain/metaReviewGate/snapshotState.js";
 import type { MetaReviewGateResult } from "../metaReviewGateResultContract.js";
 import { dispatchAutoRework } from "./metaReviewGateAutoRework.js";
-import {
-  type MetaReviewGateThresholdAuthorityResolution,
-  resolveMetaReviewGateThresholdAuthority
-} from "./metaReviewGateThresholdAuthority.js";
+import { resolveMetaReviewGateThresholdAuthority } from "./metaReviewGateThresholdAuthority.js";
 import { metaReviewApproveClaimsOpenFindings } from "../../metaReview/metaReviewCommandSubmitValidation.js";
-import { normalizeBubbleReviewPolicy } from "../../reviewPolicy/reviewPolicyRuntime.js";
 import {
   persistDispatchFailedHumanRoute,
   persistResolvedHumanRoute,
   persistRunFailedHumanRoute
 } from "./metaReviewGateCurrentRunRoutePersistence.js";
 import type { FinalizeCurrentRunMetaReviewGateInput } from "../metaReviewGateCurrentRunTypes.js";
-import {
-  buildApproveValidationReworkMessage,
-  isApproveValidationCommandFailure
-} from "../../../domain/metaReviewGate/approveValidationRework.js";
 import { META_REVIEW_APPROVE_THRESHOLD_BACKSTOP } from "../../../domain/metaReviewGate/approveThresholdBackstopPolicy.js";
-import { routeCleanMetaReviewRerun } from "./metaReviewGateCurrentRunCleanRerun.js";
+import {
+  maybeRunStickyApproveValidation,
+  routeApproveMetaReviewResult
+} from "./metaReviewGateCurrentRunApproveRouting.js";
 import { resolveCurrentRunParity } from "./metaReviewGateCurrentRunParity.js";
-import {
-  resolveApproveThresholdBackstop,
-  resolveThresholdCleanApproval
-} from "./metaReviewGateCurrentRunThresholdPolicies.js";
-import {
-  META_REVIEW_APPROVE_VALIDATION_FAILED,
-  runMetaReviewApproveValidationGate
-} from "./metaReviewApproveValidationGate.js";
-
-async function routeApproveMetaReviewResult(input: {
-  finalizeInput: FinalizeCurrentRunMetaReviewGateInput;
-  snapshot: ReturnType<typeof normalizeMetaReviewSnapshot>;
-  runResultForRouting: MetaReviewResult;
-  budgetAvailable: boolean;
-  parityMetadata: FindingsParityMetadata | null;
-  thresholdAuthority?: MetaReviewGateThresholdAuthorityResolution;
-}): Promise<MetaReviewGateResult> {
-  const cleanApproval = await resolveThresholdCleanApproval({
-    finalizeInput: input.finalizeInput,
-    runResultForRouting: input.runResultForRouting,
-    parityMetadata: input.parityMetadata,
-    ...(input.thresholdAuthority !== undefined
-      ? { thresholdAuthority: input.thresholdAuthority }
-      : {})
-  });
-  if (!cleanApproval.clean) {
-    return persistDispatchFailedHumanRoute({
-      finalizeInput: input.finalizeInput,
-      loaded: input.finalizeInput.loaded,
-      expectedState: "RUNNING",
-      runResultForRouting: input.runResultForRouting,
-      parityMetadata: cleanApproval.parityMetadata,
-      fallbackReason: cleanApproval.fallbackReason,
-      rollbackStateOnAppendFailure: input.finalizeInput.loaded.state
-    });
-  }
-
-  const normalizedReviewPolicy = normalizeBubbleReviewPolicy(
-    input.finalizeInput.resolved.bubbleConfig
-  );
-  const updatedStreak = (input.snapshot.consecutive_clean_runs ?? 0) + 1;
-  if (
-    updatedStreak <
-    normalizedReviewPolicy.meta_review_consecutive_clean_runs_required
-  ) {
-    return routeCleanMetaReviewRerun({
-      finalizeInput: input.finalizeInput,
-      runResultForRouting: input.runResultForRouting,
-      parityMetadata: cleanApproval.parityMetadata,
-      updatedStreak
-    });
-  }
-
-  const approveValidation = await runMetaReviewApproveValidationGate({
-    finalizeInput: input.finalizeInput
-  });
-  if (!approveValidation.ok) {
-    if (
-      input.budgetAvailable &&
-      isApproveValidationCommandFailure(approveValidation.fallbackReason)
-    ) {
-      return dispatchAutoRework({
-        finalizeInput: input.finalizeInput,
-        runResultForRouting: input.runResultForRouting,
-        parityMetadata: cleanApproval.parityMetadata,
-        findingsForPayload: undefined,
-        reworkTargetMessage: buildApproveValidationReworkMessage(
-          approveValidation.fallbackReason
-        ),
-        persistDispatchFailedHumanRoute: (dispatchInput) =>
-          persistDispatchFailedHumanRoute({
-            finalizeInput: input.finalizeInput,
-            ...dispatchInput
-          })
-      });
-    }
-
-    return persistDispatchFailedHumanRoute({
-      finalizeInput: input.finalizeInput,
-      loaded: input.finalizeInput.loaded,
-      expectedState: "RUNNING",
-      runResultForRouting: input.runResultForRouting,
-      parityMetadata: cleanApproval.parityMetadata,
-      fallbackReason: approveValidation.fallbackReason,
-      gateReasonCode: META_REVIEW_APPROVE_VALIDATION_FAILED,
-      targetState: "RUNNING",
-      rollbackStateOnAppendFailure: input.finalizeInput.loaded.state
-    });
-  }
-
-  return persistResolvedHumanRoute({
-    finalizeInput: input.finalizeInput,
-    runResultForRouting: input.runResultForRouting,
-    budgetAvailable: input.budgetAvailable,
-    parityMetadata: cleanApproval.parityMetadata,
-    forceStickyHumanGateBypass: false,
-    consecutiveCleanRuns: updatedStreak
-  });
-}
-
-async function maybeRunStickyApproveValidation(input: {
-  finalizeInput: FinalizeCurrentRunMetaReviewGateInput;
-  runResultForRouting: MetaReviewResult;
-  parityMetadata: FindingsParityMetadata | null;
-}): Promise<MetaReviewGateResult | null> {
-  // Sticky human-gate bypass preserves prior human routing for non-approve results;
-  // approve results still need the configured final validation gate.
-  if (input.runResultForRouting.recommendation !== "approve") {
-    return null;
-  }
-
-  const approveValidation = await runMetaReviewApproveValidationGate({
-    finalizeInput: input.finalizeInput
-  });
-  if (approveValidation.ok) {
-    return null;
-  }
-
-  return persistDispatchFailedHumanRoute({
-    finalizeInput: input.finalizeInput,
-    loaded: input.finalizeInput.loaded,
-    expectedState: "RUNNING",
-    runResultForRouting: input.runResultForRouting,
-    parityMetadata: input.parityMetadata,
-    fallbackReason: approveValidation.fallbackReason,
-    gateReasonCode: META_REVIEW_APPROVE_VALIDATION_FAILED,
-    targetState: "RUNNING",
-    rollbackStateOnAppendFailure: input.finalizeInput.loaded.state
-  });
-}
+import { resolveApproveThresholdBackstop } from "./metaReviewGateCurrentRunThresholdPolicies.js";
 
 export async function finalizeCurrentRunMetaReviewGate(
   input: FinalizeCurrentRunMetaReviewGateInput
