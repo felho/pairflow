@@ -21,14 +21,6 @@ export {
   resolveNonNegativeIntegerField,
   resolveStructuredMetaReviewClaimFromReportJson
 } from "../../domain/metaReviewGate/findingsParityMetadata.js";
-export {
-  type LatestSameRoundReviewerSnapshot,
-  isReviewerSnapshotEnvelope,
-  readLatestSameRoundReviewerSnapshotFromTranscript,
-  resolveLatestSameRoundReviewerSnapshot,
-  resolveReviewerSnapshotMetadataAdvisoryOpenTotal,
-  resolveSameRoundReviewerSnapshotFromEnvelope
-} from "./metaReviewGateReviewerSnapshot.js";
 
 export function resolveFindingsArtifactPath(input: {
   bubbleDir: string;
