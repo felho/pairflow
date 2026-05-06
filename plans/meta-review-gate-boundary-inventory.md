@@ -41,6 +41,9 @@ Completed in the bubble:
 - findings metadata/path resolution now lives under
   `shared/metaReviewGate/internal/**`; the aggregate index still exports the
   public parity metadata helper.
+- findings parity artifact validation helpers now live under
+  `shared/metaReviewGate/internal/**`; the aggregate index still exports the
+  public validation helper.
 - `domain/metaReviewGate/**` no longer imports back from
   `shared/metaReviewGate/**`; route/error language is owned in domain and
   re-exported by the shared public contract for compatibility.
@@ -247,11 +250,12 @@ the final owner should not be domain policy.
 1. Should `shared/metaReview/**` be treated as inside the same broader
    meta-review bounded context, or as an external consumer for the `internal/`
    rule pilot?
-2. Should `metaReviewGateFindingsParityHelpers.ts` remain the shared artifact
-   read/hash/parse adapter, or should its parsing/hash pieces move behind a
-   narrower infrastructure port?
-3. Is `finalizeCurrentRunMetaReviewGate` a public API during migration, or
-   should callers be moved immediately to a higher-level command API?
+2. Should `internal/metaReviewGateFindingsParityHelpers.ts` remain the shared
+   artifact read/hash/parse adapter, or should its parsing/hash pieces move
+   behind a narrower infrastructure port?
+3. Should `finalizeCurrentRunMetaReviewGate` remain public on the narrow
+   `metaReviewGateCurrentRunApi.ts` door during migration, or should callers be
+   moved immediately to a higher-level command API?
 4. Should `metaReviewGateTypes.ts` remain indefinitely as compatibility public
    surface, or should a later major cleanup remove it once external callers have
    migrated to narrower contract files?
