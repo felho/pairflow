@@ -5,7 +5,7 @@ task_family_id: timeline-display-badges
 sequence_key: "4"
 task_id: 4-timeline-display-badges
 title: "Timeline Display Badges"
-status: approved
+status: implementable
 phase: phase3
 target_files:
   - ui/src/components/expanded/BubbleTimeline.tsx
@@ -55,8 +55,11 @@ metadata interpretation to the backend-produced `entry.display.badges` DTO.
 This task owns only findings severity badges, approval decision badges,
 meta-review recommendation badges, and current badge deduplication behavior.
 Title, summary, sender, role, row kind, and base tone were cut over by task 3.
-Meta-review handoff attempts, clean-run progress, gate-failure display, and
-synthetic approval rows remain on the legacy path for task 5.
+Meta-review handoff attempts and clean-run progress remain on the legacy raw
+metadata path for task 5. Gate-failure display and synthetic approval rows are
+behaviorally out of scope for this task. Existing descriptor-backed gate or
+synthetic call-sites are read-only anchors here; task 4 must not modify them or
+use them as a reason to keep badge-family raw decision/recommendation reads.
 
 ### Domain / Control Model Summary
 
@@ -79,8 +82,11 @@ synthetic approval rows remain on the legacy path for task 5.
    `display.badges` array. React renders no badge instead of reading raw
    payload to recover one.
 7. Phase boundary: this task removes only badge-family raw payload reads from
-   React. Remaining meta/progress/synthetic raw reads are intentionally deferred
-   to task 5, and final broad no-legacy enforcement remains task 6.
+   React. Remaining meta-review handoff/clean-run/progress/reset raw reads are
+   intentionally deferred to task 5. Gate-failure and synthetic approval rows
+   stay out of task-4 mutation scope; task 4 only preserves their existing
+   behavior and must not classify them as a badge-read fallback. Final broad
+   no-legacy enforcement remains task 6.
 
 ### Plan Linkage
 
@@ -88,8 +94,10 @@ synthetic approval rows remain on the legacy path for task 5.
    decision, and recommendation fields in React.
 2. Depends on: task 3 archived basic display cutover.
 3. Unlocks / impacts successors:
-   - task 5 can cut over cross-row meta-review progress and synthetic approval
-     behavior after simple badges no longer depend on payload helpers.
+   - task 5 can cut over cross-row meta-review progress and any remaining
+     synthetic approval behavior after simple badges no longer depend on payload
+     helpers; task 4 does not expand those paths, it only avoids treating them
+     as badge-read fallback scope.
    - task 6 can remove remaining dual-shape support and no-legacy fixtures.
 4. Task-list impact: creates executable task `4-timeline-display-badges`.
 5. Inherited validation / exit expectation: focused `BubbleTimeline` tests and
@@ -121,6 +129,11 @@ synthetic approval rows remain on the legacy path for task 5.
 1. Inspected entrypoints / call-sites:
    - `BubbleTimeline.tsx` still owns `extractFindingTags`,
      `extractDecisionTag`, and `extractMetaRecommendation` for visible badges.
+     `extractMetaRecommendation`, handoff-attempt metadata parsing, and the
+     decision-derived `rework` signal are also used by the deferred meta-review
+     handoff/clean-run/progress/reset path, so task 4 must split or narrow
+     those helpers instead of deleting every raw recommendation or decision read
+     from the component.
    - `timelineDisplayPresenter.ts` already emits `display.badges` from
      findings, decision, and recommendation payload data.
    - `BubbleTimeline.test.tsx` includes current badge coverage for findings,
@@ -163,7 +176,10 @@ storage, recovery, or multiple UI consumer families.
    task 3 has already moved basic row fields to the DTO, and this task has one
    consumer family with focused fixture/test fallout.
 3. Deferred closures:
-   - meta/progress/synthetic timeline state remains task 5.
+   - meta-review handoff and clean-run/progress/reset cutover remains task 5.
+   - gate-failure and synthetic approval behavior remain behaviorally out of
+     scope for task 4 and may be refined by task 5. In task 4 they are read-only
+     anchors, not a justification for retaining badge-family raw reads.
    - broad raw-payload removal, obsolete fixture cleanup, and no-legacy guards
      remain task 6.
 4. Split decision: keep as one bounded task. The hard-stop pattern
@@ -252,9 +268,9 @@ persistence state, runtime command behavior, or router read-response validation.
 | Badge Family | Producer Authority | React Read Rule | Missing / Malformed Rule | Legacy Source Replaced | Successor Boundary |
 |---|---|---|---|---|---|
 | Finding severity badges | `timelineDisplayPresenter.ts` emits `display.badges[]` with `kind="finding"` | Render labels and tones from `entry.display.badges` only. | Omit malformed or missing finding badges in presenter output; React does not inspect findings. | `entry.payload.findings` and UI-local severity tone mapping. | Task 6 may remove residual protocol-shaped fixtures after all display families move. |
-| Approval decision badges | `timelineDisplayPresenter.ts` emits `kind="decision"` for approval decision rows | Render labels and tones from `entry.display.badges` only. | Missing decision badge means no visible decision badge; React does not recover from `payload.decision`. | `entry.payload.decision` and UI-local decision tone mapping. | Task 5 may still read decision for gate/synthetic behavior until its cutover. |
-| Meta-review recommendation badges | `timelineDisplayPresenter.ts` emits `kind="recommendation"` | Render labels and tones from `entry.display.badges` only. | Missing recommendation badge means no visible recommendation badge. | `payload.metadata.latest_recommendation` / `payload.metadata.recommendation`. | Task 5 owns progress/gate meaning around recommendations, not visible badge derivation. |
-| Badge dedupe | `timelineDisplayPresenter.ts` owns dedupe by `kind` and `label` | React renders the already-deduped array without recomputing raw-payload overlap. | Duplicate DTO badges should be avoided by producer tests; React may key by stable array position plus kind/label but must not dedupe by payload. | UI-local comparison between decision and recommendation tags. | Task 6 can add no-legacy guard coverage after remaining raw reads are gone. |
+| Approval decision badges | `timelineDisplayPresenter.ts` emits `kind="decision"` for approval decision rows | Render labels and tones from `entry.display.badges` only. | Missing decision badge means no visible decision badge; React does not recover from `payload.decision`. | `entry.payload.decision` and UI-local decision tone mapping. | Task 5 may still read decision only for meta-review handoff/clean-run/progress/reset behavior; gate/synthetic descriptor-backed behavior must not use raw decision reads. |
+| Meta-review recommendation badges | `timelineDisplayPresenter.ts` emits `kind="recommendation"` | Render labels and tones from `entry.display.badges` only. | Missing recommendation badge means no visible recommendation badge. | `payload.metadata.latest_recommendation` / `payload.metadata.recommendation`. | Task 5 owns remaining handoff/clean-run/progress meaning around recommendations, not visible badge derivation; gate/synthetic descriptor-backed behavior must not use raw recommendation reads. |
+| Badge dedupe | `timelineDisplayPresenter.ts` owns dedupe. Finding badges dedupe by `kind="finding"` plus `label`; decision/recommendation overlap dedupes by visible `label` with the decision badge winning when both families would render the same label. | React renders the already-deduped array without recomputing raw-payload overlap. React may use `kind`, `label`, and array position only for stable keys, not for semantic dedupe. | Duplicate DTO badges should be avoided by producer tests; React does not repair duplicate DTO badges by reading payload or by comparing decision/recommendation payload fields. | UI-local comparison between decision and recommendation tags. | Task 6 can add no-legacy guard coverage after remaining raw reads are gone. |
 | Badge tone | `UiTimelineBadge.tone` | React maps `tone` to existing badge class names. | Unknown tone is impossible by type/validator; tests should cover the allowlist. | UI-local severity/recommendation/decision tone inference. | Later tasks must add new tones through the contract, not local CSS heuristics. |
 
 #### Mirrored Surface Checklist
@@ -266,7 +282,9 @@ persistence state, runtime command behavior, or router read-response validation.
 3. React contract must not introduce a second badge fallback ladder.
 4. Test contract must include at least one display-over-conflicting-payload
    assertion for badge rendering.
-5. L2 implementation sketch must keep meta/progress/synthetic cutover deferred.
+5. L2 implementation sketch must keep meta-review handoff/clean-run/progress/reset
+   cutover deferred and must not require gate-failure or synthetic approval
+   implementation work in task 4.
 6. Acceptance criteria must claim only badge-family payload-read removal.
 
 ### 2) React Contract
@@ -276,14 +294,21 @@ persistence state, runtime command behavior, or router read-response validation.
 2. `BubbleTimeline.tsx` may keep helper functions that map
    `UiTimelineBadge.tone` to CSS classes, but those helpers must not inspect
    `entry.payload`.
-3. Remove or narrow the current badge helpers so they no longer read:
+3. Remove or narrow the current badge helper call-sites so normal badge chip
+   rendering no longer reads:
    - `entry.payload.findings`
    - `entry.payload.decision`
    - `payload.metadata.latest_recommendation`
    - `payload.metadata.recommendation`
-4. Preserve the current visible text casing and tone classes unless a focused
+4. Deferred task-5 helper logic may still read raw decision or recommendation
+   metadata only for the still-legacy meta-review handoff/clean-run/progress/reset
+   calculation. Gate-failure split and synthetic approval row behavior are not
+   task-4 implementation targets; do not use those out-of-scope paths as
+   justification for retaining or adding raw decision/recommendation reads in
+   normal badge chip rendering.
+5. Preserve the current visible text casing and tone classes unless a focused
    test documents an intentional difference.
-5. Do not change row layout, row ordering, synthetic row behavior, or
+6. Do not change row layout, row ordering, synthetic row behavior, or
    meta-review progress rendering.
 
 ### 3) Producer / Contract Contract
@@ -305,14 +330,22 @@ persistence state, runtime command behavior, or router read-response validation.
      findings conflict
    - decision and recommendation badges render from `display.badges`
    - duplicate decision/recommendation labels do not produce duplicate visible
-     badges when the DTO is deduped
+     badges when the DTO is deduped by the producer, with the decision badge as
+     the survivor for same-label decision/recommendation overlap
    - missing `display.badges` entries do not trigger raw payload recovery
-2. Add or update focused presenter tests proving:
+2. New task-4 badge cutover tests must set explicit `entry.display.badges`
+   values for the row under test. Do not rely on the `timelineEntry(...)`
+   fixture's default display builder when the assertion is intended to prove
+   display-over-conflicting-payload behavior, because that helper derives
+   default display badges from the same legacy payload fields being replaced.
+3. Add or update focused presenter tests proving:
    - findings severity labels map to expected tones
    - decision labels map to expected tones
    - recommendation labels map to expected tones
-   - producer-side dedupe preserves the current visible behavior
-3. Preserve existing tests for meta-review progress, clean runs, handoff
+   - producer-side dedupe preserves the current visible behavior: repeated
+     finding severities collapse per finding label, and same-label
+     decision/recommendation overlap emits only the decision badge
+4. Preserve existing tests for meta-review progress, clean runs, handoff
    attempts, gate validation failures, and synthetic approval rows unless a
    fixture shape must be mechanically updated.
 
@@ -323,11 +356,18 @@ persistence state, runtime command behavior, or router read-response validation.
 2. Replace badge extraction at render time with `entry.display.badges`.
 3. Add a small `badgeToneClass(tone)` helper if needed so CSS class ownership is
    still local to React while semantic badge interpretation stays in the DTO.
-4. Remove badge-only payload helper reads from React. Keep meta/progress helper
-   reads that belong to task 5.
+4. Remove badge-only payload helper reads from React. Keep only the meta-review
+   handoff/clean-run/progress/reset raw reads that belong to task 5, and avoid
+   using broad zero-match `rg` checks on `latest_recommendation`,
+   `recommendation`, `meta_review_handoff_id`, or `payload.decision` as task-4
+   completion proof because those terms may still be valid in that deferred
+   handoff/clean-run/progress path. Do not edit gate-failure split or synthetic
+   approval row behavior except for mechanical fixture preservation required by
+   the badge cutover.
 5. Update UI fixtures so normal badge tests provide display-shaped badge data.
    Conflicting payload fixture fields should be used only to prove display
-   precedence.
+   precedence, with explicit `display.badges` overrides on the conflicting
+   entries.
 6. Add or update presenter tests for badge output and dedupe when existing
    coverage is insufficient.
 7. Run validation:
@@ -349,14 +389,23 @@ persistence state, runtime command behavior, or router read-response validation.
 1. `BubbleTimeline.tsx` has zero normal badge-rendering reads of
    `entry.payload.findings`, `entry.payload.decision`,
    `latest_recommendation`, or `recommendation`.
+   Remaining reads of `payload.decision`, recommendation metadata, or
+   `meta_review_handoff_id` are allowed only when they are isolated to
+   task-5-deferred meta-review handoff/clean-run/progress/reset behavior and
+   are not used to create visible finding, decision, or recommendation badge
+   chips.
 2. Visible findings, decision, and recommendation badges render from
    `entry.display.badges`.
 3. Badge tones come from `UiTimelineBadge.tone`, with no UI-local protocol
    severity/recommendation/decision inference.
 4. Existing badge dedupe behavior is preserved through producer-owned DTO output
-   and focused tests.
-5. Out-of-scope meta/progress/synthetic raw reads remain explicitly deferred to
-   task 5 and are not presented as final cleanup.
+   and focused tests, including same-label decision/recommendation overlap where
+   the visible decision badge suppresses the recommendation badge.
+5. Out-of-scope meta-review handoff/clean-run/progress/reset raw reads remain
+   explicitly deferred to task 5 and are not presented as final cleanup.
+   Gate-failure and synthetic approval behavior remains behaviorally
+   out-of-scope for task 4; preserve existing behavior without expanding it or
+   using it as a badge raw-read fallback.
 6. Validation evidence includes the commands listed in L2, with any skipped
    command justified in the bubble close summary.
 
@@ -364,4 +413,4 @@ persistence state, runtime command behavior, or router read-response validation.
 
 1. `later-hardening`: task 6 should add no-legacy guards that fail if badge
    rendering reintroduces raw payload reads after task 5 also removes remaining
-   meta/progress/synthetic reads.
+   meta-review handoff/clean-run/progress/reset raw reads.
