@@ -417,6 +417,28 @@ export interface UiTimelineEntryDisplay {
   syntheticApproval: UiTimelineSyntheticApproval | null;
 }
 
+export interface UiTimelineDisplayTag {
+  label: string;
+  tone: UiTimelineTone;
+}
+
+export interface UiTimelineDisplayItem {
+  id: string;
+  sourceEntryId: string;
+  ts: string;
+  round: number;
+  role: UiTimelineDisplayRole;
+  senderLabel: string;
+  title: string;
+  summaryText: string;
+  tone: UiTimelineTone;
+  badges: UiTimelineBadge[];
+  cleanRunTag: UiTimelineDisplayTag | null;
+  gateFailed: boolean;
+  blocked: boolean;
+  convergence: boolean;
+}
+
 export interface UiTimelineEntryPayload {
   summary?: string;
   question?: string;

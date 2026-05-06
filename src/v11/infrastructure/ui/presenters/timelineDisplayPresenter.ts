@@ -7,10 +7,8 @@ import type {
   UiTimelineTone
 } from "../../../../contracts/ui/uiReadModel.js";
 import { isNonEmptyString, isRecord } from "../../../shared/validation/primitives.js";
-export type TimelineEntryWithoutDisplay = Omit<UiTimelineEntry, "display" | "payload" | "type"> & {
-  type: ProtocolMessageType;
-  payload: ProtocolEnvelopePayload;
-};
+export type TimelineEntryWithoutDisplay = Omit<UiTimelineEntry, "display" | "payload" | "type"> & { type: ProtocolMessageType; payload: ProtocolEnvelopePayload };
+export type TimelineEntryWithDisplay = TimelineEntryWithoutDisplay & Pick<UiTimelineEntry, "display">;
 
 function sanitizeLabel(value: string): string {
   const normalized = value.trim().replace(/\s+/gu, " ");
@@ -433,7 +431,7 @@ function calculateCleanRunCounts(
 
 export function attachTimelineDisplay(
   entries: TimelineEntryWithoutDisplay[]
-): Array<TimelineEntryWithoutDisplay & Pick<UiTimelineEntry, "display">> {
+): TimelineEntryWithDisplay[] {
   const markerIndexes = collectLatestMarkerIndexes(entries);
   const cleanRunCounts = calculateCleanRunCounts(entries, markerIndexes);
 

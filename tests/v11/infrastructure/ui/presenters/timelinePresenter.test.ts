@@ -1,8 +1,13 @@
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+
 import { describe, expect, it, vi } from "vitest";
 
 import type { ProtocolEnvelope } from "../../../../../src/types/protocol.js";
 import {
   presentTimeline,
+  presentTimelineEntries,
   readBubbleTimeline,
   readBubbleTimelineFromTranscriptText
 } from "../../../../../src/v11/infrastructure/ui/presenters/timelinePresenter.js";
@@ -26,7 +31,7 @@ function envelope(overrides: Partial<ProtocolEnvelope> = {}): ProtocolEnvelope {
 
 describe("timelinePresenter display DTO", () => {
   it("emits summary fallback, sender role, badge, and nullable defaults for normal rows", () => {
-    const entries = presentTimeline([
+    const entries = presentTimelineEntries([
       envelope({
         id: "env-summary",
         sender: "mystery-agent" as never,
@@ -72,7 +77,7 @@ describe("timelinePresenter display DTO", () => {
   });
 
   it("maps malformed explicit role metadata to unknown without affecting sender fallback cases", () => {
-    const [entry] = presentTimeline([
+    const [entry] = presentTimelineEntries([
       envelope({
         payload: {
           summary: "Bad role.",
@@ -88,7 +93,7 @@ describe("timelinePresenter display DTO", () => {
   });
 
   it("sanitizes UI timeline payloads after deriving display from protocol metadata", () => {
-    const [entry] = presentTimeline([
+    const [entry] = presentTimelineEntries([
       envelope({
         type: "APPROVAL_REQUEST",
         sender: "orchestrator",
@@ -134,7 +139,7 @@ describe("timelinePresenter display DTO", () => {
   });
 
   it("drops invalid findings claims instead of surfacing incomplete UI claim payloads", () => {
-    const entries = presentTimeline([
+    const entries = presentTimelineEntries([
       envelope({
         id: "missing-claim-source",
         type: "PASS",
@@ -197,7 +202,7 @@ describe("timelinePresenter display DTO", () => {
   });
 
   it("does not render unknown findings claims with empty findings as clean", () => {
-    const [entry] = presentTimeline([
+    const [entry] = presentTimelineEntries([
       envelope({
         id: "unknown-empty-findings",
         type: "PASS",
@@ -220,7 +225,7 @@ describe("timelinePresenter display DTO", () => {
   });
 
   it("emits blocked row kind and warning tone for human-question rows", () => {
-    const [entry] = presentTimeline([
+    const [entry] = presentTimelineEntries([
       envelope({
         id: "env-human-question",
         type: "HUMAN_QUESTION",
@@ -243,7 +248,7 @@ describe("timelinePresenter display DTO", () => {
   });
 
   it("emits badge tones and producer-owned decision recommendation dedupe", () => {
-    const entries = presentTimeline([
+    const entries = presentTimelineEntries([
       envelope({
         id: "clean-pass",
         type: "PASS",
@@ -314,7 +319,7 @@ describe("timelinePresenter display DTO", () => {
   });
 
   it("emits handoff and clean-run progress while nullable non-applicable families stay present", () => {
-    const entries = presentTimeline([
+    const entries = presentTimelineEntries([
       envelope({
         id: "handoff-1",
         type: "TASK",
@@ -379,7 +384,7 @@ describe("timelinePresenter display DTO", () => {
   });
 
   it("preserves distinct meta-review handoff attempts so clean-rerun progress remains visible", () => {
-    const entries = presentTimeline([
+    const entries = presentTimelineEntries([
       envelope({
         id: "converged-before-rerun",
         type: "CONVERGENCE",
@@ -430,8 +435,92 @@ describe("timelinePresenter display DTO", () => {
     });
   });
 
+  it("returns separate display items for clean-rerun handoff and final meta-review approval", () => {
+    const items = presentTimeline([
+      envelope({
+        id: "converged-before-meta-review",
+        type: "CONVERGENCE",
+        sender: "codex",
+        recipient: "orchestrator",
+        round: 2,
+        payload: {
+          summary: "Reviewer converged."
+        }
+      }),
+      envelope({
+        id: "meta-handoff-attempt-1",
+        type: "TASK",
+        sender: "orchestrator",
+        round: 2,
+        payload: {
+          summary: "Meta-review gate opened.",
+          metadata: {
+            delivery_target_role: "meta_reviewer",
+            meta_review_handoff_id: "meta_review:b-display:round:2:attempt:1"
+          }
+        }
+      }),
+      envelope({
+        id: "meta-handoff-attempt-2",
+        type: "TASK",
+        sender: "orchestrator",
+        round: 2,
+        payload: {
+          summary: "Meta-review gate opened again.",
+          metadata: {
+            delivery_target_role: "meta_reviewer",
+            meta_review_handoff_id: "meta_review:b-display:round:2:attempt:2"
+          }
+        }
+      }),
+      envelope({
+        id: "meta-approval",
+        type: "APPROVAL_REQUEST",
+        sender: "orchestrator",
+        recipient: "human",
+        round: 2,
+        payload: {
+          summary: "Meta-review approves.",
+          metadata: {
+            actor: "meta-reviewer",
+            actor_agent: "codex",
+            latest_recommendation: "approve",
+            consecutive_clean_runs: 2
+          }
+        }
+      })
+    ], {
+      cleanRunsRequired: 2
+    });
+
+    expect(items.map((item) => item.id)).toEqual([
+      "converged-before-meta-review",
+      "meta-handoff-attempt-2",
+      "meta-approval"
+    ]);
+    expect(items[1]).toMatchObject({
+      id: "meta-handoff-attempt-2",
+      role: "meta_reviewer",
+      senderLabel: "codex",
+      cleanRunTag: {
+        label: "clean 1",
+        tone: "success"
+      }
+    });
+    expect(items[1]?.badges).toEqual([]);
+    expect(items[2]).toMatchObject({
+      id: "meta-approval",
+      role: "meta_reviewer",
+      senderLabel: "codex",
+      cleanRunTag: null
+    });
+    expect(items[2]?.badges).toEqual([
+      { kind: "recommendation", label: "approve", tone: "success" }
+    ]);
+  });
+
   it("does not classify malformed meta-review handoff ids as handoff rows", () => {
-    const entries = presentTimeline([
+    const entries = presentTimelineEntries([
       envelope({
         id: "malformed-handoff",
         type: "TASK",
@@ -452,7 +541,7 @@ describe("timelinePresenter display DTO", () => {
   });
 
   it("emits gate-failure validation and synthetic approval descriptors with duplicate collapse", () => {
-    const entries = presentTimeline([
+    const entries = presentTimelineEntries([
       envelope({
         id: "gate-duplicate-old",
         type: "APPROVAL_DECISION",
@@ -544,7 +633,7 @@ describe("timelinePresenter display DTO", () => {
   });
 
   it("does not let duplicate clean-run source rows advance the streak", () => {
-    const entries = presentTimeline([
+    const entries = presentTimelineEntries([
       envelope({
         id: "clean-source-old",
         type: "APPROVAL_REQUEST",
@@ -603,6 +692,72 @@ describe("timelinePresenter display DTO", () => {
     });
   });
 
+  it("returns backend-owned display items for synthetic gate failures and clean-run replacement", () => {
+    const items = presentTimeline([
+      envelope({
+        id: "clean-1",
+        type: "APPROVAL_REQUEST",
+        sender: "orchestrator",
+        recipient: "human",
+        payload: {
+          summary: "First clean meta-review.",
+          metadata: {
+            actor: "meta-reviewer",
+            latest_recommendation: "approve",
+            consecutive_clean_runs: 1
+          }
+        }
+      }),
+      envelope({
+        id: "gate-failed",
+        type: "APPROVAL_DECISION",
+        sender: "orchestrator",
+        payload: {
+          decision: "rework",
+          message:
+            "Meta-review approved the current change, but the required approve-gate validation failed.",
+          metadata: {
+            actor: "meta-reviewer",
+            recommendation: "approve"
+          }
+        }
+      })
+    ], {
+      cleanRunsRequired: 2
+    });
+
+    expect(items[0]).toMatchObject({
+      id: "clean-1",
+      sourceEntryId: "clean-1",
+      senderLabel: "meta-reviewer",
+      role: "meta_reviewer",
+      summaryText: "First clean meta-review.",
+      cleanRunTag: {
+        label: "clean 1",
+        tone: "success"
+      },
+      gateFailed: false
+    });
+    expect(items[0]?.badges).toEqual([]);
+    expect(items[1]).toMatchObject({
+      id: "gate-failed:meta-review-approve",
+      sourceEntryId: "gate-failed",
+      role: "meta_reviewer",
+      senderLabel: "meta-reviewer",
+      summaryText: "Meta-review approved the current change.",
+      gateFailed: false
+    });
+    expect(items[2]).toMatchObject({
+      id: "gate-failed",
+      sourceEntryId: "gate-failed",
+      role: "system",
+      senderLabel: "orchestrator",
+      summaryText:
+        "Meta-review approved the current change, but the required approve-gate validation failed.",
+      gateFailed: true
+    });
+  });
+
   it("adds display to lenient transcript fallback rows", () => {
     const [entry] = readBubbleTimelineFromTranscriptText(`${JSON.stringify({
       id: "lenient-1",
@@ -621,16 +776,12 @@ describe("timelinePresenter display DTO", () => {
       refs: []
     })}\n`);
 
-    expect(entry?.display).toMatchObject({
+    expect(entry).toMatchObject({
       summaryText: "Can you proceed?",
-      summarySource: "question",
       role: "human",
-      progress: null,
-      validationFailure: null,
-      syntheticApproval: null
-    });
-    expect(entry?.payload).toStrictEqual({
-      question: "Can you proceed?"
+      cleanRunTag: null,
+      gateFailed: false,
+      blocked: true
     });
   });
 
@@ -653,15 +804,13 @@ describe("timelinePresenter display DTO", () => {
       refs: []
     })}\n`);
 
-    expect(entry?.display.senderLabel).toBe("reviewer-1");
-    expect(entry?.display.badges).toContainEqual({
+    expect(entry?.senderLabel).toBe("reviewer-1");
+    expect(entry?.badges).toContainEqual({
       kind: "recommendation",
       label: "approve",
       tone: "success"
     });
-    expect(entry?.payload).toStrictEqual({
-      summary: "Clean fallback row."
-    });
+    expect(entry?.summaryText).toBe("Clean fallback row.");
   });
 
   it("adds display to remote transcript fallback rows", async () => {
@@ -710,12 +859,113 @@ describe("timelinePresenter display DTO", () => {
       }
     );
 
-    expect(entries[0]?.display).toMatchObject({
+    expect(entries[0]).toMatchObject({
       summaryText: "Remote row.",
-      summarySource: "message",
-      progress: null,
-      validationFailure: null,
-      syntheticApproval: null
+      cleanRunTag: null,
+      gateFailed: false
     });
+  });
+
+  it("uses normalized review-policy defaults when reading a bubble timeline", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "pairflow-timeline-"));
+    const transcriptPath = join(dir, "transcript.ndjson");
+    try {
+      await writeFile(
+        transcriptPath,
+        [
+          envelope({
+            id: "converged-before-meta-review",
+            type: "CONVERGENCE",
+            sender: "codex",
+            recipient: "orchestrator",
+            round: 2,
+            payload: {
+              summary: "Reviewer converged."
+            }
+          }),
+          envelope({
+            id: "meta-handoff-attempt-1",
+            type: "TASK",
+            sender: "orchestrator",
+            round: 2,
+            payload: {
+              summary: "Meta-review gate opened.",
+              metadata: {
+                delivery_target_role: "meta_reviewer",
+                meta_review_handoff_id: "meta_review:b-display:round:2:attempt:1"
+              }
+            }
+          }),
+          envelope({
+            id: "meta-handoff-attempt-2",
+            type: "TASK",
+            sender: "orchestrator",
+            round: 2,
+            payload: {
+              summary: "Meta-review gate opened again.",
+              metadata: {
+                delivery_target_role: "meta_reviewer",
+                meta_review_handoff_id: "meta_review:b-display:round:2:attempt:2"
+              }
+            }
+          }),
+          envelope({
+            id: "meta-approval",
+            type: "APPROVAL_REQUEST",
+            sender: "orchestrator",
+            recipient: "human",
+            round: 2,
+            payload: {
+              summary: "Meta-review approves.",
+              metadata: {
+                actor: "meta-reviewer",
+                actor_agent: "codex",
+                latest_recommendation: "approve",
+                consecutive_clean_runs: 2
+              }
+            }
+          })
+        ].map((entry) => JSON.stringify(entry)).join("\n") + "\n",
+        "utf8"
+      );
+
+      const entries = await readBubbleTimeline(
+        {
+          bubbleId: "b-default-clean-runs",
+          repoPath: "/repo"
+        },
+        {
+          resolveBubbleById: vi.fn(async () => ({
+            bubblePaths: {
+              remotePointerPath: join(dir, "remote.json"),
+              transcriptPath
+            },
+            bubbleConfig: {
+              review_policy: {
+                review_loop_mode: "full",
+                reviewer_blocking_min_severity: "P3",
+                meta_review_auto_rework_min_severity: "P3"
+              }
+            }
+          })) as never,
+          readRemotePointer: vi.fn(async () => null) as never
+        }
+      );
+
+      expect(entries.map((entry) => entry.id)).toEqual([
+        "converged-before-meta-review",
+        "meta-handoff-attempt-2",
+        "meta-approval"
+      ]);
+      expect(entries[1]?.cleanRunTag).toEqual({
+        label: "clean 1",
+        tone: "success"
+      });
+      expect(entries[2]?.badges).toEqual([
+        { kind: "recommendation", label: "approve", tone: "success" }
+      ]);
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
   });
 });

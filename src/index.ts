@@ -436,6 +436,7 @@ export type {
   UiBubbleSummary,
   UiEvent,
   UiRepoSummary,
+  UiTimelineDisplayItem,
   UiTimelineEntry
 } from "./types/ui.js";
 export {

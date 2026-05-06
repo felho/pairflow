@@ -18,7 +18,7 @@ import type {
   UiRestartBubbleResult,
   UiStartBubbleResult,
   UiStopBubbleResult,
-  UiTimelineEntry
+  UiTimelineDisplayItem
 } from "./types.js";
 
 interface ReposResponse {
@@ -37,7 +37,7 @@ interface BubbleDetailResponse {
 interface BubbleTimelineResponse {
   bubbleId: string;
   repoPath: string;
-  timeline: UiTimelineEntry[];
+  timeline: UiTimelineDisplayItem[];
 }
 
 export interface PairflowApiClient {
@@ -47,7 +47,7 @@ export interface PairflowApiClient {
   getBubbleTimeline: (
     repoPath: string,
     bubbleId: string
-  ) => Promise<UiTimelineEntry[]>;
+  ) => Promise<UiTimelineDisplayItem[]>;
   startBubble: (
     repoPath: string,
     bubbleId: string
@@ -245,7 +245,7 @@ export function createApiClient(baseUrl: string = ""): PairflowApiClient {
     async getBubbleTimeline(
       repoPath: string,
       bubbleId: string
-    ): Promise<UiTimelineEntry[]> {
+    ): Promise<UiTimelineDisplayItem[]> {
       const payload = await requestJson<BubbleTimelineResponse>(
         bubbleUrl(baseUrl, repoPath, bubbleId, "timeline")
       );

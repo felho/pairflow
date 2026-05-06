@@ -10,7 +10,7 @@ vi.mock("../../lib/clipboard", () => ({
 }));
 
 import { bubbleDimensions } from "../../lib/canvasLayout";
-import { bubbleCard, bubbleDetail, timelineEntry } from "../../test/fixtures";
+import { bubbleCard, bubbleDetail, timelineDisplayItem } from "../../test/fixtures";
 import { BubbleExpandedCard } from "./BubbleExpandedCard";
 
 interface RenderExpandedCardOverrides {
@@ -19,7 +19,7 @@ interface RenderExpandedCardOverrides {
   onClose?: () => void;
   bubble?: ReturnType<typeof bubbleCard>;
   detail?: ReturnType<typeof bubbleDetail> | null;
-  timeline?: ReturnType<typeof timelineEntry>[];
+  timeline?: ReturnType<typeof timelineDisplayItem>[];
   bubbleState?: "READY_FOR_HUMAN_APPROVAL";
 }
 
@@ -223,11 +223,10 @@ describe("BubbleExpandedCard", () => {
         ]
       }),
       timeline: [
-        timelineEntry({
+        timelineDisplayItem({
           id: "env-after-question",
-          payload: {
-            question: "Timeline remains reachable after a long question"
-          }
+          title: "Timeline remains reachable after a long question",
+          summaryText: "Timeline remains reachable after a long question"
         })
       ]
     });

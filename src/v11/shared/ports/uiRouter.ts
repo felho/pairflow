@@ -27,7 +27,7 @@ import type {
   UiBubbleListView,
   UiBubbleStatusInput,
   UiBubbleStatusView,
-  UiTimelineEntry
+  UiTimelineDisplayItem
 } from "../../../contracts/ui/uiReadModel.js";
 import type {
   ReadRuntimeSessionsRegistryPort
@@ -110,7 +110,7 @@ export interface UiBubbleListDependencies {
 export interface UiBubbleTimelineDependencies {
   readBubbleTimeline: (
     input: UiBubbleTimelineInput
-  ) => Promise<UiTimelineEntry[]>;
+  ) => Promise<UiTimelineDisplayItem[]>;
 }
 
 export interface UiBubbleDetailLoadingDependencies {

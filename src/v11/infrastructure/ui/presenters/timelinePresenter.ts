@@ -1,5 +1,4 @@
 import { readFile } from "node:fs/promises";
-import { join } from "node:path";
 
 import { resolveBubbleById } from "../../executor/workspace/bubbleLookup.js";
 import { readRemotePointer } from "../../artifact/bubble/remoteExecutionArtifacts.js";
@@ -28,6 +27,7 @@ import {
 } from "../../../../types/protocol.js";
 import type {
   UiTimelineEntry,
+  UiTimelineDisplayItem,
   UiTimelineEntryPayload,
   UiTimelineFinding
 } from "../../../../contracts/ui/uiReadModel.js";
@@ -36,16 +36,23 @@ import {
   isNonEmptyString,
   isRecord
 } from "../../../shared/validation/primitives.js";
-import { shellQuote } from "../../../shared/foundation/shellQuote.js";
 import {
   attachTimelineDisplay,
+  type TimelineEntryWithDisplay,
   type TimelineEntryWithoutDisplay
 } from "./timelineDisplayPresenter.js";
+import { buildTimelineDisplayItems } from "./timelineDisplayItemsPresenter.js";
+import { readRemoteTimelineText } from "./remoteTimelineReader.js";
+import { normalizeBubbleReviewPolicy } from "../../../shared/reviewPolicy/reviewPolicyRuntime.js";
 
 export interface ReadBubbleTimelineInput {
   bubbleId: string;
   repoPath?: string | undefined;
   cwd?: string | undefined;
+}
+
+export interface PresentTimelineOptions {
+  cleanRunsRequired?: number | null | undefined;
 }
 
 interface ReadBubbleTimelineDependencies {
@@ -55,46 +62,7 @@ interface ReadBubbleTimelineDependencies {
   runCommand?: typeof runCommandDefault;
 }
 
-const remoteTimelineCommandTimeoutMs = 10_000;
-
-const sshTransportOptions = [
-  ["BatchMode", "yes"],
-  ["StrictHostKeyChecking", "yes"],
-  ["ConnectTimeout", "10"],
-  ["ConnectionAttempts", "1"]
-] as const;
-
-type RemoteTimelineReadErrorCode =
-  | "REMOTE_TIMELINE_TRANSPORT_FAILED"
-  | "REMOTE_TIMELINE_TIMEOUT";
-
-interface RemoteTimelineReadErrorContext {
-  bubble_id: string;
-  remote_alias: string;
-  remote_host: string;
-  remote_clone_path: string;
-  operation: "transport" | "timeout";
-  exit_code?: number;
-}
-
-class RemoteTimelineReadError extends Error {
-  public readonly code: RemoteTimelineReadErrorCode;
-  public readonly context: RemoteTimelineReadErrorContext;
-
-  public constructor(input: {
-    code: RemoteTimelineReadErrorCode;
-    message: string;
-    context: RemoteTimelineReadErrorContext;
-    cause?: unknown;
-  }) {
-    super(input.message, input.cause === undefined ? undefined : { cause: input.cause });
-    this.name = "RemoteTimelineReadError";
-    this.code = input.code;
-    this.context = input.context;
-  }
-}
-
-export function presentTimeline(envelopes: ProtocolEnvelope[]): UiTimelineEntry[] {
+export function presentTimelineEntries(envelopes: ProtocolEnvelope[]): UiTimelineEntry[] {
   return sanitizeTimelinePayloads(attachTimelineDisplay(envelopes.map((envelope) => ({
     id: envelope.id,
     ts: envelope.ts,
@@ -105,6 +73,25 @@ export function presentTimeline(envelopes: ProtocolEnvelope[]): UiTimelineEntry[
     payload: envelope.payload,
     refs: envelope.refs
   }))));
+}
+
+export function presentTimeline(
+  envelopes: ProtocolEnvelope[],
+  options: PresentTimelineOptions = {}
+): UiTimelineDisplayItem[] {
+  return buildTimelineDisplayItems({
+    entries: attachTimelineDisplay(envelopes.map((envelope) => ({
+      id: envelope.id,
+      ts: envelope.ts,
+      round: envelope.round,
+      type: envelope.type,
+      sender: envelope.sender,
+      recipient: envelope.recipient,
+      payload: envelope.payload,
+      refs: envelope.refs
+    }))),
+    cleanRunsRequired: options.cleanRunsRequired
+  });
 }
 
 function isFinding(value: unknown): value is Finding {
@@ -243,7 +230,7 @@ function normalizePayloadForDisplay(raw: unknown): ProtocolEnvelopePayload {
 }
 
 function sanitizeTimelinePayloads(
-  entries: Array<TimelineEntryWithoutDisplay & Pick<UiTimelineEntry, "display">>
+  entries: TimelineEntryWithDisplay[]
 ): UiTimelineEntry[] {
   return entries.map((entry) => ({
     ...entry,
@@ -290,8 +277,9 @@ function shouldFallbackToLenientTimeline(error: unknown): boolean {
 }
 
 async function readTimelineLenientFromTranscriptPath(
-  transcriptPath: string
-): Promise<UiTimelineEntry[]> {
+  transcriptPath: string,
+  options: PresentTimelineOptions = {}
+): Promise<UiTimelineDisplayItem[]> {
   const raw = await readFile(transcriptPath, "utf8").catch((error: NodeJS.ErrnoException) => {
     if (error.code === "ENOENT") {
       return "";
@@ -315,12 +303,16 @@ async function readTimelineLenientFromTranscriptPath(
     }
   }
 
-  return sanitizeTimelinePayloads(attachTimelineDisplay(entries));
+  return buildTimelineDisplayItems({
+    entries: attachTimelineDisplay(entries),
+    cleanRunsRequired: options.cleanRunsRequired
+  });
 }
 
 export function readBubbleTimelineFromTranscriptText(
-  raw: string
-): UiTimelineEntry[] {
+  raw: string,
+  options: PresentTimelineOptions = {}
+): UiTimelineDisplayItem[] {
   const entries: TimelineEntryWithoutDisplay[] = [];
   for (const line of raw.split(/\r?\n/u)) {
     if (line.trim().length === 0) {
@@ -337,132 +329,34 @@ export function readBubbleTimelineFromTranscriptText(
     }
   }
 
-  return sanitizeTimelinePayloads(attachTimelineDisplay(entries));
+  return buildTimelineDisplayItems({
+    entries: attachTimelineDisplay(entries),
+    cleanRunsRequired: options.cleanRunsRequired
+  });
 }
 
 export async function readBubbleTimelineFromTranscriptPath(
-  transcriptPath: string
-): Promise<UiTimelineEntry[]> {
+  transcriptPath: string,
+  options: PresentTimelineOptions = {}
+): Promise<UiTimelineDisplayItem[]> {
   try {
     const envelopes = await readTranscriptEnvelopes(transcriptPath, {
       allowMissing: true,
       toleratePartialFinalLine: true
     });
-    return presentTimeline(envelopes);
+    return presentTimeline(envelopes, options);
   } catch (error) {
     if (!shouldFallbackToLenientTimeline(error)) {
       throw error;
     }
-    return readTimelineLenientFromTranscriptPath(transcriptPath);
-  }
-}
-
-function buildSshTarget(input: { host: string; user?: string }): string {
-  return input.user !== undefined ? `${input.user}@${input.host}` : input.host;
-}
-
-function buildSshCommandArgs(input: {
-  target: string;
-  script: string;
-}): string[] {
-  return [
-    ...sshTransportOptions.flatMap(([key, value]) => ["-o", `${key}=${value}`]),
-    input.target,
-    input.script
-  ];
-}
-
-function summarizeTransportOutput(output: string): string {
-  const normalized = output.replace(/\s+/gu, " ").trim();
-  if (normalized.length === 0) {
-    return "<empty>";
-  }
-  return normalized.slice(0, 200);
-}
-
-async function readRemoteTimelineText(input: {
-  bubbleId: string;
-  remoteClonePath: string;
-  remoteAlias: string;
-  expectedHost: string;
-  resolveRemoteBubbleStatusTargetFn: typeof resolveRemoteBubbleStatusTarget;
-  runCommand: typeof runCommandDefault;
-}): Promise<string> {
-  const remoteTarget = await input.resolveRemoteBubbleStatusTargetFn({
-    bubbleId: input.bubbleId,
-    remoteAlias: input.remoteAlias,
-    expectedHost: input.expectedHost
-  });
-  const transcriptPath = join(
-    input.remoteClonePath,
-    ".pairflow",
-    "bubbles",
-    input.bubbleId,
-    "transcript.ndjson"
-  );
-  const abortController = new AbortController();
-  const timeout = setTimeout(() => {
-    abortController.abort();
-  }, remoteTimelineCommandTimeoutMs);
-  timeout.unref?.();
-
-  try {
-    const result = await input.runCommand(
-      "ssh",
-      buildSshCommandArgs({
-        target: buildSshTarget({
-          host: remoteTarget.host,
-          ...(remoteTarget.user !== undefined ? { user: remoteTarget.user } : {})
-        }),
-        script: `if [ -f ${shellQuote(transcriptPath)} ]; then cat ${shellQuote(transcriptPath)}; fi`
-      }),
-      {
-        signal: abortController.signal
-      }
-    );
-    if (result.exitCode !== 0) {
-      const detailSource = result.stderr.trim().length > 0 ? result.stderr : result.stdout;
-      throw new RemoteTimelineReadError({
-        code: "REMOTE_TIMELINE_TRANSPORT_FAILED",
-        message:
-          `Remote timeline read transport failed (exit ${result.exitCode}): ${summarizeTransportOutput(detailSource)}`,
-        context: {
-          bubble_id: input.bubbleId,
-          remote_alias: input.remoteAlias,
-          remote_host: remoteTarget.host,
-          remote_clone_path: input.remoteClonePath,
-          operation: "transport",
-          exit_code: result.exitCode
-        }
-      });
-    }
-    return result.stdout;
-  } catch (error) {
-    if (error instanceof Error && error.name === "AbortError") {
-      throw new RemoteTimelineReadError({
-        code: "REMOTE_TIMELINE_TIMEOUT",
-        message:
-          `Remote timeline read timed out after ${remoteTimelineCommandTimeoutMs}ms for ${input.bubbleId}.`,
-        context: {
-          bubble_id: input.bubbleId,
-          remote_alias: input.remoteAlias,
-          remote_host: remoteTarget.host,
-          remote_clone_path: input.remoteClonePath,
-          operation: "timeout"
-        },
-        cause: error
-      });
-    }
-    throw error;
-  } finally {
-    clearTimeout(timeout);
+    return readTimelineLenientFromTranscriptPath(transcriptPath, options);
   }
 }
 
 export async function readBubbleTimeline(
   input: ReadBubbleTimelineInput,
   dependencies: ReadBubbleTimelineDependencies = {}
-): Promise<UiTimelineEntry[]> {
+): Promise<UiTimelineDisplayItem[]> {
   const resolveBubbleByIdFn = dependencies.resolveBubbleById ?? resolveBubbleById;
   const readRemotePointerFn = dependencies.readRemotePointer ?? readRemotePointer;
   const resolveRemoteBubbleStatusTargetFn =
@@ -473,6 +367,9 @@ export async function readBubbleTimeline(
     ...(input.repoPath !== undefined ? { repoPath: input.repoPath } : {}),
     ...(input.cwd !== undefined ? { cwd: input.cwd } : {})
   });
+  const cleanRunsRequired = normalizeBubbleReviewPolicy(
+    resolved.bubbleConfig
+  ).meta_review_consecutive_clean_runs_required;
 
   const remotePointer = await readRemotePointerFn(resolved.bubblePaths.remotePointerPath);
   if (
@@ -487,8 +384,10 @@ export async function readBubbleTimeline(
       resolveRemoteBubbleStatusTargetFn,
       runCommand
     });
-    return readBubbleTimelineFromTranscriptText(raw);
+    return readBubbleTimelineFromTranscriptText(raw, { cleanRunsRequired });
   }
 
-  return readBubbleTimelineFromTranscriptPath(resolved.bubblePaths.transcriptPath);
+  return readBubbleTimelineFromTranscriptPath(resolved.bubblePaths.transcriptPath, {
+    cleanRunsRequired
+  });
 }

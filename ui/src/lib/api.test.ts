@@ -11,7 +11,13 @@ import type {
   UiEmitRequestReworkQueuedResult,
   UiStopBubbleResult
 } from "./contracts/uiActions";
-import { bubbleDetail, bubbleSummary, repoSummary, timelineEntry } from "../test/fixtures";
+import {
+  bubbleDetail,
+  bubbleSummary,
+  repoSummary,
+  timelineDisplayItem,
+  timelineEntry
+} from "../test/fixtures";
 
 async function captureError(action: () => Promise<unknown>): Promise<unknown> {
   try {
@@ -222,7 +228,7 @@ describe("createApiClient", () => {
           JSON.stringify({
             bubbleId: "b-a",
             repoPath: "/repo-a",
-            timeline: [timelineEntry()]
+            timeline: [timelineDisplayItem()]
           }),
           { status: 200 }
         )

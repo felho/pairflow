@@ -29,7 +29,7 @@ afterEach(async () => {
 });
 
 describe("timelinePresenter lenient fallback", () => {
-  it("returns timeline entries while dropping open claims without renderable findings", async () => {
+  it("returns timeline display items while dropping open claims without renderable findings", async () => {
     const dir = await createTempDir();
     const transcriptPath = join(dir, "transcript.ndjson");
 
@@ -67,12 +67,19 @@ describe("timelinePresenter lenient fallback", () => {
     const timeline = await readBubbleTimelineFromTranscriptPath(transcriptPath);
 
     expect(timeline).toHaveLength(2);
-    expect(timeline[0]?.type).toBe("TASK");
-    expect(timeline[1]?.type).toBe("PASS");
-    expect(timeline[1]?.payload.summary).toBe("Forward-compatible payload fields");
-    expect(timeline[1]?.payload.pass_intent).toBe("review");
-    expect(timeline[1]?.payload.findings_claim_state).toBeUndefined();
-    expect(timeline[1]?.payload.findings_claim_source).toBeUndefined();
+    expect(timeline[0]).toMatchObject({
+      id: "msg_20260313_001",
+      summaryText: "Task",
+      senderLabel: "orchestrator",
+      role: "system"
+    });
+    expect(timeline[1]).toMatchObject({
+      id: "msg_20260313_002",
+      summaryText: "Forward-compatible payload fields",
+      senderLabel: "codex",
+      role: "implementer",
+      badges: []
+    });
   });
 
   it("falls back after strict parser Invalid protocol envelope and drops open claims without findings", async () => {
@@ -104,11 +111,12 @@ describe("timelinePresenter lenient fallback", () => {
     const timeline = await readBubbleTimelineFromTranscriptPath(transcriptPath);
 
     expect(timeline).toHaveLength(1);
-    expect(timeline[0]?.sender).toBe("reviewer");
-    expect(timeline[0]?.type).toBe("PASS");
-    expect(timeline[0]?.payload.summary).toContain("Strict parse should fail");
-    expect(timeline[0]?.payload.findings_claim_state).toBeUndefined();
-    expect(timeline[0]?.payload.findings_claim_source).toBeUndefined();
+    expect(timeline[0]).toMatchObject({
+      senderLabel: "reviewer",
+      role: "reviewer",
+      badges: []
+    });
+    expect(timeline[0]?.summaryText).toContain("Strict parse should fail");
   });
 
   it("reads remote transcript content for started ssh bubbles instead of stale local transcript", async () => {
@@ -207,7 +215,7 @@ describe("timelinePresenter lenient fallback", () => {
       "msg_20260419_001",
       "msg_20260419_002"
     ]);
-    expect(timeline[1]?.payload.summary).toBe("Remote PASS");
+    expect(timeline[1]?.summaryText).toBe("Remote PASS");
     expect(runCommand).toHaveBeenCalledWith(
       "ssh",
       expect.arrayContaining([

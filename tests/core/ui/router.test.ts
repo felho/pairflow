@@ -57,7 +57,7 @@ import type {
   UiBubbleDetail,
   UiBubbleSummary,
   UiRepoSummary,
-  UiTimelineEntry
+  UiTimelineDisplayItem
 } from "../../../src/contracts/ui/uiReadModel.js";
 import type {
   UiEvent,
@@ -1568,39 +1568,24 @@ describe("UI read response validation", () => {
     );
   });
 
-  it("preserves valid timeline responses and rejects malformed entries", () => {
-    const entry: UiTimelineEntry = {
+  it("preserves valid timeline display responses and rejects malformed items", () => {
+    const entry: UiTimelineDisplayItem = {
       id: "env-router-read-validation",
+      sourceEntryId: "env-router-read-validation",
       ts: "2026-02-25T00:00:00.000Z",
       round: 1,
-      type: "PASS",
-      sender: "codex",
-      recipient: "human",
-      display: {
-        title: "Validated.",
-        summaryText: "Validated.",
-        summarySource: "summary",
-        senderLabel: "codex",
-        role: "implementer",
-        rowKind: "normal",
-        tone: "neutral",
-        badges: [],
-        progress: null,
-        validationFailure: null,
-        syntheticApproval: null
-      },
-      payload: {
-        summary: "Validated.",
-        findings: [
-          {
-            title: "Valid finding.",
-            severity: "P2",
-            evidence: ["source ref"],
-            refs: ["review.md"]
-          }
-        ]
-      },
-      refs: []
+      role: "implementer",
+      senderLabel: "codex",
+      title: "Validated.",
+      summaryText: "Validated.",
+      tone: "neutral",
+      badges: [
+        { kind: "finding", label: "P2", tone: "warning" }
+      ],
+      cleanRunTag: null,
+      gateFailed: false,
+      blocked: false,
+      convergence: false
     };
 
     expect(
@@ -1615,15 +1600,12 @@ describe("UI read response validation", () => {
       timeline: [entry]
     });
 
-    const blockedEntry: UiTimelineEntry = {
+    const blockedEntry: UiTimelineDisplayItem = {
       ...entry,
       id: "env-router-read-validation-blocked",
-      type: "HUMAN_QUESTION",
-      display: {
-        ...entry.display,
-        rowKind: "blocked",
-        tone: "warning"
-      }
+      role: "human",
+      blocked: true,
+      tone: "warning"
     };
     expect(
       validateUiBubbleTimelineResponseBody({
@@ -1645,9 +1627,24 @@ describe("UI read response validation", () => {
           timeline: [
             {
               ...entry,
-              display: {
-                ...entry.display,
-                rowKind: "unsupported" as never
+              role: "unsupported" as never
+            }
+          ]
+        }),
+      "bubble_timeline"
+    );
+
+    expectInvalidReadResponse(
+      () =>
+        validateUiBubbleTimelineResponseBody({
+          bubbleId: bubble.bubbleId,
+          repoPath: repo.repoPath,
+          timeline: [
+            {
+              ...entry,
+              cleanRunTag: {
+                label: "clean 1",
+                tone: "unsupported" as never
               }
             }
           ]
@@ -1663,11 +1660,7 @@ describe("UI read response validation", () => {
           timeline: [
             {
               ...entry,
-              payload: {
-                findings_claim_state: "open_findings",
-                findings_claim_source: "payload_findings_count",
-                findings: []
-              }
+              badges: "not-array"
             }
           ]
         }),
@@ -1682,7 +1675,7 @@ describe("UI read response validation", () => {
           timeline: [
             {
               ...entry,
-              refs: "not-array"
+              gateFailed: "yes"
             }
           ]
         }),
@@ -1697,11 +1690,32 @@ describe("UI read response validation", () => {
           timeline: [
             {
               ...entry,
-              payload: {
-                summary: "Validated.",
-                metadata: {
-                  actor: "meta-reviewer"
+              badges: [
+                {
+                  kind: "finding",
+                  label: "P2",
+                  tone: "warning",
+                  unexpected: true
                 }
+              ]
+            }
+          ]
+        }),
+      "bubble_timeline"
+    );
+
+    expectInvalidReadResponse(
+      () =>
+        validateUiBubbleTimelineResponseBody({
+          bubbleId: bubble.bubbleId,
+          repoPath: repo.repoPath,
+          timeline: [
+            {
+              ...entry,
+              cleanRunTag: {
+                label: "clean 1",
+                tone: "success",
+                unexpected: true
               }
             }
           ]
@@ -1717,108 +1731,12 @@ describe("UI read response validation", () => {
           timeline: [
             {
               ...entry,
-              payload: {
-                findings: [
-                  {
-                    title: "Invalid extra field.",
-                    severity: "P2",
-                    unexpected: true
-                  }
-                ]
-              }
+              convergence: null
             }
           ]
         }),
       "bubble_timeline"
     );
-
-    expectInvalidReadResponse(
-      () =>
-        validateUiBubbleTimelineResponseBody({
-          bubbleId: bubble.bubbleId,
-          repoPath: repo.repoPath,
-          timeline: [
-            {
-              ...entry,
-              payload: {
-                summary: "Invalid incomplete claim.",
-                findings_claim_state: "open_findings"
-              }
-            }
-          ]
-        }),
-      "bubble_timeline"
-    );
-
-    expectInvalidReadResponse(
-      () =>
-        validateUiBubbleTimelineResponseBody({
-          bubbleId: bubble.bubbleId,
-          repoPath: repo.repoPath,
-          timeline: [
-            {
-              ...entry,
-              payload: {
-                findings: [
-                  {
-                    title: "Missing renderable priority."
-                  }
-                ]
-              }
-            }
-          ]
-        }),
-      "bubble_timeline"
-    );
-
-    for (const progress of [
-      {
-        kind: "meta_review_handoff",
-        label: "handoff 0",
-        handoffAttempt: 0
-      },
-      {
-        kind: "meta_review_handoff",
-        label: "handoff 1.5",
-        handoffAttempt: 1.5
-      },
-      {
-        kind: "clean_run",
-        label: "clean NaN",
-        cleanRunCount: Number.NaN,
-        cleanRunsRequired: 2
-      },
-      {
-        kind: "clean_run",
-        label: "clean Infinity",
-        cleanRunCount: 1,
-        cleanRunsRequired: Number.POSITIVE_INFINITY
-      },
-      {
-        kind: "clean_run",
-        label: "clean negative",
-        cleanRunCount: -1,
-        cleanRunsRequired: null
-      }
-    ]) {
-      expectInvalidReadResponse(
-        () =>
-          validateUiBubbleTimelineResponseBody({
-            bubbleId: bubble.bubbleId,
-            repoPath: repo.repoPath,
-            timeline: [
-              {
-                ...entry,
-                display: {
-                  ...entry.display,
-                  progress
-                }
-              }
-            ]
-          }),
-        "bubble_timeline"
-      );
-    }
   });
 });
 
@@ -2048,17 +1966,21 @@ describe("createUiRouter read response validation failures", () => {
             ([
               {
                 id: "env-invalid-timeline",
+                sourceEntryId: "env-invalid-timeline",
                 ts: "2026-02-25T00:00:00.000Z",
                 round: 1,
-                type: "PASS",
-                sender: "codex",
-                recipient: "claude",
-                payload: {
-                  summary: "Invalid."
-                },
-                refs: "not-array"
+                role: "implementer",
+                senderLabel: "codex",
+                title: "Invalid.",
+                summaryText: "Invalid.",
+                tone: "neutral",
+                badges: [],
+                cleanRunTag: null,
+                gateFailed: false,
+                blocked: false,
+                convergence: "not-boolean"
               }
-            ]) as unknown as UiTimelineEntry[]
+            ]) as unknown as UiTimelineDisplayItem[]
         )
       }
     });

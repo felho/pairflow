@@ -3,6 +3,7 @@ import type {
   UiBubbleDetail,
   UiBubbleSummary,
   UiRepoSummary,
+  UiTimelineDisplayItem,
   UiTimelineEntryDisplay,
   UiTimelineEntry
 } from "../lib/types";
@@ -273,6 +274,28 @@ export function timelineEntry(overrides: Partial<UiTimelineEntry> = {}): UiTimel
   return {
     ...entryWithoutDisplay,
     display: overrides.display ?? timelineEntryDisplay(entryWithoutDisplay)
+  };
+}
+
+export function timelineDisplayItem(
+  overrides: Partial<UiTimelineDisplayItem> = {}
+): UiTimelineDisplayItem {
+  return {
+    id: "env-1",
+    sourceEntryId: "env-1",
+    ts: "2026-02-24T12:01:00.000Z",
+    round: 3,
+    role: "human",
+    senderLabel: "human",
+    title: "Can you proceed?",
+    summaryText: "Can you proceed?",
+    tone: "warning",
+    badges: [],
+    cleanRunTag: null,
+    gateFailed: false,
+    blocked: true,
+    convergence: false,
+    ...overrides
   };
 }
 

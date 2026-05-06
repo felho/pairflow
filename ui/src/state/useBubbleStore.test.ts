@@ -22,10 +22,15 @@ import type {
   ConnectionStatus,
   UiBubbleDetail,
   UiEvent,
-  UiTimelineEntry,
+  UiTimelineDisplayItem,
   UiRepoSummary
 } from "../lib/types";
-import { bubbleDetail, bubbleSummary, repoSummary, timelineEntry } from "../test/fixtures";
+import {
+  bubbleDetail,
+  bubbleSummary,
+  repoSummary,
+  timelineDisplayItem
+} from "../test/fixtures";
 
 class MemoryStorage {
   private readonly records = new Map<string, string>();
@@ -2706,15 +2711,16 @@ describe("createBubbleStore", () => {
   it("toggleBubbleExpanded expands and fetches detail, collapseBubble removes from list", async () => {
     const detail = bubbleDetail({ bubbleId: "b-a", repoPath: "/repo-a" });
     const timeline = [
-      timelineEntry({
+      timelineDisplayItem({
         id: "env-1",
         ts: "2026-02-24T12:01:00.000Z",
         round: 3,
-        type: "HUMAN_QUESTION" as const,
-        sender: "human",
-        recipient: "codex",
-        payload: { question: "Can you proceed?" },
-        refs: []
+        role: "human",
+        senderLabel: "human",
+        title: "Can you proceed?",
+        summaryText: "Can you proceed?",
+        blocked: true,
+        tone: "warning"
       })
     ];
 
@@ -3301,11 +3307,10 @@ describe("createBubbleStore", () => {
       .fn<(repoPath: string, bubbleId: string) => Promise<UiBubbleDetail>>()
       .mockResolvedValueOnce(undefined as unknown as UiBubbleDetail);
     const getBubbleTimeline = vi.fn(async () => [
-      timelineEntry({
+      timelineDisplayItem({
         id: "msg_001",
-        type: "TASK",
-        sender: "orchestrator",
-        recipient: "codex"
+        role: "system",
+        senderLabel: "orchestrator"
       })
     ]);
     const api = createApiStub({
@@ -3720,19 +3725,16 @@ describe("deleteBubble store method", () => {
       }
     };
     const staleDetailDeferred = createDeferred<typeof initialReviewerMetaDetail>();
-    const staleTimelineDeferred = createDeferred<UiTimelineEntry[]>();
-    const latestTimeline: UiTimelineEntry[] = [
-      timelineEntry({
+    const staleTimelineDeferred = createDeferred<UiTimelineDisplayItem[]>();
+    const latestTimeline: UiTimelineDisplayItem[] = [
+      timelineDisplayItem({
         id: "env-approval",
         ts: "2026-04-19T19:26:48.011Z",
         round: 2,
-        type: "APPROVAL_REQUEST" as const,
-        sender: "orchestrator",
-        recipient: "human",
-        payload: {
-          summary: "Bubble is ready for approval."
-        },
-        refs: []
+        role: "system",
+        senderLabel: "orchestrator",
+        title: "Bubble is ready for approval.",
+        summaryText: "Bubble is ready for approval."
       })
     ];
 
@@ -3818,17 +3820,14 @@ describe("deleteBubble store method", () => {
 
     staleDetailDeferred.resolve(initialReviewerMetaDetail);
     staleTimelineDeferred.resolve([
-      timelineEntry({
+      timelineDisplayItem({
         id: "env-pass",
         ts: "2026-04-19T19:20:59.424Z",
         round: 1,
-        type: "PASS",
-        sender: "codex",
-        recipient: "claude",
-        payload: {
-          summary: "stale pass only"
-        },
-        refs: []
+        role: "implementer",
+        senderLabel: "codex",
+        title: "stale pass only",
+        summaryText: "stale pass only"
       })
     ]);
     await Promise.resolve();
@@ -3881,23 +3880,21 @@ describe("deleteBubble store method", () => {
           lastMessageId: "msg_002"
         }
       } satisfies UiBubbleDetail;
-      const initialTimeline: UiTimelineEntry[] = [
-        timelineEntry({
+      const initialTimeline: UiTimelineDisplayItem[] = [
+        timelineDisplayItem({
           id: "msg_001",
           round: 0,
-          type: "TASK",
-          sender: "orchestrator",
-          recipient: "codex"
+          role: "system",
+          senderLabel: "orchestrator"
         })
       ];
-      const recoveredTimeline: UiTimelineEntry[] = [
+      const recoveredTimeline: UiTimelineDisplayItem[] = [
         ...initialTimeline,
-        timelineEntry({
+        timelineDisplayItem({
           id: "msg_002",
           round: 1,
-          type: "PASS",
-          sender: "codex",
-          recipient: "claude"
+          role: "implementer",
+          senderLabel: "codex"
         })
       ];
 
@@ -3907,7 +3904,7 @@ describe("deleteBubble store method", () => {
         .mockResolvedValueOnce(laggingDetail)
         .mockResolvedValueOnce(laggingDetail);
       const getBubbleTimeline = vi
-        .fn<(repoPath: string, bubbleId: string) => Promise<UiTimelineEntry[]>>()
+        .fn<(repoPath: string, bubbleId: string) => Promise<UiTimelineDisplayItem[]>>()
         .mockResolvedValueOnce(initialTimeline)
         .mockResolvedValueOnce(initialTimeline)
         .mockResolvedValueOnce(recoveredTimeline);

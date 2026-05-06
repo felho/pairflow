@@ -36,7 +36,7 @@ import type {
   UiBubbleSummary,
   UiRepoSummary,
   UiSnapshotEvent,
-  UiTimelineEntry
+  UiTimelineDisplayItem
 } from "../lib/types";
 import { bubbleLifecycleStates } from "../lib/types";
 
@@ -86,7 +86,7 @@ export interface BubbleStoreState {
   error: string | null;
   expandedBubbleIds: string[];
   bubbleDetails: Record<string, UiBubbleDetail>;
-  bubbleTimelines: Record<string, UiTimelineEntry[]>;
+  bubbleTimelines: Record<string, UiTimelineDisplayItem[]>;
   detailLoadingById: Record<string, boolean>;
   timelineLoadingById: Record<string, boolean>;
   detailErrorById: Record<string, string>;

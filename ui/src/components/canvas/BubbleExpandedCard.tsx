@@ -9,7 +9,7 @@ import type {
   BubblePosition,
   UiBubbleDetail,
   UiBubbleInboxItem,
-  UiTimelineEntry
+  UiTimelineDisplayItem
 } from "../../lib/types";
 import { bubbleDimensions } from "../../lib/canvasLayout";
 import { cn } from "../../lib/utils";
@@ -72,7 +72,7 @@ function isDragDisabledTarget(target: EventTarget | null): boolean {
 export interface BubbleExpandedCardProps {
   bubble: BubbleCardModel;
   detail: UiBubbleDetail | null;
-  timeline: UiTimelineEntry[] | null;
+  timeline: UiTimelineDisplayItem[] | null;
   position: BubblePosition;
   detailLoading: boolean;
   timelineLoading: boolean;
@@ -355,10 +355,6 @@ export function BubbleExpandedCard(props: BubbleExpandedCardProps): JSX.Element 
             isLoading={props.timelineLoading}
             error={props.timelineError}
             compact={timelineCompact}
-            metaReviewCleanRunsRequired={
-              attachSource.reviewPolicy?.meta_review_consecutive_clean_runs_required
-              ?? null
-            }
           />
         </div>
       </div>
