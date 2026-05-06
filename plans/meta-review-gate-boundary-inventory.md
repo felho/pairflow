@@ -35,6 +35,8 @@ Completed in the bubble:
 - human-gate routing policy is owned in `domain/metaReviewGate/humanGateRouting.ts`;
   shared internal persistence imports it directly instead of re-exporting it
   through state helpers.
+- snapshot-state counters are owned in `domain/metaReviewGate/snapshotState.ts`;
+  shared internal apply/auto-rework/clean-rerun code imports them directly.
 - `metaReviewGateTypes.ts` is now a compatibility aggregator only; route/error,
   result, runtime capability, and tmux runner contracts each have narrower
   public contract files.
@@ -158,6 +160,7 @@ dependencies remain pure and they do not perform I/O.
 | `approveValidationRework.ts` | 24 | Classify approve-validation command failures and build auto-rework message. | no | Done: extracted from current-run finalization. |
 | `cleanApprovalPolicy.ts` | 92 | Decide clean approval vs threshold-required/fallback route policy. | no | Done: extracted from current-run finalization. |
 | `approveThresholdBackstopPolicy.ts` | 100 | Block invalid approve-with-open-findings human-gate routes against configured threshold. | no | Done: extracted from current-run finalization. |
+| `snapshotState.ts` | 54 | Normalize meta-review snapshot state and update auto-rework/clean-run counters. | imported directly from shared/internal orchestration | Done: domain-owned; shared no longer re-exports counter helpers through state helpers. |
 
 ### Application / Orchestration Candidates
 
@@ -181,7 +184,7 @@ runtime delivery. They should not be moved wholesale to `domain`.
 | `metaReviewGateHumanGatePersistenceHelpers.ts` | 180 | Human gate recommendation, request append, rollback handling. | no direct external | Application internal; split pure recommendation from append/rollback later. |
 | `approvalRequestEnvelope.ts` | 273 | Build/append human approval request envelope with route metadata. | no direct external | Application/internal first; possible presenter/DTO extraction later. |
 | `metaReviewApproveValidationGate.ts` | 347 | Run sticky approve validation commands and map failures. | no direct external | Application candidate; validation runtime orchestration. |
-| `metaReviewGateStateHelpers.ts` | 61 | State transition coordination plus compatibility re-exports for snapshot state and auto-rework retry invariants. | no direct external | Application/internal helper; route defaults are now domain-owned in `humanGateRouting.ts`. |
+| `metaReviewGateStateHelpers.ts` | 53 | State transition coordination plus compatibility re-exports for snapshot envelope helpers. | no direct external | Application/internal helper; route defaults and snapshot counters are now domain-owned. |
 | `metaReviewGateStateStaging.ts` | 78 | Stage meta-review running state with execution context. | no direct external | Application internal. |
 | `metaReviewGateSnapshotHelpers.ts` | 71 | Normalize meta-review snapshot and derive envelope metadata. | no direct external | Mixed; likely application/domain helper split. |
 | `metaReviewGateShared.ts` | 67 | Shared reason codes, conflict/transition mapping, gate lock path. | no direct external | Mixed utility; keep internal first and split path/error pieces later. |
