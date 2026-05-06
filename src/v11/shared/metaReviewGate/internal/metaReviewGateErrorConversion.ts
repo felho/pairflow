@@ -1,7 +1,14 @@
 import { MetaReviewError } from "../../metaReview/metaReviewError.js";
 import { MetaReviewGateError } from "../metaReviewGateRouteContract.js";
-import { toConflictError } from "./metaReviewGateShared.js";
 import { isNamedError } from "../../errors/namedError.js";
+
+function toConflictError(error: unknown): MetaReviewGateError {
+  const reason = error instanceof Error ? error.message : String(error);
+  return new MetaReviewGateError(
+    "META_REVIEW_GATE_STATE_CONFLICT",
+    `META_REVIEW_GATE_STATE_CONFLICT: ${reason}`
+  );
+}
 
 export function toMetaReviewGateError(error: unknown): MetaReviewGateError {
   if (error instanceof MetaReviewGateError) {
