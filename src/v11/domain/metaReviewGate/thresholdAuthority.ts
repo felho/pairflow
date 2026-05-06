@@ -3,11 +3,10 @@ import type { FindingsParityMetadata } from "../../../types/protocol.js";
 import { isRecord } from "../../shared/validation/primitives.js";
 import { buildFindingsParityMetadata } from "./findingsParityMetadata.js";
 import type { FindingsOpenSplit } from "./findingsSplit.js";
-
-export const REVIEW_POLICY_THRESHOLD_SOURCE_UNRESOLVED =
-  "REVIEW_POLICY_THRESHOLD_SOURCE_UNRESOLVED" as const;
-export const REVIEW_POLICY_THRESHOLD_CONTEXT_INCOMPLETE =
-  "REVIEW_POLICY_THRESHOLD_CONTEXT_INCOMPLETE" as const;
+export {
+  REVIEW_POLICY_THRESHOLD_CONTEXT_INCOMPLETE,
+  REVIEW_POLICY_THRESHOLD_SOURCE_UNRESOLVED
+} from "./thresholdAuthorityResolution.js";
 
 const findingPriorityOrder: FindingPriority[] = ["P0", "P1", "P2", "P3"];
 

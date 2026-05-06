@@ -1,5 +1,3 @@
-import type { FindingPriority } from "../../../types/findings.js";
-import type { FindingsParityMetadata } from "../../../types/protocol.js";
 import { isRecord } from "../validation/primitives.js";
 import type { MetaReviewResult } from "../metaReview/metaReviewTypes.js";
 import {
@@ -14,15 +12,25 @@ import {
 import {
   buildVerifiedThresholdParityMetadata,
   resolveHighestOpenSeverity,
-  resolveVerifiedThresholdOpenSplitTotals,
-  REVIEW_POLICY_THRESHOLD_CONTEXT_INCOMPLETE,
-  REVIEW_POLICY_THRESHOLD_SOURCE_UNRESOLVED
+  resolveVerifiedThresholdOpenSplitTotals
 } from "../../domain/metaReviewGate/thresholdAuthority.js";
+import {
+  buildThresholdAuthorityIncomplete,
+  buildThresholdAuthorityUnresolved,
+  prefixThresholdAuthorityDiagnostic,
+  REVIEW_POLICY_THRESHOLD_SOURCE_UNRESOLVED,
+  type MetaReviewGateThresholdAuthorityResolution
+} from "../../domain/metaReviewGate/thresholdAuthorityResolution.js";
 export {
-  metaReviewGateThresholdIsMet,
   REVIEW_POLICY_THRESHOLD_CONTEXT_INCOMPLETE,
   REVIEW_POLICY_THRESHOLD_SOURCE_UNRESOLVED
+} from "../../domain/metaReviewGate/thresholdAuthorityResolution.js";
+export {
+  metaReviewGateThresholdIsMet
 } from "../../domain/metaReviewGate/thresholdAuthority.js";
+export type {
+  MetaReviewGateThresholdAuthorityResolution
+} from "../../domain/metaReviewGate/thresholdAuthorityResolution.js";
 
 export interface ResolveMetaReviewGateThresholdAuthorityInput {
   runResult: MetaReviewResult;
@@ -33,76 +41,6 @@ export interface ResolveMetaReviewGateThresholdAuthorityInput {
     encoding: "utf8"
   ) => Promise<string>;
   sleepForRetryMs?: (delayMs: number) => Promise<void>;
-}
-
-export type MetaReviewGateThresholdAuthorityResolution =
-  | {
-      status: "resolved";
-      parityMetadata: FindingsParityMetadata | null;
-      diagnostics: string[];
-      highestOpenSeverity: FindingPriority;
-      artifactRef: string;
-      metaReviewRunId: string;
-      findingsBlockingOpenTotal: number | null;
-      findingsAdvisoryOpenTotal: number | null;
-    }
-  | {
-      status: "unresolved" | "incomplete";
-      parityMetadata: FindingsParityMetadata | null;
-      diagnostics: string[];
-      highestOpenSeverity: null;
-      artifactRef: string | null;
-      metaReviewRunId: string | null;
-      findingsBlockingOpenTotal: number | null;
-      findingsAdvisoryOpenTotal: number | null;
-    };
-
-function prefixDiagnostic(reasonCode: string, detail: string): string {
-  return `${reasonCode}: ${detail}`;
-}
-
-function buildThresholdAuthorityUnresolved(input: {
-  parityMetadata: FindingsParityMetadata | null;
-  diagnostics: string[];
-  artifactRef: string | null;
-  metaReviewRunId: string | null;
-  findingsBlockingOpenTotal: number | null;
-  findingsAdvisoryOpenTotal: number | null;
-}): MetaReviewGateThresholdAuthorityResolution {
-  return {
-    status: "unresolved",
-    parityMetadata: input.parityMetadata,
-    diagnostics: input.diagnostics,
-    highestOpenSeverity: null,
-    artifactRef: input.artifactRef,
-    metaReviewRunId: input.metaReviewRunId,
-    findingsBlockingOpenTotal: input.findingsBlockingOpenTotal,
-    findingsAdvisoryOpenTotal: input.findingsAdvisoryOpenTotal
-  };
-}
-
-function buildThresholdAuthorityIncomplete(input: {
-  parityMetadata: FindingsParityMetadata | null;
-  artifactRef: string | null;
-  metaReviewRunId: string;
-  findingsBlockingOpenTotal: number | null;
-  findingsAdvisoryOpenTotal: number | null;
-}): MetaReviewGateThresholdAuthorityResolution {
-  return {
-    status: "incomplete",
-    parityMetadata: input.parityMetadata,
-    diagnostics: [
-      prefixDiagnostic(
-        REVIEW_POLICY_THRESHOLD_CONTEXT_INCOMPLETE,
-        "findings artifact does not expose a resolvable open severity."
-      )
-    ],
-    highestOpenSeverity: null,
-    artifactRef: input.artifactRef,
-    metaReviewRunId: input.metaReviewRunId,
-    findingsBlockingOpenTotal: input.findingsBlockingOpenTotal,
-    findingsAdvisoryOpenTotal: input.findingsAdvisoryOpenTotal
-  };
 }
 
 export async function resolveMetaReviewGateThresholdAuthority(
@@ -120,7 +58,7 @@ export async function resolveMetaReviewGateThresholdAuthority(
     return buildThresholdAuthorityUnresolved({
       parityMetadata,
       diagnostics: [
-        prefixDiagnostic(
+        prefixThresholdAuthorityDiagnostic(
           REVIEW_POLICY_THRESHOLD_SOURCE_UNRESOLVED,
           "report_json is required for threshold authority resolution."
         )
@@ -142,7 +80,7 @@ export async function resolveMetaReviewGateThresholdAuthority(
     return buildThresholdAuthorityUnresolved({
       parityMetadata: parityInput.metadata,
       diagnostics: [
-        prefixDiagnostic(
+        prefixThresholdAuthorityDiagnostic(
           REVIEW_POLICY_THRESHOLD_SOURCE_UNRESOLVED,
           parityInput.reason
         )
@@ -171,7 +109,7 @@ export async function resolveMetaReviewGateThresholdAuthority(
     return buildThresholdAuthorityUnresolved({
       parityMetadata: parity.metadata,
       diagnostics: [
-        prefixDiagnostic(
+        prefixThresholdAuthorityDiagnostic(
           REVIEW_POLICY_THRESHOLD_SOURCE_UNRESOLVED,
           parity.reason
         )
