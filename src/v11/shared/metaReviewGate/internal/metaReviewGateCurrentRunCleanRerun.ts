@@ -6,6 +6,7 @@ import type { FindingsParityMetadata } from "../../../../types/protocol.js";
 import { appendMetaReviewKickoffEnvelope, stageMetaReviewRunningState } from "./metaReviewGateApplyHelpers.js";
 import { reconcileObservedGateResult } from "./metaReviewGateApplyObservation.js";
 import { persistRuntimeDeliveryObservation } from "./metaReviewGateApplyPersistence.js";
+import { buildCleanRerunDispatchFailureRollbackState } from "./metaReviewGateCleanRerunFailureState.js";
 import { persistDispatchFailedHumanRoute } from "./metaReviewGateCurrentRunRoutePersistence.js";
 import type { FinalizeCurrentRunMetaReviewGateInput } from "../metaReviewGateCurrentRunTypes.js";
 import { buildGateLockPath } from "./metaReviewGateShared.js";
@@ -56,20 +57,6 @@ function failCleanRerunClosed(input: {
       input.loaded.state
     )
   });
-}
-
-function buildCleanRerunDispatchFailureRollbackState(
-  state: LoadedStateSnapshot["state"]
-): LoadedStateSnapshot["state"] {
-  const resetState = setMetaReviewConsecutiveCleanRuns(state, 0);
-  if (resetState.meta_review === undefined) return resetState;
-  return {
-    ...resetState,
-    meta_review: {
-      ...resetState.meta_review,
-      runtime_delivery: null
-    }
-  };
 }
 
 function appendDeactivateTelemetry(input: {
