@@ -44,6 +44,9 @@ Completed in the bubble:
 - findings parity artifact validation helpers now live under
   `shared/metaReviewGate/internal/**`; the aggregate index still exports the
   public validation helper.
+- findings artifact read/hash/parse parity validation now lives in
+  `internal/metaReviewGateFindingsArtifactParity.ts`; the former parity helper
+  remains a compatibility re-export surface.
 - reviewer snapshot transcript wrapper now lives under
   `shared/metaReviewGate/internal/**`; the aggregate index still exports the
   public read helper and snapshot type.
@@ -241,6 +244,8 @@ runtime delivery. They should not be moved wholesale to `domain`.
 | `metaReviewGateApplyPersistence.ts` | 96 | Persist runtime delivery observation. | no direct external | Application/infrastructure boundary candidate. |
 | `metaReviewGateApplyHelpers.ts` | 107 | Append kickoff envelope and persist run-failed route. | no direct external | Application internal; uses transcript/state helpers. |
 | `metaReviewGateFindingsValidation.ts` | 95 | Top-level positive-claim validation orchestration over preflight, approve policy, and rework artifact validation adapter. | no direct external | Application/internal wrapper; do not move wholesale to domain. |
+| `internal/metaReviewGateFindingsArtifactParity.ts` | 149 | Validate findings artifact parity by reading with retry, parsing JSON, deriving split, checking open total, and verifying digest. | no direct external | Application/internal artifact adapter; exported through parity helper compatibility surface. |
+| `internal/metaReviewGateFindingsParityHelpers.ts` | 30 | Compatibility re-export surface for findings parity helpers and domain projection/split wrappers. | public via aggregate index only | Keep as narrow compatibility surface while callers still import the public aggregate helper. |
 | `internal/metaReviewGateCurrentRunFinalization.ts` | 139 | Current-run top-level route resolution skeleton, parity failure handling, threshold backstop route guard, sticky-human-gate branch, rework dispatch handoff, and final human-route fallback. | no direct external; public door is `metaReviewGateCurrentRunApi.ts` | Application candidate; approve routing, parity resolution, threshold policy adapters, pure approve-validation, clean-approval, and approve-threshold backstop policies have been split out. |
 | `internal/metaReviewGateCurrentRunApproveRouting.ts` | 144 | Route approve current-run results through clean-run streak requirements, approve validation, validation-triggered auto-rework, and sticky approve validation. | no direct external | Application/internal approve-routing helper. |
 | `internal/metaReviewGateCurrentRunParity.ts` | 72 | Resolve current-run structured positive-claim parity and merge parity diagnostics into the run result used for routing. | no direct external | Application/internal adapter over findings validation and artifact read capability. |
