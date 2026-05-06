@@ -40,6 +40,9 @@ Completed in the bubble:
 - human-gate summaries and meta-review snapshot normalization are imported from
   domain owners directly; the former shared snapshot helper was removed after
   its remaining exports became unnecessary.
+- human-gate persistence is imported from its implementation module directly
+  inside the owning internal boundary; `metaReviewGateShared.ts` no longer
+  re-exports it.
 - `metaReviewGateTypes.ts` is now a compatibility aggregator only; route/error,
   result, runtime capability, and tmux runner contracts each have narrower
   public contract files.
@@ -189,7 +192,7 @@ runtime delivery. They should not be moved wholesale to `domain`.
 | `metaReviewApproveValidationGate.ts` | 347 | Run sticky approve validation commands and map failures. | no direct external | Application candidate; validation runtime orchestration. |
 | `metaReviewGateStateHelpers.ts` | 47 | State transition coordination for human-gate state persistence. | no direct external | Application/internal helper; route defaults, summaries, and snapshot state are now domain-owned. |
 | `metaReviewGateStateStaging.ts` | 78 | Stage meta-review running state with execution context. | no direct external | Application internal. |
-| `metaReviewGateShared.ts` | 53 | Shared reason codes, conflict/transition mapping, gate lock path, and narrow internal helper exports. | no direct external | Mixed utility; keep internal first and split path/error pieces later. |
+| `metaReviewGateShared.ts` | 45 | Shared reason codes, conflict/transition mapping, and gate lock path. | no direct external | Mixed utility; keep internal first and split path/error pieces later. |
 | `metaReviewGateErrorConversion.ts` | 36 | Convert meta-review errors to gate errors. | via command API | Public-adjacent error boundary; keep behind public API. |
 
 ### Infrastructure / Port Candidates
