@@ -56,7 +56,13 @@ const timelineRoles = [
   "system",
   "unknown"
 ] as const;
-const timelineRowKinds = ["normal", "handoff", "approval", "gate_failure"] as const;
+const timelineRowKinds = [
+  "normal",
+  "handoff",
+  "approval",
+  "blocked",
+  "gate_failure"
+] as const;
 const validationFailureTones = ["neutral", "warning", "danger"] as const;
 const timelineBadgeKinds = ["finding", "decision", "recommendation"] as const;
 

@@ -87,6 +87,29 @@ describe("timelinePresenter display DTO", () => {
     expect(entry?.display.senderLabel).toBe("Unknown");
   });
 
+  it("emits blocked row kind and warning tone for human-question rows", () => {
+    const [entry] = presentTimeline([
+      envelope({
+        id: "env-human-question",
+        type: "HUMAN_QUESTION",
+        sender: "human",
+        recipient: "codex",
+        payload: {
+          question: "Can you proceed?"
+        }
+      })
+    ]);
+
+    expect(entry?.display).toMatchObject({
+      summaryText: "Can you proceed?",
+      summarySource: "question",
+      senderLabel: "human",
+      role: "human",
+      rowKind: "blocked",
+      tone: "warning"
+    });
+  });
+
   it("emits handoff and clean-run progress while nullable non-applicable families stay present", () => {
     const entries = presentTimeline([
       envelope({
