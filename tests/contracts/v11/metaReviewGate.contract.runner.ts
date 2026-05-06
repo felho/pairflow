@@ -7,7 +7,7 @@ import {
   type MetaReviewGateResultV11
 } from "../../../src/v11/defaults/metaReviewGate/metaReviewGateApi.js";
 import { readStateSnapshot, writeStateSnapshot } from "../../../src/v11/infrastructure/state/stateStore.js";
-import { normalizeMetaReviewSnapshot } from "../../../src/v11/shared/metaReviewGate/internal/metaReviewGateSnapshotHelpers.js";
+import { normalizeMetaReviewSnapshot } from "../../../src/v11/domain/metaReviewGate/snapshotState.js";
 import type { MetaReviewGateTmuxRunner } from "../../../src/v11/shared/metaReviewGate/index.js";
 import type {
   RuntimeSessionRecord
