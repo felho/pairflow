@@ -1,7 +1,4 @@
-import {
-  readDocContractGateArtifact,
-  resolveDocContractGateArtifactPath
-} from "../gates/docContractGateArtifactDefaults.js";
+import { resolveDocContractGateArtifactPath } from "../gates/docContractGateArtifactDefaults.js";
 import { resolveBubbleById } from "../bubbleLookup/bubbleLookupDefaults.js";
 import {
   inspectStateSnapshot,
@@ -18,6 +15,9 @@ import type {
 import type {
   ReadReviewVerificationArtifactStatusOptions
 } from "../ports/reviewVerificationArtifacts.js";
+import type {
+  ReadDocContractGateArtifactPort
+} from "../ports/docContractGateArtifacts.js";
 import type {
   BubbleStatusState
 } from "./statusCommandTypes.js";
@@ -38,6 +38,33 @@ type ReadReviewVerificationArtifactStatusResult = (
 type InspectStateSnapshot = (
   statePath: string
 ) => Promise<InspectedStateSnapshot>;
+
+interface DocContractGateArtifactDefaultsModule {
+  readDocContractGateArtifact: ReadDocContractGateArtifactPort;
+}
+
+let docContractGateArtifactDefaultsModulePromise:
+  | Promise<DocContractGateArtifactDefaultsModule>
+  | undefined;
+
+function getDocContractGateArtifactDefaultsModulePath(): string {
+  return "../../defaults/gates/docContractGateArtifactDefaults.js";
+}
+
+async function loadDocContractGateArtifactDefaultsModule():
+  Promise<DocContractGateArtifactDefaultsModule> {
+  docContractGateArtifactDefaultsModulePromise ??= import(
+    getDocContractGateArtifactDefaultsModulePath()
+  ) as Promise<DocContractGateArtifactDefaultsModule>;
+  return docContractGateArtifactDefaultsModulePromise;
+}
+
+const readDocContractGateArtifact:
+  ReadDocContractGateArtifactPort = async (...args) => {
+    const { readDocContractGateArtifact: readDocContractGateArtifactDefault } =
+      await loadDocContractGateArtifactDefaultsModule();
+    return readDocContractGateArtifactDefault(...args);
+  };
 
 async function inspectStateSnapshotForStatus(
   ...args: Parameters<InspectStateSnapshot>
