@@ -10,12 +10,9 @@ import {
   validateFindingsArtifactParity
 } from "./metaReviewGateFindingsParityHelpers.js";
 import {
-  buildVerifiedThresholdParityMetadata,
-  resolveHighestOpenSeverity,
-  resolveVerifiedThresholdOpenSplitTotals
+  resolveVerifiedThresholdAuthority
 } from "../../domain/metaReviewGate/thresholdAuthority.js";
 import {
-  buildThresholdAuthorityIncomplete,
   buildThresholdAuthorityUnresolved,
   prefixThresholdAuthorityDiagnostic,
   REVIEW_POLICY_THRESHOLD_SOURCE_UNRESOLVED,
@@ -121,39 +118,14 @@ export async function resolveMetaReviewGateThresholdAuthority(
     });
   }
 
-  const artifactParsed = parity.artifact;
-  const artifactSplit = parity.split;
-  const verifiedParityMetadata = buildVerifiedThresholdParityMetadata({
+  return resolveVerifiedThresholdAuthority({
+    findings: parity.artifact.findings,
     findingsCount: parityInput.value.findingsCount,
     artifactOpenTotal: parity.artifactOpenTotal,
     artifactStatus: parityInput.value.artifactStatus,
     digest: parityInput.value.digest,
-    metaReviewRunId: parityInput.value.metaReviewRunId,
-    artifactSplit
-  });
-  const verifiedOpenSplit = resolveVerifiedThresholdOpenSplitTotals({
-    parityMetadata: verifiedParityMetadata,
-    artifactSplit
-  });
-  const highestOpenSeverity = resolveHighestOpenSeverity(artifactParsed.findings);
-  if (highestOpenSeverity === null) {
-    return buildThresholdAuthorityIncomplete({
-      parityMetadata: verifiedParityMetadata,
-      artifactRef,
-      metaReviewRunId: parityInput.value.metaReviewRunId,
-      findingsBlockingOpenTotal: verifiedOpenSplit.blocking,
-      findingsAdvisoryOpenTotal: verifiedOpenSplit.advisory
-    });
-  }
-
-  return {
-    status: "resolved",
-    parityMetadata: verifiedParityMetadata,
-    diagnostics: [],
-    highestOpenSeverity,
     artifactRef: parityInput.value.artifactRef,
     metaReviewRunId: parityInput.value.metaReviewRunId,
-    findingsBlockingOpenTotal: verifiedOpenSplit.blocking,
-    findingsAdvisoryOpenTotal: verifiedOpenSplit.advisory
-  };
+    artifactSplit: parity.split
+  });
 }

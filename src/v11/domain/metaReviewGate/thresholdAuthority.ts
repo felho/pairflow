@@ -3,6 +3,10 @@ import type { FindingsParityMetadata } from "../../../types/protocol.js";
 import { isRecord } from "../../shared/validation/primitives.js";
 import { buildFindingsParityMetadata } from "./findingsParityMetadata.js";
 import type { FindingsOpenSplit } from "./findingsSplit.js";
+import {
+  buildThresholdAuthorityIncomplete,
+  type MetaReviewGateThresholdAuthorityResolution
+} from "./thresholdAuthorityResolution.js";
 export {
   REVIEW_POLICY_THRESHOLD_CONTEXT_INCOMPLETE,
   REVIEW_POLICY_THRESHOLD_SOURCE_UNRESOLVED
@@ -85,6 +89,51 @@ export function resolveHighestOpenSeverity(
   return highestIndex === null
     ? null
     : (findingPriorityOrder[highestIndex] ?? null);
+}
+
+export function resolveVerifiedThresholdAuthority(input: {
+  findings: unknown;
+  findingsCount: number;
+  artifactOpenTotal: number;
+  artifactStatus: string;
+  digest: string;
+  artifactRef: string;
+  metaReviewRunId: string;
+  artifactSplit: FindingsOpenSplit | null;
+}): MetaReviewGateThresholdAuthorityResolution {
+  const verifiedParityMetadata = buildVerifiedThresholdParityMetadata({
+    findingsCount: input.findingsCount,
+    artifactOpenTotal: input.artifactOpenTotal,
+    artifactStatus: input.artifactStatus,
+    digest: input.digest,
+    metaReviewRunId: input.metaReviewRunId,
+    artifactSplit: input.artifactSplit
+  });
+  const verifiedOpenSplit = resolveVerifiedThresholdOpenSplitTotals({
+    parityMetadata: verifiedParityMetadata,
+    artifactSplit: input.artifactSplit
+  });
+  const highestOpenSeverity = resolveHighestOpenSeverity(input.findings);
+  if (highestOpenSeverity === null) {
+    return buildThresholdAuthorityIncomplete({
+      parityMetadata: verifiedParityMetadata,
+      artifactRef: input.artifactRef,
+      metaReviewRunId: input.metaReviewRunId,
+      findingsBlockingOpenTotal: verifiedOpenSplit.blocking,
+      findingsAdvisoryOpenTotal: verifiedOpenSplit.advisory
+    });
+  }
+
+  return {
+    status: "resolved",
+    parityMetadata: verifiedParityMetadata,
+    diagnostics: [],
+    highestOpenSeverity,
+    artifactRef: input.artifactRef,
+    metaReviewRunId: input.metaReviewRunId,
+    findingsBlockingOpenTotal: verifiedOpenSplit.blocking,
+    findingsAdvisoryOpenTotal: verifiedOpenSplit.advisory
+  };
 }
 
 export function metaReviewGateThresholdIsMet(input: {
