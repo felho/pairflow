@@ -3,11 +3,10 @@ import { relative, resolve } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
+import * as metaReviewGatePublicApi from "../../../src/v11/shared/metaReviewGate/index.js";
 import {
   metaReviewGateRoutes,
-  metaReviewGateThresholdIsMet,
   readLatestSameRoundReviewerSnapshotFromTranscript,
-  resolveFindingsParityMetadataFromReportJson,
   resolveMetaReviewGateThresholdAuthority,
   resolveReworkFindingsParityInput,
   validateFindingsArtifactParity
@@ -66,15 +65,22 @@ describe("meta-review gate public API boundary", () => {
     expect(violations).toEqual([]);
   });
 
-  it("exports meta-review gate policy/read helpers from the aggregate index", () => {
+  it("exports orchestration contracts without domain-only policy helpers", () => {
     expect(metaReviewGateRoutes).toContain("human_gate_approve");
-    expect(metaReviewGateThresholdIsMet).toBeTypeOf("function");
     expect(resolveMetaReviewGateThresholdAuthority).toBeTypeOf("function");
     expect(resolveReworkFindingsParityInput).toBeTypeOf("function");
     expect(validateFindingsArtifactParity).toBeTypeOf("function");
-    expect(resolveFindingsParityMetadataFromReportJson).toBeTypeOf("function");
     expect(readLatestSameRoundReviewerSnapshotFromTranscript).toBeTypeOf(
       "function"
+    );
+    expect(metaReviewGatePublicApi).not.toHaveProperty(
+      "metaReviewGateThresholdIsMet"
+    );
+    expect(metaReviewGatePublicApi).not.toHaveProperty(
+      "resolveFindingsParityMetadataFromReportJson"
+    );
+    expect(metaReviewGatePublicApi).not.toHaveProperty(
+      "isAdvisoryOnlyReviewerSnapshot"
     );
   });
 

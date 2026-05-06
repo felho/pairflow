@@ -1,6 +1,5 @@
 export * from "./metaReviewGateCommandApi.js";
 export {
-  metaReviewGateThresholdIsMet,
   resolveMetaReviewGateThresholdAuthority
 } from "./internal/metaReviewGateThresholdAuthority.js";
 export {
@@ -14,14 +13,7 @@ export type {
   ResolveMetaReviewGateThresholdAuthorityInput
 } from "./internal/metaReviewGateThresholdAuthority.js";
 export {
-  resolveFindingsParityMetadataFromReportJson
-} from "./internal/metaReviewGateFindingsMetadata.js";
-export {
-  isAdvisoryOnlyReviewerSnapshot,
   readLatestSameRoundReviewerSnapshotFromTranscript
-} from "./internal/metaReviewGateReviewerSnapshot.js";
-export type {
-  LatestSameRoundReviewerSnapshot
 } from "./internal/metaReviewGateReviewerSnapshot.js";
 export {
   resolveMetaReviewGateNotifyTmuxCapabilities,
