@@ -11,7 +11,7 @@ import type {
   NotifyMetaReviewerSubmissionRequest,
   ResolveMetaReviewerPaneWarning,
   MetaReviewGateRuntimeCapabilities
-} from "./metaReviewGateTypes.js";
+} from "./metaReviewGateRuntimeCapabilities.js";
 import type { SetMetaReviewerPaneBindingPort } from "../ports/runtimeSessions.js";
 import type { ReadTranscriptEnvelopesPort } from "../ports/transcript.js";
 import type { ValidationCommandId } from "../validation/validationCommandId.js";

@@ -9,7 +9,7 @@ export type {
   NotifyMetaReviewerSubmissionRequestDependencies,
   NotifyMetaReviewerSubmissionRequestInput,
   ResolveMetaReviewerPaneWarning
-} from "./metaReviewGateTypes.js";
+} from "./metaReviewGateRuntimeCapabilities.js";
 export type {
   MetaReviewGateReasonCode,
   MetaReviewGateRoute

@@ -17,7 +17,7 @@ import type { SetMetaReviewerPaneBindingPort } from "../../ports/runtimeSessions
 import type {
   ApplyMetaReviewGateOnConvergenceDependencies,
   ApplyMetaReviewGateOnConvergenceInput
-} from "../metaReviewGateTypes.js";
+} from "../metaReviewGateRuntimeCapabilities.js";
 import { MetaReviewGateError } from "../metaReviewGateRouteContract.js";
 
 export interface ApplyMetaReviewGateExecutionContext {

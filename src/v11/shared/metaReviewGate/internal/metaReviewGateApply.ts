@@ -17,7 +17,7 @@ import { persistRuntimeDeliveryObservation } from "./metaReviewGateApplyPersiste
 import type {
   ApplyMetaReviewGateOnConvergenceDependencies,
   ApplyMetaReviewGateOnConvergenceInput
-} from "../metaReviewGateTypes.js";
+} from "../metaReviewGateRuntimeCapabilities.js";
 import type { MetaReviewGateResult } from "../metaReviewGateResultContract.js";
 import { MetaReviewGateError } from "../metaReviewGateRouteContract.js";
 
