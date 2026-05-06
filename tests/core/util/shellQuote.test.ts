@@ -7,6 +7,10 @@ describe("shellQuote", () => {
     expect(shellQuote("hello")).toBe("'hello'");
   });
 
+  it("keeps values with spaces inside the quoted string", () => {
+    expect(shellQuote("hello world")).toBe("'hello world'");
+  });
+
   it("escapes embedded single quotes using POSIX-safe pattern", () => {
     expect(shellQuote("a'b")).toBe("'a'\\''b'");
   });
