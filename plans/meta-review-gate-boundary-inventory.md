@@ -149,7 +149,7 @@ dependencies remain pure and they do not perform I/O.
 | `approvalSummaryNormalization.ts` | 202 | Approval request summary consistency/normalization. | no direct external | Done: domain-owned. |
 | `runResultParity.ts` | 38 | Merge run result with parity resolution. | no direct external | Done: domain-owned. |
 | `findingsValidationPreflight.ts` | 103 | Preflight structured meta-review claim validation. | no direct external | Done: domain-owned. |
-| `metaReviewGateFindingsValidationParity.ts` | 92 | Rework path positive-claim validation with parity. | no direct external | Domain candidate, verify convergence policy dependency. |
+| `findingsValidationParity.ts` + `metaReviewGateFindingsValidationParity.ts` | 53 + 69 | Domain builds verified rework parity success/diagnostics; shared internal wrapper performs parity input, artifact read/hash/parse validation. | no direct external | Done split; keep artifact I/O in shared/internal. |
 | `metaReviewGateFindingsValidation.ts` | 95 | Top-level positive-claim validation orchestration over policy helpers. | no direct external | Domain/application boundary candidate; inspect I/O through artifact read callback. |
 | `gateRoutingTypes.ts` | 84 | Gate route union, threshold status metadata, and gate error language. | via shared re-export | Domain-owned shared language; keep public through `metaReviewGateTypes.ts` compatibility export. |
 | `approveValidationRework.ts` | 24 | Classify approve-validation command failures and build auto-rework message. | no | Done: extracted from current-run finalization. |
