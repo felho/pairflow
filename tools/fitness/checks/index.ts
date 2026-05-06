@@ -8,6 +8,7 @@ import { buildErrorCheckReport } from "./error.js";
 import { buildInternalModuleBoundaryCheckReport } from "./internal-module-boundary.js";
 import { buildMutationCheckReport } from "./mutation.js";
 import { createNotImplementedCheckReport } from "./not-implemented.js";
+import { buildSharedDefaultsBoundaryCheckReport } from "./shared-defaults-boundary.js";
 import { buildTransitionCheckReport } from "./transition.js";
 import { buildUiContractBoundaryCheckReport } from "./ui-contract-boundary.js";
 import { buildUiRouterPortBoundaryCheckReport } from "./ui-router-port-boundary.js";
@@ -44,6 +45,13 @@ export async function buildCheckReport({
   }
   if (effectiveCheck.id === "internal_module_boundary") {
     return buildInternalModuleBoundaryCheckReport({
+      check: effectiveCheck,
+      repoRoot,
+      fallbackMode
+    });
+  }
+  if (effectiveCheck.id === "shared_defaults_boundary") {
+    return buildSharedDefaultsBoundaryCheckReport({
       check: effectiveCheck,
       repoRoot,
       fallbackMode

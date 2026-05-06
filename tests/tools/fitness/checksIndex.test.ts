@@ -76,4 +76,30 @@ describe("fitness check mode resolution", () => {
     expect(checks[0]?.status).toBe("pass");
     expect(checks[0]?.summary).toContain("Internal module boundary check");
   });
+
+  it("routes shared defaults boundary check to its implementation", async () => {
+    const checks = await buildReportChecks(
+      {
+        defaults: {
+          mode: "hard-fail"
+        },
+        checks: [
+          {
+            id: "shared_defaults_boundary",
+            metric: "shared layer must not hide default runtime wiring behind shared defaults facades",
+            mode: "soft-fail",
+            owner: "architecture/composition",
+            scope: ["src/v11/no-files-here/**"],
+            exceptions: []
+          }
+        ]
+      },
+      process.cwd()
+    );
+
+    expect(checks).toHaveLength(1);
+    expect(checks[0]?.id).toBe("shared_defaults_boundary");
+    expect(checks[0]?.status).toBe("pass");
+    expect(checks[0]?.summary).toContain("Shared defaults boundary check");
+  });
 });

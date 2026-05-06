@@ -99,6 +99,16 @@
       "exceptions": []
     },
     {
+      "id": "shared_defaults_boundary",
+      "metric": "shared layer must not hide default runtime wiring behind shared defaults facades",
+      "scope": [
+        "src/v11/**"
+      ],
+      "mode": "soft-fail",
+      "owner": "architecture/composition",
+      "exceptions": []
+    },
+    {
       "id": "critical_side_effect",
       "metric": "critical command side-effect invariant coverage",
       "scope": [
