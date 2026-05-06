@@ -14,7 +14,7 @@ import {
 } from "../../../domain/metaReviewGate/humanGateRouting.js";
 import type { MetaReviewGateThresholdMetadata } from "../../../shared/metaReviewGate/metaReviewGateRouteContract.js";
 import type { MetaReviewGateResult } from "../../../shared/metaReviewGate/metaReviewGateResultContract.js";
-import { resolveFindingsParityMetadataFromReportJson } from "../../../shared/metaReviewGate/metaReviewGateFindingsMetadata.js";
+import { resolveFindingsParityMetadataFromReportJson } from "../metaReviewGateFindingsMetadata.js";
 import type { FinalizeCurrentRunMetaReviewGateInput } from "../../../shared/metaReviewGate/metaReviewGateCurrentRunTypes.js";
 import type { PersistHumanGateRouteInput } from "./metaReviewGateHumanGatePersistenceContract.js";
 

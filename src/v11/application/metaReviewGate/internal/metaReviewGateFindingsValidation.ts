@@ -1,7 +1,7 @@
 import type { MetaReviewResult } from "../../../shared/metaReview/metaReviewTypes.js";
 import type { Finding } from "../../../../types/findings.js";
 import { type FindingsParityMetadata } from "../../../../types/protocol.js";
-import type { MetaReviewGateArtifactReadFn } from "../../../shared/metaReviewGate/metaReviewGateFindingsMetadata.js";
+import type { MetaReviewGateArtifactReadFn } from "../metaReviewGateFindingsMetadata.js";
 import {
   validateApproveStructuredMetaReviewClaim
 } from "../../../domain/metaReviewGate/approveClaimValidation.js";

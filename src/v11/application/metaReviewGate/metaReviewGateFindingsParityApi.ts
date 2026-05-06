@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 
-import type { MetaReviewResult } from "../metaReview/metaReviewTypes.js";
-import { isRecord } from "../validation/primitives.js";
+import type { MetaReviewResult } from "../../shared/metaReview/metaReviewTypes.js";
+import { isRecord } from "../../shared/validation/primitives.js";
 import type {
   FindingsParityMetadata,
   FindingsParityStatus

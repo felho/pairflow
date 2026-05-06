@@ -1,18 +1,18 @@
-import type { LoadedStateSnapshot } from "../ports/stateSnapshots.js";
-import { normalizeMetaReviewSnapshot } from "./metaReviewSnapshot.js";
-import { MetaReviewError } from "./metaReviewError.js";
-import { toMetaReviewExecutionContext } from "../state/executionContext.js";
+import type { LoadedStateSnapshot } from "../../shared/ports/stateSnapshots.js";
+import { normalizeMetaReviewSnapshot } from "../../shared/metaReview/metaReviewSnapshot.js";
+import { MetaReviewError } from "../../shared/metaReview/metaReviewError.js";
+import { toMetaReviewExecutionContext } from "../../shared/state/executionContext.js";
 import {
   stateWriteConflictToMetaReviewError
-} from "./metaReviewCommandErrorMapping.js";
-import { isNamedError } from "../errors/namedError.js";
+} from "../../shared/metaReview/metaReviewCommandErrorMapping.js";
+import { isNamedError } from "../../shared/errors/namedError.js";
 import {
   assertActiveMetaReviewExecutionContext,
   assertMetaReviewSubmitStaleGuard
-} from "./metaReviewCommandSubmitAuthority.js";
+} from "../../shared/metaReview/metaReviewCommandSubmitAuthority.js";
 import type {
   MetaReviewArtifactReadPort
-} from "./metaReviewArtifactIo.js";
+} from "../../shared/metaReview/metaReviewArtifactIo.js";
 import type {
   BubbleExecutionContext,
   BubbleStateSnapshot,
@@ -24,7 +24,7 @@ import type {
   MetaReviewResult,
   MetaReviewRunWarning,
   MetaReviewSubmitInput
-} from "./metaReviewCommandContract.js";
+} from "../../shared/metaReview/metaReviewCommandContract.js";
 
 export function buildCanonicalSubmitRunResult(input: {
   bubbleId: string;

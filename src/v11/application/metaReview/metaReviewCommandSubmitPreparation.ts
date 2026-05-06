@@ -1,16 +1,16 @@
 import { randomUUID } from "node:crypto";
 
-import { metaReviewCommandSubmitDefaults } from "./metaReviewDependencyDefaults.js";
+import { metaReviewCommandSubmitDefaults } from "../../shared/metaReview/metaReviewDependencyDefaults.js";
 import {
   isInteger,
   isNonEmptyString,
   isRecord
-} from "../validation/primitives.js";
-import { MetaReviewError } from "./metaReviewError.js";
+} from "../../shared/validation/primitives.js";
+import { MetaReviewError } from "../../shared/metaReview/metaReviewError.js";
 import {
   normalizeOptionalText,
   resolveCanonicalMetaReviewReportJson
-} from "./metaReviewCanonicalization.js";
+} from "../../shared/metaReview/metaReviewCanonicalization.js";
 import {
   assertApproveRecommendationConsistentWithReviewerSnapshot,
   readLatestApproveReviewerSnapshot
@@ -19,7 +19,7 @@ import {
   assertActiveMetaReviewExecutionContext,
   assertMetaReviewSubmitStaleGuard,
   assertMetaReviewSubmitterAuthority
-} from "./metaReviewCommandSubmitAuthority.js";
+} from "../../shared/metaReview/metaReviewCommandSubmitAuthority.js";
 import {
   assertApproveThresholdPolicy,
   metaReviewApproveClaimsOpenFindings,
@@ -27,21 +27,21 @@ import {
   assertSubmitStatusIsSuccess,
   resolveSubmitRunStatus,
   normalizeRequiredSubmitText
-} from "./metaReviewCommandSubmitValidation.js";
+} from "../../shared/metaReview/metaReviewCommandSubmitValidation.js";
 import {
   assertSummaryStructuredParity,
-} from "./metaReviewCommandSubmitParity.js";
+} from "../../shared/metaReview/metaReviewCommandSubmitParity.js";
 import {
   resolveSubmitCanonicalRunId
-} from "./metaReviewCommandSubmitLink.js";
+} from "../../shared/metaReview/metaReviewCommandSubmitLink.js";
 import {
   resolveMetaReviewGateThresholdAuthority
 } from "../metaReviewGate/metaReviewGateThresholdAuthorityApi.js";
-import { normalizeBubbleReviewPolicy } from "../reviewPolicy/reviewPolicyRuntime.js";
+import { normalizeBubbleReviewPolicy } from "../../shared/reviewPolicy/reviewPolicyRuntime.js";
 import type {
   MetaReviewCommandDependencies,
   MetaReviewSubmitInput
-} from "./metaReviewCommandContract.js";
+} from "../../shared/metaReview/metaReviewCommandContract.js";
 
 type MetaReviewSubmitPreparationPorts = {
   resolveBubble: NonNullable<MetaReviewCommandDependencies["resolveBubbleById"]>;

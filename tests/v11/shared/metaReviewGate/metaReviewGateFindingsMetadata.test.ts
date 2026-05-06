@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   resolveFindingsArtifactPath
-} from "../../../../src/v11/shared/metaReviewGate/metaReviewGateFindingsMetadata.js";
+} from "../../../../src/v11/application/metaReviewGate/metaReviewGateFindingsMetadata.js";
 describe("resolveFindingsArtifactPath", () => {
   it("resolves artifact refs under artifacts", () => {
     expect(

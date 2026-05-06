@@ -6,14 +6,14 @@ import {
   assertSubmitReworkFindingsArtifactContract,
   buildCanonicalSubmitRunResult,
   writeCanonicalSubmitState
-} from "../../shared/metaReview/metaReviewCommandSubmitPersistence.js";
+} from "./metaReviewCommandSubmitPersistence.js";
 import {
   finalizeMetaReviewSubmitResult,
   recoverMetaReviewSubmitRoute
 } from "./metaReviewCommandSubmitRouting.js";
 import {
   prepareMetaReviewSubmitContext
-} from "../../shared/metaReview/metaReviewCommandSubmitPreparation.js";
+} from "./metaReviewCommandSubmitPreparation.js";
 import type {
   MetaReviewCommandDependencies,
   MetaReviewSubmitInput,

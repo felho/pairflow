@@ -1,4 +1,4 @@
-import { readTranscriptEnvelopes } from "../transcript/transcriptDependencyDefaults.js";
+import { readTranscriptEnvelopes } from "../../shared/transcript/transcriptDependencyDefaults.js";
 import {
   resolveLatestSameRoundReviewerSnapshot,
   type LatestSameRoundReviewerSnapshot

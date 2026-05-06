@@ -13,7 +13,7 @@ import {
   persistResolvedHumanRoute
 } from "./metaReviewGateCurrentRunRoutePersistence.js";
 import { resolveThresholdCleanApproval } from "./metaReviewGateCurrentRunThresholdPolicies.js";
-import type { MetaReviewGateThresholdAuthorityResolution } from "../../../shared/metaReviewGate/metaReviewGateThresholdAuthorityApi.js";
+import type { MetaReviewGateThresholdAuthorityResolution } from "../metaReviewGateThresholdAuthorityApi.js";
 import {
   META_REVIEW_APPROVE_VALIDATION_FAILED,
   runMetaReviewApproveValidationGate

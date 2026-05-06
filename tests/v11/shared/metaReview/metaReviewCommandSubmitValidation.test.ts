@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import {
   prepareMetaReviewSubmitContext
-} from "../../../../src/v11/shared/metaReview/metaReviewCommandSubmitPreparation.js";
+} from "../../../../src/v11/application/metaReview/metaReviewCommandSubmitPreparation.js";
 import {
   assertMetaReviewSubmitterAuthority,
   assertSubmitPayloadInvariants,

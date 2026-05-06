@@ -2,7 +2,7 @@ import { normalizeMetaReviewSnapshot } from "../../domain/metaReviewGate/snapsho
 import { META_REVIEW_APPROVE_THRESHOLD_BACKSTOP } from "../../domain/metaReviewGate/approveThresholdBackstopPolicy.js";
 import { metaReviewApproveClaimsOpenFindings } from "../../shared/metaReview/metaReviewCommandSubmitValidation.js";
 import type { MetaReviewGateResult } from "../../shared/metaReviewGate/metaReviewGateResultContract.js";
-import { resolveMetaReviewGateThresholdAuthority } from "../../shared/metaReviewGate/metaReviewGateThresholdAuthorityApi.js";
+import { resolveMetaReviewGateThresholdAuthority } from "./metaReviewGateThresholdAuthorityApi.js";
 import { dispatchAutoRework } from "./internal/metaReviewGateAutoRework.js";
 import {
   maybeRunStickyApproveValidation,

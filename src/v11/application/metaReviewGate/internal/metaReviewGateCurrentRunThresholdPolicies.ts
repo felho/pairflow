@@ -10,7 +10,7 @@ import { resolveThresholdCleanApprovalPolicy } from "../../../domain/metaReviewG
 import {
   type MetaReviewGateThresholdAuthorityResolution,
   resolveMetaReviewGateThresholdAuthority
-} from "../../../shared/metaReviewGate/metaReviewGateThresholdAuthorityApi.js";
+} from "../metaReviewGateThresholdAuthorityApi.js";
 import type { FinalizeCurrentRunMetaReviewGateInput } from "../../../shared/metaReviewGate/metaReviewGateCurrentRunTypes.js";
 
 export async function resolveApproveThresholdBackstop(input: {

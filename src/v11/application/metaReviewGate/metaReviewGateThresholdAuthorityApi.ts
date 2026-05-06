@@ -1,5 +1,5 @@
-import { isRecord } from "../validation/primitives.js";
-import type { MetaReviewResult } from "../metaReview/metaReviewTypes.js";
+import { isRecord } from "../../shared/validation/primitives.js";
+import type { MetaReviewResult } from "../../shared/metaReview/metaReviewTypes.js";
 import {
   resolveFindingsParityMetadataFromReportJson
 } from "../../domain/metaReviewGate/findingsParityMetadata.js";

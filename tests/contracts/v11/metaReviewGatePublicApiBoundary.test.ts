@@ -14,22 +14,19 @@ import {
 import {
   resolveReworkFindingsParityInput,
   validateFindingsArtifactParity
-} from "../../../src/v11/shared/metaReviewGate/metaReviewGateFindingsParityApi.js";
+} from "../../../src/v11/application/metaReviewGate/metaReviewGateFindingsParityApi.js";
 import {
   readLatestSameRoundReviewerSnapshotFromTranscript
-} from "../../../src/v11/shared/metaReviewGate/metaReviewGateReviewerSnapshotApi.js";
+} from "../../../src/v11/application/metaReviewGate/metaReviewGateReviewerSnapshotApi.js";
 import {
   resolveMetaReviewGateThresholdAuthority
-} from "../../../src/v11/shared/metaReviewGate/metaReviewGateThresholdAuthorityApi.js";
+} from "../../../src/v11/application/metaReviewGate/metaReviewGateThresholdAuthorityApi.js";
 import {
   finalizeCurrentRunMetaReviewGate
 } from "../../../src/v11/application/metaReviewGate/metaReviewGateCurrentRunApi.js";
 
 const allowedSharedMetaReviewGateImports = new Set([
-  "../metaReviewGate/index.js",
-  "../metaReviewGate/metaReviewGateFindingsParityApi.js",
-  "../metaReviewGate/metaReviewGateReviewerSnapshotApi.js",
-  "../metaReviewGate/metaReviewGateThresholdAuthorityApi.js"
+  "../metaReviewGate/index.js"
 ]);
 
 async function listTypeScriptFiles(root: string): Promise<string[]> {

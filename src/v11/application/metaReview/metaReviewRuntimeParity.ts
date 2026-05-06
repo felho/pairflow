@@ -1,7 +1,7 @@
 import {
   isNonEmptyString
-} from "../validation/primitives.js";
-import { MetaReviewError } from "./metaReviewError.js";
+} from "../../shared/validation/primitives.js";
+import { MetaReviewError } from "../../shared/metaReview/metaReviewError.js";
 import type {
   MetaReviewRecommendation
 } from "../../../types/bubble.js";
@@ -26,7 +26,7 @@ import {
 } from "../../domain/convergence/policy.js";
 import {
   buildMetaReviewSubmitAdvisoryOnlyCorrectionNote
-} from "./metaReviewSubmitGuidance.js";
+} from "../../shared/metaReview/metaReviewSubmitGuidance.js";
 
 export interface MetaReviewFindingsParitySnapshot {
   findings_claimed_open_total: number | null;
