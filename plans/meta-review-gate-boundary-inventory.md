@@ -77,6 +77,8 @@ Completed in the bubble:
   now live in `internal/metaReviewGateCurrentRunThresholdPolicies.ts`.
 - current-run approve result routing and sticky approve validation now live in
   `internal/metaReviewGateCurrentRunApproveRouting.ts`.
+- approve-validation failure reason and runner-stage diagnostics now live in
+  `internal/metaReviewApproveValidationDiagnostics.ts`.
 - `domain/metaReviewGate/**` no longer imports back from
   `shared/metaReviewGate/**`; route/error language is owned in domain and
   re-exported by the shared public contract for compatibility.
@@ -251,7 +253,8 @@ runtime delivery. They should not be moved wholesale to `domain`.
 | `metaReviewGateHumanGatePersistence.ts` | 237 | Persist human gate route and append approval request. | no direct external | Application/infrastructure boundary candidate. |
 | `metaReviewGateHumanGatePersistenceHelpers.ts` | 180 | Human gate recommendation, request append, rollback handling. | no direct external | Application internal; split pure recommendation from append/rollback later. |
 | `approvalRequestEnvelope.ts` | 149 | Build/append human approval request envelope with domain-resolved route metadata. | no direct external | Application/internal first; possible presenter/DTO extraction later. |
-| `metaReviewApproveValidationGate.ts` | 221 | Run sticky approve validation commands and map failures. | no direct external | Application candidate; validation runtime orchestration. |
+| `metaReviewApproveValidationGate.ts` | 135 | Run sticky approve validation commands. | no direct external | Application candidate; validation runtime orchestration; policy resolution and diagnostics have been split out. |
+| `internal/metaReviewApproveValidationDiagnostics.ts` | 91 | Build approve-validation failure reasons and map runner error stages into gate diagnostics. | no direct external | Shared/internal diagnostics helper; keep private behind approve-validation gate. |
 | `metaReviewApproveValidationPolicy.ts` | 130 | Resolve configured meta-review approve validation command policy. | no direct external | Application/internal policy resolver; depends on shared validation command IDs. |
 | `metaReviewGateStateHelpers.ts` | 47 | State transition coordination for human-gate state persistence. | no direct external | Application/internal helper; route defaults, summaries, and snapshot state are now domain-owned. |
 | `metaReviewGateStateStaging.ts` | 78 | Stage meta-review running state with execution context. | no direct external | Application internal. |
