@@ -5,7 +5,7 @@ task_family_id: timeline-display-meta
 sequence_key: "5"
 task_id: 5-timeline-display-meta
 title: "Timeline Display Meta"
-status: implementable
+status: in_progress
 phase: phase3
 target_files:
   - ui/src/components/expanded/BubbleTimeline.tsx
@@ -38,7 +38,7 @@ system_context_ref: docs/pairflow-initial-design.md
 owners:
   - "felho"
 doc_bubble_id: 5-timeline-display-meta-doc
-impl_bubble_id: null
+impl_bubble_id: 5-timeline-display-meta-impl
 supersedes: []
 superseded_by: null
 archive_group: 2026-05-05-timeline-display-dto-plan-v1
