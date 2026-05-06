@@ -38,6 +38,28 @@ afterEach(async () => {
 });
 
 describe("UI contract boundary fitness check", () => {
+  it("guards expanded timeline rendering against legacy protocol display reads", async () => {
+    const source = await readFile(
+      join(repoRoot, "ui/src/components/expanded/BubbleTimeline.tsx"),
+      "utf8"
+    );
+    const forbiddenPatterns = [
+      /\bentry\.payload\b/u,
+      /\bpayloadSummary\b/u,
+      /\bextractMetaReviewHandoffAttempt\b/u,
+      /\bbuildSyntheticMetaApprovalEntry\b/u,
+      /\bbuildDisplayTimelineItems\b/u,
+      /\blatest_recommendation\b/u,
+      /\bmeta_review_handoff_id\b/u,
+      /\bdelivery_target_role\b/u,
+      /\bactor_agent\b/u
+    ];
+
+    expect(
+      forbiddenPatterns.filter((pattern) => pattern.test(source)).map(String)
+    ).toEqual([]);
+  });
+
   it("fails on UI direct imports from src/v11", async () => {
     const repoRoot = await createTempRoot();
     await writeRepoFile(

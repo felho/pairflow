@@ -203,7 +203,6 @@ import type {
   ActiveMetaReviewRuntimeDeliveryView
 } from "../../src/v11/shared/metaReview/metaReviewSnapshot.js";
 import type {
-  ProtocolEnvelopePayload,
   ProtocolMessageType as RuntimeProtocolMessageType
 } from "../../src/types/protocol.js";
 import type {
@@ -533,8 +532,6 @@ type _backendTimelineParity =
   Assert<Equal<CanonicalUiTimelineEntry, BackendUiTimelineEntry>>;
 type _uiTimelineParity =
   Assert<Equal<CanonicalUiTimelineEntry, UiTimelineEntry>>;
-type _timelinePayloadProtocolTransit =
-  Assert<Equal<CanonicalUiTimelineEntry["payload"], ProtocolEnvelopePayload>>;
 type _canonicalProtocolMessageTypeTransit =
   Assert<Equal<CanonicalProtocolMessageType, RuntimeProtocolMessageType>>;
 type _timelineTypeProtocolTransit =

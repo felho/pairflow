@@ -29,7 +29,7 @@ afterEach(async () => {
 });
 
 describe("timelinePresenter lenient fallback", () => {
-  it("returns timeline entries when transcript includes forward-compatible PASS payload fields", async () => {
+  it("returns timeline entries while dropping open claims without renderable findings", async () => {
     const dir = await createTempDir();
     const transcriptPath = join(dir, "transcript.ndjson");
 
@@ -71,11 +71,11 @@ describe("timelinePresenter lenient fallback", () => {
     expect(timeline[1]?.type).toBe("PASS");
     expect(timeline[1]?.payload.summary).toBe("Forward-compatible payload fields");
     expect(timeline[1]?.payload.pass_intent).toBe("review");
-    expect(timeline[1]?.payload.findings_claim_state).toBe("open_findings");
-    expect(timeline[1]?.payload.findings_claim_source).toBe("payload_findings_count");
+    expect(timeline[1]?.payload.findings_claim_state).toBeUndefined();
+    expect(timeline[1]?.payload.findings_claim_source).toBeUndefined();
   });
 
-  it("falls back after strict parser Invalid protocol envelope and preserves normalized claim fields", async () => {
+  it("falls back after strict parser Invalid protocol envelope and drops open claims without findings", async () => {
     const dir = await createTempDir();
     const transcriptPath = join(dir, "transcript.ndjson");
 
@@ -107,8 +107,8 @@ describe("timelinePresenter lenient fallback", () => {
     expect(timeline[0]?.sender).toBe("reviewer");
     expect(timeline[0]?.type).toBe("PASS");
     expect(timeline[0]?.payload.summary).toContain("Strict parse should fail");
-    expect(timeline[0]?.payload.findings_claim_state).toBe("open_findings");
-    expect(timeline[0]?.payload.findings_claim_source).toBe("payload_findings_count");
+    expect(timeline[0]?.payload.findings_claim_state).toBeUndefined();
+    expect(timeline[0]?.payload.findings_claim_source).toBeUndefined();
   });
 
   it("reads remote transcript content for started ssh bubbles instead of stale local transcript", async () => {

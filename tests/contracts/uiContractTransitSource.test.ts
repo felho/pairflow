@@ -453,7 +453,7 @@ describe("UI contract transit source guards", () => {
       expectNoTypeDeclaration(uiCompat, symbol);
     }
 
-    expect(canonical).toContain("ProtocolEnvelopePayload");
+    expect(canonical).not.toContain("ProtocolEnvelopePayload");
     expectExportTypeBlockContains(canonical, {
       symbol: "ProtocolMessageType"
     });

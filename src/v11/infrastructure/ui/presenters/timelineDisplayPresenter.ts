@@ -1,3 +1,4 @@
+import type { ProtocolEnvelopePayload, ProtocolMessageType } from "../../../../types/protocol.js";
 import type {
   UiTimelineBadge,
   UiTimelineEntry,
@@ -5,12 +6,11 @@ import type {
   UiTimelineProgress,
   UiTimelineTone
 } from "../../../../contracts/ui/uiReadModel.js";
-import {
-  isNonEmptyString,
-  isRecord
-} from "../../../shared/validation/primitives.js";
-
-export type TimelineEntryWithoutDisplay = Omit<UiTimelineEntry, "display">;
+import { isNonEmptyString, isRecord } from "../../../shared/validation/primitives.js";
+export type TimelineEntryWithoutDisplay = Omit<UiTimelineEntry, "display" | "payload" | "type"> & {
+  type: ProtocolMessageType;
+  payload: ProtocolEnvelopePayload;
+};
 
 function sanitizeLabel(value: string): string {
   const normalized = value.trim().replace(/\s+/gu, " ");
@@ -56,9 +56,11 @@ function metadataOf(entry: TimelineEntryWithoutDisplay): Record<string, unknown>
 
 function resolveDisplaySender(entry: TimelineEntryWithoutDisplay): string {
   const metadata = metadataOf(entry);
+  if (metadata?.actor === "meta-reviewer") {
+    return isNonEmptyString(metadata.actor_agent) ? metadata.actor_agent : "meta-reviewer";
+  }
   if (
-    metadata !== null
-    && typeof metadata.meta_review_handoff_id === "string"
+    metadata !== null && typeof metadata.meta_review_handoff_id === "string"
     && metadata.delivery_target_role === "meta_reviewer"
   ) {
     return entry.recipient;
@@ -169,12 +171,16 @@ function buildBadges(
 
   const findings = entry.payload.findings;
   if (Array.isArray(findings)) {
+    const claimState = entry.payload.findings_claim_state;
+    if (entry.type === "PASS" && findings.length === 0 && (claimState === undefined || claimState === "clean")) {
+      add({ kind: "status", label: "clean", tone: "success" });
+    }
     const seenFindings = new Set<string>();
     for (const finding of findings) {
-      if (!isRecord(finding) || !isNonEmptyString(finding.severity)) {
-        continue;
-      }
-      const label = sanitizeLabel(finding.severity);
+      if (!isRecord(finding)) continue;
+      const priority = finding.effective_priority ?? finding.priority ?? finding.severity;
+      if (!isNonEmptyString(priority)) continue;
+      const label = sanitizeLabel(priority);
       if (seenFindings.has(label)) {
         continue;
       }
@@ -313,7 +319,7 @@ function resolveBaseState(input: {
   if (input.gateFailure) {
     return { rowKind: "gate_failure", tone: "danger" };
   }
-  if (input.progress?.kind === "meta_review_handoff") {
+  if (input.progress?.kind === "meta_review_handoff" || extractMetaReviewHandoffAttempt(input.entry) !== null) {
     return { rowKind: "handoff", tone: "info" };
   }
   if (
@@ -427,7 +433,7 @@ function calculateCleanRunCounts(
 
 export function attachTimelineDisplay(
   entries: TimelineEntryWithoutDisplay[]
-): UiTimelineEntry[] {
+): Array<TimelineEntryWithoutDisplay & Pick<UiTimelineEntry, "display">> {
   const markerIndexes = collectLatestMarkerIndexes(entries);
   const cleanRunCounts = calculateCleanRunCounts(entries, markerIndexes);
 
