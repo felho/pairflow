@@ -1,38 +1,21 @@
-import {
-  type LoadedStateSnapshot,
-  type WriteStateSnapshotPort
-} from "../../ports/stateSnapshots.js";
-import type {
-  AgentName,
-  BubbleStateSnapshot,
-  MetaReviewRecommendation
-} from "../../../../types/bubble.js";
-import type { MetaReviewResult } from "../../metaReview/metaReviewTypes.js";
-import type { FindingsParityMetadata } from "../../../../types/protocol.js";
-import type {
-  AppendProtocolEnvelopePort,
-  AppendProtocolEnvelopeResult
-} from "../../ports/transcript.js";
-import {
-  MetaReviewGateError,
-  type MetaReviewGateRoute,
-  type MetaReviewGateThresholdMetadata
-} from "../metaReviewGateRouteContract.js";
+import type { LoadedStateSnapshot } from "../../ports/stateSnapshots.js";
+import type { AppendProtocolEnvelopeResult } from "../../ports/transcript.js";
+import { MetaReviewGateError } from "../metaReviewGateRouteContract.js";
 import type { MetaReviewGateResult } from "../metaReviewGateResultContract.js";
 import { transitionToGateState } from "./metaReviewGateStateHelpers.js";
 import {
   resolveDefaultStickyHumanGateForRoute
 } from "../../../domain/metaReviewGate/humanGateRouting.js";
 import {
-  appendHumanGateApprovalRequest,
   resolveHumanGateRecommendation,
   resolveRollbackAfterGateAppendFailure
 } from "./metaReviewGateHumanGatePersistenceHelpers.js";
 import {
-  resolveAdvisoryFindingsFromReportJson,
-  type MetaReviewGateAdvisoryFinding
+  resolveAdvisoryFindingsFromReportJson
 } from "../../../domain/metaReviewGate/findingsSplit.js";
 import { isNamedError } from "../../errors/namedError.js";
+import type { PersistHumanGateRouteInput } from "./metaReviewGateHumanGatePersistenceContract.js";
+import { appendHumanGateRequestForRoute } from "./metaReviewGateHumanGateRouteAppend.js";
 
 export {
   metaReviewGateRollbackAppliedReasonCode,
@@ -41,33 +24,7 @@ export {
   metaReviewGateRollbackTransitionInvalidReasonCode
 } from "./metaReviewGateHumanGatePersistenceHelpers.js";
 
-export interface PersistHumanGateRouteInput {
-  appendEnvelope: AppendProtocolEnvelopePort;
-  writeState: WriteStateSnapshotPort;
-  statePath: string;
-  transcriptPath: string;
-  inboxPath: string;
-  lockPath: string;
-  now: Date;
-  nowIso: string;
-  bubbleId: string;
-  summary: string;
-  refs: string[];
-  metaReviewerAgent: AgentName;
-  loaded: LoadedStateSnapshot;
-  expectedState: BubbleStateSnapshot["state"];
-  route: MetaReviewGateRoute;
-  metaReviewRun?: MetaReviewResult;
-  parityMetadata?: FindingsParityMetadata | null;
-  thresholdMetadata?: MetaReviewGateThresholdMetadata;
-  gateReasonCode?: string;
-  findings?: MetaReviewGateAdvisoryFinding[];
-  fallbackRecommendation?: MetaReviewRecommendation;
-  targetState?: "READY_FOR_HUMAN_APPROVAL" | "RUNNING";
-  stickyHumanGate?: boolean;
-  consecutiveCleanRuns?: number;
-  rollbackStateOnAppendFailure?: BubbleStateSnapshot;
-}
+export type { PersistHumanGateRouteInput } from "./metaReviewGateHumanGatePersistenceContract.js";
 
 function assertPersistHumanGateRouteInput(
   input: PersistHumanGateRouteInput
@@ -96,62 +53,6 @@ function assertPersistHumanGateRouteInput(
       }
     );
   }
-}
-
-async function appendHumanGateRequestForRoute(input: {
-  persistInput: PersistHumanGateRouteInput;
-  recommendation: MetaReviewRecommendation | undefined;
-  advisoryFindings: MetaReviewGateAdvisoryFinding[] | undefined;
-}): Promise<AppendProtocolEnvelopeResult> {
-  const commonInput = {
-    appendEnvelope: input.persistInput.appendEnvelope,
-    transcriptPath: input.persistInput.transcriptPath,
-    inboxPath: input.persistInput.inboxPath,
-    lockPath: input.persistInput.lockPath,
-    now: input.persistInput.now,
-    bubbleId: input.persistInput.bubbleId,
-    round: input.persistInput.loaded.state.round,
-    summary: input.persistInput.summary,
-    refs: input.persistInput.refs,
-    metaReviewerAgent: input.persistInput.metaReviewerAgent,
-    ...(input.persistInput.parityMetadata !== undefined
-      ? { parityMetadata: input.persistInput.parityMetadata }
-      : {}),
-    ...(input.persistInput.gateReasonCode !== undefined
-      ? { gateReasonCode: input.persistInput.gateReasonCode }
-      : {}),
-    ...(input.persistInput.consecutiveCleanRuns !== undefined
-      ? { consecutiveCleanRuns: input.persistInput.consecutiveCleanRuns }
-      : {}),
-    ...(input.advisoryFindings !== undefined ? { findings: input.advisoryFindings } : {})
-  };
-
-  if (
-    input.persistInput.route === "human_gate_threshold_not_met"
-    || input.persistInput.route === "human_gate_threshold_unresolved"
-  ) {
-    if (input.recommendation !== "rework" || input.persistInput.thresholdMetadata === undefined) {
-      throw new MetaReviewGateError(
-        "META_REVIEW_GATE_TRANSITION_INVALID",
-        `META_REVIEW_GATE_TRANSITION_INVALID: threshold human-gate route ${input.persistInput.route} requires recommendation=rework and threshold metadata.`,
-        {
-          stageReasonCode: "META_REVIEW_GATE_TRANSITION_INVALID"
-        }
-      );
-    }
-    return appendHumanGateApprovalRequest({
-      ...commonInput,
-      route: input.persistInput.route,
-      recommendation: input.recommendation,
-      thresholdMetadata: input.persistInput.thresholdMetadata
-    });
-  }
-
-  return appendHumanGateApprovalRequest({
-    ...commonInput,
-    route: input.persistInput.route,
-    ...(input.recommendation !== undefined ? { recommendation: input.recommendation } : {})
-  });
 }
 
 export async function persistHumanGateRoute(
