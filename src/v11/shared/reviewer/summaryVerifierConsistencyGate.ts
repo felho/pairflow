@@ -1,8 +1,9 @@
 import { join } from "node:path";
-import { writeSummaryVerifierConsistencyGateArtifact as writeSummaryVerifierConsistencyGateArtifactDefault } from "../../defaults/reviewer/summaryVerifierConsistencyGateDefaults.js";
 
-import { isReviewArtifactType, type ReviewArtifactType } from "../../../types/bubble.js";
-import { type SummaryVerifierConsistencyGateArtifact } from "./summaryVerifierConsistencyGateArtifact.js";
+import {
+  isReviewArtifactType,
+  type ReviewArtifactType
+} from "../../../types/bubble.js";
 export { summaryVerifierConsistencyGateSchemaVersion } from "./summaryVerifierConsistencyGateArtifact.js";
 
 export type SummaryVerifierGateDecision = "allow" | "block" | "not_applicable";
@@ -203,11 +204,4 @@ export function evaluateSummaryVerifierConsistencyGate(
 
 export function resolveSummaryVerifierConsistencyGateArtifactPath(artifactsDir: string): string {
   return join(artifactsDir, "summary-verifier-consistency-gate.json");
-}
-
-export async function writeSummaryVerifierConsistencyGateArtifact(
-  artifactPath: string,
-  artifact: SummaryVerifierConsistencyGateArtifact
-): Promise<void> {
-  return writeSummaryVerifierConsistencyGateArtifactDefault(artifactPath, artifact);
 }

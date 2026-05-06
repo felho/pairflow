@@ -11,9 +11,11 @@ import type {
 import type {
   evaluateSummaryVerifierConsistencyGate,
   resolveSummaryVerifierConsistencyGateArtifactPath,
-  writeSummaryVerifierConsistencyGateArtifact,
   SummaryVerifierConsistencyGateDecisionRecord
 } from "../../../v11/shared/reviewer/summaryVerifierConsistencyGate.js";
+import type {
+  WriteSummaryVerifierConsistencyGateArtifactPort
+} from "../../../v11/shared/ports/summaryVerifierGateArtifacts.js";
 import type { resolveReviewerTestEvidenceArtifactPath } from "../../../v11/shared/reviewer/testEvidence.js";
 import type {
   ResolveReviewerTestExecutionDirectivePort
@@ -46,7 +48,8 @@ export interface PrepareConvergedValidationDependencies {
   evaluateSummaryVerifierConsistencyGate?: typeof evaluateSummaryVerifierConsistencyGate;
   resolveSummaryVerifierConsistencyGateArtifactPath?:
     typeof resolveSummaryVerifierConsistencyGateArtifactPath;
-  writeSummaryVerifierConsistencyGateArtifact?: typeof writeSummaryVerifierConsistencyGateArtifact;
+  writeSummaryVerifierConsistencyGateArtifact?:
+    WriteSummaryVerifierConsistencyGateArtifactPort;
 }
 
 export interface PrepareConvergedValidationAllowedResult {

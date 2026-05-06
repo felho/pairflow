@@ -4,9 +4,11 @@ import {
 } from "../../../v11/shared/reviewer/summaryVerifierConsistencyGate.js";
 import type {
   evaluateSummaryVerifierConsistencyGate,
-  resolveSummaryVerifierConsistencyGateArtifactPath,
-  writeSummaryVerifierConsistencyGateArtifact
+  resolveSummaryVerifierConsistencyGateArtifactPath
 } from "../../../v11/shared/reviewer/summaryVerifierConsistencyGate.js";
+import type {
+  WriteSummaryVerifierConsistencyGateArtifactPort
+} from "../../../v11/shared/ports/summaryVerifierGateArtifacts.js";
 import type {
   ReadReviewVerificationArtifactStatusPort
 } from "../../../v11/shared/ports/reviewVerificationArtifacts.js";
@@ -85,7 +87,7 @@ export async function evaluateAndPersistSummaryVerifierDecision(input: {
   resolveTestEvidenceArtifactPath: typeof resolveReviewerTestEvidenceArtifactPath;
   evaluateSummaryVerifierGate: typeof evaluateSummaryVerifierConsistencyGate;
   resolveSummaryVerifierArtifactPath: typeof resolveSummaryVerifierConsistencyGateArtifactPath;
-  writeSummaryVerifierArtifact: typeof writeSummaryVerifierConsistencyGateArtifact;
+  writeSummaryVerifierArtifact: WriteSummaryVerifierConsistencyGateArtifactPort;
 }): Promise<SummaryVerifierConsistencyGateDecisionRecord> {
   const reviewerTestDirective = await input.resolveReviewerDirective({
     artifactPath:

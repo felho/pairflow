@@ -7,9 +7,11 @@ import type {
 } from "../../../v11/shared/ports/reviewVerificationArtifacts.js";
 import {
   evaluateSummaryVerifierConsistencyGate,
-  resolveSummaryVerifierConsistencyGateArtifactPath,
-  writeSummaryVerifierConsistencyGateArtifact
+  resolveSummaryVerifierConsistencyGateArtifactPath
 } from "../../../v11/shared/reviewer/summaryVerifierConsistencyGate.js";
+import {
+  writeSummaryVerifierConsistencyGateArtifact
+} from "./summaryVerifierConsistencyGateArtifactDefaults.js";
 import {
   resolveReviewerTestExecutionDirective as defaultResolveReviewerTestExecutionDirective
 } from "../reviewer/reviewerTestEvidenceDefaults.js";
