@@ -1,7 +1,6 @@
 import type { ResolvedBubbleById } from "../ports/bubbleLookup.js";
 import { resolveBubbleById } from "../bubbleLookup/bubbleLookupDefaults.js";
 import { readStateSnapshot } from "../state/stateStoreDefaults.js";
-import { resolveBubbleFromWorkspaceCwd } from "../../defaults/workspace/workspaceResolutionDefaults.js";
 import {
   buildActorEmitContextSnapshot,
   type ActorEmitContextErrorReasonCode,
@@ -23,6 +22,39 @@ export {
   assertActorEmitContextMatches,
   assertActorEmitContextSnapshotIntegrity
 } from "./actorEmitContextAssertions.js";
+
+type ResolveBubbleFromWorkspaceCwd = (cwd: string) => Promise<{
+  bubbleId: string;
+  repoPath: string;
+}>;
+
+interface WorkspaceResolutionDefaultsModule {
+  resolveBubbleFromWorkspaceCwd: ResolveBubbleFromWorkspaceCwd;
+}
+
+let workspaceResolutionDefaultsModulePromise:
+  | Promise<WorkspaceResolutionDefaultsModule>
+  | undefined;
+
+function getWorkspaceResolutionDefaultsModulePath(): string {
+  return "../../defaults/workspace/workspaceResolutionDefaults.js";
+}
+
+async function loadWorkspaceResolutionDefaultsModule():
+  Promise<WorkspaceResolutionDefaultsModule> {
+  workspaceResolutionDefaultsModulePromise ??= import(
+    getWorkspaceResolutionDefaultsModulePath()
+  ) as Promise<WorkspaceResolutionDefaultsModule>;
+  return workspaceResolutionDefaultsModulePromise;
+}
+
+const resolveBubbleFromWorkspaceCwd:
+  ResolveBubbleFromWorkspaceCwd = async (...args) => {
+    const {
+      resolveBubbleFromWorkspaceCwd: resolveBubbleFromWorkspaceCwdDefault
+    } = await loadWorkspaceResolutionDefaultsModule();
+    return resolveBubbleFromWorkspaceCwdDefault(...args);
+  };
 
 async function loadActorEmitContextFromResolvedBubble(
   resolved: ResolvedBubbleById,
