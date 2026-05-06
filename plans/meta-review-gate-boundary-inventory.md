@@ -32,10 +32,9 @@ Completed in the bubble:
 - `domain/metaReviewGate/**` no longer imports back from
   `shared/metaReviewGate/**`; route/error language is owned in domain and
   re-exported by the shared public contract for compatibility.
-- `metaReviewGateTypes.ts` has been narrowed to result/compatibility exports;
-  runtime capability contracts now live in
-  `metaReviewGateRuntimeCapabilities.ts`, and tmux runner types live in
-  `metaReviewGateTmuxCapabilities.ts`.
+- `metaReviewGateTypes.ts` is now a compatibility aggregator only; route/error,
+  result, runtime capability, and tmux runner contracts each have narrower
+  public contract files.
 
 Known aggregate-index exception:
 
@@ -102,14 +101,11 @@ Current source-facing public surface:
 - `metaReviewGateCommandContract.ts`: stable command/result contracts.
 - `metaReviewGateCurrentRunApi.ts`: narrow current-run finalization entrypoint
   kept outside the aggregate index to avoid the known cycle.
-- `metaReviewGateTypes.ts`: compatibility public language while consumers move
-  to narrower contract files.
-
-Potential split from `metaReviewGateTypes.ts`:
-
-- Keep route/result/error DTOs public.
-- Move runtime dependency/capability types closer to application/defaults or
-  command-specific contracts if they are not shared language.
+- `metaReviewGateRouteContract.ts`: route/error/threshold-status language.
+- `metaReviewGateResultContract.ts`: gate result DTO.
+- `metaReviewGateRuntimeCapabilities.ts`: runtime dependency/capability
+  contracts.
+- `metaReviewGateTypes.ts`: compatibility aggregator for older imports.
 
 Avoid making these directly public unless transitional:
 
@@ -126,7 +122,9 @@ Avoid making these directly public unless transitional:
 | `metaReviewGateCommandContract.ts` | 15 | Re-exports command input/result/dependency contract types. | Keep public, but verify it does not re-export internal-only dependency bags. |
 | `metaReviewGateCommandApi.ts` | 21 | Public command API re-export surface, including error conversion. | Keep public entrypoint. Consider routing external consumers through `index.ts`. |
 | `metaReviewGateCommandRuntime.ts` | 18 | Runtime API exports for apply/error helpers. | Likely public or public-adjacent; verify whether runtime naming leaks implementation. |
-| `metaReviewGateTypes.ts` | 47 | Result type plus compatibility re-exports for route/error/runtime contract language. | Keep public while consumers migrate to narrower contract files. |
+| `metaReviewGateRouteContract.ts` | 11 | Route/error/threshold-status public language re-exported from domain. | Public contract; prefer this over `metaReviewGateTypes.ts` for new imports. |
+| `metaReviewGateResultContract.ts` | 15 | Gate result DTO. | Public contract; prefer this over `metaReviewGateTypes.ts` for new imports. |
+| `metaReviewGateTypes.ts` | 31 | Compatibility aggregator for route/result/runtime public language. | Keep temporarily for external compatibility; no source imports currently depend on it directly. |
 | `metaReviewGateRuntimeCapabilities.ts` | 172 | Notify, pane-binding, apply dependency, and runtime capability contracts. | Public contract split from the broad type file; later review whether defaults/application should own more of it. |
 | `metaReviewGateTmuxCapabilities.ts` | 15 | Tmux runner result/options function type. | Public type because runtime capability contracts expose the runner shape; internal path now re-exports for compatibility only. |
 
@@ -215,9 +213,8 @@ the final owner should not be domain policy.
    - `metaReviewGateAutoRework.ts`
    - `approvalRequestEnvelope.ts`
    - `metaReviewApproveValidationGate.ts`
-6. Treat `metaReviewGateTypes.ts` as an early split candidate. Its public route
-   language is valid shared contract, but runtime capability/dependency types
-   may belong closer to application/defaults.
+6. Keep `metaReviewGateTypes.ts` as a compatibility aggregator only; new source
+   imports should prefer the narrower route/result/runtime contract files.
 
 ## Open Questions
 
@@ -229,7 +226,8 @@ the final owner should not be domain policy.
    narrower infrastructure port?
 3. Is `finalizeCurrentRunMetaReviewGate` a public API during migration, or
    should callers be moved immediately to a higher-level command API?
-4. Should `metaReviewGateTypes.ts` now split further into route/result language
-   versus runtime capability compatibility exports?
+4. Should `metaReviewGateTypes.ts` remain indefinitely as compatibility public
+   surface, or should a later major cleanup remove it once external callers have
+   migrated to narrower contract files?
 5. Should the first fitness rule hard-fail only `/internal/` import violations,
    while a separate report-only radar finds large unprotected module candidates?
