@@ -25,7 +25,7 @@ import { statusCommandDependencyDefaults } from "../../shared/status/statusComma
 import {
   appendProtocolEnvelope,
   readTranscriptEnvelopes
-} from "../../shared/transcript/transcriptDependencyDefaults.js";
+} from "../transcript/transcriptDependencyDefaults.js";
 import { readStateSnapshot, writeStateSnapshot } from "../state/stateStoreDependencyDefaults.js";
 import { resolveBubbleFromWorkspaceCwd } from "../workspace/workspaceResolutionDependencyDefaults.js";
 

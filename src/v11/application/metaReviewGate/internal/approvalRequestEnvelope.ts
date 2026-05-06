@@ -10,7 +10,7 @@ import {
 import {
   appendProtocolEnvelope,
   type AppendProtocolEnvelopeResult
-} from "../../../shared/transcript/transcriptDependencyDefaults.js";
+} from "../../transcript/transcriptDependencyDefaults.js";
 import {
   readLatestSameRoundReviewerSnapshotFromTranscript,
   type LatestSameRoundReviewerSnapshot

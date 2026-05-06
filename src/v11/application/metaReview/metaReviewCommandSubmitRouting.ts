@@ -2,7 +2,7 @@ import type { ResolveBubbleByIdPort } from "../../shared/ports/bubbleLookup.js";
 import {
   executeImplementerHandoffDelivery
 } from "../../shared/delivery/implementerHandoffDelivery.js";
-import { appendProtocolEnvelope } from "../../shared/transcript/transcriptDependencyDefaults.js";
+import { appendProtocolEnvelope } from "../transcript/transcriptDependencyDefaults.js";
 import { MetaReviewError } from "../../shared/metaReview/metaReviewError.js";
 import {
   toMetaReviewError

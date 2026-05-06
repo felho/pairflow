@@ -1,4 +1,4 @@
-import { appendProtocolEnvelope } from "../../shared/transcript/transcriptDependencyDefaults.js";
+import { appendProtocolEnvelope } from "../transcript/transcriptDependencyDefaults.js";
 import { writeStateSnapshot } from "../state/stateStoreDependencyDefaults.js";
 import type { EmitHumanReplyDependencies } from "./replyCommandContract.js";
 import { startCommandContextDefaults } from "../start/startCommandDependencyDefaults.js";

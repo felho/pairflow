@@ -4,7 +4,7 @@ import {
 } from "../pass/reviewerDeliveryDefaults.js";
 import {
   appendProtocolEnvelope
-} from "../../shared/transcript/transcriptDependencyDefaults.js";
+} from "../transcript/transcriptDependencyDefaults.js";
 import {
   readStateSnapshot,
   writeStateSnapshot
