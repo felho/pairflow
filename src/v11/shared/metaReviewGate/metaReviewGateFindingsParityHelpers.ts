@@ -14,8 +14,8 @@ export {
   metaReviewFindingsRunLinkMissingReasonCode,
   resolveReworkFindingsParityInput,
   type ReworkFindingsParityInput
-} from "./internal/metaReviewGateFindingsParityInput.js";
-export { validateFindingsArtifactParity } from "./internal/metaReviewGateFindingsArtifactParity.js";
+} from "./metaReviewGateFindingsParityInput.js";
+export { validateFindingsArtifactParity } from "./metaReviewGateFindingsArtifactParity.js";
 
 export function deriveFindingsOpenSplit(
   findings: unknown

@@ -6,10 +6,10 @@ export {
   metaReviewFindingsCountMismatchReasonCode,
   metaReviewFindingsParityGuardReasonCode,
   metaReviewFindingsRunLinkMissingReasonCode
-} from "../metaReviewGateFindingsParityApi.js";
+} from "./metaReviewGateFindingsParityApi.js";
 export {
   resolveReworkFindingsParityInput
-} from "../metaReviewGateFindingsParityApi.js";
+} from "./metaReviewGateFindingsParityApi.js";
 export type {
   ReworkFindingsParityInput
-} from "../metaReviewGateFindingsParityApi.js";
+} from "./metaReviewGateFindingsParityApi.js";
