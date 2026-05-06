@@ -32,8 +32,10 @@ import {
 import { shellQuote } from "../../../shared/foundation/shellQuote.js";
 import {
   attachTimelineDisplay,
+  type AttachTimelineDisplayOptions,
   type TimelineEntryWithoutDisplay
 } from "./timelineDisplayPresenter.js";
+import { normalizeBubbleReviewPolicy } from "../../../shared/reviewPolicy/reviewPolicyRuntime.js";
 
 export interface ReadBubbleTimelineInput {
   bubbleId: string;
@@ -87,7 +89,10 @@ class RemoteTimelineReadError extends Error {
   }
 }
 
-export function presentTimeline(envelopes: ProtocolEnvelope[]): UiTimelineEntry[] {
+export function presentTimeline(
+  envelopes: ProtocolEnvelope[],
+  options: AttachTimelineDisplayOptions = {}
+): UiTimelineEntry[] {
   return attachTimelineDisplay(envelopes.map((envelope) => ({
     id: envelope.id,
     ts: envelope.ts,
@@ -97,7 +102,7 @@ export function presentTimeline(envelopes: ProtocolEnvelope[]): UiTimelineEntry[
     recipient: envelope.recipient,
     payload: envelope.payload,
     refs: envelope.refs
-  })));
+  })), options);
 }
 
 function isFinding(value: unknown): value is Finding {
@@ -214,7 +219,8 @@ function shouldFallbackToLenientTimeline(error: unknown): boolean {
 }
 
 async function readTimelineLenientFromTranscriptPath(
-  transcriptPath: string
+  transcriptPath: string,
+  options: AttachTimelineDisplayOptions = {}
 ): Promise<UiTimelineEntry[]> {
   const raw = await readFile(transcriptPath, "utf8").catch((error: NodeJS.ErrnoException) => {
     if (error.code === "ENOENT") {
@@ -239,11 +245,12 @@ async function readTimelineLenientFromTranscriptPath(
     }
   }
 
-  return attachTimelineDisplay(entries);
+  return attachTimelineDisplay(entries, options);
 }
 
 export function readBubbleTimelineFromTranscriptText(
-  raw: string
+  raw: string,
+  options: AttachTimelineDisplayOptions = {}
 ): UiTimelineEntry[] {
   const entries: TimelineEntryWithoutDisplay[] = [];
   for (const line of raw.split(/\r?\n/u)) {
@@ -261,23 +268,24 @@ export function readBubbleTimelineFromTranscriptText(
     }
   }
 
-  return attachTimelineDisplay(entries);
+  return attachTimelineDisplay(entries, options);
 }
 
 export async function readBubbleTimelineFromTranscriptPath(
-  transcriptPath: string
+  transcriptPath: string,
+  options: AttachTimelineDisplayOptions = {}
 ): Promise<UiTimelineEntry[]> {
   try {
     const envelopes = await readTranscriptEnvelopes(transcriptPath, {
       allowMissing: true,
       toleratePartialFinalLine: true
     });
-    return presentTimeline(envelopes);
+    return presentTimeline(envelopes, options);
   } catch (error) {
     if (!shouldFallbackToLenientTimeline(error)) {
       throw error;
     }
-    return readTimelineLenientFromTranscriptPath(transcriptPath);
+    return readTimelineLenientFromTranscriptPath(transcriptPath, options);
   }
 }
 
@@ -397,6 +405,8 @@ export async function readBubbleTimeline(
     ...(input.repoPath !== undefined ? { repoPath: input.repoPath } : {}),
     ...(input.cwd !== undefined ? { cwd: input.cwd } : {})
   });
+  const cleanRunsRequired = normalizeBubbleReviewPolicy(resolved.bubbleConfig)
+    .meta_review_consecutive_clean_runs_required;
 
   const remotePointer = await readRemotePointerFn(resolved.bubblePaths.remotePointerPath);
   if (
@@ -411,8 +421,10 @@ export async function readBubbleTimeline(
       resolveRemoteBubbleStatusTargetFn,
       runCommand
     });
-    return readBubbleTimelineFromTranscriptText(raw);
+    return readBubbleTimelineFromTranscriptText(raw, { cleanRunsRequired });
   }
 
-  return readBubbleTimelineFromTranscriptPath(resolved.bubblePaths.transcriptPath);
+  return readBubbleTimelineFromTranscriptPath(resolved.bubblePaths.transcriptPath, {
+    cleanRunsRequired
+  });
 }

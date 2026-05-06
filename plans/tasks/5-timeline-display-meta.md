@@ -5,7 +5,7 @@ task_family_id: timeline-display-meta
 sequence_key: "5"
 task_id: 5-timeline-display-meta
 title: "Timeline Display Meta"
-status: approved
+status: implementable
 phase: phase3
 target_files:
   - ui/src/components/expanded/BubbleTimeline.tsx
