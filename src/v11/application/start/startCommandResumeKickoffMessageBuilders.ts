@@ -13,6 +13,7 @@ import {
   buildCanonicalActorEmitLookupGuidance,
   buildImplementerEvidenceHandoffGuidance
 } from "../actorProtocol/roleDescriptorRegistry.js";
+import { buildDocumentBubbleSourceEditGuard } from "../../shared/document/documentBubbleSourceEditGuard.js";
 
 export function formatResumeStateValue(value: string | number | null): string {
   return value === null ? "none" : String(value);
@@ -86,6 +87,7 @@ export function buildResumeImplementerScopeInstruction(
   if (reviewArtifactType === "document") {
     return [
       "Document refinement mode (`review_artifact_type=document`): continue only task/spec/progress/docs refinement.",
+      buildDocumentBubbleSourceEditGuard(),
       "Do not implement product/runtime/source-code changes in this bubble.",
       "If the remaining work requires code changes, stop and emit a blocker or route-back/replan request instead of editing source."
     ].join(" ");

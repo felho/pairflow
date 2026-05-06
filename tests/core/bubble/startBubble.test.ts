@@ -2848,6 +2848,10 @@ describe("startBubble", () => {
     expect(implementerCommand).toContain(
       "runtime checks are not required in this round"
     );
+    expect(implementerCommand).toContain("Document bubble source-code guard:");
+    expect(implementerCommand).toContain(
+      "`target_files`, `target_write_files`, L2 implementation sketches, acceptance checks, or reviewer code findings inside the task artifact are planning context only in document scope; they do not authorize code edits."
+    );
     expect(implementerCommand).toContain(
       "Primary artifact rule (docs-only): when the task references an existing source document/task file, refine that file directly (in-place) as the main output."
     );
@@ -2868,6 +2872,9 @@ describe("startBubble", () => {
     );
     expect(implementerKickoffMessage).toContain(
       "runtime checks are not required in this round"
+    );
+    expect(implementerKickoffMessage).toContain(
+      "Document bubble source-code guard:"
     );
     expect(reviewerCommand).toContain("document/task artifacts");
     expect(reviewerCommand).toContain("Do not force `feature-dev:code-reviewer`");
@@ -4549,6 +4556,12 @@ describe("startBubble", () => {
             "runtime checks are not required in this round"
           );
           expect(input.implementerCommand).toContain(
+            "Document bubble source-code guard:"
+          );
+          expect(input.implementerCommand).toContain(
+            "`target_files`, `target_write_files`, L2 implementation sketches, acceptance checks, or reviewer code findings inside the task artifact are planning context only in document scope; they do not authorize code edits."
+          );
+          expect(input.implementerCommand).toContain(
             "Primary artifact rule (docs-only): when the task references an existing source document/task file, refine that file directly (in-place) as the main output."
           );
           expect(input.implementerCommand).toContain(
@@ -4565,6 +4578,9 @@ describe("startBubble", () => {
           );
           expect(input.implementerKickoffMessage).toContain(
             "runtime checks are not required in this round"
+          );
+          expect(input.implementerKickoffMessage).toContain(
+            "Document bubble source-code guard:"
           );
           expect(input.implementerCommand).not.toContain(
             "Missing expected evidence logs should be treated as incomplete validation packaging."

@@ -30,6 +30,7 @@ import {
   formatReviewerFocusBridgeBlock,
   formatReviewerBriefPrompt,
 } from "../../shared/reviewer/reviewerBrief.js";
+import { buildDocumentBubbleSourceEditGuard } from "../../shared/document/documentBubbleSourceEditGuard.js";
 import {
   getResumePromptConcernsForRole,
   getStartupPromptConcernsForRole
@@ -130,6 +131,7 @@ export function buildImplementerEvidenceHandoffGuidance(
     return [
       validationGuidance,
       "This bubble is docs-only (`review_artifact_type=document`), so runtime checks are not required in this round.",
+      buildDocumentBubbleSourceEditGuard(),
       "Primary artifact rule (docs-only): when the task references an existing source document/task file, refine that file directly (in-place) as the main output.",
       "Do not replace primary artifact refinement with a new standalone review/synthesis document unless the task explicitly requests creating a new file path.",
       "Docs-only scope: choose one mode and keep it consistent in the same PASS.",

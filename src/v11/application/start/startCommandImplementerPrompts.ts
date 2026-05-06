@@ -3,6 +3,7 @@ import {
   buildImplementerEvidenceHandoffGuidance as buildImplementerEvidenceHandoffGuidanceFromRegistry,
   buildRolePromptConcernLines
 } from "../actorProtocol/roleDescriptorRegistry.js";
+import { buildDocumentBubbleSourceEditGuard } from "../../shared/document/documentBubbleSourceEditGuard.js";
 import { buildPairflowCommandGuidance } from "./startCommandPromptRuntime.js";
 import type {
   BubbleCommandsConfig,
@@ -61,6 +62,7 @@ export function buildImplementerKickoffScopeInstruction(
   if (reviewArtifactType === "document") {
     return [
       "Document refinement mode (`review_artifact_type=document`): refine only the task/spec/progress/docs artifacts required by the task.",
+      buildDocumentBubbleSourceEditGuard(),
       "Do not implement product/runtime/source-code changes in this bubble, even if the task describes an eventual implementation.",
       "If the requested outcome cannot be completed without product/source edits, stop and emit a blocker or route-back/replan request instead of making those code changes."
     ].join(" ");

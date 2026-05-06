@@ -144,10 +144,14 @@ describe("startCommandImplementerPrompts", () => {
     expect(startup).toContain(
       "Do not implement product/runtime/source-code changes"
     );
+    expect(startup).toContain("Document bubble source-code guard:");
+    expect(startup).toContain("`target_files`, `target_write_files`");
     expect(resume).toContain("Continue document/task/spec refinement now");
     expect(resume).toContain(
-      "do not edit product/runtime source code in document scope"
+      "Do not edit product/runtime source code in document scope"
     );
+    expect(resume).toContain("Document bubble source-code guard:");
+    expect(resume).toContain("they do not authorize code edits");
     expect(startup).not.toContain(
       "Implement in this launch workspace and run relevant validation before handoff."
     );

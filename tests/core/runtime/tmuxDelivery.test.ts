@@ -2653,6 +2653,15 @@ describe("emitDeliveryNotificationAck", () => {
       })
     );
     expect(passMessage).toContain(
+      "Reviewer feedback received for a document bubble. Apply document-scope fixes only"
+    );
+    expect(passMessage).toContain("Document bubble source-code guard:");
+    expect(passMessage).toContain(
+      "do not edit product/runtime/source files, tests, UI components, presenter code, contracts, or build/runtime config in `review_artifact_type=document`."
+    );
+    expect(passMessage).toContain("`target_files`, `target_write_files`");
+    expect(passMessage).not.toContain("Implement fixes");
+    expect(passMessage).toContain(
       "Docs-only scope: choose one mode and keep it consistent in the same PASS."
     );
     expect(passMessage).toContain(
@@ -2682,6 +2691,11 @@ describe("emitDeliveryNotificationAck", () => {
       })
     );
     expect(humanReplyMessage).toContain(
+      "Human response received for a document bubble. Continue document/task/spec refinement"
+    );
+    expect(humanReplyMessage).toContain("Document bubble source-code guard:");
+    expect(humanReplyMessage).not.toContain("Continue implementation");
+    expect(humanReplyMessage).toContain(
       "Docs-only scope: keep summary and refs consistent; skip-claim means no `.pairflow/evidence/*.log` refs in that PASS."
     );
     expect(humanReplyMessage).toContain(
@@ -2703,6 +2717,11 @@ describe("emitDeliveryNotificationAck", () => {
       })
     );
     expect(reworkMessage).toContain(
+      "Continue document/task/spec refinement now and address only document-scope requested changes"
+    );
+    expect(reworkMessage).toContain("Document bubble source-code guard:");
+    expect(reworkMessage).not.toContain("Continue implementation");
+    expect(reworkMessage).toContain(
       "Docs-only scope: keep summary and refs consistent; skip-claim means no `.pairflow/evidence/*.log` refs in that PASS."
     );
     expect(reworkMessage).toContain(
@@ -2713,6 +2732,26 @@ describe("emitDeliveryNotificationAck", () => {
     expect(reworkMessage).not.toContain(
       "Include available `.pairflow/evidence/*.log` refs on PASS."
     );
+
+    const taskMessage = await deliverToImplementer(
+      createEnvelope({
+        id: "msg_20260222_102",
+        sender: "orchestrator",
+        recipient: "codex",
+        type: "TASK",
+        payload: {
+          summary: "Task artifact includes target_write_files and L2 implementation sketch."
+        }
+      })
+    );
+    expect(taskMessage).toContain(
+      "Document refinement task received. Refine only task/spec/progress/docs artifacts"
+    );
+    expect(taskMessage).toContain("Document bubble source-code guard:");
+    expect(taskMessage).toContain("`target_files`, `target_write_files`");
+    expect(taskMessage).toContain("they do not authorize code edits");
+    expect(taskMessage).not.toContain("Continue protocol from this event.");
+    expect(taskMessage).not.toContain("Implementation task received.");
   });
 
   it("keeps non-document implementer delivery guidance free of docs-only mode text", async () => {
@@ -2776,6 +2815,9 @@ describe("emitDeliveryNotificationAck", () => {
     );
     expect(passToImplementerCall?.[4]).not.toContain(
       "Docs-only scope: choose one mode and keep it consistent in the same PASS."
+    );
+    expect(passToImplementerCall?.[4]).not.toContain(
+      "Document bubble source-code guard:"
     );
     expect(passToImplementerCall?.[4]).not.toContain("Mode A (skip-claim)");
   });

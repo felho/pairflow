@@ -2,12 +2,17 @@ import type {
   BubbleStateSnapshot,
   ReviewArtifactType
 } from "../../../types/bubble.js";
+import { buildDocumentBubbleSourceEditGuard } from "../../shared/document/documentBubbleSourceEditGuard.js";
 
 export function buildImplementerStartActionLine(
   reviewArtifactType: ReviewArtifactType | undefined
 ): string {
   if (reviewArtifactType === "document") {
-    return "Refine document/task/spec artifacts in this launch workspace. Do not implement product/runtime/source-code changes for document-scope bubbles; route back or ask for clarification if code edits are required.";
+    return [
+      "Refine document/task/spec artifacts in this launch workspace.",
+      buildDocumentBubbleSourceEditGuard(),
+      "Do not implement product/runtime/source-code changes for document-scope bubbles; route back or ask for clarification if code edits are required."
+    ].join(" ");
   }
 
   return "Implement in this launch workspace and run relevant validation before handoff.";
@@ -19,9 +24,16 @@ export function resolveImplementerRoleInstruction(input: {
 }): string {
   if (input.reviewArtifactType === "document") {
     if (input.state.state === "RUNNING" && input.state.active_role === "implementer") {
-      return "You are currently active. Continue document/task/spec refinement now; do not edit product/runtime source code in document scope.";
+      return [
+        "You are currently active. Continue document/task/spec refinement now.",
+        buildDocumentBubbleSourceEditGuard(),
+        "Do not edit product/runtime source code in document scope."
+      ].join(" ");
     }
-    return "Continue document/task/spec refinement when you become active; otherwise stand by.";
+    return [
+      "Continue document/task/spec refinement when you become active; otherwise stand by.",
+      buildDocumentBubbleSourceEditGuard()
+    ].join(" ");
   }
 
   if (input.state.state === "RUNNING" && input.state.active_role === "implementer") {

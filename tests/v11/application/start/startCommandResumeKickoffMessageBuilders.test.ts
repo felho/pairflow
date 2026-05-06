@@ -186,6 +186,10 @@ describe("startCommandResumeKickoffMessageBuilders", () => {
     expect(message).toContain(
       "Do not implement product/runtime/source-code changes in this bubble"
     );
+    expect(message).toContain("Document bubble source-code guard:");
+    expect(message).toContain(
+      "`target_files`, `target_write_files`, L2 implementation sketches, acceptance checks, or reviewer code findings inside the task artifact are planning context only in document scope; they do not authorize code edits."
+    );
     expect(message).toContain(
       "emit a blocker or route-back/replan request"
     );
