@@ -27,6 +27,7 @@ import {
   buildApproveValidationReworkMessage,
   isApproveValidationCommandFailure
 } from "../../domain/metaReviewGate/approveValidationRework.js";
+import { resolveThresholdCleanApprovalPolicy } from "../../domain/metaReviewGate/cleanApprovalPolicy.js";
 import { mergeRunResultWithParityResolution } from "../../domain/metaReviewGate/runResultParity.js";
 import { routeCleanMetaReviewRerun } from "./internal/metaReviewGateCurrentRunCleanRerun.js";
 import {
@@ -183,26 +184,20 @@ async function resolveThresholdCleanApproval(input: {
       fallbackReason: string;
     }
 > {
-  if (input.runResultForRouting.recommendation !== "approve") {
-    return {
-      clean: false,
-      parityMetadata: input.parityMetadata,
-      fallbackReason:
-        "META_REVIEW_GATE_CLEAN_RUN_NOT_APPROVE: recommendation is not approve."
-    };
-  }
-
   const normalizedReviewPolicy = normalizeBubbleReviewPolicy(
     input.finalizeInput.resolved.bubbleConfig
   );
-  const parityMetadata = input.parityMetadata;
-  if (
-    parityMetadata?.findings_claimed_open_total === 0 &&
-    parityMetadata.findings_blocking_open_total === 0 &&
-    parityMetadata.findings_advisory_open_total === 0 &&
-    parityMetadata.findings_parity_status !== "guard_failed"
-  ) {
-    return { clean: true, parityMetadata };
+  const initialPolicy = resolveThresholdCleanApprovalPolicy({
+    recommendation: input.runResultForRouting.recommendation,
+    parityMetadata: input.parityMetadata,
+    configuredMinSeverity:
+      normalizedReviewPolicy.meta_review_auto_rework_min_severity,
+    ...(input.thresholdAuthority !== undefined
+      ? { thresholdAuthority: input.thresholdAuthority }
+      : {})
+  });
+  if (initialPolicy.clean || !initialPolicy.thresholdRequired) {
+    return initialPolicy;
   }
 
   const thresholdAuthority =
@@ -213,31 +208,22 @@ async function resolveThresholdCleanApproval(input: {
       artifactsDir: input.finalizeInput.resolved.bubblePaths.artifactsDir,
       readFileFn: input.finalizeInput.readFileFn
     });
-  const thresholdParityMetadata =
-    thresholdAuthority.parityMetadata ?? parityMetadata;
-  if (thresholdAuthority.status !== "resolved") {
+  const policy = resolveThresholdCleanApprovalPolicy({
+    recommendation: input.runResultForRouting.recommendation,
+    parityMetadata: input.parityMetadata,
+    configuredMinSeverity:
+      normalizedReviewPolicy.meta_review_auto_rework_min_severity,
+    thresholdAuthority
+  });
+  if (!policy.clean && policy.thresholdRequired) {
     return {
       clean: false,
-      parityMetadata: thresholdParityMetadata,
+      parityMetadata: policy.parityMetadata,
       fallbackReason:
-        `META_REVIEW_GATE_CLEAN_RUN_THRESHOLD_UNRESOLVED: thresholdStatus=${thresholdAuthority.status}.`
+        "META_REVIEW_GATE_CLEAN_RUN_THRESHOLD_UNRESOLVED: thresholdStatus=missing."
     };
   }
-  if (
-    metaReviewGateThresholdIsMet({
-      highestOpenSeverity: thresholdAuthority.highestOpenSeverity,
-      minSeverity: normalizedReviewPolicy.meta_review_auto_rework_min_severity
-    })
-  ) {
-    return {
-      clean: false,
-      parityMetadata: thresholdParityMetadata,
-      fallbackReason:
-        `META_REVIEW_GATE_CLEAN_RUN_THRESHOLD_MET: highestOpenSeverity=${thresholdAuthority.highestOpenSeverity}; configuredMinSeverity=${normalizedReviewPolicy.meta_review_auto_rework_min_severity}.`
-    };
-  }
-
-  return { clean: true, parityMetadata: thresholdParityMetadata };
+  return policy;
 }
 
 async function routeApproveMetaReviewResult(input: {
