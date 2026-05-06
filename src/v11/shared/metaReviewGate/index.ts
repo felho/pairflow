@@ -24,16 +24,20 @@ export type {
   LatestSameRoundReviewerSnapshot
 } from "./metaReviewGateReviewerSnapshot.js";
 export {
-  metaReviewGateRoutes,
   resolveMetaReviewGateNotifyTmuxCapabilities,
   resolveMetaReviewGatePaneBindingTmuxCapabilities
+} from "./metaReviewGateRuntimeCapabilities.js";
+export {
+  metaReviewGateRoutes
 } from "./metaReviewGateTypes.js";
 export type {
-  MetaReviewGateNotifyTmuxCapabilities,
-  MetaReviewGatePaneBindingTmuxCapabilities,
   MetaReviewGateThresholdMetadata,
   MetaReviewGateThresholdStatus
 } from "./metaReviewGateTypes.js";
+export type {
+  MetaReviewGateNotifyTmuxCapabilities,
+  MetaReviewGatePaneBindingTmuxCapabilities
+} from "./metaReviewGateRuntimeCapabilities.js";
 export type {
   MetaReviewGateTmuxRunner,
   MetaReviewGateTmuxRunOptions,
