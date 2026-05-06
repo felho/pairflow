@@ -1,7 +1,5 @@
-import type { MetaReviewResult } from "../../metaReview/metaReviewTypes.js";
 import type { LoadedStateSnapshot } from "../../ports/stateSnapshots.js";
 import type { BubbleMetaReviewRuntimeDeliveryState } from "../../../../types/bubble.js";
-import type { FindingsParityMetadata } from "../../../../types/protocol.js";
 import { appendMetaReviewKickoffEnvelope, stageMetaReviewRunningState } from "./metaReviewGateApplyHelpers.js";
 import { reconcileObservedGateResult } from "./metaReviewGateApplyObservation.js";
 import { persistRuntimeDeliveryObservation } from "./metaReviewGateApplyPersistence.js";
@@ -10,38 +8,18 @@ import {
   buildCleanRerunRuntimeDelivery,
   withDeactivateTelemetryOnDelivery
 } from "./metaReviewGateCleanRerunDelivery.js";
+import {
+  type CleanRerunDeliveryCapableInput,
+  hasCleanRerunDeliveryCapabilities,
+  type MetaReviewPaneWarningResult,
+  type RouteCleanMetaReviewRerunInput
+} from "./metaReviewGateCleanRerunContract.js";
 import { buildCleanRerunDispatchFailureRollbackState } from "./metaReviewGateCleanRerunFailureState.js";
 import { persistDispatchFailedHumanRoute } from "./metaReviewGateCurrentRunRoutePersistence.js";
 import type { FinalizeCurrentRunMetaReviewGateInput } from "../metaReviewGateCurrentRunTypes.js";
 import { buildGateLockPath } from "./metaReviewGateShared.js";
 import { setMetaReviewConsecutiveCleanRuns } from "../../../domain/metaReviewGate/snapshotState.js";
 import type { MetaReviewGateResult } from "../metaReviewGateResultContract.js";
-
-type MetaReviewPaneWarningResult = Awaited<
-  ReturnType<
-    NonNullable<FinalizeCurrentRunMetaReviewGateInput["resolvePaneWarning"]>
-  >
->;
-
-interface RouteCleanMetaReviewRerunInput {
-  finalizeInput: FinalizeCurrentRunMetaReviewGateInput;
-  runResultForRouting: MetaReviewResult;
-  parityMetadata: FindingsParityMetadata | null;
-  updatedStreak: number;
-}
-
-type CleanRerunDeliveryCapableInput = FinalizeCurrentRunMetaReviewGateInput & {
-  readState: NonNullable<FinalizeCurrentRunMetaReviewGateInput["readState"]>;
-  readTranscript: NonNullable<FinalizeCurrentRunMetaReviewGateInput["readTranscript"]>;
-  setMetaReviewerPane: NonNullable<FinalizeCurrentRunMetaReviewGateInput["setMetaReviewerPane"]>;
-  resolvePaneWarning: NonNullable<FinalizeCurrentRunMetaReviewGateInput["resolvePaneWarning"]>;
-  resolved: FinalizeCurrentRunMetaReviewGateInput["resolved"] & {
-    bubblePaths: FinalizeCurrentRunMetaReviewGateInput["resolved"]["bubblePaths"] & {
-      sessionsPath: string;
-      taskArtifactPath: string;
-    };
-  };
-};
 
 function failCleanRerunClosed(input: {
   routeInput: RouteCleanMetaReviewRerunInput;
@@ -151,19 +129,6 @@ async function appendCleanRerunKickoff(input: {
       loaded: input.metaReviewRunningState
     });
   }
-}
-
-function hasCleanRerunDeliveryCapabilities(
-  input: FinalizeCurrentRunMetaReviewGateInput
-): input is CleanRerunDeliveryCapableInput {
-  return (
-    input.readState !== undefined &&
-    input.readTranscript !== undefined &&
-    input.setMetaReviewerPane !== undefined &&
-    input.resolvePaneWarning !== undefined &&
-    input.resolved.bubblePaths.sessionsPath !== undefined &&
-    input.resolved.bubblePaths.taskArtifactPath !== undefined
-  );
 }
 
 async function resolveCleanRerunPaneBinding(input: {
