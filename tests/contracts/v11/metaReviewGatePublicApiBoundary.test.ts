@@ -29,8 +29,7 @@ const allowedSharedMetaReviewGateImports = new Set([
   "../metaReviewGate/index.js",
   "../metaReviewGate/metaReviewGateFindingsParityApi.js",
   "../metaReviewGate/metaReviewGateReviewerSnapshotApi.js",
-  "../metaReviewGate/metaReviewGateThresholdAuthorityApi.js",
-  "../metaReviewGate/metaReviewGateCurrentRunApi.js"
+  "../metaReviewGate/metaReviewGateThresholdAuthorityApi.js"
 ]);
 
 async function listTypeScriptFiles(root: string): Promise<string[]> {
