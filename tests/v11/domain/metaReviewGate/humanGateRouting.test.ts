@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 
-import { resolveHumanGateRoute } from "../../../../src/v11/shared/metaReviewGate/internal/metaReviewGateStateHelpers.js";
+import {
+  resolveHumanGateRoute
+} from "../../../../src/v11/domain/metaReviewGate/humanGateRouting.js";
 
 describe("resolveHumanGateRoute", () => {
   it.each([
