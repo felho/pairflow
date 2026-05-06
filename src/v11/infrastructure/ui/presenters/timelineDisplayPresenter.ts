@@ -254,7 +254,7 @@ function logicalProgressKey(entry: TimelineEntryWithoutDisplay): string | null {
   }
   const handoffId = metadata?.meta_review_handoff_id;
   if (typeof handoffId === "string") {
-    return `handoff:${handoffId.replace(/:attempt:\d+$/u, "")}`;
+    return `handoff:${handoffId}`;
   }
   const progressSourceId = metadata?.progress_source_id;
   if (typeof progressSourceId === "string" || typeof progressSourceId === "number") {
@@ -293,7 +293,7 @@ function baseProgressForEntry(input: {
   cleanRunsRequired: number | null;
 }): UiTimelineProgress | null {
   const handoffAttempt = extractMetaReviewHandoffAttempt(input.entry);
-  if (handoffAttempt !== null) {
+  if (handoffAttempt !== null && handoffAttempt > 1) {
     return {
       kind: "meta_review_handoff",
       label: `handoff ${handoffAttempt}`,

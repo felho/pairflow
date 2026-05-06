@@ -241,6 +241,7 @@ describe("BubbleTimeline", () => {
     const cleanRow = screen.getByText("Clean reviewer pass.").closest("div.flex.items-start");
     expect(cleanRow).not.toBeNull();
     expect(within(cleanRow as HTMLElement).getByText("clean")).toBeInTheDocument();
+    expect(within(cleanRow as HTMLElement).queryByText("\u2713 clean")).not.toBeInTheDocument();
 
     const rawOnlyRow = screen.getByText("Raw clean is hidden.").closest("div.flex.items-start");
     expect(rawOnlyRow).not.toBeNull();
@@ -399,6 +400,136 @@ describe("BubbleTimeline", () => {
 
     expect(screen.queryByText("Stale handoff must not render.")).not.toBeInTheDocument();
     expect(screen.getByText("clean 1")).toBeInTheDocument();
+  });
+
+  it("does not render the initial meta-review handoff once the later decision is present", () => {
+    render(
+      <BubbleTimeline
+        entries={[
+          entry({
+            id: "env-convergence",
+            type: "CONVERGENCE",
+            round: 2,
+            display: {
+              title: "Convergence.",
+              summaryText: "Convergence.",
+              senderLabel: "codex",
+              role: "system",
+              rowKind: "normal"
+            }
+          }),
+          entry({
+            id: "env-meta-handoff",
+            type: "TASK",
+            round: 2,
+            display: {
+              title: "Meta-review gate opened.",
+              summaryText: "Meta-review gate opened.",
+              senderLabel: "codex",
+              role: "meta_reviewer",
+              rowKind: "handoff",
+              tone: "info"
+            },
+            progress: {
+              kind: "meta_review_handoff",
+              label: "handoff 1",
+              handoffAttempt: 1
+            }
+          }),
+          entry({
+            id: "env-meta-rework",
+            type: "APPROVAL_DECISION",
+            round: 3,
+            display: {
+              title: "Meta-review requested rework.",
+              summaryText: "Meta-review requested rework.",
+              senderLabel: "codex",
+              role: "meta_reviewer",
+              rowKind: "approval",
+              badges: [
+                { kind: "finding", label: "P2", tone: "warning" },
+                { kind: "decision", label: "rework", tone: "danger" }
+              ]
+            }
+          })
+        ]}
+        isLoading={false}
+        error={null}
+        compact={false}
+      />
+    );
+
+    expect(screen.getByText("CONVERGENCE")).toBeInTheDocument();
+    expect(screen.queryByText("Meta-review gate opened.")).not.toBeInTheDocument();
+    expect(screen.getByText("Meta-review requested rework.")).toBeInTheDocument();
+    expect(screen.getByText("P2")).toBeInTheDocument();
+    expect(screen.getByText("rework")).toBeInTheDocument();
+  });
+
+  it("renders the first clean-rerun meta-review handoff after convergence", () => {
+    render(
+      <BubbleTimeline
+        entries={[
+          entry({
+            id: "env-convergence-r4",
+            type: "CONVERGENCE",
+            round: 4,
+            display: {
+              title: "Reviewer converged.",
+              summaryText: "Reviewer converged.",
+              senderLabel: "codex",
+              role: "system",
+              rowKind: "normal"
+            }
+          }),
+          entry({
+            id: "env-meta-handoff-2",
+            type: "TASK",
+            round: 4,
+            display: {
+              title: "Meta-review gate opened again.",
+              summaryText: "Meta-review gate opened again.",
+              senderLabel: "codex",
+              role: "meta_reviewer",
+              rowKind: "handoff",
+              tone: "info"
+            },
+            progress: {
+              kind: "meta_review_handoff",
+              label: "handoff 2",
+              handoffAttempt: 2
+            }
+          }),
+          entry({
+            id: "env-meta-handoff-3",
+            type: "TASK",
+            round: 4,
+            display: {
+              title: "Meta-review gate opened a third time.",
+              summaryText: "Meta-review gate opened a third time.",
+              senderLabel: "codex",
+              role: "meta_reviewer",
+              rowKind: "handoff",
+              tone: "info"
+            },
+            progress: {
+              kind: "meta_review_handoff",
+              label: "handoff 3",
+              handoffAttempt: 3
+            }
+          })
+        ]}
+        isLoading={false}
+        error={null}
+        compact
+        metaReviewCleanRunsRequired={2}
+      />
+    );
+
+    expect(screen.getByText("CONVERGENCE")).toBeInTheDocument();
+    expect(screen.getByText("clean 1")).toBeInTheDocument();
+    expect(screen.queryByText("Meta-review gate opened again.")).not.toBeInTheDocument();
+    expect(screen.queryByText("Meta-review gate opened a third time.")).not.toBeInTheDocument();
   });
 
   it("does not synthesize clean-run chips from stale raw recommendation data", () => {

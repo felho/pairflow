@@ -378,6 +378,58 @@ describe("timelinePresenter display DTO", () => {
     });
   });
 
+  it("preserves distinct meta-review handoff attempts so clean-rerun progress remains visible", () => {
+    const entries = presentTimeline([
+      envelope({
+        id: "converged-before-rerun",
+        type: "CONVERGENCE",
+        sender: "codex",
+        recipient: "orchestrator",
+        round: 4,
+        payload: {
+          summary: "Reviewer converged."
+        }
+      }),
+      envelope({
+        id: "handoff-attempt-2",
+        type: "TASK",
+        sender: "orchestrator",
+        round: 4,
+        payload: {
+          summary: "Meta-review gate opened again.",
+          metadata: {
+            delivery_target_role: "meta_reviewer",
+            meta_review_handoff_id: "meta_review:b-display:round:4:attempt:2"
+          }
+        }
+      }),
+      envelope({
+        id: "handoff-attempt-3",
+        type: "TASK",
+        sender: "orchestrator",
+        round: 4,
+        payload: {
+          summary: "Meta-review gate opened a third time.",
+          metadata: {
+            delivery_target_role: "meta_reviewer",
+            meta_review_handoff_id: "meta_review:b-display:round:4:attempt:3"
+          }
+        }
+      })
+    ]);
+
+    expect(entries[1]?.display.progress).toEqual({
+      kind: "meta_review_handoff",
+      label: "handoff 2",
+      handoffAttempt: 2
+    });
+    expect(entries[2]?.display.progress).toEqual({
+      kind: "meta_review_handoff",
+      label: "handoff 3",
+      handoffAttempt: 3
+    });
+  });
+
   it("does not classify malformed meta-review handoff ids as handoff rows", () => {
     const entries = presentTimeline([
       envelope({
