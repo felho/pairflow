@@ -41,8 +41,8 @@ task_tracker:
     status: archived
     notes: "Completed via implementation bubble 5-timeline-display-meta-impl and archived."
   - task_id: 6-timeline-legacy-cleanup
-    task_path: null
-    status: not_created
+    task_path: plans/tasks/6-timeline-legacy-cleanup.md
+    status: approved
     notes: "Remove transitional dual-shape support, raw payload render access, obsolete helpers, obsolete fixtures, and guard against recurrence."
 ---
 
