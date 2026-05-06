@@ -5,9 +5,6 @@ import {
   readStateSnapshot
 } from "../state/stateStoreDefaults.js";
 import { readTranscriptEnvelopes } from "../transcript/transcriptDependencyDefaults.js";
-import {
-  readReviewVerificationArtifactStatus
-} from "../../defaults/reviewer/reviewVerificationArtifactDefaults.js";
 import type {
   InspectedStateSnapshot,
   StateValidationDiagnostics
@@ -24,6 +21,20 @@ import type {
 import type {
   ReviewVerificationArtifactStatus
 } from "../reviewer/reviewVerification.js";
+import type {
+  BubbleRemotePointer,
+  BubbleRemoteStateCache
+} from "../../../types/bubble.js";
+import type {
+  PairflowGlobalConfig
+} from "../../../config/pairflowConfig.js";
+import type {
+  ResolveRemoteBubbleStatusTargetPort
+} from "../remote/commitRemoteExecution.js";
+import type {
+  RemoteBubbleStatusSnapshot,
+  RemoteBubbleStatusTarget
+} from "./remoteBubbleStatusContract.js";
 
 interface StatusInboxInspectionResult {
   state: BubbleStatusState;
@@ -38,17 +49,73 @@ type ReadReviewVerificationArtifactStatusResult = (
 type InspectStateSnapshot = (
   statePath: string
 ) => Promise<InspectedStateSnapshot>;
+type ReadRemotePointerPort = (
+  path: string
+) => Promise<BubbleRemotePointer | null>;
+type ReadRemoteStateCachePort = (
+  path: string
+) => Promise<BubbleRemoteStateCache | null>;
+type WriteRemoteStateCachePort = (
+  path: string,
+  value: BubbleRemoteStateCache
+) => Promise<void>;
+type ExecuteRemoteBubbleStatusPort = (input: {
+  bubbleId: string;
+  remoteClonePath: string;
+  remoteTarget: RemoteBubbleStatusTarget;
+}) => Promise<RemoteBubbleStatusSnapshot>;
+type LoadPairflowGlobalConfigPort = () => Promise<PairflowGlobalConfig>;
+
+interface ListCommandDefaultsModule {
+  listCommandDefaults: {
+    executeRemoteBubbleStatus: ExecuteRemoteBubbleStatusPort;
+    loadPairflowGlobalConfig: LoadPairflowGlobalConfigPort;
+    readRemotePointer: ReadRemotePointerPort;
+    readRemoteStateCache: ReadRemoteStateCachePort;
+    resolveRemoteBubbleStatusTarget: ResolveRemoteBubbleStatusTargetPort;
+    writeRemoteStateCache: WriteRemoteStateCachePort;
+  };
+}
 
 interface DocContractGateArtifactDefaultsModule {
   readDocContractGateArtifact: ReadDocContractGateArtifactPort;
 }
 
+interface ReviewVerificationArtifactDefaultsModule {
+  readReviewVerificationArtifactStatus:
+    ReadReviewVerificationArtifactStatusResult;
+}
+
+let listCommandDefaultsModulePromise:
+  | Promise<ListCommandDefaultsModule>
+  | undefined;
+
 let docContractGateArtifactDefaultsModulePromise:
   | Promise<DocContractGateArtifactDefaultsModule>
   | undefined;
 
+let reviewVerificationArtifactDefaultsModulePromise:
+  | Promise<ReviewVerificationArtifactDefaultsModule>
+  | undefined;
+
+function getListCommandDefaultsModulePath(): string {
+  return "../../defaults/list/listCommandDefaults.js";
+}
+
 function getDocContractGateArtifactDefaultsModulePath(): string {
   return "../../defaults/gates/docContractGateArtifactDefaults.js";
+}
+
+function getReviewVerificationArtifactDefaultsModulePath(): string {
+  return "../../defaults/reviewer/reviewVerificationArtifactDefaults.js";
+}
+
+async function loadListCommandDefaultsModule():
+  Promise<ListCommandDefaultsModule> {
+  listCommandDefaultsModulePromise ??= import(
+    getListCommandDefaultsModulePath()
+  ) as Promise<ListCommandDefaultsModule>;
+  return listCommandDefaultsModulePromise;
 }
 
 async function loadDocContractGateArtifactDefaultsModule():
@@ -57,6 +124,14 @@ async function loadDocContractGateArtifactDefaultsModule():
     getDocContractGateArtifactDefaultsModulePath()
   ) as Promise<DocContractGateArtifactDefaultsModule>;
   return docContractGateArtifactDefaultsModulePromise;
+}
+
+async function loadReviewVerificationArtifactDefaultsModule():
+  Promise<ReviewVerificationArtifactDefaultsModule> {
+  reviewVerificationArtifactDefaultsModulePromise ??= import(
+    getReviewVerificationArtifactDefaultsModulePath()
+  ) as Promise<ReviewVerificationArtifactDefaultsModule>;
+  return reviewVerificationArtifactDefaultsModulePromise;
 }
 
 const readDocContractGateArtifact:
@@ -80,26 +155,31 @@ async function inspectStateSnapshotForStatus(
 async function readReviewVerificationArtifactStatusForStatus(
   ...args: Parameters<ReadReviewVerificationArtifactStatusResult>
 ): Promise<Awaited<ReturnType<ReadReviewVerificationArtifactStatusResult>>> {
-  return readReviewVerificationArtifactStatus(...args);
+  const {
+    readReviewVerificationArtifactStatus:
+      readReviewVerificationArtifactStatusDefault
+  } = await loadReviewVerificationArtifactDefaultsModule();
+  return readReviewVerificationArtifactStatusDefault(...args);
 }
 
-const statusCommandDependencyDefaultsPromise = import(
-  "../../defaults/list/listCommandDefaults.js"
-).then(({ listCommandDefaults }) => ({
-  executeRemoteBubbleStatus: listCommandDefaults.executeRemoteBubbleStatus,
-  inspectStateSnapshot: inspectStateSnapshotForStatus,
-  loadPairflowGlobalConfig: listCommandDefaults.loadPairflowGlobalConfig,
-  readDocContractGateArtifact,
-  readRemotePointer: listCommandDefaults.readRemotePointer,
-  readRemoteStateCache: listCommandDefaults.readRemoteStateCache,
-  readReviewVerificationArtifactStatus: readReviewVerificationArtifactStatusForStatus,
-  readStateSnapshot,
-  readTranscriptEnvelopes,
-  resolveRemoteBubbleStatusTarget: listCommandDefaults.resolveRemoteBubbleStatusTarget,
-  resolveBubbleById,
-  resolveDocContractGateArtifactPath,
-  writeRemoteStateCache: listCommandDefaults.writeRemoteStateCache
-}));
+const statusCommandDependencyDefaultsPromise = loadListCommandDefaultsModule()
+  .then(({ listCommandDefaults }) => ({
+    executeRemoteBubbleStatus: listCommandDefaults.executeRemoteBubbleStatus,
+    inspectStateSnapshot: inspectStateSnapshotForStatus,
+    loadPairflowGlobalConfig: listCommandDefaults.loadPairflowGlobalConfig,
+    readDocContractGateArtifact,
+    readRemotePointer: listCommandDefaults.readRemotePointer,
+    readRemoteStateCache: listCommandDefaults.readRemoteStateCache,
+    readReviewVerificationArtifactStatus:
+      readReviewVerificationArtifactStatusForStatus,
+    readStateSnapshot,
+    readTranscriptEnvelopes,
+    resolveRemoteBubbleStatusTarget:
+      listCommandDefaults.resolveRemoteBubbleStatusTarget,
+    resolveBubbleById,
+    resolveDocContractGateArtifactPath,
+    writeRemoteStateCache: listCommandDefaults.writeRemoteStateCache
+  }));
 
 export const statusCommandDependencyDefaults =
   await statusCommandDependencyDefaultsPromise;
