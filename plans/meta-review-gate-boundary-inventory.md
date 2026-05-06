@@ -79,6 +79,8 @@ Completed in the bubble:
   `internal/metaReviewGateCurrentRunApproveRouting.ts`.
 - approve-validation failure reason and runner-stage diagnostics now live in
   `internal/metaReviewApproveValidationDiagnostics.ts`.
+- apply-flow dependency capability guards now live in
+  `internal/metaReviewGateApplyCapabilities.ts`.
 - `domain/metaReviewGate/**` no longer imports back from
   `shared/metaReviewGate/**`; route/error language is owned in domain and
   re-exported by the shared public contract for compatibility.
@@ -229,7 +231,8 @@ runtime delivery. They should not be moved wholesale to `domain`.
 | File | Lines | Responsibility | External import? | Suggested action |
 | --- | ---: | --- | --- | --- |
 | `metaReviewGateApply.ts` | 119 | Apply meta-review gate on convergence. | via command API | Public API backed by application implementation; likely application owner. |
-| `metaReviewGateApplyContext.ts` | 224 | Resolve required execution capabilities for apply flow. | yes, 1 | Application/defaults boundary candidate; likely not shared public. |
+| `metaReviewGateApplyContext.ts` | 115 | Build apply-flow execution context after resolving capabilities, bubble paths, lock path, pane deactivation, and running state. | yes, 1 | Application/defaults boundary candidate; likely not shared public. |
+| `internal/metaReviewGateApplyCapabilities.ts` | 131 | Require apply-flow dependency capabilities and raise missing-capability gate errors. | no direct external | Application/internal capability guard helper; keep private to apply-flow context construction. |
 | `metaReviewGateApplyRunRouting.ts` | 65 | Route kickoff/run-failed result during apply flow. | no direct external | Application internal. |
 | `metaReviewGateApplyObservation.ts` | 130 | Reconcile observed gate result with persisted state. | no direct external | Application internal with state semantics. |
 | `metaReviewGateApplyPersistence.ts` | 96 | Persist runtime delivery observation. | no direct external | Application/infrastructure boundary candidate. |
