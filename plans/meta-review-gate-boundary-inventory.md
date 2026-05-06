@@ -32,6 +32,9 @@ Completed in the bubble:
 - `metaReviewGateCurrentRunFinalization.ts` now lives under
   `shared/metaReviewGate/internal/**`; `metaReviewGateCurrentRunApi.ts` remains
   the public door.
+- findings parity input path/topology resolution now lives under
+  `shared/metaReviewGate/internal/**`; the aggregate index still exports the
+  public helper.
 - `domain/metaReviewGate/**` no longer imports back from
   `shared/metaReviewGate/**`; route/error language is owned in domain and
   re-exported by the shared public contract for compatibility.
@@ -153,7 +156,7 @@ dependencies remain pure and they do not perform I/O.
 | --- | ---: | --- | --- | --- |
 | `metaReviewGateThresholdAuthority.ts` | 131 | Threshold authority resolver wrapper around artifact/parity I/O and domain threshold helpers. | yes, 2 | Keep as transitional shared API; verified parity-to-authority result construction now lives in domain. |
 | `findingsClaimParsing.ts` | 91 | Structured findings claim parsing from report JSON. | imported directly from domain | Done: domain-owned. |
-| `findingsParityInput.ts` + `metaReviewGateFindingsParityInput.ts` | 114 + 71 | Domain resolves rework findings parity input candidate; shared wrapper adds artifact path resolution. | yes, via shared public wrapper | Done split; keep path/topology resolution in shared wrapper. |
+| `findingsParityInput.ts` + `internal/metaReviewGateFindingsParityInput.ts` | 114 + 71 | Domain resolves rework findings parity input candidate; shared internal wrapper adds artifact path resolution. | public via aggregate index only | Done split; keep path/topology resolution behind the shared public API. |
 | `findingsSplit.ts` | 162 | Blocking/advisory split derivation from findings/report JSON. | imported directly from domain | Done: domain-owned. |
 | `approveClaimSplit.ts` | 79 | Approve split triplet and approve reason codes. | no direct external | Done: domain-owned. |
 | `approveClaimMetadata.ts` | 118 | Approve parity metadata and diagnostics. | no direct external | Done: domain-owned. |
