@@ -8,7 +8,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import type { MetaReviewResult } from "../../../../src/v11/shared/metaReview/metaReviewTypes.js";
 import {
   resolveMetaReviewGateThresholdAuthority
-} from "../../../../src/v11/shared/metaReviewGate/index.js";
+} from "../../../../src/v11/shared/metaReviewGate/metaReviewGateThresholdAuthorityApi.js";
 
 const tempDirs: string[] = [];
 

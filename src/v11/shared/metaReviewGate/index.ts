@@ -1,12 +1,5 @@
 export * from "./metaReviewGateCommandApi.js";
 export {
-  resolveMetaReviewGateThresholdAuthority
-} from "./internal/metaReviewGateThresholdAuthority.js";
-export type {
-  MetaReviewGateThresholdAuthorityResolution,
-  ResolveMetaReviewGateThresholdAuthorityInput
-} from "./internal/metaReviewGateThresholdAuthority.js";
-export {
   readLatestSameRoundReviewerSnapshotFromTranscript
 } from "./internal/metaReviewGateReviewerSnapshot.js";
 export {
