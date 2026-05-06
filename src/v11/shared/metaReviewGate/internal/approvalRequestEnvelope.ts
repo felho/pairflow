@@ -10,7 +10,7 @@ import {
 import {
   appendProtocolEnvelope,
   type AppendProtocolEnvelopeResult
-} from "./metaReviewGateTranscriptDefaults.js";
+} from "../../transcript/transcriptDependencyDefaults.js";
 import {
   readLatestSameRoundReviewerSnapshotFromTranscript,
   type LatestSameRoundReviewerSnapshot

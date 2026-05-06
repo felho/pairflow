@@ -1,4 +1,4 @@
-import { readTranscriptEnvelopes } from "./internal/metaReviewGateTranscriptDefaults.js";
+import { readTranscriptEnvelopes } from "../transcript/transcriptDependencyDefaults.js";
 import {
   resolveLatestSameRoundReviewerSnapshot,
   type LatestSameRoundReviewerSnapshot
