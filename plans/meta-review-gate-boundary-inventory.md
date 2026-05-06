@@ -35,6 +35,9 @@ Completed in the bubble:
 - findings parity input path/topology resolution now lives under
   `shared/metaReviewGate/internal/**`; the aggregate index still exports the
   public helper.
+- threshold authority resolution now lives under
+  `shared/metaReviewGate/internal/**`; the aggregate index still exports the
+  public threshold helpers and types.
 - `domain/metaReviewGate/**` no longer imports back from
   `shared/metaReviewGate/**`; route/error language is owned in domain and
   re-exported by the shared public contract for compatibility.
@@ -154,7 +157,7 @@ dependencies remain pure and they do not perform I/O.
 
 | File | Lines | Responsibility | External import? | Suggested action |
 | --- | ---: | --- | --- | --- |
-| `metaReviewGateThresholdAuthority.ts` | 131 | Threshold authority resolver wrapper around artifact/parity I/O and domain threshold helpers. | yes, 2 | Keep as transitional shared API; verified parity-to-authority result construction now lives in domain. |
+| `internal/metaReviewGateThresholdAuthority.ts` | 131 | Threshold authority resolver wrapper around artifact/parity I/O and domain threshold helpers. | public via aggregate index only | Keep behind shared public API; verified parity-to-authority result construction now lives in domain. |
 | `findingsClaimParsing.ts` | 91 | Structured findings claim parsing from report JSON. | imported directly from domain | Done: domain-owned. |
 | `findingsParityInput.ts` + `internal/metaReviewGateFindingsParityInput.ts` | 114 + 71 | Domain resolves rework findings parity input candidate; shared internal wrapper adds artifact path resolution. | public via aggregate index only | Done split; keep path/topology resolution behind the shared public API. |
 | `findingsSplit.ts` | 162 | Blocking/advisory split derivation from findings/report JSON. | imported directly from domain | Done: domain-owned. |
