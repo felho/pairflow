@@ -34,3 +34,8 @@ export type {
   MetaReviewGateThresholdMetadata,
   MetaReviewGateThresholdStatus
 } from "./metaReviewGateTypes.js";
+export type {
+  MetaReviewGateTmuxRunner,
+  MetaReviewGateTmuxRunOptions,
+  MetaReviewGateTmuxRunResult
+} from "./metaReviewGateTmuxCapabilities.js";

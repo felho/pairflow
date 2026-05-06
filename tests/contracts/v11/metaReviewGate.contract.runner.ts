@@ -8,7 +8,7 @@ import {
 } from "../../../src/v11/defaults/metaReviewGate/metaReviewGateApi.js";
 import { readStateSnapshot, writeStateSnapshot } from "../../../src/v11/infrastructure/state/stateStore.js";
 import { normalizeMetaReviewSnapshot } from "../../../src/v11/shared/metaReviewGate/internal/metaReviewGateSnapshotHelpers.js";
-import type { MetaReviewGateTmuxRunner } from "../../../src/v11/shared/metaReviewGate/internal/metaReviewGateTmuxCapabilities.js";
+import type { MetaReviewGateTmuxRunner } from "../../../src/v11/shared/metaReviewGate/index.js";
 import type {
   RuntimeSessionRecord
 } from "../../../src/v11/infrastructure/executor/sessionRuntime/runtimeSessionsRegistry.js";
