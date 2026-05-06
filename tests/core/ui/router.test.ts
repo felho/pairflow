@@ -1590,7 +1590,15 @@ describe("UI read response validation", () => {
         syntheticApproval: null
       },
       payload: {
-        summary: "Validated."
+        summary: "Validated.",
+        findings: [
+          {
+            title: "Valid finding.",
+            severity: "P2",
+            evidence: ["source ref"],
+            refs: ["review.md"]
+          }
+        ]
       },
       refs: []
     };
@@ -1655,6 +1663,25 @@ describe("UI read response validation", () => {
           timeline: [
             {
               ...entry,
+              payload: {
+                findings_claim_state: "open_findings",
+                findings_claim_source: "payload_findings_count",
+                findings: []
+              }
+            }
+          ]
+        }),
+      "bubble_timeline"
+    );
+
+    expectInvalidReadResponse(
+      () =>
+        validateUiBubbleTimelineResponseBody({
+          bubbleId: bubble.bubbleId,
+          repoPath: repo.repoPath,
+          timeline: [
+            {
+              ...entry,
               refs: "not-array"
             }
           ]
@@ -1662,7 +1689,94 @@ describe("UI read response validation", () => {
       "bubble_timeline"
     );
 
+    expectInvalidReadResponse(
+      () =>
+        validateUiBubbleTimelineResponseBody({
+          bubbleId: bubble.bubbleId,
+          repoPath: repo.repoPath,
+          timeline: [
+            {
+              ...entry,
+              payload: {
+                summary: "Validated.",
+                metadata: {
+                  actor: "meta-reviewer"
+                }
+              }
+            }
+          ]
+        }),
+      "bubble_timeline"
+    );
+
+    expectInvalidReadResponse(
+      () =>
+        validateUiBubbleTimelineResponseBody({
+          bubbleId: bubble.bubbleId,
+          repoPath: repo.repoPath,
+          timeline: [
+            {
+              ...entry,
+              payload: {
+                findings: [
+                  {
+                    title: "Invalid extra field.",
+                    severity: "P2",
+                    unexpected: true
+                  }
+                ]
+              }
+            }
+          ]
+        }),
+      "bubble_timeline"
+    );
+
+    expectInvalidReadResponse(
+      () =>
+        validateUiBubbleTimelineResponseBody({
+          bubbleId: bubble.bubbleId,
+          repoPath: repo.repoPath,
+          timeline: [
+            {
+              ...entry,
+              payload: {
+                summary: "Invalid incomplete claim.",
+                findings_claim_state: "open_findings"
+              }
+            }
+          ]
+        }),
+      "bubble_timeline"
+    );
+
+    expectInvalidReadResponse(
+      () =>
+        validateUiBubbleTimelineResponseBody({
+          bubbleId: bubble.bubbleId,
+          repoPath: repo.repoPath,
+          timeline: [
+            {
+              ...entry,
+              payload: {
+                findings: [
+                  {
+                    title: "Missing renderable priority."
+                  }
+                ]
+              }
+            }
+          ]
+        }),
+      "bubble_timeline"
+    );
+
     for (const progress of [
+      {
+        kind: "meta_review_handoff",
+        label: "handoff 0",
+        handoffAttempt: 0
+      },
       {
         kind: "meta_review_handoff",
         label: "handoff 1.5",

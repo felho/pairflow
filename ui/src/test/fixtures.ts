@@ -3,7 +3,6 @@ import type {
   UiBubbleDetail,
   UiBubbleSummary,
   UiRepoSummary,
-  UiTimelineBadge,
   UiTimelineEntryDisplay,
   UiTimelineEntry
 } from "../lib/types";
@@ -183,216 +182,75 @@ export function bubbleDetail(input: {
   };
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-function nonEmptyString(value: unknown): string | null {
-  return typeof value === "string" && value.trim().length > 0 ? value : null;
-}
-
-function sanitizeLabel(value: string): string {
-  const normalized = value.trim().replace(/\s+/gu, " ");
-  return normalized.length > 0 ? normalized : "unknown";
-}
-
-function badgeToneForSeverity(severity: string): UiTimelineBadge["tone"] {
-  if (severity === "P0" || severity === "P1") return "danger";
-  if (severity === "P2") return "warning";
-  return "neutral";
-}
-
-function recommendationTone(label: string): UiTimelineBadge["tone"] {
-  if (label === "approve") return "success";
-  if (label === "rework") return "danger";
-  if (label === "inconclusive") return "warning";
-  return "neutral";
-}
-
-function decisionTone(label: string): UiTimelineBadge["tone"] {
-  if (label === "approve") return "success";
-  if (label === "rework") return "danger";
-  return "neutral";
-}
-
-function buildDisplayBadges(
-  entry: Omit<UiTimelineEntry, "display">,
-  metadata: Record<string, unknown> | null
-): UiTimelineBadge[] {
-  const badges: UiTimelineBadge[] = [];
-  const seen = new Set<string>();
-  const add = (badge: UiTimelineBadge): void => {
-    const key = `${badge.kind}:${badge.label}`;
-    if (!seen.has(key)) {
-      seen.add(key);
-      badges.push(badge);
-    }
+function timelineEntrySummary(entry: Omit<UiTimelineEntry, "display">): Pick<
+  UiTimelineEntryDisplay,
+  "title" | "summaryText" | "summarySource"
+> {
+  if (entry.type === "HUMAN_QUESTION") {
+    return {
+      title: "Can you proceed?",
+      summaryText: "Can you proceed?",
+      summarySource: "question"
+    };
+  }
+  if (entry.type === "HUMAN_REPLY") {
+    return {
+      title: "Human replied.",
+      summaryText: "Human replied.",
+      summarySource: "message"
+    };
+  }
+  if (entry.type === "APPROVAL_REQUEST") {
+    return {
+      title: "Approval requested.",
+      summaryText: "Approval requested.",
+      summarySource: "summary"
+    };
+  }
+  if (entry.type === "APPROVAL_DECISION") {
+    return {
+      title: "Approval decision recorded.",
+      summaryText: "Approval decision recorded.",
+      summarySource: "decision"
+    };
+  }
+  if (entry.type === "CONVERGENCE") {
+    return {
+      title: "Convergence recorded.",
+      summaryText: "Convergence recorded.",
+      summarySource: "summary"
+    };
+  }
+  return {
+    title: "Timeline entry.",
+    summaryText: "Timeline entry.",
+    summarySource: "summary"
   };
-
-  const findings = entry.payload.findings;
-  if (Array.isArray(findings)) {
-    const seenFindings = new Set<string>();
-    for (const finding of findings) {
-      if (!isRecord(finding)) {
-        continue;
-      }
-      const severityValue = nonEmptyString(finding.severity);
-      if (severityValue === null) {
-        continue;
-      }
-      const severity = sanitizeLabel(severityValue);
-      if (seenFindings.has(severity)) {
-        continue;
-      }
-      seenFindings.add(severity);
-      add({
-        kind: "finding",
-        label: severity,
-        tone: badgeToneForSeverity(severity)
-      });
-    }
-  }
-
-  const decisionValue = nonEmptyString(entry.payload.decision);
-  const decision =
-    entry.type === "APPROVAL_DECISION" && decisionValue !== null
-      ? sanitizeLabel(decisionValue)
-      : null;
-  if (decision !== null) {
-    add({
-      kind: "decision",
-      label: decision,
-      tone: decisionTone(decision)
-    });
-  }
-
-  const recommendationValue = nonEmptyString(
-    metadata?.latest_recommendation ?? metadata?.recommendation
-  );
-  const recommendation =
-    recommendationValue === null ? null : sanitizeLabel(recommendationValue);
-  if (recommendation !== null && recommendation !== decision) {
-    add({
-      kind: "recommendation",
-      label: recommendation,
-      tone: recommendationTone(recommendation)
-    });
-  }
-
-  return badges;
-}
-
-function readMetaReviewHandoffAttempt(
-  metadata: Record<string, unknown> | null
-): number | null {
-  const handoffId = metadata?.meta_review_handoff_id;
-  if (typeof handoffId !== "string") {
-    return null;
-  }
-  const match = /:attempt:(\d+)$/u.exec(handoffId);
-  if (match === null) {
-    return null;
-  }
-  const attempt = Number.parseInt(match[1] ?? "", 10);
-  return Number.isInteger(attempt) && attempt > 0 ? attempt : null;
 }
 
 function timelineEntryDisplay(entry: Omit<UiTimelineEntry, "display">): UiTimelineEntryDisplay {
-  const summaryValue = nonEmptyString(entry.payload.summary);
-  const questionValue = nonEmptyString(entry.payload.question);
-  const messageValue = nonEmptyString(entry.payload.message);
-  const decisionValue = nonEmptyString(entry.payload.decision);
-  const summary =
-    summaryValue ??
-    questionValue ??
-    messageValue ??
-    (decisionValue !== null ? `decision=${decisionValue}` : null) ??
-    "(no summary payload)";
-  const summarySource =
-    summaryValue !== null
-      ? "summary"
-      : questionValue !== null
-        ? "question"
-        : messageValue !== null
-          ? "message"
-          : decisionValue !== null
-            ? "decision"
-            : "neutral";
-  const metadata = isRecord(entry.payload.metadata) ? entry.payload.metadata : null;
-  const deliveryTargetRole = metadata?.delivery_target_role;
-  const hasMetaReviewerActor =
-    metadata?.actor === "meta-reviewer" ||
-    typeof metadata?.meta_review_handoff_id === "string";
-  const role =
-    hasMetaReviewerActor
-      ? "meta_reviewer"
-      : deliveryTargetRole !== undefined &&
-          (
-            typeof deliveryTargetRole !== "string" ||
-            !["implementer", "reviewer", "meta_reviewer", "status"].includes(
-              deliveryTargetRole
-            )
-          )
-        ? "unknown"
-        : entry.type === "HUMAN_QUESTION" || entry.type === "HUMAN_REPLY"
-          ? "human"
-          : entry.type === "CONVERGENCE"
-            ? "system"
-            : entry.type === "PASS" && deliveryTargetRole === "implementer"
-              ? "reviewer"
-              : entry.type === "PASS" &&
-                  (deliveryTargetRole === "reviewer" ||
-                    deliveryTargetRole === "meta_reviewer")
-                ? "implementer"
-                : entry.sender.toLowerCase() === "human"
-                  ? "human"
-                  : entry.sender === "orchestrator"
-                    ? "system"
-                    : entry.sender.toLowerCase().includes("review") ||
-                        entry.sender.toLowerCase().includes("claude")
-                      ? "reviewer"
-                      : "implementer";
-  const sender =
-    metadata !== null &&
-    typeof metadata.meta_review_handoff_id === "string" &&
-    metadata.delivery_target_role === "meta_reviewer"
-      ? entry.recipient
-      : metadata !== null && typeof metadata.actor_agent === "string"
-        ? metadata.actor_agent
-        : entry.sender;
-  const senderLabel =
-    role === "unknown" ? "Unknown" : sender;
-  const handoffAttempt = readMetaReviewHandoffAttempt(metadata);
-
+  const summary = timelineEntrySummary(entry);
   return {
-    title: summary,
-    summaryText: summary,
-    summarySource,
-    senderLabel,
-    role,
+    ...summary,
+    senderLabel: entry.sender,
+    role:
+      entry.type === "HUMAN_QUESTION" || entry.type === "HUMAN_REPLY"
+        ? "human"
+        : entry.type === "CONVERGENCE" || entry.sender === "orchestrator"
+          ? "system"
+          : "implementer",
     rowKind:
       entry.type === "HUMAN_QUESTION"
         ? "blocked"
-        : typeof metadata?.meta_review_handoff_id === "string"
-          ? "handoff"
         : entry.type === "APPROVAL_REQUEST" || entry.type === "APPROVAL_DECISION"
           ? "approval"
           : "normal",
     tone:
       entry.type === "HUMAN_QUESTION"
         ? "warning"
-        : typeof metadata?.meta_review_handoff_id === "string"
-          ? "info"
-          : "neutral",
-    badges: buildDisplayBadges(entry, metadata),
-    progress:
-      handoffAttempt !== null
-        ? {
-            kind: "meta_review_handoff",
-            label: `handoff ${handoffAttempt}`,
-            handoffAttempt
-          }
-        : null,
+        : "neutral",
+    badges: [],
+    progress: null,
     validationFailure: null,
     syntheticApproval: null
   };

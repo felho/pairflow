@@ -5,7 +5,7 @@ task_family_id: timeline-legacy-cleanup
 sequence_key: "6"
 task_id: 6-timeline-legacy-cleanup
 title: "Timeline Legacy Cleanup"
-status: in_progress
+status: archived
 phase: phase4
 target_files:
   - ui/src/components/expanded/BubbleTimeline.tsx

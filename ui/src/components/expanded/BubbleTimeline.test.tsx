@@ -1,11 +1,17 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
-import { protocolTimelineEntry, timelineEntry } from "../../test/fixtures";
-import type { UiTimelineEntryDisplay } from "../../lib/types";
+import type {
+  UiTimelineBadge,
+  UiTimelineEntry,
+  UiTimelineEntryDisplay,
+  UiTimelineProgress
+} from "../../lib/types";
 import { BubbleTimeline } from "./BubbleTimeline";
 
-function display(overrides: Partial<UiTimelineEntryDisplay> = {}): UiTimelineEntryDisplay {
+function display(
+  overrides: Partial<UiTimelineEntryDisplay> = {}
+): UiTimelineEntryDisplay {
   return {
     title: "Display summary.",
     summaryText: "Display summary.",
@@ -22,61 +28,58 @@ function display(overrides: Partial<UiTimelineEntryDisplay> = {}): UiTimelineEnt
   };
 }
 
+function entry(
+  overrides: Partial<Omit<UiTimelineEntry, "display">> & {
+    display?: Partial<UiTimelineEntryDisplay>;
+    badges?: UiTimelineBadge[];
+    progress?: UiTimelineProgress | null;
+  } = {}
+): UiTimelineEntry {
+  const resolvedDisplay = display({
+    ...overrides.display,
+    badges: overrides.badges ?? overrides.display?.badges ?? [],
+    progress: overrides.progress ?? overrides.display?.progress ?? null
+  });
+  return {
+    id: "env-1",
+    ts: "2026-02-24T12:01:00.000Z",
+    round: 3,
+    type: "TASK",
+    sender: "orchestrator",
+    recipient: "codex",
+    payload: {},
+    refs: [],
+    ...overrides,
+    display: resolvedDisplay
+  };
+}
+
 describe("BubbleTimeline", () => {
-  it("renders basic summary text from display fields", () => {
+  it("renders summary text only from display fields", () => {
     render(
       <BubbleTimeline
         entries={[
-          protocolTimelineEntry({
-            id: "env-summary-wins",
-            payload: {
-              summary: "Summary wins.",
-              question: "Question loses.",
-              message: "Message loses.",
-              decision: "rework"
-            }
-          }),
-          protocolTimelineEntry({
-            id: "env-question-fallback",
-            payload: {
-              question: "Question fallback."
-            }
-          }),
-          protocolTimelineEntry({
-            id: "env-message-fallback",
-            payload: {
-              message: "Message fallback."
-            }
-          }),
-          protocolTimelineEntry({
-            id: "env-decision-fallback",
-            type: "APPROVAL_DECISION",
-            payload: {
-              decision: "approve"
-            }
-          }),
-          protocolTimelineEntry({
-            id: "env-missing-fallback",
-            payload: {}
-          }),
-          protocolTimelineEntry({
+          entry({
             id: "env-display-conflict",
             payload: {
-              summary: "Payload summary must not render.",
-              question: "Payload question must not render."
+              summary: "Raw summary must not render.",
+              message: "Raw message must not render."
             },
             display: {
               title: "Display summary wins.",
               summaryText: "Display summary wins.",
-              summarySource: "summary",
-              senderLabel: "display-sender",
-              role: "implementer",
-              rowKind: "normal",
-              tone: "neutral",
-              badges: [],
-              progress: null,
-              validationFailure: null,
-              syntheticApproval: null
+              senderLabel: "display-sender"
+            }
+          }),
+          entry({
+            id: "env-missing-display",
+            payload: {
+              summary: "Raw fallback must not render."
+            },
+            display: {
+              title: "",
+              summaryText: "",
+              summarySource: "neutral"
             }
           })
         ]}
@@ -86,64 +89,43 @@ describe("BubbleTimeline", () => {
       />
     );
 
-    expect(screen.getByText("Summary wins.")).toBeInTheDocument();
-    expect(screen.queryByText("Question loses.")).not.toBeInTheDocument();
-    expect(screen.queryByText("Message loses.")).not.toBeInTheDocument();
-    expect(screen.getByText("Question fallback.")).toBeInTheDocument();
-    expect(screen.getByText("Message fallback.")).toBeInTheDocument();
-    expect(screen.getByText("decision=approve")).toBeInTheDocument();
-    expect(screen.getByText("(no summary payload)")).toBeInTheDocument();
     expect(screen.getByText("Display summary wins.")).toBeInTheDocument();
-    expect(screen.queryByText("Payload summary must not render.")).not.toBeInTheDocument();
-    expect(screen.queryByText("Payload question must not render.")).not.toBeInTheDocument();
+    expect(screen.queryByText("Raw summary must not render.")).not.toBeInTheDocument();
+    expect(screen.queryByText("Raw message must not render.")).not.toBeInTheDocument();
+    expect(screen.queryByText("Raw fallback must not render.")).not.toBeInTheDocument();
   });
 
-  it("renders sender, role, and blocked state from display fields over protocol conflicts", () => {
+  it("renders sender, role, and blocked state from display fields", () => {
     render(
       <BubbleTimeline
         entries={[
-          protocolTimelineEntry({
-            id: "env-pass-display-blocked",
-            type: "PASS",
-            sender: "codex",
-            recipient: "human",
+          entry({
+            id: "env-blocked",
+            type: "HUMAN_QUESTION",
             payload: {
-              summary: "Payload text loses."
+              question: "Raw question loses."
             },
             display: {
               title: "Display blocked text.",
               summaryText: "Display blocked text.",
-              summarySource: "summary",
               senderLabel: "display-human",
               role: "human",
               rowKind: "blocked",
-              tone: "warning",
-              badges: [],
-              progress: null,
-              validationFailure: null,
-              syntheticApproval: null
+              tone: "warning"
             }
           }),
-          protocolTimelineEntry({
-            id: "env-human-question-display-normal",
-            type: "HUMAN_QUESTION",
-            sender: "human",
-            recipient: "codex",
+          entry({
+            id: "env-reviewer",
+            type: "PASS",
+            sender: "codex",
             payload: {
-              question: "Payload question loses."
+              summary: "Raw summary loses."
             },
             display: {
-              title: "Display normal text.",
-              summaryText: "Display normal text.",
-              summarySource: "summary",
-              senderLabel: "display-implementer",
-              role: "implementer",
-              rowKind: "normal",
-              tone: "neutral",
-              badges: [],
-              progress: null,
-              validationFailure: null,
-              syntheticApproval: null
+              title: "Display reviewer text.",
+              summaryText: "Display reviewer text.",
+              senderLabel: "claude",
+              role: "reviewer"
             }
           })
         ]}
@@ -160,456 +142,49 @@ describe("BubbleTimeline", () => {
         content.includes("display-human") && content.includes("blocked")
       )
     ).toBeInTheDocument();
-    expect(within(blockedRow as HTMLElement).queryByText("Payload text loses.")).not.toBeInTheDocument();
+    expect(within(blockedRow as HTMLElement).queryByText("Raw question loses.")).not.toBeInTheDocument();
 
-    const normalRow = screen.getByText("Display normal text.").closest("div.flex.items-start");
-    expect(normalRow).not.toBeNull();
-    expect(within(normalRow as HTMLElement).getByText("implementer")).toHaveTextContent(
-      /implementer \(display-implementer\)/u
+    const reviewerRow = screen.getByText("Display reviewer text.").closest("div.flex.items-start");
+    expect(reviewerRow).not.toBeNull();
+    expect(within(reviewerRow as HTMLElement).getByText("reviewer")).toHaveTextContent(
+      /reviewer \(claude\)/u
     );
-    expect(within(normalRow as HTMLElement).queryByText(/blocked/u)).not.toBeInTheDocument();
-    expect(within(normalRow as HTMLElement).queryByText("Payload question loses.")).not.toBeInTheDocument();
+    expect(within(reviewerRow as HTMLElement).queryByText("Raw summary loses.")).not.toBeInTheDocument();
   });
 
-  it("renders meta-reviewer actor as first-class role", () => {
+  it("renders badge chips from display fields over conflicting raw data", () => {
     render(
       <BubbleTimeline
         entries={[
-          timelineEntry({
-            id: "env-meta-1",
-            type: "APPROVAL_REQUEST",
-            sender: "orchestrator",
-            recipient: "human",
-            payload: {
-              summary: "Meta-review completed",
-              metadata: {
-                actor: "meta-reviewer",
-                latest_recommendation: "rework"
-              }
-            }
-          })
-        ]}
-        isLoading={false}
-        error={null}
-        compact={false}
-      />
-    );
-
-    const actorLabel = screen.getByText("meta-reviewer", {
-      selector: "span.font-medium"
-    });
-
-    expect(actorLabel).toHaveTextContent(/meta-reviewer/u);
-    expect(actorLabel).toHaveTextContent(/\(orchestrator\)/u);
-    expect(screen.getByText("rework")).toBeInTheDocument();
-  });
-
-  it("keeps implementer role for passes delivered to the meta-reviewer", () => {
-    render(
-      <BubbleTimeline
-        entries={[
-          timelineEntry({
-            id: "env-impl-to-meta",
-            type: "PASS",
-            sender: "codex",
-            recipient: "codex",
-            payload: {
-              summary: "Ready for meta-review.",
-              pass_intent: "review",
-              metadata: {
-                delivery_target_role: "meta_reviewer"
-              }
-            }
-          })
-        ]}
-        isLoading={false}
-        error={null}
-        compact
-      />
-    );
-
-    const actorLabel = screen.getByText("implementer", {
-      selector: "span.font-medium"
-    });
-
-    expect(actorLabel).toHaveTextContent(/implementer/u);
-    expect(actorLabel).toHaveTextContent(/\(codex\)/u);
-    expect(
-      screen.queryByText("meta-reviewer", { selector: "span.font-medium" })
-    ).not.toBeInTheDocument();
-  });
-
-  it("uses PASS delivery target role instead of agent name for reviewer fix requests", () => {
-    render(
-      <BubbleTimeline
-        entries={[
-          timelineEntry({
-            id: "env-reviewer-fix-request",
-            type: "PASS",
-            sender: "codex",
-            recipient: "codex",
-            payload: {
-              summary: "Please fix the reviewer findings.",
-              pass_intent: "fix_request",
-              metadata: {
-                delivery_target_role: "implementer"
-              },
-              findings: [
-                {
-                  severity: "P2",
-                  title: "Finding title",
-                  refs: []
-                }
-              ]
-            }
-          })
-        ]}
-        isLoading={false}
-        error={null}
-        compact
-      />
-    );
-
-    const actorLabel = screen.getByText("reviewer", {
-      selector: "span.font-medium"
-    });
-
-    expect(actorLabel).toHaveTextContent(/reviewer/u);
-    expect(actorLabel).toHaveTextContent(/\(codex\)/u);
-    expect(
-      screen.queryByText("implementer", { selector: "span.font-medium" })
-    ).not.toBeInTheDocument();
-    expect(screen.getByText("P2")).toBeInTheDocument();
-  });
-
-  it("keeps current orchestrator and convergence labels for system-like rows", () => {
-    render(
-      <BubbleTimeline
-        entries={[
-          protocolTimelineEntry({
-            id: "env-orchestrator-task",
-            type: "TASK",
-            sender: "orchestrator",
-            recipient: "codex",
-            payload: {
-              summary: "Task sent."
-            }
-          }),
-          protocolTimelineEntry({
-            id: "env-convergence",
-            type: "CONVERGENCE",
-            sender: "orchestrator",
-            recipient: "human",
-            payload: {
-              summary: "Converged."
-            }
-          })
-        ]}
-        isLoading={false}
-        error={null}
-        compact={false}
-      />
-    );
-
-    const taskRow = screen.getByText("Task sent.").closest("div.flex.items-start");
-    expect(taskRow).not.toBeNull();
-    expect(within(taskRow as HTMLElement).getByText("orchestrator")).toBeInTheDocument();
-
-    const convergenceRow = screen.getByText("Converged.").closest("div.flex.items-start");
-    expect(convergenceRow).not.toBeNull();
-    expect(
-      within(convergenceRow as HTMLElement).getByText("CONVERGENCE")
-    ).toBeInTheDocument();
-  });
-
-  it("renders only rerun meta-review gate handoffs as clean-run progress", () => {
-    render(
-      <BubbleTimeline
-        entries={[
-          timelineEntry({
-            id: "env-meta-gate-1",
-            type: "TASK",
-            sender: "orchestrator",
-            recipient: "codex",
-            payload: {
-              summary: "Meta-review gate opened.",
-              metadata: {
-                delivery_target_role: "meta_reviewer",
-                actor: "meta-review-gate",
-                actor_agent: "orchestrator",
-                meta_review_handoff_id:
-                  "meta_review:b-meta-gate:round:4:attempt:1"
-              }
-            }
-          }),
-          timelineEntry({
-            id: "env-meta-gate-2",
-            type: "TASK",
-            sender: "orchestrator",
-            recipient: "codex",
-            payload: {
-              summary: "Meta-review gate opened again.",
-              metadata: {
-                delivery_target_role: "meta_reviewer",
-                actor: "meta-review-gate",
-                actor_agent: "orchestrator",
-                meta_review_handoff_id:
-                  "meta_review:b-meta-gate:round:4:attempt:2"
-              }
-            }
-          }),
-          timelineEntry({
-            id: "env-meta-approve-2",
-            type: "APPROVAL_REQUEST",
-            sender: "orchestrator",
-            recipient: "human",
-            payload: {
-              summary: "Second clean meta-review.",
-              metadata: {
-                actor: "meta-reviewer",
-                actor_agent: "codex",
-                latest_recommendation: "approve"
-              }
-            }
-          })
-        ]}
-        isLoading={false}
-        error={null}
-        compact
-        metaReviewCleanRunsRequired={2}
-      />
-    );
-
-    const metaRows = screen.getAllByText("meta-reviewer", {
-      selector: "span.font-medium"
-    });
-    expect(metaRows).toHaveLength(2);
-    expect(metaRows[0]).toHaveTextContent(/\(codex\)/u);
-    expect(metaRows[1]).toHaveTextContent(/\(codex\)/u);
-    expect(screen.getByText("clean 1")).toBeInTheDocument();
-    expect(screen.getByText("approve")).toBeInTheDocument();
-    expect(screen.queryByText("Meta-review gate opened.")).not.toBeInTheDocument();
-  });
-
-  it("uses meta-review handoff attempt when the first kickoff row is absent", () => {
-    render(
-      <BubbleTimeline
-        entries={[
-          timelineEntry({
-            id: "env-implementer-pass",
-            type: "PASS",
-            sender: "codex",
-            recipient: "codex",
-            payload: {
-              summary: "Ready for meta-review.",
-              metadata: {
-                delivery_target_role: "meta_reviewer"
-              }
-            }
-          }),
-          timelineEntry({
-            id: "env-meta-gate-2",
-            type: "TASK",
-            sender: "orchestrator",
-            recipient: "codex",
-            payload: {
-              summary: "Meta-review gate opened again.",
-              metadata: {
-                delivery_target_role: "meta_reviewer",
-                actor: "meta-review-gate",
-                actor_agent: "orchestrator",
-                meta_review_handoff_id:
-                  "meta_review:b-meta-gate:round:4:attempt:2"
-              }
-            }
-          }),
-          timelineEntry({
-            id: "env-meta-approve-2",
-            type: "APPROVAL_REQUEST",
-            sender: "orchestrator",
-            recipient: "human",
-            payload: {
-              summary: "Second clean meta-review.",
-              metadata: {
-                actor: "meta-reviewer",
-                actor_agent: "codex",
-                latest_recommendation: "approve"
-              }
-            }
-          })
-        ]}
-        isLoading={false}
-        error={null}
-        compact
-        metaReviewCleanRunsRequired={2}
-      />
-    );
-
-    expect(screen.getByText("clean 1")).toBeInTheDocument();
-    expect(screen.getByText("approve")).toBeInTheDocument();
-  });
-
-  it("does not render a clean-run progress row for a final single-run approval after prior rework", () => {
-    render(
-      <BubbleTimeline
-        entries={[
-          timelineEntry({
-            id: "env-meta-rework",
-            type: "APPROVAL_DECISION",
-            round: 2,
-            sender: "orchestrator",
-            recipient: "codex",
-            payload: {
-              decision: "rework",
-              message: "Apply rework.",
-              metadata: {
-                actor: "meta-reviewer",
-                recommendation: "rework"
-              }
-            }
-          }),
-          timelineEntry({
-            id: "env-meta-gate-after-rework",
-            type: "TASK",
-            round: 6,
-            sender: "orchestrator",
-            recipient: "codex",
-            payload: {
-              summary: "Meta-review gate opened after rework.",
-              metadata: {
-                delivery_target_role: "meta_reviewer",
-                actor: "meta-review-gate",
-                actor_agent: "orchestrator",
-                meta_review_handoff_id:
-                  "meta_review:b-meta-gate:round:6:attempt:2"
-              }
-            }
-          }),
-          timelineEntry({
-            id: "env-meta-approve",
-            type: "APPROVAL_REQUEST",
-            round: 6,
-            sender: "orchestrator",
-            recipient: "human",
-            payload: {
-              summary: "Clean meta-review approved.",
-              metadata: {
-                actor: "meta-reviewer",
-                actor_agent: "codex",
-                latest_recommendation: "approve"
-              }
-            }
-          })
-        ]}
-        isLoading={false}
-        error={null}
-        compact={false}
-        metaReviewCleanRunsRequired={1}
-      />
-    );
-
-    const metaRows = screen.getAllByText("meta-reviewer", {
-      selector: "span.font-medium"
-    });
-    expect(metaRows).toHaveLength(2);
-    expect(screen.getByText("rework")).toBeInTheDocument();
-    expect(screen.getByText("approve")).toBeInTheDocument();
-    expect(screen.queryByText("clean 1")).not.toBeInTheDocument();
-    expect(screen.queryByText("Meta-review gate opened after rework.")).not.toBeInTheDocument();
-  });
-
-  it("shows empty-state text when no timeline entries exist", () => {
-    render(
-      <BubbleTimeline
-        entries={[]}
-        isLoading={false}
-        error={null}
-        compact
-      />
-    );
-
-    expect(screen.getByText("No timeline entries yet.")).toBeInTheDocument();
-  });
-
-  it("deduplicates rework tag when decision and recommendation are the same", () => {
-    render(
-      <BubbleTimeline
-        entries={[
-          timelineEntry({
-            id: "env-decision-1",
-            type: "APPROVAL_DECISION",
-            sender: "orchestrator",
-            recipient: "codex",
-            payload: {
-              decision: "rework",
-              message: "Apply rework.",
-              metadata: {
-                actor: "meta-reviewer",
-                recommendation: "rework"
-              }
-            }
-          })
-        ]}
-        isLoading={false}
-        error={null}
-        compact={false}
-      />
-    );
-
-    const reworkBadges = screen
-      .getAllByText("rework")
-      .filter((node) => node.className.includes("inline-block"));
-    expect(reworkBadges).toHaveLength(1);
-  });
-
-  it("renders badge chips from display fields over conflicting protocol payload", () => {
-    render(
-      <BubbleTimeline
-        entries={[
-          protocolTimelineEntry({
-            id: "env-display-badges-win",
+          entry({
+            id: "env-badges",
             type: "APPROVAL_DECISION",
             payload: {
               decision: "rework",
-              message: "Payload badge sources lose.",
-              findings: [
-                { title: "Payload finding", severity: "P0" }
-              ],
-              metadata: {
-                recommendation: "rework"
-              }
+              findings: [{ title: "raw finding", severity: "P0" }]
             },
-            display: display({
-              badges: [
-                { kind: "finding", label: "P2", tone: "warning" },
-                { kind: "decision", label: "approve", tone: "success" },
-                { kind: "recommendation", label: "inconclusive", tone: "warning" }
-              ]
-            })
+            badges: [
+              { kind: "finding", label: "P2", tone: "warning" },
+              { kind: "decision", label: "approve", tone: "success" },
+              { kind: "recommendation", label: "inconclusive", tone: "warning" }
+            ]
           }),
-          protocolTimelineEntry({
-            id: "env-display-badges-empty",
+          entry({
+            id: "env-empty-badges",
             type: "APPROVAL_DECISION",
             payload: {
               decision: "rework",
-              message: "Payload badge sources must not recover.",
-              findings: [
-                { title: "Payload finding", severity: "P1" }
-              ],
-              metadata: {
-                recommendation: "rework"
-              }
+              findings: [{ title: "raw finding", severity: "P1" }]
             },
-            display: display({
+            display: {
               title: "No display badges.",
               summaryText: "No display badges."
-            })
+            }
           })
         ]}
         isLoading={false}
         error={null}
         compact={false}
-        metaReviewCleanRunsRequired={3}
       />
     );
 
@@ -624,52 +199,78 @@ describe("BubbleTimeline", () => {
     expect(within(emptyBadgeRow as HTMLElement).queryByText("rework")).not.toBeInTheDocument();
   });
 
-  it("splits meta-review approval from orchestrator gate failure using display descriptors", () => {
+  it("renders reviewer clean indicators from display badges only", () => {
     render(
       <BubbleTimeline
         entries={[
-          timelineEntry({
-            id: "env-gate-failed-rework",
-            type: "APPROVAL_DECISION",
-            round: 2,
-            sender: "orchestrator",
-            recipient: "codex",
+          entry({
+            id: "env-clean-display",
+            type: "PASS",
             payload: {
-              decision: "rework",
-              message: "Payload text does not contain the legacy gate failure marker.",
-              metadata: {
-                actor: "meta-reviewer",
-                actor_agent: "codex",
-                recommendation: "approve"
-              }
+              findings: []
             },
             display: {
-              title:
-                "Meta-review approved the current change, but the required approve-gate validation failed.",
-              summaryText:
-                "Meta-review approved the current change, but the required approve-gate validation failed.",
-              summarySource: "message",
-              senderLabel: "codex",
+              title: "Clean reviewer pass.",
+              summaryText: "Clean reviewer pass.",
+              senderLabel: "claude",
+              role: "reviewer",
+              badges: [{ kind: "status", label: "clean", tone: "success" }]
+            }
+          }),
+          entry({
+            id: "env-clean-raw-only",
+            type: "PASS",
+            payload: {
+              findings: []
+            },
+            display: {
+              title: "Raw clean is hidden.",
+              summaryText: "Raw clean is hidden.",
+              senderLabel: "claude",
+              role: "reviewer",
+              badges: []
+            }
+          })
+        ]}
+        isLoading={false}
+        error={null}
+        compact={false}
+      />
+    );
+
+    const cleanRow = screen.getByText("Clean reviewer pass.").closest("div.flex.items-start");
+    expect(cleanRow).not.toBeNull();
+    expect(within(cleanRow as HTMLElement).getByText("clean")).toBeInTheDocument();
+
+    const rawOnlyRow = screen.getByText("Raw clean is hidden.").closest("div.flex.items-start");
+    expect(rawOnlyRow).not.toBeNull();
+    expect(within(rawOnlyRow as HTMLElement).queryByText("clean")).not.toBeInTheDocument();
+  });
+
+  it("splits presenter-provided synthetic approval descriptors", () => {
+    render(
+      <BubbleTimeline
+        entries={[
+          entry({
+            id: "env-gate-failed",
+            type: "APPROVAL_DECISION",
+            sender: "orchestrator",
+            display: {
+              title: "Validation failed.",
+              summaryText: "Validation failed.",
+              senderLabel: "orchestrator",
               role: "meta_reviewer",
               rowKind: "gate_failure",
               tone: "danger",
-              badges: [
-                {
-                  kind: "decision",
-                  label: "rework",
-                  tone: "danger"
-                }
-              ],
-              progress: null,
+              badges: [{ kind: "decision", label: "rework", tone: "danger" }],
               validationFailure: {
-                summaryText:
-                  "Meta-review approved the current change, but the required approve-gate validation failed.",
+                summaryText: "Validation failed.",
                 tone: "danger"
               },
               syntheticApproval: {
                 kind: "meta_review_approval",
-                sourceEntryId: "env-gate-failed-rework",
-                syntheticEntryId: "env-gate-failed-rework:meta-review-approve",
+                sourceEntryId: "env-gate-failed",
+                syntheticEntryId: "env-gate-failed:synthetic-approve",
                 label: "Meta-review approved the current change.",
                 tone: "success"
               }
@@ -685,7 +286,7 @@ describe("BubbleTimeline", () => {
     const metaLabel = screen.getByText("meta-reviewer", {
       selector: "span.font-medium"
     });
-    expect(metaLabel).toHaveTextContent(/\(codex\)/u);
+    expect(metaLabel).toHaveTextContent(/\(meta-reviewer\)/u);
     const metaRow = metaLabel.closest("div.flex.items-start");
     expect(metaRow).not.toBeNull();
     expect(
@@ -694,363 +295,53 @@ describe("BubbleTimeline", () => {
     expect(within(metaRow as HTMLElement).getByText("approve")).toBeInTheDocument();
     expect(within(metaRow as HTMLElement).queryByText("rework")).not.toBeInTheDocument();
 
-    const orchestratorLabel = screen.getByText("orchestrator", {
+    const systemLabel = screen.getByText("orchestrator", {
       selector: "span.font-medium"
     });
-    expect(orchestratorLabel).toHaveTextContent("orchestrator (gate failed)");
-    const orchestratorRow = orchestratorLabel.closest("div.flex.items-start");
-    expect(orchestratorRow).not.toBeNull();
-    expect(
-      within(orchestratorRow as HTMLElement).getByText(
-        "Meta-review approved the current change, but the required approve-gate validation failed."
-      )
-    ).toBeInTheDocument();
-    expect(
-      within(orchestratorRow as HTMLElement).queryByText(
-        "Payload text does not contain the legacy gate failure marker."
-      )
-    ).not.toBeInTheDocument();
-    expect(within(orchestratorRow as HTMLElement).getByText("rework")).toBeInTheDocument();
-    expect(within(orchestratorRow as HTMLElement).queryByText("approve")).not.toBeInTheDocument();
+    expect(systemLabel).toHaveTextContent("orchestrator (gate failed)");
+    const systemRow = systemLabel.closest("div.flex.items-start");
+    expect(systemRow).not.toBeNull();
+    expect(within(systemRow as HTMLElement).getByText("Validation failed.")).toBeInTheDocument();
+    expect(within(systemRow as HTMLElement).getByText("rework")).toBeInTheDocument();
   });
 
-  it("renders severity tags from payload findings on meta-review auto-rework rows", () => {
+  it("uses display progress for clean-run sequencing and handoff rows", () => {
     render(
       <BubbleTimeline
         entries={[
-          timelineEntry({
-            id: "env-decision-findings-1",
-            type: "APPROVAL_DECISION",
-            sender: "orchestrator",
-            recipient: "codex",
-            payload: {
-              decision: "rework",
-              message: "Apply rework.",
-              findings: [
-                { title: "blocking", severity: "P1" },
-                { title: "advisory", severity: "P3" },
-                { title: "duplicate", severity: "P1" }
-              ],
-              metadata: {
-                actor: "meta-reviewer",
-                recommendation: "rework"
-              }
-            }
-          })
-        ]}
-        isLoading={false}
-        error={null}
-        compact={false}
-      />
-    );
-
-    const reworkBadges = screen
-      .getAllByText("rework")
-      .filter((node) => node.className.includes("inline-block"));
-
-    expect(reworkBadges).toHaveLength(1);
-    expect(screen.getByText("P1")).toBeInTheDocument();
-    expect(screen.getByText("P3")).toBeInTheDocument();
-  });
-
-  it("deduplicates finding severities and preserves fallback styling for unknown severity tags", () => {
-    render(
-      <BubbleTimeline
-        entries={[
-          protocolTimelineEntry({
-            id: "env-unknown-severity",
-            type: "APPROVAL_DECISION",
-            sender: "orchestrator",
-            recipient: "codex",
-            payload: {
-              decision: "rework",
-              message: "Apply rework.",
-              findings: [
-                { title: "blocking", severity: "P1" },
-                { title: "duplicate blocking", severity: "P1" },
-                { title: "future severity", severity: "PX" as never }
-              ]
-            }
-          })
-        ]}
-        isLoading={false}
-        error={null}
-        compact={false}
-      />
-    );
-
-    const p1Badges = screen
-      .getAllByText("P1")
-      .filter((node) => node.className.includes("inline-block"));
-    expect(p1Badges).toHaveLength(1);
-
-    const unknownBadge = screen.getByText("PX");
-    expect(unknownBadge).toBeInTheDocument();
-    expect(unknownBadge.className).toContain("text-slate-400");
-  });
-
-  it("renders current meta-review recommendation badge variants", () => {
-    render(
-      <BubbleTimeline
-        entries={[
-          protocolTimelineEntry({
-            id: "env-recommend-approve",
+          entry({
+            id: "env-clean-1",
             type: "APPROVAL_REQUEST",
-            payload: {
-              summary: "Approve recommendation.",
-              metadata: {
-                actor: "meta-reviewer",
-                latest_recommendation: "approve"
-              }
-            }
-          }),
-          protocolTimelineEntry({
-            id: "env-recommend-rework",
-            type: "APPROVAL_REQUEST",
-            payload: {
-              summary: "Rework recommendation.",
-              metadata: {
-                actor: "meta-reviewer",
-                latest_recommendation: "rework"
-              }
-            }
-          }),
-          protocolTimelineEntry({
-            id: "env-recommend-inconclusive",
-            type: "APPROVAL_REQUEST",
-            payload: {
-              summary: "Inconclusive recommendation.",
-              metadata: {
-                actor: "meta-reviewer",
-                latest_recommendation: "inconclusive"
-              }
-            }
-          })
-        ]}
-        isLoading={false}
-        error={null}
-        compact={false}
-      />
-    );
-
-    expect(screen.getByText("approve")).toBeInTheDocument();
-    expect(screen.getByText("rework")).toBeInTheDocument();
-    expect(screen.getByText("inconclusive")).toBeInTheDocument();
-  });
-
-  it("renders clean-run count instead of approve until the required streak is met", () => {
-    render(
-      <BubbleTimeline
-        entries={[
-          timelineEntry({
-            id: "env-meta-clean-1",
-            type: "APPROVAL_REQUEST",
-            sender: "orchestrator",
-            recipient: "human",
-            payload: {
-              summary: "First clean meta-review.",
-              metadata: {
-                actor: "meta-reviewer",
-                latest_recommendation: "approve"
-              }
-            }
-          }),
-          timelineEntry({
-            id: "env-meta-clean-2",
-            type: "APPROVAL_REQUEST",
-            sender: "orchestrator",
-            recipient: "human",
-            payload: {
-              summary: "Second clean meta-review.",
-              metadata: {
-                actor: "meta-reviewer",
-                latest_recommendation: "approve"
-              }
-            }
-          })
-        ]}
-        isLoading={false}
-        error={null}
-        compact={false}
-        metaReviewCleanRunsRequired={2}
-      />
-    );
-
-    expect(screen.getByText("clean 1")).toBeInTheDocument();
-    expect(screen.getByText("approve")).toBeInTheDocument();
-    expect(screen.queryByText("clean 2")).not.toBeInTheDocument();
-  });
-
-  it("renders intermediate clean-run counts for longer clean-run requirements", () => {
-    render(
-      <BubbleTimeline
-        entries={[
-          timelineEntry({
-            id: "env-meta-clean-1",
-            type: "APPROVAL_REQUEST",
-            sender: "orchestrator",
-            recipient: "human",
-            payload: {
-              summary: "First clean meta-review.",
-              metadata: {
-                actor: "meta-reviewer",
-                latest_recommendation: "approve"
-              }
-            }
-          }),
-          timelineEntry({
-            id: "env-meta-clean-2",
-            type: "APPROVAL_REQUEST",
-            sender: "orchestrator",
-            recipient: "human",
-            payload: {
-              summary: "Second clean meta-review.",
-              metadata: {
-                actor: "meta-reviewer",
-                latest_recommendation: "approve"
-              }
-            }
-          }),
-          timelineEntry({
-            id: "env-meta-clean-3",
-            type: "APPROVAL_REQUEST",
-            sender: "orchestrator",
-            recipient: "human",
-            payload: {
-              summary: "Third clean meta-review.",
-              metadata: {
-                actor: "meta-reviewer",
-                latest_recommendation: "approve"
-              }
-            }
-          })
-        ]}
-        isLoading={false}
-        error={null}
-        compact={false}
-        metaReviewCleanRunsRequired={3}
-      />
-    );
-
-    expect(screen.getByText("clean 1")).toBeInTheDocument();
-    expect(screen.getByText("clean 2")).toBeInTheDocument();
-    expect(screen.getByText("approve")).toBeInTheDocument();
-  });
-
-  it("uses explicit meta-review clean-run metadata before the approval streak is complete", () => {
-    render(
-      <BubbleTimeline
-        entries={[
-          protocolTimelineEntry({
-            id: "env-explicit-clean-runs",
-            type: "APPROVAL_REQUEST",
-            sender: "orchestrator",
-            recipient: "human",
-            payload: {
-              summary: "Second explicit clean meta-review.",
-              metadata: {
-                actor: "meta-reviewer",
-                latest_recommendation: "approve",
-                consecutive_clean_runs: 2
-              }
-            }
-          })
-        ]}
-        isLoading={false}
-        error={null}
-        compact={false}
-        metaReviewCleanRunsRequired={3}
-      />
-    );
-
-    expect(screen.getByText("clean 2")).toBeInTheDocument();
-    expect(screen.queryByText("approve")).not.toBeInTheDocument();
-  });
-
-  it("uses display clean-run progress to replace approve recommendation badges", () => {
-    render(
-      <BubbleTimeline
-        entries={[
-          protocolTimelineEntry({
-            id: "env-display-clean-run",
-            type: "APPROVAL_REQUEST",
-            sender: "orchestrator",
-            recipient: "human",
-            payload: {
-              summary: "Display clean-run meta-review."
-            },
-            display: display({
-              title: "Display clean-run meta-review.",
-              summaryText: "Display clean-run meta-review.",
+            display: {
+              title: "First clean.",
+              summaryText: "First clean.",
               senderLabel: "codex",
               role: "meta_reviewer",
-              rowKind: "approval",
-              badges: [
-                { kind: "recommendation", label: "approve", tone: "success" }
-              ],
-              progress: {
-                kind: "clean_run",
-                label: "producer clean label",
-                cleanRunCount: 1,
-                cleanRunsRequired: 2
-              }
-            })
-          })
-        ]}
-        isLoading={false}
-        error={null}
-        compact={false}
-      />
-    );
-
-    expect(screen.getByText("producer clean label")).toBeInTheDocument();
-    expect(screen.queryByText("clean 1")).not.toBeInTheDocument();
-    expect(screen.queryByText("approve")).not.toBeInTheDocument();
-  });
-
-  it("uses display clean-run progress when sequencing rerun handoff rows", () => {
-    render(
-      <BubbleTimeline
-        entries={[
-          protocolTimelineEntry({
-            id: "env-display-clean-run-before-handoff",
-            type: "APPROVAL_REQUEST",
-            sender: "orchestrator",
-            recipient: "human",
-            payload: {
-              summary: "Display clean-run meta-review."
+              rowKind: "approval"
             },
-            display: display({
-              title: "Display clean-run meta-review.",
-              summaryText: "Display clean-run meta-review.",
-              senderLabel: "codex",
-              role: "meta_reviewer",
-              rowKind: "approval",
-              badges: [
-                { kind: "recommendation", label: "approve", tone: "success" }
-              ],
-              progress: {
-                kind: "clean_run",
-                label: "producer clean label",
-                cleanRunCount: 1,
-                cleanRunsRequired: 3
-              }
-            })
+            badges: [{ kind: "recommendation", label: "approve", tone: "success" }],
+            progress: {
+              kind: "clean_run",
+              label: "producer clean label",
+              cleanRunCount: 1,
+              cleanRunsRequired: 3
+            }
           }),
-          protocolTimelineEntry({
-            id: "env-meta-gate-2-after-display-progress",
+          entry({
+            id: "env-rerun",
             type: "TASK",
-            sender: "orchestrator",
-            recipient: "codex",
-            payload: {
-              summary: "Meta-review gate opened again.",
-              metadata: {
-                delivery_target_role: "meta_reviewer",
-                actor: "meta-review-gate",
-                actor_agent: "orchestrator",
-                meta_review_handoff_id:
-                  "meta_review:b-meta-gate:round:4:attempt:2"
-              }
+            display: {
+              title: "Rerun handoff.",
+              summaryText: "Rerun handoff.",
+              senderLabel: "codex",
+              role: "meta_reviewer",
+              rowKind: "handoff",
+              tone: "info"
+            },
+            progress: {
+              kind: "meta_review_handoff",
+              label: "handoff 2",
+              handoffAttempt: 2
             }
           })
         ]}
@@ -1062,32 +353,75 @@ describe("BubbleTimeline", () => {
 
     expect(screen.getByText("producer clean label")).toBeInTheDocument();
     expect(screen.getByText("clean 2")).toBeInTheDocument();
+    expect(screen.queryByText("approve")).not.toBeInTheDocument();
   });
 
-  it("does not synthesize clean-run chips from stale payload recommendations", () => {
+  it("does not render superseded handoff display rows as normal messages", () => {
     render(
       <BubbleTimeline
         entries={[
-          protocolTimelineEntry({
-            id: "env-stale-payload-approve",
-            type: "APPROVAL_REQUEST",
-            sender: "orchestrator",
-            recipient: "human",
-            payload: {
-              summary: "Payload approve must not render.",
-              metadata: {
-                actor: "meta-reviewer",
-                latest_recommendation: "approve"
-              }
+          entry({
+            id: "env-stale-handoff",
+            type: "TASK",
+            display: {
+              title: "Stale handoff must not render.",
+              summaryText: "Stale handoff must not render.",
+              senderLabel: "codex",
+              role: "meta_reviewer",
+              rowKind: "handoff",
+              tone: "info"
+            }
+          }),
+          entry({
+            id: "env-current-handoff",
+            type: "TASK",
+            display: {
+              title: "Current handoff.",
+              summaryText: "Current handoff.",
+              senderLabel: "codex",
+              role: "meta_reviewer",
+              rowKind: "handoff",
+              tone: "info"
             },
-            display: display({
+            progress: {
+              kind: "meta_review_handoff",
+              label: "handoff 2",
+              handoffAttempt: 2
+            }
+          })
+        ]}
+        isLoading={false}
+        error={null}
+        compact={false}
+        metaReviewCleanRunsRequired={3}
+      />
+    );
+
+    expect(screen.queryByText("Stale handoff must not render.")).not.toBeInTheDocument();
+    expect(screen.getByText("clean 1")).toBeInTheDocument();
+  });
+
+  it("does not synthesize clean-run chips from stale raw recommendation data", () => {
+    render(
+      <BubbleTimeline
+        entries={[
+          entry({
+            id: "env-stale-raw-approve",
+            type: "APPROVAL_REQUEST",
+            payload: {
+              summary: "Raw approve must not render.",
+              metadata: {
+                recommendation: "approve"
+              }
+            } as never,
+            display: {
               title: "Display omits approve.",
               summaryText: "Display omits approve.",
               senderLabel: "codex",
               role: "meta_reviewer",
               rowKind: "approval",
               badges: []
-            })
+            }
           })
         ]}
         isLoading={false}
@@ -1098,71 +432,95 @@ describe("BubbleTimeline", () => {
     );
 
     expect(screen.getByText("Display omits approve.")).toBeInTheDocument();
+    expect(screen.queryByText("Raw approve must not render.")).not.toBeInTheDocument();
     expect(screen.queryByText("clean 1")).not.toBeInTheDocument();
     expect(screen.queryByText("approve")).not.toBeInTheDocument();
   });
 
-  it("does not reset clean-run sequencing from stale payload rework decisions", () => {
+  it("does not synthesize clean-run chips from display approve badges without progress", () => {
     render(
       <BubbleTimeline
         entries={[
-          protocolTimelineEntry({
-            id: "env-display-approve-clean-1",
+          entry({
+            id: "env-superseded-approve",
             type: "APPROVAL_REQUEST",
-            sender: "orchestrator",
-            recipient: "human",
-            payload: {
-              summary: "Display approve clean one."
-            },
-            display: display({
-              title: "Display approve clean one.",
-              summaryText: "Display approve clean one.",
+            display: {
+              title: "Superseded approve row.",
+              summaryText: "Superseded approve row.",
               senderLabel: "codex",
               role: "meta_reviewer",
-              rowKind: "approval",
-              badges: [
-                { kind: "recommendation", label: "approve", tone: "success" }
-              ]
-            })
+              rowKind: "approval"
+            },
+            badges: [{ kind: "recommendation", label: "approve", tone: "success" }]
+          })
+        ]}
+        isLoading={false}
+        error={null}
+        compact={false}
+        metaReviewCleanRunsRequired={2}
+      />
+    );
+
+    expect(screen.getByText("Superseded approve row.")).toBeInTheDocument();
+    expect(screen.getByText("approve")).toBeInTheDocument();
+    expect(screen.queryByText("clean 1")).not.toBeInTheDocument();
+  });
+
+  it("does not reset clean-run sequencing from stale raw decisions", () => {
+    render(
+      <BubbleTimeline
+        entries={[
+          entry({
+            id: "env-display-clean-1",
+            type: "APPROVAL_REQUEST",
+            display: {
+              title: "Display clean one.",
+              summaryText: "Display clean one.",
+              senderLabel: "codex",
+              role: "meta_reviewer",
+              rowKind: "approval"
+            },
+            badges: [{ kind: "recommendation", label: "approve", tone: "success" }],
+            progress: {
+              kind: "clean_run",
+              label: "clean 1",
+              cleanRunCount: 1,
+              cleanRunsRequired: 3
+            }
           }),
-          protocolTimelineEntry({
-            id: "env-stale-payload-rework",
+          entry({
+            id: "env-stale-raw-rework",
             type: "APPROVAL_DECISION",
-            sender: "orchestrator",
-            recipient: "codex",
             payload: {
               decision: "rework",
-              message: "Payload rework must not reset display state."
+              message: "Raw rework must not reset display state."
             },
-            display: display({
+            display: {
               title: "Display decision approve.",
               summaryText: "Display decision approve.",
               senderLabel: "codex",
               role: "meta_reviewer",
               rowKind: "approval",
-              badges: [
-                { kind: "decision", label: "approve", tone: "success" }
-              ]
-            })
+              badges: [{ kind: "decision", label: "approve", tone: "success" }]
+            }
           }),
-          protocolTimelineEntry({
-            id: "env-display-approve-clean-2",
+          entry({
+            id: "env-display-clean-2",
             type: "APPROVAL_REQUEST",
-            sender: "orchestrator",
-            recipient: "human",
-            payload: {
-              summary: "Display approve clean two."
-            },
-            display: display({
-              title: "Display approve clean two.",
-              summaryText: "Display approve clean two.",
+            display: {
+              title: "Display clean two.",
+              summaryText: "Display clean two.",
               senderLabel: "codex",
               role: "meta_reviewer",
-              rowKind: "approval",
-              badges: [
-                { kind: "recommendation", label: "approve", tone: "success" }
-              ]
-            })
+              rowKind: "approval"
+            },
+            badges: [{ kind: "recommendation", label: "approve", tone: "success" }],
+            progress: {
+              kind: "clean_run",
+              label: "clean 2",
+              cleanRunCount: 2,
+              cleanRunsRequired: 3
+            }
           })
         ]}
         isLoading={false}
@@ -1177,124 +535,10 @@ describe("BubbleTimeline", () => {
     expect(screen.getByText("Display decision approve.")).toBeInTheDocument();
   });
 
-  it("resets clean-run count after a meta-review rework recommendation", () => {
-    render(
+  it("renders status states and extras", () => {
+    const { rerender } = render(
       <BubbleTimeline
-        entries={[
-          timelineEntry({
-            id: "env-meta-clean-1",
-            type: "APPROVAL_REQUEST",
-            sender: "orchestrator",
-            recipient: "human",
-            payload: {
-              summary: "First clean meta-review.",
-              metadata: {
-                actor: "meta-reviewer",
-                latest_recommendation: "approve"
-              }
-            }
-          }),
-          timelineEntry({
-            id: "env-meta-rework",
-            type: "APPROVAL_DECISION",
-            sender: "orchestrator",
-            recipient: "codex",
-            payload: {
-              decision: "rework",
-              message: "Apply rework.",
-              metadata: {
-                actor: "meta-reviewer"
-              }
-            }
-          }),
-          timelineEntry({
-            id: "env-meta-clean-2",
-            type: "APPROVAL_REQUEST",
-            sender: "orchestrator",
-            recipient: "human",
-            payload: {
-              summary: "Clean after rework.",
-              metadata: {
-                actor: "meta-reviewer",
-                latest_recommendation: "approve"
-              }
-            }
-          })
-        ]}
-        isLoading={false}
-        error={null}
-        compact={false}
-        metaReviewCleanRunsRequired={2}
-      />
-    );
-
-    const cleanOneBadges = screen
-      .getAllByText("clean 1")
-      .filter((node) => node.className.includes("inline-block"));
-    expect(cleanOneBadges).toHaveLength(2);
-    expect(screen.queryByText("approve")).not.toBeInTheDocument();
-  });
-
-  it("keeps fixture-generated display badge labels aligned with presenter sanitization", () => {
-    const entry = timelineEntry({
-      type: "APPROVAL_DECISION",
-      payload: {
-        decision: " rework " as never,
-        message: "Apply rework.",
-        findings: [
-          { title: "spaced severity", severity: " P1 " as never }
-        ],
-        metadata: {
-          recommendation: "  rework  "
-        }
-      }
-    });
-
-    expect(entry.display.badges).toEqual([
-      { kind: "finding", label: "P1", tone: "danger" },
-      { kind: "decision", label: "rework", tone: "danger" }
-    ]);
-  });
-
-  it("does not let stray fixture decision payload suppress recommendation badges", () => {
-    const entry = timelineEntry({
-      type: "APPROVAL_REQUEST",
-      payload: {
-        summary: "Recommendation with stray decision.",
-        decision: " approve " as never,
-        metadata: {
-          recommendation: " approve "
-        }
-      }
-    });
-
-    expect(entry.display.badges).toEqual([
-      { kind: "recommendation", label: "approve", tone: "success" }
-    ]);
-  });
-
-  it("keeps fixture unknown decision badge tones aligned with presenter output", () => {
-    const entry = timelineEntry({
-      type: "APPROVAL_DECISION",
-      payload: {
-        decision: "maybe" as never
-      }
-    });
-
-    expect(entry.display.badges).toEqual([
-      { kind: "decision", label: "maybe", tone: "neutral" }
-    ]);
-  });
-
-  it("renders extras inside the same scroll container as timeline entries", () => {
-    render(
-      <BubbleTimeline
-        entries={[
-          timelineEntry({
-            id: "env-1",
-            sender: "implementer"
-          })
-        ]}
+        entries={[]}
         isLoading={false}
         error={null}
         compact
@@ -1302,12 +546,12 @@ describe("BubbleTimeline", () => {
       />
     );
 
-    const scroller = screen.getByTestId("bubble-timeline-scroll");
-    expect(scroller).toContainElement(screen.getByTestId("timeline-extras"));
-  });
+    expect(screen.getByText("No timeline entries yet.")).toBeInTheDocument();
+    expect(screen.getByTestId("bubble-timeline-scroll")).toContainElement(
+      screen.getByTestId("timeline-extras")
+    );
 
-  it("prioritizes error rendering over loading when both are present", () => {
-    render(
+    rerender(
       <BubbleTimeline
         entries={null}
         isLoading
@@ -1320,33 +564,15 @@ describe("BubbleTimeline", () => {
     expect(screen.queryByText("Loading timeline...")).not.toBeInTheDocument();
   });
 
-  it("keeps loaded timeline visible during refresh", () => {
-    render(
-      <BubbleTimeline
-        entries={[
-          timelineEntry({
-            id: "env-refresh-1",
-            sender: "implementer",
-            payload: {
-              summary: "Remote smoke running."
-            }
-          })
-        ]}
-        isLoading
-        error={null}
-        compact={false}
-      />
-    );
-
-    expect(screen.getByText("Remote smoke running.")).toBeInTheDocument();
-    expect(screen.queryByText("Loading timeline...")).not.toBeInTheDocument();
-  });
-
-  it("preserves manual scroll position when user scrolls away from bottom", () => {
+  it("preserves manual scroll position when new entries arrive", () => {
     const firstEntries = Array.from({ length: 5 }, (_, index) =>
-      timelineEntry({
+      entry({
         id: `env-${index}`,
-        ts: `2026-03-08T10:00:0${index}.000Z`
+        ts: `2026-03-08T10:00:0${index}.000Z`,
+        display: {
+          title: `Entry ${index}`,
+          summaryText: `Entry ${index}`
+        }
       })
     );
     const { rerender } = render(
@@ -1386,7 +612,14 @@ describe("BubbleTimeline", () => {
       <BubbleTimeline
         entries={[
           ...firstEntries,
-          timelineEntry({ id: "env-append", ts: "2026-03-08T10:00:10.000Z" })
+          entry({
+            id: "env-append",
+            ts: "2026-03-08T10:00:10.000Z",
+            display: {
+              title: "Appended",
+              summaryText: "Appended"
+            }
+          })
         ]}
         isLoading={false}
         error={null}

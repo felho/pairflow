@@ -8,7 +8,10 @@ import {
   resolveRemoteBubbleStatusTarget,
   runCommandDefault
 } from "../../executor/ssh/sshBubbleStatus.js";
-import type { ProtocolEnvelope } from "../../../../types/protocol.js";
+import type {
+  ProtocolEnvelope,
+  ProtocolEnvelopePayload
+} from "../../../../types/protocol.js";
 import type { Finding } from "../../../../types/findings.js";
 import {
   isFindingLayer,
@@ -23,7 +26,11 @@ import {
   isPassIntent,
   isProtocolMessageType
 } from "../../../../types/protocol.js";
-import type { UiTimelineEntry } from "../../../../contracts/ui/uiReadModel.js";
+import type {
+  UiTimelineEntry,
+  UiTimelineEntryPayload,
+  UiTimelineFinding
+} from "../../../../contracts/ui/uiReadModel.js";
 import {
   isInteger,
   isNonEmptyString,
@@ -88,7 +95,7 @@ class RemoteTimelineReadError extends Error {
 }
 
 export function presentTimeline(envelopes: ProtocolEnvelope[]): UiTimelineEntry[] {
-  return attachTimelineDisplay(envelopes.map((envelope) => ({
+  return sanitizeTimelinePayloads(attachTimelineDisplay(envelopes.map((envelope) => ({
     id: envelope.id,
     ts: envelope.ts,
     round: envelope.round,
@@ -97,11 +104,14 @@ export function presentTimeline(envelopes: ProtocolEnvelope[]): UiTimelineEntry[
     recipient: envelope.recipient,
     payload: envelope.payload,
     refs: envelope.refs
-  })));
+  }))));
 }
 
 function isFinding(value: unknown): value is Finding {
   if (!isRecord(value) || !isNonEmptyString(value.title)) {
+    return false;
+  }
+  if (!hasRenderableFindingPriority(value)) {
     return false;
   }
   if (value.priority !== undefined && !isFindingPriority(value.priority)) {
@@ -110,41 +120,71 @@ function isFinding(value: unknown): value is Finding {
   if (value.severity !== undefined && !isFindingSeverity(value.severity)) {
     return false;
   }
-  if (value.timing !== undefined && !isFindingTiming(value.timing)) {
+  return hasValidFindingMetadata(value);
+}
+
+function hasValidFindingMetadata(finding: Record<string, unknown>): boolean {
+  if (finding.timing !== undefined && !isFindingTiming(finding.timing)) {
     return false;
   }
-  if (value.layer !== undefined && !isFindingLayer(value.layer)) {
+  if (finding.layer !== undefined && !isFindingLayer(finding.layer)) {
     return false;
   }
   if (
-    value.evidence !== undefined
+    finding.evidence !== undefined
     && !(
-      isNonEmptyString(value.evidence)
+      isNonEmptyString(finding.evidence)
       || (
-        Array.isArray(value.evidence)
-        && value.evidence.every((entry) => isNonEmptyString(entry))
+        Array.isArray(finding.evidence)
+        && finding.evidence.every((entry) => isNonEmptyString(entry))
       )
     )
   ) {
     return false;
   }
-  if (value.refs !== undefined) {
-    if (!Array.isArray(value.refs) || !value.refs.every((entry) => isNonEmptyString(entry))) {
+  if (finding.refs !== undefined) {
+    if (!Array.isArray(finding.refs) || !finding.refs.every((entry) => isNonEmptyString(entry))) {
       return false;
     }
   }
-  if (value.effective_priority !== undefined && !isFindingPriority(value.effective_priority)) {
+  if (finding.effective_priority !== undefined && !isFindingPriority(finding.effective_priority)) {
     return false;
   }
   return true;
 }
 
-function normalizePayloadForUi(raw: unknown): UiTimelineEntry["payload"] {
+function hasRenderableFindingPriority(finding: Record<string, unknown>): boolean {
+  return (
+    isFindingPriority(finding.effective_priority) ||
+    isFindingPriority(finding.priority) ||
+    isFindingSeverity(finding.severity)
+  );
+}
+
+function sanitizeFindingForUi(finding: Finding): UiTimelineFinding {
+  const sanitized = {
+    title: finding.title
+  } as UiTimelineFinding;
+  if (finding.priority !== undefined) sanitized.priority = finding.priority;
+  if (finding.severity !== undefined) sanitized.severity = finding.severity;
+  if (finding.timing !== undefined) sanitized.timing = finding.timing;
+  if (finding.layer !== undefined) sanitized.layer = finding.layer;
+  if (finding.evidence !== undefined) sanitized.evidence = finding.evidence;
+  if (typeof finding.detail === "string") sanitized.detail = finding.detail;
+  if (typeof finding.code === "string") sanitized.code = finding.code;
+  if (finding.refs !== undefined) sanitized.refs = finding.refs;
+  if (finding.effective_priority !== undefined) {
+    sanitized.effective_priority = finding.effective_priority;
+  }
+  return sanitized;
+}
+
+function normalizePayloadForUi(raw: unknown): UiTimelineEntryPayload {
   if (!isRecord(raw)) {
     return {};
   }
 
-  const payload: UiTimelineEntry["payload"] = {};
+  const payload: UiTimelineEntryPayload = {};
   if (isNonEmptyString(raw.summary)) {
     payload.summary = raw.summary;
   }
@@ -160,19 +200,55 @@ function normalizePayloadForUi(raw: unknown): UiTimelineEntry["payload"] {
   if (isPassIntent(raw.pass_intent)) {
     payload.pass_intent = raw.pass_intent;
   }
-  if (isFindingsClaimState(raw.findings_claim_state)) {
-    payload.findings_claim_state = raw.findings_claim_state;
+  const rawFindings = raw.findings;
+  const hasFindingsInput = Array.isArray(rawFindings);
+  const sanitizedFindings = hasFindingsInput && rawFindings.every((value) => isFinding(value))
+    ? rawFindings.map(sanitizeFindingForUi)
+    : null;
+  if (sanitizedFindings !== null) {
+    payload.findings = sanitizedFindings;
   }
-  if (isFindingsClaimSource(raw.findings_claim_source)) {
-    payload.findings_claim_source = raw.findings_claim_source;
+  if (
+    shouldPreserveFindingsClaim(raw, sanitizedFindings)
+  ) {
+    payload.findings_claim_state = raw.findings_claim_state as "clean" | "open_findings" | "unknown";
+    payload.findings_claim_source =
+      raw.findings_claim_source as "payload_flags" | "payload_findings_count" | "legacy_summary_parser" | "meta_review_artifact";
   }
-  if (Array.isArray(raw.findings) && raw.findings.every((value) => isFinding(value))) {
-    payload.findings = raw.findings;
+  return payload;
+}
+
+function shouldPreserveFindingsClaim(
+  raw: Record<string, unknown>,
+  sanitizedFindings: UiTimelineFinding[] | null
+): boolean {
+  if (!isFindingsClaimState(raw.findings_claim_state) || !isFindingsClaimSource(raw.findings_claim_source)) {
+    return false;
   }
-  if (isRecord(raw.metadata)) {
+  if (raw.findings_claim_state === "open_findings") {
+    return sanitizedFindings !== null && sanitizedFindings.length > 0;
+  }
+  if (raw.findings_claim_state === "clean" && sanitizedFindings !== null && sanitizedFindings.length > 0) {
+    return false;
+  }
+  return !Object.hasOwn(raw, "findings") || sanitizedFindings !== null;
+}
+
+function normalizePayloadForDisplay(raw: unknown): ProtocolEnvelopePayload {
+  const payload: ProtocolEnvelopePayload = normalizePayloadForUi(raw);
+  if (isRecord(raw) && isRecord(raw.metadata)) {
     payload.metadata = raw.metadata;
   }
   return payload;
+}
+
+function sanitizeTimelinePayloads(
+  entries: Array<TimelineEntryWithoutDisplay & Pick<UiTimelineEntry, "display">>
+): UiTimelineEntry[] {
+  return entries.map((entry) => ({
+    ...entry,
+    payload: normalizePayloadForUi(entry.payload)
+  }));
 }
 
 function presentTimelineEntryLenient(input: unknown): TimelineEntryWithoutDisplay | null {
@@ -201,7 +277,7 @@ function presentTimelineEntryLenient(input: unknown): TimelineEntryWithoutDispla
     type: input.type,
     sender: input.sender,
     recipient: input.recipient,
-    payload: normalizePayloadForUi(input.payload),
+    payload: normalizePayloadForDisplay(input.payload),
     refs
   };
 }
@@ -239,7 +315,7 @@ async function readTimelineLenientFromTranscriptPath(
     }
   }
 
-  return attachTimelineDisplay(entries);
+  return sanitizeTimelinePayloads(attachTimelineDisplay(entries));
 }
 
 export function readBubbleTimelineFromTranscriptText(
@@ -261,7 +337,7 @@ export function readBubbleTimelineFromTranscriptText(
     }
   }
 
-  return attachTimelineDisplay(entries);
+  return sanitizeTimelinePayloads(attachTimelineDisplay(entries));
 }
 
 export async function readBubbleTimelineFromTranscriptPath(
