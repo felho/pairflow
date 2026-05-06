@@ -136,7 +136,7 @@ export async function assertSubmitReworkFindingsArtifactContract(input: {
   const {
     resolveReworkFindingsParityInput,
     validateFindingsArtifactParity
-  } = await import("../metaReviewGate/index.js");
+  } = await import("../metaReviewGate/metaReviewGateFindingsParityApi.js");
 
   if (input.runResult.recommendation !== "rework") {
     return;

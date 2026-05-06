@@ -7,16 +7,19 @@ import * as metaReviewGatePublicApi from "../../../src/v11/shared/metaReviewGate
 import {
   metaReviewGateRoutes,
   readLatestSameRoundReviewerSnapshotFromTranscript,
-  resolveMetaReviewGateThresholdAuthority,
+  resolveMetaReviewGateThresholdAuthority
+} from "../../../src/v11/shared/metaReviewGate/index.js";
+import {
   resolveReworkFindingsParityInput,
   validateFindingsArtifactParity
-} from "../../../src/v11/shared/metaReviewGate/index.js";
+} from "../../../src/v11/shared/metaReviewGate/metaReviewGateFindingsParityApi.js";
 import {
   finalizeCurrentRunMetaReviewGate
 } from "../../../src/v11/shared/metaReviewGate/metaReviewGateCurrentRunApi.js";
 
 const allowedSharedMetaReviewGateImports = new Set([
   "../metaReviewGate/index.js",
+  "../metaReviewGate/metaReviewGateFindingsParityApi.js",
   "../metaReviewGate/metaReviewGateCurrentRunApi.js"
 ]);
 
@@ -82,6 +85,17 @@ describe("meta-review gate public API boundary", () => {
     expect(metaReviewGatePublicApi).not.toHaveProperty(
       "isAdvisoryOnlyReviewerSnapshot"
     );
+    expect(metaReviewGatePublicApi).not.toHaveProperty(
+      "resolveReworkFindingsParityInput"
+    );
+    expect(metaReviewGatePublicApi).not.toHaveProperty(
+      "validateFindingsArtifactParity"
+    );
+  });
+
+  it("keeps findings artifact parity on its narrow public API", () => {
+    expect(resolveReworkFindingsParityInput).toBeTypeOf("function");
+    expect(validateFindingsArtifactParity).toBeTypeOf("function");
   });
 
   it("keeps current-run finalization on its narrow public API", () => {

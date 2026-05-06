@@ -2,12 +2,6 @@ export * from "./metaReviewGateCommandApi.js";
 export {
   resolveMetaReviewGateThresholdAuthority
 } from "./internal/metaReviewGateThresholdAuthority.js";
-export {
-  resolveReworkFindingsParityInput
-} from "./internal/metaReviewGateFindingsParityInput.js";
-export {
-  validateFindingsArtifactParity
-} from "./internal/metaReviewGateFindingsParityHelpers.js";
 export type {
   MetaReviewGateThresholdAuthorityResolution,
   ResolveMetaReviewGateThresholdAuthorityInput
