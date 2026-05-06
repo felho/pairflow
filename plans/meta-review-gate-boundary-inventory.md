@@ -38,6 +38,9 @@ Completed in the bubble:
 - threshold authority resolution now lives under
   `shared/metaReviewGate/internal/**`; the aggregate index still exports the
   public threshold helpers and types.
+- findings metadata/path resolution now lives under
+  `shared/metaReviewGate/internal/**`; the aggregate index still exports the
+  public parity metadata helper.
 - `domain/metaReviewGate/**` no longer imports back from
   `shared/metaReviewGate/**`; route/error language is owned in domain and
   re-exported by the shared public contract for compatibility.
@@ -110,8 +113,9 @@ public, wrapped by a higher-level API, or migrated with callers.
 Source imports no longer reach directly into the former deep policy files
 (`metaReviewGateFindingsSplit.ts`, `metaReviewGateFindingsMetadata.ts`,
 `metaReviewGateFindingsParityInput.ts`, `metaReviewGateReviewerSnapshot.ts`, or
-`metaReviewGateThresholdAuthority.ts`). Remaining direct imports of those files
-are test-local coverage of their public wrappers.
+`metaReviewGateThresholdAuthority.ts`). The remaining root-level public surface
+is the aggregate `index.ts`, the narrow current-run API, and stable contract
+files.
 
 ## Current Public Surface
 
@@ -213,7 +217,7 @@ the final owner should not be domain policy.
 
 | File | Lines | Responsibility | External import? | Suggested action |
 | --- | ---: | --- | --- | --- |
-| `metaReviewGateFindingsMetadata.ts` | 47 | Artifact path resolution plus compatibility re-exports for domain parity metadata helpers. | yes, 1 | Done split; keep path resolution here while public callers migrate to narrower imports. |
+| `internal/metaReviewGateFindingsMetadata.ts` | 47 | Artifact path resolution plus compatibility re-exports for domain parity metadata helpers. | public via aggregate index only | Done split; keep path resolution behind shared public API while pure metadata stays domain-owned. |
 | `metaReviewGateFindingsArtifactReadRetry.ts` | 90 | Retry policy around findings artifact read. | no direct external | Infrastructure/port-adjacent or application internal. |
 | `metaReviewGateReviewerSnapshot.ts` | 29 | Transcript read wrapper plus compatibility re-exports for domain reviewer snapshot policy. | yes, 1 | Done split; pure snapshot derivation is domain-owned. |
 
