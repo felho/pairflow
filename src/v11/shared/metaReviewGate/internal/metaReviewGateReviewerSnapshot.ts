@@ -1,7 +1,3 @@
-import {
-  type LatestSameRoundReviewerSnapshot
-} from "../../../domain/metaReviewGate/reviewerSnapshot.js";
-
 export {
   isAdvisoryOnlyReviewerSnapshot,
   isReviewerSnapshotEnvelope,
