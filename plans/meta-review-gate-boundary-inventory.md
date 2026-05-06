@@ -29,6 +29,9 @@ Completed in the bubble:
 - current-run finalization now routes through
   `../metaReviewGate/metaReviewGateCurrentRunApi.js`, a narrow public API file
   that avoids importing the aggregate index.
+- `metaReviewGateCurrentRunFinalization.ts` now lives under
+  `shared/metaReviewGate/internal/**`; `metaReviewGateCurrentRunApi.ts` remains
+  the public door.
 - `domain/metaReviewGate/**` no longer imports back from
   `shared/metaReviewGate/**`; route/error language is owned in domain and
   re-exported by the shared public contract for compatibility.
@@ -184,7 +187,7 @@ runtime delivery. They should not be moved wholesale to `domain`.
 | `metaReviewGateApplyPersistence.ts` | 96 | Persist runtime delivery observation. | no direct external | Application/infrastructure boundary candidate. |
 | `metaReviewGateApplyHelpers.ts` | 107 | Append kickoff envelope and persist run-failed route. | no direct external | Application internal; uses transcript/state helpers. |
 | `metaReviewGateFindingsValidation.ts` | 95 | Top-level positive-claim validation orchestration over preflight, approve policy, and rework artifact validation adapter. | no direct external | Application/internal wrapper; do not move wholesale to domain. |
-| `metaReviewGateCurrentRunFinalization.ts` | 480 | Current-run route resolution, parity I/O, threshold authority reads, approve/rework/human routing. | yes, 1 | Application candidate; pure approve-validation, clean-approval, and approve-threshold backstop policies have been split out. |
+| `internal/metaReviewGateCurrentRunFinalization.ts` | 476 | Current-run route resolution, parity I/O, threshold authority reads, approve/rework/human routing. | no direct external; public door is `metaReviewGateCurrentRunApi.ts` | Application candidate; pure approve-validation, clean-approval, and approve-threshold backstop policies have been split out. |
 | `metaReviewGateCurrentRunCleanRerun.ts` | 496 | Clean rerun routing, delivery, pane binding, observation persistence. | no direct external | Application/internal first; likely later split runtime delivery pieces. |
 | `metaReviewGateCurrentRunRoutePersistence.ts` | 175 | Persist run-failed/dispatch/resolved human routes. | no direct external | Application/infrastructure boundary candidate. |
 | `metaReviewGateAutoRework.ts` | 327 | Auto-rework state transition, transcript append, rollback handling. | no direct external | Application candidate with ports; do not domain-move wholesale. |
