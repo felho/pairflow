@@ -37,6 +37,9 @@ Completed in the bubble:
   through state helpers.
 - snapshot-state counters are owned in `domain/metaReviewGate/snapshotState.ts`;
   shared internal apply/auto-rework/clean-rerun code imports them directly.
+- human-gate summaries and meta-review snapshot normalization are imported from
+  domain owners directly; the shared snapshot helper now only keeps local
+  agent/metadata envelope utilities.
 - `metaReviewGateTypes.ts` is now a compatibility aggregator only; route/error,
   result, runtime capability, and tmux runner contracts each have narrower
   public contract files.
@@ -184,10 +187,10 @@ runtime delivery. They should not be moved wholesale to `domain`.
 | `metaReviewGateHumanGatePersistenceHelpers.ts` | 180 | Human gate recommendation, request append, rollback handling. | no direct external | Application internal; split pure recommendation from append/rollback later. |
 | `approvalRequestEnvelope.ts` | 273 | Build/append human approval request envelope with route metadata. | no direct external | Application/internal first; possible presenter/DTO extraction later. |
 | `metaReviewApproveValidationGate.ts` | 347 | Run sticky approve validation commands and map failures. | no direct external | Application candidate; validation runtime orchestration. |
-| `metaReviewGateStateHelpers.ts` | 53 | State transition coordination plus compatibility re-exports for snapshot envelope helpers. | no direct external | Application/internal helper; route defaults and snapshot counters are now domain-owned. |
+| `metaReviewGateStateHelpers.ts` | 51 | State transition coordination plus compatibility re-exports for local snapshot envelope helpers. | no direct external | Application/internal helper; route defaults, summaries, and snapshot state are now domain-owned. |
 | `metaReviewGateStateStaging.ts` | 78 | Stage meta-review running state with execution context. | no direct external | Application internal. |
-| `metaReviewGateSnapshotHelpers.ts` | 71 | Normalize meta-review snapshot and derive envelope metadata. | no direct external | Mixed; likely application/domain helper split. |
-| `metaReviewGateShared.ts` | 67 | Shared reason codes, conflict/transition mapping, gate lock path. | no direct external | Mixed utility; keep internal first and split path/error pieces later. |
+| `metaReviewGateSnapshotHelpers.ts` | 19 | Resolve configured meta-reviewer agent and protocol envelope parity metadata. | no direct external | Application/internal helper; former domain summary/snapshot re-exports removed. |
+| `metaReviewGateShared.ts` | 59 | Shared reason codes, conflict/transition mapping, gate lock path, and narrow internal helper exports. | no direct external | Mixed utility; keep internal first and split path/error pieces later. |
 | `metaReviewGateErrorConversion.ts` | 36 | Convert meta-review errors to gate errors. | via command API | Public-adjacent error boundary; keep behind public API. |
 
 ### Infrastructure / Port Candidates
