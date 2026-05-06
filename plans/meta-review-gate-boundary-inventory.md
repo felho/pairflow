@@ -75,6 +75,8 @@ Completed in the bubble:
   `internal/metaReviewGateCurrentRunParity.ts`.
 - current-run approve-threshold backstop and clean-approval threshold adapters
   now live in `internal/metaReviewGateCurrentRunThresholdPolicies.ts`.
+- current-run approve result routing and sticky approve validation now live in
+  `internal/metaReviewGateCurrentRunApproveRouting.ts`.
 - `domain/metaReviewGate/**` no longer imports back from
   `shared/metaReviewGate/**`; route/error language is owned in domain and
   re-exported by the shared public contract for compatibility.
@@ -231,7 +233,8 @@ runtime delivery. They should not be moved wholesale to `domain`.
 | `metaReviewGateApplyPersistence.ts` | 96 | Persist runtime delivery observation. | no direct external | Application/infrastructure boundary candidate. |
 | `metaReviewGateApplyHelpers.ts` | 107 | Append kickoff envelope and persist run-failed route. | no direct external | Application internal; uses transcript/state helpers. |
 | `metaReviewGateFindingsValidation.ts` | 95 | Top-level positive-claim validation orchestration over preflight, approve policy, and rework artifact validation adapter. | no direct external | Application/internal wrapper; do not move wholesale to domain. |
-| `internal/metaReviewGateCurrentRunFinalization.ts` | 275 | Current-run top-level route resolution, approve/rework/human routing, sticky approve validation, and auto-rework dispatch handoff. | no direct external; public door is `metaReviewGateCurrentRunApi.ts` | Application candidate; parity resolution, threshold policy adapters, pure approve-validation, clean-approval, and approve-threshold backstop policies have been split out. |
+| `internal/metaReviewGateCurrentRunFinalization.ts` | 139 | Current-run top-level route resolution skeleton, parity failure handling, threshold backstop route guard, sticky-human-gate branch, rework dispatch handoff, and final human-route fallback. | no direct external; public door is `metaReviewGateCurrentRunApi.ts` | Application candidate; approve routing, parity resolution, threshold policy adapters, pure approve-validation, clean-approval, and approve-threshold backstop policies have been split out. |
+| `internal/metaReviewGateCurrentRunApproveRouting.ts` | 144 | Route approve current-run results through clean-run streak requirements, approve validation, validation-triggered auto-rework, and sticky approve validation. | no direct external | Application/internal approve-routing helper. |
 | `internal/metaReviewGateCurrentRunParity.ts` | 72 | Resolve current-run structured positive-claim parity and merge parity diagnostics into the run result used for routing. | no direct external | Application/internal adapter over findings validation and artifact read capability. |
 | `internal/metaReviewGateCurrentRunThresholdPolicies.ts` | 148 | Apply current-run approve threshold backstop and clean-approval threshold policies, including lazy threshold-authority reads. | no direct external | Application/internal adapter over domain threshold policies and artifact authority reads. |
 | `metaReviewGateCurrentRunCleanRerun.ts` | 123 | Clean rerun top-level orchestration skeleton. | no direct external | Application/internal first; pane binding, dispatch/kickoff, observation/reconcile, rollback state, delivery/pane helpers, and internal route/capability contract have been split out. |
