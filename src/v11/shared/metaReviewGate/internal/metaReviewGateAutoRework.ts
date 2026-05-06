@@ -17,11 +17,11 @@ import type {
 import type { Finding } from "../../../../types/findings.js";
 import {
   deliveryTargetRoleMetadataKey,
+  resolveFindingsParityMetadataForEnvelope,
   type FindingsParityMetadata
 } from "../../../../types/protocol.js";
 import {
-  buildGateLockPath,
-  resolveFindingsParityMetadataForEnvelope
+  buildGateLockPath
 } from "./metaReviewGateShared.js";
 import {
   incrementAutoReworkCount,

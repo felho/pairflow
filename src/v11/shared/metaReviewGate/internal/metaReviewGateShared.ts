@@ -20,12 +20,6 @@ export {
   persistHumanGateRoute,
   type PersistHumanGateRouteInput
 } from "./metaReviewGateHumanGatePersistence.js";
-export {
-  resolveMetaReviewerAgent,
-  resolveFindingsParityMetadataForEnvelope,
-  transitionToGateState
-} from "./metaReviewGateStateHelpers.js";
-
 export function toConflictError(error: unknown): MetaReviewGateError {
   const reason = error instanceof Error ? error.message : String(error);
   return new MetaReviewGateError(

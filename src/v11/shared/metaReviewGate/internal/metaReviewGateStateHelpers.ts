@@ -2,10 +2,6 @@ import { applyStateTransition } from "../../../domain/state/machine.js";
 import { assertValidBubbleStateSnapshot } from "../../state/stateSchema.js";
 import type { BubbleStateSnapshot } from "../../../../types/bubble.js";
 import { clearLiveMetaReviewSnapshot } from "../../metaReview/metaReviewSnapshot.js";
-export {
-  resolveMetaReviewerAgent,
-  resolveFindingsParityMetadataForEnvelope
-} from "./metaReviewGateSnapshotHelpers.js";
 
 export function transitionToGateState(input: {
   current: BubbleStateSnapshot;
