@@ -1,6 +1,6 @@
-import { MetaReviewError } from "../../metaReview/metaReviewError.js";
-import { MetaReviewGateError } from "../metaReviewGateRouteContract.js";
-import { isNamedError } from "../../errors/namedError.js";
+import { isNamedError } from "../errors/namedError.js";
+import { MetaReviewError } from "../metaReview/metaReviewError.js";
+import { MetaReviewGateError } from "./metaReviewGateRouteContract.js";
 
 function toConflictError(error: unknown): MetaReviewGateError {
   const reason = error instanceof Error ? error.message : String(error);

@@ -9,7 +9,7 @@ import type {
   AgentName,
   BubbleStateSnapshot
 } from "../../../../types/bubble.js";
-import { toMetaReviewGateError } from "./metaReviewGateErrorConversion.js";
+import { toMetaReviewGateError } from "../metaReviewGateErrorConversion.js";
 import { MetaReviewGateError } from "../metaReviewGateRouteContract.js";
 import { normalizeMetaReviewSnapshot } from "../../../domain/metaReviewGate/snapshotState.js";
 

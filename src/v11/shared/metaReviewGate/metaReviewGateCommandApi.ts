@@ -2,9 +2,9 @@ import {
   applyMetaReviewGateOnConvergence as applyMetaReviewGateOnConvergenceInternal
 } from "./internal/metaReviewGateApply.js";
 import {
-  asMetaReviewGateError as asMetaReviewGateErrorInternal,
-  toMetaReviewGateError as toMetaReviewGateErrorInternal
-} from "./internal/metaReviewGateErrorConversion.js";
+  asMetaReviewGateError,
+  toMetaReviewGateError
+} from "./metaReviewGateErrorConversion.js";
 import {
   MetaReviewGateError
 } from "./metaReviewGateRouteContract.js";
@@ -25,14 +25,7 @@ export const applyMetaReviewGateOnConvergence: ApplyMetaReviewGateOnConvergenceP
 ): Promise<MetaReviewGateResult> => {
   return applyMetaReviewGateOnConvergenceInternal(input, dependencies);
 };
-
-export function toMetaReviewGateError(error: unknown): MetaReviewGateError {
-  return toMetaReviewGateErrorInternal(error);
-}
-
-export function asMetaReviewGateError(error: unknown): never {
-  return asMetaReviewGateErrorInternal(error);
-}
+export { asMetaReviewGateError, toMetaReviewGateError };
 export type {
   ApplyMetaReviewGateOnConvergenceDependencies,
   ApplyMetaReviewGateOnConvergenceInput,
