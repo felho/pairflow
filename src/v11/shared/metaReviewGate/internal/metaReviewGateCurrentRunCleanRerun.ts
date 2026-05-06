@@ -9,7 +9,7 @@ import { persistRuntimeDeliveryObservation } from "./metaReviewGateApplyPersiste
 import { persistDispatchFailedHumanRoute } from "./metaReviewGateCurrentRunRoutePersistence.js";
 import type { FinalizeCurrentRunMetaReviewGateInput } from "../metaReviewGateCurrentRunTypes.js";
 import { buildGateLockPath, setMetaReviewConsecutiveCleanRuns } from "./metaReviewGateShared.js";
-import type { MetaReviewGateResult } from "../metaReviewGateTypes.js";
+import type { MetaReviewGateResult } from "../metaReviewGateResultContract.js";
 
 type MetaReviewPaneWarningResult = Awaited<
   ReturnType<

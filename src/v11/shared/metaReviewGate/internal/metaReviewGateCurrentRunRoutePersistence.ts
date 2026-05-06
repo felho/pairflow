@@ -10,10 +10,8 @@ import {
   persistHumanGateRoute,
   resolveHumanGateRoute
 } from "./metaReviewGateShared.js";
-import type {
-  MetaReviewGateResult,
-  MetaReviewGateThresholdMetadata
-} from "../metaReviewGateTypes.js";
+import type { MetaReviewGateThresholdMetadata } from "../metaReviewGateTypes.js";
+import type { MetaReviewGateResult } from "../metaReviewGateResultContract.js";
 import { resolveFindingsParityMetadataFromReportJson } from "../metaReviewGateFindingsMetadata.js";
 import type { FinalizeCurrentRunMetaReviewGateInput } from "../metaReviewGateCurrentRunTypes.js";
 

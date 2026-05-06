@@ -19,7 +19,7 @@ import {
   buildHumanGateSummary,
   persistHumanGateRoute
 } from "./metaReviewGateShared.js";
-import type { MetaReviewGateResult } from "../metaReviewGateTypes.js";
+import type { MetaReviewGateResult } from "../metaReviewGateResultContract.js";
 
 export async function appendMetaReviewKickoffEnvelope(input: {
   appendEnvelope: AppendProtocolEnvelopePort;

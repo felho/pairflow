@@ -5,7 +5,6 @@ export type {
   MetaReviewGateNotifyRuntimeCapabilities,
   MetaReviewGatePaneBindingRuntimeCapabilities,
   MetaReviewGateReasonCode,
-  MetaReviewGateResult,
   MetaReviewGateRoute,
   MetaReviewGateRuntimeCapabilities,
   NotifyMetaReviewerSubmissionRequest,
@@ -13,6 +12,7 @@ export type {
   NotifyMetaReviewerSubmissionRequestInput,
   ResolveMetaReviewerPaneWarning
 } from "./metaReviewGateTypes.js";
+export type { MetaReviewGateResult } from "./metaReviewGateResultContract.js";
 export type {
   FinalizeCurrentRunMetaReviewGateInput,
   MetaReviewApproveValidationCommandRunInput

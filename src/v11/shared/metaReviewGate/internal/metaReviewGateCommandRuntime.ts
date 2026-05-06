@@ -6,7 +6,6 @@ export {
   type MetaReviewGateNotifyRuntimeCapabilities,
   type MetaReviewGatePaneBindingRuntimeCapabilities,
   type MetaReviewGateReasonCode,
-  type MetaReviewGateResult,
   type MetaReviewGateRoute,
   type MetaReviewGateRuntimeCapabilities,
   type NotifyMetaReviewerSubmissionRequest,
@@ -14,5 +13,6 @@ export {
   type NotifyMetaReviewerSubmissionRequestInput,
   type ResolveMetaReviewerPaneWarning
 } from "../metaReviewGateTypes.js";
+export type { MetaReviewGateResult } from "../metaReviewGateResultContract.js";
 export { applyMetaReviewGateOnConvergence } from "./metaReviewGateApply.js";
 export { asMetaReviewGateError, toMetaReviewGateError } from "./metaReviewGateErrorConversion.js";

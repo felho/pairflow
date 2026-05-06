@@ -26,10 +26,8 @@ import {
   resolveFindingsParityMetadataForEnvelope,
   setMetaReviewConsecutiveCleanRuns
 } from "./metaReviewGateShared.js";
-import {
-  MetaReviewGateError,
-  type MetaReviewGateResult
-} from "../metaReviewGateTypes.js";
+import { MetaReviewGateError } from "../metaReviewGateTypes.js";
+import type { MetaReviewGateResult } from "../metaReviewGateResultContract.js";
 import {
   resolveRuntimeAlignedNextRoundContinuation
 } from "../../reviewPolicy/reviewPolicyRuntime.js";

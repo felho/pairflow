@@ -15,10 +15,10 @@ import type {
 } from "../../ports/transcript.js";
 import {
   MetaReviewGateError,
-  type MetaReviewGateResult,
   type MetaReviewGateRoute,
   type MetaReviewGateThresholdMetadata
 } from "../metaReviewGateTypes.js";
+import type { MetaReviewGateResult } from "../metaReviewGateResultContract.js";
 import {
   resolveDefaultStickyHumanGateForRoute,
   transitionToGateState

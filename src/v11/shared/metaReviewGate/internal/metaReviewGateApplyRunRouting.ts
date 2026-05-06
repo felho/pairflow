@@ -1,7 +1,7 @@
 import type { LoadedStateSnapshot } from "../../ports/stateSnapshots.js";
 
 import { appendMetaReviewKickoffEnvelope, persistMetaReviewRunFailedRoute } from "./metaReviewGateApplyHelpers.js";
-import type { MetaReviewGateResult } from "../metaReviewGateTypes.js";
+import type { MetaReviewGateResult } from "../metaReviewGateResultContract.js";
 import type { ApplyMetaReviewGateExecutionContext } from "./metaReviewGateApplyContext.js";
 
 interface RouteMetaReviewKickoffOrRunFailedInput {

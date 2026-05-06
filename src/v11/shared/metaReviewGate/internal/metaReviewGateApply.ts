@@ -16,9 +16,9 @@ import { reconcileObservedGateResult } from "./metaReviewGateApplyObservation.js
 import { persistRuntimeDeliveryObservation } from "./metaReviewGateApplyPersistence.js";
 import type {
   ApplyMetaReviewGateOnConvergenceDependencies,
-  ApplyMetaReviewGateOnConvergenceInput,
-  MetaReviewGateResult
+  ApplyMetaReviewGateOnConvergenceInput
 } from "../metaReviewGateTypes.js";
+import type { MetaReviewGateResult } from "../metaReviewGateResultContract.js";
 import { MetaReviewGateError } from "../metaReviewGateTypes.js";
 
 export async function applyMetaReviewGateOnConvergence(
