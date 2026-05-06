@@ -1,14 +1,14 @@
-import { resolveLegacySummaryFindingsClaimState } from "../../../domain/convergence/policy.js";
-import type { Finding } from "../../../../types/findings.js";
 import type { MetaReviewResult } from "../../metaReview/metaReviewTypes.js";
+import type { Finding } from "../../../../types/findings.js";
 import { type FindingsParityMetadata } from "../../../../types/protocol.js";
 import type { MetaReviewGateArtifactReadFn } from "../metaReviewGateFindingsMetadata.js";
 import {
-  buildFindingsParityMetadata,
-  projectDisplayableFindingsFromArtifact,
   resolveReworkFindingsParityInput,
   validateFindingsArtifactParity
 } from "../metaReviewGateFindingsParityHelpers.js";
+import {
+  buildVerifiedReworkFindingsParityValidation
+} from "../../../domain/metaReviewGate/findingsValidationParity.js";
 
 function failStructuredMetaReviewPositiveClaim(
   reason: string,
@@ -64,29 +64,13 @@ export async function validateStructuredMetaReviewPositiveClaimReworkPath(input:
     );
   }
 
-  const parserState = resolveLegacySummaryFindingsClaimState(
-    input.runResult.summary ?? undefined
-  );
-  const diagnostics = parserState === "open_findings"
-    ? []
-    : [
-        `CLAIM_PARSER_DIVERGENCE_DIAGNOSTIC: parser_state=${parserState} structured_state=open_findings structured_source=meta_review_artifact`
-      ];
-  const findingsForPayload = projectDisplayableFindingsFromArtifact(
-    artifactParity.artifact.findings
-  );
-
-  return {
-    ok: true,
-    diagnostics,
-    ...(findingsForPayload !== undefined ? { findingsForPayload } : {}),
-    metadata: buildFindingsParityMetadata({
-      findingsCount: parityInput.value.findingsCount,
-      artifactOpenTotal: artifactParity.artifactOpenTotal,
-      artifactStatus: parityInput.value.artifactStatus,
-      digest: parityInput.value.digest,
-      metaReviewRunId: parityInput.value.metaReviewRunId,
-      parityStatus: "ok"
-    })
-  };
+  return buildVerifiedReworkFindingsParityValidation({
+    summary: input.runResult.summary ?? undefined,
+    findings: artifactParity.artifact.findings,
+    findingsCount: parityInput.value.findingsCount,
+    artifactOpenTotal: artifactParity.artifactOpenTotal,
+    artifactStatus: parityInput.value.artifactStatus,
+    digest: parityInput.value.digest,
+    metaReviewRunId: parityInput.value.metaReviewRunId
+  });
 }
