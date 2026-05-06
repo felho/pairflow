@@ -2,7 +2,25 @@ import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
 import { protocolTimelineEntry, timelineEntry } from "../../test/fixtures";
+import type { UiTimelineEntryDisplay } from "../../lib/types";
 import { BubbleTimeline } from "./BubbleTimeline";
+
+function display(overrides: Partial<UiTimelineEntryDisplay> = {}): UiTimelineEntryDisplay {
+  return {
+    title: "Display summary.",
+    summaryText: "Display summary.",
+    summarySource: "summary",
+    senderLabel: "codex",
+    role: "implementer",
+    rowKind: "normal",
+    tone: "neutral",
+    badges: [],
+    progress: null,
+    validationFailure: null,
+    syntheticApproval: null,
+    ...overrides
+  };
+}
 
 describe("BubbleTimeline", () => {
   it("renders basic summary text from display fields", () => {
@@ -544,6 +562,68 @@ describe("BubbleTimeline", () => {
     expect(reworkBadges).toHaveLength(1);
   });
 
+  it("renders badge chips from display fields over conflicting protocol payload", () => {
+    render(
+      <BubbleTimeline
+        entries={[
+          protocolTimelineEntry({
+            id: "env-display-badges-win",
+            type: "APPROVAL_DECISION",
+            payload: {
+              decision: "rework",
+              message: "Payload badge sources lose.",
+              findings: [
+                { title: "Payload finding", severity: "P0" }
+              ],
+              metadata: {
+                recommendation: "rework"
+              }
+            },
+            display: display({
+              badges: [
+                { kind: "finding", label: "P2", tone: "warning" },
+                { kind: "decision", label: "approve", tone: "success" },
+                { kind: "recommendation", label: "inconclusive", tone: "warning" }
+              ]
+            })
+          }),
+          protocolTimelineEntry({
+            id: "env-display-badges-empty",
+            type: "APPROVAL_DECISION",
+            payload: {
+              decision: "rework",
+              message: "Payload badge sources must not recover.",
+              findings: [
+                { title: "Payload finding", severity: "P1" }
+              ],
+              metadata: {
+                recommendation: "rework"
+              }
+            },
+            display: display({
+              title: "No display badges.",
+              summaryText: "No display badges."
+            })
+          })
+        ]}
+        isLoading={false}
+        error={null}
+        compact={false}
+        metaReviewCleanRunsRequired={3}
+      />
+    );
+
+    expect(screen.getByText("P2")).toBeInTheDocument();
+    expect(screen.getByText("approve")).toBeInTheDocument();
+    expect(screen.getByText("inconclusive")).toBeInTheDocument();
+    expect(screen.queryByText("P0")).not.toBeInTheDocument();
+
+    const emptyBadgeRow = screen.getByText("No display badges.").closest("div.flex.items-start");
+    expect(emptyBadgeRow).not.toBeNull();
+    expect(within(emptyBadgeRow as HTMLElement).queryByText("P1")).not.toBeInTheDocument();
+    expect(within(emptyBadgeRow as HTMLElement).queryByText("rework")).not.toBeInTheDocument();
+  });
+
   it("splits meta-review approval from orchestrator gate failure using display descriptors", () => {
     render(
       <BubbleTimeline
@@ -573,7 +653,13 @@ describe("BubbleTimeline", () => {
               role: "meta_reviewer",
               rowKind: "gate_failure",
               tone: "danger",
-              badges: [],
+              badges: [
+                {
+                  kind: "decision",
+                  label: "rework",
+                  tone: "danger"
+                }
+              ],
               progress: null,
               validationFailure: {
                 summaryText:
@@ -881,6 +967,216 @@ describe("BubbleTimeline", () => {
     expect(screen.queryByText("approve")).not.toBeInTheDocument();
   });
 
+  it("uses display clean-run progress to replace approve recommendation badges", () => {
+    render(
+      <BubbleTimeline
+        entries={[
+          protocolTimelineEntry({
+            id: "env-display-clean-run",
+            type: "APPROVAL_REQUEST",
+            sender: "orchestrator",
+            recipient: "human",
+            payload: {
+              summary: "Display clean-run meta-review."
+            },
+            display: display({
+              title: "Display clean-run meta-review.",
+              summaryText: "Display clean-run meta-review.",
+              senderLabel: "codex",
+              role: "meta_reviewer",
+              rowKind: "approval",
+              badges: [
+                { kind: "recommendation", label: "approve", tone: "success" }
+              ],
+              progress: {
+                kind: "clean_run",
+                label: "producer clean label",
+                cleanRunCount: 1,
+                cleanRunsRequired: 2
+              }
+            })
+          })
+        ]}
+        isLoading={false}
+        error={null}
+        compact={false}
+      />
+    );
+
+    expect(screen.getByText("producer clean label")).toBeInTheDocument();
+    expect(screen.queryByText("clean 1")).not.toBeInTheDocument();
+    expect(screen.queryByText("approve")).not.toBeInTheDocument();
+  });
+
+  it("uses display clean-run progress when sequencing rerun handoff rows", () => {
+    render(
+      <BubbleTimeline
+        entries={[
+          protocolTimelineEntry({
+            id: "env-display-clean-run-before-handoff",
+            type: "APPROVAL_REQUEST",
+            sender: "orchestrator",
+            recipient: "human",
+            payload: {
+              summary: "Display clean-run meta-review."
+            },
+            display: display({
+              title: "Display clean-run meta-review.",
+              summaryText: "Display clean-run meta-review.",
+              senderLabel: "codex",
+              role: "meta_reviewer",
+              rowKind: "approval",
+              badges: [
+                { kind: "recommendation", label: "approve", tone: "success" }
+              ],
+              progress: {
+                kind: "clean_run",
+                label: "producer clean label",
+                cleanRunCount: 1,
+                cleanRunsRequired: 3
+              }
+            })
+          }),
+          protocolTimelineEntry({
+            id: "env-meta-gate-2-after-display-progress",
+            type: "TASK",
+            sender: "orchestrator",
+            recipient: "codex",
+            payload: {
+              summary: "Meta-review gate opened again.",
+              metadata: {
+                delivery_target_role: "meta_reviewer",
+                actor: "meta-review-gate",
+                actor_agent: "orchestrator",
+                meta_review_handoff_id:
+                  "meta_review:b-meta-gate:round:4:attempt:2"
+              }
+            }
+          })
+        ]}
+        isLoading={false}
+        error={null}
+        compact={false}
+      />
+    );
+
+    expect(screen.getByText("producer clean label")).toBeInTheDocument();
+    expect(screen.getByText("clean 2")).toBeInTheDocument();
+  });
+
+  it("does not synthesize clean-run chips from stale payload recommendations", () => {
+    render(
+      <BubbleTimeline
+        entries={[
+          protocolTimelineEntry({
+            id: "env-stale-payload-approve",
+            type: "APPROVAL_REQUEST",
+            sender: "orchestrator",
+            recipient: "human",
+            payload: {
+              summary: "Payload approve must not render.",
+              metadata: {
+                actor: "meta-reviewer",
+                latest_recommendation: "approve"
+              }
+            },
+            display: display({
+              title: "Display omits approve.",
+              summaryText: "Display omits approve.",
+              senderLabel: "codex",
+              role: "meta_reviewer",
+              rowKind: "approval",
+              badges: []
+            })
+          })
+        ]}
+        isLoading={false}
+        error={null}
+        compact={false}
+        metaReviewCleanRunsRequired={2}
+      />
+    );
+
+    expect(screen.getByText("Display omits approve.")).toBeInTheDocument();
+    expect(screen.queryByText("clean 1")).not.toBeInTheDocument();
+    expect(screen.queryByText("approve")).not.toBeInTheDocument();
+  });
+
+  it("does not reset clean-run sequencing from stale payload rework decisions", () => {
+    render(
+      <BubbleTimeline
+        entries={[
+          protocolTimelineEntry({
+            id: "env-display-approve-clean-1",
+            type: "APPROVAL_REQUEST",
+            sender: "orchestrator",
+            recipient: "human",
+            payload: {
+              summary: "Display approve clean one."
+            },
+            display: display({
+              title: "Display approve clean one.",
+              summaryText: "Display approve clean one.",
+              senderLabel: "codex",
+              role: "meta_reviewer",
+              rowKind: "approval",
+              badges: [
+                { kind: "recommendation", label: "approve", tone: "success" }
+              ]
+            })
+          }),
+          protocolTimelineEntry({
+            id: "env-stale-payload-rework",
+            type: "APPROVAL_DECISION",
+            sender: "orchestrator",
+            recipient: "codex",
+            payload: {
+              decision: "rework",
+              message: "Payload rework must not reset display state."
+            },
+            display: display({
+              title: "Display decision approve.",
+              summaryText: "Display decision approve.",
+              senderLabel: "codex",
+              role: "meta_reviewer",
+              rowKind: "approval",
+              badges: [
+                { kind: "decision", label: "approve", tone: "success" }
+              ]
+            })
+          }),
+          protocolTimelineEntry({
+            id: "env-display-approve-clean-2",
+            type: "APPROVAL_REQUEST",
+            sender: "orchestrator",
+            recipient: "human",
+            payload: {
+              summary: "Display approve clean two."
+            },
+            display: display({
+              title: "Display approve clean two.",
+              summaryText: "Display approve clean two.",
+              senderLabel: "codex",
+              role: "meta_reviewer",
+              rowKind: "approval",
+              badges: [
+                { kind: "recommendation", label: "approve", tone: "success" }
+              ]
+            })
+          })
+        ]}
+        isLoading={false}
+        error={null}
+        compact={false}
+        metaReviewCleanRunsRequired={3}
+      />
+    );
+
+    expect(screen.getByText("clean 1")).toBeInTheDocument();
+    expect(screen.getByText("clean 2")).toBeInTheDocument();
+    expect(screen.getByText("Display decision approve.")).toBeInTheDocument();
+  });
+
   it("resets clean-run count after a meta-review rework recommendation", () => {
     render(
       <BubbleTimeline
@@ -907,8 +1203,7 @@ describe("BubbleTimeline", () => {
               decision: "rework",
               message: "Apply rework.",
               metadata: {
-                actor: "meta-reviewer",
-                recommendation: "rework"
+                actor: "meta-reviewer"
               }
             }
           }),
@@ -938,6 +1233,57 @@ describe("BubbleTimeline", () => {
       .filter((node) => node.className.includes("inline-block"));
     expect(cleanOneBadges).toHaveLength(2);
     expect(screen.queryByText("approve")).not.toBeInTheDocument();
+  });
+
+  it("keeps fixture-generated display badge labels aligned with presenter sanitization", () => {
+    const entry = timelineEntry({
+      type: "APPROVAL_DECISION",
+      payload: {
+        decision: " rework " as never,
+        message: "Apply rework.",
+        findings: [
+          { title: "spaced severity", severity: " P1 " as never }
+        ],
+        metadata: {
+          recommendation: "  rework  "
+        }
+      }
+    });
+
+    expect(entry.display.badges).toEqual([
+      { kind: "finding", label: "P1", tone: "danger" },
+      { kind: "decision", label: "rework", tone: "danger" }
+    ]);
+  });
+
+  it("does not let stray fixture decision payload suppress recommendation badges", () => {
+    const entry = timelineEntry({
+      type: "APPROVAL_REQUEST",
+      payload: {
+        summary: "Recommendation with stray decision.",
+        decision: " approve " as never,
+        metadata: {
+          recommendation: " approve "
+        }
+      }
+    });
+
+    expect(entry.display.badges).toEqual([
+      { kind: "recommendation", label: "approve", tone: "success" }
+    ]);
+  });
+
+  it("keeps fixture unknown decision badge tones aligned with presenter output", () => {
+    const entry = timelineEntry({
+      type: "APPROVAL_DECISION",
+      payload: {
+        decision: "maybe" as never
+      }
+    });
+
+    expect(entry.display.badges).toEqual([
+      { kind: "decision", label: "maybe", tone: "neutral" }
+    ]);
   });
 
   it("renders extras inside the same scroll container as timeline entries", () => {

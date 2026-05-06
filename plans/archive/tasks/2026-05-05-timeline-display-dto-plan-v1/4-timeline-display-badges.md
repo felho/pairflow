@@ -5,7 +5,7 @@ task_family_id: timeline-display-badges
 sequence_key: "4"
 task_id: 4-timeline-display-badges
 title: "Timeline Display Badges"
-status: in_progress
+status: archived
 phase: phase3
 target_files:
   - ui/src/components/expanded/BubbleTimeline.tsx

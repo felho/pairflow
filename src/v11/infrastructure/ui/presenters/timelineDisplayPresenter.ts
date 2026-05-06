@@ -187,22 +187,26 @@ function buildBadges(
     }
   }
 
+  const decision =
+    entry.type === "APPROVAL_DECISION" && isNonEmptyString(entry.payload.decision)
+      ? sanitizeLabel(entry.payload.decision)
+      : null;
+  if (decision !== null) {
+    add({
+      kind: "decision",
+      label: decision,
+      tone: decisionTone(decision)
+    });
+  }
+
   const recommendation = options.suppressRecommendation
     ? null
     : extractMetaRecommendation(entry);
-  if (recommendation !== null) {
+  if (recommendation !== null && recommendation !== decision) {
     add({
       kind: "recommendation",
       label: recommendation,
       tone: recommendationTone(recommendation)
-    });
-  }
-
-  if (entry.type === "APPROVAL_DECISION" && isNonEmptyString(entry.payload.decision)) {
-    add({
-      kind: "decision",
-      label: entry.payload.decision,
-      tone: decisionTone(entry.payload.decision)
     });
   }
 

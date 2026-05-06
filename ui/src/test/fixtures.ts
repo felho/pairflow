@@ -191,6 +191,11 @@ function nonEmptyString(value: unknown): string | null {
   return typeof value === "string" && value.trim().length > 0 ? value : null;
 }
 
+function sanitizeLabel(value: string): string {
+  const normalized = value.trim().replace(/\s+/gu, " ");
+  return normalized.length > 0 ? normalized : "unknown";
+}
+
 function badgeToneForSeverity(severity: string): UiTimelineBadge["tone"] {
   if (severity === "P0" || severity === "P1") return "danger";
   if (severity === "P2") return "warning";
@@ -201,6 +206,12 @@ function recommendationTone(label: string): UiTimelineBadge["tone"] {
   if (label === "approve") return "success";
   if (label === "rework") return "danger";
   if (label === "inconclusive") return "warning";
+  return "neutral";
+}
+
+function decisionTone(label: string): UiTimelineBadge["tone"] {
+  if (label === "approve") return "success";
+  if (label === "rework") return "danger";
   return "neutral";
 }
 
@@ -225,8 +236,12 @@ function buildDisplayBadges(
       if (!isRecord(finding)) {
         continue;
       }
-      const severity = nonEmptyString(finding.severity);
-      if (severity === null || seenFindings.has(severity)) {
+      const severityValue = nonEmptyString(finding.severity);
+      if (severityValue === null) {
+        continue;
+      }
+      const severity = sanitizeLabel(severityValue);
+      if (seenFindings.has(severity)) {
         continue;
       }
       seenFindings.add(severity);
@@ -238,23 +253,29 @@ function buildDisplayBadges(
     }
   }
 
-  const recommendation = nonEmptyString(
+  const decisionValue = nonEmptyString(entry.payload.decision);
+  const decision =
+    entry.type === "APPROVAL_DECISION" && decisionValue !== null
+      ? sanitizeLabel(decisionValue)
+      : null;
+  if (decision !== null) {
+    add({
+      kind: "decision",
+      label: decision,
+      tone: decisionTone(decision)
+    });
+  }
+
+  const recommendationValue = nonEmptyString(
     metadata?.latest_recommendation ?? metadata?.recommendation
   );
-  if (recommendation !== null) {
+  const recommendation =
+    recommendationValue === null ? null : sanitizeLabel(recommendationValue);
+  if (recommendation !== null && recommendation !== decision) {
     add({
       kind: "recommendation",
       label: recommendation,
       tone: recommendationTone(recommendation)
-    });
-  }
-
-  const decision = nonEmptyString(entry.payload.decision);
-  if (entry.type === "APPROVAL_DECISION" && decision !== null) {
-    add({
-      kind: "decision",
-      label: decision,
-      tone: decision === "rework" ? "danger" : "success"
     });
   }
 

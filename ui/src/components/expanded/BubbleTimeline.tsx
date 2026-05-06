@@ -1,5 +1,6 @@
 import { useEffect, useRef, type ReactNode } from "react";
 import type {
+  UiTimelineBadge,
   UiTimelineDisplayRole,
   UiTimelineEntry,
   UiTimelineEntryDisplay
@@ -9,53 +10,35 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-interface FindingTag {
+interface DisplayTag {
   label: string;
   style: string;
 }
 
-const findingStyles: Record<string, string> = {
-  P0: "border-red-500/20 bg-red-500/10 text-red-500",
-  P1: "border-red-500/20 bg-red-500/10 text-red-500",
-  P2: "border-amber-500/20 bg-amber-500/10 text-amber-500",
-  P3: "border-slate-500/20 bg-slate-500/10 text-slate-400"
-};
-
-function extractFindingTags(entry: UiTimelineEntry): FindingTag[] {
-  const findings = entry.payload.findings;
-  if (!Array.isArray(findings)) {
-    return [];
+function badgeToneClass(badge: UiTimelineBadge): string {
+  if (badge.tone === "success") {
+    return "border-emerald-500/20 bg-emerald-500/10 text-emerald-500";
   }
-  const seen = new Set<string>();
-  const tags: FindingTag[] = [];
-  for (const finding of findings) {
-    if (typeof finding !== "object" || finding === null) {
-      continue;
-    }
-    const severityValue = (finding as { severity?: unknown }).severity;
-    if (typeof severityValue !== "string") {
-      continue;
-    }
-    const severity = severityValue;
-    if (seen.has(severity)) {
-      continue;
-    }
-    seen.add(severity);
-    tags.push({
-      label: severity,
-      style: findingStyles[severity] ?? "border-slate-500/20 bg-slate-500/10 text-slate-400"
-    });
+  if (badge.tone === "warning") {
+    return "border-amber-500/20 bg-amber-500/10 text-amber-500";
   }
-  return tags;
+  if (badge.tone === "danger") {
+    return badge.kind === "finding"
+      ? "border-red-500/20 bg-red-500/10 text-red-500"
+      : "border-rose-500/20 bg-rose-500/10 text-rose-500";
+  }
+  if (badge.tone === "info") {
+    return "border-blue-500/20 bg-blue-500/10 text-blue-500";
+  }
+  return "border-slate-500/20 bg-slate-500/10 text-slate-400";
 }
 
-function extractMetaRecommendation(entry: UiTimelineEntry): string | null {
-  const metadata = entry.payload.metadata;
-  if (!isRecord(metadata)) {
-    return null;
-  }
-  const recommendation = metadata.latest_recommendation ?? metadata.recommendation;
-  return typeof recommendation === "string" ? recommendation : null;
+function readDisplayBadgeLabel(
+  entry: UiTimelineEntry,
+  kind: UiTimelineBadge["kind"]
+): string | null {
+  const badge = entry.display.badges.find((candidate) => candidate.kind === kind);
+  return badge?.label ?? null;
 }
 
 function hasDisplayGateFailureSplit(entry: UiTimelineEntry): boolean {
@@ -86,7 +69,13 @@ function buildSyntheticMetaApprovalEntry(entry: UiTimelineEntry): UiTimelineEntr
       role: "meta_reviewer",
       rowKind: "approval",
       tone: syntheticApproval.tone,
-      badges: [],
+      badges: [
+        {
+          kind: "recommendation",
+          label: "approve",
+          tone: "success"
+        }
+      ],
       progress: null,
       validationFailure: null,
       syntheticApproval: null
@@ -149,7 +138,7 @@ function buildDisplayTimelineItems(input: {
   entries: UiTimelineEntry[];
   cleanRunsRequired: number | null | undefined;
 }): DisplayTimelineItem[] {
-  const cleanRunsRequired =
+  let cleanRunsRequired =
     input.cleanRunsRequired !== null && input.cleanRunsRequired !== undefined
       ? input.cleanRunsRequired
       : 1;
@@ -176,8 +165,16 @@ function buildDisplayTimelineItems(input: {
       continue;
     }
 
-    const metaRecommendation = extractMetaRecommendation(entry);
-    const decisionTag = extractDecisionTag(entry);
+    const metaRecommendation = readDisplayBadgeLabel(entry, "recommendation");
+    const displayDecision = readDisplayBadgeLabel(entry, "decision");
+    const displayCleanRunCount =
+      entry.display.progress?.kind === "clean_run"
+        ? entry.display.progress.cleanRunCount
+        : null;
+    const displayCleanRunsRequired =
+      entry.display.progress?.kind === "clean_run"
+        ? entry.display.progress.cleanRunsRequired
+        : null;
 
     if (isMetaReviewHandoff(entry)) {
       const handoffAttempt = extractMetaReviewHandoffAttempt(entry);
@@ -215,7 +212,13 @@ function buildDisplayTimelineItems(input: {
       continue;
     }
 
-    if (metaRecommendation === "approve") {
+    if (displayCleanRunCount !== null) {
+      metaCleanRuns = displayCleanRunCount;
+      if (displayCleanRunsRequired !== null) {
+        cleanRunsRequired = displayCleanRunsRequired;
+      }
+      metaRunPending = false;
+    } else if (metaRecommendation === "approve") {
       const metadata = isRecord(entry.payload.metadata)
         ? entry.payload.metadata
         : null;
@@ -232,7 +235,7 @@ function buildDisplayTimelineItems(input: {
     } else if (
       metaRecommendation === "rework"
       || metaRecommendation === "inconclusive"
-      || decisionTag?.label === "rework"
+      || displayDecision === "rework"
     ) {
       metaCleanRuns = 0;
       metaRunPending = false;
@@ -248,44 +251,6 @@ function buildDisplayTimelineItems(input: {
   return items;
 }
 
-function extractMetaRecommendationTag(input: {
-  entry: UiTimelineEntry;
-  cleanRunCount: number | null;
-  cleanRunsRequired: number | null | undefined;
-}): FindingTag | null {
-  const recommendation = extractMetaRecommendation(input.entry);
-  if (recommendation === "approve") {
-    if (
-      input.cleanRunCount !== null
-      && input.cleanRunsRequired !== null
-      && input.cleanRunsRequired !== undefined
-      && input.cleanRunCount < input.cleanRunsRequired
-    ) {
-      return {
-        label: `clean ${input.cleanRunCount}`,
-        style: "border-emerald-500/20 bg-emerald-500/10 text-emerald-500"
-      };
-    }
-    return {
-      label: "approve",
-      style: "border-emerald-500/20 bg-emerald-500/10 text-emerald-500"
-    };
-  }
-  if (recommendation === "rework") {
-    return {
-      label: "rework",
-      style: "border-rose-500/20 bg-rose-500/10 text-rose-500"
-    };
-  }
-  if (recommendation === "inconclusive") {
-    return {
-      label: "inconclusive",
-      style: "border-amber-500/20 bg-amber-500/10 text-amber-500"
-    };
-  }
-  return null;
-}
-
 function isCleanPass(entry: UiTimelineEntry): boolean {
   if (entry.type !== "PASS") {
     return false;
@@ -295,26 +260,6 @@ function isCleanPass(entry: UiTimelineEntry): boolean {
     return true;
   }
   return false;
-}
-
-function extractDecisionTag(entry: UiTimelineEntry): FindingTag | null {
-  if (entry.type !== "APPROVAL_DECISION") {
-    return null;
-  }
-  const decision = entry.payload.decision;
-  if (decision === "rework") {
-    return {
-      label: "rework",
-      style: "border-rose-500/20 bg-rose-500/10 text-rose-500"
-    };
-  }
-  if (decision === "approve") {
-    return {
-      label: "approve",
-      style: "border-emerald-500/20 bg-emerald-500/10 text-emerald-500"
-    };
-  }
-  return null;
 }
 
 function formatTime(timestamp: string): string {
@@ -405,6 +350,7 @@ export function BubbleTimeline(props: BubbleTimelineProps): JSX.Element {
     !showError && displayItems !== null && displayItems.length > 0;
   const showScrollable = hasEntries || hasEmptyState || hasExtras;
   let metaCleanRuns = 0;
+  let metaCleanRunsRequired = props.metaReviewCleanRunsRequired;
 
   return (
     <div className="flex flex-1 flex-col overflow-hidden">
@@ -447,17 +393,32 @@ export function BubbleTimeline(props: BubbleTimelineProps): JSX.Element {
               : entry.display.senderLabel;
             const isConvergence = entry.type === "CONVERGENCE";
             const blocked = !item.gateFailed && entry.display.rowKind === "blocked";
-            const findingTags = extractFindingTags(entry);
             const metadata = isRecord(entry.payload.metadata)
               ? entry.payload.metadata
               : null;
             const metaRecommendation = item.gateFailed
               ? null
-              : extractMetaRecommendation(entry);
+              : readDisplayBadgeLabel(entry, "recommendation");
+            const displayDecision = item.gateFailed
+              ? null
+              : readDisplayBadgeLabel(entry, "decision");
+            const displayCleanRunProgress =
+              !item.gateFailed && entry.display.progress?.kind === "clean_run"
+                ? entry.display.progress
+                : null;
+            const displayCleanRunCount = displayCleanRunProgress?.cleanRunCount ?? null;
+            const displayCleanRunsRequired =
+              displayCleanRunProgress?.cleanRunsRequired ?? null;
             let cleanRunCount: number | null = null;
             if (item.metaReviewRerunCleanRunCount !== null) {
               metaCleanRuns = item.metaReviewRerunCleanRunCount;
               cleanRunCount = item.metaReviewRerunCleanRunCount;
+            } else if (displayCleanRunCount !== null) {
+              metaCleanRuns = displayCleanRunCount;
+              if (displayCleanRunsRequired !== null) {
+                metaCleanRunsRequired = displayCleanRunsRequired;
+              }
+              cleanRunCount = displayCleanRunCount;
             } else if (metaRecommendation === "approve") {
               const explicitCleanRunCount =
                 metadata === null
@@ -473,30 +434,34 @@ export function BubbleTimeline(props: BubbleTimelineProps): JSX.Element {
               item.gateFailed
               || metaRecommendation === "rework"
               || metaRecommendation === "inconclusive"
+              || displayDecision === "rework"
             ) {
               metaCleanRuns = 0;
             }
-            const metaRecommendationTag = item.gateFailed
-              ? null
-              : extractMetaRecommendationTag({
-                  entry,
-                  cleanRunCount,
-                  cleanRunsRequired: props.metaReviewCleanRunsRequired
-                });
-            const decisionTag = extractDecisionTag(entry);
-            const effectiveMetaRecommendationTag =
-              metaRecommendationTag !== null &&
-              decisionTag !== null &&
-              metaRecommendationTag.label === decisionTag.label
-                ? null
-                : metaRecommendationTag;
-            const metaReviewRerunTag =
-              item.metaReviewRerunCleanRunCount !== null && cleanRunCount !== null
+            const cleanRunsRequired =
+              displayCleanRunsRequired ?? metaCleanRunsRequired;
+            const replaceApproveWithCleanRun =
+              cleanRunCount !== null &&
+              cleanRunsRequired !== null &&
+              cleanRunsRequired !== undefined &&
+              cleanRunCount < cleanRunsRequired;
+            const cleanRunTag: DisplayTag | null =
+              (
+                (item.metaReviewRerunCleanRunCount !== null || replaceApproveWithCleanRun) &&
+                cleanRunCount !== null
+              )
                 ? {
-                    label: `clean ${cleanRunCount}`,
+                    label: displayCleanRunProgress?.label ?? `clean ${cleanRunCount}`,
                     style: "border-emerald-500/20 bg-emerald-500/10 text-emerald-500"
                   }
                 : null;
+            const displayBadges = entry.display.badges.filter((badge) => {
+              return !(
+                replaceApproveWithCleanRun &&
+                badge.kind === "recommendation" &&
+                badge.label === "approve"
+              );
+            });
             const cleanPass = isCleanPass(entry);
             return (
               <div
@@ -532,33 +497,19 @@ export function BubbleTimeline(props: BubbleTimelineProps): JSX.Element {
                         <span className="text-[#555]">({displaySender})</span>
                       </span>
                     )}
-                    {findingTags.map((tag) => (
+                    {displayBadges.map((badge, index) => (
                       <span
-                        key={tag.label}
-                        className={`inline-block rounded px-1 text-[9px] font-semibold leading-tight border ${tag.style}`}
+                        key={`${badge.kind}:${badge.label}:${index}`}
+                        className={`inline-block rounded px-1 text-[9px] font-semibold leading-tight border ${badgeToneClass(badge)}`}
                       >
-                        {tag.label}
+                        {badge.label}
                       </span>
                     ))}
-                    {metaReviewRerunTag !== null ? (
+                    {cleanRunTag !== null ? (
                       <span
-                        className={`inline-block rounded px-1 text-[9px] font-semibold leading-tight border ${metaReviewRerunTag.style}`}
+                        className={`inline-block rounded px-1 text-[9px] font-semibold leading-tight border ${cleanRunTag.style}`}
                       >
-                        {metaReviewRerunTag.label}
-                      </span>
-                    ) : null}
-                    {effectiveMetaRecommendationTag !== null ? (
-                      <span
-                        className={`inline-block rounded px-1 text-[9px] font-semibold leading-tight border ${effectiveMetaRecommendationTag.style}`}
-                      >
-                        {effectiveMetaRecommendationTag.label}
-                      </span>
-                    ) : null}
-                    {decisionTag !== null ? (
-                      <span
-                        className={`inline-block rounded px-1 text-[9px] font-semibold leading-tight border ${decisionTag.style}`}
-                      >
-                        {decisionTag.label}
+                        {cleanRunTag.label}
                       </span>
                     ) : null}
                     {cleanPass ? (
