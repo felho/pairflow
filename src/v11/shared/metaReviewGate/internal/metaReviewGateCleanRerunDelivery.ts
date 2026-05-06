@@ -52,3 +52,25 @@ export function buildCleanRerunRuntimeDelivery(input: {
     observed_for_round: correlation.observedForRound
   };
 }
+
+export async function deactivateCleanRerunMetaReviewerPane(
+  input: FinalizeCurrentRunMetaReviewGateInput
+): Promise<string | null> {
+  if (
+    input.setMetaReviewerPane === undefined ||
+    input.resolved.bubblePaths.sessionsPath === undefined
+  ) {
+    return "deactivate_capability_unavailable";
+  }
+  try {
+    await input.setMetaReviewerPane({
+      sessionsPath: input.resolved.bubblePaths.sessionsPath,
+      bubbleId: input.resolved.bubbleId,
+      active: false,
+      now: input.now
+    });
+    return null;
+  } catch (error) {
+    return error instanceof Error ? error.message : String(error);
+  }
+}

@@ -6,6 +6,7 @@ import { persistRuntimeDeliveryObservation } from "./metaReviewGateApplyPersiste
 import {
   appendDeactivateTelemetry,
   buildCleanRerunRuntimeDelivery,
+  deactivateCleanRerunMetaReviewerPane,
   withDeactivateTelemetryOnDelivery
 } from "./metaReviewGateCleanRerunDelivery.js";
 import {
@@ -16,7 +17,6 @@ import {
 } from "./metaReviewGateCleanRerunContract.js";
 import { buildCleanRerunDispatchFailureRollbackState } from "./metaReviewGateCleanRerunFailureState.js";
 import { persistDispatchFailedHumanRoute } from "./metaReviewGateCurrentRunRoutePersistence.js";
-import type { FinalizeCurrentRunMetaReviewGateInput } from "../metaReviewGateCurrentRunTypes.js";
 import { buildGateLockPath } from "./metaReviewGateShared.js";
 import { setMetaReviewConsecutiveCleanRuns } from "../../../domain/metaReviewGate/snapshotState.js";
 import type { MetaReviewGateResult } from "../metaReviewGateResultContract.js";
@@ -204,28 +204,6 @@ async function resolveCleanRerunPaneBinding(input: {
       }),
       loaded: input.metaReviewRunningState
     });
-  }
-}
-
-async function deactivateCleanRerunMetaReviewerPane(
-  input: FinalizeCurrentRunMetaReviewGateInput
-): Promise<string | null> {
-  if (
-    input.setMetaReviewerPane === undefined ||
-    input.resolved.bubblePaths.sessionsPath === undefined
-  ) {
-    return "deactivate_capability_unavailable";
-  }
-  try {
-    await input.setMetaReviewerPane({
-      sessionsPath: input.resolved.bubblePaths.sessionsPath,
-      bubbleId: input.resolved.bubbleId,
-      active: false,
-      now: input.now
-    });
-    return null;
-  } catch (error) {
-    return error instanceof Error ? error.message : String(error);
   }
 }
 
