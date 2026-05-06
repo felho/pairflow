@@ -1,6 +1,6 @@
 import type { MetaReviewResult } from "../../metaReview/metaReviewTypes.js";
 import type { FindingsParityMetadata } from "../../../../types/protocol.js";
-import { resolveFindingsArtifactPath } from "../metaReviewGateFindingsMetadata.js";
+import { resolveFindingsArtifactPath } from "./metaReviewGateFindingsMetadata.js";
 import {
   buildFindingsParityMetadata,
   metaReviewFindingsParityGuardReasonCode

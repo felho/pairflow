@@ -6,7 +6,7 @@ import type {
   WriteStateSnapshotPort
 } from "../ports/stateSnapshots.js";
 import type { BubbleConfig } from "../../../types/bubble.js";
-import type { MetaReviewGateArtifactReadFn } from "./metaReviewGateFindingsMetadata.js";
+import type { MetaReviewGateArtifactReadFn } from "./internal/metaReviewGateFindingsMetadata.js";
 import type {
   NotifyMetaReviewerSubmissionRequest,
   ResolveMetaReviewerPaneWarning,

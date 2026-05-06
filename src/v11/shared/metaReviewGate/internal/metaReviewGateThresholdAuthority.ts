@@ -2,7 +2,7 @@ import { isRecord } from "../../validation/primitives.js";
 import type { MetaReviewResult } from "../../metaReview/metaReviewTypes.js";
 import {
   resolveFindingsParityMetadataFromReportJson
-} from "../metaReviewGateFindingsMetadata.js";
+} from "./metaReviewGateFindingsMetadata.js";
 import {
   resolveReworkFindingsParityInput
 } from "./metaReviewGateFindingsParityInput.js";

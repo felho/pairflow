@@ -15,7 +15,7 @@ export type {
 } from "./internal/metaReviewGateThresholdAuthority.js";
 export {
   resolveFindingsParityMetadataFromReportJson
-} from "./metaReviewGateFindingsMetadata.js";
+} from "./internal/metaReviewGateFindingsMetadata.js";
 export {
   isAdvisoryOnlyReviewerSnapshot,
   readLatestSameRoundReviewerSnapshotFromTranscript

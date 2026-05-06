@@ -10,14 +10,14 @@ import {
 export { projectDisplayableFindingsFromArtifact } from "../../domain/metaReviewGate/findingsProjection.js";
 import {
   resolveFindingsArtifactOpenTotalFromArtifact
-} from "./metaReviewGateFindingsMetadata.js";
+} from "./internal/metaReviewGateFindingsMetadata.js";
 import {
   formatReadErrorDetail,
   readFindingsArtifactWithRetry
 } from "./internal/metaReviewGateFindingsArtifactReadRetry.js";
 import type {
   MetaReviewGateArtifactReadFn
-} from "./metaReviewGateFindingsMetadata.js";
+} from "./internal/metaReviewGateFindingsMetadata.js";
 import {
   buildFindingsParityMetadata,
   metaReviewFindingsCountMismatchReasonCode,

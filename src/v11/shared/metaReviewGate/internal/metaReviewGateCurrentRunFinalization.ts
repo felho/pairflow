@@ -5,7 +5,7 @@ import { normalizeMetaReviewSnapshot } from "../../../domain/metaReviewGate/snap
 import type { MetaReviewGateResult } from "../metaReviewGateResultContract.js";
 import { dispatchAutoRework } from "./metaReviewGateAutoRework.js";
 import { validateStructuredMetaReviewPositiveClaim } from "./metaReviewGateFindingsValidation.js";
-import type { MetaReviewGateArtifactReadFn } from "../metaReviewGateFindingsMetadata.js";
+import type { MetaReviewGateArtifactReadFn } from "./metaReviewGateFindingsMetadata.js";
 import {
   type MetaReviewGateThresholdAuthorityResolution,
   resolveMetaReviewGateThresholdAuthority
