@@ -11,7 +11,6 @@ import { dispatchAutoRework } from "./internal/metaReviewGateAutoRework.js";
 import { validateStructuredMetaReviewPositiveClaim } from "./internal/metaReviewGateFindingsValidation.js";
 import type { MetaReviewGateArtifactReadFn } from "./metaReviewGateFindingsMetadata.js";
 import {
-  metaReviewGateThresholdIsMet,
   type MetaReviewGateThresholdAuthorityResolution,
   resolveMetaReviewGateThresholdAuthority
 } from "./metaReviewGateThresholdAuthority.js";
@@ -27,6 +26,10 @@ import {
   buildApproveValidationReworkMessage,
   isApproveValidationCommandFailure
 } from "../../domain/metaReviewGate/approveValidationRework.js";
+import {
+  META_REVIEW_APPROVE_THRESHOLD_BACKSTOP,
+  resolveApproveThresholdBackstopPolicy
+} from "../../domain/metaReviewGate/approveThresholdBackstopPolicy.js";
 import { resolveThresholdCleanApprovalPolicy } from "../../domain/metaReviewGate/cleanApprovalPolicy.js";
 import { mergeRunResultWithParityResolution } from "../../domain/metaReviewGate/runResultParity.js";
 import { routeCleanMetaReviewRerun } from "./internal/metaReviewGateCurrentRunCleanRerun.js";
@@ -34,9 +37,6 @@ import {
   META_REVIEW_APPROVE_VALIDATION_FAILED,
   runMetaReviewApproveValidationGate
 } from "./internal/metaReviewApproveValidationGate.js";
-
-export const META_REVIEW_APPROVE_THRESHOLD_BACKSTOP =
-  "META_REVIEW_APPROVE_THRESHOLD_BACKSTOP" as const;
 
 function callMetaReviewGateArtifactReadFn(
   readFileFn: MetaReviewGateArtifactReadFn,
@@ -119,21 +119,34 @@ async function resolveApproveThresholdBackstop(input: {
       fallbackReason: string;
     }
 > {
-  if (
-    input.runResultForRouting.recommendation !== "approve" ||
-    !metaReviewApproveClaimsOpenFindings(
-      input.runResultForRouting.report_json ?? {}
-    )
-  ) {
-    return {
-      blocked: false,
-      parityMetadata: input.parityMetadata
-    };
-  }
-
   const normalizedReviewPolicy = normalizeBubbleReviewPolicy(
     input.finalizeInput.resolved.bubbleConfig
   );
+  const initialPolicy = resolveApproveThresholdBackstopPolicy({
+    recommendation: input.runResultForRouting.recommendation,
+    claimsOpenFindings: metaReviewApproveClaimsOpenFindings(
+      input.runResultForRouting.report_json ?? {}
+    ),
+    parityMetadata: input.parityMetadata,
+    configuredMinSeverity:
+      normalizedReviewPolicy.meta_review_auto_rework_min_severity,
+    ...(input.thresholdAuthority !== undefined
+      ? { thresholdAuthority: input.thresholdAuthority }
+      : {})
+  });
+  if (initialPolicy.blocked) {
+    return initialPolicy;
+  }
+  if (!initialPolicy.thresholdRequired) {
+    return {
+      blocked: false,
+      parityMetadata: initialPolicy.parityMetadata,
+      ...(input.thresholdAuthority !== undefined
+        ? { thresholdAuthority: input.thresholdAuthority }
+        : {})
+    };
+  }
+
   const thresholdAuthority =
     input.thresholdAuthority
     ?? await resolveMetaReviewGateThresholdAuthority({
@@ -142,31 +155,28 @@ async function resolveApproveThresholdBackstop(input: {
       artifactsDir: input.finalizeInput.resolved.bubblePaths.artifactsDir,
       readFileFn: input.finalizeInput.readFileFn
     });
-  const parityMetadata =
-    thresholdAuthority.parityMetadata ?? input.parityMetadata;
-
-  if (
-    thresholdAuthority.status !== "resolved" ||
-    metaReviewGateThresholdIsMet({
-      highestOpenSeverity: thresholdAuthority.highestOpenSeverity,
-      minSeverity: normalizedReviewPolicy.meta_review_auto_rework_min_severity
-    })
-  ) {
-    const authorityDetail =
-      thresholdAuthority.status === "resolved"
-        ? `highestOpenSeverity=${thresholdAuthority.highestOpenSeverity}; configuredMinSeverity=${normalizedReviewPolicy.meta_review_auto_rework_min_severity}`
-        : `thresholdStatus=${thresholdAuthority.status}`;
+  const policy = resolveApproveThresholdBackstopPolicy({
+    recommendation: input.runResultForRouting.recommendation,
+    claimsOpenFindings: true,
+    parityMetadata: input.parityMetadata,
+    configuredMinSeverity:
+      normalizedReviewPolicy.meta_review_auto_rework_min_severity,
+    thresholdAuthority
+  });
+  if (!policy.blocked && policy.thresholdRequired) {
     return {
       blocked: true,
-      parityMetadata,
+      parityMetadata: policy.parityMetadata,
       fallbackReason:
-        `${META_REVIEW_APPROVE_THRESHOLD_BACKSTOP}: invalid open-findings approve cannot route to human_gate_approve (${authorityDetail}).`
+        `${META_REVIEW_APPROVE_THRESHOLD_BACKSTOP}: invalid open-findings approve cannot route to human_gate_approve (thresholdStatus=missing).`
     };
   }
-
+  if (policy.blocked) {
+    return policy;
+  }
   return {
     blocked: false,
-    parityMetadata,
+    parityMetadata: policy.parityMetadata,
     thresholdAuthority
   };
 }
