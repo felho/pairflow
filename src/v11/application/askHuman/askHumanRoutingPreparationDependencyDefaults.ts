@@ -1,6 +1,6 @@
 import {
   readStateSnapshot
-} from "../../shared/state/stateStoreDefaults.js";
+} from "../state/stateStoreDependencyDefaults.js";
 import { ensureBubbleInstanceIdForMutation } from "../../shared/bubbleIdentity/bubbleIdentityDefaults.js";
 import { resolveBubbleFromWorkspaceCwd } from "../workspace/workspaceResolutionDependencyDefaults.js";
 

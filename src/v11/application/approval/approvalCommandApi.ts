@@ -26,7 +26,7 @@ import {
   appendProtocolEnvelope,
   readTranscriptEnvelopes
 } from "../../shared/transcript/transcriptDependencyDefaults.js";
-import { readStateSnapshot, writeStateSnapshot } from "../../shared/state/stateStoreDefaults.js";
+import { readStateSnapshot, writeStateSnapshot } from "../state/stateStoreDependencyDefaults.js";
 import { resolveBubbleFromWorkspaceCwd } from "../workspace/workspaceResolutionDependencyDefaults.js";
 
 let approvalDependencyDefaultsPromise:

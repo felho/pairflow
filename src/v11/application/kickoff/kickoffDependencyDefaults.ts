@@ -8,7 +8,7 @@ import {
 import {
   readStateSnapshot,
   writeStateSnapshot
-} from "../../shared/state/stateStoreDefaults.js";
+} from "../state/stateStoreDependencyDefaults.js";
 
 export const kickoffDefaults = {
   appendProtocolEnvelope,

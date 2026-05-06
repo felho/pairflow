@@ -1,6 +1,6 @@
 import { applyStateTransition } from "../../domain/state/machine.js";
 import { appendProtocolEnvelope } from "../../shared/transcript/transcriptDependencyDefaults.js";
-import { writeStateSnapshot } from "../../shared/state/stateStoreDefaults.js";
+import { writeStateSnapshot } from "../state/stateStoreDependencyDefaults.js";
 export const askHumanExecutionDependencyDefaults = {
   appendProtocolEnvelope,
   writeStateSnapshot,
