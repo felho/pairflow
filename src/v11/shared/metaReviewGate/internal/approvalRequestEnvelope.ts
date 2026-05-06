@@ -25,7 +25,7 @@ import { resolveApprovalRequestSummaryConsistency } from "../../../domain/metaRe
 import {
   MetaReviewGateError,
   type MetaReviewGateThresholdMetadata
-} from "../metaReviewGateTypes.js";
+} from "../metaReviewGateRouteContract.js";
 
 const metaReviewGateRunFailedReasonCode = "META_REVIEW_GATE_RUN_FAILED";
 const reviewPolicyAutoReworkThresholdNotMetReasonCode =

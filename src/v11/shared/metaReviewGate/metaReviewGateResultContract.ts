@@ -1,7 +1,7 @@
 import type { BubbleStateSnapshot } from "../../../types/bubble.js";
 import type { ProtocolEnvelope } from "../../../types/protocol.js";
 import type { MetaReviewResult } from "../metaReview/metaReviewTypes.js";
-import type { MetaReviewGateRoute } from "../../domain/metaReviewGate/gateRoutingTypes.js";
+import type { MetaReviewGateRoute } from "./metaReviewGateRouteContract.js";
 
 export interface MetaReviewGateResult {
   bubbleId: string;

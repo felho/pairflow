@@ -18,7 +18,7 @@ import type {
   ApplyMetaReviewGateOnConvergenceDependencies,
   ApplyMetaReviewGateOnConvergenceInput
 } from "../metaReviewGateTypes.js";
-import { MetaReviewGateError } from "../metaReviewGateTypes.js";
+import { MetaReviewGateError } from "../metaReviewGateRouteContract.js";
 
 export interface ApplyMetaReviewGateExecutionContext {
   appendEnvelope: AppendProtocolEnvelopePort;

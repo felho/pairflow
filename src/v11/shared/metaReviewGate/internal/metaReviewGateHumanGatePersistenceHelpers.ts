@@ -12,8 +12,8 @@ import type {
   AppendProtocolEnvelopePort,
   AppendProtocolEnvelopeResult
 } from "../../ports/transcript.js";
-import type { MetaReviewGateRoute } from "../metaReviewGateTypes.js";
-import type { MetaReviewGateThresholdMetadata } from "../metaReviewGateTypes.js";
+import type { MetaReviewGateRoute } from "../metaReviewGateRouteContract.js";
+import type { MetaReviewGateThresholdMetadata } from "../metaReviewGateRouteContract.js";
 import type { MetaReviewGateAdvisoryFinding } from "../../../domain/metaReviewGate/findingsSplit.js";
 import { isNamedError } from "../../errors/namedError.js";
 

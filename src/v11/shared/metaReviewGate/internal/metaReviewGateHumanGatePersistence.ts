@@ -17,7 +17,7 @@ import {
   MetaReviewGateError,
   type MetaReviewGateRoute,
   type MetaReviewGateThresholdMetadata
-} from "../metaReviewGateTypes.js";
+} from "../metaReviewGateRouteContract.js";
 import type { MetaReviewGateResult } from "../metaReviewGateResultContract.js";
 import {
   resolveDefaultStickyHumanGateForRoute,

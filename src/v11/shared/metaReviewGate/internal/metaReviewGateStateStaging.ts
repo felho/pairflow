@@ -10,7 +10,7 @@ import type {
   BubbleStateSnapshot
 } from "../../../../types/bubble.js";
 import { toMetaReviewGateError } from "./metaReviewGateErrorConversion.js";
-import { MetaReviewGateError } from "../metaReviewGateTypes.js";
+import { MetaReviewGateError } from "../metaReviewGateRouteContract.js";
 import { normalizeMetaReviewSnapshot } from "./metaReviewGateSnapshotHelpers.js";
 
 export function throwMetaReviewRunningStageFailure(input: {

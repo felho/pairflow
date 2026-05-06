@@ -1,7 +1,7 @@
 import { join } from "node:path";
 
 import type { BubbleStateSnapshot } from "../../../../types/bubble.js";
-import { MetaReviewGateError } from "../metaReviewGateTypes.js";
+import { MetaReviewGateError } from "../metaReviewGateRouteContract.js";
 
 export const metaReviewGateStagedReadyRestoreAppliedReasonCode =
   "META_REVIEW_GATE_STAGED_READY_RESTORE_APPLIED";

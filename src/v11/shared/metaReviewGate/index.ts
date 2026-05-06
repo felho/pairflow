@@ -29,11 +29,11 @@ export {
 } from "./metaReviewGateRuntimeCapabilities.js";
 export {
   metaReviewGateRoutes
-} from "./metaReviewGateTypes.js";
+} from "./metaReviewGateRouteContract.js";
 export type {
   MetaReviewGateThresholdMetadata,
   MetaReviewGateThresholdStatus
-} from "./metaReviewGateTypes.js";
+} from "./metaReviewGateRouteContract.js";
 export type {
   MetaReviewGateNotifyTmuxCapabilities,
   MetaReviewGatePaneBindingTmuxCapabilities

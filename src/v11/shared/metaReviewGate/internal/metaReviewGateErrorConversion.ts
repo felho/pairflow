@@ -1,5 +1,5 @@
 import { MetaReviewError } from "../../metaReview/metaReviewError.js";
-import { MetaReviewGateError } from "../metaReviewGateTypes.js";
+import { MetaReviewGateError } from "../metaReviewGateRouteContract.js";
 import { toConflictError } from "./metaReviewGateShared.js";
 import { isNamedError } from "../../errors/namedError.js";
 

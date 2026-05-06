@@ -19,7 +19,7 @@ import type {
   ApplyMetaReviewGateOnConvergenceInput
 } from "../metaReviewGateTypes.js";
 import type { MetaReviewGateResult } from "../metaReviewGateResultContract.js";
-import { MetaReviewGateError } from "../metaReviewGateTypes.js";
+import { MetaReviewGateError } from "../metaReviewGateRouteContract.js";
 
 export async function applyMetaReviewGateOnConvergence(
   input: ApplyMetaReviewGateOnConvergenceInput,

@@ -1,9 +1,9 @@
 import type { LoadedStateSnapshot } from "../../ports/stateSnapshots.js";
 import { isMetaReviewExecutionContextActiveState } from "../../metaReview/metaReviewExecutionContext.js";
 import type { ProtocolEnvelope } from "../../../../types/protocol.js";
-import type { MetaReviewGateRoute } from "../metaReviewGateTypes.js";
+import type { MetaReviewGateRoute } from "../metaReviewGateRouteContract.js";
 import type { MetaReviewGateResult } from "../metaReviewGateResultContract.js";
-import { MetaReviewGateError } from "../metaReviewGateTypes.js";
+import { MetaReviewGateError } from "../metaReviewGateRouteContract.js";
 
 interface ObservedGateResultReconciliationContext {
   readTranscript: (
