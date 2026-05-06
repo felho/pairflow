@@ -4,7 +4,7 @@ import type {
   DeliveryAckStatus,
   EmitDeliveryNotificationAckPort
 } from "../../shared/ports/tmuxDelivery.js";
-import type { applyMetaReviewGateOnConvergence } from "../../shared/metaReviewGate/index.js";
+import type { applyMetaReviewGateOnConvergence } from "../../shared/metaReviewGate/metaReviewGateCommandApi.js";
 import type { ResolvedBubbleWorkspace } from "../../shared/ports/workspaceResolution.js";
 import {
   isAgentName,

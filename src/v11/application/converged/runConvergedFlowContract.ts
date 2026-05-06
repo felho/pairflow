@@ -12,7 +12,7 @@ import type { SummaryVerifierConsistencyGateDecisionRecord } from "../../../v11/
 import type { ConvergedStructuredFinding } from "../../shared/converged/convergedCommandTypes.js";
 import type {
   applyMetaReviewGateOnConvergence
-} from "../../shared/metaReviewGate/index.js";
+} from "../../shared/metaReviewGate/metaReviewGateCommandApi.js";
 import type { MetaReviewGateRoute } from "../../shared/metaReviewGate/index.js";
 import type {
   AgentName,

@@ -8,7 +8,7 @@ import type {
 import type { ProtocolEnvelope } from "../../../types/protocol.js";
 import type {
   applyMetaReviewGateOnConvergence
-} from "../metaReviewGate/index.js";
+} from "../metaReviewGate/metaReviewGateCommandApi.js";
 import type { MetaReviewGateRoute } from "../metaReviewGate/index.js";
 import type {
   ResolveReviewerTestExecutionDirectivePort

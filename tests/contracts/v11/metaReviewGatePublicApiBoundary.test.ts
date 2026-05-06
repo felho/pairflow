@@ -8,6 +8,10 @@ import {
   metaReviewGateRoutes
 } from "../../../src/v11/shared/metaReviewGate/index.js";
 import {
+  applyMetaReviewGateOnConvergence,
+  toMetaReviewGateError
+} from "../../../src/v11/shared/metaReviewGate/metaReviewGateCommandApi.js";
+import {
   resolveReworkFindingsParityInput,
   validateFindingsArtifactParity
 } from "../../../src/v11/shared/metaReviewGate/metaReviewGateFindingsParityApi.js";
@@ -103,6 +107,17 @@ describe("meta-review gate public API boundary", () => {
     expect(metaReviewGatePublicApi).not.toHaveProperty(
       "readLatestSameRoundReviewerSnapshotFromTranscript"
     );
+    expect(metaReviewGatePublicApi).not.toHaveProperty(
+      "applyMetaReviewGateOnConvergence"
+    );
+    expect(metaReviewGatePublicApi).not.toHaveProperty(
+      "toMetaReviewGateError"
+    );
+  });
+
+  it("keeps command runtime on its narrow public API", () => {
+    expect(applyMetaReviewGateOnConvergence).toBeTypeOf("function");
+    expect(toMetaReviewGateError).toBeTypeOf("function");
   });
 
   it("keeps findings artifact parity on its narrow public API", () => {
