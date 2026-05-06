@@ -5,7 +5,7 @@ task_family_id: timeline-legacy-cleanup
 sequence_key: "6"
 task_id: 6-timeline-legacy-cleanup
 title: "Timeline Legacy Cleanup"
-status: approved
+status: implementable
 phase: phase4
 target_files:
   - ui/src/components/expanded/BubbleTimeline.tsx
@@ -58,6 +58,20 @@ tasks 1 through 5 moved normal rendering to presenter-owned display DTO fields.
 This task closes the plan by deleting obsolete raw-payload normal-render access,
 obsolete helper code, and stale protocol-shaped UI fixtures, then adding guards
 that make recurrence visible in fitness or focused tests.
+
+### Document Bubble Scope Guard
+
+This document refinement bubble is not an implementation bubble. The
+`target_files`, `target_write_files`, L2 implementation plan, validation
+commands, and acceptance checks below are the contract for the future
+implementation bubble only. They are planning context in
+`review_artifact_type=document` scope and do not authorize edits to
+product/runtime/source files, tests, UI components, presenter code, contracts,
+or build/runtime configuration during this document pass.
+
+If a requested refinement cannot be satisfied by editing only task, plan,
+progress, or documentation artifacts, stop and emit a blocker or normalized
+replanning request instead of implementing source changes.
 
 ### Domain / Control Model Summary
 
@@ -285,7 +299,8 @@ may summarize it, but must not introduce an independent rule.
    payload-driven rendering.
 6. The full plan Done Definition remains true: raw protocol payload may remain
    only as backend input or explicit debug/archive data outside normal render.
-7. The final task evidence includes the targeted no-legacy checks:
+7. The final task evidence includes the targeted no-legacy checks, captured as
+   zero-match proof rather than treated as plain successful shell commands:
 
    ```bash
    rg "entry\\.payload|payloadSummary|extractMetaReviewHandoffAttempt|buildSyntheticMetaApprovalEntry|buildDisplayTimelineItems" ui/src/components/expanded
@@ -293,18 +308,30 @@ may summarize it, but must not introduce an independent rule.
    rg "latest_recommendation|meta_review_handoff_id|delivery_target_role|actor_agent" ui/src/components/expanded
    ```
 
-   Expected normal-render result is zero matches. Any retained match must be
-   classified as backend presenter, debug/archive, non-render test assertion, or
-   contract text, with proof that `BubbleTimeline.tsx` does not consume it.
+   `rg` exits `1` when it finds zero matches, so zero output with exit code `1`
+   is the expected passing result for checks whose accepted outcome is no
+   matches. Exit codes greater than `1`, non-empty forbidden matches, or
+   retained matches without an ownership classification are failures. Any
+   retained match must be classified as backend presenter, debug/archive,
+   non-render test assertion, or contract text, with proof that
+   `BubbleTimeline.tsx` does not consume it.
 
 ### Validation
 
-Run the narrowest relevant checks first, then broader checks required by repo
-policy for UI/source changes:
+Follow the parent plan and repo verification order for implementation-source/UI
+changes, then add the final-cleanup-specific no-legacy proof:
 
-1. Focused presenter tests for timeline display presenter behavior.
-2. Focused `BubbleTimeline` tests.
-3. Targeted no-legacy `rg` checks:
+1. `pnpm typecheck`.
+2. `pnpm lint`.
+3. `pnpm fitness:check:ci`.
+4. Focused presenter tests for timeline display presenter behavior.
+5. Focused `BubbleTimeline` tests.
+6. `pnpm --dir ui test`.
+7. `pnpm test`.
+8. `pnpm build`.
+9. `pnpm --dir ui build`.
+10. Targeted no-legacy `rg` checks, captured with explicit zero-match exit-code
+    handling:
 
    ```bash
    rg "entry\\.payload|payloadSummary|extractMetaReviewHandoffAttempt|buildSyntheticMetaApprovalEntry|buildDisplayTimelineItems" ui/src/components/expanded
@@ -312,14 +339,12 @@ policy for UI/source changes:
    rg "latest_recommendation|meta_review_handoff_id|delivery_target_role|actor_agent" ui/src/components/expanded
    ```
 
-4. The guard or fitness test that prevents raw-payload timeline rendering.
-5. `pnpm typecheck`.
-6. `pnpm lint`.
-7. `pnpm fitness:check:ci`.
-8. `pnpm --dir ui test`.
-9. `pnpm test`.
-10. `pnpm build`.
-11. `pnpm --dir ui build`.
+    For each command, record stdout/stderr and exit status. Treat empty output
+    with exit code `1` as the expected zero-match pass condition; treat exit
+    code `0` as requiring retained-match classification, and exit codes greater
+    than `1` as command failures.
+
+11. The guard or fitness test that prevents raw-payload timeline rendering.
 
 If any check is skipped or fails for unrelated reasons, record the exact command
 and reason in the bubble evidence.
@@ -339,8 +364,10 @@ and reason in the bubble evidence.
    presenter tests for protocol interpretation behavior.
 5. Add or update the recurrence guard so a future raw-payload normal-render read
    in `BubbleTimeline.tsx` fails a checked test or fitness rule.
-6. Run focused tests, then the required repo verification sequence for UI and
-   source changes.
+6. Run the parent-plan/repo verification sequence for UI and source changes,
+   with `pnpm typecheck`, `pnpm lint`, and `pnpm fitness:check:ci` before
+   focused presenter/UI checks and broader affected suites/builds; then run
+   the final-cleanup no-legacy `rg` checks and recurrence-guard proof.
 7. Update task evidence with changed files, verification commands, and any
    intentionally retained payload references with their backend/debug/archive
    role.
