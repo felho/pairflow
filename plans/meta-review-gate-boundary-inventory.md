@@ -58,6 +58,9 @@ Completed in the bubble:
 - approve-validation command policy resolution now lives in
   `internal/metaReviewApproveValidationPolicy.ts`; runner orchestration remains
   in `metaReviewApproveValidationGate.ts`.
+- clean-rerun dispatch-failure rollback state now lives in
+  `internal/metaReviewGateCleanRerunFailureState.ts`; clean-rerun orchestration
+  remains in `metaReviewGateCurrentRunCleanRerun.ts`.
 - `domain/metaReviewGate/**` no longer imports back from
   `shared/metaReviewGate/**`; route/error language is owned in domain and
   re-exported by the shared public contract for compatibility.
@@ -215,7 +218,8 @@ runtime delivery. They should not be moved wholesale to `domain`.
 | `metaReviewGateApplyHelpers.ts` | 107 | Append kickoff envelope and persist run-failed route. | no direct external | Application internal; uses transcript/state helpers. |
 | `metaReviewGateFindingsValidation.ts` | 95 | Top-level positive-claim validation orchestration over preflight, approve policy, and rework artifact validation adapter. | no direct external | Application/internal wrapper; do not move wholesale to domain. |
 | `internal/metaReviewGateCurrentRunFinalization.ts` | 476 | Current-run route resolution, parity I/O, threshold authority reads, approve/rework/human routing. | no direct external; public door is `metaReviewGateCurrentRunApi.ts` | Application candidate; pure approve-validation, clean-approval, and approve-threshold backstop policies have been split out. |
-| `metaReviewGateCurrentRunCleanRerun.ts` | 496 | Clean rerun routing, delivery, pane binding, observation persistence. | no direct external | Application/internal first; likely later split runtime delivery pieces. |
+| `metaReviewGateCurrentRunCleanRerun.ts` | 484 | Clean rerun routing, delivery, pane binding, observation persistence. | no direct external | Application/internal first; dispatch-failure rollback state has been split out, likely later split runtime delivery pieces. |
+| `internal/metaReviewGateCleanRerunFailureState.ts` | 16 | Build clean-rerun dispatch-failure rollback state by resetting clean-run streak and runtime delivery. | no direct external | Shared/internal helper; keep behind clean-rerun orchestration unless reused by adjacent route persistence. |
 | `metaReviewGateCurrentRunRoutePersistence.ts` | 175 | Persist run-failed/dispatch/resolved human routes. | no direct external | Application/infrastructure boundary candidate. |
 | `metaReviewGateAutoRework.ts` | 200 | Auto-rework dispatch orchestration and failure routing. | no direct external | Application candidate with ports; do not domain-move wholesale. |
 | `metaReviewGateAutoReworkEnvelope.ts` | 78 | Append auto-rework approval-decision envelope and metadata. | no direct external | Application/internal envelope builder; keep near auto-rework orchestration. |
