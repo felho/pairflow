@@ -7,7 +7,7 @@ import {
 } from "../bubbleLookup/bubbleLookupDependencyDefaults.js";
 import {
   registerRepoInRegistry
-} from "../../shared/repoRegistry/repoRegistryDefaults.js";
+} from "../repoRegistry/repoRegistryDependencyDefaults.js";
 import type { TmuxRunner } from "../../shared/ports/tmuxSessions.js";
 
 type RunTmuxPort = TmuxRunner;
