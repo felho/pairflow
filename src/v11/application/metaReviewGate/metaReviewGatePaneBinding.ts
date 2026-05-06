@@ -13,7 +13,7 @@ import type {
 } from "../../../types/bubble.js";
 import {
   resolveMetaReviewGatePaneBindingTmuxCapabilities
-} from "../../shared/metaReviewGate/metaReviewGateRuntimeCapabilities.js";
+} from "./metaReviewGateRuntimeCapabilityResolution.js";
 import {
   resolveRuntimeSessionWorkspaceAuthority
 } from "../../shared/runtimeSessionWorkspaceAuthority.js";

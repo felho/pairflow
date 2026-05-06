@@ -8,7 +8,7 @@ import type {
 } from "../../shared/metaReviewGate/index.js";
 import {
   resolveMetaReviewGateNotifyTmuxCapabilities
-} from "../../shared/metaReviewGate/metaReviewGateRuntimeCapabilities.js";
+} from "./metaReviewGateRuntimeCapabilityResolution.js";
 
 const metaReviewerPaneExitedReasonCode = "META_REVIEWER_PANE_EXITED";
 const metaReviewRequestDeliveryUnconfirmedReasonCode =

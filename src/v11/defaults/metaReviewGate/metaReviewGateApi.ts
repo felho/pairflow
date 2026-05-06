@@ -18,7 +18,7 @@ import {
 import {
   resolveMetaReviewGateNotifyTmuxCapabilities,
   resolveMetaReviewGatePaneBindingTmuxCapabilities
-} from "../../shared/metaReviewGate/metaReviewGateRuntimeCapabilities.js";
+} from "../../application/metaReviewGate/metaReviewGateRuntimeCapabilityResolution.js";
 import {
   applyMetaReviewGateOnConvergenceV11 as applyMetaReviewGateOnConvergenceBase
 } from "../../application/metaReviewGate/emitMetaReviewGateV11.js";
