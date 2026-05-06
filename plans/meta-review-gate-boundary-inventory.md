@@ -55,6 +55,9 @@ Completed in the bubble:
   `metaReviewGateAutoRework.ts`.
 - auto-rework approval-decision envelope append now lives in
   `internal/metaReviewGateAutoReworkEnvelope.ts`.
+- auto-rework shared input contracts now live in
+  `internal/metaReviewGateAutoReworkContract.ts`, and state write/restore
+  persistence now lives in `internal/metaReviewGateAutoReworkPersistence.ts`.
 - approve-validation command policy resolution now lives in
   `internal/metaReviewApproveValidationPolicy.ts`; runner orchestration remains
   in `metaReviewApproveValidationGate.ts`.
@@ -250,8 +253,10 @@ runtime delivery. They should not be moved wholesale to `domain`.
 | `internal/metaReviewGateCleanRerunPaneBinding.ts` | 96 | Clean-rerun pane warning binding and pane-notification failure fallback. | no direct external | Application/internal pane-binding helper; keep private to clean-rerun orchestration. |
 | `internal/metaReviewGateCleanRerunFailureState.ts` | 16 | Build clean-rerun dispatch-failure rollback state by resetting clean-run streak and runtime delivery. | no direct external | Shared/internal helper; keep behind clean-rerun orchestration unless reused by adjacent route persistence. |
 | `metaReviewGateCurrentRunRoutePersistence.ts` | 175 | Persist run-failed/dispatch/resolved human routes. | no direct external | Application/infrastructure boundary candidate. |
-| `metaReviewGateAutoRework.ts` | 200 | Auto-rework dispatch orchestration and failure routing. | no direct external | Application candidate with ports; do not domain-move wholesale. |
+| `metaReviewGateAutoRework.ts` | 68 | Auto-rework dispatch orchestration and failure routing. | no direct external | Application candidate with ports; state, envelope, persistence, and contract details have been split out. |
+| `internal/metaReviewGateAutoReworkContract.ts` | 58 | Auto-rework finalize input, dispatch input, and dispatch-failure persistence callback contracts. | no direct external | Shared/internal contract for auto-rework slices; keep private. |
 | `metaReviewGateAutoReworkEnvelope.ts` | 78 | Append auto-rework approval-decision envelope and metadata. | no direct external | Application/internal envelope builder; keep near auto-rework orchestration. |
+| `internal/metaReviewGateAutoReworkPersistence.ts` | 77 | Write resumed auto-rework state, restore ready state after append failure, and map state-store errors to gate errors. | no direct external | Application/internal persistence helper; keep near auto-rework orchestration. |
 | `metaReviewGateAutoReworkState.ts` | 101 | Build resumed auto-rework state and restore READY state after append failure. | no direct external | Application/internal state builder; keep near auto-rework orchestration. |
 | `metaReviewGateHumanGatePersistence.ts` | 237 | Persist human gate route and append approval request. | no direct external | Application/infrastructure boundary candidate. |
 | `metaReviewGateHumanGatePersistenceHelpers.ts` | 180 | Human gate recommendation, request append, rollback handling. | no direct external | Application internal; split pure recommendation from append/rollback later. |
