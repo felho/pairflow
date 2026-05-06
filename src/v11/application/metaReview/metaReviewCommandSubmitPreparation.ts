@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 
-import { metaReviewCommandSubmitDefaults } from "../../shared/metaReview/metaReviewDependencyDefaults.js";
+import { metaReviewCommandSubmitDefaults } from "./metaReviewDependencyDefaults.js";
 import {
   isInteger,
   isNonEmptyString,
