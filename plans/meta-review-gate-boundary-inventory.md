@@ -101,6 +101,9 @@ Completed in the bubble:
 - human-gate persistence is imported from its implementation module directly
   inside the owning internal boundary; `metaReviewGateShared.ts` no longer
   re-exports it.
+- human-gate persistence input contract and route-specific approval-request
+  append adapter now live in `internal/metaReviewGateHumanGatePersistenceContract.ts`
+  and `internal/metaReviewGateHumanGateRouteAppend.ts`.
 - unused staged-ready reason codes and generic transition/conflict exports were
   removed from `metaReviewGateShared.ts`.
 - `metaReviewGateTypes.ts` is now a compatibility aggregator only; route/error,
@@ -263,7 +266,9 @@ runtime delivery. They should not be moved wholesale to `domain`.
 | `metaReviewGateAutoReworkEnvelope.ts` | 78 | Append auto-rework approval-decision envelope and metadata. | no direct external | Application/internal envelope builder; keep near auto-rework orchestration. |
 | `internal/metaReviewGateAutoReworkPersistence.ts` | 77 | Write resumed auto-rework state, restore ready state after append failure, and map state-store errors to gate errors. | no direct external | Application/internal persistence helper; keep near auto-rework orchestration. |
 | `metaReviewGateAutoReworkState.ts` | 101 | Build resumed auto-rework state and restore READY state after append failure. | no direct external | Application/internal state builder; keep near auto-rework orchestration. |
-| `metaReviewGateHumanGatePersistence.ts` | 237 | Persist human gate route and append approval request. | no direct external | Application/infrastructure boundary candidate. |
+| `metaReviewGateHumanGatePersistence.ts` | 138 | Persist human gate state, append route request through route adapter, and roll back state after append failure. | no direct external | Application/infrastructure boundary candidate; input contract and route append adapter have been split out. |
+| `internal/metaReviewGateHumanGatePersistenceContract.ts` | 45 | Human-gate persistence input contract. | no direct external | Shared/internal contract for human-gate persistence slices; keep private. |
+| `internal/metaReviewGateHumanGateRouteAppend.ts` | 68 | Build and append route-specific human-gate approval request envelopes, including threshold-route validation. | no direct external | Application/internal route append adapter; keep behind human-gate persistence. |
 | `metaReviewGateHumanGatePersistenceHelpers.ts` | 180 | Human gate recommendation, request append, rollback handling. | no direct external | Application internal; split pure recommendation from append/rollback later. |
 | `approvalRequestEnvelope.ts` | 149 | Build/append human approval request envelope with domain-resolved route metadata. | no direct external | Application/internal first; possible presenter/DTO extraction later. |
 | `metaReviewApproveValidationGate.ts` | 135 | Run sticky approve validation commands. | no direct external | Application candidate; validation runtime orchestration; policy resolution and diagnostics have been split out. |
