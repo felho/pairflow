@@ -5,7 +5,7 @@ task_family_id: timeline-display-basics
 sequence_key: "3"
 task_id: 3-timeline-display-basics
 title: "Timeline Display Basics"
-status: in_progress
+status: archived
 phase: phase3
 target_files:
   - ui/src/components/expanded/BubbleTimeline.tsx

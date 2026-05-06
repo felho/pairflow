@@ -1,32 +1,12 @@
 import { useEffect, useRef, type ReactNode } from "react";
-import type { ProtocolMessageType, UiTimelineEntry } from "../../lib/types";
+import type {
+  UiTimelineDisplayRole,
+  UiTimelineEntry,
+  UiTimelineEntryDisplay
+} from "../../lib/types";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-function payloadSummary(entry: UiTimelineEntry): string {
-  const summary = entry.payload.summary;
-  if (typeof summary === "string" && summary.trim().length > 0) {
-    return summary;
-  }
-
-  const question = entry.payload.question;
-  if (typeof question === "string" && question.trim().length > 0) {
-    return question;
-  }
-
-  const message = entry.payload.message;
-  if (typeof message === "string" && message.trim().length > 0) {
-    return message;
-  }
-
-  const decision = entry.payload.decision;
-  if (typeof decision === "string" && decision.trim().length > 0) {
-    return `decision=${decision}`;
-  }
-
-  return "(no summary payload)";
 }
 
 interface FindingTag {
@@ -78,30 +58,41 @@ function extractMetaRecommendation(entry: UiTimelineEntry): string | null {
   return typeof recommendation === "string" ? recommendation : null;
 }
 
-function isApproveValidationGateFailure(entry: UiTimelineEntry): boolean {
-  if (entry.type !== "APPROVAL_DECISION" || entry.payload.decision !== "rework") {
-    return false;
-  }
-  if (extractMetaRecommendation(entry) !== "approve") {
-    return false;
-  }
-
-  const text = [entry.payload.summary, entry.payload.message]
-    .filter((value): value is string => typeof value === "string")
-    .join("\n");
-  return text.includes("approve-gate validation failed");
+function hasDisplayGateFailureSplit(entry: UiTimelineEntry): boolean {
+  return entry.display.validationFailure !== null && entry.display.syntheticApproval !== null;
 }
 
 function buildSyntheticMetaApprovalEntry(entry: UiTimelineEntry): UiTimelineEntry {
+  const syntheticApproval = entry.display.syntheticApproval;
+  if (syntheticApproval === null) {
+    return entry;
+  }
   const metadata = isRecord(entry.payload.metadata) ? entry.payload.metadata : {};
+  const sender =
+    typeof metadata.actor_agent === "string" ? metadata.actor_agent : entry.recipient;
+  const summaryText = syntheticApproval.label;
   return {
     ...entry,
-    id: `${entry.id}:meta-review-approve`,
+    id: syntheticApproval.syntheticEntryId,
     type: "APPROVAL_REQUEST",
-    sender: typeof metadata.actor_agent === "string" ? metadata.actor_agent : entry.recipient,
+    sender,
     recipient: "orchestrator",
+    display: {
+      ...entry.display,
+      title: summaryText,
+      summaryText,
+      summarySource: "summary",
+      senderLabel: sender,
+      role: "meta_reviewer",
+      rowKind: "approval",
+      tone: syntheticApproval.tone,
+      badges: [],
+      progress: null,
+      validationFailure: null,
+      syntheticApproval: null
+    },
     payload: {
-      summary: "Meta-review approved the current change.",
+      summary: summaryText,
       metadata: {
         actor: "meta-reviewer",
         ...(typeof metadata.actor_agent === "string"
@@ -167,7 +158,7 @@ function buildDisplayTimelineItems(input: {
   let metaRunPending = false;
 
   for (const entry of input.entries) {
-    if (isApproveValidationGateFailure(entry)) {
+    if (hasDisplayGateFailureSplit(entry)) {
       items.push({
         entry: buildSyntheticMetaApprovalEntry(entry),
         metaReviewRerunCleanRunCount: null,
@@ -326,10 +317,6 @@ function extractDecisionTag(entry: UiTimelineEntry): FindingTag | null {
   return null;
 }
 
-function isBlockedEntry(entry: UiTimelineEntry): boolean {
-  return entry.type === "HUMAN_QUESTION";
-}
-
 function formatTime(timestamp: string): string {
   const date = new Date(timestamp);
   if (Number.isNaN(date.getTime())) {
@@ -338,14 +325,15 @@ function formatTime(timestamp: string): string {
   return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 }
 
-type RoleKind = "impl" | "review" | "human" | "system" | "meta";
+type RoleKind = "impl" | "review" | "human" | "system" | "meta" | "unknown";
 
 const roleStyles: Record<RoleKind, string> = {
   impl: "border-blue-500/30 bg-blue-500/15 text-blue-500",
   review: "border-purple-500/30 bg-purple-500/15 text-purple-500",
   human: "border-amber-500/30 bg-amber-500/15 text-amber-500",
   system: "border-emerald-500/30 bg-emerald-500/15 text-emerald-500",
-  meta: "border-fuchsia-500/30 bg-fuchsia-500/15 text-fuchsia-400"
+  meta: "border-fuchsia-500/30 bg-fuchsia-500/15 text-fuchsia-400",
+  unknown: "border-slate-500/30 bg-slate-500/15 text-slate-400"
 };
 
 const roleIcons: Record<RoleKind, string> = {
@@ -353,78 +341,30 @@ const roleIcons: Record<RoleKind, string> = {
   review: "\u25C6",
   human: "?",
   system: "\u25CB",
-  meta: "\u25C9"
+  meta: "\u25C9",
+  unknown: "?"
 };
-
-function resolveDisplaySender(entry: UiTimelineEntry): string {
-  const metadata = entry.payload.metadata;
-  if (
-    isRecord(metadata)
-    && typeof metadata.meta_review_handoff_id === "string"
-    && metadata.delivery_target_role === "meta_reviewer"
-  ) {
-    return entry.recipient;
-  }
-  if (isRecord(metadata) && typeof metadata.actor_agent === "string") {
-    return metadata.actor_agent;
-  }
-  return entry.sender;
-}
 
 const roleLabels: Record<RoleKind, string> = {
   impl: "implementer",
   review: "reviewer",
   human: "human",
   system: "system",
-  meta: "meta-reviewer"
+  meta: "meta-reviewer",
+  unknown: "Unknown"
 };
 
-function resolveRole(entry: UiTimelineEntry): RoleKind {
-  const metadata = entry.payload.metadata;
-  const actor =
-    typeof metadata === "object" && metadata !== null
-      ? (metadata as { actor?: unknown }).actor
-      : undefined;
-  const deliveryTargetRole =
-    typeof metadata === "object" && metadata !== null
-      ? (metadata as { delivery_target_role?: unknown }).delivery_target_role
-      : undefined;
-  const metaReviewHandoffId =
-    typeof metadata === "object" && metadata !== null
-      ? (metadata as { meta_review_handoff_id?: unknown }).meta_review_handoff_id
-      : undefined;
-  if (
-    actor === "meta-reviewer"
-    || typeof metaReviewHandoffId === "string"
-  ) {
-    return "meta";
-  }
-  const type: ProtocolMessageType = entry.type;
-  if (type === "HUMAN_QUESTION" || type === "HUMAN_REPLY") {
-    return "human";
-  }
-  if (type === "CONVERGENCE") {
-    return "system";
-  }
-  if (type === "PASS") {
-    if (deliveryTargetRole === "implementer") {
-      return "review";
-    }
-    if (deliveryTargetRole === "reviewer" || deliveryTargetRole === "meta_reviewer") {
-      return "impl";
-    }
-  }
-  const sender = entry.sender.toLowerCase();
-  if (sender === "human") {
-    return "human";
-  }
-  if (sender === "orchestrator") {
-    return "system";
-  }
-  if (sender.includes("review") || sender.includes("claude")) {
-    return "review";
-  }
-  return "impl";
+function resolveRole(role: UiTimelineDisplayRole): RoleKind {
+  if (role === "implementer") return "impl";
+  if (role === "reviewer") return "review";
+  if (role === "meta_reviewer") return "meta";
+  if (role === "human") return "human";
+  if (role === "system") return "system";
+  return "unknown";
+}
+
+function blockedLabelClass(display: UiTimelineEntryDisplay): string {
+  return display.tone === "warning" ? "font-medium text-amber-500" : "font-medium text-[#aaa]";
 }
 
 export interface BubbleTimelineProps {
@@ -501,12 +441,12 @@ export function BubbleTimeline(props: BubbleTimelineProps): JSX.Element {
             <>
           {displayItems.map((item) => {
             const entry = item.entry;
-            const role = item.gateFailed ? "system" : resolveRole(entry);
+            const role = item.gateFailed ? "system" : resolveRole(entry.display.role);
             const displaySender = item.gateFailed
               ? "orchestrator"
-              : resolveDisplaySender(entry);
+              : entry.display.senderLabel;
             const isConvergence = entry.type === "CONVERGENCE";
-            const blocked = isBlockedEntry(entry);
+            const blocked = !item.gateFailed && entry.display.rowKind === "blocked";
             const findingTags = extractFindingTags(entry);
             const metadata = isRecord(entry.payload.metadata)
               ? entry.payload.metadata
@@ -576,10 +516,10 @@ export function BubbleTimeline(props: BubbleTimelineProps): JSX.Element {
                     {isConvergence ? (
                       <span className="font-semibold text-emerald-500">CONVERGENCE</span>
                     ) : blocked ? (
-                      <span className="font-medium text-amber-500">
+                      <span className={blockedLabelClass(entry.display)}>
                         {displaySender} &mdash; blocked
                       </span>
-                    ) : role === "system" || role === "human" ? (
+                    ) : role === "system" || role === "human" || role === "unknown" ? (
                       <span className="font-medium text-[#aaa]">
                         {displaySender}
                         {item.gateFailed ? (
@@ -629,7 +569,7 @@ export function BubbleTimeline(props: BubbleTimelineProps): JSX.Element {
                   </div>
                   {compact ? null : (
                     <div className="leading-relaxed text-[#666]">
-                      {payloadSummary(entry)}
+                      {entry.display.summaryText}
                     </div>
                   )}
                 </div>

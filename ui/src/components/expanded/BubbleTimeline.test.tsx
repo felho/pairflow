@@ -5,7 +5,7 @@ import { protocolTimelineEntry, timelineEntry } from "../../test/fixtures";
 import { BubbleTimeline } from "./BubbleTimeline";
 
 describe("BubbleTimeline", () => {
-  it("freezes current protocol payload summary fallback order", () => {
+  it("renders basic summary text from display fields", () => {
     render(
       <BubbleTimeline
         entries={[
@@ -40,6 +40,26 @@ describe("BubbleTimeline", () => {
           protocolTimelineEntry({
             id: "env-missing-fallback",
             payload: {}
+          }),
+          protocolTimelineEntry({
+            id: "env-display-conflict",
+            payload: {
+              summary: "Payload summary must not render.",
+              question: "Payload question must not render."
+            },
+            display: {
+              title: "Display summary wins.",
+              summaryText: "Display summary wins.",
+              summarySource: "summary",
+              senderLabel: "display-sender",
+              role: "implementer",
+              rowKind: "normal",
+              tone: "neutral",
+              badges: [],
+              progress: null,
+              validationFailure: null,
+              syntheticApproval: null
+            }
           })
         ]}
         isLoading={false}
@@ -55,6 +75,82 @@ describe("BubbleTimeline", () => {
     expect(screen.getByText("Message fallback.")).toBeInTheDocument();
     expect(screen.getByText("decision=approve")).toBeInTheDocument();
     expect(screen.getByText("(no summary payload)")).toBeInTheDocument();
+    expect(screen.getByText("Display summary wins.")).toBeInTheDocument();
+    expect(screen.queryByText("Payload summary must not render.")).not.toBeInTheDocument();
+    expect(screen.queryByText("Payload question must not render.")).not.toBeInTheDocument();
+  });
+
+  it("renders sender, role, and blocked state from display fields over protocol conflicts", () => {
+    render(
+      <BubbleTimeline
+        entries={[
+          protocolTimelineEntry({
+            id: "env-pass-display-blocked",
+            type: "PASS",
+            sender: "codex",
+            recipient: "human",
+            payload: {
+              summary: "Payload text loses."
+            },
+            display: {
+              title: "Display blocked text.",
+              summaryText: "Display blocked text.",
+              summarySource: "summary",
+              senderLabel: "display-human",
+              role: "human",
+              rowKind: "blocked",
+              tone: "warning",
+              badges: [],
+              progress: null,
+              validationFailure: null,
+              syntheticApproval: null
+            }
+          }),
+          protocolTimelineEntry({
+            id: "env-human-question-display-normal",
+            type: "HUMAN_QUESTION",
+            sender: "human",
+            recipient: "codex",
+            payload: {
+              question: "Payload question loses."
+            },
+            display: {
+              title: "Display normal text.",
+              summaryText: "Display normal text.",
+              summarySource: "summary",
+              senderLabel: "display-implementer",
+              role: "implementer",
+              rowKind: "normal",
+              tone: "neutral",
+              badges: [],
+              progress: null,
+              validationFailure: null,
+              syntheticApproval: null
+            }
+          })
+        ]}
+        isLoading={false}
+        error={null}
+        compact={false}
+      />
+    );
+
+    const blockedRow = screen.getByText("Display blocked text.").closest("div.flex.items-start");
+    expect(blockedRow).not.toBeNull();
+    expect(
+      within(blockedRow as HTMLElement).getByText((content) =>
+        content.includes("display-human") && content.includes("blocked")
+      )
+    ).toBeInTheDocument();
+    expect(within(blockedRow as HTMLElement).queryByText("Payload text loses.")).not.toBeInTheDocument();
+
+    const normalRow = screen.getByText("Display normal text.").closest("div.flex.items-start");
+    expect(normalRow).not.toBeNull();
+    expect(within(normalRow as HTMLElement).getByText("implementer")).toHaveTextContent(
+      /implementer \(display-implementer\)/u
+    );
+    expect(within(normalRow as HTMLElement).queryByText(/blocked/u)).not.toBeInTheDocument();
+    expect(within(normalRow as HTMLElement).queryByText("Payload question loses.")).not.toBeInTheDocument();
   });
 
   it("renders meta-reviewer actor as first-class role", () => {
@@ -448,7 +544,7 @@ describe("BubbleTimeline", () => {
     expect(reworkBadges).toHaveLength(1);
   });
 
-  it("splits meta-review approval from orchestrator gate-failed rework", () => {
+  it("splits meta-review approval from orchestrator gate failure using display descriptors", () => {
     render(
       <BubbleTimeline
         entries={[
@@ -460,12 +556,36 @@ describe("BubbleTimeline", () => {
             recipient: "codex",
             payload: {
               decision: "rework",
-              message:
-                "Meta-review approved the current change, but the required approve-gate validation failed.",
+              message: "Payload text does not contain the legacy gate failure marker.",
               metadata: {
                 actor: "meta-reviewer",
                 actor_agent: "codex",
                 recommendation: "approve"
+              }
+            },
+            display: {
+              title:
+                "Meta-review approved the current change, but the required approve-gate validation failed.",
+              summaryText:
+                "Meta-review approved the current change, but the required approve-gate validation failed.",
+              summarySource: "message",
+              senderLabel: "codex",
+              role: "meta_reviewer",
+              rowKind: "gate_failure",
+              tone: "danger",
+              badges: [],
+              progress: null,
+              validationFailure: {
+                summaryText:
+                  "Meta-review approved the current change, but the required approve-gate validation failed.",
+                tone: "danger"
+              },
+              syntheticApproval: {
+                kind: "meta_review_approval",
+                sourceEntryId: "env-gate-failed-rework",
+                syntheticEntryId: "env-gate-failed-rework:meta-review-approve",
+                label: "Meta-review approved the current change.",
+                tone: "success"
               }
             }
           })
@@ -482,6 +602,9 @@ describe("BubbleTimeline", () => {
     expect(metaLabel).toHaveTextContent(/\(codex\)/u);
     const metaRow = metaLabel.closest("div.flex.items-start");
     expect(metaRow).not.toBeNull();
+    expect(
+      within(metaRow as HTMLElement).getByText("Meta-review approved the current change.")
+    ).toBeInTheDocument();
     expect(within(metaRow as HTMLElement).getByText("approve")).toBeInTheDocument();
     expect(within(metaRow as HTMLElement).queryByText("rework")).not.toBeInTheDocument();
 
@@ -491,6 +614,16 @@ describe("BubbleTimeline", () => {
     expect(orchestratorLabel).toHaveTextContent("orchestrator (gate failed)");
     const orchestratorRow = orchestratorLabel.closest("div.flex.items-start");
     expect(orchestratorRow).not.toBeNull();
+    expect(
+      within(orchestratorRow as HTMLElement).getByText(
+        "Meta-review approved the current change, but the required approve-gate validation failed."
+      )
+    ).toBeInTheDocument();
+    expect(
+      within(orchestratorRow as HTMLElement).queryByText(
+        "Payload text does not contain the legacy gate failure marker."
+      )
+    ).not.toBeInTheDocument();
     expect(within(orchestratorRow as HTMLElement).getByText("rework")).toBeInTheDocument();
     expect(within(orchestratorRow as HTMLElement).queryByText("approve")).not.toBeInTheDocument();
   });

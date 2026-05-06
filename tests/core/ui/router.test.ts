@@ -1607,6 +1607,46 @@ describe("UI read response validation", () => {
       timeline: [entry]
     });
 
+    const blockedEntry: UiTimelineEntry = {
+      ...entry,
+      id: "env-router-read-validation-blocked",
+      type: "HUMAN_QUESTION",
+      display: {
+        ...entry.display,
+        rowKind: "blocked",
+        tone: "warning"
+      }
+    };
+    expect(
+      validateUiBubbleTimelineResponseBody({
+        bubbleId: bubble.bubbleId,
+        repoPath: repo.repoPath,
+        timeline: [blockedEntry]
+      })
+    ).toStrictEqual({
+      bubbleId: bubble.bubbleId,
+      repoPath: repo.repoPath,
+      timeline: [blockedEntry]
+    });
+
+    expectInvalidReadResponse(
+      () =>
+        validateUiBubbleTimelineResponseBody({
+          bubbleId: bubble.bubbleId,
+          repoPath: repo.repoPath,
+          timeline: [
+            {
+              ...entry,
+              display: {
+                ...entry.display,
+                rowKind: "unsupported" as never
+              }
+            }
+          ]
+        }),
+      "bubble_timeline"
+    );
+
     expectInvalidReadResponse(
       () =>
         validateUiBubbleTimelineResponseBody({

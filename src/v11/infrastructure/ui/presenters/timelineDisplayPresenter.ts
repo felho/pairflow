@@ -120,7 +120,6 @@ function resolveDisplayRole(
 }
 
 function roleLabel(role: UiTimelineEntryDisplay["role"], sender: string): string {
-  if (role === "meta_reviewer") return "meta-reviewer";
   if (role === "unknown") return "Unknown";
   return sender;
 }
@@ -321,6 +320,9 @@ function resolveBaseState(input: {
       rowKind: "approval",
       tone: input.entry.payload.decision === "rework" ? "warning" : "neutral"
     };
+  }
+  if (input.entry.type === "HUMAN_QUESTION") {
+    return { rowKind: "blocked", tone: "warning" };
   }
   return { rowKind: "normal", tone: "neutral" };
 }

@@ -371,6 +371,7 @@ export type UiTimelineRowKind =
   | "normal"
   | "handoff"
   | "approval"
+  | "blocked"
   | "gate_failure";
 
 export interface UiTimelineBadge {
