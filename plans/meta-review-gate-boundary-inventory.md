@@ -92,14 +92,18 @@ Source imports no longer reach directly into the former deep policy files
 `metaReviewGateThresholdAuthority.ts`). Remaining direct imports of those files
 are test-local coverage of their public wrappers.
 
-## Proposed Public Surface
+## Current Public Surface
 
-First public surface, before deeper moves:
+Current source-facing public surface:
 
-- `index.ts` (new): module-level entrypoint once the boundary pilot starts.
+- `index.ts`: module-level entrypoint for the broad meta-review gate public
+  contract/API surface.
 - `metaReviewGateCommandApi.ts`: command/application-facing entrypoints.
 - `metaReviewGateCommandContract.ts`: stable command/result contracts.
-- `metaReviewGateTypes.ts`: only if trimmed to stable shared language.
+- `metaReviewGateCurrentRunApi.ts`: narrow current-run finalization entrypoint
+  kept outside the aggregate index to avoid the known cycle.
+- `metaReviewGateTypes.ts`: compatibility public language while consumers move
+  to narrower contract files.
 
 Potential split from `metaReviewGateTypes.ts`:
 
@@ -110,7 +114,6 @@ Potential split from `metaReviewGateTypes.ts`:
 Avoid making these directly public unless transitional:
 
 - `metaReviewGateThresholdAuthority.ts`
-- `metaReviewGateCurrentRunFinalization.ts`
 - `metaReviewGateFindingsMetadata.ts`
 - `metaReviewGateReviewerSnapshot.ts`
 
