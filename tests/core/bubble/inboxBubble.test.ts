@@ -4,7 +4,7 @@ import { join } from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import { createBubble } from "../../../src/v11/application/create/createBubble.js";
+import { createBubble } from "../../../src/v11/defaults/create/createBubbleApi.js";
 import { getBubbleInboxV11 as getBubbleInbox } from "../../../src/v11/application/inbox/emitInboxV11.js";
 import { appendProtocolEnvelope } from "../../../src/v11/infrastructure/artifact/transcript/transcriptStore.js";
 import {

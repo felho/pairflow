@@ -4,7 +4,7 @@ import { join } from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import { createBubble } from "../../../src/v11/application/create/createBubble.js";
+import { createBubble } from "../../../src/v11/defaults/create/createBubbleApi.js";
 import {
   StopBubbleErrorV11 as StopBubbleError,
   stopBubbleV11 as stopBubble

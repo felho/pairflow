@@ -4,7 +4,7 @@ import { join } from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import { createBubble } from "../../../../src/v11/application/create/createCommandApi.js";
+import { createBubble } from "../../../../src/v11/defaults/create/createBubbleApi.js";
 import { upsertRuntimeSession } from "../../../../src/v11/infrastructure/executor/sessionRuntime/runtimeSessionsRegistry.js";
 import { listBubbles } from "../../../../src/v11/application/list/listReadModelApi.js";
 import { listCommandDefaults } from "../../../../src/v11/defaults/list/listCommandDefaults.js";

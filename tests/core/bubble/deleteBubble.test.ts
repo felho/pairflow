@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { parseBubbleConfigToml, renderBubbleConfigToml } from "../../../src/config/bubbleConfig.js";
 import { resolveArchivePaths } from "../../../src/v11/infrastructure/artifact/archive/archivePaths.js";
-import { createBubble } from "../../../src/v11/application/create/createBubble.js";
+import { createBubble } from "../../../src/v11/defaults/create/createBubbleApi.js";
 import {
   deleteBubble,
   type DeleteBubbleDependencies

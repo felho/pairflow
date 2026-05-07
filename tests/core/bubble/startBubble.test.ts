@@ -6,7 +6,7 @@ import { spawn } from "node:child_process";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { renderBubbleConfigToml } from "../../../src/config/bubbleConfig.js";
-import { createBubble } from "../../../src/v11/application/create/createBubble.js";
+import { createBubble } from "../../../src/v11/defaults/create/createBubbleApi.js";
 import { buildMetaReviewExecutionContext } from "../../../src/v11/shared/metaReview/metaReviewExecutionContext.js";
 import {
   buildRunningExecutionContext,

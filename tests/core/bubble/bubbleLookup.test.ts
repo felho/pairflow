@@ -4,7 +4,7 @@ import { join } from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import { createBubble } from "../../../src/v11/application/create/createBubble.js";
+import { createBubble } from "../../../src/v11/defaults/create/createBubbleApi.js";
 import { resolveBubbleById } from "../../../src/v11/infrastructure/executor/workspace/bubbleLookup.js";
 import { bootstrapWorktreeWorkspace } from "../../../src/v11/infrastructure/workspace/worktreeManager.js";
 import { initGitRepository } from "../../helpers/git.js";

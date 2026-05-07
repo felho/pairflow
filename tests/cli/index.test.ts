@@ -9,7 +9,7 @@ import { renderBubbleCommitText, runCli } from "../../src/cli/index.js";
 import type { CommitBubbleResult } from "../../src/v11/application/commit/commitCommandContract.js";
 import { writeRemotePointer } from "../../src/v11/infrastructure/artifact/bubble/remoteExecutionArtifacts.js";
 import { mergeBubbleDependencyDefaults } from "../../src/v11/defaults/merge/mergeCommandDefaults.js";
-import { createBubble } from "../../src/v11/application/create/createBubble.js";
+import { createBubble } from "../../src/v11/defaults/create/createBubbleApi.js";
 import {
   readStateSnapshot,
   writeStateSnapshot

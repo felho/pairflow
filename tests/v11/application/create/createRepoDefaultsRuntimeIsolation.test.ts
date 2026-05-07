@@ -14,7 +14,7 @@ vi.mock("../../../../src/config/repoConfig.js", async (importOriginal) => {
 });
 
 import { loadPairflowRepoConfig } from "../../../../src/config/repoConfig.js";
-import { createBubble } from "../../../../src/v11/application/create/createBubble.js";
+import { createBubble } from "../../../../src/v11/defaults/create/createBubbleApi.js";
 import { getBubbleStatusV11 as getBubbleStatus } from "../../../../src/v11/application/status/emitStatusV11.js";
 import { statusCommandDependencyDefaults } from "../../../../src/v11/defaults/status/statusCommandDependencyDefaults.js";
 import { initGitRepository } from "../../../helpers/git.js";

@@ -5,7 +5,7 @@ import { join } from "node:path";
 
 import { vi } from "vitest";
 import { renderBubbleConfigToml } from "../../../src/config/bubbleConfig.js";
-import { createBubble } from "../../../src/v11/application/create/createBubble.js";
+import { createBubble } from "../../../src/v11/defaults/create/createBubbleApi.js";
 import { upsertRuntimeSession } from "../../../src/v11/infrastructure/executor/sessionRuntime/runtimeSessionsRegistry.js";
 import {
   readStateSnapshot,

@@ -324,7 +324,7 @@ twice.
 |---|-------------|-----------------|-----|--------|
 | B1 | `application/converged/convergedDependencyDefaults.ts:69` | `defaults/converged/convergedDependencyDefaults.ts` | B | CLI imports aggregator; passes to `emitConverged*`. Shim deletes. |
 | B2 | `application/converged/summaryVerifierConsistencyGateArtifactDefaults.ts:19` | `defaults/reviewer/summaryVerifierConsistencyGateDefaults.ts` | **A** (reclassified) | Completed in Batch 12: the write port is now part of `convergedDependencyDefaults.validation`; the standalone application artifact shim was deleted. |
-| B3 | `application/create/createBubbleDefaults.ts:28` | `defaults/create/createBubbleDefaults.ts` | B | Verified: target aggregates infrastructure adapters plus shared shims. Composition. |
+| B3 | `application/create/createBubbleDefaults.ts:28` | `defaults/create/createBubbleDefaults.ts` | B | Completed in Batch 32: application create is dependency-explicit; `defaults/create/createBubbleApi.ts` owns default composition for CLI/public/test convenience callers; the application shim was deleted. |
 | B4 | `application/delete/deleteBubbleDependencyDefaults.ts:133` | `defaults/delete/deleteBubbleDefaults.ts` | B | Verified: heavy composition (multiple `infrastructure/` adapters + sibling `defaults/` + shared shims). Mirrors merge in shape. |
 | B5 | `application/merge/mergeCommandDefaults.ts:54` | `defaults/merge/mergeCommandDefaults.ts` | B | Completed in Batch 27: CLI and UI composition pass `mergeBubbleDependencyDefaults` explicitly; the merge dependency resolver now receives its defaults aggregate from the caller and the standalone application shim was deleted. |
 | B6 | `application/metaReview/emitMetaReviewV11.ts:49` | `defaults/metaReview/metaReviewDefaults.ts` | B | Completed in Batch 29: defaults/metaReview and agent CLI composition now pass meta-review dependencies explicitly; actor protocol has a `metaReview` dependency branch and the application meta-review API no longer loads defaults dynamically. |
@@ -1478,6 +1478,30 @@ In the closing PR:
     batch; the targeted defaults wrapper, contract, approval, error
     normalization, and application-defaults-fitness tests cover the changed
     surface.
+  - `pnpm lint` passed.
+  - `pnpm build` passed.
+
+### 2026-05-08 — Batch 32: route create defaults through composition
+
+- Changed the application create API so it delegates directly to the create
+  flow with caller-provided dependencies and no longer fills defaults itself.
+- Added `defaults/create/createBubbleApi.ts` as the explicit composition
+  wrapper for CLI, public package, and test convenience callers.
+- Updated create CLI helpers and test imports to use the defaults wrapper where
+  default runtime behavior is expected.
+- Deleted `src/v11/application/create/createBubbleDefaults.ts`.
+- Fitness result after the batch: application dynamic defaults warnings are
+  down from 8 to 7; shared dynamic defaults warnings remain 0. Hard-fail
+  fitness checks pass.
+- Validation:
+  - `pnpm typecheck` passed.
+  - `pnpm fitness:check:ci` passed with the expected remaining warnings
+    (`application_defaults_boundary=7`, `shared_defaults_boundary=0`).
+  - `pnpm exec vitest run tests/core/bubble/createBubble.test.ts tests/core/bubble/createBubble.docContractGatesFailOpen.test.ts tests/v11/application/create/createRepoDefaultsRuntimeIsolation.test.ts tests/tools/fitness/applicationDefaultsBoundary.test.ts`
+    passed (`4` files, `79` tests).
+  - `pnpm test` skipped for this focused create defaults rewiring batch; the
+    targeted create core, doc-contract gate fail-open, runtime-isolation, and
+    application-defaults-fitness tests cover the changed surface.
   - `pnpm lint` passed.
   - `pnpm build` passed.
 

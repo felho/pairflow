@@ -26,7 +26,7 @@ import {
   applyMetaReviewGateOnConvergenceV11 as applyMetaReviewGateOnConvergence,
   MetaReviewGateErrorV11 as MetaReviewGateError
 } from "../../../src/v11/defaults/metaReviewGate/metaReviewGateApi.js";
-import { createBubble } from "../../../src/v11/application/create/createBubble.js";
+import { createBubble } from "../../../src/v11/defaults/create/createBubbleApi.js";
 import {
   appendProtocolEnvelope,
   readTranscriptEnvelopes

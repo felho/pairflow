@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { createHash } from "node:crypto";
 
 import { renderBubbleConfigToml } from "../../../src/config/bubbleConfig.js";
-import { createBubble } from "../../../src/v11/application/create/createBubble.js";
+import { createBubble } from "../../../src/v11/defaults/create/createBubbleApi.js";
 import { applyStateTransition } from "../../../src/v11/domain/state/machine.js";
 import {
   readStateSnapshot,

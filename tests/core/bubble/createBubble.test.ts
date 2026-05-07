@@ -7,7 +7,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   createBubble,
   extractReviewerFocus
-} from "../../../src/v11/application/create/createBubble.js";
+} from "../../../src/v11/defaults/create/createBubbleApi.js";
 import { getBubbleStatusV11 as getBubbleStatus } from "../../../src/v11/application/status/emitStatusV11.js";
 import { statusCommandDependencyDefaults } from "../../../src/v11/defaults/status/statusCommandDependencyDefaults.js";
 import { SchemaValidationError } from "../../../src/v11/shared/validation/primitives.js";

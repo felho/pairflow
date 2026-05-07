@@ -9,7 +9,7 @@ import {
   emitAskHumanFromWorkspaceV11 as emitAskHumanFromWorkspace,
   AskHumanCommandErrorV11 as AskHumanCommandError
 } from "../../../src/v11/application/askHuman/emitAskHumanV11.js";
-import { createBubble } from "../../../src/v11/application/create/createBubble.js";
+import { createBubble } from "../../../src/v11/defaults/create/createBubbleApi.js";
 import { WorkspaceResolutionError } from "../../../src/v11/infrastructure/executor/workspace/workspaceResolution.js";
 import { readTranscriptEnvelopes } from "../../../src/v11/infrastructure/artifact/transcript/transcriptStore.js";
 import { readStateSnapshot } from "../../../src/v11/infrastructure/state/stateStore.js";

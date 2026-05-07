@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { parseBubbleConfigToml, renderBubbleConfigToml } from "../../../src/config/bubbleConfig.js";
-import { createBubble } from "../../../src/v11/application/create/createBubble.js";
+import { createBubble } from "../../../src/v11/defaults/create/createBubbleApi.js";
 import { kickoffBubbleV11 as kickoffBubble } from "../../../src/v11/application/kickoff/emitKickoffV11.js";
 import { buildRunningExecutionContext } from "../../../src/v11/shared/state/executionContext.js";
 import {

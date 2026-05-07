@@ -62,7 +62,7 @@ export {
 export {
   BubbleCreateError,
   createBubble
-} from "./v11/application/create/createCommandApi.js";
+} from "./v11/defaults/create/createBubbleApi.js";
 export {
   asStartBubbleErrorV11 as asStartBubbleError,
   StartBubbleErrorV11 as StartBubbleError,

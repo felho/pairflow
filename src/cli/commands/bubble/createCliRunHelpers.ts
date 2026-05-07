@@ -2,7 +2,7 @@ import { resolve } from "node:path";
 
 import { DEPENDENCY_FAIL_REPO_REGISTRY_REGISTER } from "../../../config/bubbleConfig.js";
 import type { CreateReviewArtifactType } from "../../../types/bubble.js";
-import { createBubble } from "../../../v11/application/create/createCommandApi.js";
+import { createBubble } from "../../../v11/defaults/create/createBubbleApi.js";
 import type {
   BubbleCreateInput,
   CreateBubbleImplementation

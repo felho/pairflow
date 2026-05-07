@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { writeFile } from "node:fs/promises";
 
 import { renderBubbleConfigToml } from "../../src/config/bubbleConfig.js";
-import { createBubble } from "../../src/v11/application/create/createBubble.js";
+import { createBubble } from "../../src/v11/defaults/create/createBubbleApi.js";
 import type { BubbleCreateResult } from "../../src/v11/application/create/createCommandContract.js";
 import { normalizeBubbleReviewPolicy } from "../../src/v11/shared/reviewPolicy/reviewPolicyRuntime.js";
 import { buildRunningExecutionContext } from "../../src/v11/shared/state/executionContext.js";

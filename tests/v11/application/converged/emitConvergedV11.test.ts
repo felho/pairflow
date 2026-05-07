@@ -14,7 +14,7 @@ import {
   emitConvergedFromWorkspaceV11 as emitConvergedFromWorkspace,
   type EmitConvergedV11Input as EmitConvergedInput
 } from "../../../../src/v11/application/converged/emitConvergedV11.js";
-import { createBubble } from "../../../../src/v11/application/create/createCommandApi.js";
+import { createBubble } from "../../../../src/v11/defaults/create/createBubbleApi.js";
 import { bootstrapWorktreeWorkspace } from "../../../../src/v11/infrastructure/workspace/worktreeManager.js";
 import { initGitRepository } from "../../../helpers/git.js";
 import { setupRunningBubbleFixture } from "../../../helpers/bubble.js";
