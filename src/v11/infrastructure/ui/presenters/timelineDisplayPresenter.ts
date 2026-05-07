@@ -1,14 +1,11 @@
-import type { ProtocolEnvelopePayload, ProtocolMessageType } from "../../../../types/protocol.js";
 import type {
   UiTimelineBadge,
-  UiTimelineEntry,
-  UiTimelineEntryDisplay,
   UiTimelineProgress,
   UiTimelineTone
 } from "../../../../contracts/ui/uiReadModel.js";
 import { isNonEmptyString, isRecord } from "../../../shared/validation/primitives.js";
-export type TimelineEntryWithoutDisplay = Omit<UiTimelineEntry, "display" | "payload" | "type"> & { type: ProtocolMessageType; payload: ProtocolEnvelopePayload };
-export type TimelineEntryWithDisplay = TimelineEntryWithoutDisplay & Pick<UiTimelineEntry, "display">;
+import type { TimelineEntryDisplay, TimelineEntryWithDisplay, TimelineEntryWithoutDisplay } from "./timelineEntryModel.js";
+export type { TimelineEntryWithDisplay, TimelineEntryWithoutDisplay } from "./timelineEntryModel.js";
 
 function sanitizeLabel(value: string): string {
   const normalized = value.trim().replace(/\s+/gu, " ");
@@ -16,7 +13,7 @@ function sanitizeLabel(value: string): string {
 }
 
 function readSummaryDisplay(entry: TimelineEntryWithoutDisplay): Pick<
-  UiTimelineEntryDisplay,
+  TimelineEntryDisplay,
   "title" | "summaryText" | "summarySource"
 > {
   const candidates = [
@@ -71,7 +68,7 @@ function resolveDisplaySender(entry: TimelineEntryWithoutDisplay): string {
 
 function resolveDisplayRole(
   entry: TimelineEntryWithoutDisplay
-): UiTimelineEntryDisplay["role"] {
+): TimelineEntryDisplay["role"] {
   const metadata = metadataOf(entry);
   const actor = metadata?.actor;
   const deliveryTargetRole = metadata?.delivery_target_role;
@@ -119,7 +116,7 @@ function resolveDisplayRole(
   return "implementer";
 }
 
-function roleLabel(role: UiTimelineEntryDisplay["role"], sender: string): string {
+function roleLabel(role: TimelineEntryDisplay["role"], sender: string): string {
   if (role === "unknown") return "Unknown";
   return sender;
 }
@@ -313,7 +310,7 @@ function resolveBaseState(input: {
   entry: TimelineEntryWithoutDisplay;
   progress: UiTimelineProgress | null;
   gateFailure: boolean;
-}): Pick<UiTimelineEntryDisplay, "rowKind" | "tone"> {
+}): Pick<TimelineEntryDisplay, "rowKind" | "tone"> {
   if (input.gateFailure) {
     return { rowKind: "gate_failure", tone: "danger" };
   }

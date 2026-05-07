@@ -15,8 +15,7 @@ import {
   bubbleDetail,
   bubbleSummary,
   repoSummary,
-  timelineDisplayItem,
-  timelineEntry
+  timelineDisplayItem
 } from "../test/fixtures";
 
 async function captureError(action: () => Promise<unknown>): Promise<unknown> {
@@ -29,40 +28,6 @@ async function captureError(action: () => Promise<unknown>): Promise<unknown> {
 }
 
 describe("createApiClient", () => {
-  it("keeps shared timeline fixture display defaults aligned with overridden entry type", () => {
-    const approval = timelineEntry({
-      type: "APPROVAL_REQUEST",
-      sender: "orchestrator",
-      recipient: "human",
-      payload: {
-        summary: "Raw approval summary is not the fixture display source."
-      }
-    });
-    const pass = timelineEntry({
-      type: "PASS",
-      sender: "codex",
-      recipient: "claude",
-      payload: {
-        summary: "Raw pass summary is not the fixture display source."
-      }
-    });
-
-    expect(approval.display).toMatchObject({
-      title: "Approval requested.",
-      summaryText: "Approval requested.",
-      summarySource: "summary",
-      rowKind: "approval",
-      senderLabel: "orchestrator"
-    });
-    expect(pass.display).toMatchObject({
-      title: "Timeline entry.",
-      summaryText: "Timeline entry.",
-      summarySource: "summary",
-      rowKind: "normal",
-      senderLabel: "codex"
-    });
-  });
-
   it("loads repositories and bubbles", async () => {
     const fetchMock = vi
       .fn()

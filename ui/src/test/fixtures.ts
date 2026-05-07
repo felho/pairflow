@@ -3,9 +3,7 @@ import type {
   UiBubbleDetail,
   UiBubbleSummary,
   UiRepoSummary,
-  UiTimelineDisplayItem,
-  UiTimelineEntryDisplay,
-  UiTimelineEntry
+  UiTimelineDisplayItem
 } from "../lib/types";
 
 export function repoSummary(repoPath: string): UiRepoSummary {
@@ -183,100 +181,6 @@ export function bubbleDetail(input: {
   };
 }
 
-function timelineEntrySummary(entry: Omit<UiTimelineEntry, "display">): Pick<
-  UiTimelineEntryDisplay,
-  "title" | "summaryText" | "summarySource"
-> {
-  if (entry.type === "HUMAN_QUESTION") {
-    return {
-      title: "Can you proceed?",
-      summaryText: "Can you proceed?",
-      summarySource: "question"
-    };
-  }
-  if (entry.type === "HUMAN_REPLY") {
-    return {
-      title: "Human replied.",
-      summaryText: "Human replied.",
-      summarySource: "message"
-    };
-  }
-  if (entry.type === "APPROVAL_REQUEST") {
-    return {
-      title: "Approval requested.",
-      summaryText: "Approval requested.",
-      summarySource: "summary"
-    };
-  }
-  if (entry.type === "APPROVAL_DECISION") {
-    return {
-      title: "Approval decision recorded.",
-      summaryText: "Approval decision recorded.",
-      summarySource: "decision"
-    };
-  }
-  if (entry.type === "CONVERGENCE") {
-    return {
-      title: "Convergence recorded.",
-      summaryText: "Convergence recorded.",
-      summarySource: "summary"
-    };
-  }
-  return {
-    title: "Timeline entry.",
-    summaryText: "Timeline entry.",
-    summarySource: "summary"
-  };
-}
-
-function timelineEntryDisplay(entry: Omit<UiTimelineEntry, "display">): UiTimelineEntryDisplay {
-  const summary = timelineEntrySummary(entry);
-  return {
-    ...summary,
-    senderLabel: entry.sender,
-    role:
-      entry.type === "HUMAN_QUESTION" || entry.type === "HUMAN_REPLY"
-        ? "human"
-        : entry.type === "CONVERGENCE" || entry.sender === "orchestrator"
-          ? "system"
-          : "implementer",
-    rowKind:
-      entry.type === "HUMAN_QUESTION"
-        ? "blocked"
-        : entry.type === "APPROVAL_REQUEST" || entry.type === "APPROVAL_DECISION"
-          ? "approval"
-          : "normal",
-    tone:
-      entry.type === "HUMAN_QUESTION"
-        ? "warning"
-        : "neutral",
-    badges: [],
-    progress: null,
-    validationFailure: null,
-    syntheticApproval: null
-  };
-}
-
-export function timelineEntry(overrides: Partial<UiTimelineEntry> = {}): UiTimelineEntry {
-  const entryWithoutDisplay: Omit<UiTimelineEntry, "display"> = {
-    id: "env-1",
-    ts: "2026-02-24T12:01:00.000Z",
-    round: 3,
-    type: "HUMAN_QUESTION",
-    sender: "human",
-    recipient: "codex",
-    payload: {
-      question: "Can you proceed?"
-    },
-    refs: [],
-    ...overrides
-  };
-  return {
-    ...entryWithoutDisplay,
-    display: overrides.display ?? timelineEntryDisplay(entryWithoutDisplay)
-  };
-}
-
 export function timelineDisplayItem(
   overrides: Partial<UiTimelineDisplayItem> = {}
 ): UiTimelineDisplayItem {
@@ -297,10 +201,4 @@ export function timelineDisplayItem(
     convergence: false,
     ...overrides
   };
-}
-
-export function protocolTimelineEntry(
-  overrides: Partial<UiTimelineEntry> = {}
-): UiTimelineEntry {
-  return timelineEntry(overrides);
 }

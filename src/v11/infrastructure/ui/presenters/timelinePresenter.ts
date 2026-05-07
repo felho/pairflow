@@ -26,10 +26,7 @@ import {
   isProtocolMessageType
 } from "../../../../types/protocol.js";
 import type {
-  UiTimelineEntry,
   UiTimelineDisplayItem,
-  UiTimelineEntryPayload,
-  UiTimelineFinding
 } from "../../../../contracts/ui/uiReadModel.js";
 import {
   isInteger,
@@ -41,6 +38,11 @@ import {
   type TimelineEntryWithDisplay,
   type TimelineEntryWithoutDisplay
 } from "./timelineDisplayPresenter.js";
+import type {
+  PresentedTimelineEntry,
+  TimelineEntryPayload,
+  TimelineFinding
+} from "./timelineEntryModel.js";
 import { buildTimelineDisplayItems } from "./timelineDisplayItemsPresenter.js";
 import { readRemoteTimelineText } from "./remoteTimelineReader.js";
 import { normalizeBubbleReviewPolicy } from "../../../shared/reviewPolicy/reviewPolicyRuntime.js";
@@ -62,7 +64,7 @@ interface ReadBubbleTimelineDependencies {
   runCommand?: typeof runCommandDefault;
 }
 
-export function presentTimelineEntries(envelopes: ProtocolEnvelope[]): UiTimelineEntry[] {
+export function presentTimelineEntries(envelopes: ProtocolEnvelope[]): PresentedTimelineEntry[] {
   return sanitizeTimelinePayloads(attachTimelineDisplay(envelopes.map((envelope) => ({
     id: envelope.id,
     ts: envelope.ts,
@@ -148,10 +150,10 @@ function hasRenderableFindingPriority(finding: Record<string, unknown>): boolean
   );
 }
 
-function sanitizeFindingForUi(finding: Finding): UiTimelineFinding {
+function sanitizeFindingForUi(finding: Finding): TimelineFinding {
   const sanitized = {
     title: finding.title
-  } as UiTimelineFinding;
+  } as TimelineFinding;
   if (finding.priority !== undefined) sanitized.priority = finding.priority;
   if (finding.severity !== undefined) sanitized.severity = finding.severity;
   if (finding.timing !== undefined) sanitized.timing = finding.timing;
@@ -166,12 +168,12 @@ function sanitizeFindingForUi(finding: Finding): UiTimelineFinding {
   return sanitized;
 }
 
-function normalizePayloadForUi(raw: unknown): UiTimelineEntryPayload {
+function normalizePayloadForUi(raw: unknown): TimelineEntryPayload {
   if (!isRecord(raw)) {
     return {};
   }
 
-  const payload: UiTimelineEntryPayload = {};
+  const payload: TimelineEntryPayload = {};
   if (isNonEmptyString(raw.summary)) {
     payload.summary = raw.summary;
   }
@@ -207,7 +209,7 @@ function normalizePayloadForUi(raw: unknown): UiTimelineEntryPayload {
 
 function shouldPreserveFindingsClaim(
   raw: Record<string, unknown>,
-  sanitizedFindings: UiTimelineFinding[] | null
+  sanitizedFindings: TimelineFinding[] | null
 ): boolean {
   if (!isFindingsClaimState(raw.findings_claim_state) || !isFindingsClaimSource(raw.findings_claim_source)) {
     return false;
@@ -231,7 +233,7 @@ function normalizePayloadForDisplay(raw: unknown): ProtocolEnvelopePayload {
 
 function sanitizeTimelinePayloads(
   entries: TimelineEntryWithDisplay[]
-): UiTimelineEntry[] {
+): PresentedTimelineEntry[] {
   return entries.map((entry) => ({
     ...entry,
     payload: normalizePayloadForUi(entry.payload)
