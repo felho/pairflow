@@ -3,7 +3,7 @@ import { writeFile } from "node:fs/promises";
 import { ensureBubbleInstanceIdForMutation } from "../bubbleIdentity/bubbleIdentityDefaults.js";
 import { runGit } from "../git/gitDefaults.js";
 import { resolveBubbleById } from "../../shared/bubbleLookup/bubbleLookupDefaults.js";
-import { statusCommandDependencyDefaults } from "../../shared/status/statusCommandDependencyDefaults.js";
+import { statusCommandDependencyDefaults } from "../status/statusCommandDependencyDefaults.js";
 import {
   readStateSnapshot,
   writeStateSnapshot

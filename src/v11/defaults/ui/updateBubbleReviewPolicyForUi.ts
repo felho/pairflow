@@ -13,7 +13,7 @@ import {
   updateBubbleReviewPolicy,
   writeBubbleTomlAtomically
 } from "../../infrastructure/artifact/reviewPolicy/updateBubbleReviewPolicy.js";
-import { statusCommandDependencyDefaults } from "../../shared/status/statusCommandDependencyDefaults.js";
+import { statusCommandDependencyDefaults } from "../status/statusCommandDependencyDefaults.js";
 import {
   readStateSnapshot,
   withStateWriteLock

@@ -21,7 +21,7 @@ import {
   readStateSnapshot,
   writeStateSnapshot
 } from "../../../src/v11/infrastructure/state/stateStore.js";
-import { statusCommandDependencyDefaults } from "../../../src/v11/shared/status/statusCommandDependencyDefaults.js";
+import { statusCommandDependencyDefaults } from "../../../src/v11/defaults/status/statusCommandDependencyDefaults.js";
 import { writeWatchdogPaneActivity } from "../../../src/v11/infrastructure/artifact/watchdog/watchdogPaneActivityStore.js";
 import { buildMetaReviewExecutionContext } from "../../../src/v11/shared/metaReview/metaReviewExecutionContext.js";
 import { resolveWorktreePairflowEntrypoint } from "../../../src/v11/shared/command/pairflowCommandPathAssessment.js";

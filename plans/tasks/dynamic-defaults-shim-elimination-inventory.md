@@ -446,7 +446,6 @@ below is the scope envelope.
 - `statusCommandInternals.ts`
 - `statusCommandPathView.ts`
 - `statusCommandViewBuilder.ts`
-- `statusCommandViewProjection.ts`
 - `statusCommandDependencyDefaults.ts` — the shim; same rule as
   `listReadModelDefaults.ts` above. **Does not become a static
   `application/ → defaults/` import.** The moved status API takes
@@ -484,6 +483,10 @@ infrastructure, and UI boundaries (verified v5):
 - `shared/status/remoteBubbleStatusContract.ts` — SSH boundary contract.
 - `shared/status/statusCommandTypes.ts` — pure DTO/type aliases composed
   from port types.
+- `shared/status/statusCommandViewProjection.ts` — pure projection DTO/helper
+  shared by the moved application status view builder and SSH status payload
+  normalization. Keeping it in `shared/` avoids an
+  `infrastructure → application` dependency edge.
 - `shared/status/bubbleAttention.ts` — UI presenter consumes it; see note
   in the previous subsection.
 
@@ -726,6 +729,44 @@ In the closing PR:
   - `pnpm lint` passed.
   - `pnpm fitness:check:ci` passed with the expected remaining warnings.
   - `pnpm exec vitest run tests/v11/application/inbox/bubbleInboxReadModel.test.ts tests/core/bubble/inboxBubble.test.ts tests/core/ui/router.test.ts tests/contracts/uiContractTransitSource.test.ts`
+    passed.
+  - `pnpm test` passed (`433` root test files, `3719` root tests; `18` UI
+    test files, `229` UI tests).
+  - `pnpm build` passed.
+
+### 2026-05-07 — Batch 5: status read-model move
+
+- Moved the status workflow implementation out of `src/v11/shared/status/`
+  into `src/v11/application/status/`:
+  `statusCommandApi.ts`, `statusCommandGateState.ts`,
+  `statusCommandInternals.ts`, `statusCommandPathView.ts`, and
+  `statusCommandViewBuilder.ts`.
+- Kept pure shared status contracts/projections in `src/v11/shared/status/`:
+  `remoteBubbleStatusContract.ts`, `statusCommandTypes.ts`,
+  `statusCommandViewProjection.ts`, and `bubbleAttention.ts`.
+  `statusCommandViewProjection.ts` stays shared because SSH status payload
+  normalization also consumes those projection types; moving it to
+  application would create an `infrastructure -> application` edge.
+- Deleted the shared status defaults shim and moved full runtime wiring to
+  `src/v11/defaults/status/statusCommandDependencyDefaults.ts`.
+- Changed the application status API to receive explicit dependencies for
+  bubble lookup, state inspection, transcript reads, review/doc gate artifact
+  reads, watchdog pane activity, and remote status ports.
+- Left the existing narrower `application/status/statusCommandDependencyDefaults.ts`
+  in place for the separate approval/attach remote-status path; that remains
+  the already-inventoried B16 application-side warning and is not part of the
+  shared S7-S9 removal.
+- Updated commit/merge/delete/UI defaults and status tests to consume the new
+  `defaults/status` aggregate instead of the deleted shared shim.
+- Fitness result after the batch: application dynamic defaults warnings remain
+  31; shared dynamic defaults warnings are down from 9 to 6. Hard-fail
+  fitness checks pass.
+- Validation:
+  - `pnpm typecheck` passed.
+  - `pnpm lint` passed.
+  - `pnpm fitness:check:ci` passed with the expected remaining warnings
+    (`application_defaults_boundary=31`, `shared_defaults_boundary=6`).
+  - `pnpm exec vitest run tests/core/bubble/statusBubble.test.ts tests/cli/bubbleStatusCommand.test.ts tests/v11/application/status/statusCliValueFormatters.test.ts tests/core/ui/router.test.ts tests/contracts/uiContractTransitSource.test.ts tests/tools/fitness/sharedDefaultsBoundary.test.ts tests/tools/fitness/dependency.test.ts`
     passed.
   - `pnpm test` passed (`433` root test files, `3719` root tests; `18` UI
     test files, `229` UI tests).

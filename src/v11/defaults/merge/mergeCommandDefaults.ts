@@ -21,7 +21,7 @@ import {
   executeRemoteBubbleMergeCommand
 } from "../../infrastructure/executor/ssh/sshBubbleMergeCommand.js";
 import { importRemoteBubbleCommitContinuity } from "../../infrastructure/executor/ssh/sshBubbleCommitContinuityImportCommand.js";
-import { statusCommandDependencyDefaults } from "../../shared/status/statusCommandDependencyDefaults.js";
+import { statusCommandDependencyDefaults } from "../status/statusCommandDependencyDefaults.js";
 
 type MergeBubbleDependencyDefaults = {
   [K in keyof Required<MergeBubbleDependencies>]:

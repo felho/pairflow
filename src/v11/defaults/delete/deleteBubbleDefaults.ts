@@ -15,7 +15,7 @@ import { terminateBubbleTmuxSession } from "../tmux/tmuxSessionDefaults.js";
 import { cleanupWorktreeWorkspace } from "../worktree/worktreeWorkspaceDefaults.js";
 import { resolveBubbleById } from "../../shared/bubbleLookup/bubbleLookupDefaults.js";
 import { buildBubbleTmuxSessionName } from "../../shared/bubble/tmuxSessionName.js";
-import { statusCommandDependencyDefaults } from "../../shared/status/statusCommandDependencyDefaults.js";
+import { statusCommandDependencyDefaults } from "../status/statusCommandDependencyDefaults.js";
 import { removeWatchdogPaneActivity } from "../watchdog/watchdogPaneActivityDefaults.js";
 
 export const deleteBubbleDependencyDefaults = {

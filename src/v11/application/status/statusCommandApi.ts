@@ -1,23 +1,33 @@
 import type { BubbleRemotePointer, BubbleRemoteStateCache } from "../../../types/bubble.js";
-import { isNamedError } from "../errors/namedError.js";
+import { isNamedError } from "../../shared/errors/namedError.js";
 import {
   countPendingHumanQuestions,
   readStatusTranscriptData,
   resolvePendingApprovalCount,
   resolveReviewVerificationState,
   resolveStatusGateState,
+  type StatusGateStateDependencies,
+  type StatusTranscriptDataDependencies,
   withAccuracyCriticalVerificationGate
 } from "./statusCommandInternals.js";
-import { statusCommandDependencyDefaults } from "./statusCommandDependencyDefaults.js";
 import {
   buildBubbleStatusView,
   type BubbleStatusView
 } from "./statusCommandViewBuilder.js";
-import { isRemoteBubbleStatusErrorLike } from "./remoteBubbleStatusContract.js";
+import { isRemoteBubbleStatusErrorLike } from "../../shared/status/remoteBubbleStatusContract.js";
 import type {
   ReadWatchdogPaneActivity,
   ReadWatchdogPaneActivityResult
-} from "../watchdog/watchdogPaneActivityStore.js";
+} from "../../shared/watchdog/watchdogPaneActivityStore.js";
+import type { ResolveBubbleByIdPort } from "../../shared/ports/bubbleLookup.js";
+import type { ResolvedBubbleById } from "../../shared/ports/bubbleLookup.js";
+import type {
+  ResolveRemoteBubbleStatusTargetPort
+} from "../../shared/remote/commitRemoteExecution.js";
+import type {
+  RemoteBubbleStatusSnapshot,
+  RemoteBubbleStatusTarget
+} from "../../shared/status/remoteBubbleStatusContract.js";
 
 export interface BubbleStatusInput {
   bubbleId: string;
@@ -29,19 +39,31 @@ export interface BubbleStatusInput {
 export type { BubbleStatusView } from "./statusCommandViewBuilder.js";
 
 export interface BubbleStatusDependencies {
+  inspectStateSnapshot: StatusTranscriptDataDependencies["inspectStateSnapshot"];
   readWatchdogPaneActivity: ReadWatchdogPaneActivity;
-  readRemotePointer?: (
+  readTranscriptEnvelopes: StatusTranscriptDataDependencies["readTranscriptEnvelopes"];
+  readDocContractGateArtifact: StatusGateStateDependencies["readDocContractGateArtifact"];
+  readReviewVerificationArtifactStatus:
+    StatusGateStateDependencies["readReviewVerificationArtifactStatus"];
+  resolveBubbleById: ResolveBubbleByIdPort;
+  resolveDocContractGateArtifactPath:
+    StatusGateStateDependencies["resolveDocContractGateArtifactPath"];
+  readRemotePointer: (
     path: string
   ) => Promise<BubbleRemotePointer | null>;
-  readRemoteStateCache?: (
+  readRemoteStateCache: (
     path: string
   ) => Promise<BubbleRemoteStateCache | null>;
-  writeRemoteStateCache?: (
+  writeRemoteStateCache: (
     path: string,
     value: BubbleRemoteStateCache
   ) => Promise<void>;
-  resolveRemoteBubbleStatusTarget?: typeof statusCommandDependencyDefaults.resolveRemoteBubbleStatusTarget;
-  executeRemoteBubbleStatus?: typeof statusCommandDependencyDefaults.executeRemoteBubbleStatus;
+  resolveRemoteBubbleStatusTarget: ResolveRemoteBubbleStatusTargetPort;
+  executeRemoteBubbleStatus: (input: {
+    bubbleId: string;
+    remoteClonePath: string;
+    remoteTarget: RemoteBubbleStatusTarget;
+  }) => Promise<RemoteBubbleStatusSnapshot>;
 }
 
 export class BubbleStatusError extends Error {
@@ -127,9 +149,7 @@ async function refreshRemoteStateCache(input: {
 
 function resolveConfiguredRemoteAlias(input: {
   bubbleId: string;
-  bubbleConfig: Awaited<
-    ReturnType<typeof statusCommandDependencyDefaults.resolveBubbleById>
-  >["bubbleConfig"];
+  bubbleConfig: ResolvedBubbleById["bubbleConfig"];
 }): string {
   if (input.bubbleConfig.executor?.type === "ssh") {
     return input.bubbleConfig.executor.remote;
@@ -146,49 +166,14 @@ function formatRemoteStatusUnavailableReason(error: unknown): string {
     : `STATUS_REMOTE_STATUS_UNAVAILABLE: ${reason}`;
 }
 
-function resolveStatusCommandDependencies(
-  dependencies: BubbleStatusDependencies
-): {
-  readRemotePointer: NonNullable<BubbleStatusDependencies["readRemotePointer"]>;
-  readRemoteStateCache: NonNullable<BubbleStatusDependencies["readRemoteStateCache"]>;
-  writeRemoteStateCache: NonNullable<BubbleStatusDependencies["writeRemoteStateCache"]>;
-  resolveRemoteBubbleStatusTarget: NonNullable<
-    BubbleStatusDependencies["resolveRemoteBubbleStatusTarget"]
-  >;
-  executeRemoteBubbleStatus: NonNullable<
-    BubbleStatusDependencies["executeRemoteBubbleStatus"]
-  >;
-} {
-  return {
-    readRemotePointer:
-      dependencies.readRemotePointer
-      ?? statusCommandDependencyDefaults.readRemotePointer,
-    readRemoteStateCache:
-      dependencies.readRemoteStateCache
-      ?? statusCommandDependencyDefaults.readRemoteStateCache,
-    writeRemoteStateCache:
-      dependencies.writeRemoteStateCache
-      ?? statusCommandDependencyDefaults.writeRemoteStateCache,
-    resolveRemoteBubbleStatusTarget:
-      dependencies.resolveRemoteBubbleStatusTarget
-      ?? statusCommandDependencyDefaults.resolveRemoteBubbleStatusTarget,
-    executeRemoteBubbleStatus:
-      dependencies.executeRemoteBubbleStatus
-      ?? statusCommandDependencyDefaults.executeRemoteBubbleStatus
-  };
-}
-
 async function loadStartedRemoteBubbleStatusView(input: {
-  resolved: Awaited<ReturnType<typeof statusCommandDependencyDefaults.resolveBubbleById>>;
+  resolved: ResolvedBubbleById;
   remotePointer: Extract<BubbleRemotePointer, { kind: "started" }>;
-  readRemoteStateCache: NonNullable<BubbleStatusDependencies["readRemoteStateCache"]>;
-  writeRemoteStateCache: NonNullable<BubbleStatusDependencies["writeRemoteStateCache"]>;
-  resolveRemoteBubbleStatusTarget: NonNullable<
-    BubbleStatusDependencies["resolveRemoteBubbleStatusTarget"]
-  >;
-  executeRemoteBubbleStatus: NonNullable<
-    BubbleStatusDependencies["executeRemoteBubbleStatus"]
-  >;
+  readRemoteStateCache: BubbleStatusDependencies["readRemoteStateCache"];
+  writeRemoteStateCache: BubbleStatusDependencies["writeRemoteStateCache"];
+  resolveRemoteBubbleStatusTarget:
+    BubbleStatusDependencies["resolveRemoteBubbleStatusTarget"];
+  executeRemoteBubbleStatus: BubbleStatusDependencies["executeRemoteBubbleStatus"];
 }): Promise<BubbleStatusView> {
   const remoteAlias = resolveConfiguredRemoteAlias({
     bubbleId: input.resolved.bubbleId,
@@ -244,8 +229,8 @@ async function loadStartedRemoteBubbleStatusView(input: {
 
 async function throwRemoteBubbleStatusLoadError(input: {
   error: unknown;
-  resolved: Awaited<ReturnType<typeof statusCommandDependencyDefaults.resolveBubbleById>>;
-  readRemoteStateCache: NonNullable<BubbleStatusDependencies["readRemoteStateCache"]>;
+  resolved: ResolvedBubbleById;
+  readRemoteStateCache: BubbleStatusDependencies["readRemoteStateCache"];
 }): Promise<never> {
   let remoteCacheSuffix = "";
   try {
@@ -272,7 +257,7 @@ async function throwRemoteBubbleStatusLoadError(input: {
 }
 
 async function buildLocalBubbleStatusView(input: {
-  resolved: Awaited<ReturnType<typeof statusCommandDependencyDefaults.resolveBubbleById>>;
+  resolved: ResolvedBubbleById;
   now: Date;
   dependencies: BubbleStatusDependencies;
   remoteExecution?: BubbleStatusView["remoteExecution"];
@@ -282,7 +267,7 @@ async function buildLocalBubbleStatusView(input: {
     stateValidation,
     transcript,
     inbox
-  } = await readStatusTranscriptData(input.resolved);
+  } = await readStatusTranscriptData(input.resolved, input.dependencies);
   const pendingQuestions = countPendingHumanQuestions(inbox);
   const accuracyCritical = input.resolved.bubbleConfig.accuracy_critical === true;
   const pendingApprovals =
@@ -294,12 +279,17 @@ async function buildLocalBubbleStatusView(input: {
       ? await resolveReviewVerificationState(
           input.resolved,
           state,
-          accuracyCritical
+          accuracyCritical,
+          input.dependencies
         )
       : "missing";
   const gateState =
     stateValidation === null
-      ? await resolveStatusGateState(input.resolved, state.round)
+      ? await resolveStatusGateState(
+          input.resolved,
+          state.round,
+          input.dependencies
+        )
       : {
           failingGates: [],
           specLockState: {
@@ -349,7 +339,7 @@ export async function getBubbleStatus(
   input: BubbleStatusInput,
   dependencies: BubbleStatusDependencies
 ): Promise<BubbleStatusView> {
-  const resolved = await statusCommandDependencyDefaults.resolveBubbleById({
+  const resolved = await dependencies.resolveBubbleById({
     bubbleId: input.bubbleId,
     ...(input.repoPath !== undefined ? { repoPath: input.repoPath } : {}),
     ...(input.cwd !== undefined ? { cwd: input.cwd } : {})
@@ -361,7 +351,7 @@ export async function getBubbleStatus(
     writeRemoteStateCache,
     resolveRemoteBubbleStatusTarget,
     executeRemoteBubbleStatus
-  } = resolveStatusCommandDependencies(dependencies);
+  } = dependencies;
   const remotePointer = await readRemotePointer(resolved.bubblePaths.remotePointerPath);
 
   if (remotePointer?.kind === "started") {

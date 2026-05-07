@@ -1,21 +1,30 @@
-import { statusCommandDependencyDefaults } from "./statusCommandDependencyDefaults.js";
 import type { ProtocolEnvelope } from "../../../types/protocol.js";
-import { resolveCanonicalPendingApprovalSignal } from "../approval/pendingApprovalSignal.js";
+import { resolveCanonicalPendingApprovalSignal } from "../../shared/approval/pendingApprovalSignal.js";
 export {
   resolveReviewVerificationState,
   resolveStatusGateState,
   withAccuracyCriticalVerificationGate
 } from "./statusCommandGateState.js";
+export type { StatusGateStateDependencies } from "./statusCommandGateState.js";
 export { toStatusCommandPathView } from "./statusCommandPathView.js";
 export type {
   BubbleStatusState,
   ResolvedBubbleStatusContext,
   StatusGateState
-} from "./statusCommandTypes.js";
+} from "../../shared/status/statusCommandTypes.js";
 import type {
   BubbleStatusState,
   ResolvedBubbleStatusContext
-} from "./statusCommandTypes.js";
+} from "../../shared/status/statusCommandTypes.js";
+import type { InspectedStateSnapshot } from "../../shared/ports/stateSnapshots.js";
+import type { ReadTranscriptEnvelopesPort } from "../../shared/ports/transcript.js";
+
+export interface StatusTranscriptDataDependencies {
+  inspectStateSnapshot: (
+    statePath: string
+  ) => Promise<InspectedStateSnapshot>;
+  readTranscriptEnvelopes: ReadTranscriptEnvelopesPort;
+}
 
 export function countPendingHumanQuestions(envelopes: ProtocolEnvelope[]): number {
   let pending = 0;
@@ -47,24 +56,21 @@ export function resolvePendingApprovalCount(
 }
 
 export async function readStatusTranscriptData(
-  resolved: ResolvedBubbleStatusContext
+  resolved: ResolvedBubbleStatusContext,
+  dependencies: StatusTranscriptDataDependencies
 ): Promise<{
   state: BubbleStatusState;
-  stateValidation:
-    | Awaited<
-        ReturnType<typeof statusCommandDependencyDefaults.inspectStateSnapshot>
-      >["stateValidation"]
-    | null;
+  stateValidation: InspectedStateSnapshot["stateValidation"] | null;
   transcript: ProtocolEnvelope[];
   inbox: ProtocolEnvelope[];
 }> {
   const [loadedState, transcript, inbox] = await Promise.all([
-    statusCommandDependencyDefaults.inspectStateSnapshot(resolved.bubblePaths.statePath),
-    statusCommandDependencyDefaults.readTranscriptEnvelopes(resolved.bubblePaths.transcriptPath, {
+    dependencies.inspectStateSnapshot(resolved.bubblePaths.statePath),
+    dependencies.readTranscriptEnvelopes(resolved.bubblePaths.transcriptPath, {
       allowMissing: true,
       tolerateInvalidEnvelopeLines: true
     }),
-    statusCommandDependencyDefaults.readTranscriptEnvelopes(resolved.bubblePaths.inboxPath, {
+    dependencies.readTranscriptEnvelopes(resolved.bubblePaths.inboxPath, {
       allowMissing: true,
       tolerateInvalidEnvelopeLines: true
     })

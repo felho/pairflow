@@ -1,17 +1,34 @@
-import type { ReviewVerificationState } from "../../../v11/shared/reviewer/reviewVerification.js";
+import type { ReviewVerificationState } from "../../shared/reviewer/reviewVerification.js";
 import {
   collectFailingGatesFromArtifact,
   isDocContractGateScopeActive
-} from "../../../v11/shared/gates/docContractGates.js";
-import {
-  statusCommandDependencyDefaults
-} from "./statusCommandDependencyDefaults.js";
+} from "../../shared/gates/docContractGates.js";
 import type { BubbleFailingGate } from "../../../types/bubble.js";
 import type {
   BubbleStatusState,
   ResolvedBubbleStatusContext,
   StatusGateState
-} from "./statusCommandTypes.js";
+} from "../../shared/status/statusCommandTypes.js";
+import type {
+  ReadReviewVerificationArtifactStatusOptions
+} from "../../shared/ports/reviewVerificationArtifacts.js";
+import type {
+  ReadDocContractGateArtifactPort
+} from "../../shared/ports/docContractGateArtifacts.js";
+
+type ReadReviewVerificationArtifactStatusResult = (
+  artifactPath: string,
+  options?: ReadReviewVerificationArtifactStatusOptions
+) => Promise<{
+  status: ReviewVerificationState;
+}>;
+
+export interface StatusGateStateDependencies {
+  readDocContractGateArtifact: ReadDocContractGateArtifactPort;
+  readReviewVerificationArtifactStatus:
+    ReadReviewVerificationArtifactStatusResult;
+  resolveDocContractGateArtifactPath: (artifactsDir: string) => string;
+}
 
 function defaultGateState(round: number): StatusGateState {
   return {
@@ -66,12 +83,13 @@ export function withAccuracyCriticalVerificationGate(
 export async function resolveReviewVerificationState(
   resolved: ResolvedBubbleStatusContext,
   state: BubbleStatusState,
-  accuracyCritical: boolean
+  accuracyCritical: boolean,
+  dependencies: StatusGateStateDependencies
 ): Promise<ReviewVerificationState> {
   if (!accuracyCritical) {
     return "missing";
   }
-  const verification = await statusCommandDependencyDefaults.readReviewVerificationArtifactStatus(
+  const verification = await dependencies.readReviewVerificationArtifactStatus(
     resolved.bubblePaths.reviewVerificationArtifactPath,
     {
       expectedRound: state.round,
@@ -83,7 +101,8 @@ export async function resolveReviewVerificationState(
 
 export async function resolveStatusGateState(
   resolved: ResolvedBubbleStatusContext,
-  round: number
+  round: number,
+  dependencies: StatusGateStateDependencies
 ): Promise<StatusGateState> {
   const defaults = defaultGateState(round);
   const docGateScopeActive = isDocContractGateScopeActive({
@@ -94,8 +113,8 @@ export async function resolveStatusGateState(
   }
 
   try {
-    const gateArtifact = await statusCommandDependencyDefaults.readDocContractGateArtifact(
-      statusCommandDependencyDefaults.resolveDocContractGateArtifactPath(
+    const gateArtifact = await dependencies.readDocContractGateArtifact(
+      dependencies.resolveDocContractGateArtifactPath(
         resolved.bubblePaths.artifactsDir
       )
     );

@@ -590,9 +590,11 @@ describe("UI contract transit source guards", () => {
       "../../shared/read-model/list/listReadModelContract",
       "../../shared/inbox/inboxCommandApi",
       "../../shared/status/statusCommandApi",
+      "../../application/status/statusCommandApi",
       "../../../shared/read-model/list/listReadModelContract",
       "../../../shared/inbox/inboxCommandApi",
-      "../../../shared/status/statusCommandApi"
+      "../../../shared/status/statusCommandApi",
+      "../../../application/status/statusCommandApi"
     ];
 
     for (const source of [canonical, uiBarrel, routerPort]) {

@@ -6,7 +6,7 @@ import { importRemoteBubbleCommitContinuity } from "../../src/v11/infrastructure
 import { resolveBubbleById } from "../../src/v11/infrastructure/executor/workspace/bubbleLookup.js";
 import { readStateSnapshot, writeStateSnapshot } from "../../src/v11/infrastructure/state/stateStore.js";
 import { runGit } from "../../src/v11/infrastructure/workspace/git.js";
-import { statusCommandDependencyDefaults } from "../../src/v11/shared/status/statusCommandDependencyDefaults.js";
+import { statusCommandDependencyDefaults } from "../../src/v11/defaults/status/statusCommandDependencyDefaults.js";
 import type { CommitBubbleDependencies } from "../../src/v11/application/commit/commitCommandApiContract.js";
 import { rename, writeFile } from "node:fs/promises";
 

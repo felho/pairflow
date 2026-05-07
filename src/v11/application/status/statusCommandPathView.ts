@@ -1,7 +1,7 @@
-import type { ResolvedBubbleStatusContext } from "./statusCommandTypes.js";
+import type { ResolvedBubbleStatusContext } from "../../shared/status/statusCommandTypes.js";
 
 const statusCommandPathViewDefaultsPromise = import(
-  "../command/pairflowCommandPathAssessment.js"
+  "../../shared/command/pairflowCommandPathAssessment.js"
 ).then(({ assessPairflowCommandPath }) => ({
   assessPairflowCommandPath
 }));

@@ -63,7 +63,7 @@ import type {
   UiEvent,
   UiSnapshotEvent
 } from "../../../src/contracts/ui/uiEvents.js";
-import type { BubbleStatusView } from "../../../src/v11/shared/status/statusCommandApi.js";
+import type { BubbleStatusView } from "../../../src/v11/application/status/statusCommandApi.js";
 
 function createDeferred<T>(): {
   promise: Promise<T>;

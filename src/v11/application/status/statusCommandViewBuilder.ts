@@ -1,7 +1,7 @@
-import { computeWatchdogStatus, type WatchdogStatus } from "../watchdog/watchdogStatus.js";
-import { type ReviewVerificationState } from "../../../v11/shared/reviewer/reviewVerification.js";
-import type { StateValidationDiagnostics } from "../ports/stateSnapshots.js";
-import type { ReadWatchdogPaneActivityResult } from "../watchdog/watchdogPaneActivityStore.js";
+import { computeWatchdogStatus, type WatchdogStatus } from "../../shared/watchdog/watchdogStatus.js";
+import { type ReviewVerificationState } from "../../shared/reviewer/reviewVerification.js";
+import type { StateValidationDiagnostics } from "../../shared/ports/stateSnapshots.js";
+import type { ReadWatchdogPaneActivityResult } from "../../shared/watchdog/watchdogPaneActivityStore.js";
 import type {
   BubbleFailingGate,
   BubbleLifecycleState,
@@ -14,7 +14,7 @@ import {
   normalizeRuntimeAlignedExecutionContext,
   normalizeRuntimeAlignedRole,
   toRuntimeAlignedReviewPolicyExecutionContext
-} from "../reviewPolicy/reviewPolicyRuntime.js";
+} from "../../shared/reviewPolicy/reviewPolicyRuntime.js";
 import type { ProtocolEnvelope, ProtocolMessageType } from "../../../types/protocol.js";
 import type { UiBubbleStatusRemoteExecution } from "../../../types/uiRemoteExecution.js";
 import type {
@@ -22,8 +22,8 @@ import type {
   ResolvedBubbleStatusContext,
   StatusGateState
 } from "./statusCommandInternals.js";
-import type { RemoteBubbleStatusSnapshot } from "./remoteBubbleStatusContract.js";
-import { inferBubbleStartedAtFromInstanceId } from "../bubble/bubbleInstanceId.js";
+import type { RemoteBubbleStatusSnapshot } from "../../shared/status/remoteBubbleStatusContract.js";
+import { inferBubbleStartedAtFromInstanceId } from "../../shared/bubble/bubbleInstanceId.js";
 import { toStatusCommandPathView } from "./statusCommandInternals.js";
 import {
   buildStatusExecutionContextView,
@@ -32,7 +32,7 @@ import {
   type StatusExecutionContextView,
   type StatusMetaReviewView,
   type StatusPaneActivityView
-} from "./statusCommandViewProjection.js";
+} from "../../shared/status/statusCommandViewProjection.js";
 
 const noLiveReviewPolicyStatusStates = new Set<BubbleLifecycleState>([
   "WAITING_HUMAN",
