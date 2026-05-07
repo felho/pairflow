@@ -11,9 +11,14 @@ import { metaReviewExecutionContextToRunningContext } from "../../../src/v11/sha
 import { readStateSnapshot, writeStateSnapshot } from "../../../src/v11/infrastructure/state/stateStore.js";
 import { applyStateTransition } from "../../../src/v11/domain/state/machine.js";
 import {
-  reconcileRuntimeSessions,
+  reconcileRuntimeSessions as reconcileRuntimeSessionsApplication,
   StartupReconcilerError
 } from "../../../src/v11/application/reconcile/reconcileCommandApi.js";
+import type {
+  ReconcileRuntimeSessionsDependencies,
+  ReconcileRuntimeSessionsInput
+} from "../../../src/v11/application/reconcile/reconcileCommandContract.js";
+import { reconcileRuntimeSessionsDefaultDependencies } from "../../../src/v11/defaults/reconcile/reconcileCommandDefaults.js";
 import {
   readRuntimeSessionsRegistry,
   upsertRuntimeSession
@@ -23,6 +28,20 @@ import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
 import { buildWorktreeBootstrapResult } from "../../helpers/worktreeBootstrapResult.js";
 
 const tempDirs: string[] = [];
+const reconcileRuntimeSessionsDefaults = {
+  ...reconcileRuntimeSessionsDefaultDependencies,
+  readStateSnapshot
+};
+
+function reconcileRuntimeSessions(
+  input: ReconcileRuntimeSessionsInput = {},
+  dependencies: ReconcileRuntimeSessionsDependencies = {}
+) {
+  return reconcileRuntimeSessionsApplication(input, {
+    ...reconcileRuntimeSessionsDefaults,
+    ...dependencies
+  });
+}
 
 async function createTempRepo(prefix = "pairflow-reconcile-runtime-"): Promise<string> {
   const root = await mkdtemp(join(tmpdir(), prefix));

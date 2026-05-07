@@ -3,7 +3,12 @@ import { createHash } from "node:crypto";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { reconcileRuntimeSessions } from "../../../src/v11/application/reconcile/reconcileCommandApi.js";
+import { reconcileRuntimeSessions as reconcileRuntimeSessionsApplication } from "../../../src/v11/application/reconcile/reconcileCommandApi.js";
+import type {
+  ReconcileRuntimeSessionsDependencies,
+  ReconcileRuntimeSessionsInput
+} from "../../../src/v11/application/reconcile/reconcileCommandContract.js";
+import { reconcileRuntimeSessionsDefaultDependencies } from "../../../src/v11/defaults/reconcile/reconcileCommandDefaults.js";
 import { upsertRuntimeSession } from "../../../src/v11/infrastructure/executor/sessionRuntime/runtimeSessionsRegistry.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
 import { initGitRepository } from "../../helpers/git.js";
@@ -27,6 +32,21 @@ export interface ReconcileContractOutput {
 export interface ReconcileContractRunResult {
   mode: "v11";
   v11: ReconcileContractOutput;
+}
+
+const reconcileRuntimeSessionsDefaults = {
+  ...reconcileRuntimeSessionsDefaultDependencies,
+  readStateSnapshot
+};
+
+function reconcileRuntimeSessions(
+  input: ReconcileRuntimeSessionsInput = {},
+  dependencies: ReconcileRuntimeSessionsDependencies = {}
+) {
+  return reconcileRuntimeSessionsApplication(input, {
+    ...reconcileRuntimeSessionsDefaults,
+    ...dependencies
+  });
 }
 
 interface ParsedReconcileCaseInput {

@@ -18,7 +18,12 @@ import {
   readRuntimeSessionsRegistry,
   upsertRuntimeSession
 } from "../../../src/v11/infrastructure/executor/sessionRuntime/runtimeSessionsRegistry.js";
-import { reconcileRuntimeSessions } from "../../../src/v11/application/reconcile/reconcileCommandApi.js";
+import { reconcileRuntimeSessions as reconcileRuntimeSessionsApplication } from "../../../src/v11/application/reconcile/reconcileCommandApi.js";
+import type {
+  ReconcileRuntimeSessionsDependencies,
+  ReconcileRuntimeSessionsInput
+} from "../../../src/v11/application/reconcile/reconcileCommandContract.js";
+import { reconcileRuntimeSessionsDefaultDependencies } from "../../../src/v11/defaults/reconcile/reconcileCommandDefaults.js";
 import { applyStateTransition } from "../../../src/v11/domain/state/machine.js";
 import {
   buildRunningExecutionContext,
@@ -30,6 +35,20 @@ import { initGitRepository } from "../../helpers/git.js";
 import { buildWorktreeBootstrapResult } from "../../helpers/worktreeBootstrapResult.js";
 
 const tempDirs: string[] = [];
+const reconcileRuntimeSessionsDefaults = {
+  ...reconcileRuntimeSessionsDefaultDependencies,
+  readStateSnapshot
+};
+
+function reconcileRuntimeSessions(
+  input: ReconcileRuntimeSessionsInput = {},
+  dependencies: ReconcileRuntimeSessionsDependencies = {}
+) {
+  return reconcileRuntimeSessionsApplication(input, {
+    ...reconcileRuntimeSessionsDefaults,
+    ...dependencies
+  });
+}
 
 async function createTempRepo(prefix = "pairflow-restart-recovery-"): Promise<string> {
   const root = await mkdtemp(join(tmpdir(), prefix));

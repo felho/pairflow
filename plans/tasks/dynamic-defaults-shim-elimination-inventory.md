@@ -332,7 +332,7 @@ twice.
 | B8 | `application/pass/passReviewVerificationDefaults.ts:24` | `defaults/reviewer/reviewVerificationArtifactDefaults.ts` | **A** (reclassified) | Completed in Batch 17: pass review-verification resolve/write ports are now supplied through the existing pass-validation defaults aggregate; the standalone application shim was deleted. |
 | B9 | `application/pass/passValidationCommandDefaults.ts:121` | `defaults/pass/passValidationCommandDefaults.ts` | B | Verified. CLI passes the aggregator. |
 | B10 | `application/pass/reviewerDeliveryDefaults.ts:33` | `defaults/reviewer/reviewerDeliveryDefaults.ts` | B | Verified. |
-| B11 | `application/reconcile/reconcileCommandDefaults.ts:25` | `defaults/reconcile/reconcileCommandDefaults.ts` | B | Verified: target imports `infrastructure/` and `tmuxRunnerDefaults`, plus contains default probe logic. Composition. |
+| B11 | `application/reconcile/reconcileCommandDefaults.ts:25` | `defaults/reconcile/reconcileCommandDefaults.ts` | B | Completed in Batch 24: CLI now statically imports the reconcile defaults aggregate plus the state read port and passes them into the application reconcile command; the standalone application shim was deleted. |
 | B12 | `application/restart/restartCommandDefaults.ts:29` | `defaults/restart/restartCommandDefaults.ts` | B | Verified. |
 | B13 | `application/reviewer/reviewerArtifactDefaults.ts:22` | `defaults/reviewer/reviewerArtifactDefaults.ts` | **A** (reclassified) | Completed in Batch 13: reviewer brief/focus artifact readers are now supplied through the existing start and reviewer-delivery defaults aggregates; the standalone application shim was deleted. |
 | B14 | `application/reviewer/reviewerTestEvidenceDefaults.ts:30` | `defaults/reviewer/reviewerTestEvidenceDefaults.ts` | **A** (reclassified) | Completed in Batch 14: reviewer test-evidence ports are now supplied through start, converged, and reviewer-delivery defaults aggregates; the standalone application shim was deleted. |
@@ -1260,6 +1260,36 @@ In the closing PR:
   - `pnpm test` skipped for this focused transcript defaults rewiring batch;
     the targeted approval, ask-human-adjacent defaults, inbox, kickoff,
     meta-review submit, pass, reply-adjacent defaults, start, and
+    application-defaults-fitness tests cover the changed surface.
+  - `pnpm lint` passed.
+  - `pnpm build` passed.
+
+### 2026-05-07 — Batch 24: route reconcile defaults through CLI composition
+
+- Replaced the CLI bubble reconcile re-export with a real CLI wrapper that
+  statically imports `defaults/reconcile/reconcileCommandDefaults.ts` and the
+  state read default, then passes the composed dependency set to the
+  application reconcile command.
+- Changed `reconcileRuntimeSessions` so the application API requires its
+  default dependency set through explicit dependencies instead of loading the
+  defaults module dynamically.
+- Updated reconcile runtime and contract tests to provide an explicit
+  test-local dependency aggregate, keeping the application API free of hidden
+  default wiring.
+- Deleted `src/v11/application/reconcile/reconcileCommandDefaults.ts`.
+- Fitness result after the batch: application dynamic defaults warnings are
+  down from 18 to 17; shared dynamic defaults warnings remain 0. Hard-fail
+  fitness checks pass.
+- Validation:
+  - `pnpm typecheck` passed.
+  - `pnpm fitness:check:ci` passed with the expected remaining warnings
+    (`application_defaults_boundary=17`, `shared_defaults_boundary=0`) and no
+    error-context warnings.
+  - `pnpm exec vitest run tests/cli/bubbleReconcileCommand.test.ts tests/v11/application/reconcile/reconcileCommandDependencyResolution.test.ts tests/v11/application/reconcile/runReconcileFlow.test.ts tests/core/runtime/startupReconciler.test.ts tests/core/runtime/restartRecovery.test.ts tests/tools/fitness/applicationDefaultsBoundary.test.ts`
+    passed (`6` files, `25` tests).
+  - `pnpm test` skipped for this focused reconcile defaults rewiring batch; the
+    targeted CLI, reconcile dependency resolution, reconcile flow,
+    startup/restart recovery, contract runner typecheck coverage, and
     application-defaults-fitness tests cover the changed surface.
   - `pnpm lint` passed.
   - `pnpm build` passed.
