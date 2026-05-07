@@ -2,7 +2,6 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 
 import { loadPairflowGlobalConfig } from "../../../config/pairflowConfig.js";
-import { processSpawnDefault as processSpawn } from "../process/processSpawnDependencyDefaults.js";
 import { buildCheckLauncherAvailabilityDefault } from "./attachBubbleLauncherAvailability.js";
 import {
   buildAttachCommand,
@@ -18,9 +17,11 @@ import {
   type AttachBubbleInput,
   type AttachBubbleResult,
   type AttachCommandExecutionInput,
-  type AttachCommandExecutionResult,
-  type AttachCommandExecutor
+  type AttachCommandExecutionResult
 } from "./attachBubbleContract.js";
+import type {
+  ProcessSpawnPort
+} from "../../shared/ports/processSpawn.js";
 
 export type {
   AttachBubbleDependencies,
@@ -42,8 +43,9 @@ export { AttachBubbleError } from "./attachBubbleContract.js";
 
 export { AttachBubbleError as AttachBubbleErrorV11 };
 
-export const executeAttachCommand: AttachCommandExecutor = async (
-  input: AttachCommandExecutionInput
+export const executeAttachCommand = async (
+  input: AttachCommandExecutionInput,
+  processSpawn: ProcessSpawnPort
 ): Promise<AttachCommandExecutionResult> =>
   new Promise((resolvePromise, rejectPromise) => {
     const child = processSpawn("bash", ["-lc", input.command], {
@@ -81,7 +83,10 @@ export const executeAttachCommand: AttachCommandExecutor = async (
     });
   });
 
-async function checkTmuxSessionExistsDefault(sessionName: string): Promise<boolean> {
+async function checkTmuxSessionExistsDefault(
+  sessionName: string,
+  processSpawn: ProcessSpawnPort
+): Promise<boolean> {
   return new Promise((resolvePromise) => {
     const child = processSpawn("tmux", ["has-session", "-t", sessionName], {
       stdio: ["ignore", "ignore", "ignore"]
@@ -118,9 +123,36 @@ export async function attachBubble(
     );
   }
   const checkSession =
-    dependencies.checkTmuxSessionExists ?? checkTmuxSessionExistsDefault;
+    dependencies.checkTmuxSessionExists
+    ?? ((sessionName) => {
+      if (dependencies.processSpawn === undefined) {
+        throw new AttachBubbleError(
+          "Attach bubble requires processSpawn dependency for default tmux session checks.",
+          {
+            context: {
+              reason: "process_spawn_dependency_missing"
+            }
+          }
+        );
+      }
+      return checkTmuxSessionExistsDefault(sessionName, dependencies.processSpawn);
+    });
   const writeYaml = dependencies.writeYamlFile ?? writeYamlFileDefault;
-  const runCommand = dependencies.executeAttachCommand ?? executeAttachCommand;
+  const runCommand =
+    dependencies.executeAttachCommand
+    ?? ((commandInput) => {
+      if (dependencies.processSpawn === undefined) {
+        throw new AttachBubbleError(
+          "Attach bubble requires processSpawn dependency for default command execution.",
+          {
+            context: {
+              reason: "process_spawn_dependency_missing"
+            }
+          }
+        );
+      }
+      return executeAttachCommand(commandInput, dependencies.processSpawn);
+    });
   const checkLauncherAvailability =
     dependencies.checkLauncherAvailability ??
     buildCheckLauncherAvailabilityDefault(runCommand);

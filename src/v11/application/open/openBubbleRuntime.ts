@@ -19,12 +19,14 @@ import {
 import {
   createOpenBubbleError
 } from "./openBubbleError.js";
-import { processSpawnDefault as processSpawn } from "../process/processSpawnDependencyDefaults.js";
 import {
   enrichRemoteOpenContext,
   resolveOpenCommandTemplate,
   resolveOpenExecutionContext
 } from "./openBubbleResolution.js";
+import type {
+  ProcessSpawnPort
+} from "../../shared/ports/processSpawn.js";
 
 export interface OpenBubbleInput {
   bubbleId: string;
@@ -49,6 +51,7 @@ export type OpenCommandExecutor = (
 
 export interface OpenBubbleDependencies {
   executeOpenCommand?: OpenCommandExecutor;
+  processSpawn?: ProcessSpawnPort;
   resolveBubbleById?: ResolveBubbleByIdPort;
   assertWorktreeExists?: (worktreePath: string) => Promise<void>;
   loadPairflowGlobalConfig?: () => ReturnType<typeof loadPairflowGlobalConfig>;
@@ -57,8 +60,9 @@ export interface OpenBubbleDependencies {
   ) => Promise<BubbleRemotePointer | null>;
 }
 
-export const executeOpenCommand: OpenCommandExecutor = async (
-  input: OpenCommandExecutionInput
+export const executeOpenCommand = async (
+  input: OpenCommandExecutionInput,
+  processSpawn: ProcessSpawnPort
 ): Promise<OpenCommandExecutionResult> =>
   new Promise((resolvePromise, rejectPromise) => {
     const child = processSpawn("bash", ["-lc", input.command], {
@@ -240,7 +244,20 @@ export async function openBubbleRuntime(
     readRemotePointerPort,
     loadGlobalConfigOnce
   });
-  const runCommand = dependencies.executeOpenCommand ?? executeOpenCommand;
+  const runCommand =
+    dependencies.executeOpenCommand
+    ?? ((commandInput) => {
+      if (dependencies.processSpawn === undefined) {
+        throw createOpenBubbleError({
+          message: "Open bubble requires processSpawn dependency for default command execution.",
+          context: {
+            reason: "process_spawn_dependency_missing",
+            reason_code: "OPEN_PROCESS_SPAWN_DEPENDENCY_MISSING"
+          }
+        });
+      }
+      return executeOpenCommand(commandInput, dependencies.processSpawn);
+    });
   const executed = await runCommand({
     command: resolvedCommand.command,
     cwd: resolved.repoPath

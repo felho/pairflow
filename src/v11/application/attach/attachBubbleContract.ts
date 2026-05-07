@@ -4,6 +4,7 @@ import type {
   BubbleRemotePointer
 } from "../../../types/bubble.js";
 import type { ResolveBubbleByIdPort } from "../../shared/ports/bubbleLookup.js";
+import type { ProcessSpawnPort } from "../../shared/ports/processSpawn.js";
 
 export type ExplicitAttachLauncher = Exclude<AttachLauncher, "auto">;
 export type GuiAttachLauncher = Exclude<ExplicitAttachLauncher, "copy">;
@@ -71,6 +72,7 @@ export type AttachBubbleReasonCode =
 
 export interface AttachBubbleDependencies {
   executeAttachCommand?: AttachCommandExecutor;
+  processSpawn?: ProcessSpawnPort;
   resolveBubbleById?: ResolveBubbleByIdPort;
   checkTmuxSessionExists?: TmuxSessionChecker;
   writeYamlFile?: (path: string, content: string) => Promise<void>;

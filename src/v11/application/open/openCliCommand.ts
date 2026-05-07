@@ -3,6 +3,7 @@ import { parseArgs } from "node:util";
 import {
   asOpenBubbleErrorV11 as asOpenBubbleError,
   openBubbleV11 as openBubble,
+  type OpenBubbleV11Dependencies,
   type OpenBubbleResult
 } from "./emitOpenV11.js";
 
@@ -19,6 +20,11 @@ export interface BubbleOpenHelpCommandOptions {
 export type ParsedBubbleOpenCommandOptions =
   | BubbleOpenCommandOptions
   | BubbleOpenHelpCommandOptions;
+
+export interface BubbleOpenCommandDependencies
+  extends Partial<OpenBubbleV11Dependencies> {
+  openBubble?: typeof openBubble;
+}
 
 export function getBubbleOpenHelpText(): string {
   return [
@@ -89,19 +95,43 @@ export function parseBubbleOpenCommandOptions(
 
 export async function runBubbleOpenCommand(
   args: string[],
-  cwd: string = process.cwd()
+  cwd: string = process.cwd(),
+  dependencies: BubbleOpenCommandDependencies = {}
 ): Promise<OpenBubbleResult | null> {
   const options = parseBubbleOpenCommandOptions(args);
   if (options.help) {
     return null;
   }
 
+  const runOpenBubble = dependencies.openBubble ?? openBubble;
   try {
-    return await openBubble({
-      bubbleId: options.id,
-      repoPath: options.repo,
-      cwd
-    });
+    return await runOpenBubble(
+      {
+        bubbleId: options.id,
+        repoPath: options.repo,
+        cwd
+      },
+      {
+        ...(dependencies.executeOpenCommand !== undefined
+          ? { executeOpenCommand: dependencies.executeOpenCommand }
+          : {}),
+        ...(dependencies.processSpawn !== undefined
+          ? { processSpawn: dependencies.processSpawn }
+          : {}),
+        ...(dependencies.resolveBubbleById !== undefined
+          ? { resolveBubbleById: dependencies.resolveBubbleById }
+          : {}),
+        ...(dependencies.assertWorktreeExists !== undefined
+          ? { assertWorktreeExists: dependencies.assertWorktreeExists }
+          : {}),
+        ...(dependencies.loadPairflowGlobalConfig !== undefined
+          ? { loadPairflowGlobalConfig: dependencies.loadPairflowGlobalConfig }
+          : {}),
+        ...(dependencies.readRemotePointer !== undefined
+          ? { readRemotePointer: dependencies.readRemotePointer }
+          : {})
+      }
+    );
   } catch (error) {
     asOpenBubbleError(error);
   }

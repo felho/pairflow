@@ -1,7 +1,7 @@
+import type { ProcessSpawnPort } from "../../shared/ports/processSpawn.js";
 import type { RunWorktreeBootstrapCommandInput } from "./startCommandContract.js";
 import { runTmux } from "./startCommandDependencyDefaults.js";
 import { StartBubbleError } from "./startCommandRuntime.js";
-import { processSpawnDefault } from "../process/processSpawnDependencyDefaults.js";
 
 function truncateCommandOutput(raw: string, maxChars: number = 1200): string {
   const normalized = raw.trim();
@@ -11,9 +11,10 @@ function truncateCommandOutput(raw: string, maxChars: number = 1200): string {
   return `${normalized.slice(0, maxChars)}... [truncated]`;
 }
 
-export async function runWorktreeBootstrapCommandDefault(
-  input: RunWorktreeBootstrapCommandInput
-): Promise<void> {
+export function createRunWorktreeBootstrapCommandDefault(
+  processSpawn: ProcessSpawnPort
+): (input: RunWorktreeBootstrapCommandInput) => Promise<void> {
+  return async (input: RunWorktreeBootstrapCommandInput): Promise<void> => {
   const command = input.command.trim();
   if (command.length === 0) {
     return;
@@ -24,7 +25,7 @@ export async function runWorktreeBootstrapCommandDefault(
     stderr: string;
     exitCode: number;
   }>((resolvePromise, rejectPromise) => {
-    const child = processSpawnDefault("bash", ["-lc", command], {
+    const child = processSpawn("bash", ["-lc", command], {
       cwd: input.workspacePath,
       stdio: ["ignore", "pipe", "pipe"]
     });
@@ -87,6 +88,7 @@ export async function runWorktreeBootstrapCommandDefault(
     `context bubble_id=${input.bubbleId} command_name=start workspace_path=${input.workspacePath} worktree_path=${input.worktreePath}`
   );
   throw new StartBubbleError(details.join(" "));
+  };
 }
 
 export async function isTmuxSessionAliveDefault(sessionName: string): Promise<boolean> {

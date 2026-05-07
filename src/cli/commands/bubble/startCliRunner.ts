@@ -145,11 +145,17 @@ async function runStartAndAttachIfRequested(input: {
   runStartBubble: typeof startBubble;
   processSpawn: ProcessSpawnPort;
 }): Promise<StartBubbleResult> {
-  const result = await input.runStartBubble({
+  const startInput = {
     bubbleId: input.bubbleId,
     repoPath: input.repoPathForStart,
     cwd: input.cwd
-  });
+  };
+  const result =
+    input.runStartBubble === startBubble
+      ? await input.runStartBubble(startInput, {
+        processSpawn: input.processSpawn
+      })
+      : await input.runStartBubble(startInput);
   if (input.attach) {
     await runTmuxAttach(result.tmuxSessionName, input.processSpawn);
   }

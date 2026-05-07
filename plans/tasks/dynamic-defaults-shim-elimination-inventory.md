@@ -268,7 +268,7 @@ row ID prefix is historical, the "Cat" column is authoritative.
 | A3 | `application/bubbleLookup/bubbleLookupDependencyDefaults.ts:18` | `defaults/bubbleLookup/bubbleLookupDefaults.ts` | A | Single port (`ResolveBubbleByIdPort`). Same target as S2. |
 | A4 | `application/gates/docContractGateArtifactDependencyDefaults.ts:24` | `defaults/gates/docContractGateArtifactDefaults.ts` | A | Completed in Batch 15: doc-contract gate artifact ports are now supplied through create, pass-validation, and start defaults aggregates; the standalone application shim was deleted. |
 | A5 | `application/metaReview/metaReviewDependencyDefaults.ts:20` | `defaults/runtimeSessions/runtimeSessionsDefaults.ts` | A | Completed in Batch 11: V11/default wrapper injects the runtime-sessions read port through `defaults/metaReview`; the application shim was deleted. |
-| A6 | `application/process/processSpawnDependencyDefaults.ts:8` | `defaults/process/processSpawnDefaults.ts` | A | `ProcessSpawnPort` directly (port exists in `shared/ports/processSpawn.ts`). No wrapper. |
+| A6 | `application/process/processSpawnDependencyDefaults.ts:8` | `defaults/process/processSpawnDefaults.ts` | A | Completed in Batch 18: open, attach, and start command paths now receive `ProcessSpawnPort` from the CLI/defaults composition side; standalone application process-spawn shim was deleted. |
 | A7 | `application/repoRegistry/repoRegistryDependencyDefaults.ts:18` | `defaults/repoRegistry/repoRegistryDefaults.ts` | A | Completed in Batch 10: start CLI now consumes `defaults/start/startCliDefaults.ts` from the CLI layer; the application repo-registry shim was deleted. |
 | A8 | `application/state/stateStoreDependencyDefaults.ts:25` | `defaults/state/stateStoreDefaults.ts` | A | **`StateCapabilities` slice** (read + write + inspect). One of the few real slice cases. |
 | A9 | `application/status/statusCommandDefaults.ts:26` | `defaults/watchdog/watchdogPaneActivityDefaults.ts` | A | Verified: caller only uses `readWatchdogPaneActivity` (read-only). Single-port DI; use the existing read port directly, no slice. The defaults file exports read/write/remove, but this consumer needs only read. |
@@ -1092,6 +1092,32 @@ In the closing PR:
   - `pnpm test` skipped for this focused review-verification defaults rewiring
     batch; the targeted resolver, post-append writer, auto-converge, pass flow,
     and application-defaults-fitness tests cover the changed surface.
+  - `pnpm lint` passed.
+  - `pnpm build` passed.
+
+### 2026-05-07 — Batch 18: remove process-spawn defaults shim
+
+- Deleted `src/v11/application/process/processSpawnDependencyDefaults.ts`.
+- Updated open and attach CLI wrappers to inject `processSpawnDefault` from the
+  CLI/defaults composition side; the application command APIs now accept
+  `ProcessSpawnPort` as an explicit dependency for default command execution.
+- Updated start bootstrap execution so the CLI passes `ProcessSpawnPort` to the
+  real default `startBubble` implementation, while preserving the one-argument
+  contract for test/custom `startBubble` runners.
+- Converted the start bootstrap default into a `ProcessSpawnPort`-backed
+  factory; no `node:child_process` import remains in application command code.
+- Fitness result after the batch: application dynamic defaults warnings are
+  down from 24 to 23; shared dynamic defaults warnings remain 0. Hard-fail
+  fitness checks pass.
+- Validation:
+  - `pnpm typecheck` passed.
+  - `pnpm fitness:check:ci` passed with the expected remaining warnings
+    (`application_defaults_boundary=23`, `shared_defaults_boundary=0`).
+  - `pnpm exec vitest run tests/core/bubble/openBubble.test.ts tests/cli/bubbleOpenCommand.test.ts tests/core/bubble/attachBubble.test.ts tests/cli/bubbleAttachCommand.test.ts tests/v11/application/attach/attachBubbleV11.test.ts tests/core/bubble/startBubble.test.ts tests/cli/bubbleStartCommand.test.ts tests/tools/fitness/applicationDefaultsBoundary.test.ts`
+    passed (`8` files, `184` tests).
+  - `pnpm test` skipped for this focused process-spawn defaults rewiring batch;
+    the targeted open, attach, start, CLI wrapper, and
+    application-defaults-fitness tests cover the changed surface.
   - `pnpm lint` passed.
   - `pnpm build` passed.
 

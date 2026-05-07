@@ -19,7 +19,10 @@ import {
   runResumeStartFlow,
   type FreshStartProgress
 } from "./startCommandFlows.js";
-import { isTmuxSessionAliveDefault, runWorktreeBootstrapCommandDefault } from "./startCommandDefaults.js";
+import {
+  createRunWorktreeBootstrapCommandDefault,
+  isTmuxSessionAliveDefault
+} from "./startCommandDefaults.js";
 import {
   loadStartExecutionContext,
   type ResolvedStartBubble,
@@ -207,6 +210,19 @@ export async function startBubble(
   dependencies: StartBubbleDependencies = {}
 ): Promise<StartBubbleResult> {
   const resolved = await resolveStartBubblePreflightOrThrow(input);
+  const runWorktreeBootstrapCommandDefault =
+    dependencies.processSpawn === undefined
+      ? (): Promise<void> =>
+        Promise.reject(new StartBubbleError({
+          message:
+            "Start bubble requires processSpawn dependency for default bootstrap command execution.",
+          reasonCode: "START_PROCESS_SPAWN_DEPENDENCY_MISSING",
+          context: {
+            command_name: "start",
+            reason: "process_spawn_dependency_missing"
+          }
+        }))
+      : createRunWorktreeBootstrapCommandDefault(dependencies.processSpawn);
   const deps = await resolveStartBubbleDependencies({
     dependencies,
     runWorktreeBootstrapCommandDefault,

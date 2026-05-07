@@ -31,6 +31,7 @@ import type {
   ResolveReviewerTestExecutionDirectivePort
 } from "../../shared/ports/reviewerTestEvidenceArtifacts.js";
 import type { RunGitPort } from "../../shared/ports/git.js";
+import type { ProcessSpawnPort } from "../../shared/ports/processSpawn.js";
 import type { buildResumeTranscriptSummary } from "./startCommandResumeSummary.js";
 import type { BubbleStateSnapshot } from "../../../types/bubble.js";
 
@@ -93,6 +94,7 @@ export interface ExecuteRemoteBubbleStartResult {
 }
 
 export interface StartBubbleDependencies {
+  processSpawn?: ProcessSpawnPort;
   bootstrapWorktreeWorkspace?: BootstrapWorktreeWorkspacePort;
   cleanupWorktreeWorkspace?: CleanupWorktreeWorkspacePort;
   runWorktreeBootstrapCommand?:

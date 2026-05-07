@@ -131,6 +131,9 @@ export async function runBubbleAttachCommand(
     ...(dependencies.executeAttachCommand !== undefined
       ? { executeAttachCommand: dependencies.executeAttachCommand }
       : {}),
+    ...(dependencies.processSpawn !== undefined
+      ? { processSpawn: dependencies.processSpawn }
+      : {}),
     ...(dependencies.checkTmuxSessionExists !== undefined
       ? { checkTmuxSessionExists: dependencies.checkTmuxSessionExists }
       : {}),
