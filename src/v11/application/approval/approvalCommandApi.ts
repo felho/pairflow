@@ -21,7 +21,6 @@ import type { ApprovalCommandDefaultDependencies } from "./approvalCommandDepend
 import { ApprovalCommandError } from "./approvalCommandError.js";
 import { startCommandContextDefaults } from "../start/startCommandDependencyDefaults.js";
 import { reviewerDeliveryDefaults } from "../pass/reviewerDeliveryDefaults.js";
-import { statusCommandDependencyDefaults } from "../status/statusCommandDependencyDefaults.js";
 import {
   appendProtocolEnvelope,
   readTranscriptEnvelopes
@@ -62,11 +61,11 @@ async function loadApprovalDependencyDefaults(): Promise<ApprovalCommandDefaultD
       reviewerDeliveryDefaults.emitDeliveryNotificationAck,
     executeRemoteBubbleApprovalCommand,
     ensureBubbleInstanceIdForMutation,
-    readRemotePointer: statusCommandDependencyDefaults.readRemotePointer,
+    readRemotePointer: startCommandContextDefaults.readRemotePointer,
     readStateSnapshot: startCommandContextDefaults.readStateSnapshot,
     readTranscriptEnvelopes,
     resolveRemoteBubbleStatusTarget:
-      statusCommandDependencyDefaults.resolveRemoteBubbleStatusTarget,
+      startCommandContextDefaults.resolveRemoteBubbleStatusTarget,
     resolveBubbleById,
     resolveBubbleFromWorkspaceCwd:
       startCommandContextDefaults.resolveBubbleFromWorkspaceCwd,

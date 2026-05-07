@@ -10,35 +10,15 @@ import type {
 } from "./statusCommandApi.js";
 export type {
   BubbleStatusInput as BubbleStatusV11Input,
+  BubbleStatusDependencies as BubbleStatusV11Dependencies,
   BubbleStatusView as BubbleStatusV11View
-} from "./statusCommandContract.js";
-
-interface StatusCommandDependencyDefaultsModule {
-  statusCommandDependencyDefaults: BubbleStatusDependencies;
-}
-
-let statusCommandDependencyDefaultsModulePromise:
-  | Promise<StatusCommandDependencyDefaultsModule>
-  | undefined;
-
-function getStatusCommandDependencyDefaultsModulePath(): string {
-  return "../../defaults/status/statusCommandDependencyDefaults.js";
-}
-
-async function loadStatusCommandDependencyDefaultsModule():
-  Promise<StatusCommandDependencyDefaultsModule> {
-  statusCommandDependencyDefaultsModulePromise ??= import(
-    getStatusCommandDependencyDefaultsModulePath()
-  ) as Promise<StatusCommandDependencyDefaultsModule>;
-  return statusCommandDependencyDefaultsModulePromise;
-}
+} from "./statusCommandApi.js";
 
 export async function getBubbleStatusV11(
-  input: BubbleStatusInput
+  input: BubbleStatusInput,
+  dependencies: BubbleStatusDependencies
 ): Promise<BubbleStatusView> {
-  const { statusCommandDependencyDefaults } =
-    await loadStatusCommandDependencyDefaultsModule();
-  return getBubbleStatus(input, statusCommandDependencyDefaults);
+  return getBubbleStatus(input, dependencies);
 }
 
 export {

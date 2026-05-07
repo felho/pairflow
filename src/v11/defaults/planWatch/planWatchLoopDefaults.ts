@@ -24,6 +24,7 @@ import type {
 import {
   getBubbleStatusV11
 } from "../../application/status/emitStatusV11.js";
+import { statusCommandDependencyDefaults } from "../status/statusCommandDependencyDefaults.js";
 import {
   withFileLock
 } from "../../infrastructure/foundation/fs/fileLock.js";
@@ -73,7 +74,7 @@ export const localBubbleStatusPort: LinkedBubbleStatusPort = async (input) => {
       repoPath: input.repoPath,
       bubbleId: input.bubbleId,
       now: input.now
-    });
+    }, statusCommandDependencyDefaults);
     return {
       state: status.state,
       observedAt: status.lastCommandAt ?? status.activeSince ?? input.now?.toISOString(),

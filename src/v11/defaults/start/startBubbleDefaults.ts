@@ -16,6 +16,7 @@ import {
   writeRemoteStateCache as writeRemoteStateCacheCanonical
 } from "../../infrastructure/artifact/bubble/remoteExecutionArtifacts.js";
 import { executeRemoteBubbleStart as executeRemoteBubbleStartCanonical } from "../../infrastructure/executor/ssh/sshBubbleStart.js";
+import { resolveRemoteBubbleStatusTarget as resolveRemoteBubbleStatusTargetCanonical } from "../../infrastructure/executor/ssh/sshBubbleStatus.js";
 import {
   readRuntimeSessionsRegistry as readRuntimeSessionsRegistryCanonical,
   claimRuntimeSession as claimRuntimeSessionCanonical,
@@ -99,6 +100,7 @@ import type {
   EnsureBubbleInstanceIdForMutationPort
 } from "../../shared/ports/bubbleIdentity.js";
 import type { ResolveBubbleByIdPort } from "../../shared/ports/bubbleLookup.js";
+import type { ResolveRemoteBubbleStatusTargetPort } from "../../shared/remote/commitRemoteExecution.js";
 
 export interface StartBubbleDependencyDefaults {
   bootstrapWorktreeWorkspace: BootstrapWorktreeWorkspacePort;
@@ -119,6 +121,7 @@ export interface StartBubbleDependencyDefaults {
   loadPairflowGlobalConfig: () => Promise<PairflowGlobalConfig>;
   runGitCommand: RunGitPort;
   readRemotePointer: (path: string) => Promise<BubbleRemotePointer | null>;
+  resolveRemoteBubbleStatusTarget: ResolveRemoteBubbleStatusTargetPort;
   writeRemotePointer: (path: string, value: BubbleRemotePointer) => Promise<void>;
   writeRemoteStateCache: (
     path: string,
@@ -171,6 +174,7 @@ export const startBubbleDependencyDefaults: StartBubbleDependencyDefaults = {
   loadPairflowGlobalConfig: loadPairflowGlobalConfigCanonical,
   runGitCommand: runGitCommandCanonical,
   readRemotePointer: readRemotePointerCanonical,
+  resolveRemoteBubbleStatusTarget: resolveRemoteBubbleStatusTargetCanonical,
   writeRemotePointer: writeRemotePointerCanonical,
   writeRemoteStateCache: writeRemoteStateCacheCanonical,
   removeRemoteStateCache: removeRemoteStateCacheCanonical,

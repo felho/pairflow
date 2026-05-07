@@ -337,7 +337,7 @@ twice.
 | B13 | `application/reviewer/reviewerArtifactDefaults.ts:22` | `defaults/reviewer/reviewerArtifactDefaults.ts` | **A** (reclassified) | Completed in Batch 13: reviewer brief/focus artifact readers are now supplied through the existing start and reviewer-delivery defaults aggregates; the standalone application shim was deleted. |
 | B14 | `application/reviewer/reviewerTestEvidenceDefaults.ts:30` | `defaults/reviewer/reviewerTestEvidenceDefaults.ts` | **A** (reclassified) | Completed in Batch 14: reviewer test-evidence ports are now supplied through start, converged, and reviewer-delivery defaults aggregates; the standalone application shim was deleted. |
 | B15 | `application/start/startBubbleDependencyDefaults.ts:63` | `defaults/start/startBubbleDefaults.ts` | B | Verified. |
-| B16 | `application/status/statusCommandDependencyDefaults.ts:26` | `defaults/list/listCommandDefaults.ts` | B | Verified: target imports many infrastructure adapters directly (config loader, remote artifact reads/writes, SSH bubble status, repo resolution, list bubble workspace, ...). Same target as S7; resolution-strategy for the *shared* side is the S5/S7 modelling call. CLI passes the aggregator on the application side. |
+| B16 | `application/status/statusCommandDependencyDefaults.ts:26` | `defaults/list/listCommandDefaults.ts` | B | Completed in Batch 28: status CLI, UI, plan-watch, and tests now pass status defaults explicitly; approval/attach consume remote status ports through the start context aggregate and the standalone application status defaults shim was deleted. |
 | B17 | `application/stop/stopCommandDefaults.ts:29` | `defaults/stop/stopCommandDefaults.ts` | B | Completed in Batch 26: CLI, UI, and delete defaults now pass the stop defaults aggregate explicitly; the stop application contract exposes its former hidden default ports and the standalone application shim was deleted. |
 | B18 | `application/watchdog/watchdogDependencyDefaults.ts:77` | `defaults/watchdog/watchdogCommandDefaults.ts` | B | Verified. |
 | B19 | `application/watchdog/watchdogDependencyDefaults.ts:87` | `defaults/watchdog/watchdogPendingReworkDefaults.ts` | B | Verified: target aggregates 2 concrete adapters (`ensureBubbleInstanceIdForMutation` from sibling defaults, `resolveDeliveryMessageRef` from infrastructure tmuxDelivery). Composition. |
@@ -1375,6 +1375,34 @@ In the closing PR:
   - `pnpm test` skipped for this focused merge defaults rewiring batch; the
     targeted CLI, merge core, merge contract, dependency resolution, UI router,
     and application-defaults-fitness tests cover the changed surface.
+  - `pnpm lint` passed.
+  - `pnpm build` passed.
+
+### 2026-05-07 — Batch 28: route status defaults through composition
+
+- Changed `getBubbleStatusV11` and the status CLI runner to receive status
+  dependencies explicitly instead of dynamically loading defaults from
+  application code.
+- Replaced the CLI status re-export with a wrapper that passes
+  `statusCommandDependencyDefaults`.
+- Updated UI and plan-watch defaults to pass `statusCommandDependencyDefaults`
+  explicitly when invoking the application status API.
+- Added remote status ports to the existing start context aggregate so approval
+  and attach flows no longer depend on the application status defaults shim.
+- Updated status/create tests to use explicit status defaults.
+- Deleted `src/v11/application/status/statusCommandDependencyDefaults.ts`.
+- Fitness result after the batch: application dynamic defaults warnings are
+  down from 14 to 12; shared dynamic defaults warnings remain 0. Hard-fail
+  fitness checks pass.
+- Validation:
+  - `pnpm typecheck` passed.
+  - `pnpm fitness:check:ci` passed with the expected remaining warnings
+    (`application_defaults_boundary=12`, `shared_defaults_boundary=0`).
+  - `pnpm exec vitest run tests/cli/bubbleStatusCommand.test.ts tests/core/bubble/statusBubble.test.ts tests/core/bubble/createBubble.test.ts tests/v11/application/create/createRepoDefaultsRuntimeIsolation.test.ts tests/v11/application/approval/runApprovalFlow.test.ts tests/core/bubble/attachBubble.test.ts tests/core/ui/router.test.ts tests/tools/fitness/applicationDefaultsBoundary.test.ts`
+    passed (`8` files, `274` tests).
+  - `pnpm test` skipped for this focused status defaults rewiring batch; the
+    targeted CLI, status core, create/status integration, approval, attach, UI
+    router, and application-defaults-fitness tests cover the changed surface.
   - `pnpm lint` passed.
   - `pnpm build` passed.
 

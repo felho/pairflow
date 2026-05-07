@@ -9,7 +9,10 @@ import { emitAskHumanFromWorkspaceV11 as emitAskHumanFromWorkspace } from "../..
 import { emitPassFromWorkspaceV11 as emitPassFromWorkspace } from "../../../src/v11/application/pass/emitPassV11.js";
 import { createBubble } from "../../../src/v11/application/create/createBubble.js";
 import { emitHumanReplyV11 as emitHumanReply } from "../../../src/v11/application/reply/emitReplyV11.js";
-import { getBubbleStatusV11 as getBubbleStatus } from "../../../src/v11/application/status/emitStatusV11.js";
+import {
+  getBubbleStatusV11 as getBubbleStatusApplication,
+  type BubbleStatusV11Input
+} from "../../../src/v11/application/status/emitStatusV11.js";
 import { resolveDocContractGateArtifactPath } from "../../../src/v11/defaults/gates/docContractGateArtifactDefaults.js";
 import {
   writeRemoteStateCache,
@@ -31,6 +34,10 @@ import { initGitRepository } from "../../helpers/git.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
 
 const tempDirs: string[] = [];
+
+function getBubbleStatus(input: BubbleStatusV11Input) {
+  return getBubbleStatusApplication(input, statusCommandDependencyDefaults);
+}
 
 async function createTempRepo(): Promise<string> {
   const root = await mkdtemp(join(tmpdir(), "pairflow-status-bubble-"));

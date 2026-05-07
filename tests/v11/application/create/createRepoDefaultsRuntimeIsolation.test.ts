@@ -16,6 +16,7 @@ vi.mock("../../../../src/config/repoConfig.js", async (importOriginal) => {
 import { loadPairflowRepoConfig } from "../../../../src/config/repoConfig.js";
 import { createBubble } from "../../../../src/v11/application/create/createBubble.js";
 import { getBubbleStatusV11 as getBubbleStatus } from "../../../../src/v11/application/status/emitStatusV11.js";
+import { statusCommandDependencyDefaults } from "../../../../src/v11/defaults/status/statusCommandDependencyDefaults.js";
 import { initGitRepository } from "../../../helpers/git.js";
 
 const tempDirs: string[] = [];
@@ -98,7 +99,7 @@ describe("create repo defaults runtime isolation", () => {
       bubbleId: result.bubbleId,
       cwd: repoPath,
       now: new Date("2026-02-22T14:03:00.000Z")
-    });
+    }, statusCommandDependencyDefaults);
 
     expect(status.watchdog.timeoutMinutes).toBe(45);
     expect(status.bubbleToml).toContain('base_branch = "main"');

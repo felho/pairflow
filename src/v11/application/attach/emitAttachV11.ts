@@ -9,7 +9,7 @@ import {
   resolveAttachLauncher
 } from "./attachBubbleLauncherRuntime.js";
 import { resolveAttachBubbleExecution } from "../../shared/bubbleAttachment/resolveAttachBubbleExecution.js";
-import { statusCommandDependencyDefaults } from "../status/statusCommandDependencyDefaults.js";
+import { startCommandContextDefaults } from "../start/startCommandDependencyDefaults.js";
 import {
   AttachBubbleError,
   type AttachBubbleReasonCode,
@@ -160,7 +160,7 @@ export async function attachBubble(
     dependencies.loadPairflowGlobalConfig ??
     loadPairflowGlobalConfig;
   const readRemotePointerArtifact =
-    dependencies.readRemotePointer ?? statusCommandDependencyDefaults.readRemotePointer;
+    dependencies.readRemotePointer ?? startCommandContextDefaults.readRemotePointer;
 
   const resolved = await resolveBubble({
     bubbleId: input.bubbleId,

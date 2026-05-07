@@ -34,6 +34,7 @@ import type {
   ReadTranscriptEnvelopesPort
 } from "../../shared/ports/transcript.js";
 import type { RunGitPort } from "../../shared/ports/git.js";
+import type { ResolveRemoteBubbleStatusTargetPort } from "../../shared/remote/commitRemoteExecution.js";
 import type {
   ReadReviewerBriefArtifactPort,
   ReadReviewerFocusArtifactPort
@@ -98,6 +99,7 @@ export interface StartBubbleDependencyDefaults {
   loadPairflowGlobalConfig: () => Promise<PairflowGlobalConfig>;
   runGitCommand: RunGitPort;
   readRemotePointer: (path: string) => Promise<BubbleRemotePointer | null>;
+  resolveRemoteBubbleStatusTarget: ResolveRemoteBubbleStatusTargetPort;
   writeRemotePointer: (
     path: string,
     value: BubbleRemotePointer

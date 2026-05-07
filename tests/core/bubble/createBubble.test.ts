@@ -9,6 +9,7 @@ import {
   extractReviewerFocus
 } from "../../../src/v11/application/create/createBubble.js";
 import { getBubbleStatusV11 as getBubbleStatus } from "../../../src/v11/application/status/emitStatusV11.js";
+import { statusCommandDependencyDefaults } from "../../../src/v11/defaults/status/statusCommandDependencyDefaults.js";
 import { SchemaValidationError } from "../../../src/v11/shared/validation/primitives.js";
 import { getBubblePaths } from "../../../src/v11/infrastructure/artifact/bubble/paths.js";
 import {
@@ -1058,7 +1059,7 @@ describe("createBubble", () => {
       bubbleId: result.bubbleId,
       cwd: repoPath,
       now: new Date("2026-02-22T14:03:00.000Z")
-    });
+    }, statusCommandDependencyDefaults);
 
     expect(status.watchdog.timeoutMinutes).toBe(45);
     expect(status.bubbleToml).toContain('base_branch = "main"');

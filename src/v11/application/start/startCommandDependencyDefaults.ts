@@ -90,6 +90,36 @@ export async function readStateSnapshot(
   return defaults.readStateSnapshot(...args);
 }
 
+export async function readRemotePointer(
+  ...args: Parameters<
+    Awaited<ReturnType<typeof loadStartBubbleDependencyDefaults>>["readRemotePointer"]
+  >
+): Promise<
+  Awaited<
+    ReturnType<
+      Awaited<ReturnType<typeof loadStartBubbleDependencyDefaults>>["readRemotePointer"]
+    >
+  >
+> {
+  const defaults = await loadStartBubbleDependencyDefaults();
+  return defaults.readRemotePointer(...args);
+}
+
+export async function resolveRemoteBubbleStatusTarget(
+  ...args: Parameters<
+    Awaited<ReturnType<typeof loadStartBubbleDependencyDefaults>>["resolveRemoteBubbleStatusTarget"]
+  >
+): Promise<
+  Awaited<
+    ReturnType<
+      Awaited<ReturnType<typeof loadStartBubbleDependencyDefaults>>["resolveRemoteBubbleStatusTarget"]
+    >
+  >
+> {
+  const defaults = await loadStartBubbleDependencyDefaults();
+  return defaults.resolveRemoteBubbleStatusTarget(...args);
+}
+
 export const writeStateSnapshot: WriteStateSnapshotPort = async (...args) => {
   const defaults = await loadStartBubbleDependencyDefaults();
   const { writeStateSnapshot: persistStateSnapshot } = defaults;
@@ -112,8 +142,10 @@ export const startCommandContextDefaults = {
   resolveBubbleById,
   ensureBubbleInstanceIdForMutation,
   inspectStateSnapshot,
+  readRemotePointer,
   readTranscriptEnvelopes,
   readStateSnapshot,
+  resolveRemoteBubbleStatusTarget,
   resolveBubbleFromWorkspaceCwd,
   writeStateSnapshot
 } as const;

@@ -1,6 +1,7 @@
 import {
   asBubbleStatusErrorV11 as asBubbleStatusError,
   getBubbleStatusV11 as getBubbleStatus,
+  type BubbleStatusV11Dependencies as BubbleStatusDependencies,
   type BubbleStatusV11View as BubbleStatusView
 } from "./emitStatusV11.js";
 import {
@@ -10,7 +11,8 @@ import {
 
 export async function runBubbleStatusCommand(
   args: string[] | BubbleStatusCommandOptions,
-  cwd: string = process.cwd()
+  cwd: string = process.cwd(),
+  dependencies: BubbleStatusDependencies
 ): Promise<BubbleStatusView | null> {
   const options =
     Array.isArray(args) ? parseBubbleStatusCommandOptions(args) : args;
@@ -23,7 +25,7 @@ export async function runBubbleStatusCommand(
       bubbleId: options.id,
       repoPath: options.repo,
       cwd
-    });
+    }, dependencies);
   } catch (error) {
     asBubbleStatusError(error);
   }
