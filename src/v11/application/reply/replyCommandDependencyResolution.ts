@@ -1,5 +1,4 @@
 import { appendProtocolEnvelope } from "../transcript/transcriptDependencyDefaults.js";
-import { writeStateSnapshot } from "../state/stateStoreDependencyDefaults.js";
 import type { EmitHumanReplyDependencies } from "./replyCommandContract.js";
 import { startCommandContextDefaults } from "../start/startCommandDependencyDefaults.js";
 import { reviewerDeliveryDefaults } from "../pass/reviewerDeliveryDefaults.js";
@@ -37,6 +36,8 @@ function resolveDeliveryMessageRef(
 ): ReturnType<typeof reviewerDeliveryDefaults.resolveDeliveryMessageRef> {
   return reviewerDeliveryDefaults.resolveDeliveryMessageRef(...args);
 }
+
+const writeStateSnapshot = startCommandContextDefaults.writeStateSnapshot;
 
 const replyCommandDependencyDefaults = {
   appendProtocolEnvelope,

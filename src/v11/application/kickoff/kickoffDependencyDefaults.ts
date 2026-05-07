@@ -6,10 +6,8 @@ import {
 } from "../transcript/transcriptDependencyDefaults.js";
 import {
   readStateSnapshot,
+  resolveBubbleById,
   writeStateSnapshot
-} from "../state/stateStoreDependencyDefaults.js";
-import {
-  resolveBubbleById
 } from "../start/startCommandDependencyDefaults.js";
 
 export const kickoffDefaults = {

@@ -1,9 +1,9 @@
 import { randomUUID } from "node:crypto";
 
 import {
+  readStateSnapshot,
   resolveBubbleById
 } from "../start/startCommandDependencyDefaults.js";
-import { readStateSnapshot } from "../state/stateStoreDependencyDefaults.js";
 import {
   isInteger,
   isNonEmptyString,

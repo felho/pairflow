@@ -1,8 +1,6 @@
 import {
-  readStateSnapshot
-} from "../state/stateStoreDependencyDefaults.js";
-import {
   ensureBubbleInstanceIdForMutation,
+  readStateSnapshot,
   resolveBubbleFromWorkspaceCwd
 } from "../start/startCommandDependencyDefaults.js";
 

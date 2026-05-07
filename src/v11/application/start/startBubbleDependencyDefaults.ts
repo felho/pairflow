@@ -24,7 +24,11 @@ import type {
   EnsureBubbleInstanceIdForMutationPort
 } from "../../shared/ports/bubbleIdentity.js";
 import type { ResolveBubbleByIdPort } from "../../shared/ports/bubbleLookup.js";
-import type { WriteStateSnapshotPort } from "../../shared/ports/stateSnapshots.js";
+import type {
+  InspectedStateSnapshot,
+  ReadStateSnapshotPort,
+  WriteStateSnapshotPort
+} from "../../shared/ports/stateSnapshots.js";
 import type { RunGitPort } from "../../shared/ports/git.js";
 import type {
   ReadReviewerBriefArtifactPort,
@@ -82,6 +86,8 @@ export interface StartBubbleDependencyDefaults {
   removeRuntimeSession: RemoveRuntimeSessionPort;
   ensureBubbleInstanceIdForMutation: EnsureBubbleInstanceIdForMutationPort;
   resolveBubbleById: ResolveBubbleByIdPort;
+  inspectStateSnapshot: (statePath: string) => Promise<InspectedStateSnapshot>;
+  readStateSnapshot: ReadStateSnapshotPort;
   writeStateSnapshot: WriteStateSnapshotPort;
   loadPairflowGlobalConfig: () => Promise<PairflowGlobalConfig>;
   runGitCommand: RunGitPort;

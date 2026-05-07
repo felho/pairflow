@@ -33,6 +33,10 @@ import {
   resolveReviewerTestExecutionDirective
 } from "../reviewer/reviewerTestEvidenceDefaults.js";
 import { runTmux } from "../tmux/tmuxRunnerDefaults.js";
+import {
+  inspectStateSnapshot,
+  readStateSnapshot
+} from "../state/stateStoreDefaults.js";
 import { resolveBubbleFromWorkspaceCwd } from "../workspace/workspaceResolutionDefaults.js";
 import {
   cleanupWorktreeWorkspace as cleanupWorktreeWorkspaceCanonical,
@@ -65,7 +69,11 @@ import type {
   TerminateBubbleTmuxSessionPort
 } from "../../shared/ports/tmuxSessions.js";
 import type { RunGitPort } from "../../shared/ports/git.js";
-import type { WriteStateSnapshotPort } from "../../shared/ports/stateSnapshots.js";
+import type {
+  InspectedStateSnapshot,
+  ReadStateSnapshotPort,
+  WriteStateSnapshotPort
+} from "../../shared/ports/stateSnapshots.js";
 import type {
   ReadReviewerBriefArtifactPort,
   ReadReviewerFocusArtifactPort
@@ -95,6 +103,8 @@ export interface StartBubbleDependencyDefaults {
   removeRuntimeSession: RemoveRuntimeSessionPort;
   ensureBubbleInstanceIdForMutation: EnsureBubbleInstanceIdForMutationPort;
   resolveBubbleById: ResolveBubbleByIdPort;
+  inspectStateSnapshot: (statePath: string) => Promise<InspectedStateSnapshot>;
+  readStateSnapshot: ReadStateSnapshotPort;
   writeStateSnapshot: WriteStateSnapshotPort;
   loadPairflowGlobalConfig: () => Promise<PairflowGlobalConfig>;
   runGitCommand: RunGitPort;
@@ -143,6 +153,8 @@ export const startBubbleDependencyDefaults: StartBubbleDependencyDefaults = {
   removeRuntimeSession: removeRuntimeSessionCanonical,
   ensureBubbleInstanceIdForMutation,
   resolveBubbleById,
+  inspectStateSnapshot,
+  readStateSnapshot,
   writeStateSnapshot: writeStateSnapshotCanonical,
   loadPairflowGlobalConfig: loadPairflowGlobalConfigCanonical,
   runGitCommand: runGitCommandCanonical,

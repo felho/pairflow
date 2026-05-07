@@ -270,7 +270,7 @@ row ID prefix is historical, the "Cat" column is authoritative.
 | A5 | `application/metaReview/metaReviewDependencyDefaults.ts:20` | `defaults/runtimeSessions/runtimeSessionsDefaults.ts` | A | Completed in Batch 11: V11/default wrapper injects the runtime-sessions read port through `defaults/metaReview`; the application shim was deleted. |
 | A6 | `application/process/processSpawnDependencyDefaults.ts:8` | `defaults/process/processSpawnDefaults.ts` | A | Completed in Batch 18: open, attach, and start command paths now receive `ProcessSpawnPort` from the CLI/defaults composition side; standalone application process-spawn shim was deleted. |
 | A7 | `application/repoRegistry/repoRegistryDependencyDefaults.ts:18` | `defaults/repoRegistry/repoRegistryDefaults.ts` | A | Completed in Batch 10: start CLI now consumes `defaults/start/startCliDefaults.ts` from the CLI layer; the application repo-registry shim was deleted. |
-| A8 | `application/state/stateStoreDependencyDefaults.ts:25` | `defaults/state/stateStoreDefaults.ts` | A | **`StateCapabilities` slice** (read + write + inspect). One of the few real slice cases. |
+| A8 | `application/state/stateStoreDependencyDefaults.ts:25` | `defaults/state/stateStoreDefaults.ts` | A | Completed in Batch 22: state read/write/inspect ports now flow through the existing start context defaults aggregate; standalone application state-store shim was deleted. |
 | A9 | `application/status/statusCommandDefaults.ts:26` | `defaults/watchdog/watchdogPaneActivityDefaults.ts` | A | Verified: caller only uses `readWatchdogPaneActivity` (read-only). Single-port DI; use the existing read port directly, no slice. The defaults file exports read/write/remove, but this consumer needs only read. |
 | A10 | `application/tmux/tmuxRunnerDependencyDefaults.ts:18` | `defaults/tmux/tmuxRunnerDefaults.ts` | A | Completed in Batch 16: the `runTmux` port is now supplied through the existing start defaults aggregate; the standalone application tmux shim was deleted. |
 | A11 | `application/transcript/transcriptDependencyDefaults.ts:23` | `defaults/transcript/transcriptDependencyDefaults.ts` | A | **`TranscriptCapabilities` slice** (append + read). Real slice case. |
@@ -1200,6 +1200,36 @@ In the closing PR:
   - `pnpm test` skipped for this focused bubble-lookup defaults rewiring batch;
     the targeted open, attach, inbox, kickoff, meta-review submit, start, and
     application-defaults-fitness tests cover the changed surface.
+  - `pnpm lint` passed.
+  - `pnpm build` passed.
+
+### 2026-05-07 — Batch 22: remove state-store defaults shim
+
+- Added `readStateSnapshot`, `writeStateSnapshot`, and `inspectStateSnapshot`
+  to `src/v11/defaults/start/startBubbleDefaults.ts` and the application-side
+  start defaults contract.
+- Exposed the state ports through `startCommandContextDefaults`, keeping state,
+  identity, lookup, and workspace context capabilities on one existing aggregate.
+- Updated approval, ask-human, inbox, kickoff, meta-review submit, pass,
+  reconcile, reply, and start default paths to consume state ports from the
+  start context defaults aggregate.
+- Kept the `writeStateSnapshot` export as a port capability wrapper without a
+  direct write-call shape in application code, so boundary/mutation/transition
+  fitness checks continue to distinguish port wiring from mutation execution.
+- Deleted `src/v11/application/state/stateStoreDependencyDefaults.ts`.
+- Fitness result after the batch: application dynamic defaults warnings are
+  down from 20 to 19; shared dynamic defaults warnings remain 0. Hard-fail
+  fitness checks pass.
+- Validation:
+  - `pnpm typecheck` passed.
+  - `pnpm fitness:check:ci` passed with the expected remaining warnings
+    (`application_defaults_boundary=19`, `shared_defaults_boundary=0`).
+  - `pnpm exec vitest run tests/core/bubble/kickoffBubble.test.ts tests/v11/application/pass/passWorkspaceContextPreparation.test.ts tests/v11/application/pass/postAppendStateWriter.test.ts tests/v11/application/pass/autoConvergePreparation.test.ts tests/v11/application/approval/runApprovalFlow.test.ts tests/v11/application/reply/replyCommandDependencyResolution.test.ts tests/v11/application/askHuman/askHumanRoutingPreparation.test.ts tests/v11/application/inbox/bubbleInboxReadModel.test.ts tests/contracts/v11/metaReviewSubmitCoverage.test.ts tests/core/bubble/startBubble.test.ts tests/tools/fitness/applicationDefaultsBoundary.test.ts`
+    passed (`10` files, `150` tests).
+  - `pnpm test` skipped for this focused state-store defaults rewiring batch;
+    the targeted approval, ask-human, inbox, kickoff, meta-review submit, pass,
+    reconcile-adjacent, reply, start, and application-defaults-fitness tests
+    cover the changed surface.
   - `pnpm lint` passed.
   - `pnpm build` passed.
 

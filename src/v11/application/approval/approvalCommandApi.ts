@@ -26,7 +26,6 @@ import {
   appendProtocolEnvelope,
   readTranscriptEnvelopes
 } from "../transcript/transcriptDependencyDefaults.js";
-import { readStateSnapshot, writeStateSnapshot } from "../state/stateStoreDependencyDefaults.js";
 
 let approvalDependencyDefaultsPromise:
   | Promise<ApprovalCommandDefaultDependencies>
@@ -64,7 +63,7 @@ async function loadApprovalDependencyDefaults(): Promise<ApprovalCommandDefaultD
     executeRemoteBubbleApprovalCommand,
     ensureBubbleInstanceIdForMutation,
     readRemotePointer: statusCommandDependencyDefaults.readRemotePointer,
-    readStateSnapshot,
+    readStateSnapshot: startCommandContextDefaults.readStateSnapshot,
     readTranscriptEnvelopes,
     resolveRemoteBubbleStatusTarget:
       statusCommandDependencyDefaults.resolveRemoteBubbleStatusTarget,
@@ -72,7 +71,7 @@ async function loadApprovalDependencyDefaults(): Promise<ApprovalCommandDefaultD
     resolveBubbleFromWorkspaceCwd:
       startCommandContextDefaults.resolveBubbleFromWorkspaceCwd,
     resolveDeliveryMessageRef: reviewerDeliveryDefaults.resolveDeliveryMessageRef,
-    writeStateSnapshot
+    writeStateSnapshot: startCommandContextDefaults.writeStateSnapshot
   });
   return approvalDependencyDefaultsPromise;
 }
