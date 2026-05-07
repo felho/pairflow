@@ -87,8 +87,7 @@ import type {
   UiPendingInboxItemSource as CanonicalUiPendingInboxItemSource,
   ProtocolMessageType as CanonicalProtocolMessageType,
   UiRepoSummary as CanonicalUiRepoSummary,
-  UiRuntimeSessionRecord as CanonicalUiRuntimeSessionRecord,
-  UiTimelineEntry as CanonicalUiTimelineEntry
+  UiRuntimeSessionRecord as CanonicalUiRuntimeSessionRecord
 } from "../../src/contracts/ui/uiReadModel.js";
 import type {
   BubbleLifecycleState as RuntimeBubbleLifecycleState
@@ -192,8 +191,7 @@ import type {
   UiEventsConnectedPayload as BackendUiEventsConnectedPayload,
   UiPendingInboxItemSource as BackendUiPendingInboxItemSource,
   UiRepoSummary as BackendUiRepoSummary,
-  UiSnapshotEvent as BackendUiSnapshotEvent,
-  UiTimelineEntry as BackendUiTimelineEntry
+  UiSnapshotEvent as BackendUiSnapshotEvent
 } from "../../src/types/ui.js";
 import type {
   ReadRuntimeSessionsRegistryPort,
@@ -291,8 +289,7 @@ import type {
   UiBubbleWatchdog as UiBubbleWatchdog,
   UiPendingInboxItemSource as UiPendingInboxItemSource,
   UiRepoSummary as UiRepoSummary,
-  UiRuntimeSessionRecord as UiRuntimeSessionRecord,
-  UiTimelineEntry as UiTimelineEntry
+  UiRuntimeSessionRecord as UiRuntimeSessionRecord
 } from "../../ui/src/lib/contracts/uiReadModel.js";
 import type {
   PairflowApiClient
@@ -528,14 +525,8 @@ type _backendRepoSummaryParity =
   Assert<Equal<CanonicalUiRepoSummary, BackendUiRepoSummary>>;
 type _uiRepoSummaryParity =
   Assert<Equal<CanonicalUiRepoSummary, UiRepoSummary>>;
-type _backendTimelineParity =
-  Assert<Equal<CanonicalUiTimelineEntry, BackendUiTimelineEntry>>;
-type _uiTimelineParity =
-  Assert<Equal<CanonicalUiTimelineEntry, UiTimelineEntry>>;
 type _canonicalProtocolMessageTypeTransit =
   Assert<Equal<CanonicalProtocolMessageType, RuntimeProtocolMessageType>>;
-type _timelineTypeProtocolTransit =
-  Assert<Equal<CanonicalUiTimelineEntry["type"], CanonicalProtocolMessageType>>;
 type _uiProtocolMessageTypeParity =
   Assert<Equal<CanonicalProtocolMessageType, UiProtocolMessageType>>;
 type _backendWatchdogParity =

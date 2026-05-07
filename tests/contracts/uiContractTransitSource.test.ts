@@ -441,7 +441,6 @@ describe("UI contract transit source guards", () => {
       "UiBubbleInboxInput",
       "UiBubbleInboxView",
       "UiRepoSummary",
-      "UiTimelineEntry",
       "UiRuntimeSessionRecord",
       "UiBubbleReviewPolicy",
       "UiBubbleWatchdog",
@@ -454,6 +453,17 @@ describe("UI contract transit source guards", () => {
     }
 
     expect(canonical).not.toContain("ProtocolEnvelopePayload");
+    for (const symbol of [
+      "UiTimelineEntry",
+      "UiTimelineEntryDisplay",
+      "UiTimelineEntryPayload",
+      "UiTimelineFinding"
+    ]) {
+      expectNoTypeDeclaration(canonical, symbol);
+      expect(uiBarrel).not.toContain(symbol);
+      expect(uiCompat).not.toContain(symbol);
+      expect(uiTypes).not.toContain(symbol);
+    }
     expectExportTypeBlockContains(canonical, {
       symbol: "ProtocolMessageType"
     });

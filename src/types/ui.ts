@@ -35,8 +35,7 @@ export type {
   UiStatusCommandPathView,
   UiStatusExecutionContextView,
   UiStatusPaneActivityView,
-  UiTimelineDisplayItem,
-  UiTimelineEntry
+  UiTimelineDisplayItem
 } from "../contracts/ui/uiReadModel.js";
 export {
   uiApprovalRequestGateRoutes

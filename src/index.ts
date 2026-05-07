@@ -436,8 +436,7 @@ export type {
   UiBubbleSummary,
   UiEvent,
   UiRepoSummary,
-  UiTimelineDisplayItem,
-  UiTimelineEntry
+  UiTimelineDisplayItem
 } from "./types/ui.js";
 export {
   StateStoreConflictError,

@@ -87,7 +87,7 @@ export type {
   UiBubbleListView,
   UiBubbleStatusInput,
   UiBubbleStatusView,
-  UiTimelineEntry
+  UiTimelineDisplayItem
 } from "../../../contracts/ui/uiReadModel.js";
 
 export interface UiBubbleListInput {
