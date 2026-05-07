@@ -8,7 +8,7 @@ import {
   readStateSnapshot,
   writeStateSnapshot
 } from "../state/stateStoreDefaults.js";
-import { appendProtocolEnvelope } from "../../shared/transcript/transcriptDependencyDefaults.js";
+import { appendProtocolEnvelope } from "../transcript/transcriptDependencyDefaults.js";
 import { resolveBubbleById } from "../../shared/bubbleLookup/bubbleLookupDefaults.js";
 import { readRuntimeSessionsRegistry } from "../runtimeSessions/runtimeSessionsDefaults.js";
 import { runTmux } from "../tmux/tmuxRunnerDefaults.js";

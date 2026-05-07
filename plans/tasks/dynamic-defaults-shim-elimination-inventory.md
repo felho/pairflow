@@ -200,7 +200,7 @@ table.
 | S7 | `shared/status/statusCommandDependencyDefaults.ts:116` | `defaults/list/listCommandDefaults.ts` | B + modelling | Same target as S5. Same resolution path: refactor caller out of `shared/`; the shim file (which holds S7, S8, S9 together) deletes as part of the S5/S7 refactor. |
 | S8 | `shared/status/statusCommandDependencyDefaults.ts:124` | `defaults/gates/docContractGateArtifactDefaults.ts` | A | Caller takes the existing doc-contract artifact port directly (no wrapper). |
 | S9 | `shared/status/statusCommandDependencyDefaults.ts:132` | `defaults/reviewer/reviewVerificationArtifactDefaults.ts` | A | Caller takes the existing review-verification artifact port directly. |
-| S10 | `shared/transcript/transcriptDependencyDefaults.ts:25` | `defaults/transcript/transcriptDependencyDefaults.ts` | A | Delete file; callers take `TranscriptCapabilities` slice (append/read). |
+| S10 | `shared/transcript/transcriptDependencyDefaults.ts:25` | `defaults/transcript/transcriptDependencyDefaults.ts` | A | Completed in Batch 7: defaults-layer callers now import `defaults/transcript/transcriptDependencyDefaults.ts` directly, and the shared facade was deleted. |
 
 **Note on S5/S7 (modelling signal).** These two entries reveal a
 seam-classification problem that simple shim removal does not fix: the
@@ -792,6 +792,30 @@ In the closing PR:
     Batch 5 full-suite run passed immediately before this change, and the
     targeted meta-review/fitness coverage above exercises the affected import
     surface.
+  - `pnpm build` passed.
+
+### 2026-05-07 — Batch 7: remove shared transcript defaults facade
+
+- Replaced defaults-layer imports of
+  `src/v11/shared/transcript/transcriptDependencyDefaults.ts` with direct
+  imports from `src/v11/defaults/transcript/transcriptDependencyDefaults.ts`.
+- Deleted the shared transcript defaults facade.
+- Kept application-local transcript shims unchanged; those are separately
+  inventoried application warnings and remain part of the later A-category
+  migration.
+- Fitness result after the batch: application dynamic defaults warnings remain
+  31; shared dynamic defaults warnings are down from 5 to 4. Hard-fail
+  fitness checks pass.
+- Validation:
+  - `pnpm typecheck` passed.
+  - `pnpm lint` passed.
+  - `pnpm fitness:check:ci` passed with the expected remaining warnings
+    (`application_defaults_boundary=31`, `shared_defaults_boundary=4`).
+  - `pnpm exec vitest run tests/core/bubble/commitBubble.test.ts tests/core/agent/converged.test.ts tests/core/bubble/createBubble.test.ts tests/core/bubble/watchdogBubble.test.ts tests/contracts/v11/metaReviewSubmitCoverage.test.ts tests/tools/fitness/sharedDefaultsBoundary.test.ts`
+    passed.
+  - `pnpm test` skipped for this defaults-import rewiring batch; Batch 5 had
+    just completed the full suite, and this batch ran targeted coverage over
+    every changed defaults consumer family.
   - `pnpm build` passed.
 
 ---

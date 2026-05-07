@@ -5,7 +5,7 @@ import { resolveBubbleById } from "../../shared/bubbleLookup/bubbleLookupDefault
 import {
   appendProtocolEnvelope,
   readTranscriptEnvelopes
-} from "../../shared/transcript/transcriptDependencyDefaults.js";
+} from "../transcript/transcriptDependencyDefaults.js";
 import {
   readStateSnapshot,
   writeStateSnapshot

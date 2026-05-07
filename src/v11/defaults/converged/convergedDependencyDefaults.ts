@@ -10,7 +10,7 @@ import {
 import {
   appendProtocolEnvelope,
   readTranscriptEnvelopes
-} from "../../shared/transcript/transcriptDependencyDefaults.js";
+} from "../transcript/transcriptDependencyDefaults.js";
 import { ensureBubbleInstanceIdForMutation } from "../bubbleIdentity/bubbleIdentityDefaults.js";
 import {
   readDocContractGateArtifact,
