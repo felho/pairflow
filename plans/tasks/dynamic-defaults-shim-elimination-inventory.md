@@ -701,6 +701,36 @@ In the closing PR:
     test files, `229` UI tests).
   - `pnpm build` passed.
 
+### 2026-05-07 — Batch 4: inbox read-model move
+
+- Moved `bubbleInboxReadModel.ts` from `src/v11/shared/bubbleInbox/` to
+  `src/v11/application/inbox/`.
+- Updated `emitInboxV11` and UI router wiring to use the application-owned
+  inbox read model.
+- Moved the inbox read-model unit test from `tests/v11/shared/**` to
+  `tests/v11/application/**`.
+- Kept UI infrastructure from importing application code directly:
+  `defaults/ui/routerDefaults.ts` owns the default `getBubbleInbox` binding,
+  while `routerDependencies.ts` receives it through the existing UI defaults
+  loader.
+- Replaced the inbox workflow's dependency on the status-defaults aggregate
+  with the existing application-local bubble lookup, state, and transcript
+  port shims. This keeps the move structural without adding a new direct
+  `application -> defaults` static import.
+- Fitness result after the batch: dynamic warning counts are unchanged
+  (`application_defaults_boundary=31`, `shared_defaults_boundary=9`) because
+  this workflow was a structural shared-layer move rather than one of the
+  dynamic warning sites. Hard-fail fitness checks pass.
+- Validation:
+  - `pnpm typecheck` passed.
+  - `pnpm lint` passed.
+  - `pnpm fitness:check:ci` passed with the expected remaining warnings.
+  - `pnpm exec vitest run tests/v11/application/inbox/bubbleInboxReadModel.test.ts tests/core/bubble/inboxBubble.test.ts tests/core/ui/router.test.ts tests/contracts/uiContractTransitSource.test.ts`
+    passed.
+  - `pnpm test` passed (`433` root test files, `3719` root tests; `18` UI
+    test files, `229` UI tests).
+  - `pnpm build` passed.
+
 ---
 
 ## Notes

@@ -14,6 +14,7 @@ import { resumeBubbleV11 as resumeBubble } from "../../application/resume/emitRe
 import { startBubbleV11 as startBubble } from "../../application/start/emitStartV11.js";
 import { getBubbleStatusV11 as getBubbleStatus } from "../../application/status/emitStatusV11.js";
 import { stopBubbleV11 as stopBubble } from "../../application/stop/emitStopV11.js";
+import { getBubbleInbox } from "../../application/inbox/bubbleInboxReadModel.js";
 import { listBubbles } from "../../application/list/listReadModelApi.js";
 import { listCommandDefaults } from "../list/listCommandDefaults.js";
 import { updateBubbleReviewPolicyForUi } from "./updateBubbleReviewPolicyForUi.js";
@@ -55,6 +56,10 @@ import type {
   UiStartBubbleResult,
   UiStopBubbleResult
 } from "../../../contracts/ui/uiActions.js";
+import type {
+  UiBubbleInboxInput,
+  UiBubbleInboxView
+} from "../../../contracts/ui/uiReadModel.js";
 
 type UiInputWithSerializableNow = {
   now?: string | undefined;
@@ -330,6 +335,23 @@ function mapUiRestartResult(result: RestartBubbleResult): UiRestartBubbleResult 
   };
 }
 
+async function getBubbleInboxForUi(
+  input: UiBubbleInboxInput
+): Promise<UiBubbleInboxView> {
+  const view = await getBubbleInbox({
+    bubbleId: input.bubbleId,
+    ...(input.repoPath !== undefined ? { repoPath: input.repoPath } : {}),
+    ...(input.cwd !== undefined ? { cwd: input.cwd } : {})
+  });
+  return {
+    bubbleId: view.bubbleId,
+    repoPath: view.repoPath,
+    state: view.state,
+    pending: view.pending,
+    items: view.items
+  };
+}
+
 export const uiRouterDependencyDefaults = {
   async commitBubble(input) {
     return mapUiCommitResult(
@@ -349,6 +371,7 @@ export const uiRouterDependencyDefaults = {
     );
   },
   emitRequestRework: emitRequestReworkForUi,
+  getBubbleInbox: getBubbleInboxForUi,
   getBubbleStatus,
   async listBubbles(input) {
     return listBubbles(input, listCommandDefaults);
@@ -385,6 +408,7 @@ export const uiRouterDependencyDefaults = {
   | "emitApprove"
   | "emitHumanReply"
   | "emitRequestRework"
+  | "getBubbleInbox"
   | "getBubbleStatus"
   | "listBubbles"
   | "mergeBubble"

@@ -561,6 +561,7 @@ describe("UI contract transit source guards", () => {
     const routerDependencies = await readSource(
       "src/v11/infrastructure/ui/routerDependencies.ts"
     );
+    const routerDefaults = await readSource("src/v11/defaults/ui/routerDefaults.ts");
     const eventsScanTest = await readSource("tests/core/ui/eventsScan.test.ts");
     const eventsFingerprintTest = await readSource(
       "tests/core/ui/eventsFingerprint.test.ts"
@@ -631,8 +632,8 @@ describe("UI contract transit source guards", () => {
     expect(routerPort).not.toContain("from \"../read-model/list/listReadModelContract.js\"");
     expect(routerPort).not.toContain("from \"../inbox/inboxCommandApi.js\"");
     expect(routerPort).not.toContain("from \"../status/statusCommandApi.js\"");
-    expect(routerDependencies).toContain(
-      "from \"../../shared/bubbleInbox/bubbleInboxReadModel.js\""
+    expect(routerDefaults).toContain(
+      "from \"../../application/inbox/bubbleInboxReadModel.js\""
     );
     expect(routerDependencies).not.toContain(
       "from \"../../shared/inbox/inboxCommandApi.js\""

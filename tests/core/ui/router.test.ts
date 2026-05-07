@@ -34,7 +34,7 @@ import { createUiRouter, resolveStaticAssetPath } from "../../../src/v11/infrast
 import { handleUiEvents } from "../../../src/v11/infrastructure/ui/routerEvents.js";
 import type { UiEventsBroker } from "../../../src/v11/infrastructure/ui/events.js";
 import type { UiRepoScope } from "../../../src/v11/infrastructure/ui/repoScope.js";
-import type { BubbleInboxView } from "../../../src/v11/shared/bubbleInbox/bubbleInboxReadModel.js";
+import type { BubbleInboxView } from "../../../src/v11/application/inbox/bubbleInboxReadModel.js";
 import type {
   UiActionBubbleState,
   UiActionEvent

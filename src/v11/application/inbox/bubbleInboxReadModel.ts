@@ -1,11 +1,13 @@
-import { statusCommandDependencyDefaults } from "../status/statusCommandDependencyDefaults.js";
 import type {
   BubbleLifecycleState,
   MetaReviewRecommendation
 } from "../../../types/bubble.js";
-import type { MetaReviewGateRoute } from "../metaReviewGate/index.js";
-import { resolveCanonicalPendingApprovalSignal } from "../approval/pendingApprovalSignal.js";
-import { isNamedError } from "../errors/namedError.js";
+import { resolveBubbleById } from "../bubbleLookup/bubbleLookupDependencyDefaults.js";
+import { readStateSnapshot } from "../state/stateStoreDependencyDefaults.js";
+import { readTranscriptEnvelopes } from "../transcript/transcriptDependencyDefaults.js";
+import { resolveCanonicalPendingApprovalSignal } from "../../shared/approval/pendingApprovalSignal.js";
+import { isNamedError } from "../../shared/errors/namedError.js";
+import type { MetaReviewGateRoute } from "../../shared/metaReviewGate/index.js";
 
 export type PendingInboxItemType = "HUMAN_QUESTION" | "APPROVAL_REQUEST";
 
@@ -83,15 +85,15 @@ function deriveQuestionSummary(payload: Record<string, unknown>): string {
 export async function getBubbleInbox(
   input: BubbleInboxInput
 ): Promise<BubbleInboxView> {
-  const resolved = await statusCommandDependencyDefaults.resolveBubbleById({
+  const resolved = await resolveBubbleById({
     bubbleId: input.bubbleId,
     ...(input.repoPath !== undefined ? { repoPath: input.repoPath } : {}),
     ...(input.cwd !== undefined ? { cwd: input.cwd } : {})
   });
 
   const [{ state }, inbox] = await Promise.all([
-    statusCommandDependencyDefaults.readStateSnapshot(resolved.bubblePaths.statePath),
-    statusCommandDependencyDefaults.readTranscriptEnvelopes(resolved.bubblePaths.inboxPath, {
+    readStateSnapshot(resolved.bubblePaths.statePath),
+    readTranscriptEnvelopes(resolved.bubblePaths.inboxPath, {
       allowMissing: true,
       tolerateInvalidEnvelopeLines: true
     })

@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   asBubbleInboxError,
   BubbleInboxError
-} from "../../../../src/v11/shared/bubbleInbox/bubbleInboxReadModel.js";
+} from "../../../../src/v11/application/inbox/bubbleInboxReadModel.js";
 import { BubbleLookupError } from "../../../../src/v11/infrastructure/executor/workspace/bubbleLookup.js";
 
 describe("bubbleInboxReadModel", () => {

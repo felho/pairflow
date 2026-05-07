@@ -1,13 +1,8 @@
-import { getBubbleInbox } from "../../shared/bubbleInbox/bubbleInboxReadModel.js";
 import { readRuntimeSessionsRegistry } from "../executor/sessionRuntime/runtimeSessionsRegistry.js";
 import { readBubbleTimeline } from "./presenters/timelinePresenter.js";
 import { attachBubble } from "../executor/command/pairflowCommandAttach.js";
 import { resolveBubbleById } from "../executor/workspace/bubbleLookup.js";
 import type { UiRouterDependencies } from "../../shared/ports/uiRouter.js";
-import type {
-  UiBubbleInboxInput,
-  UiBubbleInboxView
-} from "../../../contracts/ui/uiReadModel.js";
 import type {
   CreateUiRouterInput
 } from "./routerContracts.js";
@@ -19,6 +14,7 @@ type CoreUiRouterDependencyDefaults = Pick<
   | "emitApprove"
   | "emitHumanReply"
   | "emitRequestRework"
+  | "getBubbleInbox"
   | "getBubbleStatus"
   | "listBubbles"
   | "mergeBubble"
@@ -43,6 +39,7 @@ async function loadUiRouterDependencyDefaults(): Promise<CoreUiRouterDependencyD
     emitApprove: (...args) => uiRouterDependencyDefaults.emitApprove(...args),
     emitHumanReply: (...args) => uiRouterDependencyDefaults.emitHumanReply(...args),
     emitRequestRework: (...args) => uiRouterDependencyDefaults.emitRequestRework(...args),
+    getBubbleInbox: (...args) => uiRouterDependencyDefaults.getBubbleInbox(...args),
     getBubbleStatus: (...args) => uiRouterDependencyDefaults.getBubbleStatus(...args),
     listBubbles: (...args) => uiRouterDependencyDefaults.listBubbles(...args),
     mergeBubble: (...args) => uiRouterDependencyDefaults.mergeBubble(...args),
@@ -57,26 +54,8 @@ async function loadUiRouterDependencyDefaults(): Promise<CoreUiRouterDependencyD
   return uiRouterDependencyDefaultsPromise;
 }
 
-async function getBubbleInboxView(
-  input: UiBubbleInboxInput
-): Promise<UiBubbleInboxView> {
-  const view = await getBubbleInbox({
-    bubbleId: input.bubbleId,
-    ...(input.repoPath !== undefined ? { repoPath: input.repoPath } : {}),
-    ...(input.cwd !== undefined ? { cwd: input.cwd } : {})
-  });
-  return {
-    bubbleId: view.bubbleId,
-    repoPath: view.repoPath,
-    state: view.state,
-    pending: view.pending,
-    items: view.items
-  };
-}
-
 export const defaultUiRouterDependencies: UiRouterDependencies = {
   ...await loadUiRouterDependencyDefaults(),
-  getBubbleInbox: getBubbleInboxView,
   readRuntimeSessionsRegistry,
   readBubbleTimeline,
   attachBubble: (input) =>
