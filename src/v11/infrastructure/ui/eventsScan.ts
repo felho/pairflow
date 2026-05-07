@@ -14,7 +14,17 @@ import type {
 import { presentBubbleSummaryFromListEntry, presentRepoSummary } from "./presenters/bubblePresenter.js";
 import type { BubbleFingerprintSnapshot, RepoDiff, RepoSnapshot } from "./eventsState.js";
 import { bubbleFingerprint, listBubbleIds, sameRepoSummary } from "./eventsFingerprint.js";
-import { listBubbles } from "./eventsScanDefaults.js";
+
+export type UiEventsListBubbles = (
+  input?: UiBubbleListInput
+) => Promise<BubbleListView>;
+
+export interface UiBubbleListInput {
+  repoPath?: string | undefined;
+  cwd?: string | undefined;
+  now?: Date | undefined;
+  refresh?: boolean | undefined;
+}
 
 function repoSnapshotHasStartedRemoteBubble(snapshot: RepoSnapshot | undefined): boolean {
   if (snapshot === undefined) {
@@ -38,10 +48,10 @@ export async function scanUiEventsRepo(input: {
   snapshots: Map<string, RepoSnapshot>;
   nextBubbleUpdatedEvent: (repoPath: string, bubble: ReturnType<typeof presentBubbleSummaryFromListEntry>) => RepoDiff["changed"][number];
   nextBubbleRemovedEvent: (repoPath: string, bubbleId: string) => RepoDiff["removed"][number];
-  listBubbles?: typeof listBubbles;
+  listBubbles: UiEventsListBubbles;
 }): Promise<RepoDiff> {
   const previous = input.snapshots.get(input.repoPath);
-  const listBubblesFn = input.listBubbles ?? listBubbles;
+  const listBubblesFn = input.listBubbles;
   let view = await listBubblesFn({
     repoPath: input.repoPath,
     ...(repoSnapshotHasStartedRemoteBubble(previous) ? { refresh: true } : {})
@@ -167,7 +177,7 @@ export async function scanUiEventsAll(input: {
   nextRepoEvent: (repoPath: string, repo: RepoDiff["repo"]) => UiRepoUpdatedEvent;
   refreshWatchers: () => Promise<void>;
   notify: (event: UiEvent) => void;
-  listBubbles?: typeof listBubbles;
+  listBubbles: UiEventsListBubbles;
 }): Promise<void> {
   const diffs: RepoDiff[] = [];
   for (const repoPath of input.repos) {
@@ -178,7 +188,7 @@ export async function scanUiEventsAll(input: {
         snapshots: input.snapshots,
         nextBubbleUpdatedEvent: input.nextBubbleUpdatedEvent,
         nextBubbleRemovedEvent: input.nextBubbleRemovedEvent,
-        ...(input.listBubbles !== undefined ? { listBubbles: input.listBubbles } : {})
+        listBubbles: input.listBubbles
       })
     );
   }

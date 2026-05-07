@@ -6,7 +6,9 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { emitAskHumanFromWorkspaceV11 as emitAskHumanFromWorkspace } from "../../../src/v11/application/askHuman/emitAskHumanV11.js";
 import { normalizeRepoPath } from "../../../src/v11/infrastructure/executor/workspace/repoResolution.js";
-import { createUiEventsBroker } from "../../../src/v11/infrastructure/ui/events.js";
+import { listBubbles as listBubblesApi } from "../../../src/v11/application/list/listReadModelApi.js";
+import { listCommandDefaults } from "../../../src/v11/defaults/list/listCommandDefaults.js";
+import { createUiEventsBroker as createUiEventsBrokerImpl } from "../../../src/v11/infrastructure/ui/events.js";
 import { UiEventsEventLog } from "../../../src/v11/infrastructure/ui/eventsLog.js";
 import {
   validateUiEvent,
@@ -25,6 +27,19 @@ import { initGitRepository } from "../../helpers/git.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
 
 const tempDirs: string[] = [];
+
+function listBubbles(input?: Parameters<typeof listBubblesApi>[0]) {
+  return listBubblesApi(input, listCommandDefaults);
+}
+
+function createUiEventsBroker(
+  options: Omit<Parameters<typeof createUiEventsBrokerImpl>[0], "listBubbles">
+) {
+  return createUiEventsBrokerImpl({
+    ...options,
+    listBubbles
+  });
+}
 
 async function createTempRepo(): Promise<string> {
   const root = await mkdtemp(join(tmpdir(), "pairflow-ui-events-unit-"));

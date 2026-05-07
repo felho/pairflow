@@ -9,8 +9,8 @@ import { createBubble } from "../../../src/v11/application/create/createBubble.j
 import { buildMetaReviewExecutionContext } from "../../../src/v11/shared/metaReview/metaReviewExecutionContext.js";
 import {
   BubbleListErrorV11 as BubbleListError,
-  listBubblesV11 as listBubbles
 } from "../../../src/v11/application/list/emitListV11.js";
+import { listBubbles as listBubblesApi } from "../../../src/v11/application/list/listReadModelApi.js";
 import {
   writeRemotePointer,
   writeRemoteStateCache
@@ -21,12 +21,16 @@ import { upsertRuntimeSession } from "../../../src/v11/infrastructure/executor/s
 import { metaReviewExecutionContextToRunningContext } from "../../../src/v11/shared/state/executionContext.js";
 import { applyStateTransition } from "../../../src/v11/domain/state/machine.js";
 import { readStateSnapshot, writeStateSnapshot } from "../../../src/v11/infrastructure/state/stateStore.js";
-import { listReadModelDefaults } from "../../../src/v11/shared/read-model/list/listReadModelDefaults.js";
+import { listCommandDefaults as listReadModelDefaults } from "../../../src/v11/defaults/list/listCommandDefaults.js";
 import { writeWatchdogPaneActivity } from "../../../src/v11/infrastructure/artifact/watchdog/watchdogPaneActivityStore.js";
 import { initGitRepository } from "../../helpers/git.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
 
 const tempDirs: string[] = [];
+
+function listBubbles(input: Parameters<typeof listBubblesApi>[0]) {
+  return listBubblesApi(input, listReadModelDefaults);
+}
 
 async function createTempRepo(prefix = "pairflow-bubble-list-"): Promise<string> {
   const root = await mkdtemp(join(tmpdir(), prefix));

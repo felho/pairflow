@@ -11,12 +11,14 @@ import type { RepoDiff, RepoSnapshot } from "./eventsState.js";
 import {
   scanUiEventsAll,
   refreshUiEventsWatchers,
-  scanUiEventsRepo
+  scanUiEventsRepo,
+  type UiEventsListBubbles
 } from "./eventsScan.js";
 import { UiEventsEventLog } from "./eventsLog.js";
 
 export interface UiEventsBrokerOptions {
   repos: string[];
+  listBubbles: UiEventsListBubbles;
   pollIntervalMs?: number | undefined;
   debounceMs?: number | undefined;
   historyLimit?: number | undefined;
@@ -60,6 +62,7 @@ class UiEventsBrokerImpl implements UiEventsBroker {
   private scanQueued = false;
   private closed = false;
   private readonly closeWaiters: Array<() => void> = [];
+  private readonly listBubbles: UiEventsListBubbles;
 
   public constructor(input: UiEventsBrokerOptions) {
     this.repos = [...new Set(input.repos)].sort((left, right) =>
@@ -68,6 +71,7 @@ class UiEventsBrokerImpl implements UiEventsBroker {
     this.pollIntervalMs = input.pollIntervalMs ?? defaultPollIntervalMs;
     this.debounceMs = input.debounceMs ?? defaultDebounceMs;
     this.historyLimit = input.historyLimit ?? defaultHistoryLimit;
+    this.listBubbles = input.listBubbles;
     this.eventLog = new UiEventsEventLog(this.historyLimit);
   }
 
@@ -275,7 +279,8 @@ class UiEventsBrokerImpl implements UiEventsBroker {
           this.eventLog.nextBubbleRemovedEvent(repoPath, bubbleId),
         nextRepoEvent: (repoPath, repo) => this.eventLog.nextRepoEvent(repoPath, repo),
         refreshWatchers: () => this.refreshWatchers(),
-        notify: (event) => this.notify(event)
+        notify: (event) => this.notify(event),
+        listBubbles: this.listBubbles
       });
     } finally {
       this.scanInFlight = false;
@@ -298,7 +303,8 @@ class UiEventsBrokerImpl implements UiEventsBroker {
       nextBubbleUpdatedEvent: (repo, bubble) =>
         this.eventLog.nextBubbleUpdatedEvent(repo, bubble),
       nextBubbleRemovedEvent: (repo, bubbleId) =>
-        this.eventLog.nextBubbleRemovedEvent(repo, bubbleId)
+        this.eventLog.nextBubbleRemovedEvent(repo, bubbleId),
+      listBubbles: this.listBubbles
     });
   }
 

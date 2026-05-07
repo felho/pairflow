@@ -5,7 +5,8 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { emitPassFromWorkspaceV11 as emitPassFromWorkspace } from "../../../src/v11/application/pass/emitPassV11.js";
-import { listBubbles } from "../../../src/v11/shared/read-model/list/listReadModelApi.js";
+import { listBubbles } from "../../../src/v11/application/list/listReadModelApi.js";
+import { listCommandDefaults } from "../../../src/v11/defaults/list/listCommandDefaults.js";
 import { readTranscriptEnvelopes } from "../../../src/v11/infrastructure/artifact/transcript/transcriptStore.js";
 import { readStateSnapshot } from "../../../src/v11/infrastructure/state/stateStore.js";
 import { initGitRepository } from "../../helpers/git.js";
@@ -78,7 +79,7 @@ describe("parallel bubbles smoke", () => {
       expect(transcript.map((entry) => entry.type)).toEqual(["TASK", "PASS"]);
     }
 
-    const listed = await listBubbles({ repoPath });
+    const listed = await listBubbles({ repoPath }, listCommandDefaults);
     expect(listed.total).toBe(5);
     expect(listed.byState.RUNNING).toBe(5);
   });

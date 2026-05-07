@@ -666,6 +666,41 @@ In the closing PR:
     `tests/v11/application/planWatch/agentRunnerBridge.test.ts` timeout/exit
     race failures; rerunning that file passed.
 
+### 2026-05-07 — Batch 3: S5 list read-model move
+
+- Moved the list read-model workflow out of
+  `src/v11/shared/read-model/list/**` and into
+  `src/v11/application/list/**`.
+- Kept `shared/read-model/list/listReadModelContract.ts` in shared as the
+  cross-boundary DTO contract.
+- Deleted `shared/read-model/list/listReadModelDefaults.ts` instead of
+  replacing it with a static application-to-defaults import.
+- Added `ListReadModelDependencies`; `listBubbles` now takes explicit
+  dependencies and no longer resolves default runtime wiring inside the
+  read-model workflow.
+- Moved the `list` CLI command implementation from the application layer into
+  `src/cli/commands/bubble/list.ts`, where the CLI statically injects
+  `defaults/list/listCommandDefaults.ts`.
+- Updated UI defaults/events composition so infrastructure receives a
+  `listBubbles` port instead of importing application read-model code.
+- Updated contract guards and tests to reflect that `list` is now a real CLI
+  module, not a direct application CLI shim.
+- Fitness result after the batch: application dynamic defaults warnings remain
+  31; shared dynamic defaults warnings are down from 10 to 9. Hard-fail
+  fitness checks pass.
+- Validation:
+  - `pnpm typecheck` passed.
+  - `pnpm lint` passed.
+  - `pnpm fitness:check:ci` passed with the expected remaining warnings
+    (`application_defaults_boundary=31`, `shared_defaults_boundary=9`).
+  - `pnpm exec vitest run tests/core/bubble/listBubbles.test.ts tests/v11/application/list/listCommandApi.test.ts tests/v11/application/list/listCommandApiError.test.ts tests/core/bubble/parallelBubblesSmoke.test.ts tests/core/bubble/parallelBubblesSoak.test.ts tests/core/ui/eventsScan.test.ts tests/core/ui/events.test.ts tests/core/ui/router.test.ts tests/core/ui/server.integration.test.ts`
+    passed.
+  - `pnpm exec vitest run tests/contracts/uiContractTransitSource.test.ts tests/contracts/v11/cli-entrypoint-boundary-guard.test.ts`
+    passed after updating the guards.
+  - `pnpm test` passed (`433` root test files, `3719` root tests; `18` UI
+    test files, `229` UI tests).
+  - `pnpm build` passed.
+
 ---
 
 ## Notes

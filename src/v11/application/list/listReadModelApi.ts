@@ -1,13 +1,14 @@
 import { constants as fsConstants } from "node:fs";
 import { access } from "node:fs/promises";
 
-import { isNamedError } from "../../errors/namedError.js";
-import { getBubblePaths } from "../../bubble/bubblePaths.js";
+import { getBubblePaths } from "../../shared/bubble/bubblePaths.js";
+import { isNamedError } from "../../shared/errors/namedError.js";
 import type {
   BubbleListEntry,
   BubbleListInput,
   BubbleListView
-} from "./listReadModelContract.js";
+} from "../../shared/read-model/list/listReadModelContract.js";
+import type { ListReadModelDependencies } from "./listReadModelDependencies.js";
 import { BubbleListError, type BubbleListErrorNormalizationContext } from "./listReadModelErrors.js";
 import {
   createZeroCounts,
@@ -21,7 +22,7 @@ export type {
   BubbleListInput,
   BubbleListStateCounts,
   BubbleListView
-} from "./listReadModelContract.js";
+} from "../../shared/read-model/list/listReadModelContract.js";
 
 export type {
   BubbleListErrorContext,
@@ -68,14 +69,17 @@ async function shouldSkipDeletedBubbleDuringList(input: {
   return !(await pathExists(bubblePaths.bubbleTomlPath));
 }
 
-export async function listBubbles(input: BubbleListInput = {}): Promise<BubbleListView> {
+export async function listBubbles(
+  input: BubbleListInput = {},
+  dependencies: ListReadModelDependencies
+): Promise<BubbleListView> {
   const {
     repoPath,
     bubbleIds,
     sessions,
     normalizedRepoPath,
     now
-  } = await resolveListBubblesContext(input);
+  } = await resolveListBubblesContext(input, dependencies);
 
   const bubbles: BubbleListEntry[] = [];
   const byState = createZeroCounts();
@@ -94,7 +98,8 @@ export async function listBubbles(input: BubbleListInput = {}): Promise<BubbleLi
         bubbleId,
         sessions,
         now,
-        refresh: input.refresh ?? false
+        refresh: input.refresh ?? false,
+        dependencies
       });
     } catch (error) {
       if (

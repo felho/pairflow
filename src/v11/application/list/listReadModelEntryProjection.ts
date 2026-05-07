@@ -1,24 +1,24 @@
-import type { parseBubbleConfigToml } from "../../../../config/bubbleConfig.js";
+import type { parseBubbleConfigToml } from "../../../config/bubbleConfig.js";
 import type {
   BubbleRemotePointer,
   BubbleRemoteStateCache
-} from "../../../../types/bubble.js";
-import type { getBubblePaths } from "../../bubble/bubblePaths.js";
-import { isNamedError } from "../../errors/namedError.js";
-import { isMetaReviewExecutionContextActiveState } from "../../metaReview/metaReviewExecutionContext.js";
-import { projectActiveMetaReviewRuntimeDelivery } from "../../metaReview/metaReviewSnapshot.js";
+} from "../../../types/bubble.js";
+import type { getBubblePaths } from "../../shared/bubble/bubblePaths.js";
+import { inferBubbleStartedAtFromInstanceId } from "../../shared/bubble/bubbleInstanceId.js";
+import { isNamedError } from "../../shared/errors/namedError.js";
+import { isMetaReviewExecutionContextActiveState } from "../../shared/metaReview/metaReviewExecutionContext.js";
+import { projectActiveMetaReviewRuntimeDelivery } from "../../shared/metaReview/metaReviewSnapshot.js";
 import {
   buildRuntimeAlignedReviewPolicyRuntimeView,
   normalizeRuntimeAlignedExecutionContext,
   normalizeRuntimeAlignedRole,
   toRuntimeAlignedReviewPolicyExecutionContext
-} from "../../reviewPolicy/reviewPolicyRuntime.js";
-import { resolveBubbleAttention } from "../../status/bubbleAttention.js";
-import { computeWatchdogStatus } from "../../watchdog/watchdogStatus.js";
-import { inferBubbleStartedAtFromInstanceId } from "../../bubble/bubbleInstanceId.js";
-import type { BubbleListEntry } from "./listReadModelContract.js";
+} from "../../shared/reviewPolicy/reviewPolicyRuntime.js";
+import { resolveBubbleAttention } from "../../shared/status/bubbleAttention.js";
+import { computeWatchdogStatus } from "../../shared/watchdog/watchdogStatus.js";
+import type { BubbleListEntry } from "../../shared/read-model/list/listReadModelContract.js";
 import { runtimeSessionExpectedStates } from "./listReadModelContext.js";
-import { listReadModelDefaults } from "./listReadModelDefaults.js";
+import type { ListReadModelDependencies } from "./listReadModelDependencies.js";
 import { BubbleListError } from "./listReadModelErrors.js";
 import { toRemotePaneActivityRead } from "./listRemotePaneActivityRead.js";
 
@@ -36,12 +36,15 @@ export interface RemoteRefreshFailureMetadata {
   refreshAttemptedAt: string;
 }
 
-export async function readRemoteStateCacheSafe(path: string): Promise<{
+export async function readRemoteStateCacheSafe(
+  path: string,
+  dependencies: ListReadModelDependencies
+): Promise<{
   cache: BubbleRemoteStateCache | null;
   cacheStatus: "present" | "missing" | "invalid";
 }> {
   try {
-    const cache = await listReadModelDefaults.readRemoteStateCache(path);
+    const cache = await dependencies.readRemoteStateCache(path);
     return {
       cache,
       cacheStatus: cache === null ? "missing" : "present"
@@ -98,11 +101,15 @@ export function buildLocalBubbleListEntry(input: {
   repoPath: string;
   bubbleId: string;
   bubblePaths: ReturnType<typeof getBubblePaths>;
-  sessions: Awaited<ReturnType<typeof listReadModelDefaults.readRuntimeSessionsRegistry>>;
+  sessions: Awaited<
+    ReturnType<ListReadModelDependencies["readRuntimeSessionsRegistry"]>
+  >;
   now: Date;
   config: ReturnType<typeof parseBubbleConfigToml>;
-  stateLoaded: Awaited<ReturnType<typeof listReadModelDefaults.inspectStateSnapshot>>;
-  paneActivityRead: Awaited<ReturnType<typeof listReadModelDefaults.readWatchdogPaneActivity>>;
+  stateLoaded: Awaited<ReturnType<ListReadModelDependencies["inspectStateSnapshot"]>>;
+  paneActivityRead: Awaited<
+    ReturnType<ListReadModelDependencies["readWatchdogPaneActivity"]>
+  >;
 }): BubbleBuildResult {
   const runtimeSession = input.sessions[input.bubbleId] ?? null;
   const invalidState = runtimeSession !== null && input.stateLoaded.stateValidation !== null;
@@ -192,7 +199,7 @@ export function buildCreatedRemoteBubbleListEntry(input: {
   bubbleId: string;
   bubblePaths: ReturnType<typeof getBubblePaths>;
   config: ReturnType<typeof parseBubbleConfigToml>;
-  stateLoaded: Awaited<ReturnType<typeof listReadModelDefaults.inspectStateSnapshot>>;
+  stateLoaded: Awaited<ReturnType<ListReadModelDependencies["inspectStateSnapshot"]>>;
   remotePointer: Extract<BubbleRemotePointer, { kind: "created" }>;
 }): BubbleBuildResult {
   const runtimeAlignedExecutionContext =
@@ -298,7 +305,7 @@ export function buildUnavailableRemoteBubbleListEntry(input: {
   bubbleId: string;
   bubblePaths: ReturnType<typeof getBubblePaths>;
   config: ReturnType<typeof parseBubbleConfigToml>;
-  stateLoaded: Awaited<ReturnType<typeof listReadModelDefaults.inspectStateSnapshot>>;
+  stateLoaded: Awaited<ReturnType<ListReadModelDependencies["inspectStateSnapshot"]>>;
   remotePointer: Extract<BubbleRemotePointer, { kind: "started" }>;
   cacheStatus: "missing" | "invalid";
   refreshFailure?: RemoteRefreshFailureMetadata;
@@ -355,9 +362,10 @@ export async function buildRefreshedRemoteBubbleListEntry(input: {
   config: ReturnType<typeof parseBubbleConfigToml>;
   remotePointer: Extract<BubbleRemotePointer, { kind: "started" }>;
   now: Date;
+  dependencies: ListReadModelDependencies;
 }): Promise<BubbleBuildResult> {
   const refreshAttemptedAt = input.now.toISOString();
-  const remoteTarget = await listReadModelDefaults.resolveRemoteBubbleStatusTarget({
+  const remoteTarget = await input.dependencies.resolveRemoteBubbleStatusTarget({
     bubbleId: input.bubbleId,
     remoteAlias: resolveRefreshRemoteAlias({
       bubbleId: input.bubbleId,
@@ -365,7 +373,7 @@ export async function buildRefreshedRemoteBubbleListEntry(input: {
     }),
     expectedHost: input.remotePointer.host
   });
-  const remoteStatusSnapshot = await listReadModelDefaults.executeRemoteBubbleStatus({
+  const remoteStatusSnapshot = await input.dependencies.executeRemoteBubbleStatus({
     bubbleId: input.bubbleId,
     remoteClonePath: input.remotePointer.remoteClonePath,
     remoteTarget
@@ -380,7 +388,7 @@ export async function buildRefreshedRemoteBubbleListEntry(input: {
   let lastCacheCheckAt: string | undefined = remoteStatusSnapshot.lastCheckedAt;
   let refreshFailure: RemoteRefreshFailureMetadata | undefined;
   try {
-    await listReadModelDefaults.writeRemoteStateCache(input.bubblePaths.remoteStateCachePath, {
+    await input.dependencies.writeRemoteStateCache(input.bubblePaths.remoteStateCachePath, {
       lastCheckedAt: remoteStatusSnapshot.lastCheckedAt,
       state: remoteStatusSnapshot.state,
       round: remoteStatusSnapshot.round,
@@ -391,7 +399,8 @@ export async function buildRefreshedRemoteBubbleListEntry(input: {
     });
   } catch {
     const cacheResult = await readRemoteStateCacheSafe(
-      input.bubblePaths.remoteStateCachePath
+      input.bubblePaths.remoteStateCachePath,
+      input.dependencies
     ).catch((error) => {
       throw new BubbleListError({
         message:

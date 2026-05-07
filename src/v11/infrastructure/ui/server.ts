@@ -19,6 +19,7 @@ import {
 } from "./uiServerAssets.js";
 import { closeServer, listen } from "./uiServerLifecycle.js";
 import { createUiServerRegistrySyncController } from "./uiServerRegistrySync.js";
+import { defaultUiRouterDependencies } from "./routerDependencies.js";
 
 const defaultHost = "127.0.0.1";
 const defaultPort = 4173;
@@ -122,6 +123,8 @@ export async function startUiServer(
 
   const events: UiEventsBroker = await createEventsBroker({
     repos: repoScope.repos,
+    listBubbles: input.routerDependencies?.listBubbles
+      ?? defaultUiRouterDependencies.listBubbles,
     ...(input.pollIntervalMs !== undefined
       ? { pollIntervalMs: input.pollIntervalMs }
       : {}),

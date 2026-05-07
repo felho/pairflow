@@ -1,12 +1,12 @@
 import { join } from "node:path";
 
-import type { BubbleLifecycleState } from "../../../../types/bubble.js";
-import { isNamedError } from "../../errors/namedError.js";
+import type { BubbleLifecycleState } from "../../../types/bubble.js";
+import { isNamedError } from "../../shared/errors/namedError.js";
 import type {
   BubbleListInput,
   BubbleListStateCounts
-} from "./listReadModelContract.js";
-import { listReadModelDefaults } from "./listReadModelDefaults.js";
+} from "../../shared/read-model/list/listReadModelContract.js";
+import type { ListReadModelDependencies } from "./listReadModelDependencies.js";
 import { BubbleListError } from "./listReadModelErrors.js";
 
 export const runtimeSessionExpectedStates = new Set<BubbleLifecycleState>([
@@ -33,17 +33,20 @@ export function createZeroCounts(): BubbleListStateCounts {
 }
 
 export async function resolveListBubblesContext(
-  input: BubbleListInput
+  input: BubbleListInput,
+  dependencies: ListReadModelDependencies
 ): Promise<{
   repoPath: string;
-  bubbleIds: Awaited<ReturnType<typeof listReadModelDefaults.listBubbleIds>>;
-  sessions: Awaited<ReturnType<typeof listReadModelDefaults.readRuntimeSessionsRegistry>>;
+  bubbleIds: Awaited<ReturnType<ListReadModelDependencies["listBubbleIds"]>>;
+  sessions: Awaited<
+    ReturnType<ListReadModelDependencies["readRuntimeSessionsRegistry"]>
+  >;
   normalizedRepoPath: string;
   now: Date;
 }> {
   let repoPath: string;
   try {
-    repoPath = await listReadModelDefaults.resolveRepoPath(input);
+    repoPath = await dependencies.resolveRepoPath(input);
   } catch (error) {
     if (isNamedError(error, "RepoResolutionError")) {
       throw new BubbleListError(error.message);
@@ -51,16 +54,16 @@ export async function resolveListBubblesContext(
     throw error;
   }
 
-  const bubbleIds = await listReadModelDefaults.listBubbleIds(repoPath);
+  const bubbleIds = await dependencies.listBubbleIds(repoPath);
   const sessionsPath = join(repoPath, ".pairflow", "runtime", "sessions.json");
-  const sessions = await listReadModelDefaults.readRuntimeSessionsRegistry(sessionsPath, {
+  const sessions = await dependencies.readRuntimeSessionsRegistry(sessionsPath, {
     allowMissing: true
   });
   return {
     repoPath,
     bubbleIds,
     sessions,
-    normalizedRepoPath: await listReadModelDefaults.normalizeRepoPath(repoPath),
+    normalizedRepoPath: await dependencies.normalizeRepoPath(repoPath),
     now: input.now ?? new Date()
   };
 }

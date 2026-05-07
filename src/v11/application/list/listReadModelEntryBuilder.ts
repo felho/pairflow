@@ -1,8 +1,8 @@
 import { resolve } from "node:path";
 
-import { parseBubbleConfigToml } from "../../../../config/bubbleConfig.js";
-import { getBubblePaths } from "../../bubble/bubblePaths.js";
-import { listReadModelDefaults } from "./listReadModelDefaults.js";
+import { parseBubbleConfigToml } from "../../../config/bubbleConfig.js";
+import { getBubblePaths } from "../../shared/bubble/bubblePaths.js";
+import type { ListReadModelDependencies } from "./listReadModelDependencies.js";
 import { isRefreshFallbackEligibleError } from "./listReadModelErrors.js";
 import {
   type BubbleBuildResult,
@@ -20,19 +20,22 @@ export async function buildBubbleListEntry(input: {
   repoPath: string;
   normalizedRepoPath: string;
   bubbleId: string;
-  sessions: Awaited<ReturnType<typeof listReadModelDefaults.readRuntimeSessionsRegistry>>;
+  sessions: Awaited<
+    ReturnType<ListReadModelDependencies["readRuntimeSessionsRegistry"]>
+  >;
   now: Date;
   refresh: boolean;
+  dependencies: ListReadModelDependencies;
 }): Promise<BubbleBuildResult> {
   const bubblePaths = getBubblePaths(input.repoPath, input.bubbleId);
   const [bubbleToml, stateLoaded, paneActivityRead, remotePointer] = await Promise.all([
-    listReadModelDefaults.readBubbleTomlArtifact(bubblePaths.bubbleTomlPath),
-    listReadModelDefaults.inspectStateSnapshot(bubblePaths.statePath),
-    listReadModelDefaults.readWatchdogPaneActivity({
+    input.dependencies.readBubbleTomlArtifact(bubblePaths.bubbleTomlPath),
+    input.dependencies.inspectStateSnapshot(bubblePaths.statePath),
+    input.dependencies.readWatchdogPaneActivity({
       runtimeDir: bubblePaths.runtimeDir,
       bubbleId: input.bubbleId
     }),
-    listReadModelDefaults.readRemotePointer(bubblePaths.remotePointerPath)
+    input.dependencies.readRemotePointer(bubblePaths.remotePointerPath)
   ]);
 
   const config = parseBubbleConfigToml(bubbleToml);
@@ -42,7 +45,7 @@ export async function buildBubbleListEntry(input: {
     );
   }
 
-  const normalizedConfigRepoPath = await listReadModelDefaults.normalizeRepoPath(
+  const normalizedConfigRepoPath = await input.dependencies.normalizeRepoPath(
     resolve(config.repo_path)
   );
   if (normalizedConfigRepoPath !== input.normalizedRepoPath) {
@@ -75,7 +78,10 @@ export async function buildBubbleListEntry(input: {
     });
   }
 
-  const cacheResult = await readRemoteStateCacheSafe(bubblePaths.remoteStateCachePath);
+  const cacheResult = await readRemoteStateCacheSafe(
+    bubblePaths.remoteStateCachePath,
+    input.dependencies
+  );
   if (input.refresh) {
     const refreshFailure: RemoteRefreshFailureMetadata = {
       reasonCode: "LIST_REMOTE_REFRESH_UNAVAILABLE",
@@ -88,7 +94,8 @@ export async function buildBubbleListEntry(input: {
         bubblePaths,
         config,
         remotePointer,
-        now: input.now
+        now: input.now,
+        dependencies: input.dependencies
       });
     } catch (error) {
       if (!isRefreshFallbackEligibleError(error)) {
