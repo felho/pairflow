@@ -1,5 +1,4 @@
 import { readTranscriptEnvelopes } from "../transcript/transcriptDependencyDefaults.js";
-import { ensureBubbleInstanceIdForMutation } from "../bubbleIdentity/bubbleIdentityDependencyDefaults.js";
 import { readStateSnapshot } from "../state/stateStoreDependencyDefaults.js";
 import {
   resolveBubbleById
@@ -29,6 +28,21 @@ export async function resolveBubbleFromWorkspaceCwd(
 > {
   const defaults = await loadStartBubbleDependencyDefaults();
   return defaults.resolveBubbleFromWorkspaceCwd(...args);
+}
+
+export async function ensureBubbleInstanceIdForMutation(
+  ...args: Parameters<
+    Awaited<ReturnType<typeof loadStartBubbleDependencyDefaults>>["ensureBubbleInstanceIdForMutation"]
+  >
+): Promise<
+  Awaited<
+    ReturnType<
+      Awaited<ReturnType<typeof loadStartBubbleDependencyDefaults>>["ensureBubbleInstanceIdForMutation"]
+    >
+  >
+> {
+  const defaults = await loadStartBubbleDependencyDefaults();
+  return defaults.ensureBubbleInstanceIdForMutation(...args);
 }
 
 export const startCommandContextDefaults = {

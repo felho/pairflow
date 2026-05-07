@@ -1,5 +1,7 @@
-import { ensureBubbleInstanceIdForMutation } from "../bubbleIdentity/bubbleIdentityDependencyDefaults.js";
-import { resolveBubbleFromWorkspaceCwd } from "../start/startCommandDependencyDefaults.js";
+import {
+  ensureBubbleInstanceIdForMutation,
+  resolveBubbleFromWorkspaceCwd
+} from "../start/startCommandDependencyDefaults.js";
 import { readStateSnapshot } from "../state/stateStoreDependencyDefaults.js";
 
 export const passWorkspaceContextDefaults = {

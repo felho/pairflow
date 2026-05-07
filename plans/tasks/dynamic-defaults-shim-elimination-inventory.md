@@ -264,7 +264,7 @@ row ID prefix is historical, the "Cat" column is authoritative.
 | # | Site (shim) | Defaults target | Cat | Action |
 |---|-------------|-----------------|-----|--------|
 | A1 | `application/askHuman/askHumanFinalizationDependencyDefaults.ts:37` | `defaults/askHuman/askHumanFinalizationDefaults.ts` | **B** (reclassified) | Verified: target imports 2 infrastructure adapters (`emitBubbleNotification`, `emitDeliveryNotificationAck`). Two-adapter aggregation = composition. CLI passes the aggregator. (Optional alternative: a 2-port `Notification` slice as A; lean B because the existing aggregator already has the right shape.) |
-| A2 | `application/bubbleIdentity/bubbleIdentityDependencyDefaults.ts:18` | `defaults/bubbleIdentity/bubbleIdentityDefaults.ts` | A | Single port (`EnsureBubbleInstanceIdForMutation`). Use the existing port type directly. |
+| A2 | `application/bubbleIdentity/bubbleIdentityDependencyDefaults.ts:18` | `defaults/bubbleIdentity/bubbleIdentityDefaults.ts` | A | Completed in Batch 20: bubble identity mutation port now flows through the existing start context defaults aggregate; standalone application bubble-identity shim was deleted. |
 | A3 | `application/bubbleLookup/bubbleLookupDependencyDefaults.ts:18` | `defaults/bubbleLookup/bubbleLookupDefaults.ts` | A | Single port (`ResolveBubbleByIdPort`). Same target as S2. |
 | A4 | `application/gates/docContractGateArtifactDependencyDefaults.ts:24` | `defaults/gates/docContractGateArtifactDefaults.ts` | A | Completed in Batch 15: doc-contract gate artifact ports are now supplied through create, pass-validation, and start defaults aggregates; the standalone application shim was deleted. |
 | A5 | `application/metaReview/metaReviewDependencyDefaults.ts:20` | `defaults/runtimeSessions/runtimeSessionsDefaults.ts` | A | Completed in Batch 11: V11/default wrapper injects the runtime-sessions read port through `defaults/metaReview`; the application shim was deleted. |
@@ -1144,6 +1144,33 @@ In the closing PR:
     passed (`7` files, `55` tests).
   - `pnpm test` skipped for this focused workspace-resolution defaults
     rewiring batch; the targeted approval, ask-human, pass, workspace, and
+    application-defaults-fitness tests cover the changed surface.
+  - `pnpm lint` passed.
+  - `pnpm build` passed.
+
+### 2026-05-07 — Batch 20: remove bubble-identity defaults shim
+
+- Added `ensureBubbleInstanceIdForMutation` to
+  `src/v11/defaults/start/startBubbleDefaults.ts` and the application-side
+  start defaults contract.
+- Exposed the bubble-identity mutation port through
+  `startCommandContextDefaults`, reusing the same context aggregate as start,
+  approval, reply, pass, and ask-human routing preparation.
+- Updated pass workspace context and ask-human routing preparation defaults to
+  consume `ensureBubbleInstanceIdForMutation` from the start context defaults
+  aggregate.
+- Deleted `src/v11/application/bubbleIdentity/bubbleIdentityDependencyDefaults.ts`.
+- Fitness result after the batch: application dynamic defaults warnings are
+  down from 22 to 21; shared dynamic defaults warnings remain 0. Hard-fail
+  fitness checks pass.
+- Validation:
+  - `pnpm typecheck` passed.
+  - `pnpm fitness:check:ci` passed with the expected remaining warnings
+    (`application_defaults_boundary=21`, `shared_defaults_boundary=0`).
+  - `pnpm exec vitest run tests/v11/application/askHuman/askHumanRoutingPreparationDependencyResolution.test.ts tests/v11/application/askHuman/askHumanRoutingPreparation.test.ts tests/v11/application/pass/passWorkspaceContextPreparation.test.ts tests/v11/application/approval/approvalCommandDependencyResolution.test.ts tests/v11/application/approval/runApprovalFlow.test.ts tests/core/bubble/bubbleInstanceId.test.ts tests/core/bubble/startBubble.test.ts tests/tools/fitness/applicationDefaultsBoundary.test.ts`
+    passed (`8` files, `126` tests).
+  - `pnpm test` skipped for this focused bubble-identity defaults rewiring
+    batch; the targeted approval, ask-human, pass, bubble identity, start, and
     application-defaults-fitness tests cover the changed surface.
   - `pnpm lint` passed.
   - `pnpm build` passed.
