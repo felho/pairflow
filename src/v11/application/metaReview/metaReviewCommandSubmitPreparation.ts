@@ -21,13 +21,17 @@ import {
   assertMetaReviewSubmitterAuthority
 } from "../../shared/metaReview/metaReviewCommandSubmitAuthority.js";
 import {
-  assertApproveThresholdPolicy,
-  metaReviewApproveClaimsOpenFindings,
   assertSubmitPayloadInvariants,
   assertSubmitStatusIsSuccess,
   resolveSubmitRunStatus,
   normalizeRequiredSubmitText
 } from "../../shared/metaReview/metaReviewCommandSubmitValidation.js";
+import {
+  metaReviewApproveClaimsOpenFindings,
+  metaReviewApproveThresholdBlockedReasonCode,
+  metaReviewApproveThresholdContextUnresolvedReasonCode,
+  resolveMetaReviewSubmitApproveThresholdPolicy
+} from "../../domain/metaReviewGate/approveSubmitThresholdPolicy.js";
 import {
   assertSummaryStructuredParity,
 } from "../../shared/metaReview/metaReviewCommandSubmitParity.js";
@@ -268,13 +272,50 @@ async function assertApproveThresholdPolicyIfNeeded(input: {
     artifactsDir: input.resolved.bubblePaths.artifactsDir,
     readFileFn: input.readFileFn
   });
-  assertApproveThresholdPolicy({
+  const policy = resolveMetaReviewSubmitApproveThresholdPolicy({
     recommendation: input.validated.recommendation,
     reportJson: input.canonicalReportJson,
     minSeverity: normalizedReviewPolicy.meta_review_auto_rework_min_severity,
-    thresholdAuthority,
-    bubbleId: input.resolved.bubbleId,
-    round: input.round
+    thresholdAuthority
+  });
+  if (policy.accepted) {
+    return;
+  }
+
+  if (
+    policy.reasonCode === metaReviewApproveThresholdContextUnresolvedReasonCode
+  ) {
+    throw new MetaReviewError({
+      reasonCode: metaReviewApproveThresholdContextUnresolvedReasonCode,
+      message:
+        "meta-review approve rejected: open-findings approve requires resolved same-run threshold authority.",
+      context: {
+        source: "meta_review_command_submit_preparation",
+        bubbleId: input.resolved.bubbleId,
+        round: input.round,
+        reason: policy.reason,
+        configuredMinSeverity:
+          normalizedReviewPolicy.meta_review_auto_rework_min_severity,
+        thresholdStatus: policy.thresholdStatus ?? "missing"
+      }
+    });
+  }
+
+  throw new MetaReviewError({
+    reasonCode: metaReviewApproveThresholdBlockedReasonCode,
+    message:
+      "meta-review approve rejected: highest same-run open severity meets the configured premature-approval guard threshold; emit rework instead.",
+    context: {
+      source: "meta_review_command_submit_preparation",
+      bubbleId: input.resolved.bubbleId,
+      round: input.round,
+      reason: policy.reason,
+      configuredMinSeverity:
+        normalizedReviewPolicy.meta_review_auto_rework_min_severity,
+      highestOpenSeverity: policy.highestOpenSeverity,
+      artifactRef: policy.artifactRef,
+      metaReviewRunId: policy.metaReviewRunId
+    }
   });
 }
 

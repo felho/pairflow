@@ -1,11 +1,13 @@
 import type { MetaReviewResult } from "../../../shared/metaReview/metaReviewTypes.js";
 import type { FindingsParityMetadata } from "../../../../types/protocol.js";
-import { metaReviewApproveClaimsOpenFindings } from "../../../shared/metaReview/metaReviewCommandSubmitValidation.js";
 import { normalizeBubbleReviewPolicy } from "../../../shared/reviewPolicy/reviewPolicyRuntime.js";
 import {
   META_REVIEW_APPROVE_THRESHOLD_BACKSTOP,
   resolveApproveThresholdBackstopPolicy
 } from "../../../domain/metaReviewGate/approveThresholdBackstopPolicy.js";
+import {
+  metaReviewApproveClaimsOpenFindings
+} from "../../../domain/metaReviewGate/approveSubmitThresholdPolicy.js";
 import { resolveThresholdCleanApprovalPolicy } from "../../../domain/metaReviewGate/cleanApprovalPolicy.js";
 import {
   type MetaReviewGateThresholdAuthorityResolution,
