@@ -1,5 +1,9 @@
-import type { BubbleLifecycleState, BubbleStateSnapshot } from "../../../types/bubble.js";
-import { BubbleWatchdogError } from "./watchdogCommandError.js";
+import { persistStateViaMutationBoundary } from "../../shared/mutation/mutationBoundaryIO.js";
+import type {
+  BubbleLifecycleState,
+  BubbleStateSnapshot
+} from "../../../types/bubble.js";
+import { BubbleWatchdogError } from "./watchdogCommandRuntime.js";
 
 export interface WatchdogPendingReworkWriteStateSnapshotOptions {
   expectedFingerprint?: string;
@@ -27,14 +31,15 @@ export async function persistPendingReworkIntentState(
   input: PersistPendingReworkIntentStateInput
 ): Promise<WatchdogPendingReworkLoadedStateSnapshot> {
   try {
-    return await input.writeStateSnapshot(
-      input.statePath,
-      input.nextState,
-      {
+    return await persistStateViaMutationBoundary({
+      write: input.writeStateSnapshot,
+      statePath: input.statePath,
+      state: input.nextState,
+      options: {
         expectedFingerprint: input.loadedState.fingerprint,
         expectedState: "WAITING_HUMAN"
       }
-    );
+    });
   } catch (error) {
     const reason = error instanceof Error ? error.message : String(error);
     throw new BubbleWatchdogError(
