@@ -1,35 +1,81 @@
 import type { PairflowGlobalConfig } from "../../../config/pairflowConfig.js";
 import type {
+  BubbleConfig,
   BubbleRemotePointer,
   BubbleRemoteStateCache
 } from "../../../types/bubble.js";
+import type { BubblePaths } from "../../shared/bubble/bubblePaths.js";
 import type {
-  StartBubbleDependencies,
-  ExecuteRemoteBubbleStartInput,
-  ExecuteRemoteBubbleStartResult
-} from "./startCommandContract.js";
+  BootstrapWorktreeWorkspacePort,
+  CleanupWorktreeWorkspacePort
+} from "../../shared/ports/worktreeWorkspace.js";
+import type {
+  LaunchBubbleSessionAckPort,
+  TmuxRunner,
+  TerminateBubbleTmuxSessionPort
+} from "../../shared/ports/tmuxSessions.js";
+import type {
+  ReadRuntimeSessionsRegistryPort,
+  ClaimRuntimeSessionPort,
+  UpsertRuntimeSessionPort,
+  RemoveRuntimeSessionPort
+} from "../../shared/ports/runtimeSessions.js";
+import type { WriteStateSnapshotPort } from "../../shared/ports/stateSnapshots.js";
+import type { RunGitPort } from "../../shared/ports/git.js";
+import type {
+  ReadReviewerBriefArtifactPort,
+  ReadReviewerFocusArtifactPort
+} from "../../shared/ports/reviewerArtifacts.js";
+import type {
+  ResolveDocContractGateArtifactPathPort
+} from "../../shared/ports/docContractGateArtifacts.js";
+import type {
+  ResolveReviewerTestExecutionDirectivePort
+} from "../../shared/ports/reviewerTestEvidenceArtifacts.js";
+
+interface ExecuteRemoteBubbleStartInput {
+  bubbleId: string;
+  repoPath: string;
+  bubblePaths: BubblePaths;
+  bubbleConfig: BubbleConfig;
+  remoteTarget: {
+    alias: string;
+    host: string;
+    user?: string;
+    repoBase: string;
+    pairflowCommand: string;
+    pairflowSyncCommand?: string;
+    portForwards?: number[];
+  };
+  originUrl: string;
+  remoteClonePath: string;
+  controlFiles: Array<{
+    relativePath: string;
+    content: string;
+  }>;
+}
+
+interface ExecuteRemoteBubbleStartResult {
+  remoteClonePath: string;
+  tmuxSessionName: string;
+  startedAt: string;
+  instanceId: string;
+  remoteState: BubbleRemoteStateCache;
+  warnings?: string[];
+}
 
 export interface StartBubbleDependencyDefaults {
-  bootstrapWorktreeWorkspace:
-    NonNullable<StartBubbleDependencies["bootstrapWorktreeWorkspace"]>;
-  cleanupWorktreeWorkspace:
-    NonNullable<StartBubbleDependencies["cleanupWorktreeWorkspace"]>;
-  launchBubbleSessionAck:
-    NonNullable<StartBubbleDependencies["launchBubbleSessionAck"]>;
-  terminateBubbleTmuxSession:
-    NonNullable<StartBubbleDependencies["terminateBubbleTmuxSession"]>;
-  readRuntimeSessionsRegistry:
-    NonNullable<StartBubbleDependencies["readRuntimeSessionsRegistry"]>;
-  claimRuntimeSession:
-    NonNullable<StartBubbleDependencies["claimRuntimeSession"]>;
-  upsertRuntimeSession:
-    NonNullable<StartBubbleDependencies["upsertRuntimeSession"]>;
-  removeRuntimeSession:
-    NonNullable<StartBubbleDependencies["removeRuntimeSession"]>;
-  writeStateSnapshot:
-    NonNullable<StartBubbleDependencies["writeStateSnapshot"]>;
+  bootstrapWorktreeWorkspace: BootstrapWorktreeWorkspacePort;
+  cleanupWorktreeWorkspace: CleanupWorktreeWorkspacePort;
+  launchBubbleSessionAck: LaunchBubbleSessionAckPort;
+  terminateBubbleTmuxSession: TerminateBubbleTmuxSessionPort;
+  readRuntimeSessionsRegistry: ReadRuntimeSessionsRegistryPort;
+  claimRuntimeSession: ClaimRuntimeSessionPort;
+  upsertRuntimeSession: UpsertRuntimeSessionPort;
+  removeRuntimeSession: RemoveRuntimeSessionPort;
+  writeStateSnapshot: WriteStateSnapshotPort;
   loadPairflowGlobalConfig: () => Promise<PairflowGlobalConfig>;
-  runGitCommand: NonNullable<StartBubbleDependencies["runGitCommand"]>;
+  runGitCommand: RunGitPort;
   readRemotePointer: (path: string) => Promise<BubbleRemotePointer | null>;
   writeRemotePointer: (
     path: string,
@@ -43,14 +89,11 @@ export interface StartBubbleDependencyDefaults {
   executeRemoteBubbleStart: (
     input: ExecuteRemoteBubbleStartInput
   ) => Promise<ExecuteRemoteBubbleStartResult>;
-  readReviewerBriefArtifact:
-    NonNullable<StartBubbleDependencies["readReviewerBriefArtifact"]>;
-  readReviewerFocusArtifact:
-    NonNullable<StartBubbleDependencies["readReviewerFocusArtifact"]>;
-  resolveDocContractGateArtifactPath:
-    NonNullable<StartBubbleDependencies["resolveDocContractGateArtifactPath"]>;
-  resolveReviewerTestExecutionDirective:
-    NonNullable<StartBubbleDependencies["resolveReviewerTestExecutionDirective"]>;
+  runTmux: TmuxRunner;
+  readReviewerBriefArtifact: ReadReviewerBriefArtifactPort;
+  readReviewerFocusArtifact: ReadReviewerFocusArtifactPort;
+  resolveDocContractGateArtifactPath: ResolveDocContractGateArtifactPathPort;
+  resolveReviewerTestExecutionDirective: ResolveReviewerTestExecutionDirectivePort;
 }
 
 interface StartBubbleDependencyDefaultsModule {

@@ -272,7 +272,7 @@ row ID prefix is historical, the "Cat" column is authoritative.
 | A7 | `application/repoRegistry/repoRegistryDependencyDefaults.ts:18` | `defaults/repoRegistry/repoRegistryDefaults.ts` | A | Completed in Batch 10: start CLI now consumes `defaults/start/startCliDefaults.ts` from the CLI layer; the application repo-registry shim was deleted. |
 | A8 | `application/state/stateStoreDependencyDefaults.ts:25` | `defaults/state/stateStoreDefaults.ts` | A | **`StateCapabilities` slice** (read + write + inspect). One of the few real slice cases. |
 | A9 | `application/status/statusCommandDefaults.ts:26` | `defaults/watchdog/watchdogPaneActivityDefaults.ts` | A | Verified: caller only uses `readWatchdogPaneActivity` (read-only). Single-port DI; use the existing read port directly, no slice. The defaults file exports read/write/remove, but this consumer needs only read. |
-| A10 | `application/tmux/tmuxRunnerDependencyDefaults.ts:18` | `defaults/tmux/tmuxRunnerDefaults.ts` | A | Single port (`runTmux`). Use directly. |
+| A10 | `application/tmux/tmuxRunnerDependencyDefaults.ts:18` | `defaults/tmux/tmuxRunnerDefaults.ts` | A | Completed in Batch 16: the `runTmux` port is now supplied through the existing start defaults aggregate; the standalone application tmux shim was deleted. |
 | A11 | `application/transcript/transcriptDependencyDefaults.ts:23` | `defaults/transcript/transcriptDependencyDefaults.ts` | A | **`TranscriptCapabilities` slice** (append + read). Real slice case. |
 | A12 | `application/workspace/workspaceResolutionDependencyDefaults.ts:18` | `defaults/workspace/workspaceResolutionDefaults.ts` | A | Existing workspace-resolution port directly. |
 
@@ -1042,6 +1042,33 @@ In the closing PR:
   - `pnpm test` skipped for this focused doc-contract gate artifact defaults
     rewiring batch; the targeted create, pass, start remote execution, updater,
     wiring, and application-defaults-fitness tests cover the changed surface.
+  - `pnpm build` passed.
+
+### 2026-05-07 — Batch 16: route start tmux runner through start defaults
+
+- Added `runTmux` to `src/v11/defaults/start/startBubbleDefaults.ts` and the
+  application-side start defaults contract.
+- Updated `src/v11/application/start/startCommandDependencyDefaults.ts` to
+  resolve `runTmux` through the existing start defaults aggregate instead of
+  the standalone tmux application shim.
+- Removed the command-contract import edge from
+  `src/v11/application/start/startBubbleDependencyDefaults.ts` by declaring the
+  wrapper's structural port types locally; this prevents the new start defaults
+  route from introducing a cycle.
+- Deleted `src/v11/application/tmux/tmuxRunnerDependencyDefaults.ts`.
+- Fitness result after the batch: application dynamic defaults warnings are
+  down from 26 to 25; shared dynamic defaults warnings remain 0. Hard-fail
+  fitness checks pass.
+- Validation:
+  - `pnpm typecheck` passed.
+  - `pnpm fitness:check:ci` passed with the expected remaining warnings
+    (`application_defaults_boundary=25`, `shared_defaults_boundary=0`).
+  - `pnpm exec vitest run tests/v11/application/start/startCommandOrchestration.test.ts tests/core/bubble/startBubble.test.ts tests/tools/fitness/applicationDefaultsBoundary.test.ts`
+    passed (`3` files, `85` tests).
+  - `pnpm test` skipped for this focused tmux-runner defaults rewiring batch;
+    the targeted start orchestration, start flow, and
+    application-defaults-fitness tests cover the changed surface.
+  - `pnpm lint` passed.
   - `pnpm build` passed.
 
 ---

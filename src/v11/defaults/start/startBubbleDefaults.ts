@@ -26,6 +26,7 @@ import {
 import {
   resolveReviewerTestExecutionDirective
 } from "../reviewer/reviewerTestEvidenceDefaults.js";
+import { runTmux } from "../tmux/tmuxRunnerDefaults.js";
 import {
   cleanupWorktreeWorkspace as cleanupWorktreeWorkspaceCanonical,
   bootstrapWorktreeWorkspace as bootstrapWorktreeWorkspaceCanonical
@@ -53,6 +54,7 @@ import type {
 } from "../../shared/ports/runtimeSessions.js";
 import type {
   LaunchBubbleSessionAckPort,
+  TmuxRunner,
   TerminateBubbleTmuxSessionPort
 } from "../../shared/ports/tmuxSessions.js";
 import type { RunGitPort } from "../../shared/ports/git.js";
@@ -90,6 +92,7 @@ export interface StartBubbleDependencyDefaults {
   executeRemoteBubbleStart: (
     input: ExecuteRemoteBubbleStartInput
   ) => Promise<ExecuteRemoteBubbleStartResult>;
+  runTmux: TmuxRunner;
   readReviewerBriefArtifact: ReadReviewerBriefArtifactPort;
   readReviewerFocusArtifact: ReadReviewerFocusArtifactPort;
   resolveDocContractGateArtifactPath: ResolveDocContractGateArtifactPathPort;
@@ -129,6 +132,7 @@ export const startBubbleDependencyDefaults: StartBubbleDependencyDefaults = {
   writeRemoteStateCache: writeRemoteStateCacheCanonical,
   removeRemoteStateCache: removeRemoteStateCacheCanonical,
   executeRemoteBubbleStart: executeRemoteBubbleStartCanonical,
+  runTmux,
   readReviewerBriefArtifact,
   readReviewerFocusArtifact,
   resolveDocContractGateArtifactPath,
