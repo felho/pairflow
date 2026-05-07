@@ -333,7 +333,7 @@ twice.
 | B9 | `application/pass/passValidationCommandDefaults.ts:121` | `defaults/pass/passValidationCommandDefaults.ts` | B | Verified. CLI passes the aggregator. |
 | B10 | `application/pass/reviewerDeliveryDefaults.ts:33` | `defaults/reviewer/reviewerDeliveryDefaults.ts` | B | Verified. |
 | B11 | `application/reconcile/reconcileCommandDefaults.ts:25` | `defaults/reconcile/reconcileCommandDefaults.ts` | B | Completed in Batch 24: CLI now statically imports the reconcile defaults aggregate plus the state read port and passes them into the application reconcile command; the standalone application shim was deleted. |
-| B12 | `application/restart/restartCommandDefaults.ts:29` | `defaults/restart/restartCommandDefaults.ts` | B | Verified. |
+| B12 | `application/restart/restartCommandDefaults.ts:29` | `defaults/restart/restartCommandDefaults.ts` | B | Completed in Batch 25: CLI and UI composition now pass `restartBubbleDependencyDefaults` explicitly; the application restart API no longer loads defaults dynamically and the standalone application shim was deleted. |
 | B13 | `application/reviewer/reviewerArtifactDefaults.ts:22` | `defaults/reviewer/reviewerArtifactDefaults.ts` | **A** (reclassified) | Completed in Batch 13: reviewer brief/focus artifact readers are now supplied through the existing start and reviewer-delivery defaults aggregates; the standalone application shim was deleted. |
 | B14 | `application/reviewer/reviewerTestEvidenceDefaults.ts:30` | `defaults/reviewer/reviewerTestEvidenceDefaults.ts` | **A** (reclassified) | Completed in Batch 14: reviewer test-evidence ports are now supplied through start, converged, and reviewer-delivery defaults aggregates; the standalone application shim was deleted. |
 | B15 | `application/start/startBubbleDependencyDefaults.ts:63` | `defaults/start/startBubbleDefaults.ts` | B | Verified. |
@@ -1290,6 +1290,34 @@ In the closing PR:
   - `pnpm test` skipped for this focused reconcile defaults rewiring batch; the
     targeted CLI, reconcile dependency resolution, reconcile flow,
     startup/restart recovery, contract runner typecheck coverage, and
+    application-defaults-fitness tests cover the changed surface.
+  - `pnpm lint` passed.
+  - `pnpm build` passed.
+
+### 2026-05-07 — Batch 25: route restart defaults through composition
+
+- Replaced the CLI bubble restart re-export with a real CLI wrapper that
+  statically imports `defaults/restart/restartCommandDefaults.ts` and passes
+  the composed defaults into the application restart command.
+- Updated UI router defaults to pass `restartBubbleDependencyDefaults`
+  explicitly when wiring the restart command for UI actions.
+- Changed the application restart API to use only caller-provided dependencies;
+  dependency completeness remains enforced by the existing restart dependency
+  resolver.
+- Updated restart unit and contract tests to provide explicit default or
+  test-local dependency aggregates.
+- Deleted `src/v11/application/restart/restartCommandDefaults.ts`.
+- Fitness result after the batch: application dynamic defaults warnings are
+  down from 17 to 16; shared dynamic defaults warnings remain 0. Hard-fail
+  fitness checks pass.
+- Validation:
+  - `pnpm typecheck` passed.
+  - `pnpm fitness:check:ci` passed with the expected remaining warnings
+    (`application_defaults_boundary=16`, `shared_defaults_boundary=0`).
+  - `pnpm exec vitest run tests/cli/bubbleRestartCommand.test.ts tests/core/bubble/restartBubble.test.ts tests/contracts/v11/restart.contract.test.ts tests/core/ui/router.test.ts tests/tools/fitness/applicationDefaultsBoundary.test.ts`
+    passed (`5` files, `92` tests).
+  - `pnpm test` skipped for this focused restart defaults rewiring batch; the
+    targeted CLI, restart core, restart contract, UI router, and
     application-defaults-fitness tests cover the changed surface.
   - `pnpm lint` passed.
   - `pnpm build` passed.

@@ -6,6 +6,31 @@ import {
 } from "../../../src/v11/application/restart/restartCommandApi.js";
 import type { ResolvedBubbleById } from "../../../src/v11/infrastructure/executor/workspace/bubbleLookup.js";
 import type { StartBubbleV11Result as StartBubbleResult } from "../../../src/v11/application/start/emitStartV11.js";
+import type { RestartBubbleDependencies } from "../../../src/v11/application/restart/restartCommandContract.js";
+
+function buildRestartBubbleDependencies(
+  overrides: RestartBubbleDependencies
+): RestartBubbleDependencies {
+  return {
+    resolveBubbleById: async () => {
+      throw new Error("resolveBubbleById test dependency not provided.");
+    },
+    readRemotePointer: async () => null,
+    terminateBubbleTmuxSession: async () => ({
+      sessionName: "pf-test",
+      existed: false
+    }),
+    removeRuntimeSession: async () => false,
+    persistPassValidationRecoveryMarker: async () => ({
+      persisted_targets: [],
+      warnings: []
+    }),
+    startBubble: async () => {
+      throw new Error("startBubble test dependency not provided.");
+    },
+    ...overrides
+  };
+}
 
 describe("restartBubble", () => {
   it("terminates previous runtime and starts bubble from resolved repo context", async () => {
@@ -58,13 +83,13 @@ describe("restartBubble", () => {
         cwd: "/tmp",
         now
       },
-      {
+      buildRestartBubbleDependencies({
         resolveBubbleById,
         readRemotePointer,
         terminateBubbleTmuxSession,
         removeRuntimeSession,
         startBubble
-      }
+      })
     );
 
     expect(resolveBubbleById).toHaveBeenCalledWith({
@@ -101,11 +126,11 @@ describe("restartBubble", () => {
         {
           bubbleId: "b_restart_02"
         },
-        {
+        buildRestartBubbleDependencies({
           resolveBubbleById: () =>
             Promise.reject(new Error("Bubble b_restart_02 does not exist")),
           readRemotePointer: async () => null
-        }
+        })
       )
     ).rejects.toBeInstanceOf(RestartBubbleError);
   });
@@ -155,13 +180,13 @@ describe("restartBubble", () => {
         bubbleId: "b_restart_03",
         repoPath: "/tmp/repo-real"
       },
-      {
+      buildRestartBubbleDependencies({
         resolveBubbleById,
         readRemotePointer,
         terminateBubbleTmuxSession,
         removeRuntimeSession,
         startBubble
-      }
+      })
     );
 
     expect(callOrder).toEqual(["resolve", "terminate", "remove", "start"]);
@@ -203,13 +228,13 @@ describe("restartBubble", () => {
           bubbleId: "b_restart_remote_started_01",
           repoPath: "/tmp/repo-real"
         },
-        {
+        buildRestartBubbleDependencies({
           resolveBubbleById,
           readRemotePointer,
           terminateBubbleTmuxSession,
           removeRuntimeSession,
           startBubble
-        }
+        })
       )
     ).rejects.toMatchObject({
       reasonCode: "RESTART_REMOTE_STARTED_UNSUPPORTED"

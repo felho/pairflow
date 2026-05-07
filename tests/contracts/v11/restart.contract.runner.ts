@@ -6,6 +6,7 @@ import { join } from "node:path";
 import {
   restartBubbleV11
 } from "../../../src/v11/application/restart/emitRestartV11.js";
+import { restartBubbleDependencyDefaults } from "../../../src/v11/defaults/restart/restartCommandDefaults.js";
 import {
   startBubbleV11 as startBubble,
   type StartBubbleV11Result as StartBubbleResult
@@ -218,6 +219,7 @@ async function executeRestartCase(input: {
           now: new Date("2026-03-20T11:00:00.000Z")
         },
         {
+          ...restartBubbleDependencyDefaults,
           terminateBubbleTmuxSession: () =>
             Promise.resolve({
               sessionName: `pf-${bubble.bubbleId}`,

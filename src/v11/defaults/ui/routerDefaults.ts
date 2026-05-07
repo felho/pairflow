@@ -8,6 +8,7 @@ import { deleteBubble } from "../../application/delete/deleteBubble.js";
 import { mergeBubbleDependencyDefaults } from "../merge/mergeCommandDefaults.js";
 import { mergeBubbleV11 as mergeBubble } from "../../application/merge/emitMergeV11.js";
 import { openBubble } from "../../application/open/emitOpenV11.js";
+import { restartBubbleDependencyDefaults } from "../restart/restartCommandDefaults.js";
 import { restartBubble } from "../../application/restart/restartCommandApi.js";
 import { emitHumanReplyV11 as emitHumanReply } from "../../application/reply/emitReplyV11.js";
 import { resumeBubbleV11 as resumeBubble } from "../../application/resume/emitResumeV11.js";
@@ -382,7 +383,10 @@ export const uiRouterDependencyDefaults = {
   openBubble,
   async restartBubble(input) {
     return mapUiRestartResult(
-      await restartBubble(projectUiInputNowToCommandNow(input))
+      await restartBubble(
+        projectUiInputNowToCommandNow(input),
+        restartBubbleDependencyDefaults
+      )
     );
   },
   async resumeBubble(input) {

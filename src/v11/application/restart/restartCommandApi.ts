@@ -2,10 +2,6 @@ import {
   restartBubbleCommandOrchestration,
   throwAsRestartBubbleError
 } from "./restartCommandOrchestration.js";
-import {
-  loadRestartBubbleDependencyDefaults,
-  type RestartBubbleDefaultDependencies
-} from "./restartCommandDefaults.js";
 import type {
   RestartBubbleDependencies,
   RestartBubbleInput,
@@ -13,16 +9,15 @@ import type {
 } from "./restartCommandContract.js";
 import { RestartBubbleError } from "./restartCommandRuntime.js";
 
+export type RestartBubbleDefaultDependencies = Required<
+  Omit<RestartBubbleDependencies, "startBubble">
+>;
+
 export async function restartBubble(
   input: RestartBubbleInput,
   dependencies: RestartBubbleDependencies = {}
 ): Promise<RestartBubbleResult> {
-  const restartBubbleDependencyDefaults =
-    await loadRestartBubbleDependencyDefaults();
-  return restartBubbleCommandOrchestration(input, {
-    ...restartBubbleDependencyDefaults,
-    ...dependencies
-  });
+  return restartBubbleCommandOrchestration(input, dependencies);
 }
 
 export {
@@ -31,7 +26,6 @@ export {
 };
 
 export type {
-  RestartBubbleDefaultDependencies,
   RestartBubbleDependencies,
   RestartBubbleInput,
   RestartBubbleResult
