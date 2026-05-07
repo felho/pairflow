@@ -16,7 +16,7 @@ import {
   executeStartResumeMutation,
   executeStartRunningMutation,
   type StartLoadedStateSnapshot
-} from "../../shared/state/startStateMutation.js";
+} from "./startStatePersistence.js";
 import type { WorktreeBootstrapResult } from "../../shared/ports/worktreeWorkspace.js";
 import { createStartBubbleError } from "./startCommandRuntime.js";
 import {
@@ -279,4 +279,4 @@ export async function runResumeStartFlow(input: {
 }
 
 export { cleanupFailedStart } from "./startCommandCleanup.js";
-export { buildResumedState } from "../../shared/state/startStateMutation.js";
+export { buildResumedState } from "./startStatePersistence.js";

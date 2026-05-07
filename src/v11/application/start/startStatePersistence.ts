@@ -4,6 +4,7 @@ import {
   deriveStartResumedState,
   deriveStartRunningState
 } from "../../domain/state/startState.js";
+import { persistStateViaMutationBoundary } from "../../shared/mutation/mutationBoundaryIO.js";
 import type {
   AgentName,
   BubbleLifecycleState,
@@ -82,9 +83,14 @@ export async function executeStartPreparingMutation(
     lastCommandAt: input.nowIso
   });
 
-  return input.writeStateSnapshot(input.statePath, preparing, {
-    expectedFingerprint: input.loadedState.fingerprint,
-    expectedState: "CREATED"
+  return persistStateViaMutationBoundary({
+    write: input.writeStateSnapshot,
+    statePath: input.statePath,
+    state: preparing,
+    options: {
+      expectedFingerprint: input.loadedState.fingerprint,
+      expectedState: "CREATED"
+    }
   });
 }
 
@@ -101,9 +107,14 @@ export async function executeStartRunningMutation(
     ideationPending: input.ideationPending
   });
 
-  return input.writeStateSnapshot(input.statePath, running, {
-    expectedFingerprint: input.preparingFingerprint,
-    expectedState: "PREPARING_WORKSPACE"
+  return persistStateViaMutationBoundary({
+    write: input.writeStateSnapshot,
+    statePath: input.statePath,
+    state: running,
+    options: {
+      expectedFingerprint: input.preparingFingerprint,
+      expectedState: "PREPARING_WORKSPACE"
+    }
   });
 }
 
@@ -116,9 +127,14 @@ export async function executeStartResumeMutation(
     watchdogTimeoutMinutes: input.watchdogTimeoutMinutes
   });
 
-  return input.writeStateSnapshot(input.statePath, resumed, {
-    expectedFingerprint: input.loadedState.fingerprint,
-    expectedState: input.loadedState.state.state
+  return persistStateViaMutationBoundary({
+    write: input.writeStateSnapshot,
+    statePath: input.statePath,
+    state: resumed,
+    options: {
+      expectedFingerprint: input.loadedState.fingerprint,
+      expectedState: input.loadedState.state.state
+    }
   });
 }
 
@@ -130,7 +146,12 @@ export async function executeStartFailedCleanupMutation(
     lastCommandAt: input.nowIso
   });
 
-  return input.writeStateSnapshot(input.statePath, failed, {
-    expectedState: "PREPARING_WORKSPACE"
+  return persistStateViaMutationBoundary({
+    write: input.writeStateSnapshot,
+    statePath: input.statePath,
+    state: failed,
+    options: {
+      expectedState: "PREPARING_WORKSPACE"
+    }
   });
 }

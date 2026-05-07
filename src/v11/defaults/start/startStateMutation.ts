@@ -4,7 +4,7 @@ export {
   executeStartPreparingMutation,
   executeStartResumeMutation,
   executeStartRunningMutation
-} from "../../shared/state/startStateMutation.js";
+} from "../../application/start/startStatePersistence.js";
 export type {
   StartFailedMutationInput,
   StartLoadedStateSnapshot,
@@ -13,4 +13,4 @@ export type {
   StartRunningMutationInput,
   StartWriteStateSnapshotOptions,
   StartWriteStateSnapshotPort
-} from "../../shared/state/startStateMutation.js";
+} from "../../application/start/startStatePersistence.js";
