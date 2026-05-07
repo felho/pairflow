@@ -5,16 +5,13 @@ import {
   DEFAULT_REVIEW_POLICY_LOOP_MODE
 } from "../../../config/defaults.js";
 import type {
-  AgentName,
   AgentRole,
-  BubbleExecutionContext,
   BubbleConfig,
+  BubbleExecutionContext,
   BubbleReviewPolicyConfig,
-  BubbleReviewPolicyRuntimeView,
-  RoundRoleHistoryEntry
+  BubbleReviewPolicyRuntimeView
 } from "../../../types/bubble.js";
 import { isAgentRole } from "../../../types/bubble.js";
-import { buildRunningExecutionContext } from "../state/executionContext.js";
 
 export const REVIEW_POLICY_META_ONLY_GUARDED =
   "REVIEW_POLICY_META_ONLY_GUARDED" as const;
@@ -43,24 +40,6 @@ export interface RuntimeAlignedReviewPolicyExecutionContext {
   round: number;
   handoffId: string;
   executionId: string;
-}
-
-export interface ResolveRuntimeAlignedNextRoundContinuationInput {
-  bubbleId: string;
-  currentRound: number;
-  roundRoleHistory: RoundRoleHistoryEntry[];
-  implementer: AgentName;
-  reviewer: AgentName;
-  nowIso: string;
-  watchdogTimeoutMinutes: number;
-}
-
-export interface RuntimeAlignedNextRoundContinuation {
-  nextRound: number;
-  activeAgent: AgentName;
-  activeRole: "implementer";
-  executionContext: BubbleExecutionContext;
-  appendRoundRoleEntry?: RoundRoleHistoryEntry;
 }
 
 export interface BuildRuntimeAlignedReviewPolicyRuntimeViewInput {
@@ -273,37 +252,4 @@ export function resolveRuntimeAlignedConvergedActiveRole(
     .effective_loop_mode === "meta_only"
     ? "implementer"
     : "reviewer";
-}
-
-export function resolveRuntimeAlignedNextRoundContinuation(
-  input: ResolveRuntimeAlignedNextRoundContinuationInput
-): RuntimeAlignedNextRoundContinuation {
-  const nextRound = input.currentRound + 1;
-  const roundRoleHistory = input.roundRoleHistory ?? [];
-  const hasRoundEntry = roundRoleHistory.some(
-    (entry) => entry.round === nextRound
-  );
-
-  return {
-    nextRound,
-    activeAgent: input.implementer,
-    activeRole: "implementer",
-    executionContext: buildRunningExecutionContext({
-      bubbleId: input.bubbleId,
-      round: nextRound,
-      activeRole: "implementer",
-      startedAt: input.nowIso,
-      watchdogTimeoutMinutes: input.watchdogTimeoutMinutes
-    }),
-    ...(hasRoundEntry
-      ? {}
-      : {
-          appendRoundRoleEntry: {
-            round: nextRound,
-            implementer: input.implementer,
-            reviewer: input.reviewer,
-            switched_at: input.nowIso
-          }
-        })
-  };
 }

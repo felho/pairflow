@@ -24,6 +24,7 @@ interface DependencyViolation {
     | "anti_circumvention_wrapper"
     | "forbidden_process_runtime_import"
     | "shared_promotion_single_lane"
+    | "shared_lifecycle_policy"
     | "ownership_signal_shared_infra";
   severity: "fail" | "warn";
   message: string;
@@ -800,6 +801,72 @@ function detectOwnershipSignalViolations(input: {
   return violations;
 }
 
+const sharedLifecyclePolicySignalMatchers: readonly {
+  signal: string;
+  matches: (sourceText: string) => boolean;
+}[] = [
+  {
+    signal: "domain-state-transition-policy",
+    matches: (sourceText) =>
+      /\bfrom\s+["'][^"']*domain\/state\/machine(?:\.js)?["']/u.test(
+        sourceText
+      ) || /\bapplyStateTransition\s*\(/u.test(sourceText)
+  },
+  {
+    signal: "transcript-state-persistence-ordering",
+    matches: (sourceText) =>
+      /\bappendProtocolEnvelope\s*\(/u.test(sourceText)
+      && /\bwriteStateSnapshot\s*\(/u.test(sourceText)
+  },
+  {
+    signal: "execution-context-continuation",
+    matches: (sourceText) =>
+      /\bresolveRuntimeAlignedNextRoundContinuation\s*\(/u.test(sourceText)
+  }
+] as const;
+
+function isNonPortSharedPath(relativePath: string): boolean {
+  return (
+    /^src\/v11\/shared(?:\/|$)/u.test(relativePath)
+    && !/^src\/v11\/shared\/ports(?:\/|$)/u.test(relativePath)
+  );
+}
+
+function detectSharedLifecyclePolicyViolations(input: {
+  repoRoot: string;
+  files: readonly string[];
+  sourceByPath: ReadonlyMap<string, string>;
+}): DependencyViolation[] {
+  const violations: DependencyViolation[] = [];
+
+  for (const filePath of input.files) {
+    const fromRelative = normalizePathToPosix(relative(input.repoRoot, filePath));
+    if (!isNonPortSharedPath(fromRelative)) {
+      continue;
+    }
+
+    const sourceText = input.sourceByPath.get(filePath) ?? "";
+    const signals = sharedLifecyclePolicySignalMatchers
+      .filter(({ matches }) => matches(sourceText))
+      .map(({ signal }) => signal);
+    if (signals.length === 0) {
+      continue;
+    }
+
+    violations.push({
+      kind: "shared_lifecycle_policy",
+      severity: "warn",
+      message:
+        `${fromRelative}: shared-lifecycle-policy warning: non-port shared module shows lifecycle policy signals (${signals.join(", ")}); keep lifecycle derivation in domain/state and transcript/state persistence workflows in the owning application command`,
+      fromRelative,
+      toRelative: undefined,
+      cycleNodes: undefined
+    });
+  }
+
+  return violations;
+}
+
 interface SharedDirectoryConsumers {
   applicationLanes: Set<string>;
   hasInfrastructureConsumer: boolean;
@@ -979,6 +1046,11 @@ export async function buildDependencyCheckReport({
       sourceByPath
     }),
     ...detectOwnershipSignalViolations({
+      repoRoot,
+      files: availableFiles,
+      sourceByPath
+    }),
+    ...detectSharedLifecyclePolicyViolations({
       repoRoot,
       files: availableFiles,
       sourceByPath

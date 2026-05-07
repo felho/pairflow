@@ -12,7 +12,7 @@ import {
 } from "../../../domain/metaReviewGate/snapshotState.js";
 import {
   resolveRuntimeAlignedNextRoundContinuation
-} from "../../../shared/reviewPolicy/reviewPolicyRuntime.js";
+} from "../../../domain/state/roundContinuation.js";
 
 export interface AutoReworkStateInput {
   resolved: {

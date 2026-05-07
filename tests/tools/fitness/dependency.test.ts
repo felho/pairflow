@@ -563,6 +563,126 @@ describe("dependency fitness check", () => {
     ).toBe(false);
   });
 
+  it("warns when non-port shared modules own lifecycle state transition policy", async () => {
+    const repoRoot = await createTempRoot();
+    await writeRepoFile(
+      repoRoot,
+      "src/v11/domain/state/machine.ts",
+      "export function applyStateTransition(): string { return 'next'; }\n"
+    );
+    await writeRepoFile(
+      repoRoot,
+      "src/v11/shared/watchdog/watchdogEscalationMutation.ts",
+      [
+        "import { applyStateTransition } from '../../domain/state/machine.js';",
+        "export function escalate(): string {",
+        "  return applyStateTransition();",
+        "}",
+        ""
+      ].join("\n")
+    );
+
+    const report = await buildDependencyCheckReport({
+      check: {
+        id: "dependency",
+        metric: "cycle and forbidden import direction detection",
+        mode: "report-only",
+        owner: "architecture",
+        scope: ["src/v11/**"],
+        exceptions: []
+      },
+      repoRoot,
+      fallbackMode: "report-only",
+    });
+
+    expect(report.status).toBe("warn");
+    expect(
+      report.details?.some((detail) =>
+        detail.includes(
+          "src/v11/shared/watchdog/watchdogEscalationMutation.ts: shared-lifecycle-policy warning"
+        )
+      )
+    ).toBe(true);
+    expect(
+      report.details?.some((detail) =>
+        detail.includes("domain-state-transition-policy")
+      )
+    ).toBe(true);
+  });
+
+  it("warns when non-port shared modules combine transcript and state persistence workflow calls", async () => {
+    const repoRoot = await createTempRoot();
+    await writeRepoFile(
+      repoRoot,
+      "src/v11/shared/state/startStateMutation.ts",
+      [
+        "export async function mutate(input: {",
+        "  appendProtocolEnvelope: () => Promise<void>;",
+        "  writeStateSnapshot: () => Promise<void>;",
+        "}): Promise<void> {",
+        "  await input.appendProtocolEnvelope();",
+        "  await input.writeStateSnapshot();",
+        "}",
+        ""
+      ].join("\n")
+    );
+
+    const report = await buildDependencyCheckReport({
+      check: {
+        id: "dependency",
+        metric: "cycle and forbidden import direction detection",
+        mode: "report-only",
+        owner: "architecture",
+        scope: ["src/v11/**"],
+        exceptions: []
+      },
+      repoRoot,
+      fallbackMode: "report-only",
+    });
+
+    expect(report.status).toBe("warn");
+    expect(
+      report.details?.some((detail) =>
+        detail.includes("transcript-state-persistence-ordering")
+      )
+    ).toBe(true);
+  });
+
+  it("does not warn for shared port contract shapes that mention state and transcript capabilities without orchestrating them", async () => {
+    const repoRoot = await createTempRoot();
+    await writeRepoFile(
+      repoRoot,
+      "src/v11/shared/metaReviewGate/metaReviewGateRuntimeCapabilities.ts",
+      [
+        "export interface RuntimeCapabilities {",
+        "  writeStateSnapshot?: unknown;",
+        "  appendProtocolEnvelope?: unknown;",
+        "}",
+        ""
+      ].join("\n")
+    );
+
+    const report = await buildDependencyCheckReport({
+      check: {
+        id: "dependency",
+        metric: "cycle and forbidden import direction detection",
+        mode: "report-only",
+        owner: "architecture",
+        scope: ["src/v11/**"],
+        exceptions: []
+      },
+      repoRoot,
+      fallbackMode: "report-only",
+    });
+
+    expect(report.status).toBe("pass");
+    expect(
+      report.details?.some((detail) =>
+        detail.includes("shared-lifecycle-policy warning")
+      )
+    ).toBe(false);
+  });
+
   it("fails on shared direct infrastructure re-export camouflage", async () => {
     const repoRoot = await createTempRoot();
     await writeRepoFile(
@@ -741,7 +861,7 @@ describe("dependency fitness check", () => {
     ).toBe(true);
   });
 
-  it("does not warn on injected transcript/state capability names without store imports", async () => {
+  it("warns on shared helpers that orchestrate injected transcript and state capabilities", async () => {
     const repoRoot = await createTempRoot();
     await writeRepoFile(
       repoRoot,
@@ -771,12 +891,17 @@ describe("dependency fitness check", () => {
       fallbackMode: "report-only",
     });
 
-    expect(report.status).toBe("pass");
+    expect(report.status).toBe("warn");
     expect(
       report.details?.some((detail) =>
         detail.includes("ownership-signal warning")
       )
     ).toBe(false);
+    expect(
+      report.details?.some((detail) =>
+        detail.includes("transcript-state-persistence-ordering")
+      )
+    ).toBe(true);
   });
 
   it("does not warn on generic tmux wording under shared", async () => {

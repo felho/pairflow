@@ -24,6 +24,25 @@
 - Important `v11` extracts must have explicit typed boundaries; do not rely on implicit meaning reconstructed from call sites.
 - If protocol or state machine behavior changes, update the spec in the same work.
 
+## Architecture Fitness Drift Policy
+
+When changing lifecycle, transcript/state ordering, execution-context ownership,
+state transition derivation, or command orchestration boundaries, update or
+explicitly re-evaluate the related fitness checks in `tools/fitness/**`.
+
+Changes that introduce or move any of the following must check whether a fitness
+rule should be added or updated:
+
+- lifecycle state transition policy
+- transcript append before/after state write ordering
+- execution-context minting, clearing, or continuation
+- command-local persistence workflows
+- shared-layer helpers that import domain policy
+- shared-layer helpers that combine multiple I/O ports into one workflow
+
+If no fitness change is needed, mention why in the commit message or task/progress
+note.
+
 ## Local Change Verification
 
 During implementation, use the narrowest relevant tests for fast feedback as needed.
