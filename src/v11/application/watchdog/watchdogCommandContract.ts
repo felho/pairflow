@@ -17,6 +17,7 @@ import type {
 } from "../../shared/ports/watchdogPaneActivity.js";
 import type { AppendWatchdogTracePort } from "../../shared/ports/watchdogTrace.js";
 import type { EnsureBubbleInstanceIdForMutationPort } from "../../shared/ports/bubbleIdentity.js";
+import type { ResolveBubbleByIdPort } from "../../shared/ports/bubbleLookup.js";
 import type {
   sampleWatchdogPaneActivity
 } from "./watchdogPaneActivitySampler.js";
@@ -31,20 +32,21 @@ export interface BubbleWatchdogInput {
 }
 
 export interface BubbleWatchdogDependencies {
-  appendProtocolEnvelope?: AppendProtocolEnvelopePort;
-  emitDeliveryNotificationAck?: EmitDeliveryNotificationAckPort;
-  emitBubbleNotification?: EmitBubbleNotificationPort;
-  readStateSnapshot?: ReadStateSnapshotPort;
-  writeStateSnapshot?: WriteStateSnapshotPort;
-  readWatchdogPaneActivity?: ReadWatchdogPaneActivityPort;
-  writeWatchdogPaneActivity?: WriteWatchdogPaneActivityPort;
-  appendWatchdogTrace?: AppendWatchdogTracePort;
+  appendProtocolEnvelope: AppendProtocolEnvelopePort;
+  emitDeliveryNotificationAck: EmitDeliveryNotificationAckPort;
+  emitBubbleNotification: EmitBubbleNotificationPort;
+  readStateSnapshot: ReadStateSnapshotPort;
+  writeStateSnapshot: WriteStateSnapshotPort;
+  readWatchdogPaneActivity: ReadWatchdogPaneActivityPort;
+  writeWatchdogPaneActivity: WriteWatchdogPaneActivityPort;
+  appendWatchdogTrace: AppendWatchdogTracePort;
+  resolveBubbleById: ResolveBubbleByIdPort;
   sampleWatchdogPaneActivity?: typeof sampleWatchdogPaneActivity;
-  readRuntimeSessionsRegistry?: ReadRuntimeSessionsRegistryPort;
-  runTmux?: TmuxRunner;
-  ensureBubbleInstanceIdForMutation?: EnsureBubbleInstanceIdForMutationPort;
-  resolveDeliveryMessageRef?: ResolveDeliveryMessageRefPort;
-  retryStuckAgentInput?: RetryStuckAgentInputPort;
+  readRuntimeSessionsRegistry: ReadRuntimeSessionsRegistryPort;
+  runTmux: TmuxRunner;
+  ensureBubbleInstanceIdForMutation: EnsureBubbleInstanceIdForMutationPort;
+  resolveDeliveryMessageRef: ResolveDeliveryMessageRefPort;
+  retryStuckAgentInput: RetryStuckAgentInputPort;
 }
 
 export type BubbleWatchdogNoopReason =

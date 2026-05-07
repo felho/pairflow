@@ -1,8 +1,11 @@
 import { parseArgs } from "node:util";
 
+import { watchdogCommandDefaults } from "../../../v11/defaults/watchdog/watchdogCommandDefaults.js";
+import { watchdogPendingReworkDefaults } from "../../../v11/defaults/watchdog/watchdogPendingReworkDefaults.js";
 import {
   asBubbleWatchdogErrorV11 as asBubbleWatchdogError,
   runBubbleWatchdogV11 as runBubbleWatchdog,
+  type BubbleWatchdogV11Dependencies,
   type BubbleWatchdogV11Result as BubbleWatchdogResult
 } from "../../../v11/application/watchdog/emitWatchdogV11.js";
 
@@ -94,7 +97,8 @@ export function renderBubbleWatchdogText(result: BubbleWatchdogResult): string {
 
 export async function runBubbleWatchdogCommand(
   args: string[] | BubbleWatchdogCommandOptions,
-  cwd: string = process.cwd()
+  cwd: string = process.cwd(),
+  dependencies: Partial<BubbleWatchdogV11Dependencies> = {}
 ): Promise<BubbleWatchdogResult | null> {
   const options = Array.isArray(args) ? parseBubbleWatchdogCommandOptions(args) : args;
   if (options.help) {
@@ -106,6 +110,10 @@ export async function runBubbleWatchdogCommand(
       bubbleId: options.id,
       repoPath: options.repo,
       cwd
+    }, {
+      ...watchdogCommandDefaults,
+      ...watchdogPendingReworkDefaults,
+      ...dependencies
     });
   } catch (error) {
     asBubbleWatchdogError(error);

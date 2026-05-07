@@ -9,6 +9,8 @@ import {
   runBubbleWatchdogV11,
   type BubbleWatchdogV11Dependencies
 } from "../../../../src/v11/application/watchdog/emitWatchdogV11.js";
+import { watchdogCommandDefaults } from "../../../../src/v11/defaults/watchdog/watchdogCommandDefaults.js";
+import { watchdogPendingReworkDefaults } from "../../../../src/v11/defaults/watchdog/watchdogPendingReworkDefaults.js";
 import type { RuntimeSessionsRegistry } from "../../../../src/v11/shared/ports/runtimeSessions.js";
 import type {
   PaneActivitySampleResult
@@ -76,9 +78,11 @@ describe("watchdogCommandApi", () => {
   }
 
   function baseDependencies(
-    input: BubbleWatchdogV11Dependencies = {}
+    input: Partial<BubbleWatchdogV11Dependencies> = {}
   ): BubbleWatchdogV11Dependencies {
     return {
+      ...watchdogCommandDefaults,
+      ...watchdogPendingReworkDefaults,
       emitDeliveryNotificationAck: () =>
         Promise.resolve({
           status: "accepted",

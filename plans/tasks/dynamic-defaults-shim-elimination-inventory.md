@@ -339,8 +339,8 @@ twice.
 | B15 | `application/start/startBubbleDependencyDefaults.ts:63` | `defaults/start/startBubbleDefaults.ts` | B | Verified. |
 | B16 | `application/status/statusCommandDependencyDefaults.ts:26` | `defaults/list/listCommandDefaults.ts` | B | Completed in Batch 28: status CLI, UI, plan-watch, and tests now pass status defaults explicitly; approval/attach consume remote status ports through the start context aggregate and the standalone application status defaults shim was deleted. |
 | B17 | `application/stop/stopCommandDefaults.ts:29` | `defaults/stop/stopCommandDefaults.ts` | B | Completed in Batch 26: CLI, UI, and delete defaults now pass the stop defaults aggregate explicitly; the stop application contract exposes its former hidden default ports and the standalone application shim was deleted. |
-| B18 | `application/watchdog/watchdogDependencyDefaults.ts:77` | `defaults/watchdog/watchdogCommandDefaults.ts` | B | Verified. |
-| B19 | `application/watchdog/watchdogDependencyDefaults.ts:87` | `defaults/watchdog/watchdogPendingReworkDefaults.ts` | B | Verified: target aggregates 2 concrete adapters (`ensureBubbleInstanceIdForMutation` from sibling defaults, `resolveDeliveryMessageRef` from infrastructure tmuxDelivery). Composition. |
+| B18 | `application/watchdog/watchdogDependencyDefaults.ts:77` | `defaults/watchdog/watchdogCommandDefaults.ts` | B | Completed in Batch 30: watchdog CLI, contract runner, and tests now pass the watchdog defaults aggregate explicitly; the standalone application watchdog defaults shim was deleted. |
+| B19 | `application/watchdog/watchdogDependencyDefaults.ts:87` | `defaults/watchdog/watchdogPendingReworkDefaults.ts` | B | Completed in Batch 30: pending-rework defaults are composed beside the main watchdog defaults at the caller; the standalone application watchdog defaults shim was deleted. |
 
 For B-category entries the application shim file becomes redundant and is
 deleted. The CLI gains an import from the corresponding `defaults/` file and
@@ -1427,6 +1427,31 @@ In the closing PR:
     passed (`5` files, `72` tests).
   - `pnpm test` skipped for this focused meta-review defaults rewiring batch;
     the targeted agent CLI, actor protocol, meta-review submit, approval, and
+    application-defaults-fitness tests cover the changed surface.
+  - `pnpm lint` passed.
+  - `pnpm build` passed.
+
+### 2026-05-08 — Batch 30: route watchdog defaults through composition
+
+- Changed the watchdog application API so it receives its runtime defaults
+  explicitly instead of dynamically loading `defaults/watchdog/*` from
+  application code.
+- Updated the watchdog CLI wrapper to compose `watchdogCommandDefaults` and
+  `watchdogPendingReworkDefaults` statically.
+- Updated watchdog contract, core, and application tests to use explicit
+  caller-side composition.
+- Deleted `src/v11/application/watchdog/watchdogDependencyDefaults.ts`.
+- Fitness result after the batch: application dynamic defaults warnings are
+  down from 11 to 9; shared dynamic defaults warnings remain 0. Hard-fail
+  fitness checks pass.
+- Validation:
+  - `pnpm typecheck` passed.
+  - `pnpm fitness:check:ci` passed with the expected remaining warnings
+    (`application_defaults_boundary=9`, `shared_defaults_boundary=0`).
+  - `pnpm exec vitest run tests/cli/bubbleWatchdogCommand.test.ts tests/core/bubble/watchdogBubble.test.ts tests/contracts/v11/watchdog.contract.test.ts tests/v11/application/watchdog/watchdogCommandApi.test.ts tests/v11/application/watchdog/watchdogCommandDefaults.test.ts tests/tools/fitness/applicationDefaultsBoundary.test.ts`
+    passed (`6` files, `49` tests).
+  - `pnpm test` skipped for this focused watchdog defaults rewiring batch; the
+    targeted CLI, watchdog core, watchdog contract, watchdog application, and
     application-defaults-fitness tests cover the changed surface.
   - `pnpm lint` passed.
   - `pnpm build` passed.

@@ -5,8 +5,11 @@ import { join } from "node:path";
 
 import {
   runBubbleWatchdogV11,
+  type BubbleWatchdogV11Dependencies,
   type BubbleWatchdogV11Result
 } from "../../../src/v11/application/watchdog/emitWatchdogV11.js";
+import { watchdogCommandDefaults } from "../../../src/v11/defaults/watchdog/watchdogCommandDefaults.js";
+import { watchdogPendingReworkDefaults } from "../../../src/v11/defaults/watchdog/watchdogPendingReworkDefaults.js";
 import {
   buildRunningExecutionContext,
   metaReviewExecutionContextToRunningContext
@@ -368,8 +371,10 @@ async function seedWatchdogPaneActivityFixture(input: {
 
 function buildWatchdogScenarioDependencies(
   scenario: WatchdogContractExtendedScenario
-) {
-  const baseDependencies = {
+): BubbleWatchdogV11Dependencies {
+  const baseDependencies: BubbleWatchdogV11Dependencies = {
+    ...watchdogCommandDefaults,
+    ...watchdogPendingReworkDefaults,
     readRuntimeSessionsRegistry: () => Promise.resolve({}),
     runTmux: () =>
       Promise.resolve({

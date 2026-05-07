@@ -20,65 +20,39 @@ import {
   maybeMonitorWatchdogPaneActivity,
   type WatchdogPaneActivityState
 } from "./watchdogPaneActivityMonitoring.js";
-import {
-  loadWatchdogCommandDefaults,
-  loadWatchdogPendingReworkDefaults
-} from "./watchdogDependencyDefaults.js";
 export { BubbleWatchdogError } from "./watchdogCommandRuntime.js";
 
 export async function runBubbleWatchdog(
   input: BubbleWatchdogInput,
-  dependencies: BubbleWatchdogDependencies = {}
+  dependencies: BubbleWatchdogDependencies
 ): Promise<BubbleWatchdogResult> {
   const now = input.now ?? new Date();
   const nowIso = now.toISOString();
-  const watchdogCommandDefaults = await loadWatchdogCommandDefaults();
-  const watchdogPendingReworkDefaults = await loadWatchdogPendingReworkDefaults();
-  const resolved = await watchdogCommandDefaults.resolveBubbleById(
+  const resolved = await dependencies.resolveBubbleById(
     {
       bubbleId: input.bubbleId,
       ...(input.repoPath !== undefined ? { repoPath: input.repoPath } : {}),
       ...(input.cwd !== undefined ? { cwd: input.cwd } : {})
     }
   );
-  const readState =
-    dependencies.readStateSnapshot ?? watchdogCommandDefaults.readStateSnapshot;
-  const appendEnvelope =
-    dependencies.appendProtocolEnvelope ??
-    watchdogCommandDefaults.appendProtocolEnvelope;
-  const writeState =
-    dependencies.writeStateSnapshot ?? watchdogCommandDefaults.writeStateSnapshot;
+  const readState = dependencies.readStateSnapshot;
+  const appendEnvelope = dependencies.appendProtocolEnvelope;
+  const writeState = dependencies.writeStateSnapshot;
   const loadedState = await readState(resolved.bubblePaths.statePath);
   const state = loadedState.state;
-  const emitDelivery =
-    dependencies.emitDeliveryNotificationAck ??
-    watchdogCommandDefaults.emitDeliveryNotificationAck;
-  const emitNotification =
-    dependencies.emitBubbleNotification ??
-    watchdogCommandDefaults.emitBubbleNotification;
-  const readPaneActivity =
-    dependencies.readWatchdogPaneActivity ??
-    watchdogCommandDefaults.readWatchdogPaneActivity;
-  const writePaneActivity =
-    dependencies.writeWatchdogPaneActivity ??
-    watchdogCommandDefaults.writeWatchdogPaneActivity;
-  const appendTrace: AppendWatchdogTracePort =
-    dependencies.appendWatchdogTrace ?? watchdogCommandDefaults.appendWatchdogTrace;
+  const emitDelivery = dependencies.emitDeliveryNotificationAck;
+  const emitNotification = dependencies.emitBubbleNotification;
+  const readPaneActivity = dependencies.readWatchdogPaneActivity;
+  const writePaneActivity = dependencies.writeWatchdogPaneActivity;
+  const appendTrace: AppendWatchdogTracePort = dependencies.appendWatchdogTrace;
   const samplePaneActivity =
     dependencies.sampleWatchdogPaneActivity ?? sampleWatchdogPaneActivity;
-  const readRuntimeSessionsRegistry =
-    dependencies.readRuntimeSessionsRegistry
-    ?? watchdogCommandDefaults.readRuntimeSessionsRegistry;
-  const runTmux = dependencies.runTmux ?? watchdogCommandDefaults.runTmux;
+  const readRuntimeSessionsRegistry = dependencies.readRuntimeSessionsRegistry;
+  const runTmux = dependencies.runTmux;
   const ensureBubbleInstanceIdForMutation =
-    dependencies.ensureBubbleInstanceIdForMutation
-    ?? watchdogPendingReworkDefaults.ensureBubbleInstanceIdForMutation;
-  const resolveDeliveryMessageRef =
-    dependencies.resolveDeliveryMessageRef
-    ?? watchdogPendingReworkDefaults.resolveDeliveryMessageRef;
-  const retryStuckAgentInput =
-    dependencies.retryStuckAgentInput
-    ?? watchdogCommandDefaults.retryStuckAgentInput;
+    dependencies.ensureBubbleInstanceIdForMutation;
+  const resolveDeliveryMessageRef = dependencies.resolveDeliveryMessageRef;
+  const retryStuckAgentInput = dependencies.retryStuckAgentInput;
   const context: WatchdogRuntimeContext = {
     now,
     nowIso,

@@ -15,6 +15,8 @@ import {
 } from "../../../src/v11/application/resume/emitResumeV11.js";
 import { emitHumanReplyV11 as emitHumanReply } from "../../../src/v11/application/reply/emitReplyV11.js";
 import { readTranscriptEnvelopes } from "../../../src/v11/infrastructure/artifact/transcript/transcriptStore.js";
+import { watchdogCommandDefaults } from "../../../src/v11/defaults/watchdog/watchdogCommandDefaults.js";
+import { watchdogPendingReworkDefaults } from "../../../src/v11/defaults/watchdog/watchdogPendingReworkDefaults.js";
 import {
   readRuntimeSessionsRegistry,
   upsertRuntimeSession
@@ -26,6 +28,7 @@ import { metaReviewExecutionContextToRunningContext } from "../../../src/v11/sha
 import { applyStateTransition } from "../../../src/v11/domain/state/machine.js";
 import { readStateSnapshot, writeStateSnapshot } from "../../../src/v11/infrastructure/state/stateStore.js";
 import { runBubbleWatchdogV11 } from "../../../src/v11/application/watchdog/emitWatchdogV11.js";
+import type { BubbleWatchdogV11Dependencies } from "../../../src/v11/application/watchdog/emitWatchdogV11.js";
 import type { EmitDeliveryNotificationAckPort } from "../../../src/v11/shared/ports/tmuxDelivery.js";
 import { initGitRepository } from "../../helpers/git.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
@@ -34,9 +37,11 @@ const tempDirs: string[] = [];
 
 async function runBubbleWatchdog(
   input: Parameters<typeof runBubbleWatchdogV11>[0],
-  dependencies: Parameters<typeof runBubbleWatchdogV11>[1] = {}
+  dependencies: Partial<BubbleWatchdogV11Dependencies> = {}
 ): Promise<Awaited<ReturnType<typeof runBubbleWatchdogV11>>> {
   return runBubbleWatchdogV11(input, {
+    ...watchdogCommandDefaults,
+    ...watchdogPendingReworkDefaults,
     readRuntimeSessionsRegistry,
     runTmux,
     ...dependencies

@@ -12,7 +12,7 @@ export {
 
 export async function runBubbleWatchdogV11(
   input: BubbleWatchdogInput,
-  dependencies: BubbleWatchdogDependencies = {}
+  dependencies: BubbleWatchdogDependencies
 ): Promise<BubbleWatchdogResult> {
   return runBubbleWatchdog(input, dependencies);
 }
