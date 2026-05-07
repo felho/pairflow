@@ -45,6 +45,41 @@ Split mutation construction from mutation execution. Put pure transition derivat
 
 The trade-off is some call-site movement and narrower dependency bundles. The benefit is lower [shared knowledge](https://coupling.dev/posts/dimensions-of-coupling/integration-strength/) at the shared boundary: lifecycle policy changes stay close to their owner, while shared remains a contract surface.
 
+The target responsibility split should be explicit:
+
+- `domain/state/**` should own pure lifecycle derivation: allowed transition inputs, start/resume/failure snapshot derivation, watchdog `WAITING_HUMAN` derivation, deferred rework application, next-round continuation, and execution-context invariants. Meta-review cleanup belongs here only when it is inseparable from a state transition, such as clearing live meta-review state while deriving an applied rework continuation; broader gate policy remains under the meta-review gate ownership described in the next issue.
+- `application/start/**`, `application/watchdog/**`, and `application/approval/**` should own command workflows: transcript/state write ordering, optimistic fingerprint/state guards, runtime delivery, remote/local routing, identity mutation, metrics, notification side effects, and command-facing error mapping.
+- `shared/ports/**` should remain the stable capability boundary for state snapshot writes, transcript append, inbox mirroring, delivery, notification, and related adapter contracts. It should not own the policy workflow that decides what lifecycle mutation means.
+
+Do not introduce an application-level shared mutation boundary as the first step. The current helpers are not one common use case: start/resume owns workspace bootstrap and runtime launch authority, watchdog escalation owns transcript-first human intervention and recovery semantics, and rework intent owns approval/watchdog handoff and next-round continuation. A boundary such as `application/lifecycleMutation/**` is justified only after two or more command modules contain duplicated persistence choreography with the same transaction semantics. If introduced, it should be named as application orchestration, not `shared`, and expose typed contracts that state whether transcript append, inbox mirroring, state write, delivery, notification, and metrics are part of the operation.
+
+Recommended migration sequence:
+
+1. Add pure `domain/state/**` derivation functions while keeping existing callers intact. Candidate responsibilities include start preparing/running/resume/failed snapshots, watchdog waiting-human state, queued rework intent state, and applied rework continuation state.
+2. Move watchdog escalation first because its invariant is clearest: append the `HUMAN_QUESTION` transcript envelope with inbox mirroring first, then persist `WAITING_HUMAN`, and preserve the existing recovery error when state write fails after transcript append.
+3. Move start/resume derivation next. Preserve `PREPARING_WORKSPACE -> RUNNING`, ideation `round=0`, fresh round-role history append, resume execution-context restart, and failed cleanup behavior. Keep bootstrap, runtime-session authority, tmux launch, remote start routing, and writes in `application/start/**`.
+4. Move deferred rework intent last. Unify duplicated next-round continuation behavior between immediate approval rework and pending rework application, while keeping delivery confirmation, identity mutation, persistence, and lifecycle metrics in the application command modules. Limit meta-review cleanup in this step to preserving the existing live-snapshot cleanup that already happens as part of rework continuation; do not expand the task into meta-review gate policy migration.
+5. Remove or shrink the old `shared/{state,watchdog,approval}` mutation exports. Keep only stable, genuinely shared value helpers if their semantics are multi-lane and policy-neutral; otherwise move them to the domain owner.
+6. Add a fitness warning after the migration establishes the intended shape. The check should catch command lifecycle policy under `shared/**`, not only helpers that still both import `domain/state/machine` and write snapshots. Useful signals include lifecycle-state transition decisions, execution-context continuation, transcript/state ordering, or state persistence orchestration in non-port shared modules.
+
+Main risks and test impact:
+
+- Preserve transcript-first watchdog recovery, including inbox mirroring and the state-write-failed recovery message after a successful append.
+- Preserve best-effort notification semantics: delivery/status and UX notifications after successful watchdog escalation must remain non-blocking side effects and must not block protocol/state progression if notification fails.
+- Preserve optimistic concurrency guards on state writes, ideation start semantics, resume execution-context restart behavior, rework continuation round history, and the existing live meta-review cleanup tied to rework continuation.
+- Add domain unit tests for pure derivation functions, plus application flow coverage for watchdog escalation, start/resume, approval rework, and pending rework application. Before/after state snapshots and transcript envelopes should match existing fixtures for fresh start, ideation start, resume, failed cleanup, watchdog escalation, queued rework intent, and applied pending rework intent.
+
+Recommended first implementation task: move watchdog escalation lifecycle derivation out of `shared/watchdog/watchdogEscalationMutation.ts` into a pure `domain/state` derivation function, and move transcript-first append/write orchestration into `application/watchdog/**`. The task should preserve the emitted `HUMAN_QUESTION` envelope, inbox mirroring, append-before-write ordering, expected state/fingerprint write guards, state-write-failed recovery error, and non-blocking notification behavior.
+
+Acceptance for that first task should require:
+
+- an explicit typed domain derivation boundary with no I/O ports, transcript paths, lock paths, or snapshot write dependencies;
+- an application flow test proving transcript append happens before state write and that a state-write failure after append returns the existing recovery error;
+- an application flow or focused unit test proving the appended `HUMAN_QUESTION` still mirrors to the inbox path;
+- an application flow or focused unit test proving delivery/status and UX notification failures remain best-effort and do not block protocol/state progression after a successful append/write;
+- unchanged state write guards for expected fingerprint and expected `RUNNING` state;
+- validation with `pnpm typecheck`, `pnpm lint`, `pnpm fitness:check:ci`, and `pnpm build`, because the implementation task moves Pairflow CLI/runtime source under `src/v11/**`.
+
 ## Issue: Meta-review submit validation and gate policy are split across shared and domain
 
 **Integration**: `src/v11/shared/metaReview/metaReviewCommandSubmitValidation.ts` + `src/v11/shared/metaReviewGate/metaReviewGateRouteContract.ts` -> `src/v11/domain/metaReviewGate/**` -> `src/v11/application/metaReviewGate/**`  
