@@ -21,6 +21,9 @@ import {
   readReviewerFocusArtifact
 } from "../reviewer/reviewerArtifactDefaults.js";
 import {
+  resolveDocContractGateArtifactPath
+} from "../gates/docContractGateArtifactDefaults.js";
+import {
   resolveReviewerTestExecutionDirective
 } from "../reviewer/reviewerTestEvidenceDefaults.js";
 import {
@@ -59,6 +62,9 @@ import type {
   ReadReviewerFocusArtifactPort
 } from "../../shared/ports/reviewerArtifacts.js";
 import type {
+  ResolveDocContractGateArtifactPathPort
+} from "../../shared/ports/docContractGateArtifacts.js";
+import type {
   ResolveReviewerTestExecutionDirectivePort
 } from "../../shared/ports/reviewerTestEvidenceArtifacts.js";
 
@@ -86,6 +92,7 @@ export interface StartBubbleDependencyDefaults {
   ) => Promise<ExecuteRemoteBubbleStartResult>;
   readReviewerBriefArtifact: ReadReviewerBriefArtifactPort;
   readReviewerFocusArtifact: ReadReviewerFocusArtifactPort;
+  resolveDocContractGateArtifactPath: ResolveDocContractGateArtifactPathPort;
   resolveReviewerTestExecutionDirective:
     ResolveReviewerTestExecutionDirectivePort;
 }
@@ -124,5 +131,6 @@ export const startBubbleDependencyDefaults: StartBubbleDependencyDefaults = {
   executeRemoteBubbleStart: executeRemoteBubbleStartCanonical,
   readReviewerBriefArtifact,
   readReviewerFocusArtifact,
+  resolveDocContractGateArtifactPath,
   resolveReviewerTestExecutionDirective
 };

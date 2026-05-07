@@ -47,6 +47,8 @@ export interface StartBubbleDependencyDefaults {
     NonNullable<StartBubbleDependencies["readReviewerBriefArtifact"]>;
   readReviewerFocusArtifact:
     NonNullable<StartBubbleDependencies["readReviewerFocusArtifact"]>;
+  resolveDocContractGateArtifactPath:
+    NonNullable<StartBubbleDependencies["resolveDocContractGateArtifactPath"]>;
   resolveReviewerTestExecutionDirective:
     NonNullable<StartBubbleDependencies["resolveReviewerTestExecutionDirective"]>;
 }

@@ -266,7 +266,7 @@ row ID prefix is historical, the "Cat" column is authoritative.
 | A1 | `application/askHuman/askHumanFinalizationDependencyDefaults.ts:37` | `defaults/askHuman/askHumanFinalizationDefaults.ts` | **B** (reclassified) | Verified: target imports 2 infrastructure adapters (`emitBubbleNotification`, `emitDeliveryNotificationAck`). Two-adapter aggregation = composition. CLI passes the aggregator. (Optional alternative: a 2-port `Notification` slice as A; lean B because the existing aggregator already has the right shape.) |
 | A2 | `application/bubbleIdentity/bubbleIdentityDependencyDefaults.ts:18` | `defaults/bubbleIdentity/bubbleIdentityDefaults.ts` | A | Single port (`EnsureBubbleInstanceIdForMutation`). Use the existing port type directly. |
 | A3 | `application/bubbleLookup/bubbleLookupDependencyDefaults.ts:18` | `defaults/bubbleLookup/bubbleLookupDefaults.ts` | A | Single port (`ResolveBubbleByIdPort`). Same target as S2. |
-| A4 | `application/gates/docContractGateArtifactDependencyDefaults.ts:24` | `defaults/gates/docContractGateArtifactDefaults.ts` | A | Existing artifact port directly. |
+| A4 | `application/gates/docContractGateArtifactDependencyDefaults.ts:24` | `defaults/gates/docContractGateArtifactDefaults.ts` | A | Completed in Batch 15: doc-contract gate artifact ports are now supplied through create, pass-validation, and start defaults aggregates; the standalone application shim was deleted. |
 | A5 | `application/metaReview/metaReviewDependencyDefaults.ts:20` | `defaults/runtimeSessions/runtimeSessionsDefaults.ts` | A | Completed in Batch 11: V11/default wrapper injects the runtime-sessions read port through `defaults/metaReview`; the application shim was deleted. |
 | A6 | `application/process/processSpawnDependencyDefaults.ts:8` | `defaults/process/processSpawnDefaults.ts` | A | `ProcessSpawnPort` directly (port exists in `shared/ports/processSpawn.ts`). No wrapper. |
 | A7 | `application/repoRegistry/repoRegistryDependencyDefaults.ts:18` | `defaults/repoRegistry/repoRegistryDefaults.ts` | A | Completed in Batch 10: start CLI now consumes `defaults/start/startCliDefaults.ts` from the CLI layer; the application repo-registry shim was deleted. |
@@ -1013,6 +1013,35 @@ In the closing PR:
   - `pnpm test` skipped for this focused reviewer test-evidence defaults
     rewiring batch; the targeted pass, converged, start, and
     application-defaults-fitness tests cover the changed surface.
+  - `pnpm build` passed.
+
+### 2026-05-07 — Batch 15: route doc-contract gate artifact ports through command defaults
+
+- Added doc-contract gate artifact path/write ports to create dependencies and
+  `src/v11/defaults/create/createBubbleDefaults.ts`; create persistence now
+  consumes them from injected create dependencies.
+- Added doc-contract gate artifact read/path/write ports to
+  `src/v11/defaults/pass/passValidationCommandDefaults.ts` and exposed them
+  through the existing application pass-validation defaults wrapper; pass flow
+  wiring now calls the reviewer doc-gate updater with those ports explicitly.
+- Added the doc-contract gate artifact path resolver to start defaults and
+  threaded it into remote-start control-file preparation.
+- Updated the doc-gate fail-open create test to use an injected failing write
+  port instead of mocking the deleted application shim.
+- Deleted `src/v11/application/gates/docContractGateArtifactDependencyDefaults.ts`.
+- Fitness result after the batch: application dynamic defaults warnings are
+  down from 27 to 26; shared dynamic defaults warnings remain 0. Hard-fail
+  fitness checks pass.
+- Validation:
+  - `pnpm typecheck` passed.
+  - `pnpm lint` passed.
+  - `pnpm fitness:check:ci` passed with the expected remaining warnings
+    (`application_defaults_boundary=26`, `shared_defaults_boundary=0`).
+  - `pnpm exec vitest run tests/core/bubble/createBubble.docContractGatesFailOpen.test.ts tests/core/bubble/createBubble.test.ts tests/core/agent/pass.test.ts tests/v11/application/start/startCommandRemoteExecution.test.ts tests/v11/application/pass/reviewerDocGateArtifactUpdater.test.ts tests/v11/application/pass/passFlowDependencyWiring.test.ts tests/tools/fitness/applicationDefaultsBoundary.test.ts`
+    passed (`7` files, `220` tests).
+  - `pnpm test` skipped for this focused doc-contract gate artifact defaults
+    rewiring batch; the targeted create, pass, start remote execution, updater,
+    wiring, and application-defaults-fitness tests cover the changed surface.
   - `pnpm build` passed.
 
 ---

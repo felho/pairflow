@@ -1,7 +1,9 @@
 import { readFile } from "node:fs/promises";
 
 import { renderBubbleConfigToml } from "../../../config/bubbleConfig.js";
-import { resolveDocContractGateArtifactPath } from "../gates/docContractGateArtifactDependencyDefaults.js";
+import type {
+  ResolveDocContractGateArtifactPathPort
+} from "../../shared/ports/docContractGateArtifacts.js";
 import { reviewerPolicySnapshotFileName } from "../../shared/reviewer/reviewerPolicySnapshot.js";
 import type { RemoteStartControlFile } from "./startCommandContract.js";
 import type { StartExecutionContext } from "./startCommandContext.js";
@@ -101,8 +103,12 @@ function buildRequiredArtifactSpecs(
 }
 
 function buildOptionalArtifactSpecs(
-  context: StartExecutionContext
+  input: {
+    context: StartExecutionContext;
+    resolveDocContractGateArtifactPath: ResolveDocContractGateArtifactPathPort;
+  }
 ): RemoteControlArtifactSpec[] {
+  const { context } = input;
   return [
     {
       relativePath: `.pairflow/bubbles/${context.resolved.bubbleId}/artifacts/reviewer-focus.json`,
@@ -124,7 +130,9 @@ function buildOptionalArtifactSpecs(
     },
     {
       relativePath: `.pairflow/bubbles/${context.resolved.bubbleId}/artifacts/doc-contract-gates.json`,
-      sourcePath: resolveDocContractGateArtifactPath(context.resolved.bubblePaths.artifactsDir),
+      sourcePath: input.resolveDocContractGateArtifactPath(
+        context.resolved.bubblePaths.artifactsDir
+      ),
       artifactKind: "doc_contract_gates",
       required: false
     }
@@ -155,6 +163,7 @@ async function readArtifactFiles(input: {
 export async function buildRemoteControlFiles(input: {
   context: StartExecutionContext;
   remoteClonePath: string;
+  resolveDocContractGateArtifactPath: ResolveDocContractGateArtifactPathPort;
 }): Promise<RemoteStartControlFile[]> {
   try {
     const bubbleTomlPath = `.pairflow/bubbles/${input.context.resolved.bubbleId}/bubble.toml`;
@@ -171,7 +180,11 @@ export async function buildRemoteControlFiles(input: {
     const optionalFiles = await readArtifactFiles({
       context: input.context,
       remoteClonePath: input.remoteClonePath,
-      artifacts: buildOptionalArtifactSpecs(input.context)
+      artifacts: buildOptionalArtifactSpecs({
+        context: input.context,
+        resolveDocContractGateArtifactPath:
+          input.resolveDocContractGateArtifactPath
+      })
     });
 
     return [

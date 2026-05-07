@@ -6,6 +6,8 @@ type CreateBubbleDependencyDefaults = Required<
     | "appendProtocolEnvelope"
     | "assertGitRepository"
     | "loadPairflowGlobalConfig"
+    | "resolveDocContractGateArtifactPath"
+    | "writeDocContractGateArtifact"
     | "writeRemotePointer"
   >
 >;

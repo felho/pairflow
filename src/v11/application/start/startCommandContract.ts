@@ -21,6 +21,9 @@ import type {
 } from "../../shared/ports/runtimeSessions.js";
 import type { WriteStateSnapshotPort } from "../../shared/ports/stateSnapshots.js";
 import type {
+  ResolveDocContractGateArtifactPathPort
+} from "../../shared/ports/docContractGateArtifacts.js";
+import type {
   ReadReviewerBriefArtifactPort,
   ReadReviewerFocusArtifactPort
 } from "../../shared/ports/reviewerArtifacts.js";
@@ -106,6 +109,7 @@ export interface StartBubbleDependencies {
   buildResumeTranscriptSummary?: typeof buildResumeTranscriptSummary;
   readReviewerBriefArtifact?: ReadReviewerBriefArtifactPort;
   readReviewerFocusArtifact?: ReadReviewerFocusArtifactPort;
+  resolveDocContractGateArtifactPath?: ResolveDocContractGateArtifactPathPort;
   resolveReviewerTestExecutionDirective?: ResolveReviewerTestExecutionDirectivePort;
   loadPairflowGlobalConfig?: () => Promise<PairflowGlobalConfig>;
   runGitCommand?: RunGitPort;

@@ -9,11 +9,11 @@ import {
   isDocContractGateScopeActive,
   mergeArtifactWithReviewerEvaluation,
 } from "../../../v11/shared/gates/docContractGates.js";
-import {
-  readDocContractGateArtifact,
-  resolveDocContractGateArtifactPath,
-  writeDocContractGateArtifact
-} from "../gates/docContractGateArtifactDependencyDefaults.js";
+import type {
+  ReadDocContractGateArtifactPort,
+  ResolveDocContractGateArtifactPathPort,
+  WriteDocContractGateArtifactPort
+} from "../../shared/ports/docContractGateArtifacts.js";
 
 export interface UpdateReviewerDocGateArtifactInput {
   now: Date;
@@ -24,6 +24,12 @@ export interface UpdateReviewerDocGateArtifactInput {
   findings: Finding[];
   reviewerEvaluation?: ReturnType<typeof evaluateReviewerGateWarnings>;
   createError: PairflowCreateCommandError;
+}
+
+export interface UpdateReviewerDocGateArtifactDependencies {
+  readDocContractGateArtifact: ReadDocContractGateArtifactPort;
+  resolveDocContractGateArtifactPath: ResolveDocContractGateArtifactPathPort;
+  writeDocContractGateArtifact: WriteDocContractGateArtifactPort;
 }
 
 export function createDocGateReadFailureWarning(input: {
@@ -53,7 +59,8 @@ export function extractTaskContentFromTaskArtifact(taskArtifactContent: string):
 }
 
 export async function updateReviewerDocGateArtifact(
-  input: UpdateReviewerDocGateArtifactInput
+  input: UpdateReviewerDocGateArtifactInput,
+  dependencies: UpdateReviewerDocGateArtifactDependencies
 ): Promise<string | undefined> {
   if (
     !isDocContractGateScopeActive({
@@ -63,13 +70,13 @@ export async function updateReviewerDocGateArtifact(
     return undefined;
   }
 
-  const gateArtifactPath = resolveDocContractGateArtifactPath(
+  const gateArtifactPath = dependencies.resolveDocContractGateArtifactPath(
     input.artifactsDir
   );
   let baseArtifact: DocContractGateArtifact | undefined;
   let gateReadWarning: BubbleFailingGate | undefined;
   try {
-    baseArtifact = await readDocContractGateArtifact(gateArtifactPath);
+    baseArtifact = await dependencies.readDocContractGateArtifact(gateArtifactPath);
   } catch (error) {
     const reason = error instanceof Error ? error.message : String(error);
     gateReadWarning = createDocGateReadFailureWarning({
@@ -123,7 +130,7 @@ export async function updateReviewerDocGateArtifact(
     reviewerEvaluation: reviewEvaluation
   });
   try {
-    await writeDocContractGateArtifact(gateArtifactPath, nextArtifact);
+    await dependencies.writeDocContractGateArtifact(gateArtifactPath, nextArtifact);
   } catch (error) {
     return error instanceof Error ? error.message : String(error);
   }

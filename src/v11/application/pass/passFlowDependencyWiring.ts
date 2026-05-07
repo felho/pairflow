@@ -36,6 +36,18 @@ export interface PassFlowRuntimeDependencies extends PassDeliveryDependencies {
   emitBubbleNotification?: EmitConvergedDependencies["emitBubbleNotification"];
 }
 
+const updateReviewerDocGateArtifactWithDefaults = (
+  input: Parameters<typeof updateReviewerDocGateArtifact>[0]
+) =>
+    updateReviewerDocGateArtifact(input, {
+      readDocContractGateArtifact:
+        passValidationDefaults.readDocContractGateArtifact,
+      resolveDocContractGateArtifactPath:
+        passValidationDefaults.resolveDocContractGateArtifactPath,
+      writeDocContractGateArtifact:
+        passValidationDefaults.writeDocContractGateArtifact
+    });
+
 function resolvePassFlowDeliveryOverride(
   runtimeDependencies: PassFlowRuntimeDependencies
 ): PassDeliveryDependencies["emitDeliveryNotificationAck"] | undefined {
@@ -71,7 +83,7 @@ export function createAutoConvergeFlowDependencies(
       ? { emitBubbleNotification: runtimeDependencies.emitBubbleNotification }
       : {}),
     finalizeAutoConvergePass,
-    updateReviewerDocGateArtifact,
+    updateReviewerDocGateArtifact: updateReviewerDocGateArtifactWithDefaults,
     emitBubbleLifecycleEventBestEffort,
     buildPassLifecycleMetricMetadata,
     buildAutoConvergePassResult
@@ -100,7 +112,7 @@ export function createNormalPassFlowDependencies(
     persistNormalPassPostAppend,
     writePostAppendReviewVerificationArtifact,
     writePostAppendPassState,
-    updateReviewerDocGateArtifact,
+    updateReviewerDocGateArtifact: updateReviewerDocGateArtifactWithDefaults,
     executeNormalPassDelivery,
     resolveReviewerTestDirectiveForPass,
     executePassDelivery,

@@ -5,6 +5,10 @@ import type { BubbleRemotePointer } from "../../../types/bubble.js";
 import type { BubblePaths } from "../../shared/bubble/bubblePaths.js";
 import type { AssertGitRepositoryPort } from "../../shared/ports/gitRepository.js";
 import type { AppendProtocolEnvelopePort } from "../../shared/ports/transcript.js";
+import type {
+  ResolveDocContractGateArtifactPathPort,
+  WriteDocContractGateArtifactPort
+} from "../../shared/ports/docContractGateArtifacts.js";
 import type { ReviewerFocusExtractionResult } from "../../../v11/shared/reviewer/reviewerBrief.js";
 import type {
   AgentName,
@@ -72,11 +76,13 @@ export interface BubbleCreateDependencies {
   writeReviewerFocusArtifact?: typeof writeFile;
   assertGitRepository?: AssertGitRepositoryPort;
   appendProtocolEnvelope?: AppendProtocolEnvelopePort;
+  resolveDocContractGateArtifactPath?: ResolveDocContractGateArtifactPathPort;
   loadPairflowGlobalConfig?: () => Promise<PairflowGlobalConfig>;
   writeRemotePointer?: (
     path: string,
     value: BubbleRemotePointer
   ) => Promise<void>;
+  writeDocContractGateArtifact?: WriteDocContractGateArtifactPort;
 }
 
 export type CreateBubbleImplementation = (

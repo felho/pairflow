@@ -1,4 +1,9 @@
 import type { BubbleConfig } from "../../../types/bubble.js";
+import type {
+  ReadDocContractGateArtifactPort,
+  ResolveDocContractGateArtifactPathPort,
+  WriteDocContractGateArtifactPort
+} from "../../shared/ports/docContractGateArtifacts.js";
 import type { ReviewerTestExecutionDirective } from "../../shared/reviewer/testEvidence.js";
 
 export type PassValidationPolicyState =
@@ -81,6 +86,8 @@ interface PassValidationDefaults {
     policyState: PassValidationPolicyState;
     executedCommands: PassValidationCommandResult[];
   }) => ReviewerTestExecutionDirective;
+  readDocContractGateArtifact: ReadDocContractGateArtifactPort;
+  resolveDocContractGateArtifactPath: ResolveDocContractGateArtifactPathPort;
   resolvePassValidationArtifactPath: (artifactsDir: string) => string;
   resolvePassValidationPolicy: (
     bubbleConfig: BubbleConfig
@@ -95,6 +102,7 @@ interface PassValidationDefaults {
     artifactPath: string,
     artifact: PassValidationEvidenceArtifact
   ) => Promise<void>;
+  writeDocContractGateArtifact: WriteDocContractGateArtifactPort;
   writePassValidationReviewerCompatibilityArtifact: (
     artifactPath: string,
     directive: ReviewerTestExecutionDirective

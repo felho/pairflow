@@ -210,7 +210,9 @@ export async function prepareRemoteStartExecution(input: {
   );
   const controlFiles = await buildRemoteControlFiles({
     context: input.context,
-    remoteClonePath
+    remoteClonePath,
+    resolveDocContractGateArtifactPath:
+      input.deps.resolveDocContractGateArtifactPath
   });
   const preparingWritten = await executeStartPreparingMutation({
     statePath: input.context.resolved.bubblePaths.statePath,

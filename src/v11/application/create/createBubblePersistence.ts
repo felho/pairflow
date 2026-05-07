@@ -5,10 +5,6 @@ import {
   createDocContractGateArtifact,
   isDocContractGateScopeActive
 } from "../../../v11/shared/gates/docContractGates.js";
-import {
-  resolveDocContractGateArtifactPath,
-  writeDocContractGateArtifact
-} from "../gates/docContractGateArtifactDependencyDefaults.js";
 import { appendInitialTaskEnvelope } from "./createInitialTaskEnvelopeAppend.js";
 import { renderBubbleConfigToml } from "../../../config/bubbleConfig.js";
 import type {
@@ -171,6 +167,24 @@ export async function persistCreatedBubbleArtifacts(
       reviewArtifactType: input.config.review_artifact_type
     })
   ) {
+    const {
+      resolveDocContractGateArtifactPath,
+      writeDocContractGateArtifact
+    } = input.dependencies;
+    if (
+      resolveDocContractGateArtifactPath === undefined
+      || writeDocContractGateArtifact === undefined
+    ) {
+      throw toBubbleCreateError({
+        message:
+          "Missing required create bubble dependency: doc contract gate artifact ports.",
+        context: {
+          dependency: "docContractGateArtifacts",
+          command_name: "create",
+          bubble_id: input.bubbleId
+        }
+      });
+    }
     await writeDocContractGateArtifact(
       resolveDocContractGateArtifactPath(input.paths.artifactsDir),
       createDocContractGateArtifact({

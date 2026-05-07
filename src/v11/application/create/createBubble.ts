@@ -22,6 +22,12 @@ export async function createBubble(
       dependencies.appendProtocolEnvelope ?? createBubbleDefaults.appendProtocolEnvelope,
     loadPairflowGlobalConfig:
       dependencies.loadPairflowGlobalConfig ?? createBubbleDefaults.loadPairflowGlobalConfig,
+    resolveDocContractGateArtifactPath:
+      dependencies.resolveDocContractGateArtifactPath
+      ?? createBubbleDefaults.resolveDocContractGateArtifactPath,
+    writeDocContractGateArtifact:
+      dependencies.writeDocContractGateArtifact
+      ?? createBubbleDefaults.writeDocContractGateArtifact,
     writeRemotePointer:
       dependencies.writeRemotePointer ?? createBubbleDefaults.writeRemotePointer
   });

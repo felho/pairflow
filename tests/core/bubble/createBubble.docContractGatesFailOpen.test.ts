@@ -4,18 +4,10 @@ import { join } from "node:path";
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("../../../src/v11/application/gates/docContractGateArtifactDependencyDefaults.js", async (importOriginal) => {
-  const actual = await importOriginal();
-  return {
-    ...(actual as Record<string, unknown>),
-    writeDocContractGateArtifact: vi.fn(async () => {
-      throw new Error("simulated doc gate artifact write failure");
-    })
-  };
-});
-
 import { createBubble } from "../../../src/v11/application/create/createBubble.js";
-import * as docContractGates from "../../../src/v11/application/gates/docContractGateArtifactDependencyDefaults.js";
+import {
+  resolveDocContractGateArtifactPath
+} from "../../../src/v11/defaults/gates/docContractGateArtifactDefaults.js";
 import { readTranscriptEnvelopes } from "../../../src/v11/infrastructure/artifact/transcript/transcriptStore.js";
 import { initGitRepository } from "../../helpers/git.js";
 
@@ -39,25 +31,32 @@ afterEach(async () => {
 describe("createBubble (doc gate artifact fail-open)", () => {
   it("continues bubble creation when advisory doc gate artifact write fails", async () => {
     const repoPath = await createTempRepo();
-
-    const result = await createBubble({
-      id: "b_create_doc_gate_fail_open_01",
-      repoPath,
-      baseBranch: "main",
-      reviewArtifactType: "document",
-      task: "Document-only task: create bubble despite advisory gate artifact write failure",
-      cwd: repoPath
+    const writeDocContractGateArtifact = vi.fn(async () => {
+      throw new Error("simulated doc gate artifact write failure");
     });
+
+    const result = await createBubble(
+      {
+        id: "b_create_doc_gate_fail_open_01",
+        repoPath,
+        baseBranch: "main",
+        reviewArtifactType: "document",
+        task: "Document-only task: create bubble despite advisory gate artifact write failure",
+        cwd: repoPath
+      },
+      {
+        writeDocContractGateArtifact
+      }
+    );
 
     expect(result.state.state).toBe("CREATED");
     const transcript = await readTranscriptEnvelopes(result.paths.transcriptPath);
     expect(transcript).toHaveLength(1);
     expect(transcript[0]?.type).toBe("TASK");
 
-    const mockedWrite = vi.mocked(docContractGates.writeDocContractGateArtifact);
-    expect(mockedWrite).toHaveBeenCalledTimes(1);
+    expect(writeDocContractGateArtifact).toHaveBeenCalledTimes(1);
 
-    const gateArtifactPath = docContractGates.resolveDocContractGateArtifactPath(
+    const gateArtifactPath = resolveDocContractGateArtifactPath(
       result.paths.artifactsDir
     );
     await expect(stat(gateArtifactPath)).rejects.toMatchObject({

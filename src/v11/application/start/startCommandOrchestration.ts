@@ -21,6 +21,9 @@ import type {
   ReadReviewerFocusArtifactPort
 } from "../../shared/ports/reviewerArtifacts.js";
 import type {
+  ResolveDocContractGateArtifactPathPort
+} from "../../shared/ports/docContractGateArtifacts.js";
+import type {
   ResolveReviewerTestExecutionDirectivePort
 } from "../../shared/ports/reviewerTestEvidenceArtifacts.js";
 import {
@@ -72,6 +75,7 @@ export interface ResolvedStartBubbleDependencies {
     NonNullable<StartBubbleDependencies["buildResumeTranscriptSummary"]>;
   readReviewerBriefArtifact: ReadReviewerBriefArtifactPort;
   readReviewerFocusArtifact: ReadReviewerFocusArtifactPort;
+  resolveDocContractGateArtifactPath: ResolveDocContractGateArtifactPathPort;
   resolveReviewerTestExecutionDirective: ResolveReviewerTestExecutionDirectivePort;
 }
 
@@ -152,6 +156,9 @@ function resolveReviewerDependencies(input: {
     readReviewerFocusArtifact:
       input.dependencies.readReviewerFocusArtifact
       ?? input.defaults.readReviewerFocusArtifact,
+    resolveDocContractGateArtifactPath:
+      input.dependencies.resolveDocContractGateArtifactPath
+      ?? input.defaults.resolveDocContractGateArtifactPath,
     resolveReviewerTestExecutionDirective:
       input.dependencies.resolveReviewerTestExecutionDirective
       ?? input.defaults.resolveReviewerTestExecutionDirective
