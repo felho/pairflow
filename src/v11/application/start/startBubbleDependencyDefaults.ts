@@ -32,6 +32,9 @@ import type {
 import type {
   ResolveReviewerTestExecutionDirectivePort
 } from "../../shared/ports/reviewerTestEvidenceArtifacts.js";
+import type {
+  ResolveBubbleFromWorkspaceCwdPort
+} from "../../shared/ports/workspaceResolution.js";
 
 interface ExecuteRemoteBubbleStartInput {
   bubbleId: string;
@@ -93,6 +96,7 @@ export interface StartBubbleDependencyDefaults {
   readReviewerBriefArtifact: ReadReviewerBriefArtifactPort;
   readReviewerFocusArtifact: ReadReviewerFocusArtifactPort;
   resolveDocContractGateArtifactPath: ResolveDocContractGateArtifactPathPort;
+  resolveBubbleFromWorkspaceCwd: ResolveBubbleFromWorkspaceCwdPort;
   resolveReviewerTestExecutionDirective: ResolveReviewerTestExecutionDirectivePort;
 }
 

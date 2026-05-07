@@ -2,7 +2,9 @@ import {
   readStateSnapshot
 } from "../state/stateStoreDependencyDefaults.js";
 import { ensureBubbleInstanceIdForMutation } from "../bubbleIdentity/bubbleIdentityDependencyDefaults.js";
-import { resolveBubbleFromWorkspaceCwd } from "../workspace/workspaceResolutionDependencyDefaults.js";
+import {
+  resolveBubbleFromWorkspaceCwd
+} from "../start/startCommandDependencyDefaults.js";
 
 export const askHumanRoutingPreparationDependencyDefaults = {
   resolveBubbleFromWorkspaceCwd,

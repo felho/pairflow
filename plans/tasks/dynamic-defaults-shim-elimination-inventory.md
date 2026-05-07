@@ -274,7 +274,7 @@ row ID prefix is historical, the "Cat" column is authoritative.
 | A9 | `application/status/statusCommandDefaults.ts:26` | `defaults/watchdog/watchdogPaneActivityDefaults.ts` | A | Verified: caller only uses `readWatchdogPaneActivity` (read-only). Single-port DI; use the existing read port directly, no slice. The defaults file exports read/write/remove, but this consumer needs only read. |
 | A10 | `application/tmux/tmuxRunnerDependencyDefaults.ts:18` | `defaults/tmux/tmuxRunnerDefaults.ts` | A | Completed in Batch 16: the `runTmux` port is now supplied through the existing start defaults aggregate; the standalone application tmux shim was deleted. |
 | A11 | `application/transcript/transcriptDependencyDefaults.ts:23` | `defaults/transcript/transcriptDependencyDefaults.ts` | A | **`TranscriptCapabilities` slice** (append + read). Real slice case. |
-| A12 | `application/workspace/workspaceResolutionDependencyDefaults.ts:18` | `defaults/workspace/workspaceResolutionDefaults.ts` | A | Existing workspace-resolution port directly. |
+| A12 | `application/workspace/workspaceResolutionDependencyDefaults.ts:18` | `defaults/workspace/workspaceResolutionDefaults.ts` | A | Completed in Batch 19: workspace resolution now flows through the existing start context defaults aggregate; standalone application workspace-resolution shim was deleted. |
 
 ---
 
@@ -1117,6 +1117,33 @@ In the closing PR:
     passed (`8` files, `184` tests).
   - `pnpm test` skipped for this focused process-spawn defaults rewiring batch;
     the targeted open, attach, start, CLI wrapper, and
+    application-defaults-fitness tests cover the changed surface.
+  - `pnpm lint` passed.
+  - `pnpm build` passed.
+
+### 2026-05-07 — Batch 19: remove workspace-resolution defaults shim
+
+- Added `resolveBubbleFromWorkspaceCwd` to
+  `src/v11/defaults/start/startBubbleDefaults.ts` and the application-side
+  start defaults contract.
+- Exposed the workspace-resolution port through
+  `startCommandContextDefaults`, reusing the existing start defaults aggregate
+  instead of adding another application-to-defaults route.
+- Updated approval, ask-human routing preparation, and pass workspace context
+  defaults to consume the workspace-resolution port from the start context
+  defaults aggregate.
+- Deleted `src/v11/application/workspace/workspaceResolutionDependencyDefaults.ts`.
+- Fitness result after the batch: application dynamic defaults warnings are
+  down from 23 to 22; shared dynamic defaults warnings remain 0. Hard-fail
+  fitness checks pass.
+- Validation:
+  - `pnpm typecheck` passed.
+  - `pnpm fitness:check:ci` passed with the expected remaining warnings
+    (`application_defaults_boundary=22`, `shared_defaults_boundary=0`).
+  - `pnpm exec vitest run tests/v11/application/askHuman/askHumanRoutingPreparationDependencyResolution.test.ts tests/v11/application/askHuman/askHumanRoutingPreparation.test.ts tests/v11/application/pass/passWorkspaceContextPreparation.test.ts tests/v11/application/approval/approvalCommandDependencyResolution.test.ts tests/v11/application/approval/runApprovalFlow.test.ts tests/core/bubble/workspaceResolution.test.ts tests/tools/fitness/applicationDefaultsBoundary.test.ts`
+    passed (`7` files, `55` tests).
+  - `pnpm test` skipped for this focused workspace-resolution defaults
+    rewiring batch; the targeted approval, ask-human, pass, workspace, and
     application-defaults-fitness tests cover the changed surface.
   - `pnpm lint` passed.
   - `pnpm build` passed.

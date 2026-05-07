@@ -16,10 +16,26 @@ export async function runTmux(
   return defaults.runTmux(...args);
 }
 
+export async function resolveBubbleFromWorkspaceCwd(
+  ...args: Parameters<
+    Awaited<ReturnType<typeof loadStartBubbleDependencyDefaults>>["resolveBubbleFromWorkspaceCwd"]
+  >
+): Promise<
+  Awaited<
+    ReturnType<
+      Awaited<ReturnType<typeof loadStartBubbleDependencyDefaults>>["resolveBubbleFromWorkspaceCwd"]
+    >
+  >
+> {
+  const defaults = await loadStartBubbleDependencyDefaults();
+  return defaults.resolveBubbleFromWorkspaceCwd(...args);
+}
+
 export const startCommandContextDefaults = {
   resolveBubbleById,
   ensureBubbleInstanceIdForMutation,
-  readStateSnapshot
+  readStateSnapshot,
+  resolveBubbleFromWorkspaceCwd
 } as const;
 
 export { readTranscriptEnvelopes };

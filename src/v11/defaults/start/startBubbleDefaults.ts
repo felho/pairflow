@@ -27,6 +27,7 @@ import {
   resolveReviewerTestExecutionDirective
 } from "../reviewer/reviewerTestEvidenceDefaults.js";
 import { runTmux } from "../tmux/tmuxRunnerDefaults.js";
+import { resolveBubbleFromWorkspaceCwd } from "../workspace/workspaceResolutionDefaults.js";
 import {
   cleanupWorktreeWorkspace as cleanupWorktreeWorkspaceCanonical,
   bootstrapWorktreeWorkspace as bootstrapWorktreeWorkspaceCanonical
@@ -69,6 +70,9 @@ import type {
 import type {
   ResolveReviewerTestExecutionDirectivePort
 } from "../../shared/ports/reviewerTestEvidenceArtifacts.js";
+import type {
+  ResolveBubbleFromWorkspaceCwdPort
+} from "../../shared/ports/workspaceResolution.js";
 
 export interface StartBubbleDependencyDefaults {
   bootstrapWorktreeWorkspace: BootstrapWorktreeWorkspacePort;
@@ -96,6 +100,7 @@ export interface StartBubbleDependencyDefaults {
   readReviewerBriefArtifact: ReadReviewerBriefArtifactPort;
   readReviewerFocusArtifact: ReadReviewerFocusArtifactPort;
   resolveDocContractGateArtifactPath: ResolveDocContractGateArtifactPathPort;
+  resolveBubbleFromWorkspaceCwd: ResolveBubbleFromWorkspaceCwdPort;
   resolveReviewerTestExecutionDirective:
     ResolveReviewerTestExecutionDirectivePort;
 }
@@ -136,5 +141,6 @@ export const startBubbleDependencyDefaults: StartBubbleDependencyDefaults = {
   readReviewerBriefArtifact,
   readReviewerFocusArtifact,
   resolveDocContractGateArtifactPath,
+  resolveBubbleFromWorkspaceCwd,
   resolveReviewerTestExecutionDirective
 };
