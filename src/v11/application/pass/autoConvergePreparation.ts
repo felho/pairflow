@@ -8,7 +8,6 @@ import type {
 } from "../../../v11/shared/ports/reviewVerificationArtifacts.js";
 import type { ReadStateSnapshotPort } from "../../shared/ports/stateSnapshots.js";
 import { readStateSnapshot } from "../start/startCommandDependencyDefaults.js";
-import { passValidationDefaults } from "./passValidationDependencyDefaults.js";
 import type { AgentName, BubbleStateSnapshot, ReviewArtifactType } from "../../../types/bubble.js";
 import type { ProtocolEnvelope } from "../../../types/protocol.js";
 import {
@@ -58,8 +57,7 @@ export async function prepareRepeatCleanAutoConverge(
     dependencies.createReviewVerificationArtifact
     ?? createReviewVerificationArtifact;
   const writeArtifact =
-    dependencies.writeReviewVerificationArtifactAtomic
-    ?? passValidationDefaults.writeReviewVerificationArtifactAtomic;
+    dependencies.writeReviewVerificationArtifactAtomic;
 
   const policyResult = validatePolicy({
     currentRound: input.round,
@@ -86,6 +84,12 @@ export async function prepareRepeatCleanAutoConverge(
   }
 
   if (input.reviewerVerification !== undefined) {
+    if (writeArtifact === undefined) {
+      raiseRepeatCleanReviewVerificationWriteFailed({
+        reason: "missing writeReviewVerificationArtifactAtomic dependency",
+        createError: input.createError
+      });
+    }
     const verificationArtifact = createArtifact({
       payload: input.reviewerVerification.payload,
       inputRef: input.reviewerVerification.inputRef,

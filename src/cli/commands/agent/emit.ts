@@ -32,6 +32,10 @@ import {
   metaReviewDefaults
 } from "../../../v11/defaults/metaReview/metaReviewDefaults.js";
 import {
+  PassValidationRunnerExecutionError,
+  passValidationDefaults
+} from "../../../v11/defaults/pass/passValidationCommandDefaults.js";
+import {
   notifyMetaReviewerSubmissionRequestV11
 } from "../../../v11/defaults/metaReviewGate/metaReviewGateApi.js";
 import {
@@ -455,7 +459,37 @@ export async function runAgentEmitCommand(
       resolveDeliveryMessageRef,
       verifyImplementerTestEvidence,
       writeReviewerTestEvidenceArtifact,
-      resolveReviewerTestExecutionDirectiveFromArtifact
+      resolveReviewerTestExecutionDirectiveFromArtifact,
+      readDocContractGateArtifact:
+        passValidationDefaults.readDocContractGateArtifact,
+      resolveDocContractGateArtifactPath:
+        passValidationDefaults.resolveDocContractGateArtifactPath,
+      writeDocContractGateArtifact:
+        passValidationDefaults.writeDocContractGateArtifact,
+      writeReviewVerificationArtifactAtomic:
+        passValidationDefaults.writeReviewVerificationArtifactAtomic,
+      resolveReviewVerificationInputFromRefs:
+        passValidationDefaults.resolveReviewVerificationInputFromRefs,
+      resolvePassValidationPolicy:
+        passValidationDefaults.resolvePassValidationPolicy,
+      runPassValidationCommand:
+        passValidationDefaults.runPassValidationCommand,
+      buildPassValidationEvidenceArtifact:
+        passValidationDefaults.buildPassValidationEvidenceArtifact,
+      createPassValidationReviewerDirective:
+        passValidationDefaults.createPassValidationReviewerDirective,
+      resolvePassValidationArtifactPath:
+        passValidationDefaults.resolvePassValidationArtifactPath,
+      resolvePassValidationReviewerCompatibilityArtifactPath:
+        passValidationDefaults.resolvePassValidationReviewerCompatibilityArtifactPath,
+      isPassValidationRunnerExecutionError: (
+        error: unknown
+      ): error is PassValidationRunnerExecutionError =>
+        error instanceof PassValidationRunnerExecutionError,
+      writePassValidationEvidenceArtifact:
+        passValidationDefaults.writePassValidationEvidenceArtifact,
+      writePassValidationReviewerCompatibilityArtifact:
+        passValidationDefaults.writePassValidationReviewerCompatibilityArtifact
     },
     convergence: {
       resolveReviewerTestExecutionDirective

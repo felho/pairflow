@@ -110,6 +110,14 @@ export interface BuildNormalPassFlowDependenciesInput<TResult> {
     ResolvePassValidationForPassDependencies["runPassValidationCommand"];
   buildPassValidationEvidenceArtifact:
     ResolvePassValidationForPassDependencies["buildPassValidationEvidenceArtifact"];
+  createPassValidationReviewerDirective?:
+    ResolvePassValidationForPassDependencies["createPassValidationReviewerDirective"];
+  resolvePassValidationArtifactPath?:
+    ResolvePassValidationForPassDependencies["resolvePassValidationArtifactPath"];
+  resolvePassValidationReviewerCompatibilityArtifactPath?:
+    ResolvePassValidationForPassDependencies["resolvePassValidationReviewerCompatibilityArtifactPath"];
+  isPassValidationRunnerExecutionError?:
+    ResolvePassValidationForPassDependencies["isPassValidationRunnerExecutionError"];
   writePassValidationEvidenceArtifact:
     ResolvePassValidationForPassDependencies["writePassValidationEvidenceArtifact"];
   writePassValidationReviewerCompatibilityArtifact:
@@ -184,6 +192,30 @@ export function buildNormalPassFlowDependencies<TResult>(
           ? {
               buildPassValidationEvidenceArtifact:
                 input.buildPassValidationEvidenceArtifact
+            }
+          : {}),
+        ...(input.createPassValidationReviewerDirective !== undefined
+          ? {
+              createPassValidationReviewerDirective:
+                input.createPassValidationReviewerDirective
+            }
+          : {}),
+        ...(input.resolvePassValidationArtifactPath !== undefined
+          ? {
+              resolvePassValidationArtifactPath:
+                input.resolvePassValidationArtifactPath
+            }
+          : {}),
+        ...(input.resolvePassValidationReviewerCompatibilityArtifactPath !== undefined
+          ? {
+              resolvePassValidationReviewerCompatibilityArtifactPath:
+                input.resolvePassValidationReviewerCompatibilityArtifactPath
+            }
+          : {}),
+        ...(input.isPassValidationRunnerExecutionError !== undefined
+          ? {
+              isPassValidationRunnerExecutionError:
+                input.isPassValidationRunnerExecutionError
             }
           : {}),
         ...(input.writePassValidationEvidenceArtifact !== undefined

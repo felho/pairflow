@@ -6,7 +6,6 @@ import {
 import type {
   ResolveReviewVerificationInputFromRefsPort
 } from "../../../v11/shared/ports/reviewVerificationArtifacts.js";
-import { passValidationDefaults } from "./passValidationDependencyDefaults.js";
 
 const reviewerVerificationResolutionFailedReasonCode =
   "REVIEWER_VERIFICATION_RESOLUTION_FAILED";
@@ -45,8 +44,16 @@ export async function resolveReviewerVerification(
   }
 
   const resolveInputFromRefs =
-    input.resolveInputFromRefs
-    ?? passValidationDefaults.resolveReviewVerificationInputFromRefs;
+    input.resolveInputFromRefs;
+  if (resolveInputFromRefs === undefined) {
+    raiseReviewerVerificationResolverError(
+      input.createError,
+      "Missing required reviewer verification dependency: resolveReviewVerificationInputFromRefs.",
+      {
+        dependency: "resolveReviewVerificationInputFromRefs"
+      }
+    );
+  }
   try {
     return await resolveInputFromRefs({
       refs: input.refs,

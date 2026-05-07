@@ -28,25 +28,59 @@ import { prepareReviewerVerification } from "./reviewerVerificationPreparation.j
 import { buildPassLifecycleMetricMetadata } from "../../domain/pass/lifecycleMetricMetadata.js";
 import { resolveMostRecentPreviousReviewerPassIsCleanFromMetadata } from "../../domain/pass/repeatCleanMetadata.js";
 import { buildPassRoutingDependencies } from "./passRoutingInvocationBuilders.js";
-import { passValidationDefaults } from "./passValidationDependencyDefaults.js";
 import { buildAutoConvergeFlowDependencies } from "./autoConvergeFlowInvocationBuilders.js";
 import { buildNormalPassFlowDependencies } from "./normalPassFlowInvocationBuilders.js";
+import type { ResolvePassValidationForPassDependencies } from "./passValidationGate.js";
+import type { UpdateReviewerDocGateArtifactDependencies } from "./reviewerDocGateArtifactUpdater.js";
+import type { WritePostAppendReviewVerificationArtifactDependencies } from "./postAppendReviewVerificationWriter.js";
 
 export interface PassFlowRuntimeDependencies extends PassDeliveryDependencies {
   emitBubbleNotification?: EmitConvergedDependencies["emitBubbleNotification"];
+  readDocContractGateArtifact?:
+    UpdateReviewerDocGateArtifactDependencies["readDocContractGateArtifact"];
+  resolveDocContractGateArtifactPath?:
+    UpdateReviewerDocGateArtifactDependencies["resolveDocContractGateArtifactPath"];
+  writeDocContractGateArtifact?:
+    UpdateReviewerDocGateArtifactDependencies["writeDocContractGateArtifact"];
+  writeReviewVerificationArtifactAtomic?:
+    WritePostAppendReviewVerificationArtifactDependencies["writeReviewVerificationArtifactAtomic"];
+  resolveReviewVerificationInputFromRefs?:
+    Parameters<typeof resolveReviewerVerification>[0]["resolveInputFromRefs"];
+  resolvePassValidationPolicy?:
+    ResolvePassValidationForPassDependencies["resolvePassValidationPolicy"];
+  runPassValidationCommand?:
+    ResolvePassValidationForPassDependencies["runPassValidationCommand"];
+  buildPassValidationEvidenceArtifact?:
+    ResolvePassValidationForPassDependencies["buildPassValidationEvidenceArtifact"];
+  createPassValidationReviewerDirective?:
+    ResolvePassValidationForPassDependencies["createPassValidationReviewerDirective"];
+  resolvePassValidationArtifactPath?:
+    ResolvePassValidationForPassDependencies["resolvePassValidationArtifactPath"];
+  resolvePassValidationReviewerCompatibilityArtifactPath?:
+    ResolvePassValidationForPassDependencies["resolvePassValidationReviewerCompatibilityArtifactPath"];
+  isPassValidationRunnerExecutionError?:
+    ResolvePassValidationForPassDependencies["isPassValidationRunnerExecutionError"];
+  writePassValidationEvidenceArtifact?:
+    ResolvePassValidationForPassDependencies["writePassValidationEvidenceArtifact"];
+  writePassValidationReviewerCompatibilityArtifact?:
+    ResolvePassValidationForPassDependencies["writePassValidationReviewerCompatibilityArtifact"];
 }
 
-const updateReviewerDocGateArtifactWithDefaults = (
-  input: Parameters<typeof updateReviewerDocGateArtifact>[0]
-) =>
+function updateReviewerDocGateArtifactWithRuntimeDependencies(
+  input: Parameters<typeof updateReviewerDocGateArtifact>[0],
+  runtimeDependencies: PassFlowRuntimeDependencies
+) {
+  return (
     updateReviewerDocGateArtifact(input, {
       readDocContractGateArtifact:
-        passValidationDefaults.readDocContractGateArtifact,
+        runtimeDependencies.readDocContractGateArtifact!,
       resolveDocContractGateArtifactPath:
-        passValidationDefaults.resolveDocContractGateArtifactPath,
+        runtimeDependencies.resolveDocContractGateArtifactPath!,
       writeDocContractGateArtifact:
-        passValidationDefaults.writeDocContractGateArtifact
-    });
+        runtimeDependencies.writeDocContractGateArtifact!
+    })
+  );
+}
 
 function resolvePassFlowDeliveryOverride(
   runtimeDependencies: PassFlowRuntimeDependencies
@@ -83,7 +117,11 @@ export function createAutoConvergeFlowDependencies(
       ? { emitBubbleNotification: runtimeDependencies.emitBubbleNotification }
       : {}),
     finalizeAutoConvergePass,
-    updateReviewerDocGateArtifact: updateReviewerDocGateArtifactWithDefaults,
+    updateReviewerDocGateArtifact: (input) =>
+      updateReviewerDocGateArtifactWithRuntimeDependencies(
+        input,
+        runtimeDependencies
+      ),
     emitBubbleLifecycleEventBestEffort,
     buildPassLifecycleMetricMetadata,
     buildAutoConvergePassResult
@@ -101,18 +139,30 @@ export function createNormalPassFlowDependencies(
     executeNormalPassAppend,
     resolvePassValidationForPass,
     resolvePassValidationPolicy:
-      passValidationDefaults.resolvePassValidationPolicy,
-    runPassValidationCommand: passValidationDefaults.runPassValidationCommand,
+      runtimeDependencies.resolvePassValidationPolicy,
+    runPassValidationCommand: runtimeDependencies.runPassValidationCommand,
     buildPassValidationEvidenceArtifact:
-      passValidationDefaults.buildPassValidationEvidenceArtifact,
+      runtimeDependencies.buildPassValidationEvidenceArtifact,
+    createPassValidationReviewerDirective:
+      runtimeDependencies.createPassValidationReviewerDirective,
+    resolvePassValidationArtifactPath:
+      runtimeDependencies.resolvePassValidationArtifactPath,
+    resolvePassValidationReviewerCompatibilityArtifactPath:
+      runtimeDependencies.resolvePassValidationReviewerCompatibilityArtifactPath,
+    isPassValidationRunnerExecutionError:
+      runtimeDependencies.isPassValidationRunnerExecutionError,
     writePassValidationEvidenceArtifact:
-      passValidationDefaults.writePassValidationEvidenceArtifact,
+      runtimeDependencies.writePassValidationEvidenceArtifact,
     writePassValidationReviewerCompatibilityArtifact:
-      passValidationDefaults.writePassValidationReviewerCompatibilityArtifact,
+      runtimeDependencies.writePassValidationReviewerCompatibilityArtifact,
     persistNormalPassPostAppend,
     writePostAppendReviewVerificationArtifact,
     writePostAppendPassState,
-    updateReviewerDocGateArtifact: updateReviewerDocGateArtifactWithDefaults,
+    updateReviewerDocGateArtifact: (input) =>
+      updateReviewerDocGateArtifactWithRuntimeDependencies(
+        input,
+        runtimeDependencies
+      ),
     executeNormalPassDelivery,
     resolveReviewerTestDirectiveForPass,
     executePassDelivery,
@@ -156,6 +206,12 @@ export function createNormalPassFlowDependencies(
       ? {
           resolveReviewerTestExecutionDirectiveFromArtifact:
             runtimeDependencies.resolveReviewerTestExecutionDirectiveFromArtifact
+        }
+      : {}),
+    ...(runtimeDependencies.writeReviewVerificationArtifactAtomic !== undefined
+      ? {
+          writeReviewVerificationArtifactAtomic:
+            runtimeDependencies.writeReviewVerificationArtifactAtomic
         }
       : {}),
     finalizeNormalPass,

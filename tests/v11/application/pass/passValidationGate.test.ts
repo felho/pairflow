@@ -3,6 +3,31 @@ import { describe, expect, it } from "vitest";
 import type { BubbleConfig } from "../../../../src/types/bubble.js";
 import { PassValidationRunnerExecutionError } from "../../../../src/v11/infrastructure/executor/validation/passValidationCommandRunner.js";
 import { resolvePassValidationForPass } from "../../../../src/v11/application/pass/passValidationGate.js";
+import { passValidationDefaults } from "../../../../src/v11/defaults/pass/passValidationCommandDefaults.js";
+
+const passValidationGateTestDefaults = {
+  resolvePassValidationPolicy: passValidationDefaults.resolvePassValidationPolicy,
+  createPassValidationReviewerDirective:
+    passValidationDefaults.createPassValidationReviewerDirective,
+  resolvePassValidationArtifactPath:
+    passValidationDefaults.resolvePassValidationArtifactPath,
+  resolvePassValidationReviewerCompatibilityArtifactPath:
+    passValidationDefaults.resolvePassValidationReviewerCompatibilityArtifactPath,
+  isPassValidationRunnerExecutionError: (
+    error: unknown
+  ): error is PassValidationRunnerExecutionError =>
+    error instanceof PassValidationRunnerExecutionError,
+  runPassValidationCommand: async () => ({
+    command: "pnpm test",
+    exitCode: 0,
+    logPath: ".pairflow/evidence/pass-validation-test.log",
+    durationMs: 0,
+    executionCwd: "/tmp/worktree"
+  }),
+  buildPassValidationEvidenceArtifact: async () => ({}),
+  writePassValidationEvidenceArtifact: async () => undefined,
+  writePassValidationReviewerCompatibilityArtifact: async () => undefined
+};
 
 function toErrorMessage(input: PairflowCommandErrorInput): string {
   if (typeof input === "string") {
@@ -69,6 +94,7 @@ describe("resolvePassValidationForPass", () => {
         createError: (input) => new Error(toErrorMessage(input))
       },
       {
+        ...passValidationGateTestDefaults,
         runPassValidationCommand: async ({ kind, command }) => ({
           command,
           exitCode: 0,
@@ -125,6 +151,7 @@ describe("resolvePassValidationForPass", () => {
         createError: (input) => new Error(toErrorMessage(input))
       },
       {
+        ...passValidationGateTestDefaults,
         runPassValidationCommand: async ({ kind, command }) => {
           runnerCalls.push(`${kind}:${command}`);
           return {
@@ -170,6 +197,7 @@ describe("resolvePassValidationForPass", () => {
         createError: (input) => new Error(toErrorMessage(input))
       },
       {
+        ...passValidationGateTestDefaults,
         runPassValidationCommand: async ({ kind, command }) => {
           runnerCalls.push(`${kind}:${command}`);
           return {
@@ -232,6 +260,7 @@ describe("resolvePassValidationForPass", () => {
         createError: (input) => new Error(toErrorMessage(input))
       },
       {
+        ...passValidationGateTestDefaults,
         runPassValidationCommand: async ({ command, cwd }) => {
           runnerInputs.push(cwd !== undefined ? { cwd } : {});
           return {
@@ -285,7 +314,8 @@ describe("resolvePassValidationForPass", () => {
           round: 2,
           now: new Date("2026-03-28T10:00:00.000Z"),
           createError: (input) => new Error(toErrorMessage(input))
-        }
+        },
+        passValidationGateTestDefaults
       )
     ).rejects.toThrow(/pass_validation_command_missing/u);
   });
@@ -313,6 +343,7 @@ describe("resolvePassValidationForPass", () => {
         createError: (input) => new Error(toErrorMessage(input))
       },
       {
+        ...passValidationGateTestDefaults,
         runPassValidationCommand: async () => {
           runnerCalls += 1;
           return {
@@ -359,6 +390,7 @@ describe("resolvePassValidationForPass", () => {
         createError: (input) => new Error(toErrorMessage(input))
       },
       {
+        ...passValidationGateTestDefaults,
         buildPassValidationEvidenceArtifact: async () => ({}) as never,
         writePassValidationEvidenceArtifact: async () => undefined,
         writePassValidationReviewerCompatibilityArtifact: async () => undefined
@@ -388,8 +420,9 @@ describe("resolvePassValidationForPass", () => {
           now: new Date("2026-03-28T10:00:00.000Z"),
           createError: (input) => new Error(toErrorMessage(input))
         },
-        {
-          buildPassValidationEvidenceArtifact: async () => ({}) as never,
+      {
+        ...passValidationGateTestDefaults,
+        buildPassValidationEvidenceArtifact: async () => ({}) as never,
           writePassValidationEvidenceArtifact: async () => {
             throw new Error("persist failed");
           }
@@ -417,8 +450,9 @@ describe("resolvePassValidationForPass", () => {
           now: new Date("2026-03-28T10:00:00.000Z"),
           createError: (input) => new Error(toErrorMessage(input))
         },
-        {
-          runPassValidationCommand: async () => {
+      {
+        ...passValidationGateTestDefaults,
+        runPassValidationCommand: async () => {
             throw new PassValidationRunnerExecutionError({
               kind: "typecheck",
               stage: "spawn",
@@ -446,8 +480,9 @@ describe("resolvePassValidationForPass", () => {
           now: new Date("2026-03-28T10:00:00.000Z"),
           createError: (input) => new Error(toErrorMessage(input))
         },
-        {
-          buildPassValidationEvidenceArtifact: async () => {
+      {
+        ...passValidationGateTestDefaults,
+        buildPassValidationEvidenceArtifact: async () => {
             throw new Error("build failed");
           }
         }
@@ -470,6 +505,7 @@ describe("resolvePassValidationForPass", () => {
         createError: (input) => new Error(toErrorMessage(input))
       },
       {
+        ...passValidationGateTestDefaults,
         buildPassValidationEvidenceArtifact: async () => ({}) as never,
         writePassValidationEvidenceArtifact: async () => undefined,
         writePassValidationReviewerCompatibilityArtifact: async () => {
@@ -505,8 +541,9 @@ describe("resolvePassValidationForPass", () => {
           now: new Date("2026-03-28T10:00:00.000Z"),
           createError: (input) => new Error(toErrorMessage(input))
         },
-        {
-          runPassValidationCommand: async () => {
+      {
+        ...passValidationGateTestDefaults,
+        runPassValidationCommand: async () => {
             runnerCalls += 1;
             return {
               command: "noop",
@@ -543,8 +580,9 @@ describe("resolvePassValidationForPass", () => {
           now: new Date("2026-03-28T10:00:00.000Z"),
           createError: (input) => new Error(toErrorMessage(input))
         },
-        {
-          runPassValidationCommand: async () => {
+      {
+        ...passValidationGateTestDefaults,
+        runPassValidationCommand: async () => {
             runnerCalls += 1;
             return {
               command: "noop",

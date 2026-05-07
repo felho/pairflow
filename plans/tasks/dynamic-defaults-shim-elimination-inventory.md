@@ -330,7 +330,7 @@ twice.
 | B6 | `application/metaReview/emitMetaReviewV11.ts:49` | `defaults/metaReview/metaReviewDefaults.ts` | B | Completed in Batch 29: defaults/metaReview and agent CLI composition now pass meta-review dependencies explicitly; actor protocol has a `metaReview` dependency branch and the application meta-review API no longer loads defaults dynamically. |
 | B7 | `application/metaReviewGate/metaReviewGateCommandDefaults.ts:79` | `defaults/metaReviewGate/metaReviewGateCommandDefaults.ts` | B | Completed in Batch 31: the application V11 wrapper no longer loads defaults; the existing defaults/metaReviewGate API remains the composition wrapper, and the standalone application resolver was deleted. |
 | B8 | `application/pass/passReviewVerificationDefaults.ts:24` | `defaults/reviewer/reviewVerificationArtifactDefaults.ts` | **A** (reclassified) | Completed in Batch 17: pass review-verification resolve/write ports are now supplied through the existing pass-validation defaults aggregate; the standalone application shim was deleted. |
-| B9 | `application/pass/passValidationCommandDefaults.ts:121` | `defaults/pass/passValidationCommandDefaults.ts` | B | Verified. CLI passes the aggregator. |
+| B9 | `application/pass/passValidationCommandDefaults.ts:121` | `defaults/pass/passValidationCommandDefaults.ts` | B | Completed in Batch 33: PASS validation ports are explicit in pass flow wiring and agent CLI composition; the application pass-validation defaults shim was deleted. |
 | B10 | `application/pass/reviewerDeliveryDefaults.ts:33` | `defaults/reviewer/reviewerDeliveryDefaults.ts` | B | Verified. |
 | B11 | `application/reconcile/reconcileCommandDefaults.ts:25` | `defaults/reconcile/reconcileCommandDefaults.ts` | B | Completed in Batch 24: CLI now statically imports the reconcile defaults aggregate plus the state read port and passes them into the application reconcile command; the standalone application shim was deleted. |
 | B12 | `application/restart/restartCommandDefaults.ts:29` | `defaults/restart/restartCommandDefaults.ts` | B | Completed in Batch 25: CLI and UI composition now pass `restartBubbleDependencyDefaults` explicitly; the application restart API no longer loads defaults dynamically and the standalone application shim was deleted. |
@@ -1502,6 +1502,30 @@ In the closing PR:
   - `pnpm test` skipped for this focused create defaults rewiring batch; the
     targeted create core, doc-contract gate fail-open, runtime-isolation, and
     application-defaults-fitness tests cover the changed surface.
+  - `pnpm lint` passed.
+  - `pnpm build` passed.
+
+### 2026-05-08 — Batch 33: route PASS validation defaults through composition
+
+- Removed the application PASS validation dynamic defaults shim and made PASS
+  validation runner/artifact/doc-gate ports explicit in pass flow wiring.
+- Updated agent emit CLI composition to provide the PASS validation defaults
+  aggregate from `defaults/pass/passValidationCommandDefaults.ts`.
+- Updated PASS validation unit tests to provide explicit test-local defaults.
+- Deleted `src/v11/application/pass/passValidationCommandDefaults.ts` and
+  `src/v11/application/pass/passValidationDependencyDefaults.ts`.
+- Fitness result after the batch: application dynamic defaults warnings are
+  down from 7 to 6; shared dynamic defaults warnings remain 0. Hard-fail
+  fitness checks pass.
+- Validation:
+  - `pnpm typecheck` passed.
+  - `pnpm fitness:check:ci` passed with the expected remaining warnings
+    (`application_defaults_boundary=6`, `shared_defaults_boundary=0`).
+  - `pnpm exec vitest run tests/v11/application/pass/passValidationGate.test.ts tests/v11/application/pass/passFlowDependencyWiring.test.ts tests/v11/application/pass/normalPassFlowInvocationBuilders.test.ts tests/v11/application/pass/autoConvergeFlowInvocationBuilders.test.ts tests/tools/fitness/applicationDefaultsBoundary.test.ts`
+    passed (`5` files, `29` tests).
+  - `pnpm test` skipped for this focused PASS validation defaults rewiring
+    batch; the targeted validation gate, pass flow wiring, invocation builder,
+    and application-defaults-fitness tests cover the changed surface.
   - `pnpm lint` passed.
   - `pnpm build` passed.
 

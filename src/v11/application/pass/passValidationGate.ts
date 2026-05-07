@@ -1,10 +1,38 @@
 import type { ReviewerTestExecutionDirective } from "../../../v11/shared/reviewer/testEvidence.js";
-import {
-  PassValidationRunnerExecutionError,
-  passValidationDefaults,
-  type PassValidationCommandResult
-} from "./passValidationDependencyDefaults.js";
 import type { BubbleConfig } from "../../../types/bubble.js";
+
+export interface PassValidationCommandSpec {
+  kind: string;
+  command: string;
+  targetId?: string;
+  cwd?: string;
+  targetPaths?: string[];
+}
+
+export interface PassValidationCommandResult {
+  kind: string;
+  command: string;
+  exitCode: number;
+  logPath: string;
+  durationMs: number;
+  targetId?: string;
+  cwd?: string;
+  targetPaths?: string[];
+}
+
+export interface ResolvedPassValidationPolicy {
+  policyState: "policy_missing" | "policy_explicit_null" | "policy_configured";
+  commands: PassValidationCommandSpec[];
+  requiredCommandSetId: string | null;
+  invalidReason?: string;
+}
+
+export interface PassValidationRunnerExecutionErrorLike extends Error {
+  logPath: string;
+  context?: {
+    cwd?: string;
+  } | undefined;
+}
 
 export interface ResolvePassValidationForPassInput {
   senderRole: "implementer" | "reviewer"
@@ -18,12 +46,45 @@ export interface ResolvePassValidationForPassInput {
 }
 
 export interface ResolvePassValidationForPassDependencies {
-  resolvePassValidationPolicy?: typeof passValidationDefaults.resolvePassValidationPolicy
-  runPassValidationCommand?: typeof passValidationDefaults.runPassValidationCommand
-  buildPassValidationEvidenceArtifact?: typeof passValidationDefaults.buildPassValidationEvidenceArtifact
-  writePassValidationEvidenceArtifact?: typeof passValidationDefaults.writePassValidationEvidenceArtifact
+  resolvePassValidationPolicy?: (bubbleConfig: BubbleConfig) => ResolvedPassValidationPolicy
+  runPassValidationCommand?: (input: {
+    kind: string
+    command: string
+    worktreePath: string
+    cwd?: string
+  }) => Promise<{
+    command: string
+    exitCode: number
+    logPath: string
+    durationMs: number
+    executionCwd: string
+  }>
+  buildPassValidationEvidenceArtifact?: (input: {
+    bubbleId: string
+    round: number
+    generatedAt: string
+    worktreePath: string
+    policyState: ResolvedPassValidationPolicy["policyState"]
+    requiredCommandSetId: string | null
+    trustLevel: "trusted" | "untrusted"
+    trustReasonCode: "no_trigger" | "pass_validation_policy_missing"
+    commands: Array<PassValidationCommandSpec | PassValidationCommandResult>
+  }) => Promise<unknown>
+  createPassValidationReviewerDirective?: (input: {
+    policyState: ResolvedPassValidationPolicy["policyState"]
+    executedCommands: PassValidationCommandResult[]
+  }) => ReviewerTestExecutionDirective
+  resolvePassValidationArtifactPath?: (artifactsDir: string) => string
+  resolvePassValidationReviewerCompatibilityArtifactPath?: (artifactsDir: string) => string
+  isPassValidationRunnerExecutionError?: (
+    error: unknown
+  ) => error is PassValidationRunnerExecutionErrorLike
+  writePassValidationEvidenceArtifact?: (
+    artifactPath: string,
+    artifact: unknown
+  ) => Promise<void>
   writePassValidationReviewerCompatibilityArtifact?:
-    typeof passValidationDefaults.writePassValidationReviewerCompatibilityArtifact
+    (artifactPath: string, directive: ReviewerTestExecutionDirective) => Promise<void>
 }
 
 export interface ResolvePassValidationForPassResult {
@@ -88,8 +149,10 @@ function buildPassValidationErrorContext(input: {
 }
 
 async function executeConfiguredValidationCommands(input: {
-  resolvedPolicy: ReturnType<typeof passValidationDefaults.resolvePassValidationPolicy>
-  runValidationCommand: typeof passValidationDefaults.runPassValidationCommand
+  resolvedPolicy: ResolvedPassValidationPolicy
+  runValidationCommand: NonNullable<ResolvePassValidationForPassDependencies["runPassValidationCommand"]>
+  isRunnerExecutionError:
+    NonNullable<ResolvePassValidationForPassDependencies["isPassValidationRunnerExecutionError"]>
   createError: PairflowCreateCommandError
   bubbleId: string
   senderRole: "implementer" | "reviewer"
@@ -103,7 +166,7 @@ async function executeConfiguredValidationCommands(input: {
 
   const executedCommands: PassValidationCommandResult[] = []
   for (const command of input.resolvedPolicy.commands) {
-    let result: Awaited<ReturnType<typeof passValidationDefaults.runPassValidationCommand>>
+    let result: Awaited<ReturnType<NonNullable<ResolvePassValidationForPassDependencies["runPassValidationCommand"]>>>
     try {
       result = await input.runValidationCommand({
         kind: command.kind,
@@ -112,7 +175,7 @@ async function executeConfiguredValidationCommands(input: {
         ...(command.cwd !== undefined ? { cwd: command.cwd } : {})
       })
     } catch (error: unknown) {
-      if (error instanceof PassValidationRunnerExecutionError) {
+      if (input.isRunnerExecutionError(error)) {
         throwPassValidationFailure(
           input.createError,
           "pass_validation_execution_error",
@@ -195,12 +258,12 @@ async function persistPassValidationArtifacts(input: {
   artifactsDir: string
   artifactPath: string
   reviewerArtifactPath: string
-  resolvedPolicy: ReturnType<typeof passValidationDefaults.resolvePassValidationPolicy>
+  resolvedPolicy: ResolvedPassValidationPolicy
   executedCommands: PassValidationCommandResult[]
   reviewerTestDirective: ReviewerTestExecutionDirective
-  buildArtifact: typeof passValidationDefaults.buildPassValidationEvidenceArtifact
-  writeArtifact: typeof passValidationDefaults.writePassValidationEvidenceArtifact
-  writeCompatibilityArtifact: typeof passValidationDefaults.writePassValidationReviewerCompatibilityArtifact
+  buildArtifact: NonNullable<ResolvePassValidationForPassDependencies["buildPassValidationEvidenceArtifact"]>
+  writeArtifact: NonNullable<ResolvePassValidationForPassDependencies["writePassValidationEvidenceArtifact"]>
+  writeCompatibilityArtifact: NonNullable<ResolvePassValidationForPassDependencies["writePassValidationReviewerCompatibilityArtifact"]>
   createError: PairflowCreateCommandError
 }): Promise<string | undefined> {
   const artifact = await input.buildArtifact({
@@ -267,6 +330,23 @@ async function persistPassValidationArtifacts(input: {
   return compatibilityArtifactWriteFailureReason
 }
 
+function requirePassValidationDependency<T>(
+  value: T | undefined,
+  name: string,
+  createError: PairflowCreateCommandError
+): T {
+  if (value === undefined) {
+    throw createError({
+      reasonCode: "pass_validation_dependency_missing",
+      message: `Missing required PASS validation dependency: ${name}.`,
+      context: {
+        dependency: name
+      }
+    })
+  }
+  return value
+}
+
 export async function resolvePassValidationForPass(
   input: ResolvePassValidationForPassInput,
   dependencies: ResolvePassValidationForPassDependencies = {}
@@ -280,24 +360,55 @@ export async function resolvePassValidationForPass(
     }
   }
 
-  const resolvePolicy =
-    dependencies.resolvePassValidationPolicy ?? passValidationDefaults.resolvePassValidationPolicy
-  const runValidationCommand =
-    dependencies.runPassValidationCommand ?? passValidationDefaults.runPassValidationCommand
-  const buildArtifact =
-    dependencies.buildPassValidationEvidenceArtifact
-    ?? passValidationDefaults.buildPassValidationEvidenceArtifact
-  const writeArtifact =
-    dependencies.writePassValidationEvidenceArtifact
-    ?? passValidationDefaults.writePassValidationEvidenceArtifact
-  const writeCompatibilityArtifact =
-    dependencies.writePassValidationReviewerCompatibilityArtifact
-    ?? passValidationDefaults.writePassValidationReviewerCompatibilityArtifact
+  const resolvePolicy = requirePassValidationDependency(
+    dependencies.resolvePassValidationPolicy,
+    "resolvePassValidationPolicy",
+    input.createError
+  )
+  const runValidationCommand = requirePassValidationDependency(
+    dependencies.runPassValidationCommand,
+    "runPassValidationCommand",
+    input.createError
+  )
+  const buildArtifact = requirePassValidationDependency(
+    dependencies.buildPassValidationEvidenceArtifact,
+    "buildPassValidationEvidenceArtifact",
+    input.createError
+  )
+  const writeArtifact = requirePassValidationDependency(
+    dependencies.writePassValidationEvidenceArtifact,
+    "writePassValidationEvidenceArtifact",
+    input.createError
+  )
+  const writeCompatibilityArtifact = requirePassValidationDependency(
+    dependencies.writePassValidationReviewerCompatibilityArtifact,
+    "writePassValidationReviewerCompatibilityArtifact",
+    input.createError
+  )
+  const resolveArtifactPath = requirePassValidationDependency(
+    dependencies.resolvePassValidationArtifactPath,
+    "resolvePassValidationArtifactPath",
+    input.createError
+  )
+  const resolveReviewerArtifactPath = requirePassValidationDependency(
+    dependencies.resolvePassValidationReviewerCompatibilityArtifactPath,
+    "resolvePassValidationReviewerCompatibilityArtifactPath",
+    input.createError
+  )
+  const createReviewerDirective = requirePassValidationDependency(
+    dependencies.createPassValidationReviewerDirective,
+    "createPassValidationReviewerDirective",
+    input.createError
+  )
+  const isRunnerExecutionError = requirePassValidationDependency(
+    dependencies.isPassValidationRunnerExecutionError,
+    "isPassValidationRunnerExecutionError",
+    input.createError
+  )
 
   const resolvedPolicy = resolvePolicy(input.bubbleConfig)
-  const artifactPath = passValidationDefaults.resolvePassValidationArtifactPath(input.artifactsDir)
-  const reviewerArtifactPath =
-    passValidationDefaults.resolvePassValidationReviewerCompatibilityArtifactPath(input.artifactsDir)
+  const artifactPath = resolveArtifactPath(input.artifactsDir)
+  const reviewerArtifactPath = resolveReviewerArtifactPath(input.artifactsDir)
 
   if (resolvedPolicy.policyState === "policy_configured" && resolvedPolicy.invalidReason !== undefined) {
     throwPassValidationFailure(
@@ -318,6 +429,7 @@ export async function resolvePassValidationForPass(
   const executedCommands = await executeConfiguredValidationCommands({
     resolvedPolicy,
     runValidationCommand,
+    isRunnerExecutionError,
     createError: input.createError,
     bubbleId: input.bubbleId,
     senderRole: input.senderRole,
@@ -326,7 +438,7 @@ export async function resolvePassValidationForPass(
     artifactsDir: input.artifactsDir
   })
 
-  const reviewerTestDirective = passValidationDefaults.createPassValidationReviewerDirective({
+  const reviewerTestDirective = createReviewerDirective({
     policyState: resolvedPolicy.policyState,
     executedCommands
   })

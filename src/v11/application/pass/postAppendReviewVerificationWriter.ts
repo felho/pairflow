@@ -7,7 +7,6 @@ import type {
 } from "../../../v11/shared/ports/reviewVerificationArtifacts.js";
 import type { AgentName } from "../../../types/bubble.js";
 import { raisePostAppendReviewVerificationWriteFailed } from "../../domain/pass/postAppendReviewVerificationWriteFailure.js";
-import { passValidationDefaults } from "./passValidationDependencyDefaults.js";
 
 export interface WritePostAppendReviewVerificationArtifactInput {
   reviewerVerification: ReviewVerificationInputResolution | undefined;
@@ -37,8 +36,14 @@ export async function writePostAppendReviewVerificationArtifact(
     dependencies.createReviewVerificationArtifact
     ?? createReviewVerificationArtifact;
   const writeArtifact =
-    dependencies.writeReviewVerificationArtifactAtomic
-    ?? passValidationDefaults.writeReviewVerificationArtifactAtomic;
+    dependencies.writeReviewVerificationArtifactAtomic;
+  if (writeArtifact === undefined) {
+    raisePostAppendReviewVerificationWriteFailed({
+      envelopeId: input.envelopeId,
+      reason: "missing writeReviewVerificationArtifactAtomic dependency",
+      createError: input.createError
+    });
+  }
 
   const verificationArtifact = createArtifact({
     payload: input.reviewerVerification.payload,
