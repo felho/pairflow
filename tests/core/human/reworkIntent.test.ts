@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { applyDeferredReworkIntent } from "../../../src/v11/shared/approval/reworkIntent.js";
+import { applyDeferredReworkIntent } from "../../../src/v11/domain/state/reworkIntent.js";
 
 describe("applyDeferredReworkIntent", () => {
   it("clears live meta-review authority when deferred rework resumes the next round", () => {

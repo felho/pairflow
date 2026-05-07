@@ -1,22 +1,21 @@
-import { randomUUID } from "node:crypto";
-
-import { clearLiveMetaReviewSnapshot } from "../metaReview/metaReviewSnapshot.js";
-import { applyStateTransition } from "../../domain/state/machine.js";
+import { clearLiveMetaReviewSnapshot } from "../../shared/metaReview/metaReviewSnapshot.js";
+import { applyStateTransition } from "./machine.js";
 import {
   resolveRuntimeAlignedNextRoundContinuation
-} from "../reviewPolicy/reviewPolicyRuntime.js";
+} from "../../shared/reviewPolicy/reviewPolicyRuntime.js";
 import type {
   AgentName,
   BubbleReworkIntentRecord,
   BubbleStateSnapshot
 } from "../../../types/bubble.js";
 
-export interface QueueDeferredReworkIntentInput {
+export interface DeriveQueuedDeferredReworkIntentStateInput {
   state: BubbleStateSnapshot;
+  intentId: string;
   message: string;
   refs?: string[];
   requestedBy: string;
-  now: Date;
+  requestedAt: string;
 }
 
 export interface QueueDeferredReworkIntentResult {
@@ -61,22 +60,17 @@ function ensurePendingIntent(
   return pendingIntent;
 }
 
-function createIntentId(): string {
-  return `intent_${randomUUID()}`;
-}
-
-export function queueDeferredReworkIntent(
-  input: QueueDeferredReworkIntentInput
+export function deriveQueuedDeferredReworkIntentState(
+  input: DeriveQueuedDeferredReworkIntentStateInput
 ): QueueDeferredReworkIntentResult {
-  const nowIso = input.now.toISOString();
   const pendingIntent = ensurePendingIntent(input.state);
   const refs = input.refs ?? [];
   const nextIntent: BubbleReworkIntentRecord = {
-    intent_id: createIntentId(),
+    intent_id: input.intentId,
     message: input.message,
     ...(refs.length > 0 ? { refs: [...refs] } : {}),
     requested_by: input.requestedBy,
-    requested_at: nowIso,
+    requested_at: input.requestedAt,
     status: "pending"
   };
 
@@ -94,7 +88,7 @@ export function queueDeferredReworkIntent(
       ...input.state,
       pending_rework_intent: nextIntent,
       rework_intent_history: history,
-      last_command_at: nowIso
+      last_command_at: input.requestedAt
     },
     intent: nextIntent,
     ...(pendingIntent !== null

@@ -1,5 +1,5 @@
 import { emitBubbleLifecycleEventBestEffort } from "../../shared/metrics/bubbleEvents.js";
-import { applyDeferredReworkIntent } from "../../shared/approval/reworkIntent.js";
+import { applyDeferredReworkIntent } from "../../domain/state/reworkIntent.js";
 import { persistPendingReworkIntentState } from "./watchdogPendingReworkPersistence.js";
 import type { BubbleStateSnapshot } from "../../../types/bubble.js";
 import type { ProtocolEnvelope } from "../../../types/protocol.js";

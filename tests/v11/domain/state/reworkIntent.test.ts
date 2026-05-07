@@ -2,12 +2,12 @@ import { describe, expect, it } from "vitest";
 
 import {
   applyDeferredReworkIntent,
-  queueDeferredReworkIntent
-} from "../../../../src/v11/shared/approval/reworkIntent.js";
+  deriveQueuedDeferredReworkIntentState
+} from "../../../../src/v11/domain/state/reworkIntent.js";
 
-describe("v11 approval reworkIntent", () => {
+describe("v11 domain reworkIntent", () => {
   it("supersedes an existing pending deferred rework intent", () => {
-    const result = queueDeferredReworkIntent({
+    const result = deriveQueuedDeferredReworkIntentState({
       state: {
         bubble_id: "b_rework_queue_01",
         state: "WAITING_HUMAN",
@@ -26,10 +26,11 @@ describe("v11 approval reworkIntent", () => {
         },
         rework_intent_history: []
       },
+      intentId: "intent_next",
       message: "Latest deferred rework.",
       refs: ["artifact://review.md"],
       requestedBy: "human:request-rework",
-      now: new Date("2026-03-21T10:05:00.000Z")
+      requestedAt: "2026-03-21T10:05:00.000Z"
     });
 
     expect(result.supersededIntentId).toBe("intent_prev");

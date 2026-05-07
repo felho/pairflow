@@ -5,7 +5,7 @@ import type {
   ResolveApprovalRemoteBubbleStatusTargetPort
 } from "./approvalRemoteExecutionContract.js";
 import { emitBubbleLifecycleEventBestEffort } from "../../shared/metrics/bubbleEvents.js";
-import { queueDeferredReworkIntent } from "../../shared/approval/reworkIntent.js";
+import { queueDeferredReworkIntent } from "./reworkIntentQueue.js";
 import type { EnsureBubbleInstanceIdForMutationPort } from "../../shared/ports/bubbleIdentity.js";
 import type { ResolveBubbleByIdPort } from "../../shared/ports/bubbleLookup.js";
 import type {

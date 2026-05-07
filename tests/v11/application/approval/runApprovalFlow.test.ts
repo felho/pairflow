@@ -17,7 +17,7 @@ import {
 } from "../../../../src/v11/application/approval/remoteApprovalExecutionContext.js";
 import { runApprovalDecisionFlow } from "../../../../src/v11/application/approval/runApprovalFlow.js";
 import { runRequestReworkFlow } from "../../../../src/v11/application/approval/runApprovalFlow.js";
-import { queueDeferredReworkIntent } from "../../../../src/v11/shared/approval/reworkIntent.js";
+import { queueDeferredReworkIntent } from "../../../../src/v11/application/approval/reworkIntentQueue.js";
 
 function toErrorMessage(input: PairflowCommandErrorInput): string {
   if (typeof input === "string") {
