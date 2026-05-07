@@ -1,3 +1,4 @@
+import { readFile } from "node:fs/promises";
 import { parseArgs } from "node:util";
 
 import type { AgentRole } from "../../../types/bubble.js";
@@ -27,6 +28,18 @@ import { emitActorProtocolFromWorkspaceV11 } from "../../../v11/application/acto
 import {
   resolveActorEmitContextByBubbleId
 } from "../../../v11/defaults/actorProtocol/actorEmitContextDefaults.js";
+import {
+  metaReviewDefaults
+} from "../../../v11/defaults/metaReview/metaReviewDefaults.js";
+import {
+  notifyMetaReviewerSubmissionRequestV11
+} from "../../../v11/defaults/metaReviewGate/metaReviewGateApi.js";
+import {
+  metaReviewGateDependencyDefaults
+} from "../../../v11/defaults/metaReviewGate/metaReviewGateCommandDefaults.js";
+import {
+  resolveMetaReviewerPaneWarning
+} from "../../../v11/application/metaReviewGate/metaReviewGatePaneBinding.js";
 import {
   readReviewerBriefArtifact,
   readReviewerFocusArtifact
@@ -446,6 +459,22 @@ export async function runAgentEmitCommand(
     },
     convergence: {
       resolveReviewerTestExecutionDirective
+    },
+    metaReview: {
+      readFile,
+      emitDeliveryNotification: metaReviewDefaults.emitDeliveryNotificationAck,
+      buildDeliveryMessageRef: metaReviewDefaults.resolveDeliveryMessageRef,
+      readRuntimeSessionsRegistry: metaReviewDefaults.readRuntimeSessionsRegistry,
+      readTranscriptEnvelopes:
+        metaReviewGateDependencyDefaults.readTranscriptEnvelopes,
+      setMetaReviewerPaneBinding:
+        metaReviewGateDependencyDefaults.setMetaReviewerPaneBinding,
+      notifyMetaReviewerSubmissionRequest:
+        notifyMetaReviewerSubmissionRequestV11,
+      resolveMetaReviewerPaneWarning,
+      runMetaReviewApproveValidationCommand:
+        metaReviewDefaults.runPassValidationCommand,
+      runtime: metaReviewGateDependencyDefaults.runtime
     }
   } as const;
   return emitActorProtocolFromWorkspaceV11(

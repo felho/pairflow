@@ -23,10 +23,12 @@ import {
 } from "./actorRuntimeDispatchMatrix.js";
 import type { EmitPassDependencies } from "../pass/passCommandContract.js";
 import type { EmitConvergedDependencies } from "../../shared/converged/convergedCommandTypes.js";
+import type { MetaReviewCommandDependencies } from "../../shared/metaReview/metaReviewCommandContract.js";
 
 export interface ActorProtocolDependencies {
   pass?: EmitPassDependencies;
   convergence?: EmitConvergedDependencies;
+  metaReview?: MetaReviewCommandDependencies;
 }
 
 export interface ExecuteActorRuntimeDispatchPlanInput {
@@ -107,11 +109,15 @@ const actorRuntimeAdapterExecutors: Readonly<
     }),
   meta_review_result_adapter: async ({
     actorInput,
-    authoritativeContext
+    authoritativeContext,
+    dependencies
   }) =>
     emitMetaReviewActorResultV11({
       actorInput: actorInput as MetaReviewResultActorEmitInput,
-      authoritativeContext
+      authoritativeContext,
+      ...(dependencies.metaReview !== undefined
+        ? { dependencies: dependencies.metaReview }
+        : {})
     })
 };
 

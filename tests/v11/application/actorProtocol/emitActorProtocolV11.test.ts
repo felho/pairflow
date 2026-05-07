@@ -1,4 +1,4 @@
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -26,6 +26,10 @@ import {
 } from "../../../../src/v11/shared/state/executionContext.js";
 import { readStateSnapshot, writeStateSnapshot } from "../../../../src/v11/infrastructure/state/stateStore.js";
 import * as actorProtocolModule from "../../../../src/v11/application/actorProtocol/emitActorProtocolV11.js";
+import { metaReviewDefaults } from "../../../../src/v11/defaults/metaReview/metaReviewDefaults.js";
+import { notifyMetaReviewerSubmissionRequestV11 } from "../../../../src/v11/defaults/metaReviewGate/metaReviewGateApi.js";
+import { metaReviewGateDependencyDefaults } from "../../../../src/v11/defaults/metaReviewGate/metaReviewGateCommandDefaults.js";
+import { resolveMetaReviewerPaneWarning } from "../../../../src/v11/application/metaReviewGate/metaReviewGatePaneBinding.js";
 import { seedConvergedCandidate } from "../converged/convergedSeedFixture.js";
 import { setupRunningBubbleFixture } from "../../../helpers/bubble.js";
 import { initGitRepository } from "../../../helpers/git.js";
@@ -34,6 +38,23 @@ const tempDirs: string[] = [];
 type ExecuteActorRuntimeDispatchPlanCall = Parameters<
   typeof actorRuntimeKernelModule.executeActorRuntimeDispatchPlan
 >;
+
+const metaReviewDependencies = {
+  readFile,
+  emitDeliveryNotification: metaReviewDefaults.emitDeliveryNotificationAck,
+  buildDeliveryMessageRef: metaReviewDefaults.resolveDeliveryMessageRef,
+  readRuntimeSessionsRegistry: metaReviewDefaults.readRuntimeSessionsRegistry,
+  readTranscriptEnvelopes:
+    metaReviewGateDependencyDefaults.readTranscriptEnvelopes,
+  setMetaReviewerPaneBinding:
+    metaReviewGateDependencyDefaults.setMetaReviewerPaneBinding,
+  notifyMetaReviewerSubmissionRequest:
+    notifyMetaReviewerSubmissionRequestV11,
+  resolveMetaReviewerPaneWarning,
+  runMetaReviewApproveValidationCommand:
+    metaReviewDefaults.runPassValidationCommand,
+  runtime: metaReviewGateDependencyDefaults.runtime
+} as const;
 
 async function createTempRepo(): Promise<string> {
   const root = await mkdtemp(join(tmpdir(), "pairflow-actor-protocol-v11-"));
@@ -847,6 +868,8 @@ describe("emitActorProtocolV11 runtime", () => {
         )
       },
       authoritativeContext
+    }, {
+      metaReview: metaReviewDependencies
     });
 
     expect(kernelSpy).toHaveBeenCalledOnce();

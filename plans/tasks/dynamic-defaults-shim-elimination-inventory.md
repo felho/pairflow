@@ -327,7 +327,7 @@ twice.
 | B3 | `application/create/createBubbleDefaults.ts:28` | `defaults/create/createBubbleDefaults.ts` | B | Verified: target aggregates infrastructure adapters plus shared shims. Composition. |
 | B4 | `application/delete/deleteBubbleDependencyDefaults.ts:133` | `defaults/delete/deleteBubbleDefaults.ts` | B | Verified: heavy composition (multiple `infrastructure/` adapters + sibling `defaults/` + shared shims). Mirrors merge in shape. |
 | B5 | `application/merge/mergeCommandDefaults.ts:54` | `defaults/merge/mergeCommandDefaults.ts` | B | Completed in Batch 27: CLI and UI composition pass `mergeBubbleDependencyDefaults` explicitly; the merge dependency resolver now receives its defaults aggregate from the caller and the standalone application shim was deleted. |
-| B6 | `application/metaReview/emitMetaReviewV11.ts:49` | `defaults/metaReview/metaReviewDefaults.ts` | B | Verified: target aggregates 3 infrastructure adapters. Composition. |
+| B6 | `application/metaReview/emitMetaReviewV11.ts:49` | `defaults/metaReview/metaReviewDefaults.ts` | B | Completed in Batch 29: defaults/metaReview and agent CLI composition now pass meta-review dependencies explicitly; actor protocol has a `metaReview` dependency branch and the application meta-review API no longer loads defaults dynamically. |
 | B7 | `application/metaReviewGate/metaReviewGateCommandDefaults.ts:79` | `defaults/metaReviewGate/metaReviewGateCommandDefaults.ts` | B | Verified. CLI passes the aggregator. |
 | B8 | `application/pass/passReviewVerificationDefaults.ts:24` | `defaults/reviewer/reviewVerificationArtifactDefaults.ts` | **A** (reclassified) | Completed in Batch 17: pass review-verification resolve/write ports are now supplied through the existing pass-validation defaults aggregate; the standalone application shim was deleted. |
 | B9 | `application/pass/passValidationCommandDefaults.ts:121` | `defaults/pass/passValidationCommandDefaults.ts` | B | Verified. CLI passes the aggregator. |
@@ -1403,6 +1403,31 @@ In the closing PR:
   - `pnpm test` skipped for this focused status defaults rewiring batch; the
     targeted CLI, status core, create/status integration, approval, attach, UI
     router, and application-defaults-fitness tests cover the changed surface.
+  - `pnpm lint` passed.
+  - `pnpm build` passed.
+
+### 2026-05-07 — Batch 29: route meta-review defaults through composition
+
+- Changed the application meta-review submit API so it uses caller-provided
+  dependencies only and no longer imports `defaults/metaReview` dynamically.
+- Extended actor protocol dependencies with a `metaReview` branch and passed it
+  through the runtime kernel to the meta-review actor emitter.
+- Updated the agent emit CLI composition to provide meta-review defaults
+  explicitly.
+- Updated actor protocol tests to provide explicit meta-review dependencies for
+  the meta-review route.
+- Fitness result after the batch: application dynamic defaults warnings are
+  down from 12 to 11; shared dynamic defaults warnings remain 0. Hard-fail
+  fitness checks pass.
+- Validation:
+  - `pnpm typecheck` passed.
+  - `pnpm fitness:check:ci` passed with the expected remaining warnings
+    (`application_defaults_boundary=11`, `shared_defaults_boundary=0`).
+  - `pnpm exec vitest run tests/cli/agentEmitCommand.test.ts tests/v11/application/actorProtocol/emitActorProtocolV11.test.ts tests/contracts/v11/metaReviewSubmitCoverage.test.ts tests/core/human/approval.test.ts tests/tools/fitness/applicationDefaultsBoundary.test.ts`
+    passed (`5` files, `72` tests).
+  - `pnpm test` skipped for this focused meta-review defaults rewiring batch;
+    the targeted agent CLI, actor protocol, meta-review submit, approval, and
+    application-defaults-fitness tests cover the changed surface.
   - `pnpm lint` passed.
   - `pnpm build` passed.
 

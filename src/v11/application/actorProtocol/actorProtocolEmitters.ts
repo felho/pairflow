@@ -14,6 +14,7 @@ import type {
 } from "../../shared/actorProtocol/actorEmitContext.js";
 import type { EmitPassDependencies } from "../pass/passCommandContract.js";
 import type { EmitConvergedDependencies } from "../../shared/converged/convergedCommandTypes.js";
+import type { MetaReviewCommandDependencies } from "../../shared/metaReview/metaReviewCommandContract.js";
 import {
   emitAskHumanFromWorkspaceV11 as emitAskHumanFromWorkspace
 } from "../askHuman/emitAskHumanV11.js";
@@ -136,6 +137,7 @@ export async function emitConvergenceActorResultV11(input: {
 export async function emitMetaReviewActorResultV11(input: {
   actorInput: MetaReviewResultActorEmitInput;
   authoritativeContext: ActorEmitContextSnapshot;
+  dependencies?: MetaReviewCommandDependencies;
 }): Promise<Extract<ActorEmitResultV11, { kind: "meta_review_result" }>> {
   const { actorInput, authoritativeContext: context } = input;
   return {
@@ -157,6 +159,6 @@ export async function emitMetaReviewActorResultV11(input: {
       expectedRole: context.expected_role,
       expectedRound: context.expected_round,
       expectedStateFingerprint: context.expected_state_fingerprint
-    })
+    }, input.dependencies)
   };
 }
