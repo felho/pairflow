@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises";
 
 import { buildAgentCommand } from "../../shared/command/agentCommand.js";
-import { resolveBubbleById } from "../../shared/bubbleLookup/bubbleLookupDefaults.js";
+import { resolveBubbleById } from "../bubbleLookup/bubbleLookupDefaults.js";
 import {
   appendProtocolEnvelope,
   readTranscriptEnvelopes
@@ -9,7 +9,7 @@ import {
 import {
   readStateSnapshot,
   writeStateSnapshot
-} from "../../shared/state/stateStoreDefaults.js";
+} from "../state/stateStoreDefaults.js";
 import { setMetaReviewerPaneBinding } from "../../infrastructure/channel/tmux/metaReviewerPaneBinding.js";
 import { runTmux } from "../../infrastructure/channel/tmux/tmuxManager.js";
 import {

@@ -4,7 +4,7 @@ import { join } from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import { resolveActorEmitContextByBubbleId } from "../../../../src/v11/shared/actorProtocol/actorEmitContext.js";
+import { resolveActorEmitContextByBubbleId } from "../../../../src/v11/defaults/actorProtocol/actorEmitContextDefaults.js";
 import type { AgentName } from "../../../../src/types/bubble.js";
 import { buildRunningExecutionContext } from "../../../../src/v11/shared/state/executionContext.js";
 import { readStateSnapshot, writeStateSnapshot } from "../../../../src/v11/infrastructure/state/stateStore.js";

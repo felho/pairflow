@@ -3,7 +3,7 @@ import { copyFile, lstat, mkdir } from "node:fs/promises";
 
 import { resolveRepoPath } from "../../infrastructure/executor/workspace/repoResolution.js";
 import { runGit } from "../../infrastructure/workspace/git.js";
-import { resolveBubbleById } from "../../shared/bubbleLookup/bubbleLookupDefaults.js";
+import { resolveBubbleById } from "../bubbleLookup/bubbleLookupDefaults.js";
 import type { ExtractCommandDependencies } from "../../application/extract/extractCommandContract.js";
 
 export const extractCommandDependencyDefaults: ExtractCommandDependencies = {

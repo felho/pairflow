@@ -26,7 +26,7 @@ import {
 import { emitActorProtocolFromWorkspaceV11 } from "../../../v11/application/actorProtocol/emitActorProtocolV11.js";
 import {
   resolveActorEmitContextByBubbleId
-} from "../../../v11/shared/actorProtocol/actorEmitContext.js";
+} from "../../../v11/defaults/actorProtocol/actorEmitContextDefaults.js";
 import {
   readReviewerBriefArtifact,
   readReviewerFocusArtifact

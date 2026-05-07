@@ -191,12 +191,12 @@ table.
 
 | # | Site (shim) | Defaults target | Cat | Action |
 |---|-------------|-----------------|-----|--------|
-| S1 | `shared/actorProtocol/actorEmitContext.ts:46` | `defaults/workspace/workspaceResolutionDefaults.ts` | A | `actorEmitContext` takes the existing workspace-resolution port as a parameter; remove dynamic load. |
-| S2 | `shared/bubbleLookup/bubbleLookupDefaults.ts:18` | `defaults/bubbleLookup/bubbleLookupDefaults.ts` | A | Delete file; callers take `ResolveBubbleByIdPort` directly. |
+| S1 | `shared/actorProtocol/actorEmitContext.ts:46` | `defaults/workspace/workspaceResolutionDefaults.ts` | A | Completed in Batch 8: shared actor context now takes explicit resolution dependencies; default wiring moved to `defaults/actorProtocol/actorEmitContextDefaults.ts`. |
+| S2 | `shared/bubbleLookup/bubbleLookupDefaults.ts:18` | `defaults/bubbleLookup/bubbleLookupDefaults.ts` | A | Completed in Batch 8: defaults callers import `defaults/bubbleLookup` directly; the shared facade was deleted. |
 | S3 | `shared/metaReview/metaReviewDependencyDefaults.ts:22` | `defaults/runtimeSessions/runtimeSessionsDefaults.ts` | A | Completed in Batch 6: the shared shim had no live caller after the application-local `metaReviewDependencyDefaults.ts` copy became authoritative, so the shared file was deleted. |
 | S4 | `shared/metrics/bubbleEvents.ts:62` | `defaults/metrics/bubbleEventsDefaults.ts` | A | bubbleEvents receives a `BubbleEventEmitter` port (single port, no wrapper). |
 | S5 | `shared/read-model/list/listReadModelDefaults.ts:73` | `defaults/list/listCommandDefaults.ts` | B + modelling | Target is verified composition (direct `infrastructure/` imports, see B16). Resolution path picked (v4): **refactor caller out of `shared/`**. The shim file deletes as part of the S5/S7 refactor; the moved application API takes deps as a parameter, CLI injects from `defaults/list/`. See "S5/S7 Refactor Scope". |
-| S6 | `shared/state/stateStoreDefaults.ts:28` | `defaults/state/stateStoreDefaults.ts` | A | Delete file; callers take `StateCapabilities` slice (read/write/inspect). The shared layer must not own state-store wiring. |
+| S6 | `shared/state/stateStoreDefaults.ts:28` | `defaults/state/stateStoreDefaults.ts` | A | Completed in Batch 8: defaults callers import `defaults/state` directly; shared actor context receives `readStateSnapshot` through explicit dependencies; the shared facade was deleted. |
 | S7 | `shared/status/statusCommandDependencyDefaults.ts:116` | `defaults/list/listCommandDefaults.ts` | B + modelling | Same target as S5. Same resolution path: refactor caller out of `shared/`; the shim file (which holds S7, S8, S9 together) deletes as part of the S5/S7 refactor. |
 | S8 | `shared/status/statusCommandDependencyDefaults.ts:124` | `defaults/gates/docContractGateArtifactDefaults.ts` | A | Caller takes the existing doc-contract artifact port directly (no wrapper). |
 | S9 | `shared/status/statusCommandDependencyDefaults.ts:132` | `defaults/reviewer/reviewVerificationArtifactDefaults.ts` | A | Caller takes the existing review-verification artifact port directly. |
@@ -816,6 +816,33 @@ In the closing PR:
   - `pnpm test` skipped for this defaults-import rewiring batch; Batch 5 had
     just completed the full suite, and this batch ran targeted coverage over
     every changed defaults consumer family.
+  - `pnpm build` passed.
+
+### 2026-05-07 — Batch 8: actor context dependency injection and state/bubble lookup facade removal
+
+- Changed `src/v11/shared/actorProtocol/actorEmitContext.ts` so actor context
+  resolution receives explicit dependencies for workspace resolution, bubble
+  lookup, and state reads.
+- Added `src/v11/defaults/actorProtocol/actorEmitContextDefaults.ts` as the
+  default runtime wiring wrapper used by the CLI and convenience tests.
+- Updated defaults-layer commit/merge/delete/extract/watchdog/meta-review-gate
+  wiring to import `defaults/bubbleLookup` and `defaults/state` directly
+  instead of going through shared facades.
+- Deleted `src/v11/shared/bubbleLookup/bubbleLookupDefaults.ts` and
+  `src/v11/shared/state/stateStoreDefaults.ts`.
+- Fitness result after the batch: application dynamic defaults warnings remain
+  31; shared dynamic defaults warnings are down from 4 to 1. Hard-fail
+  fitness checks pass.
+- Validation:
+  - `pnpm typecheck` passed.
+  - `pnpm lint` passed.
+  - `pnpm fitness:check:ci` passed with the expected remaining warnings
+    (`application_defaults_boundary=31`, `shared_defaults_boundary=1`).
+  - `pnpm exec vitest run tests/cli/agentEmitCommand.test.ts tests/v11/application/actorProtocol/emitActorProtocolV11.test.ts tests/v11/application/converged/emitConvergedV11.test.ts tests/core/bubble/commitBubble.test.ts tests/core/bubble/mergeBubble.test.ts tests/core/bubble/deleteBubble.test.ts tests/core/bubble/watchdogBubble.test.ts tests/contracts/v11/metaReviewSubmitCoverage.test.ts tests/tools/fitness/sharedDefaultsBoundary.test.ts`
+    passed.
+  - `pnpm test` skipped for this focused shared-facade removal batch; Batch 5
+    had already completed the full suite, and this batch ran targeted coverage
+    across actor emit plus every changed defaults consumer family.
   - `pnpm build` passed.
 
 ---

@@ -13,7 +13,7 @@ import { readRuntimeSessionsRegistry, removeRuntimeSession } from "../runtimeSes
 import { readStateSnapshot } from "../state/stateStoreDefaults.js";
 import { terminateBubbleTmuxSession } from "../tmux/tmuxSessionDefaults.js";
 import { cleanupWorktreeWorkspace } from "../worktree/worktreeWorkspaceDefaults.js";
-import { resolveBubbleById } from "../../shared/bubbleLookup/bubbleLookupDefaults.js";
+import { resolveBubbleById } from "../bubbleLookup/bubbleLookupDefaults.js";
 import { buildBubbleTmuxSessionName } from "../../shared/bubble/tmuxSessionName.js";
 import { statusCommandDependencyDefaults } from "../status/statusCommandDependencyDefaults.js";
 import { removeWatchdogPaneActivity } from "../watchdog/watchdogPaneActivityDefaults.js";

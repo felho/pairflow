@@ -9,11 +9,11 @@ import { removeRuntimeSession } from "../../defaults/runtimeSessions/runtimeSess
 import { terminateBubbleTmuxSession } from "../../defaults/tmux/tmuxSessionDefaults.js";
 import { cleanupWorktreeWorkspace } from "../../defaults/worktree/worktreeWorkspaceDefaults.js";
 import type { MergeBubbleDependencies } from "../../application/merge/mergeCommandContract.js";
-import { resolveBubbleById } from "../../shared/bubbleLookup/bubbleLookupDefaults.js";
+import { resolveBubbleById } from "../bubbleLookup/bubbleLookupDefaults.js";
 import {
   readStateSnapshot,
   writeStateSnapshot
-} from "../../shared/state/stateStoreDefaults.js";
+} from "../state/stateStoreDefaults.js";
 import { emitBubbleLifecycleEventBestEffort } from "../../shared/metrics/bubbleEvents.js";
 import { readRemotePointer } from "../../infrastructure/artifact/bubble/remoteExecutionArtifacts.js";
 import {
