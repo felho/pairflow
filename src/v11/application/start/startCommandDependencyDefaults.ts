@@ -1,7 +1,10 @@
-import { readTranscriptEnvelopes } from "../transcript/transcriptDependencyDefaults.js";
 import { loadStartBubbleDependencyDefaults } from "./startBubbleDependencyDefaults.js";
 import type { TmuxRunner } from "../../shared/ports/tmuxSessions.js";
 import type { WriteStateSnapshotPort } from "../../shared/ports/stateSnapshots.js";
+import type {
+  AppendProtocolEnvelopePort,
+  ReadTranscriptEnvelopesPort
+} from "../../shared/ports/transcript.js";
 
 type RunTmuxPort = TmuxRunner;
 
@@ -93,13 +96,24 @@ export const writeStateSnapshot: WriteStateSnapshotPort = async (...args) => {
   return persistStateSnapshot(...args);
 };
 
+export const appendProtocolEnvelope: AppendProtocolEnvelopePort = async (...args) => {
+  const defaults = await loadStartBubbleDependencyDefaults();
+  const { appendProtocolEnvelope: appendEnvelope } = defaults;
+  return appendEnvelope(...args);
+};
+
+export const readTranscriptEnvelopes: ReadTranscriptEnvelopesPort = async (...args) => {
+  const defaults = await loadStartBubbleDependencyDefaults();
+  return defaults.readTranscriptEnvelopes(...args);
+};
+
 export const startCommandContextDefaults = {
+  appendProtocolEnvelope,
   resolveBubbleById,
   ensureBubbleInstanceIdForMutation,
   inspectStateSnapshot,
+  readTranscriptEnvelopes,
   readStateSnapshot,
   resolveBubbleFromWorkspaceCwd,
   writeStateSnapshot
 } as const;
-
-export { readTranscriptEnvelopes };

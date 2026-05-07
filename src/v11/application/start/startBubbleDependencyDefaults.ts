@@ -29,6 +29,10 @@ import type {
   ReadStateSnapshotPort,
   WriteStateSnapshotPort
 } from "../../shared/ports/stateSnapshots.js";
+import type {
+  AppendProtocolEnvelopePort,
+  ReadTranscriptEnvelopesPort
+} from "../../shared/ports/transcript.js";
 import type { RunGitPort } from "../../shared/ports/git.js";
 import type {
   ReadReviewerBriefArtifactPort,
@@ -89,6 +93,8 @@ export interface StartBubbleDependencyDefaults {
   inspectStateSnapshot: (statePath: string) => Promise<InspectedStateSnapshot>;
   readStateSnapshot: ReadStateSnapshotPort;
   writeStateSnapshot: WriteStateSnapshotPort;
+  appendProtocolEnvelope: AppendProtocolEnvelopePort;
+  readTranscriptEnvelopes: ReadTranscriptEnvelopesPort;
   loadPairflowGlobalConfig: () => Promise<PairflowGlobalConfig>;
   runGitCommand: RunGitPort;
   readRemotePointer: (path: string) => Promise<BubbleRemotePointer | null>;

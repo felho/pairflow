@@ -25,7 +25,7 @@ import { statusCommandDependencyDefaults } from "../status/statusCommandDependen
 import {
   appendProtocolEnvelope,
   readTranscriptEnvelopes
-} from "../transcript/transcriptDependencyDefaults.js";
+} from "../start/startCommandDependencyDefaults.js";
 
 let approvalDependencyDefaultsPromise:
   | Promise<ApprovalCommandDefaultDependencies>

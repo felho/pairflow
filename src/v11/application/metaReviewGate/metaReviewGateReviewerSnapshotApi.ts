@@ -1,4 +1,4 @@
-import { readTranscriptEnvelopes } from "../transcript/transcriptDependencyDefaults.js";
+import { readTranscriptEnvelopes } from "../start/startCommandDependencyDefaults.js";
 import {
   resolveLatestSameRoundReviewerSnapshot,
   type LatestSameRoundReviewerSnapshot

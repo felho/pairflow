@@ -8,9 +8,11 @@ import {
   type FindingsParityMetadata
 } from "../../../../types/protocol.js";
 import {
-  appendProtocolEnvelope,
-  type AppendProtocolEnvelopeResult
-} from "../../transcript/transcriptDependencyDefaults.js";
+  appendProtocolEnvelope
+} from "../../start/startCommandDependencyDefaults.js";
+import type {
+  AppendProtocolEnvelopeResult
+} from "../../../shared/ports/transcript.js";
 import {
   readLatestSameRoundReviewerSnapshotFromTranscript,
   type LatestSameRoundReviewerSnapshot

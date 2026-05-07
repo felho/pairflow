@@ -2,9 +2,7 @@ import {
   reviewerDeliveryDefaults
 } from "../pass/reviewerDeliveryDefaults.js";
 import {
-  appendProtocolEnvelope
-} from "../transcript/transcriptDependencyDefaults.js";
-import {
+  appendProtocolEnvelope,
   readStateSnapshot,
   resolveBubbleById,
   writeStateSnapshot

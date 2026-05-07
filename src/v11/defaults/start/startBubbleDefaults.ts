@@ -37,6 +37,10 @@ import {
   inspectStateSnapshot,
   readStateSnapshot
 } from "../state/stateStoreDefaults.js";
+import {
+  appendProtocolEnvelope,
+  readTranscriptEnvelopes
+} from "../transcript/transcriptDependencyDefaults.js";
 import { resolveBubbleFromWorkspaceCwd } from "../workspace/workspaceResolutionDefaults.js";
 import {
   cleanupWorktreeWorkspace as cleanupWorktreeWorkspaceCanonical,
@@ -75,6 +79,10 @@ import type {
   WriteStateSnapshotPort
 } from "../../shared/ports/stateSnapshots.js";
 import type {
+  AppendProtocolEnvelopePort,
+  ReadTranscriptEnvelopesPort
+} from "../../shared/ports/transcript.js";
+import type {
   ReadReviewerBriefArtifactPort,
   ReadReviewerFocusArtifactPort
 } from "../../shared/ports/reviewerArtifacts.js";
@@ -106,6 +114,8 @@ export interface StartBubbleDependencyDefaults {
   inspectStateSnapshot: (statePath: string) => Promise<InspectedStateSnapshot>;
   readStateSnapshot: ReadStateSnapshotPort;
   writeStateSnapshot: WriteStateSnapshotPort;
+  appendProtocolEnvelope: AppendProtocolEnvelopePort;
+  readTranscriptEnvelopes: ReadTranscriptEnvelopesPort;
   loadPairflowGlobalConfig: () => Promise<PairflowGlobalConfig>;
   runGitCommand: RunGitPort;
   readRemotePointer: (path: string) => Promise<BubbleRemotePointer | null>;
@@ -156,6 +166,8 @@ export const startBubbleDependencyDefaults: StartBubbleDependencyDefaults = {
   inspectStateSnapshot,
   readStateSnapshot,
   writeStateSnapshot: writeStateSnapshotCanonical,
+  appendProtocolEnvelope,
+  readTranscriptEnvelopes,
   loadPairflowGlobalConfig: loadPairflowGlobalConfigCanonical,
   runGitCommand: runGitCommandCanonical,
   readRemotePointer: readRemotePointerCanonical,

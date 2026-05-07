@@ -4,9 +4,9 @@ import type {
 } from "../../../types/bubble.js";
 import {
   readStateSnapshot,
+  readTranscriptEnvelopes,
   resolveBubbleById
 } from "../start/startCommandDependencyDefaults.js";
-import { readTranscriptEnvelopes } from "../transcript/transcriptDependencyDefaults.js";
 import { resolveCanonicalPendingApprovalSignal } from "../../shared/approval/pendingApprovalSignal.js";
 import { isNamedError } from "../../shared/errors/namedError.js";
 import type { MetaReviewGateRoute } from "../../shared/metaReviewGate/index.js";
