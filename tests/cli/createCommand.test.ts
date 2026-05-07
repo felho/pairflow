@@ -7,7 +7,7 @@ import {
   PAIRFLOW_COMMAND_PROFILE_INVALID,
   REVIEW_ARTIFACT_TYPE_AUTO_REMOVED
 } from "../../src/config/bubbleConfig.js";
-import { CREATE_REMOTE_ALIAS_INVALID } from "../../src/v11/application/create/createCliOptionValidation.js";
+import { CREATE_REMOTE_ALIAS_INVALID } from "../../src/cli/commands/bubble/createCliOptionValidation.js";
 import {
   IDEATION_TASK_INPUT_CONFLICT,
   IDEATION_TASK_REQUIRED

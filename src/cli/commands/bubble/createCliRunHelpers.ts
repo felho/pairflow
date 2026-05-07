@@ -2,12 +2,12 @@ import { resolve } from "node:path";
 
 import { DEPENDENCY_FAIL_REPO_REGISTRY_REGISTER } from "../../../config/bubbleConfig.js";
 import type { CreateReviewArtifactType } from "../../../types/bubble.js";
-import { createBubble } from "./createCommandApi.js";
+import { createBubble } from "../../../v11/application/create/createCommandApi.js";
 import type {
   BubbleCreateInput,
   CreateBubbleImplementation
-} from "./createCommandContract.js";
-import type { RegisterRepoInRegistryPort } from "../../shared/ports/repoRegistry.js";
+} from "../../../v11/application/create/createCommandContract.js";
+import type { RegisterRepoInRegistryPort } from "../../../v11/shared/ports/repoRegistry.js";
 
 export interface BubbleCreateCommandRuntimeOptions {
   id?: string;

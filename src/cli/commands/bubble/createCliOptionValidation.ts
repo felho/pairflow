@@ -1,7 +1,7 @@
 import {
   IDEATION_TASK_INPUT_CONFLICT,
   IDEATION_TASK_REQUIRED
-} from "../../shared/ideation/ideationReasonCodes.js";
+} from "../../../v11/shared/ideation/ideationReasonCodes.js";
 import type { BubbleCreateCommandOptions } from "./createCliOptionTypes.js";
 import {
   appendMissingOption,
@@ -17,8 +17,8 @@ import {
 import {
   CREATE_REMOTE_ALIAS_INVALID,
   parseCreateRemoteAlias
-} from "./createRemoteAlias.js";
-import { isValidationTargetId } from "../../shared/validation/validationTargetId.js";
+} from "../../../v11/application/create/createRemoteAlias.js";
+import { isValidationTargetId } from "../../../v11/shared/validation/validationTargetId.js";
 
 export interface BubbleCreateParsedValues {
   id?: string;

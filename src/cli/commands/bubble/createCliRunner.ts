@@ -1,4 +1,4 @@
-import type { RegisterRepoInRegistryPort } from "../../shared/ports/repoRegistry.js";
+import type { RegisterRepoInRegistryPort } from "../../../v11/shared/ports/repoRegistry.js";
 import {
   buildCreateBubbleInput,
   registerRepoAfterCreateBestEffort,
@@ -7,7 +7,7 @@ import {
 import type {
   BubbleCreateResult,
   CreateBubbleImplementation
-} from "./createCommandContract.js";
+} from "../../../v11/application/create/createCommandContract.js";
 import { parseBubbleCreateCommandOptions } from "./createCliOptions.js";
 
 export interface BubbleCreateCommandDependencies {

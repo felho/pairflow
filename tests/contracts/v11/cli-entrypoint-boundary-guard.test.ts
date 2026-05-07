@@ -5,10 +5,7 @@ import { describe, expect, it } from "vitest";
 
 const directBubbleCliShimCommands = [
   "attach",
-  "commit",
-  "create",
   "delete",
-  "extract",
   "inbox",
   "kickoff",
   "list",
@@ -21,6 +18,9 @@ const directBubbleCliShimCommands = [
 
 const intentionalNonShimBubbleCliWrappers = [
   "approve",
+  "commit",
+  "create",
+  "extract",
   "merge",
   "reply",
   "requestRework",
@@ -29,9 +29,24 @@ const intentionalNonShimBubbleCliWrappers = [
   "watchdog"
 ] as const;
 
+const intentionalBubbleCliHelperModules = [
+  "createCliOptionParser",
+  "createCliOptionTypes",
+  "createCliOptionValidation",
+  "createCliOptionValidationHelpers",
+  "createCliOptions",
+  "createCliRunHelpers",
+  "createCliRunner"
+] as const;
+
 const allowedBubbleCliModulePrefixes = [
   "node:",
-  "../../../v11/application/"
+  "./",
+  "../../../config/",
+  "../../../types/",
+  "../../../v11/application/",
+  "../../../v11/defaults/",
+  "../../../v11/shared/"
 ] as const;
 
 async function listTypeScriptFiles(root: string): Promise<string[]> {
@@ -145,13 +160,14 @@ describe("bubble CLI entrypoint boundary guard", () => {
     const actualWrapperCommands = await listBubbleCliWrapperCommands();
     const classifiedCommands = [
       ...directBubbleCliShimCommands,
-      ...intentionalNonShimBubbleCliWrappers
+      ...intentionalNonShimBubbleCliWrappers,
+      ...intentionalBubbleCliHelperModules
     ].sort();
 
     expect(classifiedCommands).toEqual(actualWrapperCommands);
   });
 
-  it("keeps bubble CLI wrappers routed only to node or v11 application boundaries", async () => {
+  it("keeps bubble CLI wrappers routed only to node, local CLI, config, or v11 boundaries", async () => {
     const specifiers = await collectBubbleCliModuleSpecifiers();
     for (const { command, specifier } of specifiers) {
       expect(

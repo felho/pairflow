@@ -603,6 +603,39 @@ In the closing PR:
 
 ---
 
+## Execution Log
+
+### 2026-05-07 — Batch 1: D1-D3 CLI ownership inversion
+
+- Moved `commit`, `create`, and `extract` CLI command ownership from
+  `src/v11/application/**` into `src/cli/commands/bubble/**`.
+- Removed the three application-layer dynamic defaults shims:
+  `commitCliCommand.ts`, `createCliCommand.ts`, and `extractCliCommand.ts`.
+- Replaced those shims with static CLI-side defaults imports, making the CLI
+  command modules the composition boundary for these three commands.
+- Moved the create CLI parser/help/runner helper cluster into the CLI layer,
+  leaving the application create API and flow implementation in place.
+- Added `createCommandErrors.ts` so application reviewer-focus parsing no
+  longer depends on a CLI validation helper.
+- Updated the CLI entrypoint boundary guard to classify the migrated commands
+  as real CLI modules and the create helper files as explicit CLI helpers.
+- Fitness result after the batch: application dynamic defaults warnings are
+  down from 35 to 32; shared dynamic defaults warnings remain 10.
+- Validation:
+  - `pnpm typecheck` passed.
+  - `pnpm lint` passed.
+  - `pnpm fitness:check:ci` passed with the expected remaining warnings
+    (`application_defaults_boundary=32`, `shared_defaults_boundary=10`).
+  - `pnpm exec vitest run tests/cli/bubbleCommitCommand.test.ts tests/cli/bubbleExtractCommand.test.ts tests/cli/createCommand.test.ts tests/cli/createCliRunner.test.ts tests/cli/createCliRunHelpers.test.ts`
+    passed.
+  - `pnpm exec vitest run tests/contracts/v11/cli-entrypoint-boundary-guard.test.ts`
+    passed after updating the guard.
+  - `pnpm test` rerun reached only one unrelated flaky
+    `tests/core/util/fileLock.test.ts` timeout; rerunning that file passed.
+  - `pnpm build` passed.
+
+---
+
 ## Notes
 
 - Source list captured from `pnpm fitness:check:ci`, 2026-05-07. If the count

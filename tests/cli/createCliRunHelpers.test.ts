@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   buildCreateBubbleInput,
   resolveBubbleCreateCommandDependencies
-} from "../../../../src/v11/application/create/createCliRunHelpers.js";
+} from "../../src/cli/commands/bubble/createCliRunHelpers.js";
 
 describe("create CLI run helpers", () => {
   it("leaves repo registry wiring to the caller boundary", () => {

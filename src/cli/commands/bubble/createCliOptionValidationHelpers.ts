@@ -6,6 +6,12 @@ import type {
   CreateReviewArtifactType,
   PairflowCommandProfile
 } from "../../../types/bubble.js";
+import {
+  formatCreateError,
+  formatCreateErrorWithReason,
+  toCreateCommandError,
+  toCreateCommandReasonCodeError
+} from "../../../v11/application/create/createCommandErrors.js";
 
 export function appendMissingOption(
   missing: string[],
@@ -21,24 +27,12 @@ export function toValidationErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
-export function formatCreateError(message: string): string {
-  return `${message} context: command_name=create.`;
-}
-
-export function formatCreateErrorWithReason(message: string, reasonCode: string): string {
-  return `${message} context: command_name=create reason_code=${reasonCode}.`;
-}
-
-export function toCreateCommandError(message: string): Error {
-  return new Error(formatCreateError(message));
-}
-
-export function toCreateCommandReasonCodeError(
-  message: string,
-  reasonCode: string
-): Error {
-  return new Error(formatCreateErrorWithReason(message, reasonCode));
-}
+export {
+  formatCreateError,
+  formatCreateErrorWithReason,
+  toCreateCommandError,
+  toCreateCommandReasonCodeError
+};
 
 export function parsePairflowCommandProfile(
   rawPairflowCommandProfile: string | undefined

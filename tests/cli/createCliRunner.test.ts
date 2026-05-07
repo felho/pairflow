@@ -8,10 +8,10 @@ import type {
   CreateBubbleImplementation,
   BubbleCreateInput,
   BubbleCreateResult
-} from "../../../../src/v11/application/create/createCommandContract.js";
-import { CREATE_REMOTE_ALIAS_INVALID } from "../../../../src/v11/application/create/createCliOptionValidation.js";
-import { runBubbleCreateCommand } from "../../../../src/v11/application/create/createCliRunner.js";
-import { initGitRepository } from "../../../helpers/git.js";
+} from "../../src/v11/application/create/createCommandContract.js";
+import { CREATE_REMOTE_ALIAS_INVALID } from "../../src/cli/commands/bubble/createCliOptionValidation.js";
+import { runBubbleCreateCommand } from "../../src/cli/commands/bubble/createCliRunner.js";
+import { initGitRepository } from "../helpers/git.js";
 
 const tempDirs: string[] = [];
 
