@@ -97,6 +97,69 @@ describe("shared defaults boundary fitness check", () => {
     expect(report.details).toContain("application_imports_shared_defaults=1");
   });
 
+  it("warns when shared dynamically imports defaults through a path helper", async () => {
+    const repoRoot = await createTempRoot();
+    await writeRepoFile(
+      repoRoot,
+      "src/v11/defaults/state/stateStoreDefaults.ts",
+      "export const readStateSnapshot = () => undefined;\n"
+    );
+    await writeRepoFile(
+      repoRoot,
+      "src/v11/shared/state/stateStoreDefaults.ts",
+      [
+        "function getStateStoreDefaultsModulePath(): string {",
+        "  return '../../defaults/state/stateStoreDefaults.js';",
+        "}",
+        "export async function load() {",
+        "  return import(getStateStoreDefaultsModulePath());",
+        "}"
+      ].join("\n")
+    );
+
+    const report = await buildSharedDefaultsBoundaryCheckReport({
+      check: checkInput("hard-fail"),
+      repoRoot,
+      fallbackMode: "hard-fail"
+    });
+
+    expect(report.status).toBe("warn");
+    expect(report.details?.some((detail) =>
+      detail.includes("[warn] shared dynamic-imports defaults runtime wiring")
+    )).toBe(true);
+    expect(report.details).toContain("dynamic_defaults_imports=1");
+  });
+
+  it("warns when shared dynamically imports defaults through a joined path", async () => {
+    const repoRoot = await createTempRoot();
+    await writeRepoFile(
+      repoRoot,
+      "src/v11/defaults/watchdog/watchdogPaneActivityDefaults.ts",
+      "export const readWatchdogPaneActivity = () => undefined;\n"
+    );
+    await writeRepoFile(
+      repoRoot,
+      "src/v11/shared/status/statusCommandDefaults.ts",
+      [
+        "function getDefaultsModulePath(): string {",
+        "  return ['..', '..', 'defaults', 'watchdog', 'watchdogPaneActivityDefaults.js'].join('/');",
+        "}",
+        "export async function load() {",
+        "  return import(getDefaultsModulePath());",
+        "}"
+      ].join("\n")
+    );
+
+    const report = await buildSharedDefaultsBoundaryCheckReport({
+      check: checkInput("hard-fail"),
+      repoRoot,
+      fallbackMode: "hard-fail"
+    });
+
+    expect(report.status).toBe("warn");
+    expect(report.details).toContain("dynamic_defaults_imports=1");
+  });
+
   it("does not warn on application imports of shared ports", async () => {
     const repoRoot = await createTempRoot();
     await writeRepoFile(

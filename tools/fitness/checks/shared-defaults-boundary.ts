@@ -13,6 +13,7 @@ import type {
 interface ImportSpecifier {
   specifier: string;
   line: number;
+  kind: "static" | "dynamic";
 }
 
 type SharedDefaultsViolationKind =
@@ -24,6 +25,7 @@ interface SharedDefaultsViolation {
   fromRelative: string;
   toRelative: string;
   line: number;
+  severity: "fail" | "warn";
 }
 
 interface SharedDefaultsBoundaryException {
@@ -87,22 +89,114 @@ function parseImportSpecifiers(input: {
     true
   );
   const imports: ImportSpecifier[] = [];
+  const staticStringBindings = new Map<string, string>();
 
-  const pushSpecifier = (specifier: string, node: ts.Node): void => {
+  const readStaticStringExpression = (
+    expression: ts.Expression
+  ): string | undefined => {
+    if (ts.isStringLiteral(expression) || ts.isNoSubstitutionTemplateLiteral(expression)) {
+      return expression.text;
+    }
+    if (ts.isParenthesizedExpression(expression)) {
+      return readStaticStringExpression(expression.expression);
+    }
+    if (
+      ts.isAsExpression(expression) ||
+      ts.isSatisfiesExpression(expression) ||
+      ts.isTypeAssertionExpression(expression)
+    ) {
+      return readStaticStringExpression(expression.expression);
+    }
+    if (
+      ts.isCallExpression(expression) &&
+      ts.isPropertyAccessExpression(expression.expression) &&
+      expression.expression.name.text === "join" &&
+      ts.isArrayLiteralExpression(expression.expression.expression) &&
+      expression.arguments.length === 1 &&
+      expression.arguments[0] !== undefined &&
+      ts.isStringLiteral(expression.arguments[0])
+    ) {
+      const parts: string[] = [];
+      for (const element of expression.expression.expression.elements) {
+        const value = ts.isExpression(element)
+          ? readStaticStringExpression(element)
+          : undefined;
+        if (value === undefined) {
+          return undefined;
+        }
+        parts.push(value);
+      }
+      return parts.join(expression.arguments[0].text);
+    }
+    return undefined;
+  };
+
+  const collectStaticStringBindings = (node: ts.Node): void => {
+    if (
+      ts.isVariableDeclaration(node) &&
+      ts.isIdentifier(node.name) &&
+      node.initializer !== undefined
+    ) {
+      const value = readStaticStringExpression(node.initializer);
+      if (value !== undefined) {
+        staticStringBindings.set(node.name.text, value);
+      }
+    }
+    if (
+      ts.isFunctionDeclaration(node) &&
+      node.name !== undefined &&
+      node.parameters.length === 0 &&
+      node.body !== undefined
+    ) {
+      for (const statement of node.body.statements) {
+        if (ts.isReturnStatement(statement) && statement.expression !== undefined) {
+          const value = readStaticStringExpression(statement.expression);
+          if (value !== undefined) {
+            staticStringBindings.set(node.name.text, value);
+          }
+        }
+      }
+    }
+    node.forEachChild(collectStaticStringBindings);
+  };
+
+  const resolveDynamicImportSpecifier = (
+    argument: ts.Expression
+  ): string | undefined => {
+    if (ts.isIdentifier(argument)) {
+      return staticStringBindings.get(argument.text);
+    }
+    if (
+      ts.isCallExpression(argument) &&
+      argument.arguments.length === 0 &&
+      ts.isIdentifier(argument.expression)
+    ) {
+      return staticStringBindings.get(argument.expression.text);
+    }
+    return readStaticStringExpression(argument);
+  };
+
+  const pushSpecifier = (
+    specifier: string,
+    node: ts.Node,
+    kind: ImportSpecifier["kind"]
+  ): void => {
     const line =
       sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile)).line + 1;
-    imports.push({ specifier, line });
+    imports.push({ specifier, line, kind });
   };
+
+  collectStaticStringBindings(sourceFile);
 
   const visit = (node: ts.Node): void => {
     if (ts.isImportDeclaration(node) && ts.isStringLiteral(node.moduleSpecifier)) {
-      pushSpecifier(node.moduleSpecifier.text, node.moduleSpecifier);
+      pushSpecifier(node.moduleSpecifier.text, node.moduleSpecifier, "static");
     } else if (
       ts.isExportDeclaration(node)
       && node.moduleSpecifier !== undefined
       && ts.isStringLiteral(node.moduleSpecifier)
     ) {
-      pushSpecifier(node.moduleSpecifier.text, node.moduleSpecifier);
+      pushSpecifier(node.moduleSpecifier.text, node.moduleSpecifier, "static");
     } else if (
       ts.isCallExpression(node)
       && node.expression.kind === ts.SyntaxKind.ImportKeyword
@@ -110,7 +204,12 @@ function parseImportSpecifiers(input: {
     ) {
       const argument = node.arguments[0];
       if (argument !== undefined && ts.isStringLiteral(argument)) {
-        pushSpecifier(argument.text, argument);
+        pushSpecifier(argument.text, argument, "static");
+      } else if (argument !== undefined && ts.isExpression(argument)) {
+        const specifier = resolveDynamicImportSpecifier(argument);
+        if (specifier !== undefined) {
+          pushSpecifier(specifier, argument, "dynamic");
+        }
       }
     }
     node.forEachChild(visit);
@@ -234,7 +333,8 @@ async function collectViolations(input: {
           kind: "shared-imports-defaults",
           fromRelative,
           toRelative,
-          line: imported.line
+          line: imported.line,
+          severity: imported.kind === "static" ? "fail" : "warn"
         });
         continue;
       }
@@ -243,7 +343,8 @@ async function collectViolations(input: {
           kind: "application-imports-shared-defaults",
           fromRelative,
           toRelative,
-          line: imported.line
+          line: imported.line,
+          severity: imported.kind === "static" ? "fail" : "warn"
         });
       }
     }
@@ -257,9 +358,13 @@ async function collectViolations(input: {
 
 function formatViolation(violation: SharedDefaultsViolation): string {
   if (violation.kind === "shared-imports-defaults") {
-    return `${violation.fromRelative}:${String(violation.line)} shared imports defaults runtime wiring -> ${violation.toRelative}`;
+    return violation.severity === "fail"
+      ? `${violation.fromRelative}:${String(violation.line)} shared imports defaults runtime wiring -> ${violation.toRelative}`
+      : `${violation.fromRelative}:${String(violation.line)} [warn] shared dynamic-imports defaults runtime wiring -> ${violation.toRelative}`;
   }
-  return `${violation.fromRelative}:${String(violation.line)} application imports shared defaults facade -> ${violation.toRelative}`;
+  return violation.severity === "fail"
+    ? `${violation.fromRelative}:${String(violation.line)} application imports shared defaults facade -> ${violation.toRelative}`
+    : `${violation.fromRelative}:${String(violation.line)} [warn] application dynamic-imports shared defaults facade -> ${violation.toRelative}`;
 }
 
 export async function buildSharedDefaultsBoundaryCheckReport({
@@ -299,10 +404,17 @@ export async function buildSharedDefaultsBoundaryCheckReport({
     allowlist: parsedExceptions.allowlist
   });
   const sharedDefaultsCount = filtered.violations.filter(
-    (violation) => violation.kind === "shared-imports-defaults"
+    (violation) =>
+      violation.kind === "shared-imports-defaults" &&
+      violation.severity === "fail"
   ).length;
   const applicationFacadeCount = filtered.violations.filter(
-    (violation) => violation.kind === "application-imports-shared-defaults"
+    (violation) =>
+      violation.kind === "application-imports-shared-defaults" &&
+      violation.severity === "fail"
+  ).length;
+  const dynamicDefaultsCount = filtered.violations.filter(
+    (violation) => violation.severity === "warn"
   ).length;
   const details = [
     ...filtered.violations.slice(0, 100).map(formatViolation),
@@ -313,6 +425,7 @@ export async function buildSharedDefaultsBoundaryCheckReport({
     `files_scanned=${String(files.length)}`,
     `shared_imports_defaults=${String(sharedDefaultsCount)}`,
     `application_imports_shared_defaults=${String(applicationFacadeCount)}`,
+    `dynamic_defaults_imports=${String(dynamicDefaultsCount)}`,
     `exceptions_configured=${String(check.exceptions?.length ?? 0)}`,
     `exceptions_applied=${String(filtered.appliedExceptionIds.length)}`
   ].filter((detail) => detail !== undefined);
@@ -327,11 +440,17 @@ export async function buildSharedDefaultsBoundaryCheckReport({
     );
   }
 
-  const problemCount = filtered.violations.length + parsedExceptions.invalid.length;
+  const failCount = filtered.violations.filter(
+    (violation) => violation.severity === "fail"
+  ).length;
+  const warnCount = filtered.violations.filter(
+    (violation) => violation.severity === "warn"
+  ).length;
+  const problemCount = failCount + parsedExceptions.invalid.length;
   if (problemCount > 0) {
     const violationSummary =
-      filtered.violations.length > 0
-        ? `${String(filtered.violations.length)} shared-defaults boundary import(s)`
+      failCount > 0
+        ? `${String(failCount)} shared-defaults boundary import(s)`
         : undefined;
     const invalidSummary =
       parsedExceptions.invalid.length > 0
@@ -343,6 +462,18 @@ export async function buildSharedDefaultsBoundaryCheckReport({
       mode,
       status: mode === "hard-fail" ? "fail" : "warn",
       summary: `Shared defaults boundary check ${mode === "hard-fail" ? "failed" : "warning"}: ${[violationSummary, invalidSummary].filter((item) => item !== undefined).join(" and ")} detected.`,
+      metric: check.metric,
+      details
+    };
+  }
+
+  if (warnCount > 0) {
+    return {
+      id: check.id,
+      owner: check.owner ?? "unknown",
+      mode,
+      status: "warn",
+      summary: `Shared defaults boundary check warning: ${String(warnCount)} dynamic shared-defaults boundary import(s) detected.`,
       metric: check.metric,
       details
     };
