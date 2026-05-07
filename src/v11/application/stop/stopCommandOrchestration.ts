@@ -4,7 +4,6 @@ import type {
   StopBubbleInput,
   StopBubbleResult
 } from "./stopCommandContract.js";
-import { stopCommandDefaults } from "./stopCommandDefaults.js";
 import {
   StopBubbleError,
   createStopBubbleError,
@@ -13,20 +12,52 @@ import {
 
 const STOP_BUBBLE_REQUIRES_NON_FINAL_STATE =
   "STOP_BUBBLE_REQUIRES_NON_FINAL_STATE";
+const STOP_BUBBLE_DEPENDENCY_MISSING = "STOP_BUBBLE_DEPENDENCY_MISSING";
+
+function requireStopDependency<T>(value: T | undefined, name: string): T {
+  if (value === undefined) {
+    throw createStopBubbleError({
+      reasonCode: STOP_BUBBLE_DEPENDENCY_MISSING,
+      message: `stop requires dependency ${name}.`,
+      context: {
+        dependency: name,
+        stage: "resolve_stop_dependencies"
+      }
+    });
+  }
+  return value;
+}
 
 export async function stopBubbleCommandOrchestration(
   input: StopBubbleInput,
   dependencies: StopBubbleDependencies = {}
 ): Promise<StopBubbleResult> {
-  const terminateTmux =
-    dependencies.terminateBubbleTmuxSession
-    ?? stopCommandDefaults.terminateBubbleTmuxSession;
-  const removeSession =
-    dependencies.removeRuntimeSession ?? stopCommandDefaults.removeRuntimeSession;
-  const writeState =
-    dependencies.writeStateSnapshot ?? stopCommandDefaults.writeStateSnapshot;
+  const resolveBubbleById = requireStopDependency(
+    dependencies.resolveBubbleById,
+    "resolveBubbleById"
+  );
+  const readStateSnapshot = requireStopDependency(
+    dependencies.readStateSnapshot,
+    "readStateSnapshot"
+  );
+  const executeStopCancellationMutation = requireStopDependency(
+    dependencies.executeStopCancellationMutation,
+    "executeStopCancellationMutation"
+  );
+  const terminateTmux = requireStopDependency(
+    dependencies.terminateBubbleTmuxSession,
+    "terminateBubbleTmuxSession"
+  );
+  const removeSession = requireStopDependency(
+    dependencies.removeRuntimeSession,
+    "removeRuntimeSession"
+  );
+  const writeState = requireStopDependency(
+    dependencies.writeStateSnapshot,
+    "writeStateSnapshot"
+  );
 
-  const resolved = await stopCommandDefaults.resolveBubbleById({
+  const resolved = await resolveBubbleById({
     bubbleId: input.bubbleId,
     ...(input.repoPath !== undefined ? { repoPath: input.repoPath } : {}),
     ...(input.cwd !== undefined ? { cwd: input.cwd } : {})
@@ -34,9 +65,7 @@ export async function stopBubbleCommandOrchestration(
   const now = input.now ?? new Date();
   const nowIso = now.toISOString();
 
-  const loaded = await stopCommandDefaults.readStateSnapshot(
-    resolved.bubblePaths.statePath
-  );
+  const loaded = await readStateSnapshot(resolved.bubblePaths.statePath);
   if (isFinalState(loaded.state.state)) {
     throw createStopBubbleError(
       `${STOP_BUBBLE_REQUIRES_NON_FINAL_STATE}: bubble stop requires non-final state (current: ${loaded.state.state}).`
@@ -53,7 +82,7 @@ export async function stopBubbleCommandOrchestration(
 
   let written;
   try {
-    written = await stopCommandDefaults.executeStopCancellationMutation({
+    written = await executeStopCancellationMutation({
       statePath: resolved.bubblePaths.statePath,
       loadedState: loaded,
       nowIso,

@@ -14,6 +14,7 @@ import { emitHumanReplyV11 as emitHumanReply } from "../../application/reply/emi
 import { resumeBubbleV11 as resumeBubble } from "../../application/resume/emitResumeV11.js";
 import { startBubbleV11 as startBubble } from "../../application/start/emitStartV11.js";
 import { getBubbleStatusV11 as getBubbleStatus } from "../../application/status/emitStatusV11.js";
+import { stopBubbleDependencyDefaults } from "../stop/stopCommandDefaults.js";
 import { stopBubbleV11 as stopBubble } from "../../application/stop/emitStopV11.js";
 import { getBubbleInbox } from "../../application/inbox/bubbleInboxReadModel.js";
 import { listBubbles } from "../../application/list/listReadModelApi.js";
@@ -401,7 +402,10 @@ export const uiRouterDependencyDefaults = {
   },
   async stopBubble(input) {
     return mapUiStopResult(
-      await stopBubble(projectUiInputNowToCommandNow(input))
+      await stopBubble(
+        projectUiInputNowToCommandNow(input),
+        stopBubbleDependencyDefaults
+      )
     );
   },
   updateBubbleReviewPolicy: updateBubbleReviewPolicyForUi

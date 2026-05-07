@@ -23,6 +23,7 @@ import type {
 } from "../../../types/archive.js";
 import type { DeleteBubbleResult } from "../../../contracts/deleteBubble.js";
 import type { RemoteBubbleStatusTarget } from "../../shared/status/remoteBubbleStatusContract.js";
+import type { stopBubbleV11 } from "../stop/emitStopV11.js";
 
 interface TmuxCommandErrorConstructor {
   new(args: string[], exitCode: number, stderr: string): Error;
@@ -108,6 +109,7 @@ export interface DeleteBubbleDependencyDefaults {
   }) => Promise<RemoteBubbleStatusTarget>;
   resolveBubbleById: ResolveBubbleByIdPort;
   runTmux: TmuxRunner;
+  stopBubble: typeof stopBubbleV11;
   TmuxCommandError: TmuxCommandErrorConstructor;
   terminateBubbleTmuxSession: TerminateBubbleTmuxSessionPort;
   upsertDeletedArchiveIndexEntry: (

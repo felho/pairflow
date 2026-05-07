@@ -338,7 +338,7 @@ twice.
 | B14 | `application/reviewer/reviewerTestEvidenceDefaults.ts:30` | `defaults/reviewer/reviewerTestEvidenceDefaults.ts` | **A** (reclassified) | Completed in Batch 14: reviewer test-evidence ports are now supplied through start, converged, and reviewer-delivery defaults aggregates; the standalone application shim was deleted. |
 | B15 | `application/start/startBubbleDependencyDefaults.ts:63` | `defaults/start/startBubbleDefaults.ts` | B | Verified. |
 | B16 | `application/status/statusCommandDependencyDefaults.ts:26` | `defaults/list/listCommandDefaults.ts` | B | Verified: target imports many infrastructure adapters directly (config loader, remote artifact reads/writes, SSH bubble status, repo resolution, list bubble workspace, ...). Same target as S7; resolution-strategy for the *shared* side is the S5/S7 modelling call. CLI passes the aggregator on the application side. |
-| B17 | `application/stop/stopCommandDefaults.ts:29` | `defaults/stop/stopCommandDefaults.ts` | B | Verified: target has no direct `infrastructure/` imports, but aggregates 5 sibling defaults (`bubbleLookup`, `runtimeSessions`, `state`, `tmuxSession`) plus `stopCancellationMutation`. Composition by transitive aggregation. |
+| B17 | `application/stop/stopCommandDefaults.ts:29` | `defaults/stop/stopCommandDefaults.ts` | B | Completed in Batch 26: CLI, UI, and delete defaults now pass the stop defaults aggregate explicitly; the stop application contract exposes its former hidden default ports and the standalone application shim was deleted. |
 | B18 | `application/watchdog/watchdogDependencyDefaults.ts:77` | `defaults/watchdog/watchdogCommandDefaults.ts` | B | Verified. |
 | B19 | `application/watchdog/watchdogDependencyDefaults.ts:87` | `defaults/watchdog/watchdogPendingReworkDefaults.ts` | B | Verified: target aggregates 2 concrete adapters (`ensureBubbleInstanceIdForMutation` from sibling defaults, `resolveDeliveryMessageRef` from infrastructure tmuxDelivery). Composition. |
 
@@ -1318,6 +1318,37 @@ In the closing PR:
     passed (`5` files, `92` tests).
   - `pnpm test` skipped for this focused restart defaults rewiring batch; the
     targeted CLI, restart core, restart contract, UI router, and
+    application-defaults-fitness tests cover the changed surface.
+  - `pnpm lint` passed.
+  - `pnpm build` passed.
+
+### 2026-05-07 — Batch 26: route stop defaults through composition
+
+- Expanded the stop application dependency contract to expose the hidden
+  default ports previously supplied by the application shim:
+  `resolveBubbleById`, `readStateSnapshot`, and
+  `executeStopCancellationMutation`.
+- Changed stop orchestration to require its dependencies explicitly with a
+  structured `STOP_BUBBLE_DEPENDENCY_MISSING` error when composition is
+  incomplete.
+- Updated CLI and UI composition to pass `stopBubbleDependencyDefaults`
+  explicitly.
+- Added a bound `stopBubble` function to delete defaults, so delete keeps using
+  the command through composition wiring rather than through an application
+  fallback.
+- Updated stop tests to provide the explicit defaults aggregate.
+- Deleted `src/v11/application/stop/stopCommandDefaults.ts`.
+- Fitness result after the batch: application dynamic defaults warnings are
+  down from 16 to 15; shared dynamic defaults warnings remain 0. Hard-fail
+  fitness checks pass.
+- Validation:
+  - `pnpm typecheck` passed.
+  - `pnpm fitness:check:ci` passed with the expected remaining warnings
+    (`application_defaults_boundary=15`, `shared_defaults_boundary=0`).
+  - `pnpm exec vitest run tests/cli/bubbleStopCommand.test.ts tests/core/bubble/stopBubble.test.ts tests/core/bubble/deleteBubble.test.ts tests/core/ui/router.test.ts tests/tools/fitness/applicationDefaultsBoundary.test.ts`
+    passed (`5` files, `125` tests).
+  - `pnpm test` skipped for this focused stop defaults rewiring batch; the
+    targeted CLI, stop core, delete integration, UI router, and
     application-defaults-fitness tests cover the changed surface.
   - `pnpm lint` passed.
   - `pnpm build` passed.

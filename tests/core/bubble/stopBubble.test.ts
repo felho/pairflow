@@ -9,6 +9,7 @@ import {
   StopBubbleErrorV11 as StopBubbleError,
   stopBubbleV11 as stopBubble
 } from "../../../src/v11/application/stop/emitStopV11.js";
+import { stopBubbleDependencyDefaults } from "../../../src/v11/defaults/stop/stopCommandDefaults.js";
 import { readStateSnapshot } from "../../../src/v11/infrastructure/state/stateStore.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
 import { initGitRepository } from "../../helpers/git.js";
@@ -48,6 +49,7 @@ describe("stopBubble", () => {
         now: new Date("2026-02-22T21:00:00.000Z")
       },
       {
+        ...stopBubbleDependencyDefaults,
         terminateBubbleTmuxSession: () => {
           terminateCalled = true;
           return Promise.resolve({
@@ -93,6 +95,7 @@ describe("stopBubble", () => {
         now: new Date("2026-02-22T21:05:00.000Z")
       },
       {
+        ...stopBubbleDependencyDefaults,
         terminateBubbleTmuxSession: () =>
           Promise.resolve({
             sessionName: "pf-b_stop_02",
@@ -103,10 +106,13 @@ describe("stopBubble", () => {
     );
 
     await expect(
-      stopBubble({
-        bubbleId: bubble.bubbleId,
-        cwd: repoPath
-      })
+      stopBubble(
+        {
+          bubbleId: bubble.bubbleId,
+          cwd: repoPath
+        },
+        stopBubbleDependencyDefaults
+      )
     ).rejects.toBeInstanceOf(StopBubbleError);
   });
 });

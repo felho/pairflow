@@ -11,12 +11,20 @@ import { ensureBubbleInstanceIdForMutation } from "../bubbleIdentity/bubbleIdent
 import { branchExists } from "../git/gitDefaults.js";
 import { readRuntimeSessionsRegistry, removeRuntimeSession } from "../runtimeSessions/runtimeSessionsDefaults.js";
 import { readStateSnapshot } from "../state/stateStoreDefaults.js";
+import { stopBubbleV11 } from "../../application/stop/emitStopV11.js";
+import { stopBubbleDependencyDefaults } from "../stop/stopCommandDefaults.js";
 import { terminateBubbleTmuxSession } from "../tmux/tmuxSessionDefaults.js";
 import { cleanupWorktreeWorkspace } from "../worktree/worktreeWorkspaceDefaults.js";
 import { resolveBubbleById } from "../bubbleLookup/bubbleLookupDefaults.js";
 import { buildBubbleTmuxSessionName } from "../../shared/bubble/tmuxSessionName.js";
 import { statusCommandDependencyDefaults } from "../status/statusCommandDependencyDefaults.js";
 import { removeWatchdogPaneActivity } from "../watchdog/watchdogPaneActivityDefaults.js";
+
+const stopBubble: typeof stopBubbleV11 = (input, dependencies = {}) =>
+  stopBubbleV11(input, {
+    ...stopBubbleDependencyDefaults,
+    ...dependencies
+  });
 
 export const deleteBubbleDependencyDefaults = {
   buildBubbleTmuxSessionName,
@@ -35,6 +43,7 @@ export const deleteBubbleDependencyDefaults = {
     statusCommandDependencyDefaults.resolveRemoteBubbleStatusTarget,
   resolveBubbleById,
   runTmux,
+  stopBubble,
   TmuxCommandError,
   terminateBubbleTmuxSession,
   upsertDeletedArchiveIndexEntry

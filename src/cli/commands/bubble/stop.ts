@@ -1,8 +1,10 @@
 import { parseArgs } from "node:util";
 
+import { stopBubbleDependencyDefaults } from "../../../v11/defaults/stop/stopCommandDefaults.js";
 import {
   asStopBubbleErrorV11 as asStopBubbleError,
   stopBubbleV11 as stopBubble,
+  type StopBubbleV11Dependencies,
   type StopBubbleV11Result as StopBubbleResult
 } from "../../../v11/application/stop/emitStopV11.js";
 
@@ -74,7 +76,8 @@ export function parseBubbleStopCommandOptions(
 
 export async function runBubbleStopCommand(
   args: string[],
-  cwd: string = process.cwd()
+  cwd: string = process.cwd(),
+  dependencies: StopBubbleV11Dependencies = {}
 ): Promise<StopBubbleResult | null> {
   const options = parseBubbleStopCommandOptions(args);
   if (options.help) {
@@ -86,6 +89,9 @@ export async function runBubbleStopCommand(
       bubbleId: options.id,
       repoPath: options.repo,
       cwd
+    }, {
+      ...stopBubbleDependencyDefaults,
+      ...dependencies
     });
   } catch (error) {
     asStopBubbleError(error);

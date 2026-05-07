@@ -16,7 +16,6 @@ import type { BranchExistsPort } from "../../shared/ports/git.js";
 import type { PathExistsPort } from "../../shared/ports/pathExists.js";
 import type { RemoveWatchdogPaneActivityPort } from "../../shared/ports/watchdogPaneActivity.js";
 import { inferBubbleStartedAtFromInstanceId } from "../../shared/bubble/bubbleInstanceId.js";
-import { stopBubbleV11 as stopBubble } from "../stop/emitStopV11.js";
 import {
   canonicalizeDeleteExecutionPath,
   resolveRemoteDeleteExecutionContextFromEnv
@@ -83,7 +82,7 @@ export interface DeleteBubbleDependencies {
   cleanupWorktreeWorkspace?: typeof deleteBubbleDependencyDefaults.cleanupWorktreeWorkspace;
   removeBubbleDirectory?: ((path: string) => Promise<void>) | undefined;
   removeWatchdogPaneActivity?: RemoveWatchdogPaneActivityPort | undefined;
-  stopBubble?: typeof stopBubble;
+  stopBubble?: typeof deleteBubbleDependencyDefaults.stopBubble;
   createArchiveSnapshot?:
     | typeof deleteBubbleDependencyDefaults.createArchiveSnapshot
     | undefined;
@@ -112,7 +111,7 @@ export interface ResolvedDeleteDependencies {
   cleanupWorktreeWorkspace: typeof deleteBubbleDependencyDefaults.cleanupWorktreeWorkspace;
   removeBubbleDirectory: (path: string) => Promise<void>;
   removeWatchdogPaneActivity: RemoveWatchdogPaneActivityPort;
-  stopBubble: typeof stopBubble;
+  stopBubble: typeof deleteBubbleDependencyDefaults.stopBubble;
   createArchiveSnapshot:
     typeof deleteBubbleDependencyDefaults.createArchiveSnapshot;
   upsertDeletedArchiveIndexEntry:
@@ -220,7 +219,8 @@ export function resolveDeleteDependencies(
     removeWatchdogPaneActivity:
       dependencies.removeWatchdogPaneActivity ??
       deleteBubbleDependencyDefaults.removeWatchdogPaneActivity,
-    stopBubble: dependencies.stopBubble ?? stopBubble,
+    stopBubble:
+      dependencies.stopBubble ?? deleteBubbleDependencyDefaults.stopBubble,
     createArchiveSnapshot:
       dependencies.createArchiveSnapshot ??
       deleteBubbleDependencyDefaults.createArchiveSnapshot,
