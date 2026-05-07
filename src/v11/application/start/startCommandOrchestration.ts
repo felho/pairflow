@@ -17,10 +17,6 @@ import {
   createStartBubbleError
 } from "./startCommandRuntime.js";
 import {
-  readReviewerBriefArtifact as defaultReadReviewerBriefArtifact,
-  readReviewerFocusArtifact as defaultReadReviewerFocusArtifact
-} from "../reviewer/reviewerArtifactDefaults.js";
-import {
   resolveReviewerTestExecutionDirective as defaultResolveReviewerTestExecutionDirective
 } from "../reviewer/reviewerTestEvidenceDefaults.js";
 import type {
@@ -146,16 +142,21 @@ function resolveRemoteExecutionDependencies(input: {
   };
 }
 
-function resolveReviewerDependencies(dependencies: StartBubbleDependencies) {
+function resolveReviewerDependencies(input: {
+  dependencies: StartBubbleDependencies;
+  defaults: StartBubbleDependencyDefaults;
+}) {
   return {
     buildResumeSummary:
-      dependencies.buildResumeTranscriptSummary ?? buildResumeTranscriptSummary,
+      input.dependencies.buildResumeTranscriptSummary ?? buildResumeTranscriptSummary,
     readReviewerBriefArtifact:
-      dependencies.readReviewerBriefArtifact ?? defaultReadReviewerBriefArtifact,
+      input.dependencies.readReviewerBriefArtifact
+      ?? input.defaults.readReviewerBriefArtifact,
     readReviewerFocusArtifact:
-      dependencies.readReviewerFocusArtifact ?? defaultReadReviewerFocusArtifact,
+      input.dependencies.readReviewerFocusArtifact
+      ?? input.defaults.readReviewerFocusArtifact,
     resolveReviewerTestExecutionDirective:
-      dependencies.resolveReviewerTestExecutionDirective
+      input.dependencies.resolveReviewerTestExecutionDirective
       ?? defaultResolveReviewerTestExecutionDirective
   };
 }
@@ -173,7 +174,10 @@ export async function resolveStartBubbleDependencies(
     dependencies,
     defaults: startBubbleDependencyDefaults
   });
-  const reviewerDependencies = resolveReviewerDependencies(dependencies);
+  const reviewerDependencies = resolveReviewerDependencies({
+    dependencies,
+    defaults: startBubbleDependencyDefaults
+  });
 
   return {
     bootstrap:

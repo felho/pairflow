@@ -6,10 +6,16 @@ import type {
   ResolveDeliveryMessageRefPort
 } from "../../shared/ports/tmuxDelivery.js";
 import type { RefreshReviewerContextPort } from "../../shared/ports/reviewerContext.js";
+import type {
+  ReadReviewerBriefArtifactPort,
+  ReadReviewerFocusArtifactPort
+} from "../../shared/ports/reviewerArtifacts.js";
 
 interface ReviewerDeliveryDefaultsModule {
   reviewerDeliveryDefaults: {
     emitDeliveryNotificationAck: EmitDeliveryNotificationAckPort;
+    readReviewerBriefArtifact: ReadReviewerBriefArtifactPort;
+    readReviewerFocusArtifact: ReadReviewerFocusArtifactPort;
     refreshReviewerContext: RefreshReviewerContextPort;
   };
 }
@@ -17,6 +23,8 @@ interface ReviewerDeliveryDefaultsModule {
 let reviewerDeliveryDefaultsPromise:
   | Promise<{
       emitDeliveryNotificationAck: EmitDeliveryNotificationAckPort;
+      readReviewerBriefArtifact: ReadReviewerBriefArtifactPort;
+      readReviewerFocusArtifact: ReadReviewerFocusArtifactPort;
       refreshReviewerContext: RefreshReviewerContextPort;
     }>
   | undefined;
@@ -27,6 +35,8 @@ function getReviewerDeliveryDefaultsModulePath(): string {
 
 async function loadReviewerDeliveryDefaults(): Promise<{
   emitDeliveryNotificationAck: EmitDeliveryNotificationAckPort;
+  readReviewerBriefArtifact: ReadReviewerBriefArtifactPort;
+  readReviewerFocusArtifact: ReadReviewerFocusArtifactPort;
   refreshReviewerContext: RefreshReviewerContextPort;
 }> {
   reviewerDeliveryDefaultsPromise ??= import(
@@ -84,12 +94,30 @@ export async function refreshReviewerContext(
   return defaults.refreshReviewerContext(...args);
 }
 
+export async function readReviewerBriefArtifact(
+  ...args: Parameters<ReadReviewerBriefArtifactPort>
+): Promise<Awaited<ReturnType<ReadReviewerBriefArtifactPort>>> {
+  const defaults = await loadReviewerDeliveryDefaults();
+  return defaults.readReviewerBriefArtifact(...args);
+}
+
+export async function readReviewerFocusArtifact(
+  ...args: Parameters<ReadReviewerFocusArtifactPort>
+): Promise<Awaited<ReturnType<ReadReviewerFocusArtifactPort>>> {
+  const defaults = await loadReviewerDeliveryDefaults();
+  return defaults.readReviewerFocusArtifact(...args);
+}
+
 export const reviewerDeliveryDefaults = {
   emitDeliveryNotificationAck,
+  readReviewerBriefArtifact,
+  readReviewerFocusArtifact,
   refreshReviewerContext,
   resolveDeliveryMessageRef
 } as const satisfies {
   emitDeliveryNotificationAck: EmitDeliveryNotificationAckPort;
+  readReviewerBriefArtifact: ReadReviewerBriefArtifactPort;
+  readReviewerFocusArtifact: ReadReviewerFocusArtifactPort;
   refreshReviewerContext: RefreshReviewerContextPort;
   resolveDeliveryMessageRef: ResolveDeliveryMessageRefPort;
 };

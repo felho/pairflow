@@ -17,6 +17,10 @@ import {
   removeRuntimeSession as removeRuntimeSessionCanonical
 } from "../../infrastructure/executor/sessionRuntime/runtimeSessionsRegistry.js";
 import {
+  readReviewerBriefArtifact,
+  readReviewerFocusArtifact
+} from "../reviewer/reviewerArtifactDefaults.js";
+import {
   cleanupWorktreeWorkspace as cleanupWorktreeWorkspaceCanonical,
   bootstrapWorktreeWorkspace as bootstrapWorktreeWorkspaceCanonical
 } from "../../infrastructure/workspace/worktreeManager.js";
@@ -47,6 +51,10 @@ import type {
 } from "../../shared/ports/tmuxSessions.js";
 import type { RunGitPort } from "../../shared/ports/git.js";
 import type { WriteStateSnapshotPort } from "../../shared/ports/stateSnapshots.js";
+import type {
+  ReadReviewerBriefArtifactPort,
+  ReadReviewerFocusArtifactPort
+} from "../../shared/ports/reviewerArtifacts.js";
 
 export interface StartBubbleDependencyDefaults {
   bootstrapWorktreeWorkspace: BootstrapWorktreeWorkspacePort;
@@ -70,6 +78,8 @@ export interface StartBubbleDependencyDefaults {
   executeRemoteBubbleStart: (
     input: ExecuteRemoteBubbleStartInput
   ) => Promise<ExecuteRemoteBubbleStartResult>;
+  readReviewerBriefArtifact: ReadReviewerBriefArtifactPort;
+  readReviewerFocusArtifact: ReadReviewerFocusArtifactPort;
 }
 
 export const bootstrapWorktreeWorkspace: BootstrapWorktreeWorkspacePort =
@@ -103,5 +113,7 @@ export const startBubbleDependencyDefaults: StartBubbleDependencyDefaults = {
   writeRemotePointer: writeRemotePointerCanonical,
   writeRemoteStateCache: writeRemoteStateCacheCanonical,
   removeRemoteStateCache: removeRemoteStateCacheCanonical,
-  executeRemoteBubbleStart: executeRemoteBubbleStartCanonical
+  executeRemoteBubbleStart: executeRemoteBubbleStartCanonical,
+  readReviewerBriefArtifact,
+  readReviewerFocusArtifact
 };

@@ -43,6 +43,10 @@ export interface StartBubbleDependencyDefaults {
   executeRemoteBubbleStart: (
     input: ExecuteRemoteBubbleStartInput
   ) => Promise<ExecuteRemoteBubbleStartResult>;
+  readReviewerBriefArtifact:
+    NonNullable<StartBubbleDependencies["readReviewerBriefArtifact"]>;
+  readReviewerFocusArtifact:
+    NonNullable<StartBubbleDependencies["readReviewerFocusArtifact"]>;
 }
 
 interface StartBubbleDependencyDefaultsModule {

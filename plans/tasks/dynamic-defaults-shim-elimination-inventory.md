@@ -334,7 +334,7 @@ twice.
 | B10 | `application/pass/reviewerDeliveryDefaults.ts:33` | `defaults/reviewer/reviewerDeliveryDefaults.ts` | B | Verified. |
 | B11 | `application/reconcile/reconcileCommandDefaults.ts:25` | `defaults/reconcile/reconcileCommandDefaults.ts` | B | Verified: target imports `infrastructure/` and `tmuxRunnerDefaults`, plus contains default probe logic. Composition. |
 | B12 | `application/restart/restartCommandDefaults.ts:29` | `defaults/restart/restartCommandDefaults.ts` | B | Verified. |
-| B13 | `application/reviewer/reviewerArtifactDefaults.ts:22` | `defaults/reviewer/reviewerArtifactDefaults.ts` | **A** (reclassified) | Verified: target re-exports 2 cohesive reviewer-brief artifact reads. Port-slice DI: caller takes a `ReviewerBriefArtifactCapabilities` slice (or the 2 individual ports). |
+| B13 | `application/reviewer/reviewerArtifactDefaults.ts:22` | `defaults/reviewer/reviewerArtifactDefaults.ts` | **A** (reclassified) | Completed in Batch 13: reviewer brief/focus artifact readers are now supplied through the existing start and reviewer-delivery defaults aggregates; the standalone application shim was deleted. |
 | B14 | `application/reviewer/reviewerTestEvidenceDefaults.ts:30` | `defaults/reviewer/reviewerTestEvidenceDefaults.ts` | **A** (reclassified) | Verified: target re-exports 5 cohesive reviewer test-evidence ports (path resolution from `shared/reviewer/testEvidence`, plus 4 from infrastructure: directive resolution, evidence verification, artifact write). Port-slice DI: caller takes a `ReviewerTestEvidenceCapabilities` slice. |
 | B15 | `application/start/startBubbleDependencyDefaults.ts:63` | `defaults/start/startBubbleDefaults.ts` | B | Verified. |
 | B16 | `application/status/statusCommandDependencyDefaults.ts:26` | `defaults/list/listCommandDefaults.ts` | B | Verified: target imports many infrastructure adapters directly (config loader, remote artifact reads/writes, SSH bubble status, repo resolution, list bubble workspace, ...). Same target as S7; resolution-strategy for the *shared* side is the S5/S7 modelling call. CLI passes the aggregator on the application side. |
@@ -953,6 +953,34 @@ In the closing PR:
     passed (`3` files, `41` tests).
   - `pnpm test` skipped for this focused converged validation dependency
     rewiring batch; the targeted converged validation, converged flow, and
+    application-defaults-fitness tests cover the changed surface.
+  - `pnpm build` passed.
+
+### 2026-05-07 — Batch 13: route reviewer artifact readers through command defaults
+
+- Added reviewer brief/focus artifact readers to
+  `src/v11/defaults/start/startBubbleDefaults.ts` and its application-side
+  dynamic contract so start resume context receives them from the start
+  defaults aggregate.
+- Added reviewer brief/focus artifact readers to
+  `src/v11/defaults/reviewer/reviewerDeliveryDefaults.ts` and exposed them
+  through the existing application reviewer-delivery defaults wrapper.
+- Updated start dependency resolution and pass reviewer delivery fallback to
+  use those command-owned defaults instead of importing a standalone
+  application reviewer artifact shim.
+- Deleted `src/v11/application/reviewer/reviewerArtifactDefaults.ts`.
+- Fitness result after the batch: application dynamic defaults warnings are
+  down from 29 to 28; shared dynamic defaults warnings remain 0. Hard-fail
+  fitness checks pass.
+- Validation:
+  - `pnpm typecheck` passed.
+  - `pnpm lint` passed.
+  - `pnpm fitness:check:ci` passed with the expected remaining warnings
+    (`application_defaults_boundary=28`, `shared_defaults_boundary=0`).
+  - `pnpm exec vitest run tests/v11/application/pass/reviewerDelivery.test.ts tests/v11/application/start/startCommandOrchestration.test.ts tests/core/bubble/startBubble.test.ts tests/core/agent/pass.test.ts tests/tools/fitness/applicationDefaultsBoundary.test.ts`
+    passed (`5` files, `215` tests).
+  - `pnpm test` skipped for this focused reviewer-artifact defaults rewiring
+    batch; the targeted start, pass, reviewer-delivery, and
     application-defaults-fitness tests cover the changed surface.
   - `pnpm build` passed.
 

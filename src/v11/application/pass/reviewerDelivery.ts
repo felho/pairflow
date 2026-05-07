@@ -2,10 +2,6 @@ import {
   type DeliveryAck,
   type EmitDeliveryNotificationAckPort
 } from "../../../v11/shared/ports/tmuxDelivery.js";
-import {
-  readReviewerBriefArtifact as defaultReadReviewerBriefArtifact,
-  readReviewerFocusArtifact as defaultReadReviewerFocusArtifact
-} from "../reviewer/reviewerArtifactDefaults.js";
 import type { ReviewerTestExecutionDirective } from "../../../v11/shared/reviewer/testEvidence.js";
 import type { BubbleConfig } from "../../../types/bubble.js";
 import type { ProtocolEnvelope } from "../../../types/protocol.js";
@@ -96,10 +92,10 @@ export async function executePassDelivery(
     reviewerFocusArtifactPath: input.reviewerFocusArtifactPath,
     readReviewerBriefArtifact:
       dependencies.readReviewerBriefArtifact
-      ?? defaultReadReviewerBriefArtifact,
+      ?? reviewerDeliveryDefaults.readReviewerBriefArtifact,
     readReviewerFocusArtifact:
       dependencies.readReviewerFocusArtifact
-      ?? defaultReadReviewerFocusArtifact
+      ?? reviewerDeliveryDefaults.readReviewerFocusArtifact
   });
 
   const refreshReviewer =
