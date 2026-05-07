@@ -193,7 +193,7 @@ table.
 |---|-------------|-----------------|-----|--------|
 | S1 | `shared/actorProtocol/actorEmitContext.ts:46` | `defaults/workspace/workspaceResolutionDefaults.ts` | A | `actorEmitContext` takes the existing workspace-resolution port as a parameter; remove dynamic load. |
 | S2 | `shared/bubbleLookup/bubbleLookupDefaults.ts:18` | `defaults/bubbleLookup/bubbleLookupDefaults.ts` | A | Delete file; callers take `ResolveBubbleByIdPort` directly. |
-| S3 | `shared/metaReview/metaReviewDependencyDefaults.ts:22` | `defaults/runtimeSessions/runtimeSessionsDefaults.ts` | A | Caller takes the existing runtime-sessions port directly. |
+| S3 | `shared/metaReview/metaReviewDependencyDefaults.ts:22` | `defaults/runtimeSessions/runtimeSessionsDefaults.ts` | A | Completed in Batch 6: the shared shim had no live caller after the application-local `metaReviewDependencyDefaults.ts` copy became authoritative, so the shared file was deleted. |
 | S4 | `shared/metrics/bubbleEvents.ts:62` | `defaults/metrics/bubbleEventsDefaults.ts` | A | bubbleEvents receives a `BubbleEventEmitter` port (single port, no wrapper). |
 | S5 | `shared/read-model/list/listReadModelDefaults.ts:73` | `defaults/list/listCommandDefaults.ts` | B + modelling | Target is verified composition (direct `infrastructure/` imports, see B16). Resolution path picked (v4): **refactor caller out of `shared/`**. The shim file deletes as part of the S5/S7 refactor; the moved application API takes deps as a parameter, CLI injects from `defaults/list/`. See "S5/S7 Refactor Scope". |
 | S6 | `shared/state/stateStoreDefaults.ts:28` | `defaults/state/stateStoreDefaults.ts` | A | Delete file; callers take `StateCapabilities` slice (read/write/inspect). The shared layer must not own state-store wiring. |
@@ -770,6 +770,28 @@ In the closing PR:
     passed.
   - `pnpm test` passed (`433` root test files, `3719` root tests; `18` UI
     test files, `229` UI tests).
+  - `pnpm build` passed.
+
+### 2026-05-07 — Batch 6: remove unused shared meta-review defaults shim
+
+- Deleted `src/v11/shared/metaReview/metaReviewDependencyDefaults.ts`.
+- Verified the live meta-review submit preparation already imports the
+  application-local `src/v11/application/metaReview/metaReviewDependencyDefaults.ts`;
+  there were no remaining source/test callers of the shared shim.
+- Fitness result after the batch: application dynamic defaults warnings remain
+  31; shared dynamic defaults warnings are down from 6 to 5. Hard-fail
+  fitness checks pass.
+- Validation:
+  - `pnpm typecheck` passed.
+  - `pnpm lint` passed.
+  - `pnpm fitness:check:ci` passed with the expected remaining warnings
+    (`application_defaults_boundary=31`, `shared_defaults_boundary=5`).
+  - `pnpm exec vitest run tests/v11/application/metaReview/metaReviewGateEmit.test.ts tests/contracts/v11/metaReviewSubmitCoverage.test.ts tests/tools/fitness/sharedDefaultsBoundary.test.ts`
+    passed.
+  - `pnpm test` skipped for this deletion-only unused-shim batch; the previous
+    Batch 5 full-suite run passed immediately before this change, and the
+    targeted meta-review/fitness coverage above exercises the affected import
+    surface.
   - `pnpm build` passed.
 
 ---
