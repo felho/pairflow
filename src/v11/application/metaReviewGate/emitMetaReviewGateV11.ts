@@ -13,37 +13,6 @@ import type {
   NotifyMetaReviewerSubmissionRequestInput
 } from "./metaReviewGateCommandApi.js";
 import { notifyMetaReviewerSubmissionRequest } from "./metaReviewGateNotify.js";
-import { resolveMetaReviewerPaneWarning } from "./metaReviewGatePaneBinding.js";
-import { resolveMetaReviewGateDependencyDefaults } from "./metaReviewGateDependencyDefaults.js";
-
-async function withMetaReviewGateApplyDefaults(
-  dependencies: ApplyMetaReviewGateOnConvergenceDependencies = {}
-): Promise<ApplyMetaReviewGateOnConvergenceDependencies> {
-  const defaults = await resolveMetaReviewGateDependencyDefaults();
-  return {
-    appendProtocolEnvelope:
-      dependencies.appendProtocolEnvelope ?? defaults.appendProtocolEnvelope,
-    readStateSnapshot:
-      dependencies.readStateSnapshot ?? defaults.readStateSnapshot,
-    readTranscriptEnvelopes:
-      dependencies.readTranscriptEnvelopes ?? defaults.readTranscriptEnvelopes,
-    resolveBubbleById:
-      dependencies.resolveBubbleById ?? defaults.resolveBubbleById,
-    setMetaReviewerPaneBinding:
-      dependencies.setMetaReviewerPaneBinding
-      ?? defaults.setMetaReviewerPaneBinding,
-    writeStateSnapshot:
-      dependencies.writeStateSnapshot ?? defaults.writeStateSnapshot,
-    readFile: dependencies.readFile ?? defaults.readFile,
-    runtime: dependencies.runtime ?? defaults.runtime,
-    notifyMetaReviewerSubmissionRequest:
-      dependencies.notifyMetaReviewerSubmissionRequest
-      ?? notifyMetaReviewerSubmissionRequestV11,
-    resolveMetaReviewerPaneWarning:
-      dependencies.resolveMetaReviewerPaneWarning
-      ?? resolveMetaReviewerPaneWarning
-  };
-}
 
 export {
   asMetaReviewGateError as asMetaReviewGateErrorV11,
@@ -55,10 +24,7 @@ export async function notifyMetaReviewerSubmissionRequestV11(
   input: NotifyMetaReviewerSubmissionRequestInput,
   dependencies: NotifyMetaReviewerSubmissionRequestDependencies = {}
 ): Promise<MetaReviewRuntimeDeliveryObservation> {
-  const defaults = await resolveMetaReviewGateDependencyDefaults();
-  return notifyMetaReviewerSubmissionRequest(input, {
-    runtime: dependencies.runtime ?? defaults.runtime.notify
-  });
+  return notifyMetaReviewerSubmissionRequest(input, dependencies);
 }
 export type {
   ApplyMetaReviewGateOnConvergenceDependencies as ApplyMetaReviewGateOnConvergenceV11Dependencies,
@@ -74,8 +40,5 @@ export async function applyMetaReviewGateOnConvergenceV11(
   input: ApplyMetaReviewGateOnConvergenceInput,
   dependencies: ApplyMetaReviewGateOnConvergenceDependencies = {}
 ): Promise<MetaReviewGateResult> {
-  return applyMetaReviewGateOnConvergence(
-    input,
-    await withMetaReviewGateApplyDefaults(dependencies)
-  );
+  return applyMetaReviewGateOnConvergence(input, dependencies);
 }

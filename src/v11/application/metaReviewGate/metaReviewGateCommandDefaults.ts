@@ -69,16 +69,3 @@ export interface MetaReviewGateDependencyDefaults {
   writeStateSnapshot:
     NonNullable<ApplyMetaReviewGateOnConvergenceDependencies["writeStateSnapshot"]>;
 }
-
-export async function loadMetaReviewGateDependencyDefaults(): Promise<
-  MetaReviewGateDependencyDefaults
-> {
-  const defaultsModulePath =
-    "../../defaults/metaReviewGate/metaReviewGateCommandDefaults.js";
-  const { metaReviewGateDependencyDefaults } = await import(
-    defaultsModulePath
-  ) as {
-    metaReviewGateDependencyDefaults: MetaReviewGateDependencyDefaults;
-  };
-  return metaReviewGateDependencyDefaults;
-}
