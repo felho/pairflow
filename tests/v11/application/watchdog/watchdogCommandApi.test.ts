@@ -75,10 +75,9 @@ describe("watchdogCommandApi", () => {
     };
   }
 
-  function baseDependencies(input: {
-    sampleWatchdogPaneActivity?: () => Promise<PaneActivitySampleResult>;
-    retryStuckAgentInput?: BubbleWatchdogV11Dependencies["retryStuckAgentInput"];
-  } = {}): BubbleWatchdogV11Dependencies {
+  function baseDependencies(
+    input: BubbleWatchdogV11Dependencies = {}
+  ): BubbleWatchdogV11Dependencies {
     return {
       emitDeliveryNotificationAck: () =>
         Promise.resolve({
@@ -101,16 +100,7 @@ describe("watchdogCommandApi", () => {
           stderr: "",
           exitCode: 0
         }),
-      ...(input.sampleWatchdogPaneActivity !== undefined
-        ? {
-            sampleWatchdogPaneActivity: input.sampleWatchdogPaneActivity
-          }
-        : {}),
-      ...(input.retryStuckAgentInput !== undefined
-        ? {
-            retryStuckAgentInput: input.retryStuckAgentInput
-          }
-        : {})
+      ...input
     };
   }
 
@@ -620,6 +610,135 @@ describe("watchdogCommandApi", () => {
             sampled_at: "2026-02-22T12:31:00.000Z",
             error: "runtime session missing"
           })
+      })
+    );
+
+    expect(result.escalated).toBe(true);
+    expect(result.reason).toBe("escalated");
+    expect(result.state.state).toBe("WAITING_HUMAN");
+  });
+
+  it("mirrors watchdog escalation questions to the inbox", async () => {
+    const repoPath = await createTempRepo();
+    const startedAt = "2026-02-22T12:00:00.000Z";
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_watchdog_v11_inbox_mirror_01",
+      task: "Watchdog v11 inbox mirror",
+      startedAt
+    });
+
+    await runBubbleWatchdogV11(
+      {
+        bubbleId: bubble.bubbleId,
+        cwd: repoPath,
+        now: new Date(
+          Date.parse(startedAt) + (bubble.config.watchdog_timeout_minutes + 1) * 60_000
+        )
+      },
+      baseDependencies({
+        sampleWatchdogPaneActivity: () =>
+          Promise.resolve({
+            status: "no_session",
+            sampled_at: "2026-02-22T12:31:00.000Z",
+            error: "runtime session missing"
+          })
+      })
+    );
+
+    const inbox = await readFile(bubble.paths.inboxPath, "utf8");
+    expect(inbox).toContain('"type":"HUMAN_QUESTION"');
+    expect(inbox).toContain("Watchdog timeout: no pairflow command");
+  });
+
+  it("preserves transcript-first recovery when state write fails after append", async () => {
+    const repoPath = await createTempRepo();
+    const startedAt = "2026-02-22T12:00:00.000Z";
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_watchdog_v11_state_write_failure_01",
+      task: "Watchdog v11 state write failure",
+      startedAt
+    });
+    const callOrder: string[] = [];
+    const appendProtocolEnvelope: NonNullable<
+      BubbleWatchdogV11Dependencies["appendProtocolEnvelope"]
+    > = async (input) => {
+      callOrder.push("append");
+      return {
+        envelope: {
+          id: "msg_watchdog_state_write_failure",
+          ts: "2026-02-22T12:31:00.000Z",
+          ...input.envelope
+        },
+        sequence: 1,
+        mirrorWriteFailures: []
+      };
+    };
+    const writeStateSnapshot: NonNullable<
+      BubbleWatchdogV11Dependencies["writeStateSnapshot"]
+    > = async () => {
+      callOrder.push("write");
+      throw new Error("simulated write failure");
+    };
+
+    await expect(
+      runBubbleWatchdogV11(
+        {
+          bubbleId: bubble.bubbleId,
+          cwd: repoPath,
+          now: new Date(
+            Date.parse(startedAt) +
+              (bubble.config.watchdog_timeout_minutes + 1) * 60_000
+          )
+        },
+        baseDependencies({
+          sampleWatchdogPaneActivity: () =>
+            Promise.resolve({
+              status: "no_session",
+              sampled_at: "2026-02-22T12:31:00.000Z",
+              error: "runtime session missing"
+            }),
+          appendProtocolEnvelope,
+          writeStateSnapshot
+        })
+      )
+    ).rejects.toThrow(
+      "Watchdog escalation envelope msg_watchdog_state_write_failure was appended but state update failed"
+    );
+
+    expect(callOrder).toEqual(["append", "write"]);
+  });
+
+  it("keeps escalation successful when delivery and notification side effects fail", async () => {
+    const repoPath = await createTempRepo();
+    const startedAt = "2026-02-22T12:00:00.000Z";
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_watchdog_v11_best_effort_notify_01",
+      task: "Watchdog v11 best effort notification",
+      startedAt
+    });
+
+    const result = await runBubbleWatchdogV11(
+      {
+        bubbleId: bubble.bubbleId,
+        cwd: repoPath,
+        now: new Date(
+          Date.parse(startedAt) + (bubble.config.watchdog_timeout_minutes + 1) * 60_000
+        )
+      },
+      baseDependencies({
+        sampleWatchdogPaneActivity: () =>
+          Promise.resolve({
+            status: "no_session",
+            sampled_at: "2026-02-22T12:31:00.000Z",
+            error: "runtime session missing"
+          }),
+        emitDeliveryNotificationAck: () =>
+          Promise.reject(new Error("delivery failed")),
+        emitBubbleNotification: () =>
+          Promise.reject(new Error("notification failed"))
       })
     );
 

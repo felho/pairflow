@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { createInitialBubbleState } from "../../../../src/v11/domain/state/initialState.js";
 import { applyStateTransition } from "../../../../src/v11/domain/state/machine.js";
+import { deriveWatchdogWaitingHumanState } from "../../../../src/v11/domain/state/watchdogEscalation.js";
 import {
   StateTransitionError,
   getAllowedTransitions,
@@ -40,5 +41,32 @@ describe("v11 domain state machine", () => {
       "CANCELLED"
     ]);
     expect(isFinalState("DONE")).toBe(true);
+  });
+
+  it("derives watchdog escalation state without persistence concerns", () => {
+    const initial = createInitialBubbleState("b_v11_watchdog_state_01");
+    const preparing = applyStateTransition(initial, {
+      to: "PREPARING_WORKSPACE",
+      round: 0,
+      lastCommandAt: "2026-04-06T10:00:00.000Z"
+    });
+    const running = applyStateTransition(preparing, {
+      to: "RUNNING",
+      activeAgent: "codex",
+      activeRole: "implementer",
+      activeSince: "2026-04-06T10:00:00.000Z",
+      lastCommandAt: "2026-04-06T10:00:00.000Z"
+    });
+
+    const waiting = deriveWatchdogWaitingHumanState({
+      state: running,
+      lastCommandAt: "2026-04-06T10:31:00.000Z"
+    });
+
+    expect(waiting.state).toBe("WAITING_HUMAN");
+    expect(waiting.last_command_at).toBe("2026-04-06T10:31:00.000Z");
+    expect(waiting.execution_context).toBeNull();
+    expect(waiting.active_agent).toBe("codex");
+    expect(waiting.active_role).toBe("implementer");
   });
 });

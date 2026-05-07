@@ -1,6 +1,6 @@
 import type { BubbleStateSnapshot } from "../../../types/bubble.js";
 import type { BubbleWatchdogResult } from "./watchdogCommandContract.js";
-import { executeWatchdogEscalationMutation } from "../../shared/watchdog/watchdogEscalationMutation.js";
+import { deriveWatchdogWaitingHumanState } from "../../domain/state/watchdogEscalation.js";
 import { clearLiveMetaReviewSnapshot } from "../../shared/metaReview/metaReviewSnapshot.js";
 import { assertValidBubbleStateSnapshot } from "../../shared/state/stateSchema.js";
 import type { ResolvedBubbleById } from "../../shared/ports/bubbleLookup.js";
@@ -19,6 +19,18 @@ import type {
   WriteStateSnapshotPort
 } from "../../shared/ports/stateSnapshots.js";
 import { BubbleWatchdogError } from "./watchdogCommandRuntime.js";
+
+function buildEscalationQuestion(
+  bubbleId: string,
+  activeAgent: string,
+  timeoutMinutes: number
+): string {
+  return `Watchdog timeout: no pairflow command from active agent ${activeAgent} within ${timeoutMinutes} minutes. Please intervene, then run pairflow bubble resume --id ${bubbleId} when ready.`;
+}
+
+function ignoreBestEffortFailure(promise: Promise<unknown>): void {
+  void promise.catch(() => undefined);
+}
 
 export interface WatchdogRuntimeContext {
   now: Date;
@@ -75,38 +87,69 @@ export async function buildNotExpiredResult(
 export async function escalateRunningWatchdog(
   context: WatchdogRuntimeContext
 ): Promise<BubbleWatchdogResult> {
-  const { appended, written } = await executeWatchdogEscalationMutation({
-    bubbleId: context.resolved.bubbleId,
-    bubbleConfig: context.resolved.bubbleConfig,
-    bubblePaths: {
-      inboxPath: context.resolved.bubblePaths.inboxPath,
-      locksDir: context.resolved.bubblePaths.locksDir,
-      statePath: context.resolved.bubblePaths.statePath,
-      transcriptPath: context.resolved.bubblePaths.transcriptPath
-    },
-    state: context.state,
-    loadedState: context.loadedState,
+  const appended = await context.appendEnvelope({
+    transcriptPath: context.resolved.bubblePaths.transcriptPath,
+    mirrorPaths: [context.resolved.bubblePaths.inboxPath],
+    lockPath: `${context.resolved.bubblePaths.locksDir}/${context.resolved.bubbleId}.lock`,
     now: context.now,
-    nowIso: context.nowIso,
-    appendProtocolEnvelope: context.appendEnvelope,
-    writeStateSnapshot: context.writeState
+    envelope: {
+      bubble_id: context.resolved.bubbleId,
+      sender: "orchestrator",
+      recipient: "human",
+      type: "HUMAN_QUESTION",
+      round: context.state.round,
+      payload: {
+        question: buildEscalationQuestion(
+          context.resolved.bubbleId,
+          context.state.active_agent ?? "unknown",
+          context.resolved.bubbleConfig.watchdog_timeout_minutes
+        )
+      },
+      refs: []
+    }
   });
 
-  // Optional UX signal; never block protocol/state progression on notification failure.
-  void context.emitDelivery({
-    bubbleId: context.resolved.bubbleId,
-    bubbleConfig: context.resolved.bubbleConfig,
-    sessionsPath: context.resolved.bubblePaths.sessionsPath,
-    envelope: appended.envelope,
-    recipientRole: "status",
-    messageRef: context.resolveDeliveryMessageRef({
-      bubbleId: context.resolved.bubbleId,
-      sessionsPath: context.resolved.bubblePaths.sessionsPath,
-      envelope: appended.envelope
-    })
+  const nextState = deriveWatchdogWaitingHumanState({
+    state: context.state,
+    lastCommandAt: context.nowIso
   });
+
+  let written: LoadedStateSnapshot;
+  try {
+    written = await context.writeState(
+      context.resolved.bubblePaths.statePath,
+      nextState,
+      {
+        expectedFingerprint: context.loadedState.fingerprint,
+        expectedState: "RUNNING"
+      }
+    );
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error);
+    throw new BubbleWatchdogError(
+      `Watchdog escalation envelope ${appended.envelope.id} was appended but state update failed. Transcript remains canonical; recover state from transcript tail. Root error: ${reason}`
+    );
+  }
+
   // Optional UX signal; never block protocol/state progression on notification failure.
-  void context.emitNotification(context.resolved.bubbleConfig, "waiting-human");
+  ignoreBestEffortFailure(
+    context.emitDelivery({
+      bubbleId: context.resolved.bubbleId,
+      bubbleConfig: context.resolved.bubbleConfig,
+      sessionsPath: context.resolved.bubblePaths.sessionsPath,
+      envelope: appended.envelope,
+      recipientRole: "status",
+      messageRef: context.resolveDeliveryMessageRef({
+        bubbleId: context.resolved.bubbleId,
+        sessionsPath: context.resolved.bubblePaths.sessionsPath,
+        envelope: appended.envelope
+      })
+    })
+  );
+  // Optional UX signal; never block protocol/state progression on notification failure.
+  ignoreBestEffortFailure(
+    context.emitNotification(context.resolved.bubbleConfig, "waiting-human")
+  );
 
   return {
     bubbleId: context.resolved.bubbleId,
@@ -158,19 +201,23 @@ export async function escalateMetaReviewWatchdog(
     }
   );
 
-  void context.emitDelivery({
-    bubbleId: context.resolved.bubbleId,
-    bubbleConfig: context.resolved.bubbleConfig,
-    sessionsPath: context.resolved.bubblePaths.sessionsPath,
-    envelope: appended.envelope,
-    recipientRole: "status",
-    messageRef: context.resolveDeliveryMessageRef({
+  ignoreBestEffortFailure(
+    context.emitDelivery({
       bubbleId: context.resolved.bubbleId,
+      bubbleConfig: context.resolved.bubbleConfig,
       sessionsPath: context.resolved.bubblePaths.sessionsPath,
-      envelope: appended.envelope
+      envelope: appended.envelope,
+      recipientRole: "status",
+      messageRef: context.resolveDeliveryMessageRef({
+        bubbleId: context.resolved.bubbleId,
+        sessionsPath: context.resolved.bubblePaths.sessionsPath,
+        envelope: appended.envelope
+      })
     })
-  });
-  void context.emitNotification(context.resolved.bubbleConfig, "waiting-human");
+  );
+  ignoreBestEffortFailure(
+    context.emitNotification(context.resolved.bubbleConfig, "waiting-human")
+  );
 
   return {
     bubbleId: context.resolved.bubbleId,
