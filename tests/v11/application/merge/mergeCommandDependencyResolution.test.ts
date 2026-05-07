@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { resolveMergeCommandDependencies } from "../../../../src/v11/application/merge/mergeCommandDependencyResolution.js";
+import { mergeBubbleDependencyDefaults } from "../../../../src/v11/defaults/merge/mergeCommandDefaults.js";
 
 describe("mergeCommandDependencyResolution", () => {
   it("preserves explicit dependency overrides", async () => {
@@ -51,11 +52,14 @@ describe("mergeCommandDependencyResolution", () => {
       tmuxSessionName: "pf-b_remote_merge_01"
     })) as never;
 
-    const resolved = await resolveMergeCommandDependencies({
-      runGit: customRunGit,
-      executeRemoteBubbleMergeCommand,
-      executeRemoteBubbleMergeCleanupCommand
-    });
+    const resolved = resolveMergeCommandDependencies(
+      {
+        runGit: customRunGit,
+        executeRemoteBubbleMergeCommand,
+        executeRemoteBubbleMergeCleanupCommand
+      },
+      mergeBubbleDependencyDefaults
+    );
 
     expect(resolved.runGit).toBe(customRunGit);
     expect(resolved.executeRemoteBubbleMergeCommand).toBe(

@@ -1,8 +1,9 @@
 import type { MergeBubbleDependencies } from "./mergeCommandContract.js";
-import {
-  loadMergeBubbleDependencyDefaults,
-  type MergeBubbleDependencyDefaults
-} from "./mergeCommandDefaults.js";
+
+type MergeBubbleDependencyDefaults = {
+  [K in keyof Required<MergeBubbleDependencies>]:
+    NonNullable<Required<MergeBubbleDependencies>[K]>;
+};
 
 export interface ResolvedMergeCommandDependencies {
   runGit: MergeBubbleDependencyDefaults["runGit"];
@@ -32,10 +33,10 @@ export interface ResolvedMergeCommandDependencies {
   writeTextFile: MergeBubbleDependencyDefaults["writeTextFile"];
 }
 
-export async function resolveMergeCommandDependencies(
-  dependencies: MergeBubbleDependencies = {}
-): Promise<ResolvedMergeCommandDependencies> {
-  const mergeBubbleDependencyDefaults = await loadMergeBubbleDependencyDefaults();
+export function resolveMergeCommandDependencies(
+  dependencies: MergeBubbleDependencies = {},
+  mergeBubbleDependencyDefaults: MergeBubbleDependencyDefaults
+): ResolvedMergeCommandDependencies {
   return {
     runGit: dependencies.runGit ?? mergeBubbleDependencyDefaults.runGit,
     resolveBubbleById:

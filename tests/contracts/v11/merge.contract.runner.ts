@@ -18,6 +18,7 @@ import {
   type MergeBubbleV11Dependencies as MergeBubbleDependencies,
   type MergeBubbleV11Result as MergeBubbleResult
 } from "../../../src/v11/application/merge/emitMergeV11.js";
+import { mergeBubbleDependencyDefaults } from "../../../src/v11/defaults/merge/mergeCommandDefaults.js";
 import { initGitRepository, runGit } from "../../helpers/git.js";
 import type { ContractCase, ContractCaseExpected } from "./schema.js";
 
@@ -598,6 +599,7 @@ async function executeMergeCase(input: {
           now: new Date("2026-03-20T11:20:00.000Z")
         },
         {
+          ...mergeBubbleDependencyDefaults,
           ...localMergeDependencies,
           ...(mergeDependencies ?? {})
         }

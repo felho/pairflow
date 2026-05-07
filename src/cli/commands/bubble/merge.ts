@@ -1,8 +1,10 @@
 import { parseArgs } from "node:util";
 
+import { mergeBubbleDependencyDefaults } from "../../../v11/defaults/merge/mergeCommandDefaults.js";
 import {
   asBubbleMergeErrorV11 as throwAsBubbleMergeError,
   mergeBubbleV11 as mergeBubble,
+  type MergeBubbleV11Dependencies,
   type MergeBubbleV11Result as MergeBubbleResult
 } from "../../../v11/application/merge/emitMergeV11.js";
 
@@ -133,7 +135,8 @@ export function parseBubbleMergeCommandOptions(
 
 export async function executeBubbleMergeCommand(
   options: BubbleMergeCommandOptions,
-  cwd: string = process.cwd()
+  cwd: string = process.cwd(),
+  dependencies: MergeBubbleV11Dependencies = {}
 ): Promise<MergeBubbleResult> {
   try {
     return await mergeBubble({
@@ -142,6 +145,9 @@ export async function executeBubbleMergeCommand(
       cwd,
       push: options.push,
       deleteRemote: options["delete-remote"]
+    }, {
+      ...mergeBubbleDependencyDefaults,
+      ...dependencies
     });
   } catch (error) {
     return throwAsBubbleMergeError(error);
@@ -150,12 +156,13 @@ export async function executeBubbleMergeCommand(
 
 export async function runBubbleMergeCommand(
   args: string[],
-  cwd: string = process.cwd()
+  cwd: string = process.cwd(),
+  dependencies: MergeBubbleV11Dependencies = {}
 ): Promise<MergeBubbleResult | null> {
   const options = parseBubbleMergeCommandOptions(args);
   if (options.help) {
     return null;
   }
 
-  return executeBubbleMergeCommand(options, cwd);
+  return executeBubbleMergeCommand(options, cwd, dependencies);
 }

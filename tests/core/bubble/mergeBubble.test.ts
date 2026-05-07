@@ -8,8 +8,13 @@ import { renderBubbleConfigToml } from "../../../src/config/bubbleConfig.js";
 import { createBubble } from "../../../src/v11/application/create/createBubble.js";
 import {
   BubbleMergeErrorV11 as BubbleMergeError,
-  mergeBubbleV11 as mergeBubble
+  mergeBubbleV11 as mergeBubbleApplication
 } from "../../../src/v11/application/merge/emitMergeV11.js";
+import type {
+  MergeBubbleDependencies,
+  MergeBubbleInput
+} from "../../../src/v11/application/merge/mergeCommandContract.js";
+import { mergeBubbleDependencyDefaults } from "../../../src/v11/defaults/merge/mergeCommandDefaults.js";
 import {
   remoteMergeModeEnvVar,
   remoteMergeModeInnerRemoteExecution,
@@ -22,6 +27,16 @@ import { bootstrapWorktreeWorkspace } from "../../../src/v11/infrastructure/work
 import { initGitRepository, runGit } from "../../helpers/git.js";
 
 const tempDirs: string[] = [];
+
+function mergeBubble(
+  input: MergeBubbleInput,
+  dependencies: MergeBubbleDependencies = {}
+) {
+  return mergeBubbleApplication(input, {
+    ...mergeBubbleDependencyDefaults,
+    ...dependencies
+  });
+}
 
 async function createTempPath(prefix: string): Promise<string> {
   const root = await mkdtemp(join(tmpdir(), prefix));

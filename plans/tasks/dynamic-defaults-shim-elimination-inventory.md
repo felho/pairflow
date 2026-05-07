@@ -326,7 +326,7 @@ twice.
 | B2 | `application/converged/summaryVerifierConsistencyGateArtifactDefaults.ts:19` | `defaults/reviewer/summaryVerifierConsistencyGateDefaults.ts` | **A** (reclassified) | Completed in Batch 12: the write port is now part of `convergedDependencyDefaults.validation`; the standalone application artifact shim was deleted. |
 | B3 | `application/create/createBubbleDefaults.ts:28` | `defaults/create/createBubbleDefaults.ts` | B | Verified: target aggregates infrastructure adapters plus shared shims. Composition. |
 | B4 | `application/delete/deleteBubbleDependencyDefaults.ts:133` | `defaults/delete/deleteBubbleDefaults.ts` | B | Verified: heavy composition (multiple `infrastructure/` adapters + sibling `defaults/` + shared shims). Mirrors merge in shape. |
-| B5 | `application/merge/mergeCommandDefaults.ts:54` | `defaults/merge/mergeCommandDefaults.ts` | B | Verified. CLI passes to `emitMerge`. |
+| B5 | `application/merge/mergeCommandDefaults.ts:54` | `defaults/merge/mergeCommandDefaults.ts` | B | Completed in Batch 27: CLI and UI composition pass `mergeBubbleDependencyDefaults` explicitly; the merge dependency resolver now receives its defaults aggregate from the caller and the standalone application shim was deleted. |
 | B6 | `application/metaReview/emitMetaReviewV11.ts:49` | `defaults/metaReview/metaReviewDefaults.ts` | B | Verified: target aggregates 3 infrastructure adapters. Composition. |
 | B7 | `application/metaReviewGate/metaReviewGateCommandDefaults.ts:79` | `defaults/metaReviewGate/metaReviewGateCommandDefaults.ts` | B | Verified. CLI passes the aggregator. |
 | B8 | `application/pass/passReviewVerificationDefaults.ts:24` | `defaults/reviewer/reviewVerificationArtifactDefaults.ts` | **A** (reclassified) | Completed in Batch 17: pass review-verification resolve/write ports are now supplied through the existing pass-validation defaults aggregate; the standalone application shim was deleted. |
@@ -1350,6 +1350,31 @@ In the closing PR:
   - `pnpm test` skipped for this focused stop defaults rewiring batch; the
     targeted CLI, stop core, delete integration, UI router, and
     application-defaults-fitness tests cover the changed surface.
+  - `pnpm lint` passed.
+  - `pnpm build` passed.
+
+### 2026-05-07 — Batch 27: route merge defaults through composition
+
+- Changed merge dependency resolution so it receives the default aggregate from
+  its caller instead of loading `defaults/merge/mergeCommandDefaults.ts`
+  dynamically from application code.
+- Updated CLI composition to pass `mergeBubbleDependencyDefaults` explicitly;
+  UI composition already used the same aggregate.
+- Updated merge unit and contract tests to use explicit test-local composition
+  around `mergeBubbleV11`.
+- Deleted `src/v11/application/merge/mergeCommandDefaults.ts`.
+- Fitness result after the batch: application dynamic defaults warnings are
+  down from 15 to 14; shared dynamic defaults warnings remain 0. Hard-fail
+  fitness checks pass.
+- Validation:
+  - `pnpm typecheck` passed.
+  - `pnpm fitness:check:ci` passed with the expected remaining warnings
+    (`application_defaults_boundary=14`, `shared_defaults_boundary=0`).
+  - `pnpm exec vitest run tests/cli/bubbleMergeCommand.test.ts tests/core/bubble/mergeBubble.test.ts tests/contracts/v11/merge.contract.test.ts tests/v11/application/merge/mergeCommandDependencyResolution.test.ts tests/core/ui/router.test.ts tests/tools/fitness/applicationDefaultsBoundary.test.ts`
+    passed (`6` files, `128` tests).
+  - `pnpm test` skipped for this focused merge defaults rewiring batch; the
+    targeted CLI, merge core, merge contract, dependency resolution, UI router,
+    and application-defaults-fitness tests cover the changed surface.
   - `pnpm lint` passed.
   - `pnpm build` passed.
 
