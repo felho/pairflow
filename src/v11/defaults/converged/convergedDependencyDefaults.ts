@@ -8,6 +8,9 @@ import {
   readReviewVerificationArtifactStatus
 } from "../reviewer/reviewVerificationArtifactDefaults.js";
 import {
+  writeSummaryVerifierConsistencyGateArtifact
+} from "../reviewer/summaryVerifierConsistencyGateDefaults.js";
+import {
   appendProtocolEnvelope,
   readTranscriptEnvelopes
 } from "../transcript/transcriptDependencyDefaults.js";
@@ -41,7 +44,8 @@ export const convergedDependencyDefaults = {
   validation: {
     readDocContractGateArtifact,
     readReviewVerificationArtifactStatus,
-    resolveDocContractGateArtifactPath
+    resolveDocContractGateArtifactPath,
+    writeSummaryVerifierConsistencyGateArtifact
   },
   finalization: {
     assessPairflowCommandPath

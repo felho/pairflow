@@ -323,7 +323,7 @@ twice.
 | # | Site (shim) | Defaults target | Cat | Action |
 |---|-------------|-----------------|-----|--------|
 | B1 | `application/converged/convergedDependencyDefaults.ts:69` | `defaults/converged/convergedDependencyDefaults.ts` | B | CLI imports aggregator; passes to `emitConverged*`. Shim deletes. |
-| B2 | `application/converged/summaryVerifierConsistencyGateArtifactDefaults.ts:19` | `defaults/reviewer/summaryVerifierConsistencyGateDefaults.ts` | **A** (reclassified) | Verified: target forwards exactly one port (`WriteSummaryVerifierConsistencyGateArtifactPort`) from infrastructure. Single-port DI; caller takes the port directly. |
+| B2 | `application/converged/summaryVerifierConsistencyGateArtifactDefaults.ts:19` | `defaults/reviewer/summaryVerifierConsistencyGateDefaults.ts` | **A** (reclassified) | Completed in Batch 12: the write port is now part of `convergedDependencyDefaults.validation`; the standalone application artifact shim was deleted. |
 | B3 | `application/create/createBubbleDefaults.ts:28` | `defaults/create/createBubbleDefaults.ts` | B | Verified: target aggregates infrastructure adapters plus shared shims. Composition. |
 | B4 | `application/delete/deleteBubbleDependencyDefaults.ts:133` | `defaults/delete/deleteBubbleDefaults.ts` | B | Verified: heavy composition (multiple `infrastructure/` adapters + sibling `defaults/` + shared shims). Mirrors merge in shape. |
 | B5 | `application/merge/mergeCommandDefaults.ts:54` | `defaults/merge/mergeCommandDefaults.ts` | B | Verified. CLI passes to `emitMerge`. |
@@ -929,6 +929,31 @@ In the closing PR:
   - `pnpm test` skipped for this focused meta-review runtime-session wiring
     batch; the targeted meta-review submit, approval, commit, restart recovery,
     and application-defaults-fitness tests cover the changed behavior.
+  - `pnpm build` passed.
+
+### 2026-05-07 — Batch 12: fold summary-verifier artifact writer into converged defaults
+
+- Added `writeSummaryVerifierConsistencyGateArtifact` to
+  `src/v11/defaults/converged/convergedDependencyDefaults.ts` under the
+  existing `validation` dependency group.
+- Updated the application-side converged defaults contract and validation
+  preparation fallback to read the writer from
+  `convergedDependencyDefaults.validation`.
+- Deleted
+  `src/v11/application/converged/summaryVerifierConsistencyGateArtifactDefaults.ts`.
+- Fitness result after the batch: application dynamic defaults warnings are
+  down from 30 to 29; shared dynamic defaults warnings remain 0. Hard-fail
+  fitness checks pass.
+- Validation:
+  - `pnpm typecheck` passed.
+  - `pnpm lint` passed.
+  - `pnpm fitness:check:ci` passed with the expected remaining warnings
+    (`application_defaults_boundary=29`, `shared_defaults_boundary=0`).
+  - `pnpm exec vitest run tests/v11/application/converged/convergedValidationPreparation.test.ts tests/core/agent/converged.test.ts tests/tools/fitness/applicationDefaultsBoundary.test.ts`
+    passed (`3` files, `41` tests).
+  - `pnpm test` skipped for this focused converged validation dependency
+    rewiring batch; the targeted converged validation, converged flow, and
+    application-defaults-fitness tests cover the changed surface.
   - `pnpm build` passed.
 
 ---

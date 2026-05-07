@@ -10,9 +10,6 @@ import {
   resolveSummaryVerifierConsistencyGateArtifactPath
 } from "../../../v11/shared/reviewer/summaryVerifierConsistencyGate.js";
 import {
-  writeSummaryVerifierConsistencyGateArtifact
-} from "./summaryVerifierConsistencyGateArtifactDefaults.js";
-import {
   resolveReviewerTestExecutionDirective as defaultResolveReviewerTestExecutionDirective
 } from "../reviewer/reviewerTestEvidenceDefaults.js";
 import {
@@ -59,7 +56,8 @@ interface ResolvedValidationDependencies {
   ) => Promise<ResolvedReviewerDirective>;
   evaluateSummaryVerifierGate: typeof evaluateSummaryVerifierConsistencyGate;
   resolveSummaryVerifierArtifactPath: typeof resolveSummaryVerifierConsistencyGateArtifactPath;
-  writeSummaryVerifierArtifact: typeof writeSummaryVerifierConsistencyGateArtifact;
+  writeSummaryVerifierArtifact:
+    typeof convergedDependencyDefaults.validation.writeSummaryVerifierConsistencyGateArtifact;
 }
 
 function normalizeReviewerDirective(input: {
@@ -112,7 +110,7 @@ function resolveValidationDependencies(
       ?? resolveSummaryVerifierConsistencyGateArtifactPath,
     writeSummaryVerifierArtifact:
       dependencies.writeSummaryVerifierConsistencyGateArtifact
-      ?? writeSummaryVerifierConsistencyGateArtifact
+      ?? convergedDependencyDefaults.validation.writeSummaryVerifierConsistencyGateArtifact
   };
 }
 
