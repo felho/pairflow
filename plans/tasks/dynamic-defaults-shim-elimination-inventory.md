@@ -329,7 +329,7 @@ twice.
 | B5 | `application/merge/mergeCommandDefaults.ts:54` | `defaults/merge/mergeCommandDefaults.ts` | B | Verified. CLI passes to `emitMerge`. |
 | B6 | `application/metaReview/emitMetaReviewV11.ts:49` | `defaults/metaReview/metaReviewDefaults.ts` | B | Verified: target aggregates 3 infrastructure adapters. Composition. |
 | B7 | `application/metaReviewGate/metaReviewGateCommandDefaults.ts:79` | `defaults/metaReviewGate/metaReviewGateCommandDefaults.ts` | B | Verified. CLI passes the aggregator. |
-| B8 | `application/pass/passReviewVerificationDefaults.ts:24` | `defaults/reviewer/reviewVerificationArtifactDefaults.ts` | **A** (reclassified) | Verified: target re-exports 3 cohesive review-verification artifact ports (read/resolve/write) from infrastructure. Port-slice DI: caller takes a `ReviewVerificationArtifactCapabilities` slice (or the 3 individual ports). |
+| B8 | `application/pass/passReviewVerificationDefaults.ts:24` | `defaults/reviewer/reviewVerificationArtifactDefaults.ts` | **A** (reclassified) | Completed in Batch 17: pass review-verification resolve/write ports are now supplied through the existing pass-validation defaults aggregate; the standalone application shim was deleted. |
 | B9 | `application/pass/passValidationCommandDefaults.ts:121` | `defaults/pass/passValidationCommandDefaults.ts` | B | Verified. CLI passes the aggregator. |
 | B10 | `application/pass/reviewerDeliveryDefaults.ts:33` | `defaults/reviewer/reviewerDeliveryDefaults.ts` | B | Verified. |
 | B11 | `application/reconcile/reconcileCommandDefaults.ts:25` | `defaults/reconcile/reconcileCommandDefaults.ts` | B | Verified: target imports `infrastructure/` and `tmuxRunnerDefaults`, plus contains default probe logic. Composition. |
@@ -1068,6 +1068,30 @@ In the closing PR:
   - `pnpm test` skipped for this focused tmux-runner defaults rewiring batch;
     the targeted start orchestration, start flow, and
     application-defaults-fitness tests cover the changed surface.
+  - `pnpm lint` passed.
+  - `pnpm build` passed.
+
+### 2026-05-07 — Batch 17: route pass review-verification ports through pass-validation defaults
+
+- Added review-verification input resolution and atomic artifact write ports to
+  `src/v11/defaults/pass/passValidationCommandDefaults.ts` and exposed them
+  through the existing application pass-validation defaults wrapper.
+- Updated reviewer verification resolution, post-append review-verification
+  artifact writing, and auto-converge preparation to use those pass-validation
+  defaults instead of the standalone application review-verification shim.
+- Deleted `src/v11/application/pass/passReviewVerificationDefaults.ts`.
+- Fitness result after the batch: application dynamic defaults warnings are
+  down from 25 to 24; shared dynamic defaults warnings remain 0. Hard-fail
+  fitness checks pass.
+- Validation:
+  - `pnpm typecheck` passed.
+  - `pnpm fitness:check:ci` passed with the expected remaining warnings
+    (`application_defaults_boundary=24`, `shared_defaults_boundary=0`).
+  - `pnpm exec vitest run tests/v11/application/pass/reviewerVerificationResolver.test.ts tests/v11/application/pass/postAppendReviewVerificationWriter.test.ts tests/v11/application/pass/autoConvergePreparation.test.ts tests/core/agent/pass.test.ts tests/tools/fitness/applicationDefaultsBoundary.test.ts`
+    passed (`5` files, `138` tests).
+  - `pnpm test` skipped for this focused review-verification defaults rewiring
+    batch; the targeted resolver, post-append writer, auto-converge, pass flow,
+    and application-defaults-fitness tests cover the changed surface.
   - `pnpm lint` passed.
   - `pnpm build` passed.
 

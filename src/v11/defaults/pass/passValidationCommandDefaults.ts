@@ -16,6 +16,10 @@ import {
   resolveDocContractGateArtifactPath,
   writeDocContractGateArtifact
 } from "../gates/docContractGateArtifactDefaults.js";
+import {
+  resolveReviewVerificationInputFromRefs,
+  writeReviewVerificationArtifactAtomic
+} from "../reviewer/reviewVerificationArtifactDefaults.js";
 
 export type { PassValidationCommandResult } from "../../infrastructure/artifact/validation/passValidationEvidence.js";
 
@@ -28,9 +32,11 @@ export const passValidationDefaults = {
   resolvePassValidationArtifactPath,
   resolvePassValidationPolicy,
   resolveDocContractGateArtifactPath,
+  resolveReviewVerificationInputFromRefs,
   resolvePassValidationReviewerCompatibilityArtifactPath,
   runPassValidationCommand,
   writeDocContractGateArtifact,
+  writeReviewVerificationArtifactAtomic,
   writePassValidationEvidenceArtifact,
   writePassValidationReviewerCompatibilityArtifact
 } as const;

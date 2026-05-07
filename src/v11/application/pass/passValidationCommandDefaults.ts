@@ -4,6 +4,10 @@ import type {
   ResolveDocContractGateArtifactPathPort,
   WriteDocContractGateArtifactPort
 } from "../../shared/ports/docContractGateArtifacts.js";
+import type {
+  ResolveReviewVerificationInputFromRefsPort,
+  WriteReviewVerificationArtifactAtomicPort
+} from "../../shared/ports/reviewVerificationArtifacts.js";
 import type { ReviewerTestExecutionDirective } from "../../shared/reviewer/testEvidence.js";
 
 export type PassValidationPolicyState =
@@ -88,6 +92,8 @@ interface PassValidationDefaults {
   }) => ReviewerTestExecutionDirective;
   readDocContractGateArtifact: ReadDocContractGateArtifactPort;
   resolveDocContractGateArtifactPath: ResolveDocContractGateArtifactPathPort;
+  resolveReviewVerificationInputFromRefs:
+    ResolveReviewVerificationInputFromRefsPort;
   resolvePassValidationArtifactPath: (artifactsDir: string) => string;
   resolvePassValidationPolicy: (
     bubbleConfig: BubbleConfig
@@ -103,6 +109,7 @@ interface PassValidationDefaults {
     artifact: PassValidationEvidenceArtifact
   ) => Promise<void>;
   writeDocContractGateArtifact: WriteDocContractGateArtifactPort;
+  writeReviewVerificationArtifactAtomic: WriteReviewVerificationArtifactAtomicPort;
   writePassValidationReviewerCompatibilityArtifact: (
     artifactPath: string,
     directive: ReviewerTestExecutionDirective

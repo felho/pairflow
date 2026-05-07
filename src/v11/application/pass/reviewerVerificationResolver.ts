@@ -6,7 +6,7 @@ import {
 import type {
   ResolveReviewVerificationInputFromRefsPort
 } from "../../../v11/shared/ports/reviewVerificationArtifacts.js";
-import { resolveReviewVerificationInputFromRefs } from "./passReviewVerificationDefaults.js";
+import { passValidationDefaults } from "./passValidationDependencyDefaults.js";
 
 const reviewerVerificationResolutionFailedReasonCode =
   "REVIEWER_VERIFICATION_RESOLUTION_FAILED";
@@ -45,7 +45,8 @@ export async function resolveReviewerVerification(
   }
 
   const resolveInputFromRefs =
-    input.resolveInputFromRefs ?? resolveReviewVerificationInputFromRefs;
+    input.resolveInputFromRefs
+    ?? passValidationDefaults.resolveReviewVerificationInputFromRefs;
   try {
     return await resolveInputFromRefs({
       refs: input.refs,
