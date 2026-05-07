@@ -1,15 +1,15 @@
 import { join } from "node:path";
 
-import { buildRunningExecutionContext } from "../../shared/state/executionContext.js";
-import { applyStateTransition } from "../../domain/state/machine.js";
-import { buildHumanReplyEnvelopeDraft } from "../../domain/reply/replyEnvelopeDraft.js";
+import { buildRunningExecutionContext } from "../../../shared/state/executionContext.js";
+import { applyStateTransition } from "../../../domain/state/machine.js";
+import { buildHumanReplyEnvelopeDraft } from "../../../domain/reply/replyEnvelopeDraft.js";
 import {
   raiseReplyPostAppendStateWriteFailed
-} from "../../domain/reply/postAppendStateWriteFailure.js";
+} from "../../../domain/reply/postAppendStateWriteFailure.js";
 import type {
   ExecuteReplyMutationInput,
   ExecuteReplyMutationResult
-} from "../../application/reply/replyMutationExecutionContract.js";
+} from "../replyMutationExecutionContract.js";
 
 export async function executeReplyMutation(
   input: ExecuteReplyMutationInput

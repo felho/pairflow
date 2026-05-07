@@ -386,12 +386,15 @@ the file, replace dynamic shim with static import.
 
 | # | Site | Defaults target | Cat | Action |
 |---|------|-----------------|-----|--------|
-| C1 | `application/reply/replyCommandApi.ts:36` | `defaults/reply/replyMutationExecution.ts` | C | Move `defaults/reply/replyMutationExecution.ts` → `application/reply/replyMutationExecution.ts`. Replace the dynamic shim in `replyCommandApi.ts` with a static import. The mutation function already takes its IO ports as `input.dependencies.*`; no contract change needed. |
+| C1 | `application/reply/replyCommandApi.ts:36` | `defaults/reply/replyMutationExecution.ts` | C | Move `defaults/reply/replyMutationExecution.ts` → `application/reply/mutation/replyMutationExecution.ts`. Replace the dynamic shim in `replyCommandApi.ts` with a static import. The mutation function already takes its IO ports as `input.dependencies.*`; no contract change needed. |
 
 Verified by reading `defaults/reply/replyMutationExecution.ts`: imports are
 `node:path`, `shared/state/executionContext.js`, `domain/state/machine.js`,
 `domain/reply/replyEnvelopeDraft.js`, `domain/reply/postAppendStateWriteFailure.js`,
-and an `application/reply/replyMutationExecutionContract.ts` type. **Zero
+and an `application/reply/replyMutationExecutionContract.ts` type. The
+implementation should live under `application/reply/mutation/` so the boundary
+fitness rule treats it as an explicit mutation executor, not as an
+orchestrator. **Zero
 `infrastructure/` AND zero `defaults/` imports.** It takes its IO ports as
 `input.dependencies.*` parameters. This is pure application-layer logic;
 the "defaults" location was a misplacement.
@@ -633,6 +636,35 @@ In the closing PR:
   - `pnpm test` rerun reached only one unrelated flaky
     `tests/core/util/fileLock.test.ts` timeout; rerunning that file passed.
   - `pnpm build` passed.
+
+### 2026-05-07 — Batch 2: C1 reply mutation move
+
+- Moved reply mutation implementation out of `src/v11/defaults/reply/` and
+  into `src/v11/application/reply/mutation/replyMutationExecution.ts`.
+- Replaced the dynamic import in `replyCommandApi.ts` with a static
+  application-local import.
+- Refined the boundary fitness rule to match its declared scope:
+  orchestrators may not write state/transcript directly, while explicit
+  `src/v11/application/<command>/mutation/**` mutation executors are allowed
+  and still checked by the mutation fitness rule for transcript-first ordering.
+- Added typed `mutation_executor` policy-exception support for non-standard
+  mutation executor paths; the reply move uses the directory convention, not a
+  policy exception.
+- Fitness result after the batch: application dynamic defaults warnings are
+  down from 32 to 31; shared dynamic defaults warnings remain 10.
+- Validation:
+  - `pnpm typecheck` passed.
+  - `pnpm lint` passed.
+  - `pnpm fitness:check:ci` passed with
+    `mutation_execution_convention_files=1` and the expected remaining
+    warnings (`application_defaults_boundary=31`,
+    `shared_defaults_boundary=10`).
+  - `pnpm exec vitest run tests/tools/fitness/boundary.test.ts tests/core/human/reply.test.ts tests/v11/application/reply/replyDeliveryInvariant.test.ts tests/cli/bubbleReplyCommand.test.ts tests/contracts/v11/reply.contract.test.ts`
+    passed.
+  - `pnpm build` passed.
+  - `pnpm test` rerun reached only two unrelated
+    `tests/v11/application/planWatch/agentRunnerBridge.test.ts` timeout/exit
+    race failures; rerunning that file passed.
 
 ---
 

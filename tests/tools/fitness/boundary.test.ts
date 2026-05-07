@@ -84,4 +84,77 @@ describe("boundary fitness check", () => {
       report.details?.some((detail) => detail.includes("direct transcript write"))
     ).toBe(true);
   });
+
+  it("allows application mutation execution directory boundaries", async () => {
+    const repoRoot = await createTempRoot();
+    await writeRepoFile(
+      repoRoot,
+      "src/v11/application/reply/mutation/replyMutationExecution.ts",
+      [
+        "export async function executeReplyMutation(): Promise<void> {",
+        "  await appendProtocolEnvelope({});",
+        "  await writeStateSnapshot('x');",
+        "}"
+      ].join("\n")
+    );
+
+    const report = await buildBoundaryCheckReport({
+      check: {
+        id: "boundary",
+        metric: "forbidden direct state/transcript write",
+        mode: "hard-fail",
+        owner: "architecture",
+        scope: ["src/v11/application/**"],
+        exceptions: []
+      },
+      repoRoot,
+      fallbackMode: "hard-fail"
+    });
+
+    expect(report.status).toBe("pass");
+    expect(report.details).toContain("mutation_execution_convention_files=1");
+  });
+
+  it("allows typed mutation_executor exceptions for non-standard paths", async () => {
+    const repoRoot = await createTempRoot();
+    await writeRepoFile(
+      repoRoot,
+      "src/v11/application/reply/replyMutationExecution.ts",
+      [
+        "export async function executeReplyMutation(): Promise<void> {",
+        "  await appendProtocolEnvelope({});",
+        "  await writeStateSnapshot('x');",
+        "}"
+      ].join("\n")
+    );
+
+    const report = await buildBoundaryCheckReport({
+      check: {
+        id: "boundary",
+        metric: "forbidden direct state/transcript write",
+        mode: "hard-fail",
+        owner: "architecture",
+        scope: ["src/v11/application/**"],
+        exceptions: [
+          {
+            id: "reply-mutation-executor",
+            kind: "mutation_executor",
+            owner: "architecture",
+            reason: "reply mutation executor owns transcript-first state mutation",
+            from: undefined,
+            to: undefined,
+            paths: ["src/v11/application/reply/replyMutationExecution.ts"]
+          }
+        ]
+      },
+      repoRoot,
+      fallbackMode: "hard-fail"
+    });
+
+    expect(report.status).toBe("pass");
+    expect(report.details).toContain("mutation_executor_exceptions_applied=1");
+    expect(report.details).toContain(
+      "mutation_executor_exceptions_applied_ids=reply-mutation-executor"
+    );
+  });
 });
