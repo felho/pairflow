@@ -2,6 +2,10 @@ import { describe, expect, it } from "vitest";
 
 import { createInitialBubbleState } from "../../../../src/v11/domain/state/initialState.js";
 import { applyStateTransition } from "../../../../src/v11/domain/state/machine.js";
+import {
+  deriveStartPreparingState,
+  deriveStartRunningState
+} from "../../../../src/v11/domain/state/startState.js";
 import { deriveWatchdogWaitingHumanState } from "../../../../src/v11/domain/state/watchdogEscalation.js";
 import {
   StateTransitionError,
@@ -68,5 +72,37 @@ describe("v11 domain state machine", () => {
     expect(waiting.execution_context).toBeNull();
     expect(waiting.active_agent).toBe("codex");
     expect(waiting.active_role).toBe("implementer");
+  });
+
+  it("derives fresh start states without persistence concerns", () => {
+    const initial = createInitialBubbleState("b_v11_start_state_01");
+    const preparing = deriveStartPreparingState({
+      state: initial,
+      lastCommandAt: "2026-04-06T10:00:00.000Z"
+    });
+    const running = deriveStartRunningState({
+      preparingState: preparing,
+      lastCommandAt: "2026-04-06T10:01:00.000Z",
+      bubbleId: initial.bubble_id,
+      implementer: "codex",
+      reviewer: "claude",
+      watchdogTimeoutMinutes: 30,
+      ideationPending: false
+    });
+
+    expect(preparing.state).toBe("PREPARING_WORKSPACE");
+    expect(running.state).toBe("RUNNING");
+    expect(running.round).toBe(1);
+    expect(running.active_agent).toBe("codex");
+    expect(running.active_role).toBe("implementer");
+    expect(running.execution_context?.active_role).toBe("implementer");
+    expect(running.round_role_history).toStrictEqual([
+      {
+        round: 1,
+        implementer: "codex",
+        reviewer: "claude",
+        switched_at: "2026-04-06T10:01:00.000Z"
+      }
+    ]);
   });
 });

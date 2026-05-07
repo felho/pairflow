@@ -1,8 +1,9 @@
-import { applyStateTransition } from "../../domain/state/machine.js";
 import {
-  buildRestartedExecutionContext,
-  buildRunningExecutionContext
-} from "./executionContext.js";
+  deriveStartFailedCleanupState,
+  deriveStartPreparingState,
+  deriveStartResumedState,
+  deriveStartRunningState
+} from "../../domain/state/startState.js";
 import type {
   AgentName,
   BubbleLifecycleState,
@@ -66,48 +67,18 @@ export function buildResumedState(input: {
   nowIso: string;
   watchdogTimeoutMinutes: number;
 }): BubbleStateSnapshot {
-  if (
-    input.state.state === "RUNNING"
-    && input.state.round >= 1
-    && input.state.active_role !== null
-  ) {
-    const executionContext = input.state.execution_context;
-    if (executionContext === null || executionContext === undefined) {
-      throw new Error(
-        "RUNNING resume requires persisted execution_context authority."
-      );
-    }
-    const resumedExecutionContext =
-      input.state.active_role === "implementer"
-      || input.state.active_role === "reviewer"
-        ? buildRestartedExecutionContext({
-            bubbleId: input.state.bubble_id,
-            round: input.state.round,
-            activeRole: input.state.active_role,
-            restartedAt: input.nowIso,
-            watchdogTimeoutMinutes: input.watchdogTimeoutMinutes,
-            previousExecutionContext: executionContext
-          })
-        : executionContext;
-    return {
-      ...input.state,
-      execution_context: resumedExecutionContext,
-      active_since: input.nowIso,
-      last_command_at: input.nowIso
-    };
-  }
-
-  return {
-    ...input.state,
-    last_command_at: input.nowIso
-  };
+  return deriveStartResumedState({
+    state: input.state,
+    lastCommandAt: input.nowIso,
+    watchdogTimeoutMinutes: input.watchdogTimeoutMinutes
+  });
 }
 
 export async function executeStartPreparingMutation(
   input: StartPreparingMutationInput
 ): Promise<StartLoadedStateSnapshot> {
-  const preparing = applyStateTransition(input.loadedState.state, {
-    to: "PREPARING_WORKSPACE",
+  const preparing = deriveStartPreparingState({
+    state: input.loadedState.state,
     lastCommandAt: input.nowIso
   });
 
@@ -120,33 +91,14 @@ export async function executeStartPreparingMutation(
 export async function executeStartRunningMutation(
   input: StartRunningMutationInput
 ): Promise<StartLoadedStateSnapshot> {
-  const running = applyStateTransition(input.preparingState, {
-    to: "RUNNING",
-    round: input.ideationPending ? 0 : 1,
-    activeAgent: input.implementer,
-    activeRole: "implementer",
-    executionContext:
-      input.ideationPending
-        ? null
-        : buildRunningExecutionContext({
-            bubbleId: input.bubbleId,
-            round: 1,
-            activeRole: "implementer",
-            startedAt: input.nowIso,
-            watchdogTimeoutMinutes: input.watchdogTimeoutMinutes
-          }),
-    activeSince: input.nowIso,
+  const running = deriveStartRunningState({
+    preparingState: input.preparingState,
     lastCommandAt: input.nowIso,
-    ...(input.ideationPending
-      ? {}
-      : {
-          appendRoundRoleEntry: {
-            round: 1,
-            implementer: input.implementer,
-            reviewer: input.reviewer,
-            switched_at: input.nowIso
-          }
-        })
+    bubbleId: input.bubbleId,
+    implementer: input.implementer,
+    reviewer: input.reviewer,
+    watchdogTimeoutMinutes: input.watchdogTimeoutMinutes,
+    ideationPending: input.ideationPending
   });
 
   return input.writeStateSnapshot(input.statePath, running, {
@@ -173,11 +125,8 @@ export async function executeStartResumeMutation(
 export async function executeStartFailedCleanupMutation(
   input: StartFailedMutationInput
 ): Promise<StartLoadedStateSnapshot> {
-  const failed = applyStateTransition(input.preparingState, {
-    to: "FAILED",
-    activeAgent: null,
-    activeRole: null,
-    activeSince: null,
+  const failed = deriveStartFailedCleanupState({
+    preparingState: input.preparingState,
     lastCommandAt: input.nowIso
   });
 
