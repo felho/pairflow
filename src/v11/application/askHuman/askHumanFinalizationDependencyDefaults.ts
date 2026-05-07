@@ -1,6 +1,6 @@
 import { basename, dirname, join } from "node:path";
 
-import { emitBubbleLifecycleEventBestEffort } from "../../shared/metrics/bubbleEvents.js";
+import { emitBubbleLifecycleEventBestEffort } from "../metrics/bubbleEvents.js";
 import type {
   DeliveryAck,
   EmitDeliveryNotificationAckPort,

@@ -1,10 +1,10 @@
-import type { emitBubbleLifecycleEventBestEffort } from "../../shared/metrics/bubbleEvents.js";
+import type { EmitBubbleLifecycleEventBestEffortInput } from "../../shared/metrics/bubbleEvents.js";
 import type { FinalizeAskHumanFlowInput } from "./askHumanFlowContract.js";
 import { buildAskHumanLifecycleMetricMetadata } from "./askHumanFinalizationArtifacts.js";
 
 export function buildAskHumanFinalizationLifecycleEventInput(
   input: FinalizeAskHumanFlowInput
-): Parameters<typeof emitBubbleLifecycleEventBestEffort>[0] {
+): EmitBubbleLifecycleEventBestEffortInput {
   return {
     repoPath: input.routing.resolved.repoPath,
     bubbleId: input.routing.resolved.bubbleId,

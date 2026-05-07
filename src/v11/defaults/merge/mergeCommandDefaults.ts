@@ -14,7 +14,7 @@ import {
   readStateSnapshot,
   writeStateSnapshot
 } from "../state/stateStoreDefaults.js";
-import { emitBubbleLifecycleEventBestEffort } from "../../shared/metrics/bubbleEvents.js";
+import { emitBubbleLifecycleEventBestEffort } from "../metrics/bubbleEvents.js";
 import { readRemotePointer } from "../../infrastructure/artifact/bubble/remoteExecutionArtifacts.js";
 import {
   executeRemoteBubbleMergeCleanupCommand,

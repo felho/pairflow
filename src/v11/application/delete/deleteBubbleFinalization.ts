@@ -1,7 +1,7 @@
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { basename, dirname, join } from "node:path";
 
-import { emitBubbleLifecycleEventBestEffort } from "../../../v11/shared/metrics/bubbleEvents.js";
+import { emitBubbleLifecycleEventBestEffort } from "../metrics/bubbleEvents.js";
 import type {
   DeleteBubbleArtifacts
 } from "../../../contracts/deleteBubble.js";

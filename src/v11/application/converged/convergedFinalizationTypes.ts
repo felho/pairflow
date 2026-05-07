@@ -8,7 +8,7 @@ import type {
   PairflowCommandPathAssessment
 } from "../../shared/ports/pairflowCommand.js";
 import { type SummaryVerifierConsistencyGateDecisionRecord } from "../../../v11/shared/reviewer/summaryVerifierConsistencyGate.js";
-import { type emitBubbleLifecycleEventBestEffort } from "../../../v11/shared/metrics/bubbleEvents.js";
+import type { EmitBubbleLifecycleEventBestEffortPort } from "../../../v11/shared/metrics/bubbleEvents.js";
 import { type MetaReviewGateRoute } from "../../shared/metaReviewGate/index.js";
 import type {
   BubbleRoundGateState,
@@ -53,7 +53,7 @@ export interface FinalizeConvergedFlowInput {
 
 export interface FinalizeConvergedFlowDependencies {
   assessPairflowCommandPath?: AssessPairflowCommandPathPort;
-  emitBubbleLifecycleEventBestEffort?: typeof emitBubbleLifecycleEventBestEffort;
+  emitBubbleLifecycleEventBestEffort?: EmitBubbleLifecycleEventBestEffortPort;
   resolveMetaReviewRolloutBlockingReasonCodes: (input: {
     gateRoute: MetaReviewGateRoute;
     commandPathStatus: PairflowCommandPathAssessment;

@@ -1,4 +1,4 @@
-import { emitBubbleLifecycleEventBestEffort } from "../../../v11/shared/metrics/bubbleEvents.js";
+import { emitBubbleLifecycleEventBestEffort } from "../metrics/bubbleEvents.js";
 import type {
   BubbleCreateResult,
   ResolvedTaskInput

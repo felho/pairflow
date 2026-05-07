@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { mkdir, rename, rm, stat } from "node:fs/promises";
 import { dirname } from "node:path";
 
-import { emitBubbleLifecycleEventBestEffort } from "../../shared/metrics/bubbleEvents.js";
+import { emitBubbleLifecycleEventBestEffort } from "../metrics/bubbleEvents.js";
 import type {
   AppendedEnvelope,
   CommitRuntimeContext,

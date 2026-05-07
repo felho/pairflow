@@ -194,7 +194,7 @@ table.
 | S1 | `shared/actorProtocol/actorEmitContext.ts:46` | `defaults/workspace/workspaceResolutionDefaults.ts` | A | Completed in Batch 8: shared actor context now takes explicit resolution dependencies; default wiring moved to `defaults/actorProtocol/actorEmitContextDefaults.ts`. |
 | S2 | `shared/bubbleLookup/bubbleLookupDefaults.ts:18` | `defaults/bubbleLookup/bubbleLookupDefaults.ts` | A | Completed in Batch 8: defaults callers import `defaults/bubbleLookup` directly; the shared facade was deleted. |
 | S3 | `shared/metaReview/metaReviewDependencyDefaults.ts:22` | `defaults/runtimeSessions/runtimeSessionsDefaults.ts` | A | Completed in Batch 6: the shared shim had no live caller after the application-local `metaReviewDependencyDefaults.ts` copy became authoritative, so the shared file was deleted. |
-| S4 | `shared/metrics/bubbleEvents.ts:62` | `defaults/metrics/bubbleEventsDefaults.ts` | A | bubbleEvents receives a `BubbleEventEmitter` port (single port, no wrapper). |
+| S4 | `shared/metrics/bubbleEvents.ts:62` | `defaults/metrics/bubbleEventsDefaults.ts` | A | Completed in Batch 9: shared metrics now exports only the bubble-event contract types; runtime implementation moved to `defaults/metrics/bubbleEvents.ts`. |
 | S5 | `shared/read-model/list/listReadModelDefaults.ts:73` | `defaults/list/listCommandDefaults.ts` | B + modelling | Target is verified composition (direct `infrastructure/` imports, see B16). Resolution path picked (v4): **refactor caller out of `shared/`**. The shim file deletes as part of the S5/S7 refactor; the moved application API takes deps as a parameter, CLI injects from `defaults/list/`. See "S5/S7 Refactor Scope". |
 | S6 | `shared/state/stateStoreDefaults.ts:28` | `defaults/state/stateStoreDefaults.ts` | A | Completed in Batch 8: defaults callers import `defaults/state` directly; shared actor context receives `readStateSnapshot` through explicit dependencies; the shared facade was deleted. |
 | S7 | `shared/status/statusCommandDependencyDefaults.ts:116` | `defaults/list/listCommandDefaults.ts` | B + modelling | Same target as S5. Same resolution path: refactor caller out of `shared/`; the shim file (which holds S7, S8, S9 together) deletes as part of the S5/S7 refactor. |
@@ -843,6 +843,37 @@ In the closing PR:
   - `pnpm test` skipped for this focused shared-facade removal batch; Batch 5
     had already completed the full suite, and this batch ran targeted coverage
     across actor emit plus every changed defaults consumer family.
+  - `pnpm build` passed.
+
+### 2026-05-07 — Batch 9: move bubble event defaults out of shared
+
+- Changed `src/v11/shared/metrics/bubbleEvents.ts` into a contract-only
+  module that exports the lifecycle-event input and emitter port types.
+- Moved the default lifecycle-event implementation to
+  `src/v11/defaults/metrics/bubbleEvents.ts`, next to the metrics defaults
+  catalog it composes.
+- Added `src/v11/application/metrics/bubbleEvents.ts` as a temporary
+  application-local dynamic shim for existing application callers. This keeps
+  `application -> defaults` static imports out of the dependency graph while
+  the later application A/B migration removes the remaining application shims.
+- Updated application/defaults/infrastructure callers and metrics tests to
+  import from the correct layer-specific module.
+- Fitness result after the batch: shared dynamic defaults warnings are down
+  from 1 to 0 and `shared_defaults_boundary` now passes. Application dynamic
+  defaults warnings are 32 because the temporary application metrics shim is
+  now counted with the remaining application-side shim inventory.
+- Validation:
+  - `pnpm typecheck` passed.
+  - `pnpm lint` passed.
+  - `pnpm fitness:check:ci` passed with
+    `shared_defaults_boundary=0` and the expected remaining application
+    warnings (`application_defaults_boundary=32`).
+  - `pnpm exec vitest run tests/v11/shared/metrics/bubbleEvents.test.ts tests/v11/application/askHuman/askHumanFinalizationDependencyResolution.test.ts tests/v11/application/askHuman/askHumanFinalizationDependencyBuilder.test.ts tests/core/bubble/bubbleInstanceId.test.ts tests/core/bubble/commitBubble.test.ts tests/core/bubble/mergeBubble.test.ts tests/core/bubble/deleteBubble.test.ts tests/core/bubble/startBubble.test.ts tests/core/agent/pass.test.ts tests/core/agent/converged.test.ts tests/core/bubble/watchdogBubble.test.ts tests/tools/fitness/sharedDefaultsBoundary.test.ts tests/tools/fitness/applicationDefaultsBoundary.test.ts`
+    passed (`13` files, `369` tests).
+  - `pnpm test` skipped for this focused shared-facade removal batch; Batch 5
+    had completed the full suite earlier in the same migration, and this batch
+    ran targeted coverage across metrics, lifecycle callers, and the relevant
+    fitness checks.
   - `pnpm build` passed.
 
 ---

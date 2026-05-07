@@ -10,7 +10,7 @@ import type { applyStateTransition } from "../../domain/state/machine.js";
 import type {
   EmitAskHumanBubbleNotificationPort,
 } from "./askHumanDeliveryPortsContract.js";
-import type { emitBubbleLifecycleEventBestEffort } from "../../shared/metrics/bubbleEvents.js";
+import type { EmitBubbleLifecycleEventBestEffortPort } from "../../shared/metrics/bubbleEvents.js";
 import type { BubbleStateSnapshot } from "../../../types/bubble.js";
 import type { ProtocolEnvelope } from "../../../types/protocol.js";
 import type { AskHumanRoutingContext } from "./askHumanRoutingContext.js";
@@ -56,7 +56,7 @@ export interface FinalizeAskHumanFlowDependencies {
   emitDeliveryNotificationAck?: EmitDeliveryNotificationAckPort;
   emitBubbleNotification?: EmitAskHumanBubbleNotificationPort;
   resolveDeliveryMessageRef?: ResolveDeliveryMessageRefPort;
-  emitBubbleLifecycleEventBestEffort?: typeof emitBubbleLifecycleEventBestEffort;
+  emitBubbleLifecycleEventBestEffort?: EmitBubbleLifecycleEventBestEffortPort;
 }
 
 export interface RunAskHumanFlowResult {
@@ -94,7 +94,7 @@ export interface RunAskHumanFlowDependencies {
   emitDeliveryNotificationAck?: EmitDeliveryNotificationAckPort;
   emitBubbleNotification?: EmitAskHumanBubbleNotificationPort;
   resolveDeliveryMessageRef?: FinalizeAskHumanFlowDependencies["resolveDeliveryMessageRef"];
-  emitBubbleLifecycleEventBestEffort?: typeof emitBubbleLifecycleEventBestEffort;
+  emitBubbleLifecycleEventBestEffort?: EmitBubbleLifecycleEventBestEffortPort;
 }
 
 export type RunAskHumanFlowFn = (

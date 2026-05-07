@@ -7,7 +7,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import {
   clearReportedBubbleEventWarnings,
   emitBubbleLifecycleEventBestEffort
-} from "../../../../src/v11/shared/metrics/bubbleEvents.js";
+} from "../../../../src/v11/defaults/metrics/bubbleEvents.js";
 import { resolveMetricsShardPath } from "../../../../src/v11/shared/metrics/events.js";
 
 const tempDirs: string[] = [];

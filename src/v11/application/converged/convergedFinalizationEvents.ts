@@ -1,5 +1,5 @@
 import type { PairflowCommandPathAssessment } from "../../shared/ports/pairflowCommand.js";
-import { type emitBubbleLifecycleEventBestEffort } from "../../../v11/shared/metrics/bubbleEvents.js";
+import type { EmitBubbleLifecycleEventBestEffortPort } from "../../../v11/shared/metrics/bubbleEvents.js";
 import {
   buildConvergedEventMetadata,
   buildMetaReviewRoutedMetadata,
@@ -43,7 +43,7 @@ function resolveAdvisoryFindingsOpenTotal(
 
 async function emitConvergedAndRoutedEvents(input: {
   flow: FinalizeConvergedFlowInput;
-  emitLifecycle: typeof emitBubbleLifecycleEventBestEffort;
+  emitLifecycle: EmitBubbleLifecycleEventBestEffortPort;
   commandPathStatus: PairflowCommandPathAssessment;
   blockingReasonCodes: string[];
 }): Promise<void> {
@@ -95,7 +95,7 @@ async function emitConvergedAndRoutedEvents(input: {
 
 async function emitOptionalMetaReviewEvents(input: {
   flow: FinalizeConvergedFlowInput;
-  emitLifecycle: typeof emitBubbleLifecycleEventBestEffort;
+  emitLifecycle: EmitBubbleLifecycleEventBestEffortPort;
   commandPathStatus: PairflowCommandPathAssessment;
   blockingReasonCodes: string[];
 }): Promise<void> {
@@ -157,7 +157,7 @@ async function emitOptionalMetaReviewEvents(input: {
 
 export async function emitConvergedFinalizationEvents(input: {
   flow: FinalizeConvergedFlowInput;
-  emitLifecycle: typeof emitBubbleLifecycleEventBestEffort;
+  emitLifecycle: EmitBubbleLifecycleEventBestEffortPort;
   commandPathStatus: PairflowCommandPathAssessment;
   blockingReasonCodes: string[];
 }): Promise<void> {

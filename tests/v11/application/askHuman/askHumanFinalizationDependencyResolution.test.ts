@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { emitBubbleLifecycleEventBestEffort } from "../../../../src/v11/shared/metrics/bubbleEvents.js";
+import { emitBubbleLifecycleEventBestEffort } from "../../../../src/v11/application/metrics/bubbleEvents.js";
 import {
   resolveDeliveryMessageRef
 } from "../../../../src/v11/infrastructure/channel/tmux/tmuxDelivery.js";

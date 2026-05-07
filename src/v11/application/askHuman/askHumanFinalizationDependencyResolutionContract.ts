@@ -1,4 +1,4 @@
-import type { emitBubbleLifecycleEventBestEffort } from "../../shared/metrics/bubbleEvents.js";
+import type { EmitBubbleLifecycleEventBestEffortPort } from "../../shared/metrics/bubbleEvents.js";
 import type {
   EmitAskHumanBubbleNotificationPort,
 } from "./askHumanDeliveryPortsContract.js";
@@ -16,7 +16,7 @@ export interface ResolveAskHumanFinalizationDependenciesInput {
     | ResolveDeliveryMessageRefPort
     | undefined;
   emitBubbleLifecycleEventBestEffort?:
-    | typeof emitBubbleLifecycleEventBestEffort
+    | EmitBubbleLifecycleEventBestEffortPort
     | undefined;
 }
 
@@ -24,5 +24,5 @@ export interface ResolvedAskHumanFinalizationDependencies {
   emitDeliveryNotificationAck: EmitDeliveryNotificationAckPort;
   emitBubbleNotification: EmitAskHumanBubbleNotificationPort;
   resolveDeliveryMessageRef: ResolveDeliveryMessageRefPort;
-  emitBubbleLifecycleEventBestEffort: typeof emitBubbleLifecycleEventBestEffort;
+  emitBubbleLifecycleEventBestEffort: EmitBubbleLifecycleEventBestEffortPort;
 }

@@ -1,4 +1,4 @@
-import { emitBubbleLifecycleEventBestEffort } from "../../shared/metrics/bubbleEvents.js";
+import { emitBubbleLifecycleEventBestEffort } from "../metrics/bubbleEvents.js";
 import { ensureReplyWaitingHumanState } from "../../domain/reply/waitingHumanStateGuard.js";
 import type {
   EmitHumanReplyDependencies,
