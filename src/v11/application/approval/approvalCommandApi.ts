@@ -18,7 +18,7 @@ import type {
   EmitRequestReworkResult
 } from "./approvalCommandContract.js";
 import type { ApprovalCommandDefaultDependencies } from "./approvalCommandDependencyResolution.js";
-import { ApprovalCommandError } from "../../shared/approval/approvalCommandError.js";
+import { ApprovalCommandError } from "./approvalCommandError.js";
 import { startCommandContextDefaults } from "../start/startCommandDependencyDefaults.js";
 import { reviewerDeliveryDefaults } from "../pass/reviewerDeliveryDefaults.js";
 import { statusCommandDependencyDefaults } from "../status/statusCommandDependencyDefaults.js";

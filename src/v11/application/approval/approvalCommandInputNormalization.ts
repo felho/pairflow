@@ -1,7 +1,7 @@
 import {
   normalizeStringList,
   requireNonEmptyString
-} from "../normalization/stringNormalization.js";
+} from "../../shared/normalization/stringNormalization.js";
 import type { ApprovalDecision } from "../../../types/protocol.js";
 
 export interface NormalizeApprovalDecisionInputInput {

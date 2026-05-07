@@ -5,8 +5,8 @@ import {
   ApprovalCommandError,
   createApprovalCommandError,
   isApprovalCommandError
-} from "../../../../src/v11/shared/approval/approvalCommandError.js";
-import { normalizeApprovalCommandError } from "../../../../src/v11/shared/approval/approvalCommandErrorNormalization.js";
+} from "../../../../src/v11/application/approval/approvalCommandError.js";
+import { normalizeApprovalCommandError } from "../../../../src/v11/application/approval/approvalCommandErrorNormalization.js";
 
 describe("approvalCommandErrorNormalization", () => {
   it("preserves approval command errors", () => {

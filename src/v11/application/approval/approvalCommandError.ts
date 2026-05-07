@@ -1,4 +1,4 @@
-import { normalizePairflowCommandErrorInput } from "../errors/commandErrorDetails.js";
+import { normalizePairflowCommandErrorInput } from "../../shared/errors/commandErrorDetails.js";
 
 export class ApprovalCommandError extends Error {
   public readonly reasonCode: string | undefined;

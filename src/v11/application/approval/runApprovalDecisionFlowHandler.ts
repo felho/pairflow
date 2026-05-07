@@ -11,7 +11,7 @@ import {
   appendEnvelopeViaMutationBoundary,
   persistStateViaMutationBoundary
 } from "../../shared/mutation/mutationBoundaryIO.js";
-import { assertApprovalDecisionEligibility } from "../../shared/approval/approvalRoutingEligibility.js";
+import { assertApprovalDecisionEligibility } from "./approvalRoutingEligibility.js";
 import type { ApprovalFlowExecutionContext } from "./runApprovalFlowContext.js";
 
 async function runRemoteApprovalDecision(input: {

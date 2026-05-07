@@ -5,7 +5,7 @@ import {
   isHumanApprovalRequest,
   resolveApprovalGateRouteFromRequest,
   resolveApprovalRecommendationFromRequest
-} from "./approvalTranscriptContext.js";
+} from "../protocol/approvalTranscriptContext.js";
 
 export interface PendingApprovalSignal {
   envelopeId: string;

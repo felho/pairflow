@@ -10,13 +10,13 @@ import {
   resolveApprovalGateReasonCodeFromRequest,
   resolveApprovalGateRouteFromRequest,
   resolveApprovalRecommendationFromRequest
-} from "./approvalTranscriptContext.js";
-import type { ReadTranscriptEnvelopesPort } from "../ports/transcript.js";
+} from "../../shared/protocol/approvalTranscriptContext.js";
+import type { ReadTranscriptEnvelopesPort } from "../../shared/ports/transcript.js";
 export {
   hasParityInconsistencyMetadata,
   readApprovalTranscriptContext,
   type ApprovalTranscriptContext
-} from "./approvalTranscriptContext.js";
+} from "../../shared/protocol/approvalTranscriptContext.js";
 
 export const canonicalHumanApprovalState = "READY_FOR_HUMAN_APPROVAL" as const;
 

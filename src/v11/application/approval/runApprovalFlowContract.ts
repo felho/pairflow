@@ -1,7 +1,7 @@
 import type {
   NormalizedApprovalDecisionInput,
   NormalizedRequestReworkInput
-} from "../../shared/approval/approvalCommandInputNormalization.js";
+} from "./approvalCommandInputNormalization.js";
 
 export interface RunApprovalDecisionFlowInput extends NormalizedApprovalDecisionInput {
   createError: PairflowCreateCommandError;

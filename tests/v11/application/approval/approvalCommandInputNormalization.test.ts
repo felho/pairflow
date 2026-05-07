@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   normalizeApprovalDecisionInput,
   normalizeRequestReworkInput
-} from "../../../../src/v11/shared/approval/approvalCommandInputNormalization.js";
+} from "../../../../src/v11/application/approval/approvalCommandInputNormalization.js";
 
 class ApprovalInputNormalizationTestError extends Error {
   public constructor(message: string) {

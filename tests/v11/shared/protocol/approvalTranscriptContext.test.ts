@@ -5,7 +5,7 @@ import {
   readApprovalTranscriptContext,
   resolveApprovalGateRouteFromRequest,
   resolveApprovalRecommendationFromRequest
-} from "../../../../src/v11/shared/approval/approvalTranscriptContext.js";
+} from "../../../../src/v11/shared/protocol/approvalTranscriptContext.js";
 import type { ProtocolEnvelope } from "../../../../src/types/protocol.js";
 
 function createApprovalRequest(

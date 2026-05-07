@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   assertApprovalDecisionEligibility,
   resolveApprovalDecisionMetadata
-} from "../../../../src/v11/shared/approval/approvalRoutingEligibility.js";
+} from "../../../../src/v11/application/approval/approvalRoutingEligibility.js";
 import type { ProtocolEnvelope } from "../../../../src/types/protocol.js";
 
 class ApprovalRoutingEligibilityTestError extends Error {

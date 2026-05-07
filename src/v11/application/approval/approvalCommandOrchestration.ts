@@ -4,12 +4,12 @@ import type {
 import {
   createApprovalCommandError,
   isApprovalCommandError
-} from "../../shared/approval/approvalCommandError.js";
-import { normalizeApprovalCommandError } from "../../shared/approval/approvalCommandErrorNormalization.js";
+} from "./approvalCommandError.js";
+import { normalizeApprovalCommandError } from "./approvalCommandErrorNormalization.js";
 import {
   normalizeApprovalDecisionInput,
   normalizeRequestReworkInput
-} from "../../shared/approval/approvalCommandInputNormalization.js";
+} from "./approvalCommandInputNormalization.js";
 import {
   runApprovalDecisionFlow,
   runRequestReworkFlow

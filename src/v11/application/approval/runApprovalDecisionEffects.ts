@@ -1,13 +1,13 @@
 import { deliveryTargetRoleMetadataKey, type ProtocolEnvelope } from "../../../types/protocol.js";
 import type {
   NormalizedApprovalDecisionInput
-} from "../../shared/approval/approvalCommandInputNormalization.js";
+} from "./approvalCommandInputNormalization.js";
 import type {
   ResolvedApprovalCommandDependencies
 } from "./approvalCommandDependencyResolution.js";
 import {
   resolveApprovalDecisionMetadata
-} from "../../shared/approval/approvalRoutingEligibility.js";
+} from "./approvalRoutingEligibility.js";
 import type {
   ApprovalDecisionDeliverySignal,
   ApprovalDecisionDeliverySignalsResult

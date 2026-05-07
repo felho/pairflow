@@ -3,7 +3,7 @@ import { mapImmediateReworkResult, mapQueuedReworkResult } from "./approvalResul
 import { emitDeferredReworkIntentLifecycleEvents, persistDeferredReworkIntentState } from "./runApprovalDeferredRework.js";
 import type { RunRequestReworkFlowInput } from "./runApprovalFlowContract.js";
 import type { ResolvedApprovalCommandDependencies } from "./approvalCommandDependencyResolution.js";
-import { canonicalHumanApprovalState, isHumanApprovalState } from "../../shared/approval/approvalRoutingEligibility.js";
+import { canonicalHumanApprovalState, isHumanApprovalState } from "./approvalRoutingEligibility.js";
 import type { ApprovalFlowExecutionContext } from "./runApprovalFlowContext.js";
 import { runApprovalDecisionFlowWithContext } from "./runApprovalDecisionFlowHandler.js";
 export { runApprovalDecisionFlowWithContext } from "./runApprovalDecisionFlowHandler.js";
