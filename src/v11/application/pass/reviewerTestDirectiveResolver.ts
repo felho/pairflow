@@ -2,11 +2,7 @@ import {
   resolveReviewerTestEvidenceArtifactPath,
   type ReviewerTestExecutionDirective
 } from "../../../v11/shared/reviewer/testEvidence.js";
-import {
-  resolveReviewerTestExecutionDirectiveFromArtifact as defaultResolveReviewerTestExecutionDirectiveFromArtifact,
-  verifyImplementerTestEvidence as defaultVerifyImplementerTestEvidence,
-  writeReviewerTestEvidenceArtifact as defaultWriteReviewerTestEvidenceArtifact
-} from "../reviewer/reviewerTestEvidenceDefaults.js";
+import { reviewerDeliveryDefaults } from "./reviewerDeliveryDefaults.js";
 import type { BubbleConfig } from "../../../types/bubble.js";
 import type { ProtocolEnvelope } from "../../../types/protocol.js";
 import type {
@@ -43,13 +39,13 @@ export async function resolveReviewerTestDirectiveForPass(
 
   const verifyEvidence =
     dependencies.verifyImplementerTestEvidence
-    ?? defaultVerifyImplementerTestEvidence;
+    ?? reviewerDeliveryDefaults.verifyImplementerTestEvidence;
   const writeEvidenceArtifact =
     dependencies.writeReviewerTestEvidenceArtifact
-    ?? defaultWriteReviewerTestEvidenceArtifact;
+    ?? reviewerDeliveryDefaults.writeReviewerTestEvidenceArtifact;
   const resolveDirectiveFromArtifact =
     dependencies.resolveReviewerTestExecutionDirectiveFromArtifact
-    ?? defaultResolveReviewerTestExecutionDirectiveFromArtifact;
+    ?? reviewerDeliveryDefaults.resolveReviewerTestExecutionDirectiveFromArtifact;
 
   let implementerDirective: ReviewerTestExecutionDirective | undefined;
   const evidenceArtifactPath = resolveReviewerTestEvidenceArtifactPath(

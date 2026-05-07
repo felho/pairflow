@@ -10,13 +10,22 @@ import type {
   ReadReviewerBriefArtifactPort,
   ReadReviewerFocusArtifactPort
 } from "../../shared/ports/reviewerArtifacts.js";
+import type {
+  ResolveReviewerTestExecutionDirectiveFromArtifactPort,
+  VerifyImplementerTestEvidencePort,
+  WriteReviewerTestEvidenceArtifactPort
+} from "../../shared/ports/reviewerTestEvidenceArtifacts.js";
 
 interface ReviewerDeliveryDefaultsModule {
   reviewerDeliveryDefaults: {
     emitDeliveryNotificationAck: EmitDeliveryNotificationAckPort;
     readReviewerBriefArtifact: ReadReviewerBriefArtifactPort;
     readReviewerFocusArtifact: ReadReviewerFocusArtifactPort;
+    resolveReviewerTestExecutionDirectiveFromArtifact:
+      ResolveReviewerTestExecutionDirectiveFromArtifactPort;
     refreshReviewerContext: RefreshReviewerContextPort;
+    verifyImplementerTestEvidence: VerifyImplementerTestEvidencePort;
+    writeReviewerTestEvidenceArtifact: WriteReviewerTestEvidenceArtifactPort;
   };
 }
 
@@ -25,7 +34,11 @@ let reviewerDeliveryDefaultsPromise:
       emitDeliveryNotificationAck: EmitDeliveryNotificationAckPort;
       readReviewerBriefArtifact: ReadReviewerBriefArtifactPort;
       readReviewerFocusArtifact: ReadReviewerFocusArtifactPort;
+      resolveReviewerTestExecutionDirectiveFromArtifact:
+        ResolveReviewerTestExecutionDirectiveFromArtifactPort;
       refreshReviewerContext: RefreshReviewerContextPort;
+      verifyImplementerTestEvidence: VerifyImplementerTestEvidencePort;
+      writeReviewerTestEvidenceArtifact: WriteReviewerTestEvidenceArtifactPort;
     }>
   | undefined;
 
@@ -37,7 +50,11 @@ async function loadReviewerDeliveryDefaults(): Promise<{
   emitDeliveryNotificationAck: EmitDeliveryNotificationAckPort;
   readReviewerBriefArtifact: ReadReviewerBriefArtifactPort;
   readReviewerFocusArtifact: ReadReviewerFocusArtifactPort;
+  resolveReviewerTestExecutionDirectiveFromArtifact:
+    ResolveReviewerTestExecutionDirectiveFromArtifactPort;
   refreshReviewerContext: RefreshReviewerContextPort;
+  verifyImplementerTestEvidence: VerifyImplementerTestEvidencePort;
+  writeReviewerTestEvidenceArtifact: WriteReviewerTestEvidenceArtifactPort;
 }> {
   reviewerDeliveryDefaultsPromise ??= import(
     getReviewerDeliveryDefaultsModulePath()
@@ -108,16 +125,46 @@ export async function readReviewerFocusArtifact(
   return defaults.readReviewerFocusArtifact(...args);
 }
 
+export async function resolveReviewerTestExecutionDirectiveFromArtifact(
+  ...args: Parameters<ResolveReviewerTestExecutionDirectiveFromArtifactPort>
+): Promise<
+  Awaited<ReturnType<ResolveReviewerTestExecutionDirectiveFromArtifactPort>>
+> {
+  const defaults = await loadReviewerDeliveryDefaults();
+  return defaults.resolveReviewerTestExecutionDirectiveFromArtifact(...args);
+}
+
+export async function verifyImplementerTestEvidence(
+  ...args: Parameters<VerifyImplementerTestEvidencePort>
+): Promise<Awaited<ReturnType<VerifyImplementerTestEvidencePort>>> {
+  const defaults = await loadReviewerDeliveryDefaults();
+  return defaults.verifyImplementerTestEvidence(...args);
+}
+
+export async function writeReviewerTestEvidenceArtifact(
+  ...args: Parameters<WriteReviewerTestEvidenceArtifactPort>
+): Promise<Awaited<ReturnType<WriteReviewerTestEvidenceArtifactPort>>> {
+  const defaults = await loadReviewerDeliveryDefaults();
+  return defaults.writeReviewerTestEvidenceArtifact(...args);
+}
+
 export const reviewerDeliveryDefaults = {
   emitDeliveryNotificationAck,
   readReviewerBriefArtifact,
   readReviewerFocusArtifact,
+  resolveReviewerTestExecutionDirectiveFromArtifact,
   refreshReviewerContext,
-  resolveDeliveryMessageRef
+  resolveDeliveryMessageRef,
+  verifyImplementerTestEvidence,
+  writeReviewerTestEvidenceArtifact
 } as const satisfies {
   emitDeliveryNotificationAck: EmitDeliveryNotificationAckPort;
   readReviewerBriefArtifact: ReadReviewerBriefArtifactPort;
   readReviewerFocusArtifact: ReadReviewerFocusArtifactPort;
+  resolveReviewerTestExecutionDirectiveFromArtifact:
+    ResolveReviewerTestExecutionDirectiveFromArtifactPort;
   refreshReviewerContext: RefreshReviewerContextPort;
   resolveDeliveryMessageRef: ResolveDeliveryMessageRefPort;
+  verifyImplementerTestEvidence: VerifyImplementerTestEvidencePort;
+  writeReviewerTestEvidenceArtifact: WriteReviewerTestEvidenceArtifactPort;
 };

@@ -21,6 +21,9 @@ import {
   readReviewerFocusArtifact
 } from "../reviewer/reviewerArtifactDefaults.js";
 import {
+  resolveReviewerTestExecutionDirective
+} from "../reviewer/reviewerTestEvidenceDefaults.js";
+import {
   cleanupWorktreeWorkspace as cleanupWorktreeWorkspaceCanonical,
   bootstrapWorktreeWorkspace as bootstrapWorktreeWorkspaceCanonical
 } from "../../infrastructure/workspace/worktreeManager.js";
@@ -55,6 +58,9 @@ import type {
   ReadReviewerBriefArtifactPort,
   ReadReviewerFocusArtifactPort
 } from "../../shared/ports/reviewerArtifacts.js";
+import type {
+  ResolveReviewerTestExecutionDirectivePort
+} from "../../shared/ports/reviewerTestEvidenceArtifacts.js";
 
 export interface StartBubbleDependencyDefaults {
   bootstrapWorktreeWorkspace: BootstrapWorktreeWorkspacePort;
@@ -80,6 +86,8 @@ export interface StartBubbleDependencyDefaults {
   ) => Promise<ExecuteRemoteBubbleStartResult>;
   readReviewerBriefArtifact: ReadReviewerBriefArtifactPort;
   readReviewerFocusArtifact: ReadReviewerFocusArtifactPort;
+  resolveReviewerTestExecutionDirective:
+    ResolveReviewerTestExecutionDirectivePort;
 }
 
 export const bootstrapWorktreeWorkspace: BootstrapWorktreeWorkspacePort =
@@ -115,5 +123,6 @@ export const startBubbleDependencyDefaults: StartBubbleDependencyDefaults = {
   removeRemoteStateCache: removeRemoteStateCacheCanonical,
   executeRemoteBubbleStart: executeRemoteBubbleStartCanonical,
   readReviewerBriefArtifact,
-  readReviewerFocusArtifact
+  readReviewerFocusArtifact,
+  resolveReviewerTestExecutionDirective
 };

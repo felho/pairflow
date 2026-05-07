@@ -10,9 +10,6 @@ import {
   resolveSummaryVerifierConsistencyGateArtifactPath
 } from "../../../v11/shared/reviewer/summaryVerifierConsistencyGate.js";
 import {
-  resolveReviewerTestExecutionDirective as defaultResolveReviewerTestExecutionDirective
-} from "../reviewer/reviewerTestEvidenceDefaults.js";
-import {
   resolveReviewerTestEvidenceArtifactPath
 } from "../../../v11/shared/reviewer/testEvidence.js";
 import type { ReviewerTestReasonCode } from "../../../v11/shared/reviewer/testEvidence.js";
@@ -79,7 +76,7 @@ function resolveValidationDependencies(
 ): ResolvedValidationDependencies {
   const resolveReviewerTestExecutionDirective =
     dependencies.resolveReviewerTestExecutionDirective
-    ?? defaultResolveReviewerTestExecutionDirective;
+    ?? convergedDependencyDefaults.validation.resolveReviewerTestExecutionDirective;
   return {
     isDocGateScopeActive:
       dependencies.isDocContractGateScopeActive ?? isDocContractGateScopeActive,

@@ -11,6 +11,9 @@ import {
   writeSummaryVerifierConsistencyGateArtifact
 } from "../reviewer/summaryVerifierConsistencyGateDefaults.js";
 import {
+  resolveReviewerTestExecutionDirective
+} from "../reviewer/reviewerTestEvidenceDefaults.js";
+import {
   appendProtocolEnvelope,
   readTranscriptEnvelopes
 } from "../transcript/transcriptDependencyDefaults.js";
@@ -45,6 +48,7 @@ export const convergedDependencyDefaults = {
     readDocContractGateArtifact,
     readReviewVerificationArtifactStatus,
     resolveDocContractGateArtifactPath,
+    resolveReviewerTestExecutionDirective,
     writeSummaryVerifierConsistencyGateArtifact
   },
   finalization: {

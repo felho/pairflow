@@ -47,6 +47,8 @@ export interface StartBubbleDependencyDefaults {
     NonNullable<StartBubbleDependencies["readReviewerBriefArtifact"]>;
   readReviewerFocusArtifact:
     NonNullable<StartBubbleDependencies["readReviewerFocusArtifact"]>;
+  resolveReviewerTestExecutionDirective:
+    NonNullable<StartBubbleDependencies["resolveReviewerTestExecutionDirective"]>;
 }
 
 interface StartBubbleDependencyDefaultsModule {

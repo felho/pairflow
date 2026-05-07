@@ -7,11 +7,19 @@ import {
   readReviewerBriefArtifact,
   readReviewerFocusArtifact
 } from "./reviewerArtifactDefaults.js";
+import {
+  resolveReviewerTestExecutionDirectiveFromArtifact,
+  verifyImplementerTestEvidence,
+  writeReviewerTestEvidenceArtifact
+} from "./reviewerTestEvidenceDefaults.js";
 
 export const reviewerDeliveryDefaults = {
   emitDeliveryNotificationAck,
   readReviewerBriefArtifact,
   readReviewerFocusArtifact,
+  resolveReviewerTestExecutionDirectiveFromArtifact,
   refreshReviewerContext,
-  resolveDeliveryMessageRef
+  resolveDeliveryMessageRef,
+  verifyImplementerTestEvidence,
+  writeReviewerTestEvidenceArtifact
 } as const;

@@ -23,6 +23,9 @@ import type { ReadReviewVerificationArtifactStatusPort } from "../../shared/port
 import type {
   WriteSummaryVerifierConsistencyGateArtifactPort
 } from "../../shared/ports/summaryVerifierGateArtifacts.js";
+import type {
+  ResolveReviewerTestExecutionDirectivePort
+} from "../../shared/ports/reviewerTestEvidenceArtifacts.js";
 
 interface ConvergedDependencyDefaults {
   flow: {
@@ -48,6 +51,8 @@ interface ConvergedDependencyDefaults {
     readReviewVerificationArtifactStatus:
       ReadReviewVerificationArtifactStatusPort;
     resolveDocContractGateArtifactPath: ResolveDocContractGateArtifactPathPort;
+    resolveReviewerTestExecutionDirective:
+      ResolveReviewerTestExecutionDirectivePort;
     writeSummaryVerifierConsistencyGateArtifact:
       WriteSummaryVerifierConsistencyGateArtifactPort;
   };

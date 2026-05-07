@@ -335,7 +335,7 @@ twice.
 | B11 | `application/reconcile/reconcileCommandDefaults.ts:25` | `defaults/reconcile/reconcileCommandDefaults.ts` | B | Verified: target imports `infrastructure/` and `tmuxRunnerDefaults`, plus contains default probe logic. Composition. |
 | B12 | `application/restart/restartCommandDefaults.ts:29` | `defaults/restart/restartCommandDefaults.ts` | B | Verified. |
 | B13 | `application/reviewer/reviewerArtifactDefaults.ts:22` | `defaults/reviewer/reviewerArtifactDefaults.ts` | **A** (reclassified) | Completed in Batch 13: reviewer brief/focus artifact readers are now supplied through the existing start and reviewer-delivery defaults aggregates; the standalone application shim was deleted. |
-| B14 | `application/reviewer/reviewerTestEvidenceDefaults.ts:30` | `defaults/reviewer/reviewerTestEvidenceDefaults.ts` | **A** (reclassified) | Verified: target re-exports 5 cohesive reviewer test-evidence ports (path resolution from `shared/reviewer/testEvidence`, plus 4 from infrastructure: directive resolution, evidence verification, artifact write). Port-slice DI: caller takes a `ReviewerTestEvidenceCapabilities` slice. |
+| B14 | `application/reviewer/reviewerTestEvidenceDefaults.ts:30` | `defaults/reviewer/reviewerTestEvidenceDefaults.ts` | **A** (reclassified) | Completed in Batch 14: reviewer test-evidence ports are now supplied through start, converged, and reviewer-delivery defaults aggregates; the standalone application shim was deleted. |
 | B15 | `application/start/startBubbleDependencyDefaults.ts:63` | `defaults/start/startBubbleDefaults.ts` | B | Verified. |
 | B16 | `application/status/statusCommandDependencyDefaults.ts:26` | `defaults/list/listCommandDefaults.ts` | B | Verified: target imports many infrastructure adapters directly (config loader, remote artifact reads/writes, SSH bubble status, repo resolution, list bubble workspace, ...). Same target as S7; resolution-strategy for the *shared* side is the S5/S7 modelling call. CLI passes the aggregator on the application side. |
 | B17 | `application/stop/stopCommandDefaults.ts:29` | `defaults/stop/stopCommandDefaults.ts` | B | Verified: target has no direct `infrastructure/` imports, but aggregates 5 sibling defaults (`bubbleLookup`, `runtimeSessions`, `state`, `tmuxSession`) plus `stopCancellationMutation`. Composition by transitive aggregation. |
@@ -981,6 +981,37 @@ In the closing PR:
     passed (`5` files, `215` tests).
   - `pnpm test` skipped for this focused reviewer-artifact defaults rewiring
     batch; the targeted start, pass, reviewer-delivery, and
+    application-defaults-fitness tests cover the changed surface.
+  - `pnpm build` passed.
+
+### 2026-05-07 — Batch 14: route reviewer test-evidence ports through command defaults
+
+- Added reviewer test-evidence directive resolution to
+  `src/v11/defaults/start/startBubbleDefaults.ts` and the application-side
+  start defaults contract.
+- Added reviewer test-evidence directive resolution to
+  `src/v11/defaults/converged/convergedDependencyDefaults.ts` under the
+  existing `validation` group.
+- Added reviewer test-evidence verification, artifact write, and
+  directive-from-artifact ports to `src/v11/defaults/reviewer/reviewerDeliveryDefaults.ts`
+  and exposed them through the existing application reviewer-delivery defaults
+  wrapper.
+- Updated start dependency resolution, converged validation preparation, and
+  pass reviewer-test directive resolution to consume those command-owned
+  defaults.
+- Deleted `src/v11/application/reviewer/reviewerTestEvidenceDefaults.ts`.
+- Fitness result after the batch: application dynamic defaults warnings are
+  down from 28 to 27; shared dynamic defaults warnings remain 0. Hard-fail
+  fitness checks pass.
+- Validation:
+  - `pnpm typecheck` passed.
+  - `pnpm lint` passed.
+  - `pnpm fitness:check:ci` passed with the expected remaining warnings
+    (`application_defaults_boundary=27`, `shared_defaults_boundary=0`).
+  - `pnpm exec vitest run tests/v11/application/pass/reviewerTestDirectiveResolver.test.ts tests/v11/application/converged/convergedValidationPreparation.test.ts tests/v11/application/start/startCommandOrchestration.test.ts tests/core/bubble/startBubble.test.ts tests/core/agent/pass.test.ts tests/core/agent/converged.test.ts tests/tools/fitness/applicationDefaultsBoundary.test.ts`
+    passed (`7` files, `252` tests).
+  - `pnpm test` skipped for this focused reviewer test-evidence defaults
+    rewiring batch; the targeted pass, converged, start, and
     application-defaults-fitness tests cover the changed surface.
   - `pnpm build` passed.
 

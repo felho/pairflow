@@ -16,9 +16,6 @@ import {
   buildPreparingWorkspaceStartRejectMessage,
   createStartBubbleError
 } from "./startCommandRuntime.js";
-import {
-  resolveReviewerTestExecutionDirective as defaultResolveReviewerTestExecutionDirective
-} from "../reviewer/reviewerTestEvidenceDefaults.js";
 import type {
   ReadReviewerBriefArtifactPort,
   ReadReviewerFocusArtifactPort
@@ -157,7 +154,7 @@ function resolveReviewerDependencies(input: {
       ?? input.defaults.readReviewerFocusArtifact,
     resolveReviewerTestExecutionDirective:
       input.dependencies.resolveReviewerTestExecutionDirective
-      ?? defaultResolveReviewerTestExecutionDirective
+      ?? input.defaults.resolveReviewerTestExecutionDirective
   };
 }
 
