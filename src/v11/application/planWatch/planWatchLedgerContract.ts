@@ -57,13 +57,25 @@ export interface PlanWatchLedgerData {
   records: readonly PlanWatchLedgerRecord[];
 }
 
+export interface PlanWatchLedgerErrorContext {
+  context?: "plan_watch_ledger";
+  ledgerPath?: string;
+  operation?: "read" | "parse" | "write" | "reserve_run" | "complete_run" | "observe_dry_run";
+  key?: string;
+  invocationId?: string;
+  recordMode?: PlanWatchLedgerRecord["mode"];
+  recordState?: PlanWatchLedgerRecord["recordState"];
+  cause?: string;
+}
+
 export class PlanWatchLedgerError extends Error {
   public constructor(
     public readonly reason:
       | "ledger_unreadable"
       | "ledger_write_failed"
       | "ledger_schema_unsupported",
-    message: string
+    message: string,
+    public readonly context?: PlanWatchLedgerErrorContext
   ) {
     super(message);
     this.name = "PlanWatchLedgerError";

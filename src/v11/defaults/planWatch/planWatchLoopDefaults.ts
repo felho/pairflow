@@ -103,7 +103,13 @@ async function readLedgerFile(path: string): Promise<PlanWatchLedgerData> {
     }
     throw new PlanWatchLedgerError(
       "ledger_unreadable",
-      `Plan watch ledger could not be read at ${path}.`
+      `Plan watch ledger could not be read at ${path}.`,
+      {
+        context: "plan_watch_ledger",
+        ledgerPath: path,
+        operation: "read",
+        cause: errorMessage(error)
+      }
     );
   }
 
@@ -115,7 +121,13 @@ async function readLedgerFile(path: string): Promise<PlanWatchLedgerData> {
     }
     throw new PlanWatchLedgerError(
       "ledger_unreadable",
-      `Plan watch ledger is not valid JSON at ${path}.`
+      `Plan watch ledger is not valid JSON at ${path}.`,
+      {
+        context: "plan_watch_ledger",
+        ledgerPath: path,
+        operation: "parse",
+        cause: errorMessage(error)
+      }
     );
   }
 }
@@ -132,7 +144,13 @@ async function writeLedgerFile(
   } catch (error) {
     throw new PlanWatchLedgerError(
       "ledger_write_failed",
-      `Plan watch ledger could not be written at ${path}: ${errorMessage(error)}`
+      `Plan watch ledger could not be written at ${path}: ${errorMessage(error)}`,
+      {
+        context: "plan_watch_ledger",
+        ledgerPath: path,
+        operation: "write",
+        cause: errorMessage(error)
+      }
     );
   }
 }
@@ -145,7 +163,16 @@ async function appendRunRecord(
   if (ledger.records.some((existing) => existing.key === record.key && existing.mode === "run")) {
     throw new PlanWatchLedgerError(
       "ledger_write_failed",
-      `PLAN_WATCH_RUN_RECORD_CONTENTION: Plan watch ledger already contains a run record. context: key=${record.key}`
+      `PLAN_WATCH_RUN_RECORD_CONTENTION: Plan watch ledger already contains a run record. context: key=${record.key}`,
+      {
+        context: "plan_watch_ledger",
+        ledgerPath: path,
+        operation: "reserve_run",
+        key: record.key,
+        invocationId: record.invocationId,
+        recordMode: record.mode,
+        recordState: record.recordState
+      }
     );
   }
   await writeLedgerFile(path, {
@@ -169,7 +196,16 @@ async function completeRunRecord(
   if (index < 0) {
     throw new PlanWatchLedgerError(
       "ledger_write_failed",
-      `Reserved plan watch ledger record was not found for ${record.key}.`
+      `Reserved plan watch ledger record was not found for ${record.key}.`,
+      {
+        context: "plan_watch_ledger",
+        ledgerPath: path,
+        operation: "complete_run",
+        key: record.key,
+        invocationId: record.invocationId,
+        recordMode: record.mode,
+        recordState: record.recordState
+      }
     );
   }
   const records = [...ledger.records];
@@ -188,7 +224,16 @@ async function appendDryRunRecord(
   if (ledger.records.some((existing) => existing.key === record.key && existing.mode === "run")) {
     throw new PlanWatchLedgerError(
       "ledger_write_failed",
-      `PLAN_WATCH_DRY_RUN_RECORD_CONTENTION: Plan watch ledger already contains a run record. context: key=${record.key}`
+      `PLAN_WATCH_DRY_RUN_RECORD_CONTENTION: Plan watch ledger already contains a run record. context: key=${record.key}`,
+      {
+        context: "plan_watch_ledger",
+        ledgerPath: path,
+        operation: "observe_dry_run",
+        key: record.key,
+        invocationId: record.invocationId,
+        recordMode: record.mode,
+        recordState: record.recordState
+      }
     );
   }
   const existingDryRunRecord = ledger.records.find(

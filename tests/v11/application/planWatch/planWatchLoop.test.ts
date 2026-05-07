@@ -1684,9 +1684,19 @@ describe("planWatchLoop", () => {
         port.reserveRun(secondRecord)
       ]);
       const content = JSON.parse(await readFile(ledgerPath, "utf8")) as PlanWatchLedgerData;
+      const rejected = results.find((result) => result.status === "rejected");
 
       expect(results.filter((result) => result.status === "fulfilled")).toHaveLength(1);
       expect(results.filter((result) => result.status === "rejected")).toHaveLength(1);
+      expect(rejected).toMatchObject({
+        reason: {
+          context: {
+            ledgerPath,
+            operation: "reserve_run",
+            key
+          }
+        }
+      });
       expect(content.records.filter((record) => record.mode === "run")).toHaveLength(1);
     } finally {
       await rm(tempDir, { recursive: true, force: true });
