@@ -5,9 +5,6 @@ import { readStateSnapshot } from "../state/stateStoreDependencyDefaults.js";
 import {
   resolveBubbleById
 } from "../bubbleLookup/bubbleLookupDependencyDefaults.js";
-import {
-  registerRepoInRegistry
-} from "../repoRegistry/repoRegistryDependencyDefaults.js";
 import type { TmuxRunner } from "../../shared/ports/tmuxSessions.js";
 
 type RunTmuxPort = TmuxRunner;
@@ -17,11 +14,6 @@ export async function runTmux(
 ): Promise<Awaited<ReturnType<RunTmuxPort>>> {
   return runTmuxDefaults(...args);
 }
-
-export const startCliDependencyDefaults = {
-  resolveBubbleById,
-  registerRepoInRegistry
-} as const;
 
 export const startCommandContextDefaults = {
   resolveBubbleById,

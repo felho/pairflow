@@ -5,19 +5,21 @@ import {
   asStartBubbleErrorV11 as asStartBubbleError,
   startBubbleV11 as startBubble,
   type StartBubbleV11Result as StartBubbleResult
-} from "./emitStartV11.js";
+} from "../../../v11/application/start/emitStartV11.js";
 import {
   IDEATION_METADATA_PARSE_WARNING
-} from "../../shared/ideation/ideationReasonCodes.js";
+} from "../../../v11/shared/ideation/ideationReasonCodes.js";
 import {
   hasIdeationMetadataParseWarning
-} from "../../domain/ideation/ideationMetadata.js";
-import { createStartBubbleError } from "./startCommandRuntime.js";
-import { startCliDependencyDefaults } from "./startCommandDependencyDefaults.js";
+} from "../../../v11/domain/ideation/ideationMetadata.js";
+import {
+  createStartBubbleError
+} from "../../../v11/application/start/startCommandRuntime.js";
+import { startCliDependencyDefaults } from "../../../v11/defaults/start/startCliDefaults.js";
 import { parseBubbleStartCommandOptions } from "./startCliOptions.js";
-import type { ResolvedBubbleById } from "../../shared/ports/bubbleLookup.js";
-import { processSpawnDefault } from "../process/processSpawnDependencyDefaults.js";
-import type { ProcessSpawnPort } from "../../shared/ports/processSpawn.js";
+import type { ResolvedBubbleById } from "../../../v11/shared/ports/bubbleLookup.js";
+import { processSpawnDefault } from "../../../v11/defaults/process/processSpawnDefaults.js";
+import type { ProcessSpawnPort } from "../../../v11/shared/ports/processSpawn.js";
 
 export interface BubbleStartCommandDependencies {
   startBubble?: typeof startBubble;

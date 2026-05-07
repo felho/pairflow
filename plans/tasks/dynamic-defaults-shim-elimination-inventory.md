@@ -269,7 +269,7 @@ row ID prefix is historical, the "Cat" column is authoritative.
 | A4 | `application/gates/docContractGateArtifactDependencyDefaults.ts:24` | `defaults/gates/docContractGateArtifactDefaults.ts` | A | Existing artifact port directly. |
 | A5 | `application/metaReview/metaReviewDependencyDefaults.ts:20` | `defaults/runtimeSessions/runtimeSessionsDefaults.ts` | A | Existing runtime-sessions port directly. |
 | A6 | `application/process/processSpawnDependencyDefaults.ts:8` | `defaults/process/processSpawnDefaults.ts` | A | `ProcessSpawnPort` directly (port exists in `shared/ports/processSpawn.ts`). No wrapper. |
-| A7 | `application/repoRegistry/repoRegistryDependencyDefaults.ts:18` | `defaults/repoRegistry/repoRegistryDefaults.ts` | A | Existing `RegisterRepoPort` (and siblings) directly. |
+| A7 | `application/repoRegistry/repoRegistryDependencyDefaults.ts:18` | `defaults/repoRegistry/repoRegistryDefaults.ts` | A | Completed in Batch 10: start CLI now consumes `defaults/start/startCliDefaults.ts` from the CLI layer; the application repo-registry shim was deleted. |
 | A8 | `application/state/stateStoreDependencyDefaults.ts:25` | `defaults/state/stateStoreDefaults.ts` | A | **`StateCapabilities` slice** (read + write + inspect). One of the few real slice cases. |
 | A9 | `application/status/statusCommandDefaults.ts:26` | `defaults/watchdog/watchdogPaneActivityDefaults.ts` | A | Verified: caller only uses `readWatchdogPaneActivity` (read-only). Single-port DI; use the existing read port directly, no slice. The defaults file exports read/write/remove, but this consumer needs only read. |
 | A10 | `application/tmux/tmuxRunnerDependencyDefaults.ts:18` | `defaults/tmux/tmuxRunnerDefaults.ts` | A | Single port (`runTmux`). Use directly. |
@@ -874,6 +874,35 @@ In the closing PR:
     had completed the full suite earlier in the same migration, and this batch
     ran targeted coverage across metrics, lifecycle callers, and the relevant
     fitness checks.
+  - `pnpm build` passed.
+
+### 2026-05-07 — Batch 10: remove repo-registry application shim from start CLI wiring
+
+- Moved the start CLI runner/options surface from
+  `src/v11/application/start/startCli*.ts` into
+  `src/cli/commands/bubble/start*.ts`, replacing the previous CLI re-export
+  with real CLI-owned code.
+- Changed the start CLI runner to use
+  `src/v11/defaults/start/startCliDefaults.ts` directly from the CLI layer
+  for bubble lookup and repository registration.
+- Removed the now-unused `startCliDependencyDefaults` export from
+  `src/v11/application/start/startCommandDependencyDefaults.ts`.
+- Deleted `src/v11/application/repoRegistry/repoRegistryDependencyDefaults.ts`;
+  repository registration default wiring is now only consumed from the CLI
+  composition side.
+- Fitness result after the batch: application dynamic defaults warnings are
+  down from 32 to 31; shared dynamic defaults warnings remain 0. Hard-fail
+  fitness checks pass.
+- Validation:
+  - `pnpm typecheck` passed.
+  - `pnpm lint` passed.
+  - `pnpm fitness:check:ci` passed with the expected remaining warnings
+    (`application_defaults_boundary=31`, `shared_defaults_boundary=0`).
+  - `pnpm exec vitest run tests/cli/bubbleStartCommand.test.ts tests/contracts/v11/start.contract.test.ts tests/contracts/v11/start.contract.runner.ts tests/tools/fitness/dependency.test.ts tests/tools/fitness/applicationDefaultsBoundary.test.ts`
+    passed (`4` files, `46` tests).
+  - `pnpm test` skipped for this focused CLI/default-shim ownership batch;
+    the targeted CLI, start-contract, dependency-fitness, and
+    application-defaults-fitness tests cover the changed surface.
   - `pnpm build` passed.
 
 ---

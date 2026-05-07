@@ -11,7 +11,7 @@ import {
   writeStateSnapshot
 } from "../../../src/v11/infrastructure/state/stateStore.js";
 import { startBubbleV11 } from "../../../src/v11/application/start/emitStartV11.js";
-import { runBubbleStartCommand as runBubbleStartCommandV11 } from "../../../src/v11/application/start/startCliCommand.js";
+import { runBubbleStartCommand as runBubbleStartCommandV11 } from "../../../src/cli/commands/bubble/start.js";
 import { writeRemotePointer } from "../../../src/v11/infrastructure/artifact/bubble/remoteExecutionArtifacts.js";
 import type {
   ExecuteRemoteBubbleStartInput,
