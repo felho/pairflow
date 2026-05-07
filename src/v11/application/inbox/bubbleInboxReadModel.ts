@@ -2,7 +2,7 @@ import type {
   BubbleLifecycleState,
   MetaReviewRecommendation
 } from "../../../types/bubble.js";
-import { resolveBubbleById } from "../bubbleLookup/bubbleLookupDependencyDefaults.js";
+import { resolveBubbleById } from "../start/startCommandDependencyDefaults.js";
 import { readStateSnapshot } from "../state/stateStoreDependencyDefaults.js";
 import { readTranscriptEnvelopes } from "../transcript/transcriptDependencyDefaults.js";
 import { resolveCanonicalPendingApprovalSignal } from "../../shared/approval/pendingApprovalSignal.js";

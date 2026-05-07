@@ -1,4 +1,3 @@
-import { openBubbleDefaults } from "../open/openBubbleDefaults.js";
 import {
   reviewerDeliveryDefaults
 } from "../pass/reviewerDeliveryDefaults.js";
@@ -9,11 +8,14 @@ import {
   readStateSnapshot,
   writeStateSnapshot
 } from "../state/stateStoreDependencyDefaults.js";
+import {
+  resolveBubbleById
+} from "../start/startCommandDependencyDefaults.js";
 
 export const kickoffDefaults = {
   appendProtocolEnvelope,
   emitDeliveryNotificationAck: reviewerDeliveryDefaults.emitDeliveryNotificationAck,
   readStateSnapshot,
-  resolveBubbleById: openBubbleDefaults.resolveBubbleById,
+  resolveBubbleById,
   writeStateSnapshot
 } as const;

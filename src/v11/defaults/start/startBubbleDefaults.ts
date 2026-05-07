@@ -3,6 +3,9 @@ import {
   ensureBubbleInstanceIdForMutation
 } from "../bubbleIdentity/bubbleIdentityDefaults.js";
 import {
+  resolveBubbleById
+} from "../bubbleLookup/bubbleLookupDefaults.js";
+import {
   terminateBubbleTmuxSession as terminateBubbleTmuxSessionCanonical,
   launchBubbleSessionAck as launchBubbleSessionAckCanonical
 } from "../../infrastructure/channel/tmux/tmuxManager.js";
@@ -79,6 +82,7 @@ import type {
 import type {
   EnsureBubbleInstanceIdForMutationPort
 } from "../../shared/ports/bubbleIdentity.js";
+import type { ResolveBubbleByIdPort } from "../../shared/ports/bubbleLookup.js";
 
 export interface StartBubbleDependencyDefaults {
   bootstrapWorktreeWorkspace: BootstrapWorktreeWorkspacePort;
@@ -90,6 +94,7 @@ export interface StartBubbleDependencyDefaults {
   upsertRuntimeSession: UpsertRuntimeSessionPort;
   removeRuntimeSession: RemoveRuntimeSessionPort;
   ensureBubbleInstanceIdForMutation: EnsureBubbleInstanceIdForMutationPort;
+  resolveBubbleById: ResolveBubbleByIdPort;
   writeStateSnapshot: WriteStateSnapshotPort;
   loadPairflowGlobalConfig: () => Promise<PairflowGlobalConfig>;
   runGitCommand: RunGitPort;
@@ -137,6 +142,7 @@ export const startBubbleDependencyDefaults: StartBubbleDependencyDefaults = {
   upsertRuntimeSession,
   removeRuntimeSession: removeRuntimeSessionCanonical,
   ensureBubbleInstanceIdForMutation,
+  resolveBubbleById,
   writeStateSnapshot: writeStateSnapshotCanonical,
   loadPairflowGlobalConfig: loadPairflowGlobalConfigCanonical,
   runGitCommand: runGitCommandCanonical,

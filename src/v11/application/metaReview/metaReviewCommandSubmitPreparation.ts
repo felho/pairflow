@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 
 import {
   resolveBubbleById
-} from "../bubbleLookup/bubbleLookupDependencyDefaults.js";
+} from "../start/startCommandDependencyDefaults.js";
 import { readStateSnapshot } from "../state/stateStoreDependencyDefaults.js";
 import {
   isInteger,

@@ -1,6 +1,6 @@
 import {
   resolveBubbleById
-} from "../bubbleLookup/bubbleLookupDependencyDefaults.js";
+} from "../start/startCommandDependencyDefaults.js";
 import type { BubbleRemotePointer } from "../../../types/bubble.js";
 
 let remoteExecutionArtifactsModulePromise:

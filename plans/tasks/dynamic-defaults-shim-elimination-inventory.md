@@ -265,7 +265,7 @@ row ID prefix is historical, the "Cat" column is authoritative.
 |---|-------------|-----------------|-----|--------|
 | A1 | `application/askHuman/askHumanFinalizationDependencyDefaults.ts:37` | `defaults/askHuman/askHumanFinalizationDefaults.ts` | **B** (reclassified) | Verified: target imports 2 infrastructure adapters (`emitBubbleNotification`, `emitDeliveryNotificationAck`). Two-adapter aggregation = composition. CLI passes the aggregator. (Optional alternative: a 2-port `Notification` slice as A; lean B because the existing aggregator already has the right shape.) |
 | A2 | `application/bubbleIdentity/bubbleIdentityDependencyDefaults.ts:18` | `defaults/bubbleIdentity/bubbleIdentityDefaults.ts` | A | Completed in Batch 20: bubble identity mutation port now flows through the existing start context defaults aggregate; standalone application bubble-identity shim was deleted. |
-| A3 | `application/bubbleLookup/bubbleLookupDependencyDefaults.ts:18` | `defaults/bubbleLookup/bubbleLookupDefaults.ts` | A | Single port (`ResolveBubbleByIdPort`). Same target as S2. |
+| A3 | `application/bubbleLookup/bubbleLookupDependencyDefaults.ts:18` | `defaults/bubbleLookup/bubbleLookupDefaults.ts` | A | Completed in Batch 21: bubble lookup port now flows through the existing start context defaults aggregate; standalone application bubble-lookup shim was deleted. |
 | A4 | `application/gates/docContractGateArtifactDependencyDefaults.ts:24` | `defaults/gates/docContractGateArtifactDefaults.ts` | A | Completed in Batch 15: doc-contract gate artifact ports are now supplied through create, pass-validation, and start defaults aggregates; the standalone application shim was deleted. |
 | A5 | `application/metaReview/metaReviewDependencyDefaults.ts:20` | `defaults/runtimeSessions/runtimeSessionsDefaults.ts` | A | Completed in Batch 11: V11/default wrapper injects the runtime-sessions read port through `defaults/metaReview`; the application shim was deleted. |
 | A6 | `application/process/processSpawnDependencyDefaults.ts:8` | `defaults/process/processSpawnDefaults.ts` | A | Completed in Batch 18: open, attach, and start command paths now receive `ProcessSpawnPort` from the CLI/defaults composition side; standalone application process-spawn shim was deleted. |
@@ -1171,6 +1171,34 @@ In the closing PR:
     passed (`8` files, `126` tests).
   - `pnpm test` skipped for this focused bubble-identity defaults rewiring
     batch; the targeted approval, ask-human, pass, bubble identity, start, and
+    application-defaults-fitness tests cover the changed surface.
+  - `pnpm lint` passed.
+  - `pnpm build` passed.
+
+### 2026-05-07 — Batch 21: remove bubble-lookup defaults shim
+
+- Added `resolveBubbleById` to `src/v11/defaults/start/startBubbleDefaults.ts`
+  and the application-side start defaults contract.
+- Exposed the bubble lookup port through `startCommandContextDefaults`, keeping
+  context-level command lookups on the same aggregate as state, identity, and
+  workspace resolution.
+- Updated open, attach, inbox, kickoff, meta-review submit preparation, and
+  start context defaults to consume `resolveBubbleById` from the start context
+  defaults aggregate.
+- Deleted `src/v11/application/bubbleLookup/bubbleLookupDependencyDefaults.ts`.
+- Fitness result after the batch: application dynamic defaults warnings are
+  down from 21 to 20; shared dynamic defaults warnings remain 0. Hard-fail
+  fitness checks pass.
+- Validation:
+  - `pnpm typecheck` passed.
+  - `pnpm fitness:check:ci` passed with the expected remaining warnings
+    (`application_defaults_boundary=20`, `shared_defaults_boundary=0`).
+  - `pnpm exec vitest run tests/core/bubble/openBubble.test.ts tests/cli/bubbleOpenCommand.test.ts tests/core/bubble/attachBubble.test.ts tests/cli/bubbleAttachCommand.test.ts tests/core/bubble/kickoffBubble.test.ts tests/core/bubble/startBubble.test.ts tests/tools/fitness/applicationDefaultsBoundary.test.ts`
+    passed (`7` files, `168` tests).
+  - `pnpm exec vitest run tests/v11/application/inbox/bubbleInboxReadModel.test.ts tests/cli/bubbleInboxCommand.test.ts tests/contracts/v11/metaReviewSubmitCoverage.test.ts tests/core/runtime/metaReviewSubmitGuidance.test.ts tests/tools/fitness/applicationDefaultsBoundary.test.ts`
+    passed (`5` files, `22` tests).
+  - `pnpm test` skipped for this focused bubble-lookup defaults rewiring batch;
+    the targeted open, attach, inbox, kickoff, meta-review submit, start, and
     application-defaults-fitness tests cover the changed surface.
   - `pnpm lint` passed.
   - `pnpm build` passed.

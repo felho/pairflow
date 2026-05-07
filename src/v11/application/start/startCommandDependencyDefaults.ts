@@ -1,8 +1,5 @@
 import { readTranscriptEnvelopes } from "../transcript/transcriptDependencyDefaults.js";
 import { readStateSnapshot } from "../state/stateStoreDependencyDefaults.js";
-import {
-  resolveBubbleById
-} from "../bubbleLookup/bubbleLookupDependencyDefaults.js";
 import { loadStartBubbleDependencyDefaults } from "./startBubbleDependencyDefaults.js";
 import type { TmuxRunner } from "../../shared/ports/tmuxSessions.js";
 
@@ -43,6 +40,21 @@ export async function ensureBubbleInstanceIdForMutation(
 > {
   const defaults = await loadStartBubbleDependencyDefaults();
   return defaults.ensureBubbleInstanceIdForMutation(...args);
+}
+
+export async function resolveBubbleById(
+  ...args: Parameters<
+    Awaited<ReturnType<typeof loadStartBubbleDependencyDefaults>>["resolveBubbleById"]
+  >
+): Promise<
+  Awaited<
+    ReturnType<
+      Awaited<ReturnType<typeof loadStartBubbleDependencyDefaults>>["resolveBubbleById"]
+    >
+  >
+> {
+  const defaults = await loadStartBubbleDependencyDefaults();
+  return defaults.resolveBubbleById(...args);
 }
 
 export const startCommandContextDefaults = {
