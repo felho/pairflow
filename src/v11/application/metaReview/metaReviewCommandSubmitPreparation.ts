@@ -1,6 +1,9 @@
 import { randomUUID } from "node:crypto";
 
-import { metaReviewCommandSubmitDefaults } from "./metaReviewDependencyDefaults.js";
+import {
+  resolveBubbleById
+} from "../bubbleLookup/bubbleLookupDependencyDefaults.js";
+import { readStateSnapshot } from "../state/stateStoreDependencyDefaults.js";
 import {
   isInteger,
   isNonEmptyString,
@@ -57,6 +60,11 @@ type MetaReviewSubmitPreparationPorts = {
   randomUuidFn: () => string;
 };
 
+const metaReviewCommandSubmitDefaults = {
+  readStateSnapshot,
+  resolveBubbleById
+} as const;
+
 export interface PreparedMetaReviewSubmitContext {
   resolved: Awaited<ReturnType<typeof metaReviewCommandSubmitDefaults.resolveBubbleById>>;
   loadedState: Awaited<ReturnType<typeof metaReviewCommandSubmitDefaults.readStateSnapshot>>;
@@ -74,6 +82,24 @@ export interface PreparedMetaReviewSubmitContext {
   >;
   executionContext: ReturnType<typeof assertActiveMetaReviewExecutionContext>;
   now: Date;
+}
+
+function resolveMetaReviewRuntimeSessionsPort(
+  bubbleId: string,
+  dependencies: MetaReviewCommandDependencies
+): NonNullable<MetaReviewCommandDependencies["readRuntimeSessionsRegistry"]> {
+  if (dependencies.readRuntimeSessionsRegistry !== undefined) {
+    return dependencies.readRuntimeSessionsRegistry;
+  }
+  throw new MetaReviewError({
+    reasonCode: "META_REVIEW_UNKNOWN_ERROR",
+    message: "meta-review runtime session read capability is unavailable.",
+    context: {
+      source: "meta_review_command_submit_preparation",
+      bubbleId,
+      reason: "runtime_session_read_capability_unavailable"
+    }
+  });
 }
 
 function resolveMetaReviewArtifactReadPort(
@@ -105,9 +131,10 @@ function resolveMetaReviewSubmitPreparationPorts(input: {
     readState:
       input.dependencies.readStateSnapshot ??
       metaReviewCommandSubmitDefaults.readStateSnapshot,
-    readRuntimeSessions:
-      input.dependencies.readRuntimeSessionsRegistry ??
-      metaReviewCommandSubmitDefaults.readRuntimeSessionsRegistry,
+    readRuntimeSessions: resolveMetaReviewRuntimeSessionsPort(
+      input.submitInput.bubbleId,
+      input.dependencies
+    ),
     readFileFn: resolveMetaReviewArtifactReadPort(
       input.submitInput.bubbleId,
       input.dependencies

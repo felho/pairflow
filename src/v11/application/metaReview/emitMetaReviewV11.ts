@@ -24,6 +24,9 @@ interface MetaReviewDefaultsModule {
     emitDeliveryNotificationAck: NonNullable<
       MetaReviewCommandDependencies["emitDeliveryNotification"]
     >;
+    readRuntimeSessionsRegistry: NonNullable<
+      MetaReviewCommandDependencies["readRuntimeSessionsRegistry"]
+    >;
     resolveDeliveryMessageRef: NonNullable<
       MetaReviewCommandDependencies["buildDeliveryMessageRef"]
     >;
@@ -36,6 +39,9 @@ interface MetaReviewDefaultsModule {
 async function loadMetaReviewDefaults(): Promise<{
   emitDeliveryNotificationAck: NonNullable<
     MetaReviewCommandDependencies["emitDeliveryNotification"]
+  >;
+  readRuntimeSessionsRegistry: NonNullable<
+    MetaReviewCommandDependencies["readRuntimeSessionsRegistry"]
   >;
   resolveDeliveryMessageRef: NonNullable<
     MetaReviewCommandDependencies["buildDeliveryMessageRef"]
@@ -60,6 +66,8 @@ async function withMetaReviewDefaults(
     readFile,
     emitDeliveryNotification: metaReviewDefaults.emitDeliveryNotificationAck,
     buildDeliveryMessageRef: metaReviewDefaults.resolveDeliveryMessageRef,
+    readRuntimeSessionsRegistry:
+      metaReviewDefaults.readRuntimeSessionsRegistry,
     readTranscriptEnvelopes: metaReviewGateDefaults.readTranscriptEnvelopes,
     setMetaReviewerPaneBinding: metaReviewGateDefaults.setMetaReviewerPaneBinding,
     notifyMetaReviewerSubmissionRequest:

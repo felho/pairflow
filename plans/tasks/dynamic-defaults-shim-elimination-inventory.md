@@ -267,7 +267,7 @@ row ID prefix is historical, the "Cat" column is authoritative.
 | A2 | `application/bubbleIdentity/bubbleIdentityDependencyDefaults.ts:18` | `defaults/bubbleIdentity/bubbleIdentityDefaults.ts` | A | Single port (`EnsureBubbleInstanceIdForMutation`). Use the existing port type directly. |
 | A3 | `application/bubbleLookup/bubbleLookupDependencyDefaults.ts:18` | `defaults/bubbleLookup/bubbleLookupDefaults.ts` | A | Single port (`ResolveBubbleByIdPort`). Same target as S2. |
 | A4 | `application/gates/docContractGateArtifactDependencyDefaults.ts:24` | `defaults/gates/docContractGateArtifactDefaults.ts` | A | Existing artifact port directly. |
-| A5 | `application/metaReview/metaReviewDependencyDefaults.ts:20` | `defaults/runtimeSessions/runtimeSessionsDefaults.ts` | A | Existing runtime-sessions port directly. |
+| A5 | `application/metaReview/metaReviewDependencyDefaults.ts:20` | `defaults/runtimeSessions/runtimeSessionsDefaults.ts` | A | Completed in Batch 11: V11/default wrapper injects the runtime-sessions read port through `defaults/metaReview`; the application shim was deleted. |
 | A6 | `application/process/processSpawnDependencyDefaults.ts:8` | `defaults/process/processSpawnDefaults.ts` | A | `ProcessSpawnPort` directly (port exists in `shared/ports/processSpawn.ts`). No wrapper. |
 | A7 | `application/repoRegistry/repoRegistryDependencyDefaults.ts:18` | `defaults/repoRegistry/repoRegistryDefaults.ts` | A | Completed in Batch 10: start CLI now consumes `defaults/start/startCliDefaults.ts` from the CLI layer; the application repo-registry shim was deleted. |
 | A8 | `application/state/stateStoreDependencyDefaults.ts:25` | `defaults/state/stateStoreDefaults.ts` | A | **`StateCapabilities` slice** (read + write + inspect). One of the few real slice cases. |
@@ -903,6 +903,32 @@ In the closing PR:
   - `pnpm test` skipped for this focused CLI/default-shim ownership batch;
     the targeted CLI, start-contract, dependency-fitness, and
     application-defaults-fitness tests cover the changed surface.
+  - `pnpm build` passed.
+
+### 2026-05-07 — Batch 11: inject meta-review runtime sessions from defaults wrapper
+
+- Added `readRuntimeSessionsRegistry` to
+  `src/v11/defaults/metaReview/metaReviewDefaults.ts` so the existing
+  meta-review defaults aggregate owns this runtime-session port binding.
+- Changed `submitMetaReviewResultV11` default resolution to inject
+  `readRuntimeSessionsRegistry` through `withMetaReviewDefaults`.
+- Removed the runtime-sessions fallback from the application submit
+  preparation path; direct `submitMetaReviewResult` now remains an explicit
+  dependency API for runtime-session reads.
+- Deleted `src/v11/application/metaReview/metaReviewDependencyDefaults.ts`.
+- Fitness result after the batch: application dynamic defaults warnings are
+  down from 31 to 30; shared dynamic defaults warnings remain 0. Hard-fail
+  fitness checks pass.
+- Validation:
+  - `pnpm typecheck` passed.
+  - `pnpm lint` passed.
+  - `pnpm fitness:check:ci` passed with the expected remaining warnings
+    (`application_defaults_boundary=30`, `shared_defaults_boundary=0`).
+  - `pnpm exec vitest run tests/contracts/v11/metaReviewSubmitCoverage.test.ts tests/core/human/approval.test.ts tests/core/bubble/commitBubble.test.ts tests/core/runtime/restartRecovery.test.ts tests/v11/shared/metaReview/metaReviewCommandSubmitValidation.test.ts tests/tools/fitness/applicationDefaultsBoundary.test.ts`
+    passed (`6` files, `70` tests).
+  - `pnpm test` skipped for this focused meta-review runtime-session wiring
+    batch; the targeted meta-review submit, approval, commit, restart recovery,
+    and application-defaults-fitness tests cover the changed behavior.
   - `pnpm build` passed.
 
 ---
