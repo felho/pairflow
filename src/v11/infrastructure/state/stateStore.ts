@@ -11,7 +11,8 @@ import {
   fingerprintState,
   inspectStateSnapshot
 } from "./stateSnapshotInspection.js";
-import { type BubbleLifecycleState, type BubbleStateSnapshot } from "../../../types/bubble.js";
+import type { BubbleLifecycleState } from "../../domain/state/lifecycleTypes.js";
+import { type BubbleStateSnapshot } from "../../../types/bubble.js";
 import { SchemaValidationError } from "../../shared/validation/primitives.js";
 import type {
   LoadedStateSnapshot,

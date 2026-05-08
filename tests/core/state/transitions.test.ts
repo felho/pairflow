@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { bubbleLifecycleStates } from "../../../src/types/bubble.js";
+import { bubbleLifecycleStates } from "../../../src/v11/domain/state/lifecycleTypes.js";
 import {
   assertTransitionAllowed,
   canTransition,

@@ -6,9 +6,7 @@ import type {
 import type {
   BubbleReviewPolicyRuntimeView
 } from "../../reviewPolicy/reviewPolicyTypes.js";
-import type {
-  BubbleLifecycleState
-} from "../../../../types/bubble.js";
+import type { BubbleLifecycleState } from "../../../domain/state/lifecycleTypes.js";
 import type { UiBubbleAttention } from "../../../../contracts/ui/uiReadModel.js";
 import type { UiBubbleListRemoteExecution } from "../../../../types/uiRemoteExecution.js";
 

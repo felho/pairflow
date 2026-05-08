@@ -33,9 +33,7 @@ import {
 import {
   normalizeMetaReviewRuntimeDeliveryCorrelation
 } from "../../shared/metaReview/metaReviewSnapshot.js";
-import {
-  isBubbleLifecycleState
-} from "../../../types/bubble.js";
+import { isBubbleLifecycleState } from "../../domain/state/lifecycleTypes.js";
 import {
   isReworkIntentStatus
 } from "../../shared/state/reworkIntentTypes.js";

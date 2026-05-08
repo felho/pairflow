@@ -136,6 +136,15 @@ Preferred mechanical flow:
 
 ## Progress Log
 
+### Lifecycle vocabulary slice
+
+- Created `src/v11/domain/state/lifecycleTypes.ts` as the owner for lifecycle state literals, `BubbleLifecycleState`, and `isBubbleLifecycleState`.
+- Updated state transition, state validation, status/read-model, remote-status parsing, state store, review-policy mutation eligibility, root package exports, and tests to import lifecycle vocabulary from the state-domain owner.
+- Removed lifecycle literals, lifecycle type derivation, and the lifecycle guard from `src/types/bubble.ts`; the old file now only imports `BubbleLifecycleState` as a type-only dependency for the remaining remote-state cache and snapshot aggregates.
+- Preserved UI contract governance by keeping `src/contracts/ui/bubbleLifecycle.ts` as a browser-safe contract-local mirror, with parity coverage against the runtime lifecycle owner.
+- Learning: lifecycle is runtime domain vocabulary, but browser-facing contracts cannot import the runtime owner directly. For future state slices, treat UI contract files as mirrors/DTO contracts even when the runtime vocabulary has a clear domain owner.
+- Targeted verification completed: `pnpm typecheck`, `pnpm lint`, `pnpm fitness:check:ci`, and focused state/lifecycle/status/UI-contract Vitest coverage passed.
+
 ### Bubble config aggregate slice
 
 - Created `src/v11/shared/config/bubbleConfigTypes.ts` as the owner for the `BubbleConfig` aggregate.

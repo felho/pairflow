@@ -1,8 +1,6 @@
 import { persistStateViaMutationBoundary } from "../../shared/mutation/mutationBoundaryIO.js";
-import type {
-  BubbleLifecycleState,
-  BubbleStateSnapshot
-} from "../../../types/bubble.js";
+import type { BubbleLifecycleState } from "../../domain/state/lifecycleTypes.js";
+import type { BubbleStateSnapshot } from "../../../types/bubble.js";
 import { BubbleWatchdogError } from "./watchdogCommandRuntime.js";
 
 export interface WatchdogPendingReworkWriteStateSnapshotOptions {

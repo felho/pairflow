@@ -1,4 +1,4 @@
-import type { BubbleLifecycleState } from "../../../types/bubble.js";
+import type { BubbleLifecycleState } from "../../domain/state/lifecycleTypes.js";
 import type { UiBubbleAttention } from "../../../contracts/ui/uiReadModel.js";
 import type { RuntimeSessionRecord } from "../../ports/runtimeSessions.js";
 import type { StateValidationDiagnostics } from "../../ports/stateSnapshots.js";

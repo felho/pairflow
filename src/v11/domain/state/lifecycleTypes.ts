@@ -12,3 +12,12 @@ export const bubbleLifecycleStates = [
 ] as const;
 
 export type BubbleLifecycleState = (typeof bubbleLifecycleStates)[number];
+
+export function isBubbleLifecycleState(
+  value: unknown
+): value is BubbleLifecycleState {
+  return (
+    typeof value === "string" &&
+    (bubbleLifecycleStates as readonly string[]).includes(value)
+  );
+}

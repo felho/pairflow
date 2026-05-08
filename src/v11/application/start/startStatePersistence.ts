@@ -7,10 +7,8 @@ import {
 import { persistStateViaMutationBoundary } from "../../shared/mutation/mutationBoundaryIO.js";import type {
   AgentName
 } from "../../domain/agentIdentity/agentIdentity.js";
-import type {
-  BubbleLifecycleState,
-  BubbleStateSnapshot
-} from "../../../types/bubble.js";
+import type { BubbleLifecycleState } from "../../domain/state/lifecycleTypes.js";
+import type { BubbleStateSnapshot } from "../../../types/bubble.js";
 
 export interface StartLoadedStateSnapshot {
   state: BubbleStateSnapshot;

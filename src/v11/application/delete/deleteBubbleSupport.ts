@@ -10,9 +10,7 @@ import type {
   BubbleRemotePointerCreated,
   BubbleRemotePointerStarted
 } from "../../shared/remote/remoteExecutionTypes.js";
-import type {
-  BubbleLifecycleState
-} from "../../../types/bubble.js";
+import type { BubbleLifecycleState } from "../../domain/state/lifecycleTypes.js";
 import type {
   ArchiveIndexEntry,
   ArchiveManifest

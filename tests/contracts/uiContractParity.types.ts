@@ -91,10 +91,10 @@ import type {
 } from "../../src/contracts/ui/uiReadModel.js";
 import type {
   BubbleLifecycleState as RuntimeBubbleLifecycleState
-} from "../../src/types/bubble.js";
+} from "../../src/v11/domain/state/lifecycleTypes.js";
 import {
   bubbleLifecycleStates as runtimeBubbleLifecycleStates
-} from "../../src/types/bubble.js";
+} from "../../src/v11/domain/state/lifecycleTypes.js";
 import type {
   UiBubbleListRemoteExecution as TransitUiBubbleListRemoteExecution,
   UiBubbleRemoteCacheStatus as TransitUiBubbleRemoteCacheStatus,

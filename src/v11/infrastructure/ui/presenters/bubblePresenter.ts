@@ -5,7 +5,7 @@ import type {
   UiBubbleStatusView
 } from "../../../../contracts/ui/uiReadModel.js";
 import type { RuntimeSessionRecord } from "../../executor/sessionRuntime/runtimeSessionsRegistry.js";
-import type { BubbleLifecycleState } from "../../../../types/bubble.js";
+import type { BubbleLifecycleState } from "../../../domain/state/lifecycleTypes.js";
 import type {
   UiBubbleDetail,
   UiBubbleSummary,

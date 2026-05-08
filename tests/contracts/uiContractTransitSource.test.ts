@@ -361,8 +361,8 @@ describe("UI contract transit source guards", () => {
     );
   });
 
-  it("keeps lifecycle literals in src/types/bubble and re-exports them canonically", async () => {
-    const runtime = await readSource("src/types/bubble.ts");
+  it("keeps lifecycle literals owned by state domain with a browser-safe UI contract mirror", async () => {
+    const runtime = await readSource("src/v11/domain/state/lifecycleTypes.ts");
     const canonical = await readSource("src/contracts/ui/bubbleLifecycle.ts");
     const backendCompat = await readSource("src/shared/contracts/bubbleLifecycle.ts");
     const uiCompat = await readSource("ui/src/lib/contracts/bubbleLifecycle.ts");
@@ -371,8 +371,11 @@ describe("UI contract transit source guards", () => {
     expect(runtime.match(/export const bubbleLifecycleStates = \[/g)).toHaveLength(
       1
     );
-    expect(canonical).toContain("from \"../../types/bubble.js\"");
-    expect(canonical).not.toMatch(/bubbleLifecycleStates\s*=\s*\[/);
+    expect(canonical.match(/export const bubbleLifecycleStates = \[/g)).toHaveLength(
+      1
+    );
+    expect(canonical).not.toContain("../v11");
+    expect(canonical).not.toContain("src/v11");
     expect(backendCompat).toContain("from \"../../contracts/ui/bubbleLifecycle.js\"");
     expect(backendCompat).not.toMatch(/bubbleLifecycleStates\s*=\s*\[/);
     expectUiContractEntrypointImport(uiCompat);
@@ -383,7 +386,7 @@ describe("UI contract transit source guards", () => {
     expect(stateSnapshots).not.toMatch(/type\s+BubbleLifecycleState\s*=/);
     expect(stateSnapshots).not.toMatch(/interface\s+BubbleLifecycleState/);
     expect(uiCompat).not.toMatch(/bubbleLifecycleStates\s*=\s*\[/);
-    expect([canonical, backendCompat, uiCompat, stateSnapshots].join("\n")).not.toMatch(
+    expect([backendCompat, uiCompat, stateSnapshots].join("\n")).not.toMatch(
       /mirror|mirrored|keep.*sync/i
     );
   });

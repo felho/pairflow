@@ -531,7 +531,7 @@ export {
 export {
   bubbleLifecycleStates,
   isBubbleLifecycleState
-} from "./types/bubble.js";
+} from "./v11/domain/state/lifecycleTypes.js";
 export {
   isQualityMode,
   isWorkMode,
@@ -749,9 +749,9 @@ export type {
   BubbleRemotePointerStarted,
   PairflowRemoteHostConfig
 } from "./v11/shared/remote/remoteExecutionTypes.js";
+export type { BubbleLifecycleState } from "./v11/domain/state/lifecycleTypes.js";
 export type {
   BubbleRemoteStateCache,
-  BubbleLifecycleState,
   BubbleStateSnapshot
 } from "./types/bubble.js";
 export type {

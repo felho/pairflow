@@ -17,7 +17,7 @@ import type {
 import {
   bubbleLifecycleStates,
   isBubbleLifecycleState
-} from "../../../types/bubble.js";
+} from "../../domain/state/lifecycleTypes.js";
 import {
   isInteger,
   isIsoTimestamp,

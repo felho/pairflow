@@ -1,6 +1,6 @@
 import { join } from "node:path";
 
-import type { BubbleLifecycleState } from "../../../types/bubble.js";
+import type { BubbleLifecycleState } from "../../domain/state/lifecycleTypes.js";
 import { isNamedError } from "../../shared/errors/namedError.js";
 import type {
   BubbleListInput,

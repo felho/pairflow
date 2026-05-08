@@ -1,7 +1,5 @@
-import {
-  isBubbleLifecycleState,
-  type BubbleRemoteStateCache
-} from "../../../../types/bubble.js";
+import { isBubbleLifecycleState } from "../../../domain/state/lifecycleTypes.js";
+import { type BubbleRemoteStateCache } from "../../../../types/bubble.js";
 import { RemoteBubbleStartError } from "./sshBubbleStartShared.js";
 
 function resolveConfirmedRound(input: {

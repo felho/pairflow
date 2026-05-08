@@ -2,9 +2,7 @@ import { resolveBubbleById } from "../bubbleLookup/bubbleLookupDefaults.js";
 import type {
   BubbleReviewPolicyRuntimeView
 } from "../../shared/reviewPolicy/reviewPolicyTypes.js";
-import type {
-  BubbleLifecycleState
-} from "../../../types/bubble.js";
+import type { BubbleLifecycleState } from "../../domain/state/lifecycleTypes.js";
 import { buildBubbleReviewPolicyRuntimeView } from "../../shared/reviewPolicy/reviewPolicyRuntime.js";
 import { isReviewPolicyMutableState } from "../../shared/reviewPolicy/reviewPolicyMutationEligibility.js";
 import {

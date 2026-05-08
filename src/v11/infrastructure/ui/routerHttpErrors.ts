@@ -1,5 +1,5 @@
 import type { ServerResponse } from "node:http";
-import type { BubbleLifecycleState } from "../../../types/bubble.js";
+import type { BubbleLifecycleState } from "../../domain/state/lifecycleTypes.js";
 import { AttachBubbleError } from "../executor/command/pairflowCommandAttachContract.js";
 import type { UiApiError } from "./routerContracts.js";
 
