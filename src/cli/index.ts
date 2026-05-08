@@ -1,6 +1,13 @@
 #!/usr/bin/env node
 
 import {
+  configureBubbleLifecycleEventEmitter
+} from "../v11/application/metrics/bubbleEvents.js";
+import {
+  emitBubbleLifecycleEvent,
+  emitBubbleLifecycleEventBestEffort
+} from "../v11/defaults/metrics/bubbleEvents.js";
+import {
   getAskHumanHelpText,
   runAskHumanCommand
 } from "./commands/agent/askHuman.js";
@@ -8,6 +15,11 @@ import {
   getConvergedHelpText,
   runConvergedCommand
 } from "./commands/agent/converged.js";
+
+configureBubbleLifecycleEventEmitter({
+  emitBubbleLifecycleEvent,
+  emitBubbleLifecycleEventBestEffort
+});
 import {
   getAgentEmitHelpText,
   runAgentEmitCommand

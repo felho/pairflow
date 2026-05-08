@@ -1,4 +1,5 @@
 import { loadPairflowGlobalConfig } from "../../../config/pairflowConfig.js";
+import "../metrics/bubbleEvents.js";
 import { appendProtocolEnvelope } from "../transcript/transcriptDependencyDefaults.js";
 import {
   resolveDocContractGateArtifactPath,

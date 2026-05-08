@@ -9,6 +9,7 @@ import {
   type AppendMetricsEventPort,
   type AppendMetricsEventResult
 } from "../../shared/metrics/eventsStorePort.js";
+import { configureBubbleLifecycleEventEmitter } from "../../application/metrics/bubbleEvents.js";
 import { bubbleEventsDefaults } from "./bubbleEventsDefaults.js";
 
 function defaultWarningReporter(message: string): void {
@@ -87,3 +88,8 @@ export async function emitBubbleLifecycleEventBestEffort(
     }
   }
 }
+
+configureBubbleLifecycleEventEmitter({
+  emitBubbleLifecycleEvent,
+  emitBubbleLifecycleEventBestEffort
+});

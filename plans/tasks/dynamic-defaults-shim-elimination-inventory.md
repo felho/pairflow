@@ -194,7 +194,7 @@ table.
 | S1 | `shared/actorProtocol/actorEmitContext.ts:46` | `defaults/workspace/workspaceResolutionDefaults.ts` | A | Completed in Batch 8: shared actor context now takes explicit resolution dependencies; default wiring moved to `defaults/actorProtocol/actorEmitContextDefaults.ts`. |
 | S2 | `shared/bubbleLookup/bubbleLookupDefaults.ts:18` | `defaults/bubbleLookup/bubbleLookupDefaults.ts` | A | Completed in Batch 8: defaults callers import `defaults/bubbleLookup` directly; the shared facade was deleted. |
 | S3 | `shared/metaReview/metaReviewDependencyDefaults.ts:22` | `defaults/runtimeSessions/runtimeSessionsDefaults.ts` | A | Completed in Batch 6: the shared shim had no live caller after the application-local `metaReviewDependencyDefaults.ts` copy became authoritative, so the shared file was deleted. |
-| S4 | `shared/metrics/bubbleEvents.ts:62` | `defaults/metrics/bubbleEventsDefaults.ts` | A | Completed in Batch 9: shared metrics now exports only the bubble-event contract types; runtime implementation moved to `defaults/metrics/bubbleEvents.ts`. |
+| S4 | `shared/metrics/bubbleEvents.ts:62` | `defaults/metrics/bubbleEventsDefaults.ts` | A | Completed in Batch 9: shared metrics now exports only the bubble-event contract types; runtime implementation moved to `defaults/metrics/bubbleEvents.ts`. Batch 36 removed the temporary application metrics dynamic shim and replaced it with explicit composition registration. |
 | S5 | `shared/read-model/list/listReadModelDefaults.ts:73` | `defaults/list/listCommandDefaults.ts` | B + modelling | Target is verified composition (direct `infrastructure/` imports, see B16). Resolution path picked (v4): **refactor caller out of `shared/`**. The shim file deletes as part of the S5/S7 refactor; the moved application API takes deps as a parameter, CLI injects from `defaults/list/`. See "S5/S7 Refactor Scope". |
 | S6 | `shared/state/stateStoreDefaults.ts:28` | `defaults/state/stateStoreDefaults.ts` | A | Completed in Batch 8: defaults callers import `defaults/state` directly; shared actor context receives `readStateSnapshot` through explicit dependencies; the shared facade was deleted. |
 | S7 | `shared/status/statusCommandDependencyDefaults.ts:116` | `defaults/list/listCommandDefaults.ts` | B + modelling | Same target as S5. Same resolution path: refactor caller out of `shared/`; the shim file (which holds S7, S8, S9 together) deletes as part of the S5/S7 refactor. |
@@ -1578,6 +1578,30 @@ In the closing PR:
   - `pnpm test` skipped for this focused ask-human composition batch; the
     targeted ask-human finalization/flow, agent emit, and fitness tests cover
     the changed surface.
+  - `pnpm lint` passed.
+  - `pnpm build` passed.
+
+### 2026-05-08 — Batch 36: register metrics defaults through composition
+
+- Removed the dynamic `defaults/metrics/bubbleEvents.ts` import from the
+  temporary application metrics facade.
+- Replaced it with a typed application metrics emitter registry; the defaults
+  metrics module registers the concrete emitter when the composition/defaults
+  side is loaded.
+- Added defaults/create side-effect loading so public/default create APIs keep
+  writing `bubble_created` metrics in direct tests and non-CLI callers.
+- Fitness result after the batch: application dynamic defaults warnings are
+  down from 3 to 2; shared dynamic defaults warnings remain 0. Hard-fail
+  fitness checks pass.
+- Validation:
+  - `pnpm typecheck` passed.
+  - `pnpm fitness:check:ci` passed with the expected remaining warnings
+    (`application_defaults_boundary=2`, `shared_defaults_boundary=0`).
+  - `pnpm exec vitest run tests/v11/shared/metrics/bubbleEvents.test.ts tests/core/bubble/createBubble.test.ts tests/core/bubble/deleteBubble.test.ts tests/tools/fitness/applicationDefaultsBoundary.test.ts`
+    passed (`4` files, `122` tests).
+  - `pnpm test` skipped for this focused metrics composition batch. A broader
+    exploratory core run surfaced existing direct `commitBubble` setup failures
+    from missing PASS validation defaults; those are outside the metrics change.
   - `pnpm lint` passed.
   - `pnpm build` passed.
 

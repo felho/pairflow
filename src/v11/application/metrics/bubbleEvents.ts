@@ -1,47 +1,52 @@
 import type {
   EmitBubbleLifecycleEventBestEffortInput,
+  EmitBubbleLifecycleEventBestEffortPort,
   EmitBubbleLifecycleEventInput
 } from "../../shared/metrics/bubbleEvents.js";
 import type { AppendMetricsEventResult } from "../../shared/metrics/eventsStorePort.js";
 
-interface BubbleEventsDefaultsModule {
+export interface BubbleLifecycleEventEmitter {
   emitBubbleLifecycleEvent: (
     input: EmitBubbleLifecycleEventInput
   ) => Promise<AppendMetricsEventResult>;
-  emitBubbleLifecycleEventBestEffort: (
-    input: EmitBubbleLifecycleEventBestEffortInput
-  ) => Promise<void>;
+  emitBubbleLifecycleEventBestEffort: EmitBubbleLifecycleEventBestEffortPort;
 }
 
-let bubbleEventsDefaultsModulePromise:
-  | Promise<BubbleEventsDefaultsModule>
+let configuredBubbleLifecycleEventEmitter:
+  | BubbleLifecycleEventEmitter
   | undefined;
 
-function getBubbleEventsDefaultsModulePath(): string {
-  return "../../defaults/metrics/bubbleEvents.js";
+export function configureBubbleLifecycleEventEmitter(
+  emitter: BubbleLifecycleEventEmitter
+): void {
+  configuredBubbleLifecycleEventEmitter = emitter;
 }
 
-async function loadBubbleEventsDefaultsModule():
-  Promise<BubbleEventsDefaultsModule> {
-  bubbleEventsDefaultsModulePromise ??= import(
-    getBubbleEventsDefaultsModulePath()
-  ) as Promise<BubbleEventsDefaultsModule>;
-  return bubbleEventsDefaultsModulePromise;
+export function resetBubbleLifecycleEventEmitterForTests(): void {
+  configuredBubbleLifecycleEventEmitter = undefined;
 }
 
-export async function emitBubbleLifecycleEvent(
+export function emitBubbleLifecycleEvent(
   input: EmitBubbleLifecycleEventInput
 ): Promise<AppendMetricsEventResult> {
-  const { emitBubbleLifecycleEvent: emitBubbleLifecycleEventDefault } =
-    await loadBubbleEventsDefaultsModule();
-  return emitBubbleLifecycleEventDefault(input);
+  if (configuredBubbleLifecycleEventEmitter === undefined) {
+    return Promise.reject(
+      new Error(
+        `METRICS_EMITTER_UNCONFIGURED: bubble lifecycle metrics emitter was not configured for ${input.bubbleId}.`
+      )
+    );
+  }
+  return configuredBubbleLifecycleEventEmitter.emitBubbleLifecycleEvent(input);
 }
 
-export async function emitBubbleLifecycleEventBestEffort(
+export function emitBubbleLifecycleEventBestEffort(
   input: EmitBubbleLifecycleEventBestEffortInput
 ): Promise<void> {
-  const {
-    emitBubbleLifecycleEventBestEffort: emitBubbleLifecycleEventBestEffortDefault
-  } = await loadBubbleEventsDefaultsModule();
-  return emitBubbleLifecycleEventBestEffortDefault(input);
+  if (configuredBubbleLifecycleEventEmitter === undefined) {
+    input.reportWarning?.(
+      `Pairflow warning: bubble lifecycle metrics emitter was not configured for ${input.bubbleId}.`
+    );
+    return Promise.resolve(undefined);
+  }
+  return configuredBubbleLifecycleEventEmitter.emitBubbleLifecycleEventBestEffort(input);
 }
