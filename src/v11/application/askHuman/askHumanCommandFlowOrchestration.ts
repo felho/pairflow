@@ -1,6 +1,3 @@
-import { buildAskHumanFlowInputFromCommandOrchestration } from "./askHumanCommandFlowInvocationBuilder.js";
-import { buildAskHumanFlowDependencies } from "./askHumanFlowInvocationBuilders.js";
-import { buildAskHumanRoutingInputFromCommandOrchestration } from "./askHumanCommandRoutingInvocationBuilder.js";
 import type {
   AskHumanCommandOrchestrationDependencies,
   AskHumanCommandOrchestrationInput,
@@ -14,19 +11,46 @@ export async function runAskHumanCommandFlowOrchestration(
   resolvedDependencies: ResolvedAskHumanCommandOrchestrationDependencies
 ): Promise<AskHumanCommandOrchestrationResult> {
   const routing = await resolvedDependencies.prepareAskHumanRouting(
-    buildAskHumanRoutingInputFromCommandOrchestration(input)
+    {
+      question: input.question,
+      ...(input.refs !== undefined
+        ? { refs: input.refs }
+        : {}),
+      ...(input.cwd !== undefined
+        ? { cwd: input.cwd }
+        : {}),
+      ...(input.authoritativeContext !== undefined
+        ? { authoritativeContext: input.authoritativeContext }
+        : {}),
+      now: input.now,
+      createError: input.createError
+    }
   );
 
   return resolvedDependencies.runAskHumanFlow(
-    buildAskHumanFlowInputFromCommandOrchestration(input, routing),
-    buildAskHumanFlowDependencies({
+    {
+      now: input.now,
+      routing,
+      createError: input.createError
+    },
+    {
       executeAskHumanExecution: dependencies.executeAskHumanExecution,
       finalizeAskHumanFlow: dependencies.finalizeAskHumanFlow,
-      emitDeliveryNotificationAck:
-        dependencies.emitDeliveryNotificationAck,
-      emitBubbleNotification: dependencies.emitBubbleNotification,
-      emitBubbleLifecycleEventBestEffort:
-        dependencies.emitBubbleLifecycleEventBestEffort
-    })
+      ...(dependencies.emitDeliveryNotificationAck !== undefined
+        ? {
+            emitDeliveryNotificationAck:
+              dependencies.emitDeliveryNotificationAck
+          }
+        : {}),
+      ...(dependencies.emitBubbleNotification !== undefined
+        ? { emitBubbleNotification: dependencies.emitBubbleNotification }
+        : {}),
+      ...(dependencies.emitBubbleLifecycleEventBestEffort !== undefined
+        ? {
+            emitBubbleLifecycleEventBestEffort:
+              dependencies.emitBubbleLifecycleEventBestEffort
+          }
+        : {})
+    }
   );
 }
