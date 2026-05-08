@@ -11,8 +11,12 @@ import type {
 import {
   buildOptionalActorActivationProvenance
 } from "../../shared/actorProtocol/actorEmitContext.js";
-import { resolveAskHumanRoutingPreparationDependencies } from "./askHumanRoutingPreparationDependencyResolution.js";
 import { prepareAskHumanWorkspaceContext } from "./askHumanWorkspaceContextPreparation.js";
+import {
+  ensureBubbleInstanceIdForMutation,
+  readStateSnapshot,
+  resolveBubbleFromWorkspaceCwd
+} from "../start/startCommandDependencyDefaults.js";
 
 export async function prepareAskHumanRouting(
   input: PrepareAskHumanRoutingInput,
@@ -25,18 +29,19 @@ export async function prepareAskHumanRouting(
   );
   const refs = normalizeStringList(input.refs ?? []);
 
-  const resolvedDependencies = resolveAskHumanRoutingPreparationDependencies({
-    resolveBubbleFromWorkspaceCwd: dependencies.resolveBubbleFromWorkspaceCwd,
-    ensureBubbleInstanceIdForMutation:
-      dependencies.ensureBubbleInstanceIdForMutation,
-    readStateSnapshot: dependencies.readStateSnapshot
-  });
-
   const workspace = await prepareAskHumanWorkspaceContext({
     cwd: input.cwd,
     authoritativeContext: input.authoritativeContext,
     now: input.now,
-    dependencies: resolvedDependencies
+    dependencies: {
+      resolveBubble:
+        dependencies.resolveBubbleFromWorkspaceCwd
+        ?? resolveBubbleFromWorkspaceCwd,
+      ensureBubbleIdentity:
+        dependencies.ensureBubbleInstanceIdForMutation
+        ?? ensureBubbleInstanceIdForMutation,
+      readState: dependencies.readStateSnapshot ?? readStateSnapshot
+    }
   });
   assertAskHumanRunningState(workspace.state, input.createError);
   const activation =

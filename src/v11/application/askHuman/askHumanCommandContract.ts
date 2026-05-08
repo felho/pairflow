@@ -18,7 +18,7 @@ import type {
   EnsureAskHumanBubbleInstanceIdentity,
   ReadAskHumanStateSnapshot,
   ResolveAskHumanBubbleFromWorkspaceCwd
-} from "./askHumanRoutingPreparationDependencyResolutionContract.js";
+} from "./askHumanRoutingContract.js";
 
 export type AskHumanActivationProvenance = ActorActivationProvenance;
 

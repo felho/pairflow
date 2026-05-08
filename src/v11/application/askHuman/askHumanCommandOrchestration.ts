@@ -1,5 +1,6 @@
 import { runAskHumanCommandFlowOrchestration } from "./askHumanCommandFlowOrchestration.js";
-import { resolveAskHumanCommandOrchestrationDependencies } from "./askHumanCommandOrchestrationDependencyResolution.js";
+import { prepareAskHumanRouting } from "./askHumanRoutingPreparation.js";
+import { runAskHumanFlow } from "./runAskHumanFlow.js";
 import type {
   AskHumanCommandOrchestrationDependencies,
   AskHumanCommandOrchestrationInput,
@@ -10,9 +11,11 @@ export async function orchestrateAskHumanCommand(
   input: AskHumanCommandOrchestrationInput,
   dependencies: AskHumanCommandOrchestrationDependencies
 ): Promise<AskHumanCommandOrchestrationResult> {
-  const resolvedDependencies = resolveAskHumanCommandOrchestrationDependencies(
-    dependencies
-  );
+  const resolvedDependencies = {
+    prepareAskHumanRouting:
+      dependencies.prepareAskHumanRouting ?? prepareAskHumanRouting,
+    runAskHumanFlow: dependencies.runAskHumanFlow ?? runAskHumanFlow
+  };
 
   return runAskHumanCommandFlowOrchestration(
     input,

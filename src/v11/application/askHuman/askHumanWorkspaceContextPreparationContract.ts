@@ -3,9 +3,11 @@ import type { BubbleStateSnapshot } from "../../shared/state/bubbleStateSnapshot
 import type {
   AskHumanEnsureBubbleIdentityResult,
   AskHumanLoadedStateSnapshot,
-  AskHumanResolvedBubbleWorkspace,
+  AskHumanResolvedBubbleWorkspace
+} from "./askHumanRoutingContextContract.js";
+import type {
   ResolvedAskHumanRoutingPreparationDependencies
-} from "./askHumanRoutingPreparationDependencyResolutionContract.js";
+} from "./askHumanRoutingContract.js";
 
 export interface PrepareAskHumanWorkspaceContextInput {
   cwd?: string | undefined;

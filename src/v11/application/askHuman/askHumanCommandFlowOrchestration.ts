@@ -3,7 +3,13 @@ import type {
   AskHumanCommandOrchestrationInput,
   AskHumanCommandOrchestrationResult
 } from "./askHumanCommandOrchestrationContract.js";
-import type { ResolvedAskHumanCommandOrchestrationDependencies } from "./askHumanCommandOrchestrationDependencyResolutionContract.js";
+
+type ResolvedAskHumanCommandOrchestrationDependencies = Required<
+  Pick<
+    AskHumanCommandOrchestrationDependencies,
+    "prepareAskHumanRouting" | "runAskHumanFlow"
+  >
+>;
 
 export async function runAskHumanCommandFlowOrchestration(
   input: AskHumanCommandOrchestrationInput,

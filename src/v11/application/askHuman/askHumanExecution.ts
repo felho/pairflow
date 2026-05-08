@@ -7,7 +7,11 @@ import type {
   ExecuteAskHumanExecutionInput,
   ExecuteAskHumanExecutionResult
 } from "./askHumanFlowContract.js";
-import { resolveAskHumanExecutionDependencies } from "./askHumanExecutionDependencyResolution.js";
+import { applyStateTransition } from "../../domain/state/machine.js";
+import {
+  appendProtocolEnvelope,
+  writeStateSnapshot
+} from "../start/startCommandDependencyDefaults.js";
 export type {
   ExecuteAskHumanExecutionDependencies,
   ExecuteAskHumanExecutionInput,
@@ -26,16 +30,19 @@ export async function executeAskHumanExecution(
   input: ExecuteAskHumanExecutionInput,
   dependencies: ExecuteAskHumanExecutionDependencies = {}
 ): Promise<ExecuteAskHumanExecutionResult> {
-  const resolvedDependencies = resolveAskHumanExecutionDependencies(
-    dependencies
-  );
+  const appendEnvelope =
+    dependencies.appendProtocolEnvelope ?? appendProtocolEnvelope;
+  const writeSnapshot =
+    dependencies.writeStateSnapshot ?? writeStateSnapshot;
+  const applyTransition =
+    dependencies.applyStateTransition ?? applyStateTransition;
 
   const lockPath = join(
     input.routing.resolved.bubblePaths.locksDir,
     `${input.routing.resolved.bubbleId}.lock`
   );
 
-  const appended = await resolvedDependencies.appendEnvelope({
+  const appended = await appendEnvelope({
     transcriptPath: input.routing.resolved.bubblePaths.transcriptPath,
     mirrorPaths: [input.routing.resolved.bubblePaths.inboxPath],
     lockPath,
@@ -53,14 +60,14 @@ export async function executeAskHumanExecution(
     }
   });
 
-  const nextState = resolvedDependencies.applyTransition(input.routing.state, {
+  const nextState = applyTransition(input.routing.state, {
     to: "WAITING_HUMAN",
     lastCommandAt: input.routing.nowIso
   });
 
   let written: LoadedStateSnapshot;
   try {
-    written = await resolvedDependencies.writeSnapshot(
+    written = await writeSnapshot(
       input.routing.resolved.bubblePaths.statePath,
       nextState,
       {

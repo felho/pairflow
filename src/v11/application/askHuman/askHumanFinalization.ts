@@ -8,7 +8,7 @@ import type {
   RunAskHumanFlowResult
 } from "./askHumanFlowContract.js";
 import { emitOptionalAskHumanNotifications } from "./askHumanNotificationEmission.js";
-import { resolveAskHumanFinalizationDependencies } from "./askHumanFinalizationDependencyResolution.js";
+import { askHumanFinalizationDependencyDefaults } from "./askHumanFinalizationDependencyDefaults.js";
 export type {
   FinalizeAskHumanFlowDependencies,
   FinalizeAskHumanFlowInput,
@@ -19,11 +19,20 @@ export async function finalizeAskHumanFlow(
   input: FinalizeAskHumanFlowInput,
   dependencies: FinalizeAskHumanFlowDependencies = {}
 ): Promise<RunAskHumanFlowResult> {
-  const resolvedDependencies = resolveAskHumanFinalizationDependencies(
-    dependencies
-  );
+  const emitDeliveryNotificationAck =
+    dependencies.emitDeliveryNotificationAck
+    ?? askHumanFinalizationDependencyDefaults.emitDeliveryNotificationAck;
+  const emitBubbleNotification =
+    dependencies.emitBubbleNotification
+    ?? askHumanFinalizationDependencyDefaults.emitBubbleNotification;
+  const resolveDeliveryMessageRef =
+    dependencies.resolveDeliveryMessageRef
+    ?? askHumanFinalizationDependencyDefaults.resolveDeliveryMessageRef;
+  const emitBubbleLifecycleEventBestEffort =
+    dependencies.emitBubbleLifecycleEventBestEffort
+    ?? askHumanFinalizationDependencyDefaults.emitBubbleLifecycleEventBestEffort;
 
-  const messageRef = resolvedDependencies.resolveDeliveryMessageRef({
+  const messageRef = resolveDeliveryMessageRef({
     bubbleId: input.routing.resolved.bubbleId,
     sessionsPath: input.routing.resolved.bubblePaths.sessionsPath,
     envelope: input.appended.envelope
@@ -38,13 +47,12 @@ export async function finalizeAskHumanFlow(
       messageRef
     },
     {
-      emitDeliveryNotificationAck:
-        resolvedDependencies.emitDeliveryNotificationAck,
-      emitBubbleNotification: resolvedDependencies.emitBubbleNotification
+      emitDeliveryNotificationAck,
+      emitBubbleNotification
     }
   );
 
-  await resolvedDependencies.emitBubbleLifecycleEventBestEffort(
+  await emitBubbleLifecycleEventBestEffort(
     {
       repoPath: input.routing.resolved.repoPath,
       bubbleId: input.routing.resolved.bubbleId,

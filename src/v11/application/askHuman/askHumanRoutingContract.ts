@@ -1,10 +1,23 @@
 import type { ActorEmitContextSnapshot } from "../../shared/actorProtocol/actorEmitContext.js";
-import type { AskHumanRoutingContext } from "./askHumanRoutingContextContract.js";
 import type {
-  EnsureAskHumanBubbleInstanceIdentity,
-  ReadAskHumanStateSnapshot,
-  ResolveAskHumanBubbleFromWorkspaceCwd
-} from "./askHumanRoutingPreparationDependencyResolutionContract.js";
+  AskHumanEnsureBubbleIdentityInput,
+  AskHumanEnsureBubbleIdentityResult,
+  AskHumanLoadedStateSnapshot,
+  AskHumanResolvedBubbleWorkspace,
+  AskHumanRoutingContext
+} from "./askHumanRoutingContextContract.js";
+
+export type ResolveAskHumanBubbleFromWorkspaceCwd = (
+  cwd?: string
+) => Promise<AskHumanResolvedBubbleWorkspace>;
+
+export type EnsureAskHumanBubbleInstanceIdentity = (
+  input: AskHumanEnsureBubbleIdentityInput
+) => Promise<AskHumanEnsureBubbleIdentityResult>;
+
+export type ReadAskHumanStateSnapshot = (
+  statePath: string
+) => Promise<AskHumanLoadedStateSnapshot>;
 
 export interface PrepareAskHumanRoutingInput {
   question: string;
@@ -21,6 +34,12 @@ export interface PrepareAskHumanRoutingDependencies {
   resolveBubbleFromWorkspaceCwd?: ResolveAskHumanBubbleFromWorkspaceCwd;
   ensureBubbleInstanceIdForMutation?: EnsureAskHumanBubbleInstanceIdentity;
   readStateSnapshot?: ReadAskHumanStateSnapshot;
+}
+
+export interface ResolvedAskHumanRoutingPreparationDependencies {
+  resolveBubble: ResolveAskHumanBubbleFromWorkspaceCwd;
+  ensureBubbleIdentity: EnsureAskHumanBubbleInstanceIdentity;
+  readState: ReadAskHumanStateSnapshot;
 }
 
 export type PrepareAskHumanRoutingFn = (

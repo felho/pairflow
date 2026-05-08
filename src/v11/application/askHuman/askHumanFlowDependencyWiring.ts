@@ -1,7 +1,6 @@
 import type { AskHumanCommandOrchestrationDependencies } from "./askHumanCommandOrchestrationContract.js";
 import { executeAskHumanExecution } from "./askHumanExecution.js";
 import { finalizeAskHumanFlow } from "./askHumanFinalization.js";
-import { forwardAskHumanRuntimeNotificationDependencies } from "./askHumanRuntimeDependencyForwarding.js";
 import type { AskHumanFlowRuntimeDependencies } from "./askHumanFlowDependencyWiringContract.js";
 import {
   prepareAskHumanRouting
@@ -45,6 +44,23 @@ export function createAskHumanCommandOrchestrationDependencies(
             })
         }
       : {}),
-    ...forwardAskHumanRuntimeNotificationDependencies(runtimeDependencies)
+    ...(runtimeDependencies.emitDeliveryNotificationAck !== undefined
+      ? {
+          emitDeliveryNotificationAck:
+            runtimeDependencies.emitDeliveryNotificationAck
+        }
+      : {}),
+    ...(runtimeDependencies.emitBubbleNotification !== undefined
+      ? { emitBubbleNotification: runtimeDependencies.emitBubbleNotification }
+      : {}),
+    ...(runtimeDependencies.resolveDeliveryMessageRef !== undefined
+      ? { resolveDeliveryMessageRef: runtimeDependencies.resolveDeliveryMessageRef }
+      : {}),
+    ...(runtimeDependencies.emitBubbleLifecycleEventBestEffort !== undefined
+      ? {
+          emitBubbleLifecycleEventBestEffort:
+            runtimeDependencies.emitBubbleLifecycleEventBestEffort
+        }
+      : {})
   };
 }
