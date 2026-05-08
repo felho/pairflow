@@ -1,10 +1,10 @@
 import { persistStateViaMutationBoundary } from "../../shared/mutation/mutationBoundaryIO.js";
 import type { ResolvedMergeCommandDependencies } from "./mergeCommandDependencyResolution.js";
-import type { RunMergeFlowInput } from "./mergeFlowTypes.js";
 import type { MergeFlowExecutionContext } from "./mergeFlowContext.js";
 import type {
   ExecuteRemoteBubbleMergeCleanupCommandResult,
-  MergeCleanupOutcome
+  MergeCleanupOutcome,
+  RunMergeFlowInput
 } from "./mergeCommandContract.js";
 
 export interface LocalMergeFlowFinalizationResult {

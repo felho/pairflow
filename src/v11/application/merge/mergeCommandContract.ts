@@ -28,6 +28,7 @@ import type {
   RemoteMergeStatusTarget
 } from "../../shared/remote/remoteMergeContract.js";
 import type { ImportRemoteBubbleCommitContinuityPort } from "../../shared/remote/commitRemoteExecution.js";
+import type { NormalizedMergeBubbleInput } from "./mergeCommandInputNormalization.js";
 export type {
   ExecuteRemoteBubbleMergeCleanupCommandInput,
   ExecuteRemoteBubbleMergeCleanupCommandResult,
@@ -54,6 +55,10 @@ export interface MergeBubbleInput {
   push?: boolean | undefined;
   deleteRemote?: boolean | undefined;
   now?: Date | undefined;
+}
+
+export interface RunMergeFlowInput extends NormalizedMergeBubbleInput {
+  createError: PairflowCreateCommandError;
 }
 
 export interface MergeBubbleResult {

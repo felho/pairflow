@@ -1,7 +1,8 @@
 import { isNamedError } from "../../shared/errors/namedError.js";
 import {
   type ExecuteRemoteBubbleMergeCommandResult,
-  type MergeBubbleResult
+  type MergeBubbleResult,
+  type RunMergeFlowInput
 } from "./mergeCommandContract.js";
 import { buildMergeBubbleResult } from "./mergeResultMapping.js";
 import type { ResolvedMergeCommandDependencies } from "./mergeCommandDependencyResolution.js";
@@ -12,7 +13,6 @@ import {
 } from "./mergeRoutingEligibility.js";
 import { initializeMergeFlowExecutionContext } from "./mergeFlowContext.js";
 import { finalizeMergeFlow } from "./mergeFlowFinalization.js";
-import type { RunMergeFlowInput } from "./mergeFlowTypes.js";
 
 const MERGE_CONFLICT_REQUIRES_MANUAL_RESOLUTION =
   "MERGE_CONFLICT_REQUIRES_MANUAL_RESOLUTION";

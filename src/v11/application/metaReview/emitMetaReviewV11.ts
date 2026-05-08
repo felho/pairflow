@@ -5,7 +5,7 @@ import { MetaReviewError } from "../../shared/metaReview/metaReviewError.js";
 import { submitMetaReviewResult } from "./metaReviewCommandSubmitRuntime.js";
 export type {
   MetaReviewSubmitResult as MetaReviewSubmitResultV11
-} from "./metaReviewCommandContract.js";
+} from "../../shared/metaReview/metaReviewCommandContract.js";
 import type {
   MetaReviewCommandDependencies,
   MetaReviewSubmitInput,
