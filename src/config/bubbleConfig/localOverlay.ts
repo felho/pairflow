@@ -4,7 +4,7 @@ import {
   DEFAULT_LOCAL_OVERLAY_MODE
 } from "../defaults.js";
 import type { BubbleConfig } from "../../types/bubble.js";
-import { isLocalOverlayMode } from "../../types/bubble.js";
+import { isLocalOverlayMode } from "../../v11/shared/workspace/localOverlayTypes.js";
 import type { ValidationError } from "../../v11/shared/validation/primitives.js";
 import { readBoolean, readStringArray } from "./readers.js";
 

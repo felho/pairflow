@@ -136,6 +136,12 @@ Preferred mechanical flow:
 
 ## Progress Log
 
+### Local overlay config slice
+
+- Created `src/v11/shared/workspace/localOverlayTypes.ts` as the owner for local overlay mode literals, the local overlay config shape, and the local overlay mode guard.
+- Updated bubble config validation, defaults, worktree workspace port types, and root package type exports to import local overlay vocabulary from the new owner.
+- Removed local overlay vocabulary from `src/types/bubble.ts`; the old file now only imports `BubbleLocalOverlayConfig` as a type-only dependency for the remaining `BubbleConfig` aggregate.
+
 ### Notifications config slice
 
 - Created `src/v11/shared/notifications/notificationConfigTypes.ts` as the owner for `BubbleNotificationsConfig`.
@@ -233,6 +239,7 @@ Preferred mechanical flow:
 - `BubbleCommandsConfig` can move independently from the full `BubbleConfig` aggregate because its active meaning is command/validation-command guidance; the aggregate can keep a type-only dependency while config ownership is split progressively.
 - Doc-contract gate config can move before the full config aggregate because its semantics already belong to the gates subdomain; create-time partial input can depend on that owner directly.
 - Notifications config can move as a very small config submodel because runtime notification behavior consumes it through `BubbleConfig`, while the shape itself belongs to notification ownership.
+- Local overlay config belongs with workspace ownership rather than the central bubble aggregate: both config validation and worktree ports consume the same mode vocabulary, while `BubbleConfig` can keep only a type-only dependency.
 - Remote state cache should wait for lifecycle/snapshot extraction because it embeds `BubbleLifecycleState`; not every apparent slice should move all adjacent names at once.
 - Root package exports are a distinct public facade question; preserving them does not mean keeping `src/types/bubble.ts` as a bridge.
 - `src/types/bubble.ts` can safely depend on a moved owner only as a type-only aggregate dependency. A runtime value import there would be a new architecture smell.

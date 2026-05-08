@@ -27,6 +27,9 @@ import type {
   BubbleNotificationsConfig
 } from "../v11/shared/notifications/notificationConfigTypes.js";
 import type {
+  BubbleLocalOverlayConfig
+} from "../v11/shared/workspace/localOverlayTypes.js";
+import type {
   BubbleMetaReviewSnapshotState
 } from "../v11/shared/metaReview/metaReviewSnapshotTypes.js";
 import type {
@@ -75,10 +78,6 @@ export const createReviewArtifactTypes = ["code", "document"] as const;
 
 export type CreateReviewArtifactType = (typeof createReviewArtifactTypes)[number];
 
-export const localOverlayModes = ["symlink", "copy"] as const;
-
-export type LocalOverlayMode = (typeof localOverlayModes)[number];
-
 export const gateSignalLevels = ["warning", "info"] as const;
 
 export type GateSignalLevel = (typeof gateSignalLevels)[number];
@@ -109,12 +108,6 @@ export interface BubbleValidationTargetConfig {
   id: string;
   cwd?: string;
   paths?: string[];
-}
-
-export interface BubbleLocalOverlayConfig {
-  enabled: boolean;
-  mode: LocalOverlayMode;
-  entries: string[];
 }
 
 export interface BubbleRemoteStateCache {
@@ -259,13 +252,6 @@ export function isCreateReviewArtifactType(
   return (
     typeof value === "string"
     && (createReviewArtifactTypes as readonly string[]).includes(value)
-  );
-}
-
-export function isLocalOverlayMode(value: unknown): value is LocalOverlayMode {
-  return (
-    typeof value === "string" &&
-    (localOverlayModes as readonly string[]).includes(value)
   );
 }
 

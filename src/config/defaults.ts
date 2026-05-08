@@ -6,8 +6,10 @@ import type {
   BubbleReviewLoopMode
 } from "../v11/shared/reviewPolicy/reviewPolicyTypes.js";
 import type {
+  LocalOverlayMode
+} from "../v11/shared/workspace/localOverlayTypes.js";
+import type {
   AttachLauncher,
-  LocalOverlayMode,
   PairflowCommandProfile,
   QualityMode,
   ReviewArtifactType,

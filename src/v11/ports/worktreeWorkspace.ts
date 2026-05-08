@@ -1,7 +1,9 @@
 import type {
-  LocalOverlayMode,
   WorkMode
 } from "../../types/bubble.js";
+import type {
+  BubbleLocalOverlayConfig
+} from "../shared/workspace/localOverlayTypes.js";
 
 export type WorkspaceKind = WorkMode;
 
@@ -38,11 +40,7 @@ export interface WorktreeCleanupResult {
   removedBranch: boolean;
 }
 
-export interface LocalOverlayConfig {
-  enabled: boolean;
-  mode: LocalOverlayMode;
-  entries: string[];
-}
+export type LocalOverlayConfig = BubbleLocalOverlayConfig;
 
 export type BootstrapWorktreeWorkspacePort = (
   input: WorktreeBootstrapInput

@@ -759,6 +759,10 @@ export type {
   BubbleNotificationsConfig
 } from "./v11/shared/notifications/notificationConfigTypes.js";
 export type {
+  BubbleLocalOverlayConfig,
+  LocalOverlayMode
+} from "./v11/shared/workspace/localOverlayTypes.js";
+export type {
   BubbleCommandsConfig
 } from "./v11/shared/command/commandConfigTypes.js";
 export type {
