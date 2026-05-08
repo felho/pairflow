@@ -15,6 +15,7 @@ import type {
 import type { EmitPassDependencies } from "../pass/passCommandContract.js";
 import type { EmitConvergedDependencies } from "../../shared/converged/convergedCommandTypes.js";
 import type { MetaReviewCommandDependencies } from "../../shared/metaReview/metaReviewCommandContract.js";
+import type { EmitAskHumanDependencies } from "../askHuman/askHumanCommandContract.js";
 import {
   emitAskHumanFromWorkspaceV11 as emitAskHumanFromWorkspace
 } from "../askHuman/emitAskHumanV11.js";
@@ -94,16 +95,20 @@ export async function emitPassActorResultV11(input: {
 export async function emitHumanQuestionActorResultV11(input: {
   actorInput: HumanQuestionActorEmitInput;
   authoritativeContext: ActorEmitContextSnapshot;
+  dependencies?: EmitAskHumanDependencies;
 }): Promise<Extract<ActorEmitResultV11, { kind: "human_question" }>> {
   const { actorInput, authoritativeContext: context } = input;
   return {
     kind: "human_question",
-    human_question: await emitAskHumanFromWorkspace({
-      question: actorInput.question,
-      ...(actorInput.refs !== undefined ? { refs: actorInput.refs } : {}),
-      authoritativeContext: context,
-      cwd: context.worktree_path
-    })
+    human_question: await emitAskHumanFromWorkspace(
+      {
+        question: actorInput.question,
+        ...(actorInput.refs !== undefined ? { refs: actorInput.refs } : {}),
+        authoritativeContext: context,
+        cwd: context.worktree_path
+      },
+      input.dependencies
+    )
   };
 }
 

@@ -7,6 +7,9 @@ export function buildAskHumanFlowRuntimeDependenciesFromCommandRuntime(
   return {
     emitDeliveryNotificationAck:
       dependencies.emitDeliveryNotificationAck,
-    emitBubbleNotification: dependencies.emitBubbleNotification
+    emitBubbleNotification: dependencies.emitBubbleNotification,
+    resolveDeliveryMessageRef: dependencies.resolveDeliveryMessageRef,
+    emitBubbleLifecycleEventBestEffort:
+      dependencies.emitBubbleLifecycleEventBestEffort
   };
 }

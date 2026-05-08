@@ -263,7 +263,7 @@ row ID prefix is historical, the "Cat" column is authoritative.
 
 | # | Site (shim) | Defaults target | Cat | Action |
 |---|-------------|-----------------|-----|--------|
-| A1 | `application/askHuman/askHumanFinalizationDependencyDefaults.ts:37` | `defaults/askHuman/askHumanFinalizationDefaults.ts` | **B** (reclassified) | Verified: target imports 2 infrastructure adapters (`emitBubbleNotification`, `emitDeliveryNotificationAck`). Two-adapter aggregation = composition. CLI passes the aggregator. (Optional alternative: a 2-port `Notification` slice as A; lean B because the existing aggregator already has the right shape.) |
+| A1 | `application/askHuman/askHumanFinalizationDependencyDefaults.ts:37` | `defaults/askHuman/askHumanFinalizationDefaults.ts` | **B** (reclassified) | Completed in Batch 35: actor-protocol composition now passes ask-human notification, delivery-ref, and metrics ports from CLI/defaults; the application finalization defaults module keeps only pure no-runtime fallbacks and no longer loads defaults dynamically. |
 | A2 | `application/bubbleIdentity/bubbleIdentityDependencyDefaults.ts:18` | `defaults/bubbleIdentity/bubbleIdentityDefaults.ts` | A | Completed in Batch 20: bubble identity mutation port now flows through the existing start context defaults aggregate; standalone application bubble-identity shim was deleted. |
 | A3 | `application/bubbleLookup/bubbleLookupDependencyDefaults.ts:18` | `defaults/bubbleLookup/bubbleLookupDefaults.ts` | A | Completed in Batch 21: bubble lookup port now flows through the existing start context defaults aggregate; standalone application bubble-lookup shim was deleted. |
 | A4 | `application/gates/docContractGateArtifactDependencyDefaults.ts:24` | `defaults/gates/docContractGateArtifactDefaults.ts` | A | Completed in Batch 15: doc-contract gate artifact ports are now supplied through create, pass-validation, and start defaults aggregates; the standalone application shim was deleted. |
@@ -1553,6 +1553,30 @@ In the closing PR:
     passed (`7` files, `71` tests).
   - `pnpm test` skipped for this focused delete/reviewer-delivery composition
     batch; the targeted delete, reviewer-delivery, CLI, and fitness tests cover
+    the changed surface.
+  - `pnpm lint` passed.
+  - `pnpm build` passed.
+
+### 2026-05-08 — Batch 35: route ask-human finalization defaults through composition
+
+- Removed the dynamic `defaults/askHuman/askHumanFinalizationDefaults.ts`
+  import from `src/v11/application/askHuman/askHumanFinalizationDependencyDefaults.ts`.
+- Added an `askHuman` dependency branch to actor-protocol composition so CLI
+  `agent emit --kind human_question` passes notification, delivery-ref, and
+  metrics ports explicitly from defaults/infrastructure.
+- Kept application-level ask-human finalization defaults as pure no-runtime
+  fallbacks for direct application callers.
+- Fitness result after the batch: application dynamic defaults warnings are
+  down from 4 to 3; shared dynamic defaults warnings remain 0. Hard-fail
+  fitness checks pass.
+- Validation:
+  - `pnpm typecheck` passed.
+  - `pnpm fitness:check:ci` passed with the expected remaining warnings
+    (`application_defaults_boundary=3`, `shared_defaults_boundary=0`).
+  - `pnpm exec vitest run tests/v11/application/askHuman/askHumanFinalizationDependencyResolution.test.ts tests/v11/application/askHuman/askHumanFinalizationDependencyBuilder.test.ts tests/v11/application/askHuman/runAskHumanFlow.test.ts tests/cli/agentEmitCommand.test.ts tests/tools/fitness/applicationDefaultsBoundary.test.ts`
+    passed (`5` files, `27` tests).
+  - `pnpm test` skipped for this focused ask-human composition batch; the
+    targeted ask-human finalization/flow, agent emit, and fitness tests cover
     the changed surface.
   - `pnpm lint` passed.
   - `pnpm build` passed.

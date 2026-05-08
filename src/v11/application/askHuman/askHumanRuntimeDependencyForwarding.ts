@@ -15,6 +15,15 @@ export function forwardAskHumanRuntimeNotificationDependencies(
       : {}),
     ...(dependencies.emitBubbleNotification !== undefined
       ? { emitBubbleNotification: dependencies.emitBubbleNotification }
+      : {}),
+    ...(dependencies.resolveDeliveryMessageRef !== undefined
+      ? { resolveDeliveryMessageRef: dependencies.resolveDeliveryMessageRef }
+      : {}),
+    ...(dependencies.emitBubbleLifecycleEventBestEffort !== undefined
+      ? {
+          emitBubbleLifecycleEventBestEffort:
+            dependencies.emitBubbleLifecycleEventBestEffort
+        }
       : {})
   };
 }

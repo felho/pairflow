@@ -10,8 +10,10 @@ import type {
 import type {
   DeliveryAck,
   DeliveryTargetReasonCode,
-  EmitDeliveryNotificationAckPort
+  EmitDeliveryNotificationAckPort,
+  ResolveDeliveryMessageRefPort
 } from "../../shared/ports/tmuxDelivery.js";
+import type { EmitBubbleLifecycleEventBestEffortPort } from "../../shared/metrics/bubbleEvents.js";
 
 export type AskHumanActivationProvenance = ActorActivationProvenance;
 
@@ -42,4 +44,6 @@ export interface EmitAskHumanResult {
 export interface EmitAskHumanDependencies {
   emitDeliveryNotificationAck?: EmitDeliveryNotificationAckPort;
   emitBubbleNotification?: EmitAskHumanBubbleNotificationPort;
+  resolveDeliveryMessageRef?: ResolveDeliveryMessageRefPort;
+  emitBubbleLifecycleEventBestEffort?: EmitBubbleLifecycleEventBestEffortPort;
 }

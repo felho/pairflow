@@ -24,9 +24,11 @@ import {
 import type { EmitPassDependencies } from "../pass/passCommandContract.js";
 import type { EmitConvergedDependencies } from "../../shared/converged/convergedCommandTypes.js";
 import type { MetaReviewCommandDependencies } from "../../shared/metaReview/metaReviewCommandContract.js";
+import type { EmitAskHumanDependencies } from "../askHuman/askHumanCommandContract.js";
 
 export interface ActorProtocolDependencies {
   pass?: EmitPassDependencies;
+  askHuman?: EmitAskHumanDependencies;
   convergence?: EmitConvergedDependencies;
   metaReview?: MetaReviewCommandDependencies;
 }
@@ -87,11 +89,15 @@ const actorRuntimeAdapterExecutors: Readonly<
     }),
   human_question_adapter: async ({
     actorInput,
-    authoritativeContext
+    authoritativeContext,
+    dependencies
   }) =>
     emitHumanQuestionActorResultV11({
       actorInput: actorInput as HumanQuestionActorEmitInput,
-      authoritativeContext
+      authoritativeContext,
+      ...(dependencies.askHuman !== undefined
+        ? { dependencies: dependencies.askHuman }
+        : {})
     }),
   convergence_adapter: async ({
     actorInput,

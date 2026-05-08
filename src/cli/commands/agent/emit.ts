@@ -45,6 +45,15 @@ import {
   reviewerDeliveryDefaults
 } from "../../../v11/defaults/reviewer/reviewerDeliveryDefaults.js";
 import {
+  askHumanFinalizationDefaults
+} from "../../../v11/defaults/askHuman/askHumanFinalizationDefaults.js";
+import {
+  emitBubbleLifecycleEventBestEffort
+} from "../../../v11/defaults/metrics/bubbleEvents.js";
+import {
+  resolveDeliveryMessageRef
+} from "../../../v11/infrastructure/channel/tmux/tmuxDelivery.js";
+import {
   resolveMetaReviewerPaneWarning
 } from "../../../v11/application/metaReviewGate/metaReviewGatePaneBinding.js";
 import {
@@ -448,6 +457,14 @@ export async function runAgentEmitCommand(
     repoPath: parsed.input.repo
   });
   const dependencies = {
+    askHuman: {
+      emitDeliveryNotificationAck:
+        askHumanFinalizationDefaults.emitDeliveryNotificationAck,
+      emitBubbleNotification:
+        askHumanFinalizationDefaults.emitBubbleNotification,
+      resolveDeliveryMessageRef,
+      emitBubbleLifecycleEventBestEffort
+    },
     pass: {
       emitDeliveryNotificationAck:
         reviewerDeliveryDefaults.emitDeliveryNotificationAck,

@@ -1,7 +1,5 @@
 import { describe, expect, it } from "vitest";
 
-import { emitBubbleLifecycleEventBestEffort } from "../../../../src/v11/application/metrics/bubbleEvents.js";
-import { emitBubbleNotification } from "../../../../src/v11/infrastructure/channel/notifications.js";
 import {
   resolveDeliveryMessageRef
 } from "../../../../src/v11/infrastructure/channel/tmux/tmuxDelivery.js";
@@ -22,7 +20,7 @@ describe("askHumanFinalizationDependencyBuilder", () => {
     });
 
     expect(typeof dependencies.emitDeliveryNotificationAck).toBe("function");
-    expect(dependencies.emitBubbleNotification).toBe(emitBubbleNotification);
+    expect(typeof dependencies.emitBubbleNotification).toBe("function");
     expect(deliveryMessageRef).toBe(
       resolveDeliveryMessageRef({
         bubbleId: "b_ask_human_01",
@@ -33,8 +31,8 @@ describe("askHumanFinalizationDependencyBuilder", () => {
         } as never
       })
     );
-    expect(dependencies.emitBubbleLifecycleEventBestEffort).toBe(
-      emitBubbleLifecycleEventBestEffort
+    expect(typeof dependencies.emitBubbleLifecycleEventBestEffort).toBe(
+      "function"
     );
   });
 
