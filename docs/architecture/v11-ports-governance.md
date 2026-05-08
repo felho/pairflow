@@ -1,6 +1,6 @@
 # v11 Ports Governance
 
-Status: proposed  
+Status: active  
 Owner: architecture/runtime  
 Scope: explicit capability boundaries under `src/v11/shared/ports/**`
 
@@ -247,3 +247,17 @@ Recommended adoption order:
 
 Do not perform a repo-wide “convert everything to ports” sweep without cluster
 review.
+
+## Reference
+
+- [v11-architecture-overview.md](./v11-architecture-overview.md) —
+  top-level layer model and dependency-direction diagram.
+- [v11-defaults-governance.md](./v11-defaults-governance.md) — the
+  catalog that wires concrete `infrastructure/**` adapters behind these
+  ports.
+- [v11-composition-root.md](./v11-composition-root.md) — the layer
+  authorized to assemble adapters into the dependency objects that
+  `application/**` commands accept.
+- [architecture-fitness-checks.md](./architecture-fitness-checks.md) —
+  fitness checks that enforce the port direction and reject fake
+  wrappers.
