@@ -3,7 +3,7 @@ import type {
   BubbleRemotePointerKind
 } from "../../../shared/remote/remoteExecutionTypes.js";
 import type { BubbleLifecycleState } from "../../../domain/state/lifecycleTypes.js";
-import type { BubbleRemoteStateCache } from "../../../../types/bubble.js";
+import type { BubbleRemoteStateCache } from "../../../shared/remote/remoteStateCacheTypes.js";
 import {
   isBubbleRemotePointerKind
 } from "../../../shared/remote/remoteExecutionTypes.js";

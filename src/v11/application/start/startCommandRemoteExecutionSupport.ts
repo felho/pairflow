@@ -4,9 +4,7 @@ import { PAIRFLOW_REMOTE_CONFIG_INVALID } from "../../../config/pairflowConfig.j
 import type {
   BubbleRemotePointerCreated
 } from "../../shared/remote/remoteExecutionTypes.js";
-import type {
-  BubbleRemoteStateCache
-} from "../../../types/bubble.js";
+import type { BubbleRemoteStateCache } from "../../shared/remote/remoteStateCacheTypes.js";
 import type { RemoteBubbleExecutionTarget } from "./startCommandContract.js";
 import type { StartExecutionContext } from "./startCommandContext.js";
 import type { ResolvedStartBubbleDependencies } from "./startCommandOrchestration.js";

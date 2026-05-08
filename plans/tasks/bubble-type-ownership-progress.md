@@ -136,6 +136,14 @@ Preferred mechanical flow:
 
 ## Progress Log
 
+### Remote state cache slice
+
+- Created `src/v11/shared/remote/remoteStateCacheTypes.ts` as the owner for `BubbleRemoteStateCache`.
+- Updated remote execution artifact validation/persistence, SSH remote start/status contracts, start/status/list application dependencies, defaults wiring, and root package type exports to import the cache shape from the remote owner.
+- Removed `BubbleRemoteStateCache` from `src/types/bubble.ts`; the old file now only contains the remaining `BubbleStateSnapshot` aggregate.
+- Learning: after lifecycle vocabulary moved to the state-domain owner, the remote cache could move cleanly without coupling remote cache ownership back to the snapshot aggregate.
+- Targeted verification completed: `pnpm typecheck`, `pnpm lint`, `pnpm fitness:check:ci`, and focused remote/start/status/list Vitest coverage passed.
+
 ### Lifecycle vocabulary slice
 
 - Created `src/v11/domain/state/lifecycleTypes.ts` as the owner for lifecycle state literals, `BubbleLifecycleState`, and `isBubbleLifecycleState`.

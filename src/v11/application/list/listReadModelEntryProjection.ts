@@ -2,9 +2,7 @@ import type { parseBubbleConfigToml } from "../../../config/bubbleConfig.js";
 import type {
   BubbleRemotePointer
 } from "../../shared/remote/remoteExecutionTypes.js";
-import type {
-  BubbleRemoteStateCache
-} from "../../../types/bubble.js";
+import type { BubbleRemoteStateCache } from "../../shared/remote/remoteStateCacheTypes.js";
 import type { getBubblePaths } from "../../shared/bubble/bubblePaths.js";
 import { inferBubbleStartedAtFromInstanceId } from "../../shared/bubble/bubbleInstanceId.js";
 import { isNamedError } from "../../shared/errors/namedError.js";

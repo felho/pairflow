@@ -56,9 +56,7 @@ import type {
 import type {
   BubbleRemotePointer
 } from "../../shared/remote/remoteExecutionTypes.js";
-import type {
-  BubbleRemoteStateCache
-} from "../../../types/bubble.js";
+import type { BubbleRemoteStateCache } from "../../shared/remote/remoteStateCacheTypes.js";
 import type { PairflowGlobalConfig } from "../../../config/pairflowConfig.js";
 import type {
   BootstrapWorktreeWorkspacePort,

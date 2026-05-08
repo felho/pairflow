@@ -14,21 +14,7 @@ import type {
 import type {
   BubbleMetaReviewSnapshotState
 } from "../v11/shared/metaReview/metaReviewSnapshotTypes.js";
-import type {
-  BubbleLifecycleState
-} from "../v11/domain/state/lifecycleTypes.js";
-
-export interface BubbleRemoteStateCache {
-  lastCheckedAt: string;
-  state: BubbleLifecycleState;
-  round: number;
-  maxRounds: number;
-  metaReview?: {
-    consecutiveCleanRuns: number;
-  };
-  implementerStatus?: string;
-  reviewerStatus?: string;
-}
+import type { BubbleLifecycleState } from "../v11/domain/state/lifecycleTypes.js";
 
 export interface BubbleStateSnapshot {
   bubble_id: string;

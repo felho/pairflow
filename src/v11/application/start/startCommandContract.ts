@@ -3,7 +3,7 @@ import type {
   BubbleRemotePointer
 } from "../../shared/remote/remoteExecutionTypes.js";
 import type { BubbleConfig } from "../../shared/config/bubbleConfigTypes.js";
-import type { BubbleRemoteStateCache } from "../../../types/bubble.js";
+import type { BubbleRemoteStateCache } from "../../shared/remote/remoteStateCacheTypes.js";
 import type { BubblePaths } from "../../shared/bubble/bubblePaths.js";
 import type {
   BootstrapWorktreeWorkspacePort,

@@ -1,9 +1,7 @@
 import type {
   BubbleRemotePointer
 } from "../../shared/remote/remoteExecutionTypes.js";
-import type {
-  BubbleRemoteStateCache
-} from "../../../types/bubble.js";
+import type { BubbleRemoteStateCache } from "../../shared/remote/remoteStateCacheTypes.js";
 import type { ResolveRemoteBubbleStatusTargetPort } from "../../shared/remote/commitRemoteExecution.js";
 import type {
   RemoteBubbleStatusSnapshot,

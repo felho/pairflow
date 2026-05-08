@@ -4,7 +4,7 @@ import { dirname, join } from "node:path";
 import { spawn } from "node:child_process";
 
 import { buildBubbleTmuxSessionName } from "../../../shared/bubble/tmuxSessionName.js";
-import type { BubbleRemoteStateCache } from "../../../../types/bubble.js";
+import type { BubbleRemoteStateCache } from "../../../shared/remote/remoteStateCacheTypes.js";
 import { normalizeRemoteStateSnapshotForCache } from "./sshBubbleStartState.js";
 import {
   RemoteBubbleStartError,
