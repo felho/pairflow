@@ -2,13 +2,16 @@ import { clearLiveMetaReviewSnapshot } from "../../shared/metaReview/metaReviewS
 import { applyStateTransition } from "./machine.js";
 import {
   resolveRuntimeAlignedNextRoundContinuation
-} from "./roundContinuation.js";import type {
+} from "./roundContinuation.js";
+import type {
   AgentName
 } from "../agentIdentity/agentIdentity.js";
 import type {
-  BubbleReworkIntentRecord,
   BubbleStateSnapshot
 } from "../../../types/bubble.js";
+import type {
+  BubbleReworkIntentRecord
+} from "../../shared/state/reworkIntentTypes.js";
 
 export interface DeriveQueuedDeferredReworkIntentStateInput {
   state: BubbleStateSnapshot;

@@ -18,10 +18,12 @@ import {
   isAgentRole
 } from "../../domain/agentIdentity/agentIdentity.js";
 import type {
-  BubbleReworkIntentRecord,
   BubbleStateSnapshot,
   RoundRoleHistoryEntry
 } from "../../../types/bubble.js";
+import type {
+  BubbleReworkIntentRecord
+} from "../../shared/state/reworkIntentTypes.js";
 import {
   assertValidBubbleStateSnapshot,
   validateBubbleStateSnapshot
@@ -30,9 +32,11 @@ import {
   normalizeMetaReviewRuntimeDeliveryCorrelation
 } from "../../shared/metaReview/metaReviewSnapshot.js";
 import {
-  isBubbleLifecycleState,
-  isReworkIntentStatus
+  isBubbleLifecycleState
 } from "../../../types/bubble.js";
+import {
+  isReworkIntentStatus
+} from "../../shared/state/reworkIntentTypes.js";
 import {
   isInteger,
   isIsoTimestamp,

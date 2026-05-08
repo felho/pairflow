@@ -2,13 +2,16 @@ import type { applyStateTransition } from "../../domain/state/machine.js";
 import { clearLiveMetaReviewSnapshot } from "../../shared/metaReview/metaReviewSnapshot.js";
 import {
   resolveRuntimeAlignedNextRoundContinuation
-} from "../../domain/state/roundContinuation.js";import type {
+} from "../../domain/state/roundContinuation.js";
+import type {
   AgentName
 } from "../../domain/agentIdentity/agentIdentity.js";
 import type {
-  BubbleReworkIntentRecord,
   BubbleStateSnapshot
 } from "../../../types/bubble.js";
+import type {
+  BubbleReworkIntentRecord
+} from "../../shared/state/reworkIntentTypes.js";
 import type {
   EmitApprovalDecisionResult,
   EmitRequestReworkImmediateResult,

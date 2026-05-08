@@ -9,8 +9,11 @@ import type {
   BubbleAgentsConfig
 } from "../v11/domain/agentIdentity/agentIdentity.js";
 import type {
-  BubbleExecutionContext,
+  BubbleExecutionContext
 } from "../v11/shared/state/executionContextTypes.js";
+import type {
+  BubbleReworkIntentRecord
+} from "../v11/shared/state/reworkIntentTypes.js";
 import type {
   BubbleMetaReviewSnapshotState
 } from "../v11/shared/metaReview/metaReviewSnapshotTypes.js";
@@ -206,24 +209,6 @@ export interface RoundRoleHistoryEntry {
   switched_at: string;
 }
 
-export const reworkIntentStatuses = [
-  "pending",
-  "applied",
-  "superseded"
-] as const;
-
-export type ReworkIntentStatus = (typeof reworkIntentStatuses)[number];
-
-export interface BubbleReworkIntentRecord {
-  intent_id: string;
-  message: string;
-  refs?: string[];
-  requested_by: string;
-  requested_at: string;
-  status: ReworkIntentStatus;
-  superseded_by_intent_id?: string;
-}
-
 export interface BubbleStateSnapshot {
   bubble_id: string;
   state: BubbleLifecycleState;
@@ -305,12 +290,5 @@ export function isAttachLauncher(value: unknown): value is AttachLauncher {
   return (
     typeof value === "string" &&
     (attachLaunchers as readonly string[]).includes(value)
-  );
-}
-
-export function isReworkIntentStatus(value: unknown): value is ReworkIntentStatus {
-  return (
-    typeof value === "string" &&
-    (reworkIntentStatuses as readonly string[]).includes(value)
   );
 }

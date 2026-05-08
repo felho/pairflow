@@ -753,13 +753,15 @@ export type {
   BubbleRemoteStateCache,
   BubbleLifecycleState,
   BubbleNotificationsConfig,
-  BubbleReworkIntentRecord,
   BubbleStateSnapshot,
   QualityMode,
-  ReworkIntentStatus,
   RoundRoleHistoryEntry,
   WorkMode
 } from "./types/bubble.js";
+export type {
+  BubbleReworkIntentRecord,
+  ReworkIntentStatus
+} from "./v11/shared/state/reworkIntentTypes.js";
 export type { StateTransitionInput } from "./v11/domain/state/machine.js";
 export type {
   LoadedStateSnapshot,

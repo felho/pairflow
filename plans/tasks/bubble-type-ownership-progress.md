@@ -136,6 +136,12 @@ Preferred mechanical flow:
 
 ## Progress Log
 
+### Rework intent slice
+
+- Created `src/v11/shared/state/reworkIntentTypes.ts` as the owner for deferred rework intent status literals, the rework intent record shape, and the rework-intent status guard.
+- Updated rework intent domain logic, state schema validation, state inspection, UI router defaults, approval result mapping, and root package type exports to import the rework-intent vocabulary from the new owner.
+- Removed rework intent vocabulary and guard exports from `src/types/bubble.ts`; the old file now only imports `BubbleReworkIntentRecord` as a type-only dependency for the remaining `BubbleStateSnapshot` aggregate.
+
 ### Meta-review snapshot slice
 
 - Created `src/v11/shared/metaReview/metaReviewSnapshotTypes.ts` as the owner for meta-review snapshot state, runtime-delivery state/status, the auto-rework default limit, and the runtime-delivery guard.
@@ -198,6 +204,7 @@ Preferred mechanical flow:
 - The review policy slice confirmed the same UI rule for non-agent vocabularies: browser contracts should own their payload literals even when the backend runtime vocabulary has a clearer v11 owner.
 - The meta-review run vocabulary slice kept execution context/snapshot types out of the move; run result vocabulary and state ownership are adjacent but not the same ownership decision.
 - After execution context moved out, meta-review snapshot/runtime delivery could move independently; the full `BubbleStateSnapshot` aggregate still waits for a lifecycle/snapshot ownership slice.
+- Rework intent is small enough to move independently of the full snapshot aggregate: it is an embedded state submodel with its own literals and guard, while `BubbleStateSnapshot` can keep only a type-only dependency until the lifecycle/snapshot slice lands.
 - Remote state cache should wait for lifecycle/snapshot extraction because it embeds `BubbleLifecycleState`; not every apparent slice should move all adjacent names at once.
 - Root package exports are a distinct public facade question; preserving them does not mean keeping `src/types/bubble.ts` as a bridge.
 - `src/types/bubble.ts` can safely depend on a moved owner only as a type-only aggregate dependency. A runtime value import there would be a new architecture smell.
