@@ -751,11 +751,13 @@ export type {
   BubbleConfig,
   BubbleRemoteStateCache,
   BubbleLifecycleState,
-  BubbleNotificationsConfig,
   BubbleStateSnapshot,
   QualityMode,
   WorkMode
 } from "./types/bubble.js";
+export type {
+  BubbleNotificationsConfig
+} from "./v11/shared/notifications/notificationConfigTypes.js";
 export type {
   BubbleCommandsConfig
 } from "./v11/shared/command/commandConfigTypes.js";

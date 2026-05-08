@@ -24,6 +24,9 @@ import type {
   BubbleDocContractGatesConfig
 } from "../v11/shared/gates/docContractGateConfigTypes.js";
 import type {
+  BubbleNotificationsConfig
+} from "../v11/shared/notifications/notificationConfigTypes.js";
+import type {
   BubbleMetaReviewSnapshotState
 } from "../v11/shared/metaReview/metaReviewSnapshotTypes.js";
 import type {
@@ -106,12 +109,6 @@ export interface BubbleValidationTargetConfig {
   id: string;
   cwd?: string;
   paths?: string[];
-}
-
-export interface BubbleNotificationsConfig {
-  enabled: boolean;
-  waiting_human_sound?: string;
-  converged_sound?: string;
 }
 
 export interface BubbleLocalOverlayConfig {

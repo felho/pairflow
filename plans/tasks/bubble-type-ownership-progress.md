@@ -136,6 +136,12 @@ Preferred mechanical flow:
 
 ## Progress Log
 
+### Notifications config slice
+
+- Created `src/v11/shared/notifications/notificationConfigTypes.ts` as the owner for `BubbleNotificationsConfig`.
+- Updated root package type exports to import notifications config from the new owner.
+- Removed `BubbleNotificationsConfig` from `src/types/bubble.ts`; the old file now only imports it as a type-only dependency for the remaining `BubbleConfig` aggregate.
+
 ### Doc contract gate config slice
 
 - Created `src/v11/shared/gates/docContractGateConfigTypes.ts` as the owner for `BubbleDocContractGatesConfig`.
@@ -226,6 +232,7 @@ Preferred mechanical flow:
 - Round role history follows the same pattern: it is an audit/history submodel shared by state transition, pass handoff, and convergence policy, while the full lifecycle/snapshot aggregate can remain deferred.
 - `BubbleCommandsConfig` can move independently from the full `BubbleConfig` aggregate because its active meaning is command/validation-command guidance; the aggregate can keep a type-only dependency while config ownership is split progressively.
 - Doc-contract gate config can move before the full config aggregate because its semantics already belong to the gates subdomain; create-time partial input can depend on that owner directly.
+- Notifications config can move as a very small config submodel because runtime notification behavior consumes it through `BubbleConfig`, while the shape itself belongs to notification ownership.
 - Remote state cache should wait for lifecycle/snapshot extraction because it embeds `BubbleLifecycleState`; not every apparent slice should move all adjacent names at once.
 - Root package exports are a distinct public facade question; preserving them does not mean keeping `src/types/bubble.ts` as a bridge.
 - `src/types/bubble.ts` can safely depend on a moved owner only as a type-only aggregate dependency. A runtime value import there would be a new architecture smell.
