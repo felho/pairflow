@@ -2,9 +2,7 @@ import type {
   BubbleRemotePointerCreated,
   BubbleRemotePointerStarted
 } from "./remoteExecutionTypes.js";
-import type {
-  BubbleStateSnapshot
-} from "../../../types/bubble.js";
+import type { BubbleStateSnapshot } from "../state/bubbleStateSnapshotTypes.js";
 import type { ProtocolEnvelope } from "../../../types/protocol.js";
 
 export interface CommitRemoteBubbleStatusTarget {

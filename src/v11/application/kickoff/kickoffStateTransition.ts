@@ -1,7 +1,7 @@
 import { assertValidBubbleStateSnapshot } from "../../shared/state/stateSchema.js";
 import { buildRunningExecutionContext } from "../../shared/state/executionContext.js";
 import type { BubbleConfig } from "../../shared/config/bubbleConfigTypes.js";
-import type { BubbleStateSnapshot } from "../../../types/bubble.js";
+import type { BubbleStateSnapshot } from "../../shared/state/bubbleStateSnapshotTypes.js";
 
 export interface BuildKickoffNextStateInput {
   state: BubbleStateSnapshot;

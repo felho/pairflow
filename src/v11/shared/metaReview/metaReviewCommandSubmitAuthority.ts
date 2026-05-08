@@ -5,9 +5,7 @@ import { MetaReviewError } from "./metaReviewError.js";
 import type {
   AgentName
 } from "../../domain/agentIdentity/agentIdentity.js";
-import type {
-  BubbleStateSnapshot
-} from "../../../types/bubble.js";
+import type { BubbleStateSnapshot } from "../state/bubbleStateSnapshotTypes.js";
 import type { MetaReviewCommandDependencies } from "./metaReviewCommandContract.js";
 
 export function assertActiveMetaReviewExecutionContext(

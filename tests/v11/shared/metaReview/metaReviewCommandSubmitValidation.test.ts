@@ -11,7 +11,7 @@ import {
 } from "../../../../src/v11/shared/metaReview/metaReviewCommandSubmitSupport.js";
 import { buildMetaReviewExecutionContext } from "../../../../src/v11/shared/metaReview/metaReviewExecutionContext.js";
 import { metaReviewExecutionContextToRunningContext } from "../../../../src/v11/shared/state/executionContext.js";
-import type { BubbleStateSnapshot } from "../../../../src/types/bubble.js";
+import type { BubbleStateSnapshot } from "../../../../src/v11/shared/state/bubbleStateSnapshotTypes.js";
 
 function createMetaReviewRunningState(
   partial: Partial<BubbleStateSnapshot> = {}

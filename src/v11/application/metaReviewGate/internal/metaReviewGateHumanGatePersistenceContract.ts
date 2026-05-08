@@ -2,12 +2,11 @@ import type { MetaReviewRecommendation } from "../../../shared/metaReview/metaRe
 import type {
   LoadedStateSnapshot,
   WriteStateSnapshotPort
-} from "../../../ports/stateSnapshots.js";import type {
+} from "../../../ports/stateSnapshots.js";
+import type {
   AgentName
 } from "../../../domain/agentIdentity/agentIdentity.js";
-import type {
-  BubbleStateSnapshot
-} from "../../../../types/bubble.js";
+import type { BubbleStateSnapshot } from "../../../shared/state/bubbleStateSnapshotTypes.js";
 import type { MetaReviewResult } from "../../../shared/metaReview/metaReviewTypes.js";
 import type { FindingsParityMetadata } from "../../../../types/protocol.js";
 import type { AppendProtocolEnvelopePort } from "../../../ports/transcript.js";

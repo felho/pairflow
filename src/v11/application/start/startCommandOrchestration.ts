@@ -1,5 +1,5 @@
 import { buildResumeTranscriptSummary } from "./startCommandResumeSummary.js";
-import type { BubbleStateSnapshot } from "../../../types/bubble.js";
+import type { BubbleStateSnapshot } from "../../shared/state/bubbleStateSnapshotTypes.js";
 import type {
   StartBubbleDependencies,
   StartBubbleResult,

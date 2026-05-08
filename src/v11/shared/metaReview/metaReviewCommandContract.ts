@@ -1,4 +1,4 @@
-import type { BubbleStateSnapshot } from "../../../types/bubble.js";
+import type { BubbleStateSnapshot } from "../state/bubbleStateSnapshotTypes.js";
 import type {
   MetaReviewSubmissionPayload,
   ProtocolEnvelope

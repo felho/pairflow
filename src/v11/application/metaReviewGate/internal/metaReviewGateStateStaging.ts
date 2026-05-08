@@ -4,12 +4,11 @@ import { metaReviewExecutionContextToRunningContext } from "../../../shared/stat
 import {
   type LoadedStateSnapshot,
   type WriteStateSnapshotPort
-} from "../../../ports/stateSnapshots.js";import type {
+} from "../../../ports/stateSnapshots.js";
+import type {
   AgentName
 } from "../../../domain/agentIdentity/agentIdentity.js";
-import type {
-  BubbleStateSnapshot
-} from "../../../../types/bubble.js";
+import type { BubbleStateSnapshot } from "../../../shared/state/bubbleStateSnapshotTypes.js";
 import { toMetaReviewGateError } from "../../../shared/metaReviewGate/metaReviewGateErrorConversion.js";
 import { MetaReviewGateError } from "../../../shared/metaReviewGate/metaReviewGateRouteContract.js";
 import { normalizeMetaReviewSnapshot } from "../../../domain/metaReviewGate/snapshotState.js";

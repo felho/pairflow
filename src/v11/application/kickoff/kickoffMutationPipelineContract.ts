@@ -1,4 +1,5 @@
-import type { BubbleStateSnapshot } from "../../../types/bubble.js";import type {
+import type { BubbleStateSnapshot } from "../../shared/state/bubbleStateSnapshotTypes.js";
+import type {
   AgentName
 } from "../../domain/agentIdentity/agentIdentity.js";
 import type {

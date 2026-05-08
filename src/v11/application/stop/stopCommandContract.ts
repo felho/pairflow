@@ -6,7 +6,7 @@ import type {
 } from "../../ports/stateSnapshots.js";
 import type { TerminateBubbleTmuxSessionPort } from "../../ports/tmuxSessions.js";
 import type { ResolveBubbleByIdPort } from "../../ports/bubbleLookup.js";
-import type { BubbleStateSnapshot } from "../../../types/bubble.js";
+import type { BubbleStateSnapshot } from "../../shared/state/bubbleStateSnapshotTypes.js";
 
 export interface StopBubbleInput {
   bubbleId: string;

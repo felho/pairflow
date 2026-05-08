@@ -1,4 +1,4 @@
-import type { BubbleStateSnapshot } from "../../../types/bubble.js";
+import type { BubbleStateSnapshot } from "../../shared/state/bubbleStateSnapshotTypes.js";
 import type { ResolvedKickoffDependencies } from "./kickoffDependencyContract.js";
 import type { ResolvedKickoffTaskInput } from "./kickoffTaskInputResolution.js";
 import { resolveKickoffTask } from "./kickoffTaskResolution.js";

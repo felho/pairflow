@@ -25,9 +25,7 @@ import type { ActorEmitContextSnapshot } from "../../shared/actorProtocol/actorE
 import type {
   AgentName
 } from "../../domain/agentIdentity/agentIdentity.js";
-import type {
-  BubbleStateSnapshot
-} from "../../../types/bubble.js";
+import type { BubbleStateSnapshot } from "../../shared/state/bubbleStateSnapshotTypes.js";
 import {
   resolveIdeationMetadata as resolveV11IdeationMetadata
 } from "../../domain/ideation/ideationMetadata.js";

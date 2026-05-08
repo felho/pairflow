@@ -1,4 +1,4 @@
-import type { BubbleStateSnapshot } from "../../../types/bubble.js";
+import type { BubbleStateSnapshot } from "../../shared/state/bubbleStateSnapshotTypes.js";
 import { buildAskHumanEnvelope } from "./askHumanExecutionArtifacts.js";
 import type { ExecuteAskHumanExecutionInput } from "./askHumanFlowContract.js";
 import type { AppendProtocolEnvelopeInput } from "../../ports/transcript.js";

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { resolveResumeKickoffMessages } from "../../../../src/v11/application/start/startCommandResumeKickoffMessages.js";
-import type { BubbleStateSnapshot } from "../../../../src/types/bubble.js";
+import type { BubbleStateSnapshot } from "../../../../src/v11/shared/state/bubbleStateSnapshotTypes.js";
 
 function createRunningMetaReviewerState(
   activeAgent: "codex" | "claude"

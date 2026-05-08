@@ -1,11 +1,10 @@
 import { applyStateTransition } from "../../../domain/state/machine.js";
 import { assertValidBubbleStateSnapshot } from "../../../shared/state/stateSchema.js";
-import { clearLiveMetaReviewSnapshot } from "../../../shared/metaReview/metaReviewSnapshot.js";import type {
+import { clearLiveMetaReviewSnapshot } from "../../../shared/metaReview/metaReviewSnapshot.js";
+import type {
   AgentName
 } from "../../../domain/agentIdentity/agentIdentity.js";
-import type {
-  BubbleStateSnapshot
-} from "../../../../types/bubble.js";
+import type { BubbleStateSnapshot } from "../../../shared/state/bubbleStateSnapshotTypes.js";
 import {
   incrementAutoReworkCount,
   normalizeMetaReviewSnapshot,

@@ -1,9 +1,8 @@
-import type { ProtocolEnvelopeDraft } from "../../../types/protocol.js";import type {
+import type { ProtocolEnvelopeDraft } from "../../../types/protocol.js";
+import type {
   AgentName
 } from "../../domain/agentIdentity/agentIdentity.js";
-import type {
-  BubbleStateSnapshot
-} from "../../../types/bubble.js";
+import type { BubbleStateSnapshot } from "../../shared/state/bubbleStateSnapshotTypes.js";
 import type { ProtocolEnvelope } from "../../../types/protocol.js";
 import type { ExecuteKickoffMutationRollbackInput } from "./kickoffMutationRollback.js";
 import type { ResolvedKickoffTaskInput } from "./kickoffTaskInputResolution.js";

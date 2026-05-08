@@ -6,9 +6,7 @@ import { describe, expect, it, vi } from "vitest";
 import type {
   BubbleRemotePointer
 } from "../../../../src/v11/shared/remote/remoteExecutionTypes.js";
-import type {
-  BubbleStateSnapshot
-} from "../../../../src/types/bubble.js";
+import type { BubbleStateSnapshot } from "../../../../src/v11/shared/state/bubbleStateSnapshotTypes.js";
 import { applyStateTransition } from "../../../../src/v11/domain/state/machine.js";
 import { deliveryTargetRoleMetadataKey } from "../../../../src/types/protocol.js";
 import {

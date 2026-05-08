@@ -21,7 +21,7 @@ import type { ResolveBubbleByIdPort } from "../../ports/bubbleLookup.js";
 import type {
   sampleWatchdogPaneActivity
 } from "./watchdogPaneActivitySampler.js";
-import type { BubbleStateSnapshot } from "../../../types/bubble.js";
+import type { BubbleStateSnapshot } from "../../shared/state/bubbleStateSnapshotTypes.js";
 import type { ProtocolEnvelope } from "../../../types/protocol.js";
 
 export interface BubbleWatchdogInput {

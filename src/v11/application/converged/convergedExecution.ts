@@ -3,12 +3,11 @@ import { join } from "node:path";
 import type {
   ConvergedStructuredFinding
 } from "../../shared/converged/convergedCommandTypes.js";
-import type { ResolvedBubbleWorkspace } from "../../ports/workspaceResolution.js";import type {
+import type { ResolvedBubbleWorkspace } from "../../ports/workspaceResolution.js";
+import type {
   AgentName
 } from "../../domain/agentIdentity/agentIdentity.js";
-import type {
-  BubbleStateSnapshot
-} from "../../../types/bubble.js";
+import type { BubbleStateSnapshot } from "../../shared/state/bubbleStateSnapshotTypes.js";
 import {
   executeGateDelivery,
   type ConvergedDeliveryResult

@@ -1,9 +1,7 @@
 import type {
   BubbleRemotePointerStarted
 } from "../../shared/remote/remoteExecutionTypes.js";
-import type {
-  BubbleStateSnapshot
-} from "../../../types/bubble.js";
+import type { BubbleStateSnapshot } from "../../shared/state/bubbleStateSnapshotTypes.js";
 import type { LoadedStateSnapshot } from "../../ports/stateSnapshots.js";
 import {
   assertCleanRepoWorkingTree,

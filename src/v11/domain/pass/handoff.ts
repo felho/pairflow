@@ -4,9 +4,7 @@ import type {
 import type {
   BubbleReviewLoopMode
 } from "../../shared/reviewPolicy/reviewPolicyTypes.js";
-import type {
-  BubbleStateSnapshot
-} from "../../../types/bubble.js";
+import type { BubbleStateSnapshot } from "../../shared/state/bubbleStateSnapshotTypes.js";
 import type {
   RoundRoleHistoryEntry
 } from "../../shared/state/roundRoleHistoryTypes.js";

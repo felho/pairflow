@@ -2,9 +2,7 @@ import type {
   DeliveryAck,
   EmitDeliveryNotificationAckPort
 } from "../../ports/tmuxDelivery.js";
-import type {
-  BubbleStateSnapshot
-} from "../../../types/bubble.js";
+import type { BubbleStateSnapshot } from "../../shared/state/bubbleStateSnapshotTypes.js";
 import type {
   ApprovalDecision,
   ProtocolEnvelope

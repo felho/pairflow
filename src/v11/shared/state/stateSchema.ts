@@ -9,9 +9,7 @@ import {
 import type {
   BubbleMetaReviewSnapshotState
 } from "../metaReview/metaReviewSnapshotTypes.js";
-import type {
-  BubbleStateSnapshot
-} from "../../../types/bubble.js";
+import type { BubbleStateSnapshot } from "./bubbleStateSnapshotTypes.js";
 import { validateMetaReviewSnapshot } from "./stateSchemaMetaReview.js";
 import {
   validateBubbleStateActivityFields,

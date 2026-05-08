@@ -1,7 +1,7 @@
 import { writeStateSnapshot } from "../start/startCommandDependencyDefaults.js";
 import type { LoadedStateSnapshot } from "../../ports/stateSnapshots.js";
 import { buildRunningExecutionContext } from "../../shared/state/executionContext.js";
-import type { BubbleStateSnapshot } from "../../../types/bubble.js";
+import type { BubbleStateSnapshot } from "../../shared/state/bubbleStateSnapshotTypes.js";
 import type { ResolvedPassHandoff } from "../../domain/pass/handoff.js";
 import { raisePostAppendStateWriteFailed } from "../../domain/pass/postAppendStateWriteFailure.js";
 

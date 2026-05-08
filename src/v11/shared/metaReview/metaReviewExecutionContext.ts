@@ -3,9 +3,7 @@ import {
   type BubbleExecutionContext,
   type BubbleMetaReviewExecutionContext
 } from "../state/executionContextTypes.js";
-import type {
-  BubbleStateSnapshot
-} from "../../../types/bubble.js";
+import type { BubbleStateSnapshot } from "../state/bubbleStateSnapshotTypes.js";
 import {
   isInteger,
   isIsoTimestamp,

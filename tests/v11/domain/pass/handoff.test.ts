@@ -8,9 +8,7 @@ function toErrorMessage(input: PairflowCommandErrorInput): string {
 }import type {
   AgentName
 } from "../../../../src/v11/domain/agentIdentity/agentIdentity.js";
-import type {
-  BubbleStateSnapshot
-} from "../../../../src/types/bubble.js";
+import type { BubbleStateSnapshot } from "../../../../src/v11/shared/state/bubbleStateSnapshotTypes.js";
 import { resolvePassHandoff } from "../../../../src/v11/domain/pass/handoff.js";
 
 const implementer: AgentName = "codex";

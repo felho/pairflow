@@ -136,6 +136,14 @@ Preferred mechanical flow:
 
 ## Progress Log
 
+### Bubble state snapshot aggregate slice
+
+- Created `src/v11/shared/state/bubbleStateSnapshotTypes.ts` as the owner for the persisted bubble state snapshot aggregate.
+- Updated state schema/store, domain state helpers, application command contracts/flows, SSH parsing helpers, runtime status consumers, tests, and root package exports to import `BubbleStateSnapshot` from the shared state owner.
+- Removed the final export from `src/types/bubble.ts` and deleted the legacy central type bucket instead of keeping a compatibility bridge.
+- Learning: after the leaf state/config/lifecycle/remote slices had owners, the final snapshot aggregate could move cleanly; the legacy file should not survive as an empty bridge just to hide import churn.
+- Targeted verification completed: `pnpm typecheck` and focused state/lifecycle/command/UI-transit Vitest coverage passed.
+
 ### Remote state cache slice
 
 - Created `src/v11/shared/remote/remoteStateCacheTypes.ts` as the owner for `BubbleRemoteStateCache`.
@@ -306,6 +314,7 @@ Preferred mechanical flow:
 - Remote state cache should wait for lifecycle/snapshot extraction because it embeds `BubbleLifecycleState`; not every apparent slice should move all adjacent names at once.
 - Root package exports are a distinct public facade question; preserving them does not mean keeping `src/types/bubble.ts` as a bridge.
 - `src/types/bubble.ts` can safely depend on a moved owner only as a type-only aggregate dependency. A runtime value import there would be a new architecture smell.
+- Once all leaf state/config/lifecycle/remote slices have owners, the final `BubbleStateSnapshot` aggregate can move cleanly and retire `src/types/bubble.ts`; the legacy file should not survive as an empty bridge just to hide import churn.
 - Execution-context types need a separate type owner rather than living in `executionContext.ts`, because runtime builders depend on actor protocol projection while actor protocol projection also needs the awaited-output vocabulary.
 - Gate status/warning vocabulary belongs with shared gates, not the central bubble model. Status and converged flows can depend on that owner directly, while UI read models should keep browser-facing gate mirrors as DTO contract shapes.
 - Core config vocabulary is distinct from the full `BubbleConfig` aggregate: defaults, validation, create-time input, reviewer/convergence behavior, and command/runtime guidance all need the same scalar literals without owning the aggregate config file.

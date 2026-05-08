@@ -3,7 +3,7 @@ import type {
   AgentRole
 } from "../agentIdentity/agentIdentity.js";
 import type { BubbleLifecycleState } from "./lifecycleTypes.js";
-import type { BubbleStateSnapshot } from "../../../types/bubble.js";
+import type { BubbleStateSnapshot } from "../../shared/state/bubbleStateSnapshotTypes.js";
 import type {
   RoundRoleHistoryEntry
 } from "../../shared/state/roundRoleHistoryTypes.js";

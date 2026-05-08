@@ -20,16 +20,15 @@ import type { resolveReviewerTestEvidenceArtifactPath } from "../../../v11/share
 import type {
   ResolveReviewerTestExecutionDirectivePort
 } from "../../ports/reviewerTestEvidenceArtifacts.js";
-import type { ResolvedBubbleWorkspace } from "../../ports/workspaceResolution.js";import type {
+import type { ResolvedBubbleWorkspace } from "../../ports/workspaceResolution.js";
+import type {
   AgentName
 } from "../../domain/agentIdentity/agentIdentity.js";
 import type {
   BubbleRoundGateState,
   BubbleSpecLockState
 } from "../../shared/gates/gateStateTypes.js";
-import type {
-  BubbleStateSnapshot
-} from "../../../types/bubble.js";
+import type { BubbleStateSnapshot } from "../../shared/state/bubbleStateSnapshotTypes.js";
 import type { GatePipelineOutcome } from "../gates/gatePipelineContract.js";
 
 export interface PrepareConvergedValidationInput {

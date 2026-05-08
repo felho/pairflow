@@ -6,7 +6,7 @@ import {
   type CommitFinalizationAppendResult,
   type CommitFinalizationLoadedState
 } from "../../../../src/v11/application/commit/commitCommandFinalizationMutation.js";
-import type { BubbleStateSnapshot } from "../../../../src/types/bubble.js";
+import type { BubbleStateSnapshot } from "../../../../src/v11/shared/state/bubbleStateSnapshotTypes.js";
 
 function createApprovedState(): BubbleStateSnapshot {
   return {

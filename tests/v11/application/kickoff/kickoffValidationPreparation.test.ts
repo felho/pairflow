@@ -5,7 +5,7 @@ import {
   IDEATION_KICKOFF_TASK_INVALID
 } from "../../../../src/v11/shared/ideation/ideationReasonCodes.js";
 import type { BubbleConfig } from "../../../../src/v11/shared/config/bubbleConfigTypes.js";
-import type { BubbleStateSnapshot } from "../../../../src/types/bubble.js";
+import type { BubbleStateSnapshot } from "../../../../src/v11/shared/state/bubbleStateSnapshotTypes.js";
 import type { ResolvedKickoffDependencies } from "../../../../src/v11/application/kickoff/kickoffDependencyContract.js";
 import { prepareKickoffValidation } from "../../../../src/v11/application/kickoff/kickoffValidationPreparation.js";
 

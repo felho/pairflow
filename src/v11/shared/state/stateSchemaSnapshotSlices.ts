@@ -2,9 +2,7 @@ import {
   isAgentName,
   isAgentRole
 } from "../../domain/agentIdentity/agentIdentity.js";
-import type {
-  BubbleStateSnapshot,
-} from "../../../types/bubble.js";
+import type { BubbleStateSnapshot } from "./bubbleStateSnapshotTypes.js";
 import type {
   BubbleReworkIntentRecord
 } from "./reworkIntentTypes.js";

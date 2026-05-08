@@ -11,7 +11,7 @@ import type {
   BubbleRemotePointerCreated
 } from "../../shared/remote/remoteExecutionTypes.js";
 import type { BubbleConfig } from "../../shared/config/bubbleConfigTypes.js";
-import type { BubbleStateSnapshot } from "../../../types/bubble.js";
+import type { BubbleStateSnapshot } from "../../shared/state/bubbleStateSnapshotTypes.js";
 import type {
   BubbleCreateDependencies,
   ResolvedTaskInput

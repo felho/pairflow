@@ -1,4 +1,4 @@
-import type { BubbleStateSnapshot } from "../../../../types/bubble.js";
+import type { BubbleStateSnapshot } from "../../../shared/state/bubbleStateSnapshotTypes.js";
 import { setMetaReviewConsecutiveCleanRuns } from "../../../domain/metaReviewGate/snapshotState.js";
 
 export function buildCleanRerunDispatchFailureRollbackState(

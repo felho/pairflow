@@ -1,5 +1,5 @@
 import type { ActorEmitContextSnapshot } from "../../shared/actorProtocol/actorEmitContext.js";
-import type { BubbleStateSnapshot } from "../../../types/bubble.js";
+import type { BubbleStateSnapshot } from "../../shared/state/bubbleStateSnapshotTypes.js";
 import type {
   AskHumanEnsureBubbleIdentityResult,
   AskHumanLoadedStateSnapshot,
