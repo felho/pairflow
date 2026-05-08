@@ -10,17 +10,17 @@ import type {
   BubbleMetaReviewSnapshotState
 } from "../metaReview/metaReviewSnapshotTypes.js";
 import type { BubbleStateSnapshot } from "./bubbleStateSnapshotTypes.js";
-import { validateMetaReviewSnapshot } from "./stateSchemaMetaReview.js";
+import { validateMetaReviewSnapshot } from "./internal/metaReview/stateSchemaMetaReview.js";
 import {
   validateBubbleStateActivityFields,
   validateBubbleStateCoreFields,
   validateReworkIntentState,
   validateRoundRoleHistory
-} from "./stateSchemaSnapshotSlices.js";
+} from "./internal/schema/stateSchemaSnapshotSlices.js";
 import {
   normalizeMetaReviewState,
   validateBubbleStateAuthority
-} from "./stateSchemaAuthority.js";
+} from "./internal/schema/stateSchemaAuthority.js";
 
 export function validateBubbleStateSnapshot(
   input: unknown

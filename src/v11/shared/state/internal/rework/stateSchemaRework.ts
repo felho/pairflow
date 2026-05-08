@@ -1,13 +1,13 @@
 import {
   isReworkIntentStatus,
   type BubbleReworkIntentRecord
-} from "./reworkIntentTypes.js";
+} from "../rework/reworkIntentTypes.js";
 import {
   isIsoTimestamp,
   isNonEmptyString,
   isRecord,
   type ValidationError
-} from "../validation/primitives.js";
+} from "../../../validation/primitives.js";
 
 function validateOptionalRefs(input: {
   refs: unknown;
