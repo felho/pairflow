@@ -136,6 +136,14 @@ Preferred mechanical flow:
 
 ## Progress Log
 
+### Review policy slice
+
+- Created `src/v11/shared/reviewPolicy/reviewPolicyTypes.ts` as the owner for review loop modes, auto-rework severities, support statuses, review policy config/runtime view shapes, and review-policy guards.
+- Moved runtime, config, domain, infrastructure, and test consumers of the review policy vocabulary to import from the new owner.
+- Removed those exports from `src/types/bubble.ts`; the old file now only imports `BubbleReviewPolicyConfig` as a type-only dependency for the remaining `BubbleConfig` aggregate.
+- Preserved UI contract governance by adding contract-local `UiBubbleReviewLoopMode`, `UiBubbleReviewAutoReworkSeverity`, and `UiBubbleReviewSupportStatus` mirrors under `src/contracts/ui/uiReadModel.ts` instead of importing the internal v11 owner.
+- Targeted verification completed: `pnpm typecheck`, `pnpm lint`, `pnpm fitness:check:ci`, and focused review policy/config/UI contract Vitest coverage passed.
+
 ### Agent identity slice
 
 - Created `src/v11/domain/agentIdentity/agentIdentity.ts` as the owner for agent names, agent roles, agent config, role resolution policy, and related guards.
@@ -155,6 +163,7 @@ Preferred mechanical flow:
 
 - The first slice did not need a compatibility re-export bridge. The mixed imports could be split mechanically, and typecheck/lint caught the only split-quality issues.
 - The UI contract question mattered in practice: UI contract files should keep browser-safe contract-local mirrors rather than importing the new v11 domain owner.
+- The review policy slice confirmed the same UI rule for non-agent vocabularies: browser contracts should own their payload literals even when the backend runtime vocabulary has a clearer v11 owner.
 - Root package exports are a distinct public facade question; preserving them does not mean keeping `src/types/bubble.ts` as a bridge.
 - `src/types/bubble.ts` can safely depend on a moved owner only as a type-only aggregate dependency. A runtime value import there would be a new architecture smell.
 - Import count is a risk signal, not a sufficient argument for a bridge. The real risk is whether the target owner is semantically correct and whether mixed imports can be split without creating worse architecture edges.

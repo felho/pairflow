@@ -5,11 +5,14 @@ import {
 import {
   resolveIdeationMetadata
 } from "../../domain/ideation/ideationMetadata.js";
-import type { ActorEmitContextSnapshot } from "../../shared/actorProtocol/actorEmitContext.js";import type {
+import type { ActorEmitContextSnapshot } from "../../shared/actorProtocol/actorEmitContext.js";
+import type {
   AgentName
 } from "../../domain/agentIdentity/agentIdentity.js";
 import type {
-  BubbleReviewLoopMode,
+  BubbleReviewLoopMode
+} from "../../shared/reviewPolicy/reviewPolicyTypes.js";
+import type {
   BubbleStateSnapshot
 } from "../../../types/bubble.js";
 import {

@@ -4,9 +4,6 @@ import type {
   BubbleLifecycleState,
   BubbleRoundGateState,
   BubbleSpecLockState,
-  BubbleReviewAutoReworkSeverity,
-  BubbleReviewLoopMode,
-  BubbleReviewSupportStatus,
   MetaReviewRecommendation,
   MetaReviewRuntimeDeliveryStatus,
   PairflowCommandProfile,
@@ -21,6 +18,10 @@ import type {
 } from "./uiRemoteExecution.js";
 
 export type { ProtocolMessageType };
+
+export type UiBubbleReviewLoopMode = "full" | "meta_only";
+export type UiBubbleReviewAutoReworkSeverity = "P1" | "P2" | "P3";
+export type UiBubbleReviewSupportStatus = "enabled" | "guarded";
 
 export interface UiBubbleStateCounts {
   CREATED: number;
@@ -171,11 +172,11 @@ export interface UiBubbleWatchdog {
 }
 
 export interface UiBubbleReviewPolicy {
-  requested_loop_mode: BubbleReviewLoopMode;
-  effective_loop_mode: BubbleReviewLoopMode;
-  support_status: BubbleReviewSupportStatus;
-  reviewer_blocking_min_severity: BubbleReviewAutoReworkSeverity;
-  meta_review_auto_rework_min_severity: BubbleReviewAutoReworkSeverity;
+  requested_loop_mode: UiBubbleReviewLoopMode;
+  effective_loop_mode: UiBubbleReviewLoopMode;
+  support_status: UiBubbleReviewSupportStatus;
+  reviewer_blocking_min_severity: UiBubbleReviewAutoReworkSeverity;
+  meta_review_auto_rework_min_severity: UiBubbleReviewAutoReworkSeverity;
   meta_review_consecutive_clean_runs_required: number;
   blocked_reason_code?: string;
   blocked_prerequisites?: string[];

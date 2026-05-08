@@ -1,7 +1,9 @@
 import type { Finding } from "../../../types/findings.js";
 import type { PassIntent } from "../../../types/protocol.js";
 import type {
-  BubbleReviewAutoReworkSeverity,
+  BubbleReviewAutoReworkSeverity
+} from "../../shared/reviewPolicy/reviewPolicyTypes.js";
+import type {
   ReviewArtifactType
 } from "../../../types/bubble.js";
 import {

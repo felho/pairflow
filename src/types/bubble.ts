@@ -8,6 +8,9 @@ import type {
   AgentRole,
   BubbleAgentsConfig
 } from "../v11/domain/agentIdentity/agentIdentity.js";
+import type {
+  BubbleReviewPolicyConfig
+} from "../v11/shared/reviewPolicy/reviewPolicyTypes.js";
 
 export const bubbleLifecycleStates = [
   "CREATED",
@@ -51,19 +54,6 @@ export type ReviewArtifactType = (typeof reviewArtifactTypes)[number];
 export const createReviewArtifactTypes = ["code", "document"] as const;
 
 export type CreateReviewArtifactType = (typeof createReviewArtifactTypes)[number];
-
-export const bubbleReviewLoopModes = ["full", "meta_only"] as const;
-
-export type BubbleReviewLoopMode = (typeof bubbleReviewLoopModes)[number];
-
-export const bubbleReviewAutoReworkSeverities = ["P1", "P2", "P3"] as const;
-
-export type BubbleReviewAutoReworkSeverity =
-  (typeof bubbleReviewAutoReworkSeverities)[number];
-
-export const bubbleReviewSupportStatuses = ["enabled", "guarded"] as const;
-
-export type BubbleReviewSupportStatus = (typeof bubbleReviewSupportStatuses)[number];
 
 export const localOverlayModes = ["symlink", "copy"] as const;
 
@@ -169,25 +159,6 @@ export interface BubbleLocalOverlayConfig {
 export interface BubbleDocContractGatesConfig {
   round_gate_applies_after: number;
   parse_warning?: string;
-}
-
-export interface BubbleReviewPolicyConfig {
-  review_loop_mode: BubbleReviewLoopMode;
-  reviewer_blocking_min_severity: BubbleReviewAutoReworkSeverity;
-  meta_review_auto_rework_min_severity: BubbleReviewAutoReworkSeverity;
-  meta_review_consecutive_clean_runs_required?: number;
-}
-
-export interface BubbleReviewPolicyRuntimeView {
-  requested_loop_mode: BubbleReviewLoopMode;
-  effective_loop_mode: BubbleReviewLoopMode;
-  support_status: BubbleReviewSupportStatus;
-  reviewer_blocking_min_severity: BubbleReviewAutoReworkSeverity;
-  meta_review_auto_rework_min_severity: BubbleReviewAutoReworkSeverity;
-  meta_review_consecutive_clean_runs_required: number;
-  blocked_reason_code?: string;
-  blocked_prerequisites?: string[];
-  provenance_note?: string;
 }
 
 export interface PairflowRemoteHostConfig {
@@ -480,24 +451,6 @@ export function isCreateReviewArtifactType(
   return (
     typeof value === "string"
     && (createReviewArtifactTypes as readonly string[]).includes(value)
-  );
-}
-
-export function isBubbleReviewLoopMode(
-  value: unknown
-): value is BubbleReviewLoopMode {
-  return (
-    typeof value === "string"
-    && (bubbleReviewLoopModes as readonly string[]).includes(value)
-  );
-}
-
-export function isBubbleReviewAutoReworkSeverity(
-  value: unknown
-): value is BubbleReviewAutoReworkSeverity {
-  return (
-    typeof value === "string"
-    && (bubbleReviewAutoReworkSeverities as readonly string[]).includes(value)
   );
 }
 

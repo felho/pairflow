@@ -1,8 +1,8 @@
 import type { IncomingMessage } from "node:http";
 import {
   isBubbleReviewAutoReworkSeverity,
-  isBubbleReviewLoopMode,
-} from "../../../types/bubble.js";
+  isBubbleReviewLoopMode
+} from "../../shared/reviewPolicy/reviewPolicyTypes.js";
 import {
   isMetaReviewQualityPreset
 } from "../../shared/reviewPolicy/updateBubbleReviewPolicy.js";

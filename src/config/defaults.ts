@@ -2,9 +2,11 @@ import type {
   AgentName
 } from "../v11/domain/agentIdentity/agentIdentity.js";
 import type {
-  AttachLauncher,
   BubbleReviewAutoReworkSeverity,
-  BubbleReviewLoopMode,
+  BubbleReviewLoopMode
+} from "../v11/shared/reviewPolicy/reviewPolicyTypes.js";
+import type {
+  AttachLauncher,
   LocalOverlayMode,
   PairflowCommandProfile,
   QualityMode,

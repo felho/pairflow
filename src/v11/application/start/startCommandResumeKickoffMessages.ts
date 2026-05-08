@@ -2,7 +2,9 @@ import type {
   AgentName
 } from "../../domain/agentIdentity/agentIdentity.js";
 import type {
-  BubbleReviewAutoReworkSeverity,
+  BubbleReviewAutoReworkSeverity
+} from "../../shared/reviewPolicy/reviewPolicyTypes.js";
+import type {
   BubbleStateSnapshot,
   PairflowCommandProfile,
   ReviewArtifactType

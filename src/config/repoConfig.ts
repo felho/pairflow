@@ -10,7 +10,8 @@ import {
   validationOk,
   type ValidationError,
   type ValidationResult
-} from "../v11/shared/validation/primitives.js";import {
+} from "../v11/shared/validation/primitives.js";
+import {
   isAgentName
 } from "../v11/domain/agentIdentity/agentIdentity.js";
 import type {
@@ -18,13 +19,17 @@ import type {
 } from "../v11/domain/agentIdentity/agentIdentity.js";
 import type {
   BubbleReviewAutoReworkSeverity,
-  BubbleReviewLoopMode,
+  BubbleReviewLoopMode
+} from "../v11/shared/reviewPolicy/reviewPolicyTypes.js";
+import type {
   PairflowCommandProfile,
   ReviewerContextMode
 } from "../types/bubble.js";
 import {
   isBubbleReviewAutoReworkSeverity,
-  isBubbleReviewLoopMode,
+  isBubbleReviewLoopMode
+} from "../v11/shared/reviewPolicy/reviewPolicyTypes.js";
+import {
   isPairflowCommandProfile,
   isReviewerContextMode
 } from "../types/bubble.js";

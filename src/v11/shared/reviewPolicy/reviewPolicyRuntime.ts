@@ -3,15 +3,19 @@ import {
   DEFAULT_REVIEW_POLICY_CONSECUTIVE_CLEAN_RUNS_REQUIRED,
   DEFAULT_REVIEW_POLICY_REVIEWER_BLOCKING_MIN_SEVERITY,
   DEFAULT_REVIEW_POLICY_LOOP_MODE
-} from "../../../config/defaults.js";import type {
+} from "../../../config/defaults.js";
+import type {
   AgentRole
 } from "../../domain/agentIdentity/agentIdentity.js";
 import type {
-  BubbleConfig,
-  BubbleExecutionContext,
   BubbleReviewPolicyConfig,
   BubbleReviewPolicyRuntimeView
-} from "../../../types/bubble.js";import {
+} from "./reviewPolicyTypes.js";
+import type {
+  BubbleConfig,
+  BubbleExecutionContext
+} from "../../../types/bubble.js";
+import {
   isAgentRole
 } from "../../domain/agentIdentity/agentIdentity.js";
 

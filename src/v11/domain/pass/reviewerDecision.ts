@@ -1,6 +1,8 @@
 import type {
-  BubbleConfig,
   BubbleReviewAutoReworkSeverity
+} from "../../shared/reviewPolicy/reviewPolicyTypes.js";
+import type {
+  BubbleConfig
 } from "../../../types/bubble.js";
 import {
   findingPriorities,

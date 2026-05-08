@@ -1,5 +1,7 @@
 import type {
-  BubbleReviewAutoReworkSeverity,
+  BubbleReviewAutoReworkSeverity
+} from "../reviewPolicy/reviewPolicyTypes.js";
+import type {
   BubbleStateSnapshot
 } from "../../../types/bubble.js";
 import type { FindingPriority } from "../../../types/findings.js";

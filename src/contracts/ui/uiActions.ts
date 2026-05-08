@@ -1,11 +1,13 @@
 import type {
-  AttachLauncher,
-  BubbleReviewAutoReworkSeverity,
-  BubbleReviewLoopMode
+  AttachLauncher
 } from "../../types/bubble.js";
 import type { DeleteBubbleResult } from "./deleteBubble.js";
 import type { BubbleLifecycleState } from "./bubbleLifecycle.js";
-import type { UiBubbleReviewPolicy } from "./uiReadModel.js";
+import type {
+  UiBubbleReviewAutoReworkSeverity,
+  UiBubbleReviewLoopMode,
+  UiBubbleReviewPolicy
+} from "./uiReadModel.js";
 
 export type MetaReviewQualityPreset = "P1" | "P2" | "P3" | "P3+1" | "P3+2";
 
@@ -310,8 +312,8 @@ export interface UiAttachBubbleInput {
 export type AttachBubbleResult = UiAttachBubbleResult;
 
 export interface UiUpdateBubbleReviewPolicyInput extends UiBubbleMutationInput {
-  reviewLoopMode: BubbleReviewLoopMode;
-  reviewBlockingMinSeverity?: BubbleReviewAutoReworkSeverity;
+  reviewLoopMode: UiBubbleReviewLoopMode;
+  reviewBlockingMinSeverity?: UiBubbleReviewAutoReworkSeverity;
   metaReviewQualityPreset?: MetaReviewQualityPreset;
   expectedBubbleToml?: string | undefined;
 }
@@ -320,8 +322,8 @@ export interface UiUpdateBubbleReviewPolicyResult {
   kind: "review_policy_updated";
   bubbleId: string;
   reviewPolicy: UiBubbleReviewPolicy;
-  previousRequestedLoopMode: BubbleReviewLoopMode;
-  nextRequestedLoopMode: BubbleReviewLoopMode;
+  previousRequestedLoopMode: UiBubbleReviewLoopMode;
+  nextRequestedLoopMode: UiBubbleReviewLoopMode;
   activationChange: "none";
   bubbleToml: string;
 }

@@ -9,15 +9,18 @@ import type {
   ResolveDocContractGateArtifactPathPort,
   WriteDocContractGateArtifactPort
 } from "../../ports/docContractGateArtifacts.js";
-import type { ReviewerFocusExtractionResult } from "../../../v11/shared/reviewer/reviewerBrief.js";import type {
+import type { ReviewerFocusExtractionResult } from "../../../v11/shared/reviewer/reviewerBrief.js";
+import type {
   AgentName
 } from "../../domain/agentIdentity/agentIdentity.js";
+import type {
+  BubbleReviewPolicyConfig
+} from "../../shared/reviewPolicy/reviewPolicyTypes.js";
 import type {
   BubbleConfig,
   BubbleStateSnapshot,
   CreateReviewArtifactType,
   BubbleDocContractGatesConfig,
-  BubbleReviewPolicyConfig,
   PairflowCommandProfile
 } from "../../../types/bubble.js";
 

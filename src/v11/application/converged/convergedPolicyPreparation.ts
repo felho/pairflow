@@ -2,11 +2,14 @@ import { type ReadTranscriptEnvelopesPort } from "../../ports/transcript.js";
 import {
   validateConvergencePolicy,
   type ConvergencePolicyResult
-} from "../../../v11/domain/convergence/policy.js";import type {
+} from "../../../v11/domain/convergence/policy.js";
+import type {
   AgentName
 } from "../../domain/agentIdentity/agentIdentity.js";
 import type {
-  BubbleReviewLoopMode,
+  BubbleReviewLoopMode
+} from "../../shared/reviewPolicy/reviewPolicyTypes.js";
+import type {
   ReviewArtifactType,
   RoundRoleHistoryEntry
 } from "../../../types/bubble.js";

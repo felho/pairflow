@@ -9,7 +9,9 @@ import { buildRunningExecutionContext } from "../../src/v11/shared/state/executi
 import { readStateSnapshot, writeStateSnapshot } from "../../src/v11/infrastructure/state/stateStore.js";
 import { bootstrapWorktreeWorkspace } from "../../src/v11/infrastructure/workspace/worktreeManager.js";
 import type {
-  BubbleReviewPolicyConfig,
+  BubbleReviewPolicyConfig
+} from "../../src/v11/shared/reviewPolicy/reviewPolicyTypes.js";
+import type {
   CreateReviewArtifactType,
   PairflowCommandProfile,
   ReviewArtifactType

@@ -6,7 +6,9 @@ import { buildBubbleTmuxSessionName } from "../../shared/bubble/tmuxSessionName.
 import { DEFAULT_REVIEW_POLICY_REVIEWER_BLOCKING_MIN_SEVERITY } from "../../../config/defaults.js";
 import type { ReviewerFocusExtractionResult } from "../../shared/reviewer/reviewerBrief.js";
 import { reviewerPolicySnapshotFileName } from "../../shared/reviewer/reviewerPolicySnapshot.js";
-import type { BubbleReviewAutoReworkSeverity } from "../../../types/bubble.js";
+import type {
+  BubbleReviewAutoReworkSeverity
+} from "../../shared/reviewPolicy/reviewPolicyTypes.js";
 import {
   reviewerSeverityOntologyFullMarkdown,
   reviewerSeverityOntologySourceDoc

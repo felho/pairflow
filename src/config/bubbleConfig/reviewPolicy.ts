@@ -7,7 +7,7 @@ import type { BubbleConfig } from "../../types/bubble.js";
 import {
   isBubbleReviewAutoReworkSeverity,
   isBubbleReviewLoopMode
-} from "../../types/bubble.js";
+} from "../../v11/shared/reviewPolicy/reviewPolicyTypes.js";
 import {
   isInteger,
   type ValidationError

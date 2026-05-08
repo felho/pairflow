@@ -17,11 +17,12 @@ import {
 } from "../../shared/reviewPolicy/reviewPolicyRuntime.js";
 import type {
   BubbleReviewPolicyRuntimeView
-} from "../../../types/bubble.js";
+} from "../../shared/reviewPolicy/reviewPolicyTypes.js";
 import {
   assertActorEmitContextSnapshotIntegrity
 } from "../../shared/actorProtocol/actorEmitContext.js";
-import type { ActorEmitContextSnapshot } from "../../shared/actorProtocol/actorEmitContext.js";import type {
+import type { ActorEmitContextSnapshot } from "../../shared/actorProtocol/actorEmitContext.js";
+import type {
   AgentName
 } from "../../domain/agentIdentity/agentIdentity.js";
 import type {

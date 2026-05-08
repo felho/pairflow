@@ -2,7 +2,9 @@ import {
   type ReviewerFocusExtractionResult
 } from "../../shared/reviewer/reviewerBrief.js";
 import type {
-  BubbleReviewAutoReworkSeverity,
+  BubbleReviewAutoReworkSeverity
+} from "../../shared/reviewPolicy/reviewPolicyTypes.js";
+import type {
   BubbleStateSnapshot,
   PairflowCommandProfile,
   ReviewArtifactType

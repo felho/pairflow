@@ -22,14 +22,17 @@ import {
   DEFAULT_SEVERITY_GATE_ROUND,
   DEFAULT_WATCHDOG_TIMEOUT_MINUTES,
   DEFAULT_WORK_MODE
-} from "../../../config/defaults.js";import type {
+} from "../../../config/defaults.js";
+import type {
   AgentName
 } from "../../domain/agentIdentity/agentIdentity.js";
+import type {
+  BubbleReviewPolicyConfig
+} from "../../shared/reviewPolicy/reviewPolicyTypes.js";
 import type {
   BubbleConfig,
   BubbleDocContractGatesConfig,
   BubbleRemotePointerCreated,
-  BubbleReviewPolicyConfig,
   CreateReviewArtifactType,
   PairflowCommandProfile
 } from "../../../types/bubble.js";

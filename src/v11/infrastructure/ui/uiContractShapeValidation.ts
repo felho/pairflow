@@ -6,7 +6,9 @@ import { bubbleLifecycleStates } from "../../../contracts/ui/bubbleLifecycle.js"
 import {
   bubbleReviewLoopModes,
   bubbleReviewSupportStatuses,
-  isBubbleReviewAutoReworkSeverity,
+  isBubbleReviewAutoReworkSeverity
+} from "../../shared/reviewPolicy/reviewPolicyTypes.js";
+import {
   isMetaReviewRuntimeDeliveryStatus,
   workModes
 } from "../../../types/bubble.js";

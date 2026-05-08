@@ -2,7 +2,9 @@ import type {
   UiBubbleDetail,
   UiBubbleReviewPolicy
 } from "../../../contracts/ui/uiReadModel.js";
-import type { BubbleReviewPolicyRuntimeView } from "../../../types/bubble.js";
+import type {
+  BubbleReviewPolicyRuntimeView
+} from "../../shared/reviewPolicy/reviewPolicyTypes.js";
 import { REVIEW_POLICY_WRITE_CONFLICT } from "../../shared/reviewPolicy/updateBubbleReviewPolicy.js";
 import {
   REVIEW_POLICY_STATE_CONFLICT,

@@ -2,7 +2,9 @@ import type {
   AgentName
 } from "../agentIdentity/agentIdentity.js";
 import type {
-  BubbleReviewLoopMode,
+  BubbleReviewLoopMode
+} from "../../shared/reviewPolicy/reviewPolicyTypes.js";
+import type {
   ReviewArtifactType,
   RoundRoleHistoryEntry
 } from "../../../types/bubble.js";

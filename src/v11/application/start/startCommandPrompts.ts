@@ -4,7 +4,9 @@ import { shellQuote } from "../../shared/foundation/shellQuote.js";
 import { buildPinnedPairflowCommand } from "./startCommandPromptRuntime.js";
 import type { ReviewerFocusExtractionResult } from "../../shared/reviewer/reviewerBrief.js";
 import type {
-  BubbleReviewAutoReworkSeverity,
+  BubbleReviewAutoReworkSeverity
+} from "../../shared/reviewPolicy/reviewPolicyTypes.js";
+import type {
   PairflowCommandProfile,
   ReviewArtifactType
 } from "../../../types/bubble.js";

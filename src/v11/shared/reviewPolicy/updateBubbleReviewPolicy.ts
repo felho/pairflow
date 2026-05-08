@@ -1,7 +1,7 @@
 import type {
   BubbleReviewAutoReworkSeverity,
   BubbleReviewLoopMode
-} from "../../../types/bubble.js";
+} from "./reviewPolicyTypes.js";
 
 export const REVIEW_POLICY_WRITE_CONFLICT =
   "REVIEW_POLICY_WRITE_CONFLICT" as const;

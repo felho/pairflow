@@ -5,7 +5,9 @@ import {
 } from "../../shared/reviewer/reviewerCommandGateGuidance.js";
 import { buildPairflowCommandGuidance } from "./startCommandPromptRuntime.js";
 import type {
-  BubbleReviewAutoReworkSeverity,
+  BubbleReviewAutoReworkSeverity
+} from "../../shared/reviewPolicy/reviewPolicyTypes.js";
+import type {
   PairflowCommandProfile,
   ReviewArtifactType
 } from "../../../types/bubble.js";

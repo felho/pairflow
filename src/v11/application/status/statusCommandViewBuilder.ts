@@ -3,9 +3,11 @@ import { type ReviewVerificationState } from "../../shared/reviewer/reviewVerifi
 import type { StateValidationDiagnostics } from "../../ports/stateSnapshots.js";
 import type { ReadWatchdogPaneActivityResult } from "../../shared/watchdog/watchdogPaneActivityStore.js";
 import type {
+  BubbleReviewPolicyRuntimeView
+} from "../../shared/reviewPolicy/reviewPolicyTypes.js";
+import type {
   BubbleFailingGate,
   BubbleLifecycleState,
-  BubbleReviewPolicyRuntimeView,
   BubbleRoundGateState,
   BubbleSpecLockState
 } from "../../../types/bubble.js";

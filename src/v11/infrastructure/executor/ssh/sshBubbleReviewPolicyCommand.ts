@@ -3,7 +3,7 @@ import type {
   BubbleReviewAutoReworkSeverity,
   BubbleReviewLoopMode,
   BubbleReviewPolicyRuntimeView
-} from "../../../../types/bubble.js";
+} from "../../../shared/reviewPolicy/reviewPolicyTypes.js";
 import type { MetaReviewQualityPreset } from "../../../shared/reviewPolicy/updateBubbleReviewPolicy.js";
 import type { RemoteBubbleStatusTarget } from "./sshBubbleStatus.js";
 import { runCommandDefault } from "./sshBubbleStatus.js";

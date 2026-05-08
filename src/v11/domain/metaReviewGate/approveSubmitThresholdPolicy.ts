@@ -1,5 +1,7 @@
 import type {
-  BubbleReviewAutoReworkSeverity,
+  BubbleReviewAutoReworkSeverity
+} from "../../shared/reviewPolicy/reviewPolicyTypes.js";
+import type {
   MetaReviewRecommendation
 } from "../../../types/bubble.js";
 import type { FindingPriority } from "../../../types/findings.js";

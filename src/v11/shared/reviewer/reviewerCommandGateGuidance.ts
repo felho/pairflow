@@ -1,6 +1,8 @@
 import { DEFAULT_REVIEW_POLICY_REVIEWER_BLOCKING_MIN_SEVERITY } from "../../../config/defaults.js";
 import type {
-  BubbleReviewAutoReworkSeverity,
+  BubbleReviewAutoReworkSeverity
+} from "../reviewPolicy/reviewPolicyTypes.js";
+import type {
   ReviewArtifactType
 } from "../../../types/bubble.js";
 

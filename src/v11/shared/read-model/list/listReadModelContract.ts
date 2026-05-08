@@ -4,8 +4,10 @@ import type {
   ActiveMetaReviewRuntimeDeliveryView
 } from "../../metaReview/metaReviewSnapshot.js";
 import type {
-  BubbleLifecycleState,
   BubbleReviewPolicyRuntimeView
+} from "../../reviewPolicy/reviewPolicyTypes.js";
+import type {
+  BubbleLifecycleState
 } from "../../../../types/bubble.js";
 import type { UiBubbleAttention } from "../../../../contracts/ui/uiReadModel.js";
 import type { UiBubbleListRemoteExecution } from "../../../../types/uiRemoteExecution.js";
