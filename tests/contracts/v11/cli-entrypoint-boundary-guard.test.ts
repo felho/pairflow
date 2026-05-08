@@ -3,14 +3,13 @@ import { relative, resolve } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-const directBubbleCliShimCommands = [
-  "inbox",
-  "kickoff"
-] as const;
+const directBubbleCliShimCommands = [] as const;
 
 const compositionBubbleCliWrappers = [
   "attach",
   "delete",
+  "inbox",
+  "kickoff",
   "open",
   "reconcile",
   "restart",

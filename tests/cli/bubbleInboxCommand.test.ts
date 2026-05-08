@@ -4,7 +4,7 @@ import {
   getBubbleInboxHelpText,
   parseBubbleInboxCommandOptions,
   runBubbleInboxCommand
-} from "../../src/cli/commands/bubble/inbox.js";
+} from "../../src/v11/application/inbox/inboxCliCommand.js";
 
 describe("parseBubbleInboxCommandOptions", () => {
   it("parses required and optional options", () => {

@@ -37,7 +37,7 @@ import {
   parseBubbleInboxCommandOptions,
   renderBubbleInboxText,
   runBubbleInboxCommand
-} from "./commands/bubble/inbox.js";
+} from "../v11/application/inbox/inboxCliCommand.js";
 import {
   getBubbleCreateHelpText,
   runBubbleCreateCommand
@@ -45,7 +45,7 @@ import {
 import {
   getBubbleKickoffHelpText,
   runBubbleKickoffCommand
-} from "./commands/bubble/kickoff.js";
+} from "../v11/application/kickoff/kickoffCliCommand.js";
 import {
   getBubbleReplyHelpText,
   runBubbleReplyCommand

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { shellQuote } from "../../../../../src/v11/infrastructure/foundation/shell/shellQuote.js";
+import { shellQuote } from "../../../../../src/v11/shared/foundation/shellQuote.js";
 
 describe("v11 shellQuote", () => {
   it("wraps plain values in single quotes", () => {

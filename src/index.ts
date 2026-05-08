@@ -246,7 +246,7 @@ export {
   parseBubbleInboxCommandOptions,
   renderBubbleInboxText,
   runBubbleInboxCommand
-} from "./cli/commands/bubble/inbox.js";
+} from "./v11/application/inbox/inboxCliCommand.js";
 export {
   getBubbleCreateHelpText,
   parseBubbleCreateCommandOptions,
@@ -691,7 +691,7 @@ export type {
   BubbleInboxCommandOptions,
   BubbleInboxHelpCommandOptions,
   ParsedBubbleInboxCommandOptions
-} from "./cli/commands/bubble/inbox.js";
+} from "./v11/application/inbox/inboxCliCommand.js";
 export type {
   BubbleReplyCommandOptions,
   BubbleReplyHelpCommandOptions,

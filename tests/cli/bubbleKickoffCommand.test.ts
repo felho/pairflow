@@ -12,7 +12,7 @@ import {
   getBubbleKickoffHelpText,
   parseBubbleKickoffCommandOptions,
   runBubbleKickoffCommand
-} from "../../src/cli/commands/bubble/kickoff.js";
+} from "../../src/v11/application/kickoff/kickoffCliCommand.js";
 import type { ResolvedBubbleById } from "../../src/v11/infrastructure/executor/workspace/bubbleLookup.js";
 
 describe("parseBubbleKickoffCommandOptions", () => {
