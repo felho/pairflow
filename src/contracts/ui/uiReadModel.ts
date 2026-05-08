@@ -1,8 +1,5 @@
 import type {
-  BubbleFailingGate,
   BubbleLifecycleState,
-  BubbleRoundGateState,
-  BubbleSpecLockState,
   PairflowCommandProfile,
   WorkMode
 } from "../../types/bubble.js";
@@ -31,6 +28,45 @@ export type UiExecutionContextActiveRole =
 export type UiExecutionContextAwaitedOutputType =
   | "pass_result"
   | "meta_review_result";
+export type UiGateSignalLevel = "warning" | "info";
+export type UiGateReasonCode =
+  | "DOC_CONTRACT_PARSE_WARNING"
+  | "REVIEW_SCHEMA_WARNING"
+  | "BLOCKER_EVIDENCE_WARNING"
+  | "ROUND_GATE_WARNING"
+  | "ROUND_GATE_AUTODEMOTE"
+  | "STATUS_GATE_SERIALIZATION_WARNING"
+  | "GATE_CONFIG_PARSE_WARNING"
+  | "META_REVIEW_APPROVE_VALIDATION_FAILED"
+  | "META_REVIEW_APPROVE_THRESHOLD_BACKSTOP";
+export type UiFindingPriority = "P0" | "P1" | "P2" | "P3";
+export type UiFindingTiming = "required-now" | "later-hardening";
+export type UiFindingLayer = "L0" | "L1" | "L2";
+
+export interface UiBubbleFailingGate {
+  gate_id: string;
+  reason_code: UiGateReasonCode | (string & {});
+  message: string;
+  priority: UiFindingPriority;
+  timing: UiFindingTiming;
+  layer?: UiFindingLayer;
+  evidence_refs?: string[];
+  signal_level?: UiGateSignalLevel;
+  effective_priority?: UiFindingPriority;
+}
+
+export interface UiBubbleSpecLockState {
+  state: "LOCKED" | "IMPLEMENTABLE";
+  open_blocker_count: number;
+  open_required_now_count: number;
+}
+
+export interface UiBubbleRoundGateState {
+  applies: boolean;
+  violated: boolean;
+  round: number;
+  reason_code?: string;
+}
 
 export interface UiBubbleStateCounts {
   CREATED: number;
@@ -333,9 +369,9 @@ export interface UiBubbleStatusView {
   commandPath: UiStatusCommandPathView;
   accuracy_critical: boolean;
   last_review_verification: UiReviewVerificationState;
-  failing_gates: BubbleFailingGate[];
-  spec_lock_state: BubbleSpecLockState;
-  round_gate_state: BubbleRoundGateState;
+  failing_gates: UiBubbleFailingGate[];
+  spec_lock_state: UiBubbleSpecLockState;
+  round_gate_state: UiBubbleRoundGateState;
   stateValidation: StateValidationDiagnostics | null;
   remoteExecution?: UiBubbleStatusRemoteExecution;
 }

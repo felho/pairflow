@@ -2,7 +2,7 @@ import type {
   BubbleFailingGate,
   BubbleRoundGateState,
   BubbleSpecLockState
-} from "../../../types/bubble.js";
+} from "./gateStateTypes.js";
 import type { Finding } from "../../../types/findings.js";
 import {
   evaluateReviewerFinding,

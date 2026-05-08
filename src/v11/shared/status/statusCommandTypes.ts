@@ -2,7 +2,7 @@ import type {
   BubbleFailingGate,
   BubbleRoundGateState,
   BubbleSpecLockState
-} from "../../../types/bubble.js";
+} from "../gates/gateStateTypes.js";
 import type { ReadStateSnapshotPort } from "../../ports/stateSnapshots.js";
 import type { ResolveBubbleByIdPort } from "../../ports/bubbleLookup.js";
 

@@ -1,4 +1,4 @@
-import type { BubbleFailingGate } from "../../../types/bubble.js";
+import type { BubbleFailingGate } from "./gateStateTypes.js";
 import type {
   Finding,
   FindingLayer,

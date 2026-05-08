@@ -1,9 +1,11 @@
 import type {
+  BubbleLifecycleState
+} from "../../../types/bubble.js";
+import type {
   BubbleFailingGate,
-  BubbleLifecycleState,
   BubbleRoundGateState,
   BubbleSpecLockState
-} from "../../../types/bubble.js";
+} from "../gates/gateStateTypes.js";
 import type { ProtocolMessageType } from "../../../types/protocol.js";
 import type { StateValidationDiagnostics } from "../../ports/stateSnapshots.js";
 import type { ReviewVerificationState } from "../reviewer/reviewVerification.js";

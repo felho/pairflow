@@ -6,11 +6,13 @@ import type {
   BubbleReviewPolicyRuntimeView
 } from "../../shared/reviewPolicy/reviewPolicyTypes.js";
 import type {
+  BubbleLifecycleState
+} from "../../../types/bubble.js";
+import type {
   BubbleFailingGate,
-  BubbleLifecycleState,
   BubbleRoundGateState,
   BubbleSpecLockState
-} from "../../../types/bubble.js";
+} from "../../shared/gates/gateStateTypes.js";
 import {
   buildRuntimeAlignedReviewPolicyRuntimeView,
   normalizeRuntimeAlignedExecutionContext,

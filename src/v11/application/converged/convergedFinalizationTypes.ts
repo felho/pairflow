@@ -11,10 +11,12 @@ import { type SummaryVerifierConsistencyGateDecisionRecord } from "../../../v11/
 import type { EmitBubbleLifecycleEventBestEffortPort } from "../../../v11/shared/metrics/bubbleEvents.js";
 import { type MetaReviewGateRoute } from "../../shared/metaReviewGate/index.js";
 import type {
-  BubbleRoundGateState,
-  BubbleSpecLockState,
   BubbleStateSnapshot
 } from "../../../types/bubble.js";
+import type {
+  BubbleRoundGateState,
+  BubbleSpecLockState
+} from "../../shared/gates/gateStateTypes.js";
 import type { ProtocolEnvelope } from "../../../types/protocol.js";
 
 export type ConvergedDelivery = {

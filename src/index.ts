@@ -778,6 +778,13 @@ export type {
   BubbleDocContractGatesConfig
 } from "./v11/shared/gates/docContractGateConfigTypes.js";
 export type {
+  BubbleFailingGate,
+  BubbleRoundGateState,
+  BubbleSpecLockState,
+  GateReasonCode,
+  GateSignalLevel
+} from "./v11/shared/gates/gateStateTypes.js";
+export type {
   RoundRoleHistoryEntry
 } from "./v11/shared/state/roundRoleHistoryTypes.js";
 export type {

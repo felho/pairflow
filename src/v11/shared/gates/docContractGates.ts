@@ -1,9 +1,11 @@
 import type {
-  BubbleConfig,
+  BubbleConfig
+} from "../../../types/bubble.js";
+import type {
   BubbleFailingGate,
   BubbleRoundGateState,
   BubbleSpecLockState
-} from "../../../types/bubble.js";
+} from "./gateStateTypes.js";
 import {
   docContractGateArtifactSchemaVersion,
   type DocContractGateArtifact

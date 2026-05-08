@@ -16,7 +16,7 @@ import type { ReviewerTestReasonCode } from "../../../v11/shared/reviewer/testEv
 import type {
   BubbleRoundGateState,
   BubbleSpecLockState
-} from "../../../types/bubble.js";
+} from "../../shared/gates/gateStateTypes.js";
 import type {
   PrepareConvergedValidationDependencies,
   PrepareConvergedValidationInput,

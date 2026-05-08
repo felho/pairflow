@@ -17,10 +17,12 @@ import type {
   AgentName
 } from "../../domain/agentIdentity/agentIdentity.js";
 import type {
-  BubbleRoundGateState,
-  BubbleSpecLockState,
   BubbleStateSnapshot
 } from "../../../types/bubble.js";
+import type {
+  BubbleRoundGateState,
+  BubbleSpecLockState
+} from "../../shared/gates/gateStateTypes.js";
 import type { ProtocolEnvelope } from "../../../types/protocol.js";
 import type { PrepareConvergedValidationResult } from "./convergedValidationPreparationContract.js";
 

@@ -136,6 +136,14 @@ Preferred mechanical flow:
 
 ## Progress Log
 
+### Gate state slice
+
+- Created `src/v11/shared/gates/gateStateTypes.ts` as the owner for gate signal levels, gate reason codes, failing gate warnings, spec-lock state, and round-gate state.
+- Updated shared gate evaluation/artifact code, status projection, remote status parsing, converged validation/finalization contracts, and root package type exports to import gate state vocabulary from the new owner.
+- Removed gate state vocabulary from `src/types/bubble.ts`; unlike many config/state slices, the remaining bubble aggregate no longer needs a type-only dependency on these gate shapes.
+- Preserved UI contract governance by replacing the browser-facing `BubbleFailingGate`, `BubbleSpecLockState`, and `BubbleRoundGateState` imports with contract-local `UiBubbleFailingGate`, `UiBubbleSpecLockState`, and `UiBubbleRoundGateState` mirrors in `src/contracts/ui/uiReadModel.ts`.
+- Targeted verification completed: `pnpm typecheck` and focused gate/status/remote-status/UI-contract Vitest coverage passed.
+
 ### Ideation config slice
 
 - Created `src/v11/shared/ideation/ideationConfigTypes.ts` as the owner for `BubbleIdeationConfig`.
@@ -266,5 +274,6 @@ Preferred mechanical flow:
 - Root package exports are a distinct public facade question; preserving them does not mean keeping `src/types/bubble.ts` as a bridge.
 - `src/types/bubble.ts` can safely depend on a moved owner only as a type-only aggregate dependency. A runtime value import there would be a new architecture smell.
 - Execution-context types need a separate type owner rather than living in `executionContext.ts`, because runtime builders depend on actor protocol projection while actor protocol projection also needs the awaited-output vocabulary.
+- Gate status/warning vocabulary belongs with shared gates, not the central bubble model. Status and converged flows can depend on that owner directly, while UI read models should keep browser-facing gate mirrors as DTO contract shapes.
 - Import count is a risk signal, not a sufficient argument for a bridge. The real risk is whether the target owner is semantically correct and whether mixed imports can be split without creating worse architecture edges.
 - Agent-assisted migration changes the cost model: mechanical churn is cheap, but ownership mistakes and review noise remain expensive.

@@ -25,7 +25,9 @@ import type { ResolvedBubbleWorkspace } from "../../ports/workspaceResolution.js
 } from "../../domain/agentIdentity/agentIdentity.js";
 import type {
   BubbleRoundGateState,
-  BubbleSpecLockState,
+  BubbleSpecLockState
+} from "../../shared/gates/gateStateTypes.js";
+import type {
   BubbleStateSnapshot
 } from "../../../types/bubble.js";
 import type { GatePipelineOutcome } from "../gates/gatePipelineContract.js";

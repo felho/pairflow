@@ -1,11 +1,13 @@
 import { isMetaReviewRuntimeDeliveryStatus } from "../../../shared/metaReview/metaReviewSnapshotTypes.js";
 import {
   isBubbleLifecycleState,
-  type BubbleFailingGate,
-  type BubbleLifecycleState,
-  type BubbleRoundGateState,
-  type BubbleSpecLockState
+  type BubbleLifecycleState
 } from "../../../../types/bubble.js";
+import type {
+  BubbleFailingGate,
+  BubbleRoundGateState,
+  BubbleSpecLockState
+} from "../../../shared/gates/gateStateTypes.js";
 import {
   isFindingLayer,
   isFindingPriority,

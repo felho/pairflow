@@ -2,7 +2,7 @@ import type {
   BubbleFailingGate,
   BubbleRoundGateState,
   BubbleSpecLockState
-} from "../../../types/bubble.js";
+} from "./gateStateTypes.js";
 import type { GateFindingEvaluation } from "./docContractReviewerGateEvaluation.js";
 
 export const docContractGateArtifactSchemaVersion = 1 as const;

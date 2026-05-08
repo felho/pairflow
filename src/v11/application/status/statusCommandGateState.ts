@@ -3,7 +3,7 @@ import {
   collectFailingGatesFromArtifact,
   isDocContractGateScopeActive
 } from "../../shared/gates/docContractGates.js";
-import type { BubbleFailingGate } from "../../../types/bubble.js";
+import type { BubbleFailingGate } from "../../shared/gates/gateStateTypes.js";
 import type {
   BubbleStatusState,
   ResolvedBubbleStatusContext,
