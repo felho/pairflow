@@ -16,7 +16,7 @@ import { metaReviewExecutionContextToRunningContext } from "../../../src/v11/sha
 import { readStateSnapshot, writeStateSnapshot } from "../../../src/v11/infrastructure/state/stateStore.js";
 import { parseRequiredSubmitReportJson } from "../../../src/v11/application/metaReview/metaReviewCliOptionValueReader.js";
 import type { Finding } from "../../../src/types/findings.js";
-import { DEFAULT_META_REVIEW_AUTO_REWORK_LIMIT } from "../../../src/types/bubble.js";
+import { DEFAULT_META_REVIEW_AUTO_REWORK_LIMIT } from "../../../src/v11/shared/metaReview/metaReviewSnapshotTypes.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
 import { initGitRepository } from "../../helpers/git.js";
 import { renderBubbleConfigToml } from "../../../src/config/bubbleConfig.js";

@@ -10,7 +10,7 @@ import {
 } from "../../../../src/v11/shared/metaReview/metaReviewSnapshot.js";
 import { validateMetaReviewSnapshot } from "../../../../src/v11/shared/state/stateSchemaMetaReview.js";
 import { validateMetaReviewRuntimeDelivery } from "../../../../src/v11/shared/state/stateSchemaMetaReviewRuntime.js";
-import { DEFAULT_META_REVIEW_AUTO_REWORK_LIMIT } from "../../../../src/types/bubble.js";
+import { DEFAULT_META_REVIEW_AUTO_REWORK_LIMIT } from "../../../../src/v11/shared/metaReview/metaReviewSnapshotTypes.js";
 
 describe("metaReviewSnapshot", () => {
   it("normalizes an undefined snapshot to the canonical baseline", () => {

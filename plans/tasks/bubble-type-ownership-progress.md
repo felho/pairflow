@@ -136,6 +136,14 @@ Preferred mechanical flow:
 
 ## Progress Log
 
+### Meta-review snapshot slice
+
+- Created `src/v11/shared/metaReview/metaReviewSnapshotTypes.ts` as the owner for meta-review snapshot state, runtime-delivery state/status, the auto-rework default limit, and the runtime-delivery guard.
+- Updated meta-review gate, state schema, state inspection, SSH status parsing, UI validation, and meta-review snapshot tests to import those types/constants/guards from the new owner.
+- Removed meta-review snapshot/runtime-delivery exports from `src/types/bubble.ts`; the old file now only imports `BubbleMetaReviewSnapshotState` as a type-only dependency for the remaining `BubbleStateSnapshot` aggregate.
+- Preserved UI contract governance by replacing `MetaReviewRuntimeDeliveryStatus` in `src/contracts/ui/uiReadModel.ts` with a contract-local `UiMetaReviewRuntimeDeliveryStatus` mirror.
+- Targeted verification completed: `pnpm typecheck`, `pnpm lint`, and focused meta-review snapshot/state/status/UI-contract Vitest coverage passed.
+
 ### Execution context slice
 
 - Created `src/v11/shared/state/executionContextTypes.ts` as the owner for running execution-context shapes, meta-review execution-context shape, awaited-output literals, and related guards.
@@ -189,6 +197,7 @@ Preferred mechanical flow:
 - The UI contract question mattered in practice: UI contract files should keep browser-safe contract-local mirrors rather than importing the new v11 domain owner.
 - The review policy slice confirmed the same UI rule for non-agent vocabularies: browser contracts should own their payload literals even when the backend runtime vocabulary has a clearer v11 owner.
 - The meta-review run vocabulary slice kept execution context/snapshot types out of the move; run result vocabulary and state ownership are adjacent but not the same ownership decision.
+- After execution context moved out, meta-review snapshot/runtime delivery could move independently; the full `BubbleStateSnapshot` aggregate still waits for a lifecycle/snapshot ownership slice.
 - Remote state cache should wait for lifecycle/snapshot extraction because it embeds `BubbleLifecycleState`; not every apparent slice should move all adjacent names at once.
 - Root package exports are a distinct public facade question; preserving them does not mean keeping `src/types/bubble.ts` as a bridge.
 - `src/types/bubble.ts` can safely depend on a moved owner only as a type-only aggregate dependency. A runtime value import there would be a new architecture smell.

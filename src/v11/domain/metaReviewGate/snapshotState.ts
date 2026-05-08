@@ -1,8 +1,6 @@
-import {
-  type BubbleStateSnapshot,
-  DEFAULT_META_REVIEW_AUTO_REWORK_LIMIT,
-  type BubbleMetaReviewSnapshotState
-} from "../../../types/bubble.js";
+import { DEFAULT_META_REVIEW_AUTO_REWORK_LIMIT } from "../../shared/metaReview/metaReviewSnapshotTypes.js";
+import type { BubbleMetaReviewSnapshotState } from "../../shared/metaReview/metaReviewSnapshotTypes.js";
+import { type BubbleStateSnapshot } from "../../../types/bubble.js";
 
 export function normalizeMetaReviewSnapshot(
   snapshot: BubbleMetaReviewSnapshotState | undefined

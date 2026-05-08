@@ -6,9 +6,11 @@ import {
   type ValidationError,
   type ValidationResult
 } from "../validation/primitives.js";
-import {
-  type BubbleMetaReviewSnapshotState,
-  type BubbleStateSnapshot,
+import type {
+  BubbleMetaReviewSnapshotState
+} from "../metaReview/metaReviewSnapshotTypes.js";
+import type {
+  BubbleStateSnapshot
 } from "../../../types/bubble.js";
 import { validateMetaReviewSnapshot } from "./stateSchemaMetaReview.js";
 import {

@@ -1,4 +1,10 @@
 import {
+  DEFAULT_META_REVIEW_AUTO_REWORK_LIMIT,
+  isMetaReviewRuntimeDeliveryStatus,
+  type BubbleMetaReviewRuntimeDeliveryState,
+  type BubbleMetaReviewSnapshotState
+} from "../../shared/metaReview/metaReviewSnapshotTypes.js";
+import {
   isBubbleExecutionContextAwaitedOutputType,
   isMetaReviewExecutionContextAwaitedOutputType,
   type BubbleExecutionContext,
@@ -12,8 +18,6 @@ import {
   isAgentRole
 } from "../../domain/agentIdentity/agentIdentity.js";
 import type {
-  BubbleMetaReviewRuntimeDeliveryState,
-  BubbleMetaReviewSnapshotState,
   BubbleReworkIntentRecord,
   BubbleStateSnapshot,
   RoundRoleHistoryEntry
@@ -26,9 +30,7 @@ import {
   normalizeMetaReviewRuntimeDeliveryCorrelation
 } from "../../shared/metaReview/metaReviewSnapshot.js";
 import {
-  DEFAULT_META_REVIEW_AUTO_REWORK_LIMIT,
   isBubbleLifecycleState,
-  isMetaReviewRuntimeDeliveryStatus,
   isReworkIntentStatus
 } from "../../../types/bubble.js";
 import {

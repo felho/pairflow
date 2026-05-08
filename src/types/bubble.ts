@@ -10,8 +10,10 @@ import type {
 } from "../v11/domain/agentIdentity/agentIdentity.js";
 import type {
   BubbleExecutionContext,
-  BubbleMetaReviewExecutionContext
 } from "../v11/shared/state/executionContextTypes.js";
+import type {
+  BubbleMetaReviewSnapshotState
+} from "../v11/shared/metaReview/metaReviewSnapshotTypes.js";
 import type {
   BubbleReviewPolicyConfig
 } from "../v11/shared/reviewPolicy/reviewPolicyTypes.js";
@@ -65,17 +67,6 @@ export type LocalOverlayMode = (typeof localOverlayModes)[number];
 export const gateSignalLevels = ["warning", "info"] as const;
 
 export type GateSignalLevel = (typeof gateSignalLevels)[number];
-
-export const DEFAULT_META_REVIEW_AUTO_REWORK_LIMIT = 10;
-
-export const metaReviewRuntimeDeliveryStatuses = [
-  "confirmed",
-  "uncertain",
-  "failed"
-] as const;
-
-export type MetaReviewRuntimeDeliveryStatus =
-  (typeof metaReviewRuntimeDeliveryStatuses)[number];
 
 export type GateReasonCode =
   | "DOC_CONTRACT_PARSE_WARNING"
@@ -233,27 +224,6 @@ export interface BubbleReworkIntentRecord {
   superseded_by_intent_id?: string;
 }
 
-export interface BubbleMetaReviewRuntimeDeliveryState {
-  // Observability-only diagnostic block. It must never become canonical
-  // submit/approval authority and is only active when same-authority
-  // correlation fields match the current meta-review execution context.
-  status: MetaReviewRuntimeDeliveryStatus;
-  reason_code: string | null;
-  message: string;
-  observed_at: string;
-  observed_for_handoff_id: string | null;
-  observed_for_round: number | null;
-}
-
-export interface BubbleMetaReviewSnapshotState {
-  execution_context?: BubbleMetaReviewExecutionContext | null;
-  runtime_delivery?: BubbleMetaReviewRuntimeDeliveryState | null;
-  auto_rework_count: number;
-  auto_rework_limit: number;
-  sticky_human_gate: boolean;
-  consecutive_clean_runs?: number;
-}
-
 export interface BubbleStateSnapshot {
   bubble_id: string;
   state: BubbleLifecycleState;
@@ -342,14 +312,5 @@ export function isReworkIntentStatus(value: unknown): value is ReworkIntentStatu
   return (
     typeof value === "string" &&
     (reworkIntentStatuses as readonly string[]).includes(value)
-  );
-}
-
-export function isMetaReviewRuntimeDeliveryStatus(
-  value: unknown
-): value is MetaReviewRuntimeDeliveryStatus {
-  return (
-    typeof value === "string" &&
-    (metaReviewRuntimeDeliveryStatuses as readonly string[]).includes(value)
   );
 }

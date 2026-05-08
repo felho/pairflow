@@ -1,5 +1,5 @@
 import type { LoadedStateSnapshot } from "../../../ports/stateSnapshots.js";
-import type { BubbleMetaReviewRuntimeDeliveryState } from "../../../../types/bubble.js";
+import type { BubbleMetaReviewRuntimeDeliveryState } from "../../../shared/metaReview/metaReviewSnapshotTypes.js";
 import {
   buildMetaReviewRuntimeDeliveryCorrelation
 } from "../../../shared/metaReview/metaReviewSnapshot.js";

@@ -3,7 +3,6 @@ import type {
   BubbleLifecycleState,
   BubbleRoundGateState,
   BubbleSpecLockState,
-  MetaReviewRuntimeDeliveryStatus,
   PairflowCommandProfile,
   WorkMode
 } from "../../types/bubble.js";
@@ -21,6 +20,10 @@ export type UiBubbleReviewLoopMode = "full" | "meta_only";
 export type UiBubbleReviewAutoReworkSeverity = "P1" | "P2" | "P3";
 export type UiBubbleReviewSupportStatus = "enabled" | "guarded";
 export type UiMetaReviewRecommendation = "rework" | "approve" | "inconclusive";
+export type UiMetaReviewRuntimeDeliveryStatus =
+  | "confirmed"
+  | "uncertain"
+  | "failed";
 export type UiExecutionContextActiveRole =
   | "implementer"
   | "reviewer"
@@ -91,7 +94,7 @@ export interface UiBubbleMetaReviewSummary {
   authorityActive: boolean;
   consecutiveCleanRuns: number;
   runtimeDelivery: {
-    status: MetaReviewRuntimeDeliveryStatus;
+    status: UiMetaReviewRuntimeDeliveryStatus;
     reasonCode: string | null;
     message: string;
     observedAt: string;

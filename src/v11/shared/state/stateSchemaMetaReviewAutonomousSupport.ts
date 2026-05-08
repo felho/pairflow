@@ -1,4 +1,4 @@
-import type { BubbleMetaReviewSnapshotState } from "../../../types/bubble.js";
+import type { BubbleMetaReviewSnapshotState } from "../metaReview/metaReviewSnapshotTypes.js";
 import { isInteger, type ValidationError } from "../validation/primitives.js";
 
 export function validateMetaReviewAutonomousControls(input: {

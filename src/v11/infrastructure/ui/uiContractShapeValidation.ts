@@ -9,7 +9,9 @@ import {
   isBubbleReviewAutoReworkSeverity
 } from "../../shared/reviewPolicy/reviewPolicyTypes.js";
 import {
-  isMetaReviewRuntimeDeliveryStatus,
+  isMetaReviewRuntimeDeliveryStatus
+} from "../../shared/metaReview/metaReviewSnapshotTypes.js";
+import {
   workModes
 } from "../../../types/bubble.js";
 

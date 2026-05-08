@@ -1,6 +1,6 @@
+import { isMetaReviewRuntimeDeliveryStatus } from "../../../shared/metaReview/metaReviewSnapshotTypes.js";
 import {
   isBubbleLifecycleState,
-  isMetaReviewRuntimeDeliveryStatus,
   type BubbleFailingGate,
   type BubbleLifecycleState,
   type BubbleRoundGateState,
