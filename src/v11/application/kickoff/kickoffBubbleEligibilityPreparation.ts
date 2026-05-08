@@ -9,9 +9,11 @@ import {
   type KickoffEligibilityResolvedBubble,
   type KickoffValidationBubbleInput
 } from "./kickoffEligibilityStateLoading.js";
+import { prepareKickoffEligibility } from "./kickoffEligibilityPreparation.js";
 import {
-  prepareKickoffEligibilityOrFailure
-} from "./kickoffEligibilityPreparationOrFailure.js";
+  buildKickoffEligibilityOutcome,
+  type PrepareKickoffEligibilityOrFailureResult
+} from "./kickoffEligibilityOutcomeBuilder.js";
 export type {
   KickoffEligibilityLoadedState,
   KickoffEligibilityResolvedBubble,
@@ -33,6 +35,23 @@ export type PrepareKickoffBubbleEligibilityOrFailureResult =
       state: KickoffEligibilityLoadedState["state"];
       markersBefore: KickoffIdeationMarkers;
     };
+
+function prepareKickoffEligibilityOrFailure(input: {
+  resolvedBubbleId: string;
+  state: KickoffEligibilityLoadedState["state"];
+  bubbleConfig: KickoffEligibilityResolvedBubble["bubbleConfig"];
+}): PrepareKickoffEligibilityOrFailureResult {
+  const preparedEligibility = prepareKickoffEligibility({
+    bubbleConfig: input.bubbleConfig,
+    state: input.state
+  });
+  return buildKickoffEligibilityOutcome({
+    resolvedBubbleId: input.resolvedBubbleId,
+    state: input.state,
+    markersBefore: preparedEligibility.markersBefore,
+    eligibilityFailureReason: preparedEligibility.eligibilityFailureReason
+  });
+}
 
 export async function prepareKickoffBubbleEligibilityOrFailure(input: {
   validationInput: KickoffValidationBubbleInput;

@@ -1,4 +1,3 @@
-import { renderKickoffTaskArtifactFromInput } from "./kickoffTaskArtifactRendering.js";
 import type {
   KickoffReadFile,
   KickoffStatFile
@@ -46,8 +45,14 @@ async function resolveKickoffTaskFromInputMode(input: {
   });
 }
 
+function renderKickoffTaskSourceLine(task: ResolvedKickoffTaskInput): string {
+  return task.source === "file"
+    ? `Source: file (${task.sourcePath})`
+    : "Source: inline text";
+}
+
 export function renderKickoffTaskArtifact(task: ResolvedKickoffTaskInput): string {
-  return renderKickoffTaskArtifactFromInput(task);
+  return `# Bubble Task\n\n${renderKickoffTaskSourceLine(task)}\n\n${task.content}\n`;
 }
 
 export async function resolveKickoffTaskInput(input: {
