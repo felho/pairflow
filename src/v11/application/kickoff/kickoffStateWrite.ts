@@ -1,6 +1,5 @@
 import type { BubbleStateSnapshot } from "../../shared/state/bubbleStateSnapshotTypes.js";
-import { buildKickoffWriteStateOptions } from "./kickoffStateWriteOptions.js";
-import { resolveKickoffWriteErrorResult } from "./kickoffStateWriteErrorResult.js";
+import { isNamedError } from "../../shared/errors/namedError.js";
 
 export interface KickoffWrittenState {
   fingerprint: string;
@@ -45,9 +44,10 @@ function performKickoffStateWrite(
   return input.writeState(
     input.statePath,
     input.nextState,
-    buildKickoffWriteStateOptions({
-      expectedFingerprint: input.expectedFingerprint
-    })
+    {
+      expectedFingerprint: input.expectedFingerprint,
+      expectedState: "RUNNING"
+    }
   );
 }
 
@@ -60,9 +60,10 @@ export async function writeKickoffState(
       writtenState
     });
   } catch (error) {
-    const errorResult = resolveKickoffWriteErrorResult(error);
-    if (errorResult !== null) {
-      return errorResult;
+    if (isNamedError(error, "StateStoreConflictError")) {
+      return {
+        kind: "conflict"
+      };
     }
     throw error;
   }
