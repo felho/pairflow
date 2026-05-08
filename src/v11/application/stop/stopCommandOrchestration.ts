@@ -104,6 +104,12 @@ export async function stopBubbleCommandOrchestration(
   };
 }
 
+export type {
+  StopBubbleDependencies,
+  StopBubbleInput,
+  StopBubbleResult
+} from "./stopCommandContract.js";
+
 export {
   StopBubbleError,
   throwAsStopBubbleError

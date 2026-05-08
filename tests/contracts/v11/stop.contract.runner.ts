@@ -3,11 +3,11 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import {
-  stopBubbleV11,
-  type StopBubbleV11Dependencies as StopBubbleDependencies,
-  type StopBubbleV11Input as StopBubbleInput,
-  type StopBubbleV11Result as StopBubbleResult
-} from "../../../src/v11/application/stop/emitStopV11.js";
+  stopBubbleCommandOrchestration,
+  type StopBubbleDependencies,
+  type StopBubbleInput,
+  type StopBubbleResult
+} from "../../../src/v11/application/stop/stopCommandOrchestration.js";
 import {
   readStateSnapshot,
   writeStateSnapshot
@@ -263,7 +263,7 @@ export async function runStopContractCase(
 
   const v11 = await executeStopCase({
     caseDef,
-    executor: stopBubbleV11
+    executor: stopBubbleCommandOrchestration
   });
   assertContractExpectedSubset({
     output: v11,

@@ -5,8 +5,8 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { renderBubbleConfigToml } from "../../../src/config/bubbleConfig.js";
-import { emitConvergedFromWorkspaceV11 as emitConvergedFromWorkspace } from "../../../src/v11/application/converged/emitConvergedV11.js";
-import { emitPassFromWorkspaceV11 as emitPassFromWorkspace } from "../../../src/v11/application/pass/emitPassV11.js";
+import { emitConvergedFromWorkspaceCommandOrchestration as emitConvergedFromWorkspace } from "../../../src/v11/application/converged/convergedCommandOrchestration.js";
+import { emitPassFromWorkspace } from "../../../src/v11/application/pass/passCommandOrchestration.js";
 import { runAgentEmitCommand } from "../../../src/cli/commands/agent/emit.js";
 import { createBubble } from "../../../src/v11/defaults/create/createBubbleApi.js";
 import { submitMetaReviewResultV11 as submitMetaReviewResult } from "../../../src/v11/defaults/metaReview/metaReviewApi.js";

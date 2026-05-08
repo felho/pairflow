@@ -1,10 +1,10 @@
 import { parseArgs } from "node:util";
 
 import {
-  asResumeBubbleErrorV11 as asResumeBubbleError,
-  resumeBubbleV11 as resumeBubble,
-  type ResumeBubbleV11Result as ResumeBubbleResult
-} from "../../../v11/application/resume/emitResumeV11.js";
+  throwAsResumeBubbleError as asResumeBubbleError,
+  resumeBubbleCommandOrchestration as resumeBubble,
+  type ResumeBubbleResult
+} from "../../../v11/application/resume/resumeCommandOrchestration.js";
 
 export interface BubbleResumeCommandOptions {
   id: string;

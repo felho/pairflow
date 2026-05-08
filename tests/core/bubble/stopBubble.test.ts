@@ -6,9 +6,9 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import { createBubble } from "../../../src/v11/defaults/create/createBubbleApi.js";
 import {
-  StopBubbleErrorV11 as StopBubbleError,
-  stopBubbleV11 as stopBubble
-} from "../../../src/v11/application/stop/emitStopV11.js";
+  StopBubbleError,
+  stopBubbleCommandOrchestration as stopBubble
+} from "../../../src/v11/application/stop/stopCommandOrchestration.js";
 import { stopBubbleDependencyDefaults } from "../../../src/v11/defaults/stop/stopCommandDefaults.js";
 import { readStateSnapshot } from "../../../src/v11/infrastructure/state/stateStore.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";

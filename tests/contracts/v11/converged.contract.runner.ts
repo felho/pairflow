@@ -3,11 +3,11 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import {
-  emitConvergedFromWorkspaceV11,
-  type EmitConvergedV11Dependencies as EmitConvergedDependencies,
-  type EmitConvergedV11Input as EmitConvergedInput,
-  type EmitConvergedV11Result as EmitConvergedResult
-} from "../../../src/v11/application/converged/emitConvergedV11.js";
+  emitConvergedFromWorkspaceCommandOrchestration,
+  type EmitConvergedDependencies,
+  type EmitConvergedInput,
+  type EmitConvergedResult
+} from "../../../src/v11/application/converged/convergedCommandOrchestration.js";
 import { resolveConvergedSummaryFindingsContradiction } from "../../../src/v11/domain/convergence/policy.js";
 import { applyMetaReviewGateOnConvergenceV11 } from "../../../src/v11/defaults/metaReviewGate/metaReviewGateApi.js";
 import {
@@ -710,7 +710,7 @@ function assertFixtureRuntimeBinding(input: {
 
 async function executeConvergedCase(input: {
   caseDef: ContractCase;
-  executor: typeof emitConvergedFromWorkspaceV11;
+  executor: typeof emitConvergedFromWorkspaceCommandOrchestration;
   applyMetaReviewGateExecutor?: EmitConvergedDependencies["applyMetaReviewGateOnConvergence"];
 }): Promise<ConvergedContractOutput> {
   const repoPath = await mkdtemp(join(tmpdir(), "pairflow-converged-contract-"));
@@ -818,7 +818,7 @@ export async function runConvergedContractCase(
 
   const v11 = await executeConvergedCase({
     caseDef,
-    executor: emitConvergedFromWorkspaceV11,
+    executor: emitConvergedFromWorkspaceCommandOrchestration,
     applyMetaReviewGateExecutor: applyMetaReviewGateOnConvergenceV11
   });
   assertContractExpectedSubset({

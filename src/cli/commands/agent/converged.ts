@@ -1,9 +1,9 @@
 import { parseArgs } from "node:util";
 
 import {
-  asConvergedCommandErrorV11 as asConvergedCommandError,
-  type EmitConvergedV11Result as EmitConvergedResult
-} from "../../../v11/application/converged/emitConvergedV11.js";
+  throwAsConvergedCommandError as asConvergedCommandError,
+  type EmitConvergedResult
+} from "../../../v11/application/converged/convergedCommandOrchestration.js";
 import type {
   ConvergedStructuredFinding
 } from "../../../v11/shared/converged/convergedCommandTypes.js";

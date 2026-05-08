@@ -13,12 +13,12 @@ import type { BubbleConfig } from "../../../../src/v11/shared/config/bubbleConfi
 import type { BubbleStateSnapshot } from "../../../../src/v11/shared/state/bubbleStateSnapshotTypes.js";
 import type { ProtocolEnvelope } from "../../../../src/types/protocol.js";
 import {
-  emitConvergedFromWorkspaceV11 as emitConvergedFromWorkspace
-} from "../../../../src/v11/application/converged/emitConvergedV11.js";
+  emitConvergedFromWorkspaceCommandOrchestration as emitConvergedFromWorkspace
+} from "../../../../src/v11/application/converged/convergedCommandOrchestration.js";
 import { emitPassFromWorkspace } from "../../../../src/v11/application/pass/passCommandOrchestration.js";
 import { submitMetaReviewResultV11 as submitMetaReviewResult } from "../../../../src/v11/defaults/metaReview/metaReviewApi.js";
-import { emitApproveV11 as emitApprove } from "../../../../src/v11/application/approval/emitApprovalV11.js";
-import { commitBubbleV11 as commitBubble } from "../../../../src/v11/application/commit/emitCommitV11.js";
+import { emitApprove } from "../../../../src/v11/application/approval/approvalCommandApi.js";
+import { commitBubble } from "../../../../src/v11/application/commit/commitCommandApi.js";
 import {
   remoteCommitModeEnvVar,
   remoteCommitModeInnerRemoteExecution,

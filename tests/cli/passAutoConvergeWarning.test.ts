@@ -1,6 +1,6 @@
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { EmitPassV11Result as EmitPassResult } from "../../src/v11/application/pass/emitPassV11.js";
+import type { EmitPassResult } from "../../src/v11/application/pass/passCommandOrchestration.js";
 
 describe("runCli auto-converge warning parity", () => {
   const stdoutSpy = vi.spyOn(process.stdout, "write").mockImplementation(() => true);

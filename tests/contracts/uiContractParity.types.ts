@@ -195,7 +195,7 @@ import type {
 } from "../../src/types/ui.js";
 import type {
   ReadRuntimeSessionsRegistryPort,
-  RuntimeSessionRecord as RuntimeSessionRecord
+  RuntimeSessionRecord
 } from "../../src/v11/ports/runtimeSessions.js";
 import type {
   ActiveMetaReviewRuntimeDeliveryView
@@ -214,82 +214,82 @@ import type {
   StateValidationDiagnostics as UiStateValidationDiagnostics
 } from "../../ui/src/lib/contracts/stateValidation.js";
 import type {
-  UiBubbleListRemoteExecution as UiBubbleListRemoteExecution,
-  UiBubbleRemoteCacheStatus as UiBubbleRemoteCacheStatus,
-  UiBubbleRemoteExecution as UiBubbleRemoteExecution,
-  UiBubbleStatusCacheReasonCode as UiBubbleStatusCacheReasonCode,
-  UiBubbleStatusRemoteExecution as UiBubbleStatusRemoteExecution
+  UiBubbleListRemoteExecution,
+  UiBubbleRemoteCacheStatus,
+  UiBubbleRemoteExecution,
+  UiBubbleStatusCacheReasonCode,
+  UiBubbleStatusRemoteExecution
 } from "../../ui/src/lib/contracts/uiRemoteExecution.js";
 import type {
-  UiApiErrorBody as UiApiErrorBody
+  UiApiErrorBody
 } from "../../ui/src/lib/contracts/uiErrors.js";
 import type {
-  UiEvent as UiEvent,
-  UiEventsConnectedPayload as UiEventsConnectedPayload,
-  UiSnapshotEvent as UiSnapshotEvent
+  UiEvent,
+  UiEventsConnectedPayload,
+  UiSnapshotEvent
 } from "../../ui/src/lib/contracts/uiEvents.js";
 import type {
   MetaReviewQualityPreset as UiMetaReviewQualityPreset,
-  UiActionAgentName as UiActionAgentName,
-  UiActionAgentRole as UiActionAgentRole,
-  UiActionApprovalDecision as UiActionApprovalDecision,
-  UiActionBubbleState as UiActionBubbleState,
+  UiActionAgentName,
+  UiActionAgentRole,
+  UiActionApprovalDecision,
+  UiActionBubbleState,
   UiActionEvent as UiActionEventResult,
-  UiActionExecutionContextRef as UiActionExecutionContextRef,
-  UiActionFindingsClaimSource as UiActionFindingsClaimSource,
-  UiActionFindingsClaimState as UiActionFindingsClaimState,
-  UiActionPassIntent as UiActionPassIntent,
-  UiActionPendingReworkIntent as UiActionPendingReworkIntent,
-  UiActionProtocolMessageType as UiActionProtocolMessageType,
-  UiActionProtocolParticipant as UiActionProtocolParticipant,
-  UiApprovalDecisionDeliverySignal as UiApprovalDecisionDeliverySignal,
-  UiApprovalDecisionDeliverySignals as UiApprovalDecisionDeliverySignals,
-  UiAttachLauncher as UiAttachLauncher,
-  UiCommitBubbleInput as UiCommitBubbleInput,
-  UiCommitBubbleResult as UiCommitBubbleResult,
-  UiAttachBubbleInput as UiAttachBubbleInput,
-  UiBubbleMutationInput as UiBubbleMutationInput,
-  UiDeleteBubbleResult as UiDeleteBubbleResult,
-  UiDeleteBubbleInput as UiDeleteBubbleInput,
-  UiDeliveryAckReasonCode as UiDeliveryAckReasonCode,
-  UiDeliveryFailureReason as UiDeliveryFailureReason,
-  UiDeliveryTargetReasonCode as UiDeliveryTargetReasonCode,
-  UiEmitApprovalDecisionResult as UiEmitApprovalDecisionResult,
-  UiEmitApproveInput as UiEmitApproveInput,
-  UiEmitHumanReplyInput as UiEmitHumanReplyInput,
-  UiEmitHumanReplyResult as UiEmitHumanReplyResult,
-  UiEmitRequestReworkImmediateResult as UiEmitRequestReworkImmediateResult,
-  UiEmitRequestReworkInput as UiEmitRequestReworkInput,
-  UiEmitRequestReworkQueuedResult as UiEmitRequestReworkQueuedResult,
-  UiEmitRequestReworkResult as UiEmitRequestReworkResult,
-  UiAttachBubbleResult as UiAttachBubbleResult,
-  UiMergeBubbleInput as UiMergeBubbleInput,
-  UiMergeBubbleResult as UiMergeBubbleResult,
-  UiOpenBubbleResult as UiOpenBubbleResult,
-  UiPassValidationRecoveryMarkerPersistWarning as UiPassValidationRecoveryMarkerPersistWarning,
-  UiRestartBubbleResult as UiRestartBubbleResult,
-  UiStartBubbleResult as UiStartBubbleResult,
-  UiStopBubbleResult as UiStopBubbleResult,
-  UiUpdateBubbleReviewPolicyInput as UiUpdateBubbleReviewPolicyInput,
-  UiUpdateBubbleReviewPolicyResult as UiUpdateBubbleReviewPolicyResult
+  UiActionExecutionContextRef,
+  UiActionFindingsClaimSource,
+  UiActionFindingsClaimState,
+  UiActionPassIntent,
+  UiActionPendingReworkIntent,
+  UiActionProtocolMessageType,
+  UiActionProtocolParticipant,
+  UiApprovalDecisionDeliverySignal,
+  UiApprovalDecisionDeliverySignals,
+  UiAttachLauncher,
+  UiCommitBubbleInput,
+  UiCommitBubbleResult,
+  UiAttachBubbleInput,
+  UiBubbleMutationInput,
+  UiDeleteBubbleResult,
+  UiDeleteBubbleInput,
+  UiDeliveryAckReasonCode,
+  UiDeliveryFailureReason,
+  UiDeliveryTargetReasonCode,
+  UiEmitApprovalDecisionResult,
+  UiEmitApproveInput,
+  UiEmitHumanReplyInput,
+  UiEmitHumanReplyResult,
+  UiEmitRequestReworkImmediateResult,
+  UiEmitRequestReworkInput,
+  UiEmitRequestReworkQueuedResult,
+  UiEmitRequestReworkResult,
+  UiAttachBubbleResult,
+  UiMergeBubbleInput,
+  UiMergeBubbleResult,
+  UiOpenBubbleResult,
+  UiPassValidationRecoveryMarkerPersistWarning,
+  UiRestartBubbleResult,
+  UiStartBubbleResult,
+  UiStopBubbleResult,
+  UiUpdateBubbleReviewPolicyInput,
+  UiUpdateBubbleReviewPolicyResult
 } from "../../ui/src/lib/contracts/uiActions.js";
 import type {
-  UiBubbleDetail as UiBubbleDetail,
-  UiBubbleInboxInput as UiBubbleInboxInput,
-  UiBubbleInboxItem as UiBubbleInboxItem,
-  UiBubbleInboxView as UiBubbleInboxView,
-  UiBubbleListEntry as UiBubbleListEntry,
-  UiBubbleListStateCounts as UiBubbleListStateCounts,
-  UiBubbleListView as UiBubbleListView,
-  UiBubbleMetaReviewSummary as UiBubbleMetaReviewSummary,
-  UiBubbleReviewPolicy as UiBubbleReviewPolicy,
-  UiBubbleStatusInput as UiBubbleStatusInput,
-  UiBubbleStatusView as UiBubbleStatusView,
-  UiBubbleSummary as UiBubbleSummary,
-  UiBubbleWatchdog as UiBubbleWatchdog,
-  UiPendingInboxItemSource as UiPendingInboxItemSource,
-  UiRepoSummary as UiRepoSummary,
-  UiRuntimeSessionRecord as UiRuntimeSessionRecord
+  UiBubbleDetail,
+  UiBubbleInboxInput,
+  UiBubbleInboxItem,
+  UiBubbleInboxView,
+  UiBubbleListEntry,
+  UiBubbleListStateCounts,
+  UiBubbleListView,
+  UiBubbleMetaReviewSummary,
+  UiBubbleReviewPolicy,
+  UiBubbleStatusInput,
+  UiBubbleStatusView,
+  UiBubbleSummary,
+  UiBubbleWatchdog,
+  UiPendingInboxItemSource,
+  UiRepoSummary,
+  UiRuntimeSessionRecord
 } from "../../ui/src/lib/contracts/uiReadModel.js";
 import type {
   PairflowApiClient

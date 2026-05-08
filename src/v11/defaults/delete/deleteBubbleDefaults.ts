@@ -11,7 +11,7 @@ import { ensureBubbleInstanceIdForMutation } from "../bubbleIdentity/bubbleIdent
 import { branchExists } from "../git/gitDefaults.js";
 import { readRuntimeSessionsRegistry, removeRuntimeSession } from "../runtimeSessions/runtimeSessionsDefaults.js";
 import { readStateSnapshot } from "../state/stateStoreDefaults.js";
-import { stopBubbleV11 } from "../../application/stop/emitStopV11.js";
+import { stopBubbleCommandOrchestration } from "../../application/stop/stopCommandOrchestration.js";
 import { stopBubbleDependencyDefaults } from "../stop/stopCommandDefaults.js";
 import { terminateBubbleTmuxSession } from "../tmux/tmuxSessionDefaults.js";
 import { cleanupWorktreeWorkspace } from "../worktree/worktreeWorkspaceDefaults.js";
@@ -21,8 +21,8 @@ import { statusCommandDependencyDefaults } from "../status/statusCommandDependen
 import { removeWatchdogPaneActivity } from "../watchdog/watchdogPaneActivityDefaults.js";
 import type { DeleteBubbleDefaultDependencies } from "../../application/delete/deleteBubbleSupport.js";
 
-const stopBubble: typeof stopBubbleV11 = (input, dependencies = {}) =>
-  stopBubbleV11(input, {
+const stopBubble: typeof stopBubbleCommandOrchestration = (input, dependencies = {}) =>
+  stopBubbleCommandOrchestration(input, {
     ...stopBubbleDependencyDefaults,
     ...dependencies
   });

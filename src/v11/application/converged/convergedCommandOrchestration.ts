@@ -53,3 +53,11 @@ export function throwAsConvergedCommandError(error: unknown): never {
     createConvergedCommandError
   });
 }
+
+export { ConvergedCommandError } from "../../shared/converged/convergedCommandError.js";
+export { resolveConvergedRolloutBlockingReasonCodes } from "./convergedRolloutBlockingReasonResolver.js";
+export type {
+  EmitConvergedDependencies,
+  EmitConvergedInput,
+  EmitConvergedResult
+} from "../../shared/converged/convergedCommandTypes.js";

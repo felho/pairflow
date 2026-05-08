@@ -1,9 +1,9 @@
 import { parseArgs } from "node:util";
 
 import {
-  asAskHumanCommandErrorV11 as asAskHumanCommandError,
-  type EmitAskHumanV11Result as EmitAskHumanResult
-} from "../../../v11/application/askHuman/emitAskHumanV11.js";
+  asAskHumanCommandError,
+  type EmitAskHumanResult
+} from "../../../v11/application/askHuman/askHumanCommandApi.js";
 import {
   buildLegacyActorCommandRemovedError,
   isLegacyActorCommandHelpRequest

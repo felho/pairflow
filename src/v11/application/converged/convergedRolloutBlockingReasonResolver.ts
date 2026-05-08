@@ -1,6 +1,6 @@
 import type { PairflowCommandPathAssessment } from "../../ports/pairflowCommand.js";
 import {
-  resolveMetaReviewRolloutBlockingReasonCodesV11
+  resolveConvergedRolloutBlockingReasonCodes as resolveMetaReviewRolloutBlockingReasonCodes
 } from "./metaReviewRolloutBlockingReasonCodes.js";
 import { type MetaReviewGateRoute } from "../../shared/metaReviewGate/index.js";
 
@@ -12,5 +12,5 @@ export interface ResolveConvergedRolloutBlockingReasonCodesInput {
 export function resolveConvergedRolloutBlockingReasonCodes(
   input: ResolveConvergedRolloutBlockingReasonCodesInput
 ): string[] {
-  return resolveMetaReviewRolloutBlockingReasonCodesV11(input);
+  return resolveMetaReviewRolloutBlockingReasonCodes(input);
 }

@@ -1,9 +1,9 @@
 import { parseArgs } from "node:util";
 
 import {
-  asPassCommandErrorV11 as asPassCommandError,
-  type EmitPassV11Result as EmitPassResult
-} from "../../../v11/application/pass/emitPassV11.js";
+  asPassCommandError,
+  type EmitPassResult
+} from "../../../v11/application/pass/passCommandOrchestration.js";
 import { CliFindingParseError, parseCliFinding } from "./shared/findingParser.js";
 import { isPassIntent, type PassIntent } from "../../../types/protocol.js";
 import {

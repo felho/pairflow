@@ -1,8 +1,8 @@
 import {
-  asRestartBubbleErrorV11,
-  restartBubbleV11,
-  type RestartBubbleV11Result
-} from "./emitRestartV11.js";
+  asRestartBubbleError,
+  restartBubble,
+  type RestartBubbleResult
+} from "./restartCommandApi.js";
 import {
   getBubbleRestartHelpTextV11,
   parseBubbleRestartCommandOptionsV11,
@@ -16,7 +16,7 @@ export type {
 } from "./restartCommandCliOptions.js";
 
 export interface BubbleRestartCommandDependencies {
-  restartBubble?: typeof restartBubbleV11;
+  restartBubble?: typeof restartBubble;
 }
 
 export function getBubbleRestartHelpText(): string {
@@ -33,13 +33,13 @@ export async function runBubbleRestartCommand(
   args: string[],
   cwd: string = process.cwd(),
   dependencies: BubbleRestartCommandDependencies = {}
-): Promise<RestartBubbleV11Result | null> {
+): Promise<RestartBubbleResult | null> {
   const options = parseBubbleRestartCommandOptions(args);
   if (options.help) {
     return null;
   }
 
-  const runRestartBubble = dependencies.restartBubble ?? restartBubbleV11;
+  const runRestartBubble = dependencies.restartBubble ?? restartBubble;
   try {
     return await runRestartBubble({
       bubbleId: options.id,
@@ -47,6 +47,6 @@ export async function runBubbleRestartCommand(
       cwd
     });
   } catch (error) {
-    asRestartBubbleErrorV11(error);
+    asRestartBubbleError(error);
   }
 }

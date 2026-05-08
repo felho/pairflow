@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { AskHumanCommandErrorV11 } from "../../src/v11/application/askHuman/emitAskHumanV11.js";
+import { AskHumanCommandError } from "../../src/v11/application/askHuman/askHumanCommandApi.js";
 import * as actorEmitContextModule from "../../src/v11/shared/actorProtocol/actorEmitContext.js";
 import * as actorProtocolModule from "../../src/v11/application/actorProtocol/emitActorProtocolV11.js";
 import {
@@ -70,7 +70,7 @@ describe("runAskHumanCommand", () => {
         ["--question", "Need decision"],
         "/tmp/pairflow-repo"
       )
-    ).toThrowError(AskHumanCommandErrorV11);
+    ).toThrowError(AskHumanCommandError);
     expect(() =>
       runAskHumanCommand(
         ["--question", "Need decision"],
@@ -83,7 +83,7 @@ describe("runAskHumanCommand", () => {
 
   it("fails closed with removal guidance even when legacy args are missing", async () => {
     expect(() => runAskHumanCommand([], "/tmp/pairflow-repo")).toThrowError(
-      AskHumanCommandErrorV11
+      AskHumanCommandError
     );
     expect(() => runAskHumanCommand([], "/tmp/pairflow-repo")).toThrow(
       /LEGACY_COMMAND_REMOVED/u

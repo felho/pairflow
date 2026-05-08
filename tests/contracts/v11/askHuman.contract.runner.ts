@@ -3,10 +3,10 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import {
-  emitAskHumanFromWorkspaceV11,
-  type EmitAskHumanV11Dependencies as EmitAskHumanDependencies,
-  type EmitAskHumanV11Result as EmitAskHumanResult
-} from "../../../src/v11/application/askHuman/emitAskHumanV11.js";
+  emitAskHumanFromWorkspace,
+  type EmitAskHumanDependencies,
+  type EmitAskHumanResult
+} from "../../../src/v11/application/askHuman/askHumanCommandApi.js";
 import {
   readStateSnapshot,
   writeStateSnapshot
@@ -309,7 +309,7 @@ function assertContractExpectedSubset(input: {
 
 async function executeAskHumanCase(input: {
   caseDef: ContractCase;
-  executor: typeof emitAskHumanFromWorkspaceV11;
+  executor: typeof emitAskHumanFromWorkspace;
   label: string;
 }): Promise<AskHumanContractResultOutput> {
   const repoPath = await mkdtemp(join(tmpdir(), "pairflow-ask-human-contract-"));
@@ -462,7 +462,7 @@ export async function runAskHumanContractCase(
 
   const v11 = await executeAskHumanCase({
     caseDef,
-    executor: emitAskHumanFromWorkspaceV11,
+    executor: emitAskHumanFromWorkspace,
     label: "v11"
   });
   assertContractExpectedSubset({

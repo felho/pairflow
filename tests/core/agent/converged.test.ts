@@ -5,12 +5,12 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 import {
-  ConvergedCommandErrorV11 as ConvergedCommandError,
-  emitConvergedFromWorkspaceV11 as emitConvergedFromWorkspace,
-  resolveMetaReviewRolloutBlockingReasonCodesV11 as resolveMetaReviewRolloutBlockingReasonCodes
-} from "../../../src/v11/application/converged/emitConvergedV11.js";
+  ConvergedCommandError,
+  emitConvergedFromWorkspaceCommandOrchestration as emitConvergedFromWorkspace,
+  resolveConvergedRolloutBlockingReasonCodes as resolveMetaReviewRolloutBlockingReasonCodes
+} from "../../../src/v11/application/converged/convergedCommandOrchestration.js";
 import { buildMetaReviewExecutionContext } from "../../../src/v11/shared/metaReview/metaReviewExecutionContext.js";
-import { emitPassFromWorkspaceV11 as emitPassFromWorkspace } from "../../../src/v11/application/pass/emitPassV11.js";
+import { emitPassFromWorkspace } from "../../../src/v11/application/pass/passCommandOrchestration.js";
 import { renderBubbleConfigToml } from "../../../src/config/bubbleConfig.js";
 import { createBubble } from "../../../src/v11/defaults/create/createBubbleApi.js";
 import { IDEATION_CONVERGED_BLOCKED } from "../../../src/v11/shared/ideation/ideationReasonCodes.js";

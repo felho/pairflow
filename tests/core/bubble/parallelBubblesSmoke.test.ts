@@ -4,7 +4,7 @@ import { join } from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import { emitPassFromWorkspaceV11 as emitPassFromWorkspace } from "../../../src/v11/application/pass/emitPassV11.js";
+import { emitPassFromWorkspace } from "../../../src/v11/application/pass/passCommandOrchestration.js";
 import { listBubbles } from "../../../src/v11/application/list/listReadModelApi.js";
 import { listCommandDefaults } from "../../../src/v11/defaults/list/listCommandDefaults.js";
 import { readTranscriptEnvelopes } from "../../../src/v11/infrastructure/artifact/transcript/transcriptStore.js";

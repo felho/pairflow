@@ -5,10 +5,10 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 import {
-  asAskHumanCommandErrorV11,
-  AskHumanCommandErrorV11,
-  emitAskHumanFromWorkspaceV11
-} from "../../../../src/v11/application/askHuman/emitAskHumanV11.js";
+  asAskHumanCommandError,
+  AskHumanCommandError,
+  emitAskHumanFromWorkspace
+} from "../../../../src/v11/application/askHuman/askHumanCommandApi.js";
 import { askHumanFinalizationDefaults } from "../../../../src/v11/defaults/askHuman/askHumanFinalizationDefaults.js";
 import { WorkspaceResolutionError } from "../../../../src/v11/infrastructure/executor/workspace/workspaceResolution.js";
 import { createBubble } from "../../../../src/v11/defaults/create/createBubbleApi.js";
@@ -35,7 +35,7 @@ afterEach(async () => {
   );
 });
 
-describe("emitAskHumanFromWorkspaceV11", () => {
+describe("emitAskHumanFromWorkspace", () => {
   it("writes HUMAN_QUESTION to transcript + inbox and transitions to WAITING_HUMAN", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupRunningBubbleFixture({
@@ -46,7 +46,7 @@ describe("emitAskHumanFromWorkspaceV11", () => {
     const authorityBeforeEmit = await readStateSnapshot(bubble.paths.statePath);
     const now = new Date("2026-02-21T12:10:00.000Z");
 
-    const result = await emitAskHumanFromWorkspaceV11(
+    const result = await emitAskHumanFromWorkspace(
       {
         question: "Should we keep backwards compatibility?",
         refs: ["artifact://analysis/risk.md"],
@@ -117,11 +117,11 @@ describe("emitAskHumanFromWorkspaceV11", () => {
     });
 
     await expect(
-      emitAskHumanFromWorkspaceV11({
+      emitAskHumanFromWorkspace({
         question: "Need human input",
         cwd: bubble.paths.worktreePath
       })
-    ).rejects.toBeInstanceOf(AskHumanCommandErrorV11);
+    ).rejects.toBeInstanceOf(AskHumanCommandError);
   });
 
   it("forwards optional notification dependencies through v11 wrapper", async () => {
@@ -133,7 +133,7 @@ describe("emitAskHumanFromWorkspaceV11", () => {
     });
 
     const deliveryRefs: string[] = [];
-    const result = await emitAskHumanFromWorkspaceV11(
+    const result = await emitAskHumanFromWorkspace(
       {
         question: "Need operator input",
         cwd: bubble.paths.worktreePath,
@@ -174,27 +174,27 @@ describe("emitAskHumanFromWorkspaceV11", () => {
   });
 });
 
-describe("asAskHumanCommandErrorV11", () => {
-  it("rethrows AskHumanCommandErrorV11 instances as-is", () => {
-    const original = new AskHumanCommandErrorV11("already normalized");
-    expect(() => asAskHumanCommandErrorV11(original)).toThrow(original);
+describe("asAskHumanCommandError", () => {
+  it("rethrows AskHumanCommandError instances as-is", () => {
+    const original = new AskHumanCommandError("already normalized");
+    expect(() => asAskHumanCommandError(original)).toThrow(original);
   });
 
-  it("maps WorkspaceResolutionError to AskHumanCommandErrorV11", () => {
+  it("maps WorkspaceResolutionError to AskHumanCommandError", () => {
     expect(() =>
-      asAskHumanCommandErrorV11(
+      asAskHumanCommandError(
         new WorkspaceResolutionError("workspace lookup failed")
       )
-    ).toThrowError(AskHumanCommandErrorV11);
+    ).toThrowError(AskHumanCommandError);
   });
 
-  it("maps generic Error to AskHumanCommandErrorV11", () => {
-    expect(() => asAskHumanCommandErrorV11(new Error("unexpected"))).toThrowError(
-      AskHumanCommandErrorV11
+  it("maps generic Error to AskHumanCommandError", () => {
+    expect(() => asAskHumanCommandError(new Error("unexpected"))).toThrowError(
+      AskHumanCommandError
     );
   });
 
   it("rethrows non-Error values unchanged", () => {
-    expect(() => asAskHumanCommandErrorV11("raw-error")).toThrow("raw-error");
+    expect(() => asAskHumanCommandError("raw-error")).toThrow("raw-error");
   });
 });

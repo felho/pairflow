@@ -31,7 +31,7 @@ import type {
   TmuxRunner
 } from "../../ports/tmuxSessions.js";
 import type { RemoteBubbleStatusTarget } from "../../shared/status/remoteBubbleStatusContract.js";
-import type { stopBubbleV11 } from "../stop/emitStopV11.js";
+import type { stopBubbleCommandOrchestration } from "../stop/stopCommandOrchestration.js";
 import { inferBubbleStartedAtFromInstanceId } from "../../shared/bubble/bubbleInstanceId.js";
 import {
   canonicalizeDeleteExecutionPath,
@@ -131,7 +131,7 @@ export interface DeleteBubbleDefaultDependencies {
   }) => Promise<RemoteBubbleStatusTarget>;
   resolveBubbleById: ResolveBubbleByIdPort;
   runTmux: TmuxRunner;
-  stopBubble: typeof stopBubbleV11;
+  stopBubble: typeof stopBubbleCommandOrchestration;
   TmuxCommandError: TmuxCommandErrorConstructor;
   terminateBubbleTmuxSession: TerminateBubbleTmuxSessionPort;
   upsertDeletedArchiveIndexEntry: (

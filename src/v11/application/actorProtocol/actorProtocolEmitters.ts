@@ -19,34 +19,34 @@ import type { EmitConvergedDependencies } from "../../shared/converged/converged
 import type { MetaReviewCommandDependencies } from "../../shared/metaReview/metaReviewCommandContract.js";
 import type { EmitAskHumanDependencies } from "../askHuman/askHumanCommandContract.js";
 import {
-  emitAskHumanFromWorkspaceV11 as emitAskHumanFromWorkspace
-} from "../askHuman/emitAskHumanV11.js";
+  emitAskHumanFromWorkspace
+} from "../askHuman/askHumanCommandApi.js";
 import {
-  emitConvergedFromWorkspaceV11 as emitConvergedFromWorkspace
-} from "../converged/emitConvergedV11.js";
+  emitConvergedFromWorkspaceCommandOrchestration as emitConvergedFromWorkspace
+} from "../converged/convergedCommandOrchestration.js";
 import {
   submitMetaReviewResultV11 as submitMetaReviewResult
 } from "../metaReview/emitMetaReviewV11.js";
 import {
-  emitPassFromWorkspaceV11 as emitPassFromWorkspace
-} from "../pass/emitPassV11.js";
-import type { EmitAskHumanV11Result } from "../askHuman/emitAskHumanV11.js";
-import type { EmitConvergedV11Result } from "../converged/emitConvergedV11.js";
+  emitPassFromWorkspace
+} from "../pass/passCommandOrchestration.js";
+import type { EmitAskHumanResult } from "../askHuman/askHumanCommandApi.js";
+import type { EmitConvergedResult } from "../converged/convergedCommandOrchestration.js";
 import type { MetaReviewSubmitResultV11 } from "../metaReview/emitMetaReviewV11.js";
-import type { EmitPassV11Result } from "../pass/emitPassV11.js";
+import type { EmitPassResult } from "../pass/passCommandOrchestration.js";
 
 export type ActorEmitResultV11 =
   | {
       kind: "pass";
-      pass: EmitPassV11Result;
+      pass: EmitPassResult;
     }
   | {
       kind: "human_question";
-      human_question: EmitAskHumanV11Result;
+      human_question: EmitAskHumanResult;
     }
   | {
       kind: "convergence";
-      convergence: EmitConvergedV11Result;
+      convergence: EmitConvergedResult;
     }
   | {
       kind: "meta_review_result";

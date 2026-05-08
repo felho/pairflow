@@ -12,17 +12,17 @@ import type { BubbleConfig } from "../../../src/v11/shared/config/bubbleConfigTy
 import type { BubbleStateSnapshot } from "../../../src/v11/shared/state/bubbleStateSnapshotTypes.js";
 import type { ProtocolEnvelope } from "../../../src/types/protocol.js";
 import {
-  emitConvergedFromWorkspaceV11 as emitConvergedFromWorkspace
-} from "../../../src/v11/application/converged/emitConvergedV11.js";
+  emitConvergedFromWorkspaceCommandOrchestration as emitConvergedFromWorkspace
+} from "../../../src/v11/application/converged/convergedCommandOrchestration.js";
 import {
-  emitPassFromWorkspaceV11 as emitPassFromWorkspace
-} from "../../../src/v11/application/pass/emitPassV11.js";
+  emitPassFromWorkspace
+} from "../../../src/v11/application/pass/passCommandOrchestration.js";
 import {
-  BubbleCommitErrorV11 as BubbleCommitError,
-  commitBubbleV11
-} from "../../../src/v11/application/commit/emitCommitV11.js";
+  BubbleCommitError,
+  commitBubble as commitBubbleCommand
+} from "../../../src/v11/application/commit/commitCommandApi.js";
 import { submitMetaReviewResult } from "../../../src/v11/defaults/metaReview/metaReviewApi.js";
-import { emitApproveV11 as emitApprove } from "../../../src/v11/application/approval/emitApprovalV11.js";
+import { emitApprove } from "../../../src/v11/application/approval/approvalCommandApi.js";
 import { createBubble } from "../../../src/v11/defaults/create/createBubbleApi.js";
 import { commitBubbleDependencyDefaults } from "../../../src/v11/defaults/commit/commitCommandDefaults.js";
 import { readTranscriptEnvelopes } from "../../../src/v11/infrastructure/artifact/transcript/transcriptStore.js";
@@ -35,10 +35,10 @@ import { getBubblePaths } from "../../../src/v11/shared/bubble/bubblePaths.js";
 const tempDirs: string[] = [];
 
 async function commitBubble(
-  input: Parameters<typeof commitBubbleV11>[0],
-  dependencies: Parameters<typeof commitBubbleV11>[1] = commitBubbleDependencyDefaults
-): Promise<Awaited<ReturnType<typeof commitBubbleV11>>> {
-  return commitBubbleV11(input, dependencies);
+  input: Parameters<typeof commitBubbleCommand>[0],
+  dependencies: Parameters<typeof commitBubbleCommand>[1] = commitBubbleDependencyDefaults
+): Promise<Awaited<ReturnType<typeof commitBubbleCommand>>> {
+  return commitBubbleCommand(input, dependencies);
 }
 
 async function createTempRepo(): Promise<string> {

@@ -5,8 +5,8 @@ import { join } from "node:path";
 
 import {
   DEFAULT_RESUME_MESSAGE,
-  resumeBubbleV11
-} from "../../../src/v11/application/resume/emitResumeV11.js";
+  resumeBubbleCommandOrchestration
+} from "../../../src/v11/application/resume/resumeCommandOrchestration.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
 import { initGitRepository } from "../../helpers/git.js";
 import { applyStateTransition } from "../../../src/v11/domain/state/machine.js";
@@ -88,7 +88,7 @@ function parseResumeCaseInput(input: ContractCase["input"]): ParsedResumeCaseInp
 }
 
 function normalizeResumeResult(
-  result: Awaited<ReturnType<typeof resumeBubbleV11>>
+  result: Awaited<ReturnType<typeof resumeBubbleCommandOrchestration>>
 ): ResumeContractSuccessOutput {
   return {
     status: "ok",
@@ -209,7 +209,7 @@ async function seedWaitingHumanState(input: {
 
 async function executeResumeCase(input: {
   caseDef: ContractCase;
-  executor: typeof resumeBubbleV11;
+  executor: typeof resumeBubbleCommandOrchestration;
 }): Promise<ResumeContractOutput> {
   const repoPath = await mkdtemp(join(tmpdir(), "pairflow-resume-contract-"));
   try {
@@ -264,7 +264,7 @@ export async function runResumeContractCase(
 
   const v11 = await executeResumeCase({
     caseDef,
-    executor: resumeBubbleV11
+    executor: resumeBubbleCommandOrchestration
   });
   assertContractExpectedSubset({
     output: v11,

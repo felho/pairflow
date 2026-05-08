@@ -8,8 +8,8 @@ import { renderBubbleConfigToml } from "../../../src/config/bubbleConfig.js";
 import { createBubble } from "../../../src/v11/defaults/create/createBubbleApi.js";
 import { parsePassCommandOptions } from "../../../src/cli/commands/agent/pass.js";
 import {
-  emitPassFromWorkspaceV11 as emitPassFromWorkspace
-} from "../../../src/v11/application/pass/emitPassV11.js";
+  emitPassFromWorkspace
+} from "../../../src/v11/application/pass/passCommandOrchestration.js";
 import { PassCommandError } from "../../../src/v11/application/pass/passCommandError.js";
 import {
   resolveMostRecentPreviousReviewerPassIsCleanFromMetadata

@@ -5,7 +5,7 @@ import {
 } from "../../../v11/domain/convergence/repeatCleanAutoconverge.js";
 import type { BubbleStateSnapshot } from "../../shared/state/bubbleStateSnapshotTypes.js";
 import type { ProtocolEnvelope } from "../../../types/protocol.js";
-import type { EmitConvergedV11Result as EmitConvergedResult } from "../converged/emitConvergedV11.js";
+import type { EmitConvergedResult } from "../converged/convergedCommandOrchestration.js";
 import type { PassActivationProvenance } from "./passCommandContract.js";
 
 export interface PassResultDeliveryLike {

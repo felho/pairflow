@@ -3,10 +3,10 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import {
-  emitPassFromWorkspaceV11,
-  type EmitPassV11Input as EmitPassInput,
-  type EmitPassV11Result as EmitPassResult
-} from "../../../src/v11/application/pass/emitPassV11.js";
+  emitPassFromWorkspace,
+  type EmitPassInput,
+  type EmitPassResult
+} from "../../../src/v11/application/pass/passCommandOrchestration.js";
 import { readStateSnapshot } from "../../../src/v11/infrastructure/state/stateStore.js";
 import { isPassIntent, type PassIntent } from "../../../src/types/protocol.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
@@ -210,18 +210,18 @@ async function executePassCase(input: {
 async function advanceToReviewerRoundTwoWithCleanHistory(
   worktreePath: string
 ): Promise<void> {
-  await emitPassFromWorkspaceV11({
+  await emitPassFromWorkspace({
     summary: "Implementer handoff round 1",
     cwd: worktreePath,
     now: new Date("2026-03-01T10:01:00.000Z")
   });
-  await emitPassFromWorkspaceV11({
+  await emitPassFromWorkspace({
     summary: "Reviewer clean handoff round 1",
     noFindings: true,
     cwd: worktreePath,
     now: new Date("2026-03-01T10:02:00.000Z")
   });
-  await emitPassFromWorkspaceV11({
+  await emitPassFromWorkspace({
     summary: "Implementer handoff round 2",
     cwd: worktreePath,
     now: new Date("2026-03-01T10:03:00.000Z")
@@ -237,7 +237,7 @@ export async function runPassContractCase(
 
   const v11 = await executePassCase({
     caseDef,
-    executor: emitPassFromWorkspaceV11
+    executor: emitPassFromWorkspace
   });
   assertContractExpectedSubset({
     output: v11,

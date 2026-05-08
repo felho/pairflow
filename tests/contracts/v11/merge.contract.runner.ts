@@ -13,11 +13,11 @@ import {
 } from "../../../src/v11/infrastructure/state/stateStore.js";
 import { bootstrapWorktreeWorkspace } from "../../../src/v11/infrastructure/workspace/worktreeManager.js";
 import {
-  mergeBubbleV11,
-  type MergeBubbleV11Input as MergeBubbleInput,
-  type MergeBubbleV11Dependencies as MergeBubbleDependencies,
-  type MergeBubbleV11Result as MergeBubbleResult
-} from "../../../src/v11/application/merge/emitMergeV11.js";
+  mergeBubbleCommandOrchestration,
+  type MergeBubbleInput,
+  type MergeBubbleDependencies,
+  type MergeBubbleResult
+} from "../../../src/v11/application/merge/mergeCommandOrchestration.js";
 import { mergeBubbleDependencyDefaults } from "../../../src/v11/defaults/merge/mergeCommandDefaults.js";
 import { initGitRepository, runGit } from "../../helpers/git.js";
 import type { ContractCase, ContractCaseExpected } from "./schema.js";
@@ -635,7 +635,7 @@ export async function runMergeContractCase(
 
   const v11 = await executeMergeCase({
     caseDef,
-    executor: mergeBubbleV11
+    executor: mergeBubbleCommandOrchestration
   });
   assertContractExpectedSubset({
     output: v11,

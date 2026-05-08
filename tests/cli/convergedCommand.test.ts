@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
-  ConvergedCommandErrorV11
-} from "../../src/v11/application/converged/emitConvergedV11.js";
+  ConvergedCommandError
+} from "../../src/v11/application/converged/convergedCommandOrchestration.js";
 import * as actorEmitContextModule from "../../src/v11/shared/actorProtocol/actorEmitContext.js";
 import * as actorProtocolModule from "../../src/v11/application/actorProtocol/emitActorProtocolV11.js";
 import { parsePassCommandOptions } from "../../src/cli/commands/agent/pass.js";
@@ -252,7 +252,7 @@ describe("runConvergedCommand", () => {
       ["--summary", "ready", "--finding", "bad-format"]
     ]) {
       expect(() => runConvergedCommand(args, "/tmp/pairflow-repo")).toThrowError(
-        ConvergedCommandErrorV11
+        ConvergedCommandError
       );
       expect(() => runConvergedCommand(args, "/tmp/pairflow-repo")).toThrow(
         /LEGACY_COMMAND_REMOVED/u

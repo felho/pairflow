@@ -102,6 +102,15 @@ export async function emitHumanReply(
   };
 }
 
+export {
+  HumanReplyCommandError
+} from "./replyCommandError.js";
+export type {
+  EmitHumanReplyDependencies,
+  EmitHumanReplyInput,
+  EmitHumanReplyResult
+} from "./replyCommandContract.js";
+
 export function asHumanReplyCommandError(error: unknown): never {
   return throwAsHumanReplyCommandError(error);
 }

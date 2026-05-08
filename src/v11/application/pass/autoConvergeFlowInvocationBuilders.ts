@@ -1,4 +1,4 @@
-import type { EmitConvergedV11Dependencies as EmitConvergedDependencies } from "../converged/emitConvergedV11.js";
+import type { EmitConvergedDependencies } from "../converged/convergedCommandOrchestration.js";
 import type { BuildFlowBaseInput } from "./flowInvocationBuilderBase.js";
 import type {
   ExecuteAutoConvergeConvergedDependencies,

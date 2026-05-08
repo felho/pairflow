@@ -6,14 +6,14 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import { createBubble } from "../../../src/v11/defaults/create/createBubbleApi.js";
 import {
-  emitAskHumanFromWorkspaceV11 as emitAskHumanFromWorkspace
-} from "../../../src/v11/application/askHuman/emitAskHumanV11.js";
-import { emitRequestReworkV11 as emitRequestRework } from "../../../src/v11/application/approval/emitApprovalV11.js";
+  emitAskHumanFromWorkspace
+} from "../../../src/v11/application/askHuman/askHumanCommandApi.js";
+import { emitRequestRework } from "../../../src/v11/application/approval/approvalCommandApi.js";
 import {
   DEFAULT_RESUME_MESSAGE,
-  resumeBubbleV11 as resumeBubble
-} from "../../../src/v11/application/resume/emitResumeV11.js";
-import { emitHumanReplyV11 as emitHumanReply } from "../../../src/v11/application/reply/emitReplyV11.js";
+  resumeBubbleCommandOrchestration as resumeBubble
+} from "../../../src/v11/application/resume/resumeCommandOrchestration.js";
+import { emitHumanReply } from "../../../src/v11/application/reply/replyCommandApi.js";
 import { readTranscriptEnvelopes } from "../../../src/v11/infrastructure/artifact/transcript/transcriptStore.js";
 import { watchdogCommandDefaults } from "../../../src/v11/defaults/watchdog/watchdogCommandDefaults.js";
 import { watchdogPendingReworkDefaults } from "../../../src/v11/defaults/watchdog/watchdogPendingReworkDefaults.js";

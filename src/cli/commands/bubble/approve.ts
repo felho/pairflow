@@ -1,10 +1,10 @@
 import { parseArgs } from "node:util";
 
 import {
-  asApprovalCommandErrorV11 as asApprovalCommandError,
-  emitApproveV11 as emitApprove,
-  type EmitApprovalDecisionV11Result as EmitApprovalDecisionResult
-} from "../../../v11/application/approval/emitApprovalV11.js";
+  asApprovalCommandError,
+  emitApprove,
+  type EmitApprovalDecisionResult
+} from "../../../v11/application/approval/approvalCommandApi.js";
 
 export interface BubbleApproveCommandOptions {
   id: string;

@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 
-import { resolveMetaReviewRolloutBlockingReasonCodesV11 } from "../../../../src/v11/application/converged/metaReviewRolloutBlockingReasonCodes.js";
+import {
+  resolveConvergedRolloutBlockingReasonCodes as resolveMetaReviewRolloutBlockingReasonCodes
+} from "../../../../src/v11/application/converged/metaReviewRolloutBlockingReasonCodes.js";
 import { resolveConvergedRolloutBlockingReasonCodes } from "../../../../src/v11/application/converged/convergedRolloutBlockingReasonResolver.js";
 
 describe("convergedRolloutBlockingReasonResolver", () => {
@@ -21,7 +23,7 @@ describe("convergedRolloutBlockingReasonResolver", () => {
     };
 
     expect(resolveConvergedRolloutBlockingReasonCodes(input)).toEqual(
-      resolveMetaReviewRolloutBlockingReasonCodesV11(input)
+      resolveMetaReviewRolloutBlockingReasonCodes(input)
     );
   });
 
@@ -42,7 +44,7 @@ describe("convergedRolloutBlockingReasonResolver", () => {
     };
 
     expect(resolveConvergedRolloutBlockingReasonCodes(input)).toEqual(
-      resolveMetaReviewRolloutBlockingReasonCodesV11(input)
+      resolveMetaReviewRolloutBlockingReasonCodes(input)
     );
   });
 });

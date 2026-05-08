@@ -5,12 +5,12 @@ import { join } from "node:path";
 
 import { readStateSnapshot } from "../../../src/v11/infrastructure/state/stateStore.js";
 import {
-  emitConvergedFromWorkspaceV11
-} from "../../../src/v11/application/converged/emitConvergedV11.js";
-import { emitPassFromWorkspaceV11 } from "../../../src/v11/application/pass/emitPassV11.js";
+  emitConvergedFromWorkspaceCommandOrchestration
+} from "../../../src/v11/application/converged/convergedCommandOrchestration.js";
+import { emitPassFromWorkspace } from "../../../src/v11/application/pass/passCommandOrchestration.js";
 import { submitMetaReviewResult as submitMetaReviewResultV11 } from "../../../src/v11/defaults/metaReview/metaReviewApi.js";
-import { emitApproveV11 } from "../../../src/v11/application/approval/emitApprovalV11.js";
-import { commitBubbleV11 } from "../../../src/v11/application/commit/emitCommitV11.js";
+import { emitApprove } from "../../../src/v11/application/approval/approvalCommandApi.js";
+import { commitBubble } from "../../../src/v11/application/commit/commitCommandApi.js";
 import { buildCommitBubbleDependencies } from "../../helpers/commit.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
 import { initGitRepository } from "../../helpers/git.js";
@@ -231,23 +231,23 @@ async function setupApprovedBubble(repoPath: string, bubbleId: string) {
     }
   });
 
-  await emitPassFromWorkspaceV11({
+  await emitPassFromWorkspace({
     summary: "Implementation pass 1",
     cwd: bubble.paths.worktreePath,
     now: new Date("2026-03-20T13:00:00.000Z")
   });
-  await emitPassFromWorkspaceV11({
+  await emitPassFromWorkspace({
     summary: "Review pass 1 clean",
     noFindings: true,
     cwd: bubble.paths.worktreePath,
     now: new Date("2026-03-20T13:01:00.000Z")
   });
-  await emitPassFromWorkspaceV11({
+  await emitPassFromWorkspace({
     summary: "Implementation pass 2",
     cwd: bubble.paths.worktreePath,
     now: new Date("2026-03-20T13:02:00.000Z")
   });
-  const converged = await emitConvergedFromWorkspaceV11({
+  const converged = await emitConvergedFromWorkspaceCommandOrchestration({
     summary: "Ready for approval",
     cwd: bubble.paths.worktreePath,
     now: new Date("2026-03-20T13:03:00.000Z")
@@ -277,7 +277,7 @@ async function setupApprovedBubble(repoPath: string, bubbleId: string) {
       }
     }
   );
-  await emitApproveV11({
+  await emitApprove({
     bubbleId: bubble.bubbleId,
     cwd: repoPath,
     now: new Date("2026-03-20T13:04:00.000Z")
@@ -287,9 +287,9 @@ async function setupApprovedBubble(repoPath: string, bubbleId: string) {
 }
 
 function commitBubbleV11WithDefaults(
-  input: Parameters<typeof commitBubbleV11>[0]
-): ReturnType<typeof commitBubbleV11> {
-  return commitBubbleV11(input, buildCommitBubbleDependencies());
+  input: Parameters<typeof commitBubble>[0]
+): ReturnType<typeof commitBubble> {
+  return commitBubble(input, buildCommitBubbleDependencies());
 }
 
 async function executeCommitCase(input: {

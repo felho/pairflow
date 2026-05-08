@@ -88,10 +88,12 @@ export async function reconcileRuntimeSessions(
 
 export {
   StartupReconcilerError,
+  throwAsStartupReconcilerError,
   throwAsStartupReconcilerError as asStartupReconcilerError
 };
 export type {
   ReconcileRuntimeSessionsAction,
+  ReconcileRuntimeSessionsDependencies,
   ReconcileRuntimeSessionsInput,
   ReconcileRuntimeSessionsReport,
   RuntimeSessionStaleReason,

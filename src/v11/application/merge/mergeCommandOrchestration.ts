@@ -38,3 +38,9 @@ export {
   BubbleMergeError,
   throwAsBubbleMergeError
 };
+
+export type {
+  MergeBubbleDependencies,
+  MergeBubbleInput,
+  MergeBubbleResult
+} from "./mergeCommandContract.js";

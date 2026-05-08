@@ -1,10 +1,10 @@
 import { parseArgs } from "node:util";
 
 import {
-  asStartupReconcilerErrorV11,
-  reconcileRuntimeSessionsV11,
-  type ReconcileRuntimeSessionsReportV11
-} from "./emitReconcileV11.js";
+  throwAsStartupReconcilerError,
+  reconcileRuntimeSessions,
+  type ReconcileRuntimeSessionsReport
+} from "./reconcileCommandApi.js";
 
 export interface BubbleReconcileCommandOptions {
   repo?: string;
@@ -22,7 +22,7 @@ export type ParsedBubbleReconcileCommandOptions =
   | BubbleReconcileHelpCommandOptions;
 
 export interface BubbleReconcileCommandDependencies {
-  reconcileRuntimeSessions?: typeof reconcileRuntimeSessionsV11;
+  reconcileRuntimeSessions?: typeof reconcileRuntimeSessions;
 }
 
 export function getBubbleReconcileHelpText(): string {
@@ -75,7 +75,7 @@ export function parseBubbleReconcileCommandOptions(
 }
 
 export function renderBubbleReconcileText(
-  report: ReconcileRuntimeSessionsReportV11
+  report: ReconcileRuntimeSessionsReport
 ): string {
   const lines = [
     `Repository: ${report.repoPath}`,
@@ -112,14 +112,14 @@ export async function runBubbleReconcileCommand(
   args: string[] | BubbleReconcileCommandOptions,
   cwd: string = process.cwd(),
   dependencies: BubbleReconcileCommandDependencies = {}
-): Promise<ReconcileRuntimeSessionsReportV11 | null> {
+): Promise<ReconcileRuntimeSessionsReport | null> {
   const options = Array.isArray(args) ? parseBubbleReconcileCommandOptions(args) : args;
   if (options.help) {
     return null;
   }
 
   const runReconcileRuntimeSessions =
-    dependencies.reconcileRuntimeSessions ?? reconcileRuntimeSessionsV11;
+    dependencies.reconcileRuntimeSessions ?? reconcileRuntimeSessions;
   try {
     return await runReconcileRuntimeSessions({
       repoPath: options.repo,
@@ -127,6 +127,6 @@ export async function runBubbleReconcileCommand(
       dryRun: options.dryRun
     });
   } catch (error) {
-    asStartupReconcilerErrorV11(error);
+    throwAsStartupReconcilerError(error);
   }
 }

@@ -6,7 +6,7 @@ export interface ResolveMetaReviewRolloutBlockingReasonCodesInput {
   commandPathStatus: PairflowCommandPathAssessment;
 }
 
-export function resolveMetaReviewRolloutBlockingReasonCodesV11(
+export function resolveConvergedRolloutBlockingReasonCodes(
   input: ResolveMetaReviewRolloutBlockingReasonCodesInput
 ): string[] {
   const codes = new Set<string>();

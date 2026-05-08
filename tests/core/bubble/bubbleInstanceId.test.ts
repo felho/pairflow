@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { parseBubbleConfigToml, renderBubbleConfigToml } from "../../../src/config/bubbleConfig.js";
-import { emitAskHumanFromWorkspaceV11 as emitAskHumanFromWorkspace } from "../../../src/v11/application/askHuman/emitAskHumanV11.js";
+import { emitAskHumanFromWorkspace } from "../../../src/v11/application/askHuman/askHumanCommandApi.js";
 import {
   ensureBubbleInstanceIdForMutation
 } from "../../../src/v11/infrastructure/artifact/bubble/bubbleInstanceId.js";

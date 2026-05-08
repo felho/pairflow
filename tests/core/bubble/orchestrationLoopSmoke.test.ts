@@ -5,11 +5,11 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 import {
-  emitConvergedFromWorkspaceV11 as emitConvergedFromWorkspace
-} from "../../../src/v11/application/converged/emitConvergedV11.js";
+  emitConvergedFromWorkspaceCommandOrchestration as emitConvergedFromWorkspace
+} from "../../../src/v11/application/converged/convergedCommandOrchestration.js";
 import {
-  emitPassFromWorkspaceV11 as emitPassFromWorkspace
-} from "../../../src/v11/application/pass/emitPassV11.js";
+  emitPassFromWorkspace
+} from "../../../src/v11/application/pass/passCommandOrchestration.js";
 import { createBubble } from "../../../src/v11/defaults/create/createBubbleApi.js";
 import { startBubbleV11 as startBubble } from "../../../src/v11/application/start/emitStartV11.js";
 import { readTranscriptEnvelopes } from "../../../src/v11/infrastructure/artifact/transcript/transcriptStore.js";

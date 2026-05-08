@@ -5,10 +5,10 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { parseBubbleConfigToml, renderBubbleConfigToml } from "../../../src/config/bubbleConfig.js";
-import { emitAskHumanFromWorkspaceV11 as emitAskHumanFromWorkspace } from "../../../src/v11/application/askHuman/emitAskHumanV11.js";
-import { emitPassFromWorkspaceV11 as emitPassFromWorkspace } from "../../../src/v11/application/pass/emitPassV11.js";
+import { emitAskHumanFromWorkspace } from "../../../src/v11/application/askHuman/askHumanCommandApi.js";
+import { emitPassFromWorkspace } from "../../../src/v11/application/pass/passCommandOrchestration.js";
 import { createBubble } from "../../../src/v11/defaults/create/createBubbleApi.js";
-import { emitHumanReplyV11 as emitHumanReply } from "../../../src/v11/application/reply/emitReplyV11.js";
+import { emitHumanReply } from "../../../src/v11/application/reply/replyCommandApi.js";
 import {
   getBubbleStatusV11 as getBubbleStatusApplication,
   type BubbleStatusV11Input

@@ -2,9 +2,9 @@ import type {
   AgentName
 } from "../../domain/agentIdentity/agentIdentity.js";
 import type {
-  EmitConvergedV11Dependencies as EmitConvergedDependencies,
-  EmitConvergedV11Result as EmitConvergedResult
-} from "../converged/emitConvergedV11.js";
+  EmitConvergedDependencies,
+  EmitConvergedResult
+} from "../converged/convergedCommandOrchestration.js";
 
 export interface ExecuteAutoConvergeConvergedInput {
   summary: string;

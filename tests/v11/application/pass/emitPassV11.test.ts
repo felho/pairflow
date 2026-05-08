@@ -4,14 +4,13 @@ import { join } from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import { emitPassFromWorkspace } from "../../../../src/v11/application/pass/passCommandOrchestration.js";
 import type { EmitPassInput } from "../../../../src/v11/application/pass/passCommandContract.js";
 import {
-  asPassCommandErrorV11,
-  emitPassFromWorkspaceV11,
-  inferPassIntentV11,
-  PassCommandErrorV11
-} from "../../../../src/v11/application/pass/emitPassV11.js";
+  asPassCommandError,
+  emitPassFromWorkspace,
+  inferPassIntent,
+  PassCommandError
+} from "../../../../src/v11/application/pass/passCommandOrchestration.js";
 import { WorkspaceResolutionError } from "../../../../src/v11/infrastructure/executor/workspace/workspaceResolution.js";
 import { createBubble } from "../../../../src/v11/defaults/create/createBubbleApi.js";
 import { bootstrapWorktreeWorkspace } from "../../../../src/v11/infrastructure/workspace/worktreeManager.js";
@@ -80,7 +79,7 @@ async function executeSeededPass(input: {
   };
 }
 
-describe("emitPassFromWorkspaceV11", () => {
+describe("emitPassFromWorkspace", () => {
   it("matches legacy pass behavior with explicit intent on seeded scenario", async () => {
     const legacy = await executeSeededPass({
       bubbleId: "b_pass_v11_explicit_01",
@@ -89,7 +88,7 @@ describe("emitPassFromWorkspaceV11", () => {
     });
     const v11 = await executeSeededPass({
       bubbleId: "b_pass_v11_explicit_01",
-      executor: emitPassFromWorkspaceV11,
+      executor: emitPassFromWorkspace,
       includeIntent: true
     });
 
@@ -115,7 +114,7 @@ describe("emitPassFromWorkspaceV11", () => {
     });
     const v11 = await executeSeededPass({
       bubbleId: "b_pass_v11_inferred_01",
-      executor: emitPassFromWorkspaceV11,
+      executor: emitPassFromWorkspace,
       includeIntent: false
     });
 
@@ -152,52 +151,52 @@ describe("emitPassFromWorkspaceV11", () => {
     });
 
     await expect(
-      emitPassFromWorkspaceV11({
+      emitPassFromWorkspace({
         summary: "Pass without running state",
         refs: [],
         cwd: bubble.paths.worktreePath
       })
-    ).rejects.toBeInstanceOf(PassCommandErrorV11);
+    ).rejects.toBeInstanceOf(PassCommandError);
   });
 });
 
-describe("asPassCommandErrorV11", () => {
+describe("asPassCommandError", () => {
   it("rethrows PassCommandError instances as-is", () => {
-    const original = new PassCommandErrorV11("already normalized");
-    expect(() => asPassCommandErrorV11(original)).toThrow(original);
+    const original = new PassCommandError("already normalized");
+    expect(() => asPassCommandError(original)).toThrow(original);
   });
 
   it("maps WorkspaceResolutionError to PassCommandError", () => {
     expect(() =>
-      asPassCommandErrorV11(
+      asPassCommandError(
         new WorkspaceResolutionError("workspace lookup failed")
       )
-    ).toThrowError(PassCommandErrorV11);
+    ).toThrowError(PassCommandError);
   });
 
   it("maps generic Error to PassCommandError", () => {
-    expect(() => asPassCommandErrorV11(new Error("unexpected"))).toThrowError(
-      PassCommandErrorV11
+    expect(() => asPassCommandError(new Error("unexpected"))).toThrowError(
+      PassCommandError
     );
   });
 
   it("rethrows non-Error values unchanged", () => {
-    expect(() => asPassCommandErrorV11("raw-error")).toThrow("raw-error");
+    expect(() => asPassCommandError("raw-error")).toThrow("raw-error");
   });
 });
 
-describe("inferPassIntentV11", () => {
+describe("inferPassIntent", () => {
   it("returns review for implementer role", () => {
-    expect(inferPassIntentV11("implementer")).toBe("review");
+    expect(inferPassIntent("implementer")).toBe("review");
   });
 
   it("returns fix_request for reviewer role", () => {
-    expect(inferPassIntentV11("reviewer")).toBe("fix_request");
+    expect(inferPassIntent("reviewer")).toBe("fix_request");
   });
 
   it("throws PassCommandError for unsupported role", () => {
-    expect(() => inferPassIntentV11("meta_reviewer")).toThrowError(
-      PassCommandErrorV11
+    expect(() => inferPassIntent("meta_reviewer")).toThrowError(
+      PassCommandError
     );
   });
 });

@@ -4,7 +4,7 @@ import { join } from "node:path";
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { emitAskHumanFromWorkspaceV11 as emitAskHumanFromWorkspace } from "../../../src/v11/application/askHuman/emitAskHumanV11.js";
+import { emitAskHumanFromWorkspace } from "../../../src/v11/application/askHuman/askHumanCommandApi.js";
 import { normalizeRepoPath } from "../../../src/v11/infrastructure/executor/workspace/repoResolution.js";
 import { listBubbles as listBubblesApi } from "../../../src/v11/application/list/listReadModelApi.js";
 import { listCommandDefaults } from "../../../src/v11/defaults/list/listCommandDefaults.js";

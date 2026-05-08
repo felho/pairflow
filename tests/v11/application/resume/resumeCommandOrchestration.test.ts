@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 
 import {
   DEFAULT_RESUME_MESSAGE,
-  resumeBubbleV11
-} from "../../../../src/v11/application/resume/emitResumeV11.js";
+  resumeBubbleCommandOrchestration
+} from "../../../../src/v11/application/resume/resumeCommandOrchestration.js";
 import type { EmitHumanReplyResult } from "../../../../src/v11/application/reply/replyCommandContract.js";
 
 function createResumeResultFixture(): EmitHumanReplyResult {
@@ -57,7 +57,7 @@ describe("resumeCommandOrchestration", () => {
         }
       | undefined;
 
-    const result = await resumeBubbleV11(
+    const result = await resumeBubbleCommandOrchestration(
       {
         bubbleId: "b_resume_01",
         repoPath: "/tmp/repo",

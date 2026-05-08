@@ -5,11 +5,11 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 import {
-  emitAskHumanFromWorkspaceV11 as emitAskHumanFromWorkspace
-} from "../../../src/v11/application/askHuman/emitAskHumanV11.js";
+  emitAskHumanFromWorkspace
+} from "../../../src/v11/application/askHuman/askHumanCommandApi.js";
 import {
-  emitPassFromWorkspaceV11 as emitPassFromWorkspace
-} from "../../../src/v11/application/pass/emitPassV11.js";
+  emitPassFromWorkspace
+} from "../../../src/v11/application/pass/passCommandOrchestration.js";
 import { readTranscriptEnvelopes } from "../../../src/v11/infrastructure/artifact/transcript/transcriptStore.js";
 import { readStateSnapshot } from "../../../src/v11/infrastructure/state/stateStore.js";
 import { initGitRepository } from "../../helpers/git.js";

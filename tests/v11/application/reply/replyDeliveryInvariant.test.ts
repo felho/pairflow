@@ -8,7 +8,7 @@ import { emitAskHumanFromWorkspace } from "../../../../src/v11/application/askHu
 import { readTranscriptEnvelopes } from "../../../../src/v11/infrastructure/artifact/transcript/transcriptStore.js";
 import { readStateSnapshot } from "../../../../src/v11/infrastructure/state/stateStore.js";
 import { deliveryTargetRoleMetadataKey } from "../../../../src/types/protocol.js";
-import { emitHumanReplyV11 } from "../../../../src/v11/application/reply/emitReplyV11.js";
+import { emitHumanReply } from "../../../../src/v11/application/reply/replyCommandApi.js";
 import { setupRunningBubbleFixture } from "../../../helpers/bubble.js";
 import { initGitRepository } from "../../../helpers/git.js";
 
@@ -65,7 +65,7 @@ describe("v11 reply delivery invariant", () => {
       };
     }> = [];
 
-    const result = await emitHumanReplyV11(
+    const result = await emitHumanReply(
       {
         bubbleId: bubble.bubbleId,
         message: "Igen, indulhat a migration.",

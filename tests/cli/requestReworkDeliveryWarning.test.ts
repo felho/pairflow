@@ -1,6 +1,6 @@
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { EmitRequestReworkV11Result } from "../../src/v11/application/approval/emitApprovalV11.js";
+import type { EmitRequestReworkResult } from "../../src/v11/application/approval/approvalCommandApi.js";
 
 describe("runCli request-rework delivery warning parity", () => {
   const stdoutSpy = vi.spyOn(process.stdout, "write").mockImplementation(() => true);
@@ -43,7 +43,7 @@ describe("runCli request-rework delivery warning parity", () => {
           reason: "delivery_unconfirmed"
         }
       }
-    } as unknown as EmitRequestReworkV11Result;
+    } as unknown as EmitRequestReworkResult;
 
     const runBubbleRequestReworkCommand = vi.fn(async () => mockedResult);
 

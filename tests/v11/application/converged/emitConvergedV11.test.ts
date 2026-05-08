@@ -10,11 +10,11 @@ import { resolveActorEmitContextByBubbleId } from "../../../../src/v11/defaults/
 import { buildRunningExecutionContext } from "../../../../src/v11/shared/state/executionContext.js";
 import { readStateSnapshot, writeStateSnapshot } from "../../../../src/v11/infrastructure/state/stateStore.js";
 import {
-  ConvergedCommandErrorV11,
-  emitConvergedFromWorkspaceV11,
-  emitConvergedFromWorkspaceV11 as emitConvergedFromWorkspace,
-  type EmitConvergedV11Input as EmitConvergedInput
-} from "../../../../src/v11/application/converged/emitConvergedV11.js";
+  ConvergedCommandError,
+  emitConvergedFromWorkspaceCommandOrchestration,
+  emitConvergedFromWorkspaceCommandOrchestration as emitConvergedFromWorkspace,
+  type EmitConvergedInput
+} from "../../../../src/v11/application/converged/convergedCommandOrchestration.js";
 import { createBubble } from "../../../../src/v11/defaults/create/createBubbleApi.js";
 import { bootstrapWorktreeWorkspace } from "../../../../src/v11/infrastructure/workspace/worktreeManager.js";
 import { initGitRepository } from "../../../helpers/git.js";
@@ -102,7 +102,7 @@ async function executeSeededConverged(input: {
   };
 }
 
-describe("emitConvergedFromWorkspaceV11", () => {
+describe("emitConvergedFromWorkspaceCommandOrchestration", () => {
   it(
     "matches legacy converged behavior on the same seeded scenario",
     { timeout: 15_000 },
@@ -113,7 +113,7 @@ describe("emitConvergedFromWorkspaceV11", () => {
     });
     const v11 = await executeSeededConverged({
       bubbleId: "b_converged_v11_v11_01",
-      executor: emitConvergedFromWorkspaceV11
+      executor: emitConvergedFromWorkspaceCommandOrchestration
     });
 
     expect(v11).toEqual(legacy);
@@ -137,7 +137,7 @@ describe("emitConvergedFromWorkspaceV11", () => {
     });
     const v11 = await executeSeededConverged({
       bubbleId: "b_converged_v11_v11_doc_01",
-      executor: emitConvergedFromWorkspaceV11,
+      executor: emitConvergedFromWorkspaceCommandOrchestration,
       reviewArtifactType: "document"
     });
 
@@ -170,11 +170,11 @@ describe("emitConvergedFromWorkspaceV11", () => {
     });
 
     await expect(
-      emitConvergedFromWorkspaceV11({
+      emitConvergedFromWorkspaceCommandOrchestration({
         summary: "Converged without running state",
         cwd: bubble.paths.worktreePath
       })
-    ).rejects.toBeInstanceOf(ConvergedCommandErrorV11);
+    ).rejects.toBeInstanceOf(ConvergedCommandError);
   });
 
   it("accepts authoritative reviewer context without relying on cwd resolution", async () => {
@@ -196,7 +196,7 @@ describe("emitConvergedFromWorkspaceV11", () => {
       repoPath
     });
 
-    const result = await emitConvergedFromWorkspaceV11({
+    const result = await emitConvergedFromWorkspaceCommandOrchestration({
       summary: "Reviewer convergence via authoritative context.",
       refs: ["artifact://done-package.md"],
       authoritativeContext,

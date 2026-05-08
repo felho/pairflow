@@ -10,7 +10,7 @@ import type { BubbleConfig } from "../../shared/config/bubbleConfigTypes.js";
 import type { BubbleStateSnapshot } from "../../shared/state/bubbleStateSnapshotTypes.js";
 import type { Finding } from "../../../types/findings.js";
 import type { PassIntent, ProtocolEnvelope } from "../../../types/protocol.js";
-import type { EmitConvergedV11Result as EmitConvergedResult } from "../converged/emitConvergedV11.js";
+import type { EmitConvergedResult } from "../converged/convergedCommandOrchestration.js";
 import type { ResolvedPassHandoff } from "../../domain/pass/handoff.js";
 import type {
   ReviewerFindingsClaim,

@@ -6,8 +6,8 @@ import { executeAutoConvergeConverged } from "./autoConvergeConvergedExecution.j
 import { finalizeAutoConvergePass } from "./autoConvergeFinalization.js";
 import { prepareRepeatCleanAutoConverge } from "./autoConvergePreparation.js";
 import {
-  emitConvergedFromWorkspaceV11 as emitConvergedFromWorkspace
-} from "../converged/emitConvergedV11.js";
+  emitConvergedFromWorkspaceCommandOrchestration as emitConvergedFromWorkspace
+} from "../converged/convergedCommandOrchestration.js";
 import { executeNormalPassAppend } from "./normalPassAppendExecution.js";
 import { prepareNormalPassAppend } from "./normalPassAppendPreparation.js";
 import { executeNormalPassDelivery } from "./normalPassDeliveryExecution.js";

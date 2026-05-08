@@ -1,11 +1,11 @@
 import { parseArgs } from "node:util";
 
 import {
-  asOpenBubbleErrorV11 as asOpenBubbleError,
-  openBubbleV11 as openBubble,
-  type OpenBubbleV11Dependencies,
+  asOpenBubbleError,
+  openBubble,
+  type OpenBubbleDependencies,
   type OpenBubbleResult
-} from "./emitOpenV11.js";
+} from "./openBubble.js";
 
 export interface BubbleOpenCommandOptions {
   id: string;
@@ -22,7 +22,7 @@ export type ParsedBubbleOpenCommandOptions =
   | BubbleOpenHelpCommandOptions;
 
 export interface BubbleOpenCommandDependencies
-  extends Partial<OpenBubbleV11Dependencies> {
+  extends Partial<OpenBubbleDependencies> {
   openBubble?: typeof openBubble;
 }
 

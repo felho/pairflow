@@ -7,18 +7,18 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { AttachBubbleError } from "../../../src/v11/application/attach/emitAttachV11.js";
-import { BubbleCommitErrorV11 as BubbleCommitError } from "../../../src/v11/application/commit/emitCommitV11.js";
-import { BubbleMergeErrorV11 as BubbleMergeError } from "../../../src/v11/application/merge/emitMergeV11.js";
+import { BubbleCommitError } from "../../../src/v11/application/commit/commitCommandApi.js";
+import { BubbleMergeError } from "../../../src/v11/application/merge/mergeCommandOrchestration.js";
 import { RemoteBubbleApprovalCommandError } from "../../../src/v11/infrastructure/executor/ssh/sshBubbleApprovalCommand.js";
 import { RemoteBubbleCommitCommandError } from "../../../src/v11/infrastructure/executor/ssh/sshBubbleCommitCommand.js";
 import { RemoteBubbleStatusError } from "../../../src/v11/infrastructure/executor/ssh/sshBubbleStatus.js";
-import type * as EmitApprovalModule from "../../../src/v11/application/approval/emitApprovalV11.js";
-import type * as EmitCommitModule from "../../../src/v11/application/commit/emitCommitV11.js";
-import type * as EmitReplyModule from "../../../src/v11/application/reply/emitReplyV11.js";
+import type * as EmitApprovalModule from "../../../src/v11/application/approval/approvalCommandApi.js";
+import type * as EmitCommitModule from "../../../src/v11/application/commit/commitCommandApi.js";
+import type * as EmitReplyModule from "../../../src/v11/application/reply/replyCommandApi.js";
 import type * as RestartCommandModule from "../../../src/v11/application/restart/restartCommandApi.js";
-import type * as EmitResumeModule from "../../../src/v11/application/resume/emitResumeV11.js";
+import type * as EmitResumeModule from "../../../src/v11/application/resume/resumeCommandOrchestration.js";
 import type * as EmitStartModule from "../../../src/v11/application/start/emitStartV11.js";
-import type * as EmitStopModule from "../../../src/v11/application/stop/emitStopV11.js";
+import type * as EmitStopModule from "../../../src/v11/application/stop/stopCommandOrchestration.js";
 import {
   projectBubbleStateToUiActionState,
   projectPendingReworkIntentToUiActionPendingIntent,
@@ -164,16 +164,16 @@ async function createAssetsDir(): Promise<string> {
 }
 
 const emitApprovalModulePath =
-  "../../../src/v11/application/approval/emitApprovalV11.js";
+  "../../../src/v11/application/approval/approvalCommandApi.js";
 const emitCommitModulePath =
-  "../../../src/v11/application/commit/emitCommitV11.js";
+  "../../../src/v11/application/commit/commitCommandApi.js";
 const emitReplyModulePath =
-  "../../../src/v11/application/reply/emitReplyV11.js";
+  "../../../src/v11/application/reply/replyCommandApi.js";
 const emitResumeModulePath =
-  "../../../src/v11/application/resume/emitResumeV11.js";
+  "../../../src/v11/application/resume/resumeCommandOrchestration.js";
 const emitStartModulePath =
   "../../../src/v11/application/start/emitStartV11.js";
-const emitStopModulePath = "../../../src/v11/application/stop/emitStopV11.js";
+const emitStopModulePath = "../../../src/v11/application/stop/stopCommandOrchestration.js";
 const restartCommandModulePath =
   "../../../src/v11/application/restart/restartCommandApi.js";
 
@@ -370,12 +370,12 @@ function rawBubbleStateFixture(
 }
 
 async function withMockedApproveRouteDependencies<T>(
-  emitApproveV11: ReturnType<typeof vi.fn>,
+  emitApprove: ReturnType<typeof vi.fn>,
   run: (createUiRouterWithDefaultProjection: typeof createUiRouter) => Promise<T>
 ): Promise<T> {
   return withMockedApprovalRouteDependencies(
     {
-      emitApproveV11
+      emitApprove
     },
     run
   );
@@ -383,8 +383,8 @@ async function withMockedApproveRouteDependencies<T>(
 
 async function withMockedApprovalRouteDependencies<T>(
   mocks: {
-    emitApproveV11?: ReturnType<typeof vi.fn>;
-    emitRequestReworkV11?: ReturnType<typeof vi.fn>;
+    emitApprove?: ReturnType<typeof vi.fn>;
+    emitRequestRework?: ReturnType<typeof vi.fn>;
   },
   run: (createUiRouterWithDefaultProjection: typeof createUiRouter) => Promise<T>
 ): Promise<T> {
@@ -396,11 +396,11 @@ async function withMockedApprovalRouteDependencies<T>(
 
     return {
       ...actual,
-      ...(mocks.emitApproveV11 !== undefined
-        ? { emitApproveV11: mocks.emitApproveV11 }
+      ...(mocks.emitApprove !== undefined
+        ? { emitApprove: mocks.emitApprove }
         : {}),
-      ...(mocks.emitRequestReworkV11 !== undefined
-        ? { emitRequestReworkV11: mocks.emitRequestReworkV11 }
+      ...(mocks.emitRequestRework !== undefined
+        ? { emitRequestRework: mocks.emitRequestRework }
         : {})
     };
   });
@@ -419,7 +419,7 @@ async function withMockedApprovalRouteDependencies<T>(
 async function withMockedLifecycleRouteDependencies<T>(
   mocks: {
     startBubbleV11: ReturnType<typeof vi.fn>;
-    stopBubbleV11: ReturnType<typeof vi.fn>;
+    stopBubbleCommandOrchestration: ReturnType<typeof vi.fn>;
     restartBubble: ReturnType<typeof vi.fn>;
   },
   run: (createUiRouterWithDefaultProjection: typeof createUiRouter) => Promise<T>
@@ -440,7 +440,7 @@ async function withMockedLifecycleRouteDependencies<T>(
     );
     return {
       ...actual,
-      stopBubbleV11: mocks.stopBubbleV11
+      stopBubbleCommandOrchestration: mocks.stopBubbleCommandOrchestration
     };
   });
   vi.doMock(restartCommandModulePath, async () => {
@@ -468,9 +468,9 @@ async function withMockedLifecycleRouteDependencies<T>(
 
 async function withMockedEventRouteDependencies<T>(
   mocks: {
-    commitBubbleV11: ReturnType<typeof vi.fn>;
-    emitHumanReplyV11: ReturnType<typeof vi.fn>;
-    resumeBubbleV11: ReturnType<typeof vi.fn>;
+    commitBubble: ReturnType<typeof vi.fn>;
+    emitHumanReply: ReturnType<typeof vi.fn>;
+    resumeBubbleCommandOrchestration: ReturnType<typeof vi.fn>;
   },
   run: (createUiRouterWithDefaultProjection: typeof createUiRouter) => Promise<T>
 ): Promise<T> {
@@ -481,7 +481,7 @@ async function withMockedEventRouteDependencies<T>(
     );
     return {
       ...actual,
-      commitBubbleV11: mocks.commitBubbleV11
+      commitBubble: mocks.commitBubble
     };
   });
   vi.doMock(emitReplyModulePath, async () => {
@@ -490,7 +490,7 @@ async function withMockedEventRouteDependencies<T>(
     );
     return {
       ...actual,
-      emitHumanReplyV11: mocks.emitHumanReplyV11
+      emitHumanReply: mocks.emitHumanReply
     };
   });
   vi.doMock(emitResumeModulePath, async () => {
@@ -499,7 +499,7 @@ async function withMockedEventRouteDependencies<T>(
     );
     return {
       ...actual,
-      resumeBubbleV11: mocks.resumeBubbleV11
+      resumeBubbleCommandOrchestration: mocks.resumeBubbleCommandOrchestration
     };
   });
 
@@ -2724,7 +2724,7 @@ describe("createUiRouter action routes", () => {
       executionTarget: "local" as const,
       runtimeWorkspacePath: "/tmp/runtime/b-router-lifecycle-defaults"
     }));
-    const stopBubbleV11 = vi.fn(async () => ({
+    const stopBubbleCommandOrchestration = vi.fn(async () => ({
       bubbleId: "b-router-lifecycle-defaults",
       state: rawBubbleStateFixture("b-router-lifecycle-defaults", "CANCELLED"),
       tmuxSessionName: "pf-b-router-lifecycle-defaults",
@@ -2744,7 +2744,7 @@ describe("createUiRouter action routes", () => {
       await withMockedLifecycleRouteDependencies(
         {
           startBubbleV11,
-          stopBubbleV11,
+          stopBubbleCommandOrchestration,
           restartBubble
         },
         async (createUiRouterWithDefaultProjection) => {
@@ -3224,7 +3224,7 @@ describe("createUiRouter action routes", () => {
     it("strips legacy delivered fields from the default first-party approve route dependency chain", async () => {
       let server: Awaited<ReturnType<typeof startRouterServer>> | undefined;
 
-      const emitApproveV11 = vi.fn(async () => ({
+      const emitApprove = vi.fn(async () => ({
         bubbleId: "b-router-approve-default",
         sequence: 9,
         envelope: {
@@ -3271,7 +3271,7 @@ describe("createUiRouter action routes", () => {
 
       try {
         await withMockedApproveRouteDependencies(
-          emitApproveV11,
+          emitApprove,
           async (createUiRouterWithDefaultProjection) => {
             const repoPath = "/tmp/pairflow-ui-router-approve-default";
             const router = createUiRouterWithDefaultProjection({
@@ -3328,7 +3328,7 @@ describe("createUiRouter action routes", () => {
             };
 
             expect(response.status).toBe(200);
-            expect(emitApproveV11).toHaveBeenCalledTimes(1);
+            expect(emitApprove).toHaveBeenCalledTimes(1);
             expect(payload.result.event).toStrictEqual({
               id: "env-approve-default",
               timestamp: "2026-02-25T00:02:00.000Z",
@@ -3385,7 +3385,7 @@ describe("createUiRouter action routes", () => {
     it("projects queued rework results through the first-party route dependency chain", async () => {
       let server: Awaited<ReturnType<typeof startRouterServer>> | undefined;
       const repoPath = "/tmp/pairflow-ui-router-rework-default-queued";
-      const emitRequestReworkV11 = vi.fn(async () => ({
+      const emitRequestRework = vi.fn(async () => ({
         mode: "queued" as const,
         bubbleId: "b-router-rework-default-queued",
         intentId: "intent-queued-1",
@@ -3407,7 +3407,7 @@ describe("createUiRouter action routes", () => {
       try {
         await withMockedApprovalRouteDependencies(
           {
-            emitRequestReworkV11
+            emitRequestRework
           },
           async (createUiRouterWithDefaultProjection) => {
             const router = createUiRouterWithDefaultProjection({
@@ -3453,7 +3453,7 @@ describe("createUiRouter action routes", () => {
             };
 
             expect(response.status).toBe(200);
-            expect(emitRequestReworkV11).toHaveBeenCalledTimes(1);
+            expect(emitRequestRework).toHaveBeenCalledTimes(1);
             expect(payload.result).toStrictEqual({
               mode: "queued",
               bubbleId: "b-router-rework-default-queued",
@@ -3505,7 +3505,7 @@ describe("createUiRouter action routes", () => {
     it("does not synthesize queued rework intent details when state lags", async () => {
       let server: Awaited<ReturnType<typeof startRouterServer>> | undefined;
       const repoPath = "/tmp/pairflow-ui-router-rework-default-queued-lag";
-      const emitRequestReworkV11 = vi.fn(async () => ({
+      const emitRequestRework = vi.fn(async () => ({
         mode: "queued" as const,
         bubbleId: "b-router-rework-default-queued-lag",
         intentId: "intent-queued-lag",
@@ -3518,7 +3518,7 @@ describe("createUiRouter action routes", () => {
       try {
         await withMockedApprovalRouteDependencies(
           {
-            emitRequestReworkV11
+            emitRequestRework
           },
           async (createUiRouterWithDefaultProjection) => {
             const router = createUiRouterWithDefaultProjection({
@@ -3579,7 +3579,7 @@ describe("createUiRouter action routes", () => {
     it("projects immediate rework results through the first-party route dependency chain", async () => {
       let server: Awaited<ReturnType<typeof startRouterServer>> | undefined;
       const repoPath = "/tmp/pairflow-ui-router-rework-default-immediate";
-      const emitRequestReworkV11 = vi.fn(async () => ({
+      const emitRequestRework = vi.fn(async () => ({
         mode: "immediate" as const,
         bubbleId: "b-router-rework-default-immediate",
         sequence: 10,
@@ -3603,7 +3603,7 @@ describe("createUiRouter action routes", () => {
       try {
         await withMockedApprovalRouteDependencies(
           {
-            emitRequestReworkV11
+            emitRequestRework
           },
           async (createUiRouterWithDefaultProjection) => {
             const router = createUiRouterWithDefaultProjection({
@@ -4179,7 +4179,7 @@ describe("createUiRouter action routes", () => {
   it("projects default reply, resume, and commit route results to UI action DTOs", async () => {
     let server: Awaited<ReturnType<typeof startRouterServer>> | undefined;
     const repoPath = "/tmp/pairflow-ui-router-event-defaults";
-    const emitHumanReplyV11 = vi.fn(async () => ({
+    const emitHumanReply = vi.fn(async () => ({
       bubbleId: "b-router-event-defaults",
       sequence: 11,
       envelope: rawProtocolEnvelopeFixture(
@@ -4191,7 +4191,7 @@ describe("createUiRouter action routes", () => {
       ),
       state: rawBubbleStateFixture("b-router-event-defaults")
     }));
-    const resumeBubbleV11 = vi.fn(async () => ({
+    const resumeBubbleCommandOrchestration = vi.fn(async () => ({
       bubbleId: "b-router-event-defaults",
       sequence: 12,
       envelope: rawProtocolEnvelopeFixture(
@@ -4204,7 +4204,7 @@ describe("createUiRouter action routes", () => {
       ),
       state: rawBubbleStateFixture("b-router-event-defaults")
     }));
-    const commitBubbleV11 = vi.fn(async () => ({
+    const commitBubble = vi.fn(async () => ({
       bubbleId: "b-router-event-defaults",
       sequence: 13,
       envelope: rawProtocolEnvelopeFixture(
@@ -4229,9 +4229,9 @@ describe("createUiRouter action routes", () => {
     try {
       await withMockedEventRouteDependencies(
         {
-          commitBubbleV11,
-          emitHumanReplyV11,
-          resumeBubbleV11
+          commitBubble,
+          emitHumanReply,
+          resumeBubbleCommandOrchestration
         },
         async (createUiRouterWithDefaultProjection) => {
           const router = createUiRouterWithDefaultProjection({

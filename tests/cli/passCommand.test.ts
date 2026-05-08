@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { PassCommandErrorV11 } from "../../src/v11/application/pass/emitPassV11.js";
+import { PassCommandError } from "../../src/v11/application/pass/passCommandOrchestration.js";
 import * as actorEmitContextModule from "../../src/v11/shared/actorProtocol/actorEmitContext.js";
 import * as actorProtocolModule from "../../src/v11/application/actorProtocol/emitActorProtocolV11.js";
 import {
@@ -220,7 +220,7 @@ describe("runPassCommand", () => {
         ["--summary", "handoff complete"],
         "/tmp/pairflow-repo"
       )
-    ).toThrowError(PassCommandErrorV11);
+    ).toThrowError(PassCommandError);
     expect(() =>
       runPassCommand(
         ["--summary", "handoff complete"],
@@ -238,7 +238,7 @@ describe("runPassCommand", () => {
       ["--summary", "handoff", "--intent", "unknown"]
     ]) {
       expect(() => runPassCommand(args, "/tmp/pairflow-repo")).toThrowError(
-        PassCommandErrorV11
+        PassCommandError
       );
       expect(() => runPassCommand(args, "/tmp/pairflow-repo")).toThrow(
         /LEGACY_COMMAND_REMOVED/u

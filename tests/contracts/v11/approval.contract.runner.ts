@@ -3,10 +3,10 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import {
-  emitApproveV11,
-  emitRequestReworkV11,
-  type EmitApprovalDecisionV11Dependencies as EmitApprovalDecisionDependencies
-} from "../../../src/v11/application/approval/emitApprovalV11.js";
+  emitApprove,
+  emitRequestRework,
+  type EmitApprovalDecisionDependencies
+} from "../../../src/v11/application/approval/approvalCommandApi.js";
 import { deliveryTargetRoleMetadataKey } from "../../../src/types/protocol.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
 import { initGitRepository } from "../../helpers/git.js";
@@ -307,7 +307,7 @@ function assertApprovalDeliveryInvariant(input: {
 }
 
 function normalizeApproveResult(
-  result: Awaited<ReturnType<typeof emitApproveV11>>,
+  result: Awaited<ReturnType<typeof emitApprove>>,
   deliveries: CapturedApprovalDelivery[]
 ): ApprovalContractOutput {
   const decisionRaw = result.envelope.payload.decision;
@@ -331,7 +331,7 @@ function normalizeApproveResult(
 }
 
 function normalizeImmediateReworkResult(
-  result: Awaited<ReturnType<typeof emitRequestReworkV11>>,
+  result: Awaited<ReturnType<typeof emitRequestRework>>,
   deliveries: CapturedApprovalDelivery[]
 ): ApprovalContractOutput {
   if (result.mode !== "immediate") {
@@ -358,7 +358,7 @@ function normalizeImmediateReworkResult(
 }
 
 function normalizeQueuedReworkResult(
-  result: Awaited<ReturnType<typeof emitRequestReworkV11>>,
+  result: Awaited<ReturnType<typeof emitRequestRework>>,
   deliveries: CapturedApprovalDelivery[]
 ): ApprovalContractOutput {
   if (result.mode !== "queued") {
@@ -381,8 +381,8 @@ function normalizeQueuedReworkResult(
 async function executeApprovalCase(input: {
   caseDef: ContractCase;
   action: ParsedApprovalCaseInput;
-  emitApproveFn: typeof emitApproveV11;
-  emitRequestReworkFn: typeof emitRequestReworkV11;
+  emitApproveFn: typeof emitApprove;
+  emitRequestReworkFn: typeof emitRequestRework;
   label: string;
 }): Promise<ApprovalContractOutput> {
   const repoPath = await mkdtemp(join(tmpdir(), "pairflow-approval-contract-"));
@@ -508,8 +508,8 @@ export async function runApprovalContractCase(
   const v11 = await executeApprovalCase({
     caseDef,
     action: parsedInput,
-    emitApproveFn: emitApproveV11,
-    emitRequestReworkFn: emitRequestReworkV11,
+    emitApproveFn: emitApprove,
+    emitRequestReworkFn: emitRequestRework,
     label: "v11"
   });
   assertContractExpectedSubset({

@@ -24,3 +24,9 @@ export async function emitAskHumanFromWorkspace(
   );
 }
 export { throwAsAskHumanCommandError as asAskHumanCommandError } from "./askHumanCommandRuntime.js";
+export { AskHumanCommandError } from "./askHumanCommandRuntime.js";
+export type {
+  EmitAskHumanDependencies,
+  EmitAskHumanInput,
+  EmitAskHumanResult
+} from "./askHumanCommandContract.js";

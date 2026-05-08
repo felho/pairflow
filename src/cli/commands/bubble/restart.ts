@@ -1,7 +1,7 @@
 import { restartBubbleDependencyDefaults } from "../../../v11/defaults/restart/restartCommandDefaults.js";
 import {
-  restartBubbleV11
-} from "../../../v11/application/restart/emitRestartV11.js";
+  restartBubble
+} from "../../../v11/application/restart/restartCommandApi.js";
 import {
   runBubbleRestartCommand as runApplicationBubbleRestartCommand,
   type BubbleRestartCommandDependencies
@@ -27,7 +27,7 @@ export async function runBubbleRestartCommand(
     restartBubble:
       dependencies.restartBubble ??
       ((input, inputDependencies = {}) =>
-        restartBubbleV11(input, {
+        restartBubble(input, {
           ...restartBubbleDependencyDefaults,
           ...inputDependencies
         }))

@@ -6,19 +6,19 @@ import { createHash } from "node:crypto";
 import { afterEach, describe, expect, it } from "vitest";
 
 import {
-  emitConvergedFromWorkspaceV11 as emitConvergedFromWorkspace
-} from "../../../src/v11/application/converged/emitConvergedV11.js";
+  emitConvergedFromWorkspaceCommandOrchestration as emitConvergedFromWorkspace
+} from "../../../src/v11/application/converged/convergedCommandOrchestration.js";
 import {
-  emitAskHumanFromWorkspaceV11 as emitAskHumanFromWorkspace
-} from "../../../src/v11/application/askHuman/emitAskHumanV11.js";
+  emitAskHumanFromWorkspace
+} from "../../../src/v11/application/askHuman/askHumanCommandApi.js";
 import {
-  emitPassFromWorkspaceV11 as emitPassFromWorkspace
-} from "../../../src/v11/application/pass/emitPassV11.js";
+  emitPassFromWorkspace
+} from "../../../src/v11/application/pass/passCommandOrchestration.js";
 import {
-  emitApproveV11 as emitApprove,
-  emitRequestReworkV11 as emitRequestRework,
-  ApprovalCommandErrorV11 as ApprovalCommandError
-} from "../../../src/v11/application/approval/emitApprovalV11.js";
+  emitApprove,
+  emitRequestRework,
+  ApprovalCommandError
+} from "../../../src/v11/application/approval/approvalCommandApi.js";
 import {
   submitMetaReviewResultV11 as submitMetaReviewResult
 } from "../../../src/v11/defaults/metaReview/metaReviewApi.js";

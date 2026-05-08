@@ -8,8 +8,8 @@ import { parseBubbleConfigToml, renderBubbleConfigToml } from "../../../src/conf
 import { createBubble } from "../../../src/v11/defaults/create/createBubbleApi.js";
 import { buildMetaReviewExecutionContext } from "../../../src/v11/shared/metaReview/metaReviewExecutionContext.js";
 import {
-  BubbleListErrorV11 as BubbleListError,
-} from "../../../src/v11/application/list/emitListV11.js";
+  BubbleListError,
+} from "../../../src/v11/application/list/listReadModelApi.js";
 import { listBubbles as listBubblesApi } from "../../../src/v11/application/list/listReadModelApi.js";
 import {
   writeRemotePointer,

@@ -48,3 +48,10 @@ export async function emitPassFromWorkspace(
 export function asPassCommandError(error: unknown): never {
   return throwAsPassCommandError(error);
 }
+
+export { PassCommandError } from "./passCommandError.js";
+export type {
+  EmitPassDependencies,
+  EmitPassInput,
+  EmitPassResult
+} from "./passCommandContract.js";

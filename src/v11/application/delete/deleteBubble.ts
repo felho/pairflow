@@ -2,7 +2,7 @@ import type {
   DeleteBubbleArtifacts,
   DeleteBubbleResult
 } from "../../../contracts/deleteBubble.js";
-import { StopBubbleErrorV11 as StopBubbleError } from "../stop/emitStopV11.js";
+import { StopBubbleError } from "../stop/stopCommandOrchestration.js";
 import { isNamedError } from "../../shared/errors/namedError.js";
 import {
   buildDeleteConfirmationResult,

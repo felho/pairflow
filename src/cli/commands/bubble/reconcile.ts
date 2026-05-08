@@ -8,8 +8,8 @@ import {
   type BubbleReconcileCommandOptions
 } from "../../../v11/application/reconcile/reconcileCliCommand.js";
 import {
-  reconcileRuntimeSessionsV11
-} from "../../../v11/application/reconcile/emitReconcileV11.js";
+  reconcileRuntimeSessions
+} from "../../../v11/application/reconcile/reconcileCommandApi.js";
 
 export {
   getBubbleReconcileHelpText,
@@ -36,6 +36,6 @@ export function runBubbleReconcileCommand(
   return runApplicationBubbleReconcileCommand(args, cwd, {
     reconcileRuntimeSessions:
       dependencies.reconcileRuntimeSessions ??
-      ((input) => reconcileRuntimeSessionsV11(input, reconcileRuntimeSessionDefaults))
+      ((input) => reconcileRuntimeSessions(input, reconcileRuntimeSessionDefaults))
   });
 }

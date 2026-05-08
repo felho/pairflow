@@ -2,11 +2,11 @@ import { parseArgs } from "node:util";
 
 import { mergeBubbleDependencyDefaults } from "../../../v11/defaults/merge/mergeCommandDefaults.js";
 import {
-  asBubbleMergeErrorV11 as throwAsBubbleMergeError,
-  mergeBubbleV11 as mergeBubble,
-  type MergeBubbleV11Dependencies,
-  type MergeBubbleV11Result as MergeBubbleResult
-} from "../../../v11/application/merge/emitMergeV11.js";
+  throwAsBubbleMergeError,
+  mergeBubbleCommandOrchestration as mergeBubble,
+  type MergeBubbleDependencies,
+  type MergeBubbleResult
+} from "../../../v11/application/merge/mergeCommandOrchestration.js";
 
 export interface BubbleMergeCommandOptions {
   id: string;
@@ -136,7 +136,7 @@ export function parseBubbleMergeCommandOptions(
 export async function executeBubbleMergeCommand(
   options: BubbleMergeCommandOptions,
   cwd: string = process.cwd(),
-  dependencies: MergeBubbleV11Dependencies = {}
+  dependencies: MergeBubbleDependencies = {}
 ): Promise<MergeBubbleResult> {
   try {
     return await mergeBubble({
@@ -157,7 +157,7 @@ export async function executeBubbleMergeCommand(
 export async function runBubbleMergeCommand(
   args: string[],
   cwd: string = process.cwd(),
-  dependencies: MergeBubbleV11Dependencies = {}
+  dependencies: MergeBubbleDependencies = {}
 ): Promise<MergeBubbleResult | null> {
   const options = parseBubbleMergeCommandOptions(args);
   if (options.help) {

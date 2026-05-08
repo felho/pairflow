@@ -1,23 +1,23 @@
 import {
-  emitApproveV11 as emitApprove,
-  emitRequestReworkV11 as emitRequestRework
-} from "../../application/approval/emitApprovalV11.js";
+  emitApprove,
+  emitRequestRework
+} from "../../application/approval/approvalCommandApi.js";
 import { commitBubbleDependencyDefaults } from "../commit/commitCommandDefaults.js";
-import { commitBubbleV11 } from "../../application/commit/emitCommitV11.js";
+import { commitBubble } from "../../application/commit/commitCommandApi.js";
 import { deleteBubble } from "../../application/delete/deleteBubble.js";
 import { deleteBubbleDependencyDefaults } from "../delete/deleteBubbleDefaults.js";
 import { mergeBubbleDependencyDefaults } from "../merge/mergeCommandDefaults.js";
-import { mergeBubbleV11 as mergeBubble } from "../../application/merge/emitMergeV11.js";
-import { openBubble } from "../../application/open/emitOpenV11.js";
+import { mergeBubbleCommandOrchestration as mergeBubble } from "../../application/merge/mergeCommandOrchestration.js";
+import { openBubble } from "../../application/open/openBubble.js";
 import { restartBubbleDependencyDefaults } from "../restart/restartCommandDefaults.js";
 import { restartBubble } from "../../application/restart/restartCommandApi.js";
-import { emitHumanReplyV11 as emitHumanReply } from "../../application/reply/emitReplyV11.js";
-import { resumeBubbleV11 as resumeBubble } from "../../application/resume/emitResumeV11.js";
+import { emitHumanReply } from "../../application/reply/replyCommandApi.js";
+import { resumeBubbleCommandOrchestration as resumeBubble } from "../../application/resume/resumeCommandOrchestration.js";
 import { startBubbleV11 as startBubble } from "../../application/start/emitStartV11.js";
 import { getBubbleStatusV11 as getBubbleStatus } from "../../application/status/emitStatusV11.js";
 import { statusCommandDependencyDefaults } from "../status/statusCommandDependencyDefaults.js";
 import { stopBubbleDependencyDefaults } from "../stop/stopCommandDefaults.js";
-import { stopBubbleV11 as stopBubble } from "../../application/stop/emitStopV11.js";
+import { stopBubbleCommandOrchestration as stopBubble } from "../../application/stop/stopCommandOrchestration.js";
 import { getBubbleInbox } from "../../application/inbox/bubbleInboxReadModel.js";
 import { listBubbles } from "../../application/list/listReadModelApi.js";
 import { listCommandDefaults } from "../list/listCommandDefaults.js";
@@ -359,7 +359,7 @@ async function getBubbleInboxForUi(
 export const uiRouterDependencyDefaults = {
   async commitBubble(input) {
     return mapUiCommitResult(
-      await commitBubbleV11(
+      await commitBubble(
         projectUiInputNowToCommandNow(input),
         commitBubbleDependencyDefaults
       )

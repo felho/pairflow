@@ -5,60 +5,60 @@ export function healthcheck(): string {
 }
 
 export {
-  asAskHumanCommandErrorV11 as asAskHumanCommandError,
-  emitAskHumanFromWorkspaceV11 as emitAskHumanFromWorkspace,
-  AskHumanCommandErrorV11 as AskHumanCommandError
-} from "./v11/application/askHuman/emitAskHumanV11.js";
+  asAskHumanCommandError,
+  emitAskHumanFromWorkspace,
+  AskHumanCommandError
+} from "./v11/application/askHuman/askHumanCommandApi.js";
 export {
   emitActorProtocolFromWorkspaceV11 as emitActorProtocolFromWorkspace
 } from "./v11/application/actorProtocol/emitActorProtocolV11.js";
 export {
-  asConvergedCommandErrorV11 as asConvergedCommandError,
-  emitConvergedFromWorkspaceV11 as emitConvergedFromWorkspace,
-  ConvergedCommandErrorV11 as ConvergedCommandError
-} from "./v11/application/converged/emitConvergedV11.js";
+  throwAsConvergedCommandError as asConvergedCommandError,
+  emitConvergedFromWorkspaceCommandOrchestration as emitConvergedFromWorkspace,
+  ConvergedCommandError
+} from "./v11/application/converged/convergedCommandOrchestration.js";
 export {
-  asPassCommandErrorV11 as asPassCommandError,
-  emitPassFromWorkspaceV11 as emitPassFromWorkspace,
-  inferPassIntentV11 as inferPassIntent,
-  PassCommandErrorV11 as PassCommandError
-} from "./v11/application/pass/emitPassV11.js";
+  asPassCommandError,
+  emitPassFromWorkspace,
+  inferPassIntent,
+  PassCommandError
+} from "./v11/application/pass/passCommandOrchestration.js";
 export {
   BubbleLookupError,
   resolveBubbleById
 } from "./v11/infrastructure/executor/workspace/bubbleLookup.js";
 export {
-  asBubbleInboxErrorV11 as asBubbleInboxError,
-  BubbleInboxErrorV11 as BubbleInboxError,
-  getBubbleInboxV11 as getBubbleInbox
-} from "./v11/application/inbox/emitInboxV11.js";
+  asBubbleInboxError,
+  BubbleInboxError,
+  getBubbleInbox
+} from "./v11/application/inbox/bubbleInboxReadModel.js";
 export {
-  asBubbleCommitErrorV11 as asBubbleCommitError,
-  BubbleCommitErrorV11 as BubbleCommitError,
-  commitBubbleV11 as commitBubble
-} from "./v11/application/commit/emitCommitV11.js";
+  asBubbleCommitError,
+  BubbleCommitError,
+  commitBubble
+} from "./v11/application/commit/commitCommandApi.js";
 export {
-  asBubbleMergeErrorV11 as asBubbleMergeError,
-  BubbleMergeErrorV11 as BubbleMergeError,
-  mergeBubbleV11 as mergeBubble
-} from "./v11/application/merge/emitMergeV11.js";
+  throwAsBubbleMergeError as asBubbleMergeError,
+  BubbleMergeError,
+  mergeBubbleCommandOrchestration as mergeBubble
+} from "./v11/application/merge/mergeCommandOrchestration.js";
 export {
   asOpenBubbleError,
   executeOpenCommand,
   openBubble,
   OpenBubbleError
-} from "./v11/application/open/emitOpenV11.js";
+} from "./v11/application/open/openBubble.js";
 export {
-  asResumeBubbleErrorV11 as asResumeBubbleError,
+  throwAsResumeBubbleError as asResumeBubbleError,
   DEFAULT_RESUME_MESSAGE,
-  ResumeBubbleErrorV11 as ResumeBubbleError,
-  resumeBubbleV11 as resumeBubble
-} from "./v11/application/resume/emitResumeV11.js";
+  ResumeBubbleError,
+  resumeBubbleCommandOrchestration as resumeBubble
+} from "./v11/application/resume/resumeCommandOrchestration.js";
 export {
   asRestartBubbleError,
   RestartBubbleError,
   restartBubble
-} from "./v11/application/restart/emitRestartV11.js";
+} from "./v11/application/restart/restartCommandApi.js";
 export {
   BubbleCreateError,
   createBubble
@@ -69,20 +69,20 @@ export {
   startBubbleV11 as startBubble
 } from "./v11/application/start/emitStartV11.js";
 export {
-  asBubbleListErrorV11 as asBubbleListError,
-  BubbleListErrorV11 as BubbleListError,
-  listBubblesV11 as listBubbles
-} from "./v11/application/list/emitListV11.js";
+  asBubbleListError,
+  BubbleListError,
+  listBubbles
+} from "./v11/application/list/listReadModelApi.js";
 export {
-  asStartupReconcilerErrorV11 as asStartupReconcilerError,
-  reconcileRuntimeSessionsV11 as reconcileRuntimeSessions,
-  StartupReconcilerErrorV11 as StartupReconcilerError
-} from "./v11/application/reconcile/emitReconcileV11.js";
+  throwAsStartupReconcilerError as asStartupReconcilerError,
+  reconcileRuntimeSessions,
+  StartupReconcilerError
+} from "./v11/application/reconcile/reconcileCommandApi.js";
 export {
-  asStopBubbleErrorV11 as asStopBubbleError,
-  StopBubbleErrorV11 as StopBubbleError,
-  stopBubbleV11 as stopBubble
-} from "./v11/application/stop/emitStopV11.js";
+  throwAsStopBubbleError as asStopBubbleError,
+  StopBubbleError,
+  stopBubbleCommandOrchestration as stopBubble
+} from "./v11/application/stop/stopCommandOrchestration.js";
 export {
   asDeleteBubbleError,
   DeleteBubbleError,
@@ -205,17 +205,17 @@ export {
   DEFAULT_WORK_MODE
 } from "./config/defaults.js";
 export {
-  asApprovalCommandErrorV11 as asApprovalCommandError,
-  ApprovalCommandErrorV11 as ApprovalCommandError,
-  emitApprovalDecisionV11 as emitApprovalDecision,
-  emitApproveV11 as emitApprove,
-  emitRequestReworkV11 as emitRequestRework
-} from "./v11/application/approval/emitApprovalV11.js";
+  asApprovalCommandError,
+  ApprovalCommandError,
+  emitApprovalDecision,
+  emitApprove,
+  emitRequestRework
+} from "./v11/application/approval/approvalCommandApi.js";
 export {
-  asHumanReplyCommandErrorV11 as asHumanReplyCommandError,
-  emitHumanReplyV11 as emitHumanReply,
-  HumanReplyCommandErrorV11 as HumanReplyCommandError
-} from "./v11/application/reply/emitReplyV11.js";
+  asHumanReplyCommandError,
+  emitHumanReply,
+  HumanReplyCommandError
+} from "./v11/application/reply/replyCommandApi.js";
 export {
   getAskHumanHelpText,
   parseAskHumanCommandOptions,
@@ -550,31 +550,31 @@ export {
   protocolParticipants
 } from "./types/protocol.js";
 export type {
-  EmitAskHumanV11Input as EmitAskHumanInput,
-  EmitAskHumanV11Result as EmitAskHumanResult
-} from "./v11/application/askHuman/emitAskHumanV11.js";
+  EmitAskHumanInput,
+  EmitAskHumanResult
+} from "./v11/application/askHuman/askHumanCommandApi.js";
 export type {
-  EmitConvergedV11Input as EmitConvergedInput,
-  EmitConvergedV11Result as EmitConvergedResult
-} from "./v11/application/converged/emitConvergedV11.js";
+  EmitConvergedInput,
+  EmitConvergedResult
+} from "./v11/application/converged/convergedCommandOrchestration.js";
 export type {
   EmitPassInput,
   EmitPassResult
 } from "./v11/application/pass/passCommandContract.js";
 export type {
-  BubbleInboxV11Input as BubbleInboxInput,
-  BubbleInboxV11View as BubbleInboxView,
-  PendingInboxItemV11 as PendingInboxItem,
-  PendingInboxItemV11Type as PendingInboxItemType
-} from "./v11/application/inbox/emitInboxV11.js";
+  BubbleInboxInput,
+  BubbleInboxView,
+  PendingInboxItem,
+  PendingInboxItemType
+} from "./v11/application/inbox/bubbleInboxReadModel.js";
 export type {
-  CommitBubbleV11Input as CommitBubbleInput,
-  CommitBubbleV11Result as CommitBubbleResult
-} from "./v11/application/commit/emitCommitV11.js";
+  CommitBubbleInput,
+  CommitBubbleResult
+} from "./v11/application/commit/commitCommandApi.js";
 export type {
-  MergeBubbleV11Input as MergeBubbleInput,
-  MergeBubbleV11Result as MergeBubbleResult
-} from "./v11/application/merge/emitMergeV11.js";
+  MergeBubbleInput,
+  MergeBubbleResult
+} from "./v11/application/merge/mergeCommandOrchestration.js";
 export type {
   ResolvedBubbleById
 } from "./v11/infrastructure/executor/workspace/bubbleLookup.js";
@@ -585,39 +585,39 @@ export type {
   OpenCommandExecutionInput,
   OpenCommandExecutionResult,
   OpenCommandExecutor
-} from "./v11/application/open/emitOpenV11.js";
+} from "./v11/application/open/openBubble.js";
 export type {
-  ResumeBubbleV11Dependencies as ResumeBubbleDependencies,
-  ResumeBubbleV11Input as ResumeBubbleInput,
-  ResumeBubbleV11Result as ResumeBubbleResult
-} from "./v11/application/resume/emitResumeV11.js";
+  ResumeBubbleDependencies,
+  ResumeBubbleInput,
+  ResumeBubbleResult
+} from "./v11/application/resume/resumeCommandOrchestration.js";
 export type {
   RestartBubbleDependencies,
   RestartBubbleInput,
   RestartBubbleResult
-} from "./v11/application/restart/emitRestartV11.js";
+} from "./v11/application/restart/restartCommandApi.js";
 export type {
   StartBubbleV11Dependencies as StartBubbleDependencies,
   StartBubbleV11Input as StartBubbleInput,
   StartBubbleV11Result as StartBubbleResult
 } from "./v11/application/start/emitStartV11.js";
 export type {
-  StopBubbleV11Dependencies as StopBubbleDependencies,
-  StopBubbleV11Input as StopBubbleInput,
-  StopBubbleV11Result as StopBubbleResult
-} from "./v11/application/stop/emitStopV11.js";
+  StopBubbleDependencies,
+  StopBubbleInput,
+  StopBubbleResult
+} from "./v11/application/stop/stopCommandOrchestration.js";
 export type {
-  BubbleListV11Input as BubbleListInput,
-  BubbleListV11Entry as BubbleListEntry,
-  BubbleListV11StateCounts as BubbleListStateCounts,
-  BubbleListV11View as BubbleListView
-} from "./v11/application/list/emitListV11.js";
+  BubbleListInput,
+  BubbleListEntry,
+  BubbleListStateCounts,
+  BubbleListView
+} from "./v11/application/list/listReadModelApi.js";
 export type {
-  ReconcileRuntimeSessionsActionV11 as ReconcileRuntimeSessionsAction,
-  ReconcileRuntimeSessionsInputV11 as ReconcileRuntimeSessionsInput,
-  ReconcileRuntimeSessionsReportV11 as ReconcileRuntimeSessionsReport,
-  RuntimeSessionStaleReasonV11 as RuntimeSessionStaleReason
-} from "./v11/application/reconcile/emitReconcileV11.js";
+  ReconcileRuntimeSessionsAction,
+  ReconcileRuntimeSessionsInput,
+  ReconcileRuntimeSessionsReport,
+  RuntimeSessionStaleReason
+} from "./v11/application/reconcile/reconcileCommandApi.js";
 export type {
   BubbleStatusV11Input as BubbleStatusInput,
   BubbleStatusV11View as BubbleStatusView
@@ -884,18 +884,18 @@ export type {
   ProtocolEnvelopeDraft
 } from "./v11/infrastructure/artifact/transcript/transcriptStore.js";
 export type {
-  EmitApprovalDecisionV11Input as EmitApprovalDecisionInput,
-  EmitApprovalDecisionV11Result as EmitApprovalDecisionResult,
-  EmitApproveV11Input as EmitApproveInput,
-  EmitRequestReworkV11Input as EmitRequestReworkInput,
-  EmitRequestReworkImmediateV11Result as EmitRequestReworkImmediateResult,
-  EmitRequestReworkQueuedV11Result as EmitRequestReworkQueuedResult,
-  EmitRequestReworkV11Result as EmitRequestReworkResult
-} from "./v11/application/approval/emitApprovalV11.js";
+  EmitApprovalDecisionInput,
+  EmitApprovalDecisionResult,
+  EmitApproveInput,
+  EmitRequestReworkInput,
+  EmitRequestReworkImmediateResult,
+  EmitRequestReworkQueuedResult,
+  EmitRequestReworkResult
+} from "./v11/application/approval/approvalCommandApi.js";
 export type {
-  EmitHumanReplyV11Input as EmitHumanReplyInput,
-  EmitHumanReplyV11Result as EmitHumanReplyResult
-} from "./v11/application/reply/emitReplyV11.js";
+  EmitHumanReplyInput,
+  EmitHumanReplyResult
+} from "./v11/application/reply/replyCommandApi.js";
 export type {
   ApprovalDecision,
   PassIntent,

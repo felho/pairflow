@@ -5,14 +5,14 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 import {
-  emitAskHumanFromWorkspaceV11 as emitAskHumanFromWorkspace
-} from "../../../src/v11/application/askHuman/emitAskHumanV11.js";
+  emitAskHumanFromWorkspace
+} from "../../../src/v11/application/askHuman/askHumanCommandApi.js";
 import {
-  emitPassFromWorkspaceV11 as emitPassFromWorkspace
-} from "../../../src/v11/application/pass/emitPassV11.js";
+  emitPassFromWorkspace
+} from "../../../src/v11/application/pass/passCommandOrchestration.js";
 import { listBubbles } from "../../../src/v11/application/list/listReadModelApi.js";
 import { listCommandDefaults } from "../../../src/v11/defaults/list/listCommandDefaults.js";
-import { emitHumanReplyV11 as emitHumanReply } from "../../../src/v11/application/reply/emitReplyV11.js";
+import { emitHumanReply } from "../../../src/v11/application/reply/replyCommandApi.js";
 import { readTranscriptEnvelopes } from "../../../src/v11/infrastructure/artifact/transcript/transcriptStore.js";
 import { readStateSnapshot } from "../../../src/v11/infrastructure/state/stateStore.js";
 import { initGitRepository } from "../../helpers/git.js";

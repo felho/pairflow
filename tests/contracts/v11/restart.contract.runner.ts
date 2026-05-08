@@ -4,8 +4,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import {
-  restartBubbleV11
-} from "../../../src/v11/application/restart/emitRestartV11.js";
+  restartBubble
+} from "../../../src/v11/application/restart/restartCommandApi.js";
 import { restartBubbleDependencyDefaults } from "../../../src/v11/defaults/restart/restartCommandDefaults.js";
 import {
   startBubbleV11 as startBubble,
@@ -109,7 +109,7 @@ function parseRestartCaseInput(input: ContractCase["input"]): ParsedRestartCaseI
 }
 
 function normalizeRestartResult(
-  result: Awaited<ReturnType<typeof restartBubbleV11>>
+  result: Awaited<ReturnType<typeof restartBubble>>
 ): RestartContractSuccessOutput {
   return {
     status: "ok",
@@ -179,7 +179,7 @@ function assertContractExpectedSubset(input: {
 
 async function executeRestartCase(input: {
   caseDef: ContractCase;
-  executor: typeof restartBubbleV11;
+  executor: typeof restartBubble;
 }): Promise<RestartContractOutput> {
   const repoPath = await mkdtemp(join(tmpdir(), "pairflow-restart-contract-"));
   try {
@@ -264,7 +264,7 @@ export async function runRestartContractCase(
 
   const v11 = await executeRestartCase({
     caseDef,
-    executor: restartBubbleV11
+    executor: restartBubble
   });
   assertContractExpectedSubset({
     output: v11,

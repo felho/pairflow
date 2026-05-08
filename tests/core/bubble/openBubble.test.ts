@@ -7,7 +7,7 @@ import {
   asOpenBubbleError,
   openBubble,
   OpenBubbleError
-} from "../../../src/v11/application/open/emitOpenV11.js";
+} from "../../../src/v11/application/open/openBubble.js";
 import type {
   BubbleRemotePointerStarted
 } from "../../../src/v11/shared/remote/remoteExecutionTypes.js";

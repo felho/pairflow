@@ -4,7 +4,17 @@ import {
   type ResumeBubbleInput,
   type ResumeBubbleResult
 } from "./resumeCommandContract.js";
-import { emitHumanReplyV11 as emitHumanReply } from "../reply/emitReplyV11.js";
+import { emitHumanReply } from "../reply/replyCommandApi.js";
+export {
+  ResumeBubbleError,
+  throwAsResumeBubbleError
+} from "./resumeCommandRuntime.js";
+export { DEFAULT_RESUME_MESSAGE } from "./resumeCommandContract.js";
+export type {
+  ResumeBubbleDependencies,
+  ResumeBubbleInput,
+  ResumeBubbleResult
+} from "./resumeCommandContract.js";
 
 export async function resumeBubbleCommandOrchestration(
   input: ResumeBubbleInput,

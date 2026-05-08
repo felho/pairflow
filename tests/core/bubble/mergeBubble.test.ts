@@ -7,9 +7,9 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { renderBubbleConfigToml } from "../../../src/config/bubbleConfig.js";
 import { createBubble } from "../../../src/v11/defaults/create/createBubbleApi.js";
 import {
-  BubbleMergeErrorV11 as BubbleMergeError,
-  mergeBubbleV11 as mergeBubbleApplication
-} from "../../../src/v11/application/merge/emitMergeV11.js";
+  BubbleMergeError,
+  mergeBubbleCommandOrchestration as mergeBubbleApplication
+} from "../../../src/v11/application/merge/mergeCommandOrchestration.js";
 import type {
   MergeBubbleDependencies,
   MergeBubbleInput

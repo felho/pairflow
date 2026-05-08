@@ -4,12 +4,12 @@ import { join } from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import { emitAskHumanFromWorkspaceV11 as emitAskHumanFromWorkspace } from "../../../src/v11/application/askHuman/emitAskHumanV11.js";
+import { emitAskHumanFromWorkspace } from "../../../src/v11/application/askHuman/askHumanCommandApi.js";
 import { createBubble } from "../../../src/v11/defaults/create/createBubbleApi.js";
 import {
-  emitHumanReplyV11 as emitHumanReply,
-  HumanReplyCommandErrorV11 as HumanReplyCommandError
-} from "../../../src/v11/application/reply/emitReplyV11.js";
+  emitHumanReply,
+  HumanReplyCommandError
+} from "../../../src/v11/application/reply/replyCommandApi.js";
 import { readTranscriptEnvelopes } from "../../../src/v11/infrastructure/artifact/transcript/transcriptStore.js";
 import { readStateSnapshot, writeStateSnapshot } from "../../../src/v11/infrastructure/state/stateStore.js";
 import { deliveryTargetRoleMetadataKey } from "../../../src/types/protocol.js";

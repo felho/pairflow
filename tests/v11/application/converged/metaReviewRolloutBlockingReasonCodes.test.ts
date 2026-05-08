@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { resolveMetaReviewRolloutBlockingReasonCodesV11 } from "../../../../src/v11/application/converged/metaReviewRolloutBlockingReasonCodes.js";
+import { resolveConvergedRolloutBlockingReasonCodes } from "../../../../src/v11/application/converged/metaReviewRolloutBlockingReasonCodes.js";
 
-describe("resolveMetaReviewRolloutBlockingReasonCodesV11", () => {
+describe("resolveConvergedRolloutBlockingReasonCodes", () => {
   it("includes rollout-blocking gate and command-path codes", () => {
-    const codes = resolveMetaReviewRolloutBlockingReasonCodesV11({
+    const codes = resolveConvergedRolloutBlockingReasonCodes({
       gateRoute: "human_gate_run_failed",
       commandPathStatus: {
         status: "stale",
@@ -26,7 +26,7 @@ describe("resolveMetaReviewRolloutBlockingReasonCodesV11", () => {
   });
 
   it("ignores stale code for external profile when command path is a non-blocking mismatch diagnostic", () => {
-    const codes = resolveMetaReviewRolloutBlockingReasonCodesV11({
+    const codes = resolveConvergedRolloutBlockingReasonCodes({
       gateRoute: "human_gate_approve",
       commandPathStatus: {
         status: "external",
@@ -45,7 +45,7 @@ describe("resolveMetaReviewRolloutBlockingReasonCodesV11", () => {
   });
 
   it("includes external-unavailable code only for external profile", () => {
-    const externalCodes = resolveMetaReviewRolloutBlockingReasonCodesV11({
+    const externalCodes = resolveConvergedRolloutBlockingReasonCodes({
       gateRoute: "human_gate_approve",
       commandPathStatus: {
         status: "missing",
@@ -61,7 +61,7 @@ describe("resolveMetaReviewRolloutBlockingReasonCodesV11", () => {
     });
     expect(externalCodes).toContain("PAIRFLOW_COMMAND_EXTERNAL_UNAVAILABLE");
 
-    const selfHostCodes = resolveMetaReviewRolloutBlockingReasonCodesV11({
+    const selfHostCodes = resolveConvergedRolloutBlockingReasonCodes({
       gateRoute: "human_gate_approve",
       commandPathStatus: {
         status: "missing",
@@ -79,7 +79,7 @@ describe("resolveMetaReviewRolloutBlockingReasonCodesV11", () => {
   });
 
   it("includes rework-dispatch-failed blocking code for the dispatch-failed gate route", () => {
-    const codes = resolveMetaReviewRolloutBlockingReasonCodesV11({
+    const codes = resolveConvergedRolloutBlockingReasonCodes({
       gateRoute: "human_gate_dispatch_failed",
       commandPathStatus: {
         status: "external",

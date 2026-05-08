@@ -23,6 +23,10 @@ import {
   resolveRemoteCommitExecutionContextFromEnv
 } from "./remoteCommitExecutionContext.js";
 export { BubbleCommitError } from "./commitCommandRuntime.js";
+export type {
+  CommitBubbleInput,
+  CommitBubbleResult
+} from "./commitCommandContract.js";
 
 async function prepareCommitExecutionContext(input: {
   command: CommitBubbleInput;

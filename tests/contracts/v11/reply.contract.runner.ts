@@ -3,11 +3,11 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import {
-  emitHumanReplyV11,
-  type EmitHumanReplyV11Dependencies as EmitHumanReplyDependencies,
-  type EmitHumanReplyV11Result as EmitHumanReplyResult
-} from "../../../src/v11/application/reply/emitReplyV11.js";
-import { emitAskHumanFromWorkspaceV11 as emitAskHumanFromWorkspace } from "../../../src/v11/application/askHuman/emitAskHumanV11.js";
+  emitHumanReply,
+  type EmitHumanReplyDependencies,
+  type EmitHumanReplyResult
+} from "../../../src/v11/application/reply/replyCommandApi.js";
+import { emitAskHumanFromWorkspace } from "../../../src/v11/application/askHuman/askHumanCommandApi.js";
 import {
   readStateSnapshot,
   writeStateSnapshot
@@ -319,7 +319,7 @@ function assertContractExpectedSubset(input: {
 
 async function executeReplyCase(input: {
   caseDef: ContractCase;
-  executor: typeof emitHumanReplyV11;
+  executor: typeof emitHumanReply;
   label: string;
 }): Promise<ReplyContractResultOutput> {
   const repoPath = await mkdtemp(join(tmpdir(), "pairflow-reply-contract-"));
@@ -434,7 +434,7 @@ export async function runReplyContractCase(
 
   const v11 = await executeReplyCase({
     caseDef,
-    executor: emitHumanReplyV11,
+    executor: emitHumanReply,
     label: "v11"
   });
   assertContractExpectedSubset({
