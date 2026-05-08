@@ -2,7 +2,6 @@ import type {
   DeleteBubbleArtifacts,
   DeleteBubbleResult
 } from "../../../contracts/deleteBubble.js";
-import { deleteBubbleDependencyDefaults } from "./deleteBubbleDependencyDefaults.js";
 import { StopBubbleErrorV11 as StopBubbleError } from "../stop/emitStopV11.js";
 import { isNamedError } from "../../shared/errors/namedError.js";
 import {
@@ -47,7 +46,7 @@ export class DeleteBubbleError extends Error {
   }
 }
 
-type TmuxRunner = typeof deleteBubbleDependencyDefaults.runTmux;
+type TmuxRunner = ResolvedDeleteDependencies["runTmux"];
 
 function toDeleteBubbleError(message: string): DeleteBubbleError {
   return new DeleteBubbleError(message);
@@ -109,7 +108,7 @@ async function resolveDeleteArtifacts(input: {
   const runtimeSession = runtimeSessions[input.resolved.bubbleId] ?? null;
   const tmuxSessionName =
     runtimeSession?.tmuxSessionName ??
-    deleteBubbleDependencyDefaults.buildBubbleTmuxSessionName(input.resolved.bubbleId);
+    input.dependencies.buildBubbleTmuxSessionName(input.resolved.bubbleId);
   const tmuxSessionExists = await isTmuxSessionAlive(
     tmuxSessionName,
     input.dependencies.runTmux
@@ -140,10 +139,11 @@ async function resolveDeleteArtifacts(input: {
 
 async function determineDeleteExecutionContext(
   resolved: ResolvedBubble,
-  now: Date
+  now: Date,
+  dependencies: ResolvedDeleteDependencies
 ): Promise<DeleteExecutionContext> {
   const bubbleIdentity =
-    await deleteBubbleDependencyDefaults.ensureBubbleInstanceIdForMutation({
+    await dependencies.ensureBubbleInstanceIdForMutation({
     bubbleId: resolved.bubbleId,
     repoPath: resolved.repoPath,
     bubblePaths: resolved.bubblePaths,
@@ -155,7 +155,7 @@ async function determineDeleteExecutionContext(
   let requiresPreDeleteStop = false;
   let metricsRound: number | null = null;
   try {
-    const loadedState = await deleteBubbleDependencyDefaults.readStateSnapshot(
+    const loadedState = await dependencies.readStateSnapshot(
       resolved.bubblePaths.statePath
     );
     requiresPreDeleteStop = preDeleteStopStateByLifecycle[loadedState.state.state];
@@ -314,9 +314,82 @@ function assertRemoteDeleteSuccessResult(input: {
   return input.remoteResult;
 }
 
+async function deleteRemoteBubble(input: {
+  deleteInput: DeleteBubbleInput;
+  routeContext: Extract<DeleteRouteContext, { route: "remote" }>;
+  dependencies: ResolvedDeleteDependencies;
+  now: Date;
+}): Promise<DeleteBubbleResult> {
+  let remoteResult: ExecuteRemoteBubbleDeleteCommandResult;
+  try {
+    remoteResult = await input.dependencies.executeRemoteBubbleDeleteCommand({
+      bubbleId: input.routeContext.resolved.bubbleId,
+      remoteClonePath: input.routeContext.remotePointer.remoteClonePath,
+      remoteTarget: input.routeContext.remoteTarget,
+      force: input.deleteInput.force === true
+    });
+  } catch (error) {
+    const fallbackResult = await maybeFinalizeRemoteDeleteMissingTargetFallback({
+      deleteInput: input.deleteInput,
+      routeContext: input.routeContext,
+      dependencies: input.dependencies,
+      now: input.now,
+      remoteDeleteError: error,
+      determineDeleteExecutionContext,
+      returnDeleteSuccessWithLifecycle,
+      toDeleteStepError,
+      inferCreatedAtFromBubbleInstanceId
+    });
+    if (fallbackResult !== undefined) {
+      return fallbackResult;
+    }
+    throw error;
+  }
+
+  if (input.deleteInput.force !== true) {
+    return assertRemoteDeleteConfirmationResult({
+      remoteResult,
+      routeContext: input.routeContext
+    });
+  }
+
+  const successfulRemoteResult = assertRemoteDeleteSuccessResult({
+    remoteResult,
+    routeContext: input.routeContext
+  });
+  const execution = await determineDeleteExecutionContext(
+    input.routeContext.resolved,
+    input.now,
+    input.dependencies
+  );
+  await createDeleteArchive({
+    input: input.deleteInput,
+    resolved: input.routeContext.resolved,
+    execution,
+    dependencies: input.dependencies,
+    remoteArchiveCapture: successfulRemoteResult.archiveCapture,
+    now: input.now,
+    inferCreatedAtFromBubbleInstanceId,
+    toDeleteStepError
+  });
+  await removeDeleteBubbleDirectory({
+    resolved: input.routeContext.resolved,
+    execution,
+    dependencies: input.dependencies,
+    toDeleteStepError
+  });
+  return returnDeleteSuccessWithLifecycle({
+    result: successfulRemoteResult.result,
+    resolved: input.routeContext.resolved,
+    execution,
+    force: input.deleteInput.force === true,
+    now: input.now
+  });
+}
+
 export async function deleteBubble(
   input: DeleteBubbleInput,
-  dependencies: DeleteBubbleDependencies = {}
+  dependencies: DeleteBubbleDependencies
 ): Promise<DeleteBubbleResult> {
   const now = input.now ?? new Date();
   const resolvedDependencies = resolveDeleteDependencies(dependencies);
@@ -326,66 +399,11 @@ export async function deleteBubble(
   });
 
   if (routeContext.route === "remote") {
-    let remoteResult: ExecuteRemoteBubbleDeleteCommandResult;
-    try {
-      remoteResult = await resolvedDependencies.executeRemoteBubbleDeleteCommand({
-        bubbleId: routeContext.resolved.bubbleId,
-        remoteClonePath: routeContext.remotePointer.remoteClonePath,
-        remoteTarget: routeContext.remoteTarget,
-        force: input.force === true
-      });
-    } catch (error) {
-      const fallbackResult = await maybeFinalizeRemoteDeleteMissingTargetFallback({
-        deleteInput: input,
-        routeContext,
-        dependencies: resolvedDependencies,
-        now,
-        remoteDeleteError: error,
-        determineDeleteExecutionContext,
-        returnDeleteSuccessWithLifecycle,
-        toDeleteStepError,
-        inferCreatedAtFromBubbleInstanceId
-      });
-      if (fallbackResult !== undefined) {
-        return fallbackResult;
-      }
-      throw error;
-    }
-
-    if (input.force !== true) {
-      return assertRemoteDeleteConfirmationResult({
-        remoteResult,
-        routeContext
-      });
-    }
-
-    const successfulRemoteResult = assertRemoteDeleteSuccessResult({
-      remoteResult,
-      routeContext
-    });
-    const execution = await determineDeleteExecutionContext(routeContext.resolved, now);
-    await createDeleteArchive({
-      input,
-      resolved: routeContext.resolved,
-      execution,
+    return deleteRemoteBubble({
+      deleteInput: input,
+      routeContext,
       dependencies: resolvedDependencies,
-      remoteArchiveCapture: successfulRemoteResult.archiveCapture,
       now,
-      inferCreatedAtFromBubbleInstanceId,
-      toDeleteStepError
-    });
-    await removeDeleteBubbleDirectory({
-      resolved: routeContext.resolved,
-      execution,
-      dependencies: resolvedDependencies,
-      toDeleteStepError
-    });
-    return returnDeleteSuccessWithLifecycle({
-      result: successfulRemoteResult.result,
-      resolved: routeContext.resolved,
-      execution,
-      force: input.force === true,
-      now
     });
   }
 
@@ -399,7 +417,11 @@ export async function deleteBubble(
     return buildDeleteConfirmationResult(resolved.bubbleId, artifacts);
   }
 
-  const execution = await determineDeleteExecutionContext(resolved, now);
+  const execution = await determineDeleteExecutionContext(
+    resolved,
+    now,
+    resolvedDependencies
+  );
   const runtimeCleanup = await cleanupDeleteRuntimeArtifacts({
     input,
     resolved,
@@ -445,7 +467,7 @@ export function asDeleteBubbleError(error: unknown): never {
   if (isNamedError(error, "BubbleLookupError")) {
     throw toDeleteBubbleError(error.message);
   }
-  if (error instanceof deleteBubbleDependencyDefaults.TmuxCommandError) {
+  if (isNamedError(error, "TmuxCommandError")) {
     throw toDeleteBubbleError(error.message);
   }
   if (error instanceof StopBubbleError) {

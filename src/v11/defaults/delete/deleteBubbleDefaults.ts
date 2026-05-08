@@ -19,6 +19,7 @@ import { resolveBubbleById } from "../bubbleLookup/bubbleLookupDefaults.js";
 import { buildBubbleTmuxSessionName } from "../../shared/bubble/tmuxSessionName.js";
 import { statusCommandDependencyDefaults } from "../status/statusCommandDependencyDefaults.js";
 import { removeWatchdogPaneActivity } from "../watchdog/watchdogPaneActivityDefaults.js";
+import type { DeleteBubbleDefaultDependencies } from "../../application/delete/deleteBubbleSupport.js";
 
 const stopBubble: typeof stopBubbleV11 = (input, dependencies = {}) =>
   stopBubbleV11(input, {
@@ -47,4 +48,4 @@ export const deleteBubbleDependencyDefaults = {
   TmuxCommandError,
   terminateBubbleTmuxSession,
   upsertDeletedArchiveIndexEntry
-} as const;
+} as const satisfies DeleteBubbleDefaultDependencies;

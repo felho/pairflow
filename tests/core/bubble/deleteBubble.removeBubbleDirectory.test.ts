@@ -14,6 +14,7 @@ import {
   deleteBubble,
   type DeleteBubbleDependencies
 } from "../../../src/v11/application/delete/deleteBubble.js";
+import { deleteBubbleDependencyDefaults } from "../../../src/v11/defaults/delete/deleteBubbleDefaults.js";
 import type {
   CreateArchiveSnapshotResult
 } from "../../../src/v11/infrastructure/artifact/archive/archiveSnapshot.js";
@@ -45,6 +46,7 @@ function buildDependencies(): DeleteBubbleDependencies {
       >;
 
   return {
+    ...deleteBubbleDependencyDefaults,
     resolveBubbleById,
     pathExists: vi.fn(async () => false),
     branchExists: vi.fn(() => Promise.resolve(false)),

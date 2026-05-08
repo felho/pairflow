@@ -1,6 +1,7 @@
 import { basename, dirname, join } from "node:path";
 
 import type {
+  DeliveryAck,
   EmitDeliveryNotificationAckPort,
   ResolveDeliveryMessageRefInput,
   ResolveDeliveryMessageRefPort
@@ -15,55 +16,6 @@ import type {
   VerifyImplementerTestEvidencePort,
   WriteReviewerTestEvidenceArtifactPort
 } from "../../shared/ports/reviewerTestEvidenceArtifacts.js";
-
-interface ReviewerDeliveryDefaultsModule {
-  reviewerDeliveryDefaults: {
-    emitDeliveryNotificationAck: EmitDeliveryNotificationAckPort;
-    readReviewerBriefArtifact: ReadReviewerBriefArtifactPort;
-    readReviewerFocusArtifact: ReadReviewerFocusArtifactPort;
-    resolveReviewerTestExecutionDirectiveFromArtifact:
-      ResolveReviewerTestExecutionDirectiveFromArtifactPort;
-    refreshReviewerContext: RefreshReviewerContextPort;
-    verifyImplementerTestEvidence: VerifyImplementerTestEvidencePort;
-    writeReviewerTestEvidenceArtifact: WriteReviewerTestEvidenceArtifactPort;
-  };
-}
-
-let reviewerDeliveryDefaultsPromise:
-  | Promise<{
-      emitDeliveryNotificationAck: EmitDeliveryNotificationAckPort;
-      readReviewerBriefArtifact: ReadReviewerBriefArtifactPort;
-      readReviewerFocusArtifact: ReadReviewerFocusArtifactPort;
-      resolveReviewerTestExecutionDirectiveFromArtifact:
-        ResolveReviewerTestExecutionDirectiveFromArtifactPort;
-      refreshReviewerContext: RefreshReviewerContextPort;
-      verifyImplementerTestEvidence: VerifyImplementerTestEvidencePort;
-      writeReviewerTestEvidenceArtifact: WriteReviewerTestEvidenceArtifactPort;
-    }>
-  | undefined;
-
-function getReviewerDeliveryDefaultsModulePath(): string {
-  return "../../defaults/reviewer/reviewerDeliveryDefaults.js";
-}
-
-async function loadReviewerDeliveryDefaults(): Promise<{
-  emitDeliveryNotificationAck: EmitDeliveryNotificationAckPort;
-  readReviewerBriefArtifact: ReadReviewerBriefArtifactPort;
-  readReviewerFocusArtifact: ReadReviewerFocusArtifactPort;
-  resolveReviewerTestExecutionDirectiveFromArtifact:
-    ResolveReviewerTestExecutionDirectiveFromArtifactPort;
-  refreshReviewerContext: RefreshReviewerContextPort;
-  verifyImplementerTestEvidence: VerifyImplementerTestEvidencePort;
-  writeReviewerTestEvidenceArtifact: WriteReviewerTestEvidenceArtifactPort;
-}> {
-  reviewerDeliveryDefaultsPromise ??= import(
-    getReviewerDeliveryDefaultsModulePath()
-  ).then(
-    (module) =>
-      (module as ReviewerDeliveryDefaultsModule).reviewerDeliveryDefaults
-  );
-  return reviewerDeliveryDefaultsPromise;
-}
 
 function buildTranscriptFallbackRef(
   bubbleId: string,
@@ -97,55 +49,63 @@ export function resolveDeliveryMessageRef(
   );
 }
 
-export async function emitDeliveryNotificationAck(
-  ...args: Parameters<EmitDeliveryNotificationAckPort>
-): Promise<Awaited<ReturnType<EmitDeliveryNotificationAckPort>>> {
-  const defaults = await loadReviewerDeliveryDefaults();
-  return defaults.emitDeliveryNotificationAck(...args);
+export function emitDeliveryNotificationAck(
+  input: Parameters<EmitDeliveryNotificationAckPort>[0]
+): Promise<DeliveryAck> {
+  return Promise.resolve({
+    status: "rejected",
+    reason: "no_runtime_session",
+    reason_code: "DELIVERY_ACK_RUNTIME_SESSION_UNAVAILABLE",
+    message:
+      `No reviewer delivery runtime dependency was provided for ${input.bubbleId}.`
+  });
 }
 
-export async function refreshReviewerContext(
-  ...args: Parameters<RefreshReviewerContextPort>
-): Promise<Awaited<ReturnType<RefreshReviewerContextPort>>> {
-  const defaults = await loadReviewerDeliveryDefaults();
-  return defaults.refreshReviewerContext(...args);
+export function refreshReviewerContext(): Promise<
+  Awaited<ReturnType<RefreshReviewerContextPort>>
+> {
+  return Promise.resolve({
+    refreshed: false,
+    reason: "no_runtime_session"
+  });
 }
 
-export async function readReviewerBriefArtifact(
-  ...args: Parameters<ReadReviewerBriefArtifactPort>
-): Promise<Awaited<ReturnType<ReadReviewerBriefArtifactPort>>> {
-  const defaults = await loadReviewerDeliveryDefaults();
-  return defaults.readReviewerBriefArtifact(...args);
+export function readReviewerBriefArtifact(): Promise<
+  Awaited<ReturnType<ReadReviewerBriefArtifactPort>>
+> {
+  return Promise.resolve(undefined);
 }
 
-export async function readReviewerFocusArtifact(
-  ...args: Parameters<ReadReviewerFocusArtifactPort>
-): Promise<Awaited<ReturnType<ReadReviewerFocusArtifactPort>>> {
-  const defaults = await loadReviewerDeliveryDefaults();
-  return defaults.readReviewerFocusArtifact(...args);
+export function readReviewerFocusArtifact(): Promise<
+  Awaited<ReturnType<ReadReviewerFocusArtifactPort>>
+> {
+  return Promise.resolve(undefined);
 }
 
-export async function resolveReviewerTestExecutionDirectiveFromArtifact(
-  ...args: Parameters<ResolveReviewerTestExecutionDirectiveFromArtifactPort>
-): Promise<
+export function resolveReviewerTestExecutionDirectiveFromArtifact(): Promise<
   Awaited<ReturnType<ResolveReviewerTestExecutionDirectiveFromArtifactPort>>
 > {
-  const defaults = await loadReviewerDeliveryDefaults();
-  return defaults.resolveReviewerTestExecutionDirectiveFromArtifact(...args);
+  return Promise.reject(
+    new Error(
+      "REVIEWER_TEST_DIRECTIVE_DEPENDENCY_MISSING: reviewer test directive resolver dependency was not provided."
+    )
+  );
 }
 
-export async function verifyImplementerTestEvidence(
-  ...args: Parameters<VerifyImplementerTestEvidencePort>
-): Promise<Awaited<ReturnType<VerifyImplementerTestEvidencePort>>> {
-  const defaults = await loadReviewerDeliveryDefaults();
-  return defaults.verifyImplementerTestEvidence(...args);
+export function verifyImplementerTestEvidence(): Promise<
+  Awaited<ReturnType<VerifyImplementerTestEvidencePort>>
+> {
+  return Promise.reject(
+    new Error(
+      "REVIEWER_TEST_EVIDENCE_DEPENDENCY_MISSING: reviewer test evidence verifier dependency was not provided."
+    )
+  );
 }
 
-export async function writeReviewerTestEvidenceArtifact(
-  ...args: Parameters<WriteReviewerTestEvidenceArtifactPort>
-): Promise<Awaited<ReturnType<WriteReviewerTestEvidenceArtifactPort>>> {
-  const defaults = await loadReviewerDeliveryDefaults();
-  return defaults.writeReviewerTestEvidenceArtifact(...args);
+export function writeReviewerTestEvidenceArtifact(): Promise<
+  Awaited<ReturnType<WriteReviewerTestEvidenceArtifactPort>>
+> {
+  return Promise.resolve(undefined);
 }
 
 export const reviewerDeliveryDefaults = {

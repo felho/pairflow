@@ -5,6 +5,7 @@ import {
 import { commitBubbleDependencyDefaults } from "../commit/commitCommandDefaults.js";
 import { commitBubbleV11 } from "../../application/commit/emitCommitV11.js";
 import { deleteBubble } from "../../application/delete/deleteBubble.js";
+import { deleteBubbleDependencyDefaults } from "../delete/deleteBubbleDefaults.js";
 import { mergeBubbleDependencyDefaults } from "../merge/mergeCommandDefaults.js";
 import { mergeBubbleV11 as mergeBubble } from "../../application/merge/emitMergeV11.js";
 import { openBubble } from "../../application/open/emitOpenV11.js";
@@ -365,7 +366,10 @@ export const uiRouterDependencyDefaults = {
     );
   },
   async deleteBubble(input) {
-    return deleteBubble(projectUiInputNowToCommandNow(input));
+    return deleteBubble(
+      projectUiInputNowToCommandNow(input),
+      deleteBubbleDependencyDefaults
+    );
   },
   emitApprove: emitApproveForUi,
   async emitHumanReply(input) {

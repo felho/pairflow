@@ -325,13 +325,13 @@ twice.
 | B1 | `application/converged/convergedDependencyDefaults.ts:69` | `defaults/converged/convergedDependencyDefaults.ts` | B | CLI imports aggregator; passes to `emitConverged*`. Shim deletes. |
 | B2 | `application/converged/summaryVerifierConsistencyGateArtifactDefaults.ts:19` | `defaults/reviewer/summaryVerifierConsistencyGateDefaults.ts` | **A** (reclassified) | Completed in Batch 12: the write port is now part of `convergedDependencyDefaults.validation`; the standalone application artifact shim was deleted. |
 | B3 | `application/create/createBubbleDefaults.ts:28` | `defaults/create/createBubbleDefaults.ts` | B | Completed in Batch 32: application create is dependency-explicit; `defaults/create/createBubbleApi.ts` owns default composition for CLI/public/test convenience callers; the application shim was deleted. |
-| B4 | `application/delete/deleteBubbleDependencyDefaults.ts:133` | `defaults/delete/deleteBubbleDefaults.ts` | B | Verified: heavy composition (multiple `infrastructure/` adapters + sibling `defaults/` + shared shims). Mirrors merge in shape. |
+| B4 | `application/delete/deleteBubbleDependencyDefaults.ts:133` | `defaults/delete/deleteBubbleDefaults.ts` | B | Completed in Batch 34: CLI, UI, and tests now pass `deleteBubbleDependencyDefaults` explicitly; the application delete API no longer loads defaults dynamically and the standalone application shim was deleted. |
 | B5 | `application/merge/mergeCommandDefaults.ts:54` | `defaults/merge/mergeCommandDefaults.ts` | B | Completed in Batch 27: CLI and UI composition pass `mergeBubbleDependencyDefaults` explicitly; the merge dependency resolver now receives its defaults aggregate from the caller and the standalone application shim was deleted. |
 | B6 | `application/metaReview/emitMetaReviewV11.ts:49` | `defaults/metaReview/metaReviewDefaults.ts` | B | Completed in Batch 29: defaults/metaReview and agent CLI composition now pass meta-review dependencies explicitly; actor protocol has a `metaReview` dependency branch and the application meta-review API no longer loads defaults dynamically. |
 | B7 | `application/metaReviewGate/metaReviewGateCommandDefaults.ts:79` | `defaults/metaReviewGate/metaReviewGateCommandDefaults.ts` | B | Completed in Batch 31: the application V11 wrapper no longer loads defaults; the existing defaults/metaReviewGate API remains the composition wrapper, and the standalone application resolver was deleted. |
 | B8 | `application/pass/passReviewVerificationDefaults.ts:24` | `defaults/reviewer/reviewVerificationArtifactDefaults.ts` | **A** (reclassified) | Completed in Batch 17: pass review-verification resolve/write ports are now supplied through the existing pass-validation defaults aggregate; the standalone application shim was deleted. |
 | B9 | `application/pass/passValidationCommandDefaults.ts:121` | `defaults/pass/passValidationCommandDefaults.ts` | B | Completed in Batch 33: PASS validation ports are explicit in pass flow wiring and agent CLI composition; the application pass-validation defaults shim was deleted. |
-| B10 | `application/pass/reviewerDeliveryDefaults.ts:33` | `defaults/reviewer/reviewerDeliveryDefaults.ts` | B | Verified. |
+| B10 | `application/pass/reviewerDeliveryDefaults.ts:33` | `defaults/reviewer/reviewerDeliveryDefaults.ts` | B | Completed in Batch 34: agent CLI composition now passes reviewer delivery runtime ports explicitly; the application reviewer-delivery defaults module retains only pure fallbacks and no longer loads defaults dynamically. |
 | B11 | `application/reconcile/reconcileCommandDefaults.ts:25` | `defaults/reconcile/reconcileCommandDefaults.ts` | B | Completed in Batch 24: CLI now statically imports the reconcile defaults aggregate plus the state read port and passes them into the application reconcile command; the standalone application shim was deleted. |
 | B12 | `application/restart/restartCommandDefaults.ts:29` | `defaults/restart/restartCommandDefaults.ts` | B | Completed in Batch 25: CLI and UI composition now pass `restartBubbleDependencyDefaults` explicitly; the application restart API no longer loads defaults dynamically and the standalone application shim was deleted. |
 | B13 | `application/reviewer/reviewerArtifactDefaults.ts:22` | `defaults/reviewer/reviewerArtifactDefaults.ts` | **A** (reclassified) | Completed in Batch 13: reviewer brief/focus artifact readers are now supplied through the existing start and reviewer-delivery defaults aggregates; the standalone application shim was deleted. |
@@ -1526,6 +1526,34 @@ In the closing PR:
   - `pnpm test` skipped for this focused PASS validation defaults rewiring
     batch; the targeted validation gate, pass flow wiring, invocation builder,
     and application-defaults-fitness tests cover the changed surface.
+  - `pnpm lint` passed.
+  - `pnpm build` passed.
+
+### 2026-05-08 — Batch 34: remove delete and reviewer delivery dynamic defaults shims
+
+- Removed the dynamic `defaults/reviewer/reviewerDeliveryDefaults.ts` import
+  from `src/v11/application/pass/reviewerDeliveryDefaults.ts`; the application
+  file now contains only pure delivery-message fallback logic and best-effort
+  no-runtime fallbacks.
+- Updated agent emit CLI composition to provide reviewer delivery runtime ports
+  from `src/v11/defaults/reviewer/reviewerDeliveryDefaults.ts`.
+- Removed the dynamic `defaults/delete/deleteBubbleDefaults.ts` import from the
+  delete application API; CLI, UI, and tests now pass
+  `deleteBubbleDependencyDefaults` explicitly.
+- Split the remote delete branch out of `deleteBubble.ts` so the moved delete
+  wiring stays inside the existing complexity budget.
+- Fitness result after the batch: application dynamic defaults warnings are
+  down to 4; shared dynamic defaults warnings remain 0. Hard-fail fitness
+  checks pass.
+- Validation:
+  - `pnpm typecheck` passed.
+  - `pnpm fitness:check:ci` passed with the expected remaining warnings
+    (`application_defaults_boundary=4`, `shared_defaults_boundary=0`).
+  - `pnpm exec vitest run tests/v11/application/pass/reviewerDelivery.test.ts tests/cli/agentEmitCommand.test.ts tests/core/bubble/deleteBubble.test.ts tests/core/bubble/deleteBubble.removeBubbleDirectory.test.ts tests/v11/application/delete/deleteBubbleFinalization.test.ts tests/tools/fitness/applicationDefaultsBoundary.test.ts tests/contracts/v11/cli-entrypoint-boundary-guard.test.ts`
+    passed (`7` files, `71` tests).
+  - `pnpm test` skipped for this focused delete/reviewer-delivery composition
+    batch; the targeted delete, reviewer-delivery, CLI, and fitness tests cover
+    the changed surface.
   - `pnpm lint` passed.
   - `pnpm build` passed.
 

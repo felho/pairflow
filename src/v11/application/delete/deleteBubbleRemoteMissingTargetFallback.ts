@@ -63,7 +63,8 @@ export async function maybeFinalizeRemoteDeleteMissingTargetFallback(input: {
   remoteDeleteError: unknown;
   determineDeleteExecutionContext: (
     resolved: ResolvedBubble,
-    now: Date
+    now: Date,
+    dependencies: ResolvedDeleteDependencies
   ) => Promise<DeleteExecutionContext>;
   returnDeleteSuccessWithLifecycle: (input: {
     result: DeleteBubbleResult;
@@ -98,7 +99,8 @@ export async function maybeFinalizeRemoteDeleteMissingTargetFallback(input: {
 
   const execution = await input.determineDeleteExecutionContext(
     input.routeContext.resolved,
-    input.now
+    input.now,
+    input.dependencies
   );
   await createDeleteArchive({
     input: input.deleteInput,

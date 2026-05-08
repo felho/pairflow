@@ -8,9 +8,11 @@ import { parseBubbleConfigToml, renderBubbleConfigToml } from "../../../src/conf
 import { resolveArchivePaths } from "../../../src/v11/infrastructure/artifact/archive/archivePaths.js";
 import { createBubble } from "../../../src/v11/defaults/create/createBubbleApi.js";
 import {
-  deleteBubble,
+  deleteBubble as deleteBubbleWithDependencies,
+  type DeleteBubbleInput,
   type DeleteBubbleDependencies
 } from "../../../src/v11/application/delete/deleteBubble.js";
+import { deleteBubbleDependencyDefaults } from "../../../src/v11/defaults/delete/deleteBubbleDefaults.js";
 import {
   remoteDeleteModeEnvVar,
   remoteDeleteModeInnerRemoteExecution,
@@ -231,6 +233,16 @@ function watchdogHealthPath(runtimeDir: string, bubbleId: string): string {
 
 function watchdogHistoryPath(runtimeDir: string, bubbleId: string): string {
   return join(runtimeDir, "watchdog-history", `${bubbleId}.ndjson`);
+}
+
+function deleteBubble(
+  input: DeleteBubbleInput,
+  dependencies: Partial<DeleteBubbleDependencies> = {}
+) {
+  return deleteBubbleWithDependencies(input, {
+    ...deleteBubbleDependencyDefaults,
+    ...dependencies
+  });
 }
 
 describe("deleteBubble", () => {

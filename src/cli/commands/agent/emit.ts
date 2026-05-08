@@ -42,19 +42,14 @@ import {
   metaReviewGateDependencyDefaults
 } from "../../../v11/defaults/metaReviewGate/metaReviewGateCommandDefaults.js";
 import {
+  reviewerDeliveryDefaults
+} from "../../../v11/defaults/reviewer/reviewerDeliveryDefaults.js";
+import {
   resolveMetaReviewerPaneWarning
 } from "../../../v11/application/metaReviewGate/metaReviewGatePaneBinding.js";
 import {
-  readReviewerBriefArtifact,
-  readReviewerFocusArtifact
-} from "../../../v11/infrastructure/artifact/reviewer/reviewerBriefArtifacts.js";
-import {
-  resolveReviewerTestExecutionDirective,
-  resolveReviewerTestExecutionDirectiveFromArtifact,
-  verifyImplementerTestEvidence,
-  writeReviewerTestEvidenceArtifact
+  resolveReviewerTestExecutionDirective
 } from "../../../v11/infrastructure/artifact/reviewer/testEvidenceRuntime.js";
-import { resolveDeliveryMessageRef } from "../../../v11/infrastructure/channel/tmux/tmuxDelivery.js";
 import { CliFindingParseError, parseCliFinding } from "./shared/findingParser.js";
 
 export interface AgentEmitHelpCommandOptions {
@@ -454,12 +449,21 @@ export async function runAgentEmitCommand(
   });
   const dependencies = {
     pass: {
-      readReviewerBriefArtifact,
-      readReviewerFocusArtifact,
-      resolveDeliveryMessageRef,
-      verifyImplementerTestEvidence,
-      writeReviewerTestEvidenceArtifact,
-      resolveReviewerTestExecutionDirectiveFromArtifact,
+      emitDeliveryNotificationAck:
+        reviewerDeliveryDefaults.emitDeliveryNotificationAck,
+      refreshReviewerContext: reviewerDeliveryDefaults.refreshReviewerContext,
+      readReviewerBriefArtifact:
+        reviewerDeliveryDefaults.readReviewerBriefArtifact,
+      readReviewerFocusArtifact:
+        reviewerDeliveryDefaults.readReviewerFocusArtifact,
+      resolveDeliveryMessageRef:
+        reviewerDeliveryDefaults.resolveDeliveryMessageRef,
+      verifyImplementerTestEvidence:
+        reviewerDeliveryDefaults.verifyImplementerTestEvidence,
+      writeReviewerTestEvidenceArtifact:
+        reviewerDeliveryDefaults.writeReviewerTestEvidenceArtifact,
+      resolveReviewerTestExecutionDirectiveFromArtifact:
+        reviewerDeliveryDefaults.resolveReviewerTestExecutionDirectiveFromArtifact,
       readDocContractGateArtifact:
         passValidationDefaults.readDocContractGateArtifact,
       resolveDocContractGateArtifactPath:

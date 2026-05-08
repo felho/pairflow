@@ -3,6 +3,7 @@ import { parseArgs } from "node:util";
 import {
   asDeleteBubbleError,
   deleteBubble,
+  type DeleteBubbleDependencies,
   type DeleteBubbleResult
 } from "./deleteBubble.js";
 
@@ -90,6 +91,7 @@ export function parseBubbleDeleteCommandOptions(
 
 export async function runBubbleDeleteCommand(
   args: string[],
+  dependencies: DeleteBubbleDependencies,
   cwd: string = process.cwd()
 ): Promise<DeleteBubbleResult | null> {
   const options = parseBubbleDeleteCommandOptions(args);
@@ -98,12 +100,15 @@ export async function runBubbleDeleteCommand(
   }
 
   try {
-    return await deleteBubble({
-      bubbleId: options.id,
-      repoPath: options.repo,
-      cwd,
-      force: options.force
-    });
+    return await deleteBubble(
+      {
+        bubbleId: options.id,
+        repoPath: options.repo,
+        cwd,
+        force: options.force
+      },
+      dependencies
+    );
   } catch (error) {
     return asDeleteBubbleError(error);
   }

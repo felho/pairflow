@@ -4,10 +4,13 @@ import { relative, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
 const directBubbleCliShimCommands = [
+  "inbox",
+  "kickoff"
+] as const;
+
+const compositionBubbleCliWrappers = [
   "attach",
   "delete",
-  "inbox",
-  "kickoff",
   "open",
   "reconcile",
   "restart",
@@ -17,14 +20,21 @@ const directBubbleCliShimCommands = [
 
 const intentionalNonShimBubbleCliWrappers = [
   "approve",
+  "attach",
   "commit",
   "create",
+  "delete",
   "extract",
   "list",
   "merge",
+  "open",
+  "reconcile",
   "reply",
   "requestRework",
+  "restart",
   "resume",
+  "start",
+  "status",
   "stop",
   "watchdog"
 ] as const;
@@ -36,16 +46,20 @@ const intentionalBubbleCliHelperModules = [
   "createCliOptionValidationHelpers",
   "createCliOptions",
   "createCliRunHelpers",
-  "createCliRunner"
+  "createCliRunner",
+  "startCliOptions",
+  "startCliRunner"
 ] as const;
 
 const allowedBubbleCliModulePrefixes = [
   "node:",
   "./",
   "../../../config/",
+  "../../../contracts/",
   "../../../types/",
   "../../../v11/application/",
   "../../../v11/defaults/",
+  "../../../v11/domain/",
   "../../../v11/shared/"
 ] as const;
 
@@ -148,7 +162,13 @@ async function collectBubbleCliModuleSpecifiers(): Promise<
 describe("bubble CLI entrypoint boundary guard", () => {
   it("keeps the direct shim inventory aligned with v11 CLI command entrypoints", async () => {
     const v11CliCommands = await listV11CliCommands();
-    expect([...directBubbleCliShimCommands].sort()).toEqual(v11CliCommands);
+    const directShimV11Commands = v11CliCommands.filter(
+      (command) =>
+        !compositionBubbleCliWrappers.includes(
+          command as (typeof compositionBubbleCliWrappers)[number]
+        )
+    );
+    expect([...directBubbleCliShimCommands].sort()).toEqual(directShimV11Commands);
   });
 
   it("keeps the direct bubble CLI shim inventory explicit", async () => {
