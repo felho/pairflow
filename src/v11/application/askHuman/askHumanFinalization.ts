@@ -1,13 +1,12 @@
 import {
-  buildAskHumanFinalizationResult
+  buildAskHumanFinalizationResult,
+  buildAskHumanLifecycleMetricMetadata
 } from "./askHumanFinalizationArtifacts.js";
-import { buildAskHumanFinalizationLifecycleEventInput } from "./askHumanFinalizationLifecycleEventInputBuilder.js";
 import type {
   FinalizeAskHumanFlowDependencies,
   FinalizeAskHumanFlowInput,
   RunAskHumanFlowResult
 } from "./askHumanFlowContract.js";
-import { buildAskHumanFinalizationNotificationInput } from "./askHumanFinalizationNotificationInputBuilder.js";
 import { emitOptionalAskHumanNotifications } from "./askHumanNotificationEmission.js";
 import { resolveAskHumanFinalizationDependencies } from "./askHumanFinalizationDependencyResolution.js";
 export type {
@@ -31,7 +30,13 @@ export async function finalizeAskHumanFlow(
   });
 
   const notifications = await emitOptionalAskHumanNotifications(
-    buildAskHumanFinalizationNotificationInput(input, messageRef),
+    {
+      bubbleId: input.routing.resolved.bubbleId,
+      bubbleConfig: input.routing.resolved.bubbleConfig,
+      sessionsPath: input.routing.resolved.bubblePaths.sessionsPath,
+      envelope: input.appended.envelope,
+      messageRef
+    },
     {
       emitDeliveryNotificationAck:
         resolvedDependencies.emitDeliveryNotificationAck,
@@ -40,7 +45,20 @@ export async function finalizeAskHumanFlow(
   );
 
   await resolvedDependencies.emitBubbleLifecycleEventBestEffort(
-    buildAskHumanFinalizationLifecycleEventInput(input)
+    {
+      repoPath: input.routing.resolved.repoPath,
+      bubbleId: input.routing.resolved.bubbleId,
+      bubbleInstanceId: input.routing.bubbleIdentity.bubbleInstanceId,
+      eventType: "bubble_asked_human",
+      round: input.routing.state.round,
+      actorRole: input.routing.state.active_role,
+      metadata: buildAskHumanLifecycleMetricMetadata({
+        sender: input.routing.state.active_agent,
+        refs: input.routing.refs,
+        question: input.routing.question
+      }),
+      now: input.now
+    }
   );
 
   return buildAskHumanFinalizationResult({

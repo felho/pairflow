@@ -1,7 +1,7 @@
+import { join } from "node:path";
+
 import type { LoadedStateSnapshot } from "../../ports/stateSnapshots.js";
-import { buildAskHumanStateWriteFailureMessage } from "./askHumanExecutionFailureMessageBuilder.js";
-import { buildAskHumanLockPath } from "./askHumanLockPathBuilder.js";
-import { buildAskHumanEnvelope } from "./askHumanEnvelopeBuilder.js";
+import type { AppendProtocolEnvelopeResult } from "../../ports/transcript.js";
 import type {
   ExecuteAskHumanExecutionDependencies,
   ExecuteAskHumanExecutionInput,
@@ -14,6 +14,14 @@ export type {
   ExecuteAskHumanExecutionResult
 };
 
+function buildStateWriteFailureMessage(
+  appendResult: AppendProtocolEnvelopeResult,
+  error: unknown
+): string {
+  const reason = error instanceof Error ? error.message : String(error);
+  return `HUMAN_QUESTION ${appendResult.envelope.id} was appended but state update failed. Transcript remains canonical; recover state from transcript tail. Root error: ${reason}`;
+}
+
 export async function executeAskHumanExecution(
   input: ExecuteAskHumanExecutionInput,
   dependencies: ExecuteAskHumanExecutionDependencies = {}
@@ -22,14 +30,27 @@ export async function executeAskHumanExecution(
     dependencies
   );
 
-  const lockPath = buildAskHumanLockPath(input);
+  const lockPath = join(
+    input.routing.resolved.bubblePaths.locksDir,
+    `${input.routing.resolved.bubbleId}.lock`
+  );
 
   const appended = await resolvedDependencies.appendEnvelope({
     transcriptPath: input.routing.resolved.bubblePaths.transcriptPath,
     mirrorPaths: [input.routing.resolved.bubblePaths.inboxPath],
     lockPath,
     now: input.now,
-    envelope: buildAskHumanEnvelope(input)
+    envelope: {
+      bubble_id: input.routing.resolved.bubbleId,
+      sender: input.routing.state.active_agent,
+      recipient: "human",
+      type: "HUMAN_QUESTION",
+      round: input.routing.state.round,
+      payload: {
+        question: input.routing.question
+      },
+      refs: input.routing.refs
+    }
   });
 
   const nextState = resolvedDependencies.applyTransition(input.routing.state, {
@@ -49,7 +70,7 @@ export async function executeAskHumanExecution(
     );
   } catch (error) {
     // reason_code=ASK_HUMAN_STATE_PERSIST_FAILED context=transcript_appended_state_write_failed
-    throw input.createError(buildAskHumanStateWriteFailureMessage(appended, error));
+    throw input.createError(buildStateWriteFailureMessage(appended, error));
   }
 
   return {

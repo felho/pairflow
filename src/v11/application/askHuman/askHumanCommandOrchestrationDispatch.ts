@@ -3,7 +3,7 @@ import type {
   EmitAskHumanInput,
   EmitAskHumanResult
 } from "./askHumanCommandContract.js";
-import { buildAskHumanCommandContext } from "./askHumanCommandContextBuilder.js";
+import { normalizeAskHumanCommandInput } from "./askHumanCommandInputNormalization.js";
 import { createAskHumanCommandOrchestrationDependencies } from "./askHumanFlowDependencyWiring.js";
 import { orchestrateAskHumanCommand } from "./askHumanCommandOrchestration.js";
 
@@ -12,13 +12,17 @@ export async function dispatchAskHumanCommandOrchestration(
   dependencies: EmitAskHumanDependencies,
   createError: PairflowCreateCommandError
 ): Promise<EmitAskHumanResult> {
-  const context = buildAskHumanCommandContext({
-    commandInput: input,
-    createError
-  });
+  const normalizedInput = normalizeAskHumanCommandInput(input);
 
   return orchestrateAskHumanCommand(
-    context.orchestrationInput,
+    {
+      question: normalizedInput.question,
+      refs: normalizedInput.refs,
+      cwd: normalizedInput.cwd,
+      authoritativeContext: normalizedInput.authoritativeContext,
+      now: normalizedInput.now,
+      createError
+    },
     createAskHumanCommandOrchestrationDependencies(dependencies)
   );
 }
