@@ -52,7 +52,6 @@ import {
 import {
   resolvePassValidationReviewerCompatibilityArtifactPath
 } from "../../../src/v11/infrastructure/artifact/validation/passValidationEvidence.js";
-import { passWorkspaceContextDefaults } from "../../../src/v11/application/pass/passWorkspaceContextDefaults.js";
 import type { EmitDeliveryNotificationInput } from "../../../src/v11/ports/tmuxDelivery.js";
 import { initGitRepository } from "../../helpers/git.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
@@ -138,13 +137,12 @@ async function withPatchedPassWorkspaceLoadedState<T>(input: {
   mutate: (
     loaded: Awaited<ReturnType<typeof readStateSnapshot>>
   ) => Awaited<ReturnType<typeof readStateSnapshot>>;
-  run: () => Promise<T>;
+  run: (
+    dependencies: NonNullable<Parameters<typeof emitPassFromWorkspace>[1]>
+  ) => Promise<T>;
 }): Promise<T> {
-  const defaults = passWorkspaceContextDefaults as {
-    readStateSnapshot: typeof passWorkspaceContextDefaults.readStateSnapshot;
-  };
-  const originalReadStateSnapshot = defaults.readStateSnapshot;
-  defaults.readStateSnapshot = async (statePath) => {
+  const originalReadStateSnapshot = readStateSnapshot;
+  const patchedReadStateSnapshot: typeof readStateSnapshot = async (statePath) => {
     const loaded = await originalReadStateSnapshot(statePath);
     if (statePath !== input.statePath) {
       return loaded;
@@ -152,11 +150,7 @@ async function withPatchedPassWorkspaceLoadedState<T>(input: {
     return input.mutate(loaded);
   };
 
-  try {
-    return await input.run();
-  } finally {
-    defaults.readStateSnapshot = originalReadStateSnapshot;
-  }
+  return input.run({ readStateSnapshot: patchedReadStateSnapshot });
 }
 
 async function createTempRepo(): Promise<string> {
@@ -459,11 +453,14 @@ describe("emitPassFromWorkspace", { timeout: 20_000 }, () => {
           } as never
         }
       }),
-      run: () => emitPassFromWorkspace({
-        summary: "Implementation complete",
-        cwd: bubble.paths.worktreePath,
-        now: new Date("2026-02-21T12:05:00.000Z")
-      })
+      run: (dependencies) => emitPassFromWorkspace(
+        {
+          summary: "Implementation complete",
+          cwd: bubble.paths.worktreePath,
+          now: new Date("2026-02-21T12:05:00.000Z")
+        },
+        dependencies
+      )
     });
 
     expect(result.transitionDecision).toBe("normal_pass");
@@ -492,11 +489,14 @@ describe("emitPassFromWorkspace", { timeout: 20_000 }, () => {
           } as never
         }
       }),
-      run: () => emitPassFromWorkspace({
-        summary: "Implementation complete",
-        cwd: bubble.paths.worktreePath,
-        now: new Date("2026-02-21T12:05:00.000Z")
-      })
+      run: (dependencies) => emitPassFromWorkspace(
+        {
+          summary: "Implementation complete",
+          cwd: bubble.paths.worktreePath,
+          now: new Date("2026-02-21T12:05:00.000Z")
+        },
+        dependencies
+      )
     });
 
     expect(result.transitionDecision).toBe("normal_pass");
@@ -3058,12 +3058,15 @@ describe("emitPassFromWorkspace", { timeout: 20_000 }, () => {
           }
         };
       },
-      run: () => emitPassFromWorkspace({
-        summary: "Reviewer clean handoff round 2",
-        noFindings: true,
-        cwd: bubble.paths.worktreePath,
-        now: new Date("2026-03-01T10:04:00.000Z")
-      })
+      run: (dependencies) => emitPassFromWorkspace(
+        {
+          summary: "Reviewer clean handoff round 2",
+          noFindings: true,
+          cwd: bubble.paths.worktreePath,
+          now: new Date("2026-03-01T10:04:00.000Z")
+        },
+        dependencies
+      )
     });
 
     expect(result.transitionDecision).toBe("auto_converge");

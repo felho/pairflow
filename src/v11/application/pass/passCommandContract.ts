@@ -14,6 +14,9 @@ import type {
   EmitConvergedDependencies,
   EmitConvergedResult
 } from "../../shared/converged/convergedCommandTypes.js";
+import type {
+  PreparePassWorkspaceContextDependencies
+} from "./passWorkspaceContextPreparation.js";
 
 export type PassActivationProvenance = ActorActivationProvenance;
 
@@ -58,6 +61,8 @@ export interface EmitPassResult {
   docGateArtifactWriteFailureReason?: string;
 }
 
-export interface EmitPassDependencies extends PassFlowRuntimeDependencies {
+export interface EmitPassDependencies
+  extends PassFlowRuntimeDependencies,
+    PreparePassWorkspaceContextDependencies {
   emitBubbleNotification?: EmitConvergedDependencies["emitBubbleNotification"];
 }

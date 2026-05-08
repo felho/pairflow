@@ -12,6 +12,9 @@ import { normalizeBubbleReviewPolicy } from "../../shared/reviewPolicy/reviewPol
 import type { BuildFlowBaseInput } from "./flowInvocationBuilderBase.js";
 import { createPassRoutingDependencies } from "./passFlowDependencyWiring.js";
 import { preparePassWorkspaceContext } from "./passWorkspaceContextPreparation.js";
+import type {
+  PreparePassWorkspaceContextDependencies
+} from "./passWorkspaceContextPreparation.js";
 import {
   preparePassRouting,
   type PreparePassRoutingDependencies,
@@ -33,6 +36,7 @@ export interface BuildEmitPassContextInput {
   commandInput: EmitPassContextCommandInput;
   createError: PairflowCreateCommandError;
   inferDefaultPassIntent: (activeRole: AgentRole) => PassIntent;
+  workspaceContextDependencies?: PreparePassWorkspaceContextDependencies;
 }
 
 export interface BuildEmitPassContextDependencies {
@@ -83,7 +87,7 @@ export async function buildEmitPassContext(
     now,
     nowIso,
     createError: input.createError
-  });
+  }, input.workspaceContextDependencies);
   const resolved = workspaceContext.resolved;
   const normalizedReviewPolicy = normalizeBubbleReviewPolicy(resolved.bubbleConfig);
   const bubbleIdentity = workspaceContext.bubbleIdentity;

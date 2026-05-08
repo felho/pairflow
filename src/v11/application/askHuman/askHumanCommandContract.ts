@@ -14,6 +14,11 @@ import type {
   ResolveDeliveryMessageRefPort
 } from "../../ports/tmuxDelivery.js";
 import type { EmitBubbleLifecycleEventBestEffortPort } from "../../shared/metrics/bubbleEvents.js";
+import type {
+  EnsureAskHumanBubbleInstanceIdentity,
+  ReadAskHumanStateSnapshot,
+  ResolveAskHumanBubbleFromWorkspaceCwd
+} from "./askHumanRoutingPreparationDependencyResolutionContract.js";
 
 export type AskHumanActivationProvenance = ActorActivationProvenance;
 
@@ -42,6 +47,9 @@ export interface EmitAskHumanResult {
 }
 
 export interface EmitAskHumanDependencies {
+  resolveBubbleFromWorkspaceCwd?: ResolveAskHumanBubbleFromWorkspaceCwd;
+  ensureBubbleInstanceIdForMutation?: EnsureAskHumanBubbleInstanceIdentity;
+  readStateSnapshot?: ReadAskHumanStateSnapshot;
   emitDeliveryNotificationAck?: EmitDeliveryNotificationAckPort;
   emitBubbleNotification?: EmitAskHumanBubbleNotificationPort;
   resolveDeliveryMessageRef?: ResolveDeliveryMessageRefPort;

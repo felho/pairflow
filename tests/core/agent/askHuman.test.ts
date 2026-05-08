@@ -14,7 +14,6 @@ import { WorkspaceResolutionError } from "../../../src/v11/infrastructure/execut
 import { readTranscriptEnvelopes } from "../../../src/v11/infrastructure/artifact/transcript/transcriptStore.js";
 import { readStateSnapshot } from "../../../src/v11/infrastructure/state/stateStore.js";
 import { bootstrapWorktreeWorkspace } from "../../../src/v11/infrastructure/workspace/worktreeManager.js";
-import { askHumanRoutingPreparationDependencyDefaults } from "../../../src/v11/application/askHuman/askHumanRoutingPreparationDependencyDefaults.js";
 import { initGitRepository } from "../../helpers/git.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
 
@@ -40,14 +39,14 @@ async function withPatchedAskHumanWorkspaceLoadedState<T>(input: {
   mutate: (
     loaded: Awaited<ReturnType<typeof readStateSnapshot>>
   ) => Awaited<ReturnType<typeof readStateSnapshot>>;
-  run: () => Promise<T>;
+  run: (
+    dependencies: NonNullable<
+      Parameters<typeof emitAskHumanFromWorkspace>[1]
+    >
+  ) => Promise<T>;
 }): Promise<T> {
-  const defaults = askHumanRoutingPreparationDependencyDefaults as {
-    readStateSnapshot:
-      typeof askHumanRoutingPreparationDependencyDefaults.readStateSnapshot;
-  };
-  const originalReadStateSnapshot = defaults.readStateSnapshot;
-  defaults.readStateSnapshot = async (statePath) => {
+  const originalReadStateSnapshot = readStateSnapshot;
+  const patchedReadStateSnapshot: typeof readStateSnapshot = async (statePath) => {
     const loaded = await originalReadStateSnapshot(statePath);
     if (statePath !== input.statePath) {
       return loaded;
@@ -55,11 +54,7 @@ async function withPatchedAskHumanWorkspaceLoadedState<T>(input: {
     return input.mutate(loaded);
   };
 
-  try {
-    return await input.run();
-  } finally {
-    defaults.readStateSnapshot = originalReadStateSnapshot;
-  }
+  return input.run({ readStateSnapshot: patchedReadStateSnapshot });
 }
 
 describe("emitAskHumanFromWorkspace", () => {
@@ -131,11 +126,14 @@ describe("emitAskHumanFromWorkspace", () => {
           } as never
         }
       }),
-      run: () => emitAskHumanFromWorkspace({
-        question: "Should we keep backwards compatibility?",
-        cwd: bubble.paths.worktreePath,
-        now: new Date("2026-02-21T12:10:00.000Z")
-      })
+      run: (dependencies) => emitAskHumanFromWorkspace(
+        {
+          question: "Should we keep backwards compatibility?",
+          cwd: bubble.paths.worktreePath,
+          now: new Date("2026-02-21T12:10:00.000Z")
+        },
+        dependencies
+      )
     });
 
     expect(result.envelope.type).toBe("HUMAN_QUESTION");
@@ -169,11 +167,14 @@ describe("emitAskHumanFromWorkspace", () => {
           } as never
         }
       }),
-      run: () => emitAskHumanFromWorkspace({
-        question: "Should we keep backwards compatibility?",
-        cwd: bubble.paths.worktreePath,
-        now: new Date("2026-02-21T12:10:00.000Z")
-      })
+      run: (dependencies) => emitAskHumanFromWorkspace(
+        {
+          question: "Should we keep backwards compatibility?",
+          cwd: bubble.paths.worktreePath,
+          now: new Date("2026-02-21T12:10:00.000Z")
+        },
+        dependencies
+      )
     });
 
     expect(result.envelope.type).toBe("HUMAN_QUESTION");
@@ -205,11 +206,14 @@ describe("emitAskHumanFromWorkspace", () => {
           } as never
         }
       }),
-      run: () => emitAskHumanFromWorkspace({
-        question: "Should reviewer escalate to human?",
-        cwd: bubble.paths.worktreePath,
-        now: new Date("2026-02-21T12:10:00.000Z")
-      })
+      run: (dependencies) => emitAskHumanFromWorkspace(
+        {
+          question: "Should reviewer escalate to human?",
+          cwd: bubble.paths.worktreePath,
+          now: new Date("2026-02-21T12:10:00.000Z")
+        },
+        dependencies
+      )
     });
 
     expect(result.envelope.type).toBe("HUMAN_QUESTION");
@@ -239,11 +243,14 @@ describe("emitAskHumanFromWorkspace", () => {
           } as never
         }
       }),
-      run: () => emitAskHumanFromWorkspace({
-        question: "Should we trust mismatched role provenance?",
-        cwd: bubble.paths.worktreePath,
-        now: new Date("2026-02-21T12:10:00.000Z")
-      })
+      run: (dependencies) => emitAskHumanFromWorkspace(
+        {
+          question: "Should we trust mismatched role provenance?",
+          cwd: bubble.paths.worktreePath,
+          now: new Date("2026-02-21T12:10:00.000Z")
+        },
+        dependencies
+      )
     });
 
     expect(result.envelope.type).toBe("HUMAN_QUESTION");

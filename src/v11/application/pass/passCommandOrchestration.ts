@@ -33,7 +33,30 @@ export async function emitPassFromWorkspace(
   const flowContext = await buildEmitPassContext({
     commandInput: input,
     createError: passCommandErrorRuntime.createError,
-    inferDefaultPassIntent: inferPassIntent
+    inferDefaultPassIntent: inferPassIntent,
+    workspaceContextDependencies: {
+      ...(dependencies.resolveBubbleFromWorkspaceCwd !== undefined
+        ? {
+            resolveBubbleFromWorkspaceCwd:
+              dependencies.resolveBubbleFromWorkspaceCwd
+          }
+        : {}),
+      ...(dependencies.ensureBubbleInstanceIdForMutation !== undefined
+        ? {
+            ensureBubbleInstanceIdForMutation:
+              dependencies.ensureBubbleInstanceIdForMutation
+          }
+        : {}),
+      ...(dependencies.readStateSnapshot !== undefined
+        ? { readStateSnapshot: dependencies.readStateSnapshot }
+        : {}),
+      ...(dependencies.resolveIdeationMetadata !== undefined
+        ? { resolveIdeationMetadata: dependencies.resolveIdeationMetadata }
+        : {}),
+      ...(dependencies.resolvePassHandoff !== undefined
+        ? { resolvePassHandoff: dependencies.resolvePassHandoff }
+        : {})
+    }
   });
 
   return dispatchPassFlow(

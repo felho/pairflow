@@ -6,8 +6,10 @@ import type {
   ResolveDeliveryMessageRefPort
 } from "../../ports/tmuxDelivery.js";
 import type { EmitBubbleLifecycleEventBestEffortPort } from "../../shared/metrics/bubbleEvents.js";
+import type { PrepareAskHumanRoutingDependencies } from "./askHumanRoutingContract.js";
 
-export interface AskHumanFlowRuntimeDependencies {
+export interface AskHumanFlowRuntimeDependencies
+  extends PrepareAskHumanRoutingDependencies {
   emitDeliveryNotificationAck?:
     | EmitDeliveryNotificationAckPort
     | undefined;

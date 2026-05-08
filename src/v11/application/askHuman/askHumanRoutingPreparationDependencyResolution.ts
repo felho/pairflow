@@ -2,7 +2,11 @@ import type {
   ResolvedAskHumanRoutingPreparationDependencies,
   ResolveAskHumanRoutingPreparationDependenciesInput
 } from "./askHumanRoutingPreparationDependencyResolutionContract.js";
-import { askHumanRoutingPreparationDependencyDefaults } from "./askHumanRoutingPreparationDependencyDefaults.js";
+import {
+  ensureBubbleInstanceIdForMutation,
+  readStateSnapshot,
+  resolveBubbleFromWorkspaceCwd
+} from "../start/startCommandDependencyDefaults.js";
 
 export function resolveAskHumanRoutingPreparationDependencies(
   input: ResolveAskHumanRoutingPreparationDependenciesInput
@@ -10,12 +14,12 @@ export function resolveAskHumanRoutingPreparationDependencies(
   return {
     resolveBubble:
       input.resolveBubbleFromWorkspaceCwd
-      ?? askHumanRoutingPreparationDependencyDefaults.resolveBubbleFromWorkspaceCwd,
+      ?? resolveBubbleFromWorkspaceCwd,
     ensureBubbleIdentity:
       input.ensureBubbleInstanceIdForMutation
-      ?? askHumanRoutingPreparationDependencyDefaults.ensureBubbleInstanceIdForMutation,
+      ?? ensureBubbleInstanceIdForMutation,
     readState:
       input.readStateSnapshot
-      ?? askHumanRoutingPreparationDependencyDefaults.readStateSnapshot
+      ?? readStateSnapshot
   };
 }

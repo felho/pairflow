@@ -30,7 +30,11 @@ import {
   resolveIdeationMetadata as resolveV11IdeationMetadata
 } from "../../domain/ideation/ideationMetadata.js";
 import { resolvePassHandoff, type ResolvedPassHandoff } from "../../domain/pass/handoff.js";
-import { passWorkspaceContextDefaults } from "./passWorkspaceContextDefaults.js";
+import {
+  ensureBubbleInstanceIdForMutation,
+  readStateSnapshot,
+  resolveBubbleFromWorkspaceCwd
+} from "../start/startCommandDependencyDefaults.js";
 
 export interface PreparePassWorkspaceContextInput {
   cwd?: string | undefined;
@@ -42,10 +46,10 @@ export interface PreparePassWorkspaceContextInput {
 
 export interface PreparePassWorkspaceContextDependencies {
   resolveBubbleFromWorkspaceCwd?:
-    typeof passWorkspaceContextDefaults.resolveBubbleFromWorkspaceCwd;
+    typeof resolveBubbleFromWorkspaceCwd;
   ensureBubbleInstanceIdForMutation?:
-    typeof passWorkspaceContextDefaults.ensureBubbleInstanceIdForMutation;
-  readStateSnapshot?: typeof passWorkspaceContextDefaults.readStateSnapshot;
+    typeof ensureBubbleInstanceIdForMutation;
+  readStateSnapshot?: typeof readStateSnapshot;
   resolveIdeationMetadata?: typeof resolveV11IdeationMetadata;
   resolvePassHandoff?: typeof resolvePassHandoff;
 }
@@ -69,12 +73,12 @@ export async function preparePassWorkspaceContext(
 ): Promise<PreparedPassWorkspaceContext> {
   const resolveBubble =
     dependencies.resolveBubbleFromWorkspaceCwd
-    ?? passWorkspaceContextDefaults.resolveBubbleFromWorkspaceCwd;
+    ?? resolveBubbleFromWorkspaceCwd;
   const ensureBubbleIdentity =
     dependencies.ensureBubbleInstanceIdForMutation
-    ?? passWorkspaceContextDefaults.ensureBubbleInstanceIdForMutation;
+    ?? ensureBubbleInstanceIdForMutation;
   const readState =
-    dependencies.readStateSnapshot ?? passWorkspaceContextDefaults.readStateSnapshot;
+    dependencies.readStateSnapshot ?? readStateSnapshot;
   const resolveIdeation =
     dependencies.resolveIdeationMetadata ?? resolveV11IdeationMetadata;
   const resolveHandoff = dependencies.resolvePassHandoff ?? resolvePassHandoff;
