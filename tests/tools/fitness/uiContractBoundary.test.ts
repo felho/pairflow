@@ -124,6 +124,45 @@ describe("UI contract boundary fitness check", () => {
     );
   });
 
+  it("fails on browser-unsafe imports from src/contracts/kernel", async () => {
+    const repoRoot = await createTempRoot();
+    await writeRepoFile(
+      repoRoot,
+      "src/contracts/kernel/file.ts",
+      [
+        "import { readFile } from \"node:fs/promises\";",
+        "import type { ProtocolEnvelope } from \"../../types/protocol.js\";",
+        "import { run } from \"../../v11/application/run.js\";",
+        "export const value = { readFile, run };",
+        "export type Local = ProtocolEnvelope;"
+      ].join("\n")
+    );
+
+    const report = await buildUiContractBoundaryCheckReport({
+      check: {
+        id: "ui_contract_boundary",
+        metric: "UI/backend contract boundary import direction",
+        mode: "hard-fail",
+        owner: "architecture/ui-contracts",
+        scope: ["ui/src/**", "src/contracts/ui/**", "src/contracts/kernel/**"],
+        exceptions: []
+      },
+      repoRoot,
+      fallbackMode: "hard-fail"
+    });
+
+    expect(report.status).toBe("fail");
+    expect(report.details?.some((detail) => detail.includes("node:fs"))).toBe(
+      true
+    );
+    expect(report.details?.some((detail) => detail.includes("src/types"))).toBe(
+      true
+    );
+    expect(report.details?.some((detail) => detail.includes("src/v11"))).toBe(
+      true
+    );
+  });
+
   it("fails on bare internal imports from src/contracts/ui", async () => {
     const repoRoot = await createTempRoot();
     await writeRepoFile(
@@ -656,6 +695,7 @@ describe("UI contract boundary fitness check", () => {
 
     expect(liveCheck).toBeDefined();
     expect(liveCheck?.mode).toBe("hard-fail");
+    expect(liveCheck?.scope).toContain("src/contracts/kernel/**");
     expect(liveCheck?.exceptions ?? []).toStrictEqual([]);
     expect(
       JSON.stringify(liveCheck).includes(staleUiContractBoundaryExceptionId)

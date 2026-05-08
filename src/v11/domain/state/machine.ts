@@ -1,8 +1,8 @@
 import type {
   AgentName,
   AgentRole
-} from "../agentIdentity/agentIdentity.js";
-import type { BubbleLifecycleState } from "./lifecycleTypes.js";
+} from "../../../contracts/kernel/agentIdentity.js";
+import type { BubbleLifecycleState } from "../../../contracts/kernel/lifecycle.js";
 import type { BubbleStateSnapshot } from "../../shared/state/bubbleStateSnapshotTypes.js";
 import type {
   RoundRoleHistoryEntry

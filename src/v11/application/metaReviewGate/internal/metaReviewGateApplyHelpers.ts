@@ -1,9 +1,8 @@
 import type {
   AppendProtocolEnvelopePort,
   AppendProtocolEnvelopeResult
-} from "../../../ports/transcript.js";import type {
-  AgentName
-} from "../../../domain/agentIdentity/agentIdentity.js";
+} from "../../../ports/transcript.js";
+import type { AgentName } from "../../../../contracts/kernel/agentIdentity.js";
 import { buildMetaReviewSubmitCommandTemplate } from "../../../shared/metaReview/metaReviewSubmitGuidance.js";
 import {
   type LoadedStateSnapshot,

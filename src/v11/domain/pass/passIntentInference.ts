@@ -1,7 +1,5 @@
-import type {
-  AgentRole
-} from "../agentIdentity/agentIdentity.js";
-import type { PassIntent } from "../../../types/protocol.js";
+import type { AgentRole } from "../../../contracts/kernel/agentIdentity.js";
+import type { PassIntent } from "../../../contracts/kernel/protocol.js";
 
 export interface InferPassIntentFromActiveRoleInput {
   activeRole: AgentRole;

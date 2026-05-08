@@ -6,9 +6,7 @@ import {
   resolveIdeationMetadata
 } from "../../domain/ideation/ideationMetadata.js";
 import type { ActorEmitContextSnapshot } from "../../shared/actorProtocol/actorEmitContext.js";
-import type {
-  AgentName
-} from "../../domain/agentIdentity/agentIdentity.js";
+import type { AgentName } from "../../../contracts/kernel/agentIdentity.js";
 import type {
   BubbleReviewLoopMode
 } from "../../shared/reviewPolicy/reviewPolicyTypes.js";

@@ -1,4 +1,4 @@
-import type { PassIntent } from "../../../types/protocol.js";
+import type { PassIntent } from "../../../contracts/kernel/protocol.js";
 
 const reviewerVerificationConsistencyInvalidReasonCode =
   "REVIEWER_VERIFICATION_CONSISTENCY_INVALID";

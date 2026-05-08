@@ -193,6 +193,7 @@ function classifyTarget(input: {
   const target = input.resolvedRelative ?? input.specifier;
   const normalizedTarget = normalizePathToPosix(target).replace(/^\.\//u, "");
   const fromUiContracts = input.fromRelative.startsWith("src/contracts/ui/");
+  const fromContractKernel = input.fromRelative.startsWith("src/contracts/kernel/");
   const fromUiSource = input.fromRelative.startsWith("ui/src/");
 
   if (fromUiSource && /^src\/v11(?:\/|$)/u.test(normalizedTarget)) {
@@ -211,24 +212,27 @@ function classifyTarget(input: {
     return "ui source must import browser-safe UI contracts through @pairflow/ui-contracts, not src/types";
   }
 
-  if (!fromUiContracts) {
+  if (!fromUiContracts && !fromContractKernel) {
     return undefined;
   }
 
   if (input.specifier.startsWith("node:")) {
-    return "src/contracts/ui must stay browser-safe and cannot import node:* modules";
+    return "contract surfaces must stay browser-safe and cannot import node:* modules";
   }
   if (/^src\/v11(?:\/|$)/u.test(normalizedTarget)) {
-    return "src/contracts/ui must not import src/v11 runtime internals";
+    return "contract surfaces must not import src/v11 runtime internals";
+  }
+  if (/^src\/types(?:\/|$)/u.test(normalizedTarget)) {
+    return "contract surfaces must not import legacy src/types vocabulary";
   }
   if (/^(?:src\/)?application(?:\/|$)/u.test(normalizedTarget)) {
-    return "src/contracts/ui must not import application internals";
+    return "contract surfaces must not import application internals";
   }
   if (/^(?:src\/)?defaults(?:\/|$)/u.test(normalizedTarget)) {
-    return "src/contracts/ui must not import defaults internals";
+    return "contract surfaces must not import defaults internals";
   }
   if (/^(?:src\/)?infrastructure(?:\/|$)/u.test(normalizedTarget)) {
-    return "src/contracts/ui must not import infrastructure internals";
+    return "contract surfaces must not import infrastructure internals";
   }
   return undefined;
 }

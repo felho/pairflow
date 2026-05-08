@@ -29,7 +29,8 @@ import {
 } from "../../../shared/metaReview/metaReviewSubmitGuidance.js";
 import { reviewerPolicySnapshotFileName } from "../../../shared/reviewer/reviewerPolicySnapshot.js";
 import type { BubbleConfig } from "../../../shared/config/bubbleConfigTypes.js";
-import type { ProtocolEnvelope, ProtocolParticipant } from "../../../../types/protocol.js";
+import type { ProtocolParticipant } from "../../../../contracts/kernel/protocol.js";
+import type { ProtocolEnvelope } from "../../../../types/protocol.js";
 
 export type DeliveryMessageRecipientRole =
   | ProtocolParticipant

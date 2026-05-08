@@ -2,7 +2,8 @@ import type {
   AgentName,
   AgentRole,
   BubbleAgentsConfig
-} from "../../domain/agentIdentity/agentIdentity.js";import {
+} from "../../../contracts/kernel/agentIdentity.js";
+import {
   resolveConfiguredAgentForRole
 } from "../../domain/agentIdentity/agentIdentity.js";
 import type { ActorRuntimePolicyCheckId } from "../../shared/actorProtocol/actorRuntimePolicyTypes.js";

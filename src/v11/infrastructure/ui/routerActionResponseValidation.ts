@@ -10,7 +10,7 @@ import type {
   UiDeleteBubbleResult,
   UiMergeBubbleResult
 } from "../../../contracts/ui/uiActions.js";
-import { bubbleLifecycleStates } from "../../../contracts/ui/bubbleLifecycle.js";
+import { bubbleLifecycleStates } from "../../../contracts/kernel/lifecycle.js";
 import { internalError, throwApiError } from "./routerHttp.js";
 
 type UiActionResponseName = "commit" | "delete" | "merge";

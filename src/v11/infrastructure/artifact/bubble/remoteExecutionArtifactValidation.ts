@@ -2,12 +2,12 @@ import type {
   BubbleRemotePointer,
   BubbleRemotePointerKind
 } from "../../../shared/remote/remoteExecutionTypes.js";
-import type { BubbleLifecycleState } from "../../../domain/state/lifecycleTypes.js";
+import type { BubbleLifecycleState } from "../../../../contracts/kernel/lifecycle.js";
 import type { BubbleRemoteStateCache } from "../../../shared/remote/remoteStateCacheTypes.js";
 import {
   isBubbleRemotePointerKind
 } from "../../../shared/remote/remoteExecutionTypes.js";
-import { isBubbleLifecycleState } from "../../../domain/state/lifecycleTypes.js";
+import { isBubbleLifecycleState } from "../../../../contracts/kernel/lifecycle.js";
 import {
   isInteger,
   isIsoTimestamp,

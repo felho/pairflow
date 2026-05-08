@@ -1,15 +1,16 @@
 import { readFile } from "node:fs/promises";
-import { parseArgs } from "node:util";import type {
-  AgentRole
-} from "../../../v11/domain/agentIdentity/agentIdentity.js";
+import { parseArgs } from "node:util";
+import type { AgentRole } from "../../../contracts/kernel/agentIdentity.js";
 import type { Finding } from "../../../types/findings.js";
+import {
+  isPassIntent,
+  type PassIntent
+} from "../../../contracts/kernel/protocol.js";
 import {
   actorOutputKinds,
   isActorOutputKind,
-  isPassIntent,
   type ActorEmitInput,
-  type ActorOutputKind,
-  type PassIntent
+  type ActorOutputKind
 } from "../../../types/protocol.js";
 import type { ConvergedStructuredFinding } from "../../../v11/shared/converged/convergedCommandTypes.js";
 import {

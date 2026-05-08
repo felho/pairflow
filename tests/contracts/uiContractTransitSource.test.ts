@@ -361,34 +361,55 @@ describe("UI contract transit source guards", () => {
     );
   });
 
-  it("keeps lifecycle literals owned by state domain with a browser-safe UI contract mirror", async () => {
-    const runtime = await readSource("src/v11/domain/state/lifecycleTypes.ts");
+  it("keeps lifecycle literals owned by the browser-safe contract kernel", async () => {
+    const kernel = await readSource("src/contracts/kernel/lifecycle.ts");
     const canonical = await readSource("src/contracts/ui/bubbleLifecycle.ts");
-    const backendCompat = await readSource("src/shared/contracts/bubbleLifecycle.ts");
     const uiCompat = await readSource("ui/src/lib/contracts/bubbleLifecycle.ts");
     const stateSnapshots = await readSource("src/v11/ports/stateSnapshots.ts");
 
-    expect(runtime.match(/export const bubbleLifecycleStates = \[/g)).toHaveLength(
+    expect(kernel.match(/export const bubbleLifecycleStates = \[/g)).toHaveLength(
       1
     );
-    expect(canonical.match(/export const bubbleLifecycleStates = \[/g)).toHaveLength(
-      1
-    );
+    expect(canonical).toContain("from \"../kernel/lifecycle.js\"");
+    expect(canonical).not.toMatch(/bubbleLifecycleStates\s*=\s*\[/);
     expect(canonical).not.toContain("../v11");
     expect(canonical).not.toContain("src/v11");
-    expect(backendCompat).toContain("from \"../../contracts/ui/bubbleLifecycle.js\"");
-    expect(backendCompat).not.toMatch(/bubbleLifecycleStates\s*=\s*\[/);
     expectUiContractEntrypointImport(uiCompat);
     expect(stateSnapshots).toContain(
-      "from \"../../contracts/ui/bubbleLifecycle.js\""
+      "from \"../../contracts/kernel/lifecycle.js\""
     );
     expect(stateSnapshots).not.toMatch(/bubbleLifecycleStates\s*=\s*\[/);
     expect(stateSnapshots).not.toMatch(/type\s+BubbleLifecycleState\s*=/);
     expect(stateSnapshots).not.toMatch(/interface\s+BubbleLifecycleState/);
     expect(uiCompat).not.toMatch(/bubbleLifecycleStates\s*=\s*\[/);
-    expect([backendCompat, uiCompat, stateSnapshots].join("\n")).not.toMatch(
+    expect([kernel, canonical, uiCompat, stateSnapshots].join("\n")).not.toMatch(
       /mirror|mirrored|keep.*sync/i
     );
+  });
+
+  it("does not keep compatibility bridges for kernel-owned vocabulary", async () => {
+    const agentIdentity = await readSource(
+      "src/v11/domain/agentIdentity/agentIdentity.ts"
+    );
+    const protocol = await readSource("src/types/protocol.ts");
+    const uiActions = await readSource("src/contracts/ui/uiActions.ts");
+
+    await expect(
+      readSource("src/v11/domain/state/lifecycleTypes.ts")
+    ).rejects.toThrow();
+    await expect(
+      readSource("src/shared/contracts/bubbleLifecycle.ts")
+    ).rejects.toThrow();
+
+    expect(agentIdentity).not.toMatch(/\bexport\s+(?:type|interface)\s+(?:AgentName|AgentRole|BubbleAgentsConfig)\b/u);
+    expect(agentIdentity).not.toMatch(/\bexport\s+const\s+agent(?:Names|Roles)\b/u);
+    expect(protocol).not.toMatch(/\bexport\s+type\s+(?:ProtocolParticipant|ProtocolMessageType|PassIntent|FindingsClaimState|FindingsClaimSource|ApprovalDecision)\b/u);
+    expect(protocol).not.toMatch(/\bexport\s+const\s+(?:protocolParticipants|protocolMessageTypes|passIntents|findingsClaimStates|findingsClaimSources|approvalDecisions)\b/u);
+    expect(uiActions).toContain("from \"../kernel/index.js\"");
+    expect(uiActions).not.toMatch(/UiActionAgentName\s*=\s*["']/u);
+    expect(uiActions).not.toMatch(/UiActionProtocolMessageType\s*=\s*["']/u);
+    expect(uiActions).not.toMatch(/UiActionApprovalDecision\s*=\s*["']/u);
+    expect(uiActions).not.toMatch(/UiActionPassIntent\s*=\s*["']/u);
   });
 
   it("keeps delete-bubble UI names as aliases of the canonical contract", async () => {
@@ -470,7 +491,7 @@ describe("UI contract transit source guards", () => {
     expectExportTypeBlockContains(canonical, {
       symbol: "ProtocolMessageType"
     });
-    expectModuleSpecifierCount(canonical, "../../types/protocol.js", 1);
+    expectModuleSpecifierCount(canonical, "../kernel/protocol.js", 1);
     expectExportTypeBlockContains(uiBarrel, {
       symbol: "ProtocolMessageType",
       moduleSpecifier: "./uiReadModel.js"

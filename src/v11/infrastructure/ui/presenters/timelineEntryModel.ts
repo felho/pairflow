@@ -1,7 +1,5 @@
-import type {
-  ProtocolEnvelopePayload,
-  ProtocolMessageType
-} from "../../../../types/protocol.js";
+import type { ProtocolMessageType } from "../../../../contracts/kernel/protocol.js";
+import type { ProtocolEnvelopePayload } from "../../../../types/protocol.js";
 import type {
   UiTimelineBadge,
   UiTimelineDisplayRole,

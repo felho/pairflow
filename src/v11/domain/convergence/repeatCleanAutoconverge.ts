@@ -1,8 +1,12 @@
 import type {
   AgentName,
   AgentRole
-} from "../agentIdentity/agentIdentity.js";
-import { isPassIntent, type PassIntent, type ProtocolEnvelope } from "../../../types/protocol.js";
+} from "../../../contracts/kernel/agentIdentity.js";
+import {
+  isPassIntent,
+  type PassIntent
+} from "../../../contracts/kernel/protocol.js";
+import type { ProtocolEnvelope } from "../../../types/protocol.js";
 
 export const repeatCleanAutoconvergeTriggeredReasonCode =
   "REPEAT_CLEAN_AUTOCONVERGE_TRIGGERED";

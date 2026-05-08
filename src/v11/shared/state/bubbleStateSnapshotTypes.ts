@@ -1,10 +1,8 @@
 import type {
   AgentName,
   AgentRole
-} from "../../domain/agentIdentity/agentIdentity.js";
-import type {
-  BubbleLifecycleState
-} from "../../domain/state/lifecycleTypes.js";
+} from "../../../contracts/kernel/agentIdentity.js";
+import type { BubbleLifecycleState } from "../../../contracts/kernel/lifecycle.js";
 import type {
   BubbleMetaReviewSnapshotState
 } from "../metaReview/metaReviewSnapshotTypes.js";

@@ -5,7 +5,10 @@ import {
   type EmitPassResult
 } from "../../../v11/application/pass/passCommandOrchestration.js";
 import { CliFindingParseError, parseCliFinding } from "./shared/findingParser.js";
-import { isPassIntent, type PassIntent } from "../../../types/protocol.js";
+import {
+  isPassIntent,
+  type PassIntent
+} from "../../../contracts/kernel/protocol.js";
 import {
   type Finding,
   type FindingLayer,

@@ -1,4 +1,4 @@
-import type { BubbleLifecycleState } from "../../domain/state/lifecycleTypes.js";
+import type { BubbleLifecycleState } from "../../../contracts/kernel/lifecycle.js";
 import type { BubbleStateSnapshot } from "../state/bubbleStateSnapshotTypes.js";
 import { metaReviewExecutionContextToRunningContext } from "../state/executionContext.js";
 import { resolveWatchdogStatusTiming } from "./watchdogStatusTiming.js";

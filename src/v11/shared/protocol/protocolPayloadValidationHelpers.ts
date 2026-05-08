@@ -2,9 +2,9 @@ import {
   isApprovalDecision,
   isFindingsClaimSource,
   isFindingsClaimState,
-  isPassIntent,
-  type ProtocolEnvelope
-} from "../../../types/protocol.js";
+  isPassIntent
+} from "../../../contracts/kernel/protocol.js";
+import type { ProtocolEnvelope } from "../../../types/protocol.js";
 import {
   isInteger,
   isNonEmptyString,

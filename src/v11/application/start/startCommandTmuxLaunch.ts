@@ -15,9 +15,8 @@ import {
 } from "./startCommandResumePrompts.js";
 import type { resolveResumeKickoffMessages } from "./startCommandResumePrompts.js";
 import type { ResolvedStartBubbleDependencies } from "./startCommandOrchestration.js";
-import type { StartExecutionContext } from "./startCommandContext.js";import type {
-  AgentName
-} from "../../domain/agentIdentity/agentIdentity.js";
+import type { StartExecutionContext } from "./startCommandContext.js";
+import type { AgentName } from "../../../contracts/kernel/agentIdentity.js";
 import { DEFAULT_REVIEW_POLICY_REVIEWER_BLOCKING_MIN_SEVERITY } from "../../../config/defaults.js";
 import type { PairflowRemoteWorkspaceAuthority } from "../../shared/command/pairflowCommandBootstrap.js";
 

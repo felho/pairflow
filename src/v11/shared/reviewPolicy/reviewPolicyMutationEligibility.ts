@@ -1,4 +1,4 @@
-import type { BubbleLifecycleState } from "../../domain/state/lifecycleTypes.js";
+import type { BubbleLifecycleState } from "../../../contracts/kernel/lifecycle.js";
 
 export const reviewPolicyMutableStates = [
   "CREATED",

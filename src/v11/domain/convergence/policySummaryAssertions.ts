@@ -1,4 +1,4 @@
-import type { FindingsClaimState } from "../../../types/protocol.js";
+import type { FindingsClaimState } from "../../../contracts/kernel/protocol.js";
 
 export interface SummaryFindingsAssertionEvaluation {
   hasPositiveAssertion: boolean;

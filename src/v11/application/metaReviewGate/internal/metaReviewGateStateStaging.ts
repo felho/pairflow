@@ -5,9 +5,7 @@ import {
   type LoadedStateSnapshot,
   type WriteStateSnapshotPort
 } from "../../../ports/stateSnapshots.js";
-import type {
-  AgentName
-} from "../../../domain/agentIdentity/agentIdentity.js";
+import type { AgentName } from "../../../../contracts/kernel/agentIdentity.js";
 import type { BubbleStateSnapshot } from "../../../shared/state/bubbleStateSnapshotTypes.js";
 import { toMetaReviewGateError } from "../../../shared/metaReviewGate/metaReviewGateErrorConversion.js";
 import { MetaReviewGateError } from "../../../shared/metaReviewGate/metaReviewGateRouteContract.js";

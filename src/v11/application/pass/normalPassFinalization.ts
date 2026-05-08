@@ -1,6 +1,7 @@
 import type { BubbleStateSnapshot } from "../../shared/state/bubbleStateSnapshotTypes.js";
 import type { Finding } from "../../../types/findings.js";
-import type { PassIntent, ProtocolEnvelope } from "../../../types/protocol.js";
+import type { PassIntent } from "../../../contracts/kernel/protocol.js";
+import type { ProtocolEnvelope } from "../../../types/protocol.js";
 import type {
   RepeatCleanAutoconvergeReasonCode,
   RepeatCleanAutoconvergeReasonDetail

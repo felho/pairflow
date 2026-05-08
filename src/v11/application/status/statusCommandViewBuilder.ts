@@ -5,7 +5,7 @@ import type { ReadWatchdogPaneActivityResult } from "../../shared/watchdog/watch
 import type {
   BubbleReviewPolicyRuntimeView
 } from "../../shared/reviewPolicy/reviewPolicyTypes.js";
-import type { BubbleLifecycleState } from "../../domain/state/lifecycleTypes.js";
+import type { BubbleLifecycleState } from "../../../contracts/kernel/lifecycle.js";
 import type {
   BubbleFailingGate,
   BubbleRoundGateState,
@@ -17,7 +17,8 @@ import {
   normalizeRuntimeAlignedRole,
   toRuntimeAlignedReviewPolicyExecutionContext
 } from "../../shared/reviewPolicy/reviewPolicyRuntime.js";
-import type { ProtocolEnvelope, ProtocolMessageType } from "../../../types/protocol.js";
+import type { ProtocolMessageType } from "../../../contracts/kernel/protocol.js";
+import type { ProtocolEnvelope } from "../../../types/protocol.js";
 import type { UiBubbleStatusRemoteExecution } from "../../../types/uiRemoteExecution.js";
 import type {
   BubbleStatusState,

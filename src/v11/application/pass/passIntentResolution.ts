@@ -1,4 +1,7 @@
-import { isPassIntent, type PassIntent } from "../../../types/protocol.js";
+import {
+  isPassIntent,
+  type PassIntent
+} from "../../../contracts/kernel/protocol.js";
 import { assertReviewerIntentOverrideConsistency } from "../../domain/pass/reviewerIntentOverrideGuard.js";
 
 const passIntentResolutionErrorReasonCode = "PASS_INTENT_RESOLUTION_ERROR";

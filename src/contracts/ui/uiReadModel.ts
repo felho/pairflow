@@ -1,5 +1,5 @@
 import type { BubbleLifecycleState } from "./bubbleLifecycle.js";
-import type { ProtocolMessageType } from "../../types/protocol.js";
+import type { ProtocolMessageType } from "../kernel/protocol.js";
 import type { StateValidationDiagnostics } from "./stateValidation.js";
 import type {
   UiBubbleListRemoteExecution,

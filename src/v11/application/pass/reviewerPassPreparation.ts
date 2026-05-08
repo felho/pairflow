@@ -1,5 +1,5 @@
 import type { Finding } from "../../../types/findings.js";
-import type { PassIntent } from "../../../types/protocol.js";
+import type { PassIntent } from "../../../contracts/kernel/protocol.js";
 import type {
   BubbleReviewAutoReworkSeverity
 } from "../../shared/reviewPolicy/reviewPolicyTypes.js";

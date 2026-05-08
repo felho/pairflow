@@ -2,9 +2,8 @@ import type { MetaReviewResult } from "../../../shared/metaReview/metaReviewType
 import type {
   AppendProtocolEnvelopePort
 } from "../../../ports/transcript.js";
-import type { LoadedStateSnapshot } from "../../../ports/stateSnapshots.js";import type {
-  AgentName
-} from "../../../domain/agentIdentity/agentIdentity.js";
+import type { LoadedStateSnapshot } from "../../../ports/stateSnapshots.js";
+import type { AgentName } from "../../../../contracts/kernel/agentIdentity.js";
 import type { Finding } from "../../../../types/findings.js";
 import {
   deliveryTargetRoleMetadataKey,

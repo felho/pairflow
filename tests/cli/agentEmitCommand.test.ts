@@ -20,9 +20,8 @@ import {
   buildRunningExecutionContext,
   metaReviewExecutionContextToRunningContext
 } from "../../src/v11/shared/state/executionContext.js";
-import { writeStateSnapshot } from "../../src/v11/infrastructure/state/stateStore.js";import type {
-  AgentName
-} from "../../src/v11/domain/agentIdentity/agentIdentity.js";
+import { writeStateSnapshot } from "../../src/v11/infrastructure/state/stateStore.js";
+import type { AgentName } from "../../src/contracts/kernel/agentIdentity.js";
 
 const tempDirs: string[] = [];
 

@@ -1,10 +1,10 @@
-import type { BubbleLifecycleState } from "../../domain/state/lifecycleTypes.js";
+import type { BubbleLifecycleState } from "../../../contracts/kernel/lifecycle.js";
 import type {
   BubbleFailingGate,
   BubbleRoundGateState,
   BubbleSpecLockState
 } from "../gates/gateStateTypes.js";
-import type { ProtocolMessageType } from "../../../types/protocol.js";
+import type { ProtocolMessageType } from "../../../contracts/kernel/protocol.js";
 import type { StateValidationDiagnostics } from "../../ports/stateSnapshots.js";
 import type { ReviewVerificationState } from "../reviewer/reviewVerification.js";
 import type {

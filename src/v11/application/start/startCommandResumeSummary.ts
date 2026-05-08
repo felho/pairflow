@@ -3,9 +3,9 @@ import type { Finding } from "../../../types/findings.js";
 import { resolveFindingPriority } from "../../../types/findings.js";
 import {
   isFindingsClaimSource,
-  isFindingsClaimState,
-  type ProtocolEnvelope
-} from "../../../types/protocol.js";
+  isFindingsClaimState
+} from "../../../contracts/kernel/protocol.js";
+import type { ProtocolEnvelope } from "../../../types/protocol.js";
 
 const MAX_SUMMARY_CHARS = 900;
 const MAX_SUMMARY_LINES = 16;

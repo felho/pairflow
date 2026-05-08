@@ -7,13 +7,14 @@ import type { ReadTranscriptEnvelopesPort } from "../../ports/transcript.js";
 import type {
   AgentName,
   AgentRole
-} from "../../domain/agentIdentity/agentIdentity.js";
+} from "../../../contracts/kernel/agentIdentity.js";
 import type {
   BubbleReviewAutoReworkSeverity
 } from "../../shared/reviewPolicy/reviewPolicyTypes.js";
 import type { BubbleConfig } from "../../shared/config/bubbleConfigTypes.js";
 import type { Finding } from "../../../types/findings.js";
-import type { PassIntent, ProtocolEnvelope } from "../../../types/protocol.js";
+import type { PassIntent } from "../../../contracts/kernel/protocol.js";
+import type { ProtocolEnvelope } from "../../../types/protocol.js";
 import type {
   ReviewerFindingsClaim,
   ReviewerFindingsClaimParserMetadata

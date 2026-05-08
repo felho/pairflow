@@ -8,7 +8,10 @@ import {
   type EmitPassResult
 } from "../../../src/v11/application/pass/passCommandOrchestration.js";
 import { readStateSnapshot } from "../../../src/v11/infrastructure/state/stateStore.js";
-import { isPassIntent, type PassIntent } from "../../../src/types/protocol.js";
+import {
+  isPassIntent,
+  type PassIntent
+} from "../../../src/contracts/kernel/protocol.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
 import { initGitRepository } from "../../helpers/git.js";
 import type { ContractCase, ContractCaseExpected } from "./schema.js";

@@ -21,9 +21,7 @@ import type {
   ResolveReviewerTestExecutionDirectivePort
 } from "../../ports/reviewerTestEvidenceArtifacts.js";
 import type { ResolvedBubbleWorkspace } from "../../ports/workspaceResolution.js";
-import type {
-  AgentName
-} from "../../domain/agentIdentity/agentIdentity.js";
+import type { AgentName } from "../../../contracts/kernel/agentIdentity.js";
 import type {
   BubbleRoundGateState,
   BubbleSpecLockState

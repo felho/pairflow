@@ -6,7 +6,8 @@ import type {
   RepeatCleanAutoconvergeReasonDetail
 } from "../../../v11/domain/convergence/repeatCleanAutoconverge.js";
 import type { Finding } from "../../../types/findings.js";
-import type { PassIntent, ProtocolEnvelope } from "../../../types/protocol.js";
+import type { PassIntent } from "../../../contracts/kernel/protocol.js";
+import type { ProtocolEnvelope } from "../../../types/protocol.js";
 import { buildPassEnvelopeDraft } from "../../domain/pass/passEnvelopeDraft.js";
 import type { ResolvedPassHandoff } from "../../domain/pass/handoff.js";
 import type {

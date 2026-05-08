@@ -1,8 +1,6 @@
-import type {
-  AgentRole
-} from "../../domain/agentIdentity/agentIdentity.js";
+import type { AgentRole } from "../../../contracts/kernel/agentIdentity.js";
 import type { BubbleConfig } from "../../shared/config/bubbleConfigTypes.js";
-import type { PassIntent } from "../../../types/protocol.js";
+import type { PassIntent } from "../../../contracts/kernel/protocol.js";
 import type { ReviewVerificationInputResolution } from "../../../v11/shared/reviewer/reviewVerification.js";
 import { assertNoDocsOnlySkipLogRefConflict } from "../../domain/pass/docsOnlyRuntimeSkipGuard.js";
 import { validateReviewerVerificationConsistency } from "../../domain/pass/reviewerVerificationConsistencyGuard.js";

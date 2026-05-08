@@ -1,6 +1,4 @@
-import type {
-  AgentName
-} from "../v11/domain/agentIdentity/agentIdentity.js";
+import type { AgentName } from "../contracts/kernel/agentIdentity.js";
 import type {
   BubbleReviewAutoReworkSeverity,
   BubbleReviewLoopMode

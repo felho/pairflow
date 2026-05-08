@@ -1,7 +1,7 @@
 import type {
   AgentName,
   AgentRole
-} from "../../domain/agentIdentity/agentIdentity.js";
+} from "../../../contracts/kernel/agentIdentity.js";
 import type {
   ActorActivationProvenance
 } from "../../shared/actorProtocol/actorEmitContext.js";

@@ -1,6 +1,4 @@
-import type {
-  BubbleAgentsConfig
-} from "../../domain/agentIdentity/agentIdentity.js";
+import type { BubbleAgentsConfig } from "../../../contracts/kernel/agentIdentity.js";
 import type {
   AttachLauncher
 } from "../bubbleAttachment/attachLauncherTypes.js";

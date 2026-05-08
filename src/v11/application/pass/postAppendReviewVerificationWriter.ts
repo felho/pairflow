@@ -4,9 +4,8 @@ import {
 } from "../../../v11/shared/reviewer/reviewVerification.js";
 import type {
   WriteReviewVerificationArtifactAtomicPort
-} from "../../ports/reviewVerificationArtifacts.js";import type {
-  AgentName
-} from "../../domain/agentIdentity/agentIdentity.js";
+} from "../../ports/reviewVerificationArtifacts.js";
+import type { AgentName } from "../../../contracts/kernel/agentIdentity.js";
 import { raisePostAppendReviewVerificationWriteFailed } from "../../domain/pass/postAppendReviewVerificationWriteFailure.js";
 
 export interface WritePostAppendReviewVerificationArtifactInput {

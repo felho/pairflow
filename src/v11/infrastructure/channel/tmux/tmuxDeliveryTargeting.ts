@@ -1,19 +1,17 @@
 import type { BubbleConfig } from "../../../shared/config/bubbleConfigTypes.js";
-import {
-  isAgentName,
-  resolveUniquelyConfiguredRoleForAgent
-} from "../../../domain/agentIdentity/agentIdentity.js";
+import { isAgentName } from "../../../../contracts/kernel/agentIdentity.js";
+import { resolveUniquelyConfiguredRoleForAgent } from "../../../domain/agentIdentity/agentIdentity.js";
 import {
   getSharedTopologySlotPaneIndex,
   getSharedTopologySlotPaneIndexForRole
 } from "../../../shared/topology/topologySlotPaneProjection.js";
+import type { ProtocolParticipant } from "../../../../contracts/kernel/protocol.js";
 import {
   isLegacyMetaReviewerProtocolRecipient,
   parseDeliveryTargetRoleMetadata,
   type DeliveryTargetRole,
   type LegacyMetaReviewerProtocolRecipient,
-  type ProtocolEnvelope,
-  type ProtocolParticipant
+  type ProtocolEnvelope
 } from "../../../../types/protocol.js";
 import type { DeliveryTargetReasonCode } from "../../../shared/delivery/tmuxDeliveryContract.js";
 import type { DeliveryMessageRecipientRole } from "./tmuxDeliveryMessageBuilder.js";

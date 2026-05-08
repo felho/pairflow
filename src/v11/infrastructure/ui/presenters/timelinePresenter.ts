@@ -24,7 +24,7 @@ import {
   isFindingsClaimState,
   isPassIntent,
   isProtocolMessageType
-} from "../../../../types/protocol.js";
+} from "../../../../contracts/kernel/protocol.js";
 import type {
   UiTimelineDisplayItem,
 } from "../../../../contracts/ui/uiReadModel.js";

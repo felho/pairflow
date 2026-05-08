@@ -23,9 +23,7 @@ import {
   DEFAULT_WATCHDOG_TIMEOUT_MINUTES,
   DEFAULT_WORK_MODE
 } from "../../../config/defaults.js";
-import type {
-  AgentName
-} from "../../domain/agentIdentity/agentIdentity.js";
+import type { AgentName } from "../../../contracts/kernel/agentIdentity.js";
 import type {
   BubbleReviewPolicyConfig
 } from "../../shared/reviewPolicy/reviewPolicyTypes.js";

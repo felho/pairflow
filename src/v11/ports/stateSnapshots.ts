@@ -1,7 +1,5 @@
 import type { BubbleStateSnapshot } from "../shared/state/bubbleStateSnapshotTypes.js";
-import type {
-  BubbleLifecycleState
-} from "../../contracts/ui/bubbleLifecycle.js";
+import type { BubbleLifecycleState } from "../../contracts/kernel/lifecycle.js";
 import type {
   StateValidationDiagnostics
 } from "../../contracts/ui/stateValidation.js";

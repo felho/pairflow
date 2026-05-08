@@ -1,4 +1,4 @@
-import type { PassIntent } from "../../../types/protocol.js";
+import type { PassIntent } from "../../../contracts/kernel/protocol.js";
 
 const reviewerIntentOverrideInvalidReasonCode = "REVIEWER_INTENT_OVERRIDE_INVALID";
 

@@ -1,6 +1,6 @@
 import { isMetaReviewRuntimeDeliveryStatus } from "../../../shared/metaReview/metaReviewSnapshotTypes.js";
-import type { BubbleLifecycleState } from "../../../domain/state/lifecycleTypes.js";
-import { isBubbleLifecycleState } from "../../../domain/state/lifecycleTypes.js";
+import type { BubbleLifecycleState } from "../../../../contracts/kernel/lifecycle.js";
+import { isBubbleLifecycleState } from "../../../../contracts/kernel/lifecycle.js";
 import type {
   BubbleFailingGate,
   BubbleRoundGateState,

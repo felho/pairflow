@@ -1,6 +1,5 @@
-import { join } from "node:path";import type {
-  AgentName
-} from "../../domain/agentIdentity/agentIdentity.js";
+import { join } from "node:path";
+import type { AgentName } from "../../../contracts/kernel/agentIdentity.js";
 import type {
   ProtocolEnvelope,
   ProtocolEnvelopeDraft

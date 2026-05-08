@@ -3,9 +3,7 @@ import { appendHumanApprovalRequestEnvelope } from "./approvalRequestEnvelope.js
 import {
   type WriteStateSnapshotPort
 } from "../../../ports/stateSnapshots.js";
-import type {
-  AgentName
-} from "../../../domain/agentIdentity/agentIdentity.js";
+import type { AgentName } from "../../../../contracts/kernel/agentIdentity.js";
 import type { BubbleStateSnapshot } from "../../../shared/state/bubbleStateSnapshotTypes.js";
 import type { FindingsParityMetadata } from "../../../../types/protocol.js";
 import type {

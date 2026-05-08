@@ -1,6 +1,4 @@
-import type {
-  AgentName
-} from "../../domain/agentIdentity/agentIdentity.js";
+import type { AgentName } from "../../../contracts/kernel/agentIdentity.js";
 import type {
   BubbleReviewAutoReworkSeverity
 } from "../../shared/reviewPolicy/reviewPolicyTypes.js";

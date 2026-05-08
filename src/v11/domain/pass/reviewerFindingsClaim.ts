@@ -3,7 +3,7 @@ import type { Finding } from "../../../types/findings.js";
 import type {
   FindingsClaimSource,
   FindingsClaimState
-} from "../../../types/protocol.js";
+} from "../../../contracts/kernel/protocol.js";
 
 const findingsPayloadInvalidReasonCode = "FINDINGS_PAYLOAD_INVALID";
 

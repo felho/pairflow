@@ -1,6 +1,4 @@
-import type {
-  AgentName
-} from "../../domain/agentIdentity/agentIdentity.js";
+import type { AgentName } from "../../../contracts/kernel/agentIdentity.js";
 import type { ActorEmitContextSnapshot } from "../../shared/actorProtocol/actorEmitContext.js";
 import type { ConvergedStructuredFinding } from "../../shared/converged/convergedCommandTypes.js";
 import { executeConvergedExecution } from "./convergedExecution.js";

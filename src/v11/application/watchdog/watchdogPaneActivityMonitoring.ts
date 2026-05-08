@@ -1,8 +1,7 @@
 import type {
   BubbleWatchdogDependencies
-} from "./watchdogCommandContract.js";import type {
-  AgentRole
-} from "../../domain/agentIdentity/agentIdentity.js";
+} from "./watchdogCommandContract.js";
+import type { AgentRole } from "../../../contracts/kernel/agentIdentity.js";
 import { BubbleWatchdogError } from "./watchdogCommandRuntime.js";
 import { type WatchdogRuntimeContext } from "./watchdogCommandFlow.js";
 import type { sampleWatchdogPaneActivity } from "./watchdogPaneActivitySampler.js";

@@ -7,7 +7,7 @@ import type {
 } from "../../../contracts/ui/uiReadModel.js";
 import { uiApprovalRequestGateRoutes } from "../../../contracts/ui/uiReadModel.js";
 import { isMetaReviewRecommendation } from "../../shared/metaReview/metaReviewTypes.js";
-import { isProtocolMessageType } from "../../../types/protocol.js";
+import { isProtocolMessageType } from "../../../contracts/kernel/protocol.js";
 import { internalError, throwApiError } from "./routerHttp.js";
 import {
   hasExactKeys,

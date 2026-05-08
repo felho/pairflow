@@ -1,7 +1,5 @@
 import type { BubbleConfig } from "../../v11/shared/config/bubbleConfigTypes.js";
-import {
-  isAgentName
-} from "../../v11/domain/agentIdentity/agentIdentity.js";
+import { isAgentName } from "../../contracts/kernel/agentIdentity.js";
 import type { ValidationError } from "../../v11/shared/validation/primitives.js";
 import { readString } from "./readers.js";
 

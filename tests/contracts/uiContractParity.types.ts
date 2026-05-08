@@ -1,11 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 
-import type {
-  BubbleLifecycleState as CanonicalBubbleLifecycleState
-} from "../../src/contracts/ui/bubbleLifecycle.js";
-import {
-  bubbleLifecycleStates as canonicalBubbleLifecycleStates
-} from "../../src/contracts/ui/bubbleLifecycle.js";
+import type { BubbleLifecycleState as CanonicalBubbleLifecycleState } from "../../src/contracts/kernel/lifecycle.js";
+import { bubbleLifecycleStates as canonicalBubbleLifecycleStates } from "../../src/contracts/kernel/lifecycle.js";
 import type {
   ContractValidationError as CanonicalContractValidationError,
   StateValidationDiagnostics as CanonicalStateValidationDiagnostics
@@ -89,12 +85,8 @@ import type {
   UiRepoSummary as CanonicalUiRepoSummary,
   UiRuntimeSessionRecord as CanonicalUiRuntimeSessionRecord
 } from "../../src/contracts/ui/uiReadModel.js";
-import type {
-  BubbleLifecycleState as RuntimeBubbleLifecycleState
-} from "../../src/v11/domain/state/lifecycleTypes.js";
-import {
-  bubbleLifecycleStates as runtimeBubbleLifecycleStates
-} from "../../src/v11/domain/state/lifecycleTypes.js";
+import type { BubbleLifecycleState as RuntimeBubbleLifecycleState } from "../../src/contracts/kernel/lifecycle.js";
+import { bubbleLifecycleStates as runtimeBubbleLifecycleStates } from "../../src/contracts/kernel/lifecycle.js";
 import type {
   UiBubbleListRemoteExecution as TransitUiBubbleListRemoteExecution,
   UiBubbleRemoteCacheStatus as TransitUiBubbleRemoteCacheStatus,
@@ -102,9 +94,7 @@ import type {
   UiBubbleStatusCacheReasonCode as TransitUiBubbleStatusCacheReasonCode,
   UiBubbleStatusRemoteExecution as TransitUiBubbleStatusRemoteExecution
 } from "../../src/types/uiRemoteExecution.js";
-import type {
-  BubbleLifecycleState as BackendBubbleLifecycleState
-} from "../../src/shared/contracts/bubbleLifecycle.js";
+import type { BubbleLifecycleState as BackendBubbleLifecycleState } from "../../src/contracts/kernel/lifecycle.js";
 import type {
   ContractValidationError as BackendContractValidationError,
   StateValidationDiagnostics as BackendStateValidationDiagnostics
@@ -200,9 +190,7 @@ import type {
 import type {
   ActiveMetaReviewRuntimeDeliveryView
 } from "../../src/v11/shared/metaReview/metaReviewSnapshot.js";
-import type {
-  ProtocolMessageType as RuntimeProtocolMessageType
-} from "../../src/types/protocol.js";
+import type { ProtocolMessageType as RuntimeProtocolMessageType } from "../../src/contracts/kernel/protocol.js";
 import type {
   BubbleLifecycleState as UiBubbleLifecycleState
 } from "../../ui/src/lib/contracts/bubbleLifecycle.js";

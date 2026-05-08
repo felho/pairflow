@@ -1,7 +1,7 @@
 import {
   isAgentName,
   isAgentRole
-} from "../../domain/agentIdentity/agentIdentity.js";
+} from "../../../contracts/kernel/agentIdentity.js";
 import type { BubbleStateSnapshot } from "./bubbleStateSnapshotTypes.js";
 import type {
   BubbleReworkIntentRecord
@@ -15,7 +15,7 @@ import type {
 import {
   bubbleLifecycleStates,
   isBubbleLifecycleState
-} from "../../domain/state/lifecycleTypes.js";
+} from "../../../contracts/kernel/lifecycle.js";
 import {
   isInteger,
   isIsoTimestamp,

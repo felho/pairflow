@@ -1,7 +1,7 @@
 import type {
   AgentName,
   AgentRole
-} from "../agentIdentity/agentIdentity.js";
+} from "../../../contracts/kernel/agentIdentity.js";
 import {
   deliveryTargetRoleMetadataKey,
   type ProtocolEnvelopeDraft

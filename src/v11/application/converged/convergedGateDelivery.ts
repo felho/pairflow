@@ -6,22 +6,18 @@ import type {
 } from "../../ports/tmuxDelivery.js";
 import type { ApplyMetaReviewGateOnConvergencePort } from "../../shared/metaReviewGate/metaReviewGateCommandContract.js";
 import type { ResolvedBubbleWorkspace } from "../../ports/workspaceResolution.js";
-import {
-  isAgentName,
-  resolveUniquelyConfiguredRoleForAgent
-} from "../../domain/agentIdentity/agentIdentity.js";
-import type {
-  AgentName
-} from "../../domain/agentIdentity/agentIdentity.js";
+import { isAgentName } from "../../../contracts/kernel/agentIdentity.js";
+import { resolveUniquelyConfiguredRoleForAgent } from "../../domain/agentIdentity/agentIdentity.js";
+import type { AgentName } from "../../../contracts/kernel/agentIdentity.js";
 import type { BubbleConfig } from "../../shared/config/bubbleConfigTypes.js";
+import type { ProtocolParticipant } from "../../../contracts/kernel/protocol.js";
 import {
   deliveryTargetRoleMetadataKey,
   isLegacyMetaReviewerProtocolRecipient,
   parseDeliveryTargetRoleMetadata,
   type DeliveryTargetRole,
   type LegacyMetaReviewerProtocolRecipient,
-  type ProtocolEnvelope,
-  type ProtocolParticipant
+  type ProtocolEnvelope
 } from "../../../types/protocol.js";
 import { executeImplementerHandoffDelivery } from "../../shared/delivery/implementerHandoffDelivery.js";
 import {

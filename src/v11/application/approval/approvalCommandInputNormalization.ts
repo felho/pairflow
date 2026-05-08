@@ -2,7 +2,7 @@ import {
   normalizeStringList,
   requireNonEmptyString
 } from "../../shared/normalization/stringNormalization.js";
-import type { ApprovalDecision } from "../../../types/protocol.js";
+import type { ApprovalDecision } from "../../../contracts/kernel/protocol.js";
 
 export interface NormalizeApprovalDecisionInputInput {
   bubbleId: string;

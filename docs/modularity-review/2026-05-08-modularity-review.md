@@ -24,6 +24,7 @@ Pairflow's `src/v11/**` layered architecture passes every hard-fail fitness chec
 
 **Integration**: `src/v11/domain/agentIdentity/agentIdentity.ts` (`AgentName`, `AgentRole`) + `src/types/protocol.ts` (`ProtocolMessageType`) + `src/v11/shared/state/**` (`BubbleLifecycleState`, execution-context fields) -> `src/contracts/ui/uiActions.ts` (`UiActionAgentName`, `UiActionAgentRole`, `UiActionProtocolMessageType`, `UiActionApprovalDecision`, `UiActionPassIntent`, `UiActionBubbleState`) + `src/contracts/ui/bubbleLifecycle.ts` (`BubbleLifecycleState`) + `src/contracts/ui/uiReadModel.ts` (470 LOC of read-model DTOs) -> `ui/src/lib/contracts/**` -> React components and Zustand store
 **Severity**: Significant
+**Status update 2026-05-08**: Resolved in the current checkout by introducing `src/contracts/kernel/**` as the browser-safe source of truth for agent identity, lifecycle, and protocol vocabulary. The migration intentionally avoided compatibility re-export bridges: call sites that consume vocabulary now import the kernel directly, while domain modules retain only domain behavior.
 
 ### Knowledge Leakage
 

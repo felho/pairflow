@@ -1,8 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { IDEATION_CONVERGED_BLOCKED } from "../../../../src/v11/shared/ideation/ideationReasonCodes.js";import type {
-  AgentName
-} from "../../../../src/v11/domain/agentIdentity/agentIdentity.js";
+import { IDEATION_CONVERGED_BLOCKED } from "../../../../src/v11/shared/ideation/ideationReasonCodes.js";
+import type { AgentName } from "../../../../src/contracts/kernel/agentIdentity.js";
 import { prepareConvergedRouting } from "../../../../src/v11/application/converged/convergedRoutingPreparation.js";
 
 function toErrorMessage(input: PairflowCommandErrorInput): string {

@@ -1,4 +1,4 @@
-import type { BubbleLifecycleState } from "./bubbleLifecycle.js";
+import type { BubbleLifecycleState } from "../kernel/lifecycle.js";
 
 export type UiBubbleRemoteCacheStatus = "present" | "missing" | "invalid";
 

@@ -7,7 +7,7 @@ function toErrorMessage(input: PairflowCommandErrorInput): string {
   return (input.reasonCode !== undefined ? input.reasonCode + ": " : "") + input.message;
 }
 
-import type { PassIntent } from "../../../../src/types/protocol.js";
+import type { PassIntent } from "../../../../src/contracts/kernel/protocol.js";
 import { resolvePassIntent } from "../../../../src/v11/application/pass/passIntentResolution.js";
 
 describe("resolvePassIntent", () => {

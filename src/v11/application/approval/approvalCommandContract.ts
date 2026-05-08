@@ -3,10 +3,8 @@ import type {
   EmitDeliveryNotificationAckPort
 } from "../../ports/tmuxDelivery.js";
 import type { BubbleStateSnapshot } from "../../shared/state/bubbleStateSnapshotTypes.js";
-import type {
-  ApprovalDecision,
-  ProtocolEnvelope
-} from "../../../types/protocol.js";
+import type { ApprovalDecision } from "../../../contracts/kernel/protocol.js";
+import type { ProtocolEnvelope } from "../../../types/protocol.js";
 
 export interface EmitApprovalDecisionDependencies {
   emitDeliveryNotificationAck?: EmitDeliveryNotificationAckPort;

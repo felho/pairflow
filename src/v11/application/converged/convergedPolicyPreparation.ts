@@ -3,9 +3,7 @@ import {
   validateConvergencePolicy,
   type ConvergencePolicyResult
 } from "../../../v11/domain/convergence/policy.js";
-import type {
-  AgentName
-} from "../../domain/agentIdentity/agentIdentity.js";
+import type { AgentName } from "../../../contracts/kernel/agentIdentity.js";
 import type {
   BubbleReviewLoopMode
 } from "../../shared/reviewPolicy/reviewPolicyTypes.js";

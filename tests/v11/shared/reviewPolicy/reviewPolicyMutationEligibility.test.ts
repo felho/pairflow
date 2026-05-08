@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import type { BubbleLifecycleState } from "../../../../src/v11/domain/state/lifecycleTypes.js";
-import { bubbleLifecycleStates } from "../../../../src/v11/domain/state/lifecycleTypes.js";
+import type { BubbleLifecycleState } from "../../../../src/contracts/kernel/lifecycle.js";
+import { bubbleLifecycleStates } from "../../../../src/contracts/kernel/lifecycle.js";
 import {
   isReviewPolicyMutableState,
   reviewPolicyMutableStates

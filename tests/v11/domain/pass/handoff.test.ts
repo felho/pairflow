@@ -5,9 +5,7 @@ function toErrorMessage(input: PairflowCommandErrorInput): string {
     return input;
   }
   return (input.reasonCode !== undefined ? input.reasonCode + ": " : "") + input.message;
-}import type {
-  AgentName
-} from "../../../../src/v11/domain/agentIdentity/agentIdentity.js";
+}import type { AgentName } from "../../../../src/contracts/kernel/agentIdentity.js";
 import type { BubbleStateSnapshot } from "../../../../src/v11/shared/state/bubbleStateSnapshotTypes.js";
 import { resolvePassHandoff } from "../../../../src/v11/domain/pass/handoff.js";
 

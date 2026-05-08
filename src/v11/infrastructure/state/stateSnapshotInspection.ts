@@ -16,7 +16,7 @@ import { readFile } from "node:fs/promises";
 import {
   isAgentName,
   isAgentRole
-} from "../../domain/agentIdentity/agentIdentity.js";
+} from "../../../contracts/kernel/agentIdentity.js";
 import type { BubbleStateSnapshot } from "../../shared/state/bubbleStateSnapshotTypes.js";
 import type {
   BubbleReworkIntentRecord
@@ -31,7 +31,7 @@ import {
 import {
   normalizeMetaReviewRuntimeDeliveryCorrelation
 } from "../../shared/metaReview/metaReviewSnapshot.js";
-import { isBubbleLifecycleState } from "../../domain/state/lifecycleTypes.js";
+import { isBubbleLifecycleState } from "../../../contracts/kernel/lifecycle.js";
 import {
   isReworkIntentStatus
 } from "../../shared/state/reworkIntentTypes.js";

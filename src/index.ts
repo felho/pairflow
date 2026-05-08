@@ -527,11 +527,11 @@ export {
   agentRoles,
   isAgentName,
   isAgentRole
-} from "./v11/domain/agentIdentity/agentIdentity.js";
+} from "./contracts/kernel/agentIdentity.js";
 export {
   bubbleLifecycleStates,
   isBubbleLifecycleState
-} from "./v11/domain/state/lifecycleTypes.js";
+} from "./contracts/kernel/lifecycle.js";
 export {
   isQualityMode,
   isWorkMode,
@@ -548,7 +548,7 @@ export {
   passIntents,
   protocolMessageTypes,
   protocolParticipants
-} from "./types/protocol.js";
+} from "./contracts/kernel/protocol.js";
 export type {
   EmitAskHumanInput,
   EmitAskHumanResult
@@ -739,7 +739,7 @@ export type {
   BubbleAgentsConfig,
   AgentName,
   AgentRole
-} from "./v11/domain/agentIdentity/agentIdentity.js";
+} from "./contracts/kernel/agentIdentity.js";
 export type {
   BubbleExecutorConfig,
   BubbleExecutorType,
@@ -749,7 +749,7 @@ export type {
   BubbleRemotePointerStarted,
   PairflowRemoteHostConfig
 } from "./v11/shared/remote/remoteExecutionTypes.js";
-export type { BubbleLifecycleState } from "./v11/domain/state/lifecycleTypes.js";
+export type { BubbleLifecycleState } from "./contracts/kernel/lifecycle.js";
 export type { BubbleRemoteStateCache } from "./v11/shared/remote/remoteStateCacheTypes.js";
 export type { BubbleStateSnapshot } from "./v11/shared/state/bubbleStateSnapshotTypes.js";
 export type {
@@ -899,10 +899,12 @@ export type {
 export type {
   ApprovalDecision,
   PassIntent,
-  ProtocolEnvelope,
-  ProtocolEnvelopePayload,
   ProtocolMessageType,
   ProtocolParticipant
+} from "./contracts/kernel/protocol.js";
+export type {
+  ProtocolEnvelope,
+  ProtocolEnvelopePayload
 } from "./types/protocol.js";
 export type {
   ValidationError,

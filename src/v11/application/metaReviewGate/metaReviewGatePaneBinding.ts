@@ -6,9 +6,8 @@ import {
 } from "../actorProtocol/roleDescriptorRegistry.js";
 import type {
   ResolveMetaReviewerPaneWarning
-} from "../../shared/metaReviewGate/index.js";import type {
-  AgentName
-} from "../../domain/agentIdentity/agentIdentity.js";
+} from "../../shared/metaReviewGate/index.js";
+import type { AgentName } from "../../../contracts/kernel/agentIdentity.js";
 import type {
   PairflowCommandProfile
 } from "../../shared/config/bubbleConfigVocabulary.js";

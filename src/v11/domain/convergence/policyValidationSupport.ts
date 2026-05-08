@@ -1,6 +1,4 @@
-import type {
-  AgentName
-} from "../agentIdentity/agentIdentity.js";
+import type { AgentName } from "../../../contracts/kernel/agentIdentity.js";
 import type {
   ReviewArtifactType
 } from "../../shared/config/bubbleConfigVocabulary.js";
@@ -8,9 +6,9 @@ import {
   isFindingsClaimSource,
   isFindingsClaimState,
   type FindingsClaimSource,
-  type FindingsClaimState,
-  type ProtocolEnvelope
-} from "../../../types/protocol.js";
+  type FindingsClaimState
+} from "../../../contracts/kernel/protocol.js";
+import type { ProtocolEnvelope } from "../../../types/protocol.js";
 import { isRecord } from "../../shared/validation/primitives.js";
 import {
   claimParserDivergenceDiagnosticReasonCode,

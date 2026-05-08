@@ -1,9 +1,9 @@
 import type { MetaReviewRecommendation } from "../../shared/metaReview/metaReviewTypes.js";
 import type { BubbleStateSnapshot } from "../../shared/state/bubbleStateSnapshotTypes.js";
+import type { ApprovalDecision } from "../../../contracts/kernel/protocol.js";
 import {
   deliveryTargetRoleMetadataKey,
-  type ProtocolEnvelope,
-  type ApprovalDecision
+  type ProtocolEnvelope
 } from "../../../types/protocol.js";
 import {
   hasParityInconsistencyMetadata,

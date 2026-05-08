@@ -8,9 +8,7 @@ import type {
 } from "../../ports/reviewVerificationArtifacts.js";
 import type { ReadStateSnapshotPort } from "../../ports/stateSnapshots.js";
 import { readStateSnapshot } from "../start/startCommandDependencyDefaults.js";
-import type {
-  AgentName
-} from "../../domain/agentIdentity/agentIdentity.js";
+import type { AgentName } from "../../../contracts/kernel/agentIdentity.js";
 import type { BubbleStateSnapshot } from "../../shared/state/bubbleStateSnapshotTypes.js";
 import type {
   ReviewArtifactType

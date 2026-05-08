@@ -13,9 +13,7 @@ import {
   type ValidationError,
   type ValidationResult
 } from "../validation/primitives.js";
-import {
-  isAgentRole
-} from "../../domain/agentIdentity/agentIdentity.js";
+import { isAgentRole } from "../../../contracts/kernel/agentIdentity.js";
 
 import {
   buildRunningExecutionContext,

@@ -1,14 +1,14 @@
 import {
   isAgentName,
   isAgentRole
-} from "../../../domain/agentIdentity/agentIdentity.js";
+} from "../../../../contracts/kernel/agentIdentity.js";
 import {
   isBubbleExecutionContextAwaitedOutputType
 } from "../../../shared/state/executionContextTypes.js";
 import {
   isProtocolMessageType,
   type ProtocolMessageType
-} from "../../../../types/protocol.js";
+} from "../../../../contracts/kernel/protocol.js";
 import type {
   RemoteBubbleStatusSnapshot
 } from "../../../shared/status/remoteBubbleStatusContract.js";

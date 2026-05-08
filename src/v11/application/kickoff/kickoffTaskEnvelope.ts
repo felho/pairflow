@@ -1,6 +1,4 @@
-import type {
-  AgentName
-} from "../../domain/agentIdentity/agentIdentity.js";
+import type { AgentName } from "../../../contracts/kernel/agentIdentity.js";
 import type { ProtocolEnvelopeDraft } from "../../../types/protocol.js";
 import type { ResolvedKickoffTaskInput } from "./kickoffTaskInputResolution.js";
 

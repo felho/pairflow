@@ -1,7 +1,5 @@
-import {
-  isFindingsClaimState,
-  type FindingsParityStatus
-} from "../../../types/protocol.js";
+import { isFindingsClaimState } from "../../../contracts/kernel/protocol.js";
+import type { FindingsParityStatus } from "../../../types/protocol.js";
 import type { MetaReviewRecommendation } from "./metaReviewTypes.js";
 import {
   resolveFindingsOpenSplitFromReportJson

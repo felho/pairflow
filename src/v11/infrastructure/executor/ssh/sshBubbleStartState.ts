@@ -1,4 +1,4 @@
-import { isBubbleLifecycleState } from "../../../domain/state/lifecycleTypes.js";
+import { isBubbleLifecycleState } from "../../../../contracts/kernel/lifecycle.js";
 import type { BubbleRemoteStateCache } from "../../../shared/remote/remoteStateCacheTypes.js";
 import { RemoteBubbleStartError } from "./sshBubbleStartShared.js";
 

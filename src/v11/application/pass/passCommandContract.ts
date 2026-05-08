@@ -4,7 +4,8 @@ import type {
 } from "../../../v11/domain/convergence/repeatCleanAutoconverge.js";
 import type { BubbleStateSnapshot } from "../../shared/state/bubbleStateSnapshotTypes.js";
 import type { Finding } from "../../../types/findings.js";
-import type { ProtocolEnvelope, PassIntent } from "../../../types/protocol.js";
+import type { PassIntent } from "../../../contracts/kernel/protocol.js";
+import type { ProtocolEnvelope } from "../../../types/protocol.js";
 import type { PassFlowRuntimeDependencies } from "./passFlowRuntimeDependenciesContract.js";
 import type {
   ActorActivationProvenance,

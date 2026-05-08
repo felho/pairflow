@@ -1,4 +1,4 @@
-import type { BubbleLifecycleState } from "./lifecycleTypes.js";
+import type { BubbleLifecycleState } from "../../../contracts/kernel/lifecycle.js";
 
 export class StateTransitionError extends Error {
   public readonly from: BubbleLifecycleState;

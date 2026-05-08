@@ -1,6 +1,4 @@
-import type {
-  AgentRole
-} from "../agentIdentity/agentIdentity.js";
+import type { AgentRole } from "../../../contracts/kernel/agentIdentity.js";
 import type {
   BubbleConfig
 } from "../../shared/config/bubbleConfigTypes.js";

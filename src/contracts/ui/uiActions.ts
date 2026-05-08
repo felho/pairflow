@@ -1,6 +1,16 @@
 import type { DeleteBubbleResult } from "./deleteBubble.js";
 import type { BubbleLifecycleState } from "./bubbleLifecycle.js";
 import type {
+  AgentName,
+  AgentRole,
+  ApprovalDecision,
+  FindingsClaimSource,
+  FindingsClaimState,
+  PassIntent,
+  ProtocolMessageType,
+  ProtocolParticipant
+} from "../kernel/index.js";
+import type {
   UiBubbleReviewAutoReworkSeverity,
   UiBubbleReviewLoopMode,
   UiBubbleReviewPolicy
@@ -8,29 +18,17 @@ import type {
 
 export type MetaReviewQualityPreset = "P1" | "P2" | "P3" | "P3+1" | "P3+2";
 
-export type UiActionAgentName = "codex" | "claude";
+export type UiActionAgentName = AgentName;
 
-export type UiActionAgentRole = "implementer" | "reviewer" | "meta_reviewer";
+export type UiActionAgentRole = AgentRole;
 
-export type UiActionProtocolParticipant =
-  | "codex"
-  | "claude"
-  | "orchestrator"
-  | "human";
+export type UiActionProtocolParticipant = ProtocolParticipant;
 
-export type UiActionProtocolMessageType =
-  | "TASK"
-  | "PASS"
-  | "HUMAN_QUESTION"
-  | "HUMAN_REPLY"
-  | "CONVERGENCE"
-  | "APPROVAL_REQUEST"
-  | "APPROVAL_DECISION"
-  | "COMMIT_RESULT";
+export type UiActionProtocolMessageType = ProtocolMessageType;
 
-export type UiActionApprovalDecision = "approve" | "rework";
+export type UiActionApprovalDecision = ApprovalDecision;
 
-export type UiActionPassIntent = "task" | "review" | "fix_request";
+export type UiActionPassIntent = PassIntent;
 
 export type UiRequestedAttachLauncher =
   | "auto"
@@ -40,16 +38,9 @@ export type UiRequestedAttachLauncher =
   | "ghostty"
   | "copy";
 
-export type UiActionFindingsClaimState =
-  | "clean"
-  | "open_findings"
-  | "unknown";
+export type UiActionFindingsClaimState = FindingsClaimState;
 
-export type UiActionFindingsClaimSource =
-  | "payload_flags"
-  | "payload_findings_count"
-  | "legacy_summary_parser"
-  | "meta_review_artifact";
+export type UiActionFindingsClaimSource = FindingsClaimSource;
 
 export interface UiActionExecutionContextRef {
   handoffId: string;

@@ -2,7 +2,7 @@ import type {
   UiBubbleSummary,
   UiRepoSummary
 } from "../../../contracts/ui/uiReadModel.js";
-import { bubbleLifecycleStates } from "../../../contracts/ui/bubbleLifecycle.js";
+import { bubbleLifecycleStates } from "../../../contracts/kernel/lifecycle.js";
 import {
   bubbleReviewLoopModes,
   bubbleReviewSupportStatuses,

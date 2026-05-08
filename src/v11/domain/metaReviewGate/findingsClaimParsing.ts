@@ -2,7 +2,10 @@ import {
   claimSourceInvalidReasonCode,
   claimStateRequiredReasonCode
 } from "../convergence/policy.js";
-import { isFindingsClaimSource, isFindingsClaimState } from "../../../types/protocol.js";
+import {
+  isFindingsClaimSource,
+  isFindingsClaimState
+} from "../../../contracts/kernel/protocol.js";
 
 export function resolveFindingsCountFromMetaReviewReportJson(
   reportJson: Record<string, unknown>

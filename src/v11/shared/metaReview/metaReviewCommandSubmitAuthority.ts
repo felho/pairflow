@@ -2,9 +2,7 @@ import {
   validateActiveMetaReviewExecutionContext
 } from "./metaReviewExecutionContext.js";
 import { MetaReviewError } from "./metaReviewError.js";
-import type {
-  AgentName
-} from "../../domain/agentIdentity/agentIdentity.js";
+import type { AgentName } from "../../../contracts/kernel/agentIdentity.js";
 import type { BubbleStateSnapshot } from "../state/bubbleStateSnapshotTypes.js";
 import type { MetaReviewCommandDependencies } from "./metaReviewCommandContract.js";
 

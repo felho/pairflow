@@ -1,6 +1,4 @@
-import type {
-  AgentRole
-} from "../../domain/agentIdentity/agentIdentity.js";
+import type { AgentRole } from "../../../contracts/kernel/agentIdentity.js";
 import type { PromptConcernId } from "./rolePromptConcernTypes.js";
 
 const implementerStartupPromptConcernIds = [
