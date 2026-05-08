@@ -5,16 +5,15 @@ import type {
   EmitDeliveryNotificationAckPort
 } from "../../ports/tmuxDelivery.js";
 import type { ApplyMetaReviewGateOnConvergencePort } from "../../shared/metaReviewGate/metaReviewGateCommandContract.js";
-import type { ResolvedBubbleWorkspace } from "../../ports/workspaceResolution.js";import {
+import type { ResolvedBubbleWorkspace } from "../../ports/workspaceResolution.js";
+import {
   isAgentName,
   resolveUniquelyConfiguredRoleForAgent
 } from "../../domain/agentIdentity/agentIdentity.js";
 import type {
   AgentName
 } from "../../domain/agentIdentity/agentIdentity.js";
-import type {
-  BubbleConfig
-} from "../../../types/bubble.js";
+import type { BubbleConfig } from "../../shared/config/bubbleConfigTypes.js";
 import {
   deliveryTargetRoleMetadataKey,
   isLegacyMetaReviewerProtocolRecipient,

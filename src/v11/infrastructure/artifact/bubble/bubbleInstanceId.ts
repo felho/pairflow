@@ -2,7 +2,7 @@ import { readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
 import { parseBubbleConfigToml, renderBubbleConfigToml } from "../../../../config/bubbleConfig.js";
-import type { BubbleConfig } from "../../../../types/bubble.js";
+import type { BubbleConfig } from "../../../shared/config/bubbleConfigTypes.js";
 import { emitBubbleLifecycleEventBestEffort } from "../../../../v11/defaults/metrics/bubbleEvents.js";
 import {
   FileLockTimeoutError,

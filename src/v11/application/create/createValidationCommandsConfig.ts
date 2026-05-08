@@ -1,4 +1,4 @@
-import type { BubbleConfig } from "../../../types/bubble.js";
+import type { BubbleConfig } from "../../shared/config/bubbleConfigTypes.js";
 import { builtInValidationCommandIds } from "../../shared/validation/validationCommandId.js";
 import type { ResolvedRepoValidationProfileCommands } from "./repoValidationProfileResolver.js";
 

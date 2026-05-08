@@ -25,7 +25,7 @@ import {
   isReviewerContextMode,
   isWorkMode
 } from "../v11/shared/config/bubbleConfigVocabulary.js";
-import type { BubbleConfig } from "../types/bubble.js";
+import type { BubbleConfig } from "../v11/shared/config/bubbleConfigTypes.js";
 import {
   isAttachLauncher,
   type AttachLauncher

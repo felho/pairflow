@@ -8,10 +8,8 @@ import { renderBubbleConfigToml } from "../../../src/config/bubbleConfig.js";
 import type {
   BubbleRemotePointerStarted
 } from "../../../src/v11/shared/remote/remoteExecutionTypes.js";
-import type {
-  BubbleConfig,
-  BubbleStateSnapshot
-} from "../../../src/types/bubble.js";
+import type { BubbleConfig } from "../../../src/v11/shared/config/bubbleConfigTypes.js";
+import type { BubbleStateSnapshot } from "../../../src/types/bubble.js";
 import type { ProtocolEnvelope } from "../../../src/types/protocol.js";
 import {
   emitConvergedFromWorkspaceV11 as emitConvergedFromWorkspace

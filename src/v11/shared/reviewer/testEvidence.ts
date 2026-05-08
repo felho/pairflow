@@ -1,6 +1,6 @@
 import { join } from "node:path";
 
-import type { BubbleConfig } from "../../../types/bubble.js";
+import type { BubbleConfig } from "../config/bubbleConfigTypes.js";
 import type { ReviewArtifactType } from "../config/bubbleConfigVocabulary.js";
 import type { ProtocolEnvelope } from "../../../types/protocol.js";
 

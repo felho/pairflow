@@ -4,10 +4,8 @@ import type {
   ResolvedTaskInput
 } from "./createCommandContract.js";
 import type { BubblePaths } from "../../shared/bubble/bubblePaths.js";
-import type {
-  BubbleConfig,
-  BubbleStateSnapshot
-} from "../../../types/bubble.js";
+import type { BubbleConfig } from "../../shared/config/bubbleConfigTypes.js";
+import type { BubbleStateSnapshot } from "../../../types/bubble.js";
 import type { ReviewerFocusExtractionResult } from "../../../v11/shared/reviewer/reviewerBrief.js";
 import type { ReviewerFocusArtifactPersistResult } from "./createBubblePersistence.js";
 

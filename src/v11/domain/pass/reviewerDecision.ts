@@ -3,7 +3,7 @@ import type {
 } from "../../shared/reviewPolicy/reviewPolicyTypes.js";
 import type {
   BubbleConfig
-} from "../../../types/bubble.js";
+} from "../../shared/config/bubbleConfigTypes.js";
 import {
   findingPriorities,
   resolveFindingPriority,

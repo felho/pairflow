@@ -1,4 +1,4 @@
-import type { BubbleConfig } from "../../../types/bubble.js";
+import type { BubbleConfig } from "../../shared/config/bubbleConfigTypes.js";
 import type { ProtocolEnvelope } from "../../../types/protocol.js";
 import type {
   EmitAskHumanBubbleNotificationPort

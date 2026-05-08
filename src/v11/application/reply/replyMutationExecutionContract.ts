@@ -1,7 +1,7 @@
 import type { BubblePaths } from "../../shared/bubble/bubblePaths.js";
 import type { ReplyWaitingHumanState } from "../../domain/reply/waitingHumanStateGuard.js";
+import type { BubbleConfig } from "../../shared/config/bubbleConfigTypes.js";
 import type {
-  BubbleConfig,
   BubbleLifecycleState,
   BubbleStateSnapshot
 } from "../../../types/bubble.js";

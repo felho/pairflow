@@ -1,4 +1,5 @@
-import type { BubbleConfig } from "../../../../types/bubble.js";import {
+import type { BubbleConfig } from "../../../shared/config/bubbleConfigTypes.js";
+import {
   isAgentName,
   resolveUniquelyConfiguredRoleForAgent
 } from "../../../domain/agentIdentity/agentIdentity.js";

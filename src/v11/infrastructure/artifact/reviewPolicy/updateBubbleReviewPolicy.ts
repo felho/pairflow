@@ -7,7 +7,7 @@ import {
   REVIEW_POLICY_CONSECUTIVE_CLEAN_RUNS_REQUIRED_INVALID,
   renderBubbleConfigToml
 } from "../../../../config/bubbleConfig.js";
-import type { BubbleConfig } from "../../../../types/bubble.js";
+import type { BubbleConfig } from "../../../shared/config/bubbleConfigTypes.js";
 import {
   REVIEW_POLICY_PATCH_INVALID,
   REVIEW_POLICY_WRITE_CONFLICT,

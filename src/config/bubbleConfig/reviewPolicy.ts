@@ -3,7 +3,7 @@ import {
   DEFAULT_REVIEW_POLICY_LOOP_MODE,
   DEFAULT_REVIEW_POLICY_REVIEWER_BLOCKING_MIN_SEVERITY
 } from "../defaults.js";
-import type { BubbleConfig } from "../../types/bubble.js";
+import type { BubbleConfig } from "../../v11/shared/config/bubbleConfigTypes.js";
 import {
   isBubbleReviewAutoReworkSeverity,
   isBubbleReviewLoopMode

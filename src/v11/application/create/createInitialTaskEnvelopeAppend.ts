@@ -1,7 +1,7 @@
 import { join } from "node:path";
 
 import type { BubblePaths } from "../../shared/bubble/bubblePaths.js";
-import type { BubbleConfig } from "../../../types/bubble.js";
+import type { BubbleConfig } from "../../shared/config/bubbleConfigTypes.js";
 import type { ProtocolEnvelopeDraft } from "../../../types/protocol.js";
 
 export interface CreateInitialTaskEnvelopeTaskInput {

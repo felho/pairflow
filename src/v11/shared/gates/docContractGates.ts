@@ -1,6 +1,4 @@
-import type {
-  BubbleConfig
-} from "../../../types/bubble.js";
+import type { BubbleConfig } from "../config/bubbleConfigTypes.js";
 import type {
   BubbleFailingGate,
   BubbleRoundGateState,

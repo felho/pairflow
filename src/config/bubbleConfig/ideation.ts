@@ -1,4 +1,4 @@
-import type { BubbleConfig } from "../../types/bubble.js";
+import type { BubbleConfig } from "../../v11/shared/config/bubbleConfigTypes.js";
 import type { ValidationError } from "../../v11/shared/validation/primitives.js";
 import { isIsoTimestamp } from "../../v11/shared/validation/primitives.js";
 import { IDEATION_METADATA_PARSE_WARNING } from "../../v11/shared/ideation/ideationReasonCodes.js";

@@ -1,6 +1,6 @@
 import { readFile } from "node:fs/promises";
 
-import type { BubbleConfig } from "../../../types/bubble.js";
+import type { BubbleConfig } from "../../shared/config/bubbleConfigTypes.js";
 import type { Finding } from "../../../types/findings.js";
 import type { BubbleFailingGate } from "../../shared/gates/gateStateTypes.js";
 import {

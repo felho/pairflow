@@ -4,7 +4,7 @@ import { join } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import type { BubbleConfig } from "../../../../src/types/bubble.js";
+import type { BubbleConfig } from "../../../../src/v11/shared/config/bubbleConfigTypes.js";
 import type { ProtocolEnvelope } from "../../../../src/types/protocol.js";
 import {
   executePassDelivery,

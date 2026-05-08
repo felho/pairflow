@@ -9,7 +9,7 @@ import type {
   AttachBubbleError,
   LauncherAvailabilityInput
 } from "../../../../src/v11/application/attach/emitAttachV11.js";
-import type { BubbleConfig } from "../../../../src/types/bubble.js";
+import type { BubbleConfig } from "../../../../src/v11/shared/config/bubbleConfigTypes.js";
 import type {
   AttachLauncher
 } from "../../../../src/v11/shared/bubbleAttachment/attachLauncherTypes.js";

@@ -11,9 +11,7 @@ import {
 import type {
   BubbleRemotePointerStarted
 } from "../../../src/v11/shared/remote/remoteExecutionTypes.js";
-import type {
-  BubbleConfig
-} from "../../../src/types/bubble.js";
+import type { BubbleConfig } from "../../../src/v11/shared/config/bubbleConfigTypes.js";
 
 function createResolvedBubbleFixture(input: {
   bubbleId: string;

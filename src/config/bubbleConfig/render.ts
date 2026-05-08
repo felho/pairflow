@@ -3,7 +3,7 @@ import {
   DEFAULT_LOCAL_OVERLAY_ENTRIES,
   DEFAULT_LOCAL_OVERLAY_MODE
 } from "../defaults.js";
-import type { BubbleConfig } from "../../types/bubble.js";
+import type { BubbleConfig } from "../../v11/shared/config/bubbleConfigTypes.js";
 
 function tomlString(value: string): string {
   return JSON.stringify(value);

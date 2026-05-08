@@ -14,7 +14,7 @@ import type {
 } from "./reviewPolicyTypes.js";
 import type {
   BubbleConfig
-} from "../../../types/bubble.js";
+} from "../config/bubbleConfigTypes.js";
 import {
   isAgentRole
 } from "../../domain/agentIdentity/agentIdentity.js";

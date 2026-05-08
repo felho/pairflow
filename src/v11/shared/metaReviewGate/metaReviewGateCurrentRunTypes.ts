@@ -5,7 +5,7 @@ import type {
   ReadStateSnapshotPort,
   WriteStateSnapshotPort
 } from "../../ports/stateSnapshots.js";
-import type { BubbleConfig } from "../../../types/bubble.js";
+import type { BubbleConfig } from "../config/bubbleConfigTypes.js";
 import type {
   NotifyMetaReviewerSubmissionRequest,
   ResolveMetaReviewerPaneWarning,

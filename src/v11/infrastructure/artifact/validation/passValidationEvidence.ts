@@ -4,7 +4,7 @@ import { dirname, join } from "node:path"
 
 import type { ReviewerTestExecutionDirective } from "../../../../v11/shared/reviewer/testEvidence.js"
 import { runGit } from "../../workspace/git.js"
-import type { BubbleConfig } from "../../../../types/bubble.js"
+import type { BubbleConfig } from "../../../shared/config/bubbleConfigTypes.js"
 import { isValidationCommandId } from "../../../shared/validation/validationCommandId.js"
 import {
   passValidationEvidenceSchemaVersion,

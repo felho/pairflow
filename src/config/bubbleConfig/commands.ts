@@ -1,4 +1,4 @@
-import type { BubbleConfig } from "../../types/bubble.js";
+import type { BubbleConfig } from "../../v11/shared/config/bubbleConfigTypes.js";
 import {
   isNonEmptyString,
   type ValidationError

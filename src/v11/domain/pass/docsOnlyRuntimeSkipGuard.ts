@@ -3,7 +3,7 @@ import type {
 } from "../agentIdentity/agentIdentity.js";
 import type {
   BubbleConfig
-} from "../../../types/bubble.js";
+} from "../../shared/config/bubbleConfigTypes.js";
 
 const docsOnlySkipLogRefConflictReasonCode = "DOCS_ONLY_SKIP_LOG_REF_CONFLICT";
 const docsOnlyRuntimeChecksSkippedMarkers = [

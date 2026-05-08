@@ -3,7 +3,7 @@ import { join, relative, resolve } from "node:path";
 
 import { parseBubbleConfigToml } from "../../../../config/bubbleConfig.js";
 import { getBubblePaths, type BubblePaths } from "../../artifact/bubble/paths.js";
-import type { BubbleConfig } from "../../../../types/bubble.js";
+import type { BubbleConfig } from "../../../shared/config/bubbleConfigTypes.js";
 
 interface WorkspaceResolutionErrorContext {
   branchName?: string | undefined;

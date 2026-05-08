@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import type { BubbleConfig } from "../../../../src/types/bubble.js";
+import type { BubbleConfig } from "../../../../src/v11/shared/config/bubbleConfigTypes.js";
 import { buildKickoffIdeationConfig } from "../../../../src/v11/application/kickoff/kickoffIdeationConfig.js";
 
 describe("buildKickoffIdeationConfig", () => {

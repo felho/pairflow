@@ -4,7 +4,7 @@ import {
   emitBubbleNotification,
   type BubbleNotificationKind
 } from "../../../src/v11/infrastructure/channel/notifications.js";
-import type { BubbleConfig } from "../../../src/types/bubble.js";
+import type { BubbleConfig } from "../../../src/v11/shared/config/bubbleConfigTypes.js";
 
 function createConfig(overrides: Partial<BubbleConfig> = {}): BubbleConfig {
   const base: BubbleConfig = {

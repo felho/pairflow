@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { refreshReviewerContext } from "../../../src/v11/infrastructure/channel/tmux/reviewerContext.js";
-import type { BubbleConfig } from "../../../src/types/bubble.js";
+import type { BubbleConfig } from "../../../src/v11/shared/config/bubbleConfigTypes.js";
 import {
   getTopologySlotPaneIndexForRole
 } from "../../../src/v11/application/actorProtocol/roleDescriptorRegistry.js";

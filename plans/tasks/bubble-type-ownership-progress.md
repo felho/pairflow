@@ -136,6 +136,14 @@ Preferred mechanical flow:
 
 ## Progress Log
 
+### Bubble config aggregate slice
+
+- Created `src/v11/shared/config/bubbleConfigTypes.ts` as the owner for the `BubbleConfig` aggregate.
+- Updated config validation/rendering, create/start/pass/converged/ask-human/reply/watchdog contracts, delivery helpers, review/gate helpers, remote workspace lookup, runtime tests, and root package type exports to import `BubbleConfig` from the config owner.
+- Removed `BubbleConfig` and its now-moved config submodel imports from `src/types/bubble.ts`; the old file now only retains lifecycle, remote-state cache, and state snapshot ownership.
+- Learning: the aggregate move became straightforward only after the embedded config submodels and scalar config vocabulary already had explicit owners. For future aggregate slices, move leaf vocabulary first, then move the aggregate once its remaining dependencies are type-only and conceptually stable.
+- Targeted verification completed: `pnpm typecheck`, `pnpm lint`, `pnpm fitness:check:ci`, and focused config/command/review/delivery/runtime Vitest coverage passed.
+
 ### Core config vocabulary slice
 
 - Created `src/v11/shared/config/bubbleConfigVocabulary.ts` as the owner for work mode, quality mode, review artifact type, create-time review artifact type, Pairflow command profile, reviewer context mode, and their guards/literal arrays.

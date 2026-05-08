@@ -3,7 +3,7 @@ import type {
 } from "../../domain/agentIdentity/agentIdentity.js";
 import type {
   BubbleConfig
-} from "../../../types/bubble.js";
+} from "../config/bubbleConfigTypes.js";
 import type {
   DeliveryTargetRole,
   ProtocolEnvelope

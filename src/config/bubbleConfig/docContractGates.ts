@@ -1,5 +1,5 @@
 import { DEFAULT_DOC_CONTRACT_ROUND_GATE_APPLIES_AFTER } from "../defaults.js";
-import type { BubbleConfig } from "../../types/bubble.js";
+import type { BubbleConfig } from "../../v11/shared/config/bubbleConfigTypes.js";
 import { isInteger } from "../../v11/shared/validation/primitives.js";
 import type { ValidationError } from "../../v11/shared/validation/primitives.js";
 import { describeUnknownValue, readString } from "./readers.js";

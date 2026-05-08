@@ -5,7 +5,7 @@ import {
   type ReviewerTestEvidenceArtifact,
   type ReviewerTestExecutionDirective
 } from "../../../../src/v11/shared/reviewer/testEvidence.js";
-import type { BubbleConfig } from "../../../../src/types/bubble.js";
+import type { BubbleConfig } from "../../../../src/v11/shared/config/bubbleConfigTypes.js";
 import type { ProtocolEnvelope } from "../../../../src/types/protocol.js";
 import { resolveReviewerTestDirectiveForPass } from "../../../../src/v11/application/pass/reviewerTestDirectiveResolver.js";
 

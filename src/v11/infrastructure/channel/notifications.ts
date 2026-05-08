@@ -2,7 +2,7 @@ import { constants as fsConstants } from "node:fs";
 import { access } from "node:fs/promises";
 import { spawn } from "node:child_process";
 
-import type { BubbleConfig } from "../../../types/bubble.js";
+import type { BubbleConfig } from "../../shared/config/bubbleConfigTypes.js";
 
 export type BubbleNotificationKind = "waiting-human" | "converged";
 

@@ -13,7 +13,7 @@ import {
   readDocContractGateArtifact,
   resolveDocContractGateArtifactPath
 } from "../../../../src/v11/infrastructure/artifact/gates/docContractGateArtifacts.js";
-import type { BubbleConfig } from "../../../../src/types/bubble.js";
+import type { BubbleConfig } from "../../../../src/v11/shared/config/bubbleConfigTypes.js";
 import type { Finding } from "../../../../src/types/findings.js";
 
 const tempDirs: string[] = [];

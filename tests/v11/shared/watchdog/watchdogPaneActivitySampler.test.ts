@@ -11,7 +11,7 @@ import { BubbleWatchdogError } from "../../../../src/v11/shared/watchdog/watchdo
 import {
   resolveWatchdogTargetPaneIndex
 } from "../../../../src/v11/shared/watchdog/watchdogPaneTargeting.js";
-import type { BubbleConfig } from "../../../../src/types/bubble.js";
+import type { BubbleConfig } from "../../../../src/v11/shared/config/bubbleConfigTypes.js";
 
 const bubbleConfig: BubbleConfig = {
   id: "b_watchdog_sampler_01",

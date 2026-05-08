@@ -1,4 +1,4 @@
-import type { BubbleConfig } from "../../../types/bubble.js";
+import type { BubbleConfig } from "../config/bubbleConfigTypes.js";
 
 export type BubbleNotificationKind = "waiting-human" | "converged";
 

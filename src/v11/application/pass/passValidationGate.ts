@@ -1,5 +1,5 @@
 import type { ReviewerTestExecutionDirective } from "../../../v11/shared/reviewer/testEvidence.js";
-import type { BubbleConfig } from "../../../types/bubble.js";
+import type { BubbleConfig } from "../../shared/config/bubbleConfigTypes.js";
 
 export interface PassValidationCommandSpec {
   kind: string;

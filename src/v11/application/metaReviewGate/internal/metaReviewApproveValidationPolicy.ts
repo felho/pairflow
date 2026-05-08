@@ -1,5 +1,5 @@
 import { isValidationCommandId } from "../../../shared/validation/validationCommandId.js";
-import type { BubbleConfig } from "../../../../types/bubble.js";
+import type { BubbleConfig } from "../../../shared/config/bubbleConfigTypes.js";
 
 export interface MetaReviewApproveValidationCommandSpec {
   kind: string;

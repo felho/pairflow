@@ -750,11 +750,13 @@ export type {
   PairflowRemoteHostConfig
 } from "./v11/shared/remote/remoteExecutionTypes.js";
 export type {
-  BubbleConfig,
   BubbleRemoteStateCache,
   BubbleLifecycleState,
   BubbleStateSnapshot
 } from "./types/bubble.js";
+export type {
+  BubbleConfig
+} from "./v11/shared/config/bubbleConfigTypes.js";
 export type {
   QualityMode,
   WorkMode

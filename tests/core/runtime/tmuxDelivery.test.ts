@@ -41,12 +41,11 @@ import {
   topologySlotPaneIndexCatalog
 } from "../../../src/v11/shared/topology/topologySlotPaneProjection.js";
 import * as topologySlotPaneProjection from "../../../src/v11/shared/topology/topologySlotPaneProjection.js";
-import type { ReviewerTestExecutionDirective } from "../../../src/v11/shared/reviewer/testEvidence.js";import {
+import type { ReviewerTestExecutionDirective } from "../../../src/v11/shared/reviewer/testEvidence.js";
+import {
   resolveUniquelyConfiguredRoleForAgent
 } from "../../../src/v11/domain/agentIdentity/agentIdentity.js";
-import type {
-  BubbleConfig
-} from "../../../src/types/bubble.js";
+import type { BubbleConfig } from "../../../src/v11/shared/config/bubbleConfigTypes.js";
 import {
   deliveryTargetRoleMetadataKey,
   type LegacyMetaReviewerProtocolRecipient,

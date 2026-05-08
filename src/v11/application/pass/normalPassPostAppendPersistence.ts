@@ -1,5 +1,6 @@
 import type { ReviewVerificationInputResolution } from "../../../v11/shared/reviewer/reviewVerification.js";
-import type { BubbleConfig, BubbleStateSnapshot } from "../../../types/bubble.js";
+import type { BubbleConfig } from "../../shared/config/bubbleConfigTypes.js";
+import type { BubbleStateSnapshot } from "../../../types/bubble.js";
 import type { Finding } from "../../../types/findings.js";
 import type { ResolvedPassHandoff } from "../../domain/pass/handoff.js";
 import type { LoadedStateSnapshot } from "../../ports/stateSnapshots.js";
