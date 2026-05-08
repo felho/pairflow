@@ -7,7 +7,7 @@ function toErrorMessage(input: PairflowCommandErrorInput): string {
   return (input.reasonCode !== undefined ? input.reasonCode + ": " : "") + input.message;
 }
 
-import { persistNormalPassPostAppend } from "../../../../src/v11/application/pass/normalPassPostAppendPersistence.js";
+import { persistNormalPassPostAppend } from "../../../../src/v11/application/pass/internal/normalPass/normalPassPostAppendPersistence.js";
 
 describe("persistNormalPassPostAppend", () => {
   it("writes verification/state and updates doc-gate artifact with normalized findings input", async () => {

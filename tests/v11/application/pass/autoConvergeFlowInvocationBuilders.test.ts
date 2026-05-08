@@ -12,7 +12,7 @@ import {
   type BuildAutoConvergeFlowInputInput,
   buildAutoConvergeFlowDependencies,
   buildAutoConvergeFlowInput
-} from "../../../../src/v11/application/pass/autoConvergeFlowInvocationBuilders.js";
+} from "../../../../src/v11/application/pass/internal/autoConverge/autoConvergeFlowInvocationBuilders.js";
 
 function createAutoConvergeBaseInput(
   passRoutingOverrides?: Partial<BuildAutoConvergeFlowInputInput["passRouting"]>

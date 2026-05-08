@@ -8,7 +8,7 @@ function toErrorMessage(input: PairflowCommandErrorInput): string {
 }
 
 import type { Finding } from "../../../../src/types/findings.js";
-import { prepareReviewerPass } from "../../../../src/v11/application/pass/reviewerPassPreparation.js";
+import { prepareReviewerPass } from "../../../../src/v11/application/pass/internal/reviewerDelivery/reviewerPassPreparation.js";
 
 describe("prepareReviewerPass", () => {
   it("returns empty result for implementer when reviewer-only flags are not present", () => {

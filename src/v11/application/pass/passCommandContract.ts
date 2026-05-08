@@ -1,12 +1,12 @@
 import type {
   RepeatCleanAutoconvergeReasonCode,
   RepeatCleanAutoconvergeReasonDetail
-} from "../../../v11/domain/convergence/repeatCleanAutoconverge.js";
+} from "../../domain/convergence/repeatCleanAutoconverge.js";
 import type { BubbleStateSnapshot } from "../../shared/state/bubbleStateSnapshotTypes.js";
 import type { Finding } from "../../../types/findings.js";
 import type { PassIntent } from "../../../contracts/kernel/protocol.js";
 import type { ProtocolEnvelope } from "../../../types/protocol.js";
-import type { PassFlowRuntimeDependencies } from "./passFlowRuntimeDependenciesContract.js";
+import type { PassFlowRuntimeDependencies } from "./internal/normalPass/passFlowRuntimeDependenciesContract.js";
 import type {
   ActorActivationProvenance,
   ActorEmitContextSnapshot
@@ -17,7 +17,7 @@ import type {
 } from "../../shared/converged/convergedCommandTypes.js";
 import type {
   PreparePassWorkspaceContextDependencies
-} from "./passWorkspaceContextPreparation.js";
+} from "./internal/normalPass/passWorkspaceContextPreparation.js";
 
 export type PassActivationProvenance = ActorActivationProvenance;
 

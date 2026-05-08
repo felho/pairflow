@@ -6,7 +6,7 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import { parseBubbleConfigToml } from "../../../../src/config/bubbleConfig.js";
 import { createBubble } from "../../../../src/v11/defaults/create/createBubbleApi.js";
-import { prepareKickoffPersistence } from "../../../../src/v11/application/kickoff/kickoffPersistencePreparation.js";
+import { prepareKickoffPersistence } from "../../../../src/v11/application/kickoff/internal/mutation/kickoffPersistencePreparation.js";
 import { initGitRepository } from "../../../helpers/git.js";
 
 const tempDirs: string[] = [];

@@ -2,7 +2,7 @@ import { createHash } from "node:crypto"
 import { mkdir, writeFile } from "node:fs/promises"
 import { dirname, join } from "node:path"
 
-import type { ReviewerTestExecutionDirective } from "../../../../v11/shared/reviewer/testEvidence.js"
+import type { ReviewerTestExecutionDirective } from "../../../shared/reviewer/testEvidence.js"
 import { runGit } from "../../workspace/git.js"
 import type { BubbleConfig } from "../../../shared/config/bubbleConfigTypes.js"
 import { isValidationCommandId } from "../../../shared/validation/validationCommandId.js"

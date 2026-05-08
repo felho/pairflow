@@ -2,15 +2,15 @@ import type { AgentRole } from "../../../contracts/kernel/agentIdentity.js";
 import type { PassIntent } from "../../../contracts/kernel/protocol.js";
 import { inferPassIntentFromActiveRole } from "../../domain/pass/passIntentInference.js";
 import { raiseRepeatCleanDownstreamConvergedRejected } from "../../domain/pass/repeatCleanPolicyRejection.js";
-import { createPassCommandError, throwAsPassCommandError } from "./passCommandError.js";
-import { createPassCommandErrorRuntime } from "./passCommandErrorRuntime.js";
-import { buildEmitPassContext } from "./emitPassContextBuilder.js";
+import { createPassCommandError, throwAsPassCommandError } from "./internal/normalPass/passCommandError.js";
+import { createPassCommandErrorRuntime } from "./internal/normalPass/passCommandErrorRuntime.js";
+import { buildEmitPassContext } from "./internal/reviewerDelivery/emitPassContextBuilder.js";
 import type {
   EmitPassDependencies,
   EmitPassInput,
   EmitPassResult
 } from "./passCommandContract.js";
-import { dispatchPassFlow } from "./passFlowDispatch.js";
+import { dispatchPassFlow } from "./internal/normalPass/passFlowDispatch.js";
 
 const passCommandErrorRuntime = createPassCommandErrorRuntime({
   createPassCommandError,
@@ -70,7 +70,7 @@ export function asPassCommandError(error: unknown): never {
   return throwAsPassCommandError(error);
 }
 
-export { PassCommandError } from "./passCommandError.js";
+export { PassCommandError } from "./internal/normalPass/passCommandError.js";
 export type {
   EmitPassDependencies,
   EmitPassInput,

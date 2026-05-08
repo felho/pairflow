@@ -8,7 +8,7 @@ function toErrorMessage(input: PairflowCommandErrorInput): string {
 }
 
 import type { EmitConvergedResult } from "../../../../src/v11/shared/converged/convergedCommandTypes.js";
-import { finalizeAutoConvergePass } from "../../../../src/v11/application/pass/autoConvergeFinalization.js";
+import { finalizeAutoConvergePass } from "../../../../src/v11/application/pass/internal/autoConverge/autoConvergeFinalization.js";
 
 function buildConvergedResult(): EmitConvergedResult {
   return {

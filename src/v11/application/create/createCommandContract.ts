@@ -11,7 +11,7 @@ import type {
   ResolveDocContractGateArtifactPathPort,
   WriteDocContractGateArtifactPort
 } from "../../ports/docContractGateArtifacts.js";
-import type { ReviewerFocusExtractionResult } from "../../../v11/shared/reviewer/reviewerBrief.js";
+import type { ReviewerFocusExtractionResult } from "../../shared/reviewer/reviewerBrief.js";
 import type { AgentName } from "../../../contracts/kernel/agentIdentity.js";
 import type {
   BubbleReviewPolicyConfig

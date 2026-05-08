@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import type { BubbleConfig } from "../../../../src/v11/shared/config/bubbleConfigTypes.js";
 import type { ProtocolEnvelope } from "../../../../src/types/protocol.js";
 import type { ReviewerTestExecutionDirective } from "../../../../src/v11/shared/reviewer/testEvidence.js";
-import { executeNormalPassDelivery } from "../../../../src/v11/application/pass/normalPassDeliveryExecution.js";
+import { executeNormalPassDelivery } from "../../../../src/v11/application/pass/internal/normalPass/normalPassDeliveryExecution.js";
 
 describe("executeNormalPassDelivery", () => {
   it("forwards pre-resolved reviewer directive into delivery execution", async () => {

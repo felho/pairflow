@@ -8,7 +8,7 @@ function toErrorMessage(input: PairflowCommandErrorInput): string {
 }
 
 import type { PassIntent } from "../../../../src/contracts/kernel/protocol.js";
-import { resolvePassIntent } from "../../../../src/v11/application/pass/passIntentResolution.js";
+import { resolvePassIntent } from "../../../../src/v11/application/pass/internal/normalPass/passIntentResolution.js";
 
 describe("resolvePassIntent", () => {
   it("infers implementer intent from default resolver when input intent is missing", () => {

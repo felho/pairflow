@@ -13,8 +13,8 @@ import {
   resolveRemoteCloneStartContextFromEnv,
   runRemoteCloneInnerStart,
   runRemoteStartExecution
-} from "../../../../src/v11/application/start/startCommandRemoteExecution.js";
-import type { StartExecutionContext } from "../../../../src/v11/application/start/startCommandContext.js";
+} from "../../../../src/v11/application/start/internal/remote/startCommandRemoteExecution.js";
+import type { StartExecutionContext } from "../../../../src/v11/application/start/internal/runtime/startCommandContext.js";
 import type { ResolvedStartBubbleDependencies } from "../../../../src/v11/application/start/startCommandOrchestration.js";
 import type { BubbleStateSnapshot } from "../../../../src/v11/shared/state/bubbleStateSnapshotTypes.js";
 import { RemoteBubbleStartError } from "../../../../src/v11/infrastructure/executor/ssh/sshBubbleStart.js";

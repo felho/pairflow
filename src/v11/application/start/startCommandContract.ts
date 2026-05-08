@@ -32,7 +32,7 @@ import type {
 } from "../../ports/reviewerTestEvidenceArtifacts.js";
 import type { RunGitPort } from "../../ports/git.js";
 import type { ProcessSpawnPort } from "../../ports/processSpawn.js";
-import type { buildResumeTranscriptSummary } from "./startCommandResumeSummary.js";
+import type { buildResumeTranscriptSummary } from "./internal/prompts/startCommandResumeSummary.js";
 import type { BubbleStateSnapshot } from "../../shared/state/bubbleStateSnapshotTypes.js";
 
 export interface StartBubbleInput {

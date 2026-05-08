@@ -1,8 +1,8 @@
 import {
   resolveKickoffDependencies,
-} from "./kickoffDependencyResolution.js";
-import type { KickoffDependencyOverrides } from "./kickoffDependencyContract.js";
-import type { RunKickoffFlowResult } from "./kickoffFlowContract.js";
+} from "./internal/validation/kickoffDependencyResolution.js";
+import type { KickoffDependencyOverrides } from "./internal/validation/kickoffDependencyContract.js";
+import type { RunKickoffFlowResult } from "./internal/validation/kickoffFlowContract.js";
 import { runKickoffFlow } from "./runKickoffFlow.js";
 
 export interface KickoffBubbleV11Input {

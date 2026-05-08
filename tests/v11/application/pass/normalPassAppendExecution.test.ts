@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { ProtocolEnvelopeDraft } from "../../../../src/v11/infrastructure/artifact/transcript/transcriptStore.js";
-import { executeNormalPassAppend } from "../../../../src/v11/application/pass/normalPassAppendExecution.js";
+import { executeNormalPassAppend } from "../../../../src/v11/application/pass/internal/normalPass/normalPassAppendExecution.js";
 
 describe("executeNormalPassAppend", () => {
   it("builds pass draft and appends envelope with mapped sequence/envelope output", async () => {

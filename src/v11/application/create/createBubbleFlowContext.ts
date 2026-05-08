@@ -5,7 +5,7 @@ import {
   type PairflowRepoConfig
 } from "../../../config/repoConfig.js";
 import { getBubblePaths, type BubblePaths } from "../../shared/bubble/bubblePaths.js";
-import type { ReviewerFocusExtractionResult } from "../../../v11/shared/reviewer/reviewerBrief.js";
+import type { ReviewerFocusExtractionResult } from "../../shared/reviewer/reviewerBrief.js";
 import { createInitialBubbleState } from "../../domain/state/initialState.js";
 import {
   assertValidBubbleStateSnapshot

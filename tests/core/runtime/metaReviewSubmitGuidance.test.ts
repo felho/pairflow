@@ -7,7 +7,7 @@ import {
   buildMetaReviewSubmitUsageLine
 } from "../../../src/v11/shared/metaReview/metaReviewSubmitGuidance.js";
 import { getAgentEmitHelpText } from "../../../src/cli/commands/agent/emit.js";
-import { buildMetaReviewerStartupPrompt } from "../../../src/v11/application/start/startCommandPrompts.js";
+import { buildMetaReviewerStartupPrompt } from "../../../src/v11/application/start/internal/prompts/startCommandPrompts.js";
 
 describe("metaReviewSubmitGuidance", () => {
   it("keeps startup prompt aligned with the shared submit command contract", () => {

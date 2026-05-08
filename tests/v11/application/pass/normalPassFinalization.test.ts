@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { finalizeNormalPass } from "../../../../src/v11/application/pass/normalPassFinalization.js";
+import { finalizeNormalPass } from "../../../../src/v11/application/pass/internal/normalPass/normalPassFinalization.js";
 
 describe("finalizeNormalPass", () => {
   it("emits lifecycle metric and builds result with fallback repeat-clean metadata", async () => {

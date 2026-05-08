@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 
-import { executeAskHumanExecution } from "../../../../src/v11/application/askHuman/askHumanExecution.js";
-import { finalizeAskHumanFlow } from "../../../../src/v11/application/askHuman/askHumanFinalization.js";
-import { createAskHumanCommandOrchestrationDependencies } from "../../../../src/v11/application/askHuman/askHumanFlowDependencyWiring.js";
+import { executeAskHumanExecution } from "../../../../src/v11/application/askHuman/internal/delivery/askHumanExecution.js";
+import { finalizeAskHumanFlow } from "../../../../src/v11/application/askHuman/internal/mutation/askHumanFinalization.js";
+import { createAskHumanCommandOrchestrationDependencies } from "../../../../src/v11/application/askHuman/internal/delivery/askHumanFlowDependencyWiring.js";
 
 describe("askHumanFlowDependencyWiring", () => {
   it("wires execution and finalization implementations", () => {

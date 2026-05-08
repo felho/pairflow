@@ -15,12 +15,12 @@ import {
   buildReviewerDecisionMatrixReminder,
   formatReviewerTestExecutionDirective,
   type ReviewerTestExecutionDirective
-} from "../../../../v11/shared/reviewer/testEvidence.js";
+} from "../../../shared/reviewer/testEvidence.js";
 import {
   formatReviewerBriefDeliveryReminder,
   formatReviewerFocusDeliveryReminder,
   type ReviewerFocusExtractionResult
-} from "../../../../v11/shared/reviewer/reviewerBrief.js";
+} from "../../../shared/reviewer/reviewerBrief.js";
 import { buildPairflowCommandGuidance } from "../../../shared/command/pairflowCommandBootstrap.js";
 import { buildDocumentBubbleSourceEditGuard } from "../../../shared/document/documentBubbleSourceEditGuard.js";
 import {

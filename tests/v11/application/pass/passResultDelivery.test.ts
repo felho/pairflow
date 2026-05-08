@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { mapPassResultDelivery } from "../../../../src/v11/application/pass/passResultDelivery.js";
+import { mapPassResultDelivery } from "../../../../src/v11/application/pass/internal/normalPass/passResultDelivery.js";
 
 describe("mapPassResultDelivery", () => {
   it("returns undefined when delivery result is absent", () => {

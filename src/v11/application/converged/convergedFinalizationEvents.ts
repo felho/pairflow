@@ -1,5 +1,5 @@
 import type { PairflowCommandPathAssessment } from "../../ports/pairflowCommand.js";
-import type { EmitBubbleLifecycleEventBestEffortPort } from "../../../v11/shared/metrics/bubbleEvents.js";
+import type { EmitBubbleLifecycleEventBestEffortPort } from "../../shared/metrics/bubbleEvents.js";
 import {
   buildConvergedEventMetadata,
   buildMetaReviewRoutedMetadata,

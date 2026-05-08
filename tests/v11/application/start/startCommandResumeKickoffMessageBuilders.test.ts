@@ -6,7 +6,7 @@ import {
   buildResumeMetaReviewerKickoffMessage,
   buildResumeReviewerKickoffMessage,
   inferResumeReviewerProjectionVariant
-} from "../../../../src/v11/application/start/startCommandResumeKickoffMessageBuilders.js";
+} from "../../../../src/v11/application/start/internal/prompts/startCommandResumeKickoffMessageBuilders.js";
 
 function buildExpectedCanonicalActorEmitLookupGuidance(input: {
   bubbleId: string;

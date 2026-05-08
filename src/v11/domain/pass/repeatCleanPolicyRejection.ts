@@ -1,4 +1,4 @@
-import { repeatCleanAutoconvergePolicyRejectedReasonCode } from "../../../v11/domain/convergence/repeatCleanAutoconverge.js";
+import { repeatCleanAutoconvergePolicyRejectedReasonCode } from "../convergence/repeatCleanAutoconverge.js";
 
 export type RepeatCleanPolicyRejectedSubtype =
   | "policy_gate_rejected"

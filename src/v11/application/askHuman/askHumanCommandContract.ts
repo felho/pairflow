@@ -1,6 +1,6 @@
 import type {
   EmitAskHumanBubbleNotificationPort
-} from "./askHumanDeliveryPortsContract.js";
+} from "./internal/delivery/askHumanDeliveryPortsContract.js";
 import type { BubbleStateSnapshot } from "../../shared/state/bubbleStateSnapshotTypes.js";
 import type { ProtocolEnvelope } from "../../../types/protocol.js";
 import type {
@@ -18,7 +18,7 @@ import type {
   EnsureAskHumanBubbleInstanceIdentity,
   ReadAskHumanStateSnapshot,
   ResolveAskHumanBubbleFromWorkspaceCwd
-} from "./askHumanRoutingContract.js";
+} from "./internal/delivery/askHumanRoutingContract.js";
 
 export type AskHumanActivationProvenance = ActorActivationProvenance;
 

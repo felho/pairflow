@@ -121,7 +121,7 @@ let reviewVerificationArtifactsModulePromise:
   | undefined;
 
 function getListCommandDefaultsModulePath(): string {
-  return "../../defaults/list/listCommandDefaults.js";
+  return "../list/listCommandDefaults.js";
 }
 
 function getBubbleLookupModulePath(): string {

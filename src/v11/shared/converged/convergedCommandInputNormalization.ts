@@ -5,7 +5,7 @@ import {
 import { isLikelyStructuredRef } from "../reference/structuredRef.js";
 import {
   resolveConvergedSummaryFindingsContradiction
-} from "../../../v11/domain/convergence/policy.js";
+} from "../../domain/convergence/policy.js";
 import { isFindingSeverity } from "../../../types/findings.js";
 import type { ConvergedStructuredFinding } from "./convergedCommandTypes.js";
 import { isConvergedStructuredFindingSeverity } from "./convergedCommandTypes.js";

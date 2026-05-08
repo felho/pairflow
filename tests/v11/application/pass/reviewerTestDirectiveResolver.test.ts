@@ -7,7 +7,7 @@ import {
 } from "../../../../src/v11/shared/reviewer/testEvidence.js";
 import type { BubbleConfig } from "../../../../src/v11/shared/config/bubbleConfigTypes.js";
 import type { ProtocolEnvelope } from "../../../../src/types/protocol.js";
-import { resolveReviewerTestDirectiveForPass } from "../../../../src/v11/application/pass/reviewerTestDirectiveResolver.js";
+import { resolveReviewerTestDirectiveForPass } from "../../../../src/v11/application/pass/internal/reviewerDelivery/reviewerTestDirectiveResolver.js";
 
 function createBubbleConfig(
   reviewArtifactType: BubbleConfig["review_artifact_type"] = "code"

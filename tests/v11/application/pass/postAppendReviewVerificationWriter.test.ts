@@ -12,7 +12,7 @@ import {
   type ReviewVerificationArtifact,
   type ReviewVerificationInputResolution
 } from "../../../../src/v11/shared/reviewer/reviewVerification.js";
-import { writePostAppendReviewVerificationArtifact } from "../../../../src/v11/application/pass/postAppendReviewVerificationWriter.js";
+import { writePostAppendReviewVerificationArtifact } from "../../../../src/v11/application/pass/internal/verification/postAppendReviewVerificationWriter.js";
 
 class TestPostAppendReviewVerificationWriterError extends Error {
   public constructor(message: string) {

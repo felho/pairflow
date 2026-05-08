@@ -2,7 +2,7 @@ import { type ReadTranscriptEnvelopesPort } from "../../ports/transcript.js";
 import {
   validateConvergencePolicy,
   type ConvergencePolicyResult
-} from "../../../v11/domain/convergence/policy.js";
+} from "../../domain/convergence/policy.js";
 import type { AgentName } from "../../../contracts/kernel/agentIdentity.js";
 import type {
   BubbleReviewLoopMode

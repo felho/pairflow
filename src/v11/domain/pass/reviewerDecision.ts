@@ -14,7 +14,7 @@ import type { PassIntent } from "../../../contracts/kernel/protocol.js";
 import {
   evaluatePositiveSummaryFindingsAssertion,
   evaluateReviewerFindingsAggregate
-} from "../../../v11/domain/convergence/policy.js";
+} from "../convergence/policy.js";
 
 const reviewerPassNonBlockingPostGateReasonCode =
   "REVIEWER_PASS_NON_BLOCKING_POST_GATE";

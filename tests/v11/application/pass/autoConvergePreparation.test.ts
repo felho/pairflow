@@ -8,7 +8,7 @@ function toErrorMessage(input: PairflowCommandErrorInput): string {
 }
 
 import type { ReviewVerificationInputResolution } from "../../../../src/v11/shared/reviewer/reviewVerification.js";
-import { prepareRepeatCleanAutoConverge } from "../../../../src/v11/application/pass/autoConvergePreparation.js";
+import { prepareRepeatCleanAutoConverge } from "../../../../src/v11/application/pass/internal/autoConverge/autoConvergePreparation.js";
 
 class TestAutoConvergePreparationError extends Error {
   public constructor(message: string) {

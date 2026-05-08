@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { buildAutoConvergePassResult, buildNormalPassResult } from "../../../../src/v11/application/pass/passResultBuilder.js";
+import { buildAutoConvergePassResult, buildNormalPassResult } from "../../../../src/v11/application/pass/internal/normalPass/passResultBuilder.js";
 
 function buildEnvelope(id: string) {
   return {

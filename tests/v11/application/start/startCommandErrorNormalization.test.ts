@@ -13,7 +13,7 @@ import {
 import {
   StartBubbleError,
   throwAsStartBubbleError
-} from "../../../../src/v11/application/start/startCommandRuntime.js";
+} from "../../../../src/v11/application/start/internal/runtime/startCommandRuntime.js";
 
 describe("startCommandErrorNormalization", () => {
   it("preserves start bubble errors", () => {

@@ -4,7 +4,7 @@ import {
   AskHumanCommandError,
   createAskHumanCommandError,
   throwAsAskHumanCommandError
-} from "../../../../src/v11/application/askHuman/askHumanCommandRuntime.js";
+} from "../../../../src/v11/application/askHuman/internal/mutation/askHumanCommandRuntime.js";
 import { WorkspaceResolutionError } from "../../../../src/v11/infrastructure/executor/workspace/workspaceResolution.js";
 
 describe("askHumanCommandRuntime", () => {

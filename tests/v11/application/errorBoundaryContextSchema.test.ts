@@ -4,7 +4,7 @@ import { BubbleCommitError } from "../../../src/v11/application/commit/commitCom
 import { BubbleMergeError } from "../../../src/v11/application/merge/mergeCommandErrorRuntime.js";
 import { StartupReconcilerError } from "../../../src/v11/application/reconcile/reconcileCommandRuntime.js";
 import { RestartBubbleError } from "../../../src/v11/application/restart/restartCommandRuntime.js";
-import { StartBubbleError } from "../../../src/v11/application/start/startCommandRuntime.js";
+import { StartBubbleError } from "../../../src/v11/application/start/internal/runtime/startCommandRuntime.js";
 import { StopBubbleError } from "../../../src/v11/application/stop/stopCommandRuntime.js";
 
 describe("errorBoundaryContextSchema", () => {

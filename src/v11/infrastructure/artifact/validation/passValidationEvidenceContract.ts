@@ -1,4 +1,4 @@
-import type { ReviewerTestExecutionDirective } from "../../../../v11/shared/reviewer/testEvidence.js"
+import type { ReviewerTestExecutionDirective } from "../../../shared/reviewer/testEvidence.js"
 import type { ValidationCommandId } from "../../../shared/validation/validationCommandId.js"
 
 export const passValidationEvidenceSchemaVersion = 2 as const

@@ -7,7 +7,7 @@ function toErrorMessage(input: PairflowCommandErrorInput): string {
   return (input.reasonCode !== undefined ? input.reasonCode + ": " : "") + input.message;
 }
 
-import { runNormalPassFlow } from "../../../../src/v11/application/pass/runNormalPassFlow.js";
+import { runNormalPassFlow } from "../../../../src/v11/application/pass/internal/normalPass/runNormalPassFlow.js";
 
 describe("runNormalPassFlow", () => {
   it("orchestrates reviewer normal-pass flow and forwards normalized findings to finalization", async () => {

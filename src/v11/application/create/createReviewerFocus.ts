@@ -1,4 +1,4 @@
-import type { ReviewerFocusExtractionResult } from "../../../v11/shared/reviewer/reviewerBrief.js";
+import type { ReviewerFocusExtractionResult } from "../../shared/reviewer/reviewerBrief.js";
 import {
   extractFocusItemsFromText,
   normalizeReviewerFocusText,

@@ -1,4 +1,4 @@
-import { buildResumeTranscriptSummary } from "./startCommandResumeSummary.js";
+import { buildResumeTranscriptSummary } from "./internal/prompts/startCommandResumeSummary.js";
 import type { BubbleStateSnapshot } from "../../shared/state/bubbleStateSnapshotTypes.js";
 import type {
   StartBubbleDependencies,
@@ -15,7 +15,7 @@ import type { LaunchBubbleSessionAckPort } from "../../ports/tmuxSessions.js";
 import {
   buildPreparingWorkspaceStartRejectMessage,
   createStartBubbleError
-} from "./startCommandRuntime.js";
+} from "./internal/runtime/startCommandRuntime.js";
 import type {
   ReadReviewerBriefArtifactPort,
   ReadReviewerFocusArtifactPort

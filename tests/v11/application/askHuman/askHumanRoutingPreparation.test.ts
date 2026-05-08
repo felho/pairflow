@@ -7,7 +7,7 @@ function toErrorMessage(input: PairflowCommandErrorInput): string {
   return (input.reasonCode !== undefined ? input.reasonCode + ": " : "") + input.message;
 }
 
-import { prepareAskHumanRouting } from "../../../../src/v11/application/askHuman/askHumanRoutingPreparation.js";
+import { prepareAskHumanRouting } from "../../../../src/v11/application/askHuman/internal/delivery/askHumanRoutingPreparation.js";
 import type { ResolvedBubbleWorkspace } from "../../../../src/v11/infrastructure/executor/workspace/workspaceResolution.js";
 
 class AskHumanRoutingTestError extends Error {

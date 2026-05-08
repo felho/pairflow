@@ -5,7 +5,7 @@ import {
   runGit
 } from "../../infrastructure/workspace/git.js";
 import { ensureBubbleInstanceIdForMutation } from "../../infrastructure/artifact/bubble/bubbleInstanceId.js";
-import { removeRuntimeSession } from "../../defaults/runtimeSessions/runtimeSessionsDefaults.js";
+import { removeRuntimeSession } from "../runtimeSessions/runtimeSessionsDefaults.js";
 import { terminateBubbleTmuxSession } from "../../infrastructure/channel/tmux/tmuxManager.js";
 import { cleanupWorktreeWorkspace } from "../../infrastructure/workspace/worktreeManager.js";
 import type { MergeBubbleDependencies } from "../../application/merge/mergeCommandContract.js";

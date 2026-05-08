@@ -11,7 +11,7 @@ import {
   ReviewVerificationError,
   type ReviewVerificationInputResolution
 } from "../../../../src/v11/shared/reviewer/reviewVerification.js";
-import { resolveReviewerVerification } from "../../../../src/v11/application/pass/reviewerVerificationResolver.js";
+import { resolveReviewerVerification } from "../../../../src/v11/application/pass/internal/verification/reviewerVerificationResolver.js";
 
 class TestReviewerVerificationResolverError extends Error {
   public constructor(message: string) {

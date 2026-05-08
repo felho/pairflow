@@ -6,7 +6,7 @@ import type {
 import type { BubblePaths } from "../../shared/bubble/bubblePaths.js";
 import type { BubbleConfig } from "../../shared/config/bubbleConfigTypes.js";
 import type { BubbleStateSnapshot } from "../../shared/state/bubbleStateSnapshotTypes.js";
-import type { ReviewerFocusExtractionResult } from "../../../v11/shared/reviewer/reviewerBrief.js";
+import type { ReviewerFocusExtractionResult } from "../../shared/reviewer/reviewerBrief.js";
 import type { ReviewerFocusArtifactPersistResult } from "./createBubblePersistence.js";
 
 export async function emitCreateBubbleLifecycleEvent(input: {

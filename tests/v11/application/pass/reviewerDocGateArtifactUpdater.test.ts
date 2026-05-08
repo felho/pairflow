@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   createDocGateReadFailureWarning,
   extractTaskContentFromTaskArtifact
-} from "../../../../src/v11/application/pass/reviewerDocGateArtifactUpdater.js";
+} from "../../../../src/v11/application/pass/internal/reviewerDelivery/reviewerDocGateArtifactUpdater.js";
 
 describe("extractTaskContentFromTaskArtifact", () => {
   it("extracts task body from bubble task artifact template", () => {

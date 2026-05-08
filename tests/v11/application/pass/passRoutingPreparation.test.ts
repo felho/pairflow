@@ -7,7 +7,7 @@ function toErrorMessage(input: PairflowCommandErrorInput): string {
   return (input.reasonCode !== undefined ? input.reasonCode + ": " : "") + input.message;
 }
 
-import { preparePassRouting } from "../../../../src/v11/application/pass/passRoutingPreparation.js";
+import { preparePassRouting } from "../../../../src/v11/application/pass/internal/normalPass/passRoutingPreparation.js";
 
 describe("preparePassRouting", () => {
   it("builds routing context via reviewer preparation, intent resolution, verification, and repeat-clean evaluation", async () => {

@@ -3,8 +3,8 @@ import { describe, expect, it } from "vitest";
 import {
   resolveFreshLaunchWorkspace,
   resolveResumeLaunchWorkspace
-} from "../../../../src/v11/application/start/startCommandLaunchWorkspace.js";
-import { StartBubbleError } from "../../../../src/v11/application/start/startCommandRuntime.js";
+} from "../../../../src/v11/application/start/internal/runtime/startCommandLaunchWorkspace.js";
+import { StartBubbleError } from "../../../../src/v11/application/start/internal/runtime/startCommandRuntime.js";
 
 describe("startCommandLaunchWorkspace", () => {
   it("prefers explicit bootstrap workspace authority when present for worktree mode", () => {

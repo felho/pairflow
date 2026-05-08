@@ -1,7 +1,7 @@
 import type {
   RepeatCleanAutoconvergeReasonCode,
   RepeatCleanAutoconvergeReasonDetail
-} from "../../../v11/domain/convergence/repeatCleanAutoconverge.js";
+} from "../convergence/repeatCleanAutoconverge.js";
 
 const repeatCleanMostRecentPreviousReviewerPassIsCleanMetadataKey =
   "most_recent_previous_reviewer_pass_is_clean";

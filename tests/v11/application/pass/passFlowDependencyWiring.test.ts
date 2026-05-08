@@ -4,14 +4,14 @@ const buildAutoConvergeFlowDependencies = vi.fn();
 const buildNormalPassFlowDependencies = vi.fn();
 
 vi.mock(
-  "../../../../src/v11/application/pass/autoConvergeFlowInvocationBuilders.js",
+  "../../../../src/v11/application/pass/internal/autoConverge/autoConvergeFlowInvocationBuilders.js",
   () => ({
     buildAutoConvergeFlowDependencies
   })
 );
 
 vi.mock(
-  "../../../../src/v11/application/pass/normalPassFlowInvocationBuilders.js",
+  "../../../../src/v11/application/pass/internal/normalPass/normalPassFlowInvocationBuilders.js",
   () => ({
     buildNormalPassFlowDependencies
   })

@@ -1,21 +1,21 @@
 import { describe, expect, it } from "vitest";
 import type {
   PersistNormalPassPostAppendDependencies
-} from "../../../../src/v11/application/pass/normalPassPostAppendPersistence.js";
+} from "../../../../src/v11/application/pass/internal/normalPass/normalPassPostAppendPersistence.js";
 import type {
   ResolvePassValidationForPassDependencies
-} from "../../../../src/v11/application/pass/passValidationGate.js";
+} from "../../../../src/v11/application/pass/internal/verification/passValidationGate.js";
 import type {
   ExecuteNormalPassDeliveryDependencies
-} from "../../../../src/v11/application/pass/normalPassDeliveryExecution.js";
+} from "../../../../src/v11/application/pass/internal/normalPass/normalPassDeliveryExecution.js";
 import type {
   FinalizeNormalPassDependencies
-} from "../../../../src/v11/application/pass/normalPassFinalization.js";
+} from "../../../../src/v11/application/pass/internal/normalPass/normalPassFinalization.js";
 
 import {
   buildNormalPassFlowDependencies,
   buildNormalPassFlowInput
-} from "../../../../src/v11/application/pass/normalPassFlowInvocationBuilders.js";
+} from "../../../../src/v11/application/pass/internal/normalPass/normalPassFlowInvocationBuilders.js";
 
 function toErrorMessage(input: PairflowCommandErrorInput): string {
   if (typeof input === "string") {

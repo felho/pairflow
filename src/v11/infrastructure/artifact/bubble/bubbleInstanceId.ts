@@ -3,7 +3,7 @@ import { join } from "node:path";
 
 import { parseBubbleConfigToml, renderBubbleConfigToml } from "../../../../config/bubbleConfig.js";
 import type { BubbleConfig } from "../../../shared/config/bubbleConfigTypes.js";
-import { emitBubbleLifecycleEventBestEffort } from "../../../../v11/defaults/metrics/bubbleEvents.js";
+import { emitBubbleLifecycleEventBestEffort } from "../../../defaults/metrics/bubbleEvents.js";
 import {
   FileLockTimeoutError,
   withFileLock

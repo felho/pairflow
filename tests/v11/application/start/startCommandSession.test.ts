@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { claimRuntimeSessionOwnership } from "../../../../src/v11/application/start/startCommandSession.js";
-import type { StartExecutionContext } from "../../../../src/v11/application/start/startCommandContext.js";
+import { claimRuntimeSessionOwnership } from "../../../../src/v11/application/start/internal/runtime/startCommandSession.js";
+import type { StartExecutionContext } from "../../../../src/v11/application/start/internal/runtime/startCommandContext.js";
 import type { ResolvedStartBubbleDependencies } from "../../../../src/v11/application/start/startCommandOrchestration.js";
 import type { ClaimRuntimeSessionInput } from "../../../../src/v11/ports/runtimeSessions.js";
 

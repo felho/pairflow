@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { buildResumeTranscriptSummary } from "../../../../src/v11/application/start/startCommandResumeSummary.js";
+import { buildResumeTranscriptSummary } from "../../../../src/v11/application/start/internal/prompts/startCommandResumeSummary.js";
 import {
   launchBubbleSessionAck as launchBubbleSessionAckDefault,
   startBubbleDependencyDefaults
@@ -27,7 +27,7 @@ import {
 } from "../../../../src/v11/infrastructure/artifact/bubble/remoteExecutionArtifacts.js";
 import { executeRemoteBubbleStart } from "../../../../src/v11/infrastructure/executor/ssh/sshBubbleStart.js";
 import { loadPairflowGlobalConfig } from "../../../../src/config/pairflowConfig.js";
-import { StartBubbleError } from "../../../../src/v11/application/start/startCommandRuntime.js";
+import { StartBubbleError } from "../../../../src/v11/application/start/internal/runtime/startCommandRuntime.js";
 import {
   mapStartBubbleResult,
   resolveStartBubbleDependencies,

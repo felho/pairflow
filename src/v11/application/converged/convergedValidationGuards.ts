@@ -1,11 +1,11 @@
 import {
   summaryVerifierConsistencyGateSchemaVersion,
   type SummaryVerifierConsistencyGateDecisionRecord
-} from "../../../v11/shared/reviewer/summaryVerifierConsistencyGate.js";
+} from "../../shared/reviewer/summaryVerifierConsistencyGate.js";
 import type {
   evaluateSummaryVerifierConsistencyGate,
   resolveSummaryVerifierConsistencyGateArtifactPath
-} from "../../../v11/shared/reviewer/summaryVerifierConsistencyGate.js";
+} from "../../shared/reviewer/summaryVerifierConsistencyGate.js";
 import type {
   WriteSummaryVerifierConsistencyGateArtifactPort
 } from "../../ports/summaryVerifierGateArtifacts.js";
@@ -14,8 +14,8 @@ import type {
 } from "../../ports/reviewVerificationArtifacts.js";
 import type {
   resolveReviewerTestEvidenceArtifactPath
-} from "../../../v11/shared/reviewer/testEvidence.js";
-import type { ReviewerTestReasonCode } from "../../../v11/shared/reviewer/testEvidence.js";
+} from "../../shared/reviewer/testEvidence.js";
+import type { ReviewerTestReasonCode } from "../../shared/reviewer/testEvidence.js";
 import type { PrepareConvergedValidationInput } from "./convergedValidationPreparationContract.js";
 
 type ReviewerDirectiveResolution = {

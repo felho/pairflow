@@ -4,7 +4,7 @@ import type { BubblePaths } from "../../shared/bubble/bubblePaths.js";
 import {
   createDocContractGateArtifact,
   isDocContractGateScopeActive
-} from "../../../v11/shared/gates/docContractGates.js";
+} from "../../shared/gates/docContractGates.js";
 import { appendInitialTaskEnvelope } from "./createInitialTaskEnvelopeAppend.js";
 import { renderBubbleConfigToml } from "../../../config/bubbleConfig.js";
 import type {
@@ -21,7 +21,7 @@ import {
   toBubbleCreateError
 } from "./createCommandRuntime.js";
 import { renderTaskArtifact } from "./createTaskArtifacts.js";
-import type { ReviewerFocusExtractionResult } from "../../../v11/shared/reviewer/reviewerBrief.js";
+import type { ReviewerFocusExtractionResult } from "../../shared/reviewer/reviewerBrief.js";
 
 export interface CreateBubblePersistenceInput {
   bubbleId: string;

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { finalizeAskHumanFlow } from "../../../../src/v11/application/askHuman/askHumanFinalization.js";
+import { finalizeAskHumanFlow } from "../../../../src/v11/application/askHuman/internal/mutation/askHumanFinalization.js";
 
 describe("finalizeAskHumanFlow", () => {
   it("emits delivery/notification/metrics and builds ask-human command result", async () => {

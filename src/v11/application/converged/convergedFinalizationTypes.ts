@@ -7,8 +7,8 @@ import type {
   AssessPairflowCommandPathPort,
   PairflowCommandPathAssessment
 } from "../../ports/pairflowCommand.js";
-import { type SummaryVerifierConsistencyGateDecisionRecord } from "../../../v11/shared/reviewer/summaryVerifierConsistencyGate.js";
-import type { EmitBubbleLifecycleEventBestEffortPort } from "../../../v11/shared/metrics/bubbleEvents.js";
+import { type SummaryVerifierConsistencyGateDecisionRecord } from "../../shared/reviewer/summaryVerifierConsistencyGate.js";
+import type { EmitBubbleLifecycleEventBestEffortPort } from "../../shared/metrics/bubbleEvents.js";
 import { type MetaReviewGateRoute } from "../../shared/metaReviewGate/index.js";
 import type { BubbleStateSnapshot } from "../../shared/state/bubbleStateSnapshotTypes.js";
 import type {

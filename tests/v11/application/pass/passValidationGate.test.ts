@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type { BubbleConfig } from "../../../../src/v11/shared/config/bubbleConfigTypes.js";
 import { PassValidationRunnerExecutionError } from "../../../../src/v11/infrastructure/executor/validation/passValidationCommandRunner.js";
-import { resolvePassValidationForPass } from "../../../../src/v11/application/pass/passValidationGate.js";
+import { resolvePassValidationForPass } from "../../../../src/v11/application/pass/internal/verification/passValidationGate.js";
 import { passValidationDefaults } from "../../../../src/v11/defaults/pass/passValidationCommandDefaults.js";
 
 const passValidationGateTestDefaults = {

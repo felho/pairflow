@@ -11,7 +11,7 @@ import {
   REVIEW_VERIFICATION_SCHEMA,
   type ReviewVerificationInputResolution
 } from "../../../../src/v11/shared/reviewer/reviewVerification.js";
-import { prepareReviewerVerification } from "../../../../src/v11/application/pass/reviewerVerificationPreparation.js";
+import { prepareReviewerVerification } from "../../../../src/v11/application/pass/internal/verification/reviewerVerificationPreparation.js";
 
 describe("prepareReviewerVerification", () => {
   it("runs docs-only guard, resolves verification, then applies consistency guard", async () => {

@@ -3,8 +3,8 @@ import { describe, expect, it } from "vitest";
 import {
   buildImplementerKickoffMessage,
   buildImplementerStartupPrompt
-} from "../../../../src/v11/application/start/startCommandImplementerPrompts.js";
-import { buildResumeImplementerStartupPrompt } from "../../../../src/v11/application/start/startCommandResumeImplementerPrompt.js";
+} from "../../../../src/v11/application/start/internal/prompts/startCommandImplementerPrompts.js";
+import { buildResumeImplementerStartupPrompt } from "../../../../src/v11/application/start/internal/prompts/startCommandResumeImplementerPrompt.js";
 import {
   buildRolePromptConcernLines,
   buildTranscriptContextLine,
@@ -16,11 +16,11 @@ import type {
 import {
   buildMetaReviewerStartupPrompt,
   buildReviewerStartupPrompt
-} from "../../../../src/v11/application/start/startCommandPrompts.js";
+} from "../../../../src/v11/application/start/internal/prompts/startCommandPrompts.js";
 import {
   buildResumeMetaReviewerStartupPrompt,
   buildResumeReviewerStartupPrompt
-} from "../../../../src/v11/application/start/startCommandResumePrompts.js";
+} from "../../../../src/v11/application/start/internal/prompts/startCommandResumePrompts.js";
 import { buildMetaReviewSubmitCommandTemplate } from "../../../../src/v11/shared/metaReview/metaReviewSubmitGuidance.js";
 import type { BubbleStateSnapshot } from "../../../../src/v11/shared/state/bubbleStateSnapshotTypes.js";
 

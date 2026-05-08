@@ -229,4 +229,54 @@ describe("internal module boundary fitness check", () => {
       )
     ).toBe(true);
   });
+
+  it("fails oversized flat application command directories without sub-boundaries", async () => {
+    const repoRoot = await createTempRoot();
+    for (let index = 0; index < 28; index += 1) {
+      await writeRepoFile(
+        repoRoot,
+        `src/v11/application/kickoff/file${String(index)}.ts`,
+        `export const value${String(index)} = ${String(index)};\n`
+      );
+    }
+
+    const report = await buildInternalModuleBoundaryCheckReport({
+      check: checkInput(),
+      repoRoot,
+      fallbackMode: "hard-fail"
+    });
+
+    expect(report.status).toBe("fail");
+    expect(
+      report.details?.some((detail) =>
+        detail.includes(
+          "src/v11/application/kickoff is an oversized flat application command directory"
+        )
+      )
+    ).toBe(true);
+  });
+
+  it("allows oversized application command directories with named sub-boundaries", async () => {
+    const repoRoot = await createTempRoot();
+    for (let index = 0; index < 28; index += 1) {
+      await writeRepoFile(
+        repoRoot,
+        `src/v11/application/kickoff/file${String(index)}.ts`,
+        `export const value${String(index)} = ${String(index)};\n`
+      );
+    }
+    await writeRepoFile(
+      repoRoot,
+      "src/v11/application/kickoff/internal/validation/validator.ts",
+      "export const validator = 1;\n"
+    );
+
+    const report = await buildInternalModuleBoundaryCheckReport({
+      check: checkInput(),
+      repoRoot,
+      fallbackMode: "hard-fail"
+    });
+
+    expect(report.status).toBe("pass");
+  });
 });

@@ -9,7 +9,7 @@ import type { ProtocolEnvelope } from "../../../../src/types/protocol.js";
 import {
   executePassDelivery,
   type PassDeliveryDependencies
-} from "../../../../src/v11/application/pass/reviewerDelivery.js";
+} from "../../../../src/v11/application/pass/internal/reviewerDelivery/reviewerDelivery.js";
 import {
   readReviewerBriefArtifact,
   readReviewerFocusArtifact

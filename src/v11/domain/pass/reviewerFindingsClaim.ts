@@ -1,4 +1,4 @@
-import { resolveLegacySummaryFindingsClaimState } from "../../../v11/domain/convergence/policy.js";
+import { resolveLegacySummaryFindingsClaimState } from "../convergence/policy.js";
 import type { Finding } from "../../../types/findings.js";
 import type {
   FindingsClaimSource,

@@ -1,5 +1,5 @@
-import { readFile } from "node:fs/promises";
-import { dirname, extname, relative, resolve } from "node:path";
+import { readdir, readFile } from "node:fs/promises";
+import { dirname, extname, join, relative, resolve } from "node:path";
 
 import ts from "typescript";
 
@@ -22,11 +22,18 @@ interface InternalImportViolation {
   line: number;
 }
 
+interface FlatApplicationCommandDirectoryViolation {
+  commandRoot: string;
+  directTypeScriptFileCount: number;
+}
+
 interface InternalImportException {
   id: string;
   from: string;
   to: string;
 }
+
+const maxFlatApplicationCommandFiles = 27;
 
 function normalizeRelativePolicyPath(
   inputPath: string,
@@ -257,6 +264,47 @@ async function collectViolations(input: {
   });
 }
 
+async function collectFlatApplicationCommandDirectoryViolations(repoRoot: string): Promise<
+  FlatApplicationCommandDirectoryViolation[]
+> {
+  const applicationRoot = resolve(repoRoot, "src/v11/application");
+  let commandEntries;
+  try {
+    commandEntries = await readdir(applicationRoot, { withFileTypes: true });
+  } catch {
+    return [];
+  }
+
+  const violations: FlatApplicationCommandDirectoryViolation[] = [];
+  for (const commandEntry of commandEntries) {
+    if (!commandEntry.isDirectory()) {
+      continue;
+    }
+    const commandPath = join(applicationRoot, commandEntry.name);
+    const childEntries = await readdir(commandPath, { withFileTypes: true });
+    const directDirectoryCount = childEntries.filter((entry) =>
+      entry.isDirectory()
+    ).length;
+    if (directDirectoryCount > 0) {
+      continue;
+    }
+    const directTypeScriptFileCount = childEntries.filter((entry) =>
+      entry.isFile() && entry.name.endsWith(".ts")
+    ).length;
+    if (directTypeScriptFileCount <= maxFlatApplicationCommandFiles) {
+      continue;
+    }
+    violations.push({
+      commandRoot: normalizePathToPosix(relative(repoRoot, commandPath)),
+      directTypeScriptFileCount
+    });
+  }
+
+  return violations.sort((left, right) =>
+    left.commandRoot.localeCompare(right.commandRoot)
+  );
+}
+
 export async function buildInternalModuleBoundaryCheckReport({
   check,
   repoRoot,
@@ -289,6 +337,8 @@ export async function buildInternalModuleBoundaryCheckReport({
 
   const files = await resolveFilesForScopePatterns(repoRoot, scope);
   const allViolations = await collectViolations({ repoRoot, files });
+  const flatCommandDirectoryViolations =
+    await collectFlatApplicationCommandDirectoryViolations(repoRoot);
   const filtered = filterViolationsByExceptions({
     violations: allViolations,
     allowlist: parsedExceptions.allowlist
@@ -301,8 +351,14 @@ export async function buildInternalModuleBoundaryCheckReport({
     filtered.violations.length > 100
       ? `violations_truncated=${String(filtered.violations.length - 100)}`
       : undefined,
+    ...flatCommandDirectoryViolations.map(
+      (violation) =>
+        `${violation.commandRoot} is an oversized flat application command directory (${String(violation.directTypeScriptFileCount)} direct .ts file(s)); introduce internal/ or named subdirectories.`
+    ),
     `scope=${scope.join(", ")}`,
     `files_scanned=${String(files.length)}`,
+    `flat_application_command_directory_threshold=${String(maxFlatApplicationCommandFiles)}`,
+    `flat_application_command_directory_violations=${String(flatCommandDirectoryViolations.length)}`,
     `exceptions_configured=${String(check.exceptions?.length ?? 0)}`,
     `exceptions_applied=${String(filtered.appliedExceptionIds.length)}`
   ].filter((detail) => detail !== undefined);
@@ -317,11 +373,18 @@ export async function buildInternalModuleBoundaryCheckReport({
     );
   }
 
-  const problemCount = filtered.violations.length + parsedExceptions.invalid.length;
+  const problemCount =
+    filtered.violations.length
+    + flatCommandDirectoryViolations.length
+    + parsedExceptions.invalid.length;
   if (problemCount > 0) {
     const violationSummary =
       filtered.violations.length > 0
         ? `${String(filtered.violations.length)} external internal-module import(s)`
+        : undefined;
+    const flatDirectorySummary =
+      flatCommandDirectoryViolations.length > 0
+        ? `${String(flatCommandDirectoryViolations.length)} oversized flat application command director${flatCommandDirectoryViolations.length === 1 ? "y" : "ies"}`
         : undefined;
     const invalidSummary =
       parsedExceptions.invalid.length > 0
@@ -332,7 +395,7 @@ export async function buildInternalModuleBoundaryCheckReport({
       owner: check.owner ?? "unknown",
       mode,
       status: mode === "hard-fail" ? "fail" : "warn",
-      summary: `Internal module boundary check ${mode === "hard-fail" ? "failed" : "warning"}: ${[violationSummary, invalidSummary].filter((item) => item !== undefined).join(" and ")} detected.`,
+      summary: `Internal module boundary check ${mode === "hard-fail" ? "failed" : "warning"}: ${[violationSummary, flatDirectorySummary, invalidSummary].filter((item) => item !== undefined).join(" and ")} detected.`,
       metric: check.metric,
       details
     };
@@ -343,7 +406,7 @@ export async function buildInternalModuleBoundaryCheckReport({
     owner: check.owner ?? "unknown",
     mode,
     status: "pass",
-    summary: `Internal module boundary check passed: ${String(files.length)} scoped file(s) scanned, no external /internal/ imports.`,
+    summary: `Internal module boundary check passed: ${String(files.length)} scoped file(s) scanned, no external /internal/ imports or oversized flat application command directories.`,
     metric: check.metric,
     details
   };

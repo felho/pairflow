@@ -1,15 +1,15 @@
 import { describe, expect, it } from "vitest";
 import type {
   ExecuteAutoConvergeConvergedDependencies
-} from "../../../../src/v11/application/pass/autoConvergeConvergedExecution.js";
+} from "../../../../src/v11/application/pass/internal/autoConverge/autoConvergeConvergedExecution.js";
 import type {
   FinalizeAutoConvergePassDependencies
-} from "../../../../src/v11/application/pass/autoConvergeFinalization.js";
+} from "../../../../src/v11/application/pass/internal/autoConverge/autoConvergeFinalization.js";
 
 import {
   buildAutoConvergeFlowDependencies,
   buildAutoConvergeFlowInput
-} from "../../../../src/v11/application/pass/autoConvergeFlowInvocationBuilders.js";
+} from "../../../../src/v11/application/pass/internal/autoConverge/autoConvergeFlowInvocationBuilders.js";
 
 function toErrorMessage(input: PairflowCommandErrorInput): string {
   if (typeof input === "string") {

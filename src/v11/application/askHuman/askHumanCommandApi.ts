@@ -3,8 +3,8 @@ import type {
   EmitAskHumanInput,
   EmitAskHumanResult
 } from "./askHumanCommandContract.js";
-import { createAskHumanCommandError } from "./askHumanCommandRuntime.js";
-import { dispatchAskHumanCommandOrchestration } from "./askHumanCommandOrchestrationDispatch.js";
+import { createAskHumanCommandError } from "./internal/mutation/askHumanCommandRuntime.js";
+import { dispatchAskHumanCommandOrchestration } from "./internal/mutation/askHumanCommandOrchestrationDispatch.js";
 
 export async function emitAskHumanFromWorkspace(
   input: EmitAskHumanInput,
@@ -16,8 +16,8 @@ export async function emitAskHumanFromWorkspace(
     createAskHumanCommandError
   );
 }
-export { throwAsAskHumanCommandError as asAskHumanCommandError } from "./askHumanCommandRuntime.js";
-export { AskHumanCommandError } from "./askHumanCommandRuntime.js";
+export { throwAsAskHumanCommandError as asAskHumanCommandError } from "./internal/mutation/askHumanCommandRuntime.js";
+export { AskHumanCommandError } from "./internal/mutation/askHumanCommandRuntime.js";
 export type {
   EmitAskHumanDependencies,
   EmitAskHumanInput,

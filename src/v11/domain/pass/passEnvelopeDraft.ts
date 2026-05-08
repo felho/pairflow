@@ -1,8 +1,8 @@
 import type {
   RepeatCleanAutoconvergeReasonCode,
   RepeatCleanAutoconvergeReasonDetail
-} from "../../../v11/domain/convergence/repeatCleanAutoconverge.js";
-import { claimParserDivergenceDiagnosticReasonCode } from "../../../v11/domain/convergence/policy.js";
+} from "../convergence/repeatCleanAutoconverge.js";
+import { claimParserDivergenceDiagnosticReasonCode } from "../convergence/policy.js";
 import type { Finding } from "../../../types/findings.js";
 import type { PassIntent } from "../../../contracts/kernel/protocol.js";
 import {

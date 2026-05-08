@@ -1,37 +1,37 @@
 import { emitBubbleLifecycleEventBestEffort } from "../metrics/bubbleEvents.js";
 import type { AgentRole } from "../../../contracts/kernel/agentIdentity.js";
 import type { PassIntent } from "../../../contracts/kernel/protocol.js";
-import { executeAutoConvergeConverged } from "./autoConvergeConvergedExecution.js";
-import { finalizeAutoConvergePass } from "./autoConvergeFinalization.js";
-import { prepareRepeatCleanAutoConverge } from "./autoConvergePreparation.js";
+import { executeAutoConvergeConverged } from "./internal/autoConverge/autoConvergeConvergedExecution.js";
+import { finalizeAutoConvergePass } from "./internal/autoConverge/autoConvergeFinalization.js";
+import { prepareRepeatCleanAutoConverge } from "./internal/autoConverge/autoConvergePreparation.js";
 import {
   emitConvergedFromWorkspaceCommandOrchestration as emitConvergedFromWorkspace
 } from "../converged/convergedCommandOrchestration.js";
-import { executeNormalPassAppend } from "./normalPassAppendExecution.js";
-import { prepareNormalPassAppend } from "./normalPassAppendPreparation.js";
-import { executeNormalPassDelivery } from "./normalPassDeliveryExecution.js";
-import { finalizeNormalPass } from "./normalPassFinalization.js";
-import { persistNormalPassPostAppend } from "./normalPassPostAppendPersistence.js";
-import { resolvePassIntent } from "./passIntentResolution.js";
-import { mapPassResultDelivery } from "./passResultDelivery.js";
-import { buildAutoConvergePassResult, buildNormalPassResult } from "./passResultBuilder.js";
-import { resolvePassValidationForPass } from "./passValidationGate.js";
-import { writePostAppendReviewVerificationArtifact } from "./postAppendReviewVerificationWriter.js";
-import { writePostAppendPassState } from "./postAppendStateWriter.js";
-import { prepareReviewerPass } from "./reviewerPassPreparation.js";
-import { executePassDelivery, type PassDeliveryDependencies } from "./reviewerDelivery.js";
-import { updateReviewerDocGateArtifact } from "./reviewerDocGateArtifactUpdater.js";
-import { resolveReviewerTestDirectiveForPass } from "./reviewerTestDirectiveResolver.js";
-import { resolveReviewerVerification } from "./reviewerVerificationResolver.js";
-import { prepareReviewerVerification } from "./reviewerVerificationPreparation.js";
+import { executeNormalPassAppend } from "./internal/normalPass/normalPassAppendExecution.js";
+import { prepareNormalPassAppend } from "./internal/normalPass/normalPassAppendPreparation.js";
+import { executeNormalPassDelivery } from "./internal/normalPass/normalPassDeliveryExecution.js";
+import { finalizeNormalPass } from "./internal/normalPass/normalPassFinalization.js";
+import { persistNormalPassPostAppend } from "./internal/normalPass/normalPassPostAppendPersistence.js";
+import { resolvePassIntent } from "./internal/normalPass/passIntentResolution.js";
+import { mapPassResultDelivery } from "./internal/normalPass/passResultDelivery.js";
+import { buildAutoConvergePassResult, buildNormalPassResult } from "./internal/normalPass/passResultBuilder.js";
+import { resolvePassValidationForPass } from "./internal/verification/passValidationGate.js";
+import { writePostAppendReviewVerificationArtifact } from "./internal/verification/postAppendReviewVerificationWriter.js";
+import { writePostAppendPassState } from "./internal/normalPass/postAppendStateWriter.js";
+import { prepareReviewerPass } from "./internal/reviewerDelivery/reviewerPassPreparation.js";
+import { executePassDelivery, type PassDeliveryDependencies } from "./internal/reviewerDelivery/reviewerDelivery.js";
+import { updateReviewerDocGateArtifact } from "./internal/reviewerDelivery/reviewerDocGateArtifactUpdater.js";
+import { resolveReviewerTestDirectiveForPass } from "./internal/reviewerDelivery/reviewerTestDirectiveResolver.js";
+import { resolveReviewerVerification } from "./internal/verification/reviewerVerificationResolver.js";
+import { prepareReviewerVerification } from "./internal/verification/reviewerVerificationPreparation.js";
 import { buildPassLifecycleMetricMetadata } from "../../domain/pass/lifecycleMetricMetadata.js";
 import { resolveMostRecentPreviousReviewerPassIsCleanFromMetadata } from "../../domain/pass/repeatCleanMetadata.js";
-import type { PreparePassRoutingDependencies } from "./passRoutingPreparation.js";
-import { buildAutoConvergeFlowDependencies } from "./autoConvergeFlowInvocationBuilders.js";
-import { buildNormalPassFlowDependencies } from "./normalPassFlowInvocationBuilders.js";
-import type { PassFlowRuntimeDependencies } from "./passFlowRuntimeDependenciesContract.js";
+import type { PreparePassRoutingDependencies } from "./internal/normalPass/passRoutingPreparation.js";
+import { buildAutoConvergeFlowDependencies } from "./internal/autoConverge/autoConvergeFlowInvocationBuilders.js";
+import { buildNormalPassFlowDependencies } from "./internal/normalPass/normalPassFlowInvocationBuilders.js";
+import type { PassFlowRuntimeDependencies } from "./internal/normalPass/passFlowRuntimeDependenciesContract.js";
 
-export type { PassFlowRuntimeDependencies } from "./passFlowRuntimeDependenciesContract.js";
+export type { PassFlowRuntimeDependencies } from "./internal/normalPass/passFlowRuntimeDependenciesContract.js";
 
 let configuredPassFlowRuntimeDependencyDefaults:
   | PassFlowRuntimeDependencies

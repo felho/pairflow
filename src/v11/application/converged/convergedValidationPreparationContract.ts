@@ -1,6 +1,6 @@
 import type {
   isDocContractGateScopeActive
-} from "../../../v11/shared/gates/docContractGates.js";
+} from "../../shared/gates/docContractGates.js";
 import type {
   ReadReviewVerificationArtifactStatusPort
 } from "../../ports/reviewVerificationArtifacts.js";
@@ -12,11 +12,11 @@ import type {
   evaluateSummaryVerifierConsistencyGate,
   resolveSummaryVerifierConsistencyGateArtifactPath,
   SummaryVerifierConsistencyGateDecisionRecord
-} from "../../../v11/shared/reviewer/summaryVerifierConsistencyGate.js";
+} from "../../shared/reviewer/summaryVerifierConsistencyGate.js";
 import type {
   WriteSummaryVerifierConsistencyGateArtifactPort
 } from "../../ports/summaryVerifierGateArtifacts.js";
-import type { resolveReviewerTestEvidenceArtifactPath } from "../../../v11/shared/reviewer/testEvidence.js";
+import type { resolveReviewerTestEvidenceArtifactPath } from "../../shared/reviewer/testEvidence.js";
 import type {
   ResolveReviewerTestExecutionDirectivePort
 } from "../../ports/reviewerTestEvidenceArtifacts.js";

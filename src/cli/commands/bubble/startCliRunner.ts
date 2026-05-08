@@ -7,14 +7,14 @@ import {
   type StartBubbleV11Result as StartBubbleResult
 } from "../../../v11/application/start/emitStartV11.js";
 import {
+  createStartBubbleError
+} from "../../../v11/application/start/startCommandApi.js";
+import {
   IDEATION_METADATA_PARSE_WARNING
 } from "../../../v11/shared/ideation/ideationReasonCodes.js";
 import {
   hasIdeationMetadataParseWarning
 } from "../../../v11/domain/ideation/ideationMetadata.js";
-import {
-  createStartBubbleError
-} from "../../../v11/application/start/startCommandRuntime.js";
 import { startCliDependencyDefaults } from "../../../v11/defaults/start/startCliDefaults.js";
 import { parseBubbleStartCommandOptions } from "./startCliOptions.js";
 import type { ResolvedBubbleById } from "../../../v11/ports/bubbleLookup.js";

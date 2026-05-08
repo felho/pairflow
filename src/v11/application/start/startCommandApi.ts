@@ -10,25 +10,26 @@ import {
 } from "./startCommandOrchestration.js";
 import {
   buildStartupIncompleteStartFailureMessage,
+  createStartBubbleError,
   StartBubbleError,
   throwAsStartBubbleError
-} from "./startCommandRuntime.js";
+} from "./internal/runtime/startCommandRuntime.js";
 import {
   cleanupFailedStart,
   runFreshStartFlow,
   runResumeStartFlow,
   type FreshStartProgress
-} from "./startCommandFlows.js";
+} from "./internal/runtime/startCommandFlows.js";
 import {
   createRunWorktreeBootstrapCommandDefault,
   isTmuxSessionAliveDefault
-} from "./startCommandDefaults.js";
+} from "./internal/runtime/startCommandDefaults.js";
 import {
   loadStartExecutionContext,
   type ResolvedStartBubble,
   type StartExecutionContext
-} from "./startCommandContext.js";
-import { claimRuntimeSessionOwnership } from "./startCommandSession.js";
+} from "./internal/runtime/startCommandContext.js";
+import { claimRuntimeSessionOwnership } from "./internal/runtime/startCommandSession.js";
 import { startCommandContextDefaults } from "./startCommandDependencyDefaults.js";
 
 export type {
@@ -36,7 +37,7 @@ export type {
   StartBubbleInput,
   StartBubbleResult
 } from "./startCommandContract.js";
-export { StartBubbleError };
+export { createStartBubbleError, StartBubbleError };
 
 function resolveStartBubbleLookupInput(input: StartBubbleInput): {
   bubbleId: string;

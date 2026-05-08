@@ -10,8 +10,8 @@ function toErrorMessage(input: PairflowCommandErrorInput): string {
 import {
   buildEmitPassContext,
   type BuildEmitPassContextDependencies
-} from "../../../../src/v11/application/pass/emitPassContextBuilder.js";
-import type { PreparePassRoutingInput } from "../../../../src/v11/application/pass/passRoutingPreparation.js";
+} from "../../../../src/v11/application/pass/internal/reviewerDelivery/emitPassContextBuilder.js";
+import type { PreparePassRoutingInput } from "../../../../src/v11/application/pass/internal/normalPass/passRoutingPreparation.js";
 
 describe("emitPassContextBuilder", () => {
   it("builds flow context from normalized command, payload and workspace data", async () => {

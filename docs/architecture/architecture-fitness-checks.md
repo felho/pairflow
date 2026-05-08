@@ -146,7 +146,9 @@ Rules:
 - metric: internal module implementation privacy boundary
 - scope: `src/v11/**`
 - intent: enforce the `internal/` module privacy convention described in
-  [v11-internal-module-boundaries.md](/Users/felho/dev/pairflow/docs/architecture/v11-internal-module-boundaries.md)
+  [v11-internal-module-boundaries.md](/Users/felho/dev/pairflow/docs/architecture/v11-internal-module-boundaries.md),
+  and block oversized flat `src/v11/application/<command>` directories that
+  have not declared an `internal/` or named subdirectory boundary
 - owner: architecture/runtime
 
 ### 11) UI Contract Boundary

@@ -7,7 +7,7 @@ function toErrorMessage(input: PairflowCommandErrorInput): string {
   return (input.reasonCode !== undefined ? input.reasonCode + ": " : "") + input.message;
 }
 
-import { runAutoConvergeFlow } from "../../../../src/v11/application/pass/runAutoConvergeFlow.js";
+import { runAutoConvergeFlow } from "../../../../src/v11/application/pass/internal/autoConverge/runAutoConvergeFlow.js";
 
 describe("runAutoConvergeFlow", () => {
   it("orchestrates prepare -> converged execution -> finalization in order", async () => {

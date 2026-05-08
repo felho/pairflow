@@ -1,14 +1,14 @@
 import type { EnsureBubbleInstanceIdForMutationResult } from "../../ports/bubbleIdentity.js";
 import type { ResolvedBubbleWorkspace } from "../../ports/workspaceResolution.js";
 import type { ActorEmitContextSnapshot } from "../../shared/actorProtocol/actorEmitContext.js";
-import type { ConvergencePolicyResult } from "../../../v11/domain/convergence/policy.js";
+import type { ConvergencePolicyResult } from "../../domain/convergence/policy.js";
 import type { EmitBubbleNotificationPort } from "../../ports/notifications.js";
 import type { PairflowCommandPathAssessment } from "../../ports/pairflowCommand.js";
 import type {
   EmitDeliveryNotificationAckPort
 } from "../../ports/tmuxDelivery.js";
 import type { ResolveReviewerTestExecutionDirectivePort } from "../../ports/reviewerTestEvidenceArtifacts.js";
-import type { SummaryVerifierConsistencyGateDecisionRecord } from "../../../v11/shared/reviewer/summaryVerifierConsistencyGate.js";
+import type { SummaryVerifierConsistencyGateDecisionRecord } from "../../shared/reviewer/summaryVerifierConsistencyGate.js";
 import type { ConvergedStructuredFinding } from "../../shared/converged/convergedCommandTypes.js";
 import type { MetaReviewGateRoute } from "../../shared/metaReviewGate/index.js";
 import type {

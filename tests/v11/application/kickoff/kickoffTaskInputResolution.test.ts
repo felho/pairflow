@@ -8,7 +8,7 @@ import {
   KickoffTaskInputValidationError,
   renderKickoffTaskArtifact,
   resolveKickoffTaskInput
-} from "../../../../src/v11/application/kickoff/kickoffTaskInputResolution.js";
+} from "../../../../src/v11/application/kickoff/internal/validation/kickoffTaskInputResolution.js";
 
 const tempDirs: string[] = [];
 

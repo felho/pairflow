@@ -9,7 +9,7 @@ import {
   readStateSnapshot,
   writeStateSnapshot
 } from "../../../../src/v11/application/start/startCommandDependencyDefaults.js";
-import { resolveKickoffDependencies } from "../../../../src/v11/application/kickoff/kickoffDependencyResolution.js";
+import { resolveKickoffDependencies } from "../../../../src/v11/application/kickoff/internal/validation/kickoffDependencyResolution.js";
 
 describe("kickoffDependencyResolution", () => {
   it("uses kickoff defaults when overrides are omitted", () => {

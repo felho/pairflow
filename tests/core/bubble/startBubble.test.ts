@@ -61,9 +61,9 @@ import { writeEvidenceLog } from "../../helpers/evidence.js";
 import { buildWorktreeBootstrapResult } from "../../helpers/worktreeBootstrapResult.js";
 import {
   reviewerPolicySnapshotUnavailableReasonCode
-} from "../../../src/v11/application/start/startCommandContext.js";
+} from "../../../src/v11/application/start/internal/runtime/startCommandContext.js";
 import { reviewerPolicySnapshotFileName } from "../../../src/v11/shared/reviewer/reviewerPolicySnapshot.js";
-import { buildResumedState } from "../../../src/v11/application/start/startCommandFlows.js";
+import { buildResumedState } from "../../../src/v11/application/start/internal/runtime/startCommandFlows.js";
 import { startCommandContextDefaults } from "../../../src/v11/application/start/startCommandDependencyDefaults.js";
 import type { UpsertRuntimeSessionInput } from "../../../src/v11/ports/runtimeSessions.js";
 import {
@@ -71,7 +71,7 @@ import {
   remoteCloneStartModeEnvVar,
   remoteCloneStartModeValue,
   remoteCloneWorkspaceRootEnvVar
-} from "../../../src/v11/application/start/startCommandRemoteExecution.js";
+} from "../../../src/v11/application/start/internal/remote/startCommandRemoteExecution.js";
 import type { ExecuteRemoteBubbleStartInput } from "../../../src/v11/application/start/startCommandContract.js";
 import {
   readRemotePointer,

@@ -7,7 +7,7 @@ function toErrorMessage(input: PairflowCommandErrorInput): string {
   return (input.reasonCode !== undefined ? input.reasonCode + ": " : "") + input.message;
 }
 
-import { normalizePassCommandInput } from "../../../../src/v11/application/pass/passCommandInputNormalization.js";
+import { normalizePassCommandInput } from "../../../../src/v11/application/pass/internal/normalPass/passCommandInputNormalization.js";
 
 class SyntheticPassCommandError extends Error {
   public constructor(message: string) {

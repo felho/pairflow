@@ -1,11 +1,11 @@
 export {
   getBubbleKickoffHelpText,
   parseBubbleKickoffCommandOptions
-} from "./kickoffCliOptions.js";
-export { runBubbleKickoffCommand } from "./kickoffCliRunner.js";
+} from "./internal/validation/kickoffCliOptions.js";
+export { runBubbleKickoffCommand } from "./internal/validation/kickoffCliRunner.js";
 export type {
   BubbleKickoffCommandOptions,
   BubbleKickoffHelpCommandOptions,
   ParsedBubbleKickoffCommandOptions
-} from "./kickoffCliOptions.js";
-export type { BubbleKickoffCommandDependencies } from "./kickoffCliRunner.js";
+} from "./internal/validation/kickoffCliOptions.js";
+export type { BubbleKickoffCommandDependencies } from "./internal/validation/kickoffCliRunner.js";
