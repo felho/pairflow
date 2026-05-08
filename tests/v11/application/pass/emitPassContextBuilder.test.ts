@@ -11,7 +11,7 @@ import {
   buildEmitPassContext,
   type BuildEmitPassContextDependencies
 } from "../../../../src/v11/application/pass/emitPassContextBuilder.js";
-import type { BuildPassRoutingInputInput } from "../../../../src/v11/application/pass/passRoutingInvocationBuilders.js";
+import type { PreparePassRoutingInput } from "../../../../src/v11/application/pass/passRoutingPreparation.js";
 
 describe("emitPassContextBuilder", () => {
   it("builds flow context from normalized command, payload and workspace data", async () => {
@@ -30,7 +30,7 @@ describe("emitPassContextBuilder", () => {
       }
     } as never;
 
-    let capturedRoutingInput: BuildPassRoutingInputInput | undefined;
+    let capturedRoutingInput: PreparePassRoutingInput | undefined;
     let capturedRoutingDependencies: unknown;
 
     const dependencies: BuildEmitPassContextDependencies = {
@@ -89,11 +89,8 @@ describe("emitPassContextBuilder", () => {
           implementer: "codex",
           reviewer: "claude"
         }) as never,
-      buildPassRoutingInput: (input) => {
-        capturedRoutingInput = input;
-        return input as never;
-      },
-      preparePassRouting: async (_input, routingDependencies) => {
+      preparePassRouting: async (routingInput, routingDependencies) => {
+        capturedRoutingInput = routingInput;
         capturedRoutingDependencies = routingDependencies;
         return passRouting;
       },
@@ -140,7 +137,7 @@ describe("emitPassContextBuilder", () => {
   });
 
   it("omits optional inputIntent when command input does not provide it", async () => {
-    let capturedRoutingInput: BuildPassRoutingInputInput | undefined;
+    let capturedRoutingInput: PreparePassRoutingInput | undefined;
 
     const dependencies: BuildEmitPassContextDependencies = {
       normalizePassCommandInput: () => ({
@@ -192,12 +189,9 @@ describe("emitPassContextBuilder", () => {
           implementer: "codex",
           reviewer: "claude"
         }) as never,
-      buildPassRoutingInput: (input) => {
-        capturedRoutingInput = input;
-        return input as never;
-      },
-      preparePassRouting: async () =>
-        ({
+      preparePassRouting: async (routingInput) => {
+        capturedRoutingInput = routingInput;
+        return ({
           intent: "review",
           inferredIntent: true,
           reviewerVerification: undefined,
@@ -208,7 +202,8 @@ describe("emitPassContextBuilder", () => {
             trigger: false,
             mostRecentPreviousReviewerCleanPassEnvelope: false
           }
-        }) as never,
+        }) as never;
+      },
       createPassRoutingDependencies: () => ({}) as never
     };
 
@@ -300,7 +295,6 @@ describe("emitPassContextBuilder", () => {
             implementer: "codex",
             reviewer: "claude"
           }) as never,
-        buildPassRoutingInput: (input) => input as never,
         preparePassRouting: async () =>
           ({
             intent: "review",
@@ -390,7 +384,6 @@ describe("emitPassContextBuilder", () => {
             implementer: "codex",
             reviewer: "claude"
           }) as never,
-        buildPassRoutingInput: (input) => input as never,
         preparePassRouting: async () =>
           ({
             intent: "review",
@@ -481,7 +474,6 @@ describe("emitPassContextBuilder", () => {
             implementer: "codex",
             reviewer: "claude"
           }) as never,
-        buildPassRoutingInput: (input) => input as never,
         preparePassRouting: async () =>
           ({
             intent: "review",
@@ -579,7 +571,6 @@ describe("emitPassContextBuilder", () => {
             implementer: "codex",
             reviewer: "claude"
           }) as never,
-        buildPassRoutingInput: (input) => input as never,
         preparePassRouting: async () =>
           ({
             intent: "review",
@@ -673,7 +664,6 @@ describe("emitPassContextBuilder", () => {
             implementer: "codex",
             reviewer: "claude"
           }) as never,
-        buildPassRoutingInput: (input) => input as never,
         preparePassRouting: async () =>
           ({
             intent: "review",
@@ -769,7 +759,6 @@ describe("emitPassContextBuilder", () => {
             implementer: "codex",
             reviewer: "claude"
           }) as never,
-        buildPassRoutingInput: (input) => input as never,
         preparePassRouting: async () =>
           ({
             intent: "review",

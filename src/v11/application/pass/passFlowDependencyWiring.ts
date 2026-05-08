@@ -27,7 +27,7 @@ import { resolveReviewerVerification } from "./reviewerVerificationResolver.js";
 import { prepareReviewerVerification } from "./reviewerVerificationPreparation.js";
 import { buildPassLifecycleMetricMetadata } from "../../domain/pass/lifecycleMetricMetadata.js";
 import { resolveMostRecentPreviousReviewerPassIsCleanFromMetadata } from "../../domain/pass/repeatCleanMetadata.js";
-import { buildPassRoutingDependencies } from "./passRoutingInvocationBuilders.js";
+import type { PreparePassRoutingDependencies } from "./passRoutingPreparation.js";
 import { buildAutoConvergeFlowDependencies } from "./autoConvergeFlowInvocationBuilders.js";
 import { buildNormalPassFlowDependencies } from "./normalPassFlowInvocationBuilders.js";
 import type { PassFlowRuntimeDependencies } from "./passFlowRuntimeDependenciesContract.js";
@@ -119,10 +119,10 @@ function resolvePassFlowDeliveryOverride(
 
 export function createPassRoutingDependencies(
   inferDefaultPassIntent: (activeRole: AgentRole) => PassIntent
-) {
+): PreparePassRoutingDependencies {
   const configuredDefaults =
     resolveConfiguredPassFlowRuntimeDependencyDefaults();
-  return buildPassRoutingDependencies({
+  return {
     prepareReviewerPass,
     resolvePassIntent,
     prepareReviewerVerification,
@@ -137,7 +137,7 @@ export function createPassRoutingDependencies(
           : {})
       }),
     inferDefaultPassIntent
-  });
+  };
 }
 
 export function createAutoConvergeFlowDependencies(

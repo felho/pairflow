@@ -10,10 +10,13 @@ import { normalizePassCommandInput } from "./passCommandInputNormalization.js";
 import { normalizePassCommandPayload } from "./passCommandPayloadNormalization.js";
 import { normalizeBubbleReviewPolicy } from "../../shared/reviewPolicy/reviewPolicyRuntime.js";
 import type { BuildFlowBaseInput } from "./flowInvocationBuilderBase.js";
-import { buildPassRoutingInput, type BuildPassRoutingInputInput } from "./passRoutingInvocationBuilders.js";
 import { createPassRoutingDependencies } from "./passFlowDependencyWiring.js";
 import { preparePassWorkspaceContext } from "./passWorkspaceContextPreparation.js";
-import { preparePassRouting, type PreparePassRoutingDependencies } from "./passRoutingPreparation.js";
+import {
+  preparePassRouting,
+  type PreparePassRoutingDependencies,
+  type PreparePassRoutingInput
+} from "./passRoutingPreparation.js";
 
 export interface EmitPassContextCommandInput {
   summary: string;
@@ -36,7 +39,6 @@ export interface BuildEmitPassContextDependencies {
   normalizePassCommandInput: typeof normalizePassCommandInput;
   normalizePassCommandPayload: typeof normalizePassCommandPayload;
   preparePassWorkspaceContext: typeof preparePassWorkspaceContext;
-  buildPassRoutingInput: (input: BuildPassRoutingInputInput) => ReturnType<typeof buildPassRoutingInput>;
   preparePassRouting: (
     input: Parameters<typeof preparePassRouting>[0],
     dependencies: PreparePassRoutingDependencies
@@ -48,7 +50,6 @@ const defaultDependencies: BuildEmitPassContextDependencies = {
   normalizePassCommandInput,
   normalizePassCommandPayload,
   preparePassWorkspaceContext,
-  buildPassRoutingInput,
   preparePassRouting,
   createPassRoutingDependencies
 };
@@ -97,7 +98,7 @@ export async function buildEmitPassContext(
       : undefined;
 
   const passRouting = await dependencies.preparePassRouting(
-    dependencies.buildPassRoutingInput({
+    {
       senderRole: handoff.senderRole,
       round: handoff.envelopeRound,
       summary,
@@ -108,7 +109,13 @@ export async function buildEmitPassContext(
       findingsPayloadInvalid: normalizedPayload.findingsPayloadInvalid,
       reviewerBlockingMinSeverity:
         normalizedReviewPolicy.reviewer_blocking_min_severity,
-      bubbleConfig: resolved.bubbleConfig,
+      bubbleConfig: {
+        review_artifact_type: resolved.bubbleConfig.review_artifact_type,
+        severity_gate_round: resolved.bubbleConfig.severity_gate_round,
+        ...(resolved.bubbleConfig.accuracy_critical !== undefined
+          ? { accuracy_critical: resolved.bubbleConfig.accuracy_critical }
+          : {})
+      },
       worktreePath: resolved.worktreePath,
       transcriptPath: resolved.bubblePaths.transcriptPath,
       reviewer,
@@ -117,7 +124,7 @@ export async function buildEmitPassContext(
       ...(input.commandInput.intent !== undefined
         ? { inputIntent: input.commandInput.intent }
         : {})
-    }),
+    } satisfies PreparePassRoutingInput,
     dependencies.createPassRoutingDependencies(input.inferDefaultPassIntent)
   );
 
