@@ -1,8 +1,8 @@
 import { writeFile } from "node:fs/promises";
 
-import { ensureBubbleInstanceIdForMutation } from "../bubbleIdentity/bubbleIdentityDefaults.js";
-import { runGit } from "../git/gitDefaults.js";
-import { resolveBubbleById } from "../bubbleLookup/bubbleLookupDefaults.js";
+import { ensureBubbleInstanceIdForMutation } from "../../infrastructure/artifact/bubble/bubbleInstanceId.js";
+import { runGit } from "../../infrastructure/workspace/git.js";
+import { resolveBubbleById } from "../../infrastructure/executor/workspace/bubbleLookup.js";
 import { statusCommandDependencyDefaults } from "../status/statusCommandDependencyDefaults.js";
 import {
   readStateSnapshot,

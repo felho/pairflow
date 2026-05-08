@@ -1,4 +1,4 @@
-import { resolveBubbleById } from "../bubbleLookup/bubbleLookupDefaults.js";
+import { resolveBubbleById } from "../../infrastructure/executor/workspace/bubbleLookup.js";
 import type {
   BubbleReviewPolicyRuntimeView
 } from "../../shared/reviewPolicy/reviewPolicyTypes.js";

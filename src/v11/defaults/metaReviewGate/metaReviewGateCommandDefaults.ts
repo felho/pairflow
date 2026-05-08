@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises";
 
 import { buildAgentCommand } from "../../shared/command/agentCommand.js";
-import { resolveBubbleById } from "../bubbleLookup/bubbleLookupDefaults.js";
+import { resolveBubbleById } from "../../infrastructure/executor/workspace/bubbleLookup.js";
 import {
   appendProtocolEnvelope,
   readTranscriptEnvelopes

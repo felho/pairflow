@@ -1,5 +1,5 @@
-import { resolveBubbleById } from "../bubbleLookup/bubbleLookupDefaults.js";
-import { registerRepoInRegistry } from "../repoRegistry/repoRegistryDefaults.js";
+import { resolveBubbleById } from "../../infrastructure/executor/workspace/bubbleLookup.js";
+import { registerRepoInRegistry } from "../../infrastructure/executor/workspace/repoRegistry.js";
 
 export const startCliDependencyDefaults = {
   registerRepoInRegistry,

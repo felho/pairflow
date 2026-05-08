@@ -4,7 +4,7 @@ import {
   removeRuntimeSessions
 } from "../../infrastructure/executor/sessionRuntime/runtimeSessionsRegistry.js";
 import { resolveRepoPath } from "../../infrastructure/executor/workspace/repoResolution.js";
-import { runTmux } from "../tmux/tmuxRunnerDefaults.js";
+import { runTmux } from "../../infrastructure/channel/tmux/tmuxRunner.js";
 import type { ReconcileRuntimeSessionsDefaultDependencies } from "../../application/reconcile/reconcileCommandDependencyResolution.js";
 import type { TmuxSessionLivenessProbe } from "../../application/reconcile/reconcileCommandContract.js";
 

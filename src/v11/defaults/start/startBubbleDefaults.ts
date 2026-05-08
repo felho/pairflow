@@ -1,10 +1,10 @@
 import { loadPairflowGlobalConfig as loadPairflowGlobalConfigCanonical } from "../../../config/pairflowConfig.js";
 import {
   ensureBubbleInstanceIdForMutation
-} from "../bubbleIdentity/bubbleIdentityDefaults.js";
+} from "../../infrastructure/artifact/bubble/bubbleInstanceId.js";
 import {
   resolveBubbleById
-} from "../bubbleLookup/bubbleLookupDefaults.js";
+} from "../../infrastructure/executor/workspace/bubbleLookup.js";
 import {
   terminateBubbleTmuxSession as terminateBubbleTmuxSessionCanonical,
   launchBubbleSessionAck as launchBubbleSessionAckCanonical
@@ -33,7 +33,7 @@ import {
 import {
   resolveReviewerTestExecutionDirective
 } from "../reviewer/reviewerTestEvidenceDefaults.js";
-import { runTmux } from "../tmux/tmuxRunnerDefaults.js";
+import { runTmux } from "../../infrastructure/channel/tmux/tmuxRunner.js";
 import {
   inspectStateSnapshot,
   readStateSnapshot
@@ -42,7 +42,7 @@ import {
   appendProtocolEnvelope,
   readTranscriptEnvelopes
 } from "../transcript/transcriptDependencyDefaults.js";
-import { resolveBubbleFromWorkspaceCwd } from "../workspace/workspaceResolutionDefaults.js";
+import { resolveBubbleFromWorkspaceCwd } from "../../infrastructure/executor/workspace/workspaceResolution.js";
 import {
   cleanupWorktreeWorkspace as cleanupWorktreeWorkspaceCanonical,
   bootstrapWorktreeWorkspace as bootstrapWorktreeWorkspaceCanonical

@@ -3,11 +3,11 @@ import {
   resolveCompatActorEmitContextFromWorkspace as resolveCompatActorEmitContextFromWorkspaceWithDependencies,
   type ActorEmitContextResolutionDependencies
 } from "../../shared/actorProtocol/actorEmitContext.js";
-import { resolveBubbleById } from "../bubbleLookup/bubbleLookupDefaults.js";
+import { resolveBubbleById } from "../../infrastructure/executor/workspace/bubbleLookup.js";
 import { readStateSnapshot } from "../state/stateStoreDefaults.js";
 import {
   resolveBubbleFromWorkspaceCwd
-} from "../workspace/workspaceResolutionDefaults.js";
+} from "../../infrastructure/executor/workspace/workspaceResolution.js";
 
 export const actorEmitContextResolutionDefaults = {
   readStateSnapshot,

@@ -3,13 +3,13 @@ import { rename, writeFile } from "node:fs/promises";
 import {
   branchExists,
   runGit
-} from "../../defaults/git/gitDefaults.js";
-import { ensureBubbleInstanceIdForMutation } from "../../defaults/bubbleIdentity/bubbleIdentityDefaults.js";
+} from "../../infrastructure/workspace/git.js";
+import { ensureBubbleInstanceIdForMutation } from "../../infrastructure/artifact/bubble/bubbleInstanceId.js";
 import { removeRuntimeSession } from "../../defaults/runtimeSessions/runtimeSessionsDefaults.js";
-import { terminateBubbleTmuxSession } from "../../defaults/tmux/tmuxSessionDefaults.js";
-import { cleanupWorktreeWorkspace } from "../../defaults/worktree/worktreeWorkspaceDefaults.js";
+import { terminateBubbleTmuxSession } from "../../infrastructure/channel/tmux/tmuxManager.js";
+import { cleanupWorktreeWorkspace } from "../../infrastructure/workspace/worktreeManager.js";
 import type { MergeBubbleDependencies } from "../../application/merge/mergeCommandContract.js";
-import { resolveBubbleById } from "../bubbleLookup/bubbleLookupDefaults.js";
+import { resolveBubbleById } from "../../infrastructure/executor/workspace/bubbleLookup.js";
 import {
   readStateSnapshot,
   writeStateSnapshot

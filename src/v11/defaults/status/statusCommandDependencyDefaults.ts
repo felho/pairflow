@@ -76,7 +76,7 @@ interface ListCommandDefaultsModule {
   };
 }
 
-interface BubbleLookupDefaultsModule {
+interface BubbleLookupModule {
   resolveBubbleById: ResolveBubbleByIdPort;
 }
 
@@ -103,8 +103,8 @@ interface ReviewVerificationArtifactDefaultsModule {
 let listCommandDefaultsModulePromise:
   | Promise<ListCommandDefaultsModule>
   | undefined;
-let bubbleLookupDefaultsModulePromise:
-  | Promise<BubbleLookupDefaultsModule>
+let bubbleLookupModulePromise:
+  | Promise<BubbleLookupModule>
   | undefined;
 let stateStoreDefaultsModulePromise:
   | Promise<StateStoreDefaultsModule>
@@ -125,8 +125,8 @@ function getListCommandDefaultsModulePath(): string {
   return "../../defaults/list/listCommandDefaults.js";
 }
 
-function getBubbleLookupDefaultsModulePath(): string {
-  return "../../defaults/bubbleLookup/bubbleLookupDefaults.js";
+function getBubbleLookupModulePath(): string {
+  return "../../infrastructure/executor/workspace/bubbleLookup.js";
 }
 
 function getStateStoreDefaultsModulePath(): string {
@@ -153,12 +153,12 @@ async function loadListCommandDefaultsModule():
   return listCommandDefaultsModulePromise;
 }
 
-async function loadBubbleLookupDefaultsModule():
-  Promise<BubbleLookupDefaultsModule> {
-  bubbleLookupDefaultsModulePromise ??= import(
-    getBubbleLookupDefaultsModulePath()
-  ) as Promise<BubbleLookupDefaultsModule>;
-  return bubbleLookupDefaultsModulePromise;
+async function loadBubbleLookupModule():
+  Promise<BubbleLookupModule> {
+  bubbleLookupModulePromise ??= import(
+    getBubbleLookupModulePath()
+  ) as Promise<BubbleLookupModule>;
+  return bubbleLookupModulePromise;
 }
 
 async function loadStateStoreDefaultsModule():
@@ -214,7 +214,7 @@ const readTranscriptEnvelopes: ReadTranscriptEnvelopesPort = async (...args) => 
 
 const resolveBubbleById: ResolveBubbleByIdPort = async (...args) => {
   const { resolveBubbleById: resolveBubbleByIdDefault } =
-    await loadBubbleLookupDefaultsModule();
+    await loadBubbleLookupModule();
   return resolveBubbleByIdDefault(...args);
 };
 

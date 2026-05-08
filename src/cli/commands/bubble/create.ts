@@ -6,8 +6,7 @@ import {
   runBubbleCreateCommand as runBubbleCreateCommandRuntime,
   type BubbleCreateCommandDependencies
 } from "./createCliRunner.js";
-import { registerRepoInRegistry as defaultRegisterRepoInRegistry } from "../../../v11/defaults/repoRegistry/repoRegistryDefaults.js";
-import type { RegisterRepoInRegistryPort } from "../../../v11/ports/repoRegistry.js";
+import { registerRepoInRegistry } from "../../../v11/defaults/repoRegistry/repoRegistryDefaults.js";
 
 export {
   getBubbleCreateHelpText,
@@ -15,10 +14,6 @@ export {
 };
 export type { BubbleCreateCommandOptions } from "./createCliOptions.js";
 export type { BubbleCreateCommandDependencies };
-
-const registerRepoInRegistry: RegisterRepoInRegistryPort = async (input) => {
-  return defaultRegisterRepoInRegistry(input);
-};
 
 export async function runBubbleCreateCommand(
   args: string[],

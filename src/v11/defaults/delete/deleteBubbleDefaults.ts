@@ -7,15 +7,15 @@ import {
   TmuxCommandError,
   runTmux
 } from "../../infrastructure/channel/tmux/tmuxManager.js";
-import { ensureBubbleInstanceIdForMutation } from "../bubbleIdentity/bubbleIdentityDefaults.js";
-import { branchExists } from "../git/gitDefaults.js";
+import { ensureBubbleInstanceIdForMutation } from "../../infrastructure/artifact/bubble/bubbleInstanceId.js";
+import { branchExists } from "../../infrastructure/workspace/git.js";
 import { readRuntimeSessionsRegistry, removeRuntimeSession } from "../runtimeSessions/runtimeSessionsDefaults.js";
 import { readStateSnapshot } from "../state/stateStoreDefaults.js";
 import { stopBubbleCommandOrchestration } from "../../application/stop/stopCommandOrchestration.js";
 import { stopBubbleDependencyDefaults } from "../stop/stopCommandDefaults.js";
-import { terminateBubbleTmuxSession } from "../tmux/tmuxSessionDefaults.js";
-import { cleanupWorktreeWorkspace } from "../worktree/worktreeWorkspaceDefaults.js";
-import { resolveBubbleById } from "../bubbleLookup/bubbleLookupDefaults.js";
+import { terminateBubbleTmuxSession } from "../../infrastructure/channel/tmux/tmuxManager.js";
+import { cleanupWorktreeWorkspace } from "../../infrastructure/workspace/worktreeManager.js";
+import { resolveBubbleById } from "../../infrastructure/executor/workspace/bubbleLookup.js";
 import { buildBubbleTmuxSessionName } from "../../shared/bubble/tmuxSessionName.js";
 import { statusCommandDependencyDefaults } from "../status/statusCommandDependencyDefaults.js";
 import { removeWatchdogPaneActivity } from "../watchdog/watchdogPaneActivityDefaults.js";

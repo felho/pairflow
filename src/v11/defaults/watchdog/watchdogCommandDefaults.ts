@@ -9,9 +9,9 @@ import {
   writeStateSnapshot
 } from "../state/stateStoreDefaults.js";
 import { appendProtocolEnvelope } from "../transcript/transcriptDependencyDefaults.js";
-import { resolveBubbleById } from "../bubbleLookup/bubbleLookupDefaults.js";
+import { resolveBubbleById } from "../../infrastructure/executor/workspace/bubbleLookup.js";
 import { readRuntimeSessionsRegistry } from "../runtimeSessions/runtimeSessionsDefaults.js";
-import { runTmux } from "../tmux/tmuxRunnerDefaults.js";
+import { runTmux } from "../../infrastructure/channel/tmux/tmuxRunner.js";
 import {
   readWatchdogPaneActivity,
   writeWatchdogPaneActivity

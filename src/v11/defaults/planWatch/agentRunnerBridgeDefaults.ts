@@ -12,7 +12,7 @@ import { runExecutePairflowPlanContinuation } from "../../application/planWatch/
 import {
   prepareCodexRunnerFiles
 } from "../../application/planWatch/codexAgentRunnerBridge.js";
-import { processSpawnDefault } from "../process/processSpawnDefaults.js";
+import { nodeProcessSpawn } from "../../infrastructure/executor/process/nodeProcessSpawn.js";
 import type {
   ProcessSpawnPipeChild,
   ProcessSpawnPort
@@ -47,7 +47,7 @@ export async function pathExists(path: string): Promise<boolean> {
 
 export function runAgentRunnerCommand(
   invocation: AgentRunnerProcessInvocation,
-  processSpawn: ProcessSpawnPort = processSpawnDefault,
+  processSpawn: ProcessSpawnPort = nodeProcessSpawn,
   stdoutArtifactWriter: StdoutArtifactWriter = appendFile
 ): Promise<AgentRunnerProcessResult> {
   if (invocation.signal?.aborted) {

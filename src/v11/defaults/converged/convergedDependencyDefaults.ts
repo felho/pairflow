@@ -9,7 +9,7 @@ import {
 } from "../../infrastructure/artifact/reviewer/reviewVerificationArtifacts.js";
 import {
   writeSummaryVerifierConsistencyGateArtifact
-} from "../reviewer/summaryVerifierConsistencyGateDefaults.js";
+} from "../../infrastructure/artifact/reviewer/summaryVerifierConsistencyGateArtifacts.js";
 import {
   resolveReviewerTestExecutionDirective
 } from "../reviewer/reviewerTestEvidenceDefaults.js";
@@ -17,13 +17,13 @@ import {
   appendProtocolEnvelope,
   readTranscriptEnvelopes
 } from "../transcript/transcriptDependencyDefaults.js";
-import { ensureBubbleInstanceIdForMutation } from "../bubbleIdentity/bubbleIdentityDefaults.js";
+import { ensureBubbleInstanceIdForMutation } from "../../infrastructure/artifact/bubble/bubbleInstanceId.js";
 import {
   readDocContractGateArtifact,
   resolveDocContractGateArtifactPath
 } from "../gates/docContractGateArtifactDefaults.js";
 import { readStateSnapshot } from "../state/stateStoreDefaults.js";
-import { resolveBubbleFromWorkspaceCwd } from "../workspace/workspaceResolutionDefaults.js";
+import { resolveBubbleFromWorkspaceCwd } from "../../infrastructure/executor/workspace/workspaceResolution.js";
 import {
   applyMetaReviewGateOnConvergenceV11
 } from "../metaReviewGate/metaReviewGateApi.js";
