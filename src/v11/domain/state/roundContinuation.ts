@@ -3,7 +3,7 @@ import type {
 } from "../agentIdentity/agentIdentity.js";
 import type {
   RoundRoleHistoryEntry
-} from "../../../types/bubble.js";
+} from "../../shared/state/roundRoleHistoryTypes.js";
 import type {
   BubbleExecutionContext
 } from "../../shared/state/executionContextTypes.js";

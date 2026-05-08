@@ -5,9 +5,11 @@ import type {
   BubbleReviewLoopMode
 } from "../../shared/reviewPolicy/reviewPolicyTypes.js";
 import type {
-  BubbleStateSnapshot,
-  RoundRoleHistoryEntry
+  BubbleStateSnapshot
 } from "../../../types/bubble.js";
+import type {
+  RoundRoleHistoryEntry
+} from "../../shared/state/roundRoleHistoryTypes.js";
 
 export type PassSenderRole = "implementer" | "reviewer";
 export type PassRecipientRole = PassSenderRole | "meta_reviewer";

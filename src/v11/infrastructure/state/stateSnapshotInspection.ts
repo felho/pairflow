@@ -19,11 +19,13 @@ import {
 } from "../../domain/agentIdentity/agentIdentity.js";
 import type {
   BubbleStateSnapshot,
-  RoundRoleHistoryEntry
 } from "../../../types/bubble.js";
 import type {
   BubbleReworkIntentRecord
 } from "../../shared/state/reworkIntentTypes.js";
+import type {
+  RoundRoleHistoryEntry
+} from "../../shared/state/roundRoleHistoryTypes.js";
 import {
   assertValidBubbleStateSnapshot,
   validateBubbleStateSnapshot

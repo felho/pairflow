@@ -4,9 +4,11 @@ import type {
 } from "../agentIdentity/agentIdentity.js";
 import type {
   BubbleLifecycleState,
-  BubbleStateSnapshot,
-  RoundRoleHistoryEntry
+  BubbleStateSnapshot
 } from "../../../types/bubble.js";
+import type {
+  RoundRoleHistoryEntry
+} from "../../shared/state/roundRoleHistoryTypes.js";
 import { assertValidBubbleStateSnapshot } from "../../shared/state/stateSchema.js";
 import { assertTransitionAllowed } from "./transitions.js";
 

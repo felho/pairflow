@@ -15,6 +15,9 @@ import type {
   BubbleReworkIntentRecord
 } from "../v11/shared/state/reworkIntentTypes.js";
 import type {
+  RoundRoleHistoryEntry
+} from "../v11/shared/state/roundRoleHistoryTypes.js";
+import type {
   BubbleMetaReviewSnapshotState
 } from "../v11/shared/metaReview/metaReviewSnapshotTypes.js";
 import type {
@@ -200,13 +203,6 @@ export interface BubbleConfig {
   doc_contract_gates: BubbleDocContractGatesConfig;
   ideation?: BubbleIdeationConfig;
   executor?: BubbleExecutorConfig;
-}
-
-export interface RoundRoleHistoryEntry {
-  round: number;
-  implementer: AgentName;
-  reviewer: AgentName;
-  switched_at: string;
 }
 
 export interface BubbleStateSnapshot {

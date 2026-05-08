@@ -755,9 +755,11 @@ export type {
   BubbleNotificationsConfig,
   BubbleStateSnapshot,
   QualityMode,
-  RoundRoleHistoryEntry,
   WorkMode
 } from "./types/bubble.js";
+export type {
+  RoundRoleHistoryEntry
+} from "./v11/shared/state/roundRoleHistoryTypes.js";
 export type {
   BubbleReworkIntentRecord,
   ReworkIntentStatus

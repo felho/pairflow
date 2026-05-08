@@ -4,11 +4,13 @@ import {
 } from "../../domain/agentIdentity/agentIdentity.js";
 import type {
   BubbleStateSnapshot,
-  RoundRoleHistoryEntry
 } from "../../../types/bubble.js";
 import type {
   BubbleReworkIntentRecord
 } from "./reworkIntentTypes.js";
+import type {
+  RoundRoleHistoryEntry
+} from "./roundRoleHistoryTypes.js";
 import type {
   BubbleExecutionContext
 } from "./executionContextTypes.js";

@@ -10,9 +10,11 @@ import type {
   BubbleReviewLoopMode
 } from "../../shared/reviewPolicy/reviewPolicyTypes.js";
 import type {
-  ReviewArtifactType,
-  RoundRoleHistoryEntry
+  ReviewArtifactType
 } from "../../../types/bubble.js";
+import type {
+  RoundRoleHistoryEntry
+} from "../../shared/state/roundRoleHistoryTypes.js";
 import type { ProtocolEnvelope } from "../../../types/protocol.js";
 
 export interface PrepareConvergedPolicyInput {

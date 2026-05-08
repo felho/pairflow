@@ -136,6 +136,12 @@ Preferred mechanical flow:
 
 ## Progress Log
 
+### Round role history slice
+
+- Created `src/v11/shared/state/roundRoleHistoryTypes.ts` as the owner for `RoundRoleHistoryEntry`.
+- Updated state machine, round continuation, pass handoff, convergence policy, state schema, state inspection, and root package type exports to import round-role history from the new owner.
+- Removed `RoundRoleHistoryEntry` from `src/types/bubble.ts`; the old file now only imports it as a type-only dependency for the remaining `BubbleStateSnapshot` aggregate.
+
 ### Rework intent slice
 
 - Created `src/v11/shared/state/reworkIntentTypes.ts` as the owner for deferred rework intent status literals, the rework intent record shape, and the rework-intent status guard.
@@ -205,6 +211,7 @@ Preferred mechanical flow:
 - The meta-review run vocabulary slice kept execution context/snapshot types out of the move; run result vocabulary and state ownership are adjacent but not the same ownership decision.
 - After execution context moved out, meta-review snapshot/runtime delivery could move independently; the full `BubbleStateSnapshot` aggregate still waits for a lifecycle/snapshot ownership slice.
 - Rework intent is small enough to move independently of the full snapshot aggregate: it is an embedded state submodel with its own literals and guard, while `BubbleStateSnapshot` can keep only a type-only dependency until the lifecycle/snapshot slice lands.
+- Round role history follows the same pattern: it is an audit/history submodel shared by state transition, pass handoff, and convergence policy, while the full lifecycle/snapshot aggregate can remain deferred.
 - Remote state cache should wait for lifecycle/snapshot extraction because it embeds `BubbleLifecycleState`; not every apparent slice should move all adjacent names at once.
 - Root package exports are a distinct public facade question; preserving them does not mean keeping `src/types/bubble.ts` as a bridge.
 - `src/types/bubble.ts` can safely depend on a moved owner only as a type-only aggregate dependency. A runtime value import there would be a new architecture smell.
