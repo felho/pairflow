@@ -16,12 +16,12 @@ import { SchemaValidationError } from "../../shared/validation/primitives.js";
 import type {
   LoadedStateSnapshot,
   ReadStateSnapshotPort
-} from "../../shared/ports/stateSnapshots.js";
+} from "../../ports/stateSnapshots.js";
 
 export type {
   LoadedStateSnapshot,
   ReadStateSnapshotPort
-} from "../../shared/ports/stateSnapshots.js";
+} from "../../ports/stateSnapshots.js";
 
 export type {
   StateValidationDiagnostics,

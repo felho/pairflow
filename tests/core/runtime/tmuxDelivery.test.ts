@@ -31,7 +31,7 @@ import {
 import type {
   RuntimeSessionRecord,
   RuntimeSessionsRegistry
-} from "../../../src/v11/shared/ports/runtimeSessions.js";
+} from "../../../src/v11/ports/runtimeSessions.js";
 import {
   runtimePaneIndices,
   type TmuxRunResult,

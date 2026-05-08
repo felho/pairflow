@@ -1,9 +1,9 @@
-import type { AgentName } from "../../../types/bubble.js";
+import type { AgentName } from "../../types/bubble.js";
 import type {
   ReviewVerificationArtifact,
   ReviewVerificationArtifactStatus,
   ReviewVerificationInputResolution
-} from "../reviewer/reviewVerification.js";
+} from "../shared/reviewer/reviewVerification.js";
 
 export interface ResolveReviewVerificationInputFromRefsInput {
   refs: string[];

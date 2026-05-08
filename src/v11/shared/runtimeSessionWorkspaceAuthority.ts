@@ -1,5 +1,5 @@
-import type { RuntimeSessionRecord } from "./ports/runtimeSessions.js";
-import type { WorkspaceKind } from "./ports/worktreeWorkspace.js";
+import type { RuntimeSessionRecord } from "../ports/runtimeSessions.js";
+import type { WorkspaceKind } from "../ports/worktreeWorkspace.js";
 
 export interface RuntimeSessionWorkspaceAuthority {
   workspacePath: string;

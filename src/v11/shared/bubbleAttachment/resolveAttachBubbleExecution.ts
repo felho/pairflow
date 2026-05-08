@@ -5,7 +5,7 @@ import type {
   BubbleRemotePointer,
   BubbleRemotePointerStarted
 } from "../../../types/bubble.js";
-import type { ResolvedBubbleById } from "../ports/bubbleLookup.js";
+import type { ResolvedBubbleById } from "../../ports/bubbleLookup.js";
 import { SchemaValidationError } from "../validation/primitives.js";
 import { buildBubbleTmuxSessionName } from "../bubble/tmuxSessionName.js";
 

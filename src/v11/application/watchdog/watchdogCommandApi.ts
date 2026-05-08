@@ -4,8 +4,8 @@ import {
 } from "../../shared/watchdog/watchdogStatus.js";
 import { maybeApplyPendingReworkIntent } from "./watchdogPendingReworkIntent.js";
 import { sampleWatchdogPaneActivity } from "./watchdogPaneActivitySampler.js";
-import type { AppendWatchdogTracePort } from "../../shared/ports/watchdogTrace.js";
-import type { WatchdogTraceEntry } from "../../shared/ports/watchdogTrace.js";
+import type { AppendWatchdogTracePort } from "../../ports/watchdogTrace.js";
+import type { WatchdogTraceEntry } from "../../ports/watchdogTrace.js";
 import type {
   BubbleWatchdogDependencies,
   BubbleWatchdogInput,

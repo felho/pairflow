@@ -7,7 +7,7 @@ import {
 import type {
   ReadDocContractGateArtifactPort,
   WriteDocContractGateArtifactPort
-} from "../../shared/ports/docContractGateArtifacts.js";
+} from "../../ports/docContractGateArtifacts.js";
 
 export function resolveDocContractGateArtifactPath(artifactsDir: string): string {
   return join(artifactsDir, "doc-contract-gates.json");

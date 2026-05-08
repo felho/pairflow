@@ -321,7 +321,7 @@ describe("UI contract transit source guards", () => {
     const canonical = await readSource("src/contracts/ui/stateValidation.ts");
     const backendCompat = await readSource("src/shared/contracts/stateValidation.ts");
     const uiCompat = await readSource("ui/src/lib/contracts/stateValidation.ts");
-    const stateSnapshots = await readSource("src/v11/shared/ports/stateSnapshots.ts");
+    const stateSnapshots = await readSource("src/v11/ports/stateSnapshots.ts");
 
     expect(canonical).toMatch(
       /export interface ContractValidationError\s*{\s*path:\s*string;\s*message:\s*string;\s*}/
@@ -334,7 +334,7 @@ describe("UI contract transit source guards", () => {
     expect(backendCompat).toContain("from \"../../contracts/ui/stateValidation.js\"");
     expectUiContractEntrypointImport(uiCompat);
     expect(stateSnapshots).toContain(
-      "from \"../../../contracts/ui/stateValidation.js\""
+      "from \"../../contracts/ui/stateValidation.js\""
     );
     expect(stateSnapshots).not.toContain("shared/contracts/stateValidation");
     expect(stateSnapshots).not.toContain("validation/primitives");
@@ -366,7 +366,7 @@ describe("UI contract transit source guards", () => {
     const canonical = await readSource("src/contracts/ui/bubbleLifecycle.ts");
     const backendCompat = await readSource("src/shared/contracts/bubbleLifecycle.ts");
     const uiCompat = await readSource("ui/src/lib/contracts/bubbleLifecycle.ts");
-    const stateSnapshots = await readSource("src/v11/shared/ports/stateSnapshots.ts");
+    const stateSnapshots = await readSource("src/v11/ports/stateSnapshots.ts");
 
     expect(runtime.match(/export const bubbleLifecycleStates = \[/g)).toHaveLength(
       1
@@ -377,7 +377,7 @@ describe("UI contract transit source guards", () => {
     expect(backendCompat).not.toMatch(/bubbleLifecycleStates\s*=\s*\[/);
     expectUiContractEntrypointImport(uiCompat);
     expect(stateSnapshots).toContain(
-      "from \"../../../contracts/ui/bubbleLifecycle.js\""
+      "from \"../../contracts/ui/bubbleLifecycle.js\""
     );
     expect(stateSnapshots).not.toMatch(/bubbleLifecycleStates\s*=\s*\[/);
     expect(stateSnapshots).not.toMatch(/type\s+BubbleLifecycleState\s*=/);
@@ -547,7 +547,7 @@ describe("UI contract transit source guards", () => {
   it("keeps UI router read-model ownership out of command modules", async () => {
     const canonical = await readSource("src/contracts/ui/uiReadModel.ts");
     const uiBarrel = await readSource("src/contracts/ui/index.ts");
-    const routerPort = await readSource("src/v11/shared/ports/uiRouter.ts");
+    const routerPort = await readSource("src/v11/ports/uiRouter.ts");
     const eventsScan = await readSource("src/v11/infrastructure/ui/eventsScan.ts");
     const eventsFingerprint = await readSource(
       "src/v11/infrastructure/ui/eventsFingerprint.ts"
@@ -630,7 +630,7 @@ describe("UI contract transit source guards", () => {
       expectTypeDeclaration(canonical, symbol);
     }
 
-    expect(routerPort).toContain("from \"../../../contracts/ui/uiReadModel.js\"");
+    expect(routerPort).toContain("from \"../../contracts/ui/uiReadModel.js\"");
     expect(routerPort).not.toContain("from \"../read-model/list/listReadModelContract.js\"");
     expect(routerPort).not.toContain("from \"../inbox/inboxCommandApi.js\"");
     expect(routerPort).not.toContain("from \"../status/statusCommandApi.js\"");
@@ -647,8 +647,8 @@ describe("UI contract transit source guards", () => {
     expect(routerBubbleDetail).toContain(
       "from \"../../../contracts/ui/uiReadModel.js\""
     );
-    expect(eventsScan).not.toContain("shared/ports/uiRouter");
-    expect(eventsFingerprint).not.toContain("shared/ports/uiRouter");
+    expect(eventsScan).not.toContain("ports/uiRouter");
+    expect(eventsFingerprint).not.toContain("ports/uiRouter");
     expect(eventsScan).not.toContain("listReadModelContract");
     expect(eventsFingerprint).not.toContain("listReadModelContract");
     expect(eventsScanTest).toContain("from \"../../../src/contracts/ui/uiReadModel.js\"");
@@ -663,7 +663,7 @@ describe("UI contract transit source guards", () => {
     const backendCompat = await readSource("src/types/ui.ts");
     const uiTypes = await readSource("ui/src/lib/types.ts");
     const uiCompat = await readSource("ui/src/lib/contracts/uiActions.ts");
-    const routerPort = await readSource("src/v11/shared/ports/uiRouter.ts");
+    const routerPort = await readSource("src/v11/ports/uiRouter.ts");
     const routerHttpBody = await readSource(
       "src/v11/infrastructure/ui/routerHttpBody.ts"
     );
@@ -827,7 +827,7 @@ describe("UI contract transit source guards", () => {
     expectUiContractEntrypointImport(uiCompat);
     expectUiContractEntrypointImport(uiTypes);
     expect(backendCompat).not.toContain("from \"../contracts/ui/uiActions.js\"");
-    expect(routerPort).toContain("from \"../../../contracts/ui/uiActions.js\"");
+    expect(routerPort).toContain("from \"../../contracts/ui/uiActions.js\"");
     expect(routerPort).toContain("UiDeleteBubbleResult");
     expect(routerPort).not.toContain("contracts/ui/deleteBubble");
     expect(uiApi).toContain("UiCommitBubbleResult");

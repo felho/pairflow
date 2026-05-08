@@ -1,4 +1,4 @@
-import type { ResolveBubbleByIdPort } from "../../shared/ports/bubbleLookup.js";
+import type { ResolveBubbleByIdPort } from "../../ports/bubbleLookup.js";
 import {
   executeImplementerHandoffDelivery
 } from "../../shared/delivery/implementerHandoffDelivery.js";

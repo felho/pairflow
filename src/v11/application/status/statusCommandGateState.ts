@@ -11,10 +11,10 @@ import type {
 } from "../../shared/status/statusCommandTypes.js";
 import type {
   ReadReviewVerificationArtifactStatusOptions
-} from "../../shared/ports/reviewVerificationArtifacts.js";
+} from "../../ports/reviewVerificationArtifacts.js";
 import type {
   ReadDocContractGateArtifactPort
-} from "../../shared/ports/docContractGateArtifacts.js";
+} from "../../ports/docContractGateArtifacts.js";
 
 type ReadReviewVerificationArtifactStatusResult = (
   artifactPath: string,

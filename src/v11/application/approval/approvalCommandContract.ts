@@ -1,7 +1,7 @@
 import type {
   DeliveryAck,
   EmitDeliveryNotificationAckPort
-} from "../../shared/ports/tmuxDelivery.js";
+} from "../../ports/tmuxDelivery.js";
 import type {
   BubbleStateSnapshot
 } from "../../../types/bubble.js";

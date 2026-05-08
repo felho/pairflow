@@ -1,6 +1,6 @@
 import type { AgentRole, BubbleExecutionContext } from "../../../types/bubble.js";
-import type { ResolvedBubbleById } from "../ports/bubbleLookup.js";
-import type { LoadedStateSnapshot } from "../ports/stateSnapshots.js";
+import type { ResolvedBubbleById } from "../../ports/bubbleLookup.js";
+import type { LoadedStateSnapshot } from "../../ports/stateSnapshots.js";
 
 export type ActorEmitContextErrorReasonCode =
   | "ACTOR_EMIT_COMPAT_ADAPTER_INVALID"

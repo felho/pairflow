@@ -6,7 +6,7 @@ import {
   branchExists,
   refExists
 } from "./git.js";
-import type { LocalOverlayConfig } from "../../shared/ports/worktreeWorkspace.js";
+import type { LocalOverlayConfig } from "../../ports/worktreeWorkspace.js";
 
 interface WorkspaceErrorContext {
   baseBranch?: string | undefined;

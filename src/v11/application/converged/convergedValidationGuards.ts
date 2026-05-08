@@ -8,10 +8,10 @@ import type {
 } from "../../../v11/shared/reviewer/summaryVerifierConsistencyGate.js";
 import type {
   WriteSummaryVerifierConsistencyGateArtifactPort
-} from "../../../v11/shared/ports/summaryVerifierGateArtifacts.js";
+} from "../../ports/summaryVerifierGateArtifacts.js";
 import type {
   ReadReviewVerificationArtifactStatusPort
-} from "../../../v11/shared/ports/reviewVerificationArtifacts.js";
+} from "../../ports/reviewVerificationArtifacts.js";
 import type {
   resolveReviewerTestEvidenceArtifactPath
 } from "../../../v11/shared/reviewer/testEvidence.js";

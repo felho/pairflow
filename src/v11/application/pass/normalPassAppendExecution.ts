@@ -16,7 +16,7 @@ import type {
 import type {
   AppendProtocolEnvelopePort,
   AppendProtocolEnvelopeResult
-} from "../../shared/ports/transcript.js";
+} from "../../ports/transcript.js";
 
 export interface ExecuteNormalPassAppendInput {
   transcriptPath: string;

@@ -1,13 +1,13 @@
 import type {
   AppendProtocolEnvelopePort,
   AppendProtocolEnvelopeResult
-} from "../../../shared/ports/transcript.js";
+} from "../../../ports/transcript.js";
 import type { AgentName } from "../../../../types/bubble.js";
 import { buildMetaReviewSubmitCommandTemplate } from "../../../shared/metaReview/metaReviewSubmitGuidance.js";
 import {
   type LoadedStateSnapshot,
   type WriteStateSnapshotPort
-} from "../../../shared/ports/stateSnapshots.js";
+} from "../../../ports/stateSnapshots.js";
 import {
   deliveryTargetRoleMetadataKey
 } from "../../../../types/protocol.js";

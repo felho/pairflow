@@ -4,16 +4,16 @@ import { persistPendingReworkIntentState } from "./watchdogPendingReworkPersiste
 import type { BubbleStateSnapshot } from "../../../types/bubble.js";
 import type { ProtocolEnvelope } from "../../../types/protocol.js";
 import type { BubbleWatchdogResult } from "./watchdogCommandContract.js";
-import type { ResolvedBubbleById } from "../../shared/ports/bubbleLookup.js";
-import type { EnsureBubbleInstanceIdForMutationPort } from "../../shared/ports/bubbleIdentity.js";
+import type { ResolvedBubbleById } from "../../ports/bubbleLookup.js";
+import type { EnsureBubbleInstanceIdForMutationPort } from "../../ports/bubbleIdentity.js";
 import type {
   LoadedStateSnapshot,
   WriteStateSnapshotPort
-} from "../../shared/ports/stateSnapshots.js";
+} from "../../ports/stateSnapshots.js";
 import type {
   EmitDeliveryNotificationAckPort,
   ResolveDeliveryMessageRefPort
-} from "../../shared/ports/tmuxDelivery.js";
+} from "../../ports/tmuxDelivery.js";
 
 export async function maybeApplyPendingReworkIntent(input: {
   now: Date;

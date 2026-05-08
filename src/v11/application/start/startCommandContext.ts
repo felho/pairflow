@@ -16,12 +16,12 @@ import {
   buildReviewerBlockingThresholdLabel,
   buildReviewerDocumentScopeThresholdRoutingNote
 } from "../../shared/reviewer/reviewerCommandGateGuidance.js";
-import type { RuntimeSessionRecord } from "../../shared/ports/runtimeSessions.js";
+import type { RuntimeSessionRecord } from "../../ports/runtimeSessions.js";
 import type { StartBubbleInput } from "./startCommandContract.js";
 import type {
   ReadReviewerBriefArtifactPort,
   ReadReviewerFocusArtifactPort
-} from "../../shared/ports/reviewerArtifacts.js";
+} from "../../ports/reviewerArtifacts.js";
 import type { BubbleRemotePointer } from "../../../types/bubble.js";
 import { resolveStartBubbleMode } from "./startCommandOrchestration.js";
 import { createStartBubbleError } from "./startCommandRuntime.js";

@@ -160,7 +160,7 @@ Rules:
 ### 12) UI Router Port Boundary
 
 - metric: UI router port full-composite and command-owned import leakage
-- scope: `src/v11/shared/ports/**`, `src/v11/infrastructure/ui/**`
+- scope: `src/v11/ports/**`, `src/v11/infrastructure/ui/**`
 - intent: keep UI router leaf modules on narrow capability slices and prevent
   command-owned runtime imports from leaking into UI routing ports
 - owner: architecture/ui-router
@@ -186,7 +186,7 @@ Implementation maturity by check:
 - `contract_timeout_policy`: TypeScript AST-based check for raw timeout literals and
   non-standard timeout references in contract tests
 - `dependency`: AST-based import graph and cycle detection with:
-  - ports-aware `shared/ports/**` layer handling
+  - ports-aware `ports/**` layer handling
   - explicit anti-circumvention findings for obvious re-export / thin-wrapper camouflage
   - report-only ownership-signal warnings for strong infra-like behavior under `shared/**`
   - report-only Shared Promotion warnings for `shared/<name>/**` directories
@@ -256,7 +256,7 @@ The checker must detect obvious fake compliance patterns, especially:
 - direct re-export of an infrastructure adapter from `shared/**`
 - 1:1 forwarding wrapper with no boundary meaning
 - `shared` module whose real purpose is only to mask infrastructure ownership
-- future `shared/ports/**` modules that import and call infrastructure inline
+- future `ports/**` modules that import and call infrastructure inline
 
 The point is to reject “edge disappeared, ownership did not.”
 
@@ -285,8 +285,8 @@ The codebase now treats `ports` as a real architectural concept, not a fitness-o
 
 Canonical policy:
 
-- application may depend on `src/v11/shared/ports/**`
-- shared command/helper contracts may depend on `src/v11/shared/ports/**`
+- application may depend on `src/v11/ports/**`
+- shared command/helper contracts may depend on `src/v11/ports/**`
 - infrastructure owns implementations
 - ports must define typed capability contracts
 - ports must not be pass-through wrappers
@@ -298,11 +298,11 @@ Details live in [v11-ports-governance.md](/Users/felho/dev/pairflow/docs/archite
 Once the ports model is wired into fitness, the dependency check should enforce all of the following:
 
 1. `application -> infrastructure` is forbidden
-2. `application -> shared/ports` is allowed
-3. `shared -> shared/ports` is allowed for capability contracts and typed dependency surfaces
-4. `shared/ports -> infrastructure` is forbidden
-5. `shared/ports` must not be pass-through adapter camouflage
-6. infrastructure implementations may depend on `shared/ports` contracts
+2. `application -> ports` is allowed
+3. `shared -> ports` is allowed for capability contracts and typed dependency surfaces
+4. `ports -> infrastructure` is forbidden
+5. `ports` must not be pass-through adapter camouflage
+6. infrastructure implementations may depend on `ports` contracts
 7. plain `shared/**` must not absorb obvious infrastructure ownership just to satisfy layer rules
 8. plain `shared/<name>/**` should represent a real shared concept: single-lane
    application consumption with no infrastructure consumer is report-only debt

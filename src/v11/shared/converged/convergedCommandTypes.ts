@@ -4,7 +4,7 @@ import type { ActorEmitContextSnapshot } from "../actorProtocol/actorEmitContext
 import type { EmitBubbleNotification } from "../delivery/bubbleNotificationContract.js";
 import type {
   EmitDeliveryNotificationAckPort
-} from "../ports/tmuxDelivery.js";
+} from "../../ports/tmuxDelivery.js";
 import type { ProtocolEnvelope } from "../../../types/protocol.js";
 import type { MetaReviewGateRoute } from "../metaReviewGate/index.js";
 import type {
@@ -12,7 +12,7 @@ import type {
 } from "../metaReviewGate/metaReviewGateCommandContract.js";
 import type {
   ResolveReviewerTestExecutionDirectivePort
-} from "../ports/reviewerTestEvidenceArtifacts.js";
+} from "../../ports/reviewerTestEvidenceArtifacts.js";
 
 export const convergedStructuredFindingSeverities = ["P2", "P3"] as const;
 export type ConvergedStructuredFindingSeverity =

@@ -1,4 +1,4 @@
-import type { BubbleConfig } from "../../../types/bubble.js";
+import type { BubbleConfig } from "../../types/bubble.js";
 
 export interface RefreshReviewerContextInput {
   bubbleId: string;

@@ -2,7 +2,7 @@ import type {
   DeliveryAck,
   DeliveryAckReasonCode,
   DeliveryAckStatus
-} from "../../shared/ports/tmuxDelivery.js";
+} from "../../ports/tmuxDelivery.js";
 
 export interface PassResultDelivery {
   status: DeliveryAckStatus;

@@ -1,4 +1,4 @@
-import type { ResolvedBubbleById } from "../../shared/ports/bubbleLookup.js";
+import type { ResolvedBubbleById } from "../../ports/bubbleLookup.js";
 import {
   IDEATION_KICKOFF_NOT_ALLOWED,
   IDEATION_KICKOFF_TASK_INVALID,

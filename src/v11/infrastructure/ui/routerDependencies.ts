@@ -2,7 +2,7 @@ import { readRuntimeSessionsRegistry } from "../executor/sessionRuntime/runtimeS
 import { readBubbleTimeline } from "./presenters/timelinePresenter.js";
 import { attachBubble } from "../executor/command/pairflowCommandAttach.js";
 import { resolveBubbleById } from "../executor/workspace/bubbleLookup.js";
-import type { UiRouterDependencies } from "../../shared/ports/uiRouter.js";
+import type { UiRouterDependencies } from "../../ports/uiRouter.js";
 import type {
   CreateUiRouterInput
 } from "./routerContracts.js";

@@ -1,7 +1,7 @@
 import type {
   LocalOverlayMode,
   WorkMode
-} from "../../../types/bubble.js";
+} from "../../types/bubble.js";
 
 export type WorkspaceKind = WorkMode;
 

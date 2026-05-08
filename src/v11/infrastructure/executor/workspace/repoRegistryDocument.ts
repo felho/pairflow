@@ -1,5 +1,5 @@
 import { isIsoTimestamp } from "../../../shared/validation/primitives.js";
-import type { RepoRegistryEntry } from "../../../shared/ports/repoRegistry.js";
+import type { RepoRegistryEntry } from "../../../ports/repoRegistry.js";
 import { toRepoRegistryError } from "./repoRegistryErrors.js";
 
 export const registryVersion = 1;

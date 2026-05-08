@@ -1,20 +1,20 @@
 import type {
   CleanupWorktreeWorkspacePort
-} from "../../shared/ports/worktreeWorkspace.js";
+} from "../../ports/worktreeWorkspace.js";
 import type {
   RemoveRuntimeSessionPort
-} from "../../shared/ports/runtimeSessions.js";
+} from "../../ports/runtimeSessions.js";
 import type {
   TerminateBubbleTmuxSessionPort
-} from "../../shared/ports/tmuxSessions.js";
-import type { RunGitPort } from "../../shared/ports/git.js";
-import type { ResolveBubbleByIdPort } from "../../shared/ports/bubbleLookup.js";
+} from "../../ports/tmuxSessions.js";
+import type { RunGitPort } from "../../ports/git.js";
+import type { ResolveBubbleByIdPort } from "../../ports/bubbleLookup.js";
 import type {
   ReadStateSnapshotPort,
   WriteStateSnapshotPort
-} from "../../shared/ports/stateSnapshots.js";
-import type { BranchExistsPort } from "../../shared/ports/git.js";
-import type { EnsureBubbleInstanceIdForMutationPort } from "../../shared/ports/bubbleIdentity.js";
+} from "../../ports/stateSnapshots.js";
+import type { BranchExistsPort } from "../../ports/git.js";
+import type { EnsureBubbleInstanceIdForMutationPort } from "../../ports/bubbleIdentity.js";
 import type { EmitBubbleLifecycleEventBestEffortPort } from "../../shared/metrics/bubbleEvents.js";
 import type {
   BubbleRemotePointerCreated,

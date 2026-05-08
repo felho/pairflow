@@ -21,7 +21,7 @@ import {
 } from "./attachBubbleContract.js";
 import type {
   ProcessSpawnPort
-} from "../../shared/ports/processSpawn.js";
+} from "../../ports/processSpawn.js";
 
 export type {
   AttachBubbleDependencies,

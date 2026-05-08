@@ -1,18 +1,18 @@
 import type { MetaReviewResult } from "../metaReview/metaReviewTypes.js";
-import type { AppendProtocolEnvelopePort } from "../ports/transcript.js";
+import type { AppendProtocolEnvelopePort } from "../../ports/transcript.js";
 import type {
   LoadedStateSnapshot,
   ReadStateSnapshotPort,
   WriteStateSnapshotPort
-} from "../ports/stateSnapshots.js";
+} from "../../ports/stateSnapshots.js";
 import type { BubbleConfig } from "../../../types/bubble.js";
 import type {
   NotifyMetaReviewerSubmissionRequest,
   ResolveMetaReviewerPaneWarning,
   MetaReviewGateRuntimeCapabilities
 } from "./metaReviewGateRuntimeCapabilities.js";
-import type { SetMetaReviewerPaneBindingPort } from "../ports/runtimeSessions.js";
-import type { ReadTranscriptEnvelopesPort } from "../ports/transcript.js";
+import type { SetMetaReviewerPaneBindingPort } from "../../ports/runtimeSessions.js";
+import type { ReadTranscriptEnvelopesPort } from "../../ports/transcript.js";
 import type { ValidationCommandId } from "../validation/validationCommandId.js";
 
 export type MetaReviewGateArtifactReadFn = (

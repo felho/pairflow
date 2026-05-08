@@ -4,7 +4,7 @@ import type {
 import type {
   EmitDeliveryNotificationAckPort,
   ResolveDeliveryMessageRefPort
-} from "../../shared/ports/tmuxDelivery.js";
+} from "../../ports/tmuxDelivery.js";
 import type { EmitBubbleLifecycleEventBestEffortPort } from "../../shared/metrics/bubbleEvents.js";
 
 export interface AskHumanRuntimeNotificationDependencies {

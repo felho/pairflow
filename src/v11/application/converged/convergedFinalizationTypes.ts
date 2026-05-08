@@ -1,12 +1,12 @@
-import type { EnsureBubbleInstanceIdForMutationResult } from "../../shared/ports/bubbleIdentity.js";
-import type { ResolvedBubbleWorkspace } from "../../shared/ports/workspaceResolution.js";
+import type { EnsureBubbleInstanceIdForMutationResult } from "../../ports/bubbleIdentity.js";
+import type { ResolvedBubbleWorkspace } from "../../ports/workspaceResolution.js";
 import type {
   AppendProtocolEnvelopeResult
-} from "../../shared/ports/transcript.js";
+} from "../../ports/transcript.js";
 import type {
   AssessPairflowCommandPathPort,
   PairflowCommandPathAssessment
-} from "../../shared/ports/pairflowCommand.js";
+} from "../../ports/pairflowCommand.js";
 import { type SummaryVerifierConsistencyGateDecisionRecord } from "../../../v11/shared/reviewer/summaryVerifierConsistencyGate.js";
 import type { EmitBubbleLifecycleEventBestEffortPort } from "../../../v11/shared/metrics/bubbleEvents.js";
 import { type MetaReviewGateRoute } from "../../shared/metaReviewGate/index.js";

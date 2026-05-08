@@ -16,8 +16,8 @@ import type {
   BubbleStatusState,
   ResolvedBubbleStatusContext
 } from "../../shared/status/statusCommandTypes.js";
-import type { InspectedStateSnapshot } from "../../shared/ports/stateSnapshots.js";
-import type { ReadTranscriptEnvelopesPort } from "../../shared/ports/transcript.js";
+import type { InspectedStateSnapshot } from "../../ports/stateSnapshots.js";
+import type { ReadTranscriptEnvelopesPort } from "../../ports/transcript.js";
 
 export interface StatusTranscriptDataDependencies {
   inspectStateSnapshot: (

@@ -6,8 +6,8 @@ import {
   type PairflowGlobalConfig
 } from "../../../config/pairflowConfig.js";
 import type { BubbleRemotePointer } from "../../../types/bubble.js";
-import type { OpenBubbleResult } from "../../shared/ports/openBubble.js";
-import type { ResolveBubbleByIdPort } from "../../shared/ports/bubbleLookup.js";
+import type { OpenBubbleResult } from "../../ports/openBubble.js";
+import type { ResolveBubbleByIdPort } from "../../ports/bubbleLookup.js";
 import {
   localOpenWorkspaceKind,
   remoteOpenWorkspaceKind,
@@ -26,7 +26,7 @@ import {
 } from "./openBubbleResolution.js";
 import type {
   ProcessSpawnPort
-} from "../../shared/ports/processSpawn.js";
+} from "../../ports/processSpawn.js";
 
 export interface OpenBubbleInput {
   bubbleId: string;

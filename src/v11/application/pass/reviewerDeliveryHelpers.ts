@@ -1,20 +1,20 @@
 import type {
   DeliveryAck,
   EmitDeliveryNotificationInput
-} from "../../../v11/shared/ports/tmuxDelivery.js";
+} from "../../ports/tmuxDelivery.js";
 import {
   formatReviewerBriefPrompt,
   formatReviewerFocusBridgeBlock,
   type ReviewerFocusExtractionResult
 } from "../../../v11/shared/reviewer/reviewerBrief.js";
-import type { RefreshReviewerContextPort } from "../../../v11/shared/ports/reviewerContext.js";
+import type { RefreshReviewerContextPort } from "../../ports/reviewerContext.js";
 import type {
   ReadReviewerBriefArtifactPort,
   ReadReviewerFocusArtifactPort
-} from "../../../v11/shared/ports/reviewerArtifacts.js";
+} from "../../ports/reviewerArtifacts.js";
 import type {
   ResolveDeliveryMessageRefPort
-} from "../../../v11/shared/ports/tmuxDelivery.js";
+} from "../../ports/tmuxDelivery.js";
 import type { BubbleConfig } from "../../../types/bubble.js";
 import type { ProtocolEnvelope } from "../../../types/protocol.js";
 import type { ReviewerTestExecutionDirective } from "../../../v11/shared/reviewer/testEvidence.js";

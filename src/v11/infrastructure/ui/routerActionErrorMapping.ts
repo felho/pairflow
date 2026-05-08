@@ -10,7 +10,7 @@ import {
   UiBubbleReviewPolicyStateConflictError
 } from "../../defaults/ui/updateBubbleReviewPolicyForUi.js";
 import { loadBubbleDetail } from "./routerBubbleDetail.js";
-import type { UiBubbleConflictEnrichmentDependencies } from "../../shared/ports/uiRouter.js";
+import type { UiBubbleConflictEnrichmentDependencies } from "../../ports/uiRouter.js";
 import type { UiApiError } from "./routerContracts.js";
 import {
   asErrorMessage,

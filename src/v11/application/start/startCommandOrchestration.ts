@@ -11,7 +11,7 @@ import type {
   BubbleRemotePointer,
   BubbleRemoteStateCache
 } from "../../../types/bubble.js";
-import type { LaunchBubbleSessionAckPort } from "../../shared/ports/tmuxSessions.js";
+import type { LaunchBubbleSessionAckPort } from "../../ports/tmuxSessions.js";
 import {
   buildPreparingWorkspaceStartRejectMessage,
   createStartBubbleError
@@ -19,13 +19,13 @@ import {
 import type {
   ReadReviewerBriefArtifactPort,
   ReadReviewerFocusArtifactPort
-} from "../../shared/ports/reviewerArtifacts.js";
+} from "../../ports/reviewerArtifacts.js";
 import type {
   ResolveDocContractGateArtifactPathPort
-} from "../../shared/ports/docContractGateArtifacts.js";
+} from "../../ports/docContractGateArtifacts.js";
 import type {
   ResolveReviewerTestExecutionDirectivePort
-} from "../../shared/ports/reviewerTestEvidenceArtifacts.js";
+} from "../../ports/reviewerTestEvidenceArtifacts.js";
 import {
   loadStartBubbleDependencyDefaults,
   type StartBubbleDependencyDefaults

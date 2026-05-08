@@ -215,7 +215,7 @@ owners:
    - goal: topology-neutral delivery ack/port naming bevezetese retained `tmux` adapter parityvel, workflow consume-atallitas nelkul
    - expected target family:
      - `src/v11/shared/delivery/tmuxDeliveryContract.ts`
-     - `src/v11/shared/ports/tmuxDelivery.ts`
+     - `src/v11/ports/tmuxDelivery.ts`
      - `src/v11/infrastructure/channel/tmux/tmuxDeliveryRuntime.ts`
      - `src/v11/infrastructure/channel/tmux/tmuxDelivery.ts`
    - why separate: a delivery contract es producer seam mar most tobb workflow/read-model consumerre sugarzik ki
@@ -236,7 +236,7 @@ owners:
      - `src/v11/shared/delivery/implementerHandoffDelivery.ts`
      - `src/v11/shared/metaReview/metaReviewDeliveryCapabilities.ts`
    - explicit out-of-scope family:
-     - `src/v11/shared/ports/uiRouter.ts`
+     - `src/v11/ports/uiRouter.ts`
      - `src/index.ts`
    - why separate: ez mar consume-family alignment, nem producer rename vagy public/read-model cleanup
 4. `O2-T4`
@@ -245,7 +245,7 @@ owners:
    - task artifact: `plans/archive/tasks/actor-runtime-interface-opportunity2-task4-topology-neutral-launch-executor-contract-foundation.md`
    - goal: topology-neutral launch/executor ack/port naming bevezetese retained `tmux` launch producer parityvel
    - expected target family:
-     - `src/v11/shared/ports/tmuxSessions.ts`
+     - `src/v11/ports/tmuxSessions.ts`
      - `src/v11/infrastructure/channel/tmux/tmuxManager.ts`
      - `src/v11/defaults/start/startBubbleDefaults.ts`
    - why separate: a launch/executor seam kulon contract es kulon producer closure a message-delivery oldaltol
@@ -261,7 +261,7 @@ owners:
    - explicit out-of-scope family:
      - `src/v11/application/restart/**` direct launch contract rewrite
      - `src/v11/defaults/metaReviewGate/**`
-     - `src/v11/shared/ports/uiRouter.ts`
+     - `src/v11/ports/uiRouter.ts`
      - terminate/delete/merge session cleanup surfaces
    - why separate: itt mar a retained start consume csalad es a repo-root/public export fallout zarasa tortenik, nem producer closure; a restart lane current-tree szinten a `startBubble(...)` inherited parityn keresztul koveti ezt a closure-t
 6. `O2-T6`
@@ -274,7 +274,7 @@ owners:
      - `src/v11/application/metaReviewGate/**`
      - `src/v11/defaults/metaReviewGate/**`
    - explicit out-of-scope family:
-     - `src/v11/shared/ports/uiRouter.ts`
+     - `src/v11/ports/uiRouter.ts`
      - `src/v11/defaults/ui/routerDefaults.ts`
      - `src/index.ts`
      - `src/v11/infrastructure/channel/tmux/**` producer/runtime rewrite
@@ -287,7 +287,7 @@ owners:
    - task artifact: `plans/archive/tasks/actor-runtime-interface-opportunity2-task7-ui-router-and-public-delivery-read-model-export-alignment.md`
    - goal: a UI/router es repo-root/public delivery read-model/export surface topology-neutral alignmentje retained parity mellett
    - expected target family:
-     - `src/v11/shared/ports/uiRouter.ts`
+     - `src/v11/ports/uiRouter.ts`
      - `src/v11/defaults/ui/routerDefaults.ts`
      - `src/v11/infrastructure/ui/routerDependencies.ts`
      - `src/index.ts`
@@ -312,7 +312,7 @@ owners:
      - `src/v11/application/pass/**`
    - explicit out-of-scope family:
      - `src/v11/infrastructure/channel/tmux/**`
-     - `src/v11/shared/ports/uiRouter.ts`
+     - `src/v11/ports/uiRouter.ts`
      - `src/index.ts`
      - launch/executor lane
    - why separate: ez mar residual internal/workflow consumer contract closeout; nem producer es nem public/read-model cleanup
@@ -599,6 +599,6 @@ owners:
    - `src/v11/application/start/startCommandResumePrompts.ts`
    - `src/v11/application/start/startCommandResumeImplementerPrompt.ts`
    - `src/v11/shared/command/agentCommand.ts`
-   - `src/v11/shared/ports/uiRouter.ts`
+   - `src/v11/ports/uiRouter.ts`
    - `src/v11/defaults/ui/routerDefaults.ts`
    - `src/index.ts`

@@ -1,5 +1,5 @@
 import type { SummaryVerifierConsistencyGateDecisionRecord } from "../../../v11/shared/reviewer/summaryVerifierConsistencyGate.js";
-import type { PairflowCommandPathAssessment } from "../../shared/ports/pairflowCommand.js";
+import type { PairflowCommandPathAssessment } from "../../ports/pairflowCommand.js";
 import { type MetaReviewGateRoute } from "../../shared/metaReviewGate/index.js";
 import type {
   BubbleRoundGateState,

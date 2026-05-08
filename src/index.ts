@@ -818,13 +818,13 @@ export type {
   EmitDeliveryNotificationAckPort,
   RejectedDeliveryAck,
   ResolveDeliveryMessageRefInput
-} from "./v11/shared/ports/tmuxDelivery.js";
+} from "./v11/ports/tmuxDelivery.js";
 export type {
   UiAcceptedDeliverySignal,
   UiApprovalDecisionDeliverySignal,
   UiApprovalDecisionDeliverySignals,
   UiRejectedDeliverySignal
-} from "./v11/shared/ports/uiDelivery.js";
+} from "./v11/ports/uiDelivery.js";
 export type {
   WatchdogStatus
 } from "./v11/shared/watchdog/watchdogStatus.js";

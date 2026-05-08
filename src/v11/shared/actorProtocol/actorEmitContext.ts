@@ -1,8 +1,8 @@
 import type {
   ResolveBubbleByIdPort,
   ResolvedBubbleById
-} from "../ports/bubbleLookup.js";
-import type { ReadStateSnapshotPort } from "../ports/stateSnapshots.js";
+} from "../../ports/bubbleLookup.js";
+import type { ReadStateSnapshotPort } from "../../ports/stateSnapshots.js";
 import {
   buildActorEmitContextSnapshot,
   type ActorEmitContextErrorReasonCode,

@@ -4,7 +4,7 @@ import type {
   TerminateBubbleTmuxSessionPort,
   TerminateBubbleTmuxSessionResult,
   TmuxRunner
-} from "../../../shared/ports/tmuxSessions.js";
+} from "../../../ports/tmuxSessions.js";
 import { runTmux, TmuxCommandError } from "./tmuxRunner.js";
 
 export interface RespawnTmuxPaneCommandInput {

@@ -7,10 +7,10 @@ import type {
   RemoteBubbleStatusSnapshot,
   RemoteBubbleStatusTarget
 } from "../../shared/status/remoteBubbleStatusContract.js";
-import type { InspectedStateSnapshot } from "../../shared/ports/stateSnapshots.js";
-import type { ReadRuntimeSessionsRegistryPort } from "../../shared/ports/runtimeSessions.js";
-import type { ResolveRepoPathPort } from "../../shared/ports/repoResolution.js";
-import type { ReadWatchdogPaneActivityPort } from "../../shared/ports/watchdogPaneActivity.js";
+import type { InspectedStateSnapshot } from "../../ports/stateSnapshots.js";
+import type { ReadRuntimeSessionsRegistryPort } from "../../ports/runtimeSessions.js";
+import type { ResolveRepoPathPort } from "../../ports/repoResolution.js";
+import type { ReadWatchdogPaneActivityPort } from "../../ports/watchdogPaneActivity.js";
 
 export type ReadRemotePointerPort = (
   path: string

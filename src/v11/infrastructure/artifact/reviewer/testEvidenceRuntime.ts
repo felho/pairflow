@@ -11,7 +11,7 @@ import type {
 } from "../../../shared/reviewer/testEvidence.js";
 import type {
   ResolveReviewerTestExecutionDirectiveFromArtifactInput
-} from "../../../shared/ports/reviewerTestEvidenceArtifacts.js";
+} from "../../../ports/reviewerTestEvidenceArtifacts.js";
 import {
   appendSourcePolicyDiagnostics,
   buildEvidenceDiagnostics,

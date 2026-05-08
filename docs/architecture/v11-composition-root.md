@@ -86,7 +86,7 @@ A composition root file does NOT:
 - `src/v11/defaults/**` — the composition catalog.
 - `src/v11/infrastructure/**` — when bypassing the catalog for a
   one-off adapter; rare, justify in the file.
-- `src/v11/shared/ports/**` — port type signatures, if needed for
+- `src/v11/ports/**` — port type signatures, if needed for
   type assertions during assembly.
 - `src/contracts/**` — surface contracts (CLI ↔ UI, JSON output schema).
 

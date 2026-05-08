@@ -12,7 +12,7 @@ import {
 } from "../../start/startCommandDependencyDefaults.js";
 import type {
   AppendProtocolEnvelopeResult
-} from "../../../shared/ports/transcript.js";
+} from "../../../ports/transcript.js";
 import {
   readLatestSameRoundReviewerSnapshotFromTranscript,
   type LatestSameRoundReviewerSnapshot

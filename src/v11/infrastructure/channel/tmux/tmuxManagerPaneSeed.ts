@@ -4,7 +4,7 @@ import {
   sendAndSubmitTmuxPaneMessage,
   submitTmuxPaneInput
 } from "./tmuxInput.js";
-import type { TmuxRunner } from "../../../shared/ports/tmuxSessions.js";
+import type { TmuxRunner } from "../../../ports/tmuxSessions.js";
 
 export interface SeedBubbleTmuxPaneMessagesInput {
   runner: TmuxRunner;

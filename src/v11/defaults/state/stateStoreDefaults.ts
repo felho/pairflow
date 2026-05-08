@@ -9,7 +9,7 @@ import type {
   ReadStateSnapshotPort,
   WriteStateSnapshotOptions,
   WriteStateSnapshotPort
-} from "../../shared/ports/stateSnapshots.js";
+} from "../../ports/stateSnapshots.js";
 
 export const readStateSnapshot: ReadStateSnapshotPort = async (statePath) =>
   readStateSnapshotCanonical(statePath);

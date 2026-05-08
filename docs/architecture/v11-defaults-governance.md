@@ -9,7 +9,7 @@ Scope: composition catalog under `src/v11/defaults/**`
 This document defines the `defaults` model for `src/v11/**`.
 
 The goal is to provide a single, named home for the choice of which
-concrete `infrastructure/**` adapter implements each `shared/ports/**`
+concrete `infrastructure/**` adapter implements each `ports/**`
 contract, plus the choice of how those adapters compose into the
 dependency objects accepted by `application/**` commands.
 
@@ -51,7 +51,7 @@ Conventions:
 - one file per concept (state, transcript, processSpawn, merge, ...)
 - file name suffix `Defaults.ts`
 - export shape: a `const` object that satisfies one or more
-  `shared/ports/**` types, OR a typed dependency aggregator named
+  `ports/**` types, OR a typed dependency aggregator named
   `<command>BubbleDependencyDefaults` / `<command>CommandDependencyDefaults`.
 
 ## Layer Relationship
@@ -59,7 +59,7 @@ Conventions:
 ### `defaults/**` may import from
 
 - `infrastructure/**` — the only producer of runtime adapters.
-- `shared/ports/**` — port type signatures.
+- `ports/**` — port type signatures.
 - Other `defaults/**` files — transitive aggregation is permitted.
 - `domain/**` and `shared/**` (non-ports) — for pure helpers used during
   composition (path joiners, normalizers). Use sparingly.
@@ -126,7 +126,7 @@ Typical examples:
 - **Helper modules that happen to be canonical** — those belong
   under `shared/**` or `domain/**`.
 - **UI-facing or contract-facing types** — those belong under
-  `shared/ports/**` or `src/contracts/**`.
+  `ports/**` or `src/contracts/**`.
 
 ## Defaults Shape
 
@@ -196,7 +196,7 @@ Introduce a defaults file when all are true:
 Do NOT introduce a defaults file when:
 
 - the "default" is one infrastructure call routed through one port —
-  use the existing port type from `shared/ports/**` directly and let
+  use the existing port type from `ports/**` directly and let
   the composition root import the adapter inline,
 - the content is command logic that takes IO via `dependencies`
   parameters — that belongs in `application/<command>/`.

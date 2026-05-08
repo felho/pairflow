@@ -1,7 +1,7 @@
 import type { BubbleLifecycleState } from "../../../types/bubble.js";
 import type { UiBubbleAttention } from "../../../contracts/ui/uiReadModel.js";
-import type { RuntimeSessionRecord } from "../ports/runtimeSessions.js";
-import type { StateValidationDiagnostics } from "../ports/stateSnapshots.js";
+import type { RuntimeSessionRecord } from "../../ports/runtimeSessions.js";
+import type { StateValidationDiagnostics } from "../../ports/stateSnapshots.js";
 import type { ReadWatchdogPaneActivityResult } from "../watchdog/watchdogPaneActivityStore.js";
 import type { WatchdogStatus } from "../watchdog/watchdogStatus.js";
 

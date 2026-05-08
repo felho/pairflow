@@ -4,7 +4,7 @@ import type {
   PersistPassValidationRecoveryMarkerInput,
   PersistPassValidationRecoveryMarkerPort,
   PersistPassValidationRecoveryMarkerResult
-} from "../../../shared/ports/passValidationRecovery.js"
+} from "../../../ports/passValidationRecovery.js"
 import {
   formatCombinedRecoveryUncertainDetail,
   persistRecoveryMarkerTarget,

@@ -10,7 +10,7 @@ import type {
   UiBubbleDetailDependencies,
   UiBubbleListDependencies,
   UiBubbleTimelineDependencies
-} from "../../shared/ports/uiRouter.js";
+} from "../../ports/uiRouter.js";
 import type { UiRouterRequestContext } from "./routerContracts.js";
 import {
   badRequest,

@@ -1,6 +1,6 @@
-import type { RunGitPort } from "../../shared/ports/git.js";
-import type { ResolveBubbleByIdPort } from "../../shared/ports/bubbleLookup.js";
-import type { ResolveRepoPathPort } from "../../shared/ports/repoResolution.js";
+import type { RunGitPort } from "../../ports/git.js";
+import type { ResolveBubbleByIdPort } from "../../ports/bubbleLookup.js";
+import type { ResolveRepoPathPort } from "../../ports/repoResolution.js";
 
 export type ExtractCommandFailureReasonCode =
   | "EXTRACT_BUBBLE_NOT_FOUND"

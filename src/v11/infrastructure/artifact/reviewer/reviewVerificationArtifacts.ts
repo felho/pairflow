@@ -13,7 +13,7 @@ import {
 } from "../../../shared/reviewer/reviewVerification.js";
 import type {
   ReadReviewVerificationArtifactStatusOptions
-} from "../../../shared/ports/reviewVerificationArtifacts.js";
+} from "../../../ports/reviewVerificationArtifacts.js";
 
 function getRefBasename(ref: string): string {
   const normalized = ref.replaceAll("\\", "/");

@@ -3,7 +3,7 @@ import { dirname } from "node:path";
 
 import type {
   WriteSummaryVerifierConsistencyGateArtifactPort
-} from "../../../shared/ports/summaryVerifierGateArtifacts.js";
+} from "../../../ports/summaryVerifierGateArtifacts.js";
 
 export const writeSummaryVerifierConsistencyGateArtifact:
 WriteSummaryVerifierConsistencyGateArtifactPort = async (

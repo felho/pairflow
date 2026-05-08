@@ -7,7 +7,7 @@ import type {
   ReadRuntimeSessionsRegistryPort,
   RemoveRuntimeSessionPort,
   RemoveRuntimeSessionsPort
-} from "../../shared/ports/runtimeSessions.js";
+} from "../../ports/runtimeSessions.js";
 
 export const readRuntimeSessionsRegistry: ReadRuntimeSessionsRegistryPort = async (
   ...args

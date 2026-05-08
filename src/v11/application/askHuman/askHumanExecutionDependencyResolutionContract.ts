@@ -1,6 +1,6 @@
-import type { AppendProtocolEnvelopePort } from "../../shared/ports/transcript.js";
+import type { AppendProtocolEnvelopePort } from "../../ports/transcript.js";
 import type { applyStateTransition } from "../../domain/state/machine.js";
-import type { WriteStateSnapshotPort } from "../../shared/ports/stateSnapshots.js";
+import type { WriteStateSnapshotPort } from "../../ports/stateSnapshots.js";
 
 export interface ResolveAskHumanExecutionDependenciesInput {
   appendProtocolEnvelope?: AppendProtocolEnvelopePort | undefined;

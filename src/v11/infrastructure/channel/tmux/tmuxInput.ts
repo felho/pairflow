@@ -1,4 +1,4 @@
-import type { TmuxRunner } from "../../../shared/ports/tmuxSessions.js";
+import type { TmuxRunner } from "../../../ports/tmuxSessions.js";
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolvePromise) => {

@@ -1,15 +1,15 @@
 import type { ProtocolEnvelopeDraft } from "../../../types/protocol.js";
 import type {
   EmitDeliveryNotificationAckPort
-} from "../../shared/ports/tmuxDelivery.js";
+} from "../../ports/tmuxDelivery.js";
 import type {
   ResolveBubbleByIdPort
-} from "../../shared/ports/bubbleLookup.js";
+} from "../../ports/bubbleLookup.js";
 import type {
   ReadStateSnapshotPort,
   WriteStateSnapshotPort
-} from "../../shared/ports/stateSnapshots.js";
-import type { AppendProtocolEnvelopePort } from "../../shared/ports/transcript.js";
+} from "../../ports/stateSnapshots.js";
+import type { AppendProtocolEnvelopePort } from "../../ports/transcript.js";
 
 export type KickoffReadFile = (
   path: string,

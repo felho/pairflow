@@ -47,7 +47,7 @@ import type {
   UiCommitBubbleResult,
   UiDeleteBubbleResult,
   UiMergeBubbleResult
-} from "../../../src/v11/shared/ports/uiRouter.js";
+} from "../../../src/v11/ports/uiRouter.js";
 import {
   validateUiBubbleDetailResponseBody,
   validateUiBubbleListResponseBody,

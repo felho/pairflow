@@ -2,9 +2,9 @@ import type {
   RuntimeMetaReviewerPaneBinding,
   RuntimeSessionRecord,
   RuntimeSessionsRegistry
-} from "../../../shared/ports/runtimeSessions.js";
+} from "../../../ports/runtimeSessions.js";
 import { workModes } from "../../../../types/bubble.js";
-import type { WorkspaceKind } from "../../../shared/ports/worktreeWorkspace.js";
+import type { WorkspaceKind } from "../../../ports/worktreeWorkspace.js";
 import {
   toRuntimeSessionsRegistryError
 } from "./runtimeSessionsRegistryErrors.js";

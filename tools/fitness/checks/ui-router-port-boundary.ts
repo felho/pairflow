@@ -583,7 +583,7 @@ function collectAggregateDerivedLeafAliasViolations(input: {
 }): RouterPortViolation[] {
   if (
     !(
-      input.fromRelative.startsWith("src/v11/shared/ports/") ||
+      input.fromRelative.startsWith("src/v11/ports/") ||
       input.fromRelative.startsWith("src/v11/infrastructure/ui/")
     ) ||
     !input.fromRelative.endsWith(".ts")
@@ -775,7 +775,7 @@ async function collectCommandOwnedImportViolations(input: {
   sourceFile: ts.SourceFile;
 }): Promise<RouterPortViolation[]> {
   if (
-    !input.fromRelative.startsWith("src/v11/shared/ports/") ||
+    !input.fromRelative.startsWith("src/v11/ports/") ||
     !input.fromRelative.endsWith(".ts")
   ) {
     return [];

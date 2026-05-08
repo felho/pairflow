@@ -89,7 +89,7 @@ describe("UI router port boundary fitness check", () => {
         repoRoot,
         path,
         [
-          "import type { UiRouterDependencies } from '../../shared/ports/uiRouter.js';",
+          "import type { UiRouterDependencies } from '../../../src/v11/ports/uiRouter.js';",
           "export interface Allowed { dependencies: UiRouterDependencies; }"
         ].join("\n")
       );
@@ -108,7 +108,7 @@ describe("UI router port boundary fitness check", () => {
     const repoRoot = await createTempRoot();
     await writeRepoFile(
       repoRoot,
-      "src/v11/shared/ports/uiRouter.ts",
+      "src/v11/ports/uiRouter.ts",
       [
         "export interface UiRouterDependencies {",
         "  listBubbles: () => void;",
@@ -126,7 +126,7 @@ describe("UI router port boundary fitness check", () => {
       repoRoot,
       "src/v11/infrastructure/ui/routerLeafAlias.ts",
       [
-        "import type { UiRouterDependencies } from '../../shared/ports/uiRouter.js';",
+        "import type { UiRouterDependencies } from '../../../src/v11/ports/uiRouter.js';",
         "type LocalRouterDependencies = UiRouterDependencies;",
         "export type UiBubbleInfrastructureAliasDependencies = Pick<LocalRouterDependencies, 'listBubbles'>;"
       ].join("\n")
@@ -135,7 +135,7 @@ describe("UI router port boundary fitness check", () => {
     const report = await buildUiRouterPortBoundaryCheckReport({
       check: defaultCheck({
         scope: [
-          "src/v11/shared/ports/*.ts",
+          "src/v11/ports/*.ts",
           "src/v11/infrastructure/ui/*.ts"
         ]
       }),
@@ -148,21 +148,21 @@ describe("UI router port boundary fitness check", () => {
       expect.stringContaining("AGGREGATE_DERIVED_UI_ROUTER_SLICE_ALIAS")
     );
     expect(report.details).toContainEqual(
-      expect.stringContaining("src/v11/shared/ports/uiRouter.ts#UiBubbleListDependencies")
+      expect.stringContaining("src/v11/ports/uiRouter.ts#UiBubbleListDependencies")
     );
     expect(report.details).toContainEqual(
       expect.stringContaining(
-        "src/v11/shared/ports/uiRouter.ts#UiBubbleActionDependencies"
+        "src/v11/ports/uiRouter.ts#UiBubbleActionDependencies"
       )
     );
     expect(report.details).toContainEqual(
       expect.stringContaining(
-        "src/v11/shared/ports/uiRouter.ts#UiBubbleDetailDependencies"
+        "src/v11/ports/uiRouter.ts#UiBubbleDetailDependencies"
       )
     );
     expect(report.details).toContainEqual(
       expect.stringContaining(
-        "src/v11/shared/ports/uiRouter.ts#UiBubbleLocalAliasDependencies"
+        "src/v11/ports/uiRouter.ts#UiBubbleLocalAliasDependencies"
       )
     );
     expect(report.details).toContainEqual(
@@ -181,12 +181,12 @@ describe("UI router port boundary fitness check", () => {
     );
     await writeRepoFile(
       repoRoot,
-      "src/v11/shared/ports/futureUiPort.ts",
+      "src/v11/ports/futureUiPort.ts",
       "import type { WorkflowCommandContract } from '../workflow/workflowCommandContract.js';\nexport type Future = WorkflowCommandContract;\n"
     );
 
     const report = await buildUiRouterPortBoundaryCheckReport({
-      check: defaultCheck({ scope: ["src/v11/shared/ports/*.ts"] }),
+      check: defaultCheck({ scope: ["src/v11/ports/*.ts"] }),
       repoRoot,
       fallbackMode: "hard-fail"
     });
@@ -196,7 +196,7 @@ describe("UI router port boundary fitness check", () => {
       expect.stringContaining("COMMAND_OWNED_UI_PORT_IMPORT")
     );
     expect(report.details).toContainEqual(
-      expect.stringContaining("src/v11/shared/ports/futureUiPort.ts")
+      expect.stringContaining("src/v11/ports/futureUiPort.ts")
     );
   });
 
@@ -214,7 +214,7 @@ describe("UI router port boundary fitness check", () => {
     );
     await writeRepoFile(
       repoRoot,
-      "src/v11/shared/ports/futureUiPort.ts",
+      "src/v11/ports/futureUiPort.ts",
       [
         "import type { ListV2 } from '../read/ListV2.js';",
         "import type { Inbox } from '../read/Inbox.js';",
@@ -223,7 +223,7 @@ describe("UI router port boundary fitness check", () => {
     );
 
     const report = await buildUiRouterPortBoundaryCheckReport({
-      check: defaultCheck({ scope: ["src/v11/shared/ports/*.ts"] }),
+      check: defaultCheck({ scope: ["src/v11/ports/*.ts"] }),
       repoRoot,
       fallbackMode: "hard-fail"
     });
@@ -261,7 +261,7 @@ describe("UI router port boundary fitness check", () => {
     );
     await writeRepoFile(
       repoRoot,
-      "src/v11/shared/ports/uiRouter.ts",
+      "src/v11/ports/uiRouter.ts",
       "import type { WorkflowCommandContract } from '../workflow/workflowCommandContract.js';\nexport type View = WorkflowCommandContract;\n"
     );
 
@@ -269,7 +269,7 @@ describe("UI router port boundary fitness check", () => {
       check: defaultCheck({
         scope: [
           "src/v11/infrastructure/ui/*.ts",
-          "src/v11/shared/ports/*.ts"
+          "src/v11/ports/*.ts"
         ],
         exceptions: [
           {
@@ -288,7 +288,7 @@ describe("UI router port boundary fitness check", () => {
             kind: "allow-command-owned-ui-port-import",
             owner: "architecture/ui-contracts",
             reason: "temporary command-owned import",
-            from: "src/v11/shared/ports/uiRouter.ts",
+            from: "src/v11/ports/uiRouter.ts",
             to: "src/v11/shared/workflow/workflowCommandContract.ts",
             paths: undefined
           }
@@ -348,7 +348,7 @@ describe("UI router port boundary fitness check", () => {
             kind: "allow-command-owned-ui-port-import",
             owner: "architecture/ui-router",
             reason: "duplicate exception id",
-            from: "src/v11/shared/ports/uiRouter.ts",
+            from: "src/v11/ports/uiRouter.ts",
             to: "src/v11/shared/workflow/workflowCommandContract.ts",
             paths: undefined
           },
@@ -357,7 +357,7 @@ describe("UI router port boundary fitness check", () => {
             kind: "allow-command-owned-ui-port-import",
             owner: "",
             reason: "",
-            from: "src/v11/shared/ports/uiRouter.ts",
+            from: "src/v11/ports/uiRouter.ts",
             to: "src/v11/shared/workflow/workflowCommandContract.ts",
             paths: undefined
           }
@@ -383,20 +383,20 @@ describe("UI router port boundary fitness check", () => {
     );
     await writeRepoFile(
       repoRoot,
-      "src/v11/shared/ports/uiRouter.ts",
+      "src/v11/ports/uiRouter.ts",
       "import type { WorkflowCommandContract } from '../workflow/workflowCommandContract.js';\nexport type View = WorkflowCommandContract;\n"
     );
 
     const report = await buildUiRouterPortBoundaryCheckReport({
       check: defaultCheck({
-        scope: ["src/v11/shared/ports/*.ts"],
+        scope: ["src/v11/ports/*.ts"],
         exceptions: [
           {
             id: "router-port-duplicate-command",
             kind: "allow-command-owned-ui-port-import",
             owner: "architecture/ui-contracts",
             reason: "would otherwise match",
-            from: "src/v11/shared/ports/uiRouter.ts",
+            from: "src/v11/ports/uiRouter.ts",
             to: "src/v11/shared/workflow/workflowCommandContract.ts",
             paths: undefined
           },
@@ -405,7 +405,7 @@ describe("UI router port boundary fitness check", () => {
             kind: "allow-command-owned-ui-port-import",
             owner: "architecture/ui-contracts",
             reason: "duplicate",
-            from: "src/v11/shared/ports/uiRouter.ts",
+            from: "src/v11/ports/uiRouter.ts",
             to: "src/v11/shared/workflow/workflowCommandContract.ts",
             paths: undefined
           }
@@ -429,20 +429,20 @@ describe("UI router port boundary fitness check", () => {
     const repoRoot = await createTempRoot();
     await writeRepoFile(
       repoRoot,
-      "src/v11/shared/ports/uiRouter.ts",
+      "src/v11/ports/uiRouter.ts",
       "export const ok = true;\n"
     );
 
     const report = await buildUiRouterPortBoundaryCheckReport({
       check: defaultCheck({
-        scope: ["src/v11/shared/ports/*.ts"],
+        scope: ["src/v11/ports/*.ts"],
         exceptions: [
           {
             id: "router-port-js-exception",
             kind: "allow-command-owned-ui-port-import",
             owner: "architecture/ui-contracts",
             reason: "invalid non-source exception",
-            from: "src/v11/shared/ports/uiRouter.js",
+            from: "../../../src/v11/ports/uiRouter.js",
             to: "src/v11/shared/workflow/workflowCommandContract.ts",
             paths: undefined
           }
@@ -466,20 +466,20 @@ describe("UI router port boundary fitness check", () => {
     const repoRoot = await createTempRoot();
     await writeRepoFile(
       repoRoot,
-      "src/v11/shared/ports/uiRouter.ts",
+      "src/v11/ports/uiRouter.ts",
       "export const ok = true;\n"
     );
 
     const report = await buildUiRouterPortBoundaryCheckReport({
       check: defaultCheck({
-        scope: ["src/v11/shared/ports/*.ts"],
+        scope: ["src/v11/ports/*.ts"],
         exceptions: [
           {
             id: "router-port-missing-target",
             kind: "allow-command-owned-ui-port-import",
             owner: "architecture/ui-contracts",
             reason: "invalid missing source file",
-            from: "src/v11/shared/ports/uiRouter.ts",
+            from: "src/v11/ports/uiRouter.ts",
             to: "src/v11/shared/workflow/missingWorkflowCommandContract.ts",
             paths: undefined
           }
@@ -502,7 +502,7 @@ describe("UI router port boundary fitness check", () => {
     const repoRoot = await createTempRoot();
     await writeRepoFile(
       repoRoot,
-      "src/v11/shared/ports/uiRouter.ts",
+      "src/v11/ports/uiRouter.ts",
       "export const ok = true;\n"
     );
     await writeRepoFile(
@@ -518,14 +518,14 @@ describe("UI router port boundary fitness check", () => {
 
     const report = await buildUiRouterPortBoundaryCheckReport({
       check: defaultCheck({
-        scope: ["src/v11/shared/ports/*.ts"],
+        scope: ["src/v11/ports/*.ts"],
         exceptions: [
           {
             id: "router-port-ambiguous-js-target",
             kind: "allow-command-owned-ui-port-import",
             owner: "architecture/ui-contracts",
             reason: "invalid ambiguous source import encoding",
-            from: "src/v11/shared/ports/uiRouter.ts",
+            from: "src/v11/ports/uiRouter.ts",
             to: "src/v11/shared/workflow/workflowCommandContract.js",
             paths: undefined
           }
@@ -546,13 +546,13 @@ describe("UI router port boundary fitness check", () => {
     const repoRoot = await createTempRoot();
     await writeRepoFile(
       repoRoot,
-      "src/v11/shared/ports/uiRouter.ts",
+      "src/v11/ports/uiRouter.ts",
       "export const ok = true;\n"
     );
 
     const report = await buildUiRouterPortBoundaryCheckReport({
       check: defaultCheck({
-        scope: ["src/v11/shared/ports/*.ts"],
+        scope: ["src/v11/ports/*.ts"],
         exceptions: [
           {
             id: "router-port-null-command",
@@ -592,13 +592,13 @@ describe("UI router port boundary fitness check", () => {
     const repoRoot = await createTempRoot();
     await writeRepoFile(
       repoRoot,
-      "src/v11/shared/ports/uiRouter.ts",
+      "src/v11/ports/uiRouter.ts",
       "export const ok = true;\n"
     );
 
     const report = await buildUiRouterPortBoundaryCheckReport({
       check: defaultCheck({
-        scope: ["src/v11/shared/ports/*.ts"],
+        scope: ["src/v11/ports/*.ts"],
         exceptions: Array.from({ length: 12 }, (_, index) => ({
           id: `router-port-null-command-${String(index + 1)}`,
           kind: "allow-command-owned-ui-port-import",
@@ -674,26 +674,26 @@ describe("UI router port boundary fitness check", () => {
     const repoRoot = await createTempRoot();
     await writeRepoFile(
       repoRoot,
-      "src/v11/shared/ports/localCommandContract.ts",
+      "src/v11/ports/localCommandContract.ts",
       "export interface LocalCommandContract { id: string; }\n"
     );
     await writeRepoFile(
       repoRoot,
-      "src/v11/shared/ports/uiRouter.ts",
+      "src/v11/ports/uiRouter.ts",
       "import type { LocalCommandContract } from './localCommandContract.js';\nexport type View = LocalCommandContract;\n"
     );
 
     const report = await buildUiRouterPortBoundaryCheckReport({
       check: defaultCheck({
-        scope: ["src/v11/shared/ports/*.ts"],
+        scope: ["src/v11/ports/*.ts"],
         exceptions: [
           {
             id: "router-port-local-command",
             kind: "allow-command-owned-ui-port-import",
             owner: "architecture/ui-contracts",
             reason: "temporary local command-owned import",
-            from: "src/v11/shared/ports/uiRouter.ts",
-            to: "src/v11/shared/ports/localCommandContract.ts",
+            from: "src/v11/ports/uiRouter.ts",
+            to: "src/v11/ports/localCommandContract.ts",
             paths: undefined
           }
         ]
@@ -712,7 +712,7 @@ describe("UI router port boundary fitness check", () => {
     const repoRoot = await createTempRoot();
     await writeRepoFile(
       repoRoot,
-      "src/v11/shared/ports/localCommandContract.ts",
+      "src/v11/ports/localCommandContract.ts",
       "export interface LocalCommandContract { id: string; }\n"
     );
     await writeRepoFile(
@@ -722,7 +722,7 @@ describe("UI router port boundary fitness check", () => {
     );
     await writeRepoFile(
       repoRoot,
-      "src/v11/shared/ports/uiRouter.ts",
+      "src/v11/ports/uiRouter.ts",
       [
         "import type { LocalCommandContract } from './localCommandContract.js';",
         "import type { WorkflowCommandContract } from '../workflow/workflowCommandContract.js';",
@@ -733,15 +733,15 @@ describe("UI router port boundary fitness check", () => {
 
     const report = await buildUiRouterPortBoundaryCheckReport({
       check: defaultCheck({
-        scope: ["src/v11/shared/ports/*.ts"],
+        scope: ["src/v11/ports/*.ts"],
         exceptions: [
           {
             id: "router-port-local-command",
             kind: "allow-command-owned-ui-port-import",
             owner: "architecture/ui-contracts",
             reason: "temporary local command-owned import",
-            from: "src/v11/shared/ports/uiRouter.ts",
-            to: "src/v11/shared/ports/localCommandContract.ts",
+            from: "src/v11/ports/uiRouter.ts",
+            to: "src/v11/ports/localCommandContract.ts",
             paths: undefined
           },
           {
@@ -749,7 +749,7 @@ describe("UI router port boundary fitness check", () => {
             kind: "allow-command-owned-ui-port-import",
             owner: "architecture/ui-contracts",
             reason: "temporary cross-directory command-owned import",
-            from: "src/v11/shared/ports/uiRouter.ts",
+            from: "src/v11/ports/uiRouter.ts",
             to: "src/v11/shared/workflow/workflowCommandContract.ts",
             paths: undefined
           }
@@ -834,12 +834,12 @@ describe("UI router port boundary fitness check", () => {
     const repoRoot = await createTempRoot();
     await writeRepoFile(
       repoRoot,
-      "src/v11/shared/ports/uiRouter.ts",
+      "src/v11/ports/uiRouter.ts",
       "import type { WorkflowCommandContract } from '../workflow/workflowCommandContract';\nexport type View = WorkflowCommandContract;\n"
     );
 
     const report = await buildUiRouterPortBoundaryCheckReport({
-      check: defaultCheck({ scope: ["src/v11/shared/ports/*.ts"] }),
+      check: defaultCheck({ scope: ["src/v11/ports/*.ts"] }),
       repoRoot,
       fallbackMode: "hard-fail"
     });
@@ -860,20 +860,20 @@ describe("UI router port boundary fitness check", () => {
     );
     await writeRepoFile(
       repoRoot,
-      "src/v11/shared/ports/uiRouter.ts",
+      "src/v11/ports/uiRouter.ts",
       "import type { WorkflowCommandContract } from '../workflow/workflowCommandContract';\nexport type View = WorkflowCommandContract;\n"
     );
 
     const report = await buildUiRouterPortBoundaryCheckReport({
       check: defaultCheck({
-        scope: ["src/v11/shared/ports/*.ts"],
+        scope: ["src/v11/ports/*.ts"],
         exceptions: [
           {
             id: "router-port-command-extensionless",
             kind: "allow-command-owned-ui-port-import",
             owner: "architecture/ui-contracts",
             reason: "temporary command-owned import",
-            from: "src/v11/shared/ports/uiRouter.ts",
+            from: "src/v11/ports/uiRouter.ts",
             to: "src/v11/shared/workflow/workflowCommandContract.ts",
             paths: undefined
           }
@@ -898,12 +898,12 @@ describe("UI router port boundary fitness check", () => {
     );
     await writeRepoFile(
       repoRoot,
-      "src/v11/shared/ports/uiRouter.ts",
+      "src/v11/ports/uiRouter.ts",
       "import type { PlaylistHelper } from '../util/playlistHelpers.js';\nexport type View = PlaylistHelper;\n"
     );
 
     const report = await buildUiRouterPortBoundaryCheckReport({
-      check: defaultCheck({ scope: ["src/v11/shared/ports/*.ts"] }),
+      check: defaultCheck({ scope: ["src/v11/ports/*.ts"] }),
       repoRoot,
       fallbackMode: "hard-fail"
     });

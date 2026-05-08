@@ -343,8 +343,8 @@ describe("fitness:check:ci", () => {
       const scriptPath = resolve(process.cwd(), "scripts/fitness-check-ci.sh");
       const broadBagPath =
         "src/v11/infrastructure/ui/.fitnessRouterPortBroadBagDrift.ts";
-      const portPath = "src/v11/shared/ports/.fitnessRouterPortCommandDrift.ts";
-      const aliasPath = "src/v11/shared/ports/.fitnessRouterPortAliasDrift.ts";
+      const portPath = "src/v11/ports/.fitnessRouterPortCommandDrift.ts";
+      const aliasPath = "src/v11/ports/.fitnessRouterPortAliasDrift.ts";
       const commandPath = "src/v11/shared/workflow/.fitnessWorkflowCommandContract.ts";
 
       await writeFixtureFile(
@@ -360,7 +360,7 @@ describe("fitness:check:ci", () => {
       await writeFixtureFile(
         fixtureRepoRoot,
         portPath,
-        "import type { FitnessWorkflowCommandContract } from '../workflow/.fitnessWorkflowCommandContract.js';\nexport type Drift = FitnessWorkflowCommandContract;\n"
+        "import type { FitnessWorkflowCommandContract } from '../shared/workflow/.fitnessWorkflowCommandContract.js';\nexport type Drift = FitnessWorkflowCommandContract;\n"
       );
       await writeFixtureFile(
         fixtureRepoRoot,

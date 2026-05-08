@@ -1,7 +1,7 @@
 import type {
   UiAttachBubbleResult,
   UiBubbleActionDispatchDependencies
-} from "../../shared/ports/uiRouter.js";
+} from "../../ports/uiRouter.js";
 import {
   badRequest,
   parseApproveBody,

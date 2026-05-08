@@ -29,11 +29,11 @@ import type {
   UiEmitRequestReworkResult,
   UiRestartBubbleResult,
   UiRouterDependencies
-} from "../../shared/ports/uiRouter.js";
+} from "../../ports/uiRouter.js";
 import type {
   UiApprovalDecisionDeliverySignal,
   UiApprovalDecisionDeliverySignals
-} from "../../shared/ports/uiDelivery.js";
+} from "../../ports/uiDelivery.js";
 import type {
   ApprovalDecisionDeliverySignal,
   EmitApprovalDecisionResult,

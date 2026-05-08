@@ -5,7 +5,7 @@ import type {
   BubbleSpecLockState
 } from "../../../types/bubble.js";
 import type { ProtocolMessageType } from "../../../types/protocol.js";
-import type { StateValidationDiagnostics } from "../ports/stateSnapshots.js";
+import type { StateValidationDiagnostics } from "../../ports/stateSnapshots.js";
 import type { ReviewVerificationState } from "../reviewer/reviewVerification.js";
 import type {
   StatusExecutionContextView,

@@ -20,7 +20,7 @@ import type {
   UiStopBubbleResult,
   UiUpdateBubbleReviewPolicyInput,
   UiUpdateBubbleReviewPolicyResult
-} from "../../../contracts/ui/uiActions.js";
+} from "../../contracts/ui/uiActions.js";
 import type {
   UiBubbleInboxInput,
   UiBubbleInboxView,
@@ -28,7 +28,7 @@ import type {
   UiBubbleStatusInput,
   UiBubbleStatusView,
   UiTimelineDisplayItem
-} from "../../../contracts/ui/uiReadModel.js";
+} from "../../contracts/ui/uiReadModel.js";
 import type {
   ReadRuntimeSessionsRegistryPort
 } from "./runtimeSessions.js";
@@ -77,7 +77,7 @@ export type {
   UiStopBubbleResult,
   UiUpdateBubbleReviewPolicyInput,
   UiUpdateBubbleReviewPolicyResult
-} from "../../../contracts/ui/uiActions.js";
+} from "../../contracts/ui/uiActions.js";
 
 export type {
   UiBubbleInboxInput,
@@ -88,7 +88,7 @@ export type {
   UiBubbleStatusInput,
   UiBubbleStatusView,
   UiTimelineDisplayItem
-} from "../../../contracts/ui/uiReadModel.js";
+} from "../../contracts/ui/uiReadModel.js";
 
 export interface UiBubbleListInput {
   repoPath?: string | undefined;

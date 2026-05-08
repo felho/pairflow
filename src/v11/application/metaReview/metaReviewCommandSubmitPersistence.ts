@@ -1,4 +1,4 @@
-import type { LoadedStateSnapshot } from "../../shared/ports/stateSnapshots.js";
+import type { LoadedStateSnapshot } from "../../ports/stateSnapshots.js";
 import { normalizeMetaReviewSnapshot } from "../../shared/metaReview/metaReviewSnapshot.js";
 import { MetaReviewError } from "../../shared/metaReview/metaReviewError.js";
 import { toMetaReviewExecutionContext } from "../../shared/state/executionContext.js";

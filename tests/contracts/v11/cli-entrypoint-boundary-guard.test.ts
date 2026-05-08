@@ -60,6 +60,7 @@ const allowedBubbleCliModulePrefixes = [
   "../../../v11/application/",
   "../../../v11/defaults/",
   "../../../v11/domain/",
+  "../../../v11/ports/",
   "../../../v11/shared/"
 ] as const;
 

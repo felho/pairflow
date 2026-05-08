@@ -1,4 +1,4 @@
-import type { LoadedStateSnapshot } from "../../../shared/ports/stateSnapshots.js";
+import type { LoadedStateSnapshot } from "../../../ports/stateSnapshots.js";
 import {
   appendDeactivateTelemetry,
   buildCleanRerunRuntimeDelivery,

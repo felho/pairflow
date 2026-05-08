@@ -3,7 +3,7 @@ import type {
 } from "../../../../types/bubble.js";
 import type { FindingsParityMetadata } from "../../../../types/protocol.js";
 import type { MetaReviewResult } from "../../../shared/metaReview/metaReviewTypes.js";
-import type { LoadedStateSnapshot } from "../../../shared/ports/stateSnapshots.js";
+import type { LoadedStateSnapshot } from "../../../ports/stateSnapshots.js";
 import {
   buildGateLockPath
 } from "./metaReviewGateShared.js";

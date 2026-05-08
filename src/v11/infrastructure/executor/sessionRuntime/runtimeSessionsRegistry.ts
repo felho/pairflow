@@ -28,8 +28,8 @@ import type {
   RemoveRuntimeSessionsResult,
   RuntimeSessionRecord,
   RuntimeSessionsRegistry
-} from "../../../shared/ports/runtimeSessions.js";
-import type { WorkspaceKind } from "../../../shared/ports/worktreeWorkspace.js";
+} from "../../../ports/runtimeSessions.js";
+import type { WorkspaceKind } from "../../../ports/worktreeWorkspace.js";
 
 export type {
   ClaimRuntimeSessionInput,
@@ -44,8 +44,8 @@ export type {
   RemoveRuntimeSessionsResult,
   RuntimeSessionRecord,
   RuntimeSessionsRegistry
-} from "../../../shared/ports/runtimeSessions.js";
-export type { RuntimeMetaReviewerPaneBinding } from "../../../shared/ports/runtimeSessions.js";
+} from "../../../ports/runtimeSessions.js";
+export type { RuntimeMetaReviewerPaneBinding } from "../../../ports/runtimeSessions.js";
 export {
   RuntimeSessionsRegistryError,
   RuntimeSessionsRegistryLockError

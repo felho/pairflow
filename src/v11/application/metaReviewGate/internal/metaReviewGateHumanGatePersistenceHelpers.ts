@@ -1,7 +1,7 @@
 import { appendHumanApprovalRequestEnvelope } from "./approvalRequestEnvelope.js";
 import {
   type WriteStateSnapshotPort
-} from "../../../shared/ports/stateSnapshots.js";
+} from "../../../ports/stateSnapshots.js";
 import type {
   AgentName,
   BubbleStateSnapshot,
@@ -11,7 +11,7 @@ import type { FindingsParityMetadata } from "../../../../types/protocol.js";
 import type {
   AppendProtocolEnvelopePort,
   AppendProtocolEnvelopeResult
-} from "../../../shared/ports/transcript.js";
+} from "../../../ports/transcript.js";
 import type { MetaReviewGateRoute } from "../../../shared/metaReviewGate/metaReviewGateRouteContract.js";
 import type { MetaReviewGateThresholdMetadata } from "../../../shared/metaReviewGate/metaReviewGateRouteContract.js";
 import type { MetaReviewGateAdvisoryFinding } from "../../../domain/metaReviewGate/findingsSplit.js";

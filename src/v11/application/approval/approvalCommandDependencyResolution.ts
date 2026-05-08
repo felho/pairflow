@@ -6,21 +6,21 @@ import type {
 } from "./approvalRemoteExecutionContract.js";
 import { emitBubbleLifecycleEventBestEffort } from "../metrics/bubbleEvents.js";
 import { queueDeferredReworkIntent } from "./reworkIntentQueue.js";
-import type { EnsureBubbleInstanceIdForMutationPort } from "../../shared/ports/bubbleIdentity.js";
-import type { ResolveBubbleByIdPort } from "../../shared/ports/bubbleLookup.js";
+import type { EnsureBubbleInstanceIdForMutationPort } from "../../ports/bubbleIdentity.js";
+import type { ResolveBubbleByIdPort } from "../../ports/bubbleLookup.js";
 import type {
   AppendProtocolEnvelopePort,
   ReadTranscriptEnvelopesPort
-} from "../../shared/ports/transcript.js";
+} from "../../ports/transcript.js";
 import type {
   EmitDeliveryNotificationAckPort,
   ResolveDeliveryMessageRefPort
-} from "../../shared/ports/tmuxDelivery.js";
+} from "../../ports/tmuxDelivery.js";
 import type {
   ReadStateSnapshotPort,
   WriteStateSnapshotPort
-} from "../../shared/ports/stateSnapshots.js";
-import type { ResolveBubbleFromWorkspaceCwdPort } from "../../shared/ports/workspaceResolution.js";
+} from "../../ports/stateSnapshots.js";
+import type { ResolveBubbleFromWorkspaceCwdPort } from "../../ports/workspaceResolution.js";
 
 export interface ApprovalCommandDependencies {
   appendProtocolEnvelope?: AppendProtocolEnvelopePort;

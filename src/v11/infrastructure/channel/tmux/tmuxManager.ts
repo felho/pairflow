@@ -6,7 +6,7 @@ import type {
   LaunchBubbleSessionAck,
   LaunchBubbleSessionInput,
   TmuxRunner
-} from "../../../shared/ports/tmuxSessions.js";
+} from "../../../ports/tmuxSessions.js";
 import {
   runTmux,
   TmuxCommandError
@@ -35,7 +35,7 @@ export type {
   TmuxRunOptions,
   TmuxRunResult,
   TmuxRunner
-} from "../../../shared/ports/tmuxSessions.js";
+} from "../../../ports/tmuxSessions.js";
 export { runTmux, TmuxCommandError } from "./tmuxRunner.js";
 export type { RespawnTmuxPaneCommandInput } from "./tmuxManagerRuntime.js";
 

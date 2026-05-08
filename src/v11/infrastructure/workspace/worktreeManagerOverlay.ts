@@ -6,7 +6,7 @@ import {
   DEFAULT_LOCAL_OVERLAY_ENTRIES,
   DEFAULT_LOCAL_OVERLAY_MODE
 } from "../../../config/defaults.js";
-import type { LocalOverlayConfig } from "../../shared/ports/worktreeWorkspace.js";
+import type { LocalOverlayConfig } from "../../ports/worktreeWorkspace.js";
 import { toWorkspaceBootstrapError } from "./worktreeManagerErrors.js";
 
 function resolveLocalOverlayConfig(

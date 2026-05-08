@@ -1,6 +1,6 @@
 import type {
   RuntimeSessionRecord
-} from "../../shared/ports/runtimeSessions.js";
+} from "../../ports/runtimeSessions.js";
 import {
   getTopologySlotPaneIndexForRole
 } from "../actorProtocol/roleDescriptorRegistry.js";

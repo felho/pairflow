@@ -5,8 +5,8 @@ import type { BubbleConfig } from "../../../src/types/bubble.js";
 import {
   getTopologySlotPaneIndexForRole
 } from "../../../src/v11/application/actorProtocol/roleDescriptorRegistry.js";
-import type { RuntimeSessionRecord } from "../../../src/v11/shared/ports/runtimeSessions.js";
-import type { TmuxRunResult, TmuxRunner } from "../../../src/v11/shared/ports/tmuxSessions.js";
+import type { RuntimeSessionRecord } from "../../../src/v11/ports/runtimeSessions.js";
+import type { TmuxRunResult, TmuxRunner } from "../../../src/v11/ports/tmuxSessions.js";
 import { shellQuote } from "../../../src/v11/shared/foundation/shellQuote.js";
 
 const baseConfig: BubbleConfig = {

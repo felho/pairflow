@@ -67,8 +67,6 @@ Use for:
 - truly multi-lane contracts,
 - boundary-neutral shared helper modules,
 - shared adapters or helper seams used by more than one command path.
-- explicit capability contracts under `shared/ports/**` when `application`
-  must depend on a typed boundary instead of a concrete infrastructure adapter
 
 Do not use for:
 
@@ -76,6 +74,19 @@ Do not use for:
 - temporary parking for code with unclear ownership,
 - hidden domain ownership that should live in `domain` or a command-local boundary.
 - fake port/wrapper modules that only disguise infrastructure ownership
+
+### `src/v11/ports/**`
+
+Use for:
+
+- explicit capability contracts when `application` or shared helper contracts
+  must depend on a typed boundary instead of a concrete infrastructure adapter.
+
+Do not use for:
+
+- command-local helper logic,
+- runtime adapter selection,
+- direct infrastructure wrappers.
 
 ### `src/v11/infrastructure/**`
 

@@ -4,7 +4,7 @@ import type {
 } from "./tmuxDeliveryContract.js";
 import type {
   EmitDeliveryNotificationAckPort
-} from "../ports/tmuxDelivery.js";
+} from "../../ports/tmuxDelivery.js";
 
 export interface ExecuteImplementerHandoffDeliveryResult {
   result: DeliveryAck;

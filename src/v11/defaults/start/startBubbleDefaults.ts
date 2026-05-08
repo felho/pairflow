@@ -61,45 +61,45 @@ import type { PairflowGlobalConfig } from "../../../config/pairflowConfig.js";
 import type {
   BootstrapWorktreeWorkspacePort,
   CleanupWorktreeWorkspacePort
-} from "../../shared/ports/worktreeWorkspace.js";
+} from "../../ports/worktreeWorkspace.js";
 import type {
   ReadRuntimeSessionsRegistryPort,
   ClaimRuntimeSessionPort,
   UpsertRuntimeSessionPort,
   RemoveRuntimeSessionPort
-} from "../../shared/ports/runtimeSessions.js";
+} from "../../ports/runtimeSessions.js";
 import type {
   LaunchBubbleSessionAckPort,
   TmuxRunner,
   TerminateBubbleTmuxSessionPort
-} from "../../shared/ports/tmuxSessions.js";
-import type { RunGitPort } from "../../shared/ports/git.js";
+} from "../../ports/tmuxSessions.js";
+import type { RunGitPort } from "../../ports/git.js";
 import type {
   InspectedStateSnapshot,
   ReadStateSnapshotPort,
   WriteStateSnapshotPort
-} from "../../shared/ports/stateSnapshots.js";
+} from "../../ports/stateSnapshots.js";
 import type {
   AppendProtocolEnvelopePort,
   ReadTranscriptEnvelopesPort
-} from "../../shared/ports/transcript.js";
+} from "../../ports/transcript.js";
 import type {
   ReadReviewerBriefArtifactPort,
   ReadReviewerFocusArtifactPort
-} from "../../shared/ports/reviewerArtifacts.js";
+} from "../../ports/reviewerArtifacts.js";
 import type {
   ResolveDocContractGateArtifactPathPort
-} from "../../shared/ports/docContractGateArtifacts.js";
+} from "../../ports/docContractGateArtifacts.js";
 import type {
   ResolveReviewerTestExecutionDirectivePort
-} from "../../shared/ports/reviewerTestEvidenceArtifacts.js";
+} from "../../ports/reviewerTestEvidenceArtifacts.js";
 import type {
   ResolveBubbleFromWorkspaceCwdPort
-} from "../../shared/ports/workspaceResolution.js";
+} from "../../ports/workspaceResolution.js";
 import type {
   EnsureBubbleInstanceIdForMutationPort
-} from "../../shared/ports/bubbleIdentity.js";
-import type { ResolveBubbleByIdPort } from "../../shared/ports/bubbleLookup.js";
+} from "../../ports/bubbleIdentity.js";
+import type { ResolveBubbleByIdPort } from "../../ports/bubbleLookup.js";
 import type { ResolveRemoteBubbleStatusTargetPort } from "../../shared/remote/commitRemoteExecution.js";
 import { configureStartBubbleDependencyDefaults } from "../../application/start/startBubbleDependencyDefaults.js";
 

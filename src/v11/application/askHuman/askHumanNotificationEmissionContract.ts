@@ -3,7 +3,7 @@ import type { ProtocolEnvelope } from "../../../types/protocol.js";
 import type {
   EmitAskHumanBubbleNotificationPort
 } from "./askHumanDeliveryPortsContract.js";
-import type { EmitDeliveryNotificationAckPort } from "../../shared/ports/tmuxDelivery.js";
+import type { EmitDeliveryNotificationAckPort } from "../../ports/tmuxDelivery.js";
 
 export interface EmitOptionalAskHumanNotificationsInput {
   bubbleId: string;

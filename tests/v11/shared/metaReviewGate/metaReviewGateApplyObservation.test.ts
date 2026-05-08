@@ -4,7 +4,7 @@ import { reconcileObservedGateResult } from "../../../../src/v11/application/met
 import type { ApplyMetaReviewGateExecutionContext } from "../../../../src/v11/application/metaReviewGate/internal/metaReviewGateApplyContext.js";
 import { getBubblePaths } from "../../../../src/v11/shared/bubble/bubblePaths.js";
 import type { MetaReviewRuntimeDeliveryObservation } from "../../../../src/v11/shared/metaReviewGate/index.js";
-import type { LoadedStateSnapshot } from "../../../../src/v11/shared/ports/stateSnapshots.js";
+import type { LoadedStateSnapshot } from "../../../../src/v11/ports/stateSnapshots.js";
 import type { ProtocolEnvelope } from "../../../../src/types/protocol.js";
 
 function createObservedReadyState(round: number): LoadedStateSnapshot {

@@ -6,12 +6,12 @@ import { listPairflowWorkspaceCandidateCwds } from "./commandWorkspaceFallback.j
 import type {
   ResolveRepoPathInput,
   ResolveRepoPathPort
-} from "../../../shared/ports/repoResolution.js";
+} from "../../../ports/repoResolution.js";
 
 export type {
   ResolveRepoPathInput,
   ResolveRepoPathPort
-} from "../../../shared/ports/repoResolution.js";
+} from "../../../ports/repoResolution.js";
 
 export interface RepoResolutionErrorContext {
   source: "cwd_probe";

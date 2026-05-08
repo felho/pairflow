@@ -1,4 +1,4 @@
-import type { PairflowCommandProfile } from "../../../types/bubble.js";
+import type { PairflowCommandProfile } from "../../types/bubble.js";
 
 export type PairflowCommandPathStatus =
   | "worktree_local"

@@ -5,7 +5,7 @@ import {
 } from "../../../../src/v11/application/watchdog/emitWatchdogV11.js";
 import { watchdogCommandDefaults } from "../../../../src/v11/defaults/watchdog/watchdogCommandDefaults.js";
 import { watchdogPendingReworkDefaults } from "../../../../src/v11/defaults/watchdog/watchdogPendingReworkDefaults.js";
-import type { WriteWatchdogPaneActivityPort } from "../../../../src/v11/shared/ports/watchdogPaneActivity.js";
+import type { WriteWatchdogPaneActivityPort } from "../../../../src/v11/ports/watchdogPaneActivity.js";
 
 describe("watchdog command defaults", () => {
   it("exports runtime session and tmux defaults required for pane activity sampling", () => {

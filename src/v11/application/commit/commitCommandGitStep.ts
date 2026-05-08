@@ -3,7 +3,7 @@ import type {
   CommitGitResult,
   CommitRuntimeContext
 } from "./commitCommandApiContract.js";
-import type { RunGitPort } from "../../shared/ports/git.js";
+import type { RunGitPort } from "../../ports/git.js";
 import { BubbleCommitError } from "./commitCommandRuntime.js";
 import {
   assertStagedFilesWithinWorktree,

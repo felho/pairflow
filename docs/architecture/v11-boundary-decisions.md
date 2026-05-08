@@ -71,6 +71,24 @@ variant collection. The active baseline is:
 Current policy lives in the contract coverage baseline section of
 [architecture-fitness-checks.md](/Users/felho/dev/pairflow/docs/architecture/architecture-fitness-checks.md).
 
+### 6) Ports Are A Top-Level v11 Boundary
+
+Port contracts live under `src/v11/ports/**`, not under
+`src/v11/shared/ports/**`.
+
+The earlier `shared/ports` placement correctly treated ports as shared
+contracts, but it made the most important application/infrastructure seam look
+like one ordinary shared helper directory among many. That weakened discovery
+and mixed abstraction levels inside `shared/**`.
+
+The current decision is to promote ports to a first-class v11 layer:
+
+1. `application/**` and `shared/**` may depend on `ports/**` contracts.
+2. `infrastructure/**` implements those contracts.
+3. `ports/**` stays type/contract-only and must not import infrastructure.
+4. `shared/**` remains for policy-neutral helpers, meanings, and pattern
+   contracts, not IO capability seams.
+
 ## Historical Source
 
 These decisions were consolidated from the removed

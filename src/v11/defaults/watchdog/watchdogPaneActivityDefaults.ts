@@ -7,7 +7,7 @@ import type {
   RemoveWatchdogPaneActivityPort,
   ReadWatchdogPaneActivityPort,
   WriteWatchdogPaneActivityPort
-} from "../../shared/ports/watchdogPaneActivity.js";
+} from "../../ports/watchdogPaneActivity.js";
 
 export const readWatchdogPaneActivity: ReadWatchdogPaneActivityPort = async (
   ...args

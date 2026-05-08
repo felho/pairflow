@@ -6,7 +6,7 @@ import {
   WATCHDOG_PANE_ACTIVITY_CAPTURE_START_LINE,
   sampleWatchdogPaneActivity
 } from "../../../../src/v11/application/watchdog/watchdogPaneActivitySampler.js";
-import type { TmuxRunner } from "../../../../src/v11/shared/ports/tmuxSessions.js";
+import type { TmuxRunner } from "../../../../src/v11/ports/tmuxSessions.js";
 import { BubbleWatchdogError } from "../../../../src/v11/shared/watchdog/watchdogCommandError.js";
 import {
   resolveWatchdogTargetPaneIndex

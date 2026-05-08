@@ -12,7 +12,7 @@ import type {
   DeliveryTargetReasonCode,
   EmitDeliveryNotificationAckPort,
   ResolveDeliveryMessageRefPort
-} from "../../shared/ports/tmuxDelivery.js";
+} from "../../ports/tmuxDelivery.js";
 import type { EmitBubbleLifecycleEventBestEffortPort } from "../../shared/metrics/bubbleEvents.js";
 
 export type AskHumanActivationProvenance = ActorActivationProvenance;

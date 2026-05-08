@@ -7,7 +7,7 @@ import {
 import type {
   ReadReviewerBriefArtifactPort,
   ReadReviewerFocusArtifactPort
-} from "../../../shared/ports/reviewerArtifacts.js";
+} from "../../../ports/reviewerArtifacts.js";
 
 export const readReviewerBriefArtifact: ReadReviewerBriefArtifactPort = async (
   artifactPath: string

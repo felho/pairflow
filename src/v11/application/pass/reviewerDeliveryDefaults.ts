@@ -5,17 +5,17 @@ import type {
   EmitDeliveryNotificationAckPort,
   ResolveDeliveryMessageRefInput,
   ResolveDeliveryMessageRefPort
-} from "../../shared/ports/tmuxDelivery.js";
-import type { RefreshReviewerContextPort } from "../../shared/ports/reviewerContext.js";
+} from "../../ports/tmuxDelivery.js";
+import type { RefreshReviewerContextPort } from "../../ports/reviewerContext.js";
 import type {
   ReadReviewerBriefArtifactPort,
   ReadReviewerFocusArtifactPort
-} from "../../shared/ports/reviewerArtifacts.js";
+} from "../../ports/reviewerArtifacts.js";
 import type {
   ResolveReviewerTestExecutionDirectiveFromArtifactPort,
   VerifyImplementerTestEvidencePort,
   WriteReviewerTestEvidenceArtifactPort
-} from "../../shared/ports/reviewerTestEvidenceArtifacts.js";
+} from "../../ports/reviewerTestEvidenceArtifacts.js";
 
 function buildTranscriptFallbackRef(
   bubbleId: string,

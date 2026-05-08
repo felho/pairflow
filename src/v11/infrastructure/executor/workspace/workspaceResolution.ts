@@ -2,7 +2,7 @@ import { dirname, resolve } from "node:path";
 
 import { runGit } from "../../workspace/git.js";
 import { listPairflowWorkspaceCandidateCwds } from "./commandWorkspaceFallback.js";
-import type { ResolvedBubbleWorkspace } from "../../../shared/ports/workspaceResolution.js";
+import type { ResolvedBubbleWorkspace } from "../../../ports/workspaceResolution.js";
 import {
   doesCandidateMatchWorkspace,
   extractBubbleIdFromBranch,
@@ -13,7 +13,7 @@ import {
   toWorkspaceResolutionError
 } from "./workspaceResolutionSupport.js";
 
-export type { ResolvedBubbleWorkspace } from "../../../shared/ports/workspaceResolution.js";
+export type { ResolvedBubbleWorkspace } from "../../../ports/workspaceResolution.js";
 export { WorkspaceResolutionError } from "./workspaceResolutionSupport.js";
 
 interface ResolvedRepositoryPaths {

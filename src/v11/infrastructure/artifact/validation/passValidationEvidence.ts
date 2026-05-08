@@ -34,7 +34,7 @@ export type {
   PersistPassValidationRecoveryMarkerInput,
   PersistPassValidationRecoveryMarkerPort,
   PersistPassValidationRecoveryMarkerResult
-} from "../../../shared/ports/passValidationRecovery.js"
+} from "../../../ports/passValidationRecovery.js"
 export {
   passValidationRecoveryMarkerSchemaVersion,
   persistPassValidationRecoveryMarker,

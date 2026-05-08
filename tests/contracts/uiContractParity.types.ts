@@ -118,7 +118,7 @@ import type {
 } from "../../src/shared/contracts/uiRemoteExecution.js";
 import type {
   StateValidationDiagnostics as TransitStateValidationDiagnostics
-} from "../../src/v11/shared/ports/stateSnapshots.js";
+} from "../../src/v11/ports/stateSnapshots.js";
 import type {
   MetaReviewQualityPreset as RouterMetaReviewQualityPreset,
   UiActionAgentName as RouterUiActionAgentName,
@@ -172,7 +172,7 @@ import type {
   UiUpdateBubbleReviewPolicyResult as RouterUiUpdateBubbleReviewPolicyResult,
   UiBubbleConflictEnrichmentDependencies,
   UiBubbleDetailLoadingDependencies
-} from "../../src/v11/shared/ports/uiRouter.js";
+} from "../../src/v11/ports/uiRouter.js";
 import type {
   UiApiErrorBody as BackendUiApiErrorBody,
   UiBubbleDetail as BackendUiBubbleDetail,
@@ -196,7 +196,7 @@ import type {
 import type {
   ReadRuntimeSessionsRegistryPort,
   RuntimeSessionRecord as RuntimeSessionRecord
-} from "../../src/v11/shared/ports/runtimeSessions.js";
+} from "../../src/v11/ports/runtimeSessions.js";
 import type {
   ActiveMetaReviewRuntimeDeliveryView
 } from "../../src/v11/shared/metaReview/metaReviewSnapshot.js";

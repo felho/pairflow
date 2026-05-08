@@ -1,8 +1,8 @@
-import type { AppendProtocolEnvelopePort } from "../../../shared/ports/transcript.js";
+import type { AppendProtocolEnvelopePort } from "../../../ports/transcript.js";
 import type {
   LoadedStateSnapshot,
   WriteStateSnapshotPort
-} from "../../../shared/ports/stateSnapshots.js";
+} from "../../../ports/stateSnapshots.js";
 import type {
   AgentName,
   BubbleStateSnapshot

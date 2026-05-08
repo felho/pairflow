@@ -1,4 +1,4 @@
-import type { ProcessSpawnPort } from "../../shared/ports/processSpawn.js";
+import type { ProcessSpawnPort } from "../../ports/processSpawn.js";
 import type { RunWorktreeBootstrapCommandInput } from "./startCommandContract.js";
 import { runTmux } from "./startCommandDependencyDefaults.js";
 import { StartBubbleError } from "./startCommandRuntime.js";

@@ -2,12 +2,12 @@ import type {
   AppendProtocolEnvelopeInput,
   AppendProtocolEnvelopePort,
   AppendProtocolEnvelopeResult
-} from "../ports/transcript.js";
+} from "../../ports/transcript.js";
 import type {
   WriteStateSnapshotOptions,
   WriteStateSnapshotPort,
   LoadedStateSnapshot
-} from "../ports/stateSnapshots.js";
+} from "../../ports/stateSnapshots.js";
 
 export async function appendEnvelopeViaMutationBoundary(input: {
   append: AppendProtocolEnvelopePort;

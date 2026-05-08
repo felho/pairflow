@@ -8,7 +8,7 @@ import type {
   RunAskHumanFlowResult
 } from "./askHumanFlowContract.js";
 import type { PrepareAskHumanRoutingFn } from "./askHumanRoutingContract.js";
-import type { EmitDeliveryNotificationAckPort } from "../../shared/ports/tmuxDelivery.js";
+import type { EmitDeliveryNotificationAckPort } from "../../ports/tmuxDelivery.js";
 
 export interface AskHumanCommandOrchestrationInput {
   question: string;

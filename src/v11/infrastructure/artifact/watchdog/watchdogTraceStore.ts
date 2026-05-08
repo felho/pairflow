@@ -4,7 +4,7 @@ import { join } from "node:path";
 import {
   getWatchdogTracePath
 } from "../../../shared/watchdog/watchdogTraceStore.js";
-import type { WatchdogTraceEntry } from "../../../shared/ports/watchdogTrace.js";
+import type { WatchdogTraceEntry } from "../../../ports/watchdogTrace.js";
 
 export { getWatchdogTracePath } from "../../../shared/watchdog/watchdogTraceStore.js";
 

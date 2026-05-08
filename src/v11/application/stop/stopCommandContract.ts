@@ -1,11 +1,11 @@
-import type { RemoveRuntimeSessionPort } from "../../shared/ports/runtimeSessions.js";
+import type { RemoveRuntimeSessionPort } from "../../ports/runtimeSessions.js";
 import type {
   LoadedStateSnapshot,
   ReadStateSnapshotPort,
   WriteStateSnapshotPort
-} from "../../shared/ports/stateSnapshots.js";
-import type { TerminateBubbleTmuxSessionPort } from "../../shared/ports/tmuxSessions.js";
-import type { ResolveBubbleByIdPort } from "../../shared/ports/bubbleLookup.js";
+} from "../../ports/stateSnapshots.js";
+import type { TerminateBubbleTmuxSessionPort } from "../../ports/tmuxSessions.js";
+import type { ResolveBubbleByIdPort } from "../../ports/bubbleLookup.js";
 import type { BubbleStateSnapshot } from "../../../types/bubble.js";
 
 export interface StopBubbleInput {

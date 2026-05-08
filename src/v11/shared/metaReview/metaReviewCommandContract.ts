@@ -15,16 +15,16 @@ import type { MetaReviewResult } from "./metaReviewTypes.js";
 import type {
   AppendProtocolEnvelopePort,
   ReadTranscriptEnvelopesPort
-} from "../ports/transcript.js";
-import type { ResolveBubbleByIdPort } from "../ports/bubbleLookup.js";
+} from "../../ports/transcript.js";
+import type { ResolveBubbleByIdPort } from "../../ports/bubbleLookup.js";
 import type {
   ReadRuntimeSessionsRegistryPort,
   SetMetaReviewerPaneBindingPort
-} from "../ports/runtimeSessions.js";
+} from "../../ports/runtimeSessions.js";
 import type {
   ReadStateSnapshotPort,
   WriteStateSnapshotPort
-} from "../ports/stateSnapshots.js";
+} from "../../ports/stateSnapshots.js";
 import type {
   MetaReviewGateRuntimeCapabilities,
   NotifyMetaReviewerSubmissionRequest,

@@ -32,7 +32,7 @@ composition root one level up at `src/cli/`.
    │   selection                  │ │                         │
    └──────────────────────────────┘ └─────────────────────────┘
    ┌──────────────────────────────┐ ┌─────────────────────────┐
-   │ src/v11/shared/ports/**      │ │ src/v11/shared/**       │
+   │ src/v11/ports/**             │ │ src/v11/shared/**       │
    │   capability contracts       │ │   helpers, meaning,     │
    │   (types only)               │ │   normalizers           │
    └──────────────────────────────┘ │   (policy-neutral)      │
@@ -54,7 +54,7 @@ Roles in one sentence each:
 - **`shared/`** (non-ports) — common meanings, normalizers, helpers.
   Policy-neutral; reachable from many places.
   *Example*: `bubblePaths`, `errors/namedError`, `metaReview/snapshot`.
-- **`shared/ports/`** — capability contracts. Types only, no runtime
+- **`ports/`** — capability contracts. Types only, no runtime
   values. The seam between application and infrastructure.
   *Example*: `ReadStateSnapshotPort`, `ProcessSpawnPort`.
 - **`application/`** — command orchestration. Decides; does not
@@ -86,21 +86,21 @@ are reviewer-governed unless a dedicated fitness check is listed.
 ALLOWED IMPORT EDGES
 
   src/cli/         ──→  application/, defaults/, infrastructure/,
-                        shared/ports/, shared/, src/contracts/
+                        ports/, shared/, src/contracts/
 
-  defaults/        ──→  infrastructure/, shared/ports/, shared/,
+  defaults/        ──→  infrastructure/, ports/, shared/,
                         domain/, defaults/ (sibling, transitive),
                         application/ (contracts, API wrappers, explicit
                         defaults-registration hooks only)
 
-  application/     ──→  shared/ports/, shared/, domain/
+  application/     ──→  ports/, shared/, domain/
 
-  infrastructure/  ──→  shared/ports/, shared/, domain/,
+  infrastructure/  ──→  ports/, shared/, domain/,
                         infrastructure/ (sibling)
 
-  shared/          ──→  domain/, shared/ports/
+  shared/          ──→  domain/, ports/
 
-  shared/ports/    ──→  (types only — pulls types from domain/ or
+  ports/           ──→  (types only — pulls types from domain/ or
                         the standard lib)
 
   domain/          ──→  (nothing outside domain/)
@@ -180,7 +180,7 @@ How a single CLI invocation traverses the layers. Concrete example:
 
 The `application/` layer never imports `infrastructure/`, never
 imports `defaults/`. It receives a `dependencies` object whose
-fields are typed by `shared/ports/**`. Composition roots and the
+fields are typed by `ports/**`. Composition roots and the
 `defaults/**` catalog are the places that know which concrete adapter is
 behind each port; application does not.
 
@@ -205,7 +205,7 @@ detail:
   CLI surface is nominally in place but the code lives in the wrong
   layer. See
   [v11-composition-root.md](./v11-composition-root.md).
-- **A `shared/ports/<X>.ts` that re-exports an infrastructure
+- **A `ports/<X>.ts` that re-exports an infrastructure
   function** (1:1 wrap). Not a port — a fake seam. See
   [v11-ports-governance.md](./v11-ports-governance.md).
 - **Direct `writeStateSnapshot(...)` or `appendProtocolEnvelope(...)`

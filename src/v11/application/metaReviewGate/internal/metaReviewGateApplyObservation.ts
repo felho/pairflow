@@ -1,4 +1,4 @@
-import type { LoadedStateSnapshot } from "../../../shared/ports/stateSnapshots.js";
+import type { LoadedStateSnapshot } from "../../../ports/stateSnapshots.js";
 import { isMetaReviewExecutionContextActiveState } from "../../../shared/metaReview/metaReviewExecutionContext.js";
 import type { ProtocolEnvelope } from "../../../../types/protocol.js";
 import type { MetaReviewGateRoute } from "../../../shared/metaReviewGate/metaReviewGateRouteContract.js";

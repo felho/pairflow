@@ -8,7 +8,7 @@ import type {
   ExtractTransferInput
 } from "./extractCommandContract.js";
 import { commitSelectedPaths } from "./extractCommit.js";
-import type { GitRunResult } from "../../shared/ports/git.js";
+import type { GitRunResult } from "../../ports/git.js";
 
 const ABSENT_FILE_ERROR_CODES = new Set(["ENOENT", "ENOTDIR"]);
 const DIRECTORY_ALREADY_EXISTS_ERROR_CODES = new Set(["EEXIST"]);

@@ -1,5 +1,5 @@
 import { buildMetaReviewRuntimeDeliveryCorrelation } from "../../../shared/metaReview/metaReviewSnapshot.js";
-import type { LoadedStateSnapshot } from "../../../shared/ports/stateSnapshots.js";
+import type { LoadedStateSnapshot } from "../../../ports/stateSnapshots.js";
 import type { BubbleMetaReviewRuntimeDeliveryState } from "../../../../types/bubble.js";
 import type { FinalizeCurrentRunMetaReviewGateInput } from "../../../shared/metaReviewGate/metaReviewGateCurrentRunTypes.js";
 

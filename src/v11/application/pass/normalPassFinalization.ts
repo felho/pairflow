@@ -13,7 +13,7 @@ import type {
   ReviewerFindingsClaim,
   ReviewerFindingsClaimParserMetadata
 } from "../../domain/pass/reviewerFindingsClaim.js";
-import type { DeliveryAck } from "../../shared/ports/tmuxDelivery.js";
+import type { DeliveryAck } from "../../ports/tmuxDelivery.js";
 import type { PassResultDelivery } from "./passResultDelivery.js";
 import type { BuildNormalPassResultInput } from "./passResultBuilder.js";
 import type { PassActivationProvenance } from "./passCommandContract.js";

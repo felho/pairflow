@@ -9,7 +9,7 @@ import type {
   ResolveReviewerTestExecutionDirectiveFromArtifactPort,
   VerifyImplementerTestEvidencePort,
   WriteReviewerTestEvidenceArtifactPort
-} from "../../../v11/shared/ports/reviewerTestEvidenceArtifacts.js";
+} from "../../ports/reviewerTestEvidenceArtifacts.js";
 
 export interface ResolveReviewerTestDirectiveForPassInput {
   senderRole: "implementer" | "reviewer";

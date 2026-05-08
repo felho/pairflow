@@ -12,14 +12,14 @@ import { resolveRuntimeSessionWorkspaceAuthority } from "../../../shared/runtime
 import type {
   RefreshReviewerContextInput,
   RefreshReviewerContextResult
-} from "../../../shared/ports/reviewerContext.js";
+} from "../../../ports/reviewerContext.js";
 
 export type {
   RefreshReviewerContextFailureReason,
   RefreshReviewerContextInput,
   RefreshReviewerContextPort,
   RefreshReviewerContextResult
-} from "../../../shared/ports/reviewerContext.js";
+} from "../../../ports/reviewerContext.js";
 
 interface RefreshReviewerContextInternalInput extends RefreshReviewerContextInput {
   runner?: TmuxRunner;

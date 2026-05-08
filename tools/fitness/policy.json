@@ -133,8 +133,8 @@
       "id": "ui_router_port_boundary",
       "metric": "UI router port full-composite and command-owned import leakage",
       "scope": [
-        "src/v11/shared/ports/*.ts",
-        "src/v11/shared/ports/**/*.ts",
+        "src/v11/ports/*.ts",
+        "src/v11/ports/**/*.ts",
         "src/v11/infrastructure/ui/*.ts",
         "src/v11/infrastructure/ui/**/*.ts"
       ],

@@ -16,7 +16,7 @@ import { processSpawnDefault } from "../process/processSpawnDefaults.js";
 import type {
   ProcessSpawnPipeChild,
   ProcessSpawnPort
-} from "../../shared/ports/processSpawn.js";
+} from "../../ports/processSpawn.js";
 
 const TIMEOUT_KILL_GRACE_MS = 100;
 const MAX_CAPTURED_OUTPUT_CHARS = 64 * 1024;

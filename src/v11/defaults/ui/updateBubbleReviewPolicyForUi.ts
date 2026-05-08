@@ -25,7 +25,7 @@ import {
 import type {
   UiUpdateBubbleReviewPolicyInput,
   UiUpdateBubbleReviewPolicyResult
-} from "../../shared/ports/uiRouter.js";
+} from "../../ports/uiRouter.js";
 
 export const REVIEW_POLICY_STATE_CONFLICT =
   "REVIEW_POLICY_STATE_CONFLICT" as const;

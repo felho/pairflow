@@ -11,7 +11,7 @@ import {
   isFindingPriority,
   isFindingTiming
 } from "../../../../types/findings.js";
-import type { StateValidationDiagnostics } from "../../../shared/ports/stateSnapshots.js";
+import type { StateValidationDiagnostics } from "../../../ports/stateSnapshots.js";
 import {
   normalizeMetaReviewRuntimeDeliveryCorrelation
 } from "../../../shared/metaReview/metaReviewSnapshot.js";

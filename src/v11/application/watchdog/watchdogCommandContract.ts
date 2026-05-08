@@ -1,23 +1,23 @@
-import type { EmitBubbleNotificationPort } from "../../shared/ports/notifications.js";
-import type { AppendProtocolEnvelopePort } from "../../shared/ports/transcript.js";
+import type { EmitBubbleNotificationPort } from "../../ports/notifications.js";
+import type { AppendProtocolEnvelopePort } from "../../ports/transcript.js";
 import type {
   EmitDeliveryNotificationAckPort,
   ResolveDeliveryMessageRefPort,
   RetryStuckAgentInputPort
-} from "../../shared/ports/tmuxDelivery.js";
+} from "../../ports/tmuxDelivery.js";
 import type {
   ReadStateSnapshotPort,
   WriteStateSnapshotPort
-} from "../../shared/ports/stateSnapshots.js";
-import type { ReadRuntimeSessionsRegistryPort } from "../../shared/ports/runtimeSessions.js";
-import type { TmuxRunner } from "../../shared/ports/tmuxSessions.js";
+} from "../../ports/stateSnapshots.js";
+import type { ReadRuntimeSessionsRegistryPort } from "../../ports/runtimeSessions.js";
+import type { TmuxRunner } from "../../ports/tmuxSessions.js";
 import type {
   ReadWatchdogPaneActivityPort,
   WriteWatchdogPaneActivityPort
-} from "../../shared/ports/watchdogPaneActivity.js";
-import type { AppendWatchdogTracePort } from "../../shared/ports/watchdogTrace.js";
-import type { EnsureBubbleInstanceIdForMutationPort } from "../../shared/ports/bubbleIdentity.js";
-import type { ResolveBubbleByIdPort } from "../../shared/ports/bubbleLookup.js";
+} from "../../ports/watchdogPaneActivity.js";
+import type { AppendWatchdogTracePort } from "../../ports/watchdogTrace.js";
+import type { EnsureBubbleInstanceIdForMutationPort } from "../../ports/bubbleIdentity.js";
+import type { ResolveBubbleByIdPort } from "../../ports/bubbleLookup.js";
 import type {
   sampleWatchdogPaneActivity
 } from "./watchdogPaneActivitySampler.js";

@@ -12,7 +12,7 @@ import type {
   ApprovalDecisionDeliverySignal,
   ApprovalDecisionDeliverySignalsResult
 } from "./approvalCommandContract.js";
-import type { DeliveryAck } from "../../shared/ports/tmuxDelivery.js";
+import type { DeliveryAck } from "../../ports/tmuxDelivery.js";
 
 type ApprovalDecisionFlowShape = Pick<
   NormalizedApprovalDecisionInput,

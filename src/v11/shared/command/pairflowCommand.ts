@@ -1,7 +1,7 @@
 export type {
   PairflowCommandPathAssessment,
   PairflowCommandPathStatus
-} from "../ports/pairflowCommand.js";
+} from "../../ports/pairflowCommand.js";
 export {
   assessPairflowCommandPath,
   resolveExternalPairflowCommand,

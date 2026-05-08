@@ -3,8 +3,8 @@ import { createHash } from "node:crypto";
 import type { AgentRole, BubbleConfig } from "../../../types/bubble.js";
 import type {
   ReadRuntimeSessionsRegistryPort
-} from "../../shared/ports/runtimeSessions.js";
-import type { TmuxRunner } from "../../shared/ports/tmuxSessions.js";
+} from "../../ports/runtimeSessions.js";
+import type { TmuxRunner } from "../../ports/tmuxSessions.js";
 import {
   resolveWatchdogTargetPaneIndex
 } from "../../shared/watchdog/watchdogPaneTargeting.js";

@@ -1,6 +1,6 @@
 import type {
   SummaryVerifierConsistencyGateArtifact
-} from "../reviewer/summaryVerifierConsistencyGateArtifact.js";
+} from "../shared/reviewer/summaryVerifierConsistencyGateArtifact.js";
 
 export type WriteSummaryVerifierConsistencyGateArtifactPort = (
   artifactPath: string,

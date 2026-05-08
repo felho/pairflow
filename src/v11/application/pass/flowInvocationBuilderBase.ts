@@ -1,6 +1,6 @@
-import type { LoadedStateSnapshot } from "../../shared/ports/stateSnapshots.js";
-import type { EnsureBubbleInstanceIdForMutationResult } from "../../shared/ports/bubbleIdentity.js";
-import type { ResolvedBubbleWorkspace } from "../../shared/ports/workspaceResolution.js";
+import type { LoadedStateSnapshot } from "../../ports/stateSnapshots.js";
+import type { EnsureBubbleInstanceIdForMutationResult } from "../../ports/bubbleIdentity.js";
+import type { ResolvedBubbleWorkspace } from "../../ports/workspaceResolution.js";
 import type { BubbleStateSnapshot } from "../../../types/bubble.js";
 import type { Finding } from "../../../types/findings.js";
 import type { PreparePassRoutingResult } from "./passRoutingPreparation.js";

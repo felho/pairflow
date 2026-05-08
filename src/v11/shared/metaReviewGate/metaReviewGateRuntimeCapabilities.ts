@@ -3,16 +3,16 @@ import type {
   PairflowCommandProfile
 } from "../../../types/bubble.js";
 import type { MetaReviewArtifactReadPort } from "../metaReview/metaReviewArtifactIo.js";
-import type { ResolveBubbleByIdPort } from "../ports/bubbleLookup.js";
-import type { SetMetaReviewerPaneBindingPort } from "../ports/runtimeSessions.js";
+import type { ResolveBubbleByIdPort } from "../../ports/bubbleLookup.js";
+import type { SetMetaReviewerPaneBindingPort } from "../../ports/runtimeSessions.js";
 import type {
   ReadStateSnapshotPort,
   WriteStateSnapshotPort
-} from "../ports/stateSnapshots.js";
+} from "../../ports/stateSnapshots.js";
 import type {
   AppendProtocolEnvelopePort,
   ReadTranscriptEnvelopesPort
-} from "../ports/transcript.js";
+} from "../../ports/transcript.js";
 import type { MetaReviewGateTmuxRunner } from "./metaReviewGateTmuxCapabilities.js";
 
 export interface NotifyMetaReviewerSubmissionRequestInput {

@@ -15,21 +15,21 @@ import type {
   ArchiveIndexEntry,
   ArchiveManifest
 } from "../../../types/archive.js";
-import type { BranchExistsPort } from "../../shared/ports/git.js";
-import type { PathExistsPort } from "../../shared/ports/pathExists.js";
-import type { ResolveBubbleByIdPort } from "../../shared/ports/bubbleLookup.js";
-import type { EnsureBubbleInstanceIdForMutationPort } from "../../shared/ports/bubbleIdentity.js";
-import type { ReadStateSnapshotPort } from "../../shared/ports/stateSnapshots.js";
-import type { CleanupWorktreeWorkspacePort } from "../../shared/ports/worktreeWorkspace.js";
+import type { BranchExistsPort } from "../../ports/git.js";
+import type { PathExistsPort } from "../../ports/pathExists.js";
+import type { ResolveBubbleByIdPort } from "../../ports/bubbleLookup.js";
+import type { EnsureBubbleInstanceIdForMutationPort } from "../../ports/bubbleIdentity.js";
+import type { ReadStateSnapshotPort } from "../../ports/stateSnapshots.js";
+import type { CleanupWorktreeWorkspacePort } from "../../ports/worktreeWorkspace.js";
 import type {
   ReadRuntimeSessionsRegistryPort,
   RemoveRuntimeSessionPort
-} from "../../shared/ports/runtimeSessions.js";
-import type { RemoveWatchdogPaneActivityPort } from "../../shared/ports/watchdogPaneActivity.js";
+} from "../../ports/runtimeSessions.js";
+import type { RemoveWatchdogPaneActivityPort } from "../../ports/watchdogPaneActivity.js";
 import type {
   TerminateBubbleTmuxSessionPort,
   TmuxRunner
-} from "../../shared/ports/tmuxSessions.js";
+} from "../../ports/tmuxSessions.js";
 import type { RemoteBubbleStatusTarget } from "../../shared/status/remoteBubbleStatusContract.js";
 import type { stopBubbleV11 } from "../stop/emitStopV11.js";
 import { inferBubbleStartedAtFromInstanceId } from "../../shared/bubble/bubbleInstanceId.js";

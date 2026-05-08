@@ -53,7 +53,7 @@ import {
 } from "../../../src/v11/shared/reviewer/reviewerSeverityOntology.generated.js";
 import { shellQuote } from "../../../src/v11/shared/foundation/shellQuote.js";
 import type { BubbleStateSnapshot } from "../../../src/types/bubble.js";
-import type { WorktreeBootstrapInput } from "../../../src/v11/shared/ports/worktreeWorkspace.js";
+import type { WorktreeBootstrapInput } from "../../../src/v11/ports/worktreeWorkspace.js";
 import type * as WorktreeManagerModule from "../../../src/v11/infrastructure/workspace/worktreeManager.js";
 import { initGitRepository } from "../../helpers/git.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
@@ -65,7 +65,7 @@ import {
 import { reviewerPolicySnapshotFileName } from "../../../src/v11/shared/reviewer/reviewerPolicySnapshot.js";
 import { buildResumedState } from "../../../src/v11/application/start/startCommandFlows.js";
 import { startCommandContextDefaults } from "../../../src/v11/application/start/startCommandDependencyDefaults.js";
-import type { UpsertRuntimeSessionInput } from "../../../src/v11/shared/ports/runtimeSessions.js";
+import type { UpsertRuntimeSessionInput } from "../../../src/v11/ports/runtimeSessions.js";
 import {
   remoteCloneExternalPairflowCommandEnvVar,
   remoteCloneStartModeEnvVar,

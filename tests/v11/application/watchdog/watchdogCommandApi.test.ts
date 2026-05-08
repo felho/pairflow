@@ -11,7 +11,7 @@ import {
 } from "../../../../src/v11/application/watchdog/emitWatchdogV11.js";
 import { watchdogCommandDefaults } from "../../../../src/v11/defaults/watchdog/watchdogCommandDefaults.js";
 import { watchdogPendingReworkDefaults } from "../../../../src/v11/defaults/watchdog/watchdogPendingReworkDefaults.js";
-import type { RuntimeSessionsRegistry } from "../../../../src/v11/shared/ports/runtimeSessions.js";
+import type { RuntimeSessionsRegistry } from "../../../../src/v11/ports/runtimeSessions.js";
 import type {
   PaneActivitySampleResult
 } from "../../../../src/v11/application/watchdog/watchdogPaneActivitySampler.js";

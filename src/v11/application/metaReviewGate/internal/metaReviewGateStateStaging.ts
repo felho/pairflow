@@ -4,7 +4,7 @@ import { metaReviewExecutionContextToRunningContext } from "../../../shared/stat
 import {
   type LoadedStateSnapshot,
   type WriteStateSnapshotPort
-} from "../../../shared/ports/stateSnapshots.js";
+} from "../../../ports/stateSnapshots.js";
 import type {
   AgentName,
   BubbleStateSnapshot

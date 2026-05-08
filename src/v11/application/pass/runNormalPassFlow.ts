@@ -1,6 +1,6 @@
 import type { ReviewerTestExecutionDirective } from "../../../v11/shared/reviewer/testEvidence.js";
-import type { DeliveryAck } from "../../../v11/shared/ports/tmuxDelivery.js";
-import type { LoadedStateSnapshot } from "../../../v11/shared/ports/stateSnapshots.js";
+import type { DeliveryAck } from "../../ports/tmuxDelivery.js";
+import type { LoadedStateSnapshot } from "../../ports/stateSnapshots.js";
 import type { Finding } from "../../../types/findings.js";
 import type { ProtocolEnvelope } from "../../../types/protocol.js";
 import type {

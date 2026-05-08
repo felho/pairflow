@@ -18,7 +18,7 @@ import type { StartExecutionContext } from "../../../../src/v11/application/star
 import type { ResolvedStartBubbleDependencies } from "../../../../src/v11/application/start/startCommandOrchestration.js";
 import type { BubbleStateSnapshot } from "../../../../src/types/bubble.js";
 import { RemoteBubbleStartError } from "../../../../src/v11/infrastructure/executor/ssh/sshBubbleStart.js";
-import type { UpsertRuntimeSessionInput } from "../../../../src/v11/shared/ports/runtimeSessions.js";
+import type { UpsertRuntimeSessionInput } from "../../../../src/v11/ports/runtimeSessions.js";
 import type { WriteStateSnapshotOptions } from "../../../../src/v11/infrastructure/state/stateStore.js";
 import { readStateSnapshot, writeStateSnapshot } from "../../../../src/v11/infrastructure/state/stateStore.js";
 import {

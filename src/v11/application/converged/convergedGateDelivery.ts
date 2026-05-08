@@ -3,9 +3,9 @@ import type {
   DeliveryAckReasonCode,
   DeliveryAckStatus,
   EmitDeliveryNotificationAckPort
-} from "../../shared/ports/tmuxDelivery.js";
+} from "../../ports/tmuxDelivery.js";
 import type { ApplyMetaReviewGateOnConvergencePort } from "../../shared/metaReviewGate/metaReviewGateCommandContract.js";
-import type { ResolvedBubbleWorkspace } from "../../shared/ports/workspaceResolution.js";
+import type { ResolvedBubbleWorkspace } from "../../ports/workspaceResolution.js";
 import {
   isAgentName,
   resolveUniquelyConfiguredRoleForAgent,

@@ -4,7 +4,7 @@ import {
 } from "../../../v11/shared/reviewer/reviewVerification.js";
 import type {
   WriteReviewVerificationArtifactAtomicPort
-} from "../../../v11/shared/ports/reviewVerificationArtifacts.js";
+} from "../../ports/reviewVerificationArtifacts.js";
 import type { AgentName } from "../../../types/bubble.js";
 import { raisePostAppendReviewVerificationWriteFailed } from "../../domain/pass/postAppendReviewVerificationWriteFailure.js";
 

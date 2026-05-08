@@ -4,10 +4,10 @@ import {
   type RuntimeSessionsRegistry,
   type ReadRuntimeSessionsRegistryPort,
   type RemoveRuntimeSessionsPort
-} from "../../shared/ports/runtimeSessions.js";
-import type { PersistPassValidationRecoveryMarkerPort } from "../../shared/ports/passValidationRecovery.js";
-import type { ResolveRepoPathPort } from "../../shared/ports/repoResolution.js";
-import type { ReadStateSnapshotPort } from "../../shared/ports/stateSnapshots.js";
+} from "../../ports/runtimeSessions.js";
+import type { PersistPassValidationRecoveryMarkerPort } from "../../ports/passValidationRecovery.js";
+import type { ResolveRepoPathPort } from "../../ports/repoResolution.js";
+import type { ReadStateSnapshotPort } from "../../ports/stateSnapshots.js";
 import { isFinalState } from "../../domain/state/transitions.js";
 import type {
   ListBubbleIdSet,

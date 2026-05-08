@@ -1,6 +1,6 @@
 import { join, posix } from "node:path";
 
-import type { ResolvedBubbleById } from "../../shared/ports/bubbleLookup.js";
+import type { ResolvedBubbleById } from "../../ports/bubbleLookup.js";
 import type {
   ExtractCommandDependencies,
   ExtractCommandDiagnostics,

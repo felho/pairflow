@@ -1,5 +1,5 @@
-import type { RuntimeSessionRecord } from "../../ports/runtimeSessions.js";
-import type { StateValidationDiagnostics } from "../../ports/stateSnapshots.js";
+import type { RuntimeSessionRecord } from "../../../ports/runtimeSessions.js";
+import type { StateValidationDiagnostics } from "../../../ports/stateSnapshots.js";
 import type {
   ActiveMetaReviewRuntimeDeliveryView
 } from "../../metaReview/metaReviewSnapshot.js";

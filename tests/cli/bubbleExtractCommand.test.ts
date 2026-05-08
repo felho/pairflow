@@ -20,9 +20,9 @@ import type {
   ExtractFileInfo,
   ExtractCommandInput
 } from "../../src/v11/application/extract/extractCommandContract.js";
-import type { ResolvedBubbleById } from "../../src/v11/shared/ports/bubbleLookup.js";
-import type { RunGitPort } from "../../src/v11/shared/ports/git.js";
-import type { ResolveRepoPathInput } from "../../src/v11/shared/ports/repoResolution.js";
+import type { ResolvedBubbleById } from "../../src/v11/ports/bubbleLookup.js";
+import type { RunGitPort } from "../../src/v11/ports/git.js";
+import type { ResolveRepoPathInput } from "../../src/v11/ports/repoResolution.js";
 
 function defaultFileInfo(path: string): ExtractFileInfo {
   if (path.startsWith("/worktrees/")) {

@@ -5,8 +5,8 @@ import {
 } from "../../../v11/shared/reviewer/reviewVerification.js";
 import type {
   WriteReviewVerificationArtifactAtomicPort
-} from "../../../v11/shared/ports/reviewVerificationArtifacts.js";
-import type { ReadStateSnapshotPort } from "../../shared/ports/stateSnapshots.js";
+} from "../../ports/reviewVerificationArtifacts.js";
+import type { ReadStateSnapshotPort } from "../../ports/stateSnapshots.js";
 import { readStateSnapshot } from "../start/startCommandDependencyDefaults.js";
 import type { AgentName, BubbleStateSnapshot, ReviewArtifactType } from "../../../types/bubble.js";
 import type { ProtocolEnvelope } from "../../../types/protocol.js";

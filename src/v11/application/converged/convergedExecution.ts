@@ -3,7 +3,7 @@ import { join } from "node:path";
 import type {
   ConvergedStructuredFinding
 } from "../../shared/converged/convergedCommandTypes.js";
-import type { ResolvedBubbleWorkspace } from "../../shared/ports/workspaceResolution.js";
+import type { ResolvedBubbleWorkspace } from "../../ports/workspaceResolution.js";
 import type { AgentName, BubbleStateSnapshot } from "../../../types/bubble.js";
 import {
   executeGateDelivery,
@@ -11,12 +11,12 @@ import {
 } from "./convergedGateDelivery.js";
 import type {
   AppendProtocolEnvelopePort
-} from "../../shared/ports/transcript.js";
-import type { EmitBubbleNotificationPort } from "../../shared/ports/notifications.js";
+} from "../../ports/transcript.js";
+import type { EmitBubbleNotificationPort } from "../../ports/notifications.js";
 import type {
   EmitDeliveryNotificationAckPort,
   ResolveDeliveryMessageRefPort
-} from "../../shared/ports/tmuxDelivery.js";
+} from "../../ports/tmuxDelivery.js";
 import {
   buildDefaultConvergedExecutionDependencies
 } from "./convergedDefaultDependencies.js";

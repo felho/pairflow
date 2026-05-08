@@ -3,21 +3,21 @@ import type { BubbleWatchdogResult } from "./watchdogCommandContract.js";
 import { deriveWatchdogWaitingHumanState } from "../../domain/state/watchdogEscalation.js";
 import { clearLiveMetaReviewSnapshot } from "../../shared/metaReview/metaReviewSnapshot.js";
 import { assertValidBubbleStateSnapshot } from "../../shared/state/stateSchema.js";
-import type { ResolvedBubbleById } from "../../shared/ports/bubbleLookup.js";
-import type { EmitBubbleNotificationPort } from "../../shared/ports/notifications.js";
+import type { ResolvedBubbleById } from "../../ports/bubbleLookup.js";
+import type { EmitBubbleNotificationPort } from "../../ports/notifications.js";
 import type {
   EmitDeliveryNotificationAckPort,
   ResolveDeliveryMessageRefPort,
   RetryStuckAgentInputPort
-} from "../../shared/ports/tmuxDelivery.js";
+} from "../../ports/tmuxDelivery.js";
 import type {
   AppendProtocolEnvelopePort
-} from "../../shared/ports/transcript.js";
+} from "../../ports/transcript.js";
 import type {
   LoadedStateSnapshot,
   ReadStateSnapshotPort,
   WriteStateSnapshotPort
-} from "../../shared/ports/stateSnapshots.js";
+} from "../../ports/stateSnapshots.js";
 import { BubbleWatchdogError } from "./watchdogCommandRuntime.js";
 
 function buildEscalationQuestion(

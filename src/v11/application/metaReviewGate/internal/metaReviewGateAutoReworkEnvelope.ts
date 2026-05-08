@@ -1,8 +1,8 @@
 import type { MetaReviewResult } from "../../../shared/metaReview/metaReviewTypes.js";
 import type {
   AppendProtocolEnvelopePort
-} from "../../../shared/ports/transcript.js";
-import type { LoadedStateSnapshot } from "../../../shared/ports/stateSnapshots.js";
+} from "../../../ports/transcript.js";
+import type { LoadedStateSnapshot } from "../../../ports/stateSnapshots.js";
 import type { AgentName } from "../../../../types/bubble.js";
 import type { Finding } from "../../../../types/findings.js";
 import {

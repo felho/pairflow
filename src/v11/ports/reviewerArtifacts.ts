@@ -1,4 +1,4 @@
-import type { ReviewerFocusExtractionResult } from "../reviewer/reviewerBrief.js";
+import type { ReviewerFocusExtractionResult } from "../shared/reviewer/reviewerBrief.js";
 
 export type ReadReviewerBriefArtifactPort = (
   artifactPath: string

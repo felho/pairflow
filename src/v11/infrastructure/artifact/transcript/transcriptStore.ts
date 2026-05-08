@@ -16,7 +16,7 @@ import type {
   ProtocolEnvelopeDraft,
   ReadTranscriptEnvelopesPort,
   ReadTranscriptOptions
-} from "../../../shared/ports/transcript.js";
+} from "../../../ports/transcript.js";
 import {
   buildValidatedEnvelope,
   ensureTranscriptBubbleConsistency,
@@ -44,7 +44,7 @@ export type {
   ProtocolMirrorWriteFailure,
   ReadTranscriptEnvelopesPort,
   ReadTranscriptOptions
-} from "../../../shared/ports/transcript.js";
+} from "../../../ports/transcript.js";
 
 export interface AppendProtocolEnvelopeBatchEntry {
   envelope: ProtocolEnvelopeDraft;

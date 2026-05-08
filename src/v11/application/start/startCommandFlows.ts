@@ -17,7 +17,7 @@ import {
   executeStartRunningMutation,
   type StartLoadedStateSnapshot
 } from "./startStatePersistence.js";
-import type { WorktreeBootstrapResult } from "../../shared/ports/worktreeWorkspace.js";
+import type { WorktreeBootstrapResult } from "../../ports/worktreeWorkspace.js";
 import { createStartBubbleError } from "./startCommandRuntime.js";
 import {
   runRemoteCloneInnerStart,

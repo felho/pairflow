@@ -1,9 +1,9 @@
 import { constants as fsConstants } from "node:fs";
 import { access } from "node:fs/promises";
 
-import type { PathExistsPort } from "../../../shared/ports/pathExists.js";
+import type { PathExistsPort } from "../../../ports/pathExists.js";
 
-export type { PathExistsPort } from "../../../shared/ports/pathExists.js";
+export type { PathExistsPort } from "../../../ports/pathExists.js";
 
 export const pathExists: PathExistsPort = async (
   path: string

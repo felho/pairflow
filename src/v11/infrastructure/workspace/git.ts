@@ -3,15 +3,15 @@ import type {
   GitRunOptions,
   GitRunResult,
   RunGitPort
-} from "../../shared/ports/git.js";
-import type { AssertGitRepositoryPort } from "../../shared/ports/gitRepository.js";
-import type { BranchExistsPort } from "../../shared/ports/git.js";
-import { GitRepositoryError } from "../../shared/ports/gitRepository.js";
+} from "../../ports/git.js";
+import type { AssertGitRepositoryPort } from "../../ports/gitRepository.js";
+import type { BranchExistsPort } from "../../ports/git.js";
+import { GitRepositoryError } from "../../ports/gitRepository.js";
 
-export type { GitRunOptions, GitRunResult, RunGitPort } from "../../shared/ports/git.js";
-export type { BranchExistsPort } from "../../shared/ports/git.js";
-export { GitRepositoryError } from "../../shared/ports/gitRepository.js";
-export type { AssertGitRepositoryPort } from "../../shared/ports/gitRepository.js";
+export type { GitRunOptions, GitRunResult, RunGitPort } from "../../ports/git.js";
+export type { BranchExistsPort } from "../../ports/git.js";
+export { GitRepositoryError } from "../../ports/gitRepository.js";
+export type { AssertGitRepositoryPort } from "../../ports/gitRepository.js";
 
 export class GitCommandError extends Error {
   public readonly args: string[];

@@ -13,7 +13,7 @@ import type {
   WorktreeBootstrapResult,
   WorktreeCleanupInput,
   WorktreeCleanupResult
-} from "../../shared/ports/worktreeWorkspace.js";
+} from "../../ports/worktreeWorkspace.js";
 import {
   assertGitRepositoryForBootstrap,
   assertGitRepositoryForCleanup,
@@ -38,7 +38,7 @@ export type {
   WorktreeBootstrapResult,
   WorktreeCleanupInput,
   WorktreeCleanupResult
-} from "../../shared/ports/worktreeWorkspace.js";
+} from "../../ports/worktreeWorkspace.js";
 
 type CleanupWorkspaceKind = "registered-worktree" | "clone" | "none";
 type RequestedBootstrapWorkspaceKind = WorktreeBootstrapResult["workspaceKind"];

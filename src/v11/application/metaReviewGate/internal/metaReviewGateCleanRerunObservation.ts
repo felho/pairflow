@@ -1,4 +1,4 @@
-import type { LoadedStateSnapshot } from "../../../shared/ports/stateSnapshots.js";
+import type { LoadedStateSnapshot } from "../../../ports/stateSnapshots.js";
 import type { BubbleMetaReviewRuntimeDeliveryState } from "../../../../types/bubble.js";
 import { reconcileObservedGateResult } from "./metaReviewGateApplyObservation.js";
 import { persistRuntimeDeliveryObservation } from "./metaReviewGateApplyPersistence.js";

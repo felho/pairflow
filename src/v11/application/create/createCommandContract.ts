@@ -3,12 +3,12 @@ import type { writeFile } from "node:fs/promises";
 import type { PairflowGlobalConfig } from "../../../config/pairflowConfig.js";
 import type { BubbleRemotePointer } from "../../../types/bubble.js";
 import type { BubblePaths } from "../../shared/bubble/bubblePaths.js";
-import type { AssertGitRepositoryPort } from "../../shared/ports/gitRepository.js";
-import type { AppendProtocolEnvelopePort } from "../../shared/ports/transcript.js";
+import type { AssertGitRepositoryPort } from "../../ports/gitRepository.js";
+import type { AppendProtocolEnvelopePort } from "../../ports/transcript.js";
 import type {
   ResolveDocContractGateArtifactPathPort,
   WriteDocContractGateArtifactPort
-} from "../../shared/ports/docContractGateArtifacts.js";
+} from "../../ports/docContractGateArtifacts.js";
 import type { ReviewerFocusExtractionResult } from "../../../v11/shared/reviewer/reviewerBrief.js";
 import type {
   AgentName,

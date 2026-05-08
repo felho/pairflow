@@ -2,7 +2,7 @@
 
 Status: active  
 Owner: architecture/runtime  
-Scope: explicit capability boundaries under `src/v11/shared/ports/**`
+Scope: explicit capability boundaries under `src/v11/ports/**`
 
 ## Purpose
 
@@ -32,7 +32,7 @@ Ports are the intended boundary between those two extremes:
 
 Default home:
 
-- `src/v11/shared/ports/**`
+- `src/v11/ports/**`
 
 Rationale:
 
@@ -41,7 +41,9 @@ Rationale:
 - they are not infrastructure implementations,
 - they should be visible and reviewable as first-class dependency surfaces.
 
-Do not create top-level `src/v11/ports/**` by default.
+Historical note: ports previously lived under `src/v11/shared/ports/**`.
+They were promoted to top-level `src/v11/ports/**` because port contracts
+are an architectural boundary layer, not ordinary shared helpers.
 
 ## Layer Relationship
 
@@ -52,13 +54,13 @@ May depend on:
 - `application`
 - `domain`
 - `shared`
-- `shared/ports`
+- `ports`
 
 Must not depend directly on:
 
 - `infrastructure`
 
-### `shared/ports`
+### `ports`
 
 May contain:
 
@@ -86,7 +88,7 @@ Owns:
 
 ## Ports vs Shared
 
-`shared` and `shared/ports` are not the same thing.
+`shared` and `ports` are not the same thing.
 
 Use plain `shared` for:
 
@@ -95,7 +97,7 @@ Use plain `shared` for:
 - shared helper logic,
 - shared neutral contracts that are not dependency boundaries.
 
-Use `shared/ports` for:
+Use `ports` for:
 
 - capability boundaries that `application` depends on instead of importing
   infrastructure directly.
@@ -104,7 +106,7 @@ Rule of thumb:
 
 - if the module answers “what does this mean?”, it is usually `shared`,
 - if the module answers “what capability does this use-case require?”, it is
-  usually `shared/ports`.
+  usually `ports`.
 
 ## What Belongs In Ports
 
@@ -120,11 +122,11 @@ Good candidates:
 
 Typical examples:
 
-- `src/v11/shared/ports/transcript.ts`
-- `src/v11/shared/ports/stateStore.ts`
-- `src/v11/shared/ports/repoRegistry.ts`
-- `src/v11/shared/ports/gitRepository.ts`
-- `src/v11/shared/ports/runtimeSessions.ts`
+- `src/v11/ports/transcript.ts`
+- `src/v11/ports/stateSnapshots.ts`
+- `src/v11/ports/repoRegistry.ts`
+- `src/v11/ports/gitRepository.ts`
+- `src/v11/ports/runtimeSessions.ts`
 
 ## What Does Not Belong In Ports
 
@@ -183,7 +185,7 @@ The following are not valid ports:
 
 1. a direct re-export of an infrastructure function,
 2. a 1:1 forwarding wrapper with no boundary meaning,
-3. a module placed under `shared/ports` whose real owner is still clearly
+3. a module placed under `ports` whose real owner is still clearly
    infrastructure,
 4. a “port” that imports and calls infrastructure inline instead of describing a
    dependency contract.
@@ -216,10 +218,10 @@ must not silently redefine the capability contract ad hoc.
 If the ports model is adopted, fitness should enforce all of the following:
 
 1. `application -> infrastructure` remains forbidden,
-2. `application -> shared/ports` is allowed,
-3. `shared/ports -> infrastructure` is forbidden,
-4. `shared/ports` must not be pass-through adapter camouflage,
-5. infrastructure implementations may depend on `shared/ports` contracts.
+2. `application -> ports` is allowed,
+3. `ports -> infrastructure` is forbidden,
+4. `ports` must not be pass-through adapter camouflage,
+5. infrastructure implementations may depend on `ports` contracts.
 
 This means ports are a codebase concept first, and a fitness-policy concept
 second.

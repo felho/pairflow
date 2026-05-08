@@ -1,15 +1,15 @@
 import type {
   PassValidationRecoveryMarkerPersistWarning,
   PersistPassValidationRecoveryMarkerPort
-} from "../../shared/ports/passValidationRecovery.js";
-import type { ResolveRepoPathPort } from "../../shared/ports/repoResolution.js";
-import type { ReadStateSnapshotPort } from "../../shared/ports/stateSnapshots.js";
+} from "../../ports/passValidationRecovery.js";
+import type { ResolveRepoPathPort } from "../../ports/repoResolution.js";
+import type { ReadStateSnapshotPort } from "../../ports/stateSnapshots.js";
 import type { isFinalState } from "../../domain/state/transitions.js";
 import type {
   ReadRuntimeSessionsRegistryPort,
   RemoveRuntimeSessionsPort,
   RuntimeSessionsRegistry
-} from "../../shared/ports/runtimeSessions.js";
+} from "../../ports/runtimeSessions.js";
 
 export type RuntimeSessionStaleReason =
   | "missing_bubble"

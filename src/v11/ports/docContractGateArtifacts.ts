@@ -1,4 +1,4 @@
-import type { DocContractGateArtifact } from "../gates/docContractGates.js";
+import type { DocContractGateArtifact } from "../shared/gates/docContractGates.js";
 
 export type ResolveDocContractGateArtifactPathPort = (
   artifactsDir: string

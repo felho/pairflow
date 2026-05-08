@@ -1,4 +1,4 @@
-import type { ProtocolMirrorWriteFailure } from "../../../shared/ports/transcript.js";
+import type { ProtocolMirrorWriteFailure } from "../../../ports/transcript.js";
 
 export function toMirrorWriteFailure(
   mirrorPath: string,

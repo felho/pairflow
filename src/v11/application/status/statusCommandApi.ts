@@ -19,8 +19,8 @@ import type {
   ReadWatchdogPaneActivity,
   ReadWatchdogPaneActivityResult
 } from "../../shared/watchdog/watchdogPaneActivityStore.js";
-import type { ResolveBubbleByIdPort } from "../../shared/ports/bubbleLookup.js";
-import type { ResolvedBubbleById } from "../../shared/ports/bubbleLookup.js";
+import type { ResolveBubbleByIdPort } from "../../ports/bubbleLookup.js";
+import type { ResolvedBubbleById } from "../../ports/bubbleLookup.js";
 import type {
   ResolveRemoteBubbleStatusTargetPort
 } from "../../shared/remote/commitRemoteExecution.js";

@@ -1,4 +1,4 @@
-import type { LoadedStateSnapshot } from "../../../shared/ports/stateSnapshots.js";
+import type { LoadedStateSnapshot } from "../../../ports/stateSnapshots.js";
 import { isNamedError } from "../../../shared/errors/namedError.js";
 import type { BubbleStateSnapshot } from "../../../../types/bubble.js";
 import { MetaReviewGateError } from "../../../shared/metaReviewGate/metaReviewGateRouteContract.js";

@@ -1,10 +1,10 @@
-import type { LoadedStateSnapshot } from "../../shared/ports/stateSnapshots.js";
+import type { LoadedStateSnapshot } from "../../ports/stateSnapshots.js";
 import type {
   EnsureBubbleInstanceIdForMutationResult
-} from "../../shared/ports/bubbleIdentity.js";
+} from "../../ports/bubbleIdentity.js";
 import type {
   ResolvedBubbleWorkspace
-} from "../../shared/ports/workspaceResolution.js";
+} from "../../ports/workspaceResolution.js";
 import {
   IDEATION_PASS_BLOCKED
 } from "../../shared/ideation/ideationReasonCodes.js";

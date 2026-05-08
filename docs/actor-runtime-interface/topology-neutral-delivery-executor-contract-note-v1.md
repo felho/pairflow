@@ -26,23 +26,23 @@ owners:
    - `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-delivery-ack-producer-contract-phaseE2a.md`
 4. Current-tree source anchors:
    - canonical delivery contract exports: `src/v11/shared/delivery/tmuxDeliveryContract.ts`
-   - shared delivery port surface: `src/v11/shared/ports/tmuxDelivery.ts`
-   - shared launch port exports: `src/v11/shared/ports/tmuxSessions.ts`
+   - shared delivery port surface: `src/v11/ports/tmuxDelivery.ts`
+   - shared launch port exports: `src/v11/ports/tmuxSessions.ts`
    - retained delivery runtime helpers: `src/v11/infrastructure/channel/tmux/tmuxDeliveryRuntime.ts`
    - retained delivery adapter entrypoint: `src/v11/infrastructure/channel/tmux/tmuxDelivery.ts`
    - retained launch/session producer: `src/v11/infrastructure/channel/tmux/tmuxManager.ts`
    - retained launch ack consumer: `src/v11/application/start/startCommandTmuxLaunch.ts`
    - retained meta-review gate defaults: `src/v11/defaults/metaReviewGate/metaReviewGateCommandDefaults.ts`
    - retained workspace authority resolver: `src/v11/shared/runtimeSessionWorkspaceAuthority.ts`
-   - retained UI/router consume surface: `src/v11/shared/ports/uiRouter.ts`
+   - retained UI/router consume surface: `src/v11/ports/uiRouter.ts`
 
 ## Boundary Summary
 
 | Layer | Source anchors | What it owns now | What it does not own | Disposition |
 |---|---|---|---|---|
-| Canonical topology-neutral contract | `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-delivery-ack-producer-contract-phaseE2a.md`, `src/v11/shared/delivery/tmuxDeliveryContract.ts`, `src/v11/shared/ports/tmuxDelivery.ts`, `src/v11/shared/ports/tmuxSessions.ts` | topologytol fuggetlen delivery ack (`accepted | rejected`) es launch ack (`running | failed_to_start`) jelentese; a delivery/executor seam csak handoff trigger + typed ack consume boundary lehet | `tmux` pane/session naming, prompt acceptance, marker confirmation, workflow state ownership, UI/read-model projection | active, normativ |
+| Canonical topology-neutral contract | `plans/archive/tasks/actor-runtime-interface/actor-runtime-interface-delivery-ack-producer-contract-phaseE2a.md`, `src/v11/shared/delivery/tmuxDeliveryContract.ts`, `src/v11/ports/tmuxDelivery.ts`, `src/v11/ports/tmuxSessions.ts` | topologytol fuggetlen delivery ack (`accepted | rejected`) es launch ack (`running | failed_to_start`) jelentese; a delivery/executor seam csak handoff trigger + typed ack consume boundary lehet | `tmux` pane/session naming, prompt acceptance, marker confirmation, workflow state ownership, UI/read-model projection | active, normativ |
 | Retained `tmux` adapter | `src/v11/infrastructure/channel/tmux/tmuxDeliveryRuntime.ts`, `src/v11/infrastructure/channel/tmux/tmuxDelivery.ts`, `src/v11/infrastructure/channel/tmux/tmuxManager.ts` | pane targeting, session launch, command building, trust-prompt acceptance, marker confirmation, direct `tmux` primitivek | canonical ack truth ujradefiniasa, topology-neutral executor API deklaralasa, bubble lifecycle ownership | retained adapter |
-| Retained current consumers | `src/v11/application/start/startCommandTmuxLaunch.ts`, `src/v11/defaults/metaReviewGate/metaReviewGateCommandDefaults.ts`, `src/v11/shared/ports/uiRouter.ts` | fail-closed launch ack consume, retained `tmux` dependency graph, legacy/result-shape consume surface | canonical contract ownership, generic executor taxonomy | retained consumer coupling |
+| Retained current consumers | `src/v11/application/start/startCommandTmuxLaunch.ts`, `src/v11/defaults/metaReviewGate/metaReviewGateCommandDefaults.ts`, `src/v11/ports/uiRouter.ts` | fail-closed launch ack consume, retained `tmux` dependency graph, legacy/result-shape consume surface | canonical contract ownership, generic executor taxonomy | retained consumer coupling |
 | Runtime session workspace authority | `src/v11/shared/runtimeSessionWorkspaceAuthority.ts`, `src/v11/infrastructure/channel/tmux/tmuxDeliveryRuntime.ts` | runtime session recordbol feloldott read-only adapter input | standalone topology-neutral contractelem vagy jovo executor API kotelezo canonical mezorendszere | preserved adapter input |
 | Future executor generalization | nincs current-tree closure proof | majdani non-`tmux` launch/delivery topology, generic executor handshake, consumer migration | barmilyen current-tree canonical allitas evidence nelkul | deferred / successor-owned |
 
@@ -51,7 +51,7 @@ owners:
 | Element | Source anchor | Current meaning | Boundary disposition |
 |---|---|---|---|
 | `TmuxDeliveryAck` + `TmuxDeliveryAckStatus` | `src/v11/shared/delivery/tmuxDeliveryContract.ts` | canonical delivery ack truth: `accepted | rejected` | preserved canonical baseline |
-| `LaunchBubbleTmuxSessionAck` + `LaunchBubbleTmuxSessionAckStatus` | `src/v11/shared/ports/tmuxSessions.ts` | canonical launch ack truth: `running | failed_to_start` | preserved canonical baseline |
+| `LaunchBubbleTmuxSessionAck` + `LaunchBubbleTmuxSessionAckStatus` | `src/v11/ports/tmuxSessions.ts` | canonical launch ack truth: `running | failed_to_start` | preserved canonical baseline |
 | `EmitTmuxDeliveryNotificationResult` + `projectTmuxDeliveryAckToLegacyResult(...)` | `src/v11/shared/delivery/tmuxDeliveryContract.ts`, `src/v11/infrastructure/channel/tmux/tmuxDeliveryRuntime.ts#projectTmuxDeliveryAckToLegacyResult` | legacy compatibility projection a canonical delivery ackbol | compat-only, retained consumer bridge |
 | `assertRunningLaunchAck(...)` | `src/v11/application/start/startCommandTmuxLaunch.ts#assertRunningLaunchAck` | retained downstream consume a shared launch ackra | preserved consumer, nem contract owner |
 | marker confirmation / trust prompt / pane targeting | `src/v11/infrastructure/channel/tmux/tmuxDeliveryRuntime.ts`, `src/v11/infrastructure/channel/tmux/tmuxDelivery.ts` | `tmux` adapter guard es observability detail | guard-only, nem canonical truth |
@@ -70,7 +70,7 @@ owners:
 3. `src/v11/infrastructure/channel/tmux/tmuxDelivery.ts`
    - a current retained `tmux` delivery adapter entrypointja;
    - pane/session resolutiont es message-buildingt vegez, majd legacy delivery resultot ad vissza.
-4. `src/v11/shared/ports/tmuxSessions.ts` es `src/v11/infrastructure/channel/tmux/tmuxManager.ts`
+4. `src/v11/ports/tmuxSessions.ts` es `src/v11/infrastructure/channel/tmux/tmuxManager.ts`
    - a shared launch ack contract es a retained `tmux` session producer itt talalkozik;
    - a canonical launch truth a shared porton zarult, de a producer tovabbra is `tmux` topology-specifikus.
 5. `src/v11/application/start/startCommandTmuxLaunch.ts`
@@ -79,7 +79,7 @@ owners:
 6. `src/v11/defaults/metaReviewGate/metaReviewGateCommandDefaults.ts`
    - a meta-review gate dependency graph ma kozvetlen `tmux` primitivekre es pane-muveletekre ul;
    - ez retained adapter/consumer coupling, nem topology-neutral executor API.
-7. `src/v11/shared/ports/uiRouter.ts`
+7. `src/v11/ports/uiRouter.ts`
    - a UI/router felulet tovabbra is az `EmitTmuxDeliveryNotificationResult` compat shape-et fogyasztja;
    - ez explicit bizonyiteka annak, hogy a current-tree consumer csalad meg nem valt le a retained `tmux` vocabularyrol.
 

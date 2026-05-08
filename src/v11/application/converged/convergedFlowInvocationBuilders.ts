@@ -7,10 +7,10 @@ import { prepareConvergedPolicy } from "./convergedPolicyPreparation.js";
 import { prepareConvergedRouting } from "./convergedRoutingPreparation.js";
 import { prepareConvergedValidation } from "./convergedValidationPreparation.js";
 import { resolveDefaultConvergedReadTranscriptEnvelopes } from "./convergedDefaultDependencies.js";
-import type { ReadTranscriptEnvelopesPort } from "../../shared/ports/transcript.js";
+import type { ReadTranscriptEnvelopesPort } from "../../ports/transcript.js";
 import type {
   ResolveReviewerTestExecutionDirectivePort
-} from "../../shared/ports/reviewerTestEvidenceArtifacts.js";
+} from "../../ports/reviewerTestEvidenceArtifacts.js";
 import type {
   RunConvergedFlowDependencies,
   RunConvergedFlowInput

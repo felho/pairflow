@@ -17,7 +17,7 @@ import type {
   ReadWatchdogPaneActivityResult,
   WatchdogPaneActivityRecord,
   WriteWatchdogPaneActivityPort
-} from "../../shared/ports/watchdogPaneActivity.js";
+} from "../../ports/watchdogPaneActivity.js";
 
 export interface WatchdogPaneActivityState {
   readStatus: "ok" | "missing" | "invalid";

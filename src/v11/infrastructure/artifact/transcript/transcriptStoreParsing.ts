@@ -3,7 +3,7 @@ import { dirname } from "node:path";
 
 import type { ProtocolEnvelope } from "../../../../types/protocol.js";
 import { parseEnvelopeLine, serializeEnvelopeLine } from "../../../shared/protocol/envelope.js";
-import type { ReadTranscriptOptions } from "../../../shared/ports/transcript.js";
+import type { ReadTranscriptOptions } from "../../../ports/transcript.js";
 
 export interface ParsedTranscript {
   envelopes: ProtocolEnvelope[];

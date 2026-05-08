@@ -3,7 +3,7 @@ import { readFile } from "node:fs/promises";
 import { renderBubbleConfigToml } from "../../../config/bubbleConfig.js";
 import type {
   ResolveDocContractGateArtifactPathPort
-} from "../../shared/ports/docContractGateArtifacts.js";
+} from "../../ports/docContractGateArtifacts.js";
 import { reviewerPolicySnapshotFileName } from "../../shared/reviewer/reviewerPolicySnapshot.js";
 import type { RemoteStartControlFile } from "./startCommandContract.js";
 import type { StartExecutionContext } from "./startCommandContext.js";

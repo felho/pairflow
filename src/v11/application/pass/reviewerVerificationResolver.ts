@@ -5,7 +5,7 @@ import {
 } from "../../../v11/shared/reviewer/reviewVerification.js";
 import type {
   ResolveReviewVerificationInputFromRefsPort
-} from "../../../v11/shared/ports/reviewVerificationArtifacts.js";
+} from "../../ports/reviewVerificationArtifacts.js";
 
 const reviewerVerificationResolutionFailedReasonCode =
   "REVIEWER_VERIFICATION_RESOLUTION_FAILED";

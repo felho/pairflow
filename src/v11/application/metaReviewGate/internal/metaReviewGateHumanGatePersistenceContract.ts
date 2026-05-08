@@ -1,7 +1,7 @@
 import type {
   LoadedStateSnapshot,
   WriteStateSnapshotPort
-} from "../../../shared/ports/stateSnapshots.js";
+} from "../../../ports/stateSnapshots.js";
 import type {
   AgentName,
   BubbleStateSnapshot,
@@ -9,7 +9,7 @@ import type {
 } from "../../../../types/bubble.js";
 import type { MetaReviewResult } from "../../../shared/metaReview/metaReviewTypes.js";
 import type { FindingsParityMetadata } from "../../../../types/protocol.js";
-import type { AppendProtocolEnvelopePort } from "../../../shared/ports/transcript.js";
+import type { AppendProtocolEnvelopePort } from "../../../ports/transcript.js";
 import type {
   MetaReviewGateRoute,
   MetaReviewGateThresholdMetadata

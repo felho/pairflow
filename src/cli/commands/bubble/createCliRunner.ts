@@ -1,4 +1,4 @@
-import type { RegisterRepoInRegistryPort } from "../../../v11/shared/ports/repoRegistry.js";
+import type { RegisterRepoInRegistryPort } from "../../../v11/ports/repoRegistry.js";
 import {
   buildCreateBubbleInput,
   registerRepoAfterCreateBestEffort,

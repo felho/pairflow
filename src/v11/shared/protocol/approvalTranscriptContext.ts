@@ -4,7 +4,7 @@ import {
   metaReviewGateRoutes,
   type MetaReviewGateRoute
 } from "../metaReviewGate/index.js";
-import type { ReadTranscriptEnvelopesPort } from "../ports/transcript.js";
+import type { ReadTranscriptEnvelopesPort } from "../../ports/transcript.js";
 
 const approvalSummaryConsistencyStatusMetadataKey =
   "approval_summary_consistency_status";

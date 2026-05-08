@@ -10,13 +10,13 @@ import type {
   ResolveBubbleByIdInput,
   ResolveBubbleByIdPort,
   ResolvedBubbleById
-} from "../../../shared/ports/bubbleLookup.js";
+} from "../../../ports/bubbleLookup.js";
 
 export type {
   ResolveBubbleByIdInput,
   ResolveBubbleByIdPort,
   ResolvedBubbleById
-} from "../../../shared/ports/bubbleLookup.js";
+} from "../../../ports/bubbleLookup.js";
 
 export class BubbleLookupError extends Error {
   public constructor(message: string) {

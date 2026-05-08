@@ -1,10 +1,10 @@
 import { loadStartBubbleDependencyDefaults } from "./startBubbleDependencyDefaults.js";
-import type { TmuxRunner } from "../../shared/ports/tmuxSessions.js";
-import type { WriteStateSnapshotPort } from "../../shared/ports/stateSnapshots.js";
+import type { TmuxRunner } from "../../ports/tmuxSessions.js";
+import type { WriteStateSnapshotPort } from "../../ports/stateSnapshots.js";
 import type {
   AppendProtocolEnvelopePort,
   ReadTranscriptEnvelopesPort
-} from "../../shared/ports/transcript.js";
+} from "../../ports/transcript.js";
 
 type RunTmuxPort = TmuxRunner;
 

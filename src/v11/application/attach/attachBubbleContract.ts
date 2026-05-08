@@ -3,8 +3,8 @@ import type {
   AttachLauncher,
   BubbleRemotePointer
 } from "../../../types/bubble.js";
-import type { ResolveBubbleByIdPort } from "../../shared/ports/bubbleLookup.js";
-import type { ProcessSpawnPort } from "../../shared/ports/processSpawn.js";
+import type { ResolveBubbleByIdPort } from "../../ports/bubbleLookup.js";
+import type { ProcessSpawnPort } from "../../ports/processSpawn.js";
 
 export type ExplicitAttachLauncher = Exclude<AttachLauncher, "auto">;
 export type GuiAttachLauncher = Exclude<ExplicitAttachLauncher, "copy">;

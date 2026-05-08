@@ -1,4 +1,4 @@
-export type { AppendProtocolEnvelopeResult } from "../../shared/ports/transcript.js";
+export type { AppendProtocolEnvelopeResult } from "../../ports/transcript.js";
 export {
   appendProtocolEnvelope,
   readTranscriptEnvelopes

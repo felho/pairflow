@@ -1,25 +1,25 @@
 import type { BubbleRemotePointerStarted } from "../../../types/bubble.js";
 import type {
   EnsureBubbleInstanceIdForMutationResult
-} from "../../shared/ports/bubbleIdentity.js";
+} from "../../ports/bubbleIdentity.js";
 import type {
   EnsureBubbleInstanceIdForMutationPort
-} from "../../shared/ports/bubbleIdentity.js";
-import type { ResolvedBubbleById } from "../../shared/ports/bubbleLookup.js";
-import type { ResolveBubbleByIdPort } from "../../shared/ports/bubbleLookup.js";
+} from "../../ports/bubbleIdentity.js";
+import type { ResolvedBubbleById } from "../../ports/bubbleLookup.js";
+import type { ResolveBubbleByIdPort } from "../../ports/bubbleLookup.js";
 import type {
   LoadedStateSnapshot
-} from "../../shared/ports/stateSnapshots.js";
+} from "../../ports/stateSnapshots.js";
 import type {
   ReadStateSnapshotPort,
   WriteStateSnapshotPort
-} from "../../shared/ports/stateSnapshots.js";
+} from "../../ports/stateSnapshots.js";
 import type {
   AppendProtocolEnvelopePort,
   AppendProtocolEnvelopeResult,
   ReadTranscriptEnvelopesPort
-} from "../../shared/ports/transcript.js";
-import type { RunGitPort } from "../../shared/ports/git.js";
+} from "../../ports/transcript.js";
+import type { RunGitPort } from "../../ports/git.js";
 import type {
   CommitRemoteBubbleStatusTarget,
   ExecuteRemoteBubbleCommitCommandPort,

@@ -3,17 +3,17 @@ import {
   buildGateLockPath
 } from "./metaReviewGateShared.js";
 import type { MetaReviewArtifactReadPort } from "../../../shared/metaReview/metaReviewArtifactIo.js";
-import type { ResolveBubbleByIdPort } from "../../../shared/ports/bubbleLookup.js";
+import type { ResolveBubbleByIdPort } from "../../../ports/bubbleLookup.js";
 import type {
   LoadedStateSnapshot,
   ReadStateSnapshotPort,
   WriteStateSnapshotPort
-} from "../../../shared/ports/stateSnapshots.js";
+} from "../../../ports/stateSnapshots.js";
 import type {
   AppendProtocolEnvelopePort,
   ReadTranscriptEnvelopesPort
-} from "../../../shared/ports/transcript.js";
-import type { SetMetaReviewerPaneBindingPort } from "../../../shared/ports/runtimeSessions.js";
+} from "../../../ports/transcript.js";
+import type { SetMetaReviewerPaneBindingPort } from "../../../ports/runtimeSessions.js";
 import type {
   ApplyMetaReviewGateOnConvergenceDependencies,
   ApplyMetaReviewGateOnConvergenceInput

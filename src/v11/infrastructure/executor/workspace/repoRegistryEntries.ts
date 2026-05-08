@@ -1,7 +1,7 @@
 import { resolve } from "node:path";
 
 import { normalizeRepoPath } from "./repoResolution.js";
-import type { RepoRegistryEntry } from "../../../shared/ports/repoRegistry.js";
+import type { RepoRegistryEntry } from "../../../ports/repoRegistry.js";
 
 export async function normalizeRegistryEntries(
   entries: RepoRegistryEntry[],

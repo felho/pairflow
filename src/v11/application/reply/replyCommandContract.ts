@@ -1,14 +1,14 @@
 import type {
   EmitDeliveryNotificationAckPort
-} from "../../shared/ports/tmuxDelivery.js";
-import type { AppendProtocolEnvelopePort } from "../../shared/ports/transcript.js";
+} from "../../ports/tmuxDelivery.js";
+import type { AppendProtocolEnvelopePort } from "../../ports/transcript.js";
 import type {
   ReadStateSnapshotPort,
   WriteStateSnapshotPort
-} from "../../shared/ports/stateSnapshots.js";
-import type { ResolveBubbleByIdPort } from "../../shared/ports/bubbleLookup.js";
-import type { ResolveDeliveryMessageRefPort } from "../../shared/ports/tmuxDelivery.js";
-import type { EnsureBubbleInstanceIdForMutationPort } from "../../shared/ports/bubbleIdentity.js";
+} from "../../ports/stateSnapshots.js";
+import type { ResolveBubbleByIdPort } from "../../ports/bubbleLookup.js";
+import type { ResolveDeliveryMessageRefPort } from "../../ports/tmuxDelivery.js";
+import type { EnsureBubbleInstanceIdForMutationPort } from "../../ports/bubbleIdentity.js";
 import type { BubbleStateSnapshot } from "../../../types/bubble.js";
 import type { ProtocolEnvelope } from "../../../types/protocol.js";
 

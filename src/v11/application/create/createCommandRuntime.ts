@@ -33,8 +33,8 @@ import type {
   PairflowCommandProfile
 } from "../../../types/bubble.js";
 import type { ResolvedRepoValidationProfileCommands } from "./repoValidationProfileResolver.js";
-import { GitRepositoryError } from "../../shared/ports/gitRepository.js";
-import type { AssertGitRepositoryPort } from "../../shared/ports/gitRepository.js";
+import { GitRepositoryError } from "../../ports/gitRepository.js";
+import type { AssertGitRepositoryPort } from "../../ports/gitRepository.js";
 import {
   isNonEmptyString,
   SchemaValidationError

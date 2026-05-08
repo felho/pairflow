@@ -6,7 +6,7 @@ import type {
 } from "../../../contracts/ui/uiReadModel.js";
 import type { RuntimeSessionRecord } from "../executor/sessionRuntime/runtimeSessionsRegistry.js";
 import { presentBubbleDetail } from "./presenters/bubblePresenter.js";
-import type { UiBubbleDetailDependencies } from "../../shared/ports/uiRouter.js";
+import type { UiBubbleDetailDependencies } from "../../ports/uiRouter.js";
 
 export interface RouterBubbleDetailEnvironment {
   requestContext: {

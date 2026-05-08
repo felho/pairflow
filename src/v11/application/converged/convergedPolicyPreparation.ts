@@ -1,4 +1,4 @@
-import { type ReadTranscriptEnvelopesPort } from "../../shared/ports/transcript.js";
+import { type ReadTranscriptEnvelopesPort } from "../../ports/transcript.js";
 import {
   validateConvergencePolicy,
   type ConvergencePolicyResult

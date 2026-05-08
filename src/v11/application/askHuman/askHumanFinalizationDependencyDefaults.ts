@@ -4,7 +4,7 @@ import type {
   DeliveryAck,
   EmitDeliveryNotificationAckPort,
   ResolveDeliveryMessageRefInput
-} from "../../shared/ports/tmuxDelivery.js";
+} from "../../ports/tmuxDelivery.js";
 import type {
   EmitAskHumanBubbleNotificationPort
 } from "./askHumanDeliveryPortsContract.js";

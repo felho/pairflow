@@ -3,15 +3,15 @@ import {
 } from "../metaReviewGate/emitMetaReviewGateV11.js";
 import { convergedDependencyDefaults } from "./convergedDependencyDefaults.js";
 import { emitBubbleLifecycleEventBestEffort } from "../metrics/bubbleEvents.js";
-import type { EmitBubbleNotificationPort } from "../../shared/ports/notifications.js";
+import type { EmitBubbleNotificationPort } from "../../ports/notifications.js";
 import type {
   AppendProtocolEnvelopePort,
   ReadTranscriptEnvelopesPort
-} from "../../shared/ports/transcript.js";
+} from "../../ports/transcript.js";
 import type {
   EmitDeliveryNotificationAckPort,
   ResolveDeliveryMessageRefPort
-} from "../../shared/ports/tmuxDelivery.js";
+} from "../../ports/tmuxDelivery.js";
 import type {
   RunConvergedFlowDependencies
 } from "./runConvergedFlow.js";

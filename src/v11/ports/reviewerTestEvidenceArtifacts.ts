@@ -1,10 +1,10 @@
-import type { ReviewArtifactType } from "../../../types/bubble.js";
+import type { ReviewArtifactType } from "../../types/bubble.js";
 import type {
   ReviewerTestEvidenceArtifact,
   ReviewerTestExecutionDirective,
   ResolveReviewerTestExecutionDirectiveInput,
   VerifyImplementerTestEvidenceInput
-} from "../reviewer/testEvidence.js";
+} from "../shared/reviewer/testEvidence.js";
 
 export interface ResolveReviewerTestExecutionDirectiveFromArtifactInput {
   artifact: ReviewerTestEvidenceArtifact;

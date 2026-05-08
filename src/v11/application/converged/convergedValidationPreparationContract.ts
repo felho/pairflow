@@ -3,11 +3,11 @@ import type {
 } from "../../../v11/shared/gates/docContractGates.js";
 import type {
   ReadReviewVerificationArtifactStatusPort
-} from "../../../v11/shared/ports/reviewVerificationArtifacts.js";
+} from "../../ports/reviewVerificationArtifacts.js";
 import type {
   ReadDocContractGateArtifactPort,
   ResolveDocContractGateArtifactPathPort
-} from "../../../v11/shared/ports/docContractGateArtifacts.js";
+} from "../../ports/docContractGateArtifacts.js";
 import type {
   evaluateSummaryVerifierConsistencyGate,
   resolveSummaryVerifierConsistencyGateArtifactPath,
@@ -15,12 +15,12 @@ import type {
 } from "../../../v11/shared/reviewer/summaryVerifierConsistencyGate.js";
 import type {
   WriteSummaryVerifierConsistencyGateArtifactPort
-} from "../../../v11/shared/ports/summaryVerifierGateArtifacts.js";
+} from "../../ports/summaryVerifierGateArtifacts.js";
 import type { resolveReviewerTestEvidenceArtifactPath } from "../../../v11/shared/reviewer/testEvidence.js";
 import type {
   ResolveReviewerTestExecutionDirectivePort
-} from "../../../v11/shared/ports/reviewerTestEvidenceArtifacts.js";
-import type { ResolvedBubbleWorkspace } from "../../shared/ports/workspaceResolution.js";
+} from "../../ports/reviewerTestEvidenceArtifacts.js";
+import type { ResolvedBubbleWorkspace } from "../../ports/workspaceResolution.js";
 import type {
   AgentName,
   BubbleRoundGateState,

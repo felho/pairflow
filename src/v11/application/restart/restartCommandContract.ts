@@ -1,17 +1,17 @@
 import type {
   PassValidationRecoveryMarkerPersistWarning,
   PersistPassValidationRecoveryMarkerPort
-} from "../../shared/ports/passValidationRecovery.js";
+} from "../../ports/passValidationRecovery.js";
 import type {
   RemoveRuntimeSessionPort
-} from "../../shared/ports/runtimeSessions.js";
+} from "../../ports/runtimeSessions.js";
 import type {
   ResolveBubbleByIdPort
-} from "../../shared/ports/bubbleLookup.js";
+} from "../../ports/bubbleLookup.js";
 import type { BubbleRemotePointer } from "../../../types/bubble.js";
 import type {
   TerminateBubbleTmuxSessionPort
-} from "../../shared/ports/tmuxSessions.js";
+} from "../../ports/tmuxSessions.js";
 import type {
   startBubbleV11 as startBubble,
   StartBubbleV11Result as StartBubbleResult

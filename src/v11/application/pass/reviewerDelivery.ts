@@ -1,23 +1,23 @@
 import {
   type DeliveryAck,
   type EmitDeliveryNotificationAckPort
-} from "../../../v11/shared/ports/tmuxDelivery.js";
+} from "../../ports/tmuxDelivery.js";
 import type { ReviewerTestExecutionDirective } from "../../../v11/shared/reviewer/testEvidence.js";
 import type { BubbleConfig } from "../../../types/bubble.js";
 import type { ProtocolEnvelope } from "../../../types/protocol.js";
 import type {
   ReadReviewerBriefArtifactPort,
   ReadReviewerFocusArtifactPort
-} from "../../../v11/shared/ports/reviewerArtifacts.js";
+} from "../../ports/reviewerArtifacts.js";
 import type {
   ResolveDeliveryMessageRefPort
-} from "../../../v11/shared/ports/tmuxDelivery.js";
-import type { RefreshReviewerContextPort } from "../../../v11/shared/ports/reviewerContext.js";
+} from "../../ports/tmuxDelivery.js";
+import type { RefreshReviewerContextPort } from "../../ports/reviewerContext.js";
 import type {
   ResolveReviewerTestExecutionDirectiveFromArtifactPort,
   VerifyImplementerTestEvidencePort,
   WriteReviewerTestEvidenceArtifactPort
-} from "../../../v11/shared/ports/reviewerTestEvidenceArtifacts.js";
+} from "../../ports/reviewerTestEvidenceArtifacts.js";
 import type { PassRecipientRole, PassSenderRole } from "../../domain/pass/handoff.js";
 import {
   buildPassDeliveryInput,

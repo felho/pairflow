@@ -1,5 +1,5 @@
 import type { ProtocolEnvelope } from "../../../../types/protocol.js";
-import type { ProtocolEnvelopeDraft } from "../../../shared/ports/transcript.js";
+import type { ProtocolEnvelopeDraft } from "../../../ports/transcript.js";
 import {
   assertValidProtocolEnvelope
 } from "../../../shared/protocol/validators.js";

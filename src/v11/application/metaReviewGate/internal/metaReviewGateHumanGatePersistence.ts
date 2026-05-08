@@ -1,5 +1,5 @@
-import type { LoadedStateSnapshot } from "../../../shared/ports/stateSnapshots.js";
-import type { AppendProtocolEnvelopeResult } from "../../../shared/ports/transcript.js";
+import type { LoadedStateSnapshot } from "../../../ports/stateSnapshots.js";
+import type { AppendProtocolEnvelopeResult } from "../../../ports/transcript.js";
 import { MetaReviewGateError } from "../../../shared/metaReviewGate/metaReviewGateRouteContract.js";
 import type { MetaReviewGateResult } from "../../../shared/metaReviewGate/metaReviewGateResultContract.js";
 import { transitionToGateState } from "./metaReviewGateStateHelpers.js";

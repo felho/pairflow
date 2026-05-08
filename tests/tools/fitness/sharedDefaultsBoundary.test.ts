@@ -164,13 +164,13 @@ describe("shared defaults boundary fitness check", () => {
     const repoRoot = await createTempRoot();
     await writeRepoFile(
       repoRoot,
-      "src/v11/shared/ports/stateSnapshots.ts",
+      "src/v11/ports/stateSnapshots.ts",
       "export type ReadStateSnapshotPort = () => unknown;\n"
     );
     await writeRepoFile(
       repoRoot,
       "src/v11/application/pass/passStatePorts.ts",
-      "import type { ReadStateSnapshotPort } from '../../shared/ports/stateSnapshots.js';\nexport type Port = ReadStateSnapshotPort;\n"
+      "import type { ReadStateSnapshotPort } from '../../../src/v11/ports/stateSnapshots.js';\nexport type Port = ReadStateSnapshotPort;\n"
     );
 
     const report = await buildSharedDefaultsBoundaryCheckReport({

@@ -8,7 +8,7 @@ import {
 } from "../../../../src/v11/application/metaReviewGate/metaReviewGatePaneBinding.js";
 import type {
   SetMetaReviewerPaneBindingPort
-} from "../../../../src/v11/shared/ports/runtimeSessions.js";
+} from "../../../../src/v11/ports/runtimeSessions.js";
 describe("metaReviewGatePaneBinding", () => {
   it("returns runtime-unavailable when agent command builder is missing", async () => {
     const result = await resolveMetaReviewerPaneWarning({

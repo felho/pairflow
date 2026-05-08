@@ -4,7 +4,7 @@ import type {
   ProcessSpawnChild,
   ProcessSpawnOptions,
   ProcessSpawnPort
-} from "../../../shared/ports/processSpawn.js";
+} from "../../../ports/processSpawn.js";
 
 export const nodeProcessSpawn: ProcessSpawnPort = (
   command: string,

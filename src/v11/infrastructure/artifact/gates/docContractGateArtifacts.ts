@@ -9,7 +9,7 @@ import type {
   ReadDocContractGateArtifactPort,
   ResolveDocContractGateArtifactPathPort,
   WriteDocContractGateArtifactPort
-} from "../../../shared/ports/docContractGateArtifacts.js";
+} from "../../../ports/docContractGateArtifacts.js";
 
 export const resolveDocContractGateArtifactPath:
 ResolveDocContractGateArtifactPathPort = (artifactsDir) =>

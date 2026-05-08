@@ -7,7 +7,7 @@ import type { UiRepoScope } from "./repoScope.js";
 import type {
   UiAttachBubbleResult,
   UiRouterDependencies
-} from "../../shared/ports/uiRouter.js";
+} from "../../ports/uiRouter.js";
 import type { UiRuntimeSessionRecord } from "../../../contracts/ui/uiReadModel.js";
 
 export interface UiApiError {

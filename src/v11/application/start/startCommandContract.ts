@@ -8,30 +8,30 @@ import type { BubblePaths } from "../../shared/bubble/bubblePaths.js";
 import type {
   BootstrapWorktreeWorkspacePort,
   CleanupWorktreeWorkspacePort
-} from "../../shared/ports/worktreeWorkspace.js";
+} from "../../ports/worktreeWorkspace.js";
 import type {
   LaunchBubbleSessionAckPort,
   TerminateBubbleTmuxSessionPort
-} from "../../shared/ports/tmuxSessions.js";
+} from "../../ports/tmuxSessions.js";
 import type {
   ReadRuntimeSessionsRegistryPort,
   ClaimRuntimeSessionPort,
   UpsertRuntimeSessionPort,
   RemoveRuntimeSessionPort
-} from "../../shared/ports/runtimeSessions.js";
-import type { WriteStateSnapshotPort } from "../../shared/ports/stateSnapshots.js";
+} from "../../ports/runtimeSessions.js";
+import type { WriteStateSnapshotPort } from "../../ports/stateSnapshots.js";
 import type {
   ResolveDocContractGateArtifactPathPort
-} from "../../shared/ports/docContractGateArtifacts.js";
+} from "../../ports/docContractGateArtifacts.js";
 import type {
   ReadReviewerBriefArtifactPort,
   ReadReviewerFocusArtifactPort
-} from "../../shared/ports/reviewerArtifacts.js";
+} from "../../ports/reviewerArtifacts.js";
 import type {
   ResolveReviewerTestExecutionDirectivePort
-} from "../../shared/ports/reviewerTestEvidenceArtifacts.js";
-import type { RunGitPort } from "../../shared/ports/git.js";
-import type { ProcessSpawnPort } from "../../shared/ports/processSpawn.js";
+} from "../../ports/reviewerTestEvidenceArtifacts.js";
+import type { RunGitPort } from "../../ports/git.js";
+import type { ProcessSpawnPort } from "../../ports/processSpawn.js";
 import type { buildResumeTranscriptSummary } from "./startCommandResumeSummary.js";
 import type { BubbleStateSnapshot } from "../../../types/bubble.js";
 

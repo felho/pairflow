@@ -48,29 +48,27 @@ type DependencyLayer =
   | "application"
   | "domain"
   | "shared"
-  | "shared-ports"
+  | "ports"
   | "infrastructure"
   | "legacy-compat";
 
 const layerImportAllowlist: Record<DependencyLayer, readonly DependencyLayer[]> = {
   domain: ["domain", "shared"],
-  application: ["application", "domain", "shared", "shared-ports"],
-  shared: ["domain", "shared", "shared-ports"],
-  "shared-ports": ["domain", "shared", "shared-ports"],
-  infrastructure: ["domain", "shared", "shared-ports", "infrastructure"],
-  "legacy-compat": ["application", "shared", "shared-ports", "legacy-compat"]
+  application: ["application", "domain", "shared", "ports"],
+  shared: ["domain", "shared", "ports"],
+  ports: ["domain", "shared", "ports"],
+  infrastructure: ["domain", "shared", "ports", "infrastructure"],
+  "legacy-compat": ["application", "shared", "ports", "legacy-compat"]
 };
 
 function layerFromRelativePath(path: string): DependencyLayer | undefined {
   const normalized = normalizePathToPosix(path);
-  if (/^src\/v11\/shared\/ports(?:\/|$)/u.test(normalized)) {
-    return "shared-ports";
-  }
   const match = normalized.match(/^src\/v11\/([^/]+)(?:\/|$)/u);
   const layer = match?.[1];
   if (
     layer === "application"
     || layer === "domain"
+    || layer === "ports"
     || layer === "shared"
     || layer === "infrastructure"
     || layer === "legacy-compat"
@@ -512,7 +510,7 @@ function detectAntiCircumventionViolations(input: {
   for (const filePath of input.files) {
     const fromRelative = normalizePathToPosix(relative(input.repoRoot, filePath));
     const fromLayer = layerFromRelativePath(fromRelative);
-    if (fromLayer !== "shared" && fromLayer !== "shared-ports") {
+    if (fromLayer !== "shared" && fromLayer !== "ports") {
       continue;
     }
 
@@ -708,7 +706,7 @@ function detectForbiddenProcessRuntimeImports(input: {
         kind: "forbidden_process_runtime_import",
         severity: "fail",
         message:
-          `${fromRelative}:${String(imported.line)} forbidden process runtime import ${imported.specifier}; use a shared/ports capability with infrastructure implementation`,
+          `${fromRelative}:${String(imported.line)} forbidden process runtime import ${imported.specifier}; use a ports capability with infrastructure implementation`,
         fromRelative,
         toRelative: undefined,
         cycleNodes: undefined
@@ -775,7 +773,7 @@ function detectOwnershipSignalViolations(input: {
   for (const filePath of input.files) {
     const fromRelative = normalizePathToPosix(relative(input.repoRoot, filePath));
     const fromLayer = layerFromRelativePath(fromRelative);
-    if (fromLayer !== "shared" && fromLayer !== "shared-ports") {
+    if (fromLayer !== "shared" && fromLayer !== "ports") {
       continue;
     }
 

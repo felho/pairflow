@@ -4,7 +4,7 @@ import {
 } from "../../../v11/shared/gates/docContractGates.js";
 import type {
   ReadReviewVerificationArtifactStatusPort
-} from "../../../v11/shared/ports/reviewVerificationArtifacts.js";
+} from "../../ports/reviewVerificationArtifacts.js";
 import {
   evaluateSummaryVerifierConsistencyGate,
   resolveSummaryVerifierConsistencyGateArtifactPath

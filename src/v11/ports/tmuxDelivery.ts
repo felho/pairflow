@@ -2,8 +2,8 @@ import type {
   DeliveryAck,
   EmitDeliveryNotificationInput,
   ResolveDeliveryMessageRefInput
-} from "../delivery/tmuxDeliveryContract.js";
-import type * as TmuxDeliveryContract from "../delivery/tmuxDeliveryContract.js";
+} from "../shared/delivery/tmuxDeliveryContract.js";
+import type * as TmuxDeliveryContract from "../shared/delivery/tmuxDeliveryContract.js";
 
 export type {
   AcceptedDeliveryAck,
@@ -17,7 +17,7 @@ export type {
   ResolveDeliveryMessageRefInput,
   RetryStuckAgentInputOptions,
   RetryStuckAgentInputResult
-} from "../delivery/tmuxDeliveryContract.js";
+} from "../shared/delivery/tmuxDeliveryContract.js";
 
 export type EmitDeliveryNotificationAckPort = (
   input: EmitDeliveryNotificationInput

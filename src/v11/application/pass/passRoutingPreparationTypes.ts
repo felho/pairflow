@@ -3,7 +3,7 @@ import {
   type RepeatCleanAutoconvergeTriggerResult
 } from "../../../v11/domain/convergence/repeatCleanAutoconverge.js";
 import type { ReviewVerificationInputResolution } from "../../../v11/shared/reviewer/reviewVerification.js";
-import type { ReadTranscriptEnvelopesPort } from "../../../v11/shared/ports/transcript.js";
+import type { ReadTranscriptEnvelopesPort } from "../../ports/transcript.js";
 import type {
   AgentName,
   AgentRole,

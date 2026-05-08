@@ -26,14 +26,14 @@ import type {
   RegisterRepoInput,
   RegisterRepoResult,
   RepoRegistryEntry
-} from "../../../shared/ports/repoRegistry.js";
+} from "../../../ports/repoRegistry.js";
 
 export type {
   RegisterRepoInRegistryPort,
   RegisterRepoInput,
   RegisterRepoResult,
   RepoRegistryEntry
-} from "../../../shared/ports/repoRegistry.js";
+} from "../../../ports/repoRegistry.js";
 export { RepoRegistryError, RepoRegistryLockError } from "./repoRegistryErrors.js";
 
 const defaultLockTimeoutMs = 5_000;

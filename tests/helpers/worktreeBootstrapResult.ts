@@ -1,4 +1,4 @@
-import type { WorktreeBootstrapResult } from "../../src/v11/shared/ports/worktreeWorkspace.js";
+import type { WorktreeBootstrapResult } from "../../src/v11/ports/worktreeWorkspace.js";
 
 export function buildWorktreeBootstrapResult(input: {
   repoPath: string;

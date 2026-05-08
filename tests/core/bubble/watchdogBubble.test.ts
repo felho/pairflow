@@ -29,7 +29,7 @@ import { applyStateTransition } from "../../../src/v11/domain/state/machine.js";
 import { readStateSnapshot, writeStateSnapshot } from "../../../src/v11/infrastructure/state/stateStore.js";
 import { runBubbleWatchdogV11 } from "../../../src/v11/application/watchdog/emitWatchdogV11.js";
 import type { BubbleWatchdogV11Dependencies } from "../../../src/v11/application/watchdog/emitWatchdogV11.js";
-import type { EmitDeliveryNotificationAckPort } from "../../../src/v11/shared/ports/tmuxDelivery.js";
+import type { EmitDeliveryNotificationAckPort } from "../../../src/v11/ports/tmuxDelivery.js";
 import { initGitRepository } from "../../helpers/git.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
 

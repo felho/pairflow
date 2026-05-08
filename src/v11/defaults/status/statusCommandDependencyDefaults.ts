@@ -5,15 +5,15 @@ import type {
   InspectedStateSnapshot,
   ReadStateSnapshotPort,
   StateValidationDiagnostics
-} from "../../shared/ports/stateSnapshots.js";
-import type { ReadTranscriptEnvelopesPort } from "../../shared/ports/transcript.js";
+} from "../../ports/stateSnapshots.js";
+import type { ReadTranscriptEnvelopesPort } from "../../ports/transcript.js";
 import type {
   ReadReviewVerificationArtifactStatusOptions
-} from "../../shared/ports/reviewVerificationArtifacts.js";
+} from "../../ports/reviewVerificationArtifacts.js";
 import type {
   ReadDocContractGateArtifactPort
-} from "../../shared/ports/docContractGateArtifacts.js";
-import type { ResolveBubbleByIdPort } from "../../shared/ports/bubbleLookup.js";
+} from "../../ports/docContractGateArtifacts.js";
+import type { ResolveBubbleByIdPort } from "../../ports/bubbleLookup.js";
 import type {
   BubbleStatusState
 } from "../../shared/status/statusCommandTypes.js";

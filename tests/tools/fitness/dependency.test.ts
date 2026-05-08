@@ -166,17 +166,17 @@ describe("dependency fitness check", () => {
     ).toBe(false);
   });
 
-  it("passes on application to shared ports imports", async () => {
+  it("passes on application to ports imports", async () => {
     const repoRoot = await createTempRoot();
     await writeRepoFile(
       repoRoot,
-      "src/v11/shared/ports/repoRegistry.ts",
+      "src/v11/ports/repoRegistry.ts",
       "export interface RepoRegistryPort { register(name: string): Promise<void>; }\n"
     );
     await writeRepoFile(
       repoRoot,
       "src/v11/application/create/use-case.ts",
-      "import type { RepoRegistryPort } from '../../shared/ports/repoRegistry.js';\nexport type Deps = { repoRegistry: RepoRegistryPort };\n"
+      "import type { RepoRegistryPort } from '../../ports/repoRegistry.js';\nexport type Deps = { repoRegistry: RepoRegistryPort };\n"
     );
 
     const report = await buildDependencyCheckReport({
@@ -195,22 +195,22 @@ describe("dependency fitness check", () => {
     expect(report.status).toBe("pass");
     expect(
       report.details?.some((detail) =>
-        detail.includes("forbidden layer import application -> shared-ports")
+        detail.includes("forbidden layer import application -> ports")
       )
     ).toBe(false);
   });
 
-  it("passes on shared to shared ports imports", async () => {
+  it("passes on shared to ports imports", async () => {
     const repoRoot = await createTempRoot();
     await writeRepoFile(
       repoRoot,
-      "src/v11/shared/ports/transcript.ts",
+      "src/v11/ports/transcript.ts",
       "export type AppendTranscriptPort = (path: string) => Promise<void>;\n"
     );
     await writeRepoFile(
       repoRoot,
       "src/v11/shared/metaReview/metaReviewCommandContract.ts",
-      "import type { AppendTranscriptPort } from '../ports/transcript.js';\nexport interface Deps { appendTranscript?: AppendTranscriptPort; }\n"
+      "import type { AppendTranscriptPort } from '../../ports/transcript.js';\nexport interface Deps { appendTranscript?: AppendTranscriptPort; }\n"
     );
 
     const report = await buildDependencyCheckReport({
@@ -229,12 +229,12 @@ describe("dependency fitness check", () => {
     expect(report.status).toBe("pass");
     expect(
       report.details?.some((detail) =>
-        detail.includes("forbidden layer import shared -> shared-ports")
+        detail.includes("forbidden layer import shared -> ports")
       )
     ).toBe(false);
   });
 
-  it("fails on shared ports to infrastructure import", async () => {
+  it("fails on ports to infrastructure import", async () => {
     const repoRoot = await createTempRoot();
     await writeRepoFile(
       repoRoot,
@@ -243,8 +243,8 @@ describe("dependency fitness check", () => {
     );
     await writeRepoFile(
       repoRoot,
-      "src/v11/shared/ports/repoRegistry.ts",
-      "import { registerRepo } from '../../infrastructure/executor/workspace/repoRegistry.js';\nexport const register = registerRepo;\n"
+      "src/v11/ports/repoRegistry.ts",
+      "import { registerRepo } from '../infrastructure/executor/workspace/repoRegistry.js';\nexport const register = registerRepo;\n"
     );
 
     const report = await buildDependencyCheckReport({
@@ -263,22 +263,22 @@ describe("dependency fitness check", () => {
     expect(report.status).toBe("fail");
     expect(
       report.details?.some((detail) =>
-        detail.includes("forbidden layer import shared-ports -> infrastructure")
+        detail.includes("forbidden layer import ports -> infrastructure")
       )
     ).toBe(true);
   });
 
-  it("passes on infrastructure to shared ports import", async () => {
+  it("passes on infrastructure to ports import", async () => {
     const repoRoot = await createTempRoot();
     await writeRepoFile(
       repoRoot,
-      "src/v11/shared/ports/repoRegistry.ts",
+      "src/v11/ports/repoRegistry.ts",
       "export interface RepoRegistryPort { register(name: string): Promise<void>; }\n"
     );
     await writeRepoFile(
       repoRoot,
       "src/v11/infrastructure/executor/workspace/repoRegistry.ts",
-      "import type { RepoRegistryPort } from '../../../shared/ports/repoRegistry.js';\nexport const repoRegistry: RepoRegistryPort = { register: async () => {} };\n"
+      "import type { RepoRegistryPort } from '../../../ports/repoRegistry.js';\nexport const repoRegistry: RepoRegistryPort = { register: async () => {} };\n"
     );
 
     const report = await buildDependencyCheckReport({
@@ -297,7 +297,7 @@ describe("dependency fitness check", () => {
     expect(report.status).toBe("pass");
     expect(
       report.details?.some((detail) =>
-        detail.includes("forbidden layer import infrastructure -> shared-ports")
+        detail.includes("forbidden layer import infrastructure -> ports")
       )
     ).toBe(false);
   });
@@ -717,7 +717,7 @@ describe("dependency fitness check", () => {
     ).toBe(true);
   });
 
-  it("fails on shared ports thin forwarding wrapper over infrastructure", async () => {
+  it("fails on ports thin forwarding wrapper over infrastructure", async () => {
     const repoRoot = await createTempRoot();
     await writeRepoFile(
       repoRoot,
@@ -726,9 +726,9 @@ describe("dependency fitness check", () => {
     );
     await writeRepoFile(
       repoRoot,
-      "src/v11/shared/ports/repoRegistry.ts",
+      "src/v11/ports/repoRegistry.ts",
       [
-        "import { registerRepo } from '../../infrastructure/executor/workspace/repoRegistry.js';",
+        "import { registerRepo } from '../infrastructure/executor/workspace/repoRegistry.js';",
         "export const register = registerRepo;",
         ""
       ].join("\n")
@@ -750,7 +750,7 @@ describe("dependency fitness check", () => {
     expect(report.status).toBe("fail");
     expect(
       report.details?.some((detail) =>
-        detail.includes("anti-circumvention: shared-ports acts as a thin forwarding wrapper")
+        detail.includes("anti-circumvention: ports acts as a thin forwarding wrapper")
       )
     ).toBe(true);
   });
@@ -826,11 +826,11 @@ describe("dependency fitness check", () => {
     ).toBe(true);
   });
 
-  it("warns on state/transcript persistence signal under shared ports", async () => {
+  it("warns on state/transcript persistence signal under ports", async () => {
     const repoRoot = await createTempRoot();
     await writeRepoFile(
       repoRoot,
-      "src/v11/shared/ports/transcript.ts",
+      "src/v11/ports/transcript.ts",
       [
         "import { appendProtocolEnvelope } from '../../../core/protocol/transcriptStore.js';",
         "export const append = async (): Promise<void> => {",
@@ -856,7 +856,7 @@ describe("dependency fitness check", () => {
     expect(report.status).toBe("warn");
     expect(
       report.details?.some((detail) =>
-        detail.includes("ownership-signal warning: shared-ports module shows strong infrastructure signals (transcript-persistence)")
+        detail.includes("ownership-signal warning: ports module shows strong infrastructure signals (transcript-persistence)")
       )
     ).toBe(true);
   });
@@ -973,16 +973,16 @@ describe("dependency fitness check", () => {
     ).toBe(true);
   });
 
-  it("does not warn on canonical delivery port types under shared ports", async () => {
+  it("does not warn on canonical delivery port types under ports", async () => {
     const repoRoot = await createTempRoot();
     await writeRepoFile(
       repoRoot,
-      "src/v11/shared/ports/tmuxDelivery.ts",
+      "src/v11/ports/tmuxDelivery.ts",
       "export type EmitDeliveryNotificationAckPort = (input: { bubbleId: string }) => Promise<{ status: 'accepted' | 'rejected' }>;\n"
     );
     await writeRepoFile(
       repoRoot,
-      "src/v11/shared/ports/askHumanDelivery.ts",
+      "src/v11/ports/askHumanDelivery.ts",
       [
         "import type { EmitDeliveryNotificationAckPort } from './tmuxDelivery.js';",
         "export interface Deps { emit: EmitDeliveryNotificationAckPort; }",

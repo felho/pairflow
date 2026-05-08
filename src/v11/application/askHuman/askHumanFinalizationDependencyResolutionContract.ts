@@ -5,7 +5,7 @@ import type {
 import type {
   EmitDeliveryNotificationAckPort,
   ResolveDeliveryMessageRefPort
-} from "../../shared/ports/tmuxDelivery.js";
+} from "../../ports/tmuxDelivery.js";
 
 export interface ResolveAskHumanFinalizationDependenciesInput {
   emitDeliveryNotificationAck?:

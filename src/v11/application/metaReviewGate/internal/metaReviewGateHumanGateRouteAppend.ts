@@ -3,7 +3,7 @@ import type {
 } from "../../../../types/bubble.js";
 import type {
   AppendProtocolEnvelopeResult
-} from "../../../shared/ports/transcript.js";
+} from "../../../ports/transcript.js";
 import { MetaReviewGateError } from "../../../shared/metaReviewGate/metaReviewGateRouteContract.js";
 import type { PersistHumanGateRouteInput } from "./metaReviewGateHumanGatePersistenceContract.js";
 import {

@@ -53,7 +53,7 @@ import {
   resolvePassValidationReviewerCompatibilityArtifactPath
 } from "../../../src/v11/infrastructure/artifact/validation/passValidationEvidence.js";
 import { passWorkspaceContextDefaults } from "../../../src/v11/application/pass/passWorkspaceContextDefaults.js";
-import type { EmitDeliveryNotificationInput } from "../../../src/v11/shared/ports/tmuxDelivery.js";
+import type { EmitDeliveryNotificationInput } from "../../../src/v11/ports/tmuxDelivery.js";
 import { initGitRepository } from "../../helpers/git.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
 import { writeEvidenceLog } from "../../helpers/evidence.js";

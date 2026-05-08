@@ -4,7 +4,7 @@ import {
   hasIdeationMetadataParseWarning,
   resolveIdeationMetadata
 } from "../../domain/ideation/ideationMetadata.js";
-import type { ResolvedBubbleById } from "../../shared/ports/bubbleLookup.js";
+import type { ResolvedBubbleById } from "../../ports/bubbleLookup.js";
 import type {
   ExtractCommandDependencies,
   ExtractCommandDiagnostics,

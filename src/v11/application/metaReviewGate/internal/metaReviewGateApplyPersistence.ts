@@ -1,4 +1,4 @@
-import type { LoadedStateSnapshot } from "../../../shared/ports/stateSnapshots.js";
+import type { LoadedStateSnapshot } from "../../../ports/stateSnapshots.js";
 import { isMetaReviewExecutionContextActiveState } from "../../../shared/metaReview/metaReviewExecutionContext.js";
 import { resolveActiveMetaReviewRuntimeDelivery } from "../../../shared/metaReview/metaReviewSnapshot.js";
 import type { BubbleMetaReviewRuntimeDeliveryState } from "../../../../types/bubble.js";

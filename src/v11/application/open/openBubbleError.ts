@@ -1,4 +1,4 @@
-import type { OpenWorkspaceKind } from "../../shared/ports/openBubble.js";
+import type { OpenWorkspaceKind } from "../../ports/openBubble.js";
 
 export interface OpenBubbleErrorContext {
   bubbleId?: string | undefined;
