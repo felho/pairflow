@@ -3,7 +3,6 @@ import type { ResolvedKickoffDependencies } from "./kickoffDependencyContract.js
 import type { KickoffPreparedValidation } from "./kickoffValidationPreparation.js";
 import type { buildKickoffNextState } from "./kickoffStateTransition.js";
 import { persistKickoffState } from "./kickoffStatePersistence.js";
-import { buildKickoffStatePersistenceInput } from "./kickoffValidatedExecutionInputBuilders.js";
 import {
   buildKickoffPersistenceFailureResult,
   type KickoffBubbleResultShape
@@ -28,11 +27,13 @@ export async function persistKickoffNextStateOrFailure(input: {
   dependencies: ResolvedKickoffDependencies;
 }): Promise<PersistKickoffNextStateResult> {
   const statePersistenceResult = await persistKickoffState(
-    buildKickoffStatePersistenceInput({
-      validation: input.validation,
+    {
+      statePath: input.validation.resolved.bubblePaths.statePath,
+      loadedFingerprint: input.validation.loadedState.fingerprint,
       nextState: input.nextState,
-      dependencies: input.dependencies
-    })
+      readState: input.dependencies.readState,
+      writeState: input.dependencies.writeState
+    }
   );
   if (statePersistenceResult.kind === "conflict") {
     return {

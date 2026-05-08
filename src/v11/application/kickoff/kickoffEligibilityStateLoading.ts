@@ -1,5 +1,4 @@
 import type { ResolvedKickoffDependencies } from "./kickoffDependencyContract.js";
-import { buildKickoffResolveBubbleInput } from "./kickoffValidationInputBuilders.js";
 
 export interface KickoffValidationBubbleInput {
   bubbleId: string;
@@ -25,9 +24,15 @@ export async function loadKickoffEligibilityState(input: {
   validationInput: KickoffValidationBubbleInput;
   dependencies: Pick<ResolvedKickoffDependencies, "resolveBubble" | "readState">;
 }): Promise<LoadKickoffEligibilityStateResult> {
-  const resolved = await input.dependencies.resolveBubble(
-    buildKickoffResolveBubbleInput(input.validationInput)
-  );
+  const resolved = await input.dependencies.resolveBubble({
+    bubbleId: input.validationInput.bubbleId,
+    ...(input.validationInput.repoPath !== undefined
+      ? { repoPath: input.validationInput.repoPath }
+      : {}),
+    ...(input.validationInput.cwd !== undefined
+      ? { cwd: input.validationInput.cwd }
+      : {})
+  });
   const loadedState = await input.dependencies.readState(
     resolved.bubblePaths.statePath
   );

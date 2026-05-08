@@ -1,5 +1,5 @@
 import type { executeKickoffMutationRollback } from "./kickoffMutationRollback.js";
-import { buildKickoffMutationRollbackInput } from "./kickoffMutationPipelineInputBuilders.js";
+import { buildKickoffMutationRollbackInput } from "./kickoffMutationRollbackInputBuilder.js";
 import { throwKickoffMutationRollbackFailure } from "./kickoffMutationRollbackFailure.js";
 import { buildKickoffMutationPipelineRolledBackResult } from "./kickoffMutationPipelineFlowHelpers.js";
 

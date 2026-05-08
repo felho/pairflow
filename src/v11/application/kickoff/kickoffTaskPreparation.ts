@@ -6,7 +6,6 @@ import type {
   KickoffBubbleResultShape,
   KickoffIdeationMarkers
 } from "./kickoffResultBuilders.js";
-import { buildKickoffTaskResolutionInput } from "./kickoffValidationInputBuilders.js";
 import { buildKickoffTaskInvalidFailureResult } from "./kickoffValidationFailureBuilders.js";
 
 interface KickoffTaskPreparationValidationInput {
@@ -41,7 +40,13 @@ export async function prepareKickoffTaskOrFailure(
 ): Promise<PrepareKickoffTaskOrFailureResult> {
   const taskResolution = await resolveKickoffTask(
     {
-      ...buildKickoffTaskResolutionInput(input.validationInput),
+      ...(input.validationInput.task !== undefined
+        ? { task: input.validationInput.task }
+        : {}),
+      ...(input.validationInput.taskFile !== undefined
+        ? { taskFile: input.validationInput.taskFile }
+        : {}),
+      cwd: input.validationInput.cwd ?? process.cwd(),
       readFile: input.dependencies.readFileFn,
       statFile: input.dependencies.statFileFn
     }
