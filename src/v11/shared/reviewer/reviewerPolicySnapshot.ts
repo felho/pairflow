@@ -1,1 +1,1 @@
-export const reviewerPolicySnapshotFileName = "reviewer-policy-snapshot.md";
+export * from "./internal/guidance/reviewerPolicySnapshot.js";
