@@ -41,6 +41,9 @@ import type {
 import type {
   BubbleExecutorConfig
 } from "../v11/shared/remote/remoteExecutionTypes.js";
+import type {
+  BubbleValidationTargetConfig
+} from "../v11/shared/validation/validationTargetConfigTypes.js";
 
 export const bubbleLifecycleStates = [
   "CREATED",
@@ -95,12 +98,6 @@ export type GateReasonCode =
   | "GATE_CONFIG_PARSE_WARNING"
   | "META_REVIEW_APPROVE_VALIDATION_FAILED"
   | "META_REVIEW_APPROVE_THRESHOLD_BACKSTOP";
-
-export interface BubbleValidationTargetConfig {
-  id: string;
-  cwd?: string;
-  paths?: string[];
-}
 
 export interface BubbleRemoteStateCache {
   lastCheckedAt: string;

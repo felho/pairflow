@@ -763,6 +763,9 @@ export type {
   LocalOverlayMode
 } from "./v11/shared/workspace/localOverlayTypes.js";
 export type {
+  BubbleValidationTargetConfig
+} from "./v11/shared/validation/validationTargetConfigTypes.js";
+export type {
   AttachLauncher
 } from "./v11/shared/bubbleAttachment/attachLauncherTypes.js";
 export type {
