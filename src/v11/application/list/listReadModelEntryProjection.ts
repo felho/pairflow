@@ -1,6 +1,8 @@
 import type { parseBubbleConfigToml } from "../../../config/bubbleConfig.js";
 import type {
-  BubbleRemotePointer,
+  BubbleRemotePointer
+} from "../../shared/remote/remoteExecutionTypes.js";
+import type {
   BubbleRemoteStateCache
 } from "../../../types/bubble.js";
 import type { getBubblePaths } from "../../shared/bubble/bubblePaths.js";

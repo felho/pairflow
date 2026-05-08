@@ -1,6 +1,8 @@
 import type {
   BubbleRemotePointer,
-  BubbleRemotePointerStarted,
+  BubbleRemotePointerStarted
+} from "../../shared/remote/remoteExecutionTypes.js";
+import type {
   BubbleStateSnapshot
 } from "../../../types/bubble.js";
 import type { ApprovalRemoteBubbleStatusTarget } from "./approvalRemoteExecutionContract.js";

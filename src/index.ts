@@ -406,7 +406,7 @@ export {
   isBubbleRemotePointerCreated,
   isBubbleRemotePointerKind,
   isBubbleRemotePointerStarted
-} from "./types/bubble.js";
+} from "./v11/shared/remote/remoteExecutionTypes.js";
 export {
   SchemaValidationError,
   assertValidation,
@@ -739,18 +739,20 @@ export type {
   AgentRole
 } from "./v11/domain/agentIdentity/agentIdentity.js";
 export type {
-  BubbleCommandsConfig,
-  BubbleConfig,
   BubbleExecutorConfig,
   BubbleExecutorType,
   BubbleRemotePointer,
   BubbleRemotePointerCreated,
   BubbleRemotePointerKind,
   BubbleRemotePointerStarted,
+  PairflowRemoteHostConfig
+} from "./v11/shared/remote/remoteExecutionTypes.js";
+export type {
+  BubbleCommandsConfig,
+  BubbleConfig,
   BubbleRemoteStateCache,
   BubbleLifecycleState,
   BubbleNotificationsConfig,
-  PairflowRemoteHostConfig,
   BubbleReworkIntentRecord,
   BubbleStateSnapshot,
   QualityMode,

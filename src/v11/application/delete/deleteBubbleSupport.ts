@@ -7,9 +7,11 @@ import type {
   DeleteBubbleResult
 } from "../../../contracts/deleteBubble.js";
 import type {
-  BubbleLifecycleState,
   BubbleRemotePointerCreated,
   BubbleRemotePointerStarted
+} from "../../shared/remote/remoteExecutionTypes.js";
+import type {
+  BubbleLifecycleState
 } from "../../../types/bubble.js";
 import type {
   ArchiveIndexEntry,

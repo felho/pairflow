@@ -1,12 +1,16 @@
 import type {
-  BubbleLifecycleState,
   BubbleRemotePointer,
-  BubbleRemotePointerKind,
+  BubbleRemotePointerKind
+} from "../../../shared/remote/remoteExecutionTypes.js";
+import type {
+  BubbleLifecycleState,
   BubbleRemoteStateCache
 } from "../../../../types/bubble.js";
 import {
-  isBubbleLifecycleState,
   isBubbleRemotePointerKind
+} from "../../../shared/remote/remoteExecutionTypes.js";
+import {
+  isBubbleLifecycleState
 } from "../../../../types/bubble.js";
 import {
   isInteger,

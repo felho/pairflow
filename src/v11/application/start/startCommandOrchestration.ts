@@ -8,7 +8,9 @@ import type {
 } from "./startCommandContract.js";
 import type { PairflowGlobalConfig } from "../../../config/pairflowConfig.js";
 import type {
-  BubbleRemotePointer,
+  BubbleRemotePointer
+} from "../../shared/remote/remoteExecutionTypes.js";
+import type {
   BubbleRemoteStateCache
 } from "../../../types/bubble.js";
 import type { LaunchBubbleSessionAckPort } from "../../ports/tmuxSessions.js";

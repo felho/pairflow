@@ -1,7 +1,9 @@
 import type { writeFile } from "node:fs/promises";
 
 import type { PairflowGlobalConfig } from "../../../config/pairflowConfig.js";
-import type { BubbleRemotePointer } from "../../../types/bubble.js";
+import type {
+  BubbleRemotePointer
+} from "../../shared/remote/remoteExecutionTypes.js";
 import type { BubblePaths } from "../../shared/bubble/bubblePaths.js";
 import type { AssertGitRepositoryPort } from "../../ports/gitRepository.js";
 import type { AppendProtocolEnvelopePort } from "../../ports/transcript.js";

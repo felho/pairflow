@@ -54,7 +54,9 @@ import type {
   ExecuteRemoteBubbleStartResult
 } from "../../application/start/startCommandContract.js";
 import type {
-  BubbleRemotePointer,
+  BubbleRemotePointer
+} from "../../shared/remote/remoteExecutionTypes.js";
+import type {
   BubbleRemoteStateCache
 } from "../../../types/bubble.js";
 import type { PairflowGlobalConfig } from "../../../config/pairflowConfig.js";

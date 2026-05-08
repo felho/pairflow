@@ -13,10 +13,14 @@ import {
   type ValidationError,
   type ValidationResult
 } from "../v11/shared/validation/primitives.js";
+import type {
+  PairflowRemoteHostConfig
+} from "../v11/shared/remote/remoteExecutionTypes.js";
+import type {
+  AttachLauncher
+} from "../types/bubble.js";
 import {
-  isAttachLauncher,
-  type AttachLauncher,
-  type PairflowRemoteHostConfig
+  isAttachLauncher
 } from "../types/bubble.js";
 
 export interface PairflowGlobalConfig {

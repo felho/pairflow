@@ -9,8 +9,10 @@ import {
   OpenBubbleError
 } from "../../../src/v11/application/open/emitOpenV11.js";
 import type {
-  BubbleConfig,
   BubbleRemotePointerStarted
+} from "../../../src/v11/shared/remote/remoteExecutionTypes.js";
+import type {
+  BubbleConfig
 } from "../../../src/types/bubble.js";
 
 function createResolvedBubbleFixture(input: {

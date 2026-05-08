@@ -1,4 +1,9 @@
-import type { BubbleRemotePointer, BubbleRemoteStateCache } from "../../../types/bubble.js";
+import type {
+  BubbleRemotePointer
+} from "../../shared/remote/remoteExecutionTypes.js";
+import type {
+  BubbleRemoteStateCache
+} from "../../../types/bubble.js";
 import { isNamedError } from "../../shared/errors/namedError.js";
 import {
   countPendingHumanQuestions,

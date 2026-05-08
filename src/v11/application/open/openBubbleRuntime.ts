@@ -5,7 +5,9 @@ import {
   loadPairflowGlobalConfig,
   type PairflowGlobalConfig
 } from "../../../config/pairflowConfig.js";
-import type { BubbleRemotePointer } from "../../../types/bubble.js";
+import type {
+  BubbleRemotePointer
+} from "../../shared/remote/remoteExecutionTypes.js";
 import type { OpenBubbleResult } from "../../ports/openBubble.js";
 import type { ResolveBubbleByIdPort } from "../../ports/bubbleLookup.js";
 import {

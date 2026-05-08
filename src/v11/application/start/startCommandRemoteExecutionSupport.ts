@@ -2,7 +2,9 @@ import { basename } from "node:path";
 
 import { PAIRFLOW_REMOTE_CONFIG_INVALID } from "../../../config/pairflowConfig.js";
 import type {
-  BubbleRemotePointerCreated,
+  BubbleRemotePointerCreated
+} from "../../shared/remote/remoteExecutionTypes.js";
+import type {
   BubbleRemoteStateCache
 } from "../../../types/bubble.js";
 import type { RemoteBubbleExecutionTarget } from "./startCommandContract.js";

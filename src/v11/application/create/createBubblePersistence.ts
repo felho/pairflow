@@ -8,8 +8,10 @@ import {
 import { appendInitialTaskEnvelope } from "./createInitialTaskEnvelopeAppend.js";
 import { renderBubbleConfigToml } from "../../../config/bubbleConfig.js";
 import type {
+  BubbleRemotePointerCreated
+} from "../../shared/remote/remoteExecutionTypes.js";
+import type {
   BubbleConfig,
-  BubbleRemotePointerCreated,
   BubbleStateSnapshot
 } from "../../../types/bubble.js";
 import type {

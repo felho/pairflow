@@ -1,7 +1,9 @@
 import { spawn } from "node:child_process";
 
 import { PAIRFLOW_REMOTE_CONFIG_INVALID, loadPairflowGlobalConfig } from "../../../../config/pairflowConfig.js";
-import type { PairflowRemoteHostConfig } from "../../../../types/bubble.js";
+import type {
+  PairflowRemoteHostConfig
+} from "../../../shared/remote/remoteExecutionTypes.js";
 import { shellQuote } from "../../../shared/foundation/shellQuote.js";
 import type {
   RemoteBubbleStatusSnapshot,

@@ -24,7 +24,9 @@ import type {
   ReadReviewerBriefArtifactPort,
   ReadReviewerFocusArtifactPort
 } from "../../ports/reviewerArtifacts.js";
-import type { BubbleRemotePointer } from "../../../types/bubble.js";
+import type {
+  BubbleRemotePointer
+} from "../../shared/remote/remoteExecutionTypes.js";
 import { resolveStartBubbleMode } from "./startCommandOrchestration.js";
 import { createStartBubbleError } from "./startCommandRuntime.js";
 import {

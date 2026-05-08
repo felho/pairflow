@@ -6,8 +6,10 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { renderBubbleConfigToml } from "../../../src/config/bubbleConfig.js";
 import type {
+  BubbleRemotePointerStarted
+} from "../../../src/v11/shared/remote/remoteExecutionTypes.js";
+import type {
   BubbleConfig,
-  BubbleRemotePointerStarted,
   BubbleStateSnapshot
 } from "../../../src/types/bubble.js";
 import type { ProtocolEnvelope } from "../../../src/types/protocol.js";

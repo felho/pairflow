@@ -8,7 +8,9 @@ import type {
 import type {
   ResolveBubbleByIdPort
 } from "../../ports/bubbleLookup.js";
-import type { BubbleRemotePointer } from "../../../types/bubble.js";
+import type {
+  BubbleRemotePointer
+} from "../../shared/remote/remoteExecutionTypes.js";
 import type {
   TerminateBubbleTmuxSessionPort
 } from "../../ports/tmuxSessions.js";

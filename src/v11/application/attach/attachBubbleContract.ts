@@ -1,7 +1,9 @@
 import type { PairflowGlobalConfig } from "../../../config/pairflowConfig.js";
 import type {
-  AttachLauncher,
   BubbleRemotePointer
+} from "../../shared/remote/remoteExecutionTypes.js";
+import type {
+  AttachLauncher
 } from "../../../types/bubble.js";
 import type { ResolveBubbleByIdPort } from "../../ports/bubbleLookup.js";
 import type { ProcessSpawnPort } from "../../ports/processSpawn.js";

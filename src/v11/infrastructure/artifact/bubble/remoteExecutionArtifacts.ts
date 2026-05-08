@@ -1,7 +1,8 @@
 import { readFile, rm, writeFile } from "node:fs/promises";
-
 import type {
-  BubbleRemotePointer,
+  BubbleRemotePointer
+} from "../../../shared/remote/remoteExecutionTypes.js";
+import type {
   BubbleRemoteStateCache
 } from "../../../../types/bubble.js";
 import {

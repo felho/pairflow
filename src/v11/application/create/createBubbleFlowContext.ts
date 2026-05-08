@@ -11,8 +11,10 @@ import {
   assertValidBubbleStateSnapshot
 } from "../../shared/state/stateSchema.js";
 import type {
+  BubbleRemotePointerCreated
+} from "../../shared/remote/remoteExecutionTypes.js";
+import type {
   BubbleConfig,
-  BubbleRemotePointerCreated,
   BubbleStateSnapshot
 } from "../../../types/bubble.js";
 import type {

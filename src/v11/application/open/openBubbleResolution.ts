@@ -2,7 +2,7 @@ import type { PairflowGlobalConfig } from "../../../config/pairflowConfig.js";
 import type {
   BubbleRemotePointer,
   BubbleRemotePointerStarted
-} from "../../../types/bubble.js";
+} from "../../shared/remote/remoteExecutionTypes.js";
 import type { OpenWorkspaceKind } from "../../ports/openBubble.js";
 import { SchemaValidationError } from "../../shared/validation/primitives.js";
 import {

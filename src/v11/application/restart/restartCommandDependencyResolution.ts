@@ -2,7 +2,9 @@ import type { ResolveBubbleByIdPort } from "../../ports/bubbleLookup.js";
 import type { PersistPassValidationRecoveryMarkerPort } from "../../ports/passValidationRecovery.js";
 import type { RemoveRuntimeSessionPort } from "../../ports/runtimeSessions.js";
 import type { TerminateBubbleTmuxSessionPort } from "../../ports/tmuxSessions.js";
-import type { BubbleRemotePointer } from "../../../types/bubble.js";
+import type {
+  BubbleRemotePointer
+} from "../../shared/remote/remoteExecutionTypes.js";
 import type { RestartBubbleDependencies } from "./restartCommandContract.js";
 import { startBubbleV11 as startBubble } from "../start/emitStartV11.js";
 import { createRestartBubbleError } from "./restartCommandRuntime.js";

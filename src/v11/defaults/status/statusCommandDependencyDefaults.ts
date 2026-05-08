@@ -21,7 +21,9 @@ import type {
   ReviewVerificationArtifactStatus
 } from "../../shared/reviewer/reviewVerification.js";
 import type {
-  BubbleRemotePointer,
+  BubbleRemotePointer
+} from "../../shared/remote/remoteExecutionTypes.js";
+import type {
   BubbleRemoteStateCache
 } from "../../../types/bubble.js";
 import type {

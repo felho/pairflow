@@ -1,4 +1,6 @@
-import type { BubbleRemotePointer } from "../../../types/bubble.js";
+import type {
+  BubbleRemotePointer
+} from "../../shared/remote/remoteExecutionTypes.js";
 import { applyStateTransition } from "../../domain/state/machine.js";
 import type {
   ExecuteRemoteBubbleApprovalCommandPort,

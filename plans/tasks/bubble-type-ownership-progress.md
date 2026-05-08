@@ -136,6 +136,14 @@ Preferred mechanical flow:
 
 ## Progress Log
 
+### Remote executor and pointer slice
+
+- Created `src/v11/shared/remote/remoteExecutionTypes.ts` as the owner for remote executor kind/config, remote host config, remote pointer kinds, remote pointer shapes, and related guards.
+- Moved runtime, config, infrastructure, application, shared, root-export, and test consumers of those remote executor/pointer types to import from the new owner.
+- Removed those exports from `src/types/bubble.ts`; the old file now only imports `BubbleExecutorConfig` as a type-only dependency for the remaining `BubbleConfig` aggregate.
+- Deferred `BubbleRemoteStateCache` intentionally because it currently depends on `BubbleLifecycleState`; moving it before the lifecycle/snapshot owner is chosen would create a type-ownership cycle or force a premature lifecycle decision.
+- Targeted verification completed: `pnpm typecheck`, `pnpm lint`, `pnpm fitness:check:ci`, and focused remote/config/start/status/open/commit Vitest coverage passed.
+
 ### Review policy slice
 
 - Created `src/v11/shared/reviewPolicy/reviewPolicyTypes.ts` as the owner for review loop modes, auto-rework severities, support statuses, review policy config/runtime view shapes, and review-policy guards.
@@ -164,6 +172,7 @@ Preferred mechanical flow:
 - The first slice did not need a compatibility re-export bridge. The mixed imports could be split mechanically, and typecheck/lint caught the only split-quality issues.
 - The UI contract question mattered in practice: UI contract files should keep browser-safe contract-local mirrors rather than importing the new v11 domain owner.
 - The review policy slice confirmed the same UI rule for non-agent vocabularies: browser contracts should own their payload literals even when the backend runtime vocabulary has a clearer v11 owner.
+- Remote state cache should wait for lifecycle/snapshot extraction because it embeds `BubbleLifecycleState`; not every apparent slice should move all adjacent names at once.
 - Root package exports are a distinct public facade question; preserving them does not mean keeping `src/types/bubble.ts` as a bridge.
 - `src/types/bubble.ts` can safely depend on a moved owner only as a type-only aggregate dependency. A runtime value import there would be a new architecture smell.
 - Import count is a risk signal, not a sufficient argument for a bridge. The real risk is whether the target owner is semantically correct and whether mixed imports can be split without creating worse architecture edges.

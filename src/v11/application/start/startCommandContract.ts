@@ -1,7 +1,9 @@
 import type { PairflowGlobalConfig } from "../../../config/pairflowConfig.js";
 import type {
+  BubbleRemotePointer
+} from "../../shared/remote/remoteExecutionTypes.js";
+import type {
   BubbleConfig,
-  BubbleRemotePointer,
   BubbleRemoteStateCache
 } from "../../../types/bubble.js";
 import type { BubblePaths } from "../../shared/bubble/bubblePaths.js";

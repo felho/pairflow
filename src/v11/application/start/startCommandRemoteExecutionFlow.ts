@@ -3,7 +3,9 @@ import {
   executeStartPreparingMutation,
   executeStartRunningMutation
 } from "./startStatePersistence.js";
-import type { BubbleRemotePointerCreated } from "../../../types/bubble.js";
+import type {
+  BubbleRemotePointerCreated
+} from "../../shared/remote/remoteExecutionTypes.js";
 import type {
   ExecuteRemoteBubbleStartResult,
   RemoteBubbleExecutionTarget,

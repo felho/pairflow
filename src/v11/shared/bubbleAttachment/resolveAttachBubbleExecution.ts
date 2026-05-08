@@ -1,9 +1,11 @@
 import { DEFAULT_ATTACH_LAUNCHER } from "../../../config/defaults.js";
 import type { PairflowGlobalConfig } from "../../../config/pairflowConfig.js";
 import type {
-  AttachLauncher,
   BubbleRemotePointer,
   BubbleRemotePointerStarted
+} from "../remote/remoteExecutionTypes.js";
+import type {
+  AttachLauncher
 } from "../../../types/bubble.js";
 import type { ResolvedBubbleById } from "../../ports/bubbleLookup.js";
 import { SchemaValidationError } from "../validation/primitives.js";

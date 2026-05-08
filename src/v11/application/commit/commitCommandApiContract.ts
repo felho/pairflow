@@ -1,4 +1,6 @@
-import type { BubbleRemotePointerStarted } from "../../../types/bubble.js";
+import type {
+  BubbleRemotePointerStarted
+} from "../../shared/remote/remoteExecutionTypes.js";
 import type {
   EnsureBubbleInstanceIdForMutationResult
 } from "../../ports/bubbleIdentity.js";

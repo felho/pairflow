@@ -19,7 +19,7 @@ import type { EmitBubbleLifecycleEventBestEffortPort } from "../../shared/metric
 import type {
   BubbleRemotePointerCreated,
   BubbleRemotePointerStarted
-} from "../../../types/bubble.js";
+} from "../../shared/remote/remoteExecutionTypes.js";
 import type {
   ExecuteRemoteBubbleMergeCleanupCommandInput,
   ExecuteRemoteBubbleMergeCleanupCommandResult,

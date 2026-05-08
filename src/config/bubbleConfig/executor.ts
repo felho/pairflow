@@ -1,5 +1,7 @@
 import type { BubbleConfig } from "../../types/bubble.js";
-import { isBubbleExecutorType } from "../../types/bubble.js";
+import {
+  isBubbleExecutorType
+} from "../../v11/shared/remote/remoteExecutionTypes.js";
 import type { ValidationError } from "../../v11/shared/validation/primitives.js";
 import { BUBBLE_EXECUTOR_INVALID } from "./errors.js";
 import { readString } from "./readers.js";

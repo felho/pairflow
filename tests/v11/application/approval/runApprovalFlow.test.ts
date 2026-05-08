@@ -3,9 +3,10 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import { describe, expect, it, vi } from "vitest";
-
 import type {
-  BubbleRemotePointer,
+  BubbleRemotePointer
+} from "../../../../src/v11/shared/remote/remoteExecutionTypes.js";
+import type {
   BubbleStateSnapshot
 } from "../../../../src/types/bubble.js";
 import { applyStateTransition } from "../../../../src/v11/domain/state/machine.js";

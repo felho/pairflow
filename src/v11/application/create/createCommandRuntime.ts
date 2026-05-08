@@ -30,9 +30,11 @@ import type {
   BubbleReviewPolicyConfig
 } from "../../shared/reviewPolicy/reviewPolicyTypes.js";
 import type {
+  BubbleRemotePointerCreated
+} from "../../shared/remote/remoteExecutionTypes.js";
+import type {
   BubbleConfig,
   BubbleDocContractGatesConfig,
-  BubbleRemotePointerCreated,
   CreateReviewArtifactType,
   PairflowCommandProfile
 } from "../../../types/bubble.js";
