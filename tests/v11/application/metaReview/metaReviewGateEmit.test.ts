@@ -13,7 +13,7 @@ import type {
   MetaReviewRuntimeDeliveryObservation,
   NotifyMetaReviewerSubmissionRequestDependencies,
   ResolveMetaReviewerPaneWarning
-} from "../../../../src/v11/application/metaReviewGate/metaReviewGateCommandContract.js";
+} from "../../../../src/v11/shared/metaReviewGate/index.js";
 import {
   readStateSnapshot,
   writeStateSnapshot

@@ -34,7 +34,7 @@ export type {
   MetaReviewGateRoute as MetaReviewGateRouteV11,
   NotifyMetaReviewerSubmissionRequestDependencies as NotifyMetaReviewerSubmissionRequestV11Dependencies,
   NotifyMetaReviewerSubmissionRequestInput as NotifyMetaReviewerSubmissionRequestV11Input
-} from "./metaReviewGateCommandContract.js";
+} from "../../shared/metaReviewGate/index.js";
 
 export async function applyMetaReviewGateOnConvergenceV11(
   input: ApplyMetaReviewGateOnConvergenceInput,
