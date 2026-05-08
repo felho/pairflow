@@ -406,10 +406,13 @@ describe("UI contract transit source guards", () => {
     expect(protocol).not.toMatch(/\bexport\s+type\s+(?:ProtocolParticipant|ProtocolMessageType|PassIntent|FindingsClaimState|FindingsClaimSource|ApprovalDecision)\b/u);
     expect(protocol).not.toMatch(/\bexport\s+const\s+(?:protocolParticipants|protocolMessageTypes|passIntents|findingsClaimStates|findingsClaimSources|approvalDecisions)\b/u);
     expect(uiActions).toContain("from \"../kernel/index.js\"");
-    expect(uiActions).not.toMatch(/UiActionAgentName\s*=\s*["']/u);
-    expect(uiActions).not.toMatch(/UiActionProtocolMessageType\s*=\s*["']/u);
-    expect(uiActions).not.toMatch(/UiActionApprovalDecision\s*=\s*["']/u);
-    expect(uiActions).not.toMatch(/UiActionPassIntent\s*=\s*["']/u);
+    expect(uiActions).not.toMatch(/AgentName\s*=\s*["']/u);
+    expect(uiActions).not.toMatch(/ProtocolMessageType\s*=\s*["']/u);
+    expect(uiActions).not.toMatch(/ApprovalDecision\s*=\s*["']/u);
+    expect(uiActions).not.toMatch(/PassIntent\s*=\s*["']/u);
+    expect(uiActions).not.toMatch(
+      /\bexport\s+type\s+(?:AgentName|AgentRole|ProtocolParticipant|ProtocolMessageType|ApprovalDecision|PassIntent|FindingsClaimState|FindingsClaimSource)\s*=/u
+    );
   });
 
   it("keeps delete-bubble UI names as aliases of the canonical contract", async () => {
@@ -494,7 +497,7 @@ describe("UI contract transit source guards", () => {
     expectModuleSpecifierCount(canonical, "../kernel/protocol.js", 1);
     expectExportTypeBlockContains(uiBarrel, {
       symbol: "ProtocolMessageType",
-      moduleSpecifier: "./uiReadModel.js"
+      moduleSpecifier: "../kernel/index.js"
     });
     expect(canonical).not.toContain("src/v11");
     expect(canonical).not.toContain("../v11");
@@ -742,18 +745,30 @@ describe("UI contract transit source guards", () => {
     expect(inputContracts).not.toBe("");
 
     for (const symbol of [
-      "UiActionAgentName",
-      "UiActionAgentRole",
-      "UiActionApprovalDecision",
+      "AgentName",
+      "AgentRole",
+      "ApprovalDecision",
+      "FindingsClaimSource",
+      "FindingsClaimState",
+      "PassIntent",
+      "ProtocolMessageType",
+      "ProtocolParticipant"
+    ]) {
+      expectExportTypeBlockContains(canonical, {
+        symbol,
+        moduleSpecifier: "../kernel/index.js"
+      });
+      expectNoTypeDeclaration(canonical, symbol);
+      expectNoTypeDeclaration(backendCompat, symbol);
+      expectNoTypeDeclaration(uiTypes, symbol);
+      expectNoTypeDeclaration(uiCompat, symbol);
+    }
+
+    for (const symbol of [
       "UiActionBubbleState",
       "UiActionEvent",
       "UiActionExecutionContextRef",
-      "UiActionFindingsClaimSource",
-      "UiActionFindingsClaimState",
-      "UiActionPassIntent",
       "UiActionPendingReworkIntent",
-      "UiActionProtocolMessageType",
-      "UiActionProtocolParticipant",
       "UiBubbleMutationInput",
       "UiEmitApproveInput",
       "UiEmitRequestReworkInput",
@@ -790,20 +805,19 @@ describe("UI contract transit source guards", () => {
     }
 
     for (const symbol of [
-      "UiActionAgentName",
-      "UiActionAgentRole",
-      "UiActionApprovalDecision",
+      "AgentName",
+      "AgentRole",
+      "ApprovalDecision",
       "UiActionBubbleState",
       "UiActionEvent",
       "UiActionExecutionContextRef",
-      "UiActionFindingsClaimSource",
-      "UiActionFindingsClaimState",
-      "UiActionPassIntent",
+      "FindingsClaimSource",
+      "FindingsClaimState",
+      "PassIntent",
       "UiActionPendingReworkIntent",
-      "UiActionProtocolMessageType",
-      "UiActionProtocolParticipant"
+      "ProtocolMessageType",
+      "ProtocolParticipant"
     ]) {
-      expect(uiTypes).not.toContain(symbol);
       expect(uiCompat).toContain(symbol);
     }
 

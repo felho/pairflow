@@ -23,18 +23,18 @@ import type {
 } from "../../src/contracts/ui/uiEvents.js";
 import type {
   MetaReviewQualityPreset as CanonicalMetaReviewQualityPreset,
-  UiActionAgentName as CanonicalUiActionAgentName,
-  UiActionAgentRole as CanonicalUiActionAgentRole,
-  UiActionApprovalDecision as CanonicalUiActionApprovalDecision,
+  AgentName as CanonicalAgentName,
+  AgentRole as CanonicalAgentRole,
+  ApprovalDecision as CanonicalApprovalDecision,
   UiActionBubbleState as CanonicalUiActionBubbleState,
   UiActionEvent as CanonicalUiActionEvent,
   UiActionExecutionContextRef as CanonicalUiActionExecutionContextRef,
-  UiActionFindingsClaimSource as CanonicalUiActionFindingsClaimSource,
-  UiActionFindingsClaimState as CanonicalUiActionFindingsClaimState,
-  UiActionPassIntent as CanonicalUiActionPassIntent,
+  FindingsClaimSource as CanonicalFindingsClaimSource,
+  FindingsClaimState as CanonicalFindingsClaimState,
+  PassIntent as CanonicalPassIntent,
   UiActionPendingReworkIntent as CanonicalUiActionPendingReworkIntent,
-  UiActionProtocolMessageType as CanonicalUiActionProtocolMessageType,
-  UiActionProtocolParticipant as CanonicalUiActionProtocolParticipant,
+  ProtocolMessageType as CanonicalProtocolMessageType,
+  ProtocolParticipant as CanonicalProtocolParticipant,
   UiAttachLauncher as CanonicalUiAttachLauncher,
   UiCommitBubbleInput as CanonicalUiCommitBubbleInput,
   UiCommitBubbleResult as CanonicalUiCommitBubbleResult,
@@ -81,7 +81,6 @@ import type {
   UiBubbleSummary as CanonicalUiBubbleSummary,
   UiBubbleWatchdog as CanonicalUiBubbleWatchdog,
   UiPendingInboxItemSource as CanonicalUiPendingInboxItemSource,
-  ProtocolMessageType as CanonicalProtocolMessageType,
   UiRepoSummary as CanonicalUiRepoSummary,
   UiRuntimeSessionRecord as CanonicalUiRuntimeSessionRecord
 } from "../../src/contracts/ui/uiReadModel.js";
@@ -111,18 +110,18 @@ import type {
 } from "../../src/v11/ports/stateSnapshots.js";
 import type {
   MetaReviewQualityPreset as RouterMetaReviewQualityPreset,
-  UiActionAgentName as RouterUiActionAgentName,
-  UiActionAgentRole as RouterUiActionAgentRole,
-  UiActionApprovalDecision as RouterUiActionApprovalDecision,
+  AgentName as RouterAgentName,
+  AgentRole as RouterAgentRole,
+  ApprovalDecision as RouterApprovalDecision,
   UiActionBubbleState as RouterUiActionBubbleState,
   UiActionEvent as RouterUiActionEvent,
   UiActionExecutionContextRef as RouterUiActionExecutionContextRef,
-  UiActionFindingsClaimSource as RouterUiActionFindingsClaimSource,
-  UiActionFindingsClaimState as RouterUiActionFindingsClaimState,
-  UiActionPassIntent as RouterUiActionPassIntent,
+  FindingsClaimSource as RouterFindingsClaimSource,
+  FindingsClaimState as RouterFindingsClaimState,
+  PassIntent as RouterPassIntent,
   UiActionPendingReworkIntent as RouterUiActionPendingReworkIntent,
-  UiActionProtocolMessageType as RouterUiActionProtocolMessageType,
-  UiActionProtocolParticipant as RouterUiActionProtocolParticipant,
+  ProtocolMessageType as RouterProtocolMessageType,
+  ProtocolParticipant as RouterProtocolParticipant,
   UiAttachLauncher as RouterUiAttachLauncher,
   UiCommitBubbleInput as RouterUiCommitBubbleInput,
   UiCommitBubbleResult as RouterUiCommitBubbleResult,
@@ -218,18 +217,18 @@ import type {
 } from "../../ui/src/lib/contracts/uiEvents.js";
 import type {
   MetaReviewQualityPreset as UiMetaReviewQualityPreset,
-  UiActionAgentName,
-  UiActionAgentRole,
-  UiActionApprovalDecision,
+  AgentName,
+  AgentRole,
+  ApprovalDecision,
   UiActionBubbleState,
   UiActionEvent as UiActionEventResult,
   UiActionExecutionContextRef,
-  UiActionFindingsClaimSource,
-  UiActionFindingsClaimState,
-  UiActionPassIntent,
+  FindingsClaimSource,
+  FindingsClaimState,
+  PassIntent,
   UiActionPendingReworkIntent,
-  UiActionProtocolMessageType,
-  UiActionProtocolParticipant,
+  ProtocolMessageType,
+  ProtocolParticipant,
   UiApprovalDecisionDeliverySignal,
   UiApprovalDecisionDeliverySignals,
   UiAttachLauncher,
@@ -537,17 +536,17 @@ type _uiPendingInboxItemParity =
   Assert<Equal<CanonicalUiBubbleInboxItem, UiBubbleInboxItem>>;
 
 type _routerActionAgentNameParity =
-  Assert<Equal<CanonicalUiActionAgentName, RouterUiActionAgentName>>;
+  Assert<Equal<CanonicalAgentName, RouterAgentName>>;
 type _uiActionAgentNameParity =
-  Assert<Equal<CanonicalUiActionAgentName, UiActionAgentName>>;
+  Assert<Equal<CanonicalAgentName, AgentName>>;
 type _routerActionAgentRoleParity =
-  Assert<Equal<CanonicalUiActionAgentRole, RouterUiActionAgentRole>>;
+  Assert<Equal<CanonicalAgentRole, RouterAgentRole>>;
 type _uiActionAgentRoleParity =
-  Assert<Equal<CanonicalUiActionAgentRole, UiActionAgentRole>>;
+  Assert<Equal<CanonicalAgentRole, AgentRole>>;
 type _routerActionApprovalDecisionParity =
-  Assert<Equal<CanonicalUiActionApprovalDecision, RouterUiActionApprovalDecision>>;
+  Assert<Equal<CanonicalApprovalDecision, RouterApprovalDecision>>;
 type _uiActionApprovalDecisionParity =
-  Assert<Equal<CanonicalUiActionApprovalDecision, UiActionApprovalDecision>>;
+  Assert<Equal<CanonicalApprovalDecision, ApprovalDecision>>;
 type _routerActionBubbleStateParity =
   Assert<Equal<CanonicalUiActionBubbleState, RouterUiActionBubbleState>>;
 type _uiActionBubbleStateParity =
@@ -567,32 +566,32 @@ type _uiActionExecutionContextRefParity =
   Assert<Equal<CanonicalUiActionExecutionContextRef, UiActionExecutionContextRef>>;
 type _routerActionFindingsClaimSourceParity =
   Assert<
-    Equal<CanonicalUiActionFindingsClaimSource, RouterUiActionFindingsClaimSource>
+    Equal<CanonicalFindingsClaimSource, RouterFindingsClaimSource>
   >;
 type _uiActionFindingsClaimSourceParity =
-  Assert<Equal<CanonicalUiActionFindingsClaimSource, UiActionFindingsClaimSource>>;
+  Assert<Equal<CanonicalFindingsClaimSource, FindingsClaimSource>>;
 type _routerActionFindingsClaimStateParity =
   Assert<
-    Equal<CanonicalUiActionFindingsClaimState, RouterUiActionFindingsClaimState>
+    Equal<CanonicalFindingsClaimState, RouterFindingsClaimState>
   >;
 type _uiActionFindingsClaimStateParity =
-  Assert<Equal<CanonicalUiActionFindingsClaimState, UiActionFindingsClaimState>>;
+  Assert<Equal<CanonicalFindingsClaimState, FindingsClaimState>>;
 type _routerActionPassIntentParity =
-  Assert<Equal<CanonicalUiActionPassIntent, RouterUiActionPassIntent>>;
+  Assert<Equal<CanonicalPassIntent, RouterPassIntent>>;
 type _uiActionPassIntentParity =
-  Assert<Equal<CanonicalUiActionPassIntent, UiActionPassIntent>>;
+  Assert<Equal<CanonicalPassIntent, PassIntent>>;
 type _routerActionPendingReworkIntentParity =
   Assert<Equal<CanonicalUiActionPendingReworkIntent, RouterUiActionPendingReworkIntent>>;
 type _uiActionPendingReworkIntentParity =
   Assert<Equal<CanonicalUiActionPendingReworkIntent, UiActionPendingReworkIntent>>;
 type _routerActionProtocolMessageTypeParity =
-  Assert<Equal<CanonicalUiActionProtocolMessageType, RouterUiActionProtocolMessageType>>;
+  Assert<Equal<CanonicalProtocolMessageType, RouterProtocolMessageType>>;
 type _uiActionProtocolMessageTypeParity =
-  Assert<Equal<CanonicalUiActionProtocolMessageType, UiActionProtocolMessageType>>;
+  Assert<Equal<CanonicalProtocolMessageType, ProtocolMessageType>>;
 type _routerActionProtocolParticipantParity =
-  Assert<Equal<CanonicalUiActionProtocolParticipant, RouterUiActionProtocolParticipant>>;
+  Assert<Equal<CanonicalProtocolParticipant, RouterProtocolParticipant>>;
 type _uiActionProtocolParticipantParity =
-  Assert<Equal<CanonicalUiActionProtocolParticipant, UiActionProtocolParticipant>>;
+  Assert<Equal<CanonicalProtocolParticipant, ProtocolParticipant>>;
 type _routerBubbleMutationInputParity =
   Assert<Equal<CanonicalUiBubbleMutationInput, RouterUiBubbleMutationInput>>;
 type _uiBubbleMutationInputParity =

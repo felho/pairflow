@@ -18,17 +18,16 @@ import type {
 
 export type MetaReviewQualityPreset = "P1" | "P2" | "P3" | "P3+1" | "P3+2";
 
-export type UiActionAgentName = AgentName;
-
-export type UiActionAgentRole = AgentRole;
-
-export type UiActionProtocolParticipant = ProtocolParticipant;
-
-export type UiActionProtocolMessageType = ProtocolMessageType;
-
-export type UiActionApprovalDecision = ApprovalDecision;
-
-export type UiActionPassIntent = PassIntent;
+export type {
+  AgentName,
+  AgentRole,
+  ApprovalDecision,
+  FindingsClaimSource,
+  FindingsClaimState,
+  PassIntent,
+  ProtocolMessageType,
+  ProtocolParticipant
+} from "../kernel/index.js";
 
 export type UiRequestedAttachLauncher =
   | "auto"
@@ -37,10 +36,6 @@ export type UiRequestedAttachLauncher =
   | "terminal"
   | "ghostty"
   | "copy";
-
-export type UiActionFindingsClaimState = FindingsClaimState;
-
-export type UiActionFindingsClaimSource = FindingsClaimSource;
 
 export interface UiActionExecutionContextRef {
   handoffId: string;
@@ -51,8 +46,8 @@ export interface UiActionBubbleState {
   bubbleId: string;
   lifecycleState: BubbleLifecycleState;
   round: number;
-  activeAgent: UiActionAgentName | null;
-  activeRole: UiActionAgentRole | null;
+  activeAgent: AgentName | null;
+  activeRole: AgentRole | null;
   activeSince: string | null;
   lastCommandAt: string | null;
   executionContext: UiActionExecutionContextRef | null;
@@ -72,18 +67,18 @@ export interface UiActionEvent {
   id: string;
   timestamp: string;
   bubbleId: string;
-  sender: UiActionProtocolParticipant;
-  recipient: UiActionProtocolParticipant;
-  type: UiActionProtocolMessageType;
+  sender: ProtocolParticipant;
+  recipient: ProtocolParticipant;
+  type: ProtocolMessageType;
   round: number;
   refs: string[];
   summary?: string | undefined;
   question?: string | undefined;
   message?: string | undefined;
-  decision?: UiActionApprovalDecision | undefined;
-  passIntent?: UiActionPassIntent | undefined;
-  findingsClaimState?: UiActionFindingsClaimState | undefined;
-  findingsClaimSource?: UiActionFindingsClaimSource | undefined;
+  decision?: ApprovalDecision | undefined;
+  passIntent?: PassIntent | undefined;
+  findingsClaimState?: FindingsClaimState | undefined;
+  findingsClaimSource?: FindingsClaimSource | undefined;
 }
 
 export interface UiBubbleMutationInput {

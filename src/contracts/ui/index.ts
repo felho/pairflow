@@ -21,19 +21,21 @@ export type {
   UiBubbleStatusRemoteExecution
 } from "./uiRemoteExecution.js";
 export type {
+  AgentName,
+  AgentRole,
+  ApprovalDecision,
+  FindingsClaimSource,
+  FindingsClaimState,
+  PassIntent,
+  ProtocolMessageType,
+  ProtocolParticipant
+} from "../kernel/index.js";
+export type {
   MetaReviewQualityPreset,
-  UiActionAgentName,
-  UiActionAgentRole,
-  UiActionApprovalDecision,
   UiActionBubbleState,
   UiActionEvent,
   UiActionExecutionContextRef,
-  UiActionFindingsClaimSource,
-  UiActionFindingsClaimState,
-  UiActionPassIntent,
   UiActionPendingReworkIntent,
-  UiActionProtocolMessageType,
-  UiActionProtocolParticipant,
   UiApprovalDecisionDeliverySignal,
   UiApprovalDecisionDeliverySignals,
   UiAttachBubbleInput,
@@ -87,7 +89,6 @@ export {
   uiApprovalRequestGateRoutes
 } from "./uiReadModel.js";
 export type {
-  ProtocolMessageType,
   UiApprovalRequestGateRoute,
   UiBubbleAttention,
   UiBubbleAttentionCode,

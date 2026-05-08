@@ -1,11 +1,11 @@
 import type {
-  UiActionAgentName,
-  UiActionAgentRole,
+  AgentName,
+  AgentRole,
   UiActionBubbleState,
   UiActionEvent,
   UiActionExecutionContextRef,
-  UiActionProtocolMessageType,
-  UiActionProtocolParticipant,
+  ProtocolMessageType,
+  ProtocolParticipant,
   UiCommitBubbleResult,
   UiDeleteBubbleResult,
   UiMergeBubbleResult
@@ -17,19 +17,19 @@ type UiActionResponseName = "commit" | "delete" | "merge";
 
 const lifecycleStates = new Set<string>(bubbleLifecycleStates);
 
-const actionAgentNames = new Set<UiActionAgentName>(["codex", "claude"]);
-const actionAgentRoles = new Set<UiActionAgentRole>([
+const actionAgentNames = new Set<AgentName>(["codex", "claude"]);
+const actionAgentRoles = new Set<AgentRole>([
   "implementer",
   "reviewer",
   "meta_reviewer"
 ]);
-const protocolParticipants = new Set<UiActionProtocolParticipant>([
+const protocolParticipants = new Set<ProtocolParticipant>([
   "codex",
   "claude",
   "orchestrator",
   "human"
 ]);
-const protocolMessageTypes = new Set<UiActionProtocolMessageType>([
+const protocolMessageTypes = new Set<ProtocolMessageType>([
   "TASK",
   "PASS",
   "HUMAN_QUESTION",
@@ -95,12 +95,12 @@ function isNullableString(value: unknown): value is string | null {
   return value === null || typeof value === "string";
 }
 
-function isNullableActionAgent(value: unknown): value is UiActionAgentName | null {
-  return value === null || actionAgentNames.has(value as UiActionAgentName);
+function isNullableActionAgent(value: unknown): value is AgentName | null {
+  return value === null || actionAgentNames.has(value as AgentName);
 }
 
-function isNullableActionRole(value: unknown): value is UiActionAgentRole | null {
-  return value === null || actionAgentRoles.has(value as UiActionAgentRole);
+function isNullableActionRole(value: unknown): value is AgentRole | null {
+  return value === null || actionAgentRoles.has(value as AgentRole);
 }
 
 function isUiActionBubbleState(value: unknown): value is UiActionBubbleState {
@@ -157,9 +157,9 @@ function isUiActionEvent(value: unknown): value is UiActionEvent {
     typeof value.id === "string" &&
     typeof value.timestamp === "string" &&
     typeof value.bubbleId === "string" &&
-    protocolParticipants.has(value.sender as UiActionProtocolParticipant) &&
-    protocolParticipants.has(value.recipient as UiActionProtocolParticipant) &&
-    protocolMessageTypes.has(value.type as UiActionProtocolMessageType) &&
+    protocolParticipants.has(value.sender as ProtocolParticipant) &&
+    protocolParticipants.has(value.recipient as ProtocolParticipant) &&
+    protocolMessageTypes.has(value.type as ProtocolMessageType) &&
     typeof value.round === "number" &&
     isStringArray(value.refs) &&
     hasOptionalString(value, "summary") &&
