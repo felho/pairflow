@@ -5,17 +5,19 @@ import type {
 } from "./kickoffFlowContract.js";
 import { prepareKickoffValidation } from "./kickoffValidationPreparation.js";
 import { executeKickoffValidatedFlow } from "./kickoffValidatedExecution.js";
-import {
-  buildKickoffExecutionStepInput,
-  buildKickoffValidationStepInput
-} from "./kickoffFlowStepInputBuilders.js";
 
 export async function runKickoffFlow(
   input: RunKickoffFlowInput,
   dependencies: ResolvedKickoffDependencies
 ): Promise<RunKickoffFlowResult> {
   const validation = await prepareKickoffValidation(
-    buildKickoffValidationStepInput(input),
+    {
+      bubbleId: input.bubbleId,
+      ...(input.repoPath !== undefined ? { repoPath: input.repoPath } : {}),
+      ...(input.task !== undefined ? { task: input.task } : {}),
+      ...(input.taskFile !== undefined ? { taskFile: input.taskFile } : {}),
+      ...(input.cwd !== undefined ? { cwd: input.cwd } : {})
+    },
     dependencies
   );
   if (validation.kind === "failure") {
@@ -23,11 +25,11 @@ export async function runKickoffFlow(
   }
 
   return executeKickoffValidatedFlow(
-    buildKickoffExecutionStepInput({
+    {
       validation,
       now: input.now,
       nowIso: input.nowIso
-    }),
+    },
     dependencies
   );
 }
