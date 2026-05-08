@@ -112,6 +112,28 @@ For each implemented slice:
 
 If direct non-docs source edits are made in the current checkout, follow the repository local verification order before declaring the work complete.
 
+## Next Slice Working Rules
+
+Before moving another slice, classify the affected consumers into explicit surfaces:
+
+- internal v11 runtime/domain consumers;
+- `src/config/**` configuration consumers;
+- `src/types/**` legacy/public type consumers;
+- `src/contracts/ui/**` browser-safe contract consumers;
+- package root exports in `src/index.ts`.
+
+Apply direct migration by default for internal/runtime/config consumers when the owner is clear. Treat `src/contracts/ui/**` as a separate ownership surface: UI contracts should keep contract-local DTO mirrors unless the UI contract governance explicitly changes. Treat `src/index.ts` as a public package facade decision, not as a compatibility re-export bridge from `src/types/bubble.ts`.
+
+When `src/types/bubble.ts` still needs a moved slice to describe remaining aggregate types, keep that dependency type-only. Do not introduce runtime value imports from `src/types/bubble.ts` back into `src/v11/**`.
+
+Preferred mechanical flow:
+
+1. Build the surface inventory.
+2. Create the new owner module.
+3. Rewrite imports directly to the owner.
+4. Run `pnpm exec eslint . --fix` after the mechanical rewrite to normalize type-only imports.
+5. Run the verification sequence.
+
 ## Progress Log
 
 ### Agent identity slice
@@ -133,5 +155,7 @@ If direct non-docs source edits are made in the current checkout, follow the rep
 
 - The first slice did not need a compatibility re-export bridge. The mixed imports could be split mechanically, and typecheck/lint caught the only split-quality issues.
 - The UI contract question mattered in practice: UI contract files should keep browser-safe contract-local mirrors rather than importing the new v11 domain owner.
+- Root package exports are a distinct public facade question; preserving them does not mean keeping `src/types/bubble.ts` as a bridge.
+- `src/types/bubble.ts` can safely depend on a moved owner only as a type-only aggregate dependency. A runtime value import there would be a new architecture smell.
 - Import count is a risk signal, not a sufficient argument for a bridge. The real risk is whether the target owner is semantically correct and whether mixed imports can be split without creating worse architecture edges.
 - Agent-assisted migration changes the cost model: mechanical churn is cheap, but ownership mistakes and review noise remain expensive.
