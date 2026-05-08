@@ -44,7 +44,7 @@ afterEach(async () => {
 });
 
 describe("application defaults boundary fitness check", () => {
-  it("warns when application dynamically imports defaults through a path helper", async () => {
+  it("fails in hard-fail mode when application dynamically imports defaults through a path helper", async () => {
     const repoRoot = await createTempRoot();
     await writeRepoFile(
       repoRoot,
@@ -70,10 +70,40 @@ describe("application defaults boundary fitness check", () => {
       fallbackMode: "hard-fail"
     });
 
-    expect(report.status).toBe("warn");
+    expect(report.status).toBe("fail");
     expect(report.details?.some((detail) =>
       detail.includes("[warn] application dynamic-imports defaults runtime wiring")
     )).toBe(true);
+    expect(report.details).toContain("dynamic_defaults_imports=1");
+  });
+
+  it("warns in soft-fail mode when application dynamically imports defaults through a path helper", async () => {
+    const repoRoot = await createTempRoot();
+    await writeRepoFile(
+      repoRoot,
+      "src/v11/defaults/state/stateStoreDefaults.ts",
+      "export const readStateSnapshot = () => undefined;\n"
+    );
+    await writeRepoFile(
+      repoRoot,
+      "src/v11/application/state/stateStoreDependencyDefaults.ts",
+      [
+        "function getStateStoreDefaultsModulePath(): string {",
+        "  return '../../defaults/state/stateStoreDefaults.js';",
+        "}",
+        "export async function load() {",
+        "  return import(getStateStoreDefaultsModulePath());",
+        "}"
+      ].join("\n")
+    );
+
+    const report = await buildApplicationDefaultsBoundaryCheckReport({
+      check: checkInput("soft-fail"),
+      repoRoot,
+      fallbackMode: "hard-fail"
+    });
+
+    expect(report.status).toBe("warn");
     expect(report.details).toContain("dynamic_defaults_imports=1");
   });
 

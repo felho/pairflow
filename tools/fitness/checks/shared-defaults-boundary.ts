@@ -472,8 +472,8 @@ export async function buildSharedDefaultsBoundaryCheckReport({
       id: check.id,
       owner: check.owner ?? "unknown",
       mode,
-      status: "warn",
-      summary: `Shared defaults boundary check warning: ${String(warnCount)} dynamic shared-defaults boundary import(s) detected.`,
+      status: mode === "hard-fail" ? "fail" : "warn",
+      summary: `Shared defaults boundary check ${mode === "hard-fail" ? "failed" : "warning"}: ${String(warnCount)} dynamic shared-defaults boundary import(s) detected.`,
       metric: check.metric,
       details
     };

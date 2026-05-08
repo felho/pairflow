@@ -97,7 +97,7 @@ describe("shared defaults boundary fitness check", () => {
     expect(report.details).toContain("application_imports_shared_defaults=1");
   });
 
-  it("warns when shared dynamically imports defaults through a path helper", async () => {
+  it("fails in hard-fail mode when shared dynamically imports defaults through a path helper", async () => {
     const repoRoot = await createTempRoot();
     await writeRepoFile(
       repoRoot,
@@ -123,14 +123,14 @@ describe("shared defaults boundary fitness check", () => {
       fallbackMode: "hard-fail"
     });
 
-    expect(report.status).toBe("warn");
+    expect(report.status).toBe("fail");
     expect(report.details?.some((detail) =>
       detail.includes("[warn] shared dynamic-imports defaults runtime wiring")
     )).toBe(true);
     expect(report.details).toContain("dynamic_defaults_imports=1");
   });
 
-  it("warns when shared dynamically imports defaults through a joined path", async () => {
+  it("fails in hard-fail mode when shared dynamically imports defaults through a joined path", async () => {
     const repoRoot = await createTempRoot();
     await writeRepoFile(
       repoRoot,
@@ -156,7 +156,7 @@ describe("shared defaults boundary fitness check", () => {
       fallbackMode: "hard-fail"
     });
 
-    expect(report.status).toBe("warn");
+    expect(report.status).toBe("fail");
     expect(report.details).toContain("dynamic_defaults_imports=1");
   });
 

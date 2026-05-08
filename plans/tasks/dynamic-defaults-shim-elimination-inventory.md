@@ -1651,6 +1651,25 @@ In the closing PR:
     previously noted broader direct-call gaps are outside this batch.
   - `pnpm build` passed.
 
+### 2026-05-08 — Batch 39: promote dynamic defaults checks to hard fail
+
+- Updated `application_defaults_boundary` and `shared_defaults_boundary` so
+  dynamic defaults imports return `fail` in hard-fail mode instead of only
+  returning `warn`.
+- Kept soft-fail behavior intact for explicit soft-fail policy mode.
+- Fitness result after the batch: application dynamic defaults warnings are 0;
+  shared dynamic defaults warnings remain 0; any future dynamic defaults import
+  is now a blocking hard-fail violation under the current policy.
+- Validation:
+  - `pnpm exec vitest run tests/tools/fitness/applicationDefaultsBoundary.test.ts tests/tools/fitness/sharedDefaultsBoundary.test.ts`
+    passed (`2` files, `10` tests).
+  - `pnpm typecheck` passed.
+  - `pnpm lint` passed.
+  - `pnpm fitness:check:ci` passed with
+    `application_defaults_boundary dynamic_defaults_imports=0` and
+    `shared_defaults_boundary dynamic_defaults_imports=0`.
+  - `pnpm build` passed.
+
 ---
 
 ## Notes

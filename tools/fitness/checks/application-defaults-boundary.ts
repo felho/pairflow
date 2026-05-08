@@ -423,8 +423,8 @@ export async function buildApplicationDefaultsBoundaryCheckReport({
       id: check.id,
       owner: check.owner ?? "unknown",
       mode,
-      status: "warn",
-      summary: `Application defaults boundary check warning: ${String(warnCount)} dynamic application->defaults import(s) detected.`,
+      status: mode === "hard-fail" ? "fail" : "warn",
+      summary: `Application defaults boundary check ${mode === "hard-fail" ? "failed" : "warning"}: ${String(warnCount)} dynamic application->defaults import(s) detected.`,
       metric: check.metric,
       details
     };
