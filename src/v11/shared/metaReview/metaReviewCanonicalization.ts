@@ -1,13 +1,4 @@
-import { isNonEmptyString } from "../validation/primitives.js";
-
 export {
+  normalizeOptionalText,
   resolveCanonicalMetaReviewReportJson
-} from "./metaReviewCanonicalizationReport.js";
-
-export function normalizeOptionalText(value: string | undefined): string | null {
-  if (!isNonEmptyString(value)) {
-    return null;
-  }
-
-  return value.trim();
-}
+} from "./internal/canonicalization/metaReviewCanonicalization.js";
