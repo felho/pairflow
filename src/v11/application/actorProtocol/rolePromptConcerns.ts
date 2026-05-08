@@ -2,10 +2,12 @@ import type {
   AgentRole
 } from "../../domain/agentIdentity/agentIdentity.js";
 import type {
-  BubbleCommandsConfig,
   BubbleStateSnapshot,
   ReviewArtifactType
 } from "../../../types/bubble.js";
+import type {
+  BubbleCommandsConfig
+} from "../../shared/command/commandConfigTypes.js";
 import { buildPairflowCommandGuidance } from "../start/startCommandPromptRuntime.js";
 import {
   buildLaunchWorkspaceCommandScopeLine,

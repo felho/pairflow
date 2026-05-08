@@ -136,6 +136,12 @@ Preferred mechanical flow:
 
 ## Progress Log
 
+### Command config slice
+
+- Created `src/v11/shared/command/commandConfigTypes.ts` as the owner for `BubbleCommandsConfig`.
+- Updated actor prompt concern builders, start prompt builders, and root package type exports to import command config from the new owner.
+- Removed `BubbleCommandsConfig` from `src/types/bubble.ts`; the old file now only imports it as a type-only dependency for the remaining `BubbleConfig` aggregate.
+
 ### Round role history slice
 
 - Created `src/v11/shared/state/roundRoleHistoryTypes.ts` as the owner for `RoundRoleHistoryEntry`.
@@ -212,6 +218,7 @@ Preferred mechanical flow:
 - After execution context moved out, meta-review snapshot/runtime delivery could move independently; the full `BubbleStateSnapshot` aggregate still waits for a lifecycle/snapshot ownership slice.
 - Rework intent is small enough to move independently of the full snapshot aggregate: it is an embedded state submodel with its own literals and guard, while `BubbleStateSnapshot` can keep only a type-only dependency until the lifecycle/snapshot slice lands.
 - Round role history follows the same pattern: it is an audit/history submodel shared by state transition, pass handoff, and convergence policy, while the full lifecycle/snapshot aggregate can remain deferred.
+- `BubbleCommandsConfig` can move independently from the full `BubbleConfig` aggregate because its active meaning is command/validation-command guidance; the aggregate can keep a type-only dependency while config ownership is split progressively.
 - Remote state cache should wait for lifecycle/snapshot extraction because it embeds `BubbleLifecycleState`; not every apparent slice should move all adjacent names at once.
 - Root package exports are a distinct public facade question; preserving them does not mean keeping `src/types/bubble.ts` as a bridge.
 - `src/types/bubble.ts` can safely depend on a moved owner only as a type-only aggregate dependency. A runtime value import there would be a new architecture smell.

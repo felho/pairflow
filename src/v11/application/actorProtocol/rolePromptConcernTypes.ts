@@ -5,11 +5,13 @@ import type {
   BubbleReviewAutoReworkSeverity
 } from "../../shared/reviewPolicy/reviewPolicyTypes.js";
 import type {
-  BubbleCommandsConfig,
   BubbleStateSnapshot,
   PairflowCommandProfile,
   ReviewArtifactType
 } from "../../../types/bubble.js";
+import type {
+  BubbleCommandsConfig
+} from "../../shared/command/commandConfigTypes.js";
 import type {
   ReviewerFocusExtractionResult
 } from "../../shared/reviewer/reviewerBrief.js";

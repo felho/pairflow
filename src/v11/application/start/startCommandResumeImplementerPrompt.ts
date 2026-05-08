@@ -1,8 +1,10 @@
 import type {
-  BubbleCommandsConfig,
   PairflowCommandProfile,
   ReviewArtifactType
 } from "../../../types/bubble.js";
+import type {
+  BubbleCommandsConfig
+} from "../../shared/command/commandConfigTypes.js";
 import { joinPromptLines } from "./startCommandResumePromptShared.js";
 import { buildRolePromptConcernLines } from "../actorProtocol/roleDescriptorRegistry.js";
 import type { BubbleStateSnapshot } from "../../../types/bubble.js";

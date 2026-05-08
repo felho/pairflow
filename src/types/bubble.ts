@@ -18,6 +18,9 @@ import type {
   RoundRoleHistoryEntry
 } from "../v11/shared/state/roundRoleHistoryTypes.js";
 import type {
+  BubbleCommandsConfig
+} from "../v11/shared/command/commandConfigTypes.js";
+import type {
   BubbleMetaReviewSnapshotState
 } from "../v11/shared/metaReview/metaReviewSnapshotTypes.js";
 import type {
@@ -95,17 +98,6 @@ export const attachLaunchers = [
 ] as const;
 
 export type AttachLauncher = (typeof attachLaunchers)[number];
-
-export interface BubbleCommandsConfig {
-  [commandId: string]: string | string[] | boolean | undefined;
-  bootstrap?: string;
-  lint?: string;
-  test: string;
-  typecheck: string;
-  meta_review_approve_required?: string[];
-  validation_required?: string[];
-  validation_required_explicit?: true;
-}
 
 export interface BubbleValidationTargetConfig {
   id: string;

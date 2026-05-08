@@ -748,7 +748,6 @@ export type {
   PairflowRemoteHostConfig
 } from "./v11/shared/remote/remoteExecutionTypes.js";
 export type {
-  BubbleCommandsConfig,
   BubbleConfig,
   BubbleRemoteStateCache,
   BubbleLifecycleState,
@@ -757,6 +756,9 @@ export type {
   QualityMode,
   WorkMode
 } from "./types/bubble.js";
+export type {
+  BubbleCommandsConfig
+} from "./v11/shared/command/commandConfigTypes.js";
 export type {
   RoundRoleHistoryEntry
 } from "./v11/shared/state/roundRoleHistoryTypes.js";

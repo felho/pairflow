@@ -6,10 +6,12 @@ import {
 import { buildDocumentBubbleSourceEditGuard } from "../../shared/document/documentBubbleSourceEditGuard.js";
 import { buildPairflowCommandGuidance } from "./startCommandPromptRuntime.js";
 import type {
-  BubbleCommandsConfig,
   PairflowCommandProfile,
   ReviewArtifactType
 } from "../../../types/bubble.js";
+import type {
+  BubbleCommandsConfig
+} from "../../shared/command/commandConfigTypes.js";
 
 export function buildImplementerStartupPrompt(input: {
   bubbleId: string;
