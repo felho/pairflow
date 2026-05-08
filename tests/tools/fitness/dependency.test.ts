@@ -65,6 +65,47 @@ describe("dependency fitness check", () => {
     ).toBe(true);
   });
 
+  it("fails on forbidden layer import hidden behind a dynamic path helper", async () => {
+    const repoRoot = await createTempRoot();
+    await writeRepoFile(
+      repoRoot,
+      "src/v11/infrastructure/artifact/bubble/remoteExecutionArtifacts.ts",
+      "export const readRemotePointer = () => undefined;\n"
+    );
+    await writeRepoFile(
+      repoRoot,
+      "src/v11/application/open/openBubbleDefaults.ts",
+      [
+        "function getRemoteExecutionArtifactsModulePath(): string {",
+        "  return ['..', '..', 'infrastructure', 'artifact', 'bubble', 'remoteExecutionArtifacts.js'].join('/');",
+        "}",
+        "export async function load() {",
+        "  return import(getRemoteExecutionArtifactsModulePath());",
+        "}"
+      ].join("\n")
+    );
+
+    const report = await buildDependencyCheckReport({
+      check: {
+        id: "dependency",
+        metric: "cycle and forbidden import direction detection",
+        mode: "report-only",
+        owner: "architecture",
+        scope: ["src/v11/**"],
+        exceptions: []
+      },
+      repoRoot,
+      fallbackMode: "report-only",
+    });
+
+    expect(report.status).toBe("fail");
+    expect(
+      report.details?.some((detail) =>
+        detail.includes("forbidden layer import application -> infrastructure")
+      )
+    ).toBe(true);
+  });
+
   it("fails on import cycle", async () => {
     const repoRoot = await createTempRoot();
     await writeRepoFile(

@@ -1,4 +1,5 @@
 import { processSpawnDefault } from "../../../v11/defaults/process/processSpawnDefaults.js";
+import { openBubbleDefaults } from "../../../v11/defaults/open/openBubbleDefaults.js";
 import {
   runBubbleOpenCommand as runApplicationBubbleOpenCommand,
   type BubbleOpenCommandDependencies
@@ -22,6 +23,7 @@ export async function runBubbleOpenCommand(
   dependencies: BubbleOpenCommandDependencies = {}
 ) {
   return runApplicationBubbleOpenCommand(args, cwd, {
+    ...openBubbleDefaults,
     processSpawn: dependencies.processSpawn ?? processSpawnDefault,
     ...dependencies
   });

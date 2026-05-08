@@ -5,8 +5,12 @@ import { SchemaValidationError } from "../../../src/v11/shared/validation/primit
 import { getBubblePaths } from "../../../src/v11/infrastructure/artifact/bubble/paths.js";
 import {
   asOpenBubbleError,
-  openBubble,
+  openBubble as openBubbleApplication,
   OpenBubbleError
+} from "../../../src/v11/application/open/openBubble.js";
+import type {
+  OpenBubbleDependencies,
+  OpenBubbleInput
 } from "../../../src/v11/application/open/openBubble.js";
 import type {
   BubbleRemotePointerStarted
@@ -85,6 +89,16 @@ function createStartedRemotePointerFixture(
     startedAt: input.startedAt ?? "2026-04-20T12:00:00.000Z",
     ...(input.portForwards !== undefined ? { portForwards: input.portForwards } : {})
   };
+}
+
+function openBubble(
+  input: OpenBubbleInput,
+  dependencies: OpenBubbleDependencies
+) {
+  return openBubbleApplication(input, {
+    readRemotePointer: () => Promise.resolve(null),
+    ...dependencies
+  });
 }
 
 describe("openBubble", () => {

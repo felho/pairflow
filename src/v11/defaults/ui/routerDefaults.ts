@@ -9,6 +9,7 @@ import { deleteBubbleDependencyDefaults } from "../delete/deleteBubbleDefaults.j
 import { mergeBubbleDependencyDefaults } from "../merge/mergeCommandDefaults.js";
 import { mergeBubbleCommandOrchestration as mergeBubble } from "../../application/merge/mergeCommandOrchestration.js";
 import { openBubble } from "../../application/open/openBubble.js";
+import { openBubbleDefaults } from "../open/openBubbleDefaults.js";
 import { restartBubbleDependencyDefaults } from "../restart/restartCommandDefaults.js";
 import { restartBubble } from "../../application/restart/restartCommandApi.js";
 import { emitHumanReply } from "../../application/reply/replyCommandApi.js";
@@ -387,7 +388,9 @@ export const uiRouterDependencyDefaults = {
   async mergeBubble(input) {
     return mergeBubble(projectUiInputNowToCommandNow(input), mergeBubbleDependencyDefaults);
   },
-  openBubble,
+  async openBubble(input) {
+    return openBubble(input, openBubbleDefaults);
+  },
   async restartBubble(input) {
     return mapUiRestartResult(
       await restartBubble(

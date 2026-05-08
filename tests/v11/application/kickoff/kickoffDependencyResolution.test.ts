@@ -2,11 +2,11 @@ import { readFile, writeFile } from "node:fs/promises";
 
 import { describe, expect, it } from "vitest";
 
-import { openBubbleDefaults } from "../../../../src/v11/application/open/openBubbleDefaults.js";
 import { reviewerDeliveryDefaults } from "../../../../src/v11/application/pass/reviewerDeliveryDefaults.js";
 import {
   appendProtocolEnvelope,
   readStateSnapshot,
+  resolveBubbleById,
   writeStateSnapshot
 } from "../../../../src/v11/application/start/startCommandDependencyDefaults.js";
 import { resolveKickoffDependencies } from "../../../../src/v11/application/kickoff/internal/validation/kickoffDependencyResolution.js";
@@ -15,7 +15,7 @@ describe("kickoffDependencyResolution", () => {
   it("uses kickoff defaults when overrides are omitted", () => {
     const resolved = resolveKickoffDependencies({});
 
-    expect(resolved.resolveBubble).toBe(openBubbleDefaults.resolveBubbleById);
+    expect(resolved.resolveBubble).toBe(resolveBubbleById);
     expect(resolved.readState).toBe(readStateSnapshot);
     expect(resolved.writeState).toBe(writeStateSnapshot);
     expect(resolved.readFileFn).toBe(readFile);

@@ -210,11 +210,99 @@ function parseImportSpecifiers(input: {
     true
   );
   const imports: { specifier: string; line: number }[] = [];
+  const staticStringBindings = new Map<string, string>();
+
+  const readStaticStringExpression = (
+    expression: ts.Expression
+  ): string | undefined => {
+    if (ts.isStringLiteral(expression) || ts.isNoSubstitutionTemplateLiteral(expression)) {
+      return expression.text;
+    }
+    if (ts.isParenthesizedExpression(expression)) {
+      return readStaticStringExpression(expression.expression);
+    }
+    if (
+      ts.isAsExpression(expression)
+      || ts.isSatisfiesExpression(expression)
+      || ts.isTypeAssertionExpression(expression)
+    ) {
+      return readStaticStringExpression(expression.expression);
+    }
+    if (
+      ts.isCallExpression(expression)
+      && ts.isPropertyAccessExpression(expression.expression)
+      && expression.expression.name.text === "join"
+      && ts.isArrayLiteralExpression(expression.expression.expression)
+      && expression.arguments.length === 1
+      && expression.arguments[0] !== undefined
+      && ts.isStringLiteral(expression.arguments[0])
+    ) {
+      const parts: string[] = [];
+      for (const element of expression.expression.expression.elements) {
+        const value = ts.isExpression(element)
+          ? readStaticStringExpression(element)
+          : undefined;
+        if (value === undefined) {
+          return undefined;
+        }
+        parts.push(value);
+      }
+      return parts.join(expression.arguments[0].text);
+    }
+    return undefined;
+  };
+
+  const collectStaticStringBindings = (node: ts.Node): void => {
+    if (
+      ts.isVariableDeclaration(node)
+      && ts.isIdentifier(node.name)
+      && node.initializer !== undefined
+    ) {
+      const value = readStaticStringExpression(node.initializer);
+      if (value !== undefined) {
+        staticStringBindings.set(node.name.text, value);
+      }
+    }
+    if (
+      ts.isFunctionDeclaration(node)
+      && node.name !== undefined
+      && node.parameters.length === 0
+      && node.body !== undefined
+    ) {
+      for (const statement of node.body.statements) {
+        if (ts.isReturnStatement(statement) && statement.expression !== undefined) {
+          const value = readStaticStringExpression(statement.expression);
+          if (value !== undefined) {
+            staticStringBindings.set(node.name.text, value);
+          }
+        }
+      }
+    }
+    node.forEachChild(collectStaticStringBindings);
+  };
+
+  const resolveDynamicImportSpecifier = (
+    argument: ts.Expression
+  ): string | undefined => {
+    if (ts.isIdentifier(argument)) {
+      return staticStringBindings.get(argument.text);
+    }
+    if (
+      ts.isCallExpression(argument)
+      && argument.arguments.length === 0
+      && ts.isIdentifier(argument.expression)
+    ) {
+      return staticStringBindings.get(argument.expression.text);
+    }
+    return readStaticStringExpression(argument);
+  };
 
   const pushSpecifier = (specifier: string, node: ts.Node): void => {
     const line = sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile)).line + 1;
     imports.push({ specifier, line });
   };
+
+  collectStaticStringBindings(sourceFile);
 
   const visit = (node: ts.Node): void => {
     if (ts.isImportDeclaration(node) && ts.isStringLiteral(node.moduleSpecifier)) {
@@ -233,6 +321,11 @@ function parseImportSpecifiers(input: {
       const argument = node.arguments[0];
       if (argument !== undefined && ts.isStringLiteral(argument)) {
         pushSpecifier(argument.text, argument);
+      } else if (argument !== undefined && ts.isExpression(argument)) {
+        const specifier = resolveDynamicImportSpecifier(argument);
+        if (specifier !== undefined) {
+          pushSpecifier(specifier, argument);
+        }
       }
     }
     node.forEachChild(visit);

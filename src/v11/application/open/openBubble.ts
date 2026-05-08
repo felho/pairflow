@@ -13,21 +13,12 @@ import {
   createOpenBubbleError,
   OpenBubbleError
 } from "./openBubbleError.js";
-import { openBubbleDefaults } from "./openBubbleDefaults.js";
 
 export async function openBubble(
   input: OpenBubbleInput,
   dependencies: OpenBubbleDependencies = {}
 ): Promise<OpenBubbleResult> {
-  return openBubbleRuntime(input, {
-    ...dependencies,
-    resolveBubbleById:
-      dependencies.resolveBubbleById
-      ?? ((...args) => openBubbleDefaults.resolveBubbleById(...args)),
-    readRemotePointer:
-      dependencies.readRemotePointer
-      ?? ((...args) => openBubbleDefaults.readRemotePointer(...args))
-  });
+  return openBubbleRuntime(input, dependencies);
 }
 
 export function asOpenBubbleError(error: unknown): never {
