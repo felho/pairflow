@@ -5,7 +5,7 @@ import type {
 import type { BubbleStateSnapshot } from "../../../types/bubble.js";
 import type { Finding } from "../../../types/findings.js";
 import type { ProtocolEnvelope, PassIntent } from "../../../types/protocol.js";
-import type { PassDeliveryDependencies } from "./reviewerDelivery.js";
+import type { PassFlowRuntimeDependencies } from "./passFlowRuntimeDependenciesContract.js";
 import type {
   ActorActivationProvenance,
   ActorEmitContextSnapshot
@@ -58,6 +58,6 @@ export interface EmitPassResult {
   docGateArtifactWriteFailureReason?: string;
 }
 
-export interface EmitPassDependencies extends PassDeliveryDependencies {
+export interface EmitPassDependencies extends PassFlowRuntimeDependencies {
   emitBubbleNotification?: EmitConvergedDependencies["emitBubbleNotification"];
 }

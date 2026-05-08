@@ -12,6 +12,7 @@ import {
   readStateSnapshot,
   writeStateSnapshot
 } from "../../../src/v11/infrastructure/state/stateStore.js";
+import { stopBubbleDependencyDefaults } from "../../../src/v11/defaults/stop/stopCommandDefaults.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
 import { initGitRepository } from "../../helpers/git.js";
 import type { ContractCase, ContractCaseExpected } from "./schema.js";
@@ -223,6 +224,7 @@ async function executeStopCase(input: {
           now: new Date("2026-03-19T23:00:00.000Z")
         },
         {
+          ...stopBubbleDependencyDefaults,
           terminateBubbleTmuxSession: () =>
             Promise.resolve({
               sessionName: `pf-${bubble.bubbleId}`,

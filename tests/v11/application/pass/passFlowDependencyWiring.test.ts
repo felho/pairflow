@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const buildAutoConvergeFlowDependencies = vi.fn();
 const buildNormalPassFlowDependencies = vi.fn();
@@ -18,6 +18,10 @@ vi.mock(
 );
 
 describe("passFlowDependencyWiring", () => {
+  beforeEach(() => {
+    vi.resetModules();
+  });
+
   afterEach(() => {
     buildAutoConvergeFlowDependencies.mockReset();
     buildNormalPassFlowDependencies.mockReset();

@@ -24,6 +24,9 @@ import {
 } from "../gates/docContractGateArtifactDefaults.js";
 import { readStateSnapshot } from "../state/stateStoreDefaults.js";
 import { resolveBubbleFromWorkspaceCwd } from "../workspace/workspaceResolutionDefaults.js";
+import {
+  applyMetaReviewGateOnConvergenceV11
+} from "../metaReviewGate/metaReviewGateApi.js";
 import { configureConvergedDependencyDefaults } from "../../application/converged/convergedDependencyDefaults.js";
 
 export const convergedDependencyDefaults = {
@@ -37,6 +40,7 @@ export const convergedDependencyDefaults = {
   },
   execution: {
     appendProtocolEnvelope,
+    applyMetaReviewGateOnConvergence: applyMetaReviewGateOnConvergenceV11,
     emitBubbleNotification,
     emitDeliveryNotificationAck,
     resolveDeliveryMessageRef

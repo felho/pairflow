@@ -1,6 +1,3 @@
-import {
-  applyMetaReviewGateOnConvergenceV11 as applyMetaReviewGateOnConvergence
-} from "../metaReviewGate/emitMetaReviewGateV11.js";
 import { convergedDependencyDefaults } from "./convergedDependencyDefaults.js";
 import { emitBubbleLifecycleEventBestEffort } from "../metrics/bubbleEvents.js";
 import type { EmitBubbleNotificationPort } from "../../ports/notifications.js";
@@ -45,7 +42,7 @@ export function buildDefaultConvergedExecutionDependencies(
       convergedDependencyDefaults.execution.appendProtocolEnvelope,
     applyMetaReviewGateOnConvergence:
       input.applyMetaReviewGateOnConvergence ??
-      applyMetaReviewGateOnConvergence,
+      convergedDependencyDefaults.execution.applyMetaReviewGateOnConvergence,
     emitDeliveryNotificationAck:
       input.emitDeliveryNotificationAck ??
       convergedDependencyDefaults.execution.emitDeliveryNotificationAck,

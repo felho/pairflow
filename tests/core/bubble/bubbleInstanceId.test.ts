@@ -11,6 +11,8 @@ import {
 } from "../../../src/v11/infrastructure/artifact/bubble/bubbleInstanceId.js";
 import { resolveBubbleById } from "../../../src/v11/infrastructure/executor/workspace/bubbleLookup.js";
 import { createBubble } from "../../../src/v11/defaults/create/createBubbleApi.js";
+import { askHumanFinalizationDefaults } from "../../../src/v11/defaults/askHuman/askHumanFinalizationDefaults.js";
+import { emitBubbleLifecycleEventBestEffort } from "../../../src/v11/defaults/metrics/bubbleEvents.js";
 import { initGitRepository } from "../../helpers/git.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
 
@@ -112,11 +114,20 @@ describe("bubble_instance_id legacy migration", () => {
     expect(afterReadOnly.review_policy).toBeUndefined();
 
     const now = new Date("2026-02-26T13:20:00.000Z");
-    await emitAskHumanFromWorkspace({
-      question: "Need product decision",
-      cwd: bubble.paths.worktreePath,
-      now
-    });
+    await emitAskHumanFromWorkspace(
+      {
+        question: "Need product decision",
+        cwd: bubble.paths.worktreePath,
+        now
+      },
+      {
+        emitDeliveryNotificationAck:
+          askHumanFinalizationDefaults.emitDeliveryNotificationAck,
+        emitBubbleNotification:
+          askHumanFinalizationDefaults.emitBubbleNotification,
+        emitBubbleLifecycleEventBestEffort
+      }
+    );
 
     const afterMutating = parseBubbleConfigToml(
       await readFile(bubble.paths.bubbleTomlPath, "utf8")

@@ -9,6 +9,8 @@ export function buildAskHumanFlowDependenciesInputFromCommandOrchestration(
     finalizeAskHumanFlow: dependencies.finalizeAskHumanFlow,
     emitDeliveryNotificationAck:
       dependencies.emitDeliveryNotificationAck,
-    emitBubbleNotification: dependencies.emitBubbleNotification
+    emitBubbleNotification: dependencies.emitBubbleNotification,
+    emitBubbleLifecycleEventBestEffort:
+      dependencies.emitBubbleLifecycleEventBestEffort
   };
 }

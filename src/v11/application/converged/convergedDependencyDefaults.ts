@@ -26,6 +26,7 @@ import type {
 import type {
   ResolveReviewerTestExecutionDirectivePort
 } from "../../ports/reviewerTestEvidenceArtifacts.js";
+import type { ApplyMetaReviewGateOnConvergencePort } from "../../shared/metaReviewGate/metaReviewGateCommandContract.js";
 
 export interface ConvergedDependencyDefaults {
   flow: {
@@ -38,6 +39,7 @@ export interface ConvergedDependencyDefaults {
   };
   execution: {
     appendProtocolEnvelope: AppendProtocolEnvelopePort;
+    applyMetaReviewGateOnConvergence: ApplyMetaReviewGateOnConvergencePort;
     emitBubbleNotification: EmitBubbleNotificationPort;
     emitDeliveryNotificationAck: EmitDeliveryNotificationAckPort;
     resolveDeliveryMessageRef: ResolveDeliveryMessageRefPort;
@@ -101,6 +103,9 @@ export const convergedDependencyDefaults: ConvergedDependencyDefaults = {
         requireConvergedDependencyDefaults().execution.appendProtocolEnvelope;
       return appendEnvelope(...args);
     },
+    applyMetaReviewGateOnConvergence: (...args) =>
+      requireConvergedDependencyDefaults()
+        .execution.applyMetaReviewGateOnConvergence(...args),
     emitBubbleNotification: (...args) =>
       requireConvergedDependencyDefaults()
         .execution.emitBubbleNotification(...args),

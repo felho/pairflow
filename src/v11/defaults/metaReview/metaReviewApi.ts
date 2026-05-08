@@ -59,6 +59,7 @@ function withMetaReviewDefaults(
     readFile,
     emitDeliveryNotification: metaReviewDefaults.emitDeliveryNotificationAck,
     buildDeliveryMessageRef: metaReviewDefaults.resolveDeliveryMessageRef,
+    readRuntimeSessionsRegistry: metaReviewDefaults.readRuntimeSessionsRegistry,
     readTranscriptEnvelopes: metaReviewGateDependencyDefaults.readTranscriptEnvelopes,
     setMetaReviewerPaneBinding:
       metaReviewGateDependencyDefaults.setMetaReviewerPaneBinding,

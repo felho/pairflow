@@ -4,6 +4,7 @@ import type {
   EmitAskHumanBubbleNotificationPort
 } from "./askHumanDeliveryPortsContract.js";
 import type { EmitDeliveryNotificationAckPort } from "../../ports/tmuxDelivery.js";
+import type { EmitBubbleLifecycleEventBestEffortPort } from "../../shared/metrics/bubbleEvents.js";
 
 export interface BuildAskHumanFlowInputInput {
   now: Date;
@@ -29,4 +30,7 @@ export interface BuildAskHumanFlowDependenciesInput {
     | EmitDeliveryNotificationAckPort
     | undefined;
   emitBubbleNotification?: EmitAskHumanBubbleNotificationPort | undefined;
+  emitBubbleLifecycleEventBestEffort?:
+    | EmitBubbleLifecycleEventBestEffortPort
+    | undefined;
 }

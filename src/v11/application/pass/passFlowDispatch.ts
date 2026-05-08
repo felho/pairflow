@@ -3,9 +3,9 @@ import { buildAutoConvergeFlowInput } from "./autoConvergeFlowInvocationBuilders
 import { buildNormalPassFlowInput } from "./normalPassFlowInvocationBuilders.js";
 import {
   createAutoConvergeFlowDependencies,
-  createNormalPassFlowDependencies,
-  type PassFlowRuntimeDependencies
+  createNormalPassFlowDependencies
 } from "./passFlowDependencyWiring.js";
+import type { PassFlowRuntimeDependencies } from "./passFlowRuntimeDependenciesContract.js";
 import type {
   AutoConvergePassResult,
   NormalPassResult

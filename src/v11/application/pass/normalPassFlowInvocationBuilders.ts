@@ -23,6 +23,9 @@ import type {
   RunNormalPassFlowDependencies,
   RunNormalPassFlowInput
 } from "./runNormalPassFlow.js";
+import type {
+  WriteReviewVerificationArtifactAtomicPort
+} from "../../ports/reviewVerificationArtifacts.js";
 
 export type BuildNormalPassFlowInputInput = BuildFlowBaseInput;
 
@@ -122,12 +125,23 @@ export interface BuildNormalPassFlowDependenciesInput<TResult> {
     ResolvePassValidationForPassDependencies["writePassValidationEvidenceArtifact"];
   writePassValidationReviewerCompatibilityArtifact:
     ResolvePassValidationForPassDependencies["writePassValidationReviewerCompatibilityArtifact"];
+  writeReviewVerificationArtifactAtomic?: WriteReviewVerificationArtifactAtomicPort;
   persistNormalPassPostAppend: (
     input: PersistNormalPassPostAppendInput,
     dependencies: PersistNormalPassPostAppendDependencies
   ) => Promise<PersistNormalPassPostAppendResult>;
   writePostAppendReviewVerificationArtifact:
-    PersistNormalPassPostAppendDependencies["writePostAppendReviewVerificationArtifact"];
+    (
+      input: Parameters<
+        PersistNormalPassPostAppendDependencies["writePostAppendReviewVerificationArtifact"]
+      >[0],
+      dependencies?: {
+        writeReviewVerificationArtifactAtomic?:
+          WriteReviewVerificationArtifactAtomicPort;
+      }
+    ) => ReturnType<
+      PersistNormalPassPostAppendDependencies["writePostAppendReviewVerificationArtifact"]
+    >;
   writePostAppendPassState:
     PersistNormalPassPostAppendDependencies["writePostAppendPassState"];
   updateReviewerDocGateArtifact:
@@ -169,6 +183,23 @@ function resolveNormalPassFlowDeliveryOverride<TResult>(
   input: BuildNormalPassFlowDependenciesInput<TResult>
 ): PassDeliveryDependencies["emitDeliveryNotificationAck"] | undefined {
   return input.emitDeliveryNotificationAck;
+}
+
+function buildPostAppendReviewVerificationWriter<TResult>(
+  input: Pick<
+    BuildNormalPassFlowDependenciesInput<TResult>,
+    "writePostAppendReviewVerificationArtifact" | "writeReviewVerificationArtifactAtomic"
+  >
+): PersistNormalPassPostAppendDependencies["writePostAppendReviewVerificationArtifact"] {
+  return (verificationInput) =>
+    input.writePostAppendReviewVerificationArtifact(verificationInput, {
+      ...(input.writeReviewVerificationArtifactAtomic !== undefined
+        ? {
+            writeReviewVerificationArtifactAtomic:
+              input.writeReviewVerificationArtifactAtomic
+          }
+        : {})
+    });
 }
 
 export function buildNormalPassFlowDependencies<TResult>(
@@ -234,7 +265,7 @@ export function buildNormalPassFlowDependencies<TResult>(
     persistNormalPassPostAppend: (persistInput) =>
       input.persistNormalPassPostAppend(persistInput, {
         writePostAppendReviewVerificationArtifact:
-          input.writePostAppendReviewVerificationArtifact,
+          buildPostAppendReviewVerificationWriter(input),
         writePostAppendPassState: input.writePostAppendPassState,
         updateReviewerDocGateArtifact: input.updateReviewerDocGateArtifact
       }),

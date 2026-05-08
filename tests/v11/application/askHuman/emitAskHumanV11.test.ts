@@ -9,6 +9,7 @@ import {
   AskHumanCommandErrorV11,
   emitAskHumanFromWorkspaceV11
 } from "../../../../src/v11/application/askHuman/emitAskHumanV11.js";
+import { askHumanFinalizationDefaults } from "../../../../src/v11/defaults/askHuman/askHumanFinalizationDefaults.js";
 import { WorkspaceResolutionError } from "../../../../src/v11/infrastructure/executor/workspace/workspaceResolution.js";
 import { createBubble } from "../../../../src/v11/defaults/create/createBubbleApi.js";
 import { bootstrapWorktreeWorkspace } from "../../../../src/v11/infrastructure/workspace/worktreeManager.js";
@@ -45,12 +46,20 @@ describe("emitAskHumanFromWorkspaceV11", () => {
     const authorityBeforeEmit = await readStateSnapshot(bubble.paths.statePath);
     const now = new Date("2026-02-21T12:10:00.000Z");
 
-    const result = await emitAskHumanFromWorkspaceV11({
-      question: "Should we keep backwards compatibility?",
-      refs: ["artifact://analysis/risk.md"],
-      cwd: bubble.paths.worktreePath,
-      now
-    });
+    const result = await emitAskHumanFromWorkspaceV11(
+      {
+        question: "Should we keep backwards compatibility?",
+        refs: ["artifact://analysis/risk.md"],
+        cwd: bubble.paths.worktreePath,
+        now
+      },
+      {
+        emitDeliveryNotificationAck:
+          askHumanFinalizationDefaults.emitDeliveryNotificationAck,
+        emitBubbleNotification:
+          askHumanFinalizationDefaults.emitBubbleNotification
+      }
+    );
 
     expect(result.sequence).toBe(2);
     expect(result.envelope.type).toBe("HUMAN_QUESTION");

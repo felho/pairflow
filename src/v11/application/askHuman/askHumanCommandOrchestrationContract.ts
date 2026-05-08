@@ -9,6 +9,7 @@ import type {
 } from "./askHumanFlowContract.js";
 import type { PrepareAskHumanRoutingFn } from "./askHumanRoutingContract.js";
 import type { EmitDeliveryNotificationAckPort } from "../../ports/tmuxDelivery.js";
+import type { EmitBubbleLifecycleEventBestEffortPort } from "../../shared/metrics/bubbleEvents.js";
 
 export interface AskHumanCommandOrchestrationInput {
   question: string;
@@ -28,6 +29,9 @@ export interface AskHumanCommandOrchestrationDependencies {
     | EmitDeliveryNotificationAckPort
     | undefined;
   emitBubbleNotification?: EmitAskHumanBubbleNotificationPort | undefined;
+  emitBubbleLifecycleEventBestEffort?:
+    | EmitBubbleLifecycleEventBestEffortPort
+    | undefined;
   prepareAskHumanRouting?: PrepareAskHumanRoutingFn;
   runAskHumanFlow?: RunAskHumanFlowFn;
 }

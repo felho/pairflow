@@ -19,6 +19,12 @@ export function buildAskHumanFlowDependencyOptionalOverrides(
       : {}),
     ...(input.emitBubbleNotification !== undefined
       ? { emitBubbleNotification: input.emitBubbleNotification }
+      : {}),
+    ...(input.emitBubbleLifecycleEventBestEffort !== undefined
+      ? {
+          emitBubbleLifecycleEventBestEffort:
+            input.emitBubbleLifecycleEventBestEffort
+        }
       : {})
   };
 }

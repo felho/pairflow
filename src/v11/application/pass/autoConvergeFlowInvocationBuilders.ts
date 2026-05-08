@@ -12,6 +12,9 @@ import type {
   RunAutoConvergeFlowDependencies,
   RunAutoConvergeFlowInput
 } from "./runAutoConvergeFlow.js";
+import type {
+  WriteReviewVerificationArtifactAtomicPort
+} from "../../ports/reviewVerificationArtifacts.js";
 
 export interface BuildAutoConvergeFlowInputInput extends BuildFlowBaseInput {
   onDownstreamRejected: (reason: string) => never;
@@ -72,7 +75,19 @@ export function buildAutoConvergeFlowInput(
 
 export interface BuildAutoConvergeFlowDependenciesInput<TResult> {
   prepareRepeatCleanAutoConverge:
-    RunAutoConvergeFlowDependencies<TResult>["prepareRepeatCleanAutoConverge"];
+    (
+      input: Parameters<
+        RunAutoConvergeFlowDependencies<TResult>["prepareRepeatCleanAutoConverge"]
+      >[0],
+      dependencies?: {
+        writeReviewVerificationArtifactAtomic?:
+          WriteReviewVerificationArtifactAtomicPort;
+      }
+    ) => ReturnType<
+      RunAutoConvergeFlowDependencies<TResult>["prepareRepeatCleanAutoConverge"]
+    >;
+  writeReviewVerificationArtifactAtomic?:
+    WriteReviewVerificationArtifactAtomicPort;
   executeAutoConvergeConverged: (
     input: ExecuteAutoConvergeConvergedInput,
     dependencies: ExecuteAutoConvergeConvergedDependencies
@@ -113,7 +128,15 @@ export function buildAutoConvergeFlowDependencies<TResult>(
     resolveAutoConvergeFlowDeliveryOverride(input);
 
   return {
-    prepareRepeatCleanAutoConverge: input.prepareRepeatCleanAutoConverge,
+    prepareRepeatCleanAutoConverge: (autoConvergePreparationInput) =>
+      input.prepareRepeatCleanAutoConverge(autoConvergePreparationInput, {
+        ...(input.writeReviewVerificationArtifactAtomic !== undefined
+          ? {
+              writeReviewVerificationArtifactAtomic:
+                input.writeReviewVerificationArtifactAtomic
+            }
+          : {})
+      }),
     executeAutoConvergeConverged: (autoConvergedInput) =>
       input.executeAutoConvergeConverged(autoConvergedInput, {
         emitConvergedFromWorkspace: input.emitConvergedFromWorkspace,
