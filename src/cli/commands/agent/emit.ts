@@ -48,12 +48,13 @@ import {
   convergedDependencyDefaults
 } from "../../../v11/defaults/converged/convergedDependencyDefaults.js";
 import {
-  askHumanFinalizationDefaults
-} from "../../../v11/defaults/askHuman/askHumanFinalizationDefaults.js";
+  emitBubbleNotification
+} from "../../../v11/infrastructure/channel/notifications.js";
 import {
   emitBubbleLifecycleEventBestEffort
 } from "../../../v11/defaults/metrics/bubbleEvents.js";
 import {
+  emitDeliveryNotificationAck,
   resolveDeliveryMessageRef
 } from "../../../v11/infrastructure/channel/tmux/tmuxDelivery.js";
 import {
@@ -461,10 +462,8 @@ export async function runAgentEmitCommand(
   });
   const dependencies = {
     askHuman: {
-      emitDeliveryNotificationAck:
-        askHumanFinalizationDefaults.emitDeliveryNotificationAck,
-      emitBubbleNotification:
-        askHumanFinalizationDefaults.emitBubbleNotification,
+      emitDeliveryNotificationAck,
+      emitBubbleNotification,
       resolveDeliveryMessageRef,
       emitBubbleLifecycleEventBestEffort
     },

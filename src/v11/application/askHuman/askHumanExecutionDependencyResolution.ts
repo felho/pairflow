@@ -2,7 +2,11 @@ import type {
   ResolvedAskHumanExecutionDependencies,
   ResolveAskHumanExecutionDependenciesInput
 } from "./askHumanExecutionDependencyResolutionContract.js";
-import { askHumanExecutionDependencyDefaults } from "./askHumanDependencyDefaults.js";
+import { applyStateTransition } from "../../domain/state/machine.js";
+import {
+  appendProtocolEnvelope,
+  writeStateSnapshot
+} from "../start/startCommandDependencyDefaults.js";
 
 export function resolveAskHumanExecutionDependencies(
   input: ResolveAskHumanExecutionDependenciesInput
@@ -10,12 +14,12 @@ export function resolveAskHumanExecutionDependencies(
   return {
     appendEnvelope:
       input.appendProtocolEnvelope
-      ?? askHumanExecutionDependencyDefaults.appendProtocolEnvelope,
+      ?? appendProtocolEnvelope,
     writeSnapshot:
       input.writeStateSnapshot
-      ?? askHumanExecutionDependencyDefaults.writeStateSnapshot,
+      ?? writeStateSnapshot,
     applyTransition:
       input.applyStateTransition
-      ?? askHumanExecutionDependencyDefaults.applyStateTransition
+      ?? applyStateTransition
   };
 }

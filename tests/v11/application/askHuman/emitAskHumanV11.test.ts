@@ -9,7 +9,8 @@ import {
   AskHumanCommandError,
   emitAskHumanFromWorkspace
 } from "../../../../src/v11/application/askHuman/askHumanCommandApi.js";
-import { askHumanFinalizationDefaults } from "../../../../src/v11/defaults/askHuman/askHumanFinalizationDefaults.js";
+import { emitBubbleNotification } from "../../../../src/v11/infrastructure/channel/notifications.js";
+import { emitDeliveryNotificationAck } from "../../../../src/v11/infrastructure/channel/tmux/tmuxDelivery.js";
 import { WorkspaceResolutionError } from "../../../../src/v11/infrastructure/executor/workspace/workspaceResolution.js";
 import { createBubble } from "../../../../src/v11/defaults/create/createBubbleApi.js";
 import { bootstrapWorktreeWorkspace } from "../../../../src/v11/infrastructure/workspace/worktreeManager.js";
@@ -55,9 +56,9 @@ describe("emitAskHumanFromWorkspace", () => {
       },
       {
         emitDeliveryNotificationAck:
-          askHumanFinalizationDefaults.emitDeliveryNotificationAck,
+          emitDeliveryNotificationAck,
         emitBubbleNotification:
-          askHumanFinalizationDefaults.emitBubbleNotification
+          emitBubbleNotification
       }
     );
 

@@ -1,6 +1,14 @@
 import { readFile, stat, writeFile } from "node:fs/promises";
 
-import { kickoffDefaults } from "./kickoffDependencyDefaults.js";
+import {
+  appendProtocolEnvelope,
+  readStateSnapshot,
+  resolveBubbleById,
+  writeStateSnapshot
+} from "../start/startCommandDependencyDefaults.js";
+import {
+  reviewerDeliveryDefaults
+} from "../pass/reviewerDeliveryDefaults.js";
 import type {
   KickoffDependencyOverrides,
   ResolvedKickoffDependencies
@@ -8,14 +16,14 @@ import type {
 
 function buildKickoffDefaultDependencies(): ResolvedKickoffDependencies {
   return {
-    resolveBubble: kickoffDefaults.resolveBubbleById,
-    readState: kickoffDefaults.readStateSnapshot,
-    writeState: kickoffDefaults.writeStateSnapshot,
+    resolveBubble: resolveBubbleById,
+    readState: readStateSnapshot,
+    writeState: writeStateSnapshot,
     readFileFn: readFile,
     statFileFn: stat,
     writeFileFn: writeFile,
-    appendEnvelope: kickoffDefaults.appendProtocolEnvelope,
-    emitDelivery: kickoffDefaults.emitDeliveryNotificationAck
+    appendEnvelope: appendProtocolEnvelope,
+    emitDelivery: reviewerDeliveryDefaults.emitDeliveryNotificationAck
   };
 }
 

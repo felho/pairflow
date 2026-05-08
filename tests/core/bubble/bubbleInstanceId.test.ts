@@ -11,7 +11,8 @@ import {
 } from "../../../src/v11/infrastructure/artifact/bubble/bubbleInstanceId.js";
 import { resolveBubbleById } from "../../../src/v11/infrastructure/executor/workspace/bubbleLookup.js";
 import { createBubble } from "../../../src/v11/defaults/create/createBubbleApi.js";
-import { askHumanFinalizationDefaults } from "../../../src/v11/defaults/askHuman/askHumanFinalizationDefaults.js";
+import { emitBubbleNotification } from "../../../src/v11/infrastructure/channel/notifications.js";
+import { emitDeliveryNotificationAck } from "../../../src/v11/infrastructure/channel/tmux/tmuxDelivery.js";
 import { emitBubbleLifecycleEventBestEffort } from "../../../src/v11/defaults/metrics/bubbleEvents.js";
 import { initGitRepository } from "../../helpers/git.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
@@ -122,9 +123,9 @@ describe("bubble_instance_id legacy migration", () => {
       },
       {
         emitDeliveryNotificationAck:
-          askHumanFinalizationDefaults.emitDeliveryNotificationAck,
+          emitDeliveryNotificationAck,
         emitBubbleNotification:
-          askHumanFinalizationDefaults.emitBubbleNotification,
+          emitBubbleNotification,
         emitBubbleLifecycleEventBestEffort
       }
     );
