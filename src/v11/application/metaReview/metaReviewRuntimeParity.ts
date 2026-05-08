@@ -4,7 +4,7 @@ import {
 import { MetaReviewError } from "../../shared/metaReview/metaReviewError.js";
 import type {
   MetaReviewRecommendation
-} from "../../../types/bubble.js";
+} from "../../shared/metaReview/metaReviewTypes.js";
 import {
   hasApproveFindingsSplitMetadata,
   type FindingsParityStatus

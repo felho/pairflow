@@ -3,7 +3,7 @@ import type {
 } from "../v11/domain/agentIdentity/agentIdentity.js";
 import type {
   MetaReviewRecommendation
-} from "./bubble.js";
+} from "../v11/shared/metaReview/metaReviewTypes.js";
 import type { Finding } from "./findings.js";
 
 export const protocolParticipants = [

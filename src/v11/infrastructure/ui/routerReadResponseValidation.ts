@@ -6,7 +6,7 @@ import type {
   UiTimelineDisplayItem
 } from "../../../contracts/ui/uiReadModel.js";
 import { uiApprovalRequestGateRoutes } from "../../../contracts/ui/uiReadModel.js";
-import { isMetaReviewRecommendation } from "../../../types/bubble.js";
+import { isMetaReviewRecommendation } from "../../shared/metaReview/metaReviewTypes.js";
 import { isProtocolMessageType } from "../../../types/protocol.js";
 import { internalError, throwApiError } from "./routerHttp.js";
 import {

@@ -2,7 +2,7 @@ import {
   isFindingsClaimState,
   type FindingsParityStatus
 } from "../../../types/protocol.js";
-import type { MetaReviewRecommendation } from "../../../types/bubble.js";
+import type { MetaReviewRecommendation } from "./metaReviewTypes.js";
 import {
   resolveFindingsOpenSplitFromReportJson
 } from "../../domain/metaReviewGate/findingsSplit.js";

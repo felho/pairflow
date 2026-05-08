@@ -1,5 +1,4 @@
-import type { MetaReviewRecommendation } from "../../../types/bubble.js";
-
+import type { MetaReviewRecommendation } from "../../shared/metaReview/metaReviewTypes.js";
 export function resolveHumanGateRecommendation(input: {
   metaReviewRun?: { recommendation: MetaReviewRecommendation };
   fallbackRecommendation?: MetaReviewRecommendation;

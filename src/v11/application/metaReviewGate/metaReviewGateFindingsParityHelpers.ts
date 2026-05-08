@@ -1,4 +1,4 @@
-import type { MetaReviewRecommendation } from "../../../types/bubble.js";
+import type { MetaReviewRecommendation } from "../../shared/metaReview/metaReviewTypes.js";
 import {
   deriveFindingsOpenSplit as deriveFindingsOpenSplitFromMetadata,
   type FindingsOpenSplit

@@ -4,7 +4,6 @@ import type {
   BubbleLifecycleState,
   BubbleRoundGateState,
   BubbleSpecLockState,
-  MetaReviewRecommendation,
   MetaReviewRuntimeDeliveryStatus,
   PairflowCommandProfile,
   WorkMode
@@ -22,6 +21,7 @@ export type { ProtocolMessageType };
 export type UiBubbleReviewLoopMode = "full" | "meta_only";
 export type UiBubbleReviewAutoReworkSeverity = "P1" | "P2" | "P3";
 export type UiBubbleReviewSupportStatus = "enabled" | "guarded";
+export type UiMetaReviewRecommendation = "rework" | "approve" | "inconclusive";
 
 export interface UiBubbleStateCounts {
   CREATED: number;
@@ -110,7 +110,7 @@ export type UiPendingInboxItemSource = {
   sender: string;
   summary: string;
   refs: string[];
-  latestRecommendation?: MetaReviewRecommendation;
+  latestRecommendation?: UiMetaReviewRecommendation;
   gateRoute?: UiApprovalRequestGateRoute;
 };
 
@@ -138,7 +138,7 @@ export interface UiBubbleInboxItem {
   sender: string;
   summary: string;
   refs: string[];
-  latestRecommendation?: MetaReviewRecommendation;
+  latestRecommendation?: UiMetaReviewRecommendation;
   gateRoute?: UiApprovalRequestGateRoute;
 }
 

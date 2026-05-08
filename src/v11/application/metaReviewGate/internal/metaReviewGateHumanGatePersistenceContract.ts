@@ -1,3 +1,4 @@
+import type { MetaReviewRecommendation } from "../../../shared/metaReview/metaReviewTypes.js";
 import type {
   LoadedStateSnapshot,
   WriteStateSnapshotPort
@@ -5,8 +6,7 @@ import type {
   AgentName
 } from "../../../domain/agentIdentity/agentIdentity.js";
 import type {
-  BubbleStateSnapshot,
-  MetaReviewRecommendation
+  BubbleStateSnapshot
 } from "../../../../types/bubble.js";
 import type { MetaReviewResult } from "../../../shared/metaReview/metaReviewTypes.js";
 import type { FindingsParityMetadata } from "../../../../types/protocol.js";

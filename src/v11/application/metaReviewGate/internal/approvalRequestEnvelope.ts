@@ -3,7 +3,7 @@ import type {
 } from "../../../domain/agentIdentity/agentIdentity.js";
 import type {
   MetaReviewRecommendation
-} from "../../../../types/bubble.js";
+} from "../../../shared/metaReview/metaReviewTypes.js";
 import {
   deliveryTargetRoleMetadataKey,
   resolveFindingsParityMetadataForEnvelope,

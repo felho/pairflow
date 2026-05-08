@@ -1,4 +1,5 @@
-import type { BubbleStateSnapshot, MetaReviewRecommendation } from "../../../types/bubble.js";
+import type { MetaReviewRecommendation } from "../../shared/metaReview/metaReviewTypes.js";
+import type { BubbleStateSnapshot } from "../../../types/bubble.js";
 import {
   deliveryTargetRoleMetadataKey,
   type ProtocolEnvelope,

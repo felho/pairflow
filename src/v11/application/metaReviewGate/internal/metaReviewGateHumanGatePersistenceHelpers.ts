@@ -1,3 +1,4 @@
+import type { MetaReviewRecommendation } from "../../../shared/metaReview/metaReviewTypes.js";
 import { appendHumanApprovalRequestEnvelope } from "./approvalRequestEnvelope.js";
 import {
   type WriteStateSnapshotPort
@@ -5,9 +6,7 @@ import {
   AgentName
 } from "../../../domain/agentIdentity/agentIdentity.js";
 import type {
-  BubbleStateSnapshot,
-  MetaReviewRecommendation
-} from "../../../../types/bubble.js";
+  BubbleStateSnapshot } from "../../../../types/bubble.js";
 import type { FindingsParityMetadata } from "../../../../types/protocol.js";
 import type {
   AppendProtocolEnvelopePort,

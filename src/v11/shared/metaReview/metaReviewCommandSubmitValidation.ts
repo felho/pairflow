@@ -1,9 +1,9 @@
-import { isNonEmptyString } from "../validation/primitives.js";
-import { MetaReviewError } from "./metaReviewError.js";
 import type {
   MetaReviewRecommendation,
   MetaReviewRunStatus
-} from "../../../types/bubble.js";
+} from "./metaReviewTypes.js";
+import { isNonEmptyString } from "../validation/primitives.js";
+import { MetaReviewError } from "./metaReviewError.js";
 
 export type SubmitRunStatus = "success";
 

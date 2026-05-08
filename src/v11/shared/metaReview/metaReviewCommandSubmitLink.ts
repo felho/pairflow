@@ -1,5 +1,5 @@
 import { MetaReviewError } from "./metaReviewError.js";
-import type { MetaReviewRecommendation } from "../../../types/bubble.js";
+import type { MetaReviewRecommendation } from "./metaReviewTypes.js";
 
 function parseOptionalSubmitRunLinkField(
   value: unknown

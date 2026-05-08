@@ -1,7 +1,5 @@
-import type {
-  BubbleLifecycleState,
-  MetaReviewRecommendation
-} from "../../../types/bubble.js";
+import type { MetaReviewRecommendation } from "../../shared/metaReview/metaReviewTypes.js";
+import type { BubbleLifecycleState } from "../../../types/bubble.js";
 import {
   readStateSnapshot,
   readTranscriptEnvelopes,

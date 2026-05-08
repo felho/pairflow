@@ -136,6 +136,14 @@ Preferred mechanical flow:
 
 ## Progress Log
 
+### Meta-review run vocabulary slice
+
+- Moved meta-review run status, recommendation literals, related types, and guards from `src/types/bubble.ts` to the existing `src/v11/shared/metaReview/metaReviewTypes.ts` owner.
+- Updated meta-review gate, approval, inbox, protocol, persistence, and UI validation consumers to import the vocabulary from the meta-review owner.
+- Preserved UI contract governance by replacing the browser-facing `MetaReviewRecommendation` import with a contract-local `UiMetaReviewRecommendation` mirror in `src/contracts/ui/uiReadModel.ts`.
+- Kept meta-review execution context, runtime delivery, and snapshot state in `src/types/bubble.ts` for a later state/snapshot slice; this slice only moved run/result vocabulary.
+- Targeted verification completed: `pnpm typecheck` and focused meta-review/UI-contract Vitest coverage passed.
+
 ### Remote executor and pointer slice
 
 - Created `src/v11/shared/remote/remoteExecutionTypes.ts` as the owner for remote executor kind/config, remote host config, remote pointer kinds, remote pointer shapes, and related guards.
@@ -172,6 +180,7 @@ Preferred mechanical flow:
 - The first slice did not need a compatibility re-export bridge. The mixed imports could be split mechanically, and typecheck/lint caught the only split-quality issues.
 - The UI contract question mattered in practice: UI contract files should keep browser-safe contract-local mirrors rather than importing the new v11 domain owner.
 - The review policy slice confirmed the same UI rule for non-agent vocabularies: browser contracts should own their payload literals even when the backend runtime vocabulary has a clearer v11 owner.
+- The meta-review run vocabulary slice kept execution context/snapshot types out of the move; run result vocabulary and state ownership are adjacent but not the same ownership decision.
 - Remote state cache should wait for lifecycle/snapshot extraction because it embeds `BubbleLifecycleState`; not every apparent slice should move all adjacent names at once.
 - Root package exports are a distinct public facade question; preserving them does not mean keeping `src/types/bubble.ts` as a bridge.
 - `src/types/bubble.ts` can safely depend on a moved owner only as a type-only aggregate dependency. A runtime value import there would be a new architecture smell.

@@ -64,22 +64,6 @@ export type GateSignalLevel = (typeof gateSignalLevels)[number];
 
 export const DEFAULT_META_REVIEW_AUTO_REWORK_LIMIT = 10;
 
-export const metaReviewRunStatuses = [
-  "success",
-  "error",
-  "inconclusive"
-] as const;
-
-export type MetaReviewRunStatus = (typeof metaReviewRunStatuses)[number];
-
-export const metaReviewRecommendations = [
-  "rework",
-  "approve",
-  "inconclusive"
-] as const;
-
-export type MetaReviewRecommendation = (typeof metaReviewRecommendations)[number];
-
 export const bubbleExecutionContextAwaitedOutputTypes = [
   "pass_result",
   "meta_review_result"
@@ -390,24 +374,6 @@ export function isReworkIntentStatus(value: unknown): value is ReworkIntentStatu
   return (
     typeof value === "string" &&
     (reworkIntentStatuses as readonly string[]).includes(value)
-  );
-}
-
-export function isMetaReviewRunStatus(
-  value: unknown
-): value is MetaReviewRunStatus {
-  return (
-    typeof value === "string" &&
-    (metaReviewRunStatuses as readonly string[]).includes(value)
-  );
-}
-
-export function isMetaReviewRecommendation(
-  value: unknown
-): value is MetaReviewRecommendation {
-  return (
-    typeof value === "string" &&
-    (metaReviewRecommendations as readonly string[]).includes(value)
   );
 }
 

@@ -13,7 +13,7 @@ import {
   evaluatePositiveSummaryFindingsAssertion,
   hasGlobalNoFindingsSummaryAssertion
 } from "../../domain/convergence/policy.js";
-import type { MetaReviewRecommendation } from "../../../types/bubble.js";
+import type { MetaReviewRecommendation } from "./metaReviewTypes.js";
 
 function requireStructuredMetaReviewClaim(
   reportJson: Record<string, unknown>

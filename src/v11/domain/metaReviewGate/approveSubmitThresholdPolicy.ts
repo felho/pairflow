@@ -3,7 +3,7 @@ import type {
 } from "../../shared/reviewPolicy/reviewPolicyTypes.js";
 import type {
   MetaReviewRecommendation
-} from "../../../types/bubble.js";
+} from "../../shared/metaReview/metaReviewTypes.js";
 import type { FindingPriority } from "../../../types/findings.js";
 import type {
   MetaReviewGateThresholdAuthorityResolution

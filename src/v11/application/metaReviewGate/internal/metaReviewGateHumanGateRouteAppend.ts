@@ -1,6 +1,4 @@
-import type {
-  MetaReviewRecommendation
-} from "../../../../types/bubble.js";
+import type { MetaReviewRecommendation } from "../../../shared/metaReview/metaReviewTypes.js";
 import type {
   AppendProtocolEnvelopeResult
 } from "../../../ports/transcript.js";

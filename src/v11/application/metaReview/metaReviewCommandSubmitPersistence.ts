@@ -1,11 +1,7 @@
-import type { LoadedStateSnapshot } from "../../ports/stateSnapshots.js";
-import { normalizeMetaReviewSnapshot } from "../../shared/metaReview/metaReviewSnapshot.js";
-import { MetaReviewError } from "../../shared/metaReview/metaReviewError.js";
-import { toMetaReviewExecutionContext } from "../../shared/state/executionContext.js";
-import {
-  stateWriteConflictToMetaReviewError
-} from "../../shared/metaReview/metaReviewCommandErrorMapping.js";
-import { isNamedError } from "../../shared/errors/namedError.js";
+import type {
+  MetaReviewRecommendation,
+  MetaReviewRunStatus
+} from "../../shared/metaReview/metaReviewTypes.js";
 import {
   assertActiveMetaReviewExecutionContext,
   assertMetaReviewSubmitStaleGuard
@@ -15,10 +11,18 @@ import type {
 } from "../../shared/metaReview/metaReviewArtifactIo.js";
 import type {
   BubbleExecutionContext,
-  BubbleStateSnapshot,
-  MetaReviewRecommendation,
-  MetaReviewRunStatus
+  BubbleStateSnapshot
 } from "../../../types/bubble.js";
+import type {
+  LoadedStateSnapshot
+} from "../../ports/stateSnapshots.js";
+import { normalizeMetaReviewSnapshot } from "../../shared/metaReview/metaReviewSnapshot.js";
+import { MetaReviewError } from "../../shared/metaReview/metaReviewError.js";
+import { toMetaReviewExecutionContext } from "../../shared/state/executionContext.js";
+import {
+  stateWriteConflictToMetaReviewError
+} from "../../shared/metaReview/metaReviewCommandErrorMapping.js";
+import { isNamedError } from "../../shared/errors/namedError.js";
 import type {
   MetaReviewCommandDependencies,
   MetaReviewResult,
