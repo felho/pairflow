@@ -1,5 +1,4 @@
 import type { BubbleStateSnapshot } from "../../shared/state/bubbleStateSnapshotTypes.js";
-import { executeKickoffRollbackStep } from "./kickoffRollbackStepExecution.js";
 
 export interface ExecuteKickoffMutationRollbackInput {
   transcriptBackup: string | null;
@@ -24,6 +23,30 @@ export interface ExecuteKickoffMutationRollbackInput {
       expectedState: "RUNNING";
     }
   ) => Promise<unknown>;
+}
+
+function appendKickoffRollbackError(input: {
+  rollbackErrors: string[];
+  target: string;
+  rollbackError: unknown;
+}): void {
+  input.rollbackErrors.push(
+    `${input.target} rollback failed: ${input.rollbackError instanceof Error ? input.rollbackError.message : String(input.rollbackError)}`
+  );
+}
+
+async function executeKickoffRollbackStep(input: {
+  rollbackErrors: string[];
+  target: string;
+  run: () => Promise<unknown>;
+}): Promise<void> {
+  await input.run().catch((rollbackError) => {
+    appendKickoffRollbackError({
+      rollbackErrors: input.rollbackErrors,
+      target: input.target,
+      rollbackError
+    });
+  });
 }
 
 export async function executeKickoffMutationRollback(
