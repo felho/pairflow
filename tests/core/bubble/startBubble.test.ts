@@ -7,6 +7,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { renderBubbleConfigToml } from "../../../src/config/bubbleConfig.js";
 import { createBubble } from "../../../src/v11/defaults/create/createBubbleApi.js";
+import "../../../src/v11/defaults/start/startBubbleDefaults.js";
 import { buildMetaReviewExecutionContext } from "../../../src/v11/shared/metaReview/metaReviewExecutionContext.js";
 import {
   buildRunningExecutionContext,
@@ -2012,6 +2013,8 @@ describe("startBubble", () => {
         })
       }));
 
+      await import("../../../src/v11/defaults/start/startBubbleDefaults.js");
+
       const { startBubbleV11: startBubbleWithMock } = await import(
         "../../../src/v11/application/start/emitStartV11.js"
       );
@@ -2280,6 +2283,8 @@ describe("startBubble", () => {
           };
         })
       }));
+
+      await import("../../../src/v11/defaults/start/startBubbleDefaults.js");
 
       const {
         startBubbleV11: startBubbleWithMock,

@@ -120,25 +120,22 @@ export interface StartBubbleDependencyDefaults {
   resolveReviewerTestExecutionDirective: ResolveReviewerTestExecutionDirectivePort;
 }
 
-interface StartBubbleDependencyDefaultsModule {
-  startBubbleDependencyDefaults: StartBubbleDependencyDefaults;
-}
-
-let startBubbleDependencyDefaultsPromise:
-  | Promise<StartBubbleDependencyDefaults>
+let configuredStartBubbleDependencyDefaults:
+  | StartBubbleDependencyDefaults
   | undefined;
 
-function getStartBubbleDependencyDefaultsModulePath(): string {
-  return "../../defaults/start/startBubbleDefaults.js";
+export function configureStartBubbleDependencyDefaults(
+  defaults: StartBubbleDependencyDefaults
+): void {
+  configuredStartBubbleDependencyDefaults = defaults;
 }
 
-export async function loadStartBubbleDependencyDefaults():
-  Promise<StartBubbleDependencyDefaults> {
-  startBubbleDependencyDefaultsPromise ??= import(
-    getStartBubbleDependencyDefaultsModulePath()
-  ).then(
-    (module) =>
-      (module as StartBubbleDependencyDefaultsModule).startBubbleDependencyDefaults
-  );
-  return startBubbleDependencyDefaultsPromise;
+export function loadStartBubbleDependencyDefaults():
+  StartBubbleDependencyDefaults {
+  if (configuredStartBubbleDependencyDefaults === undefined) {
+    throw new Error(
+      "START_DEFAULTS_UNCONFIGURED: start runtime defaults were not configured by the composition root. context={\"route\":\"startBubbleDependencyDefaults\"}"
+    );
+  }
+  return configuredStartBubbleDependencyDefaults;
 }

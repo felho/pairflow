@@ -223,7 +223,7 @@ export async function startBubble(
           }
         }))
       : createRunWorktreeBootstrapCommandDefault(dependencies.processSpawn);
-  const deps = await resolveStartBubbleDependencies({
+  const deps = resolveStartBubbleDependencies({
     dependencies,
     runWorktreeBootstrapCommandDefault,
     isTmuxSessionAliveDefault

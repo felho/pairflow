@@ -101,6 +101,7 @@ import type {
 } from "../../shared/ports/bubbleIdentity.js";
 import type { ResolveBubbleByIdPort } from "../../shared/ports/bubbleLookup.js";
 import type { ResolveRemoteBubbleStatusTargetPort } from "../../shared/remote/commitRemoteExecution.js";
+import { configureStartBubbleDependencyDefaults } from "../../application/start/startBubbleDependencyDefaults.js";
 
 export interface StartBubbleDependencyDefaults {
   bootstrapWorktreeWorkspace: BootstrapWorktreeWorkspacePort;
@@ -186,3 +187,5 @@ export const startBubbleDependencyDefaults: StartBubbleDependencyDefaults = {
   resolveBubbleFromWorkspaceCwd,
   resolveReviewerTestExecutionDirective
 };
+
+configureStartBubbleDependencyDefaults(startBubbleDependencyDefaults);

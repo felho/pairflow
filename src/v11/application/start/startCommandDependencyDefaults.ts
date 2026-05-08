@@ -11,7 +11,7 @@ type RunTmuxPort = TmuxRunner;
 export async function runTmux(
   ...args: Parameters<RunTmuxPort>
 ): Promise<Awaited<ReturnType<RunTmuxPort>>> {
-  const defaults = await loadStartBubbleDependencyDefaults();
+  const defaults = loadStartBubbleDependencyDefaults();
   return defaults.runTmux(...args);
 }
 
@@ -26,7 +26,7 @@ export async function resolveBubbleFromWorkspaceCwd(
     >
   >
 > {
-  const defaults = await loadStartBubbleDependencyDefaults();
+  const defaults = loadStartBubbleDependencyDefaults();
   return defaults.resolveBubbleFromWorkspaceCwd(...args);
 }
 
@@ -41,7 +41,7 @@ export async function ensureBubbleInstanceIdForMutation(
     >
   >
 > {
-  const defaults = await loadStartBubbleDependencyDefaults();
+  const defaults = loadStartBubbleDependencyDefaults();
   return defaults.ensureBubbleInstanceIdForMutation(...args);
 }
 
@@ -56,7 +56,7 @@ export async function resolveBubbleById(
     >
   >
 > {
-  const defaults = await loadStartBubbleDependencyDefaults();
+  const defaults = loadStartBubbleDependencyDefaults();
   return defaults.resolveBubbleById(...args);
 }
 
@@ -71,7 +71,7 @@ export async function inspectStateSnapshot(
     >
   >
 > {
-  const defaults = await loadStartBubbleDependencyDefaults();
+  const defaults = loadStartBubbleDependencyDefaults();
   return defaults.inspectStateSnapshot(...args);
 }
 
@@ -86,7 +86,7 @@ export async function readStateSnapshot(
     >
   >
 > {
-  const defaults = await loadStartBubbleDependencyDefaults();
+  const defaults = loadStartBubbleDependencyDefaults();
   return defaults.readStateSnapshot(...args);
 }
 
@@ -101,7 +101,7 @@ export async function readRemotePointer(
     >
   >
 > {
-  const defaults = await loadStartBubbleDependencyDefaults();
+  const defaults = loadStartBubbleDependencyDefaults();
   return defaults.readRemotePointer(...args);
 }
 
@@ -116,24 +116,24 @@ export async function resolveRemoteBubbleStatusTarget(
     >
   >
 > {
-  const defaults = await loadStartBubbleDependencyDefaults();
+  const defaults = loadStartBubbleDependencyDefaults();
   return defaults.resolveRemoteBubbleStatusTarget(...args);
 }
 
 export const writeStateSnapshot: WriteStateSnapshotPort = async (...args) => {
-  const defaults = await loadStartBubbleDependencyDefaults();
+  const defaults = loadStartBubbleDependencyDefaults();
   const { writeStateSnapshot: persistStateSnapshot } = defaults;
   return persistStateSnapshot(...args);
 };
 
 export const appendProtocolEnvelope: AppendProtocolEnvelopePort = async (...args) => {
-  const defaults = await loadStartBubbleDependencyDefaults();
+  const defaults = loadStartBubbleDependencyDefaults();
   const { appendProtocolEnvelope: appendEnvelope } = defaults;
   return appendEnvelope(...args);
 };
 
 export const readTranscriptEnvelopes: ReadTranscriptEnvelopesPort = async (...args) => {
-  const defaults = await loadStartBubbleDependencyDefaults();
+  const defaults = loadStartBubbleDependencyDefaults();
   return defaults.readTranscriptEnvelopes(...args);
 };
 

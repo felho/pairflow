@@ -336,7 +336,7 @@ twice.
 | B12 | `application/restart/restartCommandDefaults.ts:29` | `defaults/restart/restartCommandDefaults.ts` | B | Completed in Batch 25: CLI and UI composition now pass `restartBubbleDependencyDefaults` explicitly; the application restart API no longer loads defaults dynamically and the standalone application shim was deleted. |
 | B13 | `application/reviewer/reviewerArtifactDefaults.ts:22` | `defaults/reviewer/reviewerArtifactDefaults.ts` | **A** (reclassified) | Completed in Batch 13: reviewer brief/focus artifact readers are now supplied through the existing start and reviewer-delivery defaults aggregates; the standalone application shim was deleted. |
 | B14 | `application/reviewer/reviewerTestEvidenceDefaults.ts:30` | `defaults/reviewer/reviewerTestEvidenceDefaults.ts` | **A** (reclassified) | Completed in Batch 14: reviewer test-evidence ports are now supplied through start, converged, and reviewer-delivery defaults aggregates; the standalone application shim was deleted. |
-| B15 | `application/start/startBubbleDependencyDefaults.ts:63` | `defaults/start/startBubbleDefaults.ts` | B | Verified. |
+| B15 | `application/start/startBubbleDependencyDefaults.ts:63` | `defaults/start/startBubbleDefaults.ts` | B | Completed in Batch 38: start defaults are registered from defaults/composition instead of dynamic application loading; direct start tests import the defaults composition explicitly when resetting modules. |
 | B16 | `application/status/statusCommandDependencyDefaults.ts:26` | `defaults/list/listCommandDefaults.ts` | B | Completed in Batch 28: status CLI, UI, plan-watch, and tests now pass status defaults explicitly; approval/attach consume remote status ports through the start context aggregate and the standalone application status defaults shim was deleted. |
 | B17 | `application/stop/stopCommandDefaults.ts:29` | `defaults/stop/stopCommandDefaults.ts` | B | Completed in Batch 26: CLI, UI, and delete defaults now pass the stop defaults aggregate explicitly; the stop application contract exposes its former hidden default ports and the standalone application shim was deleted. |
 | B18 | `application/watchdog/watchdogDependencyDefaults.ts:77` | `defaults/watchdog/watchdogCommandDefaults.ts` | B | Completed in Batch 30: watchdog CLI, contract runner, and tests now pass the watchdog defaults aggregate explicitly; the standalone application watchdog defaults shim was deleted. |
@@ -1626,6 +1626,29 @@ In the closing PR:
     A broader exploratory converged core run still surfaces existing direct
     PASS-validation/meta-review default gaps from earlier batches.
   - `pnpm lint` passed.
+  - `pnpm build` passed.
+
+### 2026-05-08 — Batch 38: register start defaults through composition
+
+- Removed the dynamic `defaults/start/startBubbleDefaults.ts` import from
+  `application/start/startBubbleDependencyDefaults.ts`.
+- Replaced it with a typed application registry configured by
+  `defaults/start/startBubbleDefaults.ts` when the composition module loads.
+- Updated the direct start tests that reset modules and mock worktree bootstrap
+  to import the defaults/start composition explicitly before importing the
+  application start API.
+- Fitness result after the batch: application dynamic defaults warnings are 0;
+  shared dynamic defaults warnings remain 0. Hard-fail fitness checks pass.
+- Validation:
+  - `pnpm typecheck` passed.
+  - `pnpm lint` passed.
+  - `pnpm fitness:check:ci` passed with
+    `application_defaults_boundary dynamic_defaults_imports=0` and
+    `shared_defaults_boundary dynamic_defaults_imports=0`.
+  - `pnpm exec vitest run tests/core/bubble/startBubble.test.ts tests/v11/application/start/startCommandOrchestration.test.ts tests/tools/fitness/applicationDefaultsBoundary.test.ts`
+    passed (`3` files, `85` tests).
+  - `pnpm test` skipped for this focused start defaults composition batch. The
+    previously noted broader direct-call gaps are outside this batch.
   - `pnpm build` passed.
 
 ---

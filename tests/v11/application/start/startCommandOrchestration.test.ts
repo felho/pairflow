@@ -68,7 +68,7 @@ describe("startCommandOrchestration", () => {
     const runWorktreeBootstrapCommandDefault = vi.fn(async () => undefined);
     const isTmuxSessionAliveDefault = vi.fn(async () => false);
 
-    const resolved = await resolveStartBubbleDependencies({
+    const resolved = resolveStartBubbleDependencies({
       dependencies: {},
       runWorktreeBootstrapCommandDefault,
       isTmuxSessionAliveDefault
@@ -163,7 +163,7 @@ describe("startCommandOrchestration", () => {
     const fallbackRunWorktreeBootstrapCommand = vi.fn(async () => undefined);
     const fallbackIsTmuxSessionAlive = vi.fn(async () => false);
 
-    const resolved = await resolveStartBubbleDependencies({
+    const resolved = resolveStartBubbleDependencies({
       dependencies: overrides,
       runWorktreeBootstrapCommandDefault: fallbackRunWorktreeBootstrapCommand,
       isTmuxSessionAliveDefault: fallbackIsTmuxSessionAlive
@@ -205,7 +205,7 @@ describe("startCommandOrchestration", () => {
       sessionName: "pf-bubble-neutral"
     }));
 
-    const resolved = await resolveStartBubbleDependencies({
+    const resolved = resolveStartBubbleDependencies({
       dependencies: {
         launchBubbleSessionAck: launchBubbleSessionAckOverride
       },

@@ -165,11 +165,11 @@ function resolveReviewerDependencies(input: {
   };
 }
 
-export async function resolveStartBubbleDependencies(
+export function resolveStartBubbleDependencies(
   input: ResolveStartBubbleDependenciesInput
-): Promise<ResolvedStartBubbleDependencies> {
+): ResolvedStartBubbleDependencies {
   const { dependencies } = input;
-  const startBubbleDependencyDefaults = await loadStartBubbleDependencyDefaults();
+  const startBubbleDependencyDefaults = loadStartBubbleDependencyDefaults();
   const runtimeSessions = resolveRuntimeSessionDependencies({
     dependencies,
     defaults: startBubbleDependencyDefaults
