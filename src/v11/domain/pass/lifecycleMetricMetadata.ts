@@ -4,8 +4,9 @@ import type {
 } from "../../../v11/domain/convergence/repeatCleanAutoconverge.js";
 import type { ReviewerTestExecutionDirective } from "../../../v11/shared/reviewer/testEvidence.js";
 import type { Finding } from "../../../types/findings.js";
-import type { PassIntent } from "../../../types/protocol.js";
-import type { AgentName } from "../../../types/bubble.js";
+import type { PassIntent } from "../../../types/protocol.js";import type {
+  AgentName
+} from "../agentIdentity/agentIdentity.js";
 import type { PassRecipientRole } from "./handoff.js";
 import { buildFindingCounts } from "./findingCounts.js";
 import { buildRepeatCleanLifecycleMetadata } from "./repeatCleanMetadata.js";

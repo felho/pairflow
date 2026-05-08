@@ -4,9 +4,10 @@ import {
   deriveStartResumedState,
   deriveStartRunningState
 } from "../../domain/state/startState.js";
-import { persistStateViaMutationBoundary } from "../../shared/mutation/mutationBoundaryIO.js";
+import { persistStateViaMutationBoundary } from "../../shared/mutation/mutationBoundaryIO.js";import type {
+  AgentName
+} from "../../domain/agentIdentity/agentIdentity.js";
 import type {
-  AgentName,
   BubbleLifecycleState,
   BubbleStateSnapshot
 } from "../../../types/bubble.js";

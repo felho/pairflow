@@ -11,8 +11,9 @@ import {
 import * as actorRuntimeKernelModule from "../../../../src/v11/application/actorProtocol/actorRuntimeKernel.js";
 import {
   resolveActorEmitContextByBubbleId
-} from "../../../../src/v11/defaults/actorProtocol/actorEmitContextDefaults.js";
-import type { AgentName } from "../../../../src/types/bubble.js";
+} from "../../../../src/v11/defaults/actorProtocol/actorEmitContextDefaults.js";import type {
+  AgentName
+} from "../../../../src/v11/domain/agentIdentity/agentIdentity.js";
 import type {
   ActorEmitContextSnapshot,
   ActorEmitContextError

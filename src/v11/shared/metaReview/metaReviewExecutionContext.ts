@@ -6,13 +6,16 @@ import {
   validationOk,
   type ValidationError,
   type ValidationResult
-} from "../validation/primitives.js";
+} from "../validation/primitives.js";import {
+  isAgentRole
+} from "../../domain/agentIdentity/agentIdentity.js";
+import type {
+  BubbleExecutionContext,
+  BubbleMetaReviewExecutionContext,
+  BubbleStateSnapshot
+} from "../../../types/bubble.js";
 import {
-  isAgentRole,
-  isBubbleExecutionContextAwaitedOutputType,
-  type BubbleExecutionContext,
-  type BubbleMetaReviewExecutionContext,
-  type BubbleStateSnapshot
+  isBubbleExecutionContextAwaitedOutputType
 } from "../../../types/bubble.js";
 import {
   buildRunningExecutionContext,

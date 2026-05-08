@@ -1,4 +1,9 @@
-import type { AgentRole, MetaReviewRecommendation } from "./bubble.js";
+import type {
+  AgentRole
+} from "../v11/domain/agentIdentity/agentIdentity.js";
+import type {
+  MetaReviewRecommendation
+} from "./bubble.js";
 import type { Finding } from "./findings.js";
 
 export const protocolParticipants = [

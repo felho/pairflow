@@ -1,4 +1,6 @@
-import type { AgentRole } from "../../../types/bubble.js";
+import type {
+  AgentRole
+} from "../../domain/agentIdentity/agentIdentity.js";
 import type { PassIntent } from "../../../types/protocol.js";
 import { inferPassIntentFromActiveRole } from "../../domain/pass/passIntentInference.js";
 import { raiseRepeatCleanDownstreamConvergedRejected } from "../../domain/pass/repeatCleanPolicyRejection.js";

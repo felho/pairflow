@@ -5,8 +5,13 @@ import type {
 import type { ReviewerTestExecutionDirective } from "../../../v11/shared/reviewer/testEvidence.js";
 import type { ReviewVerificationInputResolution } from "../../../v11/shared/reviewer/reviewVerification.js";
 import type { DeliveryAck } from "../../ports/tmuxDelivery.js";
-import type { LoadedStateSnapshot } from "../../ports/stateSnapshots.js";
-import type { AgentName, BubbleConfig, BubbleStateSnapshot } from "../../../types/bubble.js";
+import type { LoadedStateSnapshot } from "../../ports/stateSnapshots.js";import type {
+  AgentName
+} from "../../domain/agentIdentity/agentIdentity.js";
+import type {
+  BubbleConfig,
+  BubbleStateSnapshot
+} from "../../../types/bubble.js";
 import type { Finding } from "../../../types/findings.js";
 import type { PassIntent, ProtocolEnvelope } from "../../../types/protocol.js";
 import type {

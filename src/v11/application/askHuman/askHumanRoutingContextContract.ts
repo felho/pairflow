@@ -1,4 +1,10 @@
-import type { AgentName, AgentRole, BubbleStateSnapshot } from "../../../types/bubble.js";
+import type {
+  AgentName,
+  AgentRole
+} from "../../domain/agentIdentity/agentIdentity.js";
+import type {
+  BubbleStateSnapshot
+} from "../../../types/bubble.js";
 import type {
   AskHumanEnsureBubbleIdentityResult,
   AskHumanLoadedStateSnapshot,

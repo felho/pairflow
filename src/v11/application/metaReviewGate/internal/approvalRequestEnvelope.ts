@@ -1,5 +1,7 @@
 import type {
-  AgentName,
+  AgentName
+} from "../../../domain/agentIdentity/agentIdentity.js";
+import type {
   MetaReviewRecommendation
 } from "../../../../types/bubble.js";
 import {

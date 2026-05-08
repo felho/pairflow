@@ -1,7 +1,11 @@
 import {
-  isAgentRole,
-  isBubbleExecutionContextAwaitedOutputType,
-  type BubbleExecutionContext
+  isAgentRole
+} from "../../domain/agentIdentity/agentIdentity.js";
+import type {
+  BubbleExecutionContext
+} from "../../../types/bubble.js";
+import {
+  isBubbleExecutionContextAwaitedOutputType
 } from "../../../types/bubble.js";
 import {
   isInteger,

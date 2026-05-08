@@ -1,4 +1,9 @@
-import type { AgentRole, BubbleConfig } from "../../../types/bubble.js";
+import type {
+  AgentRole
+} from "../../domain/agentIdentity/agentIdentity.js";
+import type {
+  BubbleConfig
+} from "../../../types/bubble.js";
 import type {
   DeliveryTargetRole,
   ProtocolEnvelope

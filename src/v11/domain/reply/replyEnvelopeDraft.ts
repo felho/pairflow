@@ -1,4 +1,7 @@
-import type { AgentName, AgentRole } from "../../../types/bubble.js";
+import type {
+  AgentName,
+  AgentRole
+} from "../agentIdentity/agentIdentity.js";
 import {
   deliveryTargetRoleMetadataKey,
   type ProtocolEnvelopeDraft

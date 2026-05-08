@@ -1,7 +1,7 @@
-import { createHash } from "node:crypto";
-
+import { createHash } from "node:crypto";import type {
+  AgentRole
+} from "../../domain/agentIdentity/agentIdentity.js";
 import type {
-  AgentRole,
   BubbleExecutionContext,
   BubbleMetaReviewExecutionContext
 } from "../../../types/bubble.js";

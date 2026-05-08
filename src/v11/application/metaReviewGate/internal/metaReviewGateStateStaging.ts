@@ -4,9 +4,10 @@ import { metaReviewExecutionContextToRunningContext } from "../../../shared/stat
 import {
   type LoadedStateSnapshot,
   type WriteStateSnapshotPort
-} from "../../../ports/stateSnapshots.js";
+} from "../../../ports/stateSnapshots.js";import type {
+  AgentName
+} from "../../../domain/agentIdentity/agentIdentity.js";
 import type {
-  AgentName,
   BubbleStateSnapshot
 } from "../../../../types/bubble.js";
 import { toMetaReviewGateError } from "../../../shared/metaReviewGate/metaReviewGateErrorConversion.js";

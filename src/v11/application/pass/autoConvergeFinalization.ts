@@ -1,8 +1,12 @@
 import type {
   RepeatCleanAutoconvergeReasonCode,
   RepeatCleanAutoconvergeReasonDetail
-} from "../../../v11/domain/convergence/repeatCleanAutoconverge.js";
-import type { AgentName, BubbleConfig } from "../../../types/bubble.js";
+} from "../../../v11/domain/convergence/repeatCleanAutoconverge.js";import type {
+  AgentName
+} from "../../domain/agentIdentity/agentIdentity.js";
+import type {
+  BubbleConfig
+} from "../../../types/bubble.js";
 import type { Finding } from "../../../types/findings.js";
 import type { PassIntent } from "../../../types/protocol.js";
 import type { EmitConvergedV11Result as EmitConvergedResult } from "../converged/emitConvergedV11.js";

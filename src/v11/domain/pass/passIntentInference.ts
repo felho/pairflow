@@ -1,4 +1,6 @@
-import type { AgentRole } from "../../../types/bubble.js";
+import type {
+  AgentRole
+} from "../agentIdentity/agentIdentity.js";
 import type { PassIntent } from "../../../types/protocol.js";
 
 export interface InferPassIntentFromActiveRoleInput {

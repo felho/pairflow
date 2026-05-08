@@ -1,4 +1,9 @@
-import type { AgentRole, BubbleExecutionContext } from "../../../types/bubble.js";
+import type {
+  AgentRole
+} from "../../domain/agentIdentity/agentIdentity.js";
+import type {
+  BubbleExecutionContext
+} from "../../../types/bubble.js";
 import type { ResolvedBubbleById } from "../../ports/bubbleLookup.js";
 import type { LoadedStateSnapshot } from "../../ports/stateSnapshots.js";
 

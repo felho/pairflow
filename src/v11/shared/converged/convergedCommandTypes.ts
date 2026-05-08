@@ -1,4 +1,6 @@
-import type { AgentName } from "../../../types/bubble.js";
+import type {
+  AgentName
+} from "../../domain/agentIdentity/agentIdentity.js";
 import type { BubbleStateSnapshot } from "../../../types/bubble.js";
 import type { ActorEmitContextSnapshot } from "../actorProtocol/actorEmitContext.js";
 import type { EmitBubbleNotification } from "../delivery/bubbleNotificationContract.js";

@@ -1,4 +1,9 @@
-import type { AgentName, ReviewArtifactType } from "../../../types/bubble.js";
+import type {
+  AgentName
+} from "../agentIdentity/agentIdentity.js";
+import type {
+  ReviewArtifactType
+} from "../../../types/bubble.js";
 import {
   isFindingsClaimSource,
   isFindingsClaimState,

@@ -1,4 +1,9 @@
-import type { AgentName, BubbleStateSnapshot } from "../../../types/bubble.js";
+import type {
+  AgentName
+} from "../agentIdentity/agentIdentity.js";
+import type {
+  BubbleStateSnapshot
+} from "../../../types/bubble.js";
 import {
   buildRestartedExecutionContext,
   buildRunningExecutionContext

@@ -1,6 +1,9 @@
-import { createHash } from "node:crypto";
-
-import type { AgentRole, BubbleConfig } from "../../../types/bubble.js";
+import { createHash } from "node:crypto";import type {
+  AgentRole
+} from "../../domain/agentIdentity/agentIdentity.js";
+import type {
+  BubbleConfig
+} from "../../../types/bubble.js";
 import type {
   ReadRuntimeSessionsRegistryPort
 } from "../../ports/runtimeSessions.js";

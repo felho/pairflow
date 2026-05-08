@@ -1,6 +1,6 @@
-import { join } from "node:path";
-
-import type { AgentName } from "../../../types/bubble.js";
+import { join } from "node:path";import type {
+  AgentName
+} from "../../domain/agentIdentity/agentIdentity.js";
 import type {
   ProtocolEnvelope,
   ProtocolEnvelopeDraft

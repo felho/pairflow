@@ -1,5 +1,6 @@
-import type { RepoDefaultsConfig } from "../../../config/repoConfig.js";
-import type { AgentName } from "../../../types/bubble.js";
+import type { RepoDefaultsConfig } from "../../../config/repoConfig.js";import type {
+  AgentName
+} from "../../domain/agentIdentity/agentIdentity.js";
 import type { BubbleCreateInput } from "./createCommandContract.js";
 import { toBubbleCreateError } from "./createCommandRuntime.js";
 

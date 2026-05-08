@@ -525,9 +525,11 @@ export { parseEnvelopeLine, serializeEnvelopeLine } from "./v11/shared/protocol/
 export {
   agentNames,
   agentRoles,
-  bubbleLifecycleStates,
   isAgentName,
-  isAgentRole,
+  isAgentRole
+} from "./v11/domain/agentIdentity/agentIdentity.js";
+export {
+  bubbleLifecycleStates,
   isBubbleLifecycleState,
   isQualityMode,
   isWorkMode,
@@ -733,6 +735,10 @@ export type {
 } from "./cli/commands/bubble/create.js";
 export type {
   BubbleAgentsConfig,
+  AgentName,
+  AgentRole
+} from "./v11/domain/agentIdentity/agentIdentity.js";
+export type {
   BubbleCommandsConfig,
   BubbleConfig,
   BubbleExecutorConfig,
@@ -747,8 +753,6 @@ export type {
   PairflowRemoteHostConfig,
   BubbleReworkIntentRecord,
   BubbleStateSnapshot,
-  AgentName,
-  AgentRole,
   QualityMode,
   ReworkIntentStatus,
   RoundRoleHistoryEntry,

@@ -1,6 +1,8 @@
 import type {
+  AgentName
+} from "../agentIdentity/agentIdentity.js";
+import type {
   BubbleReviewLoopMode,
-  AgentName,
   BubbleStateSnapshot,
   RoundRoleHistoryEntry
 } from "../../../types/bubble.js";

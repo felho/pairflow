@@ -7,8 +7,13 @@ import type {
   WriteReviewVerificationArtifactAtomicPort
 } from "../../ports/reviewVerificationArtifacts.js";
 import type { ReadStateSnapshotPort } from "../../ports/stateSnapshots.js";
-import { readStateSnapshot } from "../start/startCommandDependencyDefaults.js";
-import type { AgentName, BubbleStateSnapshot, ReviewArtifactType } from "../../../types/bubble.js";
+import { readStateSnapshot } from "../start/startCommandDependencyDefaults.js";import type {
+  AgentName
+} from "../../domain/agentIdentity/agentIdentity.js";
+import type {
+  BubbleStateSnapshot,
+  ReviewArtifactType
+} from "../../../types/bubble.js";
 import type { ProtocolEnvelope } from "../../../types/protocol.js";
 import {
   raiseRepeatCleanAutoConvergeStateStale,

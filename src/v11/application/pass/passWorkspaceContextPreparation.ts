@@ -21,8 +21,12 @@ import type {
 import {
   assertActorEmitContextSnapshotIntegrity
 } from "../../shared/actorProtocol/actorEmitContext.js";
-import type { ActorEmitContextSnapshot } from "../../shared/actorProtocol/actorEmitContext.js";
-import type { AgentName, BubbleStateSnapshot } from "../../../types/bubble.js";
+import type { ActorEmitContextSnapshot } from "../../shared/actorProtocol/actorEmitContext.js";import type {
+  AgentName
+} from "../../domain/agentIdentity/agentIdentity.js";
+import type {
+  BubbleStateSnapshot
+} from "../../../types/bubble.js";
 import {
   resolveIdeationMetadata as resolveV11IdeationMetadata
 } from "../../domain/ideation/ideationMetadata.js";

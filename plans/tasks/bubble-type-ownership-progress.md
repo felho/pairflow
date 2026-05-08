@@ -114,6 +114,14 @@ If direct non-docs source edits are made in the current checkout, follow the rep
 
 ## Progress Log
 
+### Agent identity slice
+
+- Created `src/v11/domain/agentIdentity/agentIdentity.ts` as the owner for agent names, agent roles, agent config, role resolution policy, and related guards.
+- Moved direct consumers of `AgentName`, `AgentRole`, `BubbleAgentsConfig`, `agentNames`, `agentRoles`, `isAgentName`, `isAgentRole`, `resolveConfiguredAgentForRole`, and `resolveUniquelyConfiguredRoleForAgent` to import from the new owner.
+- Removed those exports from `src/types/bubble.ts`; the old file now only imports the agent identity types it needs to describe remaining aggregate types.
+- Preserved UI contract governance: browser-facing UI action DTOs continue to own their contract-local `UiActionAgentName` and `UiActionAgentRole` mirrors instead of importing internal `src/v11/**` runtime paths.
+- Verification completed: `pnpm typecheck`, `pnpm lint`, `pnpm fitness:check:ci`, targeted Vitest slice, `pnpm test`, and `pnpm build` all passed.
+
 ### Initial note
 
 - Captured the working decision: progressive extraction, but direct import migration by default.
@@ -123,5 +131,7 @@ If direct non-docs source edits are made in the current checkout, follow the rep
 
 ## Learnings
 
+- The first slice did not need a compatibility re-export bridge. The mixed imports could be split mechanically, and typecheck/lint caught the only split-quality issues.
+- The UI contract question mattered in practice: UI contract files should keep browser-safe contract-local mirrors rather than importing the new v11 domain owner.
 - Import count is a risk signal, not a sufficient argument for a bridge. The real risk is whether the target owner is semantically correct and whether mixed imports can be split without creating worse architecture edges.
 - Agent-assisted migration changes the cost model: mechanical churn is cheap, but ownership mistakes and review noise remain expensive.

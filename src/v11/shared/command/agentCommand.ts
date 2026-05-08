@@ -1,4 +1,9 @@
-import type { AgentName, PairflowCommandProfile } from "../../../types/bubble.js";
+import type {
+  AgentName
+} from "../../domain/agentIdentity/agentIdentity.js";
+import type {
+  PairflowCommandProfile
+} from "../../../types/bubble.js";
 import { shellQuote } from "../foundation/shellQuote.js";
 import {
   buildPairflowCommandBootstrap,

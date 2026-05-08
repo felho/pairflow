@@ -1,5 +1,6 @@
-import type { BubbleStateSnapshot } from "../../../types/bubble.js";
-import type { AgentName } from "../../../types/bubble.js";
+import type { BubbleStateSnapshot } from "../../../types/bubble.js";import type {
+  AgentName
+} from "../../domain/agentIdentity/agentIdentity.js";
 import type {
   ProtocolEnvelope,
   ProtocolEnvelopeDraft

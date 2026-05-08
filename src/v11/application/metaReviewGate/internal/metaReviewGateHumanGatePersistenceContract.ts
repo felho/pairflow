@@ -1,9 +1,10 @@
 import type {
   LoadedStateSnapshot,
   WriteStateSnapshotPort
-} from "../../../ports/stateSnapshots.js";
+} from "../../../ports/stateSnapshots.js";import type {
+  AgentName
+} from "../../../domain/agentIdentity/agentIdentity.js";
 import type {
-  AgentName,
   BubbleStateSnapshot,
   MetaReviewRecommendation
 } from "../../../../types/bubble.js";

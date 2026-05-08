@@ -1,4 +1,6 @@
-import type { AgentName } from "../../../types/bubble.js";
+import type {
+  AgentName
+} from "../../domain/agentIdentity/agentIdentity.js";
 
 export const REVIEW_VERIFICATION_SCHEMA = "review_verification_v1";
 export const REVIEW_VERIFICATION_INPUT_FILENAME = "review-verification-input.json";

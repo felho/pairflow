@@ -1,4 +1,6 @@
-import type { AgentName } from "../../../types/bubble.js";
+import type {
+  AgentName
+} from "../../domain/agentIdentity/agentIdentity.js";
 import type {
   EmitConvergedV11Dependencies as EmitConvergedDependencies,
   EmitConvergedV11Result as EmitConvergedResult

@@ -1,5 +1,7 @@
 import type {
-  AgentName,
+  AgentName
+} from "../agentIdentity/agentIdentity.js";
+import type {
   BubbleExecutionContext,
   RoundRoleHistoryEntry
 } from "../../../types/bubble.js";

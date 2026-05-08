@@ -1,12 +1,16 @@
 import {
-  bubbleLifecycleStates,
   isAgentName,
-  isAgentRole,
-  isBubbleLifecycleState,
-  type BubbleExecutionContext,
-  type BubbleReworkIntentRecord,
-  type BubbleStateSnapshot,
-  type RoundRoleHistoryEntry
+  isAgentRole
+} from "../../domain/agentIdentity/agentIdentity.js";
+import type {
+  BubbleExecutionContext,
+  BubbleReworkIntentRecord,
+  BubbleStateSnapshot,
+  RoundRoleHistoryEntry
+} from "../../../types/bubble.js";
+import {
+  bubbleLifecycleStates,
+  isBubbleLifecycleState
 } from "../../../types/bubble.js";
 import {
   isInteger,

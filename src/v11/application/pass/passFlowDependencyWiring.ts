@@ -1,5 +1,6 @@
-import { emitBubbleLifecycleEventBestEffort } from "../metrics/bubbleEvents.js";
-import type { AgentRole } from "../../../types/bubble.js";
+import { emitBubbleLifecycleEventBestEffort } from "../metrics/bubbleEvents.js";import type {
+  AgentRole
+} from "../../domain/agentIdentity/agentIdentity.js";
 import type { PassIntent } from "../../../types/protocol.js";
 import { executeAutoConvergeConverged } from "./autoConvergeConvergedExecution.js";
 import { finalizeAutoConvergePass } from "./autoConvergeFinalization.js";

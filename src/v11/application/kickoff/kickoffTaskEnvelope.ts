@@ -1,4 +1,6 @@
-import type { AgentName } from "../../../types/bubble.js";
+import type {
+  AgentName
+} from "../../domain/agentIdentity/agentIdentity.js";
 import type { ProtocolEnvelopeDraft } from "../../../types/protocol.js";
 import type { ResolvedKickoffTaskInput } from "./kickoffTaskInputResolution.js";
 

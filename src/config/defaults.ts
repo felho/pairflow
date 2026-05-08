@@ -1,5 +1,7 @@
 import type {
-  AgentName,
+  AgentName
+} from "../v11/domain/agentIdentity/agentIdentity.js";
+import type {
   AttachLauncher,
   BubbleReviewAutoReworkSeverity,
   BubbleReviewLoopMode,

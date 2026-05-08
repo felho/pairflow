@@ -2,9 +2,10 @@ import type {
   RepeatCleanAutoconvergeReasonCode,
   RepeatCleanAutoconvergeReasonDetail
 } from "../../../v11/domain/convergence/repeatCleanAutoconverge.js";
-import type { ReviewVerificationInputResolution } from "../../../v11/shared/reviewer/reviewVerification.js";
+import type { ReviewVerificationInputResolution } from "../../../v11/shared/reviewer/reviewVerification.js";import type {
+  AgentName
+} from "../../domain/agentIdentity/agentIdentity.js";
 import type {
-  AgentName,
   BubbleConfig,
   BubbleStateSnapshot
 } from "../../../types/bubble.js";

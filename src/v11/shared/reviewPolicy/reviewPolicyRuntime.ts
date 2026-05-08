@@ -3,15 +3,17 @@ import {
   DEFAULT_REVIEW_POLICY_CONSECUTIVE_CLEAN_RUNS_REQUIRED,
   DEFAULT_REVIEW_POLICY_REVIEWER_BLOCKING_MIN_SEVERITY,
   DEFAULT_REVIEW_POLICY_LOOP_MODE
-} from "../../../config/defaults.js";
+} from "../../../config/defaults.js";import type {
+  AgentRole
+} from "../../domain/agentIdentity/agentIdentity.js";
 import type {
-  AgentRole,
   BubbleConfig,
   BubbleExecutionContext,
   BubbleReviewPolicyConfig,
   BubbleReviewPolicyRuntimeView
-} from "../../../types/bubble.js";
-import { isAgentRole } from "../../../types/bubble.js";
+} from "../../../types/bubble.js";import {
+  isAgentRole
+} from "../../domain/agentIdentity/agentIdentity.js";
 
 export const REVIEW_POLICY_META_ONLY_GUARDED =
   "REVIEW_POLICY_META_ONLY_GUARDED" as const;

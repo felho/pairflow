@@ -10,18 +10,23 @@ import {
   validationOk,
   type ValidationError,
   type ValidationResult
-} from "../v11/shared/validation/primitives.js";
+} from "../v11/shared/validation/primitives.js";import {
+  isAgentName
+} from "../v11/domain/agentIdentity/agentIdentity.js";
+import type {
+  AgentName
+} from "../v11/domain/agentIdentity/agentIdentity.js";
+import type {
+  BubbleReviewAutoReworkSeverity,
+  BubbleReviewLoopMode,
+  PairflowCommandProfile,
+  ReviewerContextMode
+} from "../types/bubble.js";
 import {
-  isAgentName,
   isBubbleReviewAutoReworkSeverity,
   isBubbleReviewLoopMode,
   isPairflowCommandProfile,
-  isReviewerContextMode,
-  type AgentName,
-  type BubbleReviewAutoReworkSeverity,
-  type BubbleReviewLoopMode,
-  type PairflowCommandProfile,
-  type ReviewerContextMode
+  isReviewerContextMode
 } from "../types/bubble.js";
 import {
   builtInValidationCommandIds,

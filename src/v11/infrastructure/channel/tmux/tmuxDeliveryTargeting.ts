@@ -1,8 +1,7 @@
-import type { BubbleConfig } from "../../../../types/bubble.js";
-import {
+import type { BubbleConfig } from "../../../../types/bubble.js";import {
   isAgentName,
   resolveUniquelyConfiguredRoleForAgent
-} from "../../../../types/bubble.js";
+} from "../../../domain/agentIdentity/agentIdentity.js";
 import {
   getSharedTopologySlotPaneIndex,
   getSharedTopologySlotPaneIndexForRole

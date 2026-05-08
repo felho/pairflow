@@ -1,4 +1,9 @@
-import type { AgentRole, BubbleConfig } from "../../../types/bubble.js";
+import type {
+  AgentRole
+} from "../agentIdentity/agentIdentity.js";
+import type {
+  BubbleConfig
+} from "../../../types/bubble.js";
 
 const docsOnlySkipLogRefConflictReasonCode = "DOCS_ONLY_SKIP_LOG_REF_CONFLICT";
 const docsOnlyRuntimeChecksSkippedMarkers = [

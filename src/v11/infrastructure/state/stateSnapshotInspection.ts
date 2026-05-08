@@ -7,23 +7,26 @@ import {
 } from "../../shared/state/stateSchema.js";
 import {
   normalizeMetaReviewRuntimeDeliveryCorrelation
-} from "../../shared/metaReview/metaReviewSnapshot.js";
+} from "../../shared/metaReview/metaReviewSnapshot.js";import {
+  isAgentName,
+  isAgentRole
+} from "../../domain/agentIdentity/agentIdentity.js";
+import type {
+  BubbleExecutionContext,
+  BubbleMetaReviewExecutionContext,
+  BubbleMetaReviewRuntimeDeliveryState,
+  BubbleMetaReviewSnapshotState,
+  BubbleReworkIntentRecord,
+  BubbleStateSnapshot,
+  RoundRoleHistoryEntry
+} from "../../../types/bubble.js";
 import {
   DEFAULT_META_REVIEW_AUTO_REWORK_LIMIT,
-  isAgentName,
-  isAgentRole,
   isBubbleExecutionContextAwaitedOutputType,
   isBubbleLifecycleState,
   isMetaReviewExecutionContextAwaitedOutputType,
   isMetaReviewRuntimeDeliveryStatus,
-  isReworkIntentStatus,
-  type BubbleExecutionContext,
-  type BubbleMetaReviewExecutionContext,
-  type BubbleMetaReviewRuntimeDeliveryState,
-  type BubbleMetaReviewSnapshotState,
-  type BubbleReworkIntentRecord,
-  type BubbleStateSnapshot,
-  type RoundRoleHistoryEntry
+  isReworkIntentStatus
 } from "../../../types/bubble.js";
 import {
   isInteger,

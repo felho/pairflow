@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises";
-import { parseArgs } from "node:util";
-
-import type { AgentRole } from "../../../types/bubble.js";
+import { parseArgs } from "node:util";import type {
+  AgentRole
+} from "../../../v11/domain/agentIdentity/agentIdentity.js";
 import type { Finding } from "../../../types/findings.js";
 import {
   actorOutputKinds,

@@ -1,6 +1,9 @@
-import { describe, expect, it } from "vitest";
-
-import type { AgentName, BubbleStateSnapshot } from "../../../../src/types/bubble.js";
+import { describe, expect, it } from "vitest";import type {
+  AgentName
+} from "../../../../src/v11/domain/agentIdentity/agentIdentity.js";
+import type {
+  BubbleStateSnapshot
+} from "../../../../src/types/bubble.js";
 import { ensureReplyWaitingHumanState } from "../../../../src/v11/domain/reply/waitingHumanStateGuard.js";
 
 const implementer: AgentName = "codex";

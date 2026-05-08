@@ -1,5 +1,7 @@
 import type {
-  AgentRole,
+  AgentRole
+} from "../../domain/agentIdentity/agentIdentity.js";
+import type {
   BubbleReviewAutoReworkSeverity,
   BubbleCommandsConfig,
   BubbleStateSnapshot,

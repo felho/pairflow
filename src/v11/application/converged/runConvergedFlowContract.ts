@@ -13,9 +13,10 @@ import type { ConvergedStructuredFinding } from "../../shared/converged/converge
 import type { MetaReviewGateRoute } from "../../shared/metaReviewGate/index.js";
 import type {
   ApplyMetaReviewGateOnConvergencePort
-} from "../../shared/metaReviewGate/metaReviewGateCommandContract.js";
+} from "../../shared/metaReviewGate/metaReviewGateCommandContract.js";import type {
+  AgentName
+} from "../../domain/agentIdentity/agentIdentity.js";
 import type {
-  AgentName,
   BubbleRoundGateState,
   BubbleSpecLockState,
   BubbleStateSnapshot

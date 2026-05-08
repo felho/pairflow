@@ -1,5 +1,7 @@
 import type {
-  AgentName,
+  AgentName
+} from "../../domain/agentIdentity/agentIdentity.js";
+import type {
   PairflowCommandProfile
 } from "../../../types/bubble.js";
 import type { MetaReviewArtifactReadPort } from "../metaReview/metaReviewArtifactIo.js";

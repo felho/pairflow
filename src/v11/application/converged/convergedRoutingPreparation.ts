@@ -5,9 +5,10 @@ import {
 import {
   resolveIdeationMetadata
 } from "../../domain/ideation/ideationMetadata.js";
-import type { ActorEmitContextSnapshot } from "../../shared/actorProtocol/actorEmitContext.js";
+import type { ActorEmitContextSnapshot } from "../../shared/actorProtocol/actorEmitContext.js";import type {
+  AgentName
+} from "../../domain/agentIdentity/agentIdentity.js";
 import type {
-  AgentName,
   BubbleReviewLoopMode,
   BubbleStateSnapshot
 } from "../../../types/bubble.js";

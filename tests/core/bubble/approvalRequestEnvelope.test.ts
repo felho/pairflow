@@ -5,8 +5,9 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { appendHumanApprovalRequestEnvelope as appendHumanApprovalRequestEnvelopeImpl } from "../../../src/v11/application/metaReviewGate/internal/approvalRequestEnvelope.js";
-import type { Finding } from "../../../src/types/findings.js";
-import type { AgentName } from "../../../src/types/bubble.js";
+import type { Finding } from "../../../src/types/findings.js";import type {
+  AgentName
+} from "../../../src/v11/domain/agentIdentity/agentIdentity.js";
 import {
   deliveryTargetRoleMetadataKey,
   type FindingsParityMetadata,

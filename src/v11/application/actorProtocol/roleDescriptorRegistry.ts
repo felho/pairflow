@@ -2,8 +2,9 @@ import type {
   AgentName,
   AgentRole,
   BubbleAgentsConfig
-} from "../../../types/bubble.js";
-import { resolveConfiguredAgentForRole } from "../../../types/bubble.js";
+} from "../../domain/agentIdentity/agentIdentity.js";import {
+  resolveConfiguredAgentForRole
+} from "../../domain/agentIdentity/agentIdentity.js";
 import type { ActorRuntimePolicyCheckId } from "../../shared/actorProtocol/actorRuntimePolicyTypes.js";
 import {
   buildExecutionContextHandoffIdForRole,

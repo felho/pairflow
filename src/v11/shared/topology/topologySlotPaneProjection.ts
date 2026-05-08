@@ -1,4 +1,6 @@
-import type { AgentRole } from "../../../types/bubble.js";
+import type {
+  AgentRole
+} from "../../domain/agentIdentity/agentIdentity.js";
 
 export type SharedTopologySlotId = "status" | AgentRole;
 
