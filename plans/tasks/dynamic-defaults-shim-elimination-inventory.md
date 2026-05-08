@@ -322,7 +322,7 @@ twice.
 
 | # | Site (shim) | Defaults target | Cat | Action |
 |---|-------------|-----------------|-----|--------|
-| B1 | `application/converged/convergedDependencyDefaults.ts:69` | `defaults/converged/convergedDependencyDefaults.ts` | B | CLI imports aggregator; passes to `emitConverged*`. Shim deletes. |
+| B1 | `application/converged/convergedDependencyDefaults.ts:69` | `defaults/converged/convergedDependencyDefaults.ts` | B | Completed in Batch 37: converged defaults are registered from defaults/composition instead of dynamic application loading; CLI convergence composition imports the defaults aggregate explicitly. |
 | B2 | `application/converged/summaryVerifierConsistencyGateArtifactDefaults.ts:19` | `defaults/reviewer/summaryVerifierConsistencyGateDefaults.ts` | **A** (reclassified) | Completed in Batch 12: the write port is now part of `convergedDependencyDefaults.validation`; the standalone application artifact shim was deleted. |
 | B3 | `application/create/createBubbleDefaults.ts:28` | `defaults/create/createBubbleDefaults.ts` | B | Completed in Batch 32: application create is dependency-explicit; `defaults/create/createBubbleApi.ts` owns default composition for CLI/public/test convenience callers; the application shim was deleted. |
 | B4 | `application/delete/deleteBubbleDependencyDefaults.ts:133` | `defaults/delete/deleteBubbleDefaults.ts` | B | Completed in Batch 34: CLI, UI, and tests now pass `deleteBubbleDependencyDefaults` explicitly; the application delete API no longer loads defaults dynamically and the standalone application shim was deleted. |
@@ -1602,6 +1602,29 @@ In the closing PR:
   - `pnpm test` skipped for this focused metrics composition batch. A broader
     exploratory core run surfaced existing direct `commitBubble` setup failures
     from missing PASS validation defaults; those are outside the metrics change.
+  - `pnpm lint` passed.
+  - `pnpm build` passed.
+
+### 2026-05-08 — Batch 37: register converged defaults through composition
+
+- Removed the dynamic `defaults/converged/convergedDependencyDefaults.ts`
+  import from the application converged defaults module.
+- Replaced it with a typed application registry that defaults/composition
+  registers when `defaults/converged/convergedDependencyDefaults.ts` loads.
+- Updated CLI `agent emit` convergence composition to import the converged
+  defaults aggregate explicitly.
+- Fitness result after the batch: application dynamic defaults warnings are
+  down from 2 to 1; shared dynamic defaults warnings remain 0. Hard-fail
+  fitness checks pass.
+- Validation:
+  - `pnpm typecheck` passed.
+  - `pnpm fitness:check:ci` passed with the expected remaining warnings
+    (`application_defaults_boundary=1`, `shared_defaults_boundary=0`).
+  - `pnpm exec vitest run tests/v11/application/converged/convergedFlowInvocationBuilders.test.ts tests/v11/application/converged/convergedRoutingPreparation.test.ts tests/v11/application/converged/convergedValidationPreparation.test.ts tests/tools/fitness/applicationDefaultsBoundary.test.ts`
+    passed (`4` files, `27` tests).
+  - `pnpm test` skipped for this focused converged defaults composition batch.
+    A broader exploratory converged core run still surfaces existing direct
+    PASS-validation/meta-review default gaps from earlier batches.
   - `pnpm lint` passed.
   - `pnpm build` passed.
 

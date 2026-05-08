@@ -1,4 +1,5 @@
 import { loadPairflowGlobalConfig } from "../../../config/pairflowConfig.js";
+import "../converged/convergedDependencyDefaults.js";
 import "../metrics/bubbleEvents.js";
 import { appendProtocolEnvelope } from "../transcript/transcriptDependencyDefaults.js";
 import {

@@ -45,6 +45,9 @@ import {
   reviewerDeliveryDefaults
 } from "../../../v11/defaults/reviewer/reviewerDeliveryDefaults.js";
 import {
+  convergedDependencyDefaults
+} from "../../../v11/defaults/converged/convergedDependencyDefaults.js";
+import {
   askHumanFinalizationDefaults
 } from "../../../v11/defaults/askHuman/askHumanFinalizationDefaults.js";
 import {
@@ -513,6 +516,36 @@ export async function runAgentEmitCommand(
         passValidationDefaults.writePassValidationReviewerCompatibilityArtifact
     },
     convergence: {
+      readTranscriptEnvelopes:
+        convergedDependencyDefaults.flow.readTranscriptEnvelopes,
+      resolveBubbleFromWorkspaceCwd:
+        convergedDependencyDefaults.routing.resolveBubbleFromWorkspaceCwd,
+      ensureBubbleInstanceIdForMutation:
+        convergedDependencyDefaults.routing.ensureBubbleInstanceIdForMutation,
+      readStateSnapshot:
+        convergedDependencyDefaults.routing.readStateSnapshot,
+      appendProtocolEnvelope:
+        convergedDependencyDefaults.execution.appendProtocolEnvelope,
+      emitDeliveryNotificationAck:
+        convergedDependencyDefaults.execution.emitDeliveryNotificationAck,
+      emitBubbleNotification:
+        convergedDependencyDefaults.execution.emitBubbleNotification,
+      resolveDeliveryMessageRef:
+        convergedDependencyDefaults.execution.resolveDeliveryMessageRef,
+      gateEmitDeliveryNotificationAck:
+        convergedDependencyDefaults.gateDelivery.emitDeliveryNotificationAck,
+      gateResolveDeliveryMessageRef:
+        convergedDependencyDefaults.gateDelivery.resolveDeliveryMessageRef,
+      readDocContractGateArtifact:
+        convergedDependencyDefaults.validation.readDocContractGateArtifact,
+      readReviewVerificationArtifactStatus:
+        convergedDependencyDefaults.validation.readReviewVerificationArtifactStatus,
+      resolveDocContractGateArtifactPath:
+        convergedDependencyDefaults.validation.resolveDocContractGateArtifactPath,
+      writeSummaryVerifierConsistencyGateArtifact:
+        convergedDependencyDefaults.validation.writeSummaryVerifierConsistencyGateArtifact,
+      assessPairflowCommandPath:
+        convergedDependencyDefaults.finalization.assessPairflowCommandPath,
       resolveReviewerTestExecutionDirective
     },
     metaReview: {

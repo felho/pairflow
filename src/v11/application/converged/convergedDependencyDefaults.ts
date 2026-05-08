@@ -27,7 +27,7 @@ import type {
   ResolveReviewerTestExecutionDirectivePort
 } from "../../shared/ports/reviewerTestEvidenceArtifacts.js";
 
-interface ConvergedDependencyDefaults {
+export interface ConvergedDependencyDefaults {
   flow: {
     readTranscriptEnvelopes: ReadTranscriptEnvelopesPort;
   };
@@ -61,28 +61,84 @@ interface ConvergedDependencyDefaults {
   };
 }
 
-interface ConvergedDependencyDefaultsModule {
-  convergedDependencyDefaults: ConvergedDependencyDefaults;
-}
-
-let convergedDependencyDefaultsModulePromise:
-  | Promise<ConvergedDependencyDefaultsModule>
+let configuredConvergedDependencyDefaults:
+  | ConvergedDependencyDefaults
   | undefined;
 
-function getConvergedDependencyDefaultsModulePath(): string {
-  return "../../defaults/converged/convergedDependencyDefaults.js";
+export function configureConvergedDependencyDefaults(
+  defaults: ConvergedDependencyDefaults
+): void {
+  configuredConvergedDependencyDefaults = defaults;
 }
 
-async function loadConvergedDependencyDefaultsModule():
-  Promise<ConvergedDependencyDefaultsModule> {
-  convergedDependencyDefaultsModulePromise ??= import(
-    getConvergedDependencyDefaultsModulePath()
-  ) as Promise<ConvergedDependencyDefaultsModule>;
-  return convergedDependencyDefaultsModulePromise;
+function requireConvergedDependencyDefaults(): ConvergedDependencyDefaults {
+  if (configuredConvergedDependencyDefaults === undefined) {
+    throw new Error(
+      "CONVERGED_DEFAULTS_UNCONFIGURED: converged runtime defaults were not configured by the composition root. context={\"route\":\"convergedDependencyDefaults\"}"
+    );
+  }
+  return configuredConvergedDependencyDefaults;
 }
 
-const convergedDependencyDefaultsModule =
-  await loadConvergedDependencyDefaultsModule();
-
-export const convergedDependencyDefaults =
-  convergedDependencyDefaultsModule.convergedDependencyDefaults;
+export const convergedDependencyDefaults: ConvergedDependencyDefaults = {
+  flow: {
+    readTranscriptEnvelopes: (...args) =>
+      requireConvergedDependencyDefaults().flow.readTranscriptEnvelopes(...args)
+  },
+  routing: {
+    ensureBubbleInstanceIdForMutation: (...args) =>
+      requireConvergedDependencyDefaults()
+        .routing.ensureBubbleInstanceIdForMutation(...args),
+    readStateSnapshot: (...args) =>
+      requireConvergedDependencyDefaults().routing.readStateSnapshot(...args),
+    resolveBubbleFromWorkspaceCwd: (...args) =>
+      requireConvergedDependencyDefaults()
+        .routing.resolveBubbleFromWorkspaceCwd(...args)
+  },
+  execution: {
+    appendProtocolEnvelope: (...args) => {
+      const appendEnvelope =
+        requireConvergedDependencyDefaults().execution.appendProtocolEnvelope;
+      return appendEnvelope(...args);
+    },
+    emitBubbleNotification: (...args) =>
+      requireConvergedDependencyDefaults()
+        .execution.emitBubbleNotification(...args),
+    emitDeliveryNotificationAck: (...args) =>
+      requireConvergedDependencyDefaults()
+        .execution.emitDeliveryNotificationAck(...args),
+    resolveDeliveryMessageRef: (...args) =>
+      requireConvergedDependencyDefaults()
+        .execution.resolveDeliveryMessageRef(...args)
+  },
+  gateDelivery: {
+    emitDeliveryNotificationAck: (...args) =>
+      requireConvergedDependencyDefaults()
+        .gateDelivery.emitDeliveryNotificationAck(...args),
+    resolveDeliveryMessageRef: (...args) =>
+      requireConvergedDependencyDefaults()
+        .gateDelivery.resolveDeliveryMessageRef(...args)
+  },
+  validation: {
+    readDocContractGateArtifact: (...args) =>
+      requireConvergedDependencyDefaults()
+        .validation.readDocContractGateArtifact(...args),
+    readReviewVerificationArtifactStatus: (...args) =>
+      requireConvergedDependencyDefaults()
+        .validation.readReviewVerificationArtifactStatus(...args),
+    resolveDocContractGateArtifactPath: (...args) =>
+      requireConvergedDependencyDefaults()
+        .validation.resolveDocContractGateArtifactPath(...args),
+    resolveReviewerTestExecutionDirective: (...args) =>
+      requireConvergedDependencyDefaults()
+        .validation.resolveReviewerTestExecutionDirective(...args),
+    writeSummaryVerifierConsistencyGateArtifact: (...args) =>
+      requireConvergedDependencyDefaults()
+        .validation.writeSummaryVerifierConsistencyGateArtifact(...args)
+  },
+  finalization: {
+    assessPairflowCommandPath: (...args) =>
+      requireConvergedDependencyDefaults()
+        .finalization.assessPairflowCommandPath(...args)
+  }
+};

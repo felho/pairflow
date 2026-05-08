@@ -24,6 +24,7 @@ import {
 } from "../gates/docContractGateArtifactDefaults.js";
 import { readStateSnapshot } from "../state/stateStoreDefaults.js";
 import { resolveBubbleFromWorkspaceCwd } from "../workspace/workspaceResolutionDefaults.js";
+import { configureConvergedDependencyDefaults } from "../../application/converged/convergedDependencyDefaults.js";
 
 export const convergedDependencyDefaults = {
   flow: {
@@ -55,3 +56,5 @@ export const convergedDependencyDefaults = {
     assessPairflowCommandPath
   }
 } as const;
+
+configureConvergedDependencyDefaults(convergedDependencyDefaults);
