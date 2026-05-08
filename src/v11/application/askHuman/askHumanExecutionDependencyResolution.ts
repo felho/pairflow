@@ -2,7 +2,7 @@ import type {
   ResolvedAskHumanExecutionDependencies,
   ResolveAskHumanExecutionDependenciesInput
 } from "./askHumanExecutionDependencyResolutionContract.js";
-import { askHumanExecutionDependencyDefaults } from "./askHumanExecutionDependencyDefaults.js";
+import { askHumanExecutionDependencyDefaults } from "./askHumanDependencyDefaults.js";
 
 export function resolveAskHumanExecutionDependencies(
   input: ResolveAskHumanExecutionDependenciesInput

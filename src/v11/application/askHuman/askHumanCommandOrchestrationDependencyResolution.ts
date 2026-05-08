@@ -1,4 +1,4 @@
-import { resolveAskHumanCommandOrchestrationDependencyDefaults } from "./askHumanCommandOrchestrationDependencyDefaults.js";
+import { createAskHumanCommandFlowDefaults } from "./askHumanCommandFlowDefaults.js";
 import type {
   ResolvedAskHumanCommandOrchestrationDependencies,
   ResolveAskHumanCommandOrchestrationDependenciesInput
@@ -7,7 +7,7 @@ import type {
 export function resolveAskHumanCommandOrchestrationDependencies(
   input: ResolveAskHumanCommandOrchestrationDependenciesInput
 ): ResolvedAskHumanCommandOrchestrationDependencies {
-  const defaults = resolveAskHumanCommandOrchestrationDependencyDefaults();
+  const defaults = createAskHumanCommandFlowDefaults();
   return {
     prepareAskHumanRouting:
       input.prepareAskHumanRouting ?? defaults.prepareAskHumanRouting,

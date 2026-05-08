@@ -4,11 +4,13 @@ import {
   prepareMetaReviewSubmitContext
 } from "../../../../src/v11/application/metaReview/metaReviewCommandSubmitPreparation.js";
 import {
-  assertMetaReviewSubmitterAuthority,
   assertSubmitPayloadInvariants,
   assertSubmitStatusIsSuccess,
   resolveSubmitRunStatus
-} from "../../../../src/v11/shared/metaReview/metaReviewCommandSubmitSupport.js";
+} from "../../../../src/v11/shared/metaReview/metaReviewCommandSubmitValidation.js";
+import {
+  assertMetaReviewSubmitterAuthority
+} from "../../../../src/v11/shared/metaReview/metaReviewCommandSubmitAuthority.js";
 import { buildMetaReviewExecutionContext } from "../../../../src/v11/shared/metaReview/metaReviewExecutionContext.js";
 import { metaReviewExecutionContextToRunningContext } from "../../../../src/v11/shared/state/executionContext.js";
 import type { BubbleStateSnapshot } from "../../../../src/v11/shared/state/bubbleStateSnapshotTypes.js";

@@ -26,7 +26,7 @@ import {
 import {
   readReviewerBriefArtifact,
   readReviewerFocusArtifact
-} from "../reviewer/reviewerArtifactDefaults.js";
+} from "../../infrastructure/artifact/reviewer/reviewerBriefArtifacts.js";
 import {
   resolveDocContractGateArtifactPath
 } from "../gates/docContractGateArtifactDefaults.js";

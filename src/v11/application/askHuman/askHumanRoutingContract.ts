@@ -1,5 +1,5 @@
 import type { ActorEmitContextSnapshot } from "../../shared/actorProtocol/actorEmitContext.js";
-import type { AskHumanRoutingContext } from "./askHumanRoutingContext.js";
+import type { AskHumanRoutingContext } from "./askHumanRoutingContextContract.js";
 import type {
   EnsureAskHumanBubbleInstanceIdentity,
   ReadAskHumanStateSnapshot,

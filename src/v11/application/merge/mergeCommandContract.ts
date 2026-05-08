@@ -27,7 +27,7 @@ import type {
   ExecuteRemoteBubbleMergeCommandResult,
   RemoteMergeStatusTarget
 } from "../../shared/remote/remoteMergeContract.js";
-import type { ImportRemoteBubbleCommitContinuityPort } from "../commit/commitRemotePorts.js";
+import type { ImportRemoteBubbleCommitContinuityPort } from "../../shared/remote/commitRemoteExecution.js";
 export type {
   ExecuteRemoteBubbleMergeCleanupCommandInput,
   ExecuteRemoteBubbleMergeCleanupCommandResult,

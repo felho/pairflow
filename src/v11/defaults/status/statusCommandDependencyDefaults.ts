@@ -117,7 +117,7 @@ let docContractGateArtifactDefaultsModulePromise:
   | Promise<DocContractGateArtifactDefaultsModule>
   | undefined;
 
-let reviewVerificationArtifactDefaultsModulePromise:
+let reviewVerificationArtifactsModulePromise:
   | Promise<ReviewVerificationArtifactDefaultsModule>
   | undefined;
 
@@ -142,7 +142,7 @@ function getDocContractGateArtifactDefaultsModulePath(): string {
 }
 
 function getReviewVerificationArtifactDefaultsModulePath(): string {
-  return "../../defaults/reviewer/reviewVerificationArtifactDefaults.js";
+  return "../../infrastructure/artifact/reviewer/reviewVerificationArtifacts.js";
 }
 
 async function loadListCommandDefaultsModule():
@@ -187,10 +187,10 @@ async function loadDocContractGateArtifactDefaultsModule():
 
 async function loadReviewVerificationArtifactDefaultsModule():
   Promise<ReviewVerificationArtifactDefaultsModule> {
-  reviewVerificationArtifactDefaultsModulePromise ??= import(
+  reviewVerificationArtifactsModulePromise ??= import(
     getReviewVerificationArtifactDefaultsModulePath()
   ) as Promise<ReviewVerificationArtifactDefaultsModule>;
-  return reviewVerificationArtifactDefaultsModulePromise;
+  return reviewVerificationArtifactsModulePromise;
 }
 
 const readDocContractGateArtifact:

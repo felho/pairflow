@@ -3,7 +3,7 @@ import {
   MetaReviewGateError,
   type MetaReviewGateRoute,
   type MetaReviewGateThresholdStatus
-} from "./gateRoutingTypes.js";
+} from "../../shared/metaReviewGate/metaReviewGateRouteContract.js";
 
 export function resolveHumanGateRoute(input: {
   recommendation: MetaReviewRecommendation;

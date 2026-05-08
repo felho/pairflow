@@ -1,6 +1,6 @@
 import {
   appendProtocolEnvelope
-} from "./passTranscriptDefaults.js";
+} from "../start/startCommandDependencyDefaults.js";
 import type {
   RepeatCleanAutoconvergeReasonCode,
   RepeatCleanAutoconvergeReasonDetail

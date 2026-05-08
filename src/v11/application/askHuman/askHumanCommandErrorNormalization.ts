@@ -1,4 +1,8 @@
-import type { NormalizeAskHumanCommandErrorInput } from "./askHumanCommandErrorNormalizationContract.js";
+export interface NormalizeAskHumanCommandErrorInput {
+  error: unknown;
+  isAskHumanCommandError: (candidate: unknown) => boolean;
+  createAskHumanCommandError: PairflowCreateCommandError;
+}
 
 export function normalizeAskHumanCommandError(
   input: NormalizeAskHumanCommandErrorInput

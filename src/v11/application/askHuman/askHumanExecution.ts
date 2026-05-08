@@ -1,8 +1,6 @@
 import type { LoadedStateSnapshot } from "../../ports/stateSnapshots.js";
-import {
-  buildAskHumanLockPath,
-  buildAskHumanStateWriteFailureMessage
-} from "./askHumanExecutionArtifacts.js";
+import { buildAskHumanStateWriteFailureMessage } from "./askHumanExecutionFailureMessageBuilder.js";
+import { buildAskHumanLockPath } from "./askHumanLockPathBuilder.js";
 import {
   buildAskHumanAppendEnvelopeInput,
   buildAskHumanWriteSnapshotCallInput

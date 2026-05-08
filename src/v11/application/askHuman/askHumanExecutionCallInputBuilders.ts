@@ -1,5 +1,5 @@
 import type { BubbleStateSnapshot } from "../../shared/state/bubbleStateSnapshotTypes.js";
-import { buildAskHumanEnvelope } from "./askHumanExecutionArtifacts.js";
+import { buildAskHumanEnvelope } from "./askHumanEnvelopeBuilder.js";
 import type { ExecuteAskHumanExecutionInput } from "./askHumanFlowContract.js";
 import type { AppendProtocolEnvelopeInput } from "../../ports/transcript.js";
 import type {

@@ -1,5 +1,5 @@
 import type { RunAskHumanFlowInput } from "./askHumanFlowContract.js";
-import type { AskHumanRoutingContext } from "./askHumanRoutingContext.js";
+import type { AskHumanRoutingContext } from "./askHumanRoutingContextContract.js";
 import type { AskHumanCommandOrchestrationInput } from "./askHumanCommandOrchestrationContract.js";
 import { buildAskHumanFlowInput } from "./askHumanFlowInvocationBuilders.js";
 

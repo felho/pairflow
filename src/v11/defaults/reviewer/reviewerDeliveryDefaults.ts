@@ -6,7 +6,7 @@ import { refreshReviewerContext } from "../../infrastructure/channel/tmux/review
 import {
   readReviewerBriefArtifact,
   readReviewerFocusArtifact
-} from "./reviewerArtifactDefaults.js";
+} from "../../infrastructure/artifact/reviewer/reviewerBriefArtifacts.js";
 import {
   resolveReviewerTestExecutionDirectiveFromArtifact,
   verifyImplementerTestEvidence,

@@ -1,7 +1,7 @@
 import {
   evaluateRepeatCleanAutoconvergeTrigger,
 } from "../../../v11/domain/convergence/repeatCleanAutoconverge.js";
-import { readTranscriptEnvelopes } from "./passTranscriptDefaults.js";
+import { readTranscriptEnvelopes } from "../start/startCommandDependencyDefaults.js";
 import type {
   PreparePassRoutingDependencies,
   PreparePassRoutingInput,

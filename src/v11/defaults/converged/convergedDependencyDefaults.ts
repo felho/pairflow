@@ -6,7 +6,7 @@ import {
 import { assessPairflowCommandPath } from "../../shared/command/pairflowCommandPathAssessment.js";
 import {
   readReviewVerificationArtifactStatus
-} from "../reviewer/reviewVerificationArtifactDefaults.js";
+} from "../../infrastructure/artifact/reviewer/reviewVerificationArtifacts.js";
 import {
   writeSummaryVerifierConsistencyGateArtifact
 } from "../reviewer/summaryVerifierConsistencyGateDefaults.js";

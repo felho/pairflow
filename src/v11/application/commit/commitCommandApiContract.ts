@@ -28,7 +28,7 @@ import type {
   ImportRemoteBubbleCommitContinuityPort,
   ReadRemoteCommitPointerPort,
   ResolveRemoteBubbleStatusTargetPort
-} from "./commitRemotePorts.js";
+} from "../../shared/remote/commitRemoteExecution.js";
 
 export type ResolvedBubbleContext = ResolvedBubbleById;
 export type BubbleIdentity = EnsureBubbleInstanceIdForMutationResult;

@@ -25,9 +25,11 @@ export type {
   ReviewVerificationValidationError
 } from "./reviewVerificationContract.js";
 export {
-  validateReviewVerificationArtifact,
+  validateReviewVerificationArtifact
+} from "./reviewVerificationArtifactValidation.js";
+export {
   validateReviewVerificationPayload
-} from "./reviewVerificationValidation.js";
+} from "./reviewVerificationPayloadValidation.js";
 
 export interface ReviewVerificationInputResolution {
   inputRef: string;

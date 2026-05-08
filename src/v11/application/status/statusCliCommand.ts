@@ -2,10 +2,8 @@ export {
   getBubbleStatusHelpText,
   parseBubbleStatusCommandOptions
 } from "./statusCliOptions.js";
-export {
-  renderBubbleStatusTable,
-  renderBubbleStatusText
-} from "./statusCliRenderers.js";
+export { renderBubbleStatusTable } from "./statusCliTableRenderer.js";
+export { renderBubbleStatusText } from "./statusCliTextRenderer.js";
 export { runBubbleStatusCommand } from "./statusCliRunner.js";
 export type {
   BubbleStatusCommandOptions,

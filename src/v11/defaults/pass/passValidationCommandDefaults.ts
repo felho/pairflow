@@ -20,7 +20,7 @@ import {
 import {
   resolveReviewVerificationInputFromRefs,
   writeReviewVerificationArtifactAtomic
-} from "../reviewer/reviewVerificationArtifactDefaults.js";
+} from "../../infrastructure/artifact/reviewer/reviewVerificationArtifacts.js";
 import { reviewerDeliveryDefaults } from "../reviewer/reviewerDeliveryDefaults.js";
 import {
   configurePassFlowRuntimeDependencyDefaults

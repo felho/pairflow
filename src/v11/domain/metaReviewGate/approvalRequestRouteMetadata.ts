@@ -2,7 +2,7 @@ import type { MetaReviewRecommendation } from "../../shared/metaReview/metaRevie
 import {
   MetaReviewGateError,
   type MetaReviewGateThresholdMetadata
-} from "./gateRoutingTypes.js";
+} from "../../shared/metaReviewGate/metaReviewGateRouteContract.js";
 
 const metaReviewGateRunFailedReasonCode = "META_REVIEW_GATE_RUN_FAILED";
 const reviewPolicyAutoReworkThresholdNotMetReasonCode =

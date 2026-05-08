@@ -1,5 +1,5 @@
 import type { BubbleStateSnapshot } from "../../shared/state/bubbleStateSnapshotTypes.js";
-import type { AskHumanRunningState } from "./askHumanRoutingContext.js";
+import type { AskHumanRunningState } from "./askHumanRoutingContextContract.js";
 import { runAskHumanRunningStateValidationChecks } from "./askHumanRunningStateValidationChecks.js";
 
 export function assertAskHumanRunningState(

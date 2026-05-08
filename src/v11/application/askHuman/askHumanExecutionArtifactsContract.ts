@@ -1,4 +1,4 @@
-import type { AskHumanRoutingContext } from "./askHumanRoutingContext.js";
+import type { AskHumanRoutingContext } from "./askHumanRoutingContextContract.js";
 
 export interface AskHumanExecutionArtifactsInput {
   routing: AskHumanRoutingContext;

@@ -1,8 +1,10 @@
+import { prepareAskHumanRouting } from "./askHumanRoutingPreparation.js";
+import { runAskHumanFlow } from "./runAskHumanFlow.js";
 import type { AskHumanCommandFlowDefaults } from "./askHumanCommandFlowDefaultsContract.js";
-import { askHumanCommandFlowDefaultImplementations } from "./askHumanCommandFlowDefaultImplementations.js";
 
 export function createAskHumanCommandFlowDefaults(): AskHumanCommandFlowDefaults {
   return {
-    ...askHumanCommandFlowDefaultImplementations
+    prepareAskHumanRouting,
+    runAskHumanFlow
   };
 }

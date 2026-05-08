@@ -1,5 +1,5 @@
 import type { RunAskHumanFlowDependencies } from "./askHumanFlowContract.js";
-import type { AskHumanRoutingContext } from "./askHumanRoutingContext.js";
+import type { AskHumanRoutingContext } from "./askHumanRoutingContextContract.js";
 import type {
   EmitAskHumanBubbleNotificationPort
 } from "./askHumanDeliveryPortsContract.js";

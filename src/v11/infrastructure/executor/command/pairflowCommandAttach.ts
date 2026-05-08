@@ -18,11 +18,11 @@ import {
   type AttachCommandExecutor
 } from "./pairflowCommandAttachContract.js";
 import {
-  buildCheckLauncherAvailabilityDefault,
   buildAttachCommand,
   buildRemoteAttachCommand,
   resolveAttachLauncher
-} from "./pairflowCommandAttachLauncher.js";
+} from "./pairflowCommandAttachLauncherRuntime.js";
+import { buildCheckLauncherAvailabilityDefault } from "./pairflowCommandAttachLauncherAvailability.js";
 import { resolveAttachBubbleExecution } from "../../../shared/bubbleAttachment/resolveAttachBubbleExecution.js";
 
 export const executeAttachCommand: AttachCommandExecutor = async (

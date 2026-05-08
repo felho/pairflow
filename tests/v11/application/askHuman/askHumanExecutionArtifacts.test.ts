@@ -1,10 +1,8 @@
 import { describe, expect, it } from "vitest";
 
-import {
-  buildAskHumanEnvelope,
-  buildAskHumanLockPath,
-  buildAskHumanStateWriteFailureMessage
-} from "../../../../src/v11/application/askHuman/askHumanExecutionArtifacts.js";
+import { buildAskHumanEnvelope } from "../../../../src/v11/application/askHuman/askHumanEnvelopeBuilder.js";
+import { buildAskHumanStateWriteFailureMessage } from "../../../../src/v11/application/askHuman/askHumanExecutionFailureMessageBuilder.js";
+import { buildAskHumanLockPath } from "../../../../src/v11/application/askHuman/askHumanLockPathBuilder.js";
 
 describe("askHumanExecutionArtifacts", () => {
   const input = {
