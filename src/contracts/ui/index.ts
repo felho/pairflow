@@ -39,6 +39,7 @@ export type {
   UiAttachBubbleInput,
   UiAttachBubbleResult,
   UiAttachLauncher,
+  UiRequestedAttachLauncher,
   UiBubbleMutationInput,
   UiCommitBubbleInput,
   UiCommitBubbleResult,

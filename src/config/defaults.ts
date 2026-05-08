@@ -9,7 +9,9 @@ import type {
   LocalOverlayMode
 } from "../v11/shared/workspace/localOverlayTypes.js";
 import type {
-  AttachLauncher,
+  AttachLauncher
+} from "../v11/shared/bubbleAttachment/attachLauncherTypes.js";
+import type {
   PairflowCommandProfile,
   QualityMode,
   ReviewArtifactType,

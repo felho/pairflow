@@ -19,15 +19,17 @@ import {
   DEFAULT_WORK_MODE
 } from "./defaults.js";
 import {
-  isAttachLauncher,
   isPairflowCommandProfile,
   isQualityMode,
   isReviewArtifactType,
   isReviewerContextMode,
   isWorkMode,
-  type AttachLauncher,
   type BubbleConfig
 } from "../types/bubble.js";
+import {
+  isAttachLauncher,
+  type AttachLauncher
+} from "../v11/shared/bubbleAttachment/attachLauncherTypes.js";
 import type { PairflowGlobalConfig } from "./pairflowConfig.js";
 import { validateBubbleAgents } from "./bubbleConfig/agents.js";
 import { SEVERITY_GATE_ROUND_INVALID } from "./bubbleConfig/errors.js";

@@ -30,6 +30,9 @@ import type {
   BubbleLocalOverlayConfig
 } from "../v11/shared/workspace/localOverlayTypes.js";
 import type {
+  AttachLauncher
+} from "../v11/shared/bubbleAttachment/attachLauncherTypes.js";
+import type {
   BubbleMetaReviewSnapshotState
 } from "../v11/shared/metaReview/metaReviewSnapshotTypes.js";
 import type {
@@ -92,17 +95,6 @@ export type GateReasonCode =
   | "GATE_CONFIG_PARSE_WARNING"
   | "META_REVIEW_APPROVE_VALIDATION_FAILED"
   | "META_REVIEW_APPROVE_THRESHOLD_BACKSTOP";
-
-export const attachLaunchers = [
-  "auto",
-  "warp",
-  "iterm2",
-  "terminal",
-  "ghostty",
-  "copy"
-] as const;
-
-export type AttachLauncher = (typeof attachLaunchers)[number];
 
 export interface BubbleValidationTargetConfig {
   id: string;
@@ -252,12 +244,5 @@ export function isCreateReviewArtifactType(
   return (
     typeof value === "string"
     && (createReviewArtifactTypes as readonly string[]).includes(value)
-  );
-}
-
-export function isAttachLauncher(value: unknown): value is AttachLauncher {
-  return (
-    typeof value === "string" &&
-    (attachLaunchers as readonly string[]).includes(value)
   );
 }

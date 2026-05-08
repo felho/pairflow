@@ -1,6 +1,3 @@
-import type {
-  AttachLauncher
-} from "../../types/bubble.js";
 import type { DeleteBubbleResult } from "./deleteBubble.js";
 import type { BubbleLifecycleState } from "./bubbleLifecycle.js";
 import type {
@@ -34,6 +31,14 @@ export type UiActionProtocolMessageType =
 export type UiActionApprovalDecision = "approve" | "rework";
 
 export type UiActionPassIntent = "task" | "review" | "fix_request";
+
+export type UiRequestedAttachLauncher =
+  | "auto"
+  | "warp"
+  | "iterm2"
+  | "terminal"
+  | "ghostty"
+  | "copy";
 
 export type UiActionFindingsClaimState =
   | "clean"
@@ -279,7 +284,7 @@ export interface UiPassValidationRecoveryMarkerPersistWarning {
 export interface UiAttachBubbleResult {
   bubbleId: string;
   tmuxSessionName: string;
-  launcherRequested: AttachLauncher;
+  launcherRequested: UiRequestedAttachLauncher;
   launcherUsed: UiAttachLauncher;
   attachCommand?: string;
   diagnostics?: Array<{
@@ -298,7 +303,7 @@ export interface UiAttachBubbleResult {
   }>;
 }
 
-export type UiAttachLauncher = Exclude<AttachLauncher, "auto">;
+export type UiAttachLauncher = Exclude<UiRequestedAttachLauncher, "auto">;
 
 export interface UiAttachBubbleInput {
   bubbleId: string;

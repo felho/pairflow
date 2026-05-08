@@ -4,7 +4,7 @@ import type {
 } from "../../../shared/remote/remoteExecutionTypes.js";
 import type {
   AttachLauncher
-} from "../../../../types/bubble.js";
+} from "../../../shared/bubbleAttachment/attachLauncherTypes.js";
 import type { ResolveBubbleByIdPort } from "../../../ports/bubbleLookup.js";
 
 export type ExplicitAttachLauncher = Exclude<AttachLauncher, "auto">;

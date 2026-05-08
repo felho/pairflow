@@ -18,10 +18,10 @@ import type {
 } from "../v11/shared/remote/remoteExecutionTypes.js";
 import type {
   AttachLauncher
-} from "../types/bubble.js";
+} from "../v11/shared/bubbleAttachment/attachLauncherTypes.js";
 import {
   isAttachLauncher
-} from "../types/bubble.js";
+} from "../v11/shared/bubbleAttachment/attachLauncherTypes.js";
 
 export interface PairflowGlobalConfig {
   attach_launcher?: AttachLauncher;

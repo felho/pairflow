@@ -136,6 +136,13 @@ Preferred mechanical flow:
 
 ## Progress Log
 
+### Attach launcher slice
+
+- Created `src/v11/shared/bubbleAttachment/attachLauncherTypes.ts` as the owner for attach launcher literals, the launcher type, and the launcher guard.
+- Updated global/bubble config validation, attach runtime/application contracts, shared attach execution resolution, tests, and root package type exports to import attach launcher vocabulary from the new owner.
+- Removed attach launcher vocabulary from `src/types/bubble.ts`; the old file now only imports `AttachLauncher` as a type-only dependency for the remaining `BubbleConfig` aggregate.
+- Preserved UI contract governance by replacing the browser-facing `AttachLauncher` dependency in `src/contracts/ui/uiActions.ts` with a contract-local `UiRequestedAttachLauncher` mirror.
+
 ### Local overlay config slice
 
 - Created `src/v11/shared/workspace/localOverlayTypes.ts` as the owner for local overlay mode literals, the local overlay config shape, and the local overlay mode guard.
@@ -240,6 +247,7 @@ Preferred mechanical flow:
 - Doc-contract gate config can move before the full config aggregate because its semantics already belong to the gates subdomain; create-time partial input can depend on that owner directly.
 - Notifications config can move as a very small config submodel because runtime notification behavior consumes it through `BubbleConfig`, while the shape itself belongs to notification ownership.
 - Local overlay config belongs with workspace ownership rather than the central bubble aggregate: both config validation and worktree ports consume the same mode vocabulary, while `BubbleConfig` can keep only a type-only dependency.
+- Attach launcher vocabulary belongs with bubble attachment ownership, and UI action payloads should mirror the requested/used launcher literals contract-locally rather than importing the internal owner.
 - Remote state cache should wait for lifecycle/snapshot extraction because it embeds `BubbleLifecycleState`; not every apparent slice should move all adjacent names at once.
 - Root package exports are a distinct public facade question; preserving them does not mean keeping `src/types/bubble.ts` as a bridge.
 - `src/types/bubble.ts` can safely depend on a moved owner only as a type-only aggregate dependency. A runtime value import there would be a new architecture smell.

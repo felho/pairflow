@@ -1,4 +1,4 @@
-import type { AttachLauncher } from "../../../types/bubble.js";
+import type { AttachLauncher } from "../../shared/bubbleAttachment/attachLauncherTypes.js";
 import { shellQuote } from "../../shared/foundation/shellQuote.js";
 import type {
   ExplicitAttachLauncher,

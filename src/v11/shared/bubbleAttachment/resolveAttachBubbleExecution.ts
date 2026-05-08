@@ -6,7 +6,7 @@ import type {
 } from "../remote/remoteExecutionTypes.js";
 import type {
   AttachLauncher
-} from "../../../types/bubble.js";
+} from "./attachLauncherTypes.js";
 import type { ResolvedBubbleById } from "../../ports/bubbleLookup.js";
 import { SchemaValidationError } from "../validation/primitives.js";
 import { buildBubbleTmuxSessionName } from "../bubble/tmuxSessionName.js";
