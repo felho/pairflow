@@ -1,4 +1,12 @@
 import {
+  isBubbleExecutionContextAwaitedOutputType,
+  type BubbleExecutionContext,
+  type BubbleMetaReviewExecutionContext
+} from "../state/executionContextTypes.js";
+import type {
+  BubbleStateSnapshot
+} from "../../../types/bubble.js";
+import {
   isInteger,
   isIsoTimestamp,
   isNonEmptyString,
@@ -6,17 +14,11 @@ import {
   validationOk,
   type ValidationError,
   type ValidationResult
-} from "../validation/primitives.js";import {
+} from "../validation/primitives.js";
+import {
   isAgentRole
 } from "../../domain/agentIdentity/agentIdentity.js";
-import type {
-  BubbleExecutionContext,
-  BubbleMetaReviewExecutionContext,
-  BubbleStateSnapshot
-} from "../../../types/bubble.js";
-import {
-  isBubbleExecutionContextAwaitedOutputType
-} from "../../../types/bubble.js";
+
 import {
   buildRunningExecutionContext,
   toMetaReviewExecutionContext

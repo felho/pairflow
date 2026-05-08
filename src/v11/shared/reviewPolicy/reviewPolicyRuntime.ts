@@ -1,3 +1,4 @@
+import type { BubbleExecutionContext } from "../state/executionContextTypes.js";
 import {
   DEFAULT_REVIEW_POLICY_AUTO_REWORK_MIN_SEVERITY,
   DEFAULT_REVIEW_POLICY_CONSECUTIVE_CLEAN_RUNS_REQUIRED,
@@ -12,8 +13,7 @@ import type {
   BubbleReviewPolicyRuntimeView
 } from "./reviewPolicyTypes.js";
 import type {
-  BubbleConfig,
-  BubbleExecutionContext
+  BubbleConfig
 } from "../../../types/bubble.js";
 import {
   isAgentRole

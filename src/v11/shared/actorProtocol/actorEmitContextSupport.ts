@@ -3,7 +3,7 @@ import type {
 } from "../../domain/agentIdentity/agentIdentity.js";
 import type {
   BubbleExecutionContext
-} from "../../../types/bubble.js";
+} from "../state/executionContextTypes.js";
 import type { ResolvedBubbleById } from "../../ports/bubbleLookup.js";
 import type { LoadedStateSnapshot } from "../../ports/stateSnapshots.js";
 

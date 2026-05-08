@@ -3,11 +3,13 @@ import {
   isAgentRole
 } from "../../domain/agentIdentity/agentIdentity.js";
 import type {
-  BubbleExecutionContext,
   BubbleReworkIntentRecord,
   BubbleStateSnapshot,
   RoundRoleHistoryEntry
 } from "../../../types/bubble.js";
+import type {
+  BubbleExecutionContext
+} from "./executionContextTypes.js";
 import {
   bubbleLifecycleStates,
   isBubbleLifecycleState

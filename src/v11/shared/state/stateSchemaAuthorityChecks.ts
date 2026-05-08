@@ -1,7 +1,5 @@
-import type {
-  BubbleExecutionContext,
-  BubbleMetaReviewSnapshotState
-} from "../../../types/bubble.js";
+import type { BubbleExecutionContext } from "./executionContextTypes.js";
+import type { BubbleMetaReviewSnapshotState } from "../../../types/bubble.js";
 import type { ValidationError } from "../validation/primitives.js";
 
 export interface BubbleStateAuthorityValidationInput {

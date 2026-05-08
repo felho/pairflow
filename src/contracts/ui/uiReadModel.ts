@@ -1,5 +1,4 @@
 import type {
-  BubbleExecutionContext,
   BubbleFailingGate,
   BubbleLifecycleState,
   BubbleRoundGateState,
@@ -22,6 +21,13 @@ export type UiBubbleReviewLoopMode = "full" | "meta_only";
 export type UiBubbleReviewAutoReworkSeverity = "P1" | "P2" | "P3";
 export type UiBubbleReviewSupportStatus = "enabled" | "guarded";
 export type UiMetaReviewRecommendation = "rework" | "approve" | "inconclusive";
+export type UiExecutionContextActiveRole =
+  | "implementer"
+  | "reviewer"
+  | "meta_reviewer";
+export type UiExecutionContextAwaitedOutputType =
+  | "pass_result"
+  | "meta_review_result";
 
 export interface UiBubbleStateCounts {
   CREATED: number;
@@ -272,8 +278,8 @@ export interface UiStatusPaneActivityView {
 }
 
 export interface UiStatusExecutionContextView {
-  activeRole: BubbleExecutionContext["active_role"];
-  awaitedOutputType: BubbleExecutionContext["awaited_output_type"];
+  activeRole: UiExecutionContextActiveRole;
+  awaitedOutputType: UiExecutionContextAwaitedOutputType;
   handoffId: string;
   executionId: string;
   round: number;

@@ -1,19 +1,17 @@
+import {
+  isBubbleExecutionContextAwaitedOutputType,
+  isMetaReviewExecutionContextAwaitedOutputType,
+  type BubbleExecutionContext,
+  type BubbleMetaReviewExecutionContext
+} from "../../shared/state/executionContextTypes.js";
 import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 
 import {
-  assertValidBubbleStateSnapshot,
-  validateBubbleStateSnapshot
-} from "../../shared/state/stateSchema.js";
-import {
-  normalizeMetaReviewRuntimeDeliveryCorrelation
-} from "../../shared/metaReview/metaReviewSnapshot.js";import {
   isAgentName,
   isAgentRole
 } from "../../domain/agentIdentity/agentIdentity.js";
 import type {
-  BubbleExecutionContext,
-  BubbleMetaReviewExecutionContext,
   BubbleMetaReviewRuntimeDeliveryState,
   BubbleMetaReviewSnapshotState,
   BubbleReworkIntentRecord,
@@ -21,10 +19,15 @@ import type {
   RoundRoleHistoryEntry
 } from "../../../types/bubble.js";
 import {
+  assertValidBubbleStateSnapshot,
+  validateBubbleStateSnapshot
+} from "../../shared/state/stateSchema.js";
+import {
+  normalizeMetaReviewRuntimeDeliveryCorrelation
+} from "../../shared/metaReview/metaReviewSnapshot.js";
+import {
   DEFAULT_META_REVIEW_AUTO_REWORK_LIMIT,
-  isBubbleExecutionContextAwaitedOutputType,
   isBubbleLifecycleState,
-  isMetaReviewExecutionContextAwaitedOutputType,
   isMetaReviewRuntimeDeliveryStatus,
   isReworkIntentStatus
 } from "../../../types/bubble.js";

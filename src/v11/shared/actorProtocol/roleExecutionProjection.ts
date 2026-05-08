@@ -3,7 +3,7 @@ import type {
 } from "../../domain/agentIdentity/agentIdentity.js";
 import type {
   BubbleExecutionContextAwaitedOutputType
-} from "../../../types/bubble.js";
+} from "../state/executionContextTypes.js";
 
 export type HandoffIdFormatId = "meta_review";
 

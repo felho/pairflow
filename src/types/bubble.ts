@@ -9,6 +9,10 @@ import type {
   BubbleAgentsConfig
 } from "../v11/domain/agentIdentity/agentIdentity.js";
 import type {
+  BubbleExecutionContext,
+  BubbleMetaReviewExecutionContext
+} from "../v11/shared/state/executionContextTypes.js";
+import type {
   BubbleReviewPolicyConfig
 } from "../v11/shared/reviewPolicy/reviewPolicyTypes.js";
 import type {
@@ -63,21 +67,6 @@ export const gateSignalLevels = ["warning", "info"] as const;
 export type GateSignalLevel = (typeof gateSignalLevels)[number];
 
 export const DEFAULT_META_REVIEW_AUTO_REWORK_LIMIT = 10;
-
-export const bubbleExecutionContextAwaitedOutputTypes = [
-  "pass_result",
-  "meta_review_result"
-] as const;
-
-export type BubbleExecutionContextAwaitedOutputType =
-  (typeof bubbleExecutionContextAwaitedOutputTypes)[number];
-
-export const metaReviewExecutionContextAwaitedOutputTypes = [
-  "meta_review_result"
-] as const;
-
-export type MetaReviewExecutionContextAwaitedOutputType =
-  (typeof metaReviewExecutionContextAwaitedOutputTypes)[number];
 
 export const metaReviewRuntimeDeliveryStatuses = [
   "confirmed",
@@ -244,27 +233,6 @@ export interface BubbleReworkIntentRecord {
   superseded_by_intent_id?: string;
 }
 
-export interface BubbleMetaReviewExecutionContext {
-  handoff_id: string;
-  execution_id: string;
-  round: number;
-  awaited_output_type: MetaReviewExecutionContextAwaitedOutputType;
-  started_at: string;
-  deadline_at: string;
-  attempt: number;
-}
-
-export interface BubbleExecutionContext {
-  active_role: AgentRole;
-  awaited_output_type: BubbleExecutionContextAwaitedOutputType;
-  handoff_id: string;
-  execution_id: string;
-  round: number;
-  started_at: string;
-  deadline_at: string;
-  attempt: number;
-}
-
 export interface BubbleMetaReviewRuntimeDeliveryState {
   // Observability-only diagnostic block. It must never become canonical
   // submit/approval authority and is only active when same-authority
@@ -383,27 +351,5 @@ export function isMetaReviewRuntimeDeliveryStatus(
   return (
     typeof value === "string" &&
     (metaReviewRuntimeDeliveryStatuses as readonly string[]).includes(value)
-  );
-}
-
-export function isMetaReviewExecutionContextAwaitedOutputType(
-  value: unknown
-): value is MetaReviewExecutionContextAwaitedOutputType {
-  return (
-    typeof value === "string" &&
-    (
-      metaReviewExecutionContextAwaitedOutputTypes as readonly string[]
-    ).includes(value)
-  );
-}
-
-export function isBubbleExecutionContextAwaitedOutputType(
-  value: unknown
-): value is BubbleExecutionContextAwaitedOutputType {
-  return (
-    typeof value === "string"
-    && (
-      bubbleExecutionContextAwaitedOutputTypes as readonly string[]
-    ).includes(value)
   );
 }

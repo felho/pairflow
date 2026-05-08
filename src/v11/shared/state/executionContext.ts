@@ -1,10 +1,11 @@
-import { createHash } from "node:crypto";import type {
+import { createHash } from "node:crypto";
+import type {
   AgentRole
 } from "../../domain/agentIdentity/agentIdentity.js";
 import type {
   BubbleExecutionContext,
   BubbleMetaReviewExecutionContext
-} from "../../../types/bubble.js";
+} from "./executionContextTypes.js";
 import {
   buildExecutionContextHandoffIdForRole,
   getRoleExecutionProjectionDescriptor

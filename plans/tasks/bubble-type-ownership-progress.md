@@ -136,6 +136,14 @@ Preferred mechanical flow:
 
 ## Progress Log
 
+### Execution context slice
+
+- Created `src/v11/shared/state/executionContextTypes.ts` as the owner for running execution-context shapes, meta-review execution-context shape, awaited-output literals, and related guards.
+- Updated state schema, state inspection, actor protocol, meta-review, review-policy, status, SSH status parsing, and round-continuation consumers to import execution-context vocabulary from the new owner.
+- Removed execution-context vocabulary from `src/types/bubble.ts`; the old file now only imports the context types as type-only dependencies for the remaining `BubbleStateSnapshot` aggregate.
+- Preserved UI contract governance by replacing `BubbleExecutionContext[...]` references in `src/contracts/ui/uiReadModel.ts` with contract-local active-role and awaited-output literal mirrors.
+- Targeted verification completed: `pnpm typecheck`, `pnpm lint`, and focused state/execution-context/meta-review/status/UI-contract Vitest coverage passed.
+
 ### Meta-review run vocabulary slice
 
 - Moved meta-review run status, recommendation literals, related types, and guards from `src/types/bubble.ts` to the existing `src/v11/shared/metaReview/metaReviewTypes.ts` owner.
@@ -184,5 +192,6 @@ Preferred mechanical flow:
 - Remote state cache should wait for lifecycle/snapshot extraction because it embeds `BubbleLifecycleState`; not every apparent slice should move all adjacent names at once.
 - Root package exports are a distinct public facade question; preserving them does not mean keeping `src/types/bubble.ts` as a bridge.
 - `src/types/bubble.ts` can safely depend on a moved owner only as a type-only aggregate dependency. A runtime value import there would be a new architecture smell.
+- Execution-context types need a separate type owner rather than living in `executionContext.ts`, because runtime builders depend on actor protocol projection while actor protocol projection also needs the awaited-output vocabulary.
 - Import count is a risk signal, not a sufficient argument for a bridge. The real risk is whether the target owner is semantically correct and whether mixed imports can be split without creating worse architecture edges.
 - Agent-assisted migration changes the cost model: mechanical churn is cheap, but ownership mistakes and review noise remain expensive.

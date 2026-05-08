@@ -1,12 +1,10 @@
 import {
+  isBubbleExecutionContextAwaitedOutputType,
+  type BubbleExecutionContext
+} from "./executionContextTypes.js";
+import {
   isAgentRole
 } from "../../domain/agentIdentity/agentIdentity.js";
-import type {
-  BubbleExecutionContext
-} from "../../../types/bubble.js";
-import {
-  isBubbleExecutionContextAwaitedOutputType
-} from "../../../types/bubble.js";
 import {
   isInteger,
   isIsoTimestamp,

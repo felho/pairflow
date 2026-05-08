@@ -1,6 +1,6 @@
+import type { BubbleMetaReviewExecutionContext } from "../state/executionContextTypes.js";
 import { DEFAULT_META_REVIEW_AUTO_REWORK_LIMIT } from "../../../types/bubble.js";
 import type {
-  BubbleMetaReviewExecutionContext,
   BubbleMetaReviewRuntimeDeliveryState,
   BubbleMetaReviewSnapshotState
 } from "../../../types/bubble.js";
