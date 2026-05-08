@@ -1,7 +1,6 @@
 import {
   buildAskHumanFinalizationResult
 } from "./askHumanFinalizationArtifacts.js";
-import { buildAskHumanFinalizationDependencyResolutionInput } from "./askHumanFinalizationDependencyResolutionInputBuilder.js";
 import { buildAskHumanFinalizationLifecycleEventInput } from "./askHumanFinalizationLifecycleEventInputBuilder.js";
 import type {
   FinalizeAskHumanFlowDependencies,
@@ -22,7 +21,7 @@ export async function finalizeAskHumanFlow(
   dependencies: FinalizeAskHumanFlowDependencies = {}
 ): Promise<RunAskHumanFlowResult> {
   const resolvedDependencies = resolveAskHumanFinalizationDependencies(
-    buildAskHumanFinalizationDependencyResolutionInput(dependencies)
+    dependencies
   );
 
   const messageRef = resolvedDependencies.resolveDeliveryMessageRef({

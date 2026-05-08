@@ -1,5 +1,3 @@
-import { buildAskHumanEntrypointInvocation } from "./askHumanEntrypointInvocationBuilder.js";
-import { buildAskHumanEntrypointInvocationInput } from "./askHumanEntrypointInvocationInputBuilder.js";
 import { buildNormalizedAskHumanCommandInput } from "./askHumanCommandNormalizedInputBuilder.js";
 import type {
   AskHumanCommandContext,
@@ -12,8 +10,13 @@ export function buildAskHumanCommandContext(
   const normalizedInput = buildNormalizedAskHumanCommandInput(input.commandInput);
 
   return {
-    orchestrationInput: buildAskHumanEntrypointInvocation(
-      buildAskHumanEntrypointInvocationInput(normalizedInput, input.createError)
-    )
+    orchestrationInput: {
+      question: normalizedInput.question,
+      refs: normalizedInput.refs,
+      cwd: normalizedInput.cwd,
+      authoritativeContext: normalizedInput.authoritativeContext,
+      now: normalizedInput.now,
+      createError: input.createError
+    }
   };
 }

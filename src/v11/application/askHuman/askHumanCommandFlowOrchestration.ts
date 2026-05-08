@@ -1,5 +1,5 @@
-import { buildAskHumanCommandFlowRuntimeDependencies } from "./askHumanCommandFlowRuntimeDependencies.js";
 import { buildAskHumanFlowInputFromCommandOrchestration } from "./askHumanCommandFlowInvocationBuilder.js";
+import { buildAskHumanFlowDependencies } from "./askHumanFlowInvocationBuilders.js";
 import { buildAskHumanRoutingInputFromCommandOrchestration } from "./askHumanCommandRoutingInvocationBuilder.js";
 import type {
   AskHumanCommandOrchestrationDependencies,
@@ -19,6 +19,14 @@ export async function runAskHumanCommandFlowOrchestration(
 
   return resolvedDependencies.runAskHumanFlow(
     buildAskHumanFlowInputFromCommandOrchestration(input, routing),
-    buildAskHumanCommandFlowRuntimeDependencies(dependencies)
+    buildAskHumanFlowDependencies({
+      executeAskHumanExecution: dependencies.executeAskHumanExecution,
+      finalizeAskHumanFlow: dependencies.finalizeAskHumanFlow,
+      emitDeliveryNotificationAck:
+        dependencies.emitDeliveryNotificationAck,
+      emitBubbleNotification: dependencies.emitBubbleNotification,
+      emitBubbleLifecycleEventBestEffort:
+        dependencies.emitBubbleLifecycleEventBestEffort
+    })
   );
 }

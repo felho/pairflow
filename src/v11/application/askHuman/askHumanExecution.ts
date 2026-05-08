@@ -11,7 +11,6 @@ import type {
   ExecuteAskHumanExecutionResult
 } from "./askHumanFlowContract.js";
 import { resolveAskHumanExecutionDependencies } from "./askHumanExecutionDependencyResolution.js";
-import { buildAskHumanExecutionDependencyResolutionInput } from "./askHumanExecutionDependencyResolutionInputBuilder.js";
 export type {
   ExecuteAskHumanExecutionDependencies,
   ExecuteAskHumanExecutionInput,
@@ -23,7 +22,7 @@ export async function executeAskHumanExecution(
   dependencies: ExecuteAskHumanExecutionDependencies = {}
 ): Promise<ExecuteAskHumanExecutionResult> {
   const resolvedDependencies = resolveAskHumanExecutionDependencies(
-    buildAskHumanExecutionDependencyResolutionInput(dependencies)
+    dependencies
   );
 
   const lockPath = buildAskHumanLockPath(input);
