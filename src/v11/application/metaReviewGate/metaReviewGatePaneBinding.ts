@@ -11,7 +11,7 @@ import type {
 } from "../../domain/agentIdentity/agentIdentity.js";
 import type {
   PairflowCommandProfile
-} from "../../../types/bubble.js";
+} from "../../shared/config/bubbleConfigVocabulary.js";
 import {
   resolveMetaReviewGatePaneBindingTmuxCapabilities
 } from "./metaReviewGateRuntimeCapabilityResolution.js";

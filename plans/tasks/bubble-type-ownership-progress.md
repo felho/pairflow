@@ -136,6 +136,14 @@ Preferred mechanical flow:
 
 ## Progress Log
 
+### Core config vocabulary slice
+
+- Created `src/v11/shared/config/bubbleConfigVocabulary.ts` as the owner for work mode, quality mode, review artifact type, create-time review artifact type, Pairflow command profile, reviewer context mode, and their guards/literal arrays.
+- Updated config validation/defaults, create CLI/runtime contracts, command/runtime guidance, reviewer/convergence helpers, runtime-session parsing, UI contract shape validation, tests, and root package exports to import this vocabulary from the new owner.
+- Removed the config vocabulary literals and guards from `src/types/bubble.ts`; the remaining `BubbleConfig` aggregate now keeps only type-only dependencies on the moved vocabulary.
+- Preserved UI contract governance by replacing browser-facing `WorkMode` and `PairflowCommandProfile` uses with contract-local `UiWorkMode` and `UiPairflowCommandProfile` mirrors in `src/contracts/ui/uiReadModel.ts`.
+- Targeted verification completed: `pnpm typecheck` and focused config/create/reviewer/UI-contract Vitest coverage passed.
+
 ### Gate state slice
 
 - Created `src/v11/shared/gates/gateStateTypes.ts` as the owner for gate signal levels, gate reason codes, failing gate warnings, spec-lock state, and round-gate state.
@@ -275,5 +283,6 @@ Preferred mechanical flow:
 - `src/types/bubble.ts` can safely depend on a moved owner only as a type-only aggregate dependency. A runtime value import there would be a new architecture smell.
 - Execution-context types need a separate type owner rather than living in `executionContext.ts`, because runtime builders depend on actor protocol projection while actor protocol projection also needs the awaited-output vocabulary.
 - Gate status/warning vocabulary belongs with shared gates, not the central bubble model. Status and converged flows can depend on that owner directly, while UI read models should keep browser-facing gate mirrors as DTO contract shapes.
+- Core config vocabulary is distinct from the full `BubbleConfig` aggregate: defaults, validation, create-time input, reviewer/convergence behavior, and command/runtime guidance all need the same scalar literals without owning the aggregate config file.
 - Import count is a risk signal, not a sufficient argument for a bridge. The real risk is whether the target owner is semantically correct and whether mixed imports can be split without creating worse architecture edges.
 - Agent-assisted migration changes the cost model: mechanical churn is cheap, but ownership mistakes and review noise remain expensive.

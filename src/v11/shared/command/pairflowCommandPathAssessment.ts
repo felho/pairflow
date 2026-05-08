@@ -1,7 +1,7 @@
 import { accessSync, constants, existsSync, realpathSync } from "node:fs";
 import { delimiter, resolve } from "node:path";
 
-import type { PairflowCommandProfile } from "../../../types/bubble.js";
+import type { PairflowCommandProfile } from "../config/bubbleConfigVocabulary.js";
 import type { PairflowCommandPathAssessment } from "../../ports/pairflowCommand.js";
 
 function requireWorktreePath(worktreePath: string): string {

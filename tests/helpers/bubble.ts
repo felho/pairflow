@@ -15,7 +15,7 @@ import type {
   CreateReviewArtifactType,
   PairflowCommandProfile,
   ReviewArtifactType
-} from "../../src/types/bubble.js";
+} from "../../src/v11/shared/config/bubbleConfigVocabulary.js";
 
 export interface SetupRunningBubbleFixtureInput {
   bubbleId: string;

@@ -1,7 +1,7 @@
 import type {
   CreateReviewArtifactType,
   PairflowCommandProfile
-} from "../../../types/bubble.js";
+} from "../../../v11/shared/config/bubbleConfigVocabulary.js";
 
 export interface BubbleCreateCommandOptions {
   id?: string;

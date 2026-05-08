@@ -33,10 +33,12 @@ import type {
   BubbleRemotePointerCreated
 } from "../../shared/remote/remoteExecutionTypes.js";
 import type {
-  BubbleConfig,
+  BubbleConfig
+} from "../../../types/bubble.js";
+import type {
   CreateReviewArtifactType,
   PairflowCommandProfile
-} from "../../../types/bubble.js";
+} from "../../shared/config/bubbleConfigVocabulary.js";
 import type {
   BubbleDocContractGatesConfig
 } from "../../shared/gates/docContractGateConfigTypes.js";

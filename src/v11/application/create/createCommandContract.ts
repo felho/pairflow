@@ -20,10 +20,12 @@ import type {
 } from "../../shared/reviewPolicy/reviewPolicyTypes.js";
 import type {
   BubbleConfig,
-  BubbleStateSnapshot,
+  BubbleStateSnapshot
+} from "../../../types/bubble.js";
+import type {
   CreateReviewArtifactType,
   PairflowCommandProfile
-} from "../../../types/bubble.js";
+} from "../../shared/config/bubbleConfigVocabulary.js";
 import type {
   BubbleDocContractGatesConfig
 } from "../../shared/gates/docContractGateConfigTypes.js";

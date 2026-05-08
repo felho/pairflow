@@ -1,4 +1,4 @@
-import type { ReviewArtifactType } from "../../../types/bubble.js";
+import type { ReviewArtifactType } from "../config/bubbleConfigVocabulary.js";
 
 export function buildReviewerAgentSelectionGuidance(
   reviewArtifactType: ReviewArtifactType

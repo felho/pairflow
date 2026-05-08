@@ -3,7 +3,7 @@ import type {
 } from "../agentIdentity/agentIdentity.js";
 import type {
   ReviewArtifactType
-} from "../../../types/bubble.js";
+} from "../../shared/config/bubbleConfigVocabulary.js";
 import {
   isFindingsClaimSource,
   isFindingsClaimState,

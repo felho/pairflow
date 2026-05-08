@@ -42,6 +42,13 @@ import type {
 import type {
   BubbleIdeationConfig
 } from "../v11/shared/ideation/ideationConfigTypes.js";
+import type {
+  PairflowCommandProfile,
+  QualityMode,
+  ReviewArtifactType,
+  ReviewerContextMode,
+  WorkMode
+} from "../v11/shared/config/bubbleConfigVocabulary.js";
 
 export const bubbleLifecycleStates = [
   "CREATED",
@@ -57,30 +64,6 @@ export const bubbleLifecycleStates = [
 ] as const;
 
 export type BubbleLifecycleState = (typeof bubbleLifecycleStates)[number];
-
-export const workModes = ["worktree", "clone"] as const;
-
-export type WorkMode = (typeof workModes)[number];
-
-export const qualityModes = ["strict"] as const;
-
-export type QualityMode = (typeof qualityModes)[number];
-
-export const reviewerContextModes = ["fresh", "persistent"] as const;
-
-export type ReviewerContextMode = (typeof reviewerContextModes)[number];
-
-export const pairflowCommandProfiles = ["external", "self_host"] as const;
-
-export type PairflowCommandProfile = (typeof pairflowCommandProfiles)[number];
-
-export const reviewArtifactTypes = ["code", "document"] as const;
-
-export type ReviewArtifactType = (typeof reviewArtifactTypes)[number];
-
-export const createReviewArtifactTypes = ["code", "document"] as const;
-
-export type CreateReviewArtifactType = (typeof createReviewArtifactTypes)[number];
 
 export interface BubbleRemoteStateCache {
   lastCheckedAt: string;
@@ -145,51 +128,5 @@ export function isBubbleLifecycleState(
   return (
     typeof value === "string" &&
     (bubbleLifecycleStates as readonly string[]).includes(value)
-  );
-}
-
-export function isWorkMode(value: unknown): value is WorkMode {
-  return (
-    typeof value === "string" && (workModes as readonly string[]).includes(value)
-  );
-}
-
-export function isQualityMode(value: unknown): value is QualityMode {
-  return (
-    typeof value === "string" && (qualityModes as readonly string[]).includes(value)
-  );
-}
-
-export function isReviewerContextMode(
-  value: unknown
-): value is ReviewerContextMode {
-  return (
-    typeof value === "string" &&
-    (reviewerContextModes as readonly string[]).includes(value)
-  );
-}
-
-export function isReviewArtifactType(value: unknown): value is ReviewArtifactType {
-  return (
-    typeof value === "string" &&
-    (reviewArtifactTypes as readonly string[]).includes(value)
-  );
-}
-
-export function isPairflowCommandProfile(
-  value: unknown
-): value is PairflowCommandProfile {
-  return (
-    typeof value === "string"
-    && (pairflowCommandProfiles as readonly string[]).includes(value)
-  );
-}
-
-export function isCreateReviewArtifactType(
-  value: unknown
-): value is CreateReviewArtifactType {
-  return (
-    typeof value === "string"
-    && (createReviewArtifactTypes as readonly string[]).includes(value)
   );
 }

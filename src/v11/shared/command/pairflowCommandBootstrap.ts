@@ -1,6 +1,6 @@
 import { resolve } from "node:path";
 
-import type { PairflowCommandProfile } from "../../../types/bubble.js";
+import type { PairflowCommandProfile } from "../config/bubbleConfigVocabulary.js";
 import { shellQuote } from "../foundation/shellQuote.js";
 import {
   remoteStartExternalPairflowCommandEnvVar,

@@ -24,7 +24,7 @@ import type {
 import type {
   PairflowCommandProfile,
   ReviewerContextMode
-} from "../types/bubble.js";
+} from "../v11/shared/config/bubbleConfigVocabulary.js";
 import {
   isBubbleReviewAutoReworkSeverity,
   isBubbleReviewLoopMode
@@ -32,7 +32,7 @@ import {
 import {
   isPairflowCommandProfile,
   isReviewerContextMode
-} from "../types/bubble.js";
+} from "../v11/shared/config/bubbleConfigVocabulary.js";
 import {
   builtInValidationCommandIds,
   describeValidationCommandIdRule,

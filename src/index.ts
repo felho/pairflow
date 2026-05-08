@@ -530,12 +530,14 @@ export {
 } from "./v11/domain/agentIdentity/agentIdentity.js";
 export {
   bubbleLifecycleStates,
-  isBubbleLifecycleState,
+  isBubbleLifecycleState
+} from "./types/bubble.js";
+export {
   isQualityMode,
   isWorkMode,
   qualityModes,
   workModes
-} from "./types/bubble.js";
+} from "./v11/shared/config/bubbleConfigVocabulary.js";
 export { findingSeverities, isFindingSeverity } from "./types/findings.js";
 export {
   approvalDecisions,
@@ -751,10 +753,12 @@ export type {
   BubbleConfig,
   BubbleRemoteStateCache,
   BubbleLifecycleState,
-  BubbleStateSnapshot,
+  BubbleStateSnapshot
+} from "./types/bubble.js";
+export type {
   QualityMode,
   WorkMode
-} from "./types/bubble.js";
+} from "./v11/shared/config/bubbleConfigVocabulary.js";
 export type {
   BubbleNotificationsConfig
 } from "./v11/shared/notifications/notificationConfigTypes.js";

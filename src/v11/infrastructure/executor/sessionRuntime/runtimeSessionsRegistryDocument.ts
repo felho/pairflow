@@ -3,7 +3,7 @@ import type {
   RuntimeSessionRecord,
   RuntimeSessionsRegistry
 } from "../../../ports/runtimeSessions.js";
-import { workModes } from "../../../../types/bubble.js";
+import { workModes } from "../../../shared/config/bubbleConfigVocabulary.js";
 import type { WorkspaceKind } from "../../../ports/worktreeWorkspace.js";
 import {
   toRuntimeSessionsRegistryError

@@ -9,7 +9,7 @@ import type {
 import type {
   PairflowCommandProfile,
   ReviewArtifactType
-} from "../../../types/bubble.js";
+} from "../../shared/config/bubbleConfigVocabulary.js";
 import {
   buildDocumentPrimaryArtifactReviewerGuardrail,
   buildRolePromptConcernLines

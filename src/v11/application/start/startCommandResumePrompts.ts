@@ -5,10 +5,12 @@ import type {
   BubbleReviewAutoReworkSeverity
 } from "../../shared/reviewPolicy/reviewPolicyTypes.js";
 import type {
-  BubbleStateSnapshot,
+  BubbleStateSnapshot
+} from "../../../types/bubble.js";
+import type {
   PairflowCommandProfile,
   ReviewArtifactType
-} from "../../../types/bubble.js";
+} from "../../shared/config/bubbleConfigVocabulary.js";
 import { buildRolePromptConcernLines } from "../actorProtocol/roleDescriptorRegistry.js";
 import { joinPromptLines } from "./startCommandResumePromptShared.js";
 export { buildResumeImplementerStartupPrompt } from "./startCommandResumeImplementerPrompt.js";

@@ -1,7 +1,5 @@
 import type {
-  BubbleLifecycleState,
-  PairflowCommandProfile,
-  WorkMode
+  BubbleLifecycleState
 } from "../../types/bubble.js";
 import type { ProtocolMessageType } from "../../types/protocol.js";
 import type { StateValidationDiagnostics } from "./stateValidation.js";
@@ -28,6 +26,8 @@ export type UiExecutionContextActiveRole =
 export type UiExecutionContextAwaitedOutputType =
   | "pass_result"
   | "meta_review_result";
+export type UiWorkMode = "worktree" | "clone";
+export type UiPairflowCommandProfile = "external" | "self_host";
 export type UiGateSignalLevel = "warning" | "info";
 export type UiGateReasonCode =
   | "DOC_CONTRACT_PARSE_WARNING"
@@ -101,7 +101,7 @@ export interface UiRuntimeSessionRecord {
   repoPath: string;
   worktreePath: string;
   workspacePath?: string;
-  workspaceKind?: WorkMode;
+  workspaceKind?: UiWorkMode;
   tmuxSessionName: string;
   updatedAt: string;
   metaReviewerPane?: UiRuntimeMetaReviewerPaneBinding;
@@ -333,7 +333,7 @@ export interface UiStatusCommandPathView {
     | "PAIRFLOW_COMMAND_PATH_STALE"
     | "PAIRFLOW_COMMAND_EXTERNAL_UNAVAILABLE"
     | "PAIRFLOW_COMMAND_PATH_UNRESOLVED";
-  profile: PairflowCommandProfile;
+  profile: UiPairflowCommandProfile;
   localEntrypoint: string;
   activeEntrypoint: string | null;
   message: string;

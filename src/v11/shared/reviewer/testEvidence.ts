@@ -1,6 +1,7 @@
 import { join } from "node:path";
 
-import type { BubbleConfig, ReviewArtifactType } from "../../../types/bubble.js";
+import type { BubbleConfig } from "../../../types/bubble.js";
+import type { ReviewArtifactType } from "../config/bubbleConfigVocabulary.js";
 import type { ProtocolEnvelope } from "../../../types/protocol.js";
 
 export const reviewerTestEvidenceSchemaVersion = 1 as const;

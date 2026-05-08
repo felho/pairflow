@@ -11,7 +11,7 @@ import type {
 } from "../../shared/reviewPolicy/reviewPolicyTypes.js";
 import type {
   ReviewArtifactType
-} from "../../../types/bubble.js";
+} from "../../shared/config/bubbleConfigVocabulary.js";
 import type {
   RoundRoleHistoryEntry
 } from "../../shared/state/roundRoleHistoryTypes.js";

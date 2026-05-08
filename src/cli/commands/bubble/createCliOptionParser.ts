@@ -1,6 +1,6 @@
 import { parseArgs } from "node:util";
 
-import type { CreateReviewArtifactType } from "../../../types/bubble.js";
+import type { CreateReviewArtifactType } from "../../../v11/shared/config/bubbleConfigVocabulary.js";
 import type { BubbleCreateCommandOptions } from "./createCliOptionTypes.js";
 import {
   collectCreateValidationState,

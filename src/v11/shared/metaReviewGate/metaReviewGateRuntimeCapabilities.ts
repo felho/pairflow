@@ -3,7 +3,7 @@ import type {
 } from "../../domain/agentIdentity/agentIdentity.js";
 import type {
   PairflowCommandProfile
-} from "../../../types/bubble.js";
+} from "../config/bubbleConfigVocabulary.js";
 import type { MetaReviewArtifactReadPort } from "../metaReview/metaReviewArtifactIo.js";
 import type { ResolveBubbleByIdPort } from "../../ports/bubbleLookup.js";
 import type { SetMetaReviewerPaneBindingPort } from "../../ports/runtimeSessions.js";

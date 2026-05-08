@@ -4,7 +4,7 @@ import {
   evaluateReviewerGateWarnings,
   isDocContractGateScopeActive
 } from "../../../v11/shared/gates/docContractGates.js";
-import type { ReviewArtifactType } from "../../../types/bubble.js";
+import type { ReviewArtifactType } from "../../shared/config/bubbleConfigVocabulary.js";
 import type { Finding } from "../../../types/findings.js";
 
 export interface PrepareNormalPassAppendInput {

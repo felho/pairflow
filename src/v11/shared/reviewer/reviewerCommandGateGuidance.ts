@@ -4,7 +4,7 @@ import type {
 } from "../reviewPolicy/reviewPolicyTypes.js";
 import type {
   ReviewArtifactType
-} from "../../../types/bubble.js";
+} from "../config/bubbleConfigVocabulary.js";
 
 export type ReviewerCommandGateProjectionVariant = "clean" | "findings";
 

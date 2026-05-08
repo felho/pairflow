@@ -8,7 +8,7 @@ import { buildPairflowCommandGuidance } from "./startCommandPromptRuntime.js";
 import type {
   PairflowCommandProfile,
   ReviewArtifactType
-} from "../../../types/bubble.js";
+} from "../../shared/config/bubbleConfigVocabulary.js";
 import type {
   BubbleCommandsConfig
 } from "../../shared/command/commandConfigTypes.js";

@@ -3,7 +3,7 @@ import { join } from "node:path";
 import {
   isReviewArtifactType,
   type ReviewArtifactType
-} from "../../../types/bubble.js";
+} from "../config/bubbleConfigVocabulary.js";
 export { summaryVerifierConsistencyGateSchemaVersion } from "./summaryVerifierConsistencyGateArtifact.js";
 
 export type SummaryVerifierGateDecision = "allow" | "block" | "not_applicable";

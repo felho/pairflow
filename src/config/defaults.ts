@@ -17,7 +17,7 @@ import type {
   ReviewArtifactType,
   ReviewerContextMode,
   WorkMode
-} from "../types/bubble.js";
+} from "../v11/shared/config/bubbleConfigVocabulary.js";
 
 export const DEFAULT_WORK_MODE: WorkMode = "worktree";
 export const DEFAULT_QUALITY_MODE: QualityMode = "strict";

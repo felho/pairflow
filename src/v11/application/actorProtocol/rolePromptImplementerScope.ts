@@ -1,7 +1,9 @@
 import type {
-  BubbleStateSnapshot,
-  ReviewArtifactType
+  BubbleStateSnapshot
 } from "../../../types/bubble.js";
+import type {
+  ReviewArtifactType
+} from "../../shared/config/bubbleConfigVocabulary.js";
 import { buildDocumentBubbleSourceEditGuard } from "../../shared/document/documentBubbleSourceEditGuard.js";
 
 export function buildImplementerStartActionLine(

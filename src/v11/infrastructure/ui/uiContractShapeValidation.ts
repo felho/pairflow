@@ -13,7 +13,7 @@ import {
 } from "../../shared/metaReview/metaReviewSnapshotTypes.js";
 import {
   workModes
-} from "../../../types/bubble.js";
+} from "../../shared/config/bubbleConfigVocabulary.js";
 
 const lifecycleStates = new Set<string>(bubbleLifecycleStates);
 const exactKeysCache = new Map<string, ReadonlySet<string>>();

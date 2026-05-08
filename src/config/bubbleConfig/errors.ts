@@ -2,7 +2,7 @@ import {
   isCreateReviewArtifactType,
   isPairflowCommandProfile,
   type CreateReviewArtifactType
-} from "../../types/bubble.js";
+} from "../../v11/shared/config/bubbleConfigVocabulary.js";
 
 export const MISSING_REVIEW_ARTIFACT_TYPE_OPTION =
   "MISSING_REVIEW_ARTIFACT_TYPE_OPTION" as const;

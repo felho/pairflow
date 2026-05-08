@@ -14,7 +14,8 @@ import {
 import {
   resolveReviewerTestEvidenceArtifactPath,
 } from "../../../../src/v11/shared/reviewer/testEvidence.js";
-import type { BubbleConfig, ReviewArtifactType } from "../../../../src/types/bubble.js";
+import type { BubbleConfig } from "../../../../src/types/bubble.js";
+import type { ReviewArtifactType } from "../../../../src/v11/shared/config/bubbleConfigVocabulary.js";
 import { initGitRepository } from "../../../helpers/git.js";
 import { setupRunningBubbleFixture } from "../../../helpers/bubble.js";
 import { writeEvidenceLog } from "../../../helpers/evidence.js";

@@ -3,7 +3,7 @@ import type {
 } from "../../domain/agentIdentity/agentIdentity.js";
 import type {
   PairflowCommandProfile
-} from "../../../types/bubble.js";
+} from "../config/bubbleConfigVocabulary.js";
 import { shellQuote } from "../foundation/shellQuote.js";
 import {
   buildPairflowCommandBootstrap,

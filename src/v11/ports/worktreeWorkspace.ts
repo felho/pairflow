@@ -1,6 +1,6 @@
 import type {
   WorkMode
-} from "../../types/bubble.js";
+} from "../shared/config/bubbleConfigVocabulary.js";
 import type {
   BubbleLocalOverlayConfig
 } from "../shared/workspace/localOverlayTypes.js";
