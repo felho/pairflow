@@ -3,6 +3,7 @@ import {
   readRuntimeSessionsRegistry,
   removeRuntimeSessions
 } from "../../infrastructure/executor/sessionRuntime/runtimeSessionsRegistry.js";
+import { readStateSnapshot } from "../../infrastructure/state/stateStore.js";
 import { resolveRepoPath } from "../../infrastructure/executor/workspace/repoResolution.js";
 import { runTmux } from "../../infrastructure/channel/tmux/tmuxRunner.js";
 import type { ReconcileRuntimeSessionsDefaultDependencies } from "../../application/reconcile/reconcileCommandDependencyResolution.js";
@@ -25,9 +26,7 @@ export const reconcileRuntimeSessionsDefaultDependencies = {
   isTmuxSessionAlive: isTmuxSessionAliveDefault,
   persistPassValidationRecoveryMarker,
   readRuntimeSessionsRegistry,
+  readStateSnapshot,
   removeRuntimeSessions,
   resolveRepoPath
-} as const satisfies Omit<
-  ReconcileRuntimeSessionsDefaultDependencies,
-  "readStateSnapshot"
->;
+} as const satisfies ReconcileRuntimeSessionsDefaultDependencies;

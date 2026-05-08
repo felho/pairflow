@@ -13,7 +13,7 @@ import {
   getBubbleStatusV11 as getBubbleStatusApplication,
   type BubbleStatusV11Input
 } from "../../../src/v11/application/status/emitStatusV11.js";
-import { resolveDocContractGateArtifactPath } from "../../../src/v11/defaults/gates/docContractGateArtifactDefaults.js";
+import { resolveDocContractGateArtifactPath } from "../../../src/v11/shared/gates/docContractGateArtifactPath.js";
 import {
   writeRemoteStateCache,
   readRemoteStateCache,

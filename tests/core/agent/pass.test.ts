@@ -40,9 +40,11 @@ import {
 import { createDocContractGateArtifact } from "../../../src/v11/shared/gates/docContractGates.js";
 import {
   readDocContractGateArtifact,
-  resolveDocContractGateArtifactPath,
   writeDocContractGateArtifact
-} from "../../../src/v11/defaults/gates/docContractGateArtifactDefaults.js";
+} from "../../../src/v11/infrastructure/artifact/gates/docContractGateArtifacts.js";
+import {
+  resolveDocContractGateArtifactPath
+} from "../../../src/v11/shared/gates/docContractGateArtifactPath.js";
 import {
   resolveReviewerTestExecutionDirective
 } from "../../../src/v11/infrastructure/artifact/reviewer/testEvidenceRuntime.js";

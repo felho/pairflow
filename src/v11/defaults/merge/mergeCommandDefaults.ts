@@ -13,7 +13,7 @@ import { resolveBubbleById } from "../../infrastructure/executor/workspace/bubbl
 import {
   readStateSnapshot,
   writeStateSnapshot
-} from "../state/stateStoreDefaults.js";
+} from "../../infrastructure/state/stateStore.js";
 import { emitBubbleLifecycleEventBestEffort } from "../metrics/bubbleEvents.js";
 import { readRemotePointer } from "../../infrastructure/artifact/bubble/remoteExecutionArtifacts.js";
 import {

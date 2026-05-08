@@ -16,13 +16,13 @@ import {
 import {
   appendProtocolEnvelope,
   readTranscriptEnvelopes
-} from "../transcript/transcriptDependencyDefaults.js";
+} from "../../infrastructure/artifact/transcript/transcriptStore.js";
 import { ensureBubbleInstanceIdForMutation } from "../../infrastructure/artifact/bubble/bubbleInstanceId.js";
+import { readDocContractGateArtifact } from "../../infrastructure/artifact/gates/docContractGateArtifacts.js";
 import {
-  readDocContractGateArtifact,
   resolveDocContractGateArtifactPath
-} from "../gates/docContractGateArtifactDefaults.js";
-import { readStateSnapshot } from "../state/stateStoreDefaults.js";
+} from "../../shared/gates/docContractGateArtifactPath.js";
+import { readStateSnapshot } from "../../infrastructure/state/stateStore.js";
 import { resolveBubbleFromWorkspaceCwd } from "../../infrastructure/executor/workspace/workspaceResolution.js";
 import {
   applyMetaReviewGateOnConvergenceV11

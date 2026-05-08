@@ -1,4 +1,3 @@
-import { readStateSnapshot } from "../../../v11/defaults/state/stateStoreDefaults.js";
 import {
   reconcileRuntimeSessionsDefaultDependencies
 } from "../../../v11/defaults/reconcile/reconcileCommandDefaults.js";
@@ -23,11 +22,6 @@ export type {
   ParsedBubbleReconcileCommandOptions
 } from "../../../v11/application/reconcile/reconcileCliCommand.js";
 
-const reconcileRuntimeSessionDefaults = {
-  ...reconcileRuntimeSessionsDefaultDependencies,
-  readStateSnapshot
-};
-
 export function runBubbleReconcileCommand(
   args: string[] | BubbleReconcileCommandOptions,
   cwd: string = process.cwd(),
@@ -36,6 +30,9 @@ export function runBubbleReconcileCommand(
   return runApplicationBubbleReconcileCommand(args, cwd, {
     reconcileRuntimeSessions:
       dependencies.reconcileRuntimeSessions ??
-      ((input) => reconcileRuntimeSessions(input, reconcileRuntimeSessionDefaults))
+      ((input) => reconcileRuntimeSessions(
+        input,
+        reconcileRuntimeSessionsDefaultDependencies
+      ))
   });
 }

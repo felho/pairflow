@@ -4,7 +4,7 @@ import {
   type ActorEmitContextResolutionDependencies
 } from "../../shared/actorProtocol/actorEmitContext.js";
 import { resolveBubbleById } from "../../infrastructure/executor/workspace/bubbleLookup.js";
-import { readStateSnapshot } from "../state/stateStoreDefaults.js";
+import { readStateSnapshot } from "../../infrastructure/state/stateStore.js";
 import {
   resolveBubbleFromWorkspaceCwd
 } from "../../infrastructure/executor/workspace/workspaceResolution.js";

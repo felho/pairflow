@@ -1,5 +1,4 @@
-import { join } from "node:path";
-
+import { resolveDocContractGateArtifactPath } from "../../shared/gates/docContractGateArtifactPath.js";
 import { readWatchdogPaneActivity } from "../watchdog/watchdogPaneActivityDefaults.js";
 import type {
   InspectedStateSnapshot,
@@ -80,18 +79,18 @@ interface BubbleLookupModule {
   resolveBubbleById: ResolveBubbleByIdPort;
 }
 
-interface StateStoreDefaultsModule {
+interface StateStoreModule {
   inspectStateSnapshot: (
     statePath: string
   ) => Promise<InspectedStateSnapshot>;
   readStateSnapshot: ReadStateSnapshotPort;
 }
 
-interface TranscriptDependencyDefaultsModule {
+interface TranscriptStoreModule {
   readTranscriptEnvelopes: ReadTranscriptEnvelopesPort;
 }
 
-interface DocContractGateArtifactDefaultsModule {
+interface DocContractGateArtifactsModule {
   readDocContractGateArtifact: ReadDocContractGateArtifactPort;
 }
 
@@ -106,15 +105,15 @@ let listCommandDefaultsModulePromise:
 let bubbleLookupModulePromise:
   | Promise<BubbleLookupModule>
   | undefined;
-let stateStoreDefaultsModulePromise:
-  | Promise<StateStoreDefaultsModule>
+let stateStoreModulePromise:
+  | Promise<StateStoreModule>
   | undefined;
-let transcriptDependencyDefaultsModulePromise:
-  | Promise<TranscriptDependencyDefaultsModule>
+let transcriptStoreModulePromise:
+  | Promise<TranscriptStoreModule>
   | undefined;
 
-let docContractGateArtifactDefaultsModulePromise:
-  | Promise<DocContractGateArtifactDefaultsModule>
+let docContractGateArtifactsModulePromise:
+  | Promise<DocContractGateArtifactsModule>
   | undefined;
 
 let reviewVerificationArtifactsModulePromise:
@@ -130,15 +129,15 @@ function getBubbleLookupModulePath(): string {
 }
 
 function getStateStoreDefaultsModulePath(): string {
-  return "../../defaults/state/stateStoreDefaults.js";
+  return "../../infrastructure/state/stateStore.js";
 }
 
 function getTranscriptDependencyDefaultsModulePath(): string {
-  return "../../defaults/transcript/transcriptDependencyDefaults.js";
+  return "../../infrastructure/artifact/transcript/transcriptStore.js";
 }
 
 function getDocContractGateArtifactDefaultsModulePath(): string {
-  return "../../defaults/gates/docContractGateArtifactDefaults.js";
+  return "../../infrastructure/artifact/gates/docContractGateArtifacts.js";
 }
 
 function getReviewVerificationArtifactDefaultsModulePath(): string {
@@ -162,27 +161,27 @@ async function loadBubbleLookupModule():
 }
 
 async function loadStateStoreDefaultsModule():
-  Promise<StateStoreDefaultsModule> {
-  stateStoreDefaultsModulePromise ??= import(
+  Promise<StateStoreModule> {
+  stateStoreModulePromise ??= import(
     getStateStoreDefaultsModulePath()
-  ) as Promise<StateStoreDefaultsModule>;
-  return stateStoreDefaultsModulePromise;
+  ) as Promise<StateStoreModule>;
+  return stateStoreModulePromise;
 }
 
 async function loadTranscriptDependencyDefaultsModule():
-  Promise<TranscriptDependencyDefaultsModule> {
-  transcriptDependencyDefaultsModulePromise ??= import(
+  Promise<TranscriptStoreModule> {
+  transcriptStoreModulePromise ??= import(
     getTranscriptDependencyDefaultsModulePath()
-  ) as Promise<TranscriptDependencyDefaultsModule>;
-  return transcriptDependencyDefaultsModulePromise;
+  ) as Promise<TranscriptStoreModule>;
+  return transcriptStoreModulePromise;
 }
 
 async function loadDocContractGateArtifactDefaultsModule():
-  Promise<DocContractGateArtifactDefaultsModule> {
-  docContractGateArtifactDefaultsModulePromise ??= import(
+  Promise<DocContractGateArtifactsModule> {
+  docContractGateArtifactsModulePromise ??= import(
     getDocContractGateArtifactDefaultsModulePath()
-  ) as Promise<DocContractGateArtifactDefaultsModule>;
-  return docContractGateArtifactDefaultsModulePromise;
+  ) as Promise<DocContractGateArtifactsModule>;
+  return docContractGateArtifactsModulePromise;
 }
 
 async function loadReviewVerificationArtifactDefaultsModule():
@@ -256,8 +255,7 @@ const statusCommandDependencyDefaultsPromise = loadListCommandDefaultsModule()
     resolveRemoteBubbleStatusTarget:
       listCommandDefaults.resolveRemoteBubbleStatusTarget,
     resolveBubbleById,
-    resolveDocContractGateArtifactPath: (artifactsDir: string): string =>
-      join(artifactsDir, "doc-contract-gates.json"),
+    resolveDocContractGateArtifactPath,
     writeRemoteStateCache: listCommandDefaults.writeRemoteStateCache
   }));
 

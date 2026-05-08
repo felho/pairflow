@@ -29,7 +29,7 @@ import {
 } from "../../infrastructure/artifact/reviewer/reviewerBriefArtifacts.js";
 import {
   resolveDocContractGateArtifactPath
-} from "../gates/docContractGateArtifactDefaults.js";
+} from "../../shared/gates/docContractGateArtifactPath.js";
 import {
   resolveReviewerTestExecutionDirective
 } from "../reviewer/reviewerTestEvidenceDefaults.js";
@@ -37,11 +37,11 @@ import { runTmux } from "../../infrastructure/channel/tmux/tmuxRunner.js";
 import {
   inspectStateSnapshot,
   readStateSnapshot
-} from "../state/stateStoreDefaults.js";
+} from "../../infrastructure/state/stateStore.js";
 import {
   appendProtocolEnvelope,
   readTranscriptEnvelopes
-} from "../transcript/transcriptDependencyDefaults.js";
+} from "../../infrastructure/artifact/transcript/transcriptStore.js";
 import { resolveBubbleFromWorkspaceCwd } from "../../infrastructure/executor/workspace/workspaceResolution.js";
 import {
   cleanupWorktreeWorkspace as cleanupWorktreeWorkspaceCanonical,

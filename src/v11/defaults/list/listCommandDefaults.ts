@@ -19,8 +19,8 @@ import {
 } from "../../infrastructure/executor/workspace/listBubbleWorkspace.js";
 import { readRuntimeSessionsRegistry } from "../runtimeSessions/runtimeSessionsDefaults.js";
 import { readWatchdogPaneActivity } from "../watchdog/watchdogPaneActivityDefaults.js";
-import { inspectStateSnapshot } from "../state/stateStoreDefaults.js";
-import { readTranscriptEnvelopes } from "../transcript/transcriptDependencyDefaults.js";
+import { inspectStateSnapshot } from "../../infrastructure/state/stateStore.js";
+import { readTranscriptEnvelopes } from "../../infrastructure/artifact/transcript/transcriptStore.js";
 
 export const listCommandDefaults = {
   executeRemoteBubbleStatus,

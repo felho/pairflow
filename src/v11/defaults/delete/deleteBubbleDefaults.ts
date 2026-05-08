@@ -10,7 +10,7 @@ import {
 import { ensureBubbleInstanceIdForMutation } from "../../infrastructure/artifact/bubble/bubbleInstanceId.js";
 import { branchExists } from "../../infrastructure/workspace/git.js";
 import { readRuntimeSessionsRegistry, removeRuntimeSession } from "../runtimeSessions/runtimeSessionsDefaults.js";
-import { readStateSnapshot } from "../state/stateStoreDefaults.js";
+import { readStateSnapshot } from "../../infrastructure/state/stateStore.js";
 import { stopBubbleCommandOrchestration } from "../../application/stop/stopCommandOrchestration.js";
 import { stopBubbleDependencyDefaults } from "../stop/stopCommandDefaults.js";
 import { terminateBubbleTmuxSession } from "../../infrastructure/channel/tmux/tmuxManager.js";

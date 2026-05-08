@@ -7,11 +7,11 @@ import { statusCommandDependencyDefaults } from "../status/statusCommandDependen
 import {
   readStateSnapshot,
   writeStateSnapshot
-} from "../state/stateStoreDefaults.js";
+} from "../../infrastructure/state/stateStore.js";
 import {
   appendProtocolEnvelope,
   readTranscriptEnvelopes
-} from "../transcript/transcriptDependencyDefaults.js";
+} from "../../infrastructure/artifact/transcript/transcriptStore.js";
 import type { CommitBubbleDependencies } from "../../application/commit/commitCommandApiContract.js";
 
 let remoteExecutionArtifactsModulePromise:

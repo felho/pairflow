@@ -7,8 +7,8 @@ import { appendWatchdogTrace } from "../../infrastructure/artifact/watchdog/watc
 import {
   readStateSnapshot,
   writeStateSnapshot
-} from "../state/stateStoreDefaults.js";
-import { appendProtocolEnvelope } from "../transcript/transcriptDependencyDefaults.js";
+} from "../../infrastructure/state/stateStore.js";
+import { appendProtocolEnvelope } from "../../infrastructure/artifact/transcript/transcriptStore.js";
 import { resolveBubbleById } from "../../infrastructure/executor/workspace/bubbleLookup.js";
 import { readRuntimeSessionsRegistry } from "../runtimeSessions/runtimeSessionsDefaults.js";
 import { runTmux } from "../../infrastructure/channel/tmux/tmuxRunner.js";

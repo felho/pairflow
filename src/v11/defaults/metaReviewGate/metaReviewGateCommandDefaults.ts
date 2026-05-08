@@ -5,11 +5,11 @@ import { resolveBubbleById } from "../../infrastructure/executor/workspace/bubbl
 import {
   appendProtocolEnvelope,
   readTranscriptEnvelopes
-} from "../transcript/transcriptDependencyDefaults.js";
+} from "../../infrastructure/artifact/transcript/transcriptStore.js";
 import {
   readStateSnapshot,
   writeStateSnapshot
-} from "../state/stateStoreDefaults.js";
+} from "../../infrastructure/state/stateStore.js";
 import { setMetaReviewerPaneBinding } from "../../infrastructure/channel/tmux/metaReviewerPaneBinding.js";
 import { runTmux } from "../../infrastructure/channel/tmux/tmuxManager.js";
 import {
@@ -19,10 +19,74 @@ import {
   submitMetaReviewInput
 } from "../../infrastructure/channel/tmux/metaReviewGateTmuxDefaultBindings.js";
 import type {
-  MetaReviewGateDependencyDefaults
-} from "../../application/metaReviewGate/metaReviewGateCommandDefaults.js";
+  ApplyMetaReviewGateOnConvergenceDependencies,
+  MetaReviewGateNotifyRuntimeCapabilities,
+  MetaReviewGatePaneBindingRuntimeCapabilities
+} from "../../shared/metaReviewGate/index.js";
 
-export type { MetaReviewGateDependencyDefaults };
+export interface MetaReviewGateDependencyDefaults {
+  appendProtocolEnvelope:
+    NonNullable<ApplyMetaReviewGateOnConvergenceDependencies["appendProtocolEnvelope"]>;
+  readFile: NonNullable<ApplyMetaReviewGateOnConvergenceDependencies["readFile"]>;
+  readTranscriptEnvelopes:
+    NonNullable<ApplyMetaReviewGateOnConvergenceDependencies["readTranscriptEnvelopes"]>;
+  readStateSnapshot:
+    NonNullable<ApplyMetaReviewGateOnConvergenceDependencies["readStateSnapshot"]>;
+  resolveBubbleById:
+    NonNullable<ApplyMetaReviewGateOnConvergenceDependencies["resolveBubbleById"]>;
+  setMetaReviewerPaneBinding:
+    NonNullable<
+      ApplyMetaReviewGateOnConvergenceDependencies["setMetaReviewerPaneBinding"]
+    >;
+  runtime: {
+    notify: {
+      tmux: {
+        runner:
+          NonNullable<
+            NonNullable<MetaReviewGateNotifyRuntimeCapabilities["tmux"]>["runner"]
+          >;
+        maybeAcceptTrustPrompt:
+          NonNullable<
+            NonNullable<
+              MetaReviewGateNotifyRuntimeCapabilities["tmux"]
+            >["maybeAcceptTrustPrompt"]
+          >;
+        sendSubmissionRequestMessage:
+          NonNullable<
+            NonNullable<
+              MetaReviewGateNotifyRuntimeCapabilities["tmux"]
+            >["sendSubmissionRequestMessage"]
+          >;
+        submitPaneInput:
+          NonNullable<
+            NonNullable<
+              MetaReviewGateNotifyRuntimeCapabilities["tmux"]
+            >["submitPaneInput"]
+          >;
+      };
+    };
+    paneBinding: {
+      buildAgentCommand:
+        NonNullable<MetaReviewGatePaneBindingRuntimeCapabilities["buildAgentCommand"]>;
+      tmux: {
+        runner:
+          NonNullable<
+            NonNullable<
+              MetaReviewGatePaneBindingRuntimeCapabilities["tmux"]
+            >["runner"]
+          >;
+        respawnPaneCommand:
+          NonNullable<
+            NonNullable<
+              MetaReviewGatePaneBindingRuntimeCapabilities["tmux"]
+            >["respawnPaneCommand"]
+          >;
+      };
+    };
+  };
+  writeStateSnapshot:
+    NonNullable<ApplyMetaReviewGateOnConvergenceDependencies["writeStateSnapshot"]>;
+}
 
 export const metaReviewGateDependencyDefaults = {
   appendProtocolEnvelope,
