@@ -136,6 +136,12 @@ Preferred mechanical flow:
 
 ## Progress Log
 
+### Ideation config slice
+
+- Created `src/v11/shared/ideation/ideationConfigTypes.ts` as the owner for `BubbleIdeationConfig`.
+- Updated root package type exports to import ideation config from the new owner.
+- Removed `BubbleIdeationConfig` from `src/types/bubble.ts`; the old file now only imports it as a type-only dependency for the remaining `BubbleConfig` aggregate.
+
 ### Validation target config slice
 
 - Created `src/v11/shared/validation/validationTargetConfigTypes.ts` as the owner for `BubbleValidationTargetConfig`.
@@ -255,6 +261,7 @@ Preferred mechanical flow:
 - Local overlay config belongs with workspace ownership rather than the central bubble aggregate: both config validation and worktree ports consume the same mode vocabulary, while `BubbleConfig` can keep only a type-only dependency.
 - Attach launcher vocabulary belongs with bubble attachment ownership, and UI action payloads should mirror the requested/used launcher literals contract-locally rather than importing the internal owner.
 - Validation target config can move independently from `BubbleConfig` because validation target id/path behavior already lives under shared validation ownership; the aggregate only embeds the selected target shape.
+- Ideation config can move independently because ideation metadata and reason-code behavior already has ideation ownership; `BubbleConfig` only embeds the persisted config shape.
 - Remote state cache should wait for lifecycle/snapshot extraction because it embeds `BubbleLifecycleState`; not every apparent slice should move all adjacent names at once.
 - Root package exports are a distinct public facade question; preserving them does not mean keeping `src/types/bubble.ts` as a bridge.
 - `src/types/bubble.ts` can safely depend on a moved owner only as a type-only aggregate dependency. A runtime value import there would be a new architecture smell.

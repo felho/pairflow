@@ -44,6 +44,9 @@ import type {
 import type {
   BubbleValidationTargetConfig
 } from "../v11/shared/validation/validationTargetConfigTypes.js";
+import type {
+  BubbleIdeationConfig
+} from "../v11/shared/ideation/ideationConfigTypes.js";
 
 export const bubbleLifecycleStates = [
   "CREATED",
@@ -109,14 +112,6 @@ export interface BubbleRemoteStateCache {
   };
   implementerStatus?: string;
   reviewerStatus?: string;
-}
-
-export interface BubbleIdeationConfig {
-  mode: boolean;
-  task_pending: boolean;
-  started_at?: string;
-  kicked_off_at?: string;
-  parse_warning?: string;
 }
 
 export interface BubbleFailingGate {

@@ -759,6 +759,9 @@ export type {
   BubbleNotificationsConfig
 } from "./v11/shared/notifications/notificationConfigTypes.js";
 export type {
+  BubbleIdeationConfig
+} from "./v11/shared/ideation/ideationConfigTypes.js";
+export type {
   BubbleLocalOverlayConfig,
   LocalOverlayMode
 } from "./v11/shared/workspace/localOverlayTypes.js";
