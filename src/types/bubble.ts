@@ -21,6 +21,9 @@ import type {
   BubbleCommandsConfig
 } from "../v11/shared/command/commandConfigTypes.js";
 import type {
+  BubbleDocContractGatesConfig
+} from "../v11/shared/gates/docContractGateConfigTypes.js";
+import type {
   BubbleMetaReviewSnapshotState
 } from "../v11/shared/metaReview/metaReviewSnapshotTypes.js";
 import type {
@@ -115,11 +118,6 @@ export interface BubbleLocalOverlayConfig {
   enabled: boolean;
   mode: LocalOverlayMode;
   entries: string[];
-}
-
-export interface BubbleDocContractGatesConfig {
-  round_gate_applies_after: number;
-  parse_warning?: string;
 }
 
 export interface BubbleRemoteStateCache {

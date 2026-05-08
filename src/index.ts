@@ -760,6 +760,9 @@ export type {
   BubbleCommandsConfig
 } from "./v11/shared/command/commandConfigTypes.js";
 export type {
+  BubbleDocContractGatesConfig
+} from "./v11/shared/gates/docContractGateConfigTypes.js";
+export type {
   RoundRoleHistoryEntry
 } from "./v11/shared/state/roundRoleHistoryTypes.js";
 export type {

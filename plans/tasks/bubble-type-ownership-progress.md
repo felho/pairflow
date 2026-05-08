@@ -136,6 +136,12 @@ Preferred mechanical flow:
 
 ## Progress Log
 
+### Doc contract gate config slice
+
+- Created `src/v11/shared/gates/docContractGateConfigTypes.ts` as the owner for `BubbleDocContractGatesConfig`.
+- Updated create command contract/runtime and root package type exports to import doc-contract gate config from the new owner.
+- Removed `BubbleDocContractGatesConfig` from `src/types/bubble.ts`; the old file now only imports it as a type-only dependency for the remaining `BubbleConfig` aggregate.
+
 ### Command config slice
 
 - Created `src/v11/shared/command/commandConfigTypes.ts` as the owner for `BubbleCommandsConfig`.
@@ -219,6 +225,7 @@ Preferred mechanical flow:
 - Rework intent is small enough to move independently of the full snapshot aggregate: it is an embedded state submodel with its own literals and guard, while `BubbleStateSnapshot` can keep only a type-only dependency until the lifecycle/snapshot slice lands.
 - Round role history follows the same pattern: it is an audit/history submodel shared by state transition, pass handoff, and convergence policy, while the full lifecycle/snapshot aggregate can remain deferred.
 - `BubbleCommandsConfig` can move independently from the full `BubbleConfig` aggregate because its active meaning is command/validation-command guidance; the aggregate can keep a type-only dependency while config ownership is split progressively.
+- Doc-contract gate config can move before the full config aggregate because its semantics already belong to the gates subdomain; create-time partial input can depend on that owner directly.
 - Remote state cache should wait for lifecycle/snapshot extraction because it embeds `BubbleLifecycleState`; not every apparent slice should move all adjacent names at once.
 - Root package exports are a distinct public facade question; preserving them does not mean keeping `src/types/bubble.ts` as a bridge.
 - `src/types/bubble.ts` can safely depend on a moved owner only as a type-only aggregate dependency. A runtime value import there would be a new architecture smell.

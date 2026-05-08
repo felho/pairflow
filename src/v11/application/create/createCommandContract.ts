@@ -22,9 +22,11 @@ import type {
   BubbleConfig,
   BubbleStateSnapshot,
   CreateReviewArtifactType,
-  BubbleDocContractGatesConfig,
   PairflowCommandProfile
 } from "../../../types/bubble.js";
+import type {
+  BubbleDocContractGatesConfig
+} from "../../shared/gates/docContractGateConfigTypes.js";
 
 export interface BubbleCreateInput {
   id: string;

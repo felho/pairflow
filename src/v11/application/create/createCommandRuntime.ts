@@ -34,10 +34,12 @@ import type {
 } from "../../shared/remote/remoteExecutionTypes.js";
 import type {
   BubbleConfig,
-  BubbleDocContractGatesConfig,
   CreateReviewArtifactType,
   PairflowCommandProfile
 } from "../../../types/bubble.js";
+import type {
+  BubbleDocContractGatesConfig
+} from "../../shared/gates/docContractGateConfigTypes.js";
 import type { ResolvedRepoValidationProfileCommands } from "./repoValidationProfileResolver.js";
 import { GitRepositoryError } from "../../ports/gitRepository.js";
 import type { AssertGitRepositoryPort } from "../../ports/gitRepository.js";
