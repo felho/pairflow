@@ -30,9 +30,15 @@ import type {
   PairflowCommandProfile,
   QualityMode,
   ReviewArtifactType,
+  RoleMcpPolicy,
   ReviewerContextMode,
   WorkMode
 } from "./bubbleConfigVocabulary.js";
+
+export type BubbleRoleMcpConfig = Record<
+  keyof BubbleAgentsConfig,
+  RoleMcpPolicy
+>;
 
 export interface BubbleConfig {
   id: string;
@@ -56,6 +62,7 @@ export interface BubbleConfig {
   review_policy?: BubbleReviewPolicyConfig;
   validation_target?: BubbleValidationTargetConfig;
   agents: BubbleAgentsConfig;
+  role_mcp?: BubbleRoleMcpConfig;
   commands: BubbleCommandsConfig;
   notifications: BubbleNotificationsConfig;
   local_overlay?: BubbleLocalOverlayConfig;

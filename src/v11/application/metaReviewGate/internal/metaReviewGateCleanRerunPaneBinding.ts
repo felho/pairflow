@@ -12,6 +12,7 @@ import type {
 import { failCleanRerunClosed } from "./metaReviewGateCleanRerunDispatch.js";
 import { persistCleanRerunDeliveryObservation } from "./metaReviewGateCleanRerunObservation.js";
 import type { MetaReviewGateResult } from "../../../shared/metaReviewGate/metaReviewGateResultContract.js";
+import { DEFAULT_ROLE_MCP_POLICY_BY_ROLE } from "../../../../config/defaults.js";
 
 function isMetaReviewGateResult(
   value: LoadedStateSnapshot | MetaReviewGateResult
@@ -43,7 +44,10 @@ export async function resolveCleanRerunPaneBinding(input: {
       taskArtifactPath: finalizeInput.resolved.bubblePaths.taskArtifactPath,
       pairflowCommandProfile:
         finalizeInput.resolved.bubbleConfig.pairflow_command_profile ?? "external",
-      metaReviewerAgent: finalizeInput.resolved.bubbleConfig.agents.meta_reviewer
+      metaReviewerAgent: finalizeInput.resolved.bubbleConfig.agents.meta_reviewer,
+      metaReviewerMcpPolicy:
+        finalizeInput.resolved.bubbleConfig.role_mcp?.meta_reviewer
+        ?? DEFAULT_ROLE_MCP_POLICY_BY_ROLE.meta_reviewer
     });
   } catch (error) {
     const reason = error instanceof Error ? error.message : String(error);

@@ -14,6 +14,10 @@ export const pairflowCommandProfiles = ["external", "self_host"] as const;
 
 export type PairflowCommandProfile = (typeof pairflowCommandProfiles)[number];
 
+export const roleMcpPolicyValues = ["disabled", "enabled"] as const;
+
+export type RoleMcpPolicy = (typeof roleMcpPolicyValues)[number];
+
 export const reviewArtifactTypes = ["code", "document"] as const;
 
 export type ReviewArtifactType = (typeof reviewArtifactTypes)[number];
@@ -59,6 +63,13 @@ export function isPairflowCommandProfile(
   return (
     typeof value === "string" &&
     (pairflowCommandProfiles as readonly string[]).includes(value)
+  );
+}
+
+export function isRoleMcpPolicy(value: unknown): value is RoleMcpPolicy {
+  return (
+    typeof value === "string" &&
+    (roleMcpPolicyValues as readonly string[]).includes(value)
   );
 }
 

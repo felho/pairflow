@@ -50,6 +50,9 @@ export function prepareCreateBubbleInput(input: {
   if (input.command.metaReviewer !== undefined) {
     bubbleConfigInput.metaReviewer = input.command.metaReviewer;
   }
+  if (input.command.roleMcp !== undefined) {
+    bubbleConfigInput.roleMcp = input.command.roleMcp;
+  }
   if (input.command.watchdogTimeoutMinutes !== undefined) {
     bubbleConfigInput.watchdogTimeoutMinutes =
       input.command.watchdogTimeoutMinutes;

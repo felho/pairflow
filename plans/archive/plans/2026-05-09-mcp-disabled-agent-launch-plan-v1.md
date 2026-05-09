@@ -4,19 +4,20 @@ artifact_id: plan_mcp_disabled_agent_launch_v1
 plan_id: mcp-disabled-agent-launch-plan-v1
 created_on: "2026-05-09"
 title: "MCP-Disabled Agent Launch Defaults Plan"
-status: approved
-plan_status: approved
+status: done
+plan_status: done
 prd_ref: null
 owners:
   - "felho"
 task_order:
   - 1-mcp-disabled-agent-launch
-active_task_id: 1-mcp-disabled-agent-launch
+active_task_id: null
 archive_group: 2026-05-09-mcp-disabled-agent-launch-plan-v1
+last_completed_task_id: 1-mcp-disabled-agent-launch
 task_tracker:
   - task_id: 1-mcp-disabled-agent-launch
-    task_path: plans/tasks/1-mcp-disabled-agent-launch.md
-    status: in_progress
+    task_path: plans/archive/tasks/2026-05-09-mcp-disabled-agent-launch-plan-v1/1-mcp-disabled-agent-launch.md
+    status: archived
 ---
 
 # Plan: MCP-Disabled Agent Launch Defaults
@@ -143,11 +144,17 @@ durable config/rendering contract, launch-command consumer contract, fail-closed
 Codex discovery behavior, Claude strict empty MCP config behavior, focused test
 matrix, and deferred UI/status reporting boundary.
 
+2026-05-09 implementation close: task `1-mcp-disabled-agent-launch` completed
+via implementation bubble `1-mcp-disabled-agent-launch-impl` and was archived
+under the canonical plan archive group. Human override approved close despite
+failed full `pnpm test` evidence; lint, typecheck, fitness, focused coverage,
+and build evidence were present in the bubble artifacts.
+
 ## Open Task List
 
 | Task ID | Task Path | Purpose | Depends On | Closes Gap | Status |
 |---|---|---|---|---|---|
-| `1-mcp-disabled-agent-launch` | `plans/tasks/1-mcp-disabled-agent-launch.md` | Add config-driven default-disabled MCP launch policy for Pairflow roles, then apply the resolved role policy to the backing `codex` or `claude` launch command. | N/A | All open work in this plan. | in_progress |
+| `1-mcp-disabled-agent-launch` | `plans/archive/tasks/2026-05-09-mcp-disabled-agent-launch-plan-v1/1-mcp-disabled-agent-launch.md` | Add config-driven default-disabled MCP launch policy for Pairflow roles, then apply the resolved role policy to the backing `codex` or `claude` launch command. | N/A | All open work in this plan. | archived |
 
 ## Coverage Map
 

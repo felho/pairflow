@@ -9,7 +9,8 @@ import type {
 } from "../../shared/metaReviewGate/index.js";
 import type { AgentName } from "../../../contracts/kernel/agentIdentity.js";
 import type {
-  PairflowCommandProfile
+  PairflowCommandProfile,
+  RoleMcpPolicy
 } from "../../shared/config/bubbleConfigVocabulary.js";
 import {
   resolveMetaReviewGatePaneBindingTmuxCapabilities
@@ -18,6 +19,7 @@ import {
   resolveRuntimeSessionWorkspaceAuthority
 } from "../../shared/runtimeSessionWorkspaceAuthority.js";
 import { buildMetaReviewGateRunPrompt } from "./metaReviewGatePrompt.js";
+import { DEFAULT_ROLE_MCP_POLICY_BY_ROLE } from "../../../config/defaults.js";
 
 function resolveMetaReviewerWorkspaceAuthority(input: {
   bubbleId: string;
@@ -115,9 +117,14 @@ function buildMetaReviewerCommand(input: {
   repoPath: string;
   taskArtifactPath: string;
   pairflowCommandProfile: PairflowCommandProfile;
+  metaReviewerMcpPolicy: RoleMcpPolicy;
 }): string {
   return input.buildAgentCommand({
     agentName: input.metaReviewerAgent,
+    roleName: "meta_reviewer",
+    roleMcpPolicy:
+      input.metaReviewerMcpPolicy
+      ?? DEFAULT_ROLE_MCP_POLICY_BY_ROLE.meta_reviewer,
     bubbleId: input.bubbleId,
     workspacePath: input.workspacePath,
     pairflowCommandProfile: input.pairflowCommandProfile,
@@ -246,7 +253,10 @@ export const resolveMetaReviewerPaneWarning: ResolveMetaReviewerPaneWarning = as
     workspacePath,
     repoPath: bindStart.record.repoPath,
     taskArtifactPath: input.taskArtifactPath,
-    pairflowCommandProfile: input.pairflowCommandProfile
+    pairflowCommandProfile: input.pairflowCommandProfile,
+    metaReviewerMcpPolicy:
+      input.metaReviewerMcpPolicy
+      ?? DEFAULT_ROLE_MCP_POLICY_BY_ROLE.meta_reviewer
   });
   try {
     await respawnPaneCommand({

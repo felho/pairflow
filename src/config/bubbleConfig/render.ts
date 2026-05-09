@@ -1,7 +1,8 @@
 import {
   DEFAULT_LOCAL_OVERLAY_ENABLED,
   DEFAULT_LOCAL_OVERLAY_ENTRIES,
-  DEFAULT_LOCAL_OVERLAY_MODE
+  DEFAULT_LOCAL_OVERLAY_MODE,
+  DEFAULT_ROLE_MCP_POLICY_BY_ROLE
 } from "../defaults.js";
 import type { BubbleConfig } from "../../v11/shared/config/bubbleConfigTypes.js";
 
@@ -67,6 +68,7 @@ export function renderBubbleConfigToml(config: BubbleConfig): string {
   const ideation = config.ideation;
   const executor = config.executor;
   const reviewPolicy = config.review_policy;
+  const roleMcp = config.role_mcp ?? DEFAULT_ROLE_MCP_POLICY_BY_ROLE;
   const lines: Array<string | undefined> = [
     `id = ${tomlString(config.id)}`,
     config.bubble_instance_id
@@ -136,6 +138,11 @@ export function renderBubbleConfigToml(config: BubbleConfig): string {
     `implementer = ${tomlString(config.agents.implementer)}`,
     `reviewer = ${tomlString(config.agents.reviewer)}`,
     `meta_reviewer = ${tomlString(config.agents.meta_reviewer)}`,
+    "",
+    "[role_mcp]",
+    `implementer = ${tomlString(roleMcp.implementer)}`,
+    `reviewer = ${tomlString(roleMcp.reviewer)}`,
+    `meta_reviewer = ${tomlString(roleMcp.meta_reviewer)}`,
     "",
     "[commands]",
     config.commands.bootstrap

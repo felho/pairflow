@@ -20,7 +20,8 @@ import type { BubbleConfig } from "../../../../shared/config/bubbleConfigTypes.j
 import type { BubbleStateSnapshot } from "../../../../shared/state/bubbleStateSnapshotTypes.js";
 import type {
   CreateReviewArtifactType,
-  PairflowCommandProfile
+  PairflowCommandProfile,
+  RoleMcpPolicy
 } from "../../../../shared/config/bubbleConfigVocabulary.js";
 import type {
   BubbleDocContractGatesConfig
@@ -43,6 +44,7 @@ export interface BubbleCreateInput {
   implementer?: AgentName;
   reviewer?: AgentName;
   metaReviewer?: AgentName;
+  roleMcp?: Partial<Record<"implementer" | "reviewer" | "meta_reviewer", RoleMcpPolicy>>;
   watchdogTimeoutMinutes?: number;
   maxRounds?: number;
   severityGateRound?: number;

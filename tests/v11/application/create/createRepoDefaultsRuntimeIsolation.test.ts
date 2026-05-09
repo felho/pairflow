@@ -67,6 +67,9 @@ describe("create repo defaults runtime isolation", () => {
         'base_branch = "main"',
         "watchdog_timeout_minutes = 45",
         'reviewer_context_mode = "persistent"',
+        "",
+        "[defaults.role_mcp]",
+        'reviewer = "enabled"',
         ""
       ].join("\n"),
       "utf8"
@@ -105,5 +108,7 @@ describe("create repo defaults runtime isolation", () => {
     expect(status.bubbleToml).toContain('base_branch = "main"');
     expect(status.bubbleToml).toContain("watchdog_timeout_minutes = 45");
     expect(status.bubbleToml).toContain('reviewer_context_mode = "persistent"');
+    expect(status.bubbleToml).toContain("[role_mcp]");
+    expect(status.bubbleToml).toContain('reviewer = "enabled"');
   });
 });

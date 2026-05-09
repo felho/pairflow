@@ -10,6 +10,7 @@ import {
 import { submitTmuxPaneInput } from "./tmuxInput.js";
 import { buildAgentCommand } from "../../../shared/command/agentCommand.js";
 import { resolveRuntimeSessionWorkspaceAuthority } from "../../../shared/runtimeSessionWorkspaceAuthority.js";
+import { DEFAULT_ROLE_MCP_POLICY_BY_ROLE } from "../../../../config/defaults.js";
 import type {
   RefreshReviewerContextInput,
   RefreshReviewerContextResult
@@ -93,6 +94,10 @@ export async function refreshReviewerContext(
   const reviewerPaneIndex = getSharedTopologySlotPaneIndexForRole("reviewer");
   const reviewerCommand = buildAgentCommand({
     agentName: input.bubbleConfig.agents.reviewer,
+    roleName: "reviewer",
+    roleMcpPolicy:
+      input.bubbleConfig.role_mcp?.reviewer
+      ?? DEFAULT_ROLE_MCP_POLICY_BY_ROLE.reviewer,
     bubbleId: input.bubbleId,
     workspacePath,
     pairflowCommandProfile: input.bubbleConfig.pairflow_command_profile,

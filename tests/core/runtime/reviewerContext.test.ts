@@ -155,6 +155,53 @@ describe("refreshReviewerContext", () => {
     ]);
   });
 
+  it("uses bubble-local reviewer MCP opt-in when refreshing a Codex reviewer", async () => {
+    const calls: string[][] = [];
+    const runner: TmuxRunner = (args): Promise<TmuxRunResult> => {
+      calls.push(args);
+      return Promise.resolve({
+        stdout: "",
+        stderr: "",
+        exitCode: 0
+      });
+    };
+
+    const result = await refreshReviewerContext({
+      bubbleId: "b_reviewer_ctx_01",
+      bubbleConfig: {
+        ...baseConfig,
+        agents: {
+          ...baseConfig.agents,
+          reviewer: "codex"
+        },
+        role_mcp: {
+          implementer: "disabled",
+          reviewer: "enabled",
+          meta_reviewer: "disabled"
+        }
+      },
+      sessionsPath: "/tmp/repo/.pairflow/runtime/sessions.json",
+      reviewerStartupPrompt: "Reviewer brief: verify the current handoff.",
+      runner,
+      startupSubmitDelayMs: 0,
+      readSessionsRegistry: () =>
+        Promise.resolve({
+          b_reviewer_ctx_01: createRuntimeSessionRecord({
+            workspacePath: "/tmp/runtime-workspace",
+            workspaceKind: "worktree"
+          })
+        })
+    });
+
+    expect(result).toEqual({
+      refreshed: true
+    });
+    const reviewerCommand = calls[0]?.[6];
+    expect(typeof reviewerCommand).toBe("string");
+    expect(reviewerCommand).not.toContain("codex mcp list");
+    expect(reviewerCommand).not.toContain("PAIRFLOW_ROLE_MCP_DISABLE_ARGS");
+  });
+
   it("fails closed when explicit workspace authority is absent", async () => {
     const calls: string[][] = [];
     const runner: TmuxRunner = (args): Promise<TmuxRunResult> => {

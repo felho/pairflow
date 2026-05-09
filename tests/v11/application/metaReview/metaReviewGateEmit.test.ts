@@ -1,4 +1,4 @@
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -8,6 +8,7 @@ import {
   applyMetaReviewGateOnConvergenceV11,
   notifyMetaReviewerSubmissionRequestV11
 } from "../../../../src/v11/defaults/metaReviewGate/metaReviewGateApi.js";
+import { renderBubbleConfigToml } from "../../../../src/config/bubbleConfig.js";
 import type {
   MetaReviewGateRuntimeCapabilities,
   MetaReviewRuntimeDeliveryObservation,
@@ -208,6 +209,62 @@ describe("metaReviewGate V11 defaults", () => {
         buildAgentCommand?: unknown;
       };
     }).paneBinding?.tmux?.respawnPaneCommand).toBe("function");
+  });
+
+  it("threads bubble-local meta-reviewer MCP policy into apply pane binding", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_meta_review_apply_v11_mcp_policy",
+      task: "Verify apply path forwards meta-reviewer MCP policy."
+    });
+    await writeFile(
+      bubble.paths.bubbleTomlPath,
+      renderBubbleConfigToml({
+        ...bubble.config,
+        role_mcp: {
+          implementer: "disabled",
+          reviewer: "disabled",
+          meta_reviewer: "enabled"
+        }
+      }),
+      "utf8"
+    );
+    const observedPolicies: unknown[] = [];
+    const resolveMetaReviewerPaneWarning: ResolveMetaReviewerPaneWarning = async (
+      input
+    ) => {
+      observedPolicies.push(input.metaReviewerMcpPolicy);
+      return {
+        delivery: {
+          status: "confirmed",
+          reasonCode: null,
+          message: "ok"
+        },
+        shouldDeactivate: false
+      };
+    };
+
+    const result = await applyMetaReviewGateOnConvergenceV11({
+      bubbleId: bubble.bubbleId,
+      repoPath,
+      summary: "Ready for meta-review.",
+      now: new Date("2026-03-13T12:03:00.000Z")
+    }, {
+      resolveMetaReviewerPaneWarning,
+      setMetaReviewerPaneBinding: async () => ({
+        updated: false as const,
+        reason: "no_runtime_session" as const
+      }),
+      notifyMetaReviewerSubmissionRequest: async () => ({
+        status: "confirmed" as const,
+        reasonCode: null,
+        message: "ok"
+      })
+    });
+
+    expect(result.route).toBe("meta_review_running");
+    expect(observedPolicies).toEqual(["enabled"]);
   });
 
   it("leaves explicit notify overrides unused when pane-binding delivers the launch prompt", async () => {

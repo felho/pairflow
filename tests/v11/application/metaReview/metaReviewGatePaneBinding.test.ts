@@ -6,9 +6,15 @@ import {
 import {
   resolveMetaReviewerPaneWarning
 } from "../../../../src/v11/application/metaReviewGate/metaReviewGatePaneBinding.js";
+import {
+  resolveCleanRerunPaneBinding
+} from "../../../../src/v11/application/metaReviewGate/internal/metaReviewGateCleanRerunPaneBinding.js";
 import type {
   SetMetaReviewerPaneBindingPort
 } from "../../../../src/v11/ports/runtimeSessions.js";
+import type {
+  ResolveMetaReviewerPaneWarningInput
+} from "../../../../src/v11/shared/metaReviewGate/metaReviewGateRuntimeCapabilities.js";
 describe("metaReviewGatePaneBinding", () => {
   it("returns runtime-unavailable when agent command builder is missing", async () => {
     const result = await resolveMetaReviewerPaneWarning({
@@ -168,6 +174,118 @@ describe("metaReviewGatePaneBinding", () => {
       shouldDeactivate: false
     });
     expect(notifySubmissionRequest).not.toHaveBeenCalled();
+  });
+
+  it("passes explicit meta-reviewer MCP policy into the pane command builder", async () => {
+    const buildAgentCommand = vi.fn(
+      (input: { roleName?: string; roleMcpPolicy?: string }) => {
+        expect(input.roleName).toBe("meta_reviewer");
+        expect(input.roleMcpPolicy).toBe("enabled");
+        return "codex meta-review";
+      }
+    );
+    const respawnPaneCommand = vi.fn(async () => undefined);
+
+    const result = await resolveMetaReviewerPaneWarning({
+      setMetaReviewerPane: async () => ({
+        updated: true,
+        record: {
+          bubbleId: "b_meta_review_gate_mcp_policy",
+          repoPath: "/repo",
+          worktreePath: "/legacy/worktree",
+          workspacePath: "/runtime/workspace",
+          workspaceKind: "worktree" as const,
+          tmuxSessionName: "pf-b_meta_review_gate_mcp_policy",
+          updatedAt: "2026-04-13T00:00:00.000Z",
+          metaReviewerPane: {
+            role: "meta-reviewer",
+            paneIndex: 3,
+            active: true,
+            updatedAt: "2026-04-13T00:00:00.000Z"
+          }
+        }
+      }),
+      runtime: {
+        paneBinding: {
+          buildAgentCommand,
+          tmux: {
+            runner: vi.fn(),
+            respawnPaneCommand
+          }
+        }
+      },
+      sessionsPath: "/repo/.pairflow/runtime/sessions.json",
+      bubbleId: "b_meta_review_gate_mcp_policy",
+      round: 2,
+      now: new Date("2026-04-13T00:00:00.000Z"),
+      taskArtifactPath: "/repo/.pairflow/bubbles/b_meta_review_gate_mcp_policy/artifacts/task.md",
+      pairflowCommandProfile: "external",
+      metaReviewerAgent: "codex",
+      metaReviewerMcpPolicy: "enabled"
+    });
+
+    expect(result.delivery.status).toBe("confirmed");
+    expect(buildAgentCommand).toHaveBeenCalledTimes(1);
+    expect(respawnPaneCommand).toHaveBeenCalledTimes(1);
+  });
+
+  it("threads bubble-local meta-reviewer MCP policy through clean-rerun pane binding", async () => {
+    const observedPolicies: unknown[] = [];
+    const result = await resolveCleanRerunPaneBinding({
+      routeInput: {
+        finalizeInput: {
+          setMetaReviewerPane: vi.fn(),
+          resolvePaneWarning: async (input: ResolveMetaReviewerPaneWarningInput) => {
+            observedPolicies.push(input.metaReviewerMcpPolicy);
+            return {
+              delivery: {
+                status: "confirmed" as const,
+                reasonCode: null,
+                message: "ok"
+              },
+              shouldDeactivate: false
+            };
+          },
+          now: new Date("2026-04-13T00:00:00.000Z"),
+          resolved: {
+            bubbleId: "b_meta_review_clean_rerun_mcp_policy",
+            bubblePaths: {
+              sessionsPath: "/repo/.pairflow/runtime/sessions.json",
+              taskArtifactPath:
+                "/repo/.pairflow/bubbles/b_meta_review_clean_rerun_mcp_policy/artifacts/task.md"
+            },
+            bubbleConfig: {
+              pairflow_command_profile: "external",
+              agents: {
+                implementer: "codex",
+                reviewer: "codex",
+                meta_reviewer: "codex"
+              },
+              role_mcp: {
+                implementer: "disabled",
+                reviewer: "disabled",
+                meta_reviewer: "enabled"
+              }
+            }
+          }
+        }
+      },
+      kickoffResult: {
+        route: "meta_review_running",
+        state: {
+          round: 4
+        }
+      },
+      metaReviewRunningState: {
+        state: {
+          round: 4
+        },
+        fingerprint: "fp"
+      }
+    } as unknown as Parameters<typeof resolveCleanRerunPaneBinding>[0]);
+
+    expect("route" in result).toBe(false);
+    expect(observedPolicies).toEqual(["enabled"]);
   });
 
   it("fails closed when runtime workspace authority is absent", async () => {

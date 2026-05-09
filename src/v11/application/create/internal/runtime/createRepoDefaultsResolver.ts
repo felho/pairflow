@@ -1,6 +1,7 @@
 import type { RepoDefaultsConfig } from "../../../../../config/repoConfig.js";
 import type { AgentName } from "../../../../../contracts/kernel/agentIdentity.js";
 import type { BubbleCreateInput } from "./createCommandContract.js";
+import type { RoleMcpPolicy } from "../../../../shared/config/bubbleConfigVocabulary.js";
 import { toBubbleCreateError } from "./createCommandRuntime.js";
 
 export function resolveBaseBranch(input: {
@@ -116,6 +117,25 @@ function resolveDocContractGates(input: {
   };
 }
 
+function resolveRoleMcp(input: {
+  command: BubbleCreateInput;
+  repoDefaults: RepoDefaultsConfig;
+}): Pick<BubbleCreateInput, "roleMcp"> {
+  const defaultRoleMcp = input.repoDefaults.role_mcp;
+  const commandRoleMcp = input.command.roleMcp;
+  if (defaultRoleMcp === undefined && commandRoleMcp === undefined) {
+    return {};
+  }
+
+  const roleMcp: Partial<
+    Record<"implementer" | "reviewer" | "meta_reviewer", RoleMcpPolicy>
+  > = {
+    ...defaultRoleMcp,
+    ...commandRoleMcp
+  };
+  return { roleMcp };
+}
+
 function pickResolvedAgent(input: {
   explicit: AgentName | undefined;
   repoDefault: AgentName | undefined;
@@ -183,7 +203,6 @@ export function resolveRepoDefaultedCreateInput(input: {
     explicit: input.command.pairflowCommandProfile,
     repoDefault: defaults.pairflow_command_profile
   });
-
   const resolvedFields: Partial<BubbleCreateInput> = {
     baseBranch: input.baseBranch,
     ...(watchdogTimeoutMinutes !== undefined ? { watchdogTimeoutMinutes } : {}),
@@ -194,6 +213,10 @@ export function resolveRepoDefaultedCreateInput(input: {
     ...(reviewer !== undefined ? { reviewer } : {}),
     ...(metaReviewer !== undefined ? { metaReviewer } : {}),
     ...(pairflowCommandProfile !== undefined ? { pairflowCommandProfile } : {}),
+    ...resolveRoleMcp({
+      command: input.command,
+      repoDefaults: defaults
+    }),
     ...resolveReviewPolicy({
       command: input.command,
       repoDefaults: defaults

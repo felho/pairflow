@@ -19,6 +19,7 @@ import type {
 } from "../v11/shared/reviewPolicy/reviewPolicyTypes.js";
 import type {
   PairflowCommandProfile,
+  RoleMcpPolicy,
   ReviewerContextMode
 } from "../v11/shared/config/bubbleConfigVocabulary.js";
 import {
@@ -27,6 +28,7 @@ import {
 } from "../v11/shared/reviewPolicy/reviewPolicyTypes.js";
 import {
   isPairflowCommandProfile,
+  isRoleMcpPolicy,
   isReviewerContextMode
 } from "../v11/shared/config/bubbleConfigVocabulary.js";
 import {
@@ -80,6 +82,12 @@ export interface RepoDefaultsAgentsConfig {
   meta_reviewer?: AgentName;
 }
 
+export interface RepoDefaultsRoleMcpConfig {
+  implementer?: RoleMcpPolicy;
+  reviewer?: RoleMcpPolicy;
+  meta_reviewer?: RoleMcpPolicy;
+}
+
 export interface RepoDefaultsReviewPolicyConfig {
   review_loop_mode?: BubbleReviewLoopMode;
   reviewer_blocking_min_severity?: BubbleReviewAutoReworkSeverity;
@@ -99,6 +107,7 @@ export interface RepoDefaultsConfig {
   pairflow_command_profile?: PairflowCommandProfile;
   reviewer_context_mode?: ReviewerContextMode;
   agents?: RepoDefaultsAgentsConfig;
+  role_mcp?: RepoDefaultsRoleMcpConfig;
   review_policy?: RepoDefaultsReviewPolicyConfig;
   doc_contract_gates?: RepoDefaultsDocContractGatesConfig;
 }
@@ -226,6 +235,7 @@ function validateRepoDefaultsConfig(
     "pairflow_command_profile",
     "reviewer_context_mode",
     "agents",
+    "role_mcp",
     "review_policy",
     "doc_contract_gates"
   ]);
@@ -339,6 +349,49 @@ function validateRepoDefaultsConfig(
       }
       if (Object.keys(validatedAgents).length > 0) {
         validated.agents = validatedAgents;
+      }
+    }
+  }
+
+  const roleMcp = defaults.role_mcp;
+  if (roleMcp !== undefined) {
+    if (!isRecord(roleMcp)) {
+      errors.push({ path: "defaults.role_mcp", message: "Must be an object/section" });
+    } else {
+      const allowedRoleMcpKeys = new Set([
+        "implementer",
+        "reviewer",
+        "meta_reviewer"
+      ]);
+      for (const key of Object.keys(roleMcp)) {
+        if (!allowedRoleMcpKeys.has(key)) {
+          errors.push({
+            path: `defaults.role_mcp.${key}`,
+            message: `Unsupported defaults.role_mcp field "${key}".`
+          });
+        }
+      }
+      const validatedRoleMcp: RepoDefaultsRoleMcpConfig = {};
+      const roleMcpKeys = [
+        "implementer",
+        "reviewer",
+        "meta_reviewer"
+      ] as const;
+      for (const key of roleMcpKeys) {
+        const value = readOptionalEnum({
+          source: roleMcp,
+          key,
+          path: `defaults.role_mcp.${key}`,
+          errors,
+          isValid: isRoleMcpPolicy,
+          message: "Must be one of: disabled, enabled"
+        });
+        if (value !== undefined) {
+          validatedRoleMcp[key] = value;
+        }
+      }
+      if (Object.keys(validatedRoleMcp).length > 0) {
+        validated.role_mcp = validatedRoleMcp;
       }
     }
   }
