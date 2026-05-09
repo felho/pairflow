@@ -2,7 +2,7 @@
 artifact_type: task
 artifact_id: task_meta_review_gate_current_run_finalization_pipeline_v1
 title: "Meta-Review Gate Current-Run Finalization Pipeline"
-status: draft
+status: implementable
 phase: phase1
 target_files:
   - src/v11/application/metaReviewGate/metaReviewGateCurrentRunApi.ts
@@ -34,6 +34,12 @@ owners:
 ---
 
 # Task: Meta-Review Gate Current-Run Finalization Pipeline
+
+## Document Refinement Outcome (2026-05-09)
+
+This artifact is implementation-ready for a future code-scoped Pairflow bubble. The current document-refinement pass did not authorize or perform product/runtime/source edits; all `target_files`, L2 implementation notes, acceptance criteria, and scans below describe the future implementation scope only.
+
+If this task is executed under `review_artifact_type=document`, the allowed output is limited to refining this task/spec/progress/docs context. Any finding that requires source, test, UI, contract, or runtime config edits must route back to a code-scoped implementation bubble instead of being applied in a document bubble.
 
 ## Current Codebase Check (2026-05-09)
 
@@ -84,6 +90,7 @@ This is the same architectural pattern as the completed `meta-review submit` dee
 4. Keep shared contracts in `shared/metaReviewGate/**` only when they are genuinely multi-lane result/input vocabulary.
 5. Preserve existing `MetaReviewGateResult` route taxonomy and public input/output contracts.
 6. Do not introduce a new public route preview, dry-run, or diagnostics API in this task.
+7. Execute this task only in a code-scoped implementation bubble or equivalent direct implementation mode. A document-scoped bubble may refine this artifact but must not apply the code/test changes described here.
 
 ### In Scope
 
@@ -124,6 +131,7 @@ This is the same architectural pattern as the completed `meta-review submit` dee
 7. Moving current-run orchestration into `shared/metaReviewGate`.
 8. Adding a public dry-run, preview, UI, or diagnostics surface.
 9. Broad cleanup of unrelated `metaReviewGate` apply/start/pane-binding modules.
+10. Implementing any source/test/runtime changes while this artifact is being handled as `review_artifact_type=document`.
 
 ### Control Model
 
@@ -172,6 +180,7 @@ This is the same architectural pattern as the completed `meta-review submit` dee
 1. `contract_boundary_override`: `no`
 2. Rationale: this is an internal application orchestration refactor. Public CLI/API inputs, protocol payloads, route names, and result shapes must remain unchanged.
 3. If implementation discovers that changing `MetaReviewGateResult`, route names, protocol envelope payloads, or execution-authority semantics is necessary, stop and route back to task refinement or a Plan -> Task chain.
+4. If a document-scoped review discovers source-code changes are required, that is not a blocker on this artifact's implementability; it is a routing decision to run the implementation under code scope.
 
 ## L1 - Change Contract
 
@@ -391,6 +400,13 @@ Split decision: keep as one task because the scope is a cleanup/refactor of one 
 4. Transcript append failure after state write must continue to trigger the existing rollback attempt and error semantics.
 5. No new side effect may occur before the route decision has been selected from canonical current-run evidence.
 
+### 15) Execution-Mode Guard
+
+1. `document_scope_behavior`: refine task/spec/progress/docs artifacts only; do not edit implementation files, tests, UI components, contracts, dependency files, build artifacts, or runtime config.
+2. `code_scope_behavior`: implement the refactor described by L0-L2, then run the implementation validation suite in AC12.
+3. `route_back_trigger`: if the only way to satisfy reviewer feedback in document scope is to change source or tests, emit a blocker or replan request and preserve this task as the implementation handoff.
+4. `primary_artifact_rule`: this file remains the primary artifact for document refinements; do not replace it with a separate prose handoff unless a future task explicitly names a new target path.
+
 ## Acceptance Criteria
 
 1. AC1: `finalizeCurrentRunMetaReviewGate` delegates to `runCurrentRunMetaReviewGateFinalization(...)`.
@@ -404,7 +420,7 @@ Split decision: keep as one task because the scope is a cleanup/refactor of one 
 9. AC9: Final evidence includes scans showing that `metaReviewGateCurrentRunApi.ts` no longer imports/calls a broad spread of parity, threshold, sticky, auto-rework, approve routing, and route persistence helpers to reconstruct finalization order.
 10. AC10: No `src/v11/application/metaReviewGate/internal/metaReviewGateCurrentRun*.ts` files remain after the refactor. Current-run-specific behavior must live under `src/v11/application/metaReviewGate/internal/currentRun/**`.
 11. AC11: Any retained `metaReviewGateAutoRework*` or `metaReviewGateHumanGate*` module must be route-neutral. If it still knows current-run finalization context or route ordering, it must move under `internal/currentRun/**`.
-12. AC12: `pnpm typecheck`, `pnpm lint`, `pnpm fitness:check:ci`, relevant meta-review gate tests, broader affected tests, `pnpm test`, and `pnpm build` pass or are reported with exact failures.
+12. AC12: For the code-scoped implementation close, `pnpm typecheck`, `pnpm lint`, `pnpm fitness:check:ci`, relevant meta-review gate tests, broader affected tests, `pnpm test`, and `pnpm build` pass or are reported with exact failures. A document-scoped refinement pass may intentionally skip these runtime/build checks when it made no source/test/runtime changes, but its PASS summary must say so and must not attach fabricated evidence.
 13. AC13: The implementation preserves the canonical route list from `metaReviewGateRoutes`; no `human_gate_rework` route is introduced.
 
 Suggested final-state scans:
@@ -456,6 +472,7 @@ These choices do not require product clarification as long as current-run-specif
 3. Review must compare route semantics against current tests and source anchors before approving.
 4. Review must treat route taxonomy changes as out of scope.
 5. Review must verify caller knowledge reduction with scans, not only by reading the new directory layout.
+6. Review of a document-scoped pass must check only artifact readiness and scope consistency. It must not demand implementation evidence from a pass that was explicitly forbidden from changing code.
 
 ## Assumptions
 
