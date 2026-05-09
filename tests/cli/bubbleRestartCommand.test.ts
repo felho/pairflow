@@ -1,3 +1,6 @@
+import { readFile } from "node:fs/promises";
+import { resolve } from "node:path";
+
 import { describe, expect, it, vi } from "vitest";
 
 import {
@@ -75,5 +78,19 @@ describe("runBubbleRestartCommand", () => {
       cwd: "/tmp/cwd"
     });
     expect(result?.bubbleId).toBe("b_restart_02");
+  });
+
+  it("keeps top-level CLI wiring on the infrastructure-backed wrapper", async () => {
+    const cliIndex = await readFile(resolve("src/cli/index.ts"), "utf8");
+    const packageIndex = await readFile(resolve("src/index.ts"), "utf8");
+
+    expect(cliIndex).toContain("from \"./commands/bubble/restart.js\"");
+    expect(cliIndex).not.toContain(
+      "from \"../v11/application/restart/restartCliCommand.js\""
+    );
+    expect(packageIndex).toContain("from \"./cli/commands/bubble/restart.js\"");
+    expect(packageIndex).not.toContain(
+      "from \"./v11/application/restart/restartCliCommand.js\""
+    );
   });
 });
