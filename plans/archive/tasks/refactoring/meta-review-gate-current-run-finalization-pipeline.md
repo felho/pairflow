@@ -2,7 +2,7 @@
 artifact_type: task
 artifact_id: task_meta_review_gate_current_run_finalization_pipeline_v1
 title: "Meta-Review Gate Current-Run Finalization Pipeline"
-status: implementable
+status: archived
 phase: phase1
 target_files:
   - src/v11/application/metaReviewGate/metaReviewGateCurrentRunApi.ts
