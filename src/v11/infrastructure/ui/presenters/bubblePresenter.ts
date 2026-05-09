@@ -65,6 +65,9 @@ export function presentBubbleSummaryFromListEntry(
     bubbleId: entry.bubbleId,
     repoPath: entry.repoPath,
     worktreePath: entry.worktreePath,
+    ...(entry.reviewArtifactType !== undefined
+      ? { reviewArtifactType: entry.reviewArtifactType }
+      : {}),
     state: entry.state,
     round: entry.round,
     activeAgent: entry.activeAgent,
@@ -166,6 +169,9 @@ export function presentBubbleDetail(input: {
     bubbleId: input.status.bubbleId,
     repoPath: input.status.repoPath,
     worktreePath: input.status.worktreePath,
+    ...(input.status.reviewArtifactType !== undefined
+      ? { reviewArtifactType: input.status.reviewArtifactType }
+      : {}),
     bubbleToml: input.status.bubbleToml ?? null,
     state: input.status.state,
     round: input.status.round,

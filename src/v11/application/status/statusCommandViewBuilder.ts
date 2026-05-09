@@ -54,6 +54,7 @@ export interface BubbleStatusView {
   bubbleId: string;
   repoPath: string;
   worktreePath: string;
+  reviewArtifactType?: "code" | "document";
   bubbleToml?: string | undefined;
   bubbleStartedAt: string | null;
   state: BubbleLifecycleState;
@@ -170,6 +171,7 @@ function buildLocalBubbleStatusView(
     bubbleId: input.resolved.bubbleId,
     repoPath: input.resolved.repoPath,
     worktreePath: input.resolved.bubblePaths.worktreePath,
+    reviewArtifactType: input.resolved.bubbleConfig.review_artifact_type,
     bubbleStartedAt: inferBubbleStartedAtFromInstanceId(
       input.resolved.bubbleConfig.bubble_instance_id
     ),
@@ -239,6 +241,7 @@ function buildRemoteBubbleStatusView(
     bubbleId: input.resolved.bubbleId,
     repoPath: input.resolved.repoPath,
     worktreePath: input.resolved.bubblePaths.worktreePath,
+    reviewArtifactType: input.resolved.bubbleConfig.review_artifact_type,
     bubbleStartedAt: input.remoteStatusSnapshot.bubbleStartedAt,
     state: input.remoteStatusSnapshot.state,
     round: input.remoteStatusSnapshot.round,

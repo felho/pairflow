@@ -7,7 +7,10 @@ import type {
   BubbleReviewPolicyRuntimeView
 } from "../../reviewPolicy/reviewPolicyTypes.js";
 import type { BubbleLifecycleState } from "../../../../contracts/kernel/lifecycle.js";
-import type { UiBubbleAttention } from "../../../../contracts/ui/uiReadModel.js";
+import type {
+  UiBubbleAttention,
+  UiReviewArtifactType
+} from "../../../../contracts/ui/uiReadModel.js";
 import type { UiBubbleListRemoteExecution } from "../../../../types/uiRemoteExecution.js";
 
 export interface BubbleListInput {
@@ -21,6 +24,7 @@ export interface BubbleListEntry {
   bubbleId: string;
   repoPath: string;
   worktreePath: string;
+  reviewArtifactType?: UiReviewArtifactType;
   state: BubbleLifecycleState;
   round: number;
   activeAgent: string | null;

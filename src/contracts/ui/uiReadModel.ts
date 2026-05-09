@@ -26,6 +26,7 @@ export type UiExecutionContextAwaitedOutputType =
   | "meta_review_result";
 export type UiWorkMode = "worktree" | "clone";
 export type UiPairflowCommandProfile = "external" | "self_host";
+export type UiReviewArtifactType = "code" | "document";
 export type UiGateSignalLevel = "warning" | "info";
 export type UiGateReasonCode =
   | "DOC_CONTRACT_PARSE_WARNING"
@@ -237,6 +238,7 @@ export interface UiBubbleSummary {
   bubbleId: string;
   repoPath: string;
   worktreePath: string;
+  reviewArtifactType?: UiReviewArtifactType;
   state: BubbleLifecycleState;
   round: number;
   activeAgent: string | null;
@@ -256,6 +258,7 @@ export interface UiBubbleListEntry {
   bubbleId: string;
   repoPath: string;
   worktreePath: string;
+  reviewArtifactType?: UiReviewArtifactType;
   state: BubbleLifecycleState;
   round: number;
   activeAgent: string | null;
@@ -349,6 +352,7 @@ export interface UiBubbleStatusView {
   bubbleId: string;
   repoPath: string;
   worktreePath: string;
+  reviewArtifactType?: UiReviewArtifactType;
   bubbleToml?: string | undefined;
   bubbleStartedAt: string | null;
   state: BubbleLifecycleState;

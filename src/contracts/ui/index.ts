@@ -115,6 +115,7 @@ export type {
   UiPendingInboxItemSource,
   UiPendingInboxItemType,
   UiRepoSummary,
+  UiReviewArtifactType,
   UiReviewVerificationState,
   UiRuntimeHealth,
   UiRuntimeMetaReviewerPaneBinding,

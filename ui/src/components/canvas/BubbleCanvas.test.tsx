@@ -88,8 +88,10 @@ function createDeferred<T>(): {
 }
 
 describe("BubbleCanvas", () => {
-  const bubbleReviewPrompt =
-    "b-1: review the bubble, deep mode, be very verbose";
+  const codeBubblePrompt =
+    "b-1: approve and close the bubble and then delete it if the merge was successful";
+  const documentBubblePrompt =
+    "b-1: approve and close the bubble and then delete it if the merge was successful, and then start the implementation bubble for the task subject of this doc refinement bubble";
 
   beforeEach(() => {
     copyToClipboardMock.mockReset();
@@ -646,7 +648,7 @@ describe("BubbleCanvas", () => {
     expect(onToggleExpand).toHaveBeenCalledWith("b-1");
   });
 
-  it("copies bubble review prompt on double click of bubble id label", () => {
+  it("copies code bubble close prompt on double click of bubble id label", () => {
     vi.useFakeTimers();
     const onToggleExpand = vi.fn();
     render(
@@ -672,7 +674,7 @@ describe("BubbleCanvas", () => {
     vi.advanceTimersByTime(240);
 
     expect(copyToClipboardMock).toHaveBeenCalledTimes(1);
-    expect(copyToClipboardMock).toHaveBeenCalledWith(bubbleReviewPrompt);
+    expect(copyToClipboardMock).toHaveBeenCalledWith(codeBubblePrompt);
     expect(onToggleExpand).not.toHaveBeenCalled();
   });
 
@@ -912,7 +914,7 @@ describe("BubbleCanvas", () => {
     });
   });
 
-  it("copies bubble review prompt on double click of bubble name label", () => {
+  it("copies document bubble close prompt on double click of bubble name label", () => {
     vi.useFakeTimers();
     const onToggleExpand = vi.fn();
     render(
@@ -920,7 +922,8 @@ describe("BubbleCanvas", () => {
         bubbles={[
           bubbleCard({
             bubbleId: "b-1",
-            repoPath: "/repo-a"
+            repoPath: "/repo-a",
+            reviewArtifactType: "document"
           })
         ]}
         positions={{}}
@@ -938,7 +941,7 @@ describe("BubbleCanvas", () => {
     vi.advanceTimersByTime(240);
 
     expect(copyToClipboardMock).toHaveBeenCalledTimes(1);
-    expect(copyToClipboardMock).toHaveBeenCalledWith(bubbleReviewPrompt);
+    expect(copyToClipboardMock).toHaveBeenCalledWith(documentBubblePrompt);
     expect(onToggleExpand).not.toHaveBeenCalled();
   });
 

@@ -12,6 +12,7 @@ import {
   isMetaReviewRuntimeDeliveryStatus
 } from "../../shared/metaReview/metaReviewSnapshotTypes.js";
 import {
+  isReviewArtifactType,
   workModes
 } from "../../shared/config/bubbleConfigVocabulary.js";
 
@@ -413,7 +414,10 @@ export function isUiRepoSummary(value: unknown): value is UiRepoSummary {
 export function isUiBubbleSummary(value: unknown): value is UiBubbleSummary {
   if (
     !isRecord(value) ||
-    !hasExactKeys(value, uiBubbleSummaryRequiredKeys, ["remoteExecution"])
+    !hasExactKeys(value, uiBubbleSummaryRequiredKeys, [
+      "remoteExecution",
+      "reviewArtifactType"
+    ])
   ) {
     return false;
   }
@@ -437,6 +441,8 @@ function hasUiBubbleSummaryIdentityFields(
     typeof value.bubbleId === "string" &&
     typeof value.repoPath === "string" &&
     typeof value.worktreePath === "string" &&
+    (value.reviewArtifactType === undefined ||
+      isReviewArtifactType(value.reviewArtifactType)) &&
     lifecycleStates.has(value.state as string) &&
     typeof value.round === "number"
   );
@@ -477,6 +483,6 @@ export function hasUiBubbleSummaryKeys(
   return hasExactKeys(
     value,
     [...uiBubbleSummaryRequiredKeys, ...extraRequired],
-    ["remoteExecution", ...extraOptional]
+    ["remoteExecution", "reviewArtifactType", ...extraOptional]
   );
 }

@@ -15,6 +15,7 @@ import type {
   BubblePosition
 } from "../../lib/types";
 import { copyToClipboard } from "../../lib/clipboard";
+import { buildBubbleClipboardPrompt } from "../../lib/bubbleClipboardPrompt";
 import {
   bubbleDimensions,
   defaultPosition,
@@ -155,7 +156,7 @@ function BubbleCard(props: BubbleCardProps): JSX.Element {
 
   const copyBubbleId = useCallback(async () => {
     clearPendingOpen();
-    const bubbleReviewPrompt = `${props.bubble.bubbleId}: review the bubble, deep mode, be very verbose`;
+    const bubbleReviewPrompt = buildBubbleClipboardPrompt(props.bubble);
     try {
       await copyToClipboard(bubbleReviewPrompt);
       props.onCopySuccess(props.bubble.bubbleId);
@@ -167,6 +168,7 @@ function BubbleCard(props: BubbleCardProps): JSX.Element {
   }, [
     clearPendingOpen,
     props.bubble.bubbleId,
+    props.bubble.reviewArtifactType,
     props.onCopyError,
     props.onCopySuccess
   ]);

@@ -36,6 +36,7 @@ export function bubbleSummary(input: {
   runtimeSession?: UiBubbleSummary["runtimeSession"];
   stale?: boolean;
   round?: number;
+  reviewArtifactType?: UiBubbleSummary["reviewArtifactType"];
   activeAgent?: UiBubbleSummary["activeAgent"];
   activeRole?: UiBubbleSummary["activeRole"];
   attention?: UiBubbleSummary["attention"];
@@ -59,6 +60,7 @@ export function bubbleSummary(input: {
     bubbleId: input.bubbleId,
     repoPath: input.repoPath,
     worktreePath: `/tmp/${input.bubbleId}`,
+    reviewArtifactType: input.reviewArtifactType ?? "code",
     state,
     round: input.round ?? 3,
     activeAgent: input.activeAgent ?? "codex",
@@ -101,6 +103,7 @@ export function bubbleCard(input: {
   runtimeSession?: UiBubbleSummary["runtimeSession"];
   stale?: boolean;
   round?: number;
+  reviewArtifactType?: UiBubbleSummary["reviewArtifactType"];
   activeAgent?: UiBubbleSummary["activeAgent"];
   activeRole?: UiBubbleSummary["activeRole"];
   attention?: UiBubbleSummary["attention"];
@@ -121,6 +124,7 @@ export function bubbleDetail(input: {
   state?: UiBubbleSummary["state"];
   runtimeSession?: UiBubbleSummary["runtimeSession"];
   stale?: boolean;
+  reviewArtifactType?: UiBubbleSummary["reviewArtifactType"];
   attention?: UiBubbleSummary["attention"];
   reviewPolicy?: UiBubbleSummary["reviewPolicy"];
   remoteExecution?: UiBubbleSummary["remoteExecution"];

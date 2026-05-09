@@ -61,8 +61,10 @@ function renderExpandedCard(overrides: RenderExpandedCardOverrides = {}): void {
 }
 
 describe("BubbleExpandedCard", () => {
-  const bubbleReviewPrompt =
-    "b-expanded-1: review the bubble, deep mode, be very verbose";
+  const codeBubblePrompt =
+    "b-expanded-1: approve and close the bubble and then delete it if the merge was successful";
+  const documentBubblePrompt =
+    "b-expanded-1: approve and close the bubble and then delete it if the merge was successful, and then start the implementation bubble for the task subject of this doc refinement bubble";
 
   beforeEach(() => {
     copyToClipboardMock.mockReset();
@@ -488,25 +490,42 @@ describe("BubbleExpandedCard", () => {
     expect(screen.getByText(/Start it first, then attach/u)).toBeInTheDocument();
   });
 
-  it("copies bubble review prompt on double click of expanded bubble id label", async () => {
+  it("copies code bubble close prompt on double click of expanded bubble id label", async () => {
     renderExpandedCard();
 
     fireEvent.doubleClick(screen.getByText("b-expanded-1"));
 
     await waitFor(() => {
       expect(copyToClipboardMock).toHaveBeenCalledTimes(1);
-      expect(copyToClipboardMock).toHaveBeenCalledWith(bubbleReviewPrompt);
+      expect(copyToClipboardMock).toHaveBeenCalledWith(codeBubblePrompt);
     });
   });
 
-  it("copies bubble review prompt on double click of expanded repo label", async () => {
+  it("copies document bubble close prompt on double click of expanded repo label", async () => {
+    renderExpandedCard({
+      bubble: bubbleCard({
+        bubbleId: "b-expanded-1",
+        repoPath: "/repo-a",
+        reviewArtifactType: "document"
+      })
+    });
+
+    fireEvent.doubleClick(screen.getByText("repo-a"));
+
+    await waitFor(() => {
+      expect(copyToClipboardMock).toHaveBeenCalledTimes(1);
+      expect(copyToClipboardMock).toHaveBeenCalledWith(documentBubblePrompt);
+    });
+  });
+
+  it("copies code bubble close prompt on double click of expanded repo label", async () => {
     renderExpandedCard();
 
     fireEvent.doubleClick(screen.getByText("repo-a"));
 
     await waitFor(() => {
       expect(copyToClipboardMock).toHaveBeenCalledTimes(1);
-      expect(copyToClipboardMock).toHaveBeenCalledWith(bubbleReviewPrompt);
+      expect(copyToClipboardMock).toHaveBeenCalledWith(codeBubblePrompt);
     });
   });
 

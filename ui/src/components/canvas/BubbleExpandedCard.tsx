@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { getAttachAvailability } from "../../lib/attachAvailability";
+import { buildBubbleClipboardPrompt } from "../../lib/bubbleClipboardPrompt";
 import { copyToClipboard } from "../../lib/clipboard";
 import type {
   BubbleActionKind,
@@ -161,7 +162,7 @@ export function BubbleExpandedCard(props: BubbleExpandedCardProps): JSX.Element 
   const [timelineCompact, setTimelineCompact] = useState(true);
 
   const copyBubbleId = useCallback(async () => {
-    const bubbleReviewPrompt = `${props.bubble.bubbleId}: review the bubble, deep mode, be very verbose`;
+    const bubbleReviewPrompt = buildBubbleClipboardPrompt(props.bubble);
     try {
       await copyToClipboard(bubbleReviewPrompt);
       setCopyError(null);
@@ -170,7 +171,7 @@ export function BubbleExpandedCard(props: BubbleExpandedCardProps): JSX.Element 
         `Copy bubble ID failed (${props.bubble.bubbleId}): ${asMessage(error)}`
       );
     }
-  }, [props.bubble.bubbleId]);
+  }, [props.bubble.bubbleId, props.bubble.reviewArtifactType]);
 
   const pendingQuestion =
     attachSource.state === "WAITING_HUMAN" && props.detail !== null
