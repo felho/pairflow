@@ -73,6 +73,8 @@ owners:
 6. The implementation must preserve visible `converged` command behavior while removing the legacy import paths completely. There is no transitional compatibility mode for this task.
 7. `src/v11/shared/converged/**` currently owns shared command types, the converged command error class, input normalization, and protocol vocabulary. It must remain a vocabulary/type/error boundary only; command workflow sequencing belongs in `application/converged/**`.
 8. `convergedRolloutBlockingReasonResolver.ts` and `metaReviewRolloutBlockingReasonCodes.ts` are command-local orchestration/gate support. Their target owner is `application/converged/internal/orchestration/**` unless implementation proves the gate cluster is the narrower owner. They must not move to `shared/converged/**`.
+9. `src/v11/application/converged/convergedCommandOrchestration.ts` currently re-exports the full internal orchestration module, and that internal module currently exports `resolveConvergedRolloutBlockingReasonCodes`. The cleanup must treat that resolver as internal orchestration/gate support, not as part of the public command facade.
+10. `src/v11/defaults/converged/convergedDependencyDefaults.ts` is the defaults composition-root module and may continue to be imported by CLI/test setup/defaults bootstrap code. The forbidden path is its current import from the top-level application wrapper `src/v11/application/converged/convergedDependencyDefaults.ts`.
 
 ## Task-Mode Readiness Self-Check (2026-05-09)
 
@@ -131,6 +133,7 @@ This task must finish the cleanup. No temporary aliases, no old-wrapper barrels,
 2. Replace production imports of deleted wrappers with either:
    - the public command surface, when the consumer needs command behavior or public result types;
    - the exact internal module path, only when the consumer is an in-module test or a converged-internal implementation file.
+   - Narrow exception: `src/v11/defaults/converged/**` is production composition-root wiring code, not a public command behavior consumer. It may import the exact internal dependency-default owner only for default dependency registration/configuration, and only when the import does not expose helper behavior to callers or preserve a deleted top-level application wrapper path.
 3. Make `convergedCommandOrchestration.ts` a real public boundary rather than a broad `export *` barrel. It may delegate to `internal/orchestration/**`, but it should export only intentional public command API names.
 4. Keep `runConvergedFlow.ts` and `runConvergedFlowContract.ts` only if direct flow-boundary tests remain justified. If they remain, make their exports explicit rather than `export *` barrels.
    - Retention decision owner: the implementer must decide during the import inventory.
@@ -143,6 +146,7 @@ This task must finish the cleanup. No temporary aliases, no old-wrapper barrels,
    - `EmitConvergedInput`
    - `EmitConvergedDependencies`
    - `EmitConvergedResult`
+   - No rollout-blocking resolver, validation helper, finalization helper, dependency-default helper, flow helper, or gate-delivery helper is part of this public command API.
 6. Preserve existing command behavior:
    - input normalization;
    - routing preparation;
@@ -235,9 +239,10 @@ This task touches `src/index.ts`, so it explicitly evaluates the public-contract
 | Validation helpers | Top-level wrappers expose internals | Internal validation cluster only | Delete top-level wrappers and update focused tests to internal path | `rg "application/converged/convergedValidation"` has no production hits |
 | Finalization helpers | Top-level wrappers expose internals | Internal finalization cluster only | Delete top-level wrappers and update focused tests to internal path | Finalization tests import `internal/finalization/**` |
 | Gate helpers | Top-level wrappers expose internals | Internal gate cluster only | Delete top-level wrappers and update focused tests to internal path | Gate tests import `internal/gate/**` or public command result |
-| Default dependency helpers | Top-level wrappers expose orchestration internals | Internal orchestration cluster only unless public API needs them | Delete wrappers and route production dependency construction through public command API | No top-level default-dependency wrapper remains |
-| Defaults composition root | `src/v11/defaults/converged/convergedDependencyDefaults.ts` imports the top-level `application/converged/convergedDependencyDefaults.js` wrapper | Defaults may configure concrete dependencies but must target the surviving public command surface or exact internal owner selected by the refactor | Include `src/v11/defaults/converged/**` in import inventory and rewrite away from deleted wrapper paths | Defaults converged imports are listed in final migration summary and typecheck proves wiring |
+| Default dependency helpers | Top-level wrappers expose orchestration internals | Internal orchestration cluster; public command API must not expose dependency-default helpers | Delete top-level wrappers. Route command behavior consumers through public command API; route the defaults composition-root module through the narrow exact-internal dependency-default owner exception only for registration/configuration | No top-level default-dependency wrapper remains, and defaults composition-root imports are classified separately from command behavior consumers |
+| Defaults composition root | `src/v11/defaults/converged/convergedDependencyDefaults.ts` imports the top-level `application/converged/convergedDependencyDefaults.js` wrapper | Defaults may configure concrete dependencies and may use the exact internal dependency-default owner as a narrow composition-root exception; it is not a general production helper-import allowance | Include `src/v11/defaults/converged/**` in import inventory and rewrite away from deleted wrapper paths | Defaults converged imports are listed in final migration summary and typecheck proves wiring |
 | Rollout blocking helpers | Rollout reason helpers are exposed through top-level wrappers | Command-local orchestration/gate support, not shared workflow vocabulary | Keep under `internal/orchestration/**` unless `internal/gate/**` is proven narrower; do not move to `shared/converged/**` | Import inventory names final owner and no top-level wrapper remains |
+| Public facade leakage | The current orchestration implementation export surface includes `resolveConvergedRolloutBlockingReasonCodes` | Resolver remains internal to orchestration/gate support | Do not re-export the resolver from any retained top-level public converged surface; migrate focused tests to the internal owner | Close evidence lists the retained top-level public converged files, proves each retained public file uses explicit named exports rather than `export *`, and proves none of those retained public files exports `resolveConvergedRolloutBlockingReasonCodes`. Deleted flow files count as deletion evidence, not absent-file `rg` evidence |
 | `src/index.ts` barrel | Re-exports internal helper wrappers | Exports only `convergedCommandOrchestration.ts` public command API | Remove deleted helper exports; do not export flow unless an external package consumer is proven | Typecheck and `rg` prove no deleted exports |
 | Fitness | Wrapper pattern can reappear | Generic report-only `internal_module_boundary` camouflage radar identifies public files that only re-export `./internal/**` | Do not add a converged-only rule; use the existing generic warning list as before/after evidence | Report before cleanup includes converged wrappers; report after cleanup no longer includes the cleaned converged paths |
 
@@ -284,6 +289,11 @@ The public/internal duplicate basename for `convergedCommandOrchestration.ts` is
 4. Production code outside `application/converged/internal/**` must not import deleted helper paths.
 5. `src/index.ts` must not preserve removed helper exports. It should export the public command API only; retained flow surfaces are not package-level exports unless this task proves a package-level consumer.
 6. `src/v11/shared/converged/**` is limited to shared command types, command error, input normalization, and protocol vocabulary. Do not place rollout blocking, validation, finalization, gate delivery, or dependency default workflow code there.
+7. No retained top-level public converged surface may export `resolveConvergedRolloutBlockingReasonCodes`. This includes `convergedCommandOrchestration.ts` and any retained `runConvergedFlow*` files. Focused tests for that resolver must import the selected internal owner directly.
+   - Evidence must be collected from the retained public surface file set after deletion/retention decisions are known. Do not pass possibly deleted files as raw `rg` path arguments and treat an absent-file error as proof.
+   - The evidence must include both:
+     - no `export *` remains in retained top-level public converged surface files;
+     - no retained top-level public converged surface exports `resolveConvergedRolloutBlockingReasonCodes`.
 
 ### Required Import Inventory
 
@@ -292,9 +302,11 @@ Before editing imports, collect and record an inventory for these groups:
 1. `src/v11/application/pass/**` converged imports.
 2. `src/v11/application/actorProtocol/**` converged imports.
 3. `src/v11/defaults/converged/**` converged imports.
+   - Classify `src/v11/defaults/converged/convergedDependencyDefaults.ts` separately from `src/v11/application/converged/convergedDependencyDefaults.ts`. Imports of the defaults composition-root module are allowed; imports from the application wrapper are not.
 4. `src/cli/commands/agent/converged.ts` converged imports.
-5. `src/index.ts` converged exports.
-6. `tests/**` converged imports.
+5. Defaults composition-root consumers that import `src/v11/defaults/converged/convergedDependencyDefaults.ts`, including CLI bootstrap, test setup, and other defaults bootstrap modules.
+6. `src/index.ts` converged exports.
+7. `tests/**` converged imports.
 
 Each imported top-level converged path must be classified as:
 
@@ -302,8 +314,9 @@ Each imported top-level converged path must be classified as:
 2. retained public flow boundary;
 3. internal cluster test;
 4. accidental compatibility import.
+5. defaults composition-root bootstrap import, only when the imported path is `src/v11/defaults/converged/convergedDependencyDefaults.ts` rather than `src/v11/application/converged/convergedDependencyDefaults.ts`.
 
-Do not delete a wrapper until its in-repo import count is zero. Required evidence before each deletion is an `rg` result or equivalent showing zero imports for that wrapper basename/path.
+Do not delete a wrapper until its in-repo import count is zero. Required evidence before each deletion is an `rg` result or equivalent showing zero imports for the exact top-level application wrapper path, for example `src/v11/application/converged/<wrapper>.ts` and imports ending in `application/converged/<wrapper>.js` or `../converged/<wrapper>.js`. Do not use basename-only evidence for `convergedDependencyDefaults`, because `src/v11/defaults/converged/convergedDependencyDefaults.ts` is an allowed composition-root module with the same basename.
 
 ### Deletion Test
 
@@ -340,12 +353,14 @@ If a wrapper must remain, the implementation must stop and route back to task re
    - Include explicit pass/actorProtocol scans:
      - `rg -n "application/converged|\\.\\./converged|shared/converged" src/v11/application/pass src/v11/application/actorProtocol`
      - `rg -n "application/converged|\\.\\./\\.\\./application/converged|shared/converged" src/v11/defaults/converged`
+     - `rg -n "defaults/converged/convergedDependencyDefaults|\\.\\./defaults/converged/convergedDependencyDefaults|\\.\\./converged/convergedDependencyDefaults" src tests`
      - `rg -n "v11/application/converged|application/converged|\\.\\./converged" src tests`
 2. Classify each import:
    - public command behavior;
    - retained public flow boundary;
    - internal cluster test;
    - accidental compatibility import.
+   - defaults composition-root bootstrap import, only for `src/v11/defaults/converged/convergedDependencyDefaults.ts` imports; do not apply this category to the deleted top-level application wrapper `src/v11/application/converged/convergedDependencyDefaults.ts`.
 3. Decide `runConvergedFlow.ts` / `runConvergedFlowContract.ts` retention:
    - retain only with a named production caller or named non-migratable test scenario;
    - otherwise migrate tests to `internal/flow/**` and delete the top-level flow wrappers.
@@ -354,17 +369,29 @@ If a wrapper must remain, the implementation must stop and route back to task re
 6. Replace accidental compatibility imports with the narrow public or internal owner. If no owner exists, refine the module boundary instead of keeping a wrapper.
 7. For each wrapper, verify zero in-repo imports before deletion.
 8. Replace top-level pass-through `export *` files for retained public surfaces with named exports.
+   - `convergedCommandOrchestration.ts` named exports are limited to `emitConvergedFromWorkspaceCommandOrchestration`, `throwAsConvergedCommandError`, `ConvergedCommandError`, and the `EmitConverged*` public command types.
+   - If `runConvergedFlow.ts` or `runConvergedFlowContract.ts` are retained, they must also use explicit named exports and must not export `resolveConvergedRolloutBlockingReasonCodes`.
 9. Delete all non-retained top-level wrapper files.
 10. Keep rollout blocking helpers under `internal/orchestration/**` unless implementation proves `internal/gate/**` is narrower; do not move them to `shared/converged/**`.
 11. Rewrite `src/v11/defaults/converged/**` away from deleted top-level application wrappers.
    - The defaults module may remain the composition owner for concrete infrastructure ports.
-   - It must import the surviving public command surface or the exact internal dependency-default owner chosen by the cleanup, with no compatibility wrapper retained.
+   - As a narrow composition-root exception to the production import rule above, it may import the exact internal dependency-default owner chosen by the cleanup only to register/configure default dependencies.
+   - It must not import other internal converged workflow helpers, expose internal helper behavior to callers, or retain any deleted top-level application wrapper path.
+   - Do not treat CLI/test setup/defaults bootstrap imports of `src/v11/defaults/converged/convergedDependencyDefaults.ts` as violations; those imports initialize defaults and are outside the deleted application-wrapper surface.
+   - Inventory and final summary must classify those bootstrap imports separately so they are not confused with forbidden `src/v11/application/converged/convergedDependencyDefaults.ts` wrapper imports.
 12. Update `src/index.ts` so it exports only the intentional converged public command API.
 13. Run the generic `internal_module_boundary` fitness report and capture before/after evidence:
    - before cleanup, the relevant converged wrappers should appear as report-only internal re-export camouflage candidates;
    - after cleanup, every wrapper deleted or converted by this task must be absent from that camouflage warning list.
-14. Run `rg` scans for deleted wrapper basenames in `src` and `tests`.
-15. Run focused converged tests, then required repo verification for source changes.
+14. Run `rg` scans for deleted top-level application wrapper paths in `src` and `tests`.
+   - For most wrappers, basename scans are acceptable if reviewed for false positives.
+   - For `convergedDependencyDefaults`, the evidence must be path-qualified to `src/v11/application/converged/convergedDependencyDefaults.ts` and imports ending in `application/converged/convergedDependencyDefaults.js` or `../converged/convergedDependencyDefaults.js`; allowed `src/v11/defaults/converged/convergedDependencyDefaults.ts` imports must not fail the cleanup.
+15. Prove resolver non-leak against the retained public surface set after the retention decision:
+   - list retained top-level public converged files;
+   - scan those retained files for `export *` and fail if any remain;
+   - scan those retained files for `resolveConvergedRolloutBlockingReasonCodes` exports and fail if any remain;
+   - if `runConvergedFlow.ts` or `runConvergedFlowContract.ts` are deleted, cite the deletion list instead of scanning those absent files.
+16. Run focused converged tests, then required repo verification for source changes.
 
 ### Suggested Focused Tests
 
@@ -397,6 +424,8 @@ Because this task changes TypeScript source, use the repository default verifica
 8. `src/index.ts` exports the public converged command API and no deleted helper wrappers. It does not export retained flow surfaces unless a package-level consumer is proven.
 9. `shared/converged/**` contains only command types, command error, input normalization, and protocol vocabulary; no workflow sequencing or rollout blocking helper is moved there.
 10. `convergedRolloutBlockingReasonResolver` and `metaReviewRolloutBlockingReasonCodes` have an explicit final owner under `internal/orchestration/**` or, if proven narrower, `internal/gate/**`.
+    - `resolveConvergedRolloutBlockingReasonCodes` is not exported by any retained top-level public converged surface after cleanup, including retained `runConvergedFlow*` surfaces.
+    - Retained public surface files use explicit named exports, so the non-leak proof is not invalidated by a wildcard re-export.
 11. `src/v11/defaults/converged/**` no longer imports deleted top-level converged wrappers and still owns concrete dependency composition.
 12. The generic `internal_module_boundary` report-only camouflage diagnostic no longer lists the converged wrapper files cleaned by this task.
 13. No `legacy`, `compat`, `deprecated`, `bridge`, or alias module is introduced for the deleted paths.
@@ -413,9 +442,16 @@ The implementation close summary must include:
    - retained with named production caller or named non-migratable test scenario.
 4. `shared/converged/**` scope confirmation.
 5. Rollout blocking helper final owner confirmation.
-6. Import migration summary by consumer group, including `pass/**`, `actorProtocol/**`, `defaults/converged/**`, CLI, `src/index.ts`, and tests.
+6. Import migration summary by consumer group, including `pass/**`, `actorProtocol/**`, `defaults/converged/**`, defaults composition-root bootstrap consumers, CLI, `src/index.ts`, and tests.
+   - Defaults composition-root bootstrap consumers must be listed separately from forbidden `src/v11/application/converged/convergedDependencyDefaults.ts` wrapper imports.
 7. Per-wrapper zero-import evidence before deletion.
-8. `rg` evidence that deleted wrapper basenames have no stale `src` production imports.
-9. `src/index.ts` export summary.
-10. Verification command results.
-11. Fitness drift note naming `internal_module_boundary` report-only internal re-export camouflage diagnostics and confirming the cleaned converged paths no longer appear there.
+8. `rg` evidence that deleted top-level application wrapper paths have no stale `src` production imports.
+   - `convergedDependencyDefaults` evidence must be path-qualified so allowed imports of `src/v11/defaults/converged/convergedDependencyDefaults.ts` do not false-fail the deletion check.
+9. Resolver non-leak proof for the retained public surface set:
+   - retained top-level public converged file list;
+   - named-export proof showing no retained public file still uses `export *`;
+   - proof that retained public files do not export `resolveConvergedRolloutBlockingReasonCodes`;
+   - deletion evidence for any non-retained `runConvergedFlow*` public-surface candidate instead of absent-file scan evidence.
+10. `src/index.ts` export summary.
+11. Verification command results.
+12. Fitness drift note naming `internal_module_boundary` report-only internal re-export camouflage diagnostics and confirming the cleaned converged paths no longer appear there.
