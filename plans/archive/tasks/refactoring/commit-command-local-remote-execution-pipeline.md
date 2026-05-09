@@ -2,7 +2,7 @@
 artifact_type: task
 artifact_id: task_commit_command_local_remote_execution_pipeline_v1
 title: "Commit Command Local/Remote Execution Pipeline"
-status: approved
+status: archived
 phase: phase1
 target_files:
   - src/v11/application/commit/commitCommandApi.ts
@@ -28,6 +28,8 @@ normative_refs:
   - docs/actor-runtime-interface/execution-authority-contract-note-v1.md
 owners:
   - "felho"
+archive_group: refactoring
+archive_path: plans/archive/tasks/refactoring/commit-command-local-remote-execution-pipeline.md
 ---
 
 # Task: Commit Command Local/Remote Execution Pipeline
