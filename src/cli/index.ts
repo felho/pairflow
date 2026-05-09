@@ -477,6 +477,11 @@ async function handleBubbleKickoffCommand(args: string[]): Promise<number> {
   process.stdout.write(
     `KICKOFF activated for ${result.bubble_id}: round 0 -> 1\n`
   );
+  if (result.delivery !== undefined && result.delivery.status !== "accepted") {
+    process.stderr.write(
+      `Warning: kickoff delivery to implementer pane was not confirmed (reason: ${result.delivery.reason ?? "unknown"}${result.delivery.retried ? ", retried" : ""}). Use \`pairflow bubble status --id ${result.bubble_id}\` and \`pairflow bubble resume --id ${result.bubble_id}\` if the implementer did not start.\n`
+    );
+  }
   return 0;
 }
 
