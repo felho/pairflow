@@ -10,6 +10,7 @@ import { mergeBubbleDependencyDefaults } from "../merge/mergeCommandDefaults.js"
 import { mergeBubbleCommandOrchestration as mergeBubble } from "../../application/merge/mergeCommandOrchestration.js";
 import { openBubble } from "../../application/open/openBubble.js";
 import { openBubbleDefaults } from "../open/openBubbleDefaults.js";
+import { processSpawnDefault } from "../process/processSpawnDefaults.js";
 import { restartBubbleDependencyDefaults } from "../restart/restartCommandDefaults.js";
 import { restartBubble } from "../../application/restart/restartCommandApi.js";
 import { emitHumanReply } from "../../application/reply/replyCommandApi.js";
@@ -389,7 +390,10 @@ export const uiRouterDependencyDefaults = {
     return mergeBubble(projectUiInputNowToCommandNow(input), mergeBubbleDependencyDefaults);
   },
   async openBubble(input) {
-    return openBubble(input, openBubbleDefaults);
+    return openBubble(input, {
+      ...openBubbleDefaults,
+      processSpawn: processSpawnDefault
+    });
   },
   async restartBubble(input) {
     return mapUiRestartResult(

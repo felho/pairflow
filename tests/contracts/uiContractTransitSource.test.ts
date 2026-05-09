@@ -664,6 +664,10 @@ describe("UI contract transit source guards", () => {
     expect(routerDefaults).toContain(
       "from \"../../application/inbox/bubbleInboxReadModel.js\""
     );
+    expect(routerDefaults).toContain(
+      "from \"../process/processSpawnDefaults.js\""
+    );
+    expect(routerDefaults).toContain("processSpawn: processSpawnDefault");
     expect(routerDependencies).not.toContain(
       "from \"../../shared/inbox/inboxCommandApi.js\""
     );
