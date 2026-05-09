@@ -5,7 +5,7 @@ task_family_id: planwatch-runner-idle-timeout
 sequence_key: "1"
 task_id: 1-planwatch-runner-idle-timeout
 title: "Plan Watch Runner Idle Timeout"
-status: approved
+status: implementable
 phase: phase1
 system_context_ref: plans/plan-watch-runner-idle-timeout-plan-v1.md
 target_files:
@@ -307,6 +307,23 @@ same edit:
 4. Coordination primitives:
    - no new lock, lease, mutex, or retry primitive is introduced;
    - existing abort signal and SIGTERM/SIGKILL fallback sequencing are preserved.
+
+### Compatibility Field Boundary
+
+1. Public repo config uses only `idle_timeout_seconds`; do not add or document a
+   public `timeout_seconds` field for this task.
+2. Existing TypeScript fields named `timeoutMs` may remain as compatibility
+   aliases only while call sites and tests migrate, but their automatic
+   termination semantics must become idle-timeout semantics in this task.
+3. If `AgentRunnerCommandIdentity.timeoutMs` is preserved for compatibility,
+   it must report the effective idle timeout value and must not imply a hidden
+   total-runtime cap.
+4. If the implementation introduces a new `idleTimeoutMs` identity or process
+   field, keep legacy readers either type-compatible or deliberately updated in
+   the same implementation slice.
+5. Do not keep both an idle timer and an unconditional start-to-finish timer
+   unless the latter is separately configured, separately named, disabled by
+   default, and separately reported; that hard-cap path is out of scope here.
 
 ## L2 - Implementation Notes
 
