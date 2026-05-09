@@ -5,7 +5,7 @@ task_family_id: mcp-disabled-agent-launch
 sequence_key: "1"
 task_id: 1-mcp-disabled-agent-launch
 title: "Default-Disabled MCP Agent Launch Policy"
-status: draft
+status: approved
 phase: phase1
 target_files:
   - src/v11/shared/command/agentCommand.ts
@@ -14,15 +14,26 @@ target_files:
   - src/config/repoConfig.ts
   - src/config/bubbleConfig.ts
   - src/config/bubbleConfig/render.ts
+  - src/v11/application/create/internal/runtime/createRepoDefaultsResolver.ts
+  - src/v11/application/create/internal/runtime/createCommandRuntime.ts
+  - src/v11/application/create/internal/preparation/createBubblePreparation.ts
+  - src/v11/application/start/internal/runtime/startCommandTmuxLaunch.ts
+  - src/v11/infrastructure/channel/tmux/reviewerContext.ts
+  - src/v11/application/metaReviewGate/metaReviewGatePaneBinding.ts
+  - src/v11/application/metaReviewGate/internal/metaReviewGateApply.ts
+  - src/v11/application/metaReviewGate/internal/metaReviewGateCleanRerunPaneBinding.ts
+  - src/v11/shared/metaReviewGate/metaReviewGateRuntimeCapabilities.ts
+  - src/v11/defaults/metaReviewGate/metaReviewGateCommandDefaults.ts
   - tests/core/runtime/agentCommand.test.ts
   - tests/config/repoConfig.test.ts
   - tests/config/bubbleConfig.test.ts
+  - tests/v11/application/metaReview/metaReviewGatePaneBinding.test.ts
 prd_ref: null
 plan_ref: plans/mcp-disabled-agent-launch-plan-v1.md
 system_context_ref: docs/pairflow-initial-design.md
 owners:
   - "felho"
-doc_bubble_id: null
+doc_bubble_id: 1-mcp-disabled-agent-launch-doc
 impl_bubble_id: null
 supersedes: []
 superseded_by: null
@@ -117,8 +128,15 @@ mechanical disable strategy only after the role policy has been resolved.
 
 1. Inspected entrypoints / call-sites:
    - `src/v11/shared/command/agentCommand.ts`
+   - `src/v11/application/create/internal/runtime/createRepoDefaultsResolver.ts`
+   - `src/v11/application/create/internal/runtime/createCommandRuntime.ts`
+   - `src/v11/application/create/internal/preparation/createBubblePreparation.ts`
    - `src/v11/application/start/internal/runtime/startCommandTmuxLaunch.ts`
    - `src/v11/infrastructure/channel/tmux/reviewerContext.ts`
+   - `src/v11/application/metaReviewGate/metaReviewGatePaneBinding.ts`
+   - `src/v11/application/metaReviewGate/internal/metaReviewGateApply.ts`
+   - `src/v11/application/metaReviewGate/internal/metaReviewGateCleanRerunPaneBinding.ts`
+   - `src/v11/shared/metaReviewGate/metaReviewGateRuntimeCapabilities.ts`
    - `src/v11/defaults/metaReviewGate/metaReviewGateCommandDefaults.ts`
    - `tests/core/runtime/agentCommand.test.ts`
 2. Actual touched scope: config contract plus internal execution launch command.
@@ -276,10 +294,65 @@ success or completion semantics.
     - why this bounded mix is safe: launch command construction is the only
       consumer needed to activate the config policy
 14. Contract-dense decision:
-    - gate triggered: no
-    - trigger reasons: N/A
-    - canonical matrix source: N/A
-    - mirrored surfaces: N/A
+    - gate triggered: yes
+    - trigger reasons: config contract, launch input/interface change,
+      structured parse/render acceptance, fail-closed behavior, and multiple
+      downstream launch consumers
+    - canonical matrix source: `Canonical Contract Matrix` below
+    - mirrored surfaces: L0 control model, L1 change contract, L2 suggested
+      design, required tests, and config examples
+
+### Canonical Contract Matrix
+
+This matrix is the source of truth for the role MCP launch policy contract.
+Other sections must mirror these rows rather than creating independent policy
+rules.
+
+| Contract Row | Canonical Rule | Producer / Storage | Consumer / Runtime Behavior | Invalid / Missing Behavior | Required Proof |
+|---|---|---|---|---|---|
+| Role keys | The only supported role keys are `implementer`, `reviewer`, and `meta_reviewer`. | Repo defaults may specify these keys under `[defaults.role_mcp]`; rendered bubble config stores the same keys under `[role_mcp]`. | Launch assembly resolves the concrete workflow role first, then selects that role's MCP policy. | Unknown role policy keys in parsed config fail validation with a path-specific error. Missing supported keys default to `disabled`. | Repo and bubble config tests cover accepted keys, missing keys, and unknown keys. |
+| Policy values | The only policy values are `disabled` and `enabled`. | Typed config vocabulary and bubble config types expose only these values. | `disabled` means Pairflow must add session-scoped MCP-disable mechanics for the resolved backing CLI. `enabled` means Pairflow adds no MCP-disable flags and preserves existing agent launch behavior. | Invalid values fail config validation with a path-specific error. Omitted values resolve to `disabled`. | Config validation tests and command tests cover both values for Codex and Claude roles. |
+| Precedence | Effective policy is resolved from repo defaults into durable bubble config, then passed as explicit launch input for the pane role. | Create/start config resolution writes the resolved role policy into bubble config. | Restart and meta-review launch paths consume bubble-local resolved policy rather than rereading mutable repo defaults mid-bubble. `buildAgentCommand(...)` still defaults omitted launch input to `disabled` as a safety fallback, but call sites should pass explicit role context. | If bubble config is malformed, parse fails before launch. If a call site omits role policy, command construction falls back to disabled and diagnostics include the role when available. | Bubble config render/parse tests plus command construction tests prove precedence and omission behavior. |
+| Codex disabled mechanics | For a Codex-backed role with `disabled`, Pairflow runs `codex mcp list --json`, parses effective server names, and invokes Codex with `-c mcp_servers.<name>.enabled=false` for each discovered server. | `buildAgentCommand(...)` emits the launch-time discovery and override construction script for Codex disabled mode. | Codex is not invoked for the role until discovery and parsing succeed. Server names are data from the same Codex CLI's effective MCP list, not hard-coded repo assumptions. | Non-zero discovery exit, malformed JSON, missing expected server-name shape, or shell construction failure emits `PAIRFLOW_ROLE_MCP_DISABLE_UNAVAILABLE` style diagnostics and drops to the existing interactive shell fallback without starting Codex for that role. | Agent command tests assert discovery script, fail-closed branch, no hard-coded server names, and `bash -n` parseability. |
+| Claude disabled mechanics | For a Claude-backed role with `disabled`, Pairflow passes `--strict-mcp-config --mcp-config '{"mcpServers":{}}'`. | `buildAgentCommand(...)` appends static strict empty MCP flags for Claude disabled mode. | Claude Code ignores non-explicit MCP configs for that session while preserving existing permission bypass and startup prompt behavior. | Missing static flags in disabled mode is a test failure. | Agent command tests assert strict empty config flags and preserved baseline flags. |
+| Enabled mechanics | `enabled` is explicit opt-in to existing agent MCP behavior for that concrete workflow role only. | Repo/bubble config stores `enabled` per role. | Pairflow omits Codex discovery/disable overrides and omits Claude strict empty config flags for that role, even when another role using the same backing agent is disabled. | Cross-role leakage is forbidden; policy must not be keyed by backing agent name. | Tests cover two roles with the same backing agent and different policies. |
+| Deferred read-model semantics | This task does not create a UI/status read model proving live MCP availability. | N/A | Runtime status may continue to omit effective MCP launch policy. | Do not add read-model completion claims in this task. | Task completion summary names UI/status reporting as deferred. |
+
+### Ownership and Deferred Semantics
+
+1. Pairflow owns only session-scoped launch policy for Pairflow-created role
+   panes. User-level Codex/Claude MCP configuration files remain external
+   authority outside Pairflow.
+2. Config parsing/rendering owns durable policy storage. `buildAgentCommand(...)`
+   owns CLI-specific disable mechanics after the workflow role and backing agent
+   have both been resolved.
+3. The meta-review gate runtime capability and pane binding are consumers of the
+   same launch contract. The `meta_reviewer` policy must be threaded through
+   the capability/input path into the pane command builder, not merely recovered
+   from `buildAgentCommand(...)`'s default-disabled fallback. That preserves
+   explicit `meta_reviewer = "enabled"` opt-in while still failing closed when
+   a call site omits policy accidentally.
+4. UI/status reporting of effective MCP policy is deferred. This task must not
+   imply that operators can inspect live pane MCP state through Pairflow status.
+
+### Mirrored Surface Checklist
+
+When changing the role MCP policy contract, update these surfaces together:
+
+1. L0 control model and forbidden fallback wording.
+2. The `Canonical Contract Matrix`.
+3. L1 domain/change/shared-compatibility tables.
+4. L2 suggested design and required tests.
+5. Repo defaults parser, bubble config parser/rendering, and typed bubble config
+   definitions.
+6. All `buildAgentCommand(...)` call sites, including start/restart,
+   reviewer-context launch, and meta-review gate pane launch.
+7. Create-time repo-default resolution and bubble preparation surfaces that
+   persist resolved role policy into `bubble.toml`.
+8. Meta-review gate apply/rerun callers that construct pane-binding inputs, so
+   explicit `meta_reviewer = "enabled"` reaches the command builder.
+9. Focused meta-review pane-binding tests when policy threading changes that
+   path.
 
 ## L1 - Change Contract
 
@@ -425,7 +498,15 @@ N/A
    - rendered bubble config includes resolved role policy
    - parser round-trips role policy
    - invalid bubble policy fails validation
-4. Existing start/restart tests:
+4. `tests/v11/application/metaReview/metaReviewGatePaneBinding.test.ts`
+   - explicit `meta_reviewer = "enabled"` policy from bubble config is threaded
+     through the meta-review runtime capability / pane-binding input path into
+     `buildAgentCommand(...)`
+   - the meta-review pane path does not rely on `buildAgentCommand(...)`'s
+     default-disabled fallback when an explicit opt-in is configured
+   - disabled/default meta-reviewer policy still produces the same fail-closed
+     MCP-disable behavior as other roles
+5. Existing start/restart tests:
    - update fixtures only where new rendered config is expected.
 
 ### Verification Commands
@@ -433,7 +514,7 @@ N/A
 1. `pnpm typecheck`
 2. `pnpm lint`
 3. `pnpm fitness:check:ci`
-4. `pnpm test -- tests/core/runtime/agentCommand.test.ts tests/config/repoConfig.test.ts tests/config/bubbleConfig.test.ts`
+4. `pnpm test -- tests/core/runtime/agentCommand.test.ts tests/config/repoConfig.test.ts tests/config/bubbleConfig.test.ts tests/v11/application/metaReview/metaReviewGatePaneBinding.test.ts`
 5. `pnpm test`
 6. `pnpm build`
 

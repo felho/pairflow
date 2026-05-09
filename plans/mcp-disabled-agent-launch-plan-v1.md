@@ -16,7 +16,7 @@ archive_group: 2026-05-09-mcp-disabled-agent-launch-plan-v1
 task_tracker:
   - task_id: 1-mcp-disabled-agent-launch
     task_path: plans/tasks/1-mcp-disabled-agent-launch.md
-    status: draft
+    status: approved
 ---
 
 # Plan: MCP-Disabled Agent Launch Defaults
