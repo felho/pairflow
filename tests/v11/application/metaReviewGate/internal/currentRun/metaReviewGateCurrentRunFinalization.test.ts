@@ -5,16 +5,16 @@ import { join } from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import { finalizeCurrentRunMetaReviewGate } from "../../../../src/v11/application/metaReviewGate/metaReviewGateCurrentRunApi.js";
+import { runCurrentRunMetaReviewGateFinalization } from "../../../../../../src/v11/application/metaReviewGate/internal/currentRun/finalizationPipeline.js";
 import {
   assertActiveMetaReviewExecutionContext,
   assertMetaReviewSubmitStaleGuard
-} from "../../../../src/v11/application/metaReview/internal/submit/authority.js";
-import { MetaReviewError } from "../../../../src/v11/shared/metaReview/metaReviewError.js";
-import type { MetaReviewResult } from "../../../../src/v11/shared/metaReview/metaReviewTypes.js";
-import type { LoadedStateSnapshot } from "../../../../src/v11/ports/stateSnapshots.js";
-import type { BubbleStateSnapshot } from "../../../../src/v11/shared/state/bubbleStateSnapshotTypes.js";
-import type { ProtocolEnvelope } from "../../../../src/types/protocol.js";
+} from "../../../../../../src/v11/application/metaReview/internal/submit/authority.js";
+import { MetaReviewError } from "../../../../../../src/v11/shared/metaReview/metaReviewError.js";
+import type { MetaReviewResult } from "../../../../../../src/v11/shared/metaReview/metaReviewTypes.js";
+import type { LoadedStateSnapshot } from "../../../../../../src/v11/ports/stateSnapshots.js";
+import type { BubbleStateSnapshot } from "../../../../../../src/v11/shared/state/bubbleStateSnapshotTypes.js";
+import type { ProtocolEnvelope } from "../../../../../../src/types/protocol.js";
 
 const tempDirs: string[] = [];
 
@@ -163,7 +163,7 @@ function createCleanApproveRunResult(input: {
 
 function createAppendEnvelopeStub(events?: string[]): {
   envelopes: ProtocolEnvelope[];
-  appendEnvelope: Parameters<typeof finalizeCurrentRunMetaReviewGate>[0]["appendEnvelope"];
+  appendEnvelope: Parameters<typeof runCurrentRunMetaReviewGateFinalization>[0]["appendEnvelope"];
 } {
   const envelopes: ProtocolEnvelope[] = [];
   return {
@@ -188,7 +188,7 @@ function createAppendEnvelopeStub(events?: string[]): {
 
 function createWriteStateStub(events?: string[]): {
   writes: BubbleStateSnapshot[];
-  writeState: Parameters<typeof finalizeCurrentRunMetaReviewGate>[0]["writeState"];
+  writeState: Parameters<typeof runCurrentRunMetaReviewGateFinalization>[0]["writeState"];
 } {
   const writes: BubbleStateSnapshot[] = [];
   return {
@@ -221,16 +221,16 @@ function createCleanRerunDeliveryStubs(input: {
 }): {
   paneBindingActiveCalls: boolean[];
   readState: NonNullable<
-    Parameters<typeof finalizeCurrentRunMetaReviewGate>[0]["readState"]
+    Parameters<typeof runCurrentRunMetaReviewGateFinalization>[0]["readState"]
   >;
   readTranscript: NonNullable<
-    Parameters<typeof finalizeCurrentRunMetaReviewGate>[0]["readTranscript"]
+    Parameters<typeof runCurrentRunMetaReviewGateFinalization>[0]["readTranscript"]
   >;
   setMetaReviewerPane: NonNullable<
-    Parameters<typeof finalizeCurrentRunMetaReviewGate>[0]["setMetaReviewerPane"]
+    Parameters<typeof runCurrentRunMetaReviewGateFinalization>[0]["setMetaReviewerPane"]
   >;
   resolvePaneWarning: NonNullable<
-    Parameters<typeof finalizeCurrentRunMetaReviewGate>[0]["resolvePaneWarning"]
+    Parameters<typeof runCurrentRunMetaReviewGateFinalization>[0]["resolvePaneWarning"]
   >;
 } {
   const paneBindingActiveCalls: boolean[] = [];
@@ -265,13 +265,13 @@ function createCleanRerunDeliveryStubs(input: {
 
 async function createCleanFinalizeInputFixture(input?: {
   artifactContent?: Record<string, unknown>;
-  commands?: Parameters<typeof finalizeCurrentRunMetaReviewGate>[0]["resolved"]["bubbleConfig"]["commands"];
+  commands?: Parameters<typeof runCurrentRunMetaReviewGateFinalization>[0]["resolved"]["bubbleConfig"]["commands"];
   consecutiveCleanRunsRequired?: number;
   initialCleanRuns?: number;
   omitValidationRunner?: boolean;
   omitWorktreePath?: boolean;
   reviewArtifactType?: Parameters<
-    typeof finalizeCurrentRunMetaReviewGate
+    typeof runCurrentRunMetaReviewGateFinalization
   >[0]["resolved"]["bubbleConfig"]["review_artifact_type"];
   runnerErrorStage?: "pre_header" | "spawn" | "settle" | "stdout" | "stderr";
   runExitCodes?: Partial<Record<string, number>>;
@@ -282,7 +282,7 @@ async function createCleanFinalizeInputFixture(input?: {
   runResult?: MetaReviewResult;
   stickyHumanGate?: boolean;
   validationTarget?: Parameters<
-    typeof finalizeCurrentRunMetaReviewGate
+    typeof runCurrentRunMetaReviewGateFinalization
   >[0]["resolved"]["bubbleConfig"]["validation_target"];
 }): Promise<{
   runValidationCalls: Array<{
@@ -292,7 +292,7 @@ async function createCleanFinalizeInputFixture(input?: {
     targetId?: string;
     targetPaths?: string[];
   }>;
-  finalizeInput: Parameters<typeof finalizeCurrentRunMetaReviewGate>[0];
+  finalizeInput: Parameters<typeof runCurrentRunMetaReviewGateFinalization>[0];
 }> {
   const artifact = await createArtifactFixture(
     input?.artifactContent ?? {
@@ -429,7 +429,7 @@ async function createCleanFinalizeInputFixture(input?: {
   };
 }
 
-describe("finalizeCurrentRunMetaReviewGate", () => {
+describe("runCurrentRunMetaReviewGateFinalization", () => {
   it("increments the clean streak and unlocks human approval when the requirement is one", async () => {
     const artifact = await createArtifactFixture({
       findings: [],
@@ -444,7 +444,7 @@ describe("finalizeCurrentRunMetaReviewGate", () => {
       fallbackLoaded: loaded
     });
 
-    const result = await finalizeCurrentRunMetaReviewGate({
+    const result = await runCurrentRunMetaReviewGateFinalization({
       resolved: {
         bubbleId: "b_meta_gate_finalize_threshold_01",
         bubbleConfig: {
@@ -506,7 +506,7 @@ describe("finalizeCurrentRunMetaReviewGate", () => {
       }
     });
 
-    const result = await finalizeCurrentRunMetaReviewGate(fixture.finalizeInput);
+    const result = await runCurrentRunMetaReviewGateFinalization(fixture.finalizeInput);
 
     expect(result.route).toBe("human_gate_approve");
     expect(fixture.runValidationCalls).toEqual([
@@ -527,7 +527,7 @@ describe("finalizeCurrentRunMetaReviewGate", () => {
       }
     });
 
-    const result = await finalizeCurrentRunMetaReviewGate(fixture.finalizeInput);
+    const result = await runCurrentRunMetaReviewGateFinalization(fixture.finalizeInput);
 
     expect(result.route).toBe("human_gate_approve");
     expect(result.state.state).toBe("READY_FOR_HUMAN_APPROVAL");
@@ -548,7 +548,7 @@ describe("finalizeCurrentRunMetaReviewGate", () => {
       }
     });
 
-    const result = await finalizeCurrentRunMetaReviewGate(fixture.finalizeInput);
+    const result = await runCurrentRunMetaReviewGateFinalization(fixture.finalizeInput);
 
     expect(result.route).toBe("human_gate_approve");
     expect(fixture.runValidationCalls).toEqual([
@@ -573,7 +573,7 @@ describe("finalizeCurrentRunMetaReviewGate", () => {
       runExitCode: 1
     });
 
-    const result = await finalizeCurrentRunMetaReviewGate(fixture.finalizeInput);
+    const result = await runCurrentRunMetaReviewGateFinalization(fixture.finalizeInput);
 
     const payload = result.gateEnvelope.payload as {
       decision?: string;
@@ -609,7 +609,7 @@ describe("finalizeCurrentRunMetaReviewGate", () => {
       runnerErrorStage: "settle"
     });
 
-    const result = await finalizeCurrentRunMetaReviewGate(fixture.finalizeInput);
+    const result = await runCurrentRunMetaReviewGateFinalization(fixture.finalizeInput);
 
     expect(result.route).toBe("human_gate_dispatch_failed");
     expect(result.gateEnvelope.payload.summary).toContain("stage=exec");
@@ -633,7 +633,7 @@ describe("finalizeCurrentRunMetaReviewGate", () => {
         runnerErrorStage
       });
 
-      const result = await finalizeCurrentRunMetaReviewGate(fixture.finalizeInput);
+      const result = await runCurrentRunMetaReviewGateFinalization(fixture.finalizeInput);
 
       expect(result.route).toBe("human_gate_dispatch_failed");
       expect(result.gateEnvelope.payload.summary).toContain(
@@ -661,7 +661,7 @@ describe("finalizeCurrentRunMetaReviewGate", () => {
       }
     });
 
-    const result = await finalizeCurrentRunMetaReviewGate(fixture.finalizeInput);
+    const result = await runCurrentRunMetaReviewGateFinalization(fixture.finalizeInput);
 
     const payload = result.gateEnvelope.payload as {
       decision?: string;
@@ -697,7 +697,7 @@ describe("finalizeCurrentRunMetaReviewGate", () => {
       omitWorktreePath: true
     });
 
-    const result = await finalizeCurrentRunMetaReviewGate(fixture.finalizeInput);
+    const result = await runCurrentRunMetaReviewGateFinalization(fixture.finalizeInput);
 
     expect(result.route).toBe("human_gate_dispatch_failed");
     expect(fixture.runValidationCalls).toEqual([]);
@@ -717,7 +717,7 @@ describe("finalizeCurrentRunMetaReviewGate", () => {
       omitValidationRunner: true
     });
 
-    const result = await finalizeCurrentRunMetaReviewGate(fixture.finalizeInput);
+    const result = await runCurrentRunMetaReviewGateFinalization(fixture.finalizeInput);
 
     expect(result.route).toBe("human_gate_dispatch_failed");
     expect(fixture.runValidationCalls).toEqual([]);
@@ -735,11 +735,11 @@ describe("finalizeCurrentRunMetaReviewGate", () => {
         typecheck: "pnpm typecheck",
         meta_review_approve_required: ["test"]
       } as unknown as Parameters<
-        typeof finalizeCurrentRunMetaReviewGate
+        typeof runCurrentRunMetaReviewGateFinalization
       >[0]["resolved"]["bubbleConfig"]["commands"]
     });
 
-    const result = await finalizeCurrentRunMetaReviewGate(fixture.finalizeInput);
+    const result = await runCurrentRunMetaReviewGateFinalization(fixture.finalizeInput);
 
     expect(result.route).toBe("human_gate_dispatch_failed");
     expect(fixture.runValidationCalls).toEqual([]);
@@ -758,7 +758,7 @@ describe("finalizeCurrentRunMetaReviewGate", () => {
       }
     });
 
-    const result = await finalizeCurrentRunMetaReviewGate(fixture.finalizeInput);
+    const result = await runCurrentRunMetaReviewGateFinalization(fixture.finalizeInput);
 
     expect(result.route).toBe("human_gate_approve");
     expect(fixture.runValidationCalls).toEqual([]);
@@ -773,7 +773,7 @@ describe("finalizeCurrentRunMetaReviewGate", () => {
       }
     });
 
-    const result = await finalizeCurrentRunMetaReviewGate(fixture.finalizeInput);
+    const result = await runCurrentRunMetaReviewGateFinalization(fixture.finalizeInput);
 
     expect(result.route).toBe("human_gate_approve");
     expect(fixture.runValidationCalls).toEqual([]);
@@ -789,7 +789,7 @@ describe("finalizeCurrentRunMetaReviewGate", () => {
       }
     });
 
-    const result = await finalizeCurrentRunMetaReviewGate(fixture.finalizeInput);
+    const result = await runCurrentRunMetaReviewGateFinalization(fixture.finalizeInput);
 
     expect(result.route).toBe("meta_review_running");
     expect(fixture.runValidationCalls).toEqual([]);
@@ -824,7 +824,7 @@ describe("finalizeCurrentRunMetaReviewGate", () => {
       }
     });
 
-    const result = await finalizeCurrentRunMetaReviewGate(fixture.finalizeInput);
+    const result = await runCurrentRunMetaReviewGateFinalization(fixture.finalizeInput);
 
     expect(result.route).toBe("human_gate_inconclusive");
     expect(fixture.runValidationCalls).toEqual([]);
@@ -850,7 +850,7 @@ describe("finalizeCurrentRunMetaReviewGate", () => {
       events
     });
 
-    const result = await finalizeCurrentRunMetaReviewGate({
+    const result = await runCurrentRunMetaReviewGateFinalization({
       resolved: {
         bubbleId: "b_meta_gate_finalize_threshold_01",
         bubbleConfig: {
@@ -1004,7 +1004,7 @@ describe("finalizeCurrentRunMetaReviewGate", () => {
     delete (loaded.state.meta_review as Partial<NonNullable<BubbleStateSnapshot["meta_review"]>>)
       .consecutive_clean_runs;
 
-    const result = await finalizeCurrentRunMetaReviewGate({
+    const result = await runCurrentRunMetaReviewGateFinalization({
       resolved: {
         bubbleId: "b_meta_gate_finalize_threshold_01",
         bubbleConfig: {
@@ -1070,7 +1070,7 @@ describe("finalizeCurrentRunMetaReviewGate", () => {
     });
     let writeAttempt = 0;
 
-    const result = await finalizeCurrentRunMetaReviewGate({
+    const result = await runCurrentRunMetaReviewGateFinalization({
       resolved: {
         bubbleId: "b_meta_gate_finalize_threshold_01",
         bubbleConfig: {
@@ -1147,7 +1147,7 @@ describe("finalizeCurrentRunMetaReviewGate", () => {
       consecutive_clean_runs: 1
     };
 
-    const result = await finalizeCurrentRunMetaReviewGate({
+    const result = await runCurrentRunMetaReviewGateFinalization({
       resolved: {
         bubbleId: "b_meta_gate_finalize_threshold_01",
         bubbleConfig: {
@@ -1200,7 +1200,7 @@ describe("finalizeCurrentRunMetaReviewGate", () => {
       }
     });
 
-    const result = await finalizeCurrentRunMetaReviewGate(fixture.finalizeInput);
+    const result = await runCurrentRunMetaReviewGateFinalization(fixture.finalizeInput);
 
     expect(result.route).toBe("human_gate_sticky_bypass");
     expect(fixture.runValidationCalls).toEqual([
@@ -1230,7 +1230,7 @@ describe("finalizeCurrentRunMetaReviewGate", () => {
         })
     });
 
-    const result = await finalizeCurrentRunMetaReviewGate(fixture.finalizeInput);
+    const result = await runCurrentRunMetaReviewGateFinalization(fixture.finalizeInput);
 
     expect(result.route).toBe("human_gate_sticky_bypass");
     expect(result.gateEnvelope.payload.metadata).toMatchObject({
@@ -1262,7 +1262,7 @@ describe("finalizeCurrentRunMetaReviewGate", () => {
       }
     });
 
-    const result = await finalizeCurrentRunMetaReviewGate(fixture.finalizeInput);
+    const result = await runCurrentRunMetaReviewGateFinalization(fixture.finalizeInput);
 
     expect(result.route).toBe("human_gate_sticky_bypass");
     expect(fixture.runValidationCalls).toEqual([]);
@@ -1279,7 +1279,7 @@ describe("finalizeCurrentRunMetaReviewGate", () => {
       runExitCode: 1
     });
 
-    const result = await finalizeCurrentRunMetaReviewGate(fixture.finalizeInput);
+    const result = await runCurrentRunMetaReviewGateFinalization(fixture.finalizeInput);
 
     expect(result.route).toBe("human_gate_dispatch_failed");
     expect(result.state.state).toBe("RUNNING");
@@ -1305,7 +1305,7 @@ describe("finalizeCurrentRunMetaReviewGate", () => {
       consecutive_clean_runs: 1
     };
 
-    const result = await finalizeCurrentRunMetaReviewGate({
+    const result = await runCurrentRunMetaReviewGateFinalization({
       resolved: {
         bubbleId: "b_meta_gate_finalize_threshold_01",
         bubbleConfig: {
@@ -1365,7 +1365,7 @@ describe("finalizeCurrentRunMetaReviewGate", () => {
       consecutive_clean_runs: 2
     };
 
-    const result = await finalizeCurrentRunMetaReviewGate({
+    const result = await runCurrentRunMetaReviewGateFinalization({
       resolved: {
         bubbleId: "b_meta_gate_finalize_threshold_01",
         bubbleConfig: {
@@ -1435,7 +1435,7 @@ describe("finalizeCurrentRunMetaReviewGate", () => {
     const append = createAppendEnvelopeStub();
     const writes: BubbleStateSnapshot[] = [];
 
-    const result = await finalizeCurrentRunMetaReviewGate({
+    const result = await runCurrentRunMetaReviewGateFinalization({
       resolved: {
         bubbleId: "b_meta_gate_finalize_threshold_01",
         bubbleConfig: {
@@ -1505,7 +1505,7 @@ describe("finalizeCurrentRunMetaReviewGate", () => {
       consecutive_clean_runs: 2
     };
 
-    const result = await finalizeCurrentRunMetaReviewGate({
+    const result = await runCurrentRunMetaReviewGateFinalization({
       resolved: {
         bubbleId: "b_meta_gate_finalize_threshold_01",
         bubbleConfig: {
@@ -1567,7 +1567,7 @@ describe("finalizeCurrentRunMetaReviewGate", () => {
       consecutive_clean_runs: 2
     };
 
-    const result = await finalizeCurrentRunMetaReviewGate({
+    const result = await runCurrentRunMetaReviewGateFinalization({
       resolved: {
         bubbleId: "b_meta_gate_finalize_threshold_01",
         bubbleConfig: {
@@ -1640,7 +1640,7 @@ describe("finalizeCurrentRunMetaReviewGate", () => {
       consecutive_clean_runs: 2
     };
 
-    const result = await finalizeCurrentRunMetaReviewGate({
+    const result = await runCurrentRunMetaReviewGateFinalization({
       resolved: {
         bubbleId: "b_meta_gate_finalize_threshold_01",
         bubbleConfig: {
@@ -1699,7 +1699,7 @@ describe("finalizeCurrentRunMetaReviewGate", () => {
       consecutive_clean_runs: 1
     };
 
-    const result = await finalizeCurrentRunMetaReviewGate({
+    const result = await runCurrentRunMetaReviewGateFinalization({
       resolved: {
         bubbleId: "b_meta_gate_finalize_threshold_01",
         bubbleConfig: {
@@ -1757,7 +1757,7 @@ describe("finalizeCurrentRunMetaReviewGate", () => {
     });
     let appendAttempt = 0;
 
-    const result = await finalizeCurrentRunMetaReviewGate({
+    const result = await runCurrentRunMetaReviewGateFinalization({
       resolved: {
         bubbleId: "b_meta_gate_finalize_threshold_01",
         bubbleConfig: {
@@ -1842,7 +1842,7 @@ describe("finalizeCurrentRunMetaReviewGate", () => {
     });
     let writeAttempt = 0;
 
-    const result = await finalizeCurrentRunMetaReviewGate({
+    const result = await runCurrentRunMetaReviewGateFinalization({
       resolved: {
         bubbleId: "b_meta_gate_finalize_threshold_01",
         bubbleConfig: {
@@ -1928,7 +1928,7 @@ describe("finalizeCurrentRunMetaReviewGate", () => {
     });
     let contextReadCount = 0;
 
-    const result = await finalizeCurrentRunMetaReviewGate({
+    const result = await runCurrentRunMetaReviewGateFinalization({
       resolved: {
         bubbleId: "b_meta_gate_finalize_threshold_01",
         bubbleConfig: {
@@ -2018,7 +2018,7 @@ describe("finalizeCurrentRunMetaReviewGate", () => {
     const append = createAppendEnvelopeStub();
     const write = createWriteStateStub();
 
-    const result = await finalizeCurrentRunMetaReviewGate({
+    const result = await runCurrentRunMetaReviewGateFinalization({
       resolved: {
         bubbleId: "b_meta_gate_finalize_threshold_01",
         bubbleConfig: {
@@ -2080,7 +2080,7 @@ describe("finalizeCurrentRunMetaReviewGate", () => {
       fallbackLoaded: loaded
     });
 
-    const result = await finalizeCurrentRunMetaReviewGate({
+    const result = await runCurrentRunMetaReviewGateFinalization({
       resolved: {
         bubbleId: "b_meta_gate_finalize_threshold_01",
         bubbleConfig: {
@@ -2161,7 +2161,7 @@ describe("finalizeCurrentRunMetaReviewGate", () => {
       fallbackLoaded: loaded
     });
 
-    const result = await finalizeCurrentRunMetaReviewGate({
+    const result = await runCurrentRunMetaReviewGateFinalization({
       resolved: {
         bubbleId: "b_meta_gate_finalize_threshold_01",
         bubbleConfig: {
@@ -2244,7 +2244,7 @@ describe("finalizeCurrentRunMetaReviewGate", () => {
       fallbackLoaded: loaded
     });
 
-    const result = await finalizeCurrentRunMetaReviewGate({
+    const result = await runCurrentRunMetaReviewGateFinalization({
       resolved: {
         bubbleId: "b_meta_gate_finalize_threshold_01",
         bubbleConfig: {
@@ -2323,7 +2323,7 @@ describe("finalizeCurrentRunMetaReviewGate", () => {
       fallbackLoaded: loaded
     });
 
-    const result = await finalizeCurrentRunMetaReviewGate({
+    const result = await runCurrentRunMetaReviewGateFinalization({
       resolved: {
         bubbleId: "b_meta_gate_finalize_threshold_01",
         bubbleConfig: {
@@ -2405,7 +2405,7 @@ describe("finalizeCurrentRunMetaReviewGate", () => {
       message: "simulated pane delivery failure"
     };
 
-    const result = await finalizeCurrentRunMetaReviewGate({
+    const result = await runCurrentRunMetaReviewGateFinalization({
       resolved: {
         bubbleId: "b_meta_gate_finalize_threshold_01",
         bubbleConfig: {
@@ -2478,7 +2478,7 @@ describe("finalizeCurrentRunMetaReviewGate", () => {
     });
     let writeAttempt = 0;
 
-    const result = await finalizeCurrentRunMetaReviewGate({
+    const result = await runCurrentRunMetaReviewGateFinalization({
       resolved: {
         bubbleId: "b_meta_gate_finalize_threshold_01",
         bubbleConfig: {
@@ -2558,7 +2558,7 @@ describe("finalizeCurrentRunMetaReviewGate", () => {
     });
     let writeAttempt = 0;
 
-    const result = await finalizeCurrentRunMetaReviewGate({
+    const result = await runCurrentRunMetaReviewGateFinalization({
       resolved: {
         bubbleId: "b_meta_gate_finalize_threshold_01",
         bubbleConfig: {
@@ -2638,7 +2638,7 @@ describe("finalizeCurrentRunMetaReviewGate", () => {
     const append = createAppendEnvelopeStub();
     const write = createWriteStateStub();
 
-    const result = await finalizeCurrentRunMetaReviewGate({
+    const result = await runCurrentRunMetaReviewGateFinalization({
       resolved: {
         bubbleId: "b_meta_gate_finalize_threshold_01",
         bubbleConfig: {
@@ -2694,7 +2694,7 @@ describe("finalizeCurrentRunMetaReviewGate", () => {
     const append = createAppendEnvelopeStub();
     const write = createWriteStateStub();
 
-    const result = await finalizeCurrentRunMetaReviewGate({
+    const result = await runCurrentRunMetaReviewGateFinalization({
       resolved: {
         bubbleId: "b_meta_gate_finalize_threshold_01",
         bubbleConfig: {
@@ -2772,7 +2772,7 @@ describe("finalizeCurrentRunMetaReviewGate", () => {
     const append = createAppendEnvelopeStub();
     const write = createWriteStateStub();
 
-    const result = await finalizeCurrentRunMetaReviewGate({
+    const result = await runCurrentRunMetaReviewGateFinalization({
       resolved: {
         bubbleId: "b_meta_gate_finalize_threshold_01",
         bubbleConfig: {
@@ -2849,7 +2849,7 @@ describe("finalizeCurrentRunMetaReviewGate", () => {
     const append = createAppendEnvelopeStub();
     const write = createWriteStateStub();
 
-    const result = await finalizeCurrentRunMetaReviewGate({
+    const result = await runCurrentRunMetaReviewGateFinalization({
       resolved: {
         bubbleId: "b_meta_gate_finalize_threshold_01",
         bubbleConfig: {
@@ -2904,7 +2904,7 @@ describe("finalizeCurrentRunMetaReviewGate", () => {
     const append = createAppendEnvelopeStub();
     const write = createWriteStateStub();
 
-    const result = await finalizeCurrentRunMetaReviewGate({
+    const result = await runCurrentRunMetaReviewGateFinalization({
       resolved: {
         bubbleId: "b_meta_gate_finalize_threshold_01",
         bubbleConfig: {
@@ -2962,7 +2962,7 @@ describe("finalizeCurrentRunMetaReviewGate", () => {
     const append = createAppendEnvelopeStub();
     const write = createWriteStateStub();
 
-    const result = await finalizeCurrentRunMetaReviewGate({
+    const result = await runCurrentRunMetaReviewGateFinalization({
       resolved: {
         bubbleId: "b_meta_gate_finalize_threshold_01",
         bubbleConfig: {
@@ -3037,7 +3037,7 @@ describe("finalizeCurrentRunMetaReviewGate", () => {
       consecutive_clean_runs: 0,
     };
 
-    const result = await finalizeCurrentRunMetaReviewGate({
+    const result = await runCurrentRunMetaReviewGateFinalization({
       resolved: {
         bubbleId: "b_meta_gate_finalize_threshold_01",
         bubbleConfig: {
@@ -3101,7 +3101,7 @@ describe("finalizeCurrentRunMetaReviewGate", () => {
     const write = createWriteStateStub();
     let readCount = 0;
 
-    const result = await finalizeCurrentRunMetaReviewGate({
+    const result = await runCurrentRunMetaReviewGateFinalization({
       resolved: {
         bubbleId: "b_meta_gate_finalize_threshold_01",
         bubbleConfig: {
@@ -3160,7 +3160,7 @@ describe("finalizeCurrentRunMetaReviewGate", () => {
     const write = createWriteStateStub();
     let readCount = 0;
 
-    const result = await finalizeCurrentRunMetaReviewGate({
+    const result = await runCurrentRunMetaReviewGateFinalization({
       resolved: {
         bubbleId: "b_meta_gate_finalize_threshold_01",
         bubbleConfig: {
@@ -3223,7 +3223,7 @@ describe("finalizeCurrentRunMetaReviewGate", () => {
     const append = createAppendEnvelopeStub();
     const write = createWriteStateStub();
 
-    const result = await finalizeCurrentRunMetaReviewGate({
+    const result = await runCurrentRunMetaReviewGateFinalization({
       resolved: {
         bubbleId: "b_meta_gate_finalize_threshold_01",
         bubbleConfig: {

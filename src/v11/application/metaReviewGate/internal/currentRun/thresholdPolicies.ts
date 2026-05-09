@@ -1,19 +1,19 @@
-import type { MetaReviewResult } from "../../../shared/metaReview/metaReviewTypes.js";
-import type { FindingsParityMetadata } from "../../../../types/protocol.js";
-import { normalizeBubbleReviewPolicy } from "../../../shared/reviewPolicy/reviewPolicyRuntime.js";
+import type { MetaReviewResult } from "../../../../shared/metaReview/metaReviewTypes.js";
+import type { FindingsParityMetadata } from "../../../../../types/protocol.js";
+import { normalizeBubbleReviewPolicy } from "../../../../shared/reviewPolicy/reviewPolicyRuntime.js";
 import {
   META_REVIEW_APPROVE_THRESHOLD_BACKSTOP,
   resolveApproveThresholdBackstopPolicy
-} from "../../../domain/metaReviewGate/approveThresholdBackstopPolicy.js";
+} from "../../../../domain/metaReviewGate/approveThresholdBackstopPolicy.js";
 import {
   metaReviewApproveClaimsOpenFindings
-} from "../../../domain/metaReviewGate/approveSubmitThresholdPolicy.js";
-import { resolveThresholdCleanApprovalPolicy } from "../../../domain/metaReviewGate/cleanApprovalPolicy.js";
+} from "../../../../domain/metaReviewGate/approveSubmitThresholdPolicy.js";
+import { resolveThresholdCleanApprovalPolicy } from "../../../../domain/metaReviewGate/cleanApprovalPolicy.js";
 import {
   type MetaReviewGateThresholdAuthorityResolution,
   resolveMetaReviewGateThresholdAuthority
-} from "../metaReviewGateThresholdAuthorityApi.js";
-import type { FinalizeCurrentRunMetaReviewGateInput } from "../../../shared/metaReviewGate/metaReviewGateCurrentRunTypes.js";
+} from "../../metaReviewGateThresholdAuthorityApi.js";
+import type { FinalizeCurrentRunMetaReviewGateInput } from "../../../../shared/metaReviewGate/metaReviewGateCurrentRunTypes.js";
 
 export async function resolveApproveThresholdBackstop(input: {
   finalizeInput: FinalizeCurrentRunMetaReviewGateInput;
