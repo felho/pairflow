@@ -16,7 +16,7 @@ archive_group: 2026-05-09-mcp-disabled-agent-launch-plan-v1
 task_tracker:
   - task_id: 1-mcp-disabled-agent-launch
     task_path: plans/tasks/1-mcp-disabled-agent-launch.md
-    status: implementable
+    status: in_progress
 ---
 
 # Plan: MCP-Disabled Agent Launch Defaults
@@ -147,7 +147,7 @@ matrix, and deferred UI/status reporting boundary.
 
 | Task ID | Task Path | Purpose | Depends On | Closes Gap | Status |
 |---|---|---|---|---|---|
-| `1-mcp-disabled-agent-launch` | `plans/tasks/1-mcp-disabled-agent-launch.md` | Add config-driven default-disabled MCP launch policy for Pairflow roles, then apply the resolved role policy to the backing `codex` or `claude` launch command. | N/A | All open work in this plan. | implementable |
+| `1-mcp-disabled-agent-launch` | `plans/tasks/1-mcp-disabled-agent-launch.md` | Add config-driven default-disabled MCP launch policy for Pairflow roles, then apply the resolved role policy to the backing `codex` or `claude` launch command. | N/A | All open work in this plan. | in_progress |
 
 ## Coverage Map
 

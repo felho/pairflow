@@ -5,7 +5,7 @@ task_family_id: mcp-disabled-agent-launch
 sequence_key: "1"
 task_id: 1-mcp-disabled-agent-launch
 title: "Default-Disabled MCP Agent Launch Policy"
-status: implementable
+status: in_progress
 phase: phase1
 target_files:
   - src/v11/shared/command/agentCommand.ts
@@ -43,7 +43,7 @@ system_context_ref: docs/pairflow-initial-design.md
 owners:
   - "felho"
 doc_bubble_id: 1-mcp-disabled-agent-launch-doc
-impl_bubble_id: null
+impl_bubble_id: 1-mcp-disabled-agent-launch-impl
 supersedes: []
 superseded_by: null
 archive_group: 2026-05-09-mcp-disabled-agent-launch-plan-v1
