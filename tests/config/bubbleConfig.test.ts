@@ -92,6 +92,40 @@ describe("bubble config schema", () => {
     expect(parseBubbleConfigToml(rendered).agents.meta_reviewer).toBe("claude");
   });
 
+  it("roundtrips optional role-specific agent models", () => {
+    const config = parseBubbleConfigToml(
+      baseToml.replace(
+        '[agents]\nimplementer = "codex"\nreviewer = "claude"',
+        [
+          "[agents]",
+          'implementer = "codex"',
+          'implementer_model = "gpt-5.2"',
+          'reviewer = "claude"',
+          'reviewer_model = "claude-sonnet-4-5"',
+          'meta_reviewer = "codex"',
+          'meta_reviewer_model = "gpt-5.2-mini"'
+        ].join("\n")
+      )
+    );
+
+    expect(config.agents).toMatchObject({
+      implementer: "codex",
+      implementer_model: "gpt-5.2",
+      reviewer: "claude",
+      reviewer_model: "claude-sonnet-4-5",
+      meta_reviewer: "codex",
+      meta_reviewer_model: "gpt-5.2-mini"
+    });
+
+    const rendered = renderBubbleConfigToml(config);
+    expect(rendered).toContain('implementer_model = "gpt-5.2"');
+    expect(rendered).toContain('reviewer_model = "claude-sonnet-4-5"');
+    expect(rendered).toContain('meta_reviewer_model = "gpt-5.2-mini"');
+    expect(parseBubbleConfigToml(rendered).agents.reviewer_model).toBe(
+      "claude-sonnet-4-5"
+    );
+  });
+
   it("fails closed when agents.meta_reviewer is invalid", () => {
     const result = validateBubbleConfig(
       parseToml(

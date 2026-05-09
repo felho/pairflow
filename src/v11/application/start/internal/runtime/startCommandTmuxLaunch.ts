@@ -47,6 +47,7 @@ function resolveRemoteWorkspaceAuthority(
 
 function buildAgentLaunchCommand(input: {
   agentName: AgentName;
+  model?: string;
   bubbleId: string;
   workspacePath: string;
   pairflowCommandProfile: StartExecutionContext["resolved"]["bubbleConfig"]["pairflow_command_profile"];
@@ -56,6 +57,7 @@ function buildAgentLaunchCommand(input: {
 }): string {
   return buildAgentCommand({
     agentName: input.agentName,
+    ...(input.model !== undefined ? { model: input.model } : {}),
     bubbleId: input.bubbleId,
     workspacePath: input.workspacePath,
     pairflowCommandProfile: input.pairflowCommandProfile,
@@ -210,6 +212,9 @@ export async function launchFreshTmuxSession(input: {
     metaReviewerSubmitStartupPrompt: false,
     implementerCommand: buildAgentLaunchCommand({
       agentName: input.context.resolved.bubbleConfig.agents.implementer,
+      ...(input.context.resolved.bubbleConfig.agents.implementer_model !== undefined
+        ? { model: input.context.resolved.bubbleConfig.agents.implementer_model }
+        : {}),
       bubbleId: input.context.resolved.bubbleId,
       workspacePath: input.launchWorkspacePath,
       pairflowCommandProfile: input.context.resolved.bubbleConfig.pairflow_command_profile,
@@ -219,6 +224,9 @@ export async function launchFreshTmuxSession(input: {
     }),
     reviewerCommand: buildAgentLaunchCommand({
       agentName: input.context.resolved.bubbleConfig.agents.reviewer,
+      ...(input.context.resolved.bubbleConfig.agents.reviewer_model !== undefined
+        ? { model: input.context.resolved.bubbleConfig.agents.reviewer_model }
+        : {}),
       bubbleId: input.context.resolved.bubbleId,
       workspacePath: input.launchWorkspacePath,
       pairflowCommandProfile: input.context.resolved.bubbleConfig.pairflow_command_profile,
@@ -228,6 +236,9 @@ export async function launchFreshTmuxSession(input: {
     }),
     metaReviewerCommand: buildAgentLaunchCommand({
       agentName: metaReviewerAgent,
+      ...(input.context.resolved.bubbleConfig.agents.meta_reviewer_model !== undefined
+        ? { model: input.context.resolved.bubbleConfig.agents.meta_reviewer_model }
+        : {}),
       bubbleId: input.context.resolved.bubbleId,
       workspacePath: input.launchWorkspacePath,
       pairflowCommandProfile: input.context.resolved.bubbleConfig.pairflow_command_profile,
@@ -307,6 +318,9 @@ export async function launchResumeTmuxSession(input: {
     ),
     implementerCommand: buildAgentLaunchCommand({
       agentName: input.context.resolved.bubbleConfig.agents.implementer,
+      ...(input.context.resolved.bubbleConfig.agents.implementer_model !== undefined
+        ? { model: input.context.resolved.bubbleConfig.agents.implementer_model }
+        : {}),
       bubbleId: input.context.resolved.bubbleId,
       workspacePath: input.launchWorkspacePath,
       pairflowCommandProfile: input.context.resolved.bubbleConfig.pairflow_command_profile,
@@ -316,6 +330,9 @@ export async function launchResumeTmuxSession(input: {
     }),
     reviewerCommand: buildAgentLaunchCommand({
       agentName: input.context.resolved.bubbleConfig.agents.reviewer,
+      ...(input.context.resolved.bubbleConfig.agents.reviewer_model !== undefined
+        ? { model: input.context.resolved.bubbleConfig.agents.reviewer_model }
+        : {}),
       bubbleId: input.context.resolved.bubbleId,
       workspacePath: input.launchWorkspacePath,
       pairflowCommandProfile: input.context.resolved.bubbleConfig.pairflow_command_profile,
@@ -325,6 +342,9 @@ export async function launchResumeTmuxSession(input: {
     }),
     metaReviewerCommand: buildAgentLaunchCommand({
       agentName: metaReviewerAgent,
+      ...(input.context.resolved.bubbleConfig.agents.meta_reviewer_model !== undefined
+        ? { model: input.context.resolved.bubbleConfig.agents.meta_reviewer_model }
+        : {}),
       bubbleId: input.context.resolved.bubbleId,
       workspacePath: input.launchWorkspacePath,
       pairflowCommandProfile: input.context.resolved.bubbleConfig.pairflow_command_profile,

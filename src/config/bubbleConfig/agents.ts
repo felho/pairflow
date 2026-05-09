@@ -3,6 +3,34 @@ import { isAgentName } from "../../contracts/kernel/agentIdentity.js";
 import type { ValidationError } from "../../v11/shared/validation/primitives.js";
 import { readString } from "./readers.js";
 
+function readOptionalAgentModel(input: {
+  agents: Record<string, unknown> | undefined;
+  key: string;
+  path: string;
+  errors: ValidationError[];
+}): string | undefined {
+  if (input.agents === undefined) {
+    return undefined;
+  }
+
+  const value = readString(
+    input.agents,
+    input.key,
+    input.path,
+    input.errors,
+    false
+  );
+  if (value !== undefined && value.trim().length === 0) {
+    input.errors.push({
+      path: input.path,
+      message: "Must be a non-empty string"
+    });
+    return undefined;
+  }
+
+  return value;
+}
+
 export function validateBubbleAgents(
   agents: Record<string, unknown> | undefined,
   errors: ValidationError[]
@@ -46,9 +74,33 @@ export function validateBubbleAgents(
     });
   }
 
+  const implementerModel = readOptionalAgentModel({
+    agents,
+    key: "implementer_model",
+    path: "agents.implementer_model",
+    errors
+  });
+  const reviewerModel = readOptionalAgentModel({
+    agents,
+    key: "reviewer_model",
+    path: "agents.reviewer_model",
+    errors
+  });
+  const metaReviewerModel = readOptionalAgentModel({
+    agents,
+    key: "meta_reviewer_model",
+    path: "agents.meta_reviewer_model",
+    errors
+  });
+
   return {
     implementer: implementer as "codex" | "claude",
+    ...(implementerModel !== undefined ? { implementer_model: implementerModel } : {}),
     reviewer: reviewer as "codex" | "claude",
-    meta_reviewer: metaReviewer as "codex" | "claude"
+    ...(reviewerModel !== undefined ? { reviewer_model: reviewerModel } : {}),
+    meta_reviewer: metaReviewer as "codex" | "claude",
+    ...(metaReviewerModel !== undefined
+      ? { meta_reviewer_model: metaReviewerModel }
+      : {})
   };
 }

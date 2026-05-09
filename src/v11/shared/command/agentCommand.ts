@@ -10,6 +10,7 @@ import {
 
 export interface BuildAgentCommandInput {
   agentName: AgentName;
+  model?: string;
   bubbleId: string;
   workspacePath?: string;
   worktreePath?: string;
@@ -21,6 +22,7 @@ export interface BuildAgentCommandInput {
 
 function buildAgentLaunchCommand(
   agentName: AgentName,
+  model: string | undefined,
   startupPrompt: string | undefined
 ): string {
   const args: string[] = [agentName];
@@ -29,6 +31,10 @@ function buildAgentLaunchCommand(
     args.push("--dangerously-bypass-approvals-and-sandbox");
   } else if (agentName === "claude") {
     args.push("--dangerously-skip-permissions", "--permission-mode", "bypassPermissions");
+  }
+
+  if ((model?.trim().length ?? 0) > 0) {
+    args.push("--model", model as string);
   }
 
   if ((startupPrompt?.trim().length ?? 0) > 0) {
@@ -47,7 +53,11 @@ export function buildAgentCommand(input: BuildAgentCommandInput): string {
   }
   const missingBinaryMessage = `${agentName} CLI not found in PATH for bubble ${bubbleId}. Install it or configure agent command mapping.`;
   const worktreePinningMessage = `Failed to pin agent root to workspace ${workspacePath} for bubble ${bubbleId}.`;
-  const launchCommand = buildAgentLaunchCommand(agentName, input.startupPrompt);
+  const launchCommand = buildAgentLaunchCommand(
+    agentName,
+    input.model,
+    input.startupPrompt
+  );
   const pairflowBootstrap = buildPairflowCommandBootstrap(
     workspacePath,
     input.pairflowCommandProfile ?? "external",

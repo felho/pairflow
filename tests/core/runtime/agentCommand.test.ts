@@ -144,6 +144,19 @@ describe("buildAgentCommand", () => {
     await assertBashParses(command);
   });
 
+  it("passes an explicit model to the selected agent CLI", async () => {
+    const command = buildAgentCommand({
+      agentName: "claude",
+      model: "claude-sonnet-4-5",
+      bubbleId: "b_agent_cmd_model_01",
+      workspacePath: "/tmp/pairflow-worktree/model"
+    });
+
+    expect(command).toContain("--model");
+    expect(command).toContain("claude-sonnet-4-5");
+    await assertBashParses(command);
+  });
+
   it("fails closed when worktree path is empty", () => {
     expect(() =>
       buildAgentCommand({

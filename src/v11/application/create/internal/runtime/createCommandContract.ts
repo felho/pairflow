@@ -41,8 +41,11 @@ export interface BubbleCreateInput {
   cwd?: string;
   now?: Date;
   implementer?: AgentName;
+  implementerModel?: string;
   reviewer?: AgentName;
+  reviewerModel?: string;
   metaReviewer?: AgentName;
+  metaReviewerModel?: string;
   watchdogTimeoutMinutes?: number;
   maxRounds?: number;
   severityGateRound?: number;

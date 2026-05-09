@@ -1221,8 +1221,11 @@ reviewer_context_mode = "fresh"
 
 [defaults.agents]
 implementer = "codex"
+implementer_model = "gpt-5.2"
 reviewer = "claude"
+reviewer_model = "claude-sonnet-4-5"
 meta_reviewer = "codex"
+meta_reviewer_model = "gpt-5.2-mini"
 
 [defaults.review_policy]
 review_loop_mode = "full"
@@ -1238,6 +1241,9 @@ At `bubble create` time, Pairflow resolves explicit create input first, then
 repo `[defaults]`, then built-in defaults, and writes the resolved values into
 `.pairflow/bubbles/<id>/bubble.toml`. Later lifecycle commands use that bubble
 config as the authority; they do not re-read repo-root `pairflow.toml`.
+
+The `*_model` fields are optional. When present, Pairflow passes the configured
+value to the selected agent CLI as `--model <value>` for that role's pane.
 
 Missing `[defaults]` preserves built-in behavior. Unknown or invalid supported
 default fields fail create before the new bubble is persisted.

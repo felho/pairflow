@@ -325,7 +325,10 @@ describe("startBubble", () => {
       baseBranch: "main",
       reviewArtifactType: "code",
       task: "Start bubble task",
-      cwd: repoPath
+      cwd: repoPath,
+      implementerModel: "gpt-5.2",
+      reviewerModel: "claude-sonnet-4-5",
+      metaReviewerModel: "gpt-5.2-mini"
     });
 
     const calls: string[] = [];
@@ -489,6 +492,8 @@ describe("startBubble", () => {
     expect(reviewerCommand).toContain("exec bash -i");
     expect(implementerCommand).toContain("codex");
     expect(implementerCommand).toContain("--dangerously-bypass-approvals-and-sandbox");
+    expect(implementerCommand).toContain("--model");
+    expect(implementerCommand).toContain("gpt-5.2");
     expect(implementerCommand).toContain("Pairflow implementer start");
     expect(implementerCommand).toContain(created.paths.taskArtifactPath);
     expect(implementerCommand).toContain(
@@ -511,6 +516,8 @@ describe("startBubble", () => {
     expect(reviewerCommand).toContain("--dangerously-skip-permissions");
     expect(reviewerCommand).toContain("--permission-mode");
     expect(reviewerCommand).toContain("bypassPermissions");
+    expect(reviewerCommand).toContain("--model");
+    expect(reviewerCommand).toContain("claude-sonnet-4-5");
     expect(reviewerCommand).not.toContain("Pairflow reviewer start");
     expect(reviewerCommand).not.toContain("Reviewer brief (persisted artifact `reviewer-brief.md`)");
     expect(reviewerCommand).not.toContain("Stand by first. Do not start reviewing");
@@ -534,6 +541,8 @@ describe("startBubble", () => {
     expect(metaReviewerCommand).toContain(
       "--dangerously-bypass-approvals-and-sandbox"
     );
+    expect(metaReviewerCommand).toContain("--model");
+    expect(metaReviewerCommand).toContain("gpt-5.2-mini");
     expect(metaReviewerCommand).not.toContain("Pairflow meta-reviewer start");
     expect(metaReviewerCommand).not.toContain("--report-json");
     expect(metaReviewerCommand).not.toContain("findings_claim_state");

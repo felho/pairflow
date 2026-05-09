@@ -97,6 +97,9 @@ export async function refreshReviewerContext(
   const reviewerPaneIndex = getSharedTopologySlotPaneIndexForRole("reviewer");
   const reviewerCommand = buildAgentCommand({
     agentName: input.bubbleConfig.agents.reviewer,
+    ...(input.bubbleConfig.agents.reviewer_model !== undefined
+      ? { model: input.bubbleConfig.agents.reviewer_model }
+      : {}),
     bubbleId: input.bubbleId,
     workspacePath,
     pairflowCommandProfile: input.bubbleConfig.pairflow_command_profile,

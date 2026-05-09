@@ -163,8 +163,11 @@ reviewer_context_mode = "fresh"
 
 [defaults.agents]
 implementer = "codex"
+implementer_model = "gpt-5.2"
 reviewer = "claude"
+reviewer_model = "claude-sonnet-4-5"
 meta_reviewer = "codex"
+meta_reviewer_model = "gpt-5.2-mini"
 
 [defaults.review_policy]
 review_loop_mode = "full"
@@ -185,8 +188,11 @@ round_gate_applies_after = 2
       reviewer_context_mode: "fresh",
       agents: {
         implementer: "codex",
+        implementer_model: "gpt-5.2",
         reviewer: "claude",
-        meta_reviewer: "codex"
+        reviewer_model: "claude-sonnet-4-5",
+        meta_reviewer: "codex",
+        meta_reviewer_model: "gpt-5.2-mini"
       },
       review_policy: {
         review_loop_mode: "full",

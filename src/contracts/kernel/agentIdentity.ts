@@ -12,8 +12,11 @@ export type AgentRole = (typeof agentRoles)[number];
 
 export interface BubbleAgentsConfig {
   implementer: AgentName;
+  implementer_model?: string;
   reviewer: AgentName;
+  reviewer_model?: string;
   meta_reviewer: AgentName;
+  meta_reviewer_model?: string;
 }
 
 export function isAgentName(value: unknown): value is AgentName {

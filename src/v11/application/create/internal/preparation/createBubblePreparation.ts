@@ -44,11 +44,20 @@ export function prepareCreateBubbleInput(input: {
   if (input.command.implementer !== undefined) {
     bubbleConfigInput.implementer = input.command.implementer;
   }
+  if (input.command.implementerModel !== undefined) {
+    bubbleConfigInput.implementerModel = input.command.implementerModel;
+  }
   if (input.command.reviewer !== undefined) {
     bubbleConfigInput.reviewer = input.command.reviewer;
   }
+  if (input.command.reviewerModel !== undefined) {
+    bubbleConfigInput.reviewerModel = input.command.reviewerModel;
+  }
   if (input.command.metaReviewer !== undefined) {
     bubbleConfigInput.metaReviewer = input.command.metaReviewer;
+  }
+  if (input.command.metaReviewerModel !== undefined) {
+    bubbleConfigInput.metaReviewerModel = input.command.metaReviewerModel;
   }
   if (input.command.watchdogTimeoutMinutes !== undefined) {
     bubbleConfigInput.watchdogTimeoutMinutes =
