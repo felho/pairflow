@@ -2,7 +2,7 @@
 artifact_type: task
 artifact_id: task_list_remote_projection_pipeline_v1
 title: "List Remote Projection Pipeline"
-status: approved
+status: archived
 phase: phase1
 target_files:
   - src/v11/application/list/listReadModelApi.ts
