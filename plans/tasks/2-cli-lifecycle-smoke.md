@@ -5,7 +5,7 @@ task_family_id: cli-lifecycle-smoke
 sequence_key: "2"
 task_id: 2-cli-lifecycle-smoke
 title: "CLI Lifecycle Smoke"
-status: approved
+status: implementable
 phase: phase1
 system_context_ref: docs/architecture/almost-e2e-smoke-suite.md
 target_files:
@@ -13,6 +13,22 @@ target_files:
   - tests/almostE2e/cliLifecycleSmoke.test.ts
   - tests/helpers/almostE2eSmoke/
   - tests/helpers/almostE2eSmoke/index.ts
+target_files_role: write_targets_with_read_only_anchors
+target_write_files:
+  - tests/almostE2e/
+  - tests/almostE2e/cliLifecycleSmoke.test.ts
+  - tests/helpers/almostE2eSmoke/
+  - tests/helpers/almostE2eSmoke/index.ts
+target_read_only_anchors:
+  - docs/architecture/almost-e2e-smoke-suite.md
+  - plans/almost-e2e-smoke-suite-plan-v1.md
+  - plans/archive/tasks/2026-05-09-almost-e2e-smoke-suite-plan-v1/1-smoke-runner-contract.md
+  - src/cli/index.ts
+  - src/cli/commands/bubble/open.ts
+  - src/cli/commands/bubble/createCliOptions.ts
+  - src/v11/defaults/restart/restartCommandDefaults.ts
+  - src/config/pairflowConfig.ts
+  - src/config/bubbleConfig.ts
 prd_ref: null
 plan_ref: plans/almost-e2e-smoke-suite-plan-v1.md
 doc_bubble_id: 2-cli-lifecycle-smoke-doc
@@ -73,6 +89,14 @@ using the fake external-adapter foundation from `1-smoke-runner-contract`.
    terminals.
 6. Add focused assertions that build freshness is required or clearly diagnosed
    when `dist/cli/index.js` is missing.
+7. Reconcile the architecture document's broader Layer 1 command family with
+   this task's Phase 1 minimal slice by covering only create/start,
+   restart/open/delete here. Successor ownership is intentionally split:
+   actor-loop pass/convergence/meta-review approval belongs to
+   `3-actor-loop-smoke`; UI Open/Restart/Delete action dispatch belongs to
+   `4-ui-action-api-smoke`; kickoff and attach require explicit future
+   successor planning if they remain desired; full commit/merge/approve happy
+   path stays post-Phase-1 deferred scope unless the parent plan is refined.
 
 ### Out of Scope
 
@@ -83,6 +107,9 @@ using the fake external-adapter foundation from `1-smoke-runner-contract`.
    path.
 4. Changing production lifecycle semantics, command option contracts, or default
    adapter ownership to make the smoke easier to write.
+5. Adding source-level test hooks for create/open/restart/start/delete unless
+   the implementation first returns to task refinement with exact target files,
+   default-behavior preservation proof, and focused tests for the new hook.
 
 ## L1 - Change Contract
 
@@ -128,6 +155,7 @@ using the fake external-adapter foundation from `1-smoke-runner-contract`.
 | Fixture config/env | Yes. | Fixture-local config and environment variables may select fake external commands and isolated state roots, but must not alter global developer config. |
 | Package scripts | No by default. | Do not edit `package.json`; run the smoke through existing test commands unless implementation proves a dedicated script is necessary and updates this task first. |
 | Successor smoke semantics | Deferred. | Actor-loop ingestion and UI action API dispatch remain in tasks `3-actor-loop-smoke` and `4-ui-action-api-smoke`. |
+| Source defaults/hooks | No by default. | `src/**`, config parsers, command option contracts, and runtime defaults are read-only anchors for this task. If a compiled subprocess side effect cannot be faked through existing config/env/PATH boundaries, stop and refine this task instead of adding a hook opportunistically. |
 
 ### Baseline Preservation
 
@@ -154,12 +182,18 @@ default implementation path is fixture-local executable shims:
 5. assert the compiled CLI subprocess uses the shimmed external commands while
    production Pairflow state files are still created and removed by the CLI
 
-If this shim path cannot cover a command because the production code does not
-route that side effect through an executable or existing config boundary, the
-implementation must stop and refine this task before adding production wiring.
-Any production env/default hook would expand `target_files` to the exact
-`src/**` defaults or CLI wiring files and require tests proving default
-behavior is unchanged outside the fixture.
+Open-command fake setup must prefer an existing fixture-local configuration
+boundary. If the current compiled `bubble create` command cannot set
+`open_command` directly, the smoke may seed the fixture's Pairflow/bubble
+configuration only through normal config files read by the compiled CLI. It
+must not mutate created bubble state files after creation to make `open` pass.
+
+If this shim/config path cannot cover a command because the production code does
+not route that side effect through an executable, fixture config, or existing
+environment boundary, the implementation must stop and refine this task before
+adding production wiring. Any production env/default hook would expand
+`target_write_files` to the exact `src/**` defaults or CLI wiring files and
+require tests proving default behavior is unchanged outside the fixture.
 
 ### Scope-Reality Proof
 
@@ -178,15 +212,23 @@ behavior is unchanged outside the fixture.
    fake side-effect shape for in-process helpers; this task may reuse its
    record schema, but compiled CLI side effects must be recorded from the
    subprocess boundary.
-5. Precondition before side effect: the smoke must verify `dist/cli/index.js`
+5. Existing `src/cli/commands/bubble/createCliOptions.ts` does not expose an
+   `--open-command` flag at task-review time. The implementation must therefore
+   either use an existing fixture config boundary for `open_command` or return
+   for task refinement before adding CLI/source support.
+6. Precondition before side effect: the smoke must verify `dist/cli/index.js`
    exists and the fixture/shim environment is installed before running the
    first lifecycle command.
-6. Rollback/cleanup: the test must delete the created bubble and clean fixture
+7. Rollback/cleanup: the test must delete the created bubble and clean fixture
    temp paths it owns. It must never delete or mutate the developer checkout's
    `.pairflow` state.
-7. Actual implementation scope remains compiled CLI lifecycle smoke only:
+8. Actual implementation scope remains compiled CLI lifecycle smoke only:
    create/start/restart/open/delete. Actor feedback, meta-review, UI route
    dispatch, HTTP, Playwright, and Layer 3 remain out of scope.
+9. The runner-contract task is archived, and its current helper implementation
+   is an in-process foundation. This task may extend helper exports, but the
+   compiled CLI subprocess proof must be new here and must not claim the
+   archived helper's in-memory ports as compiled CLI coverage.
 
 ### Closure Budget and Task Shape
 
@@ -242,15 +284,22 @@ Complexity gate decision:
    setup from `1-smoke-runner-contract`.
 2. Add or extend a helper for invoking `node dist/cli/index.js` with structured
    argv and isolated environment variables for fake external adapters.
-3. Create a fixture repo for the smoke and run the lifecycle sequence:
+3. Add a missing-build diagnostic assertion for the helper's negative path
+   before positive smoke evidence is collected. This assertion must exercise the
+   absent-artifact diagnostic only and must not be reported as lifecycle smoke
+   success. It must use a helper-parameterized missing entrypoint or
+   fixture-local nonexistent path; it must not delete, rename, move, or
+   otherwise mutate the repository's real `dist/cli/index.js` artifact.
+4. Run `pnpm build` before any positive compiled CLI lifecycle sequence is
+   executed or trusted, including when the implementation changes only
+   tests/helpers.
+5. Create a fixture repo for the smoke and run the lifecycle sequence:
    create -> start -> restart -> open -> delete.
-4. Assert production-owned state after each lifecycle transition and assert fake
+6. Assert production-owned state after each lifecycle transition and assert fake
    external side-effect records for commands that would normally launch tmux,
    terminals, editors, or kill sessions.
-5. Add a missing-build diagnostic assertion if the helper can be invoked without
-   `dist/cli/index.js`.
-6. Run focused lifecycle smoke tests, then the repository's relevant validation
-   for changed tests/helpers.
+7. Run focused lifecycle smoke tests after the fresh build, then the
+   repository's relevant validation for changed tests/helpers.
 
 ## Validation Requirements
 
@@ -258,9 +307,15 @@ Complexity gate decision:
 2. Existing almost-e2e helper tests still pass if helper exports change.
 3. `pnpm typecheck`, `pnpm lint`, `pnpm fitness:check:ci`, and `pnpm test`
    pass unless a narrower explicit exception is recorded by the bubble.
-4. `pnpm build` must run before compiled CLI smoke evidence is trusted when
-   source/runtime/config affecting the CLI changed in the implementation
-   bubble.
+4. `pnpm build` must run before positive compiled CLI lifecycle smoke evidence
+   is trusted, even when the implementation changes only tests/helpers. The
+   smoke's claim is compiled public entrypoint coverage, so evidence from an
+   existing or stale `dist/cli/index.js` artifact is not sufficient.
+5. The missing-build diagnostic assertion is still required as a negative-path
+   test, but it does not replace the fresh-build precondition for the positive
+   lifecycle sequence. The negative-path setup must be idempotent and must not
+   mutate `dist/**`; simulate the absent entrypoint through helper parameters or
+   fixture-local paths instead.
 
 ## Review Checklist
 

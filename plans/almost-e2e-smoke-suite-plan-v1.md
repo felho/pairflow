@@ -24,7 +24,7 @@ task_tracker:
     notes: "Build the fake launch, fake external-adapter, scenario, and authority-refresh runner contract."
   - task_id: 2-cli-lifecycle-smoke
     task_path: plans/tasks/2-cli-lifecycle-smoke.md
-    status: approved
+    status: implementable
     notes: "Add compiled-CLI lifecycle smoke coverage for create/start, restart, open, and delete."
   - task_id: 3-actor-loop-smoke
     task_path: null
@@ -146,13 +146,16 @@ The source architecture document is
 1. The architecture document defines the suite purpose, fake/real boundary,
    public actor surface, runner-driven model, Phase 1 scope, decided choices,
    and open questions.
+2. The fake launch and runner contract foundation is implemented and archived
+   in task `1-smoke-runner-contract`; downstream smoke tasks may consume its
+   fixture and fake-helper foundation while still proving their own public
+   entrypoint coverage.
 
 ### Open Work
 
-1. Fake launch and runner contract is not implemented.
-2. Compiled CLI lifecycle smoke scenarios do not exist.
-3. Runner-driven fake actor-loop smoke does not exist.
-4. In-process UI action API smoke scenarios do not exist.
+1. Compiled CLI lifecycle smoke scenarios do not exist.
+2. Runner-driven fake actor-loop smoke does not exist.
+3. In-process UI action API smoke scenarios do not exist.
 
 ### Deferred / Future Work
 
@@ -175,12 +178,35 @@ foundation-only capability closure, authority boundary mapping, baseline
 preservation, closure-budget/task-shape proof, scope-reality proof, and a
 later-hardening backlog. No product/runtime implementation scope was added.
 
+Progress update (2026-05-09): document bubble
+`2-cli-lifecycle-smoke-doc` refined task `2-cli-lifecycle-smoke` with explicit
+implementation write targets, read-only source anchors, compiled-subprocess
+fake boundary constraints, and source-hook route-back conditions. No
+product/runtime implementation scope was added. A round-2 review refinement
+also aligned the task validation requirements with the parent plan by requiring
+`pnpm build` before positive compiled CLI smoke evidence is trusted, even for
+test/helper-only implementation changes. A round-3 review refinement aligned
+the L2 execution order with that same precondition by placing the fresh build
+before the positive compiled CLI lifecycle sequence and keeping the
+missing-build diagnostic as a separate negative-path assertion. A round-5
+review refinement separated successor handoff wording so actor-loop work points
+to task `3-actor-loop-smoke`, UI action work points to task
+`4-ui-action-api-smoke`, kickoff/attach require explicit future planning, and
+full commit/merge/approve happy path remains post-Phase-1 deferred scope. A
+round-6 review refinement aligned Current Status/Open Work with the archived
+runner-contract dependency by moving the fake launch and runner contract
+foundation into Completed Work and leaving only the remaining Phase 1 smoke
+scenarios open. A round-7 review refinement clarified that the missing-build
+negative-path assertion must use a helper-parameterized or fixture-local absent
+entrypoint and must not delete, move, or mutate the repository's real
+`dist/cli/index.js` artifact.
+
 ## Open Task List
 
 | Task ID | Task Path | Purpose | Depends On | Closes Gap | Status |
 |---|---|---|---|---|---|
 | `1-smoke-runner-contract` | `plans/archive/tasks/2026-05-09-almost-e2e-smoke-suite-plan-v1/1-smoke-runner-contract.md` | Build the fake process/editor spawn recorder, fake tmux launch/terminate adapter, runner-driven scenario advancement model, first-advance authority validation, post-first authority refresh, and TS scenario type contract. | `docs/architecture/almost-e2e-smoke-suite.md` | Provides the common fake-runner foundation required by all Phase 1 smoke tasks. | archived |
-| `2-cli-lifecycle-smoke` | `plans/tasks/2-cli-lifecycle-smoke.md` | Add compiled-CLI smoke coverage for create/start, restart, open, and delete against a minimal fixture repo using the fake external adapters where needed. | `1-smoke-runner-contract` | Proves the top-level `dist/cli/index.js` route and defaults wiring for public CLI entrypoints. | approved |
+| `2-cli-lifecycle-smoke` | `plans/tasks/2-cli-lifecycle-smoke.md` | Add compiled-CLI smoke coverage for create/start, restart, open, and delete against a minimal fixture repo using the fake external adapters where needed. | `1-smoke-runner-contract` | Proves the top-level `dist/cli/index.js` route and defaults wiring for public CLI entrypoints. | implementable |
 | `3-actor-loop-smoke` | `null` | Add one minimal runner-driven fake actor scenario through pass, convergence, and meta-review approval, using canonical `pairflow agent emit --kind ...` feedback. | `1-smoke-runner-contract`, `2-cli-lifecycle-smoke` | Proves actor ingestion, authority refresh, transcript/state progression, and meta-review approval routing without a real LLM. | not_created |
 | `4-ui-action-api-smoke` | `null` | Add in-process UI action API smoke coverage for Open, Restart, and Delete with real backend state and recorded external side effects. | `1-smoke-runner-contract`, `2-cli-lifecycle-smoke` | Proves UI action dispatch reaches the backend command paths that historically failed through Open/Restart. | not_created |
 
