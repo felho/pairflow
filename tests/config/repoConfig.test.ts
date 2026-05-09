@@ -11,6 +11,7 @@ import {
   resolvePairflowRepoConfigPath,
   validatePairflowRepoConfig
 } from "../../src/config/repoConfig.js";
+import { MAX_NODE_TIMER_DELAY_SECONDS } from "../../src/v11/shared/timing/nodeTimerDelay.js";
 
 const tempDirs: string[] = [];
 
@@ -220,11 +221,13 @@ round_gate_applies_after = 2
     const parsed = parsePairflowRepoConfigToml(`
 [plan_watch.runner]
 backend = "codex"
+idle_timeout_seconds = 900
 `);
 
     expect(parsed.plan_watch).toEqual({
       runner: {
-        backend: "codex"
+        backend: "codex",
+        idle_timeout_seconds: 900
       }
     });
   });
@@ -244,6 +247,7 @@ backend = "codex"
       parsePairflowRepoConfigToml(`
 [plan_watch.runner]
 backend = ""
+idle_timeout_seconds = 0
 extra = "ignored"
 `);
       throw new Error("Expected parsePairflowRepoConfigToml to throw.");
@@ -253,7 +257,43 @@ extra = "ignored"
         (entry) => entry.path
       );
       expect(paths).toContain("plan_watch.runner.backend");
+      expect(paths).toContain("plan_watch.runner.idle_timeout_seconds");
       expect(paths).toContain("plan_watch.runner.extra");
+    }
+  });
+
+  it("rejects non-integer plan-watch runner idle timeout", () => {
+    try {
+      parsePairflowRepoConfigToml(`
+[plan_watch.runner]
+idle_timeout_seconds = 1.5
+`);
+      throw new Error("Expected parsePairflowRepoConfigToml to throw.");
+    } catch (error) {
+      expect(error).toBeInstanceOf(SchemaValidationError);
+      const paths = (error as SchemaValidationError).errors.map(
+        (entry) => entry.path
+      );
+      expect(paths).toContain("plan_watch.runner.idle_timeout_seconds");
+    }
+  });
+
+  it("rejects plan-watch runner idle timeout values above Node timer limits", () => {
+    try {
+      parsePairflowRepoConfigToml(`
+[plan_watch.runner]
+idle_timeout_seconds = ${MAX_NODE_TIMER_DELAY_SECONDS + 1}
+`);
+      throw new Error("Expected parsePairflowRepoConfigToml to throw.");
+    } catch (error) {
+      expect(error).toBeInstanceOf(SchemaValidationError);
+      const validationError = error as SchemaValidationError;
+      const idleTimeoutError = validationError.errors.find(
+        (entry) => entry.path === "plan_watch.runner.idle_timeout_seconds"
+      );
+      expect(idleTimeoutError?.message).toContain(
+        String(MAX_NODE_TIMER_DELAY_SECONDS)
+      );
     }
   });
 

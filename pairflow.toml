@@ -16,3 +16,4 @@ meta_reviewer = "codex"
 
 [plan_watch.runner]
 backend = "codex"
+idle_timeout_seconds = 900

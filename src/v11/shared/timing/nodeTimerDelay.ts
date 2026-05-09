@@ -1,0 +1,4 @@
+export const MAX_NODE_TIMER_DELAY_MS = 2_147_483_647;
+export const MAX_NODE_TIMER_DELAY_SECONDS = Math.floor(
+  MAX_NODE_TIMER_DELAY_MS / 1000
+);

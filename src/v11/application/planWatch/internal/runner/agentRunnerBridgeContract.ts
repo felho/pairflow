@@ -17,6 +17,7 @@ export type AgentRunnerBridgeFailureReasonCode =
   | "AGENT_RUNNER_ABORTED"
   | "AGENT_RUNNER_SPAWN_FAILED"
   | "AGENT_RUNNER_TIMEOUT"
+  | "AGENT_RUNNER_IDLE_TIMEOUT"
   | "AGENT_RUNNER_NON_ZERO_EXIT"
   | "AGENT_RUNNER_OUTPUT_INVALID";
 
@@ -59,7 +60,7 @@ export interface AgentRunnerBridgeInput {
   trigger: AgentRunnerBridgeTriggerContext;
   workflow?: string | undefined;
   now?: Date;
-  timeoutMs?: number;
+  idleTimeoutMs?: number;
   stopSignal?: AbortSignal | undefined;
   onArtifactFiles?: ((files: CodexRunnerArtifactFiles) => void | Promise<void>) | undefined;
 }
@@ -70,7 +71,7 @@ export interface AgentRunnerCommandConfig {
   args?: readonly string[] | undefined;
   cwd?: string | undefined;
   env?: Readonly<Record<string, string | undefined>> | undefined;
-  timeoutMs?: number | undefined;
+  idleTimeoutMs?: number | undefined;
   inputMode?: AgentRunnerBridgeInputMode | undefined;
   codexRunnerFiles?: CodexRunnerArtifactFiles | undefined;
 }
@@ -104,7 +105,7 @@ export interface AgentRunnerCommandIdentity {
   args: readonly string[];
   cwd: string;
   inputMode: AgentRunnerBridgeInputMode;
-  timeoutMs: number;
+  idleTimeoutMs: number;
   envKeys: readonly string[];
 }
 
@@ -114,7 +115,7 @@ export interface AgentRunnerProcessInvocation {
   cwd: string;
   env?: Readonly<Record<string, string | undefined>> | undefined;
   stdin?: string | undefined;
-  timeoutMs: number;
+  idleTimeoutMs: number;
   signal?: AbortSignal | undefined;
   stdoutFilePath?: string | undefined;
 }
@@ -124,6 +125,7 @@ export interface AgentRunnerProcessResult {
   stdout: string;
   stderr: string;
   timedOut?: boolean | undefined;
+  timeoutKind?: "idle" | undefined;
   aborted?: boolean | undefined;
   stdoutFileWriteError?: string | undefined;
 }

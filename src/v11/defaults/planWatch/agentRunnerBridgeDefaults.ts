@@ -17,6 +17,7 @@ import type {
   ProcessSpawnPipeChild,
   ProcessSpawnPort
 } from "../../ports/processSpawn.js";
+import { MAX_NODE_TIMER_DELAY_MS } from "../../shared/timing/nodeTimerDelay.js";
 
 const TIMEOUT_KILL_GRACE_MS = 100;
 const MAX_CAPTURED_OUTPUT_CHARS = 64 * 1024;
@@ -66,7 +67,7 @@ class AgentRunnerCommandProcess {
   private settled = false;
   private timedOut = false;
   private aborted = false;
-  private timeoutTimer: NodeJS.Timeout | undefined;
+  private idleTimer: NodeJS.Timeout | undefined;
   private killTimer: NodeJS.Timeout | undefined;
   private finalizationTimer: NodeJS.Immediate | undefined;
   private child: ProcessSpawnPipeChild | undefined;
@@ -87,6 +88,7 @@ class AgentRunnerCommandProcess {
     return new Promise((resolve, reject) => {
       this.resolve = resolve;
       this.reject = reject;
+      const idleTimeoutMs = effectiveIdleTimeoutMs(this.invocation);
       const child = this.processSpawn(this.invocation.command, this.invocation.args, {
         cwd: this.invocation.cwd,
         ...(this.invocation.env !== undefined ? { env: this.invocation.env } : {}),
@@ -97,7 +99,7 @@ class AgentRunnerCommandProcess {
         return;
       }
       this.child = child as ProcessSpawnPipeChild;
-      this.startTimeoutTimer();
+      this.resetIdleTimer(idleTimeoutMs);
       this.invocation.signal?.addEventListener("abort", this.abortRunner, {
         once: true
       });
@@ -107,15 +109,22 @@ class AgentRunnerCommandProcess {
     });
   }
 
-  private startTimeoutTimer(): void {
-    this.timeoutTimer = setTimeout(() => {
+  private resetIdleTimer(idleTimeoutMs = effectiveIdleTimeoutMs(this.invocation)): void {
+    if (this.settled || this.aborted || this.timedOut) {
+      return;
+    }
+    if (this.idleTimer !== undefined) {
+      this.clearIdleTimer();
+    }
+    this.idleTimer = setTimeout(() => {
       this.timedOut = true;
+      this.idleTimer = undefined;
       this.child?.kill("SIGTERM");
       this.startKillTimer(() => {
         void this.forceResolve("timeout");
       });
-    }, this.invocation.timeoutMs);
-    this.timeoutTimer.unref();
+    }, idleTimeoutMs);
+    this.idleTimer.unref();
   }
 
   private startKillTimer(onExpired: () => void): void {
@@ -133,10 +142,11 @@ class AgentRunnerCommandProcess {
   }
 
   private readonly abortRunner = (): void => {
-    if (this.settled) {
+    if (this.settled || this.timedOut) {
       return;
     }
     this.aborted = true;
+    this.clearIdleTimer();
     this.child?.kill("SIGTERM");
     this.startKillTimer(() => {
       void this.forceResolve("abort");
@@ -153,12 +163,14 @@ class AgentRunnerCommandProcess {
       if (this.invocation.stdoutFilePath !== undefined) {
         this.appendStdoutFileChunk(chunk);
       }
+      this.resetIdleTimer();
       this.stdout = appendCapturedOutput(this.stdout, chunk);
     });
     child.stderr.on("data", (chunk: string) => {
       if (this.settled) {
         return;
       }
+      this.resetIdleTimer();
       this.stderr = appendCapturedOutput(this.stderr, chunk);
     });
     child.stdin.once("error", (error: Error) => {
@@ -178,11 +190,11 @@ class AgentRunnerCommandProcess {
       }
     });
     child.once("close", (exitCode) => {
-      if (this.settled) {
+      if (!this.markSettled()) {
         return;
       }
       this.finalizationTimer = setImmediate(() => {
-        void this.resolveAfterStdoutFileWrite(exitCode);
+        void this.resolveSettledAfterStdoutFileWrite(exitCode);
       });
     });
   }
@@ -210,7 +222,9 @@ class AgentRunnerCommandProcess {
       ...(this.stdoutFileWriteError !== undefined
         ? { stdoutFileWriteError: this.stdoutFileWriteError }
         : {}),
-      ...(reason === "timeout" ? { timedOut: true } : { aborted: true })
+      ...(reason === "timeout"
+        ? { timedOut: true, timeoutKind: "idle" as const }
+        : { aborted: true })
     });
   }
 
@@ -218,6 +232,10 @@ class AgentRunnerCommandProcess {
     if (!this.markSettled()) {
       return;
     }
+    await this.resolveSettledAfterStdoutFileWrite(exitCode);
+  }
+
+  private async resolveSettledAfterStdoutFileWrite(exitCode: number | null): Promise<void> {
     await this.waitForStdoutFileWrites();
     this.resolve?.(this.result(exitCode));
   }
@@ -245,15 +263,20 @@ class AgentRunnerCommandProcess {
   }
 
   private clearTimers(): void {
-    if (this.timeoutTimer !== undefined) {
-      clearTimeout(this.timeoutTimer);
-    }
+    this.clearIdleTimer();
     this.invocation.signal?.removeEventListener("abort", this.abortRunner);
     if (this.killTimer !== undefined) {
       clearTimeout(this.killTimer);
     }
     if (this.finalizationTimer !== undefined) {
       clearImmediate(this.finalizationTimer);
+    }
+  }
+
+  private clearIdleTimer(): void {
+    if (this.idleTimer !== undefined) {
+      clearTimeout(this.idleTimer);
+      this.idleTimer = undefined;
     }
   }
 
@@ -266,7 +289,7 @@ class AgentRunnerCommandProcess {
         ? { stdoutFileWriteError: this.stdoutFileWriteError }
         : {}),
       ...(this.aborted ? { aborted: true } : {}),
-      ...(this.timedOut ? { timedOut: true } : {})
+      ...(this.timedOut ? { timedOut: true, timeoutKind: "idle" as const } : {})
     };
   }
 
@@ -293,6 +316,20 @@ class AgentRunnerCommandProcess {
         }
       });
   }
+}
+
+function effectiveIdleTimeoutMs(invocation: AgentRunnerProcessInvocation): number {
+  const idleTimeoutMs = invocation.idleTimeoutMs;
+  if (
+    !Number.isInteger(idleTimeoutMs)
+    || idleTimeoutMs <= 0
+    || idleTimeoutMs > MAX_NODE_TIMER_DELAY_MS
+  ) {
+    throw new Error(
+      `AGENT_RUNNER_IDLE_TIMEOUT_INVALID: context=agent_runner_process_invocation idle timeout must be a positive integer no greater than ${MAX_NODE_TIMER_DELAY_MS} milliseconds.`
+    );
+  }
+  return idleTimeoutMs;
 }
 
 function abortedBeforeSpawnResult(): AgentRunnerProcessResult {

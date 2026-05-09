@@ -18,6 +18,9 @@ import {
   createDefaultPlanWatchLoopDependencies
 } from "../../../v11/defaults/planWatch/planWatchLoopDefaults.js";
 import {
+  DEFAULT_AGENT_RUNNER_IDLE_TIMEOUT_MS
+} from "../../../v11/application/planWatch/agentRunnerBridge.js";
+import {
   normalizeCodexTimeline
 } from "../../../v11/application/planWatch/codexAgentRunnerTimeline.js";
 import type {
@@ -141,7 +144,12 @@ export async function runPlanWatchCommand(
   }
 
   const repoConfig = await loadPairflowRepoConfig(options.repo);
-  const configuredRunnerBackend = repoConfig.plan_watch?.runner?.backend;
+  const configuredRunner = repoConfig.plan_watch?.runner;
+  const configuredRunnerBackend = configuredRunner?.backend;
+  const configuredIdleTimeoutMs =
+    configuredRunner?.idle_timeout_seconds !== undefined
+      ? configuredRunner.idle_timeout_seconds * 1000
+      : DEFAULT_AGENT_RUNNER_IDLE_TIMEOUT_MS;
   if (configuredRunnerBackend !== undefined && options.runnerCommand !== undefined) {
     throw new Error(
       "PLAN_WATCH_RUNNER_COMMAND_UNSUPPORTED: --runner-command cannot be combined with [plan_watch.runner] backend."
@@ -194,7 +202,8 @@ export async function runPlanWatchCommand(
         : {}),
       args: options.runnerArgs,
       inputMode: options.runnerInputMode,
-      cwd: options.repo
+      cwd: options.repo,
+      idleTimeoutMs: configuredIdleTimeoutMs
     },
     ...(stop.signal !== undefined ? { stopSignal: stop.signal } : {}),
     onEvent: onEventWithFollower

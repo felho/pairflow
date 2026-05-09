@@ -148,7 +148,13 @@ function processFailureResult(
     return processBlocked(input, "AGENT_RUNNER_ABORTED", "abort");
   }
   if (input.processResult.timedOut) {
-    return processBlocked(input, "AGENT_RUNNER_TIMEOUT", "timeout");
+    return processBlocked(
+      input,
+      input.processResult.timeoutKind === "idle"
+        ? "AGENT_RUNNER_IDLE_TIMEOUT"
+        : "AGENT_RUNNER_TIMEOUT",
+      "timeout"
+    );
   }
   if (input.processResult.exitCode !== 0) {
     return processBlocked(input, "AGENT_RUNNER_NON_ZERO_EXIT", "exit");

@@ -2,12 +2,10 @@ import type {
   AgentRunnerBridgeDependencies,
   AgentRunnerBridgeFailureReasonCode,
   AgentRunnerBridgeInput,
-  AgentRunnerBridgeInputMode,
   AgentRunnerBridgeResult,
   AgentRunnerCommandConfig,
   AgentRunnerCommandIdentity,
   AgentRunnerContinuationPayload,
-  AgentRunnerProcessInvocation,
   AgentRunnerProcessResult,
   RequiredAgentRunnerCommandConfig
 } from "./agentRunnerBridgeContract.js";
@@ -20,7 +18,12 @@ import {
 } from "./codexAgentRunnerBridge.js";
 import { classifyCodexJsonProcessResult } from "./codexAgentRunnerBridgeResult.js";
 import { parseStructuredAgentRunnerOutput } from "./agentRunnerBridgeResult.js";
-const DEFAULT_TIMEOUT_MS = 30 * 60 * 1000;
+import {
+  buildRunnerInvocation,
+  DEFAULT_AGENT_RUNNER_IDLE_TIMEOUT_MS,
+  resolveAgentRunnerIdleTimeoutMs
+} from "./agentRunnerInvocationPolicy.js";
+export { DEFAULT_AGENT_RUNNER_IDLE_TIMEOUT_MS };
 type PreconditionResolution =
   | { ok: true; config: RequiredAgentRunnerCommandConfig; payload: AgentRunnerContinuationPayload }
   | { ok: false; result: AgentRunnerBridgeResult };
@@ -59,6 +62,18 @@ export async function runExecutePairflowPlanContinuation(
       payload
     });
   }
+  const idleTimeoutMs = resolveAgentRunnerIdleTimeoutMs(input, config);
+  if (idleTimeoutMs === undefined) {
+    return blocked({
+      input,
+      startedAt,
+      completedAt: clock().toISOString(),
+      reasonCode: "PLAN_WATCH_RUNNER_PAYLOAD_INVALID",
+      failureStage: "precondition",
+      command: null,
+      payload
+    });
+  }
   const preconditions = await resolvePreconditions({
     input,
     config,
@@ -70,7 +85,12 @@ export async function runExecutePairflowPlanContinuation(
   if (!preconditions.ok) {
     return preconditions.result;
   }
-  const invocation = buildRunnerInvocation(input, preconditions.config, preconditions.payload);
+  const invocation = buildRunnerInvocation(
+    input,
+    preconditions.config,
+    preconditions.payload,
+    idleTimeoutMs
+  );
   if (preconditions.config.codexRunnerFiles !== undefined) await input.onArtifactFiles?.(preconditions.config.codexRunnerFiles);
   try {
     const processResult = await dependencies.runCommand(invocation.processInvocation);
@@ -306,47 +326,14 @@ async function resolveBuiltInRunnerPreconditions(input: {
     }
   };
 }
-function buildRunnerInvocation(
-  input: AgentRunnerBridgeInput,
-  config: RequiredAgentRunnerCommandConfig,
-  payload: AgentRunnerContinuationPayload
-): {
-  commandIdentity: AgentRunnerCommandIdentity;
-  payload: AgentRunnerContinuationPayload;
-  processInvocation: AgentRunnerProcessInvocation;
-} {
-  const command = config.command;
-  const timeoutMs = input.timeoutMs ?? config.timeoutMs ?? DEFAULT_TIMEOUT_MS;
-  const inputMode = config.inputMode ?? "stdin_json";
-  const cwd = config.cwd ?? input.repoPath;
-  const args =
-    inputMode === "arg_json"
-      ? [...(config.args ?? []), JSON.stringify(payload)]
-      : [...(config.args ?? [])];
-  return {
-    commandIdentity: buildCommandIdentity({
-      command,
-      args,
-      cwd,
-      inputMode,
-      timeoutMs,
-      env: config.env
-    }),
-    payload,
-    processInvocation: {
-      command,
-      args,
-      cwd,
-      env: config.env,
-      stdin: inputMode === "stdin_json" ? `${JSON.stringify(payload)}\n` : undefined,
-      timeoutMs,
-      ...(config.codexRunnerFiles !== undefined
-        ? { stdoutFilePath: config.codexRunnerFiles.eventsFilePath }
-        : {}),
-      ...(input.stopSignal !== undefined ? { signal: input.stopSignal } : {})
-    }
-  };
+function timeoutReasonCode(
+  processResult: AgentRunnerProcessResult
+): AgentRunnerBridgeFailureReasonCode {
+  return processResult.timeoutKind === "idle"
+    ? "AGENT_RUNNER_IDLE_TIMEOUT"
+    : "AGENT_RUNNER_TIMEOUT";
 }
+
 function classifyProcessResult(input: {
   input: AgentRunnerBridgeInput;
   processResult: AgentRunnerProcessResult;
@@ -375,7 +362,7 @@ function classifyProcessResult(input: {
       input: input.input,
       startedAt: input.startedAt,
       completedAt: input.completedAt,
-      reasonCode: "AGENT_RUNNER_TIMEOUT",
+      reasonCode: timeoutReasonCode(input.processResult),
       failureStage: "timeout",
       command: input.command,
       exitCode: input.processResult.exitCode,
@@ -453,23 +440,6 @@ function classifyProcessResult(input: {
   };
 }
 
-function buildCommandIdentity(input: {
-  command: string;
-  args: readonly string[];
-  cwd: string;
-  inputMode: AgentRunnerBridgeInputMode;
-  timeoutMs: number;
-  env?: Readonly<Record<string, string | undefined>> | undefined;
-}): AgentRunnerCommandIdentity {
-  return {
-    command: input.command,
-    args: input.args,
-    cwd: input.cwd,
-    inputMode: input.inputMode,
-    timeoutMs: input.timeoutMs,
-    envKeys: Object.keys(input.env ?? {}).sort()
-  };
-}
 function blocked(input: {
   input: AgentRunnerBridgeInput;
   startedAt: string;

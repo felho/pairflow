@@ -5,7 +5,7 @@ task_family_id: planwatch-runner-idle-timeout
 sequence_key: "1"
 task_id: 1-planwatch-runner-idle-timeout
 title: "Plan Watch Runner Idle Timeout"
-status: in_progress
+status: archived
 phase: phase1
 system_context_ref: plans/plan-watch-runner-idle-timeout-plan-v1.md
 target_files:
