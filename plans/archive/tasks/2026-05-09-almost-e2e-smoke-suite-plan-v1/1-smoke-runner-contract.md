@@ -5,7 +5,7 @@ task_family_id: smoke-runner-contract
 sequence_key: "1"
 task_id: 1-smoke-runner-contract
 title: "Smoke Runner Contract"
-status: in_progress
+status: archived
 phase: phase1
 system_context_ref: docs/architecture/almost-e2e-smoke-suite.md
 target_files:
