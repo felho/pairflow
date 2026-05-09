@@ -57,6 +57,15 @@ interface CommitRuntimeContextBase {
   bubbleIdentity: BubbleIdentity;
 }
 
+/**
+ * Non-caller lower-level helper boundary for local commit side effects.
+ *
+ * This type remains exported because `commitCommandGitStep.ts` and
+ * `commitCommandFinalization.ts` are intentionally kept outside
+ * `internal/pipeline/**` as focused git/finalization helpers. It is not a
+ * public orchestration contract for callers: route selection and side-effect
+ * ordering are owned by the command-local pipeline.
+ */
 export interface CommitRuntimeContext extends CommitRuntimeContextBase {
   route: "local";
   loadedState: LoadedState;
@@ -65,12 +74,25 @@ export interface CommitRuntimeContext extends CommitRuntimeContextBase {
   writeStateSnapshot: WriteStateSnapshotPort;
 }
 
+/**
+ * Internal pipeline route context for remote commit execution.
+ *
+ * The export is retained only so the pipeline can share an explicit typed union
+ * with the non-internal local helper boundary above. External callers should
+ * treat remote route selection as an implementation detail of
+ * `runCommitCommandPipeline(...)`, not as a caller-visible API surface.
+ */
 export interface RemoteCommitRuntimeContext extends CommitRuntimeContextBase {
   route: "remote";
   remotePointer: BubbleRemotePointerStarted;
   remoteTarget: CommitRemoteBubbleStatusTarget;
 }
 
+/**
+ * Command-local execution context union used by the commit pipeline and its
+ * retained lower-level helpers. This is not exported from `commitCommandApi.ts`
+ * and does not authorize callers to orchestrate commit routes directly.
+ */
 export type CommitExecutionContext =
   | CommitRuntimeContext
   | RemoteCommitRuntimeContext;
