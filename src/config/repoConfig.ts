@@ -78,8 +78,11 @@ export interface RepoValidationConfig {
 
 export interface RepoDefaultsAgentsConfig {
   implementer?: AgentName;
+  implementer_model?: string;
   reviewer?: AgentName;
+  reviewer_model?: string;
   meta_reviewer?: AgentName;
+  meta_reviewer_model?: string;
 }
 
 export interface RepoDefaultsRoleMcpConfig {
@@ -320,8 +323,13 @@ function validateRepoDefaultsConfig(
       errors.push({ path: "defaults.agents", message: "Must be an object/section" });
     } else {
       const allowedAgentKeys = new Set(["implementer", "reviewer", "meta_reviewer"]);
+      const allowedAgentModelKeys = new Set([
+        "implementer_model",
+        "reviewer_model",
+        "meta_reviewer_model"
+      ]);
       for (const key of Object.keys(agents)) {
-        if (!allowedAgentKeys.has(key)) {
+        if (!allowedAgentKeys.has(key) && !allowedAgentModelKeys.has(key)) {
           errors.push({
             path: `defaults.agents.${key}`,
             message: `Unsupported defaults.agents field "${key}".`
@@ -342,6 +350,22 @@ function validateRepoDefaultsConfig(
           errors,
           isValid: isAgentName,
           message: "Must be one of: codex, claude"
+        });
+        if (value !== undefined) {
+          validatedAgents[key] = value;
+        }
+      }
+      const agentModelKeys = [
+        "implementer_model",
+        "reviewer_model",
+        "meta_reviewer_model"
+      ] as const;
+      for (const key of agentModelKeys) {
+        const value = readOptionalNonEmptyString({
+          source: agents,
+          key,
+          path: `defaults.agents.${key}`,
+          errors
         });
         if (value !== undefined) {
           validatedAgents[key] = value;

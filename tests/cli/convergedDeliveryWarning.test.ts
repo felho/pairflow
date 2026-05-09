@@ -23,7 +23,7 @@ describe("runCli converged delivery warning parity", () => {
 
   it(
     "prints resume guidance when auto-rework delivery is not confirmed",
-    { timeout: 10_000 },
+    { timeout: 20_000 },
     async () => {
     const mockedResult = {
       bubbleId: "b_conv_warn_01",

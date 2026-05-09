@@ -136,8 +136,17 @@ export function renderBubbleConfigToml(config: BubbleConfig): string {
     "",
     "[agents]",
     `implementer = ${tomlString(config.agents.implementer)}`,
+    config.agents.implementer_model !== undefined
+      ? `implementer_model = ${tomlString(config.agents.implementer_model)}`
+      : undefined,
     `reviewer = ${tomlString(config.agents.reviewer)}`,
+    config.agents.reviewer_model !== undefined
+      ? `reviewer_model = ${tomlString(config.agents.reviewer_model)}`
+      : undefined,
     `meta_reviewer = ${tomlString(config.agents.meta_reviewer)}`,
+    config.agents.meta_reviewer_model !== undefined
+      ? `meta_reviewer_model = ${tomlString(config.agents.meta_reviewer_model)}`
+      : undefined,
     "",
     "[role_mcp]",
     `implementer = ${tomlString(roleMcp.implementer)}`,

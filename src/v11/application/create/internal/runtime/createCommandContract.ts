@@ -42,9 +42,12 @@ export interface BubbleCreateInput {
   cwd?: string;
   now?: Date;
   implementer?: AgentName;
+  implementerModel?: string;
   reviewer?: AgentName;
+  reviewerModel?: string;
   metaReviewer?: AgentName;
   roleMcp?: Partial<Record<"implementer" | "reviewer" | "meta_reviewer", RoleMcpPolicy>>;
+  metaReviewerModel?: string;
   watchdogTimeoutMinutes?: number;
   maxRounds?: number;
   severityGateRound?: number;

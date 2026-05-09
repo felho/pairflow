@@ -11,6 +11,8 @@ bootstrap = "pnpm install --frozen-lockfile && pnpm --dir ui install --frozen-lo
 
 [defaults.agents]
 reviewer = "codex"
+implementer = "codex"
+meta_reviewer = "codex"
 
 [plan_watch.runner]
 backend = "codex"

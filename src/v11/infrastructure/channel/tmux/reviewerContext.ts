@@ -35,18 +35,22 @@ function sleep(ms: number): Promise<void> {
   });
 }
 
-function shouldSubmitStartupPrompt(agentName: string): boolean {
-  return agentName === "codex";
+function shouldSubmitStartupPrompt(
+  agentName: string,
+  startupPrompt: string | undefined
+): boolean {
+  return agentName === "codex" && (startupPrompt?.trim().length ?? 0) > 0;
 }
 
 async function maybeSubmitReviewerStartupPrompt(input: {
   agentName: string;
+  startupPrompt?: string | undefined;
   runner: TmuxRunner;
   sessionName: string;
   paneIndex: number;
   startupSubmitDelayMs?: number;
 }): Promise<void> {
-  if (!shouldSubmitStartupPrompt(input.agentName)) {
+  if (!shouldSubmitStartupPrompt(input.agentName, input.startupPrompt)) {
     return;
   }
 
@@ -98,6 +102,9 @@ export async function refreshReviewerContext(
     roleMcpPolicy:
       input.bubbleConfig.role_mcp?.reviewer
       ?? DEFAULT_ROLE_MCP_POLICY_BY_ROLE.reviewer,
+    ...(input.bubbleConfig.agents.reviewer_model !== undefined
+      ? { model: input.bubbleConfig.agents.reviewer_model }
+      : {}),
     bubbleId: input.bubbleId,
     workspacePath,
     pairflowCommandProfile: input.bubbleConfig.pairflow_command_profile,
@@ -121,6 +128,9 @@ export async function refreshReviewerContext(
     });
     await maybeSubmitReviewerStartupPrompt({
       agentName: input.bubbleConfig.agents.reviewer,
+      ...(input.reviewerStartupPrompt !== undefined
+        ? { startupPrompt: input.reviewerStartupPrompt }
+        : {}),
       runner,
       sessionName,
       paneIndex: reviewerPaneIndex,

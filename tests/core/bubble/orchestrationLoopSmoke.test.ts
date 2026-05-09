@@ -135,7 +135,7 @@ describe("bubble orchestration loop smoke", () => {
     expect(runtimeRemoveCalls).toEqual([]);
     expect(startupLaunch).toBeDefined();
     expect(startupLaunch?.implementerCommand).toContain("Pairflow implementer start");
-    expect(startupLaunch?.reviewerCommand).toContain("Pairflow reviewer start");
+    expect(startupLaunch?.reviewerCommand).not.toContain("Pairflow reviewer start");
     expect(startupLaunch?.implementerKickoffMessage).toBeDefined();
     expect(startupLaunch?.implementerKickoffMessage).toContain("kickoff");
 

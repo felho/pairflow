@@ -653,8 +653,11 @@ describe("createBubble", () => {
         "",
         "[defaults.agents]",
         'implementer = "claude"',
+        'implementer_model = "claude-sonnet-4-5"',
         'reviewer = "codex"',
+        'reviewer_model = "gpt-5.2"',
         'meta_reviewer = "claude"',
+        'meta_reviewer_model = "claude-opus-4-1"',
         "",
         "[defaults.review_policy]",
         'review_loop_mode = "meta_only"',
@@ -686,8 +689,11 @@ describe("createBubble", () => {
       reviewer_context_mode: "persistent",
       agents: {
         implementer: "claude",
+        implementer_model: "claude-sonnet-4-5",
         reviewer: "codex",
-        meta_reviewer: "claude"
+        reviewer_model: "gpt-5.2",
+        meta_reviewer: "claude",
+        meta_reviewer_model: "claude-opus-4-1"
       },
       review_policy: {
         review_loop_mode: "meta_only",
@@ -711,8 +717,11 @@ describe("createBubble", () => {
     expect(reparsedConfig.pairflow_command_profile).toBe("self_host");
     expect(reparsedConfig.reviewer_context_mode).toBe("persistent");
     expect(reparsedConfig.agents.implementer).toBe("claude");
+    expect(reparsedConfig.agents.implementer_model).toBe("claude-sonnet-4-5");
     expect(reparsedConfig.agents.reviewer).toBe("codex");
+    expect(reparsedConfig.agents.reviewer_model).toBe("gpt-5.2");
     expect(reparsedConfig.agents.meta_reviewer).toBe("claude");
+    expect(reparsedConfig.agents.meta_reviewer_model).toBe("claude-opus-4-1");
     expect(reparsedConfig.review_policy?.review_loop_mode).toBe("meta_only");
     expect(reparsedConfig.review_policy?.reviewer_blocking_min_severity).toBe("P2");
     expect(reparsedConfig.review_policy?.meta_review_auto_rework_min_severity).toBe("P1");

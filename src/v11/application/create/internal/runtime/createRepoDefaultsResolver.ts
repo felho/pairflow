@@ -174,13 +174,25 @@ export function resolveRepoDefaultedCreateInput(input: {
     explicit: input.command.implementer,
     repoDefault: defaults.agents?.implementer
   });
+  const implementerModel = pickResolvedString({
+    explicit: input.command.implementerModel,
+    repoDefault: defaults.agents?.implementer_model
+  });
   const reviewer = pickResolvedAgent({
     explicit: input.command.reviewer,
     repoDefault: defaults.agents?.reviewer
   });
+  const reviewerModel = pickResolvedString({
+    explicit: input.command.reviewerModel,
+    repoDefault: defaults.agents?.reviewer_model
+  });
   const metaReviewer = pickResolvedAgent({
     explicit: input.command.metaReviewer,
     repoDefault: defaults.agents?.meta_reviewer
+  });
+  const metaReviewerModel = pickResolvedString({
+    explicit: input.command.metaReviewerModel,
+    repoDefault: defaults.agents?.meta_reviewer_model
   });
 
   const watchdogTimeoutMinutes = pickResolvedNumber({
@@ -210,8 +222,11 @@ export function resolveRepoDefaultedCreateInput(input: {
     ...(severityGateRound !== undefined ? { severityGateRound } : {}),
     ...(reviewerContextMode !== undefined ? { reviewerContextMode } : {}),
     ...(implementer !== undefined ? { implementer } : {}),
+    ...(implementerModel !== undefined ? { implementerModel } : {}),
     ...(reviewer !== undefined ? { reviewer } : {}),
+    ...(reviewerModel !== undefined ? { reviewerModel } : {}),
     ...(metaReviewer !== undefined ? { metaReviewer } : {}),
+    ...(metaReviewerModel !== undefined ? { metaReviewerModel } : {}),
     ...(pairflowCommandProfile !== undefined ? { pairflowCommandProfile } : {}),
     ...resolveRoleMcp({
       command: input.command,

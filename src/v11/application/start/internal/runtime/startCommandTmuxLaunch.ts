@@ -4,8 +4,6 @@ import {
   buildImplementerIdeationKickoffMessage,
   buildImplementerKickoffMessage,
   buildImplementerStartupPrompt,
-  buildMetaReviewerStartupPrompt,
-  buildReviewerStartupPrompt,
   buildStatusPaneCommand
 } from "../prompts/startCommandPrompts.js";
 import {
@@ -23,8 +21,11 @@ import { DEFAULT_ROLE_MCP_POLICY_BY_ROLE } from "../../../../../config/defaults.
 import type { PairflowRemoteWorkspaceAuthority } from "../../../../shared/command/pairflowCommandBootstrap.js";
 import type { RoleMcpPolicy } from "../../../../shared/config/bubbleConfigVocabulary.js";
 
-function shouldSubmitStartupPrompt(agentName: AgentName): boolean {
-  return agentName === "codex";
+function shouldSubmitStartupPrompt(
+  agentName: AgentName,
+  startupPrompt: string | undefined
+): boolean {
+  return agentName === "codex" && (startupPrompt?.trim().length ?? 0) > 0;
 }
 
 function buildStatusPaneLabel(bubbleId: string): string {
@@ -51,10 +52,11 @@ function buildAgentLaunchCommand(input: {
   agentName: AgentName;
   roleName: AgentRole;
   roleMcpPolicy: RoleMcpPolicy;
+  model?: string;
   bubbleId: string;
   workspacePath: string;
   pairflowCommandProfile: StartExecutionContext["resolved"]["bubbleConfig"]["pairflow_command_profile"];
-  startupPrompt: string;
+  startupPrompt?: string | undefined;
   externalPairflowCommand?: string;
   remoteWorkspaceAuthority?: PairflowRemoteWorkspaceAuthority;
 }): string {
@@ -62,6 +64,7 @@ function buildAgentLaunchCommand(input: {
     agentName: input.agentName,
     roleName: input.roleName,
     roleMcpPolicy: input.roleMcpPolicy,
+    ...(input.model !== undefined ? { model: input.model } : {}),
     bubbleId: input.bubbleId,
     workspacePath: input.workspacePath,
     pairflowCommandProfile: input.pairflowCommandProfile,
@@ -99,6 +102,81 @@ function assertRunningLaunchAck(input: {
   });
 }
 
+interface ActiveResumeStartupPrompts {
+  implementerStartupPrompt?: string | undefined;
+  reviewerStartupPrompt?: string | undefined;
+  metaReviewerStartupPrompt?: string | undefined;
+}
+
+function buildActiveResumeStartupPrompts(input: {
+  context: StartExecutionContext;
+  launchWorkspacePath: string;
+  transcriptSummary: string;
+  reviewerTestDirectiveLine?: string;
+  kickoffDiagnostic?: string;
+}): ActiveResumeStartupPrompts {
+  const loadedState = input.context.loadedState.state;
+  if (loadedState.state !== "RUNNING") {
+    return {};
+  }
+
+  const activeRole = loadedState.active_role;
+  const activeAgent = loadedState.active_agent;
+  const bubbleConfig = input.context.resolved.bubbleConfig;
+  const common = {
+    bubbleId: input.context.resolved.bubbleId,
+    repoPath: input.context.resolved.repoPath,
+    workspacePath: input.launchWorkspacePath,
+    taskArtifactPath: input.context.resolved.bubblePaths.taskArtifactPath,
+    pairflowCommandProfile: bubbleConfig.pairflow_command_profile,
+    state: loadedState,
+    transcriptSummary: input.transcriptSummary,
+    ...(input.kickoffDiagnostic !== undefined
+      ? { kickoffDiagnostic: input.kickoffDiagnostic }
+      : {})
+  };
+
+  if (activeRole === "implementer" && activeAgent === bubbleConfig.agents.implementer) {
+    return {
+      implementerStartupPrompt: buildResumeImplementerStartupPrompt({
+        ...common,
+        reviewArtifactType: bubbleConfig.review_artifact_type,
+        validationCommands: bubbleConfig.commands
+      })
+    };
+  }
+
+  if (activeRole === "reviewer" && activeAgent === bubbleConfig.agents.reviewer) {
+    return {
+      reviewerStartupPrompt: buildResumeReviewerStartupPrompt({
+        ...common,
+        policySnapshotPathAbs: input.context.policySnapshotPathAbs,
+        reviewArtifactType: bubbleConfig.review_artifact_type,
+        reviewerBlockingMinSeverity:
+          bubbleConfig.review_policy?.reviewer_blocking_min_severity
+          ?? DEFAULT_REVIEW_POLICY_REVIEWER_BLOCKING_MIN_SEVERITY,
+        ...(input.reviewerTestDirectiveLine !== undefined
+          ? { reviewerTestDirectiveLine: input.reviewerTestDirectiveLine }
+          : {}),
+        ...(input.context.reviewerFocus !== undefined
+          ? { reviewerFocus: input.context.reviewerFocus }
+          : {}),
+        ...(input.context.reviewerBriefText !== undefined
+          ? { reviewerBriefText: input.context.reviewerBriefText }
+          : {})
+      })
+    };
+  }
+
+  if (activeRole === "meta_reviewer" && activeAgent === bubbleConfig.agents.meta_reviewer) {
+    return {
+      metaReviewerStartupPrompt: buildResumeMetaReviewerStartupPrompt(common)
+    };
+  }
+
+  return {};
+}
+
 export async function launchFreshTmuxSession(input: {
   context: StartExecutionContext;
   deps: ResolvedStartBubbleDependencies;
@@ -109,6 +187,16 @@ export async function launchFreshTmuxSession(input: {
     input.context.remoteStartContext?.externalPairflowCommand;
   const remoteWorkspaceAuthority = resolveRemoteWorkspaceAuthority(input.context);
   const metaReviewerAgent = input.context.resolved.bubbleConfig.agents.meta_reviewer;
+  const implementerStartupPrompt = buildImplementerStartupPrompt({
+    bubbleId: input.context.resolved.bubbleId,
+    repoPath: input.context.resolved.repoPath,
+    workspacePath: input.launchWorkspacePath,
+    taskArtifactPath: input.context.resolved.bubblePaths.taskArtifactPath,
+    reviewArtifactType: input.context.resolved.bubbleConfig.review_artifact_type,
+    pairflowCommandProfile: input.context.resolved.bubbleConfig.pairflow_command_profile,
+    ideationPending: input.ideationPending,
+    validationCommands: input.context.resolved.bubbleConfig.commands
+  });
   const ack = await input.deps.launchSessionAck({
     bubbleId: input.context.resolved.bubbleId,
     workspacePath: input.launchWorkspacePath,
@@ -124,33 +212,26 @@ export async function launchFreshTmuxSession(input: {
     reviewerPaneLabel: `[${input.context.resolved.bubbleConfig.agents.reviewer}/reviewer]`,
     metaReviewerPaneLabel: `[${metaReviewerAgent}/meta-reviewer]`,
     implementerSubmitStartupPrompt: shouldSubmitStartupPrompt(
-      input.context.resolved.bubbleConfig.agents.implementer
+      input.context.resolved.bubbleConfig.agents.implementer,
+      implementerStartupPrompt
     ),
-    reviewerSubmitStartupPrompt: shouldSubmitStartupPrompt(
-      input.context.resolved.bubbleConfig.agents.reviewer
-    ),
-    metaReviewerSubmitStartupPrompt: shouldSubmitStartupPrompt(metaReviewerAgent),
+    reviewerSubmitStartupPrompt: false,
+    metaReviewerSubmitStartupPrompt: false,
     implementerCommand: buildAgentLaunchCommand({
       agentName: input.context.resolved.bubbleConfig.agents.implementer,
       roleName: "implementer",
       roleMcpPolicy:
         input.context.resolved.bubbleConfig.role_mcp?.implementer
         ?? DEFAULT_ROLE_MCP_POLICY_BY_ROLE.implementer,
+      ...(input.context.resolved.bubbleConfig.agents.implementer_model !== undefined
+        ? { model: input.context.resolved.bubbleConfig.agents.implementer_model }
+        : {}),
       bubbleId: input.context.resolved.bubbleId,
       workspacePath: input.launchWorkspacePath,
       pairflowCommandProfile: input.context.resolved.bubbleConfig.pairflow_command_profile,
       ...(externalPairflowCommand !== undefined ? { externalPairflowCommand } : {}),
       ...(remoteWorkspaceAuthority !== undefined ? { remoteWorkspaceAuthority } : {}),
-      startupPrompt: buildImplementerStartupPrompt({
-        bubbleId: input.context.resolved.bubbleId,
-        repoPath: input.context.resolved.repoPath,
-        workspacePath: input.launchWorkspacePath,
-        taskArtifactPath: input.context.resolved.bubblePaths.taskArtifactPath,
-        reviewArtifactType: input.context.resolved.bubbleConfig.review_artifact_type,
-        pairflowCommandProfile: input.context.resolved.bubbleConfig.pairflow_command_profile,
-        ideationPending: input.ideationPending,
-        validationCommands: input.context.resolved.bubbleConfig.commands
-      })
+      startupPrompt: implementerStartupPrompt
     }),
     reviewerCommand: buildAgentLaunchCommand({
       agentName: input.context.resolved.bubbleConfig.agents.reviewer,
@@ -158,29 +239,15 @@ export async function launchFreshTmuxSession(input: {
       roleMcpPolicy:
         input.context.resolved.bubbleConfig.role_mcp?.reviewer
         ?? DEFAULT_ROLE_MCP_POLICY_BY_ROLE.reviewer,
+      ...(input.context.resolved.bubbleConfig.agents.reviewer_model !== undefined
+        ? { model: input.context.resolved.bubbleConfig.agents.reviewer_model }
+        : {}),
       bubbleId: input.context.resolved.bubbleId,
       workspacePath: input.launchWorkspacePath,
       pairflowCommandProfile: input.context.resolved.bubbleConfig.pairflow_command_profile,
       ...(externalPairflowCommand !== undefined ? { externalPairflowCommand } : {}),
       ...(remoteWorkspaceAuthority !== undefined ? { remoteWorkspaceAuthority } : {}),
-      startupPrompt: buildReviewerStartupPrompt({
-        bubbleId: input.context.resolved.bubbleId,
-        repoPath: input.context.resolved.repoPath,
-        workspacePath: input.launchWorkspacePath,
-        taskArtifactPath: input.context.resolved.bubblePaths.taskArtifactPath,
-        policySnapshotPathAbs: input.context.policySnapshotPathAbs,
-        pairflowCommandProfile: input.context.resolved.bubbleConfig.pairflow_command_profile,
-        reviewArtifactType: input.context.resolved.bubbleConfig.review_artifact_type,
-        reviewerBlockingMinSeverity:
-          input.context.resolved.bubbleConfig.review_policy?.reviewer_blocking_min_severity
-          ?? DEFAULT_REVIEW_POLICY_REVIEWER_BLOCKING_MIN_SEVERITY,
-        ...(input.context.reviewerFocus !== undefined
-          ? { reviewerFocus: input.context.reviewerFocus }
-          : {}),
-        ...(input.context.reviewerBriefText !== undefined
-          ? { reviewerBriefText: input.context.reviewerBriefText }
-          : {})
-      })
+      startupPrompt: undefined
     }),
     metaReviewerCommand: buildAgentLaunchCommand({
       agentName: metaReviewerAgent,
@@ -188,18 +255,15 @@ export async function launchFreshTmuxSession(input: {
       roleMcpPolicy:
         input.context.resolved.bubbleConfig.role_mcp?.meta_reviewer
         ?? DEFAULT_ROLE_MCP_POLICY_BY_ROLE.meta_reviewer,
+      ...(input.context.resolved.bubbleConfig.agents.meta_reviewer_model !== undefined
+        ? { model: input.context.resolved.bubbleConfig.agents.meta_reviewer_model }
+        : {}),
       bubbleId: input.context.resolved.bubbleId,
       workspacePath: input.launchWorkspacePath,
       pairflowCommandProfile: input.context.resolved.bubbleConfig.pairflow_command_profile,
       ...(externalPairflowCommand !== undefined ? { externalPairflowCommand } : {}),
       ...(remoteWorkspaceAuthority !== undefined ? { remoteWorkspaceAuthority } : {}),
-      startupPrompt: buildMetaReviewerStartupPrompt({
-        bubbleId: input.context.resolved.bubbleId,
-        repoPath: input.context.resolved.repoPath,
-        workspacePath: input.launchWorkspacePath,
-        taskArtifactPath: input.context.resolved.bubblePaths.taskArtifactPath,
-        pairflowCommandProfile: input.context.resolved.bubbleConfig.pairflow_command_profile
-      })
+      startupPrompt: undefined
     }),
     implementerKickoffMessage: input.ideationPending
       ? buildImplementerIdeationKickoffMessage({
@@ -240,6 +304,11 @@ export async function launchResumeTmuxSession(input: {
     input.context.remoteStartContext?.externalPairflowCommand;
   const remoteWorkspaceAuthority = resolveRemoteWorkspaceAuthority(input.context);
   const metaReviewerAgent = input.context.resolved.bubbleConfig.agents.meta_reviewer;
+  const {
+    implementerStartupPrompt,
+    reviewerStartupPrompt,
+    metaReviewerStartupPrompt
+  } = buildActiveResumeStartupPrompts(input);
   const ack = await input.deps.launchSessionAck({
     bubbleId: input.context.resolved.bubbleId,
     workspacePath: input.launchWorkspacePath,
@@ -255,35 +324,32 @@ export async function launchResumeTmuxSession(input: {
     reviewerPaneLabel: `[${input.context.resolved.bubbleConfig.agents.reviewer}/reviewer]`,
     metaReviewerPaneLabel: `[${metaReviewerAgent}/meta-reviewer]`,
     implementerSubmitStartupPrompt: shouldSubmitStartupPrompt(
-      input.context.resolved.bubbleConfig.agents.implementer
+      input.context.resolved.bubbleConfig.agents.implementer,
+      implementerStartupPrompt
     ),
     reviewerSubmitStartupPrompt: shouldSubmitStartupPrompt(
-      input.context.resolved.bubbleConfig.agents.reviewer
+      input.context.resolved.bubbleConfig.agents.reviewer,
+      reviewerStartupPrompt
     ),
-    metaReviewerSubmitStartupPrompt: shouldSubmitStartupPrompt(metaReviewerAgent),
+    metaReviewerSubmitStartupPrompt: shouldSubmitStartupPrompt(
+      metaReviewerAgent,
+      metaReviewerStartupPrompt
+    ),
     implementerCommand: buildAgentLaunchCommand({
       agentName: input.context.resolved.bubbleConfig.agents.implementer,
       roleName: "implementer",
       roleMcpPolicy:
         input.context.resolved.bubbleConfig.role_mcp?.implementer
         ?? DEFAULT_ROLE_MCP_POLICY_BY_ROLE.implementer,
+      ...(input.context.resolved.bubbleConfig.agents.implementer_model !== undefined
+        ? { model: input.context.resolved.bubbleConfig.agents.implementer_model }
+        : {}),
       bubbleId: input.context.resolved.bubbleId,
       workspacePath: input.launchWorkspacePath,
       pairflowCommandProfile: input.context.resolved.bubbleConfig.pairflow_command_profile,
       ...(externalPairflowCommand !== undefined ? { externalPairflowCommand } : {}),
       ...(remoteWorkspaceAuthority !== undefined ? { remoteWorkspaceAuthority } : {}),
-      startupPrompt: buildResumeImplementerStartupPrompt({
-        bubbleId: input.context.resolved.bubbleId,
-        repoPath: input.context.resolved.repoPath,
-        workspacePath: input.launchWorkspacePath,
-        taskArtifactPath: input.context.resolved.bubblePaths.taskArtifactPath,
-        reviewArtifactType: input.context.resolved.bubbleConfig.review_artifact_type,
-        pairflowCommandProfile: input.context.resolved.bubbleConfig.pairflow_command_profile,
-        state: input.context.loadedState.state,
-        transcriptSummary: input.transcriptSummary,
-        validationCommands: input.context.resolved.bubbleConfig.commands,
-        ...(input.kickoffDiagnostic !== undefined ? { kickoffDiagnostic: input.kickoffDiagnostic } : {})
-      })
+      startupPrompt: implementerStartupPrompt
     }),
     reviewerCommand: buildAgentLaunchCommand({
       agentName: input.context.resolved.bubbleConfig.agents.reviewer,
@@ -291,35 +357,15 @@ export async function launchResumeTmuxSession(input: {
       roleMcpPolicy:
         input.context.resolved.bubbleConfig.role_mcp?.reviewer
         ?? DEFAULT_ROLE_MCP_POLICY_BY_ROLE.reviewer,
+      ...(input.context.resolved.bubbleConfig.agents.reviewer_model !== undefined
+        ? { model: input.context.resolved.bubbleConfig.agents.reviewer_model }
+        : {}),
       bubbleId: input.context.resolved.bubbleId,
       workspacePath: input.launchWorkspacePath,
       pairflowCommandProfile: input.context.resolved.bubbleConfig.pairflow_command_profile,
       ...(externalPairflowCommand !== undefined ? { externalPairflowCommand } : {}),
       ...(remoteWorkspaceAuthority !== undefined ? { remoteWorkspaceAuthority } : {}),
-      startupPrompt: buildResumeReviewerStartupPrompt({
-        bubbleId: input.context.resolved.bubbleId,
-        repoPath: input.context.resolved.repoPath,
-        workspacePath: input.launchWorkspacePath,
-        taskArtifactPath: input.context.resolved.bubblePaths.taskArtifactPath,
-        policySnapshotPathAbs: input.context.policySnapshotPathAbs,
-        pairflowCommandProfile: input.context.resolved.bubbleConfig.pairflow_command_profile,
-        state: input.context.loadedState.state,
-        transcriptSummary: input.transcriptSummary,
-        reviewArtifactType: input.context.resolved.bubbleConfig.review_artifact_type,
-        reviewerBlockingMinSeverity:
-          input.context.resolved.bubbleConfig.review_policy?.reviewer_blocking_min_severity
-          ?? DEFAULT_REVIEW_POLICY_REVIEWER_BLOCKING_MIN_SEVERITY,
-        ...(input.reviewerTestDirectiveLine !== undefined
-          ? { reviewerTestDirectiveLine: input.reviewerTestDirectiveLine }
-          : {}),
-        ...(input.context.reviewerFocus !== undefined
-          ? { reviewerFocus: input.context.reviewerFocus }
-          : {}),
-        ...(input.context.reviewerBriefText !== undefined
-          ? { reviewerBriefText: input.context.reviewerBriefText }
-          : {}),
-        ...(input.kickoffDiagnostic !== undefined ? { kickoffDiagnostic: input.kickoffDiagnostic } : {})
-      })
+      startupPrompt: reviewerStartupPrompt
     }),
     metaReviewerCommand: buildAgentLaunchCommand({
       agentName: metaReviewerAgent,
@@ -327,21 +373,15 @@ export async function launchResumeTmuxSession(input: {
       roleMcpPolicy:
         input.context.resolved.bubbleConfig.role_mcp?.meta_reviewer
         ?? DEFAULT_ROLE_MCP_POLICY_BY_ROLE.meta_reviewer,
+      ...(input.context.resolved.bubbleConfig.agents.meta_reviewer_model !== undefined
+        ? { model: input.context.resolved.bubbleConfig.agents.meta_reviewer_model }
+        : {}),
       bubbleId: input.context.resolved.bubbleId,
       workspacePath: input.launchWorkspacePath,
       pairflowCommandProfile: input.context.resolved.bubbleConfig.pairflow_command_profile,
       ...(externalPairflowCommand !== undefined ? { externalPairflowCommand } : {}),
       ...(remoteWorkspaceAuthority !== undefined ? { remoteWorkspaceAuthority } : {}),
-      startupPrompt: buildResumeMetaReviewerStartupPrompt({
-        bubbleId: input.context.resolved.bubbleId,
-        repoPath: input.context.resolved.repoPath,
-        workspacePath: input.launchWorkspacePath,
-        taskArtifactPath: input.context.resolved.bubblePaths.taskArtifactPath,
-        pairflowCommandProfile: input.context.resolved.bubbleConfig.pairflow_command_profile,
-        state: input.context.loadedState.state,
-        transcriptSummary: input.transcriptSummary,
-        ...(input.kickoffDiagnostic !== undefined ? { kickoffDiagnostic: input.kickoffDiagnostic } : {})
-      })
+      startupPrompt: metaReviewerStartupPrompt
     }),
     ...input.resumeKickoffMessages
   });

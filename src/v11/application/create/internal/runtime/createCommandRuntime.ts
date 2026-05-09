@@ -10,7 +10,6 @@ import type { PairflowGlobalConfig } from "../../../../../config/pairflowConfig.
 import { PAIRFLOW_REMOTE_CONFIG_INVALID } from "../../../../../config/pairflowConfig.js";
 import {
   DEFAULT_DOC_CONTRACT_ROUND_GATE_APPLIES_AFTER,
-  DEFAULT_IMPLEMENTER_AGENT,
   DEFAULT_MAX_ROUNDS,
   DEFAULT_PAIRFLOW_COMMAND_PROFILE,
   DEFAULT_QUALITY_MODE,
@@ -18,7 +17,6 @@ import {
   DEFAULT_REVIEW_POLICY_REVIEWER_BLOCKING_MIN_SEVERITY,
   DEFAULT_REVIEW_POLICY_LOOP_MODE,
   DEFAULT_REVIEWER_CONTEXT_MODE,
-  DEFAULT_REVIEWER_AGENT,
   DEFAULT_ROLE_MCP_POLICY_BY_ROLE,
   DEFAULT_SEVERITY_GATE_ROUND,
   DEFAULT_WATCHDOG_TIMEOUT_MINUTES,
@@ -52,6 +50,7 @@ import {
   parseCreateRemoteAlias
 } from "./createRemoteAlias.js";
 import { buildValidationCommandsConfig } from "../preparation/createValidationCommandsConfig.js";
+import { buildCreateBubbleAgentsConfig } from "./createBubbleAgentsConfig.js";
 
 export class BubbleCreateError extends Error {
   public constructor(message: string) {
@@ -79,9 +78,12 @@ export interface CreateBubbleConfigInput {
   ideationMode?: boolean;
   ideationStartedAt?: string;
   implementer?: AgentName;
+  implementerModel?: string;
   reviewer?: AgentName;
+  reviewerModel?: string;
   metaReviewer?: AgentName;
   roleMcp?: Partial<Record<"implementer" | "reviewer" | "meta_reviewer", RoleMcpPolicy>>;
+  metaReviewerModel?: string;
   watchdogTimeoutMinutes?: number;
   maxRounds?: number;
   severityGateRound?: number;
@@ -342,15 +344,7 @@ export function buildBubbleConfig(input: CreateBubbleConfigInput): BubbleConfig 
     ...(input.resolvedValidationCommands?.validationTarget !== undefined
       ? { validation_target: input.resolvedValidationCommands.validationTarget }
       : {}),
-    agents: {
-      implementer: input.implementer ?? DEFAULT_IMPLEMENTER_AGENT,
-      reviewer: input.reviewer ?? DEFAULT_REVIEWER_AGENT,
-      // Keep create-path compat normalization anchored to the canonical config
-      // validator instead of duplicating a producer-local fallback here.
-      ...(input.metaReviewer !== undefined
-        ? { meta_reviewer: input.metaReviewer }
-        : {})
-    },
+    agents: buildCreateBubbleAgentsConfig(input),
     role_mcp: {
       ...DEFAULT_ROLE_MCP_POLICY_BY_ROLE,
       ...input.roleMcp

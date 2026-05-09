@@ -14,6 +14,7 @@ export interface BuildAgentCommandInput {
   agentName: AgentName;
   roleName?: AgentRole;
   roleMcpPolicy?: RoleMcpPolicy;
+  model?: string;
   bubbleId: string;
   workspacePath?: string;
   worktreePath?: string;
@@ -25,6 +26,7 @@ export interface BuildAgentCommandInput {
 
 function buildAgentLaunchCommand(
   agentName: AgentName,
+  model: string | undefined,
   startupPrompt: string | undefined,
   roleMcpPolicy: RoleMcpPolicy
 ): string {
@@ -40,6 +42,10 @@ function buildAgentLaunchCommand(
     if (roleMcpPolicy === "disabled") {
       args.push("--strict-mcp-config", "--mcp-config", '{"mcpServers":{}}');
     }
+  }
+
+  if ((model?.trim().length ?? 0) > 0) {
+    args.push("--model", model as string);
   }
 
   if ((startupPrompt?.trim().length ?? 0) > 0) {
@@ -193,6 +199,7 @@ export function buildAgentCommand(input: BuildAgentCommandInput): string {
       : [];
   const launchCommand = buildAgentLaunchCommand(
     agentName,
+    input.model,
     input.startupPrompt,
     roleMcpPolicy
   );
