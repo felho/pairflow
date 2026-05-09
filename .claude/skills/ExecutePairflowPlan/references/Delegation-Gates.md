@@ -68,10 +68,14 @@ Allowed mutations require an authorizing delegated result:
    editing, staging, committing, or publishing in the operator route ledger or
    workflow notes for the current run, that names
    selected explicit admin paths, named postconditions, clean main authority,
-   ideation hold proof, selected-route scope proof, and changed-path coverage
-   including untracked files. The final `PublishPreKickoffAdmin` workflow result
-   is produced after the publish or checkpoint path; it is not required before
-   the workflow can perform its own authorized side effects.
+   ideation hold proof, selected-route scope proof, carrier base alignment
+   proof, and changed-path coverage including untracked files. Carrier base
+   alignment proof must distinguish `HEAD` already at current clean `main`,
+   `HEAD` behind-but-ancestor and therefore eligible for fast-forward-only
+   alignment in the carrier worktree, and true divergence. The final
+   `PublishPreKickoffAdmin` workflow result is produced after the publish or
+   checkpoint path; it is not required before the workflow can perform its own
+   authorized side effects.
 10. document-bubble kickoff after pre-kickoff admin publish requires the final
    `PublishPreKickoffAdmin` success result plus refreshed handler-side proof
    that `main` task metadata contains `doc_bubble_id=<task_id>-doc` with

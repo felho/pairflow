@@ -313,9 +313,15 @@ clean_main_authority:
   repo_path: <repo-path>
   main_base_ref: <main-base-ref>
   status: clean
+carrier_base_alignment:
+  carrier_head_before_alignment: <bubble-worktree-head>
+  carrier_head_is_ancestor_of_main: <true|false>
+  alignment_action: <none|ff_only_main_into_carrier|blocked_diverged>
+  carrier_head_after_alignment: <bubble-worktree-head-after-alignment>
 ideation_hold_proof: <pairflow-round-0-task-pending-proof>
 authorized_side_effects:
   - edit_selected_admin_paths
+  - ff_only_align_carrier_to_main_when_behind
   - stage_selected_admin_paths
   - create_or_reuse_admin_commit
   - publish_admin_commit_to_main
@@ -365,9 +371,10 @@ All preconditions must pass before committing or publishing:
    changes, and untracked files, contains no path outside `SELECTED_ADMIN_PATHS`.
 11. `NAMED_POSTCONDITIONS` is explicit enough to verify after publish against
     refreshed `main` metadata or refreshed selected artifact content.
-12. For the new-commit path, `BUBBLE_WORKTREE_PATH` `HEAD` equals
-    `MAIN_BASE_REF` before staging. A pre-existing `ADMIN_COMMIT_CANDIDATE` is
-    handled only by the candidate reuse rules below.
+12. For the new-commit path, `BUBBLE_WORKTREE_PATH` `HEAD` must either equal
+    `MAIN_BASE_REF`, or be an ancestor of `MAIN_BASE_REF` and be alignable by a
+    fast-forward-only `main` merge before staging. A pre-existing
+    `ADMIN_COMMIT_CANDIDATE` is handled only by the candidate reuse rules below.
 
 Side effects forbidden before all preconditions pass:
 
@@ -376,6 +383,13 @@ Side effects forbidden before all preconditions pass:
 3. merging, cherry-picking, or otherwise publishing to `main`
 4. mutating plan/task/progress metadata on `main`
 5. running `pairflow bubble kickoff`
+
+Exception: after ideation hold, clean main, selected admin scope, and complete
+changed-path coverage have been proven, this workflow may run a
+fast-forward-only alignment in `BUBBLE_WORKTREE_PATH` when the carrier `HEAD` is
+an ancestor of the current clean `main`. This alignment must not stage, commit,
+publish, or mutate `main`; it only moves the carrier branch forward to the
+current `MAIN_BASE_REF` while preserving the selected admin worktree changes.
 
 ## Decision Order
 
@@ -529,12 +543,62 @@ has no merge, rebase, cherry-pick, or revert operation in progress.
 Also immediately before staging, re-read `REFRESHED_MAIN_GIT_STATUS`. If
 `REPO_PATH` is no longer on `main`, or if `main` is dirty or any Git operation is
 now in progress, return `MAIN_NOT_CLEAN` before staging, committing, publishing,
-or kickoff. If the refreshed `main` ref no longer equals `MAIN_BASE_REF`, return
-`MAIN_BASE_REF_CHANGED` before staging or creating a stale-base admin commit.
+or kickoff. If the refreshed `main` ref no longer equals `MAIN_BASE_REF`, first
+re-evaluate the carrier base using the alignment rules below. Return
+`MAIN_BASE_REF_CHANGED` only when an unpublished `ADMIN_COMMIT_CANDIDATE` has
+already been created or reused against the older base and is not already exactly
+published on refreshed `main`.
+
+#### Carrier Base Alignment Before Admin Commit
+
+Before creating a new admin commit, classify the carrier base in this order:
+
+1. **Already current**: `BUBBLE_WORKTREE_PATH` `HEAD` equals the current clean
+   `MAIN_BASE_REF`.
+   - `alignment_action=none`
+   - continue to staging.
+2. **Behind current main, no admin commit yet**: `BUBBLE_WORKTREE_PATH` `HEAD`
+   is an ancestor of the current clean `MAIN_BASE_REF`, and the refreshed
+   changed-path set is still fully covered by `SELECTED_ADMIN_PATHS`.
+   - `alignment_action=ff_only_main_into_carrier`
+   - run a fast-forward-only `main` merge in `BUBBLE_WORKTREE_PATH`
+   - re-read carrier `HEAD`, operation state, complete changed-path coverage,
+     Pairflow ideation hold, and clean `main`
+   - continue only when carrier `HEAD` now equals the current
+     `MAIN_BASE_REF` and the selected admin changes are still present and still
+     selected-scope only.
+3. **Diverged from current main**: carrier `HEAD` is not the current
+   `MAIN_BASE_REF` and is not an ancestor of the current clean
+   `MAIN_BASE_REF`.
+   - `alignment_action=blocked_diverged`
+   - return `CARRIER_DIVERGED_FROM_MAIN` before staging, committing,
+     publishing, or kickoff.
+
+The behind-current-main case is recoverable and must not be reported as
+`MAIN_BASE_REF_CHANGED` or `ADMIN_COMMIT_FAILED`. Only true divergence requires
+operator judgment. This rule applies before new admin commit creation; candidate
+reuse still follows the `ADMIN_COMMIT_CANDIDATE` rules above.
+
+Result for true divergence:
+
+```yaml
+workflow: PublishPreKickoffAdmin
+publish_result: human_checkpoint
+reason_code: CARRIER_DIVERGED_FROM_MAIN
+bubble_id: <bubble-id>
+worktree_path: <worktree-path>
+selected_admin_paths: <selected-paths>
+postcondition_evidence:
+  main_base_ref: <current-main-ref>
+  carrier_head: <bubble-worktree-head>
+  carrier_head_is_ancestor_of_main: false
+kickoff_allowed: false
+```
 
 For the new-commit path, prove `BUBBLE_WORKTREE_PATH` `HEAD` equals
-`MAIN_BASE_REF` before staging. If the bubble worktree is already based on a
-different commit, return `ADMIN_COMMIT_FAILED` before staging or creating a
+`MAIN_BASE_REF` after any allowed carrier alignment and before staging. If that
+proof is still missing after the alignment classification above, return the
+narrow checkpoint for the failed guard before staging or creating a
 non-publishable commit. This pre-side-effect ancestry guard prevents creating a
 commit that can only fail the publish ancestry rule later.
 
@@ -750,7 +814,8 @@ This workflow may emit only these reason codes:
 7. `ADMIN_COMMIT_FAILED`
 8. `ADMIN_PUBLISH_FAILED`
 9. `ADMIN_POSTCONDITION_MISSING`
-10. `ADMIN_PUBLISH_SUCCEEDED`
+10. `CARRIER_DIVERGED_FROM_MAIN`
+11. `ADMIN_PUBLISH_SUCCEEDED`
 
 ## Validation Checklist
 
@@ -770,16 +835,19 @@ Manual review or successor tests must prove:
 9. success includes selected paths, admin commit id, refreshed main ref,
    authorization evidence, postcondition evidence, and `kickoff_allowed=true`
 10. bubble worktree operation state is checked before staging and committing
-11. `main` cleanliness and `MAIN_BASE_REF` equality are re-read immediately
-    before staging
+11. `main` cleanliness and carrier base alignment are re-read immediately
+    before staging; stale-but-ancestor carrier branches are fast-forward-aligned
+    instead of checkpointed
 12. Pairflow ideation hold status is re-read after publish before
     `kickoff_allowed=true`
 13. success proves refreshed `main` ref equals the exact `admin_commit`
 14. admin publish is fast-forward-only from `MAIN_BASE_REF` and cannot carry
     earlier bubble-branch ancestors
-15. a clean but changed `main` ref before staging or publish returns
-    `MAIN_BASE_REF_CHANGED` before stale-base staging, publish, or kickoff, and
-    retains `admin_commit` when commit creation or reuse already happened
+15. a clean but changed `main` ref before staging is split into two cases:
+    stale-but-ancestor carrier branches are fast-forward-aligned before commit,
+    while true divergence returns `CARRIER_DIVERGED_FROM_MAIN`; after commit
+    creation or reuse, base drift returns `MAIN_BASE_REF_CHANGED` and retains
+    `admin_commit`
 16. reruns can recover an already-published `admin_commit` without creating a
     second admin commit
 17. `CreateDocumentBubble` success names `doc_bubble_id=<task_id>-doc`,
@@ -819,8 +887,14 @@ Manual review or successor tests must prove:
     includes tracked changes, staged paths, and untracked files immediately
     before allowing staging, commit, or publish
 32. the new-commit path proves bubble worktree `HEAD` equals `MAIN_BASE_REF`
-    before staging, so an ancestry failure cannot be discovered only after
-    creating a non-publishable commit
+    after any allowed fast-forward carrier alignment and before staging, so an
+    ancestry failure cannot be discovered only after creating a non-publishable
+    commit
+33. a carrier branch that is behind but ancestor of current clean `main` is
+    automatically recoverable with fast-forward-only alignment when changed-path
+    coverage is selected-scope only; it is not a human checkpoint
+34. a carrier branch that has diverged from current clean `main` returns
+    `CARRIER_DIVERGED_FROM_MAIN` before staging, commit, publish, or kickoff
 
 Validation for this documentation workflow should also verify:
 

@@ -144,9 +144,12 @@ Mandatory pre-edit carrier guard:
    - `git status --porcelain=v1` is empty
    - no merge, rebase, or cherry-pick state is active
 5. Verify `BUBBLE_WORKTREE_PATH` is a Git worktree for branch
-   `bubble/<task_id>-doc` and starts from the expected clean base unless a
-   previous selected-scope admin edit for this same route is intentionally being
-   resumed.
+   `bubble/<task_id>-doc`. For task-admin editing, it may either start from the
+   expected clean base, or intentionally resume previous selected-scope admin
+   edits whose carrier `HEAD` is behind but still an ancestor of current clean
+   `main`; the later `PublishPreKickoffAdmin` step owns fast-forward-only
+   carrier alignment before admin commit. A carrier that has diverged from
+   current clean `main` must stop before staging, commit, publish, or kickoff.
 6. Write or update the route ledger/workflow notes with a
    `PublishPreKickoffAdmin` pre-side-effect authorization record before editing.
    The record must name:
@@ -157,6 +160,9 @@ Mandatory pre-edit carrier guard:
      that may be created or refined
    - named postconditions expected after publish
    - clean `main` proof
+   - carrier base alignment proof, including whether the carrier is already at
+     current `main`, behind-but-ancestor and eligible for fast-forward-only
+     carrier alignment, or diverged
    - ideation hold proof
    - selected-route scope proof
    - expected changed-path coverage, including untracked files
