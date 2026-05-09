@@ -155,6 +155,45 @@ describe("refreshReviewerContext", () => {
     ]);
   });
 
+  it("does not submit Codex reviewer pane input when refresh has no startup prompt", async () => {
+    const calls: string[][] = [];
+    const runner: TmuxRunner = (args): Promise<TmuxRunResult> => {
+      calls.push(args);
+      return Promise.resolve({
+        stdout: "",
+        stderr: "",
+        exitCode: 0
+      });
+    };
+
+    const result = await refreshReviewerContext({
+      bubbleId: "b_reviewer_ctx_01",
+      bubbleConfig: {
+        ...baseConfig,
+        agents: {
+          ...baseConfig.agents,
+          reviewer: "codex"
+        }
+      },
+      sessionsPath: "/tmp/repo/.pairflow/runtime/sessions.json",
+      runner,
+      startupSubmitDelayMs: 0,
+      readSessionsRegistry: () =>
+        Promise.resolve({
+          b_reviewer_ctx_01: createRuntimeSessionRecord({
+            workspacePath: "/tmp/runtime-workspace",
+            workspaceKind: "worktree"
+          })
+        })
+    });
+
+    expect(result).toEqual({
+      refreshed: true
+    });
+    expect(calls[0]?.[0]).toBe("respawn-pane");
+    expect(calls.some((call) => call[0] === "send-keys")).toBe(false);
+  });
+
   it("fails closed when explicit workspace authority is absent", async () => {
     const calls: string[][] = [];
     const runner: TmuxRunner = (args): Promise<TmuxRunResult> => {
