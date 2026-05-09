@@ -10,7 +10,9 @@ fitness = "pnpm fitness:check:ci"
 bootstrap = "pnpm install --frozen-lockfile && pnpm --dir ui install --frozen-lockfile && pnpm build"
 
 [defaults.agents]
-reviewer = "codex"
+reviewer = "claude"
+implementer = "claude"
+meta_reviewer = "claude"
 
 [plan_watch.runner]
 backend = "codex"
