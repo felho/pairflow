@@ -24,7 +24,7 @@ target_files:
   - tests/cli/planWatchCommand.test.ts
 prd_ref: null
 plan_ref: plans/plan-watch-runner-idle-timeout-plan-v1.md
-doc_bubble_id: null
+doc_bubble_id: 1-planwatch-runner-idle-timeout-doc
 impl_bubble_id: null
 supersedes: []
 superseded_by: null
