@@ -16,7 +16,7 @@ archive_group: 2026-05-09-mcp-disabled-agent-launch-plan-v1
 task_tracker:
   - task_id: 1-mcp-disabled-agent-launch
     task_path: plans/tasks/1-mcp-disabled-agent-launch.md
-    status: approved
+    status: implementable
 ---
 
 # Plan: MCP-Disabled Agent Launch Defaults
@@ -38,10 +38,15 @@ backed by `codex` or `claude`.
 2. `claude` launch disables MCPs through Claude Code's explicit isolated MCP
    config path: `--strict-mcp-config --mcp-config '{"mcpServers":{}}'`.
 3. `codex` launch disables MCPs by discovering configured Codex MCP servers and
-   passing `-c 'mcp_servers.<name>.enabled=false'` for every enabled/effective
+   passing one TOML-quoted key override, for example
+   `-c 'mcp_servers."server.name".enabled=false'`, for every enabled/effective
    server.
 4. Operators can opt individual workflow roles back into MCP access through
-   Pairflow configuration.
+   Pairflow configuration for newly created/prepared bubbles. Already-created
+   legacy bubbles without persisted `[role_mcp]` do not reread mutable repo
+   defaults at start/restart time; missing bubble-local role keys resolve to
+   `disabled` unless a later migration task explicitly rewrites the bubble
+   config.
 5. Launch behavior is covered by focused unit tests and the relevant config
    parsing/rendering tests.
 
@@ -49,7 +54,7 @@ backed by `codex` or `claude`.
 
 | Capability Claim | Closure Classification | Activation Path | Repo-Provided Boundary | External Prerequisites | Last-Mile Proof |
 |---|---|---|---|---|---|
-| Pairflow can launch `implementer`, `reviewer`, and `meta_reviewer` panes with MCP access disabled by default, regardless of the backing agent binary. | end_to_end | `pairflow bubble start` / restart paths that resolve role -> agent and call `buildAgentCommand(...)` | Pairflow role policy resolution, command construction, config parsing, bubble config rendering, tests | Installed `codex` and `claude` CLIs must support the documented flags used by the task when selected for a role | Planned in `1-mcp-disabled-agent-launch` |
+| Pairflow can launch `implementer`, `reviewer`, and `meta_reviewer` panes with MCP access disabled by default, regardless of the backing agent binary. | end_to_end | Bounded launch activation set that resolves role -> agent and calls `buildAgentCommand(...)`: `pairflow bubble start`, restart/resume launch, reviewer-context launch, and meta-review gate pane launch. | Pairflow role policy resolution, command construction, config parsing, bubble config rendering, tests | Installed `codex` and `claude` CLIs must support the documented flags used by the task when selected for a role; Codex disabled mode also requires `node` on `PATH` for launch-time JSON parsing | Planned in `1-mcp-disabled-agent-launch` |
 
 ## Guiding Principles
 
@@ -131,13 +136,18 @@ backed by `codex` or `claude`.
 
 ## Progress / Phase Summary
 
-N/A
+2026-05-09 document refinement: task
+`plans/tasks/1-mcp-disabled-agent-launch.md` is now specification-ready for
+implementation. The refined task closes the role-policy authority boundary,
+durable config/rendering contract, launch-command consumer contract, fail-closed
+Codex discovery behavior, Claude strict empty MCP config behavior, focused test
+matrix, and deferred UI/status reporting boundary.
 
 ## Open Task List
 
 | Task ID | Task Path | Purpose | Depends On | Closes Gap | Status |
 |---|---|---|---|---|---|
-| `1-mcp-disabled-agent-launch` | `plans/tasks/1-mcp-disabled-agent-launch.md` | Add config-driven default-disabled MCP launch policy for Pairflow roles, then apply the resolved role policy to the backing `codex` or `claude` launch command. | N/A | All open work in this plan. | draft |
+| `1-mcp-disabled-agent-launch` | `plans/tasks/1-mcp-disabled-agent-launch.md` | Add config-driven default-disabled MCP launch policy for Pairflow roles, then apply the resolved role policy to the backing `codex` or `claude` launch command. | N/A | All open work in this plan. | implementable |
 
 ## Coverage Map
 
@@ -163,11 +173,21 @@ N/A
 
 1. Assumption: `codex mcp list --json` is stable enough for launch-time
    discovery in the installed Codex CLI version.
-2. Risk: future Codex may add a first-class `--no-mcp` flag. If it does, a later
-   task can replace the generated per-server overrides.
-3. Risk: querying Codex MCP config at launch must not start MCP servers. If
-   implementation evidence shows it does, route back to task refinement before
-   shipping this approach.
+2. Risk: future Codex may add a first-class `--no-mcp` flag. If the installed
+   Codex CLI exposes that flag before this task's implementation starts, route
+   back and refine this task instead of implementing per-server overrides. If
+   the flag appears only after this task ships, a later replacement task can
+   migrate to it.
+3. Risk: querying Codex MCP config at launch must not start MCP servers or hang
+   indefinitely. This task uses a hard-coded 5 second discovery timeout local to
+   the generated launch script; it does not add a repo config key, bubble config
+   key, environment variable, or public CLI/API flag for that timeout.
+   Pre-implementation evidence must observe `codex mcp list --json` under the
+   same 5 second timeout in an isolated disposable environment without
+   secret-bearing MCP credentials, using process/network/file-access tracing or
+   an equivalent local sandbox trace. If safe observation is unavailable, the
+   command times out, or evidence shows MCP server startup or network/auth
+   checks, route back to task refinement before shipping this approach.
 4. Assumption: disabling all configured Codex MCP servers by name is equivalent
    to "no MCP tools available" for Pairflow's current use case.
 
