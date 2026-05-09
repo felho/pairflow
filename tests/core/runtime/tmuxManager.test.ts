@@ -587,6 +587,47 @@ describe("launchBubbleSessionAck orchestration", () => {
     ]);
   });
 
+  it("keeps disabled role panes on placeholders without respawning agent commands", async () => {
+    const calls: string[][] = [];
+    const runner: TmuxRunner = (args: string[]) => {
+      calls.push(args);
+      return Promise.resolve({
+        stdout: buildSplitPaneStdout(args),
+        stderr: "",
+        exitCode: args[0] === "has-session" ? 1 : 0
+      });
+    };
+
+    const ack = await launchBubbleSessionAck({
+      bubbleId: "b_start_active_only",
+      workspacePath: "/tmp/worktree",
+      statusCommand: "status",
+      implementerCommand: "codex",
+      reviewerCommand: "codex reviewer",
+      metaReviewerCommand: "codex meta",
+      launchImplementerAgent: true,
+      launchReviewerAgent: false,
+      launchMetaReviewerAgent: false,
+      runner
+    });
+
+    expect(ack).toEqual({
+      status: "running",
+      sessionName: "pf-b_start_active_only"
+    });
+    const respawnCalls = calls.filter((call) => call[0] === "respawn-pane");
+    expect(respawnCalls).toHaveLength(1);
+    expect(respawnCalls[0]).toEqual([
+      "respawn-pane",
+      "-k",
+      "-t",
+      `pf-b_start_active_only:0.${String(getTopologySlotPaneIndex("implementer"))}`,
+      "-c",
+      "/tmp/worktree",
+      "codex"
+    ]);
+  });
+
   it("sends kickoff message to implementer pane when provided", async () => {
     const calls: string[][] = [];
     const runner: TmuxRunner = (args: string[]) => {

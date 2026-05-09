@@ -309,6 +309,9 @@ export async function launchResumeTmuxSession(input: {
     reviewerStartupPrompt,
     metaReviewerStartupPrompt
   } = buildActiveResumeStartupPrompts(input);
+  const launchImplementerAgent = implementerStartupPrompt !== undefined;
+  const launchReviewerAgent = reviewerStartupPrompt !== undefined;
+  const launchMetaReviewerAgent = metaReviewerStartupPrompt !== undefined;
   const ack = await input.deps.launchSessionAck({
     bubbleId: input.context.resolved.bubbleId,
     workspacePath: input.launchWorkspacePath,
@@ -335,6 +338,9 @@ export async function launchResumeTmuxSession(input: {
       metaReviewerAgent,
       metaReviewerStartupPrompt
     ),
+    launchImplementerAgent,
+    launchReviewerAgent,
+    launchMetaReviewerAgent,
     implementerCommand: buildAgentLaunchCommand({
       agentName: input.context.resolved.bubbleConfig.agents.implementer,
       roleName: "implementer",

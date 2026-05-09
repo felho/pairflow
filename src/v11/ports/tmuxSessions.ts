@@ -23,6 +23,9 @@ export interface LaunchBubbleSessionInput {
   implementerCommand: string;
   reviewerCommand: string;
   metaReviewerCommand?: string;
+  launchImplementerAgent?: boolean;
+  launchReviewerAgent?: boolean;
+  launchMetaReviewerAgent?: boolean;
   statusPaneLabel?: string;
   implementerPaneLabel?: string;
   reviewerPaneLabel?: string;

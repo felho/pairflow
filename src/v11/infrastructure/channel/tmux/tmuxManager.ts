@@ -270,27 +270,33 @@ async function launchAndSeedBubbleSession(
     tmuxPaneSeparators: config.tmuxPaneSeparators,
     placeholderCommand: config.placeholderCommand
   });
-  await respawnTmuxPaneCommand({
-    sessionName: config.sessionName,
-    paneIndex: runtimePaneIndices.implementer,
-    cwd: config.workspacePath,
-    command: input.implementerCommand,
-    runner: config.runner
-  });
-  await respawnTmuxPaneCommand({
-    sessionName: config.sessionName,
-    paneIndex: runtimePaneIndices.reviewer,
-    cwd: config.workspacePath,
-    command: input.reviewerCommand,
-    runner: config.runner
-  });
-  await respawnTmuxPaneCommand({
-    sessionName: config.sessionName,
-    paneIndex: runtimePaneIndices.metaReviewer,
-    cwd: config.workspacePath,
-    command: config.metaReviewerCommand,
-    runner: config.runner
-  });
+  if (input.launchImplementerAgent !== false) {
+    await respawnTmuxPaneCommand({
+      sessionName: config.sessionName,
+      paneIndex: runtimePaneIndices.implementer,
+      cwd: config.workspacePath,
+      command: input.implementerCommand,
+      runner: config.runner
+    });
+  }
+  if (input.launchReviewerAgent !== false) {
+    await respawnTmuxPaneCommand({
+      sessionName: config.sessionName,
+      paneIndex: runtimePaneIndices.reviewer,
+      cwd: config.workspacePath,
+      command: input.reviewerCommand,
+      runner: config.runner
+    });
+  }
+  if (input.launchMetaReviewerAgent !== false) {
+    await respawnTmuxPaneCommand({
+      sessionName: config.sessionName,
+      paneIndex: runtimePaneIndices.metaReviewer,
+      cwd: config.workspacePath,
+      command: config.metaReviewerCommand,
+      runner: config.runner
+    });
+  }
   await seedBubbleTmuxPaneMessages({
     runner: config.runner,
     implementerPaneId: layout.implementerPaneId,

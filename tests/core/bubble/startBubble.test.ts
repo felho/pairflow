@@ -3815,6 +3815,9 @@ describe("startBubble", () => {
           expect(input.reviewerCommand).not.toContain(REVIEWER_COMMAND_GATE_REQ_F);
           expect(input.reviewerCommand).not.toContain(REVIEWER_COMMAND_GATE_REQ_E);
           expectNoForbiddenReviewerCommandGateTokens(input.reviewerCommand);
+          expect(input.launchImplementerAgent).toBe(true);
+          expect(input.launchReviewerAgent).toBe(false);
+          expect(input.launchMetaReviewerAgent).toBe(false);
           return Promise.resolve({ status: "running" as const, sessionName: "pf-b_start_resume_01" });
         }
       }
@@ -4519,6 +4522,9 @@ describe("startBubble", () => {
           Promise.resolve("resume-summary: reviewer-active"),
         launchBubbleSessionAck: (input) => {
           expect(input.implementerKickoffMessage).toBeUndefined();
+          expect(input.launchImplementerAgent).toBe(false);
+          expect(input.launchReviewerAgent).toBe(true);
+          expect(input.launchMetaReviewerAgent).toBe(false);
           expect(input.reviewerKickoffMessage).toContain("resume kickoff (reviewer)");
           expect(input.reviewerKickoffMessage).toContain(REVIEWER_COMMAND_GATE_REQ_A);
           expect(input.reviewerKickoffMessage).toContain(REVIEWER_COMMAND_GATE_REQ_D);

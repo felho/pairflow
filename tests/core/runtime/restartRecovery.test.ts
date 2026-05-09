@@ -339,8 +339,12 @@ describe("restart recovery", () => {
               worktreePath: bubble.paths.worktreePath
             })
           ),
-        launchBubbleSessionAck: () =>
-          Promise.resolve({ status: "running" as const, sessionName: "pf-b_restart_impl_01" })
+        launchBubbleSessionAck: (input) => {
+          expect(input.launchImplementerAgent).toBe(true);
+          expect(input.launchReviewerAgent).toBe(false);
+          expect(input.launchMetaReviewerAgent).toBe(false);
+          return Promise.resolve({ status: "running" as const, sessionName: "pf-b_restart_impl_01" });
+        }
       }
     );
 
