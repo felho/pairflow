@@ -2,7 +2,7 @@
 artifact_type: task
 artifact_id: task_merge_command_local_remote_execution_pipeline_v1
 title: "Merge Command Local/Remote Execution Pipeline"
-status: implementable
+status: archived
 phase: phase1
 target_files:
   - src/v11/application/merge/mergeCommandOrchestration.ts

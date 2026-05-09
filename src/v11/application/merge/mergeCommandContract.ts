@@ -57,7 +57,7 @@ export interface MergeBubbleInput {
   now?: Date | undefined;
 }
 
-export interface RunMergeFlowInput extends NormalizedMergeBubbleInput {
+export interface RunMergeCommandPipelineInput extends NormalizedMergeBubbleInput {
   createError: PairflowCreateCommandError;
 }
 

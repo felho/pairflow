@@ -10,7 +10,9 @@ import {
 import { throwAsBubbleMergeError } from "./mergeCommandErrorClassification.js";
 import { normalizeMergeBubbleInput } from "./mergeCommandInputNormalization.js";
 import { resolveMergeCommandDependencies } from "./mergeCommandDependencyResolution.js";
-import { runMergeFlow } from "./runMergeFlow.js";
+import {
+  runMergeCommandPipeline
+} from "./internal/pipeline/mergeCommandPipeline.js";
 
 export async function mergeBubbleCommandOrchestration(
   input: MergeBubbleInput,
@@ -22,7 +24,7 @@ export async function mergeBubbleCommandOrchestration(
       dependencies,
       dependencies as Required<MergeBubbleDependencies>
     );
-    return await runMergeFlow(
+    return await runMergeCommandPipeline(
       {
         ...normalized,
         createError: createBubbleMergeError
