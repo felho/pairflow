@@ -1,3 +1,5 @@
+import { spawn } from "node:child_process";
+
 import type { AgentName } from "../../../contracts/kernel/agentIdentity.js";
 import type { AgentRole } from "../../../contracts/kernel/agentIdentity.js";
 import type {
@@ -21,7 +23,22 @@ export interface BuildAgentCommandInput {
   pairflowCommandProfile?: PairflowCommandProfile;
   externalPairflowCommand?: string;
   remoteWorkspaceAuthority?: PairflowRemoteWorkspaceAuthority;
+  codexMcpDisableArgs?: string[];
   startupPrompt?: string | undefined;
+}
+
+export interface ResolveCodexMcpDisableArgsInput {
+  roleName: AgentRole;
+  bubbleId: string;
+  codexCommand?: string;
+  timeoutMs?: number;
+}
+
+export class CodexMcpDisableArgsError extends Error {
+  public constructor(message: string) {
+    super(message);
+    this.name = "CodexMcpDisableArgsError";
+  }
 }
 
 function buildAgentLaunchCommand(
@@ -62,123 +79,144 @@ function buildAgentLaunchCommand(
     .join(" ");
 }
 
-function buildCodexMcpDisablePreparation(input: {
-  roleName: AgentRole;
-  bubbleId: string;
+function toTomlString(value: string): string {
+  return JSON.stringify(value);
+}
+
+function hasUnsupportedControlCharacter(value: string): boolean {
+  for (let index = 0; index < value.length; index += 1) {
+    const charCode = value.charCodeAt(index);
+    if (charCode <= 0x1f || charCode === 0x7f) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function parseCodexMcpListOutput(input: {
+  stdout: string;
 }): string[] {
-  const diagnostic =
-    "PAIRFLOW_ROLE_MCP_DISABLE_UNAVAILABLE: failed to build Codex MCP disable arguments";
-  const nodeScript = String.raw`
-const { spawn } = require("node:child_process");
-
-const roleName = process.env.PAIRFLOW_ROLE_MCP_ROLE_NAME ?? "unknown";
-const bubbleId = process.env.PAIRFLOW_ROLE_MCP_BUBBLE_ID ?? "unknown";
-const child = spawn("codex", ["mcp", "list", "--json"], {
-  stdio: ["ignore", "pipe", "pipe"]
-});
-let stdout = "";
-let stderr = "";
-let settled = false;
-
-const fail = (message) => {
-  if (settled) {
-    return;
-  }
-  settled = true;
-  clearTimeout(timer);
-  if (!child.killed) {
-    child.kill("SIGTERM");
-  }
-  console.error(message);
-  process.exit(1);
-};
-
-const timer = setTimeout(() => {
-  fail("codex mcp list --json timed out after 5000ms");
-}, 5000);
-
-child.stdout.setEncoding("utf8");
-child.stderr.setEncoding("utf8");
-child.stdout.on("data", (chunk) => {
-  stdout += chunk;
-});
-child.stderr.on("data", (chunk) => {
-  stderr += chunk;
-});
-child.on("error", (error) => {
-  fail(error.message);
-});
-child.on("close", (code, signal) => {
-  if (settled) {
-    return;
-  }
-  settled = true;
-  clearTimeout(timer);
-  if (code !== 0 || signal !== null) {
-    console.error("codex mcp list --json failed for role " + roleName + " in bubble " + bubbleId + ": code=" + (code ?? "null") + " signal=" + (signal ?? "null") + " " + stderr.trim());
-    process.exit(1);
-  }
-  let parsed;
+  let parsed: unknown;
   try {
-    parsed = JSON.parse(stdout);
+    parsed = JSON.parse(input.stdout);
   } catch (error) {
-    console.error("codex mcp list --json returned malformed JSON: " + error.message);
-    process.exit(1);
+    throw new CodexMcpDisableArgsError(
+      `codex mcp list --json returned malformed JSON: ${error instanceof Error ? error.message : String(error)}`
+    );
   }
+
   if (!Array.isArray(parsed)) {
-    console.error("codex mcp list --json must return a top-level array");
-    process.exit(1);
+    throw new CodexMcpDisableArgsError(
+      "codex mcp list --json must return a top-level array"
+    );
   }
-  const tomlString = (value) => JSON.stringify(value);
-  const disabledServerEntries = [];
-  const args = [];
+
+  const disabledServerEntries: string[] = [];
   for (const [index, entry] of parsed.entries()) {
     if (entry === null || typeof entry !== "object" || Array.isArray(entry)) {
-      console.error("codex MCP entry " + index + " must be an object");
-      process.exit(1);
+      throw new CodexMcpDisableArgsError(
+        `codex MCP entry ${index} must be an object`
+      );
     }
-    if (typeof entry.enabled !== "boolean") {
-      console.error("codex MCP entry " + index + " has unsupported enabled value");
-      process.exit(1);
+    const mcpEntry = entry as Record<string, unknown>;
+    if (typeof mcpEntry.enabled !== "boolean") {
+      throw new CodexMcpDisableArgsError(
+        `codex MCP entry ${index} has unsupported enabled value`
+      );
     }
-    if (entry.enabled !== true) {
+    if (mcpEntry.enabled !== true) {
       continue;
     }
-    if (typeof entry.name !== "string" || entry.name.length === 0) {
-      console.error("enabled codex MCP entry " + index + " must have a non-empty string name");
-      process.exit(1);
+    if (typeof mcpEntry.name !== "string" || mcpEntry.name.length === 0) {
+      throw new CodexMcpDisableArgsError(
+        `enabled codex MCP entry ${index} must have a non-empty string name`
+      );
     }
-    if (/[\u0000-\u001f\u007f]/u.test(entry.name)) {
-      console.error("enabled codex MCP entry " + index + " name contains unsupported control characters");
-      process.exit(1);
+    if (hasUnsupportedControlCharacter(mcpEntry.name)) {
+      throw new CodexMcpDisableArgsError(
+        `enabled codex MCP entry ${index} name contains unsupported control characters`
+      );
     }
-    disabledServerEntries.push(tomlString(entry.name) + "={command=\"node\",args=[\"-e\",\"process.exit(0)\"],enabled=false}");
+    disabledServerEntries.push(
+      `${toTomlString(mcpEntry.name)}={command="node",args=["-e","process.exit(0)"],enabled=false}`
+    );
   }
-  if (disabledServerEntries.length > 0) {
-    args.push("-c", "mcp_servers={" + disabledServerEntries.join(",") + "}");
+
+  if (disabledServerEntries.length === 0) {
+    return [];
   }
-  process.stdout.write(args.join("\n"));
-});
-`;
+
+  return ["-c", `mcp_servers={${disabledServerEntries.join(",")}}`];
+}
+
+export async function resolveCodexMcpDisableArgs(
+  input: ResolveCodexMcpDisableArgsInput
+): Promise<string[]> {
+  const codexCommand = input.codexCommand ?? "codex";
+  const timeoutMs = input.timeoutMs ?? 5000;
+
+  return await new Promise<string[]>((resolvePromise, rejectPromise) => {
+    const child = spawn(codexCommand, ["mcp", "list", "--json"], {
+      stdio: ["ignore", "pipe", "pipe"]
+    });
+    let stdout = "";
+    let stderr = "";
+    let settled = false;
+
+    const fail = (message: string) => {
+      if (settled) {
+        return;
+      }
+      settled = true;
+      clearTimeout(timer);
+      if (!child.killed) {
+        child.kill("SIGTERM");
+      }
+      rejectPromise(new CodexMcpDisableArgsError(message));
+    };
+
+    const timer = setTimeout(() => {
+      fail(`codex mcp list --json timed out after ${timeoutMs}ms`);
+    }, timeoutMs);
+
+    child.stdout.setEncoding("utf8");
+    child.stderr.setEncoding("utf8");
+    child.stdout.on("data", (chunk: string) => {
+      stdout += chunk;
+    });
+    child.stderr.on("data", (chunk: string) => {
+      stderr += chunk;
+    });
+    child.on("error", (error) => {
+      fail(error.message);
+    });
+    child.on("close", (code, signal) => {
+      if (settled) {
+        return;
+      }
+      settled = true;
+      clearTimeout(timer);
+      if (code !== 0 || signal !== null) {
+        rejectPromise(new CodexMcpDisableArgsError(
+          `codex mcp list --json failed for role ${input.roleName} in bubble ${input.bubbleId}: code=${code ?? "null"} signal=${signal ?? "null"} ${stderr.trim()}`
+        ));
+        return;
+      }
+      try {
+        resolvePromise(parseCodexMcpListOutput({ stdout }));
+      } catch (error) {
+        rejectPromise(error instanceof Error ? error : new Error(String(error)));
+      }
+    });
+  });
+}
+
+function buildCodexMcpDisablePreparation(input: {
+  args: string[];
+}): string[] {
+  const quotedArgs = input.args.map((arg) => shellQuote(arg)).join(" ");
   return [
-    "PAIRFLOW_ROLE_MCP_DISABLE_ARGS=()",
-    `export PAIRFLOW_ROLE_MCP_ROLE_NAME=${shellQuote(input.roleName)}`,
-    `export PAIRFLOW_ROLE_MCP_BUBBLE_ID=${shellQuote(input.bubbleId)}`,
-    "if ! command -v node >/dev/null 2>&1; then",
-    `  printf '%s\\n' ${shellQuote(`${diagnostic}: node CLI not found in PATH for role ${input.roleName}.`)}`,
-    "  exec bash -i",
-    "fi",
-    `PAIRFLOW_ROLE_MCP_DISABLE_OUTPUT=$(node -e ${shellQuote(nodeScript.trim())})`,
-    "PAIRFLOW_ROLE_MCP_DISABLE_STATUS=$?",
-    "if [ \"$PAIRFLOW_ROLE_MCP_DISABLE_STATUS\" -ne 0 ]; then",
-    `  printf '%s\\n' ${shellQuote(`${diagnostic} for role ${input.roleName} agent codex in bubble ${input.bubbleId}.`)}`,
-    "  exec bash -i",
-    "fi",
-    "if [ -n \"$PAIRFLOW_ROLE_MCP_DISABLE_OUTPUT\" ]; then",
-    "  while IFS= read -r PAIRFLOW_ROLE_MCP_DISABLE_ARG; do",
-    "    PAIRFLOW_ROLE_MCP_DISABLE_ARGS+=(\"$PAIRFLOW_ROLE_MCP_DISABLE_ARG\")",
-    "  done <<< \"$PAIRFLOW_ROLE_MCP_DISABLE_OUTPUT\"",
-    "fi"
+    `PAIRFLOW_ROLE_MCP_DISABLE_ARGS=(${quotedArgs})`
   ];
 }
 
@@ -195,7 +233,13 @@ export function buildAgentCommand(input: BuildAgentCommandInput): string {
   const worktreePinningMessage = `Failed to pin agent root to workspace ${workspacePath} for bubble ${bubbleId}.`;
   const mcpPreparation =
     agentName === "codex" && roleMcpPolicy === "disabled"
-      ? buildCodexMcpDisablePreparation({ roleName, bubbleId })
+      ? buildCodexMcpDisablePreparation({
+        args: input.codexMcpDisableArgs ?? (() => {
+          throw new Error(
+            `Codex MCP disable args must be resolved before building a disabled Codex agent command for role ${roleName} in bubble ${bubbleId}.`
+          );
+        })()
+      })
       : [];
   const launchCommand = buildAgentLaunchCommand(
     agentName,

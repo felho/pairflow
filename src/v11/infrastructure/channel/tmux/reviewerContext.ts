@@ -9,6 +9,7 @@ import {
 } from "./tmuxManager.js";
 import { submitTmuxPaneInput } from "./tmuxInput.js";
 import { buildAgentCommand } from "../../../shared/command/agentCommand.js";
+import { resolveCodexMcpDisableArgs } from "../../../shared/command/agentCommand.js";
 import { resolveRuntimeSessionWorkspaceAuthority } from "../../../shared/runtimeSessionWorkspaceAuthority.js";
 import { DEFAULT_ROLE_MCP_POLICY_BY_ROLE } from "../../../../config/defaults.js";
 import type {
@@ -96,18 +97,27 @@ export async function refreshReviewerContext(
 
   const runner = input.runner ?? runTmux;
   const reviewerPaneIndex = getSharedTopologySlotPaneIndexForRole("reviewer");
+  const roleMcpPolicy =
+    input.bubbleConfig.role_mcp?.reviewer
+    ?? DEFAULT_ROLE_MCP_POLICY_BY_ROLE.reviewer;
+  const codexMcpDisableArgs =
+    input.bubbleConfig.agents.reviewer === "codex" && roleMcpPolicy === "disabled"
+      ? await resolveCodexMcpDisableArgs({
+        roleName: "reviewer",
+        bubbleId: input.bubbleId
+      })
+      : undefined;
   const reviewerCommand = buildAgentCommand({
     agentName: input.bubbleConfig.agents.reviewer,
     roleName: "reviewer",
-    roleMcpPolicy:
-      input.bubbleConfig.role_mcp?.reviewer
-      ?? DEFAULT_ROLE_MCP_POLICY_BY_ROLE.reviewer,
+    roleMcpPolicy,
     ...(input.bubbleConfig.agents.reviewer_model !== undefined
       ? { model: input.bubbleConfig.agents.reviewer_model }
       : {}),
     bubbleId: input.bubbleId,
     workspacePath,
     pairflowCommandProfile: input.bubbleConfig.pairflow_command_profile,
+    ...(codexMcpDisableArgs !== undefined ? { codexMcpDisableArgs } : {}),
     ...(input.bubbleConfig.executor?.type === "ssh"
       ? {
           remoteWorkspaceAuthority: {

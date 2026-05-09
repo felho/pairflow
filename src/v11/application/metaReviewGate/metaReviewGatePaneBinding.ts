@@ -18,6 +18,7 @@ import {
 import {
   resolveRuntimeSessionWorkspaceAuthority
 } from "../../shared/runtimeSessionWorkspaceAuthority.js";
+import { resolveCodexMcpDisableArgs } from "../../shared/command/agentCommand.js";
 import { buildMetaReviewGateRunPrompt } from "./metaReviewGatePrompt.js";
 import { DEFAULT_ROLE_MCP_POLICY_BY_ROLE } from "../../../config/defaults.js";
 
@@ -108,7 +109,7 @@ type MetaReviewGatePaneBindingTmux = NonNullable<
   ReturnType<typeof resolveMetaReviewGatePaneBindingTmuxCapabilities>
 >;
 
-function buildMetaReviewerCommand(input: {
+async function buildMetaReviewerCommand(input: {
   buildAgentCommand: MetaReviewGateCommandBuilder;
   metaReviewerAgent: AgentName;
   bubbleId: string;
@@ -118,16 +119,26 @@ function buildMetaReviewerCommand(input: {
   taskArtifactPath: string;
   pairflowCommandProfile: PairflowCommandProfile;
   metaReviewerMcpPolicy: RoleMcpPolicy;
-}): string {
+}): Promise<string> {
+  const roleMcpPolicy =
+    input.metaReviewerMcpPolicy
+    ?? DEFAULT_ROLE_MCP_POLICY_BY_ROLE.meta_reviewer;
+  const codexMcpDisableArgs =
+    input.metaReviewerAgent === "codex" && roleMcpPolicy === "disabled"
+      ? await resolveCodexMcpDisableArgs({
+        roleName: "meta_reviewer",
+        bubbleId: input.bubbleId
+      })
+      : undefined;
+
   return input.buildAgentCommand({
     agentName: input.metaReviewerAgent,
     roleName: "meta_reviewer",
-    roleMcpPolicy:
-      input.metaReviewerMcpPolicy
-      ?? DEFAULT_ROLE_MCP_POLICY_BY_ROLE.meta_reviewer,
+    roleMcpPolicy,
     bubbleId: input.bubbleId,
     workspacePath: input.workspacePath,
     pairflowCommandProfile: input.pairflowCommandProfile,
+    ...(codexMcpDisableArgs !== undefined ? { codexMcpDisableArgs } : {}),
     startupPrompt: buildMetaReviewGateRunPrompt({
       bubbleId: input.bubbleId,
       round: input.round,
@@ -245,20 +256,20 @@ export const resolveMetaReviewerPaneWarning: ResolveMetaReviewerPaneWarning = as
     });
   }
   const workspacePath = workspaceAuthority.workspacePath;
-  const metaReviewerCommand = buildMetaReviewerCommand({
-    buildAgentCommand,
-    metaReviewerAgent: input.metaReviewerAgent,
-    bubbleId: input.bubbleId,
-    round: input.round,
-    workspacePath,
-    repoPath: bindStart.record.repoPath,
-    taskArtifactPath: input.taskArtifactPath,
-    pairflowCommandProfile: input.pairflowCommandProfile,
-    metaReviewerMcpPolicy:
-      input.metaReviewerMcpPolicy
-      ?? DEFAULT_ROLE_MCP_POLICY_BY_ROLE.meta_reviewer
-  });
   try {
+    const metaReviewerCommand = await buildMetaReviewerCommand({
+      buildAgentCommand,
+      metaReviewerAgent: input.metaReviewerAgent,
+      bubbleId: input.bubbleId,
+      round: input.round,
+      workspacePath,
+      repoPath: bindStart.record.repoPath,
+      taskArtifactPath: input.taskArtifactPath,
+      pairflowCommandProfile: input.pairflowCommandProfile,
+      metaReviewerMcpPolicy:
+        input.metaReviewerMcpPolicy
+        ?? DEFAULT_ROLE_MCP_POLICY_BY_ROLE.meta_reviewer
+    });
     await respawnPaneCommand({
       sessionName: bindStart.record.tmuxSessionName,
       paneIndex,
