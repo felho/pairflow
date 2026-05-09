@@ -1,64 +1,27 @@
-import type { parseBubbleConfigToml } from "../../../config/bubbleConfig.js";
+import type { parseBubbleConfigToml } from "../../../../../config/bubbleConfig.js";
 import type {
   BubbleRemotePointer
-} from "../../shared/remote/remoteExecutionTypes.js";
-import type { BubbleRemoteStateCache } from "../../shared/remote/remoteStateCacheTypes.js";
-import type { getBubblePaths } from "../../shared/bubble/bubblePaths.js";
-import { inferBubbleStartedAtFromInstanceId } from "../../shared/bubble/bubbleInstanceId.js";
-import { isNamedError } from "../../shared/errors/namedError.js";
-import { isMetaReviewExecutionContextActiveState } from "../../shared/metaReview/metaReviewExecutionContext.js";
-import { projectActiveMetaReviewRuntimeDelivery } from "../../shared/metaReview/metaReviewSnapshot.js";
+} from "../../../../shared/remote/remoteExecutionTypes.js";
+import type { BubbleRemoteStateCache } from "../../../../shared/remote/remoteStateCacheTypes.js";
+import type { getBubblePaths } from "../../../../shared/bubble/bubblePaths.js";
+import { inferBubbleStartedAtFromInstanceId } from "../../../../shared/bubble/bubbleInstanceId.js";
+import { isMetaReviewExecutionContextActiveState } from "../../../../shared/metaReview/metaReviewExecutionContext.js";
+import { projectActiveMetaReviewRuntimeDelivery } from "../../../../shared/metaReview/metaReviewSnapshot.js";
 import {
   buildRuntimeAlignedReviewPolicyRuntimeView,
   normalizeRuntimeAlignedExecutionContext,
   normalizeRuntimeAlignedRole,
   toRuntimeAlignedReviewPolicyExecutionContext
-} from "../../shared/reviewPolicy/reviewPolicyRuntime.js";
-import { resolveBubbleAttention } from "../../shared/status/bubbleAttention.js";
-import { computeWatchdogStatus } from "../../shared/watchdog/watchdogStatus.js";
-import type { BubbleListEntry } from "../../shared/read-model/list/listReadModelContract.js";
-import { runtimeSessionExpectedStates } from "./listReadModelContext.js";
-import type { ListReadModelDependencies } from "./listReadModelDependencies.js";
-import { BubbleListError } from "./listReadModelErrors.js";
-import { toRemotePaneActivityRead } from "./listRemotePaneActivityRead.js";
-
-export interface BubbleBuildResult {
-  entry: BubbleListEntry;
-  hasRuntimeSession: boolean;
-  invalidState: boolean;
-  nonRuntimeState: boolean;
-  createdNotStarted: number;
-  unavailableStarted: number;
-}
-
-export interface RemoteRefreshFailureMetadata {
-  reasonCode: "LIST_REMOTE_REFRESH_UNAVAILABLE" | "LIST_REMOTE_CACHE_WRITE_FAILED";
-  refreshAttemptedAt: string;
-}
-
-export async function readRemoteStateCacheSafe(
-  path: string,
-  dependencies: ListReadModelDependencies
-): Promise<{
-  cache: BubbleRemoteStateCache | null;
-  cacheStatus: "present" | "missing" | "invalid";
-}> {
-  try {
-    const cache = await dependencies.readRemoteStateCache(path);
-    return {
-      cache,
-      cacheStatus: cache === null ? "missing" : "present"
-    };
-  } catch (error) {
-    if (isNamedError(error, "SchemaValidationError")) {
-      return {
-        cache: null,
-        cacheStatus: "invalid"
-      };
-    }
-    throw error;
-  }
-}
+} from "../../../../shared/reviewPolicy/reviewPolicyRuntime.js";
+import { resolveBubbleAttention } from "../../../../shared/status/bubbleAttention.js";
+import { computeWatchdogStatus } from "../../../../shared/watchdog/watchdogStatus.js";
+import type { BubbleListEntry } from "../../../../shared/read-model/list/listReadModelContract.js";
+import { runtimeSessionExpectedStates } from "../../listReadModelContext.js";
+import type { ListReadModelDependencies } from "../../listReadModelDependencies.js";
+import { BubbleListError } from "../../listReadModelErrors.js";
+import { toRemotePaneActivityRead } from "../../listRemotePaneActivityRead.js";
+import { readRemoteStateCacheSafe } from "./remoteStateCacheRead.js";
+import type { BubbleBuildResult, RemoteRefreshFailureMetadata } from "./types.js";
 
 function neutralMetaReview(): BubbleListEntry["metaReview"] {
   return {
