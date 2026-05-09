@@ -84,7 +84,7 @@ describe("internal module boundary fitness check", () => {
     await writeRepoFile(
       repoRoot,
       "src/v11/shared/metaReviewGate/policyApi.ts",
-      "export { policy } from './internal/policy.js';\n"
+      "import { policy } from './internal/policy.js';\nexport const publicPolicy = policy;\n"
     );
     await writeRepoFile(
       repoRoot,
@@ -278,5 +278,71 @@ describe("internal module boundary fitness check", () => {
     });
 
     expect(report.status).toBe("pass");
+  });
+
+  it("warns report-only when public files are only internal re-export camouflage", async () => {
+    const repoRoot = await createTempRoot();
+    await writeRepoFile(
+      repoRoot,
+      "src/v11/application/converged/internal/flow/runConvergedFlow.ts",
+      "export const runConvergedFlow = 1;\n"
+    );
+    await writeRepoFile(
+      repoRoot,
+      "src/v11/application/converged/runConvergedFlow.ts",
+      "export * from './internal/flow/runConvergedFlow.js';\n"
+    );
+
+    const report = await buildInternalModuleBoundaryCheckReport({
+      check: checkInput(),
+      repoRoot,
+      fallbackMode: "hard-fail"
+    });
+
+    expect(report.status).toBe("warn");
+    expect(report.mode).toBe("hard-fail");
+    expect(report.summary).toContain(
+      "report-only internal re-export camouflage"
+    );
+    expect(
+      report.details?.some((detail) =>
+        detail.includes(
+          "src/v11/application/converged/runConvergedFlow.ts is report-only internal re-export camouflage"
+        )
+      )
+    ).toBe(true);
+    expect(report.details).toContain(
+      "internal_reexport_camouflage_candidates=1"
+    );
+  });
+
+  it("does not warn when a public facade selects explicit API from internal implementation", async () => {
+    const repoRoot = await createTempRoot();
+    await writeRepoFile(
+      repoRoot,
+      "src/v11/application/converged/internal/orchestration/convergedCommandOrchestration.ts",
+      "export const emitConvergedFromWorkspaceCommandOrchestration = 1;\nexport const internalHelper = 2;\n"
+    );
+    await writeRepoFile(
+      repoRoot,
+      "src/v11/application/converged/convergedCommandOrchestration.ts",
+      [
+        "export {",
+        "  emitConvergedFromWorkspaceCommandOrchestration",
+        "} from './internal/orchestration/convergedCommandOrchestration.js';",
+        "export const publicSurfaceMarker = true;"
+      ].join("\n")
+    );
+
+    const report = await buildInternalModuleBoundaryCheckReport({
+      check: checkInput(),
+      repoRoot,
+      fallbackMode: "hard-fail"
+    });
+
+    expect(report.status).toBe("pass");
+    expect(report.details).toContain(
+      "internal_reexport_camouflage_candidates=0"
+    );
   });
 });

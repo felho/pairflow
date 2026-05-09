@@ -27,6 +27,12 @@ interface FlatApplicationCommandDirectoryViolation {
   directTypeScriptFileCount: number;
 }
 
+interface InternalReexportCamouflageCandidate {
+  fileRelative: string;
+  ownerRoot: string;
+  exportCount: number;
+}
+
 interface InternalImportException {
   id: string;
   from: string;
@@ -181,6 +187,56 @@ function isOwnerRootIndex(input: {
   return input.fromRelative === `${input.ownerRoot}/index.ts`;
 }
 
+function hasInternalChild(input: {
+  ownerRoot: string;
+  knownRelativeFiles: ReadonlySet<string>;
+}): boolean {
+  const internalPrefix = `${input.ownerRoot}/internal/`;
+  for (const file of input.knownRelativeFiles) {
+    if (file.startsWith(internalPrefix)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function isPureInternalReexportFile(input: {
+  filePath: string;
+  sourceText: string;
+}): { isCandidate: boolean; exportCount: number } {
+  const sourceFile = ts.createSourceFile(
+    input.filePath,
+    input.sourceText,
+    ts.ScriptTarget.Latest,
+    true
+  );
+
+  const statements = sourceFile.statements.filter((statement) => {
+    if (ts.isEmptyStatement(statement)) {
+      return false;
+    }
+    return true;
+  });
+  if (statements.length === 0) {
+    return { isCandidate: false, exportCount: 0 };
+  }
+
+  let exportCount = 0;
+  for (const statement of statements) {
+    if (
+      !ts.isExportDeclaration(statement)
+      || statement.moduleSpecifier === undefined
+      || !ts.isStringLiteral(statement.moduleSpecifier)
+      || !statement.moduleSpecifier.text.startsWith("./internal/")
+    ) {
+      return { isCandidate: false, exportCount: 0 };
+    }
+    exportCount += 1;
+  }
+
+  return { isCandidate: true, exportCount };
+}
+
 function filterViolationsByExceptions(input: {
   violations: readonly InternalImportViolation[];
   allowlist: readonly InternalImportException[];
@@ -264,6 +320,43 @@ async function collectViolations(input: {
   });
 }
 
+async function collectInternalReexportCamouflageCandidates(input: {
+  repoRoot: string;
+  files: readonly string[];
+}): Promise<InternalReexportCamouflageCandidate[]> {
+  const knownRelativeFiles = new Set(
+    input.files.map((filePath) =>
+      normalizePathToPosix(relative(input.repoRoot, filePath))
+    )
+  );
+  const candidates: InternalReexportCamouflageCandidate[] = [];
+
+  for (const filePath of input.files) {
+    const fileRelative = normalizePathToPosix(relative(input.repoRoot, filePath));
+    if (fileRelative.includes("/internal/")) {
+      continue;
+    }
+    const ownerRoot = dirname(fileRelative);
+    if (!hasInternalChild({ ownerRoot, knownRelativeFiles })) {
+      continue;
+    }
+    const sourceText = await readFile(filePath, "utf8");
+    const candidate = isPureInternalReexportFile({ filePath, sourceText });
+    if (!candidate.isCandidate) {
+      continue;
+    }
+    candidates.push({
+      fileRelative,
+      ownerRoot,
+      exportCount: candidate.exportCount
+    });
+  }
+
+  return candidates.sort((left, right) =>
+    left.fileRelative.localeCompare(right.fileRelative)
+  );
+}
+
 async function collectFlatApplicationCommandDirectoryViolations(repoRoot: string): Promise<
   FlatApplicationCommandDirectoryViolation[]
 > {
@@ -337,6 +430,8 @@ export async function buildInternalModuleBoundaryCheckReport({
 
   const files = await resolveFilesForScopePatterns(repoRoot, scope);
   const allViolations = await collectViolations({ repoRoot, files });
+  const internalReexportCamouflageCandidates =
+    await collectInternalReexportCamouflageCandidates({ repoRoot, files });
   const flatCommandDirectoryViolations =
     await collectFlatApplicationCommandDirectoryViolations(repoRoot);
   const filtered = filterViolationsByExceptions({
@@ -355,10 +450,18 @@ export async function buildInternalModuleBoundaryCheckReport({
       (violation) =>
         `${violation.commandRoot} is an oversized flat application command directory (${String(violation.directTypeScriptFileCount)} direct .ts file(s)); introduce internal/ or named subdirectories.`
     ),
+    ...internalReexportCamouflageCandidates.slice(0, 100).map(
+      (candidate) =>
+        `${candidate.fileRelative} is report-only internal re-export camouflage (${String(candidate.exportCount)} export(s) from ./internal/**); owner_root=${candidate.ownerRoot}`
+    ),
+    internalReexportCamouflageCandidates.length > 100
+      ? `internal_reexport_camouflage_truncated=${String(internalReexportCamouflageCandidates.length - 100)}`
+      : undefined,
     `scope=${scope.join(", ")}`,
     `files_scanned=${String(files.length)}`,
     `flat_application_command_directory_threshold=${String(maxFlatApplicationCommandFiles)}`,
     `flat_application_command_directory_violations=${String(flatCommandDirectoryViolations.length)}`,
+    `internal_reexport_camouflage_candidates=${String(internalReexportCamouflageCandidates.length)}`,
     `exceptions_configured=${String(check.exceptions?.length ?? 0)}`,
     `exceptions_applied=${String(filtered.appliedExceptionIds.length)}`
   ].filter((detail) => detail !== undefined);
@@ -377,6 +480,7 @@ export async function buildInternalModuleBoundaryCheckReport({
     filtered.violations.length
     + flatCommandDirectoryViolations.length
     + parsedExceptions.invalid.length;
+  const warningCount = internalReexportCamouflageCandidates.length;
   if (problemCount > 0) {
     const violationSummary =
       filtered.violations.length > 0
@@ -401,12 +505,24 @@ export async function buildInternalModuleBoundaryCheckReport({
     };
   }
 
+  if (warningCount > 0) {
+    return {
+      id: check.id,
+      owner: check.owner ?? "unknown",
+      mode,
+      status: "warn",
+      summary: `Internal module boundary check warning: ${String(warningCount)} report-only internal re-export camouflage candidate${warningCount === 1 ? "" : "s"} detected.`,
+      metric: check.metric,
+      details
+    };
+  }
+
   return {
     id: check.id,
     owner: check.owner ?? "unknown",
     mode,
     status: "pass",
-    summary: `Internal module boundary check passed: ${String(files.length)} scoped file(s) scanned, no external /internal/ imports or oversized flat application command directories.`,
+    summary: `Internal module boundary check passed: ${String(files.length)} scoped file(s) scanned, no external /internal/ imports, oversized flat application command directories, or internal re-export camouflage candidates.`,
     metric: check.metric,
     details
   };
