@@ -107,6 +107,54 @@ describe("refreshReviewerContext", () => {
     expect(script).toContain(`if ! cd ${shellQuote("/tmp/runtime-workspace")}; then`);
   });
 
+  it("submits Codex reviewer startup prompts after reviewer pane refresh", async () => {
+    const calls: string[][] = [];
+    const runner: TmuxRunner = (args): Promise<TmuxRunResult> => {
+      calls.push(args);
+      return Promise.resolve({
+        stdout: "",
+        stderr: "",
+        exitCode: 0
+      });
+    };
+
+    const result = await refreshReviewerContext({
+      bubbleId: "b_reviewer_ctx_01",
+      bubbleConfig: {
+        ...baseConfig,
+        agents: {
+          ...baseConfig.agents,
+          reviewer: "codex"
+        }
+      },
+      sessionsPath: "/tmp/repo/.pairflow/runtime/sessions.json",
+      reviewerStartupPrompt: "Reviewer brief: verify the current handoff.",
+      runner,
+      startupSubmitDelayMs: 0,
+      readSessionsRegistry: () =>
+        Promise.resolve({
+          b_reviewer_ctx_01: createRuntimeSessionRecord({
+            workspacePath: "/tmp/runtime-workspace",
+            workspaceKind: "worktree"
+          })
+        })
+    });
+
+    const reviewerTargetPane =
+      `pf-b_reviewer_ctx_01:0.${String(getTopologySlotPaneIndexForRole("reviewer"))}`;
+
+    expect(result).toEqual({
+      refreshed: true
+    });
+    expect(calls[0]?.[0]).toBe("respawn-pane");
+    expect(calls).toContainEqual([
+      "send-keys",
+      "-t",
+      reviewerTargetPane,
+      "Enter"
+    ]);
+  });
+
   it("fails closed when explicit workspace authority is absent", async () => {
     const calls: string[][] = [];
     const runner: TmuxRunner = (args): Promise<TmuxRunResult> => {

@@ -7,6 +7,7 @@ import {
   runTmux,
   type TmuxRunner
 } from "./tmuxManager.js";
+import { submitTmuxPaneInput } from "./tmuxInput.js";
 import { buildAgentCommand } from "../../../shared/command/agentCommand.js";
 import { resolveRuntimeSessionWorkspaceAuthority } from "../../../shared/runtimeSessionWorkspaceAuthority.js";
 import type {
@@ -24,6 +25,35 @@ export type {
 interface RefreshReviewerContextInternalInput extends RefreshReviewerContextInput {
   runner?: TmuxRunner;
   readSessionsRegistry?: typeof readRuntimeSessionsRegistry;
+  startupSubmitDelayMs?: number;
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolvePromise) => {
+    setTimeout(resolvePromise, ms);
+  });
+}
+
+function shouldSubmitStartupPrompt(agentName: string): boolean {
+  return agentName === "codex";
+}
+
+async function maybeSubmitReviewerStartupPrompt(input: {
+  agentName: string;
+  runner: TmuxRunner;
+  sessionName: string;
+  paneIndex: number;
+  startupSubmitDelayMs?: number;
+}): Promise<void> {
+  if (!shouldSubmitStartupPrompt(input.agentName)) {
+    return;
+  }
+
+  await sleep(input.startupSubmitDelayMs ?? 1500);
+  await submitTmuxPaneInput(
+    input.runner,
+    `${input.sessionName}:0.${input.paneIndex}`
+  );
 }
 
 export async function refreshReviewerContext(
@@ -60,6 +90,7 @@ export async function refreshReviewerContext(
   }
 
   const runner = input.runner ?? runTmux;
+  const reviewerPaneIndex = getSharedTopologySlotPaneIndexForRole("reviewer");
   const reviewerCommand = buildAgentCommand({
     agentName: input.bubbleConfig.agents.reviewer,
     bubbleId: input.bubbleId,
@@ -78,10 +109,19 @@ export async function refreshReviewerContext(
   try {
     await respawnTmuxPaneCommand({
       sessionName,
-      paneIndex: getSharedTopologySlotPaneIndexForRole("reviewer"),
+      paneIndex: reviewerPaneIndex,
       cwd: workspacePath,
       command: reviewerCommand,
       runner
+    });
+    await maybeSubmitReviewerStartupPrompt({
+      agentName: input.bubbleConfig.agents.reviewer,
+      runner,
+      sessionName,
+      paneIndex: reviewerPaneIndex,
+      ...(input.startupSubmitDelayMs !== undefined
+        ? { startupSubmitDelayMs: input.startupSubmitDelayMs }
+        : {})
     });
   } catch {
     return {
