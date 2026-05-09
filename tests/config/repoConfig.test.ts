@@ -169,6 +169,11 @@ reviewer_model = "claude-sonnet-4-5"
 meta_reviewer = "codex"
 meta_reviewer_model = "gpt-5.2-mini"
 
+[defaults.role_mcp]
+implementer = "disabled"
+reviewer = "enabled"
+meta_reviewer = "disabled"
+
 [defaults.review_policy]
 review_loop_mode = "full"
 reviewer_blocking_min_severity = "P3"
@@ -193,6 +198,11 @@ round_gate_applies_after = 2
         reviewer_model: "claude-sonnet-4-5",
         meta_reviewer: "codex",
         meta_reviewer_model: "gpt-5.2-mini"
+      },
+      role_mcp: {
+        implementer: "disabled",
+        reviewer: "enabled",
+        meta_reviewer: "disabled"
       },
       review_policy: {
         review_loop_mode: "full",
@@ -262,6 +272,10 @@ implementer = "codex"
 reviewer = "codex"
 unknown = "claude"
 
+[defaults.role_mcp]
+reviewer = "maybe"
+unknown = "enabled"
+
 [defaults.review_policy]
 review_loop_mode = "unsupported"
 meta_review_consecutive_clean_runs_required = 0
@@ -281,6 +295,8 @@ extra = 1
       expect(paths).toContain("defaults.severity_gate_round");
       expect(paths).toContain("defaults.pairflow_command_profile");
       expect(paths).toContain("defaults.agents.unknown");
+      expect(paths).toContain("defaults.role_mcp.reviewer");
+      expect(paths).toContain("defaults.role_mcp.unknown");
       expect(paths).toContain("defaults.review_policy.review_loop_mode");
       expect(paths).toContain(
         "defaults.review_policy.meta_review_consecutive_clean_runs_required"
@@ -298,6 +314,8 @@ extra = 1
 base_branch = "main"
 
 [defaults.agents]
+
+[defaults.role_mcp]
 
 [defaults.review_policy]
 

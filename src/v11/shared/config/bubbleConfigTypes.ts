@@ -1,4 +1,7 @@
-import type { BubbleAgentsConfig } from "../../../contracts/kernel/agentIdentity.js";
+import type {
+  AgentRole,
+  BubbleAgentsConfig
+} from "../../../contracts/kernel/agentIdentity.js";
 import type {
   AttachLauncher
 } from "../bubbleAttachment/attachLauncherTypes.js";
@@ -30,9 +33,15 @@ import type {
   PairflowCommandProfile,
   QualityMode,
   ReviewArtifactType,
+  RoleMcpPolicy,
   ReviewerContextMode,
   WorkMode
 } from "./bubbleConfigVocabulary.js";
+
+export type BubbleRoleMcpConfig = Record<
+  AgentRole,
+  RoleMcpPolicy
+>;
 
 export interface BubbleConfig {
   id: string;
@@ -56,6 +65,7 @@ export interface BubbleConfig {
   review_policy?: BubbleReviewPolicyConfig;
   validation_target?: BubbleValidationTargetConfig;
   agents: BubbleAgentsConfig;
+  role_mcp?: BubbleRoleMcpConfig;
   commands: BubbleCommandsConfig;
   notifications: BubbleNotificationsConfig;
   local_overlay?: BubbleLocalOverlayConfig;

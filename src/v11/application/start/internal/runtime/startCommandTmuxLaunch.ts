@@ -15,8 +15,11 @@ import type { resolveResumeKickoffMessages } from "../prompts/startCommandResume
 import type { ResolvedStartBubbleDependencies } from "../../startCommandOrchestration.js";
 import type { StartExecutionContext } from "./startCommandContext.js";
 import type { AgentName } from "../../../../../contracts/kernel/agentIdentity.js";
+import type { AgentRole } from "../../../../../contracts/kernel/agentIdentity.js";
 import { DEFAULT_REVIEW_POLICY_REVIEWER_BLOCKING_MIN_SEVERITY } from "../../../../../config/defaults.js";
+import { DEFAULT_ROLE_MCP_POLICY_BY_ROLE } from "../../../../../config/defaults.js";
 import type { PairflowRemoteWorkspaceAuthority } from "../../../../shared/command/pairflowCommandBootstrap.js";
+import type { RoleMcpPolicy } from "../../../../shared/config/bubbleConfigVocabulary.js";
 
 function shouldSubmitStartupPrompt(
   agentName: AgentName,
@@ -47,6 +50,8 @@ function resolveRemoteWorkspaceAuthority(
 
 function buildAgentLaunchCommand(input: {
   agentName: AgentName;
+  roleName: AgentRole;
+  roleMcpPolicy: RoleMcpPolicy;
   model?: string;
   bubbleId: string;
   workspacePath: string;
@@ -57,6 +62,8 @@ function buildAgentLaunchCommand(input: {
 }): string {
   return buildAgentCommand({
     agentName: input.agentName,
+    roleName: input.roleName,
+    roleMcpPolicy: input.roleMcpPolicy,
     ...(input.model !== undefined ? { model: input.model } : {}),
     bubbleId: input.bubbleId,
     workspacePath: input.workspacePath,
@@ -212,6 +219,10 @@ export async function launchFreshTmuxSession(input: {
     metaReviewerSubmitStartupPrompt: false,
     implementerCommand: buildAgentLaunchCommand({
       agentName: input.context.resolved.bubbleConfig.agents.implementer,
+      roleName: "implementer",
+      roleMcpPolicy:
+        input.context.resolved.bubbleConfig.role_mcp?.implementer
+        ?? DEFAULT_ROLE_MCP_POLICY_BY_ROLE.implementer,
       ...(input.context.resolved.bubbleConfig.agents.implementer_model !== undefined
         ? { model: input.context.resolved.bubbleConfig.agents.implementer_model }
         : {}),
@@ -224,6 +235,10 @@ export async function launchFreshTmuxSession(input: {
     }),
     reviewerCommand: buildAgentLaunchCommand({
       agentName: input.context.resolved.bubbleConfig.agents.reviewer,
+      roleName: "reviewer",
+      roleMcpPolicy:
+        input.context.resolved.bubbleConfig.role_mcp?.reviewer
+        ?? DEFAULT_ROLE_MCP_POLICY_BY_ROLE.reviewer,
       ...(input.context.resolved.bubbleConfig.agents.reviewer_model !== undefined
         ? { model: input.context.resolved.bubbleConfig.agents.reviewer_model }
         : {}),
@@ -236,6 +251,10 @@ export async function launchFreshTmuxSession(input: {
     }),
     metaReviewerCommand: buildAgentLaunchCommand({
       agentName: metaReviewerAgent,
+      roleName: "meta_reviewer",
+      roleMcpPolicy:
+        input.context.resolved.bubbleConfig.role_mcp?.meta_reviewer
+        ?? DEFAULT_ROLE_MCP_POLICY_BY_ROLE.meta_reviewer,
       ...(input.context.resolved.bubbleConfig.agents.meta_reviewer_model !== undefined
         ? { model: input.context.resolved.bubbleConfig.agents.meta_reviewer_model }
         : {}),
@@ -318,6 +337,10 @@ export async function launchResumeTmuxSession(input: {
     ),
     implementerCommand: buildAgentLaunchCommand({
       agentName: input.context.resolved.bubbleConfig.agents.implementer,
+      roleName: "implementer",
+      roleMcpPolicy:
+        input.context.resolved.bubbleConfig.role_mcp?.implementer
+        ?? DEFAULT_ROLE_MCP_POLICY_BY_ROLE.implementer,
       ...(input.context.resolved.bubbleConfig.agents.implementer_model !== undefined
         ? { model: input.context.resolved.bubbleConfig.agents.implementer_model }
         : {}),
@@ -330,6 +353,10 @@ export async function launchResumeTmuxSession(input: {
     }),
     reviewerCommand: buildAgentLaunchCommand({
       agentName: input.context.resolved.bubbleConfig.agents.reviewer,
+      roleName: "reviewer",
+      roleMcpPolicy:
+        input.context.resolved.bubbleConfig.role_mcp?.reviewer
+        ?? DEFAULT_ROLE_MCP_POLICY_BY_ROLE.reviewer,
       ...(input.context.resolved.bubbleConfig.agents.reviewer_model !== undefined
         ? { model: input.context.resolved.bubbleConfig.agents.reviewer_model }
         : {}),
@@ -342,6 +369,10 @@ export async function launchResumeTmuxSession(input: {
     }),
     metaReviewerCommand: buildAgentLaunchCommand({
       agentName: metaReviewerAgent,
+      roleName: "meta_reviewer",
+      roleMcpPolicy:
+        input.context.resolved.bubbleConfig.role_mcp?.meta_reviewer
+        ?? DEFAULT_ROLE_MCP_POLICY_BY_ROLE.meta_reviewer,
       ...(input.context.resolved.bubbleConfig.agents.meta_reviewer_model !== undefined
         ? { model: input.context.resolved.bubbleConfig.agents.meta_reviewer_model }
         : {}),

@@ -14,6 +14,7 @@ import {
   DEFAULT_QUALITY_MODE,
   DEFAULT_REVIEW_ARTIFACT_TYPE,
   DEFAULT_REVIEWER_CONTEXT_MODE,
+  DEFAULT_ROLE_MCP_POLICY_BY_ROLE,
   DEFAULT_SEVERITY_GATE_ROUND,
   DEFAULT_WATCHDOG_TIMEOUT_MINUTES,
   DEFAULT_WORK_MODE
@@ -23,6 +24,7 @@ import {
   isQualityMode,
   isReviewArtifactType,
   isReviewerContextMode,
+  isRoleMcpPolicy,
   isWorkMode
 } from "../v11/shared/config/bubbleConfigVocabulary.js";
 import type { BubbleConfig } from "../v11/shared/config/bubbleConfigTypes.js";
@@ -208,6 +210,7 @@ export function validateBubbleConfig(input: unknown): ValidationResult<BubbleCon
   );
 
   const agents = readObject(input, "agents", "agents", errors, true);
+  const roleMcp = readObject(input, "role_mcp", "role_mcp", errors, false);
   const commands = readObject(input, "commands", "commands", errors, true);
   const notifications = readObject(
     input,
@@ -260,6 +263,39 @@ export function validateBubbleConfig(input: unknown): ValidationResult<BubbleCon
   );
 
   const validatedAgents = validateBubbleAgents(agents, errors);
+  const validatedRoleMcp = {
+    ...DEFAULT_ROLE_MCP_POLICY_BY_ROLE
+  };
+  if (roleMcp !== undefined) {
+    const roleMcpKeys = [
+      "implementer",
+      "reviewer",
+      "meta_reviewer"
+    ] as const;
+    const allowedRoleMcpKeys = new Set<string>(roleMcpKeys);
+    for (const key of Object.keys(roleMcp)) {
+      if (!allowedRoleMcpKeys.has(key)) {
+        errors.push({
+          path: `role_mcp.${key}`,
+          message: `Unsupported role_mcp field "${key}".`
+        });
+      }
+    }
+    for (const key of roleMcpKeys) {
+      const value = roleMcp[key];
+      if (value === undefined) {
+        continue;
+      }
+      if (!isRoleMcpPolicy(value)) {
+        errors.push({
+          path: `role_mcp.${key}`,
+          message: "Must be one of: disabled, enabled"
+        });
+        continue;
+      }
+      validatedRoleMcp[key] = value;
+    }
+  }
 
   const validatedCommands = validateBubbleCommands(commands, errors);
 
@@ -321,6 +357,7 @@ export function validateBubbleConfig(input: unknown): ValidationResult<BubbleCon
       ? { validation_target: validatedValidationTarget }
       : {}),
     agents: validatedAgents,
+    role_mcp: validatedRoleMcp,
     commands: validatedCommands as BubbleConfig["commands"],
     notifications: validatedNotifications,
     local_overlay: validatedLocalOverlay,

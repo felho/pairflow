@@ -58,6 +58,54 @@ describe("bubble config schema", () => {
     ]);
     expect(config.doc_contract_gates.round_gate_applies_after).toBe(2);
     expect(config.agents.meta_reviewer).toBe("codex");
+    expect(config.role_mcp).toEqual({
+      implementer: "disabled",
+      reviewer: "disabled",
+      meta_reviewer: "disabled"
+    });
+  });
+
+  it("parses and roundtrips explicit role MCP launch policy", () => {
+    const config = parseBubbleConfigToml(`${baseToml}
+[role_mcp]
+implementer = "disabled"
+reviewer = "enabled"
+meta_reviewer = "disabled"
+`);
+
+    expect(config.role_mcp).toEqual({
+      implementer: "disabled",
+      reviewer: "enabled",
+      meta_reviewer: "disabled"
+    });
+
+    const rendered = renderBubbleConfigToml(config);
+    expect(rendered).toContain("[role_mcp]");
+    expect(rendered).toContain('reviewer = "enabled"');
+    expect(parseBubbleConfigToml(rendered).role_mcp?.reviewer).toBe("enabled");
+  });
+
+  it("rejects unknown role MCP keys and invalid policy values", () => {
+    const result = validateBubbleConfig(
+      parseToml(`${baseToml}
+[role_mcp]
+reviewer = "maybe"
+observer = "enabled"
+`)
+    );
+
+    expect(result.ok).toBe(false);
+    if (result.ok) {
+      return;
+    }
+    expect(result.errors).toContainEqual({
+      path: "role_mcp.reviewer",
+      message: "Must be one of: disabled, enabled"
+    });
+    expect(result.errors).toContainEqual({
+      path: "role_mcp.observer",
+      message: 'Unsupported role_mcp field "observer".'
+    });
   });
 
   it("normalizes legacy two-agent TOML to a canonical meta-reviewer binding", () => {

@@ -748,6 +748,11 @@ describe("createBubble", () => {
         'implementer = "claude"',
         'reviewer = "codex"',
         "",
+        "[defaults.role_mcp]",
+        'implementer = "enabled"',
+        'reviewer = "disabled"',
+        'meta_reviewer = "enabled"',
+        "",
         "[defaults.review_policy]",
         'review_loop_mode = "meta_only"',
         'reviewer_blocking_min_severity = "P2"',
@@ -775,6 +780,10 @@ describe("createBubble", () => {
       severityGateRound: 6,
       reviewerContextMode: "fresh",
       pairflowCommandProfile: "external",
+      roleMcp: {
+        reviewer: "enabled",
+        meta_reviewer: "disabled"
+      },
       reviewPolicy: {
         review_loop_mode: "full",
         reviewer_blocking_min_severity: "P3",
@@ -794,6 +803,11 @@ describe("createBubble", () => {
     expect(result.config.severity_gate_round).toBe(6);
     expect(result.config.reviewer_context_mode).toBe("fresh");
     expect(result.config.pairflow_command_profile).toBe("external");
+    expect(result.config.role_mcp).toEqual({
+      implementer: "enabled",
+      reviewer: "enabled",
+      meta_reviewer: "disabled"
+    });
     expect(result.config.review_policy).toMatchObject({
       review_loop_mode: "full",
       reviewer_blocking_min_severity: "P3",

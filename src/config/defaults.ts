@@ -13,6 +13,7 @@ import type {
   PairflowCommandProfile,
   QualityMode,
   ReviewArtifactType,
+  RoleMcpPolicy,
   ReviewerContextMode,
   WorkMode
 } from "../v11/shared/config/bubbleConfigVocabulary.js";
@@ -22,6 +23,14 @@ export const DEFAULT_QUALITY_MODE: QualityMode = "strict";
 export const DEFAULT_REVIEW_ARTIFACT_TYPE: ReviewArtifactType = "code";
 export const DEFAULT_IMPLEMENTER_AGENT: AgentName = "codex";
 export const DEFAULT_REVIEWER_AGENT: AgentName = "claude";
+export const DEFAULT_ROLE_MCP_POLICY_BY_ROLE: Record<
+  "implementer" | "reviewer" | "meta_reviewer",
+  RoleMcpPolicy
+> = {
+  implementer: "disabled",
+  reviewer: "disabled",
+  meta_reviewer: "disabled"
+};
 export const DEFAULT_PAIRFLOW_COMMAND_PROFILE: PairflowCommandProfile = "external";
 export const DEFAULT_REVIEWER_CONTEXT_MODE: ReviewerContextMode = "fresh";
 export const DEFAULT_WATCHDOG_TIMEOUT_MINUTES = 30;

@@ -1,6 +1,7 @@
 import type { AgentName } from "../../../contracts/kernel/agentIdentity.js";
 import type {
-  PairflowCommandProfile
+  PairflowCommandProfile,
+  RoleMcpPolicy
 } from "../config/bubbleConfigVocabulary.js";
 import type { MetaReviewArtifactReadPort } from "../metaReview/metaReviewArtifactIo.js";
 import type { ResolveBubbleByIdPort } from "../../ports/bubbleLookup.js";
@@ -76,6 +77,8 @@ export interface MetaReviewGatePaneBindingRuntimeCapabilities {
     workspacePath?: string;
     worktreePath?: string;
     pairflowCommandProfile?: PairflowCommandProfile;
+    roleName?: "implementer" | "reviewer" | "meta_reviewer";
+    roleMcpPolicy?: RoleMcpPolicy;
     startupPrompt?: string | undefined;
   }) => string;
   tmux?: MetaReviewGatePaneBindingTmuxCapabilities;
@@ -97,6 +100,7 @@ export interface ResolveMetaReviewerPaneWarningInput {
   taskArtifactPath: string;
   pairflowCommandProfile: PairflowCommandProfile;
   metaReviewerAgent: AgentName;
+  metaReviewerMcpPolicy?: RoleMcpPolicy;
 }
 
 export type ResolveMetaReviewerPaneWarning = (

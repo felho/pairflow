@@ -17,6 +17,7 @@ import {
   DEFAULT_REVIEW_POLICY_REVIEWER_BLOCKING_MIN_SEVERITY,
   DEFAULT_REVIEW_POLICY_LOOP_MODE,
   DEFAULT_REVIEWER_CONTEXT_MODE,
+  DEFAULT_ROLE_MCP_POLICY_BY_ROLE,
   DEFAULT_SEVERITY_GATE_ROUND,
   DEFAULT_WATCHDOG_TIMEOUT_MINUTES,
   DEFAULT_WORK_MODE
@@ -31,7 +32,8 @@ import type {
 import type { BubbleConfig } from "../../../../shared/config/bubbleConfigTypes.js";
 import type {
   CreateReviewArtifactType,
-  PairflowCommandProfile
+  PairflowCommandProfile,
+  RoleMcpPolicy
 } from "../../../../shared/config/bubbleConfigVocabulary.js";
 import type {
   BubbleDocContractGatesConfig
@@ -80,6 +82,7 @@ export interface CreateBubbleConfigInput {
   reviewer?: AgentName;
   reviewerModel?: string;
   metaReviewer?: AgentName;
+  roleMcp?: Partial<Record<"implementer" | "reviewer" | "meta_reviewer", RoleMcpPolicy>>;
   metaReviewerModel?: string;
   watchdogTimeoutMinutes?: number;
   maxRounds?: number;
@@ -342,6 +345,10 @@ export function buildBubbleConfig(input: CreateBubbleConfigInput): BubbleConfig 
       ? { validation_target: input.resolvedValidationCommands.validationTarget }
       : {}),
     agents: buildCreateBubbleAgentsConfig(input),
+    role_mcp: {
+      ...DEFAULT_ROLE_MCP_POLICY_BY_ROLE,
+      ...input.roleMcp
+    },
     commands: buildValidationCommandsConfig(input),
     notifications: {
       enabled: true

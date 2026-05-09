@@ -48,6 +48,7 @@ export interface FinalizeCurrentRunMetaReviewGateInput {
         | "pairflow_command_profile"
         | "commands"
         | "review_artifact_type"
+        | "role_mcp"
         | "validation_target"
       >
     >;

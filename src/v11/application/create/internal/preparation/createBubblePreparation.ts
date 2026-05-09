@@ -12,6 +12,33 @@ export interface PreparedCreateBubbleInput {
   bubbleConfigInput: CreateBubbleConfigInput;
 }
 
+function applyOptionalAgentInputs(
+  target: CreateBubbleConfigInput,
+  source: BubbleCreateInput
+): void {
+  if (source.implementer !== undefined) {
+    target.implementer = source.implementer;
+  }
+  if (source.implementerModel !== undefined) {
+    target.implementerModel = source.implementerModel;
+  }
+  if (source.reviewer !== undefined) {
+    target.reviewer = source.reviewer;
+  }
+  if (source.reviewerModel !== undefined) {
+    target.reviewerModel = source.reviewerModel;
+  }
+  if (source.metaReviewer !== undefined) {
+    target.metaReviewer = source.metaReviewer;
+  }
+  if (source.roleMcp !== undefined) {
+    target.roleMcp = source.roleMcp;
+  }
+  if (source.metaReviewerModel !== undefined) {
+    target.metaReviewerModel = source.metaReviewerModel;
+  }
+}
+
 export function prepareCreateBubbleInput(input: {
   command: BubbleCreateInput;
   createdAt: Date;
@@ -41,24 +68,7 @@ export function prepareCreateBubbleInput(input: {
       : {})
   };
 
-  if (input.command.implementer !== undefined) {
-    bubbleConfigInput.implementer = input.command.implementer;
-  }
-  if (input.command.implementerModel !== undefined) {
-    bubbleConfigInput.implementerModel = input.command.implementerModel;
-  }
-  if (input.command.reviewer !== undefined) {
-    bubbleConfigInput.reviewer = input.command.reviewer;
-  }
-  if (input.command.reviewerModel !== undefined) {
-    bubbleConfigInput.reviewerModel = input.command.reviewerModel;
-  }
-  if (input.command.metaReviewer !== undefined) {
-    bubbleConfigInput.metaReviewer = input.command.metaReviewer;
-  }
-  if (input.command.metaReviewerModel !== undefined) {
-    bubbleConfigInput.metaReviewerModel = input.command.metaReviewerModel;
-  }
+  applyOptionalAgentInputs(bubbleConfigInput, input.command);
   if (input.command.watchdogTimeoutMinutes !== undefined) {
     bubbleConfigInput.watchdogTimeoutMinutes =
       input.command.watchdogTimeoutMinutes;
