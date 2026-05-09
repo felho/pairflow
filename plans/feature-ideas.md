@@ -68,3 +68,4 @@
 - https://addyosmani.com/blog/agent-harness-engineering/
 - https://www.youtube.com/watch?v=ow1we5PzK-o
 - start the agents without MCP servers
+- Viszont van egy gyengébb strukturális szag: src/cli/index.ts vegyesen használ CLI wrapper modulokat és application CLI modulokat. Emiatt a restart típusú hiba könnyen visszajöhet új commandnál. Erre érdemes lenne egy fitness/contract guard: top-level CLI command importok alapértelmezetten src/cli/commands/\*\* alól jöjjenek, és csak explicit allowlist engedje az inbox/kickoff kivételt.
