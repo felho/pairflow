@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { deliveryTargetRoleMetadataKey } from "../../../../src/types/protocol.js";
-import { executeConvergedExecution } from "../../../../src/v11/application/converged/convergedExecution.js";
+import { executeConvergedExecution } from "../../../../src/v11/application/converged/internal/flow/convergedExecution.js";
 
 describe("executeConvergedExecution", () => {
   it("delivers approval request to human + implementer + reviewer with role metadata", async () => {

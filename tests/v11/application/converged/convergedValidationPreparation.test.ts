@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { prepareConvergedValidation } from "../../../../src/v11/application/converged/convergedValidationPreparation.js";
+import { prepareConvergedValidation } from "../../../../src/v11/application/converged/internal/validation/convergedValidationPreparation.js";
 
 function toErrorMessage(input: PairflowCommandErrorInput): string {
   if (typeof input === "string") {

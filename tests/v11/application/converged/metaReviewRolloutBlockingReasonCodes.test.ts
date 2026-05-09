@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { resolveConvergedRolloutBlockingReasonCodes } from "../../../../src/v11/application/converged/metaReviewRolloutBlockingReasonCodes.js";
+import { resolveConvergedRolloutBlockingReasonCodes } from "../../../../src/v11/application/converged/internal/orchestration/metaReviewRolloutBlockingReasonCodes.js";
 
 describe("resolveConvergedRolloutBlockingReasonCodes", () => {
   it("includes rollout-blocking gate and command-path codes", () => {

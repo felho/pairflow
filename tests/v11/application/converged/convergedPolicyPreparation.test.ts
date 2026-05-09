@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   prepareConvergedPolicy,
   type PrepareConvergedPolicyDependencyError
-} from "../../../../src/v11/application/converged/convergedPolicyPreparation.js";
+} from "../../../../src/v11/application/converged/internal/validation/convergedPolicyPreparation.js";
 
 describe("prepareConvergedPolicy", () => {
   it("reads transcript with tolerant options and forwards policy input", async () => {
