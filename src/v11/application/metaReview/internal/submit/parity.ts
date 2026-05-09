@@ -1,7 +1,7 @@
 import {
   isInteger
-} from "../../../validation/primitives.js";
-import { MetaReviewError } from "../command/metaReviewError.js";
+} from "../../../../shared/validation/primitives.js";
+import { MetaReviewError } from "../../../../shared/metaReview/metaReviewError.js";
 import {
   resolveStructuredMetaReviewClaimFromReportJson
 } from "../../../../domain/metaReviewGate/findingsClaimParsing.js";
@@ -13,7 +13,7 @@ import {
   evaluatePositiveSummaryFindingsAssertion,
   hasGlobalNoFindingsSummaryAssertion
 } from "../../../../domain/convergence/policy.js";
-import type { MetaReviewRecommendation } from "../../metaReviewTypes.js";
+import type { MetaReviewRecommendation } from "../../../../shared/metaReview/metaReviewTypes.js";
 
 function requireStructuredMetaReviewClaim(
   reportJson: Record<string, unknown>

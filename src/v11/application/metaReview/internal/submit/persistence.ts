@@ -1,34 +1,34 @@
 import type {
   MetaReviewRecommendation,
   MetaReviewRunStatus
-} from "../../shared/metaReview/metaReviewTypes.js";
+} from "../../../../shared/metaReview/metaReviewTypes.js";
 import {
   assertActiveMetaReviewExecutionContext,
   assertMetaReviewSubmitStaleGuard
-} from "../../shared/metaReview/metaReviewCommandSubmitAuthority.js";
+} from "./authority.js";
 import type {
   MetaReviewArtifactReadPort
-} from "../../shared/metaReview/metaReviewArtifactIo.js";
-import type { BubbleStateSnapshot } from "../../shared/state/bubbleStateSnapshotTypes.js";
+} from "../../../../shared/metaReview/metaReviewArtifactIo.js";
+import type { BubbleStateSnapshot } from "../../../../shared/state/bubbleStateSnapshotTypes.js";
 import type {
   BubbleExecutionContext
-} from "../../shared/state/executionContextTypes.js";
+} from "../../../../shared/state/executionContextTypes.js";
 import type {
   LoadedStateSnapshot
-} from "../../ports/stateSnapshots.js";
-import { normalizeMetaReviewSnapshot } from "../../shared/metaReview/metaReviewSnapshot.js";
-import { MetaReviewError } from "../../shared/metaReview/metaReviewError.js";
-import { toMetaReviewExecutionContext } from "../../shared/state/executionContext.js";
+} from "../../../../ports/stateSnapshots.js";
+import { normalizeMetaReviewSnapshot } from "../../../../shared/metaReview/metaReviewSnapshot.js";
+import { MetaReviewError } from "../../../../shared/metaReview/metaReviewError.js";
+import { toMetaReviewExecutionContext } from "../../../../shared/state/executionContext.js";
 import {
   stateWriteConflictToMetaReviewError
-} from "../../shared/metaReview/metaReviewCommandErrorMapping.js";
-import { isNamedError } from "../../shared/errors/namedError.js";
+} from "../../../../shared/metaReview/metaReviewCommandErrorMapping.js";
+import { isNamedError } from "../../../../shared/errors/namedError.js";
 import type {
   MetaReviewCommandDependencies,
   MetaReviewResult,
   MetaReviewRunWarning,
   MetaReviewSubmitInput
-} from "../../shared/metaReview/metaReviewCommandContract.js";
+} from "../../../../shared/metaReview/metaReviewCommandContract.js";
 
 export function buildCanonicalSubmitRunResult(input: {
   bubbleId: string;
@@ -140,7 +140,7 @@ export async function assertSubmitReworkFindingsArtifactContract(input: {
   const {
     resolveReworkFindingsParityInput,
     validateFindingsArtifactParity
-  } = await import("../metaReviewGate/metaReviewGateFindingsParityApi.js");
+  } = await import("../../../metaReviewGate/metaReviewGateFindingsParityApi.js");
 
   if (input.runResult.recommendation !== "rework") {
     return;

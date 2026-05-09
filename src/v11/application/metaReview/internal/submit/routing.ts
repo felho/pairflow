@@ -1,23 +1,23 @@
-import type { ResolveBubbleByIdPort } from "../../ports/bubbleLookup.js";
+import type { ResolveBubbleByIdPort } from "../../../../ports/bubbleLookup.js";
 import {
   executeImplementerHandoffDelivery
-} from "../../shared/delivery/implementerHandoffDelivery.js";
-import { appendProtocolEnvelope } from "../start/startCommandDependencyDefaults.js";
-import { MetaReviewError } from "../../shared/metaReview/metaReviewError.js";
+} from "../../../../shared/delivery/implementerHandoffDelivery.js";
+import { appendProtocolEnvelope } from "../../../start/startCommandDependencyDefaults.js";
+import { MetaReviewError } from "../../../../shared/metaReview/metaReviewError.js";
 import {
   toMetaReviewError
-} from "../../shared/metaReview/metaReviewCommandErrorMapping.js";
+} from "../../../../shared/metaReview/metaReviewCommandErrorMapping.js";
 import type {
   MetaReviewCommandDependencies,
   MetaReviewResult,
   MetaReviewSubmitResult
-} from "../../shared/metaReview/metaReviewCommandContract.js";
+} from "../../../../shared/metaReview/metaReviewCommandContract.js";
 import type {
   MetaReviewGateResult
-} from "../../shared/metaReviewGate/index.js";
+} from "../../../../shared/metaReviewGate/index.js";
 import {
   finalizeCurrentRunMetaReviewGate
-} from "../metaReviewGate/metaReviewGateCurrentRunApi.js";
+} from "../../../metaReviewGate/metaReviewGateCurrentRunApi.js";
 type ResolvedBubble = Awaited<ReturnType<ResolveBubbleByIdPort>>;
 
 async function emitSubmitAutoReworkDelivery(input: {

@@ -3,52 +3,52 @@ import { randomUUID } from "node:crypto";
 import {
   readStateSnapshot,
   resolveBubbleById
-} from "../start/startCommandDependencyDefaults.js";
+} from "../../../start/startCommandDependencyDefaults.js";
 import {
   isInteger,
   isNonEmptyString,
   isRecord
-} from "../../shared/validation/primitives.js";
-import { MetaReviewError } from "../../shared/metaReview/metaReviewError.js";
+} from "../../../../shared/validation/primitives.js";
+import { MetaReviewError } from "../../../../shared/metaReview/metaReviewError.js";
 import {
   normalizeOptionalText,
   resolveCanonicalMetaReviewReportJson
-} from "../../shared/metaReview/metaReviewCanonicalization.js";
+} from "../../../../shared/metaReview/metaReviewCanonicalization.js";
 import {
   assertApproveRecommendationConsistentWithReviewerSnapshot,
   readLatestApproveReviewerSnapshot
-} from "./metaReviewRuntimeParity.js";
+} from "../../metaReviewRuntimeParity.js";
 import {
   assertActiveMetaReviewExecutionContext,
   assertMetaReviewSubmitStaleGuard,
   assertMetaReviewSubmitterAuthority
-} from "../../shared/metaReview/metaReviewCommandSubmitAuthority.js";
+} from "./authority.js";
 import {
   assertSubmitPayloadInvariants,
   assertSubmitStatusIsSuccess,
   resolveSubmitRunStatus,
   normalizeRequiredSubmitText
-} from "../../shared/metaReview/metaReviewCommandSubmitValidation.js";
+} from "./validation.js";
 import {
   metaReviewApproveClaimsOpenFindings,
   metaReviewApproveThresholdBlockedReasonCode,
   metaReviewApproveThresholdContextUnresolvedReasonCode,
   resolveMetaReviewSubmitApproveThresholdPolicy
-} from "../../domain/metaReviewGate/approveSubmitThresholdPolicy.js";
+} from "../../../../domain/metaReviewGate/approveSubmitThresholdPolicy.js";
 import {
   assertSummaryStructuredParity,
-} from "../../shared/metaReview/metaReviewCommandSubmitParity.js";
+} from "./parity.js";
 import {
   resolveSubmitCanonicalRunId
-} from "../../shared/metaReview/metaReviewCommandSubmitLink.js";
+} from "./link.js";
 import {
   resolveMetaReviewGateThresholdAuthority
-} from "../metaReviewGate/metaReviewGateThresholdAuthorityApi.js";
-import { normalizeBubbleReviewPolicy } from "../../shared/reviewPolicy/reviewPolicyRuntime.js";
+} from "../../../metaReviewGate/metaReviewGateThresholdAuthorityApi.js";
+import { normalizeBubbleReviewPolicy } from "../../../../shared/reviewPolicy/reviewPolicyRuntime.js";
 import type {
   MetaReviewCommandDependencies,
   MetaReviewSubmitInput
-} from "../../shared/metaReview/metaReviewCommandContract.js";
+} from "../../../../shared/metaReview/metaReviewCommandContract.js";
 
 type MetaReviewSubmitPreparationPorts = {
   resolveBubble: NonNullable<MetaReviewCommandDependencies["resolveBubbleById"]>;
@@ -346,7 +346,7 @@ async function assertApproveThresholdPolicyIfNeeded(input: {
   });
 }
 
-export async function prepareMetaReviewSubmitContext(input: {
+export async function prepareAcceptedMetaReviewSubmit(input: {
   submitInput: MetaReviewSubmitInput;
   dependencies: MetaReviewCommandDependencies;
   now: Date;

@@ -1,9 +1,9 @@
 import type {
   MetaReviewRecommendation,
   MetaReviewRunStatus
-} from "../../metaReviewTypes.js";
-import { isNonEmptyString } from "../../../validation/primitives.js";
-import { MetaReviewError } from "../command/metaReviewError.js";
+} from "../../../../shared/metaReview/metaReviewTypes.js";
+import { isNonEmptyString } from "../../../../shared/validation/primitives.js";
+import { MetaReviewError } from "../../../../shared/metaReview/metaReviewError.js";
 
 export type SubmitRunStatus = "success";
 

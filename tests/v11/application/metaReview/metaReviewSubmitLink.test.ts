@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { resolveSubmitCanonicalRunId } from "../../../../src/v11/shared/metaReview/metaReviewCommandSubmitLink.js";
+import { resolveSubmitCanonicalRunId } from "../../../../src/v11/application/metaReview/internal/submit/link.js";
 import { MetaReviewError } from "../../../../src/v11/shared/metaReview/metaReviewError.js";
 
 describe("metaReviewCommandSubmitLink", () => {

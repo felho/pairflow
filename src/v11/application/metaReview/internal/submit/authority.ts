@@ -1,10 +1,10 @@
 import {
   validateActiveMetaReviewExecutionContext
-} from "../snapshot/metaReviewExecutionContext.js";
-import { MetaReviewError } from "../command/metaReviewError.js";
+} from "../../../../shared/metaReview/metaReviewExecutionContext.js";
+import { MetaReviewError } from "../../../../shared/metaReview/metaReviewError.js";
 import type { AgentName } from "../../../../../contracts/kernel/agentIdentity.js";
-import type { BubbleStateSnapshot } from "../../../state/bubbleStateSnapshotTypes.js";
-import type { MetaReviewCommandDependencies } from "../../metaReviewCommandContract.js";
+import type { BubbleStateSnapshot } from "../../../../shared/state/bubbleStateSnapshotTypes.js";
+import type { MetaReviewCommandDependencies } from "../../../../shared/metaReview/metaReviewCommandContract.js";
 
 export function assertActiveMetaReviewExecutionContext(
   state: BubbleStateSnapshot
