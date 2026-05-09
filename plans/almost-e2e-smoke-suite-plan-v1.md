@@ -19,7 +19,7 @@ archive_group: 2026-05-09-almost-e2e-smoke-suite-plan-v1
 task_tracker:
   - task_id: 1-smoke-runner-contract
     task_path: plans/tasks/1-smoke-runner-contract.md
-    status: approved
+    status: implementable
     notes: "Build the fake launch, fake external-adapter, scenario, and authority-refresh runner contract."
   - task_id: 2-cli-lifecycle-smoke
     task_path: null
@@ -81,9 +81,11 @@ The source architecture document is
    state/transcript/inbox/registry persistence, envelope validation, and
    sequence allocation remain canonical. The smoke harness may replace only
    slow external side-effect adapters at existing port boundaries.
-3. Read-path rule: runner authority and lifecycle state must be read from the
-   public status/read-model surfaces used by CLI/UI, not from private state-file
-   shortcuts.
+3. Read-path rule: runner lifecycle state and post-first actor authority must be
+   read from the public status/read-model surfaces used by CLI/UI, not from
+   private state-file shortcuts. The first fake actor advance may use captured
+   launch handoff/execution authority only after validating it against that same
+   public status/read-model surface immediately before emit.
 4. Forbidden fallback: tests must not call internal application APIs just to
    inject dependencies when doing so bypasses the compiled/public entrypoint
    under test. The fake actor must not write transcript, inbox, or state files
@@ -121,8 +123,12 @@ The source architecture document is
      surface for the fake actor.
    - `dist/cli/index.js` is the Layer 1 compiled CLI entrypoint.
    - fake actors must not directly mutate transcript, inbox, or state.
-   - handoff/execution authority must be refreshed or validated before each
-     runner `advance(...)`.
+   - before the first runner `advance(...)`, captured launch handoff/execution
+     authority may be used only after validation against the public status/read
+     model.
+   - every later runner `advance(...)` must refresh handoff/execution authority
+     from that public status/read-model surface rather than reuse launch
+     metadata.
    - Layer 2 Phase 1 transport is in-process route/action invocation, not real
      HTTP and not Playwright.
 3. Explicitly authorized reinterpretation: none. The plan turns the architecture
@@ -162,11 +168,17 @@ The source architecture document is
 2. Phase 1: implement the minimal runner and smoke matrix.
 3. Phase 2: expand only after Phase 1 proves runtime and stability.
 
+Progress update (2026-05-09): document bubble
+`1-smoke-runner-contract-doc` refined task `1-smoke-runner-contract` with
+foundation-only capability closure, authority boundary mapping, baseline
+preservation, closure-budget/task-shape proof, scope-reality proof, and a
+later-hardening backlog. No product/runtime implementation scope was added.
+
 ## Open Task List
 
 | Task ID | Task Path | Purpose | Depends On | Closes Gap | Status |
 |---|---|---|---|---|---|
-| `1-smoke-runner-contract` | `plans/tasks/1-smoke-runner-contract.md` | Build the fake process/editor spawn recorder, fake tmux launch/terminate adapter, runner-driven scenario advancement model, authority refresh rule, and TS scenario type contract. | `docs/architecture/almost-e2e-smoke-suite.md` | Provides the common fake-runner foundation required by all Phase 1 smoke tasks. | approved |
+| `1-smoke-runner-contract` | `plans/tasks/1-smoke-runner-contract.md` | Build the fake process/editor spawn recorder, fake tmux launch/terminate adapter, runner-driven scenario advancement model, first-advance authority validation, post-first authority refresh, and TS scenario type contract. | `docs/architecture/almost-e2e-smoke-suite.md` | Provides the common fake-runner foundation required by all Phase 1 smoke tasks. | implementable |
 | `2-cli-lifecycle-smoke` | `null` | Add compiled-CLI smoke coverage for create/start, restart, open, and delete against a minimal fixture repo using the fake external adapters where needed. | `1-smoke-runner-contract` | Proves the top-level `dist/cli/index.js` route and defaults wiring for public CLI entrypoints. | not_created |
 | `3-actor-loop-smoke` | `null` | Add one minimal runner-driven fake actor scenario through pass, convergence, and meta-review approval, using canonical `pairflow agent emit --kind ...` feedback. | `1-smoke-runner-contract`, `2-cli-lifecycle-smoke` | Proves actor ingestion, authority refresh, transcript/state progression, and meta-review approval routing without a real LLM. | not_created |
 | `4-ui-action-api-smoke` | `null` | Add in-process UI action API smoke coverage for Open, Restart, and Delete with real backend state and recorded external side effects. | `1-smoke-runner-contract`, `2-cli-lifecycle-smoke` | Proves UI action dispatch reaches the backend command paths that historically failed through Open/Restart. | not_created |
@@ -175,7 +187,7 @@ The source architecture document is
 
 | Plan Gap | Closed By | Notes |
 |---|---|---|
-| No reusable way to run public-entrypoint smoke without real LLM/tmux/editor. | `1-smoke-runner-contract` | Must preserve public actor feedback through `pairflow agent emit --kind ...` and current authority refresh. |
+| No reusable way to run public-entrypoint smoke without real LLM/tmux/editor. | `1-smoke-runner-contract` | Must preserve public actor feedback through `pairflow agent emit --kind ...`; first advance validates launch authority against the public status/read-model, and later advances refresh from that surface. |
 | Compiled CLI dispatch/defaults regressions can pass module-level tests. | `2-cli-lifecycle-smoke` | Must run against `dist/cli/index.js`, not only TS `runCli` imports. |
 | Actor feedback ingestion can regress while fake tests pass if the fake writes artifacts directly. | `3-actor-loop-smoke` | Fake must use canonical actor emit CLI; transcript/state writes remain production-owned. |
 | UI action dispatch regressions are not covered without browser tests. | `4-ui-action-api-smoke` | Phase 1 intentionally uses in-process route/action invocation; browser rendering remains out of scope. |
@@ -184,7 +196,8 @@ The source architecture document is
 ## Dependencies and Order
 
 1. `1-smoke-runner-contract` must be first. It defines the fake launch,
-   authority refresh, and scenario model consumed by all other smoke tasks.
+   first-advance public authority validation, post-first authority refresh, and
+   scenario model consumed by all other smoke tasks.
 2. `2-cli-lifecycle-smoke` should run before actor-loop smoke because it proves
    the compiled CLI lifecycle baseline and fixture setup.
 3. `3-actor-loop-smoke` depends on the runner contract and a reliable started
@@ -218,8 +231,8 @@ The source architecture document is
 
 1. Runner contract task validation should include focused unit/integration tests
    proving fake launch registration, recorded process spawn behavior, scenario
-   loading, authority refresh before every `advance(...)`, and rejection when
-   authority cannot be proven.
+   loading, first-advance public authority validation, post-first public
+   authority refresh, and rejection when authority cannot be proven.
 2. CLI lifecycle smoke validation must include a build step and execute the
    compiled CLI entrypoint for the covered commands.
 3. Actor-loop smoke validation must assert transcript/state/inbox changes are

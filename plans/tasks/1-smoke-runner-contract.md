@@ -5,7 +5,7 @@ task_family_id: smoke-runner-contract
 sequence_key: "1"
 task_id: 1-smoke-runner-contract
 title: "Smoke Runner Contract"
-status: approved
+status: implementable
 phase: phase1
 system_context_ref: docs/architecture/almost-e2e-smoke-suite.md
 target_files:
@@ -50,9 +50,10 @@ scenarios through the canonical `pairflow agent emit --kind ...` surface.
    registry/state/transcript/inbox persistence, sequence allocation, and actor
    emit validation remain canonical. The smoke harness may replace only slow
    external side-effect adapters at existing port boundaries.
-3. Read-path rule: runner authority for actor emits must be read or validated
-   from the public status/read-model surface used by CLI/UI before every
-   `advance(...)`.
+3. Read-path rule: runner authority for actor emits must be read from the
+   public status/read-model surface used by CLI/UI before every non-initial
+   `advance(...)`; before the first `advance(...)`, captured launch authority
+   may be used only after immediate validation against that same public surface.
 4. Forbidden fallback: the fake actor must not write transcript, inbox, state,
    registry, or bubble lifecycle files directly. Tests must not bypass the
    public command/action path under test merely to inject dependencies.
@@ -62,6 +63,9 @@ scenarios through the canonical `pairflow agent emit --kind ...` surface.
 6. Missing-data rule: if current handoff/execution authority cannot be proven
    before an actor emit, the runner must fail the step instead of reusing stale
    captured IDs or inferring authority from transcript history.
+7. Authority vocabulary rule: `handoff_id` and `execution_id` are both required
+   canonical authority tokens. `execution_id` is not optional, not a guard, and
+   must never be derived from or substituted with `handoff_id`.
 
 ### In Scope
 
@@ -79,8 +83,9 @@ scenarios through the canonical `pairflow agent emit --kind ...` surface.
 6. Provide minimal fixture-repo setup helpers suitable for downstream compiled
    CLI and UI action API smoke tasks.
 7. Add focused tests for scenario typing/validation, fake adapter recordings,
-   authority refresh before every non-initial `advance(...)`, stale-authority
-   rejection, and fixture setup.
+   first-advance public authority validation, post-first public authority
+   refresh, stale-authority rejection, structured actor emit argv/typed-input
+   construction, and fixture setup.
 8. Document in helper names or comments which surfaces are real and which
    adapters are faked.
 
@@ -105,7 +110,7 @@ scenarios through the canonical `pairflow agent emit --kind ...` surface.
 | Fake external adapters | Test helpers replace only process/editor/terminal/tmux side-effect ports that already exist in production wiring. | `tests/helpers/almostE2eSmoke/fakeExternalAdapters.ts` | Downstream smoke tests can assert attempted external commands without launching real external programs. | Adapter helper throws when a required fake is not installed or an unexpected side effect is requested. | Unit tests prove each fake records calls and does not spawn real processes. |
 | Scenario registration | Fake tmux launch acknowledgement registers launch metadata and scenario state with the runner. | `tests/helpers/almostE2eSmoke/runner.ts` | `bubble start` can produce a controllable fake actor scenario rather than a stalled bubble. | Runner start fails if launch metadata is missing or incomplete. | Test proves start captures first authority and associates it with a scenario id/bubble id. |
 | Actor emit surface | Fake actor feedback is emitted only through canonical `pairflow agent emit --kind ...` handling. | Runner `advance(...)` implementation. | State/transcript/inbox mutations remain production-owned. | `SMOKE_AUTHORITY_MISSING` or equivalent helper error when emit authority cannot be proven. | Tests spy on the invoked command/handler and assert no direct state/transcript writes occur. |
-| Authority freshness | Before each `advance(...)`, the runner refreshes or validates current handoff/execution authority from public status/read-model data. | Runner authority resolver. | Each fake actor step targets the current active role/round rather than stale launch metadata. | `SMOKE_STALE_AUTHORITY` or equivalent helper error on mismatch. | Test mutates/rotates authority between advances and proves the runner uses the refreshed value. |
+| Authority freshness | Before the first `advance(...)`, the runner may validate captured launch authority against public status/read-model data; before every later `advance(...)`, it must refresh from that public surface. | Runner authority resolver. | Each fake actor step targets the current active role/round rather than stale launch metadata. | `SMOKE_STALE_AUTHORITY` or equivalent helper error on mismatch. | Tests prove first-advance launch authority validation, post-first refresh, and rotated authority consumption. |
 | Fixture repo | Fixture helper creates a minimal git repo with Pairflow-compatible config and isolated temp paths. | `tests/helpers/almostE2eSmoke/fixtureRepo.ts` | Downstream smoke tests can create/start/delete bubbles without touching the developer checkout. | Fixture setup throws with a diagnostic path when git/config/bootstrap fails. | Fixture tests prove repo init, commit baseline, cleanup, and config shape. |
 | Public-entrypoint preservation | Helpers may be consumed by compiled CLI and UI route/action smoke tasks without forcing private application API shortcuts. | Helper README/comments and exported API shape. | Successor tasks inherit the fake/real boundary from this task. | Review/test failure if helper API requires direct state-file mutation for normal actor progression. | Tests and API shape show scenario advancement flows through actor emit and public status/read-model authority. |
 
@@ -122,6 +127,82 @@ scenarios through the canonical `pairflow agent emit --kind ...` surface.
    production defaults remain owned by existing `src/v11/defaults/**` modules.
 5. Successor tasks may extend the helper API only if they preserve the same
    canonical actor emit and authority-refresh rules.
+6. The runner's default actor emit invocation must be represented as structured
+   argv or an equivalent typed command input, not as shell-concatenated text.
+   This preserves literal `refs`, JSON report payloads, quotes, and `$`/backtick
+   characters without accidental shell interpretation.
+7. Tests may call the exported command runner/handler that backs
+   `pairflow agent emit`, but they must not call lower-level transcript,
+   state, inbox, registry, or lifecycle mutation helpers to simulate a normal
+   fake actor step.
+
+### Capability Closure
+
+| Capability Claim | Closure Classification | Activation / Entrypoint | Repo-Provided Boundary | External Prerequisites | Last-Mile Proof |
+|---|---|---|---|---|---|
+| Downstream Phase 1 smoke tasks can use a reusable fake launch, scenario, authority, and fixture helper foundation. | foundation_only | Test imports from `tests/helpers/almostE2eSmoke/index.ts`; runner `start(...)` and `advance(...)` APIs drive the helper. | Helper modules, fake adapters, fixture repo builder, scenario schema, and focused helper tests. | Node/pnpm test environment and existing Pairflow CLI/action code paths. | This task proves helper behavior with focused tests only; compiled CLI/UI smoke activation belongs to successor tasks. |
+| The helper can advance fake actor responses through the canonical actor feedback surface. | foundation_only | Runner invokes `pairflow agent emit --kind ...` or the same public CLI handler with current authority. | Runner command/handler adapter plus authority resolver. | Current public status/read-model authority must be available for the target bubble. | Focused tests must prove command/handler invocation and fail-closed authority behavior; no downstream smoke scenario is required in this task. |
+
+Done wording for this task must stay foundation-only. It must not claim that
+the Phase 1 CLI lifecycle, actor-loop, or UI action API smoke suite is usable
+until successor tasks add those scenarios and their runtime proof.
+
+### Authority Boundary Map
+
+| Boundary Bucket | In Scope For This Task | Explicit Rule |
+|---|---|---|
+| Authority producer | No production authority producer changes. | Existing lifecycle/actor protocol code continues to mint handoff and execution authority. |
+| Persisted authority | No direct persisted authority writes by the helper. | State, transcript, inbox, registry, and execution context remain production-owned. |
+| Internal execution consumers | Yes, as a test-helper consumer only. | Runner `advance(...)` consumes current authority to invoke the public actor emit surface. |
+| Workflow orchestration consumers | Deferred to successor smoke tasks. | This task must not implement CLI lifecycle, actor-loop, review routing, approval, commit, or merge scenarios. |
+| Read-model consumers | Yes, only for authority refresh/validation. | Runner authority must come from the same public status/read-model surface used by CLI/UI, not private transcript reconstruction. |
+| Cleanup/recovery consumers | Fixture cleanup only. | Fixture cleanup may remove temp directories it created, but must not add production recovery semantics. |
+| Export surface | Yes, helper exports under `tests/helpers/almostE2eSmoke/index.ts`. | The export shape is a test-helper contract for successor tasks and must preserve the fake/real boundary in this document. |
+
+### Baseline Preservation
+
+| Must Preserve | Allowed Resolution Path | Forbidden Regression Interpretation | Replacement Proof Required If Removed |
+|---|---|---|---|
+| `pairflow agent emit --kind ...` remains the canonical fake actor feedback surface. | Invoke the CLI command or the same public command handler with production validation. | Treating direct transcript/state/inbox writes as an equivalent helper shortcut. | A plan-level architecture update naming the new canonical actor surface and updating successor task contracts. |
+| First-advance validation and later refresh. | Validate captured launch authority against public status/read-model data immediately before the first emit; resolve by bubble id from public status/read-model data before every later emit. | Reusing launch-captured handoff/execution ids after the first emit, or for the first emit without public validation. | Tests proving first-advance validation and post-first refresh against the current public status/read-model rule. |
+| Fakes replace only existing external side-effect ports. | Use `ProcessSpawnPort`, `LaunchBubbleSessionAckPort`, and `TerminateBubbleTmuxSessionPort` compatible fakes. | Injecting through private application internals in a way that bypasses the public entrypoint under test. | Source-level proof that the replacement remains an existing public dependency/port boundary. |
+| Phase 1 excludes real LLM, real tmux/editor/terminal execution, Playwright, HTTP transport, and Layer 3. | Record side effects and keep downstream activation in later tasks. | Expanding this foundation task into scenario delivery or external runtime execution. | Plan refinement that changes Phase 1 scope and updates task order/coverage. |
+
+### Closure Budget and Task Shape
+
+| Gate | Result |
+|---|---|
+| Closure buckets touched | `shared_contract`, `internal_execution_consumers` as test-helper contract, `read_model_consumers` for authority refresh, and fixture-local cleanup. |
+| Collapsed closures | Helper contract plus focused helper tests are intentionally collapsed because they share the same `tests/helpers/almostE2eSmoke/**` boundary and no production persistence/schema changes. |
+| Deferred closures | CLI lifecycle smoke, actor-loop scenario delivery, UI action API smoke, approval/commit/merge happy path, Layer 3, HTTP transport, and browser tests. |
+| Primary bounded-task shape | `contract_or_persisted_authority_foundation`. |
+| Secondary shape | `activation_or_read_model`, limited to helper-side authority refresh/validation. |
+| Split decision | Keep as one foundation task because it creates the reusable helper contract without changing production authority producers, persisted schema, or downstream runtime scenario activation. |
+
+### Scope-Reality Proof
+
+1. Target helper files under `tests/helpers/almostE2eSmoke/**` do not exist yet;
+   this task creates a new test-helper module rather than modifying an existing
+   production entrypoint.
+2. Existing source anchors confirm the intended public and port boundaries:
+   - `src/types/protocol.ts` defines `PassActorEmitInput`,
+     `HumanQuestionActorEmitInput`, `ConvergenceActorEmitInput`, and
+     `MetaReviewResultActorEmitInput`.
+   - `src/cli/commands/agent/emit.ts` resolves authoritative actor context by
+     bubble id before dispatching actor emit handling.
+   - `src/cli/commands/bubble/status.ts` is the public CLI status command.
+   - `src/v11/application/status/statusCommandViewBuilder.ts` projects
+     `executionContext` into the status/read-model view consumed by CLI/UI.
+   - `src/v11/application/status/statusCliTextRenderer.ts` renders the same
+     status authority context for CLI output.
+   - `src/v11/ports/processSpawn.ts` defines `ProcessSpawnPort`.
+   - `src/v11/ports/tmuxSessions.ts` defines `LaunchBubbleSessionAckPort` and
+     `TerminateBubbleTmuxSessionPort`.
+3. The task label matches the real scope: it is a helper contract foundation,
+   not delivery of the downstream smoke scenarios.
+4. Mutation boundaries are constrained to new test helper files and their
+   focused tests. Production runtime files may be read as anchors but must not
+   be changed by this task.
 
 ### Structured Contract Rules
 
@@ -145,20 +226,43 @@ Common step rules:
    runner passes refs through to the actor emit surface and does not interpret
    them as routing truth.
 6. `expectedRole`, `expectedStateFingerprint`, or equivalent authority guards
-   may be supplied only as validation inputs. They must never replace refreshed
-   public status/read-model authority.
+   may be supplied only as validation inputs. They must never replace
+   first-advance public validation or post-first refreshed public
+   status/read-model authority.
 7. The runner must retain step input, resolved authority, invoked emit command
    or handler call, exit/result, and recorded side effects for assertion
    inspection. It must not retain or synthesize transcript/state mutations.
+8. Scenario normalization must be explicit: helper builders and raw scenario
+   input must flow through the same validator before command construction.
+   Tests should prove builders cannot bypass closed-schema rejection.
+9. The runner must reject any step payload that maps to options unsupported by
+   the current `pairflow agent emit` surface instead of carrying unknown fields
+   forward for later interpretation.
+
+Payload and guard mapping rules:
+
+1. Common authority options for every emitted step are:
+   `--repo`, `--bubble-id`, `--handoff-id`, and `--execution-id`.
+2. Guard options are derived only from the validated/refreshed public authority
+   snapshot and explicit scenario guard inputs:
+   - `expectedRole` maps to `--expected-role`
+   - `expectedRound` maps to `--expected-round`
+   - `expectedStateFingerprint` maps to `--expected-state-fingerprint`
+3. `refs` maps to repeated `--ref` values in the same order supplied by the
+   normalized scenario step.
+4. `findings` maps to repeated `--finding` values in the same order supplied by
+   the normalized scenario step, preserving finding refs.
+5. Unsupported scenario fields must not be silently ignored or carried as
+   opaque metadata; they must fail validation before command construction.
 
 Per-kind payload rules:
 
 | Step Kind | Required Fields | Optional Fields | Emit Mapping | Rejection Rules |
 |---|---|---|---|---|
-| `pass` | `summary` | `intent`, `findings`, `refs`, `noFindings` | `pairflow agent emit --kind pass` with current `handoff-id` and `execution-id` | Reject when both `findings` and `noFindings=true` are supplied; reject findings without severity/title; reject unsupported intent values. |
-| `human_question` | `question` | `refs` | `pairflow agent emit --kind human_question` | Reject empty question text or finding-like fields. |
-| `convergence` | `summary` | `findings`, `refs` | `pairflow agent emit --kind convergence` | Reject unsupported finding severities for convergence and reject `noFindings` because absence of findings is the clean signal. |
-| `meta_review_result` | `round`, `recommendation`, `summary`, `reportJson` | `reworkTargetMessage`, `refs` | `pairflow agent emit --kind meta_review_result --round <n> --recommendation <approve\|rework\|inconclusive> --summary <text> --report-json <json>` plus optional `--rework-target-message` | Reject recommendations outside the production-supported set; reject non-positive or non-integer rounds; reject missing or non-object report JSON; reject `findings` because the production `MetaReviewResultActorEmitInput` carries parity/count data in `report_json`, not a findings array. |
+| `pass` | `summary` | `intent`, `findings`, `refs`, `noFindings`, authority guards | `pairflow agent emit --kind pass --repo <path> --bubble-id <id> --handoff-id <id> --execution-id <id> --summary <text>` plus optional `--intent`, repeated `--finding`, repeated `--ref`, `--no-findings`, and guard options | Reject when both `findings` and `noFindings=true` are supplied; reject findings without severity/title; reject unsupported intent values. |
+| `human_question` | `question` | `refs`, authority guards | `pairflow agent emit --kind human_question --repo <path> --bubble-id <id> --handoff-id <id> --execution-id <id> --question <text>` plus repeated `--ref` and guard options | Reject empty question text or finding-like fields. |
+| `convergence` | `summary` | `findings`, `refs`, authority guards | `pairflow agent emit --kind convergence --repo <path> --bubble-id <id> --handoff-id <id> --execution-id <id> --summary <text>` plus repeated `--finding`, repeated `--ref`, and guard options | Reject unsupported finding severities for convergence and reject `noFindings` because absence of findings is the clean signal. |
+| `meta_review_result` | `round`, `recommendation`, `summary`, `reportJson` | `reworkTargetMessage`, `refs`, authority guards | `pairflow agent emit --kind meta_review_result --repo <path> --bubble-id <id> --handoff-id <id> --execution-id <id> --round <n> --recommendation <approve\|rework\|inconclusive> --summary <text> --report-json <json>` plus optional `--rework-target-message`, repeated `--ref`, and guard options | Reject recommendations outside the production-supported set; reject non-positive or non-integer rounds; reject missing or non-object report JSON; reject `findings` because the production `MetaReviewResultActorEmitInput` carries parity/count data in `report_json`, not a findings array. |
 
 Finding rules:
 
@@ -184,6 +288,20 @@ Authority error rules:
 4. The helper must expose enough error detail for tests to assert the failing
    step label/kind and missing or mismatched authority field without reading
    private Pairflow state files.
+5. The launch metadata captured by fake tmux is valid only as a bootstrap
+   observation for the first actor turn. The first `advance(...)` may use
+   captured launch authority only after validating it against the public
+   status/read-model immediately before emit. Every subsequent `advance(...)`
+   must refresh from the public status/read-model and must not validate against
+   launch-captured authority.
+6. The authority resolver must expose `handoff_id`, `execution_id`,
+   `active_role`, `round`, `awaited_output_type`, and, when the public surface
+   provides it, `state_fingerprint`. Guard options passed to actor emit should
+   be derived from this refreshed snapshot.
+7. If the public status/read-model is reachable but lacks `execution_id`, the
+   runner must fail as authority missing. It must not downgrade to
+   handoff-only, workspace/CWD inference, pane visibility, transcript history,
+   or tmux launch ack as authority.
 
 ### Mirrored Surface Checklist
 
@@ -194,7 +312,13 @@ Keep these sections aligned when the runner contract changes:
 3. L1 Ownership and Deferred Semantics.
 4. L1 Structured Contract Rules.
 5. L2 Branch Inventory.
-6. Validation Strategy.
+6. Capability Closure.
+7. Authority Boundary Map.
+8. Baseline Preservation.
+9. Closure Budget and Task Shape.
+10. Scope-Reality Proof.
+11. Hardening Backlog.
+12. Validation Strategy.
 
 ## L2 - Branch Inventory
 
@@ -228,12 +352,18 @@ Phase 1 actor feedback kinds. The runner must fail closed when:
 
 1. no active authority exists
 2. the public status/read-model cannot prove the expected active role
-3. the status authority mismatches the captured or expected authority
-4. the scenario asks for an unsupported emit kind or payload shape
+3. first-advance public validation mismatches the captured launch authority
+4. any post-first refreshed status authority mismatches the step's explicit
+   expected authority guards
+5. the scenario asks for an unsupported emit kind or payload shape
 
 This branch must implement the `Structured Contract Rules` as a single source
 of truth for validation and command construction. Do not duplicate slightly
 different per-kind schemas across runner code and tests.
+
+It must also prove actor emit construction is shell-safe by asserting the runner
+builds structured argv or an equivalent typed command input for refs, report
+JSON, quotes, `$`, and backticks instead of concatenating a shell command string.
 
 ### Branch D - Fixture Repo Builder
 
@@ -249,9 +379,21 @@ Add tests covering the helper contract, not downstream smoke behavior:
 
 1. fake adapters record side effects without launching real programs
 2. fake tmux launch registers a scenario with launch authority
-3. runner refreshes authority before each `advance(...)`
-4. stale/missing authority rejects the step
-5. fixture repo setup creates an isolated git baseline
+3. first `advance(...)` validates launch authority against the public
+   status/read-model before emit
+4. every subsequent `advance(...)` refreshes authority from the public
+   status/read-model rather than launch metadata
+5. stale/missing authority rejects the step
+6. missing or incomplete fake launch metadata rejects runner start before any
+   scenario advance
+7. malformed and unknown scenario payloads reject before authority refresh and
+   actor emit invocation
+8. structured argv or typed command input preserves refs, report JSON, quotes,
+   `$`, and backticks without shell interpretation
+9. authority resolver exposes `handoff_id`, `execution_id`, `active_role`,
+   `round`, `awaited_output_type`, and optional `state_fingerprint` when the
+   public surface provides it
+10. fixture repo setup creates an isolated git baseline
 
 ## Target Files
 
@@ -272,6 +414,22 @@ Expected tests:
 Target files may be split differently if the implementation keeps the same
 helper boundary and tests.
 
+## Hardening Backlog
+
+These items are explicitly later-hardening unless a successor task promotes
+them through plan refinement:
+
+1. Add downstream failure-mode smoke scenarios for malformed actor payloads and
+   real launch adapter failures after the Phase 1 happy path is stable. This
+   does not defer this task's required helper-schema rejection tests; malformed
+   and unknown scenario payloads must already fail before actor emit in the
+   helper contract. It also does not defer this task's missing or incomplete
+   fake launch metadata rejection proof.
+2. Add an event-driven fake actor mode only if a later scenario proves that
+   runner-driven advancement cannot express the required timing.
+3. Revisit Layer 3 cadence after compiled CLI, actor-loop, and UI action API
+   Phase 1 smokes have measured runtime and flake behavior.
+
 ## Validation Strategy
 
 1. Run focused helper tests for `tests/helpers/almostE2eSmoke/**`.
@@ -289,9 +447,14 @@ helper boundary and tests.
    helper surface.
 2. The runner can register fake launch metadata and advance a scenario through
    canonical actor emit invocation without direct state/transcript mutation.
-3. Authority refresh or validation runs before every actor `advance(...)`.
-4. Missing or stale authority fails with a deterministic helper error.
-5. Focused tests cover the helper contract and fixture setup.
+3. The first actor `advance(...)` validates captured launch authority against
+   the public status/read-model immediately before emit; subsequent advances
+   refresh from the public status/read-model.
+4. Missing, stale, or incomplete authority and launch metadata fails with a
+   deterministic helper error.
+5. Focused tests cover the helper contract, including malformed scenario
+   rejection, exact authority resolver fields, and structured argv/typed actor
+   emit construction.
 6. No downstream task is required to use private state-file writes or internal
    lifecycle shortcuts to consume the helper.
 7. Validation evidence is recorded in the implementation bubble before close.
