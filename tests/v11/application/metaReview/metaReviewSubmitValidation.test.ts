@@ -1,16 +1,16 @@
 import { describe, expect, it, vi } from "vitest";
 
 import {
-  prepareMetaReviewSubmitContext
-} from "../../../../src/v11/application/metaReview/metaReviewCommandSubmitPreparation.js";
+  prepareAcceptedMetaReviewSubmit
+} from "../../../../src/v11/application/metaReview/internal/submit/preparation.js";
 import {
   assertSubmitPayloadInvariants,
   assertSubmitStatusIsSuccess,
   resolveSubmitRunStatus
-} from "../../../../src/v11/shared/metaReview/metaReviewCommandSubmitValidation.js";
+} from "../../../../src/v11/application/metaReview/internal/submit/validation.js";
 import {
   assertMetaReviewSubmitterAuthority
-} from "../../../../src/v11/shared/metaReview/metaReviewCommandSubmitAuthority.js";
+} from "../../../../src/v11/application/metaReview/internal/submit/authority.js";
 import { buildMetaReviewExecutionContext } from "../../../../src/v11/shared/metaReview/metaReviewExecutionContext.js";
 import { metaReviewExecutionContextToRunningContext } from "../../../../src/v11/shared/state/executionContext.js";
 import type { BubbleStateSnapshot } from "../../../../src/v11/shared/state/bubbleStateSnapshotTypes.js";
@@ -136,7 +136,7 @@ describe("metaReviewCommandSubmitValidation", () => {
     const state = createMetaReviewRunningState({
       active_agent: "claude"
     });
-    const prepared = await prepareMetaReviewSubmitContext({
+    const prepared = await prepareAcceptedMetaReviewSubmit({
       submitInput: {
         bubbleId: "b_meta_submit_validation_01",
         round: 2,

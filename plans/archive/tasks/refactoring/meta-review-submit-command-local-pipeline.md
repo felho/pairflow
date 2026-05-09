@@ -2,7 +2,7 @@
 artifact_type: task
 artifact_id: task_meta_review_submit_command_local_pipeline_v1
 title: "Meta-Review Submit Command-Local Pipeline"
-status: draft
+status: archived
 phase: phase1
 target_files:
   - src/v11/application/metaReview/metaReviewCommandSubmitRuntime.ts
@@ -30,6 +30,8 @@ normative_refs:
   - docs/modularity-review/2026-05-09-modularity-review-deepening-candidates.md
 owners:
   - "felho"
+archive_group: refactoring
+archive_path: plans/archive/tasks/refactoring/meta-review-submit-command-local-pipeline.md
 ---
 
 # Task: Meta-Review Submit Command-Local Pipeline

@@ -1,5 +1,5 @@
-import { MetaReviewError } from "../command/metaReviewError.js";
-import type { MetaReviewRecommendation } from "../../metaReviewTypes.js";
+import { MetaReviewError } from "../../../../shared/metaReview/metaReviewError.js";
+import type { MetaReviewRecommendation } from "../../../../shared/metaReview/metaReviewTypes.js";
 
 function parseOptionalSubmitRunLinkField(
   value: unknown

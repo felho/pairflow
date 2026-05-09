@@ -9,7 +9,7 @@ import { finalizeCurrentRunMetaReviewGate } from "../../../../src/v11/applicatio
 import {
   assertActiveMetaReviewExecutionContext,
   assertMetaReviewSubmitStaleGuard
-} from "../../../../src/v11/shared/metaReview/metaReviewCommandSubmitAuthority.js";
+} from "../../../../src/v11/application/metaReview/internal/submit/authority.js";
 import { MetaReviewError } from "../../../../src/v11/shared/metaReview/metaReviewError.js";
 import type { MetaReviewResult } from "../../../../src/v11/shared/metaReview/metaReviewTypes.js";
 import type { LoadedStateSnapshot } from "../../../../src/v11/ports/stateSnapshots.js";
