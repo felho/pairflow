@@ -12,7 +12,7 @@ import { syncRemoteCommitContinuityArtifacts } from "../commit/commitCommandFina
 import {
   buildMergeImportRef,
   type RemoteMergeStatusTarget,
-  type RunMergeFlowInput
+  type RunMergeCommandPipelineInput
 } from "./mergeCommandContract.js";
 import type { ResolvedMergeCommandDependencies } from "./mergeCommandDependencyResolution.js";
 import {
@@ -53,7 +53,7 @@ async function assertRemoteMergeLocalPrerequisites(input: {
   baseBranch: string;
   bubbleBranch: string;
   dependencies: ResolvedMergeCommandDependencies;
-  createError: RunMergeFlowInput["createError"];
+  createError: RunMergeCommandPipelineInput["createError"];
 }): Promise<void> {
   await assertCleanRepoWorkingTree(
     input.repoPath,
@@ -82,7 +82,7 @@ export type MergeFlowExecutionContext =
   | RemoteMergeFlowExecutionContext;
 
 interface MergeFlowInitializationInput {
-  params: RunMergeFlowInput;
+  params: RunMergeCommandPipelineInput;
   dependencies: ResolvedMergeCommandDependencies;
 }
 
@@ -306,7 +306,7 @@ async function importRemoteCommitContinuityForMerge(input: {
   statePath: string;
   transcriptPath: string;
   dependencies: ResolvedMergeCommandDependencies;
-  createError: RunMergeFlowInput["createError"];
+  createError: RunMergeCommandPipelineInput["createError"];
 }): Promise<{ loaded: LoadedStateSnapshot; state: BubbleStateSnapshot } | null> {
   let result: Awaited<
     ReturnType<ResolvedMergeCommandDependencies["importRemoteBubbleCommitContinuity"]>

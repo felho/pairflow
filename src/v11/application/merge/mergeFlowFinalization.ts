@@ -4,7 +4,7 @@ import type { MergeFlowExecutionContext } from "./mergeFlowContext.js";
 import type {
   ExecuteRemoteBubbleMergeCleanupCommandResult,
   MergeCleanupOutcome,
-  RunMergeFlowInput
+  RunMergeCommandPipelineInput
 } from "./mergeCommandContract.js";
 
 export interface LocalMergeFlowFinalizationResult {
@@ -26,7 +26,7 @@ function resolveCleanupTmuxSessionName(input: {
 }
 
 function toRemoteReconcileError(input: {
-  params: RunMergeFlowInput;
+  params: RunMergeCommandPipelineInput;
   context: Extract<MergeFlowExecutionContext, { route: "remote" }>;
   phase: "state_persist";
   error: unknown;
@@ -71,7 +71,7 @@ function buildLocalCleanupOutcome(input: {
 }
 
 function assertRemoteCleanupIdentity(input: {
-  params: RunMergeFlowInput;
+  params: RunMergeCommandPipelineInput;
   context: Extract<MergeFlowExecutionContext, { route: "remote" }>;
   cleanupResult: ExecuteRemoteBubbleMergeCleanupCommandResult;
 }): void {
@@ -131,7 +131,7 @@ function assertRemoteCleanupIdentity(input: {
 
 function assertRemoteCleanupProof(
   input: {
-    params: RunMergeFlowInput;
+    params: RunMergeCommandPipelineInput;
     context: Extract<MergeFlowExecutionContext, { route: "remote" }>;
   },
   proof: {
@@ -154,7 +154,7 @@ function assertRemoteCleanupProof(
 }
 
 function assertRemoteCleanupProofs(input: {
-  params: RunMergeFlowInput;
+  params: RunMergeCommandPipelineInput;
   context: Extract<MergeFlowExecutionContext, { route: "remote" }>;
   cleanupResult: ExecuteRemoteBubbleMergeCleanupCommandResult;
 }): void {
@@ -202,7 +202,7 @@ function buildRemoteCleanupOutcome(input: {
 }
 
 function assertRemoteMergeCleanupResult(input: {
-  params: RunMergeFlowInput;
+  params: RunMergeCommandPipelineInput;
   context: Extract<MergeFlowExecutionContext, { route: "remote" }>;
   cleanupResult: ExecuteRemoteBubbleMergeCleanupCommandResult;
 }): MergeCleanupOutcome {
@@ -241,7 +241,7 @@ function extractRemoteCleanupErrorContext(error: unknown): {
 }
 
 export async function finalizeMergeFlow(input: {
-  params: RunMergeFlowInput;
+  params: RunMergeCommandPipelineInput;
   context: MergeFlowExecutionContext;
   dependencies: ResolvedMergeCommandDependencies;
   mergeCommitSha: string;
@@ -311,7 +311,7 @@ export async function finalizeMergeFlow(input: {
 }
 
 async function finalizeRemoteMergeFlow(input: {
-  params: RunMergeFlowInput;
+  params: RunMergeCommandPipelineInput;
   context: Extract<MergeFlowExecutionContext, { route: "remote" }>;
   dependencies: ResolvedMergeCommandDependencies;
   mergeCommitSha: string;
