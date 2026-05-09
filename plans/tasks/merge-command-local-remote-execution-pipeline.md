@@ -2,7 +2,7 @@
 artifact_type: task
 artifact_id: task_merge_command_local_remote_execution_pipeline_v1
 title: "Merge Command Local/Remote Execution Pipeline"
-status: draft
+status: implementable
 phase: phase1
 target_files:
   - src/v11/application/merge/mergeCommandOrchestration.ts
@@ -77,15 +77,17 @@ archive_path: plans/archive/tasks/refactoring/merge-command-local-remote-executi
 5. The lower-level pieces have useful identities, but `runMergeFlow.ts` remains a shallow orchestration module: route policy, remote handoff import policy, local git merge, publication steps, finalization invocation, and result mapping all remain visible in one file.
 6. The architecture docs require important `v11` extracts to use explicit typed boundaries and the narrowest correct scope. This task should deepen a command-local merge pipeline, not promote merge workflow policy into `shared`.
 7. No public behavior change is currently authorized. The implementation should preserve existing merge semantics and fully eliminate the old `runMergeFlow.ts` orchestration shape rather than leaving a transitional wrapper, compatibility alias, or facade.
+8. The old `runMergeFlow` name family is not an approved compatibility surface. Any production or test type/helper name containing `RunMergeFlow`/`runMergeFlow` must be renamed to the new pipeline vocabulary.
 
 ## Task-Mode Readiness Self-Check (2026-05-09)
 
 1. `execution_metadata_gate`: not applicable for this standalone architecture task because `plan_ref: null` and no parent plan tracker is claiming sequencing authority.
-2. `target_file_reality_check`: matches the current codebase.
+2. `target_file_reality_check`: matches the current codebase as of this document refinement.
    - `mergeCommandOrchestration.ts` is already a public command boundary.
    - `runMergeFlow.ts` currently owns route selection and route-effect ordering.
    - `mergeFlowContext.ts`, `mergeFlowFinalization.ts`, `mergeRoutingEligibility.ts`, and `remoteMergeExecutionContext.ts` already contain focused pieces that should be retained or moved under the new internal pipeline according to ownership.
    - `src/v11/application/merge/internal/pipeline/**` does not currently exist and is the intended new command-local placement.
+   - Current production import reality is `mergeCommandOrchestration.ts -> runMergeFlow.ts`; this is the specific edge the implementation must remove.
 3. `control_model_readiness`: ready. The task names the merge result authority, remote handoff authority, cleanup proof authority, missing-data fail-closed behavior, forbidden local fallback, and allowed remote continuity import resolution path.
 4. `closed_contract_drift`: no semantic drift authorized. Existing public input/result contracts, CLI behavior, remote merge transport contracts, state preconditions, git side-effect semantics, and cleanup proof rules remain fixed.
 5. `authority_fan_out`: acceptable for one bounded command-local refactor because public API, context preparation, local route, remote route, git side effects, publication, handoff import, and finalization are named separately and remain within `application/merge`.
@@ -164,6 +166,7 @@ The current code has the right policy pieces, but `runMergeFlow.ts` remains the 
 3. Delete the old top-level `runMergeFlow.ts` route orchestrator.
    - Move the route orchestration into `internal/pipeline/**`.
    - Do not keep a thin facade, compatibility alias, deprecated wrapper, or transitional export for `runMergeFlow(...)`.
+   - Rename the old internal `RunMergeFlow`/`runMergeFlow` name-family vocabulary to pipeline vocabulary such as `RunMergeCommandPipelineInput`; do not preserve any same-family type, helper, factory, dependency, context, or alias as a compatibility surface.
    - Migrate every production and test import to either the public command boundary or the exact new internal owner.
 4. Preserve local route ordering:
    - resolve bubble and bubble identity,
@@ -215,7 +218,7 @@ The current code has the right policy pieces, but `runMergeFlow.ts` remains the 
    - `mergeResultMapping.ts` for result construction.
    - These lower-level modules are not the forbidden old route helper surface when they remain focused and explicitly typed.
 8. Add or move application-level tests under `tests/v11/application/merge/**` for the new pipeline Interface. Existing CLI/core/contract tests remain public behavior coverage.
-9. Add final evidence scans proving the deleted `runMergeFlow.ts` module and its former route-orchestration helpers no longer exist as a top-level import surface, and the new application-local pipeline owns the route/effect contract.
+9. After all old-name cleanup and route-helper migration is complete, add the final evidence package required by T10 proving the deleted `runMergeFlow.ts` module, the old `RunMergeFlow`/`runMergeFlow` name family, and its former route-orchestration helpers no longer exist anywhere in the implementation/test scope, and the new application-local pipeline owns the route/effect contract.
 
 ### Out of Scope
 
@@ -300,11 +303,12 @@ The current code has the right policy pieces, but `runMergeFlow.ts` remains the 
 | ID | File | Function/Entry | Expected Behavior | Priority | Timing | Evidence |
 |---|---|---|---|---|---|---|
 | CS1 | `src/v11/application/merge/mergeCommandOrchestration.ts` | `mergeBubbleCommandOrchestration` | Keep public input normalization, dependency resolution, and error normalization; delegate execution to one command-local pipeline | P1 | required-now | T1,T2,T10,AC1 |
-| CS2 | `src/v11/application/merge/internal/pipeline/**` | `runMergeCommandPipeline` | Own context preparation, route selection, route execution, finalization invocation, and result construction | P1 | required-now | T1-T9 |
+| CS2 | `src/v11/application/merge/internal/pipeline/**` | `runMergeCommandPipeline` | Own context preparation, route selection, route execution, finalization invocation, and result construction through new explicit pipeline vocabulary, not the old `RunMergeFlow`/`runMergeFlow` name family | P1 | required-now | T1-T9 |
 | CS3 | `src/v11/application/merge/internal/pipeline/**` | context preparation step | Resolve bubble identity, local state, executor context, remote pointer, remote target, local branch prerequisites, and remote continuity import with existing guards | P1 | required-now | T2,T3,T5 |
 | CS4 | `src/v11/application/merge/internal/pipeline/**` | local route step | Preserve local git merge -> optional origin ops -> finalization -> result ordering | P1 | required-now | T4,T8 |
 | CS5 | `src/v11/application/merge/internal/pipeline/**` | started-remote route step | Preserve remote command -> handoff import -> local merge -> local reconcile -> remote cleanup -> result ordering | P1 | required-now | T5,T6,T7,T8 |
 | CS6 | `src/v11/application/merge/runMergeFlow.ts` | old top-level flow entry | Delete this file; no top-level route helper, facade, or compatibility wrapper may remain | P1 | required-now | T1,T10,AC2 |
+| CS6a | `src/v11/application/merge/**` and merge tests | old `RunMergeFlow`/`runMergeFlow` name-family vocabulary | Replace old flow-named internal types/helpers across contract, context, finalization, pipeline, and tests with pipeline vocabulary; do not keep compatibility aliases, same-purpose helpers, or test fixtures with the old name family | P1 | required-now | T1,T10,AC3a |
 | CS7 | `src/v11/application/merge/mergeFlowContext.ts` | execution context preparation | Either move under `internal/pipeline/**` or remain focused on typed context preparation; no route execution or result authority | P1 | required-now | T2,T3,T5 |
 | CS8 | `src/v11/application/merge/mergeFlowFinalization.ts` | finalization effects | Remain lower-level cleanup/reconcile/event helper or move under internal pipeline; no route selection or remote handoff import authority | P1 | required-now | T7,T8 |
 | CS9 | `src/v11/application/merge/mergeRoutingEligibility.ts` | eligibility helpers | Remain pure/port-backed guard helpers; no pipeline orchestration or result authority | P2 | required-now | T3,T4 |
@@ -354,16 +358,17 @@ Required command-local entry:
 
 ```ts
 runMergeCommandPipeline(
-  input: RunMergeFlowInput,
+  input: RunMergeCommandPipelineInput,
   dependencies: ResolvedMergeCommandDependencies
 ): Promise<MergeBubbleResult>
 ```
 
 Allowed implementation variants:
 
-1. Keep `RunMergeFlowInput` as the pipeline input if it remains the existing normalized internal command contract.
-2. Rename the internal input type only if every consumer is updated and the public external contract remains unchanged.
-3. Keep or move `MergeFlowExecutionContext` types according to the narrowest correct owner:
+1. Define `RunMergeCommandPipelineInput` as the explicit normalized internal command contract.
+2. Remove the old `RunMergeFlow`/`runMergeFlow` name family rather than preserving it as aliases or same-purpose helpers. If any downstream production or test source still imports, defines, or reuses a same-family name such as `RunMergeFlowInput`, `RunMergeFlowDependencies`, `RunMergeFlowContext`, `createRunMergeFlowInput`, or `runMergeFlowFixture` after the refactor, treat that as incomplete migration.
+3. Keep the public external contract unchanged while updating every internal consumer to the new pipeline input name.
+4. Keep or move `MergeFlowExecutionContext` types according to the narrowest correct owner:
    - if only the pipeline uses them, move them under `internal/pipeline/**`;
    - if finalization or tests need them, export explicit types from an internal contract file.
 
@@ -398,6 +403,7 @@ Allowed implementation variants:
 5. This task does not own list/status projection of remote merge state, watchdog escalation, or UI behavior.
 6. Forbidden inference: do not infer public API support from any new internal pipeline file; the only public command surface remains the existing command orchestration and exported public types.
 7. Forbidden compatibility path: do not preserve `runMergeFlow.ts`, `runMergeFlow(...)`, or any old top-level merge flow import as a wrapper around the new pipeline.
+8. Forbidden naming compatibility path: do not preserve any `RunMergeFlow`/`runMergeFlow` same-family name as an exported alias, non-exported production definition, factory/helper, dependency/context type, fixture, or same-purpose test helper for the new pipeline. The new internal boundary must use pipeline vocabulary so source scans can prove the old orchestration surface was removed rather than renamed cosmetically.
 
 ### 5) Mirrored Surface Checklist
 
@@ -420,7 +426,8 @@ The Canonical Contract Matrix is the source of truth. Other sections may summari
 
 1. Inventory current imports of merge application files:
    - `rg -n "application/merge|../merge|./merge" src tests`
-   - classify imports of `runMergeFlow`, `mergeFlowContext`, `mergeFlowFinalization`, and helper modules as public command use, internal implementation use, defaults composition use, or test-only use.
+   - run a symbol-name scan such as `rg -n "RunMergeFlow|runMergeFlow" src/v11/application/merge tests/v11/application/merge tests/contracts/v11 tests/cli tests/core tests/v11/infrastructure/executor/ssh` to find both prefix and infix same-family names, including definitions such as `RunMergeFlowInput` and consumers in retained lower-level modules.
+   - classify imports and definitions of the `RunMergeFlow`/`runMergeFlow` name family, `mergeFlowContext`, `mergeFlowFinalization`, and helper modules as public command use, internal implementation use, defaults composition use, or test-only use.
 2. Create `src/v11/application/merge/internal/pipeline/**` with an explicit typed boundary.
 3. Move route orchestration from `runMergeFlow.ts` into `runMergeCommandPipeline(...)`.
 4. Split route-specific implementation into narrow internal modules when it improves locality:
@@ -435,8 +442,15 @@ The Canonical Contract Matrix is the source of truth. Other sections may summari
 6. Delete `runMergeFlow.ts` after imports are migrated. Do not shrink it into a facade.
 7. Move or keep `mergeFlowContext.ts` and `mergeFlowFinalization.ts` according to narrowest correct ownership; if retained top-level, ensure they remain focused and explicitly typed.
 8. Update tests to target the new pipeline boundary where route/effect sequencing is the subject, and the public command boundary where CLI/API behavior is the subject.
-9. Run import/evidence scans to prove no deleted helper path remains in production code.
-10. Re-evaluate architecture fitness drift:
+9. Rename or remove all old flow-named exports, imports, definitions, and same-purpose test helpers:
+    - `runMergeFlow(...)`,
+    - `RunMergeFlowInput`,
+    - any helper, type, factory, dependency, context, fixture, alias, or same-purpose test helper whose identifier contains `RunMergeFlow` or `runMergeFlow`, including infix names such as `createRunMergeFlowInput`.
+10. Run the final T10 evidence package after step 9 is complete, not before:
+    - explicit file-deletion proof for `src/v11/application/merge/runMergeFlow.ts`, such as `test ! -e src/v11/application/merge/runMergeFlow.ts` or an equivalent `rg --files src/v11/application/merge | rg '/runMergeFlow\\.ts$'` no-match proof;
+    - source scans over `src/**` and `tests/**` proving no identifier/import path contains `RunMergeFlow` or `runMergeFlow`;
+    - source scans proving the former same-file route-orchestration helpers are not imported or defined as surviving compatibility helpers.
+11. Re-evaluate architecture fitness drift:
     - This task changes lifecycle command orchestration boundaries and remote execution-context handling.
     - Check whether `tools/fitness/**` needs a new or updated rule.
     - If no fitness change is needed, record why in the progress/commit note.
@@ -454,7 +468,7 @@ The Canonical Contract Matrix is the source of truth. Other sections may summari
 | T7 | Remote finalization tests covering local reconcile failure, cleanup command failure, invalid cleanup identity, and missing cleanup proof | Prove remote success is not claimed too early |
 | T8 | Lifecycle event/final result tests for local and started-remote routes | Prove observable result semantics remain stable |
 | T9 | Existing merge contract tests | Prove public contract stability |
-| T10 | Final source scan for `runMergeFlow`, `src/v11/application/merge/runMergeFlow.ts`, and former same-file route-orchestration helpers | Prove the old route-orchestration surface is fully removed without treating retained lower-level modules as violations |
+| T10 | Final evidence package containing both an explicit file-deletion proof for `src/v11/application/merge/runMergeFlow.ts` and source scans over `src/**` and `tests/**` only, excluding this task document and archived/planning docs, for any identifier or import path containing `RunMergeFlow` or `runMergeFlow` and former same-file route-orchestration helpers | Prove the old route-orchestration file itself is deleted and the same-family compatibility vocabulary is fully removed, including prefix and infix names, without false positives from required planning/documentation self-references and without treating retained lower-level modules as violations |
 
 ### Default Verification Commands
 
@@ -481,12 +495,13 @@ If any step is skipped, explain why in the final implementation summary.
 1. `mergeBubbleCommandOrchestration(...)` remains the public command boundary and preserves public error normalization.
 2. A command-local `runMergeCommandPipeline(...)` exists under `src/v11/application/merge/internal/pipeline/**`.
 3. `runMergeFlow.ts` is deleted. No facade, compatibility alias, deprecated wrapper, or transitional export remains for the old merge flow surface.
+3a. The old `RunMergeFlow`/`runMergeFlow` name family is removed or renamed to pipeline vocabulary; no production export, non-exported production definition, production import, test import, fixture, factory/helper, dependency/context type, alias, or same-purpose test helper keeps an identifier containing `RunMergeFlow` or `runMergeFlow` as a compatibility surface.
 4. Local route ordering matches the Canonical Contract Matrix.
 5. Started-remote route ordering matches the Canonical Contract Matrix.
 6. Remote handoff validation and cleanup proof semantics remain unchanged.
 7. Public `MergeBubbleInput`, `MergeBubbleResult`, `MergeBubbleDependencies`, reason-code behavior, CLI behavior, and remote transport contracts remain unchanged.
 8. Tests cover pipeline route/effect behavior at the new Interface and public behavior through existing CLI/core/contract surfaces.
-9. Evidence scans show no production or test code imports the deleted `runMergeFlow` module or its former same-file route-orchestration helpers. Retained focused modules such as `mergeFlowContext.ts`, `mergeFlowFinalization.ts`, `mergeRoutingEligibility.ts`, `remoteMergeExecutionContext.ts`, and `mergeResultMapping.ts` are allowed when their final ownership is explicit and they do not own route sequencing.
+9. Evidence includes an explicit proof that `src/v11/application/merge/runMergeFlow.ts` no longer exists, and scans show no production or test code imports the deleted `runMergeFlow` module, uses any identifier containing `RunMergeFlow` or `runMergeFlow`, or imports/defines its former same-file route-orchestration helpers. Retained focused modules such as `mergeFlowContext.ts`, `mergeFlowFinalization.ts`, `mergeRoutingEligibility.ts`, `remoteMergeExecutionContext.ts`, and `mergeResultMapping.ts` are allowed when their final ownership is explicit and they do not own route sequencing.
 10. Fitness drift is handled: either a relevant `tools/fitness/**` rule is updated, or the progress/commit note explains why no new rule is needed.
 
 ## Hardening Backlog
