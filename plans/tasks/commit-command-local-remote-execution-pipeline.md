@@ -2,7 +2,7 @@
 artifact_type: task
 artifact_id: task_commit_command_local_remote_execution_pipeline_v1
 title: "Commit Command Local/Remote Execution Pipeline"
-status: draft
+status: approved
 phase: phase1
 target_files:
   - src/v11/application/commit/commitCommandApi.ts
@@ -55,6 +55,22 @@ owners:
    - `commitCommandRuntime.ts`
 4. The architecture docs require important `v11` extracts to use explicit typed boundaries and the narrowest correct scope. This task should deepen an application-local commit pipeline, not promote commit workflow policy into `shared`.
 5. No blocking product question is currently known. The implementation should preserve existing commit semantics and produce a clean final module shape, not a transitional wrapper over the old API-file helper layout.
+
+## ReviewSpec Task-Mode Readiness Check (2026-05-09)
+
+1. `review_result`: `approve_task`
+2. `execution_metadata_gate`: not applicable for this legacy standalone task because `plan_ref: null`, the filename predates the ExecutePairflowPlan V1 derived-task-id convention, and no parent plan tracker is claiming sequencing authority for this task.
+3. `target_file_reality_check`: matches the task boundary.
+   - `commitCommandApi.ts` currently contains `prepareCommitExecutionContext`, `commitRemoteExecutionRoute`, `commitLocalExecutionRoute`, `importRemoteCommitContinuityForCommit`, `syncRemoteCommitContinuity`, and `buildCommitLifecycleContext`.
+   - `commitCommandApiContract.ts` currently exports `CommitExecutionContext`, `CommitRuntimeContext`, and `RemoteCommitRuntimeContext`; `commitCommandGitStep.ts` and `commitCommandFinalization.ts` currently depend on `CommitRuntimeContext`.
+   - `src/v11/application/commit/internal/pipeline/**` does not currently exist and is the intended new command-local placement.
+4. `control_model_readiness`: ready. The task names the commit result authority, missing-data fail-closed behavior, forbidden remote-to-local fallback, and allowed imported-continuity resolution path.
+5. `closed_contract_drift`: no semantic drift authorized. Existing public API/result/protocol/state/remote transport contracts are explicitly preserved, and any discovered need to change them routes back to task refinement or Plan -> Task work.
+6. `authority_fan_out`: acceptable for one bounded command-local refactor because public API, workflow pipeline, git side effect, finalization, remote context, and remote transport authorities are named separately.
+7. `closure_budget`: acceptable. The task owns one end-to-end command workflow activation path, not a new CLI surface or cross-command abstraction.
+8. `bounded_task_shape`: acceptable. The task is intentionally narrow to the commit command pipeline and its tests; unrelated lifecycle commands, shared remote transport changes, and UI/runtime config changes remain out of scope.
+9. `contract_dense_gate`: satisfied by the Canonical Contract Matrix plus mirrored-surface checklist. The matrix is the source of truth for route/effect/error semantics; mirrored L0/L1/L2 prose must be kept subordinate to it.
+10. `capability_closure`: `end_to_end` for the existing `bubble commit` runtime path only. This task does not claim a new user capability; it preserves the existing activation path while moving orchestration behind the internal pipeline boundary.
 
 ## L0 - Policy
 
@@ -345,7 +361,7 @@ Keep these surfaces synchronized when route taxonomy, remote continuity semantic
 
 ### 10) Complexity Risk Triage
 
-1. `authority_count`: 4
+1. `authority_count`: 6
 2. `surface_spread`: 5
 3. `identity_join_count`: 2
 4. `activation_paths`: 2
