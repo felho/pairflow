@@ -2,7 +2,7 @@
 artifact_type: task
 artifact_id: task_list_remote_projection_pipeline_v1
 title: "List Remote Projection Pipeline"
-status: draft
+status: approved
 phase: phase1
 target_files:
   - src/v11/application/list/listReadModelApi.ts
@@ -82,22 +82,27 @@ archive_path: plans/archive/tasks/refactoring/list-remote-projection-pipeline.md
 5. This task should deepen `application/list` by introducing a list-local projection pipeline. It must not move list-specific projection policy into `shared`, and it must not redesign UI contracts or status command semantics.
 6. No public behavior change is currently authorized. Existing list CLI JSON/text output, UI remote execution DTO shape, remote state-source taxonomy, cache fallback behavior, and by-state/count semantics must remain unchanged.
 
-## Task-Mode Readiness Self-Check (2026-05-09)
+## ReviewSpec Task-Mode Readiness Check (2026-05-09)
 
-1. `execution_metadata_gate`: not applicable for this standalone architecture task because `plan_ref: null` and no parent plan tracker is claiming sequencing authority.
-2. `target_file_reality_check`: matches the current codebase.
+1. `review_result`: `approve_task`
+2. `approval_evidence_ref`: Pairflow document-bubble kickoff carried the CreatePairflowSpec ReviewSpec result as baseline in `/Users/felho/dev/pairflow/.pairflow/bubbles/list_projection_doc_refi/artifacts/task.md`, transcript anchor `/Users/felho/dev/pairflow/.pairflow/bubbles/list_projection_doc_refi/transcript.ndjson#msg_20260509_001`.
+3. `approval_authority_scope`: this task document records that carried ReviewSpec approval provenance; this document-refinement bubble did not rerun ReviewSpec or introduce new implementation authority.
+4. `document_refinement_result`: final document pass completed without changing the approved architecture intent.
+5. `execution_metadata_gate`: not applicable for this standalone architecture task because `plan_ref: null` and no parent plan tracker is claiming sequencing authority.
+6. `target_file_reality_check`: matches the current codebase.
    - `listReadModelApi.ts` owns list-level aggregation.
    - `listReadModelEntryBuilder.ts` owns per-bubble read/context and route choice.
    - `listReadModelEntryProjection.ts` owns all local/remote projection DTO construction and is the intended deepening target.
    - `src/v11/application/list/internal/projection/**` does not currently exist and is the intended new command-local placement.
    - `remoteExecutionTypes.ts`, `remoteStateCacheTypes.ts`, and `remoteBubbleStatusContract.ts` are read-only contract anchors for remote pointer/cache/live-status meaning; this task may import their types but must not change their schema or semantics.
-3. `control_model_readiness`: ready. The task names local state, remote pointer, remote cache, live remote status, and unavailable-state fail-closed/unavailable projection behavior.
-4. `closed_contract_drift`: no semantic drift authorized. Existing `BubbleListView`, `BubbleListEntry`, `UiBubbleListRemoteExecution`, CLI text rendering expectations, and UI attach/store semantics remain fixed unless a required internal type move forces import-only rewiring.
-5. `authority_fan_out`: acceptable for one bounded read-model refactor because the task aligns one consumer family: list/read-model projection. CLI/UI surfaces are verification consumers, not new behavior owners.
-6. `closure_budget`: acceptable. The task changes internal projection ownership and tests, but does not change shared remote contracts, status live command behavior, persisted remote cache schema, or state-machine semantics.
-7. `bounded_task_shape`: acceptable. Primary shape is read-model consumer alignment; no producer authority or runtime mutation behavior is introduced.
-8. `contract_dense_gate`: satisfied by the Canonical Contract Matrix plus mirrored-surface checklist. The matrix is the source of truth for state-source/cache/refresh/unavailable semantics.
-9. `capability_closure`: `end_to_end` for the existing `bubble list` read path only. This task adds no new command or UI capability.
+7. `control_model_readiness`: ready. The task names local state, remote pointer, remote cache, live remote status, and unavailable-state fail-closed/unavailable projection behavior.
+8. `closed_contract_drift`: no semantic drift authorized. Existing `BubbleListView`, `BubbleListEntry`, `UiBubbleListRemoteExecution`, CLI text rendering expectations, and UI attach/store semantics remain fixed unless a required internal type move forces import-only rewiring.
+9. `authority_fan_out`: acceptable for one bounded read-model refactor because the task aligns one consumer family: list/read-model projection. CLI/UI surfaces are verification consumers, not new behavior owners.
+10. `closure_budget`: acceptable. The task changes internal projection ownership and tests, but does not change shared remote contracts, status live command behavior, persisted remote cache schema, or state-machine semantics.
+11. `bounded_task_shape`: acceptable. Primary shape is read-model consumer alignment; no producer authority or runtime mutation behavior is introduced.
+12. `contract_dense_gate`: satisfied by the Canonical Contract Matrix plus mirrored-surface checklist. The matrix is the source of truth for state-source/cache/refresh/unavailable semantics.
+13. `capability_closure`: `end_to_end` for the existing `bubble list` read path only. This task adds no new command or UI capability.
+14. `implementation_authority_note`: this document is approved as implementation planning input for a future code-scoped bubble. A document-scoped refinement bubble may only update task/spec/progress/docs artifacts and must not apply the source/test/UI/config changes described below.
 
 ## Complexity-Risk Triage
 
@@ -469,7 +474,7 @@ If any step is skipped, explain why in the final implementation summary.
 
 ## Hardening Backlog
 
-1. N/A for current draft. No later-hardening items are intentionally carried outside the required projection-boundary refactor.
+1. N/A for this approved task. No later-hardening items are intentionally carried outside the required projection-boundary refactor.
 
 ### Parallelization Notes
 
