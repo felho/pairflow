@@ -42,6 +42,7 @@ import {
   normalizeValidationTargetCwd,
   normalizeValidationTargetPathSelector
 } from "../v11/shared/validation/validationTargetPaths.js";
+import { MAX_NODE_TIMER_DELAY_SECONDS } from "../v11/shared/timing/nodeTimerDelay.js";
 import { parseToml } from "./bubbleConfig.js";
 
 export const VALIDATION_TARGET_DEFAULT_NOT_UNIQUE =
@@ -105,6 +106,7 @@ export interface RepoDefaultsConfig {
 
 export interface RepoPlanWatchRunnerConfig {
   backend?: string;
+  idle_timeout_seconds?: number;
 }
 
 export interface RepoPlanWatchConfig {
@@ -490,7 +492,7 @@ function validateRepoPlanWatchConfig(
     return undefined;
   }
 
-  const allowedRunnerKeys = new Set(["backend"]);
+  const allowedRunnerKeys = new Set(["backend", "idle_timeout_seconds"]);
   for (const key of Object.keys(runner)) {
     if (!allowedRunnerKeys.has(key)) {
       errors.push({
@@ -509,6 +511,17 @@ function validateRepoPlanWatchConfig(
   });
   if (backend !== undefined) {
     validatedRunner.backend = backend;
+  }
+  const idleTimeoutSeconds = readOptionalInteger({
+    source: runner,
+    key: "idle_timeout_seconds",
+    path: "plan_watch.runner.idle_timeout_seconds",
+    errors,
+    isValid: (value) => value > 0 && value <= MAX_NODE_TIMER_DELAY_SECONDS,
+    message: `Must be a positive integer no greater than ${MAX_NODE_TIMER_DELAY_SECONDS}`
+  });
+  if (idleTimeoutSeconds !== undefined) {
+    validatedRunner.idle_timeout_seconds = idleTimeoutSeconds;
   }
 
   return { runner: validatedRunner };

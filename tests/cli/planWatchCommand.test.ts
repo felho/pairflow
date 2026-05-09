@@ -433,6 +433,111 @@ describe("plan watch command", () => {
     ]);
   });
 
+  it("passes the default idle timeout into legacy runner invocation config", async () => {
+    const dependencies: PlanWatchLoopDependencies = {
+      resolveLinkedBubbleTriggerIndex: vi.fn(async () => ({
+        planPath: "/repo/plans/local-plan-watch-plan-v1.md",
+        linkedBubbles: [],
+        diagnostics: [],
+        candidates: []
+      })),
+      ledger: {
+        read: vi.fn(async (): Promise<PlanWatchLedgerData> => ({
+          schemaVersion: PLAN_WATCH_LEDGER_SCHEMA_VERSION,
+          records: []
+        })),
+        reserveRun: vi.fn(async () => {}),
+        completeRun: vi.fn(async () => {}),
+        observeDryRun: vi.fn(async (record: PlanWatchLedgerRecord) => record)
+      },
+      runExecutePairflowPlanContinuation: vi.fn(async (): Promise<AgentRunnerBridgeResult> => ({
+        status: "settled_checkpoint",
+        invocationId: "invocation-1",
+        startedAt: "2026-05-01T10:00:00.000Z",
+        completedAt: "2026-05-01T10:00:01.000Z",
+        reasonCode: asAgentRunnerBridgeRunnerReasonCode("PLAN_SETTLED"),
+        command: null
+      })),
+      now: () => new Date("2026-05-01T10:00:00.000Z"),
+      generateInvocationId: () => "invocation-1"
+    };
+
+    await runPlanWatchCommand(
+      [
+        "plans/local-plan-watch-plan-v1.md",
+        "--repo",
+        "/repo",
+        "--once",
+        "--run-now",
+        "--runner-command",
+        "agent"
+      ],
+      "/cwd",
+      () => dependencies
+    );
+
+    expect(dependencies.runExecutePairflowPlanContinuation).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ idleTimeoutMs: 15 * 60 * 1000 })
+    );
+  });
+
+  it("passes configured plan-watch runner idle timeout into runner invocation config", async () => {
+    const repoPath = await createTempDir();
+    await writeFile(
+      join(repoPath, "pairflow.toml"),
+      '[plan_watch.runner]\nbackend = "codex"\nidle_timeout_seconds = 42\n',
+      "utf8"
+    );
+    const dependencies: PlanWatchLoopDependencies = {
+      resolveLinkedBubbleTriggerIndex: vi.fn(async () => ({
+        planPath: join(repoPath, "plans/local-plan-watch-plan-v1.md"),
+        linkedBubbles: [],
+        diagnostics: [],
+        candidates: []
+      })),
+      ledger: {
+        read: vi.fn(async (): Promise<PlanWatchLedgerData> => ({
+          schemaVersion: PLAN_WATCH_LEDGER_SCHEMA_VERSION,
+          records: []
+        })),
+        reserveRun: vi.fn(async () => {}),
+        completeRun: vi.fn(async () => {}),
+        observeDryRun: vi.fn(async (record: PlanWatchLedgerRecord) => record)
+      },
+      runExecutePairflowPlanContinuation: vi.fn(async (): Promise<AgentRunnerBridgeResult> => ({
+        status: "settled_checkpoint",
+        invocationId: "invocation-1",
+        startedAt: "2026-05-01T10:00:00.000Z",
+        completedAt: "2026-05-01T10:00:01.000Z",
+        reasonCode: asAgentRunnerBridgeRunnerReasonCode("PLAN_SETTLED"),
+        command: null
+      })),
+      now: () => new Date("2026-05-01T10:00:00.000Z"),
+      generateInvocationId: () => "invocation-1"
+    };
+
+    await runPlanWatchCommand(
+      [
+        "plans/local-plan-watch-plan-v1.md",
+        "--repo",
+        repoPath,
+        "--once",
+        "--run-now"
+      ],
+      "/cwd",
+      () => dependencies
+    );
+
+    expect(dependencies.runExecutePairflowPlanContinuation).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        backend: "codex",
+        idleTimeoutMs: 42_000
+      })
+    );
+  });
+
   it("rejects legacy runner args when a config-selected backend would ignore them", async () => {
     const repoPath = await createTempDir();
     await writeFile(

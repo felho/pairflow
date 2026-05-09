@@ -8,8 +8,10 @@ import {
   rm,
   writeFile
 } from "node:fs/promises";
+import { EventEmitter } from "node:events";
 import { tmpdir } from "node:os";
 import { join, relative } from "node:path";
+import { PassThrough } from "node:stream";
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -35,6 +37,11 @@ import {
 import { parseCodexJsonlStream } from "../../../../src/v11/application/planWatch/codexAgentRunnerStream.js";
 import { normalizeCodexTimeline } from "../../../../src/v11/application/planWatch/codexAgentRunnerTimeline.js";
 import { runAgentRunnerCommand } from "../../../../src/v11/defaults/planWatch/agentRunnerBridgeDefaults.js";
+import { MAX_NODE_TIMER_DELAY_MS } from "../../../../src/v11/shared/timing/nodeTimerDelay.js";
+import type {
+  ProcessSpawnPipeChild,
+  ProcessSpawnPort
+} from "../../../../src/v11/ports/processSpawn.js";
 
 const tempDirs: string[] = [];
 const tempPaths: string[] = [];
@@ -167,6 +174,41 @@ function codexAgentMessage(output: unknown): string {
   })}\n`;
 }
 
+function controlledRunnerProcess(
+  control: (child: {
+    stdout: PassThrough;
+    stderr: PassThrough;
+    close: (exitCode: number | null) => void;
+  }) => void,
+  options: { closeOnKill?: boolean } = {}
+): ProcessSpawnPort {
+  return () => {
+    const events = new EventEmitter();
+    const closeOnKill = options.closeOnKill ?? true;
+    const child = {
+      stdin: new PassThrough(),
+      stdout: new PassThrough(),
+      stderr: new PassThrough(),
+      kill: vi.fn(() => {
+        if (closeOnKill) {
+          setImmediate(() => events.emit("close", null));
+        }
+        return true;
+      }),
+      on: events.on.bind(events),
+      once: events.once.bind(events)
+    } as unknown as ProcessSpawnPipeChild;
+    control({
+      stdout: child.stdout as PassThrough,
+      stderr: child.stderr as PassThrough,
+      close: (exitCode) => {
+        events.emit("close", exitCode);
+      }
+    });
+    return child;
+  };
+}
+
 describe("agentRunnerBridge", () => {
   it("builds compact continuation input without route decisions", () => {
     const payload = buildAgentRunnerContinuationPayload(baseInput());
@@ -204,7 +246,7 @@ describe("agentRunnerBridge", () => {
 
     const result = await runExecutePairflowPlanContinuation(
       baseInput(),
-      { command: "agent", args: ["run"], cwd: "/repo", timeoutMs: 5000 },
+      { command: "agent", args: ["run"], cwd: "/repo", idleTimeoutMs: 5000 },
       dependencies
     );
 
@@ -220,7 +262,7 @@ describe("agentRunnerBridge", () => {
         args: ["run"],
         cwd: "/repo",
         inputMode: "stdin_json",
-        timeoutMs: 5000
+        idleTimeoutMs: 5000
       }
     });
     expect(invocations).toHaveLength(1);
@@ -549,7 +591,48 @@ describe("agentRunnerBridge", () => {
       failureStage: "precondition",
       command: null
     });
+    expect(dependencies.runCommand).not.toHaveBeenCalled();
+  });
+
+  it("fails closed before spawn when direct idle timeout exceeds Node timer limits", async () => {
+    const dependencies = deps();
+
+    const result = await runExecutePairflowPlanContinuation(
+      { ...baseInput(), idleTimeoutMs: MAX_NODE_TIMER_DELAY_MS + 1 },
+      { command: "agent" },
+      dependencies
+    );
+
+    expect(result).toMatchObject({
+      status: "blocked",
+      reasonCode: "PLAN_WATCH_RUNNER_PAYLOAD_INVALID",
+      failureStage: "precondition",
+      command: null
+    });
+    expect(dependencies.runCommand).not.toHaveBeenCalled();
+  });
+
+  it("validates built-in runner idle timeout before preparing Codex artifacts", async () => {
+    const dependencies = deps({
+      prepareCodexRunnerFiles: vi.fn(async () => {
+        throw new Error("should not prepare artifacts");
+      })
+    });
+
+    const result = await runExecutePairflowPlanContinuation(
+      { ...baseInput(), idleTimeoutMs: MAX_NODE_TIMER_DELAY_MS + 1 },
+      { backend: "codex" },
+      dependencies
+    );
+
+    expect(result).toMatchObject({
+      status: "blocked",
+      reasonCode: "PLAN_WATCH_RUNNER_PAYLOAD_INVALID",
+      failureStage: "precondition",
+      command: null
+    });
     expect(dependencies.pathExists).not.toHaveBeenCalled();
+    expect(dependencies.prepareCodexRunnerFiles).not.toHaveBeenCalled();
     expect(dependencies.runCommand).not.toHaveBeenCalled();
   });
 
@@ -579,7 +662,7 @@ describe("agentRunnerBridge", () => {
 
     const result = await runExecutePairflowPlanContinuation(
       baseInput(),
-      { backend: "codex", timeoutMs: 5000 },
+      { backend: "codex", idleTimeoutMs: 5000 },
       deps({
         pathExists: vi.fn(async () => true),
         prepareCodexRunnerFiles: vi.fn(async () => ({
@@ -614,7 +697,7 @@ describe("agentRunnerBridge", () => {
         command: "codex",
         cwd: "/repo",
         inputMode: "none",
-        timeoutMs: 5000
+        idleTimeoutMs: 5000
       }
     });
     expect(invocations).toHaveLength(1);
@@ -1199,23 +1282,24 @@ describe("agentRunnerBridge", () => {
     });
   });
 
-  it("preserves Codex timeout classification when the JSON stream has no final message", async () => {
+  it("preserves Codex idle-timeout classification when the JSON stream has no final message", async () => {
     const result = await runExecutePairflowPlanContinuation(
       baseInput(),
       { backend: "codex" },
       deps({
-        runCommand: vi.fn(async () => ({
+        runCommand: vi.fn(async (): Promise<AgentRunnerProcessResult> => ({
           exitCode: null,
           stdout: "partial",
           stderr: "timed out",
-          timedOut: true
+          timedOut: true,
+          timeoutKind: "idle"
         }))
       })
     );
 
     expect(result).toMatchObject({
       status: "blocked",
-      reasonCode: "AGENT_RUNNER_TIMEOUT",
+      reasonCode: "AGENT_RUNNER_IDLE_TIMEOUT",
       failureStage: "timeout",
       exitCode: null,
       stdout: "partial",
@@ -1730,23 +1814,24 @@ describe("agentRunnerBridge", () => {
     });
   });
 
-  it("classifies timeout as blocker and preserves output diagnostics", async () => {
+  it("classifies idle timeout as blocker and preserves output diagnostics", async () => {
     const result = await runExecutePairflowPlanContinuation(
       baseInput(),
-      { command: "agent", timeoutMs: 100 },
+      { command: "agent", idleTimeoutMs: 100 },
       deps({
         runCommand: vi.fn(async (): Promise<AgentRunnerProcessResult> => ({
           exitCode: null,
           stdout: "partial stdout",
           stderr: "partial stderr",
-          timedOut: true
+          timedOut: true,
+          timeoutKind: "idle"
         }))
       })
     );
 
     expect(result).toMatchObject({
       status: "blocked",
-      reasonCode: "AGENT_RUNNER_TIMEOUT",
+      reasonCode: "AGENT_RUNNER_IDLE_TIMEOUT",
       failureStage: "timeout",
       exitCode: null,
       stdout: "partial stdout",
@@ -1906,16 +1991,61 @@ describe("agentRunnerBridge", () => {
     expect(invocations[0]?.stdin).toBeUndefined();
   });
 
-  it("terminates the default child process adapter on timeout", async () => {
+  it("terminates the default child process adapter on idle timeout", async () => {
     const result = await runAgentRunnerCommand({
       command: process.execPath,
       args: ["-e", "setInterval(() => undefined, 1000);"],
       cwd: process.cwd(),
-      timeoutMs: 200
+      idleTimeoutMs: 200
     });
 
     expect(result.timedOut).toBe(true);
+    expect(result.timeoutKind).toBe("idle");
     expect(result.exitCode).toBeNull();
+  });
+
+  it("resets the idle timeout on default-adapter stdout activity", async () => {
+    const result = await runAgentRunnerCommand(
+      {
+        command: "agent",
+        args: [],
+        cwd: process.cwd(),
+        idleTimeoutMs: 75
+      },
+      controlledRunnerProcess(({ stdout, close }) => {
+        setTimeout(() => stdout.write("tick-0\n"), 0);
+        setTimeout(() => stdout.write("tick-1\n"), 50);
+        setTimeout(() => stdout.write("tick-2\n"), 100);
+        setTimeout(() => stdout.write("tick-3\n"), 150);
+        setTimeout(() => close(0), 180);
+      })
+    );
+
+    expect(result.exitCode).toBe(0);
+    expect(result).not.toHaveProperty("timedOut");
+    expect(result.stdout).toContain("tick-3");
+  });
+
+  it("resets the idle timeout on default-adapter stderr activity", async () => {
+    const result = await runAgentRunnerCommand(
+      {
+        command: "agent",
+        args: [],
+        cwd: process.cwd(),
+        idleTimeoutMs: 75
+      },
+      controlledRunnerProcess(({ stderr, close }) => {
+        setTimeout(() => stderr.write("tick-0\n"), 0);
+        setTimeout(() => stderr.write("tick-1\n"), 50);
+        setTimeout(() => stderr.write("tick-2\n"), 100);
+        setTimeout(() => stderr.write("tick-3\n"), 150);
+        setTimeout(() => close(0), 180);
+      })
+    );
+
+    expect(result.exitCode).toBe(0);
+    expect(result).not.toHaveProperty("timedOut");
+    expect(result.stderr).toContain("tick-3");
   });
 
   it("keeps large structured envelopes available beyond the capture tail budget", async () => {
@@ -1931,7 +2061,7 @@ describe("agentRunnerBridge", () => {
         }))})`
       ],
       cwd: process.cwd(),
-      timeoutMs: 1_000
+      idleTimeoutMs: 1_000
     });
 
     expect(result.stdout).toContain('"reason_code":"PLAN_SETTLED"');
@@ -1946,10 +2076,11 @@ describe("agentRunnerBridge", () => {
         "process.on('SIGTERM', () => process.exit(143)); setInterval(() => undefined, 1000);"
       ],
       cwd: process.cwd(),
-      timeoutMs: 200
+      idleTimeoutMs: 200
     });
 
     expect(result.timedOut).toBe(true);
+    expect(result.timeoutKind).toBe("idle");
     expect(result.exitCode).toBeNull();
   });
 
@@ -1961,11 +2092,53 @@ describe("agentRunnerBridge", () => {
         "process.on('SIGTERM', () => undefined); setInterval(() => undefined, 1000);"
       ],
       cwd: process.cwd(),
-      timeoutMs: 200
+      idleTimeoutMs: 200
     });
 
     expect(result.timedOut).toBe(true);
+    expect(result.timeoutKind).toBe("idle");
     expect(result.exitCode).toBeNull();
+  });
+
+  it("preserves idle timeout classification when an abort signal arrives during kill grace", async () => {
+    const controller = new AbortController();
+    const resultPromise = runAgentRunnerCommand(
+      {
+        command: process.execPath,
+        args: ["-e", "setInterval(() => undefined, 1000);"],
+        cwd: process.cwd(),
+        idleTimeoutMs: 10,
+        signal: controller.signal
+      },
+      controlledRunnerProcess(() => undefined, { closeOnKill: false })
+    );
+
+    await new Promise((resolve) => setTimeout(resolve, 25));
+    controller.abort();
+    const result = await resultPromise;
+
+    expect(result.timedOut).toBe(true);
+    expect(result.timeoutKind).toBe("idle");
+    expect(result).not.toHaveProperty("aborted");
+    expect(result.exitCode).toBeNull();
+  });
+
+  it("preserves normal close classification when close races with idle timer finalization", async () => {
+    const result = await runAgentRunnerCommand(
+      {
+        command: process.execPath,
+        args: ["-e", "process.exit(0);"],
+        cwd: process.cwd(),
+        idleTimeoutMs: 1
+      },
+      controlledRunnerProcess(({ close }) => {
+        setTimeout(() => close(0), 1);
+      })
+    );
+
+    expect(result.exitCode).toBe(0);
+    expect(result).not.toHaveProperty("timedOut");
+    expect(result).not.toHaveProperty("aborted");
   });
 
   it("classifies default-adapter timeout through runExecutePairflowPlanContinuation", async () => {
@@ -1977,11 +2150,17 @@ describe("agentRunnerBridge", () => {
           "-e",
           "process.on('SIGTERM', () => undefined); setInterval(() => undefined, 1000);"
         ],
-        timeoutMs: 200
+        idleTimeoutMs: 200
       },
       {
         pathExists: async () => true,
-        runCommand: runAgentRunnerCommand,
+        runCommand: (invocation) =>
+          runAgentRunnerCommand(
+            invocation,
+            controlledRunnerProcess(({ stdout }) => {
+              setTimeout(() => stdout.write("active\n"), 0);
+            })
+          ),
         now: vi
           .fn()
           .mockReturnValueOnce(new Date("2026-05-01T10:00:00.000Z"))
@@ -1991,7 +2170,7 @@ describe("agentRunnerBridge", () => {
 
     expect(result).toMatchObject({
       status: "blocked",
-      reasonCode: "AGENT_RUNNER_TIMEOUT",
+      reasonCode: "AGENT_RUNNER_IDLE_TIMEOUT",
       failureStage: "timeout",
       exitCode: null
     });
@@ -2003,7 +2182,7 @@ describe("agentRunnerBridge", () => {
       command: process.execPath,
       args: ["-e", "setInterval(() => undefined, 1000);"],
       cwd: process.cwd(),
-      timeoutMs: 60_000,
+      idleTimeoutMs: 60_000,
       signal: controller.signal
     });
 
@@ -2027,11 +2206,17 @@ describe("agentRunnerBridge", () => {
       {
         command: process.execPath,
         args: ["-e", "setInterval(() => undefined, 1000);"],
-        timeoutMs: 60_000
+        idleTimeoutMs: 60_000
       },
       {
         pathExists: async () => true,
-        runCommand: runAgentRunnerCommand,
+        runCommand: (invocation) =>
+          runAgentRunnerCommand(
+            invocation,
+            controlledRunnerProcess(({ stdout }) => {
+              setTimeout(() => stdout.write("active\n"), 0);
+            })
+          ),
         now: vi
           .fn()
           .mockReturnValueOnce(new Date("2026-05-01T10:00:00.000Z"))
@@ -2051,6 +2236,142 @@ describe("agentRunnerBridge", () => {
     });
   });
 
+  it("keeps explicit abort distinct after recent runner activity", async () => {
+    const controller = new AbortController();
+    const resultPromise = runExecutePairflowPlanContinuation(
+      {
+        ...baseInput(),
+        planPath: process.cwd(),
+        repoPath: process.cwd(),
+        stopSignal: controller.signal
+      },
+      {
+        command: process.execPath,
+        args: [
+          "-e",
+          "process.stdout.write('active\\n'); setInterval(() => undefined, 1000);"
+        ],
+        idleTimeoutMs: 60_000
+      },
+      {
+        pathExists: async () => true,
+        runCommand: (invocation) =>
+          runAgentRunnerCommand(
+            invocation,
+            controlledRunnerProcess(({ stdout }) => {
+              setTimeout(() => stdout.write("active\n"), 0);
+            })
+          ),
+        now: vi
+          .fn()
+          .mockReturnValueOnce(new Date("2026-05-01T10:00:00.000Z"))
+          .mockReturnValue(new Date("2026-05-01T10:00:05.000Z"))
+      }
+    );
+
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    controller.abort();
+    const result = await resultPromise;
+
+    expect(result).toMatchObject({
+      status: "blocked",
+      reasonCode: "AGENT_RUNNER_ABORTED",
+      failureStage: "abort",
+      exitCode: null
+    });
+  });
+
+  it("keeps explicit abort distinct when a child ignores SIGTERM past the idle deadline", async () => {
+    const controller = new AbortController();
+    const resultPromise = runExecutePairflowPlanContinuation(
+      {
+        ...baseInput(),
+        planPath: process.cwd(),
+        repoPath: process.cwd(),
+        stopSignal: controller.signal
+      },
+      {
+        command: process.execPath,
+        args: ["-e", "setInterval(() => undefined, 1000);"],
+        idleTimeoutMs: 20
+      },
+      {
+        pathExists: async () => true,
+        runCommand: (invocation) =>
+          runAgentRunnerCommand(
+            invocation,
+            controlledRunnerProcess(
+              ({ stdout }) => {
+                setTimeout(() => stdout.write("active\n"), 0);
+                setTimeout(() => stdout.write("still-active-after-abort\n"), 10);
+              },
+              { closeOnKill: false }
+            )
+          ),
+        now: vi
+          .fn()
+          .mockReturnValueOnce(new Date("2026-05-01T10:00:00.000Z"))
+          .mockReturnValue(new Date("2026-05-01T10:00:05.000Z"))
+      }
+    );
+
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    controller.abort();
+    const result = await resultPromise;
+
+    expect(result).toMatchObject({
+      status: "blocked",
+      reasonCode: "AGENT_RUNNER_ABORTED",
+      failureStage: "abort",
+      exitCode: null
+    });
+  });
+
+  it("does not postpone idle-timeout kill grace when output arrives after timeout", async () => {
+    const startedAt = Date.now();
+    const resultPromise = runExecutePairflowPlanContinuation(
+      {
+        ...baseInput(),
+        planPath: process.cwd(),
+        repoPath: process.cwd()
+      },
+      {
+        command: process.execPath,
+        args: ["-e", "setInterval(() => process.stdout.write('late\\n'), 10);"],
+        idleTimeoutMs: 20
+      },
+      {
+        pathExists: async () => true,
+        runCommand: (invocation) =>
+          runAgentRunnerCommand(
+            invocation,
+            controlledRunnerProcess(
+              ({ stdout }) => {
+                for (const delayMs of [30, 80, 130, 180, 230, 280, 330, 380, 430, 480]) {
+                  setTimeout(() => stdout.write("late\n"), delayMs).unref();
+                }
+              },
+              { closeOnKill: false }
+            )
+          ),
+        now: vi
+          .fn()
+          .mockReturnValueOnce(new Date("2026-05-01T10:00:00.000Z"))
+          .mockReturnValue(new Date("2026-05-01T10:00:05.000Z"))
+      }
+    );
+
+    const result = await resultPromise;
+
+    expect(Date.now() - startedAt).toBeLessThan(450);
+    expect(result).toMatchObject({
+      status: "blocked",
+      reasonCode: "AGENT_RUNNER_IDLE_TIMEOUT",
+      failureStage: "timeout",
+      exitCode: null
+    });
+  });
+
   it("passes only explicit env values when default adapter env is configured", async () => {
     const result = await runAgentRunnerCommand({
       command: process.execPath,
@@ -2063,7 +2384,7 @@ describe("agentRunnerBridge", () => {
       ],
       cwd: process.cwd(),
       env: { PAIRFLOW_RUNNER_ONLY: "yes" },
-      timeoutMs: 1000
+      idleTimeoutMs: 1000
     });
 
     expect(result.exitCode).toBe(0);
@@ -2082,7 +2403,7 @@ describe("agentRunnerBridge", () => {
         ].join("")
       ],
       cwd: process.cwd(),
-      timeoutMs: 1000
+      idleTimeoutMs: 1000
     });
 
     expect(result.exitCode).toBe(0);
@@ -2111,7 +2432,7 @@ describe("agentRunnerBridge", () => {
         `process.stdout.write(${JSON.stringify(line.repeat(5000))});`
       ],
       cwd: process.cwd(),
-      timeoutMs: 1000,
+      idleTimeoutMs: 1000,
       stdoutFilePath
     });
 
@@ -2144,7 +2465,7 @@ describe("agentRunnerBridge", () => {
           ].join("")
         ],
         cwd: process.cwd(),
-        timeoutMs: 1000,
+        idleTimeoutMs: 1000,
         stdoutFilePath
       },
       undefined,
@@ -2176,7 +2497,7 @@ describe("agentRunnerBridge", () => {
       command: process.execPath,
       args: ["-e", "process.stdout.write('hello');"],
       cwd: process.cwd(),
-      timeoutMs: 1000,
+      idleTimeoutMs: 1000,
       stdoutFilePath: "/definitely/missing/parent/events.ndjson"
     });
 
@@ -2205,7 +2526,7 @@ describe("agentRunnerBridge", () => {
         ].join("")
       ],
       cwd: process.cwd(),
-      timeoutMs: 1000,
+      idleTimeoutMs: 1000,
       stdoutFilePath
     });
 
@@ -2301,7 +2622,7 @@ describe("agentRunnerBridge", () => {
             "process.stdout.write('d'.repeat(70000));"
           ].join("")
         ],
-        timeoutMs: 1000
+        idleTimeoutMs: 1000
       },
       {
         pathExists: async () => true,
@@ -2335,7 +2656,7 @@ describe("agentRunnerBridge", () => {
             "process.stdout.write('\\ndiagnostic-tail');"
           ].join("")
         ],
-        timeoutMs: 1000
+        idleTimeoutMs: 1000
       },
       {
         pathExists: async () => true,

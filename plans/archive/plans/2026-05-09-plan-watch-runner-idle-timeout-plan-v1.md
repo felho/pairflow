@@ -4,20 +4,20 @@ artifact_id: plan_plan_watch_runner_idle_timeout_v1
 plan_id: plan-watch-runner-idle-timeout-plan-v1
 created_on: "2026-05-09"
 title: "Plan Watch Runner Idle Timeout Plan"
-status: approved
-plan_status: approved
+status: done
+plan_status: done
 prd_ref: null
 owners:
   - "felho"
 task_order:
   - 1-planwatch-runner-idle-timeout
-active_task_id: 1-planwatch-runner-idle-timeout
-last_completed_task_id: null
+active_task_id: null
+last_completed_task_id: 1-planwatch-runner-idle-timeout
 archive_group: 2026-05-09-plan-watch-runner-idle-timeout-plan-v1
 task_tracker:
   - task_id: 1-planwatch-runner-idle-timeout
-    task_path: plans/tasks/1-planwatch-runner-idle-timeout.md
-    status: in_progress
+    task_path: plans/archive/tasks/2026-05-09-plan-watch-runner-idle-timeout-plan-v1/1-planwatch-runner-idle-timeout.md
+    status: archived
     notes: "Replace fixed plan-watch runner lifetime timeout with activity-reset idle timeout."
 ---
 
@@ -112,12 +112,14 @@ than a task-only artifact.
 2. A task artifact exists for the bounded implementation slice.
 3. ReviewSpec identified the need for this parent plan because the task changes
    runtime config contract semantics.
+4. `1-planwatch-runner-idle-timeout` implemented the idle-timeout behavior,
+   config support, reason-code classification, CLI wiring, and tests.
 
 ### Open Work
 
 | Task | Status | Purpose |
 |---|---|---|
-| `1-planwatch-runner-idle-timeout` | in_progress | Implement idle timeout semantics, config support, reason-code classification, CLI wiring, and tests. |
+| `1-planwatch-runner-idle-timeout` | archived | plans/archive/tasks/2026-05-09-plan-watch-runner-idle-timeout-plan-v1/1-planwatch-runner-idle-timeout.md |
 
 ### Deferred Work
 
