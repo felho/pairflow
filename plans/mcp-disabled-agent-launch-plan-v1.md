@@ -4,8 +4,8 @@ artifact_id: plan_mcp_disabled_agent_launch_v1
 plan_id: mcp-disabled-agent-launch-plan-v1
 created_on: "2026-05-09"
 title: "MCP-Disabled Agent Launch Defaults Plan"
-status: under_review
-plan_status: under_review
+status: approved
+plan_status: approved
 prd_ref: null
 owners:
   - "felho"
