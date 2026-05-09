@@ -72,13 +72,17 @@ describe("runCli bubble kickoff delivery warning", () => {
       "Warning: kickoff delivery to implementer pane was not confirmed (reason: delivery_unconfirmed)."
     );
     expect(stderr).toContain(
-      "Use `pairflow bubble status --id b_kickoff_warn_01` and `pairflow bubble resume --id b_kickoff_warn_01` if the implementer did not start."
+      "Use `pairflow bubble status --id b_kickoff_warn_01` and `pairflow bubble restart --id b_kickoff_warn_01` if the implementer did not start."
     );
-    expect(runBubbleKickoffCommand).toHaveBeenCalledWith([
+    expect(runBubbleKickoffCommand).toHaveBeenCalledTimes(1);
+    const kickoffCall = runBubbleKickoffCommand.mock.calls[0];
+    expect(kickoffCall?.[0]).toEqual([
       "--id",
       "b_kickoff_warn_01",
       "--task",
       "Refine task"
     ]);
+    expect(kickoffCall?.[1]).toBe(process.cwd());
+    expect(typeof kickoffCall?.[2]?.emitDeliveryNotificationAck).toBe("function");
   });
 });

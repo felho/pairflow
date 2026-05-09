@@ -9,6 +9,7 @@ import {
 } from "../../../../domain/ideation/ideationMetadata.js";
 import {
   kickoffBubbleV11 as kickoffBubble,
+  type KickoffBubbleV11Dependencies,
   type KickoffBubbleV11Result as KickoffBubbleResult
 } from "../../emitKickoffV11.js";
 import {
@@ -23,6 +24,7 @@ export interface BubbleKickoffCommandDependencies {
     cwd?: string;
   }) => Promise<ResolvedBubbleById>;
   kickoffBubble?: typeof kickoffBubble;
+  emitDeliveryNotificationAck?: KickoffBubbleV11Dependencies["emitDeliveryNotificationAck"];
   writeStderr?: (message: string) => void;
 }
 
@@ -63,6 +65,10 @@ export async function runBubbleKickoffCommand(
     ...(options.task !== undefined ? { task: options.task } : {}),
     ...(options.taskFile !== undefined ? { taskFile: options.taskFile } : {}),
     cwd
+  }, {
+    ...(dependencies.emitDeliveryNotificationAck !== undefined
+      ? { emitDeliveryNotificationAck: dependencies.emitDeliveryNotificationAck }
+      : {})
   });
 
   if (!result.ok) {

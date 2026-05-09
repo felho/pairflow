@@ -47,6 +47,9 @@ import {
   runBubbleKickoffCommand
 } from "../v11/application/kickoff/kickoffCliCommand.js";
 import {
+  emitDeliveryNotificationAck as emitTmuxDeliveryNotificationAck
+} from "../v11/infrastructure/channel/tmux/tmuxDelivery.js";
+import {
   getBubbleReplyHelpText,
   runBubbleReplyCommand
 } from "./commands/bubble/reply.js";
@@ -469,7 +472,9 @@ async function handleBubbleCreateCommand(args: string[]): Promise<number> {
 }
 
 async function handleBubbleKickoffCommand(args: string[]): Promise<number> {
-  const result = await runBubbleKickoffCommand(args);
+  const result = await runBubbleKickoffCommand(args, process.cwd(), {
+    emitDeliveryNotificationAck: emitTmuxDeliveryNotificationAck
+  });
   if (result === null) {
     process.stdout.write(`${getBubbleKickoffHelpText()}\n`);
     return 0;
@@ -479,7 +484,7 @@ async function handleBubbleKickoffCommand(args: string[]): Promise<number> {
   );
   if (result.delivery !== undefined && result.delivery.status !== "accepted") {
     process.stderr.write(
-      `Warning: kickoff delivery to implementer pane was not confirmed (reason: ${result.delivery.reason ?? "unknown"}${result.delivery.retried ? ", retried" : ""}). Use \`pairflow bubble status --id ${result.bubble_id}\` and \`pairflow bubble resume --id ${result.bubble_id}\` if the implementer did not start.\n`
+      `Warning: kickoff delivery to implementer pane was not confirmed (reason: ${result.delivery.reason ?? "unknown"}${result.delivery.retried ? ", retried" : ""}). Use \`pairflow bubble status --id ${result.bubble_id}\` and \`pairflow bubble restart --id ${result.bubble_id}\` if the implementer did not start.\n`
     );
   }
   return 0;
