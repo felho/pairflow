@@ -17,7 +17,7 @@ archive_group: 2026-05-09-plan-watch-runner-idle-timeout-plan-v1
 task_tracker:
   - task_id: 1-planwatch-runner-idle-timeout
     task_path: plans/tasks/1-planwatch-runner-idle-timeout.md
-    status: implementable
+    status: in_progress
     notes: "Replace fixed plan-watch runner lifetime timeout with activity-reset idle timeout."
 ---
 
@@ -117,7 +117,7 @@ than a task-only artifact.
 
 | Task | Status | Purpose |
 |---|---|---|
-| `1-planwatch-runner-idle-timeout` | implementable | Implement idle timeout semantics, config support, reason-code classification, CLI wiring, and tests. |
+| `1-planwatch-runner-idle-timeout` | in_progress | Implement idle timeout semantics, config support, reason-code classification, CLI wiring, and tests. |
 
 ### Deferred Work
 
