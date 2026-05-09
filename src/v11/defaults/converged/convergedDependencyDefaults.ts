@@ -27,7 +27,7 @@ import { resolveBubbleFromWorkspaceCwd } from "../../infrastructure/executor/wor
 import {
   applyMetaReviewGateOnConvergenceV11
 } from "../metaReviewGate/metaReviewGateApi.js";
-import { configureConvergedDependencyDefaults } from "../../application/converged/convergedDependencyDefaults.js";
+import { configureConvergedDependencyDefaults } from "../../application/converged/internal/orchestration/convergedDependencyDefaults.js";
 
 export const convergedDependencyDefaults = {
   flow: {

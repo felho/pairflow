@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { finalizeConvergedFlow } from "../../../../src/v11/application/converged/convergedFinalization.js";
+import { finalizeConvergedFlow } from "../../../../src/v11/application/converged/internal/finalization/convergedFinalization.js";
 
 describe("finalizeConvergedFlow", () => {
   it("emits human-gate and rollout-blocked lifecycle events when applicable", async () => {

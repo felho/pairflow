@@ -96,7 +96,16 @@
       ],
       "mode": "hard-fail",
       "owner": "architecture/runtime",
-      "exceptions": []
+      "exceptions": [
+        {
+          "id": "converged-defaults-composition-root",
+          "kind": "allow-internal-module-import",
+          "owner": "architecture/composition",
+          "reason": "The converged defaults composition root is the only allowed production owner that wires concrete runtime dependencies into the internal converged dependency-default registry after top-level compatibility wrappers were removed.",
+          "from": "src/v11/defaults/converged/convergedDependencyDefaults.ts",
+          "to": "src/v11/application/converged/internal/orchestration/convergedDependencyDefaults.ts"
+        }
+      ]
     },
     {
       "id": "shared_defaults_boundary",

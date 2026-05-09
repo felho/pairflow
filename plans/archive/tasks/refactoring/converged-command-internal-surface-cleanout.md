@@ -2,7 +2,7 @@
 artifact_type: task
 artifact_id: task_converged_command_internal_surface_cleanout_v1
 title: "Converged Command Internal Surface Cleanout"
-status: approved
+status: archived
 phase: phase1
 target_files:
   - src/v11/application/converged/convergedCommandOrchestration.ts
@@ -36,6 +36,8 @@ normative_refs:
   - plans/archive/tasks/refactoring/commit-command-local-remote-execution-pipeline.md
 owners:
   - "felho"
+archive_group: refactoring
+archive_path: plans/archive/tasks/refactoring/converged-command-internal-surface-cleanout.md
 ---
 
 # Task: Converged Command Internal Surface Cleanout

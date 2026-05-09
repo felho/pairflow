@@ -6,9 +6,11 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import {
   ConvergedCommandError,
-  emitConvergedFromWorkspaceCommandOrchestration as emitConvergedFromWorkspace,
-  resolveConvergedRolloutBlockingReasonCodes as resolveMetaReviewRolloutBlockingReasonCodes
+  emitConvergedFromWorkspaceCommandOrchestration as emitConvergedFromWorkspace
 } from "../../../src/v11/application/converged/convergedCommandOrchestration.js";
+import {
+  resolveConvergedRolloutBlockingReasonCodes as resolveMetaReviewRolloutBlockingReasonCodes
+} from "../../../src/v11/application/converged/internal/orchestration/convergedRolloutBlockingReasonResolver.js";
 import { buildMetaReviewExecutionContext } from "../../../src/v11/shared/metaReview/metaReviewExecutionContext.js";
 import { emitPassFromWorkspace } from "../../../src/v11/application/pass/passCommandOrchestration.js";
 import { renderBubbleConfigToml } from "../../../src/config/bubbleConfig.js";

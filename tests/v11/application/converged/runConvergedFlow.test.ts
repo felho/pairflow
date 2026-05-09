@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { runConvergedFlow } from "../../../../src/v11/application/converged/runConvergedFlow.js";
+import { runConvergedFlow } from "../../../../src/v11/application/converged/internal/flow/runConvergedFlow.js";
 
 function toErrorMessage(input: PairflowCommandErrorInput): string {
   if (typeof input === "string") {
