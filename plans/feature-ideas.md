@@ -67,3 +67,4 @@
 - https://tessl.io/blog/context-development-lifecycle-better-context-for-ai-coding-agents/
 - https://addyosmani.com/blog/agent-harness-engineering/
 - https://www.youtube.com/watch?v=ow1we5PzK-o
+- start the agents without MCP servers
