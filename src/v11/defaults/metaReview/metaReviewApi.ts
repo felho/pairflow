@@ -30,7 +30,7 @@ import {
   toMetaReviewError
 } from "../../application/metaReview/internal/submit/metaReviewCommandErrorMapping.js";
 import {
-  notifyMetaReviewerSubmissionRequestV11
+  notifyMetaReviewerSubmissionRequest
 } from "../metaReviewGate/metaReviewGateApi.js";
 import {
   metaReviewGateDependencyDefaults
@@ -59,7 +59,7 @@ function withMetaReviewDefaults(
     setMetaReviewerPaneBinding:
       metaReviewGateDependencyDefaults.setMetaReviewerPaneBinding,
     notifyMetaReviewerSubmissionRequest:
-      notifyMetaReviewerSubmissionRequestV11,
+      notifyMetaReviewerSubmissionRequest,
     resolveMetaReviewerPaneWarning,
     runMetaReviewApproveValidationCommand:
       metaReviewDefaults.runPassValidationCommand,

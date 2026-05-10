@@ -16,7 +16,7 @@ import { emitPassFromWorkspace } from "../../../src/v11/application/pass/passCom
 import { renderBubbleConfigToml } from "../../../src/config/bubbleConfig.js";
 import { createBubble } from "../../../src/v11/defaults/create/createBubbleApi.js";
 import { IDEATION_CONVERGED_BLOCKED } from "../../../src/v11/shared/ideation/ideationReasonCodes.js";
-import { applyMetaReviewGateOnConvergenceV11 as applyMetaReviewGateOnConvergence } from "../../../src/v11/defaults/metaReviewGate/metaReviewGateApi.js";
+import { applyMetaReviewGateOnConvergence } from "../../../src/v11/defaults/metaReviewGate/metaReviewGateApi.js";
 import {
   appendProtocolEnvelope,
   readTranscriptEnvelopes

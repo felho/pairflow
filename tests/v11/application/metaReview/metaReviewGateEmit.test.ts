@@ -5,8 +5,8 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 import {
-  applyMetaReviewGateOnConvergenceV11,
-  notifyMetaReviewerSubmissionRequestV11
+  applyMetaReviewGateOnConvergence,
+  notifyMetaReviewerSubmissionRequest
 } from "../../../../src/v11/defaults/metaReviewGate/metaReviewGateApi.js";
 import { renderBubbleConfigToml } from "../../../../src/config/bubbleConfig.js";
 import type {
@@ -51,7 +51,7 @@ async function applyWithResolvedDelivery(input: {
   });
   const paneBindingCalls: boolean[] = [];
 
-  const result = await applyMetaReviewGateOnConvergenceV11({
+  const result = await applyMetaReviewGateOnConvergence({
     bubbleId: bubble.bubbleId,
     repoPath,
     summary: "Ready for meta-review.",
@@ -103,7 +103,7 @@ describe("metaReviewGate V11 defaults", () => {
       { runner: undefined }
     );
 
-    const result = await notifyMetaReviewerSubmissionRequestV11({
+    const result = await notifyMetaReviewerSubmissionRequest({
       bubbleId: "b_meta_review_notify_v11_runner_default",
       round: 4,
       targetPane: "pf-b_meta_review_notify_v11_runner_default:0.3",
@@ -143,7 +143,7 @@ describe("metaReviewGate V11 defaults", () => {
       };
     };
 
-    const result = await applyMetaReviewGateOnConvergenceV11({
+    const result = await applyMetaReviewGateOnConvergence({
       bubbleId: bubble.bubbleId,
       repoPath,
       summary: "Ready for meta-review.",
@@ -245,7 +245,7 @@ describe("metaReviewGate V11 defaults", () => {
       };
     };
 
-    const result = await applyMetaReviewGateOnConvergenceV11({
+    const result = await applyMetaReviewGateOnConvergence({
       bubbleId: bubble.bubbleId,
       repoPath,
       summary: "Ready for meta-review.",
@@ -297,7 +297,7 @@ describe("metaReviewGate V11 defaults", () => {
       }
     };
 
-    const result = await applyMetaReviewGateOnConvergenceV11({
+    const result = await applyMetaReviewGateOnConvergence({
       bubbleId: bubble.bubbleId,
       repoPath,
       summary: "Ready for meta-review.",
@@ -370,7 +370,7 @@ describe("metaReviewGate V11 defaults", () => {
       }
     );
 
-    const result = await applyMetaReviewGateOnConvergenceV11({
+    const result = await applyMetaReviewGateOnConvergence({
       bubbleId: bubble.bubbleId,
       repoPath,
       summary: "Ready for fresh meta-review after implementer work.",
@@ -416,7 +416,7 @@ describe("metaReviewGate V11 defaults", () => {
     });
     const paneRunnerCalls: string[] = [];
 
-    const result = await applyMetaReviewGateOnConvergenceV11({
+    const result = await applyMetaReviewGateOnConvergence({
       bubbleId: bubble.bubbleId,
       repoPath,
       summary: "Ready for meta-review.",

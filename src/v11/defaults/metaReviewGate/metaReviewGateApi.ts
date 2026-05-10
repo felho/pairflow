@@ -20,10 +20,13 @@ import {
   resolveMetaReviewGatePaneBindingTmuxCapabilities
 } from "../../application/metaReviewGate/metaReviewGateRuntimeCapabilityResolution.js";
 import {
-  applyMetaReviewGateOnConvergenceV11 as applyMetaReviewGateOnConvergenceBase
-} from "../../application/metaReviewGate/emitMetaReviewGateV11.js";
+  applyMetaReviewGateOnConvergence as applyMetaReviewGateOnConvergenceBase,
+  asMetaReviewGateError,
+  MetaReviewGateError,
+  toMetaReviewGateError
+} from "../../application/metaReviewGate/metaReviewGateCommandApi.js";
 import {
-  notifyMetaReviewerSubmissionRequest
+  notifyMetaReviewerSubmissionRequest as notifyMetaReviewerSubmissionRequestImpl
 } from "../../application/metaReviewGate/metaReviewGateNotify.js";
 import {
   resolveMetaReviewerPaneWarning
@@ -34,29 +37,19 @@ import {
 } from "./metaReviewGateCommandDefaults.js";
 
 export {
-  asMetaReviewGateErrorV11,
-  asMetaReviewGateErrorV11 as asMetaReviewGateError,
-  MetaReviewGateErrorV11,
-  MetaReviewGateErrorV11 as MetaReviewGateError,
-  toMetaReviewGateErrorV11,
-  toMetaReviewGateErrorV11 as toMetaReviewGateError
-} from "../../application/metaReviewGate/emitMetaReviewGateV11.js";
+  asMetaReviewGateError,
+  MetaReviewGateError,
+  toMetaReviewGateError
+};
 export type {
-  ApplyMetaReviewGateOnConvergenceV11Dependencies,
-  ApplyMetaReviewGateOnConvergenceV11Input,
-  ApplyMetaReviewGateOnConvergenceV11Dependencies as ApplyMetaReviewGateOnConvergenceDependencies,
-  ApplyMetaReviewGateOnConvergenceV11Input as ApplyMetaReviewGateOnConvergenceInput,
-  MetaReviewGateReasonCodeV11,
-  MetaReviewGateReasonCodeV11 as MetaReviewGateReasonCode,
-  MetaReviewGateResultV11,
-  MetaReviewGateResultV11 as MetaReviewGateResult,
-  MetaReviewGateRouteV11,
-  MetaReviewGateRouteV11 as MetaReviewGateRoute,
-  NotifyMetaReviewerSubmissionRequestV11Dependencies,
-  NotifyMetaReviewerSubmissionRequestV11Input,
-  NotifyMetaReviewerSubmissionRequestV11Dependencies as NotifyMetaReviewerSubmissionRequestDependencies,
-  NotifyMetaReviewerSubmissionRequestV11Input as NotifyMetaReviewerSubmissionRequestInput
-} from "../../application/metaReviewGate/emitMetaReviewGateV11.js";
+  ApplyMetaReviewGateOnConvergenceDependencies,
+  ApplyMetaReviewGateOnConvergenceInput,
+  MetaReviewGateReasonCode,
+  MetaReviewGateResult,
+  MetaReviewGateRoute,
+  NotifyMetaReviewerSubmissionRequestDependencies,
+  NotifyMetaReviewerSubmissionRequestInput
+} from "../../shared/metaReviewGate/index.js";
 
 function mergeCapabilityLayer<T extends object>(
   override: Partial<T> | undefined,
@@ -266,7 +259,7 @@ function buildApplyRuntimeForwarding(input: {
 }
 
 function withMetaReviewGateNotifyDefaults(
-  notify: NotifyMetaReviewerSubmissionRequest = notifyMetaReviewerSubmissionRequest,
+  notify: NotifyMetaReviewerSubmissionRequest = notifyMetaReviewerSubmissionRequestImpl,
   runtime?: MetaReviewGateNotifyRuntimeCapabilities
 ): NotifyMetaReviewerSubmissionRequest {
   return (
@@ -344,14 +337,14 @@ function withMetaReviewGateApplyDefaults(
   };
 }
 
-export async function notifyMetaReviewerSubmissionRequestV11(
+export async function notifyMetaReviewerSubmissionRequest(
   input: NotifyMetaReviewerSubmissionRequestInput,
   dependencies: NotifyMetaReviewerSubmissionRequestDependencies = {}
 ): Promise<MetaReviewRuntimeDeliveryObservation> {
   return withMetaReviewGateNotifyDefaults()(input, dependencies);
 }
 
-export async function applyMetaReviewGateOnConvergenceV11(
+export async function applyMetaReviewGateOnConvergence(
   input: ApplyMetaReviewGateOnConvergenceInput,
   dependencies: ApplyMetaReviewGateOnConvergenceDependencies = {}
 ): Promise<MetaReviewGateResult> {

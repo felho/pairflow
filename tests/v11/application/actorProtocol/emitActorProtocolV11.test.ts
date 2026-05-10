@@ -27,7 +27,7 @@ import {
 import { readStateSnapshot, writeStateSnapshot } from "../../../../src/v11/infrastructure/state/stateStore.js";
 import * as actorProtocolModule from "../../../../src/v11/application/actorProtocol/emitActorProtocolV11.js";
 import { metaReviewDefaults } from "../../../../src/v11/defaults/metaReview/metaReviewDefaults.js";
-import { notifyMetaReviewerSubmissionRequestV11 } from "../../../../src/v11/defaults/metaReviewGate/metaReviewGateApi.js";
+import { notifyMetaReviewerSubmissionRequest } from "../../../../src/v11/defaults/metaReviewGate/metaReviewGateApi.js";
 import { metaReviewGateDependencyDefaults } from "../../../../src/v11/defaults/metaReviewGate/metaReviewGateCommandDefaults.js";
 import { resolveMetaReviewerPaneWarning } from "../../../../src/v11/application/metaReviewGate/metaReviewGatePaneBinding.js";
 import { seedConvergedCandidate } from "../converged/convergedSeedFixture.js";
@@ -49,7 +49,7 @@ const metaReviewDependencies = {
   setMetaReviewerPaneBinding:
     metaReviewGateDependencyDefaults.setMetaReviewerPaneBinding,
   notifyMetaReviewerSubmissionRequest:
-    notifyMetaReviewerSubmissionRequestV11,
+    notifyMetaReviewerSubmissionRequest,
   resolveMetaReviewerPaneWarning,
   runMetaReviewApproveValidationCommand:
     metaReviewDefaults.runPassValidationCommand,

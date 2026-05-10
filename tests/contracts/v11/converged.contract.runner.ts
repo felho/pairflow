@@ -9,7 +9,7 @@ import {
   type EmitConvergedResult
 } from "../../../src/v11/application/converged/convergedCommandOrchestration.js";
 import { resolveConvergedSummaryFindingsContradiction } from "../../../src/v11/domain/convergence/policy.js";
-import { applyMetaReviewGateOnConvergenceV11 } from "../../../src/v11/defaults/metaReviewGate/metaReviewGateApi.js";
+import { applyMetaReviewGateOnConvergence } from "../../../src/v11/defaults/metaReviewGate/metaReviewGateApi.js";
 import {
   isConvergedStructuredFindingSeverity,
   type ConvergedStructuredFinding
@@ -819,7 +819,7 @@ export async function runConvergedContractCase(
   const v11 = await executeConvergedCase({
     caseDef,
     executor: emitConvergedFromWorkspaceCommandOrchestration,
-    applyMetaReviewGateExecutor: applyMetaReviewGateOnConvergenceV11
+    applyMetaReviewGateExecutor: applyMetaReviewGateOnConvergence
   });
   assertContractExpectedSubset({
     output: v11,

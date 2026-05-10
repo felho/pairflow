@@ -3,8 +3,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import {
-  applyMetaReviewGateOnConvergenceV11,
-  type MetaReviewGateResultV11
+  applyMetaReviewGateOnConvergence,
+  type MetaReviewGateResult
 } from "../../../src/v11/defaults/metaReviewGate/metaReviewGateApi.js";
 import { readStateSnapshot, writeStateSnapshot } from "../../../src/v11/infrastructure/state/stateStore.js";
 import { normalizeMetaReviewSnapshot } from "../../../src/v11/domain/metaReviewGate/snapshotState.js";
@@ -104,7 +104,7 @@ function parseMetaReviewGateCaseInput(input: ContractCase["input"]): {
 }
 
 function normalizeMetaReviewGateResult(
-  result: MetaReviewGateResultV11
+  result: MetaReviewGateResult
 ): MetaReviewGateContractOutput {
   const envelopePayload =
     typeof result.gateEnvelope.payload === "object" &&
@@ -257,7 +257,7 @@ function assertContractExpectedSubset(input: {
 
 async function executeMetaReviewGateCase(input: {
   caseDef: ContractCase;
-  applyExecutor: typeof applyMetaReviewGateOnConvergenceV11;
+  applyExecutor: typeof applyMetaReviewGateOnConvergence;
 }): Promise<MetaReviewGateContractOutput> {
   const repoPath = await mkdtemp(join(tmpdir(), "pairflow-meta-review-gate-contract-"));
   try {
@@ -403,7 +403,7 @@ export async function runMetaReviewGateContractCase(
 
   const v11 = await executeMetaReviewGateCase({
     caseDef,
-    applyExecutor: applyMetaReviewGateOnConvergenceV11
+    applyExecutor: applyMetaReviewGateOnConvergence
   });
   assertContractExpectedSubset({
     output: v11,

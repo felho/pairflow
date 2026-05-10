@@ -23,8 +23,8 @@ import {
   submitMetaReviewResult
 } from "../../../src/v11/defaults/metaReview/metaReviewApi.js";
 import {
-  applyMetaReviewGateOnConvergenceV11 as applyMetaReviewGateOnConvergence,
-  MetaReviewGateErrorV11 as MetaReviewGateError
+  applyMetaReviewGateOnConvergence,
+  MetaReviewGateError
 } from "../../../src/v11/defaults/metaReviewGate/metaReviewGateApi.js";
 import { createBubble } from "../../../src/v11/defaults/create/createBubbleApi.js";
 import {

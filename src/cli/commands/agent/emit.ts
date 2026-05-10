@@ -37,7 +37,7 @@ import {
   passValidationDefaults
 } from "../../../v11/defaults/pass/passValidationCommandDefaults.js";
 import {
-  notifyMetaReviewerSubmissionRequestV11
+  notifyMetaReviewerSubmissionRequest
 } from "../../../v11/defaults/metaReviewGate/metaReviewGateApi.js";
 import {
   metaReviewGateDependencyDefaults
@@ -558,7 +558,7 @@ export async function runAgentEmitCommand(
       setMetaReviewerPaneBinding:
         metaReviewGateDependencyDefaults.setMetaReviewerPaneBinding,
       notifyMetaReviewerSubmissionRequest:
-        notifyMetaReviewerSubmissionRequestV11,
+        notifyMetaReviewerSubmissionRequest,
       resolveMetaReviewerPaneWarning,
       runMetaReviewApproveValidationCommand:
         metaReviewDefaults.runPassValidationCommand,
