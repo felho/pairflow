@@ -8,7 +8,7 @@ import type {
   CreateBubbleImplementation,
   BubbleCreateInput,
   BubbleCreateResult
-} from "../../src/v11/application/create/createCommandContract.js";
+} from "../../src/v11/application/create/createBubble.js";
 import { CREATE_REMOTE_ALIAS_INVALID } from "../../src/cli/commands/bubble/createCliOptionValidation.js";
 import { runBubbleCreateCommand } from "../../src/cli/commands/bubble/createCliRunner.js";
 import { initGitRepository } from "../helpers/git.js";

@@ -14,11 +14,9 @@ import {
   BUBBLE_EXECUTOR_INVALID,
   MISSING_REVIEW_ARTIFACT_TYPE_OPTION
 } from "../../../config/bubbleConfig.js";
-import {
-  CREATE_REMOTE_ALIAS_INVALID,
-  parseCreateRemoteAlias
-} from "../../../v11/application/create/createRemoteAlias.js";
 import { isValidationTargetId } from "../../../v11/shared/validation/validationTargetId.js";
+
+export const CREATE_REMOTE_ALIAS_INVALID = "CREATE_REMOTE_ALIAS_INVALID" as const;
 
 export interface BubbleCreateParsedValues {
   id?: string;
@@ -53,12 +51,20 @@ function parseRemoteAlias(
   remote?: string;
   remoteValidationError?: string;
 } {
-  const { remoteAlias, errorMessage } = parseCreateRemoteAlias(rawRemoteAlias);
+  if (rawRemoteAlias === undefined) {
+    return {};
+  }
+
+  const remoteAlias = rawRemoteAlias.trim();
+  if (remoteAlias.length === 0) {
+    return {
+      remoteValidationError:
+        `${CREATE_REMOTE_ALIAS_INVALID}: --remote requires a non-empty alias value.`
+    };
+  }
+
   return {
-    ...(remoteAlias !== undefined ? { remote: remoteAlias } : {}),
-    ...(errorMessage !== undefined
-      ? { remoteValidationError: errorMessage }
-      : {})
+    remote: remoteAlias
   };
 }
 
@@ -234,6 +240,5 @@ export function throwCreateValidationErrors(state: CreateValidationState): void 
 }
 
 export {
-  BUBBLE_EXECUTOR_INVALID,
-  CREATE_REMOTE_ALIAS_INVALID
+  BUBBLE_EXECUTOR_INVALID
 };
