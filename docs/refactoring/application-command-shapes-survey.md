@@ -1,16 +1,16 @@
 # Application Command Shapes — Survey
 
-Status: draft (descriptive, not prescriptive)
-Last updated: 2026-05-10
+Status: descriptive (factual inventory; companion to the template)
+Last updated: 2026-05-11
 Owner: architecture/runtime
-Scope: factual inventory of `src/v11/application/<lane>/` directories to inform
-a future application-command-lane template
-([`docs/refactoring/application-command-lane-template.md`](application-command-lane-template.md),
-not yet written).
+Scope: factual inventory of `src/v11/application/<lane>/` directories that
+backs the application-command-lane template
+([`docs/refactoring/application-command-lane-template.md`](application-command-lane-template.md)).
 
-This document **describes what exists**. It does not yet prescribe a template.
-Before writing the template, the data here is meant to ensure the template
-covers the actual shape distribution rather than codifying a single example.
+This document **describes what exists**. The template prescribes; this
+survey records the shape distribution that the template was written against.
+When a lane refactor lands, update the corresponding inventory row here so
+the data backing the template stays current.
 
 ## Method
 
@@ -39,7 +39,7 @@ restructuring opportunity).
 | watchdog | 12 | no | — | yes | yes | 35 | unstructured (multi-concern) |
 | metaReviewGate | 13 | yes | flat+1 | yes | — | 16 | half-done (internal flat) |
 | merge | 12 | yes | 1 | yes | yes | 28 | half-done (internal/pipeline only) |
-| commit | 11 | yes | 1 | yes | yes | 17 | half-done (internal/pipeline only) |
+| commit | 4 | yes | 5 | yes | yes | — | structured (Tier 2; refactored 2026-05-11) |
 | actorProtocol | 10 | no | — | yes | — | 26 | misclassified (not a command) |
 | restart | 10 | no | — | yes | yes | 21 | unstructured |
 | reconcile | 9 | no | — | yes | yes | 18 | unstructured |
@@ -50,7 +50,7 @@ restructuring opportunity).
 | delete | 6 | no | — | yes | yes | 11 | unstructured |
 | extract | 6 | no | — | yes | yes | 14 | unstructured |
 | open | 6 | no | — | yes | yes | 14 | unstructured |
-| list | 6 | yes | 1 | yes | yes | 16 | half-done (internal/projection) |
+| list | 2 | yes | 3 | yes | yes | — | structured (Tier 2; refactored 2026-05-11) |
 | pass | 4 | yes | 4 | yes | yes | -2 | structured (Tier 2) |
 | resume | 4 | no | — | — | yes | 7 | small unstructured |
 | stop | 4 | no | — | yes | yes | 4 | small unstructured |
@@ -157,10 +157,17 @@ Already-structured Tier 2:
 
 Half-done (internal/ exists but only 1 sub-area, top-level still bloated):
 
-- **commit** (11 top-level, internal/pipeline)
 - **merge** (12 top-level, internal/pipeline)
-- **list** (6 top-level, internal/projection)
 - **metaReview** (7 top-level, internal/submit)
+
+Refactored from half-done to structured (Tier 2):
+
+- **commit** (was 11 top-level + internal/pipeline; now 4 top-level + 5
+  sub-areas — `error/`, `finalization/`, `git/`, `pipeline/`, `remote/`
+  — plus a split-out cross-lane helper `remoteCommitContinuitySync.ts`
+  at root).
+- **list** (was 6 top-level + internal/projection; now 2 top-level + 3
+  sub-areas — `context/`, `error/`, `projection/`).
 
 Unstructured (no internal/ at all):
 
@@ -255,11 +262,13 @@ presentation helpers and should move to `internal/cli/` (or even into the
    boundary exists but the sub-areas don't. Refactoring this lane is a
    two-step move (introduce sub-areas + promote top-level intra-only files).
 
-4. **Half-done Tier 2 lanes share a pattern.** `commit`, `merge`, `metaReview`,
-   `list` all have a single internal sub-area (`pipeline/`, `pipeline/`,
-   `submit/`, `projection/`). The boundary was introduced for a single
-   concern, but other intra-lane concerns stayed top-level. Pattern: "first
-   sub-area added, more never followed."
+4. **Half-done Tier 2 lanes share a pattern.** At the time of the original
+   survey, `commit`, `merge`, `metaReview`, and `list` all had a single
+   internal sub-area (`pipeline/`, `pipeline/`, `submit/`, `projection/`).
+   The boundary was introduced for a single concern, but other intra-lane
+   concerns stayed top-level. Pattern: "first sub-area added, more never
+   followed." `commit` and `list` have since been refactored to structured
+   Tier 2 (see the inventory); `merge` and `metaReview` remain half-done.
 
 5. **The `emit<X>V11.ts` thin-wrapper was universal — and was removed.**
    At the time of the original survey, all CLI-fronted lanes had a thin
@@ -307,25 +316,26 @@ strictly-internal** is decision-by-consumer-scope, not prescribed:
 The template should call this out as a per-lane decision, not prescribe one
 location.
 
-**E. Half-done lanes (`commit`, `merge`, `metaReview`, `list`, `metaReviewGate`)
-are the easiest first targets.** They already have `internal/` precedent;
-the work is "promote more files into existing or new sub-areas," not
-"introduce a boundary from scratch."
+**E. Half-done lanes are the easiest first targets.** They already have
+`internal/` precedent; the work is "promote more files into existing or
+new sub-areas," not "introduce a boundary from scratch." `commit` and
+`list` validated this assumption (now structured); `merge`, `metaReview`,
+and `metaReviewGate` remain on the runway.
 
 **F. Outliers must be excluded from the template.** `actorProtocol` is not a
 command; the template should not try to fit it. Separate decision needed.
 
-## Next step
+## Template status
 
-Before writing `application-command-lane-template.md`, **one decision is open**:
-whether the template should be one document with three tiers, or three
-sister documents per tier.
+The template landed as a single document with three tiers:
+[`application-command-lane-template.md`](application-command-lane-template.md).
+It references this survey for the data backing each design decision, so a
+future contributor reading "Tier 2 commands typically have an
+`internal/finalization/` sub-area" can verify the claim against the actual
+lane inventory above.
 
-A single document is easier to navigate and shows the progression. Three
-sister documents allow tier-specific examples (planWatch as Tier 3 reference,
-`pass` as Tier 2 reference, etc.) without crowding.
-
-Either way, the template should reference this survey for the data backing
-each design decision, so when a future contributor reads "Tier 2 commands
-typically have an `internal/finalization/` sub-area," they can verify it
-against the actual lane inventory here.
+Two lane refactors have validated the template's half-done procedure: `list`
+(commit `da12ed98`, single-commit move) and `commit` (commits `8d603cff`,
+`9b2b9755`, `2b5c6c71`, `2115f606`, four-commit sequence with a public-surface
+split). The template's "Worked examples" section captures the lessons learned;
+the inventory rows above record the post-refactor state.

@@ -1,7 +1,7 @@
 # Application Command Lane Template
 
 Status: draft
-Last updated: 2026-05-10
+Last updated: 2026-05-11
 Owner: architecture/runtime
 Scope: `src/v11/application/<command>/` — the application layer of CLI-driven
 command lanes (commit, watchdog, planWatch, etc.).
@@ -296,8 +296,9 @@ still top-level. The boundary was introduced for one concern, then never
 extended. This is the most common case across `application/` and the
 recommended starting point for template adoption.
 
-Half-done lanes today (per the survey): `commit`, `merge`, `metaReview`,
-`list`, and (with caveats) `metaReviewGate`.
+Half-done lanes today (per the survey): `merge`, `metaReview`, and (with
+caveats) `metaReviewGate`. `commit` and `list` were previously half-done and
+have been refactored using this procedure; see "Worked examples" below.
 
 ### Procedure
 
@@ -357,30 +358,87 @@ Half-done lanes today (per the survey): `commit`, `merge`, `metaReview`,
    empty directories, pure pass-through files, orphaned files. Lane
    refactors commonly leave behind one or two of each.
 
-### Half-done reference
+### Worked examples
 
-`application/commit/`. Currently: 11 top-level files, `internal/pipeline/`
-(1 file). The naming clusters at top-level *suggest* sub-areas, but every
-move below is a hypothesis to validate against the import-scan manifest
-before committing — clusters that look related by name may turn out to
-have different consumer shapes.
+Two lane refactors have applied this procedure end-to-end. Both started
+from a half-done state and ended at structured Tier 2.
 
-- `commitCommandFinalization.ts` + `commitCommandFinalizationMutation.ts` →
-  likely `internal/finalization/`
-- `commitCommandError.ts` is part of the throw-catch contract — keep it
-  root-public unless the import scan shows truly intra-lane usage; pair
-  it with `commitCommandErrorNormalization.ts` (which is mapping-only)
-  in `internal/error/`.
-- `commitCommandGitStep.ts` + `commitStagedFiles.ts` →
-  likely `internal/git/` (or expand `internal/pipeline/` to hold them)
-- `commitCommandRuntime.ts` → likely `internal/runtime/`
-- `remoteCommitExecutionContext.ts` → likely `internal/remote/`
+#### `application/list/` (refactored 2026-05-10, commit `da12ed98`)
 
-Top-level after the refactor will likely include `commitCommandApi.ts`
-and `commitCommandContract.ts` at minimum; whether
-`commitCommandApiContract.ts` and `commitCommandError.ts` stay top-level
-depends on the import scan (cross-lane vs intra-lane consumer set). The
-manifest decides; the bullet list above is a starting hypothesis.
+Before: 6 top-level files, `internal/projection/` (4 files). The
+import-scan manifest showed four top-level files with no production
+external consumers (`listReadModelEntryBuilder.ts`,
+`listRemotePaneActivityRead.ts`, `listReadModelContext.ts`,
+`listReadModelErrors.ts`); only `listReadModelApi.ts` (canonical entry)
+and `listReadModelDependencies.ts` (effective contract via signature
+reference: `ListReadModelDependencies` appears in the `listBubbles`
+parameter list) had cross-lane consumers.
+
+After: 2 top-level files, `internal/{context,error,projection}/`.
+`listReadModelEntryBuilder.ts` and `listRemotePaneActivityRead.ts`
+joined `internal/projection/`; `listReadModelContext.ts` moved into
+`internal/context/`; `listReadModelErrors.ts` moved into
+`internal/error/` (the `BubbleListError` class remains publicly
+reachable through a re-export from `listReadModelApi.ts`).
+
+Single commit (move + import path updates). Manageable because the
+four moves all targeted intra-lane consumers and no public-surface
+extraction was required.
+
+The list refactor also triggered the
+[signature-reference exception](#common-naming-roles) wording in this
+template: `ListReadModelDependencies` had zero direct external imports
+but is part of the public function signature, so it stayed root-public
+regardless of the import-scan count.
+
+#### `application/commit/` (refactored 2026-05-11, commits `8d603cff` → `2115f606`)
+
+Before: 11 top-level files, `internal/pipeline/` (1 file). Larger and
+more interleaved than `list`: one top-level file
+(`commitCommandFinalization.ts`) exported four functions, but only one
+(`syncRemoteCommitContinuityArtifacts`) had a cross-lane production
+consumer (the `merge` lane). The other three were intra-lane only.
+
+After: 4 top-level files, `internal/{error,finalization,git,pipeline,remote}/`.
+Top-level: `commitCommandApi.ts`, `commitCommandApiContract.ts`,
+`commitCommandContract.ts`, and `remoteCommitContinuitySync.ts` (the
+extracted cross-lane helper).
+
+Four-commit sequence:
+
+1. **Extract `syncRemoteCommitContinuityArtifacts` to a new root-public
+   helper** (`remoteCommitContinuitySync.ts`). The merge-lane import was
+   re-targeted at the new file. This isolated the cross-lane surface so
+   the rest of `commitCommandFinalization.ts` could be demoted to
+   `internal/finalization/` in a later commit without breaking the merge
+   lane.
+2. **Move git + remote helpers** (`commitCommandGitStep.ts`,
+   `commitStagedFiles.ts` → `internal/git/`;
+   `remoteCommitExecutionContext.ts` → `internal/remote/`).
+3. **Move the error boundary** (`commitCommandError.ts`,
+   `commitCommandErrorNormalization.ts`, `commitCommandRuntime.ts` →
+   `internal/error/`). The `BubbleCommitError` class remained publicly
+   reachable via the existing re-export chain through
+   `commitCommandApi.ts`.
+4. **Move the remaining finalization helpers** (`commitCommandFinalization.ts`,
+   `commitCommandFinalizationMutation.ts` → `internal/finalization/`).
+
+Two findings worth carrying forward to future half-done refactors:
+
+- **Cross-lane split-extraction when one symbol stands out.** When a
+  multi-export file at the lane root has exactly one cross-lane consumer
+  for one of its symbols, extract that symbol to its own root-public file
+  rather than holding the rest of the file at the root just for that one
+  symbol. The remaining intra-only exports can then move into a focused
+  `internal/<sub-area>/`. (Commit 1 above is the precedent.)
+- **Sub-area names reflect content, not file-name conventions.**
+  `commitCommandRuntime.ts` was named "Runtime" but its actual content
+  was the lane's error boundary (re-export of `BubbleCommitError` plus
+  `throwAsBubbleCommitError` driving error normalization). It went into
+  `internal/error/` alongside the Error/ErrorNormalization files, not
+  into a separate `internal/runtime/`. The naming-role table is a
+  *starting* heuristic for visibility default; the sub-area placement
+  follows the file's real concern as revealed by reading it.
 
 ## Module Depth Check applies
 
