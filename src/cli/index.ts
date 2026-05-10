@@ -157,7 +157,7 @@ import {
   runPlanWatchCommand
 } from "./commands/plan/watch.js";
 import { isMainCliEntrypoint } from "./isMainCliEntrypoint.js";
-import type { ActorEmitResultV11 } from "../v11/application/actorProtocol/emitActorProtocolV11.js";
+import type { ActorEmitResult } from "../v11/application/actorProtocol/emitActorProtocol.js";
 
 async function handlePassCommand(args: string[]): Promise<number> {
   const result = await runPassCommand(args);
@@ -274,7 +274,7 @@ async function handleAgentEmitCommand(args: string[]): Promise<number> {
   return 0;
 }
 
-function writeAgentEmitResult(result: Awaited<ActorEmitResultV11>): void {
+function writeAgentEmitResult(result: Awaited<ActorEmitResult>): void {
   if (result.kind === "pass") {
     writePassResult(result.pass);
     return;

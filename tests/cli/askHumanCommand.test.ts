@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { AskHumanCommandError } from "../../src/v11/application/askHuman/askHumanCommandApi.js";
 import * as actorEmitContextModule from "../../src/v11/shared/actorProtocol/actorEmitContext.js";
-import * as actorProtocolModule from "../../src/v11/application/actorProtocol/emitActorProtocolV11.js";
+import * as actorProtocolModule from "../../src/v11/application/actorProtocol/emitActorProtocol.js";
 import {
   getAskHumanHelpText,
   parseAskHumanCommandOptions,
@@ -62,7 +62,7 @@ describe("runAskHumanCommand", () => {
     );
     const emitSpy = vi.spyOn(
       actorProtocolModule,
-      "emitActorProtocolFromWorkspaceV11"
+      "emitActorProtocolFromWorkspace"
     );
 
     expect(() =>

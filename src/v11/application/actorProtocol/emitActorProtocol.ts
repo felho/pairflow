@@ -6,7 +6,7 @@ import type {
 } from "../../../types/protocol.js";
 import {
   assertActorEmitInputMatchesContext,
-  type ActorEmitResultV11
+  type ActorEmitResult
 } from "./actorProtocolEmitters.js";
 import {
   resolveActorRuntimeDispatchPlan
@@ -16,18 +16,18 @@ import {
   executeActorRuntimeDispatchPlan
 } from "./actorRuntimeKernel.js";
 
-export type { ActorEmitResultV11 } from "./actorProtocolEmitters.js";
+export type { ActorEmitResult } from "./actorProtocolEmitters.js";
 export type { ActorProtocolDependencies } from "./actorRuntimeKernel.js";
 
-export interface ResolvedActorEmitInputV11 {
+export interface ResolvedActorEmitInput {
   input: ActorEmitInput;
   authoritativeContext: ActorEmitContextSnapshot;
 }
 
-export async function emitActorProtocolFromWorkspaceV11(
-  resolvedInput: ResolvedActorEmitInputV11,
+export async function emitActorProtocolFromWorkspace(
+  resolvedInput: ResolvedActorEmitInput,
   dependencies: ActorProtocolDependencies = {}
-): Promise<ActorEmitResultV11> {
+): Promise<ActorEmitResult> {
   assertActorEmitInputMatchesContext({
     actorInput: resolvedInput.input,
     authoritativeContext: resolvedInput.authoritativeContext

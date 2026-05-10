@@ -33,7 +33,7 @@ import type { EmitConvergedResult } from "../converged/convergedCommandOrchestra
 import type { MetaReviewSubmitResult } from "../../shared/metaReview/metaReviewCommandContract.js";
 import type { EmitPassResult } from "../pass/passCommandOrchestration.js";
 
-export type ActorEmitResultV11 =
+export type ActorEmitResult =
   | {
       kind: "pass";
       pass: EmitPassResult;
@@ -72,11 +72,11 @@ export function assertActorEmitInputMatchesContext(input: {
   });
 }
 
-export async function emitPassActorResultV11(input: {
+export async function emitPassActorResult(input: {
   actorInput: PassActorEmitInput;
   authoritativeContext: ActorEmitContextSnapshot;
   dependencies?: EmitPassDependencies;
-}): Promise<Extract<ActorEmitResultV11, { kind: "pass" }>> {
+}): Promise<Extract<ActorEmitResult, { kind: "pass" }>> {
   const { actorInput, authoritativeContext: context } = input;
   return {
     kind: "pass",
@@ -92,11 +92,11 @@ export async function emitPassActorResultV11(input: {
   };
 }
 
-export async function emitHumanQuestionActorResultV11(input: {
+export async function emitHumanQuestionActorResult(input: {
   actorInput: HumanQuestionActorEmitInput;
   authoritativeContext: ActorEmitContextSnapshot;
   dependencies?: EmitAskHumanDependencies;
-}): Promise<Extract<ActorEmitResultV11, { kind: "human_question" }>> {
+}): Promise<Extract<ActorEmitResult, { kind: "human_question" }>> {
   const { actorInput, authoritativeContext: context } = input;
   return {
     kind: "human_question",
@@ -112,12 +112,12 @@ export async function emitHumanQuestionActorResultV11(input: {
   };
 }
 
-export async function emitConvergenceActorResultV11(input: {
+export async function emitConvergenceActorResult(input: {
   actorInput: ConvergenceActorEmitInput;
   authoritativeContext: ActorEmitContextSnapshot;
   expectedReviewer?: AgentName | undefined;
   dependencies?: EmitConvergedDependencies;
-}): Promise<Extract<ActorEmitResultV11, { kind: "convergence" }>> {
+}): Promise<Extract<ActorEmitResult, { kind: "convergence" }>> {
   const {
     actorInput,
     authoritativeContext: context,
@@ -139,11 +139,11 @@ export async function emitConvergenceActorResultV11(input: {
   };
 }
 
-export async function emitMetaReviewActorResultV11(input: {
+export async function emitMetaReviewActorResult(input: {
   actorInput: MetaReviewResultActorEmitInput;
   authoritativeContext: ActorEmitContextSnapshot;
   dependencies?: MetaReviewCommandDependencies;
-}): Promise<Extract<ActorEmitResultV11, { kind: "meta_review_result" }>> {
+}): Promise<Extract<ActorEmitResult, { kind: "meta_review_result" }>> {
   const { actorInput, authoritativeContext: context } = input;
   return {
     kind: "meta_review_result",

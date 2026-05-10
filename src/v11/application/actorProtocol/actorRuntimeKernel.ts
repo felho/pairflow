@@ -10,11 +10,11 @@ import type {
   PassActorEmitInput
 } from "../../../types/protocol.js";
 import {
-  type ActorEmitResultV11,
-  emitConvergenceActorResultV11,
-  emitHumanQuestionActorResultV11,
-  emitMetaReviewActorResultV11,
-  emitPassActorResultV11
+  type ActorEmitResult,
+  emitConvergenceActorResult,
+  emitHumanQuestionActorResult,
+  emitMetaReviewActorResult,
+  emitPassActorResult
 } from "./actorProtocolEmitters.js";
 import {
   type ActorRuntimeAdapterId,
@@ -47,7 +47,7 @@ interface ActorRuntimeAdapterExecutionInput
 
 type ActorRuntimeAdapterExecutor = (
   input: ActorRuntimeAdapterExecutionInput
-) => Promise<ActorEmitResultV11>;
+) => Promise<ActorEmitResult>;
 
 type ActiveReviewer = NonNullable<
   ActorEmitContextSnapshot["loaded_state"]["state"]["active_agent"]
@@ -80,7 +80,7 @@ const actorRuntimeAdapterExecutors: Readonly<
     authoritativeContext,
     dependencies
   }) =>
-    emitPassActorResultV11({
+    emitPassActorResult({
       actorInput: actorInput as PassActorEmitInput,
       authoritativeContext,
       ...(dependencies.pass !== undefined
@@ -92,7 +92,7 @@ const actorRuntimeAdapterExecutors: Readonly<
     authoritativeContext,
     dependencies
   }) =>
-    emitHumanQuestionActorResultV11({
+    emitHumanQuestionActorResult({
       actorInput: actorInput as HumanQuestionActorEmitInput,
       authoritativeContext,
       ...(dependencies.askHuman !== undefined
@@ -104,7 +104,7 @@ const actorRuntimeAdapterExecutors: Readonly<
     authoritativeContext,
     dependencies
   }) =>
-    emitConvergenceActorResultV11({
+    emitConvergenceActorResult({
       actorInput: actorInput as ConvergenceActorEmitInput,
       authoritativeContext,
       expectedReviewer:
@@ -118,7 +118,7 @@ const actorRuntimeAdapterExecutors: Readonly<
     authoritativeContext,
     dependencies
   }) =>
-    emitMetaReviewActorResultV11({
+    emitMetaReviewActorResult({
       actorInput: actorInput as MetaReviewResultActorEmitInput,
       authoritativeContext,
       ...(dependencies.metaReview !== undefined
@@ -129,7 +129,7 @@ const actorRuntimeAdapterExecutors: Readonly<
 
 export async function executeActorRuntimeDispatchPlan(
   input: ExecuteActorRuntimeDispatchPlanInput
-): Promise<ActorEmitResultV11> {
+): Promise<ActorEmitResult> {
   const dependencies = input.dependencies ?? {};
   assertActorRuntimeDispatchPlanPolicies({
     plan: input.plan,

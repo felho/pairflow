@@ -25,7 +25,7 @@ import {
   metaReviewExecutionContextToRunningContext
 } from "../../../../src/v11/shared/state/executionContext.js";
 import { readStateSnapshot, writeStateSnapshot } from "../../../../src/v11/infrastructure/state/stateStore.js";
-import * as actorProtocolModule from "../../../../src/v11/application/actorProtocol/emitActorProtocolV11.js";
+import * as actorProtocolModule from "../../../../src/v11/application/actorProtocol/emitActorProtocol.js";
 import { metaReviewDefaults } from "../../../../src/v11/defaults/metaReview/metaReviewDefaults.js";
 import { notifyMetaReviewerSubmissionRequest } from "../../../../src/v11/defaults/metaReviewGate/metaReviewGateApi.js";
 import { metaReviewGateDependencyDefaults } from "../../../../src/v11/defaults/metaReviewGate/metaReviewGateCommandDefaults.js";
@@ -257,7 +257,7 @@ afterEach(async () => {
   );
 });
 
-describe("emitActorProtocolV11 runtime", () => {
+describe("emitActorProtocol runtime", () => {
   it("resolves the exact current-tree authority x input runtime routes", () => {
     const expectedRoutes = [
       {
@@ -624,7 +624,7 @@ describe("emitActorProtocolV11 runtime", () => {
       "executeActorRuntimeDispatchPlan"
     );
 
-    const result = await actorProtocolModule.emitActorProtocolFromWorkspaceV11({
+    const result = await actorProtocolModule.emitActorProtocolFromWorkspace({
       input: {
         kind: "human_question",
         repo: repoPath,
@@ -680,7 +680,7 @@ describe("emitActorProtocolV11 runtime", () => {
       "executeActorRuntimeDispatchPlan"
     );
 
-    const result = await actorProtocolModule.emitActorProtocolFromWorkspaceV11({
+    const result = await actorProtocolModule.emitActorProtocolFromWorkspace({
       input: {
         kind: "human_question",
         repo: repoPath,
@@ -733,7 +733,7 @@ describe("emitActorProtocolV11 runtime", () => {
       "executeActorRuntimeDispatchPlan"
     );
 
-    const result = await actorProtocolModule.emitActorProtocolFromWorkspaceV11({
+    const result = await actorProtocolModule.emitActorProtocolFromWorkspace({
       input: {
         kind: "pass",
         repo: repoPath,
@@ -791,7 +791,7 @@ describe("emitActorProtocolV11 runtime", () => {
       "executeActorRuntimeDispatchPlan"
     );
 
-    const result = await actorProtocolModule.emitActorProtocolFromWorkspaceV11({
+    const result = await actorProtocolModule.emitActorProtocolFromWorkspace({
       input: {
         kind: "convergence",
         repo: repoPath,
@@ -853,7 +853,7 @@ describe("emitActorProtocolV11 runtime", () => {
       "executeActorRuntimeDispatchPlan"
     );
 
-    const result = await actorProtocolModule.emitActorProtocolFromWorkspaceV11({
+    const result = await actorProtocolModule.emitActorProtocolFromWorkspace({
       input: {
         kind: "meta_review_result",
         repo: repoPath,
@@ -908,7 +908,7 @@ describe("emitActorProtocolV11 runtime", () => {
     });
 
     await expect(
-      actorProtocolModule.emitActorProtocolFromWorkspaceV11({
+      actorProtocolModule.emitActorProtocolFromWorkspace({
         input: {
           kind: "meta_review_result",
           repo: repoPath,
@@ -932,7 +932,7 @@ describe("emitActorProtocolV11 runtime", () => {
 
   it("rejects reviewer pass from the outer dispatcher when active reviewer authority is missing", async () => {
     await expect(
-      actorProtocolModule.emitActorProtocolFromWorkspaceV11({
+      actorProtocolModule.emitActorProtocolFromWorkspace({
         input: {
           kind: "pass",
           repo: "/repo",
@@ -975,7 +975,7 @@ describe("emitActorProtocolV11 runtime", () => {
     });
 
     await expect(
-      actorProtocolModule.emitActorProtocolFromWorkspaceV11({
+      actorProtocolModule.emitActorProtocolFromWorkspace({
         input: {
           kind: "pass",
           repo: repoPath,
@@ -996,7 +996,7 @@ describe("emitActorProtocolV11 runtime", () => {
 
   it("rejects meta_review_result from the outer dispatcher when a non-configured live agent claims meta-review authority", async () => {
     await expect(
-      actorProtocolModule.emitActorProtocolFromWorkspaceV11({
+      actorProtocolModule.emitActorProtocolFromWorkspace({
         input: {
           kind: "meta_review_result",
           repo: "/repo",
@@ -1038,7 +1038,7 @@ describe("emitActorProtocolV11 runtime", () => {
     });
 
     await expect(
-      actorProtocolModule.emitActorProtocolFromWorkspaceV11({
+      actorProtocolModule.emitActorProtocolFromWorkspace({
         input: {
           kind: "convergence",
           repo: repoPath,
@@ -1059,7 +1059,7 @@ describe("emitActorProtocolV11 runtime", () => {
 
   it("preserves canonical context mismatch precedence before unsupported-route rejection in the outer dispatcher", async () => {
     await expect(
-      actorProtocolModule.emitActorProtocolFromWorkspaceV11({
+      actorProtocolModule.emitActorProtocolFromWorkspace({
         input: {
           kind: "convergence",
           repo: "/repo",
@@ -1098,7 +1098,7 @@ describe("emitActorProtocolV11 runtime", () => {
     });
 
     await expect(
-      actorProtocolModule.emitActorProtocolFromWorkspaceV11({
+      actorProtocolModule.emitActorProtocolFromWorkspace({
         input: {
           kind: "convergence",
           repo: repoPath,

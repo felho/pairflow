@@ -11,7 +11,7 @@ import {
   writeStateSnapshot
 } from "../../../src/v11/infrastructure/state/stateStore.js";
 import { startBubble } from "../../../src/v11/application/start/startCommandApi.js";
-import { runBubbleStartCommand as runBubbleStartCommandV11 } from "../../../src/cli/commands/bubble/start.js";
+import { runBubbleStartCommand } from "../../../src/cli/commands/bubble/start.js";
 import { writeRemotePointer } from "../../../src/v11/infrastructure/artifact/bubble/remoteExecutionArtifacts.js";
 import type {
   ExecuteRemoteBubbleStartInput,
@@ -653,7 +653,7 @@ async function executeStartCase(input: {
 
       const result =
         parsedInput.scenario === "remote_attach_rejected"
-          ? await runBubbleStartCommandV11(
+          ? await runBubbleStartCommand(
               [
                 "--id",
                 bubble.bubbleId,

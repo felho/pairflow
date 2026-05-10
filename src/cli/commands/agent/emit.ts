@@ -25,7 +25,7 @@ import {
 import {
   buildMetaReviewSubmitUsageLine
 } from "../../../v11/shared/metaReview/metaReviewSubmitGuidance.js";
-import { emitActorProtocolFromWorkspaceV11 } from "../../../v11/application/actorProtocol/emitActorProtocolV11.js";
+import { emitActorProtocolFromWorkspace } from "../../../v11/application/actorProtocol/emitActorProtocol.js";
 import {
   resolveActorEmitContextByBubbleId
 } from "../../../v11/defaults/actorProtocol/actorEmitContextDefaults.js";
@@ -452,7 +452,7 @@ function parseAgentEmitArgs(args: string[]) {
 
 export async function runAgentEmitCommand(
   args: string[]
-): Promise<ReturnType<typeof emitActorProtocolFromWorkspaceV11> | null> {
+): Promise<ReturnType<typeof emitActorProtocolFromWorkspace> | null> {
   const parsed = parseAgentEmitCommandOptions(args);
   if (parsed.help) {
     return null;
@@ -565,7 +565,7 @@ export async function runAgentEmitCommand(
       runtime: metaReviewGateDependencyDefaults.runtime
     }
   } as const;
-  return emitActorProtocolFromWorkspaceV11(
+  return emitActorProtocolFromWorkspace(
     {
       input: parsed.input,
       authoritativeContext

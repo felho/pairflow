@@ -4,7 +4,7 @@ import {
   ConvergedCommandError
 } from "../../src/v11/application/converged/convergedCommandOrchestration.js";
 import * as actorEmitContextModule from "../../src/v11/shared/actorProtocol/actorEmitContext.js";
-import * as actorProtocolModule from "../../src/v11/application/actorProtocol/emitActorProtocolV11.js";
+import * as actorProtocolModule from "../../src/v11/application/actorProtocol/emitActorProtocol.js";
 import { parsePassCommandOptions } from "../../src/cli/commands/agent/pass.js";
 import {
   getConvergedHelpText,
@@ -233,7 +233,7 @@ describe("runConvergedCommand", () => {
     );
     const emitSpy = vi.spyOn(
       actorProtocolModule,
-      "emitActorProtocolFromWorkspaceV11"
+      "emitActorProtocolFromWorkspace"
     );
 
     expect(() =>
