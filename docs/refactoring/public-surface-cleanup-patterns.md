@@ -247,6 +247,10 @@ cross-cutting namespace), but its actual consumer set is confined to a single
 lane (production consumer + tests). The "shared" placement is justified by
 *hypothetical* cross-lane future use, not by current import scan.
 
+Count lanes, not importing files. Multiple production consumers inside the same
+lane are still single-lane usage; that can justify a lane-private helper, but
+not `shared/` placement.
+
 **Operation:** Move the file to the owning lane (`defaults/<area>/`,
 `cli/<command>/`, `application/<feature>/<sub>/`, etc.). The `shared/` location
 is reserved for files whose import scan demonstrates earned shared status.
@@ -262,6 +266,10 @@ depend on the helper.
 - Resulting state: `resolveDocContractGateArtifactPath` now lives in
   `src/v11/defaults/gates/` (or equivalent owning lane location), not under
   `shared/gates/`.
+- `59fec4de` — Move meta-review command error mapping to submit owner
+- Resulting state: `metaReviewCommandErrorMapping` now lives under
+  `src/v11/application/metaReview/internal/submit/`; its multiple production
+  consumers are all within the `application/metaReview` lane.
 
 **Reverse direction (when to undo a demotion):** If a second lane appears that
 needs the helper, promote it back to `shared/`. Promotion is cheap when the
