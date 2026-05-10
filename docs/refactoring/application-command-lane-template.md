@@ -86,16 +86,30 @@ Files directly under `application/<command>/`. The canonical interface a
 caller uses to reach the command. Re-exported from the project root
 `src/index.ts` when the command is part of the public API surface.
 
-Selection rule: a file is root-public when external lanes (other lanes,
-`src/cli/`, tests via the public path) actually consume it. The naming-role
-table is a starting heuristic; the import scan is authoritative.
+Selection rule: a file is root-public when **production** consumers
+genuinely demand it.
+
+- **Production external consumer** (another lane, `defaults/`, `src/cli/`)
+  → root-public signal (or lane-internal-but-named if the consumer is
+  intra-area composition only; see next tier).
+- **Test consumer via the public path** → verification signal, not a
+  public-surface signal on its own. Tests follow whatever the lane
+  exposes; if the lane changes its public path, tests update with it.
+  Tests therefore confirm that the public surface works, but they don't
+  demand it.
+
+The naming-role table is a starting heuristic; the import scan is
+authoritative.
 
 ### Lane-internal-but-named
 
 A submodule directory directly under the lane root (e.g.,
 `application/planWatch/runner/`) that is **not** re-exported from the project
-root but **is** imported by lane co-tenants — defaults, CLI, tests — using
-its named path.
+root but **is** imported by lane co-tenants — primarily `defaults/`, the
+lane's CLI integration, or another application lane that needs the named
+submodule — using its named path. Tests can follow the same path, but a
+test-only consumer is not enough to justify this tier; a production
+composition consumer must exist.
 
 Use this tier only when both conditions hold:
 
@@ -159,11 +173,15 @@ intra-lane.
 application/<command>/
 ├── <command>CommandApi.ts        ← root-public: main API (canonical entry)
 ├── <command>CommandContract.ts   ← root-public: dependency port
+├── <command>CommandError.ts      ← root-public if exported by API/contract
+│                                   (the error class is part of the
+│                                   throw-catch contract); internal only when
+│                                   neither the API nor the contract exposes it
+│                                   AND the file has no cross-lane consumer
 ├── <command>CliCommand.ts        ← root-public: CLI integration (if CLI exists)
 └── internal/
     ├── runtime/<command>CommandRuntime.ts    ← composition wiring
-    ├── error/<command>CommandError.ts        ← if not cross-lane
-    ├── error/<command>CommandErrorNormalization.ts
+    ├── error/<command>CommandErrorNormalization.ts ← mapping/coercion only
     ├── input/<command>CommandInputNormalization.ts (if applicable)
     └── ...                                   ← other implementation helpers
 ```
@@ -308,12 +326,14 @@ Half-done lanes today (per the survey): `commit`, `merge`, `metaReview`,
 
 6. **Per-commit discipline.** A half-done lane refactor is typically 2–4
    commits:
-   - (a) introduce new `internal/<sub-area>/` directories with placeholder
-     READMEs if needed,
-   - (b) move intra-only top-level files into the appropriate sub-area
-     (one sub-area per commit when the moves are large),
-   - (c) update intra-lane imports to the new paths,
-   - (d) remove placeholder READMEs / clean up empty stubs.
+   - (a) move intra-only top-level files into the appropriate sub-area
+     directory (one sub-area per commit when the moves are large); the
+     sub-area directory is created as a side effect of the moves, no
+     placeholder file needed,
+   - (b) update intra-lane imports to the new paths,
+   - (c) clean up any empty sub-area directories that result from
+     reshuffling (git does not track them, but `rmdir` keeps the working
+     tree clean).
 
    Each commit should keep the lane in a typecheck-green state.
 
@@ -326,20 +346,27 @@ Half-done lanes today (per the survey): `commit`, `merge`, `metaReview`,
 ### Half-done reference
 
 `application/commit/`. Currently: 11 top-level files, `internal/pipeline/`
-(1 file). The naming clusters at top-level suggest sub-areas:
+(1 file). The naming clusters at top-level *suggest* sub-areas, but every
+move below is a hypothesis to validate against the import-scan manifest
+before committing — clusters that look related by name may turn out to
+have different consumer shapes.
 
 - `commitCommandFinalization.ts` + `commitCommandFinalizationMutation.ts` →
-  `internal/finalization/`
-- `commitCommandError.ts` + `commitCommandErrorNormalization.ts` →
-  `internal/error/`
+  likely `internal/finalization/`
+- `commitCommandError.ts` is part of the throw-catch contract — keep it
+  root-public unless the import scan shows truly intra-lane usage; pair
+  it with `commitCommandErrorNormalization.ts` (which is mapping-only)
+  in `internal/error/`.
 - `commitCommandGitStep.ts` + `commitStagedFiles.ts` →
-  `internal/git/` (or expand `internal/pipeline/` to hold them)
-- `commitCommandRuntime.ts` → `internal/runtime/`
-- `remoteCommitExecutionContext.ts` → `internal/remote/`
+  likely `internal/git/` (or expand `internal/pipeline/` to hold them)
+- `commitCommandRuntime.ts` → likely `internal/runtime/`
+- `remoteCommitExecutionContext.ts` → likely `internal/remote/`
 
-Top-level after the refactor: `commitCommandApi.ts`,
-`commitCommandApiContract.ts`, `commitCommandContract.ts`. The exact
-sub-area decisions depend on the import-scan manifest.
+Top-level after the refactor will likely include `commitCommandApi.ts`
+and `commitCommandContract.ts` at minimum; whether
+`commitCommandApiContract.ts` and `commitCommandError.ts` stay top-level
+depends on the import scan (cross-lane vs intra-lane consumer set). The
+manifest decides; the bullet list above is a starting hypothesis.
 
 ## Module Depth Check applies
 
