@@ -75,6 +75,18 @@ regardless of default; a file consumed only intra-lane (in production) is
 internal regardless of default. Test consumers are excluded from this
 count — they are a verification signal, not a public-surface signal.
 
+**Exception (effective contract via signature reference):** a type
+referenced by a root-public function's signature — dependency interfaces,
+input types, result types — is *effectively* part of the public contract
+even with zero direct external imports. External callers must know the
+shape to call the function (whether they import the type by name or
+construct objects structurally). Keep such types root-public regardless
+of the import-scan count. Concrete example from the `list` lane:
+`ListReadModelDependencies` (in `listReadModelDependencies.ts`) has zero
+direct external imports but appears in
+`listBubbles(..., dependencies: ListReadModelDependencies)` — it stays
+root-public.
+
 The survey doc lists which lanes use each pattern.
 
 ## Visibility tiers
