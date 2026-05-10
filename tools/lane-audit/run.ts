@@ -96,9 +96,14 @@ function classifyFile(abs: string): FileEntry {
   let isLaneTopLevel = false;
   if (parts[0] === "src" && parts[1] === "v11" && parts.length >= 4) {
     const candidateArea = parts[2];
-    if ((AREAS as readonly string[]).includes(candidateArea)) {
+    const candidateLane = parts[3];
+    if (
+      candidateArea !== undefined &&
+      candidateLane !== undefined &&
+      (AREAS as readonly string[]).includes(candidateArea)
+    ) {
       area = candidateArea as Area;
-      lane = parts[3];
+      lane = candidateLane;
       isLaneTopLevel = parts.length === 5;
     }
   }
@@ -112,10 +117,10 @@ const DYNAMIC_IMPORT_RE = /import\s*\(\s*["']([^"']+)["']\s*\)/g;
 function extractImports(content: string): string[] {
   const out: string[] = [];
   for (const match of content.matchAll(STATIC_IMPORT_RE)) {
-    out.push(match[1]);
+    if (match[1] !== undefined) out.push(match[1]);
   }
   for (const match of content.matchAll(DYNAMIC_IMPORT_RE)) {
-    out.push(match[1]);
+    if (match[1] !== undefined) out.push(match[1]);
   }
   return out;
 }
@@ -350,6 +355,7 @@ lines.push(
 );
 for (let i = 0; i < laneAudits.length; i++) {
   const la = laneAudits[i];
+  if (la === undefined) continue;
   const has = la.info.hasInternal ? "yes" : "no";
   lines.push(
     `| ${i + 1} | ${la.info.area}/${la.info.lane} | ${la.info.topLevelFiles.length} | ${has} | ${la.externalCount} | ${la.intraOnlyCount} | ${la.testOnlyCount} | ${la.unusedCount} | ${la.totalScore} |`
