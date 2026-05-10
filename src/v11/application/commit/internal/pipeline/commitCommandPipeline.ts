@@ -7,7 +7,7 @@ import type {
   CommitBubbleDependencies,
   CommitExecutionContext
 } from "../../commitCommandApiContract.js";
-import { BubbleCommitError } from "../../commitCommandRuntime.js";
+import { BubbleCommitError } from "../error/commitCommandRuntime.js";
 import {
   appendCommitResultEnvelope,
   emitCommitLifecycleEvent,

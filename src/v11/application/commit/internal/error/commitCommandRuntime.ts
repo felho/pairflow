@@ -4,7 +4,7 @@ import {
   isBubbleCommitError
 } from "./commitCommandError.js";
 import { normalizeBubbleCommitError } from "./commitCommandErrorNormalization.js";
-import { isNamedError } from "../../shared/errors/namedError.js";
+import { isNamedError } from "../../../../shared/errors/namedError.js";
 
 export { BubbleCommitError };
 

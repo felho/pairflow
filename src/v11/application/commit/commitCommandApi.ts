@@ -2,13 +2,13 @@ import type {
   CommitBubbleInput,
   CommitBubbleResult
 } from "./commitCommandContract.js";
-import { throwAsBubbleCommitError } from "./commitCommandRuntime.js";
+import { throwAsBubbleCommitError } from "./internal/error/commitCommandRuntime.js";
 import type {
   CommitBubbleDependencies
 } from "./commitCommandApiContract.js";
 import { runCommitCommandPipeline } from "./internal/pipeline/commitCommandPipeline.js";
 
-export { BubbleCommitError } from "./commitCommandRuntime.js";
+export { BubbleCommitError } from "./internal/error/commitCommandRuntime.js";
 export type {
   CommitBubbleInput,
   CommitBubbleResult

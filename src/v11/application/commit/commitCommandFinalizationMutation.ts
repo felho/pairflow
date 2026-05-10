@@ -2,7 +2,7 @@ import { join } from "node:path";
 
 import { applyStateTransition } from "../../domain/state/machine.js";
 import { normalizeStringList } from "../../shared/normalization/stringNormalization.js";
-import { BubbleCommitError } from "./commitCommandError.js";
+import { BubbleCommitError } from "./internal/error/commitCommandError.js";
 import type { BubbleStateSnapshot } from "../../shared/state/bubbleStateSnapshotTypes.js";
 import type {
   ProtocolEnvelope,
