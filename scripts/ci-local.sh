@@ -190,5 +190,6 @@ run_step "install" "dependency lock validation" pnpm install --frozen-lockfile
 run_step "check" "quality suite (pnpm check)" pnpm check
 
 run_step "fitness" "fitness gate" pnpm fitness:check:ci
+run_step "smoke" "almost-e2e smoke suite" pnpm test:smoke
 
 echo "ci:local passed"

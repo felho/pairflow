@@ -27,6 +27,7 @@
     "ci:local": "bash ./scripts/ci-local.sh",
     "hooks:install": "bash ./scripts/install-git-hooks.sh",
     "test:contracts": "pnpm exec vitest run tests/contracts/v11/*.test.ts",
+    "test:smoke": "pnpm codegen:reviewer-ontology && pnpm build && pnpm exec vitest run --config vitest.smoke.config.ts",
     "build": "pnpm codegen:reviewer-ontology && tsc -p tsconfig.build.json",
     "typecheck": "bash ./scripts/run-evidence.sh .pairflow/evidence/typecheck.log \"pnpm typecheck\" -- bash -lc \"pnpm codegen:reviewer-ontology && pnpm exec tsc --noEmit\"",
     "lint": "bash ./scripts/run-evidence.sh .pairflow/evidence/lint.log \"pnpm lint\" -- bash -lc \"pnpm codegen:reviewer-ontology && pnpm exec eslint .\"",

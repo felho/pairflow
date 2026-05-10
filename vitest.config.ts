@@ -15,6 +15,7 @@ export default defineConfig({
     environment: "node",
     setupFiles: ["./tests/setup/metricsEnv.ts"],
     include: ["tests/**/*.test.ts"],
+    exclude: ["tests/almostE2e/**/*.test.ts"],
     testTimeout: 30000
   }
 });
