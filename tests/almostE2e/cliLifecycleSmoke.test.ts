@@ -78,6 +78,7 @@ function getCompiledEntrypointFreshnessError(entrypointPath: string): Error | un
   const sourceFreshnessInputs = [
     "src",
     "scripts",
+    "docs/reviewer-severity-ontology.md",
     "package.json",
     "pnpm-lock.yaml",
     "tsconfig.json",
