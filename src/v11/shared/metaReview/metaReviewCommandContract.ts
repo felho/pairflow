@@ -5,12 +5,11 @@ import type {
 } from "../../../types/protocol.js";
 import type { MetaReviewGateRoute } from "../metaReviewGate/index.js";
 import type {
-  MetaReviewDeliveryEmitter,
-  MetaReviewDeliveryMessageRefBuilder
-} from "./metaReviewDeliveryCapabilities.js";
-import type {
-  MetaReviewArtifactReadPort
-} from "./metaReviewArtifactIo.js";
+  DeliveryAck,
+  EmitDeliveryNotificationInput,
+  ResolveDeliveryMessageRefInput
+} from "../delivery/tmuxDeliveryContract.js";
+import type { MetaReviewArtifactReadPort } from "./metaReviewArtifactIo.js";
 import type { MetaReviewResult } from "./metaReviewTypes.js";
 import type {
   AppendProtocolEnvelopePort,
@@ -33,6 +32,14 @@ import type {
 } from "../metaReviewGate/index.js";
 
 export type { MetaReviewResult, MetaReviewRunWarning } from "./metaReviewTypes.js";
+
+export type MetaReviewDeliveryEmitter = (
+  input: EmitDeliveryNotificationInput
+) => Promise<DeliveryAck>;
+
+export type MetaReviewDeliveryMessageRefBuilder = (
+  input: ResolveDeliveryMessageRefInput
+) => string;
 
 export type MetaReviewSubmitInput = {
   bubbleId: string;
