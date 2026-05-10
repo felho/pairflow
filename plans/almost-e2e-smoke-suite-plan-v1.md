@@ -27,8 +27,8 @@ task_tracker:
     status: archived
     notes: "Add compiled-CLI lifecycle smoke coverage for create/start, restart, open, and delete."
   - task_id: 3-actor-loop-smoke
-    task_path: null
-    status: not_created
+    task_path: plans/tasks/3-actor-loop-smoke.md
+    status: approved
     notes: "Add one runner-driven fake actor loop through pass, convergence, and meta-review approve."
   - task_id: 4-ui-action-api-smoke
     task_path: null
@@ -207,7 +207,7 @@ entrypoint and must not delete, move, or mutate the repository's real
 |---|---|---|---|---|---|
 | `1-smoke-runner-contract` | `plans/archive/tasks/2026-05-09-almost-e2e-smoke-suite-plan-v1/1-smoke-runner-contract.md` | Build the fake process/editor spawn recorder, fake tmux launch/terminate adapter, runner-driven scenario advancement model, first-advance authority validation, post-first authority refresh, and TS scenario type contract. | `docs/architecture/almost-e2e-smoke-suite.md` | Provides the common fake-runner foundation required by all Phase 1 smoke tasks. | archived |
 | `2-cli-lifecycle-smoke` | `plans/archive/tasks/2026-05-09-almost-e2e-smoke-suite-plan-v1/2-cli-lifecycle-smoke.md` | Add compiled-CLI smoke coverage for create/start, restart, open, and delete against a minimal fixture repo using the fake external adapters where needed. | `1-smoke-runner-contract` | Proves the top-level `dist/cli/index.js` route and defaults wiring for public CLI entrypoints. | archived |
-| `3-actor-loop-smoke` | `null` | Add one minimal runner-driven fake actor scenario through pass, convergence, and meta-review approval, using canonical `pairflow agent emit --kind ...` feedback. | `1-smoke-runner-contract`, `2-cli-lifecycle-smoke` | Proves actor ingestion, authority refresh, transcript/state progression, and meta-review approval routing without a real LLM. | not_created |
+| `3-actor-loop-smoke` | `plans/tasks/3-actor-loop-smoke.md` | Add one minimal runner-driven fake actor scenario through pass, convergence, and meta-review approval, using canonical `pairflow agent emit --kind ...` feedback. | `1-smoke-runner-contract`, `2-cli-lifecycle-smoke` | Proves actor ingestion, authority refresh, transcript/state progression, and meta-review approval routing without a real LLM. | approved |
 | `4-ui-action-api-smoke` | `null` | Add in-process UI action API smoke coverage for Open, Restart, and Delete with real backend state and recorded external side effects. | `1-smoke-runner-contract`, `2-cli-lifecycle-smoke` | Proves UI action dispatch reaches the backend command paths that historically failed through Open/Restart. | not_created |
 
 ## Coverage Map
