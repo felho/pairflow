@@ -64,10 +64,10 @@ export {
   createBubble
 } from "./v11/defaults/create/createBubbleApi.js";
 export {
-  asStartBubbleErrorV11 as asStartBubbleError,
-  StartBubbleErrorV11 as StartBubbleError,
-  startBubbleV11 as startBubble
-} from "./v11/application/start/emitStartV11.js";
+  asStartBubbleError,
+  StartBubbleError,
+  startBubble
+} from "./v11/application/start/startCommandApi.js";
 export {
   asBubbleListError,
   BubbleListError,
@@ -524,10 +524,10 @@ export type {
   RestartBubbleResult
 } from "./v11/application/restart/restartCommandApi.js";
 export type {
-  StartBubbleV11Dependencies as StartBubbleDependencies,
-  StartBubbleV11Input as StartBubbleInput,
-  StartBubbleV11Result as StartBubbleResult
-} from "./v11/application/start/emitStartV11.js";
+  StartBubbleDependencies,
+  StartBubbleInput,
+  StartBubbleResult
+} from "./v11/application/start/startCommandContract.js";
 export type {
   StopBubbleDependencies,
   StopBubbleInput,

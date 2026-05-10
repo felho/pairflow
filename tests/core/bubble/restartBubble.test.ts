@@ -5,7 +5,7 @@ import {
   RestartBubbleError
 } from "../../../src/v11/application/restart/restartCommandApi.js";
 import type { ResolvedBubbleById } from "../../../src/v11/infrastructure/executor/workspace/bubbleLookup.js";
-import type { StartBubbleV11Result as StartBubbleResult } from "../../../src/v11/application/start/emitStartV11.js";
+import type { StartBubbleResult } from "../../../src/v11/application/start/startCommandContract.js";
 import type { RestartBubbleDependencies } from "../../../src/v11/application/restart/restartCommandContract.js";
 
 function buildRestartBubbleDependencies(

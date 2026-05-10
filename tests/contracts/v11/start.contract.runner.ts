@@ -10,7 +10,7 @@ import {
   readStateSnapshot,
   writeStateSnapshot
 } from "../../../src/v11/infrastructure/state/stateStore.js";
-import { startBubbleV11 } from "../../../src/v11/application/start/emitStartV11.js";
+import { startBubble } from "../../../src/v11/application/start/startCommandApi.js";
 import { runBubbleStartCommand as runBubbleStartCommandV11 } from "../../../src/cli/commands/bubble/start.js";
 import { writeRemotePointer } from "../../../src/v11/infrastructure/artifact/bubble/remoteExecutionArtifacts.js";
 import type {
@@ -379,7 +379,7 @@ async function configureRemoteBubbleFixture(input: {
   return remotePath;
 }
 
-function normalizeStartResult(result: Awaited<ReturnType<typeof startBubbleV11>>): StartContractSuccessOutput {
+function normalizeStartResult(result: Awaited<ReturnType<typeof startBubble>>): StartContractSuccessOutput {
   return {
     status: "ok",
     reasonCode: "STARTED",
@@ -463,7 +463,7 @@ function assertContractExpectedSubset(input: {
 
 async function executeStartCase(input: {
   caseDef: ContractCase;
-  executor: typeof startBubbleV11;
+  executor: typeof startBubble;
 }): Promise<StartContractOutput> {
   const repoPath = await mkdtemp(join(tmpdir(), "pairflow-start-contract-"));
   const cleanupPaths: string[] = [];
@@ -995,7 +995,7 @@ export async function runStartContractCase(
 
   const v11 = await executeStartCase({
     caseDef,
-    executor: startBubbleV11
+    executor: startBubble
   });
   assertContractExpectedSubset({
     output: v11,

@@ -1,7 +1,7 @@
 import {
-  asStartBubbleErrorV11 as asStartBubbleError,
-  StartBubbleErrorV11 as StartBubbleError
-} from "../start/emitStartV11.js";
+  asStartBubbleError,
+  StartBubbleError
+} from "../start/startCommandApi.js";
 import { normalizeRestartBubbleError } from "./restartCommandErrorNormalization.js";
 import {
   normalizePairflowCommandErrorInput,

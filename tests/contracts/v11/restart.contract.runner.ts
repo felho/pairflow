@@ -7,10 +7,8 @@ import {
   restartBubble
 } from "../../../src/v11/application/restart/restartCommandApi.js";
 import { restartBubbleDependencyDefaults } from "../../../src/v11/defaults/restart/restartCommandDefaults.js";
-import {
-  startBubbleV11 as startBubble,
-  type StartBubbleV11Result as StartBubbleResult
-} from "../../../src/v11/application/start/emitStartV11.js";
+import { startBubble } from "../../../src/v11/application/start/startCommandApi.js";
+import type { StartBubbleResult } from "../../../src/v11/application/start/startCommandContract.js";
 import {
   readStateSnapshot,
   writeStateSnapshot

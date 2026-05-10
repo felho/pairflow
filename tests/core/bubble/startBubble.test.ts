@@ -15,9 +15,9 @@ import {
 } from "../../../src/v11/shared/state/executionContext.js";
 import { readStateSnapshot, writeStateSnapshot } from "../../../src/v11/infrastructure/state/stateStore.js";
 import {
-  startBubbleV11 as startBubble,
-  StartBubbleErrorV11 as StartBubbleError
-} from "../../../src/v11/application/start/emitStartV11.js";
+  startBubble,
+  StartBubbleError
+} from "../../../src/v11/application/start/startCommandApi.js";
 import {
   launchBubbleSessionAck as launchBubbleSessionAckPublicApi,
   startBubble as startBubblePublicApi,
@@ -1975,8 +1975,8 @@ describe("startBubble", () => {
 
       await import("../../../src/v11/defaults/start/startBubbleDefaults.js");
 
-      const { startBubbleV11: startBubbleWithMock } = await import(
-        "../../../src/v11/application/start/emitStartV11.js"
+      const { startBubble: startBubbleWithMock } = await import(
+        "../../../src/v11/application/start/startCommandApi.js"
       );
 
       const result = await startBubbleWithMock(
@@ -2247,9 +2247,9 @@ describe("startBubble", () => {
       await import("../../../src/v11/defaults/start/startBubbleDefaults.js");
 
       const {
-        startBubbleV11: startBubbleWithMock,
-        StartBubbleErrorV11: StartBubbleErrorWithMock
-      } = await import("../../../src/v11/application/start/emitStartV11.js");
+        startBubble: startBubbleWithMock,
+        StartBubbleError: StartBubbleErrorWithMock
+      } = await import("../../../src/v11/application/start/startCommandApi.js");
 
       const thrown = await startBubbleWithMock(
         {

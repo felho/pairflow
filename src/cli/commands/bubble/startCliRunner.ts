@@ -2,13 +2,13 @@ import { realpath } from "node:fs/promises";
 import { resolve as resolvePath } from "node:path";
 
 import {
-  asStartBubbleErrorV11 as asStartBubbleError,
-  startBubbleV11 as startBubble,
-  type StartBubbleV11Result as StartBubbleResult
-} from "../../../v11/application/start/emitStartV11.js";
-import {
-  createStartBubbleError
+  asStartBubbleError,
+  createStartBubbleError,
+  startBubble
 } from "../../../v11/application/start/startCommandApi.js";
+import type {
+  StartBubbleResult
+} from "../../../v11/application/start/startCommandContract.js";
 import {
   IDEATION_METADATA_PARSE_WARNING
 } from "../../../v11/shared/ideation/ideationReasonCodes.js";

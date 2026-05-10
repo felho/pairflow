@@ -6,7 +6,7 @@ import { createUiRouter } from "../../src/v11/infrastructure/ui/router.js";
 import { createBubble } from "../../src/v11/defaults/create/createBubbleApi.js";
 import { openBubble } from "../../src/v11/application/open/openBubble.js";
 import { openBubbleDefaults } from "../../src/v11/defaults/open/openBubbleDefaults.js";
-import { startBubbleV11 } from "../../src/v11/application/start/emitStartV11.js";
+import { startBubble } from "../../src/v11/application/start/startCommandApi.js";
 import { restartBubble } from "../../src/v11/application/restart/restartCommandApi.js";
 import { restartBubbleDependencyDefaults } from "../../src/v11/defaults/restart/restartCommandDefaults.js";
 import { deleteBubble } from "../../src/v11/application/delete/deleteBubble.js";
@@ -65,8 +65,8 @@ describe("UI action API smoke", () => {
     let observedWorktreePath: string | undefined;
     let bubbleDeleted = false;
 
-    const startWithFakeRuntime: typeof startBubbleV11 = (input, dependencies = {}) =>
-      startBubbleV11(input, {
+    const startWithFakeRuntime: typeof startBubble = (input, dependencies = {}) =>
+      startBubble(input, {
         ...dependencies,
         processSpawn: adapters.processSpawn,
         launchBubbleSessionAck: adapters.launchBubbleSessionAck,

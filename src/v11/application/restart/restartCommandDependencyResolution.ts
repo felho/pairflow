@@ -6,7 +6,7 @@ import type {
   BubbleRemotePointer
 } from "../../shared/remote/remoteExecutionTypes.js";
 import type { RestartBubbleDependencies } from "./restartCommandContract.js";
-import { startBubbleV11 as startBubble } from "../start/emitStartV11.js";
+import { startBubble } from "../start/startCommandApi.js";
 import { createRestartBubbleError } from "./restartCommandRuntime.js";
 
 export interface ResolvedRestartBubbleDependencies {

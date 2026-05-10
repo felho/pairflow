@@ -17,7 +17,7 @@ import type * as EmitCommitModule from "../../../src/v11/application/commit/comm
 import type * as EmitReplyModule from "../../../src/v11/application/reply/replyCommandApi.js";
 import type * as RestartCommandModule from "../../../src/v11/application/restart/restartCommandApi.js";
 import type * as EmitResumeModule from "../../../src/v11/application/resume/resumeCommandOrchestration.js";
-import type * as EmitStartModule from "../../../src/v11/application/start/emitStartV11.js";
+import type * as EmitStartModule from "../../../src/v11/application/start/startCommandApi.js";
 import type * as EmitStopModule from "../../../src/v11/application/stop/stopCommandOrchestration.js";
 import {
   projectBubbleStateToUiActionState,
@@ -172,7 +172,7 @@ const emitReplyModulePath =
 const emitResumeModulePath =
   "../../../src/v11/application/resume/resumeCommandOrchestration.js";
 const emitStartModulePath =
-  "../../../src/v11/application/start/emitStartV11.js";
+  "../../../src/v11/application/start/startCommandApi.js";
 const emitStopModulePath = "../../../src/v11/application/stop/stopCommandOrchestration.js";
 const restartCommandModulePath =
   "../../../src/v11/application/restart/restartCommandApi.js";
@@ -418,7 +418,7 @@ async function withMockedApprovalRouteDependencies<T>(
 
 async function withMockedLifecycleRouteDependencies<T>(
   mocks: {
-    startBubbleV11: ReturnType<typeof vi.fn>;
+    startBubble: ReturnType<typeof vi.fn>;
     stopBubbleCommandOrchestration: ReturnType<typeof vi.fn>;
     restartBubble: ReturnType<typeof vi.fn>;
   },
@@ -431,7 +431,7 @@ async function withMockedLifecycleRouteDependencies<T>(
     );
     return {
       ...actual,
-      startBubbleV11: mocks.startBubbleV11
+      startBubble: mocks.startBubble
     };
   });
   vi.doMock(emitStopModulePath, async () => {
@@ -2716,7 +2716,7 @@ describe("createUiRouter action routes", () => {
   it("projects default start, stop, and restart route results to UI action DTOs", async () => {
     let server: Awaited<ReturnType<typeof startRouterServer>> | undefined;
     const repoPath = "/tmp/pairflow-ui-router-lifecycle-defaults";
-    const startBubbleV11 = vi.fn(async () => ({
+    const startBubble = vi.fn(async () => ({
       bubbleId: "b-router-lifecycle-defaults",
       state: rawBubbleStateFixture("b-router-lifecycle-defaults"),
       tmuxSessionName: "pf-b-router-lifecycle-defaults",
@@ -2743,7 +2743,7 @@ describe("createUiRouter action routes", () => {
     try {
       await withMockedLifecycleRouteDependencies(
         {
-          startBubbleV11,
+          startBubble,
           stopBubbleCommandOrchestration,
           restartBubble
         },

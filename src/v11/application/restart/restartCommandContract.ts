@@ -14,10 +14,8 @@ import type {
 import type {
   TerminateBubbleTmuxSessionPort
 } from "../../ports/tmuxSessions.js";
-import type {
-  startBubbleV11 as startBubble,
-  StartBubbleV11Result as StartBubbleResult
-} from "../start/emitStartV11.js";
+import type { startBubble } from "../start/startCommandApi.js";
+import type { StartBubbleResult } from "../start/startCommandContract.js";
 
 export interface RestartBubbleInput {
   bubbleId: string;

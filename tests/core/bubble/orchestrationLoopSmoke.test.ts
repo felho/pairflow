@@ -11,7 +11,7 @@ import {
   emitPassFromWorkspace
 } from "../../../src/v11/application/pass/passCommandOrchestration.js";
 import { createBubble } from "../../../src/v11/defaults/create/createBubbleApi.js";
-import { startBubbleV11 as startBubble } from "../../../src/v11/application/start/emitStartV11.js";
+import { startBubble } from "../../../src/v11/application/start/startCommandApi.js";
 import { readTranscriptEnvelopes } from "../../../src/v11/infrastructure/artifact/transcript/transcriptStore.js";
 import { readStateSnapshot } from "../../../src/v11/infrastructure/state/stateStore.js";
 import type { ProtocolEnvelope } from "../../../src/types/protocol.js";
