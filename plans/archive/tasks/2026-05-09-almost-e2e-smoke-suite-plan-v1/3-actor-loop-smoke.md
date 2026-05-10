@@ -5,7 +5,7 @@ task_family_id: actor-loop-smoke
 sequence_key: "3"
 task_id: 3-actor-loop-smoke
 title: "Actor Loop Smoke"
-status: in_progress
+status: archived
 phase: phase1
 system_context_ref: docs/architecture/almost-e2e-smoke-suite.md
 target_files:
