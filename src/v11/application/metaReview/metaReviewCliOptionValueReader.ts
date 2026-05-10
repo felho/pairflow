@@ -1,4 +1,4 @@
-import { MetaReviewErrorV11 as MetaReviewError } from "./emitMetaReviewV11.js";
+import { MetaReviewError } from "../../shared/metaReview/metaReviewError.js";
 import {
   parseOptionalReworkTarget as parseOptionalReworkTargetValue,
   parseRequiredSubmitText as parseRequiredSubmitTextValue,

@@ -20,7 +20,7 @@ import {
   ApprovalCommandError
 } from "../../../src/v11/application/approval/approvalCommandApi.js";
 import {
-  submitMetaReviewResultV11 as submitMetaReviewResult
+  submitMetaReviewResult
 } from "../../../src/v11/defaults/metaReview/metaReviewApi.js";
 import {
   applyMetaReviewGateOnConvergenceV11 as applyMetaReviewGateOnConvergence,

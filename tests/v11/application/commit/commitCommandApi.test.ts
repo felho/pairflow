@@ -16,7 +16,7 @@ import {
   emitConvergedFromWorkspaceCommandOrchestration as emitConvergedFromWorkspace
 } from "../../../../src/v11/application/converged/convergedCommandOrchestration.js";
 import { emitPassFromWorkspace } from "../../../../src/v11/application/pass/passCommandOrchestration.js";
-import { submitMetaReviewResultV11 as submitMetaReviewResult } from "../../../../src/v11/defaults/metaReview/metaReviewApi.js";
+import { submitMetaReviewResult } from "../../../../src/v11/defaults/metaReview/metaReviewApi.js";
 import { emitApprove } from "../../../../src/v11/application/approval/approvalCommandApi.js";
 import { commitBubble } from "../../../../src/v11/application/commit/commitCommandApi.js";
 import {

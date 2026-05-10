@@ -1,4 +1,4 @@
-import type { MetaReviewSubmitResultV11 as MetaReviewSubmitResult } from "./emitMetaReviewV11.js";
+import type { MetaReviewSubmitResult } from "../../shared/metaReview/metaReviewCommandContract.js";
 import {
   buildMetaReviewSubmitHeaderLines,
   appendMetaReviewOptionalFindingsParityLine,

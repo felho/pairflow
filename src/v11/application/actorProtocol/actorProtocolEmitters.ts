@@ -23,14 +23,14 @@ import {
   emitConvergedFromWorkspaceCommandOrchestration as emitConvergedFromWorkspace
 } from "../converged/convergedCommandOrchestration.js";
 import {
-  submitMetaReviewResultV11 as submitMetaReviewResult
-} from "../metaReview/emitMetaReviewV11.js";
+  submitMetaReviewResult
+} from "../metaReview/metaReviewCommandSubmitRuntime.js";
 import {
   emitPassFromWorkspace
 } from "../pass/passCommandOrchestration.js";
 import type { EmitAskHumanResult } from "../askHuman/askHumanCommandApi.js";
 import type { EmitConvergedResult } from "../converged/convergedCommandOrchestration.js";
-import type { MetaReviewSubmitResultV11 } from "../metaReview/emitMetaReviewV11.js";
+import type { MetaReviewSubmitResult } from "../../shared/metaReview/metaReviewCommandContract.js";
 import type { EmitPassResult } from "../pass/passCommandOrchestration.js";
 
 export type ActorEmitResultV11 =
@@ -48,7 +48,7 @@ export type ActorEmitResultV11 =
     }
   | {
       kind: "meta_review_result";
-      meta_review_result: MetaReviewSubmitResultV11;
+      meta_review_result: MetaReviewSubmitResult;
     };
 
 export function assertActorEmitInputMatchesContext(input: {

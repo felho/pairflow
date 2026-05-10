@@ -8,7 +8,7 @@ import {
   emitConvergedFromWorkspaceCommandOrchestration
 } from "../../../src/v11/application/converged/convergedCommandOrchestration.js";
 import { emitPassFromWorkspace } from "../../../src/v11/application/pass/passCommandOrchestration.js";
-import { submitMetaReviewResult as submitMetaReviewResultV11 } from "../../../src/v11/defaults/metaReview/metaReviewApi.js";
+import { submitMetaReviewResult } from "../../../src/v11/defaults/metaReview/metaReviewApi.js";
 import { emitApprove } from "../../../src/v11/application/approval/approvalCommandApi.js";
 import { commitBubble } from "../../../src/v11/application/commit/commitCommandApi.js";
 import { buildCommitBubbleDependencies } from "../../helpers/commit.js";
@@ -252,7 +252,7 @@ async function setupApprovedBubble(repoPath: string, bubbleId: string) {
     cwd: bubble.paths.worktreePath,
     now: new Date("2026-03-20T13:03:00.000Z")
   });
-  await submitMetaReviewResultV11(
+  await submitMetaReviewResult(
     {
       bubbleId: bubble.bubbleId,
       repoPath,

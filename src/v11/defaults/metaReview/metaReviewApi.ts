@@ -24,9 +24,11 @@ import {
   resolveMetaReviewerPaneWarning
 } from "../../application/metaReviewGate/metaReviewGatePaneBinding.js";
 import {
-  submitMetaReviewResultV11,
-  toMetaReviewErrorV11
-} from "../../application/metaReview/emitMetaReviewV11.js";
+  submitMetaReviewResult as submitMetaReviewResultImpl
+} from "../../application/metaReview/metaReviewCommandSubmitRuntime.js";
+import {
+  toMetaReviewError
+} from "../../application/metaReview/internal/submit/metaReviewCommandErrorMapping.js";
 import {
   notifyMetaReviewerSubmissionRequestV11
 } from "../metaReviewGate/metaReviewGateApi.js";
@@ -37,14 +39,7 @@ import {
   metaReviewDefaults
 } from "./metaReviewDefaults.js";
 
-export {
-  submitMetaReviewResult as submitMetaReviewResultV11,
-  toMetaReviewErrorV11 as toMetaReviewError
-};
-export { toMetaReviewErrorV11 };
-export type {
-  MetaReviewSubmitResultV11
-} from "../../application/metaReview/emitMetaReviewV11.js";
+export { toMetaReviewError };
 export {
   clearLiveMetaReviewSnapshot,
   MetaReviewError,
@@ -77,5 +72,5 @@ export async function submitMetaReviewResult(
   input: MetaReviewSubmitInput,
   dependencies: MetaReviewCommandDependencies = {}
 ): Promise<MetaReviewSubmitResult> {
-  return submitMetaReviewResultV11(input, withMetaReviewDefaults(dependencies));
+  return submitMetaReviewResultImpl(input, withMetaReviewDefaults(dependencies));
 }

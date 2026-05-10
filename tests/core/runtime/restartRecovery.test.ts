@@ -9,7 +9,7 @@ import { emitConvergedFromWorkspaceCommandOrchestration as emitConvergedFromWork
 import { emitPassFromWorkspace } from "../../../src/v11/application/pass/passCommandOrchestration.js";
 import { runAgentEmitCommand } from "../../../src/cli/commands/agent/emit.js";
 import { createBubble } from "../../../src/v11/defaults/create/createBubbleApi.js";
-import { submitMetaReviewResultV11 as submitMetaReviewResult } from "../../../src/v11/defaults/metaReview/metaReviewApi.js";
+import { submitMetaReviewResult } from "../../../src/v11/defaults/metaReview/metaReviewApi.js";
 import { applyMetaReviewGateOnConvergenceV11 as applyMetaReviewGateOnConvergence } from "../../../src/v11/defaults/metaReviewGate/metaReviewGateApi.js";
 import { startBubble } from "../../../src/v11/application/start/startCommandApi.js";
 import { buildMetaReviewExecutionContext } from "../../../src/v11/shared/metaReview/metaReviewExecutionContext.js";
