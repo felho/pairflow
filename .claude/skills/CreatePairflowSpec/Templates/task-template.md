@@ -77,6 +77,15 @@ Include this section when `target_files` are known. Otherwise say `N/A`.
 5. Branch inventory note: <fresh/reused, success/failure, retry/no-retry, precondition-pass/fail, or `N/A`.>
 6. Why the declared task shape matches reality: <Short scope-proof, or `TODO_BLOCKER`.>
 
+### Refactor Classification
+
+Include this section when the task is a refactor or target-file reality shows
+refactor behavior. Otherwise say `N/A`.
+
+1. Classification: <`mechanical|local_cleanup|boundary_architecture|N/A`>
+2. Classification triggers: <trigger list or fast-path rationale>
+3. Preparatory modifier: <`yes|no` + follow-up artifact/ID if yes>
+
 ### Authority Boundary Map
 
 1. Authority producer: <What produces canonical authority in or before this task. If N/A, say N/A.>
@@ -210,31 +219,45 @@ Include this section when the task modifies an existing mutation flow or introdu
 | Task-list impact | <refines|replaces|obsoletes|`N/A`> | <what existing open task is affected> | P1 | required-now |
 | Inherited validation / exit expectation | <explicit rule or `N/A`> | <what evidence or exit expectation this task must satisfy> | P1 | required-now |
 
-### 0d) Shared Contract Compatibility (if applicable)
+### 0d) Refactor Classification and Module Depth Check (if applicable)
+
+| Item | Rule | Implementation / Review Consequence | Priority | Timing |
+|---|---|---|---|---|
+| Refactor classification | <`mechanical|local_cleanup|boundary_architecture|N/A`> | <what standard applies> | P1 | required-now |
+| Trigger reasons / fast path | <trigger list or fast-path rationale> | <why Module Depth Check is or is not required> | P1 | required-now |
+| Deletion test: no caller-knowledge increase | <if deleting the new module would not increase what callers must know, explain why it is not pass-through ceremony; otherwise `N/A`> | <proves the module is not only file movement> | P1 | required-now |
+| Deletion test: caller-knowledge returns | <if deleting the new module would force callers to reimplement ordering, validation, policy, or invariants, name what knowledge moved behind the module; otherwise `N/A`> | <proves the module earns its interface> | P1 | required-now |
+| Caller knowledge removed | <answer or `N/A`> | <what callers no longer need to know> | P1 | required-now |
+| Public interface change | <smaller/stabler interface or `N/A`> | <new caller contract or no public change> | P1 | required-now |
+| Behavior hidden behind module | <ordering/policy/validation/canonicalization/persistence/invariant or `N/A`> | <what moved behind the module> | P1 | required-now |
+| Test shape | <production caller seam vs helper tests + reason> | <what tests must exercise> | P1 | required-now |
+| Public helpers/wrappers | <delete/demote/retain + justification or `N/A`> | <surface cleanup expectation> | P1 | required-now |
+
+### 0e) Shared Contract Compatibility (if applicable)
 
 | Shared Contract | Current Consumers | Change Type (`additive|breaking|N/A`) | This Task Action | Deferred Alignment |
 |---|---|---|---|---|
 | <path/interface/result-shape> | <list or `N/A`> | <type> | <what this task does> | <successor task or `N/A`> |
 
-### 0e) Baseline Preservation (if applicable)
+### 0f) Baseline Preservation (if applicable)
 
 | Current Behavior | Preserve/Replace/Forbid | Required Proof | Priority | Timing |
 |---|---|---|---|---|
 | <current deterministic path or `N/A`> | <preserve|replace|forbid> | <equivalence/replacement evidence or `N/A`> | P1 | required-now |
 
-### 0f) Success / Completion Proof Boundary (if applicable)
+### 0g) Success / Completion Proof Boundary (if applicable)
 
 | Surface | Current Proof Source | Target Proof Source | Canonical / Compat / Guard | Mixed-Truth Allowed? | Priority | Timing |
 |---|---|---|---|---|---|---|
 | <result/status/event surface or `N/A`> | <text> | <text> | <canonical|compat|guard> | <no|yes + why> | P1 | required-now |
 
-### 0g) Precondition and Side-Effect Boundary (if applicable)
+### 0h) Precondition and Side-Effect Boundary (if applicable)
 
 | Case | Must Be Validated Before | Forbidden Early Side Effects | Required Failure Behavior | Priority | Timing |
 |---|---|---|---|---|---|
 | invalid input / unmet precondition | <validation or `N/A`> | <forbidden mutation(s) or `N/A`> | <zero-side-effect or bounded failure rule> | P1 | required-now |
 
-### 0h) Canonical Contract Matrix (if Contract-Dense Task Gate applies)
+### 0i) Canonical Contract Matrix (if Contract-Dense Task Gate applies)
 
 Use this as the source of truth for dense contracts. Other sections may
 summarize or reference these rows, but must not define conflicting behavior.
@@ -243,25 +266,25 @@ summarize or reference these rows, but must not define conflicting behavior.
 |---|---|---|---|---|---|---|---|
 | CCM1 | <condition or `N/A`> | <current task|successor|consumer|N/A> | <status/result> | <code or `N/A`> | <fields retained/dropped> | <allowed/forbidden> | <T* or `N/A`> |
 
-### 0i) Ownership and Deferred Semantics (if Contract-Dense Task Gate applies)
+### 0j) Ownership and Deferred Semantics (if Contract-Dense Task Gate applies)
 
 | Surface / Decision | Owned By This Task | Emits / Records Only | Deferred Owner | Forbidden Interpretation / Fallback | Priority | Timing |
 |---|---|---|---|---|---|---|
 | <contract surface or `N/A`> | <yes/no + rule> | <data emitted but not interpreted> | <successor/consumer or `N/A`> | <forbidden inference> | P1 | required-now |
 
-### 0j) Structured Contract Rules (if applicable)
+### 0k) Structured Contract Rules (if applicable)
 
 | Structured Contract | Required Fields | Optional Fields | Allowed Top-Level Fields / Variants | Unknown / Malformed / Duplicate Behavior | Retention / Drop Rule | Fallback Status / Reason | Priority | Timing |
 |---|---|---|---|---|---|---|---|---|
 | <schema/payload/result or `N/A`> | <fields> | <fields> | <allowlist> | <behavior> | <retained/dropped> | <status/code> | P1 | required-now |
 
-### 0k) Mirrored Surface Checklist (if Contract-Dense Task Gate applies)
+### 0l) Mirrored Surface Checklist (if Contract-Dense Task Gate applies)
 
 | Canonical Matrix Row | Mirrored Surfaces | Required Alignment Rule | Summary-Only Surface? | Verification |
 |---|---|---|---|---|
 | <CCM*> | <L0/branch inventory/§2/§4/§4a/§6/parent plan/etc.> | <what must stay aligned> | <yes/no + source row> | <how checked> |
 
-### 0l) Capability Closure (if applicable)
+### 0m) Capability Closure (if applicable)
 
 | Capability Claim | Activation Trigger | Entrypoint | Config Owner | Repo-Provided Parts | External Prerequisites | Success Output | Failure Output | Operator/User/System Path | Last-Mile Proof | Closure Classification |
 |---|---|---|---|---|---|---|---|---|---|---|
@@ -339,12 +362,16 @@ Use this section to track non-blocking review items (`later-hardening`) that sho
    require last-mile proof; hook/foundation/deferred work must not assert fully
    usable automation.
 11. If `target_files` are known, `Scope Reality / Shape Proof` is mandatory and the declared task shape must match the inspected touched scope.
-12. If the task refines an already-closed authority/shared contract, `Canonical Contract Anchors` and `Canonical Contract Preservation` are mandatory.
-13. New terminology for an existing contract must map back to source anchors and field roles explicitly before it can become `required-now`.
-14. If the Contract-Dense Task Gate triggers, `Canonical Contract Matrix`,
+12. If the task is a refactor or target-file reality shows refactor behavior,
+   `Refactor Classification` is mandatory; if classified as
+   Boundary/Architecture, `Refactor Classification and Module Depth Check` is
+   mandatory.
+13. If the task refines an already-closed authority/shared contract, `Canonical Contract Anchors` and `Canonical Contract Preservation` are mandatory.
+14. New terminology for an existing contract must map back to source anchors and field roles explicitly before it can become `required-now`.
+15. If the Contract-Dense Task Gate triggers, `Canonical Contract Matrix`,
    `Ownership and Deferred Semantics`, and `Mirrored Surface Checklist` are
    mandatory.
-15. If structured input/output is part of a dense contract, `Structured Contract
+16. If structured input/output is part of a dense contract, `Structured Contract
    Rules` is mandatory and must use allowlist/rejection behavior instead of
    prose-only validity language.
 

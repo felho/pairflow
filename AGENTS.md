@@ -24,6 +24,21 @@
 - Important `v11` extracts must have explicit typed boundaries; do not rely on implicit meaning reconstructed from call sites.
 - If protocol or state machine behavior changes, update the spec in the same work.
 
+## Refactoring Guidance
+
+For refactors, first classify the change.
+
+Fast-path mechanical/local cleanup is allowed only when the change does not
+touch:
+- `internal/**` paths,
+- public exports or new module entrypoints,
+- cross-layer placement (shared/domain/application/infrastructure/contracts),
+- command orchestration or state/persistence ordering,
+- authority, validation, or canonicalization flow.
+
+If any of those apply, consult `docs/architecture/refactoring-guidance.md` and
+run the Boundary/Architecture checks.
+
 ## Architecture Fitness Drift Policy
 
 When changing lifecycle, transcript/state ordering, execution-context ownership,

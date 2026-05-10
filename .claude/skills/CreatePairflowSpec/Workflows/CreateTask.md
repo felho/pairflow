@@ -179,7 +179,41 @@ Policy:
 5. If the actual scope mixes multiple correctness closures and the artifact cannot prove the mix is safe, split before drafting L1.
 6. If the touched scope changes where success/completion is proven, and also changes cleanup/recovery behavior or final result/status/event surfaces, split unless the artifact can prove a single bounded closure with no mixed-truth ambiguity.
 
-### 1b) Run the Control-Model Readiness Gate
+### 1b) Run the Refactoring Guidance Gate
+
+Use `references/Refactoring-Guidance-Gate.md`.
+
+Run this gate whenever the requested work is a refactor or the target-file
+reality check shows refactor behavior.
+
+Evaluate the gate after the target-file reality check so classification is based
+on actual target files, adjacent entrypoints, and caller/test surfaces rather
+than only on the task title.
+
+Required output:
+1. `refactor_classification`: `mechanical | local_cleanup | boundary_architecture | N/A`
+2. `classification_triggers`: concrete trigger reasons, or fast-path rationale
+   when classified as mechanical/local cleanup.
+3. `preparatory_modifier`: `yes | no`, plus follow-up artifact/ID when `yes`.
+4. `module_depth_check`: required when classification is
+   `boundary_architecture`; otherwise `N/A`.
+5. `test_shape_expectation`: how tests should cross the intended module seam,
+   or why helper-level tests remain valid independent policy coverage.
+6. `public_helper_surface_action`: wrappers/helpers to delete, demote, retain,
+   or justify.
+
+Policy:
+1. If any Boundary/Architecture trigger fires, do not let the task self-declare
+   as simple cleanup without recording why no caller-knowledge reduction is
+   expected.
+2. If classification is `boundary_architecture`, the task must include Module
+   Depth Check answers before L1 is finalized.
+3. Mechanical/local cleanup may preserve the current interface, but must not add
+   new public helper surfaces.
+4. If tests would still reconstruct production behavior through internal helper
+   imports, require task refinement unless the helper owns independent policy.
+
+### 1c) Run the Control-Model Readiness Gate
 
 Use `references/Control-Model-Readiness-Gate.md`.
 
@@ -222,7 +256,7 @@ Policy:
 7. Do not let `forbidden_fallback` wording accidentally ban deterministic same-authority resolution paths unless the referenced artifact or task says so explicitly.
 8. If the task changes where success/completion is proven, it must make that proof boundary explicit instead of leaving it implicit inside call-site or cleanup wording.
 
-### 1b.1) Run the Closed-Contract Drift Check
+### 1d) Run the Closed-Contract Drift Check
 
 Use `references/Closed-Contract-Drift-Check.md`.
 
@@ -247,7 +281,7 @@ Policy:
 3. New terminology for an existing contract is allowed only if the artifact anchors it to explicit source refs and field roles.
 4. If `drift_status` is `ambiguous_drift` or `unauthorized_reinterpretation`, stop and refine the artifact or route back to plan instead of drafting implementation-ready L1.
 
-### 1c) Run the Authority Fan-out Scan
+### 1e) Run the Authority Fan-out Scan
 
 Run this scan whenever:
 1. `authority_risk >= 1`
@@ -288,7 +322,7 @@ Policy:
    - and which downstream consumer/read-model/cleanup closures remain for successor tasks.
 8. If success/completion proof cutover changes what multiple surfaces report as final truth, treat those surfaces as consume families for split analysis even when they share one command entrypoint.
 
-### 1d) Run the Shared Contract Compatibility Gate
+### 1f) Run the Shared Contract Compatibility Gate
 
 Run this gate when a shared interface/result shape, shared port, or shared artifact contract is changing.
 
@@ -304,7 +338,7 @@ Policy:
    - route back to plan refinement.
 3. Do not let a foundation task smuggle in downstream consumer alignment just because the changed contract is shared.
 
-### 1d.1) Run the Contract-Dense Task Gate
+### 1g) Run the Contract-Dense Task Gate
 
 Use `references/Contract-Dense-Task-Gate.md`.
 
@@ -343,7 +377,7 @@ Policy:
 3. If a reviewer finding changes a canonical matrix row, update every mirrored
    surface named by the checklist before handoff.
 
-### 1d.1a) Run the Capability Closure Gate
+### 1h) Run the Capability Closure Gate
 
 Use `references/Capability-Closure-Gate.md`.
 
@@ -388,7 +422,7 @@ Policy:
 4. If this task cannot close a parent-plan `end_to_end` claim as written, route
    back to plan refinement or split out the missing activation task.
 
-### 1d.2) Run the Closure-Budget Gate
+### 1i) Run the Closure-Budget Gate
 
 Run this gate when the task touches authority/runtime/read-model/shared-contract work.
 
@@ -412,7 +446,7 @@ Policy:
 5. If that proof is not available from the loaded context, do not guess; route back to `CreatePlan`.
 6. If the task changes canonical success/completion proof source and also changes cleanup/recovery or final result/status/event semantics, do not finalize as one bounded task unless the artifact includes an explicit proof-boundary mapping and mixed-truth justification.
 
-### 1d.3) Run the Bounded-Task-Shape Gate
+### 1j) Run the Bounded-Task-Shape Gate
 
 Use `references/Bounded-Task-Shape-Gate.md`.
 
@@ -433,7 +467,7 @@ Policy:
 6. If the task mixes `authority_producer` with `fail_closed_hardening` or `coordination_concurrency_hardening` without an explicit bounded proof, route back to `CreatePlan`.
 7. If the task changes success/completion proof boundary and also changes compat result/status/event semantics, treat that as mixed-shape by default and route back to `CreatePlan` unless an explicit bounded proof says otherwise.
 
-### 1e) Run the Complexity-Risk Gate
+### 1k) Run the Complexity-Risk Gate
 
 Use `references/Complexity-Risk-Gate.md`.
 
@@ -516,30 +550,39 @@ Required blockers for Task output:
    - successor tasks unlocked or impacted,
    - obsolete/refined task IDs if the current split/replacement changes the task list,
    - plan-level validation or exit expectation inherited by this task.
-6. Target-file reality proof is mandatory when `target_files` are known:
+7. Target-file reality proof is mandatory when `target_files` are known:
    - actual mutation entrypoints reviewed,
    - touched producer/fail-closed/coordination scope explicitly stated,
    - precondition-before-side-effect changes called out when present,
    - and any mismatch between requested label and actual scope is resolved in favor of actual scope.
-7. `L0`: goal, in-scope, out-of-scope, safety default
-8. `L1`: call-site/entry points, data/interface contract, error/fallback, test matrix
-9. If contract-boundary override is active:
+8. Refactor classification is mandatory when the requested work is a refactor
+   or target-file reality shows refactor behavior:
+   - classification recorded,
+   - trigger reasons or fast-path rationale recorded,
+   - preparatory modifier recorded,
+   - Module Depth Check answered when classification is
+     `boundary_architecture`,
+   - test-shape expectation recorded,
+   - public helper/wrapper action recorded.
+9. `L0`: goal, in-scope, out-of-scope, safety default
+10. `L1`: call-site/entry points, data/interface contract, error/fallback, test matrix
+11. If contract-boundary override is active:
    - L1 `Data and Interface Contract` must have impacted contract rows
    - L1 test matrix must include at least one compatibility or migration scenario
-10. L1 contract details must be explicit:
+12. L1 contract details must be explicit:
    - required vs optional fields for impacted schemas/types
    - exact function signature for changed public entry points
    - if no allowed side effects are listed, mark pure behavior
    - if dependency exists, include dependency-failure fallback row
-11. Cross-reference and token integrity must be explicit:
+13. Cross-reference and token integrity must be explicit:
    - referenced IDs must resolve to existing rows/clauses/tokens,
    - canonical token names must be used consistently (no shorthand aliases).
-12. Complexity-risk blockers must be explicit:
+14. Complexity-risk blockers must be explicit:
    - if `risk_score >= 4`, split decision must be recorded,
    - if `identity_join_risk >= 1`, the task must state the matching seam and forbidden fallback identities,
    - if `risk_score >= 8` or hard-stop applies, task must not pretend to be direct one-shot delivery,
    - authority/source-of-truth note is mandatory when authority risk is non-zero.
-13. Control-model blockers must be explicit whenever applicable:
+15. Control-model blockers must be explicit whenever applicable:
    - `business_invariant`
    - `control_model`
    - `read_path_rule`
@@ -547,17 +590,17 @@ Required blockers for Task output:
    - `allowed_resolution_path`
    - `missing_data_rule`
    - `phase_boundary`
-14. If any control-model blocker is missing and correctness depends on it, the task is not ready. Ask focused blocker questions instead of drafting around the gap.
-15. If a shared contract is changing, blockers also include:
+16. If any control-model blocker is missing and correctness depends on it, the task is not ready. Ask focused blocker questions instead of drafting around the gap.
+17. If a shared contract is changing, blockers also include:
    - current consumers inventory,
    - additive vs breaking decision,
    - explicit alignment ownership.
-16. If the Contract-Dense Task Gate triggers, blockers also include:
+18. If the Contract-Dense Task Gate triggers, blockers also include:
    - canonical contract matrix,
    - ownership and deferred semantics,
    - structured contract rules when applicable,
    - mirrored surface checklist.
-17. If the Capability Closure Gate triggers, blockers also include:
+19. If the Capability Closure Gate triggers, blockers also include:
    - capability claim,
    - closure classification,
    - activation trigger and entrypoint,
@@ -566,32 +609,32 @@ Required blockers for Task output:
    - success and failure output contracts,
    - operator/user/system path,
    - last-mile proof or explicit hook/foundation/deferred classification.
-18. If the task refines or replaces an existing canonicalization/resolution path, blockers also include:
+20. If the task refines or replaces an existing canonicalization/resolution path, blockers also include:
    - `must_preserve_behaviors`,
    - `allowed_resolution_paths`,
    - `forbidden_regression_interpretations`,
    - `replacement_proof_required_if_removed`.
-19. If authority/runtime/read-model/shared-contract work is in scope, blockers also include closure-budget triage:
+21. If authority/runtime/read-model/shared-contract work is in scope, blockers also include closure-budget triage:
    - closure buckets touched,
    - collapsed closures,
    - deferred closures,
    - why the remaining bounded task is safe.
-20. If the task modifies an existing mutation flow, blockers also include a `Precondition and Side-Effect Boundary`:
+22. If the task modifies an existing mutation flow, blockers also include a `Precondition and Side-Effect Boundary`:
    - validations that must pass before mutations,
    - side effects forbidden before those validations pass,
    - invalid/precondition-failure behavior,
    - coordination primitives in scope or explicitly deferred.
-21. If three or more consume families are implicated, blockers also include explicit sequencing ownership:
+23. If three or more consume families are implicated, blockers also include explicit sequencing ownership:
    - whether this task is producer, consumer-family alignment, activation, read-model, or cleanup,
    - what producer/predecessor closure it depends on,
    - and which downstream closures remain for successor tasks.
-22. If the task cannot name a primary bounded-task shape, or mixes producer with fail-closed/coordination work without an explicit bounded proof, the task is not ready.
-23. If the Closed-Contract Drift Check applies, blockers also include:
+24. If the task cannot name a primary bounded-task shape, or mixes producer with fail-closed/coordination work without an explicit bounded proof, the task is not ready.
+25. If the Closed-Contract Drift Check applies, blockers also include:
    - repo-local source anchors,
    - canonical vs guard vs compat classification,
    - forbidden reinterpretations,
    - drift status proving there is no unauthorized semantic change.
-24. If the task changes an existing mutable flow's success/completion semantics, blockers also include:
+26. If the task changes an existing mutable flow's success/completion semantics, blockers also include:
    - current canonical success/completion proof source,
    - target canonical success/completion proof source,
    - final result/status/event truth-surface mapping,
@@ -613,18 +656,23 @@ If blockers exist, ask only focused questions for those blockers.
    - whether producer/fail-closed/coordination scope is actually touched,
    - whether mutation boundary changes exist,
    - and why the declared task shape matches the real scope.
-8. If applicable, include an `Authority Boundary Map` and use it to say what this task intentionally does not close.
-9. If the task touches an existing runtime authority/resolution path, include a `Baseline Preservation` section and say explicitly what is preserved vs intentionally replaced.
-10. If the task touches an existing mutation flow, include a `Precondition and Side-Effect Boundary` section.
-11. If `plan_ref` exists, include a `Plan Linkage` section and keep it task-local:
+8. Include a `Refactor Classification` section when refactor work is in scope
+   and use it to record:
+   - classification,
+   - trigger reasons or fast-path rationale,
+   - preparatory modifier.
+9. If applicable, include an `Authority Boundary Map` and use it to say what this task intentionally does not close.
+10. If the task touches an existing runtime authority/resolution path, include a `Baseline Preservation` section and say explicitly what is preserved vs intentionally replaced.
+11. If the task touches an existing mutation flow, include a `Precondition and Side-Effect Boundary` section.
+12. If `plan_ref` exists, include a `Plan Linkage` section and keep it task-local:
    - closes gap,
    - depends on,
    - unlocks or impacts successors,
    - refines/replaces/obsoletes any prior open task,
    - inherits which plan-level validation/exit expectation.
-12. Record primary bounded-task shape explicitly, and secondary shape only when justified.
-13. If the Closed-Contract Drift Check applies, include canonical contract anchors and say explicitly which meanings are preserved rather than silently rephrased.
-14. If the task changes success/completion semantics of an existing mutable flow, include a `Success / Completion Proof Boundary` section.
+13. Record primary bounded-task shape explicitly, and secondary shape only when justified.
+14. If the Closed-Contract Drift Check applies, include canonical contract anchors and say explicitly which meanings are preserved rather than silently rephrased.
+15. If the task changes success/completion semantics of an existing mutable flow, include a `Success / Completion Proof Boundary` section.
 
 ### 5) L1 pass
 
@@ -633,22 +681,24 @@ Fill each section or mark `N/A`:
 2. Canonical contract preservation (required when the Closed-Contract Drift Check applies; otherwise `N/A`)
 3. Scope reality and shape proof (required when `target_files` are known; otherwise `N/A`)
 4. Plan linkage and successor impact (required when `plan_ref` exists; otherwise `N/A`)
-5. Call-site matrix
-6. Data and interface contract
-7. Side effects contract
-8. Error and fallback contract
-9. Dependency constraints
-10. Test matrix (at least one golden path and one invalid case)
-11. Shared contract compatibility (required when a shared interface/result shape changes; otherwise `N/A`)
-12. Baseline preservation (required when an existing canonicalization/resolution path is refined or replaced; otherwise `N/A`)
-13. Closure-budget summary (required when authority/runtime/read-model/shared-contract work is in scope; otherwise `N/A`)
-14. Precondition and side-effect boundary (required when an existing mutation flow is modified or coordination primitives are introduced; otherwise `N/A`)
-15. Success / completion proof boundary (required when an existing mutable flow's completion semantics or final truth surfaces change; otherwise `N/A`)
-16. Canonical contract matrix (required when the Contract-Dense Task Gate triggers; otherwise `N/A`)
-17. Ownership and deferred semantics (required when the Contract-Dense Task Gate triggers; otherwise `N/A`)
-18. Structured contract rules (required when the gate triggers and structured input/output is involved; otherwise `N/A`)
-19. Mirrored surface checklist (required when the Contract-Dense Task Gate triggers; otherwise `N/A`)
-20. Capability closure (required when the Capability Closure Gate triggers; otherwise `N/A`)
+5. Refactor classification and Module Depth Check (required when refactor work
+   is in scope; Module Depth Check required only for Boundary/Architecture)
+6. Call-site matrix
+7. Data and interface contract
+8. Side effects contract
+9. Error and fallback contract
+10. Dependency constraints
+11. Test matrix (at least one golden path and one invalid case)
+12. Shared contract compatibility (required when a shared interface/result shape changes; otherwise `N/A`)
+13. Baseline preservation (required when an existing canonicalization/resolution path is refined or replaced; otherwise `N/A`)
+14. Closure-budget summary (required when authority/runtime/read-model/shared-contract work is in scope; otherwise `N/A`)
+15. Precondition and side-effect boundary (required when an existing mutation flow is modified or coordination primitives are introduced; otherwise `N/A`)
+16. Success / completion proof boundary (required when an existing mutable flow's completion semantics or final truth surfaces change; otherwise `N/A`)
+17. Canonical contract matrix (required when the Contract-Dense Task Gate triggers; otherwise `N/A`)
+18. Ownership and deferred semantics (required when the Contract-Dense Task Gate triggers; otherwise `N/A`)
+19. Structured contract rules (required when the gate triggers and structured input/output is involved; otherwise `N/A`)
+20. Mirrored surface checklist (required when the Contract-Dense Task Gate triggers; otherwise `N/A`)
+21. Capability closure (required when the Capability Closure Gate triggers; otherwise `N/A`)
 
 Rules:
 1. `target_files` must align with call-site matrix.
@@ -660,30 +710,37 @@ Rules:
 7. If the risk gate forced a split, L1 must only describe the bounded phase, not the whole original umbrella feature.
 8. If the control-model gate applied, L1 must make the allowed read-path, forbidden fallbacks, and missing-data behavior concrete enough for implementation.
 9. If `target_files` are known, L1 must name the inspected mutation/call-site reality and must resolve any mismatch between requested label and actual scope in favor of actual scope.
-10. If the authority fan-out scan applied, L1 must keep producer closure and consumer-family closure separated unless the artifact explicitly documents why they are inseparable.
-11. If the shared contract compatibility gate applied, L1 must make additive vs breaking behavior explicit and name any out-of-scope consumers.
-12. If baseline-preservation applies, L1 must distinguish:
+10. If refactor classification is `boundary_architecture`, L1 must show what
+    caller knowledge is removed, which interface becomes smaller or more
+    stable, which behavior moves behind the module, and how test shape follows
+    the production caller seam.
+11. If refactor classification is `mechanical` or `local_cleanup`, L1 must not
+    introduce new public helper surface unless the task is reclassified or
+    explicitly refined.
+12. If the authority fan-out scan applied, L1 must keep producer closure and consumer-family closure separated unless the artifact explicitly documents why they are inseparable.
+13. If the shared contract compatibility gate applied, L1 must make additive vs breaking behavior explicit and name any out-of-scope consumers.
+14. If baseline-preservation applies, L1 must distinguish:
    - forbidden heuristic fallbacks,
    - allowed deterministic same-authority resolution paths,
    - and any exact replacement path that justifies removing a current behavior.
-13. If the task touches a mutable flow, L1 must make explicit which validations occur before any side effect and what invalid/precondition-failure path proves zero-side-effect or bounded-side-effect behavior.
-14. If `plan_ref` exists, L1 must name the exact parent gap this task closes and what successor work remains or is invalidated.
-15. If the task inherits a plan-level exit expectation, the test matrix or a validation note must make that inheritance concrete enough to review.
-16. If the Closed-Contract Drift Check applies, L1 must make canonical vs guard vs compat roles concrete enough that a reviewer can detect semantic drift, not just wording polish.
-17. If success/completion proof boundary changes, L1 must make explicit:
+15. If the task touches a mutable flow, L1 must make explicit which validations occur before any side effect and what invalid/precondition-failure path proves zero-side-effect or bounded-side-effect behavior.
+16. If `plan_ref` exists, L1 must name the exact parent gap this task closes and what successor work remains or is invalidated.
+17. If the task inherits a plan-level exit expectation, the test matrix or a validation note must make that inheritance concrete enough to review.
+18. If the Closed-Contract Drift Check applies, L1 must make canonical vs guard vs compat roles concrete enough that a reviewer can detect semantic drift, not just wording polish.
+19. If success/completion proof boundary changes, L1 must make explicit:
    - what proves success now,
    - what proves completion now,
    - which final result/status/event surfaces use which proof,
    - and whether any compat surface intentionally remains mixed-truth or must stay single-truth.
-18. If the Contract-Dense Task Gate triggers, L1 must make one canonical matrix
+20. If the Contract-Dense Task Gate triggers, L1 must make one canonical matrix
    the source of truth and must keep mirrored prose, fallback, classification,
    and test sections subordinate to it.
-19. If structured input/output is involved, L1 must state unknown-field,
+21. If structured input/output is involved, L1 must state unknown-field,
    malformed/partial/duplicate/multi-candidate, and retention/drop behavior
    explicitly rather than relying on `valid`/`parseable` prose.
-20. If ownership is split across this task and successors, L1 tests must not
+22. If ownership is split across this task and successors, L1 tests must not
    assert successor-owned semantics as current-task behavior.
-21. If the Capability Closure Gate triggers, L1 must keep Done Definition,
+23. If the Capability Closure Gate triggers, L1 must keep Done Definition,
    acceptance, validation, and test wording aligned with the closure
    classification. `end_to_end` requires last-mile proof; hook/foundation/
    deferred work must not assert fully usable automation.

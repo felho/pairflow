@@ -134,15 +134,16 @@ For `plan-mode`, apply:
 For `task-mode`, apply:
 1. Execution metadata gate when applicable
 2. `Target-File Reality Check`
-3. `Control-Model Readiness Gate`
-4. `Closed-Contract Drift Check` when applicable
-5. `Authority Fan-out Scan`
-6. `Closure-Budget Gate`
-7. `Bounded-Task-Shape Gate`
-8. `Complexity-Risk Gate`
-9. `Contract-Dense Task Gate` when applicable
-10. `Capability Closure Gate` when applicable
-11. `Remaining-Task Viability Check`
+3. `Refactoring Guidance Gate` when applicable
+4. `Control-Model Readiness Gate`
+5. `Closed-Contract Drift Check` when applicable
+6. `Authority Fan-out Scan`
+7. `Closure-Budget Gate`
+8. `Bounded-Task-Shape Gate`
+9. `Complexity-Risk Gate`
+10. `Contract-Dense Task Gate` when applicable
+11. `Capability Closure Gate` when applicable
+12. `Remaining-Task Viability Check`
 
 Policy:
 1. Review whether the artifact still fits the planning shape it claims.
@@ -151,10 +152,13 @@ Policy:
 4. In `task-mode`, if the target-file reality check disagrees with the task label, trust the reality check.
 5. Do not hide a widened scope behind the phrase "implementation review is forbidden." Scope-reality validation is mandatory in `task-mode`.
 6. Do not approve a refined artifact just because the wording reads cleaner if it silently reinterprets a closed contract.
-7. Do not approve a contract-dense task just because each section is locally
+7. Do not approve a refactor task when the Refactoring Guidance Gate concludes
+   Boundary/Architecture but the task omits refactor classification or Module
+   Depth evidence.
+8. Do not approve a contract-dense task just because each section is locally
    plausible; review the canonical matrix first, then verify all mirrored
    surfaces remain subordinate to it.
-8. Do not approve an artifact whose Done Definition, acceptance criteria, or
+9. Do not approve an artifact whose Done Definition, acceptance criteria, or
    validation strategy claims a stronger capability than its activation path and
    proof support.
 
@@ -195,7 +199,43 @@ Outcome:
 1. Record whether the task is still correctly classified.
 2. If not, require `refine_task` or `route_back_to_plan`.
 
-### 2c) Contract-Dense Task Gate (`task-mode` when applicable)
+### 2c) Refactoring Guidance Gate (`task-mode` when applicable)
+
+Use `references/Refactoring-Guidance-Gate.md`.
+
+Run this when the reviewed task is a refactor, is labeled as a refactor, or the
+target-file reality check shows refactor behavior.
+
+Required checks:
+1. The task includes `Refactor Classification` when refactor behavior is in
+   scope.
+2. The recorded classification matches target-file reality:
+   - mechanical/local cleanup must not add public helper surface,
+   - Boundary/Architecture triggers must not be hidden behind cleanup wording.
+3. If classification is `boundary_architecture`, the task includes usable
+   Module Depth Check evidence:
+   - deletion test,
+   - caller knowledge removed,
+   - public interface change,
+   - behavior hidden behind the module,
+   - test shape,
+   - public helper/wrapper action.
+4. The task's test matrix and dependency constraints do not preserve shallow
+   production-order reconstruction through internal helper imports unless the
+   helper owns independent policy.
+5. The refactor's actual scope fits within the parent plan's decomposition. If
+   Boundary/Architecture work reveals wider scope than the parent task can
+   locally own, treat that as a route-back signal, not local wording cleanup.
+
+Outcome:
+1. If classification is missing or disagrees with target-file reality, require
+   `refine_task`.
+2. If the refactor changes the parent plan's decomposition or creates a wider
+   boundary than the task can locally own, return `route_back_to_plan`.
+3. If only Module Depth evidence is missing or thin, require local
+   `refine_task` and cite the missing evidence field.
+
+### 2d) Contract-Dense Task Gate (`task-mode` when applicable)
 
 Use `references/Contract-Dense-Task-Gate.md`.
 
@@ -228,7 +268,7 @@ Outcome:
 3. If only a mirrored surface is stale while the matrix is clear, require local
    `refine_task` and cite the stale surface.
 
-### 2d) Capability Closure Gate (`plan-mode|task-mode` when applicable)
+### 2e) Capability Closure Gate (`plan-mode|task-mode` when applicable)
 
 Use `references/Capability-Closure-Gate.md`.
 
@@ -298,17 +338,19 @@ Refinement loop rule:
 
 When reviewing a `task`, check:
 1. whether the target-file reality check supports the claimed bounded slice
-2. whether the bounded task shape is explicit and still true
-3. whether producer work has absorbed fail-closed or coordination scope
-4. whether precondition-before-side-effect rules are explicit when needed
-5. whether the task still fits its parent gap and parent plan boundary
-6. whether the task silently reinterprets any already-closed canonical contract
-7. whether the task changes success/completion proof boundary and, if so, whether that cutover is isolated cleanly enough
-8. whether reused cleanup/delete/reconcile proof contracts retain validation parity or prove an explicit narrowed contract
-9. whether downstream open tasks remain viable if this task is accepted as written
-10. whether contract-dense tasks have one canonical matrix and a complete
+2. whether refactor classification matches target-file reality, and whether
+   Boundary/Architecture tasks include usable Module Depth evidence
+3. whether the bounded task shape is explicit and still true
+4. whether producer work has absorbed fail-closed or coordination scope
+5. whether precondition-before-side-effect rules are explicit when needed
+6. whether the task still fits its parent gap and parent plan boundary
+7. whether the task silently reinterprets any already-closed canonical contract
+8. whether the task changes success/completion proof boundary and, if so, whether that cutover is isolated cleanly enough
+9. whether reused cleanup/delete/reconcile proof contracts retain validation parity or prove an explicit narrowed contract
+10. whether downstream open tasks remain viable if this task is accepted as written
+11. whether contract-dense tasks have one canonical matrix and a complete
     mirrored-surface checklist
-11. whether capability closure claims inherited from the parent plan or created
+12. whether capability closure claims inherited from the parent plan or created
     by this task are aligned with activation path, output contracts, and
     last-mile proof
 
@@ -365,9 +407,11 @@ Always include:
 10. downstream task statuses when applicable
 11. execution metadata gate result when applicable
 12. when the decision is `refine_plan` or `refine_task`, whether a repeated fresh-context ReviewSpec pass is required before approval or downstream execution
-13. when the Contract-Dense Task Gate applies, the canonical matrix status and
+13. when the Refactoring Guidance Gate applies, the refactor classification
+    status and Module Depth evidence status
+14. when the Contract-Dense Task Gate applies, the canonical matrix status and
     mirrored-surface checklist status
-14. when the Capability Closure Gate applies, the closure classification,
+15. when the Capability Closure Gate applies, the closure classification,
     activation boundary status, and last-mile proof status
 
 ### 7) Output rules
@@ -386,10 +430,13 @@ Additional task-mode rule:
 4. If the issue is a success/completion proof cutover mixed with cleanup or final truth-surface alignment, phrase it as a split-trigger or sequencing problem, not as an implementation detail.
 5. If the issue is execution metadata drift, phrase it as non-deterministic
    plan/task identity or parent-plan mismatch, not as a naming nit.
-6. If the issue is contract-dense drift, phrase it as missing canonical matrix,
+6. If the issue is refactor-classification drift, phrase it as missing
+   classification, target-file reality mismatch, shallow Module Depth evidence,
+   or leaked caller knowledge, not as a style nit.
+7. If the issue is contract-dense drift, phrase it as missing canonical matrix,
    stale mirrored surface, or leaked successor-owned semantics, not as generic
    wording polish.
-7. If the issue is capability-closure drift, phrase it as claim/proof mismatch,
+8. If the issue is capability-closure drift, phrase it as claim/proof mismatch,
    ambiguous activation owner, missing shipped/external boundary, or missing
    last-mile proof, not as a style nit.
 

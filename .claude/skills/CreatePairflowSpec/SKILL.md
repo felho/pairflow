@@ -96,6 +96,27 @@ Policy:
 6. If no single canonical matrix can be stated, route to task refinement or plan
    refinement before approving implementation.
 
+## Refactoring Guidance Gate (Mandatory When Triggered)
+
+When drafting, refining, or reviewing a Task for refactor-oriented work,
+classify the refactor before finalizing task shape or approval.
+
+Use `references/Refactoring-Guidance-Gate.md`.
+
+Run this gate when the user asks for a refactor, when a task is labeled as a
+refactor, or when target-file reality shows refactor behavior.
+
+Policy:
+1. Mechanical/local cleanup may stay lightweight only when the classification
+   trigger review passes.
+2. Boundary/Architecture refactors must include Module Depth Check answers.
+3. The task must record what caller knowledge is reduced, or explicitly justify
+   why no caller-knowledge reduction is expected for a mechanical/local change.
+4. Do not add new public helper surfaces inside a task classified only as
+   mechanical or local cleanup.
+5. ReviewSpec task-mode must verify the classification against target-file
+   reality and verify Module Depth evidence for Boundary/Architecture tasks.
+
 ## Pairflow Execution Metadata Contract (Mandatory for plan-linked work)
 
 When drafting, refining, or reviewing a Plan or Task that is intended to be executed by
@@ -563,6 +584,7 @@ Policy:
 - Complexity risk gate: `references/Complexity-Risk-Gate.md`
 - Bounded-task-shape gate: `references/Bounded-Task-Shape-Gate.md`
 - Contract-dense task gate: `references/Contract-Dense-Task-Gate.md`
+- Refactoring guidance gate: `references/Refactoring-Guidance-Gate.md`
 - Capability closure gate: `references/Capability-Closure-Gate.md`
 - Remaining-task viability check: `references/Remaining-Task-Viability-Check.md`
 - Pairflow execution metadata contract:

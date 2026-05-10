@@ -41,6 +41,10 @@ Teams often have enough context already, but lose time in long interviews or end
 19. Capability claims must be classified by closure level; end-to-end claims
     require last-mile proof, while hook/foundation/deferred work must not use
     completion wording that implies fully usable automation.
+20. Refactor-oriented tasks must classify the refactor before task shape is
+    finalized; Boundary/Architecture refactors must include Module Depth Check
+    evidence that caller knowledge is reduced, and ReviewSpec task-mode must
+    verify that evidence against target-file reality.
 
 ## Directory layout
 
@@ -61,6 +65,7 @@ CreatePairflowSpec/
 │   ├── Bounded-Task-Shape-Gate.md
 │   ├── Capability-Closure-Gate.md
 │   ├── Contract-Dense-Task-Gate.md
+│   ├── Refactoring-Guidance-Gate.md
 │   ├── Remaining-Task-Viability-Check.md
 │   ├── L1-Contract-Boundaries.md
 │   └── Reviewer-Guidelines.md
