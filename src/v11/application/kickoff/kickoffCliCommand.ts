@@ -15,10 +15,10 @@ import {
   IDEATION_TASK_INPUT_CONFLICT
 } from "../../shared/ideation/ideationReasonCodes.js";
 import {
-  kickoffBubbleV11 as kickoffBubble,
-  type KickoffBubbleV11Dependencies,
-  type KickoffBubbleV11Result as KickoffBubbleResult
-} from "./emitKickoffV11.js";
+  kickoffBubble,
+  type KickoffBubbleDependencies,
+  type KickoffBubbleResult
+} from "./kickoffBubble.js";
 
 export interface BubbleKickoffCommandOptions {
   id: string;
@@ -43,7 +43,7 @@ export interface BubbleKickoffCommandDependencies {
     cwd?: string;
   }) => Promise<ResolvedBubbleById>;
   kickoffBubble?: typeof kickoffBubble;
-  emitDeliveryNotificationAck?: KickoffBubbleV11Dependencies["emitDeliveryNotificationAck"];
+  emitDeliveryNotificationAck?: KickoffBubbleDependencies["emitDeliveryNotificationAck"];
   writeStderr?: (message: string) => void;
 }
 

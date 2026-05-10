@@ -5,7 +5,7 @@ import type { KickoffDependencyOverrides } from "./internal/validation/kickoffDe
 import type { RunKickoffFlowResult } from "./internal/validation/kickoffFlowContract.js";
 import { runKickoffFlow } from "./runKickoffFlow.js";
 
-export interface KickoffBubbleV11Input {
+export interface KickoffBubbleInput {
   bubbleId: string;
   repoPath?: string;
   task?: string;
@@ -14,14 +14,14 @@ export interface KickoffBubbleV11Input {
   now?: Date;
 }
 
-export type KickoffBubbleV11Result = RunKickoffFlowResult;
+export type KickoffBubbleResult = RunKickoffFlowResult;
 
-export type KickoffBubbleV11Dependencies = KickoffDependencyOverrides;
+export type KickoffBubbleDependencies = KickoffDependencyOverrides;
 
-export async function kickoffBubbleV11(
-  input: KickoffBubbleV11Input,
-  dependencies: KickoffBubbleV11Dependencies = {}
-): Promise<KickoffBubbleV11Result> {
+export async function kickoffBubble(
+  input: KickoffBubbleInput,
+  dependencies: KickoffBubbleDependencies = {}
+): Promise<KickoffBubbleResult> {
   const now = input.now ?? new Date();
   return runKickoffFlow(
     {

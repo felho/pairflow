@@ -13,14 +13,14 @@ import {
   StateStoreConflictError,
   writeStateSnapshot
 } from "../../../src/v11/infrastructure/state/stateStore.js";
-import { kickoffBubbleV11 } from "../../../src/v11/application/kickoff/emitKickoffV11.js";
+import { kickoffBubble } from "../../../src/v11/application/kickoff/kickoffBubble.js";
 import { deliveryTargetRoleMetadataKey } from "../../../src/types/protocol.js";
 import { initGitRepository } from "../../helpers/git.js";
 import type { ContractCase, ContractCaseExpected } from "./schema.js";
 
 type DeliveryRefKind = "external" | "none" | "transcript";
 type KickoffDependencyOverrideMap = NonNullable<
-  Parameters<typeof kickoffBubbleV11>[1]
+  Parameters<typeof kickoffBubble>[1]
 >;
 
 interface CapturedKickoffDelivery {
@@ -255,7 +255,7 @@ function parseKickoffCaseInput(input: ContractCase["input"]): ParsedKickoffCaseI
 }
 
 function normalizeKickoffResult(input: {
-  result: Awaited<ReturnType<typeof kickoffBubbleV11>>;
+  result: Awaited<ReturnType<typeof kickoffBubble>>;
   taskEnvelopeCount: number;
   taskArtifactContainsTask: boolean;
   deliveries: CapturedKickoffDelivery[];
@@ -457,7 +457,7 @@ async function setupKickoffFixture(
 
 async function executeKickoffCase(input: {
   caseDef: ContractCase;
-  executor: typeof kickoffBubbleV11;
+  executor: typeof kickoffBubble;
 }): Promise<KickoffContractOutput> {
   const repoPath = await mkdtemp(join(tmpdir(), "pairflow-kickoff-contract-"));
   try {
@@ -559,7 +559,7 @@ export async function runKickoffContractCase(
 
   const v11 = await executeKickoffCase({
     caseDef,
-    executor: kickoffBubbleV11
+    executor: kickoffBubble
   });
   assertContractExpectedSubset({
     output: v11,
