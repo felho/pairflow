@@ -1,1 +1,4 @@
-export type { MetaReviewArtifactReadPort } from "./internal/command/metaReviewArtifactIo.js";
+export type MetaReviewArtifactReadPort = (
+  artifactPath: string,
+  encoding: "utf8"
+) => Promise<string>;
