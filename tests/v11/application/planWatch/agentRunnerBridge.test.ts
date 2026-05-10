@@ -29,12 +29,12 @@ import type {
 import {
   buildArtifactDirBaseName,
   planSlugFromPath
-} from "../../../../src/v11/application/planWatch/codexAgentRunnerArtifacts.js";
+} from "../../../../src/v11/application/planWatch/internal/runner/codexAgentRunnerArtifacts.js";
 import {
   prepareCodexRunnerFiles,
   validateContinuationPayload
 } from "../../../../src/v11/application/planWatch/codexAgentRunnerBridge.js";
-import { parseCodexJsonlStream } from "../../../../src/v11/application/planWatch/codexAgentRunnerStream.js";
+import { parseCodexJsonlStream } from "../../../../src/v11/application/planWatch/internal/runner/codexAgentRunnerStream.js";
 import { normalizeCodexTimeline } from "../../../../src/v11/application/planWatch/codexAgentRunnerTimeline.js";
 import { runAgentRunnerCommand } from "../../../../src/v11/defaults/planWatch/agentRunnerBridgeDefaults.js";
 import { MAX_NODE_TIMER_DELAY_MS } from "../../../../src/v11/shared/timing/nodeTimerDelay.js";

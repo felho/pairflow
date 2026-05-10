@@ -14,7 +14,7 @@ import {
 import {
   buildPlanWatchDedupeKey,
   buildPlanWatchRunNowDedupeKey
-} from "../../../../src/v11/application/planWatch/planWatchLoopMapping.js";
+} from "../../../../src/v11/application/planWatch/internal/loop/planWatchLoopMapping.js";
 import {
   createFilePlanWatchLedgerPort
 } from "../../../../src/v11/defaults/planWatch/planWatchLoopDefaults.js";
