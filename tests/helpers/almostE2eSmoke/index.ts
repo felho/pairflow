@@ -9,6 +9,17 @@ export {
   type FakeTerminateTmuxCall
 } from "./fakeExternalAdapters.js";
 export {
+  createCompiledCliHarness,
+  installCompiledCliShimEnvironment,
+  type CompiledCliHarness,
+  type CompiledCliInvocation,
+  type CompiledCliResult,
+  type CompiledCliRunOptions,
+  type CompiledCliShimEnvironment,
+  type CompiledCliSideEffectRecord,
+  type CreateCompiledCliHarnessOptions
+} from "./compiledCli.js";
+export {
   createAlmostE2eSmokeFixtureRepo,
   type AlmostE2eSmokeFixtureRepo,
   type CreateAlmostE2eSmokeFixtureRepoOptions
