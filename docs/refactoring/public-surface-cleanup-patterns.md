@@ -128,9 +128,20 @@ project root.
 re-export), AND import scan shows the symbol is consumed from **two or more
 lanes** outside the owning lane.
 
-**Operation:** Move the actual definition up to the public location as the
-canonical source of truth. Delete the `internal/` duplicate. Update intra-lane
-consumers (validators, schema modules) to import from the public contract.
+**Operation:** Move the actual definition up to the canonical public location.
+Delete the `internal/` duplicate. Update intra-lane consumers (validators,
+schema modules) to import from the public contract.
+
+**Canonical location selection:** Choose the canonical location from the import
+scan, not from intent.
+
+- If a symbol has multiple current consumers, keep a dedicated public file and
+  move the definition into that file.
+- If a symbol has exactly one current consumer and that consumer is itself a
+  public contract, absorb the symbol into that contract instead of preserving a
+  one-symbol public file.
+- Do not make another lane import a command contract just to reach a port type;
+  cross-lane port types earn their own public file.
 
 **Caller-knowledge reduction:** The "where is the real definition?" question
 collapses; the dependency direction inverts so that intra-lane logic depends on
@@ -140,9 +151,13 @@ the public contract instead of the public file forwarding to a private one.
 
 - `76cb5b72` — Canonicalize shared state data contracts
 - `848f10b1` — Canonicalize doc contract gate config type
+- `10b3c346` — Absorb meta-review delivery capability types
+- `7c979810` — Canonicalize meta-review artifact IO port
 - Resulting files: `src/v11/shared/state/executionContextTypes.ts`,
   `reworkIntentTypes.ts`, `roundRoleHistoryTypes.ts`,
-  `src/v11/shared/gates/docContractGateConfigTypes.ts`.
+  `src/v11/shared/gates/docContractGateConfigTypes.ts`,
+  `src/v11/shared/metaReview/metaReviewCommandContract.ts`,
+  `src/v11/shared/metaReview/metaReviewArtifactIo.ts`.
 
 ## #3 Pass-Through Demotion (Single-Lane Scope)
 
