@@ -5,7 +5,7 @@ import type {
   BubbleKickoffCommandDependencies
 } from "../../src/v11/application/kickoff/kickoffCliCommand.js";
 
-type RunBubbleKickoffCommandMock = (
+type RunBubbleKickoffCommand = (
   args: string[],
   cwd?: string,
   dependencies?: BubbleKickoffCommandDependencies
@@ -54,7 +54,7 @@ describe("runCli bubble kickoff delivery warning", () => {
         retried: false
       }
     } as KickoffBubbleV11Result;
-    const runBubbleKickoffCommand = vi.fn<RunBubbleKickoffCommandMock>(
+    const runBubbleKickoffCommand = vi.fn<RunBubbleKickoffCommand>(
       async () => mockedResult
     );
 

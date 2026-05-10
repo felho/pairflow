@@ -7,7 +7,7 @@ import {
 import type {
   BubbleCreateResult,
   CreateBubbleImplementation
-} from "../../../v11/application/create/createCommandContract.js";
+} from "../../../v11/application/create/createBubble.js";
 import { parseBubbleCreateCommandOptions } from "./createCliOptions.js";
 
 export interface BubbleCreateCommandDependencies {

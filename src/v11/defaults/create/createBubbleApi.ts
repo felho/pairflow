@@ -1,16 +1,15 @@
 import {
-  createBubble as createBubbleApplication,
-  extractReviewerFocus
+  BubbleCreateError,
+  createBubble as createBubbleApplication
 } from "../../application/create/createBubble.js";
-import { BubbleCreateError } from "../../application/create/createCommandRuntime.js";
 import type {
   BubbleCreateDependencies,
   BubbleCreateInput,
   BubbleCreateResult
-} from "../../application/create/createCommandContract.js";
+} from "../../application/create/createBubble.js";
 import { createBubbleDependencyDefaults } from "./createBubbleDefaults.js";
 
-export { BubbleCreateError, extractReviewerFocus };
+export { BubbleCreateError };
 
 export async function createBubble(
   input: BubbleCreateInput,
@@ -21,4 +20,3 @@ export async function createBubble(
     ...dependencies
   });
 }
-

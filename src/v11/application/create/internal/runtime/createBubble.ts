@@ -1,17 +1,16 @@
-import { extractReviewerFocus } from "../preparation/createReviewerFocus.js";
 import { BubbleCreateError } from "./createCommandRuntime.js";
-import { runCreateBubbleFlow } from "./runCreateBubbleFlow.js";
+import { runCreateCommandPipeline } from "./runCreateCommandPipeline.js";
 import type {
   BubbleCreateDependencies,
   BubbleCreateInput,
   BubbleCreateResult
 } from "./createCommandContract.js";
 
-export { BubbleCreateError, extractReviewerFocus };
+export { BubbleCreateError };
 
 export async function createBubble(
   input: BubbleCreateInput,
   dependencies: BubbleCreateDependencies = {}
 ): Promise<BubbleCreateResult> {
-  return runCreateBubbleFlow(input, dependencies);
+  return runCreateCommandPipeline(input, dependencies);
 }
