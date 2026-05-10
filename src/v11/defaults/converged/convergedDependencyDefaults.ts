@@ -18,10 +18,10 @@ import {
   readTranscriptEnvelopes
 } from "../../infrastructure/artifact/transcript/transcriptStore.js";
 import { ensureBubbleInstanceIdForMutation } from "../../infrastructure/artifact/bubble/bubbleInstanceId.js";
-import { readDocContractGateArtifact } from "../../infrastructure/artifact/gates/docContractGateArtifacts.js";
 import {
+  readDocContractGateArtifact,
   resolveDocContractGateArtifactPath
-} from "../../shared/gates/docContractGateArtifactPath.js";
+} from "../../infrastructure/artifact/gates/docContractGateArtifacts.js";
 import { readStateSnapshot } from "../../infrastructure/state/stateStore.js";
 import { resolveBubbleFromWorkspaceCwd } from "../../infrastructure/executor/workspace/workspaceResolution.js";
 import {

@@ -16,7 +16,7 @@ import {
   REVIEW_ARTIFACT_TYPE_AUTO_REMOVED,
   parseBubbleConfigToml
 } from "../../../src/config/bubbleConfig.js";
-import { resolveDocContractGateArtifactPath } from "../../../src/v11/shared/gates/docContractGateArtifactPath.js";
+import { resolveDocContractGateArtifactPath } from "../../../src/v11/infrastructure/artifact/gates/docContractGateArtifacts.js";
 import {
   readRemotePointer,
   readRemoteStateCache

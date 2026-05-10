@@ -29,7 +29,7 @@ import {
 } from "../../infrastructure/artifact/reviewer/reviewerBriefArtifacts.js";
 import {
   resolveDocContractGateArtifactPath
-} from "../../shared/gates/docContractGateArtifactPath.js";
+} from "../../infrastructure/artifact/gates/docContractGateArtifacts.js";
 import {
   resolveReviewerTestExecutionDirective
 } from "../reviewer/reviewerTestEvidenceDefaults.js";

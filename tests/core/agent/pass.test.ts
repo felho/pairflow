@@ -44,7 +44,7 @@ import {
 } from "../../../src/v11/infrastructure/artifact/gates/docContractGateArtifacts.js";
 import {
   resolveDocContractGateArtifactPath
-} from "../../../src/v11/shared/gates/docContractGateArtifactPath.js";
+} from "../../../src/v11/infrastructure/artifact/gates/docContractGateArtifacts.js";
 import {
   resolveReviewerTestExecutionDirective
 } from "../../../src/v11/infrastructure/artifact/reviewer/testEvidenceRuntime.js";

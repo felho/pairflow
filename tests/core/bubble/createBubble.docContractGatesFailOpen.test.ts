@@ -7,7 +7,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { createBubble } from "../../../src/v11/defaults/create/createBubbleApi.js";
 import {
   resolveDocContractGateArtifactPath
-} from "../../../src/v11/shared/gates/docContractGateArtifactPath.js";
+} from "../../../src/v11/infrastructure/artifact/gates/docContractGateArtifacts.js";
 import { readTranscriptEnvelopes } from "../../../src/v11/infrastructure/artifact/transcript/transcriptStore.js";
 import { initGitRepository } from "../../helpers/git.js";
 

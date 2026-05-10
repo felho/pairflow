@@ -28,7 +28,7 @@ import {
 } from "../../../../src/v11/infrastructure/artifact/bubble/remoteExecutionArtifacts.js";
 import {
   resolveDocContractGateArtifactPath
-} from "../../../../src/v11/shared/gates/docContractGateArtifactPath.js";
+} from "../../../../src/v11/infrastructure/artifact/gates/docContractGateArtifacts.js";
 import { runGit as runGitCommand } from "../../../../src/v11/infrastructure/workspace/git.js";
 import { initGitRepository, runGit } from "../../../helpers/git.js";
 

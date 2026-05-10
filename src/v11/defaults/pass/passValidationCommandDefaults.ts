@@ -14,11 +14,9 @@ import {
 } from "../../infrastructure/executor/validation/passValidationCommandRunner.js";
 import {
   readDocContractGateArtifact,
+  resolveDocContractGateArtifactPath,
   writeDocContractGateArtifact
 } from "../../infrastructure/artifact/gates/docContractGateArtifacts.js";
-import {
-  resolveDocContractGateArtifactPath
-} from "../../shared/gates/docContractGateArtifactPath.js";
 import {
   resolveReviewVerificationInputFromRefs,
   writeReviewVerificationArtifactAtomic

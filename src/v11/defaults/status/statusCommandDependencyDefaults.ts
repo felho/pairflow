@@ -1,4 +1,4 @@
-import { resolveDocContractGateArtifactPath } from "../../shared/gates/docContractGateArtifactPath.js";
+import { resolveDocContractGateArtifactPath } from "../../infrastructure/artifact/gates/docContractGateArtifacts.js";
 import { readWatchdogPaneActivity } from "../watchdog/watchdogPaneActivityDefaults.js";
 import type {
   InspectedStateSnapshot,
