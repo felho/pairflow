@@ -1,7 +1,7 @@
 import { watch, type FSWatcher } from "node:fs";
 import { join } from "node:path";
 
-import { getBubblePaths } from "../artifact/bubble/paths.js";
+import { getBubblePaths } from "../../shared/bubble/bubblePaths.js";
 import { pathExists } from "../foundation/fs/pathExists.js";
 import { getWatchdogPaneActivityPath } from "../artifact/watchdog/watchdogPaneActivityStore.js";
 import type {

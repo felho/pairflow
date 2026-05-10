@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { emitAskHumanFromWorkspace } from "../../../src/v11/application/askHuman/askHumanCommandApi.js";
-import { getBubblePaths } from "../../../src/v11/infrastructure/artifact/bubble/paths.js";
+import { getBubblePaths } from "../../../src/v11/shared/bubble/bubblePaths.js";
 import { normalizeRepoPath } from "../../../src/v11/infrastructure/executor/workspace/repoResolution.js";
 import { registerRepoInRegistry } from "../../../src/v11/infrastructure/executor/workspace/repoRegistry.js";
 import {

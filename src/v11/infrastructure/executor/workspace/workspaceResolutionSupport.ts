@@ -2,7 +2,7 @@ import { readdir, readFile, realpath } from "node:fs/promises";
 import { join, relative, resolve } from "node:path";
 
 import { parseBubbleConfigToml } from "../../../../config/bubbleConfig.js";
-import { getBubblePaths, type BubblePaths } from "../../artifact/bubble/paths.js";
+import { getBubblePaths, type BubblePaths } from "../../../shared/bubble/bubblePaths.js";
 import type { BubbleConfig } from "../../../shared/config/bubbleConfigTypes.js";
 
 interface WorkspaceResolutionErrorContext {

@@ -9,7 +9,7 @@ import { extractReviewerFocus } from "../../../src/v11/application/create/intern
 import { getBubbleStatus } from "../../../src/v11/application/status/statusCommandApi.js";
 import { statusCommandDependencyDefaults } from "../../../src/v11/defaults/status/statusCommandDependencyDefaults.js";
 import { SchemaValidationError } from "../../../src/v11/shared/validation/primitives.js";
-import { getBubblePaths } from "../../../src/v11/infrastructure/artifact/bubble/paths.js";
+import { getBubblePaths } from "../../../src/v11/shared/bubble/bubblePaths.js";
 import {
   INVALID_REVIEW_ARTIFACT_TYPE_OPTION,
   MISSING_REVIEW_ARTIFACT_TYPE_OPTION,

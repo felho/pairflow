@@ -6,7 +6,7 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import { emitAskHumanFromWorkspace } from "../../../src/v11/application/askHuman/askHumanCommandApi.js";
 import { emitHumanReply } from "../../../src/v11/application/reply/replyCommandApi.js";
-import { getBubblePaths } from "../../../src/v11/infrastructure/artifact/bubble/paths.js";
+import { getBubblePaths } from "../../../src/v11/shared/bubble/bubblePaths.js";
 import { normalizeRepoPath } from "../../../src/v11/infrastructure/executor/workspace/repoResolution.js";
 import { registerRepoInRegistry } from "../../../src/v11/infrastructure/executor/workspace/repoRegistry.js";
 import { upsertRuntimeSession } from "../../../src/v11/infrastructure/executor/sessionRuntime/runtimeSessionsRegistry.js";

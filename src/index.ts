@@ -120,7 +120,7 @@ export {
   resolveBubbleFromWorkspaceCwd,
   WorkspaceResolutionError
 } from "./v11/infrastructure/executor/workspace/workspaceResolution.js";
-export { getBubblePaths } from "./v11/infrastructure/artifact/bubble/paths.js";
+export { getBubblePaths } from "./v11/shared/bubble/bubblePaths.js";
 export { createInitialBubbleState } from "./v11/domain/state/initialState.js";
 export { runCli } from "./cli/index.js";
 export { getOrchestraHelpText, runOrchestraCli } from "./cli/orchestra.js";
@@ -562,7 +562,7 @@ export type {
   BubbleCreateResult,
   ResolvedTaskInput
 } from "./v11/application/create/createBubble.js";
-export type { BubblePaths } from "./v11/infrastructure/artifact/bubble/paths.js";
+export type { BubblePaths } from "./v11/shared/bubble/bubblePaths.js";
 export type {
   AskHumanCommandOptions,
   AskHumanHelpCommandOptions,

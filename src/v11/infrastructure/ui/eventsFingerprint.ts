@@ -2,7 +2,7 @@ import { realpathSync } from "node:fs";
 import { readdir, stat } from "node:fs/promises";
 import { join, resolve } from "node:path";
 
-import { getBubblePaths } from "../artifact/bubble/paths.js";
+import { getBubblePaths } from "../../shared/bubble/bubblePaths.js";
 import type {
   UiBubbleListEntry as BubbleListEntry,
   UiRepoSummary
