@@ -5,7 +5,7 @@ task_family_id: actor-loop-smoke
 sequence_key: "3"
 task_id: 3-actor-loop-smoke
 title: "Actor Loop Smoke"
-status: implementable
+status: in_progress
 phase: phase1
 system_context_ref: docs/architecture/almost-e2e-smoke-suite.md
 target_files:
@@ -33,7 +33,7 @@ target_read_only_anchors:
 prd_ref: null
 plan_ref: plans/almost-e2e-smoke-suite-plan-v1.md
 doc_bubble_id: 3-actor-loop-smoke-doc
-impl_bubble_id: null
+impl_bubble_id: 3-actor-loop-smoke-impl
 supersedes: []
 superseded_by: null
 archive_group: 2026-05-09-almost-e2e-smoke-suite-plan-v1
