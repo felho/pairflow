@@ -14,11 +14,11 @@ import {
   persistCommittedThenDoneState
 } from "../../commitCommandFinalization.js";
 import { syncRemoteCommitContinuityArtifacts } from "../../remoteCommitContinuitySync.js";
-import { runCommitGitStep } from "../../commitCommandGitStep.js";
+import { runCommitGitStep } from "../git/commitCommandGitStep.js";
 import {
   canonicalizeCommitExecutionPath,
   resolveRemoteCommitExecutionContextFromEnv
-} from "../../remoteCommitExecutionContext.js";
+} from "../remote/remoteCommitExecutionContext.js";
 
 async function prepareCommitExecutionContext(input: {
   command: CommitBubbleInput;

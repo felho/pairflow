@@ -70,7 +70,7 @@ const emitCommitLifecycleEvent = vi.fn(async () => {
   order.push("event");
 });
 
-vi.mock("../../../../src/v11/application/commit/commitCommandGitStep.js", () => ({
+vi.mock("../../../../src/v11/application/commit/internal/git/commitCommandGitStep.js", () => ({
   runCommitGitStep
 }));
 

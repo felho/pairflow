@@ -23,7 +23,7 @@ import {
   remoteCommitModeEnvVar,
   remoteCommitModeInnerRemoteExecution,
   remoteCommitWorkspaceRootEnvVar
-} from "../../../../src/v11/application/commit/remoteCommitExecutionContext.js";
+} from "../../../../src/v11/application/commit/internal/remote/remoteCommitExecutionContext.js";
 import { readStateSnapshot } from "../../../../src/v11/infrastructure/state/stateStore.js";
 import { readTranscriptEnvelopes } from "../../../../src/v11/infrastructure/artifact/transcript/transcriptStore.js";
 import { RemoteBubbleCommitCommandError } from "../../../../src/v11/infrastructure/executor/ssh/sshBubbleCommitCommand.js";

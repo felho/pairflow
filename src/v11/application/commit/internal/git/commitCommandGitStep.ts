@@ -1,10 +1,10 @@
-import type { CommitBubbleInput } from "./commitCommandContract.js";
+import type { CommitBubbleInput } from "../../commitCommandContract.js";
 import type {
   CommitGitResult,
   CommitRuntimeContext
-} from "./commitCommandApiContract.js";
-import type { RunGitPort } from "../../ports/git.js";
-import { BubbleCommitError } from "./commitCommandRuntime.js";
+} from "../../commitCommandApiContract.js";
+import type { RunGitPort } from "../../../../ports/git.js";
+import { BubbleCommitError } from "../../commitCommandRuntime.js";
 import {
   assertStagedFilesWithinWorktree,
   collectStagedFiles,
