@@ -238,8 +238,8 @@ export {
   runBubbleExtractCommand
 } from "./cli/commands/bubble/extract.js";
 export {
-  extractBubbleV11 as extractBubble
-} from "./v11/application/extract/emitExtractV11.js";
+  extractBubble
+} from "./v11/application/extract/extractBubble.js";
 export {
   extractCommandDependencyDefaults
 } from "./v11/defaults/extract/extractCommandDefaults.js";

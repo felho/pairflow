@@ -10,7 +10,7 @@ import {
   parseBubbleExtractCommandOptions,
   renderBubbleExtractText
 } from "../../src/index.js";
-import { extractBubbleV11 } from "../../src/v11/application/extract/emitExtractV11.js";
+import { extractBubble } from "../../src/v11/application/extract/extractBubble.js";
 import {
   checkTargetCheckoutPreconditions,
   validateExtractCommandPreconditions
@@ -415,7 +415,7 @@ describe("checkTargetCheckoutPreconditions", () => {
   });
 });
 
-describe("extractBubbleV11", () => {
+describe("extractBubble", () => {
   it("fails closed on dirty target checkout before transfer", async () => {
     const copyFile = vi.fn(async () => undefined);
     const runGit: RunGitPort = async (args: string[]) => {
@@ -431,7 +431,7 @@ describe("extractBubbleV11", () => {
       return cleanMainRunGit()(args, { cwd: "/repo", allowFailure: true });
     };
 
-    const result = await extractBubbleV11(
+    const result = await extractBubble(
       baseCommand,
       dependencies({ runGit, copyFile })
     );
@@ -467,7 +467,7 @@ describe("extractBubbleV11", () => {
   it("fails before transfer when selected paths duplicate by normalized path", async () => {
     const createDirectory = vi.fn(async () => undefined);
     const copyFile = vi.fn(async () => undefined);
-    const result = await extractBubbleV11(
+    const result = await extractBubble(
       {
         ...baseCommand,
         paths: ["docs/one.md", "docs/one.md", "plans/two.md"],
@@ -495,7 +495,7 @@ describe("extractBubbleV11", () => {
   it("copies valid selected paths under each v1 scope in explicit order", async () => {
     const createDirectory = vi.fn(async () => undefined);
     const copyFile = vi.fn(async () => undefined);
-    const result = await extractBubbleV11(
+    const result = await extractBubble(
       {
         ...baseCommand,
         paths: [
@@ -531,7 +531,7 @@ describe("extractBubbleV11", () => {
   });
 
   it("returns copy failure when target parent creation fails", async () => {
-    const result = await extractBubbleV11(
+    const result = await extractBubble(
       baseCommand,
       dependencies({
         createDirectory: async () => {
@@ -552,7 +552,7 @@ describe("extractBubbleV11", () => {
   });
 
   it("returns copy failure when selected file copy fails", async () => {
-    const result = await extractBubbleV11(
+    const result = await extractBubble(
       baseCommand,
       dependencies({
         copyFile: async () => {
@@ -575,7 +575,7 @@ describe("extractBubbleV11", () => {
   it("reports target exists when exclusive copy detects a concurrent target file", async () => {
     const error = new Error("file exists") as Error & { code: string };
     error.code = "EEXIST";
-    const result = await extractBubbleV11(
+    const result = await extractBubble(
       baseCommand,
       dependencies({
         copyFile: async () => {
@@ -599,7 +599,7 @@ describe("extractBubbleV11", () => {
   it("revalidates target parents after directory creation before copying", async () => {
     let docsParentChecks = 0;
     const copyFile = vi.fn(async () => undefined);
-    const result = await extractBubbleV11(
+    const result = await extractBubble(
       baseCommand,
       dependencies({
         copyFile,
@@ -667,7 +667,7 @@ describe("extractBubbleV11", () => {
     });
     const copyFile = vi.fn(async () => undefined);
 
-    const result = await extractBubbleV11(
+    const result = await extractBubble(
       baseCommand,
       dependencies({
         createDirectory,
@@ -695,7 +695,7 @@ describe("extractBubbleV11", () => {
       return delegateRunGit(args, { cwd: "/repo", allowFailure: true });
     };
 
-    const result = await extractBubbleV11(
+    const result = await extractBubble(
       {
         ...baseCommand,
         commit: true,
@@ -725,7 +725,7 @@ describe("extractBubbleV11", () => {
       treeChangedStdout: "docs/idea.md \0"
     });
 
-    const result = await extractBubbleV11(
+    const result = await extractBubble(
       {
         ...baseCommand,
         paths: ["docs/idea.md "],
@@ -759,7 +759,7 @@ describe("extractBubbleV11", () => {
   it("uses a deterministic default commit message when --commit has no message", async () => {
     const runGit = successfulExtractCommitRunGit({ commitSha: "def456" });
 
-    const result = await extractBubbleV11(
+    const result = await extractBubble(
       {
         ...baseCommand,
         commit: true
@@ -787,7 +787,7 @@ describe("extractBubbleV11", () => {
       return cleanMainRunGit()(args, { cwd: "/repo", allowFailure: true });
     };
 
-    const result = await extractBubbleV11(
+    const result = await extractBubble(
       {
         ...baseCommand,
         commit: true
@@ -817,7 +817,7 @@ describe("extractBubbleV11", () => {
       return cleanMainRunGit()(args, { cwd: "/repo", allowFailure: true });
     };
 
-    const result = await extractBubbleV11(
+    const result = await extractBubble(
       {
         ...baseCommand,
         commit: true
@@ -847,7 +847,7 @@ describe("extractBubbleV11", () => {
       return delegateRunGit(args, { cwd: "/repo", allowFailure: true });
     };
 
-    const result = await extractBubbleV11(
+    const result = await extractBubble(
       {
         ...baseCommand,
         paths: ["docs/ignored.md"],
@@ -872,7 +872,7 @@ describe("extractBubbleV11", () => {
       treeChangedStdout: `${selectedPath}\0`
     });
 
-    const result = await extractBubbleV11(
+    const result = await extractBubble(
       {
         ...baseCommand,
         paths: [selectedPath],
@@ -911,7 +911,7 @@ describe("extractBubbleV11", () => {
       return cleanMainRunGit()(args, { cwd: "/repo", allowFailure: true });
     };
 
-    const result = await extractBubbleV11(
+    const result = await extractBubble(
       {
         ...baseCommand,
         commit: true
@@ -940,7 +940,7 @@ describe("extractBubbleV11", () => {
       return cleanMainRunGit()(args, { cwd: "/repo", allowFailure: true });
     };
 
-    const result = await extractBubbleV11(
+    const result = await extractBubble(
       {
         ...baseCommand,
         commit: true
@@ -970,7 +970,7 @@ describe("extractBubbleV11", () => {
       return cleanMainRunGit()(args, { cwd: "/repo", allowFailure: true });
     };
 
-    const result = await extractBubbleV11(
+    const result = await extractBubble(
       {
         ...baseCommand,
         commit: true
@@ -1001,7 +1001,7 @@ describe("extractBubbleV11", () => {
       })(args, { cwd: "/repo", allowFailure: true });
     };
 
-    const result = await extractBubbleV11(
+    const result = await extractBubble(
       {
         ...baseCommand,
         commit: true
@@ -1034,7 +1034,7 @@ describe("extractBubbleV11", () => {
       return successfulExtractCommitRunGit()(args, { cwd: "/repo", allowFailure: true });
     };
 
-    const result = await extractBubbleV11(
+    const result = await extractBubble(
       {
         ...baseCommand,
         commit: true
@@ -1063,7 +1063,7 @@ describe("extractBubbleV11", () => {
       return successfulExtractCommitRunGit()(args, { cwd: "/repo", allowFailure: true });
     };
 
-    const result = await extractBubbleV11(
+    const result = await extractBubble(
       {
         ...baseCommand,
         commit: true
@@ -1090,7 +1090,7 @@ describe("extractBubbleV11", () => {
       return successfulExtractCommitRunGit()(args, { cwd: "/repo", allowFailure: true });
     };
 
-    const result = await extractBubbleV11(
+    const result = await extractBubble(
       {
         ...baseCommand,
         commit: true
@@ -1122,7 +1122,7 @@ describe("extractBubbleV11", () => {
       return delegateRunGit(args, { cwd: "/repo", allowFailure: true });
     };
 
-    const result = await extractBubbleV11(
+    const result = await extractBubble(
       {
         ...baseCommand,
         commit: true
@@ -1157,7 +1157,7 @@ describe("extractBubbleV11", () => {
       return delegateRunGit(args, { cwd: "/repo", allowFailure: true });
     };
 
-    const result = await extractBubbleV11(
+    const result = await extractBubble(
       {
         ...baseCommand,
         commit: true
@@ -1192,7 +1192,7 @@ describe("extractBubbleV11", () => {
       return delegateRunGit(args, { cwd: "/repo", allowFailure: true });
     };
 
-    const result = await extractBubbleV11(
+    const result = await extractBubble(
       {
         ...baseCommand,
         commit: true
@@ -1241,7 +1241,7 @@ describe("extractBubbleV11", () => {
     ["", "EXTRACT_PATH_UNSAFE"],
     [".", "EXTRACT_PATH_UNSAFE"]
   ])("fails closed for unsafe selected path %s", async (path, reasonCode) => {
-    const result = await extractBubbleV11(
+    const result = await extractBubble(
       {
         ...baseCommand,
         paths: [path]
@@ -1259,7 +1259,7 @@ describe("extractBubbleV11", () => {
   });
 
   it("fails closed for glob-like selected paths", async () => {
-    const result = await extractBubbleV11(
+    const result = await extractBubble(
       {
         ...baseCommand,
         paths: ["plans/*.md"]
@@ -1277,7 +1277,7 @@ describe("extractBubbleV11", () => {
   });
 
   it("fails closed for paths outside the v1 extraction scope", async () => {
-    const result = await extractBubbleV11(
+    const result = await extractBubble(
       {
         ...baseCommand,
         paths: ["src/foo.ts"]
@@ -1296,7 +1296,7 @@ describe("extractBubbleV11", () => {
   });
 
   it("fails closed when the selected source file is missing", async () => {
-    const result = await extractBubbleV11(
+    const result = await extractBubble(
       {
         ...baseCommand,
         paths: ["docs/missing.md"]
@@ -1318,7 +1318,7 @@ describe("extractBubbleV11", () => {
   });
 
   it("fails closed when the selected source is a directory", async () => {
-    const result = await extractBubbleV11(
+    const result = await extractBubble(
       {
         ...baseCommand,
         paths: ["docs/ideas"]
@@ -1338,7 +1338,7 @@ describe("extractBubbleV11", () => {
   });
 
   it("fails closed when the target path already exists", async () => {
-    const result = await extractBubbleV11(
+    const result = await extractBubble(
       {
         ...baseCommand,
         paths: ["docs/existing.md"]
@@ -1376,7 +1376,7 @@ describe("extractBubbleV11", () => {
     };
     const copyFile = vi.fn(async () => undefined);
 
-    const result = await extractBubbleV11(
+    const result = await extractBubble(
       {
         ...baseCommand,
         paths: ["docs/tracked.md"]
@@ -1423,7 +1423,7 @@ describe("extractBubbleV11", () => {
     const createDirectory = vi.fn(async () => undefined);
     const copyFile = vi.fn(async () => undefined);
 
-    const result = await extractBubbleV11(
+    const result = await extractBubble(
       {
         ...baseCommand,
         paths: ["docs/file/new.md"]
@@ -1457,7 +1457,7 @@ describe("extractBubbleV11", () => {
   });
 
   it("fails closed when the target path is occupied by a dangling symlink", async () => {
-    const result = await extractBubbleV11(
+    const result = await extractBubble(
       {
         ...baseCommand,
         paths: ["docs/dangling.md"]
@@ -1486,7 +1486,7 @@ describe("extractBubbleV11", () => {
   });
 
   it("fails closed when a source parent path is a symlink or non-directory", async () => {
-    const result = await extractBubbleV11(
+    const result = await extractBubble(
       {
         ...baseCommand,
         paths: ["docs/idea.md"]
@@ -1512,7 +1512,7 @@ describe("extractBubbleV11", () => {
   });
 
   it("fails closed when target path metadata cannot be verified", async () => {
-    const result = await extractBubbleV11(
+    const result = await extractBubble(
       {
         ...baseCommand,
         paths: ["docs/locked.md"]
@@ -1541,7 +1541,7 @@ describe("extractBubbleV11", () => {
   });
 
   it("fails closed when a target parent path is an existing file", async () => {
-    const result = await extractBubbleV11(
+    const result = await extractBubble(
       {
         ...baseCommand,
         paths: ["docs/idea/note.md"]

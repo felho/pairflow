@@ -1,6 +1,6 @@
 import { parseArgs } from "node:util";
 
-import { extractBubbleV11 } from "../../../v11/application/extract/emitExtractV11.js";
+import { extractBubble } from "../../../v11/application/extract/extractBubble.js";
 import type {
   ExtractCommandDependencies,
   ExtractCommandResult
@@ -167,7 +167,7 @@ export async function runBubbleExtractCommand(
 
   const resolvedDependencies =
     dependencies ?? extractCommandDependencyDefaults;
-  return extractBubbleV11({
+  return extractBubble({
     id: options.id,
     paths: options.paths,
     ...(options.repo !== undefined ? { repo: options.repo } : {}),

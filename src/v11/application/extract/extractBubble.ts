@@ -7,7 +7,7 @@ import { validateExtractCommandPreconditions } from "./extractCommandPreconditio
 import { validateExtractPathSelection } from "./extractPathSelection.js";
 import { transferExtractSelectedPaths } from "./extractTransfer.js";
 
-export async function extractBubbleV11(
+export async function extractBubble(
   input: ExtractCommandInput,
   dependencies: ExtractCommandDependencies
 ): Promise<ExtractCommandResult> {
