@@ -27,8 +27,8 @@ import { buildMetaReviewExecutionContext } from "../../../src/v11/shared/metaRev
 import { metaReviewExecutionContextToRunningContext } from "../../../src/v11/shared/state/executionContext.js";
 import { applyStateTransition } from "../../../src/v11/domain/state/machine.js";
 import { readStateSnapshot, writeStateSnapshot } from "../../../src/v11/infrastructure/state/stateStore.js";
-import { runBubbleWatchdogV11 } from "../../../src/v11/application/watchdog/emitWatchdogV11.js";
-import type { BubbleWatchdogV11Dependencies } from "../../../src/v11/application/watchdog/emitWatchdogV11.js";
+import { runBubbleWatchdog as runBubbleWatchdogImpl } from "../../../src/v11/application/watchdog/watchdogCommandApi.js";
+import type { BubbleWatchdogDependencies } from "../../../src/v11/application/watchdog/watchdogCommandContract.js";
 import type { EmitDeliveryNotificationAckPort } from "../../../src/v11/ports/tmuxDelivery.js";
 import { initGitRepository } from "../../helpers/git.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
@@ -36,10 +36,10 @@ import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
 const tempDirs: string[] = [];
 
 async function runBubbleWatchdog(
-  input: Parameters<typeof runBubbleWatchdogV11>[0],
-  dependencies: Partial<BubbleWatchdogV11Dependencies> = {}
-): Promise<Awaited<ReturnType<typeof runBubbleWatchdogV11>>> {
-  return runBubbleWatchdogV11(input, {
+  input: Parameters<typeof runBubbleWatchdogImpl>[0],
+  dependencies: Partial<BubbleWatchdogDependencies> = {}
+): Promise<Awaited<ReturnType<typeof runBubbleWatchdogImpl>>> {
+  return runBubbleWatchdogImpl(input, {
     ...watchdogCommandDefaults,
     ...watchdogPendingReworkDefaults,
     readRuntimeSessionsRegistry,

@@ -5,10 +5,12 @@ import { dirname, join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 import {
-  BubbleWatchdogErrorV11,
-  runBubbleWatchdogV11,
-  type BubbleWatchdogV11Dependencies
-} from "../../../../src/v11/application/watchdog/emitWatchdogV11.js";
+  BubbleWatchdogError,
+  runBubbleWatchdog
+} from "../../../../src/v11/application/watchdog/watchdogCommandApi.js";
+import type {
+  BubbleWatchdogDependencies
+} from "../../../../src/v11/application/watchdog/watchdogCommandContract.js";
 import { watchdogCommandDefaults } from "../../../../src/v11/defaults/watchdog/watchdogCommandDefaults.js";
 import { watchdogPendingReworkDefaults } from "../../../../src/v11/defaults/watchdog/watchdogPendingReworkDefaults.js";
 import type { RuntimeSessionsRegistry } from "../../../../src/v11/ports/runtimeSessions.js";
@@ -78,8 +80,8 @@ describe("watchdogCommandApi", () => {
   }
 
   function baseDependencies(
-    input: Partial<BubbleWatchdogV11Dependencies> = {}
-  ): BubbleWatchdogV11Dependencies {
+    input: Partial<BubbleWatchdogDependencies> = {}
+  ): BubbleWatchdogDependencies {
     return {
       ...watchdogCommandDefaults,
       ...watchdogPendingReworkDefaults,
@@ -156,7 +158,7 @@ describe("watchdogCommandApi", () => {
       startedAt: "2026-02-22T12:00:00.000Z"
     });
 
-    const result = await runBubbleWatchdogV11(
+    const result = await runBubbleWatchdog(
       {
         bubbleId: bubble.bubbleId,
         cwd: repoPath,
@@ -236,7 +238,7 @@ describe("watchdogCommandApi", () => {
       return sampledPaneActivity("2026-02-22T12:03:00.000Z", "pane-hash-01", true);
     };
 
-    await runBubbleWatchdogV11(
+    await runBubbleWatchdog(
       {
         bubbleId: bubble.bubbleId,
         cwd: repoPath,
@@ -247,7 +249,7 @@ describe("watchdogCommandApi", () => {
       })
     );
 
-    await runBubbleWatchdogV11(
+    await runBubbleWatchdog(
       {
         bubbleId: bubble.bubbleId,
         cwd: repoPath,
@@ -345,7 +347,7 @@ describe("watchdogCommandApi", () => {
     });
     let sampleCalls = 0;
 
-    await runBubbleWatchdogV11(
+    await runBubbleWatchdog(
       {
         bubbleId: bubble.bubbleId,
         cwd: repoPath,
@@ -390,7 +392,7 @@ describe("watchdogCommandApi", () => {
     });
 
     await expect(
-      runBubbleWatchdogV11(
+      runBubbleWatchdog(
         {
           bubbleId: bubble.bubbleId,
           cwd: repoPath,
@@ -398,11 +400,11 @@ describe("watchdogCommandApi", () => {
         },
         baseDependencies({
           retryStuckAgentInput: async () => {
-            throw new BubbleWatchdogErrorV11("WATCHDOG_ACTIVE_ROLE_INVALID");
+            throw new BubbleWatchdogError("WATCHDOG_ACTIVE_ROLE_INVALID");
           }
         })
       )
-    ).rejects.toBeInstanceOf(BubbleWatchdogErrorV11);
+    ).rejects.toBeInstanceOf(BubbleWatchdogError);
   });
 
   it("keeps generic retryStuckAgentInput failures best-effort and returns not_expired", async () => {
@@ -414,7 +416,7 @@ describe("watchdogCommandApi", () => {
       startedAt: "2026-02-22T12:00:00.000Z"
     });
 
-    const result = await runBubbleWatchdogV11(
+    const result = await runBubbleWatchdog(
       {
         bubbleId: bubble.bubbleId,
         cwd: repoPath,
@@ -456,7 +458,7 @@ describe("watchdogCommandApi", () => {
       }
     });
 
-    const result = await runBubbleWatchdogV11(
+    const result = await runBubbleWatchdog(
       {
         bubbleId: bubble.bubbleId,
         cwd: repoPath,
@@ -512,7 +514,7 @@ describe("watchdogCommandApi", () => {
       }
     });
 
-    const result = await runBubbleWatchdogV11(
+    const result = await runBubbleWatchdog(
       {
         bubbleId: bubble.bubbleId,
         cwd: repoPath,
@@ -567,7 +569,7 @@ describe("watchdogCommandApi", () => {
       }
     });
 
-    const result = await runBubbleWatchdogV11(
+    const result = await runBubbleWatchdog(
       {
         bubbleId: bubble.bubbleId,
         cwd: repoPath,
@@ -614,7 +616,7 @@ describe("watchdogCommandApi", () => {
     });
 
     let retryCalls = 0;
-    const result = await runBubbleWatchdogV11(
+    const result = await runBubbleWatchdog(
       {
         bubbleId: bubble.bubbleId,
         cwd: repoPath,
@@ -651,7 +653,7 @@ describe("watchdogCommandApi", () => {
       startedAt
     });
 
-    const result = await runBubbleWatchdogV11(
+    const result = await runBubbleWatchdog(
       {
         bubbleId: bubble.bubbleId,
         cwd: repoPath,
@@ -684,7 +686,7 @@ describe("watchdogCommandApi", () => {
       startedAt
     });
 
-    await runBubbleWatchdogV11(
+    await runBubbleWatchdog(
       {
         bubbleId: bubble.bubbleId,
         cwd: repoPath,
@@ -718,7 +720,7 @@ describe("watchdogCommandApi", () => {
     });
     const callOrder: string[] = [];
     const appendProtocolEnvelope: NonNullable<
-      BubbleWatchdogV11Dependencies["appendProtocolEnvelope"]
+      BubbleWatchdogDependencies["appendProtocolEnvelope"]
     > = async (input) => {
       callOrder.push("append");
       return {
@@ -732,14 +734,14 @@ describe("watchdogCommandApi", () => {
       };
     };
     const writeStateSnapshot: NonNullable<
-      BubbleWatchdogV11Dependencies["writeStateSnapshot"]
+      BubbleWatchdogDependencies["writeStateSnapshot"]
     > = async () => {
       callOrder.push("write");
       throw new Error("simulated write failure");
     };
 
     await expect(
-      runBubbleWatchdogV11(
+      runBubbleWatchdog(
         {
           bubbleId: bubble.bubbleId,
           cwd: repoPath,
@@ -776,7 +778,7 @@ describe("watchdogCommandApi", () => {
       startedAt
     });
 
-    const result = await runBubbleWatchdogV11(
+    const result = await runBubbleWatchdog(
       {
         bubbleId: bubble.bubbleId,
         cwd: repoPath,
@@ -826,7 +828,7 @@ describe("watchdogCommandApi", () => {
     });
     let sampleCalls = 0;
 
-    const result = await runBubbleWatchdogV11(
+    const result = await runBubbleWatchdog(
       {
         bubbleId: bubble.bubbleId,
         cwd: repoPath,
@@ -858,7 +860,7 @@ describe("watchdogCommandApi", () => {
       startedAt
     });
 
-    const result = await runBubbleWatchdogV11(
+    const result = await runBubbleWatchdog(
       {
         bubbleId: bubble.bubbleId,
         cwd: repoPath,
@@ -899,7 +901,7 @@ describe("watchdogCommandApi", () => {
       lastCommandAtIso: "2026-02-22T12:00:00.000Z"
     });
 
-    const result = await runBubbleWatchdogV11(
+    const result = await runBubbleWatchdog(
       {
         bubbleId: bubble.bubbleId,
         cwd: repoPath,
@@ -926,7 +928,7 @@ describe("watchdogCommandApi", () => {
       startedAt
     });
 
-    const result = await runBubbleWatchdogV11(
+    const result = await runBubbleWatchdog(
       {
         bubbleId: bubble.bubbleId,
         cwd: repoPath,
@@ -964,7 +966,7 @@ describe("watchdogCommandApi", () => {
     await mkdir(dirname(corruptPath), { recursive: true });
     await writeFile(corruptPath, "{ invalid-json\n", "utf8");
 
-    const result = await runBubbleWatchdogV11(
+    const result = await runBubbleWatchdog(
       {
         bubbleId: bubble.bubbleId,
         cwd: repoPath,

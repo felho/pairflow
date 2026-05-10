@@ -1,8 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
 import {
-  runBubbleWatchdogV11,
-  type BubbleWatchdogV11Dependencies
-} from "../../../../src/v11/application/watchdog/emitWatchdogV11.js";
+  runBubbleWatchdog
+} from "../../../../src/v11/application/watchdog/watchdogCommandApi.js";
+import type {
+  BubbleWatchdogDependencies
+} from "../../../../src/v11/application/watchdog/watchdogCommandContract.js";
 import { watchdogCommandDefaults } from "../../../../src/v11/defaults/watchdog/watchdogCommandDefaults.js";
 import { watchdogPendingReworkDefaults } from "../../../../src/v11/defaults/watchdog/watchdogPendingReworkDefaults.js";
 import type { WriteWatchdogPaneActivityPort } from "../../../../src/v11/ports/watchdogPaneActivity.js";
@@ -33,7 +35,7 @@ describe("watchdog command defaults", () => {
       exitCode: 0
     }));
 
-    const result = await runBubbleWatchdogV11({
+    const result = await runBubbleWatchdog({
       bubbleId: "b_watchdog_defaults_01",
       repoPath: "/tmp/repo",
       now: new Date("2026-04-10T22:00:00.000Z")
@@ -42,7 +44,7 @@ describe("watchdog command defaults", () => {
       ...watchdogPendingReworkDefaults,
       appendProtocolEnvelope: (async () => ({
         id: "msg_unused"
-      })) as unknown as BubbleWatchdogV11Dependencies["appendProtocolEnvelope"],
+      })) as unknown as BubbleWatchdogDependencies["appendProtocolEnvelope"],
       appendWatchdogTrace,
       emitBubbleNotification: async () => ({
         kind: "waiting-human" as const,
@@ -59,7 +61,7 @@ describe("watchdog command defaults", () => {
       retryStuckAgentInput: (async () => ({
         retried: false,
         reason: "not_stuck"
-      })) as BubbleWatchdogV11Dependencies["retryStuckAgentInput"],
+      })) as BubbleWatchdogDependencies["retryStuckAgentInput"],
       readStateSnapshot: (async () => ({
         fingerprint: "fp_state",
         state: {
@@ -82,7 +84,7 @@ describe("watchdog command defaults", () => {
           meta_review: null,
           round_role_history: []
         }
-      })) as unknown as BubbleWatchdogV11Dependencies["readStateSnapshot"],
+      })) as unknown as BubbleWatchdogDependencies["readStateSnapshot"],
       readRuntimeSessionsRegistry,
       readWatchdogPaneActivity: async () => ({
         status: "missing" as const
@@ -116,7 +118,7 @@ describe("watchdog command defaults", () => {
           sessionsPath: "/tmp/runtime/sessions.json",
           statePath: "/tmp/runtime/state.json"
         }
-      })) as unknown as BubbleWatchdogV11Dependencies["resolveBubbleById"],
+      })) as unknown as BubbleWatchdogDependencies["resolveBubbleById"],
       runTmux,
       writeStateSnapshot: (async () => ({
         fingerprint: "fp_next",
@@ -132,7 +134,7 @@ describe("watchdog command defaults", () => {
           meta_review: null,
           round_role_history: []
         }
-      })) as unknown as BubbleWatchdogV11Dependencies["writeStateSnapshot"],
+      })) as unknown as BubbleWatchdogDependencies["writeStateSnapshot"],
       writeWatchdogPaneActivity,
       ensureBubbleInstanceIdForMutation: async () => ({
         bubbleInstanceId: "bi_stub",

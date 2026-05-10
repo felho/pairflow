@@ -4,10 +4,12 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import {
-  runBubbleWatchdogV11,
-  type BubbleWatchdogV11Dependencies,
-  type BubbleWatchdogV11Result
-} from "../../../src/v11/application/watchdog/emitWatchdogV11.js";
+  runBubbleWatchdog
+} from "../../../src/v11/application/watchdog/watchdogCommandApi.js";
+import type {
+  BubbleWatchdogDependencies,
+  BubbleWatchdogResult
+} from "../../../src/v11/application/watchdog/watchdogCommandContract.js";
 import { watchdogCommandDefaults } from "../../../src/v11/defaults/watchdog/watchdogCommandDefaults.js";
 import { watchdogPendingReworkDefaults } from "../../../src/v11/defaults/watchdog/watchdogPendingReworkDefaults.js";
 import {
@@ -93,7 +95,7 @@ function parseWatchdogCaseInput(input: ContractCase["input"]): ParsedWatchdogCas
 }
 
 function normalizeWatchdogResult(
-  result: BubbleWatchdogV11Result
+  result: BubbleWatchdogResult
 ): WatchdogContractOutput {
   return {
     status: "ok",
@@ -371,8 +373,8 @@ async function seedWatchdogPaneActivityFixture(input: {
 
 function buildWatchdogScenarioDependencies(
   scenario: WatchdogContractExtendedScenario
-): BubbleWatchdogV11Dependencies {
-  const baseDependencies: BubbleWatchdogV11Dependencies = {
+): BubbleWatchdogDependencies {
+  const baseDependencies: BubbleWatchdogDependencies = {
     ...watchdogCommandDefaults,
     ...watchdogPendingReworkDefaults,
     readRuntimeSessionsRegistry: () => Promise.resolve({}),
@@ -441,7 +443,7 @@ function buildWatchdogScenarioDependencies(
 
 async function executeWatchdogCase(input: {
   caseDef: ContractCase;
-  executor: typeof runBubbleWatchdogV11;
+  executor: typeof runBubbleWatchdog;
 }): Promise<WatchdogContractOutput> {
   const repoPath = await mkdtemp(join(tmpdir(), "pairflow-watchdog-contract-"));
   try {
@@ -485,7 +487,7 @@ export async function runWatchdogContractCase(
 
   const v11 = await executeWatchdogCase({
     caseDef,
-    executor: runBubbleWatchdogV11
+    executor: runBubbleWatchdog
   });
   assertContractExpectedSubset({
     output: v11,
