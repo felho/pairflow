@@ -6,7 +6,7 @@ import { appendProtocolEnvelope } from "../../../start/startCommandDependencyDef
 import { MetaReviewError } from "../../../../shared/metaReview/metaReviewError.js";
 import {
   toMetaReviewError
-} from "../../../../shared/metaReview/metaReviewCommandErrorMapping.js";
+} from "./metaReviewCommandErrorMapping.js";
 import type {
   MetaReviewCommandDependencies,
   MetaReviewResult,

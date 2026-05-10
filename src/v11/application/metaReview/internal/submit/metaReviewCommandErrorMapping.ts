@@ -1,8 +1,8 @@
 import {
   SchemaValidationError
-} from "../../../validation/primitives.js";
-import { MetaReviewError } from "../command/metaReviewError.js";
-import { isNamedError } from "../../../errors/namedError.js";
+} from "../../../../shared/validation/primitives.js";
+import { MetaReviewError } from "../../../../shared/metaReview/metaReviewError.js";
+import { isNamedError } from "../../../../shared/errors/namedError.js";
 
 export function stateWriteConflictToMetaReviewError(error: unknown): MetaReviewError {
   const reason = error instanceof Error ? error.message : String(error);

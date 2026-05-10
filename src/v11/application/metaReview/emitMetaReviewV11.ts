@@ -1,6 +1,6 @@
 import {
   toMetaReviewError
-} from "../../shared/metaReview/metaReviewCommandErrorMapping.js";
+} from "./internal/submit/metaReviewCommandErrorMapping.js";
 import { MetaReviewError } from "../../shared/metaReview/metaReviewError.js";
 import { submitMetaReviewResult } from "./metaReviewCommandSubmitRuntime.js";
 export type {
