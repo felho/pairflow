@@ -1,13 +1,13 @@
 import { join } from "node:path";
 
-import { applyStateTransition } from "../../domain/state/machine.js";
-import { normalizeStringList } from "../../shared/normalization/stringNormalization.js";
-import { BubbleCommitError } from "./internal/error/commitCommandError.js";
-import type { BubbleStateSnapshot } from "../../shared/state/bubbleStateSnapshotTypes.js";
+import { applyStateTransition } from "../../../../domain/state/machine.js";
+import { normalizeStringList } from "../../../../shared/normalization/stringNormalization.js";
+import { BubbleCommitError } from "../error/commitCommandError.js";
+import type { BubbleStateSnapshot } from "../../../../shared/state/bubbleStateSnapshotTypes.js";
 import type {
   ProtocolEnvelope,
   ProtocolEnvelopeDraft
-} from "../../../types/protocol.js";
+} from "../../../../../types/protocol.js";
 
 export interface CommitFinalizationContext {
   bubbleId: string;

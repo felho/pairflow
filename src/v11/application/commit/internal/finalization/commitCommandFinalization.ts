@@ -1,9 +1,9 @@
-import { emitBubbleLifecycleEventBestEffort } from "../metrics/bubbleEvents.js";
+import { emitBubbleLifecycleEventBestEffort } from "../../../metrics/bubbleEvents.js";
 import type {
   AppendedEnvelope,
   CommitRuntimeContext,
   WrittenState
-} from "./commitCommandApiContract.js";
+} from "../../commitCommandApiContract.js";
 import {
   appendCommitResultEnvelopeMutation,
   persistCommittedThenDoneStateMutation

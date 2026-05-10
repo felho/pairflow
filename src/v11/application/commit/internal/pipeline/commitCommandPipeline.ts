@@ -12,7 +12,7 @@ import {
   appendCommitResultEnvelope,
   emitCommitLifecycleEvent,
   persistCommittedThenDoneState
-} from "../../commitCommandFinalization.js";
+} from "../finalization/commitCommandFinalization.js";
 import { syncRemoteCommitContinuityArtifacts } from "../../remoteCommitContinuitySync.js";
 import { runCommitGitStep } from "../git/commitCommandGitStep.js";
 import {

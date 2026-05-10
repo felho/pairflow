@@ -74,7 +74,7 @@ vi.mock("../../../../src/v11/application/commit/internal/git/commitCommandGitSte
   runCommitGitStep
 }));
 
-vi.mock("../../../../src/v11/application/commit/commitCommandFinalization.js", () => ({
+vi.mock("../../../../src/v11/application/commit/internal/finalization/commitCommandFinalization.js", () => ({
   appendCommitResultEnvelope,
   emitCommitLifecycleEvent,
   persistCommittedThenDoneState

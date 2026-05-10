@@ -62,10 +62,10 @@ interface CommitRuntimeContextBase {
  *
  * This type remains exported because focused git and finalization helpers
  * (`internal/git/commitCommandGitStep.ts` and
- * `commitCommandFinalization.ts`) live in sub-areas separate from
- * `internal/pipeline/**`. It is not a public orchestration contract for
- * callers: route selection and side-effect ordering are owned by the
- * command-local pipeline.
+ * `internal/finalization/commitCommandFinalization.ts`) live in sub-areas
+ * separate from `internal/pipeline/**`. It is not a public orchestration
+ * contract for callers: route selection and side-effect ordering are owned
+ * by the command-local pipeline.
  */
 export interface CommitRuntimeContext extends CommitRuntimeContextBase {
   route: "local";
