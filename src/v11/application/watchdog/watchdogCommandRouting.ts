@@ -7,7 +7,8 @@ import {
 import type { WatchdogPaneActivityRecord } from "../../ports/watchdogPaneActivity.js";
 import {
   buildNotExpiredResult,
-  escalateRunningWatchdog
+  escalateRunningWatchdog,
+  maybeRetryStuckAgentInput
 } from "./watchdogCommandFlow.js";
 import {
   maybeRouteMetaReviewBeforeExpiry,
@@ -98,6 +99,16 @@ export async function resolveWatchdogLifecycleRoute(input: {
   const quietWindowElapsedMs = context.now.getTime() - lastChangedAtMs;
   if (quietWindowElapsedMs < WATCHDOG_PANE_QUIET_WINDOW_MS) {
     return buildNotExpiredResult(context);
+  }
+
+  if (await maybeRetryStuckAgentInput(context)) {
+    return {
+      bubbleId: context.resolved.bubbleId,
+      escalated: false,
+      reason: "not_expired",
+      state: context.state,
+      stuckRetried: true
+    };
   }
 
   return escalateRunningWatchdog(context);

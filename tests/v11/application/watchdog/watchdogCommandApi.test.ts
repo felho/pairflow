@@ -589,6 +589,58 @@ describe("watchdogCommandApi", () => {
     expect(result.state.state).toBe("WAITING_HUMAN");
   });
 
+  it("retries stuck pane input before escalating an expired quiet RUNNING watchdog", async () => {
+    const repoPath = await createTempRepo();
+    const startedAt = "2026-02-22T12:00:00.000Z";
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_watchdog_v11_quiet_stuck_01",
+      task: "Watchdog v11 quiet-window stuck input recovery",
+      startedAt
+    });
+
+    await writeWatchdogPaneActivity({
+      runtimeDir: bubble.paths.runtimeDir,
+      bubbleId: bubble.bubbleId,
+      record: {
+        bubble_id: bubble.bubbleId,
+        sampled_at: "2026-02-22T12:30:00.000Z",
+        pane_hash: "pane-hash-stable",
+        last_changed_at: "2026-02-22T12:20:00.000Z",
+        session_name: "pf-watchdog-v11",
+        target_pane: "pf-watchdog-v11:0.1",
+        last_sample_status: "sampled"
+      }
+    });
+
+    let retryCalls = 0;
+    const result = await runBubbleWatchdogV11(
+      {
+        bubbleId: bubble.bubbleId,
+        cwd: repoPath,
+        now: new Date(
+          Date.parse(startedAt) + (bubble.config.watchdog_timeout_minutes + 1) * 60_000
+        )
+      },
+      baseDependencies({
+        sampleWatchdogPaneActivity: () =>
+          Promise.resolve(
+            sampledPaneActivity("2026-02-22T12:31:00.000Z", "pane-hash-stable", false)
+          ),
+        retryStuckAgentInput: async () => {
+          retryCalls += 1;
+          return { retried: true };
+        }
+      })
+    );
+
+    expect(retryCalls).toBe(1);
+    expect(result.escalated).toBe(false);
+    expect(result.reason).toBe("not_expired");
+    expect(result.stuckRetried).toBe(true);
+    expect(result.state.state).toBe("RUNNING");
+  });
+
   it("escalates after timeout when the runtime session is missing", async () => {
     const repoPath = await createTempRepo();
     const startedAt = "2026-02-22T12:00:00.000Z";

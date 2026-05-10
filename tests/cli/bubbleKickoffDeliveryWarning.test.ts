@@ -1,6 +1,15 @@
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { KickoffBubbleV11Result } from "../../src/v11/application/kickoff/emitKickoffV11.js";
+import type {
+  BubbleKickoffCommandDependencies
+} from "../../src/v11/application/kickoff/kickoffCliCommand.js";
+
+type RunBubbleKickoffCommandMock = (
+  args: string[],
+  cwd?: string,
+  dependencies?: BubbleKickoffCommandDependencies
+) => Promise<KickoffBubbleV11Result | null>;
 
 describe("runCli bubble kickoff delivery warning", () => {
   const stdoutSpy = vi.spyOn(process.stdout, "write").mockImplementation(() => true);
@@ -45,7 +54,9 @@ describe("runCli bubble kickoff delivery warning", () => {
         retried: false
       }
     } as KickoffBubbleV11Result;
-    const runBubbleKickoffCommand = vi.fn(async () => mockedResult);
+    const runBubbleKickoffCommand = vi.fn<RunBubbleKickoffCommandMock>(
+      async () => mockedResult
+    );
 
     vi.doMock("../../src/v11/application/kickoff/kickoffCliCommand.js", () => ({
       getBubbleKickoffHelpText: () => "help",

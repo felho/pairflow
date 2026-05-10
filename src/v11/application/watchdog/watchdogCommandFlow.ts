@@ -47,12 +47,11 @@ export interface WatchdogRuntimeContext {
   retryStuckAgentInput: RetryStuckAgentInputPort;
 }
 
-export async function buildNotExpiredResult(
+export async function maybeRetryStuckAgentInput(
   context: WatchdogRuntimeContext
-): Promise<BubbleWatchdogResult> {
+): Promise<boolean> {
   // Best-effort: if a pairflow message is stuck in the active role's
   // input buffer (Enter didn't register during delivery), retry it now.
-  let stuckRetried: boolean | undefined;
   if (context.state.state === "RUNNING" && context.state.active_role !== null) {
     let retryResult:
       | Awaited<ReturnType<WatchdogRuntimeContext["retryStuckAgentInput"]>>
@@ -72,15 +71,22 @@ export async function buildNotExpiredResult(
       // faults must not mutate watchdog state or block the canonical route.
     }
     if (retryResult?.retried) {
-      stuckRetried = true;
+      return true;
     }
   }
+  return false;
+}
+
+export async function buildNotExpiredResult(
+  context: WatchdogRuntimeContext
+): Promise<BubbleWatchdogResult> {
+  const stuckRetried = await maybeRetryStuckAgentInput(context);
   return {
     bubbleId: context.resolved.bubbleId,
     escalated: false,
     reason: "not_expired",
     state: context.state,
-    stuckRetried
+    stuckRetried: stuckRetried ? true : undefined
   };
 }
 
