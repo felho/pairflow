@@ -18,7 +18,11 @@ covers the actual shape distribution rather than codifying a single example.
 2. For each lane, recorded: top-level `.ts` count, `internal/` presence and
    sub-areas, defaults presence, CLI presence.
 3. Read top-level filenames, line counts, and a sample of entry-point files
-   (`emit<X>V11.ts`).
+   (at the time of the original survey these were `emit<X>V11.ts` thin
+   wrappers; the wrappers have since been removed in a codebase-wide V11
+   sweep, and the canonical entry point is now `<X>CommandApi.ts` —
+   or `<X>Bubble.ts` / `emit<X>.ts` for lanes whose entry function name
+   matches the lane).
 4. Cross-referenced against the lane structural audit
    (`.pairflow/evidence/lane-audit.md`) for consumer scope.
 5. Grouped lanes by shape and by current modularization state.
@@ -68,8 +72,8 @@ roles. Patterns are written with `<X>` standing for the lane name (e.g.,
 
 | Filename pattern | Role | Example | Lanes using it |
 |------------------|------|---------|----------------|
-| `emit<X>V11.ts` | V11 protocol entry point (thin wrapper) | `emitWatchdogV11.ts` | watchdog, status, attach, kickoff, start, metaReview, metaReviewGate, actorProtocol |
-| `<X>CommandApi.ts` | Main command API implementation | `watchdogCommandApi.ts` | commit, status, watchdog, restart, reconcile, reply, start, metaReviewGate (multiple) |
+| `<X>CommandApi.ts` | Main command API implementation; canonical entry for most lanes | `watchdogCommandApi.ts` | commit, status, watchdog, restart, reconcile, reply, start, metaReviewGate (multiple) |
+| `<X>Bubble.ts` or `<X>.ts` | Canonical entry when the API function name matches the lane | `attachBubble.ts`, `extractBubble.ts`, `kickoffBubble.ts`, `emitActorProtocol.ts` | attach, extract, kickoff, actorProtocol |
 | `<X>CommandContract.ts` | Dependency port + result types | `watchdogCommandContract.ts` | commit, watchdog, restart, reply, reconcile, start, planWatch (as `*LoopContract.ts`) |
 | `<X>CommandError.ts` | Error class definitions | `commitCommandError.ts` | commit, watchdog (as `*ErrorNormalization`), reply, restart |
 | `<X>CommandErrorNormalization.ts` | Error mapping/coercion | `restartCommandErrorNormalization.ts` | commit, watchdog, restart, reply, reconcile |
@@ -81,16 +85,25 @@ roles. Patterns are written with `<X>` standing for the lane name (e.g.,
 | `<X>CommandFinalization.ts` | Cleanup/wrap-up step | `commitCommandFinalization.ts` | commit, delete (as `*BubbleFinalization`) |
 | `<X>CliCommand.ts` | CLI integration glue (lane-side) | `restartCliCommand.ts` | kickoff, restart, status, reconcile, delete, attach |
 
-The `emit<X>V11.ts` files are characteristically small (~20–50 lines). They
-typically:
+### Historical note: V11 wrapper files (now removed)
 
-- import the API function from `<X>CommandApi.ts`,
-- re-export it as `run<X>V11`,
-- re-export error class as `<X>ErrorV11`,
-- re-export contract types with `*V11` suffixes.
+At the time of the original survey, eight lanes carried an `emit<X>V11.ts`
+file that re-exported `<X>CommandApi.ts` (and contract) symbols under
+V11-suffixed aliases. These wrappers were removed in a codebase-wide V11
+sweep:
 
-This is a stable convention: V11 is a protocol versioning layer, and the
-emit-V11 file is the version-stable adapter over the underlying command API.
+- Group A — pure alias-only wrappers (deleted): watchdog, status, start,
+  metaReview.
+- Group B — multi-source delegation (deleted): metaReviewGate.
+- Group C — wrapper held the implementation (renamed): attach
+  (`emitAttachV11.ts` → `attachBubble.ts`), extract
+  (`emitExtractV11.ts` → `extractBubble.ts`), kickoff
+  (`emitKickoffV11.ts` → `kickoffBubble.ts`), actorProtocol
+  (`emitActorProtocolV11.ts` → `emitActorProtocol.ts`).
+
+After the sweep there are no V11-suffixed identifiers and no files with
+V11 in the filename. The path-segment `tests/v11/` and `tests/contracts/v11/`
+remains as a directory naming convention only.
 
 ## Shape categories
 
@@ -116,12 +129,13 @@ straightforward: `internal/<sub>/` for everything that isn't entry/contract.
 
 - **delete** — 6 top-level, ~1640 LOC total. Files: `deleteBubble*` cluster +
   `deleteCliCommand` + `remoteDeleteExecutionContext`.
-- **attach** — 6 top-level. Files: `attachBubble*` cluster + `emitAttachV11`
-  + `attachCliCommand`.
+- **attach** — 6 top-level. Files: `attachBubble*` cluster +
+  `attachCliCommand` (the legacy `emitAttachV11` wrapper has been renamed to
+  `attachBubble.ts`).
 - **extract**, **open**, **reply**, **resume**, **stop** — similar pattern.
 - **gates**, **inbox** — 2 top-level only; below restructuring threshold.
 
-These all have the standard naming (`emit*V11`, `*CommandApi`, `*CommandContract`,
+These all have the standard naming (`*CommandApi`, `*CommandContract`,
 `*CliCommand` etc.), just no `internal/` boundary yet.
 
 ### Tier 2 — Standard Command Pipeline (7+ top-level OR multi-phase internal)
@@ -240,10 +254,16 @@ presentation helpers and should move to `internal/cli/` (or even into the
    concern, but other intra-lane concerns stayed top-level. Pattern: "first
    sub-area added, more never followed."
 
-5. **The `emit<X>V11.ts` thin-wrapper is universal.** Across all CLI-fronted
-   lanes, the V11 entry point is a thin file that re-exports + renames.
-   Treating this as the canonical root-public file is consistent with planWatch
-   (`planWatchLoop.ts`).
+5. **The `emit<X>V11.ts` thin-wrapper was universal — and was removed.**
+   At the time of the original survey, all CLI-fronted lanes had a thin
+   `emit<X>V11.ts` file that re-exported + V11-renamed the underlying
+   `<X>CommandApi.ts`. Since the V11 sweep landed, the wrapper layer is
+   gone: Group A/B wrappers were deleted (consumers now reach
+   `<X>CommandApi.ts` directly), Group C wrappers were renamed to
+   `<X>Bubble.ts` / `emit<X>.ts` (since they held the implementation, not
+   just aliases). The canonical root-public entry point is now
+   `<X>CommandApi.ts` (or its lane-specific equivalent), consistent with
+   planWatch's `planWatchLoop.ts`.
 
 6. **Standard naming covers ~80% of files.** The 14 patterns in the naming
    table classify most files in the surveyed lanes. The remaining ~20% are

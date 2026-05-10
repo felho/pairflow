@@ -49,8 +49,8 @@ lane, use the table to identify roles. `<X>` stands for the lane's command name
 
 | Pattern | Role | Default visibility |
 |---------|------|--------------------|
-| `emit<X>V11.ts` | V11 protocol entry (thin re-export wrapper) | root-public |
-| `<X>CommandApi.ts` | Main command API implementation | root-public |
+| `<X>CommandApi.ts` | Main command API implementation (canonical entry point for most lanes) | root-public |
+| `<X>Bubble.ts` or `<X>.ts` | Canonical entry point when the API function name matches the lane (`attach`, `extract`, `kickoff`); equivalent to `<X>CommandApi.ts` | root-public |
 | `<X>CommandContract.ts` | Dependency port + result types | root-public |
 | `<X>CliCommand.ts` | Application-side CLI integration glue | root-public (when consumed by `src/cli/`) |
 | `<X>CommandError.ts` | Error class definitions | root-public when cross-lane; internal when single-lane |
@@ -61,6 +61,13 @@ lane, use the table to identify roles. `<X>` stands for the lane's command name
 | `<X>CommandInputNormalization.ts` | Input parsing/validation | internal |
 | `<X>CommandDependencyResolution.ts` | Dependency resolution helper | internal |
 | `<X>CommandFinalization.ts` | Cleanup/wrap-up step | internal (or `internal/finalization/`) |
+
+Historically a thin `emit<X>V11.ts` wrapper added a V11 suffix on top of
+`<X>CommandApi.ts`. That layer was removed in a codebase-wide V11 sweep —
+consumers now import canonical names directly from `<X>CommandApi.ts` (or
+`<X>Bubble.ts` / `emit<X>.ts` for Group C lanes where the wrapper had been
+the implementation). New lanes should not reintroduce a V11-suffixed entry
+point.
 
 The "Default visibility" column is a starting point. Override based on the
 import scan: a file consumed by `≥ 2` lanes is root-public regardless of
@@ -150,8 +157,7 @@ intra-lane.
 
 ```text
 application/<command>/
-├── emit<Command>V11.ts          ← root-public: V11 protocol entry
-├── <command>CommandApi.ts        ← root-public: main API
+├── <command>CommandApi.ts        ← root-public: main API (canonical entry)
 ├── <command>CommandContract.ts   ← root-public: dependency port
 ├── <command>CliCommand.ts        ← root-public: CLI integration (if CLI exists)
 └── internal/
@@ -161,6 +167,10 @@ application/<command>/
     ├── input/<command>CommandInputNormalization.ts (if applicable)
     └── ...                                   ← other implementation helpers
 ```
+
+For lanes whose entry function name matches the lane (`attach`, `extract`,
+`kickoff`), the entry file is named `<command>Bubble.ts` or `<command>.ts`
+instead of `<command>CommandApi.ts`. The role is the same.
 
 The `internal/` sub-area names mirror role names from the naming table. A
 small lane often only needs one or two sub-areas (`runtime/`, `error/`).
@@ -185,8 +195,7 @@ command logic; persistence + routing; etc.).
 
 ```text
 application/<command>/
-├── emit<Command>V11.ts          ← root-public
-├── <command>CommandApi.ts        ← root-public
+├── <command>CommandApi.ts        ← root-public: canonical entry
 ├── <command>CommandContract.ts   ← root-public
 ├── <command>CliCommand.ts        ← root-public (if CLI exists)
 └── internal/
@@ -288,10 +297,9 @@ Half-done lanes today (per the survey): `commit`, `merge`, `metaReview`,
 
 5. **Goal state for top-level.** After the work, top-level should contain
    only:
-   - `emit<X>V11.ts` (V11 protocol entry)
+   - `<X>CommandApi.ts` (canonical API entry point) — or `<X>Bubble.ts` /
+     `<X>.ts` for lanes whose entry function name matches the lane
    - `<X>CommandContract.ts` (dependency port)
-   - `<X>CommandApi.ts` (main API, when an external lane composes it
-     directly rather than via emit-V11)
    - `<X>CliCommand.ts` (only if a real `src/cli/` consumer exists)
    - any other genuinely external-consumed file backed by import-scan
      evidence
@@ -324,9 +332,8 @@ Half-done lanes today (per the survey): `commit`, `merge`, `metaReview`,
 - `remoteCommitExecutionContext.ts` → `internal/remote/`
 
 Top-level after the refactor: `commitCommandApi.ts`,
-`commitCommandApiContract.ts`, `commitCommandContract.ts` (and
-`emit<X>V11.ts` if/when added). The exact sub-area decisions depend on the
-import-scan manifest.
+`commitCommandApiContract.ts`, `commitCommandContract.ts`. The exact
+sub-area decisions depend on the import-scan manifest.
 
 ## Module Depth Check applies
 
