@@ -9,13 +9,13 @@ import type {
   BubbleListView
 } from "../../shared/read-model/list/listReadModelContract.js";
 import type { ListReadModelDependencies } from "./listReadModelDependencies.js";
-import { BubbleListError, type BubbleListErrorNormalizationContext } from "./listReadModelErrors.js";
+import { BubbleListError, type BubbleListErrorNormalizationContext } from "./internal/error/listReadModelErrors.js";
 import {
   createZeroCounts,
   resolveListBubblesContext,
   runtimeSessionExpectedStates
-} from "./listReadModelContext.js";
-import { buildBubbleListEntry } from "./listReadModelEntryBuilder.js";
+} from "./internal/context/listReadModelContext.js";
+import { buildBubbleListEntry } from "./internal/projection/listReadModelEntryBuilder.js";
 
 export type {
   BubbleListEntry,
@@ -28,9 +28,9 @@ export type {
   BubbleListErrorContext,
   BubbleListErrorInput,
   BubbleListErrorNormalizationContext
-} from "./listReadModelErrors.js";
+} from "./internal/error/listReadModelErrors.js";
 
-export { BubbleListError } from "./listReadModelErrors.js";
+export { BubbleListError } from "./internal/error/listReadModelErrors.js";
 
 async function pathExists(path: string): Promise<boolean> {
   return access(path, fsConstants.F_OK)

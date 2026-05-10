@@ -16,10 +16,10 @@ import {
 import { resolveBubbleAttention } from "../../../../shared/status/bubbleAttention.js";
 import { computeWatchdogStatus } from "../../../../shared/watchdog/watchdogStatus.js";
 import type { BubbleListEntry } from "../../../../shared/read-model/list/listReadModelContract.js";
-import { runtimeSessionExpectedStates } from "../../listReadModelContext.js";
+import { runtimeSessionExpectedStates } from "../context/listReadModelContext.js";
 import type { ListReadModelDependencies } from "../../listReadModelDependencies.js";
-import { BubbleListError } from "../../listReadModelErrors.js";
-import { toRemotePaneActivityRead } from "../../listRemotePaneActivityRead.js";
+import { BubbleListError } from "../error/listReadModelErrors.js";
+import { toRemotePaneActivityRead } from "./listRemotePaneActivityRead.js";
 import { readRemoteStateCacheSafe } from "./remoteStateCacheRead.js";
 import type { BubbleBuildResult, RemoteRefreshFailureMetadata } from "./types.js";
 

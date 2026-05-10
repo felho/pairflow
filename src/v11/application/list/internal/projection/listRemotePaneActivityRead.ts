@@ -1,5 +1,5 @@
-import type { RemoteBubbleStatusSnapshot } from "../../shared/status/remoteBubbleStatusContract.js";
-import type { ReadWatchdogPaneActivityResult } from "../../shared/watchdog/watchdogPaneActivityStore.js";
+import type { RemoteBubbleStatusSnapshot } from "../../../../shared/status/remoteBubbleStatusContract.js";
+import type { ReadWatchdogPaneActivityResult } from "../../../../shared/watchdog/watchdogPaneActivityStore.js";
 
 export function toRemotePaneActivityRead(input: {
   bubbleId: string;

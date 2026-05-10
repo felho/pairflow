@@ -1,11 +1,11 @@
 import { resolve } from "node:path";
 
-import { parseBubbleConfigToml } from "../../../config/bubbleConfig.js";
-import { getBubblePaths } from "../../shared/bubble/bubblePaths.js";
-import { runListEntryProjectionPipeline } from "./internal/projection/listEntryProjectionPipeline.js";
-import type { BubbleBuildResult } from "./internal/projection/types.js";
-import type { ListReadModelDependencies } from "./listReadModelDependencies.js";
-import { BubbleListError } from "./listReadModelErrors.js";
+import { parseBubbleConfigToml } from "../../../../../config/bubbleConfig.js";
+import { getBubblePaths } from "../../../../shared/bubble/bubblePaths.js";
+import { runListEntryProjectionPipeline } from "./listEntryProjectionPipeline.js";
+import type { BubbleBuildResult } from "./types.js";
+import type { ListReadModelDependencies } from "../../listReadModelDependencies.js";
+import { BubbleListError } from "../error/listReadModelErrors.js";
 
 export async function buildBubbleListEntry(input: {
   repoPath: string;

@@ -1,4 +1,4 @@
-import { isRemoteBubbleStatusErrorLike } from "../../shared/status/remoteBubbleStatusContract.js";
+import { isRemoteBubbleStatusErrorLike } from "../../../../shared/status/remoteBubbleStatusContract.js";
 
 export interface BubbleListErrorContext {
   source: "repo_resolution" | "unexpected_error";

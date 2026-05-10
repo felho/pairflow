@@ -1,7 +1,7 @@
 import type { parseBubbleConfigToml } from "../../../../../config/bubbleConfig.js";
 import type { getBubblePaths } from "../../../../shared/bubble/bubblePaths.js";
 import type { BubbleRemotePointer } from "../../../../shared/remote/remoteExecutionTypes.js";
-import { isRefreshFallbackEligibleError } from "../../listReadModelErrors.js";
+import { isRefreshFallbackEligibleError } from "../error/listReadModelErrors.js";
 import type { ListReadModelDependencies } from "../../listReadModelDependencies.js";
 import {
   buildCachedRemoteBubbleListEntry,

@@ -1,13 +1,13 @@
 import { join } from "node:path";
 
-import type { BubbleLifecycleState } from "../../../contracts/kernel/lifecycle.js";
-import { isNamedError } from "../../shared/errors/namedError.js";
+import type { BubbleLifecycleState } from "../../../../../contracts/kernel/lifecycle.js";
+import { isNamedError } from "../../../../shared/errors/namedError.js";
 import type {
   BubbleListInput,
   BubbleListStateCounts
-} from "../../shared/read-model/list/listReadModelContract.js";
-import type { ListReadModelDependencies } from "./listReadModelDependencies.js";
-import { BubbleListError } from "./listReadModelErrors.js";
+} from "../../../../shared/read-model/list/listReadModelContract.js";
+import type { ListReadModelDependencies } from "../../listReadModelDependencies.js";
+import { BubbleListError } from "../error/listReadModelErrors.js";
 
 export const runtimeSessionExpectedStates = new Set<BubbleLifecycleState>([
   "RUNNING",
