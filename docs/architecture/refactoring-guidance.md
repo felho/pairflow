@@ -253,6 +253,25 @@ Boundary/Architecture refactor encounters a camouflage shape that fits none of
 the listed patterns, extend the catalog with the new shape's diagnostic signal,
 operation, and introducing commit, rather than force-fitting an existing label.
 
+## Application Command Lane Template
+
+For lane-level work in `src/v11/application/<command>/` — restructuring the
+public/internal boundary of CLI-driven command lanes — see
+[`docs/refactoring/application-command-lane-template.md`](../refactoring/application-command-lane-template.md).
+The template defines visibility tiers (root-public, lane-internal-but-named,
+strictly-internal), tier selection (Trivial / Small / Pipeline / Coordinator),
+common naming roles, and a dedicated procedure for half-done lanes (those with
+`internal/<one-sub-area>/` already introduced but the rest of the lane still
+top-level).
+
+The empirical companion document is
+[`docs/refactoring/application-command-shapes-survey.md`](../refactoring/application-command-shapes-survey.md),
+which catalogs the actual shape and naming distribution across every
+`application/` lane.
+
+Non-command application lanes (such as `actorProtocol`) are out of scope of
+the template and tracked as separate placement decisions.
+
 ## Agent Trigger
 
 Root agent guidance should stay short and point here instead of duplicating this
