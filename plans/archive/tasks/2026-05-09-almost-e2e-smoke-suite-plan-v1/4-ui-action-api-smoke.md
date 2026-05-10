@@ -5,7 +5,7 @@ task_family_id: ui-action-api-smoke
 sequence_key: "4"
 task_id: 4-ui-action-api-smoke
 title: "UI Action API Smoke"
-status: in_progress
+status: archived
 phase: phase1
 system_context_ref: docs/architecture/almost-e2e-smoke-suite.md
 target_files:

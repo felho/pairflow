@@ -25,6 +25,12 @@ export {
   type CreateAlmostE2eSmokeFixtureRepoOptions
 } from "./fixtureRepo.js";
 export {
+  createNoopSmokeUiEventsBroker,
+  invokeSmokeUiRouter,
+  type SmokeUiRouterRequest,
+  type SmokeUiRouterResponse
+} from "./uiRouter.js";
+export {
   AlmostE2eSmokeRunner,
   SmokeRunnerError,
   authorityFromStatusView,
