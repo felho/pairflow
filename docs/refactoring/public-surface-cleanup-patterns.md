@@ -319,6 +319,58 @@ Public file with camouflage warning
   #1 is the most expensive). Cheap moves shrink the residual surface that the
   expensive move must reason about.
 
+## Post-Refactor Leftover Hunt
+
+After any sweep that applies one or more of the patterns above, run a
+leftover hunt to catch artifacts that the main sweep can miss. Three
+checks cover the common cases:
+
+1. **Empty directories.** Sub-area dirs left behind when a canonicalization
+   moved files out:
+
+   ```bash
+   find src -type d -empty
+   ```
+
+   Git does not track empty dirs (only files), so they don't show in
+   `git status` — but they linger in the working tree and confuse
+   `find` / IDE navigation. `rmdir` them as a working-tree hygiene step;
+   no commit is generated.
+
+2. **Pure pass-through files** that re-export without value-add. Symptoms:
+   total non-comment lines ≤ re-export lines + a few; no `export function`
+   / `export const` / `export class` of its own. These are usually
+   Pattern #2 or #4 candidates that an earlier refactor missed:
+
+   ```bash
+   # crude but effective: list small .ts files where the body is
+   # essentially "export ... from ...":
+   find src -name "*.ts" -type f -exec sh -c \
+     'lines=$(wc -l < "$1"); reexports=$(grep -c "from \"" "$1"); \
+      [ $lines -le $((reexports * 2 + 3)) ] && echo "$lines $1"' _ {} \;
+   ```
+
+3. **Orphaned files** with zero consumers. The lane structural audit
+   already flags these as `unused` (see `tools/lane-audit/run.ts` and
+   `.pairflow/evidence/lane-audit.md`); cross-reference its output.
+
+Each check should produce 0–2 hits in a healthy codebase post-sweep. If
+you find more, classify each by pattern (#2 / #4 / etc.) and apply the
+operation in a separate commit per the standard discipline.
+
+A specific gotcha worth flagging: when a sweep targets a naming pattern
+(e.g., V11 suffix), grep tends to anchor on the most-obvious occurrence
+(filenames, top-level function names). It can miss the same suffix in:
+
+- import aliases (`import { foo as fooV11 } from "..."`),
+- private function names that happen to share the suffix,
+- comments and docstrings,
+- string literals (test fixture paths, error messages).
+
+A final `grep -rn "<suffix>"` across `src/` + `tests/` (excluding
+known-acceptable directory-name path-segments) should be part of the
+sweep's closeout.
+
 ## Maintenance
 
 This document is intended to grow. When a Boundary/Architecture refactor

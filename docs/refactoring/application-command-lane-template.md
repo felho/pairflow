@@ -317,6 +317,12 @@ Half-done lanes today (per the survey): `commit`, `merge`, `metaReview`,
 
    Each commit should keep the lane in a typecheck-green state.
 
+7. **Closeout: leftover hunt.** After the lane refactor lands, run the
+   three-check leftover hunt described in
+   [`public-surface-cleanup-patterns.md` → Post-Refactor Leftover Hunt](public-surface-cleanup-patterns.md#post-refactor-leftover-hunt):
+   empty directories, pure pass-through files, orphaned files. Lane
+   refactors commonly leave behind one or two of each.
+
 ### Half-done reference
 
 `application/commit/`. Currently: 11 top-level files, `internal/pipeline/`

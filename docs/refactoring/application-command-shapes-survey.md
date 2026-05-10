@@ -233,11 +233,18 @@ presentation helpers and should move to `internal/cli/` (or even into the
 
 ## Anomalies and notable findings
 
-1. **planWatch has empty stub directories.** `internal/runner/` and
-   `internal/linkedTriggerIndex/` exist but are empty after the realignment
-   commits moved their contents to top-level `runner/` and
-   `linkedTriggerIndex/`. A small follow-up `chore` commit can remove the
-   empty dirs.
+1. **planWatch had empty stub directories** (`internal/runner/` and
+   `internal/linkedTriggerIndex/`) left behind by the realignment commits
+   that moved their contents to top-level `runner/` and
+   `linkedTriggerIndex/`. The empty dirs have been removed; planWatch now
+   has only `internal/loop/` as its strictly-internal subtree.
+
+   *General lesson:* canonicalization sweeps that move files out of
+   `internal/<sub>/` directories should follow up with a `rmdir` of the
+   newly-empty subdir. Git does not track empty directories, so the
+   cleanup is a working-tree-only hygiene action — but the leftover dirs
+   confuse `find` / IDE navigation. This applies to any lane after a
+   structural refactor, not just planWatch.
 
 2. **actorProtocol is likely misplaced.** Its file shape suggests a
    runtime/role-domain module, not a command. A separate decision is needed
