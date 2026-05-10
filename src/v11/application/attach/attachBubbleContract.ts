@@ -83,10 +83,6 @@ export interface AttachBubbleDependencies {
   readRemotePointer?: (path: string) => Promise<BubbleRemotePointer | null>;
 }
 
-export type AttachBubbleV11Input = AttachBubbleInput;
-export type AttachBubbleV11Result = AttachBubbleResult;
-export type AttachBubbleV11Dependencies = AttachBubbleDependencies;
-
 export interface AttachBubbleErrorContext {
   bubbleId?: string;
   cwd?: string;

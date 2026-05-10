@@ -2,13 +2,13 @@ import { describe, expect, it, vi } from "vitest";
 
 import { getBubblePaths } from "../../../../src/v11/infrastructure/artifact/bubble/paths.js";
 import {
-  attachBubbleV11
-} from "../../../../src/v11/application/attach/emitAttachV11.js";
+  attachBubble
+} from "../../../../src/v11/application/attach/attachBubble.js";
 import { SchemaValidationError } from "../../../../src/v11/shared/validation/primitives.js";
 import type {
   AttachBubbleError,
   LauncherAvailabilityInput
-} from "../../../../src/v11/application/attach/emitAttachV11.js";
+} from "../../../../src/v11/application/attach/attachBubble.js";
 import type { BubbleConfig } from "../../../../src/v11/shared/config/bubbleConfigTypes.js";
 import type {
   AttachLauncher
@@ -71,7 +71,7 @@ function createAvailabilityChecker(
   };
 }
 
-describe("attachBubbleV11", () => {
+describe("attachBubble", () => {
   it("uses warp launcher when explicitly requested", async () => {
     const resolved = createResolvedBubbleFixture({
       bubbleId: "b_attach_v11_warp",
@@ -88,7 +88,7 @@ describe("attachBubbleV11", () => {
       stderr: ""
     }));
 
-    const result = await attachBubbleV11(
+    const result = await attachBubble(
       {
         bubbleId: resolved.bubbleId,
         repoPath: resolved.repoPath
@@ -142,7 +142,7 @@ describe("attachBubbleV11", () => {
       stderr: ""
     }));
 
-    const result = await attachBubbleV11(
+    const result = await attachBubble(
       {
         bubbleId: resolved.bubbleId,
         repoPath: resolved.repoPath
@@ -186,7 +186,7 @@ describe("attachBubbleV11", () => {
       )
     );
 
-    const result = await attachBubbleV11(
+    const result = await attachBubble(
       {
         bubbleId: resolved.bubbleId,
         repoPath: resolved.repoPath
@@ -216,7 +216,7 @@ describe("attachBubbleV11", () => {
     });
 
     await expect(
-      attachBubbleV11(
+      attachBubble(
         {
           bubbleId: resolved.bubbleId,
           repoPath: resolved.repoPath
@@ -240,7 +240,7 @@ describe("attachBubbleV11", () => {
       attachLauncher: "copy"
     });
 
-    const result = await attachBubbleV11(
+    const result = await attachBubble(
       {
         bubbleId: resolved.bubbleId,
         repoPath: resolved.repoPath
@@ -294,7 +294,7 @@ describe("attachBubbleV11", () => {
     });
 
     await expect(
-      attachBubbleV11(
+      attachBubble(
         {
           bubbleId: resolved.bubbleId,
           repoPath: resolved.repoPath
@@ -335,7 +335,7 @@ describe("attachBubbleV11", () => {
       attachLauncher: "copy"
     });
 
-    const result = await attachBubbleV11(
+    const result = await attachBubble(
       {
         bubbleId: resolved.bubbleId,
         repoPath: resolved.repoPath,
@@ -391,7 +391,7 @@ describe("attachBubbleV11", () => {
       attachLauncher: "copy"
     });
 
-    const result = await attachBubbleV11(
+    const result = await attachBubble(
       {
         bubbleId: resolved.bubbleId,
         repoPath: resolved.repoPath
@@ -440,7 +440,7 @@ describe("attachBubbleV11", () => {
       attachLauncher: "copy"
     });
 
-    const result = await attachBubbleV11(
+    const result = await attachBubble(
       {
         bubbleId: resolved.bubbleId,
         repoPath: resolved.repoPath
@@ -491,7 +491,7 @@ describe("attachBubbleV11", () => {
     });
 
     await expect(
-      attachBubbleV11(
+      attachBubble(
         {
           bubbleId: resolved.bubbleId,
           repoPath: resolved.repoPath
@@ -533,7 +533,7 @@ describe("attachBubbleV11", () => {
       attachLauncher: "copy"
     });
 
-    const result = await attachBubbleV11(
+    const result = await attachBubble(
       {
         bubbleId: resolved.bubbleId,
         repoPath: resolved.repoPath
@@ -580,7 +580,7 @@ describe("attachBubbleV11", () => {
     });
 
     const availabilityCalls: LauncherAvailabilityInput["launcher"][] = [];
-    const result = await attachBubbleV11(
+    const result = await attachBubble(
       {
         bubbleId: resolved.bubbleId,
         repoPath: resolved.repoPath
@@ -635,7 +635,7 @@ describe("attachBubbleV11", () => {
     });
 
     await expect(
-      attachBubbleV11(
+      attachBubble(
         {
           bubbleId: resolved.bubbleId,
           repoPath: resolved.repoPath
@@ -681,7 +681,7 @@ describe("attachBubbleV11", () => {
     });
 
     await expect(
-      attachBubbleV11(
+      attachBubble(
         {
           bubbleId: resolved.bubbleId,
           repoPath: resolved.repoPath

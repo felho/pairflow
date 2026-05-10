@@ -6,7 +6,7 @@ import { join } from "node:path";
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { AttachBubbleError } from "../../../src/v11/application/attach/emitAttachV11.js";
+import { AttachBubbleError } from "../../../src/v11/application/attach/attachBubble.js";
 import { BubbleCommitError } from "../../../src/v11/application/commit/commitCommandApi.js";
 import { BubbleMergeError } from "../../../src/v11/application/merge/mergeCommandOrchestration.js";
 import { RemoteBubbleApprovalCommandError } from "../../../src/v11/infrastructure/executor/ssh/sshBubbleApprovalCommand.js";

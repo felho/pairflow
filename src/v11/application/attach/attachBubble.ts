@@ -28,9 +28,6 @@ export type {
   AttachBubbleInput,
   AttachBubbleReasonCode,
   AttachBubbleResult,
-  AttachBubbleV11Dependencies,
-  AttachBubbleV11Input,
-  AttachBubbleV11Result,
   AttachCommandExecutionInput,
   AttachCommandExecutionResult,
   AttachCommandExecutor,
@@ -40,8 +37,6 @@ export type {
   TmuxSessionChecker
 } from "./attachBubbleContract.js";
 export { AttachBubbleError } from "./attachBubbleContract.js";
-
-export { AttachBubbleError as AttachBubbleErrorV11 };
 
 export const executeAttachCommand = async (
   input: AttachCommandExecutionInput,
@@ -213,8 +208,6 @@ export async function attachBubble(
   };
 }
 
-export { attachBubble as attachBubbleV11 };
-
 function isBubbleLookupError(
   candidate: unknown
 ): candidate is Error & { name: "BubbleLookupError" } {
@@ -247,4 +240,3 @@ export function asAttachBubbleError(error: unknown): never {
   throw error;
 }
 
-export { asAttachBubbleError as asAttachBubbleErrorV11 };

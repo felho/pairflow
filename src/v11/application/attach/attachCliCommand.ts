@@ -1,11 +1,11 @@
 import { parseArgs } from "node:util";
 
 import {
-  asAttachBubbleErrorV11,
-  attachBubbleV11,
-  type AttachBubbleV11Dependencies,
-  type AttachBubbleV11Result
-} from "./emitAttachV11.js";
+  asAttachBubbleError,
+  attachBubble,
+  type AttachBubbleDependencies,
+  type AttachBubbleResult
+} from "./attachBubble.js";
 import { resolveBubbleById } from "../start/startCommandDependencyDefaults.js";
 
 export interface BubbleAttachCommandOptions {
@@ -24,8 +24,8 @@ export type ParsedBubbleAttachCommandOptions =
   | BubbleAttachHelpCommandOptions;
 
 export interface BubbleAttachCommandDependencies
-  extends Partial<AttachBubbleV11Dependencies> {
-  attachBubble?: typeof attachBubbleV11;
+  extends Partial<AttachBubbleDependencies> {
+  attachBubble?: typeof attachBubble;
 }
 
 function parsePortForwardValues(
@@ -120,14 +120,14 @@ export async function runBubbleAttachCommand(
   args: string[],
   cwd: string = process.cwd(),
   dependencies: BubbleAttachCommandDependencies = {}
-): Promise<AttachBubbleV11Result | null> {
+): Promise<AttachBubbleResult | null> {
   const options = parseBubbleAttachCommandOptions(args);
   if (options.help) {
     return null;
   }
 
-  const runAttachBubble = dependencies.attachBubble ?? attachBubbleV11;
-  const attachDependencies: AttachBubbleV11Dependencies = {
+  const runAttachBubble = dependencies.attachBubble ?? attachBubble;
+  const attachDependencies: AttachBubbleDependencies = {
     ...(dependencies.executeAttachCommand !== undefined
       ? { executeAttachCommand: dependencies.executeAttachCommand }
       : {}),
@@ -164,6 +164,6 @@ export async function runBubbleAttachCommand(
       attachDependencies
     );
   } catch (error) {
-    asAttachBubbleErrorV11(error);
+    asAttachBubbleError(error);
   }
 }

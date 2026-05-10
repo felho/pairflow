@@ -159,7 +159,6 @@ export async function attachBubble(
   };
 }
 
-export { attachBubble as attachBubbleV11 };
 export type { AttachBubbleResult } from "./pairflowCommandAttachContract.js";
 
 export function asAttachBubbleError(error: unknown): never {
@@ -183,4 +182,3 @@ export function asAttachBubbleError(error: unknown): never {
   throw error;
 }
 
-export { asAttachBubbleError as asAttachBubbleErrorV11 };

@@ -3,13 +3,13 @@ import { describe, expect, it, vi } from "vitest";
 import { getBubblePaths } from "../../../src/v11/infrastructure/artifact/bubble/paths.js";
 import {
   attachBubble
-} from "../../../src/v11/application/attach/emitAttachV11.js";
+} from "../../../src/v11/application/attach/attachBubble.js";
 import { buildBubbleTmuxSessionName } from "../../../src/v11/shared/bubble/tmuxSessionName.js";
 import { SchemaValidationError } from "../../../src/v11/shared/validation/primitives.js";
 import type {
   AttachBubbleError,
   LauncherAvailabilityInput
-} from "../../../src/v11/application/attach/emitAttachV11.js";
+} from "../../../src/v11/application/attach/attachBubble.js";
 import type { BubbleConfig } from "../../../src/v11/shared/config/bubbleConfigTypes.js";
 import type {
   AttachLauncher
