@@ -3,7 +3,7 @@ import {
   createBubbleMergeError
 } from "./mergeCommandErrorRuntime.js";
 import { normalizeBubbleMergeError } from "./mergeCommandErrorNormalization.js";
-import { isNamedError } from "../../shared/errors/namedError.js";
+import { isNamedError } from "../../../../shared/errors/namedError.js";
 
 export function throwAsBubbleMergeError(error: unknown): never {
   throw normalizeBubbleMergeError({

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { BubbleLookupError } from "../../../../src/v11/infrastructure/executor/workspace/bubbleLookup.js";
 import { RemoteBubbleMergeCommandError } from "../../../../src/v11/infrastructure/executor/ssh/sshBubbleMergeCommand.js";
-import { BubbleMergeError } from "../../../../src/v11/application/merge/mergeCommandErrorRuntime.js";
+import { BubbleMergeError } from "../../../../src/v11/application/merge/internal/error/mergeCommandErrorRuntime.js";
 import { throwAsBubbleMergeError } from "../../../../src/v11/application/merge/mergeCommandOrchestration.js";
 
 describe("mergeCommandErrorClassification", () => {
