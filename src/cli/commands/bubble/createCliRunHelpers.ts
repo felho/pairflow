@@ -6,7 +6,7 @@ import { createBubble } from "../../../v11/defaults/create/createBubbleApi.js";
 import type {
   BubbleCreateInput,
   CreateBubbleImplementation
-} from "../../../v11/application/create/createCommandContract.js";
+} from "../../../v11/application/create/createBubble.js";
 import type { RegisterRepoInRegistryPort } from "../../../v11/ports/repoRegistry.js";
 
 export interface BubbleCreateCommandRuntimeOptions {

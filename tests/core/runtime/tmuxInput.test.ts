@@ -2,7 +2,8 @@ import { describe, expect, it } from "vitest";
 
 import {
   sendAndSubmitTmuxPaneMessage,
-  maybeAcceptClaudeTrustPrompt
+  maybeAcceptClaudeTrustPrompt,
+  checkTmuxPaneMarkerStatus
 } from "../../../src/v11/infrastructure/channel/tmux/tmuxInput.js";
 
 describe("sendAndSubmitTmuxPaneMessage", () => {
@@ -59,6 +60,29 @@ describe("sendAndSubmitTmuxPaneMessage", () => {
       ["send-keys", "-t", "pane-1", "-l", "hello"],
       ["send-keys", "-t", "pane-1", "Enter"]
     ]);
+  });
+});
+
+describe("checkTmuxPaneMarkerStatus", () => {
+  it("treats a promptless visible marker as still stuck in input", async () => {
+    const runner = async (args: string[]) => {
+      if (args[0] === "capture-pane") {
+        return {
+          stdout: "# [pairflow] r1 PASS codex->codex msg=msg_1 ref=artifact://handoff.md.",
+          stderr: "",
+          exitCode: 0
+        };
+      }
+      return {
+        stdout: "",
+        stderr: "",
+        exitCode: 0
+      };
+    };
+
+    await expect(
+      checkTmuxPaneMarkerStatus(runner, "pane-1", "msg=msg_1")
+    ).resolves.toBe("stuck_in_input");
   });
 });
 

@@ -1,18 +1,20 @@
-# Module Depth Guidance Discussion
+# Refactoring Guidance Discussion
 
 Status: discussion draft
 Date: 2026-05-10
 
 ## Problem
 
-Recent refactors showed a recurring risk: a change can introduce `internal/`
-directories, more files, or cleaner-looking placement while leaving callers with
-the same amount of knowledge about internal order, policy, and helper details.
+Recent refactors showed two related risks:
 
-That kind of refactor can be structurally neat but architecturally shallow. The
-goal of this note is to capture guidance for future agent work so new code and
-boundary refactors move toward deeper modules without over-applying the rule to
-every small cleanup.
+1. treating all refactors as if they require the same architecture scrutiny,
+2. treating boundary or architecture refactors as complete when files moved but
+   callers still need the same knowledge about internal order, policy, and
+   helper details.
+
+The goal of this note is to classify refactors first, then apply the right
+standard. Mechanical and local cleanup refactors should stay lightweight.
+Boundary and architecture refactors must move toward deeper modules.
 
 Core principle:
 
@@ -36,9 +38,10 @@ Boundary/Architecture Refactor when any of these are true:
 - it replaces multiple caller-side helper calls with a pipeline or facade,
 - it changes which tests import public surface versus internal helpers.
 
-When a trigger fires, the task must run the Module Depth Check. It can still
-conclude that the change is intentionally mechanical, but that conclusion must
-be explicit and reviewed.
+When a trigger fires, the task must run the Boundary/Architecture section of
+this guidance, including the Module Depth Check. It can still conclude that the
+change is intentionally mechanical, but that conclusion must be explicit and
+reviewed.
 
 ## Refactor Classes
 
@@ -136,6 +139,23 @@ If `preparatory: yes`, require:
 Preparatory work must not introduce public surface that the follow-up is
 expected to delete again.
 
+## Module Depth Policy
+
+Module depth is the standard for Boundary/Architecture refactors. It is not the
+standard for every refactor.
+
+When introducing or refactoring a module, optimize for depth: leverage at the
+interface and locality in the implementation. A deep module hides substantial
+behavior behind a small interface; a shallow module exposes an interface nearly
+as complex as its implementation.
+
+The interface is the test surface: tests should cross the same seam callers
+cross. Helper-level tests are useful only when the helper owns independent
+policy.
+
+Do not introduce a seam unless something really varies across it. One adapter is
+a hypothetical seam; two adapters make it real.
+
 ## Module Depth Check
 
 For Boundary/Architecture refactors, and for any task where a classification
@@ -204,44 +224,64 @@ and the import-scan evidence that proved caller knowledge was reduced.
 
 ## Proposed Agent Guidance
 
-Top-level agent guidance should stay short enough to be noticed:
+Top-level agent guidance should act as a trigger, not as the full policy. The
+goal is to make the agent load this document whenever refactoring is in scope.
+The detailed depth model belongs here, in architecture docs, and in task/review
+guidance.
+
+Suggested `AGENTS.md` trigger:
 
 ```md
-## Module Depth Policy
+## Refactoring Guidance
 
-A refactor is complete when callers need to know less, not when files are moved.
+When planning, implementing, or reviewing a refactor, apply the Refactoring
+Guidance in `plans/tasks/refactoring-guidance-discussion.md`.
 
-If a change touches `internal/**`, public exports, cross-layer placement,
-command orchestration, state/persistence ordering, authority checks, or
-canonicalization order, classify it as Boundary/Architecture and run the Module
-Depth Check.
-
-Deletion test: if deleting the new module makes complexity disappear, it was
-likely pass-through ceremony; if deleting it forces multiple callers to
-reimplement ordering, validation, policy, or invariants, it is earning its keep.
-
-Shallow module detectors:
-- public files only re-export `internal/**`,
-- callers must know internal call order,
-- tests still reconstruct production behavior through helper imports,
-- a new facade returns a broad bag of fields for callers to interpret.
-
-Mechanical/local refactors may preserve the existing interface, but they must
-not add new public helper surfaces.
+Use it to classify the refactor first. Apply the Module Depth Check when the
+guidance classifies the work as Boundary/Architecture.
 ```
+
+## Planned Changes
+
+This is the proposed action list for turning the discussion into operating
+guidance. Some target files may not exist yet; those are called out explicitly.
+
+| ID | Change | Target | Status | Notes |
+|---|---|---|---|---|
+| A1 | Keep this discussion draft as the working design note until the final guidance lands. | `plans/tasks/refactoring-guidance-discussion.md` | in-progress | This file is the current source for discussion, not the final policy home. |
+| A2 | Create a durable architecture guidance document for refactoring. | `docs/architecture/refactoring-guidance.md` or similar | planned, file missing | Should contain the refactor taxonomy, classification trigger, preparatory modifier, Module Depth Policy, and Module Depth Check. |
+| A3 | Add a short root agent trigger that points refactoring work to the durable guidance doc. | `AGENTS.md` | planned | Keep this small: only require agents to consult the refactoring guidance when planning, implementing, or reviewing refactors. Do not duplicate the full policy in `AGENTS.md`. |
+| A4 | Update `CreatePairflowSpec` so refactor-oriented task creation and review classify the refactor before task shape is finalized. | repo-local `.claude/skills/CreatePairflowSpec/**` | planned | This should cover both `CreateTask` and `ReviewSpec`: if classification marks Boundary/Architecture, task drafting and task-mode review should require the Module Depth Check. Exact file(s) need investigation before editing. |
+| A5 | After durable docs and `CreatePairflowSpec` guidance land, replace this discussion draft with a pointer or archive it. | `plans/tasks/refactoring-guidance-discussion.md` | deferred | Prevent two competing sources of truth. |
+
+### Suggested Order
+
+1. Create the durable architecture doc (`A2`) from this discussion.
+2. Add the short `AGENTS.md` trigger (`A3`) pointing to that durable doc.
+3. Update `CreatePairflowSpec` guidance (`A4`) so new refactor tasks and
+   `ReviewSpec` task-mode reviews receive the classification and Module Depth
+   Check when appropriate.
+4. Archive or replace this discussion draft once the durable policy exists
+   (`A5`).
+
+### Decisions Still Needed
+
+- Final path/name for the durable architecture document.
+- Which repo-local `CreatePairflowSpec` files own the `CreateTask` and
+  `ReviewSpec` changes.
+- What review window to use for preparatory refactors before they become tracked
+  architecture debt.
 
 ## Guidance Placement
 
 Use layered placement rather than copying the full policy everywhere:
 
-- `AGENTS.md`: core principle, deletion test, classification trigger, and four
-  shallow-module detectors.
-- Architecture documentation: full taxonomy, Module Depth Check, fitness radar,
-  worked examples, and known shallow-module debt.
-- `CreatePairflowSpec` skill: inject the Module Depth Check when the
-  classification trigger marks a task as Boundary/Architecture.
-- Review and meta-review guidance: verify the deletion test, test shape, wrapper
-  camouflage, and caller-knowledge reduction.
+- `AGENTS.md`: short refactoring trigger that points agents to this guidance.
+- Architecture documentation: full refactor taxonomy, Module Depth Policy,
+  and Module Depth Check.
+- `CreatePairflowSpec` skill: classify refactor work during task creation and
+  `ReviewSpec`; inject or verify the Module Depth Check when the classification
+  trigger marks a task as Boundary/Architecture.
 
 ## Possible Fitness Radar
 
@@ -299,9 +339,11 @@ Each tracked item should eventually record:
 ## Open Questions
 
 1. What exact short policy should be copied into root `AGENTS.md`?
-2. Should the first implementation change land in `CreatePairflowSpec`, review
-   guidance, or architecture docs?
-3. What review window should preparatory work use before becoming tracked
+2. Should the first implementation change land in the durable architecture doc
+   or in `CreatePairflowSpec`?
+3. Which `CreatePairflowSpec` workflow files should own the `CreateTask` and
+   `ReviewSpec` behavior?
+4. What review window should preparatory work use before becoming tracked
    architecture debt?
-4. Which post-refactor modules should become positive examples beside
+5. Which post-refactor modules should become positive examples beside
    meta-review submit?

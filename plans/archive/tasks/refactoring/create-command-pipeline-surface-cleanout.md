@@ -2,7 +2,7 @@
 artifact_type: task
 artifact_id: task_create_command_pipeline_surface_cleanout_v1
 title: "Create Command Pipeline Surface Cleanout"
-status: approved
+status: archived
 phase: phase1
 target_files:
   - src/v11/application/create/createBubble.ts

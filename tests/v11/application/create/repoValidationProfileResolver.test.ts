@@ -4,8 +4,8 @@ import { join } from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import { resolveRepoValidationProfileCommands } from "../../../../src/v11/application/create/repoValidationProfileResolver.js";
-import { buildValidationCommandsConfig } from "../../../../src/v11/application/create/createValidationCommandsConfig.js";
+import { resolveRepoValidationProfileCommands } from "../../../../src/v11/application/create/internal/preparation/repoValidationProfileResolver.js";
+import { buildValidationCommandsConfig } from "../../../../src/v11/application/create/internal/preparation/createValidationCommandsConfig.js";
 import { parsePairflowRepoConfigToml } from "../../../../src/config/repoConfig.js";
 
 const cleanupPaths: string[] = [];
