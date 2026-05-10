@@ -77,7 +77,10 @@ vi.mock("../../../../src/v11/application/commit/commitCommandGitStep.js", () => 
 vi.mock("../../../../src/v11/application/commit/commitCommandFinalization.js", () => ({
   appendCommitResultEnvelope,
   emitCommitLifecycleEvent,
-  persistCommittedThenDoneState,
+  persistCommittedThenDoneState
+}));
+
+vi.mock("../../../../src/v11/application/commit/remoteCommitContinuitySync.js", () => ({
   syncRemoteCommitContinuityArtifacts: vi.fn()
 }));
 

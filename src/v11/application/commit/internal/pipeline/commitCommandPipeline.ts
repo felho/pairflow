@@ -11,9 +11,9 @@ import { BubbleCommitError } from "../../commitCommandRuntime.js";
 import {
   appendCommitResultEnvelope,
   emitCommitLifecycleEvent,
-  persistCommittedThenDoneState,
-  syncRemoteCommitContinuityArtifacts
+  persistCommittedThenDoneState
 } from "../../commitCommandFinalization.js";
+import { syncRemoteCommitContinuityArtifacts } from "../../remoteCommitContinuitySync.js";
 import { runCommitGitStep } from "../../commitCommandGitStep.js";
 import {
   canonicalizeCommitExecutionPath,

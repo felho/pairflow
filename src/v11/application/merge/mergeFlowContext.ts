@@ -8,7 +8,7 @@ import {
   assertMergeBranchEligibility,
   assertMergeStateEligibility
 } from "./mergeRoutingEligibility.js";
-import { syncRemoteCommitContinuityArtifacts } from "../commit/commitCommandFinalization.js";
+import { syncRemoteCommitContinuityArtifacts } from "../commit/remoteCommitContinuitySync.js";
 import {
   buildMergeImportRef,
   type RemoteMergeStatusTarget,
