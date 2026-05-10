@@ -1,5 +1,5 @@
 import { runBubbleStatusCommand } from "../../../src/cli/commands/bubble/status.js";
-import type { BubbleStatusV11View } from "../../../src/v11/application/status/emitStatusV11.js";
+import type { BubbleStatusView } from "../../../src/v11/application/status/statusCommandApi.js";
 import type { StatusExecutionContextView } from "../../../src/v11/shared/status/statusCommandViewProjection.js";
 import type { LaunchBubbleSessionInput } from "../../../src/v11/ports/tmuxSessions.js";
 import {
@@ -151,7 +151,7 @@ function validateLaunchInput(
 }
 
 export function authorityFromStatusView(
-  status: BubbleStatusV11View
+  status: BubbleStatusView
 ): SmokeAuthoritySnapshot | null {
   if (status.executionContext === null) {
     return null;

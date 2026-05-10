@@ -1,9 +1,9 @@
 import {
-  asBubbleStatusErrorV11 as asBubbleStatusError,
-  getBubbleStatusV11 as getBubbleStatus,
-  type BubbleStatusV11Dependencies as BubbleStatusDependencies,
-  type BubbleStatusV11View as BubbleStatusView
-} from "./emitStatusV11.js";
+  asBubbleStatusError,
+  getBubbleStatus,
+  type BubbleStatusDependencies,
+  type BubbleStatusView
+} from "./statusCommandApi.js";
 import {
   parseBubbleStatusCommandOptions,
   type BubbleStatusCommandOptions

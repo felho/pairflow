@@ -7,7 +7,7 @@ import {
   renderBubbleStatusText,
   runBubbleStatusCommand
 } from "../../src/cli/commands/bubble/status.js";
-import type { BubbleStatusV11View as BubbleStatusView } from "../../src/v11/application/status/emitStatusV11.js";
+import type { BubbleStatusView } from "../../src/v11/application/status/statusCommandApi.js";
 
 function formatLocalClock(value: string): string {
   const parts = new Intl.DateTimeFormat("en-US", {

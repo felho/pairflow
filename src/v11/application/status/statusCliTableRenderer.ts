@@ -1,4 +1,4 @@
-import type { BubbleStatusV11View as BubbleStatusView } from "./emitStatusV11.js";
+import type { BubbleStatusView } from "./statusCommandApi.js";
 import {
   blue,
   bold,

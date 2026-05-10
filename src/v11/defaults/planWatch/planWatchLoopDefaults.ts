@@ -22,8 +22,8 @@ import type {
   PlanWatchLoopDependencies
 } from "../../application/planWatch/planWatchLoopContract.js";
 import {
-  getBubbleStatusV11
-} from "../../application/status/emitStatusV11.js";
+  getBubbleStatus
+} from "../../application/status/statusCommandApi.js";
 import { statusCommandDependencyDefaults } from "../status/statusCommandDependencyDefaults.js";
 import {
   withFileLock
@@ -70,7 +70,7 @@ export function createDefaultPlanWatchLoopDependencies(
 
 export const localBubbleStatusPort: LinkedBubbleStatusPort = async (input) => {
   try {
-    const status = await getBubbleStatusV11({
+    const status = await getBubbleStatus({
       repoPath: input.repoPath,
       bubbleId: input.bubbleId,
       now: input.now

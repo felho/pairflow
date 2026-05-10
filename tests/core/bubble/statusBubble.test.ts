@@ -10,9 +10,9 @@ import { emitPassFromWorkspace } from "../../../src/v11/application/pass/passCom
 import { createBubble } from "../../../src/v11/defaults/create/createBubbleApi.js";
 import { emitHumanReply } from "../../../src/v11/application/reply/replyCommandApi.js";
 import {
-  getBubbleStatusV11 as getBubbleStatusApplication,
-  type BubbleStatusV11Input
-} from "../../../src/v11/application/status/emitStatusV11.js";
+  getBubbleStatus as getBubbleStatusApplication,
+  type BubbleStatusInput
+} from "../../../src/v11/application/status/statusCommandApi.js";
 import { resolveDocContractGateArtifactPath } from "../../../src/v11/infrastructure/artifact/gates/docContractGateArtifacts.js";
 import {
   writeRemoteStateCache,
@@ -35,7 +35,7 @@ import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
 
 const tempDirs: string[] = [];
 
-function getBubbleStatus(input: BubbleStatusV11Input) {
+function getBubbleStatus(input: BubbleStatusInput) {
   return getBubbleStatusApplication(input, statusCommandDependencyDefaults);
 }
 

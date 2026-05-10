@@ -1,5 +1,5 @@
 import { blue, bold, cyan, dim, green, red, white, yellow } from "./statusCliAnsi.js";
-import type { BubbleStatusV11View as BubbleStatusView } from "./emitStatusV11.js";
+import type { BubbleStatusView } from "./statusCommandApi.js";
 
 export interface StatusTimestampFormatOptions {
   timeZone?: string;

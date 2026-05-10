@@ -3,8 +3,8 @@ import {
   runBubbleStatusCommand as runApplicationBubbleStatusCommand
 } from "../../../v11/application/status/statusCliCommand.js";
 import type {
-  BubbleStatusV11Dependencies
-} from "../../../v11/application/status/emitStatusV11.js";
+  BubbleStatusDependencies
+} from "../../../v11/application/status/statusCommandApi.js";
 import type {
   BubbleStatusCommandOptions
 } from "../../../v11/application/status/statusCliCommand.js";
@@ -24,7 +24,7 @@ export type {
 export async function runBubbleStatusCommand(
   args: string[] | BubbleStatusCommandOptions,
   cwd: string = process.cwd(),
-  dependencies: Partial<BubbleStatusV11Dependencies> = {}
+  dependencies: Partial<BubbleStatusDependencies> = {}
 ) {
   return runApplicationBubbleStatusCommand(args, cwd, {
     ...statusCommandDependencyDefaults,

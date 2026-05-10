@@ -16,7 +16,7 @@ import { restartBubble } from "../../application/restart/restartCommandApi.js";
 import { emitHumanReply } from "../../application/reply/replyCommandApi.js";
 import { resumeBubbleCommandOrchestration as resumeBubble } from "../../application/resume/resumeCommandOrchestration.js";
 import { startBubbleV11 as startBubble } from "../../application/start/emitStartV11.js";
-import { getBubbleStatusV11 as getBubbleStatus } from "../../application/status/emitStatusV11.js";
+import { getBubbleStatus } from "../../application/status/statusCommandApi.js";
 import { statusCommandDependencyDefaults } from "../status/statusCommandDependencyDefaults.js";
 import { stopBubbleDependencyDefaults } from "../stop/stopCommandDefaults.js";
 import { stopBubbleCommandOrchestration as stopBubble } from "../../application/stop/stopCommandOrchestration.js";
