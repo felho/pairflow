@@ -14,7 +14,7 @@ export type ParsedBubbleRestartCommandOptions =
   | BubbleRestartCommandOptions
   | BubbleRestartHelpCommandOptions;
 
-export function getBubbleRestartHelpTextV11(): string {
+export function getBubbleRestartHelpText(): string {
   return [
     "Usage:",
     "  pairflow bubble restart --id <id> [--repo <path>]",
@@ -29,7 +29,7 @@ export function getBubbleRestartHelpTextV11(): string {
   ].join("\n");
 }
 
-export function parseBubbleRestartCommandOptionsV11(
+export function parseBubbleRestartCommandOptions(
   args: string[]
 ): ParsedBubbleRestartCommandOptions {
   const parsed = parseArgs({

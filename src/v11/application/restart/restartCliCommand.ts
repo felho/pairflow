@@ -4,11 +4,15 @@ import {
   type RestartBubbleResult
 } from "./restartCommandApi.js";
 import {
-  getBubbleRestartHelpTextV11,
-  parseBubbleRestartCommandOptionsV11,
+  getBubbleRestartHelpText,
+  parseBubbleRestartCommandOptions,
   type ParsedBubbleRestartCommandOptions
 } from "./restartCommandCliOptions.js";
 
+export {
+  getBubbleRestartHelpText,
+  parseBubbleRestartCommandOptions
+};
 export type {
   BubbleRestartCommandOptions,
   BubbleRestartHelpCommandOptions,
@@ -17,16 +21,6 @@ export type {
 
 export interface BubbleRestartCommandDependencies {
   restartBubble?: typeof restartBubble;
-}
-
-export function getBubbleRestartHelpText(): string {
-  return getBubbleRestartHelpTextV11();
-}
-
-export function parseBubbleRestartCommandOptions(
-  args: string[]
-): ParsedBubbleRestartCommandOptions {
-  return parseBubbleRestartCommandOptionsV11(args);
 }
 
 export async function runBubbleRestartCommand(

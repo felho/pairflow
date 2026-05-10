@@ -25,7 +25,7 @@ import type { ActorEmitContextSnapshot } from "../../../../shared/actorProtocol/
 import type { AgentName } from "../../../../../contracts/kernel/agentIdentity.js";
 import type { BubbleStateSnapshot } from "../../../../shared/state/bubbleStateSnapshotTypes.js";
 import {
-  resolveIdeationMetadata as resolveV11IdeationMetadata
+  resolveIdeationMetadata
 } from "../../../../domain/ideation/ideationMetadata.js";
 import { resolvePassHandoff, type ResolvedPassHandoff } from "../../../../domain/pass/handoff.js";
 import {
@@ -48,7 +48,7 @@ export interface PreparePassWorkspaceContextDependencies {
   ensureBubbleInstanceIdForMutation?:
     typeof ensureBubbleInstanceIdForMutation;
   readStateSnapshot?: typeof readStateSnapshot;
-  resolveIdeationMetadata?: typeof resolveV11IdeationMetadata;
+  resolveIdeationMetadata?: typeof resolveIdeationMetadata;
   resolvePassHandoff?: typeof resolvePassHandoff;
 }
 
@@ -78,7 +78,7 @@ export async function preparePassWorkspaceContext(
   const readState =
     dependencies.readStateSnapshot ?? readStateSnapshot;
   const resolveIdeation =
-    dependencies.resolveIdeationMetadata ?? resolveV11IdeationMetadata;
+    dependencies.resolveIdeationMetadata ?? resolveIdeationMetadata;
   const resolveHandoff = dependencies.resolvePassHandoff ?? resolvePassHandoff;
 
   if (input.authoritativeContext !== undefined) {

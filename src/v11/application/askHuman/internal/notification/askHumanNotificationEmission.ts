@@ -36,7 +36,7 @@ function normalizeAskHumanDeliveryAck(deliveryAck: DeliveryAck): DeliveryAck {
       ...deliveryAck,
       // Ask-human notifications still target the human/status lane even when
       // the runtime session is absent, so preserve the historical reason code
-      // expected by the V11 ask-human contract and local CI.
+      // expected by the ask-human contract and local CI.
       deliveryTargetReasonCode: "DELIVERY_TARGET_ROLE_ABSENT"
     };
   }

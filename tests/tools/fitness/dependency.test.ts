@@ -457,7 +457,7 @@ describe("dependency fitness check", () => {
     );
     await writeRepoFile(
       repoRoot,
-      "src/v11/application/inbox/emitInboxV11.ts",
+      "src/v11/application/inbox/inboxCommand.ts",
       [
         "import { normalizeInboxInput } from '../../shared/inbox/inboxCommandApi.js';",
         "export const emit = (value: string): string => normalizeInboxInput(value);",
