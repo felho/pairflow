@@ -5,7 +5,7 @@ task_family_id: ui-action-api-smoke
 sequence_key: "4"
 task_id: 4-ui-action-api-smoke
 title: "UI Action API Smoke"
-status: approved
+status: implementable
 phase: phase1
 system_context_ref: docs/architecture/almost-e2e-smoke-suite.md
 target_files:
@@ -85,6 +85,10 @@ LLM.
    or fake side-effect record cannot prove that a target action reached the
    backend command path, the smoke must fail the step instead of inferring
    success from a lack of thrown errors.
+7. Source-change guard: if the current route/action API cannot exercise Open,
+   Restart, and Delete through existing public wiring and test-helper
+   boundaries, this task must return for plan/task refinement instead of adding
+   production hooks, changing command semantics, or broadening runtime contracts.
 
 ### In Scope
 
@@ -126,7 +130,7 @@ LLM.
 
 | Contract Row | Canonical Rule | Producer / Storage | Runtime Behavior | Failure / Reason Code | Required Proof |
 |---|---|---|---|---|---|
-| UI action entrypoint | Target actions must enter through the UI router/action request path, not direct application calls. | In-process route invocation using production `createUiRouter`/action dispatch. | Router resolves repo, parses action/body, dispatches to backend dependencies, maps/validates DTO output. | Fail when the test bypasses the route/action layer or uses a private command helper as the asserted action path. | Test records request URL/method/body and validates response status/body for Open, Restart, and Delete. |
+| UI action entrypoint | Target actions must enter through the UI router/action request path, not direct application calls or action-dispatch shortcuts that skip request parsing. | In-process route invocation using production `createUiRouter`/action dispatch. | Router resolves repo, parses action/body, dispatches to backend dependencies, maps/validates DTO output. | Fail when the test bypasses the route/action layer, skips route request parsing, or uses a private command helper as the asserted action path. | Test records request URL/method/body and validates response status/body for Open, Restart, and Delete. |
 | Open action | Open must call the backend open command through router dispatch and record the fake editor/open side effect. | UI action response plus fake external-adapter side-effect log. | Response exposes `UiOpenBubbleResult` without raw internal carrier fields. | Fail when open returns success without a matching fake open side effect or when raw internal fields leak into the DTO. | Assertions cover action response and side-effect record after the Open request. |
 | Restart action | Restart must call backend restart through router dispatch and preserve the fixture bubble identity/worktree while refreshing lifecycle status. | Pairflow state/runtime artifacts plus fake tmux/process side effects. | Response exposes `UiRestartBubbleResult`; public status/read-model shows the restarted bubble still running. | Fail when restart only updates a mock response, loses bubble/worktree identity, or cannot prove running status after restart. | Assertions cover action response, refreshed status/read-model, and bounded fake side effects. |
 | Delete action | Forced delete must call backend delete through router dispatch and remove the fixture bubble artifacts/worktree. | Pairflow artifact cleanup plus fake tmux/runtime cleanup side effects. | Response exposes `UiDeleteBubbleResult` and the fixture bubble is absent afterward. | Fail when delete returns success but artifacts/worktree remain, when confirmation semantics are bypassed incorrectly, or when cleanup effects are unbounded. | Assertions cover forced request body, action response, absence of artifacts/worktree, and bounded fake cleanup records. |
@@ -139,9 +143,10 @@ LLM.
 2. It consumes fixture setup and fake external-adapter conventions from the
    earlier smoke tasks but does not redefine actor-loop or compiled CLI
    coverage.
-3. It may extend helper exports only when the new surface is needed to invoke
-   the UI route/action layer against an isolated fixture repo and real backend
-   state.
+3. It may extend test/helper exports only when the new surface is needed to
+   invoke the UI route/action layer against an isolated fixture repo and real
+   backend state, and the extension does not change production route semantics
+   or create source-level test hooks.
 4. It does not own browser rendering, action button availability, full HTTP
    transport, human approval, commit/merge closure, or Layer 3 coverage.
 5. Positive smoke evidence must be trusted only after a fresh `pnpm build` when
@@ -159,7 +164,7 @@ LLM.
 
 | Boundary Bucket | In Scope For This Task | Explicit Rule |
 |---|---|---|
-| UI action route | Yes. | The test must enter through `createUiRouter`/route request handling or an equivalent in-process route/action invocation that preserves request parsing and dispatch. |
+| UI action route | Yes. | The test must enter through `createUiRouter`/route request handling or an equivalent in-process route/action invocation that preserves request parsing, repo resolution, action dispatch, and DTO mapping. |
 | Backend command paths | Yes, as observed behavior. | Open, Restart, and Delete remain production-owned; the smoke observes their results and side effects. |
 | Public status/read model | Yes. | Restart and Delete assertions must use public status/read-model or fixture-visible production artifacts after actions. |
 | Fake external side effects | Yes. | Editor, tmux/runtime, and cleanup effects may be faked only at existing adapter boundaries and must be asserted explicitly. |
@@ -179,9 +184,10 @@ LLM.
 
 1. Inspect the existing almost-e2e fixture helpers, UI router/action dispatch
    tests, and Open/Restart/Delete backend command contracts.
-2. Add only the narrow helper surface needed to construct an in-process UI
-   router/action invocation against an isolated fixture repo with fake external
-   adapters.
+2. Add only the narrow test/helper surface needed to construct an in-process UI
+   router/action request against an isolated fixture repo with fake external
+   adapters. The helper must preserve route parsing, repo resolution, action
+   dispatch, and DTO mapping as part of the exercised path.
 3. Add `tests/almostE2e/uiActionApiSmoke.test.ts` that creates or starts a
    minimal fixture bubble through existing smoke conventions, then invokes:
    - Open through the UI route/action API and asserts the action DTO plus fake
@@ -219,8 +225,8 @@ hooks when:
 2. fake external-adapter injection cannot be done through existing boundaries
    while preserving the production route/action path;
 3. preserving real backend state would require modifying `src/**`, UI route
-   semantics, command defaults, or lifecycle persistence outside the current
-   task target files;
+   semantics, command defaults, runtime/build configuration, or lifecycle
+   persistence outside the current task target files;
 4. delete cleanup proof cannot be observed through action response plus
    fixture-visible production artifacts;
 5. the work would naturally expand into browser rendering, real HTTP

@@ -32,7 +32,7 @@ task_tracker:
     notes: "Add one runner-driven fake actor loop through pass, convergence, and meta-review approve."
   - task_id: 4-ui-action-api-smoke
     task_path: plans/tasks/4-ui-action-api-smoke.md
-    status: approved
+    status: implementable
     notes: "Add in-process UI action API smoke coverage for Open, Restart, and Delete."
 ---
 
@@ -155,11 +155,15 @@ The source architecture document is
 3. The compiled CLI lifecycle smoke is implemented and archived in task
    `2-cli-lifecycle-smoke`; it closes the create/start, restart, open, and
    delete compiled-entrypoint baseline that `3-actor-loop-smoke` now depends on.
+4. The runner-driven actor-loop smoke is implemented and archived in task
+   `3-actor-loop-smoke`; it closes pass, convergence, meta-review `approve`
+   recommendation routing, authority refresh, transcript/state progression,
+   and approval-ready routing under explicit fixture-local single-clean
+   meta-review policy.
 
 ### Open Work
 
-1. Runner-driven fake actor-loop smoke does not exist.
-2. In-process UI action API smoke scenarios do not exist.
+1. In-process UI action API smoke scenarios do not exist.
 
 ### Deferred / Future Work
 
@@ -234,6 +238,21 @@ prove current `--handoff-id` and `--execution-id` from the public status/read
 model before invoking `pairflow agent emit`. The parent Completed Work
 narrative now also records archived task `2-cli-lifecycle-smoke`.
 
+Progress update (2026-05-10): document bubble
+`4-ui-action-api-smoke-doc` refined task `4-ui-action-api-smoke` so the UI
+action API smoke must preserve route request parsing, repo resolution, action
+dispatch, and DTO mapping as part of the exercised in-process path. The
+refinement also made source-level hooks, production semantic changes,
+runtime/build configuration changes, browser, real HTTP, Playwright, human
+approval, and full close lifecycle explicit route-back or out-of-scope
+conditions. No product/runtime implementation scope was added.
+
+Progress update (2026-05-10): reviewer-driven document refinement for
+`4-ui-action-api-smoke-doc` aligned the parent Current Status narrative with
+the task tracker by adding archived task `3-actor-loop-smoke` to Completed
+Work. Open Work now consistently names only the remaining UI action API smoke
+scenario gap. No product/runtime implementation scope was added.
+
 ## Open Task List
 
 | Task ID | Task Path | Purpose | Depends On | Closes Gap | Status |
@@ -241,7 +260,7 @@ narrative now also records archived task `2-cli-lifecycle-smoke`.
 | `1-smoke-runner-contract` | `plans/archive/tasks/2026-05-09-almost-e2e-smoke-suite-plan-v1/1-smoke-runner-contract.md` | Build the fake process/editor spawn recorder, fake tmux launch/terminate adapter, runner-driven scenario advancement model, first-advance authority validation, post-first authority refresh, and TS scenario type contract. | `docs/architecture/almost-e2e-smoke-suite.md` | Provides the common fake-runner foundation required by all Phase 1 smoke tasks. | archived |
 | `2-cli-lifecycle-smoke` | `plans/archive/tasks/2026-05-09-almost-e2e-smoke-suite-plan-v1/2-cli-lifecycle-smoke.md` | Add compiled-CLI smoke coverage for create/start, restart, open, and delete against a minimal fixture repo using the fake external adapters where needed. | `1-smoke-runner-contract` | Proves the top-level `dist/cli/index.js` route and defaults wiring for public CLI entrypoints. | archived |
 | `3-actor-loop-smoke` | `plans/archive/tasks/2026-05-09-almost-e2e-smoke-suite-plan-v1/3-actor-loop-smoke.md` | Add one minimal runner-driven fake actor scenario through pass, convergence, and meta-review `approve` recommendation, using canonical `pairflow agent emit --kind ...` feedback. | `1-smoke-runner-contract`, `2-cli-lifecycle-smoke` | Proves actor ingestion, authority refresh, transcript/state progression, and approval-ready routing without a real LLM. | archived |
-| `4-ui-action-api-smoke` | `plans/tasks/4-ui-action-api-smoke.md` | Add in-process UI action API smoke coverage for Open, Restart, and Delete with real backend state and recorded external side effects. | `1-smoke-runner-contract`, `2-cli-lifecycle-smoke` | Proves UI action dispatch reaches the backend command paths that historically failed through Open/Restart. | approved |
+| `4-ui-action-api-smoke` | `plans/tasks/4-ui-action-api-smoke.md` | Add in-process UI action API smoke coverage for Open, Restart, and Delete with real backend state and recorded external side effects. | `1-smoke-runner-contract`, `2-cli-lifecycle-smoke` | Proves UI action dispatch reaches the backend command paths that historically failed through Open/Restart. | implementable |
 
 ## Coverage Map
 
