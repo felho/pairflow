@@ -312,7 +312,7 @@ Half-done lanes today (per the survey): `commit`, `merge`, `metaReview`,
 
 4. **One lane, one refactor sequence.** Half-done lanes are per-lane work.
    Do not batch multiple half-done lanes into a single commit or sequence —
-   the sub-area decisions are lane-specific and don't share a sablon at the
+   the sub-area decisions are lane-specific and don't share a template at the
    move level.
 
 5. **Goal state for top-level.** After the work, top-level should contain
