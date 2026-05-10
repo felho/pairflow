@@ -3,9 +3,9 @@ import {
   type RunMergeCommandPipelineInput
 } from "../../mergeCommandContract.js";
 import type { ResolvedMergeCommandDependencies } from "../../mergeCommandDependencyResolution.js";
-import { initializeMergeFlowExecutionContext } from "../../mergeFlowContext.js";
-import { finalizeMergeFlow } from "../../mergeFlowFinalization.js";
-import { buildMergeBubbleResult } from "../../mergeResultMapping.js";
+import { initializeMergeFlowExecutionContext } from "../flow/mergeFlowContext.js";
+import { finalizeMergeFlow } from "../flow/mergeFlowFinalization.js";
+import { buildMergeBubbleResult } from "../flow/mergeResultMapping.js";
 import { mergeRevisionIntoLocalBase } from "./localMergeStep.js";
 import { publishLocalMergeResult } from "./localPublicationStep.js";
 import { importStartedRemoteMergeHandoff } from "./remoteMergeHandoffImport.js";

@@ -1,7 +1,7 @@
 import type {
   MergeBubbleResult,
   MergeCleanupOutcome
-} from "./mergeCommandContract.js";
+} from "../../mergeCommandContract.js";
 
 export interface BuildMergeBubbleResultInput {
   bubbleId: string;

@@ -1,24 +1,24 @@
 import type {
   BubbleRemotePointerStarted
-} from "../../shared/remote/remoteExecutionTypes.js";
-import type { BubbleStateSnapshot } from "../../shared/state/bubbleStateSnapshotTypes.js";
-import type { LoadedStateSnapshot } from "../../ports/stateSnapshots.js";
+} from "../../../../shared/remote/remoteExecutionTypes.js";
+import type { BubbleStateSnapshot } from "../../../../shared/state/bubbleStateSnapshotTypes.js";
+import type { LoadedStateSnapshot } from "../../../../ports/stateSnapshots.js";
 import {
   assertCleanRepoWorkingTree,
   assertMergeBranchEligibility,
   assertMergeStateEligibility
 } from "./mergeRoutingEligibility.js";
-import { syncRemoteCommitContinuityArtifacts } from "../commit/remoteCommitContinuitySync.js";
+import { syncRemoteCommitContinuityArtifacts } from "../../../commit/remoteCommitContinuitySync.js";
 import {
   buildMergeImportRef,
   type RemoteMergeStatusTarget,
   type RunMergeCommandPipelineInput
-} from "./mergeCommandContract.js";
-import type { ResolvedMergeCommandDependencies } from "./mergeCommandDependencyResolution.js";
+} from "../../mergeCommandContract.js";
+import type { ResolvedMergeCommandDependencies } from "../../mergeCommandDependencyResolution.js";
 import {
   canonicalizeMergeExecutionPath,
   resolveRemoteMergeExecutionContextFromEnv
-} from "./internal/remote/remoteMergeExecutionContext.js";
+} from "../remote/remoteMergeExecutionContext.js";
 
 interface MergeFlowExecutionContextBase {
   resolved: Awaited<ReturnType<ResolvedMergeCommandDependencies["resolveBubbleById"]>>;

@@ -5,7 +5,7 @@ import {
   ensureOriginRemote,
   hasOriginRemoteError,
   remoteBranchExists
-} from "../../mergeRoutingEligibility.js";
+} from "../flow/mergeRoutingEligibility.js";
 
 const MERGE_REMOTE_DELETE_ORIGIN_UNAVAILABLE =
   "MERGE_REMOTE_DELETE_ORIGIN_UNAVAILABLE";

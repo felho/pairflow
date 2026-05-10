@@ -1,5 +1,5 @@
-import type { BubbleStateSnapshot } from "../../shared/state/bubbleStateSnapshotTypes.js";
-import type { RunGitPort } from "../../ports/git.js";
+import type { BubbleStateSnapshot } from "../../../../shared/state/bubbleStateSnapshotTypes.js";
+import type { RunGitPort } from "../../../../ports/git.js";
 
 const MERGE_STATE_DONE_REQUIRED = "MERGE_STATE_DONE_REQUIRED";
 const MERGE_BASE_BRANCH_NOT_FOUND = "MERGE_BASE_BRANCH_NOT_FOUND";
