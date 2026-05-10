@@ -70,8 +70,10 @@ the implementation). New lanes should not reintroduce a V11-suffixed entry
 point.
 
 The "Default visibility" column is a starting point. Override based on the
-import scan: a file consumed by `≥ 2` lanes is root-public regardless of
-default; a file consumed only intra-lane is internal regardless of default.
+import scan: a file consumed by `≥ 2` **production** lanes is root-public
+regardless of default; a file consumed only intra-lane (in production) is
+internal regardless of default. Test consumers are excluded from this
+count — they are a verification signal, not a public-surface signal.
 
 The survey doc lists which lanes use each pattern.
 
@@ -237,10 +239,10 @@ abstract layer.
 
 ## Tier 3 — Coordinator
 
-**When:** the lane has multiple submodules that defaults, CLI, or tests need
-to compose by name. The submodules are themselves named concerns (not just
-phase folders inside `internal/`), and they're stable enough to be public
-within the lane.
+**When:** the lane has multiple submodules that defaults, CLI, or another
+production lane need to compose by name; tests may follow that path. The
+submodules are themselves named concerns (not just phase folders inside
+`internal/`), and they're stable enough to be public within the lane.
 
 **Structure:**
 
