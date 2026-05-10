@@ -45,7 +45,18 @@ describe("runCli bubble kickoff delivery warning", () => {
         retried: false
       }
     } as KickoffBubbleV11Result;
-    const runBubbleKickoffCommand = vi.fn(async () => mockedResult);
+    const runBubbleKickoffCommand = vi.fn(
+      async (
+        ...args: [
+          string[],
+          string?,
+          { emitDeliveryNotificationAck?: unknown }?
+        ]
+      ) => {
+        void args;
+        return mockedResult;
+      }
+    );
 
     vi.doMock("../../src/v11/application/kickoff/kickoffCliCommand.js", () => ({
       getBubbleKickoffHelpText: () => "help",

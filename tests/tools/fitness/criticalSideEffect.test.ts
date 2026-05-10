@@ -56,7 +56,7 @@ describe("critical side-effect fitness check", () => {
     );
     await writeRepoFile(
       repoRoot,
-      "src/v11/application/approval/runApprovalFlow.ts",
+      "src/v11/application/approval/internal/pipeline/approvalCommandPipeline.ts",
       "export const emit = (): void => { emitDeliveryNotificationAck(); };\n"
     );
     await writeRepoFile(
@@ -110,7 +110,7 @@ describe("critical side-effect fitness check", () => {
     );
     await writeRepoFile(
       repoRoot,
-      "src/v11/application/approval/runApprovalFlow.ts",
+      "src/v11/application/approval/internal/pipeline/approvalCommandPipeline.ts",
       "export const emit = (): void => { emitDeliveryNotificationAck(); };\n"
     );
     await writeRepoFile(
@@ -231,7 +231,7 @@ describe("critical side-effect fitness check", () => {
     );
     await writeRepoFile(
       repoRoot,
-      "src/v11/application/approval/runApprovalFlow.ts",
+      "src/v11/application/approval/internal/pipeline/approvalCommandPipeline.ts",
       "export const note = 'emitDeliveryNotificationAck + delivery:';\n"
     );
     await writeRepoFile(
@@ -293,7 +293,7 @@ describe("critical side-effect fitness check", () => {
     );
     await writeRepoFile(
       repoRoot,
-      "src/v11/application/approval/runApprovalFlow.ts",
+      "src/v11/application/approval/internal/pipeline/approvalCommandPipeline.ts",
       "export const emit = (): void => { emitDeliveryNotificationAck(); };\n"
     );
     await writeRepoFile(
@@ -338,7 +338,7 @@ describe("critical side-effect fitness check", () => {
     );
     await writeRepoFile(
       repoRoot,
-      "src/v11/application/approval/runApprovalFlow.ts",
+      "src/v11/application/approval/internal/pipeline/approvalCommandPipeline.ts",
       "export const note = 'missing';\n"
     );
     await writeRepoFile(
@@ -402,7 +402,7 @@ describe("critical side-effect fitness check", () => {
     );
     await writeRepoFile(
       repoRoot,
-      "src/v11/application/approval/runApprovalFlow.ts",
+      "src/v11/application/approval/internal/pipeline/approvalCommandPipeline.ts",
       "export const emit = (): void => { emitDeliveryNotificationAck(); };\n"
     );
     await writeRepoFile(

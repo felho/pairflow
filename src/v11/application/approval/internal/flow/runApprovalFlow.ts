@@ -1,12 +1,12 @@
 import type {
   EmitApprovalDecisionResult,
   EmitRequestReworkResult
-} from "../command/approvalCommandContract.js";
+} from "../../approvalCommandContract.js";
 import type {
   RunApprovalDecisionFlowInput,
   RunRequestReworkFlowInput
 } from "./runApprovalFlowContract.js";
-import type { ResolvedApprovalCommandDependencies } from "../command/approvalCommandDependencyResolution.js";
+import type { ResolvedApprovalCommandDependencies } from "../command/approvalCommandDependencies.js";
 import {
   initializeApprovalFlowExecutionContext,
   initializeRequestReworkFlowExecutionContext

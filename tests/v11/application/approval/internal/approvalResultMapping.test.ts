@@ -4,7 +4,7 @@ import {
   mapImmediateReworkResult,
   mapQueuedReworkResult,
   resolveApprovalNextState
-} from "../../../../src/v11/application/approval/approvalResultMapping.js";
+} from "../../../../../src/v11/application/approval/internal/result/approvalResultMapping.js";
 
 describe("approvalResultMapping", () => {
   it("maps approve decision to APPROVED_FOR_COMMIT transition payload", () => {

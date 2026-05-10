@@ -38,7 +38,8 @@ import type {
 } from "../../ports/uiDelivery.js";
 import type {
   ApprovalDecisionDeliverySignal,
-  EmitApprovalDecisionResult,
+  ApprovalDecisionDeliverySignalsResult,
+  EmitApprovalDecisionImmediateResult,
   EmitRequestReworkResult
 } from "../../application/approval/approvalCommandContract.js";
 import type { CommitBubbleResult } from "../../application/commit/commitCommandContract.js";
@@ -138,7 +139,7 @@ export function projectApprovalDecisionDeliverySignalToUiDeliverySignal(
 }
 
 export function projectApprovalDecisionDeliverySignalsToUiDeliverySignals(
-  result: NonNullable<EmitApprovalDecisionResult["delivery"]>
+  result: ApprovalDecisionDeliverySignalsResult
 ): UiApprovalDecisionDeliverySignals {
   return {
     statusDelivery: projectApprovalDecisionDeliverySignalToUiDeliverySignal(
@@ -223,7 +224,7 @@ export function projectPendingReworkIntentToUiActionPendingIntent(
 }
 
 function mapUiApprovalDecisionResult(
-  result: EmitApprovalDecisionResult
+  result: EmitApprovalDecisionImmediateResult
 ): UiEmitApprovalDecisionResult {
   return {
     bubbleId: result.bubbleId,

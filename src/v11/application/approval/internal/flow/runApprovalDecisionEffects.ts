@@ -4,14 +4,14 @@ import type {
 } from "../command/approvalCommandInputNormalization.js";
 import type {
   ResolvedApprovalCommandDependencies
-} from "../command/approvalCommandDependencyResolution.js";
+} from "../command/approvalCommandDependencies.js";
 import {
   resolveApprovalDecisionMetadata
 } from "./approvalRoutingEligibility.js";
 import type {
   ApprovalDecisionDeliverySignal,
   ApprovalDecisionDeliverySignalsResult
-} from "../command/approvalCommandContract.js";
+} from "../../approvalCommandContract.js";
 import type { DeliveryAck } from "../../../../ports/tmuxDelivery.js";
 
 type ApprovalDecisionFlowShape = Pick<

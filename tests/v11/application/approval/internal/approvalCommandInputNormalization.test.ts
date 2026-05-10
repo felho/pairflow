@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   normalizeApprovalDecisionInput,
   normalizeRequestReworkInput
-} from "../../../../src/v11/application/approval/approvalCommandInputNormalization.js";
+} from "../../../../../src/v11/application/approval/internal/command/approvalCommandInputNormalization.js";
 
 class ApprovalInputNormalizationTestError extends Error {
   public constructor(message: string) {
@@ -58,6 +58,25 @@ describe("approvalCommandInputNormalization", () => {
         createApprovalCommandError: createError
       })
     ).toThrow(/APPROVAL_OVERRIDE_REASON_REQUIRED/u);
+  });
+
+  it("requires a non-empty message for rework decisions", () => {
+    expect(() =>
+      normalizeApprovalDecisionInput({
+        bubbleId: "b_approval_03",
+        decision: "rework",
+        createApprovalCommandError: createError
+      })
+    ).toThrow(/APPROVAL_REWORK_MESSAGE_REQUIRED/u);
+
+    expect(() =>
+      normalizeApprovalDecisionInput({
+        bubbleId: "b_approval_03",
+        decision: "rework",
+        message: "   ",
+        createApprovalCommandError: createError
+      })
+    ).toThrow(/Decision message/u);
   });
 
   it("normalizes request-rework input and validates message", () => {

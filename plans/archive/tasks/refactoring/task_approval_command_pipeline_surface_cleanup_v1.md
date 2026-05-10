@@ -2,7 +2,7 @@
 artifact_type: task
 artifact_id: task_approval_command_pipeline_surface_cleanup_v1
 title: "Approval Command Pipeline Surface Cleanup"
-status: draft
+status: archived
 phase: phase1
 target_files:
   - src/v11/application/approval/approvalCommandApi.ts

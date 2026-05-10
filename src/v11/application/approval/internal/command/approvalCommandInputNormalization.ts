@@ -50,6 +50,8 @@ export interface NormalizedRequestReworkInput {
 
 const APPROVAL_OVERRIDE_REASON_REQUIRED =
   "APPROVAL_OVERRIDE_REASON_REQUIRED";
+const APPROVAL_REWORK_MESSAGE_REQUIRED =
+  "APPROVAL_REWORK_MESSAGE_REQUIRED";
 
 function validateAndNormalizeOverrideReason(
   reason: string | undefined,
@@ -69,6 +71,32 @@ function validateAndNormalizeOverrideReason(
     });
   }
   return trimmed;
+}
+
+function validateAndNormalizeDecisionMessage(
+  input: {
+    decision: ApprovalDecision;
+    message: string | undefined;
+    createError: PairflowCreateCommandError;
+  }
+): string | undefined {
+  if (input.message === undefined) {
+    if (input.decision === "rework") {
+      throw input.createError({
+        reasonCode: APPROVAL_REWORK_MESSAGE_REQUIRED,
+        message: "Rework approval decisions require a non-empty message.",
+        context: {
+          command_name: "approval"
+        }
+      });
+    }
+    return undefined;
+  }
+  return requireNonEmptyString(
+    input.message,
+    "Decision message",
+    input.createError
+  );
 }
 
 export function normalizeApprovalDecisionInput(
@@ -92,13 +120,13 @@ export function normalizeApprovalDecisionInput(
           )
         }
       : {}),
-    ...(input.message !== undefined
+    ...(input.decision === "rework" || input.message !== undefined
       ? {
-          message: requireNonEmptyString(
-            input.message,
-            "Decision message",
-            input.createApprovalCommandError
-          )
+          message: validateAndNormalizeDecisionMessage({
+            decision: input.decision,
+            message: input.message,
+            createError: input.createApprovalCommandError
+          })
         }
       : {}),
     refs: normalizeStringList(input.refs ?? []),
