@@ -3,17 +3,17 @@ import type {
   AgentRunnerBridgeResult,
   AgentRunnerCommandConfig,
   CodexRunnerArtifactFiles
-} from "../runner/agentRunnerBridgeContract.js";
+} from "../../runner/agentRunnerBridgeContract.js";
 import type {
   LinkedBubbleTriggerCandidate,
   LinkedBubbleTriggerDiagnostic,
   LinkedBubbleTriggerIndexInput,
   LinkedBubbleTriggerIndexResult
-} from "../linkedTriggerIndex/linkedBubbleTriggerIndexContract.js";
+} from "../../linkedTriggerIndex/linkedBubbleTriggerIndexContract.js";
 import type {
   PlanWatchLedgerPort,
   PlanWatchLedgerRecord
-} from "./planWatchLedgerContract.js";
+} from "../../ledger/planWatchLedgerContract.js";
 
 export const DEFAULT_PLAN_WATCH_INTERVAL_MS = 60_000;
 

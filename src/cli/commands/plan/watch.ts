@@ -19,13 +19,13 @@ import {
 } from "../../../v11/defaults/planWatch/planWatchLoopDefaults.js";
 import {
   DEFAULT_AGENT_RUNNER_IDLE_TIMEOUT_MS
-} from "../../../v11/application/planWatch/agentRunnerBridge.js";
+} from "../../../v11/application/planWatch/runner/agentRunnerBridge.js";
 import {
   normalizeCodexTimeline
-} from "../../../v11/application/planWatch/codexAgentRunnerTimeline.js";
+} from "../../../v11/application/planWatch/runner/codexAgentRunnerTimeline.js";
 import type {
   AgentRunnerBridgeInputMode
-} from "../../../v11/application/planWatch/agentRunnerBridgeContract.js";
+} from "../../../v11/application/planWatch/runner/agentRunnerBridgeContract.js";
 
 export interface PlanWatchCommandOptions {
   planPath: string;

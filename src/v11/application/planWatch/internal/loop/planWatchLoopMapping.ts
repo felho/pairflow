@@ -1,7 +1,7 @@
 import { relative, resolve, sep } from "node:path";
 
-import type { AgentRunnerBridgeInput } from "../runner/agentRunnerBridgeContract.js";
-import type { LinkedBubbleTriggerCandidate } from "../linkedTriggerIndex/linkedBubbleTriggerIndexContract.js";
+import type { AgentRunnerBridgeInput } from "../../runner/agentRunnerBridgeContract.js";
+import type { LinkedBubbleTriggerCandidate } from "../../linkedTriggerIndex/linkedBubbleTriggerIndexContract.js";
 
 const PLAN_WATCH_TRIGGER_SOURCE = "plan_watch";
 const PLAN_WATCH_TRIGGER_REASON = "linked_bubble_approval_ready";

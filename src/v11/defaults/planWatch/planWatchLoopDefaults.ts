@@ -3,21 +3,21 @@ import { dirname, join } from "node:path";
 
 import {
   resolveLinkedBubbleTriggerIndex
-} from "../../application/planWatch/linkedBubbleTriggerIndex.js";
+} from "../../application/planWatch/linkedTriggerIndex/linkedBubbleTriggerIndex.js";
 import type {
   LinkedBubbleStatusPort,
   LinkedBubbleTriggerDiagnostic
-} from "../../application/planWatch/linkedBubbleTriggerIndexContract.js";
+} from "../../application/planWatch/linkedTriggerIndex/linkedBubbleTriggerIndexContract.js";
 import {
   validatePlanWatchLedgerData
-} from "../../application/planWatch/planWatchLedger.js";
+} from "../../application/planWatch/ledger/planWatchLedger.js";
 import {
   PLAN_WATCH_LEDGER_SCHEMA_VERSION,
   PlanWatchLedgerError,
   type PlanWatchLedgerData,
   type PlanWatchLedgerPort,
   type PlanWatchLedgerRecord
-} from "../../application/planWatch/planWatchLedgerContract.js";
+} from "../../application/planWatch/ledger/planWatchLedgerContract.js";
 import type {
   PlanWatchLoopDependencies
 } from "../../application/planWatch/planWatchLoopContract.js";

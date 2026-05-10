@@ -1,6 +1,6 @@
 import {
   DEFAULT_PLAN_WATCH_INTERVAL_MS
-} from "./internal/loop/planWatchLoopContract.js";
+} from "./internal/loop/planWatchLoopInternalTypes.js";
 import type {
   PlanWatchBlockedReasonKind,
   PlanWatchDiagnostic,
@@ -10,7 +10,7 @@ import type {
   PlanWatchIterationStatus,
   PlanWatchLoopDependencies,
   PlanWatchLoopResult
-} from "./internal/loop/planWatchLoopContract.js";
+} from "./internal/loop/planWatchLoopInternalTypes.js";
 
 export { DEFAULT_PLAN_WATCH_INTERVAL_MS };
 export type {

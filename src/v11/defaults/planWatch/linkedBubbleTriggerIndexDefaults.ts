@@ -4,7 +4,7 @@ import type {
   LinkedBubbleStatusPortInput,
   LinkedBubbleTriggerDiagnostic,
   LinkedBubbleTriggerIndexDependencies
-} from "../../application/planWatch/linkedBubbleTriggerIndexContract.js";
+} from "../../application/planWatch/linkedTriggerIndex/linkedBubbleTriggerIndexContract.js";
 
 export const linkedBubbleTriggerIndexDefaults: LinkedBubbleTriggerIndexDependencies = {
   readFile: (path) => nodeReadFile(path, "utf8"),

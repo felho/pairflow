@@ -7,11 +7,11 @@ import type {
   AgentRunnerCommandConfig,
   AgentRunnerProcessInvocation,
   AgentRunnerProcessResult
-} from "../../application/planWatch/agentRunnerBridgeContract.js";
-import { runExecutePairflowPlanContinuation } from "../../application/planWatch/agentRunnerBridge.js";
+} from "../../application/planWatch/runner/agentRunnerBridgeContract.js";
+import { runExecutePairflowPlanContinuation } from "../../application/planWatch/runner/agentRunnerBridge.js";
 import {
   prepareCodexRunnerFiles
-} from "../../application/planWatch/codexAgentRunnerBridge.js";
+} from "../../application/planWatch/runner/codexAgentRunnerBridge.js";
 import { nodeProcessSpawn } from "../../infrastructure/executor/process/nodeProcessSpawn.js";
 import type {
   ProcessSpawnPipeChild,

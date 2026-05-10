@@ -3,14 +3,14 @@ import { describe, expect, it, vi } from "vitest";
 import {
   isApprovalReadyBubbleState,
   resolveLinkedBubbleTriggerIndex
-} from "../../../../src/v11/application/planWatch/linkedBubbleTriggerIndex.js";
+} from "../../../../src/v11/application/planWatch/linkedTriggerIndex/linkedBubbleTriggerIndex.js";
 import type {
   LinkedBubbleStatusPort,
   LinkedBubbleTriggerCandidate,
   LinkedBubbleTriggerDiagnostic,
   LinkedBubbleTriggerIndexDependencies,
   LinkedBubbleTriggerIndexResult
-} from "../../../../src/v11/application/planWatch/linkedBubbleTriggerIndexContract.js";
+} from "../../../../src/v11/application/planWatch/linkedTriggerIndex/linkedBubbleTriggerIndexContract.js";
 import {
   linkedBubbleTriggerIndexDefaults
 } from "../../../../src/v11/defaults/planWatch/linkedBubbleTriggerIndexDefaults.js";

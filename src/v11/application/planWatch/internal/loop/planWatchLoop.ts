@@ -16,9 +16,9 @@ import {
   type PlanWatchIterationResult,
   type PlanWatchLoopDependencies,
   type PlanWatchLoopResult
-} from "./planWatchLoopContract.js";
+} from "./planWatchLoopInternalTypes.js";
 
-export { DEFAULT_PLAN_WATCH_INTERVAL_MS } from "./planWatchLoopContract.js";
+export { DEFAULT_PLAN_WATCH_INTERVAL_MS } from "./planWatchLoopInternalTypes.js";
 
 export async function runPlanWatchIteration(
   input: PlanWatchInput,

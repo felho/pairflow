@@ -1,16 +1,16 @@
-import type { AgentRunnerBridgeResult } from "../runner/agentRunnerBridgeContract.js";
+import type { AgentRunnerBridgeResult } from "../../runner/agentRunnerBridgeContract.js";
 import type {
   LinkedBubbleTriggerCandidate,
   LinkedBubbleTriggerDiagnostic
-} from "../linkedTriggerIndex/linkedBubbleTriggerIndexContract.js";
+} from "../../linkedTriggerIndex/linkedBubbleTriggerIndexContract.js";
 import {
   buildCompletedPlanWatchLedgerRecord,
   buildDryRunPlanWatchLedgerRecord,
   buildReservedPlanWatchLedgerRecord,
   hasCompletedRunForKey,
   hasReservedRunForKey
-} from "./planWatchLedger.js";
-import { PlanWatchLedgerError } from "./planWatchLedgerContract.js";
+} from "../../ledger/planWatchLedger.js";
+import { PlanWatchLedgerError } from "../../ledger/planWatchLedgerContract.js";
 import {
   buildPlanWatchDedupeKey,
   buildRunnerInput
@@ -21,7 +21,7 @@ import type {
   PlanWatchInput,
   PlanWatchIterationResult,
   PlanWatchLoopDependencies
-} from "./planWatchLoopContract.js";
+} from "./planWatchLoopInternalTypes.js";
 
 interface CandidateExecutionInput {
   input: PlanWatchInput;

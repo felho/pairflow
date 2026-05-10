@@ -7,7 +7,7 @@ import type {
   AgentRunnerProcessInvocation,
   RequiredAgentRunnerCommandConfig
 } from "./agentRunnerBridgeContract.js";
-import { MAX_NODE_TIMER_DELAY_MS } from "../../../../shared/timing/nodeTimerDelay.js";
+import { MAX_NODE_TIMER_DELAY_MS } from "../../../shared/timing/nodeTimerDelay.js";
 
 export const DEFAULT_AGENT_RUNNER_IDLE_TIMEOUT_MS = 15 * 60 * 1000;
 

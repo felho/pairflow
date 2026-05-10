@@ -17,15 +17,15 @@ import {
 import {
   asAgentRunnerBridgeRunnerReasonCode,
   type AgentRunnerBridgeResult
-} from "../../src/v11/application/planWatch/agentRunnerBridgeContract.js";
+} from "../../src/v11/application/planWatch/runner/agentRunnerBridgeContract.js";
 import type {
   LinkedBubbleTriggerCandidate
-} from "../../src/v11/application/planWatch/linkedBubbleTriggerIndexContract.js";
+} from "../../src/v11/application/planWatch/linkedTriggerIndex/linkedBubbleTriggerIndexContract.js";
 import {
   PLAN_WATCH_LEDGER_SCHEMA_VERSION,
   type PlanWatchLedgerData,
   type PlanWatchLedgerRecord
-} from "../../src/v11/application/planWatch/planWatchLedgerContract.js";
+} from "../../src/v11/application/planWatch/ledger/planWatchLedgerContract.js";
 import type {
   PlanWatchLoopDependencies
 } from "../../src/v11/application/planWatch/planWatchLoopContract.js";

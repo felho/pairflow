@@ -18,24 +18,24 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   buildAgentRunnerContinuationPayload,
   runExecutePairflowPlanContinuation
-} from "../../../../src/v11/application/planWatch/agentRunnerBridge.js";
+} from "../../../../src/v11/application/planWatch/runner/agentRunnerBridge.js";
 import type {
   AgentRunnerBridgeDependencies,
   AgentRunnerBridgeInput,
   AgentRunnerContinuationPayload,
   AgentRunnerProcessInvocation,
   AgentRunnerProcessResult
-} from "../../../../src/v11/application/planWatch/agentRunnerBridgeContract.js";
+} from "../../../../src/v11/application/planWatch/runner/agentRunnerBridgeContract.js";
 import {
   buildArtifactDirBaseName,
   planSlugFromPath
-} from "../../../../src/v11/application/planWatch/internal/runner/codexAgentRunnerArtifacts.js";
+} from "../../../../src/v11/application/planWatch/runner/codexAgentRunnerArtifacts.js";
 import {
   prepareCodexRunnerFiles,
   validateContinuationPayload
-} from "../../../../src/v11/application/planWatch/codexAgentRunnerBridge.js";
-import { parseCodexJsonlStream } from "../../../../src/v11/application/planWatch/internal/runner/codexAgentRunnerStream.js";
-import { normalizeCodexTimeline } from "../../../../src/v11/application/planWatch/codexAgentRunnerTimeline.js";
+} from "../../../../src/v11/application/planWatch/runner/codexAgentRunnerBridge.js";
+import { parseCodexJsonlStream } from "../../../../src/v11/application/planWatch/runner/codexAgentRunnerStream.js";
+import { normalizeCodexTimeline } from "../../../../src/v11/application/planWatch/runner/codexAgentRunnerTimeline.js";
 import { runAgentRunnerCommand } from "../../../../src/v11/defaults/planWatch/agentRunnerBridgeDefaults.js";
 import { MAX_NODE_TIMER_DELAY_MS } from "../../../../src/v11/shared/timing/nodeTimerDelay.js";
 import type {
