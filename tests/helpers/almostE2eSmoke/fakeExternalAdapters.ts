@@ -13,6 +13,10 @@ import type {
   TerminateBubbleTmuxSessionPort,
   TerminateBubbleTmuxSessionResult
 } from "../../../src/v11/ports/tmuxSessions.js";
+import type {
+  OpenCommandExecutionInput,
+  OpenCommandExecutionResult
+} from "../../../src/v11/application/open/openBubble.js";
 
 export interface FakeProcessSpawnCall {
   command: string;
@@ -191,6 +195,17 @@ export class FakeExternalAdapters {
       ...(cwd !== undefined ? { cwd } : {})
     });
     return Promise.resolve();
+  };
+
+  public readonly executeOpenCommand = async (
+    input: OpenCommandExecutionInput
+  ): Promise<OpenCommandExecutionResult> => {
+    await this.openEditor(input.command, input.cwd);
+    return {
+      exitCode: 0,
+      stdout: "",
+      stderr: ""
+    };
   };
 
   public readonly openTerminal = (
