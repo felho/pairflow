@@ -103,6 +103,10 @@ function createEnvelope(overrides: Partial<ProtocolEnvelope> = {}): ProtocolEnve
   };
 }
 
+function submittedPaneOutput(markerLine: string): string {
+  return [markerLine, "", ">"].join("\n");
+}
+
 type CompatProtocolEnvelope = Omit<ProtocolEnvelope, "recipient"> & {
   recipient: ProtocolEnvelope["recipient"] | LegacyMetaReviewerProtocolRecipient;
 };
@@ -453,7 +457,7 @@ describe("tmux delivery explicit recipient-role routing", () => {
       if (args[0] === "capture-pane") {
         return {
           stdout:
-            "# [pairflow] r1 PASS codex->claude msg=msg_20260222_101 ref=artifact://handoff.md.",
+            submittedPaneOutput("# [pairflow] r1 PASS codex->claude msg=msg_20260222_101 ref=artifact://handoff.md."),
           stderr: "",
           exitCode: 0
         };
@@ -506,7 +510,7 @@ describe("tmux delivery explicit recipient-role routing", () => {
       if (args[0] === "capture-pane") {
         return {
           stdout:
-            "# [pairflow] r1 PASS codex->claude msg=msg_20260222_102 ref=artifact://handoff.md.",
+            submittedPaneOutput("# [pairflow] r1 PASS codex->claude msg=msg_20260222_102 ref=artifact://handoff.md."),
           stderr: "",
           exitCode: 0
         };
@@ -554,7 +558,7 @@ describe("emitDeliveryNotificationAck", () => {
       if (args[0] === "capture-pane") {
         return Promise.resolve({
           stdout:
-            "# [pairflow] r1 PASS codex->claude msg=msg_20260222_101 ref=artifact://handoff.md.",
+            submittedPaneOutput("# [pairflow] r1 PASS codex->claude msg=msg_20260222_101 ref=artifact://handoff.md."),
           stderr: "",
           exitCode: 0
         });
@@ -855,7 +859,7 @@ describe("emitDeliveryNotificationAck", () => {
       if (args[0] === "capture-pane") {
         return Promise.resolve({
           stdout:
-            "# [pairflow] r2 APPROVAL_REQUEST orchestrator->codex msg=msg_20260222_102 ref=artifact://approval.md. Action: Bubble is READY_FOR_HUMAN_APPROVAL after meta-reviewer gate.",
+            submittedPaneOutput("# [pairflow] r2 APPROVAL_REQUEST orchestrator->codex msg=msg_20260222_102 ref=artifact://approval.md. Action: Bubble is READY_FOR_HUMAN_APPROVAL after meta-reviewer gate."),
           stderr: "",
           exitCode: 0
         });
@@ -911,7 +915,7 @@ describe("emitDeliveryNotificationAck", () => {
       if (args[0] === "capture-pane") {
         return Promise.resolve({
           stdout:
-            "# [pairflow] r1 TASK orchestrator->codex msg=msg_20260222_201 ref=artifact://meta-review-task.md.",
+            submittedPaneOutput("# [pairflow] r1 TASK orchestrator->codex msg=msg_20260222_201 ref=artifact://meta-review-task.md."),
           stderr: "",
           exitCode: 0
         });
@@ -981,7 +985,7 @@ describe("emitDeliveryNotificationAck", () => {
       if (args[0] === "capture-pane") {
         return Promise.resolve({
           stdout:
-            "# [pairflow] r1 PASS claude->codex msg=msg_20260222_202 ref=artifact://handoff.md.",
+            submittedPaneOutput("# [pairflow] r1 PASS claude->codex msg=msg_20260222_202 ref=artifact://handoff.md."),
           stderr: "",
           exitCode: 0
         });
@@ -1056,7 +1060,7 @@ describe("emitDeliveryNotificationAck", () => {
         if (args[0] === "capture-pane") {
           return Promise.resolve({
             stdout:
-              "# [pairflow] r1 TASK orchestrator->codex msg=msg_20260222_203 ref=artifact://meta-review-task.md.",
+              submittedPaneOutput("# [pairflow] r1 TASK orchestrator->codex msg=msg_20260222_203 ref=artifact://meta-review-task.md."),
             stderr: "",
             exitCode: 0
           });
@@ -1140,7 +1144,7 @@ describe("emitDeliveryNotificationAck", () => {
       if (args[0] === "capture-pane") {
         return Promise.resolve({
           stdout:
-            "# [pairflow] r1 PASS codex->claude msg=msg_20260222_204 ref=artifact://handoff.md.",
+            submittedPaneOutput("# [pairflow] r1 PASS codex->claude msg=msg_20260222_204 ref=artifact://handoff.md."),
           stderr: "",
           exitCode: 0
         });
@@ -1185,7 +1189,7 @@ describe("emitDeliveryNotificationAck", () => {
       if (args[0] === "capture-pane") {
         return Promise.resolve({
           stdout:
-            "# [pairflow] r2 HUMAN_REPLY human->codex msg=msg_20260222_205 ref=artifact://reply.md.",
+            submittedPaneOutput("# [pairflow] r2 HUMAN_REPLY human->codex msg=msg_20260222_205 ref=artifact://reply.md."),
           stderr: "",
           exitCode: 0
         });
@@ -1233,7 +1237,7 @@ describe("emitDeliveryNotificationAck", () => {
       if (args[0] === "capture-pane") {
         return Promise.resolve({
           stdout:
-            "# [pairflow] r1 PASS codex->claude msg=msg_20260222_101 ref=artifact://handoff.md. Action: Implementer handoff received.",
+            submittedPaneOutput("# [pairflow] r1 PASS codex->claude msg=msg_20260222_101 ref=artifact://handoff.md. Action: Implementer handoff received."),
           stderr: "",
           exitCode: 0
         });
@@ -1424,7 +1428,7 @@ describe("emitDeliveryNotificationAck", () => {
       if (args[0] === "capture-pane") {
         return Promise.resolve({
           stdout:
-            "# [pairflow] r1 PASS codex->claude msg=msg_20260222_101 ref=artifact://handoff.md. Action: Implementer handoff received.",
+            submittedPaneOutput("# [pairflow] r1 PASS codex->claude msg=msg_20260222_101 ref=artifact://handoff.md. Action: Implementer handoff received."),
           stderr: "",
           exitCode: 0
         });
@@ -1476,7 +1480,7 @@ describe("emitDeliveryNotificationAck", () => {
       if (args[0] === "capture-pane") {
         return Promise.resolve({
           stdout:
-            "# [pairflow] r1 PASS codex->claude msg=msg_20260222_101 ref=artifact://handoff.md. Action: Implementer handoff received.\naccepted=true running=true handoff_id=handoff_advanced_02 actor acknowledged work",
+            submittedPaneOutput("# [pairflow] r1 PASS codex->claude msg=msg_20260222_101 ref=artifact://handoff.md. Action: Implementer handoff received.\naccepted=true running=true handoff_id=handoff_advanced_02 actor acknowledged work"),
           stderr: "",
           exitCode: 0
         });
@@ -1570,7 +1574,7 @@ describe("emitDeliveryNotificationAck", () => {
       if (args[0] === "capture-pane") {
         return Promise.resolve({
           stdout:
-            "# [pairflow] r1 PASS codex->claude msg=msg_20260222_101 ref=artifact://handoff.md. Action: Implementer handoff received.",
+            submittedPaneOutput("# [pairflow] r1 PASS codex->claude msg=msg_20260222_101 ref=artifact://handoff.md. Action: Implementer handoff received."),
           stderr: "",
           exitCode: 0
         });
@@ -1633,7 +1637,7 @@ describe("emitDeliveryNotificationAck", () => {
       if (args[0] === "capture-pane") {
         return Promise.resolve({
           stdout:
-            "# [pairflow] r1 PASS codex->claude msg=msg_20260222_101 ref=artifact://handoff.md. Action: Implementer handoff received.",
+            submittedPaneOutput("# [pairflow] r1 PASS codex->claude msg=msg_20260222_101 ref=artifact://handoff.md. Action: Implementer handoff received."),
           stderr: "",
           exitCode: 0
         });
@@ -1727,7 +1731,7 @@ describe("emitDeliveryNotificationAck", () => {
       if (args[0] === "capture-pane") {
         return Promise.resolve({
           stdout:
-            "# [pairflow] r2 PASS codex->claude msg=msg_20260222_102 ref=artifact://handoff.md. Action: Implementer handoff received.",
+            submittedPaneOutput("# [pairflow] r2 PASS codex->claude msg=msg_20260222_102 ref=artifact://handoff.md. Action: Implementer handoff received."),
           stderr: "",
           exitCode: 0
         });
@@ -1777,7 +1781,7 @@ describe("emitDeliveryNotificationAck", () => {
       if (args[0] === "capture-pane") {
         return Promise.resolve({
           stdout:
-            "# [pairflow] r2 PASS codex->claude msg=msg_20260222_103 ref=artifact://handoff.md. Action: Implementer handoff received.",
+            submittedPaneOutput("# [pairflow] r2 PASS codex->claude msg=msg_20260222_103 ref=artifact://handoff.md. Action: Implementer handoff received."),
           stderr: "",
           exitCode: 0
         });
@@ -2140,7 +2144,7 @@ describe("emitDeliveryNotificationAck", () => {
       if (args[0] === "capture-pane") {
         return Promise.resolve({
           stdout:
-            "# [pairflow] r1 PASS codex->claude msg=msg_20260222_101 ref=artifact://handoff.md. Action: Implementer handoff received.",
+            submittedPaneOutput("# [pairflow] r1 PASS codex->claude msg=msg_20260222_101 ref=artifact://handoff.md. Action: Implementer handoff received."),
           stderr: "",
           exitCode: 0
         });
@@ -2242,7 +2246,7 @@ describe("emitDeliveryNotificationAck", () => {
       if (args[0] === "capture-pane") {
         return Promise.resolve({
           stdout:
-            "# [pairflow] r1 PASS codex->claude msg=msg_20260222_101 ref=artifact://handoff.md.",
+            submittedPaneOutput("# [pairflow] r1 PASS codex->claude msg=msg_20260222_101 ref=artifact://handoff.md."),
           stderr: "",
           exitCode: 0
         });
@@ -2285,7 +2289,7 @@ describe("emitDeliveryNotificationAck", () => {
       if (args[0] === "capture-pane") {
         return Promise.resolve({
           stdout:
-            "# [pairflow] r1 HUMAN_QUESTION claude->human msg=msg_20260222_101 ref=artifact://handoff.md.",
+            submittedPaneOutput("# [pairflow] r1 HUMAN_QUESTION claude->human msg=msg_20260222_101 ref=artifact://handoff.md."),
           stderr: "",
           exitCode: 0
         });
@@ -2332,7 +2336,7 @@ describe("emitDeliveryNotificationAck", () => {
       if (args[0] === "capture-pane") {
         return Promise.resolve({
           stdout:
-            "# [pairflow] r2 APPROVAL_REQUEST orchestrator->codex msg=msg_20260222_206 ref=artifact://approval.md.",
+            submittedPaneOutput("# [pairflow] r2 APPROVAL_REQUEST orchestrator->codex msg=msg_20260222_206 ref=artifact://approval.md."),
           stderr: "",
           exitCode: 0
         });
@@ -2380,7 +2384,7 @@ describe("emitDeliveryNotificationAck", () => {
       if (args[0] === "capture-pane") {
         return Promise.resolve({
           stdout:
-            "# [pairflow] r1 APPROVAL_REQUEST orchestrator->codex msg=msg_20260222_101 ref=artifact://handoff.md.",
+            submittedPaneOutput("# [pairflow] r1 APPROVAL_REQUEST orchestrator->codex msg=msg_20260222_101 ref=artifact://handoff.md."),
           stderr: "",
           exitCode: 0
         });
@@ -2440,7 +2444,9 @@ describe("emitDeliveryNotificationAck", () => {
       calls.push(args);
       if (args[0] === "capture-pane") {
         return Promise.resolve({
-          stdout: `# [pairflow] r2 APPROVAL_DECISION human->codex msg=msg_20260222_101 ref=${reworkRef}.`,
+          stdout: submittedPaneOutput(
+            `# [pairflow] r2 APPROVAL_DECISION human->codex msg=msg_20260222_101 ref=${reworkRef}.`
+          ),
           stderr: "",
           exitCode: 0
         });
@@ -2499,7 +2505,7 @@ describe("emitDeliveryNotificationAck", () => {
       if (args[0] === "capture-pane") {
         return Promise.resolve({
           stdout:
-            "# [pairflow] r2 APPROVAL_DECISION orchestrator->codex msg=msg_20260222_103 ref=artifact://auto-rework.md.",
+            submittedPaneOutput("# [pairflow] r2 APPROVAL_DECISION orchestrator->codex msg=msg_20260222_103 ref=artifact://auto-rework.md."),
           stderr: "",
           exitCode: 0
         });
@@ -2554,7 +2560,7 @@ describe("emitDeliveryNotificationAck", () => {
       if (args[0] === "capture-pane") {
         return Promise.resolve({
           stdout:
-            "# [pairflow] r2 APPROVAL_DECISION orchestrator->codex msg=msg_20260222_104 ref=artifact://gate-auto-rework.md.",
+            submittedPaneOutput("# [pairflow] r2 APPROVAL_DECISION orchestrator->codex msg=msg_20260222_104 ref=artifact://gate-auto-rework.md."),
           stderr: "",
           exitCode: 0
         });
@@ -2761,7 +2767,7 @@ describe("emitDeliveryNotificationAck", () => {
       if (args[0] === "capture-pane") {
         return Promise.resolve({
           stdout:
-            "# [pairflow] r1 PASS claude->codex msg=msg_20260222_101 ref=artifact://handoff.md.",
+            submittedPaneOutput("# [pairflow] r1 PASS claude->codex msg=msg_20260222_101 ref=artifact://handoff.md."),
           stderr: "",
           exitCode: 0
         });
@@ -2829,7 +2835,7 @@ describe("emitDeliveryNotificationAck", () => {
       if (args[0] === "capture-pane") {
         return Promise.resolve({
           stdout:
-            "# [pairflow] r1 PASS claude->codex msg=msg_20260222_101 ref=artifact://handoff.md.",
+            submittedPaneOutput("# [pairflow] r1 PASS claude->codex msg=msg_20260222_101 ref=artifact://handoff.md."),
           stderr: "",
           exitCode: 0
         });
@@ -2894,7 +2900,9 @@ describe("emitDeliveryNotificationAck", () => {
       calls.push(args);
       if (args[0] === "capture-pane") {
         return Promise.resolve({
-          stdout: `# [pairflow] r1 PASS codex->claude msg=msg_20260222_101 ref=${fallbackRef}.`,
+          stdout: submittedPaneOutput(
+            `# [pairflow] r1 PASS codex->claude msg=msg_20260222_101 ref=${fallbackRef}.`
+          ),
           stderr: "",
           exitCode: 0
         });
@@ -2936,7 +2944,7 @@ describe("emitDeliveryNotificationAck", () => {
       if (args[0] === "capture-pane") {
         return Promise.resolve({
           stdout:
-            "# [pairflow] r1 PASS codex->claude msg=msg_20260222_101 ref=artifact://priority-source.md.",
+            submittedPaneOutput("# [pairflow] r1 PASS codex->claude msg=msg_20260222_101 ref=artifact://priority-source.md."),
           stderr: "",
           exitCode: 0
         });
@@ -2978,7 +2986,7 @@ describe("emitDeliveryNotificationAck", () => {
       if (args[0] === "capture-pane") {
         return Promise.resolve({
           stdout:
-            "# [pairflow] r1 APPROVAL_REQUEST orchestrator->claude msg=msg_20260222_101 ref=artifact://handoff.md.",
+            submittedPaneOutput("# [pairflow] r1 APPROVAL_REQUEST orchestrator->claude msg=msg_20260222_101 ref=artifact://handoff.md."),
           stderr: "",
           exitCode: 0
         });
@@ -3034,7 +3042,7 @@ describe("emitDeliveryNotificationAck", () => {
       if (args[0] === "capture-pane") {
         return Promise.resolve({
           stdout:
-            "# [pairflow] r1 PASS codex->claude msg=msg_20260222_101 ref=artifact://handoff.md.",
+            submittedPaneOutput("# [pairflow] r1 PASS codex->claude msg=msg_20260222_101 ref=artifact://handoff.md."),
           stderr: "",
           exitCode: 0
         });
@@ -3077,7 +3085,7 @@ describe("emitDeliveryNotificationAck", () => {
       if (args[0] === "capture-pane") {
         return Promise.resolve({
           stdout:
-            "# [pairflow] r1 PASS codex->claude msg=msg_20260222_101 ref=artifact://handoff.md.",
+            submittedPaneOutput("# [pairflow] r1 PASS codex->claude msg=msg_20260222_101 ref=artifact://handoff.md."),
           stderr: "",
           exitCode: 0
         });
@@ -3370,7 +3378,11 @@ describe("emitDeliveryNotificationAck", () => {
         return Promise.resolve({
           stdout:
             captureCount >= 3
-              ? "# [pairflow] r1 PASS codex->claude msg=msg_20260222_101 ref=artifact://handoff.md."
+              ? [
+                  "# [pairflow] r1 PASS codex->claude msg=msg_20260222_101 ref=artifact://handoff.md.",
+                  "",
+                  ">"
+                ].join("\n")
               : "",
           stderr: "",
           exitCode: 0

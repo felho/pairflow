@@ -159,7 +159,10 @@ export async function checkTmuxPaneMarkerStatus(
   const lines = output.split("\n");
   const lastPromptIdx = findLastIndex(lines, isAgentPromptLine);
   if (lastPromptIdx < 0) {
-    return "submitted";
+    // A promptless marker can be a wrapped TUI input buffer with the prompt
+    // scrolled off-capture. Treat it as unsubmitted so delivery fails closed
+    // instead of accepting text that may still be waiting for Enter.
+    return "stuck_in_input";
   }
 
   const promptAndAfter = lines.slice(lastPromptIdx).join("\n");
