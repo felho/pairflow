@@ -28,7 +28,7 @@ task_tracker:
     notes: "Add compiled-CLI lifecycle smoke coverage for create/start, restart, open, and delete."
   - task_id: 3-actor-loop-smoke
     task_path: plans/tasks/3-actor-loop-smoke.md
-    status: approved
+    status: implementable
     notes: "Add one runner-driven fake actor loop through pass, convergence, and meta-review approve."
   - task_id: 4-ui-action-api-smoke
     task_path: null
@@ -56,7 +56,9 @@ The source architecture document is
 2. Phase 1 CLI smoke runs against the compiled `dist/cli/index.js` entrypoint
    and covers create/start, restart, open, and delete on a fixture repo.
 3. Phase 1 actor-loop smoke proves one minimal happy path through pass,
-   convergence, and meta-review approval using the fake runner.
+   convergence, and meta-review `approve` recommendation routing to
+   `READY_FOR_HUMAN_APPROVAL` using the fake runner under explicit
+   fixture-local single-clean meta-review policy.
 4. Phase 1 UI action API smoke invokes Open, Restart, and Delete through the
    in-process route/action layer with real backend state and recorded external
    side effects.
@@ -150,12 +152,14 @@ The source architecture document is
    in task `1-smoke-runner-contract`; downstream smoke tasks may consume its
    fixture and fake-helper foundation while still proving their own public
    entrypoint coverage.
+3. The compiled CLI lifecycle smoke is implemented and archived in task
+   `2-cli-lifecycle-smoke`; it closes the create/start, restart, open, and
+   delete compiled-entrypoint baseline that `3-actor-loop-smoke` now depends on.
 
 ### Open Work
 
-1. Compiled CLI lifecycle smoke scenarios do not exist.
-2. Runner-driven fake actor-loop smoke does not exist.
-3. In-process UI action API smoke scenarios do not exist.
+1. Runner-driven fake actor-loop smoke does not exist.
+2. In-process UI action API smoke scenarios do not exist.
 
 ### Deferred / Future Work
 
@@ -201,13 +205,42 @@ negative-path assertion must use a helper-parameterized or fixture-local absent
 entrypoint and must not delete, move, or mutate the repository's real
 `dist/cli/index.js` artifact.
 
+Progress update (2026-05-10): document bubble
+`3-actor-loop-smoke-doc` refined task `3-actor-loop-smoke` so the actor-loop
+contract explicitly covers canonical `pairflow agent emit --kind pass`,
+`convergence`, and `meta_review_result` with an `approve` recommendation,
+while keeping human approval, commit/merge closure, UI action, HTTP/browser,
+Playwright, Layer 3, real LLM/tmux/editor/browser, and direct lifecycle
+artifact writes out of scope. No product/runtime implementation scope was
+added.
+
+Progress update (2026-05-10): reviewer-driven document refinement for
+`3-actor-loop-smoke-doc` aligned the parent done wording with the refined task
+scope, requiring the actor-loop smoke to prove meta-review `approve`
+recommendation routing to `READY_FOR_HUMAN_APPROVAL` rather than broader
+human approval or close lifecycle completion.
+
+Progress update (2026-05-10): reviewer-driven document refinement for
+`3-actor-loop-smoke-doc` clarified that the minimal one-loop approval-ready
+claim depends on explicit fixture-local single-clean meta-review policy,
+because repository defaults may require two consecutive clean meta-review
+approvals before `READY_FOR_HUMAN_APPROVAL`. No production policy/default
+change is authorized by this task.
+
+Progress update (2026-05-10): reviewer-driven document refinement for
+`3-actor-loop-smoke-doc` aligned the task L2 implementation sketch with the
+L0/L1 authority contract by requiring every post-launch emit to refresh or
+prove current `--handoff-id` and `--execution-id` from the public status/read
+model before invoking `pairflow agent emit`. The parent Completed Work
+narrative now also records archived task `2-cli-lifecycle-smoke`.
+
 ## Open Task List
 
 | Task ID | Task Path | Purpose | Depends On | Closes Gap | Status |
 |---|---|---|---|---|---|
 | `1-smoke-runner-contract` | `plans/archive/tasks/2026-05-09-almost-e2e-smoke-suite-plan-v1/1-smoke-runner-contract.md` | Build the fake process/editor spawn recorder, fake tmux launch/terminate adapter, runner-driven scenario advancement model, first-advance authority validation, post-first authority refresh, and TS scenario type contract. | `docs/architecture/almost-e2e-smoke-suite.md` | Provides the common fake-runner foundation required by all Phase 1 smoke tasks. | archived |
 | `2-cli-lifecycle-smoke` | `plans/archive/tasks/2026-05-09-almost-e2e-smoke-suite-plan-v1/2-cli-lifecycle-smoke.md` | Add compiled-CLI smoke coverage for create/start, restart, open, and delete against a minimal fixture repo using the fake external adapters where needed. | `1-smoke-runner-contract` | Proves the top-level `dist/cli/index.js` route and defaults wiring for public CLI entrypoints. | archived |
-| `3-actor-loop-smoke` | `plans/tasks/3-actor-loop-smoke.md` | Add one minimal runner-driven fake actor scenario through pass, convergence, and meta-review approval, using canonical `pairflow agent emit --kind ...` feedback. | `1-smoke-runner-contract`, `2-cli-lifecycle-smoke` | Proves actor ingestion, authority refresh, transcript/state progression, and meta-review approval routing without a real LLM. | approved |
+| `3-actor-loop-smoke` | `plans/tasks/3-actor-loop-smoke.md` | Add one minimal runner-driven fake actor scenario through pass, convergence, and meta-review `approve` recommendation, using canonical `pairflow agent emit --kind ...` feedback. | `1-smoke-runner-contract`, `2-cli-lifecycle-smoke` | Proves actor ingestion, authority refresh, transcript/state progression, and approval-ready routing without a real LLM. | implementable |
 | `4-ui-action-api-smoke` | `null` | Add in-process UI action API smoke coverage for Open, Restart, and Delete with real backend state and recorded external side effects. | `1-smoke-runner-contract`, `2-cli-lifecycle-smoke` | Proves UI action dispatch reaches the backend command paths that historically failed through Open/Restart. | not_created |
 
 ## Coverage Map
