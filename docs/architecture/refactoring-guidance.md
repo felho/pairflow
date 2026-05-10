@@ -238,6 +238,21 @@ Treat these as review warnings:
 - a public wrapper is retained only because callers have not moved to a deeper
   interface.
 
+## Public Surface Cleanup Patterns
+
+When a Shallow Module Detector fires on top-level re-exports of `internal/**`,
+the matching cleanup operation depends on the camouflage shape: dead public
+surface, 1:1 pass-through with cross-lane consumers, 1:1 pass-through with
+single-lane consumers only, deliberate aggregation barrel sitting one level too
+deep, or stable shape located in the wrong namespace. The catalog of named
+patterns, diagnostic signals, operations, and decision tree lives in
+[`docs/refactoring/public-surface-cleanup-patterns.md`](../refactoring/public-surface-cleanup-patterns.md).
+
+The catalog is a growing playbook, not a closed taxonomy. When a
+Boundary/Architecture refactor encounters a camouflage shape that fits none of
+the listed patterns, extend the catalog with the new shape's diagnostic signal,
+operation, and introducing commit, rather than force-fitting an existing label.
+
 ## Agent Trigger
 
 Root agent guidance should stay short and point here instead of duplicating this
