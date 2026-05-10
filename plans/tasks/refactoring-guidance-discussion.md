@@ -241,18 +241,47 @@ Use it to classify the refactor first. Apply the Module Depth Check when the
 guidance classifies the work as Boundary/Architecture.
 ```
 
+## Planned Changes
+
+This is the proposed action list for turning the discussion into operating
+guidance. Some target files may not exist yet; those are called out explicitly.
+
+| ID | Change | Target | Status | Notes |
+|---|---|---|---|---|
+| A1 | Keep this discussion draft as the working design note until the final guidance lands. | `plans/tasks/refactoring-guidance-discussion.md` | in-progress | This file is the current source for discussion, not the final policy home. |
+| A2 | Create a durable architecture guidance document for refactoring. | `docs/architecture/refactoring-guidance.md` or similar | planned, file missing | Should contain the refactor taxonomy, classification trigger, preparatory modifier, Module Depth Policy, and Module Depth Check. |
+| A3 | Add a short root agent trigger that points refactoring work to the durable guidance doc. | `AGENTS.md` | planned | Keep this small: only require agents to consult the refactoring guidance when planning, implementing, or reviewing refactors. Do not duplicate the full policy in `AGENTS.md`. |
+| A4 | Update `CreatePairflowSpec` so refactor-oriented task creation and review classify the refactor before task shape is finalized. | repo-local `.claude/skills/CreatePairflowSpec/**` | planned | This should cover both `CreateTask` and `ReviewSpec`: if classification marks Boundary/Architecture, task drafting and task-mode review should require the Module Depth Check. Exact file(s) need investigation before editing. |
+| A5 | After durable docs and `CreatePairflowSpec` guidance land, replace this discussion draft with a pointer or archive it. | `plans/tasks/refactoring-guidance-discussion.md` | deferred | Prevent two competing sources of truth. |
+
+### Suggested Order
+
+1. Create the durable architecture doc (`A2`) from this discussion.
+2. Add the short `AGENTS.md` trigger (`A3`) pointing to that durable doc.
+3. Update `CreatePairflowSpec` guidance (`A4`) so new refactor tasks and
+   `ReviewSpec` task-mode reviews receive the classification and Module Depth
+   Check when appropriate.
+4. Archive or replace this discussion draft once the durable policy exists
+   (`A5`).
+
+### Decisions Still Needed
+
+- Final path/name for the durable architecture document.
+- Which repo-local `CreatePairflowSpec` files own the `CreateTask` and
+  `ReviewSpec` changes.
+- What review window to use for preparatory refactors before they become tracked
+  architecture debt.
+
 ## Guidance Placement
 
 Use layered placement rather than copying the full policy everywhere:
 
 - `AGENTS.md`: short refactoring trigger that points agents to this guidance.
 - Architecture documentation: full refactor taxonomy, Module Depth Policy,
-  Module Depth Check, fitness radar, worked examples, and known shallow-module
-  debt.
-- `CreatePairflowSpec` skill: inject the Module Depth Check when the
-  classification trigger marks a task as Boundary/Architecture.
-- Review and meta-review guidance: verify the deletion test, test shape, wrapper
-  camouflage, and caller-knowledge reduction.
+  and Module Depth Check.
+- `CreatePairflowSpec` skill: classify refactor work during task creation and
+  `ReviewSpec`; inject or verify the Module Depth Check when the classification
+  trigger marks a task as Boundary/Architecture.
 
 ## Possible Fitness Radar
 
@@ -310,9 +339,11 @@ Each tracked item should eventually record:
 ## Open Questions
 
 1. What exact short policy should be copied into root `AGENTS.md`?
-2. Should the first implementation change land in `CreatePairflowSpec`, review
-   guidance, or architecture docs?
-3. What review window should preparatory work use before becoming tracked
+2. Should the first implementation change land in the durable architecture doc
+   or in `CreatePairflowSpec`?
+3. Which `CreatePairflowSpec` workflow files should own the `CreateTask` and
+   `ReviewSpec` behavior?
+4. What review window should preparatory work use before becoming tracked
    architecture debt?
-4. Which post-refactor modules should become positive examples beside
+5. Which post-refactor modules should become positive examples beside
    meta-review submit?
