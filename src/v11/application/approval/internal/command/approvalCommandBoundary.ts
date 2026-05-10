@@ -1,27 +1,27 @@
 import type {
   ResolvedApprovalCommandDependencies
-} from "./approvalCommandDependencyResolution.js";
+} from "./approvalCommandDependencies.js";
 import {
   createApprovalCommandError,
   isApprovalCommandError
-} from "./approvalCommandError.js";
+} from "../../approvalCommandError.js";
 import { normalizeApprovalCommandError } from "./approvalCommandErrorNormalization.js";
 import {
   normalizeApprovalDecisionInput,
   normalizeRequestReworkInput
 } from "./approvalCommandInputNormalization.js";
 import {
-  runApprovalDecisionFlow,
-  runRequestReworkFlow
-} from "../flow/runApprovalFlow.js";
+  runApprovalCommandPipeline
+} from "../pipeline/approvalCommandPipeline.js";
 import { isNamedError } from "../../../../shared/errors/namedError.js";
 import type {
+  EmitApprovalDecisionImmediateResult,
   EmitApprovalDecisionInput,
   EmitApprovalDecisionResult,
   EmitApproveInput,
   EmitRequestReworkInput,
   EmitRequestReworkResult
-} from "./approvalCommandContract.js";
+} from "../../approvalCommandContract.js";
 
 export async function emitApprovalDecisionCommandOrchestration(
   input: EmitApprovalDecisionInput,
@@ -38,21 +38,23 @@ export async function emitApprovalDecisionCommandOrchestration(
     now: input.now,
     createApprovalCommandError
   });
-  return runApprovalDecisionFlow(
+  const result = await runApprovalCommandPipeline(
     {
+      intent: "approval_decision",
       ...normalized,
       overrideNonApprove: input.overrideNonApprove,
       createError: createApprovalCommandError
     },
     dependencies
   );
+  return result as EmitApprovalDecisionResult;
 }
 
 export async function emitApproveCommandOrchestration(
   input: EmitApproveInput,
   dependencies: ResolvedApprovalCommandDependencies
-): Promise<EmitApprovalDecisionResult> {
-  return emitApprovalDecisionCommandOrchestration(
+): Promise<EmitApprovalDecisionImmediateResult> {
+  const result = await emitApprovalDecisionCommandOrchestration(
     {
       bubbleId: input.bubbleId,
       decision: "approve",
@@ -65,6 +67,18 @@ export async function emitApproveCommandOrchestration(
     },
     dependencies
   );
+  if (!("sequence" in result)) {
+    throw createApprovalCommandError({
+      reasonCode: "APPROVAL_REMOTE_RESULT_INVALID",
+      message:
+        `Remote approve for '${input.bubbleId}' returned a queued rework result.`,
+      context: {
+        command_name: "approval",
+        bubble_id: input.bubbleId
+      }
+    });
+  }
+  return result;
 }
 
 export async function emitRequestReworkCommandOrchestration(
@@ -80,13 +94,15 @@ export async function emitRequestReworkCommandOrchestration(
     now: input.now,
     createApprovalCommandError
   });
-  return runRequestReworkFlow(
+  const result = await runApprovalCommandPipeline(
     {
+      intent: "request_rework",
       ...normalized,
       createError: createApprovalCommandError
     },
     dependencies
   );
+  return result as EmitRequestReworkResult;
 }
 
 export function throwAsApprovalCommandError(error: unknown): never {

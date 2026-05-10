@@ -1,4 +1,4 @@
-import type { EmitApprovalDecisionResult } from "../command/approvalCommandContract.js";
+import type { EmitApprovalDecisionResult } from "../../approvalCommandContract.js";
 import {
   buildApprovalDecisionEnvelopePayload,
   emitApprovalDecisionDeliverySignals,
@@ -6,36 +6,74 @@ import {
 } from "./runApprovalDecisionEffects.js";
 import { resolveApprovalNextState } from "../result/approvalResultMapping.js";
 import type { RunApprovalDecisionFlowInput } from "./runApprovalFlowContract.js";
-import type { ResolvedApprovalCommandDependencies } from "../command/approvalCommandDependencyResolution.js";
+import type { ResolvedApprovalCommandDependencies } from "../command/approvalCommandDependencies.js";
 import {
   appendEnvelopeViaMutationBoundary,
   persistStateViaMutationBoundary
 } from "../../../../shared/mutation/mutationBoundaryIO.js";
 import { assertApprovalDecisionEligibility } from "./approvalRoutingEligibility.js";
 import type { ApprovalFlowExecutionContext } from "./runApprovalFlowContext.js";
+import type { ExecuteRemoteBubbleApprovalCommandResult } from "../remote/remoteApprovalCommandPort.js";
+import { runLocalQueuedReworkFlow } from "../rework/runApprovalQueuedReworkFlow.js";
 
 async function runRemoteApprovalDecision(input: {
   flow: RunApprovalDecisionFlowInput;
   dependencies: ResolvedApprovalCommandDependencies;
   execution: Extract<ApprovalFlowExecutionContext, { route: "remote" }>;
 }): Promise<EmitApprovalDecisionResult> {
-  const routed = await input.dependencies.executeRemoteBubbleApprovalCommand({
-    action: "approve",
-    bubbleId: input.execution.resolved.bubbleId,
-    remoteClonePath: input.execution.remotePointer.remoteClonePath,
-    remoteTarget: input.execution.remoteTarget,
-    refs: input.flow.refs,
-    overrideNonApprove: input.flow.overrideNonApprove ?? false,
-    ...(input.flow.overrideReason !== undefined
-      ? { overrideReason: input.flow.overrideReason }
-      : {})
-  });
+  let routed: ExecuteRemoteBubbleApprovalCommandResult;
+  if (input.flow.decision === "approve") {
+    routed = await input.dependencies.executeRemoteBubbleApprovalCommand({
+      action: "approve",
+      bubbleId: input.execution.resolved.bubbleId,
+      remoteClonePath: input.execution.remotePointer.remoteClonePath,
+      remoteTarget: input.execution.remoteTarget,
+      refs: input.flow.refs,
+      overrideNonApprove: input.flow.overrideNonApprove ?? false,
+      ...(input.flow.overrideReason !== undefined
+        ? { overrideReason: input.flow.overrideReason }
+        : {})
+    });
+  } else {
+    const message = input.flow.message;
+    if (message === undefined) {
+      throw input.flow.createError({
+        reasonCode: "APPROVAL_REWORK_MESSAGE_REQUIRED",
+        message: "Rework approval decisions require a non-empty message.",
+        context: {
+          command_name: "approval",
+          bubble_id: input.execution.resolved.bubbleId
+        }
+      });
+    }
+
+    routed = await input.dependencies.executeRemoteBubbleApprovalCommand({
+      action: "request-rework",
+      bubbleId: input.execution.resolved.bubbleId,
+      message,
+      remoteClonePath: input.execution.remotePointer.remoteClonePath,
+      remoteTarget: input.execution.remoteTarget,
+      refs: input.flow.refs
+    });
+  }
+
+  if (routed.kind === "queued_rework" && input.flow.decision === "rework") {
+    return {
+      mode: "queued",
+      bubbleId: routed.bubbleId,
+      intentId: routed.intentId,
+      ...(routed.supersededIntentId !== undefined
+        ? { supersededIntentId: routed.supersededIntentId }
+        : {}),
+      state: routed.state
+    };
+  }
 
   if (routed.kind !== "decision") {
     throw input.flow.createError({
       reasonCode: "APPROVAL_REMOTE_RESULT_INVALID",
       message:
-        `Remote approval for '${input.execution.resolved.bubbleId}' returned a queued rework result for approve.`,
+        `Remote approval decision for '${input.execution.resolved.bubbleId}' returned a non-decision result.`,
       context: {
         command_name: "approval",
         bubble_id: input.execution.resolved.bubbleId
@@ -147,6 +185,31 @@ export async function runApprovalDecisionFlowWithContext(
     });
   }
 
+  const state = input.execution.state;
+  if (state.state === "WAITING_HUMAN" && input.flow.decision === "rework") {
+    const message = input.flow.message;
+    if (message === undefined) {
+      throw input.flow.createError({
+        reasonCode: "APPROVAL_REWORK_MESSAGE_REQUIRED",
+        message: "Rework approval decisions require a non-empty message.",
+        context: {
+          command_name: "approval",
+          bubble_id: input.execution.resolved.bubbleId
+        }
+      });
+    }
+
+    return runLocalQueuedReworkFlow({
+      bubbleId: input.flow.bubbleId,
+      message,
+      refs: input.flow.refs,
+      now: input.flow.now,
+      createError: input.flow.createError,
+      dependencies: input.dependencies,
+      execution: input.execution
+    });
+  }
+
   const bubbleIdentity = await input.dependencies.ensureBubbleInstanceIdForMutation({
     bubbleId: input.execution.resolved.bubbleId,
     repoPath: input.execution.resolved.repoPath,
@@ -156,7 +219,6 @@ export async function runApprovalDecisionFlowWithContext(
   });
   input.execution.resolved.bubbleConfig = bubbleIdentity.bubbleConfig;
 
-  const state = input.execution.state;
   assertApprovalDecisionEligibility(state, input.flow.createError);
 
   const appended = await appendLocalApprovalEnvelope({

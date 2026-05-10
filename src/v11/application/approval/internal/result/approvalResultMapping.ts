@@ -9,10 +9,10 @@ import type {
   BubbleReworkIntentRecord
 } from "../../../../shared/state/reworkIntentTypes.js";
 import type {
-  EmitApprovalDecisionResult,
+  EmitApprovalDecisionImmediateResult,
   EmitRequestReworkImmediateResult,
   EmitRequestReworkQueuedResult
-} from "../command/approvalCommandContract.js";
+} from "../../approvalCommandContract.js";
 
 export interface ResolveApprovalNextStateInput {
   state: BubbleStateSnapshot;
@@ -62,7 +62,7 @@ export function resolveApprovalNextState(
 }
 
 export function mapImmediateReworkResult(
-  immediate: EmitApprovalDecisionResult
+  immediate: EmitApprovalDecisionImmediateResult
 ): EmitRequestReworkImmediateResult {
   return {
     ...immediate,

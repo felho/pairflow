@@ -2,15 +2,6 @@ import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vites
 
 import type { BubbleKickoffCommandDependencies } from "../../src/v11/application/kickoff/kickoffCliCommand.js";
 import type { KickoffBubbleV11Result } from "../../src/v11/application/kickoff/emitKickoffV11.js";
-import type {
-  BubbleKickoffCommandDependencies
-} from "../../src/v11/application/kickoff/kickoffCliCommand.js";
-
-type RunBubbleKickoffCommand = (
-  args: string[],
-  cwd?: string,
-  dependencies?: BubbleKickoffCommandDependencies
-) => Promise<KickoffBubbleV11Result | null>;
 
 type RunBubbleKickoffCommand = (
   args: string[],

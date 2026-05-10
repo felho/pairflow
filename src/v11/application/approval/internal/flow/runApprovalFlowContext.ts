@@ -3,8 +3,8 @@ import type {
   BubbleRemotePointerStarted
 } from "../../../../shared/remote/remoteExecutionTypes.js";
 import type { BubbleStateSnapshot } from "../../../../shared/state/bubbleStateSnapshotTypes.js";
-import type { ApprovalRemoteBubbleStatusTarget } from "../remote/approvalRemoteExecutionContract.js";
-import type { ResolvedApprovalCommandDependencies } from "../command/approvalCommandDependencyResolution.js";
+import type { ApprovalRemoteBubbleStatusTarget } from "../remote/remoteApprovalCommandPort.js";
+import type { ResolvedApprovalCommandDependencies } from "../command/approvalCommandDependencies.js";
 import type {
   RequestReworkRemoteFallbackDiagnostic
 } from "../remote/requestReworkRemoteCloneSupport.js";
@@ -132,11 +132,11 @@ function assertWorkspaceRepoAuthorityForRequestRework(input: {
     }
   });
 }
-async function assertNoRetainedRemotePointerArtifactsForRequestRework(input: {
+async function hasNoRetainedRemotePointerArtifactsForRequestRework(input: {
   base: ApprovalFlowBaseResolution;
   createError: PairflowCreateCommandError;
   dependencies: ResolvedApprovalCommandDependencies;
-}): Promise<void> {
+}): Promise<boolean> {
   let remotePointer: BubbleRemotePointer | null;
   try {
     remotePointer = await input.dependencies.readRemotePointer(
@@ -157,20 +157,10 @@ async function assertNoRetainedRemotePointerArtifactsForRequestRework(input: {
   }
 
   if (remotePointer === null) {
-    return;
+    return true;
   }
 
-  throw input.createError({
-    reasonCode: "APPROVAL_REMOTE_CLONE_CONTEXT_INVALID",
-    message:
-      `Bubble ${input.base.resolved.bubbleId} refused local request-rework inside a remote clone because retained remote pointer artifacts are still present.`,
-    context: {
-      command_name: "approval",
-      bubble_id: input.base.resolved.bubbleId,
-      remote_pointer_kind: remotePointer.kind,
-      remote_pointer_path: input.base.resolved.bubblePaths.remotePointerPath
-    }
-  });
+  return false;
 }
 
 async function resolveApprovalFlowBaseResolution(input: {
@@ -350,11 +340,17 @@ async function resolveVerifiedRemoteCloneRequestReworkContext(input: {
     };
   }
 
-  await assertNoRetainedRemotePointerArtifactsForRequestRework({
-    base: input.base,
-    createError: input.createError,
-    dependencies: input.dependencies
-  });
+  const localFallbackAllowed =
+    await hasNoRetainedRemotePointerArtifactsForRequestRework({
+      base: input.base,
+      createError: input.createError,
+      dependencies: input.dependencies
+    });
+  if (!localFallbackAllowed) {
+    return {
+      kind: "fallback"
+    };
+  }
 
   return {
     kind: "local",

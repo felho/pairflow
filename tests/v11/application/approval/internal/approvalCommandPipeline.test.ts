@@ -5,24 +5,60 @@ import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import type {
   BubbleRemotePointer
-} from "../../../../src/v11/shared/remote/remoteExecutionTypes.js";
-import type { BubbleStateSnapshot } from "../../../../src/v11/shared/state/bubbleStateSnapshotTypes.js";
-import { applyStateTransition } from "../../../../src/v11/domain/state/machine.js";
-import { deliveryTargetRoleMetadataKey } from "../../../../src/types/protocol.js";
+} from "../../../../../src/v11/shared/remote/remoteExecutionTypes.js";
+import type { BubbleStateSnapshot } from "../../../../../src/v11/shared/state/bubbleStateSnapshotTypes.js";
+import { applyStateTransition } from "../../../../../src/v11/domain/state/machine.js";
+import { deliveryTargetRoleMetadataKey } from "../../../../../src/types/protocol.js";
 import {
   remoteApprovalModeEnvVar,
   remoteApprovalModeInnerRemoteExecution,
   remoteApprovalWorkspaceRootEnvVar
-} from "../../../../src/v11/application/approval/remoteApprovalExecutionContext.js";
-import { runApprovalDecisionFlow } from "../../../../src/v11/application/approval/runApprovalFlow.js";
-import { runRequestReworkFlow } from "../../../../src/v11/application/approval/runApprovalFlow.js";
-import { queueDeferredReworkIntent } from "../../../../src/v11/application/approval/reworkIntentQueue.js";
+} from "../../../../../src/v11/application/approval/internal/remote/remoteApprovalExecutionContext.js";
+import {
+  runApprovalCommandPipeline
+} from "../../../../../src/v11/application/approval/internal/pipeline/approvalCommandPipeline.js";
+import type {
+  ApprovalCommandPipelineDecisionInput,
+  ApprovalCommandPipelineDependencies,
+  ApprovalCommandPipelineRequestReworkInput
+} from "../../../../../src/v11/application/approval/internal/pipeline/approvalCommandPipelineContract.js";
+import type {
+  EmitApprovalDecisionResult,
+  EmitRequestReworkResult
+} from "../../../../../src/v11/application/approval/approvalCommandContract.js";
+import { queueDeferredReworkIntent } from "../../../../../src/v11/application/approval/internal/rework/reworkIntentQueue.js";
 
 function toErrorMessage(input: PairflowCommandErrorInput): string {
   if (typeof input === "string") {
     return input;
   }
   return `${input.reasonCode !== undefined ? `${input.reasonCode}: ` : ""}${input.message}`;
+}
+
+async function runApprovalDecisionFlow(
+  input: Omit<ApprovalCommandPipelineDecisionInput, "intent">,
+  dependencies: ApprovalCommandPipelineDependencies
+): Promise<EmitApprovalDecisionResult> {
+  return runApprovalCommandPipeline(
+    {
+      intent: "approval_decision",
+      ...input
+    },
+    dependencies
+  ) as Promise<EmitApprovalDecisionResult>;
+}
+
+async function runRequestReworkFlow(
+  input: Omit<ApprovalCommandPipelineRequestReworkInput, "intent">,
+  dependencies: ApprovalCommandPipelineDependencies
+): Promise<EmitRequestReworkResult> {
+  return runApprovalCommandPipeline(
+    {
+      intent: "request_rework",
+      ...input
+    },
+    dependencies
+  ) as Promise<EmitRequestReworkResult>;
 }
 
 function createReadyForHumanApprovalState(): BubbleStateSnapshot {
@@ -476,6 +512,9 @@ describe("runApprovalDecisionFlow delivery invariant", () => {
       flow.rawDependencies as never
     );
 
+    if (!("sequence" in result)) {
+      throw new Error("Expected immediate approval decision result.");
+    }
     expect(result.sequence).toBe(11);
     expect(flow.emittedDeliveries).toHaveLength(1);
     expect(flow.emittedDeliveries[0]).toMatchObject({
@@ -568,6 +607,9 @@ describe("runApprovalDecisionFlow delivery invariant", () => {
       flow.dependencies
     );
 
+    if (!("sequence" in result)) {
+      throw new Error("Expected immediate approval decision result.");
+    }
     expect(result.sequence).toBe(14);
     expect(result.state.state).toBe("APPROVED_FOR_COMMIT");
     expect(flow.rawDependencies.readStateSnapshot).not.toHaveBeenCalled();
@@ -585,6 +627,152 @@ describe("runApprovalDecisionFlow delivery invariant", () => {
         pairflowCommand: "pairflow"
       },
       overrideNonApprove: false
+    });
+  });
+
+  it("routes remote generic rework decisions through request-rework action", async () => {
+    const flow = createRemoteFlowDependencies();
+    flow.executeRemoteBubbleApprovalCommand.mockResolvedValue({
+      kind: "decision",
+      bubbleId: "b_remote_approval_01",
+      sequence: 16,
+      envelope: {
+        id: "msg_remote_rework_decision_01",
+        ts: "2026-04-17T09:06:00.000Z",
+        bubble_id: "b_remote_approval_01",
+        sender: "human",
+        recipient: "orchestrator",
+        type: "APPROVAL_DECISION",
+        round: 2,
+        payload: {
+          decision: "rework",
+          message: "Please rework through the decision API."
+        },
+        refs: []
+      },
+      state: {
+        ...createRemoteReadyForHumanApprovalState(),
+        state: "RUNNING"
+      }
+    });
+
+    const result = await runApprovalDecisionFlow(
+      {
+        bubbleId: "b_remote_approval_01",
+        decision: "rework",
+        message: "Please rework through the decision API.",
+        refs: [],
+        now: new Date("2026-04-17T09:06:00.000Z"),
+        createError: (input) => new Error(toErrorMessage(input))
+      },
+      flow.dependencies
+    );
+
+    expect(result).toMatchObject({
+      bubbleId: "b_remote_approval_01",
+      sequence: 16,
+      state: {
+        state: "RUNNING"
+      }
+    });
+    expect(flow.rawDependencies.readStateSnapshot).not.toHaveBeenCalled();
+    expect(flow.rawDependencies.appendProtocolEnvelope).not.toHaveBeenCalled();
+    expect(flow.rawDependencies.writeStateSnapshot).not.toHaveBeenCalled();
+    expect(flow.executeRemoteBubbleApprovalCommand).toHaveBeenCalledWith({
+      action: "request-rework",
+      bubbleId: "b_remote_approval_01",
+      message: "Please rework through the decision API.",
+      refs: [],
+      remoteClonePath: "/srv/pairflow/repo--b_remote_approval_01",
+      remoteTarget: {
+        alias: "prod",
+        host: "ssh.example.com",
+        user: "pairflow",
+        pairflowCommand: "pairflow"
+      }
+    });
+  });
+
+  it("fails closed before remote routing when generic rework decisions omit a message", async () => {
+    const flow = createRemoteFlowDependencies();
+
+    await expect(() =>
+      runApprovalDecisionFlow(
+        {
+          bubbleId: "b_remote_approval_01",
+          decision: "rework",
+          refs: [],
+          now: new Date("2026-04-17T09:06:00.000Z"),
+          createError: (input) => new Error(toErrorMessage(input))
+        },
+        flow.dependencies
+      )
+    ).rejects.toThrow(/APPROVAL_REWORK_MESSAGE_REQUIRED/u);
+
+    expect(flow.rawDependencies.readStateSnapshot).not.toHaveBeenCalled();
+    expect(flow.rawDependencies.appendProtocolEnvelope).not.toHaveBeenCalled();
+    expect(flow.rawDependencies.writeStateSnapshot).not.toHaveBeenCalled();
+    expect(flow.executeRemoteBubbleApprovalCommand).not.toHaveBeenCalled();
+  });
+
+  it("returns queued result when remote generic rework decisions queue rework", async () => {
+    const flow = createRemoteFlowDependencies();
+    flow.executeRemoteBubbleApprovalCommand.mockResolvedValue({
+      kind: "queued_rework",
+      bubbleId: "b_remote_approval_01",
+      intentId: "intent_remote_rework_01",
+      state: {
+        ...createRemoteWaitingHumanState(),
+        pending_rework_intent: {
+          intent_id: "intent_remote_rework_01",
+          message: "Please rework through the decision API.",
+          requested_by: "human:request-rework",
+          requested_at: "2026-04-17T09:06:00.000Z",
+          status: "pending"
+        }
+      }
+    });
+
+    const result = await runApprovalDecisionFlow(
+      {
+        bubbleId: "b_remote_approval_01",
+        decision: "rework",
+        message: "Please rework through the decision API.",
+        refs: [],
+        now: new Date("2026-04-17T09:06:00.000Z"),
+        createError: (input) => new Error(toErrorMessage(input))
+      },
+      flow.dependencies
+    );
+
+    expect(result).toMatchObject({
+      mode: "queued",
+      bubbleId: "b_remote_approval_01",
+      intentId: "intent_remote_rework_01",
+      state: {
+        state: "WAITING_HUMAN",
+        pending_rework_intent: {
+          intent_id: "intent_remote_rework_01",
+          message: "Please rework through the decision API."
+        }
+      }
+    });
+
+    expect(flow.rawDependencies.readStateSnapshot).not.toHaveBeenCalled();
+    expect(flow.rawDependencies.appendProtocolEnvelope).not.toHaveBeenCalled();
+    expect(flow.rawDependencies.writeStateSnapshot).not.toHaveBeenCalled();
+    expect(flow.executeRemoteBubbleApprovalCommand).toHaveBeenCalledWith({
+      action: "request-rework",
+      bubbleId: "b_remote_approval_01",
+      message: "Please rework through the decision API.",
+      refs: [],
+      remoteClonePath: "/srv/pairflow/repo--b_remote_approval_01",
+      remoteTarget: {
+        alias: "prod",
+        host: "ssh.example.com",
+        user: "pairflow",
+        pairflowCommand: "pairflow"
+      }
     });
   });
 
@@ -916,6 +1104,7 @@ describe("runApprovalDecisionFlow delivery invariant", () => {
       workspaceResolution: "verified_remote_clone"
     });
     flow.executeRemoteBubbleApprovalCommand.mockResolvedValue({
+      kind: "decision",
       mode: "immediate",
       bubbleId: "b_remote_approval_01",
       sequence: 15,
@@ -958,7 +1147,51 @@ describe("runApprovalDecisionFlow delivery invariant", () => {
     expect(flow.executeRemoteBubbleApprovalCommand).toHaveBeenCalledOnce();
   });
 
-  it("fails closed when retained remote pointer artifacts are still present in a verified remote clone", async () => {
+  it("fails closed when remote request-rework returns a malformed non-queued result", async () => {
+    const flow = createRemoteFlowDependencies({
+      state: createRemoteReadyForHumanApprovalState()
+    });
+    flow.executeRemoteBubbleApprovalCommand.mockResolvedValue({
+      mode: "immediate",
+      bubbleId: "b_remote_approval_01",
+      sequence: 15,
+      envelope: {
+        id: "msg_remote_rework_001",
+        ts: "2026-04-17T09:06:00.000Z",
+        bubble_id: "b_remote_approval_01",
+        sender: "human",
+        recipient: "orchestrator",
+        type: "APPROVAL_DECISION",
+        round: 2,
+        payload: {
+          decision: "request_rework"
+        },
+        refs: []
+      },
+      state: {
+        ...createRemoteReadyForHumanApprovalState(),
+        state: "RUNNING"
+      }
+    } as never);
+
+    await expect(() =>
+      runRequestReworkFlow(
+        {
+          bubbleId: "b_remote_approval_01",
+          message: "Please rework through retained remote routing.",
+          refs: [],
+          now: new Date("2026-04-17T09:06:00.000Z"),
+          createError: (input) => new Error(toErrorMessage(input))
+        },
+        flow.dependencies
+      )
+    ).rejects.toThrow(/invalid result kind/u);
+
+    expect(flow.rawDependencies.readStateSnapshot).not.toHaveBeenCalled();
+    expect(flow.executeRemoteBubbleApprovalCommand).toHaveBeenCalledOnce();
+  });
+
+  it("keeps the retained remote route when a local control-plane workspace has retained remote pointer artifacts", async () => {
     const flow = createRemoteFlowDependencies({
       state: createRemoteReadyForHumanApprovalState(),
       remotePointer: {
@@ -971,24 +1204,60 @@ describe("runApprovalDecisionFlow delivery invariant", () => {
       },
       workspaceResolution: "verified_remote_clone"
     });
-
-    await expect(() =>
-      runRequestReworkFlow(
-        {
-          bubbleId: "b_remote_approval_01",
-          message: "Please rework locally.",
-          refs: [],
-          now: new Date("2026-04-17T09:06:00.000Z"),
-          createError: (input) => new Error(toErrorMessage(input))
+    flow.executeRemoteBubbleApprovalCommand.mockResolvedValue({
+      kind: "decision",
+      mode: "immediate",
+      bubbleId: "b_remote_approval_01",
+      sequence: 17,
+      envelope: {
+        id: "msg_remote_rework_retained_pointer_001",
+        ts: "2026-04-17T09:06:00.000Z",
+        bubble_id: "b_remote_approval_01",
+        sender: "human",
+        recipient: "orchestrator",
+        type: "APPROVAL_DECISION",
+        round: 2,
+        payload: {
+          decision: "request_rework"
         },
-        flow.dependencies
-      )
-    ).rejects.toThrow(
-      /retained remote pointer artifacts are still present/u
+        refs: []
+      },
+      state: {
+        ...createRemoteReadyForHumanApprovalState(),
+        state: "RUNNING"
+      }
+    });
+
+    const result = await runRequestReworkFlow(
+      {
+        bubbleId: "b_remote_approval_01",
+        message: "Please rework through retained remote routing.",
+        refs: [],
+        now: new Date("2026-04-17T09:06:00.000Z"),
+        createError: (input) => new Error(toErrorMessage(input))
+      },
+      flow.dependencies
     );
 
+    expect(result).toMatchObject({
+      mode: "immediate",
+      bubbleId: "b_remote_approval_01",
+      sequence: 17
+    });
     expect(flow.rawDependencies.readStateSnapshot).not.toHaveBeenCalled();
-    expect(flow.executeRemoteBubbleApprovalCommand).not.toHaveBeenCalled();
+    expect(flow.executeRemoteBubbleApprovalCommand).toHaveBeenCalledWith({
+      action: "request-rework",
+      bubbleId: "b_remote_approval_01",
+      message: "Please rework through retained remote routing.",
+      refs: [],
+      remoteClonePath: "/srv/pairflow/repo--b_remote_approval_01",
+      remoteTarget: {
+        alias: "prod",
+        host: "ssh.example.com",
+        user: "pairflow",
+        pairflowCommand: "pairflow"
+      }
+    });
   });
 
   it("surfaces clone-root fallback diagnostics when subdirectory cwd falls back to the retained remote path", async () => {
@@ -1222,6 +1491,50 @@ describe("runApprovalDecisionFlow delivery invariant", () => {
     expect(flow.rawDependencies.queueDeferredReworkIntent).toHaveBeenCalledWith({
       state: flow.state,
       message: "Please rework later.",
+      refs: [],
+      requestedBy: "human:request-rework",
+      now
+    });
+  });
+
+  it("queues local generic rework decisions without approval transcript mutation while WAITING_HUMAN", async () => {
+    const now = new Date("2026-03-20T10:08:00.000Z");
+    const flow = createFlowDependencies(now.toISOString(), {
+      state: createWaitingHumanState()
+    });
+    const queued = queueDeferredReworkIntent({
+      state: flow.state,
+      message: "Please rework later through decision API.",
+      requestedBy: "human:request-rework",
+      now
+    });
+    flow.rawDependencies.queueDeferredReworkIntent = vi.fn(() => queued);
+
+    const result = await runApprovalDecisionFlow(
+      {
+        bubbleId: "b_approval_flow_01",
+        decision: "rework",
+        message: "Please rework later through decision API.",
+        refs: [],
+        now,
+        createError: (input) => new Error(toErrorMessage(input))
+      },
+      flow.rawDependencies as never
+    );
+
+    expect(result).toMatchObject({
+      mode: "queued",
+      bubbleId: "b_approval_flow_01",
+      intentId: queued.intent.intent_id,
+      state: {
+        state: "WAITING_HUMAN"
+      }
+    });
+    expect(flow.rawDependencies.appendProtocolEnvelope).not.toHaveBeenCalled();
+    expect(flow.emittedDeliveries).toHaveLength(0);
+    expect(flow.rawDependencies.queueDeferredReworkIntent).toHaveBeenCalledWith({
+      state: flow.state,
+      message: "Please rework later through decision API.",
       refs: [],
       requestedBy: "human:request-rework",
       now

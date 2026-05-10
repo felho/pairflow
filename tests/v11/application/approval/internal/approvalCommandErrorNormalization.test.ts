@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
 
-import { BubbleLookupError } from "../../../../src/v11/infrastructure/executor/workspace/bubbleLookup.js";
+import { BubbleLookupError } from "../../../../../src/v11/infrastructure/executor/workspace/bubbleLookup.js";
 import {
   ApprovalCommandError,
   createApprovalCommandError,
   isApprovalCommandError
-} from "../../../../src/v11/application/approval/approvalCommandError.js";
-import { normalizeApprovalCommandError } from "../../../../src/v11/application/approval/approvalCommandErrorNormalization.js";
+} from "../../../../../src/v11/application/approval/approvalCommandError.js";
+import { normalizeApprovalCommandError } from "../../../../../src/v11/application/approval/internal/command/approvalCommandErrorNormalization.js";
 
 describe("approvalCommandErrorNormalization", () => {
   it("preserves approval command errors", () => {

@@ -3,7 +3,7 @@ import { parseArgs } from "node:util";
 import {
   asApprovalCommandError,
   emitApprove,
-  type EmitApprovalDecisionResult
+  type EmitApprovalDecisionImmediateResult
 } from "../../../v11/application/approval/approvalCommandApi.js";
 
 export interface BubbleApproveCommandOptions {
@@ -106,7 +106,7 @@ export function parseBubbleApproveCommandOptions(
 export async function runBubbleApproveCommand(
   args: string[],
   cwd: string = process.cwd()
-): Promise<EmitApprovalDecisionResult | null> {
+): Promise<EmitApprovalDecisionImmediateResult | null> {
   const options = parseBubbleApproveCommandOptions(args);
   if (options.help) {
     return null;

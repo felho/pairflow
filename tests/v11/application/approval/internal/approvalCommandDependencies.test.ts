@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 
-import { resolveApprovalCommandDependencies } from "../../../../src/v11/application/approval/approvalCommandDependencyResolution.js";
+import { resolveApprovalCommandDependencies } from "../../../../../src/v11/application/approval/internal/command/approvalCommandDependencies.js";
 
-describe("approvalCommandDependencyResolution", () => {
+describe("approvalCommandDependencies", () => {
   it("preserves explicit dependency overrides and falls back to supplied defaults", () => {
     const defaultAppend = (() =>
       Promise.resolve({

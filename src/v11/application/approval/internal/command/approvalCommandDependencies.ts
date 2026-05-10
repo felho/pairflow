@@ -5,7 +5,7 @@ import { applyStateTransition } from "../../../../domain/state/machine.js";
 import type {
   ExecuteRemoteBubbleApprovalCommandPort,
   ResolveApprovalRemoteBubbleStatusTargetPort
-} from "../remote/approvalRemoteExecutionContract.js";
+} from "../remote/remoteApprovalCommandPort.js";
 import { emitBubbleLifecycleEventBestEffort } from "../../../metrics/bubbleEvents.js";
 import { queueDeferredReworkIntent } from "../rework/reworkIntentQueue.js";
 import type { EnsureBubbleInstanceIdForMutationPort } from "../../../../ports/bubbleIdentity.js";
