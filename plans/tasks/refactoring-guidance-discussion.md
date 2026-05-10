@@ -1,18 +1,20 @@
-# Module Depth Guidance Discussion
+# Refactoring Guidance Discussion
 
 Status: discussion draft
 Date: 2026-05-10
 
 ## Problem
 
-Recent refactors showed a recurring risk: a change can introduce `internal/`
-directories, more files, or cleaner-looking placement while leaving callers with
-the same amount of knowledge about internal order, policy, and helper details.
+Recent refactors showed two related risks:
 
-That kind of refactor can be structurally neat but architecturally shallow. The
-goal of this note is to capture guidance for future agent work so new code and
-boundary refactors move toward deeper modules without over-applying the rule to
-every small cleanup.
+1. treating all refactors as if they require the same architecture scrutiny,
+2. treating boundary or architecture refactors as complete when files moved but
+   callers still need the same knowledge about internal order, policy, and
+   helper details.
+
+The goal of this note is to classify refactors first, then apply the right
+standard. Mechanical and local cleanup refactors should stay lightweight.
+Boundary and architecture refactors must move toward deeper modules.
 
 Core principle:
 
@@ -36,9 +38,10 @@ Boundary/Architecture Refactor when any of these are true:
 - it replaces multiple caller-side helper calls with a pipeline or facade,
 - it changes which tests import public surface versus internal helpers.
 
-When a trigger fires, the task must run the Module Depth Check. It can still
-conclude that the change is intentionally mechanical, but that conclusion must
-be explicit and reviewed.
+When a trigger fires, the task must run the Boundary/Architecture section of
+this guidance, including the Module Depth Check. It can still conclude that the
+change is intentionally mechanical, but that conclusion must be explicit and
+reviewed.
 
 ## Refactor Classes
 
@@ -136,6 +139,23 @@ If `preparatory: yes`, require:
 Preparatory work must not introduce public surface that the follow-up is
 expected to delete again.
 
+## Module Depth Policy
+
+Module depth is the standard for Boundary/Architecture refactors. It is not the
+standard for every refactor.
+
+When introducing or refactoring a module, optimize for depth: leverage at the
+interface and locality in the implementation. A deep module hides substantial
+behavior behind a small interface; a shallow module exposes an interface nearly
+as complex as its implementation.
+
+The interface is the test surface: tests should cross the same seam callers
+cross. Helper-level tests are useful only when the helper owns independent
+policy.
+
+Do not introduce a seam unless something really varies across it. One adapter is
+a hypothetical seam; two adapters make it real.
+
 ## Module Depth Check
 
 For Boundary/Architecture refactors, and for any task where a classification
@@ -204,40 +224,31 @@ and the import-scan evidence that proved caller knowledge was reduced.
 
 ## Proposed Agent Guidance
 
-Top-level agent guidance should stay short enough to be noticed:
+Top-level agent guidance should act as a trigger, not as the full policy. The
+goal is to make the agent load this document whenever refactoring is in scope.
+The detailed depth model belongs here, in architecture docs, and in task/review
+guidance.
+
+Suggested `AGENTS.md` trigger:
 
 ```md
-## Module Depth Policy
+## Refactoring Guidance
 
-A refactor is complete when callers need to know less, not when files are moved.
+When planning, implementing, or reviewing a refactor, apply the Refactoring
+Guidance in `plans/tasks/refactoring-guidance-discussion.md`.
 
-If a change touches `internal/**`, public exports, cross-layer placement,
-command orchestration, state/persistence ordering, authority checks, or
-canonicalization order, classify it as Boundary/Architecture and run the Module
-Depth Check.
-
-Deletion test: if deleting the new module makes complexity disappear, it was
-likely pass-through ceremony; if deleting it forces multiple callers to
-reimplement ordering, validation, policy, or invariants, it is earning its keep.
-
-Shallow module detectors:
-- public files only re-export `internal/**`,
-- callers must know internal call order,
-- tests still reconstruct production behavior through helper imports,
-- a new facade returns a broad bag of fields for callers to interpret.
-
-Mechanical/local refactors may preserve the existing interface, but they must
-not add new public helper surfaces.
+Use it to classify the refactor first. Apply the Module Depth Check when the
+guidance classifies the work as Boundary/Architecture.
 ```
 
 ## Guidance Placement
 
 Use layered placement rather than copying the full policy everywhere:
 
-- `AGENTS.md`: core principle, deletion test, classification trigger, and four
-  shallow-module detectors.
-- Architecture documentation: full taxonomy, Module Depth Check, fitness radar,
-  worked examples, and known shallow-module debt.
+- `AGENTS.md`: short refactoring trigger that points agents to this guidance.
+- Architecture documentation: full refactor taxonomy, Module Depth Policy,
+  Module Depth Check, fitness radar, worked examples, and known shallow-module
+  debt.
 - `CreatePairflowSpec` skill: inject the Module Depth Check when the
   classification trigger marks a task as Boundary/Architecture.
 - Review and meta-review guidance: verify the deletion test, test shape, wrapper
