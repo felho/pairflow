@@ -6,16 +6,14 @@ import {
 } from "../../../../src/v11/application/planWatch/linkedBubbleTriggerIndex.js";
 import type {
   LinkedBubbleStatusPort,
+  LinkedBubbleTriggerCandidate,
   LinkedBubbleTriggerDiagnostic,
-  LinkedBubbleTriggerIndexDependencies
+  LinkedBubbleTriggerIndexDependencies,
+  LinkedBubbleTriggerIndexResult
 } from "../../../../src/v11/application/planWatch/linkedBubbleTriggerIndexContract.js";
 import {
   linkedBubbleTriggerIndexDefaults
 } from "../../../../src/v11/defaults/planWatch/linkedBubbleTriggerIndexDefaults.js";
-import type {
-  LinkedBubbleTriggerCandidate,
-  LinkedBubbleTriggerIndexResult
-} from "../../../../src/index.js";
 
 const repoPath = "/repo";
 const planPath = "/repo/plans/local-plan-watch-plan-v1.md";

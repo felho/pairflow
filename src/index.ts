@@ -99,74 +99,13 @@ export {
   runBubbleWatchdogV11 as runBubbleWatchdog
 } from "./v11/application/watchdog/emitWatchdogV11.js";
 export {
-  buildAgentRunnerContinuationPayload,
-  runExecutePairflowPlanContinuation
-} from "./v11/application/planWatch/agentRunnerBridge.js";
-export {
-  agentRunnerBridgeDefaults
-} from "./v11/defaults/planWatch/agentRunnerBridgeDefaults.js";
-export {
-  isApprovalReadyBubbleState,
-  resolveLinkedBubbleTriggerIndex
-} from "./v11/application/planWatch/linkedBubbleTriggerIndex.js";
-export {
-  linkedBubbleTriggerIndexDefaults
-} from "./v11/defaults/planWatch/linkedBubbleTriggerIndexDefaults.js";
-export {
   DEFAULT_PLAN_WATCH_INTERVAL_MS,
   runPlanWatchIteration,
   runPlanWatchLoop
 } from "./v11/application/planWatch/planWatchLoop.js";
 export {
-  buildCompletedPlanWatchLedgerRecord,
-  buildDryRunPlanWatchLedgerRecord,
-  buildPlanWatchTriggerEvidence,
-  buildReservedPlanWatchLedgerRecord,
-  hasCompletedRunForKey,
-  hasReservedRunForKey,
-  validatePlanWatchLedgerData
-} from "./v11/application/planWatch/planWatchLedger.js";
-export {
-  createDefaultPlanWatchLoopDependencies,
-  createFilePlanWatchLedgerPort,
-  localBubbleStatusPort,
-  resolvePlanWatchLedgerPath
+  createDefaultPlanWatchLoopDependencies
 } from "./v11/defaults/planWatch/planWatchLoopDefaults.js";
-export type {
-  AgentRunnerBridgeDependencies,
-  AgentRunnerBridgeFailureReasonCode,
-  AgentRunnerBridgeInput,
-  AgentRunnerBridgeInputMode,
-  AgentRunnerBridgeReasonCode,
-  AgentRunnerBridgeRunnerReasonCode,
-  AgentRunnerBridgeResult,
-  AgentRunnerBridgeStatus,
-  AgentRunnerBridgeTriggerContext,
-  AgentRunnerCommandConfig,
-  AgentRunnerCommandIdentity,
-  AgentRunnerContinuationPayload,
-  CodexRunnerArtifactFiles,
-  RequiredAgentRunnerCommandConfig,
-  StructuredAgentRunnerOutput,
-  RunAgentRunnerCommandPort
-} from "./v11/application/planWatch/agentRunnerBridgeContract.js";
-export {
-  asAgentRunnerBridgeRunnerReasonCode
-} from "./v11/application/planWatch/agentRunnerBridgeContract.js";
-export type {
-  LinkedBubbleApprovalReadyState,
-  LinkedBubbleRole,
-  LinkedBubbleStatusPort,
-  LinkedBubbleStatusSnapshot,
-  LinkedBubbleTriggerCandidate,
-  LinkedBubbleTriggerDiagnostic,
-  LinkedBubbleTriggerDiagnosticCode,
-  LinkedBubbleTriggerDiagnosticScope,
-  LinkedBubbleTriggerDiagnosticSeverity,
-  LinkedBubbleTriggerIndexDependencies,
-  LinkedBubbleTriggerIndexInput,
-  LinkedBubbleTriggerIndexResult
-} from "./v11/application/planWatch/linkedBubbleTriggerIndexContract.js";
 export type {
   PlanWatchBlockedReasonKind,
   PlanWatchDiagnostic,
@@ -177,18 +116,6 @@ export type {
   PlanWatchLoopDependencies,
   PlanWatchLoopResult
 } from "./v11/application/planWatch/planWatchLoopContract.js";
-export type {
-  PlanWatchLedgerData,
-  PlanWatchLedgerMode,
-  PlanWatchLedgerPort,
-  PlanWatchLedgerRecord,
-  PlanWatchLedgerRecordState,
-  PlanWatchTriggerEvidence
-} from "./v11/application/planWatch/planWatchLedgerContract.js";
-export {
-  PLAN_WATCH_LEDGER_SCHEMA_VERSION,
-  PlanWatchLedgerError
-} from "./v11/application/planWatch/planWatchLedgerContract.js";
 export {
   resolveBubbleFromWorkspaceCwd,
   WorkspaceResolutionError
