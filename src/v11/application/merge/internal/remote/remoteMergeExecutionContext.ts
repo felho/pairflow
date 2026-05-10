@@ -1,7 +1,7 @@
 import { realpathSync } from "node:fs";
 import { resolve } from "node:path";
 
-import { createBubbleMergeError } from "./internal/error/mergeCommandErrorRuntime.js";
+import { createBubbleMergeError } from "../error/mergeCommandErrorRuntime.js";
 
 export const remoteMergeModeEnvVar = "PAIRFLOW_REMOTE_MERGE_MODE";
 export const remoteMergeWorkspaceRootEnvVar =

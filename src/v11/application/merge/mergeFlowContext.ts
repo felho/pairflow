@@ -18,7 +18,7 @@ import type { ResolvedMergeCommandDependencies } from "./mergeCommandDependencyR
 import {
   canonicalizeMergeExecutionPath,
   resolveRemoteMergeExecutionContextFromEnv
-} from "./remoteMergeExecutionContext.js";
+} from "./internal/remote/remoteMergeExecutionContext.js";
 
 interface MergeFlowExecutionContextBase {
   resolved: Awaited<ReturnType<ResolvedMergeCommandDependencies["resolveBubbleById"]>>;

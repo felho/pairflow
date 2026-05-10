@@ -19,7 +19,7 @@ import {
   remoteMergeModeEnvVar,
   remoteMergeModeInnerRemoteExecution,
   remoteMergeWorkspaceRootEnvVar
-} from "../../../src/v11/application/merge/remoteMergeExecutionContext.js";
+} from "../../../src/v11/application/merge/internal/remote/remoteMergeExecutionContext.js";
 import { RemoteBubbleMergeCommandError } from "../../../src/v11/infrastructure/executor/ssh/sshBubbleMergeCommand.js";
 import { readStateSnapshot, writeStateSnapshot } from "../../../src/v11/infrastructure/state/stateStore.js";
 import { GitCommandError } from "../../../src/v11/infrastructure/workspace/git.js";
