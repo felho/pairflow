@@ -88,6 +88,7 @@ async function installFakeTmuxForDeliveryConfirmation(stateFilePath: string): Pr
     "if [ \"$cmd\" = \"capture-pane\" ]; then",
     "  if [ -n \"$STATE_FILE\" ] && [ -f \"$STATE_FILE\" ]; then",
     "    cat \"$STATE_FILE\"",
+    "    printf '\\n>\\n'",
     "  fi",
     "  exit 0",
     "fi",
