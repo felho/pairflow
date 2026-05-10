@@ -1,7 +1,7 @@
 import {
   isBubbleExecutionContextAwaitedOutputType,
   type BubbleExecutionContext
-} from "../execution/executionContextTypes.js";
+} from "../../executionContextTypes.js";
 import { isAgentRole } from "../../../../../contracts/kernel/agentIdentity.js";
 import {
   isInteger,

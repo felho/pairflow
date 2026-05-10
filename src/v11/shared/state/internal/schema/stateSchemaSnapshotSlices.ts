@@ -5,13 +5,13 @@ import {
 import type { BubbleStateSnapshot } from "../../bubbleStateSnapshotTypes.js";
 import type {
   BubbleReworkIntentRecord
-} from "../rework/reworkIntentTypes.js";
+} from "../../reworkIntentTypes.js";
 import type {
   RoundRoleHistoryEntry
-} from "../rework/roundRoleHistoryTypes.js";
+} from "../../roundRoleHistoryTypes.js";
 import type {
   BubbleExecutionContext
-} from "../execution/executionContextTypes.js";
+} from "../../executionContextTypes.js";
 import {
   bubbleLifecycleStates,
   isBubbleLifecycleState

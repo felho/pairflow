@@ -1,7 +1,7 @@
 import {
   isReworkIntentStatus,
   type BubbleReworkIntentRecord
-} from "../rework/reworkIntentTypes.js";
+} from "../../reworkIntentTypes.js";
 import {
   isIsoTimestamp,
   isNonEmptyString,
