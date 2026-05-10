@@ -28,7 +28,7 @@ import {
 } from "../../application/metaReview/metaReviewCommandSubmitRuntime.js";
 import {
   toMetaReviewError
-} from "../../application/metaReview/internal/submit/metaReviewCommandErrorMapping.js";
+} from "../../application/metaReview/metaReviewCommandErrorMapping.js";
 import {
   notifyMetaReviewerSubmissionRequest
 } from "../metaReviewGate/metaReviewGateApi.js";

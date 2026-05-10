@@ -5,8 +5,7 @@ import {
 } from "./restartCommandApi.js";
 import {
   getBubbleRestartHelpText,
-  parseBubbleRestartCommandOptions,
-  type ParsedBubbleRestartCommandOptions
+  parseBubbleRestartCommandOptions
 } from "./restartCommandCliOptions.js";
 
 export {
