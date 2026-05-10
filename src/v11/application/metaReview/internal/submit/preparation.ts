@@ -13,7 +13,7 @@ import { MetaReviewError } from "../../../../shared/metaReview/metaReviewError.j
 import {
   normalizeOptionalText,
   resolveCanonicalMetaReviewReportJson
-} from "../../../../shared/metaReview/metaReviewCanonicalization.js";
+} from "./canonicalization/metaReviewCanonicalization.js";
 import {
   assertApproveRecommendationConsistentWithReviewerSnapshot,
   readLatestApproveReviewerSnapshot

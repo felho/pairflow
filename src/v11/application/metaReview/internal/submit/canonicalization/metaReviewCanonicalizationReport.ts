@@ -1,10 +1,10 @@
-import { isFindingsClaimState } from "../../../../../contracts/kernel/protocol.js";
-import type { FindingsParityStatus } from "../../../../../types/protocol.js";
-import type { MetaReviewRecommendation } from "../../metaReviewTypes.js";
+import { isFindingsClaimState } from "../../../../../../contracts/kernel/protocol.js";
+import type { FindingsParityStatus } from "../../../../../../types/protocol.js";
+import type { MetaReviewRecommendation } from "../../../../../shared/metaReview/metaReviewTypes.js";
 import {
   resolveFindingsOpenSplitFromReportJson
-} from "../../../../domain/metaReviewGate/findingsSplit.js";
-import { isNonEmptyString } from "../../../validation/primitives.js";
+} from "../../../../../domain/metaReviewGate/findingsSplit.js";
+import { isNonEmptyString } from "../../../../../shared/validation/primitives.js";
 
 function resolveClaimStateFromRecommendation(
   recommendation: MetaReviewRecommendation

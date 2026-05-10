@@ -1,4 +1,4 @@
-import { isNonEmptyString } from "../../../validation/primitives.js";
+import { isNonEmptyString } from "../../../../../shared/validation/primitives.js";
 
 export {
   resolveCanonicalMetaReviewReportJson
