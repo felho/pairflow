@@ -1,1 +1,11 @@
-export * from "./internal/guidance/reviewerGuidance.js";
+import type { ReviewArtifactType } from "../config/bubbleConfigVocabulary.js";
+
+export function buildReviewerAgentSelectionGuidance(
+  reviewArtifactType: ReviewArtifactType
+): string {
+  if (reviewArtifactType === "document") {
+    return "IMPORTANT: This bubble primarily targets document/task artifacts. Do not force `feature-dev:code-reviewer` for document-only review. Use document-focused review (scope, consistency, acceptance criteria, risks), and only use code-reviewer if substantial code changes are in scope. Runtime checks are not required for document-only scope.";
+  }
+
+  return "IMPORTANT: This bubble primarily targets code changes. If a `feature-dev:code-reviewer` agent is available (check with /help or Task tool), use it for review; fall back to manual `/review` only if the agent is unavailable.";
+}
