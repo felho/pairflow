@@ -10,7 +10,7 @@ import {
   resolveReviewVerificationState,
   resolveStatusGateState,
   withAccuracyCriticalVerificationGate
-} from "./statusCommandInternals.js";
+} from "./internal/computation/statusCommandInternals.js";
 import {
   buildBubbleStatusView,
   type BubbleStatusView

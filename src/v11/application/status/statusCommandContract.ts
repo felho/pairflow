@@ -16,7 +16,7 @@ import type {
 import type {
   StatusGateStateDependencies,
   StatusTranscriptDataDependencies
-} from "./statusCommandInternals.js";
+} from "./internal/computation/statusCommandInternals.js";
 
 export interface BubbleStatusInput {
   bubbleId: string;

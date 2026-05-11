@@ -24,10 +24,10 @@ import type {
   BubbleStatusState,
   ResolvedBubbleStatusContext,
   StatusGateState
-} from "./statusCommandInternals.js";
+} from "./internal/computation/statusCommandInternals.js";
 import type { RemoteBubbleStatusSnapshot } from "../../shared/status/remoteBubbleStatusContract.js";
 import { inferBubbleStartedAtFromInstanceId } from "../../shared/bubble/bubbleInstanceId.js";
-import { toStatusCommandPathView } from "./statusCommandInternals.js";
+import { toStatusCommandPathView } from "./internal/computation/statusCommandInternals.js";
 import {
   buildStatusExecutionContextView,
   buildStatusMetaReviewView,

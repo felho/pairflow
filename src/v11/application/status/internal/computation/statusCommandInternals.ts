@@ -1,23 +1,23 @@
-import type { ProtocolEnvelope } from "../../../types/protocol.js";
-import { resolveCanonicalPendingApprovalSignal } from "../../shared/approval/pendingApprovalSignal.js";
+import type { ProtocolEnvelope } from "../../../../../types/protocol.js";
+import { resolveCanonicalPendingApprovalSignal } from "../../../../shared/approval/pendingApprovalSignal.js";
 export {
   resolveReviewVerificationState,
   resolveStatusGateState,
   withAccuracyCriticalVerificationGate
 } from "./statusCommandGateState.js";
 export type { StatusGateStateDependencies } from "./statusCommandGateState.js";
-export { toStatusCommandPathView } from "./statusCommandPathView.js";
+export { toStatusCommandPathView } from "../../statusCommandPathView.js";
 export type {
   BubbleStatusState,
   ResolvedBubbleStatusContext,
   StatusGateState
-} from "../../shared/status/statusCommandTypes.js";
+} from "../../../../shared/status/statusCommandTypes.js";
 import type {
   BubbleStatusState,
   ResolvedBubbleStatusContext
-} from "../../shared/status/statusCommandTypes.js";
-import type { InspectedStateSnapshot } from "../../ports/stateSnapshots.js";
-import type { ReadTranscriptEnvelopesPort } from "../../ports/transcript.js";
+} from "../../../../shared/status/statusCommandTypes.js";
+import type { InspectedStateSnapshot } from "../../../../ports/stateSnapshots.js";
+import type { ReadTranscriptEnvelopesPort } from "../../../../ports/transcript.js";
 
 export interface StatusTranscriptDataDependencies {
   inspectStateSnapshot: (
