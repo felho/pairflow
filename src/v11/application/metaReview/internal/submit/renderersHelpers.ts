@@ -1,4 +1,4 @@
-import { isRecord } from "../../shared/validation/primitives.js";
+import { isRecord } from "../../../../shared/validation/primitives.js";
 
 interface MetaReviewRenderedResultLike {
   bubbleId: string;

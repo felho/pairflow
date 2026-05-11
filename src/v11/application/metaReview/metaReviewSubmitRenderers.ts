@@ -5,7 +5,7 @@ import {
   appendMetaReviewOptionalReworkTarget,
   appendMetaReviewOptionalRunId,
   appendMetaReviewOptionalWarnings
-} from "./metaReviewSubmitRenderersHelpers.js";
+} from "./internal/submit/renderersHelpers.js";
 
 export function renderMetaReviewSubmitText(result: MetaReviewSubmitResult): string {
   const lines = buildMetaReviewSubmitHeaderLines(result);

@@ -1,32 +1,32 @@
 import {
   isNonEmptyString
-} from "../../shared/validation/primitives.js";
-import { MetaReviewError } from "../../shared/metaReview/metaReviewError.js";
+} from "../../../../shared/validation/primitives.js";
+import { MetaReviewError } from "../../../../shared/metaReview/metaReviewError.js";
 import type {
   MetaReviewRecommendation
-} from "../../shared/metaReview/metaReviewTypes.js";
+} from "../../../../shared/metaReview/metaReviewTypes.js";
 import {
   hasApproveFindingsSplitMetadata,
   type FindingsParityStatus
-} from "../../../types/protocol.js";
+} from "../../../../../types/protocol.js";
 import {
   isAdvisoryOnlyReviewerSnapshot,
   resolveFindingsParityMetadataFromReportJson,
   type LatestSameRoundReviewerSnapshot
-} from "../../domain/metaReviewGate/index.js";
+} from "../../../../domain/metaReviewGate/index.js";
 import {
   readLatestSameRoundReviewerSnapshotFromTranscript
-} from "../metaReviewGate/metaReviewGateReviewerSnapshotApi.js";
+} from "../../../metaReviewGate/metaReviewGateReviewerSnapshotApi.js";
 import {
   resolveFindingsOpenSplitFromReportJson
-} from "../../domain/metaReviewGate/findingsSplit.js";
+} from "../../../../domain/metaReviewGate/findingsSplit.js";
 import {
   evaluateNoFindingsSummaryFindingsAssertion,
   hasGlobalNoFindingsSummaryAssertion
-} from "../../domain/convergence/policy.js";
+} from "../../../../domain/convergence/policy.js";
 import {
   buildMetaReviewSubmitAdvisoryOnlyCorrectionNote
-} from "../../shared/metaReview/metaReviewSubmitGuidance.js";
+} from "../../../../shared/metaReview/metaReviewSubmitGuidance.js";
 
 export interface MetaReviewFindingsParitySnapshot {
   findings_claimed_open_total: number | null;

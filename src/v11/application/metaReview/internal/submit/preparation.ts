@@ -17,7 +17,7 @@ import {
 import {
   assertApproveRecommendationConsistentWithReviewerSnapshot,
   readLatestApproveReviewerSnapshot
-} from "../../metaReviewRuntimeParity.js";
+} from "./runtimeParity.js";
 import {
   assertActiveMetaReviewExecutionContext,
   assertMetaReviewSubmitStaleGuard,

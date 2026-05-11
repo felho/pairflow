@@ -5,7 +5,7 @@ import {
   parseSubmitRecommendation as parseSubmitRecommendationValue,
   parseSubmitReportJson as parseSubmitReportJsonValue,
   parseSubmitRound as parseSubmitRoundValue
-} from "./metaReviewCliValueParsers.js";
+} from "./internal/submit/cliValueParsers.js";
 import type { MetaReviewSubmissionPayload } from "../../../types/protocol.js";
 
 function invalidMetaReviewCliOptions(message: string): never {
