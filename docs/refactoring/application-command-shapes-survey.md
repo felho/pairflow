@@ -40,7 +40,7 @@ restructuring opportunity).
 | metaReviewGate | 8 | yes | 9 | yes | — | — | structured (Tier 2; refactored 2026-05-11) |
 | merge | 2 | yes | 5 | yes | yes | — | structured (Tier 2; refactored 2026-05-12) |
 | commit | 4 | yes | 5 | yes | yes | — | structured (Tier 2; refactored 2026-05-11) |
-| actorProtocol | 10 | no | — | yes | — | 26 | misclassified (not a command) |
+| actorProtocol | 4 | no | — | yes | — | — | non-bubble command (agent-emit dispatcher; Cluster B extracted to `shared/role/` 2026-05-11) |
 | restart | 3 | yes | 4 | yes | yes | — | structured (Tier 2; refactored 2026-05-11) |
 | reconcile | 3 | yes | 3 | yes | yes | — | structured (Tier 2; refactored 2026-05-11) |
 | start | 9 | yes | 3 | yes | yes | 4 | structured (Tier 2-ish) |
@@ -334,17 +334,36 @@ not just opaque internal helpers.
 
 So far the **only** Tier 3 lane in `application/`.
 
-### Tier ?? — Misclassified (not a command)
+### Tier ?? — Non-bubble command
 
-- **actorProtocol** — 10 top-level files, no internal/. File names suggest
-  this lane is **not a command**: `actorRuntimeKernel.ts`,
-  `actorRuntimeDispatchMatrix.ts`, `actorProtocolEmitters.ts`,
-  `roleDescriptorRegistry.ts`, `rolePromptConcerns*.ts`,
-  `rolePromptImplementerScope.ts`. This is a runtime/protocol/role-modeling
-  layer that happens to live under `application/`. There is also a separate
-  `shared/actorProtocol/` (which the audit ranks at score 4). Worth raising as
-  a separate architectural question: is `application/actorProtocol/` actually
-  in the wrong area?
+- **actorProtocol** — 4 top-level files, no `internal/` (post-2026-05-11
+  Cluster B extraction). Now thematically coherent as the **agent-emit
+  dispatcher**: `emitActorProtocol.ts` (entry; CLI-driven via
+  `pairflow agent emit`), `actorRuntimeKernel.ts` (dispatcher),
+  `actorProtocolEmitters.ts` (4 cross-lane adapters that call into
+  `pass`/`askHuman`/`converged`/`metaReview` command APIs), and
+  `actorRuntimeDispatchMatrix.ts` (route matrix + policy check catalog).
+  It is a CLI-driven command, but not a bubble-lifecycle command — the
+  Tier 1/2/3 template's bubble-command-oriented procedure doesn't fit
+  directly; left as Tier ?? until either the template generalizes to
+  cover the agent-emit shape or this lane gets its own
+  application-side internal/ structure. A separate
+  `shared/actorProtocol/` directory holds the canonical actor-emit
+  framework types/policies (`ActorEmitContextSnapshot`,
+  `assertActorEmitContextMatches`, etc.); it is shared-layer
+  infrastructure consumed by the dispatcher and by `pass`/`converged`/
+  `askHuman` lanes, and is not affected by this extraction.
+
+  **What was extracted in the 2026-05-11 Cluster B move:** the lane
+  originally held 10 files mixing two orthogonal clusters. Six files
+  were a role/topology/prompt registry consumed primarily by
+  `application/start/internal/prompts/` (the prompt-builder cluster)
+  and by `application/metaReviewGate/metaReviewGatePaneBinding.ts` (a
+  topology-slot lookup); they had no command-lane semantics. The
+  extraction relocated those six files plus two collateral start
+  helpers (pure prompt-line string-builders that the cluster depended
+  on) to `shared/role/{registry,prompts}/`. The remaining four files
+  are the Cluster A dispatcher above.
 
 ### Tier 2½ — Half-done with flat internal/ (no current cases)
 
@@ -406,10 +425,33 @@ not prescribe one location.
    confuse `find` / IDE navigation. This applies to any lane after a
    structural refactor, not just planWatch.
 
-2. **actorProtocol is likely misplaced.** Its file shape suggests a
-   runtime/role-domain module, not a command. A separate decision is needed
-   on whether to move it to `domain/`, merge with `shared/actorProtocol/`, or
-   keep but treat as a non-command application lane.
+2. **actorProtocol was a mixed-cluster lane — partially resolved
+   2026-05-11.** The original ten-file directory bundled two
+   unrelated concerns: a CLI-driven agent-emit dispatcher (the
+   "Cluster A" entry + dispatcher + cross-lane adapters + route
+   matrix) and a role/topology/prompt registry consumed by
+   `application/start/` and `application/metaReviewGate/` (the
+   "Cluster B"). The split-by-cluster extraction moved Cluster B
+   (6 files) plus two collateral start prompt-line helpers
+   (`startCommandWorkspacePromptLines.ts`,
+   `startCommandResumePromptShared.ts`) to
+   `shared/role/{registry,prompts}/`. Cluster A (4 files) stays at
+   `application/actorProtocol/` as a non-bubble command lane; its
+   internal restructuring (Phase 2 of the original split plan) is
+   a separate later concern. **New finding worth carrying
+   forward:** *split-by-cluster extraction* — when a single
+   `application/<lane>/` directory mixes a command-shape cluster
+   with a non-command registry/data cluster, the non-command
+   cluster can be extracted to `shared/<concern>/` independently
+   of any later restructuring of the command cluster. Cascading
+   dependency: if the extracted cluster imports utility helpers
+   from a sibling application lane, those helpers may have to
+   move alongside (the architecture-fitness `dependency` check
+   forbids `shared/* → application/*` imports). The cascade
+   ended at two pure-utility files in the reply case; it can be
+   larger if the cluster depends on lane-specific logic, in
+   which case re-evaluating the cluster's shared-eligibility is
+   the right response.
 
 3. **metaReviewGate's `internal/` was flat — and is no longer.** Before
    the 2026-05-11 refactor, `internal/` held 32 files at its root with
@@ -648,8 +690,14 @@ split-extraction, no contract-test path-pin, no phantom cross-lane
 consumer, no type-relocation), the from-scratch introduction
 collapses to a per-sub-area move sequence with no pre-cleanup commit.
 
-**F. Outliers must be excluded from the template.** `actorProtocol` is not a
-command; the template should not try to fit it. Separate decision needed.
+**F. Outliers must be excluded from the template.** `actorProtocol` is
+not a bubble-lifecycle command; the Tier 1/2/3 template doesn't fit
+directly. The 2026-05-11 Cluster B extraction (see anomaly #2)
+removed the non-command parts of the lane, leaving a coherent
+agent-emit dispatcher at `application/actorProtocol/`. Whether that
+dispatcher should adopt an internal/ structure of its own (Phase 2)
+remains a separate later decision, not a target of this template
+version.
 
 ## Template status
 

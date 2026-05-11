@@ -31,14 +31,41 @@ less, not when files are moved.
 
 ## Out of scope
 
-**Non-command application lanes are out of scope.** This template covers
-CLI-driven command implementations: a runtime entry point + dependency port
-contract + composition root, optionally with multi-phase pipelines or
-coordinator submodules.
+**Bubble-lifecycle commands are this template's scope.** It covers
+CLI-driven bubble-lifecycle command implementations: a runtime entry
+point + dependency port contract + composition root, optionally with
+multi-phase pipelines or coordinator submodules.
 
-`actorProtocol` is a runtime/protocol/role-modeling layer that lives under
-`application/` for historical reasons. Its placement is tracked as a separate
-architectural decision and is not a target of this template.
+`application/actorProtocol/` is a CLI-driven command, but it is the
+**agent-emit dispatcher** (`pairflow agent emit --kind ...`), not a
+bubble-lifecycle command. Its 4-file shape (entry + dispatcher +
+4 cross-lane adapters + route matrix) is structurally distinct from
+the bubble-command Tier 1/2/3 lanes, so this template does not try
+to fit it directly. Phase 2 (whether to introduce an `internal/`
+structure for the dispatcher, or rename the lane to reflect its
+real purpose) is a separate later decision.
+
+**Cluster B extraction precedent (2026-05-11).** Before the
+2026-05-11 split, `application/actorProtocol/` mixed the dispatcher
+(Cluster A) with a role/topology/prompt registry consumed primarily
+by `application/start/` and `application/metaReviewGate/`
+(Cluster B). The role/topology/prompt cluster had no command-lane
+semantics — it was statically-configured prompt-building data
+plus helper functions. The split-by-cluster extraction moved
+Cluster B (six files) plus two collateral start prompt-line
+helpers to `shared/role/{registry,prompts}/`, leaving Cluster A
+at `application/actorProtocol/`. **Lesson:** when a single
+`application/<lane>/` directory mixes a command-shape cluster
+with a non-command registry/data cluster, the non-command
+cluster can be extracted to `shared/<concern>/` independently
+of any later restructuring of the command cluster. The
+architecture-fitness `dependency` check forbids
+`shared/* → application/*` imports, so cascading dependency
+moves may be required when the extracted cluster imports
+helpers from a sibling application lane (in the reply-precedent
+case, two pure-utility files moved alongside; if the cascade
+is larger, re-evaluate the cluster's shared-eligibility before
+proceeding).
 
 ## Common naming roles
 
@@ -1961,8 +1988,10 @@ the lane survey. After 5 lane refactors land using this template, the
 - whether any new naming-role pattern has emerged that belongs in the table,
 - whether the half-done procedure produced consistent results across the
   applied lanes,
-- whether `actorProtocol` (or another non-command lane) has been resolved by
-  a separate decision and should be cross-referenced.
+- whether `actorProtocol` has been further restructured (Phase 2 of
+  the 2026-05-11 split — internal/ introduction or lane rename) or
+  whether another non-command lane has emerged and should be
+  cross-referenced.
 
 The survey doc (`application-command-shapes-survey.md`) is the empirical
 companion to this template; update it alongside major template revisions.
