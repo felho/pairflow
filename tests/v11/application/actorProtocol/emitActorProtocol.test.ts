@@ -23,7 +23,7 @@ import {
 import {
   buildRunningExecutionContext,
   metaReviewExecutionContextToRunningContext
-} from "../../../../src/v11/shared/state/executionContext.js";
+} from "../../../../src/v11/domain/state/executionContext.js";
 import { readStateSnapshot, writeStateSnapshot } from "../../../../src/v11/infrastructure/state/stateStore.js";
 import * as actorProtocolModule from "../../../../src/v11/application/actorProtocol/emitActorProtocol.js";
 import { metaReviewDefaults } from "../../../../src/v11/defaults/metaReview/metaReviewDefaults.js";

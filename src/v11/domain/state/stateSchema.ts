@@ -5,10 +5,10 @@ import {
   validationOk,
   type ValidationError,
   type ValidationResult
-} from "../validation/primitives.js";
+} from "../../shared/validation/primitives.js";
 import type {
   BubbleMetaReviewSnapshotState
-} from "../metaReview/metaReviewSnapshotTypes.js";
+} from "../../shared/metaReview/metaReviewSnapshotTypes.js";
 import type { BubbleStateSnapshot } from "./bubbleStateSnapshotTypes.js";
 import { validateMetaReviewSnapshot } from "./internal/metaReview/stateSchemaMetaReview.js";
 import {

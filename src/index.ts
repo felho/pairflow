@@ -356,7 +356,7 @@ export {
 export {
   assertValidBubbleStateSnapshot,
   validateBubbleStateSnapshot
-} from "./v11/shared/state/stateSchema.js";
+} from "./v11/domain/state/stateSchema.js";
 export type {
   UiApiErrorBody,
   UiBubbleDetail,
@@ -680,7 +680,7 @@ export type {
 } from "./v11/shared/remote/remoteExecutionTypes.js";
 export type { BubbleLifecycleState } from "./contracts/kernel/lifecycle.js";
 export type { BubbleRemoteStateCache } from "./v11/shared/remote/remoteStateCacheTypes.js";
-export type { BubbleStateSnapshot } from "./v11/shared/state/bubbleStateSnapshotTypes.js";
+export type { BubbleStateSnapshot } from "./v11/domain/state/bubbleStateSnapshotTypes.js";
 export type {
   BubbleConfig
 } from "./v11/shared/config/bubbleConfigTypes.js";
@@ -719,11 +719,11 @@ export type {
 } from "./v11/shared/gates/gateStateTypes.js";
 export type {
   RoundRoleHistoryEntry
-} from "./v11/shared/state/roundRoleHistoryTypes.js";
+} from "./v11/domain/state/roundRoleHistoryTypes.js";
 export type {
   BubbleReworkIntentRecord,
   ReworkIntentStatus
-} from "./v11/shared/state/reworkIntentTypes.js";
+} from "./v11/domain/state/reworkIntentTypes.js";
 export type { StateTransitionInput } from "./v11/domain/state/machine.js";
 export type {
   LoadedStateSnapshot,

@@ -4,7 +4,7 @@ import {
   IDEATION_KICKOFF_NOT_ELIGIBLE,
   IDEATION_KICKOFF_REQUIRES_RUNNING
 } from "../../../../shared/ideation/ideationReasonCodes.js";
-import type { BubbleStateSnapshot } from "../../../../shared/state/bubbleStateSnapshotTypes.js";
+import type { BubbleStateSnapshot } from "../../../../domain/state/bubbleStateSnapshotTypes.js";
 
 export interface ResolveKickoffEligibilityInput {
   hasParseWarning: boolean;

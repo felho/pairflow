@@ -12,7 +12,7 @@ import type {
 } from "../../../../shared/config/bubbleConfigVocabulary.js";
 import type {
   RoundRoleHistoryEntry
-} from "../../../../shared/state/roundRoleHistoryTypes.js";
+} from "../../../../domain/state/roundRoleHistoryTypes.js";
 import type { ProtocolEnvelope } from "../../../../../types/protocol.js";
 
 export interface PrepareConvergedPolicyInput {

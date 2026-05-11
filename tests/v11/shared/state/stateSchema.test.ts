@@ -4,9 +4,9 @@ import { buildMetaReviewExecutionContext } from "../../../../src/v11/shared/meta
 import {
   buildRunningExecutionContext,
   metaReviewExecutionContextToRunningContext
-} from "../../../../src/v11/shared/state/executionContext.js";
+} from "../../../../src/v11/domain/state/executionContext.js";
 import { createInitialBubbleState } from "../../../../src/v11/domain/state/initialState.js";
-import { validateBubbleStateSnapshot } from "../../../../src/v11/shared/state/stateSchema.js";
+import { validateBubbleStateSnapshot } from "../../../../src/v11/domain/state/stateSchema.js";
 
 describe("v11 shared state schema", () => {
   it("keeps deterministic initial meta-review defaults under the v11 owner", () => {

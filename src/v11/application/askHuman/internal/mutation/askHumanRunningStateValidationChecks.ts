@@ -1,4 +1,4 @@
-import type { BubbleStateSnapshot } from "../../../../shared/state/bubbleStateSnapshotTypes.js";
+import type { BubbleStateSnapshot } from "../../../../domain/state/bubbleStateSnapshotTypes.js";
 
 const askHumanStateNotRunningReasonCode = "ASK_HUMAN_STATE_NOT_RUNNING";
 const askHumanRunningRoundInvalidReasonCode = "ASK_HUMAN_RUNNING_ROUND_INVALID";

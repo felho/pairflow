@@ -5,7 +5,7 @@ import type {
 } from "../../../../shared/converged/convergedCommandTypes.js";
 import type { ResolvedBubbleWorkspace } from "../../../../ports/workspaceResolution.js";
 import type { AgentName } from "../../../../../contracts/kernel/agentIdentity.js";
-import type { BubbleStateSnapshot } from "../../../../shared/state/bubbleStateSnapshotTypes.js";
+import type { BubbleStateSnapshot } from "../../../../domain/state/bubbleStateSnapshotTypes.js";
 import {
   executeGateDelivery,
   type ConvergedDeliveryResult

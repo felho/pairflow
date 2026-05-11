@@ -1,8 +1,8 @@
-import type { BubbleMetaReviewSnapshotState } from "../../../metaReview/metaReviewSnapshotTypes.js";
+import type { BubbleMetaReviewSnapshotState } from "../../../../shared/metaReview/metaReviewSnapshotTypes.js";
 import {
   isRecord,
   type ValidationError
-} from "../../../validation/primitives.js";
+} from "../../../../shared/validation/primitives.js";
 import {
   validateMetaReviewAutonomousSnapshot
 } from "./stateSchemaMetaReviewAutonomous.js";

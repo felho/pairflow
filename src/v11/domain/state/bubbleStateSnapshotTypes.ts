@@ -5,7 +5,7 @@ import type {
 import type { BubbleLifecycleState } from "../../../contracts/kernel/lifecycle.js";
 import type {
   BubbleMetaReviewSnapshotState
-} from "../metaReview/metaReviewSnapshotTypes.js";
+} from "../../shared/metaReview/metaReviewSnapshotTypes.js";
 import type {
   BubbleExecutionContext
 } from "./executionContextTypes.js";

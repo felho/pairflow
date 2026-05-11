@@ -9,7 +9,7 @@ import {
   isNonEmptyString,
   isRecord,
   type ValidationError
-} from "../../../validation/primitives.js";
+} from "../../../../shared/validation/primitives.js";
 
 function validateExecutionContextTimestamps(input: {
   pathPrefix: string;

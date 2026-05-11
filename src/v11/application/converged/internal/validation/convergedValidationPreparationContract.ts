@@ -26,7 +26,7 @@ import type {
   BubbleRoundGateState,
   BubbleSpecLockState
 } from "../../../../shared/gates/gateStateTypes.js";
-import type { BubbleStateSnapshot } from "../../../../shared/state/bubbleStateSnapshotTypes.js";
+import type { BubbleStateSnapshot } from "../../../../domain/state/bubbleStateSnapshotTypes.js";
 import type { GatePipelineOutcome } from "../../../gates/gatePipelineContract.js";
 
 export interface PrepareConvergedValidationInput {

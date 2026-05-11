@@ -1,4 +1,4 @@
-import type { BubbleStateSnapshot } from "../../../../shared/state/bubbleStateSnapshotTypes.js";
+import type { BubbleStateSnapshot } from "../../../../domain/state/bubbleStateSnapshotTypes.js";
 import { isNamedError } from "../../../../shared/errors/namedError.js";
 
 export interface KickoffWrittenState {

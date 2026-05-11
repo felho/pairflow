@@ -1,4 +1,4 @@
-import type { BubbleExecutionContext } from "../state/executionContextTypes.js";
+import type { BubbleExecutionContext } from "../../domain/state/executionContextTypes.js";
 import {
   DEFAULT_REVIEW_POLICY_AUTO_REWORK_MIN_SEVERITY,
   DEFAULT_REVIEW_POLICY_CONSECUTIVE_CLEAN_RUNS_REQUIRED,

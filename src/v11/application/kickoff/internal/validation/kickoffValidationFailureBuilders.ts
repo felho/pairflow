@@ -1,5 +1,5 @@
 import { IDEATION_KICKOFF_TASK_INVALID } from "../../../../shared/ideation/ideationReasonCodes.js";
-import type { BubbleStateSnapshot } from "../../../../shared/state/bubbleStateSnapshotTypes.js";
+import type { BubbleStateSnapshot } from "../../../../domain/state/bubbleStateSnapshotTypes.js";
 import {
   buildKickoffFailureResult,
   type KickoffBubbleResultShape,

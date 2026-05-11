@@ -28,7 +28,7 @@ import { applyStateTransition } from "../../../src/v11/domain/state/machine.js";
 import {
   buildRunningExecutionContext,
   metaReviewExecutionContextToRunningContext
-} from "../../../src/v11/shared/state/executionContext.js";
+} from "../../../src/v11/domain/state/executionContext.js";
 import { readStateSnapshot, writeStateSnapshot } from "../../../src/v11/infrastructure/state/stateStore.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
 import { initGitRepository } from "../../helpers/git.js";

@@ -5,7 +5,7 @@ import {
 import { isMetaReviewExecutionContextActiveState } from "../metaReview/metaReviewExecutionContext.js";
 import type {
   BubbleExecutionContext
-} from "../state/executionContextTypes.js";
+} from "../../domain/state/executionContextTypes.js";
 import type { ReadWatchdogPaneActivityResult } from "../watchdog/watchdogPaneActivityStore.js";
 import type { BubbleStatusState } from "./statusCommandTypes.js";
 

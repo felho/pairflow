@@ -10,7 +10,7 @@ import type {
 import { type SummaryVerifierConsistencyGateDecisionRecord } from "../../../../shared/reviewer/summaryVerifierConsistencyGate.js";
 import type { EmitBubbleLifecycleEventBestEffortPort } from "../../../../shared/metrics/bubbleEvents.js";
 import { type MetaReviewGateRoute } from "../../../../shared/metaReviewGate/index.js";
-import type { BubbleStateSnapshot } from "../../../../shared/state/bubbleStateSnapshotTypes.js";
+import type { BubbleStateSnapshot } from "../../../../domain/state/bubbleStateSnapshotTypes.js";
 import type {
   BubbleRoundGateState,
   BubbleSpecLockState

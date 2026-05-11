@@ -9,16 +9,16 @@ import {
 import type {
   MetaReviewArtifactReadPort
 } from "../../../../shared/metaReview/metaReviewArtifactIo.js";
-import type { BubbleStateSnapshot } from "../../../../shared/state/bubbleStateSnapshotTypes.js";
+import type { BubbleStateSnapshot } from "../../../../domain/state/bubbleStateSnapshotTypes.js";
 import type {
   BubbleExecutionContext
-} from "../../../../shared/state/executionContextTypes.js";
+} from "../../../../domain/state/executionContextTypes.js";
 import type {
   LoadedStateSnapshot
 } from "../../../../ports/stateSnapshots.js";
 import { normalizeMetaReviewSnapshot } from "../../../../shared/metaReview/metaReviewSnapshot.js";
 import { MetaReviewError } from "../../../../shared/metaReview/metaReviewError.js";
-import { toMetaReviewExecutionContext } from "../../../../shared/state/executionContext.js";
+import { toMetaReviewExecutionContext } from "../../../../domain/state/executionContext.js";
 import {
   stateWriteConflictToMetaReviewError
 } from "../error/metaReviewCommandErrorMapping.js";

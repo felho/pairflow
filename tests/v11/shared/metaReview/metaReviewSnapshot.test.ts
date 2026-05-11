@@ -8,8 +8,8 @@ import {
   projectActiveMetaReviewRuntimeDelivery,
   resolveActiveMetaReviewRuntimeDelivery
 } from "../../../../src/v11/shared/metaReview/metaReviewSnapshot.js";
-import { validateMetaReviewSnapshot } from "../../../../src/v11/shared/state/internal/metaReview/stateSchemaMetaReview.js";
-import { validateMetaReviewRuntimeDelivery } from "../../../../src/v11/shared/state/internal/metaReview/stateSchemaMetaReviewRuntime.js";
+import { validateMetaReviewSnapshot } from "../../../../src/v11/domain/state/internal/metaReview/stateSchemaMetaReview.js";
+import { validateMetaReviewRuntimeDelivery } from "../../../../src/v11/domain/state/internal/metaReview/stateSchemaMetaReviewRuntime.js";
 import { DEFAULT_META_REVIEW_AUTO_REWORK_LIMIT } from "../../../../src/v11/shared/metaReview/metaReviewSnapshotTypes.js";
 
 describe("metaReviewSnapshot", () => {

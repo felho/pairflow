@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { buildRunningExecutionContext } from "../../../../../src/v11/shared/state/executionContext.js";
+import { buildRunningExecutionContext } from "../../../../../src/v11/domain/state/executionContext.js";
 import {
   buildRemoteBubbleApprovalScript,
   executeRemoteBubbleApprovalCommand

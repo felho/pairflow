@@ -1,9 +1,9 @@
 import type { AgentName } from "../../../contracts/kernel/agentIdentity.js";
-import type { BubbleStateSnapshot } from "../../shared/state/bubbleStateSnapshotTypes.js";
+import type { BubbleStateSnapshot } from "../../domain/state/bubbleStateSnapshotTypes.js";
 import {
   buildRestartedExecutionContext,
   buildRunningExecutionContext
-} from "../../shared/state/executionContext.js";
+} from "../../domain/state/executionContext.js";
 import { applyStateTransition } from "./machine.js";
 
 export interface DeriveStartPreparingStateInput {

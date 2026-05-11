@@ -1,11 +1,11 @@
 import type { AgentName } from "../../../contracts/kernel/agentIdentity.js";
 import type {
   RoundRoleHistoryEntry
-} from "../../shared/state/roundRoleHistoryTypes.js";
+} from "../../domain/state/roundRoleHistoryTypes.js";
 import type {
   BubbleExecutionContext
-} from "../../shared/state/executionContextTypes.js";
-import { buildRunningExecutionContext } from "../../shared/state/executionContext.js";
+} from "../../domain/state/executionContextTypes.js";
+import { buildRunningExecutionContext } from "../../domain/state/executionContext.js";
 
 export interface ResolveRuntimeAlignedNextRoundContinuationInput {
   bubbleId: string;

@@ -4,7 +4,7 @@ import { createBubbleMergeError } from "../../../../src/v11/application/merge/in
 import { runMergeCommandPipeline } from "../../../../src/v11/application/merge/internal/pipeline/mergeCommandPipeline.js";
 import type { ResolvedMergeCommandDependencies } from "../../../../src/v11/application/merge/internal/preparation/mergeCommandDependencyResolution.js";
 import type { RunMergeCommandPipelineInput } from "../../../../src/v11/application/merge/internal/preparation/mergeCommandInputNormalization.js";
-import type { BubbleStateSnapshot } from "../../../../src/v11/shared/state/bubbleStateSnapshotTypes.js";
+import type { BubbleStateSnapshot } from "../../../../src/v11/domain/state/bubbleStateSnapshotTypes.js";
 
 function buildPipelineInput(
   overrides: Partial<RunMergeCommandPipelineInput> = {}

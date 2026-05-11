@@ -2,8 +2,8 @@ import {
   isBubbleExecutionContextAwaitedOutputType,
   type BubbleExecutionContext,
   type BubbleMetaReviewExecutionContext
-} from "../state/executionContextTypes.js";
-import type { BubbleStateSnapshot } from "../state/bubbleStateSnapshotTypes.js";
+} from "../../domain/state/executionContextTypes.js";
+import type { BubbleStateSnapshot } from "../../domain/state/bubbleStateSnapshotTypes.js";
 import {
   isInteger,
   isIsoTimestamp,
@@ -18,7 +18,7 @@ import { isAgentRole } from "../../../contracts/kernel/agentIdentity.js";
 import {
   buildRunningExecutionContext,
   toMetaReviewExecutionContext
-} from "../state/executionContext.js";
+} from "../../domain/state/executionContext.js";
 
 export const metaReviewExecutionContextPath = "meta_review.execution_context";
 export const runningExecutionContextPath = "execution_context";

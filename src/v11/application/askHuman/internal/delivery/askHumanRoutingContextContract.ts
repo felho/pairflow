@@ -7,7 +7,7 @@ import type {
 } from "../../../../shared/actorProtocol/actorEmitContext.js";
 import type { BubbleConfig } from "../../../../shared/config/bubbleConfigTypes.js";
 import type { BubblePaths } from "../../../../shared/bubble/bubblePaths.js";
-import type { BubbleStateSnapshot } from "../../../../shared/state/bubbleStateSnapshotTypes.js";
+import type { BubbleStateSnapshot } from "../../../../domain/state/bubbleStateSnapshotTypes.js";
 
 export interface AskHumanResolvedBubbleWorkspace {
   bubbleId: string;

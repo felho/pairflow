@@ -1,4 +1,4 @@
-import type { BubbleStateSnapshot } from "../../../../shared/state/bubbleStateSnapshotTypes.js";
+import type { BubbleStateSnapshot } from "../../../../domain/state/bubbleStateSnapshotTypes.js";
 
 export interface ExecuteKickoffMutationRollbackInput {
   transcriptBackup: string | null;

@@ -1,6 +1,6 @@
 import type { LoadedStateSnapshot } from "../../../../ports/stateSnapshots.js";
 import { isNamedError } from "../../../../shared/errors/namedError.js";
-import type { BubbleStateSnapshot } from "../../../../shared/state/bubbleStateSnapshotTypes.js";
+import type { BubbleStateSnapshot } from "../../../../domain/state/bubbleStateSnapshotTypes.js";
 import { MetaReviewGateError } from "../../../../shared/metaReviewGate/metaReviewGateRouteContract.js";
 import type { AutoReworkFinalizeInput } from "./metaReviewGateAutoReworkContract.js";
 import { buildRestoredReadyState } from "./metaReviewGateAutoReworkState.js";

@@ -1,7 +1,7 @@
 import type { AgentRole } from "../../../contracts/kernel/agentIdentity.js";
 import type {
   BubbleExecutionContext
-} from "../state/executionContextTypes.js";
+} from "../../domain/state/executionContextTypes.js";
 import type { ResolvedBubbleById } from "../../ports/bubbleLookup.js";
 import type { LoadedStateSnapshot } from "../../ports/stateSnapshots.js";
 

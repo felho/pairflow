@@ -1,8 +1,8 @@
-import type { BubbleStateSnapshot } from "../../../../shared/state/bubbleStateSnapshotTypes.js";
+import type { BubbleStateSnapshot } from "../../../../domain/state/bubbleStateSnapshotTypes.js";
 import type { BubbleWatchdogResult } from "../../watchdogCommandContract.js";
 import { deriveWatchdogWaitingHumanState } from "../../../../domain/state/watchdogEscalation.js";
 import { clearLiveMetaReviewSnapshot } from "../../../../shared/metaReview/metaReviewSnapshot.js";
-import { assertValidBubbleStateSnapshot } from "../../../../shared/state/stateSchema.js";
+import { assertValidBubbleStateSnapshot } from "../../../../domain/state/stateSchema.js";
 import type { ResolvedBubbleById } from "../../../../ports/bubbleLookup.js";
 import type { EmitBubbleNotificationPort } from "../../../../ports/notifications.js";
 import type {

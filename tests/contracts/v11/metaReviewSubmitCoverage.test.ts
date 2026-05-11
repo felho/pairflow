@@ -12,7 +12,7 @@ import {
   appendProtocolEnvelope,
   readTranscriptEnvelopes
 } from "../../../src/v11/infrastructure/artifact/transcript/transcriptStore.js";
-import { metaReviewExecutionContextToRunningContext } from "../../../src/v11/shared/state/executionContext.js";
+import { metaReviewExecutionContextToRunningContext } from "../../../src/v11/domain/state/executionContext.js";
 import { readStateSnapshot, writeStateSnapshot } from "../../../src/v11/infrastructure/state/stateStore.js";
 import { parseRequiredSubmitReportJson } from "../../../src/v11/application/metaReview/metaReviewCliOptionValueReader.js";
 import type { Finding } from "../../../src/types/findings.js";

@@ -24,7 +24,7 @@ import {
 import { setMetaReviewerPaneBinding } from "../../../src/v11/infrastructure/channel/tmux/metaReviewerPaneBinding.js";
 import { runTmux } from "../../../src/v11/infrastructure/channel/tmux/tmuxManager.js";
 import { buildMetaReviewExecutionContext } from "../../../src/v11/shared/metaReview/metaReviewExecutionContext.js";
-import { metaReviewExecutionContextToRunningContext } from "../../../src/v11/shared/state/executionContext.js";
+import { metaReviewExecutionContextToRunningContext } from "../../../src/v11/domain/state/executionContext.js";
 import { applyStateTransition } from "../../../src/v11/domain/state/machine.js";
 import { readStateSnapshot, writeStateSnapshot } from "../../../src/v11/infrastructure/state/stateStore.js";
 import { runBubbleWatchdog as runBubbleWatchdogImpl } from "../../../src/v11/application/watchdog/watchdogCommandApi.js";

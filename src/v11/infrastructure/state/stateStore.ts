@@ -2,7 +2,7 @@ import { dirname, join } from "node:path";
 import { randomUUID } from "node:crypto";
 import { rename, rm, writeFile } from "node:fs/promises";
 
-import { assertValidBubbleStateSnapshot } from "../../shared/state/stateSchema.js";
+import { assertValidBubbleStateSnapshot } from "../../domain/state/stateSchema.js";
 import {
   FileLockTimeoutError,
   withFileLock
@@ -12,7 +12,7 @@ import {
   inspectStateSnapshot
 } from "./stateSnapshotInspection.js";
 import type { BubbleLifecycleState } from "../../../contracts/kernel/lifecycle.js";
-import type { BubbleStateSnapshot } from "../../shared/state/bubbleStateSnapshotTypes.js";
+import type { BubbleStateSnapshot } from "../../domain/state/bubbleStateSnapshotTypes.js";
 import { SchemaValidationError } from "../../shared/validation/primitives.js";
 import type {
   LoadedStateSnapshot,

@@ -4,10 +4,10 @@ import {
   resolveRuntimeAlignedNextRoundContinuation
 } from "./roundContinuation.js";
 import type { AgentName } from "../../../contracts/kernel/agentIdentity.js";
-import type { BubbleStateSnapshot } from "../../shared/state/bubbleStateSnapshotTypes.js";
+import type { BubbleStateSnapshot } from "../../domain/state/bubbleStateSnapshotTypes.js";
 import type {
   BubbleReworkIntentRecord
-} from "../../shared/state/reworkIntentTypes.js";
+} from "../../domain/state/reworkIntentTypes.js";
 
 export interface DeriveQueuedDeferredReworkIntentStateInput {
   state: BubbleStateSnapshot;

@@ -1,12 +1,12 @@
 import { buildMetaReviewExecutionContext } from "../../../../shared/metaReview/metaReviewExecutionContext.js";
 import { clearLiveMetaReviewSnapshot } from "../../../../shared/metaReview/metaReviewSnapshot.js";
-import { metaReviewExecutionContextToRunningContext } from "../../../../shared/state/executionContext.js";
+import { metaReviewExecutionContextToRunningContext } from "../../../../domain/state/executionContext.js";
 import {
   type LoadedStateSnapshot,
   type WriteStateSnapshotPort
 } from "../../../../ports/stateSnapshots.js";
 import type { AgentName } from "../../../../../contracts/kernel/agentIdentity.js";
-import type { BubbleStateSnapshot } from "../../../../shared/state/bubbleStateSnapshotTypes.js";
+import type { BubbleStateSnapshot } from "../../../../domain/state/bubbleStateSnapshotTypes.js";
 import { toMetaReviewGateError } from "../../../../shared/metaReviewGate/metaReviewGateErrorConversion.js";
 import { MetaReviewGateError } from "../../../../shared/metaReviewGate/metaReviewGateRouteContract.js";
 import { normalizeMetaReviewSnapshot } from "../../../../domain/metaReviewGate/snapshotState.js";

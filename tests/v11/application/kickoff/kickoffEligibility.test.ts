@@ -6,7 +6,7 @@ import {
   IDEATION_KICKOFF_NOT_ELIGIBLE,
   IDEATION_KICKOFF_REQUIRES_RUNNING
 } from "../../../../src/v11/shared/ideation/ideationReasonCodes.js";
-import type { BubbleStateSnapshot } from "../../../../src/v11/shared/state/bubbleStateSnapshotTypes.js";
+import type { BubbleStateSnapshot } from "../../../../src/v11/domain/state/bubbleStateSnapshotTypes.js";
 import { resolveKickoffEligibilityFailureReason } from "../../../../src/v11/application/kickoff/internal/eligibility/kickoffEligibility.js";
 
 const baseState = {

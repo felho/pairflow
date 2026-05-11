@@ -1,4 +1,4 @@
-import type { BubbleStateSnapshot } from "../../../../shared/state/bubbleStateSnapshotTypes.js";
+import type { BubbleStateSnapshot } from "../../../../domain/state/bubbleStateSnapshotTypes.js";
 import type { AskHumanRunningState } from "../delivery/askHumanRoutingContextContract.js";
 import { runAskHumanRunningStateValidationChecks } from "./askHumanRunningStateValidationChecks.js";
 

@@ -5,9 +5,9 @@ import {
   buildRunningExecutionContext,
   metaReviewExecutionContextToRunningContext,
   toMetaReviewExecutionContext
-} from "../../../src/v11/shared/state/executionContext.js";
+} from "../../../src/v11/domain/state/executionContext.js";
 import { createInitialBubbleState } from "../../../src/v11/domain/state/initialState.js";
-import { validateBubbleStateSnapshot } from "../../../src/v11/shared/state/stateSchema.js";
+import { validateBubbleStateSnapshot } from "../../../src/v11/domain/state/stateSchema.js";
 
 function expectCanonicalMetaReviewSnapshot(
   actual: unknown,

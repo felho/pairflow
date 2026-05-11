@@ -22,7 +22,7 @@ import {
   readRemoteStateCache
 } from "../../../src/v11/infrastructure/artifact/bubble/remoteExecutionArtifacts.js";
 import { readTranscriptEnvelopes } from "../../../src/v11/infrastructure/artifact/transcript/transcriptStore.js";
-import { validateBubbleStateSnapshot } from "../../../src/v11/shared/state/stateSchema.js";
+import { validateBubbleStateSnapshot } from "../../../src/v11/domain/state/stateSchema.js";
 import { initGitRepository } from "../../helpers/git.js";
 
 const tempDirs: string[] = [];

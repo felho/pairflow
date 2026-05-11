@@ -29,7 +29,7 @@ import { readStateSnapshot, writeStateSnapshot } from "../../../../src/v11/infra
 import {
   buildRunningExecutionContext,
   metaReviewExecutionContextToRunningContext
-} from "../../../../src/v11/shared/state/executionContext.js";
+} from "../../../../src/v11/domain/state/executionContext.js";
 import { buildMetaReviewExecutionContext } from "../../../../src/v11/shared/metaReview/metaReviewExecutionContext.js";
 
 const tempDirs: string[] = [];

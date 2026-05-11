@@ -2,7 +2,7 @@ import type {
   AgentName,
   AgentRole
 } from "../../../contracts/kernel/agentIdentity.js";
-import type { BubbleStateSnapshot } from "../../shared/state/bubbleStateSnapshotTypes.js";
+import type { BubbleStateSnapshot } from "../../domain/state/bubbleStateSnapshotTypes.js";
 
 export type ReplyWaitingHumanState = BubbleStateSnapshot & {
   state: "WAITING_HUMAN";

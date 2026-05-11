@@ -22,7 +22,7 @@ import {
   isNonEmptyString,
   isRecord,
   type ValidationError
-} from "../../../validation/primitives.js";
+} from "../../../../shared/validation/primitives.js";
 import { validateExecutionContext } from "../execution/stateSchemaExecution.js";
 import { validateReworkIntentRecord } from "../rework/stateSchemaRework.js";
 

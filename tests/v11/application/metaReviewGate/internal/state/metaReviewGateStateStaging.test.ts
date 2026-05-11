@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { stageMetaReviewRunningState } from "../../../../../../src/v11/application/metaReviewGate/internal/state/metaReviewGateStateStaging.js";
 import type { LoadedStateSnapshot } from "../../../../../../src/v11/infrastructure/state/stateStore.js";
-import type { BubbleStateSnapshot } from "../../../../../../src/v11/shared/state/bubbleStateSnapshotTypes.js";
+import type { BubbleStateSnapshot } from "../../../../../../src/v11/domain/state/bubbleStateSnapshotTypes.js";
 
 function createLoadedRunningState(
   partial: Partial<BubbleStateSnapshot> = {}

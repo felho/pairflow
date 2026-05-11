@@ -1,4 +1,4 @@
-import type { BubbleStateSnapshot } from "../../../../shared/state/bubbleStateSnapshotTypes.js";
+import type { BubbleStateSnapshot } from "../../../../domain/state/bubbleStateSnapshotTypes.js";
 import type { ResolvedStartBubbleDependencies } from "../../startCommandOrchestration.js";
 import type { StartExecutionContext } from "./startCommandContext.js";
 import { executeStartFailedCleanupMutation } from "./startStatePersistence.js";

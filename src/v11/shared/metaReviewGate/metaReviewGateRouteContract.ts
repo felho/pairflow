@@ -1,7 +1,7 @@
 import type {
   BubbleReviewAutoReworkSeverity
 } from "../reviewPolicy/reviewPolicyTypes.js";
-import type { BubbleStateSnapshot } from "../state/bubbleStateSnapshotTypes.js";
+import type { BubbleStateSnapshot } from "../../domain/state/bubbleStateSnapshotTypes.js";
 import type { FindingPriority } from "../../../types/findings.js";
 
 export type MetaReviewGateThresholdStatus =

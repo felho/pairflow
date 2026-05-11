@@ -7,7 +7,7 @@ import type {
 import {
   buildExecutionContextHandoffIdForRole,
   getRoleExecutionProjectionDescriptor
-} from "../actorProtocol/roleExecutionProjection.js";
+} from "../../shared/actorProtocol/roleExecutionProjection.js";
 
 export interface RunningExecutionContextInput {
   bubbleId: string;

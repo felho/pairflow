@@ -2,7 +2,7 @@ import {
   executeStartPreparingMutation,
   executeStartRunningMutation
 } from "../runtime/startStatePersistence.js";
-import type { BubbleStateSnapshot } from "../../../../shared/state/bubbleStateSnapshotTypes.js";
+import type { BubbleStateSnapshot } from "../../../../domain/state/bubbleStateSnapshotTypes.js";
 import type { StartExecutionContext } from "../runtime/startCommandContext.js";
 import type { RemoteCloneStartContext } from "./startCommandRemoteExecutionContext.js";
 import type { ResolvedStartBubbleDependencies } from "../../startCommandOrchestration.js";

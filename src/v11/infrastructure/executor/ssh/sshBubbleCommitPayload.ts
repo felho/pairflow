@@ -1,10 +1,10 @@
-import type { BubbleStateSnapshot } from "../../../shared/state/bubbleStateSnapshotTypes.js";
+import type { BubbleStateSnapshot } from "../../../domain/state/bubbleStateSnapshotTypes.js";
 import type { ProtocolEnvelope } from "../../../../types/protocol.js";
 import type {
   ExecuteRemoteBubbleCommitCommandResult
 } from "../../../shared/remote/commitRemoteExecution.js";
 import { parseEnvelopeLine } from "../../../shared/protocol/envelope.js";
-import { assertValidBubbleStateSnapshot } from "../../../shared/state/stateSchema.js";
+import { assertValidBubbleStateSnapshot } from "../../../domain/state/stateSchema.js";
 
 type CommitResultMetadata = {
   readonly commitSha: string;

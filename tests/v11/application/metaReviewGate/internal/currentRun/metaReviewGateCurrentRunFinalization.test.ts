@@ -13,7 +13,7 @@ import {
 import { MetaReviewError } from "../../../../../../src/v11/shared/metaReview/metaReviewError.js";
 import type { MetaReviewResult } from "../../../../../../src/v11/shared/metaReview/metaReviewTypes.js";
 import type { LoadedStateSnapshot } from "../../../../../../src/v11/ports/stateSnapshots.js";
-import type { BubbleStateSnapshot } from "../../../../../../src/v11/shared/state/bubbleStateSnapshotTypes.js";
+import type { BubbleStateSnapshot } from "../../../../../../src/v11/domain/state/bubbleStateSnapshotTypes.js";
 import type { ProtocolEnvelope } from "../../../../../../src/types/protocol.js";
 
 const tempDirs: string[] = [];

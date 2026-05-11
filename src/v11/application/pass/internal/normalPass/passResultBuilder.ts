@@ -3,7 +3,7 @@ import {
   type RepeatCleanAutoconvergeReasonCode,
   type RepeatCleanAutoconvergeReasonDetail
 } from "../../../../domain/convergence/repeatCleanAutoconverge.js";
-import type { BubbleStateSnapshot } from "../../../../shared/state/bubbleStateSnapshotTypes.js";
+import type { BubbleStateSnapshot } from "../../../../domain/state/bubbleStateSnapshotTypes.js";
 import type { ProtocolEnvelope } from "../../../../../types/protocol.js";
 import type { EmitConvergedResult } from "../../../converged/convergedCommandOrchestration.js";
 import type { PassActivationProvenance } from "../../passCommandContract.js";

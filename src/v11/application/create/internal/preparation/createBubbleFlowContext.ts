@@ -9,12 +9,12 @@ import type { ReviewerFocusExtractionResult } from "../../../../shared/reviewer/
 import { createInitialBubbleState } from "../../../../domain/state/initialState.js";
 import {
   assertValidBubbleStateSnapshot
-} from "../../../../shared/state/stateSchema.js";
+} from "../../../../domain/state/stateSchema.js";
 import type {
   BubbleRemotePointerCreated
 } from "../../../../shared/remote/remoteExecutionTypes.js";
 import type { BubbleConfig } from "../../../../shared/config/bubbleConfigTypes.js";
-import type { BubbleStateSnapshot } from "../../../../shared/state/bubbleStateSnapshotTypes.js";
+import type { BubbleStateSnapshot } from "../../../../domain/state/bubbleStateSnapshotTypes.js";
 import type {
   BubbleCreateDependencies,
   BubbleCreateInput,

@@ -18,7 +18,7 @@ import { IDEATION_PASS_BLOCKED } from "../../../src/v11/shared/ideation/ideation
 import {
   buildRunningExecutionContext,
   metaReviewExecutionContextToRunningContext
-} from "../../../src/v11/shared/state/executionContext.js";
+} from "../../../src/v11/domain/state/executionContext.js";
 import {
   readStateSnapshot,
   writeStateSnapshot as rawWriteStateSnapshot

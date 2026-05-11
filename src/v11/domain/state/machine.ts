@@ -3,11 +3,11 @@ import type {
   AgentRole
 } from "../../../contracts/kernel/agentIdentity.js";
 import type { BubbleLifecycleState } from "../../../contracts/kernel/lifecycle.js";
-import type { BubbleStateSnapshot } from "../../shared/state/bubbleStateSnapshotTypes.js";
+import type { BubbleStateSnapshot } from "../../domain/state/bubbleStateSnapshotTypes.js";
 import type {
   RoundRoleHistoryEntry
-} from "../../shared/state/roundRoleHistoryTypes.js";
-import { assertValidBubbleStateSnapshot } from "../../shared/state/stateSchema.js";
+} from "../../domain/state/roundRoleHistoryTypes.js";
+import { assertValidBubbleStateSnapshot } from "../../domain/state/stateSchema.js";
 import { assertTransitionAllowed } from "./transitions.js";
 
 export interface StateTransitionInput {

@@ -6,7 +6,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { CommitBubbleDependencies } from "../../../../src/v11/application/commit/commitCommandApiContract.js";
 import { getBubblePaths } from "../../../../src/v11/shared/bubble/bubblePaths.js";
 import type { BubbleConfig } from "../../../../src/v11/shared/config/bubbleConfigTypes.js";
-import type { BubbleStateSnapshot } from "../../../../src/v11/shared/state/bubbleStateSnapshotTypes.js";
+import type { BubbleStateSnapshot } from "../../../../src/v11/domain/state/bubbleStateSnapshotTypes.js";
 import type { ProtocolEnvelope } from "../../../../src/types/protocol.js";
 
 const order: string[] = [];

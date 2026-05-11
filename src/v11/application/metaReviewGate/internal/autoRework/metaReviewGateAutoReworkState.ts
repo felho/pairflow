@@ -1,8 +1,8 @@
 import { applyStateTransition } from "../../../../domain/state/machine.js";
-import { assertValidBubbleStateSnapshot } from "../../../../shared/state/stateSchema.js";
+import { assertValidBubbleStateSnapshot } from "../../../../domain/state/stateSchema.js";
 import { clearLiveMetaReviewSnapshot } from "../../../../shared/metaReview/metaReviewSnapshot.js";
 import type { AgentName } from "../../../../../contracts/kernel/agentIdentity.js";
-import type { BubbleStateSnapshot } from "../../../../shared/state/bubbleStateSnapshotTypes.js";
+import type { BubbleStateSnapshot } from "../../../../domain/state/bubbleStateSnapshotTypes.js";
 import {
   incrementAutoReworkCount,
   normalizeMetaReviewSnapshot,

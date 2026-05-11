@@ -1,4 +1,4 @@
-import type { BubbleStateSnapshot } from "../../../../shared/state/bubbleStateSnapshotTypes.js";
+import type { BubbleStateSnapshot } from "../../../../domain/state/bubbleStateSnapshotTypes.js";
 import type { ResolvedKickoffDependencies } from "./kickoffDependencyContract.js";
 import { prepareKickoffPersistence } from "../mutation/kickoffPersistencePreparation.js";
 import { buildKickoffNextState } from "../mutation/kickoffStateTransition.js";

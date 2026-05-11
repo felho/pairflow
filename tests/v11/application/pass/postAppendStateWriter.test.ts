@@ -7,7 +7,7 @@ function toErrorMessage(input: PairflowCommandErrorInput): string {
   return (input.reasonCode !== undefined ? input.reasonCode + ": " : "") + input.message;
 }
 
-import type { BubbleStateSnapshot } from "../../../../src/v11/shared/state/bubbleStateSnapshotTypes.js";
+import type { BubbleStateSnapshot } from "../../../../src/v11/domain/state/bubbleStateSnapshotTypes.js";
 import { writePostAppendPassState } from "../../../../src/v11/application/pass/internal/normalPass/postAppendStateWriter.js";
 
 class TestPostAppendStateWriterError extends Error {

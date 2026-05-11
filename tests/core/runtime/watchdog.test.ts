@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { buildMetaReviewExecutionContext } from "../../../src/v11/shared/metaReview/metaReviewExecutionContext.js";
 import { computeWatchdogStatus } from "../../../src/v11/shared/watchdog/watchdogStatus.js";
-import type { BubbleStateSnapshot } from "../../../src/v11/shared/state/bubbleStateSnapshotTypes.js";
+import type { BubbleStateSnapshot } from "../../../src/v11/domain/state/bubbleStateSnapshotTypes.js";
 
 function createState(partial: Partial<BubbleStateSnapshot>): BubbleStateSnapshot {
   return {
