@@ -12,7 +12,7 @@ import {
 } from "../../../../domain/metaReviewGate/humanGateRouting.js";
 import type { MetaReviewGateThresholdMetadata } from "../../../../shared/metaReviewGate/metaReviewGateRouteContract.js";
 import type { MetaReviewGateResult } from "../../../../shared/metaReviewGate/metaReviewGateResultContract.js";
-import { resolveFindingsParityMetadataFromReportJson } from "../../metaReviewGateFindingsMetadata.js";
+import { resolveFindingsParityMetadataFromReportJson } from "../findings/metaReviewGateFindingsMetadata.js";
 import type { FinalizeCurrentRunMetaReviewGateInput } from "../../../../shared/metaReviewGate/metaReviewGateCurrentRunTypes.js";
 import type { PersistHumanGateRouteInput } from "../metaReviewGateHumanGatePersistenceContract.js";
 

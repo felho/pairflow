@@ -1,13 +1,13 @@
-import type { MetaReviewResult } from "../../../shared/metaReview/metaReviewTypes.js";
-import type { Finding } from "../../../../types/findings.js";
-import { type FindingsParityMetadata } from "../../../../types/protocol.js";
-import type { MetaReviewGateArtifactReadFn } from "../metaReviewGateFindingsMetadata.js";
+import type { MetaReviewResult } from "../../../../shared/metaReview/metaReviewTypes.js";
+import type { Finding } from "../../../../../types/findings.js";
+import { type FindingsParityMetadata } from "../../../../../types/protocol.js";
+import type { MetaReviewGateArtifactReadFn } from "./metaReviewGateFindingsMetadata.js";
 import {
   validateApproveStructuredMetaReviewClaim
-} from "../../../domain/metaReviewGate/approveClaimValidation.js";
+} from "../../../../domain/metaReviewGate/approveClaimValidation.js";
 import {
   validateStructuredMetaReviewClaimPreflight
-} from "../../../domain/metaReviewGate/findingsValidationPreflight.js";
+} from "../../../../domain/metaReviewGate/findingsValidationPreflight.js";
 import {
   validateStructuredMetaReviewPositiveClaimReworkPath
 } from "./metaReviewGateFindingsValidationParity.js";
@@ -18,7 +18,7 @@ export {
   metaReviewApproveAdvisoryOnlyReasonCode,
   metaReviewApproveAdvisorySplitRequiredReasonCode,
   metaReviewApproveAdvisorySplitFormatInvalidReasonCode
-} from "../../../domain/metaReviewGate/approveClaimValidation.js";
+} from "../../../../domain/metaReviewGate/approveClaimValidation.js";
 
 type PositiveMetaReviewClaimValidationSuccess =
   | {

@@ -1,9 +1,9 @@
-import type { MetaReviewRecommendation } from "../../shared/metaReview/metaReviewTypes.js";
+import type { MetaReviewRecommendation } from "../../../../shared/metaReview/metaReviewTypes.js";
 import {
   deriveFindingsOpenSplit as deriveFindingsOpenSplitFromMetadata,
   type FindingsOpenSplit
-} from "../../domain/metaReviewGate/findingsSplit.js";
-export { projectDisplayableFindingsFromArtifact } from "../../domain/metaReviewGate/findingsProjection.js";
+} from "../../../../domain/metaReviewGate/findingsSplit.js";
+export { projectDisplayableFindingsFromArtifact } from "../../../../domain/metaReviewGate/findingsProjection.js";
 export {
   buildFindingsParityMetadata,
   claimSourceInvalidReasonCode,
@@ -14,8 +14,8 @@ export {
   metaReviewFindingsRunLinkMissingReasonCode,
   resolveReworkFindingsParityInput,
   type ReworkFindingsParityInput
-} from "./metaReviewGateFindingsParityApi.js";
-export { validateFindingsArtifactParity } from "./metaReviewGateFindingsParityApi.js";
+} from "../../metaReviewGateFindingsParityApi.js";
+export { validateFindingsArtifactParity } from "../../metaReviewGateFindingsParityApi.js";
 
 export function deriveFindingsOpenSplit(
   findings: unknown

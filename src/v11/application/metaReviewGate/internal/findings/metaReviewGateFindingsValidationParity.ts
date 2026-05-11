@@ -1,14 +1,14 @@
-import type { MetaReviewResult } from "../../../shared/metaReview/metaReviewTypes.js";
-import type { Finding } from "../../../../types/findings.js";
-import { type FindingsParityMetadata } from "../../../../types/protocol.js";
-import type { MetaReviewGateArtifactReadFn } from "../metaReviewGateFindingsMetadata.js";
+import type { MetaReviewResult } from "../../../../shared/metaReview/metaReviewTypes.js";
+import type { Finding } from "../../../../../types/findings.js";
+import { type FindingsParityMetadata } from "../../../../../types/protocol.js";
+import type { MetaReviewGateArtifactReadFn } from "./metaReviewGateFindingsMetadata.js";
 import {
   resolveReworkFindingsParityInput,
   validateFindingsArtifactParity
-} from "../metaReviewGateFindingsParityHelpers.js";
+} from "./metaReviewGateFindingsParityHelpers.js";
 import {
   buildVerifiedReworkFindingsParityValidation
-} from "../../../domain/metaReviewGate/findingsValidationParity.js";
+} from "../../../../domain/metaReviewGate/findingsValidationParity.js";
 
 function failStructuredMetaReviewPositiveClaim(
   reason: string,

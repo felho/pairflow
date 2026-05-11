@@ -23,11 +23,11 @@ import {
 import {
   formatReadErrorDetail,
   readFindingsArtifactWithRetry
-} from "./metaReviewGateFindingsArtifactReadRetry.js";
+} from "./internal/findings/metaReviewGateFindingsArtifactReadRetry.js";
 import {
   resolveFindingsArtifactPath,
   type MetaReviewGateArtifactReadFn
-} from "./metaReviewGateFindingsMetadata.js";
+} from "./internal/findings/metaReviewGateFindingsMetadata.js";
 
 export {
   buildFindingsParityMetadata,

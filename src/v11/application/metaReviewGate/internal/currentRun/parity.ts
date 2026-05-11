@@ -3,8 +3,8 @@ import type { Finding } from "../../../../../types/findings.js";
 import type { FindingsParityMetadata } from "../../../../../types/protocol.js";
 import type { normalizeMetaReviewSnapshot } from "../../../../domain/metaReviewGate/snapshotState.js";
 import { mergeRunResultWithParityResolution } from "../../../../domain/metaReviewGate/runResultParity.js";
-import { validateStructuredMetaReviewPositiveClaim } from "../metaReviewGateFindingsValidation.js";
-import type { MetaReviewGateArtifactReadFn } from "../../metaReviewGateFindingsMetadata.js";
+import { validateStructuredMetaReviewPositiveClaim } from "../findings/metaReviewGateFindingsValidation.js";
+import type { MetaReviewGateArtifactReadFn } from "../findings/metaReviewGateFindingsMetadata.js";
 import type { FinalizeCurrentRunMetaReviewGateInput } from "../../../../shared/metaReviewGate/metaReviewGateCurrentRunTypes.js";
 
 function callMetaReviewGateArtifactReadFn(

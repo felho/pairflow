@@ -20,7 +20,7 @@ export {
   resolveMetaReviewRunId,
   resolveNonNegativeIntegerField,
   resolveStructuredMetaReviewClaimFromReportJson
-} from "../../domain/metaReviewGate/findingsParityMetadata.js";
+} from "../../../../domain/metaReviewGate/findingsParityMetadata.js";
 
 export function resolveFindingsArtifactPath(input: {
   bubbleDir: string;
