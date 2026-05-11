@@ -1,4 +1,4 @@
-import type { FinalizeCurrentRunMetaReviewGateInput } from "../../../shared/metaReviewGate/metaReviewGateCurrentRunTypes.js";
+import type { FinalizeCurrentRunMetaReviewGateInput } from "../../../../shared/metaReviewGate/metaReviewGateCurrentRunTypes.js";
 import {
   resolveMetaReviewApproveValidationPolicy,
   type MetaReviewApproveValidationCommandSpec

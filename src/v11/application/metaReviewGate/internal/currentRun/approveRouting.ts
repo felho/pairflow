@@ -17,7 +17,7 @@ import type { MetaReviewGateThresholdAuthorityResolution } from "../../metaRevie
 import {
   META_REVIEW_APPROVE_VALIDATION_FAILED,
   runMetaReviewApproveValidationGate
-} from "../metaReviewApproveValidationGate.js";
+} from "../approve/metaReviewApproveValidationGate.js";
 import type { FinalizeCurrentRunMetaReviewGateInput } from "../../../../shared/metaReviewGate/metaReviewGateCurrentRunTypes.js";
 import type { MetaReviewGateResult } from "../../../../shared/metaReviewGate/metaReviewGateResultContract.js";
 
