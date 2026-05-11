@@ -22,7 +22,7 @@ import {
   buildResumeReviewerStartupPrompt
 } from "../../../../src/v11/application/start/internal/prompts/startCommandResumePrompts.js";
 import { buildMetaReviewSubmitCommandTemplate } from "../../../../src/v11/shared/metaReview/metaReviewSubmitGuidance.js";
-import type { BubbleStateSnapshot } from "../../../../src/v11/domain/state/bubbleStateSnapshotTypes.js";
+import type { BubbleStateSnapshot } from "../../../../src/v11/domain/state/snapshot/bubbleStateSnapshotTypes.js";
 
 function expectNoDonePackagePromptTokens(prompt: string): void {
   expect(prompt).not.toContain("done-package");

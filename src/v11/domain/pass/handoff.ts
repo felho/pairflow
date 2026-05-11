@@ -2,10 +2,10 @@ import type { AgentName } from "../../../contracts/kernel/agentIdentity.js";
 import type {
   BubbleReviewLoopMode
 } from "../../shared/reviewPolicy/reviewPolicyTypes.js";
-import type { BubbleStateSnapshot } from "../../domain/state/bubbleStateSnapshotTypes.js";
+import type { BubbleStateSnapshot } from "../../domain/state/snapshot/bubbleStateSnapshotTypes.js";
 import type {
   RoundRoleHistoryEntry
-} from "../../domain/state/roundRoleHistoryTypes.js";
+} from "../../domain/state/snapshot/roundRoleHistory.js";
 
 export type PassSenderRole = "implementer" | "reviewer";
 export type PassRecipientRole = PassSenderRole | "meta_reviewer";

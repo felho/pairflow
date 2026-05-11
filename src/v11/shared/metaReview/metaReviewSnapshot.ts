@@ -5,7 +5,7 @@ import type {
 import {
   DEFAULT_META_REVIEW_AUTO_REWORK_LIMIT
 } from "./metaReviewSnapshotTypes.js";
-import type { BubbleMetaReviewExecutionContext } from "../../domain/state/executionContextTypes.js";
+import type { BubbleMetaReviewExecutionContext } from "../../domain/state/execution/executionContext.js";
 
 export interface ActiveMetaReviewRuntimeDeliveryView {
   status: BubbleMetaReviewRuntimeDeliveryState["status"];

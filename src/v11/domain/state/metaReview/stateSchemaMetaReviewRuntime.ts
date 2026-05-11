@@ -2,8 +2,8 @@ import {
   isMetaReviewRuntimeDeliveryStatus,
   type BubbleMetaReviewRuntimeDeliveryState
 } from "../../../shared/metaReview/metaReviewSnapshotTypes.js";
-import { isMetaReviewExecutionContextAwaitedOutputType } from "../executionContextTypes.js";
-import type { BubbleMetaReviewExecutionContext } from "../executionContextTypes.js";
+import { isMetaReviewExecutionContextAwaitedOutputType } from "../execution/executionContext.js";
+import type { BubbleMetaReviewExecutionContext } from "../execution/executionContext.js";
 import {
   isInteger,
   isIsoTimestamp,

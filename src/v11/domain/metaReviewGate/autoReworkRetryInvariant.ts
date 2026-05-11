@@ -1,4 +1,4 @@
-import type { BubbleStateSnapshot } from "../../domain/state/bubbleStateSnapshotTypes.js";
+import type { BubbleStateSnapshot } from "../../domain/state/snapshot/bubbleStateSnapshotTypes.js";
 
 const metaReviewGateAutoReworkRetryRoundInvariantReasonCode =
   "META_REVIEW_GATE_AUTO_REWORK_RETRY_ROUND_INVARIANT";

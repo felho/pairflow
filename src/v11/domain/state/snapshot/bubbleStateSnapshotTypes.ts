@@ -1,20 +1,20 @@
 import type {
   AgentName,
   AgentRole
-} from "../../../contracts/kernel/agentIdentity.js";
-import type { BubbleLifecycleState } from "../../../contracts/kernel/lifecycle.js";
+} from "../../../../contracts/kernel/agentIdentity.js";
+import type { BubbleLifecycleState } from "../../../../contracts/kernel/lifecycle.js";
 import type {
   BubbleMetaReviewSnapshotState
-} from "../../shared/metaReview/metaReviewSnapshotTypes.js";
+} from "../../../shared/metaReview/metaReviewSnapshotTypes.js";
 import type {
   BubbleExecutionContext
-} from "./executionContextTypes.js";
+} from "../execution/executionContext.js";
 import type {
   BubbleReworkIntentRecord
-} from "./reworkIntentTypes.js";
+} from "../rework/reworkIntentTypes.js";
 import type {
   RoundRoleHistoryEntry
-} from "./roundRoleHistoryTypes.js";
+} from "./roundRoleHistory.js";
 
 export interface BubbleStateSnapshot {
   bubble_id: string;

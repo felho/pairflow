@@ -33,7 +33,7 @@ import type {
 import type { RunGitPort } from "../../ports/git.js";
 import type { ProcessSpawnPort } from "../../ports/processSpawn.js";
 import type { buildResumeTranscriptSummary } from "./internal/prompts/startCommandResumeSummary.js";
-import type { BubbleStateSnapshot } from "../../domain/state/bubbleStateSnapshotTypes.js";
+import type { BubbleStateSnapshot } from "../../domain/state/snapshot/bubbleStateSnapshotTypes.js";
 
 export interface StartBubbleInput {
   bubbleId: string;

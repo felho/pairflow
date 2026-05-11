@@ -2,8 +2,8 @@ import {
   isBubbleExecutionContextAwaitedOutputType,
   type BubbleExecutionContext,
   type BubbleMetaReviewExecutionContext
-} from "../../domain/state/executionContextTypes.js";
-import type { BubbleStateSnapshot } from "../../domain/state/bubbleStateSnapshotTypes.js";
+} from "../../domain/state/execution/executionContext.js";
+import type { BubbleStateSnapshot } from "../../domain/state/snapshot/bubbleStateSnapshotTypes.js";
 import {
   isInteger,
   isIsoTimestamp,

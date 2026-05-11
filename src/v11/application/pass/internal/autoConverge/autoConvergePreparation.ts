@@ -9,7 +9,7 @@ import type {
 import type { ReadStateSnapshotPort } from "../../../../ports/stateSnapshots.js";
 import { readStateSnapshot } from "../../../start/startCommandDependencyDefaults.js";
 import type { AgentName } from "../../../../../contracts/kernel/agentIdentity.js";
-import type { BubbleStateSnapshot } from "../../../../domain/state/bubbleStateSnapshotTypes.js";
+import type { BubbleStateSnapshot } from "../../../../domain/state/snapshot/bubbleStateSnapshotTypes.js";
 import type {
   ReviewArtifactType
 } from "../../../../shared/config/bubbleConfigVocabulary.js";

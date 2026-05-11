@@ -1,4 +1,4 @@
-import type { AgentRole } from "../../../contracts/kernel/agentIdentity.js";
+import type { AgentRole } from "../../../../contracts/kernel/agentIdentity.js";
 
 export const bubbleExecutionContextAwaitedOutputTypes = [
   "pass_result",

@@ -1,4 +1,4 @@
-import type { AgentName } from "../../../contracts/kernel/agentIdentity.js";
+import type { AgentName } from "../../../../contracts/kernel/agentIdentity.js";
 
 export interface RoundRoleHistoryEntry {
   round: number;

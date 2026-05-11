@@ -1,5 +1,5 @@
 import type { AgentName } from "../../../contracts/kernel/agentIdentity.js";
-import type { BubbleStateSnapshot } from "../../domain/state/bubbleStateSnapshotTypes.js";
+import type { BubbleStateSnapshot } from "../../domain/state/snapshot/bubbleStateSnapshotTypes.js";
 import {
   buildRestartedExecutionContext,
   buildRunningExecutionContext

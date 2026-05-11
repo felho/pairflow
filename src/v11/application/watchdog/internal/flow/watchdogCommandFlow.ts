@@ -1,4 +1,4 @@
-import type { BubbleStateSnapshot } from "../../../../domain/state/bubbleStateSnapshotTypes.js";
+import type { BubbleStateSnapshot } from "../../../../domain/state/snapshot/bubbleStateSnapshotTypes.js";
 import type { BubbleWatchdogResult } from "../../watchdogCommandContract.js";
 import { deriveWatchdogWaitingHumanState } from "../../../../domain/state/watchdogEscalation.js";
 import { clearLiveMetaReviewSnapshot } from "../../../../shared/metaReview/metaReviewSnapshot.js";

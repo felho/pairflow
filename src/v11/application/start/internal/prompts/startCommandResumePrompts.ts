@@ -4,7 +4,7 @@ import {
 import type {
   BubbleReviewAutoReworkSeverity
 } from "../../../../shared/reviewPolicy/reviewPolicyTypes.js";
-import type { BubbleStateSnapshot } from "../../../../domain/state/bubbleStateSnapshotTypes.js";
+import type { BubbleStateSnapshot } from "../../../../domain/state/snapshot/bubbleStateSnapshotTypes.js";
 import type {
   PairflowCommandProfile,
   ReviewArtifactType

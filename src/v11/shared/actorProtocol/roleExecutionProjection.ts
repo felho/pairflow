@@ -1,7 +1,7 @@
 import type { AgentRole } from "../../../contracts/kernel/agentIdentity.js";
 import type {
   BubbleExecutionContextAwaitedOutputType
-} from "../../domain/state/executionContextTypes.js";
+} from "../../domain/state/execution/executionContext.js";
 
 export type HandoffIdFormatId = "meta_review";
 

@@ -12,7 +12,7 @@ import {
   inspectStateSnapshot
 } from "./stateSnapshotInspection.js";
 import type { BubbleLifecycleState } from "../../../contracts/kernel/lifecycle.js";
-import type { BubbleStateSnapshot } from "../../domain/state/bubbleStateSnapshotTypes.js";
+import type { BubbleStateSnapshot } from "../../domain/state/snapshot/bubbleStateSnapshotTypes.js";
 import { SchemaValidationError } from "../../shared/validation/primitives.js";
 import type {
   LoadedStateSnapshot,

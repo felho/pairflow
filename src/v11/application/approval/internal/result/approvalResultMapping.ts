@@ -4,10 +4,10 @@ import {
   resolveRuntimeAlignedNextRoundContinuation
 } from "../../../../domain/state/roundContinuation.js";
 import type { AgentName } from "../../../../../contracts/kernel/agentIdentity.js";
-import type { BubbleStateSnapshot } from "../../../../domain/state/bubbleStateSnapshotTypes.js";
+import type { BubbleStateSnapshot } from "../../../../domain/state/snapshot/bubbleStateSnapshotTypes.js";
 import type {
   BubbleReworkIntentRecord
-} from "../../../../domain/state/reworkIntentTypes.js";
+} from "../../../../domain/state/rework/reworkIntentTypes.js";
 import type {
   EmitApprovalDecisionImmediateResult,
   EmitRequestReworkImmediateResult,

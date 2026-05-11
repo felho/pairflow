@@ -9,7 +9,7 @@ import {
   isMetaReviewExecutionContextAwaitedOutputType,
   type BubbleExecutionContext,
   type BubbleMetaReviewExecutionContext
-} from "../../domain/state/executionContextTypes.js";
+} from "../../domain/state/execution/executionContext.js";
 import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 
@@ -17,13 +17,13 @@ import {
   isAgentName,
   isAgentRole
 } from "../../../contracts/kernel/agentIdentity.js";
-import type { BubbleStateSnapshot } from "../../domain/state/bubbleStateSnapshotTypes.js";
+import type { BubbleStateSnapshot } from "../../domain/state/snapshot/bubbleStateSnapshotTypes.js";
 import type {
   BubbleReworkIntentRecord
-} from "../../domain/state/reworkIntentTypes.js";
+} from "../../domain/state/rework/reworkIntentTypes.js";
 import type {
   RoundRoleHistoryEntry
-} from "../../domain/state/roundRoleHistoryTypes.js";
+} from "../../domain/state/snapshot/roundRoleHistory.js";
 import {
   assertValidBubbleStateSnapshot,
   validateBubbleStateSnapshot
@@ -34,7 +34,7 @@ import {
 import { isBubbleLifecycleState } from "../../../contracts/kernel/lifecycle.js";
 import {
   isReworkIntentStatus
-} from "../../domain/state/reworkIntentTypes.js";
+} from "../../domain/state/rework/reworkIntentTypes.js";
 import {
   isInteger,
   isIsoTimestamp,

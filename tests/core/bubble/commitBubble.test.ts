@@ -9,7 +9,7 @@ import type {
   BubbleRemotePointerStarted
 } from "../../../src/v11/shared/remote/remoteExecutionTypes.js";
 import type { BubbleConfig } from "../../../src/v11/shared/config/bubbleConfigTypes.js";
-import type { BubbleStateSnapshot } from "../../../src/v11/domain/state/bubbleStateSnapshotTypes.js";
+import type { BubbleStateSnapshot } from "../../../src/v11/domain/state/snapshot/bubbleStateSnapshotTypes.js";
 import type { ProtocolEnvelope } from "../../../src/types/protocol.js";
 import {
   emitConvergedFromWorkspaceCommandOrchestration as emitConvergedFromWorkspace

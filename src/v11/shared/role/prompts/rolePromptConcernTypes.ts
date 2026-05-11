@@ -2,7 +2,7 @@ import type { AgentRole } from "../../../../contracts/kernel/agentIdentity.js";
 import type {
   BubbleReviewAutoReworkSeverity
 } from "../../reviewPolicy/reviewPolicyTypes.js";
-import type { BubbleStateSnapshot } from "../../../domain/state/bubbleStateSnapshotTypes.js";
+import type { BubbleStateSnapshot } from "../../../domain/state/snapshot/bubbleStateSnapshotTypes.js";
 import type {
   PairflowCommandProfile,
   ReviewArtifactType

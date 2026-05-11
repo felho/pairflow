@@ -2,7 +2,7 @@ import type {
   BubbleRemotePointer,
   BubbleRemotePointerStarted
 } from "../../../../shared/remote/remoteExecutionTypes.js";
-import type { BubbleStateSnapshot } from "../../../../domain/state/bubbleStateSnapshotTypes.js";
+import type { BubbleStateSnapshot } from "../../../../domain/state/snapshot/bubbleStateSnapshotTypes.js";
 import type { ApprovalRemoteBubbleStatusTarget } from "../remote/remoteApprovalCommandPort.js";
 import type { ResolvedApprovalCommandDependencies } from "../command/approvalCommandDependencies.js";
 import type {

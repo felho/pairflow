@@ -3,7 +3,7 @@ import type { AgentRole } from "../../../contracts/kernel/agentIdentity.js";
 import type {
   BubbleExecutionContext,
   BubbleMetaReviewExecutionContext
-} from "./executionContextTypes.js";
+} from "./execution/executionContext.js";
 import {
   buildExecutionContextHandoffIdForRole,
   getRoleExecutionProjectionDescriptor

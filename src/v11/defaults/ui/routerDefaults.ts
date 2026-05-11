@@ -50,10 +50,10 @@ import type {
 import type { RestartBubbleResult } from "../../application/restart/restartCommandContract.js";
 import type { StartBubbleResult } from "../../application/start/startCommandContract.js";
 import type { StopBubbleResult } from "../../application/stop/stopCommandContract.js";
-import type { BubbleStateSnapshot } from "../../domain/state/bubbleStateSnapshotTypes.js";
+import type { BubbleStateSnapshot } from "../../domain/state/snapshot/bubbleStateSnapshotTypes.js";
 import type {
   BubbleReworkIntentRecord
-} from "../../domain/state/reworkIntentTypes.js";
+} from "../../domain/state/rework/reworkIntentTypes.js";
 import type { ProtocolEnvelope } from "../../../types/protocol.js";
 import type {
   UiActionBubbleState,

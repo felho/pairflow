@@ -7,7 +7,7 @@ import {
   resolveFreshLaunchWorkspace,
   resolveResumeLaunchWorkspace
 } from "./startCommandLaunchWorkspace.js";
-import type { BubbleStateSnapshot } from "../../../../domain/state/bubbleStateSnapshotTypes.js";
+import type { BubbleStateSnapshot } from "../../../../domain/state/snapshot/bubbleStateSnapshotTypes.js";
 import type { ResolvedStartBubbleDependencies } from "../../startCommandOrchestration.js";
 import type { StartExecutionContext } from "./startCommandContext.js";
 import { prepareResumeLaunchInput } from "../prompts/startCommandResumeFlowPreparation.js";

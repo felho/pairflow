@@ -1,5 +1,5 @@
 import type { AgentRole } from "../../../../contracts/kernel/agentIdentity.js";
-import type { BubbleStateSnapshot } from "../../../domain/state/bubbleStateSnapshotTypes.js";
+import type { BubbleStateSnapshot } from "../../../domain/state/snapshot/bubbleStateSnapshotTypes.js";
 import type {
   ReviewArtifactType
 } from "../../config/bubbleConfigVocabulary.js";

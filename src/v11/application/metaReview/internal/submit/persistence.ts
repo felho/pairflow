@@ -9,10 +9,10 @@ import {
 import type {
   MetaReviewArtifactReadPort
 } from "../../../../shared/metaReview/metaReviewArtifactIo.js";
-import type { BubbleStateSnapshot } from "../../../../domain/state/bubbleStateSnapshotTypes.js";
+import type { BubbleStateSnapshot } from "../../../../domain/state/snapshot/bubbleStateSnapshotTypes.js";
 import type {
   BubbleExecutionContext
-} from "../../../../domain/state/executionContextTypes.js";
+} from "../../../../domain/state/execution/executionContext.js";
 import type {
   LoadedStateSnapshot
 } from "../../../../ports/stateSnapshots.js";

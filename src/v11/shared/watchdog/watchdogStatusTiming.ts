@@ -1,4 +1,4 @@
-import type { BubbleStateSnapshot } from "../../domain/state/bubbleStateSnapshotTypes.js";
+import type { BubbleStateSnapshot } from "../../domain/state/snapshot/bubbleStateSnapshotTypes.js";
 import { SchemaValidationError } from "../validation/primitives.js";
 import { metaReviewExecutionContextToRunningContext } from "../../domain/state/executionContext.js";
 import { validateActiveMetaReviewExecutionContext } from "../metaReview/metaReviewExecutionContext.js";

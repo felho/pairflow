@@ -23,7 +23,7 @@ import {
 } from "../../../../shared/actorProtocol/actorEmitContext.js";
 import type { ActorEmitContextSnapshot } from "../../../../shared/actorProtocol/actorEmitContext.js";
 import type { AgentName } from "../../../../../contracts/kernel/agentIdentity.js";
-import type { BubbleStateSnapshot } from "../../../../domain/state/bubbleStateSnapshotTypes.js";
+import type { BubbleStateSnapshot } from "../../../../domain/state/snapshot/bubbleStateSnapshotTypes.js";
 import {
   resolveIdeationMetadata
 } from "../../../../domain/ideation/ideationMetadata.js";

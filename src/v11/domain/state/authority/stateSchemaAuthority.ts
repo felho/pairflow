@@ -1,4 +1,4 @@
-import type { BubbleExecutionContext } from "../executionContextTypes.js";
+import type { BubbleExecutionContext } from "../execution/executionContext.js";
 import type { BubbleMetaReviewSnapshotState } from "../../../shared/metaReview/metaReviewSnapshotTypes.js";
 import {
   toMetaReviewExecutionContext

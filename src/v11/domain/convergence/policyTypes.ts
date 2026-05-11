@@ -7,7 +7,7 @@ import type {
 } from "../../shared/config/bubbleConfigVocabulary.js";
 import type {
   RoundRoleHistoryEntry
-} from "../../domain/state/roundRoleHistoryTypes.js";
+} from "../../domain/state/snapshot/roundRoleHistory.js";
 import type { FindingPriority } from "../../../types/findings.js";
 import type { ProtocolEnvelope } from "../../../types/protocol.js";
 

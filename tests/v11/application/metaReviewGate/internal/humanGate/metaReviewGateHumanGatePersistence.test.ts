@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { persistHumanGateRoute } from "../../../../../../src/v11/application/metaReviewGate/internal/humanGate/metaReviewGateHumanGatePersistence.js";
 import type { LoadedStateSnapshot } from "../../../../../../src/v11/ports/stateSnapshots.js";
-import type { BubbleStateSnapshot } from "../../../../../../src/v11/domain/state/bubbleStateSnapshotTypes.js";
+import type { BubbleStateSnapshot } from "../../../../../../src/v11/domain/state/snapshot/bubbleStateSnapshotTypes.js";
 
 function createLoadedRunningState(): LoadedStateSnapshot {
   const state: BubbleStateSnapshot = {

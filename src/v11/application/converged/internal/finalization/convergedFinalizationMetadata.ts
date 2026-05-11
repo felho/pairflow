@@ -1,7 +1,7 @@
 import type { SummaryVerifierConsistencyGateDecisionRecord } from "../../../../shared/reviewer/summaryVerifierConsistencyGate.js";
 import type { PairflowCommandPathAssessment } from "../../../../ports/pairflowCommand.js";
 import { type MetaReviewGateRoute } from "../../../../shared/metaReviewGate/index.js";
-import type { BubbleStateSnapshot } from "../../../../domain/state/bubbleStateSnapshotTypes.js";
+import type { BubbleStateSnapshot } from "../../../../domain/state/snapshot/bubbleStateSnapshotTypes.js";
 import type {
   BubbleRoundGateState,
   BubbleSpecLockState

@@ -1,4 +1,4 @@
-import type { BubbleStateSnapshot } from "../../domain/state/bubbleStateSnapshotTypes.js";
+import type { BubbleStateSnapshot } from "../../domain/state/snapshot/bubbleStateSnapshotTypes.js";
 import type { ProtocolEnvelope } from "../../../types/protocol.js";
 
 export interface CommitBubbleInput {

@@ -1,6 +1,6 @@
 import { join } from "node:path";
 
-import type { BubbleStateSnapshot } from "../../../../domain/state/bubbleStateSnapshotTypes.js";
+import type { BubbleStateSnapshot } from "../../../../domain/state/snapshot/bubbleStateSnapshotTypes.js";
 import { MetaReviewGateError } from "../../../../shared/metaReviewGate/metaReviewGateRouteContract.js";
 
 export function assertRunningConvergenceState(state: BubbleStateSnapshot): void {

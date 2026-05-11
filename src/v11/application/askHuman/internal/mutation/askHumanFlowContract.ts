@@ -11,7 +11,7 @@ import type {
   EmitAskHumanBubbleNotificationPort,
 } from "../delivery/askHumanDeliveryPortsContract.js";
 import type { EmitBubbleLifecycleEventBestEffortPort } from "../../../../shared/metrics/bubbleEvents.js";
-import type { BubbleStateSnapshot } from "../../../../domain/state/bubbleStateSnapshotTypes.js";
+import type { BubbleStateSnapshot } from "../../../../domain/state/snapshot/bubbleStateSnapshotTypes.js";
 import type { ProtocolEnvelope } from "../../../../../types/protocol.js";
 import type { AskHumanRoutingContext } from "../delivery/askHumanRoutingContextContract.js";
 import type { AskHumanActivationProvenance } from "../../askHumanCommandContract.js";

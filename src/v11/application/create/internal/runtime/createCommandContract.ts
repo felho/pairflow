@@ -17,7 +17,7 @@ import type {
   BubbleReviewPolicyConfig
 } from "../../../../shared/reviewPolicy/reviewPolicyTypes.js";
 import type { BubbleConfig } from "../../../../shared/config/bubbleConfigTypes.js";
-import type { BubbleStateSnapshot } from "../../../../domain/state/bubbleStateSnapshotTypes.js";
+import type { BubbleStateSnapshot } from "../../../../domain/state/snapshot/bubbleStateSnapshotTypes.js";
 import type {
   CreateReviewArtifactType,
   PairflowCommandProfile,

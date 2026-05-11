@@ -1,5 +1,5 @@
 import type { BubbleConfig } from "../../../../shared/config/bubbleConfigTypes.js";
-import type { BubbleStateSnapshot } from "../../../../domain/state/bubbleStateSnapshotTypes.js";
+import type { BubbleStateSnapshot } from "../../../../domain/state/snapshot/bubbleStateSnapshotTypes.js";
 import { resolveIdeationMetadata } from "../../../../domain/ideation/ideationMetadata.js";
 import { resolveKickoffEligibilityFailureReason } from "./kickoffEligibility.js";
 

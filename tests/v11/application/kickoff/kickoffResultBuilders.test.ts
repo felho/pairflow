@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import type { BubbleStateSnapshot } from "../../../../src/v11/domain/state/bubbleStateSnapshotTypes.js";
+import type { BubbleStateSnapshot } from "../../../../src/v11/domain/state/snapshot/bubbleStateSnapshotTypes.js";
 import {
   buildKickoffFailureResult,
   buildKickoffSuccessResult

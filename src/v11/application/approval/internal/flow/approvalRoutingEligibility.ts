@@ -1,5 +1,5 @@
 import type { MetaReviewRecommendation } from "../../../../shared/metaReview/metaReviewTypes.js";
-import type { BubbleStateSnapshot } from "../../../../domain/state/bubbleStateSnapshotTypes.js";
+import type { BubbleStateSnapshot } from "../../../../domain/state/snapshot/bubbleStateSnapshotTypes.js";
 import type { ApprovalDecision } from "../../../../../contracts/kernel/protocol.js";
 import {
   deliveryTargetRoleMetadataKey,

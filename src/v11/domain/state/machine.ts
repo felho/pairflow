@@ -3,10 +3,10 @@ import type {
   AgentRole
 } from "../../../contracts/kernel/agentIdentity.js";
 import type { BubbleLifecycleState } from "../../../contracts/kernel/lifecycle.js";
-import type { BubbleStateSnapshot } from "../../domain/state/bubbleStateSnapshotTypes.js";
+import type { BubbleStateSnapshot } from "../../domain/state/snapshot/bubbleStateSnapshotTypes.js";
 import type {
   RoundRoleHistoryEntry
-} from "../../domain/state/roundRoleHistoryTypes.js";
+} from "../../domain/state/snapshot/roundRoleHistory.js";
 import { assertValidBubbleStateSnapshot } from "../../domain/state/stateSchema.js";
 import { assertTransitionAllowed } from "./transitions.js";
 

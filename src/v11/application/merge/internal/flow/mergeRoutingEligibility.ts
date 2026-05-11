@@ -1,4 +1,4 @@
-import type { BubbleStateSnapshot } from "../../../../domain/state/bubbleStateSnapshotTypes.js";
+import type { BubbleStateSnapshot } from "../../../../domain/state/snapshot/bubbleStateSnapshotTypes.js";
 import type { RunGitPort } from "../../../../ports/git.js";
 
 const MERGE_STATE_DONE_REQUIRED = "MERGE_STATE_DONE_REQUIRED";

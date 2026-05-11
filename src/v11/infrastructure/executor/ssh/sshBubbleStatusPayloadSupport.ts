@@ -4,7 +4,7 @@ import {
 } from "../../../../contracts/kernel/agentIdentity.js";
 import {
   isBubbleExecutionContextAwaitedOutputType
-} from "../../../domain/state/executionContextTypes.js";
+} from "../../../domain/state/execution/executionContext.js";
 import {
   isProtocolMessageType,
   type ProtocolMessageType

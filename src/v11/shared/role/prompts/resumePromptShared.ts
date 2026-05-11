@@ -1,4 +1,4 @@
-import type { BubbleStateSnapshot } from "../../../domain/state/bubbleStateSnapshotTypes.js";
+import type { BubbleStateSnapshot } from "../../../domain/state/snapshot/bubbleStateSnapshotTypes.js";
 
 function formatResumeStateValue(value: string | number | null): string {
   return value === null ? "none" : String(value);

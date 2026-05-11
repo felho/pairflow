@@ -1,6 +1,6 @@
 import { applyStateTransition } from "../../domain/state/machine.js";
 import type { BubbleLifecycleState } from "../../../contracts/kernel/lifecycle.js";
-import type { BubbleStateSnapshot } from "../../domain/state/bubbleStateSnapshotTypes.js";
+import type { BubbleStateSnapshot } from "../../domain/state/snapshot/bubbleStateSnapshotTypes.js";
 
 export interface StopCancellationLoadedStateSnapshot {
   state: BubbleStateSnapshot;

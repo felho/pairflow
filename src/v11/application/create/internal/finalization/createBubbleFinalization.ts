@@ -5,7 +5,7 @@ import type {
 } from "../runtime/createCommandContract.js";
 import type { BubblePaths } from "../../../../shared/bubble/bubblePaths.js";
 import type { BubbleConfig } from "../../../../shared/config/bubbleConfigTypes.js";
-import type { BubbleStateSnapshot } from "../../../../domain/state/bubbleStateSnapshotTypes.js";
+import type { BubbleStateSnapshot } from "../../../../domain/state/snapshot/bubbleStateSnapshotTypes.js";
 import type { ReviewerFocusExtractionResult } from "../../../../shared/reviewer/reviewerBrief.js";
 import type { ReviewerFocusArtifactPersistResult } from "../persistence/createBubblePersistence.js";
 

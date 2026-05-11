@@ -1,6 +1,6 @@
 import type {
   BubbleMetaReviewExecutionContext
-} from "../../domain/state/executionContextTypes.js";
+} from "../../domain/state/execution/executionContext.js";
 
 export const DEFAULT_META_REVIEW_AUTO_REWORK_LIMIT = 10;
 

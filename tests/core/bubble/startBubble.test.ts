@@ -52,7 +52,7 @@ import {
   reviewerSeverityOntologyFullMarkdown
 } from "../../../src/v11/shared/reviewer/reviewerSeverityOntology.generated.js";
 import { shellQuote } from "../../../src/v11/shared/foundation/shellQuote.js";
-import type { BubbleStateSnapshot } from "../../../src/v11/domain/state/bubbleStateSnapshotTypes.js";
+import type { BubbleStateSnapshot } from "../../../src/v11/domain/state/snapshot/bubbleStateSnapshotTypes.js";
 import type { WorktreeBootstrapInput } from "../../../src/v11/ports/worktreeWorkspace.js";
 import type * as WorktreeManagerModule from "../../../src/v11/infrastructure/workspace/worktreeManager.js";
 import { initGitRepository } from "../../helpers/git.js";

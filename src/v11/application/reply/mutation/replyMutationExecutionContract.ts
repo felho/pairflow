@@ -2,7 +2,7 @@ import type { BubblePaths } from "../../../shared/bubble/bubblePaths.js";
 import type { ReplyWaitingHumanState } from "../../../domain/reply/waitingHumanStateGuard.js";
 import type { BubbleConfig } from "../../../shared/config/bubbleConfigTypes.js";
 import type { BubbleLifecycleState } from "../../../../contracts/kernel/lifecycle.js";
-import type { BubbleStateSnapshot } from "../../../domain/state/bubbleStateSnapshotTypes.js";
+import type { BubbleStateSnapshot } from "../../../domain/state/snapshot/bubbleStateSnapshotTypes.js";
 import type {
   ProtocolEnvelope,
   ProtocolEnvelopeDraft
