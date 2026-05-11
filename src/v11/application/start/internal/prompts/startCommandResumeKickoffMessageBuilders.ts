@@ -14,7 +14,7 @@ import type {
 import {
   buildCanonicalActorEmitLookupGuidance,
   buildImplementerEvidenceHandoffGuidance
-} from "../../../actorProtocol/roleDescriptorRegistry.js";
+} from "../../../actorProtocol/rolePromptConcerns.js";
 import { buildDocumentBubbleSourceEditGuard } from "../../../../shared/document/documentBubbleSourceEditGuard.js";
 
 export function formatResumeStateValue(value: string | number | null): string {

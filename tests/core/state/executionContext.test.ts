@@ -6,12 +6,8 @@ import {
   buildRunningExecutionContext
 } from "../../../src/v11/shared/state/executionContext.js";
 import {
-  buildExecutionContextHandoffIdForRole,
   getPrimaryRoutePolicyCheckIdsForRole,
-  getResumePromptConcernsForRole,
   getRoleDescriptor,
-  getRoleExecutionProjectionDescriptor,
-  getStartupPromptConcernsForRole,
   getTopologySlotDescriptor,
   getTopologySlotDescriptorForRole,
   getTopologySlotIdForRole,
@@ -19,6 +15,14 @@ import {
   getTopologySlotPaneIndexForRole,
   topologySlotCatalog
 } from "../../../src/v11/application/actorProtocol/roleDescriptorRegistry.js";
+import {
+  getResumePromptConcernsForRole,
+  getStartupPromptConcernsForRole
+} from "../../../src/v11/application/actorProtocol/rolePromptConcernIds.js";
+import {
+  buildExecutionContextHandoffIdForRole,
+  getRoleExecutionProjectionDescriptor
+} from "../../../src/v11/shared/actorProtocol/roleExecutionProjection.js";
 
 describe("buildRunningExecutionContext", () => {
   it("keeps the internal role descriptor registry aligned with awaited-output, policy, and prompt projections", () => {

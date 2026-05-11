@@ -9,7 +9,7 @@ import type {
   PairflowCommandProfile,
   ReviewArtifactType
 } from "../../../../shared/config/bubbleConfigVocabulary.js";
-import { buildRolePromptConcernLines } from "../../../actorProtocol/roleDescriptorRegistry.js";
+import { buildRolePromptConcernLines } from "../../../actorProtocol/rolePromptConcerns.js";
 import { joinPromptLines } from "../../startCommandResumePromptShared.js";
 export { buildResumeImplementerStartupPrompt } from "./startCommandResumeImplementerPrompt.js";
 

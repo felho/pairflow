@@ -2,7 +2,7 @@ import {
   buildCanonicalActorEmitLookupGuidance,
   buildImplementerEvidenceHandoffGuidance as buildImplementerEvidenceHandoffGuidanceFromRegistry,
   buildRolePromptConcernLines
-} from "../../../actorProtocol/roleDescriptorRegistry.js";
+} from "../../../actorProtocol/rolePromptConcerns.js";
 import { buildDocumentBubbleSourceEditGuard } from "../../../../shared/document/documentBubbleSourceEditGuard.js";
 import { buildPairflowCommandGuidance } from "../../startCommandPromptRuntime.js";
 import type {

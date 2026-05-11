@@ -7,11 +7,9 @@ import {
   resolveConfiguredAgentForRole
 } from "../../domain/agentIdentity/agentIdentity.js";
 import type { ActorRuntimePolicyCheckId } from "../../shared/actorProtocol/actorRuntimePolicyTypes.js";
-import {
-  buildExecutionContextHandoffIdForRole,
-  getRoleExecutionProjectionDescriptor,
-  type HandoffIdFormatId,
-  type RoleExecutionProjectionDescriptor
+import type {
+  HandoffIdFormatId,
+  RoleExecutionProjectionDescriptor
 } from "../../shared/actorProtocol/roleExecutionProjection.js";
 import {
   getSharedTopologySlotPaneIndex,
@@ -19,23 +17,6 @@ import {
   type SharedTopologySlotId
 } from "../../shared/topology/topologySlotPaneProjection.js";
 import type { PromptConcernId } from "./rolePromptConcerns.js";
-export {
-  buildCanonicalActorEmitLookupGuidance,
-  buildDocumentPrimaryArtifactReviewerGuardrail,
-  buildImplementerEvidenceHandoffGuidance,
-  buildReviewerPolicySnapshotContractLines,
-  buildRolePromptConcernLines,
-  buildTranscriptContextLine,
-  getResumePromptConcernsForRole,
-  getStartupPromptConcernsForRole,
-  type PromptConcernBuildInput,
-  type PromptConcernId,
-  type ResumePromptConcernBuildInput,
-  type ReviewerResumePromptConcernBuildInput,
-  type ReviewerStartupPromptConcernBuildInput,
-  type RolePromptPhase,
-  type StartupPromptConcernBuildInput
-} from "./rolePromptConcerns.js";
 
 export type TopologySlotId = SharedTopologySlotId;
 
@@ -267,13 +248,6 @@ export function resolveRoleConfiguredAgent(input: {
 }): AgentName {
   return resolveConfiguredAgentForRole(input);
 }
-
-export {
-  buildExecutionContextHandoffIdForRole,
-  getRoleExecutionProjectionDescriptor,
-  type HandoffIdFormatId,
-  type RoleExecutionProjectionDescriptor
-};
 
 export function getPrimaryRoutePolicyCheckIdsForRole(
   role: AgentRole
