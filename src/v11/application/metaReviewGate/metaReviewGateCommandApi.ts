@@ -1,6 +1,6 @@
 import {
   applyMetaReviewGateOnConvergence as applyMetaReviewGateOnConvergenceInternal
-} from "./internal/metaReviewGateApply.js";
+} from "./internal/apply/metaReviewGateApply.js";
 import {
   asMetaReviewGateError,
   toMetaReviewGateError

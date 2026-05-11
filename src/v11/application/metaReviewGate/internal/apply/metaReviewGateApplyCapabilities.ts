@@ -1,16 +1,16 @@
-import type { MetaReviewArtifactReadPort } from "../../../shared/metaReview/metaReviewArtifactIo.js";
-import type { ResolveBubbleByIdPort } from "../../../ports/bubbleLookup.js";
+import type { MetaReviewArtifactReadPort } from "../../../../shared/metaReview/metaReviewArtifactIo.js";
+import type { ResolveBubbleByIdPort } from "../../../../ports/bubbleLookup.js";
 import type {
   ReadStateSnapshotPort,
   WriteStateSnapshotPort
-} from "../../../ports/stateSnapshots.js";
+} from "../../../../ports/stateSnapshots.js";
 import type {
   AppendProtocolEnvelopePort,
   ReadTranscriptEnvelopesPort
-} from "../../../ports/transcript.js";
-import type { SetMetaReviewerPaneBindingPort } from "../../../ports/runtimeSessions.js";
-import type { ApplyMetaReviewGateOnConvergenceDependencies } from "../../../shared/metaReviewGate/metaReviewGateRuntimeCapabilities.js";
-import { MetaReviewGateError } from "../../../shared/metaReviewGate/metaReviewGateRouteContract.js";
+} from "../../../../ports/transcript.js";
+import type { SetMetaReviewerPaneBindingPort } from "../../../../ports/runtimeSessions.js";
+import type { ApplyMetaReviewGateOnConvergenceDependencies } from "../../../../shared/metaReviewGate/metaReviewGateRuntimeCapabilities.js";
+import { MetaReviewGateError } from "../../../../shared/metaReviewGate/metaReviewGateRouteContract.js";
 
 export function requireApplyResolveBubbleById(
   dependencies: ApplyMetaReviewGateOnConvergenceDependencies,

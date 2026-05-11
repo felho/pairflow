@@ -1,5 +1,5 @@
 import type { LoadedStateSnapshot } from "../../../ports/stateSnapshots.js";
-import { appendMetaReviewKickoffEnvelope, stageMetaReviewRunningState } from "./metaReviewGateApplyHelpers.js";
+import { appendMetaReviewKickoffEnvelope, stageMetaReviewRunningState } from "./apply/metaReviewGateApplyHelpers.js";
 import { buildCleanRerunDispatchFailureRollbackState } from "./metaReviewGateCleanRerunFailureState.js";
 import type { RouteCleanMetaReviewRerunInput } from "./metaReviewGateCleanRerunContract.js";
 import { persistDispatchFailedHumanRoute } from "./currentRun/routePersistence.js";

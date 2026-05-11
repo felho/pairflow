@@ -1,23 +1,23 @@
 import type {
   AppendProtocolEnvelopePort,
   AppendProtocolEnvelopeResult
-} from "../../../ports/transcript.js";
-import type { AgentName } from "../../../../contracts/kernel/agentIdentity.js";
-import { buildMetaReviewSubmitCommandTemplate } from "../../../shared/metaReview/metaReviewSubmitGuidance.js";
+} from "../../../../ports/transcript.js";
+import type { AgentName } from "../../../../../contracts/kernel/agentIdentity.js";
+import { buildMetaReviewSubmitCommandTemplate } from "../../../../shared/metaReview/metaReviewSubmitGuidance.js";
 import {
   type LoadedStateSnapshot,
   type WriteStateSnapshotPort
-} from "../../../ports/stateSnapshots.js";
+} from "../../../../ports/stateSnapshots.js";
 import {
   deliveryTargetRoleMetadataKey
-} from "../../../../types/protocol.js";
-import { buildHumanGateSummary } from "../../../domain/metaReviewGate/humanGatePolicy.js";
+} from "../../../../../types/protocol.js";
+import { buildHumanGateSummary } from "../../../../domain/metaReviewGate/humanGatePolicy.js";
 export {
   stageMetaReviewRunningState,
   throwMetaReviewRunningStageFailure
-} from "./metaReviewGateStateStaging.js";
-import { persistHumanGateRoute } from "./metaReviewGateHumanGatePersistence.js";
-import type { MetaReviewGateResult } from "../../../shared/metaReviewGate/metaReviewGateResultContract.js";
+} from "../metaReviewGateStateStaging.js";
+import { persistHumanGateRoute } from "../metaReviewGateHumanGatePersistence.js";
+import type { MetaReviewGateResult } from "../../../../shared/metaReviewGate/metaReviewGateResultContract.js";
 
 export async function appendMetaReviewKickoffEnvelope(input: {
   appendEnvelope: AppendProtocolEnvelopePort;

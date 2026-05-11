@@ -1,7 +1,7 @@
 import type { LoadedStateSnapshot } from "../../../ports/stateSnapshots.js";
 import type { BubbleMetaReviewRuntimeDeliveryState } from "../../../shared/metaReview/metaReviewSnapshotTypes.js";
-import { reconcileObservedGateResult } from "./metaReviewGateApplyObservation.js";
-import { persistRuntimeDeliveryObservation } from "./metaReviewGateApplyPersistence.js";
+import { reconcileObservedGateResult } from "./apply/metaReviewGateApplyObservation.js";
+import { persistRuntimeDeliveryObservation } from "./apply/metaReviewGateApplyPersistence.js";
 import { appendDeactivateTelemetry, deactivateCleanRerunMetaReviewerPane } from "./metaReviewGateCleanRerunDelivery.js";
 import type {
   CleanRerunDeliveryCapableInput,
