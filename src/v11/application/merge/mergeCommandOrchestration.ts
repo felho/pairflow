@@ -8,8 +8,8 @@ import {
   createBubbleMergeError
 } from "./internal/error/mergeCommandErrorRuntime.js";
 import { throwAsBubbleMergeError } from "./internal/error/mergeCommandErrorClassification.js";
-import { normalizeMergeBubbleInput } from "./mergeCommandInputNormalization.js";
-import { resolveMergeCommandDependencies } from "./mergeCommandDependencyResolution.js";
+import { normalizeMergeBubbleInput } from "./internal/preparation/mergeCommandInputNormalization.js";
+import { resolveMergeCommandDependencies } from "./internal/preparation/mergeCommandDependencyResolution.js";
 import {
   runMergeCommandPipeline
 } from "./internal/pipeline/mergeCommandPipeline.js";

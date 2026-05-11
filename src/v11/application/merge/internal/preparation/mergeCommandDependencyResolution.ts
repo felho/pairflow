@@ -1,4 +1,4 @@
-import type { MergeBubbleDependencies } from "./mergeCommandContract.js";
+import type { MergeBubbleDependencies } from "../../mergeCommandContract.js";
 
 type MergeBubbleDependencyDefaults = {
   [K in keyof Required<MergeBubbleDependencies>]:

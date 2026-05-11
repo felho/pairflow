@@ -1,6 +1,6 @@
 import { isNamedError } from "../../../../shared/errors/namedError.js";
-import type { ResolvedMergeCommandDependencies } from "../../mergeCommandDependencyResolution.js";
-import type { RunMergeCommandPipelineInput } from "../../mergeCommandInputNormalization.js";
+import type { ResolvedMergeCommandDependencies } from "../preparation/mergeCommandDependencyResolution.js";
+import type { RunMergeCommandPipelineInput } from "../preparation/mergeCommandInputNormalization.js";
 import {
   ensureOriginRemote,
   hasOriginRemoteError,

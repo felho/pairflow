@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { normalizeMergeBubbleInput } from "../../../../src/v11/application/merge/mergeCommandInputNormalization.js";
+import { normalizeMergeBubbleInput } from "../../../../src/v11/application/merge/internal/preparation/mergeCommandInputNormalization.js";
 import { BubbleMergeError } from "../../../../src/v11/application/merge/internal/error/mergeCommandErrorRuntime.js";
 
 function toErrorMessage(input: PairflowCommandErrorInput): string {

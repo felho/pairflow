@@ -1,4 +1,4 @@
-import { requireNonEmptyString } from "../../shared/normalization/stringNormalization.js";
+import { requireNonEmptyString } from "../../../../shared/normalization/stringNormalization.js";
 
 export interface MergeBubbleInputLike {
   bubbleId: string;

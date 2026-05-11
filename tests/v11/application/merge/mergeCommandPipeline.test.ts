@@ -2,8 +2,8 @@ import { describe, expect, it, vi } from "vitest";
 
 import { createBubbleMergeError } from "../../../../src/v11/application/merge/internal/error/mergeCommandErrorRuntime.js";
 import { runMergeCommandPipeline } from "../../../../src/v11/application/merge/internal/pipeline/mergeCommandPipeline.js";
-import type { ResolvedMergeCommandDependencies } from "../../../../src/v11/application/merge/mergeCommandDependencyResolution.js";
-import type { RunMergeCommandPipelineInput } from "../../../../src/v11/application/merge/mergeCommandInputNormalization.js";
+import type { ResolvedMergeCommandDependencies } from "../../../../src/v11/application/merge/internal/preparation/mergeCommandDependencyResolution.js";
+import type { RunMergeCommandPipelineInput } from "../../../../src/v11/application/merge/internal/preparation/mergeCommandInputNormalization.js";
 import type { BubbleStateSnapshot } from "../../../../src/v11/shared/state/bubbleStateSnapshotTypes.js";
 
 function buildPipelineInput(

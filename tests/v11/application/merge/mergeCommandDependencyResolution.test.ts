@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { resolveMergeCommandDependencies } from "../../../../src/v11/application/merge/mergeCommandDependencyResolution.js";
+import { resolveMergeCommandDependencies } from "../../../../src/v11/application/merge/internal/preparation/mergeCommandDependencyResolution.js";
 import { mergeBubbleDependencyDefaults } from "../../../../src/v11/defaults/merge/mergeCommandDefaults.js";
 
 describe("mergeCommandDependencyResolution", () => {

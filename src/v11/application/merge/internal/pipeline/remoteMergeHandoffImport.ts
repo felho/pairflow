@@ -1,7 +1,7 @@
 import { isNamedError } from "../../../../shared/errors/namedError.js";
 import type { ExecuteRemoteBubbleMergeCommandResult } from "../../mergeCommandContract.js";
-import type { RunMergeCommandPipelineInput } from "../../mergeCommandInputNormalization.js";
-import type { ResolvedMergeCommandDependencies } from "../../mergeCommandDependencyResolution.js";
+import type { RunMergeCommandPipelineInput } from "../preparation/mergeCommandInputNormalization.js";
+import type { ResolvedMergeCommandDependencies } from "../preparation/mergeCommandDependencyResolution.js";
 import type { RemoteMergeFlowExecutionContext } from "../flow/mergeFlowContext.js";
 
 const MERGE_REMOTE_HANDOFF_INVALID = "MERGE_REMOTE_HANDOFF_INVALID";
