@@ -2,7 +2,7 @@ import {
   computeWatchdogStatus,
   type WatchdogStatus
 } from "../../shared/watchdog/watchdogStatus.js";
-import { maybeApplyPendingReworkIntent } from "./watchdogPendingReworkIntent.js";
+import { maybeApplyPendingReworkIntent } from "./internal/pendingRework/watchdogPendingReworkIntent.js";
 import { sampleWatchdogPaneActivity } from "./internal/paneActivity/watchdogPaneActivitySampler.js";
 import type { AppendWatchdogTracePort } from "../../ports/watchdogTrace.js";
 import type { WatchdogTraceEntry } from "../../ports/watchdogTrace.js";

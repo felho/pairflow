@@ -1,7 +1,7 @@
-import { persistStateViaMutationBoundary } from "../../shared/mutation/mutationBoundaryIO.js";
-import type { BubbleLifecycleState } from "../../../contracts/kernel/lifecycle.js";
-import type { BubbleStateSnapshot } from "../../shared/state/bubbleStateSnapshotTypes.js";
-import { BubbleWatchdogError } from "./internal/error/watchdogCommandRuntime.js";
+import { persistStateViaMutationBoundary } from "../../../../shared/mutation/mutationBoundaryIO.js";
+import type { BubbleLifecycleState } from "../../../../../contracts/kernel/lifecycle.js";
+import type { BubbleStateSnapshot } from "../../../../shared/state/bubbleStateSnapshotTypes.js";
+import { BubbleWatchdogError } from "../error/watchdogCommandRuntime.js";
 
 export interface WatchdogPendingReworkWriteStateSnapshotOptions {
   expectedFingerprint?: string;
