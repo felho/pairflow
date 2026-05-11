@@ -1,6 +1,6 @@
 import {
   reconcileRuntimeSessionsCommandOrchestration
-} from "./reconcileCommandOrchestration.js";
+} from "./internal/orchestration/reconcileCommandOrchestration.js";
 import {
   resolveReconcileRuntimeSessionsDependencies,
   type ResolvedReconcileRuntimeSessionsDependencies

@@ -5,13 +5,13 @@ import type {
   ReconcileRuntimeSessionsAction,
   RuntimeSessionStaleReason,
   TmuxSessionLivenessProbe
-} from "./reconcileCommandContract.js";
+} from "../../reconcileCommandContract.js";
 import type {
   NormalizedReconcileRuntimeSessionsInput
-} from "./reconcileCommandInputNormalization.js";
+} from "../../reconcileCommandInputNormalization.js";
 import type {
   ResolvedReconcileRuntimeSessionsDependencies
-} from "./reconcileCommandDependencyResolution.js";
+} from "../../reconcileCommandDependencyResolution.js";
 
 async function resolveStaleReason(
   repoPath: string,

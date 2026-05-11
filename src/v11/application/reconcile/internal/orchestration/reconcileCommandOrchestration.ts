@@ -1,16 +1,16 @@
-import { isNamedError } from "../../shared/errors/namedError.js";
+import { isNamedError } from "../../../../shared/errors/namedError.js";
 import { runReconcileFlow } from "./runReconcileFlow.js";
 import type {
   ReconcileRuntimeSessionsInput,
   ReconcileRuntimeSessionsReport
-} from "./reconcileCommandContract.js";
+} from "../../reconcileCommandContract.js";
 import type {
   ResolvedReconcileRuntimeSessionsDependencies
-} from "./reconcileCommandDependencyResolution.js";
-import { createStartupReconcilerError } from "./internal/error/reconcileCommandRuntime.js";
+} from "../../reconcileCommandDependencyResolution.js";
+import { createStartupReconcilerError } from "../error/reconcileCommandRuntime.js";
 import {
   normalizeReconcileRuntimeSessionsInput
-} from "./reconcileCommandInputNormalization.js";
+} from "../../reconcileCommandInputNormalization.js";
 
 const RECONCILE_REPO_RESOLUTION_FAILED = "RECONCILE_REPO_RESOLUTION_FAILED";
 
