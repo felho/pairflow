@@ -9,65 +9,23 @@ import {
   resolvePendingApprovalCount,
   resolveReviewVerificationState,
   resolveStatusGateState,
-  type StatusGateStateDependencies,
-  type StatusTranscriptDataDependencies,
   withAccuracyCriticalVerificationGate
 } from "./statusCommandInternals.js";
 import {
   buildBubbleStatusView,
   type BubbleStatusView
 } from "./statusCommandViewBuilder.js";
+import type {
+  BubbleStatusDependencies,
+  BubbleStatusInput
+} from "./statusCommandContract.js";
 import { isRemoteBubbleStatusErrorLike } from "../../shared/status/remoteBubbleStatusContract.js";
 import type {
-  ReadWatchdogPaneActivity,
   ReadWatchdogPaneActivityResult
 } from "../../shared/watchdog/watchdogPaneActivityStore.js";
-import type { ResolveBubbleByIdPort } from "../../ports/bubbleLookup.js";
 import type { ResolvedBubbleById } from "../../ports/bubbleLookup.js";
-import type {
-  ResolveRemoteBubbleStatusTargetPort
-} from "../../shared/remote/commitRemoteExecution.js";
-import type {
-  RemoteBubbleStatusSnapshot,
-  RemoteBubbleStatusTarget
-} from "../../shared/status/remoteBubbleStatusContract.js";
-
-export interface BubbleStatusInput {
-  bubbleId: string;
-  repoPath?: string | undefined;
-  cwd?: string | undefined;
-  now?: Date | undefined;
-}
 
 export type { BubbleStatusView } from "./statusCommandViewBuilder.js";
-
-export interface BubbleStatusDependencies {
-  inspectStateSnapshot: StatusTranscriptDataDependencies["inspectStateSnapshot"];
-  readWatchdogPaneActivity: ReadWatchdogPaneActivity;
-  readTranscriptEnvelopes: StatusTranscriptDataDependencies["readTranscriptEnvelopes"];
-  readDocContractGateArtifact: StatusGateStateDependencies["readDocContractGateArtifact"];
-  readReviewVerificationArtifactStatus:
-    StatusGateStateDependencies["readReviewVerificationArtifactStatus"];
-  resolveBubbleById: ResolveBubbleByIdPort;
-  resolveDocContractGateArtifactPath:
-    StatusGateStateDependencies["resolveDocContractGateArtifactPath"];
-  readRemotePointer: (
-    path: string
-  ) => Promise<BubbleRemotePointer | null>;
-  readRemoteStateCache: (
-    path: string
-  ) => Promise<BubbleRemoteStateCache | null>;
-  writeRemoteStateCache: (
-    path: string,
-    value: BubbleRemoteStateCache
-  ) => Promise<void>;
-  resolveRemoteBubbleStatusTarget: ResolveRemoteBubbleStatusTargetPort;
-  executeRemoteBubbleStatus: (input: {
-    bubbleId: string;
-    remoteClonePath: string;
-    remoteTarget: RemoteBubbleStatusTarget;
-  }) => Promise<RemoteBubbleStatusSnapshot>;
-}
 
 export class BubbleStatusError extends Error {
   public constructor(message: string) {

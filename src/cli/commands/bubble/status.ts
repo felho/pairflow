@@ -4,7 +4,7 @@ import {
 } from "../../../v11/application/status/statusCliCommand.js";
 import type {
   BubbleStatusDependencies
-} from "../../../v11/application/status/statusCommandApi.js";
+} from "../../../v11/application/status/statusCommandContract.js";
 import type {
   BubbleStatusCommandOptions
 } from "../../../v11/application/status/statusCliCommand.js";

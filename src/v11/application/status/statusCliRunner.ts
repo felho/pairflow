@@ -1,9 +1,9 @@
 import {
   asBubbleStatusError,
   getBubbleStatus,
-  type BubbleStatusDependencies,
   type BubbleStatusView
 } from "./statusCommandApi.js";
+import type { BubbleStatusDependencies } from "./statusCommandContract.js";
 import {
   parseBubbleStatusCommandOptions,
   type BubbleStatusCommandOptions

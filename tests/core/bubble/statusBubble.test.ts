@@ -10,9 +10,9 @@ import { emitPassFromWorkspace } from "../../../src/v11/application/pass/passCom
 import { createBubble } from "../../../src/v11/defaults/create/createBubbleApi.js";
 import { emitHumanReply } from "../../../src/v11/application/reply/replyCommandApi.js";
 import {
-  getBubbleStatus as getBubbleStatusApplication,
-  type BubbleStatusInput
+  getBubbleStatus as getBubbleStatusApplication
 } from "../../../src/v11/application/status/statusCommandApi.js";
+import type { BubbleStatusInput } from "../../../src/v11/application/status/statusCommandContract.js";
 import { resolveDocContractGateArtifactPath } from "../../../src/v11/infrastructure/artifact/gates/docContractGateArtifacts.js";
 import {
   writeRemoteStateCache,

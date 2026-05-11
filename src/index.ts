@@ -546,7 +546,9 @@ export type {
   RuntimeSessionStaleReason
 } from "./v11/application/reconcile/reconcileCommandApi.js";
 export type {
-  BubbleStatusInput,
+  BubbleStatusInput
+} from "./v11/application/status/statusCommandContract.js";
+export type {
   BubbleStatusView
 } from "./v11/application/status/statusCommandApi.js";
 export type {
