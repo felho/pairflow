@@ -1,0 +1,772 @@
+# Domain State Model Refactor — Step 1 Manifest
+
+Status: review (Step 1 deliverable; not yet executing)
+Last updated: 2026-05-11
+Owner: architecture/domain-state
+Scope: relocate `src/v11/shared/state/*` to `src/v11/domain/state/*` as
+the canonical home for the bubble state domain model, restructure into
+first-class sub-areas (no `internal/` wrapper), and introduce a
+derived discriminated union for `BubbleStateSnapshot` so that lifecycle
++ authority + meta-review invariants are enforced by TypeScript rather
+than by runtime authority policy code.
+
+This document is the contract between the design discussion and the
+execution commits (Step 2 through Step 6 below). The execution
+sequence does not begin until this manifest is reviewed and the
+**Open questions** section is resolved.
+
+---
+
+## 0. Anchoring decisions (already settled)
+
+1. **Persisted shape stays stable.** No new persisted discriminator field
+   (no `running_mode`, no split `RUNNING_STANDARD` lifecycle state). The
+   `state.json` wire format is preserved as-is.
+2. **Derived discriminator inside the domain layer.** A parser converts
+   the persisted shape into a narrower TypeScript variant; the variant's
+   `kind` field is domain-only, never persisted.
+3. **`domain/state/` is the canonical home.** `shared/state/` no longer
+   exists as a package. Domain types and the parser both live in domain.
+4. **Sub-areas are first-class, not `internal/`.** Domain modules don't
+   need the application-lane `internal/` convention; the sub-areas are
+   themselves first-class domain concerns.
+5. **No backward-compatibility re-export shim from `shared/state/`.**
+   Every consumer retargets to `domain/state/`. Any leftover
+   `shared/state/` import is a real bug, not a compatibility window.
+
+---
+
+## 1. Target file tree
+
+After the program completes, `src/v11/shared/state/` is gone and
+`src/v11/domain/state/` looks like this:
+
+```
+src/v11/domain/state/
+├── snapshot/
+│   ├── bubbleStateSnapshot.ts              (domain variant types + kind discriminator)
+│   ├── persistedBubbleStateSnapshot.ts     (persisted wire shape — broad nullable)
+│   └── roundRoleHistory.ts                 (type definition + helpers)
+├── execution/
+│   ├── executionContextTypes.ts            (BubbleExecutionContext + BubbleMetaReviewExecutionContext + awaited-output unions)
+│   ├── buildRunningExecutionContext.ts     (split from current shared/state/executionContext.ts)
+│   ├── buildRestartedExecutionContext.ts
+│   ├── metaReviewExecutionContext.ts       (toMetaReviewExecutionContext, metaReviewExecutionContextToRunningContext)
+│   └── executionContextsEqual.ts
+├── authority/
+│   ├── metaReviewAuthority.ts              (isMetaReviewAuthorityActive + meta-review-specific invariants)
+│   ├── executionContextAuthority.ts        (when execution_context is required vs forbidden)
+│   ├── snapshotInvariants.ts               (cross-field value invariants surviving narrowing)
+│   └── kindDiscrimination.ts               (the persisted -> kind discriminator function)
+├── schema/
+│   ├── parseBubbleStateSnapshot.ts         (boundary parser: unknown -> BubbleStateSnapshot)
+│   ├── parseSnapshotSlices.ts              (core/activity/round-role/rework slice parsers)
+│   └── parseValidationPrimitives.ts        (or import from shared/validation/ if it stays there)
+├── metaReview/
+│   ├── metaReviewSnapshot.ts               (BubbleMetaReviewSnapshotState type + MetaReviewSubstate variant)
+│   ├── parseMetaReviewSnapshot.ts          (parser for the meta_review sub-object)
+│   ├── metaReviewRuntimeDelivery.ts        (runtime_delivery type + parser)
+│   └── metaReviewAutonomousControls.ts     (auto_rework_count/limit/sticky_human_gate fields + parsers)
+├── rework/
+│   ├── reworkIntentTypes.ts                (BubbleReworkIntentRecord + ReworkIntentStatus)
+│   ├── parseReworkIntent.ts                (slice parser)
+│   └── reworkIntent.ts                     (moved from domain/state/reworkIntent.ts — same area concern)
+├── machine.ts                              (state machine; existing)
+├── transitions.ts                          (transition matrix; existing)
+├── initialState.ts                         (existing)
+├── startState.ts                           (existing)
+├── roundContinuation.ts                    (existing)
+└── watchdogEscalation.ts                   (existing)
+```
+
+Notes:
+
+- Total file count grows from ~16 (current shared/state/ + domain/state/)
+  to ~24 (after splitting executionContext.ts into 5 single-responsibility
+  files and the schema validators into thematic parsers). Several
+  currently-large files split along their natural concern boundaries.
+- The current `shared/metaReview/metaReviewSnapshotTypes.ts` and
+  `shared/metaReview/metaReviewSnapshot.ts` stay in `shared/metaReview/`
+  for now — they are higher-level meta-review concerns (delivery,
+  outcomes, transcript). Only the **state-snapshot fragment** of
+  meta-review moves to `domain/state/metaReview/`. **Open question:**
+  whether to also move `shared/metaReview/` into `domain/metaReview/`
+  later — out of scope here, noted in §10.
+- The current `shared/validation/primitives.ts` is consumed by both the
+  state parser and other parsers (e.g., metaReview snapshot). It stays
+  in `shared/validation/` since it is a truly cross-domain technical
+  primitive (`isNonEmptyString`, `isIsoTimestamp`, etc.), not a state
+  concern.
+
+---
+
+## 2. Persisted shape vs domain shape — the parser boundary
+
+The persisted shape is what is written to and read from `state.json`:
+
+```ts
+// domain/state/snapshot/persistedBubbleStateSnapshot.ts
+
+export interface PersistedBubbleStateSnapshot {
+  bubble_id: string;
+  state: BubbleLifecycleState;
+  round: number;
+  active_agent: AgentName | null;
+  active_role: AgentRole | null;
+  active_since: string | null;
+  execution_context?: BubbleExecutionContext | null;
+  round_role_history: RoundRoleHistoryEntry[];
+  last_command_at: string | null;
+  pending_rework_intent?: BubbleReworkIntentRecord | null;
+  rework_intent_history?: BubbleReworkIntentRecord[];
+  meta_review?: PersistedBubbleMetaReviewSnapshot;
+}
+
+export interface PersistedBubbleMetaReviewSnapshot {
+  execution_context?: BubbleMetaReviewExecutionContext | null;
+  runtime_delivery?: BubbleMetaReviewRuntimeDeliveryState | null;
+  auto_rework_count: number;
+  auto_rework_limit: number;
+  sticky_human_gate: boolean;
+  consecutive_clean_runs?: number;
+}
+```
+
+This is the current `BubbleStateSnapshot` shape, renamed. It is the
+**input** to `parseBubbleStateSnapshot` and the **output** of any
+serialization helper. External tooling (JSON dumps, manual edits,
+state.json files) deal with this shape only.
+
+The domain shape is the parsed/narrowed variant model (§3 below). Only
+domain/application/infrastructure consumers inside the v11 codebase see
+the variant type. The variant is never serialized.
+
+The parser:
+
+```ts
+// domain/state/schema/parseBubbleStateSnapshot.ts
+
+export function parseBubbleStateSnapshot(
+  input: unknown
+): ValidationResult<BubbleStateSnapshot>;
+
+export function assertParsedBubbleStateSnapshot(
+  input: unknown
+): BubbleStateSnapshot;  // throws on invalid
+```
+
+The parser performs three jobs in sequence:
+
+1. **Shape validation** — verify the persisted shape's field types and
+   slice integrity (round-role history entries valid, rework intents
+   well-formed, etc.). Output: `PersistedBubbleStateSnapshot` or errors.
+2. **Cross-field invariant validation** — verify the runtime invariants
+   that can't be expressed in TypeScript shape (e.g.,
+   `execution_context.round === state.round` when both are present).
+3. **Kind discrimination** — derive the variant `kind` from
+   `state + round + active_role + meta_review` field combinations.
+   Output: `BubbleStateSnapshot` (the variant union).
+
+Job 2 is what survives from the current `stateSchemaAuthorityChecks.ts`
+once the shape rules are absorbed by TypeScript narrowing. Job 3 is
+the new derivation logic.
+
+---
+
+## 3. Variant set
+
+### 3.1 Outer variants (`kind` field — domain-only discriminator)
+
+```ts
+// domain/state/snapshot/bubbleStateSnapshot.ts
+
+export type BubbleStateSnapshot =
+  | BubbleStateInactiveInitial
+  | BubbleStateRunningIdeation
+  | BubbleStateRunningStandard
+  | BubbleStateRunningMetaReview
+  | BubbleStateWaitingHuman
+  | BubbleStateReadyForApproval
+  | BubbleStateTerminalClean
+  | BubbleStateTerminalFailed;
+
+interface BubbleStateCommonFields {
+  bubble_id: string;
+  round: number;
+  round_role_history: RoundRoleHistoryEntry[];
+  last_command_at: string | null;
+  pending_rework_intent: BubbleReworkIntentRecord | null;
+  rework_intent_history: BubbleReworkIntentRecord[];
+  meta_review: MetaReviewSubstate;
+}
+
+// CREATED, PREPARING_WORKSPACE
+export interface BubbleStateInactiveInitial extends BubbleStateCommonFields {
+  kind: "inactive_initial";
+  state: "CREATED" | "PREPARING_WORKSPACE";
+  active_agent: null;
+  active_role: null;
+  active_since: null;
+  execution_context: null;
+}
+
+// RUNNING + round = 0 (ideation)
+export interface BubbleStateRunningIdeation extends BubbleStateCommonFields {
+  kind: "running_ideation";
+  state: "RUNNING";
+  round: 0;
+  active_agent: null;
+  active_role: null;
+  active_since: null;
+  execution_context: null;
+  meta_review: MetaReviewSubstateInactive | undefined;  // ideation forbids active meta-review
+}
+
+// RUNNING + round >= 1, standard (non-meta-review) authority
+export interface BubbleStateRunningStandard extends BubbleStateCommonFields {
+  kind: "running_standard";
+  state: "RUNNING";
+  active_agent: AgentName;
+  active_role: Exclude<AgentRole, "meta_reviewer">;
+  active_since: string;
+  execution_context: BubbleExecutionContext;
+  meta_review: MetaReviewSubstateInactive | undefined;
+}
+
+// RUNNING + round >= 1, meta-review authority
+export interface BubbleStateRunningMetaReview extends BubbleStateCommonFields {
+  kind: "running_meta_review";
+  state: "RUNNING";
+  active_agent: AgentName;
+  active_role: "meta_reviewer";
+  active_since: string;
+  execution_context: BubbleExecutionContext & { active_role: "meta_reviewer"; awaited_output_type: "meta_review_result" };
+  meta_review: MetaReviewSubstateActive;
+}
+
+// WAITING_HUMAN — active_* present (carried from prior RUNNING)
+export interface BubbleStateWaitingHuman extends BubbleStateCommonFields {
+  kind: "waiting_human";
+  state: "WAITING_HUMAN";
+  active_agent: AgentName;
+  active_role: AgentRole;
+  active_since: string;
+  execution_context: null;
+}
+
+// READY_FOR_HUMAN_APPROVAL — active_* present (carried from prior RUNNING)
+export interface BubbleStateReadyForApproval extends BubbleStateCommonFields {
+  kind: "ready_for_approval";
+  state: "READY_FOR_HUMAN_APPROVAL";
+  active_agent: AgentName;
+  active_role: AgentRole;
+  active_since: string;
+  execution_context: null;
+}
+
+// APPROVED_FOR_COMMIT, COMMITTED, DONE
+export interface BubbleStateTerminalClean extends BubbleStateCommonFields {
+  kind: "terminal_clean";
+  state: "APPROVED_FOR_COMMIT" | "COMMITTED" | "DONE";
+  active_agent: AgentName | null;  // OPEN QUESTION §10.1
+  active_role: AgentRole | null;
+  active_since: string | null;
+  execution_context: null;
+}
+
+// FAILED, CANCELLED
+export interface BubbleStateTerminalFailed extends BubbleStateCommonFields {
+  kind: "terminal_failed";
+  state: "FAILED" | "CANCELLED";
+  active_agent: AgentName | null;  // OPEN QUESTION §10.1
+  active_role: AgentRole | null;
+  active_since: string | null;
+  execution_context: null;
+}
+```
+
+**8 outer variants.** Each variant pins lifecycle state + the active_* +
+execution_context combinations that are valid for it. The previous
+authority rules that asserted these combinations at runtime are now
+implicit in the type.
+
+### 3.2 MetaReview inner axis
+
+The `meta_review` field carries its own discrimination, orthogonal to
+the outer variant:
+
+```ts
+// domain/state/metaReview/metaReviewSnapshot.ts
+
+interface BubbleMetaReviewCommonFields {
+  runtime_delivery: BubbleMetaReviewRuntimeDeliveryState | null;
+  auto_rework_count: number;
+  auto_rework_limit: number;
+  sticky_human_gate: boolean;
+  consecutive_clean_runs: number;
+}
+
+export interface MetaReviewSubstateInactive extends BubbleMetaReviewCommonFields {
+  status: "inactive";
+  execution_context: null;
+}
+
+export interface MetaReviewSubstateActive extends BubbleMetaReviewCommonFields {
+  status: "active";
+  execution_context: BubbleMetaReviewExecutionContext;
+}
+
+export type MetaReviewSubstate =
+  | MetaReviewSubstateInactive
+  | MetaReviewSubstateActive;
+```
+
+The `status` field is also **domain-only derived**, not persisted.
+Parsing rule: if persisted `meta_review.execution_context` is set,
+status is "active"; otherwise "inactive". The parser also throws if
+the outer variant is `running_meta_review` but the persisted
+`meta_review.execution_context` is missing — that's an invariant
+violation, not a parser error.
+
+The `BubbleStateRunningMetaReview` outer variant pins the inner
+`MetaReviewSubstateActive` type via the `meta_review:
+MetaReviewSubstateActive` field constraint. This is where the
+"meta-review state with no meta_review.execution_context" combination
+becomes type-impossible.
+
+The other outer variants accept either `MetaReviewSubstateInactive`
+or `undefined` (the meta_review field may not be present at all on
+bubbles that never reached a meta-review state).
+
+### 3.3 Construction helpers
+
+Consumers that build snapshots (state machine transitions,
+infrastructure persistence write path) need helpers to construct
+specific variants. Suggested helpers (final shape TBD during Step 4b):
+
+```ts
+// domain/state/snapshot/bubbleStateSnapshot.ts
+
+export function createInactiveInitialSnapshot(
+  input: { bubbleId: string; state: "CREATED" | "PREPARING_WORKSPACE"; ... }
+): BubbleStateInactiveInitial;
+
+export function createRunningStandardSnapshot(
+  input: { bubbleId: string; round: number; activeAgent: AgentName; ... }
+): BubbleStateRunningStandard;
+
+// ... one per variant
+```
+
+This decouples construction from the discriminated union shape, so
+consumers don't have to remember to set `kind` manually.
+
+---
+
+## 4. Runtime invariants surviving narrowing
+
+The following invariants **cannot** be enforced by TypeScript and
+remain as runtime checks inside the parser:
+
+1. **execution_context.round === state.round** when both are present.
+2. **execution_context.active_role === active_role** when both are present
+   (mirror invariant for non-meta-review running variants too).
+3. **meta_review.execution_context fields mirror the outer
+   execution_context** when both are active (handoff_id, round, etc.).
+4. **execution_context_id, handoff_id non-empty strings** (TS can't
+   express non-empty at the type level).
+5. **ISO timestamp format on active_since, started_at, deadline_at,
+   etc.** (TS string is too broad).
+6. **active_role allowed values within
+   AgentRole** — TS narrows the type, but the runtime parser still has
+   to verify the persisted string is one of the union members.
+7. **round_role_history monotonicity** (round numbers ascending, role
+   assignments consistent across rounds).
+8. **rework_intent_history.intent_id uniqueness** (current
+   `validateBubbleStateSnapshot` enforces this; survives).
+9. **auto_rework_count ≤ auto_rework_limit**, both non-negative
+   integers, etc. (meta-review autonomous control invariants).
+
+These are **9 runtime invariant groups**, down from the current ~20+
+authority rules. The reduction is the win.
+
+---
+
+## 5. Consumer impact map
+
+### 5.1 Counts
+
+- **101** `src/v11/**/*.ts` files reference `shared/state/*`.
+- **53** test files reference `shared/state/*`.
+- **~172 lines** of code do narrowing-relevant field reads on state
+  (e.g., `state.execution_context`, `state.active_role`,
+  `state.meta_review`) outside the schema validator itself.
+- **~30 files** explicitly construct `BubbleStateSnapshot` objects
+  (state machine transitions, infrastructure write path, tests).
+
+### 5.2 Categorization
+
+| Category | Estimate | Step 2 impact | Step 4b impact |
+|----------|---------:|---------------|----------------|
+| Type-only `import type` consumers | ~60 | Path update | None (signature still accepts `BubbleStateSnapshot`) |
+| Field-read consumers (need narrowing) | ~30 | Path update | Narrowing required at read sites |
+| Construction consumers (build snapshots) | ~10 | Path update | Switch to variant-specific construction helper |
+| Pass-through consumers (function args) | ~50 | Path update | None |
+| Tests (all categories combined) | ~53 | Path update + mirror move | Narrowing required for tests that read fields |
+
+The Step 2 path update is mechanical (`shared/state/X` →
+`domain/state/X`). The Step 4b narrowing impact is the variable-cost
+part of the program.
+
+### 5.3 Heaviest-impact files (representative)
+
+The narrowing scope concentrates in these areas:
+
+- **`domain/state/machine.ts`** (94 LOC) — applyStateTransition reads
+  + constructs snapshots; central hub.
+- **`infrastructure/state/stateStore.ts`** — persistence read/write
+  path; uses parser for read, must produce persisted shape for write.
+- **`infrastructure/state/stateSnapshotInspection.ts`** — diagnostic
+  reads.
+- **`application/start/internal/runtime/startStatePersistence.ts`** —
+  initial-state writes.
+- **`application/kickoff/internal/mutation/kickoff{State*}.ts`** (4
+  files) — kickoff state transitions.
+- **`application/pass/internal/normalPass/postAppendStateWriter.ts`** —
+  PASS state writes.
+- **`application/converged/internal/flow/convergedExecution.ts`** —
+  convergence state writes.
+- **`application/metaReviewGate/internal/state/metaReviewGateState*.ts`**
+  (3 files) — meta-review-gate state reads/writes.
+- **`application/askHuman/internal/mutation/askHumanRunningStateValidation.ts`**
+  + `askHumanRunningStateValidationChecks.ts` — explicit runtime
+  authority checks that mirror the parser's invariants; may be
+  candidate for removal post-Step-4b.
+
+The narrowing pattern most consumers will need:
+
+```ts
+// Before
+function readActiveRole(state: BubbleStateSnapshot): AgentRole | null {
+  return state.active_role;
+}
+
+// After
+function readActiveRole(state: BubbleStateSnapshot): AgentRole | null {
+  switch (state.kind) {
+    case "running_standard":
+    case "running_meta_review":
+    case "waiting_human":
+    case "ready_for_approval":
+      return state.active_role;
+    case "inactive_initial":
+    case "running_ideation":
+      return null;
+    case "terminal_clean":
+    case "terminal_failed":
+      return state.active_role;  // may or may not be null depending on §10.1 resolution
+  }
+}
+```
+
+For most consumers a **kind-guarding helper function** will be
+preferable to inline switches at every read site:
+
+```ts
+// domain/state/snapshot/guards.ts
+
+export function isRunningSnapshot(
+  s: BubbleStateSnapshot
+): s is BubbleStateRunningStandard | BubbleStateRunningMetaReview;
+
+export function isActiveSnapshot(
+  s: BubbleStateSnapshot
+): s is BubbleStateRunningStandard | BubbleStateRunningMetaReview | BubbleStateWaitingHuman | BubbleStateReadyForApproval;
+```
+
+These guards encapsulate the "which variants have active_* fields"
+question once, instead of repeating it in 30+ call sites.
+
+---
+
+## 6. Test impact map
+
+### 6.1 Direct internal-import tests (move alongside source)
+
+- `tests/v11/shared/metaReview/metaReviewSnapshot.test.ts` — imports
+  `shared/state/internal/metaReview/stateSchemaMetaReview.js` and
+  `stateSchemaMetaReviewRuntime.js`. After Step 3 these become
+  `domain/state/metaReview/parseMetaReviewSnapshot.js` and
+  `metaReviewRuntimeDelivery.js`. Test mirror move to
+  `tests/v11/domain/state/metaReview/`.
+
+### 6.2 Mirror-aligned tests (path update only)
+
+Tests under `tests/v11/shared/state/` mirror current `shared/state/`.
+After move, they relocate to `tests/v11/domain/state/`.
+
+Likely files (verify during Step 1 review):
+- `tests/v11/shared/state/bubbleStateSnapshotSchema*.test.ts`
+- `tests/v11/shared/state/executionContext.test.ts`
+- `tests/core/state/executionContext.test.ts` (cross-mirror — see §6.3)
+- Other `shared/state/`-mirror tests.
+
+### 6.3 Cross-mirror-root tests (precedent re-fire)
+
+- `tests/core/state/executionContext.test.ts` — under `tests/core/`,
+  but tests `shared/state/executionContext.ts` behavior. After move
+  to `domain/state/execution/`, the mirror root is wrong. Two options:
+  (a) move under `tests/v11/domain/state/execution/`, mirroring the new
+  source location (preferred — matches the metaReviewGate
+  cross-mirror-root precedent); (b) keep at `tests/core/state/` if
+  this test spans multiple state-related concerns. **Open question
+  §10.4.**
+
+### 6.4 Field-narrowing tests (Step 4b)
+
+Most tests that read snapshot fields directly will need narrowing
+updates. These are the same ~30-50 files as in §5.2's field-read
+category. Treatable mechanically using the guard helpers from §5.3.
+
+---
+
+## 7. Commit sequence
+
+### Step 2 — Move ownership (1 commit)
+
+**Scope:** `git mv` every file from `src/v11/shared/state/*` to
+`src/v11/domain/state/*` **without renaming or splitting**. Update
+all import paths in the 101 src files + 53 tests. Zero behavior
+change. Zero new files, zero file splits.
+
+**Affected files:** ~17 moved + ~154 import-path updates + no internal/
+restructure yet (the `internal/` subdir comes along as-is).
+
+**Commit message:** "Move shared/state/ package to domain/state/ (no
+structural changes)."
+
+**Validation:** typecheck + lint + fitness + full test + build.
+
+### Step 3 — Restructure into first-class sub-areas (3 commits)
+
+The internal/ wrapper unwrap is the structural rename. Splitting into
+three sub-commits keeps each diff readable:
+
+- **3a:** `domain/state/internal/schema/` → split into
+  `domain/state/snapshot/` (slice parsers) +
+  `domain/state/authority/` (the authority files). Drop the
+  `internal/schema/` subdir. Path updates only.
+- **3b:** `domain/state/internal/{metaReview,rework,execution}/` →
+  `domain/state/{metaReview,rework,execution}/`. Drop the `internal/`
+  wrapper entirely. Path updates only.
+- **3c:** Split the current `domain/state/execution/executionContext.ts`
+  (206 LOC, multiple responsibilities) into 5 single-file files per
+  §1's target tree. Also rename `bubbleStateSnapshotTypes.ts` →
+  `bubbleStateSnapshot.ts` and `executionContextTypes.ts` →
+  `executionContext.ts` (the "Types" suffix becomes redundant once
+  the directory's purpose is types-first).
+
+Behavior unchanged through all three. The lane is now in its target
+shape minus the variant model.
+
+### Step 4a — Parser semantics rename (1 commit)
+
+**Scope:** `validateBubbleStateSnapshot` → `parseBubbleStateSnapshot`
+(rename only, signature unchanged: still returns
+`ValidationResult<PersistedBubbleStateSnapshot>` for now — the variant
+model lands in 4b). `assertValidBubbleStateSnapshot` →
+`assertParsedBubbleStateSnapshot`. Doc comment added explaining the
+parser-as-boundary semantics.
+
+Also: rename `BubbleStateSnapshot` → `PersistedBubbleStateSnapshot` in
+`domain/state/snapshot/persistedBubbleStateSnapshot.ts` (file rename
+too). Step 4b will introduce a new `BubbleStateSnapshot` alias for the
+variant union; for now consumers see the old name pointing at the
+persisted shape.
+
+**Affected files:** the parser + ~17 direct callers across application/
++ infrastructure/.
+
+### Step 4b — Variant model + parser refactor + consumer narrowing (1 big commit)
+
+The substantive commit. Order of changes within:
+
+1. Add `BubbleStateSnapshot` discriminated union per §3, in
+   `domain/state/snapshot/bubbleStateSnapshot.ts`.
+2. Add `MetaReviewSubstate` discriminated union per §3.2.
+3. Add variant-construction helpers + variant-narrowing guards per
+   §3.3 and §5.3.
+4. Update `parseBubbleStateSnapshot` to return `BubbleStateSnapshot`
+   (the variant) instead of `PersistedBubbleStateSnapshot`. The
+   parser's body adds a kind-discrimination step at the end.
+5. Drop the authority files that are now subsumed by TypeScript
+   narrowing (the bulk of `authority/executionContextAuthority.ts`).
+   Keep only the cross-field value invariants in
+   `authority/snapshotInvariants.ts`.
+6. Update all ~30 narrowing consumers to use the kind discriminator
+   or the guards.
+7. Update ~10 construction consumers to use the variant-specific
+   helpers.
+8. Update ~30 tests that read fields to narrow appropriately.
+
+**Expected diff size:** ~50-80 files, ~500-1000 LOC churned. Single
+commit because intermediate states are typecheck-broken (a consumer
+expecting the broad type can't typecheck against the variant union
+until it narrows).
+
+### Step 5 — Test mirror cleanup (1 commit)
+
+The cross-mirror-root tests (§6.3) move to align with source
+locations. Most tests already aligned during Step 2.
+
+### Step 6 — Doc sync (1 commit)
+
+This manifest moves to "executed" status. Survey + template (the lane
+docs) get a brief cross-reference to the state model refactor as the
+domain-state precedent. Any architecture-fitness docs that referenced
+`shared/state/` get updates.
+
+### Total: ~7 commits
+
+| # | Step | Files | Behavior change |
+|---|------|------:|-----------------|
+| 1 | 2 | ~17 + 154 import updates | No |
+| 2 | 3a | ~6 | No |
+| 3 | 3b | ~5 | No |
+| 4 | 3c | ~5 + splits | No |
+| 5 | 4a | ~17 | No |
+| 6 | 4b | ~50-80 | **Yes** (type-level invariant enforcement; runtime authority code dropped) |
+| 7 | 5 | ~5 | No |
+| 8 | 6 | 2-3 docs | No |
+
+(Step 5 may collapse into the doc-sync commit if test moves are small.
+Currently estimated at 7-8 commits.)
+
+---
+
+## 8. Behavior changes (Step 4b only)
+
+The only commit with intentional behavior change is Step 4b. The
+visible-to-consumer changes:
+
+1. **Type signatures narrow.** Consumers receiving
+   `BubbleStateSnapshot` see a discriminated union. They must narrow
+   on `state.kind` (or use a guard) to read variant-specific fields.
+2. **Some runtime checks disappear.** Cases like "RUNNING state
+   requires active_role" no longer throw at runtime — the type
+   forbids constructing such a snapshot. If callers were depending
+   on the runtime check to validate untrusted input, they need to
+   use the parser instead.
+3. **Persisted-shape access via the persisted type.** Code paths that
+   work with the raw JSON (manual state.json edits, debug dumps) use
+   `PersistedBubbleStateSnapshot`. The parser converts.
+
+There are **no wire-format changes**, **no schema migrations**, and
+no changes to the state machine's transition semantics.
+
+---
+
+## 9. Validation strategy per commit
+
+Each step's commit must be green on all of:
+
+- `pnpm typecheck`
+- `pnpm lint`
+- `pnpm fitness:check:ci`
+- `pnpm test` (full)
+- `pnpm build`
+
+The riskiest commit is Step 4b. Suggested intermediate validation
+during 4b authoring:
+
+1. Define the variant types + helpers first, leave parser returning
+   old broad type. Typecheck the new code in isolation.
+2. Switch parser return type to variant union. This will cascade
+   typecheck errors across all ~30 narrowing call sites. Address
+   them iteratively. **All in the same commit.**
+3. Drop the authority-rule files that the variant model subsumes.
+4. Validate.
+
+---
+
+## 10. Open questions (resolve before Step 2)
+
+### 10.1 Active-field semantics on terminal states
+
+Do `APPROVED_FOR_COMMIT`, `COMMITTED`, `DONE`, `FAILED`, `CANCELLED`
+always have null active_*, or do they carry over from the prior
+running state? The current authority rules permit both (all-or-none
+rule, no positive requirement). Investigating `domain/state/machine.ts`
+transitions should answer this. If the answer is "always null after
+APPROVED_FOR_COMMIT", the `BubbleStateTerminalClean` and
+`BubbleStateTerminalFailed` variants tighten their `active_*` to
+`null` (4 fewer null-checks at read sites).
+
+### 10.2 RUNNING + round = 0 + meta-review
+
+Can a bubble be in `RUNNING + round = 0 + meta_review.status = active`?
+The current `BubbleStateRunningIdeation` variant in §3.1 says no
+(forbids active meta-review on ideation). Verify against the state
+machine.
+
+### 10.3 Cross-mirror-root test placement
+
+`tests/core/state/executionContext.test.ts` lives outside the
+`tests/v11/shared/state/` mirror tree. Should it move under
+`tests/v11/domain/state/execution/` (mirror alignment) or stay at
+`tests/core/state/`? The metaReviewGate precedent says move. Confirm.
+
+### 10.4 PersistedBubbleStateSnapshot reachability
+
+After Step 4b, who outside `domain/state/schema/` and
+`infrastructure/state/` needs access to `PersistedBubbleStateSnapshot`?
+If the answer is "essentially nobody", we can avoid exporting it
+broadly and make it a parser-input-only type. If serialization helpers
+or debug tooling need it, mark explicitly.
+
+### 10.5 Construction-helper signatures
+
+§3.3 sketched `createRunningStandardSnapshot(input: ...)` helpers but
+didn't specify the input shape. Final shapes (e.g., do they accept the
+prior snapshot for derivation? do they accept explicit field-by-field
+arguments?) should be decided during Step 4b prep, not during Step 2.
+
+### 10.6 `domain/state/reworkIntent.ts` placement
+
+The existing `domain/state/reworkIntent.ts` (150 LOC) is a domain
+helper for rework intents. Should it move into `domain/state/rework/`
+alongside the rework slice parser, or stay at the `domain/state/`
+root? **Recommendation:** move into `rework/` for cohesion.
+
+---
+
+## 11. Non-goals
+
+- **Renaming `BubbleLifecycleState` values** (e.g., `RUNNING` →
+  `RUNNING_STANDARD`). The persisted enum is stable.
+- **Schema migration of existing state.json files.** No tooling
+  written, no migration scripts. The parser handles all valid
+  persisted shapes including past variations.
+- **Refactoring `shared/metaReview/` into `domain/metaReview/`.**
+  Only the state-snapshot fragment of meta-review moves to
+  `domain/state/metaReview/`. The broader `shared/metaReview/`
+  (delivery, outcomes, transcript helpers) is a separate later
+  decision.
+- **Modeling `BubbleExecutionContext` itself as a variant.** Today's
+  `BubbleExecutionContext` is broadly typed but the meta-review
+  variant is captured via the
+  `BubbleMetaReviewExecutionContext` projection. Splitting the union
+  further (e.g., per-active-role variants) is not in this program.
+- **Moving the state machine to a fully type-driven transition
+  enforcer.** `transitions.ts` stays as a runtime map; the variant
+  model makes transition input/output stricter but doesn't replace
+  the matrix.
+
+---
+
+## 12. Approval
+
+Once §10 open questions are resolved (in review), this manifest is
+the contract. Step 2 may then begin. Deviations during execution
+require an amendment to this document in the same commit that
+introduces them.
