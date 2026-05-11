@@ -36,7 +36,7 @@ restructuring opportunity).
 | Lane | Top | Int | Sub | Defaults | CLI | Score | Status |
 |------|----:|:---:|----:|---------:|:---:|------:|--------|
 | status | 13 | no | — | yes | yes | 37 | unstructured (mixed CLI + command) |
-| watchdog | 12 | no | — | yes | yes | 35 | unstructured (multi-concern) |
+| watchdog | 2 | yes | 4 | yes | yes | — | structured (Tier 2; refactored 2026-05-11) |
 | metaReviewGate | 8 | yes | 9 | yes | — | — | structured (Tier 2; refactored 2026-05-11) |
 | merge | 2 | yes | 5 | yes | yes | — | structured (Tier 2; refactored 2026-05-12) |
 | commit | 4 | yes | 5 | yes | yes | — | structured (Tier 2; refactored 2026-05-11) |
@@ -212,10 +212,47 @@ from-scratch cases:
   reconcile's CLI options parser is inline in `reconcileCliCommand.ts`
   (no separate `*CommandCliOptions.ts` cluster like restart had).
   See the template's `application/reconcile/` worked example.
+- **watchdog** (was 11 top-level + no internal/; now 2 top-level + 4
+  sub-areas — `error/`, `flow/`, `paneActivity/`, `pendingRework/`).
+  The original survey row recorded 12 top-level files; the actual count
+  at refactor time was 11, with no `watchdogCliCommand.ts` ever
+  present in the lane. The third from-scratch case and the richest in
+  exceptions to date: the lane fired four findings against the
+  textbook from-scratch shape. (1) The `BubbleWatchdogError` class
+  stayed in `shared/watchdog/` rather than moving into
+  `internal/error/`, because the infrastructure
+  `watchdogPaneActivityStore.ts` throws it via
+  `createBubbleWatchdogError` — demoting the class to
+  `application/watchdog/internal/error/` would have created an
+  infrastructure → application/internal import (Module Depth Check
+  violation). `internal/error/` therefore holds only the composition
+  (`watchdogCommandRuntime.ts` re-export + thrower, plus
+  normalization). (2) The Contract's optional dependency override
+  was typed `sampleWatchdogPaneActivity?: typeof sampleWatchdogPaneActivity`,
+  which pinned the root-public Contract to the implementation file
+  through `import type`. The merge precedent's type-relocation
+  pre-cleanup applied with the inverse direction (into the Contract,
+  not out of it): `PaneActivitySampleResult` hoisted to Contract +
+  named `SampleWatchdogPaneActivityFn` introduced + intra-lane
+  consumers re-targeted. (3) No `watchdogCliCommand.ts` exists — the
+  parser, renderer, and runner are inline in
+  `src/cli/commands/bubble/watchdog.ts` — so the top-level closed at
+  2 root-public files rather than the 3-file shape that restart and
+  reconcile produced. (4) The cross-mirror-root test pre-cleanup from
+  the metaReviewGate precedent re-fired:
+  `tests/v11/shared/watchdog/watchdogPaneActivitySampler.test.ts`
+  covered application-side behavior and moved to
+  `tests/v11/application/watchdog/internal/paneActivity/...` in a
+  dedicated commit before the source moves. The `flow/` sub-area
+  bundles three files (`watchdogCommandFlow.ts`,
+  `watchdogCommandRouting.ts`, `watchdogMetaReviewRouting.ts`)
+  following the merge precedent ("one sub-area for the whole flow
+  lifecycle: routing + flow primitives + meta-review specialization").
+  See the template's `application/watchdog/` worked example.
 
 Unstructured (no internal/ at all):
 
-- **status** (13), **watchdog** (12), **reply** (7).
+- **status** (13), **reply** (7).
 
 These follow the standard naming and have the data to slot into the Tier 2
 shape; they just need `internal/<sub-areas>/` introduced.
@@ -331,6 +368,33 @@ presentation helpers and should move to `internal/cli/` (or even into the
    reconcile keeps the parser inline in `reconcileCliCommand.ts`, so
    no `internal/cli/` exists.
 
+   **watchdog was the third from-scratch refactor — and the
+   richest in exceptions to date.** Four findings landed in one
+   sequence: a *shared-resident error class* (the
+   `BubbleWatchdogError` class stays in `shared/watchdog/` because
+   infrastructure throws it via `createBubbleWatchdogError`, so
+   `internal/error/` holds only the composition — a new exception
+   type that inverts the commit/merge/restart/reconcile pattern),
+   a *type-relocation via `typeof`* (the Contract's
+   `sampleWatchdogPaneActivity?: typeof sampleWatchdogPaneActivity`
+   override pinned the public Contract to an intra-only Sampler;
+   the merge type-relocation precedent applied with the inverse
+   direction — types hoisted *into* the Contract because the
+   function-shape is part of the dependency port API), a *missing
+   `*CliCommand.ts`* (no application-side CLI integration helper
+   exists; the parser/renderer/runner are inline in
+   `src/cli/commands/bubble/watchdog.ts`, so the top-level closes
+   at 2 root-public files rather than the 3-file restart/reconcile
+   shape — deepening the reconcile finding that
+   `internal/cli/` is not fixed: nor is the root-public
+   `*CliCommand.ts`), and a *cross-mirror-root test pre-cleanup
+   re-fire* (the metaReviewGate precedent applied to one sampler
+   test mis-mirrored under `tests/v11/shared/watchdog/`).
+   The watchdog refactor also validated that `flow/` can host the
+   merge-style bundle of routing + flow primitives + meta-review
+   specialization (three files) when no separate orchestration
+   file exists at top-level.
+
 4. **Half-done Tier 2 lanes shared a pattern.** At the time of the original
    survey, `commit`, `merge`, `metaReview`, and `list` all had a single
    internal sub-area (`pipeline/`, `pipeline/`, `submit/`, `projection/`).
@@ -412,9 +476,9 @@ future contributor reading "Tier 2 commands typically have an
 `internal/finalization/` sub-area" can verify the claim against the actual
 lane inventory above.
 
-Seven lane refactors have validated the template. Five followed the
-half-done procedure; two (`restart`, `reconcile`) validated the
-from-scratch procedure variant. In sequence:
+Eight lane refactors have validated the template. Five followed the
+half-done procedure; three (`restart`, `reconcile`, `watchdog`)
+validated the from-scratch procedure variant. In sequence:
 `list` (commit `da12ed98`, single-commit move), `commit` (commits
 `8d603cff`, `9b2b9755`, `2b5c6c71`, `2115f606`, four-commit sequence with
 a public-surface split for `remoteCommitContinuitySync.ts`), `merge`
@@ -432,10 +496,17 @@ flat `internal/`, and a final 1-file `prompts/` sub-area demotion from
 the lane root), `restart` (commits `cc83c803` → `69bf1cb2`,
 four-sub-area introduction from a fully flat starting state with no
 pre-cleanup commit because the naming-role defaults agreed with the
-import scan on every top-level file), and `reconcile` (commits
-`a4729dc1` → this commit, three-sub-area introduction from a fully
+import scan on every top-level file), `reconcile` (commits
+`a4729dc1` → `4c5a3325`, three-sub-area introduction from a fully
 flat starting state with a merge-style type-relocation pre-cleanup
 because the defaults layer pinned an intra-only DepRes type — the
-first from-scratch refactor where a naming-role exception fired).
-The template's "Worked examples" section captures the lessons
-learned; the inventory rows above record the post-refactor state.
+first from-scratch refactor where a naming-role exception fired),
+and `watchdog` (commits `c4faf095` → this commit, four-sub-area
+introduction from a fully flat starting state with two pre-cleanup
+commits — a typeof-direction type-relocation into the Contract and a
+cross-mirror-root sampler test relocation — and three new exception
+findings: shared-resident error class, type-relocation via `typeof`
+on an implementation function, and a goal-state without an
+application-side `*CliCommand.ts`). The template's "Worked examples"
+section captures the lessons learned; the inventory rows above record
+the post-refactor state.

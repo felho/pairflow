@@ -87,6 +87,23 @@ direct external imports but appears in
 `listBubbles(..., dependencies: ListReadModelDependencies)` — it stays
 root-public.
 
+**Exception (shared-resident error class):** when the lane's error
+class has cross-area throw-callers — i.e. `infrastructure/<X>/...` or
+`domain/<X>/...` constructs and throws it, not only the application
+lane — keep the class itself in `shared/<lane>/` instead of moving it
+into `application/<lane>/internal/error/`. Demoting the class would
+force the cross-area caller to import from
+`application/<lane>/internal/`, a Module Depth Check violation. The
+lane's `internal/error/` then holds only the composition (re-export
+of the shared class, thrower, normalization). Concrete example from
+the `watchdog` lane: `BubbleWatchdogError` lives in
+`shared/watchdog/watchdogCommandError.ts` because
+`infrastructure/artifact/watchdog/watchdogPaneActivityStore.ts`
+throws it via `createBubbleWatchdogError`. The
+`*CommandError.ts` row default ("root-public when cross-lane;
+internal when single-lane") is the within-application choice; this
+exception governs the cross-area case that sits outside that axis.
+
 The survey doc lists which lanes use each pattern.
 
 ## Visibility tiers
@@ -366,19 +383,26 @@ collapses to when no naming-role exception fires.
 
 ### Worked examples
 
-Seven lane refactors have applied this procedure end-to-end. Five
-started from a half-done state and ended at structured Tier 2; the
-sixth (`restart`) and seventh (`reconcile`) started from fully flat
-lanes (no `internal/` at all) and validated the from-scratch
-procedure variant. The first five worked examples each document one
-or more naming-role exceptions (signature-reference type, cross-lane
+Eight lane refactors have applied this procedure end-to-end. Five
+started from a half-done state and ended at structured Tier 2; three
+(`restart`, `reconcile`, `watchdog`) started from fully flat lanes
+(no `internal/` at all) and validated the from-scratch procedure
+variant. The first five worked examples each document one or more
+naming-role exceptions (signature-reference type, cross-lane
 split-extraction, type-relocation, phantom cross-lane consumer,
 contract-test path-pin); the `restart` worked example is the
 canonical "no exception fired" reference for from-scratch lanes; the
 `reconcile` worked example is the first case showing that
 from-scratch lanes can *still* fire a naming-role exception
 (specifically the merge-style type-relocation), so the from-scratch
-variant is not a synonym for "no pre-cleanup needed."
+variant is not a synonym for "no pre-cleanup needed"; the `watchdog`
+worked example introduces three new exception variants on a single
+from-scratch lane (shared-resident error class, type-relocation via
+`typeof` on an implementation function, and a goal-state without an
+application-side `*CliCommand.ts`), generalizing the from-scratch
+path to: introduce the public/internal boundary fresh, project
+sub-areas from naming clusters, fire any of the catalogued exception
+precedents as needed, then run the per-sub-area moves.
 
 #### `application/list/` (refactored 2026-05-10, commit `da12ed98`)
 
@@ -1014,6 +1038,249 @@ Findings worth carrying forward:
   path-pin) as needed, then run the per-sub-area moves.* No new
   exception types appeared in reconcile; the existing exception
   catalog is sufficient through 7 refactored lanes.
+
+#### `application/watchdog/` (refactored 2026-05-11, commits `c4faf095` → this commit)
+
+**This is the third from-scratch Tier 2 case** — and the first
+where a from-scratch path fired three new exception variants in
+one sequence, two of which are exception *types* not previously
+documented (the third is a known-type re-fire). The lane began
+with eleven top-level files flat at the lane root and no
+`internal/` directory at all. Unlike restart (textbook
+default-and-scan agreement) or reconcile (single merge-style
+type-relocation), watchdog's import scan diverged from the
+naming-role defaults on three independent axes: the error class
+had cross-area throw-callers in `infrastructure/`, the Contract's
+optional dependency override pinned an intra-only Sampler via a
+`typeof` reference, and there was no application-side
+`*CliCommand.ts` at all. The from-scratch procedure absorbs all
+three; the new findings extend the exception catalog rather than
+revising the procedure itself.
+
+Worked-example structure note: this entry follows the
+restart/reconcile layout (goal-state introduction up front,
+per-sub-area moves as a mechanical postscript) and lists the
+three new exception variants together so the watchdog reference
+reads as the canonical "rich-exception from-scratch" case.
+
+Before: 11 top-level files, no `internal/`. Naming-role coverage:
+`*CommandApi`, `*CommandContract`, `*CommandRuntime` (composition
+only — the error class itself lives in `shared/watchdog/`),
+`*CommandErrorNormalization`, plus six non-role files whose names
+encode lane-specific concerns (`*CommandFlow`, `*CommandRouting`,
+`*MetaReviewRouting`, `*PaneActivityMonitoring`,
+`*PaneActivitySampler`, `*PendingReworkIntent`,
+`*PendingReworkPersistence`). No `*CliCommand` file exists at the
+lane root.
+
+After: 2 top-level root-public files plus
+`internal/{error,flow,paneActivity,pendingRework}/` (four
+sub-areas, nine internal files). Top-level: `watchdogCommandApi.ts`
+(canonical entry, re-exports `BubbleWatchdogError`),
+`watchdogCommandContract.ts` (dependency port + result types +
+the hoisted `PaneActivitySampleResult` union and
+`SampleWatchdogPaneActivityFn` function type). The lane closes
+without a `*CliCommand.ts` root-public file because the CLI
+integration is entirely owned by `src/cli/commands/bubble/watchdog.ts`
+(parser via `parseArgs`, renderer, and runner all inline).
+
+**Goal-state introduction (the from-scratch step the half-done
+procedure skips, with three new exception variants):**
+
+- **Public surface decision.** With no pre-existing `internal/`,
+  the public/internal boundary is decided fresh. The naming-role
+  table defaults proposed three potential root-public files
+  (`Api`, `Contract`, `CliCommand`), but the import scan retired
+  the third because no `watchdogCliCommand.ts` exists — the
+  CLI-integration role is fulfilled outside the application lane
+  in `src/cli/commands/bubble/watchdog.ts`. Goal-state closes at
+  two root-public files. This is a new from-scratch shape: prior
+  worked examples (restart, reconcile) ended with three
+  root-public files because their `*CliCommand.ts` cluster was
+  present at the lane root. The relevant marker is the presence
+  or absence of `*CliCommand.ts` at the lane root, not the
+  presence of CLI integration in general — watchdog has CLI
+  integration, it just lives elsewhere.
+- **Sub-area projection from naming clusters.** The nine
+  intra-only files clustered cleanly: `Runtime` +
+  `ErrorNormalization` → `error/` (commit/merge/restart/reconcile
+  `*Runtime.ts` content rule applies); `Flow` + `Routing` +
+  `MetaReviewRouting` → `flow/` (merge precedent for "one
+  sub-area for the whole flow lifecycle"); `PaneActivityMonitoring`
+  + `PaneActivitySampler` → `paneActivity/`;
+  `PendingReworkIntent` + `PendingReworkPersistence` →
+  `pendingRework/`. The `flow/` bundle is heavier than merge's
+  (three intra files vs. four in merge, but watchdog's Routing
+  *is* the lifecycle dispatcher rather than a small eligibility
+  check), reinforcing that the merge precedent generalizes when
+  routing logic and flow primitives co-vary.
+
+**Three new exception variants fired (and one prior exception
+re-fired):**
+
+- **Shared-resident error class (new exception type).**
+  `BubbleWatchdogError` is constructed and thrown by
+  `infrastructure/artifact/watchdog/watchdogPaneActivityStore.ts`
+  (via `createBubbleWatchdogError`), not only by the application
+  lane. Demoting the class into
+  `application/watchdog/internal/error/` would have created an
+  `infrastructure/ → application/<lane>/internal/` import — a
+  Module Depth Check violation. The class therefore stays in
+  `shared/watchdog/watchdogCommandError.ts`, and the application
+  lane's `internal/error/` holds only the composition
+  (`watchdogCommandRuntime.ts` re-exports the class and supplies
+  `throwAsBubbleWatchdogError`, plus
+  `watchdogCommandErrorNormalization.ts`). This is the inverse
+  of the commit/merge/restart/reconcile pattern (where the error
+  class moved into `internal/error/`). Captured as the
+  shared-resident error-class exception at the table level
+  (above), because it directly amends the
+  `*CommandError.ts` row's "root-public when cross-lane;
+  internal when single-lane" default.
+- **Type-relocation via `typeof` reference (new exception
+  variant).** Watchdog's Contract typed its optional dependency
+  override as `sampleWatchdogPaneActivity?: typeof
+  sampleWatchdogPaneActivity`, with the implementation function
+  imported from `./watchdogPaneActivitySampler.js`. The
+  root-public Contract therefore pinned the Sampler's location:
+  moving Sampler under `internal/paneActivity/` would have made
+  the public Contract import from `internal/`. The merge
+  precedent's type-relocation applied with the *inverse
+  direction*: instead of moving the offending type *out of*
+  Contract (as merge did with `RunMergeCommandPipelineInput`),
+  watchdog hoisted `PaneActivitySampleResult` *into* Contract
+  and introduced a named `SampleWatchdogPaneActivityFn` function
+  type. The reason for the inverse: the function shape is part
+  of the dependency port API (the dependency
+  `sampleWatchdogPaneActivity?` lives in `BubbleWatchdogDependencies`,
+  which is the public contract), so Contract is the conceptually
+  correct home for the type alias. Same precedent, opposite
+  direction — both eliminate a public-to-internal import before
+  the file move. New finding worth carrying forward: **when a
+  Contract types an optional dependency using
+  `typeof <implementation-function>`, the Contract is pinning
+  the implementation file. Pre-cleanup is to define a named
+  function-type alias in Contract and to relocate the function's
+  return type (and any other dependent types) INTO Contract.**
+- **Missing `*CliCommand.ts` (new goal-state shape).** Watchdog
+  has CLI integration via `src/cli/commands/bubble/watchdog.ts`,
+  but no application-side `watchdogCliCommand.ts` file exists at
+  the lane root. The parser, renderer, and runner are all inline
+  in the CLI-area-owned file. Goal-state closes at two
+  root-public files (Api + Contract) rather than three. This
+  deepens reconcile's `internal/cli/` finding: reconcile observed
+  that `internal/cli/` is not a fixed feature of the from-scratch
+  shape (it appears only when a separate `*CommandCliOptions.ts`
+  parser file exists); watchdog observes the *next step* — when
+  the application-side `*CliCommand.ts` integration helper also
+  doesn't exist, the lane's top-level closes at 2 root-public
+  files (Api + Contract). New finding worth carrying forward:
+  **the presence of `*CliCommand.ts` at the lane root, not the
+  presence of CLI integration in general, is what triggers the
+  3-root-public from-scratch shape. Lanes whose CLI parser,
+  renderer, and runner all live inline in
+  `src/cli/commands/<lane>.ts` close at 2 root-public files
+  (Api + Contract).**
+- **Cross-mirror-root test pre-cleanup (metaReviewGate precedent
+  re-fired).** `tests/v11/shared/watchdog/watchdogPaneActivitySampler.test.ts`
+  imported `sampleWatchdogPaneActivity` from
+  `src/v11/application/watchdog/watchdogPaneActivitySampler` — the
+  test's primary surface is application-side, so the
+  `tests/v11/shared/...` mirror root was wrong. Same metaReviewGate
+  precedent: move the test under
+  `tests/v11/application/watchdog/internal/paneActivity/` in a
+  dedicated pre-cleanup commit before the src moves, so the later
+  commits stay focused on production layout. The
+  metaReviewGate finding (commit `fc3b96de`) generalized
+  cleanly — no new template language needed, just the re-fire
+  reference. The other test still under
+  `tests/v11/shared/watchdog/` (`watchdogPaneActivityStore.test.ts`)
+  covers infrastructure-side behavior and is out of scope for the
+  application-lane refactor; its mirror-root is a separate
+  question for the infrastructure-side test layout.
+
+Seven-commit sequence (two pre-cleanup + four sub-area moves +
+doc-sync):
+
+1. **Type-relocation pre-cleanup** (`c4faf095`).
+   `PaneActivitySampleResult` hoisted from
+   `watchdogPaneActivitySampler.ts` into
+   `watchdogCommandContract.ts`; new
+   `SampleWatchdogPaneActivityFn` function-type introduced in
+   Contract. `BubbleWatchdogDependencies.sampleWatchdogPaneActivity?`
+   switched from `typeof sampleWatchdogPaneActivity` to
+   `SampleWatchdogPaneActivityFn`. Intra-lane consumers of
+   `PaneActivitySampleResult` (`watchdogCommandRouting.ts`,
+   `watchdogPaneActivityMonitoring.ts`, and the same-lane Api
+   test) re-targeted to import from Contract. Sampler now imports
+   its own return type from Contract. The runtime sampler value
+   and the `WATCHDOG_PANE_*` timing constants stay in
+   `watchdogPaneActivitySampler.ts`. Single canonical public
+   definition lives on Contract; Sampler no longer carries the
+   duplicate.
+2. **Cross-mirror-root test relocation** (`d4038596`).
+   `tests/v11/shared/watchdog/watchdogPaneActivitySampler.test.ts`
+   → `tests/v11/application/watchdog/internal/paneActivity/`.
+   Import paths within the test deepen by two segments
+   (`../../../../` → `../../../../../../`) to reach `src/` from
+   the new mirror location.
+3. **`internal/error/`** (`349ebe02`). Two files
+   (`watchdogCommandRuntime.ts` re-exporting `BubbleWatchdogError`
+   from `shared/watchdog/` plus `throwAsBubbleWatchdogError`,
+   `watchdogCommandErrorNormalization.ts`). The error class
+   itself stays shared-resident (see exception above). Mirror
+   test `watchdogCommandErrorNormalization.test.ts` moves
+   alongside.
+4. **`internal/flow/`** (`3000eca4`). Three files
+   (`watchdogCommandFlow.ts`, `watchdogCommandRouting.ts`,
+   `watchdogMetaReviewRouting.ts`). Bundled under one sub-area
+   per the merge precedent. No mirror tests for these three
+   files individually (covered through the Api test).
+5. **`internal/paneActivity/`** (`533b4f6c`). Two files
+   (`watchdogPaneActivityMonitoring.ts`,
+   `watchdogPaneActivitySampler.ts`). The relocated sampler test
+   from commit 2 deepens its sampler import path to the new
+   location.
+6. **`internal/pendingRework/`** (`25289153`). Two files
+   (`watchdogPendingReworkIntent.ts`,
+   `watchdogPendingReworkPersistence.ts`). Last sub-area move.
+7. **Closeout (this commit).** Survey + template doc-sync;
+   leftover-hunt confirmed (no empty directories, no orphan
+   references). The watchdog lane is the third from-scratch
+   case in the inventory.
+
+Findings worth carrying forward (in addition to the three new
+exception variants and the precedent re-fire above):
+
+- **Sample size 3 stabilizes the from-scratch path.** Three
+  from-scratch refactors have now landed (restart, reconcile,
+  watchdog). They diverge on exception firing (0, 1, 3+1 re-fire)
+  and on sub-area count (4, 3, 4), confirming that the
+  from-scratch procedure variant is robust to wide variation in
+  exception load. Restart's "no exception fired" textbook case
+  remains the simplest reference; reconcile demonstrates a single
+  exception fire; watchdog demonstrates a multi-exception fire
+  with new exception types. The procedure (introduce the
+  public/internal boundary fresh, project sub-areas from naming
+  clusters, fire any catalogued exception precedents as needed,
+  run the per-sub-area moves) absorbs all three patterns. The
+  exception catalog now totals **eight** documented variants
+  (signature-reference type, cross-lane split-extraction,
+  type-relocation [out-of-Contract], type-relocation via `typeof`
+  [into-Contract], phantom cross-lane consumer, contract-test
+  path-pin, shared-resident error class, missing `*CliCommand.ts`
+  goal-state shape).
+- **`flow/` can bundle routing + flow primitives when routing
+  IS the dispatcher.** Watchdog's `internal/flow/` holds the
+  central lifecycle dispatcher (`watchdogCommandRouting.ts`'s
+  `resolveWatchdogLifecycleRoute`) alongside the supporting
+  primitives (`watchdogCommandFlow.ts`,
+  `watchdogMetaReviewRouting.ts`). Splitting `routing/` off
+  would have created an artificial boundary between the
+  dispatcher and the steps it dispatches. The merge precedent's
+  "one sub-area for the whole flow lifecycle" generalizes to
+  cases where routing is the central orchestration, not only to
+  cases where routing is a small eligibility check.
 
 ## Module Depth Check applies
 
