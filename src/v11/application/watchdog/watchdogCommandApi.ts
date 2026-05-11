@@ -13,14 +13,14 @@ import type {
 } from "./watchdogCommandContract.js";
 import {
   throwAsBubbleWatchdogError
-} from "./watchdogCommandRuntime.js";
+} from "./internal/error/watchdogCommandRuntime.js";
 import { type WatchdogRuntimeContext } from "./watchdogCommandFlow.js";
 import { resolveWatchdogLifecycleRoute } from "./watchdogCommandRouting.js";
 import {
   maybeMonitorWatchdogPaneActivity,
   type WatchdogPaneActivityState
 } from "./watchdogPaneActivityMonitoring.js";
-export { BubbleWatchdogError } from "./watchdogCommandRuntime.js";
+export { BubbleWatchdogError } from "./internal/error/watchdogCommandRuntime.js";
 
 export async function runBubbleWatchdog(
   input: BubbleWatchdogInput,

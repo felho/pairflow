@@ -18,7 +18,7 @@ import type {
   ReadStateSnapshotPort,
   WriteStateSnapshotPort
 } from "../../ports/stateSnapshots.js";
-import { BubbleWatchdogError } from "./watchdogCommandRuntime.js";
+import { BubbleWatchdogError } from "./internal/error/watchdogCommandRuntime.js";
 
 function buildEscalationQuestion(
   bubbleId: string,

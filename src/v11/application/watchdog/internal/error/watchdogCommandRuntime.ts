@@ -2,8 +2,8 @@ import { normalizeBubbleWatchdogError } from "./watchdogCommandErrorNormalizatio
 import {
   BubbleWatchdogError,
   createBubbleWatchdogError
-} from "../../shared/watchdog/watchdogCommandError.js";
-import { isNamedError } from "../../shared/errors/namedError.js";
+} from "../../../../shared/watchdog/watchdogCommandError.js";
+import { isNamedError } from "../../../../shared/errors/namedError.js";
 
 export { BubbleWatchdogError, createBubbleWatchdogError };
 

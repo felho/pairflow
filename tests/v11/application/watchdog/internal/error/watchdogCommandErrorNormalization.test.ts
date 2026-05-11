@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { BubbleLookupError } from "../../../../src/v11/infrastructure/executor/workspace/bubbleLookup.js";
+import { BubbleLookupError } from "../../../../../../src/v11/infrastructure/executor/workspace/bubbleLookup.js";
 import {
   BubbleWatchdogError,
   createBubbleWatchdogError
-} from "../../../../src/v11/application/watchdog/watchdogCommandRuntime.js";
-import { normalizeBubbleWatchdogError } from "../../../../src/v11/application/watchdog/watchdogCommandErrorNormalization.js";
+} from "../../../../../../src/v11/application/watchdog/internal/error/watchdogCommandRuntime.js";
+import { normalizeBubbleWatchdogError } from "../../../../../../src/v11/application/watchdog/internal/error/watchdogCommandErrorNormalization.js";
 
 describe("watchdogCommandErrorNormalization", () => {
   it("preserves BubbleWatchdogError instances", () => {
