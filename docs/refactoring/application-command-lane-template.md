@@ -261,6 +261,28 @@ abstract layers. Pick names from observed concerns: `validation`, `persistence`,
 `routing`, `finalization`, `mutation`, `delivery`, `prompts`, `remote`,
 `runtime`. New names are fine when the concern is genuinely lane-specific.
 
+**Exception (mutation submodule pinned at lane root):** when a lane
+contains a *side-effect mutation executor* — a file that writes
+transcript or state directly through the canonical
+`appendProtocolEnvelope` and `writeStateSnapshot` ports — the
+executor and its intra-only sub-Contract belong under
+`application/<command>/mutation/` as a *lane-root submodule*, NOT
+under `internal/mutation/`. The fitness `boundary` check pins
+legitimate mutation executors to this canonical location; placing
+them under `internal/mutation/` requires a typed `mutation_executor`
+exception in `tools/fitness/policy.json`, which exists for
+deliberate non-conventional placements rather than for aesthetic
+uniformity. The lane-root `mutation/` submodule coexists with the
+lane's `internal/` directory; the goal-state is then
+`Api + Contract + mutation/ + internal/<other-sub-areas>/` rather
+than `Api + Contract + internal/<all-sub-areas>/`. Concrete example
+from the `reply` lane: `mutation/replyMutationExecution.ts` writes
+state and transcript directly, and its sub-Contract
+`mutation/replyMutationExecutionContract.ts` sibling-joins it at
+the same lane-root path. See the `application/reply/` worked
+example for the discovery sequence and the revert that established
+this rule.
+
 **Reference lane:** `application/pass/`. Top-level: 4 files. Internal:
 `autoConverge/`, `normalPass/`, `reviewerDelivery/`, `verification/` (38 files
 total). Each internal sub-area corresponds to a real protocol phase, not an
@@ -383,10 +405,10 @@ collapses to when no naming-role exception fires.
 
 ### Worked examples
 
-Nine lane refactors have applied this procedure end-to-end. Five
-started from a half-done state and ended at structured Tier 2; four
-(`restart`, `reconcile`, `watchdog`, `status`) started from fully
-flat lanes (no `internal/` at all) and validated the from-scratch
+Ten lane refactors have applied this procedure end-to-end. Five
+started from a half-done state and ended at structured Tier 2; five
+(`restart`, `reconcile`, `watchdog`, `status`, `reply`) started from
+fully flat (or near-flat) lanes and validated the from-scratch
 procedure variant. The first five worked examples each document one
 or more naming-role exceptions (signature-reference type, cross-lane
 split-extraction, type-relocation, phantom cross-lane consumer,
@@ -414,7 +436,34 @@ and *pure-barrel kept as Module-Depth-protective CLI surface* (when
 the lane root holds a small `*CliCommand.ts` that is **only** a
 re-export of sister CLI files, keep the barrel root-public rather
 than dropping it — the barrel is what prevents `src/cli/` consumers
-from reaching into `internal/cli/`).
+from reaching into `internal/cli/`). The `reply` worked example is
+the first from-scratch case where the lane's goal-state retained a
+lane-root submodule rather than closing at a pure
+`Api + Contract + internal/` shape, and the first to stress the
+fitness-boundary axis directly: the lane began with a pre-existing
+one-file `mutation/` subdir at the lane root (plus the
+sub-Contract sitting as a sibling at the lane root), the initial
+hypothesis was to demote `mutation/` to `internal/mutation/`
+alongside the other intra-only sub-areas, and the fitness
+`boundary` check rejected the demotion because legitimate mutation
+executors (files that write transcript and state directly through
+the canonical ports) are pinned to
+`src/v11/application/<command>/mutation/**` as the canonical
+location. The revert preserved the Q1 sibling decision for the
+sub-Contract (sibling-joining the executor at the fitness-pinned
+location rather than at `internal/mutation/`), and three new
+findings landed on the placement-rule axis: *mutation submodule
+fitness-pinned at `<command>/mutation/`* (the new placement rule
+itself), *inline defaults composition in DepRes* (reply is the
+first refactored lane with no `defaults/<lane>/` directory; the
+defaults bundle lives inline in DepRes and recomposes
+cross-application-lane defaults through preserved relative-path
+imports — preserved-existing composition, not a recommended new
+pattern), and *cross-lane Contract signature-reference pin* (the
+`list` lane's intra-lane signature-reference exception re-fired in
+its cross-lane variant: another application lane's Contract pins
+the target Contract's types through real signature parameters,
+requiring no new template language).
 
 #### `application/list/` (refactored 2026-05-10, commit `da12ed98`)
 
@@ -1567,6 +1616,323 @@ non-exception findings above):
   files; lanes with many intra-only files clustered around few
   concerns close with fewer sub-areas than the file count would
   suggest.
+
+#### `application/reply/` (refactored 2026-05-11, commits `f9eac48e` → this commit)
+
+**This is the fifth from-scratch Tier 2 case** — and the first
+where the lane's goal-state retained a *lane-root submodule*
+(`mutation/`) rather than closing at a pure
+`Api + Contract + internal/` shape. The lane began with seven
+top-level `.ts` files plus a pre-existing one-file `mutation/`
+subdir at the lane root and no `internal/` directory at all. The
+initial goal-state hypothesis was to demote `mutation/` under
+`internal/mutation/` alongside the other intra-only sub-areas
+(`error/`, `preparation/`) — the "Pre-existing named submodule at
+lane root demotes to internal/<name>/" intuition. The hypothesis
+broke against the fitness `boundary` check, which pins legitimate
+mutation executors (files that call `appendProtocolEnvelope` and
+`writeStateSnapshot` directly) to
+`src/v11/application/<command>/mutation/**` as the canonical
+location. The mutation cluster reverted to the fitness-pinned
+lane-root path, and the sub-Contract sibling-joined the executor
+there. Three new findings landed on the **placement-rule axis**
+(the same non-exception axis status opened): the mutation
+submodule pin itself, the inline-defaults-composition shape in
+DepRes with no `defaults/<lane>/` directory, and a cross-lane
+variant of the `list` lane's signature-reference exception. No
+new exception variant in the watchdog catalog fired.
+
+Worked-example structure note: this entry follows the
+restart/reconcile/watchdog/status layout (goal-state introduction
+up front, per-sub-area moves as a mechanical postscript), with one
+additional sub-section calling out the **mid-refactor goal-state
+revision** triggered by the fitness check. The revert is documented
+explicitly because it is the canonical lesson — the fitness rule is
+the source of truth on mutation executor placement, not the
+file-tree-uniformity intuition; future refactors should consult the
+boundary check before assuming a lane-root submodule can demote.
+
+Before: 7 top-level `.ts` files + 1 lane-root submodule
+(`mutation/`, one file), no `internal/`. Naming-role coverage:
+`*CommandApi`, `*CommandContract`, `*CommandError` (separate Error
+class file at lane root), `*CommandErrorNormalization`,
+`*CommandInputNormalization`, `*CommandDependencyResolution`, plus
+a `replyMutationExecutionContract.ts` sub-Contract at lane root
+(intra-only, pairing the `mutation/replyMutationExecution.ts` file
+inside the subdir). No `*CliCommand.ts` file at the lane root —
+the CLI parser, help, and runner live entirely inline in
+`src/cli/commands/bubble/reply.ts`. No `defaults/reply/` directory
+— the defaults bundle lives inline in
+`replyCommandDependencyResolution.ts` and recomposes two
+cross-application-lane defaults files
+(`application/start/startCommandDependencyDefaults.js`,
+`application/pass/reviewerDeliveryDefaults.js`).
+
+After: 2 top-level root-public `.ts` files + 1 lane-root
+submodule (`mutation/`, two files: executor + sub-Contract) +
+`internal/{error,preparation}/` (two sub-areas, four internal
+files). Top-level: `replyCommandApi.ts` (canonical entry,
+re-exports `HumanReplyCommandError` from the moved Error file plus
+the Contract types) and `replyCommandContract.ts` (dependency port
++ `EmitHumanReply{Input,Result,Dependencies}` types; pinned by
+`application/resume/resumeCommandContract.ts` as cross-lane
+signature reference). Lane-root submodule:
+`mutation/replyMutationExecution.ts` (the executor — writes
+transcript via `appendProtocolEnvelope` and state via
+`writeStateSnapshot`) and `mutation/replyMutationExecutionContract.ts`
+(intra-only sub-Contract, sibling-joins the executor at the
+fitness-pinned location). The lane closes without a
+`*CliCommand.ts` at the lane root, re-firing the watchdog
+missing-CliCommand finding (CLI parser + help + runner inline in
+`src/cli/commands/bubble/reply.ts`).
+
+**Goal-state introduction (the from-scratch step the half-done
+procedure skips):**
+
+- **Public surface decision.** With no pre-existing `internal/`,
+  the public/internal boundary is decided fresh. The naming-role
+  table defaults proposed two potential root-public files (`Api`,
+  `Contract`) given the absence of `*CliCommand.ts` at the lane
+  root (re-fire of the watchdog precedent for missing-CliCommand
+  goal-state shape). The import scan confirmed both: six
+  cross-area production consumers reach the lane through `Api`
+  (`src/index.ts` two re-export blocks,
+  `src/cli/commands/bubble/reply.ts`,
+  `src/v11/defaults/ui/routerDefaults.ts`,
+  `application/resume/resumeCommandOrchestration.ts`,
+  `application/resume/resumeCommandRuntime.ts`) and `Contract`
+  (`defaults/ui/routerDefaults.ts`,
+  `application/resume/resumeCommandContract.ts` as cross-lane
+  signature reference). The Error file, ErrorNormalization,
+  InputNormalization, and DependencyResolution all classified
+  intra-only; the existing `mutation/replyMutationExecution.ts`
+  and its sibling sub-Contract also classified intra-only.
+- **Sub-area projection from naming clusters.** The four
+  remaining intra-only `.ts` files clustered cleanly: `Error` +
+  `ErrorNormalization` → `internal/error/` (commit/merge/restart/
+  reconcile/status precedent for the error-boundary sub-area);
+  `InputNormalization` + `DependencyResolution` →
+  `internal/preparation/` (same pair name as merge, restart,
+  reconcile). No `*CommandRuntime.ts` file exists in reply
+  (separate Error class file at the lane root predates the
+  `*Runtime.ts`-is-actually-error-composition pattern), so no
+  `*Runtime.ts` content-rule re-fire was needed. The mutation
+  cluster was initially projected as a third sub-area
+  (`internal/mutation/`) on the "pre-existing named submodule
+  demotes" intuition; the fitness check rejected this and the
+  cluster reverted to the lane-root `mutation/` subdir — see the
+  next section.
+
+**Mid-refactor goal-state revision (the mutation-pin discovery):**
+
+After commits 1 and 2 (the `internal/error/` and
+`internal/preparation/` moves) landed cleanly, commit 3 attempted
+to move the mutation cluster to `internal/mutation/`: the
+executor from `mutation/replyMutationExecution.ts` to
+`internal/mutation/replyMutationExecution.ts`, and the
+sub-Contract from the lane root
+(`replyMutationExecutionContract.ts`) to a sibling location at
+`internal/mutation/replyMutationExecutionContract.ts`. Typecheck
+passed; the broader affected suite passed; lint passed. The
+fitness `boundary` check failed with two direct-write violations:
+
+```
+src/v11/application/reply/internal/mutation/replyMutationExecution.ts:22
+  direct transcript write -> const appended = await input.dependencies.appendProtocolEnvelope({
+src/v11/application/reply/internal/mutation/replyMutationExecution.ts:51
+  direct state write -> const written = await input.dependencies.writeStateSnapshot(
+Legitimate mutation executors should live under
+src/v11/application/<command>/mutation/** or be registered with a
+mutation_executor exception.
+```
+
+The boundary check (`tools/fitness/checks/boundary.ts`, asserted by
+`tests/tools/fitness/boundary.test.ts`'s "allows application
+mutation execution directory boundaries" case) treats
+`<command>/mutation/**` as the canonical location for files that
+write transcript and state directly through the canonical ports.
+The typed `mutation_executor` exception mechanism exists for
+*deliberate non-conventional placements* — when a lane's mutation
+executor must live outside the canonical path for a domain-specific
+reason. Adding an exception to allow `internal/mutation/` placement
+purely for file-tree uniformity would fight the active convention
+and set a poor precedent for subsequent lane refactors.
+
+The revert kept the Q1 sibling decision (sub-Contract joins the
+executor) intact at the fitness-pinned location: the executor
+returned to `application/reply/mutation/replyMutationExecution.ts`,
+and the sub-Contract joined it at
+`application/reply/mutation/replyMutationExecutionContract.ts`
+(rather than at `internal/mutation/`). Relative-path adjustments
+inside both files shrank by one level (`mutation/` is one level
+deeper than the lane root, but two levels shallower than
+`internal/mutation/`). The Api file's import path also reverted:
+`./internal/mutation/replyMutationExecution.js` →
+`./mutation/replyMutationExecution.js`. After the revert, all
+checks passed (typecheck + lint + fitness + affected suite). Commit
+3 therefore landed as "Colocate reply mutation sub-Contract with
+its executor" — the sub-Contract sibling-joining the executor at
+the fitness-pinned location, not a `mutation/` → `internal/mutation/`
+demotion.
+
+Four-commit sequence (no pre-cleanup, no exception-driven detour):
+
+1. **`internal/error/`** (`f9eac48e`). Two files
+   (`replyCommandError.ts` owning `HumanReplyCommandError` class +
+   creator + thrower, `replyCommandErrorNormalization.ts`). Same
+   error-boundary cluster as commit/merge/restart/reconcile/status.
+   `HumanReplyCommandError` remains publicly reachable via the
+   re-export from `replyCommandApi.ts`. Two mirror tests
+   (`replyCommandError.test.ts`,
+   `replyCommandErrorNormalization.test.ts`) relocated alongside
+   the source under `tests/v11/application/reply/internal/error/`.
+2. **`internal/preparation/`** (`c35cf4c5`). Two files
+   (`replyCommandInputNormalization.ts`,
+   `replyCommandDependencyResolution.ts`). One mirror test
+   (`replyCommandInputNormalization.test.ts`) relocated alongside
+   the source under
+   `tests/v11/application/reply/internal/preparation/`. The
+   DepRes file keeps its inline defaults composition; the two
+   cross-application-lane defaults imports
+   (`application/start/startCommandDependencyDefaults.js` and
+   `application/pass/reviewerDeliveryDefaults.js`) gain one extra
+   `../` of relative depth and pass the
+   `application-defaults-boundary` check (whose scope is
+   `application/* → defaults/*`, not `application/* →
+   application/*`). No `defaults/reply/` directory is introduced.
+   The lane-root `replyDeliveryInvariant.test.ts` stays at
+   `tests/v11/application/reply/` rather than moving to
+   `internal/preparation/`, because it is an Api-level cross-sub-area
+   invariant test (asserts HUMAN_REPLY persistence + RUNNING resume +
+   exactly-one delivery), not a sub-impl mirror.
+3. **Colocate mutation sub-Contract with its executor** (`83fb4108`).
+   `replyMutationExecutionContract.ts` moves from the lane root into
+   the existing `mutation/` submodule alongside
+   `replyMutationExecution.ts`; the executor's import of the
+   sub-Contract shortens from a parent reference
+   (`../replyMutationExecutionContract.js`) to a sibling
+   (`./replyMutationExecutionContract.js`). The `mutation/` submodule
+   stays at the lane root, not under `internal/`, per the
+   fitness-pin rule established in the mid-refactor revert above. The
+   commit message documents the revert lesson so future refactor
+   readers find it in `git log` without having to consult this
+   worked example. The `mutation/` submodule retains the same
+   semantics as before the refactor — the lane's side-effect
+   mutation cluster owned at the fitness-pinned path — but now
+   houses the sub-Contract as a sibling rather than at the lane
+   root.
+4. **Closeout (this commit).** Survey + template doc-sync;
+   leftover-hunt confirmed (no empty directories, no orphan
+   references). The reply lane is the fifth from-scratch case in
+   the inventory.
+
+Findings worth carrying forward:
+
+- **Mutation submodule fitness-pinned at `<command>/mutation/` (new
+  placement-rule finding).** Lanes whose mutation executor writes
+  transcript or state directly through `appendProtocolEnvelope` and
+  `writeStateSnapshot` keep the executor under
+  `application/<command>/mutation/` as a *lane-root submodule*, NOT
+  under `internal/mutation/`. The fitness `boundary` check pins
+  this location; the typed `mutation_executor` exception
+  mechanism in `tools/fitness/policy.json` exists for *deliberate
+  non-conventional placements*, not for file-tree uniformity. Two
+  sibling rules follow from this finding: (a) intra-only
+  sub-Contracts for the mutation submodule sibling-join the
+  executor at the fitness-pinned `mutation/` path (Q1 sibling
+  decision preserved, just at the fitness-pinned location rather
+  than at `internal/mutation/`); (b) the goal-state for such
+  lanes is `Api + Contract + mutation/ + internal/<other-sub-areas>/`
+  rather than `Api + Contract + internal/<all-sub-areas>/`. Recorded
+  separately in the "Common naming roles" section as an exception
+  at the placement axis (the third such exception, after the
+  signature-reference and shared-resident-error-class visibility
+  exceptions). Operational lesson: future from-scratch refactors
+  with a pre-existing `mutation/` submodule should consult the
+  fitness `boundary` check before applying the
+  "pre-existing-named-submodule demotes" intuition. The intuition
+  applies to other named submodules (e.g., subdir-of-concern
+  patterns without side-effect mutation), but mutation executors
+  with direct port writes are the explicit counter-example.
+- **Inline defaults composition in DepRes (new placement-rule
+  finding).** Reply is the first refactored lane with no
+  `defaults/<lane>/` directory at all. The defaults bundle
+  (`replyCommandDependencyDefaults`) is composed inline in
+  `replyCommandDependencyResolution.ts` and recomposes two
+  cross-application-lane defaults files
+  (`application/start/startCommandDependencyDefaults.js`,
+  `application/pass/reviewerDeliveryDefaults.js`) through
+  preserved relative-path imports. This is
+  *preserved-existing composition*, not a recommended new pattern
+  — the existence of `defaults/<lane>/` for other lanes
+  (`restart`, `reconcile`, etc.) reflects the cleaner
+  composition-ownership boundary; reply's inline composition is
+  acceptable through the refactor because changing it is a
+  separate composition-ownership question, not a lane-internal
+  refactor concern. The `application-defaults-boundary` fitness
+  check is unaffected because its scope is forbidding
+  `application/* → defaults/*` imports, not
+  `application/* → application/*`. **Rule:** when an existing
+  lane has its defaults bundle inline in DepRes with cross-lane
+  application-to-application imports, the lane refactor preserves
+  the pattern unchanged (paths deepen by the relative-depth delta
+  of the DepRes move); introducing a new `defaults/<lane>/`
+  directory is out of scope for the lane refactor.
+- **Cross-lane Contract signature-reference pin (re-fire of the
+  `list` lane's intra-lane exception, cross-lane variant).** The
+  `list` lane's "signature-reference exception" rule
+  (a type referenced by a root-public function's signature stays
+  root-public regardless of import-scan count) re-fired in its
+  cross-lane variant: `application/resume/resumeCommandContract.ts`
+  imports `EmitHumanReplyInput` and `EmitHumanReplyResult` from
+  `replyCommandContract.ts` as *real signature parameters* —
+  `ResumeBubbleResult = EmitHumanReplyResult`,
+  `emitHumanReply(input: EmitHumanReplyInput) => Promise<EmitHumanReplyResult>`
+  in `ResumeBubbleDependencies`. The reply Contract is already
+  root-public on standard production-consumer grounds, so this
+  cross-lane pin requires no new template language — the rule
+  generalizes from intra-lane to cross-lane without modification.
+  Worth documenting because it is the first observed case of one
+  application lane's Contract pinning another application lane's
+  Contract through real signature parameters; previous
+  signature-reference cases (`list`) were intra-lane.
+- **Sample size 5 saturates the from-scratch exception catalog.**
+  Five from-scratch refactors have now landed (restart, reconcile,
+  watchdog, status, reply). Exception firing across the sample:
+  0 new (restart), 1 new (reconcile), 3 new + 1 re-fire
+  (watchdog), 0 new (status — eight-variant catalog held), 0 new
+  + 1 cross-lane re-fire (reply — eight-variant catalog held
+  again, list's signature-reference re-fired cross-lane). The
+  eight-variant exception catalog from watchdog
+  (signature-reference type, cross-lane split-extraction,
+  type-relocation [out-of-Contract], type-relocation via `typeof`
+  [into-Contract], phantom cross-lane consumer, contract-test
+  path-pin, shared-resident error class, missing `*CliCommand.ts`
+  goal-state shape) has held across two consecutive from-scratch
+  cases without extension. **The active growth area is the
+  placement-rule axis**, not the exception catalog: status
+  introduced two placement rules (mixed-role barrel-and-impl,
+  pure-barrel as Module-Depth-protective surface), reply added
+  three more (mutation submodule pinned at lane root, inline
+  defaults composition in DepRes, cross-lane Contract
+  signature-reference re-fire). The exception catalog appears
+  saturated at eight; the placement-rule catalog continues to
+  accrete.
+- **Mid-refactor revert as a legitimate procedure step.** Reply's
+  commit 3 is the first documented case where a worked-example
+  procedure had to revert a structural move mid-sequence based on
+  a fitness check failure. The lesson is procedural, not
+  structural: when the fitness check is the source of truth on a
+  placement convention, the right response to a failure is to
+  revert the move and re-target the cluster at the fitness-pinned
+  location, NOT to add a typed exception for aesthetic reasons.
+  The typed-exception mechanism is for cases where the canonical
+  path genuinely does not fit the lane (e.g., domain-specific
+  routing of side-effect writes); adopting it for file-tree
+  uniformity sets a precedent that erodes the convention itself.
+  Future refactors should treat fitness-check failures as
+  *signals to revise the goal-state*, not as obstacles to bypass
+  with exception entries.
 
 ## Module Depth Check applies
 

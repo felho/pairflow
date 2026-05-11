@@ -1,7 +1,7 @@
 # Application Command Shapes — Survey
 
 Status: descriptive (factual inventory; companion to the template)
-Last updated: 2026-05-12
+Last updated: 2026-05-11
 Owner: architecture/runtime
 Scope: factual inventory of `src/v11/application/<lane>/` directories that
 backs the application-command-lane template
@@ -45,7 +45,7 @@ restructuring opportunity).
 | reconcile | 3 | yes | 3 | yes | yes | — | structured (Tier 2; refactored 2026-05-11) |
 | start | 9 | yes | 3 | yes | yes | 4 | structured (Tier 2-ish) |
 | metaReview | 3 | yes | 2 | yes | — | — | structured (Tier 2; refactored 2026-05-13) |
-| reply | 7 | no | — | — | yes | 13 | unstructured |
+| reply | 2 | yes | 2 | no | yes | — | structured (Tier 2; refactored 2026-05-11) |
 | attach | 6 | no | — | — | yes | 15 | unstructured |
 | delete | 6 | no | — | yes | yes | 11 | unstructured |
 | extract | 6 | no | — | yes | yes | 14 | unstructured |
@@ -132,7 +132,7 @@ straightforward: `internal/<sub>/` for everything that isn't entry/contract.
 - **attach** — 6 top-level. Files: `attachBubble*` cluster +
   `attachCliCommand` (the legacy `emitAttachV11` wrapper has been renamed to
   `attachBubble.ts`).
-- **extract**, **open**, **reply**, **resume**, **stop** — similar pattern.
+- **extract**, **open**, **resume**, **stop** — similar pattern.
 - **gates**, **inbox** — 2 top-level only; below restructuring threshold.
 
 These all have the standard naming (`*CommandApi`, `*CommandContract`,
@@ -277,13 +277,49 @@ from-scratch cases:
   introduced; the eight-variant exception catalog from watchdog covers
   the status surface end-to-end. See the template's
   `application/status/` worked example.
+- **reply** (was 7 top-level + `mutation/` lane-root submodule + no
+  `internal/`; now 2 top-level + `mutation/` lane-root submodule
+  retained + 2 sub-areas — `error/`, `preparation/`). The fifth
+  from-scratch case and the first where the lane *did not* close at a
+  pure `Api + Contract + internal/` shape: the pre-existing
+  `mutation/` subdir at lane root stayed at lane root because the
+  fitness `boundary` check pins legitimate mutation executors (files
+  that write transcript or state directly) to
+  `src/v11/application/<command>/mutation/**` as the canonical
+  location. Demoting `mutation/` under `internal/mutation/` was
+  attempted and fired the boundary check; the revert restored the
+  fitness-pinned location and the intra-only sub-Contract
+  (`replyMutationExecutionContract.ts`) sibling-joined the executor
+  at `application/reply/mutation/` rather than at `internal/mutation/`.
+  Two additional new findings landed alongside the mutation-pin
+  discovery: *inline defaults composition in DepRes* — reply is the
+  first lane refactored with no `defaults/reply/` directory; the
+  defaults bundle lives inline in
+  `replyCommandDependencyResolution.ts` and recomposes two
+  cross-application-lane defaults files
+  (`application/start/startCommandDependencyDefaults.js`,
+  `application/pass/reviewerDeliveryDefaults.js`) through preserved
+  relative-path imports rather than through a lane-local defaults
+  directory; this is preserved-existing composition, not a
+  recommended pattern for new lanes — and *cross-lane Contract
+  signature-reference pin* — `application/resume/resumeCommandContract.ts`
+  imports `EmitHumanReplyInput` and `EmitHumanReplyResult` from
+  `replyCommandContract.ts` as real signature parameters
+  (`ResumeBubbleResult = EmitHumanReplyResult`, plus
+  `emitHumanReply` typed in `ResumeBubbleDependencies`), the
+  cross-lane variant of the `list` lane's intra-lane
+  signature-reference exception. The existing
+  signature-reference rule covered the case without new template
+  language; this is a re-fire across lane boundaries rather than a
+  new exception type. See the template's `application/reply/` worked
+  example.
 
 Unstructured (no internal/ at all):
 
-- **reply** (7).
-
-The lane follows the standard naming and has the data to slot into the
-Tier 2 shape; it just needs `internal/<sub-areas>/` introduced.
+- (none — all formerly unstructured Tier 1 lanes are listed under their
+  current refactored shape; the remaining 3–7-top-level lanes without
+  `internal/` are `attach`, `delete`, `extract`, and `open`, which are
+  listed in their Tier 1 inventory rows above.)
 
 ### Tier 3 — Coordinator (lane-internal-but-named submodules)
 
@@ -488,6 +524,61 @@ not prescribe one location.
    surface end-to-end. See the template's `application/status/`
    worked example.
 
+   **reply was the fifth from-scratch refactor — and the first
+   where the lane goal-state retained a lane-root submodule
+   (`mutation/`) rather than closing at a pure `Api + Contract +
+   internal/` shape.** The lane started at seven top-level `.ts`
+   files plus a pre-existing one-file `mutation/` subdir at lane
+   root (`mutation/replyMutationExecution.ts`), with the
+   submodule's sub-Contract (`replyMutationExecutionContract.ts`)
+   sitting as a sibling at the lane root. The initial goal-state
+   hypothesis was to demote `mutation/` into `internal/mutation/`
+   alongside the other intra-only sub-areas — following the
+   half-done-style "everything intra-only collapses under
+   `internal/`" intuition. The hypothesis broke against the
+   fitness `boundary` check, which pins legitimate mutation
+   executors (files that call `appendProtocolEnvelope` and
+   `writeStateSnapshot` directly) to
+   `src/v11/application/<command>/mutation/**` as the canonical
+   location; the typed `mutation_executor` exception mechanism
+   exists for non-conventional placements, not for aesthetic
+   uniformity. The mutation cluster reverted to the lane-root
+   `mutation/` subdir, and the sub-Contract sibling-joined the
+   executor there (rather than at `internal/mutation/`), preserving
+   the Q1 sibling decision at the fitness-pinned location. **One
+   new finding** landed on the placement-rule axis (the same
+   non-exception axis that status opened):
+   *mutation submodule is fitness-pinned at `<command>/mutation/`*
+   (when a lane contains a side-effect mutation executor — a file
+   that writes transcript or state through the canonical ports —
+   the executor and its intra-only sub-Contract stay under
+   `application/<command>/mutation/` as a lane-root submodule;
+   `internal/mutation/` is not the canonical location for such
+   executors, and a typed `mutation_executor` exception is needed
+   to support it elsewhere). **Two additional findings on existing
+   axes** also landed: *inline defaults composition in DepRes*
+   (reply is the first refactored lane with no `defaults/<lane>/`
+   directory; the defaults bundle lives inline in
+   `replyCommandDependencyResolution.ts` and recomposes
+   cross-application-lane defaults from `application/start/` and
+   `application/pass/` through preserved relative-path imports —
+   this is preserved-existing composition, not a recommended
+   pattern for new lanes; the application-defaults boundary check
+   is unaffected because its scope is `application/* → defaults/*`,
+   not `application/* → application/*`), and *cross-lane Contract
+   signature-reference pin* (`application/resume/resumeCommandContract.ts`
+   imports `EmitHumanReplyInput` and `EmitHumanReplyResult` from
+   `replyCommandContract.ts` as real signature parameters: the
+   cross-lane variant of the `list` lane's intra-lane
+   signature-reference exception, requiring no new template
+   language). Sub-area outcome: two sub-areas under `internal/`
+   (`error/`, `preparation/`) plus the retained lane-root
+   `mutation/` submodule housing the executor and its
+   sub-Contract. No `*CliCommand.ts` at the lane root (re-fire of
+   watchdog's missing-CliCommand finding); the CLI parser, help,
+   and runner live entirely in `src/cli/commands/bubble/reply.ts`.
+   See the template's `application/reply/` worked example.
+
 4. **Half-done Tier 2 lanes shared a pattern.** At the time of the original
    survey, `commit`, `merge`, `metaReview`, and `list` all had a single
    internal sub-area (`pipeline/`, `pipeline/`, `submit/`, `projection/`).
@@ -569,9 +660,9 @@ future contributor reading "Tier 2 commands typically have an
 `internal/finalization/` sub-area" can verify the claim against the actual
 lane inventory above.
 
-Nine lane refactors have validated the template. Five followed the
-half-done procedure; four (`restart`, `reconcile`, `watchdog`,
-`status`) validated the from-scratch procedure variant. In sequence:
+Ten lane refactors have validated the template. Five followed the
+half-done procedure; five (`restart`, `reconcile`, `watchdog`,
+`status`, `reply`) validated the from-scratch procedure variant. In sequence:
 `list` (commit `da12ed98`, single-commit move), `commit` (commits
 `8d603cff`, `9b2b9755`, `2b5c6c71`, `2115f606`, four-commit sequence with
 a public-surface split for `remoteCommitContinuitySync.ts`), `merge`
@@ -600,13 +691,27 @@ commits — a typeof-direction type-relocation into the Contract and a
 cross-mirror-root sampler test relocation — and three new exception
 findings: shared-resident error class, type-relocation via `typeof`
 on an implementation function, and a goal-state without an
-application-side `*CliCommand.ts`), and `status` (commits
-`5f509262` → this commit, three-sub-area introduction
+application-side `*CliCommand.ts`), `status` (commits
+`5f509262` → `3b53cb52`, three-sub-area introduction
 — `cli/`, `computation/`, `view/` — from a fully flat starting
 state with one pre-cleanup commit applying the reconcile-style
 minimal Contract hoist and no new exception variant; two new
 template findings on the non-exception axis: mixed-role
 barrel-and-impl placement and pure-barrel kept as
-Module-Depth-protective CLI surface). The template's "Worked
+Module-Depth-protective CLI surface), and `reply` (commits
+`f9eac48e` → this commit, two-sub-area introduction
+— `error/`, `preparation/` — from a starting state of seven
+top-level `.ts` files plus a pre-existing one-file `mutation/`
+subdir at lane root; the goal-state retained the `mutation/`
+submodule at lane root rather than demoting to
+`internal/mutation/` because the fitness `boundary` check pins
+side-effect mutation executors to
+`application/<command>/mutation/**`; no pre-cleanup commit and no
+new exception variant fired; three new template findings on the
+placement-rule axis: mutation submodule fitness-pinned at
+`<command>/mutation/`, inline defaults composition in DepRes with
+no `defaults/<lane>/` directory, and cross-lane Contract
+signature-reference pin as a re-fire of the `list` lane's
+intra-lane signature-reference exception). The template's "Worked
 examples" section captures the lessons learned; the inventory rows
 above record the post-refactor state.
