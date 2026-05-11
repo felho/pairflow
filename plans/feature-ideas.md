@@ -71,3 +71,4 @@
 - Viszont van egy gyengébb strukturális szag: src/cli/index.ts vegyesen használ CLI wrapper modulokat és application CLI modulokat. Emiatt a restart típusú hiba könnyen visszajöhet új commandnál. Erre érdemes lenne egy fitness/contract guard: top-level CLI command importok alapértelmezetten src/cli/commands/\*\* alól jöjjenek, és csak explicit allowlist engedje az inbox/kickoff kivételt.
 - Egy felfedezés mellékesen: a defaults/tmux/ üres, viszont defaults/start/ és defaults/restart/ használnak tmux portokat. Tehát a tmux defaultok valószínűleg a start/restart wiring-ben jönnek létre, nem central helyen — ez később lehet érdekes a smoke suite konfigurálásánál, de most nem blokkoló.
 - https://x.com/trq212/status/2017024445244924382
+- https://www.youtube.com/watch?v=qKU-e0x2EmE
