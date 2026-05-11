@@ -1,16 +1,16 @@
-import { applyStateTransition } from "../../../domain/state/machine.js";
-import { assertValidBubbleStateSnapshot } from "../../../shared/state/stateSchema.js";
-import { clearLiveMetaReviewSnapshot } from "../../../shared/metaReview/metaReviewSnapshot.js";
-import type { AgentName } from "../../../../contracts/kernel/agentIdentity.js";
-import type { BubbleStateSnapshot } from "../../../shared/state/bubbleStateSnapshotTypes.js";
+import { applyStateTransition } from "../../../../domain/state/machine.js";
+import { assertValidBubbleStateSnapshot } from "../../../../shared/state/stateSchema.js";
+import { clearLiveMetaReviewSnapshot } from "../../../../shared/metaReview/metaReviewSnapshot.js";
+import type { AgentName } from "../../../../../contracts/kernel/agentIdentity.js";
+import type { BubbleStateSnapshot } from "../../../../shared/state/bubbleStateSnapshotTypes.js";
 import {
   incrementAutoReworkCount,
   normalizeMetaReviewSnapshot,
   setMetaReviewConsecutiveCleanRuns
-} from "../../../domain/metaReviewGate/snapshotState.js";
+} from "../../../../domain/metaReviewGate/snapshotState.js";
 import {
   resolveRuntimeAlignedNextRoundContinuation
-} from "../../../domain/state/roundContinuation.js";
+} from "../../../../domain/state/roundContinuation.js";
 
 export interface AutoReworkStateInput {
   resolved: {

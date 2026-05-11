@@ -6,7 +6,7 @@ import {
   isApproveValidationCommandFailure
 } from "../../../../domain/metaReviewGate/approveValidationRework.js";
 import { normalizeBubbleReviewPolicy } from "../../../../shared/reviewPolicy/reviewPolicyRuntime.js";
-import { dispatchAutoRework } from "../metaReviewGateAutoRework.js";
+import { dispatchAutoRework } from "../autoRework/metaReviewGateAutoRework.js";
 import { routeCleanMetaReviewRerun } from "./cleanRerun.js";
 import {
   persistDispatchFailedHumanRoute,

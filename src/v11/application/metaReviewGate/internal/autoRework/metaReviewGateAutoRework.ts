@@ -5,7 +5,7 @@ import {
   writeAutoReworkResumedState
 } from "./metaReviewGateAutoReworkPersistence.js";
 import type { DispatchAutoReworkInput } from "./metaReviewGateAutoReworkContract.js";
-import type { MetaReviewGateResult } from "../../../shared/metaReviewGate/metaReviewGateResultContract.js";
+import type { MetaReviewGateResult } from "../../../../shared/metaReviewGate/metaReviewGateResultContract.js";
 
 export async function dispatchAutoRework(
   input: DispatchAutoReworkInput

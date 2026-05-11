@@ -1,16 +1,16 @@
-import type { MetaReviewResult } from "../../../shared/metaReview/metaReviewTypes.js";
+import type { MetaReviewResult } from "../../../../shared/metaReview/metaReviewTypes.js";
 import type {
   AppendProtocolEnvelopePort
-} from "../../../ports/transcript.js";
-import type { LoadedStateSnapshot } from "../../../ports/stateSnapshots.js";
-import type { AgentName } from "../../../../contracts/kernel/agentIdentity.js";
-import type { Finding } from "../../../../types/findings.js";
+} from "../../../../ports/transcript.js";
+import type { LoadedStateSnapshot } from "../../../../ports/stateSnapshots.js";
+import type { AgentName } from "../../../../../contracts/kernel/agentIdentity.js";
+import type { Finding } from "../../../../../types/findings.js";
 import {
   deliveryTargetRoleMetadataKey,
   resolveFindingsParityMetadataForEnvelope,
   type FindingsParityMetadata
-} from "../../../../types/protocol.js";
-import { buildGateLockPath } from "./metaReviewGateShared.js";
+} from "../../../../../types/protocol.js";
+import { buildGateLockPath } from "../metaReviewGateShared.js";
 
 export async function appendAutoReworkDecision(input: {
   finalizeInput: {

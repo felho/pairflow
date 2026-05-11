@@ -6,7 +6,7 @@ import {
 import type { MetaReviewGateResult } from "../../../../shared/metaReviewGate/metaReviewGateResultContract.js";
 import type { FinalizeCurrentRunMetaReviewGateInput } from "../../../../shared/metaReviewGate/metaReviewGateCurrentRunTypes.js";
 import { resolveMetaReviewGateThresholdAuthority } from "../../metaReviewGateThresholdAuthorityApi.js";
-import { dispatchAutoRework } from "../metaReviewGateAutoRework.js";
+import { dispatchAutoRework } from "../autoRework/metaReviewGateAutoRework.js";
 import {
   maybeRunStickyApproveValidation,
   routeApproveMetaReviewResult

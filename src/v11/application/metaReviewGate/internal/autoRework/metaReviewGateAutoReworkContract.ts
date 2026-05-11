@@ -1,14 +1,14 @@
-import type { AppendProtocolEnvelopePort } from "../../../ports/transcript.js";
+import type { AppendProtocolEnvelopePort } from "../../../../ports/transcript.js";
 import type {
   LoadedStateSnapshot,
   WriteStateSnapshotPort
-} from "../../../ports/stateSnapshots.js";
-import type { AgentName } from "../../../../contracts/kernel/agentIdentity.js";
-import type { BubbleStateSnapshot } from "../../../shared/state/bubbleStateSnapshotTypes.js";
-import type { Finding } from "../../../../types/findings.js";
-import type { FindingsParityMetadata } from "../../../../types/protocol.js";
-import type { MetaReviewResult } from "../../../shared/metaReview/metaReviewTypes.js";
-import type { MetaReviewGateResult } from "../../../shared/metaReviewGate/metaReviewGateResultContract.js";
+} from "../../../../ports/stateSnapshots.js";
+import type { AgentName } from "../../../../../contracts/kernel/agentIdentity.js";
+import type { BubbleStateSnapshot } from "../../../../shared/state/bubbleStateSnapshotTypes.js";
+import type { Finding } from "../../../../../types/findings.js";
+import type { FindingsParityMetadata } from "../../../../../types/protocol.js";
+import type { MetaReviewResult } from "../../../../shared/metaReview/metaReviewTypes.js";
+import type { MetaReviewGateResult } from "../../../../shared/metaReviewGate/metaReviewGateResultContract.js";
 
 export interface AutoReworkFinalizeInput {
   resolved: {
