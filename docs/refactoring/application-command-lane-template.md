@@ -1,7 +1,7 @@
 # Application Command Lane Template
 
 Status: draft
-Last updated: 2026-05-11
+Last updated: 2026-05-12
 Owner: architecture/runtime
 Scope: `src/v11/application/<command>/` — the application layer of CLI-driven
 command lanes (commit, watchdog, planWatch, etc.).
@@ -296,9 +296,10 @@ still top-level. The boundary was introduced for one concern, then never
 extended. This is the most common case across `application/` and the
 recommended starting point for template adoption.
 
-Half-done lanes today (per the survey): `merge`, `metaReview`, and (with
-caveats) `metaReviewGate`. `commit` and `list` were previously half-done and
-have been refactored using this procedure; see "Worked examples" below.
+Half-done lanes today (per the survey): `metaReview` and (with caveats)
+`metaReviewGate`. `list`, `commit`, and `merge` were previously half-done
+and have been refactored using this procedure; see "Worked examples"
+below.
 
 ### Procedure
 
@@ -439,6 +440,72 @@ Two findings worth carrying forward to future half-done refactors:
   into a separate `internal/runtime/`. The naming-role table is a
   *starting* heuristic for visibility default; the sub-area placement
   follows the file's real concern as revealed by reading it.
+
+#### `application/merge/` (refactored 2026-05-12, commits `ea7f4970` → `dff96fcf`)
+
+Before: 12 top-level files, `internal/pipeline/` (4 files). Unlike
+`commit`, no cross-lane split-extraction was required (every top-level
+file other than `mergeCommandOrchestration.ts` and
+`mergeCommandContract.ts` had zero external production consumers). Unlike
+`list`, however, the lane had a type-dependency wrinkle:
+`mergeCommandContract.ts` (root-public) imported
+`NormalizedMergeBubbleInput` from `mergeCommandInputNormalization.ts` so
+that it could declare `RunMergeCommandPipelineInput extends
+NormalizedMergeBubbleInput`. The pipeline-input type had **zero**
+external production consumers, so it was accidentally exposed from a
+public file. Moving `InputNormalization` into `internal/preparation/`
+without first relocating that type would have created a transient
+public-to-internal import on the contract side.
+
+After: 2 top-level files,
+`internal/{error,flow,pipeline,preparation,remote}/`. Top-level:
+`mergeCommandOrchestration.ts` (canonical entry — note this lane uses
+the `*CommandOrchestration.ts` filename for its public entry instead of
+`*CommandApi.ts`; the import scan, not the naming-role default, settled
+the visibility) and `mergeCommandContract.ts`.
+
+Five-commit sequence:
+
+1. **Move merge error boundary** (`mergeCommandErrorRuntime.ts`,
+   `mergeCommandErrorNormalization.ts`,
+   `mergeCommandErrorClassification.ts` → `internal/error/`). Mirrors
+   the commit lane: the three error-composition files share one
+   sub-area named for their concern (error boundary), not for the
+   `*Runtime.ts` file-name convention. `BubbleMergeError` remains
+   publicly reachable through the orchestration's re-export.
+2. **Move merge remote context**
+   (`remoteMergeExecutionContext.ts` → `internal/remote/`).
+3. **Move merge flow helpers** (`mergeFlowContext.ts`,
+   `mergeFlowFinalization.ts`, `mergeRoutingEligibility.ts`,
+   `mergeResultMapping.ts` → `internal/flow/`). One sub-area for the
+   whole flow lifecycle (routing eligibility → execution context →
+   finalization → result mapping). No 1-file sub-areas were created;
+   `mergeResultMapping.ts` joined `flow/` rather than getting its own
+   `result/` because the result shape co-varies with the flow output.
+4. **Relocate `RunMergeCommandPipelineInput` out of public contract**
+   (intra-file type move from `mergeCommandContract.ts` to
+   `mergeCommandInputNormalization.ts`, both still at lane root). No
+   file moves; seven consumers updated to import the type from
+   `InputNormalization` instead of `contract`. After this commit, the
+   contract no longer depends on InputNormalization.
+5. **Move merge preparation helpers**
+   (`mergeCommandInputNormalization.ts`,
+   `mergeCommandDependencyResolution.ts` → `internal/preparation/`).
+   With the type-dependency severed in commit 4, this move introduces
+   no public-to-internal import.
+
+One additional finding worth carrying forward:
+
+- **Type-relocation before file move when public files leak intra-lane
+  types.** If a root-public file imports a type from an
+  intra-lane-only file (and the imported type itself has no external
+  production consumer), do not move the intra-lane file into
+  `internal/` first — that would create a transient public-to-internal
+  import. Instead, in a preceding commit, relocate the type into the
+  intra-lane file it conceptually belongs to (so the public file no
+  longer needs to import it), then do the file move. The two-commit
+  split also makes the type-location decision reviewable in isolation
+  from the mechanical file move.
 
 ## Module Depth Check applies
 
