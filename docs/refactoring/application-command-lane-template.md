@@ -1,7 +1,7 @@
 # Application Command Lane Template
 
 Status: draft
-Last updated: 2026-05-12
+Last updated: 2026-05-13
 Owner: architecture/runtime
 Scope: `src/v11/application/<command>/` — the application layer of CLI-driven
 command lanes (commit, watchdog, planWatch, etc.).
@@ -296,8 +296,9 @@ still top-level. The boundary was introduced for one concern, then never
 extended. This is the most common case across `application/` and the
 recommended starting point for template adoption.
 
-Half-done lanes today (per the survey): `metaReview` and (with caveats)
-`metaReviewGate`. `list`, `commit`, and `merge` were previously half-done
+Half-done lanes today (per the survey): `metaReviewGate` (with caveats —
+its `internal/` is flat, so the refactor is a two-step move).
+`list`, `commit`, `merge`, and `metaReview` were previously half-done
 and have been refactored using this procedure; see "Worked examples"
 below.
 
@@ -361,7 +362,7 @@ below.
 
 ### Worked examples
 
-Two lane refactors have applied this procedure end-to-end. Both started
+Four lane refactors have applied this procedure end-to-end. All started
 from a half-done state and ended at structured Tier 2.
 
 #### `application/list/` (refactored 2026-05-10, commit `da12ed98`)
@@ -506,6 +507,78 @@ One additional finding worth carrying forward:
   longer needs to import it), then do the file move. The two-commit
   split also makes the type-location decision reviewable in isolation
   from the mechanical file move.
+
+#### `application/metaReview/` (refactored 2026-05-13, commits `0f5a708a` → `c6cfcfef`)
+
+Before: 7 top-level files, `internal/submit/` (9 files). Smaller than
+the prior three worked examples, but the manifest exposed a wrinkle
+absent from `commit` and `merge`: `metaReviewCommandErrorMapping.ts`
+appeared to have a cross-lane consumer (`defaults/metaReview/metaReviewApi.ts`
+imported and re-exported `toMetaReviewError`), which would have pinned
+the file at the lane root. The defaults re-export was unused
+downstream — a *phantom* cross-lane signal, not a real one. Promoting
+the file would have been blocked by the appearance of an external
+consumer that didn't actually exist.
+
+After: 3 top-level files, `internal/{error,submit}/`. Top-level:
+`metaReviewCommandSubmitRuntime.ts` (canonical submit entry —
+consumed by `defaults/metaReview` and `application/actorProtocol`),
+`metaReviewCliOptionValueReader.ts` (CLI input glue — consumed by
+`src/cli/commands/agent/emit.ts`), and `metaReviewSubmitRenderers.ts`
+(CLI output glue — consumed by `src/cli/index.ts`).
+
+Three-commit sequence:
+
+1. **Drop the phantom cross-lane consumer**
+   (`export { toMetaReviewError };` and its companion import block in
+   `defaults/metaReview/metaReviewApi.ts`). No production caller read
+   the re-export; removing it reclassified
+   `metaReviewCommandErrorMapping.ts` as intra-lane-only on the
+   import scan, clearing the path to demote it.
+2. **Move meta-review error mapping**
+   (`metaReviewCommandErrorMapping.ts` → `internal/error/`). The
+   accompanying test moved alongside the source (from
+   `tests/.../internal/submit/` to `tests/.../internal/error/`) to keep
+   tests mirroring src layout — an internal-test convention that the
+   merge precedent did not exercise because its error tests already
+   lived at `tests/v11/application/merge/`, not under a sub-area
+   directory.
+3. **Move meta-review submit internals**
+   (`metaReviewCliValueParsers.ts`,
+   `metaReviewSubmitRenderersHelpers.ts`,
+   `metaReviewRuntimeParity.ts` → `internal/submit/`). The three
+   helpers collapsed into the existing `submit/` sub-area in a single
+   commit rather than fragmenting into `cli/`, `rendering/`, and
+   `parity/` 1-file enclaves. Since the lane is a single-command
+   lane (submit), nearly all intra-only helpers are submit-adjacent;
+   keeping them in one sub-area honors the merge precedent's
+   "no 1-file sub-areas" rule.
+
+Two findings worth carrying forward:
+
+- **Phantom cross-lane consumer via dead re-export.** Before treating a
+  defaults-side import as a real cross-lane signal, follow the chain:
+  if defaults imports a symbol *only* to re-export it under the same
+  name (no defaults-side caller, no downstream import of the
+  re-export), the cross-lane signal is phantom. Eliminate the dead
+  re-export in a preceding commit; the manifest then reclassifies the
+  underlying file as intra-only and the demotion becomes mechanical.
+  This is the inverse of the `commit` lane's cross-lane
+  split-extraction pattern (where one symbol genuinely needed to stay
+  cross-lane), so the same import-scan question lands two opposite
+  decisions depending on whether downstream consumers actually use the
+  exposed surface.
+- **Single-command lanes collapse internals under one sub-area.** When
+  a lane has only one command (here: submit), the cleanest internal
+  layout keeps the existing phase sub-area (`internal/submit/`) and
+  promotes nearly all intra-only helpers into it. Standalone
+  sub-areas like `internal/cli/` or `internal/rendering/` would have
+  produced 1-file enclaves without independent concern boundaries.
+  The `internal/error/` sub-area remains a separate concern,
+  consistent with the commit/merge precedents; everything else fits
+  inside `submit/`. Goal: sub-area names should reflect *concerns*
+  (`error/`, `pipeline/`, `flow/`), not file roles (`cli/`,
+  `rendering/`), unless multiple files share the role.
 
 ## Module Depth Check applies
 

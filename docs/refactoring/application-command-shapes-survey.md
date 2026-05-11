@@ -1,7 +1,7 @@
 # Application Command Shapes — Survey
 
 Status: descriptive (factual inventory; companion to the template)
-Last updated: 2026-05-12
+Last updated: 2026-05-13
 Owner: architecture/runtime
 Scope: factual inventory of `src/v11/application/<lane>/` directories that
 backs the application-command-lane template
@@ -44,7 +44,7 @@ restructuring opportunity).
 | restart | 10 | no | — | yes | yes | 21 | unstructured |
 | reconcile | 9 | no | — | yes | yes | 18 | unstructured |
 | start | 9 | yes | 3 | yes | yes | 4 | structured (Tier 2-ish) |
-| metaReview | 7 | yes | 1 | yes | — | 18 | half-done (internal/submit only) |
+| metaReview | 3 | yes | 2 | yes | — | — | structured (Tier 2; refactored 2026-05-13) |
 | reply | 7 | no | — | — | yes | 13 | unstructured |
 | attach | 6 | no | — | — | yes | 15 | unstructured |
 | delete | 6 | no | — | yes | yes | 11 | unstructured |
@@ -157,7 +157,9 @@ Already-structured Tier 2:
 
 Half-done (internal/ exists but only 1 sub-area, top-level still bloated):
 
-- **metaReview** (7 top-level, internal/submit)
+- (none — all four standard-case half-done lanes have been refactored;
+  see below. `metaReviewGate` remains half-done with the flat-internal/
+  caveat covered in "Tier 2½".)
 
 Refactored from half-done to structured (Tier 2):
 
@@ -170,6 +172,12 @@ Refactored from half-done to structured (Tier 2):
 - **merge** (was 12 top-level + internal/pipeline; now 2 top-level + 5
   sub-areas — `error/`, `flow/`, `pipeline/`, `preparation/`,
   `remote/`).
+- **metaReview** (was 7 top-level + internal/submit; now 3 top-level + 2
+  sub-areas — `error/`, `submit/`). The lane resolved into a single
+  command (submit), so most intra-only helpers consolidated into the
+  existing `internal/submit/` rather than fragmenting into new 1-file
+  sub-areas; only error-boundary earned its own `internal/error/`
+  following the commit/merge precedent.
 
 Unstructured (no internal/ at all):
 
@@ -269,10 +277,10 @@ presentation helpers and should move to `internal/cli/` (or even into the
    internal sub-area (`pipeline/`, `pipeline/`, `submit/`, `projection/`).
    The boundary was introduced for a single concern, but other intra-lane
    concerns stayed top-level. Pattern: "first sub-area added, more never
-   followed." `commit`, `list`, and `merge` have since been refactored to
-   structured Tier 2 (see the inventory); only `metaReview` remains
-   half-done in the standard sense (plus `metaReviewGate` with the flat
-   internal/ caveat).
+   followed." All four have since been refactored to structured Tier 2
+   (see the inventory); the only remaining half-done case is
+   `metaReviewGate`, which has the flat-internal/ caveat covered in
+   "Tier 2½".
 
 5. **The `emit<X>V11.ts` thin-wrapper was universal — and was removed.**
    At the time of the original survey, all CLI-fronted lanes had a thin
@@ -323,8 +331,9 @@ location.
 **E. Half-done lanes are the easiest first targets.** They already have
 `internal/` precedent; the work is "promote more files into existing or
 new sub-areas," not "introduce a boundary from scratch." `commit`,
-`list`, and `merge` validated this assumption (now structured);
-`metaReview` and `metaReviewGate` remain on the runway.
+`list`, `merge`, and `metaReview` validated this assumption (now
+structured); `metaReviewGate` (with its flat-internal/ caveat) remains
+on the runway.
 
 **F. Outliers must be excluded from the template.** `actorProtocol` is not a
 command; the template should not try to fit it. Separate decision needed.
@@ -338,12 +347,15 @@ future contributor reading "Tier 2 commands typically have an
 `internal/finalization/` sub-area" can verify the claim against the actual
 lane inventory above.
 
-Three lane refactors have validated the template's half-done procedure:
+Four lane refactors have validated the template's half-done procedure:
 `list` (commit `da12ed98`, single-commit move), `commit` (commits
 `8d603cff`, `9b2b9755`, `2b5c6c71`, `2115f606`, four-commit sequence with
-a public-surface split for `remoteCommitContinuitySync.ts`), and `merge`
+a public-surface split for `remoteCommitContinuitySync.ts`), `merge`
 (commits `ea7f4970`, `01c0c61a`, `1d6c786d`, `c4aa58fd`, `dff96fcf`,
 five-commit sequence with a type-relocation step that decoupled
 `mergeCommandContract.ts` from `mergeCommandInputNormalization.ts` before
-the file move). The template's "Worked examples" section captures the
+the file move), and `metaReview` (commits `0f5a708a`, `72d51825`,
+`c6cfcfef`, three-commit sequence preceded by a defaults-side dead
+re-export cleanup that flipped a phantom cross-lane consumer into an
+intra-lane file). The template's "Worked examples" section captures the
 lessons learned; the inventory rows above record the post-refactor state.
