@@ -4,7 +4,7 @@ import {
   type WriteStateSnapshotPort
 } from "../../../../ports/stateSnapshots.js";
 import type { AgentName } from "../../../../../contracts/kernel/agentIdentity.js";
-import type { BubbleStateSnapshot } from "../../../../domain/state/snapshot/bubbleStateSnapshotTypes.js";
+import type { PersistedBubbleStateSnapshot } from "../../../../domain/state/snapshot/persistedBubbleStateSnapshot.js";
 import type { FindingsParityMetadata } from "../../../../../types/protocol.js";
 import type {
   AppendProtocolEnvelopePort,
@@ -27,7 +27,7 @@ export const metaReviewGateRollbackTransitionInvalidReasonCode =
 export interface ResolveRollbackAfterGateAppendFailureInput {
   writeState: WriteStateSnapshotPort;
   statePath: string;
-  rollbackState: BubbleStateSnapshot;
+  rollbackState: PersistedBubbleStateSnapshot;
   expectedFingerprint: string;
   expectedState: "READY_FOR_HUMAN_APPROVAL" | "RUNNING";
 }

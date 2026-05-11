@@ -26,12 +26,12 @@ import type {
   BubbleRoundGateState,
   BubbleSpecLockState
 } from "../../../../shared/gates/gateStateTypes.js";
-import type { BubbleStateSnapshot } from "../../../../domain/state/snapshot/bubbleStateSnapshotTypes.js";
+import type { PersistedBubbleStateSnapshot } from "../../../../domain/state/snapshot/persistedBubbleStateSnapshot.js";
 import type { GatePipelineOutcome } from "../../../gates/gatePipelineContract.js";
 
 export interface PrepareConvergedValidationInput {
   resolved: ResolvedBubbleWorkspace;
-  state: BubbleStateSnapshot;
+  state: PersistedBubbleStateSnapshot;
   reviewer: AgentName;
   summary: string;
   nowIso: string;

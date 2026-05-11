@@ -1,6 +1,6 @@
 import type { ReviewVerificationInputResolution } from "../../../../shared/reviewer/reviewVerification.js";
 import type { BubbleConfig } from "../../../../shared/config/bubbleConfigTypes.js";
-import type { BubbleStateSnapshot } from "../../../../domain/state/snapshot/bubbleStateSnapshotTypes.js";
+import type { PersistedBubbleStateSnapshot } from "../../../../domain/state/snapshot/persistedBubbleStateSnapshot.js";
 import type { Finding } from "../../../../../types/findings.js";
 import type { ResolvedPassHandoff } from "../../../../domain/pass/handoff.js";
 import type { LoadedStateSnapshot } from "../../../../ports/stateSnapshots.js";
@@ -17,7 +17,7 @@ export interface PersistNormalPassPostAppendInput {
   reviewVerificationArtifactPath: string;
   mappedEnvelopeId: string;
   statePath: string;
-  state: BubbleStateSnapshot;
+  state: PersistedBubbleStateSnapshot;
   expectedFingerprint: string;
   appendEnvelopeId: string;
   docGateScopeActive: boolean;
@@ -44,7 +44,7 @@ export interface PersistNormalPassPostAppendDependencies {
   }) => Promise<void>;
   writePostAppendPassState: (input: {
     statePath: string;
-    state: BubbleStateSnapshot;
+    state: PersistedBubbleStateSnapshot;
     handoff: Pick<
       ResolvedPassHandoff,
       "nextRound" | "recipientAgent" | "recipientRole" | "appendRoundRoleEntry"

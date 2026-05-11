@@ -1,6 +1,6 @@
 import type { LoadedStateSnapshot } from "../../../../ports/stateSnapshots.js";
 import { isNamedError } from "../../../../shared/errors/namedError.js";
-import type { BubbleStateSnapshot } from "../../../../domain/state/snapshot/bubbleStateSnapshotTypes.js";
+import type { PersistedBubbleStateSnapshot } from "../../../../domain/state/snapshot/persistedBubbleStateSnapshot.js";
 import { MetaReviewGateError } from "../../../../shared/metaReviewGate/metaReviewGateRouteContract.js";
 import type { AutoReworkFinalizeInput } from "./metaReviewGateAutoReworkContract.js";
 import { buildRestoredReadyState } from "./metaReviewGateAutoReworkState.js";
@@ -29,7 +29,7 @@ function toGateTransitionError(error: unknown): MetaReviewGateError {
 
 export async function writeAutoReworkResumedState(input: {
   finalizeInput: AutoReworkFinalizeInput;
-  resumed: BubbleStateSnapshot;
+  resumed: PersistedBubbleStateSnapshot;
 }): Promise<LoadedStateSnapshot> {
   try {
     return await input.finalizeInput.writeState(

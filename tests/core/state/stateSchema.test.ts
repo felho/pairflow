@@ -7,7 +7,7 @@ import {
   toMetaReviewExecutionContext
 } from "../../../src/v11/domain/state/execution/executionContext.js";
 import { createInitialBubbleState } from "../../../src/v11/domain/state/initialState.js";
-import { validateBubbleStateSnapshot } from "../../../src/v11/domain/state/stateSchema.js";
+import { parseBubbleStateSnapshot } from "../../../src/v11/domain/state/stateSchema.js";
 
 function expectCanonicalMetaReviewSnapshot(
   actual: unknown,
@@ -46,7 +46,7 @@ describe("state schema", () => {
   });
 
   it("accepts RUNNING state with active turn tracking", () => {
-    const result = validateBubbleStateSnapshot({
+    const result = parseBubbleStateSnapshot({
       bubble_id: "b_test_01",
       state: "RUNNING",
       round: 2,
@@ -78,7 +78,7 @@ describe("state schema", () => {
   });
 
   it("accepts phase-2 lifecycle states", () => {
-    const metaRunning = validateBubbleStateSnapshot({
+    const metaRunning = parseBubbleStateSnapshot({
       bubble_id: "b_test_meta_state_01",
       state: "RUNNING",
       round: 2,
@@ -110,7 +110,7 @@ describe("state schema", () => {
         consecutive_clean_runs: 0,
       }
     });
-    const humanGate = validateBubbleStateSnapshot({
+    const humanGate = parseBubbleStateSnapshot({
       bubble_id: "b_test_meta_state_02",
       state: "READY_FOR_HUMAN_APPROVAL",
       round: 2,
@@ -171,7 +171,7 @@ describe("state schema", () => {
   ] as const)(
     "rejects legacy lifecycle state %s with explicit Phase 5 reason code",
     (legacyState, reasonCode) => {
-      const result = validateBubbleStateSnapshot({
+      const result = parseBubbleStateSnapshot({
         bubble_id: "b_test_legacy_state_reject",
         state: legacyState,
         round: 2,
@@ -194,7 +194,7 @@ describe("state schema", () => {
   );
 
   it("rejects RUNNING meta-review authority with cleared active agent context when no recovery snapshot exists", () => {
-    const result = validateBubbleStateSnapshot({
+    const result = parseBubbleStateSnapshot({
       bubble_id: "b_test_meta_state_03",
       state: "RUNNING",
       round: 2,
@@ -220,7 +220,7 @@ describe("state schema", () => {
       watchdogTimeoutMinutes: 60,
       attempt: 1
     });
-    const result = validateBubbleStateSnapshot({
+    const result = parseBubbleStateSnapshot({
       bubble_id: "b_test_meta_state_03b",
       state: "RUNNING",
       round: 2,
@@ -257,7 +257,7 @@ describe("state schema", () => {
   });
 
   it("rejects pre-E1 execution_context snapshots without execution_id", () => {
-    const result = validateBubbleStateSnapshot({
+    const result = parseBubbleStateSnapshot({
       bubble_id: "b_test_pre_e1_exec_ctx_01",
       state: "RUNNING",
       round: 2,
@@ -289,7 +289,7 @@ describe("state schema", () => {
   });
 
   it("rejects RUNNING snapshots that only persist nested meta_review.execution_context without canonical authority", () => {
-    const result = validateBubbleStateSnapshot({
+    const result = parseBubbleStateSnapshot({
       bubble_id: "b_test_meta_state_03c",
       state: "RUNNING",
       round: 2,
@@ -335,7 +335,7 @@ describe("state schema", () => {
   });
 
   it("accepts RUNNING meta-review authority and canonicalizes a drifted meta_review.execution_context mirror", () => {
-    const result = validateBubbleStateSnapshot({
+    const result = parseBubbleStateSnapshot({
       bubble_id: "b_test_meta_state_round_drift",
       state: "RUNNING",
       round: 3,
@@ -376,7 +376,7 @@ describe("state schema", () => {
   });
 
   it("rejects RUNNING meta-review authority when active ownership role is not meta_reviewer", () => {
-    const result = validateBubbleStateSnapshot({
+    const result = parseBubbleStateSnapshot({
       bubble_id: "b_test_meta_state_04",
       state: "RUNNING",
       round: 2,
@@ -415,7 +415,7 @@ describe("state schema", () => {
   });
 
   it("accepts RUNNING meta-review authority when meta_reviewer ownership uses a non-empty agent", () => {
-    const result = validateBubbleStateSnapshot({
+    const result = parseBubbleStateSnapshot({
       bubble_id: "b_test_meta_state_04b",
       state: "RUNNING",
       round: 2,
@@ -450,7 +450,7 @@ describe("state schema", () => {
   });
 
   it("rejects RUNNING state when active fields are missing", () => {
-    const result = validateBubbleStateSnapshot({
+    const result = parseBubbleStateSnapshot({
       bubble_id: "b_test_01",
       state: "RUNNING",
       round: 1,
@@ -469,7 +469,7 @@ describe("state schema", () => {
   });
 
   it("rejects RUNNING state without canonical execution_context when round >= 1", () => {
-    const result = validateBubbleStateSnapshot({
+    const result = parseBubbleStateSnapshot({
       bubble_id: "b_test_running_no_ctx",
       state: "RUNNING",
       round: 1,
@@ -495,7 +495,7 @@ describe("state schema", () => {
   });
 
   it("rejects RUNNING round=0 ideation snapshots with execution_context", () => {
-    const result = validateBubbleStateSnapshot({
+    const result = parseBubbleStateSnapshot({
       bubble_id: "b_test_running_ideation_ctx",
       state: "RUNNING",
       round: 0,
@@ -528,7 +528,7 @@ describe("state schema", () => {
   });
 
   it("rejects stale top-level execution_context on inactive lifecycle states", () => {
-    const result = validateBubbleStateSnapshot({
+    const result = parseBubbleStateSnapshot({
       bubble_id: "b_test_waiting_human_stale_ctx",
       state: "WAITING_HUMAN",
       round: 1,
@@ -561,7 +561,7 @@ describe("state schema", () => {
   });
 
   it("rejects stale nested meta_review.execution_context on non-meta-review lifecycle states", () => {
-    const result = validateBubbleStateSnapshot({
+    const result = parseBubbleStateSnapshot({
       bubble_id: "b_test_waiting_human_stale_meta_ctx",
       state: "WAITING_HUMAN",
       round: 1,
@@ -601,7 +601,7 @@ describe("state schema", () => {
   });
 
   it("rejects partially populated active fields", () => {
-    const result = validateBubbleStateSnapshot({
+    const result = parseBubbleStateSnapshot({
       bubble_id: "b_test_01",
       state: "WAITING_HUMAN",
       round: 1,
@@ -620,7 +620,7 @@ describe("state schema", () => {
   });
 
   it("rejects invalid round_role_history entries", () => {
-    const result = validateBubbleStateSnapshot({
+    const result = parseBubbleStateSnapshot({
       bubble_id: "b_test_01",
       state: "RUNNING",
       round: 2,
@@ -650,7 +650,7 @@ describe("state schema", () => {
   });
 
   it("accepts round_role_history entries where implementer and reviewer share an agent", () => {
-    const result = validateBubbleStateSnapshot({
+    const result = parseBubbleStateSnapshot({
       bubble_id: "b_test_same_agent_history",
       state: "RUNNING",
       round: 1,
@@ -679,7 +679,7 @@ describe("state schema", () => {
   });
 
   it("accepts rework intent pending slot + immutable history records", () => {
-    const result = validateBubbleStateSnapshot({
+    const result = parseBubbleStateSnapshot({
       bubble_id: "b_test_02",
       state: "WAITING_HUMAN",
       round: 2,
@@ -713,7 +713,7 @@ describe("state schema", () => {
   });
 
   it("defaults missing rework-intent fields to empty state", () => {
-    const result = validateBubbleStateSnapshot({
+    const result = parseBubbleStateSnapshot({
       bubble_id: "b_test_03",
       state: "CREATED",
       round: 0,
@@ -734,7 +734,7 @@ describe("state schema", () => {
   });
 
   it("rejects invalid pending_rework_intent status", () => {
-    const result = validateBubbleStateSnapshot({
+    const result = parseBubbleStateSnapshot({
       bubble_id: "b_test_04",
       state: "WAITING_HUMAN",
       round: 1,
@@ -764,7 +764,7 @@ describe("state schema", () => {
   });
 
   it("rejects invalid pending_rework_intent refs payload", () => {
-    const result = validateBubbleStateSnapshot({
+    const result = parseBubbleStateSnapshot({
       bubble_id: "b_test_04b",
       state: "WAITING_HUMAN",
       round: 1,
@@ -795,7 +795,7 @@ describe("state schema", () => {
   });
 
   it("accepts valid meta-review snapshot", () => {
-    const result = validateBubbleStateSnapshot({
+    const result = parseBubbleStateSnapshot({
       bubble_id: "b_test_meta_01",
       state: "WAITING_HUMAN",
       round: 2,
@@ -828,7 +828,7 @@ describe("state schema", () => {
   });
 
   it("normalizes legacy meta-review snapshots with missing clean-run streak", () => {
-    const result = validateBubbleStateSnapshot({
+    const result = parseBubbleStateSnapshot({
       bubble_id: "b_test_meta_clean_runs_01",
       state: "WAITING_HUMAN",
       round: 2,
@@ -854,7 +854,7 @@ describe("state schema", () => {
   });
 
   it("preserves non-zero meta-review clean-run streak state", () => {
-    const result = validateBubbleStateSnapshot({
+    const result = parseBubbleStateSnapshot({
       bubble_id: "b_test_meta_clean_runs_nonzero_01",
       state: "WAITING_HUMAN",
       round: 2,
@@ -882,7 +882,7 @@ describe("state schema", () => {
 
   it("rejects malformed meta-review clean-run streak state", () => {
     for (const consecutiveCleanRuns of [1.5, -1]) {
-      const result = validateBubbleStateSnapshot({
+      const result = parseBubbleStateSnapshot({
         bubble_id: "b_test_meta_clean_runs_02",
         state: "WAITING_HUMAN",
         round: 2,
@@ -913,7 +913,7 @@ describe("state schema", () => {
   });
 
   it("rejects invalid meta-review snapshot values with field-level paths", () => {
-    const result = validateBubbleStateSnapshot({
+    const result = parseBubbleStateSnapshot({
       bubble_id: "b_test_meta_02",
       state: "WAITING_HUMAN",
       round: 2,
@@ -957,7 +957,7 @@ describe("state schema", () => {
   });
 
   it("ignores legacy meta-review status/recommendation combinations", () => {
-    const result = validateBubbleStateSnapshot({
+    const result = parseBubbleStateSnapshot({
       bubble_id: "b_test_meta_03",
       state: "WAITING_HUMAN",
       round: 2,
@@ -990,7 +990,7 @@ describe("state schema", () => {
   });
 
   it("ignores legacy status=inconclusive snapshots with non-inconclusive recommendation", () => {
-    const result = validateBubbleStateSnapshot({
+    const result = parseBubbleStateSnapshot({
       bubble_id: "b_test_meta_03b",
       state: "WAITING_HUMAN",
       round: 2,
@@ -1023,7 +1023,7 @@ describe("state schema", () => {
   });
 
   it("ignores legacy empty rework target message fields", () => {
-    const result = validateBubbleStateSnapshot({
+    const result = parseBubbleStateSnapshot({
       bubble_id: "b_test_meta_03c",
       state: "WAITING_HUMAN",
       round: 2,
@@ -1056,7 +1056,7 @@ describe("state schema", () => {
   });
 
   it("ignores legacy non-string rework target message fields", () => {
-    const result = validateBubbleStateSnapshot({
+    const result = parseBubbleStateSnapshot({
       bubble_id: "b_test_meta_03c_type",
       state: "WAITING_HUMAN",
       round: 2,
@@ -1089,7 +1089,7 @@ describe("state schema", () => {
   });
 
   it("ignores legacy no-run snapshots when deprecated run-specific fields are populated", () => {
-    const result = validateBubbleStateSnapshot({
+    const result = parseBubbleStateSnapshot({
       bubble_id: "b_test_meta_04",
       state: "WAITING_HUMAN",
       round: 2,
@@ -1120,7 +1120,7 @@ describe("state schema", () => {
   });
 
   it("accepts run snapshots without run_id when status/recommendation are set", () => {
-    const result = validateBubbleStateSnapshot({
+    const result = parseBubbleStateSnapshot({
       bubble_id: "b_test_meta_05",
       state: "WAITING_HUMAN",
       round: 2,
@@ -1151,7 +1151,7 @@ describe("state schema", () => {
   });
 
   it("ignores partially-null legacy status/recommendation pairs", () => {
-    const result = validateBubbleStateSnapshot({
+    const result = parseBubbleStateSnapshot({
       bubble_id: "b_test_meta_05c",
       state: "WAITING_HUMAN",
       round: 2,
@@ -1182,7 +1182,7 @@ describe("state schema", () => {
   });
 
   it("ignores invalid legacy enum values on deprecated meta-review fields", () => {
-    const result = validateBubbleStateSnapshot({
+    const result = parseBubbleStateSnapshot({
       bubble_id: "b_test_meta_06",
       state: "WAITING_HUMAN",
       round: 2,

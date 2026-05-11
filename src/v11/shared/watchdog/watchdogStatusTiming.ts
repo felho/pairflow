@@ -1,10 +1,10 @@
-import type { BubbleStateSnapshot } from "../../domain/state/snapshot/bubbleStateSnapshotTypes.js";
+import type { PersistedBubbleStateSnapshot } from "../../domain/state/snapshot/persistedBubbleStateSnapshot.js";
 import { SchemaValidationError } from "../validation/primitives.js";
 import { metaReviewExecutionContextToRunningContext } from "../../domain/state/execution/executionContext.js";
 import { validateActiveMetaReviewExecutionContext } from "../metaReview/metaReviewExecutionContext.js";
 
 interface WatchdogStatusTimingInput {
-  state: BubbleStateSnapshot;
+  state: PersistedBubbleStateSnapshot;
   watchdogTimeoutMinutes: number;
   now: Date;
   monitored: boolean;

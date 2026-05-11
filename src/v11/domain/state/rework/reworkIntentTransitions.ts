@@ -4,13 +4,13 @@ import {
   resolveRuntimeAlignedNextRoundContinuation
 } from "../roundContinuation.js";
 import type { AgentName } from "../../../../contracts/kernel/agentIdentity.js";
-import type { BubbleStateSnapshot } from "../snapshot/bubbleStateSnapshotTypes.js";
+import type { PersistedBubbleStateSnapshot } from "../snapshot/persistedBubbleStateSnapshot.js";
 import type {
   BubbleReworkIntentRecord
 } from "./reworkIntentTypes.js";
 
 export interface DeriveQueuedDeferredReworkIntentStateInput {
-  state: BubbleStateSnapshot;
+  state: PersistedBubbleStateSnapshot;
   intentId: string;
   message: string;
   refs?: string[];
@@ -19,13 +19,13 @@ export interface DeriveQueuedDeferredReworkIntentStateInput {
 }
 
 export interface QueueDeferredReworkIntentResult {
-  state: BubbleStateSnapshot;
+  state: PersistedBubbleStateSnapshot;
   intent: BubbleReworkIntentRecord;
   supersededIntentId?: string;
 }
 
 export interface ApplyDeferredReworkIntentInput {
-  state: BubbleStateSnapshot;
+  state: PersistedBubbleStateSnapshot;
   implementer: AgentName;
   reviewer: AgentName;
   watchdogTimeoutMinutes: number;
@@ -33,18 +33,18 @@ export interface ApplyDeferredReworkIntentInput {
 }
 
 export interface ApplyDeferredReworkIntentResult {
-  state: BubbleStateSnapshot;
+  state: PersistedBubbleStateSnapshot;
   intent: BubbleReworkIntentRecord;
 }
 
 function readIntentHistory(
-  state: BubbleStateSnapshot
+  state: PersistedBubbleStateSnapshot
 ): BubbleReworkIntentRecord[] {
   return [...(state.rework_intent_history ?? [])];
 }
 
 function ensurePendingIntent(
-  state: BubbleStateSnapshot
+  state: PersistedBubbleStateSnapshot
 ): BubbleReworkIntentRecord | null {
   const pendingIntent = state.pending_rework_intent ?? null;
   if (pendingIntent === null) {

@@ -1,8 +1,8 @@
-import type { BubbleStateSnapshot } from "../../../../domain/state/snapshot/bubbleStateSnapshotTypes.js";
+import type { PersistedBubbleStateSnapshot } from "../../../../domain/state/snapshot/persistedBubbleStateSnapshot.js";
 import type { BubbleWatchdogResult } from "../../watchdogCommandContract.js";
 import { deriveWatchdogWaitingHumanState } from "../../../../domain/state/watchdogEscalation.js";
 import { clearLiveMetaReviewSnapshot } from "../../../../shared/metaReview/metaReviewSnapshot.js";
-import { assertValidBubbleStateSnapshot } from "../../../../domain/state/stateSchema.js";
+import { assertParsedBubbleStateSnapshot } from "../../../../domain/state/stateSchema.js";
 import type { ResolvedBubbleById } from "../../../../ports/bubbleLookup.js";
 import type { EmitBubbleNotificationPort } from "../../../../ports/notifications.js";
 import type {
@@ -40,7 +40,7 @@ export interface WatchdogRuntimeContext {
   appendEnvelope: AppendProtocolEnvelopePort;
   writeState: WriteStateSnapshotPort;
   loadedState: LoadedStateSnapshot;
-  state: BubbleStateSnapshot;
+  state: PersistedBubbleStateSnapshot;
   emitDelivery: EmitDeliveryNotificationAckPort;
   emitNotification: EmitBubbleNotificationPort;
   resolveDeliveryMessageRef: ResolveDeliveryMessageRefPort;
@@ -191,7 +191,7 @@ export async function escalateMetaReviewWatchdog(
     }
   });
 
-  const nextState = assertValidBubbleStateSnapshot({
+  const nextState = assertParsedBubbleStateSnapshot({
     ...context.state,
     state: "WAITING_HUMAN",
     execution_context: null,

@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
 
 import { resolveResumeKickoffMessages } from "../../../../src/v11/application/start/internal/prompts/startCommandResumeKickoffMessages.js";
-import type { BubbleStateSnapshot } from "../../../../src/v11/domain/state/snapshot/bubbleStateSnapshotTypes.js";
+import type { PersistedBubbleStateSnapshot } from "../../../../src/v11/domain/state/snapshot/persistedBubbleStateSnapshot.js";
 
 function createRunningMetaReviewerState(
   activeAgent: "codex" | "claude"
-): BubbleStateSnapshot {
+): PersistedBubbleStateSnapshot {
   return {
     bubble_id: "b_resume_kickoff_meta_01",
     state: "RUNNING",
@@ -19,7 +19,7 @@ function createRunningMetaReviewerState(
   };
 }
 
-function createBaseInput(state: BubbleStateSnapshot) {
+function createBaseInput(state: PersistedBubbleStateSnapshot) {
   return {
     bubbleId: "b_resume_kickoff_meta_01",
     repoPath: "/tmp/repo",

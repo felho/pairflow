@@ -1,4 +1,4 @@
-import type { BubbleStateSnapshot } from "../domain/state/snapshot/bubbleStateSnapshotTypes.js";
+import type { PersistedBubbleStateSnapshot } from "../domain/state/snapshot/persistedBubbleStateSnapshot.js";
 import type { BubbleLifecycleState } from "../../contracts/kernel/lifecycle.js";
 import type {
   StateValidationDiagnostics
@@ -8,7 +8,7 @@ export type {
 } from "../../contracts/ui/stateValidation.js";
 
 export interface LoadedStateSnapshot {
-  state: BubbleStateSnapshot;
+  state: PersistedBubbleStateSnapshot;
   fingerprint: string;
 }
 
@@ -28,6 +28,6 @@ export interface WriteStateSnapshotOptions {
 
 export type WriteStateSnapshotPort = (
   statePath: string,
-  state: BubbleStateSnapshot,
+  state: PersistedBubbleStateSnapshot,
   options?: WriteStateSnapshotOptions
 ) => Promise<LoadedStateSnapshot>;

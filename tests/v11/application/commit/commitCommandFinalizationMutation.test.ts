@@ -6,9 +6,9 @@ import {
   type CommitFinalizationAppendResult,
   type CommitFinalizationLoadedState
 } from "../../../../src/v11/application/commit/internal/finalization/commitCommandFinalizationMutation.js";
-import type { BubbleStateSnapshot } from "../../../../src/v11/domain/state/snapshot/bubbleStateSnapshotTypes.js";
+import type { PersistedBubbleStateSnapshot } from "../../../../src/v11/domain/state/snapshot/persistedBubbleStateSnapshot.js";
 
-function createApprovedState(): BubbleStateSnapshot {
+function createApprovedState(): PersistedBubbleStateSnapshot {
   return {
     bubble_id: "bubble-a",
     state: "APPROVED_FOR_COMMIT",

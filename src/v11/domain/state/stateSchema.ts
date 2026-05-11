@@ -9,7 +9,7 @@ import {
 import type {
   BubbleMetaReviewSnapshotState
 } from "../../shared/metaReview/metaReviewSnapshotTypes.js";
-import type { BubbleStateSnapshot } from "./snapshot/bubbleStateSnapshotTypes.js";
+import type { PersistedBubbleStateSnapshot } from "./snapshot/persistedBubbleStateSnapshot.js";
 import { validateMetaReviewSnapshot } from "./metaReview/stateSchemaMetaReview.js";
 import {
   validateBubbleStateActivityFields,
@@ -22,9 +22,9 @@ import {
   validateBubbleStateAuthority
 } from "./authority/stateSchemaAuthority.js";
 
-export function validateBubbleStateSnapshot(
+export function parseBubbleStateSnapshot(
   input: unknown
-): ValidationResult<BubbleStateSnapshot> {
+): ValidationResult<PersistedBubbleStateSnapshot> {
   const errors: ValidationError[] = [];
   if (!isRecord(input)) {
     return validationFail([{ path: "$", message: "State must be an object" }]);
@@ -101,7 +101,7 @@ export function validateBubbleStateSnapshot(
   });
 }
 
-export function assertValidBubbleStateSnapshot(input: unknown): BubbleStateSnapshot {
-  const result = validateBubbleStateSnapshot(input);
+export function assertParsedBubbleStateSnapshot(input: unknown): PersistedBubbleStateSnapshot {
+  const result = parseBubbleStateSnapshot(input);
   return assertValidation(result, "Invalid bubble state");
 }

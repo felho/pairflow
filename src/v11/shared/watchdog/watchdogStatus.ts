@@ -1,11 +1,11 @@
 import type { BubbleLifecycleState } from "../../../contracts/kernel/lifecycle.js";
-import type { BubbleStateSnapshot } from "../../domain/state/snapshot/bubbleStateSnapshotTypes.js";
+import type { PersistedBubbleStateSnapshot } from "../../domain/state/snapshot/persistedBubbleStateSnapshot.js";
 import { metaReviewExecutionContextToRunningContext } from "../../domain/state/execution/executionContext.js";
 import { resolveWatchdogStatusTiming } from "./watchdogStatusTiming.js";
 
 export interface WatchdogStatus {
   monitored: boolean;
-  monitoredAgent: BubbleStateSnapshot["active_agent"];
+  monitoredAgent: PersistedBubbleStateSnapshot["active_agent"];
   timeoutMinutes: number;
   referenceTimestamp: string | null;
   deadlineTimestamp: string | null;
@@ -26,7 +26,7 @@ const watchdogNonAgentMonitoredStates = new Set<BubbleLifecycleState>([
 ]);
 
 function isWatchdogMonitoredState(input: {
-  state: BubbleStateSnapshot;
+  state: PersistedBubbleStateSnapshot;
   recoveredExecutionContext: ReturnType<typeof metaReviewExecutionContextToRunningContext>;
 }): boolean {
   const ideationRoundPending =
@@ -43,7 +43,7 @@ function isWatchdogMonitoredState(input: {
 }
 
 export function computeWatchdogStatus(
-  state: BubbleStateSnapshot,
+  state: PersistedBubbleStateSnapshot,
   watchdogTimeoutMinutes: number,
   now: Date = new Date()
 ): WatchdogStatus {

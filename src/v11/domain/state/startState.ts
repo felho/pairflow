@@ -1,5 +1,5 @@
 import type { AgentName } from "../../../contracts/kernel/agentIdentity.js";
-import type { BubbleStateSnapshot } from "../../domain/state/snapshot/bubbleStateSnapshotTypes.js";
+import type { PersistedBubbleStateSnapshot } from "../../domain/state/snapshot/persistedBubbleStateSnapshot.js";
 import {
   buildRestartedExecutionContext,
   buildRunningExecutionContext
@@ -7,12 +7,12 @@ import {
 import { applyStateTransition } from "./machine.js";
 
 export interface DeriveStartPreparingStateInput {
-  state: BubbleStateSnapshot;
+  state: PersistedBubbleStateSnapshot;
   lastCommandAt: string;
 }
 
 export interface DeriveStartRunningStateInput {
-  preparingState: BubbleStateSnapshot;
+  preparingState: PersistedBubbleStateSnapshot;
   lastCommandAt: string;
   bubbleId: string;
   implementer: AgentName;
@@ -22,19 +22,19 @@ export interface DeriveStartRunningStateInput {
 }
 
 export interface DeriveStartResumedStateInput {
-  state: BubbleStateSnapshot;
+  state: PersistedBubbleStateSnapshot;
   lastCommandAt: string;
   watchdogTimeoutMinutes: number;
 }
 
 export interface DeriveStartFailedCleanupStateInput {
-  preparingState: BubbleStateSnapshot;
+  preparingState: PersistedBubbleStateSnapshot;
   lastCommandAt: string;
 }
 
 export function deriveStartPreparingState(
   input: DeriveStartPreparingStateInput
-): BubbleStateSnapshot {
+): PersistedBubbleStateSnapshot {
   return applyStateTransition(input.state, {
     to: "PREPARING_WORKSPACE",
     lastCommandAt: input.lastCommandAt
@@ -43,7 +43,7 @@ export function deriveStartPreparingState(
 
 export function deriveStartRunningState(
   input: DeriveStartRunningStateInput
-): BubbleStateSnapshot {
+): PersistedBubbleStateSnapshot {
   return applyStateTransition(input.preparingState, {
     to: "RUNNING",
     round: input.ideationPending ? 0 : 1,
@@ -76,7 +76,7 @@ export function deriveStartRunningState(
 
 export function deriveStartResumedState(
   input: DeriveStartResumedStateInput
-): BubbleStateSnapshot {
+): PersistedBubbleStateSnapshot {
   if (
     input.state.state === "RUNNING"
     && input.state.round >= 1
@@ -116,7 +116,7 @@ export function deriveStartResumedState(
 
 export function deriveStartFailedCleanupState(
   input: DeriveStartFailedCleanupStateInput
-): BubbleStateSnapshot {
+): PersistedBubbleStateSnapshot {
   return applyStateTransition(input.preparingState, {
     to: "FAILED",
     activeAgent: null,

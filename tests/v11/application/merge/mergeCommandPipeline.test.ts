@@ -4,7 +4,7 @@ import { createBubbleMergeError } from "../../../../src/v11/application/merge/in
 import { runMergeCommandPipeline } from "../../../../src/v11/application/merge/internal/pipeline/mergeCommandPipeline.js";
 import type { ResolvedMergeCommandDependencies } from "../../../../src/v11/application/merge/internal/preparation/mergeCommandDependencyResolution.js";
 import type { RunMergeCommandPipelineInput } from "../../../../src/v11/application/merge/internal/preparation/mergeCommandInputNormalization.js";
-import type { BubbleStateSnapshot } from "../../../../src/v11/domain/state/snapshot/bubbleStateSnapshotTypes.js";
+import type { PersistedBubbleStateSnapshot } from "../../../../src/v11/domain/state/snapshot/persistedBubbleStateSnapshot.js";
 
 function buildPipelineInput(
   overrides: Partial<RunMergeCommandPipelineInput> = {}
@@ -22,7 +22,7 @@ function buildPipelineInput(
   };
 }
 
-function buildDoneState(): BubbleStateSnapshot {
+function buildDoneState(): PersistedBubbleStateSnapshot {
   return {
     schema_version: "v11",
     state: "DONE",
@@ -32,7 +32,7 @@ function buildDoneState(): BubbleStateSnapshot {
     active_role: null,
     active_since: null,
     last_command_at: "2026-05-09T09:00:00.000Z"
-  } as unknown as BubbleStateSnapshot;
+  } as unknown as PersistedBubbleStateSnapshot;
 }
 
 function buildDependencies(

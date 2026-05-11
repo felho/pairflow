@@ -33,7 +33,7 @@ import type {
 import type { RunGitPort } from "../../ports/git.js";
 import type { ProcessSpawnPort } from "../../ports/processSpawn.js";
 import type { buildResumeTranscriptSummary } from "./internal/prompts/startCommandResumeSummary.js";
-import type { BubbleStateSnapshot } from "../../domain/state/snapshot/bubbleStateSnapshotTypes.js";
+import type { PersistedBubbleStateSnapshot } from "../../domain/state/snapshot/persistedBubbleStateSnapshot.js";
 
 export interface StartBubbleInput {
   bubbleId: string;
@@ -44,7 +44,7 @@ export interface StartBubbleInput {
 
 export interface StartBubbleResult {
   bubbleId: string;
-  state: BubbleStateSnapshot;
+  state: PersistedBubbleStateSnapshot;
   tmuxSessionName: string;
   worktreePath: string;
   executionTarget: "local" | "remote";

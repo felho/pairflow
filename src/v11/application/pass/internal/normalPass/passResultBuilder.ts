@@ -3,7 +3,7 @@ import {
   type RepeatCleanAutoconvergeReasonCode,
   type RepeatCleanAutoconvergeReasonDetail
 } from "../../../../domain/convergence/repeatCleanAutoconverge.js";
-import type { BubbleStateSnapshot } from "../../../../domain/state/snapshot/bubbleStateSnapshotTypes.js";
+import type { PersistedBubbleStateSnapshot } from "../../../../domain/state/snapshot/persistedBubbleStateSnapshot.js";
 import type { ProtocolEnvelope } from "../../../../../types/protocol.js";
 import type { EmitConvergedResult } from "../../../converged/convergedCommandOrchestration.js";
 import type { PassActivationProvenance } from "../../passCommandContract.js";
@@ -22,7 +22,7 @@ export interface BuildAutoConvergePassResultInput {
   repeatCleanReasonDetail: RepeatCleanAutoconvergeReasonDetail;
   convergenceSequence: number;
   convergenceEnvelope: ProtocolEnvelope;
-  state: BubbleStateSnapshot;
+  state: PersistedBubbleStateSnapshot;
   gateRoute: EmitConvergedResult["gateRoute"];
   approvalRequestSequence: number;
   approvalRequestEnvelope: ProtocolEnvelope;
@@ -34,7 +34,7 @@ export interface BuildNormalPassResultInput {
   bubbleId: string;
   sequence: number;
   envelope: ProtocolEnvelope;
-  state: BubbleStateSnapshot;
+  state: PersistedBubbleStateSnapshot;
   inferredIntent: boolean;
   activation?: PassActivationProvenance;
   repeatCleanReasonCode: RepeatCleanAutoconvergeReasonCode;
@@ -51,7 +51,7 @@ export interface AutoConvergePassResult {
   sequence: number;
   envelope: ProtocolEnvelope;
   resultEnvelopeKind: "convergence";
-  state: BubbleStateSnapshot;
+  state: PersistedBubbleStateSnapshot;
   inferredIntent: boolean;
   activation?: PassActivationProvenance;
   transitionDecision: "auto_converge";
@@ -75,7 +75,7 @@ export interface NormalPassResult {
   sequence: number;
   envelope: ProtocolEnvelope;
   resultEnvelopeKind: "pass";
-  state: BubbleStateSnapshot;
+  state: PersistedBubbleStateSnapshot;
   inferredIntent: boolean;
   activation?: PassActivationProvenance;
   transitionDecision: "normal_pass";

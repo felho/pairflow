@@ -1,8 +1,8 @@
 import { applyStateTransition } from "../../../../domain/state/machine.js";
-import { assertValidBubbleStateSnapshot } from "../../../../domain/state/stateSchema.js";
+import { assertParsedBubbleStateSnapshot } from "../../../../domain/state/stateSchema.js";
 import { clearLiveMetaReviewSnapshot } from "../../../../shared/metaReview/metaReviewSnapshot.js";
 import type { AgentName } from "../../../../../contracts/kernel/agentIdentity.js";
-import type { BubbleStateSnapshot } from "../../../../domain/state/snapshot/bubbleStateSnapshotTypes.js";
+import type { PersistedBubbleStateSnapshot } from "../../../../domain/state/snapshot/persistedBubbleStateSnapshot.js";
 import {
   incrementAutoReworkCount,
   normalizeMetaReviewSnapshot,
@@ -24,14 +24,14 @@ export interface AutoReworkStateInput {
     };
   };
   loaded: {
-    state: BubbleStateSnapshot;
+    state: PersistedBubbleStateSnapshot;
   };
   now: Date;
 }
 
 export function buildAutoReworkResumedState(
   input: AutoReworkStateInput
-): { resumed: BubbleStateSnapshot; nowIso: string } {
+): { resumed: PersistedBubbleStateSnapshot; nowIso: string } {
   const nowIso = input.now.toISOString();
   const streakResetState = setMetaReviewConsecutiveCleanRuns(
     input.loaded.state,
@@ -47,7 +47,7 @@ export function buildAutoReworkResumedState(
     watchdogTimeoutMinutes:
       input.resolved.bubbleConfig.watchdog_timeout_minutes
   });
-  const resumedBase = assertValidBubbleStateSnapshot({
+  const resumedBase = assertParsedBubbleStateSnapshot({
     ...streakResetState,
     state: "RUNNING",
     round: continuation.nextRound,
@@ -69,7 +69,7 @@ export function buildAutoReworkResumedState(
   });
   return {
     nowIso,
-    resumed: assertValidBubbleStateSnapshot({
+    resumed: assertParsedBubbleStateSnapshot({
       ...resumedBase,
       meta_review: normalizeMetaReviewSnapshot(
         incrementAutoReworkCount(resumedBase).meta_review
@@ -79,10 +79,10 @@ export function buildAutoReworkResumedState(
 }
 
 export function buildRestoredReadyState(input: {
-  resumedState: BubbleStateSnapshot;
-  loadedState: BubbleStateSnapshot;
+  resumedState: PersistedBubbleStateSnapshot;
+  loadedState: PersistedBubbleStateSnapshot;
   nowIso: string;
-}): BubbleStateSnapshot {
+}): PersistedBubbleStateSnapshot {
   const restoredReady = applyStateTransition(input.resumedState, {
     to: "READY_FOR_HUMAN_APPROVAL",
     activeAgent: null,

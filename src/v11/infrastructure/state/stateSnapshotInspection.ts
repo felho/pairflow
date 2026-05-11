@@ -17,7 +17,7 @@ import {
   isAgentName,
   isAgentRole
 } from "../../../contracts/kernel/agentIdentity.js";
-import type { BubbleStateSnapshot } from "../../domain/state/snapshot/bubbleStateSnapshotTypes.js";
+import type { PersistedBubbleStateSnapshot } from "../../domain/state/snapshot/persistedBubbleStateSnapshot.js";
 import type {
   BubbleReworkIntentRecord
 } from "../../domain/state/rework/reworkIntentTypes.js";
@@ -25,8 +25,8 @@ import type {
   RoundRoleHistoryEntry
 } from "../../domain/state/snapshot/roundRoleHistory.js";
 import {
-  assertValidBubbleStateSnapshot,
-  validateBubbleStateSnapshot
+  assertParsedBubbleStateSnapshot,
+  parseBubbleStateSnapshot
 } from "../../domain/state/stateSchema.js";
 import {
   normalizeMetaReviewRuntimeDeliveryCorrelation
@@ -50,7 +50,7 @@ export interface StateValidationDiagnostics {
 }
 
 export interface InspectedStateSnapshot {
-  state: BubbleStateSnapshot;
+  state: PersistedBubbleStateSnapshot;
   fingerprint: string;
   stateValidation: StateValidationDiagnostics | null;
 }
@@ -58,7 +58,7 @@ export interface InspectedStateSnapshot {
 const inspectStatePreE1ExecutionAuthorityRejectedReasonCode =
   "INSPECT_STATE_PRE_E1_EXECUTION_AUTHORITY_REJECTED";
 
-export function fingerprintState(state: BubbleStateSnapshot): string {
+export function fingerprintState(state: PersistedBubbleStateSnapshot): string {
   const normalized = JSON.stringify(state);
   return createHash("sha256").update(normalized).digest("hex");
 }
@@ -250,7 +250,7 @@ function normalizeInspectableReworkIntentRecord(
   };
 }
 
-function coerceInspectableBubbleStateSnapshot(value: unknown): BubbleStateSnapshot | null {
+function coerceInspectablePersistedBubbleStateSnapshot(value: unknown): PersistedBubbleStateSnapshot | null {
   if (!isRecord(value)) return null;
   if (!isNonEmptyString(value.bubble_id) || !isBubbleLifecycleState(value.state)) return null;
   if (!isInteger(value.round) || value.round < 0) return null;
@@ -292,7 +292,7 @@ function coerceInspectableBubbleStateSnapshot(value: unknown): BubbleStateSnapsh
 async function loadStateSnapshot(statePath: string): Promise<InspectedStateSnapshot> {
   const raw = await readFile(statePath, "utf8");
   const parsed = JSON.parse(raw) as unknown;
-  const result = validateBubbleStateSnapshot(parsed);
+  const result = parseBubbleStateSnapshot(parsed);
   if (result.ok) {
     return {
       state: result.value,
@@ -305,9 +305,9 @@ async function loadStateSnapshot(statePath: string): Promise<InspectedStateSnaps
     throwPreE1ExecutionAuthorityInspectionError(result.errors);
   }
 
-  const inspectable = coerceInspectableBubbleStateSnapshot(parsed);
+  const inspectable = coerceInspectablePersistedBubbleStateSnapshot(parsed);
   if (inspectable === null) {
-    const state = assertValidBubbleStateSnapshot(parsed);
+    const state = assertParsedBubbleStateSnapshot(parsed);
     return {
       state,
       fingerprint: fingerprintState(state),

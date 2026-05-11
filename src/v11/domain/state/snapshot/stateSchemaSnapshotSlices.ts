@@ -2,7 +2,7 @@ import {
   isAgentName,
   isAgentRole
 } from "../../../../contracts/kernel/agentIdentity.js";
-import type { BubbleStateSnapshot } from "./bubbleStateSnapshotTypes.js";
+import type { PersistedBubbleStateSnapshot } from "./persistedBubbleStateSnapshot.js";
 import type {
   BubbleReworkIntentRecord
 } from "../rework/reworkIntentTypes.js";
@@ -34,16 +34,16 @@ const legacyLifecycleStateReasonCodeByState = new Map<string, string>([
 
 export interface ValidatedBubbleStateCoreFields {
   bubbleId: string;
-  state: BubbleStateSnapshot["state"];
+  state: PersistedBubbleStateSnapshot["state"];
   round: number;
   validatedRound: number | null;
 }
 
 export interface ValidatedBubbleStateActivityFields {
-  activeAgent: BubbleStateSnapshot["active_agent"];
-  activeRole: BubbleStateSnapshot["active_role"];
-  activeSince: BubbleStateSnapshot["active_since"];
-  lastCommandAt: BubbleStateSnapshot["last_command_at"];
+  activeAgent: PersistedBubbleStateSnapshot["active_agent"];
+  activeRole: PersistedBubbleStateSnapshot["active_role"];
+  activeSince: PersistedBubbleStateSnapshot["active_since"];
+  lastCommandAt: PersistedBubbleStateSnapshot["last_command_at"];
   executionContext: BubbleExecutionContext | null;
 }
 

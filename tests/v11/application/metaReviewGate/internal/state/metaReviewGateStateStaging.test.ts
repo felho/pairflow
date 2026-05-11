@@ -2,10 +2,10 @@ import { describe, expect, it } from "vitest";
 
 import { stageMetaReviewRunningState } from "../../../../../../src/v11/application/metaReviewGate/internal/state/metaReviewGateStateStaging.js";
 import type { LoadedStateSnapshot } from "../../../../../../src/v11/infrastructure/state/stateStore.js";
-import type { BubbleStateSnapshot } from "../../../../../../src/v11/domain/state/snapshot/bubbleStateSnapshotTypes.js";
+import type { PersistedBubbleStateSnapshot } from "../../../../../../src/v11/domain/state/snapshot/persistedBubbleStateSnapshot.js";
 
 function createLoadedRunningState(
-  partial: Partial<BubbleStateSnapshot> = {}
+  partial: Partial<PersistedBubbleStateSnapshot> = {}
 ): LoadedStateSnapshot {
   return {
     fingerprint: "ready-fingerprint",
@@ -41,12 +41,12 @@ function createLoadedRunningState(
 describe("stageMetaReviewRunningState", () => {
   it("increments attempt from auto_rework_count when starting the next gate run", async () => {
     const calls: Array<{
-      state: BubbleStateSnapshot;
+      state: PersistedBubbleStateSnapshot;
       options: { expectedFingerprint?: string; expectedState?: string };
     }> = [];
     const writeState = async (
       _statePath: string,
-      state: BubbleStateSnapshot,
+      state: PersistedBubbleStateSnapshot,
       options: { expectedFingerprint?: string; expectedState?: string } = {}
     ): Promise<LoadedStateSnapshot> => {
       calls.push({ state, options });

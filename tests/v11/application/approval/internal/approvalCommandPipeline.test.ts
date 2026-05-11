@@ -6,7 +6,7 @@ import { describe, expect, it, vi } from "vitest";
 import type {
   BubbleRemotePointer
 } from "../../../../../src/v11/shared/remote/remoteExecutionTypes.js";
-import type { BubbleStateSnapshot } from "../../../../../src/v11/domain/state/snapshot/bubbleStateSnapshotTypes.js";
+import type { PersistedBubbleStateSnapshot } from "../../../../../src/v11/domain/state/snapshot/persistedBubbleStateSnapshot.js";
 import { applyStateTransition } from "../../../../../src/v11/domain/state/machine.js";
 import { deliveryTargetRoleMetadataKey } from "../../../../../src/types/protocol.js";
 import {
@@ -61,7 +61,7 @@ async function runRequestReworkFlow(
   ) as Promise<EmitRequestReworkResult>;
 }
 
-function createReadyForHumanApprovalState(): BubbleStateSnapshot {
+function createReadyForHumanApprovalState(): PersistedBubbleStateSnapshot {
   return {
     bubble_id: "b_approval_flow_01",
     state: "READY_FOR_HUMAN_APPROVAL",
@@ -84,7 +84,7 @@ function createReadyForHumanApprovalState(): BubbleStateSnapshot {
   };
 }
 
-function createWaitingHumanState(): BubbleStateSnapshot {
+function createWaitingHumanState(): PersistedBubbleStateSnapshot {
   const ready = createReadyForHumanApprovalState();
   return {
     ...ready,
@@ -92,7 +92,7 @@ function createWaitingHumanState(): BubbleStateSnapshot {
   };
 }
 
-function createRemoteReadyForHumanApprovalState(): BubbleStateSnapshot {
+function createRemoteReadyForHumanApprovalState(): PersistedBubbleStateSnapshot {
   return {
     bubble_id: "b_remote_approval_01",
     state: "READY_FOR_HUMAN_APPROVAL",
@@ -116,7 +116,7 @@ function createRemoteReadyForHumanApprovalState(): BubbleStateSnapshot {
   };
 }
 
-function createRemoteWaitingHumanState(): BubbleStateSnapshot {
+function createRemoteWaitingHumanState(): PersistedBubbleStateSnapshot {
   return {
     ...createRemoteReadyForHumanApprovalState(),
     state: "WAITING_HUMAN"
@@ -126,7 +126,7 @@ function createRemoteWaitingHumanState(): BubbleStateSnapshot {
 function createFlowDependencies(
   nowIso: string,
   input: {
-    state?: BubbleStateSnapshot;
+    state?: PersistedBubbleStateSnapshot;
   } = {}
 ) {
   const state = input.state ?? createReadyForHumanApprovalState();
@@ -252,7 +252,7 @@ function createFlowDependencies(
 
 function createRemoteFlowDependencies(
   input: {
-    state?: BubbleStateSnapshot;
+    state?: PersistedBubbleStateSnapshot;
     resolvedRepoPath?: string;
     workspaceRepoPath?: string;
     workspaceWorktreePath?: string;

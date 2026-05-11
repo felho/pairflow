@@ -6,7 +6,7 @@ function toErrorMessage(input: PairflowCommandErrorInput): string {
   }
   return (input.reasonCode !== undefined ? input.reasonCode + ": " : "") + input.message;
 }import type { AgentName } from "../../../../src/contracts/kernel/agentIdentity.js";
-import type { BubbleStateSnapshot } from "../../../../src/v11/domain/state/snapshot/bubbleStateSnapshotTypes.js";
+import type { PersistedBubbleStateSnapshot } from "../../../../src/v11/domain/state/snapshot/persistedBubbleStateSnapshot.js";
 import { resolvePassHandoff } from "../../../../src/v11/domain/pass/handoff.js";
 
 const implementer: AgentName = "codex";
@@ -22,8 +22,8 @@ class TestPassError extends Error {
 }
 
 function buildRunningState(
-  overrides: Partial<BubbleStateSnapshot> = {}
-): BubbleStateSnapshot {
+  overrides: Partial<PersistedBubbleStateSnapshot> = {}
+): PersistedBubbleStateSnapshot {
   return {
     bubble_id: "b_handoff_01",
     state: "RUNNING",
@@ -44,7 +44,7 @@ function buildRunningState(
   };
 }
 
-function resolveFromState(state: BubbleStateSnapshot) {
+function resolveFromState(state: PersistedBubbleStateSnapshot) {
   return resolvePassHandoff({
     state,
     implementer,

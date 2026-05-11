@@ -4,7 +4,7 @@ import {
 import type {
   BubbleReviewAutoReworkSeverity
 } from "../../../../shared/reviewPolicy/reviewPolicyTypes.js";
-import type { BubbleStateSnapshot } from "../../../../domain/state/snapshot/bubbleStateSnapshotTypes.js";
+import type { PersistedBubbleStateSnapshot } from "../../../../domain/state/snapshot/persistedBubbleStateSnapshot.js";
 import type {
   PairflowCommandProfile,
   ReviewArtifactType
@@ -19,7 +19,7 @@ export function buildResumeMetaReviewerStartupPrompt(input: {
   workspacePath: string;
   taskArtifactPath: string;
   pairflowCommandProfile: PairflowCommandProfile;
-  state: BubbleStateSnapshot;
+  state: PersistedBubbleStateSnapshot;
   transcriptSummary: string;
   kickoffDiagnostic?: string;
 }): string {
@@ -39,7 +39,7 @@ export function buildResumeReviewerStartupPrompt(input: {
   taskArtifactPath: string;
   policySnapshotPathAbs: string;
   pairflowCommandProfile: PairflowCommandProfile;
-  state: BubbleStateSnapshot;
+  state: PersistedBubbleStateSnapshot;
   transcriptSummary: string;
   kickoffDiagnostic?: string;
   reviewArtifactType: ReviewArtifactType;

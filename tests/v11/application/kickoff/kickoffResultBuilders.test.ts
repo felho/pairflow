@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import type { BubbleStateSnapshot } from "../../../../src/v11/domain/state/snapshot/bubbleStateSnapshotTypes.js";
+import type { PersistedBubbleStateSnapshot } from "../../../../src/v11/domain/state/snapshot/persistedBubbleStateSnapshot.js";
 import {
   buildKickoffFailureResult,
   buildKickoffSuccessResult
@@ -8,7 +8,7 @@ import {
 
 describe("kickoffResultBuilders", () => {
   it("builds failure kickoff result shape", () => {
-    const stateBefore: BubbleStateSnapshot = {
+    const stateBefore: PersistedBubbleStateSnapshot = {
       bubble_id: "b_kickoff_result_01",
       state: "RUNNING",
       round: 0,
@@ -45,7 +45,7 @@ describe("kickoffResultBuilders", () => {
   });
 
   it("builds success kickoff result shape", () => {
-    const stateBefore: BubbleStateSnapshot = {
+    const stateBefore: PersistedBubbleStateSnapshot = {
       bubble_id: "b_kickoff_result_02",
       state: "RUNNING",
       round: 0,
@@ -55,7 +55,7 @@ describe("kickoffResultBuilders", () => {
       round_role_history: [],
       last_command_at: "2026-03-19T22:00:00.000Z"
     };
-    const stateAfter: BubbleStateSnapshot = {
+    const stateAfter: PersistedBubbleStateSnapshot = {
       bubble_id: "b_kickoff_result_02",
       state: "RUNNING",
       round: 1,
@@ -100,12 +100,12 @@ describe("kickoffResultBuilders", () => {
       bubble_id: "b_kickoff_result_03",
       state: "RUNNING",
       round: 0
-    } as BubbleStateSnapshot;
+    } as PersistedBubbleStateSnapshot;
     const stateAfter = {
       bubble_id: "b_kickoff_result_03",
       state: "RUNNING",
       round: 1
-    } as BubbleStateSnapshot;
+    } as PersistedBubbleStateSnapshot;
 
     const result = buildKickoffSuccessResult({
       bubbleId: "b_kickoff_result_03",

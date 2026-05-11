@@ -1,10 +1,10 @@
-import type { BubbleStateSnapshot } from "../../../domain/state/snapshot/bubbleStateSnapshotTypes.js";
+import type { PersistedBubbleStateSnapshot } from "../../../domain/state/snapshot/persistedBubbleStateSnapshot.js";
 import type { ProtocolEnvelope } from "../../../../types/protocol.js";
 import type {
   ExecuteRemoteBubbleCommitCommandResult
 } from "../../../shared/remote/commitRemoteExecution.js";
 import { parseEnvelopeLine } from "../../../shared/protocol/envelope.js";
-import { assertValidBubbleStateSnapshot } from "../../../domain/state/stateSchema.js";
+import { assertParsedBubbleStateSnapshot } from "../../../domain/state/stateSchema.js";
 
 type CommitResultMetadata = {
   readonly commitSha: string;
@@ -91,7 +91,7 @@ export function extractRemoteCommitMarkerPayload(input: {
 function parseRemoteBubbleState(input: {
   raw: string;
   bubbleId: string;
-}): BubbleStateSnapshot {
+}): PersistedBubbleStateSnapshot {
   let parsed: unknown;
   try {
     parsed = JSON.parse(input.raw) as unknown;
@@ -105,7 +105,7 @@ function parseRemoteBubbleState(input: {
   }
 
   try {
-    return assertValidBubbleStateSnapshot(parsed);
+    return assertParsedBubbleStateSnapshot(parsed);
   } catch (error) {
     throw new RemoteBubbleCommitCommandError({
       code: "REMOTE_COMMIT_PAYLOAD_INVALID",

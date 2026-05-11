@@ -4,7 +4,7 @@ import {
   resolveRuntimeAlignedNextRoundContinuation
 } from "../../../../domain/state/roundContinuation.js";
 import type { AgentName } from "../../../../../contracts/kernel/agentIdentity.js";
-import type { BubbleStateSnapshot } from "../../../../domain/state/snapshot/bubbleStateSnapshotTypes.js";
+import type { PersistedBubbleStateSnapshot } from "../../../../domain/state/snapshot/persistedBubbleStateSnapshot.js";
 import type {
   BubbleReworkIntentRecord
 } from "../../../../domain/state/rework/reworkIntentTypes.js";
@@ -15,7 +15,7 @@ import type {
 } from "../../approvalCommandContract.js";
 
 export interface ResolveApprovalNextStateInput {
-  state: BubbleStateSnapshot;
+  state: PersistedBubbleStateSnapshot;
   decision: "approve" | "rework";
   nowIso: string;
   implementer: AgentName;
@@ -26,7 +26,7 @@ export interface ResolveApprovalNextStateInput {
 
 export function resolveApprovalNextState(
   input: ResolveApprovalNextStateInput
-): BubbleStateSnapshot {
+): PersistedBubbleStateSnapshot {
   if (input.decision === "approve") {
     return input.applyStateTransition(input.state, {
       to: "APPROVED_FOR_COMMIT",
@@ -72,7 +72,7 @@ export function mapImmediateReworkResult(
 
 export function mapQueuedReworkResult(input: {
   bubbleId: string;
-  state: BubbleStateSnapshot;
+  state: PersistedBubbleStateSnapshot;
   intent: BubbleReworkIntentRecord;
   supersededIntentId?: string | undefined;
 }): EmitRequestReworkQueuedResult {

@@ -11,7 +11,7 @@ import type {
   BubbleRemotePointerCreated
 } from "../../../../shared/remote/remoteExecutionTypes.js";
 import type { BubbleConfig } from "../../../../shared/config/bubbleConfigTypes.js";
-import type { BubbleStateSnapshot } from "../../../../domain/state/snapshot/bubbleStateSnapshotTypes.js";
+import type { PersistedBubbleStateSnapshot } from "../../../../domain/state/snapshot/persistedBubbleStateSnapshot.js";
 import type {
   BubbleCreateDependencies,
   ResolvedTaskInput
@@ -28,7 +28,7 @@ export interface CreateBubblePersistenceInput {
   createdAt: Date;
   paths: BubblePaths;
   config: BubbleConfig;
-  state: BubbleStateSnapshot;
+  state: PersistedBubbleStateSnapshot;
   task: ResolvedTaskInput;
   reviewerFocus: ReviewerFocusExtractionResult;
   reviewerBrief?: ResolvedTaskInput | undefined;

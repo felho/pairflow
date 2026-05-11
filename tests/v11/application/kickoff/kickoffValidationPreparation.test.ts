@@ -5,11 +5,11 @@ import {
   IDEATION_KICKOFF_TASK_INVALID
 } from "../../../../src/v11/shared/ideation/ideationReasonCodes.js";
 import type { BubbleConfig } from "../../../../src/v11/shared/config/bubbleConfigTypes.js";
-import type { BubbleStateSnapshot } from "../../../../src/v11/domain/state/snapshot/bubbleStateSnapshotTypes.js";
+import type { PersistedBubbleStateSnapshot } from "../../../../src/v11/domain/state/snapshot/persistedBubbleStateSnapshot.js";
 import type { ResolvedKickoffDependencies } from "../../../../src/v11/application/kickoff/internal/validation/kickoffDependencyContract.js";
 import { prepareKickoffValidation } from "../../../../src/v11/application/kickoff/internal/validation/kickoffValidationPreparation.js";
 
-function createStateSnapshot(): BubbleStateSnapshot {
+function createStateSnapshot(): PersistedBubbleStateSnapshot {
   return {
     bubble_id: "b_kickoff_validation_01",
     state: "RUNNING",
@@ -22,7 +22,7 @@ function createStateSnapshot(): BubbleStateSnapshot {
   };
 }
 
-function createDependencies(config: BubbleConfig, state: BubbleStateSnapshot): ResolvedKickoffDependencies {
+function createDependencies(config: BubbleConfig, state: PersistedBubbleStateSnapshot): ResolvedKickoffDependencies {
   const resolvedBubble = {
     bubbleId: "b_kickoff_validation_01",
     bubbleConfig: config,

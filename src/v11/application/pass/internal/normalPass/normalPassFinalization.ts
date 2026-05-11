@@ -1,4 +1,4 @@
-import type { BubbleStateSnapshot } from "../../../../domain/state/snapshot/bubbleStateSnapshotTypes.js";
+import type { PersistedBubbleStateSnapshot } from "../../../../domain/state/snapshot/persistedBubbleStateSnapshot.js";
 import type { Finding } from "../../../../../types/findings.js";
 import type { PassIntent } from "../../../../../contracts/kernel/protocol.js";
 import type { ProtocolEnvelope } from "../../../../../types/protocol.js";
@@ -46,7 +46,7 @@ export interface FinalizeNormalPassInput {
   docGateArtifactWriteFailureReason?: string;
   sequence: number;
   envelope: ProtocolEnvelope;
-  state: BubbleStateSnapshot;
+  state: PersistedBubbleStateSnapshot;
   activation?: PassActivationProvenance;
   deliveryResult: DeliveryAck | undefined;
   deliveryRetried: boolean;

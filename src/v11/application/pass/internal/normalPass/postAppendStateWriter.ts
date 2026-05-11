@@ -1,13 +1,13 @@
 import { writeStateSnapshot } from "../../../start/startCommandDependencyDefaults.js";
 import type { LoadedStateSnapshot } from "../../../../ports/stateSnapshots.js";
 import { buildRunningExecutionContext } from "../../../../domain/state/execution/executionContext.js";
-import type { BubbleStateSnapshot } from "../../../../domain/state/snapshot/bubbleStateSnapshotTypes.js";
+import type { PersistedBubbleStateSnapshot } from "../../../../domain/state/snapshot/persistedBubbleStateSnapshot.js";
 import type { ResolvedPassHandoff } from "../../../../domain/pass/handoff.js";
 import { raisePostAppendStateWriteFailed } from "../../../../domain/pass/postAppendStateWriteFailure.js";
 
 export interface WritePostAppendPassStateInput {
   statePath: string;
-  state: BubbleStateSnapshot;
+  state: PersistedBubbleStateSnapshot;
   handoff: Pick<
     ResolvedPassHandoff,
     "nextRound" | "recipientAgent" | "recipientRole" | "appendRoundRoleEntry"
@@ -29,7 +29,7 @@ export async function writePostAppendPassState(
 ): Promise<LoadedStateSnapshot> {
   const writeState = dependencies.writeStateSnapshot ?? writeStateSnapshot;
 
-  const nextState: BubbleStateSnapshot = {
+  const nextState: PersistedBubbleStateSnapshot = {
     ...input.state,
     round: input.handoff.nextRound,
     active_agent: input.handoff.recipientAgent,

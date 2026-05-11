@@ -1,11 +1,11 @@
 import type { BubbleConfig } from "../../../../shared/config/bubbleConfigTypes.js";
-import type { BubbleStateSnapshot } from "../../../../domain/state/snapshot/bubbleStateSnapshotTypes.js";
+import type { PersistedBubbleStateSnapshot } from "../../../../domain/state/snapshot/persistedBubbleStateSnapshot.js";
 import { resolveIdeationMetadata } from "../../../../domain/ideation/ideationMetadata.js";
 import { resolveKickoffEligibilityFailureReason } from "./kickoffEligibility.js";
 
 export interface KickoffEligibilityPreparationInput {
   bubbleConfig: BubbleConfig;
-  state: BubbleStateSnapshot;
+  state: PersistedBubbleStateSnapshot;
 }
 
 export interface KickoffEligibilityPreparationResult {
@@ -28,7 +28,7 @@ function buildKickoffMarkersBefore(input: {
 
 function buildKickoffEligibilityInput(input: {
   bubbleConfig: BubbleConfig;
-  state: BubbleStateSnapshot;
+  state: PersistedBubbleStateSnapshot;
   ideationMode: boolean;
   ideationTaskPending: boolean;
 }): Parameters<typeof resolveKickoffEligibilityFailureReason>[0] {

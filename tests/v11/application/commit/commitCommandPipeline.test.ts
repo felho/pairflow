@@ -6,7 +6,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { CommitBubbleDependencies } from "../../../../src/v11/application/commit/commitCommandApiContract.js";
 import { getBubblePaths } from "../../../../src/v11/shared/bubble/bubblePaths.js";
 import type { BubbleConfig } from "../../../../src/v11/shared/config/bubbleConfigTypes.js";
-import type { BubbleStateSnapshot } from "../../../../src/v11/domain/state/snapshot/bubbleStateSnapshotTypes.js";
+import type { PersistedBubbleStateSnapshot } from "../../../../src/v11/domain/state/snapshot/persistedBubbleStateSnapshot.js";
 import type { ProtocolEnvelope } from "../../../../src/types/protocol.js";
 
 const order: string[] = [];
@@ -44,7 +44,7 @@ const appendCommitResultEnvelope = vi.fn(async () => {
   };
 });
 
-const doneState: BubbleStateSnapshot = {
+const doneState: PersistedBubbleStateSnapshot = {
   bubble_id: "b_pipeline_01",
   state: "DONE",
   round: 3,
@@ -89,7 +89,7 @@ describe("runCommitCommandPipeline", () => {
     order.length = 0;
     vi.clearAllMocks();
 
-    const approvedState: BubbleStateSnapshot = {
+    const approvedState: PersistedBubbleStateSnapshot = {
       ...doneState,
       state: "APPROVED_FOR_COMMIT",
       last_command_at: "2026-05-09T07:59:00.000Z"

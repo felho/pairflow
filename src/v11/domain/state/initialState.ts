@@ -1,7 +1,7 @@
 import { DEFAULT_META_REVIEW_AUTO_REWORK_LIMIT } from "../../shared/metaReview/metaReviewSnapshotTypes.js";
-import type { BubbleStateSnapshot } from "../../domain/state/snapshot/bubbleStateSnapshotTypes.js";
+import type { PersistedBubbleStateSnapshot } from "../../domain/state/snapshot/persistedBubbleStateSnapshot.js";
 
-export function createInitialBubbleState(bubbleId: string): BubbleStateSnapshot {
+export function createInitialBubbleState(bubbleId: string): PersistedBubbleStateSnapshot {
   return {
     bubble_id: bubbleId,
     state: "CREATED",

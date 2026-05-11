@@ -20,7 +20,7 @@ import type {
 import type { AppendWatchdogTracePort } from "../../ports/watchdogTrace.js";
 import type { EnsureBubbleInstanceIdForMutationPort } from "../../ports/bubbleIdentity.js";
 import type { ResolveBubbleByIdPort } from "../../ports/bubbleLookup.js";
-import type { BubbleStateSnapshot } from "../../domain/state/snapshot/bubbleStateSnapshotTypes.js";
+import type { PersistedBubbleStateSnapshot } from "../../domain/state/snapshot/persistedBubbleStateSnapshot.js";
 import type { ProtocolEnvelope } from "../../../types/protocol.js";
 
 export type PaneActivitySampleResult =
@@ -92,7 +92,7 @@ export interface BubbleWatchdogResult {
   bubbleId: string;
   escalated: boolean;
   reason: BubbleWatchdogNoopReason | "escalated";
-  state: BubbleStateSnapshot;
+  state: PersistedBubbleStateSnapshot;
   envelope?: ProtocolEnvelope | undefined;
   sequence?: number | undefined;
   stuckRetried?: boolean | undefined;

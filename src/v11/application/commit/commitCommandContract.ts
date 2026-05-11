@@ -1,4 +1,4 @@
-import type { BubbleStateSnapshot } from "../../domain/state/snapshot/bubbleStateSnapshotTypes.js";
+import type { PersistedBubbleStateSnapshot } from "../../domain/state/snapshot/persistedBubbleStateSnapshot.js";
 import type { ProtocolEnvelope } from "../../../types/protocol.js";
 
 export interface CommitBubbleInput {
@@ -21,7 +21,7 @@ export interface CommitBubbleResult {
   bubbleId: string;
   sequence: number;
   envelope: ProtocolEnvelope;
-  state: BubbleStateSnapshot;
+  state: PersistedBubbleStateSnapshot;
   commitSha: string;
   commitMessage: string;
   stagedFiles: string[];

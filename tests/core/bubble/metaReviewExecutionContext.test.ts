@@ -6,11 +6,11 @@ import {
   validateActiveMetaReviewExecutionContext
 } from "../../../src/v11/shared/metaReview/metaReviewExecutionContext.js";
 import { metaReviewExecutionContextToRunningContext } from "../../../src/v11/domain/state/execution/executionContext.js";
-import type { BubbleStateSnapshot } from "../../../src/v11/domain/state/snapshot/bubbleStateSnapshotTypes.js";
+import type { PersistedBubbleStateSnapshot } from "../../../src/v11/domain/state/snapshot/persistedBubbleStateSnapshot.js";
 
 function createMetaReviewRunningState(
-  partial: Partial<BubbleStateSnapshot> = {}
-): BubbleStateSnapshot {
+  partial: Partial<PersistedBubbleStateSnapshot> = {}
+): PersistedBubbleStateSnapshot {
   return {
     bubble_id: "b_meta_execctx_test_01",
     state: "RUNNING",
@@ -227,7 +227,7 @@ describe("validateActiveMetaReviewExecutionContext", () => {
     const result = validateActiveMetaReviewExecutionContext(
       createMetaReviewRunningState({
         execution_context: preE1ExecutionContext as NonNullable<
-          BubbleStateSnapshot["execution_context"]
+          PersistedBubbleStateSnapshot["execution_context"]
         >
       })
     );

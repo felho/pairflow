@@ -10,7 +10,7 @@ import type {
   BubbleRemotePointerStarted
 } from "../../../../src/v11/shared/remote/remoteExecutionTypes.js";
 import type { BubbleConfig } from "../../../../src/v11/shared/config/bubbleConfigTypes.js";
-import type { BubbleStateSnapshot } from "../../../../src/v11/domain/state/snapshot/bubbleStateSnapshotTypes.js";
+import type { PersistedBubbleStateSnapshot } from "../../../../src/v11/domain/state/snapshot/persistedBubbleStateSnapshot.js";
 import type { ProtocolEnvelope } from "../../../../src/types/protocol.js";
 import {
   emitConvergedFromWorkspaceCommandOrchestration as emitConvergedFromWorkspace
@@ -273,7 +273,7 @@ describe("commitCommandApi", () => {
     const statePath = bubblePaths.statePath;
     const transcriptPath = bubblePaths.transcriptPath;
     const donePackagePath = join(bubblePaths.artifactsDir, "done-package.md");
-    const remoteState: BubbleStateSnapshot = {
+    const remoteState: PersistedBubbleStateSnapshot = {
       bubble_id: "b_remote_commit_01",
       state: "DONE",
       round: 2,
@@ -286,7 +286,7 @@ describe("commitCommandApi", () => {
       pending_rework_intent: null,
       rework_intent_history: []
     };
-    const localApprovedState: BubbleStateSnapshot = {
+    const localApprovedState: PersistedBubbleStateSnapshot = {
       ...remoteState,
       state: "APPROVED_FOR_COMMIT",
       last_command_at: "2026-04-18T08:04:00.000Z"
@@ -596,7 +596,7 @@ describe("commitCommandApi", () => {
     const repoPath = await createTempRepo();
     const bubbleConfig = createRemoteBubbleConfig(repoPath, "b_remote_commit_payload_01");
     const bubblePaths = getBubblePaths(repoPath, "b_remote_commit_payload_01");
-    const approvedState: BubbleStateSnapshot = {
+    const approvedState: PersistedBubbleStateSnapshot = {
       bubble_id: "b_remote_commit_payload_01",
       state: "APPROVED_FOR_COMMIT",
       round: 2,
@@ -678,7 +678,7 @@ describe("commitCommandApi", () => {
     const bubbleId = "b_remote_commit_import_unavailable_01";
     const bubbleConfig = createRemoteBubbleConfig(repoPath, bubbleId);
     const bubblePaths = getBubblePaths(repoPath, bubbleId);
-    const approvedState: BubbleStateSnapshot = {
+    const approvedState: PersistedBubbleStateSnapshot = {
       bubble_id: bubbleId,
       state: "APPROVED_FOR_COMMIT",
       round: 2,
@@ -760,7 +760,7 @@ describe("commitCommandApi", () => {
     const bubbleId = "b_remote_commit_import_invalid_01";
     const bubbleConfig = createRemoteBubbleConfig(repoPath, bubbleId);
     const bubblePaths = getBubblePaths(repoPath, bubbleId);
-    const approvedState: BubbleStateSnapshot = {
+    const approvedState: PersistedBubbleStateSnapshot = {
       bubble_id: bubbleId,
       state: "APPROVED_FOR_COMMIT",
       round: 2,
@@ -842,7 +842,7 @@ describe("commitCommandApi", () => {
     const bubbleId = "b_remote_commit_no_evidence_done_01";
     const bubbleConfig = createRemoteBubbleConfig(repoPath, bubbleId);
     const bubblePaths = getBubblePaths(repoPath, bubbleId);
-    const doneState: BubbleStateSnapshot = {
+    const doneState: PersistedBubbleStateSnapshot = {
       bubble_id: bubbleId,
       state: "DONE",
       round: 2,
@@ -924,7 +924,7 @@ describe("commitCommandApi", () => {
     const bubblePaths = getBubblePaths(repoPath, "b_remote_commit_sync_fail_01");
     const statePath = bubblePaths.statePath;
     const transcriptPath = bubblePaths.transcriptPath;
-    const approvedState: BubbleStateSnapshot = {
+    const approvedState: PersistedBubbleStateSnapshot = {
       bubble_id: "b_remote_commit_sync_fail_01",
       state: "APPROVED_FOR_COMMIT",
       round: 2,
@@ -973,7 +973,7 @@ describe("commitCommandApi", () => {
       },
       refs: []
     };
-    const remoteDoneState: BubbleStateSnapshot = {
+    const remoteDoneState: PersistedBubbleStateSnapshot = {
       ...approvedState,
       state: "DONE",
       last_command_at: "2026-04-18T08:13:00.000Z"
@@ -1056,7 +1056,7 @@ describe("commitCommandApi", () => {
     const bubblePaths = getBubblePaths(repoPath, "b_remote_commit_sync_rename_fail_01");
     const statePath = bubblePaths.statePath;
     const transcriptPath = bubblePaths.transcriptPath;
-    const approvedState: BubbleStateSnapshot = {
+    const approvedState: PersistedBubbleStateSnapshot = {
       bubble_id: "b_remote_commit_sync_rename_fail_01",
       state: "APPROVED_FOR_COMMIT",
       round: 2,
@@ -1105,7 +1105,7 @@ describe("commitCommandApi", () => {
       },
       refs: []
     };
-    const remoteDoneState: BubbleStateSnapshot = {
+    const remoteDoneState: PersistedBubbleStateSnapshot = {
       ...approvedState,
       state: "DONE",
       last_command_at: "2026-04-18T08:15:00.000Z"
@@ -1200,7 +1200,7 @@ describe("commitCommandApi", () => {
     );
     const statePath = bubblePaths.statePath;
     const transcriptPath = bubblePaths.transcriptPath;
-    const approvedState: BubbleStateSnapshot = {
+    const approvedState: PersistedBubbleStateSnapshot = {
       bubble_id: "b_remote_commit_sync_restore_retry_01",
       state: "APPROVED_FOR_COMMIT",
       round: 2,
@@ -1249,7 +1249,7 @@ describe("commitCommandApi", () => {
       },
       refs: []
     };
-    const remoteDoneState: BubbleStateSnapshot = {
+    const remoteDoneState: PersistedBubbleStateSnapshot = {
       ...approvedState,
       state: "DONE",
       last_command_at: "2026-04-18T08:17:00.000Z"
@@ -1351,7 +1351,7 @@ describe("commitCommandApi", () => {
     const bubbleId = "b_remote_commit_import_retry_01";
     const bubbleConfig = createRemoteBubbleConfig(repoPath, bubbleId);
     const bubblePaths = getBubblePaths(repoPath, bubbleId);
-    const approvedState: BubbleStateSnapshot = {
+    const approvedState: PersistedBubbleStateSnapshot = {
       bubble_id: bubbleId,
       state: "APPROVED_FOR_COMMIT",
       round: 2,
@@ -1364,7 +1364,7 @@ describe("commitCommandApi", () => {
       pending_rework_intent: null,
       rework_intent_history: []
     };
-    const remoteDoneState: BubbleStateSnapshot = {
+    const remoteDoneState: PersistedBubbleStateSnapshot = {
       ...approvedState,
       state: "DONE",
       last_command_at: "2026-04-18T08:21:00.000Z"
@@ -1509,7 +1509,7 @@ describe("commitCommandApi", () => {
     const bubbleId = "b_remote_commit_import_done_retry_01";
     const bubbleConfig = createRemoteBubbleConfig(repoPath, bubbleId);
     const bubblePaths = getBubblePaths(repoPath, bubbleId);
-    const doneState: BubbleStateSnapshot = {
+    const doneState: PersistedBubbleStateSnapshot = {
       bubble_id: bubbleId,
       state: "DONE",
       round: 2,

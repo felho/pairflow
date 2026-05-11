@@ -1,4 +1,4 @@
-import type { BubbleStateSnapshot } from "../../../domain/state/snapshot/bubbleStateSnapshotTypes.js";
+import type { PersistedBubbleStateSnapshot } from "../../../domain/state/snapshot/persistedBubbleStateSnapshot.js";
 import type { ProtocolEnvelope } from "../../../../types/protocol.js";
 import { parseEnvelopeLine } from "../../../shared/protocol/envelope.js";
 import {
@@ -18,14 +18,14 @@ export interface RemoteBubbleApprovalDecisionResult {
   bubbleId: string;
   sequence: number;
   envelope: ProtocolEnvelope;
-  state: BubbleStateSnapshot;
+  state: PersistedBubbleStateSnapshot;
 }
 
 export interface RemoteBubbleApprovalQueuedReworkResult {
   kind: "queued_rework";
   bubbleId: string;
   intentId: string;
-  state: BubbleStateSnapshot;
+  state: PersistedBubbleStateSnapshot;
   supersededIntentId?: string;
 }
 
@@ -63,7 +63,7 @@ export function normalizeDecisionResult(input: {
   expectedOverrideReason?: string;
   transcriptLine: string;
   transcriptLineCount: number;
-  state: BubbleStateSnapshot;
+  state: PersistedBubbleStateSnapshot;
   createPayloadError: RemoteApprovalPayloadErrorFactory;
 }): RemoteBubbleApprovalDecisionResult {
   const envelope = parseDecisionEnvelope({
@@ -117,8 +117,8 @@ export function normalizeDecisionResult(input: {
 
 export function normalizeQueuedReworkResult(input: {
   bubbleId: string;
-  beforeState: BubbleStateSnapshot;
-  afterState: BubbleStateSnapshot;
+  beforeState: PersistedBubbleStateSnapshot;
+  afterState: PersistedBubbleStateSnapshot;
   expectedMessage: string;
   expectedRefs: string[];
   createPayloadError: RemoteApprovalPayloadErrorFactory;

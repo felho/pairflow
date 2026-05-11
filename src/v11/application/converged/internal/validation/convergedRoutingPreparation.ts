@@ -10,7 +10,7 @@ import type { AgentName } from "../../../../../contracts/kernel/agentIdentity.js
 import type {
   BubbleReviewLoopMode
 } from "../../../../shared/reviewPolicy/reviewPolicyTypes.js";
-import type { BubbleStateSnapshot } from "../../../../domain/state/snapshot/bubbleStateSnapshotTypes.js";
+import type { PersistedBubbleStateSnapshot } from "../../../../domain/state/snapshot/persistedBubbleStateSnapshot.js";
 import {
   resolveRuntimeAlignedConvergedActiveRole,
   toRuntimeAlignedReviewPolicyExecutionContext
@@ -36,7 +36,7 @@ export interface PrepareConvergedRoutingDependencies {
 export interface PrepareConvergedRoutingResult {
   resolved: Awaited<ReturnType<typeof convergedDependencyDefaults.routing.resolveBubbleFromWorkspaceCwd>>;
   bubbleIdentity: Awaited<ReturnType<typeof convergedDependencyDefaults.routing.ensureBubbleInstanceIdForMutation>>;
-  state: BubbleStateSnapshot;
+  state: PersistedBubbleStateSnapshot;
   implementer: AgentName;
   reviewer: AgentName;
   effectiveLoopMode: BubbleReviewLoopMode;
@@ -64,7 +64,7 @@ function resolveAuthoritativeBubbleContext(
 }
 
 function assertConvergedActiveContext(input: {
-  state: BubbleStateSnapshot,
+  state: PersistedBubbleStateSnapshot,
   configuredImplementer: AgentName,
   configuredReviewer: AgentName,
   effectiveLoopMode: BubbleReviewLoopMode,
@@ -229,7 +229,7 @@ function assertConvergedStateFreshness(input: {
 }
 
 function assertConvergedIdeationGate(input: {
-  state: BubbleStateSnapshot;
+  state: PersistedBubbleStateSnapshot;
   resolvedBubbleConfig: ResolvedConvergedBubbleContext["resolved"]["bubbleConfig"];
   resolveIdeationMetadataFn: typeof resolveIdeationMetadata;
   createError: PairflowCreateCommandError;
@@ -254,7 +254,7 @@ function assertConvergedIdeationGate(input: {
 
 function resolveConvergedEffectiveLoopMode(input: {
   bubbleConfig: ResolvedConvergedBubbleContext["resolved"]["bubbleConfig"];
-  state: BubbleStateSnapshot;
+  state: PersistedBubbleStateSnapshot;
 }): BubbleReviewLoopMode {
   return resolveRuntimeAlignedConvergedActiveRole({
     config: input.bubbleConfig,

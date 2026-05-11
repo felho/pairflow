@@ -13,11 +13,11 @@ import {
 } from "../../../../src/v11/application/metaReview/internal/submit/authority.js";
 import { buildMetaReviewExecutionContext } from "../../../../src/v11/shared/metaReview/metaReviewExecutionContext.js";
 import { metaReviewExecutionContextToRunningContext } from "../../../../src/v11/domain/state/execution/executionContext.js";
-import type { BubbleStateSnapshot } from "../../../../src/v11/domain/state/snapshot/bubbleStateSnapshotTypes.js";
+import type { PersistedBubbleStateSnapshot } from "../../../../src/v11/domain/state/snapshot/persistedBubbleStateSnapshot.js";
 
 function createMetaReviewRunningState(
-  partial: Partial<BubbleStateSnapshot> = {}
-): BubbleStateSnapshot {
+  partial: Partial<PersistedBubbleStateSnapshot> = {}
+): PersistedBubbleStateSnapshot {
   const nestedExecutionContext = buildMetaReviewExecutionContext({
     bubbleId: "b_meta_submit_validation_01",
     round: 2,

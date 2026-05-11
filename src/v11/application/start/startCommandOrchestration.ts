@@ -1,5 +1,5 @@
 import { buildResumeTranscriptSummary } from "./internal/prompts/startCommandResumeSummary.js";
-import type { BubbleStateSnapshot } from "../../domain/state/snapshot/bubbleStateSnapshotTypes.js";
+import type { PersistedBubbleStateSnapshot } from "../../domain/state/snapshot/persistedBubbleStateSnapshot.js";
 import type {
   StartBubbleDependencies,
   StartBubbleResult,
@@ -245,7 +245,7 @@ export function resolveStartBubbleMode(currentState: string): StartBubbleMode {
 
 export function mapStartBubbleResult(input: {
   bubbleId: string;
-  state: BubbleStateSnapshot;
+  state: PersistedBubbleStateSnapshot;
   tmuxSessionName: string;
   worktreePath: string;
   executionTarget: "local" | "remote";

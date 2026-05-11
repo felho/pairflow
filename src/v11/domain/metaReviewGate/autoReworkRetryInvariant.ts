@@ -1,4 +1,4 @@
-import type { BubbleStateSnapshot } from "../../domain/state/snapshot/bubbleStateSnapshotTypes.js";
+import type { PersistedBubbleStateSnapshot } from "../../domain/state/snapshot/persistedBubbleStateSnapshot.js";
 
 const metaReviewGateAutoReworkRetryRoundInvariantReasonCode =
   "META_REVIEW_GATE_AUTO_REWORK_RETRY_ROUND_INVARIANT";
@@ -10,8 +10,8 @@ export const metaReviewGateAutoReworkRetryRunIdentityInvariantReasonCode =
   "META_REVIEW_GATE_AUTO_REWORK_RETRY_RUN_IDENTITY_INVARIANT";
 
 export function resolveAutoReworkRetryInvariantViolation(input: {
-  latest: BubbleStateSnapshot;
-  expected: BubbleStateSnapshot;
+  latest: PersistedBubbleStateSnapshot;
+  expected: PersistedBubbleStateSnapshot;
 }): string | null {
   if (input.latest.round !== input.expected.round) {
     return metaReviewGateAutoReworkRetryRoundInvariantReasonCode;

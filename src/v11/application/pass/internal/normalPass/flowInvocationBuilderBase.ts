@@ -1,7 +1,7 @@
 import type { LoadedStateSnapshot } from "../../../../ports/stateSnapshots.js";
 import type { EnsureBubbleInstanceIdForMutationResult } from "../../../../ports/bubbleIdentity.js";
 import type { ResolvedBubbleWorkspace } from "../../../../ports/workspaceResolution.js";
-import type { BubbleStateSnapshot } from "../../../../domain/state/snapshot/bubbleStateSnapshotTypes.js";
+import type { PersistedBubbleStateSnapshot } from "../../../../domain/state/snapshot/persistedBubbleStateSnapshot.js";
 import type { Finding } from "../../../../../types/findings.js";
 import type { PreparePassRoutingResult } from "./passRoutingPreparation.js";
 import type { ResolvedPassHandoff } from "../../../../domain/pass/handoff.js";
@@ -23,7 +23,7 @@ export interface BuildFlowBaseInput {
   handoff: ResolvedPassHandoff;
   reviewer: ResolvedPassHandoff["senderAgent"];
   implementer: ResolvedPassHandoff["recipientAgent"];
-  state: BubbleStateSnapshot;
+  state: PersistedBubbleStateSnapshot;
   loadedState: Pick<LoadedStateSnapshot, "fingerprint">;
   activation?: PassActivationProvenance;
   passRouting: PreparePassRoutingResult;

@@ -4,13 +4,13 @@ import {
   IDEATION_KICKOFF_NOT_ELIGIBLE,
   IDEATION_KICKOFF_REQUIRES_RUNNING
 } from "../../../../shared/ideation/ideationReasonCodes.js";
-import type { BubbleStateSnapshot } from "../../../../domain/state/snapshot/bubbleStateSnapshotTypes.js";
+import type { PersistedBubbleStateSnapshot } from "../../../../domain/state/snapshot/persistedBubbleStateSnapshot.js";
 
 export interface ResolveKickoffEligibilityInput {
   hasParseWarning: boolean;
   ideationMode: boolean;
   ideationTaskPending: boolean;
-  state: BubbleStateSnapshot;
+  state: PersistedBubbleStateSnapshot;
 }
 
 function hasKickoffConfigurationGuardFailure(

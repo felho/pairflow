@@ -6,7 +6,7 @@ import type {
 } from "../../ports/stateSnapshots.js";
 import type { TerminateBubbleTmuxSessionPort } from "../../ports/tmuxSessions.js";
 import type { ResolveBubbleByIdPort } from "../../ports/bubbleLookup.js";
-import type { BubbleStateSnapshot } from "../../domain/state/snapshot/bubbleStateSnapshotTypes.js";
+import type { PersistedBubbleStateSnapshot } from "../../domain/state/snapshot/persistedBubbleStateSnapshot.js";
 
 export interface StopBubbleInput {
   bubbleId: string;
@@ -17,7 +17,7 @@ export interface StopBubbleInput {
 
 export interface StopBubbleResult {
   bubbleId: string;
-  state: BubbleStateSnapshot;
+  state: PersistedBubbleStateSnapshot;
   tmuxSessionName: string;
   tmuxSessionExisted: boolean;
   runtimeSessionRemoved: boolean;

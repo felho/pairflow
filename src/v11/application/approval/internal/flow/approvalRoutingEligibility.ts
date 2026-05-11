@@ -1,5 +1,5 @@
 import type { MetaReviewRecommendation } from "../../../../shared/metaReview/metaReviewTypes.js";
-import type { BubbleStateSnapshot } from "../../../../domain/state/snapshot/bubbleStateSnapshotTypes.js";
+import type { PersistedBubbleStateSnapshot } from "../../../../domain/state/snapshot/persistedBubbleStateSnapshot.js";
 import type { ApprovalDecision } from "../../../../../contracts/kernel/protocol.js";
 import {
   deliveryTargetRoleMetadataKey,
@@ -38,7 +38,7 @@ const APPROVAL_PARITY_OVERRIDE_REQUIRED = approvalParityOverrideRequiredReasonCo
 
 export interface ResolveApprovalDecisionMetadataInput {
   decision: ApprovalDecision;
-  state: BubbleStateSnapshot;
+  state: PersistedBubbleStateSnapshot;
   transcriptPath: string;
   round: number;
   overrideNonApprove?: boolean | undefined;
@@ -48,13 +48,13 @@ export interface ResolveApprovalDecisionMetadataInput {
 }
 
 export function isHumanApprovalState(
-  state: BubbleStateSnapshot["state"]
+  state: PersistedBubbleStateSnapshot["state"]
 ): state is typeof canonicalHumanApprovalState {
   return state === canonicalHumanApprovalState;
 }
 
 export function assertApprovalDecisionEligibility(
-  state: BubbleStateSnapshot,
+  state: PersistedBubbleStateSnapshot,
   createError: PairflowCreateCommandError
 ): void {
   if (!isHumanApprovalState(state.state)) {

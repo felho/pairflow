@@ -3,11 +3,11 @@ import type {
   AgentRole
 } from "../../../contracts/kernel/agentIdentity.js";
 import type { BubbleLifecycleState } from "../../../contracts/kernel/lifecycle.js";
-import type { BubbleStateSnapshot } from "../../domain/state/snapshot/bubbleStateSnapshotTypes.js";
+import type { PersistedBubbleStateSnapshot } from "../../domain/state/snapshot/persistedBubbleStateSnapshot.js";
 import type {
   RoundRoleHistoryEntry
 } from "../../domain/state/snapshot/roundRoleHistory.js";
-import { assertValidBubbleStateSnapshot } from "../../domain/state/stateSchema.js";
+import { assertParsedBubbleStateSnapshot } from "../../domain/state/stateSchema.js";
 import { assertTransitionAllowed } from "./transitions.js";
 
 export interface StateTransitionInput {
@@ -15,7 +15,7 @@ export interface StateTransitionInput {
   round?: number;
   activeAgent?: AgentName | null;
   activeRole?: AgentRole | null;
-  executionContext?: BubbleStateSnapshot["execution_context"];
+  executionContext?: PersistedBubbleStateSnapshot["execution_context"];
   activeSince?: string | null;
   lastCommandAt?: string | null;
   appendRoundRoleEntry?: RoundRoleHistoryEntry;
@@ -34,8 +34,8 @@ const statesThatClearExecutionContext = new Set<BubbleLifecycleState>([
 ]);
 
 function clearCompatibilityMetaReviewExecutionContext(
-  state: BubbleStateSnapshot
-): BubbleStateSnapshot {
+  state: PersistedBubbleStateSnapshot
+): PersistedBubbleStateSnapshot {
   if (
     state.meta_review === undefined ||
     state.active_role === "meta_reviewer" ||
@@ -54,12 +54,12 @@ function clearCompatibilityMetaReviewExecutionContext(
 }
 
 export function applyStateTransition(
-  current: BubbleStateSnapshot,
+  current: PersistedBubbleStateSnapshot,
   input: StateTransitionInput
-): BubbleStateSnapshot {
+): PersistedBubbleStateSnapshot {
   assertTransitionAllowed(current.state, input.to, current.bubble_id);
 
-  const next: BubbleStateSnapshot = {
+  const next: PersistedBubbleStateSnapshot = {
     ...current,
     state: input.to,
     round: input.round ?? current.round,
@@ -88,7 +88,7 @@ export function applyStateTransition(
     next.last_command_at = input.lastCommandAt;
   }
 
-  return assertValidBubbleStateSnapshot(
+  return assertParsedBubbleStateSnapshot(
     clearCompatibilityMetaReviewExecutionContext(next)
   );
 }

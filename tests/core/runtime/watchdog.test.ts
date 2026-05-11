@@ -2,9 +2,9 @@ import { describe, expect, it } from "vitest";
 
 import { buildMetaReviewExecutionContext } from "../../../src/v11/shared/metaReview/metaReviewExecutionContext.js";
 import { computeWatchdogStatus } from "../../../src/v11/shared/watchdog/watchdogStatus.js";
-import type { BubbleStateSnapshot } from "../../../src/v11/domain/state/snapshot/bubbleStateSnapshotTypes.js";
+import type { PersistedBubbleStateSnapshot } from "../../../src/v11/domain/state/snapshot/persistedBubbleStateSnapshot.js";
 
-function createState(partial: Partial<BubbleStateSnapshot>): BubbleStateSnapshot {
+function createState(partial: Partial<PersistedBubbleStateSnapshot>): PersistedBubbleStateSnapshot {
   return {
     bubble_id: "b_watchdog_01",
     state: "RUNNING",

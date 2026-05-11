@@ -23,7 +23,7 @@ import {
 } from "../../../../shared/actorProtocol/actorEmitContext.js";
 import type { ActorEmitContextSnapshot } from "../../../../shared/actorProtocol/actorEmitContext.js";
 import type { AgentName } from "../../../../../contracts/kernel/agentIdentity.js";
-import type { BubbleStateSnapshot } from "../../../../domain/state/snapshot/bubbleStateSnapshotTypes.js";
+import type { PersistedBubbleStateSnapshot } from "../../../../domain/state/snapshot/persistedBubbleStateSnapshot.js";
 import {
   resolveIdeationMetadata
 } from "../../../../domain/ideation/ideationMetadata.js";
@@ -56,7 +56,7 @@ export interface PreparedPassWorkspaceContext {
   resolved: ResolvedBubbleWorkspace;
   bubbleIdentity: EnsureBubbleInstanceIdForMutationResult;
   loadedState: LoadedStateSnapshot;
-  state: BubbleStateSnapshot;
+  state: PersistedBubbleStateSnapshot;
   activation?: ActorActivationProvenance;
   reviewPolicyRuntime: BubbleReviewPolicyRuntimeView;
   handoff: ResolvedPassHandoff;

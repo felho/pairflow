@@ -2,7 +2,7 @@ import type {
   BubbleRemotePointerCreated,
   BubbleRemotePointerStarted
 } from "./remoteExecutionTypes.js";
-import type { BubbleStateSnapshot } from "../../domain/state/snapshot/bubbleStateSnapshotTypes.js";
+import type { PersistedBubbleStateSnapshot } from "../../domain/state/snapshot/persistedBubbleStateSnapshot.js";
 import type { ProtocolEnvelope } from "../../../types/protocol.js";
 
 export interface CommitRemoteBubbleStatusTarget {
@@ -25,7 +25,7 @@ export interface ExecuteRemoteBubbleCommitCommandResult {
   bubbleId: string;
   sequence: number;
   envelope: ProtocolEnvelope;
-  state: BubbleStateSnapshot;
+  state: PersistedBubbleStateSnapshot;
   stateContent: string;
   transcriptContent: string;
   commitSha: string;

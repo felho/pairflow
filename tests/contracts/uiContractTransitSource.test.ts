@@ -827,9 +827,9 @@ describe("UI contract transit source guards", () => {
 
     expect(canonical).not.toContain("src/v11");
     expect(canonical).not.toContain("../v11");
-    expect(canonical).not.toContain("BubbleStateSnapshot");
+    expect(canonical).not.toContain("PersistedBubbleStateSnapshot");
     expect(canonical).not.toContain("ProtocolEnvelope");
-    expect(canonical).not.toMatch(/\bstate:\s*BubbleStateSnapshot\b/u);
+    expect(canonical).not.toMatch(/\bstate:\s*PersistedBubbleStateSnapshot\b/u);
     expect(canonical).not.toMatch(/\benvelope:\s*ProtocolEnvelope\b/u);
     expect(canonical).toContain("actionState: UiActionBubbleState");
     expect(canonical).toContain("event: UiActionEvent");

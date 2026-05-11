@@ -2,7 +2,7 @@ import type { AgentName } from "../../../../../contracts/kernel/agentIdentity.js
 import type {
   BubbleReviewAutoReworkSeverity
 } from "../../../../shared/reviewPolicy/reviewPolicyTypes.js";
-import type { BubbleStateSnapshot } from "../../../../domain/state/snapshot/bubbleStateSnapshotTypes.js";
+import type { PersistedBubbleStateSnapshot } from "../../../../domain/state/snapshot/persistedBubbleStateSnapshot.js";
 import type {
   PairflowCommandProfile,
   ReviewArtifactType
@@ -22,7 +22,7 @@ export function resolveResumeKickoffMessages(input: {
   taskArtifactPath: string;
   reviewArtifactType: ReviewArtifactType;
   pairflowCommandProfile: PairflowCommandProfile;
-  state: BubbleStateSnapshot;
+  state: PersistedBubbleStateSnapshot;
   transcriptSummary: string;
   implementerAgent: AgentName;
   reviewerAgent: AgentName;

@@ -1,4 +1,4 @@
-import type { BubbleStateSnapshot } from "../../domain/state/snapshot/bubbleStateSnapshotTypes.js";
+import type { PersistedBubbleStateSnapshot } from "../../domain/state/snapshot/persistedBubbleStateSnapshot.js";
 import type { ProtocolEnvelope } from "../../../types/protocol.js";
 import type { MetaReviewResult } from "../metaReview/metaReviewTypes.js";
 import type { MetaReviewGateRoute } from "./metaReviewGateRouteContract.js";
@@ -8,7 +8,7 @@ export interface MetaReviewGateResult {
   route: MetaReviewGateRoute;
   gateSequence: number;
   gateEnvelope: ProtocolEnvelope;
-  state: BubbleStateSnapshot;
+  state: PersistedBubbleStateSnapshot;
   metaReviewRun?: MetaReviewResult;
   warnings?: string[];
   diagnostics?: string[];

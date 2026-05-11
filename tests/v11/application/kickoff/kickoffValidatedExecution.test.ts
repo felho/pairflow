@@ -7,7 +7,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { createBubble } from "../../../../src/v11/defaults/create/createBubbleApi.js";
 import { IDEATION_KICKOFF_STATE_CONFLICT } from "../../../../src/v11/shared/ideation/ideationReasonCodes.js";
 import { renderBubbleConfigToml } from "../../../../src/config/bubbleConfig.js";
-import type { BubbleStateSnapshot } from "../../../../src/v11/domain/state/snapshot/bubbleStateSnapshotTypes.js";
+import type { PersistedBubbleStateSnapshot } from "../../../../src/v11/domain/state/snapshot/persistedBubbleStateSnapshot.js";
 import type { ResolvedKickoffDependencies } from "../../../../src/v11/application/kickoff/internal/validation/kickoffDependencyContract.js";
 import type { KickoffPreparedValidation } from "../../../../src/v11/application/kickoff/internal/validation/kickoffValidationPreparation.js";
 import { executeKickoffValidatedFlow } from "../../../../src/v11/application/kickoff/internal/validation/kickoffValidatedExecution.js";
@@ -22,7 +22,7 @@ async function createTempRepo(): Promise<string> {
   return root;
 }
 
-function createRunningState(base: BubbleStateSnapshot): BubbleStateSnapshot {
+function createRunningState(base: PersistedBubbleStateSnapshot): PersistedBubbleStateSnapshot {
   return {
     ...base,
     state: "RUNNING",
@@ -66,7 +66,7 @@ describe("executeKickoffValidatedFlow", () => {
         state: currentState,
         fingerprint: "stable-fingerprint"
       })),
-      writeState: vi.fn(async (_statePath: string, nextState: BubbleStateSnapshot) => ({
+      writeState: vi.fn(async (_statePath: string, nextState: PersistedBubbleStateSnapshot) => ({
         state: nextState,
         fingerprint: "written-fingerprint"
       })),
@@ -162,7 +162,7 @@ describe("executeKickoffValidatedFlow", () => {
         state: currentState,
         fingerprint: "stable-fingerprint"
       })),
-      writeState: vi.fn(async (_statePath: string, nextState: BubbleStateSnapshot) => ({
+      writeState: vi.fn(async (_statePath: string, nextState: PersistedBubbleStateSnapshot) => ({
         state: nextState,
         fingerprint: "written-fingerprint"
       })),
@@ -257,7 +257,7 @@ describe("executeKickoffValidatedFlow", () => {
         state: currentState,
         fingerprint: "stable-fingerprint"
       })),
-      writeState: vi.fn(async (_statePath: string, nextState: BubbleStateSnapshot) => ({
+      writeState: vi.fn(async (_statePath: string, nextState: PersistedBubbleStateSnapshot) => ({
         state: nextState,
         fingerprint: "written-fingerprint"
       })),

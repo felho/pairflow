@@ -2,7 +2,7 @@ import type { BubblePaths } from "../../../shared/bubble/bubblePaths.js";
 import type { ReplyWaitingHumanState } from "../../../domain/reply/waitingHumanStateGuard.js";
 import type { BubbleConfig } from "../../../shared/config/bubbleConfigTypes.js";
 import type { BubbleLifecycleState } from "../../../../contracts/kernel/lifecycle.js";
-import type { BubbleStateSnapshot } from "../../../domain/state/snapshot/bubbleStateSnapshotTypes.js";
+import type { PersistedBubbleStateSnapshot } from "../../../domain/state/snapshot/persistedBubbleStateSnapshot.js";
 import type {
   ProtocolEnvelope,
   ProtocolEnvelopeDraft
@@ -16,7 +16,7 @@ export interface ReplyResolvedBubble {
 }
 
 export interface ReplyLoadedStateSnapshot {
-  state: BubbleStateSnapshot;
+  state: PersistedBubbleStateSnapshot;
   fingerprint: string;
 }
 
@@ -52,7 +52,7 @@ export interface ExecuteReplyMutationInput {
     ) => Promise<ReplyAppendProtocolEnvelopeResult>;
     writeStateSnapshot: (
       statePath: string,
-      state: BubbleStateSnapshot,
+      state: PersistedBubbleStateSnapshot,
       options?: ReplyWriteStateSnapshotOptions
     ) => Promise<ReplyLoadedStateSnapshot>;
   };

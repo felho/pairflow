@@ -7,10 +7,10 @@ import {
 import { persistStateViaMutationBoundary } from "../../../../shared/mutation/mutationBoundaryIO.js";
 import type { AgentName } from "../../../../../contracts/kernel/agentIdentity.js";
 import type { BubbleLifecycleState } from "../../../../../contracts/kernel/lifecycle.js";
-import type { BubbleStateSnapshot } from "../../../../domain/state/snapshot/bubbleStateSnapshotTypes.js";
+import type { PersistedBubbleStateSnapshot } from "../../../../domain/state/snapshot/persistedBubbleStateSnapshot.js";
 
 export interface StartLoadedStateSnapshot {
-  state: BubbleStateSnapshot;
+  state: PersistedBubbleStateSnapshot;
   fingerprint: string;
 }
 
@@ -22,7 +22,7 @@ export interface StartWriteStateSnapshotOptions {
 
 export type StartWriteStateSnapshotPort = (
   statePath: string,
-  state: BubbleStateSnapshot,
+  state: PersistedBubbleStateSnapshot,
   options?: StartWriteStateSnapshotOptions
 ) => Promise<StartLoadedStateSnapshot>;
 
@@ -35,7 +35,7 @@ export interface StartPreparingMutationInput {
 
 export interface StartRunningMutationInput {
   statePath: string;
-  preparingState: BubbleStateSnapshot;
+  preparingState: PersistedBubbleStateSnapshot;
   preparingFingerprint: string;
   nowIso: string;
   bubbleId: string;
@@ -56,16 +56,16 @@ export interface StartResumeMutationInput {
 
 export interface StartFailedMutationInput {
   statePath: string;
-  preparingState: BubbleStateSnapshot;
+  preparingState: PersistedBubbleStateSnapshot;
   nowIso: string;
   writeStateSnapshot: StartWriteStateSnapshotPort;
 }
 
 export function buildResumedState(input: {
-  state: BubbleStateSnapshot;
+  state: PersistedBubbleStateSnapshot;
   nowIso: string;
   watchdogTimeoutMinutes: number;
-}): BubbleStateSnapshot {
+}): PersistedBubbleStateSnapshot {
   return deriveStartResumedState({
     state: input.state,
     lastCommandAt: input.nowIso,

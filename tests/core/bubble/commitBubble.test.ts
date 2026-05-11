@@ -9,7 +9,7 @@ import type {
   BubbleRemotePointerStarted
 } from "../../../src/v11/shared/remote/remoteExecutionTypes.js";
 import type { BubbleConfig } from "../../../src/v11/shared/config/bubbleConfigTypes.js";
-import type { BubbleStateSnapshot } from "../../../src/v11/domain/state/snapshot/bubbleStateSnapshotTypes.js";
+import type { PersistedBubbleStateSnapshot } from "../../../src/v11/domain/state/snapshot/persistedBubbleStateSnapshot.js";
 import type { ProtocolEnvelope } from "../../../src/types/protocol.js";
 import {
   emitConvergedFromWorkspaceCommandOrchestration as emitConvergedFromWorkspace
@@ -761,7 +761,7 @@ describe("commitBubble", () => {
     const statePath = bubblePaths.statePath;
     const transcriptPath = bubblePaths.transcriptPath;
     const donePackagePath = join(bubblePaths.artifactsDir, "done-package.md");
-    const remoteState: BubbleStateSnapshot = {
+    const remoteState: PersistedBubbleStateSnapshot = {
       bubble_id: "b_commit_remote_public_01",
       state: "DONE",
       round: 2,
@@ -781,7 +781,7 @@ describe("commitBubble", () => {
         ...remoteState,
         state: "APPROVED_FOR_COMMIT",
         last_command_at: "2026-04-18T08:19:00.000Z"
-      } satisfies BubbleStateSnapshot, null, 2)}\n`,
+      } satisfies PersistedBubbleStateSnapshot, null, 2)}\n`,
       "utf8"
     );
     const remoteEnvelope: ProtocolEnvelope = {

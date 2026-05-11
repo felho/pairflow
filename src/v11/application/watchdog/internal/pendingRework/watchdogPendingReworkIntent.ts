@@ -1,7 +1,7 @@
 import { emitBubbleLifecycleEventBestEffort } from "../../../metrics/bubbleEvents.js";
 import { applyDeferredReworkIntent } from "../../../../domain/state/rework/reworkIntentTransitions.js";
 import { persistPendingReworkIntentState } from "./watchdogPendingReworkPersistence.js";
-import type { BubbleStateSnapshot } from "../../../../domain/state/snapshot/bubbleStateSnapshotTypes.js";
+import type { PersistedBubbleStateSnapshot } from "../../../../domain/state/snapshot/persistedBubbleStateSnapshot.js";
 import type { ProtocolEnvelope } from "../../../../../types/protocol.js";
 import type { BubbleWatchdogResult } from "../../watchdogCommandContract.js";
 import type { ResolvedBubbleById } from "../../../../ports/bubbleLookup.js";
@@ -20,7 +20,7 @@ export async function maybeApplyPendingReworkIntent(input: {
   nowIso: string;
   resolved: ResolvedBubbleById;
   loadedState: LoadedStateSnapshot;
-  state: BubbleStateSnapshot;
+  state: PersistedBubbleStateSnapshot;
   writeState: WriteStateSnapshotPort;
   emitDelivery: EmitDeliveryNotificationAckPort;
   ensureBubbleInstanceIdForMutation: EnsureBubbleInstanceIdForMutationPort;

@@ -1,5 +1,5 @@
 import { IDEATION_KICKOFF_TASK_INVALID } from "../../../../shared/ideation/ideationReasonCodes.js";
-import type { BubbleStateSnapshot } from "../../../../domain/state/snapshot/bubbleStateSnapshotTypes.js";
+import type { PersistedBubbleStateSnapshot } from "../../../../domain/state/snapshot/persistedBubbleStateSnapshot.js";
 import {
   buildKickoffFailureResult,
   type KickoffBubbleResultShape,
@@ -9,7 +9,7 @@ import {
 interface BuildKickoffValidationFailureResultInput {
   resolvedBubbleId: string;
   reasonCode: string;
-  stateBefore: BubbleStateSnapshot;
+  stateBefore: PersistedBubbleStateSnapshot;
   markersBefore: KickoffIdeationMarkers;
 }
 
@@ -30,7 +30,7 @@ export function buildKickoffValidationFailureResult(input: BuildKickoffValidatio
 
 export function buildKickoffTaskInvalidFailureResult(input: {
   resolvedBubbleId: string;
-  state: BubbleStateSnapshot;
+  state: PersistedBubbleStateSnapshot;
   markersBefore: KickoffIdeationMarkers;
 }): { kind: "failure"; result: KickoffBubbleResultShape } {
   return buildKickoffValidationFailureResult({
@@ -44,7 +44,7 @@ export function buildKickoffTaskInvalidFailureResult(input: {
 export function buildKickoffEligibilityFailureResult(input: {
   resolvedBubbleId: string;
   eligibilityFailureReason: string;
-  state: BubbleStateSnapshot;
+  state: PersistedBubbleStateSnapshot;
   markersBefore: KickoffIdeationMarkers;
 }): { kind: "failure"; result: KickoffBubbleResultShape } {
   return buildKickoffValidationFailureResult({

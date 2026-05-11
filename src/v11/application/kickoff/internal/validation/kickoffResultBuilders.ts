@@ -1,4 +1,4 @@
-import type { BubbleStateSnapshot } from "../../../../domain/state/snapshot/bubbleStateSnapshotTypes.js";
+import type { PersistedBubbleStateSnapshot } from "../../../../domain/state/snapshot/persistedBubbleStateSnapshot.js";
 import type {
   DeliveryAckReasonCode,
   DeliveryAckStatus,
@@ -31,15 +31,15 @@ export interface KickoffBubbleResultShape {
   };
   markers_before: KickoffIdeationMarkers;
   markers_after: KickoffIdeationMarkers;
-  state_before?: BubbleStateSnapshot;
-  state_after?: BubbleStateSnapshot;
+  state_before?: PersistedBubbleStateSnapshot;
+  state_after?: PersistedBubbleStateSnapshot;
   delivery?: KickoffResultDelivery;
 }
 
 export interface BuildKickoffFailureResultInput {
   bubbleId: string;
   reasonCode: string;
-  stateBefore: BubbleStateSnapshot;
+  stateBefore: PersistedBubbleStateSnapshot;
   markersBefore: KickoffIdeationMarkers;
 }
 
@@ -69,8 +69,8 @@ export function buildKickoffFailureResult(
 export interface BuildKickoffSuccessResultInput {
   bubbleId: string;
   markersBefore: KickoffIdeationMarkers;
-  stateBefore: BubbleStateSnapshot;
-  stateAfter: BubbleStateSnapshot;
+  stateBefore: PersistedBubbleStateSnapshot;
+  stateAfter: PersistedBubbleStateSnapshot;
   delivery?: KickoffResultDelivery;
 }
 

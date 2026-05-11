@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { AgentName } from "../../../../src/contracts/kernel/agentIdentity.js";
-import type { BubbleStateSnapshot } from "../../../../src/v11/domain/state/snapshot/bubbleStateSnapshotTypes.js";
+import type { PersistedBubbleStateSnapshot } from "../../../../src/v11/domain/state/snapshot/persistedBubbleStateSnapshot.js";
 import { ensureReplyWaitingHumanState } from "../../../../src/v11/domain/reply/waitingHumanStateGuard.js";
 
 const implementer: AgentName = "codex";
@@ -21,8 +21,8 @@ function toErrorMessage(input: PairflowCommandErrorInput): string {
 }
 
 function buildWaitingHumanState(
-  overrides: Partial<BubbleStateSnapshot> = {}
-): BubbleStateSnapshot {
+  overrides: Partial<PersistedBubbleStateSnapshot> = {}
+): PersistedBubbleStateSnapshot {
   return {
     bubble_id: "b_reply_guard_01",
     state: "WAITING_HUMAN",
@@ -43,7 +43,7 @@ function buildWaitingHumanState(
   };
 }
 
-function ensureFromState(state: BubbleStateSnapshot) {
+function ensureFromState(state: PersistedBubbleStateSnapshot) {
   return ensureReplyWaitingHumanState({
     state,
     createError: (input) => new TestReplyError(toErrorMessage(input))

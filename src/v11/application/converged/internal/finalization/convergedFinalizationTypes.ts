@@ -10,7 +10,7 @@ import type {
 import { type SummaryVerifierConsistencyGateDecisionRecord } from "../../../../shared/reviewer/summaryVerifierConsistencyGate.js";
 import type { EmitBubbleLifecycleEventBestEffortPort } from "../../../../shared/metrics/bubbleEvents.js";
 import { type MetaReviewGateRoute } from "../../../../shared/metaReviewGate/index.js";
-import type { BubbleStateSnapshot } from "../../../../domain/state/snapshot/bubbleStateSnapshotTypes.js";
+import type { PersistedBubbleStateSnapshot } from "../../../../domain/state/snapshot/persistedBubbleStateSnapshot.js";
 import type {
   BubbleRoundGateState,
   BubbleSpecLockState
@@ -27,7 +27,7 @@ export type ConvergedDelivery = {
 export interface FinalizeConvergedFlowInput {
   resolved: ResolvedBubbleWorkspace;
   bubbleIdentity: EnsureBubbleInstanceIdForMutationResult;
-  state: BubbleStateSnapshot;
+  state: PersistedBubbleStateSnapshot;
   summary: string;
   refs: string[];
   now: Date;
@@ -36,7 +36,7 @@ export interface FinalizeConvergedFlowInput {
     route: MetaReviewGateRoute;
     gateSequence: number;
     gateEnvelope: ProtocolEnvelope;
-    state: BubbleStateSnapshot;
+    state: PersistedBubbleStateSnapshot;
     metaReviewRun?: {
       status: string;
       recommendation: string;
@@ -68,6 +68,6 @@ export interface FinalizeConvergedFlowResult {
   gateRoute: MetaReviewGateRoute;
   approvalRequestSequence: number;
   approvalRequestEnvelope: ProtocolEnvelope;
-  state: BubbleStateSnapshot;
+  state: PersistedBubbleStateSnapshot;
   delivery?: ConvergedDelivery;
 }

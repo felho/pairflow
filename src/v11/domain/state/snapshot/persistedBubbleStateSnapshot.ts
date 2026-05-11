@@ -16,7 +16,7 @@ import type {
   RoundRoleHistoryEntry
 } from "./roundRoleHistory.js";
 
-export interface BubbleStateSnapshot {
+export interface PersistedBubbleStateSnapshot {
   bubble_id: string;
   state: BubbleLifecycleState;
   round: number;

@@ -2,7 +2,7 @@ import {
   executeStartPreparingMutation,
   executeStartRunningMutation
 } from "../runtime/startStatePersistence.js";
-import type { BubbleStateSnapshot } from "../../../../domain/state/snapshot/bubbleStateSnapshotTypes.js";
+import type { PersistedBubbleStateSnapshot } from "../../../../domain/state/snapshot/persistedBubbleStateSnapshot.js";
 import type { StartExecutionContext } from "../runtime/startCommandContext.js";
 import type { RemoteCloneStartContext } from "./startCommandRemoteExecutionContext.js";
 import type { ResolvedStartBubbleDependencies } from "../../startCommandOrchestration.js";
@@ -27,7 +27,7 @@ export type {
 
 interface FreshStartProgress {
   workspaceBootstrapped: boolean;
-  preparingState: BubbleStateSnapshot | null;
+  preparingState: PersistedBubbleStateSnapshot | null;
   preparingFingerprint: string | null;
 }
 

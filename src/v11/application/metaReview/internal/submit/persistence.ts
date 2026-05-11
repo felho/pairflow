@@ -9,7 +9,7 @@ import {
 import type {
   MetaReviewArtifactReadPort
 } from "../../../../shared/metaReview/metaReviewArtifactIo.js";
-import type { BubbleStateSnapshot } from "../../../../domain/state/snapshot/bubbleStateSnapshotTypes.js";
+import type { PersistedBubbleStateSnapshot } from "../../../../domain/state/snapshot/persistedBubbleStateSnapshot.js";
 import type {
   BubbleExecutionContext
 } from "../../../../domain/state/execution/executionContext.js";
@@ -76,7 +76,7 @@ export async function writeCanonicalSubmitState(input: {
     execution_context: toMetaReviewExecutionContext(input.executionContext)
   };
 
-  const nextState: BubbleStateSnapshot = {
+  const nextState: PersistedBubbleStateSnapshot = {
     ...input.loadedState.state,
     execution_context: input.executionContext,
     meta_review: nextMetaReview

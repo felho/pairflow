@@ -354,8 +354,8 @@ export {
   writeRemoteStateCache
 } from "./v11/infrastructure/artifact/bubble/remoteExecutionArtifacts.js";
 export {
-  assertValidBubbleStateSnapshot,
-  validateBubbleStateSnapshot
+  assertParsedBubbleStateSnapshot,
+  parseBubbleStateSnapshot
 } from "./v11/domain/state/stateSchema.js";
 export type {
   UiApiErrorBody,
@@ -680,7 +680,7 @@ export type {
 } from "./v11/shared/remote/remoteExecutionTypes.js";
 export type { BubbleLifecycleState } from "./contracts/kernel/lifecycle.js";
 export type { BubbleRemoteStateCache } from "./v11/shared/remote/remoteStateCacheTypes.js";
-export type { BubbleStateSnapshot } from "./v11/domain/state/snapshot/bubbleStateSnapshotTypes.js";
+export type { PersistedBubbleStateSnapshot } from "./v11/domain/state/snapshot/persistedBubbleStateSnapshot.js";
 export type {
   BubbleConfig
 } from "./v11/shared/config/bubbleConfigTypes.js";

@@ -6,7 +6,7 @@ import {
   metaReviewExecutionContextToRunningContext
 } from "../../../../src/v11/domain/state/execution/executionContext.js";
 import { createInitialBubbleState } from "../../../../src/v11/domain/state/initialState.js";
-import { validateBubbleStateSnapshot } from "../../../../src/v11/domain/state/stateSchema.js";
+import { parseBubbleStateSnapshot } from "../../../../src/v11/domain/state/stateSchema.js";
 
 describe("v11 shared state schema", () => {
   it("keeps deterministic initial meta-review defaults under the v11 owner", () => {
@@ -23,7 +23,7 @@ describe("v11 shared state schema", () => {
   });
 
   it("accepts running state with canonical execution context from the v11 shared boundary", () => {
-    const result = validateBubbleStateSnapshot({
+    const result = parseBubbleStateSnapshot({
       bubble_id: "b_v11_state_schema_02",
       state: "RUNNING",
       round: 2,
@@ -53,7 +53,7 @@ describe("v11 shared state schema", () => {
       attempt: 1
     });
 
-    const result = validateBubbleStateSnapshot({
+    const result = parseBubbleStateSnapshot({
       bubble_id: "b_v11_state_schema_03",
       state: "RUNNING",
       round: 2,
@@ -90,7 +90,7 @@ describe("v11 shared state schema", () => {
       attempt: 1
     });
 
-    const result = validateBubbleStateSnapshot({
+    const result = parseBubbleStateSnapshot({
       bubble_id: "b_v11_state_schema_clean_runs_01",
       state: "RUNNING",
       round: 2,
@@ -126,7 +126,7 @@ describe("v11 shared state schema", () => {
       attempt: 1
     });
 
-    const result = validateBubbleStateSnapshot({
+    const result = parseBubbleStateSnapshot({
       bubble_id: "b_v11_state_schema_03b",
       state: "RUNNING",
       round: 2,
@@ -178,7 +178,7 @@ describe("v11 shared state schema", () => {
       attempt: 1
     });
 
-    const result = validateBubbleStateSnapshot({
+    const result = parseBubbleStateSnapshot({
       bubble_id: "b_v11_state_schema_03c",
       state: "RUNNING",
       round: 2,
@@ -222,7 +222,7 @@ describe("v11 shared state schema", () => {
   });
 
   it("rejects pre-E1 execution authority snapshots without execution_id under the v11 shared schema", () => {
-    const result = validateBubbleStateSnapshot({
+    const result = parseBubbleStateSnapshot({
       bubble_id: "b_v11_state_schema_04",
       state: "RUNNING",
       round: 2,

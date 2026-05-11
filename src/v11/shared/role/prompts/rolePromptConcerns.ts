@@ -1,5 +1,5 @@
 import type { AgentRole } from "../../../../contracts/kernel/agentIdentity.js";
-import type { BubbleStateSnapshot } from "../../../domain/state/snapshot/bubbleStateSnapshotTypes.js";
+import type { PersistedBubbleStateSnapshot } from "../../../domain/state/snapshot/persistedBubbleStateSnapshot.js";
 import type {
   ReviewArtifactType
 } from "../../config/bubbleConfigVocabulary.js";
@@ -90,9 +90,9 @@ function requirePromptValue(
 }
 
 function requirePromptState(
-  state: BubbleStateSnapshot | undefined,
+  state: PersistedBubbleStateSnapshot | undefined,
   concernId: PromptConcernId
-): BubbleStateSnapshot {
+): PersistedBubbleStateSnapshot {
   if (state !== undefined) {
     return state;
   }
@@ -218,7 +218,7 @@ export function buildDocumentPrimaryArtifactReviewerGuardrail(
 }
 
 function buildReviewerResumeRoleInstruction(
-  state: BubbleStateSnapshot
+  state: PersistedBubbleStateSnapshot
 ): string {
   return state.state === "RUNNING" && state.active_role === "reviewer"
     ? "You are currently active. Continue review now."

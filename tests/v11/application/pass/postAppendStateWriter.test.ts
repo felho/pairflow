@@ -7,7 +7,7 @@ function toErrorMessage(input: PairflowCommandErrorInput): string {
   return (input.reasonCode !== undefined ? input.reasonCode + ": " : "") + input.message;
 }
 
-import type { BubbleStateSnapshot } from "../../../../src/v11/domain/state/snapshot/bubbleStateSnapshotTypes.js";
+import type { PersistedBubbleStateSnapshot } from "../../../../src/v11/domain/state/snapshot/persistedBubbleStateSnapshot.js";
 import { writePostAppendPassState } from "../../../../src/v11/application/pass/internal/normalPass/postAppendStateWriter.js";
 
 class TestPostAppendStateWriterError extends Error {
@@ -21,7 +21,7 @@ function createError(message: PairflowCommandErrorInput): Error {
   return new TestPostAppendStateWriterError(toErrorMessage(message));
 }
 
-function buildState(): BubbleStateSnapshot {
+function buildState(): PersistedBubbleStateSnapshot {
   return {
     bubble_id: "b_123",
     state: "RUNNING",
@@ -84,7 +84,7 @@ describe("writePostAppendPassState", () => {
         expectedState: "RUNNING"
       }
     });
-    expect((writes[0] as { state: BubbleStateSnapshot }).state).toMatchObject({
+    expect((writes[0] as { state: PersistedBubbleStateSnapshot }).state).toMatchObject({
       round: 2,
       active_agent: "claude",
       active_role: "reviewer",
@@ -104,7 +104,7 @@ describe("writePostAppendPassState", () => {
   });
 
   it("appends round role history when handoff includes appendRoundRoleEntry", async () => {
-    let capturedState: BubbleStateSnapshot | undefined;
+    let capturedState: PersistedBubbleStateSnapshot | undefined;
     await writePostAppendPassState(
       {
         statePath: "/tmp/state.json",
@@ -147,7 +147,7 @@ describe("writePostAppendPassState", () => {
   });
 
   it("writes canonical meta-review authority when bypass handoff targets meta-reviewer", async () => {
-    let capturedState: BubbleStateSnapshot | undefined;
+    let capturedState: PersistedBubbleStateSnapshot | undefined;
     await writePostAppendPassState(
       {
         statePath: "/tmp/state.json",

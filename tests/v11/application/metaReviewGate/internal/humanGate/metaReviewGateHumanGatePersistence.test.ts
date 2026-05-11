@@ -2,10 +2,10 @@ import { describe, expect, it } from "vitest";
 
 import { persistHumanGateRoute } from "../../../../../../src/v11/application/metaReviewGate/internal/humanGate/metaReviewGateHumanGatePersistence.js";
 import type { LoadedStateSnapshot } from "../../../../../../src/v11/ports/stateSnapshots.js";
-import type { BubbleStateSnapshot } from "../../../../../../src/v11/domain/state/snapshot/bubbleStateSnapshotTypes.js";
+import type { PersistedBubbleStateSnapshot } from "../../../../../../src/v11/domain/state/snapshot/persistedBubbleStateSnapshot.js";
 
 function createLoadedRunningState(): LoadedStateSnapshot {
-  const state: BubbleStateSnapshot = {
+  const state: PersistedBubbleStateSnapshot = {
     bubble_id: "b_meta_gate_human_route_01",
     state: "RUNNING",
     round: 4,
@@ -88,7 +88,7 @@ describe("persistHumanGateRoute", () => {
 
   it("does not persist fallback-only recommendation state on the staged canonical snapshot", async () => {
     const loaded = createLoadedRunningState();
-    const writes: BubbleStateSnapshot[] = [];
+    const writes: PersistedBubbleStateSnapshot[] = [];
 
     const result = await persistHumanGateRoute({
       appendEnvelope: async ({ envelope }) => ({

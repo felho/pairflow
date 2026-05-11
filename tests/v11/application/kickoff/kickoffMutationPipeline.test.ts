@@ -1,9 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
 
-import type { BubbleStateSnapshot } from "../../../../src/v11/domain/state/snapshot/bubbleStateSnapshotTypes.js";
+import type { PersistedBubbleStateSnapshot } from "../../../../src/v11/domain/state/snapshot/persistedBubbleStateSnapshot.js";
 import { executeKickoffMutationPipeline } from "../../../../src/v11/application/kickoff/internal/mutation/kickoffMutationPipeline.js";
 
-function createState(round: number): BubbleStateSnapshot {
+function createState(round: number): PersistedBubbleStateSnapshot {
   return {
     bubble_id: "b_kickoff_pipeline_01",
     state: "RUNNING",

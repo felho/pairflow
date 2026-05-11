@@ -2,7 +2,7 @@ import { dirname, join } from "node:path";
 import { randomUUID } from "node:crypto";
 import { rename, rm, writeFile } from "node:fs/promises";
 
-import { assertValidBubbleStateSnapshot } from "../../domain/state/stateSchema.js";
+import { assertParsedBubbleStateSnapshot } from "../../domain/state/stateSchema.js";
 import {
   FileLockTimeoutError,
   withFileLock
@@ -12,7 +12,7 @@ import {
   inspectStateSnapshot
 } from "./stateSnapshotInspection.js";
 import type { BubbleLifecycleState } from "../../../contracts/kernel/lifecycle.js";
-import type { BubbleStateSnapshot } from "../../domain/state/snapshot/bubbleStateSnapshotTypes.js";
+import type { PersistedBubbleStateSnapshot } from "../../domain/state/snapshot/persistedBubbleStateSnapshot.js";
 import { SchemaValidationError } from "../../shared/validation/primitives.js";
 import type {
   LoadedStateSnapshot,
@@ -43,7 +43,7 @@ export class StateStoreConflictError extends Error {
   }
 }
 
-function serializeState(state: BubbleStateSnapshot): string {
+function serializeState(state: PersistedBubbleStateSnapshot): string {
   return `${JSON.stringify(state, null, 2)}\n`;
 }
 
@@ -65,7 +65,7 @@ export const readStateSnapshot: ReadStateSnapshotPort = async (
 
 async function atomicWriteState(
   statePath: string,
-  state: BubbleStateSnapshot
+  state: PersistedBubbleStateSnapshot
 ): Promise<void> {
   const parentDir = dirname(statePath);
   const tempPath = join(parentDir, `.state-${randomUUID()}.tmp`);
@@ -105,9 +105,9 @@ export async function withStateWriteLock<T>(
 
 export async function createStateSnapshot(
   statePath: string,
-  state: BubbleStateSnapshot
+  state: PersistedBubbleStateSnapshot
 ): Promise<LoadedStateSnapshot> {
-  const validated = assertValidBubbleStateSnapshot(state);
+  const validated = assertParsedBubbleStateSnapshot(state);
   await writeFile(statePath, serializeState(validated), {
     encoding: "utf8",
     flag: "wx"
@@ -120,10 +120,10 @@ export async function createStateSnapshot(
 
 export async function writeStateSnapshot(
   statePath: string,
-  state: BubbleStateSnapshot,
+  state: PersistedBubbleStateSnapshot,
   options: WriteStateSnapshotOptions = {}
 ): Promise<LoadedStateSnapshot> {
-  const validated = assertValidBubbleStateSnapshot(state);
+  const validated = assertParsedBubbleStateSnapshot(state);
   return withStateWriteLock(
     statePath,
     options.lockTimeoutMs ?? 5_000,

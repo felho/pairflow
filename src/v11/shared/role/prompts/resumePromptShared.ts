@@ -1,10 +1,10 @@
-import type { BubbleStateSnapshot } from "../../../domain/state/snapshot/bubbleStateSnapshotTypes.js";
+import type { PersistedBubbleStateSnapshot } from "../../../domain/state/snapshot/persistedBubbleStateSnapshot.js";
 
 function formatResumeStateValue(value: string | number | null): string {
   return value === null ? "none" : String(value);
 }
 
-export function buildResumeContextLine(state: BubbleStateSnapshot): string {
+export function buildResumeContextLine(state: PersistedBubbleStateSnapshot): string {
   const parts = [
     `state=${state.state}`,
     `round=${state.round}`,

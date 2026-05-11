@@ -1,7 +1,7 @@
 import type {
   EmitAskHumanBubbleNotificationPort
 } from "./internal/delivery/askHumanDeliveryPortsContract.js";
-import type { BubbleStateSnapshot } from "../../domain/state/snapshot/bubbleStateSnapshotTypes.js";
+import type { PersistedBubbleStateSnapshot } from "../../domain/state/snapshot/persistedBubbleStateSnapshot.js";
 import type { ProtocolEnvelope } from "../../../types/protocol.js";
 import type {
   ActorActivationProvenance,
@@ -34,7 +34,7 @@ export interface EmitAskHumanResult {
   bubbleId: string;
   sequence: number;
   envelope: ProtocolEnvelope;
-  state: BubbleStateSnapshot;
+  state: PersistedBubbleStateSnapshot;
   inferredRecipient: "human";
   activation?: AskHumanActivationProvenance;
   delivery?: {

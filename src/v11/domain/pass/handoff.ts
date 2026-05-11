@@ -2,7 +2,7 @@ import type { AgentName } from "../../../contracts/kernel/agentIdentity.js";
 import type {
   BubbleReviewLoopMode
 } from "../../shared/reviewPolicy/reviewPolicyTypes.js";
-import type { BubbleStateSnapshot } from "../../domain/state/snapshot/bubbleStateSnapshotTypes.js";
+import type { PersistedBubbleStateSnapshot } from "../../domain/state/snapshot/persistedBubbleStateSnapshot.js";
 import type {
   RoundRoleHistoryEntry
 } from "../../domain/state/snapshot/roundRoleHistory.js";
@@ -21,7 +21,7 @@ export interface ResolvedPassHandoff {
 }
 
 export interface ResolvePassHandoffInput {
-  state: BubbleStateSnapshot;
+  state: PersistedBubbleStateSnapshot;
   implementer: AgentName;
   reviewer: AgentName;
   metaReviewer: AgentName;

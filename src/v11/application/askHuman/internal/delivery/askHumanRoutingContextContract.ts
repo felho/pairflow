@@ -7,7 +7,7 @@ import type {
 } from "../../../../shared/actorProtocol/actorEmitContext.js";
 import type { BubbleConfig } from "../../../../shared/config/bubbleConfigTypes.js";
 import type { BubblePaths } from "../../../../shared/bubble/bubblePaths.js";
-import type { BubbleStateSnapshot } from "../../../../domain/state/snapshot/bubbleStateSnapshotTypes.js";
+import type { PersistedBubbleStateSnapshot } from "../../../../domain/state/snapshot/persistedBubbleStateSnapshot.js";
 
 export interface AskHumanResolvedBubbleWorkspace {
   bubbleId: string;
@@ -33,13 +33,13 @@ export interface AskHumanEnsureBubbleIdentityResult {
 }
 
 export interface AskHumanLoadedStateSnapshot {
-  state: BubbleStateSnapshot;
+  state: PersistedBubbleStateSnapshot;
   fingerprint: string;
 }
 
 type AskHumanActiveRole = Exclude<AgentRole, "meta_reviewer">;
 
-export interface AskHumanRunningState extends BubbleStateSnapshot {
+export interface AskHumanRunningState extends PersistedBubbleStateSnapshot {
   state: "RUNNING";
   active_agent: AgentName;
   active_role: AskHumanActiveRole;

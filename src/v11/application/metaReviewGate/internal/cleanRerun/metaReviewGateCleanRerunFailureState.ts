@@ -1,9 +1,9 @@
-import type { BubbleStateSnapshot } from "../../../../domain/state/snapshot/bubbleStateSnapshotTypes.js";
+import type { PersistedBubbleStateSnapshot } from "../../../../domain/state/snapshot/persistedBubbleStateSnapshot.js";
 import { setMetaReviewConsecutiveCleanRuns } from "../../../../domain/metaReviewGate/snapshotState.js";
 
 export function buildCleanRerunDispatchFailureRollbackState(
-  state: BubbleStateSnapshot
-): BubbleStateSnapshot {
+  state: PersistedBubbleStateSnapshot
+): PersistedBubbleStateSnapshot {
   const resetState = setMetaReviewConsecutiveCleanRuns(state, 0);
   if (resetState.meta_review === undefined) return resetState;
   return {

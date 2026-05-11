@@ -1,18 +1,18 @@
 import { applyStateTransition } from "../../../../domain/state/machine.js";
-import { assertValidBubbleStateSnapshot } from "../../../../domain/state/stateSchema.js";
-import type { BubbleStateSnapshot } from "../../../../domain/state/snapshot/bubbleStateSnapshotTypes.js";
+import { assertParsedBubbleStateSnapshot } from "../../../../domain/state/stateSchema.js";
+import type { PersistedBubbleStateSnapshot } from "../../../../domain/state/snapshot/persistedBubbleStateSnapshot.js";
 import { clearLiveMetaReviewSnapshot } from "../../../../shared/metaReview/metaReviewSnapshot.js";
 
 export function transitionToGateState(input: {
-  current: BubbleStateSnapshot;
+  current: PersistedBubbleStateSnapshot;
   nowIso: string;
   targetState: "READY_FOR_HUMAN_APPROVAL" | "RUNNING";
   stickyHumanGate: boolean;
   consecutiveCleanRuns?: number;
-}): BubbleStateSnapshot {
+}): PersistedBubbleStateSnapshot {
   const transitioned =
     input.current.state === input.targetState
-      ? assertValidBubbleStateSnapshot({
+      ? assertParsedBubbleStateSnapshot({
           ...input.current,
           ...(input.targetState === "READY_FOR_HUMAN_APPROVAL"
             ? {

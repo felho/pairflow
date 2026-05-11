@@ -1,7 +1,7 @@
 import type {
   BubbleReviewAutoReworkSeverity
 } from "../reviewPolicy/reviewPolicyTypes.js";
-import type { BubbleStateSnapshot } from "../../domain/state/snapshot/bubbleStateSnapshotTypes.js";
+import type { PersistedBubbleStateSnapshot } from "../../domain/state/snapshot/persistedBubbleStateSnapshot.js";
 import type { FindingPriority } from "../../../types/findings.js";
 
 export type MetaReviewGateThresholdStatus =
@@ -51,7 +51,7 @@ export interface MetaReviewGateErrorDiagnostics {
   round?: number;
   rollbackReasonCode?: string;
   rollbackOutcome?: "not_attempted" | "applied" | "failed";
-  rollbackTargetState?: BubbleStateSnapshot["state"];
+  rollbackTargetState?: PersistedBubbleStateSnapshot["state"];
   stageReasonCode?: string;
   restoreReasonCode?: string;
   retryInvariantReasonCode?: string;

@@ -22,7 +22,7 @@ import {
   buildResumeReviewerStartupPrompt
 } from "../../../../src/v11/application/start/internal/prompts/startCommandResumePrompts.js";
 import { buildMetaReviewSubmitCommandTemplate } from "../../../../src/v11/shared/metaReview/metaReviewSubmitGuidance.js";
-import type { BubbleStateSnapshot } from "../../../../src/v11/domain/state/snapshot/bubbleStateSnapshotTypes.js";
+import type { PersistedBubbleStateSnapshot } from "../../../../src/v11/domain/state/snapshot/persistedBubbleStateSnapshot.js";
 
 function expectNoDonePackagePromptTokens(prompt: string): void {
   expect(prompt).not.toContain("done-package");
@@ -108,7 +108,7 @@ describe("startCommandImplementerPrompts", () => {
   });
 
   it("keeps document-scope startup and resume prompts out of code implementation mode", () => {
-    const state: BubbleStateSnapshot = {
+    const state: PersistedBubbleStateSnapshot = {
       bubble_id: "bubble_prompt_doc_resume_01",
       state: "RUNNING",
       round: 1,
@@ -165,7 +165,7 @@ describe("startCommandImplementerPrompts", () => {
       fitness: "pnpm fitness",
       validation_required: ["fitness", "typecheck"]
     };
-    const state: BubbleStateSnapshot = {
+    const state: PersistedBubbleStateSnapshot = {
       bubble_id: "bubble_prompt_validation_01",
       state: "RUNNING",
       round: 2,
@@ -244,7 +244,7 @@ describe("startCommandImplementerPrompts", () => {
   });
 
   it("keeps resume implementer startup prompt free of retired done-package tokens", () => {
-    const state: BubbleStateSnapshot = {
+    const state: PersistedBubbleStateSnapshot = {
       bubble_id: "bubble_prompt_resume_01",
       state: "RUNNING",
       round: 3,
@@ -281,7 +281,7 @@ describe("startCommandImplementerPrompts", () => {
   });
 
   it("keeps the ideation-pending implementer resume prompt routed through the registry seam", () => {
-    const state: BubbleStateSnapshot = {
+    const state: PersistedBubbleStateSnapshot = {
       bubble_id: "bubble_prompt_resume_ideation_01",
       state: "RUNNING",
       round: 0,
@@ -366,7 +366,7 @@ describe("startCommandImplementerPrompts", () => {
   });
 
   it("keeps reviewer and meta-reviewer prompts aligned with the registry-driven concern composition", () => {
-    const reviewerState: BubbleStateSnapshot = {
+    const reviewerState: PersistedBubbleStateSnapshot = {
       bubble_id: "bubble_prompt_reviewer_resume_01",
       state: "RUNNING",
       round: 2,
@@ -377,7 +377,7 @@ describe("startCommandImplementerPrompts", () => {
       round_role_history: [],
       last_command_at: "2026-04-25T21:00:42.033Z"
     };
-    const metaReviewerState: BubbleStateSnapshot = {
+    const metaReviewerState: PersistedBubbleStateSnapshot = {
       ...reviewerState,
       bubble_id: "bubble_prompt_meta_resume_01",
       active_agent: "codex",
@@ -490,7 +490,7 @@ describe("startCommandImplementerPrompts", () => {
   });
 
   it("keeps runtime fail-closed behavior when transcript context rendering is invoked without transcriptSummary", () => {
-    const state: BubbleStateSnapshot = {
+    const state: PersistedBubbleStateSnapshot = {
       bubble_id: "bubble_prompt_resume_missing_transcript_01",
       state: "RUNNING",
       round: 2,

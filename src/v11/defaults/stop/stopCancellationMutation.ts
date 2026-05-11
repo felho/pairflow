@@ -1,9 +1,9 @@
 import { applyStateTransition } from "../../domain/state/machine.js";
 import type { BubbleLifecycleState } from "../../../contracts/kernel/lifecycle.js";
-import type { BubbleStateSnapshot } from "../../domain/state/snapshot/bubbleStateSnapshotTypes.js";
+import type { PersistedBubbleStateSnapshot } from "../../domain/state/snapshot/persistedBubbleStateSnapshot.js";
 
 export interface StopCancellationLoadedStateSnapshot {
-  state: BubbleStateSnapshot;
+  state: PersistedBubbleStateSnapshot;
   fingerprint: string;
 }
 
@@ -19,7 +19,7 @@ export interface StopCancellationMutationInput {
   nowIso: string;
   writeStateSnapshot: (
     statePath: string,
-    state: BubbleStateSnapshot,
+    state: PersistedBubbleStateSnapshot,
     options?: StopCancellationWriteStateSnapshotOptions
   ) => Promise<StopCancellationLoadedStateSnapshot>;
 }

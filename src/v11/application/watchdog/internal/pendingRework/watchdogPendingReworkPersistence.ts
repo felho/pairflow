@@ -1,6 +1,6 @@
 import { persistStateViaMutationBoundary } from "../../../../shared/mutation/mutationBoundaryIO.js";
 import type { BubbleLifecycleState } from "../../../../../contracts/kernel/lifecycle.js";
-import type { BubbleStateSnapshot } from "../../../../domain/state/snapshot/bubbleStateSnapshotTypes.js";
+import type { PersistedBubbleStateSnapshot } from "../../../../domain/state/snapshot/persistedBubbleStateSnapshot.js";
 import { BubbleWatchdogError } from "../error/watchdogCommandRuntime.js";
 
 export interface WatchdogPendingReworkWriteStateSnapshotOptions {
@@ -9,18 +9,18 @@ export interface WatchdogPendingReworkWriteStateSnapshotOptions {
 }
 
 export interface WatchdogPendingReworkLoadedStateSnapshot {
-  state: BubbleStateSnapshot;
+  state: PersistedBubbleStateSnapshot;
   fingerprint: string;
 }
 
 export interface PersistPendingReworkIntentStateInput {
   statePath: string;
-  nextState: BubbleStateSnapshot;
+  nextState: PersistedBubbleStateSnapshot;
   loadedState: WatchdogPendingReworkLoadedStateSnapshot;
   intentId: string;
   writeStateSnapshot: (
     statePath: string,
-    state: BubbleStateSnapshot,
+    state: PersistedBubbleStateSnapshot,
     options?: WatchdogPendingReworkWriteStateSnapshotOptions
   ) => Promise<WatchdogPendingReworkLoadedStateSnapshot>;
 }

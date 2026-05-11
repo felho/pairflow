@@ -1,6 +1,6 @@
 import { DEFAULT_META_REVIEW_AUTO_REWORK_LIMIT } from "../../shared/metaReview/metaReviewSnapshotTypes.js";
 import type { BubbleMetaReviewSnapshotState } from "../../shared/metaReview/metaReviewSnapshotTypes.js";
-import type { BubbleStateSnapshot } from "../../domain/state/snapshot/bubbleStateSnapshotTypes.js";
+import type { PersistedBubbleStateSnapshot } from "../../domain/state/snapshot/persistedBubbleStateSnapshot.js";
 
 export function normalizeMetaReviewSnapshot(
   snapshot: BubbleMetaReviewSnapshotState | undefined
@@ -26,7 +26,7 @@ export function normalizeMetaReviewSnapshot(
   };
 }
 
-export function incrementAutoReworkCount(input: BubbleStateSnapshot): BubbleStateSnapshot {
+export function incrementAutoReworkCount(input: PersistedBubbleStateSnapshot): PersistedBubbleStateSnapshot {
   const metaReview = normalizeMetaReviewSnapshot(input.meta_review);
   return {
     ...input,
@@ -38,9 +38,9 @@ export function incrementAutoReworkCount(input: BubbleStateSnapshot): BubbleStat
 }
 
 export function setMetaReviewConsecutiveCleanRuns(
-  input: BubbleStateSnapshot,
+  input: PersistedBubbleStateSnapshot,
   consecutiveCleanRuns: number
-): BubbleStateSnapshot {
+): PersistedBubbleStateSnapshot {
   const metaReview = normalizeMetaReviewSnapshot(input.meta_review);
   return {
     ...input,

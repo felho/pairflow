@@ -6,7 +6,7 @@ import {
   IDEATION_KICKOFF_NOT_ELIGIBLE,
   IDEATION_KICKOFF_REQUIRES_RUNNING
 } from "../../../../src/v11/shared/ideation/ideationReasonCodes.js";
-import type { BubbleStateSnapshot } from "../../../../src/v11/domain/state/snapshot/bubbleStateSnapshotTypes.js";
+import type { PersistedBubbleStateSnapshot } from "../../../../src/v11/domain/state/snapshot/persistedBubbleStateSnapshot.js";
 import { resolveKickoffEligibilityFailureReason } from "../../../../src/v11/application/kickoff/internal/eligibility/kickoffEligibility.js";
 
 const baseState = {
@@ -18,7 +18,7 @@ const baseState = {
   active_since: "2026-03-19T12:00:00.000Z",
   last_command_at: "2026-03-19T12:00:00.000Z",
   round_role_history: []
-} as unknown as BubbleStateSnapshot;
+} as unknown as PersistedBubbleStateSnapshot;
 
 describe("resolveKickoffEligibilityFailureReason", () => {
   it("returns null when kickoff is eligible", () => {

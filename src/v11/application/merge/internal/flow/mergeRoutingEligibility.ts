@@ -1,4 +1,4 @@
-import type { BubbleStateSnapshot } from "../../../../domain/state/snapshot/bubbleStateSnapshotTypes.js";
+import type { PersistedBubbleStateSnapshot } from "../../../../domain/state/snapshot/persistedBubbleStateSnapshot.js";
 import type { RunGitPort } from "../../../../ports/git.js";
 
 const MERGE_STATE_DONE_REQUIRED = "MERGE_STATE_DONE_REQUIRED";
@@ -25,7 +25,7 @@ export function hasOriginRemoteError(stderr: string): boolean {
 }
 
 export function assertMergeStateEligibility(
-  state: BubbleStateSnapshot,
+  state: PersistedBubbleStateSnapshot,
   createError: PairflowCreateCommandError
 ): void {
   if (state.state !== "DONE") {

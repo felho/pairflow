@@ -1,10 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
 
 import { StateStoreConflictError } from "../../../../src/v11/infrastructure/state/stateStore.js";
-import type { BubbleStateSnapshot } from "../../../../src/v11/domain/state/snapshot/bubbleStateSnapshotTypes.js";
+import type { PersistedBubbleStateSnapshot } from "../../../../src/v11/domain/state/snapshot/persistedBubbleStateSnapshot.js";
 import { persistKickoffState } from "../../../../src/v11/application/kickoff/internal/mutation/kickoffStatePersistence.js";
 
-function createState(round: number): BubbleStateSnapshot {
+function createState(round: number): PersistedBubbleStateSnapshot {
   return {
     bubble_id: "b_kickoff_state_persistence_01",
     state: "RUNNING",

@@ -1,4 +1,4 @@
-import type { BubbleStateSnapshot } from "../../../domain/state/snapshot/bubbleStateSnapshotTypes.js";
+import type { PersistedBubbleStateSnapshot } from "../../../domain/state/snapshot/persistedBubbleStateSnapshot.js";
 import type {
   ReviewArtifactType
 } from "../../config/bubbleConfigVocabulary.js";
@@ -20,7 +20,7 @@ export function buildImplementerStartActionLine(
 
 export function resolveImplementerRoleInstruction(input: {
   reviewArtifactType: ReviewArtifactType | undefined;
-  state: BubbleStateSnapshot;
+  state: PersistedBubbleStateSnapshot;
 }): string {
   if (input.reviewArtifactType === "document") {
     if (input.state.state === "RUNNING" && input.state.active_role === "implementer") {

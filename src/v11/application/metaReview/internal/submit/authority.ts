@@ -3,11 +3,11 @@ import {
 } from "../../../../shared/metaReview/metaReviewExecutionContext.js";
 import { MetaReviewError } from "../../../../shared/metaReview/metaReviewError.js";
 import type { AgentName } from "../../../../../contracts/kernel/agentIdentity.js";
-import type { BubbleStateSnapshot } from "../../../../domain/state/snapshot/bubbleStateSnapshotTypes.js";
+import type { PersistedBubbleStateSnapshot } from "../../../../domain/state/snapshot/persistedBubbleStateSnapshot.js";
 import type { MetaReviewCommandDependencies } from "../../../../shared/metaReview/metaReviewCommandContract.js";
 
 export function assertActiveMetaReviewExecutionContext(
-  state: BubbleStateSnapshot
+  state: PersistedBubbleStateSnapshot
 ) {
   const executionContextResult = validateActiveMetaReviewExecutionContext(state);
   if (executionContextResult.ok) {
@@ -56,7 +56,7 @@ export async function assertMetaReviewSubmitterAuthority(input: {
   metaReviewerAgent: AgentName;
   sessionsPath: string;
   readRuntimeSessions: NonNullable<MetaReviewCommandDependencies["readRuntimeSessionsRegistry"]>;
-  state: BubbleStateSnapshot;
+  state: PersistedBubbleStateSnapshot;
   now?: Date;
 }): Promise<void> {
   const executionContext = assertActiveMetaReviewExecutionContext(input.state);

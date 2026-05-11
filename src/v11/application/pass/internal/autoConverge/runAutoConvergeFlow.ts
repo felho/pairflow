@@ -5,7 +5,7 @@ import type {
 import type { ReviewVerificationInputResolution } from "../../../../shared/reviewer/reviewVerification.js";
 import type { AgentName } from "../../../../../contracts/kernel/agentIdentity.js";
 import type { BubbleConfig } from "../../../../shared/config/bubbleConfigTypes.js";
-import type { BubbleStateSnapshot } from "../../../../domain/state/snapshot/bubbleStateSnapshotTypes.js";
+import type { PersistedBubbleStateSnapshot } from "../../../../domain/state/snapshot/persistedBubbleStateSnapshot.js";
 import type { Finding } from "../../../../../types/findings.js";
 import type { PassIntent } from "../../../../../contracts/kernel/protocol.js";
 import type { ProtocolEnvelope } from "../../../../../types/protocol.js";
@@ -37,7 +37,7 @@ export interface RunAutoConvergeFlowInput {
   >;
   reviewer: AgentName;
   implementer: AgentName;
-  roundRoleHistory: BubbleStateSnapshot["round_role_history"];
+  roundRoleHistory: PersistedBubbleStateSnapshot["round_role_history"];
   transcript: ProtocolEnvelope[];
   severityGateRound: number;
   expectedStateFingerprint: string;
@@ -64,7 +64,7 @@ export interface RunAutoConvergeFlowDependencies<TResult> {
     reviewer: AgentName;
     implementer: AgentName;
     reviewArtifactType: BubbleConfig["review_artifact_type"];
-    roundRoleHistory: BubbleStateSnapshot["round_role_history"];
+    roundRoleHistory: PersistedBubbleStateSnapshot["round_role_history"];
     transcript: ProtocolEnvelope[];
     severityGateRound: number;
     statePath: string;

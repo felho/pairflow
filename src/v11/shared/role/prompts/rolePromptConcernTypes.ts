@@ -2,7 +2,7 @@ import type { AgentRole } from "../../../../contracts/kernel/agentIdentity.js";
 import type {
   BubbleReviewAutoReworkSeverity
 } from "../../reviewPolicy/reviewPolicyTypes.js";
-import type { BubbleStateSnapshot } from "../../../domain/state/snapshot/bubbleStateSnapshotTypes.js";
+import type { PersistedBubbleStateSnapshot } from "../../../domain/state/snapshot/persistedBubbleStateSnapshot.js";
 import type {
   PairflowCommandProfile,
   ReviewArtifactType
@@ -80,7 +80,7 @@ export interface StartupPromptConcernBuildInput
 
 export interface ResumePromptConcernBuildInput
   extends PromptConcernBuildInputBase {
-  state: BubbleStateSnapshot;
+  state: PersistedBubbleStateSnapshot;
   transcriptSummary: string;
 }
 

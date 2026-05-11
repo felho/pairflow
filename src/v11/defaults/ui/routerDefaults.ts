@@ -50,7 +50,7 @@ import type {
 import type { RestartBubbleResult } from "../../application/restart/restartCommandContract.js";
 import type { StartBubbleResult } from "../../application/start/startCommandContract.js";
 import type { StopBubbleResult } from "../../application/stop/stopCommandContract.js";
-import type { BubbleStateSnapshot } from "../../domain/state/snapshot/bubbleStateSnapshotTypes.js";
+import type { PersistedBubbleStateSnapshot } from "../../domain/state/snapshot/persistedBubbleStateSnapshot.js";
 import type {
   BubbleReworkIntentRecord
 } from "../../domain/state/rework/reworkIntentTypes.js";
@@ -157,7 +157,7 @@ export function projectApprovalDecisionDeliverySignalsToUiDeliverySignals(
 }
 
 export function projectBubbleStateToUiActionState(
-  state: BubbleStateSnapshot
+  state: PersistedBubbleStateSnapshot
 ): UiActionBubbleState {
   const executionContext = state.execution_context ?? null;
   return {

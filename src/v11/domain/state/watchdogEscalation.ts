@@ -1,14 +1,14 @@
-import type { BubbleStateSnapshot } from "../../domain/state/snapshot/bubbleStateSnapshotTypes.js";
+import type { PersistedBubbleStateSnapshot } from "../../domain/state/snapshot/persistedBubbleStateSnapshot.js";
 import { applyStateTransition } from "./machine.js";
 
 export interface DeriveWatchdogWaitingHumanStateInput {
-  state: BubbleStateSnapshot;
+  state: PersistedBubbleStateSnapshot;
   lastCommandAt: string;
 }
 
 export function deriveWatchdogWaitingHumanState(
   input: DeriveWatchdogWaitingHumanStateInput
-): BubbleStateSnapshot {
+): PersistedBubbleStateSnapshot {
   return applyStateTransition(input.state, {
     to: "WAITING_HUMAN",
     lastCommandAt: input.lastCommandAt

@@ -1,19 +1,19 @@
-import { assertValidBubbleStateSnapshot } from "../../../../domain/state/stateSchema.js";
+import { assertParsedBubbleStateSnapshot } from "../../../../domain/state/stateSchema.js";
 import { buildRunningExecutionContext } from "../../../../domain/state/execution/executionContext.js";
 import type { BubbleConfig } from "../../../../shared/config/bubbleConfigTypes.js";
-import type { BubbleStateSnapshot } from "../../../../domain/state/snapshot/bubbleStateSnapshotTypes.js";
+import type { PersistedBubbleStateSnapshot } from "../../../../domain/state/snapshot/persistedBubbleStateSnapshot.js";
 
 export interface BuildKickoffNextStateInput {
-  state: BubbleStateSnapshot;
+  state: PersistedBubbleStateSnapshot;
   bubbleConfig: Pick<BubbleConfig, "agents" | "watchdog_timeout_minutes">;
   nowIso: string;
 }
 
 function buildKickoffRoundOneRoleHistory(input: {
-  state: BubbleStateSnapshot;
+  state: PersistedBubbleStateSnapshot;
   bubbleConfig: Pick<BubbleConfig, "agents">;
   nowIso: string;
-}): BubbleStateSnapshot["round_role_history"] {
+}): PersistedBubbleStateSnapshot["round_role_history"] {
   if (input.state.round_role_history.some((entry) => entry.round === 1)) {
     return input.state.round_role_history;
   }
@@ -31,8 +31,8 @@ function buildKickoffRoundOneRoleHistory(input: {
 
 export function buildKickoffNextState(
   input: BuildKickoffNextStateInput
-): BubbleStateSnapshot {
-  return assertValidBubbleStateSnapshot({
+): PersistedBubbleStateSnapshot {
+  return assertParsedBubbleStateSnapshot({
     ...input.state,
     state: "RUNNING",
     round: 1,

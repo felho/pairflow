@@ -13,7 +13,7 @@ import {
 import { MetaReviewError } from "../../../../../../src/v11/shared/metaReview/metaReviewError.js";
 import type { MetaReviewResult } from "../../../../../../src/v11/shared/metaReview/metaReviewTypes.js";
 import type { LoadedStateSnapshot } from "../../../../../../src/v11/ports/stateSnapshots.js";
-import type { BubbleStateSnapshot } from "../../../../../../src/v11/domain/state/snapshot/bubbleStateSnapshotTypes.js";
+import type { PersistedBubbleStateSnapshot } from "../../../../../../src/v11/domain/state/snapshot/persistedBubbleStateSnapshot.js";
 import type { ProtocolEnvelope } from "../../../../../../src/types/protocol.js";
 
 const tempDirs: string[] = [];
@@ -25,7 +25,7 @@ afterEach(async () => {
 });
 
 function createLoadedRunningState(): LoadedStateSnapshot {
-  const state: BubbleStateSnapshot = {
+  const state: PersistedBubbleStateSnapshot = {
     bubble_id: "b_meta_gate_finalize_threshold_01",
     state: "RUNNING",
     round: 1,
@@ -187,10 +187,10 @@ function createAppendEnvelopeStub(events?: string[]): {
 }
 
 function createWriteStateStub(events?: string[]): {
-  writes: BubbleStateSnapshot[];
+  writes: PersistedBubbleStateSnapshot[];
   writeState: Parameters<typeof runCurrentRunMetaReviewGateFinalization>[0]["writeState"];
 } {
-  const writes: BubbleStateSnapshot[] = [];
+  const writes: PersistedBubbleStateSnapshot[] = [];
   return {
     writes,
     writeState: async (_path, state) => {
@@ -215,7 +215,7 @@ function createWriteStateStub(events?: string[]): {
 
 function createCleanRerunDeliveryStubs(input: {
   envelopes: ProtocolEnvelope[];
-  writes: BubbleStateSnapshot[];
+  writes: PersistedBubbleStateSnapshot[];
   fallbackLoaded: LoadedStateSnapshot;
   events?: string[];
 }): {
@@ -1001,7 +1001,7 @@ describe("runCurrentRunMetaReviewGateFinalization", () => {
       writes: write.writes,
       fallbackLoaded: loaded
     });
-    delete (loaded.state.meta_review as Partial<NonNullable<BubbleStateSnapshot["meta_review"]>>)
+    delete (loaded.state.meta_review as Partial<NonNullable<PersistedBubbleStateSnapshot["meta_review"]>>)
       .consecutive_clean_runs;
 
     const result = await runCurrentRunMetaReviewGateFinalization({
@@ -1061,7 +1061,7 @@ describe("runCurrentRunMetaReviewGateFinalization", () => {
       summary: { open_total: 0 }
     });
     const append = createAppendEnvelopeStub();
-    const writes: BubbleStateSnapshot[] = [];
+    const writes: PersistedBubbleStateSnapshot[] = [];
     const loaded = createLoadedRunningState();
     const delivery = createCleanRerunDeliveryStubs({
       envelopes: append.envelopes,
@@ -1433,7 +1433,7 @@ describe("runCurrentRunMetaReviewGateFinalization", () => {
       summary: { open_total: 1 }
     });
     const append = createAppendEnvelopeStub();
-    const writes: BubbleStateSnapshot[] = [];
+    const writes: PersistedBubbleStateSnapshot[] = [];
 
     const result = await runCurrentRunMetaReviewGateFinalization({
       resolved: {
@@ -1833,7 +1833,7 @@ describe("runCurrentRunMetaReviewGateFinalization", () => {
       summary: { open_total: 0 }
     });
     const append = createAppendEnvelopeStub();
-    const writes: BubbleStateSnapshot[] = [];
+    const writes: PersistedBubbleStateSnapshot[] = [];
     const loaded = createLoadedRunningState();
     const delivery = createCleanRerunDeliveryStubs({
       envelopes: append.envelopes,
@@ -1885,7 +1885,7 @@ describe("runCurrentRunMetaReviewGateFinalization", () => {
       readTranscript: delivery.readTranscript,
       writeState: async (_path, state) => {
         writeAttempt += 1;
-        const writtenState: BubbleStateSnapshot =
+        const writtenState: PersistedBubbleStateSnapshot =
           writeAttempt === 1 && state.meta_review !== undefined
             ? {
                 ...state,
@@ -1919,7 +1919,7 @@ describe("runCurrentRunMetaReviewGateFinalization", () => {
       summary: { open_total: 0 }
     });
     const append = createAppendEnvelopeStub();
-    const writes: BubbleStateSnapshot[] = [];
+    const writes: PersistedBubbleStateSnapshot[] = [];
     const loaded = createLoadedRunningState();
     const delivery = createCleanRerunDeliveryStubs({
       envelopes: append.envelopes,
@@ -1977,7 +1977,7 @@ describe("runCurrentRunMetaReviewGateFinalization", () => {
         ) {
           const stagedMetaReview = state.meta_review;
           const stagedContext = stagedMetaReview.execution_context ?? null;
-          const stagedState: BubbleStateSnapshot = {
+          const stagedState: PersistedBubbleStateSnapshot = {
             ...state,
             meta_review: {
               ...stagedMetaReview,
@@ -2469,7 +2469,7 @@ describe("runCurrentRunMetaReviewGateFinalization", () => {
       summary: { open_total: 0 }
     });
     const append = createAppendEnvelopeStub();
-    const writes: BubbleStateSnapshot[] = [];
+    const writes: PersistedBubbleStateSnapshot[] = [];
     const loaded = createLoadedRunningState();
     const delivery = createCleanRerunDeliveryStubs({
       envelopes: append.envelopes,
@@ -2549,7 +2549,7 @@ describe("runCurrentRunMetaReviewGateFinalization", () => {
       summary: { open_total: 0 }
     });
     const append = createAppendEnvelopeStub();
-    const writes: BubbleStateSnapshot[] = [];
+    const writes: PersistedBubbleStateSnapshot[] = [];
     const loaded = createLoadedRunningState();
     const delivery = createCleanRerunDeliveryStubs({
       envelopes: append.envelopes,

@@ -1,4 +1,4 @@
-import type { BubbleStateSnapshot } from "../../../../domain/state/snapshot/bubbleStateSnapshotTypes.js";
+import type { PersistedBubbleStateSnapshot } from "../../../../domain/state/snapshot/persistedBubbleStateSnapshot.js";
 import type { ProtocolEnvelope } from "../../../../../types/protocol.js";
 
 export interface ApprovalRemoteBubbleStatusTarget {
@@ -37,14 +37,14 @@ export interface RemoteBubbleApprovalDecisionResult {
   bubbleId: string;
   sequence: number;
   envelope: ProtocolEnvelope;
-  state: BubbleStateSnapshot;
+  state: PersistedBubbleStateSnapshot;
 }
 
 export interface RemoteBubbleApprovalQueuedReworkResult {
   kind: "queued_rework";
   bubbleId: string;
   intentId: string;
-  state: BubbleStateSnapshot;
+  state: PersistedBubbleStateSnapshot;
   supersededIntentId?: string;
 }
 

@@ -1,4 +1,4 @@
-import type { BubbleStateSnapshot } from "../../domain/state/snapshot/bubbleStateSnapshotTypes.js";
+import type { PersistedBubbleStateSnapshot } from "../../domain/state/snapshot/persistedBubbleStateSnapshot.js";
 import type {
   MetaReviewSubmissionPayload,
   ProtocolEnvelope
@@ -94,7 +94,7 @@ export type MetaReviewSubmitResult = Omit<
   "bubble_id" | "report_json"
 > & {
   bubbleId: string;
-  lifecycle_state: BubbleStateSnapshot["state"];
+  lifecycle_state: PersistedBubbleStateSnapshot["state"];
   report_json: Record<string, unknown>;
   gate_route: MetaReviewGateRoute;
   gate_sequence: number;

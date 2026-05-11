@@ -8,13 +8,13 @@ import { getBubblePaths, type BubblePaths } from "../../../../shared/bubble/bubb
 import type { ReviewerFocusExtractionResult } from "../../../../shared/reviewer/reviewerBrief.js";
 import { createInitialBubbleState } from "../../../../domain/state/initialState.js";
 import {
-  assertValidBubbleStateSnapshot
+  assertParsedBubbleStateSnapshot
 } from "../../../../domain/state/stateSchema.js";
 import type {
   BubbleRemotePointerCreated
 } from "../../../../shared/remote/remoteExecutionTypes.js";
 import type { BubbleConfig } from "../../../../shared/config/bubbleConfigTypes.js";
-import type { BubbleStateSnapshot } from "../../../../domain/state/snapshot/bubbleStateSnapshotTypes.js";
+import type { PersistedBubbleStateSnapshot } from "../../../../domain/state/snapshot/persistedBubbleStateSnapshot.js";
 import type {
   BubbleCreateDependencies,
   BubbleCreateInput,
@@ -52,7 +52,7 @@ export interface CreateBubbleFlowContext {
   remotePointer?: BubbleRemotePointerCreated | undefined;
   prepared: PreparedCreateBubbleInput;
   config: BubbleConfig;
-  state: BubbleStateSnapshot;
+  state: PersistedBubbleStateSnapshot;
 }
 
 async function resolveTaskForCreateCommand(
@@ -219,7 +219,7 @@ export async function prepareCreateBubbleFlowContext(input: {
       : {}),
     prepared,
     config: buildBubbleConfig(prepared.bubbleConfigInput),
-    state: assertValidBubbleStateSnapshot(
+    state: assertParsedBubbleStateSnapshot(
       createInitialBubbleState(resolvedCommand.id)
     )
   };

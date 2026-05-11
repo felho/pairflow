@@ -2,9 +2,9 @@ import type {
   AgentName,
   AgentRole
 } from "../../../contracts/kernel/agentIdentity.js";
-import type { BubbleStateSnapshot } from "../../domain/state/snapshot/bubbleStateSnapshotTypes.js";
+import type { PersistedBubbleStateSnapshot } from "../../domain/state/snapshot/persistedBubbleStateSnapshot.js";
 
-export type ReplyWaitingHumanState = BubbleStateSnapshot & {
+export type ReplyWaitingHumanState = PersistedBubbleStateSnapshot & {
   state: "WAITING_HUMAN";
   active_agent: AgentName;
   active_role: AgentRole;
@@ -12,7 +12,7 @@ export type ReplyWaitingHumanState = BubbleStateSnapshot & {
 };
 
 export interface EnsureReplyWaitingHumanStateInput {
-  state: BubbleStateSnapshot;
+  state: PersistedBubbleStateSnapshot;
   createError: PairflowCreateCommandError;
 }
 

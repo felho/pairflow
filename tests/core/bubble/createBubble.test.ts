@@ -22,7 +22,7 @@ import {
   readRemoteStateCache
 } from "../../../src/v11/infrastructure/artifact/bubble/remoteExecutionArtifacts.js";
 import { readTranscriptEnvelopes } from "../../../src/v11/infrastructure/artifact/transcript/transcriptStore.js";
-import { validateBubbleStateSnapshot } from "../../../src/v11/domain/state/stateSchema.js";
+import { parseBubbleStateSnapshot } from "../../../src/v11/domain/state/stateSchema.js";
 import { initGitRepository } from "../../helpers/git.js";
 
 const tempDirs: string[] = [];
@@ -139,7 +139,7 @@ describe("createBubble", () => {
     const stateRaw = JSON.parse(
       await readFile(result.paths.statePath, "utf8")
     ) as unknown;
-    const validatedState = validateBubbleStateSnapshot(stateRaw);
+    const validatedState = parseBubbleStateSnapshot(stateRaw);
     expect(validatedState.ok).toBe(true);
 
     await stat(result.paths.transcriptPath);

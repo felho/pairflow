@@ -3,7 +3,7 @@ import { join } from "node:path";
 import { applyStateTransition } from "../../../../domain/state/machine.js";
 import { normalizeStringList } from "../../../../shared/normalization/stringNormalization.js";
 import { BubbleCommitError } from "../error/commitCommandError.js";
-import type { BubbleStateSnapshot } from "../../../../domain/state/snapshot/bubbleStateSnapshotTypes.js";
+import type { PersistedBubbleStateSnapshot } from "../../../../domain/state/snapshot/persistedBubbleStateSnapshot.js";
 import type {
   ProtocolEnvelope,
   ProtocolEnvelopeDraft
@@ -30,7 +30,7 @@ export interface CommitFinalizationAppendResult {
 }
 
 export interface CommitFinalizationLoadedState {
-  state: BubbleStateSnapshot;
+  state: PersistedBubbleStateSnapshot;
   fingerprint: string;
 }
 
@@ -80,7 +80,7 @@ export async function appendCommitResultEnvelopeMutation(input: {
 export async function persistCommittedThenDoneStateMutation(input: {
   context: {
     statePath: string;
-    state: BubbleStateSnapshot;
+    state: PersistedBubbleStateSnapshot;
     loadedState: CommitFinalizationLoadedState;
   };
   nowIso: string;
@@ -88,10 +88,10 @@ export async function persistCommittedThenDoneStateMutation(input: {
   commitSha: string;
   writeStateSnapshot: (
     statePath: string,
-    state: BubbleStateSnapshot,
+    state: PersistedBubbleStateSnapshot,
     options?: {
       expectedFingerprint?: string;
-      expectedState?: BubbleStateSnapshot["state"];
+      expectedState?: PersistedBubbleStateSnapshot["state"];
     }
   ) => Promise<CommitFinalizationLoadedState>;
 }): Promise<CommitFinalizationLoadedState> {

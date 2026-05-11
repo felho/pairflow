@@ -8,7 +8,7 @@ import type { DeliveryAck } from "../../../../ports/tmuxDelivery.js";
 import type { LoadedStateSnapshot } from "../../../../ports/stateSnapshots.js";
 import type { AgentName } from "../../../../../contracts/kernel/agentIdentity.js";
 import type { BubbleConfig } from "../../../../shared/config/bubbleConfigTypes.js";
-import type { BubbleStateSnapshot } from "../../../../domain/state/snapshot/bubbleStateSnapshotTypes.js";
+import type { PersistedBubbleStateSnapshot } from "../../../../domain/state/snapshot/persistedBubbleStateSnapshot.js";
 import type { Finding } from "../../../../../types/findings.js";
 import type { PassIntent } from "../../../../../contracts/kernel/protocol.js";
 import type { ProtocolEnvelope } from "../../../../../types/protocol.js";
@@ -56,7 +56,7 @@ export interface RunNormalPassFlowInput {
   inferredIntent: boolean;
   activation?: PassActivationProvenance;
   reviewerVerification: ReviewVerificationInputResolution | undefined;
-  state: BubbleStateSnapshot;
+  state: PersistedBubbleStateSnapshot;
   expectedStateFingerprint: string;
   bubbleId: string;
   bubbleInstanceId: string;
@@ -138,7 +138,7 @@ export interface RunNormalPassFlowDependencies<TResult> {
     reviewVerificationArtifactPath: string;
     mappedEnvelopeId: string;
     statePath: string;
-    state: BubbleStateSnapshot;
+    state: PersistedBubbleStateSnapshot;
     expectedFingerprint: string;
     appendEnvelopeId: string;
     docGateScopeActive: boolean;
@@ -200,7 +200,7 @@ export interface RunNormalPassFlowDependencies<TResult> {
     docGateArtifactWriteFailureReason?: string;
     sequence: number;
     envelope: ProtocolEnvelope;
-    state: BubbleStateSnapshot;
+    state: PersistedBubbleStateSnapshot;
     activation?: PassActivationProvenance;
     deliveryResult: DeliveryAck | undefined;
     deliveryRetried: boolean;
