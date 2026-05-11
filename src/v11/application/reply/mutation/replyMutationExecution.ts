@@ -1,6 +1,6 @@
 import { join } from "node:path";
 
-import { buildRunningExecutionContext } from "../../../domain/state/executionContext.js";
+import { buildRunningExecutionContext } from "../../../domain/state/execution/executionContext.js";
 import { applyStateTransition } from "../../../domain/state/machine.js";
 import { buildHumanReplyEnvelopeDraft } from "../../../domain/reply/replyEnvelopeDraft.js";
 import {

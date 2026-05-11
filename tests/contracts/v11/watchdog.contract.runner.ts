@@ -15,7 +15,7 @@ import { watchdogPendingReworkDefaults } from "../../../src/v11/defaults/watchdo
 import {
   buildRunningExecutionContext,
   metaReviewExecutionContextToRunningContext
-} from "../../../src/v11/domain/state/executionContext.js";
+} from "../../../src/v11/domain/state/execution/executionContext.js";
 import { buildMetaReviewExecutionContext } from "../../../src/v11/shared/metaReview/metaReviewExecutionContext.js";
 import {
   writeWatchdogPaneActivity

@@ -28,7 +28,7 @@ import { statusCommandDependencyDefaults } from "../../../src/v11/defaults/statu
 import { writeWatchdogPaneActivity } from "../../../src/v11/infrastructure/artifact/watchdog/watchdogPaneActivityStore.js";
 import { buildMetaReviewExecutionContext } from "../../../src/v11/shared/metaReview/metaReviewExecutionContext.js";
 import { resolveWorktreePairflowEntrypoint } from "../../../src/v11/shared/command/pairflowCommandPathAssessment.js";
-import { metaReviewExecutionContextToRunningContext } from "../../../src/v11/domain/state/executionContext.js";
+import { metaReviewExecutionContextToRunningContext } from "../../../src/v11/domain/state/execution/executionContext.js";
 import * as watchdogStatusModule from "../../../src/v11/shared/watchdog/watchdogStatus.js";
 import { initGitRepository } from "../../helpers/git.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";

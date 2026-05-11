@@ -3,7 +3,7 @@ import type { BubbleStateSnapshot } from "../../domain/state/snapshot/bubbleStat
 import {
   buildRestartedExecutionContext,
   buildRunningExecutionContext
-} from "../../domain/state/executionContext.js";
+} from "../../domain/state/execution/executionContext.js";
 import { applyStateTransition } from "./machine.js";
 
 export interface DeriveStartPreparingStateInput {

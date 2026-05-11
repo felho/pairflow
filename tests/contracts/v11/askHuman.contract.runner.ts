@@ -11,7 +11,7 @@ import {
   readStateSnapshot,
   writeStateSnapshot
 } from "../../../src/v11/infrastructure/state/stateStore.js";
-import { buildRunningExecutionContext } from "../../../src/v11/domain/state/executionContext.js";
+import { buildRunningExecutionContext } from "../../../src/v11/domain/state/execution/executionContext.js";
 import { buildMetaReviewExecutionContext } from "../../../src/v11/shared/metaReview/metaReviewExecutionContext.js";
 import { deliveryTargetRoleMetadataKey } from "../../../src/types/protocol.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";

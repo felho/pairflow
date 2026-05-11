@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { buildRunningExecutionContext } from "../../../src/v11/domain/state/executionContext.js";
+import { buildRunningExecutionContext } from "../../../src/v11/domain/state/execution/executionContext.js";
 import { SchemaValidationError } from "../../../src/v11/shared/validation/primitives.js";
 import { applyStateTransition } from "../../../src/v11/domain/state/machine.js";
 import { createInitialBubbleState } from "../../../src/v11/domain/state/initialState.js";

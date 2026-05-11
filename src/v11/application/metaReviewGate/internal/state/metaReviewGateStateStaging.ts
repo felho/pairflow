@@ -1,6 +1,6 @@
 import { buildMetaReviewExecutionContext } from "../../../../shared/metaReview/metaReviewExecutionContext.js";
 import { clearLiveMetaReviewSnapshot } from "../../../../shared/metaReview/metaReviewSnapshot.js";
-import { metaReviewExecutionContextToRunningContext } from "../../../../domain/state/executionContext.js";
+import { metaReviewExecutionContextToRunningContext } from "../../../../domain/state/execution/executionContext.js";
 import {
   type LoadedStateSnapshot,
   type WriteStateSnapshotPort

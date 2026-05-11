@@ -18,7 +18,7 @@ import type {
 } from "../../../../ports/stateSnapshots.js";
 import { normalizeMetaReviewSnapshot } from "../../../../shared/metaReview/metaReviewSnapshot.js";
 import { MetaReviewError } from "../../../../shared/metaReview/metaReviewError.js";
-import { toMetaReviewExecutionContext } from "../../../../domain/state/executionContext.js";
+import { toMetaReviewExecutionContext } from "../../../../domain/state/execution/executionContext.js";
 import {
   stateWriteConflictToMetaReviewError
 } from "../error/metaReviewCommandErrorMapping.js";

@@ -5,7 +5,7 @@ import type {
 import type {
   BubbleExecutionContext
 } from "../../domain/state/execution/executionContext.js";
-import { buildRunningExecutionContext } from "../../domain/state/executionContext.js";
+import { buildRunningExecutionContext } from "../../domain/state/execution/executionContext.js";
 
 export interface ResolveRuntimeAlignedNextRoundContinuationInput {
   bubbleId: string;

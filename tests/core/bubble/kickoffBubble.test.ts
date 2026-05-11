@@ -7,7 +7,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { parseBubbleConfigToml, renderBubbleConfigToml } from "../../../src/config/bubbleConfig.js";
 import { createBubble } from "../../../src/v11/defaults/create/createBubbleApi.js";
 import { kickoffBubble } from "../../../src/v11/application/kickoff/kickoffBubble.js";
-import { buildRunningExecutionContext } from "../../../src/v11/domain/state/executionContext.js";
+import { buildRunningExecutionContext } from "../../../src/v11/domain/state/execution/executionContext.js";
 import {
   IDEATION_ALREADY_ACTIVE,
   IDEATION_KICKOFF_NOT_ALLOWED,

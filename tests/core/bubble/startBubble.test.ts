@@ -12,7 +12,7 @@ import { buildMetaReviewExecutionContext } from "../../../src/v11/shared/metaRev
 import {
   buildRunningExecutionContext,
   metaReviewExecutionContextToRunningContext
-} from "../../../src/v11/domain/state/executionContext.js";
+} from "../../../src/v11/domain/state/execution/executionContext.js";
 import { readStateSnapshot, writeStateSnapshot } from "../../../src/v11/infrastructure/state/stateStore.js";
 import {
   startBubble,

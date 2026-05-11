@@ -6,7 +6,7 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import { resolveActorEmitContextByBubbleId } from "../../../../src/v11/defaults/actorProtocol/actorEmitContextDefaults.js";
 import type { AgentName } from "../../../../src/contracts/kernel/agentIdentity.js";
-import { buildRunningExecutionContext } from "../../../../src/v11/domain/state/executionContext.js";
+import { buildRunningExecutionContext } from "../../../../src/v11/domain/state/execution/executionContext.js";
 import { readStateSnapshot, writeStateSnapshot } from "../../../../src/v11/infrastructure/state/stateStore.js";
 import {
   ConvergedCommandError,

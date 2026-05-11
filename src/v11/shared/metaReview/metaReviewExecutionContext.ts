@@ -18,7 +18,7 @@ import { isAgentRole } from "../../../contracts/kernel/agentIdentity.js";
 import {
   buildRunningExecutionContext,
   toMetaReviewExecutionContext
-} from "../../domain/state/executionContext.js";
+} from "../../domain/state/execution/executionContext.js";
 
 export const metaReviewExecutionContextPath = "meta_review.execution_context";
 export const runningExecutionContextPath = "execution_context";

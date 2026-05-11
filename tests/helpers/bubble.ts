@@ -5,7 +5,7 @@ import { renderBubbleConfigToml } from "../../src/config/bubbleConfig.js";
 import { createBubble } from "../../src/v11/defaults/create/createBubbleApi.js";
 import type { BubbleCreateResult } from "../../src/v11/application/create/createBubble.js";
 import { normalizeBubbleReviewPolicy } from "../../src/v11/shared/reviewPolicy/reviewPolicyRuntime.js";
-import { buildRunningExecutionContext } from "../../src/v11/domain/state/executionContext.js";
+import { buildRunningExecutionContext } from "../../src/v11/domain/state/execution/executionContext.js";
 import { readStateSnapshot, writeStateSnapshot } from "../../src/v11/infrastructure/state/stateStore.js";
 import { bootstrapWorktreeWorkspace } from "../../src/v11/infrastructure/workspace/worktreeManager.js";
 import type {

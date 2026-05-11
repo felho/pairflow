@@ -4,7 +4,7 @@ import {
   executionContextsEqual,
   buildRestartedExecutionContext,
   buildRunningExecutionContext
-} from "../../../src/v11/domain/state/executionContext.js";
+} from "../../../src/v11/domain/state/execution/executionContext.js";
 import {
   getPrimaryRoutePolicyCheckIdsForRole,
   getRoleDescriptor

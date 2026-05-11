@@ -25,7 +25,7 @@ import { upsertRuntimeSession } from "../../../src/v11/infrastructure/executor/s
 import {
   buildRunningExecutionContext,
   metaReviewExecutionContextToRunningContext
-} from "../../../src/v11/domain/state/executionContext.js";
+} from "../../../src/v11/domain/state/execution/executionContext.js";
 import {
   readStateSnapshot,
   writeStateSnapshot as rawWriteStateSnapshot
