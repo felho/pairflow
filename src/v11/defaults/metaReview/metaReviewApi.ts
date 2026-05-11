@@ -27,9 +27,6 @@ import {
   submitMetaReviewResult as submitMetaReviewResultImpl
 } from "../../application/metaReview/metaReviewCommandSubmitRuntime.js";
 import {
-  toMetaReviewError
-} from "../../application/metaReview/metaReviewCommandErrorMapping.js";
-import {
   notifyMetaReviewerSubmissionRequest
 } from "../metaReviewGate/metaReviewGateApi.js";
 import {
@@ -39,7 +36,6 @@ import {
   metaReviewDefaults
 } from "./metaReviewDefaults.js";
 
-export { toMetaReviewError };
 export {
   clearLiveMetaReviewSnapshot,
   MetaReviewError,
