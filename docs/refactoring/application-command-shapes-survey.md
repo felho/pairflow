@@ -42,7 +42,7 @@ restructuring opportunity).
 | commit | 4 | yes | 5 | yes | yes | — | structured (Tier 2; refactored 2026-05-11) |
 | actorProtocol | 10 | no | — | yes | — | 26 | misclassified (not a command) |
 | restart | 3 | yes | 4 | yes | yes | — | structured (Tier 2; refactored 2026-05-11) |
-| reconcile | 9 | no | — | yes | yes | 18 | unstructured |
+| reconcile | 3 | yes | 3 | yes | yes | — | structured (Tier 2; refactored 2026-05-11) |
 | start | 9 | yes | 3 | yes | yes | 4 | structured (Tier 2-ish) |
 | metaReview | 3 | yes | 2 | yes | — | — | structured (Tier 2; refactored 2026-05-13) |
 | reply | 7 | no | — | — | yes | 13 | unstructured |
@@ -188,7 +188,7 @@ Refactored from half-done to structured (Tier 2):
   the single-sub-area shape the prior four shared.
 
 Refactored from unstructured (no `internal/`) to structured (Tier 2) — the
-from-scratch case:
+from-scratch cases:
 
 - **restart** (was 10 top-level + no internal/; now 3 top-level + 4
   sub-areas — `cli/`, `error/`, `orchestration/`, `preparation/`).
@@ -199,11 +199,23 @@ from-scratch case:
   into a per-sub-area move sequence. See the template's
   `application/restart/` worked example for the from-scratch
   procedure variant.
+- **reconcile** (was 9 top-level + no internal/; now 3 top-level + 3
+  sub-areas — `error/`, `orchestration/`, `preparation/`). The
+  second from-scratch case; the first where a naming-role exception
+  fired on a from-scratch path. The defaults/reconcile layer pinned
+  `ReconcileRuntimeSessionsDefaultDependencies` (a type defined on the
+  otherwise intra-only `reconcileCommandDependencyResolution.ts`),
+  which would have leaked public → internal once DepRes moved under
+  `internal/preparation/`. The merge precedent's type-relocation
+  pre-cleanup applied — the type hoisted to the Contract before the
+  sub-area introductions. No `internal/cli/` sub-area because
+  reconcile's CLI options parser is inline in `reconcileCliCommand.ts`
+  (no separate `*CommandCliOptions.ts` cluster like restart had).
+  See the template's `application/reconcile/` worked example.
 
 Unstructured (no internal/ at all):
 
-- **status** (13), **watchdog** (12), **reconcile** (9),
-  **reply** (7).
+- **status** (13), **watchdog** (12), **reply** (7).
 
 These follow the standard naming and have the data to slot into the Tier 2
 shape; they just need `internal/<sub-areas>/` introduced.
@@ -300,6 +312,25 @@ presentation helpers and should move to `internal/cli/` (or even into the
    "no exception fired" reference; the prior five worked examples
    document each exception type.
 
+   **reconcile was the second from-scratch refactor — and the
+   first where a from-scratch path fired a naming-role exception.**
+   The lane shape matched restart's almost exactly (every top-level
+   file mapped to a role-table row), but the defaults/reconcile layer
+   imported `ReconcileRuntimeSessionsDefaultDependencies` as a
+   `satisfies` constraint from an otherwise intra-only DepRes file.
+   The merge precedent's type-relocation pre-cleanup applied
+   verbatim — the type hoisted to the Contract first, then the
+   three sub-area introductions followed mechanically. This refutes
+   the early reading of restart that "from-scratch means no
+   exceptions"; the better generalization is "from-scratch means
+   the public/internal boundary is decided fresh, and exceptions
+   can still fire on the import-scan agreement step."
+   reconcile also reinforced that `internal/cli/` is not mandatory
+   in the from-scratch path: restart had a separate
+   `restartCommandCliOptions.ts` parser file (one-file sub-area);
+   reconcile keeps the parser inline in `reconcileCliCommand.ts`, so
+   no `internal/cli/` exists.
+
 4. **Half-done Tier 2 lanes shared a pattern.** At the time of the original
    survey, `commit`, `merge`, `metaReview`, and `list` all had a single
    internal sub-area (`pipeline/`, `pipeline/`, `submit/`, `projection/`).
@@ -381,9 +412,9 @@ future contributor reading "Tier 2 commands typically have an
 `internal/finalization/` sub-area" can verify the claim against the actual
 lane inventory above.
 
-Six lane refactors have validated the template. Five followed the
-half-done procedure; the sixth (`restart`) validated the from-scratch
-procedure variant. In sequence:
+Seven lane refactors have validated the template. Five followed the
+half-done procedure; two (`restart`, `reconcile`) validated the
+from-scratch procedure variant. In sequence:
 `list` (commit `da12ed98`, single-commit move), `commit` (commits
 `8d603cff`, `9b2b9755`, `2b5c6c71`, `2115f606`, four-commit sequence with
 a public-surface split for `remoteCommitContinuitySync.ts`), `merge`
@@ -398,9 +429,13 @@ intra-lane file), `metaReviewGate` (commits `fc3b96de` →
 seven sub-area introductions (`findings/`, `apply/`, `autoRework/`,
 `cleanRerun/`, `humanGate/`, `approve/`, `state/`) inside a previously
 flat `internal/`, and a final 1-file `prompts/` sub-area demotion from
-the lane root), and `restart` (commits `cc83c803` → `69bf1cb2`,
+the lane root), `restart` (commits `cc83c803` → `69bf1cb2`,
 four-sub-area introduction from a fully flat starting state with no
 pre-cleanup commit because the naming-role defaults agreed with the
-import scan on every top-level file). The template's "Worked examples"
-section captures the lessons learned; the inventory rows above record
-the post-refactor state.
+import scan on every top-level file), and `reconcile` (commits
+`a4729dc1` → this commit, three-sub-area introduction from a fully
+flat starting state with a merge-style type-relocation pre-cleanup
+because the defaults layer pinned an intra-only DepRes type — the
+first from-scratch refactor where a naming-role exception fired).
+The template's "Worked examples" section captures the lessons
+learned; the inventory rows above record the post-refactor state.

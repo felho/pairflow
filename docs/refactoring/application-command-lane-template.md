@@ -366,15 +366,19 @@ collapses to when no naming-role exception fires.
 
 ### Worked examples
 
-Six lane refactors have applied this procedure end-to-end. Five started
-from a half-done state and ended at structured Tier 2; the sixth
-(`restart`) started from a fully flat lane (no `internal/` at all)
-and validated a from-scratch procedure variant. The first five
-worked examples each document one or more naming-role exceptions
-(signature-reference type, cross-lane split-extraction,
-type-relocation, phantom cross-lane consumer, contract-test
-path-pin); the `restart` worked example is the canonical "no
-exception fired" reference.
+Seven lane refactors have applied this procedure end-to-end. Five
+started from a half-done state and ended at structured Tier 2; the
+sixth (`restart`) and seventh (`reconcile`) started from fully flat
+lanes (no `internal/` at all) and validated the from-scratch
+procedure variant. The first five worked examples each document one
+or more naming-role exceptions (signature-reference type, cross-lane
+split-extraction, type-relocation, phantom cross-lane consumer,
+contract-test path-pin); the `restart` worked example is the
+canonical "no exception fired" reference for from-scratch lanes; the
+`reconcile` worked example is the first case showing that
+from-scratch lanes can *still* fire a naming-role exception
+(specifically the merge-style type-relocation), so the from-scratch
+variant is not a synonym for "no pre-cleanup needed."
 
 #### `application/list/` (refactored 2026-05-10, commit `da12ed98`)
 
@@ -858,6 +862,158 @@ Findings worth carrying forward:
   exclusive by content (CLI parsing vs. domain-input normalization
   vs. dependency wiring vs. orchestration), so each cluster is its
   own honest sub-area concern.
+
+#### `application/reconcile/` (refactored 2026-05-11, commits `a4729dc1` → this commit)
+
+**This is the second from-scratch Tier 2 case** — and the first
+where a from-scratch path fired a naming-role exception. The lane
+shape at the start matched restart's almost exactly (every top-level
+file mapped to a role-table row), but unlike restart the import scan
+diverged from the naming-role default on one file: the
+`defaults/reconcile` layer pinned
+`ReconcileRuntimeSessionsDefaultDependencies` (a type defined inside
+the otherwise intra-only `reconcileCommandDependencyResolution.ts`)
+as a `satisfies` constraint over its default bundle. Demoting DepRes
+into `internal/preparation/` without addressing the type first would
+have made `defaults/reconcile` import from an internal path. The
+merge precedent's type-relocation pre-cleanup applied verbatim.
+
+Worked-example structure note: this entry follows the restart layout
+(goal-state introduction up front, per-sub-area moves as a mechanical
+postscript) and explicitly contrasts with restart at the exception
+step, so the two from-scratch references read as a pair rather than
+as two independent cases.
+
+Before: 9 top-level files, no `internal/`. Naming-role coverage:
+`*CommandApi`, `*CommandContract`, `*CliCommand`, `*CommandRuntime`
+(error class by content, despite the filename), `*CommandErrorNormalization`,
+`*CommandOrchestration`, `run<X>Flow`, `*CommandInputNormalization`,
+`*CommandDependencyResolution`. Every file mapped to a row in
+[Common naming roles](#common-naming-roles); no `*CommandCliOptions`
+file exists, so no separate `cli/` cluster materializes (the parser
+is inline in `reconcileCliCommand.ts` via `parseArgs`).
+
+After: 3 top-level root-public files plus
+`internal/{error,orchestration,preparation}/` (three sub-areas, six
+internal files). Top-level: `reconcileCommandApi.ts` (canonical
+entry), `reconcileCommandContract.ts` (dependency port + result
+types + the hoisted `ReconcileRuntimeSessionsDefaultDependencies`),
+`reconcileCliCommand.ts` (CLI integration, consumed by
+`src/cli/commands/bubble/reconcile.ts`).
+
+**Goal-state introduction (the from-scratch step the half-done
+procedure skips, with exception handling):**
+
+- **Public surface decision.** With no pre-existing `internal/`,
+  the public/internal boundary is decided fresh. The naming-role
+  table defaults proposed three root-public files (`Api`, `Contract`,
+  `CliCommand`) and six intra-only candidates; the import scan
+  confirmed the three root-public choices and the six intra-only
+  classifications. **One exception fired** on the intra-only side:
+  `reconcileCommandDependencyResolution.ts` exports a public-side
+  type (`ReconcileRuntimeSessionsDefaultDependencies`) that
+  `defaults/reconcile` pins. The merge precedent's type-relocation
+  applied — hoist the type into the Contract before the file move
+  so the public defaults stay against the public Contract.
+  This is the first from-scratch refactor where a naming-role
+  exception fired; restart's "default-and-scan agreement on every
+  file" was a sufficient condition for the textbook from-scratch
+  collapse, not a necessary feature of from-scratch lanes.
+- **Sub-area projection from naming clusters.** The six intra-only
+  files clustered cleanly: `Runtime` + `ErrorNormalization` →
+  `error/` (commit/merge/restart `*Runtime.ts` content rule —
+  StartupReconcilerError class lives in `Runtime.ts`);
+  `Orchestration` + `runReconcileFlow` → `orchestration/` (same
+  pair as restart); `InputNormalization` + `DependencyResolution` →
+  `preparation/` (same pair name as merge and restart). No `cli/`
+  sub-area appears because the `*CommandCliOptions.ts` filename
+  that restart had does not exist in reconcile (the parseArgs
+  parser is inline in `reconcileCliCommand.ts`). The from-scratch
+  variant therefore yields three or four sub-areas depending on
+  whether the CLI parser was extracted from `*CliCommand.ts`,
+  not a fixed pattern.
+
+Five-commit sequence (one pre-cleanup + three sub-area moves +
+doc-sync):
+
+1. **Type-relocation pre-cleanup** (`a4729dc1`).
+   `ReconcileRuntimeSessionsDefaultDependencies` hoisted from
+   `reconcileCommandDependencyResolution.ts` into
+   `reconcileCommandContract.ts`. Consumers updated: Api, DepRes
+   (now imports the type from Contract instead of owning it),
+   `defaults/reconcile/reconcileCommandDefaults.ts`, and the
+   DepRes mirror test. Single canonical public definition lives
+   on Contract; DepRes no longer carries the duplicate. Same
+   merge-precedent split: the type-location decision is
+   reviewable in isolation from the mechanical sub-area moves.
+2. **`internal/error/`** (`e0e18ff9`). Two files
+   (`reconcileCommandRuntime.ts` owning `StartupReconcilerError` +
+   creator + thrower, `reconcileCommandErrorNormalization.ts`).
+   Same `*Runtime.ts`-is-actually-error-composition content rule
+   as commit, merge, and restart. The error-normalization test
+   mirrors the move; the cross-lane
+   `errorBoundaryContextSchema.test.ts` (which asserts the error
+   class shape alongside the five other command-error classes) gets
+   a path-only update — not relocated, since it spans multiple
+   lanes' error families.
+3. **`internal/orchestration/`** (`558a4eec`). Two files
+   (`reconcileCommandOrchestration.ts`, `runReconcileFlow.ts`).
+   `runReconcileFlow.test.ts` mirrors the move.
+4. **`internal/preparation/`** (`4db0df10`). Two files
+   (`reconcileCommandInputNormalization.ts`,
+   `reconcileCommandDependencyResolution.ts`). Two mirror tests
+   follow. Because the DefaultDependencies type was hoisted in
+   commit 1, this move introduces no public-to-internal import.
+   A stale path in the already-moved
+   `runReconcileFlow.test.ts` (the
+   `ResolvedReconcileRuntimeSessionsDependencies` import that
+   was still pointing at the lane-root DepRes location) updates
+   here — the path could only be corrected once DepRes itself
+   moved.
+5. **Closeout (this commit).** Survey + template doc-sync;
+   leftover-hunt confirmed (no empty directories, no orphan
+   references).
+
+Findings worth carrying forward:
+
+- **From-scratch can fire exceptions too.** Restart's
+  "default-and-scan agreement on every file" is a sufficient
+  condition for textbook collapse, not a necessary property of
+  from-scratch lanes. Reconcile demonstrates the merge-style
+  type-relocation exception firing on a from-scratch path: the
+  defaults layer pinned an intra-only file's exported type as a
+  `satisfies` constraint, so the type had to hoist to the
+  Contract before the file move. The from-scratch *procedure
+  variant* still applies (introduce the boundary fresh, project
+  sub-areas from naming clusters, validate against the import
+  scan); it just may need a pre-cleanup step when the scan
+  diverges from the role-table default. Past framings of
+  from-scratch as "no exception fired" describe restart's
+  textbook case, not a constraint of the from-scratch variant
+  itself.
+- **`internal/cli/` is not a fixed feature of the from-scratch
+  shape.** Restart had a separate `*CommandCliOptions.ts` parser
+  file, so a one-file `internal/cli/` sub-area materialized
+  (following the metaReviewGate `prompts/` precedent for
+  deliberate 1-file sub-areas). Reconcile keeps the parser
+  inline in `reconcileCliCommand.ts`, so no `internal/cli/`
+  appears. The presence of an extracted CLI-options parser
+  cluster (not the CLI integration itself) is what triggers the
+  `cli/` sub-area on a from-scratch path; lanes whose CLI option
+  parsing stays inline in `*CliCommand.ts` end with three
+  sub-areas rather than four.
+- **Sample size 2 generalizes the from-scratch path.** Two
+  from-scratch refactors landed; both validate the per-sub-area
+  move sequence projected from naming clusters. They diverge on
+  exception firing (restart 0, reconcile 1) and on sub-area
+  count (restart 4, reconcile 3). The path now generalizes as:
+  *introduce the public/internal boundary fresh, run the import
+  scan, fire any of the five documented exception precedents
+  (signature-reference type, cross-lane split-extraction,
+  type-relocation, phantom cross-lane consumer, contract-test
+  path-pin) as needed, then run the per-sub-area moves.* No new
+  exception types appeared in reconcile; the existing exception
+  catalog is sufficient through 7 refactored lanes.
 
 ## Module Depth Check applies
 
