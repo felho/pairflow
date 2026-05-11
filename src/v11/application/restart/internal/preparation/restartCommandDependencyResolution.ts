@@ -1,13 +1,13 @@
-import type { ResolveBubbleByIdPort } from "../../ports/bubbleLookup.js";
-import type { PersistPassValidationRecoveryMarkerPort } from "../../ports/passValidationRecovery.js";
-import type { RemoveRuntimeSessionPort } from "../../ports/runtimeSessions.js";
-import type { TerminateBubbleTmuxSessionPort } from "../../ports/tmuxSessions.js";
+import type { ResolveBubbleByIdPort } from "../../../../ports/bubbleLookup.js";
+import type { PersistPassValidationRecoveryMarkerPort } from "../../../../ports/passValidationRecovery.js";
+import type { RemoveRuntimeSessionPort } from "../../../../ports/runtimeSessions.js";
+import type { TerminateBubbleTmuxSessionPort } from "../../../../ports/tmuxSessions.js";
 import type {
   BubbleRemotePointer
-} from "../../shared/remote/remoteExecutionTypes.js";
-import type { RestartBubbleDependencies } from "./restartCommandContract.js";
-import { startBubble } from "../start/startCommandApi.js";
-import { createRestartBubbleError } from "./internal/error/restartCommandRuntime.js";
+} from "../../../../shared/remote/remoteExecutionTypes.js";
+import type { RestartBubbleDependencies } from "../../restartCommandContract.js";
+import { startBubble } from "../../../start/startCommandApi.js";
+import { createRestartBubbleError } from "../error/restartCommandRuntime.js";
 
 export interface ResolvedRestartBubbleDependencies {
   resolveBubbleById: ResolveBubbleByIdPort;

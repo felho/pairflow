@@ -4,8 +4,8 @@ import type {
   RestartBubbleResult
 } from "../../restartCommandContract.js";
 import { runRestartFlow } from "./runRestartFlow.js";
-import { resolveRestartBubbleDependencies } from "../../restartCommandDependencyResolution.js";
-import { normalizeRestartBubbleInput } from "../../restartCommandInputNormalization.js";
+import { resolveRestartBubbleDependencies } from "../preparation/restartCommandDependencyResolution.js";
+import { normalizeRestartBubbleInput } from "../preparation/restartCommandInputNormalization.js";
 import {
   createRestartBubbleError,
   throwAsRestartBubbleError

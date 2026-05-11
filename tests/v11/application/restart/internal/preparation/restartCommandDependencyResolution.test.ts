@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { resolveRestartBubbleDependencies } from "../../../../src/v11/application/restart/restartCommandDependencyResolution.js";
+import { resolveRestartBubbleDependencies } from "../../../../../../src/v11/application/restart/internal/preparation/restartCommandDependencyResolution.js";
 
 describe("restartCommandDependencyResolution", () => {
   it("preserves explicit dependency overrides", () => {

@@ -9,7 +9,7 @@ import {
   persistPassValidationRecoveryMarker,
   resolvePassValidationRecoveryRepoMarkerPath
 } from "../../../../../../src/v11/infrastructure/artifact/validation/passValidationEvidence.js"
-import type { ResolvedRestartBubbleDependencies } from "../../../../../../src/v11/application/restart/restartCommandDependencyResolution.js"
+import type { ResolvedRestartBubbleDependencies } from "../../../../../../src/v11/application/restart/internal/preparation/restartCommandDependencyResolution.js"
 
 const tempDirs: string[] = []
 
