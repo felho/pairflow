@@ -1,7 +1,7 @@
 import {
   buildMetaReviewSubmitApproveParityNote,
   buildMetaReviewSubmitCommandTemplate
-} from "../../shared/metaReview/metaReviewSubmitGuidance.js";
+} from "../../../../shared/metaReview/metaReviewSubmitGuidance.js";
 
 export function buildMetaReviewGateRunPrompt(input: {
   bubbleId: string;

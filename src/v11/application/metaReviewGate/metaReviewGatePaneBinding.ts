@@ -19,7 +19,7 @@ import {
   resolveRuntimeSessionWorkspaceAuthority
 } from "../../shared/runtimeSessionWorkspaceAuthority.js";
 import { resolveCodexMcpDisableArgs } from "../../shared/command/agentCommand.js";
-import { buildMetaReviewGateRunPrompt } from "./metaReviewGatePrompt.js";
+import { buildMetaReviewGateRunPrompt } from "./internal/prompts/metaReviewGatePrompt.js";
 import { DEFAULT_ROLE_MCP_POLICY_BY_ROLE } from "../../../config/defaults.js";
 
 function resolveMetaReviewerWorkspaceAuthority(input: {

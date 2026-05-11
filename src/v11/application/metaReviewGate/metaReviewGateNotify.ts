@@ -1,6 +1,6 @@
 import {
   buildMetaReviewGateRunPrompt
-} from "./metaReviewGatePrompt.js";
+} from "./internal/prompts/metaReviewGatePrompt.js";
 import type {
   MetaReviewRuntimeDeliveryObservation,
   NotifyMetaReviewerSubmissionRequestDependencies,
