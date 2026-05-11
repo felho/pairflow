@@ -1,12 +1,12 @@
-import type { BubblePaths } from "../../shared/bubble/bubblePaths.js";
-import type { ReplyWaitingHumanState } from "../../domain/reply/waitingHumanStateGuard.js";
-import type { BubbleConfig } from "../../shared/config/bubbleConfigTypes.js";
-import type { BubbleLifecycleState } from "../../../contracts/kernel/lifecycle.js";
-import type { BubbleStateSnapshot } from "../../shared/state/bubbleStateSnapshotTypes.js";
+import type { BubblePaths } from "../../../shared/bubble/bubblePaths.js";
+import type { ReplyWaitingHumanState } from "../../../domain/reply/waitingHumanStateGuard.js";
+import type { BubbleConfig } from "../../../shared/config/bubbleConfigTypes.js";
+import type { BubbleLifecycleState } from "../../../../contracts/kernel/lifecycle.js";
+import type { BubbleStateSnapshot } from "../../../shared/state/bubbleStateSnapshotTypes.js";
 import type {
   ProtocolEnvelope,
   ProtocolEnvelopeDraft
-} from "../../../types/protocol.js";
+} from "../../../../types/protocol.js";
 
 export interface ReplyResolvedBubble {
   bubbleId: string;

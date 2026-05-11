@@ -9,7 +9,7 @@ import {
 import type {
   ExecuteReplyMutationInput,
   ExecuteReplyMutationResult
-} from "../replyMutationExecutionContract.js";
+} from "./replyMutationExecutionContract.js";
 
 export async function executeReplyMutation(
   input: ExecuteReplyMutationInput
