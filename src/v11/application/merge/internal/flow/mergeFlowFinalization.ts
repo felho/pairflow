@@ -3,9 +3,9 @@ import type { ResolvedMergeCommandDependencies } from "../../mergeCommandDepende
 import type { MergeFlowExecutionContext } from "./mergeFlowContext.js";
 import type {
   ExecuteRemoteBubbleMergeCleanupCommandResult,
-  MergeCleanupOutcome,
-  RunMergeCommandPipelineInput
+  MergeCleanupOutcome
 } from "../../mergeCommandContract.js";
+import type { RunMergeCommandPipelineInput } from "../../mergeCommandInputNormalization.js";
 
 export interface LocalMergeFlowFinalizationResult {
   cleanupOutcome: MergeCleanupOutcome;

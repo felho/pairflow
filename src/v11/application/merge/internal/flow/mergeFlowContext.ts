@@ -11,9 +11,9 @@ import {
 import { syncRemoteCommitContinuityArtifacts } from "../../../commit/remoteCommitContinuitySync.js";
 import {
   buildMergeImportRef,
-  type RemoteMergeStatusTarget,
-  type RunMergeCommandPipelineInput
+  type RemoteMergeStatusTarget
 } from "../../mergeCommandContract.js";
+import type { RunMergeCommandPipelineInput } from "../../mergeCommandInputNormalization.js";
 import type { ResolvedMergeCommandDependencies } from "../../mergeCommandDependencyResolution.js";
 import {
   canonicalizeMergeExecutionPath,

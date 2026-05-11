@@ -1,7 +1,5 @@
-import {
-  type MergeBubbleResult,
-  type RunMergeCommandPipelineInput
-} from "../../mergeCommandContract.js";
+import type { MergeBubbleResult } from "../../mergeCommandContract.js";
+import type { RunMergeCommandPipelineInput } from "../../mergeCommandInputNormalization.js";
 import type { ResolvedMergeCommandDependencies } from "../../mergeCommandDependencyResolution.js";
 import { initializeMergeFlowExecutionContext } from "../flow/mergeFlowContext.js";
 import { finalizeMergeFlow } from "../flow/mergeFlowFinalization.js";

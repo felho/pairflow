@@ -1,8 +1,6 @@
 import { isNamedError } from "../../../../shared/errors/namedError.js";
-import type {
-  ExecuteRemoteBubbleMergeCommandResult,
-  RunMergeCommandPipelineInput
-} from "../../mergeCommandContract.js";
+import type { ExecuteRemoteBubbleMergeCommandResult } from "../../mergeCommandContract.js";
+import type { RunMergeCommandPipelineInput } from "../../mergeCommandInputNormalization.js";
 import type { ResolvedMergeCommandDependencies } from "../../mergeCommandDependencyResolution.js";
 import type { RemoteMergeFlowExecutionContext } from "../flow/mergeFlowContext.js";
 

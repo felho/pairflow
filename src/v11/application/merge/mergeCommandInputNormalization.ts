@@ -19,6 +19,10 @@ export interface NormalizedMergeBubbleInput {
   nowIso: string;
 }
 
+export interface RunMergeCommandPipelineInput extends NormalizedMergeBubbleInput {
+  createError: PairflowCreateCommandError;
+}
+
 export function normalizeMergeBubbleInput(
   input: MergeBubbleInputLike,
   createError: PairflowCreateCommandError
