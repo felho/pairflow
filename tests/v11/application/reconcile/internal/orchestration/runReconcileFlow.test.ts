@@ -10,7 +10,7 @@ import {
   resolvePassValidationRecoveryWorktreeMarkerPath
 } from "../../../../../../src/v11/infrastructure/artifact/validation/passValidationEvidence.js"
 import { runReconcileFlow } from "../../../../../../src/v11/application/reconcile/internal/orchestration/runReconcileFlow.js"
-import type { ResolvedReconcileRuntimeSessionsDependencies } from "../../../../../../src/v11/application/reconcile/reconcileCommandDependencyResolution.js"
+import type { ResolvedReconcileRuntimeSessionsDependencies } from "../../../../../../src/v11/application/reconcile/internal/preparation/reconcileCommandDependencyResolution.js"
 
 const tempDirs: string[] = []
 

@@ -8,10 +8,10 @@ import type {
 } from "../../reconcileCommandContract.js";
 import type {
   NormalizedReconcileRuntimeSessionsInput
-} from "../../reconcileCommandInputNormalization.js";
+} from "../preparation/reconcileCommandInputNormalization.js";
 import type {
   ResolvedReconcileRuntimeSessionsDependencies
-} from "../../reconcileCommandDependencyResolution.js";
+} from "../preparation/reconcileCommandDependencyResolution.js";
 
 async function resolveStaleReason(
   repoPath: string,

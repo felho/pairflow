@@ -4,17 +4,17 @@ import {
   type RuntimeSessionsRegistry,
   type ReadRuntimeSessionsRegistryPort,
   type RemoveRuntimeSessionsPort
-} from "../../ports/runtimeSessions.js";
-import type { PersistPassValidationRecoveryMarkerPort } from "../../ports/passValidationRecovery.js";
-import type { ResolveRepoPathPort } from "../../ports/repoResolution.js";
-import type { ReadStateSnapshotPort } from "../../ports/stateSnapshots.js";
-import { isFinalState } from "../../domain/state/transitions.js";
+} from "../../../../ports/runtimeSessions.js";
+import type { PersistPassValidationRecoveryMarkerPort } from "../../../../ports/passValidationRecovery.js";
+import type { ResolveRepoPathPort } from "../../../../ports/repoResolution.js";
+import type { ReadStateSnapshotPort } from "../../../../ports/stateSnapshots.js";
+import { isFinalState } from "../../../../domain/state/transitions.js";
 import type {
   ListBubbleIdSet,
   ReconcileRuntimeSessionsDefaultDependencies,
   ReconcileRuntimeSessionsDependencies,
   TmuxSessionLivenessProbe
-} from "./reconcileCommandContract.js";
+} from "../../reconcileCommandContract.js";
 
 export interface ResolvedReconcileRuntimeSessionsDependencies {
   resolveRepoPath: ResolveRepoPathPort;

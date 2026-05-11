@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { normalizeReconcileRuntimeSessionsInput } from "../../../../src/v11/application/reconcile/reconcileCommandInputNormalization.js";
+import { normalizeReconcileRuntimeSessionsInput } from "../../../../../../src/v11/application/reconcile/internal/preparation/reconcileCommandInputNormalization.js";
 
 describe("reconcileCommandInputNormalization", () => {
   it("applies default dryRun and tmux liveness probe", () => {

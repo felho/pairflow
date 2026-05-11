@@ -6,11 +6,11 @@ import type {
 } from "../../reconcileCommandContract.js";
 import type {
   ResolvedReconcileRuntimeSessionsDependencies
-} from "../../reconcileCommandDependencyResolution.js";
+} from "../preparation/reconcileCommandDependencyResolution.js";
 import { createStartupReconcilerError } from "../error/reconcileCommandRuntime.js";
 import {
   normalizeReconcileRuntimeSessionsInput
-} from "../../reconcileCommandInputNormalization.js";
+} from "../preparation/reconcileCommandInputNormalization.js";
 
 const RECONCILE_REPO_RESOLUTION_FAILED = "RECONCILE_REPO_RESOLUTION_FAILED";
 

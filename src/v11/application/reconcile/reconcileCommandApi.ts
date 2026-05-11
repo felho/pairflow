@@ -4,7 +4,7 @@ import {
 import {
   resolveReconcileRuntimeSessionsDependencies,
   type ResolvedReconcileRuntimeSessionsDependencies
-} from "./reconcileCommandDependencyResolution.js";
+} from "./internal/preparation/reconcileCommandDependencyResolution.js";
 import type {
   ReconcileRuntimeSessionsDefaultDependencies,
   ReconcileRuntimeSessionsDependencies,

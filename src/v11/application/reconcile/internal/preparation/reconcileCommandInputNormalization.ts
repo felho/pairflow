@@ -1,7 +1,7 @@
 import type {
   ReconcileRuntimeSessionsInput,
   TmuxSessionLivenessProbe
-} from "./reconcileCommandContract.js";
+} from "../../reconcileCommandContract.js";
 
 export interface NormalizedReconcileRuntimeSessionsInput {
   repoPath?: string;

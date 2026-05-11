@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 
-import type { RuntimeSessionsRegistry } from "../../../../src/v11/infrastructure/executor/sessionRuntime/runtimeSessionsRegistry.js";
-import type { ReconcileRuntimeSessionsDefaultDependencies } from "../../../../src/v11/application/reconcile/reconcileCommandContract.js";
-import { resolveReconcileRuntimeSessionsDependencies } from "../../../../src/v11/application/reconcile/reconcileCommandDependencyResolution.js";
+import type { RuntimeSessionsRegistry } from "../../../../../../src/v11/infrastructure/executor/sessionRuntime/runtimeSessionsRegistry.js";
+import type { ReconcileRuntimeSessionsDefaultDependencies } from "../../../../../../src/v11/application/reconcile/reconcileCommandContract.js";
+import { resolveReconcileRuntimeSessionsDependencies } from "../../../../../../src/v11/application/reconcile/internal/preparation/reconcileCommandDependencyResolution.js";
 
 describe("reconcileCommandDependencyResolution", () => {
   it("preserves explicit dependency overrides", () => {
