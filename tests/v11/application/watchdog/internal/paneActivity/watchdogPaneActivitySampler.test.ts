@@ -5,13 +5,13 @@ import { describe, expect, it, vi } from "vitest";
 import {
   WATCHDOG_PANE_ACTIVITY_CAPTURE_START_LINE,
   sampleWatchdogPaneActivity
-} from "../../../../src/v11/application/watchdog/watchdogPaneActivitySampler.js";
-import type { TmuxRunner } from "../../../../src/v11/ports/tmuxSessions.js";
-import { BubbleWatchdogError } from "../../../../src/v11/shared/watchdog/watchdogCommandError.js";
+} from "../../../../../../src/v11/application/watchdog/watchdogPaneActivitySampler.js";
+import type { TmuxRunner } from "../../../../../../src/v11/ports/tmuxSessions.js";
+import { BubbleWatchdogError } from "../../../../../../src/v11/shared/watchdog/watchdogCommandError.js";
 import {
   resolveWatchdogTargetPaneIndex
-} from "../../../../src/v11/shared/watchdog/watchdogPaneTargeting.js";
-import type { BubbleConfig } from "../../../../src/v11/shared/config/bubbleConfigTypes.js";
+} from "../../../../../../src/v11/shared/watchdog/watchdogPaneTargeting.js";
+import type { BubbleConfig } from "../../../../../../src/v11/shared/config/bubbleConfigTypes.js";
 
 const bubbleConfig: BubbleConfig = {
   id: "b_watchdog_sampler_01",
