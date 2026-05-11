@@ -5,7 +5,7 @@ import type {
 } from "./watchdogCommandContract.js";
 import type { AgentRole } from "../../../contracts/kernel/agentIdentity.js";
 import { BubbleWatchdogError } from "./internal/error/watchdogCommandRuntime.js";
-import { type WatchdogRuntimeContext } from "./watchdogCommandFlow.js";
+import { type WatchdogRuntimeContext } from "./internal/flow/watchdogCommandFlow.js";
 import {
   resolveWatchdogTargetPaneIndex
 } from "../../shared/watchdog/watchdogPaneTargeting.js";

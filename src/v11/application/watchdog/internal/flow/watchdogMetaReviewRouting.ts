@@ -1,12 +1,12 @@
-import type { BubbleStateSnapshot } from "../../shared/state/bubbleStateSnapshotTypes.js";
-import type { BubbleWatchdogResult } from "./watchdogCommandContract.js";
+import type { BubbleStateSnapshot } from "../../../../shared/state/bubbleStateSnapshotTypes.js";
+import type { BubbleWatchdogResult } from "../../watchdogCommandContract.js";
 import type { WatchdogRuntimeContext } from "./watchdogCommandFlow.js";
 import { escalateMetaReviewWatchdog } from "./watchdogCommandFlow.js";
 import {
   isMetaReviewExecutionContextActiveState,
   validateActiveMetaReviewExecutionContext
-} from "../../shared/metaReview/metaReviewExecutionContext.js";
-import { SchemaValidationError } from "../../shared/validation/primitives.js";
+} from "../../../../shared/metaReview/metaReviewExecutionContext.js";
+import { SchemaValidationError } from "../../../../shared/validation/primitives.js";
 
 function assertMetaReviewExecutionContext(state: BubbleStateSnapshot): void {
   const result = validateActiveMetaReviewExecutionContext(state);

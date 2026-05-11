@@ -14,8 +14,8 @@ import type {
 import {
   throwAsBubbleWatchdogError
 } from "./internal/error/watchdogCommandRuntime.js";
-import { type WatchdogRuntimeContext } from "./watchdogCommandFlow.js";
-import { resolveWatchdogLifecycleRoute } from "./watchdogCommandRouting.js";
+import { type WatchdogRuntimeContext } from "./internal/flow/watchdogCommandFlow.js";
+import { resolveWatchdogLifecycleRoute } from "./internal/flow/watchdogCommandRouting.js";
 import {
   maybeMonitorWatchdogPaneActivity,
   type WatchdogPaneActivityState

@@ -1,10 +1,10 @@
 import type {
   BubbleWatchdogResult,
   PaneActivitySampleResult
-} from "./watchdogCommandContract.js";
+} from "../../watchdogCommandContract.js";
 import type { WatchdogRuntimeContext } from "./watchdogCommandFlow.js";
-import { WATCHDOG_PANE_QUIET_WINDOW_MS } from "./watchdogPaneActivitySampler.js";
-import type { WatchdogPaneActivityRecord } from "../../ports/watchdogPaneActivity.js";
+import { WATCHDOG_PANE_QUIET_WINDOW_MS } from "../../watchdogPaneActivitySampler.js";
+import type { WatchdogPaneActivityRecord } from "../../../../ports/watchdogPaneActivity.js";
 import {
   buildNotExpiredResult,
   escalateRunningWatchdog,
