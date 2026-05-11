@@ -1,19 +1,19 @@
-import type { MetaReviewRecommendation } from "../../../shared/metaReview/metaReviewTypes.js";
+import type { MetaReviewRecommendation } from "../../../../shared/metaReview/metaReviewTypes.js";
 import { appendHumanApprovalRequestEnvelope } from "./approvalRequestEnvelope.js";
 import {
   type WriteStateSnapshotPort
-} from "../../../ports/stateSnapshots.js";
-import type { AgentName } from "../../../../contracts/kernel/agentIdentity.js";
-import type { BubbleStateSnapshot } from "../../../shared/state/bubbleStateSnapshotTypes.js";
-import type { FindingsParityMetadata } from "../../../../types/protocol.js";
+} from "../../../../ports/stateSnapshots.js";
+import type { AgentName } from "../../../../../contracts/kernel/agentIdentity.js";
+import type { BubbleStateSnapshot } from "../../../../shared/state/bubbleStateSnapshotTypes.js";
+import type { FindingsParityMetadata } from "../../../../../types/protocol.js";
 import type {
   AppendProtocolEnvelopePort,
   AppendProtocolEnvelopeResult
-} from "../../../ports/transcript.js";
-import type { MetaReviewGateRoute } from "../../../shared/metaReviewGate/metaReviewGateRouteContract.js";
-import type { MetaReviewGateThresholdMetadata } from "../../../shared/metaReviewGate/metaReviewGateRouteContract.js";
-import type { MetaReviewGateAdvisoryFinding } from "../../../domain/metaReviewGate/findingsSplit.js";
-import { isNamedError } from "../../../shared/errors/namedError.js";
+} from "../../../../ports/transcript.js";
+import type { MetaReviewGateRoute } from "../../../../shared/metaReviewGate/metaReviewGateRouteContract.js";
+import type { MetaReviewGateThresholdMetadata } from "../../../../shared/metaReviewGate/metaReviewGateRouteContract.js";
+import type { MetaReviewGateAdvisoryFinding } from "../../../../domain/metaReviewGate/findingsSplit.js";
+import { isNamedError } from "../../../../shared/errors/namedError.js";
 
 export const metaReviewGateRollbackNotAttemptedReasonCode =
   "META_REVIEW_GATE_ROLLBACK_NOT_ATTEMPTED";
@@ -39,7 +39,7 @@ export interface ResolveRollbackAfterGateAppendFailureResult {
   rollbackReasonCode: "META_REVIEW_GATE_TRANSITION_INVALID" | "META_REVIEW_GATE_STATE_CONFLICT";
 }
 
-export { resolveHumanGateRecommendation } from "../../../domain/metaReviewGate/humanGatePolicy.js";
+export { resolveHumanGateRecommendation } from "../../../../domain/metaReviewGate/humanGatePolicy.js";
 
 export type AppendHumanGateApprovalRequestInput = {
   appendEnvelope: AppendProtocolEnvelopePort;

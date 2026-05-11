@@ -1,13 +1,13 @@
-import type { MetaReviewRecommendation } from "../../../shared/metaReview/metaReviewTypes.js";
+import type { MetaReviewRecommendation } from "../../../../shared/metaReview/metaReviewTypes.js";
 import type {
   AppendProtocolEnvelopeResult
-} from "../../../ports/transcript.js";
-import { MetaReviewGateError } from "../../../shared/metaReviewGate/metaReviewGateRouteContract.js";
+} from "../../../../ports/transcript.js";
+import { MetaReviewGateError } from "../../../../shared/metaReviewGate/metaReviewGateRouteContract.js";
 import type { PersistHumanGateRouteInput } from "./metaReviewGateHumanGatePersistenceContract.js";
 import {
   appendHumanGateApprovalRequest
 } from "./metaReviewGateHumanGatePersistenceHelpers.js";
-import type { MetaReviewGateAdvisoryFinding } from "../../../domain/metaReviewGate/findingsSplit.js";
+import type { MetaReviewGateAdvisoryFinding } from "../../../../domain/metaReviewGate/findingsSplit.js";
 
 export async function appendHumanGateRequestForRoute(input: {
   persistInput: PersistHumanGateRouteInput;

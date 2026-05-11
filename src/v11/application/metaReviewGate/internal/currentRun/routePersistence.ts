@@ -5,7 +5,7 @@ import type { LoadedStateSnapshot } from "../../../../ports/stateSnapshots.js";
 import {
   buildGateLockPath
 } from "../metaReviewGateShared.js";
-import { persistHumanGateRoute } from "../metaReviewGateHumanGatePersistence.js";
+import { persistHumanGateRoute } from "../humanGate/metaReviewGateHumanGatePersistence.js";
 import { buildHumanGateSummary } from "../../../../domain/metaReviewGate/humanGatePolicy.js";
 import {
   resolveHumanGateRoute
@@ -14,7 +14,7 @@ import type { MetaReviewGateThresholdMetadata } from "../../../../shared/metaRev
 import type { MetaReviewGateResult } from "../../../../shared/metaReviewGate/metaReviewGateResultContract.js";
 import { resolveFindingsParityMetadataFromReportJson } from "../findings/metaReviewGateFindingsMetadata.js";
 import type { FinalizeCurrentRunMetaReviewGateInput } from "../../../../shared/metaReviewGate/metaReviewGateCurrentRunTypes.js";
-import type { PersistHumanGateRouteInput } from "../metaReviewGateHumanGatePersistenceContract.js";
+import type { PersistHumanGateRouteInput } from "../humanGate/metaReviewGateHumanGatePersistenceContract.js";
 
 type CurrentRunHumanGatePersistenceBase = Pick<
   PersistHumanGateRouteInput,

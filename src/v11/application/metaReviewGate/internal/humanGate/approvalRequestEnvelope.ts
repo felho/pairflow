@@ -1,34 +1,34 @@
-import type { AgentName } from "../../../../contracts/kernel/agentIdentity.js";
+import type { AgentName } from "../../../../../contracts/kernel/agentIdentity.js";
 import type {
   MetaReviewRecommendation
-} from "../../../shared/metaReview/metaReviewTypes.js";
+} from "../../../../shared/metaReview/metaReviewTypes.js";
 import {
   deliveryTargetRoleMetadataKey,
   resolveFindingsParityMetadataForEnvelope,
   type FindingsParityMetadata
-} from "../../../../types/protocol.js";
+} from "../../../../../types/protocol.js";
 import {
   appendProtocolEnvelope
-} from "../../start/startCommandDependencyDefaults.js";
+} from "../../../start/startCommandDependencyDefaults.js";
 import type {
   AppendProtocolEnvelopeResult
-} from "../../../ports/transcript.js";
+} from "../../../../ports/transcript.js";
 import {
   readLatestSameRoundReviewerSnapshotFromTranscript,
   type LatestSameRoundReviewerSnapshot
-} from "../metaReviewGateReviewerSnapshotApi.js";
+} from "../../metaReviewGateReviewerSnapshotApi.js";
 import {
   assertAdvisorySplitMetadataWhenRequired,
   assertApprovePathConsistentWithReviewerSnapshot,
   normalizeApprovalAdvisoryFindings,
   type ApprovalAdvisoryFinding
 } from "./metaReviewGateApprovalReviewerConsistency.js";
-import { resolveApprovalRequestSummaryConsistency } from "../../../domain/metaReviewGate/approvalSummaryNormalization.js";
-import { resolveApprovalRequestGateRouteMetadata } from "../../../domain/metaReviewGate/approvalRequestRouteMetadata.js";
+import { resolveApprovalRequestSummaryConsistency } from "../../../../domain/metaReviewGate/approvalSummaryNormalization.js";
+import { resolveApprovalRequestGateRouteMetadata } from "../../../../domain/metaReviewGate/approvalRequestRouteMetadata.js";
 import {
   MetaReviewGateError,
   type MetaReviewGateThresholdMetadata
-} from "../../../shared/metaReviewGate/metaReviewGateRouteContract.js";
+} from "../../../../shared/metaReviewGate/metaReviewGateRouteContract.js";
 
 export async function appendHumanApprovalRequestEnvelope(input: {
   appendEnvelope?: typeof appendProtocolEnvelope;

@@ -1,13 +1,13 @@
-import type { MetaReviewRecommendation } from "../../../shared/metaReview/metaReviewTypes.js";
-import type { FindingsParityMetadata } from "../../../../types/protocol.js";
-import type { LatestSameRoundReviewerSnapshot } from "../../../domain/metaReviewGate/reviewerSnapshot.js";
+import type { MetaReviewRecommendation } from "../../../../shared/metaReview/metaReviewTypes.js";
+import type { FindingsParityMetadata } from "../../../../../types/protocol.js";
+import type { LatestSameRoundReviewerSnapshot } from "../../../../domain/metaReviewGate/reviewerSnapshot.js";
 import {
   buildMetaReviewSubmitAdvisoryOnlyCorrectionNote
-} from "../../../shared/metaReview/metaReviewSubmitGuidance.js";
+} from "../../../../shared/metaReview/metaReviewSubmitGuidance.js";
 import {
   resolveApprovePathReviewerConsistencyConflict,
   resolveSnapshotParityMismatchMessage
-} from "../../../domain/metaReviewGate/approvalReviewerConsistency.js";
+} from "../../../../domain/metaReviewGate/approvalReviewerConsistency.js";
 import {
   assertAdvisorySplitMetadataWhenRequired,
   hasConsistentApproveAdvisoryOnlySplit,
@@ -15,7 +15,7 @@ import {
   resolveAdvisoryContractInvariant,
   resolveStructuredParityMetadataSnapshot,
   type ApprovalAdvisoryFinding
-} from "../../../domain/metaReviewGate/approvalParitySnapshot.js";
+} from "../../../../domain/metaReviewGate/approvalParitySnapshot.js";
 
 export function assertApprovePathConsistentWithReviewerSnapshot(input: {
   route: string;
