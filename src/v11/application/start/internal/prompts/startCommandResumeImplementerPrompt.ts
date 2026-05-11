@@ -5,8 +5,8 @@ import type {
 import type {
   BubbleCommandsConfig
 } from "../../../../shared/command/commandConfigTypes.js";
-import { joinPromptLines } from "../../startCommandResumePromptShared.js";
-import { buildRolePromptConcernLines } from "../../../actorProtocol/rolePromptConcerns.js";
+import { joinPromptLines } from "../../../../shared/role/prompts/resumePromptShared.js";
+import { buildRolePromptConcernLines } from "../../../../shared/role/prompts/rolePromptConcerns.js";
 import type { BubbleStateSnapshot } from "../../../../shared/state/bubbleStateSnapshotTypes.js";
 
 export function buildResumeImplementerStartupPrompt(input: {

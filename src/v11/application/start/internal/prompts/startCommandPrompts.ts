@@ -13,7 +13,7 @@ import type {
 import {
   buildDocumentPrimaryArtifactReviewerGuardrail,
   buildRolePromptConcernLines
-} from "../../../actorProtocol/rolePromptConcerns.js";
+} from "../../../../shared/role/prompts/rolePromptConcerns.js";
 export {
   buildImplementerEvidenceHandoffGuidance,
   buildImplementerIdeationKickoffMessage,

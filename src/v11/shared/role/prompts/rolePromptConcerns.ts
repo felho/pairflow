@@ -1,38 +1,38 @@
-import type { AgentRole } from "../../../contracts/kernel/agentIdentity.js";
-import type { BubbleStateSnapshot } from "../../shared/state/bubbleStateSnapshotTypes.js";
+import type { AgentRole } from "../../../../contracts/kernel/agentIdentity.js";
+import type { BubbleStateSnapshot } from "../../state/bubbleStateSnapshotTypes.js";
 import type {
   ReviewArtifactType
-} from "../../shared/config/bubbleConfigVocabulary.js";
+} from "../../config/bubbleConfigVocabulary.js";
 import type {
   BubbleCommandsConfig
-} from "../../shared/command/commandConfigTypes.js";
-import { buildPairflowCommandGuidance } from "../start/startCommandPromptRuntime.js";
+} from "../../command/commandConfigTypes.js";
+import { buildPairflowCommandGuidance } from "../../command/pairflowCommandBootstrap.js";
 import {
   buildLaunchWorkspaceCommandScopeLine,
   buildRepositoryLaunchWorkspaceLine,
   buildRepoLaunchWorkspaceTaskLine
-} from "../start/startCommandWorkspacePromptLines.js";
-import { buildResumeContextLine } from "../start/startCommandResumePromptShared.js";
-import { buildReviewerAgentSelectionGuidance } from "../../shared/reviewer/reviewerGuidance.js";
-import { buildReviewerSeverityOntologyReminder } from "../../shared/reviewer/reviewerSeverityOntology.js";
+} from "./workspacePromptLines.js";
+import { buildResumeContextLine } from "./resumePromptShared.js";
+import { buildReviewerAgentSelectionGuidance } from "../../reviewer/reviewerGuidance.js";
+import { buildReviewerSeverityOntologyReminder } from "../../reviewer/reviewerSeverityOntology.js";
 import {
   buildReviewerPassOutputContractGuidance,
   buildReviewerScoutExpansionWorkflowGuidance
-} from "../../shared/reviewer/reviewerScoutExpansionGuidance.js";
+} from "../../reviewer/reviewerScoutExpansionGuidance.js";
 import {
   buildMetaReviewSubmitApproveParityNote,
   buildMetaReviewSubmitCommandTemplate
-} from "../../shared/metaReview/metaReviewSubmitGuidance.js";
+} from "../../metaReview/metaReviewSubmitGuidance.js";
 import {
   buildReviewerCanonicalCommandGateLines,
   buildReviewerFindingsPassInstruction
-} from "../../shared/reviewer/reviewerCommandGateGuidance.js";
-import { buildReviewerDecisionMatrixReminder } from "../../shared/reviewer/testEvidence.js";
+} from "../../reviewer/reviewerCommandGateGuidance.js";
+import { buildReviewerDecisionMatrixReminder } from "../../reviewer/testEvidence.js";
 import {
   formatReviewerFocusBridgeBlock,
   formatReviewerBriefPrompt,
-} from "../../shared/reviewer/reviewerBrief.js";
-import { buildDocumentBubbleSourceEditGuard } from "../../shared/document/documentBubbleSourceEditGuard.js";
+} from "../../reviewer/reviewerBrief.js";
+import { buildDocumentBubbleSourceEditGuard } from "../../document/documentBubbleSourceEditGuard.js";
 import {
   getResumePromptConcernsForRole,
   getStartupPromptConcernsForRole

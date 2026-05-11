@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { buildCanonicalActorEmitLookupGuidance } from "../../../../src/v11/application/actorProtocol/rolePromptConcerns.js";
+import { buildCanonicalActorEmitLookupGuidance } from "../../../../src/v11/shared/role/prompts/rolePromptConcerns.js";
 import {
   buildResumeImplementerKickoffMessage,
   buildResumeMetaReviewerKickoffMessage,

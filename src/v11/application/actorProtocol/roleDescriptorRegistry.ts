@@ -16,7 +16,7 @@ import {
   getSharedTopologySlotPaneIndexForRole,
   type SharedTopologySlotId
 } from "../../shared/topology/topologySlotPaneProjection.js";
-import type { PromptConcernId } from "./rolePromptConcerns.js";
+import type { PromptConcernId } from "../../shared/role/prompts/rolePromptConcerns.js";
 
 export type TopologySlotId = SharedTopologySlotId;
 

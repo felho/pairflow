@@ -1,7 +1,7 @@
 import {
   buildRepositoryLaunchWorkspaceLine,
-} from "../start/startCommandWorkspacePromptLines.js";
-import { buildResumeContextLine } from "../start/startCommandResumePromptShared.js";
+} from "./workspacePromptLines.js";
+import { buildResumeContextLine } from "./resumePromptShared.js";
 import type {
   PromptConcernBuildInput,
   ResumePromptConcernBuildInput,

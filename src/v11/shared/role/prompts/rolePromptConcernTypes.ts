@@ -1,18 +1,18 @@
-import type { AgentRole } from "../../../contracts/kernel/agentIdentity.js";
+import type { AgentRole } from "../../../../contracts/kernel/agentIdentity.js";
 import type {
   BubbleReviewAutoReworkSeverity
-} from "../../shared/reviewPolicy/reviewPolicyTypes.js";
-import type { BubbleStateSnapshot } from "../../shared/state/bubbleStateSnapshotTypes.js";
+} from "../../reviewPolicy/reviewPolicyTypes.js";
+import type { BubbleStateSnapshot } from "../../state/bubbleStateSnapshotTypes.js";
 import type {
   PairflowCommandProfile,
   ReviewArtifactType
-} from "../../shared/config/bubbleConfigVocabulary.js";
+} from "../../config/bubbleConfigVocabulary.js";
 import type {
   BubbleCommandsConfig
-} from "../../shared/command/commandConfigTypes.js";
+} from "../../command/commandConfigTypes.js";
 import type {
   ReviewerFocusExtractionResult
-} from "../../shared/reviewer/reviewerBrief.js";
+} from "../../reviewer/reviewerBrief.js";
 
 export type PromptConcernId =
   | "pairflow_command_guidance"

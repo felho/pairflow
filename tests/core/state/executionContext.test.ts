@@ -18,7 +18,7 @@ import {
 import {
   getResumePromptConcernsForRole,
   getStartupPromptConcernsForRole
-} from "../../../src/v11/application/actorProtocol/rolePromptConcernIds.js";
+} from "../../../src/v11/shared/role/prompts/rolePromptConcernIds.js";
 import {
   buildExecutionContextHandoffIdForRole,
   getRoleExecutionProjectionDescriptor

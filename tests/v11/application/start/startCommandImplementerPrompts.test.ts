@@ -9,10 +9,10 @@ import {
   buildRolePromptConcernLines,
   buildTranscriptContextLine,
   type ResumePromptConcernBuildInput
-} from "../../../../src/v11/application/actorProtocol/rolePromptConcerns.js";
+} from "../../../../src/v11/shared/role/prompts/rolePromptConcerns.js";
 import type {
   buildReviewerPolicySnapshotContractLines
-} from "../../../../src/v11/application/actorProtocol/rolePromptConcerns.js";
+} from "../../../../src/v11/shared/role/prompts/rolePromptConcerns.js";
 import {
   buildMetaReviewerStartupPrompt,
   buildReviewerStartupPrompt

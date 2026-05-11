@@ -9,8 +9,8 @@ import type {
   PairflowCommandProfile,
   ReviewArtifactType
 } from "../../../../shared/config/bubbleConfigVocabulary.js";
-import { buildRolePromptConcernLines } from "../../../actorProtocol/rolePromptConcerns.js";
-import { joinPromptLines } from "../../startCommandResumePromptShared.js";
+import { buildRolePromptConcernLines } from "../../../../shared/role/prompts/rolePromptConcerns.js";
+import { joinPromptLines } from "../../../../shared/role/prompts/resumePromptShared.js";
 export { buildResumeImplementerStartupPrompt } from "./startCommandResumeImplementerPrompt.js";
 
 export function buildResumeMetaReviewerStartupPrompt(input: {
