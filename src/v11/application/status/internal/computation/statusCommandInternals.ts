@@ -6,7 +6,7 @@ export {
   withAccuracyCriticalVerificationGate
 } from "./statusCommandGateState.js";
 export type { StatusGateStateDependencies } from "./statusCommandGateState.js";
-export { toStatusCommandPathView } from "../../statusCommandPathView.js";
+export { toStatusCommandPathView } from "../view/statusCommandPathView.js";
 export type {
   BubbleStatusState,
   ResolvedBubbleStatusContext,

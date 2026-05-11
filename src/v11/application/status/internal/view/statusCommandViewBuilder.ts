@@ -1,33 +1,33 @@
-import { computeWatchdogStatus, type WatchdogStatus } from "../../shared/watchdog/watchdogStatus.js";
-import { type ReviewVerificationState } from "../../shared/reviewer/reviewVerification.js";
-import type { StateValidationDiagnostics } from "../../ports/stateSnapshots.js";
-import type { ReadWatchdogPaneActivityResult } from "../../shared/watchdog/watchdogPaneActivityStore.js";
+import { computeWatchdogStatus, type WatchdogStatus } from "../../../../shared/watchdog/watchdogStatus.js";
+import { type ReviewVerificationState } from "../../../../shared/reviewer/reviewVerification.js";
+import type { StateValidationDiagnostics } from "../../../../ports/stateSnapshots.js";
+import type { ReadWatchdogPaneActivityResult } from "../../../../shared/watchdog/watchdogPaneActivityStore.js";
 import type {
   BubbleReviewPolicyRuntimeView
-} from "../../shared/reviewPolicy/reviewPolicyTypes.js";
-import type { BubbleLifecycleState } from "../../../contracts/kernel/lifecycle.js";
+} from "../../../../shared/reviewPolicy/reviewPolicyTypes.js";
+import type { BubbleLifecycleState } from "../../../../../contracts/kernel/lifecycle.js";
 import type {
   BubbleFailingGate,
   BubbleRoundGateState,
   BubbleSpecLockState
-} from "../../shared/gates/gateStateTypes.js";
+} from "../../../../shared/gates/gateStateTypes.js";
 import {
   buildRuntimeAlignedReviewPolicyRuntimeView,
   normalizeRuntimeAlignedExecutionContext,
   normalizeRuntimeAlignedRole,
   toRuntimeAlignedReviewPolicyExecutionContext
-} from "../../shared/reviewPolicy/reviewPolicyRuntime.js";
-import type { ProtocolMessageType } from "../../../contracts/kernel/protocol.js";
-import type { ProtocolEnvelope } from "../../../types/protocol.js";
-import type { UiBubbleStatusRemoteExecution } from "../../../types/uiRemoteExecution.js";
+} from "../../../../shared/reviewPolicy/reviewPolicyRuntime.js";
+import type { ProtocolMessageType } from "../../../../../contracts/kernel/protocol.js";
+import type { ProtocolEnvelope } from "../../../../../types/protocol.js";
+import type { UiBubbleStatusRemoteExecution } from "../../../../../types/uiRemoteExecution.js";
 import type {
   BubbleStatusState,
   ResolvedBubbleStatusContext,
   StatusGateState
-} from "./internal/computation/statusCommandInternals.js";
-import type { RemoteBubbleStatusSnapshot } from "../../shared/status/remoteBubbleStatusContract.js";
-import { inferBubbleStartedAtFromInstanceId } from "../../shared/bubble/bubbleInstanceId.js";
-import { toStatusCommandPathView } from "./internal/computation/statusCommandInternals.js";
+} from "../computation/statusCommandInternals.js";
+import type { RemoteBubbleStatusSnapshot } from "../../../../shared/status/remoteBubbleStatusContract.js";
+import { inferBubbleStartedAtFromInstanceId } from "../../../../shared/bubble/bubbleInstanceId.js";
+import { toStatusCommandPathView } from "../computation/statusCommandInternals.js";
 import {
   buildStatusExecutionContextView,
   buildStatusMetaReviewView,
@@ -35,7 +35,7 @@ import {
   type StatusExecutionContextView,
   type StatusMetaReviewView,
   type StatusPaneActivityView
-} from "../../shared/status/statusCommandViewProjection.js";
+} from "../../../../shared/status/statusCommandViewProjection.js";
 
 const noLiveReviewPolicyStatusStates = new Set<BubbleLifecycleState>([
   "WAITING_HUMAN",

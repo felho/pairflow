@@ -14,7 +14,7 @@ import {
 import {
   buildBubbleStatusView,
   type BubbleStatusView
-} from "./statusCommandViewBuilder.js";
+} from "./internal/view/statusCommandViewBuilder.js";
 import type {
   BubbleStatusDependencies,
   BubbleStatusInput
@@ -25,7 +25,7 @@ import type {
 } from "../../shared/watchdog/watchdogPaneActivityStore.js";
 import type { ResolvedBubbleById } from "../../ports/bubbleLookup.js";
 
-export type { BubbleStatusView } from "./statusCommandViewBuilder.js";
+export type { BubbleStatusView } from "./internal/view/statusCommandViewBuilder.js";
 
 export class BubbleStatusError extends Error {
   public constructor(message: string) {
