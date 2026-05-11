@@ -58,3 +58,12 @@ export interface ReconcileRuntimeSessionsDependencies {
   isFinalState?: typeof isFinalState;
   countRegistryEntries?: (registry: RuntimeSessionsRegistry) => number;
 }
+
+export interface ReconcileRuntimeSessionsDefaultDependencies {
+  resolveRepoPath: ResolveRepoPathPort;
+  readRuntimeSessionsRegistry: ReadRuntimeSessionsRegistryPort;
+  removeRuntimeSessions: RemoveRuntimeSessionsPort;
+  persistPassValidationRecoveryMarker: PersistPassValidationRecoveryMarkerPort;
+  readStateSnapshot: ReadStateSnapshotPort;
+  isTmuxSessionAlive: TmuxSessionLivenessProbe;
+}

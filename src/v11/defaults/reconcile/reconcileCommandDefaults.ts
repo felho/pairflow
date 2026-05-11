@@ -6,8 +6,10 @@ import {
 import { readStateSnapshot } from "../../infrastructure/state/stateStore.js";
 import { resolveRepoPath } from "../../infrastructure/executor/workspace/repoResolution.js";
 import { runTmux } from "../../infrastructure/channel/tmux/tmuxRunner.js";
-import type { ReconcileRuntimeSessionsDefaultDependencies } from "../../application/reconcile/reconcileCommandDependencyResolution.js";
-import type { TmuxSessionLivenessProbe } from "../../application/reconcile/reconcileCommandContract.js";
+import type {
+  ReconcileRuntimeSessionsDefaultDependencies,
+  TmuxSessionLivenessProbe
+} from "../../application/reconcile/reconcileCommandContract.js";
 
 export const isTmuxSessionAliveDefault: TmuxSessionLivenessProbe = async (
   sessionName: string
