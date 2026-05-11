@@ -4,7 +4,7 @@ import { refreshReviewerContext } from "../../../src/v11/infrastructure/channel/
 import type { BubbleConfig } from "../../../src/v11/shared/config/bubbleConfigTypes.js";
 import {
   getTopologySlotPaneIndexForRole
-} from "../../../src/v11/application/actorProtocol/roleDescriptorRegistry.js";
+} from "../../../src/v11/application/actorProtocol/topologySlotCatalog.js";
 import type { RuntimeSessionRecord } from "../../../src/v11/ports/runtimeSessions.js";
 import type { TmuxRunResult, TmuxRunner } from "../../../src/v11/ports/tmuxSessions.js";
 import { shellQuote } from "../../../src/v11/shared/foundation/shellQuote.js";

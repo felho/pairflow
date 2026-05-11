@@ -3,7 +3,7 @@ import type {
 } from "../../ports/runtimeSessions.js";
 import {
   getTopologySlotPaneIndexForRole
-} from "../actorProtocol/roleDescriptorRegistry.js";
+} from "../actorProtocol/topologySlotCatalog.js";
 import type {
   ResolveMetaReviewerPaneWarning
 } from "../../shared/metaReviewGate/index.js";

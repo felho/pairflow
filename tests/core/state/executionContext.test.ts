@@ -7,14 +7,16 @@ import {
 } from "../../../src/v11/shared/state/executionContext.js";
 import {
   getPrimaryRoutePolicyCheckIdsForRole,
-  getRoleDescriptor,
+  getRoleDescriptor
+} from "../../../src/v11/application/actorProtocol/roleDescriptorRegistry.js";
+import {
   getTopologySlotDescriptor,
   getTopologySlotDescriptorForRole,
   getTopologySlotIdForRole,
   getTopologySlotPaneIndex,
   getTopologySlotPaneIndexForRole,
   topologySlotCatalog
-} from "../../../src/v11/application/actorProtocol/roleDescriptorRegistry.js";
+} from "../../../src/v11/application/actorProtocol/topologySlotCatalog.js";
 import {
   getResumePromptConcernsForRole,
   getStartupPromptConcernsForRole

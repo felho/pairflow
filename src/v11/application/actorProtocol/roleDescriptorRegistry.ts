@@ -11,14 +11,8 @@ import type {
   HandoffIdFormatId,
   RoleExecutionProjectionDescriptor
 } from "../../shared/actorProtocol/roleExecutionProjection.js";
-import {
-  getSharedTopologySlotPaneIndex,
-  getSharedTopologySlotPaneIndexForRole,
-  type SharedTopologySlotId
-} from "../../shared/topology/topologySlotPaneProjection.js";
+import type { SharedTopologySlotId } from "../../shared/topology/topologySlotPaneProjection.js";
 import type { PromptConcernId } from "../../shared/role/prompts/rolePromptConcerns.js";
-
-export type TopologySlotId = SharedTopologySlotId;
 
 export type ActiveAgentConstraintId = "configured_when_present";
 
@@ -31,25 +25,13 @@ export type AgentResolutionDescriptor =
 export interface RoleDescriptor {
   id: AgentRole;
   primary_awaited_output_type: RoleExecutionProjectionDescriptor["primary_awaited_output_type"];
-  topology_slot_id: TopologySlotId;
+  topology_slot_id: SharedTopologySlotId;
   authority_policy_check_id: ActorRuntimePolicyCheckId;
   agent_resolution: AgentResolutionDescriptor;
   startup_prompt_concern_ids: readonly PromptConcernId[];
   resume_prompt_concern_ids: readonly PromptConcernId[];
   handoff_id_format_id: HandoffIdFormatId | null;
   active_agent_constraint_id: ActiveAgentConstraintId | null;
-}
-
-export interface TopologySlotDescriptor {
-  id: TopologySlotId;
-  pane_index: number;
-  bound_role_id: AgentRole | null;
-}
-
-function freezeTopologySlotDescriptor<T extends TopologySlotDescriptor>(
-  descriptor: T
-): Readonly<T> {
-  return Object.freeze(descriptor);
 }
 
 type RoleDescriptorDefinition = Omit<RoleDescriptor, "id">;
@@ -182,29 +164,6 @@ const roleDescriptorRegistry = {
   })
 } as const satisfies Readonly<Record<AgentRole, RoleDescriptor>>;
 
-export const topologySlotCatalog = Object.freeze({
-  status: freezeTopologySlotDescriptor({
-    id: "status",
-    pane_index: getSharedTopologySlotPaneIndex("status"),
-    bound_role_id: null
-  }),
-  implementer: freezeTopologySlotDescriptor({
-    id: "implementer",
-    pane_index: getSharedTopologySlotPaneIndex("implementer"),
-    bound_role_id: "implementer"
-  }),
-  reviewer: freezeTopologySlotDescriptor({
-    id: "reviewer",
-    pane_index: getSharedTopologySlotPaneIndex("reviewer"),
-    bound_role_id: "reviewer"
-  }),
-  meta_reviewer: freezeTopologySlotDescriptor({
-    id: "meta_reviewer",
-    pane_index: getSharedTopologySlotPaneIndex("meta_reviewer"),
-    bound_role_id: "meta_reviewer"
-  })
-} as const satisfies Readonly<Record<TopologySlotId, TopologySlotDescriptor>>);
-
 function resolveActiveAgentConstraintPolicyCheckId(
   constraintId: ActiveAgentConstraintId
 ): ActorRuntimePolicyCheckId {
@@ -216,30 +175,6 @@ function resolveActiveAgentConstraintPolicyCheckId(
 
 export function getRoleDescriptor(role: AgentRole): RoleDescriptor {
   return roleDescriptorRegistry[role];
-}
-
-export function getTopologySlotIdForRole(role: AgentRole): TopologySlotId {
-  return getRoleDescriptor(role).topology_slot_id;
-}
-
-export function getTopologySlotDescriptor(
-  slotId: TopologySlotId
-): TopologySlotDescriptor {
-  return topologySlotCatalog[slotId];
-}
-
-export function getTopologySlotDescriptorForRole(
-  role: AgentRole
-): TopologySlotDescriptor {
-  return getTopologySlotDescriptor(getTopologySlotIdForRole(role));
-}
-
-export function getTopologySlotPaneIndex(slotId: TopologySlotId): number {
-  return getSharedTopologySlotPaneIndex(slotId);
-}
-
-export function getTopologySlotPaneIndexForRole(role: AgentRole): number {
-  return getSharedTopologySlotPaneIndexForRole(role);
 }
 
 export function resolveRoleConfiguredAgent(input: {
