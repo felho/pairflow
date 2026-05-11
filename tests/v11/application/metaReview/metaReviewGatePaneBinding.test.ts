@@ -8,7 +8,7 @@ import {
 } from "../../../../src/v11/application/metaReviewGate/metaReviewGatePaneBinding.js";
 import {
   resolveCleanRerunPaneBinding
-} from "../../../../src/v11/application/metaReviewGate/internal/metaReviewGateCleanRerunPaneBinding.js";
+} from "../../../../src/v11/application/metaReviewGate/internal/cleanRerun/metaReviewGateCleanRerunPaneBinding.js";
 import type {
   SetMetaReviewerPaneBindingPort
 } from "../../../../src/v11/ports/runtimeSessions.js";

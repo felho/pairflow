@@ -1,6 +1,6 @@
-import type { MetaReviewResult } from "../../../shared/metaReview/metaReviewTypes.js";
-import type { FindingsParityMetadata } from "../../../../types/protocol.js";
-import type { FinalizeCurrentRunMetaReviewGateInput } from "../../../shared/metaReviewGate/metaReviewGateCurrentRunTypes.js";
+import type { MetaReviewResult } from "../../../../shared/metaReview/metaReviewTypes.js";
+import type { FindingsParityMetadata } from "../../../../../types/protocol.js";
+import type { FinalizeCurrentRunMetaReviewGateInput } from "../../../../shared/metaReviewGate/metaReviewGateCurrentRunTypes.js";
 
 export type MetaReviewPaneWarningResult = Awaited<
   ReturnType<

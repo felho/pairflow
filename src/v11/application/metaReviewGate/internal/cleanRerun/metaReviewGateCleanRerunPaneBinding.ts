@@ -1,4 +1,4 @@
-import type { LoadedStateSnapshot } from "../../../ports/stateSnapshots.js";
+import type { LoadedStateSnapshot } from "../../../../ports/stateSnapshots.js";
 import {
   appendDeactivateTelemetry,
   buildCleanRerunRuntimeDelivery,
@@ -11,8 +11,8 @@ import type {
 } from "./metaReviewGateCleanRerunContract.js";
 import { failCleanRerunClosed } from "./metaReviewGateCleanRerunDispatch.js";
 import { persistCleanRerunDeliveryObservation } from "./metaReviewGateCleanRerunObservation.js";
-import type { MetaReviewGateResult } from "../../../shared/metaReviewGate/metaReviewGateResultContract.js";
-import { DEFAULT_ROLE_MCP_POLICY_BY_ROLE } from "../../../../config/defaults.js";
+import type { MetaReviewGateResult } from "../../../../shared/metaReviewGate/metaReviewGateResultContract.js";
+import { DEFAULT_ROLE_MCP_POLICY_BY_ROLE } from "../../../../../config/defaults.js";
 
 function isMetaReviewGateResult(
   value: LoadedStateSnapshot | MetaReviewGateResult

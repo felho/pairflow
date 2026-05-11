@@ -4,22 +4,22 @@ import {
   buildCleanRerunRuntimeDelivery,
   deactivateCleanRerunMetaReviewerPane,
   withDeactivateTelemetryOnDelivery
-} from "../metaReviewGateCleanRerunDelivery.js";
+} from "../cleanRerun/metaReviewGateCleanRerunDelivery.js";
 import {
   type CleanRerunDeliveryCapableInput,
   hasCleanRerunDeliveryCapabilities,
   type RouteCleanMetaReviewRerunInput
-} from "../metaReviewGateCleanRerunContract.js";
+} from "../cleanRerun/metaReviewGateCleanRerunContract.js";
 import {
   appendCleanRerunKickoff,
   failCleanRerunClosed,
   stageCleanRerunRunningState
-} from "../metaReviewGateCleanRerunDispatch.js";
+} from "../cleanRerun/metaReviewGateCleanRerunDispatch.js";
 import {
   persistCleanRerunDeliveryObservation,
   reconcileCleanRerunObservedResult
-} from "../metaReviewGateCleanRerunObservation.js";
-import { resolveCleanRerunPaneBinding } from "../metaReviewGateCleanRerunPaneBinding.js";
+} from "../cleanRerun/metaReviewGateCleanRerunObservation.js";
+import { resolveCleanRerunPaneBinding } from "../cleanRerun/metaReviewGateCleanRerunPaneBinding.js";
 import type { MetaReviewGateResult } from "../../../../shared/metaReviewGate/metaReviewGateResultContract.js";
 
 function isMetaReviewGateResult(
