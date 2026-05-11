@@ -1,9 +1,9 @@
-import type { AgentRole } from "../../../contracts/kernel/agentIdentity.js";
+import type { AgentRole } from "../../../../contracts/kernel/agentIdentity.js";
 import {
   getSharedTopologySlotPaneIndex,
   getSharedTopologySlotPaneIndexForRole,
   type SharedTopologySlotId
-} from "../../shared/topology/topologySlotPaneProjection.js";
+} from "../../topology/topologySlotPaneProjection.js";
 import { getRoleDescriptor } from "./roleDescriptorRegistry.js";
 
 export type TopologySlotId = SharedTopologySlotId;

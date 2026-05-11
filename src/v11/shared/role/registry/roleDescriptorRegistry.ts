@@ -2,17 +2,17 @@ import type {
   AgentName,
   AgentRole,
   BubbleAgentsConfig
-} from "../../../contracts/kernel/agentIdentity.js";
+} from "../../../../contracts/kernel/agentIdentity.js";
 import {
   resolveConfiguredAgentForRole
-} from "../../domain/agentIdentity/agentIdentity.js";
-import type { ActorRuntimePolicyCheckId } from "../../shared/actorProtocol/actorRuntimePolicyTypes.js";
+} from "../../../domain/agentIdentity/agentIdentity.js";
+import type { ActorRuntimePolicyCheckId } from "../../actorProtocol/actorRuntimePolicyTypes.js";
 import type {
   HandoffIdFormatId,
   RoleExecutionProjectionDescriptor
-} from "../../shared/actorProtocol/roleExecutionProjection.js";
-import type { SharedTopologySlotId } from "../../shared/topology/topologySlotPaneProjection.js";
-import type { PromptConcernId } from "../../shared/role/prompts/rolePromptConcerns.js";
+} from "../../actorProtocol/roleExecutionProjection.js";
+import type { SharedTopologySlotId } from "../../topology/topologySlotPaneProjection.js";
+import type { PromptConcernId } from "../prompts/rolePromptConcerns.js";
 
 export type ActiveAgentConstraintId = "configured_when_present";
 

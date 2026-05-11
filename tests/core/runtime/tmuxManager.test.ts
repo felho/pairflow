@@ -14,7 +14,7 @@ import {
 import {
   getTopologySlotPaneIndex,
   topologySlotCatalog
-} from "../../../src/v11/application/actorProtocol/topologySlotCatalog.js";
+} from "../../../src/v11/shared/role/registry/topologySlotCatalog.js";
 
 const launchPanePlaceholderCommand = "sh -lc 'while :; do sleep 3600; done'";
 

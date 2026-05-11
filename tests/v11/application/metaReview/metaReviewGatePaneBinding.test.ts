@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import {
   getTopologySlotPaneIndexForRole
-} from "../../../../src/v11/application/actorProtocol/topologySlotCatalog.js";
+} from "../../../../src/v11/shared/role/registry/topologySlotCatalog.js";
 import {
   resolveMetaReviewerPaneWarning
 } from "../../../../src/v11/application/metaReviewGate/metaReviewGatePaneBinding.js";

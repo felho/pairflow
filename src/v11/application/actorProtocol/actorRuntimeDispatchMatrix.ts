@@ -12,7 +12,7 @@ import type { ActorRuntimePolicyCheckId } from "../../shared/actorProtocol/actor
 import {
   getPrimaryRoutePolicyCheckIdsForRole,
   resolveRoleConfiguredAgent
-} from "./roleDescriptorRegistry.js";
+} from "../../shared/role/registry/roleDescriptorRegistry.js";
 import type {
   ActorEmitContextSnapshot
 } from "../../shared/actorProtocol/actorEmitContext.js";
