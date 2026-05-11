@@ -4,7 +4,7 @@ import {
   deriveQueuedDeferredReworkIntentState,
   type DeriveQueuedDeferredReworkIntentStateInput,
   type QueueDeferredReworkIntentResult
-} from "../../../../domain/state/reworkIntent.js";
+} from "../../../../domain/state/rework/reworkIntentTransitions.js";
 
 export interface QueueDeferredReworkIntentInput
   extends Omit<

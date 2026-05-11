@@ -23,8 +23,8 @@ import {
   isRecord,
   type ValidationError
 } from "../../../shared/validation/primitives.js";
-import { validateExecutionContext } from "../internal/execution/stateSchemaExecution.js";
-import { validateReworkIntentRecord } from "../internal/rework/stateSchemaRework.js";
+import { validateExecutionContext } from "../execution/stateSchemaExecution.js";
+import { validateReworkIntentRecord } from "../rework/stateSchemaRework.js";
 
 const legacyLifecycleStateReasonCodeByState = new Map<string, string>([
   ["READY_FOR_APPROVAL", "LEGACY_APPROVAL_STATE_UNSUPPORTED"],

@@ -1,15 +1,15 @@
 import {
   isBubbleExecutionContextAwaitedOutputType,
   type BubbleExecutionContext
-} from "../../executionContextTypes.js";
-import { isAgentRole } from "../../../../../contracts/kernel/agentIdentity.js";
+} from "../executionContextTypes.js";
+import { isAgentRole } from "../../../../contracts/kernel/agentIdentity.js";
 import {
   isInteger,
   isIsoTimestamp,
   isNonEmptyString,
   isRecord,
   type ValidationError
-} from "../../../../shared/validation/primitives.js";
+} from "../../../shared/validation/primitives.js";
 
 function validateExecutionContextTimestamps(input: {
   pathPrefix: string;

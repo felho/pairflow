@@ -1,19 +1,19 @@
 import {
   isMetaReviewRuntimeDeliveryStatus,
   type BubbleMetaReviewRuntimeDeliveryState
-} from "../../../../shared/metaReview/metaReviewSnapshotTypes.js";
-import { isMetaReviewExecutionContextAwaitedOutputType } from "../../executionContextTypes.js";
-import type { BubbleMetaReviewExecutionContext } from "../../executionContextTypes.js";
+} from "../../../shared/metaReview/metaReviewSnapshotTypes.js";
+import { isMetaReviewExecutionContextAwaitedOutputType } from "../executionContextTypes.js";
+import type { BubbleMetaReviewExecutionContext } from "../executionContextTypes.js";
 import {
   isInteger,
   isIsoTimestamp,
   isNonEmptyString,
   isRecord,
   type ValidationError
-} from "../../../../shared/validation/primitives.js";
+} from "../../../shared/validation/primitives.js";
 import {
   normalizeMetaReviewRuntimeDeliveryCorrelation
-} from "../../../../shared/metaReview/metaReviewSnapshot.js";
+} from "../../../shared/metaReview/metaReviewSnapshot.js";
 
 function validateMetaReviewExecutionContextTimestamps(input: {
   pathPrefix: string;

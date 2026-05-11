@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   applyDeferredReworkIntent,
   deriveQueuedDeferredReworkIntentState
-} from "../../../../src/v11/domain/state/reworkIntent.js";
+} from "../../../../src/v11/domain/state/rework/reworkIntentTransitions.js";
 
 describe("v11 domain reworkIntent", () => {
   it("supersedes an existing pending deferred rework intent", () => {

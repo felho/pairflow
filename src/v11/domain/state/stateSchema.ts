@@ -10,7 +10,7 @@ import type {
   BubbleMetaReviewSnapshotState
 } from "../../shared/metaReview/metaReviewSnapshotTypes.js";
 import type { BubbleStateSnapshot } from "./bubbleStateSnapshotTypes.js";
-import { validateMetaReviewSnapshot } from "./internal/metaReview/stateSchemaMetaReview.js";
+import { validateMetaReviewSnapshot } from "./metaReview/stateSchemaMetaReview.js";
 import {
   validateBubbleStateActivityFields,
   validateBubbleStateCoreFields,

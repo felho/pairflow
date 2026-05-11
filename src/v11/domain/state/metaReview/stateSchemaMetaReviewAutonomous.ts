@@ -1,5 +1,5 @@
-import type { BubbleMetaReviewSnapshotState } from "../../../../shared/metaReview/metaReviewSnapshotTypes.js";
-import { type ValidationError } from "../../../../shared/validation/primitives.js";
+import type { BubbleMetaReviewSnapshotState } from "../../../shared/metaReview/metaReviewSnapshotTypes.js";
+import { type ValidationError } from "../../../shared/validation/primitives.js";
 import { validateMetaReviewAutonomousControls } from "./stateSchemaMetaReviewAutonomousSupport.js";
 
 export interface ValidatedMetaReviewAutonomousSnapshot {

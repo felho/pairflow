@@ -1,13 +1,13 @@
-import { clearLiveMetaReviewSnapshot } from "../../shared/metaReview/metaReviewSnapshot.js";
-import { applyStateTransition } from "./machine.js";
+import { clearLiveMetaReviewSnapshot } from "../../../shared/metaReview/metaReviewSnapshot.js";
+import { applyStateTransition } from "../machine.js";
 import {
   resolveRuntimeAlignedNextRoundContinuation
-} from "./roundContinuation.js";
-import type { AgentName } from "../../../contracts/kernel/agentIdentity.js";
-import type { BubbleStateSnapshot } from "../../domain/state/bubbleStateSnapshotTypes.js";
+} from "../roundContinuation.js";
+import type { AgentName } from "../../../../contracts/kernel/agentIdentity.js";
+import type { BubbleStateSnapshot } from "../bubbleStateSnapshotTypes.js";
 import type {
   BubbleReworkIntentRecord
-} from "../../domain/state/reworkIntentTypes.js";
+} from "../reworkIntentTypes.js";
 
 export interface DeriveQueuedDeferredReworkIntentStateInput {
   state: BubbleStateSnapshot;
