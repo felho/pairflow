@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   formatClockTimestamp,
   formatTableTimestamp
-} from "../../../../src/v11/application/status/statusCliValueFormatters.js";
+} from "../../../../../../src/v11/application/status/internal/cli/statusCliValueFormatters.js";
 
 describe("statusCliValueFormatters", () => {
   it("formats clock timestamps in the requested timezone instead of forcing UTC", () => {

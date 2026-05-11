@@ -1,4 +1,4 @@
-import type { BubbleStatusView } from "./statusCommandApi.js";
+import type { BubbleStatusView } from "../../statusCommandApi.js";
 import {
   formatClockTimestamp,
   formatElapsedSeconds
