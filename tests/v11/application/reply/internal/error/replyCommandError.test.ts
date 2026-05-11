@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { BubbleLookupError } from "../../../../src/v11/infrastructure/executor/workspace/bubbleLookup.js";
+import { BubbleLookupError } from "../../../../../../src/v11/infrastructure/executor/workspace/bubbleLookup.js";
 import {
   createHumanReplyCommandError,
   HumanReplyCommandError,
   throwAsHumanReplyCommandError
-} from "../../../../src/v11/application/reply/replyCommandError.js";
+} from "../../../../../../src/v11/application/reply/internal/error/replyCommandError.js";
 
 describe("replyCommandError", () => {
   it("creates typed HumanReplyCommandError instances", () => {

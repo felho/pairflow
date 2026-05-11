@@ -8,7 +8,7 @@ import type {
 import {
   createHumanReplyCommandError,
   throwAsHumanReplyCommandError
-} from "./replyCommandError.js";
+} from "./internal/error/replyCommandError.js";
 import { executeReplyMutation } from "./mutation/replyMutationExecution.js";
 import { resolveReplyCommandDependencies } from "./replyCommandDependencyResolution.js";
 import { normalizeReplyCommandInput } from "./replyCommandInputNormalization.js";
@@ -104,7 +104,7 @@ export async function emitHumanReply(
 
 export {
   HumanReplyCommandError
-} from "./replyCommandError.js";
+} from "./internal/error/replyCommandError.js";
 export type {
   EmitHumanReplyDependencies,
   EmitHumanReplyInput,
