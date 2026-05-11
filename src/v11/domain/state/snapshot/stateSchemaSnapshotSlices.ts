@@ -1,30 +1,30 @@
 import {
   isAgentName,
   isAgentRole
-} from "../../../../../contracts/kernel/agentIdentity.js";
-import type { BubbleStateSnapshot } from "../../bubbleStateSnapshotTypes.js";
+} from "../../../../contracts/kernel/agentIdentity.js";
+import type { BubbleStateSnapshot } from "../bubbleStateSnapshotTypes.js";
 import type {
   BubbleReworkIntentRecord
-} from "../../reworkIntentTypes.js";
+} from "../reworkIntentTypes.js";
 import type {
   RoundRoleHistoryEntry
-} from "../../roundRoleHistoryTypes.js";
+} from "../roundRoleHistoryTypes.js";
 import type {
   BubbleExecutionContext
-} from "../../executionContextTypes.js";
+} from "../executionContextTypes.js";
 import {
   bubbleLifecycleStates,
   isBubbleLifecycleState
-} from "../../../../../contracts/kernel/lifecycle.js";
+} from "../../../../contracts/kernel/lifecycle.js";
 import {
   isInteger,
   isIsoTimestamp,
   isNonEmptyString,
   isRecord,
   type ValidationError
-} from "../../../../shared/validation/primitives.js";
-import { validateExecutionContext } from "../execution/stateSchemaExecution.js";
-import { validateReworkIntentRecord } from "../rework/stateSchemaRework.js";
+} from "../../../shared/validation/primitives.js";
+import { validateExecutionContext } from "../internal/execution/stateSchemaExecution.js";
+import { validateReworkIntentRecord } from "../internal/rework/stateSchemaRework.js";
 
 const legacyLifecycleStateReasonCodeByState = new Map<string, string>([
   ["READY_FOR_APPROVAL", "LEGACY_APPROVAL_STATE_UNSUPPORTED"],

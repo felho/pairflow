@@ -16,11 +16,11 @@ import {
   validateBubbleStateCoreFields,
   validateReworkIntentState,
   validateRoundRoleHistory
-} from "./internal/schema/stateSchemaSnapshotSlices.js";
+} from "./snapshot/stateSchemaSnapshotSlices.js";
 import {
   normalizeMetaReviewState,
   validateBubbleStateAuthority
-} from "./internal/schema/stateSchemaAuthority.js";
+} from "./authority/stateSchemaAuthority.js";
 
 export function validateBubbleStateSnapshot(
   input: unknown
