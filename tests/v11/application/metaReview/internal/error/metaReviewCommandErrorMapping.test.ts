@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { SchemaValidationError } from "../../../../../../src/v11/shared/validation/primitives.js";
 import { MetaReviewGateError } from "../../../../../../src/v11/shared/metaReviewGate/index.js";
-import { toMetaReviewError } from "../../../../../../src/v11/application/metaReview/metaReviewCommandErrorMapping.js";
+import { toMetaReviewError } from "../../../../../../src/v11/application/metaReview/internal/error/metaReviewCommandErrorMapping.js";
 
 describe("metaReviewCommandErrorMapping", () => {
   it("maps schema validation errors to META_REVIEW_SCHEMA_INVALID", () => {

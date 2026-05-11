@@ -21,7 +21,7 @@ import { MetaReviewError } from "../../../../shared/metaReview/metaReviewError.j
 import { toMetaReviewExecutionContext } from "../../../../shared/state/executionContext.js";
 import {
   stateWriteConflictToMetaReviewError
-} from "../../metaReviewCommandErrorMapping.js";
+} from "../error/metaReviewCommandErrorMapping.js";
 import { isNamedError } from "../../../../shared/errors/namedError.js";
 import type {
   MetaReviewCommandDependencies,
