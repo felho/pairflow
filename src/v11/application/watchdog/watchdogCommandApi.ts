@@ -3,7 +3,7 @@ import {
   type WatchdogStatus
 } from "../../shared/watchdog/watchdogStatus.js";
 import { maybeApplyPendingReworkIntent } from "./watchdogPendingReworkIntent.js";
-import { sampleWatchdogPaneActivity } from "./watchdogPaneActivitySampler.js";
+import { sampleWatchdogPaneActivity } from "./internal/paneActivity/watchdogPaneActivitySampler.js";
 import type { AppendWatchdogTracePort } from "../../ports/watchdogTrace.js";
 import type { WatchdogTraceEntry } from "../../ports/watchdogTrace.js";
 import type {
@@ -19,7 +19,7 @@ import { resolveWatchdogLifecycleRoute } from "./internal/flow/watchdogCommandRo
 import {
   maybeMonitorWatchdogPaneActivity,
   type WatchdogPaneActivityState
-} from "./watchdogPaneActivityMonitoring.js";
+} from "./internal/paneActivity/watchdogPaneActivityMonitoring.js";
 export { BubbleWatchdogError } from "./internal/error/watchdogCommandRuntime.js";
 
 export async function runBubbleWatchdog(

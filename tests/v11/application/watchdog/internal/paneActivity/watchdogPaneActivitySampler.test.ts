@@ -5,7 +5,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   WATCHDOG_PANE_ACTIVITY_CAPTURE_START_LINE,
   sampleWatchdogPaneActivity
-} from "../../../../../../src/v11/application/watchdog/watchdogPaneActivitySampler.js";
+} from "../../../../../../src/v11/application/watchdog/internal/paneActivity/watchdogPaneActivitySampler.js";
 import type { TmuxRunner } from "../../../../../../src/v11/ports/tmuxSessions.js";
 import { BubbleWatchdogError } from "../../../../../../src/v11/shared/watchdog/watchdogCommandError.js";
 import {

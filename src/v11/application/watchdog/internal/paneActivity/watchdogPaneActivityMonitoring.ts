@@ -2,20 +2,20 @@ import type {
   BubbleWatchdogDependencies,
   PaneActivitySampleResult,
   SampleWatchdogPaneActivityFn
-} from "./watchdogCommandContract.js";
-import type { AgentRole } from "../../../contracts/kernel/agentIdentity.js";
-import { BubbleWatchdogError } from "./internal/error/watchdogCommandRuntime.js";
-import { type WatchdogRuntimeContext } from "./internal/flow/watchdogCommandFlow.js";
+} from "../../watchdogCommandContract.js";
+import type { AgentRole } from "../../../../../contracts/kernel/agentIdentity.js";
+import { BubbleWatchdogError } from "../error/watchdogCommandRuntime.js";
+import { type WatchdogRuntimeContext } from "../flow/watchdogCommandFlow.js";
 import {
   resolveWatchdogTargetPaneIndex
-} from "../../shared/watchdog/watchdogPaneTargeting.js";
+} from "../../../../shared/watchdog/watchdogPaneTargeting.js";
 import { WATCHDOG_PANE_ACTIVITY_SAMPLE_INTERVAL_MS } from "./watchdogPaneActivitySampler.js";
 import type {
   ReadWatchdogPaneActivityPort,
   ReadWatchdogPaneActivityResult,
   WatchdogPaneActivityRecord,
   WriteWatchdogPaneActivityPort
-} from "../../ports/watchdogPaneActivity.js";
+} from "../../../../ports/watchdogPaneActivity.js";
 
 export interface WatchdogPaneActivityState {
   readStatus: "ok" | "missing" | "invalid";

@@ -3,7 +3,7 @@ import type {
   PaneActivitySampleResult
 } from "../../watchdogCommandContract.js";
 import type { WatchdogRuntimeContext } from "./watchdogCommandFlow.js";
-import { WATCHDOG_PANE_QUIET_WINDOW_MS } from "../../watchdogPaneActivitySampler.js";
+import { WATCHDOG_PANE_QUIET_WINDOW_MS } from "../paneActivity/watchdogPaneActivitySampler.js";
 import type { WatchdogPaneActivityRecord } from "../../../../ports/watchdogPaneActivity.js";
 import {
   buildNotExpiredResult,

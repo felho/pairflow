@@ -1,14 +1,14 @@
 import { createHash } from "node:crypto";
-import type { AgentRole } from "../../../contracts/kernel/agentIdentity.js";
-import type { BubbleConfig } from "../../shared/config/bubbleConfigTypes.js";
+import type { AgentRole } from "../../../../../contracts/kernel/agentIdentity.js";
+import type { BubbleConfig } from "../../../../shared/config/bubbleConfigTypes.js";
 import type {
   ReadRuntimeSessionsRegistryPort
-} from "../../ports/runtimeSessions.js";
-import type { TmuxRunner } from "../../ports/tmuxSessions.js";
-import type { PaneActivitySampleResult } from "./watchdogCommandContract.js";
+} from "../../../../ports/runtimeSessions.js";
+import type { TmuxRunner } from "../../../../ports/tmuxSessions.js";
+import type { PaneActivitySampleResult } from "../../watchdogCommandContract.js";
 import {
   resolveWatchdogTargetPaneIndex
-} from "../../shared/watchdog/watchdogPaneTargeting.js";
+} from "../../../../shared/watchdog/watchdogPaneTargeting.js";
 
 export const WATCHDOG_PANE_ACTIVITY_SAMPLE_INTERVAL_MS = 60_000;
 export const WATCHDOG_PANE_QUIET_WINDOW_MS = 10 * 60_000;
