@@ -7,7 +7,7 @@ import type {
   RestartBubbleInput,
   RestartBubbleResult
 } from "./restartCommandContract.js";
-import { RestartBubbleError } from "./restartCommandRuntime.js";
+import { RestartBubbleError } from "./internal/error/restartCommandRuntime.js";
 
 export type RestartBubbleDefaultDependencies = Required<
   Omit<RestartBubbleDependencies, "startBubble">

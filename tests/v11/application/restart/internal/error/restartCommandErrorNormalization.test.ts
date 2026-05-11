@@ -1,17 +1,17 @@
 import { describe, expect, it } from "vitest";
 
-import { BubbleLookupError } from "../../../../src/v11/infrastructure/executor/workspace/bubbleLookup.js";
-import type { TmuxCommandError } from "../../../../src/v11/infrastructure/channel/tmux/tmuxManager.js";
+import { BubbleLookupError } from "../../../../../../src/v11/infrastructure/executor/workspace/bubbleLookup.js";
+import type { TmuxCommandError } from "../../../../../../src/v11/infrastructure/channel/tmux/tmuxManager.js";
 import type {
   RuntimeSessionsRegistryError,
   RuntimeSessionsRegistryLockError
-} from "../../../../src/v11/infrastructure/executor/sessionRuntime/runtimeSessionsRegistry.js";
-import type { StartBubbleError } from "../../../../src/v11/application/start/startCommandApi.js";
+} from "../../../../../../src/v11/infrastructure/executor/sessionRuntime/runtimeSessionsRegistry.js";
+import type { StartBubbleError } from "../../../../../../src/v11/application/start/startCommandApi.js";
 import {
   RestartBubbleError,
   createRestartBubbleError
-} from "../../../../src/v11/application/restart/restartCommandRuntime.js";
-import { normalizeRestartBubbleError } from "../../../../src/v11/application/restart/restartCommandErrorNormalization.js";
+} from "../../../../../../src/v11/application/restart/internal/error/restartCommandRuntime.js";
+import { normalizeRestartBubbleError } from "../../../../../../src/v11/application/restart/internal/error/restartCommandErrorNormalization.js";
 
 describe("restartCommandErrorNormalization", () => {
   it("preserves restart bubble errors", () => {

@@ -7,7 +7,7 @@ import type {
 } from "../../shared/remote/remoteExecutionTypes.js";
 import type { RestartBubbleDependencies } from "./restartCommandContract.js";
 import { startBubble } from "../start/startCommandApi.js";
-import { createRestartBubbleError } from "./restartCommandRuntime.js";
+import { createRestartBubbleError } from "./internal/error/restartCommandRuntime.js";
 
 export interface ResolvedRestartBubbleDependencies {
   resolveBubbleById: ResolveBubbleByIdPort;

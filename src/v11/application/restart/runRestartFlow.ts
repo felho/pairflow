@@ -1,7 +1,7 @@
 import type { RestartBubbleResult } from "./restartCommandContract.js";
 import type { NormalizedRestartBubbleInput } from "./restartCommandInputNormalization.js";
 import type { ResolvedRestartBubbleDependencies } from "./restartCommandDependencyResolution.js";
-import { createRestartBubbleError } from "./restartCommandRuntime.js";
+import { createRestartBubbleError } from "./internal/error/restartCommandRuntime.js";
 
 async function assertRemoteStartedRestartUnsupported(input: {
   resolved: Awaited<ReturnType<ResolvedRestartBubbleDependencies["resolveBubbleById"]>>;

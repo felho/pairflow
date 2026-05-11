@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { normalizeRestartBubbleInput } from "../../../../src/v11/application/restart/restartCommandInputNormalization.js";
-import { RestartBubbleError } from "../../../../src/v11/application/restart/restartCommandRuntime.js";
+import { RestartBubbleError } from "../../../../src/v11/application/restart/internal/error/restartCommandRuntime.js";
 
 function toErrorMessage(input: PairflowCommandErrorInput): string {
   if (typeof input === "string") {

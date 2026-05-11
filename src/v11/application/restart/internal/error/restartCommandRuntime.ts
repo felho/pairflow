@@ -1,13 +1,13 @@
 import {
   asStartBubbleError,
   StartBubbleError
-} from "../start/startCommandApi.js";
+} from "../../../start/startCommandApi.js";
 import { normalizeRestartBubbleError } from "./restartCommandErrorNormalization.js";
 import {
   normalizePairflowCommandErrorInput,
   withRequiredCommandContext
-} from "../../shared/errors/commandErrorDetails.js";
-import { isNamedError } from "../../shared/errors/namedError.js";
+} from "../../../../shared/errors/commandErrorDetails.js";
+import { isNamedError } from "../../../../shared/errors/namedError.js";
 
 export class RestartBubbleError extends Error {
   public readonly reasonCode: string | undefined;

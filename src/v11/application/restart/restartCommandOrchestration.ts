@@ -9,7 +9,7 @@ import { normalizeRestartBubbleInput } from "./restartCommandInputNormalization.
 import {
   createRestartBubbleError,
   throwAsRestartBubbleError
-} from "./restartCommandRuntime.js";
+} from "./internal/error/restartCommandRuntime.js";
 
 export async function restartBubbleCommandOrchestration(
   input: RestartBubbleInput,
