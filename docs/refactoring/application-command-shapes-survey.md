@@ -41,7 +41,7 @@ restructuring opportunity).
 | merge | 2 | yes | 5 | yes | yes | — | structured (Tier 2; refactored 2026-05-12) |
 | commit | 4 | yes | 5 | yes | yes | — | structured (Tier 2; refactored 2026-05-11) |
 | actorProtocol | 10 | no | — | yes | — | 26 | misclassified (not a command) |
-| restart | 10 | no | — | yes | yes | 21 | unstructured |
+| restart | 3 | yes | 4 | yes | yes | — | structured (Tier 2; refactored 2026-05-11) |
 | reconcile | 9 | no | — | yes | yes | 18 | unstructured |
 | start | 9 | yes | 3 | yes | yes | 4 | structured (Tier 2-ish) |
 | metaReview | 3 | yes | 2 | yes | — | — | structured (Tier 2; refactored 2026-05-13) |
@@ -187,9 +187,22 @@ Refactored from half-done to structured (Tier 2):
   the existing `internal/` was flat (~30 files at root) rather than
   the single-sub-area shape the prior four shared.
 
+Refactored from unstructured (no `internal/`) to structured (Tier 2) — the
+from-scratch case:
+
+- **restart** (was 10 top-level + no internal/; now 3 top-level + 4
+  sub-areas — `cli/`, `error/`, `orchestration/`, `preparation/`).
+  The first lane refactored from a fully flat starting state
+  (no pre-existing `internal/` boundary). The naming-role table's
+  defaults agreed with the import scan on every file, so no
+  pre-cleanup commit was needed and the introduction collapsed
+  into a per-sub-area move sequence. See the template's
+  `application/restart/` worked example for the from-scratch
+  procedure variant.
+
 Unstructured (no internal/ at all):
 
-- **status** (13), **watchdog** (12), **restart** (10), **reconcile** (9),
+- **status** (13), **watchdog** (12), **reconcile** (9),
   **reply** (7).
 
 These follow the standard naming and have the data to slot into the Tier 2
@@ -277,6 +290,16 @@ presentation helpers and should move to `internal/cli/` (or even into the
    sub-areas, then demote intra-only top-level files into them) is
    documented as a worked example in the template.
 
+   Closely related: **restart was the first from-scratch refactor.**
+   The lane started with no `internal/` directory at all, and the
+   role-naming pattern was clean enough that the four sub-areas
+   (`cli/`, `error/`, `orchestration/`, `preparation/`) projected
+   mechanically from the filename clusters and the import scan
+   confirmed the projection without any naming-role exception
+   firing. The from-scratch worked example is the canonical
+   "no exception fired" reference; the prior five worked examples
+   document each exception type.
+
 4. **Half-done Tier 2 lanes shared a pattern.** At the time of the original
    survey, `commit`, `merge`, `metaReview`, and `list` all had a single
    internal sub-area (`pipeline/`, `pipeline/`, `submit/`, `projection/`).
@@ -338,7 +361,13 @@ new sub-areas," not "introduce a boundary from scratch." `commit`,
 `list`, `merge`, `metaReview`, and `metaReviewGate` validated this
 assumption (now all structured). The `metaReviewGate` case also validated
 the two-step variant that handles flat-internal cases (introduce
-sub-areas, then demote remaining intra-only top-level files).
+sub-areas, then demote remaining intra-only top-level files). The
+`restart` case validated the from-scratch path separately: when the
+role-naming pattern is consistent end-to-end and no exception fires
+on the import scan (no signature-reference type, no cross-lane
+split-extraction, no contract-test path-pin, no phantom cross-lane
+consumer, no type-relocation), the from-scratch introduction
+collapses to a per-sub-area move sequence with no pre-cleanup commit.
 
 **F. Outliers must be excluded from the template.** `actorProtocol` is not a
 command; the template should not try to fit it. Separate decision needed.
@@ -352,7 +381,9 @@ future contributor reading "Tier 2 commands typically have an
 `internal/finalization/` sub-area" can verify the claim against the actual
 lane inventory above.
 
-Five lane refactors have validated the template's half-done procedure:
+Six lane refactors have validated the template. Five followed the
+half-done procedure; the sixth (`restart`) validated the from-scratch
+procedure variant. In sequence:
 `list` (commit `da12ed98`, single-commit move), `commit` (commits
 `8d603cff`, `9b2b9755`, `2b5c6c71`, `2115f606`, four-commit sequence with
 a public-surface split for `remoteCommitContinuitySync.ts`), `merge`
@@ -362,10 +393,14 @@ five-commit sequence with a type-relocation step that decoupled
 the file move), `metaReview` (commits `0f5a708a`, `72d51825`,
 `c6cfcfef`, three-commit sequence preceded by a defaults-side dead
 re-export cleanup that flipped a phantom cross-lane consumer into an
-intra-lane file), and `metaReviewGate` (commits `fc3b96de` →
+intra-lane file), `metaReviewGate` (commits `fc3b96de` →
 `d2aa84d4`, nine-commit sequence covering a test-mirror pre-cleanup,
 seven sub-area introductions (`findings/`, `apply/`, `autoRework/`,
 `cleanRerun/`, `humanGate/`, `approve/`, `state/`) inside a previously
 flat `internal/`, and a final 1-file `prompts/` sub-area demotion from
-the lane root). The template's "Worked examples" section captures the
-lessons learned; the inventory rows above record the post-refactor state.
+the lane root), and `restart` (commits `cc83c803` → `69bf1cb2`,
+four-sub-area introduction from a fully flat starting state with no
+pre-cleanup commit because the naming-role defaults agreed with the
+import scan on every top-level file). The template's "Worked examples"
+section captures the lessons learned; the inventory rows above record
+the post-refactor state.

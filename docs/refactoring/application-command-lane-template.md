@@ -301,7 +301,10 @@ Half-done lanes today (per the survey): none. `list`, `commit`, `merge`,
 been refactored using this procedure; see "Worked examples" below. The
 `metaReviewGate` case also validates the two-step variant that handles
 flat-internal cases (introduce sub-areas, then demote remaining
-intra-only top-level files).
+intra-only top-level files). `restart` was the first **from-scratch**
+refactor (no `internal/` directory at all at the start) and is also
+documented in "Worked examples" below; it shows what the procedure
+collapses to when no naming-role exception fires.
 
 ### Procedure
 
@@ -363,8 +366,15 @@ intra-only top-level files).
 
 ### Worked examples
 
-Five lane refactors have applied this procedure end-to-end. All started
-from a half-done state and ended at structured Tier 2.
+Six lane refactors have applied this procedure end-to-end. Five started
+from a half-done state and ended at structured Tier 2; the sixth
+(`restart`) started from a fully flat lane (no `internal/` at all)
+and validated a from-scratch procedure variant. The first five
+worked examples each document one or more naming-role exceptions
+(signature-reference type, cross-lane split-extraction,
+type-relocation, phantom cross-lane consumer, contract-test
+path-pin); the `restart` worked example is the canonical "no
+exception fired" reference.
 
 #### `application/list/` (refactored 2026-05-10, commit `da12ed98`)
 
@@ -719,6 +729,135 @@ Findings worth carrying forward:
   re-targets a file, scan `tests/` without filename-based exclusion
   to surface non-mirror test consumers — tests outside the lane's
   own mirror tree can still import lane internals directly.
+
+#### `application/restart/` (refactored 2026-05-11, commits `cc83c803` → `69bf1cb2`)
+
+**This is the first from-scratch Tier 2 case.** Unlike the prior five
+worked examples, the lane began with **no `internal/` directory at
+all** — ten top-level files flat at the lane root, with no pre-existing
+boundary to extend. The half-done procedure above does not directly
+cover this case; restart validates that with a clean role-naming
+pattern, the sub-area introduction can be projected mechanically from
+filename clusters and confirmed by the import scan, with no
+pre-cleanup commit and no naming-role exception.
+
+Worked-example structure note: this entry is intentionally laid out
+differently from the five half-done cases. It opens with a
+**goal-state introduction** (the part the half-done procedure skips,
+because half-done lanes inherit the public/internal boundary
+decision) and treats the per-sub-area moves as a mechanical
+postscript.
+
+Before: 10 top-level files, no `internal/`. The lane uses every
+standard naming role from the table in
+[Common naming roles](#common-naming-roles): `*CommandApi`,
+`*CommandContract`, `*CliCommand`, `*CommandCliOptions`,
+`*CommandRuntime`, `*CommandErrorNormalization`, `*CommandOrchestration`,
+`*CommandInputNormalization`, `*CommandDependencyResolution`,
+`run<X>Flow`. Every file maps to a row in the table.
+
+After: 3 top-level root-public files plus
+`internal/{cli,error,orchestration,preparation}/` (four sub-areas,
+seven internal files). Top-level: `restartCommandApi.ts` (canonical
+entry), `restartCommandContract.ts` (dependency port +
+`RestartBubble{Input,Result,Dependencies}` types),
+`restartCliCommand.ts` (CLI integration, consumed by
+`src/cli/commands/bubble/restart.ts`).
+
+**Goal-state introduction (the from-scratch step the half-done
+procedure skips):**
+
+- **Public surface decision.** With no pre-existing `internal/`,
+  the public/internal boundary is decided fresh. The naming-role
+  table defaults plus the import scan agreed on three root-public
+  files (`Api`, `Contract`, `CliCommand`). No naming-role exception
+  fired: no signature-reference type stuck at root (cf. `list`),
+  no cross-lane split-extraction (cf. `commit`), no contract-test
+  path-pin (cf. `metaReviewGate`), no phantom cross-lane consumer
+  (cf. `metaReview`), no type-relocation pre-cleanup (cf. `merge`).
+  The agreement of default-and-scan is the from-scratch signal that
+  the lane is a textbook Tier 2 — when the two diverge, you have
+  one of the five documented exceptions and need a precedent-driven
+  decision plus a pre-cleanup commit.
+- **Sub-area projection from naming clusters.** The seven intra-only
+  files clustered cleanly by filename: `Runtime` + `ErrorNormalization`
+  → `error/`; `Orchestration` + `runRestartFlow` → `orchestration/`;
+  `InputNormalization` + `DependencyResolution` → `preparation/`
+  (merge precedent reuses this exact name for the same Input/Dependency
+  pair); `CliOptions` → `cli/` (deliberate one-file sub-area). No
+  file content surprised the cluster mapping — but content was still
+  read first (`*Runtime.ts` is error-composition by content, as the
+  commit/merge precedents already documented; restart matched).
+
+Four-sub-area move sequence (one commit per sub-area), then doc-sync:
+
+1. **`internal/error/`** (`cc83c803`). Two files
+   (`restartCommandRuntime.ts`, `restartCommandErrorNormalization.ts`).
+   Runtime holds the `RestartBubbleError` class plus
+   `createRestartBubbleError` and `throwAsRestartBubbleError`;
+   consistent with commit/merge, `*Runtime.ts` is the lane's error
+   boundary by content. `RestartBubbleError` remains publicly
+   reachable via re-export from `restartCommandApi.ts`. Cross-lane
+   `errorBoundaryContextSchema.test.ts` got a path-only update
+   (no test relocation; it covers multiple lanes' error classes).
+2. **`internal/orchestration/`** (`ea2d34a9`). Two files
+   (`restartCommandOrchestration.ts`, `runRestartFlow.ts`). The
+   API re-export chain stays intact; only the import path inside
+   `restartCommandApi.ts` changed.
+3. **`internal/preparation/`** (`8fd01058`). Two files
+   (`restartCommandInputNormalization.ts`,
+   `restartCommandDependencyResolution.ts`). Sub-area name follows
+   the merge precedent.
+4. **`internal/cli/`** (`69bf1cb2`). One file
+   (`restartCommandCliOptions.ts`). The sole production consumer is
+   `restartCliCommand.ts` (re-exports the parser and help-text
+   functions). A deliberate one-file sub-area following the
+   metaReviewGate `prompts/` precedent: the parser concern is
+   distinct from input normalization (parses argv into command
+   options vs. validates the command's `RestartBubbleInput`
+   contract) and from CLI integration glue.
+5. **Closeout (this commit).** Survey + template doc-sync; leftover
+   hunt confirmed (no empty directories, no orphan references).
+
+Findings worth carrying forward:
+
+- **From-scratch is not a blocker; clean role-naming is the
+  prerequisite.** The half-done procedure exists because the
+  public/internal boundary was already decided at the start.
+  From-scratch lanes need that boundary introduced first, but when
+  the role-naming pattern is consistent (every file matches a row
+  in the naming-role table) and the import scan agrees with the
+  default visibility column, the introduction is mechanical.
+  Restart hit zero exceptions, so the procedure collapsed into a
+  per-sub-area move sequence with no pre-cleanup commit.
+- **Default-and-scan agreement as from-scratch signal.** When the
+  naming-role table's default visibility column and the import
+  scan agree on every top-level file, the lane is a textbook
+  Tier 2 case and the prior five worked examples' exceptions do
+  not need to be invoked. When they disagree, you need one of the
+  documented precedent decisions and a pre-cleanup commit. Restart
+  is the canonical "no exception fired" reference; the prior five
+  worked examples cover each exception type.
+- **`*Runtime.ts` content rule generalizes beyond half-done.** The
+  commit/merge precedent that `*Runtime.ts` is error-composition by
+  content (and belongs in `internal/error/`, not `internal/runtime/`)
+  reproduced exactly in restart — the file-name convention misleads
+  in the same way regardless of whether the lane was half-done or
+  from-scratch. Read the file first; honor the content over the
+  name. Renaming `*Runtime.ts` → something error-named is a
+  separate convention-cleanup decision, not part of the lane
+  refactor.
+- **Single-command lane vs. multi-command lane: from-scratch
+  doesn't change the sub-area count.** Restart is a single-command
+  lane (like metaReview), but unlike metaReview's collapse into the
+  existing `submit/` sub-area, restart's sub-areas (`cli/`, `error/`,
+  `orchestration/`, `preparation/`) all stand on their own naming
+  clusters. The metaReview precedent ("collapse intra-only helpers
+  under the existing phase sub-area when no other concern boundary
+  exists") did not apply because restart's clusters are mutually
+  exclusive by content (CLI parsing vs. domain-input normalization
+  vs. dependency wiring vs. orchestration), so each cluster is its
+  own honest sub-area concern.
 
 ## Module Depth Check applies
 
