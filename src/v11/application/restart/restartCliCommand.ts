@@ -6,7 +6,7 @@ import {
 import {
   getBubbleRestartHelpText,
   parseBubbleRestartCommandOptions
-} from "./restartCommandCliOptions.js";
+} from "./internal/cli/restartCommandCliOptions.js";
 
 export {
   getBubbleRestartHelpText,
@@ -16,7 +16,7 @@ export type {
   BubbleRestartCommandOptions,
   BubbleRestartHelpCommandOptions,
   ParsedBubbleRestartCommandOptions
-} from "./restartCommandCliOptions.js";
+} from "./internal/cli/restartCommandCliOptions.js";
 
 export interface BubbleRestartCommandDependencies {
   restartBubble?: typeof restartBubble;
