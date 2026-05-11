@@ -4,7 +4,7 @@ import type { MetaReviewResult } from "../../../../shared/metaReview/metaReviewT
 import type { LoadedStateSnapshot } from "../../../../ports/stateSnapshots.js";
 import {
   buildGateLockPath
-} from "../metaReviewGateShared.js";
+} from "../state/metaReviewGateShared.js";
 import { persistHumanGateRoute } from "../humanGate/metaReviewGateHumanGatePersistence.js";
 import { buildHumanGateSummary } from "../../../../domain/metaReviewGate/humanGatePolicy.js";
 import {

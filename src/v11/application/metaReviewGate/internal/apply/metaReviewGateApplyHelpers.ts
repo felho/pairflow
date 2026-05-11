@@ -15,7 +15,7 @@ import { buildHumanGateSummary } from "../../../../domain/metaReviewGate/humanGa
 export {
   stageMetaReviewRunningState,
   throwMetaReviewRunningStageFailure
-} from "../metaReviewGateStateStaging.js";
+} from "../state/metaReviewGateStateStaging.js";
 import { persistHumanGateRoute } from "../humanGate/metaReviewGateHumanGatePersistence.js";
 import type { MetaReviewGateResult } from "../../../../shared/metaReviewGate/metaReviewGateResultContract.js";
 

@@ -3,7 +3,7 @@ import { appendMetaReviewKickoffEnvelope, stageMetaReviewRunningState } from "..
 import { buildCleanRerunDispatchFailureRollbackState } from "./metaReviewGateCleanRerunFailureState.js";
 import type { RouteCleanMetaReviewRerunInput } from "./metaReviewGateCleanRerunContract.js";
 import { persistDispatchFailedHumanRoute } from "../currentRun/routePersistence.js";
-import { buildGateLockPath } from "../metaReviewGateShared.js";
+import { buildGateLockPath } from "../state/metaReviewGateShared.js";
 import { setMetaReviewConsecutiveCleanRuns } from "../../../../domain/metaReviewGate/snapshotState.js";
 import type { MetaReviewGateResult } from "../../../../shared/metaReviewGate/metaReviewGateResultContract.js";
 

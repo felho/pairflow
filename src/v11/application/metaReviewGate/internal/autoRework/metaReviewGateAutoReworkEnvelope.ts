@@ -10,7 +10,7 @@ import {
   resolveFindingsParityMetadataForEnvelope,
   type FindingsParityMetadata
 } from "../../../../../types/protocol.js";
-import { buildGateLockPath } from "../metaReviewGateShared.js";
+import { buildGateLockPath } from "../state/metaReviewGateShared.js";
 
 export async function appendAutoReworkDecision(input: {
   finalizeInput: {

@@ -2,7 +2,7 @@ import type { LoadedStateSnapshot } from "../../../../ports/stateSnapshots.js";
 import type { AppendProtocolEnvelopeResult } from "../../../../ports/transcript.js";
 import { MetaReviewGateError } from "../../../../shared/metaReviewGate/metaReviewGateRouteContract.js";
 import type { MetaReviewGateResult } from "../../../../shared/metaReviewGate/metaReviewGateResultContract.js";
-import { transitionToGateState } from "../metaReviewGateStateHelpers.js";
+import { transitionToGateState } from "../state/metaReviewGateStateHelpers.js";
 import {
   resolveDefaultStickyHumanGateForRoute
 } from "../../../../domain/metaReviewGate/humanGateRouting.js";
