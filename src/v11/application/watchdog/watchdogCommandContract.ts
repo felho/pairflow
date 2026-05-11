@@ -1,3 +1,5 @@
+import type { AgentRole } from "../../../contracts/kernel/agentIdentity.js";
+import type { BubbleConfig } from "../../shared/config/bubbleConfigTypes.js";
 import type { EmitBubbleNotificationPort } from "../../ports/notifications.js";
 import type { AppendProtocolEnvelopePort } from "../../ports/transcript.js";
 import type {
@@ -18,11 +20,41 @@ import type {
 import type { AppendWatchdogTracePort } from "../../ports/watchdogTrace.js";
 import type { EnsureBubbleInstanceIdForMutationPort } from "../../ports/bubbleIdentity.js";
 import type { ResolveBubbleByIdPort } from "../../ports/bubbleLookup.js";
-import type {
-  sampleWatchdogPaneActivity
-} from "./watchdogPaneActivitySampler.js";
 import type { BubbleStateSnapshot } from "../../shared/state/bubbleStateSnapshotTypes.js";
 import type { ProtocolEnvelope } from "../../../types/protocol.js";
+
+export type PaneActivitySampleResult =
+  | {
+      status: "sampled";
+      sampled_at: string;
+      pane_hash: string;
+      changed: boolean;
+      session_name: string;
+      target_pane: string;
+    }
+  | {
+      status: "no_session";
+      sampled_at: string;
+      error: string;
+    }
+  | {
+      status: "pane_unreadable";
+      sampled_at: string;
+      error: string;
+      session_name: string;
+      target_pane: string;
+    };
+
+export type SampleWatchdogPaneActivityFn = (input: {
+  bubbleId: string;
+  bubbleConfig: BubbleConfig;
+  sessionsPath: string;
+  activeRole: AgentRole;
+  readSessionsRegistry: ReadRuntimeSessionsRegistryPort;
+  runner: TmuxRunner;
+  priorPaneHash?: string;
+  now?: Date;
+}) => Promise<PaneActivitySampleResult>;
 
 export interface BubbleWatchdogInput {
   bubbleId: string;
@@ -41,7 +73,7 @@ export interface BubbleWatchdogDependencies {
   writeWatchdogPaneActivity: WriteWatchdogPaneActivityPort;
   appendWatchdogTrace: AppendWatchdogTracePort;
   resolveBubbleById: ResolveBubbleByIdPort;
-  sampleWatchdogPaneActivity?: typeof sampleWatchdogPaneActivity;
+  sampleWatchdogPaneActivity?: SampleWatchdogPaneActivityFn;
   readRuntimeSessionsRegistry: ReadRuntimeSessionsRegistryPort;
   runTmux: TmuxRunner;
   ensureBubbleInstanceIdForMutation: EnsureBubbleInstanceIdForMutationPort;

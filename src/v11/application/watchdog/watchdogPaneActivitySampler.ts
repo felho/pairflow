@@ -5,6 +5,7 @@ import type {
   ReadRuntimeSessionsRegistryPort
 } from "../../ports/runtimeSessions.js";
 import type { TmuxRunner } from "../../ports/tmuxSessions.js";
+import type { PaneActivitySampleResult } from "./watchdogCommandContract.js";
 import {
   resolveWatchdogTargetPaneIndex
 } from "../../shared/watchdog/watchdogPaneTargeting.js";
@@ -12,28 +13,6 @@ import {
 export const WATCHDOG_PANE_ACTIVITY_SAMPLE_INTERVAL_MS = 60_000;
 export const WATCHDOG_PANE_QUIET_WINDOW_MS = 10 * 60_000;
 export const WATCHDOG_PANE_ACTIVITY_CAPTURE_START_LINE = "-20";
-
-export type PaneActivitySampleResult =
-  | {
-      status: "sampled";
-      sampled_at: string;
-      pane_hash: string;
-      changed: boolean;
-      session_name: string;
-      target_pane: string;
-    }
-  | {
-      status: "no_session";
-      sampled_at: string;
-      error: string;
-    }
-  | {
-      status: "pane_unreadable";
-      sampled_at: string;
-      error: string;
-      session_name: string;
-      target_pane: string;
-    };
 
 export async function sampleWatchdogPaneActivity(input: {
   bubbleId: string;

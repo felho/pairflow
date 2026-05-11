@@ -1,17 +1,15 @@
 import type {
-  BubbleWatchdogDependencies
+  BubbleWatchdogDependencies,
+  PaneActivitySampleResult,
+  SampleWatchdogPaneActivityFn
 } from "./watchdogCommandContract.js";
 import type { AgentRole } from "../../../contracts/kernel/agentIdentity.js";
 import { BubbleWatchdogError } from "./watchdogCommandRuntime.js";
 import { type WatchdogRuntimeContext } from "./watchdogCommandFlow.js";
-import type { sampleWatchdogPaneActivity } from "./watchdogPaneActivitySampler.js";
 import {
   resolveWatchdogTargetPaneIndex
 } from "../../shared/watchdog/watchdogPaneTargeting.js";
-import {
-  WATCHDOG_PANE_ACTIVITY_SAMPLE_INTERVAL_MS,
-  type PaneActivitySampleResult
-} from "./watchdogPaneActivitySampler.js";
+import { WATCHDOG_PANE_ACTIVITY_SAMPLE_INTERVAL_MS } from "./watchdogPaneActivitySampler.js";
 import type {
   ReadWatchdogPaneActivityPort,
   ReadWatchdogPaneActivityResult,
@@ -122,7 +120,7 @@ export async function maybeMonitorWatchdogPaneActivity(input: {
   monitored: boolean;
   readPaneActivity: ReadWatchdogPaneActivityPort;
   writePaneActivity: WriteWatchdogPaneActivityPort;
-  samplePaneActivity: typeof sampleWatchdogPaneActivity;
+  samplePaneActivity: SampleWatchdogPaneActivityFn;
   readRuntimeSessionsRegistry: BubbleWatchdogDependencies["readRuntimeSessionsRegistry"];
   runTmux: BubbleWatchdogDependencies["runTmux"];
 }): Promise<WatchdogPaneActivityState | null> {

@@ -9,14 +9,12 @@ import {
   runBubbleWatchdog
 } from "../../../../src/v11/application/watchdog/watchdogCommandApi.js";
 import type {
-  BubbleWatchdogDependencies
+  BubbleWatchdogDependencies,
+  PaneActivitySampleResult
 } from "../../../../src/v11/application/watchdog/watchdogCommandContract.js";
 import { watchdogCommandDefaults } from "../../../../src/v11/defaults/watchdog/watchdogCommandDefaults.js";
 import { watchdogPendingReworkDefaults } from "../../../../src/v11/defaults/watchdog/watchdogPendingReworkDefaults.js";
 import type { RuntimeSessionsRegistry } from "../../../../src/v11/ports/runtimeSessions.js";
-import type {
-  PaneActivitySampleResult
-} from "../../../../src/v11/application/watchdog/watchdogPaneActivitySampler.js";
 import {
   getWatchdogPaneActivityPath,
   readWatchdogPaneActivity,
