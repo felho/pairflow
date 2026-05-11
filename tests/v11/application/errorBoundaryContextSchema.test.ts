@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { BubbleCommitError } from "../../../src/v11/application/commit/internal/error/commitCommandError.js";
 import { BubbleMergeError } from "../../../src/v11/application/merge/internal/error/mergeCommandErrorRuntime.js";
-import { StartupReconcilerError } from "../../../src/v11/application/reconcile/reconcileCommandRuntime.js";
+import { StartupReconcilerError } from "../../../src/v11/application/reconcile/internal/error/reconcileCommandRuntime.js";
 import { RestartBubbleError } from "../../../src/v11/application/restart/internal/error/restartCommandRuntime.js";
 import { StartBubbleError } from "../../../src/v11/application/start/internal/runtime/startCommandRuntime.js";
 import { StopBubbleError } from "../../../src/v11/application/stop/stopCommandRuntime.js";

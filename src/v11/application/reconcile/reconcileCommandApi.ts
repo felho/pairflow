@@ -17,7 +17,7 @@ import type {
 import {
   StartupReconcilerError,
   throwAsStartupReconcilerError
-} from "./reconcileCommandRuntime.js";
+} from "./internal/error/reconcileCommandRuntime.js";
 
 const RECONCILE_DEFAULT_DEPENDENCIES_MISSING =
   "RECONCILE_DEFAULT_DEPENDENCIES_MISSING";
