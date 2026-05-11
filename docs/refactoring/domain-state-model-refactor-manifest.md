@@ -1,7 +1,7 @@
 # Domain State Model Refactor — Step 1 Manifest
 
-Status: settled (Step 1 contract finalized; Step 2 may begin)
-Last updated: 2026-05-11 (open questions resolved this revision)
+Status: settled (Steps 2–3 complete on 2026-05-11; Step 4 sequence pending)
+Last updated: 2026-05-11 (Step 4.0 manifest review: 3c2 deviation incorporated per §10.9)
 Owner: architecture/domain-state
 Scope: relocate `src/v11/shared/state/*` to `src/v11/domain/state/*` as
 the canonical home for the bubble state domain model, restructure into
@@ -48,11 +48,9 @@ src/v11/domain/state/
 │   ├── persistedBubbleStateSnapshot.ts     (persisted wire shape — broad nullable)
 │   └── roundRoleHistory.ts                 (type definition + helpers)
 ├── execution/
-│   ├── executionContextTypes.ts            (BubbleExecutionContext + BubbleMetaReviewExecutionContext + awaited-output unions)
-│   ├── buildRunningExecutionContext.ts     (split from current shared/state/executionContext.ts)
-│   ├── buildRestartedExecutionContext.ts
-│   ├── metaReviewExecutionContext.ts       (toMetaReviewExecutionContext, metaReviewExecutionContextToRunningContext)
-│   └── executionContextsEqual.ts
+│   ├── executionContextTypes.ts            (BubbleExecutionContext + BubbleMetaReviewExecutionContext + awaited-output unions + type predicates) [§10.9: types-only file for cycle break]
+│   ├── executionContext.ts                 (build helpers — buildRunningExecutionContext, buildRestartedExecutionContext, toMetaReviewExecutionContext, metaReviewExecutionContextToRunningContext, executionContextsEqual — plus types re-exports for consumer convenience) [§10.9: combined helpers file]
+│   └── stateSchemaExecution.ts             (execution slice parser)
 ├── authority/
 │   ├── metaReviewAuthority.ts              (isMetaReviewAuthorityActive + meta-review-specific invariants)
 │   ├── executionContextAuthority.ts        (when execution_context is required vs forbidden)
@@ -84,10 +82,12 @@ thematic cohesion with the rework slice parser — see §10.6.)
 
 Notes:
 
-- Total file count grows from ~16 (current shared/state/ + domain/state/)
-  to ~24 (after splitting executionContext.ts into 5 single-responsibility
-  files and the schema validators into thematic parsers). Several
-  currently-large files split along their natural concern boundaries.
+- Total file count grows modestly. The original Step 1 plan was a
+  5-file split for `executionContext.ts`; the 3c2 deviation (§10.9)
+  keeps it as a 2-file shape (types + combined helpers) because the
+  5-file split triggered an import cycle through the actorProtocol
+  consumer. Schema validators do split into thematic parsers across
+  sub-areas (snapshot/authority/metaReview/rework/execution).
 - The current `shared/metaReview/metaReviewSnapshotTypes.ts` and
   `shared/metaReview/metaReviewSnapshot.ts` stay in `shared/metaReview/`
   for now — they are higher-level meta-review concerns (delivery,
@@ -364,6 +364,13 @@ export function createRunningStandardSnapshot(
 This decouples construction from the discriminated union shape, so
 consumers don't have to remember to set `kind` manually.
 
+**Cycle awareness:** if a future split of construction helpers
+introduces a barrel/cycle issue (per §10.9's executionContext
+precedent), prefer co-locating helpers with their dependency-source
+file and exposing types from a sibling `*Types.ts` file rather than
+fragmenting helpers further. Fitness boundary checks are the ground
+truth — do not preemptively split.
+
 ---
 
 ## 4. Runtime invariants surviving narrowing
@@ -550,27 +557,41 @@ structural changes)."
 
 **Validation:** typecheck + lint + fitness + full test + build.
 
-### Step 3 — Restructure into first-class sub-areas (3 commits)
+### Step 3 — Restructure into first-class sub-areas (4 commits — landed)
 
-The internal/ wrapper unwrap is the structural rename. Splitting into
-three sub-commits keeps each diff readable:
+The internal/ wrapper unwrap is the structural rename. The plan
+called for 3 sub-commits; in execution 3c split into 3c1 and 3c2 to
+keep the type-files-move diff readable separately from the
+executionContext-move + cycle-break work:
 
 - **3a:** `domain/state/internal/schema/` → split into
   `domain/state/snapshot/` (slice parsers) +
   `domain/state/authority/` (the authority files). Drop the
-  `internal/schema/` subdir. Path updates only.
+  `internal/schema/` subdir. Path updates only. **Landed: e798ccbe.**
 - **3b:** `domain/state/internal/{metaReview,rework,execution}/` →
   `domain/state/{metaReview,rework,execution}/`. Drop the `internal/`
-  wrapper entirely. Path updates only.
-- **3c:** Split the current `domain/state/execution/executionContext.ts`
-  (206 LOC, multiple responsibilities) into 5 single-file files per
-  §1's target tree. Also rename `bubbleStateSnapshotTypes.ts` →
-  `bubbleStateSnapshot.ts` and `executionContextTypes.ts` →
-  `executionContext.ts` (the "Types" suffix becomes redundant once
-  the directory's purpose is types-first).
+  wrapper entirely. Path updates only. **Landed: 8537ba80.**
+- **3c1:** Move type files (`bubbleStateSnapshotTypes.ts`,
+  `reworkIntentTypes.ts`) into their sub-area homes. Path updates
+  only; no renames yet. **Landed: 3953e04c.**
+- **3c2:** Move the original `domain/state/execution/executionContext.ts`
+  (206 LOC, multiple responsibilities) into `execution/`. The Step 1
+  plan was a 5-file split; the fitness dependency check caught a
+  barrel-induced cycle between the per-function files and
+  `shared/actorProtocol/roleExecutionProjection.ts`. Final shape:
+  2-file (`executionContextTypes.ts` holds types + predicates;
+  `executionContext.ts` holds build helpers and re-exports types
+  for consumer convenience). The planned
+  `executionContextTypes.ts` → `executionContext.ts` and
+  `bubbleStateSnapshotTypes.ts` → `bubbleStateSnapshot.ts` renames
+  do NOT happen in Step 3. The `Types` suffix stays as the
+  cycle-break boundary marker (§10.9), and
+  `bubbleStateSnapshotTypes.ts` is instead renamed to
+  `persistedBubbleStateSnapshot.ts` in Step 4a. **Landed: 43dec6b0.**
 
-Behavior unchanged through all three. The lane is now in its target
-shape minus the variant model.
+Behavior unchanged through all four commits. The lane is now in its
+target shape minus the parser-semantics rename and the variant
+model. See §10.9 for the 3c2 deviation rationale.
 
 ### Step 4a — Parser semantics rename (1 commit)
 
@@ -629,21 +650,24 @@ docs) get a brief cross-reference to the state model refactor as the
 domain-state precedent. Any architecture-fitness docs that referenced
 `shared/state/` get updates.
 
-### Total: ~7 commits
+### Total: ~10 commits
 
-| # | Step | Files | Behavior change |
-|---|------|------:|-----------------|
-| 1 | 2 | ~17 + 154 import updates | No |
-| 2 | 3a | ~6 | No |
-| 3 | 3b | ~5 | No |
-| 4 | 3c | ~5 + splits | No |
-| 5 | 4a | ~17 | No |
-| 6 | 4b | ~50-80 | **Yes** (type-level invariant enforcement; runtime authority code dropped) |
-| 7 | 5 | ~5 | No |
-| 8 | 6 | 2-3 docs | No |
+| #  | Step | Files | Status | Behavior change |
+|---:|------|------:|--------|-----------------|
+| 1  | 2    | ~17 + 154 import updates | landed (935eefec) | No |
+| 2  | 3a   | ~6 | landed (e798ccbe) | No |
+| 3  | 3b   | ~5 | landed (8537ba80) | No |
+| 4  | 3c1  | ~5 | landed (3953e04c) | No |
+| 5  | 3c2  | ~3 + types split | landed (43dec6b0) | No |
+| 6  | 4.0  | 1 doc | in progress | No (this commit) |
+| 7  | 4a   | ~17 | pending | No |
+| 8  | 4b   | ~50-80 | pending | **Yes** (type-level invariant enforcement; runtime authority code dropped) |
+| 9  | 5    | ~5 | pending | No |
+| 10 | 6    | 2-3 docs | pending | No |
 
-(Step 5 may collapse into the doc-sync commit if test moves are small.
-Currently estimated at 7-8 commits.)
+(Step 4a-guards is an optional conditional commit between 4a and 4b,
+gated on pilot findings — would push total to ~11. Step 5 may
+collapse into the doc-sync commit if test moves are small.)
 
 ---
 
@@ -859,6 +883,73 @@ already-validated `PersistedBubbleStateSnapshot`. This means the
 discriminator function's input type is the persisted shape, not
 `unknown`; the parsing layer wraps everything.
 
+### 10.9 ExecutionContext split — 2-FILE SHAPE (3c2 deviation)
+
+**Background:**
+§1's original target tree split `executionContext.ts` into 5
+single-responsibility files (`executionContextTypes.ts`,
+`buildRunningExecutionContext.ts`,
+`buildRestartedExecutionContext.ts`, `metaReviewExecutionContext.ts`,
+`executionContextsEqual.ts`) and renamed `executionContextTypes.ts`
+to `executionContext.ts` (since the directory's purpose was
+types-first).
+
+**Issue surfaced during Step 3c2:**
+The per-function split combined with the manifest-prescribed
+re-export barrel introduced a fitness-detected import cycle:
+
+- `buildRestartedExecutionContext.ts` ↔ `buildRunningExecutionContext.ts`
+  (helper composition: restart calls running's build path).
+- `executionContext.ts` (the barrel) ↔ all 4 helper files.
+- `shared/actorProtocol/roleExecutionProjection.ts` ↔
+  `executionContext.ts` (types flow one way, helper import flows the
+  other).
+
+Even after collapsing back to a single helpers file (merging types
++ helpers into `executionContext.ts`), the actorProtocol cycle
+remained: `roleExecutionProjection.ts` needs the awaited-output
+type union, and `executionContext.ts` needs
+`roleExecutionProjection.ts`'s helper for `handoff_id` derivation.
+
+**Decision:**
+Two-file shape, types separated from helpers:
+
+- `execution/executionContextTypes.ts` — types and type-predicate
+  functions only.
+- `execution/executionContext.ts` — build helpers; re-exports types
+  from the sibling for consumer convenience.
+- `shared/actorProtocol/roleExecutionProjection.ts` imports types
+  from `executionContextTypes.js`, not from `executionContext.js` —
+  the one-way edge breaks the cycle.
+
+The `executionContextTypes.ts` → `executionContext.ts` rename
+originally planned in §7 Step 3c does NOT happen. The `Types`
+suffix is preserved as a semantic marker that this file is the
+cycle-break boundary; the consumer convenience case is served by
+the helpers-file re-exports.
+
+**Rationale:**
+
+- Fitness rules are the ground truth for architecture invariants.
+  The manifest is a contract for the design intent, not for the
+  exact file count.
+- The 2-file shape preserves the design intent (types + helpers in
+  a dedicated sub-area, no `internal/`, no re-export shim) while
+  avoiding the cycle.
+- Final file count grows by 1 instead of 4. Smaller diff, easier
+  mental model for consumers.
+
+**Forward implication for Step 4b:**
+If construction helpers in `snapshot/bubbleStateSnapshot.ts` ever
+trigger a similar cycle (e.g., a helper imports `applyStateTransition`
+which itself imports back into snapshot types), apply the same
+pattern: types in `bubbleStateSnapshotTypes.ts`, helpers in
+`bubbleStateSnapshot.ts`, types re-exported via the helpers file
+for consumer convenience. Do not preemptively split — let fitness
+checks dictate.
+
+**Landed:** Step 3c2 (commit 43dec6b0).
+
 ---
 
 ## 11. Non-goals
@@ -888,6 +979,10 @@ discriminator function's input type is the persisted shape, not
 ## 12. Approval
 
 This manifest is **settled** as of 2026-05-11 (the open-questions
-revision). All §10 decisions are locked. Step 2 may begin.
-Deviations during execution require an amendment to this document
-in the same commit that introduces them.
+revision, amended on the same day by the Step 4.0 review to
+incorporate the 3c2 deviation per §10.9). All §10 decisions are
+locked. Steps 2 and 3 are complete (commits 935eefec → 43dec6b0;
+see §7 status column). Step 4 proceeds via the launch sequence:
+4.0 (this commit) → 4a → pilot → 4a-guards (conditional) → 4b →
+5 → 6. Further deviations during execution require an amendment
+to this document in the same commit that introduces them.
