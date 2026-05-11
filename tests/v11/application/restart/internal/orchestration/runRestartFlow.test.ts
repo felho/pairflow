@@ -4,12 +4,12 @@ import { join } from "node:path"
 
 import { afterEach, describe, expect, it, vi } from "vitest"
 
-import { runRestartFlow } from "../../../../src/v11/application/restart/runRestartFlow.js"
+import { runRestartFlow } from "../../../../../../src/v11/application/restart/internal/orchestration/runRestartFlow.js"
 import {
   persistPassValidationRecoveryMarker,
   resolvePassValidationRecoveryRepoMarkerPath
-} from "../../../../src/v11/infrastructure/artifact/validation/passValidationEvidence.js"
-import type { ResolvedRestartBubbleDependencies } from "../../../../src/v11/application/restart/restartCommandDependencyResolution.js"
+} from "../../../../../../src/v11/infrastructure/artifact/validation/passValidationEvidence.js"
+import type { ResolvedRestartBubbleDependencies } from "../../../../../../src/v11/application/restart/restartCommandDependencyResolution.js"
 
 const tempDirs: string[] = []
 

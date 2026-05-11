@@ -1,7 +1,7 @@
 import {
   restartBubbleCommandOrchestration,
   throwAsRestartBubbleError
-} from "./restartCommandOrchestration.js";
+} from "./internal/orchestration/restartCommandOrchestration.js";
 import type {
   RestartBubbleDependencies,
   RestartBubbleInput,
