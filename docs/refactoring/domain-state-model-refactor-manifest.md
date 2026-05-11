@@ -1,7 +1,7 @@
 # Domain State Model Refactor — Step 1 Manifest
 
-Status: review (Step 1 deliverable; not yet executing)
-Last updated: 2026-05-11
+Status: settled (Step 1 contract finalized; Step 2 may begin)
+Last updated: 2026-05-11 (open questions resolved this revision)
 Owner: architecture/domain-state
 Scope: relocate `src/v11/shared/state/*` to `src/v11/domain/state/*` as
 the canonical home for the bubble state domain model, restructure into
@@ -70,7 +70,7 @@ src/v11/domain/state/
 ├── rework/
 │   ├── reworkIntentTypes.ts                (BubbleReworkIntentRecord + ReworkIntentStatus)
 │   ├── parseReworkIntent.ts                (slice parser)
-│   └── reworkIntent.ts                     (moved from domain/state/reworkIntent.ts — same area concern)
+│   └── reworkIntentTransitions.ts          (moved + renamed from current domain/state/reworkIntent.ts; deriveQueuedDeferredReworkIntentState + applyDeferredReworkIntent)
 ├── machine.ts                              (state machine; existing)
 ├── transitions.ts                          (transition matrix; existing)
 ├── initialState.ts                         (existing)
@@ -78,6 +78,9 @@ src/v11/domain/state/
 ├── roundContinuation.ts                    (existing)
 └── watchdogEscalation.ts                   (existing)
 ```
+
+(reworkIntent.ts moves from the domain/state/ root into rework/ for
+thematic cohesion with the rework slice parser — see §10.6.)
 
 Notes:
 
@@ -264,23 +267,23 @@ export interface BubbleStateReadyForApproval extends BubbleStateCommonFields {
   execution_context: null;
 }
 
-// APPROVED_FOR_COMMIT, COMMITTED, DONE
+// APPROVED_FOR_COMMIT, COMMITTED, DONE — no active work in progress
 export interface BubbleStateTerminalClean extends BubbleStateCommonFields {
   kind: "terminal_clean";
   state: "APPROVED_FOR_COMMIT" | "COMMITTED" | "DONE";
-  active_agent: AgentName | null;  // OPEN QUESTION §10.1
-  active_role: AgentRole | null;
-  active_since: string | null;
+  active_agent: null;
+  active_role: null;
+  active_since: null;
   execution_context: null;
 }
 
-// FAILED, CANCELLED
+// FAILED, CANCELLED — terminal failure paths
 export interface BubbleStateTerminalFailed extends BubbleStateCommonFields {
   kind: "terminal_failed";
   state: "FAILED" | "CANCELLED";
-  active_agent: AgentName | null;  // OPEN QUESTION §10.1
-  active_role: AgentRole | null;
-  active_since: string | null;
+  active_agent: null;
+  active_role: null;
+  active_since: null;
   execution_context: null;
 }
 ```
@@ -689,54 +692,172 @@ during 4b authoring:
 
 ---
 
-## 10. Open questions (resolve before Step 2)
+## 10. Settled decisions (formerly open questions)
 
-### 10.1 Active-field semantics on terminal states
+### 10.1 Active-field semantics on terminal states — TIGHTENED
 
-Do `APPROVED_FOR_COMMIT`, `COMMITTED`, `DONE`, `FAILED`, `CANCELLED`
-always have null active_*, or do they carry over from the prior
-running state? The current authority rules permit both (all-or-none
-rule, no positive requirement). Investigating `domain/state/machine.ts`
-transitions should answer this. If the answer is "always null after
-APPROVED_FOR_COMMIT", the `BubbleStateTerminalClean` and
-`BubbleStateTerminalFailed` variants tighten their `active_*` to
-`null` (4 fewer null-checks at read sites).
+**Evidence reviewed:**
+- `machine.ts:24-34` defines `statesThatClearExecutionContext` for all
+  non-RUNNING states but does NOT auto-clear `active_*`. In
+  `machine.ts:73-78` the rule is: `undefined` keeps previous,
+  `null` clears explicitly.
+- `startState.ts:117-127` (`deriveStartFailedCleanupState`) explicitly
+  passes `activeAgent: null, activeRole: null, activeSince: null`
+  when transitioning to FAILED, confirming the intent that terminal
+  states do not retain active_* ownership.
+- The schema's all-or-none rule technically permits either
+  configuration on non-RUNNING states, so the existing model is
+  weaker than the operational intent.
 
-### 10.2 RUNNING + round = 0 + meta-review
+**Decision:** `BubbleStateTerminalClean` (APPROVED_FOR_COMMIT,
+COMMITTED, DONE) and `BubbleStateTerminalFailed` (FAILED, CANCELLED)
+variants have `active_agent: null`, `active_role: null`,
+`active_since: null` — the strict shape that reflects "no active work
+in progress." §3.1 has been updated accordingly.
 
-Can a bubble be in `RUNNING + round = 0 + meta_review.status = active`?
-The current `BubbleStateRunningIdeation` variant in §3.1 says no
-(forbids active meta-review on ideation). Verify against the state
-machine.
+**Backward-compat implication:** the parser must decide what to do
+with legacy persisted states that have non-null active_* on terminal
+states. See §10.7 (parser strictness, settled below).
 
-### 10.3 Cross-mirror-root test placement
+### 10.2 RUNNING + round = 0 + meta-review — CONFIRMED
 
-`tests/core/state/executionContext.test.ts` lives outside the
-`tests/v11/shared/state/` mirror tree. Should it move under
-`tests/v11/domain/state/execution/` (mirror alignment) or stay at
-`tests/core/state/`? The metaReviewGate precedent says move. Confirm.
+**Evidence reviewed:**
+- `initialState.ts:17-24` instantiates CREATED state with a
+  `meta_review` field carrying inactive defaults — so the field
+  may be present-inactive at any lifecycle state.
+- `deriveStartRunningState` (startState.ts:44-75) constructs an
+  ideation state (RUNNING + round=0) with `executionContext: null`,
+  no active_*. Meta-review authority requires `execution_context`
+  (per the authority rules). Therefore active meta-review is
+  impossible during ideation.
 
-### 10.4 PersistedBubbleStateSnapshot reachability
+**Decision:** `BubbleStateRunningIdeation.meta_review:
+MetaReviewSubstateInactive | undefined` is correct as drafted. No
+change to §3.1 needed.
 
-After Step 4b, who outside `domain/state/schema/` and
-`infrastructure/state/` needs access to `PersistedBubbleStateSnapshot`?
-If the answer is "essentially nobody", we can avoid exporting it
-broadly and make it a parser-input-only type. If serialization helpers
-or debug tooling need it, mark explicitly.
+### 10.3 Cross-mirror-root test placement — DECIDED
 
-### 10.5 Construction-helper signatures
+**Decision:** `tests/core/state/executionContext.test.ts` moves to
+`tests/v11/domain/state/execution/` during Step 5, mirroring the
+new source location. Consistent with the metaReviewGate, watchdog,
+and reply cross-mirror-root test precedents.
 
-§3.3 sketched `createRunningStandardSnapshot(input: ...)` helpers but
-didn't specify the input shape. Final shapes (e.g., do they accept the
-prior snapshot for derivation? do they accept explicit field-by-field
-arguments?) should be decided during Step 4b prep, not during Step 2.
+### 10.4 PersistedBubbleStateSnapshot reachability — NARROW
 
-### 10.6 `domain/state/reworkIntent.ts` placement
+**Evidence reviewed:**
+- `infrastructure/state/stateStore.ts:47` serializes via
+  `JSON.stringify(state, null, 2)` — direct persisted-shape write.
+- `infrastructure/state/stateSnapshotInspection.ts:62` reads
+  diagnostically via `JSON.stringify(state)` — direct read.
+- 15+ application/domain files call `applyStateTransition`; all
+  work with the domain variant, none touch the persisted shape
+  directly.
 
-The existing `domain/state/reworkIntent.ts` (150 LOC) is a domain
-helper for rework intents. Should it move into `domain/state/rework/`
-alongside the rework slice parser, or stay at the `domain/state/`
-root? **Recommendation:** move into `rework/` for cohesion.
+**Decision:**
+- `PersistedBubbleStateSnapshot` is exported from
+  `domain/state/snapshot/persistedBubbleStateSnapshot.ts`.
+- Allowed external consumers (post Step 4b): only files under
+  `infrastructure/state/` and tests that fixture state.json
+  contents. Application/domain code never imports the persisted
+  type directly; it goes through the parser (read path) or through
+  variant constructors plus a projection helper (write path).
+- `domain/state/snapshot/projection.ts` provides
+  `toPersistedSnapshot(snapshot: BubbleStateSnapshot):
+  PersistedBubbleStateSnapshot` for the write path. `writeStateSnapshot`
+  in `infrastructure/state/stateStore.ts` accepts the domain variant
+  and calls the projection helper internally — callers of
+  `writeStateSnapshot` need not be aware of the persisted shape.
+
+### 10.5 Construction-helper signatures — DECIDED
+
+**Evidence reviewed:**
+- 15+ callers use `applyStateTransition(current, input)` as the
+  primary state-mutation path.
+- The current `StateTransitionInput` (machine.ts:13-22) takes broad
+  optional fields and merges with the previous snapshot using
+  `undefined = keep / null = clear` semantics.
+- Per-variant constructors do exist (e.g., `createInitialBubbleState`
+  in initialState.ts) but are exceptions, not the rule.
+
+**Decision:**
+- `applyStateTransition` signature stays the same:
+  `(current: BubbleStateSnapshot, input: StateTransitionInput):
+  BubbleStateSnapshot`. The input type remains the broad optional
+  fields shape for compatibility.
+- The function body changes internally: after building the merged
+  flat record, it discriminates against the target lifecycle state
+  + provided fields and constructs the appropriate variant. If
+  the input does not provide enough fields to satisfy the target
+  variant (e.g., transitioning to RUNNING + round>=1 + standard
+  without `executionContext`), the function throws a typed error
+  with a clear message — same failure mode as today, just enforced
+  through the variant constructor instead of through the schema
+  validator at the tail.
+- Per-variant helpers (`createRunningStandardSnapshot`,
+  `createWaitingHumanFromRunning`, etc.) are **optional additive
+  conveniences**, not required for Step 4b. They may be added
+  later if call sites would benefit.
+
+### 10.6 `domain/state/reworkIntent.ts` placement — MOVED INTO REWORK/
+
+**Evidence reviewed:**
+- `domain/state/reworkIntent.ts` (150 LOC) holds
+  `deriveQueuedDeferredReworkIntentState` and
+  `applyDeferredReworkIntent` — pure rework-intent state transition
+  logic.
+- It imports from `machine.ts` and `roundContinuation.ts` (state-
+  root cohorts) — a sub-area move doesn't break those imports.
+- The rework slice parser belongs in `rework/` per the target tree.
+
+**Decision:** `reworkIntent.ts` moves into `domain/state/rework/`
+during Step 3b, renamed to `reworkIntentTransitions.ts` to
+disambiguate from the type-only `reworkIntentTypes.ts` sibling. §1
+target tree updated.
+
+### 10.7 Parser strictness on legacy/wrong inputs — STRICT-REJECT
+
+A new question surfaced by the §10.1 tightening: when the parser
+encounters a persisted state file where (e.g.) `state: "DONE"` has
+non-null `active_role`, what should it do?
+
+Three options:
+
+- **Strict-reject:** parser returns a validation error. Real bugs
+  become loud, never silently absorbed.
+- **Tolerant-normalize:** parser silently nulls the offending field
+  to match the variant. Smooths over historical inconsistency.
+- **Warn-and-normalize:** parser normalizes but logs a structured
+  warning. Surfaces the inconsistency without breaking workflows.
+
+**Decision: strict-reject.** Pairflow controls its own state writes;
+any legacy state file that violates the tightened invariants
+reflects a real bug in past code (or an unsupported manual edit),
+and silently normalizing would mask the bug. A startup state-file
+audit (one-off script during the Step 4b deployment) can pre-flag
+any in-the-wild violations. If such files exist and they were
+written by Pairflow itself, fix the writer in the same Step 4b
+commit. If they're manual edits, the user is responsible.
+
+**Note:** this decision applies to **value-level** invariants
+inside variants (e.g., terminal state with non-null active_*),
+NOT to shape-level invariants enforceable by TypeScript itself.
+Shape violations always reject (no choice).
+
+### 10.8 Variant validation order in parser — DECIDED
+
+Two natural orderings:
+
+1. Validate all slice shapes first → derive `kind` from result.
+2. Derive `kind` from raw input fields → validate within the
+   discriminated variant.
+
+**Decision:** order 1. Slice shape validation is per-field and
+catches malformed input before the kind discrimination relies on
+those fields. The kind discriminator (in
+`domain/state/authority/kindDiscrimination.ts`) operates on the
+already-validated `PersistedBubbleStateSnapshot`. This means the
+discriminator function's input type is the persisted shape, not
+`unknown`; the parsing layer wraps everything.
 
 ---
 
@@ -766,7 +887,7 @@ root? **Recommendation:** move into `rework/` for cohesion.
 
 ## 12. Approval
 
-Once §10 open questions are resolved (in review), this manifest is
-the contract. Step 2 may then begin. Deviations during execution
-require an amendment to this document in the same commit that
-introduces them.
+This manifest is **settled** as of 2026-05-11 (the open-questions
+revision). All §10 decisions are locked. Step 2 may begin.
+Deviations during execution require an amendment to this document
+in the same commit that introduces them.
