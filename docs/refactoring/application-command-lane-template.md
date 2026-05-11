@@ -1,7 +1,7 @@
 # Application Command Lane Template
 
 Status: draft
-Last updated: 2026-05-13
+Last updated: 2026-05-11
 Owner: architecture/runtime
 Scope: `src/v11/application/<command>/` — the application layer of CLI-driven
 command lanes (commit, watchdog, planWatch, etc.).
@@ -296,11 +296,12 @@ still top-level. The boundary was introduced for one concern, then never
 extended. This is the most common case across `application/` and the
 recommended starting point for template adoption.
 
-Half-done lanes today (per the survey): `metaReviewGate` (with caveats —
-its `internal/` is flat, so the refactor is a two-step move).
-`list`, `commit`, `merge`, and `metaReview` were previously half-done
-and have been refactored using this procedure; see "Worked examples"
-below.
+Half-done lanes today (per the survey): none. `list`, `commit`, `merge`,
+`metaReview`, and `metaReviewGate` were previously half-done and have
+been refactored using this procedure; see "Worked examples" below. The
+`metaReviewGate` case also validates the two-step variant that handles
+flat-internal cases (introduce sub-areas, then demote remaining
+intra-only top-level files).
 
 ### Procedure
 
@@ -362,7 +363,7 @@ below.
 
 ### Worked examples
 
-Four lane refactors have applied this procedure end-to-end. All started
+Five lane refactors have applied this procedure end-to-end. All started
 from a half-done state and ended at structured Tier 2.
 
 #### `application/list/` (refactored 2026-05-10, commit `da12ed98`)
@@ -579,6 +580,145 @@ Two findings worth carrying forward:
   inside `submit/`. Goal: sub-area names should reflect *concerns*
   (`error/`, `pipeline/`, `flow/`), not file roles (`cli/`,
   `rendering/`), unless multiple files share the role.
+
+#### `application/metaReviewGate/` (refactored 2026-05-11, commits `fc3b96de` → `d2aa84d4`)
+
+Structurally different from the prior four worked examples. The lane
+is a **multi-public-surface** case (eight root-public files, not the
+usual two or three), its `internal/` was **flat with ~30 files at the
+root** (one existing sub-dir, `currentRun/`) rather than the
+single-sub-area half-done shape, and the refactor was a **two-step
+move**: introduce new sub-areas inside `internal/`, then demote the
+few remaining intra-only top-level files into them. This worked
+example is intentionally laid out differently from the prior four to
+reflect those differences.
+
+Before: 12 top-level files, `internal/` with 32 flat `.ts` files + 1
+existing sub-dir (`currentRun/`, 6 files). The lane covers a routing
+decision point at convergence time (apply gate → finalize current
+run → auxiliary findings/threshold/reviewer-snapshot queries), so
+the public surface is wider than a single-command lane.
+
+After: 8 top-level root-public files + `internal/{apply,approve,autoRework,cleanRerun,currentRun,findings,humanGate,prompts,state}/`
+(nine sub-areas). The nine sub-areas mirror the lane's real concerns:
+`apply/` (convergence-time gate application), `approve/` (approve-path
+validation), `autoRework/` (auto-rework dispatch), `cleanRerun/`
+(clean-rerun route), `currentRun/` (post-convergence finalization
+pipeline — the pre-existing sub-area), `findings/` (findings metadata +
+validation + parity), `humanGate/` (human-gate route persistence +
+approval-envelope helpers), `prompts/` (1-file prompt-text builder),
+`state/` (state-machine helpers + cross-cluster gate-operation
+preconditions).
+
+Ten-commit sequence:
+
+1. **Test-relocation pre-cleanup** (`fc3b96de`). Six tests under
+   `tests/v11/shared/metaReviewGate/` covered behavior implemented in
+   `application/metaReviewGate/`, so the mirror root was wrong. Move
+   them under `tests/v11/application/metaReviewGate/[/internal/]/`
+   before any src moves to keep later src-move commits focused on
+   production layout rather than mixing in cross-root test relocations.
+2. **`findings/`** (`7188e934`). Two existing flat
+   `metaReviewGateFindingsValidation*` files + three demoted intra-only
+   top-level files (`metaReviewGateFindingsArtifactReadRetry`,
+   `metaReviewGateFindingsMetadata`, `metaReviewGateFindingsParityHelpers`)
+   merge into one sub-area. `metaReviewGateFindingsParityApi` stays
+   root-public because the contract test pins it (see finding below).
+3. **`apply/`** (`2bb0bde4`). Seven `metaReviewGateApply*` files. Apex
+   `metaReviewGateApply.ts` is consumed by the root-public
+   `metaReviewGateCommandApi`.
+4. **`autoRework/`** (`0b97bf26`). Five `metaReviewGateAutoRework*`
+   files; apex consumed by `currentRun/finalizationPipeline` and
+   `currentRun/approveRouting`.
+5. **`cleanRerun/`** (`ce47bc42`). Six `metaReviewGateCleanRerun*`
+   files, composed by `currentRun/cleanRerun.ts` (five of six imported
+   across the cluster boundary).
+6. **`humanGate/`** (`0cfe689b`). Four `metaReviewGateHumanGate*` files
+   plus two approval-envelope helpers (`approvalRequestEnvelope.ts`,
+   `metaReviewGateApprovalReviewerConsistency.ts`) that the persistence
+   chain pulls in. Six files, one sub-area.
+7. **`approve/`** (`c9822f1a`). Three `metaReviewApproveValidation*`
+   files; apex consumed only by `currentRun/approveRouting`.
+8. **`state/`** (`eab14434`). Two state-machine helpers
+   (`metaReviewGateStateHelpers`, `metaReviewGateStateStaging`) plus
+   the cross-cluster `metaReviewGateShared` (precondition + lock-path
+   helpers) — see "Cross-cluster shared util" finding below.
+9. **`prompts/`** (`d2aa84d4`). One file (`metaReviewGatePrompt.ts`)
+   demoted from lane root; a deliberate 1-file sub-area. See
+   "Deliberate 1-file sub-area" finding below.
+10. **Closeout (this commit)**. Survey + template doc-sync,
+    leftover-hunt confirmation (no empty directories, no orphan
+    references).
+
+Findings worth carrying forward:
+
+- **Contract-test-asserted root-public boundary.** Of the eight
+  root-public top-level files, five are pinned by
+  `tests/contracts/v11/metaReviewGatePublicApiBoundary.test.ts`. The
+  test imports symbols by exact path from `metaReviewGateCommandApi`,
+  `metaReviewGateCurrentRunApi`, `metaReviewGateFindingsParityApi`,
+  `metaReviewGateReviewerSnapshotApi`, and
+  `metaReviewGateThresholdAuthorityApi`, and asserts that the
+  shared barrel (`shared/metaReviewGate/index.ts`) does *not*
+  re-export them. The test path itself is the public-API contract;
+  demoting any of these files would break the boundary test even if
+  no production consumer existed. This is a **distinct pattern**
+  from the `list` lane's "signature-reference exception" (where a
+  type is part of a function signature) — here a boundary contract
+  test directly defines what the public surface is. The remaining
+  three root-public files (`Notify`, `PaneBinding`,
+  `RuntimeCapabilityResolution`) stay root-public on standard
+  production-consumer grounds (`defaults/` and `src/cli/`).
+- **Two-step move because `internal/` was flat.** Unlike the prior
+  four half-done lanes, `metaReviewGate`'s `internal/` already had
+  ~30 files at its root with one sub-dir (`currentRun/`). The
+  refactor introduces *new* sub-areas inside `internal/` *and*
+  demotes intra-only top-level files into them. The flat-internal
+  hypothesis (six naming clusters from the survey: `Apply*`,
+  `AutoRework*`, `CleanRerun*`, `Findings*`, `HumanGate*`,
+  `Approve*`) survived import-scan validation with two additions: the
+  two approval-envelope helpers fold into `humanGate/` (their sole
+  consumer chain), and the three state-related files plus
+  `metaReviewGateShared.ts` fold into `state/`.
+- **Cross-cluster shared util has a home.** `metaReviewGateShared.ts`
+  has four consumers across three sibling sub-areas plus
+  `currentRun/`. A 1-file `internal/support/` would have been a
+  generic enclave; bundling it with the state-machine helpers
+  (`StateHelpers` + `StateStaging`) into `state/` keeps the
+  sub-area count contained. The placement is borderline
+  (`buildGateLockPath` is path-related, not state-related), but the
+  trade-off favours fewer named sub-areas over more, and both
+  Shared helpers express gate-operation preconditions.
+- **Deliberate 1-file sub-area when nothing else fits.** `prompts/`
+  has exactly one file (`metaReviewGatePrompt.ts`). The
+  merge/metaReview precedents warn against 1-file enclaves, but
+  those warnings are context-specific — they apply when a natural
+  larger host exists. Here, the prompt-text composition concern
+  doesn't fit any of the other eight sub-areas, and
+  `metaReviewGatePrompt` doesn't itself form a natural pair with
+  anything else. A `prompts/` 1-file sub-area is the honest
+  single-concern home; the merge/metaReview "no 1-file" rule
+  remains correct as a heuristic against fragmentation, not as an
+  absolute prohibition.
+- **Cross-mirror-root test pre-cleanup.** Six tests under
+  `tests/v11/shared/metaReviewGate/` actually covered
+  application-side behavior. They were moved to
+  `tests/v11/application/metaReviewGate/[/internal/]/` in a
+  dedicated pre-cleanup commit before any src moves, so the later
+  src moves don't mix two orthogonal concerns (test mirror
+  correction vs production layout). This is heavier than the
+  `metaReview` precedent's same-sub-area test move because it
+  crosses the `shared/ → application/` mirror root, not just a
+  sister sub-area boundary.
+- **Tangential test-consumer discovery.** A non-mirror test
+  (`tests/core/bubble/approvalRequestEnvelope.test.ts`) imported
+  `approvalRequestEnvelope.ts` by its old `internal/` path; the
+  `humanGate/` move broke typecheck because the original
+  consumer-scan filter excluded `*.test.ts` filenames from the
+  result, masking this dependency. Lesson: when a sub-area move
+  re-targets a file, scan `tests/` without filename-based exclusion
+  to surface non-mirror test consumers — tests outside the lane's
+  own mirror tree can still import lane internals directly.
 
 ## Module Depth Check applies
 

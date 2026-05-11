@@ -1,7 +1,7 @@
 # Application Command Shapes — Survey
 
 Status: descriptive (factual inventory; companion to the template)
-Last updated: 2026-05-13
+Last updated: 2026-05-11
 Owner: architecture/runtime
 Scope: factual inventory of `src/v11/application/<lane>/` directories that
 backs the application-command-lane template
@@ -37,7 +37,7 @@ restructuring opportunity).
 |------|----:|:---:|----:|---------:|:---:|------:|--------|
 | status | 13 | no | — | yes | yes | 37 | unstructured (mixed CLI + command) |
 | watchdog | 12 | no | — | yes | yes | 35 | unstructured (multi-concern) |
-| metaReviewGate | 13 | yes | flat+1 | yes | — | 16 | half-done (internal flat) |
+| metaReviewGate | 8 | yes | 9 | yes | — | — | structured (Tier 2; refactored 2026-05-11) |
 | merge | 2 | yes | 5 | yes | yes | — | structured (Tier 2; refactored 2026-05-12) |
 | commit | 4 | yes | 5 | yes | yes | — | structured (Tier 2; refactored 2026-05-11) |
 | actorProtocol | 10 | no | — | yes | — | 26 | misclassified (not a command) |
@@ -157,9 +157,7 @@ Already-structured Tier 2:
 
 Half-done (internal/ exists but only 1 sub-area, top-level still bloated):
 
-- (none — all four standard-case half-done lanes have been refactored;
-  see below. `metaReviewGate` remains half-done with the flat-internal/
-  caveat covered in "Tier 2½".)
+- (none — all five half-done lanes have been refactored; see below.)
 
 Refactored from half-done to structured (Tier 2):
 
@@ -178,6 +176,16 @@ Refactored from half-done to structured (Tier 2):
   existing `internal/submit/` rather than fragmenting into new 1-file
   sub-areas; only error-boundary earned its own `internal/error/`
   following the commit/merge precedent.
+- **metaReviewGate** (was 12 top-level + 32 flat internal/ files + 1
+  existing sub-dir `currentRun/`; now 8 top-level + 9 sub-areas —
+  `apply/`, `approve/`, `autoRework/`, `cleanRerun/`, `currentRun/`,
+  `findings/`, `humanGate/`, `prompts/`, `state/`). The lane is the
+  only multi-public-surface refactored case so far: five of the eight
+  root-public files are pinned by a contract test
+  (`metaReviewGatePublicApiBoundary.test.ts`) rather than by direct
+  production consumers, and the refactor was a two-step move because
+  the existing `internal/` was flat (~30 files at root) rather than
+  the single-sub-area shape the prior four shared.
 
 Unstructured (no internal/ at all):
 
@@ -212,21 +220,16 @@ So far the **only** Tier 3 lane in `application/`.
   a separate architectural question: is `application/actorProtocol/` actually
   in the wrong area?
 
-### Tier 2½ — Half-done with flat internal/
+### Tier 2½ — Half-done with flat internal/ (no current cases)
 
-- **metaReviewGate** — 13 top-level, `internal/` exists but is **flat**: 33+
-  `.ts` files at `internal/` root, only 1 sub-dir (`currentRun/`). The flat
-  files cluster naturally:
-  - `metaReviewGateApply*` — 7 files
-  - `metaReviewGateAutoRework*` — 5 files
-  - `metaReviewGateCleanRerun*` — 6 files
-  - `metaReviewGateFindings*` — 2 files
-  - `metaReviewGateHumanGate*` — 4 files
-  - `metaReviewApprove*` — 3 files
-  
-  Restructuring metaReviewGate is therefore a two-step move: (a) introduce
-  sub-areas inside `internal/`, (b) move the still-top-level intra-only files
-  into them. This is a larger task than the standard Tier 2 promotion.
+This tier described `metaReviewGate` before its 2026-05-11 refactor:
+13 top-level files with an `internal/` directory that was flat (32 `.ts`
+files at `internal/` root and one existing sub-dir, `currentRun/`).
+The post-refactor shape is recorded under "Refactored from half-done
+to structured (Tier 2)" above. The two-step procedure that handles
+flat-internal cases (introduce sub-areas, then demote intra-only
+top-level files) is captured in the template's
+[`metaReviewGate` worked example](application-command-lane-template.md#applicationmetareviewgate-refactored-2026-05-11-commits-fc3b96de--d2aa84d4).
 
 ## CLI integration pattern
 
@@ -268,19 +271,20 @@ presentation helpers and should move to `internal/cli/` (or even into the
    on whether to move it to `domain/`, merge with `shared/actorProtocol/`, or
    keep but treat as a non-command application lane.
 
-3. **metaReviewGate's `internal/` is flat.** Half-done structure: the
-   boundary exists but the sub-areas don't. Refactoring this lane is a
-   two-step move (introduce sub-areas + promote top-level intra-only files).
+3. **metaReviewGate's `internal/` was flat — and is no longer.** Before
+   the 2026-05-11 refactor, `internal/` held 32 files at its root with
+   only one sub-dir (`currentRun/`). The two-step refactor (introduce
+   sub-areas, then demote intra-only top-level files into them) is
+   documented as a worked example in the template.
 
-4. **Half-done Tier 2 lanes share a pattern.** At the time of the original
+4. **Half-done Tier 2 lanes shared a pattern.** At the time of the original
    survey, `commit`, `merge`, `metaReview`, and `list` all had a single
    internal sub-area (`pipeline/`, `pipeline/`, `submit/`, `projection/`).
    The boundary was introduced for a single concern, but other intra-lane
    concerns stayed top-level. Pattern: "first sub-area added, more never
-   followed." All four have since been refactored to structured Tier 2
-   (see the inventory); the only remaining half-done case is
-   `metaReviewGate`, which has the flat-internal/ caveat covered in
-   "Tier 2½".
+   followed." All four — plus `metaReviewGate` with its flat-internal
+   variant — have since been refactored to structured Tier 2 (see the
+   inventory).
 
 5. **The `emit<X>V11.ts` thin-wrapper was universal — and was removed.**
    At the time of the original survey, all CLI-fronted lanes had a thin
@@ -331,9 +335,10 @@ location.
 **E. Half-done lanes are the easiest first targets.** They already have
 `internal/` precedent; the work is "promote more files into existing or
 new sub-areas," not "introduce a boundary from scratch." `commit`,
-`list`, `merge`, and `metaReview` validated this assumption (now
-structured); `metaReviewGate` (with its flat-internal/ caveat) remains
-on the runway.
+`list`, `merge`, `metaReview`, and `metaReviewGate` validated this
+assumption (now all structured). The `metaReviewGate` case also validated
+the two-step variant that handles flat-internal cases (introduce
+sub-areas, then demote remaining intra-only top-level files).
 
 **F. Outliers must be excluded from the template.** `actorProtocol` is not a
 command; the template should not try to fit it. Separate decision needed.
@@ -347,15 +352,20 @@ future contributor reading "Tier 2 commands typically have an
 `internal/finalization/` sub-area" can verify the claim against the actual
 lane inventory above.
 
-Four lane refactors have validated the template's half-done procedure:
+Five lane refactors have validated the template's half-done procedure:
 `list` (commit `da12ed98`, single-commit move), `commit` (commits
 `8d603cff`, `9b2b9755`, `2b5c6c71`, `2115f606`, four-commit sequence with
 a public-surface split for `remoteCommitContinuitySync.ts`), `merge`
 (commits `ea7f4970`, `01c0c61a`, `1d6c786d`, `c4aa58fd`, `dff96fcf`,
 five-commit sequence with a type-relocation step that decoupled
 `mergeCommandContract.ts` from `mergeCommandInputNormalization.ts` before
-the file move), and `metaReview` (commits `0f5a708a`, `72d51825`,
+the file move), `metaReview` (commits `0f5a708a`, `72d51825`,
 `c6cfcfef`, three-commit sequence preceded by a defaults-side dead
 re-export cleanup that flipped a phantom cross-lane consumer into an
-intra-lane file). The template's "Worked examples" section captures the
+intra-lane file), and `metaReviewGate` (commits `fc3b96de` →
+`d2aa84d4`, nine-commit sequence covering a test-mirror pre-cleanup,
+seven sub-area introductions (`findings/`, `apply/`, `autoRework/`,
+`cleanRerun/`, `humanGate/`, `approve/`, `state/`) inside a previously
+flat `internal/`, and a final 1-file `prompts/` sub-area demotion from
+the lane root). The template's "Worked examples" section captures the
 lessons learned; the inventory rows above record the post-refactor state.
