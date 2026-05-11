@@ -10,8 +10,8 @@ import {
   throwAsHumanReplyCommandError
 } from "./internal/error/replyCommandError.js";
 import { executeReplyMutation } from "./mutation/replyMutationExecution.js";
-import { resolveReplyCommandDependencies } from "./replyCommandDependencyResolution.js";
-import { normalizeReplyCommandInput } from "./replyCommandInputNormalization.js";
+import { resolveReplyCommandDependencies } from "./internal/preparation/replyCommandDependencyResolution.js";
+import { normalizeReplyCommandInput } from "./internal/preparation/replyCommandInputNormalization.js";
 
 export async function emitHumanReply(
   input: EmitHumanReplyInput,

@@ -1,9 +1,9 @@
-import type { EmitHumanReplyDependencies } from "./replyCommandContract.js";
+import type { EmitHumanReplyDependencies } from "../../replyCommandContract.js";
 import {
   appendProtocolEnvelope,
   startCommandContextDefaults
-} from "../start/startCommandDependencyDefaults.js";
-import { reviewerDeliveryDefaults } from "../pass/reviewerDeliveryDefaults.js";
+} from "../../../start/startCommandDependencyDefaults.js";
+import { reviewerDeliveryDefaults } from "../../../pass/reviewerDeliveryDefaults.js";
 
 async function emitDeliveryNotificationAck(
   ...args: Parameters<typeof reviewerDeliveryDefaults.emitDeliveryNotificationAck>
