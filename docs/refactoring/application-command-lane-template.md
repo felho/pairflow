@@ -383,12 +383,12 @@ collapses to when no naming-role exception fires.
 
 ### Worked examples
 
-Eight lane refactors have applied this procedure end-to-end. Five
-started from a half-done state and ended at structured Tier 2; three
-(`restart`, `reconcile`, `watchdog`) started from fully flat lanes
-(no `internal/` at all) and validated the from-scratch procedure
-variant. The first five worked examples each document one or more
-naming-role exceptions (signature-reference type, cross-lane
+Nine lane refactors have applied this procedure end-to-end. Five
+started from a half-done state and ended at structured Tier 2; four
+(`restart`, `reconcile`, `watchdog`, `status`) started from fully
+flat lanes (no `internal/` at all) and validated the from-scratch
+procedure variant. The first five worked examples each document one
+or more naming-role exceptions (signature-reference type, cross-lane
 split-extraction, type-relocation, phantom cross-lane consumer,
 contract-test path-pin); the `restart` worked example is the
 canonical "no exception fired" reference for from-scratch lanes; the
@@ -402,7 +402,19 @@ from-scratch lane (shared-resident error class, type-relocation via
 application-side `*CliCommand.ts`), generalizing the from-scratch
 path to: introduce the public/internal boundary fresh, project
 sub-areas from naming clusters, fire any of the catalogued exception
-precedents as needed, then run the per-sub-area moves.
+precedents as needed, then run the per-sub-area moves. The `status`
+worked example is the first from-scratch case where no new
+*exception* variant was introduced — the eight-variant catalog from
+watchdog covered the surface end-to-end — but two new findings
+landed on the **non-exception axis**: *mixed-role barrel-and-impl
+placement* (when a `*Internals.ts`-style file is both a re-export
+aggregator and a focused implementation file, place by primary
+content concern without splitting the file in the lane refactor)
+and *pure-barrel kept as Module-Depth-protective CLI surface* (when
+the lane root holds a small `*CliCommand.ts` that is **only** a
+re-export of sister CLI files, keep the barrel root-public rather
+than dropping it — the barrel is what prevents `src/cli/` consumers
+from reaching into `internal/cli/`).
 
 #### `application/list/` (refactored 2026-05-10, commit `da12ed98`)
 
@@ -1281,6 +1293,280 @@ exception variants and the precedent re-fire above):
   "one sub-area for the whole flow lifecycle" generalizes to
   cases where routing is the central orchestration, not only to
   cases where routing is a small eligibility check.
+
+#### `application/status/` (refactored 2026-05-12, commits `5f509262` → this commit)
+
+**This is the fourth from-scratch Tier 2 case** — and the first
+where the lane closed with a pure re-export barrel at the lane root
+as its CLI surface (rather than a `*CliCommand.ts` that holds parser
+or runner logic) and the first where no *new* exception variant
+fired. The eight-variant exception catalog from watchdog covered the
+status surface end-to-end; instead, two findings landed on the
+**non-exception axis**: how to place a mixed-role barrel-and-impl
+file, and why a tiny `*CliCommand.ts` that contains only re-exports
+is still root-public load-bearing.
+
+Worked-example structure note: this entry follows the
+restart/reconcile/watchdog layout (goal-state introduction up front,
+per-sub-area moves as a mechanical postscript). The "Findings" block
+below documents the two non-exception findings; the
+goal-state-and-move story is closer to restart's textbook collapse
+than to watchdog's multi-exception case, despite the larger sister
+file count, because the CLI cluster's seven sister files all
+classify lane-internal-already on the import scan.
+
+Before: 12 top-level files, no `internal/`. Naming-role coverage:
+`*CommandApi`, `*CliCommand` (pure re-export barrel of four sister
+symbols, 450 bytes), six `statusCli*` rendering/parser/runner files
+(`statusCliOptions`, `statusCliRunner`, `statusCliAnsi`,
+`statusCliTableRenderer`, `statusCliTextRenderer`,
+`statusCliValueFormatters`), plus four `statusCommand*` files
+encoding the computation/view pipeline (`statusCommandViewBuilder`,
+`statusCommandGateState`, `statusCommandInternals`,
+`statusCommandPathView`). No `*CommandContract.ts` file at the lane
+root before the refactor — `BubbleStatusInput` and
+`BubbleStatusDependencies` lived inline in the 13.6kB
+`statusCommandApi.ts`.
+
+After: 3 top-level root-public files plus
+`internal/{cli,computation,view}/` (three sub-areas, ten internal
+files). Top-level: `statusCommandApi.ts` (canonical entry,
+re-exports `BubbleStatusView` from the moved ViewBuilder, holds
+`BubbleStatusError` and `asBubbleStatusError` inline),
+`statusCommandContract.ts` (new file — `BubbleStatusInput` and
+`BubbleStatusDependencies`), `statusCliCommand.ts` (the 450-byte
+pure re-export barrel, retargeted at `./internal/cli/` paths).
+
+**Goal-state introduction (the from-scratch step the half-done
+procedure skips):**
+
+- **Public surface decision.** With no pre-existing `internal/`,
+  the public/internal boundary is decided fresh. The naming-role
+  table defaults proposed three potential root-public files (`Api`,
+  `Contract`, `CliCommand`). The import scan agreed on all three
+  with one note: `statusCommandContract.ts` did not yet exist at
+  the start (the dependency port types lived inline in
+  `statusCommandApi.ts`). Goal-state therefore *introduces* a
+  Contract file via the reconcile-style minimal hoist (see commit 1
+  below) rather than promoting an existing file. The seven CLI
+  sister files and four computation/view sister files all
+  classified intra-only on the import scan: every renderer's only
+  intra-lane import was the public `BubbleStatusView` result type
+  (re-exported from `statusCommandApi.ts`), and no cross-area
+  production caller reached any sister directly — the sole
+  external CLI consumer (`src/cli/commands/bubble/status.ts`)
+  reached the lane through the barrel.
+- **Sub-area projection from naming clusters.** The ten intra-only
+  files clustered by content: the six `statusCli*` rendering and
+  parser/runner files → `cli/`; the two view-assembly files
+  (`statusCommandViewBuilder` defining `BubbleStatusView`,
+  `statusCommandPathView` projecting the command path) → `view/`;
+  the two read-and-resolve files (`statusCommandInternals` reading
+  transcript + inbox, `statusCommandGateState` resolving doc gate
+  state) → `computation/`. The `view/` vs `computation/` split
+  reflects the natural read→assemble pipeline: computation reads
+  state and resolves gates; view assembles the public
+  `BubbleStatusView` from the read results. Bundling all four under
+  a single `projection/` was considered and rejected — the
+  read-vs-assemble concern boundary is real, and merging would have
+  produced one wide sub-area mixing four concerns (transcript
+  reading, gate resolution, view assembly, path-view projection)
+  for no honest gain.
+
+**No new exception variant fired** (the eight-variant catalog from
+watchdog covers the surface), **but two non-exception axis findings
+landed**:
+
+- **Mixed-role barrel-and-impl file placement (new finding).**
+  `statusCommandInternals.ts` is structurally two files glued
+  together: half a re-export barrel (re-exports the GateState
+  module's four symbols, the PathView module's `toStatusCommandPathView`
+  function, and three shared type passthroughs from
+  `shared/status/statusCommandTypes.ts`) and half a focused
+  implementation file (defines `StatusTranscriptDataDependencies`,
+  exports `countPendingHumanQuestions`,
+  `resolvePendingApprovalCount`, and the primary
+  `readStatusTranscriptData` reader). The merge precedent's
+  "sub-area names reflect content, not file-name conventions" rule
+  generalizes here: the file's *primary* concern is transcript +
+  inbox reading and pending-question counting, so it placed under
+  `internal/computation/` alongside `statusCommandGateState.ts`.
+  The barrel re-exports were left intact during the move and
+  retargeted at the new sibling/cross-sub-area paths; splitting the
+  barrel half from the impl half is a separate cleanup, not part of
+  the lane refactor, because (a) the refactor scope is file-level
+  not function-level, and (b) the barrel re-exports keep existing
+  call sites stable while the lane structure stabilizes. **Lesson
+  for future refactors:** when a `*Internals.ts`-style file mixes a
+  barrel-aggregator role with a focused-impl role, classify by the
+  primary impl concern at the file level, accept the barrel
+  re-exports as incidental during the move, and treat any later
+  barrel-split as a downstream cleanup that the lane refactor does
+  not block on.
+- **Pure-barrel kept as Module-Depth-protective CLI surface (new
+  finding).** `statusCliCommand.ts` is a 450-byte pure re-export
+  barrel: it contains only four `export { ... } from "./statusCli<X>.js"`
+  lines plus one `export type { ... }` block. The barrel has no
+  logic of its own. The natural question on the from-scratch path
+  is whether to *drop* the barrel and have
+  `src/cli/commands/bubble/status.ts` import the four sister
+  symbols directly. Two competing approaches were considered and
+  rejected:
+  - Drop the barrel and keep sisters root-public — would have
+    promoted four single-purpose files to root-public on
+    sister-by-sister grounds, with no production consumer demanding
+    each one individually (the CLI entry's import is the only
+    consumer, and it currently imports them as a bundle through the
+    barrel).
+  - Drop the barrel and move sisters to `internal/cli/`, with the
+    CLI entry importing directly from `internal/` — would have
+    created a Module Depth Check violation: external code
+    (`src/cli/`) would reach into the lane's `internal/cli/`,
+    which the visibility tier definition explicitly forbids.
+
+  Keeping the barrel root-public preserves the Module Depth invariant
+  ("`internal/` is consumed only intra-lane") while still demoting
+  the six sister files into `internal/cli/`. The barrel becomes the
+  canonical CLI surface the external consumer reaches, exactly as
+  the naming-role table's `*CliCommand.ts` row intends — even though
+  its *content* is now structurally different from
+  restart/reconcile-style `*CliCommand.ts` files that hold runtime
+  composition or parser-help-text logic. **Lesson for future
+  refactors:** a `*CliCommand.ts` whose content is purely re-exports
+  is still root-public load-bearing when it is the only path
+  through which a `src/cli/` consumer composes the lane's CLI
+  surface; the visibility decision is "is this how external CLI
+  reaches the lane?", not "does the file contain logic?". The
+  pure-barrel pattern is the inverse complement of watchdog's
+  "missing `*CliCommand.ts`" finding: where watchdog observed that
+  the lane root closes at two root-public files when no
+  application-side `*CliCommand.ts` exists at all (CLI parser +
+  runner inline in `src/cli/commands/bubble/<lane>.ts`), status
+  observes that the lane root closes at three root-public files
+  even when the `*CliCommand.ts` is a 450-byte content-free
+  re-export barrel — what counts is the *presence* of the file as a
+  Module-Depth-protective surface.
+
+Five-commit sequence (one pre-cleanup + three sub-area moves +
+doc-sync):
+
+1. **Contract hoist pre-cleanup** (`5f509262`).
+   `BubbleStatusInput` and `BubbleStatusDependencies` hoisted from
+   `statusCommandApi.ts` into a new `statusCommandContract.ts`,
+   following the reconcile-precedent minimal-hoist pattern.
+   Intra-lane consumer `statusCliRunner.ts` updated; cross-area
+   consumers `src/cli/commands/bubble/status.ts` (`BubbleStatusDependencies`
+   type import) and `src/index.ts` (`BubbleStatusInput` re-export)
+   retargeted at Contract; the application-side test consumer
+   `tests/core/bubble/statusBubble.test.ts` updated its type-import
+   helper to match. The `BubbleStatusError` class and
+   `asBubbleStatusError` thrower stayed inline in Api because the
+   class is small (4 lines), single-area, and tightly coupled to
+   the thrower — the four-sub-area extension (commit/merge/restart/
+   reconcile precedent of a separate `internal/error/`) would have
+   produced an honest 1-file sub-area without independent concern
+   value, and the merge precedent's "no 1-file sub-areas unless
+   nothing else fits" rule applies.
+2. **`internal/computation/`** (`7fb3d381`). Two files
+   (`statusCommandInternals.ts`, `statusCommandGateState.ts`). The
+   read-and-resolve cluster moves first because the view assembly
+   in commit 3 depends on its types; ordering computation before
+   view also keeps the temporary barrel re-export of
+   `toStatusCommandPathView` (which Internals re-exports from a
+   PathView still at root) on a single transient path
+   `../../statusCommandPathView.js` until commit 3 shortens it to
+   the sibling sub-area `../view/statusCommandPathView.js`.
+3. **`internal/view/`** (`ad4c0c43`). Two files
+   (`statusCommandViewBuilder.ts`, `statusCommandPathView.ts`). The
+   view-assembly cluster moves second; `statusCommandApi.ts`
+   retargets its ViewBuilder import + re-export at the new path,
+   and the Internals barrel re-export of `toStatusCommandPathView`
+   shortens to `../view/statusCommandPathView.js` (cross-sub-area
+   sibling). After this commit the lane root holds only Api +
+   Contract + the seven CLI sister files yet to move.
+4. **`internal/cli/`** (`0e204705`). Six sister CLI files
+   (`statusCliOptions.ts`, `statusCliRunner.ts`, `statusCliAnsi.ts`,
+   `statusCliTableRenderer.ts`, `statusCliTextRenderer.ts`,
+   `statusCliValueFormatters.ts`) move in a single commit; the
+   single application-side test mirror
+   (`tests/v11/application/status/statusCliValueFormatters.test.ts`)
+   relocates alongside its source under
+   `tests/v11/application/status/internal/cli/`. The root-public
+   `statusCliCommand.ts` barrel retargets its four re-export paths
+   at `./internal/cli/`. Cross-sibling renderer imports of
+   `BubbleStatusView` from Api shorten to the sibling-of-parent
+   path `../../statusCommandApi.js`; `statusCliRunner.ts`
+   re-targets its dependency port type via
+   `../../statusCommandContract.js`; `statusCliAnsi.ts` and
+   `statusCliOptions.ts` have no intra-lane imports so they
+   relocate unchanged.
+5. **Closeout (this commit).** Survey + template doc-sync;
+   leftover-hunt confirmed (no empty directories, no orphan
+   references). The status lane is the fourth from-scratch case in
+   the inventory.
+
+Findings worth carrying forward (in addition to the two
+non-exception findings above):
+
+- **Sample size 4 hardens the from-scratch path.** Four
+  from-scratch refactors have now landed (restart, reconcile,
+  watchdog, status). Exception firing across the sample: 0, 1, 3+1
+  re-fire, 0 new (existing precedents applied). Sub-area counts:
+  4, 3, 4, 3. The procedure (introduce the public/internal
+  boundary fresh, project sub-areas from naming clusters, fire
+  any catalogued exception precedents as needed, run the
+  per-sub-area moves) absorbs all four patterns. The eight-variant
+  exception catalog from watchdog
+  (signature-reference type, cross-lane split-extraction,
+  type-relocation [out-of-Contract], type-relocation via `typeof`
+  [into-Contract], phantom cross-lane consumer, contract-test
+  path-pin, shared-resident error class, missing `*CliCommand.ts`
+  goal-state shape) covered the status surface without requiring a
+  new ninth variant — the first from-scratch case where the
+  catalog held without extension. Status instead extended the
+  template on the orthogonal **non-exception** axis (placement
+  rules for mixed-role files and load-bearing pure-barrel
+  surfaces), suggesting that the exception catalog is approaching
+  saturation while the placement-rule axis remains an active area
+  of accretion.
+- **Contract hoist scope rule generalizes from reconcile.**
+  Reconcile hoisted a single defaults-pinned type
+  (`ReconcileRuntimeSessionsDefaultDependencies`) into Contract to
+  unblock a file move; status hoisted the entire dependency port
+  (`BubbleStatusInput` + `BubbleStatusDependencies`) preemptively
+  because the host Api file was 13.6kB and 423 lines and the
+  port-type cluster was substantial. Both are reconcile-precedent
+  *minimal* Contract hoists in the sense that only the types
+  needing public-surface stability move; in reconcile that was one
+  type, in status it was two interface definitions. The error
+  class and thrower stayed inline in Api (status) because the
+  class is small and single-area; reconcile's `StartupReconcilerError`
+  moved to `internal/error/` because its containing Runtime file
+  had two siblings (`Orchestration`, `ErrorNormalization`) earning
+  their own sub-area. **Rule:** Contract hoist scope is governed
+  by what the import scan demands and what the host Api's size
+  warrants, not by a fixed type-by-type recipe; small classes that
+  are tightly coupled to a public thrower can stay inline in Api
+  rather than forming a 1-file `internal/error/` sub-area.
+- **Sub-area count is governed by content boundaries, not by
+  sister file count.** Status has the largest sister file count
+  among the four from-scratch cases (ten intra-only files
+  post-Contract-hoist), yet closed at three sub-areas — fewer than
+  restart's four or watchdog's four. The cluster boundary is
+  content-driven (`cli/` for six files that share the CLI
+  concern; `computation/` for two files that share the
+  read-and-resolve concern; `view/` for two files that share the
+  view-assembly concern), not file-count-driven. Splitting
+  `cli/` into `cli/rendering/` + `cli/integration/` was
+  considered and rejected — the merge precedent's "one sub-area
+  for the whole lifecycle" generalizes to the CLI concern when
+  rendering, parsing, and runner integration co-vary (they all
+  consume the same `BubbleStatusView` and share the same external
+  reach surface through the barrel). **Rule:** sub-area count
+  reflects the number of distinct concerns, not the number of
+  files; lanes with many intra-only files clustered around few
+  concerns close with fewer sub-areas than the file count would
+  suggest.
 
 ## Module Depth Check applies
 

@@ -1,7 +1,7 @@
 # Application Command Shapes — Survey
 
 Status: descriptive (factual inventory; companion to the template)
-Last updated: 2026-05-11
+Last updated: 2026-05-12
 Owner: architecture/runtime
 Scope: factual inventory of `src/v11/application/<lane>/` directories that
 backs the application-command-lane template
@@ -35,7 +35,7 @@ restructuring opportunity).
 
 | Lane | Top | Int | Sub | Defaults | CLI | Score | Status |
 |------|----:|:---:|----:|---------:|:---:|------:|--------|
-| status | 13 | no | — | yes | yes | 37 | unstructured (mixed CLI + command) |
+| status | 3 | yes | 3 | yes | yes | — | structured (Tier 2; refactored 2026-05-12) |
 | watchdog | 2 | yes | 4 | yes | yes | — | structured (Tier 2; refactored 2026-05-11) |
 | metaReviewGate | 8 | yes | 9 | yes | — | — | structured (Tier 2; refactored 2026-05-11) |
 | merge | 2 | yes | 5 | yes | yes | — | structured (Tier 2; refactored 2026-05-12) |
@@ -249,13 +249,41 @@ from-scratch cases:
   following the merge precedent ("one sub-area for the whole flow
   lifecycle: routing + flow primitives + meta-review specialization").
   See the template's `application/watchdog/` worked example.
+- **status** (was 12 top-level + no internal/; now 3 top-level + 3
+  sub-areas — `cli/`, `computation/`, `view/`). The fourth from-scratch
+  case and the first where the lane closed with a pure re-export barrel
+  at the lane root rather than a `*CliCommand.ts` that holds CLI parser
+  or runner logic. Two pre-existing patterns extended cleanly: the
+  reconcile-style minimal Contract hoist (`BubbleStatusInput` and
+  `BubbleStatusDependencies` lifted out of `statusCommandApi.ts` into a
+  new `statusCommandContract.ts`, with the `BubbleStatusError` class
+  staying inline in Api because it is tiny, single-area, and tightly
+  coupled to `asBubbleStatusError`); the merge-precedent rule "sub-area
+  names reflect content, not file-name conventions" generalized to the
+  mixed-role `statusCommandInternals.ts` (a barrel + transcript/inbox
+  reader that placed under `internal/computation/` by primary content
+  without splitting the file). Two new findings landed:
+  *mixed-role barrel-and-impl placement* (when a `*Internals.ts`-style
+  file is both a re-export aggregator and a focused implementation file,
+  content-classify by the primary impl concern and accept the barrel
+  re-exports as incidental; splitting the file is a separate cleanup,
+  not part of the lane refactor); and *pure-barrel kept as
+  Module-Depth-protective CLI surface* (when the lane root holds a
+  small `*CliCommand.ts` that is **only** a re-export of sister CLI
+  files, keep the barrel root-public rather than dropping it — the
+  barrel is what prevents `src/cli/` consumers from reaching directly
+  into `internal/cli/`, so it has structural protection value even when
+  its content is purely re-exports). No new exception variant
+  introduced; the eight-variant exception catalog from watchdog covers
+  the status surface end-to-end. See the template's
+  `application/status/` worked example.
 
 Unstructured (no internal/ at all):
 
-- **status** (13), **reply** (7).
+- **reply** (7).
 
-These follow the standard naming and have the data to slot into the Tier 2
-shape; they just need `internal/<sub-areas>/` introduced.
+The lane follows the standard naming and has the data to slot into the
+Tier 2 shape; it just needs `internal/<sub-areas>/` introduced.
 
 ### Tier 3 — Coordinator (lane-internal-but-named submodules)
 
@@ -308,10 +336,24 @@ restructuring: typically stays at root-public (the CLI layer imports it), or
 moves to `internal/cli/<X>CliCommand.ts` if the CLI entry becomes the only
 external consumer and a deeper `<X>CommandApi` is the use-case interface.
 
-`status` is an outlier: it has 7 `statusCli*` rendering files (ANSI, table,
-text, formatters, value-formatters) at top-level. These are clearly CLI
-presentation helpers and should move to `internal/cli/` (or even into the
-`src/cli/commands/status/` area, if rendering is CLI-area-owned).
+`status` had been an outlier — seven `statusCli*` files (ANSI, table,
+text, formatters, value-formatters) flat at top-level — and resolved
+under the lane-private branch of this choice: the renderers and
+related CLI sister files moved into `application/status/internal/cli/`
+as part of the 2026-05-12 from-scratch Tier 2 refactor, with the
+small `statusCliCommand.ts` pure re-export barrel kept root-public as
+the canonical CLI surface (Module Depth Check protection — the
+`src/cli/` consumer reaches the lane through the barrel, not into
+`internal/cli/`). The alternative branch — moving CLI rendering into
+`src/cli/commands/status/` as CLI-area-owned code — was considered
+and deferred as a separate downstream concern; no production consumer
+demanded it, since every renderer's only intra-lane import was the
+public `BubbleStatusView` result type re-exported from
+`statusCommandApi.ts`, and the renderers were already lane-internal
+in production. The general lesson stands: the CLI rendering placement
+axis is per-lane judgment between *lane-private CLI cluster* (status
+took this branch) and *CLI-area-owned cluster*; the template should
+not prescribe one location.
 
 ## Anomalies and notable findings
 
@@ -395,6 +437,57 @@ presentation helpers and should move to `internal/cli/` (or even into the
    specialization (three files) when no separate orchestration
    file exists at top-level.
 
+   **status was the fourth from-scratch refactor — and the first
+   where the lane root closed with a pure re-export barrel as its
+   CLI surface rather than a `*CliCommand.ts` holding parser or
+   runner logic.** The lane started at twelve top-level files
+   (computation/view cluster of five `statusCommand*` files plus a
+   CLI cluster of seven `statusCli*` files) and no `internal/`. The
+   import scan flagged two pre-existing patterns to apply rather
+   than introduce as new exception types:
+   (1) the reconcile-style minimal Contract hoist —
+   `BubbleStatusInput` and `BubbleStatusDependencies` lifted out of
+   the 13.6kB `statusCommandApi.ts` into a new
+   `statusCommandContract.ts`, with consumers (intra-lane runner,
+   `src/cli/commands/bubble/status.ts`, `src/index.ts` re-export,
+   and the application-side `statusBubble.test.ts` type-import
+   helper) retargeted at the Contract; the `BubbleStatusError`
+   class and `asBubbleStatusError` thrower stayed inline in Api
+   because the class is small, single-area, and tightly coupled to
+   the thrower, so the four-sub-area extension (commit/merge/
+   restart/reconcile pattern of a separate `internal/error/`) would
+   have produced an honest 1-file sub-area without independent
+   concern value;
+   (2) the merge precedent's content-over-naming rule — the
+   `statusCommandInternals.ts` file is half re-export barrel
+   (gateState + pathView re-exports plus shared/status type
+   passthrough) and half implementation (the transcript + inbox
+   reader plus pending-question counter), so it placed under
+   `internal/computation/` by its primary impl concern; splitting
+   the barrel half from the impl half was deferred as a separate
+   cleanup. **Two new findings** landed:
+   *mixed-role barrel-and-impl placement* (the generalization of
+   the `*Internals.ts` content rule: place by primary concern, do
+   not split mixed-role files during the lane refactor); and
+   *pure-barrel kept as Module-Depth-protective CLI surface* (the
+   450-byte `statusCliCommand.ts` re-exports the four sister CLI
+   symbols and contains no logic of its own — keeping it
+   root-public is what prevents the `src/cli/` consumer from
+   reaching into `internal/cli/`; dropping the barrel would have
+   forced either path B (CLI-area extraction) or root-public sister
+   files, both more invasive than warranted). Sub-area outcome:
+   three sub-areas — `cli/` (six files: Options, Runner, Ansi,
+   TableRenderer, TextRenderer, ValueFormatters), `computation/`
+   (two files: Internals + GateState), `view/` (two files:
+   ViewBuilder + PathView). No new exception type introduced; the
+   eight-variant catalog from watchdog (signature-reference type,
+   cross-lane split-extraction, type-relocation [out-of-Contract],
+   type-relocation via `typeof` [into-Contract], phantom cross-lane
+   consumer, contract-test path-pin, shared-resident error class,
+   missing `*CliCommand.ts` goal-state shape) covers the status
+   surface end-to-end. See the template's `application/status/`
+   worked example.
+
 4. **Half-done Tier 2 lanes shared a pattern.** At the time of the original
    survey, `commit`, `merge`, `metaReview`, and `list` all had a single
    internal sub-area (`pipeline/`, `pipeline/`, `submit/`, `projection/`).
@@ -476,9 +569,9 @@ future contributor reading "Tier 2 commands typically have an
 `internal/finalization/` sub-area" can verify the claim against the actual
 lane inventory above.
 
-Eight lane refactors have validated the template. Five followed the
-half-done procedure; three (`restart`, `reconcile`, `watchdog`)
-validated the from-scratch procedure variant. In sequence:
+Nine lane refactors have validated the template. Five followed the
+half-done procedure; four (`restart`, `reconcile`, `watchdog`,
+`status`) validated the from-scratch procedure variant. In sequence:
 `list` (commit `da12ed98`, single-commit move), `commit` (commits
 `8d603cff`, `9b2b9755`, `2b5c6c71`, `2115f606`, four-commit sequence with
 a public-surface split for `remoteCommitContinuitySync.ts`), `merge`
@@ -501,12 +594,19 @@ import scan on every top-level file), `reconcile` (commits
 flat starting state with a merge-style type-relocation pre-cleanup
 because the defaults layer pinned an intra-only DepRes type — the
 first from-scratch refactor where a naming-role exception fired),
-and `watchdog` (commits `c4faf095` → this commit, four-sub-area
+`watchdog` (commits `c4faf095` → `596f98f0`, four-sub-area
 introduction from a fully flat starting state with two pre-cleanup
 commits — a typeof-direction type-relocation into the Contract and a
 cross-mirror-root sampler test relocation — and three new exception
 findings: shared-resident error class, type-relocation via `typeof`
 on an implementation function, and a goal-state without an
-application-side `*CliCommand.ts`). The template's "Worked examples"
-section captures the lessons learned; the inventory rows above record
-the post-refactor state.
+application-side `*CliCommand.ts`), and `status` (commits
+`5f509262` → this commit, three-sub-area introduction
+— `cli/`, `computation/`, `view/` — from a fully flat starting
+state with one pre-cleanup commit applying the reconcile-style
+minimal Contract hoist and no new exception variant; two new
+template findings on the non-exception axis: mixed-role
+barrel-and-impl placement and pure-barrel kept as
+Module-Depth-protective CLI surface). The template's "Worked
+examples" section captures the lessons learned; the inventory rows
+above record the post-refactor state.
