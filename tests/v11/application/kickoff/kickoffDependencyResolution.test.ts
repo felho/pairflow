@@ -9,6 +9,7 @@ import {
 } from "../../../../src/v11/application/start/startCommandDependencyDefaults.js";
 import { resolveKickoffDependencies } from "../../../../src/v11/application/kickoff/internal/validation/kickoffDependencyResolution.js";
 import { createInitialBubbleState } from "../../../../src/v11/domain/state/initialState.js";
+import { toPersistedSnapshot } from "../../../../src/v11/domain/state/snapshot/projection.js";
 
 describe("kickoffDependencyResolution", () => {
   it("uses kickoff defaults when overrides are omitted", () => {
@@ -69,7 +70,9 @@ describe("kickoffDependencyResolution", () => {
   });
 
   it("delegates state read/write through the variant adapter to the override", async () => {
-    const persistedSnapshot = createInitialBubbleState("b_kickoff_dep_resolution_adapter");
+    const persistedSnapshot = toPersistedSnapshot(
+      createInitialBubbleState("b_kickoff_dep_resolution_adapter")
+    );
     const readStateSnapshotOverride = vi.fn(async () => ({
       state: persistedSnapshot,
       fingerprint: "fp-read"

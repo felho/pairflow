@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { createInitialBubbleState } from "../../../src/v11/domain/state/initialState.js";
+import { toPersistedSnapshot } from "../../../src/v11/domain/state/snapshot/projection.js";
 import {
   StateStoreConflictError,
   createStateSnapshot,
@@ -36,7 +37,7 @@ describe("state store", () => {
 
     const created = await createStateSnapshot(
       statePath,
-      createInitialBubbleState("b_store_01")
+      toPersistedSnapshot(createInitialBubbleState("b_store_01"))
     );
     const loaded = await readStateSnapshot(statePath);
 
@@ -50,7 +51,7 @@ describe("state store", () => {
 
     const created = await createStateSnapshot(
       statePath,
-      createInitialBubbleState("b_store_02")
+      toPersistedSnapshot(createInitialBubbleState("b_store_02"))
     );
 
     const next = {
@@ -72,7 +73,7 @@ describe("state store", () => {
 
     const created = await createStateSnapshot(
       statePath,
-      createInitialBubbleState("b_store_03")
+      toPersistedSnapshot(createInitialBubbleState("b_store_03"))
     );
 
     const newer = {
@@ -176,7 +177,7 @@ describe("state store", () => {
 
     const created = await createStateSnapshot(
       statePath,
-      createInitialBubbleState("b_store_04")
+      toPersistedSnapshot(createInitialBubbleState("b_store_04"))
     );
 
     await writeFile(`${statePath}.lock`, "locked", "utf8");

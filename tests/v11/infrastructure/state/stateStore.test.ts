@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { createInitialBubbleState } from "../../../../src/v11/domain/state/initialState.js";
+import { toPersistedSnapshot } from "../../../../src/v11/domain/state/snapshot/projection.js";
 import {
   StateStoreConflictError,
   createStateSnapshot,
@@ -36,7 +37,7 @@ describe("v11 infrastructure state store", () => {
 
     const created = await createStateSnapshot(
       statePath,
-      createInitialBubbleState("b_v11_state_store_01")
+      toPersistedSnapshot(createInitialBubbleState("b_v11_state_store_01"))
     );
     const loaded = await readStateSnapshot(statePath);
 
@@ -89,7 +90,7 @@ describe("v11 infrastructure state store", () => {
 
     const created = await createStateSnapshot(
       statePath,
-      createInitialBubbleState("b_v11_state_store_03")
+      toPersistedSnapshot(createInitialBubbleState("b_v11_state_store_03"))
     );
 
     await writeStateSnapshot(

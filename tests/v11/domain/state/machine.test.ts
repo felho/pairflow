@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 
 import { createInitialBubbleState } from "../../../../src/v11/domain/state/initialState.js";
 import { applyStateTransition } from "../../../../src/v11/domain/state/machine.js";
-import { buildBubbleStateSnapshotVariant } from "../../../../src/v11/domain/state/snapshot/buildBubbleStateSnapshot.js";
 import {
   deriveStartPreparingState,
   deriveStartRunningState
@@ -16,9 +15,7 @@ import {
 
 describe("v11 domain state machine", () => {
   it("applies valid transitions and clears execution context for non-running states", () => {
-    const initial = buildBubbleStateSnapshotVariant(
-      createInitialBubbleState("b_v11_state_machine_01")
-    );
+    const initial = createInitialBubbleState("b_v11_state_machine_01");
     const preparing = applyStateTransition(initial, {
       to: "PREPARING_WORKSPACE",
       round: 1,
@@ -31,9 +28,7 @@ describe("v11 domain state machine", () => {
   });
 
   it("rejects invalid transitions with the canonical domain error", () => {
-    const initial = buildBubbleStateSnapshotVariant(
-      createInitialBubbleState("b_v11_state_machine_02")
-    );
+    const initial = createInitialBubbleState("b_v11_state_machine_02");
 
     expect(() =>
       applyStateTransition(initial, {
@@ -53,9 +48,7 @@ describe("v11 domain state machine", () => {
   });
 
   it("derives watchdog escalation state without persistence concerns", () => {
-    const initial = buildBubbleStateSnapshotVariant(
-      createInitialBubbleState("b_v11_watchdog_state_01")
-    );
+    const initial = createInitialBubbleState("b_v11_watchdog_state_01");
     const preparing = applyStateTransition(initial, {
       to: "PREPARING_WORKSPACE",
       round: 0,
@@ -82,9 +75,7 @@ describe("v11 domain state machine", () => {
   });
 
   it("derives fresh start states without persistence concerns", () => {
-    const initial = buildBubbleStateSnapshotVariant(
-      createInitialBubbleState("b_v11_start_state_01")
-    );
+    const initial = createInitialBubbleState("b_v11_start_state_01");
     const preparing = deriveStartPreparingState({
       state: initial,
       lastCommandAt: "2026-04-06T10:00:00.000Z"

@@ -6,6 +6,7 @@ function toErrorMessage(input: PairflowCommandErrorInput): string {
   }
   return (input.reasonCode !== undefined ? input.reasonCode + ": " : "") + input.message;
 }import type { AgentName } from "../../../../src/contracts/kernel/agentIdentity.js";
+import type { BubbleStateSnapshot } from "../../../../src/v11/domain/state/snapshot/bubbleStateSnapshot.js";
 import type { PersistedBubbleStateSnapshot } from "../../../../src/v11/domain/state/snapshot/persistedBubbleStateSnapshot.js";
 import { resolvePassHandoff } from "../../../../src/v11/domain/pass/handoff.js";
 
@@ -45,8 +46,13 @@ function buildRunningState(
 }
 
 function resolveFromState(state: PersistedBubbleStateSnapshot) {
+  // The handoff input contract is BubbleStateSnapshot post Step 4b-γ/3.
+  // Tests construct persisted-shape fixtures (including intentionally
+  // invariant-violating ones for negative-path coverage); cast at the
+  // boundary so the runtime validation inside resolvePassHandoff is
+  // exercised without TypeScript pre-rejecting malformed inputs.
   return resolvePassHandoff({
-    state,
+    state: state as unknown as BubbleStateSnapshot,
     implementer,
     reviewer,
     metaReviewer,
@@ -82,7 +88,7 @@ describe("resolvePassHandoff", () => {
         round: 4,
         active_agent: implementer,
         active_role: "implementer"
-      }),
+      }) as unknown as BubbleStateSnapshot,
       implementer,
       reviewer,
       metaReviewer,
@@ -223,7 +229,7 @@ describe("resolvePassHandoff", () => {
         state: buildRunningState({
           active_role: "meta_reviewer",
           active_agent: metaReviewer
-        }),
+        }) as unknown as BubbleStateSnapshot,
         implementer,
         reviewer,
         metaReviewer,

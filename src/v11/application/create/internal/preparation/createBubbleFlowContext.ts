@@ -7,10 +7,6 @@ import {
 import { getBubblePaths, type BubblePaths } from "../../../../shared/bubble/bubblePaths.js";
 import type { ReviewerFocusExtractionResult } from "../../../../shared/reviewer/reviewerBrief.js";
 import { createInitialBubbleState } from "../../../../domain/state/initialState.js";
-import {
-  assertParsedBubbleStateSnapshot
-} from "../../../../domain/state/stateSchema.js";
-import { buildBubbleStateSnapshotVariant } from "../../../../domain/state/snapshot/buildBubbleStateSnapshot.js";
 import type {
   BubbleRemotePointerCreated
 } from "../../../../shared/remote/remoteExecutionTypes.js";
@@ -220,10 +216,6 @@ export async function prepareCreateBubbleFlowContext(input: {
       : {}),
     prepared,
     config: buildBubbleConfig(prepared.bubbleConfigInput),
-    state: buildBubbleStateSnapshotVariant(
-      assertParsedBubbleStateSnapshot(
-        createInitialBubbleState(resolvedCommand.id)
-      )
-    )
+    state: createInitialBubbleState(resolvedCommand.id)
   };
 }

@@ -35,9 +35,7 @@ describe("v11 infrastructure state store — variant boundary", () => {
   it("createDomainStateSnapshot persists the persisted shape and returns the variant", async () => {
     const dir = await createTempDir();
     const statePath = join(dir, "state.json");
-    const initial = buildBubbleStateSnapshotVariant(
-      createInitialBubbleState("b_v11_domain_store_01")
-    );
+    const initial = createInitialBubbleState("b_v11_domain_store_01");
 
     const created = await createDomainStateSnapshot(statePath, initial);
 
@@ -55,7 +53,7 @@ describe("v11 infrastructure state store — variant boundary", () => {
     const statePath = join(dir, "state.json");
     await createDomainStateSnapshot(
       statePath,
-      buildBubbleStateSnapshotVariant(createInitialBubbleState("b_v11_domain_store_02"))
+      createInitialBubbleState("b_v11_domain_store_02")
     );
 
     const loaded = await readDomainStateSnapshot(statePath);
@@ -72,9 +70,7 @@ describe("v11 infrastructure state store — variant boundary", () => {
     const dir = await createTempDir();
     const statePath = join(dir, "state.json");
 
-    const initial = buildBubbleStateSnapshotVariant(
-      createInitialBubbleState("b_v11_domain_store_03")
-    );
+    const initial = createInitialBubbleState("b_v11_domain_store_03");
     const initialLoaded = await createDomainStateSnapshot(statePath, initial);
 
     const startedAt = "2026-05-12T10:00:00.000Z";
@@ -126,9 +122,7 @@ describe("v11 infrastructure state store — variant boundary", () => {
     const dir = await createTempDir();
     const statePath = join(dir, "state.json");
 
-    const initial = buildBubbleStateSnapshotVariant(
-      createInitialBubbleState("b_v11_domain_store_04")
-    );
+    const initial = createInitialBubbleState("b_v11_domain_store_04");
 
     const writtenViaDomain = await createDomainStateSnapshot(statePath, initial);
     const readViaPersisted = await readStateSnapshot(statePath);
