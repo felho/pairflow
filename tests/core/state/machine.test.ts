@@ -4,10 +4,15 @@ import { buildRunningExecutionContext } from "../../../src/v11/domain/state/exec
 import { SchemaValidationError } from "../../../src/v11/shared/validation/primitives.js";
 import { applyStateTransition } from "../../../src/v11/domain/state/machine.js";
 import { createInitialBubbleState } from "../../../src/v11/domain/state/initialState.js";
+import { buildBubbleStateSnapshotVariant } from "../../../src/v11/domain/state/snapshot/buildBubbleStateSnapshot.js";
+
+function createInitialVariant(bubbleId: string) {
+  return buildBubbleStateSnapshotVariant(createInitialBubbleState(bubbleId));
+}
 
 describe("state machine", () => {
   it("applies valid transition and updates state", () => {
-    const initial = createInitialBubbleState("b_test_01");
+    const initial = createInitialVariant("b_test_01");
     const next = applyStateTransition(initial, {
       to: "PREPARING_WORKSPACE"
     });
@@ -17,7 +22,7 @@ describe("state machine", () => {
   });
 
   it("rejects invalid transition", () => {
-    const initial = createInitialBubbleState("b_test_01");
+    const initial = createInitialVariant("b_test_01");
     expect(() =>
       applyStateTransition(initial, {
         to: "READY_FOR_HUMAN_APPROVAL"
@@ -26,7 +31,7 @@ describe("state machine", () => {
   });
 
   it("enforces RUNNING active_* requirements through schema validation", () => {
-    const preparing = applyStateTransition(createInitialBubbleState("b_test_01"), {
+    const preparing = applyStateTransition(createInitialVariant("b_test_01"), {
       to: "PREPARING_WORKSPACE"
     });
 
@@ -45,7 +50,7 @@ describe("state machine", () => {
   });
 
   it("supports round and role-history updates in one transition", () => {
-    const preparing = applyStateTransition(createInitialBubbleState("b_test_01"), {
+    const preparing = applyStateTransition(createInitialVariant("b_test_01"), {
       to: "PREPARING_WORKSPACE"
     });
 
@@ -82,7 +87,7 @@ describe("state machine", () => {
   });
 
   it("preserves active ownership when transition fields are omitted", () => {
-    const preparing = applyStateTransition(createInitialBubbleState("b_test_01"), {
+    const preparing = applyStateTransition(createInitialVariant("b_test_01"), {
       to: "PREPARING_WORKSPACE"
     });
     const running = applyStateTransition(preparing, {
@@ -114,7 +119,7 @@ describe("state machine", () => {
   });
 
   it("clears active ownership when transition fields are explicitly set to null", () => {
-    const preparing = applyStateTransition(createInitialBubbleState("b_test_01"), {
+    const preparing = applyStateTransition(createInitialVariant("b_test_01"), {
       to: "PREPARING_WORKSPACE"
     });
     const running = applyStateTransition(preparing, {

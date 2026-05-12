@@ -27,15 +27,7 @@ export async function dispatchAutoRework(
     });
   }
 
-  // buildAutoReworkResumedState consumes persisted shape (later batch);
-  // project at the boundary.
-  const { resumed, nowIso } = buildAutoReworkResumedState({
-    ...input.finalizeInput,
-    loaded: {
-      ...input.finalizeInput.loaded,
-      state: toPersistedSnapshot(input.finalizeInput.loaded.state)
-    }
-  });
+  const { resumed, nowIso } = buildAutoReworkResumedState(input.finalizeInput);
   const resumedWritten = await writeAutoReworkResumedState({
     finalizeInput: input.finalizeInput,
     resumed

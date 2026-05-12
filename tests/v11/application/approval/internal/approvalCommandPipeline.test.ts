@@ -8,6 +8,7 @@ import type {
 } from "../../../../../src/v11/shared/remote/remoteExecutionTypes.js";
 import type { PersistedBubbleStateSnapshot } from "../../../../../src/v11/domain/state/snapshot/persistedBubbleStateSnapshot.js";
 import { applyStateTransition } from "../../../../../src/v11/domain/state/machine.js";
+import { buildBubbleStateSnapshotVariant } from "../../../../../src/v11/domain/state/snapshot/buildBubbleStateSnapshot.js";
 import { deliveryTargetRoleMetadataKey } from "../../../../../src/types/protocol.js";
 import {
   remoteApprovalModeEnvVar,
@@ -964,7 +965,7 @@ describe("runApprovalDecisionFlow delivery invariant", () => {
       workspaceResolution: "verified_remote_clone"
     });
     const queued = queueDeferredReworkIntent({
-      state: createRemoteWaitingHumanState(),
+      state: buildBubbleStateSnapshotVariant(createRemoteWaitingHumanState()),
       message: "Please rework locally.",
       requestedBy: "human:request-rework",
       now
@@ -1460,7 +1461,7 @@ describe("runApprovalDecisionFlow delivery invariant", () => {
       state: createWaitingHumanState()
     });
     const queued = queueDeferredReworkIntent({
-      state: flow.state,
+      state: buildBubbleStateSnapshotVariant(flow.state),
       message: "Please rework later.",
       requestedBy: "human:request-rework",
       now
@@ -1503,7 +1504,7 @@ describe("runApprovalDecisionFlow delivery invariant", () => {
       state: createWaitingHumanState()
     });
     const queued = queueDeferredReworkIntent({
-      state: flow.state,
+      state: buildBubbleStateSnapshotVariant(flow.state),
       message: "Please rework later through decision API.",
       requestedBy: "human:request-rework",
       now

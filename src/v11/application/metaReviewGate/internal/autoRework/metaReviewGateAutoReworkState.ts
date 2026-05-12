@@ -1,8 +1,10 @@
 import { applyStateTransition } from "../../../../domain/state/machine.js";
 import { assertParsedBubbleStateSnapshot } from "../../../../domain/state/stateSchema.js";
+import { buildBubbleStateSnapshotVariant } from "../../../../domain/state/snapshot/buildBubbleStateSnapshot.js";
+import { toPersistedSnapshot } from "../../../../domain/state/snapshot/projection.js";
 import { clearLiveMetaReviewSnapshot } from "../../../../shared/metaReview/metaReviewSnapshot.js";
 import type { AgentName } from "../../../../../contracts/kernel/agentIdentity.js";
-import type { PersistedBubbleStateSnapshot } from "../../../../domain/state/snapshot/persistedBubbleStateSnapshot.js";
+import type { BubbleStateSnapshot } from "../../../../domain/state/snapshot/bubbleStateSnapshot.js";
 import {
   incrementAutoReworkCount,
   normalizeMetaReviewSnapshot,
@@ -24,23 +26,24 @@ export interface AutoReworkStateInput {
     };
   };
   loaded: {
-    state: PersistedBubbleStateSnapshot;
+    state: BubbleStateSnapshot;
   };
   now: Date;
 }
 
 export function buildAutoReworkResumedState(
   input: AutoReworkStateInput
-): { resumed: PersistedBubbleStateSnapshot; nowIso: string } {
+): { resumed: BubbleStateSnapshot; nowIso: string } {
   const nowIso = input.now.toISOString();
+  const loadedPersisted = toPersistedSnapshot(input.loaded.state);
   const streakResetState = setMetaReviewConsecutiveCleanRuns(
-    input.loaded.state,
+    loadedPersisted,
     0
   );
   const continuation = resolveRuntimeAlignedNextRoundContinuation({
-    bubbleId: input.loaded.state.bubble_id,
-    currentRound: input.loaded.state.round,
-    roundRoleHistory: input.loaded.state.round_role_history,
+    bubbleId: loadedPersisted.bubble_id,
+    currentRound: loadedPersisted.round,
+    roundRoleHistory: loadedPersisted.round_role_history,
     implementer: input.resolved.bubbleConfig.agents.implementer,
     reviewer: input.resolved.bubbleConfig.agents.reviewer,
     nowIso,
@@ -69,20 +72,22 @@ export function buildAutoReworkResumedState(
   });
   return {
     nowIso,
-    resumed: assertParsedBubbleStateSnapshot({
-      ...resumedBase,
-      meta_review: normalizeMetaReviewSnapshot(
-        incrementAutoReworkCount(resumedBase).meta_review
-      )
-    })
+    resumed: buildBubbleStateSnapshotVariant(
+      assertParsedBubbleStateSnapshot({
+        ...resumedBase,
+        meta_review: normalizeMetaReviewSnapshot(
+          incrementAutoReworkCount(resumedBase).meta_review
+        )
+      })
+    )
   };
 }
 
 export function buildRestoredReadyState(input: {
-  resumedState: PersistedBubbleStateSnapshot;
-  loadedState: PersistedBubbleStateSnapshot;
+  resumedState: BubbleStateSnapshot;
+  loadedState: BubbleStateSnapshot;
   nowIso: string;
-}): PersistedBubbleStateSnapshot {
+}): BubbleStateSnapshot {
   const restoredReady = applyStateTransition(input.resumedState, {
     to: "READY_FOR_HUMAN_APPROVAL",
     activeAgent: null,
@@ -90,10 +95,11 @@ export function buildRestoredReadyState(input: {
     activeSince: null,
     lastCommandAt: input.nowIso
   });
-  return {
-    ...restoredReady,
-    round: input.loadedState.round,
-    round_role_history: input.loadedState.round_role_history,
-    meta_review: normalizeMetaReviewSnapshot(input.loadedState.meta_review)
-  };
+  const loadedPersisted = toPersistedSnapshot(input.loadedState);
+  return buildBubbleStateSnapshotVariant({
+    ...toPersistedSnapshot(restoredReady),
+    round: loadedPersisted.round,
+    round_role_history: loadedPersisted.round_role_history,
+    meta_review: normalizeMetaReviewSnapshot(loadedPersisted.meta_review)
+  });
 }

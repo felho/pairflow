@@ -26,6 +26,8 @@ import { runTmux } from "../../../src/v11/infrastructure/channel/tmux/tmuxManage
 import { buildMetaReviewExecutionContext } from "../../../src/v11/shared/metaReview/metaReviewExecutionContext.js";
 import { metaReviewExecutionContextToRunningContext } from "../../../src/v11/domain/state/execution/executionContext.js";
 import { applyStateTransition } from "../../../src/v11/domain/state/machine.js";
+import { buildBubbleStateSnapshotVariant } from "../../../src/v11/domain/state/snapshot/buildBubbleStateSnapshot.js";
+import { toPersistedSnapshot } from "../../../src/v11/domain/state/snapshot/projection.js";
 import { readStateSnapshot, writeStateSnapshot } from "../../../src/v11/infrastructure/state/stateStore.js";
 import { runBubbleWatchdog as runBubbleWatchdogImpl } from "../../../src/v11/application/watchdog/watchdogCommandApi.js";
 import type { BubbleWatchdogDependencies } from "../../../src/v11/application/watchdog/watchdogCommandContract.js";
@@ -110,13 +112,15 @@ describe("runBubbleWatchdog", () => {
     activeAgent?: "codex" | null;
   }): Promise<void> {
     const loaded = await readStateSnapshot(input.statePath);
-    const readyForApproval = applyStateTransition(loaded.state, {
-      to: "READY_FOR_HUMAN_APPROVAL",
-      activeAgent: null,
-      activeRole: null,
-      activeSince: null,
-      lastCommandAt: input.lastCommandAtIso
-    });
+    const readyForApproval = toPersistedSnapshot(
+      applyStateTransition(buildBubbleStateSnapshotVariant(loaded.state), {
+        to: "READY_FOR_HUMAN_APPROVAL",
+        activeAgent: null,
+        activeRole: null,
+        activeSince: null,
+        lastCommandAt: input.lastCommandAtIso
+      })
+    );
     const metaReviewRunning = {
       ...readyForApproval,
       state: "RUNNING" as const,
@@ -1130,13 +1134,16 @@ describe("runBubbleWatchdog", () => {
     });
 
     const loaded = await readStateSnapshot(bubble.paths.statePath);
-    const progressed = applyStateTransition(loaded.state, {
-      to: "READY_FOR_HUMAN_APPROVAL",
-      activeAgent: null,
-      activeRole: null,
-      activeSince: null,
-      lastCommandAt: "2026-02-22T14:00:00.000Z"
-    });
+    const progressed = applyStateTransition(
+      buildBubbleStateSnapshotVariant(loaded.state),
+      {
+        to: "READY_FOR_HUMAN_APPROVAL",
+        activeAgent: null,
+        activeRole: null,
+        activeSince: null,
+        lastCommandAt: "2026-02-22T14:00:00.000Z"
+      }
+    );
     expect(progressed.state).toBe("READY_FOR_HUMAN_APPROVAL");
     const result = await runBubbleWatchdog({
       bubbleId: bubble.bubbleId,

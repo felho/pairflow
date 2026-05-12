@@ -3,7 +3,10 @@ import type {
   AgentRole
 } from "../../../contracts/kernel/agentIdentity.js";
 import type { BubbleLifecycleState } from "../../../contracts/kernel/lifecycle.js";
+import type { BubbleStateSnapshot } from "../../domain/state/snapshot/bubbleStateSnapshot.js";
+import { buildBubbleStateSnapshotVariant } from "../../domain/state/snapshot/buildBubbleStateSnapshot.js";
 import type { PersistedBubbleStateSnapshot } from "../../domain/state/snapshot/persistedBubbleStateSnapshot.js";
+import { toPersistedSnapshot } from "../../domain/state/snapshot/projection.js";
 import type {
   RoundRoleHistoryEntry
 } from "../../domain/state/snapshot/roundRoleHistory.js";
@@ -15,7 +18,7 @@ export interface StateTransitionInput {
   round?: number;
   activeAgent?: AgentName | null;
   activeRole?: AgentRole | null;
-  executionContext?: PersistedBubbleStateSnapshot["execution_context"];
+  executionContext?: BubbleStateSnapshot["execution_context"];
   activeSince?: string | null;
   lastCommandAt?: string | null;
   appendRoundRoleEntry?: RoundRoleHistoryEntry;
@@ -54,19 +57,22 @@ function clearCompatibilityMetaReviewExecutionContext(
 }
 
 export function applyStateTransition(
-  current: PersistedBubbleStateSnapshot,
+  current: BubbleStateSnapshot,
   input: StateTransitionInput
-): PersistedBubbleStateSnapshot {
-  assertTransitionAllowed(current.state, input.to, current.bubble_id);
+): BubbleStateSnapshot {
+  // Project to persisted-shape at the function boundary; the parser flip
+  // (Step 4b-γ/4) will collapse this into a single canonical shape.
+  const currentPersisted = toPersistedSnapshot(current);
+  assertTransitionAllowed(currentPersisted.state, input.to, currentPersisted.bubble_id);
 
   const next: PersistedBubbleStateSnapshot = {
-    ...current,
+    ...currentPersisted,
     state: input.to,
-    round: input.round ?? current.round,
+    round: input.round ?? currentPersisted.round,
     round_role_history:
       input.appendRoundRoleEntry === undefined
-        ? current.round_role_history
-        : [...current.round_role_history, input.appendRoundRoleEntry]
+        ? currentPersisted.round_role_history
+        : [...currentPersisted.round_role_history, input.appendRoundRoleEntry]
   };
 
   // `null` means explicit clear, `undefined` means keep previous value.
@@ -88,7 +94,9 @@ export function applyStateTransition(
     next.last_command_at = input.lastCommandAt;
   }
 
-  return assertParsedBubbleStateSnapshot(
-    clearCompatibilityMetaReviewExecutionContext(next)
+  return buildBubbleStateSnapshotVariant(
+    assertParsedBubbleStateSnapshot(
+      clearCompatibilityMetaReviewExecutionContext(next)
+    )
   );
 }

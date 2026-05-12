@@ -1,6 +1,5 @@
 import type { AgentName } from "../../../contracts/kernel/agentIdentity.js";
 import type { BubbleStateSnapshot } from "../../domain/state/snapshot/bubbleStateSnapshot.js";
-import { buildBubbleStateSnapshotVariant } from "../../domain/state/snapshot/buildBubbleStateSnapshot.js";
 import { toPersistedSnapshot } from "../../domain/state/snapshot/projection.js";
 import {
   buildRestartedExecutionContext,
@@ -38,17 +37,16 @@ export interface DeriveStartFailedCleanupStateInput {
 export function deriveStartPreparingState(
   input: DeriveStartPreparingStateInput
 ): BubbleStateSnapshot {
-  const nextPersisted = applyStateTransition(toPersistedSnapshot(input.state), {
+  return applyStateTransition(input.state, {
     to: "PREPARING_WORKSPACE",
     lastCommandAt: input.lastCommandAt
   });
-  return buildBubbleStateSnapshotVariant(nextPersisted);
 }
 
 export function deriveStartRunningState(
   input: DeriveStartRunningStateInput
 ): BubbleStateSnapshot {
-  const nextPersisted = applyStateTransition(toPersistedSnapshot(input.preparingState), {
+  return applyStateTransition(input.preparingState, {
     to: "RUNNING",
     round: input.ideationPending ? 0 : 1,
     activeAgent: input.implementer,
@@ -76,7 +74,6 @@ export function deriveStartRunningState(
           }
         })
   });
-  return buildBubbleStateSnapshotVariant(nextPersisted);
 }
 
 export function deriveStartResumedState(
@@ -123,12 +120,11 @@ export function deriveStartResumedState(
 export function deriveStartFailedCleanupState(
   input: DeriveStartFailedCleanupStateInput
 ): BubbleStateSnapshot {
-  const nextPersisted = applyStateTransition(toPersistedSnapshot(input.preparingState), {
+  return applyStateTransition(input.preparingState, {
     to: "FAILED",
     activeAgent: null,
     activeRole: null,
     activeSince: null,
     lastCommandAt: input.lastCommandAt
   });
-  return buildBubbleStateSnapshotVariant(nextPersisted);
 }

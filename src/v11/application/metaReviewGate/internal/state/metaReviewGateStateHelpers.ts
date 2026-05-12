@@ -1,30 +1,34 @@
 import { applyStateTransition } from "../../../../domain/state/machine.js";
 import { assertParsedBubbleStateSnapshot } from "../../../../domain/state/stateSchema.js";
-import type { PersistedBubbleStateSnapshot } from "../../../../domain/state/snapshot/persistedBubbleStateSnapshot.js";
+import { buildBubbleStateSnapshotVariant } from "../../../../domain/state/snapshot/buildBubbleStateSnapshot.js";
+import { toPersistedSnapshot } from "../../../../domain/state/snapshot/projection.js";
+import type { BubbleStateSnapshot } from "../../../../domain/state/snapshot/bubbleStateSnapshot.js";
 import { clearLiveMetaReviewSnapshot } from "../../../../shared/metaReview/metaReviewSnapshot.js";
 
 export function transitionToGateState(input: {
-  current: PersistedBubbleStateSnapshot;
+  current: BubbleStateSnapshot;
   nowIso: string;
   targetState: "READY_FOR_HUMAN_APPROVAL" | "RUNNING";
   stickyHumanGate: boolean;
   consecutiveCleanRuns?: number;
-}): PersistedBubbleStateSnapshot {
+}): BubbleStateSnapshot {
   const transitioned =
     input.current.state === input.targetState
-      ? assertParsedBubbleStateSnapshot({
-          ...input.current,
-          ...(input.targetState === "READY_FOR_HUMAN_APPROVAL"
-            ? {
-                active_agent: null,
-                active_role: null,
-                active_since: null,
-                execution_context: null
-              }
-            : {}),
-          last_command_at: input.nowIso,
-          meta_review: clearLiveMetaReviewSnapshot(input.current.meta_review)
-        })
+      ? buildBubbleStateSnapshotVariant(
+          assertParsedBubbleStateSnapshot({
+            ...toPersistedSnapshot(input.current),
+            ...(input.targetState === "READY_FOR_HUMAN_APPROVAL"
+              ? {
+                  active_agent: null,
+                  active_role: null,
+                  active_since: null,
+                  execution_context: null
+                }
+              : {}),
+            last_command_at: input.nowIso,
+            meta_review: clearLiveMetaReviewSnapshot(input.current.meta_review)
+          })
+        )
       : applyStateTransition(input.current, {
           to: input.targetState,
           activeAgent: null,
@@ -34,8 +38,8 @@ export function transitionToGateState(input: {
         });
 
   const metaReview = clearLiveMetaReviewSnapshot(transitioned.meta_review);
-  return {
-    ...transitioned,
+  return buildBubbleStateSnapshotVariant({
+    ...toPersistedSnapshot(transitioned),
     meta_review: {
       ...metaReview,
       sticky_human_gate: input.stickyHumanGate,
@@ -43,5 +47,5 @@ export function transitionToGateState(input: {
         ? { consecutive_clean_runs: input.consecutiveCleanRuns }
         : {})
     }
-  };
+  });
 }

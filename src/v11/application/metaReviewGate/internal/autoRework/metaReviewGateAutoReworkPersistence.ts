@@ -1,8 +1,6 @@
 import type { LoadedDomainStateSnapshot } from "../../../../ports/stateSnapshots.js";
 import { isNamedError } from "../../../../shared/errors/namedError.js";
-import { buildBubbleStateSnapshotVariant } from "../../../../domain/state/snapshot/buildBubbleStateSnapshot.js";
-import { toPersistedSnapshot } from "../../../../domain/state/snapshot/projection.js";
-import type { PersistedBubbleStateSnapshot } from "../../../../domain/state/snapshot/persistedBubbleStateSnapshot.js";
+import type { BubbleStateSnapshot } from "../../../../domain/state/snapshot/bubbleStateSnapshot.js";
 import { MetaReviewGateError } from "../../../../shared/metaReviewGate/metaReviewGateRouteContract.js";
 import type { AutoReworkFinalizeInput } from "./metaReviewGateAutoReworkContract.js";
 import { buildRestoredReadyState } from "./metaReviewGateAutoReworkState.js";
@@ -31,14 +29,12 @@ function toGateTransitionError(error: unknown): MetaReviewGateError {
 
 export async function writeAutoReworkResumedState(input: {
   finalizeInput: AutoReworkFinalizeInput;
-  resumed: PersistedBubbleStateSnapshot;
+  resumed: BubbleStateSnapshot;
 }): Promise<LoadedDomainStateSnapshot> {
   try {
-    // resumed is still persisted-shape (buildAutoReworkResumedState is a
-    // later-batch helper). Wrap for the Domain write port.
     return await input.finalizeInput.writeState(
       input.finalizeInput.resolved.bubblePaths.statePath,
-      buildBubbleStateSnapshotVariant(input.resumed),
+      input.resumed,
       {
         expectedFingerprint: input.finalizeInput.loaded.fingerprint,
         expectedState: "RUNNING"
@@ -57,18 +53,16 @@ export async function restoreReadyStateAfterAppendFailure(input: {
   resumedWritten: LoadedDomainStateSnapshot;
   nowIso: string;
 }): Promise<LoadedDomainStateSnapshot> {
-  // buildRestoredReadyState consumes persisted shape (later batch); project
-  // at the boundary and rebuild the variant before the Domain write port.
   const restoredState = buildRestoredReadyState({
-    resumedState: toPersistedSnapshot(input.resumedWritten.state),
-    loadedState: toPersistedSnapshot(input.finalizeInput.loaded.state),
+    resumedState: input.resumedWritten.state,
+    loadedState: input.finalizeInput.loaded.state,
     nowIso: input.nowIso
   });
 
   try {
     return await input.finalizeInput.writeState(
       input.finalizeInput.resolved.bubblePaths.statePath,
-      buildBubbleStateSnapshotVariant(restoredState),
+      restoredState,
       {
         expectedFingerprint: input.resumedWritten.fingerprint,
         expectedState: "RUNNING"

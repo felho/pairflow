@@ -8,8 +8,6 @@ import type {
   ExecuteAskHumanExecutionResult
 } from "../mutation/askHumanFlowContract.js";
 import { applyStateTransition } from "../../../../domain/state/machine.js";
-import { toPersistedSnapshot } from "../../../../domain/state/snapshot/projection.js";
-import { buildBubbleStateSnapshotVariant } from "../../../../domain/state/snapshot/buildBubbleStateSnapshot.js";
 import { adaptPersistedWritePortToDomain } from "../../../../shared/mutation/mutationBoundaryIO.js";
 import {
   appendProtocolEnvelope,
@@ -64,13 +62,10 @@ export async function executeAskHumanExecution(
     }
   });
 
-  // applyStateTransition is still persisted-shape (its migration is a later
-  // batch); project at the boundary and rebuild the variant from the output.
-  const nextPersisted = applyTransition(toPersistedSnapshot(input.routing.state), {
+  const nextState = applyTransition(input.routing.state, {
     to: "WAITING_HUMAN",
     lastCommandAt: input.routing.nowIso
   });
-  const nextState = buildBubbleStateSnapshotVariant(nextPersisted);
 
   let written: LoadedDomainStateSnapshot;
   try {

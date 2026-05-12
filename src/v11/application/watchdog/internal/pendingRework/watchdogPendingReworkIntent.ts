@@ -2,8 +2,6 @@ import { emitBubbleLifecycleEventBestEffort } from "../../../metrics/bubbleEvent
 import { applyDeferredReworkIntent } from "../../../../domain/state/rework/reworkIntentTransitions.js";
 import { persistPendingReworkIntentState } from "./watchdogPendingReworkPersistence.js";
 import type { BubbleStateSnapshot } from "../../../../domain/state/snapshot/bubbleStateSnapshot.js";
-import { buildBubbleStateSnapshotVariant } from "../../../../domain/state/snapshot/buildBubbleStateSnapshot.js";
-import { toPersistedSnapshot } from "../../../../domain/state/snapshot/projection.js";
 import type { ProtocolEnvelope } from "../../../../../types/protocol.js";
 import type { BubbleWatchdogResult } from "../../watchdogCommandContract.js";
 import type { ResolvedBubbleById } from "../../../../ports/bubbleLookup.js";
@@ -79,7 +77,7 @@ export async function maybeApplyPendingReworkIntent(input: {
   }
 
   const appliedTransition = applyDeferredReworkIntent({
-    state: toPersistedSnapshot(input.state),
+    state: input.state,
     implementer: input.resolved.bubbleConfig.agents.implementer,
     reviewer: input.resolved.bubbleConfig.agents.reviewer,
     watchdogTimeoutMinutes: input.resolved.bubbleConfig.watchdog_timeout_minutes,
@@ -106,7 +104,7 @@ export async function maybeApplyPendingReworkIntent(input: {
 
   const written = await persistPendingReworkIntentState({
     statePath: input.resolved.bubblePaths.statePath,
-    nextState: buildBubbleStateSnapshotVariant(appliedTransition.state),
+    nextState: appliedTransition.state,
     loadedState: input.loadedState,
     intentId: pendingIntent.intent_id,
     writeStateSnapshot: input.writeState

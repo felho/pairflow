@@ -23,6 +23,8 @@ import {
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
 import { initGitRepository } from "../../helpers/git.js";
 import { applyStateTransition } from "../../../src/v11/domain/state/machine.js";
+import { buildBubbleStateSnapshotVariant } from "../../../src/v11/domain/state/snapshot/buildBubbleStateSnapshot.js";
+import { toPersistedSnapshot } from "../../../src/v11/domain/state/snapshot/projection.js";
 import {
   readStateSnapshot,
   writeStateSnapshot
@@ -331,11 +333,14 @@ async function seedWaitingHumanState(input: {
     return bubble;
   }
   const loaded = await readStateSnapshot(bubble.paths.statePath);
-  const transitioned = applyStateTransition(loaded.state, {
-    to: "WAITING_HUMAN",
-    lastCommandAt: "2026-03-20T12:40:00.000Z"
-  });
-  await writeStateSnapshot(bubble.paths.statePath, transitioned, {
+  const transitioned = applyStateTransition(
+    buildBubbleStateSnapshotVariant(loaded.state),
+    {
+      to: "WAITING_HUMAN",
+      lastCommandAt: "2026-03-20T12:40:00.000Z"
+    }
+  );
+  await writeStateSnapshot(bubble.paths.statePath, toPersistedSnapshot(transitioned), {
     expectedFingerprint: loaded.fingerprint,
     expectedState: "RUNNING"
   });

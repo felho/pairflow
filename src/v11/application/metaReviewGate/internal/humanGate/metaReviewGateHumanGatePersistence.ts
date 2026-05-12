@@ -3,7 +3,6 @@ import type { AppendProtocolEnvelopeResult } from "../../../../ports/transcript.
 import { MetaReviewGateError } from "../../../../shared/metaReviewGate/metaReviewGateRouteContract.js";
 import type { MetaReviewGateResult } from "../../../../shared/metaReviewGate/metaReviewGateResultContract.js";
 import { buildBubbleStateSnapshotVariant } from "../../../../domain/state/snapshot/buildBubbleStateSnapshot.js";
-import { toPersistedSnapshot } from "../../../../domain/state/snapshot/projection.js";
 import { transitionToGateState } from "../state/metaReviewGateStateHelpers.js";
 import {
   resolveDefaultStickyHumanGateForRoute
@@ -64,11 +63,8 @@ export async function persistHumanGateRoute(
   const targetState = input.targetState ?? "READY_FOR_HUMAN_APPROVAL";
   const stickyHumanGate =
     input.stickyHumanGate ?? resolveDefaultStickyHumanGateForRoute(input.route);
-  // transitionToGateState (and downstream helpers) still consume persisted
-  // shape (later batch); project at the boundary and rebuild the variant
-  // for the write port.
-  const nextStatePersisted = transitionToGateState({
-    current: toPersistedSnapshot(input.loaded.state),
+  const nextState = transitionToGateState({
+    current: input.loaded.state,
     nowIso: input.nowIso,
     targetState,
     stickyHumanGate,
@@ -76,7 +72,6 @@ export async function persistHumanGateRoute(
       ? { consecutiveCleanRuns: input.consecutiveCleanRuns }
       : {})
   });
-  const nextState = buildBubbleStateSnapshotVariant(nextStatePersisted);
 
   const recommendation = resolveHumanGateRecommendation({
     ...(input.metaReviewRun !== undefined ? { metaReviewRun: input.metaReviewRun } : {}),

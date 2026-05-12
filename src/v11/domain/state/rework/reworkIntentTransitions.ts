@@ -4,13 +4,16 @@ import {
   resolveRuntimeAlignedNextRoundContinuation
 } from "../roundContinuation.js";
 import type { AgentName } from "../../../../contracts/kernel/agentIdentity.js";
+import type { BubbleStateSnapshot } from "../snapshot/bubbleStateSnapshot.js";
+import { buildBubbleStateSnapshotVariant } from "../snapshot/buildBubbleStateSnapshot.js";
+import { toPersistedSnapshot } from "../snapshot/projection.js";
 import type { PersistedBubbleStateSnapshot } from "../snapshot/persistedBubbleStateSnapshot.js";
 import type {
   BubbleReworkIntentRecord
 } from "./reworkIntentTypes.js";
 
 export interface DeriveQueuedDeferredReworkIntentStateInput {
-  state: PersistedBubbleStateSnapshot;
+  state: BubbleStateSnapshot;
   intentId: string;
   message: string;
   refs?: string[];
@@ -19,13 +22,13 @@ export interface DeriveQueuedDeferredReworkIntentStateInput {
 }
 
 export interface QueueDeferredReworkIntentResult {
-  state: PersistedBubbleStateSnapshot;
+  state: BubbleStateSnapshot;
   intent: BubbleReworkIntentRecord;
   supersededIntentId?: string;
 }
 
 export interface ApplyDeferredReworkIntentInput {
-  state: PersistedBubbleStateSnapshot;
+  state: BubbleStateSnapshot;
   implementer: AgentName;
   reviewer: AgentName;
   watchdogTimeoutMinutes: number;
@@ -33,7 +36,7 @@ export interface ApplyDeferredReworkIntentInput {
 }
 
 export interface ApplyDeferredReworkIntentResult {
-  state: PersistedBubbleStateSnapshot;
+  state: BubbleStateSnapshot;
   intent: BubbleReworkIntentRecord;
 }
 
@@ -63,7 +66,8 @@ function ensurePendingIntent(
 export function deriveQueuedDeferredReworkIntentState(
   input: DeriveQueuedDeferredReworkIntentStateInput
 ): QueueDeferredReworkIntentResult {
-  const pendingIntent = ensurePendingIntent(input.state);
+  const persistedState = toPersistedSnapshot(input.state);
+  const pendingIntent = ensurePendingIntent(persistedState);
   const refs = input.refs ?? [];
   const nextIntent: BubbleReworkIntentRecord = {
     intent_id: input.intentId,
@@ -74,7 +78,7 @@ export function deriveQueuedDeferredReworkIntentState(
     status: "pending"
   };
 
-  const history = readIntentHistory(input.state);
+  const history = readIntentHistory(persistedState);
   if (pendingIntent !== null) {
     history.push({
       ...pendingIntent,
@@ -84,12 +88,12 @@ export function deriveQueuedDeferredReworkIntentState(
   }
 
   return {
-    state: {
-      ...input.state,
+    state: buildBubbleStateSnapshotVariant({
+      ...persistedState,
       pending_rework_intent: nextIntent,
       rework_intent_history: history,
       last_command_at: input.requestedAt
-    },
+    }),
     intent: nextIntent,
     ...(pendingIntent !== null
       ? { supersededIntentId: pendingIntent.intent_id }
@@ -100,34 +104,37 @@ export function deriveQueuedDeferredReworkIntentState(
 export function applyDeferredReworkIntent(
   input: ApplyDeferredReworkIntentInput
 ): ApplyDeferredReworkIntentResult | null {
-  const pendingIntent = ensurePendingIntent(input.state);
+  const persistedState = toPersistedSnapshot(input.state);
+  const pendingIntent = ensurePendingIntent(persistedState);
   if (pendingIntent === null) {
     return null;
   }
 
   const nowIso = input.now.toISOString();
   const continuation = resolveRuntimeAlignedNextRoundContinuation({
-    bubbleId: input.state.bubble_id,
-    currentRound: input.state.round,
-    roundRoleHistory: input.state.round_role_history,
+    bubbleId: persistedState.bubble_id,
+    currentRound: persistedState.round,
+    roundRoleHistory: persistedState.round_role_history,
     implementer: input.implementer,
     reviewer: input.reviewer,
     nowIso,
     watchdogTimeoutMinutes: input.watchdogTimeoutMinutes
   });
 
-  const resumed = applyStateTransition(input.state, {
-    to: "RUNNING",
-    round: continuation.nextRound,
-    activeAgent: continuation.activeAgent,
-    activeRole: continuation.activeRole,
-    executionContext: continuation.executionContext,
-    activeSince: nowIso,
-    lastCommandAt: nowIso,
-    ...(continuation.appendRoundRoleEntry !== undefined
-      ? { appendRoundRoleEntry: continuation.appendRoundRoleEntry }
-      : {})
-  });
+  const resumed = toPersistedSnapshot(
+    applyStateTransition(input.state, {
+      to: "RUNNING",
+      round: continuation.nextRound,
+      activeAgent: continuation.activeAgent,
+      activeRole: continuation.activeRole,
+      executionContext: continuation.executionContext,
+      activeSince: nowIso,
+      lastCommandAt: nowIso,
+      ...(continuation.appendRoundRoleEntry !== undefined
+        ? { appendRoundRoleEntry: continuation.appendRoundRoleEntry }
+        : {})
+    })
+  );
 
   const appliedIntent: BubbleReworkIntentRecord = {
     ...pendingIntent,
@@ -135,7 +142,7 @@ export function applyDeferredReworkIntent(
   };
 
   return {
-    state: {
+    state: buildBubbleStateSnapshotVariant({
       ...resumed,
       meta_review: clearLiveMetaReviewSnapshot(resumed.meta_review),
       pending_rework_intent: null,
@@ -144,7 +151,7 @@ export function applyDeferredReworkIntent(
         appliedIntent
       ],
       last_command_at: nowIso
-    },
+    }),
     intent: appliedIntent
   };
 }

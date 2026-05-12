@@ -16,7 +16,9 @@ import {
 
 describe("v11 domain state machine", () => {
   it("applies valid transitions and clears execution context for non-running states", () => {
-    const initial = createInitialBubbleState("b_v11_state_machine_01");
+    const initial = buildBubbleStateSnapshotVariant(
+      createInitialBubbleState("b_v11_state_machine_01")
+    );
     const preparing = applyStateTransition(initial, {
       to: "PREPARING_WORKSPACE",
       round: 1,
@@ -29,7 +31,9 @@ describe("v11 domain state machine", () => {
   });
 
   it("rejects invalid transitions with the canonical domain error", () => {
-    const initial = createInitialBubbleState("b_v11_state_machine_02");
+    const initial = buildBubbleStateSnapshotVariant(
+      createInitialBubbleState("b_v11_state_machine_02")
+    );
 
     expect(() =>
       applyStateTransition(initial, {
@@ -49,7 +53,9 @@ describe("v11 domain state machine", () => {
   });
 
   it("derives watchdog escalation state without persistence concerns", () => {
-    const initial = createInitialBubbleState("b_v11_watchdog_state_01");
+    const initial = buildBubbleStateSnapshotVariant(
+      createInitialBubbleState("b_v11_watchdog_state_01")
+    );
     const preparing = applyStateTransition(initial, {
       to: "PREPARING_WORKSPACE",
       round: 0,
@@ -64,7 +70,7 @@ describe("v11 domain state machine", () => {
     });
 
     const waiting = deriveWatchdogWaitingHumanState({
-      state: buildBubbleStateSnapshotVariant(running),
+      state: running,
       lastCommandAt: "2026-04-06T10:31:00.000Z"
     });
 

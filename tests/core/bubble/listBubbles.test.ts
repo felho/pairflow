@@ -20,6 +20,8 @@ import { appendProtocolEnvelope } from "../../../src/v11/infrastructure/artifact
 import { upsertRuntimeSession } from "../../../src/v11/infrastructure/executor/sessionRuntime/runtimeSessionsRegistry.js";
 import { metaReviewExecutionContextToRunningContext } from "../../../src/v11/domain/state/execution/executionContext.js";
 import { applyStateTransition } from "../../../src/v11/domain/state/machine.js";
+import { buildBubbleStateSnapshotVariant } from "../../../src/v11/domain/state/snapshot/buildBubbleStateSnapshot.js";
+import { toPersistedSnapshot } from "../../../src/v11/domain/state/snapshot/projection.js";
 import { readStateSnapshot, writeStateSnapshot } from "../../../src/v11/infrastructure/state/stateStore.js";
 import { listCommandDefaults as listReadModelDefaults } from "../../../src/v11/defaults/list/listCommandDefaults.js";
 import { writeWatchdogPaneActivity } from "../../../src/v11/infrastructure/artifact/watchdog/watchdogPaneActivityStore.js";
@@ -323,13 +325,15 @@ describe("listBubbles", () => {
     });
 
     const loaded = await readStateSnapshot(bubble.paths.statePath);
-    const readyForApproval = applyStateTransition(loaded.state, {
-      to: "READY_FOR_HUMAN_APPROVAL",
-      activeAgent: null,
-      activeRole: null,
-      activeSince: null,
-      lastCommandAt: "2026-02-22T18:40:00.000Z"
-    });
+    const readyForApproval = toPersistedSnapshot(
+      applyStateTransition(buildBubbleStateSnapshotVariant(loaded.state), {
+        to: "READY_FOR_HUMAN_APPROVAL",
+        activeAgent: null,
+        activeRole: null,
+        activeSince: null,
+        lastCommandAt: "2026-02-22T18:40:00.000Z"
+      })
+    );
     const metaRunning = {
       ...readyForApproval,
       state: "RUNNING" as const,
@@ -357,13 +361,15 @@ describe("listBubbles", () => {
         })
       }
     };
-    const humanGate = applyStateTransition(metaRunning, {
-      to: "READY_FOR_HUMAN_APPROVAL",
-      activeAgent: null,
-      activeRole: null,
-      activeSince: null,
-      lastCommandAt: "2026-02-22T18:42:00.000Z"
-    });
+    const humanGate = toPersistedSnapshot(
+      applyStateTransition(buildBubbleStateSnapshotVariant(metaRunning), {
+        to: "READY_FOR_HUMAN_APPROVAL",
+        activeAgent: null,
+        activeRole: null,
+        activeSince: null,
+        lastCommandAt: "2026-02-22T18:42:00.000Z"
+      })
+    );
     await writeStateSnapshot(bubble.paths.statePath, humanGate, {
       expectedFingerprint: loaded.fingerprint,
       expectedState: "RUNNING"
@@ -452,11 +458,14 @@ describe("listBubbles", () => {
     });
 
     const loaded = await readStateSnapshot(created.paths.statePath);
-    const preparing = applyStateTransition(loaded.state, {
-      to: "PREPARING_WORKSPACE",
-      lastCommandAt: "2026-02-22T18:45:00.000Z"
-    });
-    await writeStateSnapshot(created.paths.statePath, preparing, {
+    const preparing = applyStateTransition(
+      buildBubbleStateSnapshotVariant(loaded.state),
+      {
+        to: "PREPARING_WORKSPACE",
+        lastCommandAt: "2026-02-22T18:45:00.000Z"
+      }
+    );
+    await writeStateSnapshot(created.paths.statePath, toPersistedSnapshot(preparing), {
       expectedFingerprint: loaded.fingerprint,
       expectedState: "CREATED"
     });
@@ -491,11 +500,14 @@ describe("listBubbles", () => {
     });
 
     const loaded = await readStateSnapshot(created.paths.statePath);
-    const preparing = applyStateTransition(loaded.state, {
-      to: "PREPARING_WORKSPACE",
-      lastCommandAt: "2026-02-22T18:39:30.000Z"
-    });
-    await writeStateSnapshot(created.paths.statePath, preparing, {
+    const preparing = applyStateTransition(
+      buildBubbleStateSnapshotVariant(loaded.state),
+      {
+        to: "PREPARING_WORKSPACE",
+        lastCommandAt: "2026-02-22T18:39:30.000Z"
+      }
+    );
+    await writeStateSnapshot(created.paths.statePath, toPersistedSnapshot(preparing), {
       expectedFingerprint: loaded.fingerprint,
       expectedState: "CREATED"
     });

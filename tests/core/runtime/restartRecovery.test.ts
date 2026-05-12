@@ -25,6 +25,8 @@ import type {
 } from "../../../src/v11/application/reconcile/reconcileCommandContract.js";
 import { reconcileRuntimeSessionsDefaultDependencies } from "../../../src/v11/defaults/reconcile/reconcileCommandDefaults.js";
 import { applyStateTransition } from "../../../src/v11/domain/state/machine.js";
+import { buildBubbleStateSnapshotVariant } from "../../../src/v11/domain/state/snapshot/buildBubbleStateSnapshot.js";
+import { toPersistedSnapshot } from "../../../src/v11/domain/state/snapshot/projection.js";
 import {
   buildRunningExecutionContext,
   metaReviewExecutionContextToRunningContext
@@ -135,13 +137,15 @@ describe("restart recovery", () => {
     });
 
     const loaded = await readStateSnapshot(bubble.paths.statePath);
-    const readyForApproval = applyStateTransition(loaded.state, {
-      to: "READY_FOR_HUMAN_APPROVAL",
-      activeAgent: null,
-      activeRole: null,
-      activeSince: null,
-      lastCommandAt: "2026-02-23T11:00:00.000Z"
-    });
+    const readyForApproval = toPersistedSnapshot(
+      applyStateTransition(buildBubbleStateSnapshotVariant(loaded.state), {
+        to: "READY_FOR_HUMAN_APPROVAL",
+        activeAgent: null,
+        activeRole: null,
+        activeSince: null,
+        lastCommandAt: "2026-02-23T11:00:00.000Z"
+      })
+    );
     const metaReviewRunning = {
       ...readyForApproval,
       state: "RUNNING" as const,
@@ -244,10 +248,12 @@ describe("restart recovery", () => {
     });
 
     const loaded = await readStateSnapshot(bubble.paths.statePath);
-    const readyForApproval = applyStateTransition(loaded.state, {
-      to: "READY_FOR_HUMAN_APPROVAL",
-      lastCommandAt: "2026-02-23T12:00:00.000Z"
-    });
+    const readyForApproval = toPersistedSnapshot(
+      applyStateTransition(buildBubbleStateSnapshotVariant(loaded.state), {
+        to: "READY_FOR_HUMAN_APPROVAL",
+        lastCommandAt: "2026-02-23T12:00:00.000Z"
+      })
+    );
     const humanGate = {
       ...readyForApproval,
       last_command_at: "2026-02-23T12:01:00.000Z"

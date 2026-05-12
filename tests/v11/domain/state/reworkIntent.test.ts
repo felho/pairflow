@@ -4,17 +4,19 @@ import {
   applyDeferredReworkIntent,
   deriveQueuedDeferredReworkIntentState
 } from "../../../../src/v11/domain/state/rework/reworkIntentTransitions.js";
+import { buildBubbleStateSnapshotVariant } from "../../../../src/v11/domain/state/snapshot/buildBubbleStateSnapshot.js";
 
 describe("v11 domain reworkIntent", () => {
   it("supersedes an existing pending deferred rework intent", () => {
     const result = deriveQueuedDeferredReworkIntentState({
-      state: {
+      state: buildBubbleStateSnapshotVariant({
         bubble_id: "b_rework_queue_01",
         state: "WAITING_HUMAN",
         round: 2,
-        active_agent: null,
-        active_since: null,
-        active_role: null,
+        active_agent: "codex",
+        active_since: "2026-03-21T09:55:00.000Z",
+        active_role: "implementer",
+        execution_context: null,
         round_role_history: [],
         last_command_at: "2026-03-21T10:00:00.000Z",
         pending_rework_intent: {
@@ -25,7 +27,7 @@ describe("v11 domain reworkIntent", () => {
           status: "pending"
         },
         rework_intent_history: []
-      },
+      }),
       intentId: "intent_next",
       message: "Latest deferred rework.",
       refs: ["artifact://review.md"],
@@ -50,13 +52,14 @@ describe("v11 domain reworkIntent", () => {
 
   it("clears live meta-review authority when deferred rework resumes the next round", () => {
     const result = applyDeferredReworkIntent({
-      state: {
+      state: buildBubbleStateSnapshotVariant({
         bubble_id: "b_rework_intent_01",
         state: "WAITING_HUMAN",
         round: 2,
-        active_agent: null,
-        active_since: null,
-        active_role: null,
+        active_agent: "codex",
+        active_since: "2026-03-21T09:55:00.000Z",
+        active_role: "implementer",
+        execution_context: null,
         round_role_history: [],
         last_command_at: "2026-03-21T10:00:00.000Z",
         pending_rework_intent: {
@@ -68,12 +71,14 @@ describe("v11 domain reworkIntent", () => {
         },
         rework_intent_history: [],
         meta_review: {
+          execution_context: null,
+          runtime_delivery: null,
           auto_rework_count: 2,
           auto_rework_limit: 5,
           sticky_human_gate: true,
           consecutive_clean_runs: 0,
         }
-      },
+      }),
       implementer: "codex",
       reviewer: "claude",
       watchdogTimeoutMinutes: 60,
@@ -105,13 +110,14 @@ describe("v11 domain reworkIntent", () => {
 
   it("does not append duplicate next-round history when deferred rework resumes an already-staged round", () => {
     const result = applyDeferredReworkIntent({
-      state: {
+      state: buildBubbleStateSnapshotVariant({
         bubble_id: "b_rework_intent_02",
         state: "WAITING_HUMAN",
         round: 2,
-        active_agent: null,
-        active_since: null,
-        active_role: null,
+        active_agent: "codex",
+        active_since: "2026-03-21T09:55:00.000Z",
+        active_role: "implementer",
+        execution_context: null,
         round_role_history: [
           {
             round: 3,
@@ -129,7 +135,7 @@ describe("v11 domain reworkIntent", () => {
           status: "pending"
         },
         rework_intent_history: []
-      },
+      }),
       implementer: "codex",
       reviewer: "claude",
       watchdogTimeoutMinutes: 60,

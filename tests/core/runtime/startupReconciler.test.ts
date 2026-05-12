@@ -10,6 +10,8 @@ import { buildMetaReviewExecutionContext } from "../../../src/v11/shared/metaRev
 import { metaReviewExecutionContextToRunningContext } from "../../../src/v11/domain/state/execution/executionContext.js";
 import { readStateSnapshot, writeStateSnapshot } from "../../../src/v11/infrastructure/state/stateStore.js";
 import { applyStateTransition } from "../../../src/v11/domain/state/machine.js";
+import { buildBubbleStateSnapshotVariant } from "../../../src/v11/domain/state/snapshot/buildBubbleStateSnapshot.js";
+import { toPersistedSnapshot } from "../../../src/v11/domain/state/snapshot/projection.js";
 import {
   reconcileRuntimeSessions as reconcileRuntimeSessionsApplication,
   StartupReconcilerError
@@ -82,14 +84,17 @@ describe("reconcileRuntimeSessions", () => {
     });
 
     const loaded = await readStateSnapshot(bubbleFinal.paths.statePath);
-    const cancelled = applyStateTransition(loaded.state, {
-      to: "CANCELLED",
-      activeAgent: null,
-      activeRole: null,
-      activeSince: null,
-      lastCommandAt: "2026-02-22T19:00:00.000Z"
-    });
-    await writeStateSnapshot(bubbleFinal.paths.statePath, cancelled, {
+    const cancelled = applyStateTransition(
+      buildBubbleStateSnapshotVariant(loaded.state),
+      {
+        to: "CANCELLED",
+        activeAgent: null,
+        activeRole: null,
+        activeSince: null,
+        lastCommandAt: "2026-02-22T19:00:00.000Z"
+      }
+    );
+    await writeStateSnapshot(bubbleFinal.paths.statePath, toPersistedSnapshot(cancelled), {
       expectedFingerprint: loaded.fingerprint,
       expectedState: "CREATED"
     });
@@ -246,13 +251,15 @@ describe("reconcileRuntimeSessions", () => {
     });
 
     const loaded = await readStateSnapshot(bubble.paths.statePath);
-    const metaRunning = applyStateTransition(loaded.state, {
-      to: "READY_FOR_HUMAN_APPROVAL",
-      activeAgent: null,
-      activeRole: null,
-      activeSince: null,
-      lastCommandAt: "2026-02-22T19:40:00.000Z"
-    });
+    const metaRunning = toPersistedSnapshot(
+      applyStateTransition(buildBubbleStateSnapshotVariant(loaded.state), {
+        to: "READY_FOR_HUMAN_APPROVAL",
+        activeAgent: null,
+        activeRole: null,
+        activeSince: null,
+        lastCommandAt: "2026-02-22T19:40:00.000Z"
+      })
+    );
     const transitioned = {
       ...metaRunning,
       state: "RUNNING" as const,

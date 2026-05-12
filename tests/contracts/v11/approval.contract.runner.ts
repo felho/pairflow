@@ -11,6 +11,8 @@ import { deliveryTargetRoleMetadataKey } from "../../../src/types/protocol.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
 import { initGitRepository } from "../../helpers/git.js";
 import { applyStateTransition } from "../../../src/v11/domain/state/machine.js";
+import { buildBubbleStateSnapshotVariant } from "../../../src/v11/domain/state/snapshot/buildBubbleStateSnapshot.js";
+import { toPersistedSnapshot } from "../../../src/v11/domain/state/snapshot/projection.js";
 import { appendProtocolEnvelope } from "../../../src/v11/infrastructure/artifact/transcript/transcriptStore.js";
 import {
   readStateSnapshot,
@@ -157,10 +159,14 @@ async function seedReadyForHumanApprovalState(input: {
     task: "Approval contract parity fixture"
   });
   const loaded = await readStateSnapshot(bubble.paths.statePath);
-  const transitioned = applyStateTransition(loaded.state, {
-    to: "READY_FOR_HUMAN_APPROVAL",
-    lastCommandAt: "2026-03-20T11:30:00.000Z"
-  });
+  const transitionedVariant = applyStateTransition(
+    buildBubbleStateSnapshotVariant(loaded.state),
+    {
+      to: "READY_FOR_HUMAN_APPROVAL",
+      lastCommandAt: "2026-03-20T11:30:00.000Z"
+    }
+  );
+  const transitioned = toPersistedSnapshot(transitionedVariant);
   await writeStateSnapshot(
     bubble.paths.statePath,
     {
@@ -219,11 +225,14 @@ async function seedWaitingHumanState(input: {
     task: "Approval contract queued rework fixture"
   });
   const loaded = await readStateSnapshot(bubble.paths.statePath);
-  const transitioned = applyStateTransition(loaded.state, {
-    to: "WAITING_HUMAN",
-    lastCommandAt: "2026-03-20T11:31:00.000Z"
-  });
-  await writeStateSnapshot(bubble.paths.statePath, transitioned, {
+  const transitioned = applyStateTransition(
+    buildBubbleStateSnapshotVariant(loaded.state),
+    {
+      to: "WAITING_HUMAN",
+      lastCommandAt: "2026-03-20T11:31:00.000Z"
+    }
+  );
+  await writeStateSnapshot(bubble.paths.statePath, toPersistedSnapshot(transitioned), {
     expectedFingerprint: loaded.fingerprint,
     expectedState: "RUNNING"
   });

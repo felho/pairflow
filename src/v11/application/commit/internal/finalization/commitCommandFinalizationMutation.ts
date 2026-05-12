@@ -1,8 +1,6 @@
 import { join } from "node:path";
 
 import { applyStateTransition } from "../../../../domain/state/machine.js";
-import { buildBubbleStateSnapshotVariant } from "../../../../domain/state/snapshot/buildBubbleStateSnapshot.js";
-import { toPersistedSnapshot } from "../../../../domain/state/snapshot/projection.js";
 import { normalizeStringList } from "../../../../shared/normalization/stringNormalization.js";
 import { BubbleCommitError } from "../error/commitCommandError.js";
 import type { BubbleStateSnapshot } from "../../../../domain/state/snapshot/bubbleStateSnapshot.js";
@@ -92,14 +90,10 @@ export async function persistCommittedThenDoneStateMutation(input: {
   writeStateSnapshot: WriteDomainStateSnapshotPort;
 }): Promise<CommitFinalizationLoadedState> {
   const writeSnapshot = input.writeStateSnapshot;
-  // applyStateTransition is still persisted-shape (later batch); project
-  // at the boundary and rebuild the variant from the output.
-  const committed = buildBubbleStateSnapshotVariant(
-    applyStateTransition(toPersistedSnapshot(input.context.state), {
-      to: "COMMITTED",
-      lastCommandAt: input.nowIso
-    })
-  );
+  const committed = applyStateTransition(input.context.state, {
+    to: "COMMITTED",
+    lastCommandAt: input.nowIso
+  });
   const committedWritten = await writeSnapshot(
     input.context.statePath,
     committed,
@@ -109,15 +103,13 @@ export async function persistCommittedThenDoneStateMutation(input: {
     }
   );
 
-  const done = buildBubbleStateSnapshotVariant(
-    applyStateTransition(toPersistedSnapshot(committedWritten.state), {
-      to: "DONE",
-      activeAgent: null,
-      activeRole: null,
-      activeSince: null,
-      lastCommandAt: input.nowIso
-    })
-  );
+  const done = applyStateTransition(committedWritten.state, {
+    to: "DONE",
+    activeAgent: null,
+    activeRole: null,
+    activeSince: null,
+    lastCommandAt: input.nowIso
+  });
 
   try {
     return await writeSnapshot(input.context.statePath, done, {

@@ -6,6 +6,8 @@ import { createHash } from "node:crypto";
 import { renderBubbleConfigToml } from "../../../src/config/bubbleConfig.js";
 import { createBubble } from "../../../src/v11/defaults/create/createBubbleApi.js";
 import { applyStateTransition } from "../../../src/v11/domain/state/machine.js";
+import { buildBubbleStateSnapshotVariant } from "../../../src/v11/domain/state/snapshot/buildBubbleStateSnapshot.js";
+import { toPersistedSnapshot } from "../../../src/v11/domain/state/snapshot/projection.js";
 import {
   readStateSnapshot,
   writeStateSnapshot
@@ -310,7 +312,7 @@ async function setResumeFixtureState(input: {
   const loaded = await readStateSnapshot(input.statePath);
   const lastCommandAt = "2026-03-20T12:00:00.000Z";
 
-  let nextState = loaded.state;
+  let nextState = buildBubbleStateSnapshotVariant(loaded.state);
   if (input.targetState === "WAITING_HUMAN") {
     nextState = applyStateTransition(nextState, {
       to: "WAITING_HUMAN",
@@ -343,7 +345,7 @@ async function setResumeFixtureState(input: {
     }
   }
 
-  await writeStateSnapshot(input.statePath, nextState, {
+  await writeStateSnapshot(input.statePath, toPersistedSnapshot(nextState), {
     expectedFingerprint: loaded.fingerprint,
     expectedState: loaded.state.state
   });

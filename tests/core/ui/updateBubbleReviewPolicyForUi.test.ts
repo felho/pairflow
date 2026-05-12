@@ -14,6 +14,8 @@ import {
   updateBubbleReviewPolicyForUi
 } from "../../../src/v11/defaults/ui/updateBubbleReviewPolicyForUi.js";
 import { applyStateTransition } from "../../../src/v11/domain/state/machine.js";
+import { buildBubbleStateSnapshotVariant } from "../../../src/v11/domain/state/snapshot/buildBubbleStateSnapshot.js";
+import { toPersistedSnapshot } from "../../../src/v11/domain/state/snapshot/projection.js";
 import { withFileLock } from "../../../src/v11/infrastructure/foundation/fs/fileLock.js";
 import { readStateSnapshot } from "../../../src/v11/infrastructure/state/stateStore.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
@@ -439,13 +441,15 @@ describe("updateBubbleReviewPolicyForUi", () => {
         await writeFile(
           bubble.paths.statePath,
           `${JSON.stringify(
-            applyStateTransition(loaded.state, {
-              to: "CANCELLED",
-              activeAgent: null,
-              activeRole: null,
-              activeSince: null,
-              lastCommandAt: "2026-02-21T12:05:00.000Z"
-            }),
+            toPersistedSnapshot(
+              applyStateTransition(buildBubbleStateSnapshotVariant(loaded.state), {
+                to: "CANCELLED",
+                activeAgent: null,
+                activeRole: null,
+                activeSince: null,
+                lastCommandAt: "2026-02-21T12:05:00.000Z"
+              })
+            ),
             null,
             2
           )}\n`,

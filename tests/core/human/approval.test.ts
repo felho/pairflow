@@ -33,6 +33,8 @@ import {
 } from "../../../src/v11/infrastructure/artifact/transcript/transcriptStore.js";
 import { renderBubbleConfigToml } from "../../../src/config/bubbleConfig.js";
 import { applyStateTransition } from "../../../src/v11/domain/state/machine.js";
+import { buildBubbleStateSnapshotVariant } from "../../../src/v11/domain/state/snapshot/buildBubbleStateSnapshot.js";
+import { toPersistedSnapshot } from "../../../src/v11/domain/state/snapshot/projection.js";
 import { readStateSnapshot, writeStateSnapshot } from "../../../src/v11/infrastructure/state/stateStore.js";
 import { bootstrapWorktreeWorkspace } from "../../../src/v11/infrastructure/workspace/worktreeManager.js";
 import { deliveryTargetRoleMetadataKey } from "../../../src/types/protocol.js";
@@ -430,10 +432,10 @@ describe("approval decisions", () => {
       task: "Missing approval recommendation context"
     });
     const loaded = await readStateSnapshot(bubble.paths.statePath);
-    const legacyReadyState = applyStateTransition(loaded.state, {
+    const legacyReadyState = toPersistedSnapshot(applyStateTransition(buildBubbleStateSnapshotVariant(loaded.state), {
       to: "READY_FOR_HUMAN_APPROVAL",
       lastCommandAt: "2026-02-22T12:04:00.000Z"
-    });
+    }));
     const legacyStateWithoutMetaReview = { ...legacyReadyState };
     delete legacyStateWithoutMetaReview.meta_review;
     await writeStateSnapshot(bubble.paths.statePath, legacyStateWithoutMetaReview, {
@@ -458,10 +460,10 @@ describe("approval decisions", () => {
       task: "Human-gate approval parity override"
     });
     const loaded = await readStateSnapshot(bubble.paths.statePath);
-    const legacyReadyState = applyStateTransition(loaded.state, {
+    const legacyReadyState = toPersistedSnapshot(applyStateTransition(buildBubbleStateSnapshotVariant(loaded.state), {
       to: "READY_FOR_HUMAN_APPROVAL",
       lastCommandAt: "2026-02-22T12:04:00.000Z"
-    });
+    }));
     await writeStateSnapshot(
       bubble.paths.statePath,
       {
@@ -536,10 +538,10 @@ describe("approval decisions", () => {
       task: "READY_FOR_HUMAN_APPROVAL sticky run-failed flow"
     });
     const loaded = await readStateSnapshot(bubble.paths.statePath);
-    const legacyReadyState = applyStateTransition(loaded.state, {
+    const legacyReadyState = toPersistedSnapshot(applyStateTransition(buildBubbleStateSnapshotVariant(loaded.state), {
       to: "READY_FOR_HUMAN_APPROVAL",
       lastCommandAt: "2026-02-22T12:04:00.000Z"
-    });
+    }));
     await writeStateSnapshot(
       bubble.paths.statePath,
       {
@@ -611,10 +613,10 @@ describe("approval decisions", () => {
       task: "READY_FOR_HUMAN_APPROVAL sticky missing recommendation"
     });
     const loaded = await readStateSnapshot(bubble.paths.statePath);
-    const legacyReadyState = applyStateTransition(loaded.state, {
+    const legacyReadyState = toPersistedSnapshot(applyStateTransition(buildBubbleStateSnapshotVariant(loaded.state), {
       to: "READY_FOR_HUMAN_APPROVAL",
       lastCommandAt: "2026-02-22T12:04:00.000Z"
-    });
+    }));
     await writeStateSnapshot(
       bubble.paths.statePath,
       {
