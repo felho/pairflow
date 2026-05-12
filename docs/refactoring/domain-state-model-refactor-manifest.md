@@ -1207,6 +1207,144 @@ the `kind` discriminator.
 
 **Recorded:** 2026-05-12.
 
+### 10.13 Scope-split cascade evidence (metaReviewGate, list, resume) — DECIDED
+
+**Background:**
+§10.12 introduced two batch units — lane and shared-boundary —
+and stated the pilot-scope rule should include shared projection
+helpers. The Step 4b-β/12–17 wave exercised both units against
+the remaining lanes; three of those batches surfaced new
+patterns worth recording.
+
+**Three follow-up observations from the 4b-β/12–17 wave:**
+
+1. **Resume lane transitive closure (post 4b-β/11 scan).**
+   Confirmed in §10.12: the resume lane source tree
+   (`src/v11/application/resume/**`) carries no
+   `PersistedBubbleStateSnapshot` reference after the reply lane
+   closed at Step 4b-β/9. The only resume-adjacent persisted-state
+   surface was the shared UI projection adapter, migrated in Step
+   4b-β/11. No separate resume batch was queued; the lane is
+   considered transitively migrated. CLI + UI integration points
+   (`src/cli/commands/bubble/resume.ts`,
+   `src/v11/defaults/ui/routerDefaults.ts:mapUiHumanReplyResult`,
+   `src/v11/infrastructure/ui/routerActionDispatch.ts`) consume
+   the variant via the reply contract without further change.
+
+2. **List lane intentionally skipped (no migration target).**
+   A scan of `src/v11/application/list/**` found:
+   - No mutation surface (read-model only).
+   - `BubbleListEntry.state` is already `BubbleLifecycleState`
+     (lifecycle enum string), not a state snapshot.
+   - Internal projection (`entryProjection.ts`) reads only
+     common fields (`state.state`, `state.round`,
+     `state.active_*`, `state.last_command_at`) on
+     `InspectedStateSnapshot`, which is shared with
+     `start` + `status` and is a separate read-only inspect
+     port, not list-owned. Variant and persisted are
+     structurally compatible for these reads.
+   No list source-side migration was queued; the lane is
+   considered out of variant-migration scope until a
+   cross-lane `InspectedDomainStateSnapshot` boundary batch
+   is needed (analogue of the §10.12 UI projection adapter
+   batch). That boundary batch is **not currently scheduled**;
+   if surfaced during Step 4b-γ preparation, it joins the
+   parser-flip cascade.
+
+3. **MetaReviewGate cascade cannot be split into
+   "public + defaults first" (Batch A) and "internals second"
+   (Batch B).** During the Step 4b-β/17 attempt at the
+   user-preferred Batch A scope:
+   - The public-contract migration (MetaReviewGateResult,
+     dependency ports, current-run types) was a small change.
+   - But the apply context's `readState` / `writeState` fields
+     propagate Domain ports straight into every internal
+     cluster (apply, humanGate, autoRework, cleanRerun,
+     currentRun, state).
+   - Every cluster constructs a `MetaReviewGateResult` whose
+     `state` field is the variant union, so every cluster also
+     becomes a return-boundary projection site.
+   - The type cascade reached ~14 source files + ~38 test
+     fixture sites; splitting at the half-migrated point would
+     have required cross-cluster adapter shims that the unified
+     batch elides.
+   The Batch A scope-split was abandoned in favor of a single
+   cohesive commit (Step 4b-β/17) covering all of metaReviewGate
+   end-to-end. The user-preferred split survived the type-evidence
+   test for stop/commit/start/merge/create lanes (where internals
+   are smaller and the boundary genuinely contains the cascade)
+   but did not for metaReviewGate (where the apply context is the
+   internal-port hub).
+
+**Decision (recorded 2026-05-13):**
+
+1. **The two batch units stand** (lane + shared-boundary, per
+   §10.12). The §10.12 forward implication extends:
+   shared-boundary helpers and shared internal-port hubs are
+   both valid units; the type cascade is the arbiter.
+
+2. **"Lane transitive closure" + "lane intentionally skipped"
+   are first-class manifest states**, not absences. Future
+   readers MUST be able to tell that the resume lane is closed
+   transitively and the list lane is out of scope (rather than
+   simply pending). The 4b-γ test fixture sweep needs to
+   inventory both.
+
+3. **The "public + defaults first" scope split is a heuristic,
+   not a rule.** For lanes whose internal-port hub is the apply
+   context (or equivalent), the split is infeasible and the
+   batch should be a single comprehensive commit. The
+   type-cascade evidence at the half-migrated point is the
+   decision criterion.
+
+**Forward implication:**
+- The remaining 4b-β scope is now narrow: no further per-lane
+  migration is queued. The remaining persisted-state surfaces
+  are:
+  - **SSH cross-batch border** (approval + commit lanes mark
+    `infrastructure/executor/ssh/sshBubble*Command.ts` results
+    as persisted with explicit comments; same pattern applies
+    to other SSH command parsers under
+    `infrastructure/executor/ssh/`). A boundary review batch
+    can either migrate the SSH lane to variant or leave it
+    explicit-persisted with documentation; the choice depends
+    on Step 4b-γ's parser-flip strategy.
+  - **InspectedStateSnapshot** (read-only inspect port shared
+    by list/status/start, per observation 2 above) — same
+    boundary-batch character as the UI projection adapter
+    cleanup.
+  - **Domain helpers** still consuming persisted shape:
+    `domain/metaReviewGate/snapshotState.ts` (incrementAutoReworkCount,
+    setMetaReviewConsecutiveCleanRuns,
+    normalizeMetaReviewSnapshot),
+    `domain/metaReviewGate/autoReworkRetryInvariant.ts`,
+    `domain/state/rework/reworkIntentTransitions.ts`
+    (deriveQueuedDeferredReworkIntentState,
+    applyDeferredReworkIntent), `domain/state/machine.ts`
+    (applyStateTransition itself). These are projected at
+    every consumer boundary via `toPersistedSnapshot` +
+    `buildBubbleStateSnapshotVariant`. Domain-helper migration
+    is **deferred to Step 4b-γ** — the parser flip will move
+    these helpers' inputs to the variant union directly.
+
+**Landed work:**
+
+- Step 4b-β/12 (commit 8b6a48b5): stop lane public result +
+  mutation port migrated.
+- Step 4b-β/13 (commit 3584d9e7): start + restart public result
+  lifted to variant (internal already migrated in 4b-β/2).
+- Step 4b-β/14 (commit 94bcc212): commit lane public result +
+  mutation port migrated; last UI consumer wrap removed.
+- Step 4b-β/15 (commit cb500004): merge lane internal state
+  migrated (no public-result change; result has no state field).
+- Step 4b-β/16 (commit e362866a): create lane public result +
+  initial state construction migrated.
+- Step 4b-β/17 (commit 58f1332e): metaReviewGate authority
+  surface migrated end-to-end (largest single batch — 28 files);
+  scope-split Batch A approach abandoned per observation 3 above.
+
+**Recorded:** 2026-05-13.
+
 ---
 
 ## 11. Non-goals
@@ -1235,23 +1373,36 @@ the `kind` discriminator.
 
 ## 12. Approval
 
-This manifest is **settled** as of 2026-05-12 (revising the
-2026-05-11 open-questions revision; the Step 4b atomic-commit
-plan is split per §10.10; the §3.2 MetaReviewSubstate inner
-union is recorded as not-implemented per §10.11; lane
-transitivity and shared-boundary batch unit are recorded per
-§10.12). All §10 decisions are locked. Steps 2, 3, 4.0, 4a, and
-4b-α are complete (commits 935eefec → 43dec6b0 → b6998a27 →
-a3ae830a → 0ce0ddc9; see §7 status column). Step 4b-β has eleven
-green increments landed (2ab700ba → f59a07bd → 0e23743c →
-4f697f71 → a7db7e40 → 03f8b2b6 → 2f316a59 → a8745e0d → 471b40bd
-→ 09e671e8 → 84376e95) covering boundary helpers, start, kickoff,
-watchdog, pass, converged, askHuman validation, askHuman mutation,
-reply, approval, and the shared UI projection adapter. Remaining
-Step 4 sequence: continued 4b-β increments (metaReviewGate +
-smaller persisted-result lanes) → 4b-γ (terminal: test fixture
-migration + canonical parser switch to the variant union,
-transitional API removal — mandatory program endpoint per §10.10)
-→ 5 (test mirror cleanup) → 6 (doc sync). Further deviations
-during execution require an amendment to this document in the
-same commit that introduces them.
+This manifest is **settled** as of 2026-05-13 (revising the
+2026-05-12 revision; the Step 4b atomic-commit plan is split per
+§10.10; the §3.2 MetaReviewSubstate inner union is recorded as
+not-implemented per §10.11; lane transitivity and shared-boundary
+batch unit are recorded per §10.12; scope-split cascade evidence
++ resume/list closure + metaReviewGate single-batch realization
+are recorded per §10.13). All §10 decisions are locked. Steps 2,
+3, 4.0, 4a, and 4b-α are complete (commits 935eefec → 43dec6b0
+→ b6998a27 → a3ae830a → 0ce0ddc9; see §7 status column).
+Step 4b-β has seventeen green increments landed (2ab700ba →
+f59a07bd → 0e23743c → 4f697f71 → a7db7e40 → 03f8b2b6 → 2f316a59
+→ a8745e0d → 471b40bd → 09e671e8 → 84376e95 → 8b6a48b5 →
+3584d9e7 → 94bcc212 → cb500004 → e362866a → 58f1332e) covering
+boundary helpers, start (internal), kickoff, watchdog, pass,
+converged, askHuman validation, askHuman mutation, reply,
+approval, UI projection adapter, stop, start + restart public
+result, commit, merge, create, and metaReviewGate. Resume lane
+is closed transitively via reply (Step 4b-β/9); list lane is
+intentionally skipped (read-only projection over shared inspect
+port — out of variant-migration scope per §10.13). The Step
+4b-β per-lane wave is **considered closed**; remaining
+persisted-state surfaces (SSH command parsers under
+`infrastructure/executor/ssh/`, the shared
+`InspectedStateSnapshot` read port, and domain helpers in
+`domain/metaReviewGate/` + `domain/state/rework/` +
+`domain/state/machine.ts`) are deferred to Step 4b-γ per §10.13.
+Remaining Step 4 sequence: 4b-γ (terminal: SSH/inspect boundary
+review or explicit deferral + domain-helper migration + test
+fixture migration + canonical parser switch to the variant
+union + transitional API removal — mandatory program endpoint
+per §10.10) → 5 (test mirror cleanup) → 6 (doc sync). Further
+deviations during execution require an amendment to this document
+in the same commit that introduces them.
