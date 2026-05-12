@@ -319,11 +319,7 @@ function mapUiCommitResult(result: CommitBubbleResult): UiCommitBubbleResult {
 function mapUiStartResult(result: StartBubbleResult): UiStartBubbleResult {
   return {
     bubbleId: result.bubbleId,
-    // start lane's public result is still persisted-shape (later batch);
-    // wrap at the UI consumer boundary.
-    actionState: projectBubbleStateToUiActionState(
-      buildBubbleStateSnapshotVariant(result.state)
-    ),
+    actionState: projectBubbleStateToUiActionState(result.state),
     tmuxSessionName: result.tmuxSessionName,
     worktreePath: result.worktreePath
   };
@@ -342,11 +338,7 @@ function mapUiStopResult(result: StopBubbleResult): UiStopBubbleResult {
 function mapUiRestartResult(result: RestartBubbleResult): UiRestartBubbleResult {
   return {
     bubbleId: result.bubbleId,
-    // restart lane reuses StartBubbleResult["state"], persisted-shape
-    // (later batch); wrap at the UI consumer boundary.
-    actionState: projectBubbleStateToUiActionState(
-      buildBubbleStateSnapshotVariant(result.state)
-    ),
+    actionState: projectBubbleStateToUiActionState(result.state),
     tmuxSessionName: result.tmuxSessionName,
     worktreePath: result.worktreePath,
     previousTmuxSessionExisted: result.previousTmuxSessionExisted,

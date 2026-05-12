@@ -1,6 +1,5 @@
 import { buildResumeTranscriptSummary } from "./internal/prompts/startCommandResumeSummary.js";
 import type { BubbleStateSnapshot } from "../../domain/state/snapshot/bubbleStateSnapshot.js";
-import { toPersistedSnapshot } from "../../domain/state/snapshot/projection.js";
 import { adaptPersistedWritePortToDomain } from "../../shared/mutation/mutationBoundaryIO.js";
 import type {
   WriteDomainStateSnapshotPort
@@ -259,7 +258,7 @@ export function mapStartBubbleResult(input: {
 }): StartBubbleResult {
   return {
     bubbleId: input.bubbleId,
-    state: toPersistedSnapshot(input.state),
+    state: input.state,
     tmuxSessionName: input.tmuxSessionName,
     worktreePath: input.worktreePath,
     executionTarget: input.executionTarget,
