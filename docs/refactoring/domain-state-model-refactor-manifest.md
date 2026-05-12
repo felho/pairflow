@@ -1690,97 +1690,181 @@ post-flip cleanup commits**, in that order.
 
    - **4b-γ/4 — Canonical parser flip + port collapse +
      transitional API deletion + SSH cleanup + adapter cleanup.**
-     This commit is **atomically required** because the
-     end-of-step invariant ("only one canonical parser API")
-     cannot exist as a green intermediate state. Specifically:
-     - `parseBubbleStateSnapshot` returns
-       `ValidationResult<BubbleStateSnapshot>`.
-     - `assertParsedBubbleStateSnapshot` returns
+     Landed as commit 468188ab (120 files: 760 ins / 644 del).
+     The Step 4 program endpoint per §10.10 / §10.15 mandatory
+     atomic criterion. Realised scope:
+     - **Canonical parser flip** in
+       `domain/state/stateSchema.ts`: `parseBubbleStateSnapshot`
+       returns `ValidationResult<BubbleStateSnapshot>` (variant
+       built internally via `buildBubbleStateSnapshotVariant`);
+       `assertParsedBubbleStateSnapshot` returns
        `BubbleStateSnapshot`.
-     - `parseDomainBubbleStateSnapshot` and
-       `assertParsedDomainBubbleStateSnapshot` are **deleted**;
-       their 4 callsites rename to the canonical names.
-       Strongly-justified rename (keeping the persisted-shape
-       parser under a new name) was considered and rejected:
-       post-flip the persisted-shape parser has zero callsites
-       (wire-format I/O routes through the variant parser +
-       `toPersistedSnapshot` at write boundary), so retaining a
-       zero-caller parser violates the endpoint criterion.
-     - Port families collapse: `ReadStateSnapshotPort` /
-       `WriteStateSnapshotPort` / `LoadedStateSnapshot` either
-       become aliases of their Domain siblings OR are deleted
-       with the Domain prefix removed from the survivor. Result:
-       single port family.
-     - `stateStore.ts` boundary functions consolidated:
-       `readStateSnapshot` / `writeStateSnapshot` /
-       `createStateSnapshot` return variant; the
+     - **Transitional API deletion**: `parseDomainBubbleStateSnapshot`
+       + `assertParsedDomainBubbleStateSnapshot` deleted; 5 src
+       callsites (kickoffStateTransition, postAppendStateWriter,
+       watchdogCommandFlow, startState × 2) + 1 test
+       (`bubbleStateSnapshotVariant.test.ts`) renamed to the
+       canonical names. Rename-keep-zero-caller path explicitly
+       rejected per the endpoint criterion.
+     - **Port family collapse (Option B per user direction)**:
+       `LoadedDomainStateSnapshot` /
+       `ReadDomainStateSnapshotPort` /
+       `WriteDomainStateSnapshotPort` /
        `readDomainStateSnapshot` / `writeDomainStateSnapshot` /
-       `createDomainStateSnapshot` opt-in siblings collapse.
-     - SSH lane absorbed per §10.14: the 8
-       `buildBubbleStateSnapshotVariant(routed.state |
-       remoteResult.state)` wrap deletions at the approval +
-       commit application boundaries, plus the 2 cross-batch
-       border comments (`remoteApprovalCommandPort.ts:1-4`,
-       `commitRemoteExecution.ts:5-8`), land in the same commit.
-     - Adapter helper cleanup: 52
-       `adaptPersistedReadPortToDomain` /
-       `adaptPersistedWritePortToDomain` /
-       `persistDomainStateViaMutationBoundary` callsites
-       across 6 defaults + ~20 application files become
-       identity post-port-collapse; either deleted as
-       no-op adapters or absorbed by direct port use.
-     - Estimated scope: ~80–100 files in single commit;
-       mechanically uniform because pre-flip preparation
-       (4b-γ/1 → 4b-γ/3) eliminated internal persisted-shape
-       dependencies in application code.
+       `createDomainStateSnapshot` deleted; ~195 references
+       mass-renamed to canonical names. Single variant-shaped
+       port family; persisted-port aliases NOT retained
+       (Option A alias-collapse rejected per the endpoint
+       criterion).
+     - **stateStore consolidation**: `createStateSnapshot` /
+       `writeStateSnapshot` / `readStateSnapshot` accept and
+       return variant; internal projection via
+       `toPersistedSnapshot` + `serializeState` at wire-format
+       boundary. `inspectStateSnapshot` keeps persisted-shape
+       per §10.15 decision 1 but projects variant parser output
+       through `toPersistedSnapshot` to preserve on-disk
+       fingerprint stability.
+     - **SSH cleanup absorbed (per §10.14)**: 6
+       `buildBubbleStateSnapshotVariant(...)` wrap deletions
+       at approval (4) + commit (2) application boundaries; 2
+       cross-batch border comments removed
+       (`remoteApprovalCommandPort.ts`,
+       `commitRemoteExecution.ts`); 3 SSH parser-result type
+       sites (sshBubbleApprovalParsing,
+       sshBubbleApprovalValidationHelpers, sshBubbleCommitPayload)
+       inherit variant via the canonical parser.
+     - **Adapter cleanup**: `adaptPersistedReadPortToDomain` +
+       `adaptPersistedWritePortToDomain` deleted from
+       `mutationBoundaryIO.ts`; 52 single-line callsites
+       inlined; 3 multi-line callsites
+       (`passWorkspaceContextPreparation`,
+       `convergedRoutingPreparation`,
+       `startCommandOrchestration`) collapsed to direct port
+       use. `persistDomainStateViaMutationBoundary` deleted;
+       ~15 callsites renamed to `persistStateViaMutationBoundary`.
+     - **Section G application-helper bundle (undocumented
+       fan-out uncovered during the pre-flip scope-scan)**: 3
+       additional src files signature-lifted that the original
+       §10.15 estimate did not list:
+       `application/metaReview/internal/submit/persistence.ts`,
+       `application/status/internal/computation/statusCommandInternals.ts`,
+       `shared/status/statusCommandTypes.ts` (`BubbleStatusState`
+       redirected to `InspectedStateSnapshot["state"]` since
+       status reads via the inspect port).
+     - **§10.13 cross-batch border preserved**:
+       `rollbackStateOnAppendFailure` remains
+       `PersistedBubbleStateSnapshot`. Set sites continue
+       projecting via `toPersistedSnapshot`. Documented
+       exception, not migration debt.
+     - **Temporary test fixture scaffold (4b-γ/5 mandatory
+       cleanup target)**: created
+       `tests/helpers/temporaryVariantStateFixture.ts`
+       exporting `asTemporaryVariantStateFixture<T>(s: T):
+       BubbleStateSnapshot`. ~32 test files used it via local
+       `writeStateSnapshot` wrapper that accepts `unknown`
+       state input and casts at the boundary. The scaffold was
+       chosen over a ~200-site fixture rewrite to preserve the
+       atomic source-flip commit focus while keeping the
+       green-commit invariant (option B3 in the pre-commit
+       deliberation). Production source MUST NOT import it.
 
-     **Mandatory pre-flip verifications (before 4b-γ/4 lands):**
-     - **Wire-format invariant**: explicit verification that
+     **Footprint deviation from §10.15 estimate**: ~80–100 →
+     **120 files** (Section G fan-out + test scaffold scope).
+     Mechanically uniform because pre-flip preparation
+     (4b-γ/1 → 4b-γ/3) eliminated internal persisted-shape
+     dependencies in application code.
+
+     **Mandatory pre-flip verifications (completed before
+     4b-γ/4 landed)**:
+     - **Wire-format invariant**: existing variant tests
+       (`bubbleStateSnapshotVariant.test.ts:145-154`,
+       `stateStoreDomain.test.ts:47, 117`) cover the
        `toPersistedSnapshot(buildBubbleStateSnapshotVariant(s))`
-       is byte-identical to `s` for every reachable persisted
-       state shape. Existing variant tests assert this; re-affirm
-       in the 4b-γ/4 prep notes.
+       round-trip and the on-disk JSON `kind`-absence assertion.
+       No new test added; existing coverage was sufficient.
      - **`stateSchema.test.ts` focused prep scan**: the
-       1186-line parser unit test exercises
-       `parseBubbleStateSnapshot` extensively. Pre-scan
-       identifies which assertions check shape-agnostic
-       (e.g., `result.value.state === "RUNNING"`) versus
-       persisted-shape-specific (`.toEqual({...persisted-only
-       field ordering...})`). The latter need conversion to
-       variant-aware assertions in the same 4b-γ/4 commit; the
-       former survive without edit.
+       1214-line parser unit test verified
+       100% shape-agnostic (`result.ok` boolean,
+       `result.errors` field access, `result.value.<field>`
+       discrete access patterns only; zero
+       `.toEqual({...full persisted-shape...})` callsites). No
+       fixture edits required in this test file.
+
+     **Verification chain at landing**: `pnpm typecheck` exit
+     0; `pnpm test` 3766/3766 + ui 230/230 green.
 
    **Post-flip cleanup (2 splittable green commits):**
 
-   - **4b-γ/5 — Test fixture sweep.** Convert ~50–100
-     full-state construction sites (passed to port mocks /
-     mutation helpers) from persisted-shape literals to
-     `buildBubbleStateSnapshotVariant({...})`. Most test sites
-     (`toMatchObject({state:{state:"X"}})` partials, direct
-     enum-field assertions) are already shape-agnostic; only
-     full-state constructions need wrapping. Sub-splittable
-     per `tests/<directory>/`; each sub-commit greens.
+   - **4b-γ/5 — Cast scaffold + test fixture cleanup.** Landed
+     as commit c498256d (42 files: 123 ins / 171 del; deletion
+     bias = scaffold removal). Realised scope:
+     - **Scaffold helper deleted**:
+       `tests/helpers/temporaryVariantStateFixture.ts` removed
+       (mandatory cleanup target documented in the 4b-γ/4
+       commit).
+     - **108 callsites renamed**: `asTemporaryVariantStateFixture`
+       → `buildBubbleStateSnapshotVariant` across 39 test
+       files; imports re-pointed from the deleted helper to
+       the canonical
+       `src/v11/domain/state/snapshot/buildBubbleStateSnapshot.js`.
+     - **Local writeStateSnapshot wrapper cast pattern**: ~21
+       test files keep the local wrapper that accepts
+       `unknown` state input (so persisted-shape spread
+       fixtures still compile) with a single boundary cast
+       (`buildBubbleStateSnapshotVariant(state as
+       PersistedBubbleStateSnapshot)`). The cast lives at one
+       wrapper site per file, not at every fixture
+       construction.
+     - **`PersistedBubbleStateSnapshot` type imports added** in
+       30 test files where the boundary cast needs the type
+       name.
+     - **Lint-driven dead-code cleanup** (4 unused imports + 3
+       unnecessary type assertions): `metaReview/submit/persistence.ts`
+       drops unused `PersistedBubbleStateSnapshot` import;
+       `kickoffDependencyResolution.test.ts` drops unused
+       `toPersistedSnapshot` + `buildBubbleStateSnapshotVariant`;
+       `v11/stateStore.test.ts` drops unused
+       `toPersistedSnapshot`; `converged.test.ts`,
+       `metaReviewGateCurrentRunFinalization.test.ts`,
+       `metaReviewGateHumanGatePersistence.test.ts` drop
+       now-unnecessary `as PersistedBubbleStateSnapshot`
+       assertions.
+     - **Final grep**: zero occurrences of
+       `asTemporaryVariantStateFixture` or
+       `temporaryVariantStateFixture` in `tests/` or `src/`.
+     - **Verification chain**: `pnpm lint` exit 0; `pnpm
+       typecheck` exit 0; `pnpm test` 3766/3766 + ui 230/230
+       green; `pnpm build` (`tsc -p tsconfig.build.json`) clean.
+
+     Originally planned as "convert ~50–100 full-state
+     construction sites to `buildBubbleStateSnapshotVariant`",
+     but the 4b-γ/4 cast-scaffold approach concentrated the
+     fixture surface at ~21 local wrapper sites instead of
+     ~200 per-callsite rewrites. The realised scope reflects
+     this concentration: scaffold deletion + per-wrapper
+     boundary cast + lint sweep.
    - **4b-γ/6 — Final `PersistedBubbleStateSnapshot` reach
-     cleanup.** Audit remaining references after fixture sweep.
-     Legitimate retain: wire-format I/O (stateStore serialize,
-     SSH JSON.stringify, createBubblePersistence write).
-     Remove: any application-code or test reference; indexed-type
-     accesses (`PersistedBubbleStateSnapshot["state"]`) become
-     `BubbleStateSnapshot["state"]`. Type-alias and re-export
-     hygiene only.
+     cleanup** — **folded into 4b-γ/5 at landing time.** The
+     post-flip residual cleanup planned as a separate commit
+     was naturally subsumed by the 4b-γ/5 lint-driven dead-code
+     sweep: every dead `PersistedBubbleStateSnapshot` import
+     in test files was removed in the same commit as the
+     scaffold removal. The remaining `PersistedBubbleStateSnapshot`
+     references are all legitimate wire-format I/O surfaces
+     (stateStore serialize, SSH JSON parser internals,
+     `createBubblePersistence` write, the type definition
+     itself, and the §10.15-deferred `InspectedStateSnapshot`
+     fallback). No separate 4b-γ/6 commit is required; the
+     Step 4b-γ wave closes at 4b-γ/5.
 
 **Forward implication:**
-- The Step 4b-γ scope is now fully bounded: 3 pre-flip green
-  preparation commits (4b-γ/1 → 4b-γ/3) + 1 atomic parser-flip
-  commit (4b-γ/4) + 2 post-flip cleanup commits (4b-γ/5 → 4b-γ/6).
-- After 4b-γ/4, the program endpoint is technically reached:
-  canonical parser variant, transitional API deleted, single
-  port family. The two post-flip cleanups (4b-γ/5, 4b-γ/6) are
-  consistency follow-ups; they MAY be folded into Step 5
-  (test mirror cleanup) and Step 6 (doc sync) if the per-commit
-  blast radius is small at flip time, OR kept as 4b-γ
-  sub-commits if the fixture-sweep scope makes them more
-  naturally part of the parser-flip program.
+- The Step 4b-γ scope landed as **5 green commits**, not 6:
+  3 pre-flip preparation (4b-γ/1 → 4b-γ/3) + 1 atomic
+  parser-flip endpoint (4b-γ/4) + 1 post-flip cleanup that
+  absorbed the originally-planned 6th (4b-γ/5).
+- The Step 4 program endpoint is reached: canonical parser
+  variant, transitional API deleted, single port family,
+  zero temporary scaffolds.
 - `InspectedStateSnapshot` stays persisted-shape indefinitely
   after Step 4b-γ; any later read-port unification batch
   (post-Step 4) is out of this manifest's scope.
@@ -1842,36 +1926,52 @@ intentionally skipped (read-only projection over shared inspect
 port — out of variant-migration scope per §10.13). The Step
 4b-β per-lane wave is **considered closed**.
 
-Remaining persisted-state surfaces and their 4b-γ disposition
-(per §10.15 commit-sequence plan):
-- **Domain helpers** in `domain/metaReviewGate/` +
-  `domain/state/rework/` + `domain/state/machine.ts` — lifted
-  to variant input/output in pre-flip commits **4b-γ/1**
-  (`applyStateTransition`) and **4b-γ/2** (snapshotState +
-  autoReworkRetryInvariant + reworkIntentTransitions).
-- **Construction helpers** in `domain/state/initialState.ts`,
-  `domain/state/startState.ts`, `domain/pass/handoff.ts` —
-  lifted to variant output in pre-flip commit **4b-γ/3**.
-- **Canonical parser, transitional parser, port families,
-  SSH wrap sites, adapter helpers, cross-batch border
-  comments** — all collapsed into atomic commit **4b-γ/4**
-  (the program endpoint per §10.10). SSH absorbed per §10.14.
-- **Test fixture full-state constructions** — converted to
-  `buildBubbleStateSnapshotVariant({...})` in post-flip
-  commit **4b-γ/5** (splittable per directory).
-- **Residual `PersistedBubbleStateSnapshot` reach** —
-  type-alias / re-export / indexed-access hygiene in
-  post-flip commit **4b-γ/6**.
-- **Shared `InspectedStateSnapshot` read port** (list / status
-  / start) — **kept persisted-shape after 4b-γ per §10.15**.
-  The inspect port's coercion-fallback path is a deliberate
-  diagnostic boundary, not migration debt. Read-port
-  unification is out of Step 4 scope.
+**Step 4b-γ is complete.** Five green commits landed in the
+planned sequence (3 pre-flip + 1 atomic + 1 post-flip
+cleanup; the originally planned 4b-γ/6 residual reach
+hygiene folded naturally into 4b-γ/5's lint sweep):
 
-Remaining Step 4 sequence: 4b-γ (terminal: per §10.15 — 3
-pre-flip green commits + 1 atomic parser-flip commit (mandatory
-program endpoint per §10.10) + 2 post-flip cleanup commits —
-where post-flip cleanups MAY fold into Step 5/6 if naturally
-small) → 5 (test mirror cleanup) → 6 (doc sync). Further
-deviations during execution require an amendment to this
-document in the same commit that introduces them.
+- **4b-γ/1** (commit 5d6241ae) — `applyStateTransition` lift
+  + immediate-transition helper bundle (3 helpers + 6 callers
+  + 7 B.1 callsites + 13 test fixture sites).
+- **4b-γ/2** (commit bb9f6eb7) — snapshotState helpers
+  (`incrementAutoReworkCount`,
+  `setMetaReviewConsecutiveCleanRuns`) lifted;
+  `autoReworkRetryInvariant.ts` deleted as dead code.
+- **4b-γ/3** (commit a3e16a72) — construction helpers:
+  `initialState.ts` output lifted; `handoff.ts` input lifted
+  (DTO output unchanged); `startState.ts` already variant
+  from 4b-γ/1 cascade.
+- **4b-γ/4** (commit 468188ab) — **Step 4 endpoint commit**:
+  canonical parser flip + transitional API deletion + port
+  family collapse (Option B) + stateStore consolidation + SSH
+  cleanup (§10.14) + adapter cleanup + Section G application
+  helper bundle + temporary test cast scaffold (option B3).
+  120 files, 760 ins / 644 del.
+- **4b-γ/5** (commit c498256d) — cast scaffold removal + 108
+  callsites renamed to canonical `buildBubbleStateSnapshotVariant`
+  + lint-driven dead-code cleanup. 42 files, 123 ins / 171 del
+  (deletion bias). Zero
+  `asTemporaryVariantStateFixture` references remaining.
+
+**Step 4 program endpoint reached**: single canonical
+state-snapshot parser API; transitional opt-in API deleted;
+single variant-shaped port family; SSH and adapter scaffolds
+collapsed; test fixtures use the canonical builder.
+
+Surviving exceptions, deliberate and documented:
+- `PersistedBubbleStateSnapshot` retained as the wire-format
+  type (used at file I/O serialization, SSH JSON.stringify,
+  `createBubblePersistence` write).
+- `InspectedStateSnapshot` keeps persisted-shape per §10.15
+  decision 1 — the inspect port's coercion-fallback path is
+  a deliberate diagnostic boundary. Read-port unification is
+  out of Step 4 scope.
+- `rollbackStateOnAppendFailure` keeps persisted-shape per
+  §10.13 cross-batch border decision. Set sites project via
+  `toPersistedSnapshot`.
+
+Remaining Step 4 sequence: Step 5 (test mirror cleanup) →
+Step 6 (final doc sync). Further deviations during execution
+require an amendment to this document in the same commit
+that introduces them.
