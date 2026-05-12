@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { buildAutoConvergePassResult, buildNormalPassResult } from "../../../../src/v11/application/pass/internal/normalPass/passResultBuilder.js";
+import { buildBubbleStateSnapshotVariant } from "../../../../src/v11/domain/state/snapshot/buildBubbleStateSnapshot.js";
 
 function buildEnvelope(id: string) {
   return {
@@ -19,7 +20,7 @@ function buildEnvelope(id: string) {
 }
 
 function buildState() {
-  return {
+  return buildBubbleStateSnapshotVariant({
     bubble_id: "b_123",
     state: "RUNNING" as const,
     round: 2,
@@ -28,7 +29,7 @@ function buildState() {
     active_role: "implementer" as const,
     round_role_history: [],
     last_command_at: "2026-03-19T12:00:00.000Z"
-  };
+  });
 }
 
 describe("passResultBuilder", () => {

@@ -7,6 +7,8 @@ import type { BubbleConfig } from "../../../../shared/config/bubbleConfigTypes.j
 import type { Finding } from "../../../../../types/findings.js";
 import type { PassIntent } from "../../../../../contracts/kernel/protocol.js";
 import type { EmitConvergedResult } from "../../../converged/convergedCommandOrchestration.js";
+import type { BubbleStateSnapshot } from "../../../../domain/state/snapshot/bubbleStateSnapshot.js";
+import { buildBubbleStateSnapshotVariant } from "../../../../domain/state/snapshot/buildBubbleStateSnapshot.js";
 import type {
   ReviewerFindingsClaim,
   ReviewerFindingsClaimParserMetadata
@@ -87,7 +89,7 @@ export interface FinalizeAutoConvergePassDependencies<TResult> {
     repeatCleanReasonDetail: RepeatCleanAutoconvergeReasonDetail;
     convergenceSequence: number;
     convergenceEnvelope: EmitConvergedResult["convergenceEnvelope"];
-    state: EmitConvergedResult["state"];
+    state: BubbleStateSnapshot;
     gateRoute: EmitConvergedResult["gateRoute"];
     approvalRequestSequence: number;
     approvalRequestEnvelope: EmitConvergedResult["approvalRequestEnvelope"];
@@ -159,7 +161,7 @@ export async function finalizeAutoConvergePass<TResult>(
     repeatCleanReasonDetail: input.repeatCleanReasonDetail,
     convergenceSequence: input.converged.convergenceSequence,
     convergenceEnvelope: input.converged.convergenceEnvelope,
-    state: input.converged.state,
+    state: buildBubbleStateSnapshotVariant(input.converged.state),
     gateRoute: input.converged.gateRoute,
     approvalRequestSequence: input.converged.approvalRequestSequence,
     approvalRequestEnvelope: input.converged.approvalRequestEnvelope,

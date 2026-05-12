@@ -1,9 +1,9 @@
 import type { ReviewVerificationInputResolution } from "../../../../shared/reviewer/reviewVerification.js";
 import type { BubbleConfig } from "../../../../shared/config/bubbleConfigTypes.js";
-import type { PersistedBubbleStateSnapshot } from "../../../../domain/state/snapshot/persistedBubbleStateSnapshot.js";
+import type { BubbleStateSnapshot } from "../../../../domain/state/snapshot/bubbleStateSnapshot.js";
 import type { Finding } from "../../../../../types/findings.js";
 import type { ResolvedPassHandoff } from "../../../../domain/pass/handoff.js";
-import type { LoadedStateSnapshot } from "../../../../ports/stateSnapshots.js";
+import type { LoadedDomainStateSnapshot } from "../../../../ports/stateSnapshots.js";
 import type { evaluateReviewerGateWarnings } from "../../../../shared/gates/docContractGates.js";
 
 export interface PersistNormalPassPostAppendInput {
@@ -17,7 +17,7 @@ export interface PersistNormalPassPostAppendInput {
   reviewVerificationArtifactPath: string;
   mappedEnvelopeId: string;
   statePath: string;
-  state: PersistedBubbleStateSnapshot;
+  state: BubbleStateSnapshot;
   expectedFingerprint: string;
   appendEnvelopeId: string;
   docGateScopeActive: boolean;
@@ -44,7 +44,7 @@ export interface PersistNormalPassPostAppendDependencies {
   }) => Promise<void>;
   writePostAppendPassState: (input: {
     statePath: string;
-    state: PersistedBubbleStateSnapshot;
+    state: BubbleStateSnapshot;
     handoff: Pick<
       ResolvedPassHandoff,
       "nextRound" | "recipientAgent" | "recipientRole" | "appendRoundRoleEntry"
@@ -54,7 +54,7 @@ export interface PersistNormalPassPostAppendDependencies {
     expectedFingerprint: string;
     envelopeId: string;
     createError: PairflowCreateCommandError;
-  }) => Promise<LoadedStateSnapshot>;
+  }) => Promise<LoadedDomainStateSnapshot>;
   updateReviewerDocGateArtifact: (input: {
     now: Date;
     bubbleConfig: BubbleConfig;
@@ -68,7 +68,7 @@ export interface PersistNormalPassPostAppendDependencies {
 }
 
 export interface PersistNormalPassPostAppendResult {
-  written: LoadedStateSnapshot;
+  written: LoadedDomainStateSnapshot;
   docGateArtifactWriteFailureReason?: string;
 }
 

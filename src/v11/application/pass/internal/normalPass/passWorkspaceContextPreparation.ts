@@ -1,4 +1,6 @@
-import type { LoadedStateSnapshot } from "../../../../ports/stateSnapshots.js";
+import { adaptPersistedReadPortToDomain } from "../../../../shared/mutation/mutationBoundaryIO.js";
+import { buildBubbleStateSnapshotVariant } from "../../../../domain/state/snapshot/buildBubbleStateSnapshot.js";
+import type { LoadedDomainStateSnapshot } from "../../../../ports/stateSnapshots.js";
 import type {
   EnsureBubbleInstanceIdForMutationResult
 } from "../../../../ports/bubbleIdentity.js";
@@ -23,7 +25,7 @@ import {
 } from "../../../../shared/actorProtocol/actorEmitContext.js";
 import type { ActorEmitContextSnapshot } from "../../../../shared/actorProtocol/actorEmitContext.js";
 import type { AgentName } from "../../../../../contracts/kernel/agentIdentity.js";
-import type { PersistedBubbleStateSnapshot } from "../../../../domain/state/snapshot/persistedBubbleStateSnapshot.js";
+import type { BubbleStateSnapshot } from "../../../../domain/state/snapshot/bubbleStateSnapshot.js";
 import {
   resolveIdeationMetadata
 } from "../../../../domain/ideation/ideationMetadata.js";
@@ -55,8 +57,8 @@ export interface PreparePassWorkspaceContextDependencies {
 export interface PreparedPassWorkspaceContext {
   resolved: ResolvedBubbleWorkspace;
   bubbleIdentity: EnsureBubbleInstanceIdForMutationResult;
-  loadedState: LoadedStateSnapshot;
-  state: PersistedBubbleStateSnapshot;
+  loadedState: LoadedDomainStateSnapshot;
+  state: BubbleStateSnapshot;
   activation?: ActorActivationProvenance;
   reviewPolicyRuntime: BubbleReviewPolicyRuntimeView;
   handoff: ResolvedPassHandoff;
@@ -75,8 +77,9 @@ export async function preparePassWorkspaceContext(
   const ensureBubbleIdentity =
     dependencies.ensureBubbleInstanceIdForMutation
     ?? ensureBubbleInstanceIdForMutation;
-  const readState =
-    dependencies.readStateSnapshot ?? readStateSnapshot;
+  const readState = adaptPersistedReadPortToDomain(
+    dependencies.readStateSnapshot ?? readStateSnapshot
+  );
   const resolveIdeation =
     dependencies.resolveIdeationMetadata ?? resolveIdeationMetadata;
   const resolveHandoff = dependencies.resolvePassHandoff ?? resolvePassHandoff;
@@ -108,9 +111,13 @@ export async function preparePassWorkspaceContext(
   });
   resolved.bubbleConfig = bubbleIdentity.bubbleConfig;
 
-  const loadedState =
-    input.authoritativeContext?.loaded_state
-    ?? await readState(resolved.bubblePaths.statePath);
+  const loadedState: LoadedDomainStateSnapshot =
+    input.authoritativeContext?.loaded_state !== undefined
+      ? {
+          state: buildBubbleStateSnapshotVariant(input.authoritativeContext.loaded_state.state),
+          fingerprint: input.authoritativeContext.loaded_state.fingerprint
+        }
+      : await readState(resolved.bubblePaths.statePath);
   const state = loadedState.state;
   const ideationMetadata = resolveIdeation(resolved.bubbleConfig);
   if (

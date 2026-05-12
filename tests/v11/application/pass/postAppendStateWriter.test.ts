@@ -7,6 +7,8 @@ function toErrorMessage(input: PairflowCommandErrorInput): string {
   return (input.reasonCode !== undefined ? input.reasonCode + ": " : "") + input.message;
 }
 
+import type { BubbleStateSnapshot } from "../../../../src/v11/domain/state/snapshot/bubbleStateSnapshot.js";
+import { buildBubbleStateSnapshotVariant } from "../../../../src/v11/domain/state/snapshot/buildBubbleStateSnapshot.js";
 import type { PersistedBubbleStateSnapshot } from "../../../../src/v11/domain/state/snapshot/persistedBubbleStateSnapshot.js";
 import { writePostAppendPassState } from "../../../../src/v11/application/pass/internal/normalPass/postAppendStateWriter.js";
 
@@ -21,8 +23,8 @@ function createError(message: PairflowCommandErrorInput): Error {
   return new TestPostAppendStateWriterError(toErrorMessage(message));
 }
 
-function buildState(): PersistedBubbleStateSnapshot {
-  return {
+function buildState(): BubbleStateSnapshot {
+  return buildBubbleStateSnapshotVariant({
     bubble_id: "b_123",
     state: "RUNNING",
     round: 2,
@@ -44,7 +46,7 @@ function buildState(): PersistedBubbleStateSnapshot {
       }
     ],
     last_command_at: "2026-03-19T11:59:00.000Z"
-  };
+  });
 }
 
 describe("writePostAppendPassState", () => {
@@ -84,7 +86,7 @@ describe("writePostAppendPassState", () => {
         expectedState: "RUNNING"
       }
     });
-    expect((writes[0] as { state: PersistedBubbleStateSnapshot }).state).toMatchObject({
+    expect((writes[0] as { state: BubbleStateSnapshot }).state).toMatchObject({
       round: 2,
       active_agent: "claude",
       active_role: "reviewer",

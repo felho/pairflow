@@ -5,10 +5,10 @@ import type {
 import type { ReviewerTestExecutionDirective } from "../../../../shared/reviewer/testEvidence.js";
 import type { ReviewVerificationInputResolution } from "../../../../shared/reviewer/reviewVerification.js";
 import type { DeliveryAck } from "../../../../ports/tmuxDelivery.js";
-import type { LoadedStateSnapshot } from "../../../../ports/stateSnapshots.js";
+import type { LoadedDomainStateSnapshot } from "../../../../ports/stateSnapshots.js";
 import type { AgentName } from "../../../../../contracts/kernel/agentIdentity.js";
 import type { BubbleConfig } from "../../../../shared/config/bubbleConfigTypes.js";
-import type { PersistedBubbleStateSnapshot } from "../../../../domain/state/snapshot/persistedBubbleStateSnapshot.js";
+import type { BubbleStateSnapshot } from "../../../../domain/state/snapshot/bubbleStateSnapshot.js";
 import type { Finding } from "../../../../../types/findings.js";
 import type { PassIntent } from "../../../../../contracts/kernel/protocol.js";
 import type { ProtocolEnvelope } from "../../../../../types/protocol.js";
@@ -56,7 +56,7 @@ export interface RunNormalPassFlowInput {
   inferredIntent: boolean;
   activation?: PassActivationProvenance;
   reviewerVerification: ReviewVerificationInputResolution | undefined;
-  state: PersistedBubbleStateSnapshot;
+  state: BubbleStateSnapshot;
   expectedStateFingerprint: string;
   bubbleId: string;
   bubbleInstanceId: string;
@@ -138,7 +138,7 @@ export interface RunNormalPassFlowDependencies<TResult> {
     reviewVerificationArtifactPath: string;
     mappedEnvelopeId: string;
     statePath: string;
-    state: PersistedBubbleStateSnapshot;
+    state: BubbleStateSnapshot;
     expectedFingerprint: string;
     appendEnvelopeId: string;
     docGateScopeActive: boolean;
@@ -151,7 +151,7 @@ export interface RunNormalPassFlowDependencies<TResult> {
     reviewerGateEvaluation?: ReturnType<typeof evaluateReviewerGateWarnings>;
     createError: PairflowCreateCommandError;
   }) => Promise<{
-    written: LoadedStateSnapshot;
+    written: LoadedDomainStateSnapshot;
     docGateArtifactWriteFailureReason?: string;
   }>;
   executeNormalPassDelivery: (input: {
@@ -200,7 +200,7 @@ export interface RunNormalPassFlowDependencies<TResult> {
     docGateArtifactWriteFailureReason?: string;
     sequence: number;
     envelope: ProtocolEnvelope;
-    state: PersistedBubbleStateSnapshot;
+    state: BubbleStateSnapshot;
     activation?: PassActivationProvenance;
     deliveryResult: DeliveryAck | undefined;
     deliveryRetried: boolean;

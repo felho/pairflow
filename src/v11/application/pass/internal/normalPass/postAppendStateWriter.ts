@@ -1,13 +1,19 @@
 import { writeStateSnapshot } from "../../../start/startCommandDependencyDefaults.js";
-import type { LoadedStateSnapshot } from "../../../../ports/stateSnapshots.js";
+import { adaptPersistedWritePortToDomain } from "../../../../shared/mutation/mutationBoundaryIO.js";
+import type {
+  LoadedDomainStateSnapshot,
+  WriteDomainStateSnapshotPort
+} from "../../../../ports/stateSnapshots.js";
+import type { BubbleStateSnapshot } from "../../../../domain/state/snapshot/bubbleStateSnapshot.js";
+import { toPersistedSnapshot } from "../../../../domain/state/snapshot/projection.js";
+import { assertParsedDomainBubbleStateSnapshot } from "../../../../domain/state/stateSchema.js";
 import { buildRunningExecutionContext } from "../../../../domain/state/execution/executionContext.js";
-import type { PersistedBubbleStateSnapshot } from "../../../../domain/state/snapshot/persistedBubbleStateSnapshot.js";
 import type { ResolvedPassHandoff } from "../../../../domain/pass/handoff.js";
 import { raisePostAppendStateWriteFailed } from "../../../../domain/pass/postAppendStateWriteFailure.js";
 
 export interface WritePostAppendPassStateInput {
   statePath: string;
-  state: PersistedBubbleStateSnapshot;
+  state: BubbleStateSnapshot;
   handoff: Pick<
     ResolvedPassHandoff,
     "nextRound" | "recipientAgent" | "recipientRole" | "appendRoundRoleEntry"
@@ -26,16 +32,19 @@ export interface WritePostAppendPassStateDependencies {
 export async function writePostAppendPassState(
   input: WritePostAppendPassStateInput,
   dependencies: WritePostAppendPassStateDependencies = {}
-): Promise<LoadedStateSnapshot> {
-  const writeState = dependencies.writeStateSnapshot ?? writeStateSnapshot;
+): Promise<LoadedDomainStateSnapshot> {
+  const persistedWritePort = dependencies.writeStateSnapshot ?? writeStateSnapshot;
+  const writeState: WriteDomainStateSnapshotPort =
+    adaptPersistedWritePortToDomain(persistedWritePort);
 
-  const nextState: PersistedBubbleStateSnapshot = {
-    ...input.state,
+  const currentPersisted = toPersistedSnapshot(input.state);
+  const nextState = assertParsedDomainBubbleStateSnapshot({
+    ...currentPersisted,
     round: input.handoff.nextRound,
     active_agent: input.handoff.recipientAgent,
     active_role: input.handoff.recipientRole,
     execution_context: buildRunningExecutionContext({
-      bubbleId: input.state.bubble_id,
+      bubbleId: currentPersisted.bubble_id,
       round: input.handoff.nextRound,
       activeRole: input.handoff.recipientRole,
       startedAt: input.nowIso,
@@ -45,9 +54,9 @@ export async function writePostAppendPassState(
     last_command_at: input.nowIso,
     round_role_history:
       input.handoff.appendRoundRoleEntry === undefined
-        ? input.state.round_role_history
-        : [...input.state.round_role_history, input.handoff.appendRoundRoleEntry]
-  };
+        ? currentPersisted.round_role_history
+        : [...currentPersisted.round_role_history, input.handoff.appendRoundRoleEntry]
+  });
 
   try {
     // Transcript is canonical source of truth. If state write fails after append,
