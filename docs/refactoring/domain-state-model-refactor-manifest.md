@@ -1,7 +1,7 @@
 # Domain State Model Refactor — Step 1 Manifest
 
-Status: settled (Steps 2–3 complete on 2026-05-11; Step 4 sequence pending)
-Last updated: 2026-05-11 (Step 4.0 manifest review: 3c2 deviation incorporated per §10.9)
+Status: settled (Steps 2–3 + 4a + 4b-α complete; Step 4b-β / 4b-γ pending; final parser switch is the mandatory program endpoint)
+Last updated: 2026-05-12 (Step 4b atomic split revised — see §10.10 — and MetaReviewSubstate deviation recorded — see §10.11)
 Owner: architecture/domain-state
 Scope: relocate `src/v11/shared/state/*` to `src/v11/domain/state/*` as
 the canonical home for the bubble state domain model, restructure into
@@ -294,6 +294,13 @@ authority rules that asserted these combinations at runtime are now
 implicit in the type.
 
 ### 3.2 MetaReview inner axis
+
+> **Status:** NOT IMPLEMENTED — see §10.11 for the settled decision.
+> The `kind` outer discriminator pins meta-review semantics on
+> `running_meta_review` without an inner substate union. The variant
+> types reference `BubbleMetaReviewSnapshotState` (the persisted
+> shape) directly. The original §3.2 design below is preserved as
+> historical context for the program decision history.
 
 The `meta_review` field carries its own discrimination, orthogonal to
 the outer variant:
@@ -611,32 +618,52 @@ persisted shape.
 **Affected files:** the parser + ~17 direct callers across application/
 + infrastructure/.
 
-### Step 4b — Variant model + parser refactor + consumer narrowing (1 big commit)
+### Step 4b — Variant model rollout (split — see §10.10)
 
-The substantive commit. Order of changes within:
+The original Step 4b plan called for a single atomic commit that
+introduced the variant types, switched the parser's return type to
+`BubbleStateSnapshot`, and cascaded the change through every
+consumer + test fixture. A live Step 4b attempt surfaced a much
+larger blast radius than the pilot (§5) had estimated, driven
+almost entirely by inline test fixture literals; §10.10 records
+the lesson and the resulting sequence revision. The substantive
+work is now staged across multiple green commits:
 
-1. Add `BubbleStateSnapshot` discriminated union per §3, in
-   `domain/state/snapshot/bubbleStateSnapshot.ts`.
-2. Add `MetaReviewSubstate` discriminated union per §3.2.
-3. Add variant-construction helpers + variant-narrowing guards per
-   §3.3 and §5.3.
-4. Update `parseBubbleStateSnapshot` to return `BubbleStateSnapshot`
-   (the variant) instead of `PersistedBubbleStateSnapshot`. The
-   parser's body adds a kind-discrimination step at the end.
-5. Drop the authority files that are now subsumed by TypeScript
-   narrowing (the bulk of `authority/executionContextAuthority.ts`).
-   Keep only the cross-field value invariants in
-   `authority/snapshotInvariants.ts`.
-6. Update all ~30 narrowing consumers to use the kind discriminator
-   or the guards.
-7. Update ~10 construction consumers to use the variant-specific
-   helpers.
-8. Update ~30 tests that read fields to narrow appropriately.
+- **Step 4b-α — Additive variant model (1 commit, landed: 0ce0ddc9).**
+  Introduce the variant types, kind discriminator, builder, guards,
+  and projection helper as additive API. Add opt-in
+  `parseDomainBubbleStateSnapshot` /
+  `assertParsedDomainBubbleStateSnapshot` in `stateSchema.ts`. The
+  canonical `parseBubbleStateSnapshot` continues to return
+  `PersistedBubbleStateSnapshot`. No consumer change. No test
+  fixture change.
 
-**Expected diff size:** ~50-80 files, ~500-1000 LOC churned. Single
-commit because intermediate states are typecheck-broken (a consumer
-expecting the broad type can't typecheck against the variant union
-until it narrows).
+- **Step 4b-β — Production consumer migration (multiple commits,
+  pending).** Migrate domain + application + infrastructure
+  consumers to the variant API (`parseDomainBubbleStateSnapshot`,
+  guards, narrowing on `state.kind`) in small green increments.
+  Each commit individually green on
+  typecheck/lint/fitness/tests/build. Sequencing of these
+  increments is determined when each batch is queued; this manifest
+  does not pre-plan them.
+
+- **Step 4b-γ — Test fixture migration + canonical parser switch
+  (1 or more commits, pending; mandatory program endpoint).**
+  Migrate test fixtures to the variant model (likely via a fixture
+  helper or codemod once the production-side migration shows the
+  representative patterns). Then flip
+  `parseBubbleStateSnapshot`'s return type to `BubbleStateSnapshot`,
+  drop `parseDomainBubbleStateSnapshot` /
+  `assertParsedDomainBubbleStateSnapshot` as transitional API, and
+  drop the authority shape rules subsumed by TypeScript narrowing.
+  After this commit, every consumer of the parser receives the
+  variant union; the persisted shape is reachable only via
+  `infrastructure/state/` + test fixtures (per §10.4).
+
+The **final design endpoint is unchanged**: the canonical parser
+returns `BubbleStateSnapshot`, and the persisted shape is a narrow
+boundary type. The split is a sequencing correction in service of
+the green-commit invariant, not a design retreat.
 
 ### Step 5 — Test mirror cleanup (1 commit)
 
@@ -650,24 +677,27 @@ docs) get a brief cross-reference to the state model refactor as the
 domain-state precedent. Any architecture-fitness docs that referenced
 `shared/state/` get updates.
 
-### Total: ~10 commits
+### Total: ~11+ commits (revised — see §10.10)
 
-| #  | Step | Files | Status | Behavior change |
-|---:|------|------:|--------|-----------------|
-| 1  | 2    | ~17 + 154 import updates | landed (935eefec) | No |
-| 2  | 3a   | ~6 | landed (e798ccbe) | No |
-| 3  | 3b   | ~5 | landed (8537ba80) | No |
-| 4  | 3c1  | ~5 | landed (3953e04c) | No |
-| 5  | 3c2  | ~3 + types split | landed (43dec6b0) | No |
-| 6  | 4.0  | 1 doc | in progress | No (this commit) |
-| 7  | 4a   | ~17 | pending | No |
-| 8  | 4b   | ~50-80 | pending | **Yes** (type-level invariant enforcement; runtime authority code dropped) |
-| 9  | 5    | ~5 | pending | No |
-| 10 | 6    | 2-3 docs | pending | No |
+| #   | Step  | Files | Status | Behavior change |
+|----:|-------|------:|--------|-----------------|
+| 1   | 2     | ~17 + 154 import updates | landed (935eefec) | No |
+| 2   | 3a    | ~6 | landed (e798ccbe) | No |
+| 3   | 3b    | ~5 | landed (8537ba80) | No |
+| 4   | 3c1   | ~5 | landed (3953e04c) | No |
+| 5   | 3c2   | ~3 + types split | landed (43dec6b0) | No |
+| 6   | 4.0   | 1 doc | landed (b6998a27) | No |
+| 7   | 4a    | 142 (5 token rename) | landed (a3ae830a) | No |
+| 8   | 4b-α  | 7 (5 new + 1 modified + 1 test) | landed (0ce0ddc9) | No (additive) |
+| 9   | 4.1   | 1 doc | in progress | No (this commit) |
+| 10+ | 4b-β  | tbd per increment | pending | Per increment |
+| N   | 4b-γ  | tbd | pending | **Yes** (canonical parser returns variant; transitional API removed) |
+| N+1 | 5     | ~5 | pending | No |
+| N+2 | 6     | 2-3 docs | pending | No |
 
-(Step 4a-guards is an optional conditional commit between 4a and 4b,
-gated on pilot findings — would push total to ~11. Step 5 may
-collapse into the doc-sync commit if test moves are small.)
+(Step 4b-β is a series of small green migration commits; commit
+count is determined as each batch queues. Step 5 may collapse into
+the doc-sync commit if test moves are small.)
 
 ---
 
@@ -950,6 +980,146 @@ checks dictate.
 
 **Landed:** Step 3c2 (commit 43dec6b0).
 
+### 10.10 Step 4b atomic split — REVISED FOR FIXTURE BLAST RADIUS
+
+**Background:**
+The original §7 Step 4b called for a single atomic commit because
+intermediate states would be typecheck-broken: switching the
+parser's return type from `PersistedBubbleStateSnapshot` to the
+`BubbleStateSnapshot` variant union cascades typecheck errors
+across every consumer until each one narrows. Pilot estimates
+(§5) projected 50–80 files and 500–1000 LOC of churn for that
+atomic commit.
+
+**Issue surfaced during the live Step 4b attempt:**
+The actual cascade reached ~14 production source files (within
+range) and ~277 test files (roughly 4–5× the pilot estimate). The
+production-side cascade was tractable; the test-side was not.
+Test fixtures throughout the codebase construct inline
+state-snapshot literals and pass them to functions that the
+parser switch would have begun typing as the variant union. With
+the variant requiring a `kind` discriminator field, ~300–500
+fixture sites needed simultaneous updates within a single commit
+to remain green.
+
+The pilot did not anticipate this because it focused on
+production-side narrowing (the explicit §5 scope) and not on
+test fixture surface. Fixture sites are mechanical to fix
+individually but pervasive enough that bundling them into the
+production-switch commit pushed the working tree into
+multi-day, typecheck-broken territory — exactly the regime
+the program has so far avoided.
+
+**Decision:**
+Step 4b is split across multiple green commits per §7's revised
+"Step 4b — Variant model rollout":
+
+- **4b-α (landed: 0ce0ddc9)** introduces the variant model as
+  additive opt-in API. Parser unchanged. No consumer change.
+- **4b-β (pending, multiple commits)** migrates production
+  consumers to the variant API in small green increments.
+- **4b-γ (pending, terminal commit)** migrates test fixtures and
+  flips the canonical parser to return the variant union, dropping
+  the transitional opt-in API.
+
+Each commit remains green on
+typecheck/lint/fitness/tests/build. The "atomic because
+intermediate states are typecheck-broken" rationale becomes
+"atomic per migration unit"; no commit ships in a broken state.
+
+**Rationale:**
+- The green-commit invariant is the program's primary safety
+  property. A multi-day dirty tree fundamentally changes the
+  collaboration model; preserving green is more valuable than
+  preserving "single atomic Step 4b" semantics.
+- The final design endpoint is unchanged: the canonical parser
+  returns the variant union, and the persisted shape is a narrow
+  boundary type (per §10.4). The terminal Step 4b-γ commit
+  lands that endpoint.
+- The variant model API is observable in 4b-α onward; production
+  consumers can opt in and be reviewed individually. This
+  surfaces narrowing-pattern issues earlier than a single big
+  commit would have.
+
+**Forward implication:**
+Future refactors that change a deeply-shared type's return
+shape should pre-budget for fixture blast radius alongside
+production-side narrowing. The pilot scope (§5) should explicitly
+include a fixture-construction count, not just a field-read
+count.
+
+**Mandatory program endpoint:** `parseBubbleStateSnapshot`
+returns `BubbleStateSnapshot` (the variant union) at Step 4b-γ.
+Until that commit lands, the program's terminal goal is not
+achieved; 4b-α / 4b-β are intermediate stations, not the
+destination.
+
+### 10.11 MetaReviewSubstate inner discriminated union — NOT IMPLEMENTED
+
+**Background:**
+§3.2 specified an inner discriminated union for the `meta_review`
+field: `MetaReviewSubstate = MetaReviewSubstateInactive |
+MetaReviewSubstateActive`, with a domain-only `status` field as
+discriminator. The substate types tightened
+`BubbleMetaReviewSnapshotState`'s optional fields into required
+ones, intended to give consumers tighter narrowing on meta-review
+state.
+
+**Issues surfaced during the Step 4b live attempt:**
+
+- The substate's stricter shape (e.g., `runtime_delivery:
+  T | null` required) was not assignable to the persisted
+  `BubbleMetaReviewSnapshotState`'s optional shape under
+  `exactOptionalPropertyTypes`. Each cross-boundary use needed
+  conversion helpers.
+- Several existing helpers (e.g., `clearLiveMetaReviewSnapshot`)
+  return the persisted-shape `BubbleMetaReviewSnapshotState`,
+  not the substate. Consumers reading
+  `state.meta_review` (substate) and round-tripping through these
+  helpers introduced widespread `MetaReviewSubstate` ↔
+  `BubbleMetaReviewSnapshotState` projection plumbing.
+- The deep-equality assertions in
+  `tests/core/state/stateSchema.test.ts` (e.g., L38–46) check
+  `meta_review` against literal objects without a `status` field;
+  the substate's discriminator field would have required either
+  test-wide updates or a `status`-less variant of the substate.
+
+**Decision:**
+The inner substate discriminated union is **not** implemented.
+The variant types in
+`src/v11/domain/state/snapshot/bubbleStateSnapshot.ts` reference
+`BubbleMetaReviewSnapshotState` (the persisted shape) directly
+for the `meta_review` field. Discrimination on meta-review state
+remains available via the outer variant
+(`state.kind === "running_meta_review"`) and via runtime checks
+on `state.meta_review?.execution_context`.
+
+**Rationale:**
+- The outer `kind` discriminator already pins meta-review
+  semantics for `running_meta_review` (active execution context,
+  active_role = `meta_reviewer`). Most meta-review-aware code
+  already narrows on the outer kind first.
+- The substate's incremental narrowing benefit was small: it
+  would have changed `state.meta_review?.execution_context !==
+  null` checks to `state.meta_review?.status === "active"`
+  checks. Same expressive power, different syntax.
+- The cross-boundary conversion plumbing (helper return-type
+  mismatches, fixture deep-equality breaks) cost more than the
+  narrowing convenience saved.
+- Per the §10.9 pattern: when the design intent fights the
+  fitness check (or here, the type-system structural reality),
+  prefer simpler structures that preserve the design intent.
+
+**Forward implication:**
+If a future change makes the substate discrimination clearly
+beneficial (e.g., a refactor that introduces multiple
+meta-review sub-states beyond just active/inactive), revisit
+this decision. The `BubbleStateRunningMetaReview` variant pins
+the outer authority, which is the bulk of what consumers need.
+
+**Recorded:** 2026-05-12 (during the Step 4b atomic split
+revision; see §10.10).
+
 ---
 
 ## 11. Non-goals
@@ -978,11 +1148,16 @@ checks dictate.
 
 ## 12. Approval
 
-This manifest is **settled** as of 2026-05-11 (the open-questions
-revision, amended on the same day by the Step 4.0 review to
-incorporate the 3c2 deviation per §10.9). All §10 decisions are
-locked. Steps 2 and 3 are complete (commits 935eefec → 43dec6b0;
-see §7 status column). Step 4 proceeds via the launch sequence:
-4.0 (this commit) → 4a → pilot → 4a-guards (conditional) → 4b →
-5 → 6. Further deviations during execution require an amendment
+This manifest is **settled** as of 2026-05-12 (revising the
+2026-05-11 open-questions revision; the Step 4b atomic-commit
+plan is split per §10.10, and the §3.2 MetaReviewSubstate inner
+union is recorded as not-implemented per §10.11). All §10
+decisions are locked. Steps 2, 3, 4.0, 4a, and 4b-α are complete
+(commits 935eefec → 43dec6b0 → b6998a27 → a3ae830a → 0ce0ddc9;
+see §7 status column). Remaining Step 4 sequence: 4b-β
+(production consumer migration, multiple green increments) →
+4b-γ (terminal: test fixture migration + canonical parser switch
+to the variant union, transitional API removal — mandatory
+program endpoint per §10.10) → 5 (test mirror cleanup) → 6 (doc
+sync). Further deviations during execution require an amendment
 to this document in the same commit that introduces them.
