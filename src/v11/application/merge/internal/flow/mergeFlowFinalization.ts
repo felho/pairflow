@@ -1,4 +1,4 @@
-import { persistStateViaMutationBoundary } from "../../../../shared/mutation/mutationBoundaryIO.js";
+import { persistDomainStateViaMutationBoundary } from "../../../../shared/mutation/mutationBoundaryIO.js";
 import type { ResolvedMergeCommandDependencies } from "../preparation/mergeCommandDependencyResolution.js";
 import type { MergeFlowExecutionContext } from "./mergeFlowContext.js";
 import type {
@@ -263,7 +263,7 @@ export async function finalizeMergeFlow(input: {
     bubbleId: input.context.resolved.bubbleId
   });
 
-  await persistStateViaMutationBoundary({
+  await persistDomainStateViaMutationBoundary({
     write: input.dependencies.writeStateSnapshot,
     statePath: input.context.resolved.bubblePaths.statePath,
     state: {
@@ -319,7 +319,7 @@ async function finalizeRemoteMergeFlow(input: {
   deletedRemoteBranch: boolean;
 }): Promise<LocalMergeFlowFinalizationResult> {
   try {
-    await persistStateViaMutationBoundary({
+    await persistDomainStateViaMutationBoundary({
       write: input.dependencies.writeStateSnapshot,
       statePath: input.context.resolved.bubblePaths.statePath,
       state: {

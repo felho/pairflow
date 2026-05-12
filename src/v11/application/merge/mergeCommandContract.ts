@@ -10,8 +10,8 @@ import type {
 import type { RunGitPort } from "../../ports/git.js";
 import type { ResolveBubbleByIdPort } from "../../ports/bubbleLookup.js";
 import type {
-  ReadStateSnapshotPort,
-  WriteStateSnapshotPort
+  ReadDomainStateSnapshotPort,
+  WriteDomainStateSnapshotPort
 } from "../../ports/stateSnapshots.js";
 import type { BranchExistsPort } from "../../ports/git.js";
 import type { EnsureBubbleInstanceIdForMutationPort } from "../../ports/bubbleIdentity.js";
@@ -77,8 +77,8 @@ export interface MergeBubbleDependencies {
   cleanupWorktreeWorkspace?: CleanupWorktreeWorkspacePort;
   runGit?: RunGitPort;
   resolveBubbleById?: ResolveBubbleByIdPort;
-  readStateSnapshot?: ReadStateSnapshotPort;
-  writeStateSnapshot?: WriteStateSnapshotPort;
+  readStateSnapshot?: ReadDomainStateSnapshotPort;
+  writeStateSnapshot?: WriteDomainStateSnapshotPort;
   branchExists?: BranchExistsPort;
   ensureBubbleInstanceIdForMutation?: EnsureBubbleInstanceIdForMutationPort;
   emitBubbleLifecycleEventBestEffort?: EmitBubbleLifecycleEventBestEffortPort;
