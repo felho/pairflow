@@ -20,7 +20,7 @@ import type { PersistedBubbleStateSnapshot } from "../../../../src/v11/domain/st
 import { RemoteBubbleStartError } from "../../../../src/v11/infrastructure/executor/ssh/sshBubbleStart.js";
 import type { UpsertRuntimeSessionInput } from "../../../../src/v11/ports/runtimeSessions.js";
 import type { WriteStateSnapshotOptions } from "../../../../src/v11/infrastructure/state/stateStore.js";
-import { readStateSnapshot, writeStateSnapshot } from "../../../../src/v11/infrastructure/state/stateStore.js";
+import { readStateSnapshot, writeDomainStateSnapshot, writeStateSnapshot } from "../../../../src/v11/infrastructure/state/stateStore.js";
 import {
   readRemotePointer,
   readRemoteStateCache,
@@ -491,7 +491,7 @@ describe("startCommandRemoteExecution", () => {
             if (state.state === "RUNNING") {
               throw new Error("forced running persistence failure");
             }
-            return writeStateSnapshot(statePath, state, options);
+            return writeDomainStateSnapshot(statePath, state, options);
           },
           writeRemoteStateCache: async (path, value) => {
             await writeFile(path, `${JSON.stringify(value)}\n`, "utf8");
@@ -532,7 +532,7 @@ describe("startCommandRemoteExecution", () => {
           if (state.state === "RUNNING") {
             throw new Error("forced running persistence failure");
           }
-          return writeStateSnapshot(statePath, state, options);
+          return writeDomainStateSnapshot(statePath, state, options);
         },
         removeRemoteStateCache: async () => {
           throw new Error("forced cache rollback failure");

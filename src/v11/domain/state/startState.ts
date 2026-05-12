@@ -1,18 +1,21 @@
 import type { AgentName } from "../../../contracts/kernel/agentIdentity.js";
-import type { PersistedBubbleStateSnapshot } from "../../domain/state/snapshot/persistedBubbleStateSnapshot.js";
+import type { BubbleStateSnapshot } from "../../domain/state/snapshot/bubbleStateSnapshot.js";
+import { buildBubbleStateSnapshotVariant } from "../../domain/state/snapshot/buildBubbleStateSnapshot.js";
+import { toPersistedSnapshot } from "../../domain/state/snapshot/projection.js";
 import {
   buildRestartedExecutionContext,
   buildRunningExecutionContext
 } from "../../domain/state/execution/executionContext.js";
+import { assertParsedDomainBubbleStateSnapshot } from "./stateSchema.js";
 import { applyStateTransition } from "./machine.js";
 
 export interface DeriveStartPreparingStateInput {
-  state: PersistedBubbleStateSnapshot;
+  state: BubbleStateSnapshot;
   lastCommandAt: string;
 }
 
 export interface DeriveStartRunningStateInput {
-  preparingState: PersistedBubbleStateSnapshot;
+  preparingState: BubbleStateSnapshot;
   lastCommandAt: string;
   bubbleId: string;
   implementer: AgentName;
@@ -22,29 +25,30 @@ export interface DeriveStartRunningStateInput {
 }
 
 export interface DeriveStartResumedStateInput {
-  state: PersistedBubbleStateSnapshot;
+  state: BubbleStateSnapshot;
   lastCommandAt: string;
   watchdogTimeoutMinutes: number;
 }
 
 export interface DeriveStartFailedCleanupStateInput {
-  preparingState: PersistedBubbleStateSnapshot;
+  preparingState: BubbleStateSnapshot;
   lastCommandAt: string;
 }
 
 export function deriveStartPreparingState(
   input: DeriveStartPreparingStateInput
-): PersistedBubbleStateSnapshot {
-  return applyStateTransition(input.state, {
+): BubbleStateSnapshot {
+  const nextPersisted = applyStateTransition(toPersistedSnapshot(input.state), {
     to: "PREPARING_WORKSPACE",
     lastCommandAt: input.lastCommandAt
   });
+  return buildBubbleStateSnapshotVariant(nextPersisted);
 }
 
 export function deriveStartRunningState(
   input: DeriveStartRunningStateInput
-): PersistedBubbleStateSnapshot {
-  return applyStateTransition(input.preparingState, {
+): BubbleStateSnapshot {
+  const nextPersisted = applyStateTransition(toPersistedSnapshot(input.preparingState), {
     to: "RUNNING",
     round: input.ideationPending ? 0 : 1,
     activeAgent: input.implementer,
@@ -72,56 +76,59 @@ export function deriveStartRunningState(
           }
         })
   });
+  return buildBubbleStateSnapshotVariant(nextPersisted);
 }
 
 export function deriveStartResumedState(
   input: DeriveStartResumedStateInput
-): PersistedBubbleStateSnapshot {
+): BubbleStateSnapshot {
+  const currentPersisted = toPersistedSnapshot(input.state);
   if (
-    input.state.state === "RUNNING"
-    && input.state.round >= 1
-    && input.state.active_role !== null
+    currentPersisted.state === "RUNNING"
+    && currentPersisted.round >= 1
+    && currentPersisted.active_role !== null
   ) {
-    const executionContext = input.state.execution_context;
+    const executionContext = currentPersisted.execution_context;
     if (executionContext === null || executionContext === undefined) {
       throw new Error(
         "RUNNING resume requires persisted execution_context authority."
       );
     }
     const resumedExecutionContext =
-      input.state.active_role === "implementer"
-      || input.state.active_role === "reviewer"
+      currentPersisted.active_role === "implementer"
+      || currentPersisted.active_role === "reviewer"
         ? buildRestartedExecutionContext({
-            bubbleId: input.state.bubble_id,
-            round: input.state.round,
-            activeRole: input.state.active_role,
+            bubbleId: currentPersisted.bubble_id,
+            round: currentPersisted.round,
+            activeRole: currentPersisted.active_role,
             restartedAt: input.lastCommandAt,
             watchdogTimeoutMinutes: input.watchdogTimeoutMinutes,
             previousExecutionContext: executionContext
           })
         : executionContext;
-    return {
-      ...input.state,
+    return assertParsedDomainBubbleStateSnapshot({
+      ...currentPersisted,
       execution_context: resumedExecutionContext,
       active_since: input.lastCommandAt,
       last_command_at: input.lastCommandAt
-    };
+    });
   }
 
-  return {
-    ...input.state,
+  return assertParsedDomainBubbleStateSnapshot({
+    ...currentPersisted,
     last_command_at: input.lastCommandAt
-  };
+  });
 }
 
 export function deriveStartFailedCleanupState(
   input: DeriveStartFailedCleanupStateInput
-): PersistedBubbleStateSnapshot {
-  return applyStateTransition(input.preparingState, {
+): BubbleStateSnapshot {
+  const nextPersisted = applyStateTransition(toPersistedSnapshot(input.preparingState), {
     to: "FAILED",
     activeAgent: null,
     activeRole: null,
     activeSince: null,
     lastCommandAt: input.lastCommandAt
   });
+  return buildBubbleStateSnapshotVariant(nextPersisted);
 }

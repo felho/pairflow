@@ -7,7 +7,7 @@ import {
   resolveFreshLaunchWorkspace,
   resolveResumeLaunchWorkspace
 } from "./startCommandLaunchWorkspace.js";
-import type { PersistedBubbleStateSnapshot } from "../../../../domain/state/snapshot/persistedBubbleStateSnapshot.js";
+import type { BubbleStateSnapshot } from "../../../../domain/state/snapshot/bubbleStateSnapshot.js";
 import type { ResolvedStartBubbleDependencies } from "../../startCommandOrchestration.js";
 import type { StartExecutionContext } from "./startCommandContext.js";
 import { prepareResumeLaunchInput } from "../prompts/startCommandResumeFlowPreparation.js";
@@ -42,7 +42,7 @@ interface ResumeStartResult {
 
 export interface FreshStartProgress {
   workspaceBootstrapped: boolean;
-  preparingState: PersistedBubbleStateSnapshot | null;
+  preparingState: BubbleStateSnapshot | null;
   preparingFingerprint: string | null;
 }
 

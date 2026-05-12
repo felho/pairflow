@@ -1,5 +1,11 @@
 import { buildResumeTranscriptSummary } from "./internal/prompts/startCommandResumeSummary.js";
-import type { PersistedBubbleStateSnapshot } from "../../domain/state/snapshot/persistedBubbleStateSnapshot.js";
+import type { BubbleStateSnapshot } from "../../domain/state/snapshot/bubbleStateSnapshot.js";
+import { buildBubbleStateSnapshotVariant } from "../../domain/state/snapshot/buildBubbleStateSnapshot.js";
+import { toPersistedSnapshot } from "../../domain/state/snapshot/projection.js";
+import type {
+  WriteDomainStateSnapshotPort,
+  WriteStateSnapshotPort
+} from "../../ports/stateSnapshots.js";
 import type {
   StartBubbleDependencies,
   StartBubbleResult,
@@ -55,7 +61,7 @@ export interface ResolvedStartBubbleDependencies {
   claimSession: NonNullable<StartBubbleDependencies["claimRuntimeSession"]>;
   upsertSession: NonNullable<StartBubbleDependencies["upsertRuntimeSession"]>;
   removeSession: NonNullable<StartBubbleDependencies["removeRuntimeSession"]>;
-  writeState: NonNullable<StartBubbleDependencies["writeStateSnapshot"]>;
+  writeState: WriteDomainStateSnapshotPort;
   loadPairflowGlobalConfig:
     () => Promise<PairflowGlobalConfig>;
   runGitCommand:
@@ -203,8 +209,9 @@ export function resolveStartBubbleDependencies(
     isTmuxSessionAlive:
       dependencies.isTmuxSessionAlive ?? input.isTmuxSessionAliveDefault,
     ...runtimeSessions,
-    writeState:
-      dependencies.writeStateSnapshot ?? startBubbleDependencyDefaults.writeStateSnapshot,
+    writeState: adaptPersistedWritePortToDomain(
+      dependencies.writeStateSnapshot ?? startBubbleDependencyDefaults.writeStateSnapshot
+    ),
     ...remoteExecution,
     reportWarning:
       dependencies.reportWarning
@@ -245,7 +252,7 @@ export function resolveStartBubbleMode(currentState: string): StartBubbleMode {
 
 export function mapStartBubbleResult(input: {
   bubbleId: string;
-  state: PersistedBubbleStateSnapshot;
+  state: BubbleStateSnapshot;
   tmuxSessionName: string;
   worktreePath: string;
   executionTarget: "local" | "remote";
@@ -253,10 +260,27 @@ export function mapStartBubbleResult(input: {
 }): StartBubbleResult {
   return {
     bubbleId: input.bubbleId,
-    state: input.state,
+    state: toPersistedSnapshot(input.state),
     tmuxSessionName: input.tmuxSessionName,
     worktreePath: input.worktreePath,
     executionTarget: input.executionTarget,
     runtimeWorkspacePath: input.runtimeWorkspacePath
+  };
+}
+
+// Boundary adapter: the external StartBubbleDependencies contract still
+// supplies a persisted-shape WriteStateSnapshotPort; the resolved
+// internal `writeState` is the variant-aware WriteDomainStateSnapshotPort.
+// This adapter wraps the persisted port so internal start mutation
+// helpers can hand it a BubbleStateSnapshot variant.
+function adaptPersistedWritePortToDomain(
+  persistedPort: WriteStateSnapshotPort
+): WriteDomainStateSnapshotPort {
+  return async (statePath, state, options) => {
+    const result = await persistedPort(statePath, toPersistedSnapshot(state), options);
+    return {
+      state: buildBubbleStateSnapshotVariant(result.state),
+      fingerprint: result.fingerprint
+    };
   };
 }

@@ -38,9 +38,9 @@ export interface BubbleStateRunningIdeation extends BubbleStateCommonFields {
   kind: "running_ideation";
   state: "RUNNING";
   round: 0;
-  active_agent: null;
-  active_role: null;
-  active_since: null;
+  active_agent: AgentName;
+  active_role: Exclude<AgentRole, "meta_reviewer">;
+  active_since: string;
   execution_context: null;
 }
 

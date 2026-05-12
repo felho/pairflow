@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { createInitialBubbleState } from "../../../../src/v11/domain/state/initialState.js";
 import { applyStateTransition } from "../../../../src/v11/domain/state/machine.js";
+import { buildBubbleStateSnapshotVariant } from "../../../../src/v11/domain/state/snapshot/buildBubbleStateSnapshot.js";
 import {
   deriveStartPreparingState,
   deriveStartRunningState
@@ -75,7 +76,9 @@ describe("v11 domain state machine", () => {
   });
 
   it("derives fresh start states without persistence concerns", () => {
-    const initial = createInitialBubbleState("b_v11_start_state_01");
+    const initial = buildBubbleStateSnapshotVariant(
+      createInitialBubbleState("b_v11_start_state_01")
+    );
     const preparing = deriveStartPreparingState({
       state: initial,
       lastCommandAt: "2026-04-06T10:00:00.000Z"

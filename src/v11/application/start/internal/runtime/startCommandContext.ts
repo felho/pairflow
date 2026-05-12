@@ -3,6 +3,8 @@ import { dirname, join, resolve } from "node:path";
 
 import { startCommandContextDefaults } from "../../startCommandDependencyDefaults.js";
 import { buildBubbleTmuxSessionName } from "../../../../shared/bubble/tmuxSessionName.js";
+import { buildBubbleStateSnapshotVariant } from "../../../../domain/state/snapshot/buildBubbleStateSnapshot.js";
+import type { StartLoadedStateSnapshot } from "./startStatePersistence.js";
 import { DEFAULT_REVIEW_POLICY_REVIEWER_BLOCKING_MIN_SEVERITY } from "../../../../../config/defaults.js";
 import type { ReviewerFocusExtractionResult } from "../../../../shared/reviewer/reviewerBrief.js";
 import { reviewerPolicySnapshotFileName } from "../../../../shared/reviewer/reviewerPolicySnapshot.js";
@@ -34,8 +36,7 @@ import {
   type RemoteCloneStartContext
 } from "../remote/startCommandRemoteExecutionContext.js";
 
-export type StartLoadedState =
-  Awaited<ReturnType<typeof startCommandContextDefaults.readStateSnapshot>>;
+export type StartLoadedState = StartLoadedStateSnapshot;
 export type ResolvedStartBubble =
   Awaited<ReturnType<typeof startCommandContextDefaults.resolveBubbleById>>;
 export const reviewerPolicySnapshotUnavailableReasonCode =
@@ -253,8 +254,12 @@ export async function loadStartExecutionContext(
     resolved.bubbleConfig.review_policy?.reviewer_blocking_min_severity
       ?? DEFAULT_REVIEW_POLICY_REVIEWER_BLOCKING_MIN_SEVERITY
   );
-  const loadedState =
+  const loadedPersisted =
     await startCommandContextDefaults.readStateSnapshot(resolved.bubblePaths.statePath);
+  const loadedState: StartLoadedState = {
+    state: buildBubbleStateSnapshotVariant(loadedPersisted.state),
+    fingerprint: loadedPersisted.fingerprint
+  };
   const remoteStartContext = resolveRemoteCloneStartContextFromEnv();
   if (
     remoteStartContext !== undefined

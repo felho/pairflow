@@ -60,9 +60,9 @@ export function buildBubbleStateSnapshotVariant(
         kind,
         state: "RUNNING",
         round: 0,
-        active_agent: null,
-        active_role: null,
-        active_since: null,
+        active_agent: persisted.active_agent as AgentName,
+        active_role: persisted.active_role as Exclude<AgentRole, "meta_reviewer">,
+        active_since: persisted.active_since as string,
         execution_context: null
       };
     case "running_standard":
