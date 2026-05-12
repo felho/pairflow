@@ -153,11 +153,15 @@ the public contract instead of the public file forwarding to a private one.
 - `848f10b1` — Canonicalize doc contract gate config type
 - `10b3c346` — Absorb meta-review delivery capability types
 - `7c979810` — Canonicalize meta-review artifact IO port
-- Resulting files: `src/v11/shared/state/executionContextTypes.ts`,
-  `reworkIntentTypes.ts`, `roundRoleHistoryTypes.ts`,
+- Resulting files: `src/v11/domain/state/execution/executionContextTypes.ts`,
+  `src/v11/domain/state/rework/reworkIntentTypes.ts`,
+  `src/v11/domain/state/snapshot/roundRoleHistory.ts`,
   `src/v11/shared/gates/docContractGateConfigTypes.ts`,
   `src/v11/shared/metaReview/metaReviewCommandContract.ts`,
   `src/v11/shared/metaReview/metaReviewArtifactIo.ts`.
+  (The state-related types were originally under `src/v11/shared/state/`
+  at the time of commit `76cb5b72`; the Step 4 domain-state refactor
+  relocated them under `src/v11/domain/state/<subarea>/`.)
 
 ## #3 Pass-Through Demotion (Single-Lane Scope)
 
@@ -181,7 +185,10 @@ callers cannot accidentally couple to a non-contract symbol.
   this pattern to the meta-review schema validators after import scan showed
   intra-lane scope only).
 - Resulting state: `stateSchemaMetaReview.ts` and
-  `stateSchemaMetaReviewRuntime.ts` live only under `shared/state/internal/`.
+  `stateSchemaMetaReviewRuntime.ts` live only under
+  `src/v11/domain/state/metaReview/` after the Step 4 domain-state
+  refactor (originally `shared/state/internal/` at the time of
+  commit `76cb5b72`).
 
 ## #4 Dead Public Surface Removal
 

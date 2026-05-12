@@ -36,7 +36,7 @@ owners:
    - `src/v11/application/actorProtocol/actorProtocolEmitters.ts`
    - `src/v11/application/actorProtocol/emitActorProtocolV11.ts`
 5. Current-tree source anchors (4 seam):
-   - S1: `src/v11/shared/state/executionContext.ts`
+   - S1: `src/v11/domain/state/execution/executionContext.ts`
    - S2: `src/v11/infrastructure/channel/tmux/tmuxManager.ts`, `src/v11/infrastructure/channel/tmux/tmuxDeliveryTargeting.ts`
    - S3: `src/config/bubbleConfig.ts`, `src/types/bubble.ts`
    - S4: `src/v11/application/start/startCommandPrompts.ts`, `src/v11/application/start/startCommandImplementerPrompts.ts`, `src/v11/application/start/startCommandResumePrompts.ts`, `src/v11/application/start/startCommandResumeImplementerPrompt.ts`, `src/v11/shared/command/agentCommand.ts`
@@ -105,7 +105,7 @@ owners:
 
 | Seam | Implicit szerzodes a current tree-ben | Source anchor (file + szimbolum) |
 |---|---|---|
-| `S1` (role -> primary awaited output) | `if (role === "meta_reviewer") return "meta_review_result"; return "pass_result";` | `src/v11/shared/state/executionContext.ts::resolveAwaitedOutputTypeForRole` |
+| `S1` (role -> primary awaited output) | `if (role === "meta_reviewer") return "meta_review_result"; return "pass_result";` | `src/v11/domain/state/execution/executionContext.ts::resolveAwaitedOutputTypeForRole` |
 | `S2` (role -> topology slot) | hardcoded `runtimePaneIndices` literal + delivery targeting role-elagazas; `meta_reviewer` mappingje `metaReviewer` slotra mehet, a `bubbleConfig.agents.implementer/reviewer` mezok az `implementer`/`reviewer` slotokra | `src/v11/infrastructure/channel/tmux/tmuxManager.ts::runtimePaneIndices`, `src/v11/infrastructure/channel/tmux/tmuxDeliveryTargeting.ts::resolveTargetPaneIndex` |
 | `S3` (role -> bubble config binding) | `BubbleAgentsConfig` csak `implementer` es `reviewer` mezovel; "implementer !== reviewer" enforce-olt konvencio; `meta_reviewer` nincs config mezoben | `src/config/bubbleConfig.ts::validateBubbleConfig` (agents szekcio), `src/types/bubble.ts::BubbleAgentsConfig` |
 | `S4` (role -> startup/resume prompt composition) | role-specifikus top-level builderek (`buildImplementerStartupPrompt`, `buildReviewerStartupPrompt`, `buildMetaReviewerStartupPrompt`, plusz a 3 resume parja) compose-oljak a source-anchorolt prompt concern blokkokat, amelyek ma lehetnek kozvetlen reusable helper builderek (`build*Guidance`, `build*Line`, `build*Reminder`) vagy grouped builder-local fixed blockok | `src/v11/application/start/startCommandPrompts.ts::buildReviewerStartupPrompt`, `buildMetaReviewerStartupPrompt`; `src/v11/application/start/startCommandImplementerPrompts.ts::buildImplementerStartupPrompt`; `src/v11/application/start/startCommandResumePrompts.ts::buildResumeReviewerStartupPrompt`, `buildResumeMetaReviewerStartupPrompt`; `src/v11/application/start/startCommandResumeImplementerPrompt.ts::buildResumeImplementerStartupPrompt` |
@@ -135,13 +135,13 @@ owners:
 | Mezo | Tipus | Szemantika | Source anchor (current tree) | Seam |
 |---|---|---|---|---|
 | `id` | `AgentRole` | role identifier; a registry-bejegyzes kulcsa | `src/types/bubble.ts::agentRoles` | - |
-| `primary_awaited_output_type` | `BubbleExecutionContextAwaitedOutputType` | a role workflow-beli primer elvart kimenete (single value); cross-cutting outcome (`human_question`) NEM ide tartozik, hanem a route-matrix dimenzioja | `src/v11/shared/state/executionContext.ts::resolveAwaitedOutputTypeForRole` | S1 |
+| `primary_awaited_output_type` | `BubbleExecutionContextAwaitedOutputType` | a role workflow-beli primer elvart kimenete (single value); cross-cutting outcome (`human_question`) NEM ide tartozik, hanem a route-matrix dimenzioja | `src/v11/domain/state/execution/executionContext.ts::resolveAwaitedOutputTypeForRole` | S1 |
 | `topology_slot_id` | `TopologySlotId` (proposed catalog) | a role dedikalt pane slot ID-ja a `topologySlotCatalog`-ban | `src/v11/infrastructure/channel/tmux/tmuxManager.ts::runtimePaneIndices` | S2 |
 | `authority_policy_check_id` | `ActorRuntimePolicyCheckId` | a role authority guardja a meglevo `actorRuntimePolicyCheckCatalog`-ban | `src/v11/application/actorProtocol/actorRuntimeDispatchMatrix.ts::actorRuntimePolicyCheckCatalog` | - |
 | `agent_resolution` | `{ kind: "config_bound"; config_key: keyof BubbleAgentsConfig } \| { kind: "hardcoded_runtime"; current_agent: AgentName }` | hogyan szarmazik le a role agentje a current tree-ben; mai allapot rogzitett, `O3-T4`-ben mind a 3 role `config_bound`-ra konvergal | `src/config/bubbleConfig.ts`, `assertMetaReviewerActiveAgentCodexWhenPresent` | S3 |
 | `startup_prompt_concern_ids` | `readonly PromptConcernId[]` (proposed catalog) | a role startup prompt-jat alkoto concern-modulok ID-listaja a `promptConcernCatalog`-bol | `src/v11/application/start/startCommandPrompts.ts`, `startCommandImplementerPrompts.ts` | S4 |
 | `resume_prompt_concern_ids` | `readonly PromptConcernId[]` (proposed catalog) | a role resume prompt-jat alkoto concern-modulok ID-listaja | `src/v11/application/start/startCommandResumePrompts.ts`, `startCommandResumeImplementerPrompt.ts` | S4 |
-| `handoff_id_format_id?` | `HandoffIdFormatId?` (proposed catalog) | opcionalis; a role-specifikus handoff_id formatter ID-ja, amennyiben a default formattol elter (`meta_reviewer` ma kulon prefixet hasznal) | `src/v11/shared/state/executionContext.ts::buildExecutionContextHandoffId` | - |
+| `handoff_id_format_id?` | `HandoffIdFormatId?` (proposed catalog) | opcionalis; a role-specifikus handoff_id formatter ID-ja, amennyiben a default formattol elter (`meta_reviewer` ma kulon prefixet hasznal) | `src/v11/domain/state/execution/executionContext.ts::buildExecutionContextHandoffId` | - |
 | `active_agent_constraint_id?` | `ActiveAgentConstraintId?` (proposed catalog) | opcionalis; a role extra active-agent invariansa, ha van (`meta_reviewer` ma `codex` only when present) | `src/v11/application/actorProtocol/actorRuntimeDispatchMatrix.ts::assertMetaReviewerActiveAgentCodexWhenPresent` | - |
 
 6. A registry-olvaso projection helperek (proposed naming, `O3-T2`-ben kerulnek bevezetesre):
@@ -283,7 +283,7 @@ Megjegyzes: a `promptConcernId` listak source-anchorolt, ordered concern-szettek
    - `src/types/protocol.ts`
    - `src/cli/commands/agent/emit.ts`
 2. Read-only downstream state surfaces:
-   - `src/v11/shared/state/executionContext.ts`
+   - `src/v11/domain/state/execution/executionContext.ts`
    - `src/v11/shared/metaReview/metaReviewExecutionContext.ts`
 3. Read-only downstream config surface:
    - `src/config/bubbleConfig.ts` (shape change `O3-T4` ownership)

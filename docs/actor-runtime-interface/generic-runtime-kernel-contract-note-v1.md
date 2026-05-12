@@ -32,7 +32,7 @@ owners:
    - `src/types/protocol.ts`
    - `src/types/bubble.ts`
    - `src/cli/commands/agent/emit.ts`
-   - `src/v11/shared/state/executionContext.ts`
+   - `src/v11/domain/state/execution/executionContext.ts`
    - `src/v11/shared/metaReview/metaReviewExecutionContext.ts`
    - `src/config/bubbleConfig.ts`
    - `src/v11/domain/pass/handoff.ts`
@@ -84,7 +84,7 @@ owners:
    - `meta_reviewer -> meta_review_result`
    - otherwise `pass_result`
 4. A current-tree source anchor:
-   - `resolveAwaitedOutputTypeForRole(...)` a `src/v11/shared/state/executionContext.ts` file-ban
+   - `resolveAwaitedOutputTypeForRole(...)` a `src/v11/domain/state/execution/executionContext.ts` file-ban
    - `buildMetaReviewExecutionContext(...)` es `validateActiveMetaReviewExecutionContext(...)` a `src/v11/shared/metaReview/metaReviewExecutionContext.ts` file-ban
 5. Ez closed baseline mapping, nem optional example es nem deferred terminology.
 
@@ -114,7 +114,7 @@ Source anchors:
 
 | Layer | Source anchors | What it owns now | What it does not own |
 |---|---|---|---|
-| Canonical actor authority context | `docs/actor-runtime-interface/execution-authority-contract-note-v1.md`, `src/v11/shared/actorProtocol/actorEmitContext.ts`, `src/v11/shared/state/executionContext.ts` | explicit `execution_context`, `handoff_id`, `execution_id`, `expected_role`, `expected_round`, `expected_state_fingerprint` jelentese | workflow topology, bubble handoff loop ownership, public output taxonomy redesign |
+| Canonical actor authority context | `docs/actor-runtime-interface/execution-authority-contract-note-v1.md`, `src/v11/shared/actorProtocol/actorEmitContext.ts`, `src/v11/domain/state/execution/executionContext.ts` | explicit `execution_context`, `handoff_id`, `execution_id`, `expected_role`, `expected_round`, `expected_state_fingerprint` jelentese | workflow topology, bubble handoff loop ownership, public output taxonomy redesign |
 | Generic runtime route/policy matrix | `src/v11/application/actorProtocol/emitActorProtocolV11.ts` | `expected_role x input.kind` dispatch, wrapper-local policy guards, retained reviewer fallback, fail-closed mismatch rule | canonical authority redefinition, delivery topology ownership, public CLI grammar rewrite |
 | Workflow-specific output adapters | `src/v11/application/actorProtocol/actorProtocolEmitters.ts`, `src/types/protocol.ts`, `src/cli/commands/agent/emit.ts` | pass / ask-human / converged / meta-review submit workflow outputs es a hozza tartozo public kinds | generic internal kernel taxonomy, authority producer semantics |
 
@@ -161,7 +161,7 @@ Source anchors:
    - `src/types/protocol.ts`
    - `src/cli/commands/agent/emit.ts`
 2. Read-only downstream state surfaces:
-   - `src/v11/shared/state/executionContext.ts`
+   - `src/v11/domain/state/execution/executionContext.ts`
    - `src/v11/shared/metaReview/metaReviewExecutionContext.ts`
 3. Read-only downstream workflow baseline:
    - `src/config/bubbleConfig.ts`

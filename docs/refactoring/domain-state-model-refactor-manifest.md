@@ -400,7 +400,7 @@ remain as runtime checks inside the parser:
 7. **round_role_history monotonicity** (round numbers ascending, role
    assignments consistent across rounds).
 8. **rework_intent_history.intent_id uniqueness** (current
-   `validateBubbleStateSnapshot` enforces this; survives).
+   `parseBubbleStateSnapshot` enforces this; survives).
 9. **auto_rework_count ≤ auto_rework_limit**, both non-negative
    integers, etc. (meta-review autonomous control invariants).
 
