@@ -25,8 +25,7 @@ import { readStateSnapshot, writeStateSnapshot } from "../../../src/v11/infrastr
 import { GitCommandError } from "../../../src/v11/infrastructure/workspace/git.js";
 import { bootstrapWorktreeWorkspace } from "../../../src/v11/infrastructure/workspace/worktreeManager.js";
 import { initGitRepository, runGit } from "../../helpers/git.js";
-import { asTemporaryVariantStateFixture } from "../../helpers/temporaryVariantStateFixture.js";
-
+import { buildBubbleStateSnapshotVariant } from "../../../src/v11/domain/state/snapshot/buildBubbleStateSnapshot.js";
 const tempDirs: string[] = [];
 
 function mergeBubble(
@@ -80,7 +79,7 @@ async function setupDoneBubble(repoPath: string, bubbleId: string) {
   const loaded = await readStateSnapshot(bubble.paths.statePath);
   await writeStateSnapshot(
     bubble.paths.statePath,
-    asTemporaryVariantStateFixture({
+    buildBubbleStateSnapshotVariant({
       ...loaded.state,
       state: "DONE",
       active_agent: null,
@@ -638,7 +637,7 @@ describe("mergeBubble", () => {
       state: "DONE" as const,
       last_command_at: "2026-04-18T08:06:00.000Z"
     };
-    await writeStateSnapshot(bubble.paths.statePath, asTemporaryVariantStateFixture(staleState), {
+    await writeStateSnapshot(bubble.paths.statePath, buildBubbleStateSnapshotVariant(staleState), {
       expectedFingerprint: loaded.fingerprint,
       expectedState: "DONE"
     });
@@ -665,7 +664,7 @@ describe("mergeBubble", () => {
       bubbleId: bubble.bubbleId,
       sequence: 3,
       envelope: remoteEnvelope,
-      state: asTemporaryVariantStateFixture(remoteDoneState),
+      state: buildBubbleStateSnapshotVariant(remoteDoneState),
       stateContent: `${JSON.stringify(remoteDoneState, null, 2)}\n`,
       transcriptContent: `${JSON.stringify(remoteEnvelope)}\n`,
       commitSha: "abcdef1234567890",
@@ -722,7 +721,7 @@ describe("mergeBubble", () => {
       state: "APPROVED_FOR_COMMIT" as const,
       last_command_at: "2026-04-18T08:05:00.000Z"
     };
-    await writeStateSnapshot(bubble.paths.statePath, asTemporaryVariantStateFixture(staleState), {
+    await writeStateSnapshot(bubble.paths.statePath, buildBubbleStateSnapshotVariant(staleState), {
       expectedFingerprint: loaded.fingerprint,
       expectedState: "DONE"
     });
@@ -772,7 +771,7 @@ describe("mergeBubble", () => {
     const loaded = await readStateSnapshot(bubble.paths.statePath);
     await writeStateSnapshot(
       bubble.paths.statePath,
-      asTemporaryVariantStateFixture({
+      buildBubbleStateSnapshotVariant({
         ...loaded.state,
         state: "APPROVED_FOR_COMMIT",
         last_command_at: "2026-04-18T08:05:00.000Z"
@@ -846,7 +845,7 @@ describe("mergeBubble", () => {
     const loaded = await readStateSnapshot(bubble.paths.statePath);
     await writeStateSnapshot(
       bubble.paths.statePath,
-      asTemporaryVariantStateFixture({
+      buildBubbleStateSnapshotVariant({
         ...loaded.state,
         state: "APPROVED_FOR_COMMIT",
         last_command_at: "2026-04-18T08:05:00.000Z"
@@ -909,7 +908,7 @@ describe("mergeBubble", () => {
       state: "DONE" as const,
       last_command_at: "2026-04-18T08:06:00.000Z"
     };
-    await writeStateSnapshot(bubble.paths.statePath, asTemporaryVariantStateFixture(staleState), {
+    await writeStateSnapshot(bubble.paths.statePath, buildBubbleStateSnapshotVariant(staleState), {
       expectedFingerprint: loaded.fingerprint,
       expectedState: "DONE"
     });
@@ -948,7 +947,7 @@ describe("mergeBubble", () => {
             bubbleId: bubble.bubbleId,
             sequence: 3,
             envelope: remoteEnvelope,
-            state: asTemporaryVariantStateFixture(remoteDoneState),
+            state: buildBubbleStateSnapshotVariant(remoteDoneState),
             stateContent: `${JSON.stringify(remoteDoneState, null, 2)}\n`,
             transcriptContent: `${JSON.stringify(remoteEnvelope)}\n`,
             commitSha: "abcdef1234567890",

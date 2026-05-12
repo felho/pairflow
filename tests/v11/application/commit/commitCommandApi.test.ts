@@ -32,8 +32,7 @@ import { buildCommitBubbleDependencies } from "../../../helpers/commit.js";
 import { initGitRepository, runGit } from "../../../helpers/git.js";
 import { setupRunningBubbleFixture } from "../../../helpers/bubble.js";
 import { getBubblePaths } from "../../../../src/v11/shared/bubble/bubblePaths.js";
-import { asTemporaryVariantStateFixture } from "../../../helpers/temporaryVariantStateFixture.js";
-
+import { buildBubbleStateSnapshotVariant } from "../../../../src/v11/domain/state/snapshot/buildBubbleStateSnapshot.js";
 const tempDirs: string[] = [];
 
 async function createTempRepo(): Promise<string> {
@@ -321,7 +320,7 @@ describe("commitCommandApi", () => {
       bubbleId: "b_remote_commit_01",
       sequence: 7,
       envelope: remoteEnvelope,
-      state: asTemporaryVariantStateFixture(remoteState),
+      state: buildBubbleStateSnapshotVariant(remoteState),
       stateContent: `${JSON.stringify(remoteState, null, 2)}\n`,
       transcriptContent: `${JSON.stringify(remoteEnvelope)}\n`,
       commitSha: "abcdef1234567890",
@@ -983,7 +982,7 @@ describe("commitCommandApi", () => {
       bubbleId: "b_remote_commit_sync_fail_01",
       sequence: 4,
       envelope: remoteEnvelope,
-      state: asTemporaryVariantStateFixture(remoteDoneState),
+      state: buildBubbleStateSnapshotVariant(remoteDoneState),
       stateContent: `${JSON.stringify(remoteDoneState, null, 2)}\n`,
       transcriptContent: `${JSON.stringify(remoteEnvelope)}\n`,
       commitSha: "1234567",
@@ -1115,7 +1114,7 @@ describe("commitCommandApi", () => {
       bubbleId: "b_remote_commit_sync_rename_fail_01",
       sequence: 5,
       envelope: remoteEnvelope,
-      state: asTemporaryVariantStateFixture(remoteDoneState),
+      state: buildBubbleStateSnapshotVariant(remoteDoneState),
       stateContent: `${JSON.stringify(remoteDoneState, null, 2)}\n`,
       transcriptContent: `${JSON.stringify(remoteEnvelope)}\n`,
       commitSha: "2345678",
@@ -1259,7 +1258,7 @@ describe("commitCommandApi", () => {
       bubbleId: "b_remote_commit_sync_restore_retry_01",
       sequence: 6,
       envelope: remoteEnvelope,
-      state: asTemporaryVariantStateFixture(remoteDoneState),
+      state: buildBubbleStateSnapshotVariant(remoteDoneState),
       stateContent: `${JSON.stringify(remoteDoneState, null, 2)}\n`,
       transcriptContent: `${JSON.stringify(remoteEnvelope)}\n`,
       commitSha: "3456789",
@@ -1414,7 +1413,7 @@ describe("commitCommandApi", () => {
       bubbleId,
       sequence: 4,
       envelope: remoteEnvelope,
-      state: asTemporaryVariantStateFixture(remoteDoneState),
+      state: buildBubbleStateSnapshotVariant(remoteDoneState),
       stateContent: `${JSON.stringify(remoteDoneState, null, 2)}\n`,
       transcriptContent: `${JSON.stringify(remoteEnvelope)}\n`,
       commitSha: "4567890",
@@ -1582,7 +1581,7 @@ describe("commitCommandApi", () => {
           bubbleId,
           sequence: 4,
           envelope: remoteEnvelope,
-          state: asTemporaryVariantStateFixture(doneState),
+          state: buildBubbleStateSnapshotVariant(doneState),
           stateContent: `${JSON.stringify(doneState, null, 2)}\n`,
           transcriptContent: `${JSON.stringify(remoteEnvelope)}\n`,
           commitSha: "5678901",

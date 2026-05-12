@@ -16,8 +16,7 @@ import { readStateSnapshot } from "../../../src/v11/infrastructure/state/stateSt
 import { bootstrapWorktreeWorkspace } from "../../../src/v11/infrastructure/workspace/worktreeManager.js";
 import { initGitRepository } from "../../helpers/git.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
-import { asTemporaryVariantStateFixture } from "../../helpers/temporaryVariantStateFixture.js";
-
+import { buildBubbleStateSnapshotVariant } from "../../../src/v11/domain/state/snapshot/buildBubbleStateSnapshot.js";
 const tempDirs: string[] = [];
 
 async function createTempRepo(): Promise<string> {
@@ -197,7 +196,7 @@ describe("emitAskHumanFromWorkspace", () => {
       statePath: bubble.paths.statePath,
       mutate: (loaded) => ({
         ...loaded,
-        state: asTemporaryVariantStateFixture({
+        state: buildBubbleStateSnapshotVariant({
           ...loaded.state,
           active_agent: bubble.config.agents.reviewer,
           active_role: "reviewer",
@@ -236,7 +235,7 @@ describe("emitAskHumanFromWorkspace", () => {
       statePath: bubble.paths.statePath,
       mutate: (loaded) => ({
         ...loaded,
-        state: asTemporaryVariantStateFixture({
+        state: buildBubbleStateSnapshotVariant({
           ...loaded.state,
           active_agent: bubble.config.agents.implementer,
           active_role: "implementer",

@@ -9,8 +9,7 @@ function toErrorMessage(input: PairflowCommandErrorInput): string {
 
 import type { ReviewVerificationInputResolution } from "../../../../src/v11/shared/reviewer/reviewVerification.js";
 import { prepareRepeatCleanAutoConverge } from "../../../../src/v11/application/pass/internal/autoConverge/autoConvergePreparation.js";
-import { asTemporaryVariantStateFixture } from "../../../helpers/temporaryVariantStateFixture.js";
-
+import { buildBubbleStateSnapshotVariant } from "../../../../src/v11/domain/state/snapshot/buildBubbleStateSnapshot.js";
 class TestAutoConvergePreparationError extends Error {
   public constructor(message: string) {
     super(message);
@@ -74,7 +73,7 @@ describe("prepareRepeatCleanAutoConverge", () => {
           diagnostics: []
         }),
         readStateSnapshot: async () => ({
-          state: asTemporaryVariantStateFixture({
+          state: buildBubbleStateSnapshotVariant({
             bubble_id: "b_123",
             state: "RUNNING",
             round: 2,
@@ -124,7 +123,7 @@ describe("prepareRepeatCleanAutoConverge", () => {
             diagnostics: []
           }),
           readStateSnapshot: async () => ({
-            state: asTemporaryVariantStateFixture({
+            state: buildBubbleStateSnapshotVariant({
               bubble_id: "b_123",
               state: "RUNNING",
               round: 2,
@@ -158,7 +157,7 @@ describe("prepareRepeatCleanAutoConverge", () => {
             diagnostics: []
           }),
           readStateSnapshot: async () => ({
-            state: asTemporaryVariantStateFixture({
+            state: buildBubbleStateSnapshotVariant({
               bubble_id: "b_123",
               state: "RUNNING",
               round: 2,

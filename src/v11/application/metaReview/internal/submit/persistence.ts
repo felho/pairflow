@@ -9,7 +9,6 @@ import {
 import type {
   MetaReviewArtifactReadPort
 } from "../../../../shared/metaReview/metaReviewArtifactIo.js";
-import type { PersistedBubbleStateSnapshot } from "../../../../domain/state/snapshot/persistedBubbleStateSnapshot.js";
 import { buildBubbleStateSnapshotVariant } from "../../../../domain/state/snapshot/buildBubbleStateSnapshot.js";
 import { toPersistedSnapshot } from "../../../../domain/state/snapshot/projection.js";
 import type {

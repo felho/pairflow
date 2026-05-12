@@ -12,6 +12,7 @@ import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
 import { initGitRepository } from "../../helpers/git.js";
 import { applyStateTransition } from "../../../src/v11/domain/state/machine.js";
 import { buildBubbleStateSnapshotVariant } from "../../../src/v11/domain/state/snapshot/buildBubbleStateSnapshot.js";
+import type { PersistedBubbleStateSnapshot } from "../../../src/v11/domain/state/snapshot/persistedBubbleStateSnapshot.js";
 import { toPersistedSnapshot } from "../../../src/v11/domain/state/snapshot/projection.js";
 import { appendProtocolEnvelope } from "../../../src/v11/infrastructure/artifact/transcript/transcriptStore.js";
 import {
@@ -19,14 +20,12 @@ import {
   writeStateSnapshot as rawWriteStateSnapshot
 } from "../../../src/v11/infrastructure/state/stateStore.js";
 import type { ContractCase, ContractCaseExpected } from "./schema.js";
-import { asTemporaryVariantStateFixture } from "../../helpers/temporaryVariantStateFixture.js";
-
 // Step 4b-γ/4 transitional: 4b-γ/5 cleanup target.
 const writeStateSnapshot = (
   statePath: Parameters<typeof rawWriteStateSnapshot>[0],
   state: unknown,
   options?: Parameters<typeof rawWriteStateSnapshot>[2]
-): ReturnType<typeof rawWriteStateSnapshot> => rawWriteStateSnapshot(statePath, asTemporaryVariantStateFixture(state), options);
+): ReturnType<typeof rawWriteStateSnapshot> => rawWriteStateSnapshot(statePath, buildBubbleStateSnapshotVariant(state as PersistedBubbleStateSnapshot), options);
 
 type ApprovalCaseAction =
   | "approve"

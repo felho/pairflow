@@ -27,6 +27,7 @@ import { buildMetaReviewExecutionContext } from "../../../src/v11/shared/metaRev
 import { metaReviewExecutionContextToRunningContext } from "../../../src/v11/domain/state/execution/executionContext.js";
 import { applyStateTransition } from "../../../src/v11/domain/state/machine.js";
 import { buildBubbleStateSnapshotVariant } from "../../../src/v11/domain/state/snapshot/buildBubbleStateSnapshot.js";
+import type { PersistedBubbleStateSnapshot } from "../../../src/v11/domain/state/snapshot/persistedBubbleStateSnapshot.js";
 import { toPersistedSnapshot } from "../../../src/v11/domain/state/snapshot/projection.js";
 import { readStateSnapshot, writeStateSnapshot as rawWriteStateSnapshot } from "../../../src/v11/infrastructure/state/stateStore.js";
 import { runBubbleWatchdog as runBubbleWatchdogImpl } from "../../../src/v11/application/watchdog/watchdogCommandApi.js";
@@ -34,14 +35,12 @@ import type { BubbleWatchdogDependencies } from "../../../src/v11/application/wa
 import type { EmitDeliveryNotificationAckPort } from "../../../src/v11/ports/tmuxDelivery.js";
 import { initGitRepository } from "../../helpers/git.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
-import { asTemporaryVariantStateFixture } from "../../helpers/temporaryVariantStateFixture.js";
-
 // Step 4b-γ/4 transitional: 4b-γ/5 cleanup target.
 const writeStateSnapshot = (
   statePath: Parameters<typeof rawWriteStateSnapshot>[0],
   state: unknown,
   options?: Parameters<typeof rawWriteStateSnapshot>[2]
-): ReturnType<typeof rawWriteStateSnapshot> => rawWriteStateSnapshot(statePath, asTemporaryVariantStateFixture(state), options);
+): ReturnType<typeof rawWriteStateSnapshot> => rawWriteStateSnapshot(statePath, buildBubbleStateSnapshotVariant(state as PersistedBubbleStateSnapshot), options);
 
 const tempDirs: string[] = [];
 

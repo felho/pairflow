@@ -31,8 +31,7 @@ import { bootstrapWorktreeWorkspace } from "../../../src/v11/infrastructure/work
 import { initGitRepository, runGit } from "../../helpers/git.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
 import { getBubblePaths } from "../../../src/v11/shared/bubble/bubblePaths.js";
-import { asTemporaryVariantStateFixture } from "../../helpers/temporaryVariantStateFixture.js";
-
+import { buildBubbleStateSnapshotVariant } from "../../../src/v11/domain/state/snapshot/buildBubbleStateSnapshot.js";
 const tempDirs: string[] = [];
 
 async function commitBubble(
@@ -833,7 +832,7 @@ describe("commitBubble", () => {
           bubbleId: "b_commit_remote_public_01",
           sequence: 5,
           envelope: remoteEnvelope,
-          state: asTemporaryVariantStateFixture(remoteState),
+          state: buildBubbleStateSnapshotVariant(remoteState),
           stateContent: `${JSON.stringify(remoteState, null, 2)}\n`,
           transcriptContent: `${JSON.stringify(remoteEnvelope)}\n`,
           commitSha: "fedcba9876543210",

@@ -79,14 +79,13 @@ import {
   writeRemotePointer
 } from "../../../src/v11/infrastructure/artifact/bubble/remoteExecutionArtifacts.js";
 import { runGit } from "../../helpers/git.js";
-import { asTemporaryVariantStateFixture } from "../../helpers/temporaryVariantStateFixture.js";
-
+import { buildBubbleStateSnapshotVariant } from "../../../src/v11/domain/state/snapshot/buildBubbleStateSnapshot.js";
 // Step 4b-γ/4 transitional: 4b-γ/5 cleanup target.
 const writeStateSnapshot = (
   statePath: Parameters<typeof rawWriteStateSnapshot>[0],
   state: unknown,
   options?: Parameters<typeof rawWriteStateSnapshot>[2]
-): ReturnType<typeof rawWriteStateSnapshot> => rawWriteStateSnapshot(statePath, asTemporaryVariantStateFixture(state), options);
+): ReturnType<typeof rawWriteStateSnapshot> => rawWriteStateSnapshot(statePath, buildBubbleStateSnapshotVariant(state as PersistedBubbleStateSnapshot), options);
 
 const tempDirs: string[] = [];
 

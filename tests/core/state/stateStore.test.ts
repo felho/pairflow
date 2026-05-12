@@ -12,8 +12,7 @@ import {
   readStateSnapshot,
   writeStateSnapshot
 } from "../../../src/v11/infrastructure/state/stateStore.js";
-import { asTemporaryVariantStateFixture } from "../../helpers/temporaryVariantStateFixture.js";
-
+import { buildBubbleStateSnapshotVariant } from "../../../src/v11/domain/state/snapshot/buildBubbleStateSnapshot.js";
 const tempDirs: string[] = [];
 
 async function createTempDir(): Promise<string> {
@@ -58,7 +57,7 @@ describe("state store", () => {
       ...created.state,
       state: "PREPARING_WORKSPACE" as const
     };
-    const written = await writeStateSnapshot(statePath, asTemporaryVariantStateFixture(next), {
+    const written = await writeStateSnapshot(statePath, buildBubbleStateSnapshotVariant(next), {
       expectedFingerprint: created.fingerprint,
       expectedState: "CREATED"
     });
@@ -80,7 +79,7 @@ describe("state store", () => {
       ...created.state,
       state: "PREPARING_WORKSPACE" as const
     };
-    await writeStateSnapshot(statePath, asTemporaryVariantStateFixture(newer), {
+    await writeStateSnapshot(statePath, buildBubbleStateSnapshotVariant(newer), {
       expectedFingerprint: created.fingerprint
     });
 
@@ -90,7 +89,7 @@ describe("state store", () => {
     };
 
     await expect(
-      writeStateSnapshot(statePath, asTemporaryVariantStateFixture(staleAttempt), {
+      writeStateSnapshot(statePath, buildBubbleStateSnapshotVariant(staleAttempt), {
         expectedFingerprint: created.fingerprint
       })
     ).rejects.toBeInstanceOf(StateStoreConflictError);
@@ -143,7 +142,7 @@ describe("state store", () => {
 
     const written = await writeStateSnapshot(
       statePath,
-      asTemporaryVariantStateFixture({
+      buildBubbleStateSnapshotVariant({
         ...inspected.state,
         meta_review: {
           ...inspected.state.meta_review!,
@@ -185,7 +184,7 @@ describe("state store", () => {
     await expect(
       writeStateSnapshot(
         statePath,
-        asTemporaryVariantStateFixture({
+        buildBubbleStateSnapshotVariant({
           ...created.state,
           state: "PREPARING_WORKSPACE"
         }),

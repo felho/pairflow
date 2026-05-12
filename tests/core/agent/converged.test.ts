@@ -18,6 +18,7 @@ import { createBubble } from "../../../src/v11/defaults/create/createBubbleApi.j
 import { IDEATION_CONVERGED_BLOCKED } from "../../../src/v11/shared/ideation/ideationReasonCodes.js";
 import { applyMetaReviewGateOnConvergence } from "../../../src/v11/defaults/metaReviewGate/metaReviewGateApi.js";
 import { buildBubbleStateSnapshotVariant } from "../../../src/v11/domain/state/snapshot/buildBubbleStateSnapshot.js";
+import type { PersistedBubbleStateSnapshot } from "../../../src/v11/domain/state/snapshot/persistedBubbleStateSnapshot.js";
 import {
   appendProtocolEnvelope,
   readTranscriptEnvelopes
@@ -38,7 +39,6 @@ import { resolveDocContractGateArtifactPath } from "../../../src/v11/infrastruct
 import { deliveryTargetRoleMetadataKey } from "../../../src/types/protocol.js";
 import { initGitRepository } from "../../helpers/git.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
-import { asTemporaryVariantStateFixture } from "../../helpers/temporaryVariantStateFixture.js";
 import { toPersistedSnapshot } from "../../../src/v11/domain/state/snapshot/projection.js";
 
 const tempDirs: string[] = [];
@@ -47,7 +47,7 @@ const defaultWatchdogTimeoutMinutes = 60;
 function resolveWatchdogTimeoutMinutes(
   rawState: unknown
 ): number {
-  const state = toPersistedSnapshot(asTemporaryVariantStateFixture(rawState));
+  const state = toPersistedSnapshot(buildBubbleStateSnapshotVariant(rawState as PersistedBubbleStateSnapshot));
   const executionContext =
     state.state === "RUNNING"
       ? metaReviewExecutionContextToRunningContext(
@@ -68,9 +68,9 @@ function resolveWatchdogTimeoutMinutes(
 function normalizeTestStateForWrite(
   rawState: unknown
 ): Parameters<typeof rawWriteStateSnapshot>[1] {
-  const state = toPersistedSnapshot(asTemporaryVariantStateFixture(rawState));
+  const state = toPersistedSnapshot(buildBubbleStateSnapshotVariant(rawState as PersistedBubbleStateSnapshot));
   if (state.state === "RUNNING" && state.active_role === "meta_reviewer") {
-    return asTemporaryVariantStateFixture({
+    return buildBubbleStateSnapshotVariant({
       ...state,
       execution_context: metaReviewExecutionContextToRunningContext(
         state.meta_review?.execution_context ?? null
@@ -80,27 +80,27 @@ function normalizeTestStateForWrite(
 
   if (state.state === "RUNNING") {
     if (state.round === 0) {
-      return asTemporaryVariantStateFixture({
+      return buildBubbleStateSnapshotVariant({
         ...state,
         execution_context: null
       });
     }
     if (state.active_role !== null && state.active_since !== null) {
-      return asTemporaryVariantStateFixture({
+      return buildBubbleStateSnapshotVariant({
         ...state,
         execution_context: buildRunningExecutionContext({
           bubbleId: state.bubble_id,
           round: state.round,
           activeRole: state.active_role,
           startedAt: state.active_since,
-          watchdogTimeoutMinutes: resolveWatchdogTimeoutMinutes(asTemporaryVariantStateFixture(state)),
+          watchdogTimeoutMinutes: resolveWatchdogTimeoutMinutes(buildBubbleStateSnapshotVariant(state)),
           attempt: state.execution_context?.attempt ?? 1
         })
       });
     }
   }
 
-  return asTemporaryVariantStateFixture({
+  return buildBubbleStateSnapshotVariant({
     ...state,
     execution_context: null
   });

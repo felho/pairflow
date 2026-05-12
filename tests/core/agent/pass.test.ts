@@ -25,8 +25,8 @@ import {
 } from "../../../src/v11/infrastructure/state/stateStore.js";
 import type { BubbleStateSnapshot } from "../../../src/v11/domain/state/snapshot/bubbleStateSnapshot.js";
 import { buildBubbleStateSnapshotVariant } from "../../../src/v11/domain/state/snapshot/buildBubbleStateSnapshot.js";
+import type { PersistedBubbleStateSnapshot } from "../../../src/v11/domain/state/snapshot/persistedBubbleStateSnapshot.js";
 import { toPersistedSnapshot } from "../../../src/v11/domain/state/snapshot/projection.js";
-import { asTemporaryVariantStateFixture } from "../../helpers/temporaryVariantStateFixture.js";
 import { bootstrapWorktreeWorkspace } from "../../../src/v11/infrastructure/workspace/worktreeManager.js";
 import {
   appendProtocolEnvelope,
@@ -67,7 +67,7 @@ const tempDirs: string[] = [];
 const defaultWatchdogTimeoutMinutes = 60;
 
 // Step 4b-γ/4: tests work with persisted-shape fixtures and cast at
-// boundary via asTemporaryVariantStateFixture. Step 4b-γ/5 will replace
+// boundary via buildBubbleStateSnapshotVariant. Step 4b-γ/5 will replace
 // with proper variant fixture builders.
 type PassTestState = unknown;
 
@@ -94,7 +94,7 @@ function resolveWatchdogTimeoutMinutes(
 function normalizeTestStateForWrite(
   state: PassTestState
 ): BubbleStateSnapshot {
-  const persisted = toPersistedSnapshot(asTemporaryVariantStateFixture(state));
+  const persisted = toPersistedSnapshot(buildBubbleStateSnapshotVariant(state as PersistedBubbleStateSnapshot));
   if (persisted.state === "RUNNING" && persisted.active_role === "meta_reviewer") {
     return buildBubbleStateSnapshotVariant({
       ...persisted,
@@ -491,7 +491,7 @@ describe("emitPassFromWorkspace", { timeout: 20_000 }, () => {
       statePath: bubble.paths.statePath,
       mutate: (loaded) => ({
         ...loaded,
-        state: asTemporaryVariantStateFixture({
+        state: buildBubbleStateSnapshotVariant({
           ...loaded.state,
           active_agent: bubble.config.agents.implementer,
           active_role: "implementer",
