@@ -1596,18 +1596,48 @@ post-flip cleanup commits**, in that order.
        approvalCommandPipeline, reworkIntent variants).
      Aggregate footprint: 17 src + 12 test files. `pnpm test`
      3766/3766 green; `pnpm typecheck` exit 0.
-   - **4b-γ/2 — Remaining domain helper migration.** Scope
-     reduced from the originally planned three-helper-module
-     list per the 4b-γ/1 bundle absorption above. Remaining:
-     `domain/metaReviewGate/snapshotState.ts` (3 functions —
-     `incrementAutoReworkCount`, `setMetaReviewConsecutiveCleanRuns`,
-     `normalizeMetaReviewSnapshot`) and
-     `domain/metaReviewGate/autoReworkRetryInvariant.ts` (1
-     function — `resolveAutoReworkRetryInvariantViolation`).
+   - **4b-γ/2 — Remaining domain helper migration.** Landed as
+     commit bb9f6eb7 (6 files: 1 deleted + 5 modified; 43
+     insertions / 78 deletions; zero test fixture edits).
+     Scope shape:
+     - **Lifted to variant in/out**: 2 helpers in
+       `domain/metaReviewGate/snapshotState.ts` —
+       `incrementAutoReworkCount` and
+       `setMetaReviewConsecutiveCleanRuns`. Both use the
+       uniform internal boundary projection pattern
+       (`toPersistedSnapshot` enter →
+       `buildBubbleStateSnapshotVariant` exit), matching
+       machine.ts in 4b-γ/1; both wraps dissolve uniformly
+       with the canonical parser flip in 4b-γ/4.
+     - **Unchanged**: `normalizeMetaReviewSnapshot` in the same
+       module. It accepts `BubbleMetaReviewSnapshotState |
+       undefined` (the `meta_review` field), not the state
+       itself; shape-independent — no signature flip required.
+     - **Deleted (deviation from the originally planned lift)**:
+       `domain/metaReviewGate/autoReworkRetryInvariant.ts`.
+       The 4b-γ/2 scope-scan confirmed zero callsites for both
+       the function (`resolveAutoReworkRetryInvariantViolation`)
+       and the exported reasonCode constant
+       (`metaReviewGateAutoReworkRetryRunIdentityInvariantReasonCode`).
+       Migrating dead code to variant signatures would only
+       conserve dead code; deletion is the cleaner endpoint.
+       Same "scope-scan as arbiter" pattern as the 4b-γ/1
+       bundle scope-shift.
+     - **5 callsite updates**: 3 wrap drops
+       (`metaReviewGateApply`, `metaReviewGateCleanRerunDispatch`,
+       `metaReviewGateAutoReworkState`/setStreak); 1 new
+       internal wrap (`metaReviewGateAutoReworkState`/incrementCount
+       — `assertParsedBubbleStateSnapshot` still returns persisted,
+       so the call site uses `buildBubbleStateSnapshotVariant`
+       at the boundary; dissolves in 4b-γ/4); 1 cross-batch-border
+       internal wrap (`metaReviewGateCleanRerunFailureState` —
+       the helper's `rollbackStateOnAppendFailure` consumer
+       contract is persisted-shape per §10.13, so the helper
+       keeps a persisted signature and wraps the variant helper
+       internally; dissolves in 4b-γ/4).
      `domain/state/rework/reworkIntentTransitions.ts` was
-     absorbed by 4b-γ/1's bundle and is no longer in 4b-γ/2's
-     scope. Sub-splittable per helper module if fan-out cluster
-     is large; each helper greens with its consumers.
+     absorbed by 4b-γ/1's bundle and is not part of 4b-γ/2.
+     `pnpm test` 3766/3766 green; `pnpm typecheck` exit 0.
    - **4b-γ/3 — Construction helper migration.** Lift
      `domain/state/initialState.ts`, `domain/state/startState.ts`,
      `domain/pass/handoff.ts` output types to
