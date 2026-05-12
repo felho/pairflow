@@ -27,6 +27,7 @@ import { createBubble } from "../../../src/v11/defaults/create/createBubbleApi.j
 import { commitBubbleDependencyDefaults } from "../../../src/v11/defaults/commit/commitCommandDefaults.js";
 import { readTranscriptEnvelopes } from "../../../src/v11/infrastructure/artifact/transcript/transcriptStore.js";
 import { readStateSnapshot } from "../../../src/v11/infrastructure/state/stateStore.js";
+import { adaptPersistedReadPortToDomain } from "../../../src/v11/shared/mutation/mutationBoundaryIO.js";
 import { bootstrapWorktreeWorkspace } from "../../../src/v11/infrastructure/workspace/worktreeManager.js";
 import { initGitRepository, runGit } from "../../helpers/git.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
@@ -842,7 +843,7 @@ describe("commitBubble", () => {
         appendProtocolEnvelope: vi.fn(async () => {
           throw new Error("unused");
         }),
-        readStateSnapshot,
+        readStateSnapshot: adaptPersistedReadPortToDomain(readStateSnapshot),
         readTranscriptEnvelopes: vi.fn(async () => []),
         runGit: vi.fn(async () => {
           throw new Error("runGit should not be used for remote public routing");

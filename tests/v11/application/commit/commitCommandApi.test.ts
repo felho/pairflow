@@ -25,6 +25,7 @@ import {
   remoteCommitWorkspaceRootEnvVar
 } from "../../../../src/v11/application/commit/internal/remote/remoteCommitExecutionContext.js";
 import { readStateSnapshot } from "../../../../src/v11/infrastructure/state/stateStore.js";
+import { adaptPersistedReadPortToDomain } from "../../../../src/v11/shared/mutation/mutationBoundaryIO.js";
 import { readTranscriptEnvelopes } from "../../../../src/v11/infrastructure/artifact/transcript/transcriptStore.js";
 import { RemoteBubbleCommitCommandError } from "../../../../src/v11/infrastructure/executor/ssh/sshBubbleCommitCommand.js";
 import { resolveMetricsShardPath } from "../../../../src/v11/shared/metrics/events.js";
@@ -367,7 +368,7 @@ describe("commitCommandApi", () => {
         importRemoteBubbleCommitContinuity: noRemoteCommitCompletionEvidence(),
         executeRemoteBubbleCommitCommand,
         appendProtocolEnvelope,
-        readStateSnapshot,
+        readStateSnapshot: adaptPersistedReadPortToDomain(readStateSnapshot),
         readTranscriptEnvelopes: vi.fn(async () => []),
         runGit,
         writeTextFile: async (path: string, content: string) => {
@@ -656,7 +657,7 @@ describe("commitCommandApi", () => {
           appendProtocolEnvelope: vi.fn(async () => {
             throw new Error("unused");
           }),
-          readStateSnapshot,
+          readStateSnapshot: adaptPersistedReadPortToDomain(readStateSnapshot),
           readTranscriptEnvelopes: vi.fn(async () => []),
           runGit,
           writeTextFile: vi.fn(async () => undefined),
@@ -737,7 +738,7 @@ describe("commitCommandApi", () => {
           appendProtocolEnvelope: vi.fn(async () => {
             throw new Error("unused");
           }),
-          readStateSnapshot,
+          readStateSnapshot: adaptPersistedReadPortToDomain(readStateSnapshot),
           readTranscriptEnvelopes: vi.fn(async () => []),
           runGit: vi.fn(async () => {
             throw new Error("unused");
@@ -819,7 +820,7 @@ describe("commitCommandApi", () => {
           appendProtocolEnvelope: vi.fn(async () => {
             throw new Error("unused");
           }),
-          readStateSnapshot,
+          readStateSnapshot: adaptPersistedReadPortToDomain(readStateSnapshot),
           readTranscriptEnvelopes: vi.fn(async () => []),
           runGit: vi.fn(async () => {
             throw new Error("unused");
@@ -896,7 +897,7 @@ describe("commitCommandApi", () => {
           appendProtocolEnvelope: vi.fn(async () => {
             throw new Error("unused");
           }),
-          readStateSnapshot,
+          readStateSnapshot: adaptPersistedReadPortToDomain(readStateSnapshot),
           readTranscriptEnvelopes: vi.fn(async () => []),
           runGit: vi.fn(async () => {
             throw new Error("unused");
@@ -1021,7 +1022,7 @@ describe("commitCommandApi", () => {
           appendProtocolEnvelope: vi.fn(async () => {
             throw new Error("unused");
           }),
-          readStateSnapshot,
+          readStateSnapshot: adaptPersistedReadPortToDomain(readStateSnapshot),
           readTranscriptEnvelopes: vi.fn(async () => []),
           runGit: vi.fn(async () => {
             throw new Error("unused");
@@ -1163,7 +1164,7 @@ describe("commitCommandApi", () => {
           appendProtocolEnvelope: vi.fn(async () => {
             throw new Error("unused");
           }),
-          readStateSnapshot,
+          readStateSnapshot: adaptPersistedReadPortToDomain(readStateSnapshot),
           readTranscriptEnvelopes: vi.fn(async () => []),
           renamePath,
           runGit: vi.fn(async () => {
@@ -1316,7 +1317,7 @@ describe("commitCommandApi", () => {
           appendProtocolEnvelope: vi.fn(async () => {
             throw new Error("unused");
           }),
-          readStateSnapshot,
+          readStateSnapshot: adaptPersistedReadPortToDomain(readStateSnapshot),
           readTranscriptEnvelopes: vi.fn(async () => []),
           renamePath,
           runGit: vi.fn(async () => {
@@ -1451,7 +1452,7 @@ describe("commitCommandApi", () => {
         appendProtocolEnvelope: vi.fn(async () => {
           throw new Error("unused");
         }),
-        readStateSnapshot,
+        readStateSnapshot: adaptPersistedReadPortToDomain(readStateSnapshot),
         readTranscriptEnvelopes: vi.fn(async () => []),
         runGit: vi.fn(async () => {
           throw new Error("unused");
@@ -1594,7 +1595,7 @@ describe("commitCommandApi", () => {
         appendProtocolEnvelope: vi.fn(async () => {
           throw new Error("unused");
         }),
-        readStateSnapshot,
+        readStateSnapshot: adaptPersistedReadPortToDomain(readStateSnapshot),
         readTranscriptEnvelopes: vi.fn(async () => []),
         runGit: vi.fn(async () => {
           throw new Error("unused");

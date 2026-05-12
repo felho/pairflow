@@ -5,14 +5,24 @@ import { runGit } from "../../infrastructure/workspace/git.js";
 import { resolveBubbleById } from "../../infrastructure/executor/workspace/bubbleLookup.js";
 import { statusCommandDependencyDefaults } from "../status/statusCommandDependencyDefaults.js";
 import {
-  readStateSnapshot,
-  writeStateSnapshot
+  readStateSnapshot as readStateSnapshotPersisted,
+  writeStateSnapshot as writeStateSnapshotPersisted
 } from "../../infrastructure/state/stateStore.js";
+import {
+  adaptPersistedReadPortToDomain,
+  adaptPersistedWritePortToDomain
+} from "../../shared/mutation/mutationBoundaryIO.js";
 import {
   appendProtocolEnvelope,
   readTranscriptEnvelopes
 } from "../../infrastructure/artifact/transcript/transcriptStore.js";
 import type { CommitBubbleDependencies } from "../../application/commit/commitCommandApiContract.js";
+
+// Adapt persisted-shape infrastructure ports into domain-variant ports at
+// the defaults boundary so the commit lane holds BubbleStateSnapshot
+// end-to-end through its dependency contract.
+const readStateSnapshot = adaptPersistedReadPortToDomain(readStateSnapshotPersisted);
+const writeStateSnapshot = adaptPersistedWritePortToDomain(writeStateSnapshotPersisted);
 
 let remoteExecutionArtifactsModulePromise:
   | Promise<{

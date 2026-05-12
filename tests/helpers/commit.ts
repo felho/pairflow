@@ -4,7 +4,14 @@ import { readRemotePointer } from "../../src/v11/infrastructure/artifact/bubble/
 import { executeRemoteBubbleCommitCommand } from "../../src/v11/infrastructure/executor/ssh/sshBubbleCommitCommand.js";
 import { importRemoteBubbleCommitContinuity } from "../../src/v11/infrastructure/executor/ssh/sshBubbleCommitContinuityImportCommand.js";
 import { resolveBubbleById } from "../../src/v11/infrastructure/executor/workspace/bubbleLookup.js";
-import { readStateSnapshot, writeStateSnapshot } from "../../src/v11/infrastructure/state/stateStore.js";
+import {
+  readStateSnapshot as readStateSnapshotPersisted,
+  writeStateSnapshot as writeStateSnapshotPersisted
+} from "../../src/v11/infrastructure/state/stateStore.js";
+import {
+  adaptPersistedReadPortToDomain,
+  adaptPersistedWritePortToDomain
+} from "../../src/v11/shared/mutation/mutationBoundaryIO.js";
 import { runGit } from "../../src/v11/infrastructure/workspace/git.js";
 import { statusCommandDependencyDefaults } from "../../src/v11/defaults/status/statusCommandDependencyDefaults.js";
 import type { CommitBubbleDependencies } from "../../src/v11/application/commit/commitCommandApiContract.js";
@@ -17,7 +24,7 @@ export function buildCommitBubbleDependencies(): CommitBubbleDependencies {
     importRemoteBubbleCommitContinuity,
     ensureBubbleInstanceIdForMutation,
     readRemotePointer,
-    readStateSnapshot,
+    readStateSnapshot: adaptPersistedReadPortToDomain(readStateSnapshotPersisted),
     readTranscriptEnvelopes,
     resolveRemoteBubbleStatusTarget:
       statusCommandDependencyDefaults.resolveRemoteBubbleStatusTarget,
@@ -27,6 +34,6 @@ export function buildCommitBubbleDependencies(): CommitBubbleDependencies {
     writeTextFile: async (path: string, content: string) => {
       await writeFile(path, content, "utf8");
     },
-    writeStateSnapshot
+    writeStateSnapshot: adaptPersistedWritePortToDomain(writeStateSnapshotPersisted)
   };
 }

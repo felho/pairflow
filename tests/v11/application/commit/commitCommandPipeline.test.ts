@@ -7,6 +7,7 @@ import type { CommitBubbleDependencies } from "../../../../src/v11/application/c
 import { getBubblePaths } from "../../../../src/v11/shared/bubble/bubblePaths.js";
 import type { BubbleConfig } from "../../../../src/v11/shared/config/bubbleConfigTypes.js";
 import type { PersistedBubbleStateSnapshot } from "../../../../src/v11/domain/state/snapshot/persistedBubbleStateSnapshot.js";
+import { buildBubbleStateSnapshotVariant } from "../../../../src/v11/domain/state/snapshot/buildBubbleStateSnapshot.js";
 import type { ProtocolEnvelope } from "../../../../src/types/protocol.js";
 
 const order: string[] = [];
@@ -138,7 +139,7 @@ describe("runCommitCommandPipeline", () => {
       })),
       readRemotePointer: vi.fn(),
       readStateSnapshot: vi.fn(async () => ({
-        state: approvedState,
+        state: buildBubbleStateSnapshotVariant(approvedState),
         fingerprint: "state-fingerprint"
       })),
       readTranscriptEnvelopes: vi.fn(async () => []),

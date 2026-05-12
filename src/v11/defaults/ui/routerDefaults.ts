@@ -51,7 +51,6 @@ import type { RestartBubbleResult } from "../../application/restart/restartComma
 import type { StartBubbleResult } from "../../application/start/startCommandContract.js";
 import type { StopBubbleResult } from "../../application/stop/stopCommandContract.js";
 import type { BubbleStateSnapshot } from "../../domain/state/snapshot/bubbleStateSnapshot.js";
-import { buildBubbleStateSnapshotVariant } from "../../domain/state/snapshot/buildBubbleStateSnapshot.js";
 import type {
   BubbleReworkIntentRecord
 } from "../../domain/state/rework/reworkIntentTypes.js";
@@ -305,11 +304,7 @@ function mapUiCommitResult(result: CommitBubbleResult): UiCommitBubbleResult {
     bubbleId: result.bubbleId,
     sequence: result.sequence,
     event: projectProtocolEnvelopeToUiActionEvent(result.envelope),
-    // commit lane's public result is still persisted-shape (later batch);
-    // wrap at the UI consumer boundary.
-    actionState: projectBubbleStateToUiActionState(
-      buildBubbleStateSnapshotVariant(result.state)
-    ),
+    actionState: projectBubbleStateToUiActionState(result.state),
     commitSha: result.commitSha,
     commitMessage: result.commitMessage,
     stagedFiles: [...result.stagedFiles]

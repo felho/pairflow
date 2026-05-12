@@ -7,6 +7,7 @@ import { afterAll, afterEach, describe, expect, it, vi } from "vitest";
 import { renderBubbleConfigToml } from "../../src/config/bubbleConfig.js";
 import { renderBubbleCommitText, runCli } from "../../src/cli/index.js";
 import type { CommitBubbleResult } from "../../src/v11/application/commit/commitCommandContract.js";
+import { buildBubbleStateSnapshotVariant } from "../../src/v11/domain/state/snapshot/buildBubbleStateSnapshot.js";
 import { writeRemotePointer } from "../../src/v11/infrastructure/artifact/bubble/remoteExecutionArtifacts.js";
 import { mergeBubbleDependencyDefaults } from "../../src/v11/defaults/merge/mergeCommandDefaults.js";
 import { createBubble } from "../../src/v11/defaults/create/createBubbleApi.js";
@@ -694,7 +695,7 @@ describe("runCli", () => {
         },
         refs: []
       },
-      state: {
+      state: buildBubbleStateSnapshotVariant({
         bubble_id: "b_cli_commit_remote_01",
         state: "DONE",
         round: 2,
@@ -706,7 +707,7 @@ describe("runCli", () => {
         last_command_at: "2026-04-18T08:20:00.000Z",
         pending_rework_intent: null,
         rework_intent_history: []
-      },
+      }),
       commitSha: "abcdef1234567890",
       commitMessage: "bubble(b_cli_commit_remote_01): finalize",
       stagedFiles: ["feature-remote.txt"]

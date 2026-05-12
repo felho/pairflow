@@ -1,9 +1,15 @@
 import { join } from "node:path";
 
 import { applyStateTransition } from "../../../../domain/state/machine.js";
+import { buildBubbleStateSnapshotVariant } from "../../../../domain/state/snapshot/buildBubbleStateSnapshot.js";
+import { toPersistedSnapshot } from "../../../../domain/state/snapshot/projection.js";
 import { normalizeStringList } from "../../../../shared/normalization/stringNormalization.js";
 import { BubbleCommitError } from "../error/commitCommandError.js";
-import type { PersistedBubbleStateSnapshot } from "../../../../domain/state/snapshot/persistedBubbleStateSnapshot.js";
+import type { BubbleStateSnapshot } from "../../../../domain/state/snapshot/bubbleStateSnapshot.js";
+import type {
+  LoadedDomainStateSnapshot,
+  WriteDomainStateSnapshotPort
+} from "../../../../ports/stateSnapshots.js";
 import type {
   ProtocolEnvelope,
   ProtocolEnvelopeDraft
@@ -29,10 +35,7 @@ export interface CommitFinalizationAppendResult {
   }>;
 }
 
-export interface CommitFinalizationLoadedState {
-  state: PersistedBubbleStateSnapshot;
-  fingerprint: string;
-}
+export type CommitFinalizationLoadedState = LoadedDomainStateSnapshot;
 
 export async function appendCommitResultEnvelopeMutation(input: {
   context: CommitFinalizationContext;
@@ -80,26 +83,23 @@ export async function appendCommitResultEnvelopeMutation(input: {
 export async function persistCommittedThenDoneStateMutation(input: {
   context: {
     statePath: string;
-    state: PersistedBubbleStateSnapshot;
+    state: BubbleStateSnapshot;
     loadedState: CommitFinalizationLoadedState;
   };
   nowIso: string;
   appended: CommitFinalizationAppendResult;
   commitSha: string;
-  writeStateSnapshot: (
-    statePath: string,
-    state: PersistedBubbleStateSnapshot,
-    options?: {
-      expectedFingerprint?: string;
-      expectedState?: PersistedBubbleStateSnapshot["state"];
-    }
-  ) => Promise<CommitFinalizationLoadedState>;
+  writeStateSnapshot: WriteDomainStateSnapshotPort;
 }): Promise<CommitFinalizationLoadedState> {
   const writeSnapshot = input.writeStateSnapshot;
-  const committed = applyStateTransition(input.context.state, {
-    to: "COMMITTED",
-    lastCommandAt: input.nowIso
-  });
+  // applyStateTransition is still persisted-shape (later batch); project
+  // at the boundary and rebuild the variant from the output.
+  const committed = buildBubbleStateSnapshotVariant(
+    applyStateTransition(toPersistedSnapshot(input.context.state), {
+      to: "COMMITTED",
+      lastCommandAt: input.nowIso
+    })
+  );
   const committedWritten = await writeSnapshot(
     input.context.statePath,
     committed,
@@ -109,13 +109,15 @@ export async function persistCommittedThenDoneStateMutation(input: {
     }
   );
 
-  const done = applyStateTransition(committedWritten.state, {
-    to: "DONE",
-    activeAgent: null,
-    activeRole: null,
-    activeSince: null,
-    lastCommandAt: input.nowIso
-  });
+  const done = buildBubbleStateSnapshotVariant(
+    applyStateTransition(toPersistedSnapshot(committedWritten.state), {
+      to: "DONE",
+      activeAgent: null,
+      activeRole: null,
+      activeSince: null,
+      lastCommandAt: input.nowIso
+    })
+  );
 
   try {
     return await writeSnapshot(input.context.statePath, done, {

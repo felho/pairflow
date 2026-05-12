@@ -6,10 +6,11 @@ import {
   type CommitFinalizationAppendResult,
   type CommitFinalizationLoadedState
 } from "../../../../src/v11/application/commit/internal/finalization/commitCommandFinalizationMutation.js";
-import type { PersistedBubbleStateSnapshot } from "../../../../src/v11/domain/state/snapshot/persistedBubbleStateSnapshot.js";
+import type { BubbleStateSnapshot } from "../../../../src/v11/domain/state/snapshot/bubbleStateSnapshot.js";
+import { buildBubbleStateSnapshotVariant } from "../../../../src/v11/domain/state/snapshot/buildBubbleStateSnapshot.js";
 
-function createApprovedState(): PersistedBubbleStateSnapshot {
-  return {
+function createApprovedState(): BubbleStateSnapshot {
+  return buildBubbleStateSnapshotVariant({
     bubble_id: "bubble-a",
     state: "APPROVED_FOR_COMMIT",
     round: 2,
@@ -18,7 +19,7 @@ function createApprovedState(): PersistedBubbleStateSnapshot {
     active_since: "2026-05-04T00:00:00.000Z",
     last_command_at: "2026-05-04T00:00:00.000Z",
     round_role_history: []
-  };
+  });
 }
 
 describe("commitCommandFinalizationMutation", () => {
@@ -90,25 +91,38 @@ describe("commitCommandFinalizationMutation", () => {
 
   it("persists COMMITTED then DONE through the injected state callback", async () => {
     const approved = createApprovedState();
+    const committedState = buildBubbleStateSnapshotVariant({
+      bubble_id: "bubble-a",
+      state: "COMMITTED",
+      round: 2,
+      active_agent: "codex",
+      active_role: "implementer",
+      active_since: "2026-05-04T00:00:00.000Z",
+      last_command_at: "2026-05-04T01:00:00.000Z",
+      execution_context: null,
+      round_role_history: [],
+      pending_rework_intent: null,
+      rework_intent_history: []
+    });
     const committed: CommitFinalizationLoadedState = {
-      state: {
-        ...approved,
-        state: "COMMITTED",
-        last_command_at: "2026-05-04T01:00:00.000Z",
-        execution_context: null,
-        pending_rework_intent: null,
-        rework_intent_history: []
-      },
+      state: committedState,
       fingerprint: "committed-fingerprint"
     };
+    const doneState = buildBubbleStateSnapshotVariant({
+      bubble_id: "bubble-a",
+      state: "DONE",
+      round: 2,
+      active_agent: null,
+      active_role: null,
+      active_since: null,
+      last_command_at: "2026-05-04T01:00:00.000Z",
+      execution_context: null,
+      round_role_history: [],
+      pending_rework_intent: null,
+      rework_intent_history: []
+    });
     const done: CommitFinalizationLoadedState = {
-      state: {
-        ...committed.state,
-        state: "DONE",
-        active_agent: null,
-        active_role: null,
-        active_since: null
-      },
+      state: doneState,
       fingerprint: "done-fingerprint"
     };
     const writeStateSnapshot = vi
@@ -140,14 +154,7 @@ describe("commitCommandFinalizationMutation", () => {
     expect(writeStateSnapshot).toHaveBeenNthCalledWith(
       1,
       "/repo/.pairflow/bubbles/bubble-a/state.json",
-      {
-        ...approved,
-        state: "COMMITTED",
-        last_command_at: "2026-05-04T01:00:00.000Z",
-        execution_context: null,
-        pending_rework_intent: null,
-        rework_intent_history: []
-      },
+      committedState,
       {
         expectedFingerprint: "approved-fingerprint",
         expectedState: "APPROVED_FOR_COMMIT"
@@ -156,13 +163,7 @@ describe("commitCommandFinalizationMutation", () => {
     expect(writeStateSnapshot).toHaveBeenNthCalledWith(
       2,
       "/repo/.pairflow/bubbles/bubble-a/state.json",
-      {
-        ...committed.state,
-        state: "DONE",
-        active_agent: null,
-        active_role: null,
-        active_since: null
-      },
+      doneState,
       {
         expectedFingerprint: "committed-fingerprint",
         expectedState: "COMMITTED"
