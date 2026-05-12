@@ -1,3 +1,4 @@
+import { toPersistedSnapshot } from "../../../../domain/state/snapshot/projection.js";
 import type { PersistedBubbleStateSnapshot } from "../../../../domain/state/snapshot/persistedBubbleStateSnapshot.js";
 import type { BubbleWatchdogResult } from "../../watchdogCommandContract.js";
 import type { WatchdogRuntimeContext } from "./watchdogCommandFlow.js";
@@ -22,10 +23,11 @@ function assertMetaReviewExecutionContext(state: PersistedBubbleStateSnapshot): 
 export function maybeRouteMetaReviewBeforeExpiry(
   input: WatchdogRuntimeContext
 ): BubbleWatchdogResult | null {
-  if (!isMetaReviewExecutionContextActiveState(input.state)) {
+  const persistedState = toPersistedSnapshot(input.state);
+  if (!isMetaReviewExecutionContextActiveState(persistedState)) {
     return null;
   }
-  assertMetaReviewExecutionContext(input.state);
+  assertMetaReviewExecutionContext(persistedState);
   return {
     bubbleId: input.resolved.bubbleId,
     escalated: false,
@@ -37,9 +39,10 @@ export function maybeRouteMetaReviewBeforeExpiry(
 export async function maybeRouteMetaReviewOnExpiry(
   input: WatchdogRuntimeContext
 ): Promise<BubbleWatchdogResult | null> {
-  if (!isMetaReviewExecutionContextActiveState(input.state)) {
+  const persistedState = toPersistedSnapshot(input.state);
+  if (!isMetaReviewExecutionContextActiveState(persistedState)) {
     return null;
   }
-  assertMetaReviewExecutionContext(input.state);
+  assertMetaReviewExecutionContext(persistedState);
   return escalateMetaReviewWatchdog(input);
 }

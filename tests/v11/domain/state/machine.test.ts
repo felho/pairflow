@@ -64,7 +64,7 @@ describe("v11 domain state machine", () => {
     });
 
     const waiting = deriveWatchdogWaitingHumanState({
-      state: running,
+      state: buildBubbleStateSnapshotVariant(running),
       lastCommandAt: "2026-04-06T10:31:00.000Z"
     });
 

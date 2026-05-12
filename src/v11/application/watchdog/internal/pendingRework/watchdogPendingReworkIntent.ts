@@ -1,14 +1,16 @@
 import { emitBubbleLifecycleEventBestEffort } from "../../../metrics/bubbleEvents.js";
 import { applyDeferredReworkIntent } from "../../../../domain/state/rework/reworkIntentTransitions.js";
 import { persistPendingReworkIntentState } from "./watchdogPendingReworkPersistence.js";
-import type { PersistedBubbleStateSnapshot } from "../../../../domain/state/snapshot/persistedBubbleStateSnapshot.js";
+import type { BubbleStateSnapshot } from "../../../../domain/state/snapshot/bubbleStateSnapshot.js";
+import { buildBubbleStateSnapshotVariant } from "../../../../domain/state/snapshot/buildBubbleStateSnapshot.js";
+import { toPersistedSnapshot } from "../../../../domain/state/snapshot/projection.js";
 import type { ProtocolEnvelope } from "../../../../../types/protocol.js";
 import type { BubbleWatchdogResult } from "../../watchdogCommandContract.js";
 import type { ResolvedBubbleById } from "../../../../ports/bubbleLookup.js";
 import type { EnsureBubbleInstanceIdForMutationPort } from "../../../../ports/bubbleIdentity.js";
 import type {
-  LoadedStateSnapshot,
-  WriteStateSnapshotPort
+  LoadedDomainStateSnapshot,
+  WriteDomainStateSnapshotPort
 } from "../../../../ports/stateSnapshots.js";
 import type {
   EmitDeliveryNotificationAckPort,
@@ -19,9 +21,9 @@ export async function maybeApplyPendingReworkIntent(input: {
   now: Date;
   nowIso: string;
   resolved: ResolvedBubbleById;
-  loadedState: LoadedStateSnapshot;
-  state: PersistedBubbleStateSnapshot;
-  writeState: WriteStateSnapshotPort;
+  loadedState: LoadedDomainStateSnapshot;
+  state: BubbleStateSnapshot;
+  writeState: WriteDomainStateSnapshotPort;
   emitDelivery: EmitDeliveryNotificationAckPort;
   ensureBubbleInstanceIdForMutation: EnsureBubbleInstanceIdForMutationPort;
   resolveDeliveryMessageRef: ResolveDeliveryMessageRefPort;
@@ -77,7 +79,7 @@ export async function maybeApplyPendingReworkIntent(input: {
   }
 
   const appliedTransition = applyDeferredReworkIntent({
-    state: input.state,
+    state: toPersistedSnapshot(input.state),
     implementer: input.resolved.bubbleConfig.agents.implementer,
     reviewer: input.resolved.bubbleConfig.agents.reviewer,
     watchdogTimeoutMinutes: input.resolved.bubbleConfig.watchdog_timeout_minutes,
@@ -104,7 +106,7 @@ export async function maybeApplyPendingReworkIntent(input: {
 
   const written = await persistPendingReworkIntentState({
     statePath: input.resolved.bubblePaths.statePath,
-    nextState: appliedTransition.state,
+    nextState: buildBubbleStateSnapshotVariant(appliedTransition.state),
     loadedState: input.loadedState,
     intentId: pendingIntent.intent_id,
     writeStateSnapshot: input.writeState

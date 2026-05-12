@@ -1,8 +1,9 @@
-import type { PersistedBubbleStateSnapshot } from "../../../../domain/state/snapshot/persistedBubbleStateSnapshot.js";
+import type { BubbleStateSnapshot } from "../../../../domain/state/snapshot/bubbleStateSnapshot.js";
+import { toPersistedSnapshot } from "../../../../domain/state/snapshot/projection.js";
 import type { BubbleWatchdogResult } from "../../watchdogCommandContract.js";
 import { deriveWatchdogWaitingHumanState } from "../../../../domain/state/watchdogEscalation.js";
 import { clearLiveMetaReviewSnapshot } from "../../../../shared/metaReview/metaReviewSnapshot.js";
-import { assertParsedBubbleStateSnapshot } from "../../../../domain/state/stateSchema.js";
+import { assertParsedDomainBubbleStateSnapshot } from "../../../../domain/state/stateSchema.js";
 import type { ResolvedBubbleById } from "../../../../ports/bubbleLookup.js";
 import type { EmitBubbleNotificationPort } from "../../../../ports/notifications.js";
 import type {
@@ -14,9 +15,9 @@ import type {
   AppendProtocolEnvelopePort
 } from "../../../../ports/transcript.js";
 import type {
-  LoadedStateSnapshot,
-  ReadStateSnapshotPort,
-  WriteStateSnapshotPort
+  LoadedDomainStateSnapshot,
+  ReadDomainStateSnapshotPort,
+  WriteDomainStateSnapshotPort
 } from "../../../../ports/stateSnapshots.js";
 import { BubbleWatchdogError } from "../error/watchdogCommandRuntime.js";
 
@@ -36,11 +37,11 @@ export interface WatchdogRuntimeContext {
   now: Date;
   nowIso: string;
   resolved: ResolvedBubbleById;
-  readState: ReadStateSnapshotPort;
+  readState: ReadDomainStateSnapshotPort;
   appendEnvelope: AppendProtocolEnvelopePort;
-  writeState: WriteStateSnapshotPort;
-  loadedState: LoadedStateSnapshot;
-  state: PersistedBubbleStateSnapshot;
+  writeState: WriteDomainStateSnapshotPort;
+  loadedState: LoadedDomainStateSnapshot;
+  state: BubbleStateSnapshot;
   emitDelivery: EmitDeliveryNotificationAckPort;
   emitNotification: EmitBubbleNotificationPort;
   resolveDeliveryMessageRef: ResolveDeliveryMessageRefPort;
@@ -120,7 +121,7 @@ export async function escalateRunningWatchdog(
     lastCommandAt: context.nowIso
   });
 
-  let written: LoadedStateSnapshot;
+  let written: LoadedDomainStateSnapshot;
   try {
     written = await context.writeState(
       context.resolved.bubblePaths.statePath,
@@ -191,12 +192,13 @@ export async function escalateMetaReviewWatchdog(
     }
   });
 
-  const nextState = assertParsedBubbleStateSnapshot({
-    ...context.state,
+  const persistedCurrent = toPersistedSnapshot(context.state);
+  const nextState = assertParsedDomainBubbleStateSnapshot({
+    ...persistedCurrent,
     state: "WAITING_HUMAN",
     execution_context: null,
     last_command_at: context.nowIso,
-    meta_review: clearLiveMetaReviewSnapshot(context.state.meta_review)
+    meta_review: clearLiveMetaReviewSnapshot(persistedCurrent.meta_review)
   });
   const written = await context.writeState(
     context.resolved.bubblePaths.statePath,
