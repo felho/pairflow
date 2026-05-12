@@ -2,6 +2,9 @@ import { dirname, join } from "node:path";
 import { randomUUID } from "node:crypto";
 import { rename, rm, writeFile } from "node:fs/promises";
 
+import type { BubbleStateSnapshot } from "../../domain/state/snapshot/bubbleStateSnapshot.js";
+import { buildBubbleStateSnapshotVariant } from "../../domain/state/snapshot/buildBubbleStateSnapshot.js";
+import { toPersistedSnapshot } from "../../domain/state/snapshot/projection.js";
 import { assertParsedBubbleStateSnapshot } from "../../domain/state/stateSchema.js";
 import {
   FileLockTimeoutError,
@@ -15,13 +18,19 @@ import type { BubbleLifecycleState } from "../../../contracts/kernel/lifecycle.j
 import type { PersistedBubbleStateSnapshot } from "../../domain/state/snapshot/persistedBubbleStateSnapshot.js";
 import { SchemaValidationError } from "../../shared/validation/primitives.js";
 import type {
+  LoadedDomainStateSnapshot,
   LoadedStateSnapshot,
-  ReadStateSnapshotPort
+  ReadDomainStateSnapshotPort,
+  ReadStateSnapshotPort,
+  WriteDomainStateSnapshotPort
 } from "../../ports/stateSnapshots.js";
 
 export type {
+  LoadedDomainStateSnapshot,
   LoadedStateSnapshot,
-  ReadStateSnapshotPort
+  ReadDomainStateSnapshotPort,
+  ReadStateSnapshotPort,
+  WriteDomainStateSnapshotPort
 } from "../../ports/stateSnapshots.js";
 
 export type {
@@ -157,3 +166,44 @@ export async function writeStateSnapshot(
     }
   );
 }
+
+// Variant-aware boundary functions — Step 4b-β opt-in API. The persisted
+// shape stays the canonical wire format; these helpers project at the
+// boundary so application/domain consumers can hold the variant union.
+// Each function delegates to the persisted-shape implementation for the
+// actual file I/O, then projects in the appropriate direction.
+
+export const readDomainStateSnapshot: ReadDomainStateSnapshotPort = async (
+  statePath: string
+): Promise<LoadedDomainStateSnapshot> => {
+  const loaded = await readStateSnapshot(statePath);
+  return {
+    state: buildBubbleStateSnapshotVariant(loaded.state),
+    fingerprint: loaded.fingerprint
+  };
+};
+
+export async function createDomainStateSnapshot(
+  statePath: string,
+  state: BubbleStateSnapshot
+): Promise<LoadedDomainStateSnapshot> {
+  const persisted = toPersistedSnapshot(state);
+  const result = await createStateSnapshot(statePath, persisted);
+  return {
+    state: buildBubbleStateSnapshotVariant(result.state),
+    fingerprint: result.fingerprint
+  };
+}
+
+export const writeDomainStateSnapshot: WriteDomainStateSnapshotPort = async (
+  statePath: string,
+  state: BubbleStateSnapshot,
+  options: WriteStateSnapshotOptions = {}
+): Promise<LoadedDomainStateSnapshot> => {
+  const persisted = toPersistedSnapshot(state);
+  const result = await writeStateSnapshot(statePath, persisted, options);
+  return {
+    state: buildBubbleStateSnapshotVariant(result.state),
+    fingerprint: result.fingerprint
+  };
+};

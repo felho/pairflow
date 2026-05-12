@@ -1,3 +1,4 @@
+import type { BubbleStateSnapshot } from "../domain/state/snapshot/bubbleStateSnapshot.js";
 import type { PersistedBubbleStateSnapshot } from "../domain/state/snapshot/persistedBubbleStateSnapshot.js";
 import type { BubbleLifecycleState } from "../../contracts/kernel/lifecycle.js";
 import type {
@@ -31,3 +32,23 @@ export type WriteStateSnapshotPort = (
   state: PersistedBubbleStateSnapshot,
   options?: WriteStateSnapshotOptions
 ) => Promise<LoadedStateSnapshot>;
+
+// Variant-aware port siblings — Step 4b-β opt-in API. Consumers that
+// have migrated to the domain variant model use these; others continue
+// using the persisted-shape ports above. Step 4b-γ collapses the two
+// families into a single canonical variant-shaped API.
+
+export interface LoadedDomainStateSnapshot {
+  state: BubbleStateSnapshot;
+  fingerprint: string;
+}
+
+export type ReadDomainStateSnapshotPort = (
+  statePath: string
+) => Promise<LoadedDomainStateSnapshot>;
+
+export type WriteDomainStateSnapshotPort = (
+  statePath: string,
+  state: BubbleStateSnapshot,
+  options?: WriteStateSnapshotOptions
+) => Promise<LoadedDomainStateSnapshot>;
