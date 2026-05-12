@@ -50,7 +50,8 @@ import type {
 import type { RestartBubbleResult } from "../../application/restart/restartCommandContract.js";
 import type { StartBubbleResult } from "../../application/start/startCommandContract.js";
 import type { StopBubbleResult } from "../../application/stop/stopCommandContract.js";
-import type { PersistedBubbleStateSnapshot } from "../../domain/state/snapshot/persistedBubbleStateSnapshot.js";
+import type { BubbleStateSnapshot } from "../../domain/state/snapshot/bubbleStateSnapshot.js";
+import { buildBubbleStateSnapshotVariant } from "../../domain/state/snapshot/buildBubbleStateSnapshot.js";
 import type {
   BubbleReworkIntentRecord
 } from "../../domain/state/rework/reworkIntentTypes.js";
@@ -157,7 +158,7 @@ export function projectApprovalDecisionDeliverySignalsToUiDeliverySignals(
 }
 
 export function projectBubbleStateToUiActionState(
-  state: PersistedBubbleStateSnapshot
+  state: BubbleStateSnapshot
 ): UiActionBubbleState {
   const executionContext = state.execution_context ?? null;
   return {
@@ -304,7 +305,11 @@ function mapUiCommitResult(result: CommitBubbleResult): UiCommitBubbleResult {
     bubbleId: result.bubbleId,
     sequence: result.sequence,
     event: projectProtocolEnvelopeToUiActionEvent(result.envelope),
-    actionState: projectBubbleStateToUiActionState(result.state),
+    // commit lane's public result is still persisted-shape (later batch);
+    // wrap at the UI consumer boundary.
+    actionState: projectBubbleStateToUiActionState(
+      buildBubbleStateSnapshotVariant(result.state)
+    ),
     commitSha: result.commitSha,
     commitMessage: result.commitMessage,
     stagedFiles: [...result.stagedFiles]
@@ -314,7 +319,11 @@ function mapUiCommitResult(result: CommitBubbleResult): UiCommitBubbleResult {
 function mapUiStartResult(result: StartBubbleResult): UiStartBubbleResult {
   return {
     bubbleId: result.bubbleId,
-    actionState: projectBubbleStateToUiActionState(result.state),
+    // start lane's public result is still persisted-shape (later batch);
+    // wrap at the UI consumer boundary.
+    actionState: projectBubbleStateToUiActionState(
+      buildBubbleStateSnapshotVariant(result.state)
+    ),
     tmuxSessionName: result.tmuxSessionName,
     worktreePath: result.worktreePath
   };
@@ -323,7 +332,11 @@ function mapUiStartResult(result: StartBubbleResult): UiStartBubbleResult {
 function mapUiStopResult(result: StopBubbleResult): UiStopBubbleResult {
   return {
     bubbleId: result.bubbleId,
-    actionState: projectBubbleStateToUiActionState(result.state),
+    // stop lane's public result is still persisted-shape (later batch);
+    // wrap at the UI consumer boundary.
+    actionState: projectBubbleStateToUiActionState(
+      buildBubbleStateSnapshotVariant(result.state)
+    ),
     tmuxSessionName: result.tmuxSessionName,
     tmuxSessionExisted: result.tmuxSessionExisted,
     runtimeSessionRemoved: result.runtimeSessionRemoved
@@ -333,7 +346,11 @@ function mapUiStopResult(result: StopBubbleResult): UiStopBubbleResult {
 function mapUiRestartResult(result: RestartBubbleResult): UiRestartBubbleResult {
   return {
     bubbleId: result.bubbleId,
-    actionState: projectBubbleStateToUiActionState(result.state),
+    // restart lane reuses StartBubbleResult["state"], persisted-shape
+    // (later batch); wrap at the UI consumer boundary.
+    actionState: projectBubbleStateToUiActionState(
+      buildBubbleStateSnapshotVariant(result.state)
+    ),
     tmuxSessionName: result.tmuxSessionName,
     worktreePath: result.worktreePath,
     previousTmuxSessionExisted: result.previousTmuxSessionExisted,

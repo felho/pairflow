@@ -26,6 +26,7 @@ import {
   projectApprovalDecisionDeliverySignalToUiDeliverySignal,
   projectApprovalDecisionDeliverySignalsToUiDeliverySignals
 } from "../../../src/v11/defaults/ui/routerDefaults.js";
+import { buildBubbleStateSnapshotVariant } from "../../../src/v11/domain/state/snapshot/buildBubbleStateSnapshot.js";
 import {
   UiBubbleReviewPolicyConflictError,
   UiBubbleReviewPolicyStateConflictError
@@ -555,43 +556,45 @@ describe("resolveStaticAssetPath", () => {
 
 describe("approval decision delivery projection", () => {
   it("projects raw action state to the explicit UI action DTO without hidden state slices", () => {
-    const projected = projectBubbleStateToUiActionState({
-      bubble_id: "b-router-action-state",
-      state: "RUNNING",
-      round: 3,
-      active_agent: "codex",
-      active_role: "implementer",
-      active_since: "2026-02-25T00:00:00.000Z",
-      last_command_at: "2026-02-25T00:01:00.000Z",
-      execution_context: {
-        active_role: "implementer",
-        awaited_output_type: "pass_result",
-        handoff_id: "handoff-1",
-        execution_id: "execution-1",
+    const projected = projectBubbleStateToUiActionState(
+      buildBubbleStateSnapshotVariant({
+        bubble_id: "b-router-action-state",
+        state: "RUNNING",
         round: 3,
-        started_at: "2026-02-25T00:00:00.000Z",
-        deadline_at: "2026-02-25T00:30:00.000Z",
-        attempt: 2
-      },
-      round_role_history: [
-        {
-          round: 1,
-          implementer: "codex",
-          reviewer: "claude",
-          switched_at: "2026-02-25T00:00:00.000Z"
+        active_agent: "codex",
+        active_role: "implementer",
+        active_since: "2026-02-25T00:00:00.000Z",
+        last_command_at: "2026-02-25T00:01:00.000Z",
+        execution_context: {
+          active_role: "implementer",
+          awaited_output_type: "pass_result",
+          handoff_id: "handoff-1",
+          execution_id: "execution-1",
+          round: 3,
+          started_at: "2026-02-25T00:00:00.000Z",
+          deadline_at: "2026-02-25T00:30:00.000Z",
+          attempt: 2
+        },
+        round_role_history: [
+          {
+            round: 1,
+            implementer: "codex",
+            reviewer: "claude",
+            switched_at: "2026-02-25T00:00:00.000Z"
+          }
+        ],
+        pending_rework_intent: null,
+        rework_intent_history: [],
+        meta_review: {
+          auto_rework_count: 0,
+          auto_rework_limit: 10,
+          sticky_human_gate: false,
+          consecutive_clean_runs: 1,
+          execution_context: null,
+          runtime_delivery: null
         }
-      ],
-      pending_rework_intent: null,
-      rework_intent_history: [],
-      meta_review: {
-        auto_rework_count: 0,
-        auto_rework_limit: 10,
-        sticky_human_gate: false,
-        consecutive_clean_runs: 1,
-        execution_context: null,
-        runtime_delivery: null
-      }
-    });
+      })
+    );
 
     expect(projected).toStrictEqual({
       bubbleId: "b-router-action-state",

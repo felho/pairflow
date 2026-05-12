@@ -16,6 +16,7 @@ import { stopBubbleDependencyDefaults } from "../../src/v11/defaults/stop/stopCo
 import {
   projectBubbleStateToUiActionState
 } from "../../src/v11/defaults/ui/routerDefaults.js";
+import { buildBubbleStateSnapshotVariant } from "../../src/v11/domain/state/snapshot/buildBubbleStateSnapshot.js";
 import type {
   UiDeleteBubbleResult,
   UiOpenBubbleResult,
@@ -120,7 +121,11 @@ describe("UI action API smoke", () => {
           );
           return {
             bubbleId: result.bubbleId,
-            actionState: projectBubbleStateToUiActionState(result.state),
+            // restart lane public result is still persisted-shape; wrap at
+            // the UI consumer boundary.
+            actionState: projectBubbleStateToUiActionState(
+              buildBubbleStateSnapshotVariant(result.state)
+            ),
             tmuxSessionName: result.tmuxSessionName,
             worktreePath: result.worktreePath,
             previousTmuxSessionExisted: result.previousTmuxSessionExisted,
