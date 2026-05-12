@@ -1557,21 +1557,57 @@ post-flip cleanup commits**, in that order.
 
    **Pre-flip preparation (3 splittable green commits):**
 
-   - **4b-γ/1 — `applyStateTransition` lift to variant in/out.**
-     Largest single helper fan-out (41 callsites). Internal
-     implementation may still project via `toPersistedSnapshot` +
-     rebuild via `buildBubbleStateSnapshotVariant` at the
-     function boundary; the exported signature becomes
-     `(current: BubbleStateSnapshot, input) => BubbleStateSnapshot`.
-     All callsites drop their input `toPersistedSnapshot(...)`
-     wrappers. Per-callsite mechanical change; greens preserved.
-   - **4b-γ/2 — Domain helper migration.** Lift
-     `domain/metaReviewGate/snapshotState.ts` (3 functions),
-     `domain/metaReviewGate/autoReworkRetryInvariant.ts` (1),
-     `domain/state/rework/reworkIntentTransitions.ts` (2) to
-     variant input/output. Sub-splittable per helper if
-     fan-out cluster is large; each helper greens with its
-     consumers.
+   - **4b-γ/1 — `applyStateTransition` lift to variant in/out
+     + immediate-transition helper bundle.** Landed as commit
+     5d6241ae (32 files, 369 insertions / 321 deletions). Scope
+     widened during execution from the originally planned
+     "applyStateTransition only" to a cascade-required bundle,
+     per Section G of the 4b-γ/1 scope-scan: the helpers that
+     directly invoke `applyStateTransition` would otherwise
+     typecheck-break, so a temporary-internal-wrap path was
+     considered and rejected (would have added churn the next
+     commit removes; violates "no temporary projection ceremony"
+     principle). Bundle composition:
+     - `machine.ts:applyStateTransition` signature flipped to
+       `(BubbleStateSnapshot, input) => BubbleStateSnapshot` with
+       internal projection at the function boundary
+       (`toPersistedSnapshot` enter → `buildBubbleStateSnapshotVariant`
+       exit). The internal projection dissolves uniformly with all
+       other `assertParsedBubbleStateSnapshot` callsites in 4b-γ/4.
+     - 3 immediate-transition helpers lifted to variant in/out:
+       `transitionToGateState`
+       (application/metaReviewGate/internal/state),
+       `buildAutoReworkResumedState` + `buildRestoredReadyState`
+       (application/metaReviewGate/internal/autoRework),
+       `deriveQueuedDeferredReworkIntentState` +
+       `applyDeferredReworkIntent`
+       (domain/state/rework/reworkIntentTransitions).
+     - 6 direct callers wrap-dropped:
+       `metaReviewGateHumanGatePersistence`,
+       `metaReviewGateAutoRework`,
+       `metaReviewGateAutoReworkPersistence`,
+       `watchdogPendingReworkIntent`, `reworkIntentQueue`,
+       `runApprovalDeferredRework`.
+     - 7 B.1 production callsite wraps dropped (stop, commit×2,
+       reply, askHuman, approvalResultMapping×2, startState×3,
+       watchdogEscalation).
+     - 13 test fixture sites wrapped with variant builder (machine
+       tests, contract runners, runtime/bubble/human tests,
+       approvalCommandPipeline, reworkIntent variants).
+     Aggregate footprint: 17 src + 12 test files. `pnpm test`
+     3766/3766 green; `pnpm typecheck` exit 0.
+   - **4b-γ/2 — Remaining domain helper migration.** Scope
+     reduced from the originally planned three-helper-module
+     list per the 4b-γ/1 bundle absorption above. Remaining:
+     `domain/metaReviewGate/snapshotState.ts` (3 functions —
+     `incrementAutoReworkCount`, `setMetaReviewConsecutiveCleanRuns`,
+     `normalizeMetaReviewSnapshot`) and
+     `domain/metaReviewGate/autoReworkRetryInvariant.ts` (1
+     function — `resolveAutoReworkRetryInvariantViolation`).
+     `domain/state/rework/reworkIntentTransitions.ts` was
+     absorbed by 4b-γ/1's bundle and is no longer in 4b-γ/2's
+     scope. Sub-splittable per helper module if fan-out cluster
+     is large; each helper greens with its consumers.
    - **4b-γ/3 — Construction helper migration.** Lift
      `domain/state/initialState.ts`, `domain/state/startState.ts`,
      `domain/pass/handoff.ts` output types to
