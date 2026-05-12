@@ -36,6 +36,7 @@ import type {
 
 interface StatusInboxInspectionResult {
   state: BubbleStatusState;
+  validatedSnapshot: InspectedStateSnapshot["validatedSnapshot"];
   fingerprint: string;
   stateValidation: StateValidationDiagnostics | null;
 }
@@ -225,6 +226,7 @@ async function inspectStateSnapshotForStatus(
   return {
     fingerprint: inspected.fingerprint,
     state: inspected.state,
+    validatedSnapshot: inspected.validatedSnapshot,
     stateValidation: inspected.stateValidation
   };
 }

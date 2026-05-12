@@ -9,9 +9,8 @@ import type { ResolveBubbleByIdPort } from "../../ports/bubbleLookup.js";
 export type ResolvedBubbleStatusContext = Awaited<
   ReturnType<ResolveBubbleByIdPort>
 >;
-// Status reads via the inspect port (persisted-shape per §10.15
-// diagnostic-fallback decision), so BubbleStatusState is the
-// inspect-source persisted snapshot.
+// Status reads via the inspect port's diagnostic projection. Valid snapshots
+// also carry a strict domain variant on InspectedStateSnapshot.validatedSnapshot.
 export type BubbleStatusState = InspectedStateSnapshot["state"];
 
 export interface StatusGateState {

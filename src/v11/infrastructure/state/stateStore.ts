@@ -24,15 +24,13 @@ import type {
 } from "../../ports/stateSnapshots.js";
 
 export type {
+  InspectedStateSnapshot,
   LoadedStateSnapshot,
   ReadStateSnapshotPort,
+  StateValidationDiagnostics,
   WriteStateSnapshotPort
 } from "../../ports/stateSnapshots.js";
 
-export type {
-  StateValidationDiagnostics,
-  InspectedStateSnapshot
-} from "./stateSnapshotInspection.js";
 export { inspectStateSnapshot } from "./stateSnapshotInspection.js";
 
 export interface WriteStateSnapshotOptions {
@@ -63,7 +61,7 @@ export const readStateSnapshot: ReadStateSnapshotPort = async (
     );
   }
   return {
-    state: buildBubbleStateSnapshotVariant(loaded.state),
+    state: loaded.validatedSnapshot ?? buildBubbleStateSnapshotVariant(loaded.state),
     fingerprint: loaded.fingerprint
   };
 };

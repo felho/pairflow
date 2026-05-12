@@ -1517,14 +1517,14 @@ The Step 4b-γ terminal commit sequence is fixed at **3 pre-flip
 green preparation commits + 1 atomic parser-flip commit + 2
 post-flip cleanup commits**, in that order.
 
-1. **InspectedStateSnapshot stays persisted-shape after 4b-γ.**
+1. **InspectedStateSnapshot remains an inspect/read-model boundary after 4b-γ.**
    The inspect port has two construction paths in
    `infrastructure/state/stateSnapshotInspection.ts:loadStateSnapshot`:
    - the happy path (parser-success) which naturally becomes
      variant-returning after the parser flip;
    - the **coercion fallback path** which uses
-     `coerceInspectablePersistedBubbleStateSnapshot` to synthesize
-     a structurally-incomplete `PersistedBubbleStateSnapshot`
+     `coerceInspectableStateProjection` to synthesize
+     a structurally-incomplete `InspectableStateProjection`
      from partial/malformed input so the inspect port can return
      diagnostic data instead of failing closed.
 
@@ -1537,13 +1537,14 @@ post-flip cleanup commits**, in that order.
    read common fields `state.state`, `.round`, `.active_agent`,
    `.active_role`, `.active_since`, `.last_command_at`).
 
-   `InspectedStateSnapshot` therefore remains
-   `{ state: PersistedBubbleStateSnapshot; fingerprint;
-   stateValidation }` after 4b-γ. The inspect port is a
-   **diagnostic/coercion fallback boundary** — by design, not by
-   neglect. Any later read-port unification batch (post-Step 4)
-   that wants variant-shaped diagnostic snapshots needs to
-   address the coercer-path semantics first.
+   Follow-up hygiene split the two purposes explicitly:
+   `InspectedStateSnapshot.state` is an `InspectableStateProjection`
+   for uniform diagnostic/list/status reads, while
+   `InspectedStateSnapshot.validatedSnapshot` carries the strict
+   `BubbleStateSnapshot` variant when canonical parsing succeeded
+   and is `null` on diagnostic salvage. The inspect port remains
+   a **diagnostic/coercion fallback boundary** — by design, not by
+   neglect.
 
 2. **`createStateSnapshot` lifts to variant input + internal
    projection.** Symmetric with `writeDomainStateSnapshot`
@@ -1865,9 +1866,10 @@ post-flip cleanup commits**, in that order.
 - The Step 4 program endpoint is reached: canonical parser
   variant, transitional API deleted, single port family,
   zero temporary scaffolds.
-- `InspectedStateSnapshot` stays persisted-shape indefinitely
-  after Step 4b-γ; any later read-port unification batch
-  (post-Step 4) is out of this manifest's scope.
+- Follow-up inspect-port hygiene replaced the old
+  `InspectedStateSnapshot.state` persisted-shape exception with
+  `InspectableStateProjection` plus `validatedSnapshot`, preserving
+  diagnostic salvage while separating the strict domain variant.
 
 **Recorded:** 2026-05-13.
 
@@ -1909,7 +1911,7 @@ are recorded per §10.13; the SSH boundary review is closed
 without a standalone batch and absorbed into the 4b-γ
 parser-flip per §10.14; the Step 4b-γ terminal parser-flip
 sequence is bounded at 3 pre-flip + 1 atomic + 2 post-flip
-commits with InspectedStateSnapshot kept persisted-shape per
+commits with the inspect-port diagnostic boundary defined per
 §10.15). All §10 decisions are locked. Steps 2,
 3, 4.0, 4a, and 4b-α are complete (commits 935eefec → 43dec6b0
 → b6998a27 → a3ae830a → 0ce0ddc9; see §7 status column).
@@ -1963,10 +1965,9 @@ Surviving exceptions, deliberate and documented:
 - `PersistedBubbleStateSnapshot` retained as the wire-format
   type (used at file I/O serialization, SSH JSON.stringify,
   `createBubblePersistence` write).
-- `InspectedStateSnapshot` keeps persisted-shape per §10.15
-  decision 1 — the inspect port's coercion-fallback path is
-  a deliberate diagnostic boundary. Read-port unification is
-  out of Step 4 scope.
+- `InspectedStateSnapshot` keeps an inspectable diagnostic projection
+  plus `validatedSnapshot` per §10.15 decision 1 — the inspect
+  port's coercion-fallback path is a deliberate diagnostic boundary.
 - `rollbackStateOnAppendFailure` keeps persisted-shape per
   §10.13 cross-batch border decision. Set sites project via
   `toPersistedSnapshot`.

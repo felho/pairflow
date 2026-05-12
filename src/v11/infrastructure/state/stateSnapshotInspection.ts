@@ -17,7 +17,6 @@ import {
   isAgentName,
   isAgentRole
 } from "../../../contracts/kernel/agentIdentity.js";
-import type { PersistedBubbleStateSnapshot } from "../../domain/state/snapshot/persistedBubbleStateSnapshot.js";
 import type {
   BubbleReworkIntentRecord
 } from "../../domain/state/rework/reworkIntentTypes.js";
@@ -29,6 +28,13 @@ import {
   parseBubbleStateSnapshot
 } from "../../domain/state/stateSchema.js";
 import { toPersistedSnapshot } from "../../domain/state/snapshot/projection.js";
+import type {
+  BubbleStateSnapshot
+} from "../../domain/state/snapshot/bubbleStateSnapshot.js";
+import type {
+  InspectableStateProjection,
+  InspectedStateSnapshot
+} from "../../ports/stateSnapshots.js";
 import {
   normalizeMetaReviewRuntimeDeliveryCorrelation
 } from "../../shared/metaReview/metaReviewSnapshot.js";
@@ -50,18 +56,18 @@ export interface StateValidationDiagnostics {
   errors: ValidationError[];
 }
 
-export interface InspectedStateSnapshot {
-  state: PersistedBubbleStateSnapshot;
-  fingerprint: string;
-  stateValidation: StateValidationDiagnostics | null;
-}
-
 const inspectStatePreE1ExecutionAuthorityRejectedReasonCode =
   "INSPECT_STATE_PRE_E1_EXECUTION_AUTHORITY_REJECTED";
 
-export function fingerprintState(state: PersistedBubbleStateSnapshot): string {
+export function fingerprintState(state: InspectableStateProjection): string {
   const normalized = JSON.stringify(state);
   return createHash("sha256").update(normalized).digest("hex");
+}
+
+function toInspectableProjection(
+  snapshot: BubbleStateSnapshot
+): InspectableStateProjection {
+  return toPersistedSnapshot(snapshot);
 }
 
 function hasPreE1ExecutionAuthorityShape(value: unknown): boolean {
@@ -251,7 +257,7 @@ function normalizeInspectableReworkIntentRecord(
   };
 }
 
-function coerceInspectablePersistedBubbleStateSnapshot(value: unknown): PersistedBubbleStateSnapshot | null {
+function coerceInspectableStateProjection(value: unknown): InspectableStateProjection | null {
   if (!isRecord(value)) return null;
   if (!isNonEmptyString(value.bubble_id) || !isBubbleLifecycleState(value.state)) return null;
   if (!isInteger(value.round) || value.round < 0) return null;
@@ -295,13 +301,11 @@ async function loadStateSnapshot(statePath: string): Promise<InspectedStateSnaps
   const parsed = JSON.parse(raw) as unknown;
   const result = parseBubbleStateSnapshot(parsed);
   if (result.ok) {
-    // InspectedStateSnapshot stays persisted-shape per §10.15; the parser
-    // now returns the variant union, so project to persisted before storing
-    // and fingerprinting to keep the on-disk fingerprint stable.
-    const persisted = toPersistedSnapshot(result.value);
+    const projection = toInspectableProjection(result.value);
     return {
-      state: persisted,
-      fingerprint: fingerprintState(persisted),
+      state: projection,
+      validatedSnapshot: result.value,
+      fingerprint: fingerprintState(projection),
       stateValidation: null
     };
   }
@@ -310,19 +314,21 @@ async function loadStateSnapshot(statePath: string): Promise<InspectedStateSnaps
     throwPreE1ExecutionAuthorityInspectionError(result.errors);
   }
 
-  const inspectable = coerceInspectablePersistedBubbleStateSnapshot(parsed);
+  const inspectable = coerceInspectableStateProjection(parsed);
   if (inspectable === null) {
     const variant = assertParsedBubbleStateSnapshot(parsed);
-    const persisted = toPersistedSnapshot(variant);
+    const projection = toInspectableProjection(variant);
     return {
-      state: persisted,
-      fingerprint: fingerprintState(persisted),
+      state: projection,
+      validatedSnapshot: variant,
+      fingerprint: fingerprintState(projection),
       stateValidation: null
     };
   }
 
   return {
     state: inspectable,
+    validatedSnapshot: null,
     fingerprint: fingerprintState(inspectable),
     stateValidation: {
       message: "Invalid bubble state",
