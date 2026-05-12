@@ -5,7 +5,7 @@ import type {
 } from "../../../../shared/converged/convergedCommandTypes.js";
 import type { ResolvedBubbleWorkspace } from "../../../../ports/workspaceResolution.js";
 import type { AgentName } from "../../../../../contracts/kernel/agentIdentity.js";
-import type { PersistedBubbleStateSnapshot } from "../../../../domain/state/snapshot/persistedBubbleStateSnapshot.js";
+import type { BubbleStateSnapshot } from "../../../../domain/state/snapshot/bubbleStateSnapshot.js";
 import {
   executeGateDelivery,
   type ConvergedDeliveryResult
@@ -27,7 +27,7 @@ import type {
 
 export interface ExecuteConvergedExecutionInput {
   resolved: ResolvedBubbleWorkspace;
-  state: PersistedBubbleStateSnapshot;
+  state: BubbleStateSnapshot;
   reviewer: AgentName;
   implementer: AgentName;
   summary: string;

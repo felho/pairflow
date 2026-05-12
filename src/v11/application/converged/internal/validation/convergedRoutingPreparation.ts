@@ -1,4 +1,5 @@
 import { convergedDependencyDefaults } from "../orchestration/convergedDependencyDefaults.js";
+import { adaptPersistedReadPortToDomain } from "../../../../shared/mutation/mutationBoundaryIO.js";
 import {
   IDEATION_CONVERGED_BLOCKED
 } from "../../../../shared/ideation/ideationReasonCodes.js";
@@ -10,7 +11,7 @@ import type { AgentName } from "../../../../../contracts/kernel/agentIdentity.js
 import type {
   BubbleReviewLoopMode
 } from "../../../../shared/reviewPolicy/reviewPolicyTypes.js";
-import type { PersistedBubbleStateSnapshot } from "../../../../domain/state/snapshot/persistedBubbleStateSnapshot.js";
+import type { BubbleStateSnapshot } from "../../../../domain/state/snapshot/bubbleStateSnapshot.js";
 import {
   resolveRuntimeAlignedConvergedActiveRole,
   toRuntimeAlignedReviewPolicyExecutionContext
@@ -36,7 +37,7 @@ export interface PrepareConvergedRoutingDependencies {
 export interface PrepareConvergedRoutingResult {
   resolved: Awaited<ReturnType<typeof convergedDependencyDefaults.routing.resolveBubbleFromWorkspaceCwd>>;
   bubbleIdentity: Awaited<ReturnType<typeof convergedDependencyDefaults.routing.ensureBubbleInstanceIdForMutation>>;
-  state: PersistedBubbleStateSnapshot;
+  state: BubbleStateSnapshot;
   implementer: AgentName;
   reviewer: AgentName;
   effectiveLoopMode: BubbleReviewLoopMode;
@@ -64,7 +65,7 @@ function resolveAuthoritativeBubbleContext(
 }
 
 function assertConvergedActiveContext(input: {
-  state: PersistedBubbleStateSnapshot,
+  state: BubbleStateSnapshot,
   configuredImplementer: AgentName,
   configuredReviewer: AgentName,
   effectiveLoopMode: BubbleReviewLoopMode,
@@ -229,7 +230,7 @@ function assertConvergedStateFreshness(input: {
 }
 
 function assertConvergedIdeationGate(input: {
-  state: PersistedBubbleStateSnapshot;
+  state: BubbleStateSnapshot;
   resolvedBubbleConfig: ResolvedConvergedBubbleContext["resolved"]["bubbleConfig"];
   resolveIdeationMetadataFn: typeof resolveIdeationMetadata;
   createError: PairflowCreateCommandError;
@@ -254,7 +255,7 @@ function assertConvergedIdeationGate(input: {
 
 function resolveConvergedEffectiveLoopMode(input: {
   bubbleConfig: ResolvedConvergedBubbleContext["resolved"]["bubbleConfig"];
-  state: PersistedBubbleStateSnapshot;
+  state: BubbleStateSnapshot;
 }): BubbleReviewLoopMode {
   return resolveRuntimeAlignedConvergedActiveRole({
     config: input.bubbleConfig,
@@ -278,9 +279,10 @@ export async function prepareConvergedRouting(
   const ensureBubbleIdentity =
     dependencies.ensureBubbleInstanceIdForMutation
     ?? convergedDependencyDefaults.routing.ensureBubbleInstanceIdForMutation;
-  const readStateSnapshotFn =
+  const readStateSnapshotFn = adaptPersistedReadPortToDomain(
     dependencies.readStateSnapshot
-    ?? convergedDependencyDefaults.routing.readStateSnapshot;
+    ?? convergedDependencyDefaults.routing.readStateSnapshot
+  );
   const resolveIdeationMetadataFn =
     dependencies.resolveIdeationMetadata ?? resolveIdeationMetadata;
   const { resolved, bubbleIdentity } = await resolveConvergedBubbleContext(input, {

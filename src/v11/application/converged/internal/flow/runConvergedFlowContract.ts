@@ -15,6 +15,7 @@ import type {
   ApplyMetaReviewGateOnConvergencePort
 } from "../../../../shared/metaReviewGate/metaReviewGateCommandContract.js";
 import type { AgentName } from "../../../../../contracts/kernel/agentIdentity.js";
+import type { BubbleStateSnapshot } from "../../../../domain/state/snapshot/bubbleStateSnapshot.js";
 import type { PersistedBubbleStateSnapshot } from "../../../../domain/state/snapshot/persistedBubbleStateSnapshot.js";
 import type {
   BubbleRoundGateState,
@@ -49,7 +50,7 @@ export interface RunConvergedFlowInput {
 interface PrepareConvergedRoutingResult {
   resolved: ResolvedBubbleWorkspace;
   bubbleIdentity: EnsureBubbleInstanceIdForMutationResult;
-  state: PersistedBubbleStateSnapshot;
+  state: BubbleStateSnapshot;
   implementer: AgentName;
   reviewer: AgentName;
   effectiveLoopMode: "full" | "meta_only";
@@ -75,6 +76,7 @@ interface ExecuteConvergedExecutionResult {
     route: MetaReviewGateRoute;
     gateSequence: number;
     gateEnvelope: ProtocolEnvelope;
+    // Gate result state is persisted-shape (gate lane out of scope).
     state: PersistedBubbleStateSnapshot;
     metaReviewRun?: {
       status: string;
@@ -110,13 +112,13 @@ export interface RunConvergedFlowDependencies
     reviewer: AgentName;
     implementer: AgentName;
     reviewArtifactType: ResolvedBubbleWorkspace["bubbleConfig"]["review_artifact_type"];
-    roundRoleHistory: PersistedBubbleStateSnapshot["round_role_history"];
+    roundRoleHistory: BubbleStateSnapshot["round_role_history"];
     severityGateRound: number;
     effectiveLoopMode: PrepareConvergedRoutingResult["effectiveLoopMode"];
   }) => Promise<PrepareConvergedPolicyResult>;
   prepareConvergedValidation: (input: {
     resolved: ResolvedBubbleWorkspace;
-    state: PersistedBubbleStateSnapshot;
+    state: BubbleStateSnapshot;
     reviewer: AgentName;
     summary: string;
     nowIso: string;
@@ -127,7 +129,7 @@ export interface RunConvergedFlowDependencies
   executeConvergedExecution: (
     input: {
       resolved: ResolvedBubbleWorkspace;
-      state: PersistedBubbleStateSnapshot;
+      state: BubbleStateSnapshot;
       reviewer: AgentName;
       implementer: AgentName;
       summary: string;
@@ -143,7 +145,7 @@ export interface RunConvergedFlowDependencies
     input: {
       resolved: ResolvedBubbleWorkspace;
       bubbleIdentity: EnsureBubbleInstanceIdForMutationResult;
-      state: PersistedBubbleStateSnapshot;
+      state: BubbleStateSnapshot;
       summary: string;
       refs: string[];
       now: Date;
@@ -169,6 +171,8 @@ export interface RunConvergedFlowResult {
   gateRoute: MetaReviewGateRoute;
   approvalRequestSequence: number;
   approvalRequestEnvelope: ProtocolEnvelope;
+  // Result state mirrors gate output (persisted-shape) — see
+  // FinalizeConvergedFlowResult.state for the same rationale.
   state: PersistedBubbleStateSnapshot;
   delivery?: {
     status: "accepted" | "rejected";
