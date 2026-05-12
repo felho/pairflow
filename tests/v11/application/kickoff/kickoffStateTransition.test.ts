@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { createBubble } from "../../../../src/v11/defaults/create/createBubbleApi.js";
-import { readStateSnapshot } from "../../../../src/v11/infrastructure/state/stateStore.js";
+import { readDomainStateSnapshot } from "../../../../src/v11/infrastructure/state/stateStore.js";
 import { buildKickoffNextState } from "../../../../src/v11/application/kickoff/internal/mutation/kickoffStateTransition.js";
 import { initGitRepository } from "../../../helpers/git.js";
 
@@ -37,7 +37,7 @@ describe("buildKickoffNextState", () => {
       ideation: true,
       cwd: repoPath
     });
-    const loaded = await readStateSnapshot(created.paths.statePath);
+    const loaded = await readDomainStateSnapshot(created.paths.statePath);
 
     const nowIso = "2026-03-19T22:00:00.000Z";
     const next = buildKickoffNextState({

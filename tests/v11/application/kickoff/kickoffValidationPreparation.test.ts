@@ -5,12 +5,13 @@ import {
   IDEATION_KICKOFF_TASK_INVALID
 } from "../../../../src/v11/shared/ideation/ideationReasonCodes.js";
 import type { BubbleConfig } from "../../../../src/v11/shared/config/bubbleConfigTypes.js";
-import type { PersistedBubbleStateSnapshot } from "../../../../src/v11/domain/state/snapshot/persistedBubbleStateSnapshot.js";
+import type { BubbleStateSnapshot } from "../../../../src/v11/domain/state/snapshot/bubbleStateSnapshot.js";
+import { buildBubbleStateSnapshotVariant } from "../../../../src/v11/domain/state/snapshot/buildBubbleStateSnapshot.js";
 import type { ResolvedKickoffDependencies } from "../../../../src/v11/application/kickoff/internal/validation/kickoffDependencyContract.js";
 import { prepareKickoffValidation } from "../../../../src/v11/application/kickoff/internal/validation/kickoffValidationPreparation.js";
 
-function createStateSnapshot(): PersistedBubbleStateSnapshot {
-  return {
+function createStateSnapshot(): BubbleStateSnapshot {
+  return buildBubbleStateSnapshotVariant({
     bubble_id: "b_kickoff_validation_01",
     state: "RUNNING",
     round: 0,
@@ -19,10 +20,10 @@ function createStateSnapshot(): PersistedBubbleStateSnapshot {
     active_role: "reviewer",
     round_role_history: [],
     last_command_at: "2026-03-19T22:00:00.000Z"
-  };
+  });
 }
 
-function createDependencies(config: BubbleConfig, state: PersistedBubbleStateSnapshot): ResolvedKickoffDependencies {
+function createDependencies(config: BubbleConfig, state: BubbleStateSnapshot): ResolvedKickoffDependencies {
   const resolvedBubble = {
     bubbleId: "b_kickoff_validation_01",
     bubbleConfig: config,

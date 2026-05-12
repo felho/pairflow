@@ -1,10 +1,9 @@
 import { buildResumeTranscriptSummary } from "./internal/prompts/startCommandResumeSummary.js";
 import type { BubbleStateSnapshot } from "../../domain/state/snapshot/bubbleStateSnapshot.js";
-import { buildBubbleStateSnapshotVariant } from "../../domain/state/snapshot/buildBubbleStateSnapshot.js";
 import { toPersistedSnapshot } from "../../domain/state/snapshot/projection.js";
+import { adaptPersistedWritePortToDomain } from "../../shared/mutation/mutationBoundaryIO.js";
 import type {
-  WriteDomainStateSnapshotPort,
-  WriteStateSnapshotPort
+  WriteDomainStateSnapshotPort
 } from "../../ports/stateSnapshots.js";
 import type {
   StartBubbleDependencies,
@@ -268,19 +267,3 @@ export function mapStartBubbleResult(input: {
   };
 }
 
-// Boundary adapter: the external StartBubbleDependencies contract still
-// supplies a persisted-shape WriteStateSnapshotPort; the resolved
-// internal `writeState` is the variant-aware WriteDomainStateSnapshotPort.
-// This adapter wraps the persisted port so internal start mutation
-// helpers can hand it a BubbleStateSnapshot variant.
-function adaptPersistedWritePortToDomain(
-  persistedPort: WriteStateSnapshotPort
-): WriteDomainStateSnapshotPort {
-  return async (statePath, state, options) => {
-    const result = await persistedPort(statePath, toPersistedSnapshot(state), options);
-    return {
-      state: buildBubbleStateSnapshotVariant(result.state),
-      fingerprint: result.fingerprint
-    };
-  };
-}

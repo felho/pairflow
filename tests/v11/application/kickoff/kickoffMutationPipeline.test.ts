@@ -1,10 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
 
-import type { PersistedBubbleStateSnapshot } from "../../../../src/v11/domain/state/snapshot/persistedBubbleStateSnapshot.js";
+import type { BubbleStateSnapshot } from "../../../../src/v11/domain/state/snapshot/bubbleStateSnapshot.js";
+import { buildBubbleStateSnapshotVariant } from "../../../../src/v11/domain/state/snapshot/buildBubbleStateSnapshot.js";
 import { executeKickoffMutationPipeline } from "../../../../src/v11/application/kickoff/internal/mutation/kickoffMutationPipeline.js";
 
-function createState(round: number): PersistedBubbleStateSnapshot {
-  return {
+function createState(round: number): BubbleStateSnapshot {
+  return buildBubbleStateSnapshotVariant({
     bubble_id: "b_kickoff_pipeline_01",
     state: "RUNNING",
     round,
@@ -13,7 +14,7 @@ function createState(round: number): PersistedBubbleStateSnapshot {
     active_role: round === 0 ? "reviewer" : "implementer",
     round_role_history: [],
     last_command_at: "2026-03-19T22:00:00.000Z"
-  };
+  });
 }
 
 function createInput() {

@@ -207,3 +207,4 @@ export const writeDomainStateSnapshot: WriteDomainStateSnapshotPort = async (
     fingerprint: result.fingerprint
   };
 };
+

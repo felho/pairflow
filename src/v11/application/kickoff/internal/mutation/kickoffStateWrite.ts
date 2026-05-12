@@ -1,18 +1,18 @@
-import type { PersistedBubbleStateSnapshot } from "../../../../domain/state/snapshot/persistedBubbleStateSnapshot.js";
+import type { BubbleStateSnapshot } from "../../../../domain/state/snapshot/bubbleStateSnapshot.js";
 import { isNamedError } from "../../../../shared/errors/namedError.js";
 
 export interface KickoffWrittenState {
   fingerprint: string;
-  state: PersistedBubbleStateSnapshot;
+  state: BubbleStateSnapshot;
 }
 
 export interface WriteKickoffStateInput {
   statePath: string;
-  nextState: PersistedBubbleStateSnapshot;
+  nextState: BubbleStateSnapshot;
   expectedFingerprint: string;
   writeState: (
     statePath: string,
-    state: PersistedBubbleStateSnapshot,
+    state: BubbleStateSnapshot,
     options: {
       expectedFingerprint: string;
       expectedState: "RUNNING";

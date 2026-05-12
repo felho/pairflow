@@ -1,10 +1,12 @@
-import { assertParsedBubbleStateSnapshot } from "../../../../domain/state/stateSchema.js";
+import type { BubbleStateSnapshot } from "../../../../domain/state/snapshot/bubbleStateSnapshot.js";
+import { toPersistedSnapshot } from "../../../../domain/state/snapshot/projection.js";
+import { assertParsedDomainBubbleStateSnapshot } from "../../../../domain/state/stateSchema.js";
 import { buildRunningExecutionContext } from "../../../../domain/state/execution/executionContext.js";
 import type { BubbleConfig } from "../../../../shared/config/bubbleConfigTypes.js";
 import type { PersistedBubbleStateSnapshot } from "../../../../domain/state/snapshot/persistedBubbleStateSnapshot.js";
 
 export interface BuildKickoffNextStateInput {
-  state: PersistedBubbleStateSnapshot;
+  state: BubbleStateSnapshot;
   bubbleConfig: Pick<BubbleConfig, "agents" | "watchdog_timeout_minutes">;
   nowIso: string;
 }
@@ -31,15 +33,16 @@ function buildKickoffRoundOneRoleHistory(input: {
 
 export function buildKickoffNextState(
   input: BuildKickoffNextStateInput
-): PersistedBubbleStateSnapshot {
-  return assertParsedBubbleStateSnapshot({
-    ...input.state,
+): BubbleStateSnapshot {
+  const currentPersisted = toPersistedSnapshot(input.state);
+  return assertParsedDomainBubbleStateSnapshot({
+    ...currentPersisted,
     state: "RUNNING",
     round: 1,
     active_agent: input.bubbleConfig.agents.implementer,
     active_role: "implementer",
     execution_context: buildRunningExecutionContext({
-      bubbleId: input.state.bubble_id,
+      bubbleId: currentPersisted.bubble_id,
       round: 1,
       activeRole: "implementer",
       startedAt: input.nowIso,
@@ -48,7 +51,7 @@ export function buildKickoffNextState(
     active_since: input.nowIso,
     last_command_at: input.nowIso,
     round_role_history: buildKickoffRoundOneRoleHistory({
-      state: input.state,
+      state: currentPersisted,
       bubbleConfig: input.bubbleConfig,
       nowIso: input.nowIso
     })

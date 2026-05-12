@@ -1,4 +1,4 @@
-import type { PersistedBubbleStateSnapshot } from "../../../../domain/state/snapshot/persistedBubbleStateSnapshot.js";
+import type { BubbleStateSnapshot } from "../../../../domain/state/snapshot/bubbleStateSnapshot.js";
 import {
   writeKickoffState,
   type KickoffWrittenState
@@ -10,20 +10,20 @@ import {
 import { buildKickoffStateWriteInput } from "./kickoffStateWriteInputBuilder.js";
 
 export interface LoadedKickoffState {
-  state: PersistedBubbleStateSnapshot;
+  state: BubbleStateSnapshot;
   fingerprint: string;
 }
 
 export interface PersistKickoffStateInput {
   statePath: string;
   loadedFingerprint: string;
-  nextState: PersistedBubbleStateSnapshot;
+  nextState: BubbleStateSnapshot;
   readState: (
     statePath: string
   ) => Promise<LoadedKickoffState>;
   writeState: (
     statePath: string,
-    state: PersistedBubbleStateSnapshot,
+    state: BubbleStateSnapshot,
     options: {
       expectedFingerprint: string;
       expectedState: "RUNNING";

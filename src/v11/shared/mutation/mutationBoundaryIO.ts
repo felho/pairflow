@@ -1,3 +1,5 @@
+import { buildBubbleStateSnapshotVariant } from "../../domain/state/snapshot/buildBubbleStateSnapshot.js";
+import { toPersistedSnapshot } from "../../domain/state/snapshot/projection.js";
 import type {
   AppendProtocolEnvelopeInput,
   AppendProtocolEnvelopePort,
@@ -6,6 +8,8 @@ import type {
 import type {
   LoadedDomainStateSnapshot,
   LoadedStateSnapshot,
+  ReadDomainStateSnapshotPort,
+  ReadStateSnapshotPort,
   WriteDomainStateSnapshotPort,
   WriteStateSnapshotOptions,
   WriteStateSnapshotPort
@@ -38,4 +42,36 @@ export async function persistDomainStateViaMutationBoundary(input: {
   options?: WriteStateSnapshotOptions;
 }): Promise<LoadedDomainStateSnapshot> {
   return input.write(input.statePath, input.state, input.options);
+}
+
+// Port adapters for lane migration (Step 4b-β). External command
+// contracts still supply persisted-shape ports; lanes migrated to the
+// variant model wrap those external ports into variant-aware siblings
+// at the dependency-resolution boundary so internal mutation helpers
+// can hand them BubbleStateSnapshot directly. These adapters live in
+// shared/ so application code can import them without crossing the
+// application -> infrastructure boundary.
+
+export function adaptPersistedWritePortToDomain(
+  persistedPort: WriteStateSnapshotPort
+): WriteDomainStateSnapshotPort {
+  return async (statePath, state, options) => {
+    const result = await persistedPort(statePath, toPersistedSnapshot(state), options);
+    return {
+      state: buildBubbleStateSnapshotVariant(result.state),
+      fingerprint: result.fingerprint
+    };
+  };
+}
+
+export function adaptPersistedReadPortToDomain(
+  persistedPort: ReadStateSnapshotPort
+): ReadDomainStateSnapshotPort {
+  return async (statePath) => {
+    const result = await persistedPort(statePath);
+    return {
+      state: buildBubbleStateSnapshotVariant(result.state),
+      fingerprint: result.fingerprint
+    };
+  };
 }

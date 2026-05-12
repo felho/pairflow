@@ -1,6 +1,6 @@
 import type { ProtocolEnvelopeDraft } from "../../../../../types/protocol.js";
 import type { AgentName } from "../../../../../contracts/kernel/agentIdentity.js";
-import type { PersistedBubbleStateSnapshot } from "../../../../domain/state/snapshot/persistedBubbleStateSnapshot.js";
+import type { BubbleStateSnapshot } from "../../../../domain/state/snapshot/bubbleStateSnapshot.js";
 import type { ProtocolEnvelope } from "../../../../../types/protocol.js";
 import type { ExecuteKickoffMutationRollbackInput } from "./kickoffMutationRollback.js";
 import type { ResolvedKickoffTaskInput } from "../validation/kickoffTaskInputResolution.js";
@@ -18,7 +18,7 @@ export interface KickoffMutationPipelineInputForBuilders {
   locksDir: string;
   now: Date;
   statePath: string;
-  previousState: PersistedBubbleStateSnapshot;
+  previousState: BubbleStateSnapshot;
   writtenStateFingerprint: string;
   writeFile: (
     path: string,
@@ -35,7 +35,7 @@ export interface KickoffMutationPipelineInputForBuilders {
   onEnvelopeAppended?: (envelope: ProtocolEnvelope) => void;
   writeState: (
     statePath: string,
-    state: PersistedBubbleStateSnapshot,
+    state: BubbleStateSnapshot,
     options: {
       expectedFingerprint: string;
       expectedState: "RUNNING";

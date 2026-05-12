@@ -1,4 +1,4 @@
-import type { PersistedBubbleStateSnapshot } from "../../../../domain/state/snapshot/persistedBubbleStateSnapshot.js";
+import type { BubbleStateSnapshot } from "../../../../domain/state/snapshot/bubbleStateSnapshot.js";
 
 export interface ExecuteKickoffMutationRollbackInput {
   transcriptBackup: string | null;
@@ -8,7 +8,7 @@ export interface ExecuteKickoffMutationRollbackInput {
   bubbleTomlPath: string;
   previousBubbleToml: string;
   statePath: string;
-  previousState: PersistedBubbleStateSnapshot;
+  previousState: BubbleStateSnapshot;
   writtenStateFingerprint: string;
   writeFile: (
     path: string,
@@ -17,7 +17,7 @@ export interface ExecuteKickoffMutationRollbackInput {
   ) => Promise<unknown>;
   writeState: (
     statePath: string,
-    state: PersistedBubbleStateSnapshot,
+    state: BubbleStateSnapshot,
     options: {
       expectedFingerprint: string;
       expectedState: "RUNNING";

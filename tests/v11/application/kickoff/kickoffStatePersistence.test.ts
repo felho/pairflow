@@ -1,11 +1,12 @@
 import { describe, expect, it, vi } from "vitest";
 
 import { StateStoreConflictError } from "../../../../src/v11/infrastructure/state/stateStore.js";
-import type { PersistedBubbleStateSnapshot } from "../../../../src/v11/domain/state/snapshot/persistedBubbleStateSnapshot.js";
+import type { BubbleStateSnapshot } from "../../../../src/v11/domain/state/snapshot/bubbleStateSnapshot.js";
+import { buildBubbleStateSnapshotVariant } from "../../../../src/v11/domain/state/snapshot/buildBubbleStateSnapshot.js";
 import { persistKickoffState } from "../../../../src/v11/application/kickoff/internal/mutation/kickoffStatePersistence.js";
 
-function createState(round: number): PersistedBubbleStateSnapshot {
-  return {
+function createState(round: number): BubbleStateSnapshot {
+  return buildBubbleStateSnapshotVariant({
     bubble_id: "b_kickoff_state_persistence_01",
     state: "RUNNING",
     round,
@@ -14,7 +15,7 @@ function createState(round: number): PersistedBubbleStateSnapshot {
     active_role: round === 0 ? "reviewer" : "implementer",
     round_role_history: [],
     last_command_at: "2026-03-19T22:00:00.000Z"
-  };
+  });
 }
 
 describe("persistKickoffState", () => {

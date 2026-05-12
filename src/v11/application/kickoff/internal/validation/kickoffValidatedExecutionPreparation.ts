@@ -1,4 +1,4 @@
-import type { PersistedBubbleStateSnapshot } from "../../../../domain/state/snapshot/persistedBubbleStateSnapshot.js";
+import type { BubbleStateSnapshot } from "../../../../domain/state/snapshot/bubbleStateSnapshot.js";
 import type { ResolvedKickoffDependencies } from "./kickoffDependencyContract.js";
 import { prepareKickoffPersistence } from "../mutation/kickoffPersistencePreparation.js";
 import { buildKickoffNextState } from "../mutation/kickoffStateTransition.js";
@@ -11,7 +11,7 @@ export interface PrepareKickoffValidatedExecutionContextInput {
 }
 
 export interface KickoffValidatedExecutionContext {
-  nextState: PersistedBubbleStateSnapshot;
+  nextState: BubbleStateSnapshot;
   persistence: Awaited<ReturnType<typeof prepareKickoffPersistence>>;
 }
 

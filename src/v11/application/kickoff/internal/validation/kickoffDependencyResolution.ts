@@ -9,6 +9,10 @@ import {
 import {
   reviewerDeliveryDefaults
 } from "../../../pass/reviewerDeliveryDefaults.js";
+import {
+  adaptPersistedReadPortToDomain,
+  adaptPersistedWritePortToDomain
+} from "../../../../shared/mutation/mutationBoundaryIO.js";
 import type {
   KickoffDependencyOverrides,
   ResolvedKickoffDependencies
@@ -17,8 +21,8 @@ import type {
 function buildKickoffDefaultDependencies(): ResolvedKickoffDependencies {
   return {
     resolveBubble: resolveBubbleById,
-    readState: readStateSnapshot,
-    writeState: writeStateSnapshot,
+    readState: adaptPersistedReadPortToDomain(readStateSnapshot),
+    writeState: adaptPersistedWritePortToDomain(writeStateSnapshot),
     readFileFn: readFile,
     statFileFn: stat,
     writeFileFn: writeFile,
@@ -33,8 +37,14 @@ export function resolveKickoffDependencies(
   const defaults = buildKickoffDefaultDependencies();
   return {
     resolveBubble: overrides.resolveBubbleById ?? defaults.resolveBubble,
-    readState: overrides.readStateSnapshot ?? defaults.readState,
-    writeState: overrides.writeStateSnapshot ?? defaults.writeState,
+    readState:
+      overrides.readStateSnapshot !== undefined
+        ? adaptPersistedReadPortToDomain(overrides.readStateSnapshot)
+        : defaults.readState,
+    writeState:
+      overrides.writeStateSnapshot !== undefined
+        ? adaptPersistedWritePortToDomain(overrides.writeStateSnapshot)
+        : defaults.writeState,
     readFileFn: overrides.readFile ?? defaults.readFileFn,
     statFileFn: overrides.statFile ?? defaults.statFileFn,
     writeFileFn: overrides.writeFile ?? defaults.writeFileFn,

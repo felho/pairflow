@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import type { PersistedBubbleStateSnapshot } from "../../../../src/v11/domain/state/snapshot/persistedBubbleStateSnapshot.js";
+import type { BubbleStateSnapshot } from "../../../../src/v11/domain/state/snapshot/bubbleStateSnapshot.js";
 import { executeKickoffMutationRollback } from "../../../../src/v11/application/kickoff/internal/rollback/kickoffMutationRollback.js";
 
 const baseState = {
@@ -12,7 +12,7 @@ const baseState = {
   active_since: "2026-03-19T22:00:00.000Z",
   last_command_at: "2026-03-19T22:00:00.000Z",
   round_role_history: []
-} as unknown as PersistedBubbleStateSnapshot;
+} as unknown as BubbleStateSnapshot;
 
 describe("executeKickoffMutationRollback", () => {
   it("returns empty error list when all rollback operations succeed", async () => {
