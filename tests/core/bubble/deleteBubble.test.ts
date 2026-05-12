@@ -34,6 +34,7 @@ import {
   readStateSnapshot,
   writeStateSnapshot
 } from "../../../src/v11/infrastructure/state/stateStore.js";
+import { buildBubbleStateSnapshotVariant } from "../../../src/v11/domain/state/snapshot/buildBubbleStateSnapshot.js";
 import type { ArchiveIndexDocument, ArchiveManifest } from "../../../src/types/archive.js";
 import { branchExists } from "../../../src/v11/infrastructure/workspace/git.js";
 import { initGitRepository, runGit } from "../../helpers/git.js";
@@ -563,7 +564,7 @@ describe("deleteBubble", () => {
       });
       return {
         bubbleId: bubble.bubbleId,
-        state: {
+        state: buildBubbleStateSnapshotVariant({
           bubble_id: bubble.bubbleId,
           state: "CANCELLED" as const,
           round: 1,
@@ -572,7 +573,7 @@ describe("deleteBubble", () => {
           active_since: null,
           last_command_at: "2026-02-25T10:05:30.000Z",
           round_role_history: []
-        },
+        }),
         tmuxSessionName: "pf-b_delete_03",
         tmuxSessionExisted: true,
         runtimeSessionRemoved: true
@@ -648,7 +649,7 @@ describe("deleteBubble", () => {
         ),
         stopBubble: vi.fn(async () => ({
           bubbleId: bubble.bubbleId,
-          state: {
+          state: buildBubbleStateSnapshotVariant({
             bubble_id: bubble.bubbleId,
             state: "CANCELLED" as const,
             round: 1,
@@ -657,7 +658,7 @@ describe("deleteBubble", () => {
             active_since: null,
             last_command_at: "2026-02-25T10:05:30.000Z",
             round_role_history: []
-          },
+          }),
           tmuxSessionName: `pf-${bubble.bubbleId}`,
           tmuxSessionExisted: false,
           runtimeSessionRemoved: false
@@ -707,7 +708,7 @@ describe("deleteBubble", () => {
         ),
         stopBubble: vi.fn(async () => ({
           bubbleId: bubble.bubbleId,
-          state: {
+          state: buildBubbleStateSnapshotVariant({
             bubble_id: bubble.bubbleId,
             state: "CANCELLED" as const,
             round: 1,
@@ -716,7 +717,7 @@ describe("deleteBubble", () => {
             active_since: null,
             last_command_at: "2026-02-25T10:05:30.000Z",
             round_role_history: []
-          },
+          }),
           tmuxSessionName: `pf-${bubble.bubbleId}`,
           tmuxSessionExisted: false,
           runtimeSessionRemoved: false
@@ -750,7 +751,7 @@ describe("deleteBubble", () => {
     const removeRuntimeSessionMock = vi.fn(removeRuntimeSession);
     const stopBubbleMock: NonNullable<DeleteBubbleDependencies["stopBubble"]> = async () => ({
       bubbleId: bubble.bubbleId,
-      state: {
+      state: buildBubbleStateSnapshotVariant({
         bubble_id: bubble.bubbleId,
         state: "CANCELLED" as const,
         round: 1,
@@ -759,7 +760,7 @@ describe("deleteBubble", () => {
         active_since: null,
         last_command_at: "2026-02-25T10:06:30.000Z",
         round_role_history: []
-      },
+      }),
       tmuxSessionName: "pf-b_delete_03b",
       tmuxSessionExisted: true,
       runtimeSessionRemoved: false
@@ -833,7 +834,7 @@ describe("deleteBubble", () => {
 
     const stopBubbleMock = vi.fn(async () => ({
       bubbleId: bubble.bubbleId,
-      state: {
+      state: buildBubbleStateSnapshotVariant({
         bubble_id: bubble.bubbleId,
         state: "CANCELLED" as const,
         round: 1,
@@ -842,7 +843,7 @@ describe("deleteBubble", () => {
         active_since: null,
         last_command_at: "2026-02-25T10:08:30.000Z",
         round_role_history: []
-      },
+      }),
       tmuxSessionName: "pf-b_delete_committed_01",
       tmuxSessionExisted: false,
       runtimeSessionRemoved: false
@@ -887,7 +888,7 @@ describe("deleteBubble", () => {
     const removeBubbleDirectory = vi.fn(async () => undefined);
     const stopBubbleMock: NonNullable<DeleteBubbleDependencies["stopBubble"]> = async () => ({
       bubbleId: bubble.bubbleId,
-      state: {
+      state: buildBubbleStateSnapshotVariant({
         bubble_id: bubble.bubbleId,
         state: "CANCELLED" as const,
         round: 1,
@@ -896,7 +897,7 @@ describe("deleteBubble", () => {
         active_since: null,
         last_command_at: "2026-02-25T10:15:30.000Z",
         round_role_history: []
-      },
+      }),
       tmuxSessionName: `pf-${bubble.bubbleId}`,
       tmuxSessionExisted: false,
       runtimeSessionRemoved: false

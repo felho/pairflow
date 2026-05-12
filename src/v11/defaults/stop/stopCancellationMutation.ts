@@ -1,39 +1,32 @@
 import { applyStateTransition } from "../../domain/state/machine.js";
-import type { BubbleLifecycleState } from "../../../contracts/kernel/lifecycle.js";
-import type { PersistedBubbleStateSnapshot } from "../../domain/state/snapshot/persistedBubbleStateSnapshot.js";
-
-export interface StopCancellationLoadedStateSnapshot {
-  state: PersistedBubbleStateSnapshot;
-  fingerprint: string;
-}
-
-export interface StopCancellationWriteStateSnapshotOptions {
-  expectedFingerprint?: string;
-  expectedState?: BubbleLifecycleState;
-  lockTimeoutMs?: number;
-}
+import { buildBubbleStateSnapshotVariant } from "../../domain/state/snapshot/buildBubbleStateSnapshot.js";
+import { toPersistedSnapshot } from "../../domain/state/snapshot/projection.js";
+import type {
+  LoadedDomainStateSnapshot,
+  WriteDomainStateSnapshotPort
+} from "../../ports/stateSnapshots.js";
 
 export interface StopCancellationMutationInput {
   statePath: string;
-  loadedState: StopCancellationLoadedStateSnapshot;
+  loadedState: LoadedDomainStateSnapshot;
   nowIso: string;
-  writeStateSnapshot: (
-    statePath: string,
-    state: PersistedBubbleStateSnapshot,
-    options?: StopCancellationWriteStateSnapshotOptions
-  ) => Promise<StopCancellationLoadedStateSnapshot>;
+  writeStateSnapshot: WriteDomainStateSnapshotPort;
 }
 
 export async function executeStopCancellationMutation(
   input: StopCancellationMutationInput
-): Promise<StopCancellationLoadedStateSnapshot> {
-  const cancelled = applyStateTransition(input.loadedState.state, {
-    to: "CANCELLED",
-    activeAgent: null,
-    activeRole: null,
-    activeSince: null,
-    lastCommandAt: input.nowIso
-  });
+): Promise<LoadedDomainStateSnapshot> {
+  // applyStateTransition is still persisted-shape (later batch). Project at
+  // the boundary and rebuild the variant from the output.
+  const cancelled = buildBubbleStateSnapshotVariant(
+    applyStateTransition(toPersistedSnapshot(input.loadedState.state), {
+      to: "CANCELLED",
+      activeAgent: null,
+      activeRole: null,
+      activeSince: null,
+      lastCommandAt: input.nowIso
+    })
+  );
 
   return input.writeStateSnapshot(input.statePath, cancelled, {
     expectedFingerprint: input.loadedState.fingerprint

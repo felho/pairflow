@@ -332,11 +332,7 @@ function mapUiStartResult(result: StartBubbleResult): UiStartBubbleResult {
 function mapUiStopResult(result: StopBubbleResult): UiStopBubbleResult {
   return {
     bubbleId: result.bubbleId,
-    // stop lane's public result is still persisted-shape (later batch);
-    // wrap at the UI consumer boundary.
-    actionState: projectBubbleStateToUiActionState(
-      buildBubbleStateSnapshotVariant(result.state)
-    ),
+    actionState: projectBubbleStateToUiActionState(result.state),
     tmuxSessionName: result.tmuxSessionName,
     tmuxSessionExisted: result.tmuxSessionExisted,
     runtimeSessionRemoved: result.runtimeSessionRemoved

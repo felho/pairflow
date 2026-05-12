@@ -1,12 +1,12 @@
 import type { RemoveRuntimeSessionPort } from "../../ports/runtimeSessions.js";
 import type {
-  LoadedStateSnapshot,
-  ReadStateSnapshotPort,
-  WriteStateSnapshotPort
+  LoadedDomainStateSnapshot,
+  ReadDomainStateSnapshotPort,
+  WriteDomainStateSnapshotPort
 } from "../../ports/stateSnapshots.js";
 import type { TerminateBubbleTmuxSessionPort } from "../../ports/tmuxSessions.js";
 import type { ResolveBubbleByIdPort } from "../../ports/bubbleLookup.js";
-import type { PersistedBubbleStateSnapshot } from "../../domain/state/snapshot/persistedBubbleStateSnapshot.js";
+import type { BubbleStateSnapshot } from "../../domain/state/snapshot/bubbleStateSnapshot.js";
 
 export interface StopBubbleInput {
   bubbleId: string;
@@ -17,7 +17,7 @@ export interface StopBubbleInput {
 
 export interface StopBubbleResult {
   bubbleId: string;
-  state: PersistedBubbleStateSnapshot;
+  state: BubbleStateSnapshot;
   tmuxSessionName: string;
   tmuxSessionExisted: boolean;
   runtimeSessionRemoved: boolean;
@@ -25,16 +25,16 @@ export interface StopBubbleResult {
 
 export type ExecuteStopCancellationMutationPort = (input: {
   statePath: string;
-  loadedState: LoadedStateSnapshot;
+  loadedState: LoadedDomainStateSnapshot;
   nowIso: string;
-  writeStateSnapshot: WriteStateSnapshotPort;
-}) => Promise<LoadedStateSnapshot>;
+  writeStateSnapshot: WriteDomainStateSnapshotPort;
+}) => Promise<LoadedDomainStateSnapshot>;
 
 export interface StopBubbleDependencies {
   resolveBubbleById?: ResolveBubbleByIdPort;
-  readStateSnapshot?: ReadStateSnapshotPort;
+  readStateSnapshot?: ReadDomainStateSnapshotPort;
   executeStopCancellationMutation?: ExecuteStopCancellationMutationPort;
   terminateBubbleTmuxSession?: TerminateBubbleTmuxSessionPort;
   removeRuntimeSession?: RemoveRuntimeSessionPort;
-  writeStateSnapshot?: WriteStateSnapshotPort;
+  writeStateSnapshot?: WriteDomainStateSnapshotPort;
 }
