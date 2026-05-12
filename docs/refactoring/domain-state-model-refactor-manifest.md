@@ -1120,6 +1120,93 @@ the outer authority, which is the bulk of what consumers need.
 **Recorded:** 2026-05-12 (during the Step 4b atomic split
 revision; see §10.10).
 
+### 10.12 Step 4b-β lane transitivity + shared-boundary batches — DECIDED
+
+**Background:**
+The Step 4b-β sequence (§10.10) treats each application lane as a
+migration unit. The early batches (start, kickoff, watchdog, pass,
+converged, askHuman, askHuman mutation, reply, approval) each
+migrated a single lane's `state` field, ports, and result type to
+the variant model in a green commit. The implicit assumption was
+that every remaining lane would have its own non-trivial migration
+surface.
+
+**Issue surfaced when scoping the resume lane batch (post Step
+4b-β/10):**
+A pre-batch scan of `src/v11/application/resume/**` returned **no**
+remaining persisted-state references. The resume lane is a thin
+delegator: `ResumeBubbleResult = EmitHumanReplyResult` (type alias),
+and `resumeBubbleCommandOrchestration` calls `emitHumanReply`. With
+the reply lane closed in Step 4b-β/9, the resume lane became
+**transitively closed** — no production source change required.
+
+A hidden-reference scan over CLI (`src/cli/`), UI defaults
+(`src/v11/defaults/ui/`), UI infrastructure
+(`src/v11/infrastructure/ui/`), and UI ports
+(`src/v11/ports/uiRouter.ts`) found a single resume-adjacent
+persisted-state surface: the shared UI projection adapter
+`projectBubbleStateToUiActionState` at
+`src/v11/defaults/ui/routerDefaults.ts`, whose input was
+`PersistedBubbleStateSnapshot` while several of its callers
+(reply/resume, approval, request-rework) already passed
+`BubbleStateSnapshot`. TypeScript structural typing was masking
+the contract mismatch — a variant value satisfies a persisted-shape
+parameter because the variant carries every persisted field plus
+the `kind` discriminator.
+
+**Decision (recorded 2026-05-12):**
+
+1. **Lane transitivity is acknowledged.** When a lane is a thin
+   orchestrator that aliases another lane's already-migrated
+   result type (e.g., `ResumeBubbleResult = EmitHumanReplyResult`),
+   it is **transitively migrated** when its upstream closes. No
+   separate batch is required and no manifest line item is owed
+   for it; the closure is recorded here.
+
+2. **Shared boundaries are valid batch units, not "lanes".** A
+   shared cross-lane projection helper (e.g.,
+   `projectBubbleStateToUiActionState`) is its own migration unit
+   when multiple already-migrated lanes converge on it. Its
+   migration is a boundary cleanup, not a lane migration:
+   - Input contract migrates to `BubbleStateSnapshot`.
+   - Already-variant callers pass through unchanged.
+   - Still-persisted callers wrap at the consumer site via
+     `buildBubbleStateSnapshotVariant(result.state)`. The wrap
+     is an explicit cross-batch border, not a sub-batch of the
+     persisted lane.
+
+3. **Structural-typing leaks are part of the migration surface.**
+   When a downstream parameter type would compile under structural
+   typing but no longer reflects the true contract, treat that as
+   a real migration target. Don't rely on "it compiles" — rely on
+   "the contract is truthful".
+
+**Forward implication:**
+- The remaining Step 4b-β batches are: metaReviewGate (largest
+  authority surface), and the smaller persisted-result lanes
+  (commit, stop, start-public-result, restart-public-result,
+  merge, create, list, etc.). Each of those lanes can be
+  migrated independently; their consumer boundaries (CLI
+  output projections, UI router result shapes) may need a
+  similar wrap-at-consumer transition.
+- The pilot scope rule from §10.10 extends: include not just
+  production-side narrowing and fixture-construction sites, but
+  also **shared-boundary projection helpers** whose inputs widen
+  across the lane fleet.
+
+**Landed work:**
+
+- Step 4b-β/11 (commit 84376e95): UI projection adapter
+  (`projectBubbleStateToUiActionState`) input migrated to
+  `BubbleStateSnapshot`; commit/start/stop/restart UI consumer
+  sites wrap their persisted-shape `result.state` via
+  `buildBubbleStateSnapshotVariant`. Reply, resume, approval,
+  request-rework callsites pass the variant through unchanged.
+  No `src/v11/application/resume/` change — resume is closed
+  transitively via reply (Step 4b-β/9).
+
+**Recorded:** 2026-05-12.
+
 ---
 
 ## 11. Non-goals
@@ -1150,14 +1237,21 @@ revision; see §10.10).
 
 This manifest is **settled** as of 2026-05-12 (revising the
 2026-05-11 open-questions revision; the Step 4b atomic-commit
-plan is split per §10.10, and the §3.2 MetaReviewSubstate inner
-union is recorded as not-implemented per §10.11). All §10
-decisions are locked. Steps 2, 3, 4.0, 4a, and 4b-α are complete
-(commits 935eefec → 43dec6b0 → b6998a27 → a3ae830a → 0ce0ddc9;
-see §7 status column). Remaining Step 4 sequence: 4b-β
-(production consumer migration, multiple green increments) →
-4b-γ (terminal: test fixture migration + canonical parser switch
-to the variant union, transitional API removal — mandatory
-program endpoint per §10.10) → 5 (test mirror cleanup) → 6 (doc
-sync). Further deviations during execution require an amendment
-to this document in the same commit that introduces them.
+plan is split per §10.10; the §3.2 MetaReviewSubstate inner
+union is recorded as not-implemented per §10.11; lane
+transitivity and shared-boundary batch unit are recorded per
+§10.12). All §10 decisions are locked. Steps 2, 3, 4.0, 4a, and
+4b-α are complete (commits 935eefec → 43dec6b0 → b6998a27 →
+a3ae830a → 0ce0ddc9; see §7 status column). Step 4b-β has eleven
+green increments landed (2ab700ba → f59a07bd → 0e23743c →
+4f697f71 → a7db7e40 → 03f8b2b6 → 2f316a59 → a8745e0d → 471b40bd
+→ 09e671e8 → 84376e95) covering boundary helpers, start, kickoff,
+watchdog, pass, converged, askHuman validation, askHuman mutation,
+reply, approval, and the shared UI projection adapter. Remaining
+Step 4 sequence: continued 4b-β increments (metaReviewGate +
+smaller persisted-result lanes) → 4b-γ (terminal: test fixture
+migration + canonical parser switch to the variant union,
+transitional API removal — mandatory program endpoint per §10.10)
+→ 5 (test mirror cleanup) → 6 (doc sync). Further deviations
+during execution require an amendment to this document in the
+same commit that introduces them.
