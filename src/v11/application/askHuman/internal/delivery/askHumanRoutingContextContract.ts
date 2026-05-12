@@ -1,13 +1,9 @@
 import type {
-  AgentName,
-  AgentRole
-} from "../../../../../contracts/kernel/agentIdentity.js";
-import type {
   ActorActivationProvenance
 } from "../../../../shared/actorProtocol/actorEmitContext.js";
 import type { BubbleConfig } from "../../../../shared/config/bubbleConfigTypes.js";
 import type { BubblePaths } from "../../../../shared/bubble/bubblePaths.js";
-import type { PersistedBubbleStateSnapshot } from "../../../../domain/state/snapshot/persistedBubbleStateSnapshot.js";
+import type { BubbleStateSnapshot, BubbleStateRunningStandard } from "../../../../domain/state/snapshot/bubbleStateSnapshot.js";
 
 export interface AskHumanResolvedBubbleWorkspace {
   bubbleId: string;
@@ -33,18 +29,14 @@ export interface AskHumanEnsureBubbleIdentityResult {
 }
 
 export interface AskHumanLoadedStateSnapshot {
-  state: PersistedBubbleStateSnapshot;
+  state: BubbleStateSnapshot;
   fingerprint: string;
 }
 
-type AskHumanActiveRole = Exclude<AgentRole, "meta_reviewer">;
-
-export interface AskHumanRunningState extends PersistedBubbleStateSnapshot {
-  state: "RUNNING";
-  active_agent: AgentName;
-  active_role: AskHumanActiveRole;
-  active_since: string;
-}
+// AskHumanRunningState is the narrowed variant produced by
+// assertAskHumanRunningState. Structurally identical to
+// BubbleStateRunningStandard (RUNNING + active_role !== meta_reviewer).
+export type AskHumanRunningState = BubbleStateRunningStandard;
 
 export interface AskHumanRoutingContext {
   nowIso: string;

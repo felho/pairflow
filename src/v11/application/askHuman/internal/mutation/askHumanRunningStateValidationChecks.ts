@@ -1,4 +1,4 @@
-import type { PersistedBubbleStateSnapshot } from "../../../../domain/state/snapshot/persistedBubbleStateSnapshot.js";
+import type { BubbleStateSnapshot } from "../../../../domain/state/snapshot/bubbleStateSnapshot.js";
 
 const askHumanStateNotRunningReasonCode = "ASK_HUMAN_STATE_NOT_RUNNING";
 const askHumanRunningRoundInvalidReasonCode = "ASK_HUMAN_RUNNING_ROUND_INVALID";
@@ -6,7 +6,7 @@ const askHumanActiveContextMissingReasonCode = "ASK_HUMAN_ACTIVE_CONTEXT_MISSING
 const askHumanRoleUnsupportedReasonCode = "ASK_HUMAN_ROLE_UNSUPPORTED";
 
 function assertRunningLifecycleState(
-  state: PersistedBubbleStateSnapshot,
+  state: BubbleStateSnapshot,
   createError: PairflowCreateCommandError
 ): void {
   if (state.state !== "RUNNING") {
@@ -22,7 +22,7 @@ function assertRunningLifecycleState(
 }
 
 function assertRunningRound(
-  state: PersistedBubbleStateSnapshot,
+  state: BubbleStateSnapshot,
   createError: PairflowCreateCommandError
 ): void {
   if (state.round < 1) {
@@ -38,7 +38,7 @@ function assertRunningRound(
 }
 
 function assertRunningActiveContext(
-  state: PersistedBubbleStateSnapshot,
+  state: BubbleStateSnapshot,
   createError: PairflowCreateCommandError
 ): void {
   if (
@@ -57,7 +57,7 @@ function assertRunningActiveContext(
 }
 
 function assertRunningRoleAllowed(
-  state: PersistedBubbleStateSnapshot,
+  state: BubbleStateSnapshot,
   createError: PairflowCreateCommandError
 ): void {
   if (state.active_role === "meta_reviewer") {
@@ -73,7 +73,7 @@ function assertRunningRoleAllowed(
 }
 
 export function runAskHumanRunningStateValidationChecks(
-  state: PersistedBubbleStateSnapshot,
+  state: BubbleStateSnapshot,
   createError: PairflowCreateCommandError
 ): void {
   assertRunningLifecycleState(state, createError);

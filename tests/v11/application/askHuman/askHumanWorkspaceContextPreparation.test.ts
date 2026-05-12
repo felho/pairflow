@@ -5,6 +5,7 @@ import type {
   AskHumanLoadedStateSnapshot as LoadedStateSnapshot,
   AskHumanResolvedBubbleWorkspace as ResolvedBubbleWorkspace
 } from "../../../../src/v11/application/askHuman/internal/delivery/askHumanRoutingContextContract.js";
+import { buildBubbleStateSnapshotVariant } from "../../../../src/v11/domain/state/snapshot/buildBubbleStateSnapshot.js";
 
 describe("prepareAskHumanWorkspaceContext", () => {
   it("resolves bubble context, updates config from identity, and loads state", async () => {
@@ -26,7 +27,7 @@ describe("prepareAskHumanWorkspaceContext", () => {
     } as never;
 
     const loadedState: LoadedStateSnapshot = {
-      state: {
+      state: buildBubbleStateSnapshotVariant({
         bubble_id: "b_ask_human_01",
         state: "RUNNING",
         round: 3,
@@ -35,7 +36,7 @@ describe("prepareAskHumanWorkspaceContext", () => {
         active_since: "2026-02-21T12:00:00.000Z",
         round_role_history: [],
         last_command_at: "2026-02-21T12:00:00.000Z"
-      },
+      }),
       fingerprint: "fp_running_01"
     };
 
@@ -84,7 +85,7 @@ describe("prepareAskHumanWorkspaceContext", () => {
     let readStateCalls = 0;
 
     const loadedState: LoadedStateSnapshot = {
-      state: {
+      state: buildBubbleStateSnapshotVariant({
         bubble_id: "b_ask_human_02",
         state: "RUNNING",
         round: 4,
@@ -99,7 +100,7 @@ describe("prepareAskHumanWorkspaceContext", () => {
         } as never,
         round_role_history: [],
         last_command_at: "2026-02-21T12:00:00.000Z"
-      },
+      }),
       fingerprint: "fp_running_02"
     };
 
@@ -150,7 +151,11 @@ describe("prepareAskHumanWorkspaceContext", () => {
 
     expect(resolveBubbleCalls).toBe(0);
     expect(readStateCalls).toBe(0);
-    expect(result.loadedState).toBe(loadedState);
+    // Workspace prep projects authoritativeContext.loaded_state (persisted-shape per
+    // the actor-emit-context contract — cross-batch boundary) into the variant
+    // AskHumanLoadedStateSnapshot. Identity is no longer preserved; deep equality
+    // verifies the projection produced the same observable shape.
+    expect(result.loadedState).toEqual(loadedState);
     expect(result.resolved.cwd).toBe("/repo/worktrees/b_ask_human_02");
   });
 

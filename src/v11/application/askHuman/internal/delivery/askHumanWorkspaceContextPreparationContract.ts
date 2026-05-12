@@ -1,5 +1,5 @@
 import type { ActorEmitContextSnapshot } from "../../../../shared/actorProtocol/actorEmitContext.js";
-import type { PersistedBubbleStateSnapshot } from "../../../../domain/state/snapshot/persistedBubbleStateSnapshot.js";
+import type { BubbleStateSnapshot } from "../../../../domain/state/snapshot/bubbleStateSnapshot.js";
 import type {
   AskHumanEnsureBubbleIdentityResult,
   AskHumanLoadedStateSnapshot,
@@ -20,5 +20,5 @@ export interface PreparedAskHumanWorkspaceContext {
   resolved: AskHumanResolvedBubbleWorkspace;
   bubbleIdentity: AskHumanEnsureBubbleIdentityResult;
   loadedState: AskHumanLoadedStateSnapshot;
-  state: PersistedBubbleStateSnapshot;
+  state: BubbleStateSnapshot;
 }

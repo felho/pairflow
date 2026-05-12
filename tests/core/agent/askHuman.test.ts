@@ -13,6 +13,7 @@ import { createBubble } from "../../../src/v11/defaults/create/createBubbleApi.j
 import { WorkspaceResolutionError } from "../../../src/v11/infrastructure/executor/workspace/workspaceResolution.js";
 import { readTranscriptEnvelopes } from "../../../src/v11/infrastructure/artifact/transcript/transcriptStore.js";
 import { readStateSnapshot } from "../../../src/v11/infrastructure/state/stateStore.js";
+import { adaptPersistedReadPortToDomain } from "../../../src/v11/shared/mutation/mutationBoundaryIO.js";
 import { bootstrapWorktreeWorkspace } from "../../../src/v11/infrastructure/workspace/worktreeManager.js";
 import { initGitRepository } from "../../helpers/git.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
@@ -54,7 +55,9 @@ async function withPatchedAskHumanWorkspaceLoadedState<T>(input: {
     return input.mutate(loaded);
   };
 
-  return input.run({ readStateSnapshot: patchedReadStateSnapshot });
+  return input.run({
+    readStateSnapshot: adaptPersistedReadPortToDomain(patchedReadStateSnapshot)
+  });
 }
 
 describe("emitAskHumanFromWorkspace", () => {

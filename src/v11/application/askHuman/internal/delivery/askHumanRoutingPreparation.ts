@@ -17,6 +17,7 @@ import {
   readStateSnapshot,
   resolveBubbleFromWorkspaceCwd
 } from "../../../start/startCommandDependencyDefaults.js";
+import { adaptPersistedReadPortToDomain } from "../../../../shared/mutation/mutationBoundaryIO.js";
 
 export async function prepareAskHumanRouting(
   input: PrepareAskHumanRoutingInput,
@@ -40,7 +41,9 @@ export async function prepareAskHumanRouting(
       ensureBubbleIdentity:
         dependencies.ensureBubbleInstanceIdForMutation
         ?? ensureBubbleInstanceIdForMutation,
-      readState: dependencies.readStateSnapshot ?? readStateSnapshot
+      readState:
+        dependencies.readStateSnapshot
+        ?? adaptPersistedReadPortToDomain(readStateSnapshot)
     }
   });
   assertAskHumanRunningState(workspace.state, input.createError);

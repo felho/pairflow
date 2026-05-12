@@ -1,6 +1,7 @@
 import {
   assertActorEmitContextSnapshotIntegrity
 } from "../../../../shared/actorProtocol/actorEmitContext.js";
+import { buildBubbleStateSnapshotVariant } from "../../../../domain/state/snapshot/buildBubbleStateSnapshot.js";
 import type {
   PreparedAskHumanWorkspaceContext,
   PrepareAskHumanWorkspaceContextInput
@@ -37,8 +38,12 @@ export async function prepareAskHumanWorkspaceContext(
   resolved.bubbleConfig = bubbleIdentity.bubbleConfig;
 
   const loadedState =
-    input.authoritativeContext?.loaded_state
-    ?? await input.dependencies.readState(resolved.bubblePaths.statePath);
+    input.authoritativeContext?.loaded_state !== undefined
+      ? {
+          state: buildBubbleStateSnapshotVariant(input.authoritativeContext.loaded_state.state),
+          fingerprint: input.authoritativeContext.loaded_state.fingerprint
+        }
+      : await input.dependencies.readState(resolved.bubblePaths.statePath);
 
   return {
     resolved,
