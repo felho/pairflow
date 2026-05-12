@@ -11,7 +11,8 @@ import type {
   BubbleRemotePointerCreated
 } from "../../../../shared/remote/remoteExecutionTypes.js";
 import type { BubbleConfig } from "../../../../shared/config/bubbleConfigTypes.js";
-import type { PersistedBubbleStateSnapshot } from "../../../../domain/state/snapshot/persistedBubbleStateSnapshot.js";
+import type { BubbleStateSnapshot } from "../../../../domain/state/snapshot/bubbleStateSnapshot.js";
+import { toPersistedSnapshot } from "../../../../domain/state/snapshot/projection.js";
 import type {
   BubbleCreateDependencies,
   ResolvedTaskInput
@@ -28,7 +29,7 @@ export interface CreateBubblePersistenceInput {
   createdAt: Date;
   paths: BubblePaths;
   config: BubbleConfig;
-  state: PersistedBubbleStateSnapshot;
+  state: BubbleStateSnapshot;
   task: ResolvedTaskInput;
   reviewerFocus: ReviewerFocusExtractionResult;
   reviewerBrief?: ResolvedTaskInput | undefined;
@@ -124,9 +125,12 @@ export async function persistCreatedBubbleArtifacts(
     encoding: "utf8",
     flag: "wx"
   });
+  // Project to persisted shape before JSON.stringify so the on-disk
+  // state.json wire format stays byte-for-byte identical (no `kind`
+  // discriminator on disk; it is reconstructed by the parser).
   await writeFile(
     input.paths.statePath,
-    `${JSON.stringify(input.state, null, 2)}\n`,
+    `${JSON.stringify(toPersistedSnapshot(input.state), null, 2)}\n`,
     {
       encoding: "utf8",
       flag: "wx"

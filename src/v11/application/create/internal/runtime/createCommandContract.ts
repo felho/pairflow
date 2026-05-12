@@ -17,7 +17,7 @@ import type {
   BubbleReviewPolicyConfig
 } from "../../../../shared/reviewPolicy/reviewPolicyTypes.js";
 import type { BubbleConfig } from "../../../../shared/config/bubbleConfigTypes.js";
-import type { PersistedBubbleStateSnapshot } from "../../../../domain/state/snapshot/persistedBubbleStateSnapshot.js";
+import type { BubbleStateSnapshot } from "../../../../domain/state/snapshot/bubbleStateSnapshot.js";
 import type {
   CreateReviewArtifactType,
   PairflowCommandProfile,
@@ -72,7 +72,7 @@ export interface BubbleCreateResult {
   bubbleId: string;
   paths: BubblePaths;
   config: BubbleConfig;
-  state: PersistedBubbleStateSnapshot;
+  state: BubbleStateSnapshot;
   task: ResolvedTaskInput;
   reviewerFocus: ReviewerFocusExtractionResult;
   reviewerFocusArtifactPersist: {

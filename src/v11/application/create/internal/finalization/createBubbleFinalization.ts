@@ -5,7 +5,7 @@ import type {
 } from "../runtime/createCommandContract.js";
 import type { BubblePaths } from "../../../../shared/bubble/bubblePaths.js";
 import type { BubbleConfig } from "../../../../shared/config/bubbleConfigTypes.js";
-import type { PersistedBubbleStateSnapshot } from "../../../../domain/state/snapshot/persistedBubbleStateSnapshot.js";
+import type { BubbleStateSnapshot } from "../../../../domain/state/snapshot/bubbleStateSnapshot.js";
 import type { ReviewerFocusExtractionResult } from "../../../../shared/reviewer/reviewerBrief.js";
 import type { ReviewerFocusArtifactPersistResult } from "../persistence/createBubblePersistence.js";
 
@@ -51,7 +51,7 @@ export function buildCreateBubbleResult(input: {
   bubbleId: string;
   paths: BubblePaths;
   config: BubbleConfig;
-  state: PersistedBubbleStateSnapshot;
+  state: BubbleStateSnapshot;
   task: ResolvedTaskInput;
   reviewerFocus: ReviewerFocusExtractionResult;
   reviewerFocusArtifactPersist: ReviewerFocusArtifactPersistResult;
