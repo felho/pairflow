@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { AgentName } from "../../../../src/contracts/kernel/agentIdentity.js";
+import type { BubbleStateSnapshot } from "../../../../src/v11/domain/state/snapshot/bubbleStateSnapshot.js";
+import { buildBubbleStateSnapshotVariant } from "../../../../src/v11/domain/state/snapshot/buildBubbleStateSnapshot.js";
 import type { PersistedBubbleStateSnapshot } from "../../../../src/v11/domain/state/snapshot/persistedBubbleStateSnapshot.js";
 import { ensureReplyWaitingHumanState } from "../../../../src/v11/domain/reply/waitingHumanStateGuard.js";
 
@@ -22,8 +24,8 @@ function toErrorMessage(input: PairflowCommandErrorInput): string {
 
 function buildWaitingHumanState(
   overrides: Partial<PersistedBubbleStateSnapshot> = {}
-): PersistedBubbleStateSnapshot {
-  return {
+): BubbleStateSnapshot {
+  return buildBubbleStateSnapshotVariant({
     bubble_id: "b_reply_guard_01",
     state: "WAITING_HUMAN",
     round: 1,
@@ -40,10 +42,10 @@ function buildWaitingHumanState(
     ],
     last_command_at: "2026-03-19T09:30:00.000Z",
     ...overrides
-  };
+  });
 }
 
-function ensureFromState(state: PersistedBubbleStateSnapshot) {
+function ensureFromState(state: BubbleStateSnapshot) {
   return ensureReplyWaitingHumanState({
     state,
     createError: (input) => new TestReplyError(toErrorMessage(input))
@@ -94,11 +96,15 @@ describe("ensureReplyWaitingHumanState", () => {
   });
 
   it("throws configured error when active agent context is incomplete", () => {
+    // Defense-in-depth: the BubbleStateWaitingHuman variant pins
+    // active_agent to non-null at the type level, but the runtime guard
+    // remains useful against malformed persisted input that the current
+    // parser permits. Reach the runtime branch via a deliberate type-lie.
     expect(() =>
       ensureFromState(
         buildWaitingHumanState({
           active_agent: null
-        })
+        }) as never
       )
     ).toThrowError(
       new TestReplyError(

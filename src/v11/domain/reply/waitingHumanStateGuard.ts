@@ -1,18 +1,12 @@
-import type {
-  AgentName,
-  AgentRole
-} from "../../../contracts/kernel/agentIdentity.js";
-import type { PersistedBubbleStateSnapshot } from "../../domain/state/snapshot/persistedBubbleStateSnapshot.js";
+import type { BubbleStateSnapshot, BubbleStateWaitingHuman } from "../../domain/state/snapshot/bubbleStateSnapshot.js";
 
-export type ReplyWaitingHumanState = PersistedBubbleStateSnapshot & {
-  state: "WAITING_HUMAN";
-  active_agent: AgentName;
-  active_role: AgentRole;
-  active_since: string;
-};
+// ReplyWaitingHumanState is the narrowed variant produced by
+// ensureReplyWaitingHumanState. Structurally identical to
+// BubbleStateWaitingHuman (lifecycle WAITING_HUMAN + active_*).
+export type ReplyWaitingHumanState = BubbleStateWaitingHuman;
 
 export interface EnsureReplyWaitingHumanStateInput {
-  state: PersistedBubbleStateSnapshot;
+  state: BubbleStateSnapshot;
   createError: PairflowCreateCommandError;
 }
 
@@ -67,18 +61,32 @@ export function ensureReplyWaitingHumanState(
     );
   }
 
-  if (state.active_agent === null || state.active_role === null || state.active_since === null) {
+  // Defense-in-depth runtime check: the BubbleStateWaitingHuman variant
+  // pins active_agent / active_role / active_since to non-null at the type
+  // level (post-parser invariant). The variant builder uses `as` casts that
+  // do not fully validate the persisted input shape, so the runtime guard
+  // remains useful against malformed persisted input that the current
+  // parser is too lenient about. Step 4b-γ should tighten the parser so
+  // this guard becomes provably dead; until then it is intentional defense.
+  const activeAgentLoose: unknown = state.active_agent;
+  const activeRoleLoose: unknown = state.active_role;
+  const activeSinceLoose: unknown = state.active_since;
+  if (
+    activeAgentLoose === null
+    || activeRoleLoose === null
+    || activeSinceLoose === null
+  ) {
     raiseWaitingHumanStateError(
       createError,
       REPLY_WAITING_HUMAN_CONTEXT_INCOMPLETE,
       "WAITING_HUMAN state is missing active agent context; cannot resume RUNNING after reply.",
       {
-        has_active_agent: state.active_agent !== null,
-        has_active_role: state.active_role !== null,
-        has_active_since: state.active_since !== null
+        has_active_agent: activeAgentLoose !== null,
+        has_active_role: activeRoleLoose !== null,
+        has_active_since: activeSinceLoose !== null
       }
     );
   }
 
-  return state as ReplyWaitingHumanState;
+  return state;
 }

@@ -5,6 +5,7 @@ import {
   resumeBubbleCommandOrchestration as resumeBubble
 } from "../../../src/v11/application/resume/resumeCommandOrchestration.js";
 import type { EmitHumanReplyResult } from "../../../src/v11/application/reply/replyCommandApi.js";
+import { buildBubbleStateSnapshotVariant } from "../../../src/v11/domain/state/snapshot/buildBubbleStateSnapshot.js";
 
 function createResumeResultFixture(): EmitHumanReplyResult {
   return {
@@ -23,7 +24,7 @@ function createResumeResultFixture(): EmitHumanReplyResult {
       },
       refs: []
     },
-    state: {
+    state: buildBubbleStateSnapshotVariant({
       bubble_id: "b_resume_01",
       state: "RUNNING",
       round: 1,
@@ -39,7 +40,7 @@ function createResumeResultFixture(): EmitHumanReplyResult {
         }
       ],
       last_command_at: "2026-02-22T12:00:00.000Z"
-    }
+    })
   };
 }
 

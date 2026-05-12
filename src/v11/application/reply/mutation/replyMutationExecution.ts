@@ -2,6 +2,8 @@ import { join } from "node:path";
 
 import { buildRunningExecutionContext } from "../../../domain/state/execution/executionContext.js";
 import { applyStateTransition } from "../../../domain/state/machine.js";
+import { toPersistedSnapshot } from "../../../domain/state/snapshot/projection.js";
+import { buildBubbleStateSnapshotVariant } from "../../../domain/state/snapshot/buildBubbleStateSnapshot.js";
 import { buildHumanReplyEnvelopeDraft } from "../../../domain/reply/replyEnvelopeDraft.js";
 import {
   raiseReplyPostAppendStateWriteFailed
@@ -34,7 +36,9 @@ export async function executeReplyMutation(
     })
   });
 
-  const nextState = applyStateTransition(input.state, {
+  // applyStateTransition is still persisted-shape (later batch). Project at
+  // the boundary and rebuild the variant from the output.
+  const nextPersisted = applyStateTransition(toPersistedSnapshot(input.state), {
     to: "RUNNING",
     executionContext: buildRunningExecutionContext({
       bubbleId: input.resolved.bubbleId,
@@ -46,6 +50,7 @@ export async function executeReplyMutation(
     activeSince: input.nowIso,
     lastCommandAt: input.nowIso
   });
+  const nextState = buildBubbleStateSnapshotVariant(nextPersisted);
 
   try {
     const written = await input.dependencies.writeStateSnapshot(

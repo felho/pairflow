@@ -3,13 +3,13 @@ import type {
 } from "../../ports/tmuxDelivery.js";
 import type { AppendProtocolEnvelopePort } from "../../ports/transcript.js";
 import type {
-  ReadStateSnapshotPort,
-  WriteStateSnapshotPort
+  ReadDomainStateSnapshotPort,
+  WriteDomainStateSnapshotPort
 } from "../../ports/stateSnapshots.js";
 import type { ResolveBubbleByIdPort } from "../../ports/bubbleLookup.js";
 import type { ResolveDeliveryMessageRefPort } from "../../ports/tmuxDelivery.js";
 import type { EnsureBubbleInstanceIdForMutationPort } from "../../ports/bubbleIdentity.js";
-import type { PersistedBubbleStateSnapshot } from "../../domain/state/snapshot/persistedBubbleStateSnapshot.js";
+import type { BubbleStateSnapshot } from "../../domain/state/snapshot/bubbleStateSnapshot.js";
 import type { ProtocolEnvelope } from "../../../types/protocol.js";
 
 export interface EmitHumanReplyInput {
@@ -25,15 +25,15 @@ export interface EmitHumanReplyResult {
   bubbleId: string;
   sequence: number;
   envelope: ProtocolEnvelope;
-  state: PersistedBubbleStateSnapshot;
+  state: BubbleStateSnapshot;
 }
 
 export interface EmitHumanReplyDependencies {
   appendProtocolEnvelope?: AppendProtocolEnvelopePort;
   emitDeliveryNotificationAck?: EmitDeliveryNotificationAckPort;
   ensureBubbleInstanceIdForMutation?: EnsureBubbleInstanceIdForMutationPort;
-  readStateSnapshot?: ReadStateSnapshotPort;
+  readStateSnapshot?: ReadDomainStateSnapshotPort;
   resolveBubbleById?: ResolveBubbleByIdPort;
   resolveDeliveryMessageRef?: ResolveDeliveryMessageRefPort;
-  writeStateSnapshot?: WriteStateSnapshotPort;
+  writeStateSnapshot?: WriteDomainStateSnapshotPort;
 }
