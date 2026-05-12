@@ -1,3 +1,4 @@
+import type { BubbleLifecycleState } from "../../../../../contracts/kernel/lifecycle.js";
 import type { PersistedBubbleStateSnapshot } from "../../../../domain/state/snapshot/persistedBubbleStateSnapshot.js";
 import type { FindingsParityMetadata } from "../../../../../types/protocol.js";
 import type { MetaReviewResult } from "../../../../shared/metaReview/metaReviewTypes.js";
@@ -91,7 +92,7 @@ export async function persistRunFailedHumanRoute(
 export async function persistDispatchFailedHumanRoute(input: {
   finalizeInput: FinalizeCurrentRunMetaReviewGateInput;
   loaded: LoadedStateSnapshot;
-  expectedState: PersistedBubbleStateSnapshot["state"];
+  expectedState: BubbleLifecycleState;
   runResultForRouting: MetaReviewResult;
   parityMetadata: FindingsParityMetadata | null;
   fallbackReason: string;

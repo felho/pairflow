@@ -8,7 +8,6 @@ import {
 import type { AgentName } from "../../../../../contracts/kernel/agentIdentity.js";
 import { buildBubbleStateSnapshotVariant } from "../../../../domain/state/snapshot/buildBubbleStateSnapshot.js";
 import { toPersistedSnapshot } from "../../../../domain/state/snapshot/projection.js";
-import type { PersistedBubbleStateSnapshot } from "../../../../domain/state/snapshot/persistedBubbleStateSnapshot.js";
 import { toMetaReviewGateError } from "../../../../shared/metaReviewGate/metaReviewGateErrorConversion.js";
 import { MetaReviewGateError } from "../../../../shared/metaReviewGate/metaReviewGateRouteContract.js";
 import { normalizeMetaReviewSnapshot } from "../../../../domain/metaReviewGate/snapshotState.js";
@@ -57,7 +56,7 @@ export async function stageMetaReviewRunningState(input: {
     watchdogTimeoutMinutes: input.watchdogTimeoutMinutes,
     attempt
   });
-  const nextState: PersistedBubbleStateSnapshot = {
+  const nextState = {
     ...loadedRunningPersisted,
     state: "RUNNING" as const,
     active_agent: input.metaReviewerAgent,

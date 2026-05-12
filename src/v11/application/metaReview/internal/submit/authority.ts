@@ -2,12 +2,27 @@ import {
   validateActiveMetaReviewExecutionContext
 } from "../../../../shared/metaReview/metaReviewExecutionContext.js";
 import { MetaReviewError } from "../../../../shared/metaReview/metaReviewError.js";
-import type { AgentName } from "../../../../../contracts/kernel/agentIdentity.js";
-import type { PersistedBubbleStateSnapshot } from "../../../../domain/state/snapshot/persistedBubbleStateSnapshot.js";
+import type {
+  AgentName,
+  AgentRole
+} from "../../../../../contracts/kernel/agentIdentity.js";
+import type { BubbleLifecycleState } from "../../../../../contracts/kernel/lifecycle.js";
+import type {
+  BubbleExecutionContext
+} from "../../../../domain/state/execution/executionContext.js";
 import type { MetaReviewCommandDependencies } from "../../../../shared/metaReview/metaReviewCommandContract.js";
 
+interface MetaReviewSubmitterState {
+  state: BubbleLifecycleState;
+  round: number;
+  active_agent: AgentName | null;
+  active_role: AgentRole | null;
+  active_since: string | null;
+  execution_context?: BubbleExecutionContext | null;
+}
+
 export function assertActiveMetaReviewExecutionContext(
-  state: PersistedBubbleStateSnapshot
+  state: MetaReviewSubmitterState
 ) {
   const executionContextResult = validateActiveMetaReviewExecutionContext(state);
   if (executionContextResult.ok) {
@@ -56,7 +71,7 @@ export async function assertMetaReviewSubmitterAuthority(input: {
   metaReviewerAgent: AgentName;
   sessionsPath: string;
   readRuntimeSessions: NonNullable<MetaReviewCommandDependencies["readRuntimeSessionsRegistry"]>;
-  state: PersistedBubbleStateSnapshot;
+  state: MetaReviewSubmitterState;
   now?: Date;
 }): Promise<void> {
   const executionContext = assertActiveMetaReviewExecutionContext(input.state);

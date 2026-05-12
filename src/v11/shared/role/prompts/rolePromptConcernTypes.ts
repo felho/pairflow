@@ -1,8 +1,14 @@
-import type { AgentRole } from "../../../../contracts/kernel/agentIdentity.js";
 import type {
   BubbleReviewAutoReworkSeverity
 } from "../../reviewPolicy/reviewPolicyTypes.js";
-import type { PersistedBubbleStateSnapshot } from "../../../domain/state/snapshot/persistedBubbleStateSnapshot.js";
+import type {
+  AgentName,
+  AgentRole
+} from "../../../../contracts/kernel/agentIdentity.js";
+import type { BubbleLifecycleState } from "../../../../contracts/kernel/lifecycle.js";
+import type {
+  BubbleExecutionContext
+} from "../../../domain/state/execution/executionContext.js";
 import type {
   PairflowCommandProfile,
   ReviewArtifactType
@@ -80,7 +86,7 @@ export interface StartupPromptConcernBuildInput
 
 export interface ResumePromptConcernBuildInput
   extends PromptConcernBuildInputBase {
-  state: PersistedBubbleStateSnapshot;
+  state: RolePromptStateSnapshot;
   transcriptSummary: string;
 }
 
@@ -101,3 +107,15 @@ export type PromptConcernBuildInput =
   | ReviewerResumePromptConcernBuildInput;
 
 export type NonReviewerRole = Exclude<AgentRole, "reviewer">;
+
+export interface RolePromptStateSnapshot {
+  bubble_id?: string;
+  state: BubbleLifecycleState;
+  round: number;
+  active_agent: AgentName | null;
+  active_role: AgentRole | null;
+  active_since: string | null;
+  execution_context?: BubbleExecutionContext | null;
+  round_role_history?: unknown[];
+  last_command_at?: string | null;
+}

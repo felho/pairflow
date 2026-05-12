@@ -11,7 +11,6 @@ import { type SummaryVerifierConsistencyGateDecisionRecord } from "../../../../s
 import type { EmitBubbleLifecycleEventBestEffortPort } from "../../../../shared/metrics/bubbleEvents.js";
 import { type MetaReviewGateRoute } from "../../../../shared/metaReviewGate/index.js";
 import type { BubbleStateSnapshot } from "../../../../domain/state/snapshot/bubbleStateSnapshot.js";
-import type { PersistedBubbleStateSnapshot } from "../../../../domain/state/snapshot/persistedBubbleStateSnapshot.js";
 import type {
   BubbleRoundGateState,
   BubbleSpecLockState
@@ -37,8 +36,7 @@ export interface FinalizeConvergedFlowInput {
     route: MetaReviewGateRoute;
     gateSequence: number;
     gateEnvelope: ProtocolEnvelope;
-    // Gate result state is persisted-shape (gate lane has not migrated yet).
-    state: PersistedBubbleStateSnapshot;
+    state: BubbleStateSnapshot;
     metaReviewRun?: {
       status: string;
       recommendation: string;
@@ -70,10 +68,6 @@ export interface FinalizeConvergedFlowResult {
   gateRoute: MetaReviewGateRoute;
   approvalRequestSequence: number;
   approvalRequestEnvelope: ProtocolEnvelope;
-  // The result state mirrors the gate output (persisted-shape, since the
-  // gate lane is not migrated yet). Consumers that hold the variant
-  // model (e.g., pass) project via buildBubbleStateSnapshotVariant at
-  // their own boundary.
-  state: PersistedBubbleStateSnapshot;
+  state: BubbleStateSnapshot;
   delivery?: ConvergedDelivery;
 }

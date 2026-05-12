@@ -1,7 +1,7 @@
 import type { SummaryVerifierConsistencyGateDecisionRecord } from "../../../../shared/reviewer/summaryVerifierConsistencyGate.js";
 import type { PairflowCommandPathAssessment } from "../../../../ports/pairflowCommand.js";
 import { type MetaReviewGateRoute } from "../../../../shared/metaReviewGate/index.js";
-import type { PersistedBubbleStateSnapshot } from "../../../../domain/state/snapshot/persistedBubbleStateSnapshot.js";
+import type { BubbleStateSnapshot } from "../../../../domain/state/snapshot/bubbleStateSnapshot.js";
 import type {
   BubbleRoundGateState,
   BubbleSpecLockState
@@ -16,7 +16,7 @@ export function buildConvergedEventMetadata(input: {
   gateResult: {
     route: MetaReviewGateRoute;
     gateEnvelope: ProtocolEnvelope;
-    state: PersistedBubbleStateSnapshot;
+    state: BubbleStateSnapshot;
     metaReviewRun?: {
       status: string;
       recommendation: string;
@@ -150,7 +150,7 @@ export function buildMetaReviewRoutedMetadata(input: {
   gateResult: {
     route: MetaReviewGateRoute;
     gateEnvelope: ProtocolEnvelope;
-    state: PersistedBubbleStateSnapshot;
+    state: BubbleStateSnapshot;
     metaReviewRun?: {
       status: string;
       recommendation: string;

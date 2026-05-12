@@ -1,9 +1,9 @@
 import { join } from "node:path";
 
-import type { PersistedBubbleStateSnapshot } from "../../../../domain/state/snapshot/persistedBubbleStateSnapshot.js";
+import type { BubbleStateSnapshot } from "../../../../domain/state/snapshot/bubbleStateSnapshot.js";
 import { MetaReviewGateError } from "../../../../shared/metaReviewGate/metaReviewGateRouteContract.js";
 
-export function assertRunningConvergenceState(state: PersistedBubbleStateSnapshot): void {
+export function assertRunningConvergenceState(state: BubbleStateSnapshot): void {
   if (state.state !== "RUNNING") {
     throw new MetaReviewGateError(
       "META_REVIEW_GATE_TRANSITION_INVALID",

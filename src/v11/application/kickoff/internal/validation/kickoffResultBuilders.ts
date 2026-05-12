@@ -1,4 +1,20 @@
-import type { PersistedBubbleStateSnapshot } from "../../../../domain/state/snapshot/persistedBubbleStateSnapshot.js";
+import type {
+  AgentName,
+  AgentRole
+} from "../../../../../contracts/kernel/agentIdentity.js";
+import type { BubbleLifecycleState } from "../../../../../contracts/kernel/lifecycle.js";
+import type {
+  BubbleExecutionContext
+} from "../../../../domain/state/execution/executionContext.js";
+import type {
+  BubbleMetaReviewSnapshotState
+} from "../../../../shared/metaReview/metaReviewSnapshotTypes.js";
+import type {
+  BubbleReworkIntentRecord
+} from "../../../../domain/state/rework/reworkIntentTypes.js";
+import type {
+  RoundRoleHistoryEntry
+} from "../../../../domain/state/snapshot/roundRoleHistory.js";
 import type {
   DeliveryAckReasonCode,
   DeliveryAckStatus,
@@ -31,15 +47,30 @@ export interface KickoffBubbleResultShape {
   };
   markers_before: KickoffIdeationMarkers;
   markers_after: KickoffIdeationMarkers;
-  state_before?: PersistedBubbleStateSnapshot;
-  state_after?: PersistedBubbleStateSnapshot;
+  state_before?: KickoffResultStateSnapshot;
+  state_after?: KickoffResultStateSnapshot;
   delivery?: KickoffResultDelivery;
+}
+
+export interface KickoffResultStateSnapshot {
+  bubble_id: string;
+  state: BubbleLifecycleState;
+  round: number;
+  active_agent: AgentName | null;
+  active_since: string | null;
+  active_role: AgentRole | null;
+  execution_context?: BubbleExecutionContext | null;
+  round_role_history: RoundRoleHistoryEntry[];
+  last_command_at: string | null;
+  pending_rework_intent?: BubbleReworkIntentRecord | null;
+  rework_intent_history?: BubbleReworkIntentRecord[];
+  meta_review?: BubbleMetaReviewSnapshotState;
 }
 
 export interface BuildKickoffFailureResultInput {
   bubbleId: string;
   reasonCode: string;
-  stateBefore: PersistedBubbleStateSnapshot;
+  stateBefore: KickoffResultStateSnapshot;
   markersBefore: KickoffIdeationMarkers;
 }
 
@@ -69,8 +100,8 @@ export function buildKickoffFailureResult(
 export interface BuildKickoffSuccessResultInput {
   bubbleId: string;
   markersBefore: KickoffIdeationMarkers;
-  stateBefore: PersistedBubbleStateSnapshot;
-  stateAfter: PersistedBubbleStateSnapshot;
+  stateBefore: KickoffResultStateSnapshot;
+  stateAfter: KickoffResultStateSnapshot;
   delivery?: KickoffResultDelivery;
 }
 

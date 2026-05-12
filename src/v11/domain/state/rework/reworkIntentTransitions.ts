@@ -7,7 +7,6 @@ import type { AgentName } from "../../../../contracts/kernel/agentIdentity.js";
 import type { BubbleStateSnapshot } from "../snapshot/bubbleStateSnapshot.js";
 import { buildBubbleStateSnapshotVariant } from "../snapshot/buildBubbleStateSnapshot.js";
 import { toPersistedSnapshot } from "../snapshot/projection.js";
-import type { PersistedBubbleStateSnapshot } from "../snapshot/persistedBubbleStateSnapshot.js";
 import type {
   BubbleReworkIntentRecord
 } from "./reworkIntentTypes.js";
@@ -41,13 +40,17 @@ export interface ApplyDeferredReworkIntentResult {
 }
 
 function readIntentHistory(
-  state: PersistedBubbleStateSnapshot
+  state: {
+    rework_intent_history?: BubbleReworkIntentRecord[];
+  }
 ): BubbleReworkIntentRecord[] {
   return [...(state.rework_intent_history ?? [])];
 }
 
 function ensurePendingIntent(
-  state: PersistedBubbleStateSnapshot
+  state: {
+    pending_rework_intent?: BubbleReworkIntentRecord | null;
+  }
 ): BubbleReworkIntentRecord | null {
   const pendingIntent = state.pending_rework_intent ?? null;
   if (pendingIntent === null) {

@@ -1,5 +1,4 @@
-import { toPersistedSnapshot } from "../../../../domain/state/snapshot/projection.js";
-import type { PersistedBubbleStateSnapshot } from "../../../../domain/state/snapshot/persistedBubbleStateSnapshot.js";
+import type { BubbleStateSnapshot } from "../../../../domain/state/snapshot/bubbleStateSnapshot.js";
 import type { BubbleWatchdogResult } from "../../watchdogCommandContract.js";
 import type { WatchdogRuntimeContext } from "./watchdogCommandFlow.js";
 import { escalateMetaReviewWatchdog } from "./watchdogCommandFlow.js";
@@ -9,7 +8,7 @@ import {
 } from "../../../../shared/metaReview/metaReviewExecutionContext.js";
 import { SchemaValidationError } from "../../../../shared/validation/primitives.js";
 
-function assertMetaReviewExecutionContext(state: PersistedBubbleStateSnapshot): void {
+function assertMetaReviewExecutionContext(state: BubbleStateSnapshot): void {
   const result = validateActiveMetaReviewExecutionContext(state);
   if (result.ok) {
     return;
@@ -23,11 +22,10 @@ function assertMetaReviewExecutionContext(state: PersistedBubbleStateSnapshot): 
 export function maybeRouteMetaReviewBeforeExpiry(
   input: WatchdogRuntimeContext
 ): BubbleWatchdogResult | null {
-  const persistedState = toPersistedSnapshot(input.state);
-  if (!isMetaReviewExecutionContextActiveState(persistedState)) {
+  if (!isMetaReviewExecutionContextActiveState(input.state)) {
     return null;
   }
-  assertMetaReviewExecutionContext(persistedState);
+  assertMetaReviewExecutionContext(input.state);
   return {
     bubbleId: input.resolved.bubbleId,
     escalated: false,
@@ -39,10 +37,9 @@ export function maybeRouteMetaReviewBeforeExpiry(
 export async function maybeRouteMetaReviewOnExpiry(
   input: WatchdogRuntimeContext
 ): Promise<BubbleWatchdogResult | null> {
-  const persistedState = toPersistedSnapshot(input.state);
-  if (!isMetaReviewExecutionContextActiveState(persistedState)) {
+  if (!isMetaReviewExecutionContextActiveState(input.state)) {
     return null;
   }
-  assertMetaReviewExecutionContext(persistedState);
+  assertMetaReviewExecutionContext(input.state);
   return escalateMetaReviewWatchdog(input);
 }

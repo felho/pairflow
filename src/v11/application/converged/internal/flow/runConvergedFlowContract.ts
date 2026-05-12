@@ -16,7 +16,6 @@ import type {
 } from "../../../../shared/metaReviewGate/metaReviewGateCommandContract.js";
 import type { AgentName } from "../../../../../contracts/kernel/agentIdentity.js";
 import type { BubbleStateSnapshot } from "../../../../domain/state/snapshot/bubbleStateSnapshot.js";
-import type { PersistedBubbleStateSnapshot } from "../../../../domain/state/snapshot/persistedBubbleStateSnapshot.js";
 import type {
   BubbleRoundGateState,
   BubbleSpecLockState
@@ -76,8 +75,7 @@ interface ExecuteConvergedExecutionResult {
     route: MetaReviewGateRoute;
     gateSequence: number;
     gateEnvelope: ProtocolEnvelope;
-    // Gate result state is persisted-shape (gate lane out of scope).
-    state: PersistedBubbleStateSnapshot;
+    state: BubbleStateSnapshot;
     metaReviewRun?: {
       status: string;
       recommendation: string;
@@ -171,9 +169,7 @@ export interface RunConvergedFlowResult {
   gateRoute: MetaReviewGateRoute;
   approvalRequestSequence: number;
   approvalRequestEnvelope: ProtocolEnvelope;
-  // Result state mirrors gate output (persisted-shape) — see
-  // FinalizeConvergedFlowResult.state for the same rationale.
-  state: PersistedBubbleStateSnapshot;
+  state: BubbleStateSnapshot;
   delivery?: {
     status: "accepted" | "rejected";
     reason?: string;

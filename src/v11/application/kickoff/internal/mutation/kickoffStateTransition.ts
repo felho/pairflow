@@ -3,7 +3,9 @@ import { toPersistedSnapshot } from "../../../../domain/state/snapshot/projectio
 import { assertParsedBubbleStateSnapshot } from "../../../../domain/state/stateSchema.js";
 import { buildRunningExecutionContext } from "../../../../domain/state/execution/executionContext.js";
 import type { BubbleConfig } from "../../../../shared/config/bubbleConfigTypes.js";
-import type { PersistedBubbleStateSnapshot } from "../../../../domain/state/snapshot/persistedBubbleStateSnapshot.js";
+import type {
+  RoundRoleHistoryEntry
+} from "../../../../domain/state/snapshot/roundRoleHistory.js";
 
 export interface BuildKickoffNextStateInput {
   state: BubbleStateSnapshot;
@@ -12,10 +14,10 @@ export interface BuildKickoffNextStateInput {
 }
 
 function buildKickoffRoundOneRoleHistory(input: {
-  state: PersistedBubbleStateSnapshot;
+  state: BubbleStateSnapshot;
   bubbleConfig: Pick<BubbleConfig, "agents">;
   nowIso: string;
-}): PersistedBubbleStateSnapshot["round_role_history"] {
+}): RoundRoleHistoryEntry[] {
   if (input.state.round_role_history.some((entry) => entry.round === 1)) {
     return input.state.round_role_history;
   }
@@ -51,7 +53,7 @@ export function buildKickoffNextState(
     active_since: input.nowIso,
     last_command_at: input.nowIso,
     round_role_history: buildKickoffRoundOneRoleHistory({
-      state: currentPersisted,
+      state: input.state,
       bubbleConfig: input.bubbleConfig,
       nowIso: input.nowIso
     })

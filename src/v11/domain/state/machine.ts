@@ -5,7 +5,6 @@ import type {
 import type { BubbleLifecycleState } from "../../../contracts/kernel/lifecycle.js";
 import type { BubbleStateSnapshot } from "../../domain/state/snapshot/bubbleStateSnapshot.js";
 import { buildBubbleStateSnapshotVariant } from "../../domain/state/snapshot/buildBubbleStateSnapshot.js";
-import type { PersistedBubbleStateSnapshot } from "../../domain/state/snapshot/persistedBubbleStateSnapshot.js";
 import { toPersistedSnapshot } from "../../domain/state/snapshot/projection.js";
 import type {
   RoundRoleHistoryEntry
@@ -37,8 +36,8 @@ const statesThatClearExecutionContext = new Set<BubbleLifecycleState>([
 ]);
 
 function clearCompatibilityMetaReviewExecutionContext(
-  state: PersistedBubbleStateSnapshot
-): PersistedBubbleStateSnapshot {
+  state: ReturnType<typeof toPersistedSnapshot>
+): ReturnType<typeof toPersistedSnapshot> {
   if (
     state.meta_review === undefined ||
     state.active_role === "meta_reviewer" ||
@@ -60,12 +59,10 @@ export function applyStateTransition(
   current: BubbleStateSnapshot,
   input: StateTransitionInput
 ): BubbleStateSnapshot {
-  // Project to persisted-shape at the function boundary; the parser flip
-  // (Step 4b-γ/4) will collapse this into a single canonical shape.
   const currentPersisted = toPersistedSnapshot(current);
   assertTransitionAllowed(currentPersisted.state, input.to, currentPersisted.bubble_id);
 
-  const next: PersistedBubbleStateSnapshot = {
+  const next: ReturnType<typeof toPersistedSnapshot> = {
     ...currentPersisted,
     state: input.to,
     round: input.round ?? currentPersisted.round,

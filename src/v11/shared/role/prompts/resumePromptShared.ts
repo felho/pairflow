@@ -1,10 +1,10 @@
-import type { PersistedBubbleStateSnapshot } from "../../../domain/state/snapshot/persistedBubbleStateSnapshot.js";
+import type { RolePromptStateSnapshot } from "./rolePromptConcernTypes.js";
 
 function formatResumeStateValue(value: string | number | null): string {
   return value === null ? "none" : String(value);
 }
 
-export function buildResumeContextLine(state: PersistedBubbleStateSnapshot): string {
+export function buildResumeContextLine(state: RolePromptStateSnapshot): string {
   const parts = [
     `state=${state.state}`,
     `round=${state.round}`,

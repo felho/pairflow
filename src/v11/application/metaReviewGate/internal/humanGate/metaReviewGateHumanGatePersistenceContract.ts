@@ -4,6 +4,7 @@ import type {
   WriteStateSnapshotPort
 } from "../../../../ports/stateSnapshots.js";
 import type { AgentName } from "../../../../../contracts/kernel/agentIdentity.js";
+import type { BubbleLifecycleState } from "../../../../../contracts/kernel/lifecycle.js";
 import type { PersistedBubbleStateSnapshot } from "../../../../domain/state/snapshot/persistedBubbleStateSnapshot.js";
 import type { MetaReviewResult } from "../../../../shared/metaReview/metaReviewTypes.js";
 import type { FindingsParityMetadata } from "../../../../../types/protocol.js";
@@ -28,7 +29,7 @@ export interface PersistHumanGateRouteInput {
   refs: string[];
   metaReviewerAgent: AgentName;
   loaded: LoadedStateSnapshot;
-  expectedState: PersistedBubbleStateSnapshot["state"];
+  expectedState: BubbleLifecycleState;
   route: MetaReviewGateRoute;
   metaReviewRun?: MetaReviewResult;
   parityMetadata?: FindingsParityMetadata | null;

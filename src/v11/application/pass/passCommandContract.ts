@@ -2,7 +2,7 @@ import type {
   RepeatCleanAutoconvergeReasonCode,
   RepeatCleanAutoconvergeReasonDetail
 } from "../../domain/convergence/repeatCleanAutoconverge.js";
-import type { PersistedBubbleStateSnapshot } from "../../domain/state/snapshot/persistedBubbleStateSnapshot.js";
+import type { BubbleStateSnapshot } from "../../domain/state/snapshot/bubbleStateSnapshot.js";
 import type { Finding } from "../../../types/findings.js";
 import type { PassIntent } from "../../../contracts/kernel/protocol.js";
 import type { ProtocolEnvelope } from "../../../types/protocol.js";
@@ -37,7 +37,7 @@ export interface EmitPassResult {
   sequence: number;
   envelope: ProtocolEnvelope;
   resultEnvelopeKind: "pass" | "convergence";
-  state: PersistedBubbleStateSnapshot;
+  state: BubbleStateSnapshot;
   inferredIntent: boolean;
   activation?: PassActivationProvenance;
   transitionDecision: "normal_pass" | "auto_converge";

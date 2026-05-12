@@ -3,7 +3,7 @@ import {
   type BubbleExecutionContext,
   type BubbleMetaReviewExecutionContext
 } from "../../domain/state/execution/executionContext.js";
-import type { PersistedBubbleStateSnapshot } from "../../domain/state/snapshot/persistedBubbleStateSnapshot.js";
+import type { BubbleLifecycleState } from "../../../contracts/kernel/lifecycle.js";
 import {
   isInteger,
   isIsoTimestamp,
@@ -23,8 +23,14 @@ import {
 export const metaReviewExecutionContextPath = "meta_review.execution_context";
 export const runningExecutionContextPath = "execution_context";
 
+interface MetaReviewExecutionContextState {
+  state: BubbleLifecycleState;
+  round: number;
+  execution_context?: BubbleExecutionContext | null;
+}
+
 export function isMetaReviewExecutionContextActiveState(
-  state: PersistedBubbleStateSnapshot
+  state: MetaReviewExecutionContextState
 ): boolean {
   if (state.state !== "RUNNING") {
     return false;
@@ -76,7 +82,7 @@ export function buildMetaReviewExecutionContext(input: {
 }
 
 function validateMetaReviewExecutionIdentity(input: {
-  state: PersistedBubbleStateSnapshot;
+  state: MetaReviewExecutionContextState;
   executionContext: BubbleExecutionContext;
   errors: ValidationError[];
 }): void {
@@ -176,7 +182,7 @@ function validateMetaReviewExecutionTiming(input: {
 }
 
 export function validateActiveMetaReviewExecutionContext(
-  state: PersistedBubbleStateSnapshot
+  state: MetaReviewExecutionContextState
 ): ValidationResult<BubbleExecutionContext> {
   const errors: ValidationError[] = [];
 

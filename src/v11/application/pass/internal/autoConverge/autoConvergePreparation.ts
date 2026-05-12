@@ -9,7 +9,9 @@ import type {
 import type { ReadStateSnapshotPort } from "../../../../ports/stateSnapshots.js";
 import { readStateSnapshot } from "../../../start/startCommandDependencyDefaults.js";
 import type { AgentName } from "../../../../../contracts/kernel/agentIdentity.js";
-import type { PersistedBubbleStateSnapshot } from "../../../../domain/state/snapshot/persistedBubbleStateSnapshot.js";
+import type {
+  RoundRoleHistoryEntry
+} from "../../../../domain/state/snapshot/roundRoleHistory.js";
 import type {
   ReviewArtifactType
 } from "../../../../shared/config/bubbleConfigVocabulary.js";
@@ -25,7 +27,7 @@ export interface PrepareRepeatCleanAutoConvergeInput {
   reviewer: AgentName;
   implementer: AgentName;
   reviewArtifactType: ReviewArtifactType;
-  roundRoleHistory: PersistedBubbleStateSnapshot["round_role_history"];
+  roundRoleHistory: RoundRoleHistoryEntry[];
   transcript: ProtocolEnvelope[];
   severityGateRound: number;
   statePath: string;

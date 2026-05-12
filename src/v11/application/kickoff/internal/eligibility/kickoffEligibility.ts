@@ -4,13 +4,18 @@ import {
   IDEATION_KICKOFF_NOT_ELIGIBLE,
   IDEATION_KICKOFF_REQUIRES_RUNNING
 } from "../../../../shared/ideation/ideationReasonCodes.js";
-import type { PersistedBubbleStateSnapshot } from "../../../../domain/state/snapshot/persistedBubbleStateSnapshot.js";
+import type { BubbleLifecycleState } from "../../../../../contracts/kernel/lifecycle.js";
+
+export interface KickoffEligibilityStateSnapshot {
+  state: BubbleLifecycleState;
+  round: number;
+}
 
 export interface ResolveKickoffEligibilityInput {
   hasParseWarning: boolean;
   ideationMode: boolean;
   ideationTaskPending: boolean;
-  state: PersistedBubbleStateSnapshot;
+  state: KickoffEligibilityStateSnapshot;
 }
 
 function hasKickoffConfigurationGuardFailure(

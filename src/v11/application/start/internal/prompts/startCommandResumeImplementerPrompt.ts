@@ -7,7 +7,9 @@ import type {
 } from "../../../../shared/command/commandConfigTypes.js";
 import { joinPromptLines } from "../../../../shared/role/prompts/resumePromptShared.js";
 import { buildRolePromptConcernLines } from "../../../../shared/role/prompts/rolePromptConcerns.js";
-import type { PersistedBubbleStateSnapshot } from "../../../../domain/state/snapshot/persistedBubbleStateSnapshot.js";
+import type {
+  RolePromptStateSnapshot
+} from "../../../../shared/role/prompts/rolePromptConcernTypes.js";
 
 export function buildResumeImplementerStartupPrompt(input: {
   bubbleId: string;
@@ -16,7 +18,7 @@ export function buildResumeImplementerStartupPrompt(input: {
   taskArtifactPath: string;
   reviewArtifactType: ReviewArtifactType;
   pairflowCommandProfile: PairflowCommandProfile;
-  state: PersistedBubbleStateSnapshot;
+  state: RolePromptStateSnapshot;
   transcriptSummary: string;
   kickoffDiagnostic?: string;
   validationCommands?: BubbleCommandsConfig;

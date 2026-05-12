@@ -1,13 +1,29 @@
-import type { PersistedBubbleStateSnapshot } from "../../domain/state/snapshot/persistedBubbleStateSnapshot.js";
+import type { AgentName, AgentRole } from "../../../contracts/kernel/agentIdentity.js";
+import type { BubbleLifecycleState } from "../../../contracts/kernel/lifecycle.js";
+import type { BubbleExecutionContext } from "../../domain/state/execution/executionContext.js";
+import type {
+  BubbleMetaReviewSnapshotState
+} from "../metaReview/metaReviewSnapshotTypes.js";
 import { SchemaValidationError } from "../validation/primitives.js";
 import { metaReviewExecutionContextToRunningContext } from "../../domain/state/execution/executionContext.js";
 import { validateActiveMetaReviewExecutionContext } from "../metaReview/metaReviewExecutionContext.js";
 
 interface WatchdogStatusTimingInput {
-  state: PersistedBubbleStateSnapshot;
+  state: WatchdogStatusTimingState;
   watchdogTimeoutMinutes: number;
   now: Date;
   monitored: boolean;
+}
+
+interface WatchdogStatusTimingState {
+  state: BubbleLifecycleState;
+  active_since: string | null;
+  active_agent: AgentName | null;
+  active_role: AgentRole | null;
+  last_command_at: string | null;
+  round: number;
+  execution_context?: BubbleExecutionContext | null;
+  meta_review?: BubbleMetaReviewSnapshotState;
 }
 
 interface WatchdogStatusTimingResult {

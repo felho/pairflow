@@ -1,5 +1,5 @@
 import type { AgentName } from "../../../contracts/kernel/agentIdentity.js";
-import type { PersistedBubbleStateSnapshot } from "../../domain/state/snapshot/persistedBubbleStateSnapshot.js";
+import type { BubbleStateSnapshot } from "../../domain/state/snapshot/bubbleStateSnapshot.js";
 import type { ActorEmitContextSnapshot } from "../actorProtocol/actorEmitContext.js";
 import type { EmitBubbleNotification } from "../delivery/bubbleNotificationContract.js";
 import type {
@@ -60,7 +60,7 @@ export interface EmitConvergedResult {
   gateRoute: MetaReviewGateRoute;
   approvalRequestSequence: number;
   approvalRequestEnvelope: ProtocolEnvelope;
-  state: PersistedBubbleStateSnapshot;
+  state: BubbleStateSnapshot;
   delivery?: {
     status: "accepted" | "rejected";
     reason?: string;

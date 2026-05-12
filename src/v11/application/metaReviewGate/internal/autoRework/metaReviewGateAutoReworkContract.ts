@@ -4,6 +4,7 @@ import type {
   WriteStateSnapshotPort
 } from "../../../../ports/stateSnapshots.js";
 import type { AgentName } from "../../../../../contracts/kernel/agentIdentity.js";
+import type { BubbleLifecycleState } from "../../../../../contracts/kernel/lifecycle.js";
 import type { PersistedBubbleStateSnapshot } from "../../../../domain/state/snapshot/persistedBubbleStateSnapshot.js";
 import type { Finding } from "../../../../../types/findings.js";
 import type { FindingsParityMetadata } from "../../../../../types/protocol.js";
@@ -37,7 +38,7 @@ export interface AutoReworkFinalizeInput {
 
 export interface PersistDispatchFailedHumanRouteInput {
   loaded: LoadedStateSnapshot;
-  expectedState: PersistedBubbleStateSnapshot["state"];
+  expectedState: BubbleLifecycleState;
   runResultForRouting: MetaReviewResult;
   parityMetadata: FindingsParityMetadata | null;
   fallbackReason: string;
