@@ -1347,6 +1347,139 @@ patterns worth recording.
 
 ---
 
+### 10.14 SSH boundary review — DEFERRED TO 4b-γ PARSER FLIP
+
+After the Step 4b-β per-lane wave closed (per §10.13), a
+focused docs-only scan of
+`src/v11/infrastructure/executor/ssh/sshBubble*Command.ts`
+established the SSH cross-batch border's status. The question
+under review: does the SSH lane need a separate variant-migration
+batch before Step 4b-γ, or does the canonical parser flip
+absorb it?
+
+**Scan findings (2026-05-13):**
+
+1. **State-bearing SSH parsers (3 files).**
+   - `sshBubbleApprovalParsing.ts` + `sshBubbleApprovalParsingSupport.ts`
+     + `sshBubbleApprovalValidationHelpers.ts` (+ `sshBubbleApprovalCommand.ts`
+     as consumer): `parseRemoteBubbleState` calls
+     `assertParsedBubbleStateSnapshot` from `domain/state/stateSchema.ts`
+     and returns `PersistedBubbleStateSnapshot`. The result interfaces
+     `RemoteBubbleApprovalDecisionResult.state` /
+     `RemoteBubbleApprovalQueuedReworkResult.state` thread that shape
+     up to the application boundary, where 6 sites in
+     `application/approval/internal/**` project it via
+     `buildBubbleStateSnapshotVariant`.
+   - `sshBubbleCommitPayload.ts` (used by `sshBubbleCommitCommand.ts`
+     and `sshBubbleCommitContinuityImportCommand.ts`): same pattern —
+     local `parseRemoteBubbleState` calls
+     `assertParsedBubbleStateSnapshot`, exposes
+     `ExecuteRemoteBubbleCommitCommandResult.state` as
+     persisted-shape. Two application-side sites in
+     `application/commit/internal/pipeline/commitCommandPipeline.ts`
+     project via `buildBubbleStateSnapshotVariant`.
+   - `sshBubbleApprovalValidationHelpers.ts` is structurally
+     passive: it accepts `PersistedBubbleStateSnapshot` parameters
+     but only reads `.state` (enum) and `.pending_rework_intent`
+     (struct). No constructor-level dependency on the persisted
+     shape's identity beyond the field set.
+
+2. **State-clean SSH parsers (5 files).**
+   - `sshBubbleMergeCommand.ts` + `sshBubbleMergeParsers.ts`:
+     `ExecuteRemoteBubbleMergeCommandResult` has no `state` field
+     (git refs / branches / tmux only). No state-shape coupling.
+   - `sshBubbleReviewPolicyCommand.ts`: no `state` field; emits
+     `BubbleReviewPolicyRuntimeView`.
+   - `sshBubbleStart.ts` + `sshBubbleStartState.ts` +
+     `sshBubbleStartExecution.ts`: no `PersistedBubbleStateSnapshot`
+     reference; pointer error metadata contains state-name strings
+     only.
+   - `sshBubbleDeleteCommand.ts`: captures `state.json` bytes as an
+     opaque forensic blob; does not parse.
+   - `sshBubbleStatus.ts` + `sshBubbleStatusPayload.ts`: uses
+     `BubbleLifecycleState` (independent enum), not
+     `PersistedBubbleStateSnapshot`. Out of variant-migration scope
+     entirely.
+
+3. **Cross-batch border comments already in place.**
+   - `application/approval/internal/remote/remoteApprovalCommandPort.ts:1-4`
+   - `shared/remote/commitRemoteExecution.ts:5-8`
+   Both quote the SSH-lane provenance and the wrap-at-consumer
+   contract verbatim.
+
+4. **Tests are shape-agnostic.**
+   - `tests/v11/infrastructure/executor/ssh/sshBubbleApprovalCommand.test.ts`
+     + `sshBubbleCommitCommand.test.ts` +
+     `sshBubbleCommitContinuityImportCommand.test.ts` pin via
+     `toMatchObject({ state: { state: "X" } })` literals on the
+     lifecycle-enum field. Neither imports
+     `PersistedBubbleStateSnapshot` nor `BubbleStateSnapshot` as
+     a type. The variant projection preserves the
+     `.state` discriminator, so these expectations survive the
+     flip without edit.
+
+**Decision (recorded 2026-05-13):**
+
+**No standalone SSH boundary batch is scheduled before Step 4b-γ.
+The SSH lane is absorbed by the 4b-γ canonical-parser flip.**
+
+Rationale:
+
+1. **Single boundary, single flip.** Both state-bearing SSH
+   parsers route through `assertParsedBubbleStateSnapshot` from
+   `domain/state/stateSchema.ts` — the same canonical parser
+   that Step 4b-γ flips to return the variant. Migrating the
+   SSH lane separately would require duplicating that projection
+   inside two SSH helpers, only to dissolve those projections
+   when the canonical parser switches.
+
+2. **Wrap-at-consumer becomes identity, not edited.** After the
+   parser flip, the 8 application-side
+   `buildBubbleStateSnapshotVariant(routed.state |
+   remoteResult.state)` wrap sites become identity no-ops by
+   construction. They are removed in the same 4b-γ commit as the
+   parser flip, alongside deletion of the 2 cross-batch border
+   comments. Migrating SSH first would force this cleanup to land
+   in two separate commits (SSH batch + parser-flip batch) with no
+   intermediate green-state benefit.
+
+3. **Validation helpers are pass-through.** The structural
+   passivity of `sshBubbleApprovalValidationHelpers.ts` means the
+   parser flip transparently lifts its input type from
+   `PersistedBubbleStateSnapshot` to the variant without code
+   change. There is no internal cluster cascade comparable to the
+   metaReviewGate apply-context hub (§10.13 observation 3).
+
+4. **Tests confirm flip-safety.** All SSH test files use
+   `toMatchObject` with plain `state.state` enum literals, so
+   the parser-flip will leave them green without fixture edits.
+   This is the inverse of the metaReviewGate cascade where 38
+   fixture sites required bulk replacement.
+
+**Forward implication:**
+
+The SSH-lane scope folded into Step 4b-γ is now bounded:
+- 2 SSH parser-result interface type sites (approval, commit) —
+  inherited variant via canonical parser flip, no manual edit.
+- 8 application-side `buildBubbleStateSnapshotVariant` wrap-site
+  deletions (6 approval, 2 commit) in the same 4b-γ commit.
+- 2 cross-batch border comments deleted (approval port +
+  commit shared port).
+- 1 transitional parser API removed
+  (`parseDomainBubbleStateSnapshot` in
+  `domain/state/stateSchema.ts:117`).
+
+This SSH-absorbed work does **not** expand the Step 4b-γ scope
+inventory recorded in §12 — it co-locates with the parser-flip
+commit itself. The InspectedStateSnapshot read-port boundary
+(per §10.13 observation 2) and the domain-helper migrations
+(per §10.13 forward implication) remain the only 4b-γ surfaces
+that may require independent scope decisions during planning.
+
+**Recorded:** 2026-05-13.
+
+---
+
 ## 11. Non-goals
 
 - **Renaming `BubbleLifecycleState` values** (e.g., `RUNNING` →
@@ -1379,7 +1512,9 @@ This manifest is **settled** as of 2026-05-13 (revising the
 not-implemented per §10.11; lane transitivity and shared-boundary
 batch unit are recorded per §10.12; scope-split cascade evidence
 + resume/list closure + metaReviewGate single-batch realization
-are recorded per §10.13). All §10 decisions are locked. Steps 2,
+are recorded per §10.13; the SSH boundary review is closed
+without a standalone batch and absorbed into the 4b-γ
+parser-flip per §10.14). All §10 decisions are locked. Steps 2,
 3, 4.0, 4a, and 4b-α are complete (commits 935eefec → 43dec6b0
 → b6998a27 → a3ae830a → 0ce0ddc9; see §7 status column).
 Step 4b-β has seventeen green increments landed (2ab700ba →
@@ -1393,16 +1528,31 @@ result, commit, merge, create, and metaReviewGate. Resume lane
 is closed transitively via reply (Step 4b-β/9); list lane is
 intentionally skipped (read-only projection over shared inspect
 port — out of variant-migration scope per §10.13). The Step
-4b-β per-lane wave is **considered closed**; remaining
-persisted-state surfaces (SSH command parsers under
-`infrastructure/executor/ssh/`, the shared
-`InspectedStateSnapshot` read port, and domain helpers in
-`domain/metaReviewGate/` + `domain/state/rework/` +
-`domain/state/machine.ts`) are deferred to Step 4b-γ per §10.13.
-Remaining Step 4 sequence: 4b-γ (terminal: SSH/inspect boundary
-review or explicit deferral + domain-helper migration + test
-fixture migration + canonical parser switch to the variant
-union + transitional API removal — mandatory program endpoint
-per §10.10) → 5 (test mirror cleanup) → 6 (doc sync). Further
-deviations during execution require an amendment to this document
-in the same commit that introduces them.
+4b-β per-lane wave is **considered closed**.
+
+Remaining persisted-state surfaces and their 4b-γ disposition:
+- **SSH command parsers under
+  `infrastructure/executor/ssh/`** — no standalone batch; the
+  SSH lane (approval + commit parsers, 8 application-side wrap
+  sites, 2 cross-batch border comments) is absorbed by the
+  4b-γ canonical-parser flip per §10.14. Tests are flip-safe
+  via shape-agnostic `toMatchObject` literals.
+- **Shared `InspectedStateSnapshot` read port** (list / status
+  / start) — per §10.13 observation 2, may require an
+  independent scope decision during 4b-γ planning (boundary
+  batch analogue of the §10.12 UI projection adapter cleanup).
+- **Domain helpers** in `domain/metaReviewGate/` +
+  `domain/state/rework/` + `domain/state/machine.ts` — per
+  §10.13 forward implication, migrated as part of the 4b-γ
+  parser flip; the variant union becomes the canonical input
+  type and the `toPersistedSnapshot` + rebuild ceremony
+  drops out.
+
+Remaining Step 4 sequence: 4b-γ (terminal: canonical parser
+switch to the variant union + SSH parser/wrap/border cleanup
+[co-located, per §10.14] + InspectedStateSnapshot disposition
++ domain-helper migration + test fixture migration +
+transitional API removal — mandatory program endpoint per
+§10.10) → 5 (test mirror cleanup) → 6 (doc sync). Further
+deviations during execution require an amendment to this
+document in the same commit that introduces them.
