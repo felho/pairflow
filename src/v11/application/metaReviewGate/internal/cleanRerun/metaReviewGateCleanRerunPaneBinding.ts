@@ -1,4 +1,4 @@
-import type { LoadedStateSnapshot } from "../../../../ports/stateSnapshots.js";
+import type { LoadedDomainStateSnapshot } from "../../../../ports/stateSnapshots.js";
 import {
   appendDeactivateTelemetry,
   buildCleanRerunRuntimeDelivery,
@@ -15,7 +15,7 @@ import type { MetaReviewGateResult } from "../../../../shared/metaReviewGate/met
 import { DEFAULT_ROLE_MCP_POLICY_BY_ROLE } from "../../../../../config/defaults.js";
 
 function isMetaReviewGateResult(
-  value: LoadedStateSnapshot | MetaReviewGateResult
+  value: LoadedDomainStateSnapshot | MetaReviewGateResult
 ): value is MetaReviewGateResult {
   return "route" in value;
 }
@@ -25,7 +25,7 @@ export async function resolveCleanRerunPaneBinding(input: {
     finalizeInput: CleanRerunDeliveryCapableInput;
   };
   kickoffResult: MetaReviewGateResult;
-  metaReviewRunningState: LoadedStateSnapshot;
+  metaReviewRunningState: LoadedDomainStateSnapshot;
 }): Promise<MetaReviewPaneWarningResult | MetaReviewGateResult> {
   const finalizeInput = input.routeInput.finalizeInput;
   try {

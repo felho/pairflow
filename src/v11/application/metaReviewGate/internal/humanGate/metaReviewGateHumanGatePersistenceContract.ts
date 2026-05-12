@@ -1,7 +1,7 @@
 import type { MetaReviewRecommendation } from "../../../../shared/metaReview/metaReviewTypes.js";
 import type {
-  LoadedStateSnapshot,
-  WriteStateSnapshotPort
+  LoadedDomainStateSnapshot,
+  WriteDomainStateSnapshotPort
 } from "../../../../ports/stateSnapshots.js";
 import type { AgentName } from "../../../../../contracts/kernel/agentIdentity.js";
 import type { PersistedBubbleStateSnapshot } from "../../../../domain/state/snapshot/persistedBubbleStateSnapshot.js";
@@ -16,7 +16,7 @@ import type { MetaReviewGateAdvisoryFinding } from "../../../../domain/metaRevie
 
 export interface PersistHumanGateRouteInput {
   appendEnvelope: AppendProtocolEnvelopePort;
-  writeState: WriteStateSnapshotPort;
+  writeState: WriteDomainStateSnapshotPort;
   statePath: string;
   transcriptPath: string;
   inboxPath: string;
@@ -27,7 +27,7 @@ export interface PersistHumanGateRouteInput {
   summary: string;
   refs: string[];
   metaReviewerAgent: AgentName;
-  loaded: LoadedStateSnapshot;
+  loaded: LoadedDomainStateSnapshot;
   expectedState: PersistedBubbleStateSnapshot["state"];
   route: MetaReviewGateRoute;
   metaReviewRun?: MetaReviewResult;

@@ -1,16 +1,18 @@
-import type { LoadedStateSnapshot } from "../../../../ports/stateSnapshots.js";
+import type { LoadedDomainStateSnapshot } from "../../../../ports/stateSnapshots.js";
 import { appendMetaReviewKickoffEnvelope, stageMetaReviewRunningState } from "../apply/metaReviewGateApplyHelpers.js";
 import { buildCleanRerunDispatchFailureRollbackState } from "./metaReviewGateCleanRerunFailureState.js";
 import type { RouteCleanMetaReviewRerunInput } from "./metaReviewGateCleanRerunContract.js";
 import { persistDispatchFailedHumanRoute } from "../currentRun/routePersistence.js";
 import { buildGateLockPath } from "../state/metaReviewGateShared.js";
 import { setMetaReviewConsecutiveCleanRuns } from "../../../../domain/metaReviewGate/snapshotState.js";
+import { buildBubbleStateSnapshotVariant } from "../../../../domain/state/snapshot/buildBubbleStateSnapshot.js";
+import { toPersistedSnapshot } from "../../../../domain/state/snapshot/projection.js";
 import type { MetaReviewGateResult } from "../../../../shared/metaReviewGate/metaReviewGateResultContract.js";
 
 export function failCleanRerunClosed(input: {
   routeInput: RouteCleanMetaReviewRerunInput;
   fallbackReason: string;
-  loaded: LoadedStateSnapshot;
+  loaded: LoadedDomainStateSnapshot;
 }): Promise<MetaReviewGateResult> {
   return persistDispatchFailedHumanRoute({
     finalizeInput: input.routeInput.finalizeInput,
@@ -20,20 +22,23 @@ export function failCleanRerunClosed(input: {
     parityMetadata: input.routeInput.parityMetadata,
     fallbackReason: input.fallbackReason,
     rollbackStateOnAppendFailure: buildCleanRerunDispatchFailureRollbackState(
-      input.loaded.state
+      toPersistedSnapshot(input.loaded.state)
     )
   });
 }
 
 export async function stageCleanRerunRunningState(
   input: RouteCleanMetaReviewRerunInput
-): Promise<LoadedStateSnapshot | MetaReviewGateResult> {
+): Promise<LoadedDomainStateSnapshot | MetaReviewGateResult> {
   const finalizeInput = input.finalizeInput;
-  const loadedWithUpdatedStreak: LoadedStateSnapshot = {
+  // setMetaReviewConsecutiveCleanRuns is still persisted-shape (later batch).
+  const loadedWithUpdatedStreak: LoadedDomainStateSnapshot = {
     ...finalizeInput.loaded,
-    state: setMetaReviewConsecutiveCleanRuns(
-      finalizeInput.loaded.state,
-      input.updatedStreak
+    state: buildBubbleStateSnapshotVariant(
+      setMetaReviewConsecutiveCleanRuns(
+        toPersistedSnapshot(finalizeInput.loaded.state),
+        input.updatedStreak
+      )
     )
   };
 
@@ -61,7 +66,7 @@ export async function stageCleanRerunRunningState(
 
 export async function appendCleanRerunKickoff(input: {
   routeInput: RouteCleanMetaReviewRerunInput;
-  metaReviewRunningState: LoadedStateSnapshot;
+  metaReviewRunningState: LoadedDomainStateSnapshot;
 }): Promise<MetaReviewGateResult> {
   const finalizeInput = input.routeInput.finalizeInput;
   const handoffId =

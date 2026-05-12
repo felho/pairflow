@@ -5,6 +5,7 @@ import {
   writeAutoReworkResumedState
 } from "./metaReviewGateAutoReworkPersistence.js";
 import type { DispatchAutoReworkInput } from "./metaReviewGateAutoReworkContract.js";
+import { toPersistedSnapshot } from "../../../../domain/state/snapshot/projection.js";
 import type { MetaReviewGateResult } from "../../../../shared/metaReviewGate/metaReviewGateResultContract.js";
 
 export async function dispatchAutoRework(
@@ -20,11 +21,21 @@ export async function dispatchAutoRework(
       parityMetadata: input.parityMetadata,
       fallbackReason:
         "META_REVIEW_GATE_REWORK_DISPATCH_FAILED: missing rework target message for autonomous dispatch",
-      rollbackStateOnAppendFailure: input.finalizeInput.loaded.state
+      // rollbackStateOnAppendFailure is persisted-shape (later batch);
+      // project at the boundary.
+      rollbackStateOnAppendFailure: toPersistedSnapshot(input.finalizeInput.loaded.state)
     });
   }
 
-  const { resumed, nowIso } = buildAutoReworkResumedState(input.finalizeInput);
+  // buildAutoReworkResumedState consumes persisted shape (later batch);
+  // project at the boundary.
+  const { resumed, nowIso } = buildAutoReworkResumedState({
+    ...input.finalizeInput,
+    loaded: {
+      ...input.finalizeInput.loaded,
+      state: toPersistedSnapshot(input.finalizeInput.loaded.state)
+    }
+  });
   const resumedWritten = await writeAutoReworkResumedState({
     finalizeInput: input.finalizeInput,
     resumed
@@ -62,7 +73,9 @@ export async function dispatchAutoRework(
       parityMetadata: input.parityMetadata,
       fallbackReason:
         `META_REVIEW_GATE_REWORK_DISPATCH_FAILED: append_error=${appendReason}`,
-      rollbackStateOnAppendFailure: readyLoaded.state
+      // rollbackStateOnAppendFailure is persisted-shape (later batch);
+      // project at the boundary.
+      rollbackStateOnAppendFailure: toPersistedSnapshot(readyLoaded.state)
     });
   }
 }

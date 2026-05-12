@@ -12,7 +12,9 @@ import {
 } from "../../../../../../src/v11/application/metaReview/internal/submit/authority.js";
 import { MetaReviewError } from "../../../../../../src/v11/shared/metaReview/metaReviewError.js";
 import type { MetaReviewResult } from "../../../../../../src/v11/shared/metaReview/metaReviewTypes.js";
-import type { LoadedStateSnapshot } from "../../../../../../src/v11/ports/stateSnapshots.js";
+import type { LoadedDomainStateSnapshot } from "../../../../../../src/v11/ports/stateSnapshots.js";
+import { buildBubbleStateSnapshotVariant } from "../../../../../../src/v11/domain/state/snapshot/buildBubbleStateSnapshot.js";
+import { toPersistedSnapshot } from "../../../../../../src/v11/domain/state/snapshot/projection.js";
 import type { PersistedBubbleStateSnapshot } from "../../../../../../src/v11/domain/state/snapshot/persistedBubbleStateSnapshot.js";
 import type { ProtocolEnvelope } from "../../../../../../src/types/protocol.js";
 
@@ -24,7 +26,7 @@ afterEach(async () => {
   );
 });
 
-function createLoadedRunningState(): LoadedStateSnapshot {
+function createLoadedRunningState(): LoadedDomainStateSnapshot {
   const state: PersistedBubbleStateSnapshot = {
     bubble_id: "b_meta_gate_finalize_threshold_01",
     state: "RUNNING",
@@ -71,7 +73,7 @@ function createLoadedRunningState(): LoadedStateSnapshot {
 
   return {
     fingerprint: "loaded-fingerprint",
-    state
+    state: buildBubbleStateSnapshotVariant(state)
   };
 }
 
@@ -216,7 +218,7 @@ function createWriteStateStub(events?: string[]): {
 function createCleanRerunDeliveryStubs(input: {
   envelopes: ProtocolEnvelope[];
   writes: PersistedBubbleStateSnapshot[];
-  fallbackLoaded: LoadedStateSnapshot;
+  fallbackLoaded: LoadedDomainStateSnapshot;
   events?: string[];
 }): {
   paneBindingActiveCalls: boolean[];
@@ -236,10 +238,16 @@ function createCleanRerunDeliveryStubs(input: {
   const paneBindingActiveCalls: boolean[] = [];
   return {
     paneBindingActiveCalls,
-    readState: async () => ({
-      fingerprint: `written-${input.writes.length}`,
-      state: input.writes.at(-1) ?? input.fallbackLoaded.state
-    }),
+    readState: async () => {
+      const latestWrite = input.writes.at(-1);
+      return {
+        fingerprint: `written-${input.writes.length}`,
+        state:
+          latestWrite !== undefined
+            ? buildBubbleStateSnapshotVariant(latestWrite)
+            : input.fallbackLoaded.state
+      };
+    },
     readTranscript: async () => input.envelopes,
     setMetaReviewerPane: async ({ active }) => {
       input.events?.push(`pane_active_${String(active)}`);
@@ -1885,18 +1893,18 @@ describe("runCurrentRunMetaReviewGateFinalization", () => {
       readTranscript: delivery.readTranscript,
       writeState: async (_path, state) => {
         writeAttempt += 1;
-        const writtenState: PersistedBubbleStateSnapshot =
+        const writtenState =
           writeAttempt === 1 && state.meta_review !== undefined
-            ? {
-                ...state,
+            ? buildBubbleStateSnapshotVariant({
+                ...toPersistedSnapshot(state),
                 execution_context: null,
                 meta_review: {
                   ...state.meta_review,
                   execution_context: null
                 }
-              }
+              })
             : state;
-        writes.push(writtenState);
+        writes.push(toPersistedSnapshot(writtenState));
         return {
           fingerprint: `written-${writes.length}`,
           state: writtenState
@@ -1977,8 +1985,8 @@ describe("runCurrentRunMetaReviewGateFinalization", () => {
         ) {
           const stagedMetaReview = state.meta_review;
           const stagedContext = stagedMetaReview.execution_context ?? null;
-          const stagedState: PersistedBubbleStateSnapshot = {
-            ...state,
+          const stagedPersisted: PersistedBubbleStateSnapshot = {
+            ...toPersistedSnapshot(state),
             meta_review: {
               ...stagedMetaReview,
               get execution_context() {
@@ -1987,13 +1995,13 @@ describe("runCurrentRunMetaReviewGateFinalization", () => {
               }
             }
           };
-          writes.push(stagedState);
+          writes.push(stagedPersisted);
           return {
             fingerprint: `written-${writes.length}`,
-            state: stagedState
+            state: buildBubbleStateSnapshotVariant(stagedPersisted)
           };
         }
-        writes.push(state);
+        writes.push(toPersistedSnapshot(state));
         return {
           fingerprint: `written-${writes.length}`,
           state
@@ -2603,14 +2611,14 @@ describe("runCurrentRunMetaReviewGateFinalization", () => {
         writeAttempt += 1;
         const writtenState =
           writeAttempt === 2
-            ? {
-                ...state,
+            ? buildBubbleStateSnapshotVariant({
+                ...toPersistedSnapshot(state),
                 state: "READY_FOR_HUMAN_APPROVAL" as const,
                 active_role: null,
                 active_agent: null
-              }
+              })
             : state;
-        writes.push(writtenState);
+        writes.push(toPersistedSnapshot(writtenState));
         return {
           fingerprint: `written-${writes.length}`,
           state: writtenState

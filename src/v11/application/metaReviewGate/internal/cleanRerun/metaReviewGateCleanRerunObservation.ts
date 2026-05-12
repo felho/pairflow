@@ -1,4 +1,4 @@
-import type { LoadedStateSnapshot } from "../../../../ports/stateSnapshots.js";
+import type { LoadedDomainStateSnapshot } from "../../../../ports/stateSnapshots.js";
 import type { BubbleMetaReviewRuntimeDeliveryState } from "../../../../shared/metaReview/metaReviewSnapshotTypes.js";
 import { reconcileObservedGateResult } from "../apply/metaReviewGateApplyObservation.js";
 import { persistRuntimeDeliveryObservation } from "../apply/metaReviewGateApplyPersistence.js";
@@ -15,9 +15,9 @@ export async function persistCleanRerunDeliveryObservation(input: {
     finalizeInput: CleanRerunDeliveryCapableInput;
   };
   kickoffResult: MetaReviewGateResult;
-  metaReviewRunningState: LoadedStateSnapshot;
+  metaReviewRunningState: LoadedDomainStateSnapshot;
   delivery: BubbleMetaReviewRuntimeDeliveryState;
-}): Promise<LoadedStateSnapshot | MetaReviewGateResult> {
+}): Promise<LoadedDomainStateSnapshot | MetaReviewGateResult> {
   const finalizeInput = input.routeInput.finalizeInput;
   try {
     return await persistRuntimeDeliveryObservation({
@@ -55,7 +55,7 @@ export async function reconcileCleanRerunObservedResult(input: {
     finalizeInput: CleanRerunDeliveryCapableInput;
   };
   kickoffResult: MetaReviewGateResult;
-  observedState: LoadedStateSnapshot;
+  observedState: LoadedDomainStateSnapshot;
 }): Promise<MetaReviewGateResult> {
   const finalizeInput = input.routeInput.finalizeInput;
   try {

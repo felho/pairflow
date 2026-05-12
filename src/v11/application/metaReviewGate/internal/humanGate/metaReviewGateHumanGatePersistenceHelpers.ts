@@ -1,10 +1,10 @@
 import type { MetaReviewRecommendation } from "../../../../shared/metaReview/metaReviewTypes.js";
 import { appendHumanApprovalRequestEnvelope } from "./approvalRequestEnvelope.js";
 import {
-  type WriteStateSnapshotPort
+  type WriteDomainStateSnapshotPort
 } from "../../../../ports/stateSnapshots.js";
 import type { AgentName } from "../../../../../contracts/kernel/agentIdentity.js";
-import type { PersistedBubbleStateSnapshot } from "../../../../domain/state/snapshot/persistedBubbleStateSnapshot.js";
+import type { BubbleStateSnapshot } from "../../../../domain/state/snapshot/bubbleStateSnapshot.js";
 import type { FindingsParityMetadata } from "../../../../../types/protocol.js";
 import type {
   AppendProtocolEnvelopePort,
@@ -25,9 +25,9 @@ export const metaReviewGateRollbackTransitionInvalidReasonCode =
   "META_REVIEW_GATE_ROLLBACK_TRANSITION_INVALID";
 
 export interface ResolveRollbackAfterGateAppendFailureInput {
-  writeState: WriteStateSnapshotPort;
+  writeState: WriteDomainStateSnapshotPort;
   statePath: string;
-  rollbackState: PersistedBubbleStateSnapshot;
+  rollbackState: BubbleStateSnapshot;
   expectedFingerprint: string;
   expectedState: "READY_FOR_HUMAN_APPROVAL" | "RUNNING";
 }

@@ -4,13 +4,14 @@ import { reconcileObservedGateResult } from "../../../../../../src/v11/applicati
 import type { ApplyMetaReviewGateExecutionContext } from "../../../../../../src/v11/application/metaReviewGate/internal/apply/metaReviewGateApplyContext.js";
 import { getBubblePaths } from "../../../../../../src/v11/shared/bubble/bubblePaths.js";
 import type { MetaReviewRuntimeDeliveryObservation } from "../../../../../../src/v11/shared/metaReviewGate/index.js";
-import type { LoadedStateSnapshot } from "../../../../../../src/v11/ports/stateSnapshots.js";
+import type { LoadedDomainStateSnapshot } from "../../../../../../src/v11/ports/stateSnapshots.js";
+import { buildBubbleStateSnapshotVariant } from "../../../../../../src/v11/domain/state/snapshot/buildBubbleStateSnapshot.js";
 import type { ProtocolEnvelope } from "../../../../../../src/types/protocol.js";
 
-function createObservedReadyState(round: number): LoadedStateSnapshot {
+function createObservedReadyState(round: number): LoadedDomainStateSnapshot {
   return {
     fingerprint: `fp-${round}`,
-    state: {
+    state: buildBubbleStateSnapshotVariant({
       bubble_id: "b_meta_gate_apply_observation_01",
       state: "READY_FOR_HUMAN_APPROVAL",
       round,
@@ -28,7 +29,7 @@ function createObservedReadyState(round: number): LoadedStateSnapshot {
         sticky_human_gate: true,
         consecutive_clean_runs: 0,
       }
-    }
+    })
   };
 }
 

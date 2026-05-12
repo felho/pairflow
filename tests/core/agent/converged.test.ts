@@ -17,6 +17,7 @@ import { renderBubbleConfigToml } from "../../../src/config/bubbleConfig.js";
 import { createBubble } from "../../../src/v11/defaults/create/createBubbleApi.js";
 import { IDEATION_CONVERGED_BLOCKED } from "../../../src/v11/shared/ideation/ideationReasonCodes.js";
 import { applyMetaReviewGateOnConvergence } from "../../../src/v11/defaults/metaReviewGate/metaReviewGateApi.js";
+import { buildBubbleStateSnapshotVariant } from "../../../src/v11/domain/state/snapshot/buildBubbleStateSnapshot.js";
 import {
   appendProtocolEnvelope,
   readTranscriptEnvelopes
@@ -457,14 +458,14 @@ describe("emitConvergedFromWorkspace", () => {
             },
             refs: []
           },
-          state: {
+          state: buildBubbleStateSnapshotVariant({
             ...loaded.state,
             state: "READY_FOR_HUMAN_APPROVAL",
             active_agent: null,
             active_role: null,
             active_since: null,
             last_command_at: "2026-02-22T09:04:00.000Z"
-          }
+          })
         }),
       }
     );
@@ -530,7 +531,7 @@ describe("emitConvergedFromWorkspace", () => {
             },
             refs: []
           },
-          state: {
+          state: buildBubbleStateSnapshotVariant({
             ...loaded.state,
             state: "RUNNING",
             round: loaded.state.round + 1,
@@ -538,7 +539,7 @@ describe("emitConvergedFromWorkspace", () => {
             active_role: "implementer",
             active_since: "2026-02-22T09:04:30.000Z",
             last_command_at: "2026-02-22T09:04:30.000Z"
-          }
+          })
         }),
         emitDeliveryNotificationAck: (input) => {
           deliveries.push(input.envelope.recipient);
@@ -648,14 +649,14 @@ describe("emitConvergedFromWorkspace", () => {
             },
             refs: []
           },
-          state: {
+          state: buildBubbleStateSnapshotVariant({
             ...loaded.state,
             state: "READY_FOR_HUMAN_APPROVAL",
             active_agent: null,
             active_role: null,
             active_since: null,
             last_command_at: "2026-02-22T09:10:20.000Z"
-          }
+          })
         }),
         emitDeliveryNotificationAck: async () => ({
           status: "accepted",
@@ -723,7 +724,7 @@ describe("emitConvergedFromWorkspace", () => {
             },
             refs: []
           },
-          state: {
+          state: buildBubbleStateSnapshotVariant({
             ...loaded.state,
             state: "RUNNING",
             round: loaded.state.round + 1,
@@ -731,7 +732,7 @@ describe("emitConvergedFromWorkspace", () => {
             active_role: "implementer",
             active_since: "2026-02-22T09:04:31.000Z",
             last_command_at: "2026-02-22T09:04:31.000Z"
-          }
+          })
         }),
         emitDeliveryNotificationAck: (input) => {
           calls.push({

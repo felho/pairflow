@@ -1,7 +1,7 @@
 import type { AppendProtocolEnvelopePort } from "../../../../ports/transcript.js";
 import type {
-  LoadedStateSnapshot,
-  WriteStateSnapshotPort
+  LoadedDomainStateSnapshot,
+  WriteDomainStateSnapshotPort
 } from "../../../../ports/stateSnapshots.js";
 import type { AgentName } from "../../../../../contracts/kernel/agentIdentity.js";
 import type { PersistedBubbleStateSnapshot } from "../../../../domain/state/snapshot/persistedBubbleStateSnapshot.js";
@@ -28,15 +28,15 @@ export interface AutoReworkFinalizeInput {
       transcriptPath: string;
     };
   };
-  loaded: LoadedStateSnapshot;
+  loaded: LoadedDomainStateSnapshot;
   now: Date;
   refs: string[];
   appendEnvelope: AppendProtocolEnvelopePort;
-  writeState: WriteStateSnapshotPort;
+  writeState: WriteDomainStateSnapshotPort;
 }
 
 export interface PersistDispatchFailedHumanRouteInput {
-  loaded: LoadedStateSnapshot;
+  loaded: LoadedDomainStateSnapshot;
   expectedState: PersistedBubbleStateSnapshot["state"];
   runResultForRouting: MetaReviewResult;
   parityMetadata: FindingsParityMetadata | null;

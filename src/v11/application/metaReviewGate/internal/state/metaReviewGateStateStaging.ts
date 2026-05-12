@@ -2,10 +2,12 @@ import { buildMetaReviewExecutionContext } from "../../../../shared/metaReview/m
 import { clearLiveMetaReviewSnapshot } from "../../../../shared/metaReview/metaReviewSnapshot.js";
 import { metaReviewExecutionContextToRunningContext } from "../../../../domain/state/execution/executionContext.js";
 import {
-  type LoadedStateSnapshot,
-  type WriteStateSnapshotPort
+  type LoadedDomainStateSnapshot,
+  type WriteDomainStateSnapshotPort
 } from "../../../../ports/stateSnapshots.js";
 import type { AgentName } from "../../../../../contracts/kernel/agentIdentity.js";
+import { buildBubbleStateSnapshotVariant } from "../../../../domain/state/snapshot/buildBubbleStateSnapshot.js";
+import { toPersistedSnapshot } from "../../../../domain/state/snapshot/projection.js";
 import type { PersistedBubbleStateSnapshot } from "../../../../domain/state/snapshot/persistedBubbleStateSnapshot.js";
 import { toMetaReviewGateError } from "../../../../shared/metaReviewGate/metaReviewGateErrorConversion.js";
 import { MetaReviewGateError } from "../../../../shared/metaReviewGate/metaReviewGateRouteContract.js";
@@ -28,31 +30,35 @@ export function throwMetaReviewRunningStageFailure(input: {
 
 export async function stageMetaReviewRunningState(input: {
   bubbleId: string;
-  loadedRunning: LoadedStateSnapshot;
+  loadedRunning: LoadedDomainStateSnapshot;
   metaReviewerAgent: AgentName;
   nowIso: string;
   watchdogTimeoutMinutes: number;
   statePath: string;
-  writeState: WriteStateSnapshotPort;
-}): Promise<LoadedStateSnapshot> {
+  writeState: WriteDomainStateSnapshotPort;
+}): Promise<LoadedDomainStateSnapshot> {
+  // Project the variant input to persisted shape for the existing object
+  // spread / mutation helpers (later batch); rebuild the variant for the
+  // Domain write port.
+  const loadedRunningPersisted = toPersistedSnapshot(input.loadedRunning.state);
   const normalizedMetaReview = normalizeMetaReviewSnapshot(
-    input.loadedRunning.state.meta_review
+    loadedRunningPersisted.meta_review
   );
   const previousMetaReview = clearLiveMetaReviewSnapshot(
-    input.loadedRunning.state.meta_review
+    loadedRunningPersisted.meta_review
   );
   const attempt =
     (normalizedMetaReview.execution_context?.attempt
       ?? normalizedMetaReview.auto_rework_count) + 1;
   const metaReviewExecutionContext = buildMetaReviewExecutionContext({
     bubbleId: input.bubbleId,
-    round: input.loadedRunning.state.round,
+    round: loadedRunningPersisted.round,
     startedAt: input.nowIso,
     watchdogTimeoutMinutes: input.watchdogTimeoutMinutes,
     attempt
   });
   const nextState: PersistedBubbleStateSnapshot = {
-    ...input.loadedRunning.state,
+    ...loadedRunningPersisted,
     state: "RUNNING" as const,
     active_agent: input.metaReviewerAgent,
     active_role: "meta_reviewer" as const,
@@ -67,7 +73,7 @@ export async function stageMetaReviewRunningState(input: {
     metaReviewExecutionContextToRunningContext(metaReviewExecutionContext);
   return input.writeState(
     input.statePath,
-    nextState,
+    buildBubbleStateSnapshotVariant(nextState),
     {
       expectedFingerprint: input.loadedRunning.fingerprint,
       expectedState: "RUNNING"

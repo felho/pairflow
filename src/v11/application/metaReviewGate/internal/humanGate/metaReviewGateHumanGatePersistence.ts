@@ -1,7 +1,9 @@
-import type { LoadedStateSnapshot } from "../../../../ports/stateSnapshots.js";
+import type { LoadedDomainStateSnapshot } from "../../../../ports/stateSnapshots.js";
 import type { AppendProtocolEnvelopeResult } from "../../../../ports/transcript.js";
 import { MetaReviewGateError } from "../../../../shared/metaReviewGate/metaReviewGateRouteContract.js";
 import type { MetaReviewGateResult } from "../../../../shared/metaReviewGate/metaReviewGateResultContract.js";
+import { buildBubbleStateSnapshotVariant } from "../../../../domain/state/snapshot/buildBubbleStateSnapshot.js";
+import { toPersistedSnapshot } from "../../../../domain/state/snapshot/projection.js";
 import { transitionToGateState } from "../state/metaReviewGateStateHelpers.js";
 import {
   resolveDefaultStickyHumanGateForRoute
@@ -62,8 +64,11 @@ export async function persistHumanGateRoute(
   const targetState = input.targetState ?? "READY_FOR_HUMAN_APPROVAL";
   const stickyHumanGate =
     input.stickyHumanGate ?? resolveDefaultStickyHumanGateForRoute(input.route);
-  const nextState = transitionToGateState({
-    current: input.loaded.state,
+  // transitionToGateState (and downstream helpers) still consume persisted
+  // shape (later batch); project at the boundary and rebuild the variant
+  // for the write port.
+  const nextStatePersisted = transitionToGateState({
+    current: toPersistedSnapshot(input.loaded.state),
     nowIso: input.nowIso,
     targetState,
     stickyHumanGate,
@@ -71,6 +76,7 @@ export async function persistHumanGateRoute(
       ? { consecutiveCleanRuns: input.consecutiveCleanRuns }
       : {})
   });
+  const nextState = buildBubbleStateSnapshotVariant(nextStatePersisted);
 
   const recommendation = resolveHumanGateRecommendation({
     ...(input.metaReviewRun !== undefined ? { metaReviewRun: input.metaReviewRun } : {}),
@@ -81,7 +87,7 @@ export async function persistHumanGateRoute(
   const advisoryFindings =
     input.findings ??
     resolveAdvisoryFindingsFromReportJson(input.metaReviewRun?.report_json);
-  let written: LoadedStateSnapshot;
+  let written: LoadedDomainStateSnapshot;
   try {
     written = await input.writeState(input.statePath, nextState, {
       expectedFingerprint: input.loaded.fingerprint,
@@ -108,7 +114,13 @@ export async function persistHumanGateRoute(
     });
   } catch (error) {
     const reason = error instanceof Error ? error.message : String(error);
-    const rollbackState = input.rollbackStateOnAppendFailure ?? input.loaded.state;
+    // rollbackStateOnAppendFailure is still persisted-shape (later batch);
+    // wrap as variant so the Domain write port accepts it. loaded.state is
+    // already variant.
+    const rollbackState =
+      input.rollbackStateOnAppendFailure !== undefined
+        ? buildBubbleStateSnapshotVariant(input.rollbackStateOnAppendFailure)
+        : input.loaded.state;
     const rollbackResult = await resolveRollbackAfterGateAppendFailure({
       writeState: input.writeState,
       statePath: input.statePath,

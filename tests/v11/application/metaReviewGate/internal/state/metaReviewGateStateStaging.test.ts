@@ -1,15 +1,18 @@
 import { describe, expect, it } from "vitest";
 
 import { stageMetaReviewRunningState } from "../../../../../../src/v11/application/metaReviewGate/internal/state/metaReviewGateStateStaging.js";
-import type { LoadedStateSnapshot } from "../../../../../../src/v11/infrastructure/state/stateStore.js";
+import type { LoadedDomainStateSnapshot } from "../../../../../../src/v11/ports/stateSnapshots.js";
+import type { BubbleStateSnapshot } from "../../../../../../src/v11/domain/state/snapshot/bubbleStateSnapshot.js";
+import { buildBubbleStateSnapshotVariant } from "../../../../../../src/v11/domain/state/snapshot/buildBubbleStateSnapshot.js";
+import { toPersistedSnapshot } from "../../../../../../src/v11/domain/state/snapshot/projection.js";
 import type { PersistedBubbleStateSnapshot } from "../../../../../../src/v11/domain/state/snapshot/persistedBubbleStateSnapshot.js";
 
 function createLoadedRunningState(
   partial: Partial<PersistedBubbleStateSnapshot> = {}
-): LoadedStateSnapshot {
+): LoadedDomainStateSnapshot {
   return {
     fingerprint: "ready-fingerprint",
-    state: {
+    state: buildBubbleStateSnapshotVariant({
       bubble_id: "b_meta_gate_stage_01",
       state: "RUNNING",
       round: 4,
@@ -34,7 +37,7 @@ function createLoadedRunningState(
         consecutive_clean_runs: 0,
       },
       ...partial
-    }
+    })
   };
 }
 
@@ -46,10 +49,12 @@ describe("stageMetaReviewRunningState", () => {
     }> = [];
     const writeState = async (
       _statePath: string,
-      state: PersistedBubbleStateSnapshot,
+      state: BubbleStateSnapshot,
       options: { expectedFingerprint?: string; expectedState?: string } = {}
-    ): Promise<LoadedStateSnapshot> => {
-      calls.push({ state, options });
+    ): Promise<LoadedDomainStateSnapshot> => {
+      // Push persisted shape so existing field-by-field assertions are
+      // unaffected; the variant flows back out through the Domain port.
+      calls.push({ state: toPersistedSnapshot(state), options });
       return {
         fingerprint: "next-fingerprint",
         state
@@ -107,7 +112,7 @@ describe("stageMetaReviewRunningState", () => {
       writeState: async (
         _statePath,
         state
-      ): Promise<LoadedStateSnapshot> => ({
+      ): Promise<LoadedDomainStateSnapshot> => ({
         fingerprint: "next-fingerprint",
         state
       })

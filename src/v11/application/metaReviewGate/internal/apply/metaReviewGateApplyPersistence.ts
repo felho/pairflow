@@ -1,12 +1,18 @@
-import type { LoadedStateSnapshot } from "../../../../ports/stateSnapshots.js";
+import type {
+  LoadedDomainStateSnapshot,
+  ReadDomainStateSnapshotPort,
+  WriteDomainStateSnapshotPort
+} from "../../../../ports/stateSnapshots.js";
 import { isMetaReviewExecutionContextActiveState } from "../../../../shared/metaReview/metaReviewExecutionContext.js";
 import { resolveActiveMetaReviewRuntimeDelivery } from "../../../../shared/metaReview/metaReviewSnapshot.js";
 import type { BubbleMetaReviewRuntimeDeliveryState } from "../../../../shared/metaReview/metaReviewSnapshotTypes.js";
+import { buildBubbleStateSnapshotVariant } from "../../../../domain/state/snapshot/buildBubbleStateSnapshot.js";
+import { toPersistedSnapshot } from "../../../../domain/state/snapshot/projection.js";
 import { isNamedError } from "../../../../shared/errors/namedError.js";
 
 interface RuntimeDeliveryObservationPersistenceContext {
-  readState: ApplyMetaReviewGateStateReadPort;
-  writeState: ApplyMetaReviewGateStateWritePort;
+  readState: ReadDomainStateSnapshotPort;
+  writeState: WriteDomainStateSnapshotPort;
   resolved: {
     bubblePaths: {
       statePath: string;
@@ -14,38 +20,30 @@ interface RuntimeDeliveryObservationPersistenceContext {
   };
 }
 
-type ApplyMetaReviewGateStateReadPort = (
-  path: string
-) => Promise<LoadedStateSnapshot>;
-
-type ApplyMetaReviewGateStateWritePort = (
-  path: string,
-  state: LoadedStateSnapshot["state"],
-  options: {
-    expectedFingerprint: string;
-    expectedState: "RUNNING";
-  }
-) => Promise<LoadedStateSnapshot>;
-
 export async function persistRuntimeDeliveryObservation(input: {
   context: RuntimeDeliveryObservationPersistenceContext;
-  loaded: LoadedStateSnapshot;
+  loaded: LoadedDomainStateSnapshot;
   runtimeDelivery: BubbleMetaReviewRuntimeDeliveryState;
-}): Promise<LoadedStateSnapshot> {
-  const currentMetaReview = input.loaded.state.meta_review;
+}): Promise<LoadedDomainStateSnapshot> {
+  // The object-spread mutation below preserves all fields, but the variant
+  // requires its kind discriminator to stay consistent with the state field.
+  // Project to persisted shape, mutate, then rebuild the variant on the
+  // way back into the Domain write port.
+  const loadedPersisted = toPersistedSnapshot(input.loaded.state);
+  const currentMetaReview = loadedPersisted.meta_review;
   if (currentMetaReview === undefined) {
     return input.loaded;
   }
   try {
     return await input.context.writeState(
       input.context.resolved.bubblePaths.statePath,
-      {
-        ...input.loaded.state,
+      buildBubbleStateSnapshotVariant({
+        ...loadedPersisted,
         meta_review: {
           ...currentMetaReview,
           runtime_delivery: input.runtimeDelivery
         }
-      },
+      }),
       {
         expectedFingerprint: input.loaded.fingerprint,
         expectedState: "RUNNING"
@@ -58,10 +56,11 @@ export async function persistRuntimeDeliveryObservation(input: {
     const latest = await input.context.readState(
       input.context.resolved.bubblePaths.statePath
     );
-    if (!isMetaReviewExecutionContextActiveState(latest.state)) {
+    const latestPersisted = toPersistedSnapshot(latest.state);
+    if (!isMetaReviewExecutionContextActiveState(latestPersisted)) {
       return latest;
     }
-    const latestMetaReview = latest.state.meta_review;
+    const latestMetaReview = latestPersisted.meta_review;
     if (
       latestMetaReview === undefined ||
       resolveActiveMetaReviewRuntimeDelivery({
@@ -74,13 +73,13 @@ export async function persistRuntimeDeliveryObservation(input: {
     try {
       return await input.context.writeState(
         input.context.resolved.bubblePaths.statePath,
-        {
-          ...latest.state,
+        buildBubbleStateSnapshotVariant({
+          ...latestPersisted,
           meta_review: {
             ...latestMetaReview,
             runtime_delivery: input.runtimeDelivery
           }
-        },
+        }),
         {
           expectedFingerprint: latest.fingerprint,
           expectedState: "RUNNING"
