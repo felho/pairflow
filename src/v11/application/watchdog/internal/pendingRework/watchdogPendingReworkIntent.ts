@@ -7,8 +7,8 @@ import type { BubbleWatchdogResult } from "../../watchdogCommandContract.js";
 import type { ResolvedBubbleById } from "../../../../ports/bubbleLookup.js";
 import type { EnsureBubbleInstanceIdForMutationPort } from "../../../../ports/bubbleIdentity.js";
 import type {
-  LoadedDomainStateSnapshot,
-  WriteDomainStateSnapshotPort
+  LoadedStateSnapshot,
+  WriteStateSnapshotPort
 } from "../../../../ports/stateSnapshots.js";
 import type {
   EmitDeliveryNotificationAckPort,
@@ -19,9 +19,9 @@ export async function maybeApplyPendingReworkIntent(input: {
   now: Date;
   nowIso: string;
   resolved: ResolvedBubbleById;
-  loadedState: LoadedDomainStateSnapshot;
+  loadedState: LoadedStateSnapshot;
   state: BubbleStateSnapshot;
-  writeState: WriteDomainStateSnapshotPort;
+  writeState: WriteStateSnapshotPort;
   emitDelivery: EmitDeliveryNotificationAckPort;
   ensureBubbleInstanceIdForMutation: EnsureBubbleInstanceIdForMutationPort;
   resolveDeliveryMessageRef: ResolveDeliveryMessageRefPort;

@@ -1,8 +1,4 @@
-// SSH cross-batch border: the remote command parser is in
-// infrastructure/executor/ssh/, which is owned by a later batch
-// (Step 4b-β SSH lane). The remote result here stays persisted-shape;
-// the approval-side consumer projects it via buildBubbleStateSnapshotVariant.
-import type { PersistedBubbleStateSnapshot } from "../../../../domain/state/snapshot/persistedBubbleStateSnapshot.js";
+import type { BubbleStateSnapshot } from "../../../../domain/state/snapshot/bubbleStateSnapshot.js";
 import type { ProtocolEnvelope } from "../../../../../types/protocol.js";
 
 export interface ApprovalRemoteBubbleStatusTarget {
@@ -41,14 +37,14 @@ export interface RemoteBubbleApprovalDecisionResult {
   bubbleId: string;
   sequence: number;
   envelope: ProtocolEnvelope;
-  state: PersistedBubbleStateSnapshot;
+  state: BubbleStateSnapshot;
 }
 
 export interface RemoteBubbleApprovalQueuedReworkResult {
   kind: "queued_rework";
   bubbleId: string;
   intentId: string;
-  state: PersistedBubbleStateSnapshot;
+  state: BubbleStateSnapshot;
   supersededIntentId?: string;
 }
 

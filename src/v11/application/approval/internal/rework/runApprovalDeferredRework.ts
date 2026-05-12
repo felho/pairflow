@@ -1,6 +1,6 @@
 import type { QueueDeferredReworkIntentResult } from "./reworkIntentQueue.js";
 import type { ResolvedApprovalCommandDependencies } from "../command/approvalCommandDependencies.js";
-import { persistDomainStateViaMutationBoundary } from "../../../../shared/mutation/mutationBoundaryIO.js";
+import { persistStateViaMutationBoundary } from "../../../../shared/mutation/mutationBoundaryIO.js";
 
 export async function persistDeferredReworkIntentState(input: {
   queued: QueueDeferredReworkIntentResult;
@@ -10,7 +10,7 @@ export async function persistDeferredReworkIntentState(input: {
   createError: PairflowCreateCommandError;
 }): Promise<Awaited<ReturnType<ResolvedApprovalCommandDependencies["writeStateSnapshot"]>>> {
   try {
-    return await persistDomainStateViaMutationBoundary({
+    return await persistStateViaMutationBoundary({
       write: input.writeStateSnapshot,
       statePath: input.statePath,
       state: input.queued.state,

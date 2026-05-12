@@ -3,8 +3,8 @@ import type {
   AppendProtocolEnvelopePort
 } from "../../../../ports/transcript.js";
 import type {
-  LoadedDomainStateSnapshot,
-  WriteDomainStateSnapshotPort
+  LoadedStateSnapshot,
+  WriteStateSnapshotPort
 } from "../../../../ports/stateSnapshots.js";
 import type { applyStateTransition } from "../../../../domain/state/machine.js";
 import type {
@@ -36,12 +36,12 @@ export interface ExecuteAskHumanExecutionInput {
 
 export interface ExecuteAskHumanExecutionResult {
   appended: AppendProtocolEnvelopeResult;
-  written: LoadedDomainStateSnapshot;
+  written: LoadedStateSnapshot;
 }
 
 export interface ExecuteAskHumanExecutionDependencies {
   appendProtocolEnvelope?: AppendProtocolEnvelopePort;
-  writeStateSnapshot?: WriteDomainStateSnapshotPort;
+  writeStateSnapshot?: WriteStateSnapshotPort;
   applyStateTransition?: typeof applyStateTransition;
 }
 
@@ -49,7 +49,7 @@ export interface FinalizeAskHumanFlowInput {
   now: Date;
   routing: AskHumanRoutingContext;
   appended: AppendProtocolEnvelopeResult;
-  written: LoadedDomainStateSnapshot;
+  written: LoadedStateSnapshot;
 }
 
 export interface FinalizeAskHumanFlowDependencies {
@@ -89,7 +89,7 @@ export interface RunAskHumanFlowDependencies {
     dependencies?: FinalizeAskHumanFlowDependencies
   ) => Promise<RunAskHumanFlowResult>;
   appendProtocolEnvelope?: AppendProtocolEnvelopePort;
-  writeStateSnapshot?: WriteDomainStateSnapshotPort;
+  writeStateSnapshot?: WriteStateSnapshotPort;
   applyStateTransition?: typeof applyStateTransition;
   emitDeliveryNotificationAck?: EmitDeliveryNotificationAckPort;
   emitBubbleNotification?: EmitAskHumanBubbleNotificationPort;

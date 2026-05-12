@@ -5,8 +5,6 @@ import {
 import { appendProtocolEnvelope } from "../../../start/startCommandDependencyDefaults.js";
 import { buildBubbleStateSnapshotVariant } from "../../../../domain/state/snapshot/buildBubbleStateSnapshot.js";
 import {
-  adaptPersistedReadPortToDomain,
-  adaptPersistedWritePortToDomain
 } from "../../../../shared/mutation/mutationBoundaryIO.js";
 import { MetaReviewError } from "../../../../shared/metaReview/metaReviewError.js";
 import {
@@ -146,13 +144,9 @@ export async function recoverMetaReviewSubmitRoute(input: {
       readFileFn: input.dependencies.readFile,
       appendEnvelope:
         input.dependencies.appendProtocolEnvelope ?? appendProtocolEnvelope,
-      readState: adaptPersistedReadPortToDomain(
-        input.dependencies.readStateSnapshot
-      ),
+      readState: input.dependencies.readStateSnapshot,
       readTranscript: input.dependencies.readTranscriptEnvelopes,
-      writeState: adaptPersistedWritePortToDomain(
-        input.dependencies.writeStateSnapshot
-      ),
+      writeState: input.dependencies.writeStateSnapshot,
       ...(input.dependencies.setMetaReviewerPaneBinding !== undefined
         ? { setMetaReviewerPane: input.dependencies.setMetaReviewerPaneBinding }
         : {}),

@@ -5,7 +5,6 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { createInitialBubbleState } from "../../../src/v11/domain/state/initialState.js";
-import { toPersistedSnapshot } from "../../../src/v11/domain/state/snapshot/projection.js";
 import {
   StateStoreConflictError,
   createStateSnapshot,
@@ -13,6 +12,7 @@ import {
   readStateSnapshot,
   writeStateSnapshot
 } from "../../../src/v11/infrastructure/state/stateStore.js";
+import { asTemporaryVariantStateFixture } from "../../helpers/temporaryVariantStateFixture.js";
 
 const tempDirs: string[] = [];
 
@@ -37,7 +37,7 @@ describe("state store", () => {
 
     const created = await createStateSnapshot(
       statePath,
-      toPersistedSnapshot(createInitialBubbleState("b_store_01"))
+      createInitialBubbleState("b_store_01")
     );
     const loaded = await readStateSnapshot(statePath);
 
@@ -51,14 +51,14 @@ describe("state store", () => {
 
     const created = await createStateSnapshot(
       statePath,
-      toPersistedSnapshot(createInitialBubbleState("b_store_02"))
+      createInitialBubbleState("b_store_02")
     );
 
     const next = {
       ...created.state,
       state: "PREPARING_WORKSPACE" as const
     };
-    const written = await writeStateSnapshot(statePath, next, {
+    const written = await writeStateSnapshot(statePath, asTemporaryVariantStateFixture(next), {
       expectedFingerprint: created.fingerprint,
       expectedState: "CREATED"
     });
@@ -73,14 +73,14 @@ describe("state store", () => {
 
     const created = await createStateSnapshot(
       statePath,
-      toPersistedSnapshot(createInitialBubbleState("b_store_03"))
+      createInitialBubbleState("b_store_03")
     );
 
     const newer = {
       ...created.state,
       state: "PREPARING_WORKSPACE" as const
     };
-    await writeStateSnapshot(statePath, newer, {
+    await writeStateSnapshot(statePath, asTemporaryVariantStateFixture(newer), {
       expectedFingerprint: created.fingerprint
     });
 
@@ -90,7 +90,7 @@ describe("state store", () => {
     };
 
     await expect(
-      writeStateSnapshot(statePath, staleAttempt, {
+      writeStateSnapshot(statePath, asTemporaryVariantStateFixture(staleAttempt), {
         expectedFingerprint: created.fingerprint
       })
     ).rejects.toBeInstanceOf(StateStoreConflictError);
@@ -143,14 +143,14 @@ describe("state store", () => {
 
     const written = await writeStateSnapshot(
       statePath,
-      {
+      asTemporaryVariantStateFixture({
         ...inspected.state,
         meta_review: {
           ...inspected.state.meta_review!,
           sticky_human_gate: true,
           consecutive_clean_runs: 0,
         }
-      },
+      }),
       {
         expectedFingerprint: inspected.fingerprint,
         expectedState: "WAITING_HUMAN"
@@ -177,7 +177,7 @@ describe("state store", () => {
 
     const created = await createStateSnapshot(
       statePath,
-      toPersistedSnapshot(createInitialBubbleState("b_store_04"))
+      createInitialBubbleState("b_store_04")
     );
 
     await writeFile(`${statePath}.lock`, "locked", "utf8");
@@ -185,10 +185,10 @@ describe("state store", () => {
     await expect(
       writeStateSnapshot(
         statePath,
-        {
+        asTemporaryVariantStateFixture({
           ...created.state,
           state: "PREPARING_WORKSPACE"
-        },
+        }),
         {
           expectedFingerprint: created.fingerprint,
           lockTimeoutMs: 20

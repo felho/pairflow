@@ -11,16 +11,14 @@ import {
   writeStateSnapshot as writeStateSnapshotPersisted
 } from "../../infrastructure/state/stateStore.js";
 import {
-  adaptPersistedReadPortToDomain,
-  adaptPersistedWritePortToDomain
 } from "../../shared/mutation/mutationBoundaryIO.js";
 import { setMetaReviewerPaneBinding } from "../../infrastructure/channel/tmux/metaReviewerPaneBinding.js";
 
 // Adapt persisted-shape infrastructure ports into domain-variant ports
 // at the defaults boundary so the metaReviewGate lane holds
 // BubbleStateSnapshot at its public dependency contract.
-const readStateSnapshot = adaptPersistedReadPortToDomain(readStateSnapshotPersisted);
-const writeStateSnapshot = adaptPersistedWritePortToDomain(writeStateSnapshotPersisted);
+const readStateSnapshot = readStateSnapshotPersisted;
+const writeStateSnapshot = writeStateSnapshotPersisted;
 import { runTmux } from "../../infrastructure/channel/tmux/tmuxManager.js";
 import {
   acceptMetaReviewTrustPrompt,

@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 
 import { buildRunningExecutionContext } from "../../../../../src/v11/domain/state/execution/executionContext.js";
 import {
-  assertParsedDomainBubbleStateSnapshot,
-  parseDomainBubbleStateSnapshot
+  assertParsedBubbleStateSnapshot,
+  parseBubbleStateSnapshot
 } from "../../../../../src/v11/domain/state/stateSchema.js";
 import { buildBubbleStateSnapshotVariant } from "../../../../../src/v11/domain/state/snapshot/buildBubbleStateSnapshot.js";
 import { discriminateBubbleStateSnapshotKind } from "../../../../../src/v11/domain/state/authority/kindDiscrimination.js";
@@ -120,9 +120,9 @@ describe("guards", () => {
   });
 });
 
-describe("parseDomainBubbleStateSnapshot", () => {
+describe("parseBubbleStateSnapshot returns the variant union", () => {
   it("returns the variant union on valid input", () => {
-    const result = parseDomainBubbleStateSnapshot(persistedRunning(2));
+    const result = parseBubbleStateSnapshot(persistedRunning(2));
     expect(result.ok).toBe(true);
     if (result.ok) {
       expect(result.value.kind).toBe("running_standard");
@@ -130,13 +130,13 @@ describe("parseDomainBubbleStateSnapshot", () => {
   });
 
   it("propagates parser errors", () => {
-    const result = parseDomainBubbleStateSnapshot({ bubble_id: "" });
+    const result = parseBubbleStateSnapshot({ bubble_id: "" });
     expect(result.ok).toBe(false);
   });
 
-  it("assertParsedDomainBubbleStateSnapshot throws on invalid input", () => {
+  it("assertParsedBubbleStateSnapshot throws on invalid input", () => {
     expect(() =>
-      assertParsedDomainBubbleStateSnapshot({ bubble_id: "" })
+      assertParsedBubbleStateSnapshot({ bubble_id: "" })
     ).toThrow();
   });
 });

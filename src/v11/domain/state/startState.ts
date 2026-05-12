@@ -5,7 +5,7 @@ import {
   buildRestartedExecutionContext,
   buildRunningExecutionContext
 } from "../../domain/state/execution/executionContext.js";
-import { assertParsedDomainBubbleStateSnapshot } from "./stateSchema.js";
+import { assertParsedBubbleStateSnapshot } from "./stateSchema.js";
 import { applyStateTransition } from "./machine.js";
 
 export interface DeriveStartPreparingStateInput {
@@ -103,7 +103,7 @@ export function deriveStartResumedState(
             previousExecutionContext: executionContext
           })
         : executionContext;
-    return assertParsedDomainBubbleStateSnapshot({
+    return assertParsedBubbleStateSnapshot({
       ...currentPersisted,
       execution_context: resumedExecutionContext,
       active_since: input.lastCommandAt,
@@ -111,7 +111,7 @@ export function deriveStartResumedState(
     });
   }
 
-  return assertParsedDomainBubbleStateSnapshot({
+  return assertParsedBubbleStateSnapshot({
     ...currentPersisted,
     last_command_at: input.lastCommandAt
   });

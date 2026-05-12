@@ -28,6 +28,7 @@ import {
   assertParsedBubbleStateSnapshot,
   parseBubbleStateSnapshot
 } from "../../domain/state/stateSchema.js";
+import { toPersistedSnapshot } from "../../domain/state/snapshot/projection.js";
 import {
   normalizeMetaReviewRuntimeDeliveryCorrelation
 } from "../../shared/metaReview/metaReviewSnapshot.js";
@@ -294,9 +295,13 @@ async function loadStateSnapshot(statePath: string): Promise<InspectedStateSnaps
   const parsed = JSON.parse(raw) as unknown;
   const result = parseBubbleStateSnapshot(parsed);
   if (result.ok) {
+    // InspectedStateSnapshot stays persisted-shape per §10.15; the parser
+    // now returns the variant union, so project to persisted before storing
+    // and fingerprinting to keep the on-disk fingerprint stable.
+    const persisted = toPersistedSnapshot(result.value);
     return {
-      state: result.value,
-      fingerprint: fingerprintState(result.value),
+      state: persisted,
+      fingerprint: fingerprintState(persisted),
       stateValidation: null
     };
   }
@@ -307,10 +312,11 @@ async function loadStateSnapshot(statePath: string): Promise<InspectedStateSnaps
 
   const inspectable = coerceInspectablePersistedBubbleStateSnapshot(parsed);
   if (inspectable === null) {
-    const state = assertParsedBubbleStateSnapshot(parsed);
+    const variant = assertParsedBubbleStateSnapshot(parsed);
+    const persisted = toPersistedSnapshot(variant);
     return {
-      state,
-      fingerprint: fingerprintState(state),
+      state: persisted,
+      fingerprint: fingerprintState(persisted),
       stateValidation: null
     };
   }

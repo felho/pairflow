@@ -3,15 +3,16 @@ import type {
   BubbleRoundGateState,
   BubbleSpecLockState
 } from "../gates/gateStateTypes.js";
-import type { ReadStateSnapshotPort } from "../../ports/stateSnapshots.js";
+import type { InspectedStateSnapshot } from "../../ports/stateSnapshots.js";
 import type { ResolveBubbleByIdPort } from "../../ports/bubbleLookup.js";
 
 export type ResolvedBubbleStatusContext = Awaited<
   ReturnType<ResolveBubbleByIdPort>
 >;
-export type BubbleStatusState = Awaited<
-  ReturnType<ReadStateSnapshotPort>
->["state"];
+// Status reads via the inspect port (persisted-shape per §10.15
+// diagnostic-fallback decision), so BubbleStatusState is the
+// inspect-source persisted snapshot.
+export type BubbleStatusState = InspectedStateSnapshot["state"];
 
 export interface StatusGateState {
   failingGates: BubbleFailingGate[];

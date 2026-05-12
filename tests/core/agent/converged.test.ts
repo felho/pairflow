@@ -38,13 +38,16 @@ import { resolveDocContractGateArtifactPath } from "../../../src/v11/infrastruct
 import { deliveryTargetRoleMetadataKey } from "../../../src/types/protocol.js";
 import { initGitRepository } from "../../helpers/git.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
+import { asTemporaryVariantStateFixture } from "../../helpers/temporaryVariantStateFixture.js";
+import { toPersistedSnapshot } from "../../../src/v11/domain/state/snapshot/projection.js";
 
 const tempDirs: string[] = [];
 const defaultWatchdogTimeoutMinutes = 60;
 
 function resolveWatchdogTimeoutMinutes(
-  state: Parameters<typeof rawWriteStateSnapshot>[1]
+  rawState: unknown
 ): number {
+  const state = toPersistedSnapshot(asTemporaryVariantStateFixture(rawState));
   const executionContext =
     state.state === "RUNNING"
       ? metaReviewExecutionContextToRunningContext(
@@ -63,48 +66,49 @@ function resolveWatchdogTimeoutMinutes(
 }
 
 function normalizeTestStateForWrite(
-  state: Parameters<typeof rawWriteStateSnapshot>[1]
+  rawState: unknown
 ): Parameters<typeof rawWriteStateSnapshot>[1] {
+  const state = toPersistedSnapshot(asTemporaryVariantStateFixture(rawState));
   if (state.state === "RUNNING" && state.active_role === "meta_reviewer") {
-    return {
+    return asTemporaryVariantStateFixture({
       ...state,
       execution_context: metaReviewExecutionContextToRunningContext(
         state.meta_review?.execution_context ?? null
       )
-    };
+    });
   }
 
   if (state.state === "RUNNING") {
     if (state.round === 0) {
-      return {
+      return asTemporaryVariantStateFixture({
         ...state,
         execution_context: null
-      };
+      });
     }
     if (state.active_role !== null && state.active_since !== null) {
-      return {
+      return asTemporaryVariantStateFixture({
         ...state,
         execution_context: buildRunningExecutionContext({
           bubbleId: state.bubble_id,
           round: state.round,
           activeRole: state.active_role,
           startedAt: state.active_since,
-          watchdogTimeoutMinutes: resolveWatchdogTimeoutMinutes(state),
+          watchdogTimeoutMinutes: resolveWatchdogTimeoutMinutes(asTemporaryVariantStateFixture(state)),
           attempt: state.execution_context?.attempt ?? 1
         })
-      };
+      });
     }
   }
 
-  return {
+  return asTemporaryVariantStateFixture({
     ...state,
     execution_context: null
-  };
+  });
 }
 
 async function writeStateSnapshot(
   statePath: Parameters<typeof rawWriteStateSnapshot>[0],
-  state: Parameters<typeof rawWriteStateSnapshot>[1],
+  state: unknown,
   options?: Parameters<typeof rawWriteStateSnapshot>[2]
 ): ReturnType<typeof rawWriteStateSnapshot> {
   return rawWriteStateSnapshot(

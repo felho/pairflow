@@ -1,5 +1,4 @@
 import { convergedDependencyDefaults } from "../orchestration/convergedDependencyDefaults.js";
-import { adaptPersistedReadPortToDomain } from "../../../../shared/mutation/mutationBoundaryIO.js";
 import {
   IDEATION_CONVERGED_BLOCKED
 } from "../../../../shared/ideation/ideationReasonCodes.js";
@@ -279,10 +278,9 @@ export async function prepareConvergedRouting(
   const ensureBubbleIdentity =
     dependencies.ensureBubbleInstanceIdForMutation
     ?? convergedDependencyDefaults.routing.ensureBubbleInstanceIdForMutation;
-  const readStateSnapshotFn = adaptPersistedReadPortToDomain(
+  const readStateSnapshotFn =
     dependencies.readStateSnapshot
-    ?? convergedDependencyDefaults.routing.readStateSnapshot
-  );
+    ?? convergedDependencyDefaults.routing.readStateSnapshot;
   const resolveIdeationMetadataFn =
     dependencies.resolveIdeationMetadata ?? resolveIdeationMetadata;
   const { resolved, bubbleIdentity } = await resolveConvergedBubbleContext(input, {

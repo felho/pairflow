@@ -1,4 +1,4 @@
-import type { LoadedDomainStateSnapshot } from "../../../../ports/stateSnapshots.js";
+import type { LoadedStateSnapshot } from "../../../../ports/stateSnapshots.js";
 import { isMetaReviewExecutionContextActiveState } from "../../../../shared/metaReview/metaReviewExecutionContext.js";
 import type { ProtocolEnvelope } from "../../../../../types/protocol.js";
 import type { MetaReviewGateRoute } from "../../../../shared/metaReviewGate/metaReviewGateRouteContract.js";
@@ -52,7 +52,7 @@ function resolvePersistedHumanGateRoute(
 export async function reconcileObservedGateResult(input: {
   context: ObservedGateResultReconciliationContext;
   kickoffResult: MetaReviewGateResult;
-  observedState: LoadedDomainStateSnapshot;
+  observedState: LoadedStateSnapshot;
 }): Promise<MetaReviewGateResult> {
   if (isMetaReviewExecutionContextActiveState(input.observedState.state)) {
     return {

@@ -5,9 +5,9 @@ import {
 import type { MetaReviewArtifactReadPort } from "../../../../shared/metaReview/metaReviewArtifactIo.js";
 import type { ResolveBubbleByIdPort } from "../../../../ports/bubbleLookup.js";
 import type {
-  LoadedDomainStateSnapshot,
-  ReadDomainStateSnapshotPort,
-  WriteDomainStateSnapshotPort
+  LoadedStateSnapshot,
+  ReadStateSnapshotPort,
+  WriteStateSnapshotPort
 } from "../../../../ports/stateSnapshots.js";
 import type {
   AppendProtocolEnvelopePort,
@@ -32,8 +32,8 @@ import {
 export interface ApplyMetaReviewGateExecutionContext {
   appendEnvelope: AppendProtocolEnvelopePort;
   readTranscript: ReadTranscriptEnvelopesPort;
-  readState: ReadDomainStateSnapshotPort;
-  writeState: WriteDomainStateSnapshotPort;
+  readState: ReadStateSnapshotPort;
+  writeState: WriteStateSnapshotPort;
   setMetaReviewerPane: SetMetaReviewerPaneBindingPort;
   notifySubmissionRequest:
     ApplyMetaReviewGateOnConvergenceDependencies["notifyMetaReviewerSubmissionRequest"];
@@ -47,7 +47,7 @@ export interface ApplyMetaReviewGateExecutionContext {
   resolved: Awaited<ReturnType<ResolveBubbleByIdPort>>;
   lockPath: string;
   deactivateMetaReviewerPane: () => Promise<void>;
-  loadedRunning: LoadedDomainStateSnapshot;
+  loadedRunning: LoadedStateSnapshot;
 }
 
 export async function initializeApplyMetaReviewGateExecutionContext(

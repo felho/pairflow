@@ -3,8 +3,6 @@ import {
   type WatchdogStatus
 } from "../../shared/watchdog/watchdogStatus.js";
 import {
-  adaptPersistedReadPortToDomain,
-  adaptPersistedWritePortToDomain
 } from "../../shared/mutation/mutationBoundaryIO.js";
 import { toPersistedSnapshot } from "../../domain/state/snapshot/projection.js";
 import { maybeApplyPendingReworkIntent } from "./internal/pendingRework/watchdogPendingReworkIntent.js";
@@ -40,9 +38,9 @@ export async function runBubbleWatchdog(
       ...(input.cwd !== undefined ? { cwd: input.cwd } : {})
     }
   );
-  const readState = adaptPersistedReadPortToDomain(dependencies.readStateSnapshot);
+  const readState = dependencies.readStateSnapshot;
   const appendEnvelope = dependencies.appendProtocolEnvelope;
-  const writeState = adaptPersistedWritePortToDomain(dependencies.writeStateSnapshot);
+  const writeState = dependencies.writeStateSnapshot;
   const loadedState = await readState(resolved.bubblePaths.statePath);
   const state = loadedState.state;
   const emitDelivery = dependencies.emitDeliveryNotificationAck;

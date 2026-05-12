@@ -4,7 +4,7 @@ import {
   deriveStartResumedState,
   deriveStartRunningState
 } from "../../../../domain/state/startState.js";
-import { persistDomainStateViaMutationBoundary } from "../../../../shared/mutation/mutationBoundaryIO.js";
+import { persistStateViaMutationBoundary } from "../../../../shared/mutation/mutationBoundaryIO.js";
 import type { AgentName } from "../../../../../contracts/kernel/agentIdentity.js";
 import type { BubbleLifecycleState } from "../../../../../contracts/kernel/lifecycle.js";
 import type { BubbleStateSnapshot } from "../../../../domain/state/snapshot/bubbleStateSnapshot.js";
@@ -81,7 +81,7 @@ export async function executeStartPreparingMutation(
     lastCommandAt: input.nowIso
   });
 
-  return persistDomainStateViaMutationBoundary({
+  return persistStateViaMutationBoundary({
     write: input.writeStateSnapshot,
     statePath: input.statePath,
     state: preparing,
@@ -105,7 +105,7 @@ export async function executeStartRunningMutation(
     ideationPending: input.ideationPending
   });
 
-  return persistDomainStateViaMutationBoundary({
+  return persistStateViaMutationBoundary({
     write: input.writeStateSnapshot,
     statePath: input.statePath,
     state: running,
@@ -125,7 +125,7 @@ export async function executeStartResumeMutation(
     watchdogTimeoutMinutes: input.watchdogTimeoutMinutes
   });
 
-  return persistDomainStateViaMutationBoundary({
+  return persistStateViaMutationBoundary({
     write: input.writeStateSnapshot,
     statePath: input.statePath,
     state: resumed,
@@ -144,7 +144,7 @@ export async function executeStartFailedCleanupMutation(
     lastCommandAt: input.nowIso
   });
 
-  return persistDomainStateViaMutationBoundary({
+  return persistStateViaMutationBoundary({
     write: input.writeStateSnapshot,
     statePath: input.statePath,
     state: failed,

@@ -7,8 +7,8 @@ import type { MetaReviewArtifactReadPort } from "../metaReview/metaReviewArtifac
 import type { ResolveBubbleByIdPort } from "../../ports/bubbleLookup.js";
 import type { SetMetaReviewerPaneBindingPort } from "../../ports/runtimeSessions.js";
 import type {
-  ReadDomainStateSnapshotPort,
-  WriteDomainStateSnapshotPort
+  ReadStateSnapshotPort,
+  WriteStateSnapshotPort
 } from "../../ports/stateSnapshots.js";
 import type {
   AppendProtocolEnvelopePort,
@@ -127,8 +127,8 @@ export interface ApplyMetaReviewGateOnConvergenceInput {
 
 export interface ApplyMetaReviewGateOnConvergenceDependencies {
   resolveBubbleById?: ResolveBubbleByIdPort;
-  readStateSnapshot?: ReadDomainStateSnapshotPort;
-  writeStateSnapshot?: WriteDomainStateSnapshotPort;
+  readStateSnapshot?: ReadStateSnapshotPort;
+  writeStateSnapshot?: WriteStateSnapshotPort;
   appendProtocolEnvelope?: AppendProtocolEnvelopePort;
   readTranscriptEnvelopes?: ReadTranscriptEnvelopesPort;
   setMetaReviewerPaneBinding?: SetMetaReviewerPaneBindingPort;

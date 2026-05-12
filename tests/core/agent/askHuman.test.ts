@@ -13,10 +13,10 @@ import { createBubble } from "../../../src/v11/defaults/create/createBubbleApi.j
 import { WorkspaceResolutionError } from "../../../src/v11/infrastructure/executor/workspace/workspaceResolution.js";
 import { readTranscriptEnvelopes } from "../../../src/v11/infrastructure/artifact/transcript/transcriptStore.js";
 import { readStateSnapshot } from "../../../src/v11/infrastructure/state/stateStore.js";
-import { adaptPersistedReadPortToDomain } from "../../../src/v11/shared/mutation/mutationBoundaryIO.js";
 import { bootstrapWorktreeWorkspace } from "../../../src/v11/infrastructure/workspace/worktreeManager.js";
 import { initGitRepository } from "../../helpers/git.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
+import { asTemporaryVariantStateFixture } from "../../helpers/temporaryVariantStateFixture.js";
 
 const tempDirs: string[] = [];
 
@@ -56,7 +56,7 @@ async function withPatchedAskHumanWorkspaceLoadedState<T>(input: {
   };
 
   return input.run({
-    readStateSnapshot: adaptPersistedReadPortToDomain(patchedReadStateSnapshot)
+    readStateSnapshot: patchedReadStateSnapshot
   });
 }
 
@@ -197,7 +197,7 @@ describe("emitAskHumanFromWorkspace", () => {
       statePath: bubble.paths.statePath,
       mutate: (loaded) => ({
         ...loaded,
-        state: {
+        state: asTemporaryVariantStateFixture({
           ...loaded.state,
           active_agent: bubble.config.agents.reviewer,
           active_role: "reviewer",
@@ -207,7 +207,7 @@ describe("emitAskHumanFromWorkspace", () => {
             handoff_id:
               "reviewer:b_ask_human_reviewer_no_activation_01:round:1:attempt:1"
           } as never
-        }
+        })
       }),
       run: (dependencies) => emitAskHumanFromWorkspace(
         {
@@ -217,7 +217,7 @@ describe("emitAskHumanFromWorkspace", () => {
         },
         dependencies
       )
-    });
+    }) as { envelope: { type: string }; state: { state: string }; activation: unknown };
 
     expect(result.envelope.type).toBe("HUMAN_QUESTION");
     expect(result.state.state).toBe("WAITING_HUMAN");
@@ -236,7 +236,7 @@ describe("emitAskHumanFromWorkspace", () => {
       statePath: bubble.paths.statePath,
       mutate: (loaded) => ({
         ...loaded,
-        state: {
+        state: asTemporaryVariantStateFixture({
           ...loaded.state,
           active_agent: bubble.config.agents.implementer,
           active_role: "implementer",
@@ -244,7 +244,7 @@ describe("emitAskHumanFromWorkspace", () => {
             ...loaded.state.execution_context,
             active_role: "reviewer"
           } as never
-        }
+        })
       }),
       run: (dependencies) => emitAskHumanFromWorkspace(
         {
@@ -254,7 +254,7 @@ describe("emitAskHumanFromWorkspace", () => {
         },
         dependencies
       )
-    });
+    }) as { envelope: { type: string }; state: { state: string }; activation: unknown };
 
     expect(result.envelope.type).toBe("HUMAN_QUESTION");
     expect(result.state.state).toBe("WAITING_HUMAN");

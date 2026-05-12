@@ -5,8 +5,8 @@ import { normalizeStringList } from "../../../../shared/normalization/stringNorm
 import { BubbleCommitError } from "../error/commitCommandError.js";
 import type { BubbleStateSnapshot } from "../../../../domain/state/snapshot/bubbleStateSnapshot.js";
 import type {
-  LoadedDomainStateSnapshot,
-  WriteDomainStateSnapshotPort
+  LoadedStateSnapshot,
+  WriteStateSnapshotPort
 } from "../../../../ports/stateSnapshots.js";
 import type {
   ProtocolEnvelope,
@@ -33,7 +33,7 @@ export interface CommitFinalizationAppendResult {
   }>;
 }
 
-export type CommitFinalizationLoadedState = LoadedDomainStateSnapshot;
+export type CommitFinalizationLoadedState = LoadedStateSnapshot;
 
 export async function appendCommitResultEnvelopeMutation(input: {
   context: CommitFinalizationContext;
@@ -87,7 +87,7 @@ export async function persistCommittedThenDoneStateMutation(input: {
   nowIso: string;
   appended: CommitFinalizationAppendResult;
   commitSha: string;
-  writeStateSnapshot: WriteDomainStateSnapshotPort;
+  writeStateSnapshot: WriteStateSnapshotPort;
 }): Promise<CommitFinalizationLoadedState> {
   const writeSnapshot = input.writeStateSnapshot;
   const committed = applyStateTransition(input.context.state, {

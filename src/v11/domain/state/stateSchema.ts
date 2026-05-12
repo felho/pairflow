@@ -11,7 +11,6 @@ import type {
 } from "../../shared/metaReview/metaReviewSnapshotTypes.js";
 import type { BubbleStateSnapshot } from "./snapshot/bubbleStateSnapshot.js";
 import { buildBubbleStateSnapshotVariant } from "./snapshot/buildBubbleStateSnapshot.js";
-import type { PersistedBubbleStateSnapshot } from "./snapshot/persistedBubbleStateSnapshot.js";
 import { validateMetaReviewSnapshot } from "./metaReview/stateSchemaMetaReview.js";
 import {
   validateBubbleStateActivityFields,
@@ -26,7 +25,7 @@ import {
 
 export function parseBubbleStateSnapshot(
   input: unknown
-): ValidationResult<PersistedBubbleStateSnapshot> {
+): ValidationResult<BubbleStateSnapshot> {
   const errors: ValidationError[] = [];
   if (!isRecord(input)) {
     return validationFail([{ path: "$", message: "State must be an object" }]);
@@ -87,7 +86,7 @@ export function parseBubbleStateSnapshot(
     executionContext
   });
 
-  return validationOk({
+  return validationOk(buildBubbleStateSnapshotVariant({
     bubble_id: bubbleId,
     state,
     round,
@@ -100,31 +99,10 @@ export function parseBubbleStateSnapshot(
     pending_rework_intent: pendingReworkIntent,
     rework_intent_history: reworkIntentHistory,
     ...(normalizedMetaReview !== undefined ? { meta_review: normalizedMetaReview } : {})
-  });
+  }));
 }
 
-export function assertParsedBubbleStateSnapshot(input: unknown): PersistedBubbleStateSnapshot {
+export function assertParsedBubbleStateSnapshot(input: unknown): BubbleStateSnapshot {
   const result = parseBubbleStateSnapshot(input);
-  return assertValidation(result, "Invalid bubble state");
-}
-
-// Opt-in domain-variant parser. Step 4b-α (revised) introduces the variant
-// model as additive API; consumers that want kind-discriminated narrowing
-// invoke these functions explicitly. The canonical parser still returns
-// the persisted shape; the parser switch to the variant union is the
-// terminal Step 4b commit (mandatory final endpoint).
-
-export function parseDomainBubbleStateSnapshot(
-  input: unknown
-): ValidationResult<BubbleStateSnapshot> {
-  const persistedResult = parseBubbleStateSnapshot(input);
-  if (!persistedResult.ok) {
-    return persistedResult;
-  }
-  return validationOk(buildBubbleStateSnapshotVariant(persistedResult.value));
-}
-
-export function assertParsedDomainBubbleStateSnapshot(input: unknown): BubbleStateSnapshot {
-  const result = parseDomainBubbleStateSnapshot(input);
   return assertValidation(result, "Invalid bubble state");
 }

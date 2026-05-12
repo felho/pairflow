@@ -1,4 +1,4 @@
-import type { PersistedBubbleStateSnapshot } from "../../../domain/state/snapshot/persistedBubbleStateSnapshot.js";
+import type { BubbleStateSnapshot } from "../../../domain/state/snapshot/bubbleStateSnapshot.js";
 import type { ProtocolEnvelope } from "../../../../types/protocol.js";
 import type {
   ExecuteRemoteBubbleCommitCommandResult
@@ -91,7 +91,7 @@ export function extractRemoteCommitMarkerPayload(input: {
 function parseRemoteBubbleState(input: {
   raw: string;
   bubbleId: string;
-}): PersistedBubbleStateSnapshot {
+}): BubbleStateSnapshot {
   let parsed: unknown;
   try {
     parsed = JSON.parse(input.raw) as unknown;

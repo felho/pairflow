@@ -1,19 +1,19 @@
 import { applyStateTransition } from "../../domain/state/machine.js";
 import type {
-  LoadedDomainStateSnapshot,
-  WriteDomainStateSnapshotPort
+  LoadedStateSnapshot,
+  WriteStateSnapshotPort
 } from "../../ports/stateSnapshots.js";
 
 export interface StopCancellationMutationInput {
   statePath: string;
-  loadedState: LoadedDomainStateSnapshot;
+  loadedState: LoadedStateSnapshot;
   nowIso: string;
-  writeStateSnapshot: WriteDomainStateSnapshotPort;
+  writeStateSnapshot: WriteStateSnapshotPort;
 }
 
 export async function executeStopCancellationMutation(
   input: StopCancellationMutationInput
-): Promise<LoadedDomainStateSnapshot> {
+): Promise<LoadedStateSnapshot> {
   const cancelled = applyStateTransition(input.loadedState.state, {
     to: "CANCELLED",
     activeAgent: null,

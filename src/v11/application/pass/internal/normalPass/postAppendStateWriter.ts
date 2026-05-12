@@ -1,12 +1,11 @@
 import { writeStateSnapshot } from "../../../start/startCommandDependencyDefaults.js";
-import { adaptPersistedWritePortToDomain } from "../../../../shared/mutation/mutationBoundaryIO.js";
 import type {
-  LoadedDomainStateSnapshot,
-  WriteDomainStateSnapshotPort
+  LoadedStateSnapshot,
+  WriteStateSnapshotPort
 } from "../../../../ports/stateSnapshots.js";
 import type { BubbleStateSnapshot } from "../../../../domain/state/snapshot/bubbleStateSnapshot.js";
 import { toPersistedSnapshot } from "../../../../domain/state/snapshot/projection.js";
-import { assertParsedDomainBubbleStateSnapshot } from "../../../../domain/state/stateSchema.js";
+import { assertParsedBubbleStateSnapshot } from "../../../../domain/state/stateSchema.js";
 import { buildRunningExecutionContext } from "../../../../domain/state/execution/executionContext.js";
 import type { ResolvedPassHandoff } from "../../../../domain/pass/handoff.js";
 import { raisePostAppendStateWriteFailed } from "../../../../domain/pass/postAppendStateWriteFailure.js";
@@ -32,13 +31,13 @@ export interface WritePostAppendPassStateDependencies {
 export async function writePostAppendPassState(
   input: WritePostAppendPassStateInput,
   dependencies: WritePostAppendPassStateDependencies = {}
-): Promise<LoadedDomainStateSnapshot> {
+): Promise<LoadedStateSnapshot> {
   const persistedWritePort = dependencies.writeStateSnapshot ?? writeStateSnapshot;
-  const writeState: WriteDomainStateSnapshotPort =
-    adaptPersistedWritePortToDomain(persistedWritePort);
+  const writeState: WriteStateSnapshotPort =
+    persistedWritePort;
 
   const currentPersisted = toPersistedSnapshot(input.state);
-  const nextState = assertParsedDomainBubbleStateSnapshot({
+  const nextState = assertParsedBubbleStateSnapshot({
     ...currentPersisted,
     round: input.handoff.nextRound,
     active_agent: input.handoff.recipientAgent,

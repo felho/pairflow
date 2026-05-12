@@ -10,7 +10,7 @@ import { buildBubbleStateSnapshotVariant } from "../../../src/v11/domain/state/s
 import { toPersistedSnapshot } from "../../../src/v11/domain/state/snapshot/projection.js";
 import {
   readStateSnapshot,
-  writeStateSnapshot
+  writeStateSnapshot as rawWriteStateSnapshot
 } from "../../../src/v11/infrastructure/state/stateStore.js";
 import { startBubble } from "../../../src/v11/application/start/startCommandApi.js";
 import { runBubbleStartCommand } from "../../../src/cli/commands/bubble/start.js";
@@ -24,6 +24,14 @@ import { initGitRepository, runGit } from "../../helpers/git.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
 import { buildWorktreeBootstrapResult } from "../../helpers/worktreeBootstrapResult.js";
 import type { ContractCase, ContractCaseExpected } from "./schema.js";
+import { asTemporaryVariantStateFixture } from "../../helpers/temporaryVariantStateFixture.js";
+
+// Step 4b-γ/4 transitional: 4b-γ/5 cleanup target.
+const writeStateSnapshot = (
+  statePath: Parameters<typeof rawWriteStateSnapshot>[0],
+  state: unknown,
+  options?: Parameters<typeof rawWriteStateSnapshot>[2]
+): ReturnType<typeof rawWriteStateSnapshot> => rawWriteStateSnapshot(statePath, asTemporaryVariantStateFixture(state), options);
 
 export interface StartContractSuccessOutput {
   status: "ok";

@@ -1,4 +1,4 @@
-import { persistDomainStateViaMutationBoundary } from "../../../../shared/mutation/mutationBoundaryIO.js";
+import { persistStateViaMutationBoundary } from "../../../../shared/mutation/mutationBoundaryIO.js";
 import type { BubbleLifecycleState } from "../../../../../contracts/kernel/lifecycle.js";
 import type { BubbleStateSnapshot } from "../../../../domain/state/snapshot/bubbleStateSnapshot.js";
 import { BubbleWatchdogError } from "../error/watchdogCommandRuntime.js";
@@ -29,7 +29,7 @@ export async function persistPendingReworkIntentState(
   input: PersistPendingReworkIntentStateInput
 ): Promise<WatchdogPendingReworkLoadedStateSnapshot> {
   try {
-    return await persistDomainStateViaMutationBoundary({
+    return await persistStateViaMutationBoundary({
       write: input.writeStateSnapshot,
       statePath: input.statePath,
       state: input.nextState,

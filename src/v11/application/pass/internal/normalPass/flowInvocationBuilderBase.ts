@@ -1,4 +1,4 @@
-import type { LoadedDomainStateSnapshot } from "../../../../ports/stateSnapshots.js";
+import type { LoadedStateSnapshot } from "../../../../ports/stateSnapshots.js";
 import type { EnsureBubbleInstanceIdForMutationResult } from "../../../../ports/bubbleIdentity.js";
 import type { ResolvedBubbleWorkspace } from "../../../../ports/workspaceResolution.js";
 import type { BubbleStateSnapshot } from "../../../../domain/state/snapshot/bubbleStateSnapshot.js";
@@ -24,7 +24,7 @@ export interface BuildFlowBaseInput {
   reviewer: ResolvedPassHandoff["senderAgent"];
   implementer: ResolvedPassHandoff["recipientAgent"];
   state: BubbleStateSnapshot;
-  loadedState: Pick<LoadedDomainStateSnapshot, "fingerprint">;
+  loadedState: Pick<LoadedStateSnapshot, "fingerprint">;
   activation?: PassActivationProvenance;
   passRouting: PreparePassRoutingResult;
   createError: PairflowCreateCommandError;

@@ -1,5 +1,4 @@
 import { normalizeStringList } from "../../../../shared/normalization/stringNormalization.js";
-import { buildBubbleStateSnapshotVariant } from "../../../../domain/state/snapshot/buildBubbleStateSnapshot.js";
 import type {
   CommitBubbleInput,
   CommitBubbleResult
@@ -240,12 +239,11 @@ async function commitRemoteExecutionRoute(input: {
       });
     }
 
-    // SSH cross-batch border: project routed.state (persisted) into variant.
     return {
       bubbleId: input.context.resolved.bubbleId,
       sequence: imported.sequence,
       envelope: imported.envelope,
-      state: buildBubbleStateSnapshotVariant(imported.state),
+      state: imported.state,
       commitSha: imported.commitSha,
       commitMessage: imported.commitMessage,
       stagedFiles: imported.stagedFiles
@@ -287,12 +285,11 @@ async function commitRemoteExecutionRoute(input: {
     auto: input.stageAll
   });
 
-  // SSH cross-batch border: project routed.state (persisted) into variant.
   return {
     bubbleId: input.context.resolved.bubbleId,
     sequence: remoteResult.sequence,
     envelope: remoteResult.envelope,
-    state: buildBubbleStateSnapshotVariant(remoteResult.state),
+    state: remoteResult.state,
     commitSha: remoteResult.commitSha,
     commitMessage: remoteResult.commitMessage,
     stagedFiles: remoteResult.stagedFiles

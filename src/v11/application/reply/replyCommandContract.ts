@@ -3,8 +3,8 @@ import type {
 } from "../../ports/tmuxDelivery.js";
 import type { AppendProtocolEnvelopePort } from "../../ports/transcript.js";
 import type {
-  ReadDomainStateSnapshotPort,
-  WriteDomainStateSnapshotPort
+  ReadStateSnapshotPort,
+  WriteStateSnapshotPort
 } from "../../ports/stateSnapshots.js";
 import type { ResolveBubbleByIdPort } from "../../ports/bubbleLookup.js";
 import type { ResolveDeliveryMessageRefPort } from "../../ports/tmuxDelivery.js";
@@ -32,8 +32,8 @@ export interface EmitHumanReplyDependencies {
   appendProtocolEnvelope?: AppendProtocolEnvelopePort;
   emitDeliveryNotificationAck?: EmitDeliveryNotificationAckPort;
   ensureBubbleInstanceIdForMutation?: EnsureBubbleInstanceIdForMutationPort;
-  readStateSnapshot?: ReadDomainStateSnapshotPort;
+  readStateSnapshot?: ReadStateSnapshotPort;
   resolveBubbleById?: ResolveBubbleByIdPort;
   resolveDeliveryMessageRef?: ResolveDeliveryMessageRefPort;
-  writeStateSnapshot?: WriteDomainStateSnapshotPort;
+  writeStateSnapshot?: WriteStateSnapshotPort;
 }

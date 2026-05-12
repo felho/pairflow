@@ -3,7 +3,7 @@ import type { BubbleConfig } from "../../../../shared/config/bubbleConfigTypes.j
 import type { BubbleStateSnapshot } from "../../../../domain/state/snapshot/bubbleStateSnapshot.js";
 import type { Finding } from "../../../../../types/findings.js";
 import type { ResolvedPassHandoff } from "../../../../domain/pass/handoff.js";
-import type { LoadedDomainStateSnapshot } from "../../../../ports/stateSnapshots.js";
+import type { LoadedStateSnapshot } from "../../../../ports/stateSnapshots.js";
 import type { evaluateReviewerGateWarnings } from "../../../../shared/gates/docContractGates.js";
 
 export interface PersistNormalPassPostAppendInput {
@@ -54,7 +54,7 @@ export interface PersistNormalPassPostAppendDependencies {
     expectedFingerprint: string;
     envelopeId: string;
     createError: PairflowCreateCommandError;
-  }) => Promise<LoadedDomainStateSnapshot>;
+  }) => Promise<LoadedStateSnapshot>;
   updateReviewerDocGateArtifact: (input: {
     now: Date;
     bubbleConfig: BubbleConfig;
@@ -68,7 +68,7 @@ export interface PersistNormalPassPostAppendDependencies {
 }
 
 export interface PersistNormalPassPostAppendResult {
-  written: LoadedDomainStateSnapshot;
+  written: LoadedStateSnapshot;
   docGateArtifactWriteFailureReason?: string;
 }
 

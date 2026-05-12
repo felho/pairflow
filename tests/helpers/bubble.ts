@@ -6,7 +6,7 @@ import { createBubble } from "../../src/v11/defaults/create/createBubbleApi.js";
 import type { BubbleCreateResult } from "../../src/v11/application/create/createBubble.js";
 import { normalizeBubbleReviewPolicy } from "../../src/v11/shared/reviewPolicy/reviewPolicyRuntime.js";
 import { buildRunningExecutionContext } from "../../src/v11/domain/state/execution/executionContext.js";
-import { readStateSnapshot, writeStateSnapshot } from "../../src/v11/infrastructure/state/stateStore.js";
+import { readStateSnapshot, writeStateSnapshot as rawWriteStateSnapshot } from "../../src/v11/infrastructure/state/stateStore.js";
 import { bootstrapWorktreeWorkspace } from "../../src/v11/infrastructure/workspace/worktreeManager.js";
 import type {
   BubbleReviewPolicyConfig
@@ -16,6 +16,14 @@ import type {
   PairflowCommandProfile,
   ReviewArtifactType
 } from "../../src/v11/shared/config/bubbleConfigVocabulary.js";
+import { asTemporaryVariantStateFixture } from "./temporaryVariantStateFixture.js";
+
+// Step 4b-γ/4 transitional: 4b-γ/5 cleanup target.
+const writeStateSnapshot = (
+  statePath: Parameters<typeof rawWriteStateSnapshot>[0],
+  state: unknown,
+  options?: Parameters<typeof rawWriteStateSnapshot>[2]
+): ReturnType<typeof rawWriteStateSnapshot> => rawWriteStateSnapshot(statePath, asTemporaryVariantStateFixture(state), options);
 
 export interface SetupRunningBubbleFixtureInput {
   bubbleId: string;

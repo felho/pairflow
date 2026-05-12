@@ -2,7 +2,7 @@ import type {
   BubbleRemotePointerStarted
 } from "../../../../shared/remote/remoteExecutionTypes.js";
 import type { BubbleStateSnapshot } from "../../../../domain/state/snapshot/bubbleStateSnapshot.js";
-import type { LoadedDomainStateSnapshot } from "../../../../ports/stateSnapshots.js";
+import type { LoadedStateSnapshot } from "../../../../ports/stateSnapshots.js";
 import {
   assertCleanRepoWorkingTree,
   assertMergeBranchEligibility,
@@ -25,7 +25,7 @@ interface MergeFlowExecutionContextBase {
   bubbleIdentity: Awaited<
     ReturnType<ResolvedMergeCommandDependencies["ensureBubbleInstanceIdForMutation"]>
   >;
-  loaded: LoadedDomainStateSnapshot;
+  loaded: LoadedStateSnapshot;
   state: BubbleStateSnapshot;
   nowIso: string;
   repoPath: string;
@@ -91,7 +91,7 @@ interface MergeFlowInitializationBase {
   bubbleIdentity: Awaited<
     ReturnType<ResolvedMergeCommandDependencies["ensureBubbleInstanceIdForMutation"]>
   >;
-  loaded: LoadedDomainStateSnapshot;
+  loaded: LoadedStateSnapshot;
   state: BubbleStateSnapshot;
   baseBranch: string;
   bubbleBranch: string;
@@ -307,7 +307,7 @@ async function importRemoteCommitContinuityForMerge(input: {
   transcriptPath: string;
   dependencies: ResolvedMergeCommandDependencies;
   createError: RunMergeCommandPipelineInput["createError"];
-}): Promise<{ loaded: LoadedDomainStateSnapshot; state: BubbleStateSnapshot } | null> {
+}): Promise<{ loaded: LoadedStateSnapshot; state: BubbleStateSnapshot } | null> {
   let result: Awaited<
     ReturnType<ResolvedMergeCommandDependencies["importRemoteBubbleCommitContinuity"]>
   >;

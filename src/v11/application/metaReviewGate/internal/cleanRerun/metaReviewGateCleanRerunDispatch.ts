@@ -1,4 +1,4 @@
-import type { LoadedDomainStateSnapshot } from "../../../../ports/stateSnapshots.js";
+import type { LoadedStateSnapshot } from "../../../../ports/stateSnapshots.js";
 import { appendMetaReviewKickoffEnvelope, stageMetaReviewRunningState } from "../apply/metaReviewGateApplyHelpers.js";
 import { buildCleanRerunDispatchFailureRollbackState } from "./metaReviewGateCleanRerunFailureState.js";
 import type { RouteCleanMetaReviewRerunInput } from "./metaReviewGateCleanRerunContract.js";
@@ -11,7 +11,7 @@ import type { MetaReviewGateResult } from "../../../../shared/metaReviewGate/met
 export function failCleanRerunClosed(input: {
   routeInput: RouteCleanMetaReviewRerunInput;
   fallbackReason: string;
-  loaded: LoadedDomainStateSnapshot;
+  loaded: LoadedStateSnapshot;
 }): Promise<MetaReviewGateResult> {
   return persistDispatchFailedHumanRoute({
     finalizeInput: input.routeInput.finalizeInput,
@@ -28,9 +28,9 @@ export function failCleanRerunClosed(input: {
 
 export async function stageCleanRerunRunningState(
   input: RouteCleanMetaReviewRerunInput
-): Promise<LoadedDomainStateSnapshot | MetaReviewGateResult> {
+): Promise<LoadedStateSnapshot | MetaReviewGateResult> {
   const finalizeInput = input.finalizeInput;
-  const loadedWithUpdatedStreak: LoadedDomainStateSnapshot = {
+  const loadedWithUpdatedStreak: LoadedStateSnapshot = {
     ...finalizeInput.loaded,
     state: setMetaReviewConsecutiveCleanRuns(
       finalizeInput.loaded.state,
@@ -62,7 +62,7 @@ export async function stageCleanRerunRunningState(
 
 export async function appendCleanRerunKickoff(input: {
   routeInput: RouteCleanMetaReviewRerunInput;
-  metaReviewRunningState: LoadedDomainStateSnapshot;
+  metaReviewRunningState: LoadedStateSnapshot;
 }): Promise<MetaReviewGateResult> {
   const finalizeInput = input.routeInput.finalizeInput;
   const handoffId =

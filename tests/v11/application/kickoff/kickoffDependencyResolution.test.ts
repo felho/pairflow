@@ -10,6 +10,7 @@ import {
 import { resolveKickoffDependencies } from "../../../../src/v11/application/kickoff/internal/validation/kickoffDependencyResolution.js";
 import { createInitialBubbleState } from "../../../../src/v11/domain/state/initialState.js";
 import { toPersistedSnapshot } from "../../../../src/v11/domain/state/snapshot/projection.js";
+import { asTemporaryVariantStateFixture } from "../../../helpers/temporaryVariantStateFixture.js";
 
 describe("kickoffDependencyResolution", () => {
   it("uses kickoff defaults when overrides are omitted", () => {
@@ -70,15 +71,13 @@ describe("kickoffDependencyResolution", () => {
   });
 
   it("delegates state read/write through the variant adapter to the override", async () => {
-    const persistedSnapshot = toPersistedSnapshot(
-      createInitialBubbleState("b_kickoff_dep_resolution_adapter")
-    );
+    const variantSnapshot = createInitialBubbleState("b_kickoff_dep_resolution_adapter");
     const readStateSnapshotOverride = vi.fn(async () => ({
-      state: persistedSnapshot,
+      state: variantSnapshot,
       fingerprint: "fp-read"
     }));
     const writeStateSnapshotOverride = vi.fn(async () => ({
-      state: persistedSnapshot,
+      state: variantSnapshot,
       fingerprint: "fp-write"
     }));
 
@@ -98,10 +97,11 @@ describe("kickoffDependencyResolution", () => {
       { expectedFingerprint: "fp-read" }
     );
     expect(writeStateSnapshotOverride).toHaveBeenCalledTimes(1);
+    // Post Step 4b-γ/4: read/write ports are variant-shaped end-to-end;
+    // adapter no longer projects persisted at the boundary.
     expect(writeStateSnapshotOverride).toHaveBeenCalledWith(
       "/tmp/state.json",
-      // The persisted projection strips the variant kind discriminator.
-      expect.not.objectContaining({ kind: "inactive_initial" }),
+      expect.objectContaining({ kind: "inactive_initial" }),
       { expectedFingerprint: "fp-read" }
     );
     expect(writeResult.fingerprint).toBe("fp-write");

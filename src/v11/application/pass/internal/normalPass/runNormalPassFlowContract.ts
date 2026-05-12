@@ -5,7 +5,7 @@ import type {
 import type { ReviewerTestExecutionDirective } from "../../../../shared/reviewer/testEvidence.js";
 import type { ReviewVerificationInputResolution } from "../../../../shared/reviewer/reviewVerification.js";
 import type { DeliveryAck } from "../../../../ports/tmuxDelivery.js";
-import type { LoadedDomainStateSnapshot } from "../../../../ports/stateSnapshots.js";
+import type { LoadedStateSnapshot } from "../../../../ports/stateSnapshots.js";
 import type { AgentName } from "../../../../../contracts/kernel/agentIdentity.js";
 import type { BubbleConfig } from "../../../../shared/config/bubbleConfigTypes.js";
 import type { BubbleStateSnapshot } from "../../../../domain/state/snapshot/bubbleStateSnapshot.js";
@@ -151,7 +151,7 @@ export interface RunNormalPassFlowDependencies<TResult> {
     reviewerGateEvaluation?: ReturnType<typeof evaluateReviewerGateWarnings>;
     createError: PairflowCreateCommandError;
   }) => Promise<{
-    written: LoadedDomainStateSnapshot;
+    written: LoadedStateSnapshot;
     docGateArtifactWriteFailureReason?: string;
   }>;
   executeNormalPassDelivery: (input: {

@@ -23,6 +23,10 @@ import {
   readStateSnapshot,
   writeStateSnapshot as rawWriteStateSnapshot
 } from "../../../src/v11/infrastructure/state/stateStore.js";
+import type { BubbleStateSnapshot } from "../../../src/v11/domain/state/snapshot/bubbleStateSnapshot.js";
+import { buildBubbleStateSnapshotVariant } from "../../../src/v11/domain/state/snapshot/buildBubbleStateSnapshot.js";
+import { toPersistedSnapshot } from "../../../src/v11/domain/state/snapshot/projection.js";
+import { asTemporaryVariantStateFixture } from "../../helpers/temporaryVariantStateFixture.js";
 import { bootstrapWorktreeWorkspace } from "../../../src/v11/infrastructure/workspace/worktreeManager.js";
 import {
   appendProtocolEnvelope,
@@ -62,8 +66,13 @@ import { writeEvidenceLog } from "../../helpers/evidence.js";
 const tempDirs: string[] = [];
 const defaultWatchdogTimeoutMinutes = 60;
 
+// Step 4b-γ/4: tests work with persisted-shape fixtures and cast at
+// boundary via asTemporaryVariantStateFixture. Step 4b-γ/5 will replace
+// with proper variant fixture builders.
+type PassTestState = unknown;
+
 function resolveWatchdogTimeoutMinutes(
-  state: Parameters<typeof rawWriteStateSnapshot>[1]
+  state: ReturnType<typeof toPersistedSnapshot>
 ): number {
   const executionContext =
     state.state === "RUNNING"
@@ -83,48 +92,49 @@ function resolveWatchdogTimeoutMinutes(
 }
 
 function normalizeTestStateForWrite(
-  state: Parameters<typeof rawWriteStateSnapshot>[1]
-): Parameters<typeof rawWriteStateSnapshot>[1] {
-  if (state.state === "RUNNING" && state.active_role === "meta_reviewer") {
-    return {
-      ...state,
+  state: PassTestState
+): BubbleStateSnapshot {
+  const persisted = toPersistedSnapshot(asTemporaryVariantStateFixture(state));
+  if (persisted.state === "RUNNING" && persisted.active_role === "meta_reviewer") {
+    return buildBubbleStateSnapshotVariant({
+      ...persisted,
       execution_context: metaReviewExecutionContextToRunningContext(
-        state.meta_review?.execution_context ?? null
+        persisted.meta_review?.execution_context ?? null
       )
-    };
+    });
   }
 
-  if (state.state === "RUNNING") {
-    if (state.round === 0) {
-      return {
-        ...state,
+  if (persisted.state === "RUNNING") {
+    if (persisted.round === 0) {
+      return buildBubbleStateSnapshotVariant({
+        ...persisted,
         execution_context: null
-      };
+      });
     }
-    if (state.active_role !== null && state.active_since !== null) {
-      return {
-        ...state,
+    if (persisted.active_role !== null && persisted.active_since !== null) {
+      return buildBubbleStateSnapshotVariant({
+        ...persisted,
         execution_context: buildRunningExecutionContext({
-          bubbleId: state.bubble_id,
-          round: state.round,
-          activeRole: state.active_role,
-          startedAt: state.active_since,
-          watchdogTimeoutMinutes: resolveWatchdogTimeoutMinutes(state),
-          attempt: state.execution_context?.attempt ?? 1
+          bubbleId: persisted.bubble_id,
+          round: persisted.round,
+          activeRole: persisted.active_role,
+          startedAt: persisted.active_since,
+          watchdogTimeoutMinutes: resolveWatchdogTimeoutMinutes(persisted),
+          attempt: persisted.execution_context?.attempt ?? 1
         })
-      };
+      });
     }
   }
 
-  return {
-    ...state,
+  return buildBubbleStateSnapshotVariant({
+    ...persisted,
     execution_context: null
-  };
+  });
 }
 
 async function writeStateSnapshot(
   statePath: Parameters<typeof rawWriteStateSnapshot>[0],
-  state: Parameters<typeof rawWriteStateSnapshot>[1],
+  state: PassTestState,
   options?: Parameters<typeof rawWriteStateSnapshot>[2]
 ): ReturnType<typeof rawWriteStateSnapshot> {
   return rawWriteStateSnapshot(
@@ -481,7 +491,7 @@ describe("emitPassFromWorkspace", { timeout: 20_000 }, () => {
       statePath: bubble.paths.statePath,
       mutate: (loaded) => ({
         ...loaded,
-        state: {
+        state: asTemporaryVariantStateFixture({
           ...loaded.state,
           active_agent: bubble.config.agents.implementer,
           active_role: "implementer",
@@ -489,7 +499,7 @@ describe("emitPassFromWorkspace", { timeout: 20_000 }, () => {
             ...loaded.state.execution_context,
             active_role: "reviewer"
           } as never
-        }
+        })
       }),
       run: (dependencies) => emitPassFromWorkspace(
         {
@@ -499,7 +509,7 @@ describe("emitPassFromWorkspace", { timeout: 20_000 }, () => {
         },
         dependencies
       )
-    });
+    }) as { transitionDecision: string; resultEnvelopeKind: string; activation: unknown };
 
     expect(result.transitionDecision).toBe("normal_pass");
     expect(result.resultEnvelopeKind).toBe("pass");

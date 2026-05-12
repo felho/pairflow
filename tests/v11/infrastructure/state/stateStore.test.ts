@@ -11,8 +11,16 @@ import {
   createStateSnapshot,
   inspectStateSnapshot,
   readStateSnapshot,
-  writeStateSnapshot
+  writeStateSnapshot as rawWriteStateSnapshot
 } from "../../../../src/v11/infrastructure/state/stateStore.js";
+import { asTemporaryVariantStateFixture } from "../../../helpers/temporaryVariantStateFixture.js";
+
+// Step 4b-γ/4 transitional: 4b-γ/5 cleanup target.
+const writeStateSnapshot = (
+  statePath: Parameters<typeof rawWriteStateSnapshot>[0],
+  state: unknown,
+  options?: Parameters<typeof rawWriteStateSnapshot>[2]
+): ReturnType<typeof rawWriteStateSnapshot> => rawWriteStateSnapshot(statePath, asTemporaryVariantStateFixture(state), options);
 
 const tempDirs: string[] = [];
 
@@ -37,7 +45,7 @@ describe("v11 infrastructure state store", () => {
 
     const created = await createStateSnapshot(
       statePath,
-      toPersistedSnapshot(createInitialBubbleState("b_v11_state_store_01"))
+      createInitialBubbleState("b_v11_state_store_01")
     );
     const loaded = await readStateSnapshot(statePath);
 
@@ -90,7 +98,7 @@ describe("v11 infrastructure state store", () => {
 
     const created = await createStateSnapshot(
       statePath,
-      toPersistedSnapshot(createInitialBubbleState("b_v11_state_store_03"))
+      createInitialBubbleState("b_v11_state_store_03")
     );
 
     await writeStateSnapshot(

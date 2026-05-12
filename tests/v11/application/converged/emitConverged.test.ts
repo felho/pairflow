@@ -7,7 +7,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { resolveActorEmitContextByBubbleId } from "../../../../src/v11/defaults/actorProtocol/actorEmitContextDefaults.js";
 import type { AgentName } from "../../../../src/contracts/kernel/agentIdentity.js";
 import { buildRunningExecutionContext } from "../../../../src/v11/domain/state/execution/executionContext.js";
-import { readStateSnapshot, writeStateSnapshot } from "../../../../src/v11/infrastructure/state/stateStore.js";
+import { readStateSnapshot, writeStateSnapshot as rawWriteStateSnapshot } from "../../../../src/v11/infrastructure/state/stateStore.js";
 import {
   ConvergedCommandError,
   emitConvergedFromWorkspaceCommandOrchestration,
@@ -19,6 +19,14 @@ import { bootstrapWorktreeWorkspace } from "../../../../src/v11/infrastructure/w
 import { initGitRepository } from "../../../helpers/git.js";
 import { setupRunningBubbleFixture } from "../../../helpers/bubble.js";
 import { seedConvergedCandidate } from "./convergedSeedFixture.js";
+import { asTemporaryVariantStateFixture } from "../../../helpers/temporaryVariantStateFixture.js";
+
+// Step 4b-γ/4 transitional: 4b-γ/5 cleanup target.
+const writeStateSnapshot = (
+  statePath: Parameters<typeof rawWriteStateSnapshot>[0],
+  state: unknown,
+  options?: Parameters<typeof rawWriteStateSnapshot>[2]
+): ReturnType<typeof rawWriteStateSnapshot> => rawWriteStateSnapshot(statePath, asTemporaryVariantStateFixture(state), options);
 
 const tempDirs: string[] = [];
 

@@ -25,10 +25,18 @@ import { initGitRepository } from "../../helpers/git.js";
 import { applyStateTransition } from "../../../src/v11/domain/state/machine.js";
 import { buildBubbleStateSnapshotVariant } from "../../../src/v11/domain/state/snapshot/buildBubbleStateSnapshot.js";
 import { toPersistedSnapshot } from "../../../src/v11/domain/state/snapshot/projection.js";
+import { asTemporaryVariantStateFixture } from "../../helpers/temporaryVariantStateFixture.js";
 import {
   readStateSnapshot,
-  writeStateSnapshot
+  writeStateSnapshot as rawWriteStateSnapshot
 } from "../../../src/v11/infrastructure/state/stateStore.js";
+
+// Step 4b-γ/4 transitional: 4b-γ/5 cleanup target.
+const writeStateSnapshot = (
+  statePath: Parameters<typeof rawWriteStateSnapshot>[0],
+  state: unknown,
+  options?: Parameters<typeof rawWriteStateSnapshot>[2]
+): ReturnType<typeof rawWriteStateSnapshot> => rawWriteStateSnapshot(statePath, asTemporaryVariantStateFixture(state), options);
 import type { ContractCase, ContractCaseExpected } from "./schema.js";
 
 export interface WatchdogContractOutput {

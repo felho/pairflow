@@ -1,4 +1,4 @@
-import type { LoadedDomainStateSnapshot } from "../../../../ports/stateSnapshots.js";
+import type { LoadedStateSnapshot } from "../../../../ports/stateSnapshots.js";
 import { isNamedError } from "../../../../shared/errors/namedError.js";
 import type { BubbleStateSnapshot } from "../../../../domain/state/snapshot/bubbleStateSnapshot.js";
 import { MetaReviewGateError } from "../../../../shared/metaReviewGate/metaReviewGateRouteContract.js";
@@ -30,7 +30,7 @@ function toGateTransitionError(error: unknown): MetaReviewGateError {
 export async function writeAutoReworkResumedState(input: {
   finalizeInput: AutoReworkFinalizeInput;
   resumed: BubbleStateSnapshot;
-}): Promise<LoadedDomainStateSnapshot> {
+}): Promise<LoadedStateSnapshot> {
   try {
     return await input.finalizeInput.writeState(
       input.finalizeInput.resolved.bubblePaths.statePath,
@@ -50,9 +50,9 @@ export async function writeAutoReworkResumedState(input: {
 
 export async function restoreReadyStateAfterAppendFailure(input: {
   finalizeInput: AutoReworkFinalizeInput;
-  resumedWritten: LoadedDomainStateSnapshot;
+  resumedWritten: LoadedStateSnapshot;
   nowIso: string;
-}): Promise<LoadedDomainStateSnapshot> {
+}): Promise<LoadedStateSnapshot> {
   const restoredState = buildRestoredReadyState({
     resumedState: input.resumedWritten.state,
     loadedState: input.finalizeInput.loaded.state,

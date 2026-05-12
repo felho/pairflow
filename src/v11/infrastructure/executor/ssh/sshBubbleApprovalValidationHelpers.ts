@@ -1,4 +1,4 @@
-import type { PersistedBubbleStateSnapshot } from "../../../domain/state/snapshot/persistedBubbleStateSnapshot.js";
+import type { BubbleStateSnapshot } from "../../../domain/state/snapshot/bubbleStateSnapshot.js";
 import type { ProtocolEnvelope } from "../../../../types/protocol.js";
 
 interface RemoteApprovalPayloadErrorContext {
@@ -70,7 +70,7 @@ function refsMatch(expected: string[], actual: string[]): boolean {
 
 function expectedDecisionState(
   decision: "approve" | "rework"
-): PersistedBubbleStateSnapshot["state"] {
+): BubbleStateSnapshot["state"] {
   return decision === "approve" ? "APPROVED_FOR_COMMIT" : "RUNNING";
 }
 
@@ -193,7 +193,7 @@ export function assertApprovalMetadataMatches(input: {
 export function assertDecisionStateMatches(input: {
   bubbleId: string;
   action: "approve" | "request-rework";
-  state: PersistedBubbleStateSnapshot;
+  state: BubbleStateSnapshot;
   expectedDecision: "approve" | "rework";
   createPayloadError: RemoteApprovalPayloadErrorFactory;
 }): void {
@@ -212,7 +212,7 @@ export function assertDecisionStateMatches(input: {
 
 export function assertQueuedReworkPendingIntent(input: {
   bubbleId: string;
-  pendingIntent: NonNullable<PersistedBubbleStateSnapshot["pending_rework_intent"]>;
+  pendingIntent: NonNullable<BubbleStateSnapshot["pending_rework_intent"]>;
   expectedMessage: string;
   expectedRefs: string[];
   createPayloadError: RemoteApprovalPayloadErrorFactory;
@@ -261,8 +261,8 @@ export function assertQueuedReworkPendingIntent(input: {
 
 export function resolveQueuedReworkSupersededIntentId(input: {
   bubbleId: string;
-  beforeState: PersistedBubbleStateSnapshot;
-  afterState: PersistedBubbleStateSnapshot;
+  beforeState: BubbleStateSnapshot;
+  afterState: BubbleStateSnapshot;
   pendingIntentId: string;
   createPayloadError: RemoteApprovalPayloadErrorFactory;
 }): string | undefined {

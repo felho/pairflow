@@ -5,8 +5,6 @@ import {
 } from "../../../start/startCommandDependencyDefaults.js";
 import { reviewerDeliveryDefaults } from "../../../pass/reviewerDeliveryDefaults.js";
 import {
-  adaptPersistedReadPortToDomain,
-  adaptPersistedWritePortToDomain
 } from "../../../../shared/mutation/mutationBoundaryIO.js";
 
 async function emitDeliveryNotificationAck(
@@ -86,7 +84,7 @@ export function resolveReplyCommandDependencies(
       ?? replyCommandDependencyDefaults.ensureBubbleInstanceIdForMutation,
     readStateSnapshot:
       dependencies.readStateSnapshot
-      ?? adaptPersistedReadPortToDomain(replyCommandDependencyDefaults.readStateSnapshot),
+      ?? replyCommandDependencyDefaults.readStateSnapshot,
     resolveBubbleById:
       dependencies.resolveBubbleById ?? replyCommandDependencyDefaults.resolveBubbleById,
     resolveDeliveryMessageRef:
@@ -94,6 +92,6 @@ export function resolveReplyCommandDependencies(
       ?? replyCommandDependencyDefaults.resolveDeliveryMessageRef,
     writeStateSnapshot:
       dependencies.writeStateSnapshot
-      ?? adaptPersistedWritePortToDomain(replyCommandDependencyDefaults.writeStateSnapshot)
+      ?? replyCommandDependencyDefaults.writeStateSnapshot
   };
 }

@@ -10,8 +10,6 @@ import {
   reviewerDeliveryDefaults
 } from "../../../pass/reviewerDeliveryDefaults.js";
 import {
-  adaptPersistedReadPortToDomain,
-  adaptPersistedWritePortToDomain
 } from "../../../../shared/mutation/mutationBoundaryIO.js";
 import type {
   KickoffDependencyOverrides,
@@ -21,8 +19,8 @@ import type {
 function buildKickoffDefaultDependencies(): ResolvedKickoffDependencies {
   return {
     resolveBubble: resolveBubbleById,
-    readState: adaptPersistedReadPortToDomain(readStateSnapshot),
-    writeState: adaptPersistedWritePortToDomain(writeStateSnapshot),
+    readState: readStateSnapshot,
+    writeState: writeStateSnapshot,
     readFileFn: readFile,
     statFileFn: stat,
     writeFileFn: writeFile,
@@ -39,11 +37,11 @@ export function resolveKickoffDependencies(
     resolveBubble: overrides.resolveBubbleById ?? defaults.resolveBubble,
     readState:
       overrides.readStateSnapshot !== undefined
-        ? adaptPersistedReadPortToDomain(overrides.readStateSnapshot)
+        ? overrides.readStateSnapshot
         : defaults.readState,
     writeState:
       overrides.writeStateSnapshot !== undefined
-        ? adaptPersistedWritePortToDomain(overrides.writeStateSnapshot)
+        ? overrides.writeStateSnapshot
         : defaults.writeState,
     readFileFn: overrides.readFile ?? defaults.readFileFn,
     statFileFn: overrides.statFile ?? defaults.statFileFn,

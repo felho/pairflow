@@ -25,7 +25,6 @@ import {
   remoteCommitWorkspaceRootEnvVar
 } from "../../../../src/v11/application/commit/internal/remote/remoteCommitExecutionContext.js";
 import { readStateSnapshot } from "../../../../src/v11/infrastructure/state/stateStore.js";
-import { adaptPersistedReadPortToDomain } from "../../../../src/v11/shared/mutation/mutationBoundaryIO.js";
 import { readTranscriptEnvelopes } from "../../../../src/v11/infrastructure/artifact/transcript/transcriptStore.js";
 import { RemoteBubbleCommitCommandError } from "../../../../src/v11/infrastructure/executor/ssh/sshBubbleCommitCommand.js";
 import { resolveMetricsShardPath } from "../../../../src/v11/shared/metrics/events.js";
@@ -33,6 +32,7 @@ import { buildCommitBubbleDependencies } from "../../../helpers/commit.js";
 import { initGitRepository, runGit } from "../../../helpers/git.js";
 import { setupRunningBubbleFixture } from "../../../helpers/bubble.js";
 import { getBubblePaths } from "../../../../src/v11/shared/bubble/bubblePaths.js";
+import { asTemporaryVariantStateFixture } from "../../../helpers/temporaryVariantStateFixture.js";
 
 const tempDirs: string[] = [];
 
@@ -321,7 +321,7 @@ describe("commitCommandApi", () => {
       bubbleId: "b_remote_commit_01",
       sequence: 7,
       envelope: remoteEnvelope,
-      state: remoteState,
+      state: asTemporaryVariantStateFixture(remoteState),
       stateContent: `${JSON.stringify(remoteState, null, 2)}\n`,
       transcriptContent: `${JSON.stringify(remoteEnvelope)}\n`,
       commitSha: "abcdef1234567890",
@@ -368,7 +368,7 @@ describe("commitCommandApi", () => {
         importRemoteBubbleCommitContinuity: noRemoteCommitCompletionEvidence(),
         executeRemoteBubbleCommitCommand,
         appendProtocolEnvelope,
-        readStateSnapshot: adaptPersistedReadPortToDomain(readStateSnapshot),
+        readStateSnapshot: readStateSnapshot,
         readTranscriptEnvelopes: vi.fn(async () => []),
         runGit,
         writeTextFile: async (path: string, content: string) => {
@@ -657,7 +657,7 @@ describe("commitCommandApi", () => {
           appendProtocolEnvelope: vi.fn(async () => {
             throw new Error("unused");
           }),
-          readStateSnapshot: adaptPersistedReadPortToDomain(readStateSnapshot),
+          readStateSnapshot: readStateSnapshot,
           readTranscriptEnvelopes: vi.fn(async () => []),
           runGit,
           writeTextFile: vi.fn(async () => undefined),
@@ -738,7 +738,7 @@ describe("commitCommandApi", () => {
           appendProtocolEnvelope: vi.fn(async () => {
             throw new Error("unused");
           }),
-          readStateSnapshot: adaptPersistedReadPortToDomain(readStateSnapshot),
+          readStateSnapshot: readStateSnapshot,
           readTranscriptEnvelopes: vi.fn(async () => []),
           runGit: vi.fn(async () => {
             throw new Error("unused");
@@ -820,7 +820,7 @@ describe("commitCommandApi", () => {
           appendProtocolEnvelope: vi.fn(async () => {
             throw new Error("unused");
           }),
-          readStateSnapshot: adaptPersistedReadPortToDomain(readStateSnapshot),
+          readStateSnapshot: readStateSnapshot,
           readTranscriptEnvelopes: vi.fn(async () => []),
           runGit: vi.fn(async () => {
             throw new Error("unused");
@@ -897,7 +897,7 @@ describe("commitCommandApi", () => {
           appendProtocolEnvelope: vi.fn(async () => {
             throw new Error("unused");
           }),
-          readStateSnapshot: adaptPersistedReadPortToDomain(readStateSnapshot),
+          readStateSnapshot: readStateSnapshot,
           readTranscriptEnvelopes: vi.fn(async () => []),
           runGit: vi.fn(async () => {
             throw new Error("unused");
@@ -983,7 +983,7 @@ describe("commitCommandApi", () => {
       bubbleId: "b_remote_commit_sync_fail_01",
       sequence: 4,
       envelope: remoteEnvelope,
-      state: remoteDoneState,
+      state: asTemporaryVariantStateFixture(remoteDoneState),
       stateContent: `${JSON.stringify(remoteDoneState, null, 2)}\n`,
       transcriptContent: `${JSON.stringify(remoteEnvelope)}\n`,
       commitSha: "1234567",
@@ -1022,7 +1022,7 @@ describe("commitCommandApi", () => {
           appendProtocolEnvelope: vi.fn(async () => {
             throw new Error("unused");
           }),
-          readStateSnapshot: adaptPersistedReadPortToDomain(readStateSnapshot),
+          readStateSnapshot: readStateSnapshot,
           readTranscriptEnvelopes: vi.fn(async () => []),
           runGit: vi.fn(async () => {
             throw new Error("unused");
@@ -1115,7 +1115,7 @@ describe("commitCommandApi", () => {
       bubbleId: "b_remote_commit_sync_rename_fail_01",
       sequence: 5,
       envelope: remoteEnvelope,
-      state: remoteDoneState,
+      state: asTemporaryVariantStateFixture(remoteDoneState),
       stateContent: `${JSON.stringify(remoteDoneState, null, 2)}\n`,
       transcriptContent: `${JSON.stringify(remoteEnvelope)}\n`,
       commitSha: "2345678",
@@ -1164,7 +1164,7 @@ describe("commitCommandApi", () => {
           appendProtocolEnvelope: vi.fn(async () => {
             throw new Error("unused");
           }),
-          readStateSnapshot: adaptPersistedReadPortToDomain(readStateSnapshot),
+          readStateSnapshot: readStateSnapshot,
           readTranscriptEnvelopes: vi.fn(async () => []),
           renamePath,
           runGit: vi.fn(async () => {
@@ -1259,7 +1259,7 @@ describe("commitCommandApi", () => {
       bubbleId: "b_remote_commit_sync_restore_retry_01",
       sequence: 6,
       envelope: remoteEnvelope,
-      state: remoteDoneState,
+      state: asTemporaryVariantStateFixture(remoteDoneState),
       stateContent: `${JSON.stringify(remoteDoneState, null, 2)}\n`,
       transcriptContent: `${JSON.stringify(remoteEnvelope)}\n`,
       commitSha: "3456789",
@@ -1317,7 +1317,7 @@ describe("commitCommandApi", () => {
           appendProtocolEnvelope: vi.fn(async () => {
             throw new Error("unused");
           }),
-          readStateSnapshot: adaptPersistedReadPortToDomain(readStateSnapshot),
+          readStateSnapshot: readStateSnapshot,
           readTranscriptEnvelopes: vi.fn(async () => []),
           renamePath,
           runGit: vi.fn(async () => {
@@ -1414,7 +1414,7 @@ describe("commitCommandApi", () => {
       bubbleId,
       sequence: 4,
       envelope: remoteEnvelope,
-      state: remoteDoneState,
+      state: asTemporaryVariantStateFixture(remoteDoneState),
       stateContent: `${JSON.stringify(remoteDoneState, null, 2)}\n`,
       transcriptContent: `${JSON.stringify(remoteEnvelope)}\n`,
       commitSha: "4567890",
@@ -1452,7 +1452,7 @@ describe("commitCommandApi", () => {
         appendProtocolEnvelope: vi.fn(async () => {
           throw new Error("unused");
         }),
-        readStateSnapshot: adaptPersistedReadPortToDomain(readStateSnapshot),
+        readStateSnapshot: readStateSnapshot,
         readTranscriptEnvelopes: vi.fn(async () => []),
         runGit: vi.fn(async () => {
           throw new Error("unused");
@@ -1582,7 +1582,7 @@ describe("commitCommandApi", () => {
           bubbleId,
           sequence: 4,
           envelope: remoteEnvelope,
-          state: doneState,
+          state: asTemporaryVariantStateFixture(doneState),
           stateContent: `${JSON.stringify(doneState, null, 2)}\n`,
           transcriptContent: `${JSON.stringify(remoteEnvelope)}\n`,
           commitSha: "5678901",
@@ -1595,7 +1595,7 @@ describe("commitCommandApi", () => {
         appendProtocolEnvelope: vi.fn(async () => {
           throw new Error("unused");
         }),
-        readStateSnapshot: adaptPersistedReadPortToDomain(readStateSnapshot),
+        readStateSnapshot: readStateSnapshot,
         readTranscriptEnvelopes: vi.fn(async () => []),
         runGit: vi.fn(async () => {
           throw new Error("unused");

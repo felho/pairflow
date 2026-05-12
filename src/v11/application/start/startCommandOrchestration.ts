@@ -1,8 +1,7 @@
 import { buildResumeTranscriptSummary } from "./internal/prompts/startCommandResumeSummary.js";
 import type { BubbleStateSnapshot } from "../../domain/state/snapshot/bubbleStateSnapshot.js";
-import { adaptPersistedWritePortToDomain } from "../../shared/mutation/mutationBoundaryIO.js";
 import type {
-  WriteDomainStateSnapshotPort
+  WriteStateSnapshotPort
 } from "../../ports/stateSnapshots.js";
 import type {
   StartBubbleDependencies,
@@ -59,7 +58,7 @@ export interface ResolvedStartBubbleDependencies {
   claimSession: NonNullable<StartBubbleDependencies["claimRuntimeSession"]>;
   upsertSession: NonNullable<StartBubbleDependencies["upsertRuntimeSession"]>;
   removeSession: NonNullable<StartBubbleDependencies["removeRuntimeSession"]>;
-  writeState: WriteDomainStateSnapshotPort;
+  writeState: WriteStateSnapshotPort;
   loadPairflowGlobalConfig:
     () => Promise<PairflowGlobalConfig>;
   runGitCommand:
@@ -207,9 +206,8 @@ export function resolveStartBubbleDependencies(
     isTmuxSessionAlive:
       dependencies.isTmuxSessionAlive ?? input.isTmuxSessionAliveDefault,
     ...runtimeSessions,
-    writeState: adaptPersistedWritePortToDomain(
-      dependencies.writeStateSnapshot ?? startBubbleDependencyDefaults.writeStateSnapshot
-    ),
+    writeState:
+      dependencies.writeStateSnapshot ?? startBubbleDependencyDefaults.writeStateSnapshot,
     ...remoteExecution,
     reportWarning:
       dependencies.reportWarning

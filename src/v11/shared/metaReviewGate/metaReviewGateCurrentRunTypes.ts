@@ -1,9 +1,9 @@
 import type { MetaReviewResult } from "../metaReview/metaReviewTypes.js";
 import type { AppendProtocolEnvelopePort } from "../../ports/transcript.js";
 import type {
-  LoadedDomainStateSnapshot,
-  ReadDomainStateSnapshotPort,
-  WriteDomainStateSnapshotPort
+  LoadedStateSnapshot,
+  ReadStateSnapshotPort,
+  WriteStateSnapshotPort
 } from "../../ports/stateSnapshots.js";
 import type { BubbleConfig } from "../config/bubbleConfigTypes.js";
 import type {
@@ -64,16 +64,16 @@ export interface FinalizeCurrentRunMetaReviewGateInput {
       worktreePath?: string;
     };
   };
-  loaded: LoadedDomainStateSnapshot;
+  loaded: LoadedStateSnapshot;
   now: Date;
   refs: string[];
   summary: string;
   runResult: MetaReviewResult;
   readFileFn: MetaReviewGateArtifactReadFn;
   appendEnvelope: AppendProtocolEnvelopePort;
-  readState?: ReadDomainStateSnapshotPort;
+  readState?: ReadStateSnapshotPort;
   readTranscript?: ReadTranscriptEnvelopesPort;
-  writeState: WriteDomainStateSnapshotPort;
+  writeState: WriteStateSnapshotPort;
   setMetaReviewerPane?: SetMetaReviewerPaneBindingPort;
   notifySubmissionRequest?: NotifyMetaReviewerSubmissionRequest;
   resolvePaneWarning?: ResolveMetaReviewerPaneWarning;

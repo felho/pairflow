@@ -9,11 +9,16 @@ export type {
 } from "../../contracts/ui/stateValidation.js";
 
 export interface LoadedStateSnapshot {
-  state: PersistedBubbleStateSnapshot;
+  state: BubbleStateSnapshot;
   fingerprint: string;
 }
 
-export interface InspectedStateSnapshot extends LoadedStateSnapshot {
+// InspectedStateSnapshot remains persisted-shape per §10.15 — the inspect
+// port's coercion fallback path synthesizes diagnostic snapshots from
+// partial/malformed input, which would defeat variant invariants.
+export interface InspectedStateSnapshot {
+  state: PersistedBubbleStateSnapshot;
+  fingerprint: string;
   stateValidation: StateValidationDiagnostics | null;
 }
 
@@ -29,26 +34,6 @@ export interface WriteStateSnapshotOptions {
 
 export type WriteStateSnapshotPort = (
   statePath: string,
-  state: PersistedBubbleStateSnapshot,
-  options?: WriteStateSnapshotOptions
-) => Promise<LoadedStateSnapshot>;
-
-// Variant-aware port siblings — Step 4b-β opt-in API. Consumers that
-// have migrated to the domain variant model use these; others continue
-// using the persisted-shape ports above. Step 4b-γ collapses the two
-// families into a single canonical variant-shaped API.
-
-export interface LoadedDomainStateSnapshot {
-  state: BubbleStateSnapshot;
-  fingerprint: string;
-}
-
-export type ReadDomainStateSnapshotPort = (
-  statePath: string
-) => Promise<LoadedDomainStateSnapshot>;
-
-export type WriteDomainStateSnapshotPort = (
-  statePath: string,
   state: BubbleStateSnapshot,
   options?: WriteStateSnapshotOptions
-) => Promise<LoadedDomainStateSnapshot>;
+) => Promise<LoadedStateSnapshot>;

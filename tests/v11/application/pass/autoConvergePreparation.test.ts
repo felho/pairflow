@@ -9,6 +9,7 @@ function toErrorMessage(input: PairflowCommandErrorInput): string {
 
 import type { ReviewVerificationInputResolution } from "../../../../src/v11/shared/reviewer/reviewVerification.js";
 import { prepareRepeatCleanAutoConverge } from "../../../../src/v11/application/pass/internal/autoConverge/autoConvergePreparation.js";
+import { asTemporaryVariantStateFixture } from "../../../helpers/temporaryVariantStateFixture.js";
 
 class TestAutoConvergePreparationError extends Error {
   public constructor(message: string) {
@@ -73,7 +74,7 @@ describe("prepareRepeatCleanAutoConverge", () => {
           diagnostics: []
         }),
         readStateSnapshot: async () => ({
-          state: {
+          state: asTemporaryVariantStateFixture({
             bubble_id: "b_123",
             state: "RUNNING",
             round: 2,
@@ -82,7 +83,7 @@ describe("prepareRepeatCleanAutoConverge", () => {
             active_role: "reviewer",
             round_role_history: [],
             last_command_at: "2026-03-19T12:00:00.000Z"
-          },
+          }),
           fingerprint: "fp_expected"
         })
       }
@@ -123,7 +124,7 @@ describe("prepareRepeatCleanAutoConverge", () => {
             diagnostics: []
           }),
           readStateSnapshot: async () => ({
-            state: {
+            state: asTemporaryVariantStateFixture({
               bubble_id: "b_123",
               state: "RUNNING",
               round: 2,
@@ -132,7 +133,7 @@ describe("prepareRepeatCleanAutoConverge", () => {
               active_role: "reviewer",
               round_role_history: [],
               last_command_at: "2026-03-19T12:00:00.000Z"
-            },
+            }),
             fingerprint: "fp_changed"
           })
         }
@@ -157,7 +158,7 @@ describe("prepareRepeatCleanAutoConverge", () => {
             diagnostics: []
           }),
           readStateSnapshot: async () => ({
-            state: {
+            state: asTemporaryVariantStateFixture({
               bubble_id: "b_123",
               state: "RUNNING",
               round: 2,
@@ -166,7 +167,7 @@ describe("prepareRepeatCleanAutoConverge", () => {
               active_role: "reviewer",
               round_role_history: [],
               last_command_at: "2026-03-19T12:00:00.000Z"
-            },
+            }),
             fingerprint: "fp_expected"
           }),
           writeReviewVerificationArtifactAtomic: async () => {

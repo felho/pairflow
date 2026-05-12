@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
 
 import { persistHumanGateRoute } from "../../../../../../src/v11/application/metaReviewGate/internal/humanGate/metaReviewGateHumanGatePersistence.js";
-import type { LoadedDomainStateSnapshot } from "../../../../../../src/v11/ports/stateSnapshots.js";
+import type { LoadedStateSnapshot } from "../../../../../../src/v11/ports/stateSnapshots.js";
 import { buildBubbleStateSnapshotVariant } from "../../../../../../src/v11/domain/state/snapshot/buildBubbleStateSnapshot.js";
 import type { PersistedBubbleStateSnapshot } from "../../../../../../src/v11/domain/state/snapshot/persistedBubbleStateSnapshot.js";
 
-function createLoadedRunningState(): LoadedDomainStateSnapshot {
+function createLoadedRunningState(): LoadedStateSnapshot {
   const state: PersistedBubbleStateSnapshot = {
     bubble_id: "b_meta_gate_human_route_01",
     state: "RUNNING",

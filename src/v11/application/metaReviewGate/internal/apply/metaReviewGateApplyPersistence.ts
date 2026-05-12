@@ -1,7 +1,7 @@
 import type {
-  LoadedDomainStateSnapshot,
-  ReadDomainStateSnapshotPort,
-  WriteDomainStateSnapshotPort
+  LoadedStateSnapshot,
+  ReadStateSnapshotPort,
+  WriteStateSnapshotPort
 } from "../../../../ports/stateSnapshots.js";
 import { isMetaReviewExecutionContextActiveState } from "../../../../shared/metaReview/metaReviewExecutionContext.js";
 import { resolveActiveMetaReviewRuntimeDelivery } from "../../../../shared/metaReview/metaReviewSnapshot.js";
@@ -11,8 +11,8 @@ import { toPersistedSnapshot } from "../../../../domain/state/snapshot/projectio
 import { isNamedError } from "../../../../shared/errors/namedError.js";
 
 interface RuntimeDeliveryObservationPersistenceContext {
-  readState: ReadDomainStateSnapshotPort;
-  writeState: WriteDomainStateSnapshotPort;
+  readState: ReadStateSnapshotPort;
+  writeState: WriteStateSnapshotPort;
   resolved: {
     bubblePaths: {
       statePath: string;
@@ -22,9 +22,9 @@ interface RuntimeDeliveryObservationPersistenceContext {
 
 export async function persistRuntimeDeliveryObservation(input: {
   context: RuntimeDeliveryObservationPersistenceContext;
-  loaded: LoadedDomainStateSnapshot;
+  loaded: LoadedStateSnapshot;
   runtimeDelivery: BubbleMetaReviewRuntimeDeliveryState;
-}): Promise<LoadedDomainStateSnapshot> {
+}): Promise<LoadedStateSnapshot> {
   // The object-spread mutation below preserves all fields, but the variant
   // requires its kind discriminator to stay consistent with the state field.
   // Project to persisted shape, mutate, then rebuild the variant on the

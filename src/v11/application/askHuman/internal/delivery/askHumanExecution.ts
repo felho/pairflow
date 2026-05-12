@@ -1,6 +1,6 @@
 import { join } from "node:path";
 
-import type { LoadedDomainStateSnapshot } from "../../../../ports/stateSnapshots.js";
+import type { LoadedStateSnapshot } from "../../../../ports/stateSnapshots.js";
 import type { AppendProtocolEnvelopeResult } from "../../../../ports/transcript.js";
 import type {
   ExecuteAskHumanExecutionDependencies,
@@ -8,7 +8,6 @@ import type {
   ExecuteAskHumanExecutionResult
 } from "../mutation/askHumanFlowContract.js";
 import { applyStateTransition } from "../../../../domain/state/machine.js";
-import { adaptPersistedWritePortToDomain } from "../../../../shared/mutation/mutationBoundaryIO.js";
 import {
   appendProtocolEnvelope,
   writeStateSnapshot
@@ -35,7 +34,7 @@ export async function executeAskHumanExecution(
     dependencies.appendProtocolEnvelope ?? appendProtocolEnvelope;
   const writeSnapshot =
     dependencies.writeStateSnapshot
-    ?? adaptPersistedWritePortToDomain(writeStateSnapshot);
+    ?? writeStateSnapshot;
   const applyTransition =
     dependencies.applyStateTransition ?? applyStateTransition;
 
@@ -67,7 +66,7 @@ export async function executeAskHumanExecution(
     lastCommandAt: input.routing.nowIso
   });
 
-  let written: LoadedDomainStateSnapshot;
+  let written: LoadedStateSnapshot;
   try {
     written = await writeSnapshot(
       input.routing.resolved.bubblePaths.statePath,

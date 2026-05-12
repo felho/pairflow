@@ -5,8 +5,8 @@ import type {
 import type { AgentName } from "../../../../../contracts/kernel/agentIdentity.js";
 import { buildMetaReviewSubmitCommandTemplate } from "../../../../shared/metaReview/metaReviewSubmitGuidance.js";
 import {
-  type LoadedDomainStateSnapshot,
-  type WriteDomainStateSnapshotPort
+  type LoadedStateSnapshot,
+  type WriteStateSnapshotPort
 } from "../../../../ports/stateSnapshots.js";
 import {
   deliveryTargetRoleMetadataKey
@@ -65,7 +65,7 @@ export async function appendMetaReviewKickoffEnvelope(input: {
 
 export async function persistMetaReviewRunFailedRoute(input: {
   appendEnvelope: AppendProtocolEnvelopePort;
-  writeState: WriteDomainStateSnapshotPort;
+  writeState: WriteStateSnapshotPort;
   statePath: string;
   transcriptPath: string;
   inboxPath: string;
@@ -77,7 +77,7 @@ export async function persistMetaReviewRunFailedRoute(input: {
   convergenceSummary: string;
   fallbackReason: string;
   refs: string[];
-  loaded: LoadedDomainStateSnapshot;
+  loaded: LoadedStateSnapshot;
 }): Promise<MetaReviewGateResult> {
   return persistHumanGateRoute({
     appendEnvelope: input.appendEnvelope,

@@ -3,7 +3,7 @@ import { toPersistedSnapshot } from "../../../../domain/state/snapshot/projectio
 import type { BubbleWatchdogResult } from "../../watchdogCommandContract.js";
 import { deriveWatchdogWaitingHumanState } from "../../../../domain/state/watchdogEscalation.js";
 import { clearLiveMetaReviewSnapshot } from "../../../../shared/metaReview/metaReviewSnapshot.js";
-import { assertParsedDomainBubbleStateSnapshot } from "../../../../domain/state/stateSchema.js";
+import { assertParsedBubbleStateSnapshot } from "../../../../domain/state/stateSchema.js";
 import type { ResolvedBubbleById } from "../../../../ports/bubbleLookup.js";
 import type { EmitBubbleNotificationPort } from "../../../../ports/notifications.js";
 import type {
@@ -15,9 +15,9 @@ import type {
   AppendProtocolEnvelopePort
 } from "../../../../ports/transcript.js";
 import type {
-  LoadedDomainStateSnapshot,
-  ReadDomainStateSnapshotPort,
-  WriteDomainStateSnapshotPort
+  LoadedStateSnapshot,
+  ReadStateSnapshotPort,
+  WriteStateSnapshotPort
 } from "../../../../ports/stateSnapshots.js";
 import { BubbleWatchdogError } from "../error/watchdogCommandRuntime.js";
 
@@ -37,10 +37,10 @@ export interface WatchdogRuntimeContext {
   now: Date;
   nowIso: string;
   resolved: ResolvedBubbleById;
-  readState: ReadDomainStateSnapshotPort;
+  readState: ReadStateSnapshotPort;
   appendEnvelope: AppendProtocolEnvelopePort;
-  writeState: WriteDomainStateSnapshotPort;
-  loadedState: LoadedDomainStateSnapshot;
+  writeState: WriteStateSnapshotPort;
+  loadedState: LoadedStateSnapshot;
   state: BubbleStateSnapshot;
   emitDelivery: EmitDeliveryNotificationAckPort;
   emitNotification: EmitBubbleNotificationPort;
@@ -121,7 +121,7 @@ export async function escalateRunningWatchdog(
     lastCommandAt: context.nowIso
   });
 
-  let written: LoadedDomainStateSnapshot;
+  let written: LoadedStateSnapshot;
   try {
     written = await context.writeState(
       context.resolved.bubblePaths.statePath,
@@ -193,7 +193,7 @@ export async function escalateMetaReviewWatchdog(
   });
 
   const persistedCurrent = toPersistedSnapshot(context.state);
-  const nextState = assertParsedDomainBubbleStateSnapshot({
+  const nextState = assertParsedBubbleStateSnapshot({
     ...persistedCurrent,
     state: "WAITING_HUMAN",
     execution_context: null,

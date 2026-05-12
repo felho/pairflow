@@ -2,8 +2,8 @@ import { buildMetaReviewExecutionContext } from "../../../../shared/metaReview/m
 import { clearLiveMetaReviewSnapshot } from "../../../../shared/metaReview/metaReviewSnapshot.js";
 import { metaReviewExecutionContextToRunningContext } from "../../../../domain/state/execution/executionContext.js";
 import {
-  type LoadedDomainStateSnapshot,
-  type WriteDomainStateSnapshotPort
+  type LoadedStateSnapshot,
+  type WriteStateSnapshotPort
 } from "../../../../ports/stateSnapshots.js";
 import type { AgentName } from "../../../../../contracts/kernel/agentIdentity.js";
 import { buildBubbleStateSnapshotVariant } from "../../../../domain/state/snapshot/buildBubbleStateSnapshot.js";
@@ -30,13 +30,13 @@ export function throwMetaReviewRunningStageFailure(input: {
 
 export async function stageMetaReviewRunningState(input: {
   bubbleId: string;
-  loadedRunning: LoadedDomainStateSnapshot;
+  loadedRunning: LoadedStateSnapshot;
   metaReviewerAgent: AgentName;
   nowIso: string;
   watchdogTimeoutMinutes: number;
   statePath: string;
-  writeState: WriteDomainStateSnapshotPort;
-}): Promise<LoadedDomainStateSnapshot> {
+  writeState: WriteStateSnapshotPort;
+}): Promise<LoadedStateSnapshot> {
   // Project the variant input to persisted shape for the existing object
   // spread / mutation helpers (later batch); rebuild the variant for the
   // Domain write port.

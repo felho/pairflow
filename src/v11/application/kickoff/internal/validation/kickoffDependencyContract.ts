@@ -6,9 +6,7 @@ import type {
   ResolveBubbleByIdPort
 } from "../../../../ports/bubbleLookup.js";
 import type {
-  ReadDomainStateSnapshotPort,
   ReadStateSnapshotPort,
-  WriteDomainStateSnapshotPort,
   WriteStateSnapshotPort
 } from "../../../../ports/stateSnapshots.js";
 import type { AppendProtocolEnvelopePort } from "../../../../ports/transcript.js";
@@ -47,8 +45,8 @@ export interface KickoffDependencyOverrides {
 
 export interface ResolvedKickoffDependencies {
   resolveBubble: ResolveBubbleByIdPort;
-  readState: ReadDomainStateSnapshotPort;
-  writeState: WriteDomainStateSnapshotPort;
+  readState: ReadStateSnapshotPort;
+  writeState: WriteStateSnapshotPort;
   readFileFn: KickoffReadFile;
   statFileFn: KickoffStatFile;
   writeFileFn: KickoffWriteFile;

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { stageMetaReviewRunningState } from "../../../../../../src/v11/application/metaReviewGate/internal/state/metaReviewGateStateStaging.js";
-import type { LoadedDomainStateSnapshot } from "../../../../../../src/v11/ports/stateSnapshots.js";
+import type { LoadedStateSnapshot } from "../../../../../../src/v11/ports/stateSnapshots.js";
 import type { BubbleStateSnapshot } from "../../../../../../src/v11/domain/state/snapshot/bubbleStateSnapshot.js";
 import { buildBubbleStateSnapshotVariant } from "../../../../../../src/v11/domain/state/snapshot/buildBubbleStateSnapshot.js";
 import { toPersistedSnapshot } from "../../../../../../src/v11/domain/state/snapshot/projection.js";
@@ -9,7 +9,7 @@ import type { PersistedBubbleStateSnapshot } from "../../../../../../src/v11/dom
 
 function createLoadedRunningState(
   partial: Partial<PersistedBubbleStateSnapshot> = {}
-): LoadedDomainStateSnapshot {
+): LoadedStateSnapshot {
   return {
     fingerprint: "ready-fingerprint",
     state: buildBubbleStateSnapshotVariant({
@@ -51,7 +51,7 @@ describe("stageMetaReviewRunningState", () => {
       _statePath: string,
       state: BubbleStateSnapshot,
       options: { expectedFingerprint?: string; expectedState?: string } = {}
-    ): Promise<LoadedDomainStateSnapshot> => {
+    ): Promise<LoadedStateSnapshot> => {
       // Push persisted shape so existing field-by-field assertions are
       // unaffected; the variant flows back out through the Domain port.
       calls.push({ state: toPersistedSnapshot(state), options });
@@ -112,7 +112,7 @@ describe("stageMetaReviewRunningState", () => {
       writeState: async (
         _statePath,
         state
-      ): Promise<LoadedDomainStateSnapshot> => ({
+      ): Promise<LoadedStateSnapshot> => ({
         fingerprint: "next-fingerprint",
         state
       })

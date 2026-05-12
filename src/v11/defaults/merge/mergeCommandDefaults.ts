@@ -15,15 +15,13 @@ import {
   writeStateSnapshot as writeStateSnapshotPersisted
 } from "../../infrastructure/state/stateStore.js";
 import {
-  adaptPersistedReadPortToDomain,
-  adaptPersistedWritePortToDomain
 } from "../../shared/mutation/mutationBoundaryIO.js";
 
 // Adapt persisted-shape infrastructure ports into domain-variant ports at
 // the defaults boundary so the merge lane holds BubbleStateSnapshot
 // end-to-end through its dependency contract.
-const readStateSnapshot = adaptPersistedReadPortToDomain(readStateSnapshotPersisted);
-const writeStateSnapshot = adaptPersistedWritePortToDomain(writeStateSnapshotPersisted);
+const readStateSnapshot = readStateSnapshotPersisted;
+const writeStateSnapshot = writeStateSnapshotPersisted;
 import { emitBubbleLifecycleEventBestEffort } from "../metrics/bubbleEvents.js";
 import { readRemotePointer } from "../../infrastructure/artifact/bubble/remoteExecutionArtifacts.js";
 import {

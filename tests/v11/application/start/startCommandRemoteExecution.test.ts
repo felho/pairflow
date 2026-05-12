@@ -20,7 +20,7 @@ import type { PersistedBubbleStateSnapshot } from "../../../../src/v11/domain/st
 import { RemoteBubbleStartError } from "../../../../src/v11/infrastructure/executor/ssh/sshBubbleStart.js";
 import type { UpsertRuntimeSessionInput } from "../../../../src/v11/ports/runtimeSessions.js";
 import type { WriteStateSnapshotOptions } from "../../../../src/v11/infrastructure/state/stateStore.js";
-import { readStateSnapshot, writeDomainStateSnapshot, writeStateSnapshot } from "../../../../src/v11/infrastructure/state/stateStore.js";
+import { readStateSnapshot, writeStateSnapshot as rawWriteStateSnapshot } from "../../../../src/v11/infrastructure/state/stateStore.js";
 import {
   readRemotePointer,
   readRemoteStateCache,
@@ -31,6 +31,14 @@ import {
 } from "../../../../src/v11/infrastructure/artifact/gates/docContractGateArtifacts.js";
 import { runGit as runGitCommand } from "../../../../src/v11/infrastructure/workspace/git.js";
 import { initGitRepository, runGit } from "../../../helpers/git.js";
+import { asTemporaryVariantStateFixture } from "../../../helpers/temporaryVariantStateFixture.js";
+
+// Step 4b-γ/4 transitional: 4b-γ/5 cleanup target.
+const writeStateSnapshot = (
+  statePath: Parameters<typeof rawWriteStateSnapshot>[0],
+  state: unknown,
+  options?: Parameters<typeof rawWriteStateSnapshot>[2]
+): ReturnType<typeof rawWriteStateSnapshot> => rawWriteStateSnapshot(statePath, asTemporaryVariantStateFixture(state), options);
 
 const tempDirs: string[] = [];
 
@@ -491,7 +499,7 @@ describe("startCommandRemoteExecution", () => {
             if (state.state === "RUNNING") {
               throw new Error("forced running persistence failure");
             }
-            return writeDomainStateSnapshot(statePath, state, options);
+            return writeStateSnapshot(statePath, state, options);
           },
           writeRemoteStateCache: async (path, value) => {
             await writeFile(path, `${JSON.stringify(value)}\n`, "utf8");
@@ -532,7 +540,7 @@ describe("startCommandRemoteExecution", () => {
           if (state.state === "RUNNING") {
             throw new Error("forced running persistence failure");
           }
-          return writeDomainStateSnapshot(statePath, state, options);
+          return writeStateSnapshot(statePath, state, options);
         },
         removeRemoteStateCache: async () => {
           throw new Error("forced cache rollback failure");

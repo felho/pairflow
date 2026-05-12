@@ -12,7 +12,7 @@ import {
 } from "../../../../../../src/v11/application/metaReview/internal/submit/authority.js";
 import { MetaReviewError } from "../../../../../../src/v11/shared/metaReview/metaReviewError.js";
 import type { MetaReviewResult } from "../../../../../../src/v11/shared/metaReview/metaReviewTypes.js";
-import type { LoadedDomainStateSnapshot } from "../../../../../../src/v11/ports/stateSnapshots.js";
+import type { LoadedStateSnapshot } from "../../../../../../src/v11/ports/stateSnapshots.js";
 import { buildBubbleStateSnapshotVariant } from "../../../../../../src/v11/domain/state/snapshot/buildBubbleStateSnapshot.js";
 import { toPersistedSnapshot } from "../../../../../../src/v11/domain/state/snapshot/projection.js";
 import type { PersistedBubbleStateSnapshot } from "../../../../../../src/v11/domain/state/snapshot/persistedBubbleStateSnapshot.js";
@@ -26,7 +26,7 @@ afterEach(async () => {
   );
 });
 
-function createLoadedRunningState(): LoadedDomainStateSnapshot {
+function createLoadedRunningState(): LoadedStateSnapshot {
   const state: PersistedBubbleStateSnapshot = {
     bubble_id: "b_meta_gate_finalize_threshold_01",
     state: "RUNNING",
@@ -218,7 +218,7 @@ function createWriteStateStub(events?: string[]): {
 function createCleanRerunDeliveryStubs(input: {
   envelopes: ProtocolEnvelope[];
   writes: PersistedBubbleStateSnapshot[];
-  fallbackLoaded: LoadedDomainStateSnapshot;
+  fallbackLoaded: LoadedStateSnapshot;
   events?: string[];
 }): {
   paneBindingActiveCalls: boolean[];

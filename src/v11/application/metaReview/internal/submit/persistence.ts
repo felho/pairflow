@@ -10,6 +10,8 @@ import type {
   MetaReviewArtifactReadPort
 } from "../../../../shared/metaReview/metaReviewArtifactIo.js";
 import type { PersistedBubbleStateSnapshot } from "../../../../domain/state/snapshot/persistedBubbleStateSnapshot.js";
+import { buildBubbleStateSnapshotVariant } from "../../../../domain/state/snapshot/buildBubbleStateSnapshot.js";
+import { toPersistedSnapshot } from "../../../../domain/state/snapshot/projection.js";
 import type {
   BubbleExecutionContext
 } from "../../../../domain/state/execution/executionContext.js";
@@ -76,11 +78,11 @@ export async function writeCanonicalSubmitState(input: {
     execution_context: toMetaReviewExecutionContext(input.executionContext)
   };
 
-  const nextState: PersistedBubbleStateSnapshot = {
-    ...input.loadedState.state,
+  const nextState = buildBubbleStateSnapshotVariant({
+    ...toPersistedSnapshot(input.loadedState.state),
     execution_context: input.executionContext,
     meta_review: nextMetaReview
-  };
+  });
 
   try {
     await input.writeState(input.resolved.bubblePaths.statePath, nextState, {

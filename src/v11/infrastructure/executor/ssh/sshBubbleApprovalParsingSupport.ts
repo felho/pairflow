@@ -1,4 +1,4 @@
-import type { PersistedBubbleStateSnapshot } from "../../../domain/state/snapshot/persistedBubbleStateSnapshot.js";
+import type { BubbleStateSnapshot } from "../../../domain/state/snapshot/bubbleStateSnapshot.js";
 import type { ProtocolEnvelope } from "../../../../types/protocol.js";
 import { assertParsedBubbleStateSnapshot } from "../../../domain/state/stateSchema.js";
 
@@ -82,7 +82,7 @@ export function parseRemoteBubbleState(input: {
   label: string;
   action: "approve" | "request-rework";
   createPayloadError: RemoteApprovalPayloadErrorFactory;
-}): PersistedBubbleStateSnapshot {
+}): BubbleStateSnapshot {
   let parsed: unknown;
   try {
     parsed = JSON.parse(input.raw) as unknown;

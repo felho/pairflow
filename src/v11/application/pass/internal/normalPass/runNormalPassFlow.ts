@@ -1,6 +1,6 @@
 import type { ReviewerTestExecutionDirective } from "../../../../shared/reviewer/testEvidence.js";
 import type { DeliveryAck } from "../../../../ports/tmuxDelivery.js";
-import type { LoadedDomainStateSnapshot } from "../../../../ports/stateSnapshots.js";
+import type { LoadedStateSnapshot } from "../../../../ports/stateSnapshots.js";
 import type { Finding } from "../../../../../types/findings.js";
 import type { ProtocolEnvelope } from "../../../../../types/protocol.js";
 import type {
@@ -24,7 +24,7 @@ function buildFinalizeNormalPassInput<TResult>(input: {
     sequence: number;
     envelope: ProtocolEnvelope;
   };
-  written: LoadedDomainStateSnapshot;
+  written: LoadedStateSnapshot;
   normalPassDelivery: {
     reviewerTestDirective?: ReviewerTestExecutionDirective;
     deliveryResult: DeliveryAck | undefined;

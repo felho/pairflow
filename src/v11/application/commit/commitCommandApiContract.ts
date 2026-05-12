@@ -10,11 +10,11 @@ import type {
 import type { ResolvedBubbleById } from "../../ports/bubbleLookup.js";
 import type { ResolveBubbleByIdPort } from "../../ports/bubbleLookup.js";
 import type {
-  LoadedDomainStateSnapshot
+  LoadedStateSnapshot
 } from "../../ports/stateSnapshots.js";
 import type {
-  ReadDomainStateSnapshotPort,
-  WriteDomainStateSnapshotPort
+  ReadStateSnapshotPort,
+  WriteStateSnapshotPort
 } from "../../ports/stateSnapshots.js";
 import type {
   AppendProtocolEnvelopePort,
@@ -32,9 +32,9 @@ import type {
 
 export type ResolvedBubbleContext = ResolvedBubbleById;
 export type BubbleIdentity = EnsureBubbleInstanceIdForMutationResult;
-export type LoadedState = LoadedDomainStateSnapshot;
+export type LoadedState = LoadedStateSnapshot;
 export type AppendedEnvelope = AppendProtocolEnvelopeResult;
-export type WrittenState = LoadedDomainStateSnapshot;
+export type WrittenState = LoadedStateSnapshot;
 
 export interface CommitBubbleDependencies {
   appendProtocolEnvelope: AppendProtocolEnvelopePort;
@@ -42,14 +42,14 @@ export interface CommitBubbleDependencies {
   importRemoteBubbleCommitContinuity: ImportRemoteBubbleCommitContinuityPort;
   ensureBubbleInstanceIdForMutation: EnsureBubbleInstanceIdForMutationPort;
   readRemotePointer: ReadRemoteCommitPointerPort;
-  readStateSnapshot: ReadDomainStateSnapshotPort;
+  readStateSnapshot: ReadStateSnapshotPort;
   readTranscriptEnvelopes: ReadTranscriptEnvelopesPort;
   resolveRemoteBubbleStatusTarget: ResolveRemoteBubbleStatusTargetPort;
   resolveBubbleById: ResolveBubbleByIdPort;
   runGit: RunGitPort;
   renamePath?: (fromPath: string, toPath: string) => Promise<void>;
   writeTextFile: (path: string, content: string) => Promise<void>;
-  writeStateSnapshot: WriteDomainStateSnapshotPort;
+  writeStateSnapshot: WriteStateSnapshotPort;
 }
 
 interface CommitRuntimeContextBase {
@@ -72,7 +72,7 @@ export interface CommitRuntimeContext extends CommitRuntimeContextBase {
   loadedState: LoadedState;
   state: LoadedState["state"];
   appendProtocolEnvelope: AppendProtocolEnvelopePort;
-  writeStateSnapshot: WriteDomainStateSnapshotPort;
+  writeStateSnapshot: WriteStateSnapshotPort;
 }
 
 /**

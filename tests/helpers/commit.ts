@@ -9,8 +9,6 @@ import {
   writeStateSnapshot as writeStateSnapshotPersisted
 } from "../../src/v11/infrastructure/state/stateStore.js";
 import {
-  adaptPersistedReadPortToDomain,
-  adaptPersistedWritePortToDomain
 } from "../../src/v11/shared/mutation/mutationBoundaryIO.js";
 import { runGit } from "../../src/v11/infrastructure/workspace/git.js";
 import { statusCommandDependencyDefaults } from "../../src/v11/defaults/status/statusCommandDependencyDefaults.js";
@@ -24,7 +22,7 @@ export function buildCommitBubbleDependencies(): CommitBubbleDependencies {
     importRemoteBubbleCommitContinuity,
     ensureBubbleInstanceIdForMutation,
     readRemotePointer,
-    readStateSnapshot: adaptPersistedReadPortToDomain(readStateSnapshotPersisted),
+    readStateSnapshot: readStateSnapshotPersisted,
     readTranscriptEnvelopes,
     resolveRemoteBubbleStatusTarget:
       statusCommandDependencyDefaults.resolveRemoteBubbleStatusTarget,
@@ -34,6 +32,6 @@ export function buildCommitBubbleDependencies(): CommitBubbleDependencies {
     writeTextFile: async (path: string, content: string) => {
       await writeFile(path, content, "utf8");
     },
-    writeStateSnapshot: adaptPersistedWritePortToDomain(writeStateSnapshotPersisted)
+    writeStateSnapshot: writeStateSnapshotPersisted
   };
 }

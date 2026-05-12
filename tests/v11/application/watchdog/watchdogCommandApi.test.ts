@@ -25,12 +25,20 @@ import {
 } from "../../../../src/v11/infrastructure/artifact/watchdog/watchdogTraceStore.js";
 import { setupRunningBubbleFixture } from "../../../helpers/bubble.js";
 import { initGitRepository } from "../../../helpers/git.js";
-import { readStateSnapshot, writeStateSnapshot } from "../../../../src/v11/infrastructure/state/stateStore.js";
+import { readStateSnapshot, writeStateSnapshot as rawWriteStateSnapshot } from "../../../../src/v11/infrastructure/state/stateStore.js";
 import {
   buildRunningExecutionContext,
   metaReviewExecutionContextToRunningContext
 } from "../../../../src/v11/domain/state/execution/executionContext.js";
 import { buildMetaReviewExecutionContext } from "../../../../src/v11/shared/metaReview/metaReviewExecutionContext.js";
+import { asTemporaryVariantStateFixture } from "../../../helpers/temporaryVariantStateFixture.js";
+
+// Step 4b-γ/4 transitional: 4b-γ/5 cleanup target.
+const writeStateSnapshot = (
+  statePath: Parameters<typeof rawWriteStateSnapshot>[0],
+  state: unknown,
+  options?: Parameters<typeof rawWriteStateSnapshot>[2]
+): ReturnType<typeof rawWriteStateSnapshot> => rawWriteStateSnapshot(statePath, asTemporaryVariantStateFixture(state), options);
 
 const tempDirs: string[] = [];
 

@@ -7,10 +7,9 @@ import {
 import { resolveApprovalNextState } from "../result/approvalResultMapping.js";
 import type { RunApprovalDecisionFlowInput } from "./runApprovalFlowContract.js";
 import type { ResolvedApprovalCommandDependencies } from "../command/approvalCommandDependencies.js";
-import { buildBubbleStateSnapshotVariant } from "../../../../domain/state/snapshot/buildBubbleStateSnapshot.js";
 import {
   appendEnvelopeViaMutationBoundary,
-  persistDomainStateViaMutationBoundary
+  persistStateViaMutationBoundary
 } from "../../../../shared/mutation/mutationBoundaryIO.js";
 import { assertApprovalDecisionEligibility } from "./approvalRoutingEligibility.js";
 import type { ApprovalFlowExecutionContext } from "./runApprovalFlowContext.js";
@@ -59,8 +58,6 @@ async function runRemoteApprovalDecision(input: {
   }
 
   if (routed.kind === "queued_rework" && input.flow.decision === "rework") {
-    // SSH cross-batch border: remote port still returns persisted shape.
-    // Project to variant at the approval-side consumer.
     return {
       mode: "queued",
       bubbleId: routed.bubbleId,
@@ -68,7 +65,7 @@ async function runRemoteApprovalDecision(input: {
       ...(routed.supersededIntentId !== undefined
         ? { supersededIntentId: routed.supersededIntentId }
         : {}),
-      state: buildBubbleStateSnapshotVariant(routed.state)
+      state: routed.state
     };
   }
 
@@ -84,12 +81,11 @@ async function runRemoteApprovalDecision(input: {
     });
   }
 
-  // SSH cross-batch border: project routed.state (persisted) into variant.
   return {
     bubbleId: routed.bubbleId,
     sequence: routed.sequence,
     envelope: routed.envelope,
-    state: buildBubbleStateSnapshotVariant(routed.state)
+    state: routed.state
   };
 }
 
@@ -150,7 +146,7 @@ async function persistLocalApprovalState(input: {
   });
 
   try {
-    return await persistDomainStateViaMutationBoundary({
+    return await persistStateViaMutationBoundary({
       write: input.dependencies.writeStateSnapshot,
       statePath: input.execution.resolved.bubblePaths.statePath,
       state: nextState,

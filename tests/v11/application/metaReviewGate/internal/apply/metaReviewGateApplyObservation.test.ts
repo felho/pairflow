@@ -4,11 +4,11 @@ import { reconcileObservedGateResult } from "../../../../../../src/v11/applicati
 import type { ApplyMetaReviewGateExecutionContext } from "../../../../../../src/v11/application/metaReviewGate/internal/apply/metaReviewGateApplyContext.js";
 import { getBubblePaths } from "../../../../../../src/v11/shared/bubble/bubblePaths.js";
 import type { MetaReviewRuntimeDeliveryObservation } from "../../../../../../src/v11/shared/metaReviewGate/index.js";
-import type { LoadedDomainStateSnapshot } from "../../../../../../src/v11/ports/stateSnapshots.js";
+import type { LoadedStateSnapshot } from "../../../../../../src/v11/ports/stateSnapshots.js";
 import { buildBubbleStateSnapshotVariant } from "../../../../../../src/v11/domain/state/snapshot/buildBubbleStateSnapshot.js";
 import type { ProtocolEnvelope } from "../../../../../../src/types/protocol.js";
 
-function createObservedReadyState(round: number): LoadedDomainStateSnapshot {
+function createObservedReadyState(round: number): LoadedStateSnapshot {
   return {
     fingerprint: `fp-${round}`,
     state: buildBubbleStateSnapshotVariant({

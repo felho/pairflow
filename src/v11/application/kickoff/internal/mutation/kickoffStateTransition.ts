@@ -1,6 +1,6 @@
 import type { BubbleStateSnapshot } from "../../../../domain/state/snapshot/bubbleStateSnapshot.js";
 import { toPersistedSnapshot } from "../../../../domain/state/snapshot/projection.js";
-import { assertParsedDomainBubbleStateSnapshot } from "../../../../domain/state/stateSchema.js";
+import { assertParsedBubbleStateSnapshot } from "../../../../domain/state/stateSchema.js";
 import { buildRunningExecutionContext } from "../../../../domain/state/execution/executionContext.js";
 import type { BubbleConfig } from "../../../../shared/config/bubbleConfigTypes.js";
 import type { PersistedBubbleStateSnapshot } from "../../../../domain/state/snapshot/persistedBubbleStateSnapshot.js";
@@ -35,7 +35,7 @@ export function buildKickoffNextState(
   input: BuildKickoffNextStateInput
 ): BubbleStateSnapshot {
   const currentPersisted = toPersistedSnapshot(input.state);
-  return assertParsedDomainBubbleStateSnapshot({
+  return assertParsedBubbleStateSnapshot({
     ...currentPersisted,
     state: "RUNNING",
     round: 1,

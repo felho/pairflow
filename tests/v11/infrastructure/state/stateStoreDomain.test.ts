@@ -9,10 +9,9 @@ import { createInitialBubbleState } from "../../../../src/v11/domain/state/initi
 import { buildBubbleStateSnapshotVariant } from "../../../../src/v11/domain/state/snapshot/buildBubbleStateSnapshot.js";
 import { toPersistedSnapshot } from "../../../../src/v11/domain/state/snapshot/projection.js";
 import {
-  createDomainStateSnapshot,
-  readDomainStateSnapshot,
+  createStateSnapshot,
   readStateSnapshot,
-  writeDomainStateSnapshot
+  writeStateSnapshot
 } from "../../../../src/v11/infrastructure/state/stateStore.js";
 
 const tempDirs: string[] = [];
@@ -32,12 +31,12 @@ afterEach(async () => {
 });
 
 describe("v11 infrastructure state store — variant boundary", () => {
-  it("createDomainStateSnapshot persists the persisted shape and returns the variant", async () => {
+  it("createStateSnapshot persists the persisted shape and returns the variant", async () => {
     const dir = await createTempDir();
     const statePath = join(dir, "state.json");
     const initial = createInitialBubbleState("b_v11_domain_store_01");
 
-    const created = await createDomainStateSnapshot(statePath, initial);
+    const created = await createStateSnapshot(statePath, initial);
 
     expect(created.state.kind).toBe("inactive_initial");
     expect(created.state.bubble_id).toBe("b_v11_domain_store_01");
@@ -48,15 +47,15 @@ describe("v11 infrastructure state store — variant boundary", () => {
     expect(onDisk.state).toBe("CREATED");
   });
 
-  it("readDomainStateSnapshot returns the variant union with kind discriminator", async () => {
+  it("readStateSnapshot returns the variant union with kind discriminator", async () => {
     const dir = await createTempDir();
     const statePath = join(dir, "state.json");
-    await createDomainStateSnapshot(
+    await createStateSnapshot(
       statePath,
       createInitialBubbleState("b_v11_domain_store_02")
     );
 
-    const loaded = await readDomainStateSnapshot(statePath);
+    const loaded = await readStateSnapshot(statePath);
 
     expect(loaded.state.kind).toBe("inactive_initial");
     if (loaded.state.kind === "inactive_initial") {
@@ -66,12 +65,12 @@ describe("v11 infrastructure state store — variant boundary", () => {
     }
   });
 
-  it("writeDomainStateSnapshot round-trips a running variant via the projection", async () => {
+  it("writeStateSnapshot round-trips a running variant via the projection", async () => {
     const dir = await createTempDir();
     const statePath = join(dir, "state.json");
 
     const initial = createInitialBubbleState("b_v11_domain_store_03");
-    const initialLoaded = await createDomainStateSnapshot(statePath, initial);
+    const initialLoaded = await createStateSnapshot(statePath, initial);
 
     const startedAt = "2026-05-12T10:00:00.000Z";
     const runningPersisted = {
@@ -100,7 +99,7 @@ describe("v11 infrastructure state store — variant boundary", () => {
     };
     const runningVariant = buildBubbleStateSnapshotVariant(runningPersisted);
 
-    const written = await writeDomainStateSnapshot(statePath, runningVariant, {
+    const written = await writeStateSnapshot(statePath, runningVariant, {
       expectedFingerprint: initialLoaded.fingerprint,
       expectedState: "CREATED"
     });
@@ -112,19 +111,23 @@ describe("v11 infrastructure state store — variant boundary", () => {
       expect(written.state.execution_context.active_role).toBe("implementer");
     }
 
-    // Re-read with the persisted-shape API to confirm wire format stability.
-    const reloadedPersisted = await readStateSnapshot(statePath);
-    expect(Object.hasOwn(reloadedPersisted.state, "kind")).toBe(false);
-    expect(reloadedPersisted.fingerprint).toBe(written.fingerprint);
+    // Re-read confirms wire format stability: on-disk JSON has no kind
+    // field (persisted shape); the read API now returns the variant union
+    // with kind discriminator restored from the parser.
+    const reloadedVariant = await readStateSnapshot(statePath);
+    expect(reloadedVariant.state.kind).toBe("running_standard");
+    expect(reloadedVariant.fingerprint).toBe(written.fingerprint);
+    const onDisk = JSON.parse(await readFile(statePath, "utf8")) as Record<string, unknown>;
+    expect(Object.hasOwn(onDisk, "kind")).toBe(false);
   });
 
-  it("writeDomainStateSnapshot fingerprint matches the persisted-shape fingerprint", async () => {
+  it("writeStateSnapshot fingerprint matches the persisted-shape fingerprint", async () => {
     const dir = await createTempDir();
     const statePath = join(dir, "state.json");
 
     const initial = createInitialBubbleState("b_v11_domain_store_04");
 
-    const writtenViaDomain = await createDomainStateSnapshot(statePath, initial);
+    const writtenViaDomain = await createStateSnapshot(statePath, initial);
     const readViaPersisted = await readStateSnapshot(statePath);
 
     // Fingerprints must agree: variant write → persisted read sees the same hash,

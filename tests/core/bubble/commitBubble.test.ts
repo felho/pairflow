@@ -27,11 +27,11 @@ import { createBubble } from "../../../src/v11/defaults/create/createBubbleApi.j
 import { commitBubbleDependencyDefaults } from "../../../src/v11/defaults/commit/commitCommandDefaults.js";
 import { readTranscriptEnvelopes } from "../../../src/v11/infrastructure/artifact/transcript/transcriptStore.js";
 import { readStateSnapshot } from "../../../src/v11/infrastructure/state/stateStore.js";
-import { adaptPersistedReadPortToDomain } from "../../../src/v11/shared/mutation/mutationBoundaryIO.js";
 import { bootstrapWorktreeWorkspace } from "../../../src/v11/infrastructure/workspace/worktreeManager.js";
 import { initGitRepository, runGit } from "../../helpers/git.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
 import { getBubblePaths } from "../../../src/v11/shared/bubble/bubblePaths.js";
+import { asTemporaryVariantStateFixture } from "../../helpers/temporaryVariantStateFixture.js";
 
 const tempDirs: string[] = [];
 
@@ -833,7 +833,7 @@ describe("commitBubble", () => {
           bubbleId: "b_commit_remote_public_01",
           sequence: 5,
           envelope: remoteEnvelope,
-          state: remoteState,
+          state: asTemporaryVariantStateFixture(remoteState),
           stateContent: `${JSON.stringify(remoteState, null, 2)}\n`,
           transcriptContent: `${JSON.stringify(remoteEnvelope)}\n`,
           commitSha: "fedcba9876543210",
@@ -843,7 +843,7 @@ describe("commitBubble", () => {
         appendProtocolEnvelope: vi.fn(async () => {
           throw new Error("unused");
         }),
-        readStateSnapshot: adaptPersistedReadPortToDomain(readStateSnapshot),
+        readStateSnapshot: readStateSnapshot,
         readTranscriptEnvelopes: vi.fn(async () => []),
         runGit: vi.fn(async () => {
           throw new Error("runGit should not be used for remote public routing");

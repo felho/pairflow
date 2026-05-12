@@ -1,8 +1,8 @@
 import type { MetaReviewArtifactReadPort } from "../../../../shared/metaReview/metaReviewArtifactIo.js";
 import type { ResolveBubbleByIdPort } from "../../../../ports/bubbleLookup.js";
 import type {
-  ReadDomainStateSnapshotPort,
-  WriteDomainStateSnapshotPort
+  ReadStateSnapshotPort,
+  WriteStateSnapshotPort
 } from "../../../../ports/stateSnapshots.js";
 import type {
   AppendProtocolEnvelopePort,
@@ -28,7 +28,7 @@ export function requireApplyResolveBubbleById(
 export function requireApplyReadStateSnapshot(
   dependencies: ApplyMetaReviewGateOnConvergenceDependencies,
   bubbleId: string
-): ReadDomainStateSnapshotPort {
+): ReadStateSnapshotPort {
   if (dependencies.readStateSnapshot !== undefined) {
     return dependencies.readStateSnapshot;
   }
@@ -41,7 +41,7 @@ export function requireApplyReadStateSnapshot(
 export function requireApplyWriteStateSnapshot(
   dependencies: ApplyMetaReviewGateOnConvergenceDependencies,
   bubbleId: string
-): WriteDomainStateSnapshotPort {
+): WriteStateSnapshotPort {
   if (dependencies.writeStateSnapshot !== undefined) {
     return dependencies.writeStateSnapshot;
   }

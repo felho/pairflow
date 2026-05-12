@@ -1,4 +1,4 @@
-import type { LoadedDomainStateSnapshot } from "../../../../ports/stateSnapshots.js";
+import type { LoadedStateSnapshot } from "../../../../ports/stateSnapshots.js";
 import type { AppendProtocolEnvelopeResult } from "../../../../ports/transcript.js";
 import { MetaReviewGateError } from "../../../../shared/metaReviewGate/metaReviewGateRouteContract.js";
 import type { MetaReviewGateResult } from "../../../../shared/metaReviewGate/metaReviewGateResultContract.js";
@@ -82,7 +82,7 @@ export async function persistHumanGateRoute(
   const advisoryFindings =
     input.findings ??
     resolveAdvisoryFindingsFromReportJson(input.metaReviewRun?.report_json);
-  let written: LoadedDomainStateSnapshot;
+  let written: LoadedStateSnapshot;
   try {
     written = await input.writeState(input.statePath, nextState, {
       expectedFingerprint: input.loaded.fingerprint,

@@ -1,7 +1,7 @@
 import type { PersistedBubbleStateSnapshot } from "../../../../domain/state/snapshot/persistedBubbleStateSnapshot.js";
 import type { FindingsParityMetadata } from "../../../../../types/protocol.js";
 import type { MetaReviewResult } from "../../../../shared/metaReview/metaReviewTypes.js";
-import type { LoadedDomainStateSnapshot } from "../../../../ports/stateSnapshots.js";
+import type { LoadedStateSnapshot } from "../../../../ports/stateSnapshots.js";
 import {
   buildGateLockPath
 } from "../state/metaReviewGateShared.js";
@@ -90,7 +90,7 @@ export async function persistRunFailedHumanRoute(
 
 export async function persistDispatchFailedHumanRoute(input: {
   finalizeInput: FinalizeCurrentRunMetaReviewGateInput;
-  loaded: LoadedDomainStateSnapshot;
+  loaded: LoadedStateSnapshot;
   expectedState: PersistedBubbleStateSnapshot["state"];
   runResultForRouting: MetaReviewResult;
   parityMetadata: FindingsParityMetadata | null;
