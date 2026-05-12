@@ -19,9 +19,15 @@ import type {
   ResolveDeliveryMessageRefPort
 } from "../../../../ports/tmuxDelivery.js";
 import type {
+  ReadDomainStateSnapshotPort,
   ReadStateSnapshotPort,
+  WriteDomainStateSnapshotPort,
   WriteStateSnapshotPort
 } from "../../../../ports/stateSnapshots.js";
+import {
+  adaptPersistedReadPortToDomain,
+  adaptPersistedWritePortToDomain
+} from "../../../../shared/mutation/mutationBoundaryIO.js";
 import type { ResolveBubbleFromWorkspaceCwdPort } from "../../../../ports/workspaceResolution.js";
 
 export interface ApprovalCommandDependencies {
@@ -33,13 +39,13 @@ export interface ApprovalCommandDependencies {
   ensureBubbleInstanceIdForMutation?: EnsureBubbleInstanceIdForMutationPort;
   queueDeferredReworkIntent?: typeof queueDeferredReworkIntent;
   readRemotePointer?: (path: string) => Promise<BubbleRemotePointer | null>;
-  readStateSnapshot?: ReadStateSnapshotPort;
+  readStateSnapshot?: ReadDomainStateSnapshotPort;
   readTranscriptEnvelopes?: ReadTranscriptEnvelopesPort;
   resolveRemoteBubbleStatusTarget?: ResolveApprovalRemoteBubbleStatusTargetPort;
   resolveBubbleById?: ResolveBubbleByIdPort;
   resolveBubbleFromWorkspaceCwd?: ResolveBubbleFromWorkspaceCwdPort;
   resolveDeliveryMessageRef?: ResolveDeliveryMessageRefPort;
-  writeStateSnapshot?: WriteStateSnapshotPort;
+  writeStateSnapshot?: WriteDomainStateSnapshotPort;
 }
 
 export interface ApprovalCommandDefaultDependencies {
@@ -66,13 +72,13 @@ export interface ResolvedApprovalCommandDependencies {
   ensureBubbleInstanceIdForMutation: EnsureBubbleInstanceIdForMutationPort;
   queueDeferredReworkIntent: typeof queueDeferredReworkIntent;
   readRemotePointer: (path: string) => Promise<BubbleRemotePointer | null>;
-  readStateSnapshot: ReadStateSnapshotPort;
+  readStateSnapshot: ReadDomainStateSnapshotPort;
   readTranscriptEnvelopes: ReadTranscriptEnvelopesPort;
   resolveRemoteBubbleStatusTarget: ResolveApprovalRemoteBubbleStatusTargetPort;
   resolveBubbleById: ResolveBubbleByIdPort;
   resolveBubbleFromWorkspaceCwd: ResolveBubbleFromWorkspaceCwdPort;
   resolveDeliveryMessageRef: ResolveDeliveryMessageRefPort;
-  writeStateSnapshot: WriteStateSnapshotPort;
+  writeStateSnapshot: WriteDomainStateSnapshotPort;
 }
 
 export function resolveApprovalCommandDependencies(
@@ -100,7 +106,8 @@ export function resolveApprovalCommandDependencies(
     readRemotePointer:
       dependencies.readRemotePointer ?? defaults.readRemotePointer,
     readStateSnapshot:
-      dependencies.readStateSnapshot ?? defaults.readStateSnapshot,
+      dependencies.readStateSnapshot
+      ?? adaptPersistedReadPortToDomain(defaults.readStateSnapshot),
     readTranscriptEnvelopes:
       dependencies.readTranscriptEnvelopes ?? defaults.readTranscriptEnvelopes,
     resolveRemoteBubbleStatusTarget:
@@ -112,6 +119,8 @@ export function resolveApprovalCommandDependencies(
       ?? defaults.resolveBubbleFromWorkspaceCwd,
     resolveDeliveryMessageRef:
       dependencies.resolveDeliveryMessageRef ?? defaults.resolveDeliveryMessageRef,
-    writeStateSnapshot: dependencies.writeStateSnapshot ?? defaults.writeStateSnapshot
+    writeStateSnapshot:
+      dependencies.writeStateSnapshot
+      ?? adaptPersistedWritePortToDomain(defaults.writeStateSnapshot)
   };
 }

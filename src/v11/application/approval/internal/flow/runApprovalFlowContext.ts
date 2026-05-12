@@ -2,7 +2,7 @@ import type {
   BubbleRemotePointer,
   BubbleRemotePointerStarted
 } from "../../../../shared/remote/remoteExecutionTypes.js";
-import type { PersistedBubbleStateSnapshot } from "../../../../domain/state/snapshot/persistedBubbleStateSnapshot.js";
+import type { BubbleStateSnapshot } from "../../../../domain/state/snapshot/bubbleStateSnapshot.js";
 import type { ApprovalRemoteBubbleStatusTarget } from "../remote/remoteApprovalCommandPort.js";
 import type { ResolvedApprovalCommandDependencies } from "../command/approvalCommandDependencies.js";
 import type {
@@ -23,7 +23,7 @@ export interface LocalApprovalFlowExecutionContext {
   route: "local";
   resolved: Awaited<ReturnType<ResolvedApprovalCommandDependencies["resolveBubbleById"]>>;
   loadedState: Awaited<ReturnType<ResolvedApprovalCommandDependencies["readStateSnapshot"]>>;
-  state: PersistedBubbleStateSnapshot;
+  state: BubbleStateSnapshot;
   nowIso: string;
   lockPath: string;
 }

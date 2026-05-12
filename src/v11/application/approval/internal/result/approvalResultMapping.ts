@@ -4,7 +4,9 @@ import {
   resolveRuntimeAlignedNextRoundContinuation
 } from "../../../../domain/state/roundContinuation.js";
 import type { AgentName } from "../../../../../contracts/kernel/agentIdentity.js";
-import type { PersistedBubbleStateSnapshot } from "../../../../domain/state/snapshot/persistedBubbleStateSnapshot.js";
+import type { BubbleStateSnapshot } from "../../../../domain/state/snapshot/bubbleStateSnapshot.js";
+import { buildBubbleStateSnapshotVariant } from "../../../../domain/state/snapshot/buildBubbleStateSnapshot.js";
+import { toPersistedSnapshot } from "../../../../domain/state/snapshot/projection.js";
 import type {
   BubbleReworkIntentRecord
 } from "../../../../domain/state/rework/reworkIntentTypes.js";
@@ -15,7 +17,7 @@ import type {
 } from "../../approvalCommandContract.js";
 
 export interface ResolveApprovalNextStateInput {
-  state: PersistedBubbleStateSnapshot;
+  state: BubbleStateSnapshot;
   decision: "approve" | "rework";
   nowIso: string;
   implementer: AgentName;
@@ -26,12 +28,17 @@ export interface ResolveApprovalNextStateInput {
 
 export function resolveApprovalNextState(
   input: ResolveApprovalNextStateInput
-): PersistedBubbleStateSnapshot {
+): BubbleStateSnapshot {
+  // applyStateTransition is still persisted-shape (later batch). Project
+  // at the boundary and rebuild the variant from the output.
+  const persistedState = toPersistedSnapshot(input.state);
   if (input.decision === "approve") {
-    return input.applyStateTransition(input.state, {
-      to: "APPROVED_FOR_COMMIT",
-      lastCommandAt: input.nowIso
-    });
+    return buildBubbleStateSnapshotVariant(
+      input.applyStateTransition(persistedState, {
+        to: "APPROVED_FOR_COMMIT",
+        lastCommandAt: input.nowIso
+      })
+    );
   }
 
   const continuation = resolveRuntimeAlignedNextRoundContinuation({
@@ -43,7 +50,7 @@ export function resolveApprovalNextState(
     nowIso: input.nowIso,
     watchdogTimeoutMinutes: input.watchdogTimeoutMinutes
   });
-  const resumed = input.applyStateTransition(input.state, {
+  const resumed = input.applyStateTransition(persistedState, {
     to: "RUNNING",
     round: continuation.nextRound,
     activeAgent: continuation.activeAgent,
@@ -55,10 +62,10 @@ export function resolveApprovalNextState(
       ? { appendRoundRoleEntry: continuation.appendRoundRoleEntry }
       : {})
   });
-  return {
+  return buildBubbleStateSnapshotVariant({
     ...resumed,
     meta_review: clearLiveMetaReviewSnapshot(resumed.meta_review)
-  };
+  });
 }
 
 export function mapImmediateReworkResult(
@@ -72,7 +79,7 @@ export function mapImmediateReworkResult(
 
 export function mapQueuedReworkResult(input: {
   bubbleId: string;
-  state: PersistedBubbleStateSnapshot;
+  state: BubbleStateSnapshot;
   intent: BubbleReworkIntentRecord;
   supersededIntentId?: string | undefined;
 }): EmitRequestReworkQueuedResult {

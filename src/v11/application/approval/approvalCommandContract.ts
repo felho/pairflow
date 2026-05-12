@@ -4,7 +4,7 @@ import type {
 import type {
   ApprovalCommandDependencies as InternalApprovalCommandDependencies
 } from "./internal/command/approvalCommandDependencies.js";
-import type { PersistedBubbleStateSnapshot } from "../../domain/state/snapshot/persistedBubbleStateSnapshot.js";
+import type { BubbleStateSnapshot } from "../../domain/state/snapshot/bubbleStateSnapshot.js";
 import type { ApprovalDecision } from "../../../contracts/kernel/protocol.js";
 import type { ProtocolEnvelope } from "../../../types/protocol.js";
 
@@ -59,7 +59,7 @@ export interface EmitApprovalDecisionImmediateResult {
   bubbleId: string;
   sequence: number;
   envelope: ProtocolEnvelope;
-  state: PersistedBubbleStateSnapshot;
+  state: BubbleStateSnapshot;
   delivery?: ApprovalDecisionDeliverySignalsResult;
 }
 
@@ -67,7 +67,7 @@ export interface EmitApprovalDecisionQueuedReworkResult {
   mode: "queued";
   bubbleId: string;
   intentId: string;
-  state: PersistedBubbleStateSnapshot;
+  state: BubbleStateSnapshot;
   supersededIntentId?: string;
 }
 
@@ -103,7 +103,7 @@ export interface EmitRequestReworkQueuedResult {
   mode: "queued";
   bubbleId: string;
   intentId: string;
-  state: PersistedBubbleStateSnapshot;
+  state: BubbleStateSnapshot;
   supersededIntentId?: string;
 }
 

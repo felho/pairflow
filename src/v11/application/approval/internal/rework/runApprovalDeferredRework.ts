@@ -1,6 +1,7 @@
 import type { QueueDeferredReworkIntentResult } from "./reworkIntentQueue.js";
 import type { ResolvedApprovalCommandDependencies } from "../command/approvalCommandDependencies.js";
-import { persistStateViaMutationBoundary } from "../../../../shared/mutation/mutationBoundaryIO.js";
+import { buildBubbleStateSnapshotVariant } from "../../../../domain/state/snapshot/buildBubbleStateSnapshot.js";
+import { persistDomainStateViaMutationBoundary } from "../../../../shared/mutation/mutationBoundaryIO.js";
 
 export async function persistDeferredReworkIntentState(input: {
   queued: QueueDeferredReworkIntentResult;
@@ -10,10 +11,13 @@ export async function persistDeferredReworkIntentState(input: {
   createError: PairflowCreateCommandError;
 }): Promise<Awaited<ReturnType<ResolvedApprovalCommandDependencies["writeStateSnapshot"]>>> {
   try {
-    return await persistStateViaMutationBoundary({
+    // queued.state is still persisted-shape (deriveQueuedDeferredReworkIntentState
+    // is a later batch). Wrap into the variant before crossing the
+    // domain-variant write port.
+    return await persistDomainStateViaMutationBoundary({
       write: input.writeStateSnapshot,
       statePath: input.statePath,
-      state: input.queued.state,
+      state: buildBubbleStateSnapshotVariant(input.queued.state),
       options: {
         expectedFingerprint: input.loadedFingerprint,
         expectedState: "WAITING_HUMAN"

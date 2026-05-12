@@ -1,4 +1,5 @@
 import type { EmitRequestReworkResult } from "../../approvalCommandContract.js";
+import { buildBubbleStateSnapshotVariant } from "../../../../domain/state/snapshot/buildBubbleStateSnapshot.js";
 import { mapImmediateReworkResult } from "../result/approvalResultMapping.js";
 import { runLocalQueuedReworkFlow } from "../rework/runApprovalQueuedReworkFlow.js";
 import type { RunRequestReworkFlowInput } from "./runApprovalFlowContract.js";
@@ -23,11 +24,12 @@ async function runRemoteRequestReworkFlow(input: {
   });
 
   if (routed.kind === "queued_rework") {
+    // SSH cross-batch border: remote port still returns persisted shape.
     return {
       mode: "queued",
       bubbleId: routed.bubbleId,
       intentId: routed.intentId,
-      state: routed.state,
+      state: buildBubbleStateSnapshotVariant(routed.state),
       ...(routed.supersededIntentId !== undefined
         ? { supersededIntentId: routed.supersededIntentId }
         : {})
@@ -46,12 +48,13 @@ async function runRemoteRequestReworkFlow(input: {
     });
   }
 
+  // SSH cross-batch border: project routed.state (persisted) into variant.
   return {
     mode: "immediate",
     bubbleId: routed.bubbleId,
     sequence: routed.sequence,
     envelope: routed.envelope,
-    state: routed.state
+    state: buildBubbleStateSnapshotVariant(routed.state)
   };
 }
 

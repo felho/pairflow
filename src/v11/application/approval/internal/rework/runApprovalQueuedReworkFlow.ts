@@ -8,6 +8,7 @@ import {
   persistDeferredReworkIntentState
 } from "./runApprovalDeferredRework.js";
 import type { ApprovalFlowExecutionContext } from "../flow/runApprovalFlowContext.js";
+import { toPersistedSnapshot } from "../../../../domain/state/snapshot/projection.js";
 
 export async function runLocalQueuedReworkFlow(input: {
   bubbleId: string;
@@ -28,8 +29,10 @@ export async function runLocalQueuedReworkFlow(input: {
   });
   input.execution.resolved.bubbleConfig = bubbleIdentity.bubbleConfig;
 
+  // queueDeferredReworkIntent still consumes persisted shape (later batch).
+  // Project at the boundary; the queued result is re-wrapped before writing.
   const queued = input.dependencies.queueDeferredReworkIntent({
-    state,
+    state: toPersistedSnapshot(state),
     message: input.message,
     refs: input.refs,
     requestedBy: "human:request-rework",

@@ -1,9 +1,9 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { resolveApprovalCommandDependencies } from "../../../../../src/v11/application/approval/internal/command/approvalCommandDependencies.js";
 
 describe("approvalCommandDependencies", () => {
-  it("preserves explicit dependency overrides and falls back to supplied defaults", () => {
+  it("preserves explicit dependency overrides and falls back to supplied defaults", async () => {
     const defaultAppend = (() =>
       Promise.resolve({
         envelope: {} as never,
@@ -39,11 +39,20 @@ describe("approvalCommandDependencies", () => {
         bubbleConfig: {} as never
       })) as never;
     const defaultReadRemotePointer = (async () => null) as never;
-    const defaultReadState = (async () =>
-      ({
-        state: {} as never,
-        fingerprint: "default"
-      })) as never;
+    const defaultReadState = vi.fn(async () => ({
+      state: {
+        bubble_id: "b_default",
+        state: "CREATED",
+        round: 0,
+        active_agent: null,
+        active_role: null,
+        active_since: null,
+        execution_context: null,
+        round_role_history: [],
+        last_command_at: null
+      },
+      fingerprint: "default"
+    })) as never;
     const defaultReadTranscript = (async () => []) as never;
     const defaultResolveRemoteTarget = (async () =>
       ({
@@ -61,11 +70,13 @@ describe("approvalCommandDependencies", () => {
         cwd: "/repo"
       })) as never;
     const defaultResolveDeliveryMessageRef = (() => "default-ref") as never;
-    const defaultWriteState = (async () =>
-      ({
-        state: {} as never,
-        fingerprint: "default"
-      })) as never;
+    const defaultWriteState = vi.fn(async (
+      _statePath: string,
+      state: unknown
+    ) => ({
+      state: state as never,
+      fingerprint: "default"
+    })) as never;
 
     const customEmitDelivery = (() =>
       Promise.resolve({
@@ -103,7 +114,6 @@ describe("approvalCommandDependencies", () => {
     expect(resolved.resolveDeliveryMessageRef).toBe(customResolveMessageRef);
     expect(resolved.ensureBubbleInstanceIdForMutation).toBe(defaultEnsureBubble);
     expect(resolved.readRemotePointer).toBe(defaultReadRemotePointer);
-    expect(resolved.readStateSnapshot).toBe(defaultReadState);
     expect(resolved.readTranscriptEnvelopes).toBe(defaultReadTranscript);
     expect(resolved.resolveRemoteBubbleStatusTarget).toBe(
       defaultResolveRemoteTarget
@@ -111,7 +121,29 @@ describe("approvalCommandDependencies", () => {
     expect(resolved.resolveBubbleFromWorkspaceCwd).toBe(
       defaultResolveBubbleFromWorkspaceCwd
     );
-    expect(resolved.writeStateSnapshot).toBe(defaultWriteState);
+
+    // Domain-variant ports wrap persisted defaults at the resolution
+    // boundary; verify behaviorally that invoking the resolved port
+    // delegates to the supplied persisted default.
+    await resolved.readStateSnapshot("/state/path");
+    expect(defaultReadState).toHaveBeenCalledWith("/state/path");
+    await resolved.writeStateSnapshot(
+      "/state/path",
+      {
+        kind: "inactive_initial",
+        bubble_id: "b_default",
+        state: "CREATED",
+        round: 0,
+        active_agent: null,
+        active_role: null,
+        active_since: null,
+        execution_context: null,
+        round_role_history: [],
+        last_command_at: null
+      },
+      { expectedFingerprint: "default", expectedState: "CREATED" }
+    );
+    expect(defaultWriteState).toHaveBeenCalled();
   });
 
   it("forwards a direct emitDeliveryNotificationAck override", () => {
