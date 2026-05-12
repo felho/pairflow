@@ -1638,10 +1638,47 @@ post-flip cleanup commits**, in that order.
      `domain/state/rework/reworkIntentTransitions.ts` was
      absorbed by 4b-γ/1's bundle and is not part of 4b-γ/2.
      `pnpm test` 3766/3766 green; `pnpm typecheck` exit 0.
-   - **4b-γ/3 — Construction helper migration.** Lift
-     `domain/state/initialState.ts`, `domain/state/startState.ts`,
-     `domain/pass/handoff.ts` output types to
-     `BubbleStateSnapshot`. ~10 source files affected.
+   - **4b-γ/3 — Construction helper migration.** Landed as
+     commit a3e16a72 (10 files: 3 src + 7 test; 41 insertions /
+     57 deletions). Scope shape (deviation from the originally
+     planned three-module output lift):
+     - **`domain/state/initialState.ts:createInitialBubbleState`**
+       — output lifted to `BubbleStateSnapshot`. The variant
+       shape is constructed directly with type-system-honored
+       field constraints (CREATED state requires null active_*
+       / execution_context); no internal projection ceremony
+       at the function body.
+     - **`domain/pass/handoff.ts:resolvePassHandoff`** — **input-only**
+       lift. The output type `ResolvedPassHandoff` is a DTO
+       (sender/recipient agent/role + round info), not a state,
+       so it stays unchanged. The originally planned "output
+       lift" phrasing was imprecise for handoff — it is a
+       DTO resolver, not a state-construction helper.
+     - **`domain/state/startState.ts`** — **already variant from
+       Step 4b-γ/1's bundle cascade**, no edit needed in 4b-γ/3.
+       Its internal `assertParsedDomainBubbleStateSnapshot`
+       usage will be renamed to the canonical parser in 4b-γ/4
+       as part of the transitional API deletion.
+     - **1 production callsite update**
+       (`createBubbleFlowContext.ts`): drop
+       `buildBubbleStateSnapshotVariant(assertParsedBubbleStateSnapshot(...))`
+       wrap, pass `createInitialBubbleState(id)` directly.
+     - **8 test fixture sites updated**: 5 drop
+       `buildBubbleStateSnapshotVariant(...)` wraps (machine
+       tests, stateStoreDomain test); 7 add
+       `toPersistedSnapshot(...)` projection at persisted-port
+       consumers (stateStore tests, kickoffDependencyResolution);
+       3 `as unknown as BubbleStateSnapshot` casts in
+       handoff.test.ts (factory `buildRunningState` stays
+       persisted-shape to preserve negative-path coverage of
+       intentionally-invalid state inputs; the cast at the
+       resolvePassHandoff boundary exercises runtime validation
+       without TS pre-rejection).
+     **No new helper cascade.** Unlike 4b-γ/1, neither lift
+     triggered cascade-required fan-out — the production
+     consumers were either already variant (passWorkspace
+     context from 4b-β) or wrap-drop-only at the boundary.
+     `pnpm test` 3766/3766 green; `pnpm typecheck` exit 0.
 
    After the three pre-flip commits, application code holds the
    variant exclusively; persisted-shape remains only at the
