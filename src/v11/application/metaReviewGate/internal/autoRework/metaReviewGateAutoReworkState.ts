@@ -35,15 +35,13 @@ export function buildAutoReworkResumedState(
   input: AutoReworkStateInput
 ): { resumed: BubbleStateSnapshot; nowIso: string } {
   const nowIso = input.now.toISOString();
-  const loadedPersisted = toPersistedSnapshot(input.loaded.state);
-  const streakResetState = setMetaReviewConsecutiveCleanRuns(
-    loadedPersisted,
-    0
+  const streakResetState = toPersistedSnapshot(
+    setMetaReviewConsecutiveCleanRuns(input.loaded.state, 0)
   );
   const continuation = resolveRuntimeAlignedNextRoundContinuation({
-    bubbleId: loadedPersisted.bubble_id,
-    currentRound: loadedPersisted.round,
-    roundRoleHistory: loadedPersisted.round_role_history,
+    bubbleId: streakResetState.bubble_id,
+    currentRound: streakResetState.round,
+    roundRoleHistory: streakResetState.round_role_history,
     implementer: input.resolved.bubbleConfig.agents.implementer,
     reviewer: input.resolved.bubbleConfig.agents.reviewer,
     nowIso,
@@ -70,13 +68,16 @@ export function buildAutoReworkResumedState(
       streakResetState.meta_review
     )
   });
+  const resumedWithIncrementedCount = toPersistedSnapshot(
+    incrementAutoReworkCount(buildBubbleStateSnapshotVariant(resumedBase))
+  );
   return {
     nowIso,
     resumed: buildBubbleStateSnapshotVariant(
       assertParsedBubbleStateSnapshot({
         ...resumedBase,
         meta_review: normalizeMetaReviewSnapshot(
-          incrementAutoReworkCount(resumedBase).meta_review
+          resumedWithIncrementedCount.meta_review
         )
       })
     )

@@ -5,7 +5,6 @@ import type { RouteCleanMetaReviewRerunInput } from "./metaReviewGateCleanRerunC
 import { persistDispatchFailedHumanRoute } from "../currentRun/routePersistence.js";
 import { buildGateLockPath } from "../state/metaReviewGateShared.js";
 import { setMetaReviewConsecutiveCleanRuns } from "../../../../domain/metaReviewGate/snapshotState.js";
-import { buildBubbleStateSnapshotVariant } from "../../../../domain/state/snapshot/buildBubbleStateSnapshot.js";
 import { toPersistedSnapshot } from "../../../../domain/state/snapshot/projection.js";
 import type { MetaReviewGateResult } from "../../../../shared/metaReviewGate/metaReviewGateResultContract.js";
 
@@ -31,14 +30,11 @@ export async function stageCleanRerunRunningState(
   input: RouteCleanMetaReviewRerunInput
 ): Promise<LoadedDomainStateSnapshot | MetaReviewGateResult> {
   const finalizeInput = input.finalizeInput;
-  // setMetaReviewConsecutiveCleanRuns is still persisted-shape (later batch).
   const loadedWithUpdatedStreak: LoadedDomainStateSnapshot = {
     ...finalizeInput.loaded,
-    state: buildBubbleStateSnapshotVariant(
-      setMetaReviewConsecutiveCleanRuns(
-        toPersistedSnapshot(finalizeInput.loaded.state),
-        input.updatedStreak
-      )
+    state: setMetaReviewConsecutiveCleanRuns(
+      finalizeInput.loaded.state,
+      input.updatedStreak
     )
   };
 

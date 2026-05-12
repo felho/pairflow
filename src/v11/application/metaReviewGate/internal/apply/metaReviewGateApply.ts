@@ -1,7 +1,5 @@
 import type { LoadedDomainStateSnapshot } from "../../../../ports/stateSnapshots.js";
 import type { BubbleMetaReviewRuntimeDeliveryState } from "../../../../shared/metaReview/metaReviewSnapshotTypes.js";
-import { buildBubbleStateSnapshotVariant } from "../../../../domain/state/snapshot/buildBubbleStateSnapshot.js";
-import { toPersistedSnapshot } from "../../../../domain/state/snapshot/projection.js";
 import {
   buildMetaReviewRuntimeDeliveryCorrelation
 } from "../../../../shared/metaReview/metaReviewSnapshot.js";
@@ -35,16 +33,9 @@ export async function applyMetaReviewGateOnConvergence(
 
   let metaReviewRunningState: LoadedDomainStateSnapshot;
   try {
-    // setMetaReviewConsecutiveCleanRuns is still persisted-shape (later batch);
-    // project at the boundary and rebuild the variant for the Domain port.
     const loadedRunningWithFreshCleanStreak: LoadedDomainStateSnapshot = {
       ...context.loadedRunning,
-      state: buildBubbleStateSnapshotVariant(
-        setMetaReviewConsecutiveCleanRuns(
-          toPersistedSnapshot(context.loadedRunning.state),
-          0
-        )
-      )
+      state: setMetaReviewConsecutiveCleanRuns(context.loadedRunning.state, 0)
     };
     metaReviewRunningState = await stageMetaReviewRunningState({
       bubbleId: context.resolved.bubbleId,
