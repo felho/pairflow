@@ -3,8 +3,8 @@ import { describe, expect, it } from "vitest";
 import {
   applyDeferredReworkIntent,
   deriveQueuedDeferredReworkIntentState
-} from "../../../../src/v11/domain/state/rework/reworkIntentTransitions.js";
-import { buildBubbleStateSnapshotVariant } from "../../../../src/v11/domain/state/snapshot/buildBubbleStateSnapshot.js";
+} from "../../../../../src/v11/domain/state/rework/reworkIntentTransitions.js";
+import { buildBubbleStateSnapshotVariant } from "../../../../../src/v11/domain/state/snapshot/buildBubbleStateSnapshot.js";
 
 describe("v11 domain reworkIntent", () => {
   it("supersedes an existing pending deferred rework intent", () => {
