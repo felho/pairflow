@@ -1,4 +1,4 @@
-import type { PersistedBubbleStateSnapshot } from "../../../../domain/state/snapshot/persistedBubbleStateSnapshot.js";
+import type { BubbleStateSnapshot } from "../../../../domain/state/snapshot/bubbleStateSnapshot.js";
 import type { ProtocolEnvelope } from "../../../../../types/protocol.js";
 import type { AskHumanActivationProvenance } from "../../askHumanCommandContract.js";
 import type { DeliveryAck } from "../../../../ports/tmuxDelivery.js";
@@ -13,7 +13,7 @@ export interface BuildAskHumanFinalizationResultInput {
   bubbleId: string;
   sequence: number;
   envelope: ProtocolEnvelope;
-  state: PersistedBubbleStateSnapshot;
+  state: BubbleStateSnapshot;
   activation?: AskHumanActivationProvenance;
   deliveryResult?: DeliveryAck;
 }

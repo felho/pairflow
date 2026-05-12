@@ -1,6 +1,6 @@
 import { join } from "node:path";
 
-import type { LoadedStateSnapshot } from "../../../../ports/stateSnapshots.js";
+import type { LoadedDomainStateSnapshot } from "../../../../ports/stateSnapshots.js";
 import type { AppendProtocolEnvelopeResult } from "../../../../ports/transcript.js";
 import type {
   ExecuteAskHumanExecutionDependencies,
@@ -8,6 +8,9 @@ import type {
   ExecuteAskHumanExecutionResult
 } from "../mutation/askHumanFlowContract.js";
 import { applyStateTransition } from "../../../../domain/state/machine.js";
+import { toPersistedSnapshot } from "../../../../domain/state/snapshot/projection.js";
+import { buildBubbleStateSnapshotVariant } from "../../../../domain/state/snapshot/buildBubbleStateSnapshot.js";
+import { adaptPersistedWritePortToDomain } from "../../../../shared/mutation/mutationBoundaryIO.js";
 import {
   appendProtocolEnvelope,
   writeStateSnapshot
@@ -33,7 +36,8 @@ export async function executeAskHumanExecution(
   const appendEnvelope =
     dependencies.appendProtocolEnvelope ?? appendProtocolEnvelope;
   const writeSnapshot =
-    dependencies.writeStateSnapshot ?? writeStateSnapshot;
+    dependencies.writeStateSnapshot
+    ?? adaptPersistedWritePortToDomain(writeStateSnapshot);
   const applyTransition =
     dependencies.applyStateTransition ?? applyStateTransition;
 
@@ -60,12 +64,15 @@ export async function executeAskHumanExecution(
     }
   });
 
-  const nextState = applyTransition(input.routing.state, {
+  // applyStateTransition is still persisted-shape (its migration is a later
+  // batch); project at the boundary and rebuild the variant from the output.
+  const nextPersisted = applyTransition(toPersistedSnapshot(input.routing.state), {
     to: "WAITING_HUMAN",
     lastCommandAt: input.routing.nowIso
   });
+  const nextState = buildBubbleStateSnapshotVariant(nextPersisted);
 
-  let written: LoadedStateSnapshot;
+  let written: LoadedDomainStateSnapshot;
   try {
     written = await writeSnapshot(
       input.routing.resolved.bubblePaths.statePath,

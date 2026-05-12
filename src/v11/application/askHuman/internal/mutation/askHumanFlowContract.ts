@@ -3,15 +3,15 @@ import type {
   AppendProtocolEnvelopePort
 } from "../../../../ports/transcript.js";
 import type {
-  LoadedStateSnapshot,
-  WriteStateSnapshotPort
+  LoadedDomainStateSnapshot,
+  WriteDomainStateSnapshotPort
 } from "../../../../ports/stateSnapshots.js";
 import type { applyStateTransition } from "../../../../domain/state/machine.js";
 import type {
   EmitAskHumanBubbleNotificationPort,
 } from "../delivery/askHumanDeliveryPortsContract.js";
 import type { EmitBubbleLifecycleEventBestEffortPort } from "../../../../shared/metrics/bubbleEvents.js";
-import type { PersistedBubbleStateSnapshot } from "../../../../domain/state/snapshot/persistedBubbleStateSnapshot.js";
+import type { BubbleStateSnapshot } from "../../../../domain/state/snapshot/bubbleStateSnapshot.js";
 import type { ProtocolEnvelope } from "../../../../../types/protocol.js";
 import type { AskHumanRoutingContext } from "../delivery/askHumanRoutingContextContract.js";
 import type { AskHumanActivationProvenance } from "../../askHumanCommandContract.js";
@@ -36,12 +36,12 @@ export interface ExecuteAskHumanExecutionInput {
 
 export interface ExecuteAskHumanExecutionResult {
   appended: AppendProtocolEnvelopeResult;
-  written: LoadedStateSnapshot;
+  written: LoadedDomainStateSnapshot;
 }
 
 export interface ExecuteAskHumanExecutionDependencies {
   appendProtocolEnvelope?: AppendProtocolEnvelopePort;
-  writeStateSnapshot?: WriteStateSnapshotPort;
+  writeStateSnapshot?: WriteDomainStateSnapshotPort;
   applyStateTransition?: typeof applyStateTransition;
 }
 
@@ -49,7 +49,7 @@ export interface FinalizeAskHumanFlowInput {
   now: Date;
   routing: AskHumanRoutingContext;
   appended: AppendProtocolEnvelopeResult;
-  written: LoadedStateSnapshot;
+  written: LoadedDomainStateSnapshot;
 }
 
 export interface FinalizeAskHumanFlowDependencies {
@@ -63,7 +63,7 @@ export interface RunAskHumanFlowResult {
   bubbleId: string;
   sequence: number;
   envelope: ProtocolEnvelope;
-  state: PersistedBubbleStateSnapshot;
+  state: BubbleStateSnapshot;
   inferredRecipient: "human";
   activation?: AskHumanActivationProvenance;
   delivery?: {
@@ -89,7 +89,7 @@ export interface RunAskHumanFlowDependencies {
     dependencies?: FinalizeAskHumanFlowDependencies
   ) => Promise<RunAskHumanFlowResult>;
   appendProtocolEnvelope?: AppendProtocolEnvelopePort;
-  writeStateSnapshot?: WriteStateSnapshotPort;
+  writeStateSnapshot?: WriteDomainStateSnapshotPort;
   applyStateTransition?: typeof applyStateTransition;
   emitDeliveryNotificationAck?: EmitDeliveryNotificationAckPort;
   emitBubbleNotification?: EmitAskHumanBubbleNotificationPort;
