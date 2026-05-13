@@ -669,6 +669,8 @@ describe("UI contract transit source guards", () => {
     expect(routerDependencies).not.toContain(
       "from \"../../shared/inbox/inboxCommandApi.js\""
     );
+    expect(routerDependencies).not.toContain("../../defaults/ui");
+    expect(routerDependencies).not.toContain("routerDefaults");
     expect(eventsScan).toContain("from \"../../../contracts/ui/uiReadModel.js\"");
     expect(eventsFingerprint).toContain(
       "from \"../../../contracts/ui/uiReadModel.js\""

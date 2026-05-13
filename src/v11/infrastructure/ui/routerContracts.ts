@@ -20,6 +20,7 @@ export interface CreateUiRouterInput {
   events: UiEventsBroker;
   cwd?: string | undefined;
   keepAliveIntervalMs?: number | undefined;
+  dependencyDefaults?: UiRouterDependencies | undefined;
   dependencies?: Partial<UiRouterDependencies> | undefined;
 }
 

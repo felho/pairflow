@@ -1,103 +1,54 @@
-import { readRuntimeSessionsRegistry } from "../executor/sessionRuntime/runtimeSessionsRegistry.js";
-import { readBubbleTimeline } from "./presenters/timelinePresenter.js";
-import { attachBubble } from "../executor/command/pairflowCommandAttach.js";
-import { resolveBubbleById } from "../executor/workspace/bubbleLookup.js";
 import type { UiRouterDependencies } from "../../ports/uiRouter.js";
 import type {
   CreateUiRouterInput
 } from "./routerContracts.js";
 
-type CoreUiRouterDependencyDefaults = Pick<
-  UiRouterDependencies,
-  | "commitBubble"
-  | "deleteBubble"
-  | "emitApprove"
-  | "emitHumanReply"
-  | "emitRequestRework"
-  | "getBubbleInbox"
-  | "getBubbleStatus"
-  | "listBubbles"
-  | "mergeBubble"
-  | "openBubble"
-  | "restartBubble"
-  | "resumeBubble"
-  | "startBubble"
-  | "stopBubble"
-  | "updateBubbleReviewPolicy"
->;
+const uiRouterDependencyKeys = [
+  "listBubbles",
+  "getBubbleStatus",
+  "getBubbleInbox",
+  "readRuntimeSessionsRegistry",
+  "readBubbleTimeline",
+  "startBubble",
+  "emitApprove",
+  "emitRequestRework",
+  "emitHumanReply",
+  "resumeBubble",
+  "commitBubble",
+  "mergeBubble",
+  "openBubble",
+  "attachBubble",
+  "updateBubbleReviewPolicy",
+  "stopBubble",
+  "restartBubble",
+  "deleteBubble"
+] as const satisfies readonly (keyof UiRouterDependencies)[];
 
-let uiRouterDependencyDefaultsPromise:
-  | Promise<CoreUiRouterDependencyDefaults>
-  | undefined;
-
-async function loadUiRouterDependencyDefaults(): Promise<CoreUiRouterDependencyDefaults> {
-  uiRouterDependencyDefaultsPromise ??= import(
-    "../../defaults/ui/routerDefaults.js"
-  ).then(({ uiRouterDependencyDefaults }) => ({
-    commitBubble: (...args) => uiRouterDependencyDefaults.commitBubble(...args),
-    deleteBubble: (...args) => uiRouterDependencyDefaults.deleteBubble(...args),
-    emitApprove: (...args) => uiRouterDependencyDefaults.emitApprove(...args),
-    emitHumanReply: (...args) => uiRouterDependencyDefaults.emitHumanReply(...args),
-    emitRequestRework: (...args) => uiRouterDependencyDefaults.emitRequestRework(...args),
-    getBubbleInbox: (...args) => uiRouterDependencyDefaults.getBubbleInbox(...args),
-    getBubbleStatus: (...args) => uiRouterDependencyDefaults.getBubbleStatus(...args),
-    listBubbles: (...args) => uiRouterDependencyDefaults.listBubbles(...args),
-    mergeBubble: (...args) => uiRouterDependencyDefaults.mergeBubble(...args),
-    openBubble: (...args) => uiRouterDependencyDefaults.openBubble(...args),
-    restartBubble: (...args) => uiRouterDependencyDefaults.restartBubble(...args),
-    resumeBubble: (...args) => uiRouterDependencyDefaults.resumeBubble(...args),
-    startBubble: (...args) => uiRouterDependencyDefaults.startBubble(...args),
-    stopBubble: (...args) => uiRouterDependencyDefaults.stopBubble(...args),
-    updateBubbleReviewPolicy: (...args) =>
-      uiRouterDependencyDefaults.updateBubbleReviewPolicy(...args)
-  }));
-  return uiRouterDependencyDefaultsPromise;
+function resolveUiRouterDependency<K extends keyof UiRouterDependencies>(
+  input: CreateUiRouterInput,
+  key: K
+): UiRouterDependencies[K] {
+  const dependency = input.dependencies?.[key] ?? input.dependencyDefaults?.[key];
+  if (dependency === undefined) {
+    throw new Error(
+      `UI_ROUTER_DEPENDENCY_MISSING: missing UI router dependency '${String(key)}'. `
+      + "Pass dependencyDefaults from the UI host composition root or provide an explicit dependency."
+      + ` context=${JSON.stringify({
+        route: "ui_router_dependencies",
+        dependency: String(key)
+      })}`
+    );
+  }
+  return dependency;
 }
-
-export const defaultUiRouterDependencies: UiRouterDependencies = {
-  ...await loadUiRouterDependencyDefaults(),
-  readRuntimeSessionsRegistry,
-  readBubbleTimeline,
-  attachBubble: (input) =>
-    attachBubble(input, {
-      resolveBubbleById
-    }),
-};
 
 export function resolveUiRouterDependencies(
   input: CreateUiRouterInput
 ): UiRouterDependencies {
-  return {
-    listBubbles: input.dependencies?.listBubbles ?? defaultUiRouterDependencies.listBubbles,
-    getBubbleStatus:
-      input.dependencies?.getBubbleStatus ?? defaultUiRouterDependencies.getBubbleStatus,
-    getBubbleInbox:
-      input.dependencies?.getBubbleInbox ?? defaultUiRouterDependencies.getBubbleInbox,
-    readRuntimeSessionsRegistry:
-      input.dependencies?.readRuntimeSessionsRegistry ??
-      defaultUiRouterDependencies.readRuntimeSessionsRegistry,
-    readBubbleTimeline:
-      input.dependencies?.readBubbleTimeline ?? defaultUiRouterDependencies.readBubbleTimeline,
-    startBubble: input.dependencies?.startBubble ?? defaultUiRouterDependencies.startBubble,
-    emitApprove: input.dependencies?.emitApprove ?? defaultUiRouterDependencies.emitApprove,
-    emitRequestRework:
-      input.dependencies?.emitRequestRework
-      ?? defaultUiRouterDependencies.emitRequestRework,
-    emitHumanReply:
-      input.dependencies?.emitHumanReply ?? defaultUiRouterDependencies.emitHumanReply,
-    resumeBubble:
-      input.dependencies?.resumeBubble ?? defaultUiRouterDependencies.resumeBubble,
-    commitBubble:
-      input.dependencies?.commitBubble ?? defaultUiRouterDependencies.commitBubble,
-    mergeBubble: input.dependencies?.mergeBubble ?? defaultUiRouterDependencies.mergeBubble,
-    openBubble: input.dependencies?.openBubble ?? defaultUiRouterDependencies.openBubble,
-    attachBubble: input.dependencies?.attachBubble ?? defaultUiRouterDependencies.attachBubble,
-    updateBubbleReviewPolicy:
-      input.dependencies?.updateBubbleReviewPolicy
-      ?? defaultUiRouterDependencies.updateBubbleReviewPolicy,
-    stopBubble: input.dependencies?.stopBubble ?? defaultUiRouterDependencies.stopBubble,
-    restartBubble:
-      input.dependencies?.restartBubble ?? defaultUiRouterDependencies.restartBubble,
-    deleteBubble: input.dependencies?.deleteBubble ?? defaultUiRouterDependencies.deleteBubble
-  };
+  return Object.fromEntries(
+    uiRouterDependencyKeys.map((key) => [
+      key,
+      resolveUiRouterDependency(input, key)
+    ])
+  ) as unknown as UiRouterDependencies;
 }

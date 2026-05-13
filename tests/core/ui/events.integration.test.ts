@@ -11,6 +11,9 @@ import { normalizeRepoPath } from "../../../src/v11/infrastructure/executor/work
 import { registerRepoInRegistry } from "../../../src/v11/infrastructure/executor/workspace/repoRegistry.js";
 import { upsertRuntimeSession } from "../../../src/v11/infrastructure/executor/sessionRuntime/runtimeSessionsRegistry.js";
 import { startUiServer, type UiServerHandle } from "../../../src/v11/infrastructure/ui/server.js";
+import {
+  defaultUiRouterDependencies
+} from "../../../src/v11/defaults/ui/routerDependencyDefaults.js";
 import { initGitRepository } from "../../helpers/git.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
 
@@ -263,6 +266,7 @@ async function startServer(input: {
     port: 0,
     pollIntervalMs: input.pollIntervalMs ?? 40,
     debounceMs: input.debounceMs ?? 10,
+    routerDependencyDefaults: defaultUiRouterDependencies,
     ...(input.keepAliveIntervalMs !== undefined
       ? { keepAliveIntervalMs: input.keepAliveIntervalMs }
       : {})

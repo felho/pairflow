@@ -3,7 +3,7 @@ import { parseArgs } from "node:util";
 import {
   startUiServer,
   type UiServerHandle
-} from "../../../v11/infrastructure/ui/server.js";
+} from "../../../v11/defaults/ui/serverDefaults.js";
 
 export interface UiServerCommandOptions {
   repos: string[];

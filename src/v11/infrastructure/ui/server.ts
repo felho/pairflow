@@ -19,7 +19,6 @@ import {
 } from "./uiServerAssets.js";
 import { closeServer, listen } from "./uiServerLifecycle.js";
 import { createUiServerRegistrySyncController } from "./uiServerRegistrySync.js";
-import { defaultUiRouterDependencies } from "./routerDependencies.js";
 
 const defaultHost = "127.0.0.1";
 const defaultPort = 4173;
@@ -34,6 +33,7 @@ export interface StartUiServerInput {
   pollIntervalMs?: number | undefined;
   debounceMs?: number | undefined;
   keepAliveIntervalMs?: number | undefined;
+  routerDependencyDefaults?: CreateUiRouterInput["dependencyDefaults"] | undefined;
   routerDependencies?: CreateUiRouterInput["dependencies"] | undefined;
   dependencies?:
     | {
@@ -124,7 +124,17 @@ export async function startUiServer(
   const events: UiEventsBroker = await createEventsBroker({
     repos: repoScope.repos,
     listBubbles: input.routerDependencies?.listBubbles
-      ?? defaultUiRouterDependencies.listBubbles,
+      ?? input.routerDependencyDefaults?.listBubbles
+      ?? (() => {
+        throw new Error(
+          "UI_SERVER_DEPENDENCY_MISSING: missing listBubbles dependency. "
+          + "Pass routerDependencyDefaults from the UI host composition root or provide routerDependencies.listBubbles."
+          + ` context=${JSON.stringify({
+            route: "ui_server_events",
+            dependency: "listBubbles"
+          })}`
+        );
+      }),
     ...(input.pollIntervalMs !== undefined
       ? { pollIntervalMs: input.pollIntervalMs }
       : {}),
@@ -136,6 +146,9 @@ export async function startUiServer(
     cwd,
     ...(input.keepAliveIntervalMs !== undefined
       ? { keepAliveIntervalMs: input.keepAliveIntervalMs }
+      : {}),
+    ...(input.routerDependencyDefaults !== undefined
+      ? { dependencyDefaults: input.routerDependencyDefaults }
       : {}),
     ...(input.routerDependencies !== undefined
       ? { dependencies: input.routerDependencies }

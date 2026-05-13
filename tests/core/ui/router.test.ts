@@ -26,12 +26,19 @@ import {
   projectApprovalDecisionDeliverySignalToUiDeliverySignal,
   projectApprovalDecisionDeliverySignalsToUiDeliverySignals
 } from "../../../src/v11/defaults/ui/routerDefaults.js";
+import {
+  defaultUiRouterDependencies
+} from "../../../src/v11/defaults/ui/routerDependencyDefaults.js";
 import { buildBubbleStateSnapshotVariant } from "../../../src/v11/domain/state/snapshot/buildBubbleStateSnapshot.js";
 import {
   UiBubbleReviewPolicyConflictError,
   UiBubbleReviewPolicyStateConflictError
 } from "../../../src/v11/defaults/ui/updateBubbleReviewPolicyForUi.js";
-import { createUiRouter, resolveStaticAssetPath } from "../../../src/v11/infrastructure/ui/router.js";
+import {
+  createUiRouter as createUiRouterInfrastructure,
+  resolveStaticAssetPath,
+  type CreateUiRouterInput
+} from "../../../src/v11/infrastructure/ui/router.js";
 import { handleUiEvents } from "../../../src/v11/infrastructure/ui/routerEvents.js";
 import type { UiEventsBroker } from "../../../src/v11/infrastructure/ui/events.js";
 import type { UiRepoScope } from "../../../src/v11/infrastructure/ui/repoScope.js";
@@ -40,6 +47,14 @@ import type {
   UiActionBubbleState,
   UiActionEvent
 } from "../../../src/contracts/ui/uiActions.js";
+
+function createUiRouter(input: CreateUiRouterInput) {
+  return createUiRouterInfrastructure({
+    ...input,
+    dependencyDefaults:
+      input.dependencyDefaults ?? defaultUiRouterDependencies
+  });
+}
 import type {
   UiStartBubbleResult,
   UiStopBubbleResult,
@@ -407,9 +422,17 @@ async function withMockedApprovalRouteDependencies<T>(
   });
 
   try {
-    const { createUiRouter: createUiRouterWithDefaultProjection } = await import(
+    const { createUiRouter: createUiRouterWithDefaultProjectionBase } = await import(
       "../../../src/v11/infrastructure/ui/router.js"
     );
+    const { defaultUiRouterDependencies: mockedDefaults } = await import(
+      "../../../src/v11/defaults/ui/routerDependencyDefaults.js"
+    );
+    const createUiRouterWithDefaultProjection: typeof createUiRouter = (input) =>
+      createUiRouterWithDefaultProjectionBase({
+        ...input,
+        dependencyDefaults: input.dependencyDefaults ?? mockedDefaults
+      });
     return await run(createUiRouterWithDefaultProjection);
   } finally {
     vi.resetModules();
@@ -455,9 +478,17 @@ async function withMockedLifecycleRouteDependencies<T>(
   });
 
   try {
-    const { createUiRouter: createUiRouterWithDefaultProjection } = await import(
+    const { createUiRouter: createUiRouterWithDefaultProjectionBase } = await import(
       "../../../src/v11/infrastructure/ui/router.js"
     );
+    const { defaultUiRouterDependencies: mockedDefaults } = await import(
+      "../../../src/v11/defaults/ui/routerDependencyDefaults.js"
+    );
+    const createUiRouterWithDefaultProjection: typeof createUiRouter = (input) =>
+      createUiRouterWithDefaultProjectionBase({
+        ...input,
+        dependencyDefaults: input.dependencyDefaults ?? mockedDefaults
+      });
     return await run(createUiRouterWithDefaultProjection);
   } finally {
     vi.resetModules();
@@ -505,9 +536,17 @@ async function withMockedEventRouteDependencies<T>(
   });
 
   try {
-    const { createUiRouter: createUiRouterWithDefaultProjection } = await import(
+    const { createUiRouter: createUiRouterWithDefaultProjectionBase } = await import(
       "../../../src/v11/infrastructure/ui/router.js"
     );
+    const { defaultUiRouterDependencies: mockedDefaults } = await import(
+      "../../../src/v11/defaults/ui/routerDependencyDefaults.js"
+    );
+    const createUiRouterWithDefaultProjection: typeof createUiRouter = (input) =>
+      createUiRouterWithDefaultProjectionBase({
+        ...input,
+        dependencyDefaults: input.dependencyDefaults ?? mockedDefaults
+      });
     return await run(createUiRouterWithDefaultProjection);
   } finally {
     vi.resetModules();

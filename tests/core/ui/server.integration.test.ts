@@ -12,7 +12,10 @@ import {
   startUiServer,
   type StartUiServerInput,
   type UiServerHandle
-} from "../../../src/v11/infrastructure/ui/server.js";
+} from "../../../src/v11/defaults/ui/serverDefaults.js";
+import {
+  defaultUiRouterDependencies
+} from "../../../src/v11/defaults/ui/routerDependencyDefaults.js";
 import { upsertRuntimeSession } from "../../../src/v11/infrastructure/executor/sessionRuntime/runtimeSessionsRegistry.js";
 import type { UiEventsBroker } from "../../../src/v11/infrastructure/ui/events.js";
 import type { UiRepoScope } from "../../../src/v11/infrastructure/ui/repoScope.js";
@@ -155,6 +158,7 @@ async function startServer(input: {
     port: 0,
     pollIntervalMs: 75,
     debounceMs: 10,
+    routerDependencyDefaults: defaultUiRouterDependencies,
     ...(input.routerDependencies !== undefined
       ? { routerDependencies: input.routerDependencies }
       : {})
