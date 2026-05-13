@@ -17,7 +17,7 @@ import {
   remoteDeleteModeEnvVar,
   remoteDeleteModeInnerRemoteExecution,
   remoteDeleteWorkspaceRootEnvVar
-} from "../../../src/v11/application/delete/remoteDeleteExecutionContext.js";
+} from "../../../src/v11/application/delete/internal/remote/remoteDeleteExecutionContext.js";
 import { RemoteBubbleDeleteCommandError } from "../../../src/v11/infrastructure/executor/ssh/sshBubbleDeleteCommand.js";
 import {
   readRuntimeSessionsRegistry,

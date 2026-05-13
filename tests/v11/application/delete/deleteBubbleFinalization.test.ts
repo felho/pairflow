@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { tmpdir } from "node:os";
 
 import type { ArchiveManifest } from "../../../../src/types/archive.js";
-import { createDeleteArchive } from "../../../../src/v11/application/delete/deleteBubbleFinalization.js";
+import { createDeleteArchive } from "../../../../src/v11/application/delete/internal/finalization/deleteBubbleFinalization.js";
 
 const tempDirs: string[] = [];
 

@@ -9,7 +9,7 @@ import {
   remoteDeleteModeInnerRemoteExecution,
   remoteDeleteWorkspaceRootEnvVar,
   resolveRemoteDeleteExecutionContextFromEnv
-} from "../../../../src/v11/application/delete/remoteDeleteExecutionContext.js";
+} from "../../../../src/v11/application/delete/internal/remote/remoteDeleteExecutionContext.js";
 
 const tempDirs: string[] = [];
 

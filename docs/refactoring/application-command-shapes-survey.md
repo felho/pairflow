@@ -1,7 +1,7 @@
 # Application Command Shapes — Survey
 
 Status: descriptive (factual inventory; companion to the template)
-Last updated: 2026-05-11
+Last updated: 2026-05-13
 Owner: architecture/runtime
 Scope: factual inventory of `src/v11/application/<lane>/` directories that
 backs the application-command-lane template
@@ -47,7 +47,7 @@ restructuring opportunity).
 | metaReview | 3 | yes | 2 | yes | — | — | structured (Tier 2; refactored 2026-05-13) |
 | reply | 2 | yes | 2 | no | yes | — | structured (Tier 2; refactored 2026-05-11) |
 | attach | 6 | no | — | — | yes | 15 | unstructured |
-| delete | 6 | no | — | yes | yes | 11 | unstructured |
+| delete | 3 | yes | 6 | yes | yes | — | structured (Tier 2; refactored 2026-05-13) |
 | extract | 2 | yes | 4 | yes | yes | — | structured (Tier 2; refactored 2026-05-13) |
 | open | 6 | no | — | yes | yes | 14 | unstructured |
 | list | 2 | yes | 3 | yes | yes | — | structured (Tier 2; refactored 2026-05-11) |
@@ -127,8 +127,6 @@ Already minimal. No restructuring needed.
 Self-contained command lanes with all files at the top level. Restructuring
 straightforward: `internal/<sub>/` for everything that isn't entry/contract.
 
-- **delete** — 6 top-level, ~1640 LOC total. Files: `deleteBubble*` cluster +
-  `deleteCliCommand` + `remoteDeleteExecutionContext`.
 - **attach** — 6 top-level. Files: `attachBubble*` cluster +
   `attachCliCommand` (the legacy `emitAttachV11` wrapper has been renamed to
   `attachBubble.ts`).
@@ -137,6 +135,11 @@ straightforward: `internal/<sub>/` for everything that isn't entry/contract.
 
 These all have the standard naming (`*CommandApi`, `*CommandContract`,
 `*CliCommand` etc.), just no `internal/` boundary yet.
+
+`delete` was removed from this bucket on 2026-05-13. The lane now keeps only
+`deleteBubble.ts`, `deleteBubbleContract.ts`, and `deleteCliCommand.ts` at root;
+route resolution, dependency resolution, result construction, finalization,
+remote support, and internal types live under `internal/`.
 
 ### Tier 2 — Standard Command Pipeline (7+ top-level OR multi-phase internal)
 

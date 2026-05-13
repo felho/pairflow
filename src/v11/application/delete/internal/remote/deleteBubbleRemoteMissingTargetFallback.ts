@@ -1,16 +1,18 @@
-import type { DeleteBubbleResult } from "../../../contracts/deleteBubble.js";
+import type { DeleteBubbleResult } from "../../../../../contracts/deleteBubble.js";
+import type { DeleteBubbleInput } from "../../deleteBubbleContract.js";
 import {
-  buildDeleteSuccessResult,
-  type DeleteBubbleInput,
-  type DeleteExecutionContext,
-  type DeleteRouteContext,
-  type ResolvedBubble,
-  type ResolvedDeleteDependencies
-} from "./deleteBubbleSupport.js";
+  buildDeleteSuccessResult
+} from "../result/deleteResultBuilders.js";
+import type {
+  DeleteExecutionContext,
+  ResolvedBubble,
+  ResolvedDeleteDependencies
+} from "../types/deleteTypes.js";
+import type { DeleteRouteContext } from "../route/deleteRouteContext.js";
 import {
   createDeleteArchive,
   removeDeleteBubbleDirectory
-} from "./deleteBubbleFinalization.js";
+} from "../finalization/deleteBubbleFinalization.js";
 
 function isRemoteDeleteInvalidTargetError(error: unknown): boolean {
   return (

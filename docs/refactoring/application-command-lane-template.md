@@ -251,15 +251,12 @@ instead of `<command>CommandApi.ts`. The role is the same.
 The `internal/` sub-area names mirror role names from the naming table. A
 small lane often only needs one or two sub-areas (`runtime/`, `error/`).
 
-**Reference lane:** `application/delete/` (currently 6 top-level, no
-`internal/`). The current top-level files (`deleteBubble.ts`,
-`deleteBubbleFinalization.ts`, `deleteBubbleSupport.ts`,
-`remoteDeleteExecutionContext.ts`, `deleteCliCommand.ts`,
-`deleteBubbleRemoteMissingTargetFallback.ts`) represent: API + finalization +
-support + remote context + CLI + fallback. After Tier 1 application, the
-expected layout is: `deleteBubble.ts` (API) and `deleteCliCommand.ts` at root,
-the rest moved to `internal/finalization/`, `internal/remote/`,
-`internal/support/`.
+**Reference lane:** `application/delete/` before its 2026-05-13 refactor had
+6 top-level files and no `internal/`. The implementation details have since
+been moved under `internal/{dependencies,finalization,remote,result,route,types}/`;
+root now contains only `deleteBubble.ts` (API), `deleteBubbleContract.ts`
+(dependency contract), and `deleteCliCommand.ts` (CLI integration). This is the
+target shape for Tier 1 lanes that outgrow a flat layout.
 
 ## Tier 2 — Pipeline Command
 

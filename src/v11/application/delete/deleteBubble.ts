@@ -1,43 +1,45 @@
-import type {
-  DeleteBubbleArtifacts,
-  DeleteBubbleResult
-} from "../../../contracts/deleteBubble.js";
+import type { DeleteBubbleArtifacts, DeleteBubbleResult } from "../../../contracts/deleteBubble.js";
 import { StopBubbleError } from "../stop/stopCommandOrchestration.js";
 import { isNamedError } from "../../shared/errors/namedError.js";
+import type {
+  DeleteBubbleDependencies,
+  DeleteBubbleInput,
+  ExecuteRemoteBubbleDeleteCommandResult
+} from "./deleteBubbleContract.js";
+import {
+  inferCreatedAtFromBubbleInstanceId,
+  resolveDeleteDependencies
+} from "./internal/dependencies/deleteDependencyResolution.js";
 import {
   buildDeleteConfirmationResult,
   buildDeleteSuccessResult,
-  type DeleteRouteContext,
-  type DeleteBubbleDependencies,
-  type DeleteBubbleInput,
-  type DeleteExecutionContext,
-  type DeleteResolution,
-  type DeleteRuntimeCleanupResult,
-  type ExecuteRemoteBubbleDeleteCommandResult,
-  inferCreatedAtFromBubbleInstanceId,
   preDeleteStopStateByLifecycle,
-  requiresDeleteConfirmation,
-  resolveDeleteRouteContext,
-  resolveDeleteDependencies,
-  type ResolvedBubble,
-  type ResolvedDeleteDependencies
-} from "./deleteBubbleSupport.js";
+  requiresDeleteConfirmation
+} from "./internal/result/deleteResultBuilders.js";
+import {
+  type DeleteRouteContext,
+  resolveDeleteRouteContext
+} from "./internal/route/deleteRouteContext.js";
+import type {
+  DeleteExecutionContext,
+  DeleteResolution,
+  DeleteRuntimeCleanupResult,
+  ResolvedBubble,
+  ResolvedDeleteDependencies
+} from "./internal/types/deleteTypes.js";
 import {
   cleanupDeleteWorkspace,
   createDeleteArchive,
   emitDeleteLifecycleEvent,
   removeDeleteBubbleDirectory
-} from "./deleteBubbleFinalization.js";
-import { maybeFinalizeRemoteDeleteMissingTargetFallback } from "./deleteBubbleRemoteMissingTargetFallback.js";
+} from "./internal/finalization/deleteBubbleFinalization.js";
+import { maybeFinalizeRemoteDeleteMissingTargetFallback } from "./internal/remote/deleteBubbleRemoteMissingTargetFallback.js";
 
-export type {
-  DeleteBubbleArtifacts,
-  DeleteBubbleResult
-} from "../../../contracts/deleteBubble.js";
+export type { DeleteBubbleArtifacts, DeleteBubbleResult } from "../../../contracts/deleteBubble.js";
 export type {
   DeleteBubbleDependencies,
   DeleteBubbleInput
-} from "./deleteBubbleSupport.js";
+} from "./deleteBubbleContract.js";
 
 export class DeleteBubbleError extends Error {
   public constructor(message: string) {

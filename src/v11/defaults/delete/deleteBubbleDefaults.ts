@@ -19,7 +19,7 @@ import { resolveBubbleById } from "../../infrastructure/executor/workspace/bubbl
 import { buildBubbleTmuxSessionName } from "../../shared/bubble/tmuxSessionName.js";
 import { statusCommandDependencyDefaults } from "../status/statusCommandDependencyDefaults.js";
 import { removeWatchdogPaneActivity } from "../watchdog/watchdogPaneActivityDefaults.js";
-import type { DeleteBubbleDefaultDependencies } from "../../application/delete/deleteBubbleSupport.js";
+import type { DeleteBubbleDefaultDependencies } from "../../application/delete/deleteBubbleContract.js";
 
 const stopBubble: typeof stopBubbleCommandOrchestration = (input, dependencies = {}) =>
   stopBubbleCommandOrchestration(input, {

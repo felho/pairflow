@@ -1,19 +1,21 @@
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { basename, dirname, join } from "node:path";
 
-import { emitBubbleLifecycleEventBestEffort } from "../metrics/bubbleEvents.js";
+import { emitBubbleLifecycleEventBestEffort } from "../../../metrics/bubbleEvents.js";
 import type {
   DeleteBubbleArtifacts
-} from "../../../contracts/deleteBubble.js";
+} from "../../../../../contracts/deleteBubble.js";
 import type {
   DeleteBubbleInput,
+  ExecuteRemoteBubbleDeleteCommandResult
+} from "../../deleteBubbleContract.js";
+import type {
   DeleteExecutionContext,
-  ExecuteRemoteBubbleDeleteCommandResult,
   DeleteRuntimeCleanupResult,
   DeleteWorkspaceCleanupResult,
   ResolvedBubble,
   ResolvedDeleteDependencies
-} from "./deleteBubbleSupport.js";
+} from "../types/deleteTypes.js";
 
 type RemoteDeleteArchiveCapture = NonNullable<
   ExecuteRemoteBubbleDeleteCommandResult["archiveCapture"]
