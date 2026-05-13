@@ -7,18 +7,10 @@ import {
   readTranscriptEnvelopes
 } from "../../infrastructure/artifact/transcript/transcriptStore.js";
 import {
-  readStateSnapshot as readStateSnapshotPersisted,
-  writeStateSnapshot as writeStateSnapshotPersisted
+  readStateSnapshot,
+  writeStateSnapshot
 } from "../../infrastructure/state/stateStore.js";
-import {
-} from "../../shared/mutation/mutationBoundaryIO.js";
 import { setMetaReviewerPaneBinding } from "../../infrastructure/channel/tmux/metaReviewerPaneBinding.js";
-
-// Adapt persisted-shape infrastructure ports into domain-variant ports
-// at the defaults boundary so the metaReviewGate lane holds
-// BubbleStateSnapshot at its public dependency contract.
-const readStateSnapshot = readStateSnapshotPersisted;
-const writeStateSnapshot = writeStateSnapshotPersisted;
 import { runTmux } from "../../infrastructure/channel/tmux/tmuxManager.js";
 import {
   acceptMetaReviewTrustPrompt,

@@ -6,8 +6,7 @@ import {
   type WriteStateSnapshotPort
 } from "../../../../ports/stateSnapshots.js";
 import type { AgentName } from "../../../../../contracts/kernel/agentIdentity.js";
-import { buildBubbleStateSnapshotVariant } from "../../../../domain/state/snapshot/buildBubbleStateSnapshot.js";
-import { toPersistedSnapshot } from "../../../../domain/state/snapshot/projection.js";
+import type { BubbleStateRunningMetaReview } from "../../../../domain/state/snapshot/bubbleStateSnapshot.js";
 import { toMetaReviewGateError } from "../../../../shared/metaReviewGate/metaReviewGateErrorConversion.js";
 import { MetaReviewGateError } from "../../../../shared/metaReviewGate/metaReviewGateRouteContract.js";
 import { normalizeMetaReviewSnapshot } from "../../../../domain/metaReviewGate/snapshotState.js";
@@ -36,28 +35,34 @@ export async function stageMetaReviewRunningState(input: {
   statePath: string;
   writeState: WriteStateSnapshotPort;
 }): Promise<LoadedStateSnapshot> {
-  // Project the variant input to persisted shape for the existing object
-  // spread / mutation helpers (later batch); rebuild the variant for the
-  // Domain write port.
-  const loadedRunningPersisted = toPersistedSnapshot(input.loadedRunning.state);
   const normalizedMetaReview = normalizeMetaReviewSnapshot(
-    loadedRunningPersisted.meta_review
+    input.loadedRunning.state.meta_review
   );
   const previousMetaReview = clearLiveMetaReviewSnapshot(
-    loadedRunningPersisted.meta_review
+    input.loadedRunning.state.meta_review
   );
   const attempt =
     (normalizedMetaReview.execution_context?.attempt
       ?? normalizedMetaReview.auto_rework_count) + 1;
   const metaReviewExecutionContext = buildMetaReviewExecutionContext({
     bubbleId: input.bubbleId,
-    round: loadedRunningPersisted.round,
+    round: input.loadedRunning.state.round,
     startedAt: input.nowIso,
     watchdogTimeoutMinutes: input.watchdogTimeoutMinutes,
     attempt
   });
-  const nextState = {
-    ...loadedRunningPersisted,
+  const runningExecutionContext = metaReviewExecutionContextToRunningContext(
+    metaReviewExecutionContext
+  );
+  if (runningExecutionContext === null) {
+    throwMetaReviewRunningStageFailure({
+      rootError: new Error("meta-review execution context projection failed"),
+      stageReasonCode: "META_REVIEW_RUNNING_CONTEXT_UNAVAILABLE"
+    });
+  }
+  const nextState: BubbleStateRunningMetaReview = {
+    ...input.loadedRunning.state,
+    kind: "running_meta_review",
     state: "RUNNING" as const,
     active_agent: input.metaReviewerAgent,
     active_role: "meta_reviewer" as const,
@@ -66,13 +71,12 @@ export async function stageMetaReviewRunningState(input: {
     meta_review: {
       ...previousMetaReview,
       execution_context: metaReviewExecutionContext
-    }
+    },
+    execution_context: runningExecutionContext
   };
-  nextState.execution_context =
-    metaReviewExecutionContextToRunningContext(metaReviewExecutionContext);
   return input.writeState(
     input.statePath,
-    buildBubbleStateSnapshotVariant(nextState),
+    nextState,
     {
       expectedFingerprint: input.loadedRunning.fingerprint,
       expectedState: "RUNNING"

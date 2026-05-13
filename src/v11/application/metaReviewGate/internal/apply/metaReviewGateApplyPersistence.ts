@@ -28,7 +28,7 @@ export async function persistRuntimeDeliveryObservation(input: {
   // The object-spread mutation below preserves all fields, but the variant
   // requires its kind discriminator to stay consistent with the state field.
   // Project to persisted shape, mutate, then rebuild the variant on the
-  // way back into the Domain write port.
+  // way back into the state write port.
   const loadedPersisted = toPersistedSnapshot(input.loaded.state);
   const currentMetaReview = loadedPersisted.meta_review;
   if (currentMetaReview === undefined) {

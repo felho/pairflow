@@ -1,8 +1,6 @@
 import { DEFAULT_META_REVIEW_AUTO_REWORK_LIMIT } from "../../shared/metaReview/metaReviewSnapshotTypes.js";
 import type { BubbleMetaReviewSnapshotState } from "../../shared/metaReview/metaReviewSnapshotTypes.js";
 import type { BubbleStateSnapshot } from "../../domain/state/snapshot/bubbleStateSnapshot.js";
-import { buildBubbleStateSnapshotVariant } from "../../domain/state/snapshot/buildBubbleStateSnapshot.js";
-import { toPersistedSnapshot } from "../../domain/state/snapshot/projection.js";
 
 export function normalizeMetaReviewSnapshot(
   snapshot: BubbleMetaReviewSnapshotState | undefined
@@ -29,32 +27,26 @@ export function normalizeMetaReviewSnapshot(
 }
 
 export function incrementAutoReworkCount(input: BubbleStateSnapshot): BubbleStateSnapshot {
-  // Project to persisted-shape at the function boundary; the parser flip
-  // (Step 4b-γ/4) will collapse this into a single canonical shape.
-  const persisted = toPersistedSnapshot(input);
-  const metaReview = normalizeMetaReviewSnapshot(persisted.meta_review);
-  return buildBubbleStateSnapshotVariant({
-    ...persisted,
+  const metaReview = normalizeMetaReviewSnapshot(input.meta_review);
+  return {
+    ...input,
     meta_review: {
       ...metaReview,
       auto_rework_count: metaReview.auto_rework_count + 1
     }
-  });
+  };
 }
 
 export function setMetaReviewConsecutiveCleanRuns(
   input: BubbleStateSnapshot,
   consecutiveCleanRuns: number
 ): BubbleStateSnapshot {
-  // Project to persisted-shape at the function boundary; the parser flip
-  // (Step 4b-γ/4) will collapse this into a single canonical shape.
-  const persisted = toPersistedSnapshot(input);
-  const metaReview = normalizeMetaReviewSnapshot(persisted.meta_review);
-  return buildBubbleStateSnapshotVariant({
-    ...persisted,
+  const metaReview = normalizeMetaReviewSnapshot(input.meta_review);
+  return {
+    ...input,
     meta_review: {
       ...metaReview,
       consecutive_clean_runs: consecutiveCleanRuns
     }
-  });
+  };
 }

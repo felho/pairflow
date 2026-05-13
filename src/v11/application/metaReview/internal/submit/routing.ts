@@ -3,9 +3,6 @@ import {
   executeImplementerHandoffDelivery
 } from "../../../../shared/delivery/implementerHandoffDelivery.js";
 import { appendProtocolEnvelope } from "../../../start/startCommandDependencyDefaults.js";
-import { buildBubbleStateSnapshotVariant } from "../../../../domain/state/snapshot/buildBubbleStateSnapshot.js";
-import {
-} from "../../../../shared/mutation/mutationBoundaryIO.js";
 import { MetaReviewError } from "../../../../shared/metaReview/metaReviewError.js";
 import {
   toMetaReviewError
@@ -128,12 +125,10 @@ export async function recoverMetaReviewSubmitRoute(input: {
     const loaded = await input.dependencies.readStateSnapshot(
       input.resolved.bubblePaths.statePath
     );
-    // metaReview's dependency contract still wires persisted-shape ports
-    // (later batch); adapt them at the metaReviewGate boundary.
     return await finalizeCurrentRunMetaReviewGate({
       resolved: input.resolved,
       loaded: {
-        state: buildBubbleStateSnapshotVariant(loaded.state),
+        state: loaded.state,
         fingerprint: loaded.fingerprint
       },
       now: input.now,
