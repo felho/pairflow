@@ -1,6 +1,8 @@
-import type { OpenWorkspaceKind } from "../../ports/openBubble.js";
-import { shellQuote } from "../../shared/foundation/shellQuote.js";
-import { createOpenBubbleError } from "./openBubbleError.js";
+import type { OpenWorkspaceKind } from "../../../../ports/openBubble.js";
+import { shellQuote } from "../../../../shared/foundation/shellQuote.js";
+import {
+  createOpenBubbleError
+} from "../error/openBubbleErrorCreation.js";
 
 export const worktreePathPlaceholder = "{{worktree_path}}";
 export const defaultOpenCommandTemplate = `cursor ${worktreePathPlaceholder}`;

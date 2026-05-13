@@ -4,12 +4,12 @@ import { access } from "node:fs/promises";
 import {
   loadPairflowGlobalConfig,
   type PairflowGlobalConfig
-} from "../../../config/pairflowConfig.js";
+} from "../../../../../config/pairflowConfig.js";
 import type {
   BubbleRemotePointer
-} from "../../shared/remote/remoteExecutionTypes.js";
-import type { OpenBubbleResult } from "../../ports/openBubble.js";
-import type { ResolveBubbleByIdPort } from "../../ports/bubbleLookup.js";
+} from "../../../../shared/remote/remoteExecutionTypes.js";
+import type { OpenBubbleResult } from "../../../../ports/openBubble.js";
+import type { ResolveBubbleByIdPort } from "../../../../ports/bubbleLookup.js";
 import {
   localOpenWorkspaceKind,
   remoteOpenWorkspaceKind,
@@ -17,50 +17,24 @@ import {
   renderRemoteOpenCommand,
   type RemoteOpenBaseContext,
   type RemoteOpenContext
-} from "./openBubbleCommandRendering.js";
+} from "../rendering/openBubbleCommandRendering.js";
 import {
   createOpenBubbleError
-} from "./openBubbleError.js";
+} from "../error/openBubbleErrorCreation.js";
 import {
   enrichRemoteOpenContext,
   resolveOpenCommandTemplate,
   resolveOpenExecutionContext
-} from "./openBubbleResolution.js";
+} from "../resolution/openBubbleResolution.js";
 import type {
   ProcessSpawnPort
-} from "../../ports/processSpawn.js";
-
-export interface OpenBubbleInput {
-  bubbleId: string;
-  repoPath?: string | undefined;
-  cwd?: string | undefined;
-}
-
-export interface OpenCommandExecutionInput {
-  command: string;
-  cwd: string;
-}
-
-export interface OpenCommandExecutionResult {
-  exitCode: number;
-  stdout: string;
-  stderr: string;
-}
-
-export type OpenCommandExecutor = (
-  input: OpenCommandExecutionInput
-) => Promise<OpenCommandExecutionResult>;
-
-export interface OpenBubbleDependencies {
-  executeOpenCommand?: OpenCommandExecutor;
-  processSpawn?: ProcessSpawnPort;
-  resolveBubbleById?: ResolveBubbleByIdPort;
-  assertWorktreeExists?: (worktreePath: string) => Promise<void>;
-  loadPairflowGlobalConfig?: () => ReturnType<typeof loadPairflowGlobalConfig>;
-  readRemotePointer?: (
-    path: string
-  ) => Promise<BubbleRemotePointer | null>;
-}
+} from "../../../../ports/processSpawn.js";
+import type {
+  OpenBubbleDependencies,
+  OpenBubbleInput,
+  OpenCommandExecutionInput,
+  OpenCommandExecutionResult
+} from "../../openBubbleContract.js";
 
 export const executeOpenCommand = async (
   input: OpenCommandExecutionInput,

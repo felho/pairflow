@@ -49,7 +49,7 @@ restructuring opportunity).
 | attach | 6 | no | — | — | yes | 15 | unstructured |
 | delete | 3 | yes | 6 | yes | yes | — | structured (Tier 2; refactored 2026-05-13) |
 | extract | 2 | yes | 4 | yes | yes | — | structured (Tier 2; refactored 2026-05-13) |
-| open | 6 | no | — | yes | yes | 14 | unstructured |
+| open | 4 | yes | 4 | yes | yes | — | structured (Tier 1/2; refactored 2026-05-13) |
 | list | 2 | yes | 3 | yes | yes | — | structured (Tier 2; refactored 2026-05-11) |
 | pass | 4 | yes | 4 | yes | yes | -2 | structured (Tier 2) |
 | resume | 4 | no | — | — | yes | 7 | small unstructured |
@@ -131,7 +131,7 @@ straightforward: `internal/<sub>/` for everything that isn't entry/contract.
 - **attach** — 6 top-level. Files: `attachBubble*` cluster +
   `attachCliCommand` (the legacy `emitAttachV11` wrapper has been renamed to
   `attachBubble.ts`).
-- **open**, **resume**, **stop** — similar pattern.
+- **resume**, **stop** — similar pattern.
 - **gates**, **inbox** — 2 top-level only; below restructuring threshold.
 
 These all have the standard naming (`*CommandApi`, `*CommandContract`,
@@ -324,11 +324,23 @@ from-scratch cases:
   language; this is a re-fire across lane boundaries rather than a
   new exception type. See the template's `application/reply/` worked
   example.
+- **open** (was 6 top-level + no `internal/`; now 4 top-level + 4
+  sub-areas — `error/`, `rendering/`, `resolution/`, `runtime/`).
+  Root-public files are the command entry façade (`openBubble.ts`),
+  the dependency/input/execution contract (`openBubbleContract.ts`),
+  the public error class (`openBubbleError.ts`), and the CLI
+  integration (`openCliCommand.ts`). The implementation files moved
+  under `internal/`; no production consumer imported those
+  implementation paths directly. The one public-surface wrinkle was
+  `executeOpenCommand`: it is an execution helper by implementation
+  concern but is already exported from `src/index.ts`, so the
+  root-public façade preserves that export while the implementation
+  lives in `internal/runtime/`.
 
 Unstructured (no internal/ at all):
 
 - The remaining 3–7-top-level lanes without `internal/` are `attach`,
-  `open`, `resume`, and `stop`, which are listed in their Tier 1 inventory
+  `resume`, and `stop`, which are listed in their Tier 1 inventory
   rows above. `gates` and `inbox` remain below the restructuring threshold.
 
 ### Tier 3 — Coordinator (lane-internal-but-named submodules)
@@ -720,9 +732,9 @@ future contributor reading "Tier 2 commands typically have an
 `internal/finalization/` sub-area" can verify the claim against the actual
 lane inventory above.
 
-Ten lane refactors have validated the template. Five followed the
-half-done procedure; five (`restart`, `reconcile`, `watchdog`,
-`status`, `reply`) validated the from-scratch procedure variant. In sequence:
+Eleven lane refactors have validated the template. Five followed the
+half-done procedure; six (`restart`, `reconcile`, `watchdog`,
+`status`, `reply`, `open`) validated the from-scratch procedure variant. In sequence:
 `list` (commit `da12ed98`, single-commit move), `commit` (commits
 `8d603cff`, `9b2b9755`, `2b5c6c71`, `2115f606`, four-commit sequence with
 a public-surface split for `remoteCommitContinuitySync.ts`), `merge`
@@ -772,6 +784,10 @@ placement-rule axis: mutation submodule fitness-pinned at
 `<command>/mutation/`, inline defaults composition in DepRes with
 no `defaults/<lane>/` directory, and cross-lane Contract
 signature-reference pin as a re-fire of the `list` lane's
-intra-lane signature-reference exception). The template's "Worked
+intra-lane signature-reference exception), and `open` (2026-05-13,
+four-sub-area introduction — `error/`, `rendering/`, `resolution/`,
+`runtime/` — plus a root `openBubbleContract.ts` hoist so defaults,
+tests, and the package barrel keep using public paths while the
+runtime implementation moves under `internal/`). The template's "Worked
 examples" section captures the lessons learned; the inventory rows
 above record the post-refactor state.

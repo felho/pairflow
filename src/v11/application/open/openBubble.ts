@@ -2,17 +2,18 @@ import { isNamedError } from "../../shared/errors/namedError.js";
 import type { OpenBubbleResult } from "../../ports/openBubble.js";
 import {
   executeOpenCommand,
-  openBubbleRuntime,
-  type OpenBubbleDependencies,
-  type OpenBubbleInput,
-  type OpenCommandExecutionInput,
-  type OpenCommandExecutionResult,
-  type OpenCommandExecutor
-} from "./openBubbleRuntime.js";
+  openBubbleRuntime
+} from "./internal/runtime/openBubbleRuntime.js";
+import type {
+  OpenBubbleDependencies,
+  OpenBubbleInput
+} from "./openBubbleContract.js";
 import {
-  createOpenBubbleError,
   OpenBubbleError
 } from "./openBubbleError.js";
+import {
+  createOpenBubbleError
+} from "./internal/error/openBubbleErrorCreation.js";
 
 export async function openBubble(
   input: OpenBubbleInput,
@@ -55,8 +56,8 @@ export {
 export type {
   OpenBubbleDependencies,
   OpenBubbleInput,
-  OpenBubbleResult,
   OpenCommandExecutionInput,
   OpenCommandExecutionResult,
   OpenCommandExecutor
-};
+} from "./openBubbleContract.js";
+export type { OpenBubbleResult };

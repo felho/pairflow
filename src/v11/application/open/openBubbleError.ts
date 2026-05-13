@@ -31,14 +31,3 @@ export class OpenBubbleError extends Error {
     this.context = options?.context;
   }
 }
-
-export function createOpenBubbleError(input: {
-  message: string;
-  context: OpenBubbleErrorContext;
-  cause?: unknown;
-}): OpenBubbleError {
-  return new OpenBubbleError(input.message, {
-    context: input.context,
-    ...(input.cause !== undefined ? { cause: input.cause } : {})
-  });
-}
