@@ -1,4 +1,4 @@
-import { convergedDependencyDefaults } from "./convergedDependencyDefaults.js";
+import { convergedDependencyDefaults } from "../../convergedDependencyDefaults.js";
 import { emitBubbleLifecycleEventBestEffort } from "../../../metrics/bubbleEvents.js";
 import type { EmitBubbleNotificationPort } from "../../../../ports/notifications.js";
 import type {

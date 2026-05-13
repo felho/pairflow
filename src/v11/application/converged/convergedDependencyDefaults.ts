@@ -1,32 +1,32 @@
-import type { EnsureBubbleInstanceIdForMutationPort } from "../../../../ports/bubbleIdentity.js";
-import type { AssessPairflowCommandPathPort } from "../../../../ports/pairflowCommand.js";
+import type { EnsureBubbleInstanceIdForMutationPort } from "../../ports/bubbleIdentity.js";
+import type { AssessPairflowCommandPathPort } from "../../ports/pairflowCommand.js";
 import type {
   ReadStateSnapshotPort
-} from "../../../../ports/stateSnapshots.js";
+} from "../../ports/stateSnapshots.js";
 import type {
   AppendProtocolEnvelopePort,
   ReadTranscriptEnvelopesPort
-} from "../../../../ports/transcript.js";
+} from "../../ports/transcript.js";
 import type {
   EmitDeliveryNotificationAckPort,
   ResolveDeliveryMessageRefPort
-} from "../../../../ports/tmuxDelivery.js";
+} from "../../ports/tmuxDelivery.js";
 import type {
   ResolveBubbleFromWorkspaceCwdPort
-} from "../../../../ports/workspaceResolution.js";
-import type { EmitBubbleNotificationPort } from "../../../../ports/notifications.js";
+} from "../../ports/workspaceResolution.js";
+import type { EmitBubbleNotificationPort } from "../../ports/notifications.js";
 import type {
   ReadDocContractGateArtifactPort,
   ResolveDocContractGateArtifactPathPort
-} from "../../../../ports/docContractGateArtifacts.js";
-import type { ReadReviewVerificationArtifactStatusPort } from "../../../../ports/reviewVerificationArtifacts.js";
+} from "../../ports/docContractGateArtifacts.js";
+import type { ReadReviewVerificationArtifactStatusPort } from "../../ports/reviewVerificationArtifacts.js";
 import type {
   WriteSummaryVerifierConsistencyGateArtifactPort
-} from "../../../../ports/summaryVerifierGateArtifacts.js";
+} from "../../ports/summaryVerifierGateArtifacts.js";
 import type {
   ResolveReviewerTestExecutionDirectivePort
-} from "../../../../ports/reviewerTestEvidenceArtifacts.js";
-import type { ApplyMetaReviewGateOnConvergencePort } from "../../../../shared/metaReviewGate/metaReviewGateCommandContract.js";
+} from "../../ports/reviewerTestEvidenceArtifacts.js";
+import type { ApplyMetaReviewGateOnConvergencePort } from "../../shared/metaReviewGate/metaReviewGateCommandContract.js";
 
 export interface ConvergedDependencyDefaults {
   flow: {

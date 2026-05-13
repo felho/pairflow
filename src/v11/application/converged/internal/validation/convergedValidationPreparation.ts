@@ -1,4 +1,4 @@
-import { convergedDependencyDefaults } from "../orchestration/convergedDependencyDefaults.js";
+import { convergedDependencyDefaults } from "../../convergedDependencyDefaults.js";
 import {
   isDocContractGateScopeActive,
 } from "../../../../shared/gates/docContractGates.js";
