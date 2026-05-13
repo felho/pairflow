@@ -44,6 +44,12 @@ interface DependencyCycleException {
   paths: string[];
 }
 
+interface DependencyWarningException {
+  id: string;
+  kind: DependencyViolation["kind"];
+  from: string;
+}
+
 type DependencyLayer =
   | "application"
   | "domain"
@@ -99,13 +105,30 @@ function parseDependencyExceptions(input: {
 }): {
   edgeAllowlist: DependencyEdgeException[];
   cycleAllowlist: DependencyCycleException[];
+  warningAllowlist: DependencyWarningException[];
   invalid: string[];
 } {
   const edgeAllowlist: DependencyEdgeException[] = [];
   const cycleAllowlist: DependencyCycleException[] = [];
+  const warningAllowlist: DependencyWarningException[] = [];
   const invalid: string[] = [];
 
   for (const exception of input.exceptions ?? []) {
+    if (exception.kind === "allow-ownership-signal") {
+      if (exception.from === undefined) {
+        invalid.push(
+          `exception ${exception.id}: allow-ownership-signal requires from field`
+        );
+        continue;
+      }
+      warningAllowlist.push({
+        id: exception.id,
+        kind: "ownership_signal_shared_infra",
+        from: normalizeRelativePolicyPath(exception.from, input.repoRoot)
+      });
+      continue;
+    }
+
     if (exception.kind === "allow-edge") {
       if (exception.from === undefined || exception.to === undefined) {
         invalid.push(
@@ -145,6 +168,7 @@ function parseDependencyExceptions(input: {
   return {
     edgeAllowlist,
     cycleAllowlist,
+    warningAllowlist,
     invalid
   };
 }
@@ -153,6 +177,7 @@ function filterDependencyViolationsByExceptions(input: {
   violations: readonly DependencyViolation[];
   edgeAllowlist: readonly DependencyEdgeException[];
   cycleAllowlist: readonly DependencyCycleException[];
+  warningAllowlist: readonly DependencyWarningException[];
 }): {
   violations: DependencyViolation[];
   appliedExceptionIds: string[];
@@ -181,6 +206,21 @@ function filterDependencyViolationsByExceptions(input: {
       const violationCycleKey = cycleKey(violation.cycleNodes);
       const match = input.cycleAllowlist.find(
         (exception) => cycleKey(exception.paths) === violationCycleKey
+      );
+      if (match !== undefined) {
+        appliedExceptionIds.add(match.id);
+        continue;
+      }
+    }
+
+    if (
+      violation.severity === "warn"
+      && violation.fromRelative !== undefined
+    ) {
+      const match = input.warningAllowlist.find(
+        (exception) =>
+          exception.kind === violation.kind
+          && exception.from === violation.fromRelative
       );
       if (match !== undefined) {
         appliedExceptionIds.add(match.id);
@@ -1159,7 +1199,8 @@ export async function buildDependencyCheckReport({
   const filtered = filterDependencyViolationsByExceptions({
     violations: allViolations,
     edgeAllowlist: parsedExceptions.edgeAllowlist,
-    cycleAllowlist: parsedExceptions.cycleAllowlist
+    cycleAllowlist: parsedExceptions.cycleAllowlist,
+    warningAllowlist: parsedExceptions.warningAllowlist
   });
   const violations = filtered.violations;
   const failViolations = violations.filter((violation) => violation.severity === "fail");

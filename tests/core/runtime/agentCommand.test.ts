@@ -5,6 +5,7 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
+import type { CodexMcpDisableArgsError } from "../../../src/v11/shared/command/agentCommand.js";
 import {
   buildAgentCommand,
   resolveCodexMcpDisableArgs
@@ -186,6 +187,13 @@ describe("buildAgentCommand", () => {
     await expect(resolveArgsWithFakeCodex({
       codexStdout: "{not-json"
     })).rejects.toThrow("codex mcp list --json returned malformed JSON");
+    await expect(resolveArgsWithFakeCodex({
+      codexStdout: "{not-json"
+    })).rejects.toMatchObject({
+      name: "CodexMcpDisableArgsError",
+      reasonCode: "CODEX_MCP_LIST_JSON_MALFORMED",
+      context: { command_name: "codex mcp list --json" }
+    } satisfies Partial<CodexMcpDisableArgsError>);
   });
 
   it("fails closed when Codex MCP discovery returns invalid schema", async () => {

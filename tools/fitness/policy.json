@@ -76,7 +76,15 @@
       ],
       "mode": "hard-fail",
       "owner": "architecture",
-      "exceptions": []
+      "exceptions": [
+        {
+          "id": "agent-command-codex-mcp-discovery",
+          "kind": "allow-ownership-signal",
+          "owner": "architecture/runtime",
+          "reason": "agentCommand is shared command-construction policy used by start, meta-review, defaults, and tmux reviewer context. Its only child-process ownership signal is bounded Codex MCP discovery for command-line argument synthesis; moving it into infrastructure would force application/defaults callers through an infrastructure-owned command builder.",
+          "from": "src/v11/shared/command/agentCommand.ts"
+        }
+      ]
     },
     {
       "id": "application_defaults_boundary",
@@ -104,6 +112,13 @@
           "reason": "The converged defaults composition root is the only allowed production owner that wires concrete runtime dependencies into the internal converged dependency-default registry after top-level compatibility wrappers were removed.",
           "from": "src/v11/defaults/converged/convergedDependencyDefaults.ts",
           "to": "src/v11/application/converged/internal/orchestration/convergedDependencyDefaults.ts"
+        },
+        {
+          "id": "status-cli-command-root-facade",
+          "kind": "allow-internal-reexport-camouflage",
+          "owner": "architecture/runtime",
+          "reason": "statusCliCommand is an intentional Module-Depth-protective CLI facade documented in the application command lane template; it prevents src/cli consumers from importing status internal CLI modules directly.",
+          "from": "src/v11/application/status/statusCliCommand.ts"
         }
       ]
     },

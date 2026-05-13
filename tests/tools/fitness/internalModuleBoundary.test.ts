@@ -316,6 +316,48 @@ describe("internal module boundary fitness check", () => {
     );
   });
 
+  it("allows documented internal re-export camouflage facades by exact path", async () => {
+    const repoRoot = await createTempRoot();
+    await writeRepoFile(
+      repoRoot,
+      "src/v11/application/status/internal/cli/statusCliRunner.ts",
+      "export const runBubbleStatusCommand = 1;\n"
+    );
+    await writeRepoFile(
+      repoRoot,
+      "src/v11/application/status/statusCliCommand.ts",
+      "export { runBubbleStatusCommand } from './internal/cli/statusCliRunner.js';\n"
+    );
+
+    const report = await buildInternalModuleBoundaryCheckReport({
+      check: {
+        ...checkInput(),
+        exceptions: [
+          {
+            id: "status-cli-command-root-facade",
+            kind: "allow-internal-reexport-camouflage",
+            owner: "architecture/runtime",
+            reason: "Intentional root CLI facade.",
+            from: "src/v11/application/status/statusCliCommand.ts",
+            to: undefined,
+            paths: undefined
+          }
+        ]
+      },
+      repoRoot,
+      fallbackMode: "hard-fail"
+    });
+
+    expect(report.status).toBe("pass");
+    expect(report.details).toContain(
+      "internal_reexport_camouflage_candidates=0"
+    );
+    expect(report.details).toContain("exceptions_applied=1");
+    expect(report.details).toContain(
+      "exceptions_applied_ids=status-cli-command-root-facade"
+    );
+  });
+
   it("does not warn when a public facade selects explicit API from internal implementation", async () => {
     const repoRoot = await createTempRoot();
     await writeRepoFile(

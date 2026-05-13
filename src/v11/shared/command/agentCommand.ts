@@ -6,6 +6,7 @@ import type {
   PairflowCommandProfile,
   RoleMcpPolicy
 } from "../config/bubbleConfigVocabulary.js";
+import { normalizePairflowCommandErrorInput } from "../errors/commandErrorDetails.js";
 import { shellQuote } from "../foundation/shellQuote.js";
 import {
   buildPairflowCommandBootstrap,
@@ -35,9 +36,15 @@ export interface ResolveCodexMcpDisableArgsInput {
 }
 
 export class CodexMcpDisableArgsError extends Error {
-  public constructor(message: string) {
-    super(message);
+  public readonly reasonCode: string | undefined;
+  public readonly context: PairflowCommandErrorContext | undefined;
+
+  public constructor(input: PairflowCommandErrorInput) {
+    const normalized = normalizePairflowCommandErrorInput(input);
+    super(normalized.message, { cause: normalized.cause });
     this.name = "CodexMcpDisableArgsError";
+    this.reasonCode = normalized.reasonCode;
+    this.context = normalized.context;
   }
 }
 
@@ -100,42 +107,55 @@ function parseCodexMcpListOutput(input: {
   try {
     parsed = JSON.parse(input.stdout);
   } catch (error) {
-    throw new CodexMcpDisableArgsError(
-      `codex mcp list --json returned malformed JSON: ${error instanceof Error ? error.message : String(error)}`
-    );
+    throw new CodexMcpDisableArgsError({
+      message: `codex mcp list --json returned malformed JSON: ${error instanceof Error ? error.message : String(error)}`,
+      reasonCode: "CODEX_MCP_LIST_JSON_MALFORMED",
+      context: { command_name: "codex mcp list --json" },
+      cause: error
+    });
   }
 
   if (!Array.isArray(parsed)) {
-    throw new CodexMcpDisableArgsError(
-      "codex mcp list --json must return a top-level array"
-    );
+    throw new CodexMcpDisableArgsError({
+      message: "codex mcp list --json must return a top-level array",
+      reasonCode: "CODEX_MCP_LIST_JSON_SHAPE_INVALID",
+      context: { command_name: "codex mcp list --json" }
+    });
   }
 
   const disabledServerEntries: string[] = [];
   for (const [index, entry] of parsed.entries()) {
     if (entry === null || typeof entry !== "object" || Array.isArray(entry)) {
-      throw new CodexMcpDisableArgsError(
-        `codex MCP entry ${index} must be an object`
-      );
+      throw new CodexMcpDisableArgsError({
+        message: `codex MCP entry ${index} must be an object`,
+        reasonCode: "CODEX_MCP_ENTRY_SHAPE_INVALID",
+        context: { command_name: "codex mcp list --json", index }
+      });
     }
     const mcpEntry = entry as Record<string, unknown>;
     if (typeof mcpEntry.enabled !== "boolean") {
-      throw new CodexMcpDisableArgsError(
-        `codex MCP entry ${index} has unsupported enabled value`
-      );
+      throw new CodexMcpDisableArgsError({
+        message: `codex MCP entry ${index} has unsupported enabled value`,
+        reasonCode: "CODEX_MCP_ENTRY_ENABLED_INVALID",
+        context: { command_name: "codex mcp list --json", index }
+      });
     }
     if (mcpEntry.enabled !== true) {
       continue;
     }
     if (typeof mcpEntry.name !== "string" || mcpEntry.name.length === 0) {
-      throw new CodexMcpDisableArgsError(
-        `enabled codex MCP entry ${index} must have a non-empty string name`
-      );
+      throw new CodexMcpDisableArgsError({
+        message: `enabled codex MCP entry ${index} must have a non-empty string name`,
+        reasonCode: "CODEX_MCP_ENTRY_NAME_INVALID",
+        context: { command_name: "codex mcp list --json", index }
+      });
     }
     if (hasUnsupportedControlCharacter(mcpEntry.name)) {
-      throw new CodexMcpDisableArgsError(
-        `enabled codex MCP entry ${index} name contains unsupported control characters`
-      );
+      throw new CodexMcpDisableArgsError({
+        message: `enabled codex MCP entry ${index} name contains unsupported control characters`,
+        reasonCode: "CODEX_MCP_ENTRY_NAME_CONTROL_CHARACTER",
+        context: { command_name: "codex mcp list --json", index }
+      });
     }
     disabledServerEntries.push(
       `${toTomlString(mcpEntry.name)}={command="node",args=["-e","process.exit(0)"],enabled=false}`

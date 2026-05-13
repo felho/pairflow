@@ -39,6 +39,11 @@ interface InternalImportException {
   to: string;
 }
 
+interface InternalReexportCamouflageException {
+  id: string;
+  from: string;
+}
+
 const maxFlatApplicationCommandFiles = 27;
 
 function normalizeRelativePolicyPath(
@@ -57,12 +62,28 @@ function parseImportExceptions(input: {
   exceptions: readonly FitnessPolicyException[] | undefined;
 }): {
   allowlist: InternalImportException[];
+  reexportCamouflageAllowlist: InternalReexportCamouflageException[];
   invalid: string[];
 } {
   const allowlist: InternalImportException[] = [];
+  const reexportCamouflageAllowlist: InternalReexportCamouflageException[] = [];
   const invalid: string[] = [];
 
   for (const exception of input.exceptions ?? []) {
+    if (exception.kind === "allow-internal-reexport-camouflage") {
+      if (exception.from === undefined) {
+        invalid.push(
+          `exception ${exception.id}: allow-internal-reexport-camouflage requires from field`
+        );
+        continue;
+      }
+      reexportCamouflageAllowlist.push({
+        id: exception.id,
+        from: normalizeRelativePolicyPath(exception.from, input.repoRoot)
+      });
+      continue;
+    }
+
     if (exception.kind !== "allow-internal-module-import") {
       invalid.push(
         `exception ${exception.id}: unsupported internal_module_boundary exception kind "${exception.kind}"`
@@ -82,7 +103,7 @@ function parseImportExceptions(input: {
     });
   }
 
-  return { allowlist, invalid };
+  return { allowlist, reexportCamouflageAllowlist, invalid };
 }
 
 function parseImportSpecifiers(input: {
@@ -268,6 +289,35 @@ function filterViolationsByExceptions(input: {
   };
 }
 
+function filterInternalReexportCamouflageCandidatesByExceptions(input: {
+  candidates: readonly InternalReexportCamouflageCandidate[];
+  allowlist: readonly InternalReexportCamouflageException[];
+}): {
+  candidates: InternalReexportCamouflageCandidate[];
+  appliedExceptionIds: string[];
+} {
+  const appliedExceptionIds = new Set<string>();
+  const candidates: InternalReexportCamouflageCandidate[] = [];
+
+  for (const candidate of input.candidates) {
+    const match = input.allowlist.find(
+      (exception) => exception.from === candidate.fileRelative
+    );
+    if (match !== undefined) {
+      appliedExceptionIds.add(match.id);
+      continue;
+    }
+    candidates.push(candidate);
+  }
+
+  return {
+    candidates,
+    appliedExceptionIds: [...appliedExceptionIds].sort((left, right) =>
+      left.localeCompare(right)
+    )
+  };
+}
+
 async function collectViolations(input: {
   repoRoot: string;
   files: readonly string[];
@@ -438,6 +488,11 @@ export async function buildInternalModuleBoundaryCheckReport({
     violations: allViolations,
     allowlist: parsedExceptions.allowlist
   });
+  const filteredCamouflage =
+    filterInternalReexportCamouflageCandidatesByExceptions({
+      candidates: internalReexportCamouflageCandidates,
+      allowlist: parsedExceptions.reexportCamouflageAllowlist
+    });
   const details = [
     ...filtered.violations.slice(0, 100).map(
       (violation) =>
@@ -450,29 +505,33 @@ export async function buildInternalModuleBoundaryCheckReport({
       (violation) =>
         `${violation.commandRoot} is an oversized flat application command directory (${String(violation.directTypeScriptFileCount)} direct .ts file(s)); introduce internal/ or named subdirectories.`
     ),
-    ...internalReexportCamouflageCandidates.slice(0, 100).map(
+    ...filteredCamouflage.candidates.slice(0, 100).map(
       (candidate) =>
         `${candidate.fileRelative} is report-only internal re-export camouflage (${String(candidate.exportCount)} export(s) from ./internal/**); owner_root=${candidate.ownerRoot}`
     ),
-    internalReexportCamouflageCandidates.length > 100
-      ? `internal_reexport_camouflage_truncated=${String(internalReexportCamouflageCandidates.length - 100)}`
+    filteredCamouflage.candidates.length > 100
+      ? `internal_reexport_camouflage_truncated=${String(filteredCamouflage.candidates.length - 100)}`
       : undefined,
     `scope=${scope.join(", ")}`,
     `files_scanned=${String(files.length)}`,
     `flat_application_command_directory_threshold=${String(maxFlatApplicationCommandFiles)}`,
     `flat_application_command_directory_violations=${String(flatCommandDirectoryViolations.length)}`,
-    `internal_reexport_camouflage_candidates=${String(internalReexportCamouflageCandidates.length)}`,
+    `internal_reexport_camouflage_candidates=${String(filteredCamouflage.candidates.length)}`,
     `exceptions_configured=${String(check.exceptions?.length ?? 0)}`,
-    `exceptions_applied=${String(filtered.appliedExceptionIds.length)}`
+    `exceptions_applied=${String(filtered.appliedExceptionIds.length + filteredCamouflage.appliedExceptionIds.length)}`
   ].filter((detail) => detail !== undefined);
 
   if (parsedExceptions.invalid.length > 0) {
     details.push(`exceptions_invalid=${String(parsedExceptions.invalid.length)}`);
     details.push(...parsedExceptions.invalid.slice(0, 10));
   }
-  if (filtered.appliedExceptionIds.length > 0) {
+  const appliedExceptionIds = [
+    ...filtered.appliedExceptionIds,
+    ...filteredCamouflage.appliedExceptionIds
+  ].sort((left, right) => left.localeCompare(right));
+  if (appliedExceptionIds.length > 0) {
     details.push(
-      `exceptions_applied_ids=${filtered.appliedExceptionIds.join(", ")}`
+      `exceptions_applied_ids=${appliedExceptionIds.join(", ")}`
     );
   }
 
@@ -480,7 +539,7 @@ export async function buildInternalModuleBoundaryCheckReport({
     filtered.violations.length
     + flatCommandDirectoryViolations.length
     + parsedExceptions.invalid.length;
-  const warningCount = internalReexportCamouflageCandidates.length;
+  const warningCount = filteredCamouflage.candidates.length;
   if (problemCount > 0) {
     const violationSummary =
       filtered.violations.length > 0

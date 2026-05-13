@@ -867,6 +867,50 @@ describe("dependency fitness check", () => {
     ).toBe(true);
   });
 
+  it("allows documented ownership-signal warnings by exact path", async () => {
+    const repoRoot = await createTempRoot();
+    await writeRepoFile(
+      repoRoot,
+      "src/v11/shared/command/agentCommand.ts",
+      [
+        "import { spawn } from 'node:child_process';",
+        "export const discover = (): void => {",
+        "  spawn('codex', ['mcp', 'list', '--json']);",
+        "};",
+        ""
+      ].join("\n")
+    );
+
+    const report = await buildDependencyCheckReport({
+      check: {
+        id: "dependency",
+        metric: "cycle and forbidden import direction detection",
+        mode: "report-only",
+        owner: "architecture",
+        scope: ["src/v11/**"],
+        exceptions: [
+          {
+            id: "agent-command-codex-mcp-discovery",
+            kind: "allow-ownership-signal",
+            owner: "architecture/runtime",
+            reason: "Bounded command discovery is intentionally shared.",
+            from: "src/v11/shared/command/agentCommand.ts",
+            to: undefined,
+            paths: undefined
+          }
+        ]
+      },
+      repoRoot,
+      fallbackMode: "report-only",
+    });
+
+    expect(report.status).toBe("pass");
+    expect(report.details).toContain("exceptions_applied=1");
+    expect(report.details).toContain(
+      "exceptions_applied_ids=agent-command-codex-mcp-discovery"
+    );
+  });
+
   it("warns on state/transcript persistence signal under ports", async () => {
     const repoRoot = await createTempRoot();
     await writeRepoFile(
