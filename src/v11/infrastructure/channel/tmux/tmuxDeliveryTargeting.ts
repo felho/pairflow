@@ -12,9 +12,9 @@ import {
 } from "../../../shared/delivery/deliveryTargetMetadataContract.js";
 import {
   isLegacyMetaReviewerProtocolRecipient,
-  type LegacyMetaReviewerProtocolRecipient,
-  type ProtocolEnvelope
-} from "../../../../types/protocol.js";
+  type LegacyMetaReviewerProtocolRecipient
+} from "../../../shared/protocol/legacyMetaReviewerRecipientContract.js";
+import type { ProtocolEnvelope } from "../../../shared/protocol/protocolEnvelopeContract.js";
 import type { DeliveryTargetReasonCode } from "../../../shared/delivery/tmuxDeliveryContract.js";
 import type { DeliveryMessageRecipientRole } from "./tmuxDeliveryMessageBuilder.js";
 

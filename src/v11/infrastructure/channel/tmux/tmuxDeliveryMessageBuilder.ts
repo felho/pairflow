@@ -30,7 +30,7 @@ import {
 import { reviewerPolicySnapshotFileName } from "../../../shared/reviewer/reviewerPolicySnapshot.js";
 import type { BubbleConfig } from "../../../shared/config/bubbleConfigTypes.js";
 import type { ProtocolParticipant } from "../../../../contracts/kernel/protocol.js";
-import type { ProtocolEnvelope } from "../../../../types/protocol.js";
+import type { ProtocolEnvelope } from "../../../shared/protocol/protocolEnvelopeContract.js";
 
 export type DeliveryMessageRecipientRole =
   | ProtocolParticipant

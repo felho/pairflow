@@ -54,7 +54,7 @@ import type { BubbleStateSnapshot } from "../../domain/state/snapshot/bubbleStat
 import type {
   BubbleReworkIntentRecord
 } from "../../domain/state/rework/reworkIntentTypes.js";
-import type { ProtocolEnvelope } from "../../../types/protocol.js";
+import type { ProtocolEnvelope } from "../../shared/protocol/protocolEnvelopeContract.js";
 import type {
   UiActionBubbleState,
   UiActionEvent,

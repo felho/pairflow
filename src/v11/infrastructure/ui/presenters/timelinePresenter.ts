@@ -10,7 +10,7 @@ import {
 import type {
   ProtocolEnvelope,
   ProtocolEnvelopePayload
-} from "../../../../types/protocol.js";
+} from "../../../shared/protocol/protocolEnvelopeContract.js";
 import type { Finding } from "../../../../types/findings.js";
 import {
   isFindingLayer,
