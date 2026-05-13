@@ -1,6 +1,4 @@
 import type {
-  LinkedBubbleApprovalReadyState,
-  LinkedBubbleRole,
   LinkedBubbleStatusPortSnapshot,
   LinkedBubbleTriggerCandidate,
   LinkedBubbleTriggerDiagnostic,
@@ -26,6 +24,12 @@ import {
   unlinkedTaskDiagnostic
 } from "./internal/taskDiagnostics.js";
 import { createDuplicateTrackerRowGuard } from "./internal/trackerRows.js";
+import {
+  isApprovalReadyBubbleState,
+  toLinkedBubbleSnapshot,
+  toTriggerCandidate,
+  type TaskBubbleLink
+} from "./internal/bubbleStatusProjection.js";
 
 interface ParsedPlanFrontmatter {
   taskOrder: readonly string[] | undefined;
@@ -38,32 +42,27 @@ interface ParsedTaskFrontmatter {
   implBubbleId: string | undefined;
 }
 
-interface TaskBubbleLink {
-  taskId: string;
-  taskPath: string;
-  bubbleId: string;
-  bubbleRole: LinkedBubbleRole;
+interface LinkedBubbleTriggerIndexAccumulator {
+  diagnostics: LinkedBubbleTriggerDiagnostic[];
+  linkedBubbles: LinkedBubbleStatusSnapshot[];
+  candidates: LinkedBubbleTriggerCandidate[];
 }
 
-const APPROVAL_READY_STATES = new Set<string>([
-  "READY_FOR_HUMAN_APPROVAL",
-  "READY_FOR_APPROVAL"
-]);
+type DuplicateTrackerRowGuard = ReturnType<typeof createDuplicateTrackerRowGuard>;
 
-export function isApprovalReadyBubbleState(
-  state: string
-): state is LinkedBubbleApprovalReadyState {
-  return APPROVAL_READY_STATES.has(state);
+interface LinkedBubbleTriggerIndexCollectionContext {
+  input: LinkedBubbleTriggerIndexInput;
+  dependencies: LinkedBubbleTriggerIndexDependencies;
+  checkDuplicateTrackerRow: DuplicateTrackerRowGuard;
+  accumulator: LinkedBubbleTriggerIndexAccumulator;
 }
+
+export { isApprovalReadyBubbleState };
 
 export async function resolveLinkedBubbleTriggerIndex(
   input: LinkedBubbleTriggerIndexInput,
   dependencies: LinkedBubbleTriggerIndexDependencies
 ): Promise<LinkedBubbleTriggerIndexResult> {
-  const diagnostics: LinkedBubbleTriggerDiagnostic[] = [];
-  const linkedBubbles: LinkedBubbleStatusSnapshot[] = [];
-  const candidates: LinkedBubbleTriggerCandidate[] = [];
-
   const planContent = await readFileOrDiagnostic(
     dependencies,
     input.planPath,
@@ -79,92 +78,142 @@ export async function resolveLinkedBubbleTriggerIndex(
   }
 
   const checkDuplicateTrackerRow = createDuplicateTrackerRowGuard();
+  const accumulator: LinkedBubbleTriggerIndexAccumulator = {
+    diagnostics: [],
+    linkedBubbles: [],
+    candidates: []
+  };
+  const context: LinkedBubbleTriggerIndexCollectionContext = {
+    input,
+    dependencies,
+    checkDuplicateTrackerRow,
+    accumulator
+  };
+
   for (const row of parsedPlan.plan.taskTracker) {
-    const duplicate = checkDuplicateTrackerRow(row);
-    if (duplicate !== undefined) {
-      if (duplicate.diagnostic !== undefined) {
-        diagnostics.push(duplicate.diagnostic);
-      }
-      continue;
-    }
-
-    if (row.taskPath === null) {
-      diagnostics.push(missingTaskPathDiagnostic(row));
-      continue;
-    }
-
-    const resolvedTaskPath = resolveRepoTaskPath(input.repoPath, row.taskPath);
-    if (resolvedTaskPath === undefined) {
-      diagnostics.push(outsideRepoTaskPathDiagnostic({ ...row, taskPath: row.taskPath }));
-      continue;
-    }
-
-    const taskContent = await readFileOrDiagnostic(
-      dependencies,
-      resolvedTaskPath,
-      taskDiagnostic({
-        code: "TASK_UNREADABLE",
-        severity: "error",
-        message: `Task file for ${row.taskId} could not be read.`,
-        taskId: row.taskId,
-        taskPath: row.taskPath
-      })
-    );
-    if (typeof taskContent !== "string") {
-      diagnostics.push(taskContent);
-      continue;
-    }
-
-    const parsedTask = parseTaskFrontmatter(taskContent, row);
-    if (!parsedTask.ok) {
-      diagnostics.push(parsedTask.diagnostic);
-      continue;
-    }
-
-    const links = buildTaskBubbleLinks(row, parsedTask.task);
-    if (links.length === 0) {
-      diagnostics.push(unlinkedTaskDiagnostic({ ...row, taskPath: row.taskPath }));
-      continue;
-    }
-
-    for (const link of links) {
-      const status = await readBubbleStatus(input, dependencies, link);
-      if ("diagnostic" in status) {
-        diagnostics.push(status.diagnostic);
-        continue;
-      }
-
-      linkedBubbles.push(toLinkedBubbleSnapshot(input.planPath, link, status.snapshot));
-
-      if (!status.snapshot.current) {
-        diagnostics.push(
-          bubbleDiagnostic({
-            code: "BUBBLE_STATUS_STALE",
-            severity: "warning",
-            message: `Status for bubble ${link.bubbleId} is not current.`,
-            link
-          })
-        );
-        continue;
-      }
-
-      if (isApprovalReadyBubbleState(status.snapshot.state)) {
-        candidates.push(
-          toTriggerCandidate(input.planPath, link, {
-            ...status.snapshot,
-            state: status.snapshot.state
-          })
-        );
-      }
-    }
+    await collectTrackerRowTriggers(context, row);
   }
 
   return {
     planPath: input.planPath,
-    candidates,
-    linkedBubbles,
-    diagnostics
+    candidates: accumulator.candidates,
+    linkedBubbles: accumulator.linkedBubbles,
+    diagnostics: accumulator.diagnostics
   };
+}
+
+async function collectTrackerRowTriggers(
+  context: LinkedBubbleTriggerIndexCollectionContext,
+  row: PlanTrackerRow
+): Promise<void> {
+  const task = await resolveTaskFrontmatterForTrackerRow(context, row);
+  if ("diagnostics" in task) {
+    context.accumulator.diagnostics.push(...task.diagnostics);
+    return;
+  }
+
+  const links = buildTaskBubbleLinks(row, task.taskPath, task.frontmatter);
+  if (links.length === 0) {
+    context.accumulator.diagnostics.push(
+      unlinkedTaskDiagnostic({ ...row, taskPath: task.taskPath })
+    );
+    return;
+  }
+
+  for (const link of links) {
+    await collectLinkedBubbleTrigger(context, link);
+  }
+}
+
+async function resolveTaskFrontmatterForTrackerRow(
+  context: LinkedBubbleTriggerIndexCollectionContext,
+  row: PlanTrackerRow
+): Promise<
+  | { frontmatter: ParsedTaskFrontmatter; taskPath: string }
+  | { diagnostics: readonly LinkedBubbleTriggerDiagnostic[] }
+> {
+  const duplicate = context.checkDuplicateTrackerRow(row);
+  if (duplicate !== undefined) {
+    return {
+      diagnostics:
+        duplicate.diagnostic !== undefined ? [duplicate.diagnostic] : []
+    };
+  }
+
+  if (row.taskPath === null) {
+    return { diagnostics: [missingTaskPathDiagnostic(row)] };
+  }
+
+  const resolvedTaskPath = resolveRepoTaskPath(context.input.repoPath, row.taskPath);
+  if (resolvedTaskPath === undefined) {
+    return {
+      diagnostics: [
+        outsideRepoTaskPathDiagnostic({ ...row, taskPath: row.taskPath })
+      ]
+    };
+  }
+
+  const taskContent = await readFileOrDiagnostic(
+    context.dependencies,
+    resolvedTaskPath,
+    taskDiagnostic({
+      code: "TASK_UNREADABLE",
+      severity: "error",
+      message: `Task file for ${row.taskId} could not be read.`,
+      taskId: row.taskId,
+      taskPath: row.taskPath
+    })
+  );
+  if (typeof taskContent !== "string") {
+    return { diagnostics: [taskContent] };
+  }
+
+  const parsedTask = parseTaskFrontmatter(taskContent, row);
+  if (!parsedTask.ok) {
+    return { diagnostics: [parsedTask.diagnostic] };
+  }
+
+  return { frontmatter: parsedTask.task, taskPath: row.taskPath };
+}
+
+async function collectLinkedBubbleTrigger(
+  context: LinkedBubbleTriggerIndexCollectionContext,
+  link: TaskBubbleLink
+): Promise<void> {
+  const status = await readBubbleStatus(
+    context.input,
+    context.dependencies,
+    link
+  );
+  if ("diagnostic" in status) {
+    context.accumulator.diagnostics.push(status.diagnostic);
+    return;
+  }
+
+  context.accumulator.linkedBubbles.push(
+    toLinkedBubbleSnapshot(context.input.planPath, link, status.snapshot)
+  );
+
+  if (!status.snapshot.current) {
+    context.accumulator.diagnostics.push(
+      bubbleDiagnostic({
+        code: "BUBBLE_STATUS_STALE",
+        severity: "warning",
+        message: `Status for bubble ${link.bubbleId} is not current.`,
+        link
+      })
+    );
+    return;
+  }
+
+  if (isApprovalReadyBubbleState(status.snapshot.state)) {
+    context.accumulator.candidates.push(
+      toTriggerCandidate(context.input.planPath, link, {
+        ...status.snapshot,
+        state: status.snapshot.state
+      })
+    );
+  }
 }
 
 async function readFileOrDiagnostic(
@@ -335,13 +384,14 @@ function parseTaskFrontmatter(
 
 function buildTaskBubbleLinks(
   row: PlanTrackerRow,
+  taskPath: string,
   task: ParsedTaskFrontmatter
 ): TaskBubbleLink[] {
   const links: TaskBubbleLink[] = [];
   if (task.docBubbleId !== undefined) {
     links.push({
       taskId: task.taskId,
-      taskPath: row.taskPath as string,
+      taskPath,
       bubbleId: task.docBubbleId,
       bubbleRole: "document"
     });
@@ -349,49 +399,12 @@ function buildTaskBubbleLinks(
   if (task.implBubbleId !== undefined) {
     links.push({
       taskId: task.taskId,
-      taskPath: row.taskPath as string,
+      taskPath,
       bubbleId: task.implBubbleId,
       bubbleRole: "implementation"
     });
   }
   return links;
-}
-
-function toLinkedBubbleSnapshot(
-  planPath: string,
-  link: TaskBubbleLink,
-  status: LinkedBubbleStatusPortSnapshot
-): LinkedBubbleStatusSnapshot {
-  return {
-    planPath,
-    taskId: link.taskId,
-    taskPath: link.taskPath,
-    bubbleId: link.bubbleId,
-    bubbleRole: link.bubbleRole,
-    state: status.state,
-    current: status.current,
-    ...(status.observedAt !== undefined ? { observedAt: status.observedAt } : {}),
-    ...(status.statusRef !== undefined ? { statusRef: status.statusRef } : {}),
-    ...(status.metadata !== undefined ? { metadata: status.metadata } : {})
-  };
-}
-
-function toTriggerCandidate(
-  planPath: string,
-  link: TaskBubbleLink,
-  status: LinkedBubbleStatusPortSnapshot & { state: LinkedBubbleApprovalReadyState }
-): LinkedBubbleTriggerCandidate {
-  return {
-    planPath,
-    taskId: link.taskId,
-    taskPath: link.taskPath,
-    bubbleId: link.bubbleId,
-    bubbleRole: link.bubbleRole,
-    observedState: status.state,
-    ...(status.observedAt !== undefined ? { observedAt: status.observedAt } : {}),
-    ...(status.statusRef !== undefined ? { statusRef: status.statusRef } : {}),
-    ...(status.metadata !== undefined ? { statusMetadata: status.metadata } : {})
-  };
 }
 
 function emptyResult(
