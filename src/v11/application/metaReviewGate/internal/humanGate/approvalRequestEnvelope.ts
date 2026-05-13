@@ -4,7 +4,7 @@ import type {
 } from "../../../../shared/metaReview/metaReviewTypes.js";
 import {
   deliveryTargetRoleMetadataKey
-} from "../../../../../types/protocol.js";
+} from "../../../../shared/delivery/deliveryTargetMetadataContract.js";
 import {
   resolveFindingsParityMetadataForEnvelope,
   type FindingsParityMetadata

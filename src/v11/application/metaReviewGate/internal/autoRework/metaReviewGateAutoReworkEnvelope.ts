@@ -7,7 +7,7 @@ import type { AgentName } from "../../../../../contracts/kernel/agentIdentity.js
 import type { Finding } from "../../../../../types/findings.js";
 import {
   deliveryTargetRoleMetadataKey
-} from "../../../../../types/protocol.js";
+} from "../../../../shared/delivery/deliveryTargetMetadataContract.js";
 import {
   resolveFindingsParityMetadataForEnvelope,
   type FindingsParityMetadata

@@ -1,4 +1,7 @@
-import { deliveryTargetRoleMetadataKey, type ProtocolEnvelope } from "../../../../../types/protocol.js";
+import type { ProtocolEnvelope } from "../../../../../types/protocol.js";
+import {
+  deliveryTargetRoleMetadataKey
+} from "../../../../shared/delivery/deliveryTargetMetadataContract.js";
 import type {
   NormalizedApprovalDecisionInput
 } from "../command/approvalCommandInputNormalization.js";

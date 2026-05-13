@@ -2,7 +2,9 @@ import type { MetaReviewRecommendation } from "../../../../shared/metaReview/met
 import type { BubbleStateSnapshot } from "../../../../domain/state/snapshot/bubbleStateSnapshot.js";
 import type { ApprovalDecision } from "../../../../../contracts/kernel/protocol.js";
 import {
-  deliveryTargetRoleMetadataKey,
+  deliveryTargetRoleMetadataKey
+} from "../../../../shared/delivery/deliveryTargetMetadataContract.js";
+import {
   type ProtocolEnvelope
 } from "../../../../../types/protocol.js";
 import {

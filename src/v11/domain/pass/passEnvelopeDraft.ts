@@ -6,9 +6,11 @@ import { claimParserDivergenceDiagnosticReasonCode } from "../convergence/policy
 import type { Finding } from "../../../types/findings.js";
 import type { PassIntent } from "../../../contracts/kernel/protocol.js";
 import {
-  deliveryTargetRoleMetadataKey,
   type ProtocolEnvelopeDraft
 } from "../../../types/protocol.js";
+import {
+  deliveryTargetRoleMetadataKey
+} from "../../shared/delivery/deliveryTargetMetadataContract.js";
 import type { ResolvedPassHandoff } from "./handoff.js";
 import type {
   ReviewerFindingsClaim,

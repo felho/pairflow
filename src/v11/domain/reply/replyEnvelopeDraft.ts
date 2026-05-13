@@ -3,9 +3,11 @@ import type {
   AgentRole
 } from "../../../contracts/kernel/agentIdentity.js";
 import {
-  deliveryTargetRoleMetadataKey,
   type ProtocolEnvelopeDraft
 } from "../../../types/protocol.js";
+import {
+  deliveryTargetRoleMetadataKey
+} from "../../shared/delivery/deliveryTargetMetadataContract.js";
 
 export interface BuildHumanReplyEnvelopeDraftInput {
   bubbleId: string;

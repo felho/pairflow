@@ -30,34 +30,22 @@ export type {
   FindingsParityMetadata,
   FindingsParityStatus
 } from "../v11/shared/metaReviewGate/findingsParityMetadataContract.js";
+// Transitional compatibility surface. Delivery targeting ownership lives in
+// v11/shared/delivery; keep these exports until protocol imports are migrated.
+export {
+  deliveryTargetRoleMetadataKey,
+  deliveryTargetRoles,
+  isDeliveryTargetRole,
+  parseDeliveryTargetRoleMetadata
+} from "../v11/shared/delivery/deliveryTargetMetadataContract.js";
+export type {
+  DeliveryTargetRole,
+  DeliveryTargetRoleMetadataParseResult
+} from "../v11/shared/delivery/deliveryTargetMetadataContract.js";
 
 export const legacyMetaReviewerProtocolRecipient = "meta-reviewer" as const;
 export type LegacyMetaReviewerProtocolRecipient =
   typeof legacyMetaReviewerProtocolRecipient;
-
-export const deliveryTargetRoles = [
-  "implementer",
-  "reviewer",
-  "meta_reviewer",
-  "status"
-] as const;
-
-export type DeliveryTargetRole = (typeof deliveryTargetRoles)[number];
-
-export const deliveryTargetRoleMetadataKey = "delivery_target_role" as const;
-
-export type DeliveryTargetRoleMetadataParseResult =
-  | {
-      status: "absent";
-    }
-  | {
-      status: "invalid";
-      value: unknown;
-    }
-  | {
-      status: "valid";
-      role: DeliveryTargetRole;
-    };
 
 export interface ProtocolEnvelopePayload {
   summary?: string;
@@ -172,39 +160,9 @@ export function isLegacyMetaReviewerProtocolRecipient(
   return value === legacyMetaReviewerProtocolRecipient;
 }
 
-export function isDeliveryTargetRole(value: unknown): value is DeliveryTargetRole {
-  return (
-    typeof value === "string" &&
-    (deliveryTargetRoles as readonly string[]).includes(value)
-  );
-}
-
 export function isActorOutputKind(value: unknown): value is ActorOutputKind {
   return (
     typeof value === "string"
     && (actorOutputKinds as readonly string[]).includes(value)
   );
-}
-
-export function parseDeliveryTargetRoleMetadata(
-  metadata: unknown
-): DeliveryTargetRoleMetadataParseResult {
-  if (typeof metadata !== "object" || metadata === null) {
-    return { status: "absent" };
-  }
-  const value =
-    (metadata as Record<string, unknown>)[deliveryTargetRoleMetadataKey];
-  if (value === undefined) {
-    return { status: "absent" };
-  }
-  if (isDeliveryTargetRole(value)) {
-    return {
-      status: "valid",
-      role: value
-    };
-  }
-  return {
-    status: "invalid",
-    value
-  };
 }

@@ -13,9 +13,11 @@ import type { BubbleConfig } from "../../../../shared/config/bubbleConfigTypes.j
 import type { ProtocolParticipant } from "../../../../../contracts/kernel/protocol.js";
 import {
   deliveryTargetRoleMetadataKey,
-  isLegacyMetaReviewerProtocolRecipient,
   parseDeliveryTargetRoleMetadata,
-  type DeliveryTargetRole,
+  type DeliveryTargetRole
+} from "../../../../shared/delivery/deliveryTargetMetadataContract.js";
+import {
+  isLegacyMetaReviewerProtocolRecipient,
   type LegacyMetaReviewerProtocolRecipient,
   type ProtocolEnvelope
 } from "../../../../../types/protocol.js";

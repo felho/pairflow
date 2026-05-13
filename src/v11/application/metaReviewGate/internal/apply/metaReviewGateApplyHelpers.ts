@@ -10,7 +10,7 @@ import {
 } from "../../../../ports/stateSnapshots.js";
 import {
   deliveryTargetRoleMetadataKey
-} from "../../../../../types/protocol.js";
+} from "../../../../shared/delivery/deliveryTargetMetadataContract.js";
 import { buildHumanGateSummary } from "../../../../domain/metaReviewGate/humanGatePolicy.js";
 export {
   stageMetaReviewRunningState,

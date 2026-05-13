@@ -3,7 +3,9 @@ import type {
   BubbleConfig
 } from "../config/bubbleConfigTypes.js";
 import type {
-  DeliveryTargetRole,
+  DeliveryTargetRole
+} from "./deliveryTargetMetadataContract.js";
+import type {
   ProtocolEnvelope
 } from "../../../types/protocol.js";
 import type { ReviewerTestExecutionDirective } from "../reviewer/testEvidence.js";
