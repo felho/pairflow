@@ -1726,7 +1726,7 @@ procedure skips):**
   `src/cli/commands/bubble/reply.ts`,
   `src/v11/defaults/ui/routerDefaults.ts`,
   `application/resume/resumeCommandOrchestration.ts`,
-  `application/resume/resumeCommandRuntime.ts`) and `Contract`
+  `application/resume/internal/error/resumeCommandRuntime.ts`) and `Contract`
   (`defaults/ui/routerDefaults.ts`,
   `application/resume/resumeCommandContract.ts` as cross-lane
   signature reference). The Error file, ErrorNormalization,

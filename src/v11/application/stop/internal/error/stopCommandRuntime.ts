@@ -1,8 +1,8 @@
 import {
   normalizePairflowCommandErrorInput,
   withRequiredCommandContext
-} from "../../shared/errors/commandErrorDetails.js";
-import { isNamedError } from "../../shared/errors/namedError.js";
+} from "../../../../shared/errors/commandErrorDetails.js";
+import { isNamedError } from "../../../../shared/errors/namedError.js";
 import { normalizeStopBubbleError } from "./stopCommandErrorNormalization.js";
 
 export class StopBubbleError extends Error {

@@ -8,7 +8,7 @@ import {
   StopBubbleError,
   createStopBubbleError,
   throwAsStopBubbleError
-} from "./stopCommandRuntime.js";
+} from "./internal/error/stopCommandRuntime.js";
 
 const STOP_BUBBLE_REQUIRES_NON_FINAL_STATE =
   "STOP_BUBBLE_REQUIRES_NON_FINAL_STATE";

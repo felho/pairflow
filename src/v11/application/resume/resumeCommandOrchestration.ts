@@ -5,11 +5,12 @@ import {
   type ResumeBubbleResult
 } from "./resumeCommandContract.js";
 import { emitHumanReply } from "../reply/replyCommandApi.js";
-export {
+import {
   ResumeBubbleError,
   throwAsResumeBubbleError
-} from "./resumeCommandRuntime.js";
+} from "./internal/error/resumeCommandRuntime.js";
 export { DEFAULT_RESUME_MESSAGE } from "./resumeCommandContract.js";
+export { ResumeBubbleError, throwAsResumeBubbleError };
 export type {
   ResumeBubbleDependencies,
   ResumeBubbleInput,

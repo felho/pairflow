@@ -54,8 +54,8 @@ restructuring opportunity).
 | open | 4 | yes | 4 | yes | yes | — | structured (Tier 1/2; refactored 2026-05-13) |
 | list | 2 | yes | 3 | yes | yes | — | structured (Tier 2; refactored 2026-05-11) |
 | pass | 4 | yes | 4 | yes | yes | -2 | structured (Tier 2) |
-| resume | 4 | no | — | — | yes | 7 | small unstructured |
-| stop | 4 | no | — | yes | yes | 4 | small unstructured |
+| resume | 2 | yes | 1 | — | yes | — | structured (Tier 1/2; refactored 2026-05-13) |
+| stop | 2 | yes | 1 | yes | yes | — | structured (Tier 1/2; refactored 2026-05-13) |
 | approval | 3 | yes | 6 | — | — | 1 | structured (Tier 2) |
 | kickoff | 3 | yes | 4 | — | — | 8 | structured (Tier 2) |
 | askHuman | 2 | yes | 3 | — | yes | -2 | structured (Tier 2) |
@@ -130,16 +130,19 @@ Already minimal. No restructuring needed.
 Self-contained command lanes with all files at the top level. Restructuring
 straightforward: `internal/<sub>/` for everything that isn't entry/contract.
 
-- **resume**, **stop** — similar pattern.
 - **gates**, **inbox** — 2 top-level only; below restructuring threshold.
 
-These all have the standard naming (`*CommandApi`, `*CommandContract`,
+These have the standard naming (`*CommandApi`, `*CommandContract`,
 `*CliCommand` etc.), just no `internal/` boundary yet.
 
 `delete` was removed from this bucket on 2026-05-13. The lane now keeps only
 `deleteBubble.ts`, `deleteBubbleContract.ts`, and `deleteCliCommand.ts` at root;
 route resolution, dependency resolution, result construction, finalization,
 remote support, and internal types live under `internal/`.
+
+`resume` and `stop` were removed from this bucket on 2026-05-13. Each lane now
+keeps orchestration and contract files at root; runtime error helpers and
+normalizers live under `internal/error/`.
 
 ### Tier 2 — Standard Command Pipeline (7+ top-level OR multi-phase internal)
 
@@ -349,9 +352,8 @@ from-scratch cases:
 
 Unstructured (no internal/ at all):
 
-- The remaining 3–7-top-level lanes without `internal/` are `resume`
-  and `stop`, which are listed in their Tier 1 inventory
-  rows above. `gates` and `inbox` remain below the restructuring threshold.
+- There are no remaining 3–7-top-level lanes without `internal/`.
+  `gates` and `inbox` remain below the restructuring threshold.
 
 ### Tier 3 — Coordinator (lane-internal-but-named submodules)
 
