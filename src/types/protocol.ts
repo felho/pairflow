@@ -1,16 +1,3 @@
-import type {
-  ApprovalDecision,
-  FindingsClaimSource,
-  FindingsClaimState,
-  PassIntent,
-  ProtocolMessageType,
-  ProtocolParticipant
-} from "../contracts/kernel/protocol.js";
-import type {
-  FindingsParityMetadata
-} from "../v11/shared/metaReviewGate/findingsParityMetadataContract.js";
-import type { Finding } from "./findings.js";
-
 // Transitional compatibility surface. Findings parity ownership lives in
 // v11/shared/metaReviewGate; keep these exports until legacy protocol imports
 // have been migrated.
@@ -58,44 +45,18 @@ export type {
 export type {
   MetaReviewSubmissionPayload
 } from "../v11/shared/metaReview/metaReviewSubmissionContract.js";
+// Transitional compatibility surface. Protocol envelope ownership lives in
+// v11/shared/protocol; keep these exports until legacy protocol imports are
+// migrated.
+export type {
+  ProtocolEnvelope,
+  ProtocolEnvelopeDraft,
+  ProtocolEnvelopePayload
+} from "../v11/shared/protocol/protocolEnvelopeContract.js";
 
 export const legacyMetaReviewerProtocolRecipient = "meta-reviewer" as const;
 export type LegacyMetaReviewerProtocolRecipient =
   typeof legacyMetaReviewerProtocolRecipient;
-
-export interface ProtocolEnvelopePayload {
-  summary?: string;
-  question?: string;
-  message?: string;
-  decision?: ApprovalDecision;
-  pass_intent?: PassIntent;
-  findings_claim_state?: FindingsClaimState;
-  findings_claim_source?: FindingsClaimSource;
-  findings?: Finding[];
-  metadata?: Record<string, unknown> & FindingsParityMetadata;
-}
-
-export interface ProtocolEnvelopeDraft {
-  bubble_id: string;
-  sender: ProtocolParticipant;
-  recipient: ProtocolParticipant;
-  type: ProtocolMessageType;
-  round: number;
-  payload: ProtocolEnvelopePayload;
-  refs: string[];
-}
-
-export interface ProtocolEnvelope {
-  id: string;
-  ts: string;
-  bubble_id: string;
-  sender: ProtocolParticipant;
-  recipient: ProtocolParticipant;
-  type: ProtocolMessageType;
-  round: number;
-  payload: ProtocolEnvelopePayload;
-  refs: string[];
-}
 
 export function isLegacyMetaReviewerProtocolRecipient(
   value: unknown

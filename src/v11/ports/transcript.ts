@@ -1,7 +1,7 @@
 import type {
   ProtocolEnvelopeDraft,
   ProtocolEnvelope
-} from "../../types/protocol.js";
+} from "../shared/protocol/protocolEnvelopeContract.js";
 export type { ProtocolEnvelopeDraft };
 
 export interface AppendProtocolEnvelopeInput {

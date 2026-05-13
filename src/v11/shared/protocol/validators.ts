@@ -14,7 +14,7 @@ import {
   isProtocolMessageType,
   isProtocolParticipant
 } from "../../../contracts/kernel/protocol.js";
-import type { ProtocolEnvelope } from "../../../types/protocol.js";
+import type { ProtocolEnvelope } from "./protocolEnvelopeContract.js";
 import { validatePayloadByType } from "./protocolPayloadValidation.js";
 
 export function validateProtocolEnvelope(

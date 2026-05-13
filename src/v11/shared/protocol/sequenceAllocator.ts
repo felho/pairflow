@@ -1,4 +1,4 @@
-import type { ProtocolEnvelope } from "../../../types/protocol.js";
+import type { ProtocolEnvelope } from "./protocolEnvelopeContract.js";
 
 const messageIdPattern = /^msg_(\d{8})_(\d+)$/u;
 

@@ -1,5 +1,5 @@
 import type { MetaReviewRecommendation } from "../metaReview/metaReviewTypes.js";
-import type { ProtocolEnvelope } from "../../../types/protocol.js";
+import type { ProtocolEnvelope } from "./protocolEnvelopeContract.js";
 import {
   metaReviewGateRoutes,
   type MetaReviewGateRoute

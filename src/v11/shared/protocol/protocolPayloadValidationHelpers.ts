@@ -4,7 +4,7 @@ import {
   isFindingsClaimState,
   isPassIntent
 } from "../../../contracts/kernel/protocol.js";
-import type { ProtocolEnvelope } from "../../../types/protocol.js";
+import type { ProtocolEnvelope } from "./protocolEnvelopeContract.js";
 import {
   isInteger,
   isNonEmptyString,

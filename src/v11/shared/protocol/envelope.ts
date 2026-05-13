@@ -1,5 +1,5 @@
 import { assertValidProtocolEnvelope } from "./validators.js";
-import type { ProtocolEnvelope } from "../../../types/protocol.js";
+import type { ProtocolEnvelope } from "./protocolEnvelopeContract.js";
 
 export function parseEnvelopeLine(line: string): ProtocolEnvelope {
   const trimmed = line.trim();

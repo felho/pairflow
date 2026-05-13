@@ -1,6 +1,6 @@
 import {
   type ProtocolEnvelope
-} from "../../../types/protocol.js";
+} from "./protocolEnvelopeContract.js";
 import { type ValidationError } from "../validation/primitives.js";
 import { validateFindings } from "./protocolFindingValidation.js";
 import {
