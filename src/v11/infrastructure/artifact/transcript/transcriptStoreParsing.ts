@@ -1,7 +1,9 @@
 import { mkdir, readFile } from "node:fs/promises";
 import { dirname } from "node:path";
 
-import type { ProtocolEnvelope } from "../../../../types/protocol.js";
+import type {
+  ProtocolEnvelope
+} from "../../../shared/protocol/protocolEnvelopeContract.js";
 import { parseEnvelopeLine, serializeEnvelopeLine } from "../../../shared/protocol/envelope.js";
 import type { ReadTranscriptOptions } from "../../../ports/transcript.js";
 

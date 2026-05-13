@@ -8,7 +8,9 @@ import {
   FileLockTimeoutError,
   withFileLock
 } from "../../foundation/fs/fileLock.js";
-import type { ProtocolEnvelope } from "../../../../types/protocol.js";
+import type {
+  ProtocolEnvelope
+} from "../../../shared/protocol/protocolEnvelopeContract.js";
 import type {
   AppendProtocolEnvelopeInput,
   AppendProtocolEnvelopePort,

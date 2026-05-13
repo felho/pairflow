@@ -1,4 +1,6 @@
-import type { ProtocolEnvelope } from "../../../../types/protocol.js";
+import type {
+  ProtocolEnvelope
+} from "../../../shared/protocol/protocolEnvelopeContract.js";
 import type { ProtocolEnvelopeDraft } from "../../../ports/transcript.js";
 import {
   assertValidProtocolEnvelope
