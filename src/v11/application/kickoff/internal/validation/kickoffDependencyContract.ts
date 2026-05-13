@@ -1,4 +1,4 @@
-import type { ProtocolEnvelopeDraft } from "../../../../../types/protocol.js";
+import type { ProtocolEnvelopeDraft } from "../../../../shared/protocol/protocolEnvelopeContract.js";
 import type {
   EmitDeliveryNotificationAckPort
 } from "../../../../ports/tmuxDelivery.js";

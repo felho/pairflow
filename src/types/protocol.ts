@@ -54,12 +54,10 @@ export type {
   ProtocolEnvelopePayload
 } from "../v11/shared/protocol/protocolEnvelopeContract.js";
 
-export const legacyMetaReviewerProtocolRecipient = "meta-reviewer" as const;
-export type LegacyMetaReviewerProtocolRecipient =
-  typeof legacyMetaReviewerProtocolRecipient;
-
-export function isLegacyMetaReviewerProtocolRecipient(
-  value: unknown
-): value is LegacyMetaReviewerProtocolRecipient {
-  return value === legacyMetaReviewerProtocolRecipient;
-}
+export {
+  isLegacyMetaReviewerProtocolRecipient,
+  legacyMetaReviewerProtocolRecipient
+} from "../v11/shared/protocol/legacyMetaReviewerRecipientContract.js";
+export type {
+  LegacyMetaReviewerProtocolRecipient
+} from "../v11/shared/protocol/legacyMetaReviewerRecipientContract.js";

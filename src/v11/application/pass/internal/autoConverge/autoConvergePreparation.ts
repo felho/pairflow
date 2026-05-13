@@ -15,7 +15,7 @@ import type {
 import type {
   ReviewArtifactType
 } from "../../../../shared/config/bubbleConfigVocabulary.js";
-import type { ProtocolEnvelope } from "../../../../../types/protocol.js";
+import type { ProtocolEnvelope } from "../../../../shared/protocol/protocolEnvelopeContract.js";
 import {
   raiseRepeatCleanAutoConvergeStateStale,
   raiseRepeatCleanPolicyGateRejected,

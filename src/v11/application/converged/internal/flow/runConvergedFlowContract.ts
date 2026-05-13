@@ -20,7 +20,7 @@ import type {
   BubbleRoundGateState,
   BubbleSpecLockState
 } from "../../../../shared/gates/gateStateTypes.js";
-import type { ProtocolEnvelope } from "../../../../../types/protocol.js";
+import type { ProtocolEnvelope } from "../../../../shared/protocol/protocolEnvelopeContract.js";
 import type { PrepareConvergedValidationResult } from "../validation/convergedValidationPreparationContract.js";
 
 export interface ExecuteConvergedExecutionDependencies {

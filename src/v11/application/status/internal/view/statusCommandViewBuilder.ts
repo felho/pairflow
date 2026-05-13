@@ -18,7 +18,7 @@ import {
   toRuntimeAlignedReviewPolicyExecutionContext
 } from "../../../../shared/reviewPolicy/reviewPolicyRuntime.js";
 import type { ProtocolMessageType } from "../../../../../contracts/kernel/protocol.js";
-import type { ProtocolEnvelope } from "../../../../../types/protocol.js";
+import type { ProtocolEnvelope } from "../../../../shared/protocol/protocolEnvelopeContract.js";
 import type { UiBubbleStatusRemoteExecution } from "../../../../../types/uiRemoteExecution.js";
 import type {
   BubbleStatusState,

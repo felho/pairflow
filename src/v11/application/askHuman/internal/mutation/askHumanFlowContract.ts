@@ -12,7 +12,7 @@ import type {
 } from "../delivery/askHumanDeliveryPortsContract.js";
 import type { EmitBubbleLifecycleEventBestEffortPort } from "../../../../shared/metrics/bubbleEvents.js";
 import type { BubbleStateSnapshot } from "../../../../domain/state/snapshot/bubbleStateSnapshot.js";
-import type { ProtocolEnvelope } from "../../../../../types/protocol.js";
+import type { ProtocolEnvelope } from "../../../../shared/protocol/protocolEnvelopeContract.js";
 import type { AskHumanRoutingContext } from "../delivery/askHumanRoutingContextContract.js";
 import type { AskHumanActivationProvenance } from "../../askHumanCommandContract.js";
 import type {

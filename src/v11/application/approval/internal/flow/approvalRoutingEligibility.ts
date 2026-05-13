@@ -6,7 +6,7 @@ import {
 } from "../../../../shared/delivery/deliveryTargetMetadataContract.js";
 import {
   type ProtocolEnvelope
-} from "../../../../../types/protocol.js";
+} from "../../../../shared/protocol/protocolEnvelopeContract.js";
 import {
   hasParityInconsistencyMetadata,
   readApprovalTranscriptContext,

@@ -3,7 +3,7 @@ import type { AgentName } from "../../../../../contracts/kernel/agentIdentity.js
 import type {
   ProtocolEnvelope,
   ProtocolEnvelopeDraft
-} from "../../../../../types/protocol.js";
+} from "../../../../shared/protocol/protocolEnvelopeContract.js";
 import type { ResolvedKickoffTaskInput } from "../validation/kickoffTaskInputResolution.js";
 import type { executeKickoffMutation } from "./kickoffMutationExecution.js";
 import type { executeKickoffMutationRollback } from "../rollback/kickoffMutationRollback.js";

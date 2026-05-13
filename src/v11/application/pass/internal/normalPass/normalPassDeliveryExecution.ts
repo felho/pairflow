@@ -1,5 +1,5 @@
 import type { BubbleConfig } from "../../../../shared/config/bubbleConfigTypes.js";
-import type { ProtocolEnvelope } from "../../../../../types/protocol.js";
+import type { ProtocolEnvelope } from "../../../../shared/protocol/protocolEnvelopeContract.js";
 import type { ReviewerTestExecutionDirective } from "../../../../shared/reviewer/testEvidence.js";
 import type { PassRecipientRole, PassSenderRole } from "../../../../domain/pass/handoff.js";
 import type {

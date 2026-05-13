@@ -2,7 +2,7 @@ import type { ReviewerTestExecutionDirective } from "../../../../shared/reviewer
 import type { DeliveryAck } from "../../../../ports/tmuxDelivery.js";
 import type { LoadedStateSnapshot } from "../../../../ports/stateSnapshots.js";
 import type { Finding } from "../../../../../types/findings.js";
-import type { ProtocolEnvelope } from "../../../../../types/protocol.js";
+import type { ProtocolEnvelope } from "../../../../shared/protocol/protocolEnvelopeContract.js";
 import type {
   RunNormalPassFlowDependencies,
   RunNormalPassFlowInput

@@ -1,5 +1,5 @@
 import type { BubbleStateSnapshot } from "../../../../domain/state/snapshot/bubbleStateSnapshot.js";
-import type { ProtocolEnvelope } from "../../../../../types/protocol.js";
+import type { ProtocolEnvelope } from "../../../../shared/protocol/protocolEnvelopeContract.js";
 import type { AskHumanActivationProvenance } from "../../askHumanCommandContract.js";
 import type { DeliveryAck } from "../../../../ports/tmuxDelivery.js";
 

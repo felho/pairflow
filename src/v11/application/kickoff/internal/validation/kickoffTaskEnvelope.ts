@@ -1,5 +1,5 @@
 import type { AgentName } from "../../../../../contracts/kernel/agentIdentity.js";
-import type { ProtocolEnvelopeDraft } from "../../../../../types/protocol.js";
+import type { ProtocolEnvelopeDraft } from "../../../../shared/protocol/protocolEnvelopeContract.js";
 import type { ResolvedKickoffTaskInput } from "./kickoffTaskInputResolution.js";
 
 export interface BuildKickoffTaskEnvelopeInput {

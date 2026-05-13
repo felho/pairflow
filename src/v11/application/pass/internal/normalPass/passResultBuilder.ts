@@ -4,7 +4,7 @@ import {
   type RepeatCleanAutoconvergeReasonDetail
 } from "../../../../domain/convergence/repeatCleanAutoconverge.js";
 import type { BubbleStateSnapshot } from "../../../../domain/state/snapshot/bubbleStateSnapshot.js";
-import type { ProtocolEnvelope } from "../../../../../types/protocol.js";
+import type { ProtocolEnvelope } from "../../../../shared/protocol/protocolEnvelopeContract.js";
 import type { EmitConvergedResult } from "../../../converged/convergedCommandOrchestration.js";
 import type { PassActivationProvenance } from "../../passCommandContract.js";
 

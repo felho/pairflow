@@ -1,4 +1,4 @@
-import type { ProtocolEnvelope } from "../../../../../types/protocol.js";
+import type { ProtocolEnvelope } from "../../../../shared/protocol/protocolEnvelopeContract.js";
 import { resolveCanonicalPendingApprovalSignal } from "../../../../shared/approval/pendingApprovalSignal.js";
 export {
   resolveReviewVerificationState,

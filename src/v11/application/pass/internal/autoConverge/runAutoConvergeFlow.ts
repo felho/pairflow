@@ -10,7 +10,7 @@ import type {
 } from "../../../../domain/state/snapshot/roundRoleHistory.js";
 import type { Finding } from "../../../../../types/findings.js";
 import type { PassIntent } from "../../../../../contracts/kernel/protocol.js";
-import type { ProtocolEnvelope } from "../../../../../types/protocol.js";
+import type { ProtocolEnvelope } from "../../../../shared/protocol/protocolEnvelopeContract.js";
 import type { EmitConvergedResult } from "../../../converged/convergedCommandOrchestration.js";
 import type { ResolvedPassHandoff } from "../../../../domain/pass/handoff.js";
 import type {

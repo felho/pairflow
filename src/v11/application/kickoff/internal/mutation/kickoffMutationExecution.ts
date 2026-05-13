@@ -2,7 +2,7 @@ import type { AgentName } from "../../../../../contracts/kernel/agentIdentity.js
 import type {
   ProtocolEnvelope,
   ProtocolEnvelopeDraft
-} from "../../../../../types/protocol.js";
+} from "../../../../shared/protocol/protocolEnvelopeContract.js";
 import type { ResolvedKickoffTaskInput } from "../validation/kickoffTaskInputResolution.js";
 import { renderKickoffTaskArtifact } from "../validation/kickoffTaskInputResolution.js";
 import { appendKickoffMutationEnvelopeWithBackup } from "./kickoffMutationTranscriptAppend.js";

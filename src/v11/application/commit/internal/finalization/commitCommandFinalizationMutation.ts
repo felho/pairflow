@@ -11,7 +11,7 @@ import type {
 import type {
   ProtocolEnvelope,
   ProtocolEnvelopeDraft
-} from "../../../../../types/protocol.js";
+} from "../../../../shared/protocol/protocolEnvelopeContract.js";
 
 export interface CommitFinalizationContext {
   bubbleId: string;

@@ -5,7 +5,7 @@ import {
   isFindingsClaimSource,
   isFindingsClaimState
 } from "../../../../../contracts/kernel/protocol.js";
-import type { ProtocolEnvelope } from "../../../../../types/protocol.js";
+import type { ProtocolEnvelope } from "../../../../shared/protocol/protocolEnvelopeContract.js";
 
 const MAX_SUMMARY_CHARS = 900;
 const MAX_SUMMARY_LINES = 16;

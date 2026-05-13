@@ -2,7 +2,7 @@ import { emitBubbleLifecycleEventBestEffort } from "../../../metrics/bubbleEvent
 import { applyDeferredReworkIntent } from "../../../../domain/state/rework/reworkIntentTransitions.js";
 import { persistPendingReworkIntentState } from "./watchdogPendingReworkPersistence.js";
 import type { BubbleStateSnapshot } from "../../../../domain/state/snapshot/bubbleStateSnapshot.js";
-import type { ProtocolEnvelope } from "../../../../../types/protocol.js";
+import type { ProtocolEnvelope } from "../../../../shared/protocol/protocolEnvelopeContract.js";
 import type { BubbleWatchdogResult } from "../../watchdogCommandContract.js";
 import type { ResolvedBubbleById } from "../../../../ports/bubbleLookup.js";
 import type { EnsureBubbleInstanceIdForMutationPort } from "../../../../ports/bubbleIdentity.js";

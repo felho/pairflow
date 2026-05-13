@@ -6,7 +6,7 @@ import type {
   BubbleRoundGateState,
   BubbleSpecLockState
 } from "../../../../shared/gates/gateStateTypes.js";
-import type { ProtocolEnvelope } from "../../../../../types/protocol.js";
+import type { ProtocolEnvelope } from "../../../../shared/protocol/protocolEnvelopeContract.js";
 
 export function buildConvergedEventMetadata(input: {
   summary: string;

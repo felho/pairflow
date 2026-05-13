@@ -6,7 +6,7 @@ import type { BubbleStateSnapshot } from "../../../domain/state/snapshot/bubbleS
 import type {
   ProtocolEnvelope,
   ProtocolEnvelopeDraft
-} from "../../../../types/protocol.js";
+} from "../../../shared/protocol/protocolEnvelopeContract.js";
 
 export interface ReplyResolvedBubble {
   bubbleId: string;

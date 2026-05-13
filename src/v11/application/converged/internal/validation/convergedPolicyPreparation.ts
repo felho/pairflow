@@ -13,7 +13,7 @@ import type {
 import type {
   RoundRoleHistoryEntry
 } from "../../../../domain/state/snapshot/roundRoleHistory.js";
-import type { ProtocolEnvelope } from "../../../../../types/protocol.js";
+import type { ProtocolEnvelope } from "../../../../shared/protocol/protocolEnvelopeContract.js";
 
 export interface PrepareConvergedPolicyInput {
   transcriptPath: string;
