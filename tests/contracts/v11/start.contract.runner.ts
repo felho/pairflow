@@ -7,12 +7,8 @@ import { renderBubbleConfigToml } from "../../../src/config/bubbleConfig.js";
 import { createBubble } from "../../../src/v11/defaults/create/createBubbleApi.js";
 import { applyStateTransition } from "../../../src/v11/domain/state/machine.js";
 import { buildBubbleStateSnapshotVariant } from "../../../src/v11/domain/state/snapshot/buildBubbleStateSnapshot.js";
-import type { PersistedBubbleStateSnapshot } from "../../../src/v11/domain/state/snapshot/persistedBubbleStateSnapshot.js";
 import { toPersistedSnapshot } from "../../../src/v11/domain/state/snapshot/projection.js";
-import {
-  readStateSnapshot,
-  writeStateSnapshot as rawWriteStateSnapshot
-} from "../../../src/v11/infrastructure/state/stateStore.js";
+import { readStateSnapshot } from "../../../src/v11/infrastructure/state/stateStore.js";
 import { startBubble } from "../../../src/v11/application/start/startCommandApi.js";
 import { runBubbleStartCommand } from "../../../src/cli/commands/bubble/start.js";
 import { writeRemotePointer } from "../../../src/v11/infrastructure/artifact/bubble/remoteExecutionArtifacts.js";
@@ -25,13 +21,7 @@ import { initGitRepository, runGit } from "../../helpers/git.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
 import { buildWorktreeBootstrapResult } from "../../helpers/worktreeBootstrapResult.js";
 import type { ContractCase, ContractCaseExpected } from "./schema.js";
-// Step 4b-γ/4 transitional: 4b-γ/5 cleanup target.
-const writeStateSnapshot = (
-  statePath: Parameters<typeof rawWriteStateSnapshot>[0],
-  state: unknown,
-  options?: Parameters<typeof rawWriteStateSnapshot>[2]
-): ReturnType<typeof rawWriteStateSnapshot> => rawWriteStateSnapshot(statePath, buildBubbleStateSnapshotVariant(state as PersistedBubbleStateSnapshot), options);
-
+import { writeStateSnapshotFixture as writeStateSnapshot } from "../../helpers/stateSnapshot.js";
 export interface StartContractSuccessOutput {
   status: "ok";
   reasonCode: "STARTED";

@@ -30,23 +30,13 @@ import type {
 import type {
   UpsertDeletedArchiveIndexEntryResult
 } from "../../../src/v11/infrastructure/artifact/archive/archiveIndex.js";
-import {
-  readStateSnapshot,
-  writeStateSnapshot as rawWriteStateSnapshot
-} from "../../../src/v11/infrastructure/state/stateStore.js";
+import { readStateSnapshot } from "../../../src/v11/infrastructure/state/stateStore.js";
 import { buildBubbleStateSnapshotVariant } from "../../../src/v11/domain/state/snapshot/buildBubbleStateSnapshot.js";
-import type { PersistedBubbleStateSnapshot } from "../../../src/v11/domain/state/snapshot/persistedBubbleStateSnapshot.js";
 import type { ArchiveIndexDocument, ArchiveManifest } from "../../../src/types/archive.js";
 import { branchExists } from "../../../src/v11/infrastructure/workspace/git.js";
 import { initGitRepository, runGit } from "../../helpers/git.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
-// Step 4b-γ/4 transitional: 4b-γ/5 cleanup target.
-const writeStateSnapshot = (
-  statePath: Parameters<typeof rawWriteStateSnapshot>[0],
-  state: unknown,
-  options?: Parameters<typeof rawWriteStateSnapshot>[2]
-): ReturnType<typeof rawWriteStateSnapshot> => rawWriteStateSnapshot(statePath, buildBubbleStateSnapshotVariant(state as PersistedBubbleStateSnapshot), options);
-
+import { writeStateSnapshotFixture as writeStateSnapshot } from "../../helpers/stateSnapshot.js";
 const tempDirs: string[] = [];
 const initialArchiveRoot = process.env.PAIRFLOW_ARCHIVE_ROOT;
 const initialMetricsRoot = process.env.PAIRFLOW_METRICS_EVENTS_ROOT;

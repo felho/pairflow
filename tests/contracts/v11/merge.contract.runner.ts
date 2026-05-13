@@ -7,10 +7,7 @@ import { vi } from "vitest";
 import { renderBubbleConfigToml } from "../../../src/config/bubbleConfig.js";
 import { createBubble } from "../../../src/v11/defaults/create/createBubbleApi.js";
 import { upsertRuntimeSession } from "../../../src/v11/infrastructure/executor/sessionRuntime/runtimeSessionsRegistry.js";
-import {
-  readStateSnapshot,
-  writeStateSnapshot as rawWriteStateSnapshot
-} from "../../../src/v11/infrastructure/state/stateStore.js";
+import { readStateSnapshot } from "../../../src/v11/infrastructure/state/stateStore.js";
 import { bootstrapWorktreeWorkspace } from "../../../src/v11/infrastructure/workspace/worktreeManager.js";
 import {
   mergeBubbleCommandOrchestration,
@@ -21,15 +18,7 @@ import {
 import { mergeBubbleDependencyDefaults } from "../../../src/v11/defaults/merge/mergeCommandDefaults.js";
 import { initGitRepository, runGit } from "../../helpers/git.js";
 import type { ContractCase, ContractCaseExpected } from "./schema.js";
-import { buildBubbleStateSnapshotVariant } from "../../../src/v11/domain/state/snapshot/buildBubbleStateSnapshot.js";
-import type { PersistedBubbleStateSnapshot } from "../../../src/v11/domain/state/snapshot/persistedBubbleStateSnapshot.js";
-// Step 4b-γ/4 transitional: 4b-γ/5 cleanup target.
-const writeStateSnapshot = (
-  statePath: Parameters<typeof rawWriteStateSnapshot>[0],
-  state: unknown,
-  options?: Parameters<typeof rawWriteStateSnapshot>[2]
-): ReturnType<typeof rawWriteStateSnapshot> => rawWriteStateSnapshot(statePath, buildBubbleStateSnapshotVariant(state as PersistedBubbleStateSnapshot), options);
-
+import { writeStateSnapshotFixture as writeStateSnapshot } from "../../helpers/stateSnapshot.js";
 export interface MergeContractSuccessOutput {
   status: "ok";
   reasonCode: "MERGED";

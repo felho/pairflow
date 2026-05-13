@@ -24,7 +24,7 @@ import {
   buildRunningExecutionContext,
   metaReviewExecutionContextToRunningContext
 } from "../../../../src/v11/domain/state/execution/executionContext.js";
-import { readStateSnapshot, writeStateSnapshot as rawWriteStateSnapshot } from "../../../../src/v11/infrastructure/state/stateStore.js";
+import { readStateSnapshot } from "../../../../src/v11/infrastructure/state/stateStore.js";
 import * as actorProtocolModule from "../../../../src/v11/application/actorProtocol/emitActorProtocol.js";
 import { metaReviewDefaults } from "../../../../src/v11/defaults/metaReview/metaReviewDefaults.js";
 import { notifyMetaReviewerSubmissionRequest } from "../../../../src/v11/defaults/metaReviewGate/metaReviewGateApi.js";
@@ -33,15 +33,7 @@ import { resolveMetaReviewerPaneWarning } from "../../../../src/v11/application/
 import { seedConvergedCandidate } from "../converged/convergedSeedFixture.js";
 import { setupRunningBubbleFixture } from "../../../helpers/bubble.js";
 import { initGitRepository } from "../../../helpers/git.js";
-import { buildBubbleStateSnapshotVariant } from "../../../../src/v11/domain/state/snapshot/buildBubbleStateSnapshot.js";
-import type { PersistedBubbleStateSnapshot } from "../../../../src/v11/domain/state/snapshot/persistedBubbleStateSnapshot.js";
-// Step 4b-γ/4 transitional: 4b-γ/5 cleanup target.
-const writeStateSnapshot = (
-  statePath: Parameters<typeof rawWriteStateSnapshot>[0],
-  state: unknown,
-  options?: Parameters<typeof rawWriteStateSnapshot>[2]
-): ReturnType<typeof rawWriteStateSnapshot> => rawWriteStateSnapshot(statePath, buildBubbleStateSnapshotVariant(state as PersistedBubbleStateSnapshot), options);
-
+import { writeStateSnapshotFixture as writeStateSnapshot } from "../../../helpers/stateSnapshot.js";
 const tempDirs: string[] = [];
 type ExecuteActorRuntimeDispatchPlanCall = Parameters<
   typeof actorRuntimeKernelModule.executeActorRuntimeDispatchPlan

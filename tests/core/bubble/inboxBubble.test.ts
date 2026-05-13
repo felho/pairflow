@@ -7,20 +7,9 @@ import { afterEach, describe, expect, it } from "vitest";
 import { createBubble } from "../../../src/v11/defaults/create/createBubbleApi.js";
 import { getBubbleInbox } from "../../../src/v11/application/inbox/bubbleInboxReadModel.js";
 import { appendProtocolEnvelope } from "../../../src/v11/infrastructure/artifact/transcript/transcriptStore.js";
-import {
-  readStateSnapshot,
-  writeStateSnapshot as rawWriteStateSnapshot
-} from "../../../src/v11/infrastructure/state/stateStore.js";
+import { readStateSnapshot } from "../../../src/v11/infrastructure/state/stateStore.js";
 import { initGitRepository } from "../../helpers/git.js";
-import { buildBubbleStateSnapshotVariant } from "../../../src/v11/domain/state/snapshot/buildBubbleStateSnapshot.js";
-import type { PersistedBubbleStateSnapshot } from "../../../src/v11/domain/state/snapshot/persistedBubbleStateSnapshot.js";
-// Step 4b-γ/4 transitional: 4b-γ/5 cleanup target.
-const writeStateSnapshot = (
-  statePath: Parameters<typeof rawWriteStateSnapshot>[0],
-  state: unknown,
-  options?: Parameters<typeof rawWriteStateSnapshot>[2]
-): ReturnType<typeof rawWriteStateSnapshot> => rawWriteStateSnapshot(statePath, buildBubbleStateSnapshotVariant(state as PersistedBubbleStateSnapshot), options);
-
+import { writeStateSnapshotFixture as writeStateSnapshot } from "../../helpers/stateSnapshot.js";
 const tempDirs: string[] = [];
 
 async function createTempRepo(prefix = "pairflow-bubble-inbox-"): Promise<string> {

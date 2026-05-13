@@ -20,17 +20,8 @@ import {
   buildRunningExecutionContext,
   metaReviewExecutionContextToRunningContext
 } from "../../src/v11/domain/state/execution/executionContext.js";
-import { writeStateSnapshot as rawWriteStateSnapshot } from "../../src/v11/infrastructure/state/stateStore.js";
 import type { AgentName } from "../../src/contracts/kernel/agentIdentity.js";
-import { buildBubbleStateSnapshotVariant } from "../../src/v11/domain/state/snapshot/buildBubbleStateSnapshot.js";
-import type { PersistedBubbleStateSnapshot } from "../../src/v11/domain/state/snapshot/persistedBubbleStateSnapshot.js";
-// Step 4b-γ/4 transitional: 4b-γ/5 cleanup target.
-const writeStateSnapshot = (
-  statePath: Parameters<typeof rawWriteStateSnapshot>[0],
-  state: unknown,
-  options?: Parameters<typeof rawWriteStateSnapshot>[2]
-): ReturnType<typeof rawWriteStateSnapshot> => rawWriteStateSnapshot(statePath, buildBubbleStateSnapshotVariant(state as PersistedBubbleStateSnapshot), options);
-
+import { writeStateSnapshotFixture as writeStateSnapshot } from "../helpers/stateSnapshot.js";
 const tempDirs: string[] = [];
 
 async function createTempRepo(): Promise<string> {

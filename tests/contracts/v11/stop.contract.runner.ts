@@ -8,23 +8,12 @@ import {
   type StopBubbleInput,
   type StopBubbleResult
 } from "../../../src/v11/application/stop/stopCommandOrchestration.js";
-import {
-  readStateSnapshot,
-  writeStateSnapshot as rawWriteStateSnapshot
-} from "../../../src/v11/infrastructure/state/stateStore.js";
+import { readStateSnapshot } from "../../../src/v11/infrastructure/state/stateStore.js";
 import { stopBubbleDependencyDefaults } from "../../../src/v11/defaults/stop/stopCommandDefaults.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
 import { initGitRepository } from "../../helpers/git.js";
 import type { ContractCase, ContractCaseExpected } from "./schema.js";
-import { buildBubbleStateSnapshotVariant } from "../../../src/v11/domain/state/snapshot/buildBubbleStateSnapshot.js";
-import type { PersistedBubbleStateSnapshot } from "../../../src/v11/domain/state/snapshot/persistedBubbleStateSnapshot.js";
-// Step 4b-γ/4 transitional: 4b-γ/5 cleanup target.
-const writeStateSnapshot = (
-  statePath: Parameters<typeof rawWriteStateSnapshot>[0],
-  state: unknown,
-  options?: Parameters<typeof rawWriteStateSnapshot>[2]
-): ReturnType<typeof rawWriteStateSnapshot> => rawWriteStateSnapshot(statePath, buildBubbleStateSnapshotVariant(state as PersistedBubbleStateSnapshot), options);
-
+import { writeStateSnapshotFixture as writeStateSnapshot } from "../../helpers/stateSnapshot.js";
 export interface StopContractSuccessOutput {
   status: "ok";
   reasonCode: "STOPPED";

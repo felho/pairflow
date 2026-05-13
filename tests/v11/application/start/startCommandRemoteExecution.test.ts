@@ -20,7 +20,7 @@ import type { PersistedBubbleStateSnapshot } from "../../../../src/v11/domain/st
 import { RemoteBubbleStartError } from "../../../../src/v11/infrastructure/executor/ssh/sshBubbleStart.js";
 import type { UpsertRuntimeSessionInput } from "../../../../src/v11/ports/runtimeSessions.js";
 import type { WriteStateSnapshotOptions } from "../../../../src/v11/infrastructure/state/stateStore.js";
-import { readStateSnapshot, writeStateSnapshot as rawWriteStateSnapshot } from "../../../../src/v11/infrastructure/state/stateStore.js";
+import { readStateSnapshot } from "../../../../src/v11/infrastructure/state/stateStore.js";
 import {
   readRemotePointer,
   readRemoteStateCache,
@@ -31,14 +31,7 @@ import {
 } from "../../../../src/v11/infrastructure/artifact/gates/docContractGateArtifacts.js";
 import { runGit as runGitCommand } from "../../../../src/v11/infrastructure/workspace/git.js";
 import { initGitRepository, runGit } from "../../../helpers/git.js";
-import { buildBubbleStateSnapshotVariant } from "../../../../src/v11/domain/state/snapshot/buildBubbleStateSnapshot.js";
-// Step 4b-γ/4 transitional: 4b-γ/5 cleanup target.
-const writeStateSnapshot = (
-  statePath: Parameters<typeof rawWriteStateSnapshot>[0],
-  state: unknown,
-  options?: Parameters<typeof rawWriteStateSnapshot>[2]
-): ReturnType<typeof rawWriteStateSnapshot> => rawWriteStateSnapshot(statePath, buildBubbleStateSnapshotVariant(state as PersistedBubbleStateSnapshot), options);
-
+import { writeStateSnapshotFixture as writeStateSnapshot } from "../../../helpers/stateSnapshot.js";
 const tempDirs: string[] = [];
 
 async function createTempRepo(prefix: string = "pairflow-start-remote-exec-"): Promise<string> {

@@ -20,10 +20,7 @@ import {
   writeRemotePointer
 } from "../../../src/v11/infrastructure/artifact/bubble/remoteExecutionArtifacts.js";
 import { appendProtocolEnvelope } from "../../../src/v11/infrastructure/artifact/transcript/transcriptStore.js";
-import {
-  readStateSnapshot,
-  writeStateSnapshot as rawWriteStateSnapshot
-} from "../../../src/v11/infrastructure/state/stateStore.js";
+import { readStateSnapshot } from "../../../src/v11/infrastructure/state/stateStore.js";
 import { statusCommandDependencyDefaults } from "../../../src/v11/defaults/status/statusCommandDependencyDefaults.js";
 import { writeWatchdogPaneActivity } from "../../../src/v11/infrastructure/artifact/watchdog/watchdogPaneActivityStore.js";
 import { buildMetaReviewExecutionContext } from "../../../src/v11/shared/metaReview/metaReviewExecutionContext.js";
@@ -32,15 +29,7 @@ import { metaReviewExecutionContextToRunningContext } from "../../../src/v11/dom
 import * as watchdogStatusModule from "../../../src/v11/shared/watchdog/watchdogStatus.js";
 import { initGitRepository } from "../../helpers/git.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
-import { buildBubbleStateSnapshotVariant } from "../../../src/v11/domain/state/snapshot/buildBubbleStateSnapshot.js";
-import type { PersistedBubbleStateSnapshot } from "../../../src/v11/domain/state/snapshot/persistedBubbleStateSnapshot.js";
-// Step 4b-γ/4 transitional: 4b-γ/5 cleanup target.
-const writeStateSnapshot = (
-  statePath: Parameters<typeof rawWriteStateSnapshot>[0],
-  state: unknown,
-  options?: Parameters<typeof rawWriteStateSnapshot>[2]
-): ReturnType<typeof rawWriteStateSnapshot> => rawWriteStateSnapshot(statePath, buildBubbleStateSnapshotVariant(state as PersistedBubbleStateSnapshot), options);
-
+import { writeStateSnapshotFixture as writeStateSnapshot } from "../../helpers/stateSnapshot.js";
 const tempDirs: string[] = [];
 
 function getBubbleStatus(input: BubbleStatusInput) {
