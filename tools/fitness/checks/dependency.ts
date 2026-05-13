@@ -23,6 +23,7 @@ interface DependencyViolation {
     | "anti_circumvention_reexport"
     | "anti_circumvention_wrapper"
     | "forbidden_process_runtime_import"
+    | "legacy_protocol_facade_import"
     | "shared_promotion_single_lane"
     | "shared_lifecycle_policy"
     | "ownership_signal_shared_infra";
@@ -850,6 +851,64 @@ function detectForbiddenProcessRuntimeImports(input: {
   return violations;
 }
 
+function resolveImportSpecifierToRepoPath(input: {
+  importerPath: string;
+  repoRoot: string;
+  specifier: string;
+}): string | undefined {
+  if (!input.specifier.startsWith(".")) {
+    return undefined;
+  }
+
+  const resolvedPath = resolve(dirname(input.importerPath), input.specifier);
+  const resolvedExt = extname(resolvedPath);
+  const candidate =
+    resolvedExt === ".js" || resolvedExt === ".mjs" || resolvedExt === ".cjs"
+      ? `${resolvedPath.slice(0, -resolvedExt.length)}.ts`
+      : resolvedPath;
+  return normalizePathToPosix(relative(input.repoRoot, candidate));
+}
+
+function detectLegacyProtocolFacadeImports(input: {
+  repoRoot: string;
+  files: readonly string[];
+  sourceByPath: ReadonlyMap<string, string>;
+}): DependencyViolation[] {
+  const violations: DependencyViolation[] = [];
+
+  for (const filePath of input.files) {
+    const fromRelative = normalizePathToPosix(relative(input.repoRoot, filePath));
+    const sourceText = input.sourceByPath.get(filePath) ?? "";
+    const imports = parseImportSpecifiers({
+      filePath,
+      sourceText
+    });
+
+    for (const imported of imports) {
+      const importedPath = resolveImportSpecifierToRepoPath({
+        importerPath: filePath,
+        repoRoot: input.repoRoot,
+        specifier: imported.specifier
+      });
+      if (importedPath !== "src/types/protocol.ts") {
+        continue;
+      }
+
+      violations.push({
+        kind: "legacy_protocol_facade_import",
+        severity: "fail",
+        message:
+          `${fromRelative}:${String(imported.line)} legacy protocol facade import is forbidden in v11 production code; import the owning v11 protocol contract directly`,
+        fromRelative,
+        toRelative: importedPath,
+        cycleNodes: undefined
+      });
+    }
+  }
+
+  return violations;
+}
+
 const ownershipSignalMatchers: readonly {
   signal: string;
   matches: (sourceText: string) => boolean;
@@ -1172,6 +1231,11 @@ export async function buildDependencyCheckReport({
       sourceByPath
     }),
     ...detectForbiddenProcessRuntimeImports({
+      repoRoot,
+      files: availableFiles,
+      sourceByPath
+    }),
+    ...detectLegacyProtocolFacadeImports({
       repoRoot,
       files: availableFiles,
       sourceByPath

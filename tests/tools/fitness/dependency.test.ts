@@ -241,6 +241,43 @@ describe("dependency fitness check", () => {
     ).toBe(false);
   });
 
+  it("fails on v11 imports from the legacy protocol facade", async () => {
+    const repoRoot = await createTempRoot();
+    await writeRepoFile(
+      repoRoot,
+      "src/types/protocol.ts",
+      "export interface ProtocolEnvelope { id: string; }\n"
+    );
+    await writeRepoFile(
+      repoRoot,
+      "src/v11/application/handler.ts",
+      [
+        "import type { ProtocolEnvelope } from '../../types/protocol.js';",
+        "export type HandlerEnvelope = ProtocolEnvelope;"
+      ].join("\n")
+    );
+
+    const report = await buildDependencyCheckReport({
+      check: {
+        id: "dependency",
+        metric: "cycle and forbidden import direction detection",
+        mode: "report-only",
+        owner: "architecture",
+        scope: ["src/v11/**"],
+        exceptions: []
+      },
+      repoRoot,
+      fallbackMode: "report-only",
+    });
+
+    expect(report.status).toBe("fail");
+    expect(
+      report.details?.some((detail) =>
+        detail.includes("legacy protocol facade import is forbidden")
+      )
+    ).toBe(true);
+  });
+
   it("passes on shared to ports imports", async () => {
     const repoRoot = await createTempRoot();
     await writeRepoFile(
