@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { parseArgs } from "node:util";
 import type { AgentRole } from "../../../contracts/kernel/agentIdentity.js";
-import type { Finding } from "../../../types/findings.js";
+import type { Finding } from "../../../contracts/kernel/findings.js";
 import {
   isPassIntent,
   type PassIntent

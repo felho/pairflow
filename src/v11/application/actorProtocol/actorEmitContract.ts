@@ -7,7 +7,7 @@ import type {
 import type {
   MetaReviewRecommendation
 } from "../../shared/metaReview/metaReviewTypes.js";
-import type { Finding } from "../../../types/findings.js";
+import type { Finding } from "../../../contracts/kernel/findings.js";
 
 // New ActorOutputKind values are successor-owned, not local widenings.
 // If a future change needs a new output kind, activate the deferred `O3-T5`

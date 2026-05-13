@@ -7,7 +7,7 @@ import {
   type FindingLayer,
   type FindingPriority,
   type FindingTiming
-} from "../../../../../types/findings.js";
+} from "../../../../../contracts/kernel/findings.js";
 import { normalizeEvidenceRefs } from "./docContractReviewerGateEvidence.js";
 import { evaluateReviewerFindingPolicy } from "./docContractReviewerGatePolicy.js";
 

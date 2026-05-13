@@ -24,6 +24,8 @@ interface DependencyViolation {
     | "anti_circumvention_wrapper"
     | "forbidden_process_runtime_import"
     | "legacy_protocol_facade_import"
+    | "protocol_contract_transitional_findings_import"
+    | "v11_transitional_findings_import"
     | "shared_promotion_single_lane"
     | "shared_lifecycle_policy"
     | "ownership_signal_shared_infra";
@@ -909,6 +911,94 @@ function detectLegacyProtocolFacadeImports(input: {
   return violations;
 }
 
+function detectProtocolContractTransitionalFindingsImports(input: {
+  repoRoot: string;
+  files: readonly string[];
+  sourceByPath: ReadonlyMap<string, string>;
+}): DependencyViolation[] {
+  const violations: DependencyViolation[] = [];
+
+  for (const filePath of input.files) {
+    const fromRelative = normalizePathToPosix(relative(input.repoRoot, filePath));
+    if (fromRelative !== "src/v11/shared/protocol/protocolEnvelopeContract.ts") {
+      continue;
+    }
+
+    const sourceText = input.sourceByPath.get(filePath) ?? "";
+    const imports = parseImportSpecifiers({
+      filePath,
+      sourceText
+    });
+
+    for (const imported of imports) {
+      const importedPath = resolveImportSpecifierToRepoPath({
+        importerPath: filePath,
+        repoRoot: input.repoRoot,
+        specifier: imported.specifier
+      });
+      if (importedPath !== "src/types/findings.ts") {
+        continue;
+      }
+
+      violations.push({
+        kind: "protocol_contract_transitional_findings_import",
+        severity: "fail",
+        message:
+          `${fromRelative}:${String(imported.line)} protocol envelope contract must import findings from the kernel owner, not the transitional src/types/findings.ts facade`,
+        fromRelative,
+        toRelative: importedPath,
+        cycleNodes: undefined
+      });
+    }
+  }
+
+  return violations;
+}
+
+function detectV11TransitionalFindingsImports(input: {
+  repoRoot: string;
+  files: readonly string[];
+  sourceByPath: ReadonlyMap<string, string>;
+}): DependencyViolation[] {
+  const violations: DependencyViolation[] = [];
+
+  for (const filePath of input.files) {
+    const fromRelative = normalizePathToPosix(relative(input.repoRoot, filePath));
+    if (!fromRelative.startsWith("src/v11/")) {
+      continue;
+    }
+
+    const sourceText = input.sourceByPath.get(filePath) ?? "";
+    const imports = parseImportSpecifiers({
+      filePath,
+      sourceText
+    });
+
+    for (const imported of imports) {
+      const importedPath = resolveImportSpecifierToRepoPath({
+        importerPath: filePath,
+        repoRoot: input.repoRoot,
+        specifier: imported.specifier
+      });
+      if (importedPath !== "src/types/findings.ts") {
+        continue;
+      }
+
+      violations.push({
+        kind: "v11_transitional_findings_import",
+        severity: "fail",
+        message:
+          `${fromRelative}:${String(imported.line)} v11 production code must import findings from src/contracts/kernel/findings.ts, not the transitional src/types/findings.ts facade`,
+        fromRelative,
+        toRelative: importedPath,
+        cycleNodes: undefined
+      });
+    }
+  }
+
+  return violations;
+}
+
 const ownershipSignalMatchers: readonly {
   signal: string;
   matches: (sourceText: string) => boolean;
@@ -1236,6 +1326,16 @@ export async function buildDependencyCheckReport({
       sourceByPath
     }),
     ...detectLegacyProtocolFacadeImports({
+      repoRoot,
+      files: availableFiles,
+      sourceByPath
+    }),
+    ...detectProtocolContractTransitionalFindingsImports({
+      repoRoot,
+      files: availableFiles,
+      sourceByPath
+    }),
+    ...detectV11TransitionalFindingsImports({
       repoRoot,
       files: availableFiles,
       sourceByPath

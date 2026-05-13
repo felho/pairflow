@@ -4,7 +4,7 @@ import type {
 import type {
   MetaReviewRecommendation
 } from "../../shared/metaReview/metaReviewTypes.js";
-import type { FindingPriority } from "../../../types/findings.js";
+import type { FindingPriority } from "../../../contracts/kernel/findings.js";
 import type {
   MetaReviewGateThresholdAuthorityResolution
 } from "./thresholdAuthorityResolution.js";

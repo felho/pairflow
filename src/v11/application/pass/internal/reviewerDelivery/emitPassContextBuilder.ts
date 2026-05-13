@@ -1,5 +1,5 @@
 import type { AgentRole } from "../../../../../contracts/kernel/agentIdentity.js";
-import type { Finding } from "../../../../../types/findings.js";
+import type { Finding } from "../../../../../contracts/kernel/findings.js";
 import type { PassIntent } from "../../../../../contracts/kernel/protocol.js";
 import {
   type ActorEmitContextSnapshot

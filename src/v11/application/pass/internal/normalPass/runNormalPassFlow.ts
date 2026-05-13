@@ -1,7 +1,7 @@
 import type { ReviewerTestExecutionDirective } from "../../../../shared/reviewer/testEvidence.js";
 import type { DeliveryAck } from "../../../../ports/tmuxDelivery.js";
 import type { LoadedStateSnapshot } from "../../../../ports/stateSnapshots.js";
-import type { Finding } from "../../../../../types/findings.js";
+import type { Finding } from "../../../../../contracts/kernel/findings.js";
 import type { ProtocolEnvelope } from "../../../../shared/protocol/protocolEnvelopeContract.js";
 import type {
   RunNormalPassFlowDependencies,

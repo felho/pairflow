@@ -3,7 +3,7 @@ import type {
   FindingLayer,
   FindingPriority,
   FindingTiming
-} from "../../../../../types/findings.js";
+} from "../../../../../contracts/kernel/findings.js";
 
 interface CreateGateWarningInput {
   gateId: string;

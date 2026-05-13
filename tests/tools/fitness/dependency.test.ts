@@ -278,6 +278,80 @@ describe("dependency fitness check", () => {
     ).toBe(true);
   });
 
+  it("fails when protocol envelope contract imports the transitional findings facade", async () => {
+    const repoRoot = await createTempRoot();
+    await writeRepoFile(
+      repoRoot,
+      "src/types/findings.ts",
+      "export interface Finding { title: string; }\n"
+    );
+    await writeRepoFile(
+      repoRoot,
+      "src/v11/shared/protocol/protocolEnvelopeContract.ts",
+      [
+        "import type { Finding } from '../../../types/findings.js';",
+        "export interface ProtocolEnvelopePayload { findings?: Finding[]; }"
+      ].join("\n")
+    );
+
+    const report = await buildDependencyCheckReport({
+      check: {
+        id: "dependency",
+        metric: "cycle and forbidden import direction detection",
+        mode: "report-only",
+        owner: "architecture",
+        scope: ["src/v11/**"],
+        exceptions: []
+      },
+      repoRoot,
+      fallbackMode: "report-only",
+    });
+
+    expect(report.status).toBe("fail");
+    expect(
+      report.details?.some((detail) =>
+        detail.includes("protocol envelope contract must import findings from the kernel owner")
+      )
+    ).toBe(true);
+  });
+
+  it("fails when v11 production code imports the transitional findings facade", async () => {
+    const repoRoot = await createTempRoot();
+    await writeRepoFile(
+      repoRoot,
+      "src/types/findings.ts",
+      "export interface Finding { title: string; }\n"
+    );
+    await writeRepoFile(
+      repoRoot,
+      "src/v11/domain/pass/findingPolicy.ts",
+      [
+        "import type { Finding } from '../../../types/findings.js';",
+        "export type PolicyFinding = Finding;"
+      ].join("\n")
+    );
+
+    const report = await buildDependencyCheckReport({
+      check: {
+        id: "dependency",
+        metric: "cycle and forbidden import direction detection",
+        mode: "report-only",
+        owner: "architecture",
+        scope: ["src/v11/**"],
+        exceptions: []
+      },
+      repoRoot,
+      fallbackMode: "report-only",
+    });
+
+    expect(report.status).toBe("fail");
+    expect(
+      report.details?.some((detail) =>
+        detail.includes("v11 production code must import findings from src/contracts/kernel/findings.ts")
+      )
+    ).toBe(true);
+  });
+
   it("passes on shared to ports imports", async () => {
     const repoRoot = await createTempRoot();
     await writeRepoFile(

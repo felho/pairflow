@@ -4,7 +4,7 @@ import type {
   FindingLayer,
   FindingPriority,
   FindingTiming
-} from "../../../../../types/findings.js";
+} from "../../../../../contracts/kernel/findings.js";
 import { createGateWarning } from "../warnings/docContractReviewerGateWarnings.js";
 
 export interface ReviewerFindingPolicyOutcome {

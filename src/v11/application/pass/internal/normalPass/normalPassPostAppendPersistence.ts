@@ -1,7 +1,7 @@
 import type { ReviewVerificationInputResolution } from "../../../../shared/reviewer/reviewVerification.js";
 import type { BubbleConfig } from "../../../../shared/config/bubbleConfigTypes.js";
 import type { BubbleStateSnapshot } from "../../../../domain/state/snapshot/bubbleStateSnapshot.js";
-import type { Finding } from "../../../../../types/findings.js";
+import type { Finding } from "../../../../../contracts/kernel/findings.js";
 import type { ResolvedPassHandoff } from "../../../../domain/pass/handoff.js";
 import type { LoadedStateSnapshot } from "../../../../ports/stateSnapshots.js";
 import type { evaluateReviewerGateWarnings } from "../../../../shared/gates/docContractGates.js";

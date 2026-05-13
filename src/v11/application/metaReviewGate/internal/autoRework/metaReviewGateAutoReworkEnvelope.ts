@@ -4,7 +4,7 @@ import type {
 } from "../../../../ports/transcript.js";
 import type { LoadedStateSnapshot } from "../../../../ports/stateSnapshots.js";
 import type { AgentName } from "../../../../../contracts/kernel/agentIdentity.js";
-import type { Finding } from "../../../../../types/findings.js";
+import type { Finding } from "../../../../../contracts/kernel/findings.js";
 import {
   deliveryTargetRoleMetadataKey
 } from "../../../../shared/delivery/deliveryTargetMetadataContract.js";

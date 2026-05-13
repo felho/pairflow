@@ -8,7 +8,7 @@ import type {
 import type {
   RoundRoleHistoryEntry
 } from "../../domain/state/snapshot/roundRoleHistory.js";
-import type { FindingPriority } from "../../../types/findings.js";
+import type { FindingPriority } from "../../../contracts/kernel/findings.js";
 import type {
   ProtocolEnvelope
 } from "../../shared/protocol/protocolEnvelopeContract.js";

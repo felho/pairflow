@@ -10,7 +10,7 @@ import {
   isFindingLayer,
   isFindingPriority,
   isFindingTiming
-} from "../../../../types/findings.js";
+} from "../../../../contracts/kernel/findings.js";
 import type { StateValidationDiagnostics } from "../../../ports/stateSnapshots.js";
 import {
   normalizeMetaReviewRuntimeDeliveryCorrelation

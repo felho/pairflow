@@ -1,5 +1,5 @@
 import { isRecord } from "../../shared/validation/primitives.js";
-import { resolveFindingPriority } from "../../../types/findings.js";
+import { resolveFindingPriority } from "../../../contracts/kernel/findings.js";
 import { resolveNonNegativeIntegerField } from "./findingsClaimParsing.js";
 
 export interface FindingsOpenSplit {

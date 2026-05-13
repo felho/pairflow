@@ -3,7 +3,7 @@ import type {
   BubbleRoundGateState,
   BubbleSpecLockState
 } from "../../gateStateTypes.js";
-import type { Finding } from "../../../../../types/findings.js";
+import type { Finding } from "../../../../../contracts/kernel/findings.js";
 import {
   evaluateReviewerFinding,
   type GateFindingEvaluation

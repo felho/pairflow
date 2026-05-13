@@ -1,4 +1,4 @@
-import type { Finding } from "../../../../../types/findings.js";
+import type { Finding } from "../../../../../contracts/kernel/findings.js";
 import { isNonEmptyString } from "../../../validation/primitives.js";
 
 export function normalizeEvidenceRefs(finding: Finding): string[] {

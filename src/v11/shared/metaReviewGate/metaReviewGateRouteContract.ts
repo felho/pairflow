@@ -2,7 +2,7 @@ import type {
   BubbleReviewAutoReworkSeverity
 } from "../reviewPolicy/reviewPolicyTypes.js";
 import type { BubbleLifecycleState } from "../../../contracts/kernel/lifecycle.js";
-import type { FindingPriority } from "../../../types/findings.js";
+import type { FindingPriority } from "../../../contracts/kernel/findings.js";
 
 export type MetaReviewGateThresholdStatus =
   | "not_met"

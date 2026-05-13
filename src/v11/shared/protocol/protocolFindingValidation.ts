@@ -1,4 +1,4 @@
-import { type Finding } from "../../../types/findings.js";
+import { type Finding } from "../../../contracts/kernel/findings.js";
 import { isRecord, type ValidationError } from "../validation/primitives.js";
 import {
   buildValidatedFinding,

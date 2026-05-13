@@ -1,4 +1,4 @@
-import { isFindingSeverity, type FindingSeverity } from "../../../../types/findings.js";
+import { isFindingSeverity, type FindingSeverity } from "../../../../contracts/kernel/findings.js";
 import { isLikelyStructuredRef } from "../../../../v11/shared/reference/structuredRef.js";
 
 export interface ParsedCliFinding {

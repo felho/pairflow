@@ -5,7 +5,7 @@ import type {
   RepeatCleanAutoconvergeReasonCode,
   RepeatCleanAutoconvergeReasonDetail
 } from "../../../../domain/convergence/repeatCleanAutoconverge.js";
-import type { Finding } from "../../../../../types/findings.js";
+import type { Finding } from "../../../../../contracts/kernel/findings.js";
 import type { PassIntent } from "../../../../../contracts/kernel/protocol.js";
 import type { ProtocolEnvelope } from "../../../../shared/protocol/protocolEnvelopeContract.js";
 import { buildPassEnvelopeDraft } from "../../../../domain/pass/passEnvelopeDraft.js";

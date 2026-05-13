@@ -1,4 +1,4 @@
-import { resolveFindingPriority, type FindingPriority } from "../../../types/findings.js";
+import { resolveFindingPriority, type FindingPriority } from "../../../contracts/kernel/findings.js";
 import type { FindingsParityMetadata } from "../../shared/metaReviewGate/findingsParityMetadataContract.js";
 import { isRecord } from "../../shared/validation/primitives.js";
 import { buildFindingsParityMetadata } from "./findingsParityMetadata.js";

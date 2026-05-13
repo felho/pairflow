@@ -5,7 +5,7 @@ import {
   isFindingTiming,
   resolveFindingPriority,
   type FindingPriority
-} from "../../../types/findings.js";
+} from "../../../contracts/kernel/findings.js";
 import { isRecord } from "../../shared/validation/primitives.js";
 import type { ReviewerFindingsAggregate } from "./policyTypes.js";
 

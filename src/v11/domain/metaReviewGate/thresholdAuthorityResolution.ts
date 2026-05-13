@@ -1,4 +1,4 @@
-import type { FindingPriority } from "../../../types/findings.js";
+import type { FindingPriority } from "../../../contracts/kernel/findings.js";
 import type { FindingsParityMetadata } from "../../shared/metaReviewGate/findingsParityMetadataContract.js";
 
 export const REVIEW_POLICY_THRESHOLD_SOURCE_UNRESOLVED =

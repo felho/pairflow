@@ -5,7 +5,7 @@ import {
   isDocContractGateScopeActive
 } from "../../../../shared/gates/docContractGates.js";
 import type { ReviewArtifactType } from "../../../../shared/config/bubbleConfigVocabulary.js";
-import type { Finding } from "../../../../../types/findings.js";
+import type { Finding } from "../../../../../contracts/kernel/findings.js";
 
 export interface PrepareNormalPassAppendInput {
   senderRole: "implementer" | "reviewer";

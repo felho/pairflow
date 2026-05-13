@@ -465,7 +465,10 @@ export {
   qualityModes,
   workModes
 } from "./v11/shared/config/bubbleConfigVocabulary.js";
-export { findingSeverities, isFindingSeverity } from "./types/findings.js";
+export {
+  findingSeverities,
+  isFindingSeverity
+} from "./contracts/kernel/findings.js";
 export {
   approvalDecisions,
   isApprovalDecision,
@@ -735,7 +738,10 @@ export type {
   WorktreeBootstrapInput,
   WorktreeBootstrapResult
 } from "./v11/infrastructure/workspace/worktreeManager.js";
-export type { Finding, FindingSeverity } from "./types/findings.js";
+export type {
+  Finding,
+  FindingSeverity
+} from "./contracts/kernel/findings.js";
 export type {
   ProtocolSequenceAllocationOptions,
   ProtocolSequenceAllocation

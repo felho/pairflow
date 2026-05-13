@@ -9,7 +9,7 @@ import {
   resolveFindingPriority,
   type Finding,
   type FindingPriority
-} from "../../../types/findings.js";
+} from "../../../contracts/kernel/findings.js";
 import type { PassIntent } from "../../../contracts/kernel/protocol.js";
 import {
   evaluatePositiveSummaryFindingsAssertion,

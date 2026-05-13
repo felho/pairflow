@@ -5,7 +5,7 @@ import {
   isFindingSeverity,
   isFindingTiming,
   type Finding
-} from "../../../types/findings.js";
+} from "../../../contracts/kernel/findings.js";
 
 function resolveStringArray(value: unknown): string[] | undefined {
   if (!Array.isArray(value)) {

@@ -1,5 +1,5 @@
 import { normalizeReviewerFindingsPayload } from "../../../../domain/pass/reviewerFindingsPayload.js";
-import type { Finding } from "../../../../../types/findings.js";
+import type { Finding } from "../../../../../contracts/kernel/findings.js";
 
 export interface NormalizePassCommandPayloadInput {
   findings: unknown;

@@ -11,13 +11,13 @@ import type {
   ProtocolEnvelope,
   ProtocolEnvelopePayload
 } from "../../../shared/protocol/protocolEnvelopeContract.js";
-import type { Finding } from "../../../../types/findings.js";
+import type { Finding } from "../../../../contracts/kernel/findings.js";
 import {
   isFindingLayer,
   isFindingPriority,
   isFindingSeverity,
   isFindingTiming
-} from "../../../../types/findings.js";
+} from "../../../../contracts/kernel/findings.js";
 import {
   isApprovalDecision,
   isFindingsClaimSource,

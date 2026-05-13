@@ -1,5 +1,5 @@
 import { resolveLegacySummaryFindingsClaimState } from "../convergence/policy.js";
-import type { Finding } from "../../../types/findings.js";
+import type { Finding } from "../../../contracts/kernel/findings.js";
 import type {
   FindingsClaimSource,
   FindingsClaimState

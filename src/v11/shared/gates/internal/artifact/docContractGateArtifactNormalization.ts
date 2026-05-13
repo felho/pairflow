@@ -7,7 +7,7 @@ import {
   isFindingLayer,
   isFindingPriority,
   isFindingTiming
-} from "../../../../../types/findings.js";
+} from "../../../../../contracts/kernel/findings.js";
 import { isNonEmptyString, isRecord } from "../../../validation/primitives.js";
 import type {
   DocContractGateArtifact

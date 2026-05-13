@@ -3,7 +3,7 @@ import type {
   RepeatCleanAutoconvergeReasonDetail
 } from "../convergence/repeatCleanAutoconverge.js";
 import type { ReviewerTestExecutionDirective } from "../../shared/reviewer/testEvidence.js";
-import type { Finding } from "../../../types/findings.js";
+import type { Finding } from "../../../contracts/kernel/findings.js";
 import type { PassIntent } from "../../../contracts/kernel/protocol.js";
 import type { AgentName } from "../../../contracts/kernel/agentIdentity.js";
 import type { PassRecipientRole } from "./handoff.js";

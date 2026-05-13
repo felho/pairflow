@@ -1,4 +1,4 @@
-import { resolveFindingPriority, type Finding } from "../../../types/findings.js";
+import { resolveFindingPriority, type Finding } from "../../../contracts/kernel/findings.js";
 
 export interface FindingCounts {
   p0: number;

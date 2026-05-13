@@ -5,7 +5,7 @@ import {
   isFindingTiming,
   resolveFindingPriority,
   type Finding
-} from "../../../types/findings.js";
+} from "../../../contracts/kernel/findings.js";
 
 export interface NormalizedReviewerFindingsPayload {
   findings: Finding[];

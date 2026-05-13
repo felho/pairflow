@@ -13,7 +13,7 @@ import {
   type Finding,
   type FindingLayer,
   type FindingTiming
-} from "../../../types/findings.js";
+} from "../../../contracts/kernel/findings.js";
 import {
   buildLegacyActorCommandRemovedError,
   isLegacyActorCommandHelpRequest

@@ -1,6 +1,6 @@
 import { readTranscriptEnvelopes } from "../../startCommandDependencyDefaults.js";
-import type { Finding } from "../../../../../types/findings.js";
-import { resolveFindingPriority } from "../../../../../types/findings.js";
+import type { Finding } from "../../../../../contracts/kernel/findings.js";
+import { resolveFindingPriority } from "../../../../../contracts/kernel/findings.js";
 import {
   isFindingsClaimSource,
   isFindingsClaimState
