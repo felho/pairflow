@@ -43,7 +43,7 @@ restructuring opportunity).
 | actorProtocol | 1 | yes | 3 | yes | — | — | structured non-bubble command (agent-emit dispatcher; Cluster B extracted 2026-05-11, Phase 2 internalized 2026-05-13) |
 | restart | 3 | yes | 4 | yes | yes | — | structured (Tier 2; refactored 2026-05-11) |
 | reconcile | 3 | yes | 3 | yes | yes | — | structured (Tier 2; refactored 2026-05-11) |
-| start | 9 | yes | 3 | yes | yes | 4 | structured (Tier 2-ish) |
+| start | 6 | yes | 3 | yes | yes | 4 | structured (Tier 2-ish) |
 | metaReview | 3 | yes | 2 | yes | — | — | structured (Tier 2; refactored 2026-05-13) |
 | reply | 2 | yes | 2 | no | yes | — | structured (Tier 2; refactored 2026-05-11) |
 | attach | 6 | no | — | — | yes | 15 | unstructured |
@@ -59,8 +59,8 @@ restructuring opportunity).
 | askHuman | 2 | yes | 3 | — | yes | -2 | structured (Tier 2) |
 | gates | 2 | no | — | — | — | -2 | small unstructured |
 | inbox | 2 | no | — | — | — | 2 | small unstructured |
-| planWatch | 2 | yes | 3 | yes | — | 0 | structured (Tier 3, empty stub dirs) |
-| converged | 1 | yes | 5 | yes | yes | 0 | structured (Tier 2) |
+| planWatch | 2 | yes | 1 | yes | — | 0 | structured (Tier 3; named lane submodules + internal/loop) |
+| converged | 2 | yes | 5 | yes | yes | 0 | structured (Tier 2) |
 | create | 1 | yes | 4 | yes | yes | 0 | structured (Tier 2) |
 | metrics | 1 | no | — | yes | yes | 0 | trivial |
 
@@ -114,8 +114,9 @@ heuristic for how much modularization the lane needs.
 
 Already minimal. No restructuring needed.
 
-- **converged** — 1 top-level (`convergedCommandOrchestration.ts`), already
-  has `internal/{finalization,flow,gate,orchestration,validation}/`.
+- **converged** — 2 top-level (`convergedCommandOrchestration.ts`,
+  `convergedDependencyDefaults.ts`), already has
+  `internal/{finalization,flow,gate,orchestration,validation}/`.
 - **create** — 1 top-level, has `internal/{finalization,persistence,preparation,runtime}/`.
 - **metrics** — 1 top-level. No internal/ but no need (single small file).
 - **planWatch** — 2 top-level (after narrowing) plus 3 lane-internal-but-named
@@ -149,7 +150,7 @@ error + a few orchestration-adjacent files.
 
 Already-structured Tier 2:
 
-- **start** — top: 9, internal: `prompts/`, `remote/`, `runtime/` (23 files).
+- **start** — top: 6, internal: `prompts/`, `remote/`, `runtime/` (23 files).
 - **pass** — top: 4, internal: `autoConverge/`, `normalPass/`, `reviewerDelivery/`,
   `verification/` (38 files). Among the cleanest.
 - **kickoff** — top: 3 (`emit`, `cli`, `runFlow`), internal: `eligibility/`,
@@ -326,10 +327,9 @@ from-scratch cases:
 
 Unstructured (no internal/ at all):
 
-- (none — all formerly unstructured Tier 1 lanes are listed under their
-  current refactored shape; the remaining 3–7-top-level lanes without
-  `internal/` are `attach`, `delete`, and `open`, which are
-  listed in their Tier 1 inventory rows above.)
+- The remaining 3–7-top-level lanes without `internal/` are `attach`,
+  `open`, `resume`, and `stop`, which are listed in their Tier 1 inventory
+  rows above. `gates` and `inbox` remain below the restructuring threshold.
 
 ### Tier 3 — Coordinator (lane-internal-but-named submodules)
 
