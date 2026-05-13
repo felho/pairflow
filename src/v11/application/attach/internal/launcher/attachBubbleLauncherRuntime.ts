@@ -1,11 +1,11 @@
-import type { AttachLauncher } from "../../shared/bubbleAttachment/attachLauncherTypes.js";
-import { shellQuote } from "../../shared/foundation/shellQuote.js";
+import type { AttachLauncher } from "../../../../shared/bubbleAttachment/attachLauncherTypes.js";
+import { shellQuote } from "../../../../shared/foundation/shellQuote.js";
 import type {
   ExplicitAttachLauncher,
   GuiAttachLauncher,
   LauncherAvailabilityChecker
-} from "./attachBubbleContract.js";
-import { AttachBubbleError as AttachBubbleErrorClass } from "./attachBubbleContract.js";
+} from "../../attachBubbleContract.js";
+import { AttachBubbleError as AttachBubbleErrorClass } from "../../attachBubbleContract.js";
 import {
   launchGuiLauncher,
   normalizeLauncherError,

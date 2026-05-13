@@ -1,11 +1,11 @@
 import { join } from "node:path";
 
-import { shellQuote } from "../../shared/foundation/shellQuote.js";
+import { shellQuote } from "../../../../shared/foundation/shellQuote.js";
 import type {
   AttachCommandExecutor,
   GuiAttachLauncher,
   LauncherAvailabilityChecker
-} from "./attachBubbleContract.js";
+} from "../../attachBubbleContract.js";
 
 const launcherApplicationNames: Record<GuiAttachLauncher, string> = {
   warp: "Warp",

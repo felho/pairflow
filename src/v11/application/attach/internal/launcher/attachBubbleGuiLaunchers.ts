@@ -1,15 +1,15 @@
 import { homedir } from "node:os";
 import { join } from "node:path";
 
-import { shellQuote } from "../../shared/foundation/shellQuote.js";
+import { shellQuote } from "../../../../shared/foundation/shellQuote.js";
 import type {
   AttachBubbleError,
   AttachBubbleReasonCode,
   AttachCommandExecutor,
   ExplicitAttachLauncher,
   GuiAttachLauncher
-} from "./attachBubbleContract.js";
-import { AttachBubbleError as AttachBubbleErrorClass } from "./attachBubbleContract.js";
+} from "../../attachBubbleContract.js";
+import { AttachBubbleError as AttachBubbleErrorClass } from "../../attachBubbleContract.js";
 
 export interface AttachLaunchContext {
   tmuxSessionName: string;

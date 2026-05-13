@@ -430,9 +430,9 @@ collapses to when no naming-role exception fires.
 
 ### Worked examples
 
-Eleven lane refactors have applied this procedure end-to-end. Five
-started from a half-done state and ended at structured Tier 2; six
-(`restart`, `reconcile`, `watchdog`, `status`, `reply`, `open`) started from
+Twelve lane refactors have applied this procedure end-to-end. Five
+started from a half-done state and ended at structured Tier 2; seven
+(`restart`, `reconcile`, `watchdog`, `status`, `reply`, `open`, `attach`) started from
 fully flat (or near-flat) lanes and validated the from-scratch
 procedure variant. The first five worked examples each document one
 or more naming-role exceptions (signature-reference type, cross-lane
@@ -1921,15 +1921,17 @@ Findings worth carrying forward:
   application lane's Contract pinning another application lane's
   Contract through real signature parameters; previous
   signature-reference cases (`list`) were intra-lane.
-- **Sample size 6 saturates the from-scratch exception catalog.**
-  Six from-scratch refactors have now landed (restart, reconcile,
-  watchdog, status, reply, open). Exception firing across the sample:
+- **Sample size 7 saturates the from-scratch exception catalog.**
+  Seven from-scratch refactors have now landed (restart, reconcile,
+  watchdog, status, reply, open, attach). Exception firing across the sample:
   0 new (restart), 1 new (reconcile), 3 new + 1 re-fire
   (watchdog), 0 new (status — eight-variant catalog held), 0 new
   + 1 cross-lane re-fire (reply — eight-variant catalog held
   again, list's signature-reference re-fired cross-lane), 0 new
   (open — the catalog still held; the only wrinkle was preserving
-  an existing package-barrel export through a root façade). The
+  an existing package-barrel export through a root façade), 0 new
+  (attach — same façade preservation pattern, with an already-split
+  root Contract). The
   eight-variant exception catalog from watchdog
   (signature-reference type, cross-lane split-extraction,
   type-relocation [out-of-Contract], type-relocation via `typeof`
@@ -1970,6 +1972,13 @@ Findings worth carrying forward:
   the same Module Depth principle as the status CLI barrel: public
   callers keep crossing the lane root, while implementation files
   become lane-private.
+- **Pre-existing Contract makes the from-scratch path more
+  mechanical.** Attach followed open's façade-preserving shape but
+  did not need a contract hoist: `attachBubbleContract.ts` was
+  already a root-public dependency/result surface. The implementation
+  split therefore collapsed to two concern moves (`runtime/` and
+  `launcher/`) while keeping `attachBubble.ts` as the package-facing
+  façade.
 
 ## Module Depth Check applies
 
