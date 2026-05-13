@@ -7,7 +7,7 @@ import type {
 } from "./deliveryTargetMetadataContract.js";
 import type {
   ProtocolEnvelope
-} from "../../../types/protocol.js";
+} from "../protocol/protocolEnvelopeContract.js";
 import type { ReviewerTestExecutionDirective } from "../reviewer/testEvidence.js";
 import type { ReviewerFocusExtractionResult } from "../reviewer/reviewerBrief.js";
 

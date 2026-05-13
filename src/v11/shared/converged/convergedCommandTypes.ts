@@ -5,7 +5,9 @@ import type { EmitBubbleNotification } from "../delivery/bubbleNotificationContr
 import type {
   EmitDeliveryNotificationAckPort
 } from "../../ports/tmuxDelivery.js";
-import type { ProtocolEnvelope } from "../../../types/protocol.js";
+import type {
+  ProtocolEnvelope
+} from "../protocol/protocolEnvelopeContract.js";
 import type { MetaReviewGateRoute } from "../metaReviewGate/index.js";
 import type {
   ApplyMetaReviewGateOnConvergencePort

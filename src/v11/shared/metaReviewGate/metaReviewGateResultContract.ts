@@ -1,5 +1,7 @@
 import type { BubbleStateSnapshot } from "../../domain/state/snapshot/bubbleStateSnapshot.js";
-import type { ProtocolEnvelope } from "../../../types/protocol.js";
+import type {
+  ProtocolEnvelope
+} from "../protocol/protocolEnvelopeContract.js";
 import type { MetaReviewResult } from "../metaReview/metaReviewTypes.js";
 import type { MetaReviewGateRoute } from "./metaReviewGateRouteContract.js";
 

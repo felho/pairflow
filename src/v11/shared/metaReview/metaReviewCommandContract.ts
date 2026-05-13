@@ -1,7 +1,7 @@
 import type { BubbleLifecycleState } from "../../../contracts/kernel/lifecycle.js";
 import type {
   ProtocolEnvelope
-} from "../../../types/protocol.js";
+} from "../protocol/protocolEnvelopeContract.js";
 import type { MetaReviewGateRoute } from "../metaReviewGate/index.js";
 import type {
   DeliveryAck,
