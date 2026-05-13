@@ -7,9 +7,6 @@ import type {
   ProtocolParticipant
 } from "../contracts/kernel/protocol.js";
 import type {
-  MetaReviewRecommendation
-} from "../v11/shared/metaReview/metaReviewTypes.js";
-import type {
   FindingsParityMetadata
 } from "../v11/shared/metaReviewGate/findingsParityMetadataContract.js";
 import type { Finding } from "./findings.js";
@@ -55,6 +52,12 @@ export type {
   MetaReviewResultActorEmitInput,
   PassActorEmitInput
 } from "../v11/application/actorProtocol/actorEmitContract.js";
+// Transitional compatibility surface. Meta-review submit ownership lives in
+// v11/shared/metaReview; keep this export until legacy protocol imports are
+// migrated.
+export type {
+  MetaReviewSubmissionPayload
+} from "../v11/shared/metaReview/metaReviewSubmissionContract.js";
 
 export const legacyMetaReviewerProtocolRecipient = "meta-reviewer" as const;
 export type LegacyMetaReviewerProtocolRecipient =
@@ -92,15 +95,6 @@ export interface ProtocolEnvelope {
   round: number;
   payload: ProtocolEnvelopePayload;
   refs: string[];
-}
-
-export interface MetaReviewSubmissionPayload {
-  bubble_id: string;
-  round: number;
-  recommendation: MetaReviewRecommendation;
-  summary: string;
-  rework_target_message?: string | null;
-  report_json: Record<string, unknown>;
 }
 
 export function isLegacyMetaReviewerProtocolRecipient(

@@ -1,4 +1,6 @@
-import type { MetaReviewSubmissionPayload } from "../../../../../types/protocol.js";
+import type {
+  MetaReviewSubmissionPayload
+} from "../../../../shared/metaReview/metaReviewSubmissionContract.js";
 
 type RaiseInvalidMetaReviewOption = (message: string) => never;
 

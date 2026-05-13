@@ -1,6 +1,5 @@
 import type { BubbleLifecycleState } from "../../../contracts/kernel/lifecycle.js";
 import type {
-  MetaReviewSubmissionPayload,
   ProtocolEnvelope
 } from "../../../types/protocol.js";
 import type { MetaReviewGateRoute } from "../metaReviewGate/index.js";
@@ -11,6 +10,9 @@ import type {
 } from "../delivery/tmuxDeliveryContract.js";
 import type { MetaReviewArtifactReadPort } from "./metaReviewArtifactIo.js";
 import type { MetaReviewResult } from "./metaReviewTypes.js";
+import type {
+  MetaReviewSubmissionPayload
+} from "./metaReviewSubmissionContract.js";
 import type {
   AppendProtocolEnvelopePort,
   ReadTranscriptEnvelopesPort
