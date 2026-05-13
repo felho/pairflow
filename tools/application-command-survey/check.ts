@@ -34,6 +34,10 @@ export interface SurveyDriftReport {
 
 const defaultSurveyPath = "docs/refactoring/application-command-shapes-survey.md";
 
+// The survey's CLI column is intentionally descriptive: it captures whether a
+// lane is CLI-fronted or has lane-side CLI integration, not a filesystem fact.
+// This checker only verifies fields that can be derived mechanically.
+
 function parseBooleanCell(value: string): boolean {
   return value.trim() === "yes";
 }

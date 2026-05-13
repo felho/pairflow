@@ -22,7 +22,7 @@ is a manual freshness guard for those moments; it is intentionally not part of
 
 1. Listed every direct subdirectory of `src/v11/application/`.
 2. For each lane, recorded: top-level `.ts` count, `internal/` presence and
-   sub-areas, defaults presence, CLI presence.
+   sub-areas, defaults presence, and CLI-fronted usage.
 3. Read top-level filenames, line counts, and a sample of entry-point files
    (at the time of the original survey these were `emit<X>V11.ts` thin
    wrappers; the wrappers have since been removed in a codebase-wide V11
@@ -40,8 +40,12 @@ round of prioritization.
 ## Lane inventory (28 lanes)
 
 `Top` = top-level `.ts` files. `Int` = has `internal/`. `Sub` = `internal/`
-sub-area count. `Score` = lane structural audit score (higher = more
-restructuring opportunity).
+sub-area count. `Defaults` = `src/v11/defaults/<lane>/` exists. `CLI` =
+the lane is fronted by a CLI command or has application-side CLI integration.
+`CLI` is descriptive and manually classified; it does not necessarily mean a
+`src/cli/commands/**` file directly imports the lane root, and it is not
+checked by `pnpm survey:check`. `Score` = lane structural audit score
+(higher = more restructuring opportunity).
 
 | Lane | Top | Int | Sub | Defaults | CLI | Score | Status |
 |------|----:|:---:|----:|---------:|:---:|------:|--------|
