@@ -834,7 +834,7 @@ export type {
 export type {
   ProtocolEnvelope,
   ProtocolEnvelopePayload
-} from "./types/protocol.js";
+} from "./v11/shared/protocol/protocolEnvelopeContract.js";
 export type {
   ValidationError,
   ValidationFail,
