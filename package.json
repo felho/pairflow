@@ -21,6 +21,7 @@
   },
   "scripts": {
     "codegen:reviewer-ontology": "node ./scripts/generate-reviewer-severity-ontology.mjs",
+    "survey:check": "pnpm exec tsx ./tools/application-command-survey/check.ts",
     "fitness:report": "pnpm exec tsx ./tools/fitness/run-report.ts",
     "fitness:check": "pnpm exec tsx ./tools/fitness/run-check.ts",
     "fitness:check:ci": "bash ./scripts/fitness-check-ci.sh",

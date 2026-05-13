@@ -11,6 +11,8 @@ This document **describes what exists**. The template prescribes; this
 survey records the shape distribution that the template was written against.
 When a lane refactor lands, update the corresponding inventory row here so
 the data backing the template stays current.
+Run `pnpm survey:check` after structural lane changes to catch drift between
+the inventory table and the filesystem-derived lane shape.
 
 ## Method
 
