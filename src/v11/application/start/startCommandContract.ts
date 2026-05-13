@@ -30,6 +30,10 @@ import type {
 import type {
   ResolveReviewerTestExecutionDirectivePort
 } from "../../ports/reviewerTestEvidenceArtifacts.js";
+import type {
+  PrepareRemoteStartControlFilesPort,
+  RemoteStartControlFile
+} from "../../ports/remoteStartControlFiles.js";
 import type { RunGitPort } from "../../ports/git.js";
 import type { ProcessSpawnPort } from "../../ports/processSpawn.js";
 import type { buildResumeTranscriptSummary } from "./internal/prompts/startCommandResumeSummary.js";
@@ -68,10 +72,7 @@ export interface RemoteBubbleExecutionTarget {
   portForwards?: number[];
 }
 
-export interface RemoteStartControlFile {
-  relativePath: string;
-  content: string;
-}
+export type { RemoteStartControlFile };
 
 export interface ExecuteRemoteBubbleStartInput {
   bubbleId: string;
@@ -125,5 +126,6 @@ export interface StartBubbleDependencies {
   executeRemoteBubbleStart?:
     | ((input: ExecuteRemoteBubbleStartInput) => Promise<ExecuteRemoteBubbleStartResult>)
     | undefined;
+  prepareRemoteStartControlFiles?: PrepareRemoteStartControlFilesPort | undefined;
   reportWarning?: ((message: string) => void) | undefined;
 }

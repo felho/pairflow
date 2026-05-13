@@ -46,6 +46,9 @@ import type {
   ResolveReviewerTestExecutionDirectivePort
 } from "../../ports/reviewerTestEvidenceArtifacts.js";
 import type {
+  PrepareRemoteStartControlFilesPort
+} from "../../ports/remoteStartControlFiles.js";
+import type {
   ResolveBubbleFromWorkspaceCwdPort
 } from "../../ports/workspaceResolution.js";
 
@@ -112,6 +115,7 @@ export interface StartBubbleDependencyDefaults {
   executeRemoteBubbleStart: (
     input: ExecuteRemoteBubbleStartInput
   ) => Promise<ExecuteRemoteBubbleStartResult>;
+  prepareRemoteStartControlFiles: PrepareRemoteStartControlFilesPort;
   runTmux: TmuxRunner;
   readReviewerBriefArtifact: ReadReviewerBriefArtifactPort;
   readReviewerFocusArtifact: ReadReviewerFocusArtifactPort;

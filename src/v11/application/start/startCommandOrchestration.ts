@@ -29,6 +29,9 @@ import type {
 import type {
   ResolveReviewerTestExecutionDirectivePort
 } from "../../ports/reviewerTestEvidenceArtifacts.js";
+import type {
+  PrepareRemoteStartControlFilesPort
+} from "../../ports/remoteStartControlFiles.js";
 import {
   loadStartBubbleDependencyDefaults,
   type StartBubbleDependencyDefaults
@@ -73,6 +76,7 @@ export interface ResolvedStartBubbleDependencies {
     (path: string) => Promise<void>;
   executeRemoteBubbleStart:
     (input: ExecuteRemoteBubbleStartInput) => Promise<ExecuteRemoteBubbleStartResult>;
+  prepareRemoteStartControlFiles: PrepareRemoteStartControlFilesPort;
   reportWarning: (message: string) => void;
   buildResumeSummary:
     NonNullable<StartBubbleDependencies["buildResumeTranscriptSummary"]>;
@@ -142,7 +146,10 @@ function resolveRemoteExecutionDependencies(input: {
       ?? input.defaults.removeRemoteStateCache,
     executeRemoteBubbleStart:
       input.dependencies.executeRemoteBubbleStart
-      ?? input.defaults.executeRemoteBubbleStart
+      ?? input.defaults.executeRemoteBubbleStart,
+    prepareRemoteStartControlFiles:
+      input.dependencies.prepareRemoteStartControlFiles
+      ?? input.defaults.prepareRemoteStartControlFiles
   };
 }
 
@@ -263,4 +270,3 @@ export function mapStartBubbleResult(input: {
     runtimeWorkspacePath: input.runtimeWorkspacePath
   };
 }
-

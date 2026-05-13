@@ -16,6 +16,7 @@ import {
   writeRemoteStateCache as writeRemoteStateCacheCanonical
 } from "../../infrastructure/artifact/bubble/remoteExecutionArtifacts.js";
 import { executeRemoteBubbleStart as executeRemoteBubbleStartCanonical } from "../../infrastructure/executor/ssh/sshBubbleStart.js";
+import { prepareRemoteStartControlFiles as prepareRemoteStartControlFilesCanonical } from "../../infrastructure/artifact/bubble/remoteStartControlFiles.js";
 import { resolveRemoteBubbleStatusTarget as resolveRemoteBubbleStatusTargetCanonical } from "../../infrastructure/executor/ssh/sshBubbleStatus.js";
 import {
   readRuntimeSessionsRegistry as readRuntimeSessionsRegistryCanonical,
@@ -94,6 +95,9 @@ import type {
   ResolveReviewerTestExecutionDirectivePort
 } from "../../ports/reviewerTestEvidenceArtifacts.js";
 import type {
+  PrepareRemoteStartControlFilesPort
+} from "../../ports/remoteStartControlFiles.js";
+import type {
   ResolveBubbleFromWorkspaceCwdPort
 } from "../../ports/workspaceResolution.js";
 import type {
@@ -132,6 +136,7 @@ export interface StartBubbleDependencyDefaults {
   executeRemoteBubbleStart: (
     input: ExecuteRemoteBubbleStartInput
   ) => Promise<ExecuteRemoteBubbleStartResult>;
+  prepareRemoteStartControlFiles: PrepareRemoteStartControlFilesPort;
   runTmux: TmuxRunner;
   readReviewerBriefArtifact: ReadReviewerBriefArtifactPort;
   readReviewerFocusArtifact: ReadReviewerFocusArtifactPort;
@@ -180,6 +185,7 @@ export const startBubbleDependencyDefaults: StartBubbleDependencyDefaults = {
   writeRemoteStateCache: writeRemoteStateCacheCanonical,
   removeRemoteStateCache: removeRemoteStateCacheCanonical,
   executeRemoteBubbleStart: executeRemoteBubbleStartCanonical,
+  prepareRemoteStartControlFiles: prepareRemoteStartControlFilesCanonical,
   runTmux,
   readReviewerBriefArtifact,
   readReviewerFocusArtifact,

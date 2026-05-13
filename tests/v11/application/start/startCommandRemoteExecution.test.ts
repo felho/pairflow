@@ -27,6 +27,9 @@ import {
   writeRemotePointer
 } from "../../../../src/v11/infrastructure/artifact/bubble/remoteExecutionArtifacts.js";
 import {
+  prepareRemoteStartControlFiles
+} from "../../../../src/v11/infrastructure/artifact/bubble/remoteStartControlFiles.js";
+import {
   resolveDocContractGateArtifactPath
 } from "../../../../src/v11/infrastructure/artifact/gates/docContractGateArtifacts.js";
 import { runGit as runGitCommand } from "../../../../src/v11/infrastructure/workspace/git.js";
@@ -136,6 +139,7 @@ function createRemoteExecutionDeps(overrides: Partial<ResolvedStartBubbleDepende
     writeRemotePointer,
     writeRemoteStateCache: async () => undefined,
     removeRemoteStateCache: async () => undefined,
+    prepareRemoteStartControlFiles,
     upsertSession: async (input) => ({
       bubbleId: String(input.bubbleId),
       repoPath: String(input.repoPath),

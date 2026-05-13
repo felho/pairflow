@@ -14,7 +14,9 @@ import type {
 import type { StartExecutionContext } from "../runtime/startCommandContext.js";
 import type { ResolvedStartBubbleDependencies } from "../../startCommandOrchestration.js";
 import { createStartBubbleError } from "../runtime/startCommandRuntime.js";
-import { buildRemoteControlFiles } from "./startCommandRemoteControlFiles.js";
+import {
+  RemoteStartControlFilesError
+} from "../../../../ports/remoteStartControlFiles.js";
 import {
   assertConfirmedRemoteStateIsRunning,
   assertCreatedPointerMatchesRemoteTarget,
@@ -210,11 +212,10 @@ export async function prepareRemoteStartExecution(input: {
     input.context.resolved.repoPath,
     input.context.resolved.bubbleId
   );
-  const controlFiles = await buildRemoteControlFiles({
+  const controlFiles = await prepareRemoteStartControlFilesWithMappedErrors({
     context: input.context,
+    deps: input.deps,
     remoteClonePath,
-    resolveDocContractGateArtifactPath:
-      input.deps.resolveDocContractGateArtifactPath
   });
   const preparingWritten = await executeStartPreparingMutation({
     statePath: input.context.resolved.bubblePaths.statePath,
@@ -233,6 +234,56 @@ export async function prepareRemoteStartExecution(input: {
     controlFiles,
     preparingWritten
   };
+}
+
+async function prepareRemoteStartControlFilesWithMappedErrors(input: {
+  context: StartExecutionContext;
+  deps: ResolvedStartBubbleDependencies;
+  remoteClonePath: string;
+}): Promise<RemoteStartControlFile[]> {
+  try {
+    return await input.deps.prepareRemoteStartControlFiles({
+      bubbleId: input.context.resolved.bubbleId,
+      repoPath: input.context.resolved.repoPath,
+      bubblePaths: input.context.resolved.bubblePaths,
+      bubbleConfig: input.context.resolved.bubbleConfig,
+      remoteClonePath: input.remoteClonePath,
+      policySnapshotPathAbs: input.context.policySnapshotPathAbs,
+      docContractGateArtifactPath: input.deps.resolveDocContractGateArtifactPath(
+        input.context.resolved.bubblePaths.artifactsDir
+      )
+    });
+  } catch (error) {
+    if (error instanceof RemoteStartControlFilesError) {
+      throw createStartBubbleError({
+        reasonCode: "START_REMOTE_CONTROL_FILES_UNAVAILABLE",
+        message: error.message,
+        context: {
+          bubble_id: input.context.resolved.bubbleId,
+          repo_path: input.context.resolved.repoPath,
+          remote_clone_path: input.remoteClonePath,
+          artifact_relative_path: error.details.artifactRelativePath,
+          artifact_source_path: error.details.artifactSourcePath,
+          artifact_kind: error.details.artifactKind,
+          artifact_requirement: error.details.artifactRequirement
+        },
+        cause: error
+      });
+    }
+
+    const reason = error instanceof Error ? error.message : String(error);
+    throw createStartBubbleError({
+      reasonCode: "START_REMOTE_CONTROL_FILES_UNAVAILABLE",
+      message:
+        `Bubble ${input.context.resolved.bubbleId} remote start could not prepare local control artifacts before remote activation: ${reason}`,
+      context: {
+        bubble_id: input.context.resolved.bubbleId,
+        repo_path: input.context.resolved.repoPath,
+        remote_clone_path: input.remoteClonePath
+      },
+      cause: error
+    });
+  }
 }
 
 export async function executeRemoteBubbleStartWithMappedErrors(input: {
