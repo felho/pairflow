@@ -40,7 +40,7 @@ restructuring opportunity).
 | metaReviewGate | 8 | yes | 9 | yes | — | — | structured (Tier 2; refactored 2026-05-11) |
 | merge | 2 | yes | 5 | yes | yes | — | structured (Tier 2; refactored 2026-05-12) |
 | commit | 4 | yes | 5 | yes | yes | — | structured (Tier 2; refactored 2026-05-11) |
-| actorProtocol | 4 | no | — | yes | — | — | non-bubble command (agent-emit dispatcher; Cluster B extracted to `shared/role/` 2026-05-11) |
+| actorProtocol | 1 | yes | 3 | yes | — | — | structured non-bubble command (agent-emit dispatcher; Cluster B extracted 2026-05-11, Phase 2 internalized 2026-05-13) |
 | restart | 3 | yes | 4 | yes | yes | — | structured (Tier 2; refactored 2026-05-11) |
 | reconcile | 3 | yes | 3 | yes | yes | — | structured (Tier 2; refactored 2026-05-11) |
 | start | 9 | yes | 3 | yes | yes | 4 | structured (Tier 2-ish) |
@@ -346,18 +346,18 @@ So far the **only** Tier 3 lane in `application/`.
 
 ### Tier ?? — Non-bubble command
 
-- **actorProtocol** — 4 top-level files, no `internal/` (post-2026-05-11
-  Cluster B extraction). Now thematically coherent as the **agent-emit
-  dispatcher**: `emitActorProtocol.ts` (entry; CLI-driven via
-  `pairflow agent emit`), `actorRuntimeKernel.ts` (dispatcher),
-  `actorProtocolEmitters.ts` (4 cross-lane adapters that call into
-  `pass`/`askHuman`/`converged`/`metaReview` command APIs), and
-  `actorRuntimeDispatchMatrix.ts` (route matrix + policy check catalog).
+- **actorProtocol** — 1 top-level entry plus 3 internal sub-areas
+  (post-2026-05-13 Phase 2). It remains a thematically coherent
+  **agent-emit dispatcher**: `emitActorProtocol.ts` is the public
+  entry (CLI-driven via `pairflow agent emit`), `internal/kernel/`
+  executes dispatch plans, `internal/adapters/` holds the 4 cross-lane
+  adapters that call into `pass`/`askHuman`/`converged`/`metaReview`
+  command APIs, and `internal/dispatch/` owns the route matrix + policy
+  check catalog.
   It is a CLI-driven command, but not a bubble-lifecycle command — the
   Tier 1/2/3 template's bubble-command-oriented procedure doesn't fit
   directly; left as Tier ?? until either the template generalizes to
-  cover the agent-emit shape or this lane gets its own
-  application-side internal/ structure. A separate
+  cover the agent-emit shape. A separate
   `shared/actorProtocol/` directory holds the canonical actor-emit
   framework types/policies (`ActorEmitContextSnapshot`,
   `assertActorEmitContextMatches`, etc.); it is shared-layer
@@ -435,8 +435,8 @@ not prescribe one location.
    confuse `find` / IDE navigation. This applies to any lane after a
    structural refactor, not just planWatch.
 
-2. **actorProtocol was a mixed-cluster lane — partially resolved
-   2026-05-11.** The original ten-file directory bundled two
+2. **actorProtocol was a mixed-cluster lane — resolved in two
+   phases (2026-05-11, 2026-05-13).** The original ten-file directory bundled two
    unrelated concerns: a CLI-driven agent-emit dispatcher (the
    "Cluster A" entry + dispatcher + cross-lane adapters + route
    matrix) and a role/topology/prompt registry consumed by
@@ -445,10 +445,11 @@ not prescribe one location.
    (6 files) plus two collateral start prompt-line helpers
    (`startCommandWorkspacePromptLines.ts`,
    `startCommandResumePromptShared.ts`) to
-   `shared/role/{registry,prompts}/`. Cluster A (4 files) stays at
-   `application/actorProtocol/` as a non-bubble command lane; its
-   internal restructuring (Phase 2 of the original split plan) is
-   a separate later concern. **New finding worth carrying
+   `shared/role/{registry,prompts}/`. Cluster A then stayed at
+   `application/actorProtocol/` as a non-bubble command lane until
+   Phase 2 moved its implementation under
+   `internal/{adapters,dispatch,kernel}/`, leaving only
+   `emitActorProtocol.ts` at the root. **New finding worth carrying
    forward:** *split-by-cluster extraction* — when a single
    `application/<lane>/` directory mixes a command-shape cluster
    with a non-command registry/data cluster, the non-command
@@ -704,10 +705,11 @@ collapses to a per-sub-area move sequence with no pre-cleanup commit.
 not a bubble-lifecycle command; the Tier 1/2/3 template doesn't fit
 directly. The 2026-05-11 Cluster B extraction (see anomaly #2)
 removed the non-command parts of the lane, leaving a coherent
-agent-emit dispatcher at `application/actorProtocol/`. Whether that
-dispatcher should adopt an internal/ structure of its own (Phase 2)
-remains a separate later decision, not a target of this template
-version.
+agent-emit dispatcher at `application/actorProtocol/`. The 2026-05-13
+Phase 2 internalized that dispatcher behind
+`internal/{adapters,dispatch,kernel}/`. It remains outside this
+template's bubble-command procedure, but no longer has a flat
+top-level implementation surface.
 
 ## Template status
 

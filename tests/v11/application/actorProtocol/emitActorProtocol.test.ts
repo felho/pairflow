@@ -7,8 +7,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   assertActorRuntimeDispatchPlanPolicies,
   resolveActorRuntimeDispatchPlan
-} from "../../../../src/v11/application/actorProtocol/actorRuntimeDispatchMatrix.js";
-import * as actorRuntimeKernelModule from "../../../../src/v11/application/actorProtocol/actorRuntimeKernel.js";
+} from "../../../../src/v11/application/actorProtocol/internal/dispatch/actorRuntimeDispatchMatrix.js";
+import * as actorRuntimeKernelModule from "../../../../src/v11/application/actorProtocol/internal/kernel/actorRuntimeKernel.js";
 import {
   resolveActorEmitContextByBubbleId
 } from "../../../../src/v11/defaults/actorProtocol/actorEmitContextDefaults.js";

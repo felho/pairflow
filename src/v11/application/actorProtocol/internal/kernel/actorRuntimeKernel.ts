@@ -1,30 +1,30 @@
-import { ActorEmitContextError } from "../../shared/actorProtocol/actorEmitContext.js";
+import { ActorEmitContextError } from "../../../../shared/actorProtocol/actorEmitContext.js";
 import type {
   ActorEmitContextSnapshot
-} from "../../shared/actorProtocol/actorEmitContext.js";
+} from "../../../../shared/actorProtocol/actorEmitContext.js";
 import type {
   ActorEmitInput,
   ConvergenceActorEmitInput,
   HumanQuestionActorEmitInput,
   MetaReviewResultActorEmitInput,
   PassActorEmitInput
-} from "../../../types/protocol.js";
+} from "../../../../../types/protocol.js";
 import {
   type ActorEmitResult,
   emitConvergenceActorResult,
   emitHumanQuestionActorResult,
   emitMetaReviewActorResult,
   emitPassActorResult
-} from "./actorProtocolEmitters.js";
+} from "../adapters/actorProtocolEmitters.js";
 import {
   type ActorRuntimeAdapterId,
   type ActorRuntimeDispatchPlan,
   assertActorRuntimeDispatchPlanPolicies
-} from "./actorRuntimeDispatchMatrix.js";
-import type { EmitPassDependencies } from "../pass/passCommandContract.js";
-import type { EmitConvergedDependencies } from "../../shared/converged/convergedCommandTypes.js";
-import type { MetaReviewCommandDependencies } from "../../shared/metaReview/metaReviewCommandContract.js";
-import type { EmitAskHumanDependencies } from "../askHuman/askHumanCommandContract.js";
+} from "../dispatch/actorRuntimeDispatchMatrix.js";
+import type { EmitPassDependencies } from "../../../pass/passCommandContract.js";
+import type { EmitConvergedDependencies } from "../../../../shared/converged/convergedCommandTypes.js";
+import type { MetaReviewCommandDependencies } from "../../../../shared/metaReview/metaReviewCommandContract.js";
+import type { EmitAskHumanDependencies } from "../../../askHuman/askHumanCommandContract.js";
 
 export interface ActorProtocolDependencies {
   pass?: EmitPassDependencies;

@@ -31,10 +31,10 @@ owners:
 3. Historical predecessor:
    - az `Opportunity 3` lezart discovery/ideation kore
 4. Current-tree source anchors (kernel + dispatch + adapter):
-   - `src/v11/application/actorProtocol/actorRuntimeKernel.ts`
-   - `src/v11/application/actorProtocol/actorRuntimeDispatchMatrix.ts`
-   - `src/v11/application/actorProtocol/actorProtocolEmitters.ts`
-   - `src/v11/application/actorProtocol/emitActorProtocolV11.ts`
+   - `src/v11/application/actorProtocol/internal/kernel/actorRuntimeKernel.ts`
+   - `src/v11/application/actorProtocol/internal/dispatch/actorRuntimeDispatchMatrix.ts`
+   - `src/v11/application/actorProtocol/internal/adapters/actorProtocolEmitters.ts`
+   - `src/v11/application/actorProtocol/emitActorProtocol.ts`
 5. Current-tree source anchors (4 seam):
    - S1: `src/v11/domain/state/execution/executionContext.ts`
    - S2: `src/v11/infrastructure/channel/tmux/tmuxManager.ts`, `src/v11/infrastructure/channel/tmux/tmuxDeliveryTargeting.ts`
@@ -119,8 +119,8 @@ owners:
 | `ActorOutputKind` | `src/types/protocol.ts` | public actor emit kind union (`pass`, `human_question`, `convergence`, `meta_review_result`) | preserved zart enum; uj ertek csak `O3-T5`-ben |
 | `BubbleExecutionContextAwaitedOutputType` | `src/types/bubble.ts` | top-level canonical awaited output vocabulary (`pass_result | meta_review_result`) | preserved state baseline; a `RoleDescriptor.primary_awaited_output_type` mezoje ezt veszi fel |
 | `MetaReviewExecutionContextAwaitedOutputType` | `src/types/bubble.ts` | meta-review mirror/subset awaited output vocabulary (`meta_review_result`) | preserved meta-review state baseline |
-| `ActorRuntimePolicyCheckId` | `src/v11/application/actorProtocol/actorRuntimeDispatchMatrix.ts` | ID-zott policy check katalogus kulcsa (`context_snapshot_integrity`, `input_context_match`, `implementer_authority`, `reviewer_authority`, `reviewer_human_question_retained_fallback`, `meta_reviewer_authority`, `meta_reviewer_active_agent_codex_when_present`) | preserved katalogus; a `RoleDescriptor.authority_policy_check_id` mezoje ide hivatkozik |
-| `ActorRuntimeAdapterId` | `src/v11/application/actorProtocol/actorRuntimeKernel.ts` | ID-zott adapter Map kulcsa (`pass_adapter`, `human_question_adapter`, `convergence_adapter`, `meta_review_result_adapter`) | preserved katalogus; a route-matrix mezoje ide hivatkozik (`O3-T1` ezt nem modositja) |
+| `ActorRuntimePolicyCheckId` | `src/v11/application/actorProtocol/internal/dispatch/actorRuntimeDispatchMatrix.ts` | ID-zott policy check katalogus kulcsa (`context_snapshot_integrity`, `input_context_match`, `implementer_authority`, `reviewer_authority`, `reviewer_human_question_retained_fallback`, `meta_reviewer_authority`, `meta_reviewer_active_agent_codex_when_present`) | preserved katalogus; a `RoleDescriptor.authority_policy_check_id` mezoje ide hivatkozik |
+| `ActorRuntimeAdapterId` | `src/v11/application/actorProtocol/internal/kernel/actorRuntimeKernel.ts` | ID-zott adapter Map kulcsa (`pass_adapter`, `human_question_adapter`, `convergence_adapter`, `meta_review_result_adapter`) | preserved katalogus; a route-matrix mezoje ide hivatkozik (`O3-T1` ezt nem modositja) |
 | `runtimePaneIndices` | `src/v11/infrastructure/channel/tmux/tmuxManager.ts` | hardcoded `{ status: 0, implementer: 1, reviewer: 2, metaReviewer: 3 }` literal | preserved working assumption baseline; `O3-T3`-ban kerul `topologySlotCatalog`-ra atkotesre |
 | `BubbleAgentsConfig` | `src/types/bubble.ts` | bubble config role binding shape (`implementer: AgentName, reviewer: AgentName`) | preserved zart shape ebben a slice-ban; `O3-T4`-ben kerul ujragondolasra (`agents.meta_reviewer` vagy uniform shape) |
 
@@ -137,12 +137,12 @@ owners:
 | `id` | `AgentRole` | role identifier; a registry-bejegyzes kulcsa | `src/types/bubble.ts::agentRoles` | - |
 | `primary_awaited_output_type` | `BubbleExecutionContextAwaitedOutputType` | a role workflow-beli primer elvart kimenete (single value); cross-cutting outcome (`human_question`) NEM ide tartozik, hanem a route-matrix dimenzioja | `src/v11/domain/state/execution/executionContext.ts::resolveAwaitedOutputTypeForRole` | S1 |
 | `topology_slot_id` | `TopologySlotId` (proposed catalog) | a role dedikalt pane slot ID-ja a `topologySlotCatalog`-ban | `src/v11/infrastructure/channel/tmux/tmuxManager.ts::runtimePaneIndices` | S2 |
-| `authority_policy_check_id` | `ActorRuntimePolicyCheckId` | a role authority guardja a meglevo `actorRuntimePolicyCheckCatalog`-ban | `src/v11/application/actorProtocol/actorRuntimeDispatchMatrix.ts::actorRuntimePolicyCheckCatalog` | - |
+| `authority_policy_check_id` | `ActorRuntimePolicyCheckId` | a role authority guardja a meglevo `actorRuntimePolicyCheckCatalog`-ban | `src/v11/application/actorProtocol/internal/dispatch/actorRuntimeDispatchMatrix.ts::actorRuntimePolicyCheckCatalog` | - |
 | `agent_resolution` | `{ kind: "config_bound"; config_key: keyof BubbleAgentsConfig } \| { kind: "hardcoded_runtime"; current_agent: AgentName }` | hogyan szarmazik le a role agentje a current tree-ben; mai allapot rogzitett, `O3-T4`-ben mind a 3 role `config_bound`-ra konvergal | `src/config/bubbleConfig.ts`, `assertMetaReviewerActiveAgentCodexWhenPresent` | S3 |
 | `startup_prompt_concern_ids` | `readonly PromptConcernId[]` (proposed catalog) | a role startup prompt-jat alkoto concern-modulok ID-listaja a `promptConcernCatalog`-bol | `src/v11/application/start/startCommandPrompts.ts`, `startCommandImplementerPrompts.ts` | S4 |
 | `resume_prompt_concern_ids` | `readonly PromptConcernId[]` (proposed catalog) | a role resume prompt-jat alkoto concern-modulok ID-listaja | `src/v11/application/start/startCommandResumePrompts.ts`, `startCommandResumeImplementerPrompt.ts` | S4 |
 | `handoff_id_format_id?` | `HandoffIdFormatId?` (proposed catalog) | opcionalis; a role-specifikus handoff_id formatter ID-ja, amennyiben a default formattol elter (`meta_reviewer` ma kulon prefixet hasznal) | `src/v11/domain/state/execution/executionContext.ts::buildExecutionContextHandoffId` | - |
-| `active_agent_constraint_id?` | `ActiveAgentConstraintId?` (proposed catalog) | opcionalis; a role extra active-agent invariansa, ha van (`meta_reviewer` ma `codex` only when present) | `src/v11/application/actorProtocol/actorRuntimeDispatchMatrix.ts::assertMetaReviewerActiveAgentCodexWhenPresent` | - |
+| `active_agent_constraint_id?` | `ActiveAgentConstraintId?` (proposed catalog) | opcionalis; a role extra active-agent invariansa, ha van (`meta_reviewer` ma `codex` only when present) | `src/v11/application/actorProtocol/internal/dispatch/actorRuntimeDispatchMatrix.ts::assertMetaReviewerActiveAgentCodexWhenPresent` | - |
 
 6. A registry-olvaso projection helperek (proposed naming, `O3-T2`-ben kerulnek bevezetesre):
    - `getAwaitedOutputForRole(role: AgentRole): BubbleExecutionContextAwaitedOutputType` (S1)

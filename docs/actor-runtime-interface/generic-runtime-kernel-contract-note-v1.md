@@ -27,8 +27,8 @@ owners:
    - `docs/actor-runtime-interface/execution-authority-contract-note-v1.md`
 3. Current-tree source anchors:
    - `src/v11/shared/actorProtocol/actorEmitContext.ts`
-   - `src/v11/application/actorProtocol/emitActorProtocolV11.ts`
-   - `src/v11/application/actorProtocol/actorProtocolEmitters.ts`
+   - `src/v11/application/actorProtocol/emitActorProtocol.ts`
+   - `src/v11/application/actorProtocol/internal/adapters/actorProtocolEmitters.ts`
    - `src/types/protocol.ts`
    - `src/types/bubble.ts`
    - `src/cli/commands/agent/emit.ts`
@@ -42,16 +42,16 @@ owners:
 ## Current-Tree Coupling Inventory
 
 1. A canonical actor authority current-tree source-of-truth-ja a top-level `execution_context`, explicit `execution_id`-val es fail-closed guard semanticszel.
-2. A generic runtime kernel ma implicit a `emitActorProtocolV11.ts` wrapper-dispatcher matrixban el:
+2. A generic runtime kernel ma a `emitActorProtocol.ts` entry + `internal/dispatch/actorRuntimeDispatchMatrix.ts` route matrix + `internal/kernel/actorRuntimeKernel.ts` execute seam kombinációban él:
    - `expected_role x input.kind` branch-ek,
-   - wrapper-local policy guardok,
+   - route-local policy guardok,
    - retained reviewer-origin `human_question` fallback,
    - minden mas mismatch fail-closed.
 3. A workflow-specific output adapters ma kulon emitterek:
-   - `emitPassActorResultV11`
-   - `emitHumanQuestionActorResultV11`
-   - `emitConvergenceActorResultV11`
-   - `emitMetaReviewActorResultV11`
+   - `emitPassActorResult`
+   - `emitHumanQuestionActorResult`
+   - `emitConvergenceActorResult`
+   - `emitMetaReviewActorResult`
 4. A public vocabulary ettol kulon, de read-only downstream surface marad:
    - `ActorOutputKind`
    - `ProtocolParticipant`
@@ -92,20 +92,20 @@ owners:
 
 | Expected role | Input kind | Routed adapter path | Extra policy guard | Outcome semantics |
 |---|---|---|---|---|
-| `implementer` | `pass` | `emitImplementerPilotActorProtocolV11` -> `emitPassActorResultV11` -> `emitPassFromWorkspaceV11` | context integrity + input/context match + `expected_role === implementer` | allowed current-tree wrapper row |
-| `implementer` | `human_question` | `emitImplementerPilotActorProtocolV11` -> `emitHumanQuestionActorResultV11` -> `emitAskHumanFromWorkspaceV11` | context integrity + input/context match + `expected_role === implementer` | allowed current-tree wrapper row |
-| `reviewer` | `pass` | `emitReviewerActorProtocolV11` -> `emitPassActorResultV11` -> `emitPassFromWorkspaceV11` | `requireReviewerAuthority(...)`; downstream handoff loop/round-role baseline read-only | allowed current-tree wrapper row |
-| `reviewer` | `convergence` | `emitReviewerActorProtocolV11` -> `emitConvergenceActorResultV11` -> `emitConvergedFromWorkspaceV11` | `requireReviewerAuthority(...)`; expected reviewer derived from active agent; downstream `validateConvergencePolicy(...)` retained | allowed current-tree wrapper row |
-| `reviewer` | `human_question` | `emitActorProtocolViaFallbackRouting` -> `emitHumanQuestionActorResultV11` -> `emitAskHumanFromWorkspaceV11` | explicit retained baseline fallback; not wrapper-generalized route | preserved fallback row |
-| `meta_reviewer` | `meta_review_result` | `emitMetaReviewerActorProtocolV11` -> `emitMetaReviewActorResultV11` -> `submitMetaReviewResultV11` | `requireMetaReviewerAuthority(...)`; `active_agent === codex` when present; top-level meta-review execution-context validation retained | allowed current-tree wrapper row |
+| `implementer` | `pass` | `resolveActorRuntimeDispatchPlan` -> `pass_adapter` -> `emitPassActorResult` -> `emitPassFromWorkspace` | context integrity + input/context match + `expected_role === implementer` | allowed current-tree route row |
+| `implementer` | `human_question` | `resolveActorRuntimeDispatchPlan` -> `human_question_adapter` -> `emitHumanQuestionActorResult` -> `emitAskHumanFromWorkspace` | context integrity + input/context match + `expected_role === implementer` | allowed current-tree route row |
+| `reviewer` | `pass` | `resolveActorRuntimeDispatchPlan` -> `pass_adapter` -> `emitPassActorResult` -> `emitPassFromWorkspace` | reviewer authority policy; downstream handoff loop/round-role baseline read-only | allowed current-tree route row |
+| `reviewer` | `convergence` | `resolveActorRuntimeDispatchPlan` -> `convergence_adapter` -> `emitConvergenceActorResult` -> `emitConvergedFromWorkspace` | reviewer authority policy; expected reviewer derived from active agent; downstream `validateConvergencePolicy(...)` retained | allowed current-tree route row |
+| `reviewer` | `human_question` | `reviewer_human_question_fallback` route -> `human_question_adapter` -> `emitHumanQuestionActorResult` -> `emitAskHumanFromWorkspace` | explicit retained baseline fallback; not primary reviewer route | preserved fallback row |
+| `meta_reviewer` | `meta_review_result` | `resolveActorRuntimeDispatchPlan` -> `meta_review_result_adapter` -> `emitMetaReviewActorResult` -> `submitMetaReviewResult` | meta-reviewer authority policy; configured meta-reviewer agent when active; top-level meta-review execution-context validation retained | allowed current-tree route row |
 | any role | every other `input.kind` combination | no route | fail-closed `ActorEmitContextError` | forbidden current-tree mismatch path |
 
 Source anchors:
 1. Wrapper + fallback routing:
-   - `src/v11/application/actorProtocol/emitActorProtocolV11.ts`
-   - concrete retained fallback helper: `emitActorProtocolViaFallbackRouting(...)`
+   - `src/v11/application/actorProtocol/emitActorProtocol.ts`
+   - concrete retained fallback route: `reviewer_human_question_fallback`
 2. Adapter callsites:
-   - `src/v11/application/actorProtocol/actorProtocolEmitters.ts`
+   - `src/v11/application/actorProtocol/internal/adapters/actorProtocolEmitters.ts`
 3. CLI/public emit kind surface:
    - `src/types/protocol.ts`
    - `src/cli/commands/agent/emit.ts`
@@ -115,8 +115,8 @@ Source anchors:
 | Layer | Source anchors | What it owns now | What it does not own |
 |---|---|---|---|
 | Canonical actor authority context | `docs/actor-runtime-interface/execution-authority-contract-note-v1.md`, `src/v11/shared/actorProtocol/actorEmitContext.ts`, `src/v11/domain/state/execution/executionContext.ts` | explicit `execution_context`, `handoff_id`, `execution_id`, `expected_role`, `expected_round`, `expected_state_fingerprint` jelentese | workflow topology, bubble handoff loop ownership, public output taxonomy redesign |
-| Generic runtime route/policy matrix | `src/v11/application/actorProtocol/emitActorProtocolV11.ts` | `expected_role x input.kind` dispatch, wrapper-local policy guards, retained reviewer fallback, fail-closed mismatch rule | canonical authority redefinition, delivery topology ownership, public CLI grammar rewrite |
-| Workflow-specific output adapters | `src/v11/application/actorProtocol/actorProtocolEmitters.ts`, `src/types/protocol.ts`, `src/cli/commands/agent/emit.ts` | pass / ask-human / converged / meta-review submit workflow outputs es a hozza tartozo public kinds | generic internal kernel taxonomy, authority producer semantics |
+| Generic runtime route/policy matrix | `src/v11/application/actorProtocol/emitActorProtocol.ts` | `expected_role x input.kind` dispatch, wrapper-local policy guards, retained reviewer fallback, fail-closed mismatch rule | canonical authority redefinition, delivery topology ownership, public CLI grammar rewrite |
+| Workflow-specific output adapters | `src/v11/application/actorProtocol/internal/adapters/actorProtocolEmitters.ts`, `src/types/protocol.ts`, `src/cli/commands/agent/emit.ts` | pass / ask-human / converged / meta-review submit workflow outputs es a hozza tartozo public kinds | generic internal kernel taxonomy, authority producer semantics |
 
 ## Proposed Typed Internal Boundary Vocabulary
 

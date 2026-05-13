@@ -38,12 +38,10 @@ multi-phase pipelines or coordinator submodules.
 
 `application/actorProtocol/` is a CLI-driven command, but it is the
 **agent-emit dispatcher** (`pairflow agent emit --kind ...`), not a
-bubble-lifecycle command. Its 4-file shape (entry + dispatcher +
-4 cross-lane adapters + route matrix) is structurally distinct from
-the bubble-command Tier 1/2/3 lanes, so this template does not try
-to fit it directly. Phase 2 (whether to introduce an `internal/`
-structure for the dispatcher, or rename the lane to reflect its
-real purpose) is a separate later decision.
+bubble-lifecycle command. Its current shape is a single public entry
+(`emitActorProtocol.ts`) plus `internal/{adapters,dispatch,kernel}/`.
+That internal structure is still distinct from the bubble-command
+Tier 1/2/3 lanes, so this template does not try to fit it directly.
 
 **Cluster B extraction precedent (2026-05-11).** Before the
 2026-05-11 split, `application/actorProtocol/` mixed the dispatcher
@@ -54,7 +52,10 @@ semantics — it was statically-configured prompt-building data
 plus helper functions. The split-by-cluster extraction moved
 Cluster B (six files) plus two collateral start prompt-line
 helpers to `shared/role/{registry,prompts}/`, leaving Cluster A
-at `application/actorProtocol/`. **Lesson:** when a single
+at `application/actorProtocol/`. The 2026-05-13 Phase 2 then moved
+Cluster A's dispatcher implementation under
+`internal/{adapters,dispatch,kernel}/`, leaving the root as the
+public entry seam. **Lesson:** when a single
 `application/<lane>/` directory mixes a command-shape cluster
 with a non-command registry/data cluster, the non-command
 cluster can be extracted to `shared/<concern>/` independently
@@ -1985,10 +1986,8 @@ the lane survey. After 5 lane refactors land using this template, the
 - whether any new naming-role pattern has emerged that belongs in the table,
 - whether the half-done procedure produced consistent results across the
   applied lanes,
-- whether `actorProtocol` has been further restructured (Phase 2 of
-  the 2026-05-11 split — internal/ introduction or lane rename) or
-  whether another non-command lane has emerged and should be
-  cross-referenced.
+- whether another non-command lane has emerged and should be
+  cross-referenced alongside `actorProtocol`.
 
 The survey doc (`application-command-shapes-survey.md`) is the empirical
 companion to this template; update it alongside major template revisions.

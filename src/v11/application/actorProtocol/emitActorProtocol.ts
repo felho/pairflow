@@ -7,17 +7,17 @@ import type {
 import {
   assertActorEmitInputMatchesContext,
   type ActorEmitResult
-} from "./actorProtocolEmitters.js";
+} from "./internal/adapters/actorProtocolEmitters.js";
 import {
   resolveActorRuntimeDispatchPlan
-} from "./actorRuntimeDispatchMatrix.js";
+} from "./internal/dispatch/actorRuntimeDispatchMatrix.js";
 import {
   type ActorProtocolDependencies,
   executeActorRuntimeDispatchPlan
-} from "./actorRuntimeKernel.js";
+} from "./internal/kernel/actorRuntimeKernel.js";
 
-export type { ActorEmitResult } from "./actorProtocolEmitters.js";
-export type { ActorProtocolDependencies } from "./actorRuntimeKernel.js";
+export type { ActorEmitResult } from "./internal/adapters/actorProtocolEmitters.js";
+export type { ActorProtocolDependencies } from "./internal/kernel/actorRuntimeKernel.js";
 
 export interface ResolvedActorEmitInput {
   input: ActorEmitInput;

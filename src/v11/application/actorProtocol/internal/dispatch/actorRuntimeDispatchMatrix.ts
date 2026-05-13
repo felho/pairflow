@@ -1,21 +1,21 @@
-import type { AgentRole } from "../../../contracts/kernel/agentIdentity.js";
+import type { AgentRole } from "../../../../../contracts/kernel/agentIdentity.js";
 import type {
   ActorEmitInput,
   ActorOutputKind
-} from "../../../types/protocol.js";
+} from "../../../../../types/protocol.js";
 import {
   ActorEmitContextError,
   assertActorEmitContextMatches,
   assertActorEmitContextSnapshotIntegrity
-} from "../../shared/actorProtocol/actorEmitContext.js";
-import type { ActorRuntimePolicyCheckId } from "../../shared/actorProtocol/actorRuntimePolicyTypes.js";
+} from "../../../../shared/actorProtocol/actorEmitContext.js";
+import type { ActorRuntimePolicyCheckId } from "../../../../shared/actorProtocol/actorRuntimePolicyTypes.js";
 import {
   getPrimaryRoutePolicyCheckIdsForRole,
   resolveRoleConfiguredAgent
-} from "../../shared/role/registry/roleDescriptorRegistry.js";
+} from "../../../../shared/role/registry/roleDescriptorRegistry.js";
 import type {
   ActorEmitContextSnapshot
-} from "../../shared/actorProtocol/actorEmitContext.js";
+} from "../../../../shared/actorProtocol/actorEmitContext.js";
 
 export type ActorRuntimePolicyOwner =
   | "canonical_authority_context"

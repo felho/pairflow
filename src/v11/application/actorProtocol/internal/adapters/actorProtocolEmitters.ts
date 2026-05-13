@@ -1,37 +1,37 @@
-import type { AgentName } from "../../../contracts/kernel/agentIdentity.js";
+import type { AgentName } from "../../../../../contracts/kernel/agentIdentity.js";
 import type {
   ActorEmitInput,
   ConvergenceActorEmitInput,
   HumanQuestionActorEmitInput,
   MetaReviewResultActorEmitInput,
   PassActorEmitInput
-} from "../../../types/protocol.js";
+} from "../../../../../types/protocol.js";
 import {
   assertActorEmitContextMatches
-} from "../../shared/actorProtocol/actorEmitContext.js";
+} from "../../../../shared/actorProtocol/actorEmitContext.js";
 import type {
   ActorEmitContextSnapshot
-} from "../../shared/actorProtocol/actorEmitContext.js";
-import type { EmitPassDependencies } from "../pass/passCommandContract.js";
-import type { EmitConvergedDependencies } from "../../shared/converged/convergedCommandTypes.js";
-import type { MetaReviewCommandDependencies } from "../../shared/metaReview/metaReviewCommandContract.js";
-import type { EmitAskHumanDependencies } from "../askHuman/askHumanCommandContract.js";
+} from "../../../../shared/actorProtocol/actorEmitContext.js";
+import type { EmitPassDependencies } from "../../../pass/passCommandContract.js";
+import type { EmitConvergedDependencies } from "../../../../shared/converged/convergedCommandTypes.js";
+import type { MetaReviewCommandDependencies } from "../../../../shared/metaReview/metaReviewCommandContract.js";
+import type { EmitAskHumanDependencies } from "../../../askHuman/askHumanCommandContract.js";
 import {
   emitAskHumanFromWorkspace
-} from "../askHuman/askHumanCommandApi.js";
+} from "../../../askHuman/askHumanCommandApi.js";
 import {
   emitConvergedFromWorkspaceCommandOrchestration as emitConvergedFromWorkspace
-} from "../converged/convergedCommandOrchestration.js";
+} from "../../../converged/convergedCommandOrchestration.js";
 import {
   submitMetaReviewResult
-} from "../metaReview/metaReviewCommandSubmitRuntime.js";
+} from "../../../metaReview/metaReviewCommandSubmitRuntime.js";
 import {
   emitPassFromWorkspace
-} from "../pass/passCommandOrchestration.js";
-import type { EmitAskHumanResult } from "../askHuman/askHumanCommandApi.js";
-import type { EmitConvergedResult } from "../converged/convergedCommandOrchestration.js";
-import type { MetaReviewSubmitResult } from "../../shared/metaReview/metaReviewCommandContract.js";
-import type { EmitPassResult } from "../pass/passCommandOrchestration.js";
+} from "../../../pass/passCommandOrchestration.js";
+import type { EmitAskHumanResult } from "../../../askHuman/askHumanCommandApi.js";
+import type { EmitConvergedResult } from "../../../converged/convergedCommandOrchestration.js";
+import type { MetaReviewSubmitResult } from "../../../../shared/metaReview/metaReviewCommandContract.js";
+import type { EmitPassResult } from "../../../pass/passCommandOrchestration.js";
 
 export type ActorEmitResult =
   | {
