@@ -13,6 +13,7 @@ import { deleteBubble } from "../../src/v11/application/delete/deleteBubble.js";
 import { deleteBubbleDependencyDefaults } from "../../src/v11/defaults/delete/deleteBubbleDefaults.js";
 import { stopBubbleCommandOrchestration } from "../../src/v11/application/stop/stopCommandOrchestration.js";
 import { stopBubbleDependencyDefaults } from "../../src/v11/defaults/stop/stopCommandDefaults.js";
+import { defaultUiRouterDependencies } from "../../src/v11/defaults/ui/routerDependencyDefaults.js";
 import {
   projectBubbleStateToUiActionState
 } from "../../src/v11/defaults/ui/routerDefaults.js";
@@ -99,6 +100,7 @@ describe("UI action API smoke", () => {
         has: (value: string) => Promise.resolve(value === repoPath)
       },
       events: createNoopSmokeUiEventsBroker(),
+      dependencyDefaults: defaultUiRouterDependencies,
       dependencies: {
         openBubble: (input) =>
           openBubble(input, {
