@@ -72,3 +72,4 @@
 - Egy felfedezés mellékesen: a defaults/tmux/ üres, viszont defaults/start/ és defaults/restart/ használnak tmux portokat. Tehát a tmux defaultok valószínűleg a start/restart wiring-ben jönnek létre, nem central helyen — ez később lehet érdekes a smoke suite konfigurálásánál, de most nem blokkoló.
 - https://x.com/trq212/status/2017024445244924382
 - https://www.youtube.com/watch?v=qKU-e0x2EmE
+- https://github.com/CsabaKovacs/rulesmith
