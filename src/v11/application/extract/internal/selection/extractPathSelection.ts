@@ -1,6 +1,6 @@
 import { join, posix } from "node:path";
 
-import type { ResolvedBubbleById } from "../../ports/bubbleLookup.js";
+import type { ResolvedBubbleById } from "../../../../ports/bubbleLookup.js";
 import type {
   ExtractCommandDependencies,
   ExtractCommandDiagnostics,
@@ -8,7 +8,7 @@ import type {
   ExtractCommandInput,
   ExtractCommandResult,
   ExtractSelectedPath
-} from "./extractCommandContract.js";
+} from "../../extractCommandContract.js";
 
 const ALLOWED_PATH_PREFIXES = ["plans/", "docs/", "progress/"] as const;
 const GLOB_PATTERN = /[*?[\]{}]/u;

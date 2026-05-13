@@ -3,8 +3,8 @@ import { join } from "node:path";
 import {
   hasIdeationMetadataParseWarning,
   resolveIdeationMetadata
-} from "../../domain/ideation/ideationMetadata.js";
-import type { ResolvedBubbleById } from "../../ports/bubbleLookup.js";
+} from "../../../../domain/ideation/ideationMetadata.js";
+import type { ResolvedBubbleById } from "../../../../ports/bubbleLookup.js";
 import type {
   ExtractCommandDependencies,
   ExtractCommandDiagnostics,
@@ -12,7 +12,7 @@ import type {
   ExtractCommandInput,
   ExtractCommandResult,
   ExtractTargetCheckoutFailureReason
-} from "./extractCommandContract.js";
+} from "../../extractCommandContract.js";
 
 interface TargetCheckoutPreconditionPassed {
   ok: true;

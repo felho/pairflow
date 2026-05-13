@@ -48,7 +48,7 @@ restructuring opportunity).
 | reply | 2 | yes | 2 | no | yes | — | structured (Tier 2; refactored 2026-05-11) |
 | attach | 6 | no | — | — | yes | 15 | unstructured |
 | delete | 6 | no | — | yes | yes | 11 | unstructured |
-| extract | 6 | no | — | yes | yes | 14 | unstructured |
+| extract | 2 | yes | 4 | yes | yes | — | structured (Tier 2; refactored 2026-05-13) |
 | open | 6 | no | — | yes | yes | 14 | unstructured |
 | list | 2 | yes | 3 | yes | yes | — | structured (Tier 2; refactored 2026-05-11) |
 | pass | 4 | yes | 4 | yes | yes | -2 | structured (Tier 2) |
@@ -132,7 +132,7 @@ straightforward: `internal/<sub>/` for everything that isn't entry/contract.
 - **attach** — 6 top-level. Files: `attachBubble*` cluster +
   `attachCliCommand` (the legacy `emitAttachV11` wrapper has been renamed to
   `attachBubble.ts`).
-- **extract**, **open**, **resume**, **stop** — similar pattern.
+- **open**, **resume**, **stop** — similar pattern.
 - **gates**, **inbox** — 2 top-level only; below restructuring threshold.
 
 These all have the standard naming (`*CommandApi`, `*CommandContract`,
@@ -212,6 +212,13 @@ from-scratch cases:
   reconcile's CLI options parser is inline in `reconcileCliCommand.ts`
   (no separate `*CommandCliOptions.ts` cluster like restart had).
   See the template's `application/reconcile/` worked example.
+- **extract** (was 6 top-level + no internal/; now 2 top-level + 4
+  sub-areas — `preparation/`, `selection/`, `transfer/`, `commit/`).
+  Root-public files are the command entry (`extractBubble.ts`) and dependency
+  contract (`extractCommandContract.ts`); the pipeline phases moved under
+  `internal/` without behavior changes. This is the smallest from-scratch
+  Tier 1-to-Tier 2 case: no production consumer imported the moved helpers,
+  while one CLI test followed the precondition helper to its internal path.
 - **watchdog** (was 11 top-level + no internal/; now 2 top-level + 4
   sub-areas — `error/`, `flow/`, `paneActivity/`, `pendingRework/`).
   The original survey row recorded 12 top-level files; the actual count
@@ -318,7 +325,7 @@ Unstructured (no internal/ at all):
 
 - (none — all formerly unstructured Tier 1 lanes are listed under their
   current refactored shape; the remaining 3–7-top-level lanes without
-  `internal/` are `attach`, `delete`, `extract`, and `open`, which are
+  `internal/` are `attach`, `delete`, and `open`, which are
   listed in their Tier 1 inventory rows above.)
 
 ### Tier 3 — Coordinator (lane-internal-but-named submodules)

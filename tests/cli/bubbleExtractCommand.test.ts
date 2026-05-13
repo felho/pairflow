@@ -14,7 +14,7 @@ import { extractBubble } from "../../src/v11/application/extract/extractBubble.j
 import {
   checkTargetCheckoutPreconditions,
   validateExtractCommandPreconditions
-} from "../../src/v11/application/extract/extractCommandPreconditions.js";
+} from "../../src/v11/application/extract/internal/preparation/extractCommandPreconditions.js";
 import type {
   ExtractCommandDependencies,
   ExtractFileInfo,

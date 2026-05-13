@@ -3,9 +3,9 @@ import type {
   ExtractCommandInput,
   ExtractCommandResult
 } from "./extractCommandContract.js";
-import { validateExtractCommandPreconditions } from "./extractCommandPreconditions.js";
-import { validateExtractPathSelection } from "./extractPathSelection.js";
-import { transferExtractSelectedPaths } from "./extractTransfer.js";
+import { validateExtractCommandPreconditions } from "./internal/preparation/extractCommandPreconditions.js";
+import { validateExtractPathSelection } from "./internal/selection/extractPathSelection.js";
+import { transferExtractSelectedPaths } from "./internal/transfer/extractTransfer.js";
 
 export async function extractBubble(
   input: ExtractCommandInput,

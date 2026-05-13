@@ -2,8 +2,8 @@ import type {
   ExtractCommandDiagnostics,
   ExtractCommandResult,
   ExtractTransferInput
-} from "./extractCommandContract.js";
-import type { GitRunResult } from "../../ports/git.js";
+} from "../../extractCommandContract.js";
+import type { GitRunResult } from "../../../../ports/git.js";
 
 const DEFAULT_EXTRACT_COMMIT_MESSAGE_PREFIX = "extract";
 
