@@ -10,7 +10,7 @@ import type { ResolveBubbleByIdPort } from "../../ports/bubbleLookup.js";
 import type { ResolveDeliveryMessageRefPort } from "../../ports/tmuxDelivery.js";
 import type { EnsureBubbleInstanceIdForMutationPort } from "../../ports/bubbleIdentity.js";
 import type { BubbleStateSnapshot } from "../../domain/state/snapshot/bubbleStateSnapshot.js";
-import type { ProtocolEnvelope } from "../../../types/protocol.js";
+import type { ProtocolEnvelope } from "../../shared/protocol/protocolEnvelopeContract.js";
 
 export interface EmitHumanReplyInput {
   bubbleId: string;

@@ -6,7 +6,7 @@ import type {
 } from "./internal/command/approvalCommandDependencies.js";
 import type { BubbleStateSnapshot } from "../../domain/state/snapshot/bubbleStateSnapshot.js";
 import type { ApprovalDecision } from "../../../contracts/kernel/protocol.js";
-import type { ProtocolEnvelope } from "../../../types/protocol.js";
+import type { ProtocolEnvelope } from "../../shared/protocol/protocolEnvelopeContract.js";
 
 export type EmitApprovalDecisionDependencies = InternalApprovalCommandDependencies;
 

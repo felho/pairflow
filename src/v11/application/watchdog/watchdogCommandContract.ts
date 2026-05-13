@@ -21,7 +21,7 @@ import type { AppendWatchdogTracePort } from "../../ports/watchdogTrace.js";
 import type { EnsureBubbleInstanceIdForMutationPort } from "../../ports/bubbleIdentity.js";
 import type { ResolveBubbleByIdPort } from "../../ports/bubbleLookup.js";
 import type { BubbleStateSnapshot } from "../../domain/state/snapshot/bubbleStateSnapshot.js";
-import type { ProtocolEnvelope } from "../../../types/protocol.js";
+import type { ProtocolEnvelope } from "../../shared/protocol/protocolEnvelopeContract.js";
 
 export type PaneActivitySampleResult =
   | {
