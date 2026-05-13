@@ -342,8 +342,9 @@ is not imported outside the lane.
 
 **Reference lane:** `application/planWatch/`. Top-level: 2 files
 (`planWatchLoop.ts`, `planWatchLoopContract.ts`). Lane-internal-but-named:
-`runner/` (10 files), `ledger/` (2), `linkedTriggerIndex/` (5).
-Strictly-internal: `internal/loop/` (5 files). The runner is composed by
+`runner/` (10 files), `ledger/` (2), `linkedTriggerIndex/` (2 public files
+plus 4 helper files under `linkedTriggerIndex/internal/`). Strictly-internal:
+`internal/loop/` (5 files). The runner is composed by
 `defaults/planWatch/`; the trigger index is consumed by linked-bubble
 discovery in another lane; the ledger is consumed by persistence.
 

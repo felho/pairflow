@@ -1,7 +1,7 @@
 import type {
   LinkedBubbleTriggerDiagnostic
-} from "./linkedBubbleTriggerIndexContract.js";
-import type { PlanTrackerRow } from "./linkedBubbleTriggerIndexFrontmatter.js";
+} from "../linkedBubbleTriggerIndexContract.js";
+import type { PlanTrackerRow } from "./frontmatter.js";
 
 export function missingTaskPathDiagnostic(row: PlanTrackerRow): LinkedBubbleTriggerDiagnostic {
   return {

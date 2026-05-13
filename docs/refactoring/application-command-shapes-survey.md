@@ -358,7 +358,8 @@ not just opaque internal helpers.
 
 - **planWatch** — top: 2 (`planWatchLoop.ts`, `planWatchLoopContract.ts`).
   Lane-internal-but-named: `runner/` (10 files), `ledger/` (2), `linkedTriggerIndex/`
-  (5). Strictly-internal: `internal/loop/` (5 files). The runner module is
+  (2 public files plus 4 helper files under `linkedTriggerIndex/internal/`).
+  Strictly-internal: `internal/loop/` (5 files). The runner module is
   consumed by `defaults/planWatch/` for adapter wiring; the trigger index is
   consumed by linked-bubble discovery; the ledger is consumed by persistence.
 

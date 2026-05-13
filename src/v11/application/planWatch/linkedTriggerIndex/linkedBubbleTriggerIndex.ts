@@ -17,15 +17,15 @@ import {
   parseScalarList,
   parseTaskTracker,
   parseTopLevelScalar
-} from "./linkedBubbleTriggerIndexFrontmatter.js";
-import type { PlanTrackerRow } from "./linkedBubbleTriggerIndexFrontmatter.js";
-import { resolveRepoTaskPath } from "./linkedBubbleTriggerIndexPath.js";
+} from "./internal/frontmatter.js";
+import type { PlanTrackerRow } from "./internal/frontmatter.js";
+import { resolveRepoTaskPath } from "./internal/path.js";
 import {
   missingTaskPathDiagnostic,
   outsideRepoTaskPathDiagnostic,
   unlinkedTaskDiagnostic
-} from "./linkedBubbleTriggerIndexTaskDiagnostics.js";
-import { createDuplicateTrackerRowGuard } from "./linkedBubbleTriggerIndexTrackerRows.js";
+} from "./internal/taskDiagnostics.js";
+import { createDuplicateTrackerRowGuard } from "./internal/trackerRows.js";
 
 interface ParsedPlanFrontmatter {
   taskOrder: readonly string[] | undefined;

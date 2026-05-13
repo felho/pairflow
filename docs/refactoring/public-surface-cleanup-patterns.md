@@ -116,8 +116,8 @@ project root.
 - `14ed041c` — Realign planWatch internal ownership
 - See `src/v11/application/planWatch/` for the resulting three-tier layout
   (`planWatchLoop.ts`, `planWatchLoopContract.ts` at root; `runner/`,
-  `ledger/`, `linkedTriggerIndex/` as lane-internal-but-named; `internal/loop/`
-  as strictly-internal).
+  `ledger/`, `linkedTriggerIndex/` as lane-internal-but-named;
+  `internal/loop/` and `linkedTriggerIndex/internal/` as strictly-internal).
 
 ## #2 Pass-Through Canonicalization (Cross-Lane)
 
