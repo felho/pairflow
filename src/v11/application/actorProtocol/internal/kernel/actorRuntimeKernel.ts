@@ -8,7 +8,7 @@ import type {
   HumanQuestionActorEmitInput,
   MetaReviewResultActorEmitInput,
   PassActorEmitInput
-} from "../../../../../types/protocol.js";
+} from "../../actorEmitContract.js";
 import {
   type ActorEmitResult,
   emitConvergenceActorResult,

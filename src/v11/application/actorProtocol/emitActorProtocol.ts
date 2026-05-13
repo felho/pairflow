@@ -3,7 +3,7 @@ import type {
 } from "../../shared/actorProtocol/actorEmitContext.js";
 import type {
   ActorEmitInput
-} from "../../../types/protocol.js";
+} from "./actorEmitContract.js";
 import {
   assertActorEmitInputMatchesContext,
   type ActorEmitResult

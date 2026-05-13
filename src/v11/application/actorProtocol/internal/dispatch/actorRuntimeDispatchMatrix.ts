@@ -2,7 +2,7 @@ import type { AgentRole } from "../../../../../contracts/kernel/agentIdentity.js
 import type {
   ActorEmitInput,
   ActorOutputKind
-} from "../../../../../types/protocol.js";
+} from "../../actorEmitContract.js";
 import {
   ActorEmitContextError,
   assertActorEmitContextMatches,

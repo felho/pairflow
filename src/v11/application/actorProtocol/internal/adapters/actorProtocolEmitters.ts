@@ -5,7 +5,7 @@ import type {
   HumanQuestionActorEmitInput,
   MetaReviewResultActorEmitInput,
   PassActorEmitInput
-} from "../../../../../types/protocol.js";
+} from "../../actorEmitContract.js";
 import {
   assertActorEmitContextMatches
 } from "../../../../shared/actorProtocol/actorEmitContext.js";

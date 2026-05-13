@@ -11,7 +11,7 @@ import {
   isActorOutputKind,
   type ActorEmitInput,
   type ActorOutputKind
-} from "../../../types/protocol.js";
+} from "../../../v11/application/actorProtocol/actorEmitContract.js";
 import type { ConvergedStructuredFinding } from "../../../v11/shared/converged/convergedCommandTypes.js";
 import {
   isConvergedStructuredFindingSeverity
