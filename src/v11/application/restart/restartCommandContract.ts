@@ -14,8 +14,10 @@ import type {
 import type {
   TerminateBubbleTmuxSessionPort
 } from "../../ports/tmuxSessions.js";
-import type { startBubble } from "../start/startCommandApi.js";
-import type { StartBubbleResult } from "../start/startCommandContract.js";
+import type {
+  StartBubbleInput,
+  StartBubbleResult
+} from "../start/startCommandContract.js";
 
 export interface RestartBubbleInput {
   bubbleId: string;
@@ -34,11 +36,15 @@ export interface RestartBubbleResult {
   warnings?: PassValidationRecoveryMarkerPersistWarning[] | undefined;
 }
 
+export type RestartStartBubblePort = (
+  input: StartBubbleInput
+) => Promise<StartBubbleResult>;
+
 export interface RestartBubbleDependencies {
   resolveBubbleById?: ResolveBubbleByIdPort;
   readRemotePointer?: (path: string) => Promise<BubbleRemotePointer | null>;
   terminateBubbleTmuxSession?: TerminateBubbleTmuxSessionPort;
   removeRuntimeSession?: RemoveRuntimeSessionPort;
   persistPassValidationRecoveryMarker?: PersistPassValidationRecoveryMarkerPort;
-  startBubble?: typeof startBubble;
+  startBubble?: RestartStartBubblePort;
 }

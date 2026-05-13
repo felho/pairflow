@@ -5,7 +5,10 @@ import type { TerminateBubbleTmuxSessionPort } from "../../../../ports/tmuxSessi
 import type {
   BubbleRemotePointer
 } from "../../../../shared/remote/remoteExecutionTypes.js";
-import type { RestartBubbleDependencies } from "../../restartCommandContract.js";
+import type {
+  RestartBubbleDependencies,
+  RestartStartBubblePort
+} from "../../restartCommandContract.js";
 import { startBubble } from "../../../start/startCommandApi.js";
 import { createRestartBubbleError } from "../error/restartCommandRuntime.js";
 
@@ -15,7 +18,7 @@ export interface ResolvedRestartBubbleDependencies {
   terminateBubbleTmuxSession: TerminateBubbleTmuxSessionPort;
   removeRuntimeSession: RemoveRuntimeSessionPort;
   persistPassValidationRecoveryMarker: PersistPassValidationRecoveryMarkerPort;
-  startBubble: typeof startBubble;
+  startBubble: RestartStartBubblePort;
 }
 
 function requireRestartDependency<T>(value: T | undefined, name: string): T {
