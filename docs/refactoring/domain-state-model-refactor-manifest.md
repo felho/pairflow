@@ -1241,15 +1241,15 @@ patterns worth recording.
      `state.active_*`, `state.last_command_at`) on
      `InspectedStateSnapshot`, which is shared with
      `start` + `status` and is a separate read-only inspect
-     port, not list-owned. Variant and persisted are
-     structurally compatible for these reads.
+     port, not list-owned. Follow-up inspect-port hygiene split
+     that boundary into a uniform `InspectableStateProjection`
+     plus optional `validatedSnapshot` for the strict domain
+     variant.
    No list source-side migration was queued; the lane is
-   considered out of variant-migration scope until a
-   cross-lane `InspectedDomainStateSnapshot` boundary batch
-   is needed (analogue of the §10.12 UI projection adapter
-   batch). That boundary batch is **not currently scheduled**;
-   if surfaced during Step 4b-γ preparation, it joins the
-   parser-flip cascade.
+   considered out of variant-migration scope because its
+   read-model projection consumes only the inspectable common
+   fields; stricter variant consumers can opt into
+   `validatedSnapshot`.
 
 3. **MetaReviewGate cascade cannot be split into
    "public + defaults first" (Batch A) and "internals second"
@@ -1310,9 +1310,9 @@ patterns worth recording.
     explicit-persisted with documentation; the choice depends
     on Step 4b-γ's parser-flip strategy.
   - **InspectedStateSnapshot** (read-only inspect port shared
-    by list/status/start, per observation 2 above) — same
-    boundary-batch character as the UI projection adapter
-    cleanup.
+    by list/status/start, per observation 2 above) — later
+    resolved by the inspectable projection + `validatedSnapshot`
+    split recorded in §10.15.
   - **Domain helpers** still consuming persisted shape:
     `domain/metaReviewGate/snapshotState.ts` (incrementAutoReworkCount,
     setMetaReviewConsecutiveCleanRuns,
@@ -1721,10 +1721,12 @@ post-flip cleanup commits**, in that order.
        `writeStateSnapshot` / `readStateSnapshot` accept and
        return variant; internal projection via
        `toPersistedSnapshot` + `serializeState` at wire-format
-       boundary. `inspectStateSnapshot` keeps persisted-shape
-       per §10.15 decision 1 but projects variant parser output
-       through `toPersistedSnapshot` to preserve on-disk
-       fingerprint stability.
+       boundary. Follow-up inspect-port hygiene gives
+       `inspectStateSnapshot` a diagnostic
+       `InspectableStateProjection` plus `validatedSnapshot`
+       for parser-success paths, preserving fingerprint
+       stability without using the wire-format type as the
+       inspect read model.
      - **SSH cleanup absorbed (per §10.14)**: 6
        `buildBubbleStateSnapshotVariant(...)` wrap deletions
        at approval (4) + commit (2) application boundaries; 2
