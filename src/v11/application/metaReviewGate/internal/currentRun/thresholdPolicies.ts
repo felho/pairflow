@@ -1,5 +1,5 @@
 import type { MetaReviewResult } from "../../../../shared/metaReview/metaReviewTypes.js";
-import type { FindingsParityMetadata } from "../../../../../types/protocol.js";
+import type { FindingsParityMetadata } from "../../../../shared/metaReviewGate/findingsParityMetadataContract.js";
 import { normalizeBubbleReviewPolicy } from "../../../../shared/reviewPolicy/reviewPolicyRuntime.js";
 import {
   META_REVIEW_APPROVE_THRESHOLD_BACKSTOP,

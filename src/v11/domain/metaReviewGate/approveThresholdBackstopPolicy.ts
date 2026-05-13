@@ -1,5 +1,5 @@
 import type { FindingPriority } from "../../../types/findings.js";
-import type { FindingsParityMetadata } from "../../../types/protocol.js";
+import type { FindingsParityMetadata } from "../../shared/metaReviewGate/findingsParityMetadataContract.js";
 import { metaReviewGateThresholdIsMet } from "./thresholdAuthority.js";
 
 export const META_REVIEW_APPROVE_THRESHOLD_BACKSTOP =

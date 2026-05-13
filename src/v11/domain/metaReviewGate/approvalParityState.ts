@@ -2,7 +2,7 @@ import type { MetaReviewRecommendation } from "../../shared/metaReview/metaRevie
 import {
   hasApproveFindingsSplitMetadata,
   type FindingsParityMetadata
-} from "../../../types/protocol.js";
+} from "../../shared/metaReviewGate/findingsParityMetadataContract.js";
 
 export interface ApprovalAdvisoryFinding {
   severity: "P2" | "P3";

@@ -2,7 +2,7 @@ import { isRecord } from "../../shared/validation/primitives.js";
 import {
   type FindingsParityMetadata,
   type FindingsParityStatus
-} from "../../../types/protocol.js";
+} from "../../shared/metaReviewGate/findingsParityMetadataContract.js";
 import {
   resolveFindingsCountFromMetaReviewReportJson,
   resolveNonNegativeIntegerField

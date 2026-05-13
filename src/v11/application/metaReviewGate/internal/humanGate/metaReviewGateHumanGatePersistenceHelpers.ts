@@ -5,7 +5,7 @@ import {
 } from "../../../../ports/stateSnapshots.js";
 import type { AgentName } from "../../../../../contracts/kernel/agentIdentity.js";
 import type { BubbleStateSnapshot } from "../../../../domain/state/snapshot/bubbleStateSnapshot.js";
-import type { FindingsParityMetadata } from "../../../../../types/protocol.js";
+import type { FindingsParityMetadata } from "../../../../shared/metaReviewGate/findingsParityMetadataContract.js";
 import type {
   AppendProtocolEnvelopePort,
   AppendProtocolEnvelopeResult

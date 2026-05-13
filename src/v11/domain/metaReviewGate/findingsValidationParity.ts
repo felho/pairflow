@@ -1,5 +1,5 @@
 import type { Finding } from "../../../types/findings.js";
-import type { FindingsParityMetadata } from "../../../types/protocol.js";
+import type { FindingsParityMetadata } from "../../shared/metaReviewGate/findingsParityMetadataContract.js";
 import {
   resolveLegacySummaryFindingsClaimState
 } from "../convergence/policy.js";

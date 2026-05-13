@@ -1,5 +1,5 @@
 import type { MetaReviewRecommendation } from "../../../../shared/metaReview/metaReviewTypes.js";
-import type { FindingsParityMetadata } from "../../../../../types/protocol.js";
+import type { FindingsParityMetadata } from "../../../../shared/metaReviewGate/findingsParityMetadataContract.js";
 import type { LatestSameRoundReviewerSnapshot } from "../../../../domain/metaReviewGate/reviewerSnapshot.js";
 import {
   buildMetaReviewSubmitAdvisoryOnlyCorrectionNote

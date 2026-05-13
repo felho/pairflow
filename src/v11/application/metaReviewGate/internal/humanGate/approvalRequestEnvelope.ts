@@ -3,10 +3,12 @@ import type {
   MetaReviewRecommendation
 } from "../../../../shared/metaReview/metaReviewTypes.js";
 import {
-  deliveryTargetRoleMetadataKey,
+  deliveryTargetRoleMetadataKey
+} from "../../../../../types/protocol.js";
+import {
   resolveFindingsParityMetadataForEnvelope,
   type FindingsParityMetadata
-} from "../../../../../types/protocol.js";
+} from "../../../../shared/metaReviewGate/findingsParityMetadataContract.js";
 import {
   appendProtocolEnvelope
 } from "../../../start/startCommandDependencyDefaults.js";

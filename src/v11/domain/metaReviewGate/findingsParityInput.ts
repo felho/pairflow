@@ -1,4 +1,4 @@
-import type { FindingsParityMetadata, FindingsParityStatus } from "../../../types/protocol.js";
+import type { FindingsParityMetadata, FindingsParityStatus } from "../../shared/metaReviewGate/findingsParityMetadataContract.js";
 import {
   buildFindingsParityMetadata,
   metaReviewFindingsArtifactRequiredReasonCode,

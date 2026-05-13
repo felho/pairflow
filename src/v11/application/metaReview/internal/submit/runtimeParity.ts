@@ -8,7 +8,7 @@ import type {
 import {
   hasApproveFindingsSplitMetadata,
   type FindingsParityStatus
-} from "../../../../../types/protocol.js";
+} from "../../../../shared/metaReviewGate/findingsParityMetadataContract.js";
 import {
   isAdvisoryOnlyReviewerSnapshot,
   resolveFindingsParityMetadataFromReportJson,

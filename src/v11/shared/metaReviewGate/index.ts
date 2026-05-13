@@ -2,6 +2,16 @@ export {
   MetaReviewGateError,
   metaReviewGateRoutes
 } from "./metaReviewGateRouteContract.js";
+export {
+  findingsParityStatuses,
+  hasApproveFindingsSplitMetadata,
+  resolveFindingsParityMetadataForEnvelope
+} from "./findingsParityMetadataContract.js";
+export type {
+  ApproveFindingsSplitMetadata,
+  FindingsParityMetadata,
+  FindingsParityStatus
+} from "./findingsParityMetadataContract.js";
 export type {
   ApplyMetaReviewGateOnConvergenceDependencies,
   ApplyMetaReviewGateOnConvergenceInput,

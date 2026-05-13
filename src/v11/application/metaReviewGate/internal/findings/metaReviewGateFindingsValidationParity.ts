@@ -1,6 +1,6 @@
 import type { MetaReviewResult } from "../../../../shared/metaReview/metaReviewTypes.js";
 import type { Finding } from "../../../../../types/findings.js";
-import { type FindingsParityMetadata } from "../../../../../types/protocol.js";
+import { type FindingsParityMetadata } from "../../../../shared/metaReviewGate/findingsParityMetadataContract.js";
 import type { MetaReviewGateArtifactReadFn } from "./metaReviewGateFindingsMetadata.js";
 import {
   resolveReworkFindingsParityInput,

@@ -7,7 +7,7 @@ import type { AgentName } from "../../../../../contracts/kernel/agentIdentity.js
 import type { BubbleLifecycleState } from "../../../../../contracts/kernel/lifecycle.js";
 import type { BubbleStateSnapshot } from "../../../../domain/state/snapshot/bubbleStateSnapshot.js";
 import type { MetaReviewResult } from "../../../../shared/metaReview/metaReviewTypes.js";
-import type { FindingsParityMetadata } from "../../../../../types/protocol.js";
+import type { FindingsParityMetadata } from "../../../../shared/metaReviewGate/findingsParityMetadataContract.js";
 import type { AppendProtocolEnvelopePort } from "../../../../ports/transcript.js";
 import type {
   MetaReviewGateRoute,

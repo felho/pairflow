@@ -1,4 +1,4 @@
-import type { FindingsParityMetadata } from "../../../types/protocol.js";
+import type { FindingsParityMetadata } from "../../shared/metaReviewGate/findingsParityMetadataContract.js";
 
 interface RunResultWithReportJson {
   report_json?: Record<string, unknown>;

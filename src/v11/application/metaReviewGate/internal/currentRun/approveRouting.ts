@@ -1,5 +1,5 @@
 import type { MetaReviewResult } from "../../../../shared/metaReview/metaReviewTypes.js";
-import type { FindingsParityMetadata } from "../../../../../types/protocol.js";
+import type { FindingsParityMetadata } from "../../../../shared/metaReviewGate/findingsParityMetadataContract.js";
 import type { normalizeMetaReviewSnapshot } from "../../../../domain/metaReviewGate/snapshotState.js";
 import {
   buildApproveValidationReworkMessage,

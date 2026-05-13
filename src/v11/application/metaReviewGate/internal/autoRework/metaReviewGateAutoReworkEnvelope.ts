@@ -6,10 +6,12 @@ import type { LoadedStateSnapshot } from "../../../../ports/stateSnapshots.js";
 import type { AgentName } from "../../../../../contracts/kernel/agentIdentity.js";
 import type { Finding } from "../../../../../types/findings.js";
 import {
-  deliveryTargetRoleMetadataKey,
+  deliveryTargetRoleMetadataKey
+} from "../../../../../types/protocol.js";
+import {
   resolveFindingsParityMetadataForEnvelope,
   type FindingsParityMetadata
-} from "../../../../../types/protocol.js";
+} from "../../../../shared/metaReviewGate/findingsParityMetadataContract.js";
 import { buildGateLockPath } from "../state/metaReviewGateShared.js";
 
 export async function appendAutoReworkDecision(input: {

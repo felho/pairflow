@@ -10,7 +10,7 @@ import {
   resolveStructuredParityMetadataSnapshot,
   type ApprovalAdvisoryFinding
 } from "./approvalParitySnapshot.js";
-import type { FindingsParityMetadata } from "../../../types/protocol.js";
+import type { FindingsParityMetadata } from "../../shared/metaReviewGate/findingsParityMetadataContract.js";
 
 const approvalSummaryMetadataMismatchReasonCode =
   "META_REVIEW_GATE_APPROVAL_SUMMARY_METADATA_MISMATCH";

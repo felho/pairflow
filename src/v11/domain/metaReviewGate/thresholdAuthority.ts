@@ -1,5 +1,5 @@
 import { resolveFindingPriority, type FindingPriority } from "../../../types/findings.js";
-import type { FindingsParityMetadata } from "../../../types/protocol.js";
+import type { FindingsParityMetadata } from "../../shared/metaReviewGate/findingsParityMetadataContract.js";
 import { isRecord } from "../../shared/validation/primitives.js";
 import { buildFindingsParityMetadata } from "./findingsParityMetadata.js";
 import type { FindingsOpenSplit } from "./findingsSplit.js";
