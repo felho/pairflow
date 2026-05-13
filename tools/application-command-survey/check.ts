@@ -253,10 +253,10 @@ export async function checkApplicationCommandSurveyDrift(input: {
 
 function renderReport(report: SurveyDriftReport): string {
   if (report.status === "pass") {
-    return `application-command survey check passed: ${report.checkedLanes} lane(s) match the documented inventory.`;
+    return `application-command survey check passed: ${report.checkedLanes} lane(s) match the documented snapshot inventory.`;
   }
   return [
-    `application-command survey check failed: ${report.issues.length} drift issue(s).`,
+    `application-command survey check failed: ${report.issues.length} snapshot drift issue(s).`,
     ...report.issues.map((issue) =>
       `${issue.lane}: ${issue.field} expected=${issue.expected} actual=${issue.actual}`
     )

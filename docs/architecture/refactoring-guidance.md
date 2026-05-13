@@ -264,10 +264,11 @@ common naming roles, and a dedicated procedure for half-done lanes (those with
 `internal/<one-sub-area>/` already introduced but the rest of the lane still
 top-level).
 
-The empirical companion document is
+The empirical companion snapshot is
 [`docs/refactoring/application-command-shapes-survey.md`](../refactoring/application-command-shapes-survey.md),
-which catalogs the actual shape and naming distribution across every
-`application/` lane.
+which records a point-in-time shape and naming distribution across
+`application/` lanes. Treat the codebase as the source of truth; refresh the
+survey when a planning pass needs current lane-shape evidence.
 
 Non-command application lanes (such as `actorProtocol`) are out of scope of
 the template and tracked as separate placement decisions.

@@ -2001,7 +2001,7 @@ the structure deepened on disk but not at the interface — go further.
 ## Maintenance
 
 This template is written from the planWatch + half-done evidence backed by
-the lane survey. After 5 lane refactors land using this template, the
+the lane survey snapshot. After 5 lane refactors land using this template, the
 `architecture/runtime` owner should review:
 
 - whether the three tiers still cover the observed lane shapes,
@@ -2011,5 +2011,7 @@ the lane survey. After 5 lane refactors land using this template, the
 - whether another non-command lane has emerged and should be
   cross-referenced alongside `actorProtocol`.
 
-The survey doc (`application-command-shapes-survey.md`) is the empirical
-companion to this template; update it alongside major template revisions.
+The survey doc (`application-command-shapes-survey.md`) is an empirical
+companion to this template, not a live inventory that must be updated after
+every lane move. Refresh or regenerate it when revisiting template assumptions
+or when a new planning pass needs current lane-shape evidence.

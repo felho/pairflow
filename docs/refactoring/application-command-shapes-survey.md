@@ -1,18 +1,22 @@
-# Application Command Shapes — Survey
+# Application Command Shapes — Survey Snapshot
 
-Status: descriptive (factual inventory; companion to the template)
+Status: diagnostic snapshot (not a continuously maintained source of truth)
 Last updated: 2026-05-13
 Owner: architecture/runtime
-Scope: factual inventory of `src/v11/application/<lane>/` directories that
-backs the application-command-lane template
+Scope: point-in-time inventory of `src/v11/application/<lane>/` directories
+used to inform the application-command-lane template
 ([`docs/refactoring/application-command-lane-template.md`](application-command-lane-template.md)).
 
-This document **describes what exists**. The template prescribes; this
-survey records the shape distribution that the template was written against.
-When a lane refactor lands, update the corresponding inventory row here so
-the data backing the template stays current.
-Run `pnpm survey:check` after structural lane changes to catch drift between
-the inventory table and the filesystem-derived lane shape.
+The codebase is the source of truth. This survey is a saved diagnostic
+snapshot and planning aid: regenerate or refresh it when starting another
+application-lane scope scan, when revisiting the template's assumptions, or
+when a concrete refactoring hypothesis needs a current inventory.
+
+Do not treat this document as a CI-style live dashboard. Routine lane refactors
+do not have to update this table unless the work is explicitly maintaining the
+survey or using it as evidence for a planning decision. `pnpm survey:check`
+is a manual freshness guard for those moments; it is intentionally not part of
+`fitness:check:ci` or `ci:local`.
 
 ## Method
 
@@ -28,6 +32,10 @@ the inventory table and the filesystem-derived lane shape.
 4. Cross-referenced against the lane structural audit
    (`.pairflow/evidence/lane-audit.md`) for consumer scope.
 5. Grouped lanes by shape and by current modularization state.
+
+This method is the durable artifact. The inventory below may drift as the
+codebase evolves; refresh it from the filesystem before using it for a new
+round of prioritization.
 
 ## Lane inventory (28 lanes)
 
