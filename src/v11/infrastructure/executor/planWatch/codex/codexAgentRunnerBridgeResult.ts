@@ -8,7 +8,7 @@ import type {
   AgentRunnerContinuationPayload,
   AgentRunnerProcessResult,
   RequiredAgentRunnerCommandConfig
-} from "./agentRunnerBridgeContract.js";
+} from "../../../../shared/planWatchRunner/agentRunnerBridgeContract.js";
 import { parseCodexJsonlStream } from "./codexAgentRunnerStream.js";
 import { normalizeCodexTimeline } from "./codexAgentRunnerTimeline.js";
 
@@ -19,7 +19,7 @@ export async function classifyCodexJsonProcessResult(input: {
   completedAt: string;
   command: AgentRunnerCommandIdentity;
   payload: AgentRunnerContinuationPayload;
-  artifactFiles: NonNullable<RequiredAgentRunnerCommandConfig["codexRunnerFiles"]>;
+  artifactFiles: NonNullable<RequiredAgentRunnerCommandConfig["runnerArtifactFiles"]>;
 }): Promise<AgentRunnerBridgeResult> {
   const stdoutFileFailure = stdoutFileFailureResult(input);
   if (stdoutFileFailure !== undefined) {
@@ -200,7 +200,7 @@ function blocked(input: {
     completedAt: string;
     command: AgentRunnerCommandIdentity;
     payload: AgentRunnerContinuationPayload;
-    artifactFiles: NonNullable<RequiredAgentRunnerCommandConfig["codexRunnerFiles"]>;
+    artifactFiles: NonNullable<RequiredAgentRunnerCommandConfig["runnerArtifactFiles"]>;
   };
   reasonCode: AgentRunnerBridgeFailureReasonCode;
   stderr: string;

@@ -25,17 +25,18 @@ import type {
   AgentRunnerContinuationPayload,
   AgentRunnerProcessInvocation,
   AgentRunnerProcessResult
-} from "../../../../src/v11/application/planWatch/runner/agentRunnerBridgeContract.js";
+} from "../../../../src/v11/shared/planWatchRunner/agentRunnerBridgeContract.js";
 import {
   buildArtifactDirBaseName,
   planSlugFromPath
-} from "../../../../src/v11/application/planWatch/runner/codexAgentRunnerArtifacts.js";
+} from "../../../../src/v11/infrastructure/executor/planWatch/codex/codexAgentRunnerArtifacts.js";
 import {
+  createCodexPlanWatchRunnerBackendAdapter,
   prepareCodexRunnerFiles,
   validateContinuationPayload
-} from "../../../../src/v11/application/planWatch/runner/codexAgentRunnerBridge.js";
-import { parseCodexJsonlStream } from "../../../../src/v11/application/planWatch/runner/codexAgentRunnerStream.js";
-import { normalizeCodexTimeline } from "../../../../src/v11/application/planWatch/runner/codexAgentRunnerTimeline.js";
+} from "../../../../src/v11/infrastructure/executor/planWatch/codex/codexAgentRunnerBridge.js";
+import { parseCodexJsonlStream } from "../../../../src/v11/infrastructure/executor/planWatch/codex/codexAgentRunnerStream.js";
+import { normalizeCodexTimeline } from "../../../../src/v11/infrastructure/executor/planWatch/codex/codexAgentRunnerTimeline.js";
 import { runAgentRunnerCommand } from "../../../../src/v11/defaults/planWatch/agentRunnerBridgeDefaults.js";
 import { MAX_NODE_TIMER_DELAY_MS } from "../../../../src/v11/shared/timing/nodeTimerDelay.js";
 import type {
@@ -79,9 +80,13 @@ function baseInput(): AgentRunnerBridgeInput {
   };
 }
 
+type AgentRunnerBridgeTestDependencies = AgentRunnerBridgeDependencies & {
+  prepareCodexRunnerFiles: ReturnType<typeof vi.fn>;
+};
+
 function deps(
-  overrides: Partial<AgentRunnerBridgeDependencies> = {}
-): AgentRunnerBridgeDependencies {
+  overrides: Partial<AgentRunnerBridgeTestDependencies> = {}
+): AgentRunnerBridgeTestDependencies {
   artifactCounter += 1;
   const artifactSuffix = `${process.pid}-${artifactCounter}`;
   const defaultArtifactDir = join(tmpdir(), `pairflow-agent-runner-artifacts-${artifactSuffix}`);
@@ -102,22 +107,29 @@ function deps(
       'runner prose\n{"status":"settled_checkpoint","reason_code":"PLAN_SETTLED","summary":"done"}\n',
     stderr: ""
   })));
+  const prepareCodexRunnerFilesMock = overrides.prepareCodexRunnerFiles ?? vi.fn(async () => ({
+    artifactDir: defaultArtifactDir,
+    artifactDirRef:
+      ".pairflow/runtime/plan-watch/agent-runner/2026-05-01_10-00-00-local-plan-watch-plan-v1_invocation-001",
+    schemaFilePath: defaultSchemaFilePath,
+    metadataFilePath: defaultMetadataFilePath,
+    eventsFilePath: defaultEventsFilePath,
+    timelineFilePath: defaultTimelineFilePath
+  }));
   return {
     pathExists: vi.fn(async () => true),
-    prepareCodexRunnerFiles: vi.fn(async () => ({
-      artifactDir: defaultArtifactDir,
-      artifactDirRef:
-        ".pairflow/runtime/plan-watch/agent-runner/2026-05-01_10-00-00-local-plan-watch-plan-v1_invocation-001",
-      schemaFilePath: defaultSchemaFilePath,
-      metadataFilePath: defaultMetadataFilePath,
-      eventsFilePath: defaultEventsFilePath,
-      timelineFilePath: defaultTimelineFilePath
-    })),
+    prepareCodexRunnerFiles: prepareCodexRunnerFilesMock,
     now: vi
       .fn()
       .mockReturnValueOnce(new Date("2026-05-01T10:00:00.000Z"))
       .mockReturnValue(new Date("2026-05-01T10:00:05.000Z")),
     ...overrides,
+    builtInBackends:
+      overrides.builtInBackends ?? [
+        createCodexPlanWatchRunnerBackendAdapter({
+          prepareRunnerFiles: prepareCodexRunnerFilesMock
+        })
+      ],
     runCommand
   };
 }
@@ -2583,14 +2595,18 @@ describe("agentRunnerBridge", () => {
       {
         pathExists: async () => true,
         runCommand: runAgentRunnerCommand,
-        prepareCodexRunnerFiles: async () => ({
-          artifactDir: root,
-          artifactDirRef: ".pairflow/runtime/plan-watch/agent-runner/run",
-          schemaFilePath: join(root, "schema.json"),
-          metadataFilePath: join(root, "metadata.json"),
-          eventsFilePath,
-          timelineFilePath
-        }),
+        builtInBackends: [
+          createCodexPlanWatchRunnerBackendAdapter({
+            prepareRunnerFiles: async () => ({
+              artifactDir: root,
+              artifactDirRef: ".pairflow/runtime/plan-watch/agent-runner/run",
+              schemaFilePath: join(root, "schema.json"),
+              metadataFilePath: join(root, "metadata.json"),
+              eventsFilePath,
+              timelineFilePath
+            })
+          })
+        ],
         now: vi
           .fn()
           .mockReturnValueOnce(new Date("2026-05-01T10:00:00.000Z"))

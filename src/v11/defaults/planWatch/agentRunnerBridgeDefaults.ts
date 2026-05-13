@@ -7,11 +7,11 @@ import type {
   AgentRunnerCommandConfig,
   AgentRunnerProcessInvocation,
   AgentRunnerProcessResult
-} from "../../application/planWatch/runner/agentRunnerBridgeContract.js";
+} from "../../shared/planWatchRunner/agentRunnerBridgeContract.js";
 import { runExecutePairflowPlanContinuation } from "../../application/planWatch/runner/agentRunnerBridge.js";
 import {
-  prepareCodexRunnerFiles
-} from "../../application/planWatch/runner/codexAgentRunnerBridge.js";
+  codexPlanWatchRunnerBackendAdapter
+} from "../../infrastructure/executor/planWatch/codex/codexAgentRunnerBridge.js";
 import { nodeProcessSpawn } from "../../infrastructure/executor/process/nodeProcessSpawn.js";
 import type {
   ProcessSpawnPipeChild,
@@ -344,7 +344,7 @@ function abortedBeforeSpawnResult(): AgentRunnerProcessResult {
 export const agentRunnerBridgeDefaults: AgentRunnerBridgeDependencies = {
   pathExists,
   runCommand: runAgentRunnerCommand,
-  prepareCodexRunnerFiles
+  builtInBackends: [codexPlanWatchRunnerBackendAdapter]
 };
 
 export function runExecutePairflowPlanContinuationWithDefaults(

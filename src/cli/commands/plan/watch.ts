@@ -22,10 +22,10 @@ import {
 } from "../../../v11/application/planWatch/runner/agentRunnerBridge.js";
 import {
   normalizeAgentRunnerTimeline
-} from "../../../v11/application/planWatch/runner/agentRunnerTimeline.js";
+} from "../../../v11/infrastructure/executor/planWatch/agentRunnerTimeline.js";
 import type {
   AgentRunnerBridgeInputMode
-} from "../../../v11/application/planWatch/runner/agentRunnerBridgeContract.js";
+} from "../../../v11/shared/planWatchRunner/agentRunnerBridgeContract.js";
 
 export interface PlanWatchCommandOptions {
   planPath: string;

@@ -6,6 +6,6 @@ The lane has three visibility levels:
 - Lane-internal named modules: `runner/`, `ledger/`, and `linkedTriggerIndex/`, used by in-repo composition such as CLI and defaults.
 - Strictly-internal modules: `internal/loop/` and `linkedTriggerIndex/internal/`, used only by their owning PlanWatch implementation.
 
-CLI-facing runner timeline rendering should depend on the neutral `runner/agentRunnerTimeline.ts` facade, not provider-specific timeline files.
+CLI-facing runner timeline rendering should depend on the neutral infrastructure facade at `src/v11/infrastructure/executor/planWatch/agentRunnerTimeline.ts`, not provider-specific timeline files.
 
-Keep Codex-specific runner implementation in `runner/` while it is the only runner. Split provider-specific code under defaults, for example `defaults/planWatch/codex/runner/`, when a second runner implementation arrives.
+Keep application `runner/` limited to orchestration contracts, command invocation policy, and provider-neutral result classification. Provider-specific process arguments, artifact files, JSONL parsing, and timeline normalization belong under infrastructure, such as `src/v11/infrastructure/executor/planWatch/codex/**`.

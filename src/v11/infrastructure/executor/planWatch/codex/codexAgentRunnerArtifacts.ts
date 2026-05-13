@@ -3,8 +3,8 @@ import { basename, join, relative, sep } from "node:path";
 
 import type {
   AgentRunnerContinuationPayload,
-  CodexRunnerArtifactFiles
-} from "./agentRunnerBridgeContract.js";
+  AgentRunnerArtifactFiles
+} from "../../../../shared/planWatchRunner/agentRunnerBridgeContract.js";
 
 export const CODEX_RUNNER_ARTIFACT_SCHEMA_VERSION = 1;
 
@@ -16,7 +16,7 @@ export interface PrepareCodexRunnerArtifactsInput {
 
 export async function prepareCodexRunnerArtifacts(
   input: PrepareCodexRunnerArtifactsInput
-): Promise<CodexRunnerArtifactFiles> {
+): Promise<AgentRunnerArtifactFiles> {
   const root = join(
     input.payload.repo_path,
     ".pairflow",

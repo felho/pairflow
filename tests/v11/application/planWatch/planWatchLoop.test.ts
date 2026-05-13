@@ -28,7 +28,7 @@ import {
 import {
   asAgentRunnerBridgeRunnerReasonCode,
   type AgentRunnerBridgeResult
-} from "../../../../src/v11/application/planWatch/runner/agentRunnerBridgeContract.js";
+} from "../../../../src/v11/shared/planWatchRunner/agentRunnerBridgeContract.js";
 import type {
   LinkedBubbleTriggerCandidate,
   LinkedBubbleTriggerIndexResult

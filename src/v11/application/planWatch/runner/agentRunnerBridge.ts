@@ -1,6 +1,7 @@
 import type {
   AgentRunnerBridgeDependencies,
   AgentRunnerBridgeFailureReasonCode,
+  AgentRunnerBuiltInBackendAdapter,
   AgentRunnerBridgeInput,
   AgentRunnerBridgeResult,
   AgentRunnerCommandConfig,
@@ -8,16 +9,8 @@ import type {
   AgentRunnerContinuationPayload,
   AgentRunnerProcessResult,
   RequiredAgentRunnerCommandConfig
-} from "./agentRunnerBridgeContract.js";
-import {
-  buildCodexRunnerArgs,
-  CODEX_PLAN_WATCH_RUNNER_BACKEND,
-  isUnavailableExecutableError,
-  prepareCodexRunnerFiles,
-  validateContinuationPayload
-} from "./codexAgentRunnerBridge.js";
-import { classifyCodexJsonProcessResult } from "./codexAgentRunnerBridgeResult.js";
-import { parseStructuredAgentRunnerOutput } from "./agentRunnerBridgeResult.js";
+} from "../../../shared/planWatchRunner/agentRunnerBridgeContract.js";
+import { parseStructuredAgentRunnerOutput } from "../../../shared/planWatchRunner/agentRunnerBridgeResult.js";
 import {
   buildRunnerInvocation,
   DEFAULT_AGENT_RUNNER_IDLE_TIMEOUT_MS,
@@ -25,7 +18,12 @@ import {
 } from "./agentRunnerInvocationPolicy.js";
 export { DEFAULT_AGENT_RUNNER_IDLE_TIMEOUT_MS };
 type PreconditionResolution =
-  | { ok: true; config: RequiredAgentRunnerCommandConfig; payload: AgentRunnerContinuationPayload }
+  | {
+      ok: true;
+      config: RequiredAgentRunnerCommandConfig;
+      payload: AgentRunnerContinuationPayload;
+      backendAdapter?: AgentRunnerBuiltInBackendAdapter | undefined;
+    }
   | { ok: false; result: AgentRunnerBridgeResult };
 export function buildAgentRunnerContinuationPayload(
   input: AgentRunnerBridgeInput,
@@ -41,6 +39,35 @@ export function buildAgentRunnerContinuationPayload(
     trigger: input.trigger
   };
 }
+
+function validateContinuationPayload(
+  payload: AgentRunnerContinuationPayload
+): AgentRunnerBridgeFailureReasonCode | undefined {
+  if (payload.workflow !== "ExecutePairflowPlan") {
+    return "PLAN_WATCH_RUNNER_WORKFLOW_UNSUPPORTED";
+  }
+  if (
+    payload.kind !== "pairflow.execute_pairflow_plan.continuation"
+    || !nonEmptyString(payload.invocation_id)
+    || !nonEmptyString(payload.plan_path)
+    || !nonEmptyString(payload.repo_path)
+    || !nonEmptyString(payload.triggered_at)
+    || Number.isNaN(Date.parse(payload.triggered_at))
+    || !isRecord(payload.trigger)
+  ) {
+    return "PLAN_WATCH_RUNNER_PAYLOAD_INVALID";
+  }
+  return undefined;
+}
+
+function nonEmptyString(value: unknown): value is string {
+  return typeof value === "string" && value.trim().length > 0;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
 export async function runExecutePairflowPlanContinuation(
   input: AgentRunnerBridgeInput,
   config: AgentRunnerCommandConfig,
@@ -91,18 +118,18 @@ export async function runExecutePairflowPlanContinuation(
     preconditions.payload,
     idleTimeoutMs
   );
-  if (preconditions.config.codexRunnerFiles !== undefined) await input.onArtifactFiles?.(preconditions.config.codexRunnerFiles);
+  if (preconditions.config.runnerArtifactFiles !== undefined) await input.onArtifactFiles?.(preconditions.config.runnerArtifactFiles);
   try {
     const processResult = await dependencies.runCommand(invocation.processInvocation);
-    if (preconditions.config.codexRunnerFiles !== undefined) {
-      return classifyCodexJsonProcessResult({
+    if (preconditions.backendAdapter !== undefined) {
+      return preconditions.backendAdapter.classifyProcessResult({
         input,
         processResult,
         startedAt,
         completedAt: clock().toISOString(),
         command: invocation.commandIdentity,
         payload: invocation.payload,
-        artifactFiles: preconditions.config.codexRunnerFiles
+        config: preconditions.config
       });
     }
     if (processResult.aborted || processResult.timedOut || processResult.exitCode !== 0) {
@@ -130,15 +157,15 @@ export async function runExecutePairflowPlanContinuation(
       startedAt,
       completedAt: clock().toISOString(),
       reasonCode:
-        preconditions.config.backend === CODEX_PLAN_WATCH_RUNNER_BACKEND
-          && isUnavailableExecutableError(error)
-          ? "PLAN_WATCH_CODEX_UNAVAILABLE"
-          : "AGENT_RUNNER_SPAWN_FAILED",
+        preconditions.backendAdapter?.classifySpawnErrorReasonCode?.({
+          error,
+          config: preconditions.config
+        }) ?? "AGENT_RUNNER_SPAWN_FAILED",
       failureStage: "spawn",
       command: invocation.commandIdentity,
       stderr: error instanceof Error ? error.message : String(error),
       payload: invocation.payload,
-      artifactDir: preconditions.config.codexRunnerFiles?.artifactDirRef
+      artifactDir: preconditions.config.runnerArtifactFiles?.artifactDirRef
     });
   }
 }
@@ -232,7 +259,10 @@ async function resolveBuiltInRunnerPreconditions(input: {
       })
     };
   }
-  if (backend !== CODEX_PLAN_WATCH_RUNNER_BACKEND) {
+  const backendAdapter = input.dependencies.builtInBackends?.find(
+    (adapter) => adapter.backend === backend
+  );
+  if (backendAdapter === undefined) {
     return {
       ok: false,
       result: blocked({
@@ -245,85 +275,33 @@ async function resolveBuiltInRunnerPreconditions(input: {
       })
     };
   }
-  const payloadValidation = validateContinuationPayload(input.payload);
-  if (payloadValidation !== undefined) {
+  const prepared = await backendAdapter.prepareInvocationConfig({
+    input: input.input,
+    config: input.config,
+    payload: input.payload,
+    pathExists: input.dependencies.pathExists,
+    startedAt: input.startedAt
+  });
+  if (!prepared.ok) {
     return {
       ok: false,
       result: blocked({
         input: input.input,
         startedAt: input.startedAt,
         completedAt: input.completedAt(),
-        reasonCode: payloadValidation,
+        reasonCode: prepared.reasonCode,
         failureStage: "precondition",
         command: null,
-        payload: input.payload
-      })
-    };
-  }
-  const repoAvailable = await input.dependencies.pathExists(input.payload.repo_path);
-  if (!repoAvailable) {
-    return {
-      ok: false,
-      result: blocked({
-        input: input.input,
-        startedAt: input.startedAt,
-        completedAt: input.completedAt(),
-        reasonCode: "PLAN_WATCH_REPO_PATH_UNAVAILABLE",
-        failureStage: "precondition",
-        command: null,
-        payload: input.payload
-      })
-    };
-  }
-  const planAvailable = await input.dependencies.pathExists(input.payload.plan_path);
-  if (!planAvailable) {
-    return {
-      ok: false,
-      result: blocked({
-        input: input.input,
-        startedAt: input.startedAt,
-        completedAt: input.completedAt(),
-        reasonCode: "PLAN_WATCH_PLAN_PATH_UNAVAILABLE",
-        failureStage: "precondition",
-        command: null,
-        payload: input.payload
-      })
-    };
-  }
-  const prepareFiles = input.dependencies.prepareCodexRunnerFiles ?? prepareCodexRunnerFiles;
-  let codexRunnerFiles: Awaited<ReturnType<typeof prepareCodexRunnerFiles>>;
-  try {
-    codexRunnerFiles = await prepareFiles(input.payload, input.startedAt);
-  } catch (error) {
-    return {
-      ok: false,
-      result: blocked({
-        input: input.input,
-        startedAt: input.startedAt,
-        completedAt: input.completedAt(),
-        reasonCode: "PLAN_WATCH_RUNNER_FILE_IO_FAILED",
-        failureStage: "precondition",
-        command: null,
-        stderr: error instanceof Error ? error.message : String(error),
-        payload: input.payload
+        ...(prepared.stderr !== undefined ? { stderr: prepared.stderr } : {}),
+        payload: prepared.payload ?? input.payload
       })
     };
   }
   return {
     ok: true,
     payload: input.payload,
-    config: {
-      ...input.config,
-      backend,
-      command: input.config.command?.trim() || "codex",
-      args: buildCodexRunnerArgs({
-        payload: input.payload,
-        schemaFilePath: codexRunnerFiles.schemaFilePath
-      }),
-      cwd: input.payload.repo_path,
-      codexRunnerFiles,
-      inputMode: "none"
-    }
+    config: prepared.config,
+    backendAdapter
   };
 }
 function timeoutReasonCode(

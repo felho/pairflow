@@ -62,7 +62,7 @@ export interface AgentRunnerBridgeInput {
   now?: Date;
   idleTimeoutMs?: number;
   stopSignal?: AbortSignal | undefined;
-  onArtifactFiles?: ((files: CodexRunnerArtifactFiles) => void | Promise<void>) | undefined;
+  onArtifactFiles?: ((files: AgentRunnerArtifactFiles) => void | Promise<void>) | undefined;
 }
 
 export interface AgentRunnerCommandConfig {
@@ -73,7 +73,7 @@ export interface AgentRunnerCommandConfig {
   env?: Readonly<Record<string, string | undefined>> | undefined;
   idleTimeoutMs?: number | undefined;
   inputMode?: AgentRunnerBridgeInputMode | undefined;
-  codexRunnerFiles?: CodexRunnerArtifactFiles | undefined;
+  runnerArtifactFiles?: AgentRunnerArtifactFiles | undefined;
 }
 
 export interface RequiredAgentRunnerCommandConfig
@@ -91,7 +91,7 @@ export interface AgentRunnerContinuationPayload {
   trigger: AgentRunnerBridgeTriggerContext;
 }
 
-export interface CodexRunnerArtifactFiles {
+export interface AgentRunnerArtifactFiles {
   artifactDir: string;
   artifactDirRef: string;
   schemaFilePath: string;
@@ -137,13 +137,53 @@ export type RunAgentRunnerCommandPort = (
 export interface AgentRunnerBridgeDependencies {
   pathExists: (path: string) => Promise<boolean>;
   runCommand: RunAgentRunnerCommandPort;
-  prepareCodexRunnerFiles?:
-    | ((
-        payload: AgentRunnerContinuationPayload,
-        startedAt?: string
-      ) => Promise<CodexRunnerArtifactFiles>)
-    | undefined;
+  builtInBackends?: readonly AgentRunnerBuiltInBackendAdapter[] | undefined;
   now?: (() => Date) | undefined;
+}
+
+export interface AgentRunnerBuiltInBackendPreconditionInput {
+  input: AgentRunnerBridgeInput;
+  config: AgentRunnerCommandConfig;
+  payload: AgentRunnerContinuationPayload;
+  pathExists: (path: string) => Promise<boolean>;
+  startedAt: string;
+}
+
+export type AgentRunnerBuiltInBackendPreconditionResult =
+  | { ok: true; config: RequiredAgentRunnerCommandConfig }
+  | {
+      ok: false;
+      reasonCode: AgentRunnerBridgeFailureReasonCode;
+      stderr?: string | undefined;
+      payload?: AgentRunnerContinuationPayload | undefined;
+    };
+
+export interface AgentRunnerBuiltInBackendProcessResultInput {
+  input: AgentRunnerBridgeInput;
+  processResult: AgentRunnerProcessResult;
+  startedAt: string;
+  completedAt: string;
+  command: AgentRunnerCommandIdentity;
+  payload: AgentRunnerContinuationPayload;
+  config: RequiredAgentRunnerCommandConfig;
+}
+
+export interface AgentRunnerBuiltInBackendSpawnErrorInput {
+  error: unknown;
+  config: RequiredAgentRunnerCommandConfig;
+}
+
+export interface AgentRunnerBuiltInBackendAdapter {
+  backend: string;
+  prepareInvocationConfig: (
+    input: AgentRunnerBuiltInBackendPreconditionInput
+  ) => Promise<AgentRunnerBuiltInBackendPreconditionResult>;
+  classifyProcessResult: (
+    input: AgentRunnerBuiltInBackendProcessResultInput
+  ) => Promise<AgentRunnerBridgeResult>;
+  classifySpawnErrorReasonCode?: (
+    input: AgentRunnerBuiltInBackendSpawnErrorInput
+  ) => AgentRunnerBridgeFailureReasonCode | undefined;
 }
 
 export interface AgentRunnerBridgeResult {

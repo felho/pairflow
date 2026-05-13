@@ -6,7 +6,7 @@ import type {
   AgentRunnerContinuationPayload,
   AgentRunnerProcessInvocation,
   RequiredAgentRunnerCommandConfig
-} from "./agentRunnerBridgeContract.js";
+} from "../../../shared/planWatchRunner/agentRunnerBridgeContract.js";
 import { MAX_NODE_TIMER_DELAY_MS } from "../../../shared/timing/nodeTimerDelay.js";
 
 export const DEFAULT_AGENT_RUNNER_IDLE_TIMEOUT_MS = 15 * 60 * 1000;
@@ -65,8 +65,8 @@ export function buildRunnerInvocation(
       env: config.env,
       stdin: inputMode === "stdin_json" ? `${JSON.stringify(payload)}\n` : undefined,
       idleTimeoutMs,
-      ...(config.codexRunnerFiles !== undefined
-        ? { stdoutFilePath: config.codexRunnerFiles.eventsFilePath }
+      ...(config.runnerArtifactFiles !== undefined
+        ? { stdoutFilePath: config.runnerArtifactFiles.eventsFilePath }
         : {}),
       ...(input.stopSignal !== undefined ? { signal: input.stopSignal } : {})
     }

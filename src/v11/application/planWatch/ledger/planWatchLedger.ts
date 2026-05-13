@@ -1,7 +1,7 @@
 import type {
   AgentRunnerBridgeResult,
   AgentRunnerBridgeStatus
-} from "../runner/agentRunnerBridgeContract.js";
+} from "../../../shared/planWatchRunner/agentRunnerBridgeContract.js";
 import type { LinkedBubbleTriggerCandidate } from "../linkedTriggerIndex/linkedBubbleTriggerIndexContract.js";
 import {
   PLAN_WATCH_LEDGER_SCHEMA_VERSION,

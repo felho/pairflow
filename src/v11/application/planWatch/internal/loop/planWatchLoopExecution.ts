@@ -1,4 +1,4 @@
-import type { AgentRunnerBridgeResult } from "../../runner/agentRunnerBridgeContract.js";
+import type { AgentRunnerBridgeResult } from "../../../../shared/planWatchRunner/agentRunnerBridgeContract.js";
 import type {
   LinkedBubbleTriggerCandidate,
   LinkedBubbleTriggerDiagnostic

@@ -1,5 +1,5 @@
-import type { StructuredAgentRunnerOutput } from "./agentRunnerBridgeContract.js";
-import { parseStructuredAgentRunnerRecord } from "./agentRunnerBridgeResult.js";
+import type { StructuredAgentRunnerOutput } from "../../../../shared/planWatchRunner/agentRunnerBridgeContract.js";
+import { parseStructuredAgentRunnerRecord } from "../../../../shared/planWatchRunner/agentRunnerBridgeResult.js";
 
 export interface ParsedCodexStream {
   rawLines: readonly string[];

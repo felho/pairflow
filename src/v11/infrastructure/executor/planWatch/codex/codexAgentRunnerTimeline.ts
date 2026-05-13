@@ -1,4 +1,4 @@
-import type { StructuredAgentRunnerOutput } from "./agentRunnerBridgeContract.js";
+import type { StructuredAgentRunnerOutput } from "../../../../shared/planWatchRunner/agentRunnerBridgeContract.js";
 import type { CodexJsonEvent } from "./codexAgentRunnerStream.js";
 
 export interface CodexTimelineRow {
