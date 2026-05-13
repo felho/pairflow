@@ -21,8 +21,8 @@ import {
   DEFAULT_AGENT_RUNNER_IDLE_TIMEOUT_MS
 } from "../../../v11/application/planWatch/runner/agentRunnerBridge.js";
 import {
-  normalizeCodexTimeline
-} from "../../../v11/application/planWatch/runner/codexAgentRunnerTimeline.js";
+  normalizeAgentRunnerTimeline
+} from "../../../v11/application/planWatch/runner/agentRunnerTimeline.js";
 import type {
   AgentRunnerBridgeInputMode
 } from "../../../v11/application/planWatch/runner/agentRunnerBridgeContract.js";
@@ -439,7 +439,7 @@ export function renderPlanWatchRunnerEventLine(line: string): string | null {
   if (!isRecord(event)) {
     return "runner: malformed event";
   }
-  const rows = normalizeCodexTimeline({
+  const rows = normalizeAgentRunnerTimeline({
     events: [{ line, value: event }],
     finalOutput: null,
     completedAt: new Date().toISOString()
