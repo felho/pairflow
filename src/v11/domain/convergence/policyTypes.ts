@@ -9,7 +9,9 @@ import type {
   RoundRoleHistoryEntry
 } from "../../domain/state/snapshot/roundRoleHistory.js";
 import type { FindingPriority } from "../../../types/findings.js";
-import type { ProtocolEnvelope } from "../../../types/protocol.js";
+import type {
+  ProtocolEnvelope
+} from "../../shared/protocol/protocolEnvelopeContract.js";
 
 export interface ConvergencePolicyInput {
   currentRound: number;

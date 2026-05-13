@@ -6,7 +6,9 @@ import {
   isPassIntent,
   type PassIntent
 } from "../../../contracts/kernel/protocol.js";
-import type { ProtocolEnvelope } from "../../../types/protocol.js";
+import type {
+  ProtocolEnvelope
+} from "../../shared/protocol/protocolEnvelopeContract.js";
 
 export const repeatCleanAutoconvergeTriggeredReasonCode =
   "REPEAT_CLEAN_AUTOCONVERGE_TRIGGERED";

@@ -8,7 +8,9 @@ import {
   type FindingsClaimSource,
   type FindingsClaimState
 } from "../../../contracts/kernel/protocol.js";
-import type { ProtocolEnvelope } from "../../../types/protocol.js";
+import type {
+  ProtocolEnvelope
+} from "../../shared/protocol/protocolEnvelopeContract.js";
 import { isRecord } from "../../shared/validation/primitives.js";
 import {
   claimParserDivergenceDiagnosticReasonCode,

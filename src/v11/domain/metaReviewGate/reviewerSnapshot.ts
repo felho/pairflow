@@ -1,7 +1,7 @@
 import { isRecord } from "../../shared/validation/primitives.js";
 import {
   type ProtocolEnvelope
-} from "../../../types/protocol.js";
+} from "../../shared/protocol/protocolEnvelopeContract.js";
 import {
   deriveFindingsOpenSplit,
   resolveAdvisoryFindingsFromFindings,

@@ -4,7 +4,7 @@ import type {
 } from "../../../contracts/kernel/agentIdentity.js";
 import {
   type ProtocolEnvelopeDraft
-} from "../../../types/protocol.js";
+} from "../../shared/protocol/protocolEnvelopeContract.js";
 import {
   deliveryTargetRoleMetadataKey
 } from "../../shared/delivery/deliveryTargetMetadataContract.js";

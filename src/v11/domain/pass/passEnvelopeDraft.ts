@@ -7,7 +7,7 @@ import type { Finding } from "../../../types/findings.js";
 import type { PassIntent } from "../../../contracts/kernel/protocol.js";
 import {
   type ProtocolEnvelopeDraft
-} from "../../../types/protocol.js";
+} from "../../shared/protocol/protocolEnvelopeContract.js";
 import {
   deliveryTargetRoleMetadataKey
 } from "../../shared/delivery/deliveryTargetMetadataContract.js";
