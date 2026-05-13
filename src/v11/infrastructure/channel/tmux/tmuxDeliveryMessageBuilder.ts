@@ -22,7 +22,11 @@ import {
   type ReviewerFocusExtractionResult
 } from "../../../shared/reviewer/reviewerBrief.js";
 import { buildPairflowCommandGuidance } from "../../../shared/command/pairflowCommandBootstrap.js";
-import { buildDocumentBubbleSourceEditGuard } from "../../../shared/document/documentBubbleSourceEditGuard.js";
+import {
+  buildImplementerDeliveryActionGuidance,
+  buildImplementerDeliveryValidationGuidance,
+  type ImplementerDeliveryEvent
+} from "../../../shared/role/prompts/roleActionGuidance.js";
 import {
   buildMetaReviewSubmitApproveParityNote,
   buildMetaReviewSubmitCommandTemplate
@@ -65,39 +69,19 @@ function resolveImplementerReworkOrigin(
   return "unknown";
 }
 
-function buildImplementerReworkActionText(input: {
-  docsOnly: boolean;
-  origin: "meta_review_auto_rework" | "unknown";
-  validationGuidance: string;
-}): string {
-  const intro =
-    input.origin === "meta_review_auto_rework"
-      ? "Meta-review auto-rework received."
-      : "Rework received.";
-  const documentSourceEditGuard = buildDocumentBubbleSourceEditGuard();
-  return input.docsOnly
-    ? `${intro} Continue document/task/spec refinement now and address only document-scope requested changes, then hand off with canonical actor emit (\`pairflow agent emit --kind pass ...\`) directly. ${documentSourceEditGuard} ${input.validationGuidance} Primary artifact rule (docs-only): apply the rework on the referenced source task/document file directly, not only in a new standalone review note. Docs-only scope: keep summary and refs consistent; skip-claim means no \`.pairflow/evidence/*.log\` refs in that PASS.`
-    : `${intro} Continue implementation now and address the requested changes, then hand off with canonical actor emit (\`pairflow agent emit --kind pass ...\`) directly. ${input.validationGuidance} Include available \`.pairflow/evidence/*.log\` refs on PASS.`;
-}
-
-function buildImplementerValidationGuidance(bubbleConfig: BubbleConfig): string {
-  const required = bubbleConfig.commands.validation_required;
-  if (required === undefined) {
-    return "No bubble-level PASS validation policy is configured; run relevant local validation before handoff.";
+function toImplementerDeliveryEvent(
+  type: ProtocolEnvelope["type"]
+): ImplementerDeliveryEvent {
+  switch (type) {
+    case "TASK":
+    case "PASS":
+    case "HUMAN_REPLY":
+    case "APPROVAL_DECISION":
+    case "APPROVAL_REQUEST":
+      return type;
+    default:
+      return "OTHER";
   }
-  if (required.length === 0 && bubbleConfig.commands.validation_required_explicit === true) {
-    return "Bubble-level PASS validation explicitly requires no commands; state any local checks you ran.";
-  }
-  if (required.length === 0) {
-    return "Bubble-level PASS validation policy is invalid: commands.validation_required=[] requires commands.validation_required_explicit=true. PASS will fail closed until the bubble config is corrected.";
-  }
-  const entries = required.map((id) => {
-    const command = bubbleConfig.commands[id];
-    return typeof command === "string" && command.trim().length > 0
-      ? `${id}: \`${command.trim()}\``
-      : `${id}: <missing command in bubble config>`;
-  });
-  return `Required PASS validation commands: ${entries.join("; ")}. You may run them locally for feedback, but PASS re-runs them and PASS-owned evidence logs are authoritative.`;
 }
 
 function buildImplementerDeliveryAction(input: {
@@ -106,39 +90,19 @@ function buildImplementerDeliveryAction(input: {
   actorLabel: string | null;
 }): string {
   const docsOnly = input.bubbleConfig.review_artifact_type === "document";
-  const validationGuidance = buildImplementerValidationGuidance(input.bubbleConfig);
-  const documentSourceEditGuard = buildDocumentBubbleSourceEditGuard();
-  if (input.envelope.type === "TASK") {
-    return docsOnly
-      ? `Document refinement task received. Refine only task/spec/progress/docs artifacts, then hand off with canonical actor emit (\`pairflow agent emit --kind pass ...\`) directly (no confirmation prompt). ${documentSourceEditGuard} ${validationGuidance} Docs-only scope: choose one mode and keep it consistent in the same PASS. Mode A (skip-claim): summary says runtime checks were intentionally not executed -> attach no \`.pairflow/evidence/*.log\` refs. Mode B (checks executed): attach refs only for commands actually run and do not claim checks were intentionally not executed.`
-      : `Implementation task received. Continue implementation, then hand off with canonical actor emit (\`pairflow agent emit --kind pass ...\`) directly (no confirmation prompt). ${validationGuidance} Include available \`.pairflow/evidence/*.log\` refs on PASS.`;
-  }
-  if (input.envelope.type === "PASS") {
-    return docsOnly
-      ? `Reviewer feedback received for a document bubble. Apply document-scope fixes only, then hand off with canonical actor emit (\`pairflow agent emit --kind pass ...\`) directly (no confirmation prompt). ${documentSourceEditGuard} ${validationGuidance} Primary artifact rule (docs-only): when the task references an existing source document/task file, refine that file directly (in-place) as the main output. Do not replace primary artifact refinement with a new standalone review/synthesis document unless the task explicitly requests creating a new file path. Docs-only scope: choose one mode and keep it consistent in the same PASS. Mode A (skip-claim): summary says runtime checks were intentionally not executed -> attach no \`.pairflow/evidence/*.log\` refs. Mode B (checks executed): attach refs only for commands actually run and do not claim checks were intentionally not executed.`
-      : `Reviewer feedback received. Implement fixes, then hand off with canonical actor emit (\`pairflow agent emit --kind pass ...\`) directly (no confirmation prompt). ${validationGuidance} If \`.pairflow/evidence/*.log\` files exist, include them as \`--ref\` (lint/typecheck/test). If only a subset ran, attach refs for that subset and state what was intentionally not executed.`;
-  }
-  if (input.envelope.type === "HUMAN_REPLY") {
-    return docsOnly
-      ? `Human response received for a document bubble. Continue document/task/spec refinement using this input, then hand off with canonical actor emit (\`pairflow agent emit --kind pass ...\`) directly. ${documentSourceEditGuard} ${validationGuidance} Primary artifact rule (docs-only): refine the referenced source task/document file directly, not only a new standalone review note. Docs-only scope: keep summary and refs consistent; skip-claim means no \`.pairflow/evidence/*.log\` refs in that PASS.`
-      : `Human response received. Continue implementation using this input, then hand off with canonical actor emit (\`pairflow agent emit --kind pass ...\`) directly. ${validationGuidance} Include available \`.pairflow/evidence/*.log\` refs on PASS.`;
-  }
-  if (input.envelope.type === "APPROVAL_DECISION") {
-    if (input.envelope.payload.decision === "rework") {
-      return buildImplementerReworkActionText({
-        docsOnly,
-        origin: resolveImplementerReworkOrigin(input.envelope),
-        validationGuidance
-      });
-    }
-    return "Human approved this bubble. Wait for commit/merge flow and do not continue new implementation in this round.";
-  }
-  if (input.envelope.type === "APPROVAL_REQUEST") {
-    return input.actorLabel === "meta-reviewer"
-      ? "Meta-reviewer requested human gate decision. Stop coding and wait for human decision (`bubble approve` or `bubble request-rework`). Do not run canonical pass emit now."
-      : "Bubble is READY_FOR_HUMAN_APPROVAL. Stop coding and wait for human decision (`bubble approve` or `bubble request-rework`). Do not run canonical pass emit now.";
-  }
-  return "Continue protocol from this event.";
+  const validationGuidance = buildImplementerDeliveryValidationGuidance(
+    input.bubbleConfig.commands
+  );
+  return buildImplementerDeliveryActionGuidance({
+    event: toImplementerDeliveryEvent(input.envelope.type),
+    docsOnly,
+    validationGuidance,
+    actorLabel: input.actorLabel,
+    ...(input.envelope.payload.decision !== undefined
+      ? { approvalDecision: input.envelope.payload.decision }
+      : {}),
+    reworkOrigin: resolveImplementerReworkOrigin(input.envelope)
+  });
 }
 
 function buildReviewerDeliveryAction(input: {
