@@ -9,7 +9,7 @@ import type {
 import type { PersistedBubbleStateSnapshot } from "../../../../../src/v11/domain/state/snapshot/persistedBubbleStateSnapshot.js";
 import { applyStateTransition } from "../../../../../src/v11/domain/state/machine.js";
 import { buildBubbleStateSnapshotVariant } from "../../../../../src/v11/domain/state/snapshot/buildBubbleStateSnapshot.js";
-import { deliveryTargetRoleMetadataKey } from "../../../../../src/types/protocol.js";
+import { deliveryTargetRoleMetadataKey } from "../../../../../src/v11/shared/delivery/deliveryTargetMetadataContract.js";
 import {
   remoteApprovalModeEnvVar,
   remoteApprovalModeInnerRemoteExecution,

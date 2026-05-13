@@ -4,7 +4,7 @@ import {
   META_REVIEW_APPROVE_THRESHOLD_BACKSTOP,
   resolveApproveThresholdBackstopPolicy
 } from "../../../../src/v11/domain/metaReviewGate/approveThresholdBackstopPolicy.js";
-import type { FindingsParityMetadata } from "../../../../src/types/protocol.js";
+import type { FindingsParityMetadata } from "../../../../src/v11/shared/metaReviewGate/findingsParityMetadataContract.js";
 
 function createParityMetadata(
   input: Partial<FindingsParityMetadata> = {}

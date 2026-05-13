@@ -12,7 +12,7 @@ import {
 } from "../../../src/v11/application/reply/replyCommandApi.js";
 import { readTranscriptEnvelopes } from "../../../src/v11/infrastructure/artifact/transcript/transcriptStore.js";
 import { readStateSnapshot } from "../../../src/v11/infrastructure/state/stateStore.js";
-import { deliveryTargetRoleMetadataKey } from "../../../src/types/protocol.js";
+import { deliveryTargetRoleMetadataKey } from "../../../src/v11/shared/delivery/deliveryTargetMetadataContract.js";
 import { initGitRepository } from "../../helpers/git.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
 import { writeStateSnapshotFixture as writeStateSnapshot } from "../../helpers/stateSnapshot.js";

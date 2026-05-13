@@ -8,7 +8,7 @@ import { getBubblePaths } from "../../../../src/v11/shared/bubble/bubblePaths.js
 import type { BubbleConfig } from "../../../../src/v11/shared/config/bubbleConfigTypes.js";
 import type { PersistedBubbleStateSnapshot } from "../../../../src/v11/domain/state/snapshot/persistedBubbleStateSnapshot.js";
 import { buildBubbleStateSnapshotVariant } from "../../../../src/v11/domain/state/snapshot/buildBubbleStateSnapshot.js";
-import type { ProtocolEnvelope } from "../../../../src/types/protocol.js";
+import type { ProtocolEnvelope } from "../../../../src/v11/shared/protocol/protocolEnvelopeContract.js";
 
 const order: string[] = [];
 

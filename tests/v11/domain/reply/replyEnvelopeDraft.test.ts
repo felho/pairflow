@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { deliveryTargetRoleMetadataKey } from "../../../../src/types/protocol.js";
+import { deliveryTargetRoleMetadataKey } from "../../../../src/v11/shared/delivery/deliveryTargetMetadataContract.js";
 import { buildHumanReplyEnvelopeDraft } from "../../../../src/v11/domain/reply/replyEnvelopeDraft.js";
 
 describe("buildHumanReplyEnvelopeDraft", () => {

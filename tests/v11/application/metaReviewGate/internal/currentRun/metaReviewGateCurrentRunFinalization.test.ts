@@ -16,7 +16,7 @@ import type { LoadedStateSnapshot } from "../../../../../../src/v11/ports/stateS
 import { buildBubbleStateSnapshotVariant } from "../../../../../../src/v11/domain/state/snapshot/buildBubbleStateSnapshot.js";
 import { toPersistedSnapshot } from "../../../../../../src/v11/domain/state/snapshot/projection.js";
 import type { PersistedBubbleStateSnapshot } from "../../../../../../src/v11/domain/state/snapshot/persistedBubbleStateSnapshot.js";
-import type { ProtocolEnvelope } from "../../../../../../src/types/protocol.js";
+import type { ProtocolEnvelope } from "../../../../../../src/v11/shared/protocol/protocolEnvelopeContract.js";
 
 const tempDirs: string[] = [];
 

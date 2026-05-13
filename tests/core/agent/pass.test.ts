@@ -32,7 +32,7 @@ import {
   appendProtocolEnvelope,
   readTranscriptEnvelopes
 } from "../../../src/v11/infrastructure/artifact/transcript/transcriptStore.js";
-import { deliveryTargetRoleMetadataKey } from "../../../src/types/protocol.js";
+import { deliveryTargetRoleMetadataKey } from "../../../src/v11/shared/delivery/deliveryTargetMetadataContract.js";
 import {
   repeatCleanAutoconvergeTriggeredReasonCode,
   repeatCleanAutoconvergePolicyRejectedReasonCode,

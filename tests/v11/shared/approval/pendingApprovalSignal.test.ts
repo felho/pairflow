@@ -4,7 +4,7 @@ import {
   resolveCanonicalPendingApprovalSignal,
   resolveLatestPendingApprovalRequest
 } from "../../../../src/v11/shared/approval/pendingApprovalSignal.js";
-import type { ProtocolEnvelope } from "../../../../src/types/protocol.js";
+import type { ProtocolEnvelope } from "../../../../src/v11/shared/protocol/protocolEnvelopeContract.js";
 
 function createApprovalRequestEnvelope(
   overrides: Partial<ProtocolEnvelope> & {

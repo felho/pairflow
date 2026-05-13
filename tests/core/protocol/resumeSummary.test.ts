@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { buildResumeTranscriptSummary } from "../../../src/v11/application/start/internal/prompts/startCommandResumeSummary.js";
-import type { ProtocolEnvelope } from "../../../src/types/protocol.js";
+import type { ProtocolEnvelope } from "../../../src/v11/shared/protocol/protocolEnvelopeContract.js";
 
 const tempDirs: string[] = [];
 

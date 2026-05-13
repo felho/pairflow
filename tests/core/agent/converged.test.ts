@@ -36,7 +36,7 @@ import { bootstrapWorktreeWorkspace } from "../../../src/v11/infrastructure/work
 import { resolveReviewerTestEvidenceArtifactPath } from "../../../src/v11/shared/reviewer/testEvidence.js";
 import { resolveSummaryVerifierConsistencyGateArtifactPath } from "../../../src/v11/shared/reviewer/summaryVerifierConsistencyGate.js";
 import { resolveDocContractGateArtifactPath } from "../../../src/v11/infrastructure/artifact/gates/docContractGateArtifacts.js";
-import { deliveryTargetRoleMetadataKey } from "../../../src/types/protocol.js";
+import { deliveryTargetRoleMetadataKey } from "../../../src/v11/shared/delivery/deliveryTargetMetadataContract.js";
 import { initGitRepository } from "../../helpers/git.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
 import { toPersistedSnapshot } from "../../../src/v11/domain/state/snapshot/projection.js";

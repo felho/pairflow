@@ -7,7 +7,7 @@ import {
   REVIEW_POLICY_THRESHOLD_CONTEXT_INCOMPLETE,
   REVIEW_POLICY_THRESHOLD_SOURCE_UNRESOLVED
 } from "../../../../src/v11/domain/metaReviewGate/thresholdAuthorityResolution.js";
-import type { FindingsParityMetadata } from "../../../../src/types/protocol.js";
+import type { FindingsParityMetadata } from "../../../../src/v11/shared/metaReviewGate/findingsParityMetadataContract.js";
 
 function createParityMetadata(): FindingsParityMetadata {
   return {

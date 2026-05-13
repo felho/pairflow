@@ -7,7 +7,7 @@ import {
   resolveConvergedSummaryFindingsContradiction,
   validateConvergencePolicy
 } from "../../../../src/v11/domain/convergence/policy.js";
-import type { ProtocolEnvelope } from "../../../../src/types/protocol.js";
+import type { ProtocolEnvelope } from "../../../../src/v11/shared/protocol/protocolEnvelopeContract.js";
 
 function createPassEnvelope(
   partial: Partial<ProtocolEnvelope>

@@ -17,7 +17,7 @@ import {
 import { seedConvergedCandidate } from "../../v11/application/converged/convergedSeedFixture.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
 import { initGitRepository } from "../../helpers/git.js";
-import { deliveryTargetRoleMetadataKey } from "../../../src/types/protocol.js";
+import { deliveryTargetRoleMetadataKey } from "../../../src/v11/shared/delivery/deliveryTargetMetadataContract.js";
 import type { ContractCase, ContractCaseExpected } from "./schema.js";
 import type { RuntimeSessionRecord } from "../../../src/v11/infrastructure/executor/sessionRuntime/runtimeSessionsRegistry.js";
 

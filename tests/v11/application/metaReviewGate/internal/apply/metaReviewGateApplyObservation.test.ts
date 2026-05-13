@@ -6,7 +6,7 @@ import { getBubblePaths } from "../../../../../../src/v11/shared/bubble/bubblePa
 import type { MetaReviewRuntimeDeliveryObservation } from "../../../../../../src/v11/shared/metaReviewGate/index.js";
 import type { LoadedStateSnapshot } from "../../../../../../src/v11/ports/stateSnapshots.js";
 import { buildBubbleStateSnapshotVariant } from "../../../../../../src/v11/domain/state/snapshot/buildBubbleStateSnapshot.js";
-import type { ProtocolEnvelope } from "../../../../../../src/types/protocol.js";
+import type { ProtocolEnvelope } from "../../../../../../src/v11/shared/protocol/protocolEnvelopeContract.js";
 
 function createObservedReadyState(round: number): LoadedStateSnapshot {
   return {

@@ -37,7 +37,7 @@ import { buildBubbleStateSnapshotVariant } from "../../../src/v11/domain/state/s
 import { toPersistedSnapshot } from "../../../src/v11/domain/state/snapshot/projection.js";
 import { readStateSnapshot } from "../../../src/v11/infrastructure/state/stateStore.js";
 import { bootstrapWorktreeWorkspace } from "../../../src/v11/infrastructure/workspace/worktreeManager.js";
-import { deliveryTargetRoleMetadataKey } from "../../../src/types/protocol.js";
+import { deliveryTargetRoleMetadataKey } from "../../../src/v11/shared/delivery/deliveryTargetMetadataContract.js";
 import { initGitRepository } from "../../helpers/git.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
 import { writeStateSnapshotFixture as writeStateSnapshot } from "../../helpers/stateSnapshot.js";

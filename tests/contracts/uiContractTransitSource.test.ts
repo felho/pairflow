@@ -391,9 +391,9 @@ describe("UI contract transit source guards", () => {
     const agentIdentity = await readSource(
       "src/v11/domain/agentIdentity/agentIdentity.ts"
     );
-    const protocol = await readSource("src/types/protocol.ts");
     const uiActions = await readSource("src/contracts/ui/uiActions.ts");
 
+    await expect(readSource("src/types/protocol.ts")).rejects.toThrow();
     await expect(
       readSource("src/v11/domain/state/lifecycleTypes.ts")
     ).rejects.toThrow();
@@ -403,8 +403,6 @@ describe("UI contract transit source guards", () => {
 
     expect(agentIdentity).not.toMatch(/\bexport\s+(?:type|interface)\s+(?:AgentName|AgentRole|BubbleAgentsConfig)\b/u);
     expect(agentIdentity).not.toMatch(/\bexport\s+const\s+agent(?:Names|Roles)\b/u);
-    expect(protocol).not.toMatch(/\bexport\s+type\s+(?:ProtocolParticipant|ProtocolMessageType|PassIntent|FindingsClaimState|FindingsClaimSource|ApprovalDecision)\b/u);
-    expect(protocol).not.toMatch(/\bexport\s+const\s+(?:protocolParticipants|protocolMessageTypes|passIntents|findingsClaimStates|findingsClaimSources|approvalDecisions)\b/u);
     expect(uiActions).toContain("from \"../kernel/index.js\"");
     expect(uiActions).not.toMatch(/AgentName\s*=\s*["']/u);
     expect(uiActions).not.toMatch(/ProtocolMessageType\s*=\s*["']/u);

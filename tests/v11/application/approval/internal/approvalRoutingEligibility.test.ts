@@ -4,7 +4,7 @@ import {
   assertApprovalDecisionEligibility,
   resolveApprovalDecisionMetadata
 } from "../../../../../src/v11/application/approval/internal/flow/approvalRoutingEligibility.js";
-import type { ProtocolEnvelope } from "../../../../../src/types/protocol.js";
+import type { ProtocolEnvelope } from "../../../../../src/v11/shared/protocol/protocolEnvelopeContract.js";
 
 class ApprovalRoutingEligibilityTestError extends Error {
   public constructor(message: string) {

@@ -4,7 +4,7 @@ import {
   allocateNextProtocolSequence,
   TranscriptSequenceError
 } from "../../../src/v11/shared/protocol/sequenceAllocator.js";
-import type { ProtocolEnvelope } from "../../../src/types/protocol.js";
+import type { ProtocolEnvelope } from "../../../src/v11/shared/protocol/protocolEnvelopeContract.js";
 
 function buildEnvelope(id: string): ProtocolEnvelope {
   return {

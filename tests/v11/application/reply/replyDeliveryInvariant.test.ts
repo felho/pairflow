@@ -7,7 +7,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { emitAskHumanFromWorkspace } from "../../../../src/v11/application/askHuman/askHumanCommandApi.js";
 import { readTranscriptEnvelopes } from "../../../../src/v11/infrastructure/artifact/transcript/transcriptStore.js";
 import { readStateSnapshot } from "../../../../src/v11/infrastructure/state/stateStore.js";
-import { deliveryTargetRoleMetadataKey } from "../../../../src/types/protocol.js";
+import { deliveryTargetRoleMetadataKey } from "../../../../src/v11/shared/delivery/deliveryTargetMetadataContract.js";
 import { emitHumanReply } from "../../../../src/v11/application/reply/replyCommandApi.js";
 import { setupRunningBubbleFixture } from "../../../helpers/bubble.js";
 import { initGitRepository } from "../../../helpers/git.js";

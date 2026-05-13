@@ -14,7 +14,7 @@ import { createBubble } from "../../../src/v11/defaults/create/createBubbleApi.j
 import { startBubble } from "../../../src/v11/application/start/startCommandApi.js";
 import { readTranscriptEnvelopes } from "../../../src/v11/infrastructure/artifact/transcript/transcriptStore.js";
 import { readStateSnapshot } from "../../../src/v11/infrastructure/state/stateStore.js";
-import type { ProtocolEnvelope } from "../../../src/types/protocol.js";
+import type { ProtocolEnvelope } from "../../../src/v11/shared/protocol/protocolEnvelopeContract.js";
 import { initGitRepository } from "../../helpers/git.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
 import { buildWorktreeBootstrapResult } from "../../helpers/worktreeBootstrapResult.js";

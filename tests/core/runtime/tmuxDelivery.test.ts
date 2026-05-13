@@ -48,11 +48,11 @@ import {
 import type { BubbleConfig } from "../../../src/v11/shared/config/bubbleConfigTypes.js";
 import {
   deliveryTargetRoleMetadataKey,
-  type LegacyMetaReviewerProtocolRecipient,
   parseDeliveryTargetRoleMetadata,
-  type DeliveryTargetRole,
-  type ProtocolEnvelope
-} from "../../../src/types/protocol.js";
+  type DeliveryTargetRole
+} from "../../../src/v11/shared/delivery/deliveryTargetMetadataContract.js";
+import type { LegacyMetaReviewerProtocolRecipient } from "../../../src/v11/shared/protocol/legacyMetaReviewerRecipientContract.js";
+import type { ProtocolEnvelope } from "../../../src/v11/shared/protocol/protocolEnvelopeContract.js";
 
 const baseConfig: BubbleConfig = {
   id: "b_delivery_01",

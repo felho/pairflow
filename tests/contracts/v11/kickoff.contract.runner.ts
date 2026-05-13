@@ -13,7 +13,7 @@ import {
   StateStoreConflictError
 } from "../../../src/v11/infrastructure/state/stateStore.js";
 import { kickoffBubble } from "../../../src/v11/application/kickoff/kickoffBubble.js";
-import { deliveryTargetRoleMetadataKey } from "../../../src/types/protocol.js";
+import { deliveryTargetRoleMetadataKey } from "../../../src/v11/shared/delivery/deliveryTargetMetadataContract.js";
 import { initGitRepository } from "../../helpers/git.js";
 import type { ContractCase, ContractCaseExpected } from "./schema.js";
 import { writeStateSnapshotFixture as writeStateSnapshot } from "../../helpers/stateSnapshot.js";

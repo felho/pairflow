@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { resolveThresholdCleanApprovalPolicy } from "../../../../src/v11/domain/metaReviewGate/cleanApprovalPolicy.js";
-import type { FindingsParityMetadata } from "../../../../src/types/protocol.js";
+import type { FindingsParityMetadata } from "../../../../src/v11/shared/metaReviewGate/findingsParityMetadataContract.js";
 
 function createParityMetadata(
   input: Partial<FindingsParityMetadata> = {}
