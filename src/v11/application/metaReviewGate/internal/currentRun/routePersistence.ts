@@ -1,5 +1,5 @@
 import type { BubbleLifecycleState } from "../../../../../contracts/kernel/lifecycle.js";
-import type { PersistedBubbleStateSnapshot } from "../../../../domain/state/snapshot/persistedBubbleStateSnapshot.js";
+import type { BubbleStateSnapshot } from "../../../../domain/state/snapshot/bubbleStateSnapshot.js";
 import type { FindingsParityMetadata } from "../../../../../types/protocol.js";
 import type { MetaReviewResult } from "../../../../shared/metaReview/metaReviewTypes.js";
 import type { LoadedStateSnapshot } from "../../../../ports/stateSnapshots.js";
@@ -98,7 +98,7 @@ export async function persistDispatchFailedHumanRoute(input: {
   fallbackReason: string;
   gateReasonCode?: string;
   targetState?: "READY_FOR_HUMAN_APPROVAL" | "RUNNING";
-  rollbackStateOnAppendFailure?: PersistedBubbleStateSnapshot;
+  rollbackStateOnAppendFailure?: BubbleStateSnapshot;
 }): Promise<MetaReviewGateResult> {
   const finalizeInput = input.finalizeInput;
   return persistHumanGateRoute({

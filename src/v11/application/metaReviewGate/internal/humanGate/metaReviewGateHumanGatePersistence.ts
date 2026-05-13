@@ -2,7 +2,6 @@ import type { LoadedStateSnapshot } from "../../../../ports/stateSnapshots.js";
 import type { AppendProtocolEnvelopeResult } from "../../../../ports/transcript.js";
 import { MetaReviewGateError } from "../../../../shared/metaReviewGate/metaReviewGateRouteContract.js";
 import type { MetaReviewGateResult } from "../../../../shared/metaReviewGate/metaReviewGateResultContract.js";
-import { buildBubbleStateSnapshotVariant } from "../../../../domain/state/snapshot/buildBubbleStateSnapshot.js";
 import { transitionToGateState } from "../state/metaReviewGateStateHelpers.js";
 import {
   resolveDefaultStickyHumanGateForRoute
@@ -109,12 +108,9 @@ export async function persistHumanGateRoute(
     });
   } catch (error) {
     const reason = error instanceof Error ? error.message : String(error);
-    // rollbackStateOnAppendFailure is still persisted-shape (later batch);
-    // wrap as variant so the Domain write port accepts it. loaded.state is
-    // already variant.
     const rollbackState =
       input.rollbackStateOnAppendFailure !== undefined
-        ? buildBubbleStateSnapshotVariant(input.rollbackStateOnAppendFailure)
+        ? input.rollbackStateOnAppendFailure
         : input.loaded.state;
     const rollbackResult = await resolveRollbackAfterGateAppendFailure({
       writeState: input.writeState,

@@ -1632,10 +1632,9 @@ post-flip cleanup commits**, in that order.
        so the call site uses `buildBubbleStateSnapshotVariant`
        at the boundary; dissolves in 4b-γ/4); 1 cross-batch-border
        internal wrap (`metaReviewGateCleanRerunFailureState` —
-       the helper's `rollbackStateOnAppendFailure` consumer
-       contract is persisted-shape per §10.13, so the helper
-       keeps a persisted signature and wraps the variant helper
-       internally; dissolves in 4b-γ/4).
+       later follow-up hygiene lifted `rollbackStateOnAppendFailure`
+       to the variant union and removed this persisted-shape
+       adapter ceremony).
      `domain/state/rework/reworkIntentTransitions.ts` was
      absorbed by 4b-γ/1's bundle and is not part of 4b-γ/2.
      `pnpm test` 3766/3766 green; `pnpm typecheck` exit 0.
@@ -1754,11 +1753,10 @@ post-flip cleanup commits**, in that order.
        `shared/status/statusCommandTypes.ts` (`BubbleStatusState`
        redirected to `InspectedStateSnapshot["state"]` since
        status reads via the inspect port).
-     - **§10.13 cross-batch border preserved**:
-       `rollbackStateOnAppendFailure` remains
-       `PersistedBubbleStateSnapshot`. Set sites continue
-       projecting via `toPersistedSnapshot`. Documented
-       exception, not migration debt.
+     - **§10.13 cross-batch border follow-up**:
+       later hygiene lifted `rollbackStateOnAppendFailure` to
+       `BubbleStateSnapshot`; rollback writes still project to
+       persisted only inside the canonical `writeState` boundary.
      - **Temporary test fixture scaffold (4b-γ/5 mandatory
        cleanup target)**: created
        `tests/helpers/temporaryVariantStateFixture.ts`
@@ -1970,9 +1968,9 @@ Surviving exceptions, deliberate and documented:
 - `InspectedStateSnapshot` keeps an inspectable diagnostic projection
   plus `validatedSnapshot` per §10.15 decision 1 — the inspect
   port's coercion-fallback path is a deliberate diagnostic boundary.
-- `rollbackStateOnAppendFailure` keeps persisted-shape per
-  §10.13 cross-batch border decision. Set sites project via
-  `toPersistedSnapshot`.
+- `rollbackStateOnAppendFailure` was follow-up-lifted to the
+  variant union; rollback persistence still crosses the canonical
+  `writeState` wire-format projection boundary.
 
 Remaining Step 4 sequence: Step 5 (test mirror cleanup) →
 Step 6 (final doc sync). Further deviations during execution

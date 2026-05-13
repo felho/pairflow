@@ -5,7 +5,7 @@ import type {
 } from "../../../../ports/stateSnapshots.js";
 import type { AgentName } from "../../../../../contracts/kernel/agentIdentity.js";
 import type { BubbleLifecycleState } from "../../../../../contracts/kernel/lifecycle.js";
-import type { PersistedBubbleStateSnapshot } from "../../../../domain/state/snapshot/persistedBubbleStateSnapshot.js";
+import type { BubbleStateSnapshot } from "../../../../domain/state/snapshot/bubbleStateSnapshot.js";
 import type { Finding } from "../../../../../types/findings.js";
 import type { FindingsParityMetadata } from "../../../../../types/protocol.js";
 import type { MetaReviewResult } from "../../../../shared/metaReview/metaReviewTypes.js";
@@ -42,7 +42,7 @@ export interface PersistDispatchFailedHumanRouteInput {
   runResultForRouting: MetaReviewResult;
   parityMetadata: FindingsParityMetadata | null;
   fallbackReason: string;
-  rollbackStateOnAppendFailure?: PersistedBubbleStateSnapshot;
+  rollbackStateOnAppendFailure?: BubbleStateSnapshot;
 }
 
 export interface DispatchAutoReworkInput {

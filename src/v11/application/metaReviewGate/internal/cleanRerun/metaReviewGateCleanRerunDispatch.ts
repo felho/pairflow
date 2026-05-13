@@ -5,7 +5,6 @@ import type { RouteCleanMetaReviewRerunInput } from "./metaReviewGateCleanRerunC
 import { persistDispatchFailedHumanRoute } from "../currentRun/routePersistence.js";
 import { buildGateLockPath } from "../state/metaReviewGateShared.js";
 import { setMetaReviewConsecutiveCleanRuns } from "../../../../domain/metaReviewGate/snapshotState.js";
-import { toPersistedSnapshot } from "../../../../domain/state/snapshot/projection.js";
 import type { MetaReviewGateResult } from "../../../../shared/metaReviewGate/metaReviewGateResultContract.js";
 
 export function failCleanRerunClosed(input: {
@@ -21,7 +20,7 @@ export function failCleanRerunClosed(input: {
     parityMetadata: input.routeInput.parityMetadata,
     fallbackReason: input.fallbackReason,
     rollbackStateOnAppendFailure: buildCleanRerunDispatchFailureRollbackState(
-      toPersistedSnapshot(input.loaded.state)
+      input.loaded.state
     )
   });
 }

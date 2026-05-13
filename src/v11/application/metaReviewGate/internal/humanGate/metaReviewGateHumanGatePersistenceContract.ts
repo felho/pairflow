@@ -5,7 +5,7 @@ import type {
 } from "../../../../ports/stateSnapshots.js";
 import type { AgentName } from "../../../../../contracts/kernel/agentIdentity.js";
 import type { BubbleLifecycleState } from "../../../../../contracts/kernel/lifecycle.js";
-import type { PersistedBubbleStateSnapshot } from "../../../../domain/state/snapshot/persistedBubbleStateSnapshot.js";
+import type { BubbleStateSnapshot } from "../../../../domain/state/snapshot/bubbleStateSnapshot.js";
 import type { MetaReviewResult } from "../../../../shared/metaReview/metaReviewTypes.js";
 import type { FindingsParityMetadata } from "../../../../../types/protocol.js";
 import type { AppendProtocolEnvelopePort } from "../../../../ports/transcript.js";
@@ -40,5 +40,5 @@ export interface PersistHumanGateRouteInput {
   targetState?: "READY_FOR_HUMAN_APPROVAL" | "RUNNING";
   stickyHumanGate?: boolean;
   consecutiveCleanRuns?: number;
-  rollbackStateOnAppendFailure?: PersistedBubbleStateSnapshot;
+  rollbackStateOnAppendFailure?: BubbleStateSnapshot;
 }
