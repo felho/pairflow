@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { appendHumanApprovalRequestEnvelope as appendHumanApprovalRequestEnvelopeImpl } from "../../../src/v11/application/metaReviewGate/internal/humanGate/approvalRequestEnvelope.js";
-import type { Finding } from "../../../src/types/findings.js";
+import type { Finding } from "../../../src/contracts/kernel/findings.js";
 import type { AgentName } from "../../../src/contracts/kernel/agentIdentity.js";
 import { deliveryTargetRoleMetadataKey } from "../../../src/v11/shared/delivery/deliveryTargetMetadataContract.js";
 import type { FindingsParityMetadata } from "../../../src/v11/shared/metaReviewGate/findingsParityMetadataContract.js";

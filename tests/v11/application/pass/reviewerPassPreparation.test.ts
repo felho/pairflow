@@ -7,7 +7,7 @@ function toErrorMessage(input: PairflowCommandErrorInput): string {
   return (input.reasonCode !== undefined ? input.reasonCode + ": " : "") + input.message;
 }
 
-import type { Finding } from "../../../../src/types/findings.js";
+import type { Finding } from "../../../../src/contracts/kernel/findings.js";
 import { prepareReviewerPass } from "../../../../src/v11/application/pass/internal/reviewerDelivery/reviewerPassPreparation.js";
 
 describe("prepareReviewerPass", () => {

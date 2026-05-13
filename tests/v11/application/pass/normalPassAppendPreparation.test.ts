@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import type { Finding } from "../../../../src/types/findings.js";
+import type { Finding } from "../../../../src/contracts/kernel/findings.js";
 import { prepareNormalPassAppend } from "../../../../src/v11/application/pass/internal/normalPass/normalPassAppendPreparation.js";
 
 describe("prepareNormalPassAppend", () => {

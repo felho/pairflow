@@ -3,7 +3,7 @@ import {
   isPassIntent,
   type PassIntent
 } from "../../../src/contracts/kernel/protocol.js";
-import type { Finding } from "../../../src/types/findings.js";
+import type { Finding } from "../../../src/contracts/kernel/findings.js";
 import { isLikelyStructuredRef } from "../../../src/v11/shared/reference/structuredRef.js";
 import {
   isMetaReviewRecommendation,

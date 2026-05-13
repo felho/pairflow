@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { findingSeverities } from "../../../../src/types/findings.js";
+import { findingSeverities } from "../../../../src/contracts/kernel/findings.js";
 import { normalizeConvergedCommandInput } from "../../../../src/v11/shared/converged/convergedCommandInputNormalization.js";
 import { convergedBlockerFindingsForbiddenReasonCode } from "../../../../src/v11/shared/converged/convergedCommandReasonCodes.js";
 import {
