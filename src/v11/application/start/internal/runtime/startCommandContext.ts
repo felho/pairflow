@@ -1,5 +1,4 @@
-import { mkdir, readFile, writeFile } from "node:fs/promises";
-import { dirname, join, resolve } from "node:path";
+import { resolve } from "node:path";
 
 import { startCommandContextDefaults } from "../../startCommandDependencyDefaults.js";
 import { buildBubbleTmuxSessionName } from "../../../../shared/bubble/tmuxSessionName.js";
@@ -7,22 +6,11 @@ import { buildBubbleStateSnapshotVariant } from "../../../../domain/state/snapsh
 import type { StartLoadedStateSnapshot } from "./startStatePersistence.js";
 import { DEFAULT_REVIEW_POLICY_REVIEWER_BLOCKING_MIN_SEVERITY } from "../../../../../config/defaults.js";
 import type { ReviewerFocusExtractionResult } from "../../../../shared/reviewer/reviewerBrief.js";
-import { reviewerPolicySnapshotFileName } from "../../../../shared/reviewer/reviewerPolicySnapshot.js";
-import type {
-  BubbleReviewAutoReworkSeverity
-} from "../../../../shared/reviewPolicy/reviewPolicyTypes.js";
-import {
-  reviewerSeverityOntologyFullMarkdown,
-  reviewerSeverityOntologySourceDoc
-} from "../../../../shared/reviewer/reviewerSeverityOntology.generated.js";
-import {
-  buildReviewerBlockingThresholdAuthorityLine,
-  buildReviewerBlockingThresholdLabel,
-  buildReviewerDocumentScopeThresholdRoutingNote
-} from "../../../../shared/reviewer/reviewerCommandGateGuidance.js";
 import type { RuntimeSessionRecord } from "../../../../ports/runtimeSessions.js";
 import type { StartBubbleInput } from "../../startCommandContract.js";
 import type {
+  EnsureReviewerPolicySnapshotPort,
+  EnsureReviewerPolicySnapshotResult,
   ReadReviewerBriefArtifactPort,
   ReadReviewerFocusArtifactPort
 } from "../../../../ports/reviewerArtifacts.js";
@@ -42,86 +30,6 @@ export type ResolvedStartBubble =
 export const reviewerPolicySnapshotUnavailableReasonCode =
   "REVIEWER_POLICY_SNAPSHOT_UNAVAILABLE";
 const pairflowWorktreeRootEnvVar = "PAIRFLOW_WORKTREE_ROOT";
-
-function buildReviewerPolicySnapshotContentForThreshold(
-  reviewerBlockingMinSeverity: BubbleReviewAutoReworkSeverity
-): string {
-  const thresholdLabel = buildReviewerBlockingThresholdLabel({
-    reviewerBlockingMinSeverity
-  });
-  return [
-    "# Reviewer Policy Snapshot",
-    "",
-    "## Runtime Review Threshold",
-    `- Current post-gate routing threshold: \`${thresholdLabel}\`.`,
-    `- ${buildReviewerBlockingThresholdAuthorityLine({ reviewerBlockingMinSeverity })}`,
-    "- This threshold controls reviewer PASS vs convergence after `severity_gate_round`; it does not redefine the canonical `P0/P1/P2/P3` severity meanings.",
-    `- ${buildReviewerDocumentScopeThresholdRoutingNote()}`,
-    `- Canonical ontology source: \`${reviewerSeverityOntologySourceDoc}\`.`,
-    "",
-    "## Canonical Severity Ontology",
-    "",
-    reviewerSeverityOntologyFullMarkdown,
-    ""
-  ].join("\n");
-}
-
-async function ensureReviewerPolicySnapshot(
-  artifactsDir: string,
-  reviewerBlockingMinSeverity: BubbleReviewAutoReworkSeverity
-): Promise<string> {
-  const artifactPath = join(artifactsDir, reviewerPolicySnapshotFileName);
-  const artifactPathAbs = resolve(artifactPath);
-  const snapshotContent = buildReviewerPolicySnapshotContentForThreshold(
-    reviewerBlockingMinSeverity
-  );
-
-  try {
-    await mkdir(dirname(artifactPathAbs), { recursive: true });
-    await writeFile(artifactPathAbs, snapshotContent, "utf8");
-  } catch (error) {
-    throw createStartBubbleError({
-      reasonCode: reviewerPolicySnapshotUnavailableReasonCode,
-      message: "Failed to write reviewer policy snapshot artifact.",
-      context: {
-        artifact_path: artifactPathAbs,
-        source_doc: reviewerSeverityOntologySourceDoc,
-        stage: "write"
-      },
-      cause: error
-    });
-  }
-
-  let readBack: string;
-  try {
-    readBack = await readFile(artifactPathAbs, "utf8");
-  } catch (error) {
-    throw createStartBubbleError({
-      reasonCode: reviewerPolicySnapshotUnavailableReasonCode,
-      message: "Failed to read reviewer policy snapshot artifact after write.",
-      context: {
-        artifact_path: artifactPathAbs,
-        source_doc: reviewerSeverityOntologySourceDoc,
-        stage: "read_back"
-      },
-      cause: error
-    });
-  }
-
-  if (readBack.trim().length === 0) {
-    throw createStartBubbleError({
-      reasonCode: reviewerPolicySnapshotUnavailableReasonCode,
-      message: "Reviewer policy snapshot artifact is empty after write.",
-      context: {
-        artifact_path: artifactPathAbs,
-        source_doc: reviewerSeverityOntologySourceDoc,
-        stage: "validate_non_empty"
-      }
-    });
-  }
-
-  return artifactPathAbs;
-}
 
 function resolveOptionalWorkspaceEnvPath(
   envVar: string
@@ -195,6 +103,24 @@ async function assertVerifiedRemoteCloneContext(input: {
   }
 }
 
+function assertReviewerPolicySnapshotAvailable(
+  result: EnsureReviewerPolicySnapshotResult
+): string {
+  if (result.ok) {
+    return result.policySnapshotPathAbs;
+  }
+  throw createStartBubbleError({
+    reasonCode: reviewerPolicySnapshotUnavailableReasonCode,
+    message: result.reason,
+    context: {
+      artifact_path: result.artifactPathAbs,
+      source_doc: result.sourceDoc,
+      stage: result.stage
+    },
+    ...(result.cause !== undefined ? { cause: result.cause } : {})
+  });
+}
+
 export interface StartExecutionContext {
   resolved: ResolvedStartBubble;
   now: Date;
@@ -216,6 +142,7 @@ export interface StartExecutionContext {
 export async function loadStartExecutionContext(
   input: StartBubbleInput,
   dependencies: {
+    ensureReviewerPolicySnapshot: EnsureReviewerPolicySnapshotPort;
     readReviewerBriefArtifact: ReadReviewerBriefArtifactPort;
     readReviewerFocusArtifact: ReadReviewerFocusArtifactPort;
     readRemotePointer: (path: string) => Promise<BubbleRemotePointer | null>;
@@ -249,10 +176,13 @@ export async function loadStartExecutionContext(
   const reviewerFocus = await dependencies.readReviewerFocusArtifact(
     resolved.bubblePaths.reviewerFocusArtifactPath
   ).catch(() => undefined);
-  const policySnapshotPathAbs = await ensureReviewerPolicySnapshot(
-    resolved.bubblePaths.artifactsDir,
-    resolved.bubbleConfig.review_policy?.reviewer_blocking_min_severity
+  const policySnapshotPathAbs = assertReviewerPolicySnapshotAvailable(
+    await dependencies.ensureReviewerPolicySnapshot({
+      artifactsDir: resolved.bubblePaths.artifactsDir,
+      reviewerBlockingMinSeverity:
+        resolved.bubbleConfig.review_policy?.reviewer_blocking_min_severity
       ?? DEFAULT_REVIEW_POLICY_REVIEWER_BLOCKING_MIN_SEVERITY
+    })
   );
   const loadedPersisted =
     await startCommandContextDefaults.readStateSnapshot(resolved.bubblePaths.statePath);

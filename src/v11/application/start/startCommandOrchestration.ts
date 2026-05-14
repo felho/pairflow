@@ -20,6 +20,7 @@ import {
   createStartBubbleError
 } from "./internal/runtime/startCommandRuntime.js";
 import type {
+  EnsureReviewerPolicySnapshotPort,
   ReadReviewerBriefArtifactPort,
   ReadReviewerFocusArtifactPort
 } from "../../ports/reviewerArtifacts.js";
@@ -80,6 +81,7 @@ export interface ResolvedStartBubbleDependencies {
   reportWarning: (message: string) => void;
   buildResumeSummary:
     NonNullable<StartBubbleDependencies["buildResumeTranscriptSummary"]>;
+  ensureReviewerPolicySnapshot: EnsureReviewerPolicySnapshotPort;
   readReviewerBriefArtifact: ReadReviewerBriefArtifactPort;
   readReviewerFocusArtifact: ReadReviewerFocusArtifactPort;
   resolveDocContractGateArtifactPath: ResolveDocContractGateArtifactPathPort;
@@ -160,6 +162,9 @@ function resolveReviewerDependencies(input: {
   return {
     buildResumeSummary:
       input.dependencies.buildResumeTranscriptSummary ?? buildResumeTranscriptSummary,
+    ensureReviewerPolicySnapshot:
+      input.dependencies.ensureReviewerPolicySnapshot
+      ?? input.defaults.ensureReviewerPolicySnapshot,
     readReviewerBriefArtifact:
       input.dependencies.readReviewerBriefArtifact
       ?? input.defaults.readReviewerBriefArtifact,

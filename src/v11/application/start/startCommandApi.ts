@@ -55,12 +55,17 @@ async function loadExecutionContextOrThrow(
   input: StartBubbleInput,
   deps: Pick<
     Awaited<ReturnType<typeof resolveStartBubbleDependencies>>,
-    "readReviewerBriefArtifact" | "readReviewerFocusArtifact" | "readRemotePointer"
+    | "ensureReviewerPolicySnapshot"
+    | "readReviewerBriefArtifact"
+    | "readReviewerFocusArtifact"
+    | "readRemotePointer"
   >,
   resolved?: ResolvedStartBubble
 ): Promise<StartExecutionContext> {
   try {
     return await loadStartExecutionContext(input, {
+      ensureReviewerPolicySnapshot:
+        deps.ensureReviewerPolicySnapshot,
       readReviewerBriefArtifact:
         deps.readReviewerBriefArtifact,
       readReviewerFocusArtifact:

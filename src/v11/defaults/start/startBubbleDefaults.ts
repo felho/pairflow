@@ -29,6 +29,9 @@ import {
   readReviewerFocusArtifact
 } from "../../infrastructure/artifact/reviewer/reviewerBriefArtifacts.js";
 import {
+  ensureReviewerPolicySnapshot
+} from "../../infrastructure/artifact/reviewer/reviewerPolicySnapshotArtifact.js";
+import {
   resolveDocContractGateArtifactPath
 } from "../../infrastructure/artifact/gates/docContractGateArtifacts.js";
 import {
@@ -85,6 +88,7 @@ import type {
   ReadTranscriptEnvelopesPort
 } from "../../ports/transcript.js";
 import type {
+  EnsureReviewerPolicySnapshotPort,
   ReadReviewerBriefArtifactPort,
   ReadReviewerFocusArtifactPort
 } from "../../ports/reviewerArtifacts.js";
@@ -138,6 +142,7 @@ export interface StartBubbleDependencyDefaults {
   ) => Promise<ExecuteRemoteBubbleStartResult>;
   prepareRemoteStartControlFiles: PrepareRemoteStartControlFilesPort;
   runTmux: TmuxRunner;
+  ensureReviewerPolicySnapshot: EnsureReviewerPolicySnapshotPort;
   readReviewerBriefArtifact: ReadReviewerBriefArtifactPort;
   readReviewerFocusArtifact: ReadReviewerFocusArtifactPort;
   resolveDocContractGateArtifactPath: ResolveDocContractGateArtifactPathPort;
@@ -187,6 +192,7 @@ export const startBubbleDependencyDefaults: StartBubbleDependencyDefaults = {
   executeRemoteBubbleStart: executeRemoteBubbleStartCanonical,
   prepareRemoteStartControlFiles: prepareRemoteStartControlFilesCanonical,
   runTmux,
+  ensureReviewerPolicySnapshot,
   readReviewerBriefArtifact,
   readReviewerFocusArtifact,
   resolveDocContractGateArtifactPath,

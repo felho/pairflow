@@ -24,6 +24,7 @@ import type {
   ResolveDocContractGateArtifactPathPort
 } from "../../ports/docContractGateArtifacts.js";
 import type {
+  EnsureReviewerPolicySnapshotPort,
   ReadReviewerBriefArtifactPort,
   ReadReviewerFocusArtifactPort
 } from "../../ports/reviewerArtifacts.js";
@@ -110,6 +111,7 @@ export interface StartBubbleDependencies {
   removeRuntimeSession?: RemoveRuntimeSessionPort;
   writeStateSnapshot?: WriteStateSnapshotPort;
   buildResumeTranscriptSummary?: typeof buildResumeTranscriptSummary;
+  ensureReviewerPolicySnapshot?: EnsureReviewerPolicySnapshotPort;
   readReviewerBriefArtifact?: ReadReviewerBriefArtifactPort;
   readReviewerFocusArtifact?: ReadReviewerFocusArtifactPort;
   resolveDocContractGateArtifactPath?: ResolveDocContractGateArtifactPathPort;

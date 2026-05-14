@@ -36,6 +36,7 @@ import type {
 import type { RunGitPort } from "../../ports/git.js";
 import type { ResolveRemoteBubbleStatusTargetPort } from "../../shared/remote/commitRemoteExecution.js";
 import type {
+  EnsureReviewerPolicySnapshotPort,
   ReadReviewerBriefArtifactPort,
   ReadReviewerFocusArtifactPort
 } from "../../ports/reviewerArtifacts.js";
@@ -117,6 +118,7 @@ export interface StartBubbleDependencyDefaults {
   ) => Promise<ExecuteRemoteBubbleStartResult>;
   prepareRemoteStartControlFiles: PrepareRemoteStartControlFilesPort;
   runTmux: TmuxRunner;
+  ensureReviewerPolicySnapshot: EnsureReviewerPolicySnapshotPort;
   readReviewerBriefArtifact: ReadReviewerBriefArtifactPort;
   readReviewerFocusArtifact: ReadReviewerFocusArtifactPort;
   resolveDocContractGateArtifactPath: ResolveDocContractGateArtifactPathPort;
