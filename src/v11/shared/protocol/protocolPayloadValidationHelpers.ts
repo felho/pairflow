@@ -24,6 +24,7 @@ const allowedPayloadKeys = new Set([
   "findings_claim_source",
   "findings",
   "findings_parity",
+  "advisory_findings_open_total",
   "metadata"
 ]);
 
@@ -53,6 +54,10 @@ const findingsParityFieldNames = new Set([
 
 function isNonNegativeIntegerOrNull(value: unknown): boolean {
   return value === null || (isInteger(value) && value >= 0);
+}
+
+function isNonNegativeInteger(value: unknown): value is number {
+  return isInteger(value) && value >= 0;
 }
 
 function isStringArray(value: unknown): boolean {
@@ -188,6 +193,20 @@ function validateNoFindingsParityFieldsInMetadata(
   }
 }
 
+function validateNoAdvisoryFindingsOpenTotalInMetadata(
+  metadata: Record<string, unknown>,
+  errors: ValidationError[]
+): void {
+  if (metadata.advisory_findings_open_total === undefined) {
+    return;
+  }
+  errors.push({
+    path: "payload.metadata.advisory_findings_open_total",
+    message:
+      "Advisory findings open total must use payload.advisory_findings_open_total"
+  });
+}
+
 export function validatePayloadMetadata(
   envelopeType: string,
   payload: Record<string, unknown>,
@@ -202,6 +221,30 @@ export function validatePayloadMetadata(
   }
   if (isRecord(payload.metadata) && envelopeType !== "COMMIT_RESULT") {
     validateNoFindingsParityFieldsInMetadata(payload.metadata, errors);
+    validateNoAdvisoryFindingsOpenTotalInMetadata(payload.metadata, errors);
+  }
+}
+
+export function validatePayloadAdvisoryFindingsOpenTotal(
+  envelopeType: string,
+  payload: Record<string, unknown>,
+  errors: ValidationError[]
+): void {
+  if (payload.advisory_findings_open_total === undefined) {
+    return;
+  }
+  if (envelopeType !== "CONVERGENCE") {
+    errors.push({
+      path: "payload.advisory_findings_open_total",
+      message: "Only CONVERGENCE can carry advisory_findings_open_total"
+    });
+    return;
+  }
+  if (!isNonNegativeInteger(payload.advisory_findings_open_total)) {
+    errors.push({
+      path: "payload.advisory_findings_open_total",
+      message: "Must be a non-negative integer"
+    });
   }
 }
 
@@ -264,6 +307,9 @@ export function buildValidatedPayload(input: {
       : {}),
     ...(findings !== undefined ? { findings } : {}),
     ...(findingsParity !== undefined ? { findings_parity: findingsParity } : {}),
+    ...(isNonNegativeInteger(payload.advisory_findings_open_total)
+      ? { advisory_findings_open_total: payload.advisory_findings_open_total }
+      : {}),
     ...(isRecord(payload.metadata) ? { metadata: payload.metadata } : {})
   };
 }
@@ -362,6 +408,16 @@ export function validateEnvelopeSpecificPayload(
     errors.push({
       path: "payload.summary",
       message: "CONVERGENCE payload requires non-empty summary"
+    });
+  }
+  if (
+    envelopeType === "CONVERGENCE" &&
+    !isNonNegativeInteger(payload.advisory_findings_open_total)
+  ) {
+    errors.push({
+      path: "payload.advisory_findings_open_total",
+      message:
+        "CONVERGENCE payload requires advisory_findings_open_total as a non-negative integer"
     });
   }
   if (envelopeType === "APPROVAL_DECISION" && !isApprovalDecision(payload.decision)) {

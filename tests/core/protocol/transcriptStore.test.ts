@@ -153,7 +153,8 @@ describe("appendProtocolEnvelope", () => {
             recipient: "orchestrator",
             type: "CONVERGENCE",
             payload: {
-              summary: "Converged."
+              summary: "Converged.",
+              advisory_findings_open_total: 0
             }
           })
         },

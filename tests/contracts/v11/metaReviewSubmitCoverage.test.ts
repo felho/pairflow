@@ -119,14 +119,8 @@ async function appendReviewerSnapshot(input: {
       round: input.round ?? 1,
       payload: {
         summary: "Reviewer converged snapshot.",
+        advisory_findings_open_total: input.advisoryFindingsOpenTotal ?? 0,
         ...(input.findings !== undefined ? { findings: input.findings } : {}),
-        ...(input.advisoryFindingsOpenTotal !== undefined
-          ? {
-              metadata: {
-                advisory_findings_open_total: input.advisoryFindingsOpenTotal
-              }
-            }
-          : {})
       },
       refs: []
     }

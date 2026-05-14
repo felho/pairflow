@@ -7,6 +7,7 @@ import {
   buildValidatedPayload,
   validateEnvelopeSpecificPayload,
   validateFindingsClaimFields,
+  validatePayloadAdvisoryFindingsOpenTotal,
   validatePayloadFindingsParity,
   validatePayloadMetadata,
   validateUnknownPayloadKeys
@@ -23,6 +24,7 @@ export function validatePayloadByType(
   }
   validatePayloadMetadata(envelopeType, payload, errors);
   validatePayloadFindingsParity(envelopeType, payload, errors);
+  validatePayloadAdvisoryFindingsOpenTotal(envelopeType, payload, errors);
 
   const findings =
     envelopeType !== "COMMIT_RESULT" && payload.findings !== undefined

@@ -390,7 +390,8 @@ describe("timelinePresenter display DTO", () => {
         recipient: "orchestrator",
         round: 4,
         payload: {
-          summary: "Reviewer converged."
+          summary: "Reviewer converged.",
+          advisory_findings_open_total: 0
         }
       }),
       envelope({
@@ -442,7 +443,8 @@ describe("timelinePresenter display DTO", () => {
         recipient: "orchestrator",
         round: 2,
         payload: {
-          summary: "Reviewer converged."
+          summary: "Reviewer converged.",
+          advisory_findings_open_total: 0
         }
       }),
       envelope({
@@ -878,7 +880,8 @@ describe("timelinePresenter display DTO", () => {
             recipient: "orchestrator",
             round: 2,
             payload: {
-              summary: "Reviewer converged."
+              summary: "Reviewer converged.",
+              advisory_findings_open_total: 0
             }
           }),
           envelope({

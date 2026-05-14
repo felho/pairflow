@@ -51,10 +51,11 @@ export interface HumanReplyProtocolEnvelopePayload {
   metadata?: ProtocolEnvelopeMetadata;
 }
 
-export interface ConvergenceProtocolEnvelopePayload
-  extends ProtocolEnvelopePayloadBase {
-  summary?: string;
+export interface ConvergenceProtocolEnvelopePayload {
+  summary: string;
+  advisory_findings_open_total: number;
   findings?: Finding[];
+  metadata?: ProtocolEnvelopeMetadata;
 }
 
 export interface ApprovalRequestProtocolEnvelopePayload

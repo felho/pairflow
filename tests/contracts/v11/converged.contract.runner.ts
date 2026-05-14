@@ -589,16 +589,10 @@ function extractAdvisoryFindingsOpenTotal(input: {
       `converged contract case=${input.caseId}: convergence payload must be an object.`
     );
   }
-  const metadataRaw = (payload as Record<string, unknown>).metadata;
-  if (typeof metadataRaw !== "object" || metadataRaw === null) {
-    throw new Error(
-      `converged contract case=${input.caseId}: convergence payload metadata must be an object.`
-    );
-  }
-  const value = (metadataRaw as Record<string, unknown>).advisory_findings_open_total;
+  const value = (payload as Record<string, unknown>).advisory_findings_open_total;
   if (typeof value !== "number" || !Number.isInteger(value) || value < 0) {
     throw new Error(
-      `converged contract case=${input.caseId}: convergence payload metadata.advisory_findings_open_total must be a non-negative integer.`
+      `converged contract case=${input.caseId}: convergence payload advisory_findings_open_total must be a non-negative integer.`
     );
   }
   return value;

@@ -1,4 +1,3 @@
-import { isRecord } from "../../shared/validation/primitives.js";
 import {
   type ProtocolEnvelope
 } from "../../shared/protocol/protocolEnvelopeContract.js";
@@ -33,13 +32,10 @@ export function isAdvisoryOnlyReviewerSnapshot(
   );
 }
 
-export function resolveReviewerSnapshotMetadataAdvisoryOpenTotal(
+export function resolveReviewerSnapshotAdvisoryOpenTotal(
   envelope: ProtocolEnvelope<"CONVERGENCE">
 ): number | null {
-  if (!isRecord(envelope.payload.metadata)) {
-    return null;
-  }
-  const advisoryOpenTotal = envelope.payload.metadata.advisory_findings_open_total;
+  const advisoryOpenTotal = envelope.payload.advisory_findings_open_total;
   return isNonNegativeInteger(advisoryOpenTotal) ? advisoryOpenTotal : null;
 }
 
@@ -63,13 +59,13 @@ export function resolveSameRoundReviewerSnapshotFromEnvelope(
     envelope.payload.findings
   );
   const derivedSplit = deriveFindingsOpenSplit(envelope.payload.findings);
-  const metadataAdvisoryOpenTotal =
-    resolveReviewerSnapshotMetadataAdvisoryOpenTotal(envelope);
+  const payloadAdvisoryOpenTotal =
+    resolveReviewerSnapshotAdvisoryOpenTotal(envelope);
   const advisoryOpenTotal =
-    metadataAdvisoryOpenTotal ?? derivedSplit?.advisoryOpenTotal ?? null;
+    payloadAdvisoryOpenTotal ?? derivedSplit?.advisoryOpenTotal ?? null;
   const blockingOpenTotal =
     derivedSplit?.blockingOpenTotal ??
-    (metadataAdvisoryOpenTotal !== null ? 0 : null);
+    (payloadAdvisoryOpenTotal !== null ? 0 : null);
   const openFindingsTotal =
     advisoryOpenTotal !== null || blockingOpenTotal !== null
       ? (advisoryOpenTotal ?? 0) + (blockingOpenTotal ?? 0)

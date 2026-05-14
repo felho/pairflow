@@ -1720,7 +1720,8 @@ describe("emitConvergedFromWorkspace", () => {
         type: "CONVERGENCE",
         round: 4,
         payload: {
-          summary: "Round 4 converged before approval rework"
+          summary: "Round 4 converged before approval rework",
+          advisory_findings_open_total: 0
         },
         refs: []
       }

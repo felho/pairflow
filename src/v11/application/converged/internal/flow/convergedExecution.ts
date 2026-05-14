@@ -80,9 +80,7 @@ async function appendConvergenceEnvelope(
 ): Promise<Awaited<ReturnType<ResolvedExecutionDependencies["appendEnvelope"]>>> {
   const lockPath = join(input.resolved.bubblePaths.locksDir, `${input.resolved.bubbleId}.lock`);
   const advisoryFindingsOpenTotal = input.findings?.length ?? 0;
-  const metadata: Record<string, unknown> = {
-    advisory_findings_open_total: advisoryFindingsOpenTotal
-  };
+  const metadata: Record<string, unknown> = {};
   if (input.convergencePolicyDiagnostics.length > 0) {
     metadata.convergence_policy_diagnostics = input.convergencePolicyDiagnostics;
   }
@@ -101,10 +99,11 @@ async function appendConvergenceEnvelope(
       round: input.state.round,
       payload: {
         summary: input.summary,
+        advisory_findings_open_total: advisoryFindingsOpenTotal,
         ...(input.findings !== undefined && input.findings.length > 0
           ? { findings: input.findings }
           : {}),
-        metadata
+        ...(Object.keys(metadata).length > 0 ? { metadata } : {})
       },
       refs: input.refs
     }

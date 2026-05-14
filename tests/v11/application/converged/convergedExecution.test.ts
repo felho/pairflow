@@ -57,8 +57,8 @@ describe("executeConvergedExecution", () => {
               refs: ["artifact://review/follow-up.md"]
             }
           ]);
+          expect(input.envelope.payload.advisory_findings_open_total).toBe(1);
           expect(input.envelope.payload.metadata).toMatchObject({
-            advisory_findings_open_total: 1,
             convergence_policy_diagnostics: ["diagnostic-a"],
             gate_pipeline_diagnostics: ["diagnostic-a", "gate-warning"]
           });
@@ -375,9 +375,8 @@ describe("executeConvergedExecution", () => {
             throw new Error("Expected convergence envelope.");
           }
           expect(input.envelope.payload.findings).toBeUndefined();
-          expect(input.envelope.payload.metadata).toMatchObject({
-            advisory_findings_open_total: 0
-          });
+          expect(input.envelope.payload.advisory_findings_open_total).toBe(0);
+          expect(input.envelope.payload.metadata).toBeUndefined();
           return {
             sequence: 19,
             envelope: {

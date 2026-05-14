@@ -6,7 +6,7 @@ import {
 } from "../../../../src/v11/domain/metaReviewGate/reviewerSnapshot.js";
 
 describe("reviewer same-round snapshot domain policy", () => {
-  it("prefers metadata advisory open total over explicit empty findings list", () => {
+  it("prefers payload advisory open total over explicit empty findings list", () => {
     const snapshot = resolveSameRoundReviewerSnapshotFromEnvelope({
       id: "msg_conv_latest_01",
       ts: "2026-03-28T10:00:00.000Z",
@@ -17,10 +17,8 @@ describe("reviewer same-round snapshot domain policy", () => {
       round: 4,
       payload: {
         summary: "Converged.",
-        findings: [],
-        metadata: {
-          advisory_findings_open_total: 2
-        }
+        advisory_findings_open_total: 2,
+        findings: []
       },
       refs: []
     });
@@ -48,9 +46,7 @@ describe("reviewer same-round snapshot domain policy", () => {
           round: 3,
           payload: {
             summary: "Older round.",
-            metadata: {
-              advisory_findings_open_total: 3
-            }
+            advisory_findings_open_total: 3
           },
           refs: []
         },
@@ -64,9 +60,7 @@ describe("reviewer same-round snapshot domain policy", () => {
           round: 4,
           payload: {
             summary: "Older same round.",
-            metadata: {
-              advisory_findings_open_total: 2
-            }
+            advisory_findings_open_total: 2
           },
           refs: []
         },
@@ -80,6 +74,7 @@ describe("reviewer same-round snapshot domain policy", () => {
           round: 4,
           payload: {
             summary: "Latest same round.",
+            advisory_findings_open_total: 0,
             findings: []
           },
           refs: []
