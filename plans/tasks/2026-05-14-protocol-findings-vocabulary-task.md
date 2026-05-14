@@ -2,7 +2,16 @@
 
 **Source review**: `docs/modularity-review/2026-05-14-modularity-review-full-codebase.md`  
 **Issue**: `Protocol and findings vocabulary is still the widest volatile model`  
-**Status**: first slice complete in `9cbfd971` (`Tighten protocol payload contracts`); second-slice survey started below
+**Status**: second slice complete through `24861376` (`Lift COMMIT_RESULT commit facts`); `ProtocolEnvelopePayloadBase` has no remaining code references
+
+## Implementation Progress
+
+- `9cbfd971` (`Tighten protocol payload contracts`) completed the first low-risk payload slice.
+- `225a3d1e` (`Tighten PASS protocol payload`) removed the inherited base from `PASS` and kept only its explicit contract fields.
+- `3b8e1efb` (`Tighten CONVERGENCE protocol payload`) removed the inherited base from `CONVERGENCE` and made `advisory_findings_open_total` a required top-level protocol field.
+- `9e1ff844` (`Tighten APPROVAL_REQUEST protocol payload`) removed the inherited base from `APPROVAL_REQUEST` while keeping `findings_parity` top-level.
+- `24861376` (`Lift COMMIT_RESULT commit facts`) moved `commit_sha`, `commit_message`, and `staged_files` to required top-level `COMMIT_RESULT` payload fields and rejected commit facts under `payload.metadata`.
+- Follow-up check: `rg` confirms no `ProtocolEnvelopePayloadBase` references remain in `src/` or `tests/`. Remaining mentions are this task document's historical plan and end-state notes.
 
 ## Problem
 
