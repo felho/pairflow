@@ -1,5 +1,8 @@
-import { realpathSync } from "node:fs";
-import { resolve } from "node:path";
+import {
+  canonicalizeRemoteExecutionPath,
+  resolveRemoteCloneExecutionContextFromEnv,
+  type RemoteExecutionContextEnvFailure
+} from "../../../remote/remoteExecutionContextEnv.js";
 
 export const remoteDeleteModeEnvVar = "PAIRFLOW_REMOTE_DELETE_MODE";
 export const remoteDeleteWorkspaceRootEnvVar =
@@ -37,71 +40,57 @@ function toRemoteDeleteExecutionContextError(input: {
   return new RemoteDeleteExecutionContextError(input);
 }
 
-export function canonicalizeDeleteExecutionPath(pathValue: string): string {
-  const absolutePath = resolve(pathValue);
-  try {
-    return realpathSync.native(absolutePath);
-  } catch {
-    return absolutePath;
-  }
-}
+export const canonicalizeDeleteExecutionPath = canonicalizeRemoteExecutionPath;
 
 export function resolveRemoteDeleteExecutionContextFromEnv():
   | RemoteDeleteExecutionContext
   | undefined {
-  const remoteDeleteMode = process.env[remoteDeleteModeEnvVar]?.trim();
-  const workspaceRoot = process.env[remoteDeleteWorkspaceRootEnvVar]?.trim();
-
-  if (
-    workspaceRoot !== undefined
-    && workspaceRoot.length > 0
-    && (remoteDeleteMode === undefined || remoteDeleteMode.length === 0)
-  ) {
-    throw toRemoteDeleteExecutionContextError({
-      code: "REMOTE_DELETE_MODE_REQUIRED",
-      message:
-        "Remote inner delete workspace authority was provided without the matching remote execution mode.",
-      context: {
-        modeEnvVar: remoteDeleteModeEnvVar,
-        workspaceEnvVar: remoteDeleteWorkspaceRootEnvVar,
-        remoteDeleteMode: remoteDeleteMode ?? null,
-        workspaceRoot
+  return resolveRemoteCloneExecutionContextFromEnv({
+    modeEnvVar: remoteDeleteModeEnvVar,
+    workspaceRootEnvVar: remoteDeleteWorkspaceRootEnvVar,
+    expectedMode: remoteDeleteModeInnerRemoteExecution,
+    workspaceWithoutExpectedMode: "missing_only",
+    canonicalizeWorkspaceRoot: canonicalizeDeleteExecutionPath,
+    toError: (failure: RemoteExecutionContextEnvFailure) => {
+      if (failure.kind === "workspace_without_mode") {
+        return toRemoteDeleteExecutionContextError({
+          code: "REMOTE_DELETE_MODE_REQUIRED",
+          message:
+            "Remote inner delete workspace authority was provided without the matching remote execution mode.",
+          context: {
+            modeEnvVar: remoteDeleteModeEnvVar,
+            workspaceEnvVar: remoteDeleteWorkspaceRootEnvVar,
+            remoteDeleteMode: failure.modeValue ?? null,
+            workspaceRoot: failure.workspaceRoot ?? null
+          }
+        });
       }
-    });
-  }
 
-  if (remoteDeleteMode === undefined || remoteDeleteMode.length === 0) {
-    return undefined;
-  }
-  if (remoteDeleteMode !== remoteDeleteModeInnerRemoteExecution) {
-    throw toRemoteDeleteExecutionContextError({
-      code: "REMOTE_DELETE_MODE_INVALID",
-      message:
-        `Remote inner delete mode env var contains an unsupported execution mode: '${remoteDeleteMode}'.`,
-      context: {
-        modeEnvVar: remoteDeleteModeEnvVar,
-        workspaceEnvVar: remoteDeleteWorkspaceRootEnvVar,
-        remoteDeleteMode,
-        workspaceRoot: workspaceRoot ?? null
+      if (failure.kind === "unsupported_mode") {
+        return toRemoteDeleteExecutionContextError({
+          code: "REMOTE_DELETE_MODE_INVALID",
+          message:
+            `Remote inner delete mode env var contains an unsupported execution mode: '${failure.modeValue}'.`,
+          context: {
+            modeEnvVar: remoteDeleteModeEnvVar,
+            workspaceEnvVar: remoteDeleteWorkspaceRootEnvVar,
+            remoteDeleteMode: failure.modeValue,
+            workspaceRoot: failure.workspaceRoot ?? null
+          }
+        });
       }
-    });
-  }
-  if (workspaceRoot === undefined || workspaceRoot.length === 0) {
-    throw toRemoteDeleteExecutionContextError({
-      code: "REMOTE_DELETE_WORKSPACE_REQUIRED",
-      message:
-        "Remote inner delete requires explicit clone-root workspace authority.",
-      context: {
-        modeEnvVar: remoteDeleteModeEnvVar,
-        workspaceEnvVar: remoteDeleteWorkspaceRootEnvVar,
-        remoteDeleteMode,
-        workspaceRoot: workspaceRoot ?? null
-      }
-    });
-  }
 
-  return {
-    kind: "remote_clone",
-    workspaceRoot: canonicalizeDeleteExecutionPath(workspaceRoot)
-  };
+      return toRemoteDeleteExecutionContextError({
+        code: "REMOTE_DELETE_WORKSPACE_REQUIRED",
+        message:
+          "Remote inner delete requires explicit clone-root workspace authority.",
+        context: {
+          modeEnvVar: remoteDeleteModeEnvVar,
+          workspaceEnvVar: remoteDeleteWorkspaceRootEnvVar,
+          remoteDeleteMode: failure.modeValue,
+          workspaceRoot: null
+        }
+      });
+    }
+  });
 }

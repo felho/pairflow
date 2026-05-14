@@ -1,7 +1,9 @@
-import { realpathSync } from "node:fs";
-import { resolve } from "node:path";
-
 import { createBubbleMergeError } from "../error/mergeCommandErrorRuntime.js";
+import {
+  canonicalizeRemoteExecutionPath,
+  resolveRemoteCloneExecutionContextFromEnv,
+  type RemoteExecutionContextEnvFailure
+} from "../../../remote/remoteExecutionContextEnv.js";
 
 export const remoteMergeModeEnvVar = "PAIRFLOW_REMOTE_MERGE_MODE";
 export const remoteMergeWorkspaceRootEnvVar =
@@ -19,63 +21,55 @@ export interface RemoteMergeExecutionContext {
   workspaceRoot: string;
 }
 
-export function canonicalizeMergeExecutionPath(pathValue: string): string {
-  const absolutePath = resolve(pathValue);
-  try {
-    return realpathSync.native(absolutePath);
-  } catch {
-    return absolutePath;
+export const canonicalizeMergeExecutionPath = canonicalizeRemoteExecutionPath;
+
+function toRemoteMergeExecutionContextError(
+  failure: RemoteExecutionContextEnvFailure
+): Error {
+  if (failure.kind === "workspace_without_mode") {
+    return createBubbleMergeError({
+      reasonCode: MERGE_REMOTE_MODE_REQUIRED,
+      message:
+        "Remote inner merge workspace authority was provided without the matching remote execution mode.",
+      context: {
+        remote_merge_mode: failure.modeValue ?? "missing",
+        ...(failure.workspaceRoot !== undefined
+          ? { remote_workspace_root: failure.workspaceRoot }
+          : {})
+      }
+    });
   }
+
+  if (failure.kind === "unsupported_mode") {
+    return createBubbleMergeError({
+      reasonCode: MERGE_REMOTE_MODE_UNSUPPORTED,
+      message:
+        `Remote inner merge mode env var contains an unsupported execution mode: '${failure.modeValue}'.`,
+      context: {
+        remote_merge_mode: failure.modeValue
+      }
+    });
+  }
+
+  return createBubbleMergeError({
+    reasonCode: MERGE_REMOTE_WORKSPACE_ROOT_REQUIRED,
+    message:
+      "Remote inner merge requires explicit clone-root workspace authority.",
+    context: {
+      remote_merge_mode: remoteMergeModeInnerRemoteExecution
+    }
+  });
 }
 
 export function resolveRemoteMergeExecutionContextFromEnv():
   | RemoteMergeExecutionContext
   | undefined {
-  const remoteMergeMode = process.env[remoteMergeModeEnvVar]?.trim();
-  const workspaceRoot = process.env[remoteMergeWorkspaceRootEnvVar]?.trim();
-
-  if (
-    workspaceRoot !== undefined
-    && workspaceRoot.length > 0
-    && remoteMergeMode !== remoteMergeModeInnerRemoteExecution
-  ) {
-    throw createBubbleMergeError({
-      reasonCode: MERGE_REMOTE_MODE_REQUIRED,
-      message:
-        "Remote inner merge workspace authority was provided without the matching remote execution mode.",
-      context: {
-        remote_merge_mode: remoteMergeMode ?? "missing",
-        remote_workspace_root: workspaceRoot
-      }
-    });
-  }
-
-  if (remoteMergeMode === undefined || remoteMergeMode.length === 0) {
-    return undefined;
-  }
-  if (remoteMergeMode !== remoteMergeModeInnerRemoteExecution) {
-    throw createBubbleMergeError({
-      reasonCode: MERGE_REMOTE_MODE_UNSUPPORTED,
-      message:
-        `Remote inner merge mode env var contains an unsupported execution mode: '${remoteMergeMode}'.`,
-      context: {
-        remote_merge_mode: remoteMergeMode
-      }
-    });
-  }
-  if (workspaceRoot === undefined || workspaceRoot.length === 0) {
-    throw createBubbleMergeError({
-      reasonCode: MERGE_REMOTE_WORKSPACE_ROOT_REQUIRED,
-      message:
-        "Remote inner merge requires explicit clone-root workspace authority.",
-      context: {
-        remote_merge_mode: remoteMergeModeInnerRemoteExecution
-      }
-    });
-  }
-
-  return {
-    kind: "remote_clone",
-    workspaceRoot: canonicalizeMergeExecutionPath(workspaceRoot)
-  };
+  return resolveRemoteCloneExecutionContextFromEnv({
+    modeEnvVar: remoteMergeModeEnvVar,
+    workspaceRootEnvVar: remoteMergeWorkspaceRootEnvVar,
+    expectedMode: remoteMergeModeInnerRemoteExecution,
+    workspaceWithoutExpectedMode: "missing_or_mismatch",
+    canonicalizeWorkspaceRoot: canonicalizeMergeExecutionPath,
+    toError: toRemoteMergeExecutionContextError
+  });
 }

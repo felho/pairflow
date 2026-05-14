@@ -1,5 +1,8 @@
-import { realpathSync } from "node:fs";
-import { resolve } from "node:path";
+import {
+  canonicalizeRemoteExecutionPath,
+  resolveRemoteCloneExecutionContextFromEnv,
+  type RemoteExecutionContextEnvFailure
+} from "../../../remote/remoteExecutionContextEnv.js";
 
 export const remoteApprovalModeEnvVar = "PAIRFLOW_REMOTE_APPROVAL_MODE";
 export const remoteApprovalWorkspaceRootEnvVar =
@@ -42,71 +45,63 @@ export class RemoteApprovalExecutionContextError extends Error {
   }
 }
 
-export function canonicalizeApprovalExecutionPath(pathValue: string): string {
-  const absolutePath = resolve(pathValue);
-  try {
-    return realpathSync.native(absolutePath);
-  } catch {
-    return absolutePath;
-  }
-}
+export const canonicalizeApprovalExecutionPath = canonicalizeRemoteExecutionPath;
 
-export function resolveRemoteApprovalExecutionContextFromEnv():
-  | RemoteApprovalExecutionContext
-  | undefined {
-  const remoteApprovalMode = process.env[remoteApprovalModeEnvVar]?.trim();
-  const workspaceRoot = process.env[remoteApprovalWorkspaceRootEnvVar]?.trim();
-
-  if (
-    workspaceRoot !== undefined
-    && workspaceRoot.length > 0
-    && remoteApprovalMode !== remoteApprovalModeInnerRemoteExecution
-  ) {
-    throw new RemoteApprovalExecutionContextError({
+function toRemoteApprovalExecutionContextError(
+  failure: RemoteExecutionContextEnvFailure
+): Error {
+  if (failure.kind === "workspace_without_mode") {
+    return new RemoteApprovalExecutionContextError({
       code: "REMOTE_APPROVAL_CONTEXT_MODE_REQUIRED",
       message:
         "Remote inner approval workspace authority was provided without the matching remote execution mode.",
       context: {
         command_name: "approval",
-        ...(remoteApprovalMode !== undefined
-          ? { remote_approval_mode: remoteApprovalMode }
+        ...(failure.modeValue !== undefined
+          ? { remote_approval_mode: failure.modeValue }
           : {}),
-        remote_workspace_root: workspaceRoot
+        ...(failure.workspaceRoot !== undefined
+          ? { remote_workspace_root: failure.workspaceRoot }
+          : {})
       }
     });
   }
 
-  if (remoteApprovalMode === undefined || remoteApprovalMode.length === 0) {
-    return undefined;
-  }
-  if (remoteApprovalMode !== remoteApprovalModeInnerRemoteExecution) {
-    throw new RemoteApprovalExecutionContextError({
+  if (failure.kind === "unsupported_mode") {
+    return new RemoteApprovalExecutionContextError({
       code: "REMOTE_APPROVAL_CONTEXT_MODE_INVALID",
       message:
         "Remote inner approval mode env var contains an unsupported execution mode.",
       context: {
         command_name: "approval",
-        remote_approval_mode: remoteApprovalMode,
-        ...(workspaceRoot !== undefined
-          ? { remote_workspace_root: workspaceRoot }
+        remote_approval_mode: failure.modeValue,
+        ...(failure.workspaceRoot !== undefined
+          ? { remote_workspace_root: failure.workspaceRoot }
           : {})
       }
     });
   }
-  if (workspaceRoot === undefined || workspaceRoot.length === 0) {
-    throw new RemoteApprovalExecutionContextError({
-      code: "REMOTE_APPROVAL_CONTEXT_WORKSPACE_ROOT_REQUIRED",
-      message:
-        "Remote inner approval requires explicit clone-root workspace authority.",
-      context: {
-        command_name: "approval",
-        remote_approval_mode: remoteApprovalMode
-      }
-    });
-  }
 
-  return {
-    kind: "remote_clone",
-    workspaceRoot: canonicalizeApprovalExecutionPath(workspaceRoot)
-  };
+  return new RemoteApprovalExecutionContextError({
+    code: "REMOTE_APPROVAL_CONTEXT_WORKSPACE_ROOT_REQUIRED",
+    message:
+      "Remote inner approval requires explicit clone-root workspace authority.",
+    context: {
+      command_name: "approval",
+      remote_approval_mode: failure.modeValue
+    }
+  });
+}
+
+export function resolveRemoteApprovalExecutionContextFromEnv():
+  | RemoteApprovalExecutionContext
+  | undefined {
+  return resolveRemoteCloneExecutionContextFromEnv({
+    modeEnvVar: remoteApprovalModeEnvVar,
+    workspaceRootEnvVar: remoteApprovalWorkspaceRootEnvVar,
+    expectedMode: remoteApprovalModeInnerRemoteExecution,
+    workspaceWithoutExpectedMode: "missing_or_mismatch",
+    canonicalizeWorkspaceRoot: canonicalizeApprovalExecutionPath,
+    toError: toRemoteApprovalExecutionContextError
+  });
 }
