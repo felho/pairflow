@@ -25,14 +25,11 @@ import type {
   ReadReviewerFocusArtifactPort
 } from "../../ports/reviewerArtifacts.js";
 import type {
-  ResolveDocContractGateArtifactPathPort
-} from "../../ports/docContractGateArtifacts.js";
-import type {
   ResolveReviewerTestExecutionDirectivePort
 } from "../../ports/reviewerTestEvidenceArtifacts.js";
 import type {
-  PrepareRemoteStartControlFilesPort
-} from "../../ports/remoteStartControlFiles.js";
+  PrepareRemoteStartActivationPackagePort
+} from "../../ports/remoteStartActivationPackage.js";
 import {
   loadStartBubbleDependencyDefaults,
   type StartBubbleDependencyDefaults
@@ -77,14 +74,13 @@ export interface ResolvedStartBubbleDependencies {
     (path: string) => Promise<void>;
   executeRemoteBubbleStart:
     (input: ExecuteRemoteBubbleStartInput) => Promise<ExecuteRemoteBubbleStartResult>;
-  prepareRemoteStartControlFiles: PrepareRemoteStartControlFilesPort;
+  prepareRemoteStartActivationPackage: PrepareRemoteStartActivationPackagePort;
   reportWarning: (message: string) => void;
   buildResumeSummary:
     NonNullable<StartBubbleDependencies["buildResumeTranscriptSummary"]>;
   ensureReviewerPolicySnapshot: EnsureReviewerPolicySnapshotPort;
   readReviewerBriefArtifact: ReadReviewerBriefArtifactPort;
   readReviewerFocusArtifact: ReadReviewerFocusArtifactPort;
-  resolveDocContractGateArtifactPath: ResolveDocContractGateArtifactPathPort;
   resolveReviewerTestExecutionDirective: ResolveReviewerTestExecutionDirectivePort;
 }
 
@@ -149,9 +145,9 @@ function resolveRemoteExecutionDependencies(input: {
     executeRemoteBubbleStart:
       input.dependencies.executeRemoteBubbleStart
       ?? input.defaults.executeRemoteBubbleStart,
-    prepareRemoteStartControlFiles:
-      input.dependencies.prepareRemoteStartControlFiles
-      ?? input.defaults.prepareRemoteStartControlFiles
+    prepareRemoteStartActivationPackage:
+      input.dependencies.prepareRemoteStartActivationPackage
+      ?? input.defaults.prepareRemoteStartActivationPackage
   };
 }
 
@@ -171,9 +167,6 @@ function resolveReviewerDependencies(input: {
     readReviewerFocusArtifact:
       input.dependencies.readReviewerFocusArtifact
       ?? input.defaults.readReviewerFocusArtifact,
-    resolveDocContractGateArtifactPath:
-      input.dependencies.resolveDocContractGateArtifactPath
-      ?? input.defaults.resolveDocContractGateArtifactPath,
     resolveReviewerTestExecutionDirective:
       input.dependencies.resolveReviewerTestExecutionDirective
       ?? input.defaults.resolveReviewerTestExecutionDirective

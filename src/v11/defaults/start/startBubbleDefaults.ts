@@ -16,7 +16,9 @@ import {
   writeRemoteStateCache as writeRemoteStateCacheCanonical
 } from "../../infrastructure/artifact/bubble/remoteExecutionArtifacts.js";
 import { executeRemoteBubbleStart as executeRemoteBubbleStartCanonical } from "../../infrastructure/executor/ssh/sshBubbleStart.js";
-import { prepareRemoteStartControlFiles as prepareRemoteStartControlFilesCanonical } from "../../infrastructure/artifact/bubble/remoteStartControlFiles.js";
+import {
+  prepareRemoteStartActivationPackage
+} from "../../infrastructure/artifact/bubble/remoteStartActivationPackage.js";
 import { resolveRemoteBubbleStatusTarget as resolveRemoteBubbleStatusTargetCanonical } from "../../infrastructure/executor/ssh/sshBubbleStatus.js";
 import {
   readRuntimeSessionsRegistry as readRuntimeSessionsRegistryCanonical,
@@ -31,9 +33,6 @@ import {
 import {
   ensureReviewerPolicySnapshot
 } from "../../infrastructure/artifact/reviewer/reviewerPolicySnapshotArtifact.js";
-import {
-  resolveDocContractGateArtifactPath
-} from "../../infrastructure/artifact/gates/docContractGateArtifacts.js";
 import {
   resolveReviewerTestExecutionDirective
 } from "../reviewer/reviewerTestEvidenceDefaults.js";
@@ -93,14 +92,11 @@ import type {
   ReadReviewerFocusArtifactPort
 } from "../../ports/reviewerArtifacts.js";
 import type {
-  ResolveDocContractGateArtifactPathPort
-} from "../../ports/docContractGateArtifacts.js";
-import type {
   ResolveReviewerTestExecutionDirectivePort
 } from "../../ports/reviewerTestEvidenceArtifacts.js";
 import type {
-  PrepareRemoteStartControlFilesPort
-} from "../../ports/remoteStartControlFiles.js";
+  PrepareRemoteStartActivationPackagePort
+} from "../../ports/remoteStartActivationPackage.js";
 import type {
   ResolveBubbleFromWorkspaceCwdPort
 } from "../../ports/workspaceResolution.js";
@@ -140,12 +136,11 @@ export interface StartBubbleDependencyDefaults {
   executeRemoteBubbleStart: (
     input: ExecuteRemoteBubbleStartInput
   ) => Promise<ExecuteRemoteBubbleStartResult>;
-  prepareRemoteStartControlFiles: PrepareRemoteStartControlFilesPort;
+  prepareRemoteStartActivationPackage: PrepareRemoteStartActivationPackagePort;
   runTmux: TmuxRunner;
   ensureReviewerPolicySnapshot: EnsureReviewerPolicySnapshotPort;
   readReviewerBriefArtifact: ReadReviewerBriefArtifactPort;
   readReviewerFocusArtifact: ReadReviewerFocusArtifactPort;
-  resolveDocContractGateArtifactPath: ResolveDocContractGateArtifactPathPort;
   resolveBubbleFromWorkspaceCwd: ResolveBubbleFromWorkspaceCwdPort;
   resolveReviewerTestExecutionDirective:
     ResolveReviewerTestExecutionDirectivePort;
@@ -190,12 +185,11 @@ export const startBubbleDependencyDefaults: StartBubbleDependencyDefaults = {
   writeRemoteStateCache: writeRemoteStateCacheCanonical,
   removeRemoteStateCache: removeRemoteStateCacheCanonical,
   executeRemoteBubbleStart: executeRemoteBubbleStartCanonical,
-  prepareRemoteStartControlFiles: prepareRemoteStartControlFilesCanonical,
+  prepareRemoteStartActivationPackage,
   runTmux,
   ensureReviewerPolicySnapshot,
   readReviewerBriefArtifact,
   readReviewerFocusArtifact,
-  resolveDocContractGateArtifactPath,
   resolveBubbleFromWorkspaceCwd,
   resolveReviewerTestExecutionDirective
 };

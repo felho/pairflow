@@ -41,14 +41,11 @@ import type {
   ReadReviewerFocusArtifactPort
 } from "../../ports/reviewerArtifacts.js";
 import type {
-  ResolveDocContractGateArtifactPathPort
-} from "../../ports/docContractGateArtifacts.js";
-import type {
   ResolveReviewerTestExecutionDirectivePort
 } from "../../ports/reviewerTestEvidenceArtifacts.js";
 import type {
-  PrepareRemoteStartControlFilesPort
-} from "../../ports/remoteStartControlFiles.js";
+  PrepareRemoteStartActivationPackagePort
+} from "../../ports/remoteStartActivationPackage.js";
 import type {
   ResolveBubbleFromWorkspaceCwdPort
 } from "../../ports/workspaceResolution.js";
@@ -116,12 +113,11 @@ export interface StartBubbleDependencyDefaults {
   executeRemoteBubbleStart: (
     input: ExecuteRemoteBubbleStartInput
   ) => Promise<ExecuteRemoteBubbleStartResult>;
-  prepareRemoteStartControlFiles: PrepareRemoteStartControlFilesPort;
+  prepareRemoteStartActivationPackage: PrepareRemoteStartActivationPackagePort;
   runTmux: TmuxRunner;
   ensureReviewerPolicySnapshot: EnsureReviewerPolicySnapshotPort;
   readReviewerBriefArtifact: ReadReviewerBriefArtifactPort;
   readReviewerFocusArtifact: ReadReviewerFocusArtifactPort;
-  resolveDocContractGateArtifactPath: ResolveDocContractGateArtifactPathPort;
   resolveBubbleFromWorkspaceCwd: ResolveBubbleFromWorkspaceCwdPort;
   resolveReviewerTestExecutionDirective: ResolveReviewerTestExecutionDirectivePort;
 }

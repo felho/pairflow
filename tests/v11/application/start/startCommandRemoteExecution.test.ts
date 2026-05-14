@@ -27,11 +27,8 @@ import {
   writeRemotePointer
 } from "../../../../src/v11/infrastructure/artifact/bubble/remoteExecutionArtifacts.js";
 import {
-  prepareRemoteStartControlFiles
-} from "../../../../src/v11/infrastructure/artifact/bubble/remoteStartControlFiles.js";
-import {
-  resolveDocContractGateArtifactPath
-} from "../../../../src/v11/infrastructure/artifact/gates/docContractGateArtifacts.js";
+  prepareRemoteStartActivationPackage
+} from "../../../../src/v11/infrastructure/artifact/bubble/remoteStartActivationPackage.js";
 import { runGit as runGitCommand } from "../../../../src/v11/infrastructure/workspace/git.js";
 import { initGitRepository, runGit } from "../../../helpers/git.js";
 import { writeStateSnapshotFixture as writeStateSnapshot } from "../../../helpers/stateSnapshot.js";
@@ -135,11 +132,10 @@ function createRemoteExecutionDeps(overrides: Partial<ResolvedStartBubbleDepende
     }),
     runGitCommand,
     readRemotePointer,
-    resolveDocContractGateArtifactPath,
     writeRemotePointer,
     writeRemoteStateCache: async () => undefined,
     removeRemoteStateCache: async () => undefined,
-    prepareRemoteStartControlFiles,
+    prepareRemoteStartActivationPackage,
     upsertSession: async (input) => ({
       bubbleId: String(input.bubbleId),
       repoPath: String(input.repoPath),

@@ -14,9 +14,9 @@ import type {
 import type { StartExecutionContext } from "../runtime/startCommandContext.js";
 import type { ResolvedStartBubbleDependencies } from "../../startCommandOrchestration.js";
 import { createStartBubbleError } from "../runtime/startCommandRuntime.js";
-import {
-  RemoteStartControlFilesError
-} from "../../../../ports/remoteStartControlFiles.js";
+import type {
+  PrepareRemoteStartActivationPackageResult
+} from "../../../../ports/remoteStartActivationPackage.js";
 import {
   assertConfirmedRemoteStateIsRunning,
   assertCreatedPointerMatchesRemoteTarget,
@@ -212,7 +212,7 @@ export async function prepareRemoteStartExecution(input: {
     input.context.resolved.repoPath,
     input.context.resolved.bubbleId
   );
-  const controlFiles = await prepareRemoteStartControlFilesWithMappedErrors({
+  const controlFiles = await prepareRemoteStartActivationPackageOrThrow({
     context: input.context,
     deps: input.deps,
     remoteClonePath,
@@ -236,54 +236,48 @@ export async function prepareRemoteStartExecution(input: {
   };
 }
 
-async function prepareRemoteStartControlFilesWithMappedErrors(input: {
+async function prepareRemoteStartActivationPackageOrThrow(input: {
   context: StartExecutionContext;
   deps: ResolvedStartBubbleDependencies;
   remoteClonePath: string;
 }): Promise<RemoteStartControlFile[]> {
-  try {
-    return await input.deps.prepareRemoteStartControlFiles({
+  const result = await input.deps.prepareRemoteStartActivationPackage({
+    bubbleId: input.context.resolved.bubbleId,
+    repoPath: input.context.resolved.repoPath,
+    bubblePaths: input.context.resolved.bubblePaths,
+    bubbleConfig: input.context.resolved.bubbleConfig,
+    remoteClonePath: input.remoteClonePath,
+    policySnapshotPathAbs: input.context.policySnapshotPathAbs
+  }).catch((error: unknown): PrepareRemoteStartActivationPackageResult => ({
+    ok: false,
+    failure: {
       bubbleId: input.context.resolved.bubbleId,
       repoPath: input.context.resolved.repoPath,
-      bubblePaths: input.context.resolved.bubblePaths,
-      bubbleConfig: input.context.resolved.bubbleConfig,
       remoteClonePath: input.remoteClonePath,
-      policySnapshotPathAbs: input.context.policySnapshotPathAbs,
-      docContractGateArtifactPath: input.deps.resolveDocContractGateArtifactPath(
-        input.context.resolved.bubblePaths.artifactsDir
-      )
-    });
-  } catch (error) {
-    if (error instanceof RemoteStartControlFilesError) {
-      throw createStartBubbleError({
-        reasonCode: "START_REMOTE_CONTROL_FILES_UNAVAILABLE",
-        message: error.message,
-        context: {
-          bubble_id: input.context.resolved.bubbleId,
-          repo_path: input.context.resolved.repoPath,
-          remote_clone_path: input.remoteClonePath,
-          artifact_relative_path: error.details.artifactRelativePath,
-          artifact_source_path: error.details.artifactSourcePath,
-          artifact_kind: error.details.artifactKind,
-          artifact_requirement: error.details.artifactRequirement
-        },
-        cause: error
-      });
+      reason: error instanceof Error ? error.message : String(error),
+      cause: error
     }
+  }));
 
-    const reason = error instanceof Error ? error.message : String(error);
+  if (!result.ok) {
     throw createStartBubbleError({
       reasonCode: "START_REMOTE_CONTROL_FILES_UNAVAILABLE",
       message:
-        `Bubble ${input.context.resolved.bubbleId} remote start could not prepare local control artifacts before remote activation: ${reason}`,
+        result.failure.reason,
       context: {
-        bubble_id: input.context.resolved.bubbleId,
-        repo_path: input.context.resolved.repoPath,
-        remote_clone_path: input.remoteClonePath
+        bubble_id: result.failure.bubbleId,
+        repo_path: result.failure.repoPath,
+        remote_clone_path: result.failure.remoteClonePath,
+        artifact_relative_path: result.failure.artifactRelativePath,
+        artifact_source_path: result.failure.artifactSourcePath,
+        artifact_kind: result.failure.artifactKind,
+        artifact_requirement: result.failure.artifactRequirement
       },
-      cause: error
+      cause: result.failure.cause
     });
   }
+
+  return result.package.controlFiles;
 }
 
 export async function executeRemoteBubbleStartWithMappedErrors(input: {

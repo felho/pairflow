@@ -26,6 +26,9 @@ import {
   writeRemoteStateCache
 } from "../../../../src/v11/infrastructure/artifact/bubble/remoteExecutionArtifacts.js";
 import { executeRemoteBubbleStart } from "../../../../src/v11/infrastructure/executor/ssh/sshBubbleStart.js";
+import {
+  prepareRemoteStartActivationPackage
+} from "../../../../src/v11/infrastructure/artifact/bubble/remoteStartActivationPackage.js";
 import { loadPairflowGlobalConfig } from "../../../../src/config/pairflowConfig.js";
 import { StartBubbleError } from "../../../../src/v11/application/start/internal/runtime/startCommandRuntime.js";
 import {
@@ -90,6 +93,9 @@ describe("startCommandOrchestration", () => {
     expect(resolved.writeRemoteStateCache).toBe(writeRemoteStateCache);
     expect(resolved.removeRemoteStateCache).toBe(removeRemoteStateCache);
     expect(resolved.executeRemoteBubbleStart).toBe(executeRemoteBubbleStart);
+    expect(resolved.prepareRemoteStartActivationPackage).toBe(
+      prepareRemoteStartActivationPackage
+    );
     expect(resolved.buildResumeSummary).toBe(buildResumeTranscriptSummary);
   });
 
@@ -157,7 +163,13 @@ describe("startCommandOrchestration", () => {
             round: 1,
             maxRounds: 8
           }
-        }))
+        })),
+      prepareRemoteStartActivationPackage: vi.fn(async () => ({
+        ok: true as const,
+        package: {
+          controlFiles: []
+        }
+      }))
     };
 
     const fallbackRunWorktreeBootstrapCommand = vi.fn(async () => undefined);
@@ -196,6 +208,9 @@ describe("startCommandOrchestration", () => {
     expect(resolved.writeRemoteStateCache).toBe(overrides.writeRemoteStateCache);
     expect(resolved.removeRemoteStateCache).toBe(overrides.removeRemoteStateCache);
     expect(resolved.executeRemoteBubbleStart).toBe(overrides.executeRemoteBubbleStart);
+    expect(resolved.prepareRemoteStartActivationPackage).toBe(
+      overrides.prepareRemoteStartActivationPackage
+    );
     expect(resolved.buildResumeSummary).toBe(overrides.buildResumeTranscriptSummary);
   });
 

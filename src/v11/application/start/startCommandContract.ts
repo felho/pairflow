@@ -21,9 +21,6 @@ import type {
 } from "../../ports/runtimeSessions.js";
 import type { WriteStateSnapshotPort } from "../../ports/stateSnapshots.js";
 import type {
-  ResolveDocContractGateArtifactPathPort
-} from "../../ports/docContractGateArtifacts.js";
-import type {
   EnsureReviewerPolicySnapshotPort,
   ReadReviewerBriefArtifactPort,
   ReadReviewerFocusArtifactPort
@@ -32,9 +29,9 @@ import type {
   ResolveReviewerTestExecutionDirectivePort
 } from "../../ports/reviewerTestEvidenceArtifacts.js";
 import type {
-  PrepareRemoteStartControlFilesPort,
+  PrepareRemoteStartActivationPackagePort,
   RemoteStartControlFile
-} from "../../ports/remoteStartControlFiles.js";
+} from "../../ports/remoteStartActivationPackage.js";
 import type { RunGitPort } from "../../ports/git.js";
 import type { ProcessSpawnPort } from "../../ports/processSpawn.js";
 import type { buildResumeTranscriptSummary } from "./internal/prompts/startCommandResumeSummary.js";
@@ -114,7 +111,6 @@ export interface StartBubbleDependencies {
   ensureReviewerPolicySnapshot?: EnsureReviewerPolicySnapshotPort;
   readReviewerBriefArtifact?: ReadReviewerBriefArtifactPort;
   readReviewerFocusArtifact?: ReadReviewerFocusArtifactPort;
-  resolveDocContractGateArtifactPath?: ResolveDocContractGateArtifactPathPort;
   resolveReviewerTestExecutionDirective?: ResolveReviewerTestExecutionDirectivePort;
   loadPairflowGlobalConfig?: () => Promise<PairflowGlobalConfig>;
   runGitCommand?: RunGitPort;
@@ -128,6 +124,8 @@ export interface StartBubbleDependencies {
   executeRemoteBubbleStart?:
     | ((input: ExecuteRemoteBubbleStartInput) => Promise<ExecuteRemoteBubbleStartResult>)
     | undefined;
-  prepareRemoteStartControlFiles?: PrepareRemoteStartControlFilesPort | undefined;
+  prepareRemoteStartActivationPackage?:
+    | PrepareRemoteStartActivationPackagePort
+    | undefined;
   reportWarning?: ((message: string) => void) | undefined;
 }
