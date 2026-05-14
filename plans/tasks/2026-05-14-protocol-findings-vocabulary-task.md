@@ -2,7 +2,7 @@
 
 **Source review**: `docs/modularity-review/2026-05-14-modularity-review-full-codebase.md`  
 **Issue**: `Protocol and findings vocabulary is still the widest volatile model`  
-**Status**: implementation in progress — key architectural decisions resolved (see "Resolved Decisions")
+**Status**: first slice complete in `9cbfd971` (`Tighten protocol payload contracts`); second-slice survey started below
 
 ## Problem
 
@@ -172,7 +172,7 @@ The first slice contains two distinct kinds of work:
 
 **B. Parity metadata relocation (Approach #2).** `findings_parity` is lifted to a top-level field on the message kinds (or adjacent event/result contracts) that carry parity. The implementation survey confirmed the first-slice carriers as `APPROVAL_REQUEST` and auto-rework `APPROVAL_DECISION`; `CONVERGENCE` is not a first-slice `FindingsParityMetadata` carrier. `ProtocolEnvelopeMetadata` becomes a plain unstructured metadata bag.
 
-Plus **Approach #4** (fitness): stale exception removed; report-only checks added.
+Plus **Approach #4** (fitness): stale exception removed; report-only checks considered before final closure.
 
 **Important boundary.** Work item B touches `APPROVAL_REQUEST` **only** to relocate parity to a top-level field. Full payload tightening for heavier payloads — removing `extends ProtocolEnvelopePayloadBase` and tightening field-by-field — is a second-slice activity, not first slice.
 
@@ -197,8 +197,66 @@ Implementation progress checkpoint:
 - Runtime emitters/readers have been migrated to top-level `payload.findings_parity` for the confirmed carriers.
 - The old flatten-to-`payload.metadata` parity helper was removed rather than kept as a compatibility shim.
 - Validator coverage now rejects parity fields under `payload.metadata` and validates them under `payload.findings_parity`.
-- Current validation evidence: `pnpm typecheck`, `pnpm lint`, `pnpm fitness:check:ci`, focused parity/protocol suites, full `pnpm test`, and `pnpm build` all pass after the first implementation pass.
-- Remaining follow-up before calling the whole task closed: decide whether to add new report-only architecture visibility checks now or leave them as a second implementation slice, and run the archive smoke test called out below.
+- Current validation evidence from first-slice commit `9cbfd971`: `pnpm typecheck`, `pnpm lint`, `pnpm fitness:check:ci`, focused parity/protocol suites, full `pnpm test`, and `pnpm build` all passed.
+- Remaining follow-up before calling the whole task closed: decide whether to add new report-only architecture visibility checks now or leave them as a later implementation slice, and run the archive smoke test called out below.
+
+## Second-Slice Survey
+
+The first slice intentionally left the heavier protocol payload kinds for a separate pass. A quick source survey after `9cbfd971` shows the remaining wide model is now concentrated in four places:
+
+| Payload kind | Current contract shape | Observed emitter/read path | Second-slice direction |
+|---|---|---|---|
+| `PASS` | Still `extends ProtocolEnvelopePayloadBase`; redeclares `summary`, `pass_intent`, `findings_claim_state`, `findings_claim_source`, `findings`. | Main emitter is `buildPassEnvelopeDraft(...)`. Reviewer PASS emits `findings` plus claim fields; implementer PASS emits no claim fields. Readers include convergence policy, repeat-clean autoconverge, resume summary, UI projections, metrics/test-evidence paths. | Tighten in place first. It has the clearest emitter and the most downstream value because convergence policy depends on its findings/claim consistency. |
+| `CONVERGENCE` | Still `extends ProtocolEnvelopePayloadBase`; currently needs `summary`, optional `findings`, optional `metadata`. | Main emitter is converged flow append. Readers include meta-review reviewer snapshot, lifecycle events, resume summary, UI/tmux projections. `metadata.advisory_findings_open_total` is a convergence-specific typed value, not `FindingsParityMetadata`. | Tighten after `PASS`. Decide whether `advisory_findings_open_total` should become a top-level payload field; do not leave it in metadata as an undocumented exception. Do not add `findings_parity` unless a separate survey proves it is a real carrier. |
+| `APPROVAL_REQUEST` | Still `extends ProtocolEnvelopePayloadBase`; currently needs `summary`, optional `findings`, optional `findings_parity`, optional `metadata`. | Main emitter is `appendHumanApprovalRequestEnvelope(...)`. Readers include approval transcript context, human approval routing, inbox/context projections, UI projections. | Tighten after convergence or in the same second slice if scope remains small. It already has top-level `findings_parity`; the remaining work is deleting inherited invalid fields. |
+| `COMMIT_RESULT` | Does not extend the base, but still manually carries base-like optional fields (`summary`, `question`, `message`, `decision`, `pass_intent`, `findings_claim_state`, `findings_claim_source`, `findings`) and stores required commit facts under `metadata`. | Main emitter is commit finalization. Remote commit import validates `metadata.commit_sha`, `metadata.commit_message`, and `metadata.staged_files`. Validators already reject non-metadata payload fields. | Lift required commit facts to top-level payload fields: `commit_sha`, `commit_message`, `staged_files`, plus optional unstructured `metadata`. This applies the same rule used for parity: structured, typed, load-bearing data is not generic metadata. |
+
+### Structured Metadata Rule
+
+The second slice should apply one consistent rule across the remaining payloads:
+
+- **Top-level payload field:** structured, typed data that is part of the protocol contract, is required by workflow correctness, or is read by downstream routing/display/import code.
+- **`metadata` bag:** optional producer-local annotations, telemetry, diagnostics, or extension data that are not required to understand the message kind.
+
+This rule means `COMMIT_RESULT` commit facts (`commit_sha`, `commit_message`, `staged_files`) should move to top-level payload fields. It also means `CONVERGENCE` must explicitly decide the fate of `advisory_findings_open_total`; keeping it in metadata is allowed only if the survey shows it is telemetry rather than a reader-owned protocol field, and that exception must be documented.
+
+### Second-Slice Recommended Order
+
+1. **`PASS` strict contract.** Remove the inherited base and keep only required `summary`, optional `pass_intent`, optional `findings_claim_state`, optional `findings_claim_source`, optional `findings`, and optional `metadata`. `summary` is required because the runtime validator already enforces a non-empty `PASS` summary.
+2. **`CONVERGENCE` strict contract.** Remove the inherited base and keep required `summary`, optional `findings`, optional `metadata`, plus a documented decision on `advisory_findings_open_total`. `summary` is required because the runtime validator already enforces a non-empty `CONVERGENCE` summary.
+3. **`APPROVAL_REQUEST` strict contract.** Remove the inherited base and keep required `summary`, optional `findings`, optional `findings_parity`, and optional `metadata`. Keep parity top-level only.
+4. **`COMMIT_RESULT` contract cleanup.** Move `commit_sha`, `commit_message`, and `staged_files` out of `metadata` into required top-level payload fields; keep `metadata?` only for true unstructured extension data; remove all base-like optional payload fields. The current `metadata: ProtocolEnvelopeMetadata & { commit_sha, commit_message, staged_files }` intersection type form is removed entirely rather than rewritten with a different structured metadata intersection.
+5. **Validator and reader migration.**
+   - Update runtime validation to require top-level commit fields and reject commit facts under `payload.metadata`, mirroring the parity-leak guard.
+   - Update commit finalization to emit top-level commit fields.
+   - Update remote commit import and continuity checks to read top-level commit fields.
+   - Update UI/resume projections and any CLI response projection that reads commit facts.
+   - Update tests and fixtures to use the new `COMMIT_RESULT` payload shape.
+6. **Delete `ProtocolEnvelopePayloadBase`.** This is the second-slice end-state check. Do not leave it as an empty symmetry interface.
+
+### Second-Slice Finding Projection Decision
+
+Do not introduce `ReviewerPassFinding`, `ConvergenceFinding`, or `ApprovalRequestFinding` as part of the payload-base cleanup by default. The survey shows current readers still operate on the shared kernel `Finding` vocabulary, and the first useful strictness gain is deleting invalid payload fields. Projection types remain a separate decision after the payload contracts are closed.
+
+If projection work is considered later, start from a field-requirement matrix:
+
+- reviewer `PASS`: which fields are required for convergence policy and blocker/advisory decisions;
+- `CONVERGENCE`: which fields are persisted vs only displayed;
+- `APPROVAL_REQUEST`: which advisory finding fields are actually shown or used by approval routing;
+- meta-review artifacts: whether artifact-only fields diverge from protocol payload fields.
+
+### Second-Slice Done State
+
+The second slice is not done until:
+
+- no payload interface extends `ProtocolEnvelopePayloadBase`;
+- `ProtocolEnvelopePayloadBase` is deleted;
+- `COMMIT_RESULT` TypeScript contract and runtime validation expose `commit_sha`, `commit_message`, and `staged_files` as required top-level payload fields;
+- `payload.metadata` remains an unstructured extension bag and does not carry `FindingsParityMetadata` or required `COMMIT_RESULT` commit facts;
+- `CONVERGENCE` has an explicit documented decision for `advisory_findings_open_total`: top-level field if it is protocol-owned, or a documented metadata exception if it is telemetry-only;
+- readers still narrow by `envelope.type` before accessing payload-specific fields;
+- no new wide/readable payload alias, compatibility shim, or caller-side append-result cast is introduced;
+- `pnpm typecheck`, `pnpm lint`, `pnpm fitness:check:ci`, focused protocol/pass/converged/approval/commit tests, `pnpm test`, and `pnpm build` pass.
 
 Before starting implementation:
 
