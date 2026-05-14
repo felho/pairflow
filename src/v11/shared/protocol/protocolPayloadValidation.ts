@@ -2,7 +2,10 @@ import {
   type ProtocolEnvelope
 } from "./protocolEnvelopeContract.js";
 import { type ValidationError } from "../validation/primitives.js";
-import { validateFindings } from "./protocolFindingValidation.js";
+import {
+  validateAdvisoryFindings,
+  validateFindings
+} from "./protocolFindingValidation.js";
 import {
   buildValidatedPayload,
   validateEnvelopeSpecificPayload,
@@ -26,10 +29,13 @@ export function validatePayloadByType(
   validatePayloadFindingsParity(envelopeType, payload, errors);
   validatePayloadAdvisoryFindingsOpenTotal(envelopeType, payload, errors);
 
-  const findings =
-    envelopeType !== "COMMIT_RESULT" && payload.findings !== undefined
-      ? validateFindings(payload.findings, "payload.findings", errors)
-      : undefined;
+  const findings = payload.findings !== undefined
+    ? envelopeType === "CONVERGENCE" || envelopeType === "APPROVAL_REQUEST"
+      ? validateAdvisoryFindings(payload.findings, "payload.findings", errors)
+      : envelopeType !== "COMMIT_RESULT"
+        ? validateFindings(payload.findings, "payload.findings", errors)
+        : undefined
+    : undefined;
 
   return validateEnvelopeSpecificPayload(
     envelopeType,

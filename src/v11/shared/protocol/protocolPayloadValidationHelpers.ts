@@ -6,7 +6,10 @@ import {
 } from "../../../contracts/kernel/protocol.js";
 import type { Finding } from "../../../contracts/kernel/findings.js";
 import type { FindingsParityMetadata } from "../metaReviewGate/findingsParityMetadataContract.js";
-import type { ProtocolEnvelope } from "./protocolEnvelopeContract.js";
+import type {
+  ProtocolAdvisoryFinding,
+  ProtocolEnvelope
+} from "./protocolEnvelopeContract.js";
 import {
   isInteger,
   isNonEmptyString,
@@ -314,7 +317,7 @@ function buildValidatedCommitPayloadFields(
 
 export function buildValidatedPayload(input: {
   payload: Record<string, unknown>;
-  findings: Finding[] | undefined;
+  findings: Finding[] | ProtocolAdvisoryFinding[] | undefined;
 }): ProtocolEnvelope["payload"] {
   const { payload, findings } = input;
   const findingsParity = isRecord(payload.findings_parity)

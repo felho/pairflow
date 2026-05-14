@@ -254,6 +254,20 @@ If projection work is considered later, start from a field-requirement matrix:
 - `APPROVAL_REQUEST`: which advisory finding fields are actually shown or used by approval routing;
 - meta-review artifacts: whether artifact-only fields diverge from protocol payload fields.
 
+### Finding Projection Survey
+
+The post-payload cleanup survey shows one real split, not four independent finding vocabularies.
+
+| Context | Emitter shape | Reader requirements | Silent-failure risk | Decision |
+|---|---|---|---|---|
+| Reviewer `PASS` | Normalized from CLI/API reviewer input into kernel `Finding`: required `title` plus `priority` or `severity`; optional `detail`, `code`, `refs`, `timing`, `layer`, `evidence`, `effective_priority`. | Reviewer decision, doc-gate evaluation, finding counts, metrics, and repeat-clean policy read priority/severity; doc-gate reads timing/layer/evidence/refs/effective priority. | Missing priority/title fails validation; missing timing/layer/evidence can change blocker classification in document scope. | Keep kernel `Finding`. This is the canonical rich reviewer finding contract. |
+| `CONVERGENCE` payload | `ConvergedStructuredFinding`: `severity: P2|P3`, `title`, optional `refs`. | Runtime only needs advisory count, title/severity for display/contract checks, and optional refs. | A broad `Finding` type would allow impossible blocker fields (`P0/P1`, timing/layer/evidence) that readers ignore. | Use a narrow advisory projection. |
+| `APPROVAL_REQUEST` payload | `ApprovalAdvisoryFinding`: `severity: P2|P3`, `title`, optional `refs`, derived from same-round reviewer snapshot or meta-review artifact split. | Approval routing/display only uses advisory count consistency and displayable advisory entries. | Broad `Finding` would imply approval routing reads blocker/detail/timing fields, but it does not. | Use the same narrow advisory projection as `CONVERGENCE`. |
+| Auto-rework `APPROVAL_DECISION` payload | Projected from meta-review artifact through `projectDisplayableFindingsFromArtifact(...)`, preserving `detail`, `code`, `timing`, `layer`, `evidence`, and `effective_priority` when present. | Implementer-facing rework payload benefits from rich display/context fields; parity metadata carries counts. | Narrowing this to advisory-only would lose useful artifact context. | Keep kernel `Finding` for now. |
+| Meta-review artifact JSON | External/runtime artifact, not a protocol payload. Split logic reads `priority`/`severity`; display projection preserves optional rich fields. | Artifact validation and parity compare counts/digest/status; payload projection is derived, not the source of truth. | Treating artifact shape as a protocol payload would over-couple artifact evolution to transcript contracts. | Keep artifact parsing separate; project into protocol-specific shapes at boundaries. |
+
+Implementation follow-up: introduce one shared advisory finding projection for `CONVERGENCE.findings` and `APPROVAL_REQUEST.findings`. Do **not** introduce `ReviewerPassFinding` or a broad set of per-workflow projections yet.
+
 ### Second-Slice Done State
 
 The second slice is not done until:

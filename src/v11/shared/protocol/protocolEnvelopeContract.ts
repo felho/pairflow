@@ -15,6 +15,12 @@ export interface ProtocolEnvelopeMetadata {
   [key: string]: unknown;
 }
 
+export interface ProtocolAdvisoryFinding {
+  severity: "P2" | "P3";
+  title: string;
+  refs?: string[];
+}
+
 export interface TaskProtocolEnvelopePayload {
   summary: string;
   metadata?: ProtocolEnvelopeMetadata;
@@ -42,13 +48,13 @@ export interface HumanReplyProtocolEnvelopePayload {
 export interface ConvergenceProtocolEnvelopePayload {
   summary: string;
   advisory_findings_open_total: number;
-  findings?: Finding[];
+  findings?: ProtocolAdvisoryFinding[];
   metadata?: ProtocolEnvelopeMetadata;
 }
 
 export interface ApprovalRequestProtocolEnvelopePayload {
   summary: string;
-  findings?: Finding[];
+  findings?: ProtocolAdvisoryFinding[];
   findings_parity?: FindingsParityMetadata;
   metadata?: ProtocolEnvelopeMetadata;
 }

@@ -440,6 +440,119 @@ describe("protocol envelope schema", () => {
     ).toBe(true);
   });
 
+  it("accepts CONVERGENCE advisory findings with the narrow protocol shape", () => {
+    const result = validateProtocolEnvelope({
+      id: "msg_convergence_advisory_findings",
+      ts: "2026-02-21T12:34:56.000Z",
+      bubble_id: "b_test_01",
+      sender: "claude",
+      recipient: "orchestrator",
+      type: "CONVERGENCE",
+      round: 2,
+      payload: {
+        summary: "Converged with advisory follow-up.",
+        advisory_findings_open_total: 1,
+        findings: [
+          {
+            severity: "P2",
+            title: "Follow-up is non-blocking",
+            refs: ["artifact://review/follow-up.md"]
+          }
+        ]
+      },
+      refs: []
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) {
+      return;
+    }
+    expect(result.value.type).toBe("CONVERGENCE");
+    if (result.value.type !== "CONVERGENCE") {
+      throw new Error("Expected convergence envelope validation result.");
+    }
+    expect(result.value.payload.findings).toEqual([
+      {
+        severity: "P2",
+        title: "Follow-up is non-blocking",
+        refs: ["artifact://review/follow-up.md"]
+      }
+    ]);
+  });
+
+  it("rejects CONVERGENCE findings outside the advisory projection", () => {
+    const result = validateProtocolEnvelope({
+      id: "msg_convergence_invalid_findings",
+      ts: "2026-02-21T12:34:56.000Z",
+      bubble_id: "b_test_01",
+      sender: "claude",
+      recipient: "orchestrator",
+      type: "CONVERGENCE",
+      round: 2,
+      payload: {
+        summary: "Converged with invalid advisory shape.",
+        advisory_findings_open_total: 1,
+        findings: [
+          {
+            priority: "P1",
+            severity: "P1",
+            title: "Blocking shape is invalid here",
+            detail: "CONVERGENCE payload only carries advisory display findings"
+          }
+        ]
+      },
+      refs: []
+    });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) {
+      return;
+    }
+    expect(
+      result.errors.some((error) => error.path === "payload.findings[0].severity")
+    ).toBe(true);
+    expect(
+      result.errors.some((error) => error.path === "payload.findings[0].priority")
+    ).toBe(true);
+    expect(
+      result.errors.some((error) => error.path === "payload.findings[0].detail")
+    ).toBe(true);
+  });
+
+  it("rejects APPROVAL_REQUEST findings outside the advisory projection", () => {
+    const result = validateProtocolEnvelope({
+      id: "msg_approval_request_invalid_findings",
+      ts: "2026-02-21T12:34:56.000Z",
+      bubble_id: "b_test_01",
+      sender: "orchestrator",
+      recipient: "human",
+      type: "APPROVAL_REQUEST",
+      round: 2,
+      payload: {
+        summary: "Approval request",
+        findings: [
+          {
+            severity: "P0",
+            title: "Blocking shape is invalid here",
+            timing: "required-now"
+          }
+        ]
+      },
+      refs: []
+    });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) {
+      return;
+    }
+    expect(
+      result.errors.some((error) => error.path === "payload.findings[0].severity")
+    ).toBe(true);
+    expect(
+      result.errors.some((error) => error.path === "payload.findings[0].timing")
+    ).toBe(true);
+  });
+
   it("accepts PASS envelope when blocker finding has no finding refs and envelope refs are empty", () => {
     const result = validateProtocolEnvelope({
       id: "msg_001b",

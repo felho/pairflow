@@ -16,6 +16,9 @@ import { metaReviewExecutionContextToRunningContext } from "../../../src/v11/dom
 import { readStateSnapshot } from "../../../src/v11/infrastructure/state/stateStore.js";
 import { parseRequiredSubmitReportJson } from "../../../src/v11/application/metaReview/metaReviewCliOptionValueReader.js";
 import type { Finding } from "../../../src/contracts/kernel/findings.js";
+import type {
+  ProtocolAdvisoryFinding
+} from "../../../src/v11/shared/protocol/protocolEnvelopeContract.js";
 import { DEFAULT_META_REVIEW_AUTO_REWORK_LIMIT } from "../../../src/v11/shared/metaReview/metaReviewSnapshotTypes.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
 import { initGitRepository } from "../../helpers/git.js";
@@ -100,7 +103,7 @@ function buildActiveMetaReviewerSession(input: {
 async function appendReviewerSnapshot(input: {
   bubble: Awaited<ReturnType<typeof setupRunningBubbleFixture>>;
   nowIso: string;
-  findings?: Finding[];
+  findings?: ProtocolAdvisoryFinding[];
   advisoryFindingsOpenTotal?: number;
   round?: number;
 }): Promise<void> {
