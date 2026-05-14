@@ -39,6 +39,11 @@ export async function appendAutoReworkDecision(input: {
   parityMetadata: FindingsParityMetadata | null;
   findingsForPayload: Finding[] | undefined;
   reworkMessage: string;
+  displayMetadata?: Readonly<{
+    approval_gate_failure?: true;
+    approve_gate_failure_id?: string;
+    validation_failure_id?: string;
+  }>;
 }): Promise<Awaited<ReturnType<AppendProtocolEnvelopePort>>> {
   const findingsParity = compactFindingsParityMetadata(input.parityMetadata);
   return await input.finalizeInput.appendEnvelope({
@@ -72,6 +77,7 @@ export async function appendAutoReworkDecision(input: {
           actor_agent:
             input.finalizeInput.resolved.bubbleConfig.agents.meta_reviewer,
           recommendation: input.runResultForRouting.recommendation,
+          ...(input.displayMetadata ?? {}),
           ...(input.runResultForRouting.run_id !== undefined
             ? { run_id: input.runResultForRouting.run_id }
             : {})

@@ -553,6 +553,7 @@ describe("timelinePresenter display DTO", () => {
           metadata: {
             actor: "meta-reviewer",
             recommendation: "approve",
+            approval_gate_failure: true,
             validation_failure_id: "same-gate"
           }
         }
@@ -568,6 +569,7 @@ describe("timelinePresenter display DTO", () => {
           metadata: {
             actor: "meta-reviewer",
             recommendation: "approve",
+            approval_gate_failure: true,
             validation_failure_id: "same-gate"
           }
         }
@@ -583,6 +585,7 @@ describe("timelinePresenter display DTO", () => {
           metadata: {
             actor: "meta-reviewer",
             recommendation: "approve",
+            approval_gate_failure: true,
             validation_failure_id: "other-gate"
           }
         }
@@ -630,6 +633,29 @@ describe("timelinePresenter display DTO", () => {
       cleanRunCount: 1,
       cleanRunsRequired: null
     });
+  });
+
+  it("does not classify approve-validation text as gate failure without the explicit marker", () => {
+    const entries = presentTimelineEntries([
+      envelope({
+        id: "legacy-gate-text",
+        type: "APPROVAL_DECISION",
+        sender: "orchestrator",
+        payload: {
+          decision: "rework",
+          message:
+            "Meta-review approved the current change, but the required approve-gate validation failed.",
+          metadata: {
+            actor: "meta-reviewer",
+            recommendation: "approve"
+          }
+        }
+      })
+    ]);
+
+    expect(entries[0]?.display.rowKind).toBe("approval");
+    expect(entries[0]?.display.validationFailure).toBeNull();
+    expect(entries[0]?.display.syntheticApproval).toBeNull();
   });
 
   it("does not let duplicate clean-run source rows advance the streak", () => {
@@ -718,7 +744,8 @@ describe("timelinePresenter display DTO", () => {
             "Meta-review approved the current change, but the required approve-gate validation failed.",
           metadata: {
             actor: "meta-reviewer",
-            recommendation: "approve"
+            recommendation: "approve",
+            approval_gate_failure: true
           }
         }
       })

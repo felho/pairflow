@@ -623,6 +623,7 @@ describe("runCurrentRunMetaReviewGateFinalization", () => {
     const payload = result.gateEnvelope.payload as {
       decision?: string;
       message?: string;
+      metadata?: Record<string, unknown>;
     };
 
     expect(result.route).toBe("auto_rework");
@@ -640,6 +641,7 @@ describe("runCurrentRunMetaReviewGateFinalization", () => {
     expect(payload.message).toContain(
       "logPath=.pairflow/evidence/meta-review-approve-validation-test-fixture.log"
     );
+    expect(payload.metadata?.approval_gate_failure).toBe(true);
     expect(payload.message).toContain("try to fix it in this bubble worktree");
     expect(payload.message).toContain("ask the human for direction");
   });
@@ -711,6 +713,7 @@ describe("runCurrentRunMetaReviewGateFinalization", () => {
     const payload = result.gateEnvelope.payload as {
       decision?: string;
       message?: string;
+      metadata?: Record<string, unknown>;
     };
 
     expect(result.route).toBe("auto_rework");
@@ -730,6 +733,12 @@ describe("runCurrentRunMetaReviewGateFinalization", () => {
     expect(payload.message).toContain(
       "logPath=.pairflow/evidence/meta-review-approve-validation-test-fixture.log"
     );
+    expect(payload.metadata?.approval_gate_failure).toBe(true);
+    const approveGateFailureId = payload.metadata?.approve_gate_failure_id;
+    if (typeof approveGateFailureId !== "string") {
+      throw new Error("approve_gate_failure_id metadata must be a string.");
+    }
+    expect(approveGateFailureId).toContain("META_REVIEW_APPROVE_VALIDATION_FAILED");
   });
 
   it("uses spawn diagnostics when approve validation cannot access the worktree path", async () => {

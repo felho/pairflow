@@ -51,6 +51,11 @@ export interface DispatchAutoReworkInput {
   parityMetadata: FindingsParityMetadata | null;
   findingsForPayload: Finding[] | undefined;
   reworkTargetMessage?: string;
+  displayMetadata?: Readonly<{
+    approval_gate_failure?: true;
+    approve_gate_failure_id?: string;
+    validation_failure_id?: string;
+  }>;
   persistDispatchFailedHumanRoute: (
     input: PersistDispatchFailedHumanRouteInput
   ) => Promise<MetaReviewGateResult>;

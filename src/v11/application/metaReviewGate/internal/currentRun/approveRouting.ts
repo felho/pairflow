@@ -81,6 +81,10 @@ export async function routeApproveMetaReviewResult(input: {
         reworkTargetMessage: buildApproveValidationReworkMessage(
           approveValidation.fallbackReason
         ),
+        displayMetadata: {
+          approval_gate_failure: true,
+          approve_gate_failure_id: approveValidation.fallbackReason
+        },
         persistDispatchFailedHumanRoute: (dispatchInput) =>
           persistDispatchFailedHumanRoute({
             finalizeInput: input.finalizeInput,

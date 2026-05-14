@@ -37,7 +37,10 @@ export async function dispatchAutoRework(
       runResultForRouting: input.runResultForRouting,
       parityMetadata: input.parityMetadata,
       findingsForPayload: input.findingsForPayload,
-      reworkMessage
+      reworkMessage,
+      ...(input.displayMetadata !== undefined
+        ? { displayMetadata: input.displayMetadata }
+        : {})
     });
 
     return {

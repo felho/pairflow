@@ -265,10 +265,7 @@ function isApproveValidationGateFailure(entry: TimelineEntryWithoutDisplay): boo
   if (extractMetaRecommendation(entry) !== "approve") {
     return false;
   }
-  const text = [entry.payload.summary, entry.payload.message]
-    .filter((value): value is string => typeof value === "string")
-    .join("\n");
-  return text.includes("approve-gate validation failed");
+  return metadataOf(entry)?.approval_gate_failure === true;
 }
 
 function logicalValidationFailureKey(entry: TimelineEntryWithoutDisplay): string {
