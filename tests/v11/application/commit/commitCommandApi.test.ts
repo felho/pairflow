@@ -226,11 +226,9 @@ describe("commitCommandApi", () => {
     expect(result.envelope.type).toBe("COMMIT_RESULT");
     expect("donePackagePath" in result).toBe(false);
     expect(result.envelope.payload).toEqual({
-      metadata: {
-        commit_message: "bubble(b_commit_v11_01): finalize",
-        commit_sha: result.commitSha,
-        staged_files: ["feature.txt"]
-      }
+      commit_message: "bubble(b_commit_v11_01): finalize",
+      commit_sha: result.commitSha,
+      staged_files: ["feature.txt"]
     });
 
     const loaded = await readStateSnapshot(bubble.paths.statePath);
@@ -306,11 +304,9 @@ describe("commitCommandApi", () => {
       type: "COMMIT_RESULT",
       round: 2,
       payload: {
-        metadata: {
-          staged_files: ["feature-remote.txt"],
-          commit_message: "bubble(b_remote_commit_01): finalize",
-          commit_sha: "abcdef1234567890"
-        }
+        staged_files: ["feature-remote.txt"],
+        commit_message: "bubble(b_remote_commit_01): finalize",
+        commit_sha: "abcdef1234567890"
       },
       refs: [
         "/srv/pairflow/repo/.pairflow/evidence/typecheck.log"
@@ -965,11 +961,9 @@ describe("commitCommandApi", () => {
       type: "COMMIT_RESULT",
       round: 2,
       payload: {
-        metadata: {
-          staged_files: ["feature.txt"],
-          commit_message: "bubble(b_remote_commit_sync_fail_01): finalize",
-          commit_sha: "1234567"
-        }
+        staged_files: ["feature.txt"],
+        commit_message: "bubble(b_remote_commit_sync_fail_01): finalize",
+        commit_sha: "1234567"
       },
       refs: []
     };
@@ -1097,11 +1091,9 @@ describe("commitCommandApi", () => {
       type: "COMMIT_RESULT",
       round: 2,
       payload: {
-        metadata: {
-          staged_files: ["feature.txt"],
-          commit_message: "bubble(b_remote_commit_sync_rename_fail_01): finalize",
-          commit_sha: "2345678"
-        }
+        staged_files: ["feature.txt"],
+        commit_message: "bubble(b_remote_commit_sync_rename_fail_01): finalize",
+        commit_sha: "2345678"
       },
       refs: []
     };
@@ -1241,11 +1233,9 @@ describe("commitCommandApi", () => {
       type: "COMMIT_RESULT",
       round: 2,
       payload: {
-        metadata: {
-          staged_files: ["feature.txt"],
-          commit_message: "bubble(b_remote_commit_sync_restore_retry_01): finalize",
-          commit_sha: "3456789"
-        }
+        staged_files: ["feature.txt"],
+        commit_message: "bubble(b_remote_commit_sync_restore_retry_01): finalize",
+        commit_sha: "3456789"
       },
       refs: []
     };
@@ -1378,11 +1368,9 @@ describe("commitCommandApi", () => {
       type: "COMMIT_RESULT",
       round: 2,
       payload: {
-        metadata: {
-          staged_files: ["feature.txt"],
-          commit_message: "bubble(b_remote_commit_import_retry_01): finalize",
-          commit_sha: "4567890"
-        }
+        staged_files: ["feature.txt"],
+        commit_message: "bubble(b_remote_commit_import_retry_01): finalize",
+        commit_sha: "4567890"
       },
       refs: []
     };
@@ -1531,11 +1519,9 @@ describe("commitCommandApi", () => {
       type: "COMMIT_RESULT",
       round: 2,
       payload: {
-        metadata: {
-          staged_files: ["feature.txt"],
-          commit_message: "bubble(b_remote_commit_import_done_retry_01): finalize",
-          commit_sha: "5678901"
-        }
+        staged_files: ["feature.txt"],
+        commit_message: "bubble(b_remote_commit_import_done_retry_01): finalize",
+        commit_sha: "5678901"
       },
       refs: []
     };

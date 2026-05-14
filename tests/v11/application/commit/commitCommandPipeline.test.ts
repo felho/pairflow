@@ -34,11 +34,9 @@ const appendCommitResultEnvelope = vi.fn(async () => {
       type: "COMMIT_RESULT",
       round: 3,
       payload: {
-        metadata: {
-          staged_files: ["feature.txt"],
-          commit_message: "bubble(b_pipeline_01): finalize",
-          commit_sha: "abc1234"
-        }
+        staged_files: ["feature.txt"],
+        commit_message: "bubble(b_pipeline_01): finalize",
+        commit_sha: "abc1234"
       },
       refs: ["ref-a"]
     } satisfies ProtocolEnvelope

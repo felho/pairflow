@@ -13,25 +13,23 @@ describe("protocol envelope schema", () => {
       type: "COMMIT_RESULT",
       round: 1,
       payload: {
-        metadata: {
-          commit_sha: "abc1234",
-          commit_message: "Complete bubble",
-          staged_files: ["src/types/protocol.ts"]
-        },
+        commit_sha: "abc1234",
+        commit_message: "Complete bubble",
+        staged_files: ["src/types/protocol.ts"],
         ...payload
       },
       refs: []
     };
   }
 
-  it("accepts COMMIT_RESULT envelope with closed technical metadata", () => {
+  it("accepts COMMIT_RESULT envelope with top-level commit facts", () => {
     const result = validateProtocolEnvelope(buildCommitResultEnvelope());
 
     expect(result.ok).toBe(true);
     if (!result.ok) {
       return;
     }
-    expect(result.value.payload.metadata).toEqual({
+    expect(result.value.payload).toMatchObject({
       commit_sha: "abc1234",
       commit_message: "Complete bubble",
       staged_files: ["src/types/protocol.ts"]
@@ -53,15 +51,47 @@ describe("protocol envelope schema", () => {
   });
 
   it.each([
-    ["message", "commit completed"],
-    ["question", "commit completed?"],
-    ["decision", "approve"],
-    ["pass_intent", "task"],
-    ["findings", []],
-    ["findings_claim_state", "clean"],
-    ["findings_claim_source", "payload_flags"],
-    ["extra_field", "unexpected"]
-  ])("rejects COMMIT_RESULT non-metadata payload field %s", (field, value) => {
+    [
+      "message",
+      "commit completed",
+      "COMMIT_RESULT payload only allows commit result fields and metadata"
+    ],
+    [
+      "question",
+      "commit completed?",
+      "COMMIT_RESULT payload only allows commit result fields and metadata"
+    ],
+    [
+      "decision",
+      "approve",
+      "COMMIT_RESULT payload only allows commit result fields and metadata"
+    ],
+    [
+      "pass_intent",
+      "task",
+      "COMMIT_RESULT payload only allows commit result fields and metadata"
+    ],
+    [
+      "findings",
+      [],
+      "COMMIT_RESULT payload only allows commit result fields and metadata"
+    ],
+    [
+      "findings_claim_state",
+      "clean",
+      "COMMIT_RESULT payload only allows commit result fields and metadata"
+    ],
+    [
+      "findings_claim_source",
+      "payload_flags",
+      "COMMIT_RESULT payload only allows commit result fields and metadata"
+    ],
+    [
+      "extra_field",
+      "unexpected",
+      "Unknown payload field; use payload.metadata for custom data"
+    ]
+  ])("rejects COMMIT_RESULT non-metadata payload field %s", (field, value, message) => {
     const result = validateProtocolEnvelope(
       buildCommitResultEnvelope({ [field]: value })
     );
@@ -74,17 +104,14 @@ describe("protocol envelope schema", () => {
       (error) => error.path === `payload.${field}`
     );
     expect(matchingErrors).toHaveLength(1);
-    expect(matchingErrors[0]?.message).toBe(
-      "COMMIT_RESULT payload only allows metadata"
-    );
+    expect(matchingErrors[0]?.message).toBe(message);
   });
 
-  it("rejects COMMIT_RESULT missing required commit metadata", () => {
+  it("rejects COMMIT_RESULT missing required commit facts", () => {
     const result = validateProtocolEnvelope(
       buildCommitResultEnvelope({
-        metadata: {
-          staged_files: ["src/types/protocol.ts"]
-        }
+        commit_sha: undefined,
+        commit_message: undefined
       })
     );
 
@@ -94,17 +121,17 @@ describe("protocol envelope schema", () => {
     }
     expect(
       result.errors.some(
-        (error) => error.path === "payload.metadata.commit_sha"
+        (error) => error.path === "payload.commit_sha"
       )
     ).toBe(true);
     expect(
       result.errors.some(
-        (error) => error.path === "payload.metadata.commit_message"
+        (error) => error.path === "payload.commit_message"
       )
     ).toBe(true);
   });
 
-  it("rejects COMMIT_RESULT when metadata is absent", () => {
+  it("rejects COMMIT_RESULT when commit facts are absent", () => {
     const envelope = buildCommitResultEnvelope();
     const result = validateProtocolEnvelope({
       ...envelope,
@@ -117,17 +144,17 @@ describe("protocol envelope schema", () => {
     }
     expect(
       result.errors.some(
-        (error) => error.path === "payload.metadata.commit_sha"
+        (error) => error.path === "payload.commit_sha"
       )
     ).toBe(true);
     expect(
       result.errors.some(
-        (error) => error.path === "payload.metadata.commit_message"
+        (error) => error.path === "payload.commit_message"
       )
     ).toBe(true);
     expect(
       result.errors.some(
-        (error) => error.path === "payload.metadata.staged_files"
+        (error) => error.path === "payload.staged_files"
       )
     ).toBe(true);
   });
@@ -146,19 +173,9 @@ describe("protocol envelope schema", () => {
     ).toBe(true);
     expect(
       result.errors.some(
-        (error) => error.path === "payload.metadata.commit_sha"
+        (error) => error.path === "payload.commit_sha"
       )
-    ).toBe(true);
-    expect(
-      result.errors.some(
-        (error) => error.path === "payload.metadata.commit_message"
-      )
-    ).toBe(true);
-    expect(
-      result.errors.some(
-        (error) => error.path === "payload.metadata.staged_files"
-      )
-    ).toBe(true);
+    ).toBe(false);
   });
 
   it.each([
@@ -168,11 +185,7 @@ describe("protocol envelope schema", () => {
   ])("rejects COMMIT_RESULT invalid staged_files value %#", (stagedFiles) => {
     const result = validateProtocolEnvelope(
       buildCommitResultEnvelope({
-        metadata: {
-          commit_sha: "abc1234",
-          commit_message: "Complete bubble",
-          staged_files: stagedFiles
-        }
+        staged_files: stagedFiles
       })
     );
 
@@ -182,7 +195,7 @@ describe("protocol envelope schema", () => {
     }
     expect(
       result.errors.some(
-        (error) => error.path === "payload.metadata.staged_files"
+        (error) => error.path === "payload.staged_files"
       )
     ).toBe(true);
   });
@@ -217,9 +230,6 @@ describe("protocol envelope schema", () => {
     const result = validateProtocolEnvelope(
       buildCommitResultEnvelope({
         metadata: {
-          commit_sha: "abc1234",
-          commit_message: "Complete bubble",
-          staged_files: ["src/types/protocol.ts"],
           [field]: "done-package.md"
         }
       })
@@ -236,34 +246,22 @@ describe("protocol envelope schema", () => {
     expect(matchingErrors[0]?.message).toContain("done-package fields");
   });
 
-  it("rejects COMMIT_RESULT unknown metadata keys", () => {
+  it("accepts COMMIT_RESULT unstructured metadata keys", () => {
     const result = validateProtocolEnvelope(
       buildCommitResultEnvelope({
         metadata: {
-          commit_sha: "abc1234",
-          commit_message: "Complete bubble",
-          staged_files: ["src/types/protocol.ts"],
-          extra: "not allowed"
+          extra: "allowed"
         }
       })
     );
 
-    expect(result.ok).toBe(false);
-    if (result.ok) {
-      return;
-    }
-    expect(
-      result.errors.some((error) => error.path === "payload.metadata.extra")
-    ).toBe(true);
+    expect(result.ok).toBe(true);
   });
 
-  it("rejects COMMIT_RESULT parity metadata as unknown metadata only", () => {
+  it("rejects COMMIT_RESULT parity metadata", () => {
     const result = validateProtocolEnvelope(
       buildCommitResultEnvelope({
         metadata: {
-          commit_sha: "abc1234",
-          commit_message: "Complete bubble",
-          staged_files: ["src/types/protocol.ts"],
           findings_blocking_open_total: -1
         }
       })
@@ -279,7 +277,7 @@ describe("protocol envelope schema", () => {
     );
     expect(matchingErrors).toHaveLength(1);
     expect(matchingErrors[0]?.message).toBe(
-      "Unknown COMMIT_RESULT metadata field"
+      "Findings parity fields must use payload.findings_parity"
     );
   });
 

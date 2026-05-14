@@ -196,10 +196,12 @@ export function projectProtocolEnvelopeToUiActionEvent(
     case "PASS":
     case "CONVERGENCE":
     case "APPROVAL_REQUEST":
-    case "COMMIT_RESULT":
       if (envelope.payload.summary !== undefined) {
         event.summary = envelope.payload.summary;
       }
+      break;
+    case "COMMIT_RESULT":
+      event.summary = envelope.payload.commit_message;
       break;
     case "HUMAN_QUESTION":
       event.question = envelope.payload.question;

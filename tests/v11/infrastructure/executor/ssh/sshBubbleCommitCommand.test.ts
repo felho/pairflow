@@ -66,11 +66,9 @@ describe("sshBubbleCommitCommand", () => {
         type: "COMMIT_RESULT",
         round: 2,
         payload: {
-          metadata: {
-            staged_files: ["feature-remote.txt"],
-            commit_message: "bubble(b_remote_commit_01): finalize",
-            commit_sha: "abcdef1234567890"
-          }
+          staged_files: ["feature-remote.txt"],
+          commit_message: "bubble(b_remote_commit_01): finalize",
+          commit_sha: "abcdef1234567890"
         },
         refs: []
       }),
@@ -148,11 +146,9 @@ describe("sshBubbleCommitCommand", () => {
         type: "COMMIT_RESULT",
         round: 2,
         payload: {
-          metadata: {
-            staged_files: ["feature-remote.txt"],
-            commit_message: "  bubble(b_remote_commit_trimmed_message_01): finalize  ",
-            commit_sha: "abcdef1234567890"
-          }
+          staged_files: ["feature-remote.txt"],
+          commit_message: "  bubble(b_remote_commit_trimmed_message_01): finalize  ",
+          commit_sha: "abcdef1234567890"
         },
         refs: []
       }),
@@ -222,11 +218,9 @@ describe("sshBubbleCommitCommand", () => {
         type: "COMMIT_RESULT",
         round: 2,
         payload: {
-          metadata: {
-            staged_files: ["feature-remote.txt"],
-            commit_message: "bubble(b_remote_commit_marker_literal_01): finalize",
-            commit_sha: "abcdef1234567890"
-          }
+          staged_files: ["feature-remote.txt"],
+          commit_message: "bubble(b_remote_commit_marker_literal_01): finalize",
+          commit_sha: "abcdef1234567890"
         },
         refs: [
           "__PAIRFLOW_REMOTE_COMMIT_TRANSCRIPT_END__",
@@ -359,11 +353,9 @@ describe("sshBubbleCommitCommand", () => {
         type: "COMMIT_RESULT",
         round: 2,
         payload: {
-          metadata: {
-            staged_files: ["feature-remote.txt"],
-            commit_message: "bubble(b_remote_commit_invalid_state_01): finalize",
-            commit_sha: "abcdef1234567890"
-          }
+          staged_files: ["feature-remote.txt"],
+          commit_message: "bubble(b_remote_commit_invalid_state_01): finalize",
+          commit_sha: "abcdef1234567890"
         },
         refs: []
       }),
@@ -434,11 +426,9 @@ describe("sshBubbleCommitCommand", () => {
         type: "COMMIT_RESULT",
         round: 2,
         payload: {
-          metadata: {
-            staged_files: ["feature-remote.txt"],
-            commit_message: "bubble(b_remote_commit_wrong_state_identity_01): finalize",
-            commit_sha: "abcdef1234567890"
-          }
+          staged_files: ["feature-remote.txt"],
+          commit_message: "bubble(b_remote_commit_wrong_state_identity_01): finalize",
+          commit_sha: "abcdef1234567890"
         },
         refs: []
       }),
@@ -582,11 +572,9 @@ describe("sshBubbleCommitCommand", () => {
         type: "COMMIT_RESULT",
         round: 2,
         payload: {
-          metadata: {
-            staged_files: ["b.txt", "a.txt"],
-            commit_message: "bubble(b_remote_commit_reordered_files_01): finalize",
-            commit_sha: "abcdef1234567890"
-          }
+          staged_files: ["b.txt", "a.txt"],
+          commit_message: "bubble(b_remote_commit_reordered_files_01): finalize",
+          commit_sha: "abcdef1234567890"
         },
         refs: []
       }),
@@ -633,7 +621,7 @@ describe("sshBubbleCommitCommand", () => {
     { name: "non-array staged_files", stagedFiles: "feature-remote.txt" },
     { name: "non-string staged_files entry", stagedFiles: ["feature-remote.txt", 42] },
     { name: "empty staged_files entry", stagedFiles: ["feature-remote.txt", ""] }
-  ])("fails closed for invalid COMMIT_RESULT metadata: $name", async (input) => {
+  ])("fails closed for invalid COMMIT_RESULT payload: $name", async (input) => {
     const stdout = [
       "__PAIRFLOW_REMOTE_COMMIT_STATE_START__",
       JSON.stringify({
@@ -660,11 +648,9 @@ describe("sshBubbleCommitCommand", () => {
         type: "COMMIT_RESULT",
         round: 2,
         payload: {
-          metadata: {
-            commit_sha: "abcdef1234567890",
-            commit_message: "bubble(b_remote_commit_invalid_metadata_01): finalize",
-            staged_files: input.stagedFiles
-          }
+          commit_sha: "abcdef1234567890",
+          commit_message: "bubble(b_remote_commit_invalid_metadata_01): finalize",
+          staged_files: input.stagedFiles
         },
         refs: []
       }),
@@ -711,7 +697,7 @@ describe("sshBubbleCommitCommand", () => {
   it.each([
     {
       name: "commit SHA",
-      metadata: {
+      payload: {
         staged_files: ["feature-remote.txt"],
         commit_message: "bubble(b_remote_commit_mismatch_01): finalize",
         commit_sha: "transcript-sha"
@@ -724,7 +710,7 @@ describe("sshBubbleCommitCommand", () => {
     },
     {
       name: "commit message",
-      metadata: {
+      payload: {
         staged_files: ["feature-remote.txt"],
         commit_message: "transcript message",
         commit_sha: "abcdef1234567890"
@@ -737,7 +723,7 @@ describe("sshBubbleCommitCommand", () => {
     },
     {
       name: "staged files",
-      metadata: {
+      payload: {
         staged_files: ["feature-remote.txt"],
         commit_message: "bubble(b_remote_commit_mismatch_01): finalize",
         commit_sha: "abcdef1234567890"
@@ -748,7 +734,7 @@ describe("sshBubbleCommitCommand", () => {
         files: ["other-feature.txt"]
       }
     }
-  ])("fails closed when COMMIT_RESULT $name metadata disagrees with remote git facts", async (input) => {
+  ])("fails closed when COMMIT_RESULT $name payload disagrees with remote git facts", async (input) => {
     const stdout = [
       "__PAIRFLOW_REMOTE_COMMIT_STATE_START__",
       JSON.stringify({
@@ -774,9 +760,7 @@ describe("sshBubbleCommitCommand", () => {
         recipient: "human",
         type: "COMMIT_RESULT",
         round: 2,
-        payload: {
-          metadata: input.metadata
-        },
+        payload: input.payload,
         refs: []
       }),
       "__PAIRFLOW_REMOTE_COMMIT_TRANSCRIPT_END__",

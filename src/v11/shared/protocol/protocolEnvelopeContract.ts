@@ -62,19 +62,10 @@ export interface ApprovalDecisionProtocolEnvelopePayload {
 }
 
 export interface CommitResultProtocolEnvelopePayload {
-  summary?: string;
-  question?: string;
-  message?: string;
-  decision?: ApprovalDecision;
-  pass_intent?: PassIntent;
-  findings_claim_state?: FindingsClaimState;
-  findings_claim_source?: FindingsClaimSource;
-  findings?: Finding[];
-  metadata: ProtocolEnvelopeMetadata & {
-    commit_sha: string;
-    commit_message: string;
-    staged_files: string[];
-  };
+  commit_sha: string;
+  commit_message: string;
+  staged_files: string[];
+  metadata?: ProtocolEnvelopeMetadata;
 }
 
 export interface ProtocolEnvelopePayloadByType {

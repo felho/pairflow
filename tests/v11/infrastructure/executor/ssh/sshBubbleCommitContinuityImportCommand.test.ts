@@ -81,11 +81,9 @@ describe("sshBubbleCommitContinuityImportCommand", () => {
       type: "COMMIT_RESULT",
       round: 2,
       payload: {
-        metadata: {
-          staged_files: ["feature-remote.txt"],
-          commit_message: "bubble(b_remote_import_01): finalize",
-          commit_sha: "abcdef1234567890"
-        }
+        staged_files: ["feature-remote.txt"],
+        commit_message: "bubble(b_remote_import_01): finalize",
+        commit_sha: "abcdef1234567890"
       },
       refs: []
     });
@@ -274,11 +272,9 @@ describe("sshBubbleCommitContinuityImportCommand", () => {
       type: "COMMIT_RESULT",
       round: 2,
       payload: {
-        metadata: {
-          staged_files: [],
-          commit_message: "bubble(b_remote_import_empty_files_01): finalize",
-          commit_sha: "abcdef1234567890"
-        }
+        staged_files: [],
+        commit_message: "bubble(b_remote_import_empty_files_01): finalize",
+        commit_sha: "abcdef1234567890"
       },
       refs: []
     });

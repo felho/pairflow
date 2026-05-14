@@ -271,11 +271,9 @@ describe("commitBubble", () => {
     expect(result.envelope.type).toBe("COMMIT_RESULT");
     expect("donePackagePath" in result).toBe(false);
     expect(result.envelope.payload).toEqual({
-      metadata: {
-        commit_message: "bubble(b_commit_02): finalize",
-        commit_sha: result.commitSha,
-        staged_files: ["feature.txt"]
-      }
+      commit_message: "bubble(b_commit_02): finalize",
+      commit_sha: result.commitSha,
+      staged_files: ["feature.txt"]
     });
 
     const loaded = await readStateSnapshot(bubble.paths.statePath);
@@ -355,11 +353,9 @@ describe("commitBubble", () => {
     expect(result.stagedFiles).toEqual([]);
     expect(result.envelope.type).toBe("COMMIT_RESULT");
     expect(result.envelope.payload).toEqual({
-      metadata: {
-        commit_message: "bubble(b_commit_empty_force): finalize",
-        commit_sha: result.commitSha,
-        staged_files: []
-      }
+      commit_message: "bubble(b_commit_empty_force): finalize",
+      commit_sha: result.commitSha,
+      staged_files: []
     });
 
     const log = await runGit(bubble.paths.worktreePath, [
@@ -793,11 +789,9 @@ describe("commitBubble", () => {
       type: "COMMIT_RESULT",
       round: 2,
       payload: {
-        metadata: {
-          staged_files: ["feature-public.txt"],
-          commit_message: "bubble(b_commit_remote_public_01): finalize",
-          commit_sha: "fedcba9876543210"
-        }
+        staged_files: ["feature-public.txt"],
+        commit_message: "bubble(b_commit_remote_public_01): finalize",
+        commit_sha: "fedcba9876543210"
       },
       refs: []
     };

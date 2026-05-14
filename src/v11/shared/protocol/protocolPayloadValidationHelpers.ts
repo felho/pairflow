@@ -25,10 +25,13 @@ const allowedPayloadKeys = new Set([
   "findings",
   "findings_parity",
   "advisory_findings_open_total",
+  "commit_sha",
+  "commit_message",
+  "staged_files",
   "metadata"
 ]);
 
-const commitResultMetadataKeys = new Set([
+const commitResultFieldNames = new Set([
   "commit_sha",
   "commit_message",
   "staged_files"
@@ -60,7 +63,7 @@ function isNonNegativeInteger(value: unknown): value is number {
   return isInteger(value) && value >= 0;
 }
 
-function isStringArray(value: unknown): boolean {
+function isStringArray(value: unknown): value is string[] {
   return Array.isArray(value) && value.every(isNonEmptyString);
 }
 
@@ -69,12 +72,12 @@ export function validateUnknownPayloadKeys(
   payload: Record<string, unknown>,
   errors: ValidationError[]
 ): void {
-  if (envelopeType === "COMMIT_RESULT") {
-    return;
-  }
-  const unknownKeys = Object.keys(payload).filter(
-    (key) => !allowedPayloadKeys.has(key)
-  );
+  const unknownKeys = Object.keys(payload).filter((key) => {
+    if (envelopeType === "COMMIT_RESULT" && donePackageFieldNames.has(key)) {
+      return false;
+    }
+    return !allowedPayloadKeys.has(key);
+  });
   for (const key of unknownKeys) {
     errors.push({
       path: `payload.${key}`,
@@ -207,6 +210,21 @@ function validateNoAdvisoryFindingsOpenTotalInMetadata(
   });
 }
 
+function validateNoCommitResultFieldsInMetadata(
+  metadata: Record<string, unknown>,
+  errors: ValidationError[]
+): void {
+  for (const field of commitResultFieldNames) {
+    if (metadata[field] === undefined) {
+      continue;
+    }
+    errors.push({
+      path: `payload.metadata.${field}`,
+      message: "Commit result fields must use top-level payload fields"
+    });
+  }
+}
+
 export function validatePayloadMetadata(
   envelopeType: string,
   payload: Record<string, unknown>,
@@ -219,9 +237,10 @@ export function validatePayloadMetadata(
     });
     return;
   }
-  if (isRecord(payload.metadata) && envelopeType !== "COMMIT_RESULT") {
+  if (isRecord(payload.metadata)) {
     validateNoFindingsParityFieldsInMetadata(payload.metadata, errors);
     validateNoAdvisoryFindingsOpenTotalInMetadata(payload.metadata, errors);
+    validateNoCommitResultFieldsInMetadata(payload.metadata, errors);
   }
 }
 
@@ -277,6 +296,22 @@ export function validatePayloadFindingsParity(
   );
 }
 
+function buildValidatedCommitPayloadFields(
+  payload: Record<string, unknown>
+): Partial<ProtocolEnvelope["payload"]> {
+  return {
+    ...(payload.commit_sha !== undefined && isNonEmptyString(payload.commit_sha)
+      ? { commit_sha: payload.commit_sha }
+      : {}),
+    ...(payload.commit_message !== undefined && isNonEmptyString(payload.commit_message)
+      ? { commit_message: payload.commit_message }
+      : {}),
+    ...(isStringArray(payload.staged_files)
+      ? { staged_files: payload.staged_files }
+      : {})
+  };
+}
+
 export function buildValidatedPayload(input: {
   payload: Record<string, unknown>;
   findings: Finding[] | undefined;
@@ -310,6 +345,7 @@ export function buildValidatedPayload(input: {
     ...(isNonNegativeInteger(payload.advisory_findings_open_total)
       ? { advisory_findings_open_total: payload.advisory_findings_open_total }
       : {}),
+    ...buildValidatedCommitPayloadFields(payload),
     ...(isRecord(payload.metadata) ? { metadata: payload.metadata } : {})
   };
   return validatedPayload as ProtocolEnvelope["payload"];
@@ -320,7 +356,12 @@ function validateCommitResultPayload(
   errors: ValidationError[]
 ): void {
   for (const key of Object.keys(payload)) {
-    if (key === "metadata") {
+    if (
+      key === "commit_sha" ||
+      key === "commit_message" ||
+      key === "staged_files" ||
+      key === "metadata"
+    ) {
       continue;
     }
     if (key === "summary") {
@@ -337,47 +378,47 @@ function validateCommitResultPayload(
       });
       continue;
     }
+    if (!allowedPayloadKeys.has(key)) {
+      continue;
+    }
     errors.push({
       path: `payload.${key}`,
-      message: "COMMIT_RESULT payload only allows metadata"
+      message: "COMMIT_RESULT payload only allows commit result fields and metadata"
+    });
+  }
+
+  if (!isNonEmptyString(payload.commit_sha)) {
+    errors.push({
+      path: "payload.commit_sha",
+      message: "COMMIT_RESULT payload requires non-empty commit_sha"
+    });
+  }
+  if (!isNonEmptyString(payload.commit_message)) {
+    errors.push({
+      path: "payload.commit_message",
+      message: "COMMIT_RESULT payload requires non-empty commit_message"
+    });
+  }
+  if (!isStringArray(payload.staged_files)) {
+    errors.push({
+      path: "payload.staged_files",
+      message:
+        "COMMIT_RESULT payload requires staged_files as an array of non-empty strings"
     });
   }
 
   const metadata = isRecord(payload.metadata) ? payload.metadata : undefined;
-  if (!metadata || !isNonEmptyString(metadata.commit_sha)) {
-    errors.push({
-      path: "payload.metadata.commit_sha",
-      message: "COMMIT_RESULT metadata requires non-empty commit_sha"
-    });
-  }
-  if (!metadata || !isNonEmptyString(metadata.commit_message)) {
-    errors.push({
-      path: "payload.metadata.commit_message",
-      message: "COMMIT_RESULT metadata requires non-empty commit_message"
-    });
-  }
-  if (!metadata || !isStringArray(metadata.staged_files)) {
-    errors.push({
-      path: "payload.metadata.staged_files",
-      message:
-        "COMMIT_RESULT metadata requires staged_files as an array of non-empty strings"
-    });
-  }
-
   if (!metadata) {
     return;
   }
 
   for (const key of Object.keys(metadata)) {
-    if (commitResultMetadataKeys.has(key)) {
-      continue;
+    if (donePackageFieldNames.has(key)) {
+      errors.push({
+        path: `payload.metadata.${key}`,
+        message: "COMMIT_RESULT metadata must not include done-package fields"
+      });
     }
-    errors.push({
-      path: `payload.metadata.${key}`,
-      message: donePackageFieldNames.has(key)
-        ? "COMMIT_RESULT metadata must not include done-package fields"
-        : "Unknown COMMIT_RESULT metadata field"
-    });
   }
 }
 

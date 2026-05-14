@@ -34,11 +34,9 @@ describe("commitCommandFinalizationMutation", () => {
         type: "COMMIT_RESULT",
         round: 2,
         payload: {
-          metadata: {
-            commit_message: "commit local helpers",
-            commit_sha: "abc123",
-            staged_files: ["src/file.ts"]
-          }
+          commit_message: "commit local helpers",
+          commit_sha: "abc123",
+          staged_files: ["src/file.ts"]
         },
         refs: ["ref-a"]
       },
@@ -78,11 +76,9 @@ describe("commitCommandFinalizationMutation", () => {
         type: "COMMIT_RESULT",
         round: 2,
         payload: {
-          metadata: {
-            commit_message: "commit local helpers",
-            commit_sha: "abc123",
-            staged_files: ["src/file.ts"]
-          }
+          commit_message: "commit local helpers",
+          commit_sha: "abc123",
+          staged_files: ["src/file.ts"]
         },
         refs: ["ref-a"]
       }

@@ -63,7 +63,7 @@ export function buildRemoteBubbleCommitContinuityImportScript(
     + "if(lines.length===0)process.exit(0);"
     + "try{"
     + "const envelope=JSON.parse(lines.at(-1));"
-    + "const sha=envelope?.payload?.metadata?.commit_sha;"
+    + "const sha=envelope?.payload?.commit_sha;"
     + "if(typeof sha==='string'&&sha.length>0)process.stdout.write(sha);"
     + "}catch{}";
 

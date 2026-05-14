@@ -67,11 +67,9 @@ export async function appendCommitResultEnvelopeMutation(input: {
       type: "COMMIT_RESULT",
       round: input.context.round,
       payload: {
-        metadata: {
-          commit_message: input.commitMessage,
-          commit_sha: input.commitSha,
-          staged_files: input.stagedFiles
-        }
+        commit_message: input.commitMessage,
+        commit_sha: input.commitSha,
+        staged_files: input.stagedFiles
       },
       refs: envelopeRefs
     }

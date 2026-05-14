@@ -84,12 +84,14 @@ function appendPrimaryPayloadExcerpt(
     case "PASS":
     case "CONVERGENCE":
     case "APPROVAL_REQUEST":
-    case "COMMIT_RESULT":
       if (typeof envelope.payload.summary === "string") {
         fields.push(
           `summary="${truncateText(compactWhitespace(envelope.payload.summary), 120)}"`
         );
       }
+      break;
+    case "COMMIT_RESULT":
+      fields.push(`commit=${envelope.payload.commit_sha}`);
       break;
     case "HUMAN_QUESTION":
       fields.push(

@@ -651,11 +651,9 @@ describe("mergeBubble", () => {
       type: "COMMIT_RESULT" as const,
       round: remoteDoneState.round,
       payload: {
-        metadata: {
-          staged_files: ["feature.txt"],
-          commit_message: "bubble(b_merge_remote_import_state_01): finalize",
-          commit_sha: "abcdef1234567890"
-        }
+        staged_files: ["feature.txt"],
+        commit_message: "bubble(b_merge_remote_import_state_01): finalize",
+        commit_sha: "abcdef1234567890"
       },
       refs: []
     };
@@ -922,11 +920,9 @@ describe("mergeBubble", () => {
       type: "COMMIT_RESULT" as const,
       round: remoteDoneState.round,
       payload: {
-        metadata: {
-          staged_files: ["feature.txt"],
-          commit_message: "bubble(b_merge_remote_import_sync_fail_01): finalize",
-          commit_sha: "abcdef1234567890"
-        }
+        staged_files: ["feature.txt"],
+        commit_message: "bubble(b_merge_remote_import_sync_fail_01): finalize",
+        commit_sha: "abcdef1234567890"
       },
       refs: []
     };

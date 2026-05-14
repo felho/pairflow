@@ -170,7 +170,7 @@ function parseRemoteCommitTranscript(input: {
     // Sequence follows transcript line-count semantics used by sibling SSH parsers.
     sequence: envelopes.length,
     envelope,
-    metadata: parseCommitResultMetadata({
+    metadata: parseCommitResultPayloadFacts({
       envelope,
       bubbleId: input.bubbleId
     })
@@ -193,22 +193,21 @@ function haveSameStringSet(left: string[], right: string[]): boolean {
   return sortedLeft.every((value, index) => value === sortedRight[index]);
 }
 
-function parseCommitResultMetadata(input: {
+function parseCommitResultPayloadFacts(input: {
   envelope: ProtocolEnvelope;
   bubbleId: string;
 }): CommitResultMetadata {
-  const metadata = input.envelope.payload.metadata;
-  if (metadata === undefined) {
+  if (input.envelope.type !== "COMMIT_RESULT") {
     throw new RemoteBubbleCommitCommandError({
       code: "REMOTE_COMMIT_PAYLOAD_INVALID",
       message:
-        `Remote commit returned COMMIT_RESULT without metadata for bubble ${input.bubbleId}.`
+        `Remote commit did not finish with a COMMIT_RESULT envelope for bubble ${input.bubbleId}.`
     });
   }
 
-  const commitSha = metadata.commit_sha;
-  const rawCommitMessage = metadata.commit_message;
-  const stagedFiles = metadata.staged_files;
+  const commitSha = input.envelope.payload.commit_sha;
+  const rawCommitMessage = input.envelope.payload.commit_message;
+  const stagedFiles = input.envelope.payload.staged_files;
   if (
     typeof commitSha !== "string" ||
     commitSha.length === 0 ||
@@ -218,7 +217,7 @@ function parseCommitResultMetadata(input: {
     throw new RemoteBubbleCommitCommandError({
       code: "REMOTE_COMMIT_PAYLOAD_INVALID",
       message:
-        `Remote commit returned invalid COMMIT_RESULT metadata for bubble ${input.bubbleId}.`
+        `Remote commit returned invalid COMMIT_RESULT payload for bubble ${input.bubbleId}.`
     });
   }
   const commitMessage = rawCommitMessage.trim();
@@ -226,7 +225,7 @@ function parseCommitResultMetadata(input: {
     throw new RemoteBubbleCommitCommandError({
       code: "REMOTE_COMMIT_PAYLOAD_INVALID",
       message:
-        `Remote commit returned invalid COMMIT_RESULT metadata for bubble ${input.bubbleId}.`
+        `Remote commit returned invalid COMMIT_RESULT payload for bubble ${input.bubbleId}.`
     });
   }
 
@@ -252,7 +251,7 @@ function assertCommitResultMatchesGitFacts(input: {
     throw new RemoteBubbleCommitCommandError({
       code: "REMOTE_COMMIT_PAYLOAD_INVALID",
       message:
-        `Remote commit COMMIT_RESULT metadata does not match remote git facts for bubble ${input.bubbleId}.`,
+        `Remote commit COMMIT_RESULT payload does not match remote git facts for bubble ${input.bubbleId}.`,
       context: {
         command_name: "commit",
         payload_label: "commit-result",

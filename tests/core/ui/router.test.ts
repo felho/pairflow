@@ -232,7 +232,7 @@ function uiCommitResultFixture(
       type: "COMMIT_RESULT",
       sender: "orchestrator",
       recipient: "human",
-      summary: "Committed abc123."
+      summary: "Commit message"
     },
     actionState: {
       ...uiActionStateFixture(bubbleId),
@@ -311,8 +311,28 @@ function rawProtocolEnvelopeFixture(
     summary: string;
     message: string;
     decision: "approve" | "rework";
+    commitSha: string;
+    commitMessage: string;
+    stagedFiles: string[];
   }> = {}
 ) {
+  const payload = type === "COMMIT_RESULT"
+    ? {
+        commit_sha: overrides.commitSha ?? "abc123",
+        commit_message: overrides.commitMessage ?? "Commit message",
+        staged_files: overrides.stagedFiles ?? ["src/example.ts"],
+        metadata: {
+          internal_only: true
+        }
+      }
+    : {
+        ...(overrides.summary !== undefined ? { summary: overrides.summary } : {}),
+        ...(overrides.message !== undefined ? { message: overrides.message } : {}),
+        ...(overrides.decision !== undefined ? { decision: overrides.decision } : {}),
+        metadata: {
+          internal_only: true
+        }
+      };
   return {
     id: overrides.id ?? `env-${bubbleId}`,
     ts: "2026-02-25T00:02:00.000Z",
@@ -321,14 +341,7 @@ function rawProtocolEnvelopeFixture(
     recipient: overrides.recipient ?? "orchestrator",
     type,
     round: 2,
-    payload: {
-      ...(overrides.summary !== undefined ? { summary: overrides.summary } : {}),
-      ...(overrides.message !== undefined ? { message: overrides.message } : {}),
-      ...(overrides.decision !== undefined ? { decision: overrides.decision } : {}),
-      metadata: {
-        internal_only: true
-      }
-    },
+    payload,
     refs: ["artifact://action.md"]
   } as const;
 }
@@ -4254,7 +4267,9 @@ describe("createUiRouter action routes", () => {
           id: "env-commit-default",
           sender: "orchestrator",
           recipient: "human",
-          summary: "Committed abc123."
+          commitSha: "abc123",
+          commitMessage: "Commit message",
+          stagedFiles: ["src/example.ts"]
         }
       ),
       state: {
@@ -4406,7 +4421,7 @@ describe("createUiRouter action routes", () => {
               type: "COMMIT_RESULT",
               round: 2,
               refs: ["artifact://action.md"],
-              summary: "Committed abc123."
+              summary: "Commit message"
             },
             actionState: {
               bubbleId: "b-router-event-defaults",

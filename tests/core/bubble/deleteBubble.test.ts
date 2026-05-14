@@ -1483,7 +1483,7 @@ describe("deleteBubble", () => {
     await writeFile(historyPath, "{\"sample\":\"remote-success-keep\"}\n", "utf8");
     const remoteState = `{\n  "bubble_id": "${bubble.bubbleId}",\n  "state": "DONE"\n}\n`;
     const remoteTranscript =
-      `{"id":"msg_remote_delete_01","ts":"2026-04-18T16:19:30.000Z","bubble_id":"${bubble.bubbleId}","sender":"orchestrator","recipient":"human","type":"COMMIT_RESULT","round":2,"payload":{"metadata":{"commit_sha":"abcdef1234567890","commit_message":"bubble(${bubble.bubbleId}): finalize","staged_files":["feature.txt"]}},"refs":[]}\n`;
+      `{"id":"msg_remote_delete_01","ts":"2026-04-18T16:19:30.000Z","bubble_id":"${bubble.bubbleId}","sender":"orchestrator","recipient":"human","type":"COMMIT_RESULT","round":2,"payload":{"commit_sha":"abcdef1234567890","commit_message":"bubble(${bubble.bubbleId}): finalize","staged_files":["feature.txt"]},"refs":[]}\n`;
     const cleanupWorktreeWorkspace = vi.fn(async () => {
       throw new Error("local workspace cleanup must stay unused on remote success");
     });

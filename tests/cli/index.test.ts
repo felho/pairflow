@@ -684,11 +684,9 @@ describe("runCli", () => {
         type: "COMMIT_RESULT",
         round: 2,
         payload: {
-          metadata: {
-            commit_sha: "abcdef1234567890",
-            commit_message: "bubble(b_cli_commit_remote_01): finalize",
-            staged_files: ["feature-remote.txt"]
-          }
+          commit_sha: "abcdef1234567890",
+          commit_message: "bubble(b_cli_commit_remote_01): finalize",
+          staged_files: ["feature-remote.txt"]
         },
         refs: []
       },
