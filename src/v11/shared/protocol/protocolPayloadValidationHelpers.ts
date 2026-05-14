@@ -285,7 +285,7 @@ export function buildValidatedPayload(input: {
   const findingsParity = isRecord(payload.findings_parity)
     ? payload.findings_parity as FindingsParityMetadata
     : undefined;
-  return {
+  const validatedPayload = {
     ...(payload.summary !== undefined && isNonEmptyString(payload.summary)
       ? { summary: payload.summary }
       : {}),
@@ -312,6 +312,7 @@ export function buildValidatedPayload(input: {
       : {}),
     ...(isRecord(payload.metadata) ? { metadata: payload.metadata } : {})
   };
+  return validatedPayload as ProtocolEnvelope["payload"];
 }
 
 function validateCommitResultPayload(
@@ -408,6 +409,12 @@ export function validateEnvelopeSpecificPayload(
     errors.push({
       path: "payload.summary",
       message: "CONVERGENCE payload requires non-empty summary"
+    });
+  }
+  if (envelopeType === "APPROVAL_REQUEST" && !isNonEmptyString(payload.summary)) {
+    errors.push({
+      path: "payload.summary",
+      message: "APPROVAL_REQUEST payload requires non-empty summary"
     });
   }
   if (

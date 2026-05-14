@@ -15,18 +15,6 @@ export interface ProtocolEnvelopeMetadata {
   [key: string]: unknown;
 }
 
-interface ProtocolEnvelopePayloadBase {
-  summary?: string;
-  question?: string;
-  message?: string;
-  decision?: ApprovalDecision;
-  pass_intent?: PassIntent;
-  findings_claim_state?: FindingsClaimState;
-  findings_claim_source?: FindingsClaimSource;
-  findings?: Finding[];
-  metadata?: ProtocolEnvelopeMetadata;
-}
-
 export interface TaskProtocolEnvelopePayload {
   summary: string;
   metadata?: ProtocolEnvelopeMetadata;
@@ -58,11 +46,11 @@ export interface ConvergenceProtocolEnvelopePayload {
   metadata?: ProtocolEnvelopeMetadata;
 }
 
-export interface ApprovalRequestProtocolEnvelopePayload
-  extends ProtocolEnvelopePayloadBase {
-  summary?: string;
+export interface ApprovalRequestProtocolEnvelopePayload {
+  summary: string;
   findings?: Finding[];
   findings_parity?: FindingsParityMetadata;
+  metadata?: ProtocolEnvelopeMetadata;
 }
 
 export interface ApprovalDecisionProtocolEnvelopePayload {

@@ -109,7 +109,7 @@ function normalizeMetaReviewGateResult(
   const envelopePayload =
     typeof result.gateEnvelope.payload === "object" &&
     result.gateEnvelope.payload !== null
-      ? result.gateEnvelope.payload as Record<string, unknown>
+      ? result.gateEnvelope.payload as unknown as Record<string, unknown>
       : {};
   return {
     status: "ok",

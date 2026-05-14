@@ -531,7 +531,7 @@ function extractConvergenceEnvelopeFindings(input: {
       `converged contract case=${input.caseId}: convergence payload must be an object.`
     );
   }
-  const findingsRaw = (payload as Record<string, unknown>).findings;
+  const findingsRaw = (payload as unknown as Record<string, unknown>).findings;
   if (findingsRaw === undefined) {
     return [];
   }
@@ -589,7 +589,8 @@ function extractAdvisoryFindingsOpenTotal(input: {
       `converged contract case=${input.caseId}: convergence payload must be an object.`
     );
   }
-  const value = (payload as Record<string, unknown>).advisory_findings_open_total;
+  const value = (payload as unknown as Record<string, unknown>)
+    .advisory_findings_open_total;
   if (typeof value !== "number" || !Number.isInteger(value) || value < 0) {
     throw new Error(
       `converged contract case=${input.caseId}: convergence payload advisory_findings_open_total must be a non-negative integer.`

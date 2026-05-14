@@ -5,7 +5,10 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { buildResumeTranscriptSummary } from "../../../src/v11/application/start/internal/prompts/startCommandResumeSummary.js";
-import type { ProtocolEnvelope } from "../../../src/v11/shared/protocol/protocolEnvelopeContract.js";
+import type {
+  ApprovalRequestProtocolEnvelopePayload,
+  ProtocolEnvelope
+} from "../../../src/v11/shared/protocol/protocolEnvelopeContract.js";
 
 const tempDirs: string[] = [];
 
@@ -205,7 +208,7 @@ describe("buildResumeTranscriptSummary", () => {
             findings_artifact_open_total: null,
             findings_parity_status: ""
           }
-        } as unknown as ProtocolEnvelope["payload"]
+        } as unknown as ApprovalRequestProtocolEnvelopePayload
       })
     ]);
 
