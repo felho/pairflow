@@ -2,7 +2,7 @@
 
 **Source review**: `docs/modularity-review/2026-05-14-modularity-review-full-codebase.md`  
 **Issue**: `Protocol and findings vocabulary is still the widest volatile model`  
-**Status**: second slice complete through `24861376` (`Lift COMMIT_RESULT commit facts`); `ProtocolEnvelopePayloadBase` has no remaining code references
+**Status**: resolved in code through `f47b05ec` (`Narrow advisory protocol findings`)
 
 ## Implementation Progress
 
@@ -11,7 +11,23 @@
 - `3b8e1efb` (`Tighten CONVERGENCE protocol payload`) removed the inherited base from `CONVERGENCE` and made `advisory_findings_open_total` a required top-level protocol field.
 - `9e1ff844` (`Tighten APPROVAL_REQUEST protocol payload`) removed the inherited base from `APPROVAL_REQUEST` while keeping `findings_parity` top-level.
 - `24861376` (`Lift COMMIT_RESULT commit facts`) moved `commit_sha`, `commit_message`, and `staged_files` to required top-level `COMMIT_RESULT` payload fields and rejected commit facts under `payload.metadata`.
+- `9fcf9104` (`Read convergence advisory count from payload`) removed the remaining stale reader of `metadata.advisory_findings_open_total` and aligned the finalization fixture with the real emitter shape.
+- `f47b05ec` (`Narrow advisory protocol findings`) introduced the shared `ProtocolAdvisoryFinding` projection for `CONVERGENCE` and `APPROVAL_REQUEST`, keeping reviewer `PASS` and auto-rework `APPROVAL_DECISION` on the richer kernel `Finding` contract.
 - Follow-up check: `rg` confirms no `ProtocolEnvelopePayloadBase` references remain in `src/` or `tests/`. Remaining mentions are this task document's historical plan and end-state notes.
+
+## Closure Check
+
+The original modularity review issue is resolved for the scoped protocol/finding vocabulary work:
+
+- `ProtocolEnvelopePayloadBase` is deleted from runtime and tests; no payload interface extends a permissive shared base.
+- `ProtocolEnvelope` defaults to the strict discriminated union of per-message payload contracts; no wide/readable payload alias remains.
+- `ProtocolEnvelopeMetadata` is only an unstructured extension bag. Structured, load-bearing protocol facts moved to top-level fields: `findings_parity`, `advisory_findings_open_total`, and `COMMIT_RESULT` commit facts.
+- Append infrastructure preserves the concrete `TType` from draft to result, avoiding caller-side casts from appended envelopes back to concrete protocol message types.
+- `CONVERGENCE.findings` and `APPROVAL_REQUEST.findings` use the narrow `ProtocolAdvisoryFinding` projection; reviewer `PASS` and auto-rework `APPROVAL_DECISION` intentionally keep the richer kernel `Finding` contract.
+- Runtime validators reject parity, advisory count, commit facts, and advisory-only finding fields in the wrong payload locations.
+- Completion validation passed on the implementation commits: `pnpm typecheck`, focused protocol/converged/meta-review/approval tests, `pnpm lint`, `pnpm fitness:check:ci`, `pnpm test`, and `pnpm build`.
+
+No mandatory implementation follow-up remains for this task. Future cleanup, if desired, should be tracked separately; for example, aliasing existing advisory projection names such as `ConvergedStructuredFinding` or `MetaReviewGateAdvisoryFinding` to `ProtocolAdvisoryFinding` where import direction and naming make that clearer.
 
 ## Problem
 
