@@ -13,10 +13,17 @@ import {
 import { MetaReviewError } from "../../../../../../src/v11/shared/metaReview/metaReviewError.js";
 import type { MetaReviewResult } from "../../../../../../src/v11/shared/metaReview/metaReviewTypes.js";
 import type { LoadedStateSnapshot } from "../../../../../../src/v11/ports/stateSnapshots.js";
+import type { AppendProtocolEnvelopeInput } from "../../../../../../src/v11/ports/transcript.js";
 import { buildBubbleStateSnapshotVariant } from "../../../../../../src/v11/domain/state/snapshot/buildBubbleStateSnapshot.js";
 import { toPersistedSnapshot } from "../../../../../../src/v11/domain/state/snapshot/projection.js";
 import type { PersistedBubbleStateSnapshot } from "../../../../../../src/v11/domain/state/snapshot/persistedBubbleStateSnapshot.js";
-import type { ProtocolEnvelope } from "../../../../../../src/v11/shared/protocol/protocolEnvelopeContract.js";
+import type {
+  ApprovalDecisionProtocolEnvelopePayload,
+  ApprovalRequestProtocolEnvelopePayload,
+  ProtocolEnvelope,
+  TaskProtocolEnvelopePayload
+} from "../../../../../../src/v11/shared/protocol/protocolEnvelopeContract.js";
+import type { ProtocolMessageType } from "../../../../../../src/contracts/kernel/protocol.js";
 
 const tempDirs: string[] = [];
 
@@ -25,6 +32,34 @@ afterEach(async () => {
     tempDirs.splice(0).map((path) => rm(path, { recursive: true, force: true }))
   );
 });
+
+function approvalRequestPayload(
+  envelope: ProtocolEnvelope
+): ApprovalRequestProtocolEnvelopePayload {
+  expect(envelope.type).toBe("APPROVAL_REQUEST");
+  if (envelope.type !== "APPROVAL_REQUEST") {
+    throw new Error("Expected approval request envelope.");
+  }
+  return envelope.payload;
+}
+
+function approvalDecisionPayload(
+  envelope: ProtocolEnvelope
+): ApprovalDecisionProtocolEnvelopePayload {
+  expect(envelope.type).toBe("APPROVAL_DECISION");
+  if (envelope.type !== "APPROVAL_DECISION") {
+    throw new Error("Expected approval decision envelope.");
+  }
+  return envelope.payload;
+}
+
+function taskPayload(envelope: ProtocolEnvelope): TaskProtocolEnvelopePayload {
+  expect(envelope.type).toBe("TASK");
+  if (envelope.type !== "TASK") {
+    throw new Error("Expected task envelope.");
+  }
+  return envelope.payload;
+}
 
 function createLoadedRunningState(): LoadedStateSnapshot {
   const state: PersistedBubbleStateSnapshot = {
@@ -170,14 +205,16 @@ function createAppendEnvelopeStub(events?: string[]): {
   const envelopes: ProtocolEnvelope[] = [];
   return {
     envelopes,
-    appendEnvelope: async ({ envelope, now }) => {
+    appendEnvelope: async <TType extends ProtocolMessageType>(
+      input: AppendProtocolEnvelopeInput<TType>
+    ) => {
       events?.push("kickoff_append");
-      const envelopeNow = now ?? new Date("2026-04-22T10:05:00.000Z");
-      const withId: ProtocolEnvelope = {
-        ...envelope,
+      const envelopeNow = input.now ?? new Date("2026-04-22T10:05:00.000Z");
+      const withId = {
+        ...input.envelope,
         id: `env_${String(envelopes.length + 1).padStart(2, "0")}`,
         ts: envelopeNow.toISOString()
-      };
+      } as ProtocolEnvelope<TType>;
       envelopes.push(withId);
       return {
         envelope: withId,
@@ -620,8 +657,8 @@ describe("runCurrentRunMetaReviewGateFinalization", () => {
     const result = await runCurrentRunMetaReviewGateFinalization(fixture.finalizeInput);
 
     expect(result.route).toBe("human_gate_dispatch_failed");
-    expect(result.gateEnvelope.payload.summary).toContain("stage=exec");
-    expect(result.gateEnvelope.payload.summary).toContain("runnerStage=settle");
+    expect(approvalRequestPayload(result.gateEnvelope).summary).toContain("stage=exec");
+    expect(approvalRequestPayload(result.gateEnvelope).summary).toContain("runnerStage=settle");
   });
 
   it.each([
@@ -644,14 +681,14 @@ describe("runCurrentRunMetaReviewGateFinalization", () => {
       const result = await runCurrentRunMetaReviewGateFinalization(fixture.finalizeInput);
 
       expect(result.route).toBe("human_gate_dispatch_failed");
-      expect(result.gateEnvelope.payload.summary).toContain(
+      expect(approvalRequestPayload(result.gateEnvelope).summary).toContain(
         `stage=${expectedStage}`
       );
-      expect(result.gateEnvelope.payload.summary).toContain(
+      expect(approvalRequestPayload(result.gateEnvelope).summary).toContain(
         `runnerStage=${runnerErrorStage}`
       );
       if (runnerErrorStage === "pre_header") {
-        expect(result.gateEnvelope.payload.summary).toContain("logPath=null");
+        expect(approvalRequestPayload(result.gateEnvelope).summary).toContain("logPath=null");
       }
     }
   );
@@ -709,10 +746,10 @@ describe("runCurrentRunMetaReviewGateFinalization", () => {
 
     expect(result.route).toBe("human_gate_dispatch_failed");
     expect(fixture.runValidationCalls).toEqual([]);
-    expect(result.gateEnvelope.payload.summary).toContain("stage=spawn");
-    expect(result.gateEnvelope.payload.summary).toContain("commandId=test");
-    expect(result.gateEnvelope.payload.summary).toContain("exitCode=null");
-    expect(result.gateEnvelope.payload.summary).toContain("logPath=null");
+    expect(approvalRequestPayload(result.gateEnvelope).summary).toContain("stage=spawn");
+    expect(approvalRequestPayload(result.gateEnvelope).summary).toContain("commandId=test");
+    expect(approvalRequestPayload(result.gateEnvelope).summary).toContain("exitCode=null");
+    expect(approvalRequestPayload(result.gateEnvelope).summary).toContain("logPath=null");
   });
 
   it("uses spawn diagnostics when the approve validation runner is unavailable", async () => {
@@ -729,9 +766,9 @@ describe("runCurrentRunMetaReviewGateFinalization", () => {
 
     expect(result.route).toBe("human_gate_dispatch_failed");
     expect(fixture.runValidationCalls).toEqual([]);
-    expect(result.gateEnvelope.payload.summary).toContain("stage=spawn");
-    expect(result.gateEnvelope.payload.summary).toContain("commandId=test");
-    expect(result.gateEnvelope.payload.summary).toContain(
+    expect(approvalRequestPayload(result.gateEnvelope).summary).toContain("stage=spawn");
+    expect(approvalRequestPayload(result.gateEnvelope).summary).toContain("commandId=test");
+    expect(approvalRequestPayload(result.gateEnvelope).summary).toContain(
       "approve-gate validation runner is unavailable"
     );
   });
@@ -751,9 +788,9 @@ describe("runCurrentRunMetaReviewGateFinalization", () => {
 
     expect(result.route).toBe("human_gate_dispatch_failed");
     expect(fixture.runValidationCalls).toEqual([]);
-    expect(result.gateEnvelope.payload.summary).toContain("stage=resolve");
-    expect(result.gateEnvelope.payload.summary).toContain("commandId=test");
-    expect(result.gateEnvelope.payload.summary).toContain(
+    expect(approvalRequestPayload(result.gateEnvelope).summary).toContain("stage=resolve");
+    expect(approvalRequestPayload(result.gateEnvelope).summary).toContain("commandId=test");
+    expect(approvalRequestPayload(result.gateEnvelope).summary).toContain(
       "commands.test must be a string"
     );
   });
@@ -940,7 +977,7 @@ describe("runCurrentRunMetaReviewGateFinalization", () => {
         "meta_review:b_meta_gate_finalize_threshold_01:round:1:attempt:2",
       observed_for_round: 1
     });
-    expect(result.gateEnvelope.payload.metadata?.meta_review_handoff_id).toBe(
+    expect(taskPayload(result.gateEnvelope).metadata?.meta_review_handoff_id).toBe(
       "meta_review:b_meta_gate_finalize_threshold_01:round:1:attempt:2"
     );
     expect(delivery.paneBindingActiveCalls).toEqual([]);
@@ -1136,7 +1173,7 @@ describe("runCurrentRunMetaReviewGateFinalization", () => {
 
     expect(result.route).toBe("human_gate_dispatch_failed");
     expect(result.state.meta_review?.consecutive_clean_runs).toBe(0);
-    expect(result.gateEnvelope.payload.summary).toContain(
+    expect(approvalRequestPayload(result.gateEnvelope).summary).toContain(
       "META_REVIEW_GATE_CLEAN_RERUN_DISPATCH_FAILED: stage_error="
     );
   });
@@ -1241,7 +1278,7 @@ describe("runCurrentRunMetaReviewGateFinalization", () => {
     const result = await runCurrentRunMetaReviewGateFinalization(fixture.finalizeInput);
 
     expect(result.route).toBe("human_gate_sticky_bypass");
-    expect(result.gateEnvelope.payload.metadata).toMatchObject({
+    expect(approvalRequestPayload(result.gateEnvelope).findings_parity).toMatchObject({
       findings_claimed_open_total: 1,
       findings_blocking_open_total: 0,
       findings_advisory_open_total: 1,
@@ -1294,10 +1331,10 @@ describe("runCurrentRunMetaReviewGateFinalization", () => {
     expect(result.route).not.toBe("human_gate_sticky_bypass");
     expect(result.state.state).not.toBe("READY_FOR_HUMAN_APPROVAL");
     expect(result.state.meta_review?.consecutive_clean_runs).toBe(0);
-    expect(result.gateEnvelope.payload.summary).toContain(
+    expect(approvalRequestPayload(result.gateEnvelope).summary).toContain(
       "META_REVIEW_APPROVE_VALIDATION_FAILED"
     );
-    expect(result.gateEnvelope.payload.summary).toContain("stage=exec");
+    expect(approvalRequestPayload(result.gateEnvelope).summary).toContain("stage=exec");
   });
 
   it("unlocks human approval when the updated clean streak reaches the requirement", async () => {
@@ -1803,16 +1840,19 @@ describe("runCurrentRunMetaReviewGateFinalization", () => {
         artifactOpenTotal: 0
       }),
       readFileFn: (path, encoding) => readFile(path, encoding),
-      appendEnvelope: async ({ envelope, now }) => {
+      appendEnvelope: async <TType extends ProtocolMessageType>({
+        envelope,
+        now
+      }: AppendProtocolEnvelopeInput<TType>) => {
         appendAttempt += 1;
         if (appendAttempt === 1) {
           throw new Error("simulated kickoff append failure");
         }
-        const withId: ProtocolEnvelope = {
+        const withId = {
           ...envelope,
           id: `env_${String(envelopes.length + 1).padStart(2, "0")}`,
           ts: (now ?? new Date("2026-04-22T10:05:00.000Z")).toISOString()
-        };
+        } as ProtocolEnvelope<TType>;
         envelopes.push(withId);
         return {
           envelope: withId,
@@ -1830,7 +1870,7 @@ describe("runCurrentRunMetaReviewGateFinalization", () => {
     expect(result.route).toBe("human_gate_dispatch_failed");
     expect(write.writes[0]?.meta_review?.consecutive_clean_runs).toBe(1);
     expect(result.state.meta_review?.consecutive_clean_runs).toBe(0);
-    expect(result.gateEnvelope.payload.summary).toContain(
+    expect(approvalRequestPayload(result.gateEnvelope).summary).toContain(
       "append_error=simulated kickoff append failure"
     );
   });
@@ -1916,7 +1956,7 @@ describe("runCurrentRunMetaReviewGateFinalization", () => {
 
     expect(result.route).toBe("human_gate_dispatch_failed");
     expect(append.envelopes[0]?.type).toBe("APPROVAL_REQUEST");
-    expect(result.gateEnvelope.payload.summary).toContain(
+    expect(approvalRequestPayload(result.gateEnvelope).summary).toContain(
       "execution_context_missing_before_kickoff"
     );
   });
@@ -2013,7 +2053,7 @@ describe("runCurrentRunMetaReviewGateFinalization", () => {
 
     expect(result.route).toBe("human_gate_dispatch_failed");
     expect(append.envelopes[0]?.type).toBe("TASK");
-    expect(result.gateEnvelope.payload.summary).toContain(
+    expect(approvalRequestPayload(result.gateEnvelope).summary).toContain(
       "execution_context_missing"
     );
   });
@@ -2069,7 +2109,7 @@ describe("runCurrentRunMetaReviewGateFinalization", () => {
     expect(append.envelopes).toHaveLength(1);
     expect(append.envelopes[0]?.type).toBe("APPROVAL_REQUEST");
     expect(write.writes[0]?.meta_review?.consecutive_clean_runs).toBe(0);
-    expect(result.gateEnvelope.payload.summary).toContain(
+    expect(approvalRequestPayload(result.gateEnvelope).summary).toContain(
       "delivery_capability_unavailable"
     );
   });
@@ -2149,7 +2189,7 @@ describe("runCurrentRunMetaReviewGateFinalization", () => {
         "meta_review:b_meta_gate_finalize_threshold_01:round:1:attempt:2"
     });
     expect(result.state.meta_review?.consecutive_clean_runs).toBe(0);
-    expect(result.gateEnvelope.payload.summary).toContain(
+    expect(approvalRequestPayload(result.gateEnvelope).summary).toContain(
       "pane_notification_failed=META_REVIEW_REQUEST_DELIVERY_FAILED"
     );
     expect(delivery.paneBindingActiveCalls).toContain(false);
@@ -2232,7 +2272,7 @@ describe("runCurrentRunMetaReviewGateFinalization", () => {
         "meta_review:b_meta_gate_finalize_threshold_01:round:1:attempt:2"
     });
     expect(result.state.meta_review?.consecutive_clean_runs).toBe(0);
-    expect(result.gateEnvelope.payload.summary).toContain(
+    expect(approvalRequestPayload(result.gateEnvelope).summary).toContain(
       "pane_notification_failed=META_REVIEW_REQUEST_DELIVERY_FAILED"
     );
     expect(delivery.paneBindingActiveCalls).not.toContain(false);
@@ -2388,7 +2428,7 @@ describe("runCurrentRunMetaReviewGateFinalization", () => {
         "meta_review:b_meta_gate_finalize_threshold_01:round:1:attempt:2"
     });
     expect(result.state.meta_review?.consecutive_clean_runs).toBe(0);
-    expect(result.gateEnvelope.payload.summary).toContain(
+    expect(approvalRequestPayload(result.gateEnvelope).summary).toContain(
       "pane_notification_error=simulated pane notification failure"
     );
     expect(delivery.paneBindingActiveCalls).toContain(false);
@@ -2545,7 +2585,7 @@ describe("runCurrentRunMetaReviewGateFinalization", () => {
     expect(result.route).toBe("human_gate_dispatch_failed");
     expect(writes[0]?.meta_review?.consecutive_clean_runs).toBe(1);
     expect(result.state.meta_review?.consecutive_clean_runs).toBe(0);
-    expect(result.gateEnvelope.payload.summary).toContain(
+    expect(approvalRequestPayload(result.gateEnvelope).summary).toContain(
       "delivery_observation_error=simulated runtime delivery observation failure"
     );
     expect(delivery.paneBindingActiveCalls).toContain(false);
@@ -2632,7 +2672,7 @@ describe("runCurrentRunMetaReviewGateFinalization", () => {
     expect(writes[0]?.meta_review?.consecutive_clean_runs).toBe(1);
     expect(writes[1]?.state).toBe("READY_FOR_HUMAN_APPROVAL");
     expect(result.state.meta_review?.consecutive_clean_runs).toBe(0);
-    expect(result.gateEnvelope.payload.summary).toContain(
+    expect(approvalRequestPayload(result.gateEnvelope).summary).toContain(
       "observation_reconcile_error=META_REVIEW_GATE_TRANSITION_INVALID"
     );
     expect(delivery.paneBindingActiveCalls).toContain(false);
@@ -2745,7 +2785,7 @@ describe("runCurrentRunMetaReviewGateFinalization", () => {
 
     expect(result.route).toBe("auto_rework");
     expect(result.gateEnvelope.type).toBe("APPROVAL_DECISION");
-    expect(result.gateEnvelope.payload.metadata).toMatchObject({
+    expect(approvalDecisionPayload(result.gateEnvelope).metadata).toMatchObject({
       actor: "meta-reviewer",
       actor_agent: "claude",
       recommendation: "rework"
@@ -2824,7 +2864,7 @@ describe("runCurrentRunMetaReviewGateFinalization", () => {
     });
 
     expect(result.route).toBe("auto_rework");
-    expect(result.gateEnvelope.payload.findings).toEqual([
+    expect(approvalDecisionPayload(result.gateEnvelope).findings).toEqual([
       {
         priority: "P1",
         severity: "P1",
@@ -2901,7 +2941,7 @@ describe("runCurrentRunMetaReviewGateFinalization", () => {
     });
 
     expect(result.route).toBe("auto_rework");
-    expect(result.gateEnvelope.payload.findings).toBeUndefined();
+    expect(approvalDecisionPayload(result.gateEnvelope).findings).toBeUndefined();
   });
 
   it("does not threshold-gate the rework route when the highest open severity is below the configured minimum", async () => {
@@ -3017,12 +3057,14 @@ describe("runCurrentRunMetaReviewGateFinalization", () => {
     expect(result.route).toBe("human_gate_dispatch_failed");
     expect(result.route).not.toBe("human_gate_approve");
     expect(result.state.meta_review?.auto_rework_count).toBe(0);
-    expect(result.gateEnvelope.payload.summary).toContain(
+    expect(approvalRequestPayload(result.gateEnvelope).summary).toContain(
       "META_REVIEW_APPROVE_THRESHOLD_BACKSTOP"
     );
-    expect(result.gateEnvelope.payload.metadata).toMatchObject({
+    expect(approvalRequestPayload(result.gateEnvelope).metadata).toMatchObject({
       latest_recommendation: "approve",
-      meta_review_gate_route: "human_gate_dispatch_failed",
+      meta_review_gate_route: "human_gate_dispatch_failed"
+    });
+    expect(approvalRequestPayload(result.gateEnvelope).findings_parity).toMatchObject({
       findings_claimed_open_total: 1,
       findings_blocking_open_total: 0,
       findings_advisory_open_total: 1,
@@ -3091,10 +3133,10 @@ describe("runCurrentRunMetaReviewGateFinalization", () => {
 
     expect(result.route).toBe("human_gate_dispatch_failed");
     expect(result.route).not.toBe("human_gate_sticky_bypass");
-    expect(result.gateEnvelope.payload.summary).toContain(
+    expect(approvalRequestPayload(result.gateEnvelope).summary).toContain(
       "META_REVIEW_APPROVE_THRESHOLD_BACKSTOP"
     );
-    expect(result.gateEnvelope.payload.metadata).toMatchObject({
+    expect(approvalRequestPayload(result.gateEnvelope).metadata).toMatchObject({
       latest_recommendation: "approve",
       meta_review_gate_route: "human_gate_dispatch_failed"
     });

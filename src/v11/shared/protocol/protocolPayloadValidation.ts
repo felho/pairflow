@@ -7,6 +7,7 @@ import {
   buildValidatedPayload,
   validateEnvelopeSpecificPayload,
   validateFindingsClaimFields,
+  validatePayloadFindingsParity,
   validatePayloadMetadata,
   validateUnknownPayloadKeys
 } from "./protocolPayloadValidationHelpers.js";
@@ -21,6 +22,7 @@ export function validatePayloadByType(
     validateFindingsClaimFields(payload, errors);
   }
   validatePayloadMetadata(envelopeType, payload, errors);
+  validatePayloadFindingsParity(envelopeType, payload, errors);
 
   const findings =
     envelopeType !== "COMMIT_RESULT" && payload.findings !== undefined

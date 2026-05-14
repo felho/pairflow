@@ -37,7 +37,7 @@ function createEnvelope(
     ...base,
     ...partial,
     payload: partial.payload ?? base.payload
-  };
+  } as ProtocolEnvelope;
 }
 
 async function writeTranscript(
@@ -175,7 +175,7 @@ describe("buildResumeTranscriptSummary", () => {
         recipient: "human",
         payload: {
           summary: "Reviewer parity mismatch.",
-          metadata: {
+          findings_parity: {
             findings_claimed_open_total: 2,
             findings_artifact_open_total: 1,
             findings_parity_status: "mismatch"
@@ -200,7 +200,7 @@ describe("buildResumeTranscriptSummary", () => {
         recipient: "human",
         payload: {
           summary: "Reviewer parity unavailable.",
-          metadata: {
+          findings_parity: {
             findings_claimed_open_total: "2",
             findings_artifact_open_total: null,
             findings_parity_status: ""
@@ -235,7 +235,7 @@ describe("buildResumeTranscriptSummary", () => {
               title: "CLI guidance wording consistency"
             }
           ],
-          metadata: {
+          findings_parity: {
             findings_claimed_open_total: 2,
             findings_artifact_open_total: 2,
             findings_blocking_open_total: 0,

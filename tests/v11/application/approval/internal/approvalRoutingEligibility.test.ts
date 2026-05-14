@@ -23,12 +23,32 @@ function toErrorMessage(input: PairflowCommandErrorInput): string {
 const createError: PairflowCreateCommandError = (input) =>
   new ApprovalRoutingEligibilityTestError(toErrorMessage(input));
 
+const findingsParityFieldNames = new Set([
+  "findings_claimed_open_total",
+  "findings_artifact_open_total",
+  "findings_blocking_open_total",
+  "findings_advisory_open_total",
+  "findings_artifact_status",
+  "findings_digest_sha256",
+  "meta_review_run_id",
+  "findings_parity_status"
+]);
+
 describe("approvalRoutingEligibility", () => {
   function createApprovalRequest(
     round: number,
     recommendation?: "approve" | "rework" | "inconclusive",
     metadataOverrides?: Record<string, unknown>
   ): ProtocolEnvelope[] {
+    const metadata: Record<string, unknown> = {};
+    const findingsParity: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(metadataOverrides ?? {})) {
+      if (findingsParityFieldNames.has(key)) {
+        findingsParity[key] = value;
+      } else {
+        metadata[key] = value;
+      }
+    }
     return [
       {
         id: "msg_approval_request_01",
@@ -40,11 +60,14 @@ describe("approvalRoutingEligibility", () => {
         round,
         payload: {
           summary: "Approval summary",
+          ...(Object.keys(findingsParity).length > 0
+            ? { findings_parity: findingsParity }
+            : {}),
           metadata: {
             ...(recommendation !== undefined
               ? { latest_recommendation: recommendation }
               : {}),
-            ...metadataOverrides
+            ...metadata
           }
         },
         refs: []

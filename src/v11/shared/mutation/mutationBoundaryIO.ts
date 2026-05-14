@@ -3,16 +3,19 @@ import type {
   AppendProtocolEnvelopePort,
   AppendProtocolEnvelopeResult
 } from "../../ports/transcript.js";
+import type { ProtocolMessageType } from "../../../contracts/kernel/protocol.js";
 import type {
   LoadedStateSnapshot,
   WriteStateSnapshotOptions,
   WriteStateSnapshotPort
 } from "../../ports/stateSnapshots.js";
 
-export async function appendEnvelopeViaMutationBoundary(input: {
+export async function appendEnvelopeViaMutationBoundary<
+  TType extends ProtocolMessageType
+>(input: {
   append: AppendProtocolEnvelopePort;
-  payload: AppendProtocolEnvelopeInput;
-}): Promise<AppendProtocolEnvelopeResult> {
+  payload: AppendProtocolEnvelopeInput<TType>;
+}): Promise<AppendProtocolEnvelopeResult<TType>> {
   return input.append(input.payload);
 }
 

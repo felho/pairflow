@@ -2,7 +2,7 @@
 
 **Source review**: `docs/modularity-review/2026-05-14-modularity-review-full-codebase.md`  
 **Issue**: `Protocol and findings vocabulary is still the widest volatile model`  
-**Status**: discussion draft — key architectural decisions resolved (see "Resolved Decisions")
+**Status**: implementation in progress — key architectural decisions resolved (see "Resolved Decisions")
 
 ## Problem
 
@@ -82,6 +82,8 @@ export interface HumanReplyProtocolEnvelopePayload {
 export interface ApprovalDecisionProtocolEnvelopePayload {
   decision: ApprovalDecision;
   message?: string;
+  findings?: Finding[];
+  findings_parity?: FindingsParityMetadata;
   metadata?: ProtocolEnvelopeMetadata;
 }
 
@@ -95,6 +97,7 @@ Notes:
 
 - These interfaces no longer `extends ProtocolEnvelopePayloadBase`. Each declares only the fields valid for its message kind.
 - The exact required-vs-optional choice (e.g. `question: string` vs `question?: string`) is determined per payload from current emitter behavior. Default: required unless emitters demonstrably leave it absent on purpose.
+- `APPROVAL_DECISION` is not just a human decision payload: the auto-rework path can attach structured findings and parity metadata. Those fields are valid only because that runtime path uses them; they must not be generalized through the shared base.
 
 Heavier payload kinds (`PASS`, `CONVERGENCE`, `APPROVAL_REQUEST`, `COMMIT_RESULT`) follow in a second slice using the same pattern.
 
@@ -115,7 +118,7 @@ export interface ApprovalRequestProtocolEnvelopePayload {
 }
 ```
 
-Apply the same `findings_parity?: FindingsParityMetadata` field only on message kinds (or adjacent event/result contracts) where parity is part of the contract. The carrier list is confirmed by a brief consumer survey before implementation; current candidates are `APPROVAL_REQUEST` and `CONVERGENCE` payloads. All other payload kinds carry no parity field.
+Apply the same `findings_parity?: FindingsParityMetadata` field only on message kinds (or adjacent event/result contracts) where parity is part of the contract. The implementation survey confirmed the first-slice carriers as `APPROVAL_REQUEST` and auto-rework `APPROVAL_DECISION`. `CONVERGENCE` is not a first-slice parity carrier: it currently carries reviewer advisory counts through `metadata.advisory_findings_open_total`, not the `FindingsParityMetadata` contract. All other payload kinds carry no parity field.
 
 Note that `meta_review_result` is currently an agent emit kind / awaited output, not a kernel `ProtocolMessageType`. The consumer survey should identify the actual owners of parity metadata in the codebase; this approach does not introduce a new protocol message kind.
 
@@ -165,23 +168,42 @@ These start as warnings / report-only signals, not hard gates.
 
 The first slice contains two distinct kinds of work:
 
-**A. Low-risk payload tightening (Approach #1).** Applied to the lowest-risk payload kinds: `HUMAN_QUESTION`, `HUMAN_REPLY`, `APPROVAL_DECISION`, and possibly `TASK`. Each loses its `extends ProtocolEnvelopePayloadBase` and is rewritten with only the fields valid for that message kind.
+**A. Low-risk payload tightening (Approach #1).** Applied to the lowest-risk payload kinds: `HUMAN_QUESTION`, `HUMAN_REPLY`, `APPROVAL_DECISION`, and `TASK`. Each loses its `extends ProtocolEnvelopePayloadBase` and is rewritten with only the fields valid for that message kind.
 
-**B. Parity metadata relocation (Approach #2).** `findings_parity` is lifted to a top-level field on the message kinds (or adjacent event/result contracts) that carry parity. The carrier list is confirmed by a brief consumer survey before implementation; current candidates are `APPROVAL_REQUEST` and `CONVERGENCE`. `ProtocolEnvelopeMetadata` becomes a plain `Record<string, unknown>`.
+**B. Parity metadata relocation (Approach #2).** `findings_parity` is lifted to a top-level field on the message kinds (or adjacent event/result contracts) that carry parity. The implementation survey confirmed the first-slice carriers as `APPROVAL_REQUEST` and auto-rework `APPROVAL_DECISION`; `CONVERGENCE` is not a first-slice `FindingsParityMetadata` carrier. `ProtocolEnvelopeMetadata` becomes a plain unstructured metadata bag.
 
 Plus **Approach #4** (fitness): stale exception removed; report-only checks added.
 
-**Important boundary.** Work item B touches the heavier payload kinds (`APPROVAL_REQUEST`, `CONVERGENCE`) **only** to relocate parity to a top-level field. Their full payload tightening — removing `extends ProtocolEnvelopePayloadBase` and tightening field-by-field — is a second-slice activity, not first slice.
+**Important boundary.** Work item B touches `APPROVAL_REQUEST` **only** to relocate parity to a top-level field. Full payload tightening for heavier payloads — removing `extends ProtocolEnvelopePayloadBase` and tightening field-by-field — is a second-slice activity, not first slice.
 
 Out of scope for the first slice:
 
 - Full payload tightening for `PASS`, `CONVERGENCE`, `APPROVAL_REQUEST`, `COMMIT_RESULT` — second slice.
 - Any `Finding` projection — deferred until the empirical study (see Approach #3).
 
+Survey checkpoint:
+
+- `TASK` is included in the first slice. Runtime emitters construct `summary` plus optional source / routing metadata.
+- `HUMAN_QUESTION` carries required `question` plus optional metadata only where a specific emitter needs it.
+- `HUMAN_REPLY` carries required `message` plus delivery-target metadata.
+- `APPROVAL_DECISION` carries required `decision`, optional `message`, and can carry `findings` / `findings_parity` on the meta-review auto-rework path.
+- Confirmed top-level `findings_parity` carriers for the first slice: `APPROVAL_REQUEST` and `APPROVAL_DECISION` auto-rework. `CONVERGENCE` currently carries reviewer advisory counts through `metadata.advisory_findings_open_total`; it is not a `FindingsParityMetadata` carrier in this slice.
+
+Implementation progress checkpoint:
+
+- First-slice runtime contract edits are implemented in `src/v11/shared/protocol/protocolEnvelopeContract.ts`.
+- `HUMAN_QUESTION`, `HUMAN_REPLY`, `APPROVAL_DECISION`, and `TASK` were tightened in place, without parallel `Strict*` payload types.
+- `ProtocolEnvelopeMetadata` has been detached from `FindingsParityMetadata`.
+- Runtime emitters/readers have been migrated to top-level `payload.findings_parity` for the confirmed carriers.
+- The old flatten-to-`payload.metadata` parity helper was removed rather than kept as a compatibility shim.
+- Validator coverage now rejects parity fields under `payload.metadata` and validates them under `payload.findings_parity`.
+- Current validation evidence: `pnpm typecheck`, `pnpm lint`, `pnpm fitness:check:ci`, focused parity/protocol suites, full `pnpm test`, and `pnpm build` all pass after the first implementation pass.
+- Remaining follow-up before calling the whole task closed: decide whether to add new report-only architecture visibility checks now or leave them as a second implementation slice, and run the archive smoke test called out below.
+
 Before starting implementation:
 
-- Run a brief emitter site survey for the four lowest-risk payload kinds. Count how many emitter sites construct each payload and how many readers depend on each field. Use the result to confirm — or reorder — the "lowest risk" ranking.
-- Run a brief consumer survey to confirm which message kinds (or adjacent event/result contracts) currently carry `FindingsParityMetadata`. The current candidate list (`APPROVAL_REQUEST`, `CONVERGENCE`) is a starting point, not a definitive list.
+- Run a brief emitter site survey for the four first-slice payload kinds. Count how many emitter sites construct each payload and how many readers depend on each field. Use the result to confirm — or reorder — the implementation order.
+- Run a brief consumer survey to confirm which message kinds (or adjacent event/result contracts) currently carry `FindingsParityMetadata`. Re-check this if new meta-review gate code lands before implementation.
 
 Implementation caution:
 
@@ -194,6 +216,56 @@ Validation during implementation:
 - Add type-level tests or compile-time fixtures proving invalid fields are rejected for the tightened payloads.
 - Run the normal typecheck / lint / test path for touched behavior.
 - Smoke-test transcript loading and affected projections against a recent bubble archive. The change is compile-time only; old transcripts will not "fail to parse" at the JSON level. But runtime validation, transcript readers, or UI projection assumptions may fail if an archived payload contains fields the new strict type does not permit, or relies on parity living under `metadata` rather than at the top level. If such a failure surfaces, decide per case: ad-hoc migration script, or accept loss of that archived bubble (per Resolved Decisions).
+
+## Implementation Kickoff Plan
+
+Start with a short survey and scope lock before editing runtime contracts. This prevents accidental compatibility shims and keeps the first slice aligned with the End-State Invariants.
+
+### Feedback checkpoint: strict default envelope
+
+A first implementation pass exposed an important end-state clarification: a renamed wide payload type such as `ProtocolEnvelopeReadablePayload` is still an interim solution if it becomes the default for `ProtocolEnvelope`. The default `ProtocolEnvelope` must remain the discriminated union of strict payloads (`ProtocolEnvelopePayloadByType[ProtocolMessageType]`), so reader code is forced to narrow on `envelope.type` before reading type-specific payload fields such as `findings_parity`, `findings`, `question`, or `message`.
+
+Completion therefore requires:
+
+- no `ProtocolEnvelopeReadablePayload` or equivalent wide/readable payload alias;
+- no default `ProtocolEnvelope` payload shape where every known payload field is optional;
+- reader and projection sites updated to narrow by `envelope.type` instead of relying on a permissive payload view;
+- tests updated with concrete envelope fixtures or type guards, not `as any` casts.
+
+### Feedback checkpoint: generic append boundary
+
+Once `ProtocolEnvelope` defaults to a strict discriminated union, append infrastructure must preserve the concrete `TType` from draft to result. Otherwise callers that append a `ProtocolEnvelopeDraft<"PASS">` receive only `ProtocolEnvelope` back, and application code is pushed into `as ProtocolEnvelope<"PASS">` casts at the emit boundary.
+
+Completion therefore requires:
+
+- `AppendProtocolEnvelopeInput`, `AppendProtocolEnvelopeResult`, and `AppendProtocolEnvelopePort` generic in `TType extends ProtocolMessageType`;
+- mutation-boundary append helpers preserving the same `TType` between input draft and returned envelope;
+- application callers not casting appended results back to concrete envelope types;
+- any remaining casts confined to true runtime/TypeScript boundaries, such as validated unstructured input or generic object-spread reconstruction, with no caller-side type assertion needed.
+
+1. **Emitter and reader survey.**
+   - For `HUMAN_QUESTION`, `HUMAN_REPLY`, `APPROVAL_DECISION`, and `TASK`, list emitter sites, observed payload fields, and readers/projections that consume those fields.
+   - Separately list all `FindingsParityMetadata` carriers and consumers, especially places that flatten or read parity through `metadata`.
+2. **First-slice scope lock.**
+   - Decide whether `TASK` is included.
+   - Decide required-vs-optional fields for each first-slice payload kind.
+   - Confirm the exact carrier list for top-level `findings_parity`.
+3. **Runtime contract edits.**
+   - Update `src/v11/shared/protocol/protocolEnvelopeContract.ts`.
+   - Tighten only first-slice payload kinds.
+   - Detach `ProtocolEnvelopeMetadata` from `FindingsParityMetadata`.
+   - Add `findings_parity` only to confirmed carrier contracts.
+4. **Call-site migration.**
+   - Update emitters to use concrete `ProtocolEnvelope<"...">` / draft generics where useful.
+   - Update readers/projections to consume top-level parity instead of generic metadata.
+   - Remove or rewrite flattening helpers so they cannot remain as canonical parity paths.
+5. **Architecture visibility.**
+   - Remove the stale `src/types/protocol.ts` fitness exception.
+   - Add report-only checks for broad protocol/finding fan-out and parity leakage back into generic metadata.
+6. **Validation.**
+   - Run `pnpm typecheck`, `pnpm lint`, `pnpm fitness:check:ci`, focused tests, `pnpm test`, and `pnpm build`.
+   - Smoke-test transcript loading and affected projections against a recent bubble archive.
+   - Before declaring the slice complete, check the End-State Invariants explicitly.
 
 ## End-State Invariants
 
@@ -212,6 +284,7 @@ The first slice is "done" only when the invariants below hold across the touched
 
 - **No `as any` casts in tests** for the touched payload kinds. If a test needs to verify that an invalid envelope is rejected, it constructs that case through discriminated union narrowing or an explicit fixture, not through type erasure.
 - **No wrapper helpers that accept loose payload objects and produce typed envelopes** for the touched kinds. Emitter sites use `ProtocolEnvelope<"HUMAN_QUESTION">` (etc.) directly, without an intermediate `buildEnvelope(type, partialPayload)`-style escape hatch.
+- **No caller-side casts from appended results back to a concrete envelope type.** Append infrastructure preserves `TType` end to end, so application code does not need `appended.envelope as ProtocolEnvelope<"...">` to recover the type it just emitted.
 - **No "translate old to new" shims** kept as permanent code. If a transcript reader needs to handle archived payloads from before the change, that handling is either an explicit one-off migration script or accepted data loss (per Resolved Decisions) — not an ongoing translation layer in the runtime path.
 - **No "optional during migration" fields.** A field that emitters always populate becomes `required` in the strict type. The optional-vs-required choice reflects the actual contract, not the migration phase.
 
@@ -235,7 +308,7 @@ Open implementation-time questions (architecture-level questions are settled in 
 
 This discussion is ready to become implementation work when:
 
-- the message kinds included in the first slice are confirmed (currently: `HUMAN_QUESTION`, `HUMAN_REPLY`, `APPROVAL_DECISION`, possibly `TASK`);
+- the message kinds included in the first slice are confirmed (`HUMAN_QUESTION`, `HUMAN_REPLY`, `APPROVAL_DECISION`, and `TASK`);
 - the required-vs-optional payload fields for those message kinds are decided based on a brief emitter site survey;
 - the list of message kinds that receive a top-level `findings_parity` field is confirmed against the actual consumer list.
 

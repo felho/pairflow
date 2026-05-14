@@ -165,6 +165,9 @@ describe("createBubble", () => {
     const transcript = await readTranscriptEnvelopes(result.paths.transcriptPath);
     expect(transcript).toHaveLength(1);
     expect(transcript[0]?.type).toBe("TASK");
+    if (transcript[0]?.type !== "TASK") {
+      throw new Error("Expected TASK envelope.");
+    }
     expect(transcript[0]?.sender).toBe("orchestrator");
     expect(transcript[0]?.recipient).toBe(result.config.agents.implementer);
     expect(transcript[0]?.payload.summary).toBe("Implement feature X");

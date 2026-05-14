@@ -33,7 +33,7 @@ export interface BuildAutoConvergePassResultInput {
 export interface BuildNormalPassResultInput {
   bubbleId: string;
   sequence: number;
-  envelope: ProtocolEnvelope;
+  envelope: ProtocolEnvelope<"PASS">;
   state: BubbleStateSnapshot;
   inferredIntent: boolean;
   activation?: PassActivationProvenance;
@@ -73,7 +73,7 @@ export interface AutoConvergePassResult {
 export interface NormalPassResult {
   bubbleId: string;
   sequence: number;
-  envelope: ProtocolEnvelope;
+  envelope: ProtocolEnvelope<"PASS">;
   resultEnvelopeKind: "pass";
   state: BubbleStateSnapshot;
   inferredIntent: boolean;

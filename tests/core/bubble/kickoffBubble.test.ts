@@ -103,6 +103,9 @@ describe("kickoffBubble", () => {
     const transcript = await readTranscriptEnvelopes(created.paths.transcriptPath);
     expect(transcript).toHaveLength(1);
     expect(transcript[0]?.type).toBe("TASK");
+    if (transcript[0]?.type !== "TASK") {
+      throw new Error("Expected TASK envelope.");
+    }
     expect(transcript[0]?.payload.summary).toBe("Implement activation flow");
 
     const taskArtifact = await readFile(created.paths.taskArtifactPath, "utf8");

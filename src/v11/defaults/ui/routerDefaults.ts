@@ -181,8 +181,7 @@ export function projectBubbleStateToUiActionState(
 export function projectProtocolEnvelopeToUiActionEvent(
   envelope: ProtocolEnvelope
 ): UiActionEvent {
-  const { payload } = envelope;
-  return {
+  const event: UiActionEvent = {
     id: envelope.id,
     timestamp: envelope.ts,
     bubbleId: envelope.bubble_id,
@@ -190,21 +189,43 @@ export function projectProtocolEnvelopeToUiActionEvent(
     recipient: envelope.recipient,
     type: envelope.type,
     round: envelope.round,
-    refs: [...envelope.refs],
-    ...(payload.summary !== undefined ? { summary: payload.summary } : {}),
-    ...(payload.question !== undefined ? { question: payload.question } : {}),
-    ...(payload.message !== undefined ? { message: payload.message } : {}),
-    ...(payload.decision !== undefined ? { decision: payload.decision } : {}),
-    ...(payload.pass_intent !== undefined
-      ? { passIntent: payload.pass_intent }
-      : {}),
-    ...(payload.findings_claim_state !== undefined
-      ? { findingsClaimState: payload.findings_claim_state }
-      : {}),
-    ...(payload.findings_claim_source !== undefined
-      ? { findingsClaimSource: payload.findings_claim_source }
-      : {})
+    refs: [...envelope.refs]
   };
+  switch (envelope.type) {
+    case "TASK":
+    case "PASS":
+    case "CONVERGENCE":
+    case "APPROVAL_REQUEST":
+    case "COMMIT_RESULT":
+      if (envelope.payload.summary !== undefined) {
+        event.summary = envelope.payload.summary;
+      }
+      break;
+    case "HUMAN_QUESTION":
+      event.question = envelope.payload.question;
+      break;
+    case "HUMAN_REPLY":
+      event.message = envelope.payload.message;
+      break;
+    case "APPROVAL_DECISION":
+      event.decision = envelope.payload.decision;
+      if (envelope.payload.message !== undefined) {
+        event.message = envelope.payload.message;
+      }
+      break;
+  }
+  if (envelope.type === "PASS") {
+    if (envelope.payload.pass_intent !== undefined) {
+      event.passIntent = envelope.payload.pass_intent;
+    }
+    if (envelope.payload.findings_claim_state !== undefined) {
+      event.findingsClaimState = envelope.payload.findings_claim_state;
+    }
+    if (envelope.payload.findings_claim_source !== undefined) {
+      event.findingsClaimSource = envelope.payload.findings_claim_source;
+    }
+  }
+  return event;
 }
 
 export function projectPendingReworkIntentToUiActionPendingIntent(

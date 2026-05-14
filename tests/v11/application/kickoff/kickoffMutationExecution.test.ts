@@ -1,12 +1,45 @@
 import { describe, expect, it, vi } from "vitest";
 
 import { executeKickoffMutation } from "../../../../src/v11/application/kickoff/internal/mutation/kickoffMutationExecution.js";
+import type { ProtocolMessageType } from "../../../../src/contracts/kernel/protocol.js";
+import type {
+  AppendProtocolEnvelopeInput,
+  AppendProtocolEnvelopePort
+} from "../../../../src/v11/ports/transcript.js";
+import type { ProtocolEnvelope } from "../../../../src/v11/shared/protocol/protocolEnvelopeContract.js";
+
+function createAppendEnvelopeStub(input?: {
+  id?: string;
+  ts?: string;
+}): {
+  appendEnvelope: AppendProtocolEnvelopePort;
+  calls: AppendProtocolEnvelopeInput[];
+} {
+  const calls: AppendProtocolEnvelopeInput[] = [];
+  const appendEnvelope: AppendProtocolEnvelopePort = async <
+    TType extends ProtocolMessageType
+  >(
+    appendInput: AppendProtocolEnvelopeInput<TType>
+  ) => {
+    calls.push(appendInput);
+    return {
+      envelope: {
+        ...appendInput.envelope,
+        id: input?.id ?? "msg_20260319_0001",
+        ts: input?.ts ?? appendInput.now?.toISOString() ?? "2026-03-19T22:40:00.000Z"
+      } as ProtocolEnvelope<TType>,
+      sequence: calls.length,
+      mirrorWriteFailures: []
+    };
+  };
+  return { appendEnvelope, calls };
+}
 
 describe("executeKickoffMutation", () => {
   it("writes artifacts, snapshots transcript, and appends TASK envelope", async () => {
     const writeFile = vi.fn(async () => {});
     const readFile = vi.fn(async () => "transcript-backup");
-    const appendEnvelope = vi.fn(async () => {});
+    const { appendEnvelope, calls } = createAppendEnvelopeStub();
     const now = new Date("2026-03-19T22:40:00.000Z");
 
     const backup = await executeKickoffMutation({
@@ -30,7 +63,7 @@ describe("executeKickoffMutation", () => {
     expect(backup).toBe("transcript-backup");
     expect(writeFile).toHaveBeenCalledTimes(2);
     expect(readFile).toHaveBeenCalledWith("/tmp/transcript.ndjson", "utf8");
-    expect(appendEnvelope).toHaveBeenCalledWith({
+    expect(calls).toEqual([{
       transcriptPath: "/tmp/transcript.ndjson",
       lockPath: "/tmp/locks/b_kickoff_exec_01.lock",
       now,
@@ -48,31 +81,14 @@ describe("executeKickoffMutation", () => {
         },
         refs: ["/tmp/task.md"]
       }
-    });
+    }]);
   });
 
   it("forwards appended envelope via optional callback", async () => {
     const writeFile = vi.fn(async () => {});
     const readFile = vi.fn(async () => "transcript-backup");
     const nowIso = "2026-03-19T22:41:00.000Z";
-    const appendEnvelope = vi.fn(async () => ({
-      envelope: {
-        id: "msg_20260319_0001",
-        ts: nowIso,
-        bubble_id: "b_kickoff_exec_02",
-        sender: "orchestrator",
-        recipient: "codex",
-        type: "TASK",
-        round: 1,
-        payload: {
-          summary: "Kickoff callback task",
-          metadata: {
-            source: "inline"
-          }
-        },
-        refs: ["/tmp/task.md"]
-      }
-    }));
+    const { appendEnvelope } = createAppendEnvelopeStub({ ts: nowIso });
     const onEnvelopeAppended = vi.fn();
 
     await executeKickoffMutation({

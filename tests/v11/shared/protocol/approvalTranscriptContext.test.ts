@@ -12,7 +12,7 @@ function createApprovalRequest(
   id: string,
   round: number,
   ts: string
-): ProtocolEnvelope {
+): ProtocolEnvelope<"APPROVAL_REQUEST"> {
   return {
     id,
     ts,
@@ -31,7 +31,10 @@ function createApprovalRequest(
   };
 }
 
-function createApprovalDecision(round: number, ts: string): ProtocolEnvelope {
+function createApprovalDecision(
+  round: number,
+  ts: string
+): ProtocolEnvelope<"APPROVAL_DECISION"> {
   return {
     id: `env_round_${round}_decision`,
     ts,
@@ -103,9 +106,11 @@ describe("approvalTranscriptContext", () => {
         ...createApprovalRequest("env_parity_status", 2, "2026-04-11T20:03:00.000Z"),
         payload: {
           summary: "Parity mismatch",
-          metadata: {
-            latest_recommendation: "approve",
+          findings_parity: {
             findings_parity_status: "mismatch"
+          },
+          metadata: {
+            latest_recommendation: "approve"
           }
         }
       })
@@ -115,10 +120,12 @@ describe("approvalTranscriptContext", () => {
         ...createApprovalRequest("env_parity_counts", 2, "2026-04-11T20:03:00.000Z"),
         payload: {
           summary: "Parity count mismatch",
-          metadata: {
-            latest_recommendation: "approve",
+          findings_parity: {
             findings_claimed_open_total: 1,
             findings_artifact_open_total: 2
+          },
+          metadata: {
+            latest_recommendation: "approve"
           }
         }
       })

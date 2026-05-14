@@ -1,8 +1,11 @@
 import { join } from "node:path";
 import type { AgentName } from "../../../../../contracts/kernel/agentIdentity.js";
 import type {
-  ProtocolEnvelope,
-  ProtocolEnvelopeDraft
+  AppendProtocolEnvelopeInput,
+  AppendProtocolEnvelopePort
+} from "../../../../ports/transcript.js";
+import type {
+  ProtocolEnvelope
 } from "../../../../shared/protocol/protocolEnvelopeContract.js";
 import type { ResolvedKickoffTaskInput } from "../validation/kickoffTaskInputResolution.js";
 import { buildKickoffTaskEnvelope } from "../validation/kickoffTaskEnvelope.js";
@@ -16,13 +19,8 @@ export interface AppendKickoffMutationEnvelopeWithBackupInput {
   locksDir: string;
   now: Date;
   readFile: (path: string, encoding: "utf8") => Promise<string>;
-  appendEnvelope: (input: {
-    transcriptPath: string;
-    lockPath: string;
-    now: Date;
-    envelope: ProtocolEnvelopeDraft;
-  }) => Promise<unknown>;
-  onEnvelopeAppended?: (envelope: ProtocolEnvelope) => void;
+  appendEnvelope: AppendProtocolEnvelopePort;
+  onEnvelopeAppended?: (envelope: ProtocolEnvelope<"TASK">) => void;
 }
 
 function buildKickoffMutationTaskEnvelope(input: {
@@ -41,7 +39,7 @@ function buildKickoffMutationTaskEnvelope(input: {
 
 function buildKickoffMutationEnvelopeAppendInput(
   input: AppendKickoffMutationEnvelopeWithBackupInput
-): Parameters<AppendKickoffMutationEnvelopeWithBackupInput["appendEnvelope"]>[0] {
+): AppendProtocolEnvelopeInput<"TASK"> {
   return {
     transcriptPath: input.transcriptPath,
     lockPath: join(input.locksDir, `${input.bubbleId}.lock`),
@@ -62,12 +60,8 @@ export async function appendKickoffMutationEnvelopeWithBackup(
   const appendResult = await input.appendEnvelope(
     buildKickoffMutationEnvelopeAppendInput(input)
   );
-  const appendedEnvelope =
-    typeof appendResult === "object" && appendResult !== null
-      ? (appendResult as { envelope?: unknown }).envelope
-      : undefined;
-  if (input.onEnvelopeAppended !== undefined && appendedEnvelope !== undefined) {
-    input.onEnvelopeAppended(appendedEnvelope as ProtocolEnvelope);
+  if (input.onEnvelopeAppended !== undefined) {
+    input.onEnvelopeAppended(appendResult.envelope);
   }
   return transcriptBackup;
 }

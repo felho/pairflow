@@ -26,7 +26,7 @@ function envelope(overrides: Partial<ProtocolEnvelope> = {}): ProtocolEnvelope {
     },
     refs: [],
     ...overrides
-  };
+  } as ProtocolEnvelope;
 }
 
 describe("timelinePresenter display DTO", () => {
@@ -69,8 +69,7 @@ describe("timelinePresenter display DTO", () => {
       syntheticApproval: null
     });
     expect(entries[0]?.display.badges).toEqual([
-      { kind: "finding", label: "P1", tone: "danger" },
-      { kind: "finding", label: "PX", tone: "neutral" }
+      { kind: "finding", label: "P1", tone: "danger" }
     ]);
     expect(entries[1]?.display.summarySource).toBe("decision");
     expect(entries[1]?.display.summaryText).toBe("decision=approve");
@@ -195,8 +194,7 @@ describe("timelinePresenter display DTO", () => {
       summary: "Non-array findings."
     });
     expect(entries[3]?.payload).toStrictEqual({
-      summary: "Empty open findings.",
-      findings: []
+      summary: "Empty open findings."
     });
     expect(entries[3]?.display.badges).toEqual([]);
   });

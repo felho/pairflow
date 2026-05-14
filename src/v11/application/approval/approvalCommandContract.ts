@@ -58,7 +58,7 @@ export interface EmitApprovalDecisionInput {
 export interface EmitApprovalDecisionImmediateResult {
   bubbleId: string;
   sequence: number;
-  envelope: ProtocolEnvelope;
+  envelope: ProtocolEnvelope<"APPROVAL_DECISION">;
   state: BubbleStateSnapshot;
   delivery?: ApprovalDecisionDeliverySignalsResult;
 }

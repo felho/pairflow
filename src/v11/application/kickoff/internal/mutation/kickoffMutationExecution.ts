@@ -1,7 +1,7 @@
 import type { AgentName } from "../../../../../contracts/kernel/agentIdentity.js";
+import type { AppendProtocolEnvelopePort } from "../../../../ports/transcript.js";
 import type {
-  ProtocolEnvelope,
-  ProtocolEnvelopeDraft
+  ProtocolEnvelope
 } from "../../../../shared/protocol/protocolEnvelopeContract.js";
 import type { ResolvedKickoffTaskInput } from "../validation/kickoffTaskInputResolution.js";
 import { renderKickoffTaskArtifact } from "../validation/kickoffTaskInputResolution.js";
@@ -23,13 +23,8 @@ export interface ExecuteKickoffMutationInput {
     options: { encoding: "utf8" }
   ) => Promise<unknown>;
   readFile: (path: string, encoding: "utf8") => Promise<string>;
-  appendEnvelope: (input: {
-    transcriptPath: string;
-    lockPath: string;
-    now: Date;
-    envelope: ProtocolEnvelopeDraft;
-  }) => Promise<unknown>;
-  onEnvelopeAppended?: (envelope: ProtocolEnvelope) => void;
+  appendEnvelope: AppendProtocolEnvelopePort;
+  onEnvelopeAppended?: (envelope: ProtocolEnvelope<"TASK">) => void;
 }
 
 async function writeKickoffMutationArtifacts(

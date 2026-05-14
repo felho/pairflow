@@ -34,8 +34,8 @@ export async function buildApprovalDecisionEnvelopePayload(input: {
   round: number;
   readTranscriptEnvelopes: ResolvedApprovalCommandDependencies["readTranscriptEnvelopes"];
   createError: ApprovalDecisionFlowShape["createError"];
-}): Promise<ProtocolEnvelope["payload"]> {
-  const envelopePayload: ProtocolEnvelope["payload"] = {
+}): Promise<ProtocolEnvelope<"APPROVAL_DECISION">["payload"]> {
+  const envelopePayload: ProtocolEnvelope<"APPROVAL_DECISION">["payload"] = {
     decision: input.decision
   };
   const envelopeMetadata = await resolveApprovalDecisionMetadata({
@@ -107,7 +107,7 @@ function projectDeliveryAckToSignal(
 export async function emitApprovalDecisionDeliverySignals(input: {
   decision: ApprovalDecisionFlowShape["decision"];
   resolved: Awaited<ReturnType<ResolvedApprovalCommandDependencies["resolveBubbleById"]>>;
-  appendedEnvelope: ProtocolEnvelope;
+  appendedEnvelope: ProtocolEnvelope<"APPROVAL_DECISION">;
   messageRef: string;
   dependencies: ResolvedApprovalCommandDependencies;
 }): Promise<ApprovalDecisionDeliverySignalsResult> {
@@ -138,21 +138,22 @@ export async function emitApprovalDecisionDeliverySignals(input: {
     input.appendedEnvelope.payload.metadata !== null
       ? input.appendedEnvelope.payload.metadata
       : {};
+  const implementerEnvelope: ProtocolEnvelope<"APPROVAL_DECISION"> = {
+    ...input.appendedEnvelope,
+    recipient: input.resolved.bubbleConfig.agents.implementer,
+    payload: {
+      ...input.appendedEnvelope.payload,
+      metadata: {
+        ...existingDeliveryMetadata,
+        [deliveryTargetRoleMetadataKey]: "implementer"
+      }
+    }
+  };
   const implementerDelivery = await input.dependencies.emitDeliveryNotificationAck({
     bubbleId: input.resolved.bubbleId,
     bubbleConfig: input.resolved.bubbleConfig,
     sessionsPath: input.resolved.bubblePaths.sessionsPath,
-    envelope: {
-      ...input.appendedEnvelope,
-      recipient: input.resolved.bubbleConfig.agents.implementer,
-      payload: {
-        ...input.appendedEnvelope.payload,
-        metadata: {
-          ...existingDeliveryMetadata,
-          [deliveryTargetRoleMetadataKey]: "implementer"
-        }
-      }
-    },
+    envelope: implementerEnvelope,
     recipientRole: "implementer",
     messageRef: input.messageRef
   }).catch(() =>

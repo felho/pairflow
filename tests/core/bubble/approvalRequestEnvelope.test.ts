@@ -7,6 +7,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { appendHumanApprovalRequestEnvelope as appendHumanApprovalRequestEnvelopeImpl } from "../../../src/v11/application/metaReviewGate/internal/humanGate/approvalRequestEnvelope.js";
 import type { Finding } from "../../../src/contracts/kernel/findings.js";
 import type { AgentName } from "../../../src/contracts/kernel/agentIdentity.js";
+import type { ProtocolMessageType } from "../../../src/contracts/kernel/protocol.js";
 import { deliveryTargetRoleMetadataKey } from "../../../src/v11/shared/delivery/deliveryTargetMetadataContract.js";
 import type { FindingsParityMetadata } from "../../../src/v11/shared/metaReviewGate/findingsParityMetadataContract.js";
 import type { ProtocolEnvelope } from "../../../src/v11/shared/protocol/protocolEnvelopeContract.js";
@@ -35,18 +36,22 @@ afterEach(async () => {
 });
 
 function createAppendEnvelopeStub(now: Date): {
-  appendEnvelope: (input: AppendProtocolEnvelopeInput) => Promise<AppendProtocolEnvelopeResult>;
-  calls: AppendProtocolEnvelopeInput[];
+  appendEnvelope: <TType extends ProtocolMessageType>(
+    input: AppendProtocolEnvelopeInput<TType>
+  ) => Promise<AppendProtocolEnvelopeResult<TType>>;
+  calls: AppendProtocolEnvelopeInput<"APPROVAL_REQUEST">[];
 } {
-  const calls: AppendProtocolEnvelopeInput[] = [];
+  const calls: AppendProtocolEnvelopeInput<"APPROVAL_REQUEST">[] = [];
   return {
-    appendEnvelope: async (input) => {
-      calls.push(input);
-      const envelope: ProtocolEnvelope = {
+    appendEnvelope: async <TType extends ProtocolMessageType>(
+      input: AppendProtocolEnvelopeInput<TType>
+    ) => {
+      calls.push(input as AppendProtocolEnvelopeInput<"APPROVAL_REQUEST">);
+      const envelope = {
         id: "msg_approval_env_test_001",
         ts: now.toISOString(),
         ...input.envelope
-      };
+      } as ProtocolEnvelope<TType>;
       return {
         envelope,
         sequence: 1,
@@ -347,7 +352,7 @@ describe("appendHumanApprovalRequestEnvelope", () => {
     });
 
     expect(result.envelope.payload.summary).toBe(summary);
-    expect(result.envelope.payload.metadata).toMatchObject({
+    expect(result.envelope.payload.findings_parity).toMatchObject({
       findings_claimed_open_total: 2,
       findings_artifact_open_total: 2,
       findings_parity_status: "mismatch"
@@ -637,7 +642,9 @@ describe("appendHumanApprovalRequestEnvelope", () => {
       [deliveryTargetRoleMetadataKey]: "status",
       latest_recommendation: "approve",
       meta_review_gate_route: "human_gate_dispatch_failed",
-      meta_review_gate_reason_code: "META_REVIEW_APPROVE_THRESHOLD_BACKSTOP",
+      meta_review_gate_reason_code: "META_REVIEW_APPROVE_THRESHOLD_BACKSTOP"
+    });
+    expect(result.envelope.payload.findings_parity).toMatchObject({
       findings_claimed_open_total: 4,
       findings_blocking_open_total: 0,
       findings_advisory_open_total: 4
@@ -694,7 +701,9 @@ describe("appendHumanApprovalRequestEnvelope", () => {
       approval_summary_normalized: true,
       approval_summary_normalization_reason_code:
         "CONVERGED_SUMMARY_FINDINGS_CONTRADICTION_DEFENSE_IN_DEPTH",
-      approval_summary_consistency_status: "mismatch",
+      approval_summary_consistency_status: "mismatch"
+    });
+    expect(result.envelope.payload.findings_parity).toMatchObject({
       findings_blocking_open_total: 0,
       findings_advisory_open_total: 2
     });
@@ -888,7 +897,7 @@ describe("appendHumanApprovalRequestEnvelope", () => {
     });
 
     expect(result.envelope.payload.summary).toBe(summary);
-    expect(result.envelope.payload.metadata).toMatchObject({
+    expect(result.envelope.payload.findings_parity).toMatchObject({
       findings_claimed_open_total: 2,
       findings_artifact_open_total: null,
       findings_blocking_open_total: 0,
@@ -1001,24 +1010,24 @@ describe("appendHumanApprovalRequestEnvelope", () => {
       parityMetadata: parityMetadata as FindingsParityMetadata
     });
 
-    const metadata = result.envelope.payload.metadata ?? {};
-    expect(metadata).toMatchObject({
+    const findingsParity = result.envelope.payload.findings_parity ?? {};
+    expect(findingsParity).toMatchObject({
       findings_claimed_open_total: 0,
       findings_artifact_open_total: 0,
       findings_parity_status: "ok",
       meta_review_run_id: "run_approval_env_undefined_keys_01"
     });
     expect(
-      Object.prototype.hasOwnProperty.call(metadata, "findings_blocking_open_total")
+      Object.prototype.hasOwnProperty.call(findingsParity, "findings_blocking_open_total")
     ).toBe(false);
     expect(
-      Object.prototype.hasOwnProperty.call(metadata, "findings_advisory_open_total")
+      Object.prototype.hasOwnProperty.call(findingsParity, "findings_advisory_open_total")
     ).toBe(false);
     expect(
-      Object.prototype.hasOwnProperty.call(metadata, "findings_artifact_status")
+      Object.prototype.hasOwnProperty.call(findingsParity, "findings_artifact_status")
     ).toBe(false);
     expect(
-      Object.prototype.hasOwnProperty.call(metadata, "findings_digest_sha256")
+      Object.prototype.hasOwnProperty.call(findingsParity, "findings_digest_sha256")
     ).toBe(false);
   });
 

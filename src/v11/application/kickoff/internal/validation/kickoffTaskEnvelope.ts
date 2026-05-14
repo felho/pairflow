@@ -23,7 +23,7 @@ function buildKickoffTaskPayloadMetadata(
 
 function buildKickoffTaskPayload(
   task: ResolvedKickoffTaskInput
-): ProtocolEnvelopeDraft["payload"] {
+): ProtocolEnvelopeDraft<"TASK">["payload"] {
   return {
     summary: task.content,
     metadata: buildKickoffTaskPayloadMetadata(task)
@@ -32,7 +32,7 @@ function buildKickoffTaskPayload(
 
 export function buildKickoffTaskEnvelope(
   input: BuildKickoffTaskEnvelopeInput
-): ProtocolEnvelopeDraft {
+): ProtocolEnvelopeDraft<"TASK"> {
   return {
     bubble_id: input.bubbleId,
     sender: "orchestrator",

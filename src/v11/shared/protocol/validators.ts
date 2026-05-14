@@ -116,7 +116,7 @@ export function validateProtocolEnvelope(
     round: round as number,
     payload: validatedPayload as ProtocolEnvelope["payload"],
     refs: refs as string[]
-  });
+  } as ProtocolEnvelope);
 }
 
 export function assertValidProtocolEnvelope(input: unknown): ProtocolEnvelope {

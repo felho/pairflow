@@ -30,7 +30,7 @@ function createApprovalRequestEnvelope(
     },
     refs: [],
     ...rest
-  } satisfies ProtocolEnvelope;
+  } as ProtocolEnvelope;
 }
 
 describe("pendingApprovalSignal", () => {

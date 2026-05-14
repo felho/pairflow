@@ -327,6 +327,10 @@ describe("approval decisions", () => {
       },
       {
         emitDeliveryNotificationAck: (input) => {
+          expect(input.envelope.type).toBe("APPROVAL_DECISION");
+          if (input.envelope.type !== "APPROVAL_DECISION") {
+            throw new Error("Expected approval decision delivery envelope.");
+          }
           deliveries.push({
             recipient: input.envelope.recipient,
             type: input.envelope.type,
@@ -496,12 +500,14 @@ describe("approval decisions", () => {
         round: legacyReadyState.round,
         payload: {
           summary: "Human-gate readiness with parity inconsistency metadata.",
+          findings_parity: {
+            findings_parity_status: "guard_failed"
+          },
           metadata: {
             [deliveryTargetRoleMetadataKey]: "status",
             actor: "meta-reviewer",
             actor_agent: "codex",
-            latest_recommendation: "approve",
-            findings_parity_status: "guard_failed"
+            latest_recommendation: "approve"
           }
         },
         refs: []
@@ -975,6 +981,10 @@ describe("approval decisions", () => {
     expect(rerunFailedGate.route).toBe("human_gate_run_failed");
     expect(rerunFailedGate.state.state).toBe("READY_FOR_HUMAN_APPROVAL");
     expect(rerunFailedGate.state.meta_review?.sticky_human_gate).toBe(false);
+    expect(rerunFailedGate.gateEnvelope.type).toBe("APPROVAL_REQUEST");
+    if (rerunFailedGate.gateEnvelope.type !== "APPROVAL_REQUEST") {
+      throw new Error("Expected rerun-failed gate to emit an approval request.");
+    }
     expect(rerunFailedGate.gateEnvelope.payload.summary).toContain(
       "META_REVIEW_GATE_RUN_FAILED"
     );
@@ -1096,6 +1106,13 @@ describe("approval decisions", () => {
         payload: {
           summary:
             "META_REVIEW_APPROVE_THRESHOLD_BACKSTOP: invalid open-findings approve cannot route to human_gate_approve.",
+          findings_parity: {
+            findings_claimed_open_total: 1,
+            findings_artifact_open_total: 1,
+            findings_blocking_open_total: 0,
+            findings_advisory_open_total: 1,
+            findings_parity_status: "ok"
+          },
           metadata: {
             [deliveryTargetRoleMetadataKey]: "status",
             actor: "meta-reviewer",
@@ -1103,12 +1120,7 @@ describe("approval decisions", () => {
             latest_recommendation: "approve",
             meta_review_gate_route: "human_gate_dispatch_failed",
             meta_review_gate_reason_code:
-              "META_REVIEW_APPROVE_THRESHOLD_BACKSTOP",
-            findings_claimed_open_total: 1,
-            findings_artifact_open_total: 1,
-            findings_blocking_open_total: 0,
-            findings_advisory_open_total: 1,
-            findings_parity_status: "ok"
+              "META_REVIEW_APPROVE_THRESHOLD_BACKSTOP"
           }
         },
         refs: []
@@ -1188,12 +1200,14 @@ describe("approval decisions", () => {
         round: loaded.state.round,
         payload: {
           summary: "Parity metadata unresolved; explicit human override required.",
+          findings_parity: {
+            findings_parity_status: "guard_failed"
+          },
           metadata: {
             [deliveryTargetRoleMetadataKey]: "status",
             actor: "meta-reviewer",
             actor_agent: "codex",
-            latest_recommendation: "approve",
-            findings_parity_status: "guard_failed"
+            latest_recommendation: "approve"
           }
         },
         refs: []
@@ -1269,14 +1283,16 @@ describe("approval decisions", () => {
         round: loaded.state.round,
         payload: {
           summary: "Parity counts are inconsistent but status is marked ok.",
+          findings_parity: {
+            findings_claimed_open_total: 2,
+            findings_artifact_open_total: 1,
+            findings_parity_status: "ok"
+          },
           metadata: {
             [deliveryTargetRoleMetadataKey]: "status",
             actor: "meta-reviewer",
             actor_agent: "codex",
-            latest_recommendation: "approve",
-            findings_claimed_open_total: 2,
-            findings_artifact_open_total: 1,
-            findings_parity_status: "ok"
+            latest_recommendation: "approve"
           }
         },
         refs: []
@@ -1343,14 +1359,16 @@ describe("approval decisions", () => {
         round: loaded.state.round,
         payload: {
           summary: "Summary normalization reported mismatch.",
+          findings_parity: {
+            findings_claimed_open_total: 2,
+            findings_artifact_open_total: 2,
+            findings_parity_status: "ok"
+          },
           metadata: {
             [deliveryTargetRoleMetadataKey]: "status",
             actor: "meta-reviewer",
             actor_agent: "codex",
             latest_recommendation: "approve",
-            findings_claimed_open_total: 2,
-            findings_artifact_open_total: 2,
-            findings_parity_status: "ok",
             approval_summary_consistency_status: "mismatch"
           }
         },
@@ -1431,12 +1449,14 @@ describe("approval decisions", () => {
         round: failedLoaded.state.round,
         payload: {
           summary: "Run-failed human-gate route with unresolved findings parity.",
+          findings_parity: {
+            findings_parity_status: "guard_failed"
+          },
           metadata: {
             [deliveryTargetRoleMetadataKey]: "status",
             actor: "meta-reviewer",
             actor_agent: "codex",
-            latest_recommendation: "approve",
-            findings_parity_status: "guard_failed"
+            latest_recommendation: "approve"
           }
         },
         refs: []

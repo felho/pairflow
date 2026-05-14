@@ -10,6 +10,7 @@ import { parsePassCommandOptions } from "../../../src/cli/commands/agent/pass.js
 import {
   emitPassFromWorkspace
 } from "../../../src/v11/application/pass/passCommandOrchestration.js";
+import type { EmitPassResult } from "../../../src/v11/application/pass/passCommandContract.js";
 import { PassCommandError } from "../../../src/v11/application/pass/internal/normalPass/passCommandError.js";
 import {
   resolveMostRecentPreviousReviewerPassIsCleanFromMetadata
@@ -62,6 +63,9 @@ import type { EmitDeliveryNotificationInput } from "../../../src/v11/ports/tmuxD
 import { initGitRepository } from "../../helpers/git.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
 import { writeEvidenceLog } from "../../helpers/evidence.js";
+import type {
+  PassProtocolEnvelopePayload
+} from "../../../src/v11/shared/protocol/protocolEnvelopeContract.js";
 
 const tempDirs: string[] = [];
 const defaultWatchdogTimeoutMinutes = 60;
@@ -89,6 +93,15 @@ function resolveWatchdogTimeoutMinutes(
   return Number.isFinite(deltaMinutes) && deltaMinutes > 0
     ? deltaMinutes
     : defaultWatchdogTimeoutMinutes;
+}
+
+function passPayload(result: EmitPassResult): PassProtocolEnvelopePayload {
+  expect(result.resultEnvelopeKind).toBe("pass");
+  expect(result.envelope.type).toBe("PASS");
+  if (result.resultEnvelopeKind !== "pass" || result.envelope.type !== "PASS") {
+    throw new Error("Expected pass result envelope.");
+  }
+  return result.envelope.payload;
 }
 
 function normalizeTestStateForWrite(
@@ -414,8 +427,8 @@ describe("emitPassFromWorkspace", { timeout: 20_000 }, () => {
     expect(result.envelope.round).toBe(1);
     expect(result.envelope.sender).toBe("codex");
     expect(result.envelope.recipient).toBe("claude");
-    expect(result.envelope.payload.pass_intent).toBe("review");
-    expect(result.envelope.payload.metadata).toEqual(
+    expect(passPayload(result).pass_intent).toBe("review");
+    expect(passPayload(result).metadata).toEqual(
       expect.objectContaining({
         [deliveryTargetRoleMetadataKey]: "reviewer"
       })
@@ -532,7 +545,7 @@ describe("emitPassFromWorkspace", { timeout: 20_000 }, () => {
     });
 
     expect(result.inferredIntent).toBe(false);
-    expect(result.envelope.payload.pass_intent).toBe("task");
+    expect(passPayload(result).pass_intent).toBe("task");
   });
 
   it("emits absolute transcript fallback messageRef for PASS delivery", async () => {
@@ -614,7 +627,7 @@ describe("emitPassFromWorkspace", { timeout: 20_000 }, () => {
     expect(result.envelope.recipient).toBe("codex");
     expect(result.envelope.round).toBe(1);
     expect(result.inferredIntent).toBe(true);
-    expect(result.envelope.payload.pass_intent).toBe("fix_request");
+    expect(passPayload(result).pass_intent).toBe("fix_request");
 
     const updated = await readStateSnapshot(bubble.paths.statePath);
     expect(updated.state.round).toBe(2);
@@ -682,7 +695,7 @@ describe("emitPassFromWorkspace", { timeout: 20_000 }, () => {
 
     expect(result.envelope.type).toBe("PASS");
     expect(result.envelope.round).toBe(3);
-    expect(result.envelope.payload.pass_intent).toBe("fix_request");
+    expect(passPayload(result).pass_intent).toBe("fix_request");
     expect(result.state.active_role).toBe("implementer");
     expect(result.state.round).toBe(4);
   });
@@ -806,10 +819,10 @@ describe("emitPassFromWorkspace", { timeout: 20_000 }, () => {
     expect(result.repeatCleanReasonCode).toBe(repeatCleanRound1DisabledReasonCode);
     expect(result.repeatCleanReasonDetail).toBe("round_gate_disabled");
     expect(result.repeatCleanTrigger).toBe(false);
-    expect(result.envelope.payload.pass_intent).toBe("review");
-    expect(result.envelope.payload.findings_claim_state).toBe("clean");
-    expect(result.envelope.payload.findings_claim_source).toBe("payload_flags");
-    expect(result.envelope.payload.findings).toEqual([]);
+    expect(passPayload(result).pass_intent).toBe("review");
+    expect(passPayload(result).findings_claim_state).toBe("clean");
+    expect(passPayload(result).findings_claim_source).toBe("payload_flags");
+    expect(passPayload(result).findings).toEqual([]);
   });
 
   it("emits open structured findings claim on reviewer fix_request PASS", async () => {
@@ -850,9 +863,9 @@ describe("emitPassFromWorkspace", { timeout: 20_000 }, () => {
       now: new Date("2026-02-21T12:07:00.000Z")
     });
 
-    expect(result.envelope.payload.pass_intent).toBe("fix_request");
-    expect(result.envelope.payload.findings_claim_state).toBe("open_findings");
-    expect(result.envelope.payload.findings_claim_source).toBe(
+    expect(passPayload(result).pass_intent).toBe("fix_request");
+    expect(passPayload(result).findings_claim_state).toBe("open_findings");
+    expect(passPayload(result).findings_claim_source).toBe(
       "payload_findings_count"
     );
   });
@@ -889,8 +902,8 @@ describe("emitPassFromWorkspace", { timeout: 20_000 }, () => {
       cwd: bubble.paths.worktreePath,
       now: new Date("2026-02-21T12:07:00.000Z")
     });
-    expect(reviewerPass.envelope.payload.findings_claim_state).toBe("clean");
-    expect(reviewerPass.envelope.payload.findings_claim_source).toBe("payload_flags");
+    expect(passPayload(reviewerPass).findings_claim_state).toBe("clean");
+    expect(passPayload(reviewerPass).findings_claim_source).toBe("payload_flags");
 
     const implementerPass = await emitPassFromWorkspace({
       summary: "Implemented requested follow-up.",
@@ -936,8 +949,8 @@ describe("emitPassFromWorkspace", { timeout: 20_000 }, () => {
       now: new Date("2026-02-21T12:07:00.000Z")
     });
 
-    expect(result.envelope.payload.pass_intent).toBe("review");
-    expect(result.envelope.payload.findings).toEqual([]);
+    expect(passPayload(result).pass_intent).toBe("review");
+    expect(passPayload(result).findings).toEqual([]);
   });
 
   it("allows reviewer --no-findings when summary says no open severity findings remain", async () => {
@@ -973,8 +986,8 @@ describe("emitPassFromWorkspace", { timeout: 20_000 }, () => {
       now: new Date("2026-02-21T12:07:00.000Z")
     });
 
-    expect(result.envelope.payload.pass_intent).toBe("review");
-    expect(result.envelope.payload.findings).toEqual([]);
+    expect(passPayload(result).pass_intent).toBe("review");
+    expect(passPayload(result).findings).toEqual([]);
   });
 
   it("allows reviewer --no-findings for multi-severity alternation clean phrasing", async () => {
@@ -1022,8 +1035,8 @@ describe("emitPassFromWorkspace", { timeout: 20_000 }, () => {
         now: new Date("2026-02-21T12:07:00.000Z")
       });
 
-      expect(result.envelope.payload.pass_intent).toBe("review");
-      expect(result.envelope.payload.findings).toEqual([]);
+      expect(passPayload(result).pass_intent).toBe("review");
+      expect(passPayload(result).findings).toEqual([]);
     }
   });
 
@@ -1060,8 +1073,8 @@ describe("emitPassFromWorkspace", { timeout: 20_000 }, () => {
       now: new Date("2026-02-21T12:07:00.000Z")
     });
 
-    expect(result.envelope.payload.pass_intent).toBe("review");
-    expect(result.envelope.payload.findings).toEqual([]);
+    expect(passPayload(result).pass_intent).toBe("review");
+    expect(passPayload(result).findings).toEqual([]);
   });
 
   it("allows reviewer --no-findings when summary says no active findings", async () => {
@@ -1097,8 +1110,8 @@ describe("emitPassFromWorkspace", { timeout: 20_000 }, () => {
       now: new Date("2026-02-21T12:07:00.000Z")
     });
 
-    expect(result.envelope.payload.pass_intent).toBe("review");
-    expect(result.envelope.payload.findings).toEqual([]);
+    expect(passPayload(result).pass_intent).toBe("review");
+    expect(passPayload(result).findings).toEqual([]);
   });
 
   it("allows reviewer --no-findings when summary uses double-qualifier no-findings phrasing", async () => {
@@ -1138,8 +1151,8 @@ describe("emitPassFromWorkspace", { timeout: 20_000 }, () => {
         now: new Date("2026-02-21T12:07:00.000Z")
       });
 
-      expect(result.envelope.payload.pass_intent).toBe("review");
-      expect(result.envelope.payload.findings).toEqual([]);
+      expect(passPayload(result).pass_intent).toBe("review");
+      expect(passPayload(result).findings).toEqual([]);
     }
   });
 
@@ -1176,8 +1189,8 @@ describe("emitPassFromWorkspace", { timeout: 20_000 }, () => {
       now: new Date("2026-02-21T12:07:00.000Z")
     });
 
-    expect(result.envelope.payload.pass_intent).toBe("review");
-    expect(result.envelope.payload.findings).toEqual([]);
+    expect(passPayload(result).pass_intent).toBe("review");
+    expect(passPayload(result).findings).toEqual([]);
   });
 
   it("allows reviewer --no-findings when summary says findings remain: 0", async () => {
@@ -1213,8 +1226,8 @@ describe("emitPassFromWorkspace", { timeout: 20_000 }, () => {
       now: new Date("2026-02-21T12:07:00.000Z")
     });
 
-    expect(result.envelope.payload.pass_intent).toBe("review");
-    expect(result.envelope.payload.findings).toEqual([]);
+    expect(passPayload(result).pass_intent).toBe("review");
+    expect(passPayload(result).findings).toEqual([]);
   });
 
   it("allows reviewer --no-findings for severity zero-count phrasing variants", async () => {
@@ -1255,8 +1268,8 @@ describe("emitPassFromWorkspace", { timeout: 20_000 }, () => {
         now: new Date("2026-02-21T12:07:00.000Z")
       });
 
-      expect(result.envelope.payload.pass_intent).toBe("review");
-      expect(result.envelope.payload.findings).toEqual([]);
+      expect(passPayload(result).pass_intent).toBe("review");
+      expect(passPayload(result).findings).toEqual([]);
     }
   });
 
@@ -1293,8 +1306,8 @@ describe("emitPassFromWorkspace", { timeout: 20_000 }, () => {
       now: new Date("2026-02-21T12:07:00.000Z")
     });
 
-    expect(result.envelope.payload.pass_intent).toBe("review");
-    expect(result.envelope.payload.findings).toEqual([]);
+    expect(passPayload(result).pass_intent).toBe("review");
+    expect(passPayload(result).findings).toEqual([]);
   });
 
   it("allows reviewer --no-findings when summary uses natural negation terminal variants", async () => {
@@ -1340,8 +1353,8 @@ describe("emitPassFromWorkspace", { timeout: 20_000 }, () => {
         now: new Date("2026-02-21T12:07:00.000Z")
       });
 
-      expect(result.envelope.payload.pass_intent).toBe("review");
-      expect(result.envelope.payload.findings).toEqual([]);
+      expect(passPayload(result).pass_intent).toBe("review");
+      expect(passPayload(result).findings).toEqual([]);
     }
   });
 
@@ -1378,8 +1391,8 @@ describe("emitPassFromWorkspace", { timeout: 20_000 }, () => {
       now: new Date("2026-02-21T12:07:00.000Z")
     });
 
-    expect(result.envelope.payload.pass_intent).toBe("review");
-    expect(result.envelope.payload.findings).toEqual([]);
+    expect(passPayload(result).pass_intent).toBe("review");
+    expect(passPayload(result).findings).toEqual([]);
   });
 
   it("allows reviewer --no-findings when summary says severity findings were addressed", async () => {
@@ -1415,8 +1428,8 @@ describe("emitPassFromWorkspace", { timeout: 20_000 }, () => {
       now: new Date("2026-02-21T12:07:00.000Z")
     });
 
-    expect(result.envelope.payload.pass_intent).toBe("review");
-    expect(result.envelope.payload.findings).toEqual([]);
+    expect(passPayload(result).pass_intent).toBe("review");
+    expect(passPayload(result).findings).toEqual([]);
   });
 
   it("allows reviewer --no-findings when summary uses disjointed resolved severity phrasing", async () => {
@@ -1457,8 +1470,8 @@ describe("emitPassFromWorkspace", { timeout: 20_000 }, () => {
         now: new Date("2026-02-21T12:07:00.000Z")
       });
 
-      expect(result.envelope.payload.pass_intent).toBe("review");
-      expect(result.envelope.payload.findings).toEqual([]);
+      expect(passPayload(result).pass_intent).toBe("review");
+      expect(passPayload(result).findings).toEqual([]);
     }
   });
 
@@ -1508,8 +1521,8 @@ describe("emitPassFromWorkspace", { timeout: 20_000 }, () => {
         now: new Date("2026-02-21T12:07:00.000Z")
       });
 
-      expect(result.envelope.payload.pass_intent).toBe("review");
-      expect(result.envelope.payload.findings).toEqual([]);
+      expect(passPayload(result).pass_intent).toBe("review");
+      expect(passPayload(result).findings).toEqual([]);
     }
   });
 
@@ -1550,8 +1563,8 @@ describe("emitPassFromWorkspace", { timeout: 20_000 }, () => {
         now: new Date("2026-02-21T12:07:00.000Z")
       });
 
-      expect(result.envelope.payload.pass_intent).toBe("review");
-      expect(result.envelope.payload.findings).toEqual([]);
+      expect(passPayload(result).pass_intent).toBe("review");
+      expect(passPayload(result).findings).toEqual([]);
     }
   });
 
@@ -1980,8 +1993,8 @@ describe("emitPassFromWorkspace", { timeout: 20_000 }, () => {
       now: new Date("2026-02-21T12:07:00.000Z")
     });
 
-    expect(result.envelope.payload.pass_intent).toBe("review");
-    expect(result.envelope.payload.findings).toEqual([]);
+    expect(passPayload(result).pass_intent).toBe("review");
+    expect(passPayload(result).findings).toEqual([]);
   });
 
   it("rejects reviewer --no-findings via pass at round>=severity_gate_round with no side effects", async () => {
@@ -2196,8 +2209,8 @@ describe("emitPassFromWorkspace", { timeout: 20_000 }, () => {
     });
 
     expect(result.envelope.type).toBe("PASS");
-    expect(result.envelope.payload.pass_intent).toBe("fix_request");
-    expect(result.envelope.payload.findings).toEqual([
+    expect(passPayload(result).pass_intent).toBe("fix_request");
+    expect(passPayload(result).findings).toEqual([
       {
         priority: "P3",
         severity: "P3",
@@ -2265,8 +2278,8 @@ describe("emitPassFromWorkspace", { timeout: 20_000 }, () => {
     });
 
     expect(result.envelope.type).toBe("PASS");
-    expect(result.envelope.payload.pass_intent).toBe("fix_request");
-    expect(result.envelope.payload.findings).toEqual([
+    expect(passPayload(result).pass_intent).toBe("fix_request");
+    expect(passPayload(result).findings).toEqual([
       {
         priority: "P2",
         severity: "P2",
@@ -2374,7 +2387,7 @@ describe("emitPassFromWorkspace", { timeout: 20_000 }, () => {
     });
 
     expect(result.envelope.type).toBe("PASS");
-    expect(result.envelope.payload.pass_intent).toBe("fix_request");
+    expect(passPayload(result).pass_intent).toBe("fix_request");
     expect(result.state.active_role).toBe("implementer");
     expect(result.state.round).toBe(5);
   });
@@ -2507,7 +2520,7 @@ describe("emitPassFromWorkspace", { timeout: 20_000 }, () => {
     });
 
     expect(result.envelope.type).toBe("PASS");
-    expect(result.envelope.payload.pass_intent).toBe("fix_request");
+    expect(passPayload(result).pass_intent).toBe("fix_request");
     expect(result.state.active_role).toBe("implementer");
     expect(result.state.round).toBe(5);
   });
@@ -2537,7 +2550,7 @@ describe("emitPassFromWorkspace", { timeout: 20_000 }, () => {
       cwd: bubble.paths.worktreePath
     });
 
-    expect(result.envelope.payload.findings).toEqual([
+    expect(passPayload(result).findings).toEqual([
       {
         priority: "P2",
         severity: "P2",
@@ -2591,7 +2604,7 @@ describe("emitPassFromWorkspace", { timeout: 20_000 }, () => {
       cwd: bubble.paths.worktreePath
     });
 
-    expect(result.envelope.payload.findings).toEqual([
+    expect(passPayload(result).findings).toEqual([
       {
         priority: "P1",
         severity: "P1",
@@ -2662,7 +2675,7 @@ describe("emitPassFromWorkspace", { timeout: 20_000 }, () => {
       cwd: bubble.paths.worktreePath
     });
 
-    expect(result.envelope.payload.findings).toEqual([
+    expect(passPayload(result).findings).toEqual([
       {
         priority: "P1",
         severity: "P1",
@@ -2744,7 +2757,7 @@ describe("emitPassFromWorkspace", { timeout: 20_000 }, () => {
     expect(result.repeatCleanReasonDetail).toBe("previous_reviewer_pass_absent");
     expect(result.state.state).toBe("RUNNING");
     expect(result.state.active_role).toBe("implementer");
-    expect(result.envelope.payload.metadata).toEqual(
+    expect(passPayload(result).metadata).toEqual(
       expect.objectContaining({
         transition_decision: "normal_pass",
         reason_code: repeatCleanPreviousMissingReasonCode,
@@ -2798,7 +2811,7 @@ describe("emitPassFromWorkspace", { timeout: 20_000 }, () => {
     expect(result.repeatCleanTrigger).toBe(false);
     expect(result.repeatCleanReasonCode).toBe(repeatCleanPreviousNotCleanReasonCode);
     expect(result.repeatCleanReasonDetail).toBe("previous_reviewer_pass_not_clean");
-    expect(result.envelope.payload.metadata).toEqual(
+    expect(passPayload(result).metadata).toEqual(
       expect.objectContaining({
         transition_decision: "normal_pass",
         reason_code: repeatCleanPreviousNotCleanReasonCode,
@@ -3400,7 +3413,7 @@ describe("emitPassFromWorkspace", { timeout: 20_000 }, () => {
       cwd: bubble.paths.worktreePath
     });
 
-    expect(result.envelope.payload.findings).toEqual([
+    expect(passPayload(result).findings).toEqual([
       {
         priority: "P1",
         severity: "P1",
@@ -3446,7 +3459,7 @@ describe("emitPassFromWorkspace", { timeout: 20_000 }, () => {
       cwd: bubble.paths.worktreePath
     });
 
-    expect(result.envelope.payload.findings).toEqual([
+    expect(passPayload(result).findings).toEqual([
       {
         priority: "P0",
         severity: "P0",
@@ -3495,8 +3508,8 @@ describe("emitPassFromWorkspace", { timeout: 20_000 }, () => {
     });
 
     expect(result.inferredIntent).toBe(true);
-    expect(result.envelope.payload.pass_intent).toBe("fix_request");
-    expect(result.envelope.payload.findings).toEqual([
+    expect(passPayload(result).pass_intent).toBe("fix_request");
+    expect(passPayload(result).findings).toEqual([
       {
         priority: "P1",
         severity: "P1",
@@ -3548,7 +3561,7 @@ describe("emitPassFromWorkspace", { timeout: 20_000 }, () => {
       cwd: bubble.paths.worktreePath
     });
 
-    expect(result.envelope.payload.findings).toEqual([
+    expect(passPayload(result).findings).toEqual([
       {
         priority: "P1",
         severity: "P1",
@@ -3604,7 +3617,7 @@ describe("emitPassFromWorkspace", { timeout: 20_000 }, () => {
       cwd: bubble.paths.worktreePath
     });
 
-    expect(result.envelope.payload.findings).toEqual([
+    expect(passPayload(result).findings).toEqual([
       {
         priority: "P1",
         severity: "P1",
@@ -3662,8 +3675,8 @@ describe("emitPassFromWorkspace", { timeout: 20_000 }, () => {
     });
 
     expect(result.inferredIntent).toBe(true);
-    expect(result.envelope.payload.pass_intent).toBe("fix_request");
-    expect(result.envelope.payload.findings).toEqual([
+    expect(passPayload(result).pass_intent).toBe("fix_request");
+    expect(passPayload(result).findings).toEqual([
       {
         priority: "P2",
         severity: "P2",
@@ -3718,7 +3731,7 @@ describe("emitPassFromWorkspace", { timeout: 20_000 }, () => {
       cwd: bubble.paths.worktreePath
     });
 
-    expect(result.envelope.payload.findings).toEqual([
+    expect(passPayload(result).findings).toEqual([
       {
         priority: "P2",
         timing: "required-now",
@@ -3775,7 +3788,7 @@ describe("emitPassFromWorkspace", { timeout: 20_000 }, () => {
       cwd: bubble.paths.worktreePath
     });
 
-    expect(result.envelope.payload.findings).toEqual([
+    expect(passPayload(result).findings).toEqual([
       {
         priority: "P2",
         timing: "later-hardening",
@@ -3875,7 +3888,7 @@ describe("emitPassFromWorkspace", { timeout: 20_000 }, () => {
       cwd: bubble.paths.worktreePath
     });
 
-    expect(result.envelope.payload.findings).toEqual([]);
+    expect(passPayload(result).findings).toEqual([]);
     const artifact = await readDocContractGateArtifact(gateArtifactPath);
     expect(artifact).toBeDefined();
     expect(artifact?.review_warnings).toEqual([]);
@@ -3984,7 +3997,7 @@ describe("emitPassFromWorkspace", { timeout: 20_000 }, () => {
       cwd: bubble.paths.worktreePath
     });
 
-    expect(result.envelope.payload.findings).toEqual([
+    expect(passPayload(result).findings).toEqual([
       {
         priority: "P1",
         timing: "required-now",
@@ -4044,7 +4057,7 @@ describe("emitPassFromWorkspace", { timeout: 20_000 }, () => {
       cwd: bubble.paths.worktreePath
     });
 
-    expect(result.envelope.payload.findings).toEqual([
+    expect(passPayload(result).findings).toEqual([
       {
         priority: "P1",
         timing: "required-now",
@@ -4124,7 +4137,7 @@ describe("emitPassFromWorkspace", { timeout: 20_000 }, () => {
         now: new Date("2026-02-21T12:20:00.000Z")
       });
 
-      expect(result.envelope.payload.findings).toEqual([
+      expect(passPayload(result).findings).toEqual([
         {
           title: "Declared blocker without evidence should be counted by effective priority",
           priority: "P1",
@@ -4464,8 +4477,8 @@ present`,
     });
 
     expect(result.inferredIntent).toBe(false);
-    expect(result.envelope.payload.pass_intent).toBe("review");
-    expect(result.envelope.payload.findings).toEqual([]);
+    expect(passPayload(result).pass_intent).toBe("review");
+    expect(passPayload(result).findings).toEqual([]);
   });
 
   it("does not attach reviewer test directive metadata on reviewer PASS", async () => {
@@ -4564,8 +4577,8 @@ present`,
     });
 
     expect(result.inferredIntent).toBe(false);
-    expect(result.envelope.payload.pass_intent).toBe("fix_request");
-    expect(result.envelope.payload.findings).toEqual([
+    expect(passPayload(result).pass_intent).toBe("fix_request");
+    expect(passPayload(result).findings).toEqual([
       {
         priority: "P2",
         severity: "P2",
@@ -5608,7 +5621,7 @@ present`,
 
     expect(result.resultEnvelopeKind).toBe("pass");
     expect(result.envelope.sender).toBe(bubble.config.agents.reviewer);
-    expect(result.envelope.payload.pass_intent).toBe("review");
+    expect(passPayload(result).pass_intent).toBe("review");
     expect(result.envelope.refs).toEqual([".pairflow/evidence/lint.log"]);
   });
 
@@ -5629,7 +5642,7 @@ present`,
     });
 
     expect(result.resultEnvelopeKind).toBe("pass");
-    expect(result.envelope.payload.pass_intent).toBe("review");
+    expect(passPayload(result).pass_intent).toBe("review");
     expect(result.envelope.refs).toEqual(["artifact://handoff.md"]);
   });
 

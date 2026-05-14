@@ -93,8 +93,18 @@ function normalizeResumeResult(
     status: "ok",
     reasonCode: "RESUMED",
     envelopeType: result.envelope.type,
-    hasMessage: typeof result.envelope.payload.message === "string",
-    messageMatchesDefault: result.envelope.payload.message === DEFAULT_RESUME_MESSAGE,
+    hasMessage:
+      result.envelope.type === "HUMAN_REPLY" ||
+      result.envelope.type === "APPROVAL_DECISION" ||
+      result.envelope.type === "COMMIT_RESULT"
+        ? typeof result.envelope.payload.message === "string"
+        : false,
+    messageMatchesDefault:
+      result.envelope.type === "HUMAN_REPLY" ||
+      result.envelope.type === "APPROVAL_DECISION" ||
+      result.envelope.type === "COMMIT_RESULT"
+        ? result.envelope.payload.message === DEFAULT_RESUME_MESSAGE
+        : false,
     stateSubset: {
       state: result.state.state
     },

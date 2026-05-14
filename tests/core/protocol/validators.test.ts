@@ -384,7 +384,7 @@ describe("protocol envelope schema", () => {
       round: 1,
       payload: {
         summary: "Approval request",
-        metadata: {
+        findings_parity: {
           findings_claimed_open_total: 2,
           findings_artifact_open_total: 2,
           findings_blocking_open_total: 0,
@@ -409,7 +409,7 @@ describe("protocol envelope schema", () => {
       round: 1,
       payload: {
         summary: "Approval request",
-        metadata: {
+        findings_parity: {
           findings_blocking_open_total: -1,
           findings_advisory_open_total: "2",
           findings_parity_status: "partial"
@@ -425,19 +425,19 @@ describe("protocol envelope schema", () => {
     expect(
       result.errors.some(
         (error) =>
-          error.path === "payload.metadata.findings_blocking_open_total"
+          error.path === "payload.findings_parity.findings_blocking_open_total"
       )
     ).toBe(true);
     expect(
       result.errors.some(
         (error) =>
-          error.path === "payload.metadata.findings_advisory_open_total"
+          error.path === "payload.findings_parity.findings_advisory_open_total"
       )
     ).toBe(true);
     expect(
       result.errors.some(
         (error) =>
-          error.path === "payload.metadata.findings_parity_status"
+          error.path === "payload.findings_parity.findings_parity_status"
       )
     ).toBe(true);
   });
@@ -492,6 +492,10 @@ describe("protocol envelope schema", () => {
     if (!result.ok) {
       return;
     }
+    expect(result.value.type).toBe("PASS");
+    if (result.value.type !== "PASS") {
+      throw new Error("Expected pass envelope validation result.");
+    }
     expect(result.value.payload.findings).toEqual([
       {
         priority: "P1",
@@ -528,6 +532,10 @@ describe("protocol envelope schema", () => {
     expect(result.ok).toBe(true);
     if (!result.ok) {
       return;
+    }
+    expect(result.value.type).toBe("PASS");
+    if (result.value.type !== "PASS") {
+      throw new Error("Expected pass envelope validation result.");
     }
     expect(result.value.payload.findings).toEqual([
       {

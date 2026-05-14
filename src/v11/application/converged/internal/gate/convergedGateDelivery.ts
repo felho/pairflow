@@ -11,6 +11,7 @@ import { resolveUniquelyConfiguredRoleForAgent } from "../../../../domain/agentI
 import type { AgentName } from "../../../../../contracts/kernel/agentIdentity.js";
 import type { BubbleConfig } from "../../../../shared/config/bubbleConfigTypes.js";
 import type { ProtocolParticipant } from "../../../../../contracts/kernel/protocol.js";
+import type { ProtocolMessageType } from "../../../../../contracts/kernel/protocol.js";
 import {
   deliveryTargetRoleMetadataKey,
   parseDeliveryTargetRoleMetadata,
@@ -45,10 +46,10 @@ interface NormalizedConvergedDelivery {
   reason_code?: DeliveryAckReasonCode;
 }
 
-function withDeliveryTargetRole(
-  envelope: ProtocolEnvelope,
+function withDeliveryTargetRole<TType extends ProtocolMessageType>(
+  envelope: ProtocolEnvelope<TType>,
   role: DeliveryTargetRole
-): ProtocolEnvelope {
+): ProtocolEnvelope<TType> {
   const existingMetadata =
     typeof envelope.payload.metadata === "object" &&
     envelope.payload.metadata !== null
@@ -63,7 +64,7 @@ function withDeliveryTargetRole(
         [deliveryTargetRoleMetadataKey]: role
       }
     }
-  };
+  } as ProtocolEnvelope<TType>;
 }
 
 function resolveCompatParticipantRoleFromAgents(input: {

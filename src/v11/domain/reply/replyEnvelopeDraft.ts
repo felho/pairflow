@@ -20,7 +20,7 @@ export interface BuildHumanReplyEnvelopeDraftInput {
 
 export function buildHumanReplyEnvelopeDraft(
   input: BuildHumanReplyEnvelopeDraftInput
-): ProtocolEnvelopeDraft {
+): ProtocolEnvelopeDraft<"HUMAN_REPLY"> {
   return {
     bubble_id: input.bubbleId,
     sender: "human",

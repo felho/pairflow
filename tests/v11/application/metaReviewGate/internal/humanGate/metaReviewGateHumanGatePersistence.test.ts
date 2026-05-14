@@ -2,8 +2,11 @@ import { describe, expect, it } from "vitest";
 
 import { persistHumanGateRoute } from "../../../../../../src/v11/application/metaReviewGate/internal/humanGate/metaReviewGateHumanGatePersistence.js";
 import type { LoadedStateSnapshot } from "../../../../../../src/v11/ports/stateSnapshots.js";
+import type { AppendProtocolEnvelopeInput } from "../../../../../../src/v11/ports/transcript.js";
 import { buildBubbleStateSnapshotVariant } from "../../../../../../src/v11/domain/state/snapshot/buildBubbleStateSnapshot.js";
 import type { PersistedBubbleStateSnapshot } from "../../../../../../src/v11/domain/state/snapshot/persistedBubbleStateSnapshot.js";
+import type { ProtocolMessageType } from "../../../../../../src/contracts/kernel/protocol.js";
+import type { ProtocolEnvelope } from "../../../../../../src/v11/shared/protocol/protocolEnvelopeContract.js";
 
 function createLoadedRunningState(): LoadedStateSnapshot {
   const state: PersistedBubbleStateSnapshot = {
@@ -55,12 +58,14 @@ describe("persistHumanGateRoute", () => {
 
     await expect(
       persistHumanGateRoute({
-        appendEnvelope: async ({ envelope }) => ({
+        appendEnvelope: async <TType extends ProtocolMessageType>(
+          input: AppendProtocolEnvelopeInput<TType>
+        ) => ({
           envelope: {
-            ...envelope,
+            ...input.envelope,
             id: "env_meta_gate_human_route_missing_recommendation",
             ts: "2026-03-22T11:05:00.000Z"
-          },
+          } as ProtocolEnvelope<TType>,
           sequence: 7,
           mirrorWriteFailures: []
         }),
@@ -92,12 +97,14 @@ describe("persistHumanGateRoute", () => {
     const writes: PersistedBubbleStateSnapshot[] = [];
 
     const result = await persistHumanGateRoute({
-      appendEnvelope: async ({ envelope }) => ({
+      appendEnvelope: async <TType extends ProtocolMessageType>(
+        input: AppendProtocolEnvelopeInput<TType>
+      ) => ({
         envelope: {
-          ...envelope,
+          ...input.envelope,
           id: "env_meta_gate_human_route_01",
           ts: "2026-03-22T11:05:00.000Z"
-        },
+        } as ProtocolEnvelope<TType>,
         sequence: 7,
         mirrorWriteFailures: []
       }),

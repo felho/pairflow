@@ -25,7 +25,7 @@ function createPassEnvelope(
     },
     refs: [],
     ...partial
-  };
+  } as ProtocolEnvelope;
 }
 
 function createConvergenceEnvelope(
@@ -44,7 +44,7 @@ function createConvergenceEnvelope(
     },
     refs: [],
     ...partial
-  };
+  } as ProtocolEnvelope;
 }
 
 const missingClaimStateError =

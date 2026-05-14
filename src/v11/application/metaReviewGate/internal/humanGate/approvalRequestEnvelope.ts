@@ -6,7 +6,7 @@ import {
   deliveryTargetRoleMetadataKey
 } from "../../../../shared/delivery/deliveryTargetMetadataContract.js";
 import {
-  resolveFindingsParityMetadataForEnvelope,
+  compactFindingsParityMetadata,
   type FindingsParityMetadata
 } from "../../../../shared/metaReviewGate/findingsParityMetadataContract.js";
 import {
@@ -51,7 +51,7 @@ export async function appendHumanApprovalRequestEnvelope(input: {
   findings?: ApprovalAdvisoryFinding[];
   reviewerSnapshot?: LatestSameRoundReviewerSnapshot;
   consecutiveCleanRuns?: number;
-}): Promise<AppendProtocolEnvelopeResult> {
+}): Promise<AppendProtocolEnvelopeResult<"APPROVAL_REQUEST">> {
   const appendEnvelope = input.appendEnvelope ?? appendProtocolEnvelope;
   if (
     input.route === "human_gate_approve" &&
@@ -105,7 +105,8 @@ export async function appendHumanApprovalRequestEnvelope(input: {
     parityMetadata: input.parityMetadata,
     advisoryFindings
   });
-  return appendEnvelope({
+  const findingsParity = compactFindingsParityMetadata(input.parityMetadata);
+  const appended = await appendEnvelope({
     transcriptPath: input.transcriptPath,
     mirrorPaths: [input.inboxPath],
     lockPath: input.lockPath,
@@ -120,6 +121,9 @@ export async function appendHumanApprovalRequestEnvelope(input: {
         summary: summaryConsistency.summary,
         ...(advisoryFindings !== undefined && advisoryFindings.length > 0
           ? { findings: advisoryFindings }
+          : {}),
+        ...(findingsParity !== undefined
+          ? { findings_parity: findingsParity }
           : {}),
         metadata: {
           [deliveryTargetRoleMetadataKey]: "status",
@@ -143,11 +147,14 @@ export async function appendHumanApprovalRequestEnvelope(input: {
               ? { gateReasonCode: input.gateReasonCode }
               : {})
           }),
-          ...resolveFindingsParityMetadataForEnvelope(input.parityMetadata),
           ...summaryConsistency.metadata
         }
       },
       refs: input.refs
     }
   });
+  return {
+    ...appended,
+    envelope: appended.envelope
+  };
 }

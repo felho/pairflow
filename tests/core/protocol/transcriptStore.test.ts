@@ -34,7 +34,7 @@ function createDraft(partial: Partial<ProtocolEnvelopeDraft> = {}): ProtocolEnve
     },
     refs: [],
     ...partial
-  };
+  } as ProtocolEnvelopeDraft;
 }
 
 afterEach(async () => {
@@ -350,6 +350,10 @@ describe("appendProtocolEnvelope", () => {
     expect(recovered).toHaveLength(2);
     expect(recovered[0]?.id).toBe("msg_20260221_001");
     expect(recovered[1]?.id).toBe("msg_20260221_002");
+    expect(recovered[1]?.type).toBe("PASS");
+    if (recovered[1]?.type !== "PASS") {
+      throw new Error("Expected recovered appended envelope to be a pass.");
+    }
     expect(recovered[1]?.payload.summary).toBe("handoff");
   });
 

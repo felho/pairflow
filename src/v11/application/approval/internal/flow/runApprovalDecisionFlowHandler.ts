@@ -15,6 +15,7 @@ import { assertApprovalDecisionEligibility } from "./approvalRoutingEligibility.
 import type { ApprovalFlowExecutionContext } from "./runApprovalFlowContext.js";
 import type { ExecuteRemoteBubbleApprovalCommandResult } from "../remote/remoteApprovalCommandPort.js";
 import { runLocalQueuedReworkFlow } from "../rework/runApprovalQueuedReworkFlow.js";
+import type { ProtocolEnvelope } from "../../../../shared/protocol/protocolEnvelopeContract.js";
 
 async function runRemoteApprovalDecision(input: {
   flow: RunApprovalDecisionFlowInput;
@@ -93,7 +94,10 @@ async function appendLocalApprovalEnvelope(input: {
   flow: RunApprovalDecisionFlowInput;
   dependencies: ResolvedApprovalCommandDependencies;
   execution: Extract<ApprovalFlowExecutionContext, { route: "local" }>;
-}) {
+}): Promise<{
+  sequence: number;
+  envelope: ProtocolEnvelope<"APPROVAL_DECISION">;
+}> {
   const state = input.execution.state;
   const envelopePayload = await buildApprovalDecisionEnvelopePayload({
     decision: input.flow.decision,
@@ -107,7 +111,7 @@ async function appendLocalApprovalEnvelope(input: {
     createError: input.flow.createError
   });
 
-  return appendEnvelopeViaMutationBoundary({
+  const appended = await appendEnvelopeViaMutationBoundary({
     append: input.dependencies.appendProtocolEnvelope,
     payload: {
       transcriptPath: input.execution.resolved.bubblePaths.transcriptPath,
@@ -125,6 +129,10 @@ async function appendLocalApprovalEnvelope(input: {
       }
     }
   });
+  return {
+    sequence: appended.sequence,
+    envelope: appended.envelope
+  };
 }
 
 async function persistLocalApprovalState(input: {

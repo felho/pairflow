@@ -9,7 +9,7 @@ import {
   deliveryTargetRoleMetadataKey
 } from "../../../../shared/delivery/deliveryTargetMetadataContract.js";
 import {
-  resolveFindingsParityMetadataForEnvelope,
+  compactFindingsParityMetadata,
   type FindingsParityMetadata
 } from "../../../../shared/metaReviewGate/findingsParityMetadataContract.js";
 import { buildGateLockPath } from "../state/metaReviewGateShared.js";
@@ -40,6 +40,7 @@ export async function appendAutoReworkDecision(input: {
   findingsForPayload: Finding[] | undefined;
   reworkMessage: string;
 }): Promise<Awaited<ReturnType<AppendProtocolEnvelopePort>>> {
+  const findingsParity = compactFindingsParityMetadata(input.parityMetadata);
   return await input.finalizeInput.appendEnvelope({
     transcriptPath: input.finalizeInput.resolved.bubblePaths.transcriptPath,
     mirrorPaths: [input.finalizeInput.resolved.bubblePaths.inboxPath],
@@ -62,6 +63,9 @@ export async function appendAutoReworkDecision(input: {
         ...(input.findingsForPayload !== undefined
           ? { findings: input.findingsForPayload }
           : {}),
+        ...(findingsParity !== undefined
+          ? { findings_parity: findingsParity }
+          : {}),
         metadata: {
           [deliveryTargetRoleMetadataKey]: "implementer",
           actor: "meta-reviewer",
@@ -70,8 +74,7 @@ export async function appendAutoReworkDecision(input: {
           recommendation: input.runResultForRouting.recommendation,
           ...(input.runResultForRouting.run_id !== undefined
             ? { run_id: input.runResultForRouting.run_id }
-            : {}),
-          ...resolveFindingsParityMetadataForEnvelope(input.parityMetadata)
+            : {})
         }
       },
       refs: input.finalizeInput.refs

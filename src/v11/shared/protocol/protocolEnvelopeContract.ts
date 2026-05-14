@@ -11,7 +11,7 @@ import type {
   FindingsParityMetadata
 } from "../metaReviewGate/findingsParityMetadataContract.js";
 
-export interface ProtocolEnvelopeMetadata extends FindingsParityMetadata {
+export interface ProtocolEnvelopeMetadata {
   [key: string]: unknown;
 }
 
@@ -27,8 +27,9 @@ interface ProtocolEnvelopePayloadBase {
   metadata?: ProtocolEnvelopeMetadata;
 }
 
-export interface TaskProtocolEnvelopePayload extends ProtocolEnvelopePayloadBase {
-  summary?: string;
+export interface TaskProtocolEnvelopePayload {
+  summary: string;
+  metadata?: ProtocolEnvelopeMetadata;
 }
 
 export interface PassProtocolEnvelopePayload extends ProtocolEnvelopePayloadBase {
@@ -39,14 +40,14 @@ export interface PassProtocolEnvelopePayload extends ProtocolEnvelopePayloadBase
   findings?: Finding[];
 }
 
-export interface HumanQuestionProtocolEnvelopePayload
-  extends ProtocolEnvelopePayloadBase {
-  question?: string;
+export interface HumanQuestionProtocolEnvelopePayload {
+  question: string;
+  metadata?: ProtocolEnvelopeMetadata;
 }
 
-export interface HumanReplyProtocolEnvelopePayload
-  extends ProtocolEnvelopePayloadBase {
-  message?: string;
+export interface HumanReplyProtocolEnvelopePayload {
+  message: string;
+  metadata?: ProtocolEnvelopeMetadata;
 }
 
 export interface ConvergenceProtocolEnvelopePayload
@@ -59,12 +60,15 @@ export interface ApprovalRequestProtocolEnvelopePayload
   extends ProtocolEnvelopePayloadBase {
   summary?: string;
   findings?: Finding[];
+  findings_parity?: FindingsParityMetadata;
 }
 
-export interface ApprovalDecisionProtocolEnvelopePayload
-  extends ProtocolEnvelopePayloadBase {
-  decision?: ApprovalDecision;
+export interface ApprovalDecisionProtocolEnvelopePayload {
+  decision: ApprovalDecision;
   message?: string;
+  findings?: Finding[];
+  findings_parity?: FindingsParityMetadata;
+  metadata?: ProtocolEnvelopeMetadata;
 }
 
 export interface CommitResultProtocolEnvelopePayload {
@@ -97,7 +101,9 @@ export interface ProtocolEnvelopePayloadByType {
 export type ProtocolEnvelopePayload =
   ProtocolEnvelopePayloadByType[ProtocolMessageType];
 
-export interface ProtocolEnvelopeDraft<TType extends ProtocolMessageType = ProtocolMessageType> {
+export type ProtocolEnvelopeDraft<
+  TType extends ProtocolMessageType = ProtocolMessageType
+> = TType extends ProtocolMessageType ? {
   bubble_id: string;
   sender: ProtocolParticipant;
   recipient: ProtocolParticipant;
@@ -105,10 +111,11 @@ export interface ProtocolEnvelopeDraft<TType extends ProtocolMessageType = Proto
   round: number;
   payload: ProtocolEnvelopePayloadByType[TType];
   refs: string[];
-}
+} : never;
 
-export interface ProtocolEnvelope<TType extends ProtocolMessageType = ProtocolMessageType>
-  extends ProtocolEnvelopeDraft<TType> {
+export type ProtocolEnvelope<
+  TType extends ProtocolMessageType = ProtocolMessageType
+> = TType extends ProtocolMessageType ? ProtocolEnvelopeDraft<TType> & {
   id: string;
   ts: string;
-}
+} : never;

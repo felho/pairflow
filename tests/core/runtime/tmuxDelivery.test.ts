@@ -100,7 +100,7 @@ function createEnvelope(overrides: Partial<ProtocolEnvelope> = {}): ProtocolEnve
     },
     refs: ["artifact://handoff.md"],
     ...overrides
-  };
+  } as ProtocolEnvelope;
 }
 
 function submittedPaneOutput(markerLine: string): string {

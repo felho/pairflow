@@ -11,6 +11,7 @@ import {
 import type {
   ProtocolEnvelope
 } from "../../../shared/protocol/protocolEnvelopeContract.js";
+import type { ProtocolMessageType } from "../../../../contracts/kernel/protocol.js";
 import type {
   AppendProtocolEnvelopeInput,
   AppendProtocolEnvelopePort,
@@ -88,9 +89,11 @@ export async function readTranscriptEnvelopesOrThrow(
 }
 
 
-export const appendProtocolEnvelope: AppendProtocolEnvelopePort = async (
-  input: AppendProtocolEnvelopeInput
-): Promise<AppendProtocolEnvelopeResult> => {
+export const appendProtocolEnvelope: AppendProtocolEnvelopePort = async <
+  TType extends ProtocolMessageType
+>(
+  input: AppendProtocolEnvelopeInput<TType>
+): Promise<AppendProtocolEnvelopeResult<TType>> => {
   const batchResult = await appendProtocolEnvelopes({
     transcriptPath: input.transcriptPath,
     lockPath: input.lockPath,
@@ -116,7 +119,7 @@ export const appendProtocolEnvelope: AppendProtocolEnvelopePort = async (
     });
   }
 
-  return first;
+  return first as AppendProtocolEnvelopeResult<TType>;
 };
 
 async function appendProtocolEnvelopesLocked(

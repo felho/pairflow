@@ -1,4 +1,4 @@
-import type { ProtocolEnvelopeDraft } from "../../../../shared/protocol/protocolEnvelopeContract.js";
+import type { AppendProtocolEnvelopePort } from "../../../../ports/transcript.js";
 import type { AgentName } from "../../../../../contracts/kernel/agentIdentity.js";
 import type { BubbleStateSnapshot } from "../../../../domain/state/snapshot/bubbleStateSnapshot.js";
 import type { ProtocolEnvelope } from "../../../../shared/protocol/protocolEnvelopeContract.js";
@@ -26,13 +26,8 @@ export interface KickoffMutationPipelineInputForBuilders {
     options: { encoding: "utf8" }
   ) => Promise<unknown>;
   readFile: (path: string, options: "utf8") => Promise<string>;
-  appendEnvelope: (input: {
-    transcriptPath: string;
-    lockPath: string;
-    now: Date;
-    envelope: ProtocolEnvelopeDraft;
-  }) => Promise<unknown>;
-  onEnvelopeAppended?: (envelope: ProtocolEnvelope) => void;
+  appendEnvelope: AppendProtocolEnvelopePort;
+  onEnvelopeAppended?: (envelope: ProtocolEnvelope<"TASK">) => void;
   writeState: (
     statePath: string,
     state: BubbleStateSnapshot,

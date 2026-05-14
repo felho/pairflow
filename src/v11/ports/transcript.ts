@@ -2,13 +2,16 @@ import type {
   ProtocolEnvelopeDraft,
   ProtocolEnvelope
 } from "../shared/protocol/protocolEnvelopeContract.js";
+import type { ProtocolMessageType } from "../../contracts/kernel/protocol.js";
 export type { ProtocolEnvelopeDraft };
 
-export interface AppendProtocolEnvelopeInput {
+export interface AppendProtocolEnvelopeInput<
+  TType extends ProtocolMessageType = ProtocolMessageType
+> {
   transcriptPath: string;
   mirrorPaths?: string[];
   lockPath: string;
-  envelope: ProtocolEnvelopeDraft;
+  envelope: ProtocolEnvelopeDraft<TType>;
   now?: Date;
   lockTimeoutMs?: number;
 }
@@ -19,8 +22,10 @@ export interface ProtocolMirrorWriteFailure {
   code?: string;
 }
 
-export interface AppendProtocolEnvelopeResult {
-  envelope: ProtocolEnvelope;
+export interface AppendProtocolEnvelopeResult<
+  TType extends ProtocolMessageType = ProtocolMessageType
+> {
+  envelope: ProtocolEnvelope<TType>;
   sequence: number;
   mirrorWriteFailures: ProtocolMirrorWriteFailure[];
 }
@@ -36,6 +41,8 @@ export type ReadTranscriptEnvelopesPort = (
   options?: ReadTranscriptOptions
 ) => Promise<ProtocolEnvelope[]>;
 
-export type AppendProtocolEnvelopePort = (
-  input: AppendProtocolEnvelopeInput
-) => Promise<AppendProtocolEnvelopeResult>;
+export type AppendProtocolEnvelopePort = <
+  TType extends ProtocolMessageType
+>(
+  input: AppendProtocolEnvelopeInput<TType>
+) => Promise<AppendProtocolEnvelopeResult<TType>>;

@@ -36,7 +36,7 @@ export interface RemoteBubbleApprovalDecisionResult {
   kind: "decision";
   bubbleId: string;
   sequence: number;
-  envelope: ProtocolEnvelope;
+  envelope: ProtocolEnvelope<"APPROVAL_DECISION">;
   state: BubbleStateSnapshot;
 }
 

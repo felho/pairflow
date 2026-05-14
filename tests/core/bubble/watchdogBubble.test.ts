@@ -530,6 +530,9 @@ describe("runBubbleWatchdog", () => {
     expect(result.reason).toBe("escalated");
     expect(result.state.state).toBe("WAITING_HUMAN");
     expect(result.envelope?.type).toBe("HUMAN_QUESTION");
+    if (result.envelope?.type !== "HUMAN_QUESTION") {
+      throw new Error("Expected watchdog escalation to emit a human question.");
+    }
     const question = result.envelope?.payload.question;
     expect(typeof question).toBe("string");
     expect(question).toContain("restart or re-run meta-review");
@@ -571,6 +574,9 @@ describe("runBubbleWatchdog", () => {
     });
 
     expect(resumeResult.envelope.type).toBe("HUMAN_REPLY");
+    if (resumeResult.envelope.type !== "HUMAN_REPLY") {
+      throw new Error("Expected resume to emit a human reply.");
+    }
     expect(resumeResult.envelope.payload.message).toBe(DEFAULT_RESUME_MESSAGE);
     expect(resumeResult.state.state).toBe("RUNNING");
     expect(resumeResult.state.active_agent).toBe("codex");
@@ -619,6 +625,9 @@ describe("runBubbleWatchdog", () => {
     });
 
     expect(replyResult.envelope.type).toBe("HUMAN_REPLY");
+    if (replyResult.envelope.type !== "HUMAN_REPLY") {
+      throw new Error("Expected explicit reply to emit a human reply.");
+    }
     expect(replyResult.envelope.payload.message).toBe(
       "Meta-review timeout acknowledged; continue the meta-review flow."
     );
@@ -1072,6 +1081,9 @@ describe("runBubbleWatchdog", () => {
     expect(result.reason).toBe("escalated");
     expect(result.state.state).toBe("WAITING_HUMAN");
     expect(result.envelope?.type).toBe("HUMAN_QUESTION");
+    if (result.envelope?.type !== "HUMAN_QUESTION") {
+      throw new Error("Expected watchdog escalation to emit a human question.");
+    }
     expect(result.envelope?.payload.question).toContain("restart or re-run meta-review");
   });
 

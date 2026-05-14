@@ -1,5 +1,4 @@
 import type { ProtocolMessageType } from "../../../../contracts/kernel/protocol.js";
-import type { ProtocolEnvelopePayload } from "../../../shared/protocol/protocolEnvelopeContract.js";
 import type {
   UiTimelineBadge,
   UiTimelineDisplayRole,
@@ -40,6 +39,7 @@ export interface TimelineEntryPayload {
     | "legacy_summary_parser"
     | "meta_review_artifact";
   findings?: TimelineFinding[];
+  metadata?: Record<string, unknown>;
 }
 
 interface TimelineFindingBase {
@@ -77,7 +77,7 @@ export interface TimelineEntryWithoutDisplay {
   type: ProtocolMessageType;
   sender: string;
   recipient: string;
-  payload: ProtocolEnvelopePayload;
+  payload: TimelineEntryPayload;
   refs: string[];
 }
 

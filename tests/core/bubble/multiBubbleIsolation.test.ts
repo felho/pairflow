@@ -121,6 +121,11 @@ describe("multi-bubble isolation", () => {
     expect(inboxB).toHaveLength(1);
     expect(inboxA[0]?.bubble_id).toBe("b_iso_c");
     expect(inboxB[0]?.bubble_id).toBe("b_iso_d");
+    expect(inboxA[0]?.type).toBe("HUMAN_QUESTION");
+    expect(inboxB[0]?.type).toBe("HUMAN_QUESTION");
+    if (inboxA[0]?.type !== "HUMAN_QUESTION" || inboxB[0]?.type !== "HUMAN_QUESTION") {
+      throw new Error("Expected human-question inbox envelopes.");
+    }
     expect(inboxA[0]?.payload.question).toContain("C");
     expect(inboxB[0]?.payload.question).toContain("D");
   });

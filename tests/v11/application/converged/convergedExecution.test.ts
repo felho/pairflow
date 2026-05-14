@@ -46,6 +46,10 @@ describe("executeConvergedExecution", () => {
       },
       {
         appendProtocolEnvelope: async (input) => {
+          expect(input.envelope.type).toBe("CONVERGENCE");
+          if (input.envelope.type !== "CONVERGENCE") {
+            throw new Error("Expected convergence envelope.");
+          }
           expect(input.envelope.payload.findings).toEqual([
             {
               severity: "P2",
@@ -366,6 +370,10 @@ describe("executeConvergedExecution", () => {
       },
       {
         appendProtocolEnvelope: async (input) => {
+          expect(input.envelope.type).toBe("CONVERGENCE");
+          if (input.envelope.type !== "CONVERGENCE") {
+            throw new Error("Expected convergence envelope.");
+          }
           expect(input.envelope.payload.findings).toBeUndefined();
           expect(input.envelope.payload.metadata).toMatchObject({
             advisory_findings_open_total: 0

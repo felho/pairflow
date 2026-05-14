@@ -2,7 +2,7 @@ import { join } from "node:path";
 
 import type { BubblePaths } from "../../../../shared/bubble/bubblePaths.js";
 import type { BubbleConfig } from "../../../../shared/config/bubbleConfigTypes.js";
-import type { ProtocolEnvelopeDraft } from "../../../../shared/protocol/protocolEnvelopeContract.js";
+import type { AppendProtocolEnvelopePort } from "../../../../ports/transcript.js";
 
 export interface CreateInitialTaskEnvelopeTaskInput {
   content: string;
@@ -17,12 +17,7 @@ export interface CreateInitialTaskEnvelopeAppendInput {
   config: BubbleConfig;
   round: number;
   task: CreateInitialTaskEnvelopeTaskInput;
-  appendEnvelope: (input: {
-    transcriptPath: string;
-    lockPath: string;
-    now: Date;
-    envelope: ProtocolEnvelopeDraft;
-  }) => Promise<unknown>;
+  appendEnvelope: AppendProtocolEnvelopePort;
   createError: (message: string) => Error;
 }
 

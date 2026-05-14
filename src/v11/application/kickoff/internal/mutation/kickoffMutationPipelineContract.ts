@@ -1,8 +1,8 @@
 import type { BubbleStateSnapshot } from "../../../../domain/state/snapshot/bubbleStateSnapshot.js";
 import type { AgentName } from "../../../../../contracts/kernel/agentIdentity.js";
+import type { AppendProtocolEnvelopePort } from "../../../../ports/transcript.js";
 import type {
-  ProtocolEnvelope,
-  ProtocolEnvelopeDraft
+  ProtocolEnvelope
 } from "../../../../shared/protocol/protocolEnvelopeContract.js";
 import type { ResolvedKickoffTaskInput } from "../validation/kickoffTaskInputResolution.js";
 import type { executeKickoffMutation } from "./kickoffMutationExecution.js";
@@ -33,13 +33,8 @@ export interface ExecuteKickoffMutationPipelineInput {
     path: string,
     options: "utf8"
   ) => Promise<string>;
-  appendEnvelope: (input: {
-    transcriptPath: string;
-    lockPath: string;
-    now: Date;
-    envelope: ProtocolEnvelopeDraft;
-  }) => Promise<unknown>;
-  onEnvelopeAppended?: (envelope: ProtocolEnvelope) => void;
+  appendEnvelope: AppendProtocolEnvelopePort;
+  onEnvelopeAppended?: (envelope: ProtocolEnvelope<"TASK">) => void;
   writeState: (
     statePath: string,
     state: BubbleStateSnapshot,

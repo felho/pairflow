@@ -6,6 +6,7 @@ import {
   isFindingsClaimState
 } from "../../../../../contracts/kernel/protocol.js";
 import type { ProtocolEnvelope } from "../../../../shared/protocol/protocolEnvelopeContract.js";
+import type { FindingsParityMetadata } from "../../../../shared/metaReviewGate/findingsParityMetadataContract.js";
 
 const MAX_SUMMARY_CHARS = 900;
 const MAX_SUMMARY_LINES = 16;
@@ -43,8 +44,8 @@ function clampSummary(text: string): string {
   return truncateText(limitedLines, MAX_SUMMARY_CHARS);
 }
 
-function extractFindingsParityDiagnosticFromMetadata(
-  metadata: Record<string, unknown> | undefined
+function extractFindingsParityDiagnostic(
+  metadata: FindingsParityMetadata | undefined
 ): string | null {
   if (metadata === undefined) {
     return null;
@@ -74,43 +75,103 @@ function extractFindingsParityDiagnosticFromMetadata(
   return `parity=${claimedText}/${artifactText}@${statusText}${splitSuffix}`;
 }
 
-function extractPayloadExcerpt(envelope: ProtocolEnvelope): string {
-  const payload = envelope.payload;
-  const fields: string[] = [];
+function appendPrimaryPayloadExcerpt(
+  fields: string[],
+  envelope: ProtocolEnvelope
+): void {
+  switch (envelope.type) {
+    case "TASK":
+    case "PASS":
+    case "CONVERGENCE":
+    case "APPROVAL_REQUEST":
+    case "COMMIT_RESULT":
+      if (typeof envelope.payload.summary === "string") {
+        fields.push(
+          `summary="${truncateText(compactWhitespace(envelope.payload.summary), 120)}"`
+        );
+      }
+      break;
+    case "HUMAN_QUESTION":
+      fields.push(
+        `question="${truncateText(compactWhitespace(envelope.payload.question), 120)}"`
+      );
+      break;
+    case "HUMAN_REPLY":
+      fields.push(
+        `message="${truncateText(compactWhitespace(envelope.payload.message), 120)}"`
+      );
+      break;
+    case "APPROVAL_DECISION":
+      fields.push(`decision=${envelope.payload.decision}`);
+      if (typeof envelope.payload.message === "string") {
+        fields.push(
+          `message="${truncateText(compactWhitespace(envelope.payload.message), 120)}"`
+        );
+      }
+      break;
+  }
+}
 
-  if (typeof payload.summary === "string") {
-    fields.push(`summary="${truncateText(compactWhitespace(payload.summary), 120)}"`);
-  }
-  if (typeof payload.question === "string") {
-    fields.push(`question="${truncateText(compactWhitespace(payload.question), 120)}"`);
-  }
-  if (typeof payload.message === "string") {
-    fields.push(`message="${truncateText(compactWhitespace(payload.message), 120)}"`);
-  }
-  if (typeof payload.decision === "string") {
-    fields.push(`decision=${payload.decision}`);
-  }
-  if (typeof payload.pass_intent === "string") {
-    fields.push(`intent=${payload.pass_intent}`);
-  }
-  if (Array.isArray(payload.findings)) {
-    fields.push(`findings=${payload.findings.length}`);
+function appendPassPayloadExcerpt(
+  fields: string[],
+  envelope: ProtocolEnvelope<"PASS">
+): void {
+  if (typeof envelope.payload.pass_intent === "string") {
+    fields.push(`intent=${envelope.payload.pass_intent}`);
   }
   if (
-    isFindingsClaimState(payload.findings_claim_state) &&
-    isFindingsClaimSource(payload.findings_claim_source)
+    isFindingsClaimState(envelope.payload.findings_claim_state) &&
+    isFindingsClaimSource(envelope.payload.findings_claim_source)
   ) {
     fields.push(
-      `findings_claim=${payload.findings_claim_state}@${payload.findings_claim_source}`
+      `findings_claim=${envelope.payload.findings_claim_state}@${envelope.payload.findings_claim_source}`
     );
   }
-  if (typeof payload.metadata === "object" && payload.metadata !== null) {
-    const parityDiagnostic = extractFindingsParityDiagnosticFromMetadata(
-      payload.metadata as Record<string, unknown>
-    );
-    if (parityDiagnostic !== null) {
-      fields.push(parityDiagnostic);
-    }
+}
+
+function appendFindingsPayloadExcerpt(
+  fields: string[],
+  envelope: ProtocolEnvelope<"PASS" | "CONVERGENCE" | "APPROVAL_REQUEST" | "APPROVAL_DECISION">
+): void {
+  if (Array.isArray(envelope.payload.findings)) {
+    fields.push(`findings=${envelope.payload.findings.length}`);
+  }
+}
+
+function appendParityPayloadExcerpt(
+  fields: string[],
+  envelope: ProtocolEnvelope<"APPROVAL_REQUEST" | "APPROVAL_DECISION">
+): void {
+  if (envelope.payload.findings_parity === undefined) {
+    return;
+  }
+  const parityDiagnostic =
+    extractFindingsParityDiagnostic(envelope.payload.findings_parity);
+  if (parityDiagnostic !== null) {
+    fields.push(parityDiagnostic);
+  }
+}
+
+function extractPayloadExcerpt(envelope: ProtocolEnvelope): string {
+  const fields: string[] = [];
+
+  appendPrimaryPayloadExcerpt(fields, envelope);
+  if (envelope.type === "PASS") {
+    appendPassPayloadExcerpt(fields, envelope);
+  }
+  if (
+    envelope.type === "PASS" ||
+    envelope.type === "CONVERGENCE" ||
+    envelope.type === "APPROVAL_REQUEST" ||
+    envelope.type === "APPROVAL_DECISION"
+  ) {
+    appendFindingsPayloadExcerpt(fields, envelope);
+  }
+  if (
+    envelope.type === "APPROVAL_REQUEST" ||
+    envelope.type === "APPROVAL_DECISION"
+  ) {
+    appendParityPayloadExcerpt(fields, envelope);
   }
 
   if (fields.length === 0) {
@@ -124,7 +185,7 @@ function formatFinding(finding: Finding): string {
   return `${resolveFindingPriority(finding) ?? "P2"}:${truncateText(compactWhitespace(finding.title), 64)}`;
 }
 
-function formatPassEvent(envelope: ProtocolEnvelope): string {
+function formatPassEvent(envelope: ProtocolEnvelope<"PASS">): string {
   const summary = truncateText(
     compactWhitespace(envelope.payload.summary ?? "(no summary)"),
     MAX_EVENT_TEXT_CHARS
@@ -146,27 +207,17 @@ function formatPassEvent(envelope: ProtocolEnvelope): string {
   return `- PASS r${envelope.round} ${envelope.sender}->${envelope.recipient}: ${summary}${claimText}${findingsText}`;
 }
 
-function formatFlowEvent(envelope: ProtocolEnvelope): string {
+function formatFlowEvent(
+  envelope:
+    | ProtocolEnvelope<"HUMAN_QUESTION">
+    | ProtocolEnvelope<"HUMAN_REPLY">
+): string {
   const textSource =
-    envelope.payload.question ??
-    envelope.payload.message ??
-    envelope.payload.summary ??
-    "(no text)";
+    envelope.type === "HUMAN_QUESTION"
+      ? envelope.payload.question
+      : envelope.payload.message;
   const text = truncateText(compactWhitespace(textSource), MAX_EVENT_TEXT_CHARS);
-  let paritySuffix = "";
-  if (
-    envelope.type === "APPROVAL_REQUEST" &&
-    typeof envelope.payload.metadata === "object" &&
-    envelope.payload.metadata !== null
-  ) {
-    const parityDiagnostic = extractFindingsParityDiagnosticFromMetadata(
-      envelope.payload.metadata as Record<string, unknown>
-    );
-    if (parityDiagnostic !== null) {
-      paritySuffix = ` (${parityDiagnostic})`;
-    }
-  }
-  return `- ${envelope.type} r${envelope.round} ${envelope.sender}->${envelope.recipient}: ${text}${paritySuffix}`;
+  return `- ${envelope.type} r${envelope.round} ${envelope.sender}->${envelope.recipient}: ${text}`;
 }
 
 function summarizeTranscript(envelopes: readonly ProtocolEnvelope[]): string {
@@ -175,9 +226,17 @@ function summarizeTranscript(envelopes: readonly ProtocolEnvelope[]): string {
     0
   );
 
-  const passEvents = envelopes.filter((entry) => entry.type === "PASS");
+  const passEvents = envelopes.filter(
+    (entry): entry is ProtocolEnvelope<"PASS"> => entry.type === "PASS"
+  );
   const humanFlow = envelopes.filter(
-    (entry) => entry.type === "HUMAN_QUESTION" || entry.type === "HUMAN_REPLY"
+    (
+      entry
+    ): entry is
+      | ProtocolEnvelope<"HUMAN_QUESTION">
+      | ProtocolEnvelope<"HUMAN_REPLY"> =>
+      entry.type === "HUMAN_QUESTION" ||
+      entry.type === "HUMAN_REPLY"
   );
 
   let humanQuestions = 0;

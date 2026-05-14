@@ -34,7 +34,7 @@ export function isAdvisoryOnlyReviewerSnapshot(
 }
 
 export function resolveReviewerSnapshotMetadataAdvisoryOpenTotal(
-  envelope: ProtocolEnvelope
+  envelope: ProtocolEnvelope<"CONVERGENCE">
 ): number | null {
   if (!isRecord(envelope.payload.metadata)) {
     return null;
@@ -43,7 +43,9 @@ export function resolveReviewerSnapshotMetadataAdvisoryOpenTotal(
   return isNonNegativeInteger(advisoryOpenTotal) ? advisoryOpenTotal : null;
 }
 
-export function isReviewerSnapshotEnvelope(envelope: ProtocolEnvelope): boolean {
+export function isReviewerSnapshotEnvelope(
+  envelope: ProtocolEnvelope
+): envelope is ProtocolEnvelope<"CONVERGENCE"> {
   return (
     envelope.type === "CONVERGENCE" &&
     envelope.recipient === "orchestrator"

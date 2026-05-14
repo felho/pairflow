@@ -68,7 +68,7 @@ function createEnvelope(overrides: Partial<ProtocolEnvelope> = {}): ProtocolEnve
     },
     refs: [],
     ...overrides
-  };
+  } as ProtocolEnvelope;
 }
 
 describe("executePassDelivery", () => {

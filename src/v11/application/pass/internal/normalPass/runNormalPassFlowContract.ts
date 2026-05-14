@@ -111,7 +111,7 @@ export interface RunNormalPassFlowDependencies<TResult> {
     mostRecentPreviousReviewerCleanPassEnvelope: boolean;
   }) => Promise<{
     sequence: number;
-    envelope: ProtocolEnvelope;
+    envelope: ProtocolEnvelope<"PASS">;
   }>;
   resolvePassValidationForPass: (input: {
     senderRole: "implementer" | "reviewer";
@@ -158,7 +158,7 @@ export interface RunNormalPassFlowDependencies<TResult> {
     senderRole: PassSenderRole;
     bubbleId: string;
     bubbleConfig: BubbleConfig;
-    envelope: ProtocolEnvelope;
+    envelope: ProtocolEnvelope<"PASS">;
     worktreePath: string;
     repoPath: string;
     artifactsDir: string;
@@ -199,7 +199,7 @@ export interface RunNormalPassFlowDependencies<TResult> {
     findings: Finding[];
     docGateArtifactWriteFailureReason?: string;
     sequence: number;
-    envelope: ProtocolEnvelope;
+    envelope: ProtocolEnvelope<"PASS">;
     state: BubbleStateSnapshot;
     activation?: PassActivationProvenance;
     deliveryResult: DeliveryAck | undefined;

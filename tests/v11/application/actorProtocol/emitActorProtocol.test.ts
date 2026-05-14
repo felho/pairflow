@@ -761,6 +761,10 @@ describe("emitActorProtocol runtime", () => {
     if (result.kind !== "pass") {
       throw new Error("Expected pass result.");
     }
+    expect(result.pass.envelope.type).toBe("PASS");
+    if (result.pass.envelope.type !== "PASS") {
+      throw new Error("Expected pass envelope.");
+    }
     expect(result.pass.envelope.payload.summary).toBe(
       "Should outer dispatcher use the reviewer route?"
     );
@@ -823,6 +827,10 @@ describe("emitActorProtocol runtime", () => {
     expect(result.kind).toBe("convergence");
     if (result.kind !== "convergence") {
       throw new Error("Expected convergence result.");
+    }
+    expect(result.convergence.convergenceEnvelope.type).toBe("CONVERGENCE");
+    if (result.convergence.convergenceEnvelope.type !== "CONVERGENCE") {
+      throw new Error("Expected convergence envelope.");
     }
     expect(result.convergence.convergenceEnvelope.payload.summary).toBe(
       "Should outer dispatcher use the reviewer convergence route?"

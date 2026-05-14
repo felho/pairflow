@@ -171,7 +171,11 @@ export async function verifyImplementerTestEvidence(
     isRecord(input.envelope.payload.metadata) &&
     input.envelope.payload.metadata["test_evidence_policy_force_fallback"] === true;
   const loadedSources = await loadEvidenceSources({
-    summary: input.envelope.payload.summary ?? "",
+    summary:
+      input.envelope.type === "PASS" ||
+      input.envelope.type === "CONVERGENCE"
+        ? input.envelope.payload.summary ?? ""
+        : "",
     refs: input.envelope.refs,
     worktreePath: input.worktreePath,
     repoPath: input.repoPath,

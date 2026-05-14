@@ -1,8 +1,14 @@
 import { describe, expect, it, vi } from "vitest";
 
+import type { ProtocolMessageType } from "../../../../src/contracts/kernel/protocol.js";
 import type { BubbleStateSnapshot } from "../../../../src/v11/domain/state/snapshot/bubbleStateSnapshot.js";
 import { buildBubbleStateSnapshotVariant } from "../../../../src/v11/domain/state/snapshot/buildBubbleStateSnapshot.js";
 import { executeKickoffMutationPipeline } from "../../../../src/v11/application/kickoff/internal/mutation/kickoffMutationPipeline.js";
+import type {
+  AppendProtocolEnvelopeInput,
+  AppendProtocolEnvelopePort
+} from "../../../../src/v11/ports/transcript.js";
+import type { ProtocolEnvelope } from "../../../../src/v11/shared/protocol/protocolEnvelopeContract.js";
 
 function createState(round: number): BubbleStateSnapshot {
   return buildBubbleStateSnapshotVariant({
@@ -18,6 +24,20 @@ function createState(round: number): BubbleStateSnapshot {
 }
 
 function createInput() {
+  const appendEnvelope: AppendProtocolEnvelopePort = async <
+    TType extends ProtocolMessageType
+  >(
+    input: AppendProtocolEnvelopeInput<TType>
+  ) =>
+    ({
+      envelope: {
+        ...input.envelope,
+        id: "msg_20260319_0001",
+        ts: input.now?.toISOString() ?? "2026-03-19T22:00:00.000Z"
+      } as ProtocolEnvelope<TType>,
+      sequence: 1,
+      mirrorWriteFailures: []
+    });
   return {
     persistenceFailureCode: "IDEATION_KICKOFF_PERSISTENCE_FAILED",
     bubbleId: "b_kickoff_pipeline_01",
@@ -39,7 +59,7 @@ function createInput() {
     writtenStateFingerprint: "written-fingerprint",
     writeFile: vi.fn(async () => {}),
     readFile: vi.fn(async () => "transcript-backup"),
-    appendEnvelope: vi.fn(async () => {}),
+    appendEnvelope,
     writeState: vi.fn(async () => ({
       fingerprint: "rollback-fingerprint",
       state: createState(0)

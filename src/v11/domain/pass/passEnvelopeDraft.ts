@@ -40,7 +40,7 @@ export interface BuildPassEnvelopeDraftInput {
 
 export function buildPassEnvelopeDraft(
   input: BuildPassEnvelopeDraftInput
-): ProtocolEnvelopeDraft {
+): ProtocolEnvelopeDraft<"PASS"> {
   return {
     bubble_id: input.bubbleId,
     sender: input.handoff.senderAgent,

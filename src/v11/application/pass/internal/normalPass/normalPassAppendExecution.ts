@@ -48,11 +48,11 @@ export interface ExecuteNormalPassAppendDependencies {
 
 export interface ExecuteNormalPassAppendResult {
   sequence: number;
-  envelope: ProtocolEnvelope;
+  envelope: ProtocolEnvelope<"PASS">;
 }
 
 function mapAppendResult(
-  result: AppendProtocolEnvelopeResult
+  result: AppendProtocolEnvelopeResult<"PASS">
 ): ExecuteNormalPassAppendResult {
   return {
     sequence: result.sequence,

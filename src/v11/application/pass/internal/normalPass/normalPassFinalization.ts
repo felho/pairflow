@@ -45,7 +45,7 @@ export interface FinalizeNormalPassInput {
   findings: Finding[];
   docGateArtifactWriteFailureReason?: string;
   sequence: number;
-  envelope: ProtocolEnvelope;
+  envelope: ProtocolEnvelope<"PASS">;
   state: BubbleStateSnapshot;
   activation?: PassActivationProvenance;
   deliveryResult: DeliveryAck | undefined;

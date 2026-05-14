@@ -6,7 +6,7 @@ import { executeNormalPassAppend } from "../../../../src/v11/application/pass/in
 describe("executeNormalPassAppend", () => {
   it("builds pass draft and appends envelope with mapped sequence/envelope output", async () => {
     const now = new Date("2026-03-19T12:00:00.000Z");
-    const draft = { marker: "draft" } as unknown as ProtocolEnvelopeDraft;
+    const draft = { marker: "draft" } as unknown as ProtocolEnvelopeDraft<"PASS">;
     const envelope = { id: "env_1" } as never;
     let capturedDraftInput:
       | Parameters<
@@ -116,7 +116,7 @@ describe("executeNormalPassAppend", () => {
       {
         buildPassEnvelopeDraft: (input) => {
           capturedDraftInput = input;
-          return { marker: "draft" } as unknown as ProtocolEnvelopeDraft;
+          return { marker: "draft" } as unknown as ProtocolEnvelopeDraft<"PASS">;
         },
         appendProtocolEnvelope: async () => ({
           sequence: 1,

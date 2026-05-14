@@ -7,10 +7,7 @@ import {
   resolveRemoteBubbleStatusTarget,
   runCommandDefault
 } from "../../executor/ssh/sshBubbleStatus.js";
-import type {
-  ProtocolEnvelope,
-  ProtocolEnvelopePayload
-} from "../../../shared/protocol/protocolEnvelopeContract.js";
+import type { ProtocolEnvelope } from "../../../shared/protocol/protocolEnvelopeContract.js";
 import type { Finding } from "../../../../contracts/kernel/findings.js";
 import {
   isFindingLayer,
@@ -72,7 +69,7 @@ export function presentTimelineEntries(envelopes: ProtocolEnvelope[]): Presented
     type: envelope.type,
     sender: envelope.sender,
     recipient: envelope.recipient,
-    payload: envelope.payload,
+    payload: normalizePayloadForDisplay(envelope.payload),
     refs: envelope.refs
   }))));
 }
@@ -89,7 +86,7 @@ export function presentTimeline(
       type: envelope.type,
       sender: envelope.sender,
       recipient: envelope.recipient,
-      payload: envelope.payload,
+      payload: normalizePayloadForDisplay(envelope.payload),
       refs: envelope.refs
     }))),
     cleanRunsRequired: options.cleanRunsRequired
@@ -191,10 +188,22 @@ function normalizePayloadForUi(raw: unknown): TimelineEntryPayload {
   }
   const rawFindings = raw.findings;
   const hasFindingsInput = Array.isArray(rawFindings);
-  const sanitizedFindings = hasFindingsInput && rawFindings.every((value) => isFinding(value))
-    ? rawFindings.map(sanitizeFindingForUi)
+  const sanitizedFindings = hasFindingsInput
+    ? rawFindings.filter(isFinding).map(sanitizeFindingForUi)
     : null;
-  if (sanitizedFindings !== null) {
+  const contradictoryOpenEmptyClaim =
+    isFindingsClaimState(raw.findings_claim_state)
+    && isFindingsClaimSource(raw.findings_claim_source)
+    && raw.findings_claim_state === "open_findings"
+    && sanitizedFindings !== null
+    && sanitizedFindings.length === 0;
+  if (
+    sanitizedFindings !== null
+    && (
+      sanitizedFindings.length > 0
+      || (hasFindingsInput && rawFindings.length === 0 && !contradictoryOpenEmptyClaim)
+    )
+  ) {
     payload.findings = sanitizedFindings;
   }
   if (
@@ -223,8 +232,8 @@ function shouldPreserveFindingsClaim(
   return !Object.hasOwn(raw, "findings") || sanitizedFindings !== null;
 }
 
-function normalizePayloadForDisplay(raw: unknown): ProtocolEnvelopePayload {
-  const payload: ProtocolEnvelopePayload = normalizePayloadForUi(raw);
+function normalizePayloadForDisplay(raw: unknown): TimelineEntryPayload {
+  const payload = normalizePayloadForUi(raw);
   if (isRecord(raw) && isRecord(raw.metadata)) {
     payload.metadata = raw.metadata;
   }

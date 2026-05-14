@@ -63,7 +63,7 @@ function resolveMostRecentPreviousReviewerPass(input: {
   reviewer: AgentName;
   implementer: AgentName;
   currentRound: number;
-}): ProtocolEnvelope | undefined {
+}): ProtocolEnvelope<"PASS"> | undefined {
   for (let index = input.transcript.length - 1; index >= 0; index -= 1) {
     const envelope = input.transcript[index];
     if (

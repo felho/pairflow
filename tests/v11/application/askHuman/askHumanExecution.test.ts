@@ -56,6 +56,10 @@ describe("executeAskHumanExecution", () => {
           expect(input.lockPath).toBe(
             "/repo/.pairflow/bubbles/b_ask_human_01/locks/b_ask_human_01.lock"
           );
+          expect(input.envelope.type).toBe("HUMAN_QUESTION");
+          if (input.envelope.type !== "HUMAN_QUESTION") {
+            throw new Error("Expected ask-human to append a human question.");
+          }
           expect(input.envelope.payload.question).toBe("Need migration decision?");
           return {
             envelope: {

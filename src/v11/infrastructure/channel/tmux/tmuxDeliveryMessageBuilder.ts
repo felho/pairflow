@@ -98,7 +98,7 @@ function buildImplementerDeliveryAction(input: {
     docsOnly,
     validationGuidance,
     actorLabel: input.actorLabel,
-    ...(input.envelope.payload.decision !== undefined
+    ...(input.envelope.type === "APPROVAL_DECISION"
       ? { approvalDecision: input.envelope.payload.decision }
       : {}),
     reworkOrigin: resolveImplementerReworkOrigin(input.envelope)

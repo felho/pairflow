@@ -22,7 +22,7 @@ function buildFinalizeNormalPassInput<TResult>(input: {
   docGateArtifactWriteFailureReason?: string;
   mapped: {
     sequence: number;
-    envelope: ProtocolEnvelope;
+    envelope: ProtocolEnvelope<"PASS">;
   };
   written: LoadedStateSnapshot;
   normalPassDelivery: {

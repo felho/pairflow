@@ -4,6 +4,8 @@ import {
   isFindingsClaimState,
   isPassIntent
 } from "../../../contracts/kernel/protocol.js";
+import type { Finding } from "../../../contracts/kernel/findings.js";
+import type { FindingsParityMetadata } from "../metaReviewGate/findingsParityMetadataContract.js";
 import type { ProtocolEnvelope } from "./protocolEnvelopeContract.js";
 import {
   isInteger,
@@ -21,6 +23,7 @@ const allowedPayloadKeys = new Set([
   "findings_claim_state",
   "findings_claim_source",
   "findings",
+  "findings_parity",
   "metadata"
 ]);
 
@@ -35,6 +38,17 @@ const donePackageFieldNames = new Set([
   "done_package_path",
   "donePackageContent",
   "done_package_content"
+]);
+
+const findingsParityFieldNames = new Set([
+  "findings_claimed_open_total",
+  "findings_artifact_open_total",
+  "findings_blocking_open_total",
+  "findings_advisory_open_total",
+  "findings_artifact_status",
+  "findings_digest_sha256",
+  "meta_review_run_id",
+  "findings_parity_status"
 ]);
 
 function isNonNegativeIntegerOrNull(value: unknown): boolean {
@@ -119,8 +133,9 @@ export function validateFindingsClaimFields(
   }
 }
 
-function validateParityMetadataFields(
+function validateFindingsParityFields(
   metadata: Record<string, unknown>,
+  pathPrefix: string,
   errors: ValidationError[]
 ): void {
   const nonNegativeIntegerOrNullFields = [
@@ -137,7 +152,7 @@ function validateParityMetadataFields(
     }
     if (!isNonNegativeIntegerOrNull(value)) {
       errors.push({
-        path: `payload.metadata.${field}`,
+        path: `${pathPrefix}.${field}`,
         message: "Must be a non-negative integer or null when provided"
       });
     }
@@ -152,8 +167,23 @@ function validateParityMetadataFields(
     parityStatus !== "guard_failed"
   ) {
     errors.push({
-      path: "payload.metadata.findings_parity_status",
+      path: `${pathPrefix}.findings_parity_status`,
       message: "Must be one of: ok, mismatch, guard_failed, null"
+    });
+  }
+}
+
+function validateNoFindingsParityFieldsInMetadata(
+  metadata: Record<string, unknown>,
+  errors: ValidationError[]
+): void {
+  for (const field of Object.keys(metadata)) {
+    if (!findingsParityFieldNames.has(field)) {
+      continue;
+    }
+    errors.push({
+      path: `payload.metadata.${field}`,
+      message: "Findings parity fields must use payload.findings_parity"
     });
   }
 }
@@ -171,15 +201,47 @@ export function validatePayloadMetadata(
     return;
   }
   if (isRecord(payload.metadata) && envelopeType !== "COMMIT_RESULT") {
-    validateParityMetadataFields(payload.metadata, errors);
+    validateNoFindingsParityFieldsInMetadata(payload.metadata, errors);
   }
+}
+
+export function validatePayloadFindingsParity(
+  envelopeType: string,
+  payload: Record<string, unknown>,
+  errors: ValidationError[]
+): void {
+  if (payload.findings_parity === undefined) {
+    return;
+  }
+  if (envelopeType !== "APPROVAL_REQUEST" && envelopeType !== "APPROVAL_DECISION") {
+    errors.push({
+      path: "payload.findings_parity",
+      message: "Only APPROVAL_REQUEST and APPROVAL_DECISION can carry findings_parity"
+    });
+    return;
+  }
+  if (!isRecord(payload.findings_parity)) {
+    errors.push({
+      path: "payload.findings_parity",
+      message: "Must be an object when provided"
+    });
+    return;
+  }
+  validateFindingsParityFields(
+    payload.findings_parity,
+    "payload.findings_parity",
+    errors
+  );
 }
 
 export function buildValidatedPayload(input: {
   payload: Record<string, unknown>;
-  findings: ProtocolEnvelope["payload"]["findings"] | undefined;
+  findings: Finding[] | undefined;
 }): ProtocolEnvelope["payload"] {
   const { payload, findings } = input;
+  const findingsParity = isRecord(payload.findings_parity)
+    ? payload.findings_parity as FindingsParityMetadata
+    : undefined;
   return {
     ...(payload.summary !== undefined && isNonEmptyString(payload.summary)
       ? { summary: payload.summary }
@@ -201,6 +263,7 @@ export function buildValidatedPayload(input: {
       ? { findings_claim_source: payload.findings_claim_source }
       : {}),
     ...(findings !== undefined ? { findings } : {}),
+    ...(findingsParity !== undefined ? { findings_parity: findingsParity } : {}),
     ...(isRecord(payload.metadata) ? { metadata: payload.metadata } : {})
   };
 }

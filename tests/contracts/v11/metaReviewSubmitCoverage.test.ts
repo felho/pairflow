@@ -418,12 +418,17 @@ describe("v11 meta-review submit contract", () => {
     );
     const last = transcript.at(-1);
     expect(last?.type).toBe("APPROVAL_REQUEST");
-    expect(last?.payload.metadata).toMatchObject({
+    if (last?.type !== "APPROVAL_REQUEST") {
+      throw new Error("Expected APPROVAL_REQUEST envelope.");
+    }
+    expect(last.payload.metadata).toMatchObject({
       actor: "meta-reviewer",
       actor_agent: "codex",
       delivery_target_role: "status",
       latest_recommendation: "approve",
-      meta_review_gate_route: "human_gate_approve",
+      meta_review_gate_route: "human_gate_approve"
+    });
+    expect(last.payload.findings_parity).toMatchObject({
       meta_review_run_id: "run_meta_contract_submit_approve_advisory_01",
       findings_claimed_open_total: 2,
       findings_blocking_open_total: 0,
@@ -638,10 +643,18 @@ describe("v11 meta-review submit contract", () => {
     );
     const last = transcript.at(-1);
     expect(last?.type).toBe("APPROVAL_REQUEST");
-    expect(last?.payload.metadata).toStrictEqual({
+    if (last?.type !== "APPROVAL_REQUEST") {
+      throw new Error("Expected APPROVAL_REQUEST envelope.");
+    }
+    expect(last.payload.metadata).toStrictEqual({
       actor: "meta-reviewer",
       actor_agent: "codex",
       delivery_target_role: "status",
+      consecutive_clean_runs: 0,
+      latest_recommendation: "inconclusive",
+      meta_review_gate_route: "human_gate_inconclusive"
+    });
+    expect(last.payload.findings_parity).toStrictEqual({
       findings_advisory_open_total: null,
       findings_artifact_open_total: null,
       findings_artifact_status: null,
@@ -649,9 +662,6 @@ describe("v11 meta-review submit contract", () => {
       findings_claimed_open_total: 2,
       findings_digest_sha256: null,
       findings_parity_status: null,
-      consecutive_clean_runs: 0,
-      latest_recommendation: "inconclusive",
-      meta_review_gate_route: "human_gate_inconclusive",
       meta_review_run_id: "run_meta_contract_submit_inconclusive_01"
     });
   });

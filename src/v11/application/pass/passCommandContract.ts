@@ -32,26 +32,16 @@ export interface EmitPassInput {
   now?: Date;
 }
 
-export interface EmitPassResult {
+interface EmitPassResultBase {
   bubbleId: string;
   sequence: number;
-  envelope: ProtocolEnvelope;
-  resultEnvelopeKind: "pass" | "convergence";
   state: BubbleStateSnapshot;
   inferredIntent: boolean;
   activation?: PassActivationProvenance;
-  transitionDecision: "normal_pass" | "auto_converge";
   repeatCleanReasonCode: RepeatCleanAutoconvergeReasonCode;
   repeatCleanReasonDetail: RepeatCleanAutoconvergeReasonDetail;
   repeatCleanTrigger: boolean;
   mostRecentPreviousReviewerCleanPassEnvelope: boolean;
-  autoConverged?: {
-    gateRoute: EmitConvergedResult["gateRoute"];
-    convergenceSequence: number;
-    convergenceEnvelope: ProtocolEnvelope;
-    approvalRequestSequence: number;
-    approvalRequestEnvelope: ProtocolEnvelope;
-  };
   delivery?: {
     status: "accepted" | "rejected";
     reason?: string;
@@ -61,6 +51,30 @@ export interface EmitPassResult {
   passValidationCompatibilityArtifactWriteFailureReason?: string;
   docGateArtifactWriteFailureReason?: string;
 }
+
+export interface EmitNormalPassResult extends EmitPassResultBase {
+  envelope: ProtocolEnvelope<"PASS">;
+  resultEnvelopeKind: "pass";
+  transitionDecision: "normal_pass";
+  autoConverged?: never;
+}
+
+export interface EmitAutoConvergePassResult extends EmitPassResultBase {
+  envelope: ProtocolEnvelope;
+  resultEnvelopeKind: "convergence";
+  transitionDecision: "auto_converge";
+  autoConverged: {
+    gateRoute: EmitConvergedResult["gateRoute"];
+    convergenceSequence: number;
+    convergenceEnvelope: ProtocolEnvelope;
+    approvalRequestSequence: number;
+    approvalRequestEnvelope: ProtocolEnvelope;
+  };
+}
+
+export type EmitPassResult =
+  | EmitNormalPassResult
+  | EmitAutoConvergePassResult;
 
 export interface EmitPassDependencies
   extends PassFlowRuntimeDependencies,

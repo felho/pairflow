@@ -4,8 +4,7 @@ export {
 } from "./metaReviewGateRouteContract.js";
 export {
   findingsParityStatuses,
-  hasApproveFindingsSplitMetadata,
-  resolveFindingsParityMetadataForEnvelope
+  hasApproveFindingsSplitMetadata
 } from "./findingsParityMetadataContract.js";
 export type {
   ApproveFindingsSplitMetadata,

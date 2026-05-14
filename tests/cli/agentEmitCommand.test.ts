@@ -379,6 +379,10 @@ describe("runAgentEmitCommand", () => {
       throw new Error("Expected pass result.");
     }
     expect(result.pass.bubbleId).toBe(bubble.bubbleId);
+    expect(result.pass.envelope.type).toBe("PASS");
+    if (result.pass.envelope.type !== "PASS") {
+      throw new Error("Expected PASS envelope.");
+    }
     expect(result.pass.envelope.payload.summary).toBe("Implemented canonical pass");
   });
 

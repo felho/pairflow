@@ -32,6 +32,9 @@ import {
 } from "../../../../src/v11/domain/state/execution/executionContext.js";
 import { buildMetaReviewExecutionContext } from "../../../../src/v11/shared/metaReview/metaReviewExecutionContext.js";
 import { writeStateSnapshotFixture as writeStateSnapshot } from "../../../helpers/stateSnapshot.js";
+import type { ProtocolMessageType } from "../../../../src/contracts/kernel/protocol.js";
+import type { ProtocolEnvelope } from "../../../../src/v11/shared/protocol/protocolEnvelopeContract.js";
+import type { AppendProtocolEnvelopeInput } from "../../../../src/v11/ports/transcript.js";
 const tempDirs: string[] = [];
 
 async function createTempRepo(): Promise<string> {
@@ -719,14 +722,16 @@ describe("watchdogCommandApi", () => {
     const callOrder: string[] = [];
     const appendProtocolEnvelope: NonNullable<
       BubbleWatchdogDependencies["appendProtocolEnvelope"]
-    > = async (input) => {
+    > = async <TType extends ProtocolMessageType>(
+      input: AppendProtocolEnvelopeInput<TType>
+    ) => {
       callOrder.push("append");
       return {
         envelope: {
           id: "msg_watchdog_state_write_failure",
           ts: "2026-02-22T12:31:00.000Z",
           ...input.envelope
-        },
+        } as ProtocolEnvelope<TType>,
         sequence: 1,
         mirrorWriteFailures: []
       };
