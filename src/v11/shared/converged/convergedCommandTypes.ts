@@ -6,6 +6,7 @@ import type {
   EmitDeliveryNotificationAckPort
 } from "../../ports/tmuxDelivery.js";
 import type {
+  ProtocolAdvisoryFinding,
   ProtocolEnvelope
 } from "../protocol/protocolEnvelopeContract.js";
 import type { MetaReviewGateRoute } from "../metaReviewGate/index.js";
@@ -18,13 +19,9 @@ import type {
 
 export const convergedStructuredFindingSeverities = ["P2", "P3"] as const;
 export type ConvergedStructuredFindingSeverity =
-  (typeof convergedStructuredFindingSeverities)[number];
+  ProtocolAdvisoryFinding["severity"];
 
-export interface ConvergedStructuredFinding {
-  severity: ConvergedStructuredFindingSeverity;
-  title: string;
-  refs?: string[];
-}
+export type ConvergedStructuredFinding = ProtocolAdvisoryFinding;
 
 export function isConvergedStructuredFindingSeverity(
   value: unknown

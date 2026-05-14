@@ -1,5 +1,8 @@
 import { isRecord } from "../../shared/validation/primitives.js";
 import { resolveFindingPriority } from "../../../contracts/kernel/findings.js";
+import type {
+  ProtocolAdvisoryFinding
+} from "../../shared/protocol/protocolEnvelopeContract.js";
 import { resolveNonNegativeIntegerField } from "./findingsClaimParsing.js";
 
 export interface FindingsOpenSplit {
@@ -7,11 +10,7 @@ export interface FindingsOpenSplit {
   advisoryOpenTotal: number;
 }
 
-export interface MetaReviewGateAdvisoryFinding {
-  severity: "P2" | "P3";
-  title: string;
-  refs?: string[];
-}
+export type MetaReviewGateAdvisoryFinding = ProtocolAdvisoryFinding;
 
 export function deriveFindingsOpenSplit(findings: unknown): FindingsOpenSplit | null {
   if (!Array.isArray(findings)) {
