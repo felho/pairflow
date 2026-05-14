@@ -31,6 +31,12 @@ import type {
   PrepareRemoteStartActivationPackagePort
 } from "../../ports/remoteStartActivationPackage.js";
 import {
+  createVerifyRemoteCloneStartAuthority
+} from "./internal/remote/startCommandRemoteCloneAuthority.js";
+import type {
+  VerifyRemoteCloneStartAuthorityPort
+} from "../../ports/remoteCloneStartAuthority.js";
+import {
   loadStartBubbleDependencyDefaults,
   type StartBubbleDependencyDefaults
 } from "./startBubbleDependencyDefaults.js";
@@ -66,6 +72,7 @@ export interface ResolvedStartBubbleDependencies {
     NonNullable<StartBubbleDependencies["runGitCommand"]>;
   readRemotePointer:
     (path: string) => Promise<BubbleRemotePointer | null>;
+  verifyRemoteCloneStartAuthority: VerifyRemoteCloneStartAuthorityPort;
   writeRemotePointer:
     (path: string, value: BubbleRemotePointer) => Promise<void>;
   writeRemoteStateCache:
@@ -126,14 +133,18 @@ function resolveRemoteExecutionDependencies(input: {
   dependencies: StartBubbleDependencies;
   defaults: StartBubbleDependencyDefaults;
 }) {
+  const readRemotePointer =
+    input.dependencies.readRemotePointer ?? input.defaults.readRemotePointer;
   return {
     loadPairflowGlobalConfig:
       input.dependencies.loadPairflowGlobalConfig
       ?? input.defaults.loadPairflowGlobalConfig,
     runGitCommand:
       input.dependencies.runGitCommand ?? input.defaults.runGitCommand,
-    readRemotePointer:
-      input.dependencies.readRemotePointer ?? input.defaults.readRemotePointer,
+    readRemotePointer,
+    verifyRemoteCloneStartAuthority:
+      input.dependencies.verifyRemoteCloneStartAuthority
+      ?? createVerifyRemoteCloneStartAuthority({ readRemotePointer }),
     writeRemotePointer:
       input.dependencies.writeRemotePointer ?? input.defaults.writeRemotePointer,
     writeRemoteStateCache:

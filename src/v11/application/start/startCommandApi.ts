@@ -58,7 +58,7 @@ async function loadExecutionContextOrThrow(
     | "ensureReviewerPolicySnapshot"
     | "readReviewerBriefArtifact"
     | "readReviewerFocusArtifact"
-    | "readRemotePointer"
+    | "verifyRemoteCloneStartAuthority"
   >,
   resolved?: ResolvedStartBubble
 ): Promise<StartExecutionContext> {
@@ -70,8 +70,8 @@ async function loadExecutionContextOrThrow(
         deps.readReviewerBriefArtifact,
       readReviewerFocusArtifact:
         deps.readReviewerFocusArtifact,
-      readRemotePointer:
-        deps.readRemotePointer
+      verifyRemoteCloneStartAuthority:
+        deps.verifyRemoteCloneStartAuthority
     }, {
       ...(resolved !== undefined ? { resolved } : {})
     });

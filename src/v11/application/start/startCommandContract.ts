@@ -36,6 +36,9 @@ import type { RunGitPort } from "../../ports/git.js";
 import type { ProcessSpawnPort } from "../../ports/processSpawn.js";
 import type { buildResumeTranscriptSummary } from "./internal/prompts/startCommandResumeSummary.js";
 import type { BubbleStateSnapshot } from "../../domain/state/snapshot/bubbleStateSnapshot.js";
+import type {
+  VerifyRemoteCloneStartAuthorityPort
+} from "../../ports/remoteCloneStartAuthority.js";
 
 export interface StartBubbleInput {
   bubbleId: string;
@@ -115,6 +118,7 @@ export interface StartBubbleDependencies {
   loadPairflowGlobalConfig?: () => Promise<PairflowGlobalConfig>;
   runGitCommand?: RunGitPort;
   readRemotePointer?: (path: string) => Promise<BubbleRemotePointer | null>;
+  verifyRemoteCloneStartAuthority?: VerifyRemoteCloneStartAuthorityPort;
   writeRemotePointer?: (path: string, value: BubbleRemotePointer) => Promise<void>;
   writeRemoteStateCache?: (
     path: string,

@@ -1,5 +1,3 @@
-import { resolve } from "node:path";
-
 import { startCommandContextDefaults } from "../../startCommandDependencyDefaults.js";
 import { buildBubbleTmuxSessionName } from "../../../../shared/bubble/tmuxSessionName.js";
 import { buildBubbleStateSnapshotVariant } from "../../../../domain/state/snapshot/buildBubbleStateSnapshot.js";
@@ -14,94 +12,21 @@ import type {
   ReadReviewerBriefArtifactPort,
   ReadReviewerFocusArtifactPort
 } from "../../../../ports/reviewerArtifacts.js";
-import type {
-  BubbleRemotePointer
-} from "../../../../shared/remote/remoteExecutionTypes.js";
 import { resolveStartBubbleMode } from "../../startCommandOrchestration.js";
 import { createStartBubbleError } from "./startCommandRuntime.js";
 import {
   resolveRemoteCloneStartContextFromEnv,
   type RemoteCloneStartContext
 } from "../remote/startCommandRemoteExecutionContext.js";
+import type {
+  VerifyRemoteCloneStartAuthorityPort
+} from "../../../../ports/remoteCloneStartAuthority.js";
 
 export type StartLoadedState = StartLoadedStateSnapshot;
 export type ResolvedStartBubble =
   Awaited<ReturnType<typeof startCommandContextDefaults.resolveBubbleById>>;
 export const reviewerPolicySnapshotUnavailableReasonCode =
   "REVIEWER_POLICY_SNAPSHOT_UNAVAILABLE";
-const pairflowWorktreeRootEnvVar = "PAIRFLOW_WORKTREE_ROOT";
-
-function resolveOptionalWorkspaceEnvPath(
-  envVar: string
-): string | undefined {
-  const rawValue = process.env[envVar];
-  if (typeof rawValue !== "string") {
-    return undefined;
-  }
-
-  const trimmed = rawValue.trim();
-  if (trimmed.length === 0) {
-    return undefined;
-  }
-
-  return resolve(trimmed);
-}
-
-async function assertVerifiedRemoteCloneContext(input: {
-  resolved: ResolvedStartBubble;
-  remoteStartContext: RemoteCloneStartContext;
-  readRemotePointer: (path: string) => Promise<BubbleRemotePointer | null>;
-}): Promise<void> {
-  const normalizedWorkspaceRoot = resolve(input.remoteStartContext.workspaceRoot);
-  const pairflowWorktreeRoot = resolveOptionalWorkspaceEnvPath(
-    pairflowWorktreeRootEnvVar
-  );
-
-  if (pairflowWorktreeRoot !== normalizedWorkspaceRoot) {
-    throw createStartBubbleError({
-      reasonCode: "START_REMOTE_EXECUTION_CONTEXT_INVALID",
-      message:
-        `Bubble ${input.resolved.bubbleId} remote inner-start env is only valid inside a verified remote clone workspace authority.`,
-      context: {
-        bubble_id: input.resolved.bubbleId,
-        remote_workspace_root: normalizedWorkspaceRoot,
-        pairflow_worktree_root: pairflowWorktreeRoot ?? null,
-        required_env_var: pairflowWorktreeRootEnvVar
-      }
-    });
-  }
-
-  let remotePointer: BubbleRemotePointer | null;
-  try {
-    remotePointer = await input.readRemotePointer(
-      input.resolved.bubblePaths.remotePointerPath
-    );
-  } catch (error) {
-    throw createStartBubbleError({
-      reasonCode: "START_REMOTE_EXECUTION_CONTEXT_INVALID",
-      message:
-        `Bubble ${input.resolved.bubbleId} could not verify remote clone control-plane boundaries for inner-start env.`,
-      context: {
-        bubble_id: input.resolved.bubbleId,
-        remote_pointer_path: input.resolved.bubblePaths.remotePointerPath
-      },
-      cause: error
-    });
-  }
-
-  if (remotePointer !== null) {
-    throw createStartBubbleError({
-      reasonCode: "START_REMOTE_EXECUTION_CONTEXT_INVALID",
-      message:
-        `Bubble ${input.resolved.bubbleId} refused remote inner-start env because local source-repo remote artifacts are still present.`,
-      context: {
-        bubble_id: input.resolved.bubbleId,
-        remote_pointer_kind: remotePointer.kind,
-        remote_pointer_path: input.resolved.bubblePaths.remotePointerPath
-      }
-    });
-  }
-}
 
 function assertReviewerPolicySnapshotAvailable(
   result: EnsureReviewerPolicySnapshotResult
@@ -145,7 +70,7 @@ export async function loadStartExecutionContext(
     ensureReviewerPolicySnapshot: EnsureReviewerPolicySnapshotPort;
     readReviewerBriefArtifact: ReadReviewerBriefArtifactPort;
     readReviewerFocusArtifact: ReadReviewerFocusArtifactPort;
-    readRemotePointer: (path: string) => Promise<BubbleRemotePointer | null>;
+    verifyRemoteCloneStartAuthority: VerifyRemoteCloneStartAuthorityPort;
   },
   options: {
     resolved?: ResolvedStartBubble;
@@ -206,10 +131,10 @@ export async function loadStartExecutionContext(
     });
   }
   if (remoteStartContext !== undefined) {
-    await assertVerifiedRemoteCloneContext({
-      resolved,
-      remoteStartContext,
-      readRemotePointer: dependencies.readRemotePointer
+    await dependencies.verifyRemoteCloneStartAuthority({
+      bubbleId: resolved.bubbleId,
+      remoteWorkspaceRoot: remoteStartContext.workspaceRoot,
+      remotePointerPath: resolved.bubblePaths.remotePointerPath
     });
   }
 
