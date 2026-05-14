@@ -5,14 +5,14 @@
 
 ## Executive Summary
 
-Pairflow is a local-first orchestration runtime for isolated agent work units called bubbles: it creates workspaces, drives agent CLIs, persists protocol history, and routes lifecycle transitions through review, meta-review, approval, commit, merge, remote execution, and UI gates. The repository is not in a critical modularity state: `pnpm fitness:report` passes every hard-fail architecture check across 884 scoped v11 files and 3455 import edges. The main risks are below the current fitness gates, where volatile workflow meaning is still shared through broad contracts or recomputed in high-distance presenters. The most important finding is that protocol/finding/timeline vocabulary remains the central wide language across domain, application, infrastructure, CLI, tests, and UI projection.
+Pairflow is a local-first orchestration runtime for isolated agent work units called bubbles: it creates workspaces, drives agent CLIs, persists protocol history, and routes lifecycle transitions through review, meta-review, approval, commit, merge, remote execution, and UI gates. The repository is not in a critical modularity state: `pnpm fitness:report` passes every hard-fail architecture check across 884 scoped v11 files and 3455 import edges. The main risks are below the current fitness gates, where volatile workflow meaning is still shared through broad contracts or adapter-shaped lifecycle details. The most important finding is that protocol and finding vocabulary remains the central wide language across domain, application, infrastructure, CLI, tests, and UI projection.
 
 ## Coupling Overview
 
 | Integration | [Strength](https://coupling.dev/posts/dimensions-of-coupling/integration-strength/) | [Distance](https://coupling.dev/posts/dimensions-of-coupling/distance/) | [Volatility](https://coupling.dev/posts/dimensions-of-coupling/volatility/) | [Balanced?](https://coupling.dev/posts/core-concepts/balance/) |
 | ----------- | ----------------------------------------------------------------------------------- | ----------------------------------------------------------------------- | --------------------------------------------------------------------------- | -------------------------------------------------------------- |
 | `contracts/kernel/{protocol,findings}` + `shared/protocol/protocolEnvelopeContract` + `shared/metaReviewGate` -> domain/application/infrastructure/CLI/tests/UI projection | [Model](https://coupling.dev/posts/dimensions-of-coupling/integration-strength/) plus localized [functional](https://coupling.dev/posts/dimensions-of-coupling/integration-strength/) coupling | High: one vocabulary crosses most runtime layers and test surfaces | High: actor protocol, findings parity, reviewer policy, and meta-review routing are core Pairflow workflow concepts | No |
-| `infrastructure/ui/presenters/timelineDisplayPresenter` -> `ui/src/components/expanded/BubbleTimeline` via `contracts/ui/uiReadModel` | [Functional](https://coupling.dev/posts/dimensions-of-coupling/integration-strength/) coupling around display policy and workflow semantics | High: backend presenter, browser renderer, UI contracts, and tests | Medium-high: meta-review progress, approval gates, and timeline evidence are active workflow UX surfaces | No |
+| `infrastructure/ui/presenters/timelineDisplayPresenter` -> `ui/src/components/expanded/BubbleTimeline` via `contracts/ui/uiReadModel` | Residual [functional](https://coupling.dev/posts/dimensions-of-coupling/integration-strength/) coupling around inferred display policy | High: backend presenter, browser renderer, UI contracts, and tests | Medium: the prior raw-payload UI coupling is fixed; remaining risk is hardening implicit presenter inference | Mostly yes, with follow-up hardening |
 | `application/start/**` and remote command paths -> filesystem/env/runtime-session/tmux/remote payload details | [Intrusive](https://coupling.dev/posts/dimensions-of-coupling/integration-strength/) plus [functional](https://coupling.dev/posts/dimensions-of-coupling/integration-strength/) coupling | High: command orchestration owns adapter-shaped runtime details | High: start/resume/remote execution are core lifecycle paths | No |
 | `application/planWatch/**` -> `shared/planWatchRunner/**` -> `infrastructure/executor/planWatch/codex/**` | [Contract](https://coupling.dev/posts/dimensions-of-coupling/integration-strength/) with some [model](https://coupling.dev/posts/dimensions-of-coupling/integration-strength/) coupling through runner result codes | Medium-high: application orchestration, shared contract, defaults wiring, provider adapter | Medium-high: plan-watch automation is active and likely to evolve | Mostly yes: provider-specific argv/artifacts now live in infrastructure |
 | `defaults/ui/routerDefaults` -> application command APIs -> `contracts/ui/**` -> browser app | [Contract](https://coupling.dev/posts/dimensions-of-coupling/integration-strength/) and composition [functional](https://coupling.dev/posts/dimensions-of-coupling/integration-strength/) coupling | High: CLI/UI host, backend command APIs, HTTP router, browser bundle | Medium-high: UI action surface changes with lifecycle and remote flows | Mostly yes: explicit UI contracts and fitness gates contain the distance |
@@ -48,34 +48,34 @@ Shrink the shared model into narrower [contract coupling](https://coupling.dev/p
 
 The trade-off is a migration across many consumers. The payoff is lower [model coupling](https://coupling.dev/posts/dimensions-of-coupling/integration-strength/) while preserving a single canonical language where the domain genuinely needs one.
 
-## Issue: Timeline display recomputes workflow policy across backend and browser boundaries
+## Issue: Timeline display has residual implicit workflow inference
 
 **Integration**: `src/v11/infrastructure/ui/presenters/timelineDisplayPresenter.ts` -> `src/contracts/ui/uiReadModel.ts` -> `ui/src/components/expanded/BubbleTimeline.tsx`  
-**Severity**: Significant
+**Severity**: Minor
 
 ### Knowledge Leakage
 
-The UI timeline is no longer directly rendering raw transcript payloads, which is good. However, the backend presenter still reads protocol-level metadata keys such as `meta_review_handoff_id`, `delivery_target_role`, `latest_recommendation`, `recommendation`, `consecutive_clean_runs`, and approve-gate failure text. It derives sender roles, badges, meta-review handoff attempts, clean-run progress, gate-failure rows, synthetic approval rows, and tone values. The browser component then applies additional role/icon/tone/blocked rendering decisions from the UI read model.
+The earlier raw-transcript/raw-protocol UI coupling has materially improved: the browser timeline now consumes a UI read model instead of interpreting the transcript payload directly. The remaining leakage is narrower and lives mostly in the backend presenter. `timelineDisplayPresenter.ts` still reads metadata keys such as `meta_review_handoff_id`, `delivery_target_role`, `latest_recommendation`, `recommendation`, and `consecutive_clean_runs`, plus approve-gate failure text, to derive sender roles, badges, handoff attempts, clean-run progress, gate-failure rows, synthetic approval rows, and tone values.
 
-This is [functional coupling](https://coupling.dev/posts/dimensions-of-coupling/integration-strength/): the display is not just formatting data, it encodes workflow interpretations. The [shared knowledge](https://coupling.dev/posts/dimensions-of-coupling/integration-strength/) is partly hidden in metadata key names and text matching, especially the `"approve-gate validation failed"` classifier.
+This is residual [functional coupling](https://coupling.dev/posts/dimensions-of-coupling/integration-strength/), not the same issue as the previous browser-side raw payload dependency. The [shared knowledge](https://coupling.dev/posts/dimensions-of-coupling/integration-strength/) is partly hidden in metadata key names and text matching, especially the `"approve-gate validation failed"` classifier.
 
 ### Complexity Impact
 
-Timeline rows are operator feedback for lifecycle authority, review evidence, and meta-review confidence. If the backend presenter and browser component disagree about role, tone, progress, or synthetic approval state, the UI can show a plausible but incorrect workflow story. A developer changing meta-review clean-run policy or approval validation must reason about domain state, transcript metadata, backend presentation, UI contracts, React rendering, and tests together.
+Timeline rows are operator feedback for lifecycle authority, review evidence, and meta-review confidence. The current UI read model reduces the [distance](https://coupling.dev/posts/dimensions-of-coupling/distance/) problem substantially, but implicit presenter inference can still drift when workflow metadata changes. A developer changing meta-review clean-run policy or approval validation may still need to check domain state, transcript metadata, backend presentation, UI contracts, and tests.
 
 ### Cascading Changes
 
-Changes to meta-review handoff IDs, clean-run source IDs, recommendation wording, gate failure metadata, or approval route naming can cascade from domain/application event producers into `timelineDisplayPresenter.ts`, `uiReadModel.ts`, UI fixtures, `BubbleTimeline`, and UI tests. The [distance](https://coupling.dev/posts/dimensions-of-coupling/distance/) is high because the meaning crosses backend runtime and browser bundle boundaries. The [volatility](https://coupling.dev/posts/dimensions-of-coupling/volatility/) is medium-high because meta-review progress and approval feedback are still active product surfaces.
+Changes to meta-review handoff IDs, clean-run source IDs, recommendation wording, gate failure metadata, or approval route naming can still cascade into `timelineDisplayPresenter.ts`, `uiReadModel.ts`, UI fixtures, and UI tests. The [distance](https://coupling.dev/posts/dimensions-of-coupling/distance/) is high because the display crosses backend runtime and browser bundle boundaries, but the [integration strength](https://coupling.dev/posts/dimensions-of-coupling/integration-strength/) is now lower than it was before the UI read-model refactor. The [volatility](https://coupling.dev/posts/dimensions-of-coupling/volatility/) is medium because this is product-facing workflow feedback, not the core protocol authority itself.
 
 ### Recommended Improvement
 
-Promote timeline semantics into a dedicated published read-model contract:
+Treat this as follow-up hardening rather than a repeat of the earlier UI boundary fix:
 
-- Have backend application/infrastructure emit typed timeline semantic events such as `meta_review_clean_run_progress`, `meta_review_handoff_attempt`, `approval_gate_failure`, and `synthetic_meta_review_approval`.
-- Keep `timelineDisplayPresenter.ts` as a projection from canonical events to UI DTOs, but remove string matching and metadata-key inference from display classification.
-- Keep `BubbleTimeline.tsx` responsible for rendering stable DTO fields only: role, tone, badges, progress, validation failure, and summary text.
+- Replace text matching with explicit metadata fields for approval gate failures.
+- Prefer typed timeline display markers such as `meta_review_clean_run_progress`, `meta_review_handoff_attempt`, `approval_gate_failure`, and `synthetic_meta_review_approval` when those concepts next change.
+- Keep `BubbleTimeline.tsx` responsible for rendering stable DTO fields only; avoid moving workflow inference back into the browser.
 
-This reduces [functional coupling](https://coupling.dev/posts/dimensions-of-coupling/integration-strength/) across the backend/browser [distance](https://coupling.dev/posts/dimensions-of-coupling/distance/). The cost is a slightly richer UI read model, but it makes operator-facing workflow meaning explicit and testable.
+This reduces the remaining [functional coupling](https://coupling.dev/posts/dimensions-of-coupling/integration-strength/) without reopening a boundary that was already improved. The cost is a slightly richer UI read model, but it makes operator-facing workflow meaning explicit and testable.
 
 ## Issue: Start and remote lifecycle orchestration owns adapter-shaped runtime details
 
