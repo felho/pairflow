@@ -1,5 +1,6 @@
 import type { PairflowCommandPathAssessment } from "../../../../ports/pairflowCommand.js";
 import type { EmitBubbleLifecycleEventBestEffortPort } from "../../../../shared/metrics/bubbleEvents.js";
+import type { ProtocolEnvelope } from "../../../../shared/protocol/protocolEnvelopeContract.js";
 import {
   buildConvergedEventMetadata,
   buildMetaReviewRoutedMetadata,
@@ -11,34 +12,9 @@ import type {
 } from "./convergedFinalizationTypes.js";
 
 function resolveAdvisoryFindingsOpenTotal(
-  convergenceEnvelope: FinalizeConvergedFlowInput["convergence"]["envelope"]
+  convergenceEnvelope: ProtocolEnvelope<"CONVERGENCE">
 ): number {
-  const payload =
-    typeof convergenceEnvelope.payload === "object" &&
-    convergenceEnvelope.payload !== null
-      ? convergenceEnvelope.payload
-      : null;
-  if (payload === null) {
-    return 0;
-  }
-
-  const metadata = payload.metadata;
-  let metadataCount: number | null = null;
-  if (typeof metadata === "object" && metadata !== null) {
-    const candidate = (metadata as Record<string, unknown>).advisory_findings_open_total;
-    if (typeof candidate === "number") {
-      metadataCount = candidate;
-    }
-  }
-  if (
-    metadataCount !== null &&
-    Number.isInteger(metadataCount) &&
-    metadataCount >= 0
-  ) {
-    return metadataCount;
-  }
-
-  return 0;
+  return convergenceEnvelope.payload.advisory_findings_open_total;
 }
 
 async function emitConvergedAndRoutedEvents(input: {

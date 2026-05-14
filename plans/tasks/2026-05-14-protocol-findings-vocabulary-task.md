@@ -354,6 +354,7 @@ The first slice is "done" only when the invariants below hold across the touched
 - **No caller-side casts from appended results back to a concrete envelope type.** Append infrastructure preserves `TType` end to end, so application code does not need `appended.envelope as ProtocolEnvelope<"...">` to recover the type it just emitted.
 - **No "translate old to new" shims** kept as permanent code. If a transcript reader needs to handle archived payloads from before the change, that handling is either an explicit one-off migration script or accepted data loss (per Resolved Decisions) — not an ongoing translation layer in the runtime path.
 - **No "optional during migration" fields.** A field that emitters always populate becomes `required` in the strict type. The optional-vs-required choice reflects the actual contract, not the migration phase.
+- **No test fixture mirrors a pre-migration field location.** Fixtures for touched payload kinds must use the same payload shape the real emitter produces; otherwise a stale reader and stale fixture can pass together while production telemetry or projections silently drift.
 
 ### Comment / TODO invariants
 

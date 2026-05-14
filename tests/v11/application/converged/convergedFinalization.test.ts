@@ -33,9 +33,7 @@ describe("finalizeConvergedFlow", () => {
             id: "env_conv_final_1",
             payload: {
               summary: "Converged summary",
-              metadata: {
-                advisory_findings_open_total: 2
-              },
+              advisory_findings_open_total: 2,
               findings: [
                 {
                   severity: "P2",
@@ -143,9 +141,7 @@ describe("finalizeConvergedFlow", () => {
         id: "env_conv_final_1",
         payload: {
           summary: "Converged summary",
-          metadata: {
-            advisory_findings_open_total: 2
-          },
+          advisory_findings_open_total: 2,
           findings: [
             {
               severity: "P2",
@@ -211,9 +207,7 @@ describe("finalizeConvergedFlow", () => {
             id: "env_conv_final_2",
             payload: {
               summary: "Converged summary",
-              metadata: {
-                advisory_findings_open_total: 3
-              }
+              advisory_findings_open_total: 3
             }
           }
         } as never,
@@ -290,7 +284,7 @@ describe("finalizeConvergedFlow", () => {
     ).toBe("consistent");
   });
 
-  it("uses convergence metadata as single advisory metric source over list length and gate payload metadata", async () => {
+  it("uses convergence payload as single advisory metric source over list length and gate payload", async () => {
     const emittedEvents: Array<{ eventType: string; metadata: Record<string, unknown> }> = [];
 
     const result = await finalizeConvergedFlow(
@@ -320,9 +314,7 @@ describe("finalizeConvergedFlow", () => {
             id: "env_conv_final_3",
             payload: {
               summary: "Converged summary",
-              metadata: {
-                advisory_findings_open_total: 5
-              },
+              advisory_findings_open_total: 5,
               findings: [
                 {
                   severity: "P2",
@@ -339,9 +331,7 @@ describe("finalizeConvergedFlow", () => {
             id: "env_gate_final_3",
             type: "APPROVAL_REQUEST",
             payload: {
-              metadata: {
-                advisory_findings_open_total: 9
-              },
+              summary: "Approval request summary",
               findings: [
                 {
                   severity: "P2",
@@ -410,11 +400,19 @@ describe("finalizeConvergedFlow", () => {
     expect(emittedEvents[2]?.eventType).toBe("bubble_meta_review_human_gate_reached");
     expect(emittedEvents[2]?.metadata.recommendation).toBe("approve");
     expect(emittedEvents[0]?.metadata.advisory_findings_open_total).not.toBe(1);
-    expect(emittedEvents[1]?.metadata.advisory_findings_open_total).not.toBe(9);
-    expect(
-      (result.approvalRequestEnvelope as { payload?: { metadata?: { advisory_findings_open_total?: unknown } } })
-        .payload?.metadata?.advisory_findings_open_total
-    ).toBe(9);
+    expect(result.approvalRequestEnvelope).toEqual({
+      id: "env_gate_final_3",
+      type: "APPROVAL_REQUEST",
+      payload: {
+        summary: "Approval request summary",
+        findings: [
+          {
+            severity: "P2",
+            title: "gate-follow-up"
+          }
+        ]
+      }
+    });
   });
 
   it("falls back to route-derived metadata when metaReviewRun is absent", async () => {
@@ -553,7 +551,10 @@ describe("finalizeConvergedFlow", () => {
           sequence: 61,
           envelope: {
             id: "env_conv_projection",
-            payload: {}
+            payload: {
+              summary: "Converged summary",
+              advisory_findings_open_total: 0
+            }
           }
         } as never,
         gateResult: {

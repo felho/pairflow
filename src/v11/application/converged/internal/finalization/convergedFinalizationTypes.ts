@@ -31,7 +31,7 @@ export interface FinalizeConvergedFlowInput {
   summary: string;
   refs: string[];
   now: Date;
-  convergence: AppendProtocolEnvelopeResult;
+  convergence: AppendProtocolEnvelopeResult<"CONVERGENCE">;
   gateResult: {
     route: MetaReviewGateRoute;
     gateSequence: number;
@@ -64,7 +64,7 @@ export interface FinalizeConvergedFlowDependencies {
 export interface FinalizeConvergedFlowResult {
   bubbleId: string;
   convergenceSequence: number;
-  convergenceEnvelope: ProtocolEnvelope;
+  convergenceEnvelope: ProtocolEnvelope<"CONVERGENCE">;
   gateRoute: MetaReviewGateRoute;
   approvalRequestSequence: number;
   approvalRequestEnvelope: ProtocolEnvelope;

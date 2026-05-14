@@ -21,6 +21,7 @@ import type {
   BubbleSpecLockState
 } from "../../../../shared/gates/gateStateTypes.js";
 import type { ProtocolEnvelope } from "../../../../shared/protocol/protocolEnvelopeContract.js";
+import type { AppendProtocolEnvelopeResult } from "../../../../ports/transcript.js";
 import type { PrepareConvergedValidationResult } from "../validation/convergedValidationPreparationContract.js";
 
 export interface ExecuteConvergedExecutionDependencies {
@@ -62,15 +63,7 @@ interface PrepareConvergedPolicyResult {
 }
 
 interface ExecuteConvergedExecutionResult {
-  convergence: {
-    sequence: number;
-    envelope: ProtocolEnvelope;
-    mirrorWriteFailures: Array<{
-      path: string;
-      message: string;
-      code?: string;
-    }>;
-  };
+  convergence: AppendProtocolEnvelopeResult<"CONVERGENCE">;
   gateResult: {
     route: MetaReviewGateRoute;
     gateSequence: number;
@@ -165,7 +158,7 @@ export interface RunConvergedFlowDependencies
 export interface RunConvergedFlowResult {
   bubbleId: string;
   convergenceSequence: number;
-  convergenceEnvelope: ProtocolEnvelope;
+  convergenceEnvelope: ProtocolEnvelope<"CONVERGENCE">;
   gateRoute: MetaReviewGateRoute;
   approvalRequestSequence: number;
   approvalRequestEnvelope: ProtocolEnvelope;

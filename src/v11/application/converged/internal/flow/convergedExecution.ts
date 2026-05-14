@@ -11,7 +11,8 @@ import {
   type ConvergedDeliveryResult
 } from "../gate/convergedGateDelivery.js";
 import type {
-  AppendProtocolEnvelopePort
+  AppendProtocolEnvelopePort,
+  AppendProtocolEnvelopeResult
 } from "../../../../ports/transcript.js";
 import type { EmitBubbleNotificationPort } from "../../../../ports/notifications.js";
 import type {
@@ -48,7 +49,7 @@ export interface ExecuteConvergedExecutionDependencies {
 }
 
 export interface ExecuteConvergedExecutionResult {
-  convergence: Awaited<ReturnType<ResolvedConvergedExecutionDependencies["appendProtocolEnvelope"]>>;
+  convergence: AppendProtocolEnvelopeResult<"CONVERGENCE">;
   gateResult: Awaited<ReturnType<ResolvedConvergedExecutionDependencies["applyMetaReviewGateOnConvergence"]>>;
   delivery: ConvergedDeliveryResult;
 }
@@ -77,7 +78,7 @@ function resolveExecutionDependencies(
 async function appendConvergenceEnvelope(
   input: ExecuteConvergedExecutionInput,
   appendEnvelope: ResolvedExecutionDependencies["appendEnvelope"]
-): Promise<Awaited<ReturnType<ResolvedExecutionDependencies["appendEnvelope"]>>> {
+): Promise<AppendProtocolEnvelopeResult<"CONVERGENCE">> {
   const lockPath = join(input.resolved.bubblePaths.locksDir, `${input.resolved.bubbleId}.lock`);
   const advisoryFindingsOpenTotal = input.findings?.length ?? 0;
   const metadata: Record<string, unknown> = {};
@@ -87,7 +88,7 @@ async function appendConvergenceEnvelope(
   if (input.gatePipelineDiagnostics.length > 0) {
     metadata.gate_pipeline_diagnostics = input.gatePipelineDiagnostics;
   }
-  return appendEnvelope({
+  return appendEnvelope<"CONVERGENCE">({
     transcriptPath: input.resolved.bubblePaths.transcriptPath,
     lockPath,
     now: input.now,
