@@ -32,12 +32,13 @@ export interface TaskProtocolEnvelopePayload {
   metadata?: ProtocolEnvelopeMetadata;
 }
 
-export interface PassProtocolEnvelopePayload extends ProtocolEnvelopePayloadBase {
-  summary?: string;
+export interface PassProtocolEnvelopePayload {
+  summary: string;
   pass_intent?: PassIntent;
   findings_claim_state?: FindingsClaimState;
   findings_claim_source?: FindingsClaimSource;
   findings?: Finding[];
+  metadata?: ProtocolEnvelopeMetadata;
 }
 
 export interface HumanQuestionProtocolEnvelopePayload {

@@ -9,7 +9,11 @@ import {
   repeatCleanRound1DisabledReasonCode,
   repeatCleanTriggerNotMetReasonCode
 } from "../../../../src/v11/domain/convergence/repeatCleanAutoconverge.js";
-import type { ProtocolEnvelope } from "../../../../src/v11/shared/protocol/protocolEnvelopeContract.js";
+import type { Finding } from "../../../../src/contracts/kernel/findings.js";
+import type {
+  PassProtocolEnvelopePayload,
+  ProtocolEnvelope
+} from "../../../../src/v11/shared/protocol/protocolEnvelopeContract.js";
 
 function createReviewerPass(input: {
   id: string;
@@ -17,15 +21,15 @@ function createReviewerPass(input: {
   ts: string;
   passIntent?: "task" | "review" | "fix_request";
   findings?: unknown;
-}): ProtocolEnvelope {
-  const payload: Record<string, unknown> = {
+}): ProtocolEnvelope<"PASS"> {
+  const payload: PassProtocolEnvelopePayload = {
     summary: input.id
   };
   if (input.passIntent !== undefined) {
-    payload["pass_intent"] = input.passIntent;
+    payload.pass_intent = input.passIntent;
   }
-  if ("findings" in input) {
-    payload["findings"] = input.findings;
+  if (input.findings !== undefined) {
+    payload.findings = input.findings as Finding[];
   }
 
   return {
@@ -36,7 +40,7 @@ function createReviewerPass(input: {
     recipient: "codex",
     type: "PASS",
     round: input.round,
-    payload: payload as ProtocolEnvelope["payload"],
+    payload,
     refs: []
   };
 }
