@@ -8,6 +8,10 @@ import { buildErrorCheckReport } from "./error.js";
 import { buildInternalModuleBoundaryCheckReport } from "./internal-module-boundary.js";
 import { buildMutationCheckReport } from "./mutation.js";
 import { createNotImplementedCheckReport } from "./not-implemented.js";
+import {
+  buildProtocolEnvelopeCastInventoryCheckReport,
+  buildProtocolVocabularyDriftCheckReport
+} from "./protocol-vocabulary-drift.js";
 import { buildSharedDefaultsBoundaryCheckReport } from "./shared-defaults-boundary.js";
 import { buildTransitionCheckReport } from "./transition.js";
 import { buildUiContractBoundaryCheckReport } from "./ui-contract-boundary.js";
@@ -115,6 +119,20 @@ export async function buildCheckReport({
   }
   if (effectiveCheck.id === "ui_router_port_boundary") {
     return buildUiRouterPortBoundaryCheckReport({
+      check: effectiveCheck,
+      repoRoot,
+      fallbackMode
+    });
+  }
+  if (effectiveCheck.id === "protocol_vocabulary_drift") {
+    return buildProtocolVocabularyDriftCheckReport({
+      check: effectiveCheck,
+      repoRoot,
+      fallbackMode
+    });
+  }
+  if (effectiveCheck.id === "protocol_envelope_cast_inventory") {
+    return buildProtocolEnvelopeCastInventoryCheckReport({
       check: effectiveCheck,
       repoRoot,
       fallbackMode

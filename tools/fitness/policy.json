@@ -166,6 +166,27 @@
       "mode": "hard-fail",
       "owner": "architecture/ui-router",
       "exceptions": []
+    },
+    {
+      "id": "protocol_vocabulary_drift",
+      "metric": "protocol payload vocabulary must not drift back to wide payloads or structured metadata bags",
+      "scope": [
+        "src/v11/**/*.ts"
+      ],
+      "mode": "hard-fail",
+      "owner": "architecture/protocol",
+      "exceptions": []
+    },
+    {
+      "id": "protocol_envelope_cast_inventory",
+      "metric": "ProtocolEnvelope concrete casts should remain visible until proven safe to hard-fail",
+      "scope": [
+        "src/v11/**/*.ts",
+        "tests/**/*.ts"
+      ],
+      "mode": "report-only",
+      "owner": "architecture/protocol",
+      "exceptions": []
     }
   ]
 }
