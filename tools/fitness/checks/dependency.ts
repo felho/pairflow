@@ -23,7 +23,6 @@ interface DependencyViolation {
     | "anti_circumvention_reexport"
     | "anti_circumvention_wrapper"
     | "forbidden_process_runtime_import"
-    | "legacy_protocol_facade_import"
     | "protocol_contract_transitional_findings_import"
     | "v11_transitional_findings_import"
     | "shared_promotion_single_lane"
@@ -871,46 +870,6 @@ function resolveImportSpecifierToRepoPath(input: {
   return normalizePathToPosix(relative(input.repoRoot, candidate));
 }
 
-function detectLegacyProtocolFacadeImports(input: {
-  repoRoot: string;
-  files: readonly string[];
-  sourceByPath: ReadonlyMap<string, string>;
-}): DependencyViolation[] {
-  const violations: DependencyViolation[] = [];
-
-  for (const filePath of input.files) {
-    const fromRelative = normalizePathToPosix(relative(input.repoRoot, filePath));
-    const sourceText = input.sourceByPath.get(filePath) ?? "";
-    const imports = parseImportSpecifiers({
-      filePath,
-      sourceText
-    });
-
-    for (const imported of imports) {
-      const importedPath = resolveImportSpecifierToRepoPath({
-        importerPath: filePath,
-        repoRoot: input.repoRoot,
-        specifier: imported.specifier
-      });
-      if (importedPath !== "src/types/protocol.ts") {
-        continue;
-      }
-
-      violations.push({
-        kind: "legacy_protocol_facade_import",
-        severity: "fail",
-        message:
-          `${fromRelative}:${String(imported.line)} legacy protocol facade import is forbidden in v11 production code; import the owning v11 protocol contract directly`,
-        fromRelative,
-        toRelative: importedPath,
-        cycleNodes: undefined
-      });
-    }
-  }
-
-  return violations;
-}
-
 function detectProtocolContractTransitionalFindingsImports(input: {
   repoRoot: string;
   files: readonly string[];
@@ -1321,11 +1280,6 @@ export async function buildDependencyCheckReport({
       sourceByPath
     }),
     ...detectForbiddenProcessRuntimeImports({
-      repoRoot,
-      files: availableFiles,
-      sourceByPath
-    }),
-    ...detectLegacyProtocolFacadeImports({
       repoRoot,
       files: availableFiles,
       sourceByPath

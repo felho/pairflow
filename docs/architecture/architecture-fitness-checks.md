@@ -49,6 +49,9 @@ The current posture is:
 - `critical_side_effect`: hard-fail
 - `ui_contract_boundary`: hard-fail
 - `ui_router_port_boundary`: hard-fail
+- `protocol_vocabulary_drift`: hard-fail
+- `protocol_envelope_cast_inventory`: report-only
+- `protocol_surface_fanout_inventory`: report-only
 
 This means the system is already operating as an enforcement gate, not only as advisory reporting.
 
@@ -167,6 +170,27 @@ Rules:
   command-owned runtime imports from leaking into UI routing ports
 - owner: architecture/ui-router
 
+### 13) Protocol Vocabulary Drift
+
+- metric: protocol payload vocabulary must not drift back to wide payloads or structured metadata bags
+- scope: `src/v11/**`
+- intent: keep protocol envelope payloads message-specific and prevent structured workflow facts from moving back into generic `payload.metadata`
+- owner: architecture/protocol
+
+### 14) ProtocolEnvelope Cast Inventory
+
+- metric: ProtocolEnvelope concrete casts should remain visible until proven safe to hard-fail
+- scope: `src/v11/**`, `tests/**`
+- intent: keep broad `ProtocolEnvelope<T>` cast sites visible while the protocol surface is narrowed
+- owner: architecture/protocol
+
+### 15) Protocol Surface Fan-Out Inventory
+
+- metric: Protocol and finding contract fan-out should remain visible while broad vocabulary is being narrowed
+- scope: `src/**`, `tests/**`, `tools/**`, `ui/src/**`, `ui/tests/**`
+- intent: report broad import fan-out for the current protocol/finding/parity ownership surfaces without blocking work
+- owner: architecture/protocol
+
 ## Current Implementation Status
 
 All policy-declared checks are currently wired to executable runners in
@@ -206,6 +230,14 @@ Implementation maturity by check:
   - adapter-call evidence
   - explicit result-side outcome-shape evidence
   - still narrower than full command-semantic proof
+- `protocol_vocabulary_drift`: TypeScript AST-based drift guard against retired
+  wide payload aliases, structured `ProtocolEnvelopeMetadata`, and structured
+  protocol facts carried through `payload.metadata`
+- `protocol_envelope_cast_inventory`: report-only AST inventory for concrete
+  `ProtocolEnvelope<T>` cast sites
+- `protocol_surface_fanout_inventory`: report-only import inventory for the
+  current protocol/finding/parity contract owners; thresholds are hard-coded
+  advisory tripwires, not merge gates
 
 This means the current system is fully executable, but several checks still rely
 on heuristics rather than complete semantic proof.

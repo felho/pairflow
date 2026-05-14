@@ -187,6 +187,20 @@
       "mode": "report-only",
       "owner": "architecture/protocol",
       "exceptions": []
+    },
+    {
+      "id": "protocol_surface_fanout_inventory",
+      "metric": "Protocol and finding contract fan-out should remain visible while broad vocabulary is being narrowed",
+      "scope": [
+        "src/**/*.ts",
+        "tests/**/*.ts",
+        "tools/**/*.ts",
+        "ui/src/**/*.ts",
+        "ui/tests/**/*.ts"
+      ],
+      "mode": "report-only",
+      "owner": "architecture/protocol",
+      "exceptions": []
     }
   ]
 }

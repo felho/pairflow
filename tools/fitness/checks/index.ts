@@ -10,6 +10,7 @@ import { buildMutationCheckReport } from "./mutation.js";
 import { createNotImplementedCheckReport } from "./not-implemented.js";
 import {
   buildProtocolEnvelopeCastInventoryCheckReport,
+  buildProtocolSurfaceFanoutInventoryCheckReport,
   buildProtocolVocabularyDriftCheckReport
 } from "./protocol-vocabulary-drift.js";
 import { buildSharedDefaultsBoundaryCheckReport } from "./shared-defaults-boundary.js";
@@ -133,6 +134,13 @@ export async function buildCheckReport({
   }
   if (effectiveCheck.id === "protocol_envelope_cast_inventory") {
     return buildProtocolEnvelopeCastInventoryCheckReport({
+      check: effectiveCheck,
+      repoRoot,
+      fallbackMode
+    });
+  }
+  if (effectiveCheck.id === "protocol_surface_fanout_inventory") {
+    return buildProtocolSurfaceFanoutInventoryCheckReport({
       check: effectiveCheck,
       repoRoot,
       fallbackMode

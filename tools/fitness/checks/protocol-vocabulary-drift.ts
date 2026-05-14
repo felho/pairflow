@@ -1,5 +1,5 @@
 import { readFile } from "node:fs/promises";
-import { relative } from "node:path";
+import { dirname, extname, relative, resolve } from "node:path";
 
 import ts from "typescript";
 
@@ -25,6 +25,45 @@ interface ProtocolEnvelopeCastInventoryItem {
   line: number;
   snippet: string;
 }
+
+interface ProtocolSurfaceFanoutTarget {
+  id: string;
+  label: string;
+  path: string;
+  threshold: number;
+}
+
+interface ProtocolSurfaceFanoutItem {
+  target: ProtocolSurfaceFanoutTarget;
+  importers: string[];
+}
+
+const protocolSurfaceFanoutTargets: readonly ProtocolSurfaceFanoutTarget[] = [
+  {
+    id: "protocol_envelope_contract",
+    label: "ProtocolEnvelope contract",
+    path: "src/v11/shared/protocol/protocolEnvelopeContract.ts",
+    threshold: 75
+  },
+  {
+    id: "kernel_protocol_contract",
+    label: "kernel protocol vocabulary",
+    path: "src/contracts/kernel/protocol.ts",
+    threshold: 75
+  },
+  {
+    id: "kernel_findings_contract",
+    label: "kernel findings vocabulary",
+    path: "src/contracts/kernel/findings.ts",
+    threshold: 75
+  },
+  {
+    id: "findings_parity_metadata_contract",
+    label: "findings parity metadata contract",
+    path: "src/v11/shared/metaReviewGate/findingsParityMetadataContract.ts",
+    threshold: 30
+  }
+];
 
 const forbiddenPayloadMetadataFields = new Set([
   "findings_parity",
@@ -297,6 +336,78 @@ function formatCastInventoryItem(item: ProtocolEnvelopeCastInventoryItem): strin
   return `${item.path}:${String(item.line)} ProtocolEnvelope cast inventory -> ${item.snippet}`;
 }
 
+function resolveImportSpecifierToRepoPath(input: {
+  importerPath: string;
+  repoRoot: string;
+  specifier: string;
+}): string | undefined {
+  if (!input.specifier.startsWith(".")) {
+    return undefined;
+  }
+
+  const resolvedPath = resolve(dirname(input.importerPath), input.specifier);
+  const resolvedExt = extname(resolvedPath);
+  const candidate =
+    resolvedExt === ".js" || resolvedExt === ".mjs" || resolvedExt === ".cjs"
+      ? `${resolvedPath.slice(0, -resolvedExt.length)}.ts`
+      : resolvedPath;
+  return normalizePathToPosix(relative(input.repoRoot, candidate));
+}
+
+function collectProtocolSurfaceFanout(input: {
+  files: readonly string[];
+  repoRoot: string;
+}): Promise<ProtocolSurfaceFanoutItem[]> {
+  return Promise.all(
+    protocolSurfaceFanoutTargets.map(async (target) => {
+      const importers: string[] = [];
+      for (const absolutePath of input.files) {
+        const relativePath = normalizePathToPosix(relative(input.repoRoot, absolutePath));
+        const sourceText = await readFile(absolutePath, "utf8");
+        const sourceFile = ts.createSourceFile(
+          relativePath,
+          sourceText,
+          ts.ScriptTarget.Latest,
+          true
+        );
+        let importsTarget = false;
+        const visit = (node: ts.Node): void => {
+          if (
+            importsTarget
+            || !ts.isImportDeclaration(node)
+            || !ts.isStringLiteralLike(node.moduleSpecifier)
+          ) {
+            node.forEachChild(visit);
+            return;
+          }
+          const importedPath = resolveImportSpecifierToRepoPath({
+            importerPath: absolutePath,
+            repoRoot: input.repoRoot,
+            specifier: node.moduleSpecifier.text
+          });
+          if (importedPath === target.path) {
+            importsTarget = true;
+          }
+          node.forEachChild(visit);
+        };
+        visit(sourceFile);
+        if (importsTarget) {
+          importers.push(relativePath);
+        }
+      }
+      return {
+        target,
+        importers: importers.sort((left, right) => left.localeCompare(right))
+      };
+    })
+  );
+}
+
+function formatFanoutItem(item: ProtocolSurfaceFanoutItem): string {
+  const sample = item.importers.slice(0, 8).join(", ");
+  return `${item.target.path}: ${String(item.importers.length)} importer(s), threshold=${String(item.target.threshold)}, label=${item.target.label}${sample.length > 0 ? `, sample=${sample}` : ""}`;
+}
+
 export async function buildProtocolVocabularyDriftCheckReport({
   check,
   repoRoot,
@@ -350,6 +461,60 @@ export async function buildProtocolVocabularyDriftCheckReport({
     summary: `Protocol vocabulary drift check passed: ${String(files.length)} scoped file(s) scanned, no protocol vocabulary drift detected.`,
     metric: check.metric,
     details: [`scope=${scope.join(", ")}`, `files_scanned=${String(files.length)}`]
+  };
+}
+
+export async function buildProtocolSurfaceFanoutInventoryCheckReport({
+  check,
+  repoRoot,
+  fallbackMode
+}: {
+  check: FitnessPolicyCheck;
+  repoRoot: string;
+  fallbackMode: string;
+}): Promise<FitnessReportCheck> {
+  const mode = check.mode ?? fallbackMode;
+  const scope = check.scope ?? [];
+  if (scope.length === 0) {
+    return {
+      id: check.id,
+      owner: check.owner ?? "unknown",
+      mode,
+      status: "warn",
+      summary: "Protocol surface fan-out inventory check has no configured scope.",
+      metric: check.metric,
+      details: [
+        "Set scope patterns in tools/fitness/policy.json for protocol_surface_fanout_inventory check."
+      ]
+    };
+  }
+
+  const files = await resolveFilesForScopePatterns(repoRoot, scope);
+  const fanout = await collectProtocolSurfaceFanout({ files, repoRoot });
+  const exceeded = fanout.filter((item) =>
+    item.importers.length > item.target.threshold
+  );
+
+  if (exceeded.length > 0) {
+    return {
+      id: check.id,
+      owner: check.owner ?? "unknown",
+      mode,
+      status: "warn",
+      summary: `Protocol surface fan-out inventory found ${String(exceeded.length)} surface(s) above report-only threshold in ${String(files.length)} scanned file(s).`,
+      metric: check.metric,
+      details: fanout.map(formatFanoutItem)
+    };
+  }
+
+  return {
+    id: check.id,
+    owner: check.owner ?? "unknown",
+    mode,
+    status: "pass",
+    summary: `Protocol surface fan-out inventory passed: ${String(files.length)} scoped file(s) scanned, no tracked surface exceeded its report-only threshold.`,
+    metric: check.metric,
+    details: fanout.map(formatFanoutItem)
   };
 }
 

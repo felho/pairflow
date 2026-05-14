@@ -6,6 +6,7 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import {
   buildProtocolEnvelopeCastInventoryCheckReport,
+  buildProtocolSurfaceFanoutInventoryCheckReport,
   buildProtocolVocabularyDriftCheckReport
 } from "../../../tools/fitness/checks/protocol-vocabulary-drift.js";
 
@@ -46,6 +47,18 @@ function castInventoryCheckInput(mode: string = "report-only") {
     mode,
     owner: "architecture/protocol",
     scope: ["src/v11/**/*.ts", "tests/**/*.ts"],
+    exceptions: []
+  };
+}
+
+function fanoutInventoryCheckInput(mode: string = "report-only") {
+  return {
+    id: "protocol_surface_fanout_inventory",
+    metric:
+      "Protocol and finding contract fan-out should remain visible while broad vocabulary is being narrowed",
+    mode,
+    owner: "architecture/protocol",
+    scope: ["src/**/*.ts", "tests/**/*.ts"],
     exceptions: []
   };
 }
@@ -246,6 +259,40 @@ describe("protocol vocabulary drift fitness check", () => {
     expect(report.summary).toContain("cast site");
     expect(
       report.details?.some((detail) => detail.includes("castBoundary.ts"))
+    ).toBe(true);
+  });
+
+  it("reports broad protocol surface fan-out without blocking", async () => {
+    const repoRoot = await createTempRoot();
+    await writeRepoFile(
+      repoRoot,
+      "src/v11/shared/protocol/protocolEnvelopeContract.ts",
+      "export interface ProtocolEnvelope { id: string; }\n"
+    );
+    for (let index = 0; index < 76; index += 1) {
+      await writeRepoFile(
+        repoRoot,
+        `src/v11/application/lane${String(index)}/consumer.ts`,
+        [
+          "import type { ProtocolEnvelope } from '../../shared/protocol/protocolEnvelopeContract.js';",
+          "export type ConsumerEnvelope = ProtocolEnvelope;"
+        ].join("\n")
+      );
+    }
+
+    const report = await buildProtocolSurfaceFanoutInventoryCheckReport({
+      check: fanoutInventoryCheckInput(),
+      repoRoot,
+      fallbackMode: "hard-fail"
+    });
+
+    expect(report.mode).toBe("report-only");
+    expect(report.status).toBe("warn");
+    expect(report.summary).toContain("above report-only threshold");
+    expect(
+      report.details?.some((detail) =>
+        detail.includes("src/v11/shared/protocol/protocolEnvelopeContract.ts: 76 importer(s)")
+      )
     ).toBe(true);
   });
 });
