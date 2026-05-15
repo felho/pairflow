@@ -73,3 +73,4 @@
 - https://x.com/trq212/status/2017024445244924382
 - https://www.youtube.com/watch?v=qKU-e0x2EmE
 - https://github.com/CsabaKovacs/rulesmith
+- https://github.com/bemafred/sky-omega
