@@ -82,3 +82,4 @@
 - https://x.com/port_dev/status/2054259445732110408
 - https://github.com/antirez/ds4
 - https://github.com/yvgude/lean-ctx
+- https://github.com/cheriftj/c4-model-skill
