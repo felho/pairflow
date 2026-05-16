@@ -74,3 +74,4 @@
 - https://www.youtube.com/watch?v=qKU-e0x2EmE
 - https://github.com/CsabaKovacs/rulesmith
 - https://github.com/bemafred/sky-omega
+- https://github.com/llmsresearch/paperbanana
