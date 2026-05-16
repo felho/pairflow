@@ -75,3 +75,5 @@
 - https://github.com/CsabaKovacs/rulesmith
 - https://github.com/bemafred/sky-omega
 - https://github.com/llmsresearch/paperbanana
+- execute plan --> taskra is működjön, meg a remote vonal sincs elvarrva
+- v2-es architektúra ötletelést vinni tovább --> első lépésként a xstate-et megnézni
