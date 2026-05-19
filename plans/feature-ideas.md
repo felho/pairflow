@@ -89,3 +89,4 @@
 - https://github.com/public-apis/public-apis
 - https://github.com/colbymchenry/codegraph
 - https://githits.com/
+- https://github.com/virgiliojr94/book-to-skill
