@@ -84,3 +84,6 @@
 - https://github.com/yvgude/lean-ctx
 - https://github.com/cheriftj/c4-model-skill
 - https://github.com/Tencent/TencentDB-Agent-Memory
+- https://github.com/teng-lin/notebooklm-py
+- https://github.com/alirezarezvani/claude-skills
+- https://github.com/public-apis/public-apis
