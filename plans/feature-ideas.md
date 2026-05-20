@@ -90,4 +90,4 @@
 - https://github.com/colbymchenry/codegraph
 - https://githits.com/
 - https://github.com/virgiliojr94/book-to-skill
-- https://github.com/proffesor-for-testing/agentic-qe
+- https://github.com/proffesor-for-testing/agentic-qe, https://agentic-qe.dev/framework
