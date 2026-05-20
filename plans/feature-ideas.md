@@ -93,3 +93,4 @@
 - https://github.com/proffesor-for-testing/agentic-qe, https://agentic-qe.dev/framework
 - https://github.com/DeusData/codebase-memory-mcp, https://github.com/jskswamy/claude-plugins/tree/main/plugins/codebase
 - https://gist.github.com/adambkovacs/1067974308e10912ff03918d99bd8a90 (Multi-Layer Memory Architecture for AI Agents)
+- https://github.com/aiming-lab/SimpleMem, https://github.com/MemPalace/mempalace
