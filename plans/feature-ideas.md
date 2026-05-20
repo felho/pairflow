@@ -91,3 +91,4 @@
 - https://githits.com/
 - https://github.com/virgiliojr94/book-to-skill
 - https://github.com/proffesor-for-testing/agentic-qe, https://agentic-qe.dev/framework
+- https://github.com/DeusData/codebase-memory-mcp, https://github.com/jskswamy/claude-plugins/tree/main/plugins/codebase
