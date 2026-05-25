@@ -96,3 +96,4 @@
 - https://github.com/aiming-lab/SimpleMem, https://github.com/MemPalace/mempalace
 - https://github.com/alabamahanna123/RuView/releases/tag/v1.0.0-sleep-monitor
 - https://picrew.github.io/LLM-Harness, https://github.com/Picrew/awesome-agent-harness
+- https://github.com/pnocera/reversa
