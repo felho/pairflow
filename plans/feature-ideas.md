@@ -99,3 +99,4 @@
 - https://github.com/pnocera/reversa
 - https://github.com/awesome-skills/code-review-skill
 - https://github.com/OpenDCAI/DataFlow
+- https://github.com/Ontos-AI/knowhere
