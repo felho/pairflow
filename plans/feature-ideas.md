@@ -101,3 +101,4 @@
 - https://github.com/OpenDCAI/DataFlow
 - https://github.com/Ontos-AI/knowhere
 - https://github.com/DrCatHicks/learning-opportunities
+- https://github.com/nicobailon/pi-subagents
