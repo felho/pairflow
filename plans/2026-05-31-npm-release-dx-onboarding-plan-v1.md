@@ -25,8 +25,8 @@ task_tracker:
     task_path: plans/tasks/0-remove-orchestra-bin.md
     status: done
   - task_id: 1-package-version
-    task_path: null
-    status: not_created
+    task_path: plans/tasks/1-package-version.md
+    status: approved
   - task_id: 2-commit-policy
     task_path: null
     status: not_created
@@ -58,7 +58,7 @@ This plan turns the current local-development install story into a release-quali
 ## Done Definition
 
 1. Pairflow can be packaged as a public npm package with the `pairflow` binary and all runtime assets needed by the CLI, including the built UI assets used by `pairflow ui`.
-2. Users can install or upgrade the latest release and a specific version through npm, for example `npm install -g <package>@latest` and `npm install -g <package>@0.1.0`, after `1-package-version` records the final package name and scoped/unscoped policy.
+2. Users can install or upgrade the latest release and a specific version through npm, for example `npm install -g @pairflow/cli@latest` and `npm install -g @pairflow/cli@0.1.0`; the installed CLI command remains `pairflow`.
 3. `pairflow --version` and `pairflow -v` print the installed package version from the same version source used for npm publishing.
 4. Releases follow semantic versioning from the current `0.1.0` baseline, with conventional commits driving changelog and version bumps.
 5. Commit-message policy is documented as a separate, on-demand guidance file; `AGENTS.md` only points agents to that file when they are preparing a commit.
@@ -68,13 +68,12 @@ This plan turns the current local-development install story into a release-quali
 9. The CLI exposes a supported skill installation command that wraps the repo-local Pairflow skill install policy without treating global skill copies as source.
 10. The UI server lifecycle has a supported start/stop/status/restart path with durable PID/state files, stale-PID handling, and printed URL/status information.
 11. The first release is proven with a dry-run package inspection and a release-pilot validation path before public publish is enabled or treated as complete.
-12. The removed legacy `orchestra` CLI alias is no longer exposed as a public npm binary before package-readiness work defines the final npm package surface.
 
 ## Capability Closure
 
 | Capability Claim | Closure Classification | Activation Path | Repo-Provided Boundary | External Prerequisites | Last-Mile Proof |
 |---|---|---|---|---|---|
-| Install Pairflow as a CLI through npm | externally_activated | `npm install -g <package>@<version>` then `pairflow --version` | npm package metadata, build output, bin entries, package contents, release workflow | npm account/org, `NPM_TOKEN`, package name availability, GitHub repository settings | Planned in `7-release-pilot` |
+| Install Pairflow as a CLI through npm | externally_activated | `npm install -g @pairflow/cli@<version>` then `pairflow --version` | npm package metadata, build output, bin entries, package contents, release workflow | npm account/org, `NPM_TOKEN`, package name availability, GitHub repository settings | Planned in `7-release-pilot` |
 | Generate changelog and releases from conventional commits | externally_activated | Merge conventional commits, release automation opens/lands release PR or publishes from tag/release event | release configuration, CI workflow, changelog policy docs | GitHub Actions enabled, repository permissions, conventional commit discipline | Commit policy planned in `2-commit-policy`; release automation planned in `3-release-automation`; public publish proven in `7-release-pilot` |
 | Publish static documentation through GitHub Pages | externally_activated | GitHub Pages workflow builds docs site on release/main | docs site source and build config | GitHub Pages settings/domain, repository permissions | Planned in `4-docs-site-pages` |
 | Install Pairflow skills from the CLI | end_to_end | `pairflow skills install --skills ... --target-dir ...` | CLI command, validation, copy/symlink implementation, dry-run/json reporting | user filesystem permissions for `~/.claude` / `~/.codex` | Planned in `5-skills-install` |
@@ -99,7 +98,6 @@ This plan turns the current local-development install story into a release-quali
    - `package.json`
    - `src/index.ts`
    - `src/cli/index.ts`
-   - `src/cli/orchestra.ts`
    - `src/cli/commands/ui/server.ts`
    - `src/v11/infrastructure/ui/server.ts`
    - `src/v11/infrastructure/ui/uiServerAssets.ts`
@@ -114,7 +112,6 @@ This plan turns the current local-development install story into a release-quali
 3. Closed canonical elements / terms:
    - `package.json.version` starts at `0.1.0` and is the semver source for npm.
    - `bin.pairflow` remains the primary CLI entrypoint.
-   - `bin.orchestra` is not part of the intended public npm CLI surface; there are no current external users to preserve for backward compatibility.
    - `pairflow ui` foreground behavior remains supported and already prints the listening URL.
    - Repo-local `.claude/skills/**` remains the source of truth for Pairflow skill content.
    - Global `~/.claude/skills` and `~/.codex/skills` copies are derived install targets.
@@ -136,12 +133,13 @@ This plan turns the current local-development install story into a release-quali
 4. `pairflow ui` already prints the URL after startup: `Pairflow UI server listening on <url>`.
 5. UI asset discovery already checks `ui/dist` from the current checkout and package-relative candidates.
 6. Pairflow skill installation policy already exists as `.claude/skills/INSTALL.md`.
-7. npm registry checks on 2026-05-30 returned `404 Not Found` for both `pairflow` and `@pairflow/cli`; final name availability still needs release-time confirmation with the publishing account/org context.
+7. npm registry checks on 2026-05-30 returned `404 Not Found` for both `pairflow` and `@pairflow/cli`; the package identity decision is now `@pairflow/cli` under the npm `@pairflow` organization scope, with release-time access still needing confirmation in the publishing account/org context.
+8. `0-remove-orchestra-bin` removed the legacy public CLI alias, deleted the legacy shim entrypoint/test, and removed the public helper exports from `src/index.ts`.
 
 ### Open Work
 
 1. The package is currently `private: true`, so public npm publish is blocked.
-2. The package does not yet define a final package name/scoped-package policy, publish-ready file manifest, or package-content validation workflow.
+2. The package does not yet apply the recorded `@pairflow/cli` package identity, publish-ready file manifest, or package-content validation workflow.
 3. The CLI does not yet support top-level `--version` / `-v`.
 4. Changelog generation, conventional-commit policy, release tagging, and npm publish automation are not yet configured.
 5. There is not yet a dedicated commit-message guidance file or hook/CI enforcement path for LLM-authored commits.
@@ -150,8 +148,7 @@ This plan turns the current local-development install story into a release-quali
 8. Pairflow skill installation is documented but not available as a supported CLI command.
 9. UI background lifecycle commands and PID/state files do not yet exist.
 10. The first release has not been proven through `npm pack --dry-run`, local package install, version check, UI asset check, release automation dry run, protected publish dry run/manual approval, or publish pilot.
-11. `package.json` currently also exposes `bin.orchestra`, while `src/cli/orchestra.ts` only provides a legacy removal/help shim and points users to `pairflow agent emit ...`.
-12. `src/index.ts` currently re-exports `getOrchestraHelpText` and `runOrchestraCli`, so the legacy shim is also present on the public package export surface.
+11. Package-readiness has not yet been proven after the legacy public CLI cleanup.
 
 ### Deferred / Future Work
 
@@ -176,8 +173,8 @@ This plan turns the current local-development install story into a release-quali
 
 | Task ID | Task Path | Purpose | Depends On | Closes Gap | Status |
 |---|---|---|---|---|---|
-| `0-remove-orchestra-bin` | `plans/tasks/0-remove-orchestra-bin.md` | Remove the legacy `orchestra` public CLI/bin and package export surfaces before npm package-readiness work proceeds. | `N/A` | Current package manifest and public index exports expose a removed legacy alias. | done |
-| `1-package-version` | `null` | Decide the final package name/scoped-package policy, make the package publish-ready, define package contents, preserve UI asset inclusion, and add top-level CLI version reporting from package metadata. | `0-remove-orchestra-bin` | Missing package-name authority, npm package publish readiness, and visible installed version. | not_created |
+| `0-remove-orchestra-bin` | `plans/tasks/0-remove-orchestra-bin.md` | Remove the legacy public CLI/bin and package export surfaces before npm package-readiness work proceeds. | `N/A` | Current package manifest and public index exports expose a removed legacy alias. | done |
+| `1-package-version` | `plans/tasks/1-package-version.md` | Apply the recorded `@pairflow/cli` package identity, make the package publish-ready, define package contents, preserve UI asset inclusion, and add top-level CLI version reporting from package metadata. | `0-remove-orchestra-bin` | Package identity not yet applied, npm package publish readiness missing, and visible installed version missing. | approved |
 | `2-commit-policy` | `null` | Add a separate commit-message guidance file, lightweight `AGENTS.md` pointer, commit-msg hook/CI enforcement, release-history strategy, and Pairflow bubble commit/merge/revert/lifecycle message compatibility without adding release publishing. | `1-package-version` | Missing commit-message guidance/enforcement and bubble lifecycle message compatibility. | not_created |
 | `3-release-automation` | `null` | Add conventional-commit release configuration, changelog/version automation, release tagging/release workflow, and guarded npm publish GitHub Actions. | `1-package-version`, `2-commit-policy` | Missing automated semver, changelog, release, and guarded npm publish path. | not_created |
 | `4-docs-site-pages` | `null` | Add static documentation source/build/publish workflow covering install, upgrade, version pinning, CLI basics, UI, skills, and release semantics. | `1-package-version`, `2-commit-policy`, `3-release-automation` | Missing public onboarding/docs surface. | not_created |
@@ -189,8 +186,8 @@ This plan turns the current local-development install story into a release-quali
 
 | Plan Gap | Closed By | Notes |
 |---|---|---|
-| The package manifest and public index exports expose `orchestra`, a removed legacy alias, as public surfaces. | `0-remove-orchestra-bin` | Remove the bin/export surfaces and any now-dead entrypoint/tests unless an internal non-public path is still needed. |
-| Public npm publish is blocked by package metadata, package name uncertainty, and package contents uncertainty. | `1-package-version` | Must decide final package name/scoped policy and remove `private: true` only when package manifest and included files are safe. |
+| The package manifest and public index exports expose a removed legacy alias as public surfaces. | `0-remove-orchestra-bin` | Remove the bin/export surfaces and any now-dead entrypoint/tests unless an internal non-public path is still needed. |
+| Public npm publish is blocked by package metadata, unapplied package identity, and package contents uncertainty. | `1-package-version` | Must apply `@pairflow/cli` and remove `private: true` only when package manifest and included files are safe. |
 | Users cannot inspect installed Pairflow version through the CLI. | `1-package-version` | `--version` / `-v` should be handled before command dispatch. |
 | Release versions and changelog are manual. | `3-release-automation` | Prefer standard conventional commits and release tags/releases over a custom commit-message tag trigger. |
 | LLM-authored commit messages have no lightweight guidance or enforcement path. | `2-commit-policy` | Put detailed guidance in a separate repo-local file; keep `AGENTS.md` to a short "read this when preparing commits" pointer; enforce with `commit-msg` hook and CI. |
@@ -214,7 +211,7 @@ This plan turns the current local-development install story into a release-quali
 
 ## Risks and Assumptions
 
-1. Assumption: the project can publish under either `pairflow` or a chosen scoped package name. Final naming must be confirmed before release automation is treated as complete.
+1. Assumption: the project will publish as public package `@pairflow/cli` under the npm `@pairflow` organization scope; release automation must still confirm org/package access before public publish is treated as complete.
 2. Assumption: npm global install is the primary DX path; source checkout install remains available for contributors.
 3. Assumption: the initial release model can use release-relevant bubble branch commits as semver/changelog authority and ignore default merge commits for release calculation; `2-commit-policy` must verify and encode the exact full-history vs first-parent strategy.
 4. Risk: publishing root source files or local artifacts unintentionally. Mitigation: define `files` explicitly and require `npm pack --dry-run` evidence.
@@ -227,7 +224,7 @@ This plan turns the current local-development install story into a release-quali
 11. Risk: background UI stop kills an unrelated process. Mitigation: prefer Pairflow-owned PID/state records and verify process identity before termination.
 12. Risk: GitHub Pages or npm publish needs repository/account settings not present in code. Mitigation: classify these as external prerequisites and surface clear setup instructions.
 13. Risk: npm publish automation fires before release readiness is proven. Mitigation: `3-release-automation` must ship the publish workflow behind dry-run/manual approval/disabled-public-publish guard until `7-release-pilot` proves and explicitly opens it.
-14. Risk: a removed legacy CLI alias becomes part of the public npm API by accident. Mitigation: remove `bin.orchestra` before package-readiness work, because there are no current external users requiring compatibility.
+14. Risk: a removed legacy CLI alias becomes part of the public npm API by accident. Mitigation: complete the legacy public CLI cleanup before package-readiness work, because there are no current external users requiring compatibility.
 
 ## Validation Strategy
 
