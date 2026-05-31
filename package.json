@@ -6,8 +6,7 @@
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "bin": {
-    "pairflow": "./dist/cli/index.js",
-    "orchestra": "./dist/cli/orchestra.js"
+    "pairflow": "./dist/cli/index.js"
   },
   "exports": {
     ".": {

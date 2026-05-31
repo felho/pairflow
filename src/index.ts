@@ -123,7 +123,6 @@ export {
 export { getBubblePaths } from "./v11/shared/bubble/bubblePaths.js";
 export { createInitialBubbleState } from "./v11/domain/state/initialState.js";
 export { runCli } from "./cli/index.js";
-export { getOrchestraHelpText, runOrchestraCli } from "./cli/orchestra.js";
 export {
   DEFAULT_COMMIT_REQUIRES_APPROVAL,
   DEFAULT_MAX_ROUNDS,

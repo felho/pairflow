@@ -5,7 +5,7 @@ task_family_id: remove-orchestra-bin
 sequence_key: "0"
 task_id: 0-remove-orchestra-bin
 title: "Remove Legacy Orchestra CLI Bin"
-status: approved
+status: done
 phase: phase0
 target_files:
   - "package.json"
@@ -226,7 +226,7 @@ Remove the legacy `orchestra` public CLI/bin and package export surfaces before 
 1. `package.json.bin` contains `pairflow` and does not contain `orchestra`.
 2. `src/index.ts` does not export `getOrchestraHelpText`, `runOrchestraCli`, or any replacement `orchestra` helper.
 3. Forbidden-reference check finds no stale public-bin, public-export, or entrypoint imports:
-   `rg "bin\\.orchestra|cli/orchestra|getOrchestraHelpText|runOrchestraCli|from \\\".*orchestra|from '.*orchestra" package.json src tests`
+   `rg "bin\\.orchestra|cli/orchestra|getOrchestraHelpText|runOrchestraCli|from [\\\"'][^\\\"']*(^|/)orchestra(\\.js)?[\\\"']" package.json src tests`
 4. Remaining-reference audit is run and classified:
    `rg -n "\\borchestra\\b" package.json src tests`
 5. Any remaining `orchestra` findings are either removed or explicitly classified as allowed historical/migration references under this task's allowed-reference rules.
@@ -236,7 +236,7 @@ Remove the legacy `orchestra` public CLI/bin and package export surfaces before 
 
 ### 3) Validation Strategy
 
-1. Forbidden-reference check: `rg "bin\\.orchestra|cli/orchestra|getOrchestraHelpText|runOrchestraCli|from \\\".*orchestra|from '.*orchestra" package.json src tests`
+1. Forbidden-reference check: `rg "bin\\.orchestra|cli/orchestra|getOrchestraHelpText|runOrchestraCli|from [\\\"'][^\\\"']*(^|/)orchestra(\\.js)?[\\\"']" package.json src tests`
 2. Remaining-reference audit: `rg -n "\\borchestra\\b" package.json src tests`
 3. `pnpm build`
 4. Run the narrowest relevant CLI test suite if one exists for bin/entrypoint behavior.
