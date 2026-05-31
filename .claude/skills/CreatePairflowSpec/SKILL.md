@@ -510,6 +510,12 @@ Policy:
    - ownership and deferred semantics,
    - structured contract rules when applicable,
    - mirrored surface checklist.
+19. `ReviewSpec task-mode` must audit mandatory gate-output records before
+   approving an implementation-oriented task. A task is not approvable when a
+   triggered gate is only implicitly satisfied by nearby prose. Required gate
+   outputs such as `risk_score`, `split_decision`, authority fan-out inventory,
+   closure-budget triage, and bounded-task-shape classification must be present
+   and auditable in the task artifact.
 19. For Plans with authority/read-model/multi-consumer relevance, a control-model section is mandatory. It must explicitly state:
    - business invariant,
    - control model,

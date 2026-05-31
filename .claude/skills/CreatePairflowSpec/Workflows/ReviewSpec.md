@@ -11,6 +11,8 @@ This workflow exists to catch:
 - over-wide tasks before implementation,
 - plan/task drift after refinement,
 - capability claims that outpace their activation path or proof,
+- missing mandatory gate-output records that make a task look locally coherent
+  while hiding split/no-split risk,
 - and cases where the remaining open tasks are no longer viable if the current artifact is accepted unchanged.
 
 ## Input
@@ -161,8 +163,99 @@ Policy:
 9. Do not approve an artifact whose Done Definition, acceptance criteria, or
    validation strategy claims a stronger capability than its activation path and
    proof support.
+10. Do not approve a task when an applicable mandatory gate is only implicitly
+    satisfied by nearby prose. Required gate-output fields must be present and
+    auditable in the task artifact, or the decision is `refine_task` /
+    `route_back_to_plan`.
+11. If a task is detailed but lacks the mandatory split/no-split record for a
+    triggered gate, treat that as a planning failure, not as a documentation
+    style issue.
 
-### 2a) Closed-Contract Drift Check (`plan-mode|task-mode` when applicable)
+### 2a) Mandatory Gate-Output Audit (`task-mode`)
+
+Before `approve_task`, audit whether every triggered mandatory task gate has a
+materialized output record in the task artifact. This audit is separate from
+checking whether the prose is locally coherent.
+
+Required checks:
+1. Identify which mandatory gates triggered from the task content, parent plan,
+   and target-file reality.
+2. For each triggered gate, verify that the task includes the required output
+   fields named by the gate reference or `SKILL.md` minimum contract rules.
+3. If a triggered gate's output is missing, generic, or only implied by prose,
+   record a finding with:
+   - gate name,
+   - missing required fields,
+   - why the absence can hide split/no-split or required-now/later-hardening
+     risk,
+   - local `refine_task` vs `route_back_to_plan` action.
+4. Do not substitute adjacent sections for a gate output unless they contain
+   the exact decision fields required by the gate and can be audited without
+   inference.
+
+Complexity Risk Gate output is mandatory whenever implementation-oriented
+authority/runtime/read-model/shared-contract work is in scope. The task must
+include at minimum:
+1. `risk_score`
+2. `authority_risk`
+3. `surface_spread`
+4. `identity_join_risk`
+5. `activation_coupling`
+6. `prerequisite_risk`
+7. `acceptance_multiplicity`
+8. `split_decision`
+9. `authority_fanout` when authority fan-out is relevant
+10. explicit `single_task_allowed: yes|no` or equivalent split/no-split
+    conclusion
+11. if `single_task_allowed: yes`, a concrete explanation of why the collapsed
+    closures are safe
+12. if `single_task_allowed: no`, the proposed split shape or route-back action
+
+Closure-Budget Gate output is mandatory whenever authority/runtime/read-model/
+shared-contract work is in scope. The task must name:
+1. touched closure buckets,
+2. intentionally collapsed closures,
+3. why each collapse is safe,
+4. explicitly deferred closures.
+
+Bounded-Task-Shape Gate output is mandatory for mutable/runtime flows. The task
+must name:
+1. primary shape,
+2. secondary shape if any,
+3. why the shape mix is safe,
+4. split trigger if more than the allowed adjacent shape is needed.
+
+Authority Fan-out Scan output is mandatory when a canonical authority is
+consumed by multiple surfaces or roles. The task must inventory the relevant
+consumer families and state whether the split is producer, consumer-family
+alignment, activation, read-model, or cleanup/rollout.
+
+Outcome:
+1. If Complexity Risk Gate output is missing for an implementation-oriented
+   task where it applies, return `refine_task`; return `route_back_to_plan` when
+   the missing split decision may invalidate parent-plan sequencing.
+2. If a gate output is present but contradicts target-file reality, return
+   `route_back_to_plan` when the task cannot be safely narrowed locally.
+3. If the output exists but omits specific required fields, return
+   `refine_task` and list the missing fields.
+
+Optional parallel review lanes:
+1. For large task reviews, the orchestrator may split ReviewSpec task-mode into
+   independent sub-agent lanes, then combine the results into one final
+   ReviewSpec decision:
+   - `metadata_lane`: execution metadata, parent-plan linkage, remaining-task
+     viability
+   - `scope_lane`: target-file reality, authority fan-out, closure budget,
+     bounded-task shape
+   - `contract_lane`: control model, closed-contract drift, contract-dense
+     matrix, mirrored surfaces
+   - `capability_lane`: capability closure, activation boundary, proof strength
+2. Lane outputs are advisory inputs. The final ReviewSpec decision must still
+   be a single decision over the refreshed artifact.
+3. A lane may not approve the whole artifact. It can only report pass/fail for
+   its assigned gate family and required refinements.
+
+### 2b) Closed-Contract Drift Check (`plan-mode|task-mode` when applicable)
 
 Use `references/Closed-Contract-Drift-Check.md`.
 
@@ -182,7 +275,7 @@ Outcome:
 2. If the result is `unauthorized_reinterpretation`, do not approve.
 3. A locally coherent artifact that contradicts repo-local source anchors is not approvable.
 
-### 2b) Target-File Reality Check (`task-mode`)
+### 2c) Target-File Reality Check (`task-mode`)
 
 When `target_files` are known and the files exist, inspect them and, when needed, their adjacent entrypoints.
 
@@ -199,7 +292,7 @@ Outcome:
 1. Record whether the task is still correctly classified.
 2. If not, require `refine_task` or `route_back_to_plan`.
 
-### 2c) Refactoring Guidance Gate (`task-mode` when applicable)
+### 2d) Refactoring Guidance Gate (`task-mode` when applicable)
 
 Use `references/Refactoring-Guidance-Gate.md`.
 
@@ -235,7 +328,7 @@ Outcome:
 3. If only Module Depth evidence is missing or thin, require local
    `refine_task` and cite the missing evidence field.
 
-### 2d) Contract-Dense Task Gate (`task-mode` when applicable)
+### 2e) Contract-Dense Task Gate (`task-mode` when applicable)
 
 Use `references/Contract-Dense-Task-Gate.md`.
 
@@ -268,7 +361,7 @@ Outcome:
 3. If only a mirrored surface is stale while the matrix is clear, require local
    `refine_task` and cite the stale surface.
 
-### 2e) Capability Closure Gate (`plan-mode|task-mode` when applicable)
+### 2f) Capability Closure Gate (`plan-mode|task-mode` when applicable)
 
 Use `references/Capability-Closure-Gate.md`.
 
@@ -413,6 +506,8 @@ Always include:
     mirrored-surface checklist status
 15. when the Capability Closure Gate applies, the closure classification,
     activation boundary status, and last-mile proof status
+16. in `task-mode`, the Mandatory Gate-Output Audit result, including triggered
+    gates, missing output fields, and split/no-split decision status
 
 ### 7) Output rules
 
