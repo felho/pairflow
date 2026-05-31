@@ -26,21 +26,24 @@ Release authority belongs to content commits, not Pairflow lifecycle events.
 4. Existing `bubble(<id>): finalize` commits are historical noise only. New
    validation and new Pairflow behavior must not support them as an accepted
    message class.
+5. Commit-message validation applies to newly created commits after the policy
+   is implemented. Existing history is not rewritten, revalidated as a whole, or
+   made acceptable through cutoff, legacy-range, or compatibility modes.
 
 ## Release Authority Classes
 
-| History Shape | Example | Accepted In History | Release Authority Input | Default Semver Effect | Rule |
+| History Shape | Example | Existing History / New Validation | Release Authority Input | Default Semver Effect | Rule |
 |---|---|---:|---:|---|---|
-| Feature content commit | `feat(cli): add commit message validator` | yes | yes | minor | New user-visible or operator-visible capability. |
-| Bug or defect fix commit | `fix(cli): reject empty conventional subjects` | yes | yes | patch | Correction for incorrect behavior, including bugs, defects, and fail-closed validation fixes. |
-| Performance commit | `perf(runtime): reduce status scan cost` | yes | yes | patch unless release automation says otherwise | Runtime performance improvement without a new feature contract. |
-| Breaking conventional content commit | `feat(cli)!: change command contract` | yes | yes | breaking / major policy input | Breaking marker is explicit release input, regardless of conventional type. |
-| Internal refactor commit | `refactor(commit): isolate message parser` | yes | yes | successor-owned, often none | Internal structure change without intended behavior change; release automation decides changelog/version effect. |
-| Conventional docs/test/build/ci/chore commit | `docs(release): document commit policy` | yes | yes | successor-owned, often none | Accepted as conventional history; successor release automation decides changelog/version effect. |
-| Standard merge commit (tolerated integration artifact) | `Merge branch 'bubble/2-commit-policy-impl'` | yes | no | none | Accepted so existing or manual integration history does not break validation; it is not the ideal release-authority path and must never be semver/changelog input. |
-| Standard or conventional revert commit | `Revert "feat(cli): add validator"` / `revert(cli): remove validator change` | yes | recovery input | successor-owned | Recovery history remains valid; release automation decides whether and how the revert affects changelog/versioning. |
-| Pairflow lifecycle finalize | `bubble(2-commit-policy-impl): finalize` | no | no | none | Historical noise only; new policy must not accept or generate this message class. |
-| Ambiguous prose | `update stuff` | no | no | none | Reject with guidance. |
+| Feature content commit | `feat(cli): add commit message validator` | accepted for new validation | yes | minor | New user-visible or operator-visible capability. |
+| Bug or defect fix commit | `fix(cli): reject empty conventional subjects` | accepted for new validation | yes | patch | Correction for incorrect behavior, including bugs, defects, and fail-closed validation fixes. |
+| Performance commit | `perf(runtime): reduce status scan cost` | accepted for new validation | yes | patch unless release automation says otherwise | Runtime performance improvement without a new feature contract. |
+| Breaking conventional content commit | `feat(cli)!: change command contract` | accepted for new validation | yes | breaking / major policy input | Breaking marker is explicit release input, regardless of conventional type. |
+| Internal refactor commit | `refactor(commit): isolate message parser` | accepted for new validation | yes | successor-owned, often none | Internal structure change without intended behavior change; release automation decides changelog/version effect. |
+| Conventional docs/test/build/ci/chore commit | `docs(release): document commit policy` | accepted for new validation | yes | successor-owned, often none | Accepted as conventional history; successor release automation decides changelog/version effect. |
+| Explicit merge header exception (tolerated integration artifact) | `Merge branch 'bubble/2-commit-policy-impl'` | accepted for new validation only in the exact configured header forms | no | none | Accepted only for the configured merge header forms so Pairflow/manual integration can remain compatible without widening validation; it is not the ideal release-authority path and must never be semver/changelog input. |
+| Standard or conventional revert commit | `Revert "feat(cli): add validator"` / `revert(cli): remove validator change` | accepted for new validation | recovery input | successor-owned | Recovery history remains valid; release automation decides whether and how the revert affects changelog/versioning. |
+| Historical Pairflow lifecycle finalize | `bubble(2-commit-policy-impl): finalize` | tolerated only when already present before this policy; rejected for new validation | no | none | Historical noise only; new policy must not accept or generate this message class. |
+| Ambiguous prose | `update stuff` | rejected for new validation | no | none | Reject with guidance. |
 
 ## Bubble Branch Commit Flow
 
@@ -85,24 +88,35 @@ Ideal behavior:
 2. If `main` is still an ancestor of the bubble branch, the preferred result is
    a fast-forward merge: `main` moves to the bubble branch head and no new Git
    commit is created.
-3. If fast-forward is not possible, it may create a normal Git merge commit as a
-   tolerated integration artifact.
+3. If fast-forward is not possible, it may create a merge commit whose first
+   line matches one of the configured merge header exception forms:
+   `Merge branch ...` or `Merge remote-tracking branch ...`.
 4. The merge commit is not release authority.
 5. Release automation must not infer semver or changelog meaning from the merge
    commit first line.
 
 ## Release Automation Inheritance
 
-The release automation task must choose a history-selection strategy that can
-see release-relevant conventional bubble branch commits while ignoring
-historical lifecycle-finalize noise and merge integration artifacts.
+The release automation task must consume full-history conventional commit
+selection. It must see release-relevant conventional bubble branch commits while
+ignoring historical lifecycle-finalize noise and merge integration artifacts.
+This is the initial release-history strategy selected by this authority
+document.
 
-Allowed strategies include:
+Required strategy:
 
-1. Full-history conventional commit selection with explicit ignore rules for
-   merge commits and historical lifecycle-finalize noise.
-2. Pairflow-aware selection that follows merged bubble branch commits recorded
-   by Pairflow metadata.
+1. Select conventional commits from the full reachable release range, not only
+   first-parent merge commits.
+2. Ignore merge commits as integration artifacts.
+3. Ignore historical lifecycle-finalize noise such as `bubble(<id>): finalize`.
+4. Treat standard Git revert commits and conventional `revert:` commits as
+   recovery input whose changelog/version effect is successor-owned.
+
+Optional future strategy:
+
+1. Pairflow-aware selection may later follow merged bubble branch commits
+   recorded by Pairflow metadata, but only as an explicit refinement of the same
+   authority model.
 
 Forbidden strategy:
 
@@ -131,13 +145,23 @@ Future policy:
 Commit-message validation should:
 
 1. Accept conventional commit headers as the normal content path.
-2. Accept standard merge commits as non-release history.
+2. Accept only the configured merge header exception forms as non-release
+   history: `Merge branch ...` and `Merge remote-tracking branch ...`.
 3. Accept standard Git revert commits and conventional `revert:` commits as
    recovery history.
 4. Reject new ambiguous prose.
 5. Reject `bubble(<id>): finalize` instead of accepting it as a normal future
    path.
 6. Print actionable guidance that points to the commit policy documentation.
+7. Validate deterministic new-commit ranges only when a safe local range is
+   available, and fail closed with a checkpoint otherwise. It must not scan all
+   pre-policy history as if it were subject to the new policy.
+8. Treat safe range sources as explicit authority only: an operator-provided
+   base/head range, a lifecycle-provided base/head range, or a CI-provided
+   base/head range. A range-validation command with no safe range must exit
+   non-zero with the checkpoint reason; broad commands may skip invoking range
+   validation only if they print that the new-commit range check was not
+   applicable and do not claim range validation passed.
 
 ## Successor Task Boundaries
 
@@ -153,6 +177,7 @@ Commit-message validation should:
 
 1. semver bump behavior,
 2. changelog generation,
-3. release-history selection,
+3. implementation of the selected full-history release strategy, including
+   exact release-range selection,
 4. GitHub release/tag workflows,
 5. npm publish workflow integration.
