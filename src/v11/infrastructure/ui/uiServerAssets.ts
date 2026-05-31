@@ -61,6 +61,14 @@ async function findAssetsDirFromCwd(cwd: string): Promise<string | null> {
   }
 }
 
+export function packageRelativeAssetsDirCandidates(moduleUrl: string): string[] {
+  const modulePath = fileURLToPath(moduleUrl);
+  const moduleDir = dirname(modulePath);
+  return [
+    resolve(moduleDir, "../../../../ui/dist")
+  ];
+}
+
 export function fallbackAssetsHtml(): string {
   return [
     "<!doctype html>",
@@ -80,6 +88,7 @@ export function fallbackAssetsHtml(): string {
 export async function resolveAssetsDir(input: {
   cwd: string;
   explicitAssetsDir?: string | undefined;
+  moduleUrl?: string | undefined;
 }): Promise<string | null> {
   if (input.explicitAssetsDir !== undefined) {
     const resolvedPath = resolve(input.explicitAssetsDir);
@@ -92,21 +101,14 @@ export async function resolveAssetsDir(input: {
     return resolvedPath;
   }
 
-  const discovered = await findAssetsDirFromCwd(input.cwd);
-  if (discovered !== null) {
-    return discovered;
-  }
-
-  const modulePath = fileURLToPath(import.meta.url);
-  const candidates = [
-    resolve(dirname(modulePath), "../../../ui/dist"),
-    resolve(dirname(modulePath), "../../../../ui/dist")
-  ];
+  const candidates = packageRelativeAssetsDirCandidates(
+    input.moduleUrl ?? import.meta.url
+  );
   for (const candidate of candidates) {
     if (await pathExists(join(candidate, "index.html"))) {
       return candidate;
     }
   }
 
-  return null;
+  return findAssetsDirFromCwd(input.cwd);
 }

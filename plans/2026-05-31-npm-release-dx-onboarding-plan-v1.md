@@ -18,15 +18,16 @@ task_order:
   - 5-skills-install
   - 6-ui-service-lifecycle
   - 7-release-pilot
-active_task_id: 1-package-version
+active_task_id: 2-commit-policy
+last_completed_task_id: 1-package-version
 archive_group: 2026-05-31-npm-release-dx-onboarding
 task_tracker:
   - task_id: 0-remove-orchestra-bin
     task_path: plans/tasks/0-remove-orchestra-bin.md
     status: done
   - task_id: 1-package-version
-    task_path: plans/tasks/1-package-version.md
-    status: in_progress
+    task_path: plans/archive/tasks/2026-05-31-npm-release-dx-onboarding/1-package-version.md
+    status: archived
   - task_id: 2-commit-policy
     task_path: null
     status: not_created
@@ -174,7 +175,7 @@ This plan turns the current local-development install story into a release-quali
 | Task ID | Task Path | Purpose | Depends On | Closes Gap | Status |
 |---|---|---|---|---|---|
 | `0-remove-orchestra-bin` | `plans/tasks/0-remove-orchestra-bin.md` | Remove the legacy public CLI/bin and package export surfaces before npm package-readiness work proceeds. | `N/A` | Current package manifest and public index exports expose a removed legacy alias. | done |
-| `1-package-version` | `plans/tasks/1-package-version.md` | Apply the recorded `@pairflow/cli` package identity, make the package publish-ready, define package contents, preserve UI asset inclusion, and add top-level CLI version reporting from package metadata. | `0-remove-orchestra-bin` | Package identity not yet applied, npm package publish readiness missing, and visible installed version missing. | in_progress |
+| `1-package-version` | `plans/archive/tasks/2026-05-31-npm-release-dx-onboarding/1-package-version.md` | Apply the recorded `@pairflow/cli` package identity, make the package publish-ready, define package contents, preserve UI asset inclusion, and add top-level CLI version reporting from package metadata. | `0-remove-orchestra-bin` | Package identity not yet applied, npm package publish readiness missing, and visible installed version missing. | archived |
 | `2-commit-policy` | `null` | Add a separate commit-message guidance file, lightweight `AGENTS.md` pointer, commit-msg hook/CI enforcement, release-history strategy, and Pairflow bubble commit/merge/revert/lifecycle message compatibility without adding release publishing. | `1-package-version` | Missing commit-message guidance/enforcement and bubble lifecycle message compatibility. | not_created |
 | `3-release-automation` | `null` | Add conventional-commit release configuration, changelog/version automation, release tagging/release workflow, and guarded npm publish GitHub Actions. | `1-package-version`, `2-commit-policy` | Missing automated semver, changelog, release, and guarded npm publish path. | not_created |
 | `4-docs-site-pages` | `null` | Add static documentation source/build/publish workflow covering install, upgrade, version pinning, CLI basics, UI, skills, and release semantics. | `1-package-version`, `2-commit-policy`, `3-release-automation` | Missing public onboarding/docs surface. | not_created |

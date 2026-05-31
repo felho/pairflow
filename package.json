@@ -1,7 +1,7 @@
 {
-  "name": "pairflow",
+  "name": "@pairflow/cli",
   "version": "0.1.0",
-  "private": true,
+  "description": "CLI-first orchestration for Pairflow bubbles and local agent workflows.",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -13,6 +13,17 @@
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
     }
+  },
+  "files": [
+    "dist/**",
+    "ui/dist/**",
+    "README.md"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "pairflow": {
+    "skillSourcePackaging": "deferred-to-5-skills-install"
   },
   "packageManager": "pnpm@10.8.1",
   "engines": {
@@ -28,7 +39,7 @@
     "hooks:install": "bash ./scripts/install-git-hooks.sh",
     "test:contracts": "pnpm exec vitest run tests/contracts/v11/*.test.ts",
     "test:smoke": "pnpm codegen:reviewer-ontology && pnpm build && pnpm exec vitest run --config vitest.smoke.config.ts",
-    "build": "pnpm codegen:reviewer-ontology && tsc -p tsconfig.build.json",
+    "build": "pnpm codegen:reviewer-ontology && tsc -p tsconfig.build.json && pnpm --dir ui install --frozen-lockfile && pnpm --dir ui build",
     "typecheck": "bash ./scripts/run-evidence.sh .pairflow/evidence/typecheck.log \"pnpm typecheck\" -- bash -lc \"pnpm codegen:reviewer-ontology && pnpm exec tsc --noEmit\"",
     "lint": "bash ./scripts/run-evidence.sh .pairflow/evidence/lint.log \"pnpm lint\" -- bash -lc \"pnpm codegen:reviewer-ontology && pnpm exec eslint .\"",
     "test:root": "pnpm codegen:reviewer-ontology && pnpm exec vitest run",

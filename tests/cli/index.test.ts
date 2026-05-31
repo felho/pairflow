@@ -112,6 +112,23 @@ describe("runCli", () => {
     stdoutSpy.mockRestore();
     stderrSpy.mockRestore();
   });
+
+  it("prints the package version for top-level --version", async () => {
+    const exitCode = await runCli(["--version"]);
+
+    expect(exitCode).toBe(0);
+    expect(stdoutSpy).toHaveBeenCalledWith("0.1.0\n");
+    expect(stderrSpy).not.toHaveBeenCalled();
+  });
+
+  it("prints the package version for top-level -v", async () => {
+    const exitCode = await runCli(["-v"]);
+
+    expect(exitCode).toBe(0);
+    expect(stdoutSpy).toHaveBeenCalledWith("0.1.0\n");
+    expect(stderrSpy).not.toHaveBeenCalled();
+  });
+
   it("routes top-level pass help to removal guidance", async () => {
     const exitCode = await runCli(["pass", "--help"]);
 

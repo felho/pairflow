@@ -150,6 +150,7 @@ import {
   getMetricsReportHelpText,
   runMetricsReportCommand
 } from "./commands/metrics/report.js";
+import { readInstalledPackageMetadata } from "./packageMetadata.js";
 import {
   getPlanWatchHelpText,
   PlanWatchTerminalRenderer,
@@ -937,6 +938,18 @@ function buildSupportedCommandsText(): string {
 
 export async function runCli(argv: string[]): Promise<number> {
   const [command, subcommand, ...rest] = argv;
+
+  if ((command === "--version" || command === "-v") && subcommand === undefined) {
+    try {
+      const metadata = await readInstalledPackageMetadata();
+      process.stdout.write(`${metadata.version}\n`);
+      return 0;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      process.stderr.write(`${message}\n`);
+      return 1;
+    }
+  }
 
   const passArgs = resolveAgentCommandArgs(command, subcommand, rest, "pass");
   if (passArgs !== null) {
