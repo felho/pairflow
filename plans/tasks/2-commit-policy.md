@@ -126,7 +126,7 @@ Add a repo-local conventional-commit policy that is explicit enough for humans, 
 ### Authority Boundary Map
 
 1. Authority producer: `docs/commit-message-guidance.md` produces operator-facing policy; validation code/config produces machine enforcement; bubble commit command produces bubble branch commit messages.
-2. Stored authority: Git commit message history after this cutoff; hook/CI validation evidence.
+2. Stored authority: newly created Git commit messages after this policy is implemented; hook/CI validation evidence.
 3. In-scope consumers: developers/agents preparing commits, local `commit-msg` hook, repo-local CI/check command, `pairflow bubble commit`.
 4. Explicit out-of-scope consumers: release automation, changelog generation, GitHub Release creation, npm publish workflow, and hosted CI release gating.
 5. Export surfaces closed in this phase: yes for commit policy guidance and validation entrypoints; no for release automation interpretation beyond documented strategy.
@@ -232,7 +232,7 @@ task is not approvable.
 
 ### In Scope
 
-1. Create `docs/commit-and-release-history-authority.md` as the source of truth for release authority, bubble branch content commits, historical lifecycle-finalize noise, merge commits, legacy cutoff handling, and release automation inheritance.
+1. Create `docs/commit-and-release-history-authority.md` as the source of truth for release authority, bubble branch content commits, historical lifecycle-finalize noise, merge commits, new-commit validation scope, and release automation inheritance.
 2. Create `docs/commit-message-guidance.md` with conventional commit format, release-relevant classification, historical finalize rejection, Pairflow bubble commit/merge expectations, merge/revert compatibility, and examples. This guidance document must stay consistent with `docs/commit-and-release-history-authority.md` and must not define a competing taxonomy.
 3. Add a short pointer in `AGENTS.md` telling agents to read the guidance file when preparing commits.
 4. Add a local `commit-msg` hook through `.githooks/commit-msg` and update `scripts/install-git-hooks.sh` so both hooks are executable/installed.

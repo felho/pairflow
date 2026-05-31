@@ -23,9 +23,9 @@ Release authority belongs to content commits, not Pairflow lifecycle events.
    changelog authority.
 3. New policy must move toward explicit conventional commit messages rather
    than preserving `bubble(<id>): finalize` for compatibility.
-4. Historical `bubble(<id>): finalize` commits before the cutoff are historical
-   noise only; new validation and new Pairflow behavior should not support them
-   as an accepted message class.
+4. Existing `bubble(<id>): finalize` commits are historical noise only. New
+   validation and new Pairflow behavior must not support them as an accepted
+   message class.
 
 ## Release Authority Classes
 
@@ -114,14 +114,17 @@ Forbidden strategy:
 
 This repository may already contain `bubble(<id>): finalize` commits. They are
 historical artifacts of the previous lifecycle default, not an accepted policy
-class.
+class. Commit-message validation defined by this policy applies to newly
+created commits; it does not require rewriting or revalidating existing
+history.
 
 Future policy:
 
 1. Treat existing finalize commits as historical non-release noise.
 2. Do not use them as examples for new release-relevant work.
 3. Do not preserve the default solely for compatibility.
-4. Do not add a legacy validation mode for new commit-policy checks.
+4. Do not add a compatibility validation mode that accepts finalize messages
+   for newly created commits.
 
 ## Validation Implications
 
