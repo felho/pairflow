@@ -9,6 +9,7 @@ status: approved
 phase: phase2
 target_files:
   - "AGENTS.md"
+  - "docs/commit-and-release-history-authority.md"
   - "docs/commit-message-guidance.md"
   - "package.json"
   - "scripts/install-git-hooks.sh"
@@ -50,7 +51,7 @@ Add a repo-local conventional-commit policy that is explicit enough for humans, 
 2. Control model: a dedicated repo-local guidance file owns human/agent policy; hook/CI logic owns mechanical validation; Pairflow bubble commit owns bubble branch commit messages; release automation will later own changelog/version interpretation.
 3. Read-path rule: agents preparing commits read the guidance file through a short `AGENTS.md` pointer; hooks/CI read an explicit repo-local validation contract, not prose parsing.
 4. Forbidden fallback: do not rely on undocumented commitlint defaults, remote release-tool behavior, branch names, merge commit text, or broad exemptions that let release-relevant commits bypass policy.
-5. Allowed resolution path: deterministic allowlist validation may accept conventional commit messages, standard Git merge/revert messages, and explicitly recognized Pairflow lifecycle-only messages when they are classified as non-release authority.
+5. Allowed resolution path: deterministic allowlist validation may accept conventional commit messages, standard Git merge/revert messages, and explicit legacy-range handling for old Pairflow lifecycle-only messages when they are classified as non-release authority.
 6. Missing-data rule: when commit intent cannot be classified as release-relevant, lifecycle-only, merge, revert, or documentation/policy-only, validation must fail with actionable guidance.
 
 ### Plan Linkage
@@ -65,6 +66,7 @@ Add a repo-local conventional-commit policy that is explicit enough for humans, 
 
 1. Source-of-truth anchors:
    - `AGENTS.md`
+   - `docs/commit-and-release-history-authority.md`
    - `docs/commit-message-guidance.md`
    - `package.json`
    - `scripts/install-git-hooks.sh`
@@ -76,17 +78,19 @@ Add a repo-local conventional-commit policy that is explicit enough for humans, 
    - `tests/cli/bubbleCommitCommand.test.ts`
    - `tests/cli/bubbleMergeCommand.test.ts`
 2. Canonical elements:
+   - Release authority belongs to content commits, not Pairflow lifecycle events; `docs/commit-and-release-history-authority.md` is the source of truth for this decision.
    - Detailed conventional commit guidance belongs in `docs/commit-message-guidance.md`, not inline in `AGENTS.md`.
    - `AGENTS.md` may contain only a short pointer that applies when preparing commits.
    - Release-relevant bubble implementation commits should use conventional commit messages.
-   - Lifecycle-only merge/revert/cleanup messages are allowed but explicitly not semver authority.
-   - Default `pairflow bubble commit` behavior must remain safe for non-release lifecycle closes and must give actionable guidance when a conventional message is required or recommended.
+   - Lifecycle-only merge/revert/cleanup messages are not semver authority.
+   - New policy moves away from generic `bubble(<id>): finalize` commits; implementation should reject them for new content commits or legacy-scope them before a documented cutoff.
+   - Default `pairflow bubble commit` behavior must remain lifecycle-safe while moving toward explicit conventional messages or deterministic conventional defaults.
 3. Guard elements:
    - Commit-message validation must not publish, tag, create releases, or configure npm tokens.
    - Release history strategy is defined for successor automation but no release automation is added here.
    - Merge commits remain compatible with normal Git and Pairflow merge flows.
 4. Compat-only elements:
-   - Existing default `bubble(<id>): finalize` messages may remain allowed only as lifecycle-only/non-release authority or be replaced by a documented conventional default if that preserves bubble close behavior.
+   - Existing historical `bubble(<id>): finalize` messages may remain legacy-only before the cutoff, but they are not the ideal future close behavior.
 5. Forbidden reinterpretations:
    - Do not treat default merge commits as semantic-version authority.
    - Do not turn `AGENTS.md` into the full commit policy document.
@@ -137,7 +141,7 @@ This matrix is the source of truth for commit-message classification in this tas
 | Breaking conventional commit | `feat(cli)!: change command contract` | yes | release-relevant candidate with breaking marker | accept only when `!` appears in the conventional header position and subject is non-empty | document breaking marker and require careful use | valid and malformed breaking-marker cases | `3-release-automation` decides major/minor behavior for the release model |
 | Standard merge commit | `Merge branch 'bubble/2-commit-policy-impl'` | yes | non-release lifecycle/history authority | accept through explicit merge-pattern exception | document as allowed history shape but not semver authority | merge-pattern pass case | `3-release-automation` must ignore or explicitly support merge commits without treating them as semver authority |
 | Standard revert commit | `Revert "feat(cli): add version output"` | yes | recovery authority; release impact depends on successor strategy | accept standard Git revert header and conventional `revert:` form | document recovery compatibility | revert pass cases | `3-release-automation` decides how reverted changes affect changelog/versioning |
-| Pairflow lifecycle-only finalize | `bubble(2-commit-policy-impl): finalize` | yes only when classified as lifecycle-only/non-release authority, unless implementation chooses a stricter conventional-message requirement for implementation bubbles | non-release lifecycle authority | accept with explicit lifecycle classification or replace with a documented conventional default; if stricter behavior is chosen, fail with guidance for implementation bubbles | document that lifecycle-only messages are not semver authority and when `--message` should be used | lifecycle message pass or stricter-failure case matching the chosen implementation | `3-release-automation` must not infer semver from lifecycle-only finalize messages |
+| Pairflow lifecycle-only finalize | `bubble(2-commit-policy-impl): finalize` | legacy-only before cutoff, or rejected for new content commits | non-release lifecycle authority | reject for new policy unless the validator is explicitly operating in legacy range mode; fail with guidance to use a conventional message | document as historical noise, not the ideal future close behavior | stricter-failure case and legacy-range handling if implemented | `3-release-automation` must not infer semver from lifecycle-only finalize messages |
 | Invalid or ambiguous prose | `update stuff` | no | none | reject with invalid first line, expected format, and guidance path | document common invalid examples | invalid message failure case | none |
 | Unreadable commit message file | missing path or unreadable file | no | none | fail closed with file-read error and guidance path | document hook failure behavior briefly | unreadable-file failure case if validator exposes file input | none |
 
@@ -156,7 +160,7 @@ The validator contract must be expressed as exact first-line allowlist rules. Th
    - Meaning: accepted; recovery authority whose semver/changelog interpretation remains successor-owned.
 4. Pairflow lifecycle-only finalize header:
    - Pattern: `^bubble\\([a-z0-9][a-z0-9_-]{1,38}\\): finalize$`
-   - Meaning: accepted only as non-release lifecycle authority unless the implementation deliberately tightens implementation-bubble behavior to require an explicit conventional `--message`.
+   - Meaning: rejected for new content commits or accepted only in an explicit legacy-range mode before the policy cutoff; never release authority.
 5. Empty, whitespace-only, unknown type, missing colon-space, invalid scope characters, malformed breaking marker, or vague prose:
    - Meaning: rejected with an actionable message and `docs/commit-message-guidance.md`.
 
@@ -165,11 +169,12 @@ The validator contract must be expressed as exact first-line allowlist rules. Th
 1. This task owns recording and enforcing commit-message classification policy for local development and repo-local CI/check reuse.
 2. This task owns making Pairflow bubble commit/merge message behavior compatible with the classification matrix.
 3. This task owns examples and operator guidance that tell humans and agents when to use `pairflow bubble commit --message "<conventional message>"`.
-4. This task owns a local range-validation entrypoint (`tools/commit-policy/validateCommitRange.ts`) and `scripts/ci-local.sh` integration only when the current repository history can be checked deterministically without remote release tooling.
-5. GitHub Actions release enforcement and release-pipeline commit range selection remain deferred to `3-release-automation`.
-6. This task does not own semver bump calculation, changelog generation, GitHub Release creation, npm publish, or release workflow triggering.
-7. `3-release-automation` owns interpreting accepted conventional commits for version/changelog output, including merge-history strategy, revert semantics, and lifecycle-only exclusion.
-8. If this task emits a classification that successor automation cannot consume deterministically, the successor must route back to plan/task refinement instead of inventing release semantics.
+4. This task owns creating and honoring `docs/commit-and-release-history-authority.md` as the shared authority contract for later release automation.
+5. This task owns a local range-validation entrypoint (`tools/commit-policy/validateCommitRange.ts`) and `scripts/ci-local.sh` integration only when the current repository history can be checked deterministically without remote release tooling.
+6. GitHub Actions release enforcement and release-pipeline commit range selection remain deferred to `3-release-automation`.
+7. This task does not own semver bump calculation, changelog generation, GitHub Release creation, npm publish, or release workflow triggering.
+8. `3-release-automation` owns interpreting accepted conventional commits for version/changelog output, including merge-history strategy, revert semantics, and lifecycle-only exclusion.
+9. If this task emits a classification that successor automation cannot consume deterministically, the successor must route back to plan/task refinement instead of inventing release semantics.
 
 ### Mirrored Surface Checklist
 
@@ -224,20 +229,23 @@ When changing the commit classification contract, keep these surfaces aligned wi
 
 ### In Scope
 
-1. Create `docs/commit-message-guidance.md` with conventional commit format, release-relevant vs lifecycle-only classification, Pairflow bubble commit/merge expectations, merge/revert compatibility, and examples.
-2. Add a short pointer in `AGENTS.md` telling agents to read the guidance file when preparing commits.
-3. Add a local `commit-msg` hook through `.githooks/commit-msg` and update `scripts/install-git-hooks.sh` so both hooks are executable/installed.
-4. Add a reusable validation command/script for commit messages that can be used by the hook and repo-local CI/check scripts.
-5. Add focused tests for valid and invalid commit messages, including merge/revert and Pairflow lifecycle cases.
-6. Reconcile `pairflow bubble commit` behavior with the policy:
+1. Create `docs/commit-and-release-history-authority.md` as the source of truth for release authority, bubble branch content commits, lifecycle-only history, merge commits, legacy cutoff handling, and release automation inheritance.
+2. Create `docs/commit-message-guidance.md` with conventional commit format, release-relevant vs lifecycle-only classification, Pairflow bubble commit/merge expectations, merge/revert compatibility, and examples.
+3. Add a short pointer in `AGENTS.md` telling agents to read the guidance file when preparing commits.
+4. Add a local `commit-msg` hook through `.githooks/commit-msg` and update `scripts/install-git-hooks.sh` so both hooks are executable/installed.
+5. Add a reusable validation command/script for commit messages that can be used by the hook and repo-local CI/check scripts.
+6. Add focused tests for valid and invalid commit messages, including merge/revert and Pairflow lifecycle cases.
+7. Reconcile `pairflow bubble commit` behavior with the policy:
    - preserve explicit `--message`
-   - ensure the default or guidance does not create accidental release authority
+   - ensure no generic lifecycle default becomes accidental release authority
+   - move toward explicit conventional messages, deterministic conventional defaults, or fail-closed guidance when no deterministic message exists
    - add actionable error/help output when implementation bubbles should use conventional messages
-7. Define the release-history strategy for successor automation:
+8. Define the release-history strategy for successor automation:
    - release-relevant bubble branch commits are semver/changelog authority
    - normal merge commits and lifecycle-only commits are ignored or explicitly allowed without semver impact
-8. Validate that `pairflow bubble merge` remains compatible with accepted merge commit handling.
-9. Explicitly re-evaluate whether architecture fitness checks need updates for command orchestration or lifecycle message changes.
+   - first-parent-only release interpretation is forbidden when bubble branch content commits carry release meaning
+9. Validate that `pairflow bubble merge` remains compatible with accepted merge commit handling.
+10. Explicitly re-evaluate whether architecture fitness checks need updates for command orchestration or lifecycle message changes.
 
 ### Out of Scope
 
@@ -279,13 +287,14 @@ When changing the commit classification contract, keep these surfaces aligned wi
    - optional breaking marker: `<type>(<optional-scope>)!: <subject>`
    - standard merge commits such as `Merge branch 'bubble/<id>'`
    - standard revert commits such as `Revert "<subject>"`
-   - explicitly allowed lifecycle-only Pairflow messages when documented as non-release authority
+   - `bubble(<id>): finalize` only in an explicit legacy-range validation mode before the documented cutoff, never as a normal future content-commit path
 2. Commit-message validator rejects:
    - empty subjects
    - unknown conventional types
    - vague non-conventional prose
    - malformed breaking markers
-   - ambiguous `bubble(...)` messages if the implementation chooses to require conventional messages for implementation bubbles
+   - new `bubble(...): finalize` content commits outside explicit legacy-range validation
+   - ambiguous `bubble(...)` messages that are not the exact legacy finalize pattern under legacy-range handling
 3. Allowed conventional types must be explicit and tested. Minimum expected set:
    - `feat`
    - `fix`
@@ -306,7 +315,11 @@ When changing the commit classification contract, keep these surfaces aligned wi
 2. `.githooks/commit-msg` validates the message file passed by Git and exits non-zero on failure.
 3. `scripts/install-git-hooks.sh` keeps installing `core.hooksPath .githooks` and ensures both `pre-push` and `commit-msg` hooks are executable.
 4. `pairflow bubble commit --message <message>` remains the operator override for release-relevant implementation commit messages.
-5. If default bubble commit messages remain non-conventional, they must be documented as lifecycle-only and the validator must classify them accordingly.
+5. Default `pairflow bubble commit` behavior must not emit a new non-conventional `bubble(<id>): finalize` commit for content changes. It must use one of:
+   - an explicit conventional `--message`,
+   - a deterministic conventional default derived from task metadata,
+   - branch-head reuse when content commits already exist and no staged changes remain,
+   - fail-closed guidance asking for an explicit conventional message.
 6. `scripts/ci-local.sh` or a documented package script must invoke a deterministic commit-range validation path when a local range can be derived safely; hosted release CI selection remains deferred to `3-release-automation`.
 
 ### Control Flow / Lifecycle Contract
@@ -315,9 +328,11 @@ When changing the commit classification contract, keep these surfaces aligned wi
    - `bubble approve`
    - `bubble commit`
    - `bubble merge`
-2. The implementation must decide and encode how implementation bubbles receive conventional release-relevant commit messages:
-   - either require/provide explicit conventional `--message` for release-relevant implementation bubbles, or
-   - derive a safe conventional default from task metadata when deterministic.
+2. The implementation must encode how implementation bubbles receive conventional release-relevant commit messages:
+   - require/provide explicit conventional `--message`, or
+   - derive a safe conventional default from task metadata when deterministic, or
+   - reuse the already-committed bubble branch head when content commits already exist and no staged changes remain.
+   If none of these applies, it must fail closed with guidance.
 3. Merge commits created by `pairflow bubble merge` must remain allowed by validation but excluded from release authority in the guidance.
 4. Revert commits must remain allowed so recovery does not require policy bypass.
 
@@ -358,7 +373,7 @@ When changing the commit classification contract, keep these surfaces aligned wi
 6. Valid conventional commit examples pass.
 7. Invalid ambiguous messages fail with guidance.
 8. Standard merge and revert messages pass.
-9. Pairflow lifecycle-only messages are either accepted as explicitly non-release authority or replaced by tested conventional defaults.
+9. Pairflow lifecycle-only `bubble(...): finalize` messages are rejected for new content commits or handled only by an explicit tested legacy-range mode before the cutoff.
 10. Exact first-line allowlist rules are covered by focused tests.
 11. `pairflow bubble commit --message "feat(...): ..."` remains supported and tested.
 12. Release automation is not added.
