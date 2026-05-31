@@ -5,7 +5,7 @@ task_family_id: package-version
 sequence_key: "1"
 task_id: 1-package-version
 title: "Package Readiness and CLI Version Surface"
-status: in_progress
+status: archived
 phase: phase1
 target_files:
   - "package.json"
