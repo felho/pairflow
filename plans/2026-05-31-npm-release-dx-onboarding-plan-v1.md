@@ -30,7 +30,7 @@ task_tracker:
     status: archived
   - task_id: 2-commit-policy
     task_path: plans/tasks/2-commit-policy.md
-    status: approved
+    status: under_review
   - task_id: 3-release-automation
     task_path: null
     status: not_created
@@ -63,7 +63,7 @@ This plan turns the current local-development install story into a release-quali
 3. `pairflow --version` and `pairflow -v` print the installed package version from the same version source used for npm publishing.
 4. Releases follow semantic versioning from the current `0.1.0` baseline, with conventional commits driving changelog and version bumps.
 5. Commit-message policy is documented as a separate, on-demand guidance file; `AGENTS.md` only points agents to that file when they are preparing a commit.
-6. Pairflow bubble lifecycle commits are reconciled with the release model: release-relevant bubble commits use conventional commit messages, while merge/revert/lifecycle-only commits are either ignored by enforcement/release tooling or explicitly supported without becoming semver authority.
+6. Pairflow bubble lifecycle commits are reconciled with the release model: release-relevant bubble commits use conventional commit messages, merge commits are tolerated integration artifacts, revert commits remain recovery-compatible, and historical lifecycle-finalize commits are treated as non-release noise without accepting or generating new finalize messages.
 7. GitHub automation builds, validates, tags/releases, and publishes npm packages without manual local publish steps after the first-release publish guard is deliberately opened by the release pilot.
 8. Operator-facing documentation explains install, upgrade, version pinning, release semantics, CLI basics, UI usage, and skill installation.
 9. The CLI exposes a supported skill installation command that wraps the repo-local Pairflow skill install policy without treating global skill copies as source.
@@ -176,7 +176,7 @@ This plan turns the current local-development install story into a release-quali
 |---|---|---|---|---|---|
 | `0-remove-orchestra-bin` | `plans/tasks/0-remove-orchestra-bin.md` | Remove the legacy public CLI/bin and package export surfaces before npm package-readiness work proceeds. | `N/A` | Current package manifest and public index exports expose a removed legacy alias. | done |
 | `1-package-version` | `plans/archive/tasks/2026-05-31-npm-release-dx-onboarding/1-package-version.md` | Apply the recorded `@pairflow/cli` package identity, make the package publish-ready, define package contents, preserve UI asset inclusion, and add top-level CLI version reporting from package metadata. | `0-remove-orchestra-bin` | Package identity not yet applied, npm package publish readiness missing, and visible installed version missing. | archived |
-| `2-commit-policy` | `plans/tasks/2-commit-policy.md` | Add a separate commit-message guidance file, lightweight `AGENTS.md` pointer, commit-msg hook/CI enforcement, release-history strategy, and Pairflow bubble commit/merge/revert/lifecycle message compatibility without adding release publishing. | `1-package-version` | Missing commit-message guidance/enforcement and bubble lifecycle message compatibility. | approved |
+| `2-commit-policy` | `plans/tasks/2-commit-policy.md` | Add a separate commit-message guidance file, lightweight `AGENTS.md` pointer, commit-msg hook/CI enforcement, release-history strategy, Pairflow bubble commit/merge/revert compatibility, and explicit rejection of new generic finalize messages without adding release publishing. | `1-package-version` | Missing commit-message guidance/enforcement and bubble lifecycle message compatibility. | under_review |
 | `3-release-automation` | `null` | Add conventional-commit release configuration, changelog/version automation, release tagging/release workflow, and guarded npm publish GitHub Actions. | `1-package-version`, `2-commit-policy` | Missing automated semver, changelog, release, and guarded npm publish path. | not_created |
 | `4-docs-site-pages` | `null` | Add static documentation source/build/publish workflow covering install, upgrade, version pinning, CLI basics, UI, skills, and release semantics. | `1-package-version`, `2-commit-policy`, `3-release-automation` | Missing public onboarding/docs surface. | not_created |
 | `5-skills-install` | `null` | Add `pairflow skills install` CLI support around the existing repo-local skill install policy, including target validation, dry-run/json output, and safe symlink/copy behavior. | `1-package-version` | Missing supported CLI path for skill installation. | not_created |
@@ -192,7 +192,7 @@ This plan turns the current local-development install story into a release-quali
 | Users cannot inspect installed Pairflow version through the CLI. | `1-package-version` | `--version` / `-v` should be handled before command dispatch. |
 | Release versions and changelog are manual. | `3-release-automation` | Prefer standard conventional commits and release tags/releases over a custom commit-message tag trigger. |
 | LLM-authored commit messages have no lightweight guidance or enforcement path. | `2-commit-policy` | Put detailed guidance in a separate repo-local file; keep `AGENTS.md` to a short "read this when preparing commits" pointer; enforce with `commit-msg` hook and CI. |
-| Pairflow bubble commit/merge messages can conflict with conventional-commit enforcement. | `2-commit-policy` | Audit `pairflow bubble commit` and `pairflow bubble merge`; make release-relevant bubble commits conventional, define full-history vs first-parent release-history strategy, and ignore or explicitly allow merge/revert/lifecycle-only commits without treating them as semver authority. |
+| Pairflow bubble commit/merge messages can conflict with conventional-commit enforcement. | `2-commit-policy` | Audit `pairflow bubble commit` and `pairflow bubble merge`; make release-relevant bubble commits conventional, define full-history vs first-parent release-history strategy, tolerate merge artifacts, keep revert recovery-compatible, and reject new generic finalize messages while treating historical finalize commits as non-release noise. |
 | npm publish is not automated. | `3-release-automation` | Requires `NPM_TOKEN` and publish workflow guarded by release/tag event plus dry-run/manual environment approval until `7-release-pilot` opens the guard. |
 | Public docs and onboarding path are missing. | `4-docs-site-pages` | Keep initial docs small and operational: install, quickstart, CLI, UI, skills, release process. |
 | Skill install is documented but not CLI-supported. | `5-skills-install` | Must preserve repo-local source-of-truth and derived global copy rules. |
@@ -217,7 +217,7 @@ This plan turns the current local-development install story into a release-quali
 3. Assumption: the initial release model can use release-relevant bubble branch commits as semver/changelog authority and ignore default merge commits for release calculation; `2-commit-policy` must verify and encode the exact full-history vs first-parent strategy.
 4. Risk: publishing root source files or local artifacts unintentionally. Mitigation: define `files` explicitly and require `npm pack --dry-run` evidence.
 5. Risk: release automation bumps versions unexpectedly while commit history is not yet conventional. Mitigation: enforce conventional commits from the cutoff forward and defer historical rewrite.
-6. Risk: commitlint blocks valid Pairflow lifecycle commits. Mitigation: task `2-commit-policy` must explicitly cover merge commits, revert commits, lifecycle-only bubble commits, and release-relevant bubble implementation commits.
+6. Risk: commit-message validation blocks valid Pairflow close/recovery history or preserves generic finalize compatibility too broadly. Mitigation: task `2-commit-policy` must explicitly cover merge commits, revert commits, historical finalize noise, new finalize rejection, and release-relevant bubble implementation commits.
 7. Risk: inlining commit-message rules in `AGENTS.md` increases irrelevant session context. Mitigation: keep `AGENTS.md` as a pointer only and store the detailed policy in a separate guidance file.
 8. Risk: CLI version reporting drifts from npm package version. Mitigation: use package metadata as the only version source.
 9. Risk: UI assets are missing after npm install. Mitigation: package `ui/dist/**` and test `pairflow ui` from a packed local install.
