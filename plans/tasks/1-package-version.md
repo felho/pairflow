@@ -5,7 +5,7 @@ task_family_id: package-version
 sequence_key: "1"
 task_id: 1-package-version
 title: "Package Readiness and CLI Version Surface"
-status: implementable
+status: in_progress
 phase: phase1
 target_files:
   - "package.json"
@@ -23,7 +23,7 @@ system_context_ref: docs/pairflow-initial-design.md
 owners:
   - "felho"
 doc_bubble_id: 1-package-version-doc
-impl_bubble_id: null
+impl_bubble_id: 1-package-version-impl
 supersedes: []
 superseded_by: null
 archive_group: 2026-05-31-npm-release-dx-onboarding

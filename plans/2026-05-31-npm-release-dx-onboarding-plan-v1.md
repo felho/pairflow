@@ -4,8 +4,8 @@ artifact_id: plan_npm_release_dx_onboarding_v1
 plan_id: npm-release-dx-onboarding
 created_on: "2026-05-31"
 title: "NPM Release, CLI DX, and Onboarding Plan"
-status: draft
-plan_status: draft
+status: in_progress
+plan_status: in_progress
 prd_ref: null
 owners:
   - "felho"
@@ -26,7 +26,7 @@ task_tracker:
     status: done
   - task_id: 1-package-version
     task_path: plans/tasks/1-package-version.md
-    status: implementable
+    status: in_progress
   - task_id: 2-commit-policy
     task_path: null
     status: not_created
@@ -174,7 +174,7 @@ This plan turns the current local-development install story into a release-quali
 | Task ID | Task Path | Purpose | Depends On | Closes Gap | Status |
 |---|---|---|---|---|---|
 | `0-remove-orchestra-bin` | `plans/tasks/0-remove-orchestra-bin.md` | Remove the legacy public CLI/bin and package export surfaces before npm package-readiness work proceeds. | `N/A` | Current package manifest and public index exports expose a removed legacy alias. | done |
-| `1-package-version` | `plans/tasks/1-package-version.md` | Apply the recorded `@pairflow/cli` package identity, make the package publish-ready, define package contents, preserve UI asset inclusion, and add top-level CLI version reporting from package metadata. | `0-remove-orchestra-bin` | Package identity not yet applied, npm package publish readiness missing, and visible installed version missing. | implementable |
+| `1-package-version` | `plans/tasks/1-package-version.md` | Apply the recorded `@pairflow/cli` package identity, make the package publish-ready, define package contents, preserve UI asset inclusion, and add top-level CLI version reporting from package metadata. | `0-remove-orchestra-bin` | Package identity not yet applied, npm package publish readiness missing, and visible installed version missing. | in_progress |
 | `2-commit-policy` | `null` | Add a separate commit-message guidance file, lightweight `AGENTS.md` pointer, commit-msg hook/CI enforcement, release-history strategy, and Pairflow bubble commit/merge/revert/lifecycle message compatibility without adding release publishing. | `1-package-version` | Missing commit-message guidance/enforcement and bubble lifecycle message compatibility. | not_created |
 | `3-release-automation` | `null` | Add conventional-commit release configuration, changelog/version automation, release tagging/release workflow, and guarded npm publish GitHub Actions. | `1-package-version`, `2-commit-policy` | Missing automated semver, changelog, release, and guarded npm publish path. | not_created |
 | `4-docs-site-pages` | `null` | Add static documentation source/build/publish workflow covering install, upgrade, version pinning, CLI basics, UI, skills, and release semantics. | `1-package-version`, `2-commit-policy`, `3-release-automation` | Missing public onboarding/docs surface. | not_created |
