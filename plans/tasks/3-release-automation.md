@@ -5,7 +5,7 @@ task_family_id: release-automation
 sequence_key: "3"
 task_id: 3-release-automation
 title: "Release Automation and Guarded NPM Publish"
-status: implementable
+status: in_progress
 phase: phase3
 target_files:
   - "package.json"
@@ -22,7 +22,7 @@ system_context_ref: docs/pairflow-initial-design.md
 owners:
   - "felho"
 doc_bubble_id: 3-release-automation-doc
-impl_bubble_id: null
+impl_bubble_id: 3-release-automation-impl
 supersedes: []
 superseded_by: null
 archive_group: 2026-05-31-npm-release-dx-onboarding

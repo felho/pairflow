@@ -41,7 +41,7 @@ task_tracker:
     status: archived
   - task_id: 3-release-automation
     task_path: plans/tasks/3-release-automation.md
-    status: implementable
+    status: in_progress
   - task_id: 4-docs-site-pages
     task_path: null
     status: not_created
@@ -185,7 +185,7 @@ This plan turns the current local-development install story into a release-quali
 | `2a-commit-policy` | `plans/archive/tasks/2026-05-31-npm-release-dx-onboarding/2a-commit-policy.md` | Establish the commit/release-history authority document, operator guidance document, `AGENTS.md` pointer, canonical first-line taxonomy, and release-history handoff boundary without hook/runtime activation. | `1-package-version` | Missing commit-message authority foundation and release-history classification contract. | archived |
 | `2b-commit-policy` | `plans/archive/tasks/2026-05-31-npm-release-dx-onboarding/2b-commit-policy.md` | Implement local validation/gate alignment for the approved taxonomy: validator module/CLI, package script, commit-msg hook, hook installer update, safe-range validator behavior, and focused validator/hook tests. | `2a-commit-policy` | Missing repo-local commit-message enforcement for newly created commits and deterministic safe ranges. | archived |
 | `2c-commit-policy` | `plans/archive/tasks/2026-05-31-npm-release-dx-onboarding/2c-commit-policy.md` | Align Pairflow commit producers and lifecycle consumers with the approved taxonomy: local/remote `bubble commit`, merge/revert compatibility, and deterministic accepted default handling for `bubble extract --commit`. | `2b-commit-policy` | Pairflow bubble lifecycle message compatibility and adjacent commit-producer alignment. | archived |
-| `3-release-automation` | `plans/tasks/3-release-automation.md` | Add conventional-commit release configuration, changelog/version automation, release tagging/release workflow, and guarded npm publish GitHub Actions. | `1-package-version`, `2a-commit-policy`, `2b-commit-policy`, `2c-commit-policy` | Missing automated semver, changelog, release, and guarded npm publish path. | implementable |
+| `3-release-automation` | `plans/tasks/3-release-automation.md` | Add conventional-commit release configuration, changelog/version automation, release tagging/release workflow, and guarded npm publish GitHub Actions. | `1-package-version`, `2a-commit-policy`, `2b-commit-policy`, `2c-commit-policy` | Missing automated semver, changelog, release, and guarded npm publish path. | in_progress |
 | `4-docs-site-pages` | `null` | Add static documentation source/build/publish workflow covering install, upgrade, version pinning, CLI basics, UI, skills, and release semantics. | `1-package-version`, `2c-commit-policy`, `3-release-automation` | Missing public onboarding/docs surface. | not_created |
 | `5-skills-install` | `null` | Add `pairflow skills install` CLI support around the existing repo-local skill install policy, including target validation, dry-run/json output, and safe symlink/copy behavior. | `1-package-version` | Missing supported CLI path for skill installation. | not_created |
 | `6-ui-service-lifecycle` | `null` | Add `pairflow ui start|stop|status|restart` with PID/state files, stale-PID cleanup, URL/status reporting, and foreground `pairflow ui` compatibility. | `1-package-version` | Missing durable local UI server lifecycle management. | not_created |
