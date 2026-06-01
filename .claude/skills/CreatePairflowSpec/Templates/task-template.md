@@ -163,6 +163,15 @@ silently pulled into required-now scope. Otherwise say `N/A`.
 1. `contract_boundary_override`: `yes|no`
 2. If `yes`, list impacted contracts (DB/API/event/auth/config) and keep `plan_ref` non-null.
 
+### Gate Detail Budget
+
+Use this section to keep gate output proportional. Full tables are required only
+for gates with split/contract/fan-out risk. Otherwise use compact records.
+
+| Gate | Detail Level | Evidence / Reason |
+|---|---|---|
+| <gate name> | <not_triggered|triggered_low_risk|triggered_split_or_contract_risk> | <N/A evidence, compact decision, or full-output trigger> |
+
 ### Complexity Risk Gate
 
 1. `authority_risk`: `0|1|2`

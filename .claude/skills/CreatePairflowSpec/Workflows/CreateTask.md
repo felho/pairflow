@@ -692,6 +692,29 @@ Required blockers for Task output:
 
 If blockers exist, ask only focused questions for those blockers.
 
+### 3a) Apply the Gate Detail Budget
+
+Use the Gate Detail Budget before expanding gate sections.
+
+Detail levels:
+1. `not_triggered`: write `N/A` plus a short evidence reason.
+2. `triggered_low_risk`: write a compact decision record with the conclusion,
+   evidence anchor, and why full output is not needed.
+3. `triggered_split_or_contract_risk`: write the full gate output required by
+   the relevant reference.
+
+Escalate to full output only when a concrete trigger exists, such as:
+1. new or changed authority/shared contract,
+2. three or more consumer families,
+3. an `unknown` relevant bucket,
+4. `split_required` or another hard-stop,
+5. broad invariant language with plausible adjacent surfaces,
+6. capability claim stronger than proof,
+7. target-file reality contradicting the declared task shape.
+
+Do not fill every template section maximally by default. Mandatory gates require
+auditable decisions, not maximal prose for unrelated or low-risk gates.
+
 ### 4) L0 pass
 
 1. Confirm explicit in-scope and out-of-scope boundaries.
@@ -892,13 +915,17 @@ Run a document-level consistency gate:
 3. Include a short "Open Questions" block only if non-blocking.
 4. Include a standard "Hardening Backlog" block for `later-hardening` items.
    - If none exist, emit `No open later-hardening items.`
-5. Include explicit complexity-risk summary:
+5. Include a compact Gate Detail Budget summary:
+   - which gates were full-output,
+   - which gates used compact records,
+   - which gates were `N/A with evidence`.
+6. Include explicit complexity-risk summary:
    - `risk_score`
    - split decision
    - authority/source-of-truth note when applicable
    - authority fan-out note when applicable
-6. If the control-model gate applied, include a short note explaining whether the control model was inherited cleanly or had to be clarified during drafting.
-7. If the Contract-Dense Task Gate applied, include a short note naming the
+7. If the control-model gate applied, include a short note explaining whether the control model was inherited cleanly or had to be clarified during drafting.
+8. If the Contract-Dense Task Gate applied, include a short note naming the
    canonical matrix and the mirrored surfaces it controls.
 
 ## Output
@@ -909,6 +936,7 @@ Run a document-level consistency gate:
    - include only `later-hardening` items
 3. Short summary:
    - contract-boundary override decision (`yes|no`) and reason,
+   - gate detail budget outcome,
    - complexity-risk decision and score,
    - contract-dense decision (`yes|no`) and mirrored-surface impact,
    - what was inferred,

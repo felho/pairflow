@@ -560,6 +560,42 @@ Policy:
     known plausible edge-case families must say whether review should treat
     them as follow-up, route-back-to-plan, accepted limitation, or external
     instead of silently widening required-now scope.
+34. Mandatory does not mean maximal: gate decisions must be auditable, but
+    output detail should be proportional to the triggered risk. Do not expand
+    low-risk or non-triggered gates into full tables merely because a template
+    has room for them.
+
+## Gate Detail Budget (Mandatory)
+
+Use a proportional detail budget whenever drafting or reviewing Plan/Task
+artifacts. The purpose is to preserve the new gate safety without turning every
+average task into a large spec.
+
+Detail levels:
+1. `not_triggered`: one-line `N/A` plus evidence is enough.
+2. `triggered_low_risk`: compact decision record is enough; include the
+   conclusion, evidence anchor, and no-split/no-extra-output reason.
+3. `triggered_split_or_contract_risk`: full gate output is required, including
+   tables/matrices when the gate reference asks for them.
+
+Escalate to full gate output when any of these are true:
+1. a new or changed authority/shared contract is introduced,
+2. three or more consumer families are implicated,
+3. any relevant bucket is `unknown`,
+4. `split_required` or another hard-stop rule triggers,
+5. broad invariant language can pull adjacent surfaces into required-now scope,
+6. a capability claim could be stronger than its activation/proof boundary,
+7. target-file reality contradicts the task's declared label or shape.
+
+Policy:
+1. ReviewSpec must fail missing triggered gate decisions, but must not demand
+   full tables for gates that are clearly not triggered or low-risk.
+2. CreateTask should prefer compact `N/A with evidence` records for unrelated
+   gates instead of filling template sections with speculative content.
+3. If a reviewer wants more detail, they must name the concrete trigger that
+   escalates the detail level.
+4. If the detail itself starts hiding the bounded slice, prefer split/route-back
+   over adding more explanatory prose.
 
 ## Minimum Contract Rules
 
@@ -600,7 +636,8 @@ Policy:
    triggered gate is only implicitly satisfied by nearby prose. Required gate
    outputs such as `risk_score`, `split_decision`, authority fan-out inventory,
    closure-budget triage, and bounded-task-shape classification must be present
-   and auditable in the task artifact.
+   and auditable in the task artifact at the proportional detail level required
+   by the Gate Detail Budget.
 20. For Plans with authority/read-model/multi-consumer relevance, a control-model section is mandatory. It must explicitly state:
    - business invariant,
    - control model,
@@ -647,29 +684,32 @@ Policy:
 31. If plausible adjacent edge-case families are known, the task must include a
     `Review Scope Fence` naming each family, why it is not required-now, current
     safe behavior, review handling, and route.
-32. `ReviewSpec plan-mode` is planning-only:
+32. If a gate is not triggered or is triggered low-risk, the task may use a
+    compact decision record instead of a full table, provided the evidence and
+    no-escalation reason are explicit.
+33. `ReviewSpec plan-mode` is planning-only:
    - check coverage, dependency, sequencing, and downstream viability,
    - do not turn it into implementation or code-review workflow.
-33. `ReviewSpec task-mode` must load the parent plan when `plan_ref` exists and treat parent-plan fit as mandatory review context, not optional background.
-34. `ReviewSpec task-mode` must inspect `target_files` when available and use the real touched scope to validate the bounded slice.
-35. Plan/task review must include a remaining-task viability check:
+34. `ReviewSpec task-mode` must load the parent plan when `plan_ref` exists and treat parent-plan fit as mandatory review context, not optional background.
+35. `ReviewSpec task-mode` must inspect `target_files` when available and use the real touched scope to validate the bounded slice.
+36. Plan/task review must include a remaining-task viability check:
    - whether downstream open tasks remain valid as written,
    - whether a plan/task refinement is needed,
    - whether a new split task is required,
    - whether a downstream task became obsolete,
    - whether phase ordering is invalidated.
-36. When a refined Plan or Task touches an already-closed authority/shared contract, a `Closed-Contract Drift Check` is mandatory:
+37. When a refined Plan or Task touches an already-closed authority/shared contract, a `Closed-Contract Drift Check` is mandatory:
    - source anchors,
    - canonical vs guard vs compat classification,
    - forbidden reinterpretations,
    - and drift status.
-37. A refined artifact must not be marked implementable/approvable if it is only locally coherent but contradicts repo-local source anchors for the same contract.
-38. Plans or tasks that claim a usable capability must record capability closure
+38. A refined artifact must not be marked implementable/approvable if it is only locally coherent but contradicts repo-local source anchors for the same contract.
+39. Plans or tasks that claim a usable capability must record capability closure
     classification and must keep Done Definition / acceptance wording aligned
     with that classification.
-39. `end_to_end` capability claims require a last-mile proof; hook/foundation/
+40. `end_to_end` capability claims require a last-mile proof; hook/foundation/
     deferred work must not be worded as fully usable automation.
-40. Ambiguous activation language such as `configured`, `wired`, `integrated`,
+41. Ambiguous activation language such as `configured`, `wired`, `integrated`,
     `available`, `supported`, or `ready` must name the configuration owner and
     shipped/external boundary before approval.
 

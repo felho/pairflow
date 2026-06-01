@@ -178,11 +178,23 @@ Before `approve_task`, audit whether every triggered mandatory task gate has a
 materialized output record in the task artifact. This audit is separate from
 checking whether the prose is locally coherent.
 
+Apply the Gate Detail Budget while auditing:
+1. `not_triggered`: accept one-line `N/A` plus evidence.
+2. `triggered_low_risk`: accept a compact decision record with conclusion,
+   evidence anchor, and no-escalation reason.
+3. `triggered_split_or_contract_risk`: require the full fields/tables/matrices
+   named below or by the gate reference.
+
+Do not turn template availability into a detail requirement. If requesting more
+detail, name the concrete risk trigger that escalates the gate from compact
+output to full output.
+
 Required checks:
 1. Identify which mandatory gates triggered from the task content, parent plan,
    and target-file reality.
 2. For each triggered gate, verify that the task includes the required output
-   fields named by the gate reference or `SKILL.md` minimum contract rules.
+   fields named by the gate reference or `SKILL.md` minimum contract rules at
+   the required detail level.
 3. If a triggered gate's output is missing, generic, or only implied by prose,
    record a finding with:
    - gate name,
@@ -193,6 +205,9 @@ Required checks:
 4. Do not substitute adjacent sections for a gate output unless they contain
    the exact decision fields required by the gate and can be audited without
    inference.
+5. Do not fail a task merely because a non-triggered or low-risk gate is
+   compact. Fail only if the compact record lacks evidence, hides a trigger, or
+   makes the split/no-split decision unauditable.
 
 Complexity Risk Gate output is mandatory whenever implementation-oriented
 authority/runtime/read-model/shared-contract work is in scope. The task must
@@ -582,6 +597,10 @@ Always include:
 18. when a Review Scope Fence is present or needed, whether fenced edge-case
     families have valid route handling and are not required for the current
     contract
+19. in `task-mode`, the Gate Detail Budget result: which gates were
+    `not_triggered`, `triggered_low_risk`, or `triggered_split_or_contract_risk`,
+    and whether any requested detail escalation is justified by a concrete
+    trigger
 
 ### 7) Output rules
 
