@@ -378,18 +378,35 @@ Count how many of these closure buckets are materially changing in the same boun
 6. `persisted_authority_or_schema`
 7. `cleanup_recovery_consumers`
 
+Discovery rule:
+1. Each closure bucket must be recorded as `present`, `absent`, or `unknown`.
+2. `absent` requires a short evidence note from target-file reality, adjacent
+   entrypoint inspection, parent-plan boundaries, or source-anchor context.
+3. Any plausibly relevant but uninspected closure bucket is `unknown`, not
+   `absent`.
+4. `unknown` closure buckets block `approve_task` until refined, routed back,
+   or explicitly accepted by the human as a knowingly high-risk bundle.
+
 Policy:
-1. If `authority_producer` + `shared_contract` + any two consumer buckets appear together, do not keep the scope as one bounded task by default.
+1. If `authority_producer` + `shared_contract` + any two consumer buckets are
+   `present`, the default decision is `split_required`.
 2. If `persisted_authority_or_schema` changes in the same bounded artifact as `shared_contract` and two or more consumer buckets, route to `Plan -> Task` even if the work initially looked task-sized.
 3. If the artifact would simultaneously close producer boundary, shared contract alignment, and read-model/status/CLI fallout, treat that as a sequencing failure candidate and split before drafting implementation-ready output.
-4. A task may own adjacent closures only when the artifact explicitly proves:
+4. A task may override `split_required` only with one of:
+   - explicit human override plus knowingly high-risk bundle rationale, or
+   - safe-collapse proof showing all of the following:
+     - the same bounded code path closes the collapsed buckets,
+     - the same consumer family owns the fallout,
+     - no separate compatibility, diagnostics, read-model, recovery, or
+       side-effect-ordering risk is introduced.
+5. A task may own adjacent closures only when the artifact explicitly proves:
    - the same bounded code path closes them,
    - the same consumer family owns the fallout,
    - and no separate compatibility or diagnostics risk is introduced.
-5. Do not let a task stay broad merely because each individual sub-area looks understandable in isolation.
-6. The output artifact must name the collapsed vs deferred closures explicitly whenever more than two closure buckets are in scope.
-7. In plans, use this gate to decide split/no-split, not to dump full intermediate closure accounting into the plan text.
-8. In tasks, this gate is part of the bounded-slice proof and must remain explicit.
+6. Do not let a task stay broad merely because each individual sub-area looks understandable in isolation.
+7. The output artifact must name the collapsed vs deferred closures explicitly whenever more than two closure buckets are in scope.
+8. In plans, use this gate to decide split/no-split, not to dump full intermediate closure accounting into the plan text.
+9. In tasks, this gate is part of the bounded-slice proof and must remain explicit.
 
 ## Bounded-Task-Shape Gate (Mandatory)
 
@@ -560,10 +577,12 @@ Policy:
    - `replacement_proof_required_if_removed`.
 25. If a current behavior is being removed, the artifact must identify the exact replacement path and the equivalence or intentional-difference proof expected from validation.
 26. Tasks must record closure-budget triage explicitly when authority/runtime/read-model/shared-contract work is in scope:
-   - closure buckets touched,
+   - closure buckets recorded as `present`, `absent`, or `unknown`,
+   - evidence for `absent` buckets,
    - which closures are intentionally collapsed,
    - why that collapse is safe,
-   - which closures are explicitly deferred.
+   - which closures are explicitly deferred,
+   - whether `split_required` was triggered and how it was resolved.
 27. Tasks for mutable/runtime flows must record bounded-task-shape classification explicitly:
    - primary shape,
    - secondary shape (if any),

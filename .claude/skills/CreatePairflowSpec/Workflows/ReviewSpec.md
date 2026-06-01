@@ -213,10 +213,22 @@ include at minimum:
 
 Closure-Budget Gate output is mandatory whenever authority/runtime/read-model/
 shared-contract work is in scope. The task must name:
-1. touched closure buckets,
-2. intentionally collapsed closures,
-3. why each collapse is safe,
-4. explicitly deferred closures.
+1. each closure bucket with `present`, `absent`, or `unknown`,
+2. evidence for every `absent` bucket,
+3. why every plausible `unknown` bucket is resolved before approval, or the
+   human override that accepts the high-risk bundle,
+4. intentionally collapsed closures,
+5. why each collapse is safe,
+6. explicitly deferred closures,
+7. whether `split_required` was triggered, and the final split/no-split
+   decision.
+
+If `authority_producer` + `shared_contract` + any two consumer buckets are
+`present`, the default closure-budget decision is `split_required`. A single
+task may continue only with explicit human override or safe-collapse proof that
+the same bounded code path closes the buckets, the same consumer family owns
+the fallout, and no separate compatibility, diagnostics, read-model, recovery,
+or side-effect-ordering risk is introduced.
 
 Bounded-Task-Shape Gate output is mandatory for mutable/runtime flows. The task
 must name:
