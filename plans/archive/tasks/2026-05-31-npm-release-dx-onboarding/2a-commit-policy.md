@@ -5,7 +5,7 @@ task_family_id: commit-policy
 sequence_key: "2a"
 task_id: 2a-commit-policy
 title: "Commit Policy Authority Foundation"
-status: implementable
+status: archived
 phase: phase2
 target_files:
   - "AGENTS.md"
