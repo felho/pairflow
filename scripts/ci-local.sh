@@ -186,6 +186,25 @@ if [[ "$CI_VERBOSE" != "1" ]]; then
 fi
 echo
 
+COMMIT_RANGE_FROM="${PAIRFLOW_COMMIT_RANGE_FROM:-}"
+COMMIT_RANGE_TO="${PAIRFLOW_COMMIT_RANGE_TO:-}"
+COMMIT_RANGE_REQUIRED="${PAIRFLOW_COMMIT_RANGE_REQUIRED:-0}"
+
+if [[ -n "$COMMIT_RANGE_FROM" && -n "$COMMIT_RANGE_TO" ]]; then
+  run_step "commit-range" "commit message range validation" pnpm commit-policy:validate-range -- --from "$COMMIT_RANGE_FROM" --to "$COMMIT_RANGE_TO"
+elif [[ -n "$COMMIT_RANGE_FROM" || -n "$COMMIT_RANGE_TO" ]]; then
+  echo "ci:local commit range not validated: incomplete safe range provided"
+  echo "ci:local requires both PAIRFLOW_COMMIT_RANGE_FROM and PAIRFLOW_COMMIT_RANGE_TO before install/build/test steps"
+  exit 1
+elif [[ "$COMMIT_RANGE_REQUIRED" == "1" ]]; then
+  echo "ci:local commit range not validated: no safe range provided"
+  echo "ci:local requires PAIRFLOW_COMMIT_RANGE_FROM and PAIRFLOW_COMMIT_RANGE_TO before install/build/test steps"
+  exit 1
+else
+  echo "ci:local commit range not validated: no safe range provided"
+  echo
+fi
+
 run_step "install" "dependency lock validation" pnpm install --frozen-lockfile
 run_step "check" "quality suite (pnpm check)" pnpm check
 

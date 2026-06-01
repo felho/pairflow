@@ -1,0 +1,146 @@
+import { execFile } from "node:child_process";
+import {
+  chmod,
+  mkdir,
+  mkdtemp,
+  readFile,
+  writeFile
+} from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { delimiter, join } from "node:path";
+import { promisify } from "node:util";
+
+import { describe, expect, it } from "vitest";
+
+const execFileAsync = promisify(execFile);
+const repoRoot = process.cwd();
+
+function outputFrom(error: unknown, stream: "stdout" | "stderr"): string {
+  if (typeof error === "object" && error !== null && stream in error) {
+    const value = (error as Record<typeof stream, unknown>)[stream];
+    return typeof value === "string" ? value : "";
+  }
+  return "";
+}
+
+async function createCiFixture(): Promise<{ fixtureDir: string; commandLog: string }> {
+  const fixtureDir = await mkdtemp(join(tmpdir(), "pairflow-ci-local-"));
+  const binDir = join(fixtureDir, "bin");
+  const commandLog = join(fixtureDir, "commands.log");
+  await mkdir(join(fixtureDir, "scripts"), { recursive: true });
+  await mkdir(binDir, { recursive: true });
+  await writeFile(
+    join(fixtureDir, "scripts/ci-local.sh"),
+    await readFile(join(repoRoot, "scripts/ci-local.sh"), "utf8"),
+    "utf8"
+  );
+  await chmod(join(fixtureDir, "scripts/ci-local.sh"), 0o755);
+  await writeFile(
+    join(binDir, "pnpm"),
+    [
+      "#!/usr/bin/env bash",
+      "set -euo pipefail",
+      `echo "$*" >> "${commandLog}"`,
+      "exit 0",
+      ""
+    ].join("\n"),
+    "utf8"
+  );
+  await chmod(join(binDir, "pnpm"), 0o755);
+  return { fixtureDir, commandLog };
+}
+
+async function runCiFixture(
+  fixtureDir: string,
+  env: Record<string, string> = {}
+): Promise<{ stdout: string; stderr: string }> {
+  return execFileAsync("bash", ["scripts/ci-local.sh"], {
+    cwd: fixtureDir,
+    env: {
+      ...process.env,
+      PATH: `${join(fixtureDir, "bin")}${delimiter}${process.env.PATH ?? ""}`,
+      ...env
+    }
+  });
+}
+
+describe("ci-local commit range integration", () => {
+  it("validates an explicit range before install and quality steps", async () => {
+    const { fixtureDir, commandLog } = await createCiFixture();
+    await runCiFixture(fixtureDir, {
+      PAIRFLOW_COMMIT_RANGE_FROM: "base",
+      PAIRFLOW_COMMIT_RANGE_TO: "head"
+    });
+
+    const commands = (await readFile(commandLog, "utf8")).trim().split("\n");
+    expect(commands[0]).toBe(
+      "commit-policy:validate-range -- --from base --to head"
+    );
+    expect(commands).toContain("install --frozen-lockfile");
+    expect(commands).toContain("check");
+  });
+
+  it("fails closed before side-effectful steps when a range is required but missing", async () => {
+    const { fixtureDir, commandLog } = await createCiFixture();
+
+    let failure: unknown;
+    try {
+      await runCiFixture(fixtureDir, { PAIRFLOW_COMMIT_RANGE_REQUIRED: "1" });
+    } catch (error) {
+      failure = error;
+    }
+
+    expect(failure).toMatchObject({ code: 1 });
+    expect(outputFrom(failure, "stdout")).toContain("not validated");
+
+    await expect(readFile(commandLog, "utf8")).rejects.toThrow();
+  });
+
+  it("fails closed before side-effectful steps when only one range endpoint is provided", async () => {
+    const { fixtureDir, commandLog } = await createCiFixture();
+
+    let failure: unknown;
+    try {
+      await runCiFixture(fixtureDir, {
+        PAIRFLOW_COMMIT_RANGE_FROM: "base"
+      });
+    } catch (error) {
+      failure = error;
+    }
+
+    expect(failure).toMatchObject({ code: 1 });
+    expect(outputFrom(failure, "stdout")).toContain("incomplete safe range");
+
+    await expect(readFile(commandLog, "utf8")).rejects.toThrow();
+  });
+
+  it("fails closed before side-effectful steps when only the range head is provided", async () => {
+    const { fixtureDir, commandLog } = await createCiFixture();
+
+    let failure: unknown;
+    try {
+      await runCiFixture(fixtureDir, {
+        PAIRFLOW_COMMIT_RANGE_TO: "head"
+      });
+    } catch (error) {
+      failure = error;
+    }
+
+    expect(failure).toMatchObject({ code: 1 });
+    expect(outputFrom(failure, "stdout")).toContain("incomplete safe range");
+
+    await expect(readFile(commandLog, "utf8")).rejects.toThrow();
+  });
+
+  it("honestly skips range validation by default without claiming a pass", async () => {
+    const { fixtureDir, commandLog } = await createCiFixture();
+    const result = await runCiFixture(fixtureDir);
+
+    expect(result.stdout).toContain("commit range not validated");
+    expect(result.stdout).toContain("no safe range");
+    expect(result.stdout).not.toContain("range validation passed");
+
+    const commands = (await readFile(commandLog, "utf8")).trim().split("\n");
+    expect(commands[0]).toBe("install --frozen-lockfile");
+  });
+});
