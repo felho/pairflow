@@ -202,6 +202,8 @@ Task-creation/review execution guard:
    - the first review pass defaults to `full_lane_review`,
    - refinement reruns default to `targeted_lane_review`,
    - every rerun still needs one final ReviewSpec decision,
+   - completed first-pass lane agents whose outputs are already recorded should
+     be closed before spawning targeted rerun lanes,
    - and the route ledger must record lane ids or skipped-lane reasons.
    Repeat until the decision is `approve_task`, `route_back_to_plan`,
    `split_task`, `block_not_ready`, or a real blocker.

@@ -253,18 +253,22 @@ Review delegation budget:
      uncertain coverage,
    - lanes whose covered surfaces changed in the artifact diff,
    - and a final top-level ReviewSpec reconciliation step.
-5. Escalate a refinement rerun back to `full_lane_review` only when:
+5. Before spawning targeted rerun lanes, close completed first-pass lane agents
+   whose outputs have already been recorded in the route ledger. This is
+   lifecycle hygiene for the orchestrator, not a review decision; it prevents
+   stale completed agents from consuming the runtime's sub-agent/thread budget.
+6. Escalate a refinement rerun back to `full_lane_review` only when:
    - the task or plan identity changed,
    - the bounded scope materially changed,
    - the split/no-split decision changed or became uncertain,
    - parent-plan sequencing changed,
    - a previously untouched gate family became relevant,
    - or the final reviewer cannot prove that skipped lanes remain unaffected.
-6. `single_thread_review` is allowed only when sub-agents are unavailable, or
+7. `single_thread_review` is allowed only when sub-agents are unavailable, or
    when a later explicit policy introduces a low-risk fast path. Until then,
    the first pass should spend the discovery budget and refinement passes should
    save budget through targeted invalidation.
-7. Every ReviewSpec delegation result must record the selected review mode,
+8. Every ReviewSpec delegation result must record the selected review mode,
    why that mode was selected, lane ids or explicit skipped-lane reasons, and
    the final ReviewSpec decision.
 

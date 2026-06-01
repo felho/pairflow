@@ -151,7 +151,10 @@ never sufficient.
    reconciliation. Do not repeat full lane fan-out unless identity, bounded
    scope, split/no-split, parent sequencing, or gate-family relevance changed,
    or skipped lanes cannot be proven unaffected.
-10. The route ledger must record `review_delegation.mode`, lane agent ids or
+10. Before spawning targeted rerun lanes, close completed first-pass lane agents
+    whose outputs have already been recorded in the route ledger so stale
+    completed agents do not consume the runtime's sub-agent/thread budget.
+11. The route ledger must record `review_delegation.mode`, lane agent ids or
     skipped-lane reasons, the final ReviewSpec decision source, and any reason
     for escalating a refinement rerun back to `full_lane_review`.
 
