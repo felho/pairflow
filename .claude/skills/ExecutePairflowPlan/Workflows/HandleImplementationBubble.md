@@ -949,11 +949,13 @@ Delegation:
 2. require the returned close result to prove implementation task/progress/archive
    admin was applied in the bubble worktree before lifecycle commit when task
    source metadata is available
-3. require the returned close result to prove finalized bubble artifact deletion, or to provide an explicit retained-bubble reason that prevents reporting a settled close
-4. do not treat `APPROVED_FOR_COMMIT`, `COMMITTED`, or `DONE` as sufficient by
+3. require `UsePairflow` `CloseBubble` to use an explicit conventional
+   lifecycle commit message; it must not rely on default finalize commit text
+4. require the returned close result to prove finalized bubble artifact deletion, or to provide an explicit retained-bubble reason that prevents reporting a settled close
+5. do not treat `APPROVED_FOR_COMMIT`, `COMMITTED`, or `DONE` as sufficient by
    itself; the delegated `CloseBubble` result must carry the explicit close
    proof before this workflow may emit an auto-continuable close result
-5. if the delegated close reaches `COMMITTED` or `DONE` and then discovers the
+6. if the delegated close reaches `COMMITTED` or `DONE` and then discovers the
    required implementation admin/archive proof is missing, stop at a human
    checkpoint/blocker; do not run merge/delete and do not repair the closed
    task admin on `main`
@@ -970,6 +972,7 @@ source_scope: not_applicable
 approval_gate_state: already_satisfied
 reason_code: IMPL_BUBBLE_CLOSE_REQUIRED
 delegated_use_pairflow_surface: CloseBubble
+lifecycle_commit_message_policy: explicit_conventional_message_required
 cleanup_postcondition: <bubble_deleted|retained_with_reason>
 implementation_admin_postcondition: <task_archived_in_bubble_commit|not_applicable>
 close_result_proof:

@@ -527,14 +527,25 @@ Delegation:
    through `UsePairflow` `CloseBubble`
 2. require `UsePairflow` `CloseBubble` to apply the required
    `status=implementable` task/plan metadata postcondition in the bubble
-   worktree after approval but before `pairflow bubble commit --stage-all`
-3. require the returned close result to prove finalized bubble artifact deletion,
+   worktree after approval but before
+   `pairflow bubble commit --stage-all --message "<conventional message>"`
+3. pass the active `TASK_PATH` and parent plan context as the document-close
+   task-source authority when the document bubble was kicked off from an inline
+   docs-only payload; `CloseBubble` may use this only after it verifies the task
+   frontmatter `doc_bubble_id`, `task_id`, parent plan tracker row, and inline
+   artifact/task identity all point to the same task
+4. require the returned close result to include
+   `task_source_resolution=<artifact_file_source|verified_route_context_inline_doc_payload|explicit_human_override>`
+   whenever `metadata_postcondition=task_status_implementable`
+5. require `UsePairflow` `CloseBubble` to use an explicit conventional
+   lifecycle commit message; it must not rely on default finalize commit text
+6. require the returned close result to prove finalized bubble artifact deletion,
    or to provide an explicit retained-bubble reason that prevents reporting a
    settled close
-4. after successful close/merge cleanup, re-read refreshed `main` metadata and
+7. after successful close/merge cleanup, re-read refreshed `main` metadata and
    prove `status=implementable`; do not create a direct post-merge `main` admin
    commit to repair missing close metadata
-5. preserve the existing `doc_bubble_id` as historical linkage; do not clear it
+8. preserve the existing `doc_bubble_id` as historical linkage; do not clear it
 
 Output:
 
@@ -550,6 +561,9 @@ reason_code: DOC_BUBBLE_AUTO_APPROVAL_CLOSE_REQUIRED
 delegated_use_pairflow_surface: CloseBubble
 metadata_postcondition: task_status_implementable
 metadata_commit_timing: pre_lifecycle_commit_in_bubble_worktree
+task_source_authority: active_task_path_from_route_context
+task_source_resolution: <artifact_file_source|verified_route_context_inline_doc_payload|explicit_human_override>
+lifecycle_commit_message_policy: explicit_conventional_message_required
 cleanup_postcondition: <bubble_deleted|retained_with_reason>
 auto_approval_proof:
   required_clean_runs: <reviewPolicy.meta_review_consecutive_clean_runs_required>
@@ -604,12 +618,23 @@ Delegation:
    `UsePairflow` `CloseBubble`
 2. require `UsePairflow` `CloseBubble` to apply the required
    `status=implementable` task/plan metadata postcondition in the bubble
-   worktree before `pairflow bubble commit --stage-all`
-3. require the returned close result to prove finalized bubble artifact deletion, or to provide an explicit retained-bubble reason that prevents reporting a settled close
-4. after successful close/merge cleanup, re-read refreshed `main` metadata and
+   worktree before
+   `pairflow bubble commit --stage-all --message "<conventional message>"`
+3. pass the active `TASK_PATH` and parent plan context as the document-close
+   task-source authority when the document bubble was kicked off from an inline
+   docs-only payload; `CloseBubble` may use this only after it verifies the task
+   frontmatter `doc_bubble_id`, `task_id`, parent plan tracker row, and inline
+   artifact/task identity all point to the same task
+4. require the returned close result to include
+   `task_source_resolution=<artifact_file_source|verified_route_context_inline_doc_payload|explicit_human_override>`
+   whenever `metadata_postcondition=task_status_implementable`
+5. require `UsePairflow` `CloseBubble` to use an explicit conventional
+   lifecycle commit message; it must not rely on default finalize commit text
+6. require the returned close result to prove finalized bubble artifact deletion, or to provide an explicit retained-bubble reason that prevents reporting a settled close
+7. after successful close/merge cleanup, re-read refreshed `main` metadata and
    prove `status=implementable`; do not create a direct post-merge `main` admin
    commit to repair missing close metadata
-5. preserve the existing `doc_bubble_id` as historical linkage; do not clear it
+8. preserve the existing `doc_bubble_id` as historical linkage; do not clear it
 
 Output:
 
@@ -625,6 +650,9 @@ reason_code: DOC_BUBBLE_CLOSE_REQUIRED
 delegated_use_pairflow_surface: CloseBubble
 metadata_postcondition: task_status_implementable
 metadata_commit_timing: pre_lifecycle_commit_in_bubble_worktree
+task_source_authority: active_task_path_from_route_context
+task_source_resolution: <artifact_file_source|verified_route_context_inline_doc_payload|explicit_human_override>
+lifecycle_commit_message_policy: explicit_conventional_message_required
 cleanup_postcondition: <bubble_deleted|retained_with_reason>
 handoff_boundary_note: Close the approved document bubble, persist status=implementable inside the bubble before lifecycle commit, verify it on main after merge, and then allow fresh route selection.
 ```
@@ -634,11 +662,17 @@ Fail-closed rule:
 1. if `UsePairflow` `CloseBubble` cannot persist `status=implementable` in the
    bubble worktree before lifecycle commit, the handler must stop before merge
    rather than relying on a direct `main` repair commit
-2. if close/merge succeeds but refreshed `main` task metadata does not prove
+2. if `UsePairflow` `CloseBubble` cannot resolve the task source from artifact
+   file source or verified route-context inline document payload, the handler
+   must stop before merge unless there is an explicit human override recorded in
+   the close result
+3. if `UsePairflow` `CloseBubble` cannot produce an explicit conventional
+   lifecycle commit message, the handler must stop before commit
+4. if close/merge succeeds but refreshed `main` task metadata does not prove
    `status=implementable`, the handler must not emit an auto-continuable close
    result
-3. if close/merge succeeds but the finalized bubble artifact remains present without an explicit retained-bubble reason, the handler must not emit an auto-continuable close result
-4. later implementation-bubble routing must never infer document completion from `doc_bubble_id`, deleted bubble artifacts, or prose-only memory
+5. if close/merge succeeds but the finalized bubble artifact remains present without an explicit retained-bubble reason, the handler must not emit an auto-continuable close result
+6. later implementation-bubble routing must never infer document completion from `doc_bubble_id`, deleted bubble artifacts, or prose-only memory
 
 ### 8. Normalized replanning path
 

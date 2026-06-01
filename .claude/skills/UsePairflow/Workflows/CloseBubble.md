@@ -17,7 +17,9 @@ REPO_PATH: extracted from `--repo`, or `git rev-parse --show-toplevel`
 PUSH: `true` if `--push` flag is present, default `false`
 DELETE_REMOTE: `true` if `--delete-remote` flag is present, default `false`
 REVIEW_ARTIFACT_TYPE: read from bubble metadata (`document` or `code`) before merge
-TASK_SOURCE_PATH: absolute task source file path extracted from bubble artifact metadata before merge
+TASK_SOURCE_PATH: absolute task source file path resolved before merge
+TASK_SOURCE_PATH_RESOLUTION: `artifact_file_source`, `verified_route_context_inline_doc_payload`, `explicit_human_override`, or `unresolved`
+CLOSE_COMMIT_MESSAGE: conventional commit message passed to `pairflow bubble commit --message`
 BASE_BRANCH: base branch read from bubble metadata before merge when available
 DOCUMENT_PRE_COMMIT_ADMIN_REQUIRED: true only when the caller contract explicitly requires a document-close metadata postcondition such as `task_status_implementable`
 IMPLEMENTATION_PRE_COMMIT_ADMIN_REQUIRED: true for code/implementation bubbles when TASK_SOURCE_PATH is known and the source task belongs under `<REPO_PATH>/plans/tasks/`
@@ -38,9 +40,10 @@ IMPLEMENTATION_PRE_COMMIT_ADMIN_REQUIRED: true for code/implementation bubbles w
   1. merge-conflict recovery commits on the bubble branch inside the bubble worktree after the confidence gates pass
   2. explicitly requested operator-facing follow-up changes on `main` after close, excluding task/progress/archive completion admin that belongs in the bubble pre-commit hook
   It is not allowed for normal lifecycle approve/commit/merge state transitions.
-- Document close metadata postconditions must be applied before the lifecycle commit when the caller contract requires them. Do not merge a document bubble and then create a direct `main` admin commit for `status=implementable`; that metadata must be part of the bubble branch commit that `pairflow bubble commit --stage-all` records.
-- Implementation close task/progress/archive postconditions must be applied before the lifecycle commit when TASK_SOURCE_PATH is known and the task lives under `plans/tasks/`. Do not merge an implementation bubble and then create a direct `main` admin commit for task `status=archived`, parent-plan tracker advancement, or canonical task archive movement; that metadata/archive update must be part of the bubble branch commit that `pairflow bubble commit --stage-all` records.
-- For code bubbles with an implementation task source under `plans/tasks/`, `pairflow bubble commit --stage-all` is forbidden until the implementation pre-commit admin proof below has been collected from the bubble worktree. Do not treat this as a best-effort instruction; missing proof is a STOP before commit.
+- Document close metadata postconditions must be applied before the lifecycle commit when the caller contract requires them. Do not merge a document bubble and then create a direct `main` admin commit for `status=implementable`; that metadata must be part of the bubble branch commit that `pairflow bubble commit --stage-all --message "<CLOSE_COMMIT_MESSAGE>"` records.
+- Implementation close task/progress/archive postconditions must be applied before the lifecycle commit when TASK_SOURCE_PATH is known and the task lives under `plans/tasks/`. Do not merge an implementation bubble and then create a direct `main` admin commit for task `status=archived`, parent-plan tracker advancement, or canonical task archive movement; that metadata/archive update must be part of the bubble branch commit that `pairflow bubble commit --stage-all --message "<CLOSE_COMMIT_MESSAGE>"` records.
+- For code bubbles with an implementation task source under `plans/tasks/`, `pairflow bubble commit --stage-all --message "<CLOSE_COMMIT_MESSAGE>"` is forbidden until the implementation pre-commit admin proof below has been collected from the bubble worktree. Do not treat this as a best-effort instruction; missing proof is a STOP before commit.
+- Lifecycle commit must pass an explicit conventional `--message`. Do not rely on Pairflow default commit text, legacy finalize wording, branch names, or merge commit text. If no valid `CLOSE_COMMIT_MESSAGE` can be selected, STOP before `pairflow bubble commit`.
 - For code bubbles already in `COMMITTED` or `DONE`, `pairflow bubble merge` is forbidden until the already-committed bubble content proves that same implementation admin/archive postcondition. If proof is missing, STOP and report that the close is past the safe pre-commit admin point.
 - After successful merge, delete the finalized local bubble artifact with `pairflow bubble delete --force` unless a concrete safety blocker requires retaining it. A retained DONE/merged bubble is not a normal settled close result; report the explicit retained-bubble reason and stop or checkpoint according to the caller contract.
 
@@ -77,13 +80,31 @@ pairflow bubble status --id <BUBBLE_ID> --repo <REPO_PATH> --json
 - Before merge, capture `REVIEW_ARTIFACT_TYPE` from:
   - `<REPO_PATH>/.pairflow/bubbles/<BUBBLE_ID>/bubble.toml` (`review_artifact_type`)
 - Also capture `BASE_BRANCH` from the same `bubble.toml` when available.
+- Initialize `TASK_SOURCE_PATH_RESOLUTION=unresolved`.
 - Try to capture `TASK_SOURCE_PATH` from:
   - `<REPO_PATH>/.pairflow/bubbles/<BUBBLE_ID>/artifacts/task.md`
   - Expected first-line format: `Source: file (<ABSOLUTE_PATH>)`
-- If task source cannot be parsed:
+- If the artifact file source is parsed, set `TASK_SOURCE_PATH_RESOLUTION=artifact_file_source`.
+- If the artifact source is `Source: inline text`, `REVIEW_ARTIFACT_TYPE=document`, and `DOCUMENT_PRE_COMMIT_ADMIN_REQUIRED=true`, a file source is not required by itself. Resolve `TASK_SOURCE_PATH` from route context only when every gate below passes:
+  1. the caller route context supplies exactly one active task path for this document-close operation
+  2. that task path is absolute or can be resolved under `<REPO_PATH>` and normalizes under `<REPO_PATH>/plans/tasks/`
+  3. the task frontmatter in the main checkout has `doc_bubble_id=<BUBBLE_ID>`
+  4. the task frontmatter `task_id` matches the parent plan tracker row selected by `plan_ref`
+  5. the parent plan tracker row and task-list table point to the same task path when a path field is present
+  6. the inline task artifact text names the same task path or task id when it names any task path or task id
+  7. no second plausible task path is present in route context, task metadata, or the inline artifact
+- When all inline gates pass, set `TASK_SOURCE_PATH_RESOLUTION=verified_route_context_inline_doc_payload`.
+- If a human explicitly decides that a single route-context task path is authoritative despite incomplete inline artifact evidence, set `TASK_SOURCE_PATH_RESOLUTION=explicit_human_override`, record the justification in the close report, and still verify the path is under `<REPO_PATH>/plans/tasks/` with `doc_bubble_id=<BUBBLE_ID>`.
+- If task source cannot be resolved:
   - for `REVIEW_ARTIFACT_TYPE=document` with `DOCUMENT_PRE_COMMIT_ADMIN_REQUIRED=true`, STOP before commit and report that the required document admin postcondition cannot be applied safely
   - for `REVIEW_ARTIFACT_TYPE=code`, continue close flow only when the caller explicitly accepts that implementation task/progress/archive admin cannot be applied in this close; otherwise STOP before commit and report that the required implementation admin postcondition cannot be applied safely
   - otherwise continue when no caller-required task metadata postcondition depends on it
+- Resolve `CLOSE_COMMIT_MESSAGE` before the commit step:
+  - prefer an explicit caller-provided conventional message when present
+  - for document close with required metadata admin, derive a conventional docs message from task or plan context, for example `docs(<scope>): refine <task subject>`, where `<scope>` is a stable lowercase scope from the task domain and the subject names the document/task refinement
+  - for implementation close, use the approved implementation task's actual release-relevant change class and scope; do not use a generic lifecycle-only message when source/product behavior changed
+  - validate the first line against `docs/commit-message-guidance.md`
+  - if the chosen message is missing, generic finalize text, or not conventional, STOP before commit
 
 ### 4. Sequential close with skip-if-already-done
 
@@ -112,6 +133,7 @@ pairflow bubble status --id <BUBBLE_ID> --repo <REPO_PATH> --json
      - Verify the worktree is on `bubble/<BUBBLE_ID>`.
      - Re-read `TASK_SOURCE_PATH` in that worktree and set task frontmatter `status` to `implementable`.
      - Preserve the existing `doc_bubble_id`; do not clear or rewrite it.
+     - Verify `TASK_SOURCE_PATH_RESOLUTION` is not `unresolved`; if it is `explicit_human_override`, include the explicit override reason in the close report.
      - If `plan_ref` resolves to a parent plan in the same worktree, update the matching `task_tracker` row and task-list table status for the same `task_id` to `implementable`.
      - Keep the diff limited to the active task artifact and its parent plan metadata/table status. Product/source/runtime edits are forbidden in this hook.
      - Verify the changed file list before continuing. If any changed file is outside that admin scope, STOP before commit and report the out-of-scope paths.
@@ -139,10 +161,10 @@ pairflow bubble status --id <BUBBLE_ID> --repo <REPO_PATH> --json
        - the parent plan has the matching tracker row set to `status=archived` with the canonical archive path.
        - the parent plan task-list table has the same archived status/path for the closed task.
        - `git diff --name-status` includes the task move plus parent plan update, and no path outside the allowed admin/archive scope.
-     - If any proof item is missing, STOP before `pairflow bubble commit --stage-all`; do not commit and do not repair later on `main`.
+     - If any proof item is missing, STOP before `pairflow bubble commit --stage-all --message "<CLOSE_COMMIT_MESSAGE>"`; do not commit and do not repair later on `main`.
   3. Run the lifecycle commit only after every required pre-commit admin hook above is either proven applied or proven not applicable:
   ```bash
-  pairflow bubble commit --id <BUBBLE_ID> --repo <REPO_PATH> --stage-all
+  pairflow bubble commit --id <BUBBLE_ID> --repo <REPO_PATH> --stage-all --message "<CLOSE_COMMIT_MESSAGE>"
   ```
   Remote bubble note: still run this from the laptop/local repo; do not commit lifecycle state by manually invoking Pairflow inside the remote clone.
 - Else if state is already `COMMITTED` or `DONE`:
@@ -315,9 +337,10 @@ Bubble <BUBBLE_ID> close summary:
 
 - Initial state: <STATE>
 - Approved: <yes / skipped (state was <STATE>)>
+- Task source: <artifact_file_source / verified_route_context_inline_doc_payload / explicit_human_override / unresolved>
 - Document pre-commit admin: <n/a / applied in bubble commit / skipped with reason / blocked with reason>
 - Implementation pre-commit admin: <n/a / applied in bubble commit / skipped with reason / blocked with reason>
-- Committed: <yes (--stage-all) / skipped (state was <STATE>)>
+- Committed: <yes (--stage-all --message "<CLOSE_COMMIT_MESSAGE>") / skipped (state was <STATE>)>
 - Merged: <yes / yes after merge_conflict_recovered / no>
 - Merge target: bubble/<BUBBLE_ID> -> <base-branch or n/a>
 - Cleanup: <deleted finalized bubble / already absent / retained with reason / skipped because merge did not complete>
