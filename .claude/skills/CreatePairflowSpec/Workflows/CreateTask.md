@@ -305,7 +305,10 @@ Bucket intent:
 4. `cleanup_recovery_consumers`: cleanup, rollback, migration, teardown, or recovery paths.
 
 Policy:
-1. If three or more consume families are affected, do not keep producer closure and consumer-family closure inside one task unless the user explicitly requests a knowingly high-risk bundle.
+1. If three or more consume families are affected, do not keep producer closure
+   and consumer-family closure inside one task by default. Split within the
+   same plan scope unless implementation-closure proof shows one bubble can
+   close the work.
 2. Use the scan to decide whether this task is:
    - a producer task,
    - a consumer-family alignment task,
@@ -533,7 +536,11 @@ Policy:
 7. If the authority fan-out scan reveals three or more consume families, producer closure and consumer-family closure should not remain in the same bounded task by default.
 8. But do not split adjacent closures into separate tasks just to mirror the vocabulary; merge them when they are genuinely one bounded change with the same consumers and no separate compatibility/read-model risk.
 9. If the Closure-Budget Gate says the task is too wide, the task must not be written as direct feature-delivery even if the risk score alone looks borderline acceptable.
-10. If the task changes canonical success/completion proof source and also touches cleanup or final result/status/event semantics, default `single-task allowed: no` unless proof-boundary mapping shows one non-ambiguous bounded closure.
+10. If `risk_score >= 7`, authority fan-out reaches three or more consumer
+   families, Closure-Budget says `split_required`, and
+   `authority_producer` + `shared_contract` + any two consumer buckets are
+   present, default to `split_task_within_same_plan_scope`.
+11. If the task changes canonical success/completion proof source and also touches cleanup or final result/status/event semantics, default `single-task allowed: no` unless proof-boundary mapping shows one non-ambiguous bounded closure.
 
 ### 2) Build draft immediately
 
@@ -654,20 +661,24 @@ Required blockers for Task output:
    - collapsed closures,
    - deferred closures,
    - why the remaining bounded task is safe.
-22. If the task modifies an existing mutation flow, blockers also include a `Precondition and Side-Effect Boundary`:
+22. If the high-risk autonomous split rule triggers, blockers also include a
+   proposed within-plan split shape. Do not keep a single task on shared
+   invariant reasoning alone; a single-task exception needs implementation-
+   closure proof.
+23. If the task modifies an existing mutation flow, blockers also include a `Precondition and Side-Effect Boundary`:
    - validations that must pass before mutations,
    - side effects forbidden before those validations pass,
    - invalid/precondition-failure behavior,
    - coordination primitives in scope or explicitly deferred.
-23. If three or more consume families are implicated, blockers also include explicit sequencing ownership:
+24. If three or more consume families are implicated, blockers also include explicit sequencing ownership:
    - whether this task is producer, consumer-family alignment, activation, read-model, or cleanup,
    - what producer/predecessor closure it depends on,
    - and which downstream closures remain for successor tasks.
-24. If the task cannot name a primary bounded-task shape, if a declared shape
+25. If the task cannot name a primary bounded-task shape, if a declared shape
    hides multiple independent closures, or if it mixes producer with
    fail-closed/coordination work without an explicit bounded proof, the task is
    not ready.
-25. If the task uses broad invariant language, blockers also include a
+26. If the task uses broad invariant language, blockers also include a
    `Scoped Invariants` record:
    - invariant text or token,
    - applies-to boundary,
@@ -675,15 +686,15 @@ Required blockers for Task output:
    - proof surface,
    - deferred or external surfaces,
    - reviewer non-goals.
-26. If plausible adjacent edge-case families are known, blockers also include a
+27. If plausible adjacent edge-case families are known, blockers also include a
    `Review Scope Fence` record with route handling. The task must not use this
    fence to hide work required for the current contract to be true.
-27. If the Closed-Contract Drift Check applies, blockers also include:
+28. If the Closed-Contract Drift Check applies, blockers also include:
    - repo-local source anchors,
    - canonical vs guard vs compat classification,
    - forbidden reinterpretations,
    - drift status proving there is no unauthorized semantic change.
-28. If the task changes an existing mutable flow's success/completion semantics, blockers also include:
+29. If the task changes an existing mutable flow's success/completion semantics, blockers also include:
    - current canonical success/completion proof source,
    - target canonical success/completion proof source,
    - final result/status/event truth-surface mapping,

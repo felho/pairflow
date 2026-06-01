@@ -223,8 +223,8 @@ include at minimum:
 9. `authority_fanout` when authority fan-out is relevant
 10. explicit `single_task_allowed: yes|no` or equivalent split/no-split
     conclusion
-11. if `single_task_allowed: yes`, a concrete explanation of why the collapsed
-    closures are safe
+11. if `single_task_allowed: yes`, implementation-closure proof explaining why
+    no split is needed
 12. if `single_task_allowed: no`, the proposed split shape or route-back action
 
 Closure-Budget Gate output is mandatory whenever authority/runtime/read-model/
@@ -232,7 +232,7 @@ shared-contract work is in scope. The task must name:
 1. each closure bucket with `present`, `absent`, or `unknown`,
 2. evidence for every `absent` bucket,
 3. why every plausible `unknown` bucket is resolved before approval, or the
-   human override that accepts the high-risk bundle,
+   split/refinement action that keeps it out of the current task,
 4. intentionally collapsed closures,
 5. why each collapse is safe,
 6. explicitly deferred closures,
@@ -240,11 +240,15 @@ shared-contract work is in scope. The task must name:
    decision.
 
 If `authority_producer` + `shared_contract` + any two consumer buckets are
-`present`, the default closure-budget decision is `split_required`. A single
-task may continue only with explicit human override or safe-collapse proof that
-the same bounded code path closes the buckets, the same consumer family owns
-the fallout, and no separate compatibility, diagnostics, read-model, recovery,
-or side-effect-ordering risk is introduced.
+`present`, the default closure-budget decision is `split_required`. A high-risk
+split-trigger combination defaults to `split_task_within_same_plan_scope`, not
+single-task approval. A single task may continue only with implementation-
+closure proof that one implementation bubble can close the whole task without
+separate sequencing, the same bounded code path closes the buckets, the same
+consumer family owns the fallout, the same proof surface validates the buckets,
+no separate reviewer feedback loop is expected per consumer bucket, and no
+separate compatibility, diagnostics, read-model, recovery, or
+side-effect-ordering risk is introduced.
 
 Bounded-Task-Shape Gate output is mandatory for mutable/runtime flows. The task
 must name:
@@ -276,8 +280,9 @@ the task. For each lifecycle role, record `present`, `absent`, or `unknown`:
 
 `unknown` means the role plausibly exists but was not inspected. Unknown
 plausible roles block `approve_task`. If three or more consumer families are
-confirmed, the task is not implementation-ready as one bounded task unless it
-records an explicit human override and a knowingly-high-risk bundle rationale.
+confirmed, the default decision is `refine_task` with
+`split_task_within_same_plan_scope` unless the task proves implementation
+closure.
 The task must state whether the split is producer, consumer-family alignment,
 activation, read-model, or cleanup/rollout.
 
@@ -372,6 +377,22 @@ Lane coverage reconciliation:
    high-risk combinations such as `risk_score >= 7`, `split_required`, or
    authority fan-out across three or more consumer families must be reconciled
    explicitly before approval.
+
+High-risk autonomous split rule:
+1. If `risk_score >= 7`, authority fan-out reaches three or more consumer
+   families, Closure-Budget says `split_required`, and
+   `authority_producer` + `shared_contract` + any two consumer buckets are
+   `present`, the default decision is not `approve_task`; it is
+   `refine_task` with `split_task_within_same_plan_scope`.
+2. Keep the parent plan scope intact unless the split changes dependencies,
+   sequencing, or coverage.
+3. The review result must propose the split shape using closure-family terms
+   such as authority foundation, local validation/gate alignment,
+   consumer-family alignment, activation/read-model, or cleanup/recovery.
+4. A single-task exception requires implementation-closure proof. Shared
+   invariant coherence alone is not enough.
+5. If the task only provides invariant-level safe-collapse reasoning, return
+   `refine_task` and require split refinement.
 
 ### 2b) Closed-Contract Drift Check (`plan-mode|task-mode` when applicable)
 

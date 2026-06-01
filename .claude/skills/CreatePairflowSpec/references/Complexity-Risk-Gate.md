@@ -174,11 +174,22 @@ When authority fan-out is present across 3 or more consume families, prefer this
 5. `read-model`
 6. `cleanup/rollout`
 
-This is not a mandatory phase count.
-Use it to decide what must be separated, then collapse adjacent closures when:
-1. the same bounded code change closes them,
-2. they share the same consumers,
-3. they do not introduce a separate compatibility or read-model risk.
+This is not a mandatory phase count. Use it to decide what must be separated.
+For high-risk split-trigger combinations, default to autonomous split
+refinement within the same plan scope. Collapse adjacent closures only when the
+artifact proves implementation closure:
+1. one implementation bubble can close the whole task without separate
+   sequencing,
+2. the same bounded code change closes them,
+3. they share the same consumers,
+4. the same proof surface validates the collapsed closures,
+5. no separate reviewer feedback loop is expected per consumer family,
+6. they do not introduce a separate compatibility or read-model risk.
+
+Shared invariant coherence is not sufficient safe-collapse proof. Most broad
+features can be described as serving one invariant; the review question is
+whether the same implementation closure and proof surface can actually close
+the work.
 
 If the task includes future milestone-gated behavior:
 1. document the contract now,
@@ -198,6 +209,8 @@ When risk score is `4+`, the Task artifact should explicitly capture:
 8. split decision:
    - `single-task allowed: yes|no`
    - if `no`, specify `foundation / delivery / activation`
+   - if `yes` after a hard-stop or `split_required`, provide implementation-
+     closure proof, not only invariant-level reasoning
 
 If authority fan-out is the reason for the split, do not stop at the generic three-way label. State whether the split is:
 - `authority producer`
@@ -227,7 +240,9 @@ For mutable existing flows, the Task should also record:
 3. whether coordination primitives are introduced,
 4. whether those concerns are intentionally split out of the producer/delivery slice.
 
-When risk score is `8+`, do not write the task as if it were direct feature delivery unless the user explicitly asks for a knowingly high-risk bundle.
+When risk score is `8+`, do not write the task as if it were direct feature
+delivery. Prefer autonomous split refinement within the same plan scope unless
+implementation-closure proof shows one bubble can close the work.
 
 For Plans:
 1. use this gate to decide whether decomposition is required,

@@ -337,7 +337,7 @@ Discovery rule:
    entrypoint inspection, parent-plan boundaries, or source-anchor context.
 4. Any plausibly relevant but uninspected bucket is `unknown`, not `absent`.
 5. `unknown` fan-out blocks implementation approval until refined, routed back,
-   or explicitly accepted by the human as a knowingly high-risk bundle.
+   or converted into an explicit split/refinement decision.
 6. When a command, hook, runtime behavior, authority, or shared contract has
    multiple execution variants, inspect for local/remote, interactive/batch,
    retry/continuation, import/export, and UI/API/CLI variants before declaring
@@ -356,9 +356,8 @@ Policy:
 4. Prefer the smallest safe split:
    - collapse adjacent closures when they are owned by the same code path, touch the same consumers, and do not introduce a distinct compatibility/read-model risk,
    - keep closures separate only when they cross a real boundary.
-5. If the completed scan confirms three or more consume families, the task is
-   not implementation-ready as a single bounded task unless it records an
-   explicit human override and a knowingly high-risk bundle rationale.
+5. If the completed scan confirms three or more consume families, the default
+   action is autonomous split refinement inside the same plan scope.
    Producer-first sequencing is mandatory, but not necessarily six separate
    phases.
 6. The output artifact may rename these buckets into domain-specific terms, but the generic-to-local mapping must remain explicit and auditable.
@@ -385,28 +384,66 @@ Discovery rule:
 3. Any plausibly relevant but uninspected closure bucket is `unknown`, not
    `absent`.
 4. `unknown` closure buckets block `approve_task` until refined, routed back,
-   or explicitly accepted by the human as a knowingly high-risk bundle.
+   or converted into an explicit split/refinement decision.
 
 Policy:
 1. If `authority_producer` + `shared_contract` + any two consumer buckets are
    `present`, the default decision is `split_required`.
 2. If `persisted_authority_or_schema` changes in the same bounded artifact as `shared_contract` and two or more consumer buckets, route to `Plan -> Task` even if the work initially looked task-sized.
 3. If the artifact would simultaneously close producer boundary, shared contract alignment, and read-model/status/CLI fallout, treat that as a sequencing failure candidate and split before drafting implementation-ready output.
-4. A task may override `split_required` only with one of:
-   - explicit human override plus knowingly high-risk bundle rationale, or
-   - safe-collapse proof showing all of the following:
-     - the same bounded code path closes the collapsed buckets,
-     - the same consumer family owns the fallout,
-     - no separate compatibility, diagnostics, read-model, recovery, or
-       side-effect-ordering risk is introduced.
-5. A task may own adjacent closures only when the artifact explicitly proves:
+4. When `split_required` is triggered, the default action is autonomous split
+   refinement within the same plan scope. Do not approve a single
+   implementation task by writing a broad safe-collapse narrative.
+5. A single-task exception requires implementation-closure proof showing all of
+   the following:
+   - one implementation bubble can close the whole task without separate
+     sequencing,
+   - the same bounded code path closes the collapsed buckets,
+   - the same consumer family owns the fallout,
+   - the same proof surface validates every collapsed bucket,
+   - no separate review feedback loop is expected per consumer bucket,
+   - no separate compatibility, diagnostics, read-model, recovery, or
+     side-effect-ordering risk is introduced.
+6. A task may own adjacent closures only when the artifact explicitly proves:
    - the same bounded code path closes them,
    - the same consumer family owns the fallout,
    - and no separate compatibility or diagnostics risk is introduced.
-6. Do not let a task stay broad merely because each individual sub-area looks understandable in isolation.
-7. The output artifact must name the collapsed vs deferred closures explicitly whenever more than two closure buckets are in scope.
-8. In plans, use this gate to decide split/no-split, not to dump full intermediate closure accounting into the plan text.
-9. In tasks, this gate is part of the bounded-slice proof and must remain explicit.
+7. Do not let a task stay broad merely because each individual sub-area looks understandable in isolation.
+8. The output artifact must name the collapsed vs deferred closures explicitly whenever more than two closure buckets are in scope.
+9. In plans, use this gate to decide split/no-split, not to dump full intermediate closure accounting into the plan text.
+10. In tasks, this gate is part of the bounded-slice proof and must remain explicit.
+
+## High-Risk Autonomous Split Policy (Mandatory)
+
+When a task review or draft sees a high-risk split-trigger combination, prefer
+autonomous task decomposition over single-task approval.
+
+The default action is `split_task_within_same_plan_scope` when all are true:
+1. `risk_score >= 7`,
+2. authority fan-out reaches three or more consumer families,
+3. Closure-Budget says `split_required`,
+4. `authority_producer` + `shared_contract` + any two consumer buckets are
+   `present`.
+
+Policy:
+1. Treat the parent plan scope as still valid unless sequencing or coverage
+   genuinely changes.
+2. Split the current task into the smallest safe successor task sequence within
+   the same plan scope.
+3. Prefer split vocabulary from the actual closure family:
+   - authority foundation,
+   - authority producer,
+   - local validation / gate alignment,
+   - consumer-family alignment,
+   - activation/read-model,
+   - cleanup/recovery.
+4. A single-task exception must prove implementation closure, not just shared
+   invariant coherence.
+5. Invariant-level arguments such as "all closures serve the same outcome" are
+   insufficient by themselves.
+6. Return `route_back_to_plan` only when the split changes plan sequencing,
+   dependencies, or open-task coverage. Otherwise return `refine_task` with a
+   required split shape.
 
 ## Bounded-Task-Shape Gate (Mandatory)
 
@@ -536,7 +573,7 @@ Policy:
 17. Baseline-preservation before cleanup: when a task refines an existing runtime path, explicitly record which current behaviors must survive unchanged unless the task authorizes a replacement.
 18. If a task forbids a heuristic, also state the allowed deterministic resolution paths so reviewers do not "tighten" the code into a regression.
 19. Closure-width matters as much as risk score: if producer boundary, shared contract, persistence/schema, and multiple consumer families move together, split before drafting implementation-ready scope.
-20. Do not use a single task to carry producer closure, shared-contract migration, consumer rollout, and diagnostics fallout together unless the user explicitly requests a knowingly high-risk bundle.
+20. Do not use a single task to carry producer closure, shared-contract migration, consumer rollout, and diagnostics fallout together; split within the same plan scope unless implementation-closure proof shows one bubble can close it.
 21. For mutable existing flows, tasks must make the precondition-before-side-effect boundary explicit; invalid input should not silently create early artifacts, locks, or namespaces unless the artifact explicitly authorizes that behavior.
 22. Locking/concurrency work is not "free hardening" inside a producer task by default; treat it as its own closure unless the artifact proves otherwise.
 23. Plan slimness is a feature: keep plans focused on coverage, dependency, and sequencing.
