@@ -5,12 +5,12 @@ task_family_id: docs-site-pages
 sequence_key: "4"
 task_id: 4-docs-site-pages
 title: "Static Documentation Site and GitHub Pages Publish"
-status: approved
+status: implementable
 phase: phase4
 target_files:
   - "package.json"
   - ".github/workflows/docs-pages.yml"
-  - "tools/docs/buildDocsSite.ts"
+  - "tools/docs/**"
   - "docs/site/**"
   - "docs/README.md"
   - "README.md"
@@ -74,7 +74,9 @@ Pairflow's npm install and onboarding path.
 3. Unlocks / impacts successors: informs `7-release-pilot` docs build and
    release-flow proof; must not implement `5-skills-install` or
    `6-ui-service-lifecycle`.
-4. Task-list impact: creates the planned `4-docs-site-pages` task artifact.
+4. Task-list impact: refines the already-approved `4-docs-site-pages` task
+   document contract so the later implementation bubble can proceed from a
+   bounded docs-site and Pages workflow scope.
 5. Inherited validation / exit expectation: implementation should run the docs
    build/validation path, relevant focused checks for docs workflow shape, and
    the default repo validation needed for touched scripts/config.
@@ -88,14 +90,24 @@ Pairflow's npm install and onboarding path.
    - `docs/commit-and-release-history-authority.md`
    - `docs/commit-message-guidance.md`
    - `.claude/skills/INSTALL.md`
-2. Canonical elements: package name `@pairflow/cli`, binary name `pairflow`,
+2. New docs-site anchors to create:
+   - deterministic docs build script, preferably `tools/docs/buildDocsSite.ts`
+     or the narrowest equivalent under `tools/docs/**`
+   - package script, preferably `docs:build`, that invokes the deterministic
+     docs build without requiring a dev server
+   - static docs source under `docs/site/**`
+   - generated output directory, preferably `docs/site-dist/**` or another
+     clearly generated path excluded from source authority unless the
+     implementation explicitly justifies committing generated output
+   - `.github/workflows/docs-pages.yml`
+3. Canonical elements: package name `@pairflow/cli`, binary name `pairflow`,
    `package.json.version`, standard `v<semver>` release tags, guarded npm
    publish semantics, and repo-local Pairflow skill source-of-truth rules.
-3. Guard elements: GitHub Pages workflow permissions, Pages environment,
-   build artifact upload, and external repository settings.
-4. Compat-only elements: source checkout install via `scripts/install.sh` may
+4. Guard elements: GitHub Pages workflow permissions, Pages environment,
+   build artifact upload, Pages deploy step, and external repository settings.
+5. Compat-only elements: source checkout install via `scripts/install.sh` may
    remain documented for contributors, but npm install is the public user path.
-5. Forbidden reinterpretations: do not present real npm publish as already
+6. Forbidden reinterpretations: do not present real npm publish as already
    proven before `7-release-pilot`; do not treat global skill copies as source;
    do not document UI service lifecycle commands before `6-ui-service-lifecycle`.
 
@@ -117,6 +129,20 @@ Pairflow's npm install and onboarding path.
    guard-closed release semantics must be represented.
 6. Why the declared task shape matches reality: the task creates a public docs
    read model and publish workflow without changing Pairflow runtime behavior.
+7. Document bubble source-code guard:
+   - this document-refinement bubble may edit only task/spec/plan/progress/docs
+     artifacts.
+   - implementation of package scripts, docs build tooling, GitHub Actions
+     workflows, source docs pages, tests, UI components, presenter code,
+     runtime contracts, release config, or build/runtime config belongs to a
+     later code-scoped implementation bubble.
+   - `target_files`, `target_write_files`, L2 implementation sketches,
+     acceptance checks, workflow names, package-script names, and reviewer code
+     findings in this task are planning context only while
+     `review_artifact_type=document` is active; they do not authorize this
+     document bubble to create or modify product/runtime/source files, tests,
+     UI components, presenter code, contracts, workflows, package metadata, or
+     build/runtime config.
 
 ### Refactor Classification
 
@@ -140,6 +166,18 @@ Pairflow's npm install and onboarding path.
 5. Export surfaces closed in this phase: yes, static public docs source and
    Pages publish workflow configuration.
 
+### Authority Fan-out Scan
+
+| Bucket | Status | Evidence / Boundary |
+|---|---|---|
+| `authority_producer` | present, consumed | `package.json`, README/docs, release authority docs, and skill install docs produce the truth mirrored by the site. |
+| `persisted_authority` | present | Source docs pages and workflow configuration are persisted; generated site output is a read model unless explicitly justified as committed source. |
+| `workflow_orchestration_consumers` | present | GitHub Actions consumes the docs build command and generated output path. |
+| `external_integration_consumers` | present | GitHub Pages consumes the uploaded artifact only after repository Pages settings and permissions are configured. |
+| `read_model_consumers` | present | Operators and public readers consume onboarding pages that summarize deeper repo authority. |
+| `internal_execution_consumers` | absent | CLI/runtime code must not consume docs-site internals in this task. |
+| `successor_task_consumers` | present | `5-skills-install`, `6-ui-service-lifecycle`, and `7-release-pilot` inherit the current/future boundaries stated by these docs. |
+
 ### Baseline Preservation
 
 1. Must-preserve behaviors: source checkout install docs remain available for
@@ -161,7 +199,8 @@ Pairflow's npm install and onboarding path.
    Pages workflow configuration committed in the repo.
 3. Current canonical completion proof source: N/A.
 4. Target canonical completion proof source: docs build command passes and
-   workflow YAML is syntactically valid/configured for Pages artifact upload.
+   workflow YAML is syntactically valid/configured for Pages artifact upload
+   and Pages deploy.
 5. Reused proof contract: release/publish guard wording inherited from
    `docs/commit-and-release-history-authority.md`.
 6. Proof-parity rule: narrowed_here_with_proof.
@@ -177,18 +216,27 @@ Pairflow's npm install and onboarding path.
    workflow consume of the docs source.
 3. Preconditions that must pass before side effects: docs build source exists,
    package script resolves, workflow uses repo-local build command, and Pages
-   upload path is generated rather than manually committed.
+   upload/deploy path is generated rather than manually committed.
 4. Side effects forbidden before preconditions pass: no real npm publish, no
    GitHub settings mutation, no runtime command implementation.
 5. Invalid/precondition-failure behavior: fail the local build or workflow job
    with a clear error.
 6. Coordination primitives in scope: N/A.
 
+### Capability Closure
+
+| Capability Claim | Closure Classification | Activation Trigger | Repo-Provided Parts | External Prerequisites | Success Output Contract | Failure Output Contract | Last-Mile Proof |
+|---|---|---|---|---|---|---|---|
+| Build static onboarding docs locally | end_to_end | operator runs the docs build package script | source pages, build tool, package script, generated output path | Node/pnpm install from repo | generated static site contains the required onboarding pages and links | build exits non-zero with a clear missing-input or generation error | local docs build evidence in the implementation bubble |
+| Publish docs artifact through GitHub Pages workflow | externally_activated | workflow runs on pushes to `main` and on GitHub release `published` events, with optional manual dispatch | workflow permissions, Pages environment/job, artifact upload/deploy steps, same docs build command | GitHub Actions enabled, Pages settings/domain, repository permissions | deployed Pages artifact/job output after external activation | workflow fails closed before deploy or reports missing external setup | workflow run proof later; local config/build proof now |
+| Provide public install/release/skills/UI onboarding | read_model | reader opens the static docs site | pages mirror current package, release, skill, and UI authorities | public Pages URL only after external activation | docs accurately distinguish current commands from future tasks | review rejects overclaims or future-command availability claims | content review plus generated output inspection |
+
 ### In Scope
 
 1. Add a static docs source structure for public onboarding pages.
 2. Add a deterministic local docs build command and generated output directory.
-3. Add GitHub Pages workflow configuration for build and artifact upload.
+3. Add GitHub Pages workflow configuration for build, artifact upload, and
+   Pages deploy.
 4. Cover install, upgrade, version pinning, CLI basics, UI usage, skills, and
    release semantics at onboarding depth.
 5. Update `README.md` and/or `docs/README.md` only as needed to point to the
@@ -371,7 +419,7 @@ Pairflow's npm install and onboarding path.
 | Parent gap closed | Missing public onboarding/docs surface | Add initial docs site pages and publish workflow | P1 | required-now |
 | Depends on | `1-package-version`, `2c-commit-policy`, `3-release-automation` | Use established package and release semantics | P1 | required-now |
 | Unlocks / impacts successors | `7-release-pilot` consumes docs build proof | Record validation evidence for pilot | P2 | required-now |
-| Task-list impact | Creates planned task `4-docs-site-pages` | Plan tracker must point to this artifact | P1 | required-now |
+| Task-list impact | Refines already-approved task `4-docs-site-pages` | Plan tracker must continue to point to this artifact | P1 | required-now |
 | Inherited validation / exit expectation | Docs build and relevant repo validation | Include exact commands in implementation evidence | P1 | required-now |
 
 ### 1) Required Behavior
@@ -379,11 +427,22 @@ Pairflow's npm install and onboarding path.
 | Requirement | Rule | Priority | Timing |
 |---|---|---|---|
 | Static docs source | Add public docs pages covering install, upgrade, version pinning, CLI basics, current UI usage, current manual skill installation, and release semantics | P1 | required-now |
-| Local build | Add a deterministic package script that builds the docs site into a generated output directory | P1 | required-now |
-| Pages workflow | Add a GitHub Pages workflow that builds the site and uploads/deploys the generated artifact | P1 | required-now |
+| Local build | Add a deterministic package script, preferably `pnpm docs:build`, that builds the docs site into a generated output directory without starting a dev server | P1 | required-now |
+| Pages workflow | Add a GitHub Pages workflow that uses the same local build command, uploads the generated artifact, and deploys only through GitHub's Pages action path | P1 | required-now |
 | Accurate activation claims | Mark GitHub Pages settings/domain and real npm publish as external/deferred where applicable | P1 | required-now |
 | Existing docs continuity | Keep README/docs pointers coherent and avoid deleting detailed operator docs without replacement | P2 | required-now |
 | Generated output policy | Do not commit generated site output unless explicitly justified | P2 | required-now |
+
+### 1a) Workflow and Output Contract
+
+| Surface | Required Contract | Forbidden Shortcut | Priority | Timing |
+|---|---|---|---|---|
+| Package script | A single documented command builds the site locally and is reused by the workflow | Separate workflow-only build path that cannot be run locally | P1 | required-now |
+| Build inputs | Source comes from `docs/site/**` plus explicitly named authority docs/package metadata | Scraping generated output or npm registry state as source authority | P1 | required-now |
+| Build output | Generated output path is deterministic and suitable for Pages artifact upload | Manually edited generated output as canonical docs source | P1 | required-now |
+| Workflow permissions | Pages workflow grants only the permissions needed for Pages build/deploy | Broad permissions unrelated to docs publication | P2 | required-now |
+| Workflow triggers | Workflow runs for the parent-plan publication path: pushes to `main` and GitHub release `published` events; `workflow_dispatch` may be added for manual verification | Choosing a documented trigger that omits either the `main` push path or the GitHub release `published` path, or claiming workflow presence proves a public URL | P1 | required-now |
+| Failure behavior | Missing inputs or external activation gaps fail closed with clear output | Silent fallback to stale docs or an unrelated deployment path | P1 | required-now |
 
 ### 2) Acceptance Checks
 
@@ -391,8 +450,9 @@ Pairflow's npm install and onboarding path.
 2. The generated docs output contains pages or routes for install, upgrade,
    version pinning, CLI basics, current foreground UI usage, current manual
    skill installation policy, and guarded release semantics.
-3. The Pages workflow uses the same local build command and deploys the
-   generated output artifact.
+3. The Pages workflow uses the same local build command, is triggered for
+   pushes to `main` and GitHub release `published` events, uploads the
+   generated artifact, and deploys it through GitHub Pages.
 4. Docs text does not claim real npm publish or public Pages URL proof before
    external activation.
 5. Docs text does not claim `pairflow skills install` or
@@ -404,6 +464,16 @@ Pairflow's npm install and onboarding path.
 7. Run `pnpm typecheck`, `pnpm lint`, `pnpm fitness:check:ci`, focused docs
    workflow/build validation, `pnpm test`, and `pnpm build`, unless the
    implementation bubble records a precise skipped-step reason.
+8. Focused docs validation includes inspecting the generated output path for
+   required routes/pages, verifying the workflow references the same package
+   build command, validating the workflow YAML syntax/configuration with a
+   YAML parser or existing workflow validator, and confirming generated output
+   is not committed unless the implementation records an explicit
+   justification.
+9. Review rejects the implementation if the docs site or README/docs index
+   presents source-checkout helper scripts as the future Pairflow-owned UI
+   lifecycle CLI, treats global skill copies as source, or presents npm publish
+   / Pages URL proof as locally complete.
 
 ## L2 - Notes
 
@@ -414,3 +484,11 @@ Pairflow's npm install and onboarding path.
    dependency and prove package/build boundaries still stay narrow.
 3. The initial site may be plain and operational; visual polish, search,
    versioned docs, and custom domains are later hardening.
+4. A small TypeScript or JavaScript static generator is acceptable if it keeps
+   the docs source easy to review and avoids adding a runtime docs service.
+5. Suggested page set: install, upgrade/version pinning, quickstart or CLI
+   basics, current foreground UI usage, current manual skill installation,
+   release semantics, and Pages/deploy activation notes.
+6. Suggested README/docs index update: link to the docs-site source and local
+   build command, while keeping deeper operator guidance in the README and
+   `docs/**` as the current detailed authority.
