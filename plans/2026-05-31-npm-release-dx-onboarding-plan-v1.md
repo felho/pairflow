@@ -23,8 +23,8 @@ last_completed_task_id: 1-package-version
 archive_group: 2026-05-31-npm-release-dx-onboarding
 task_tracker:
   - task_id: 0-remove-orchestra-bin
-    task_path: plans/tasks/0-remove-orchestra-bin.md
-    status: done
+    task_path: plans/archive/tasks/2026-05-31-npm-release-dx-onboarding/0-remove-orchestra-bin.md
+    status: archived
   - task_id: 1-package-version
     task_path: plans/archive/tasks/2026-05-31-npm-release-dx-onboarding/1-package-version.md
     status: archived
@@ -129,7 +129,7 @@ This plan turns the current local-development install story into a release-quali
 
 ### Completed Work
 
-1. `package.json` already declares `name: pairflow`, `version: 0.1.0`, `type: module`, `main`, `types`, and `bin.pairflow`.
+1. `package.json` now declares the npm package identity `name: @pairflow/cli`, `version: 0.1.0`, `type: module`, `main`, `types`, `bin.pairflow`, an explicit package `files` allowlist, and `publishConfig.access: public`; `private: true` has been removed.
 2. The root package already has `build`, `typecheck`, `lint`, and `test` scripts.
 3. `pairflow ui` already accepts `--port`, `--host`, `--repo`, and `--assets-dir`.
 4. `pairflow ui` already prints the URL after startup: `Pairflow UI server listening on <url>`.
@@ -137,20 +137,17 @@ This plan turns the current local-development install story into a release-quali
 6. Pairflow skill installation policy already exists as `.claude/skills/INSTALL.md`.
 7. npm registry checks on 2026-05-30 returned `404 Not Found` for both `pairflow` and `@pairflow/cli`; the package identity decision is now `@pairflow/cli` under the npm `@pairflow` organization scope, with release-time access still needing confirmation in the publishing account/org context.
 8. `0-remove-orchestra-bin` removed the legacy public CLI alias, deleted the legacy shim entrypoint/test, and removed the public helper exports from `src/index.ts`.
+9. `1-package-version` applied the package identity, package-content boundary, public-ready manifest fields, and top-level `pairflow --version` / `pairflow -v` support from package metadata.
 
 ### Open Work
 
-1. The package is currently `private: true`, so public npm publish is blocked.
-2. The package does not yet apply the recorded `@pairflow/cli` package identity, publish-ready file manifest, or package-content validation workflow.
-3. The CLI does not yet support top-level `--version` / `-v`.
-4. Changelog generation, conventional-commit policy, release tagging, and npm publish automation are not yet configured.
-5. There is not yet a dedicated commit-message guidance file or hook/CI enforcement path for LLM-authored commits.
-6. The existing `pairflow bubble commit` default message (`bubble(<bubbleId>): finalize`) and `pairflow bubble merge` default merge messages are not yet reconciled with repo-local commit-message enforcement or release automation.
-7. There is no generated/static docs site or GitHub Pages workflow.
-8. Pairflow skill installation is documented but not available as a supported CLI command.
-9. UI background lifecycle commands and PID/state files do not yet exist.
-10. The first release has not been proven through `npm pack --dry-run`, local package install, version check, UI asset check, release automation dry run, protected publish dry run/manual approval, or publish pilot.
-11. Package-readiness has not yet been proven after the legacy public CLI cleanup.
+1. Changelog generation, conventional-commit policy, release tagging, and npm publish automation are not yet configured.
+2. There is not yet a dedicated commit-message guidance file or hook/CI enforcement path for LLM-authored commits.
+3. The existing `pairflow bubble commit` default message (`bubble(<bubbleId>): finalize`) and `pairflow bubble merge` default merge messages are not yet reconciled with repo-local commit-message enforcement or release automation.
+4. There is no generated/static docs site or GitHub Pages workflow.
+5. Pairflow skill installation is documented but not available as a supported CLI command.
+6. UI background lifecycle commands and PID/state files do not yet exist.
+7. The first release has not been proven through isolated local package install, installed-package version check, packaged UI asset check, release automation dry run, docs build proof, skill-install proof, protected publish dry run/manual approval, or publish pilot.
 
 ### Deferred / Future Work
 
@@ -175,8 +172,8 @@ This plan turns the current local-development install story into a release-quali
 
 | Task ID | Task Path | Purpose | Depends On | Closes Gap | Status |
 |---|---|---|---|---|---|
-| `0-remove-orchestra-bin` | `plans/tasks/0-remove-orchestra-bin.md` | Remove the legacy public CLI/bin and package export surfaces before npm package-readiness work proceeds. | `N/A` | Current package manifest and public index exports expose a removed legacy alias. | done |
-| `1-package-version` | `plans/archive/tasks/2026-05-31-npm-release-dx-onboarding/1-package-version.md` | Apply the recorded `@pairflow/cli` package identity, make the package publish-ready, define package contents, preserve UI asset inclusion, and add top-level CLI version reporting from package metadata. | `0-remove-orchestra-bin` | Package identity not yet applied, npm package publish readiness missing, and visible installed version missing. | archived |
+| `0-remove-orchestra-bin` | `plans/archive/tasks/2026-05-31-npm-release-dx-onboarding/0-remove-orchestra-bin.md` | Remove the legacy public CLI/bin and package export surfaces before npm package-readiness work proceeds. | `N/A` | Legacy public alias exposure was removed before package-readiness work. | archived |
+| `1-package-version` | `plans/archive/tasks/2026-05-31-npm-release-dx-onboarding/1-package-version.md` | Apply the recorded `@pairflow/cli` package identity, make the package publish-ready, define package contents, preserve UI asset inclusion, and add top-level CLI version reporting from package metadata. | `0-remove-orchestra-bin` | Package identity, package-readiness boundary, and visible installed-version surface were established. | archived |
 | `2-commit-policy` | `plans/tasks/2-commit-policy.md` | Add a separate commit-message guidance file, lightweight `AGENTS.md` pointer, commit-msg hook/CI enforcement for newly created commits, release-history strategy, Pairflow bubble commit/merge/revert compatibility, and explicit rejection of new generic finalize messages without adding release publishing or historical revalidation. | `1-package-version` | Missing commit-message guidance/enforcement and bubble lifecycle message compatibility. | under_review |
 | `3-release-automation` | `null` | Add conventional-commit release configuration, changelog/version automation, release tagging/release workflow, and guarded npm publish GitHub Actions. | `1-package-version`, `2-commit-policy` | Missing automated semver, changelog, release, and guarded npm publish path. | not_created |
 | `4-docs-site-pages` | `null` | Add static documentation source/build/publish workflow covering install, upgrade, version pinning, CLI basics, UI, skills, and release semantics. | `1-package-version`, `2-commit-policy`, `3-release-automation` | Missing public onboarding/docs surface. | not_created |
@@ -188,9 +185,9 @@ This plan turns the current local-development install story into a release-quali
 
 | Plan Gap | Closed By | Notes |
 |---|---|---|
-| The package manifest and public index exports expose a removed legacy alias as public surfaces. | `0-remove-orchestra-bin` | Remove the bin/export surfaces and any now-dead entrypoint/tests unless an internal non-public path is still needed. |
-| Public npm publish is blocked by package metadata, unapplied package identity, and package contents uncertainty. | `1-package-version` | Must apply `@pairflow/cli` and remove `private: true` only when package manifest and included files are safe. |
-| Users cannot inspect installed Pairflow version through the CLI. | `1-package-version` | `--version` / `-v` should be handled before command dispatch. |
+| The package manifest and public index exports exposed a removed legacy alias as public surfaces. | `0-remove-orchestra-bin` | Removed the bin/export surfaces and dead entrypoint/test surfaces while preserving the supported `pairflow` CLI path. |
+| Public npm publish was blocked by package metadata, unapplied package identity, and package contents uncertainty. | `1-package-version` | Applied `@pairflow/cli`, removed `private: true`, and established the package manifest/content boundary; public publish execution remains deferred to release automation and pilot work. |
+| Users could not inspect installed Pairflow version through the CLI. | `1-package-version` | Added top-level `--version` / `-v` handling before command dispatch from package metadata. |
 | Release versions and changelog are manual. | `3-release-automation` | Prefer standard conventional commits and release tags/releases over a custom commit-message tag trigger. |
 | LLM-authored commit messages have no lightweight guidance or enforcement path. | `2-commit-policy` | Put detailed guidance in a separate repo-local file; keep `AGENTS.md` to a short "read this when preparing commits" pointer; enforce with `commit-msg` hook and CI. |
 | Pairflow bubble commit/merge messages can conflict with conventional-commit enforcement. | `2-commit-policy` | Audit `pairflow bubble commit` and `pairflow bubble merge`; select full-history conventional commit selection over first-parent-only semantic interpretation, tolerate exact configured merge header exception forms as integration artifacts, keep revert recovery-compatible, and reject new generic finalize messages while treating historical finalize commits as non-release noise without cutoff or legacy compatibility modes. |

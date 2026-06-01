@@ -5,7 +5,7 @@ task_family_id: remove-orchestra-bin
 sequence_key: "0"
 task_id: 0-remove-orchestra-bin
 title: "Remove Legacy Orchestra CLI Bin"
-status: done
+status: archived
 phase: phase0
 target_files:
   - "package.json"
