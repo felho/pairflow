@@ -20,8 +20,8 @@ task_order:
   - 5-skills-install
   - 6-ui-service-lifecycle
   - 7-release-pilot
-active_task_id: 2b-commit-policy
-last_completed_task_id: 2a-commit-policy
+active_task_id: 2c-commit-policy
+last_completed_task_id: 2b-commit-policy
 archive_group: 2026-05-31-npm-release-dx-onboarding
 task_tracker:
   - task_id: 0-remove-orchestra-bin
@@ -34,8 +34,8 @@ task_tracker:
     task_path: plans/archive/tasks/2026-05-31-npm-release-dx-onboarding/2a-commit-policy.md
     status: archived
   - task_id: 2b-commit-policy
-    task_path: plans/tasks/2b-commit-policy.md
-    status: implementable
+    task_path: plans/archive/tasks/2026-05-31-npm-release-dx-onboarding/2b-commit-policy.md
+    status: archived
   - task_id: 2c-commit-policy
     task_path: null
     status: not_created
@@ -183,7 +183,7 @@ This plan turns the current local-development install story into a release-quali
 | `0-remove-orchestra-bin` | `plans/archive/tasks/2026-05-31-npm-release-dx-onboarding/0-remove-orchestra-bin.md` | Remove the legacy public CLI/bin and package export surfaces before npm package-readiness work proceeds. | `N/A` | Legacy public alias exposure was removed before package-readiness work. | archived |
 | `1-package-version` | `plans/archive/tasks/2026-05-31-npm-release-dx-onboarding/1-package-version.md` | Apply the recorded `@pairflow/cli` package identity, make the package publish-ready, define package contents, preserve UI asset inclusion, and add top-level CLI version reporting from package metadata. | `0-remove-orchestra-bin` | Package identity, package-readiness boundary, and visible installed-version surface were established. | archived |
 | `2a-commit-policy` | `plans/archive/tasks/2026-05-31-npm-release-dx-onboarding/2a-commit-policy.md` | Establish the commit/release-history authority document, operator guidance document, `AGENTS.md` pointer, canonical first-line taxonomy, and release-history handoff boundary without hook/runtime activation. | `1-package-version` | Missing commit-message authority foundation and release-history classification contract. | archived |
-| `2b-commit-policy` | `plans/tasks/2b-commit-policy.md` | Implement local validation/gate alignment for the approved taxonomy: validator module/CLI, package script, commit-msg hook, hook installer update, safe-range validator behavior, and focused validator/hook tests. | `2a-commit-policy` | Missing repo-local commit-message enforcement for newly created commits and deterministic safe ranges. | implementable |
+| `2b-commit-policy` | `plans/archive/tasks/2026-05-31-npm-release-dx-onboarding/2b-commit-policy.md` | Implement local validation/gate alignment for the approved taxonomy: validator module/CLI, package script, commit-msg hook, hook installer update, safe-range validator behavior, and focused validator/hook tests. | `2a-commit-policy` | Missing repo-local commit-message enforcement for newly created commits and deterministic safe ranges. | archived |
 | `2c-commit-policy` | `null` | Align Pairflow commit producers and lifecycle consumers with the approved taxonomy: local/remote `bubble commit`, merge/revert compatibility, and explicit handling or deferral of `bubble extract --commit`. | `2b-commit-policy` | Pairflow bubble lifecycle message compatibility and adjacent commit-producer alignment. | not_created |
 | `3-release-automation` | `null` | Add conventional-commit release configuration, changelog/version automation, release tagging/release workflow, and guarded npm publish GitHub Actions. | `1-package-version`, `2a-commit-policy`, `2b-commit-policy`, `2c-commit-policy` | Missing automated semver, changelog, release, and guarded npm publish path. | not_created |
 | `4-docs-site-pages` | `null` | Add static documentation source/build/publish workflow covering install, upgrade, version pinning, CLI basics, UI, skills, and release semantics. | `1-package-version`, `2c-commit-policy`, `3-release-automation` | Missing public onboarding/docs surface. | not_created |

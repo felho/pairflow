@@ -5,7 +5,7 @@ task_family_id: commit-policy
 sequence_key: "2b"
 task_id: 2b-commit-policy
 title: "Commit Policy Validation and Local Gate Alignment"
-status: implementable
+status: archived
 phase: phase2
 target_files:
   - "package.json"

@@ -37,6 +37,8 @@
     "fitness:check:ci": "bash ./scripts/fitness-check-ci.sh",
     "ci:local": "bash ./scripts/ci-local.sh",
     "hooks:install": "bash ./scripts/install-git-hooks.sh",
+    "commit-policy:validate-message": "pnpm exec tsx ./tools/commit-policy/validateCommitMessage.ts",
+    "commit-policy:validate-range": "pnpm exec tsx ./tools/commit-policy/validateCommitRange.ts",
     "test:contracts": "pnpm exec vitest run tests/contracts/v11/*.test.ts",
     "test:smoke": "pnpm codegen:reviewer-ontology && pnpm build && pnpm exec vitest run --config vitest.smoke.config.ts",
     "build": "pnpm codegen:reviewer-ontology && tsc -p tsconfig.build.json && pnpm --dir ui install --frozen-lockfile && pnpm --dir ui build",
