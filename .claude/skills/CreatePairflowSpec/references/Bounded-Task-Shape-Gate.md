@@ -48,6 +48,40 @@ A bounded slice may own one secondary adjacent shape only when all are true:
 
 If that proof is weak, implicit, or speculative, split now.
 
+## Shape Decomposition Rule
+
+Do not accept declared shape labels as already bounded.
+
+Before approving a task shape, decompose each declared shape into the concrete
+correctness closures it hides. Examples of closures include:
+1. contract foundation
+2. authority producer closure
+3. consumer-family alignment
+4. fail-closed hardening
+5. coordination/recovery hardening
+6. activation/read-model surfacing
+
+If one declared shape expands into multiple independent closures, treat those
+closures as separate shape pressure. They do not count as one adjacent shape
+merely because they were grouped under the same label.
+
+The decomposition must also inspect adjacent call-sites/entrypoints that are
+near the changed authority or contract. If a plausible adjacent consumer family
+exists but was not inspected, record it as `unknown`. Unknown adjacent consumer
+families block implementation approval until refined, routed back, or accepted
+with an explicit human high-risk override.
+
+Common adjacent consumer signals include:
+1. local validators/hooks
+2. pre-push or CI validation
+3. local workflow commands
+4. retained clone or replay paths
+5. remote execution paths
+6. continuity/import paths
+7. merge/close flows
+8. UI or read-model forms
+9. recovery/amend/cleanup paths
+
 ## Split Triggers
 
 Split by default when any of these are true:
@@ -59,6 +93,10 @@ Split by default when any of these are true:
 5. locking/serialization is being added to "stabilize" a producer task
 6. the slice changes where success/completion is proven and also changes cleanup/recovery or final result/status/event semantics
 7. the slice keeps one compat surface but its fields would now be populated from different proof phases without an explicit truth-surface mapping
+8. a declared primary or secondary shape decomposes into more than one
+   independent closure and the artifact treats that as one shape without proof
+9. adjacent call-sites imply additional consumer families, but the artifact has
+   not classified them as in scope, out of scope with evidence, or `unknown`
 
 These are not minor implementation details. They are separate correctness closures.
 
@@ -88,7 +126,10 @@ If the task changes the proof boundary and also changes cleanup/recovery behavio
 For affected Plan/Task artifacts, record:
 1. primary task shape
 2. secondary shape, if any
-3. why the mix is safe when present
-4. whether invalid/precondition-failure must be zero-side-effect
-5. whether coordination primitives are in scope
-6. whether fail-closed hardening is in scope or deferred
+3. decomposed closures under each declared shape
+4. adjacent call-site/consumer-family scan result, including any `unknown`
+5. why the mix is safe when present
+6. whether invalid/precondition-failure must be zero-side-effect
+7. whether coordination primitives are in scope
+8. whether fail-closed hardening is in scope or deferred
+9. split trigger if decomposition reveals more than the allowed adjacent shape

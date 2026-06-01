@@ -234,8 +234,16 @@ Bounded-Task-Shape Gate output is mandatory for mutable/runtime flows. The task
 must name:
 1. primary shape,
 2. secondary shape if any,
-3. why the shape mix is safe,
-4. split trigger if more than the allowed adjacent shape is needed.
+3. decomposed closures under each declared shape,
+4. adjacent call-site/consumer-family scan result for the changed authority or
+   contract, including any `unknown`,
+5. why the shape mix is safe,
+6. split trigger if more than the allowed adjacent shape is needed.
+
+A declared shape that decomposes into multiple independent closures is not one
+adjacent shape by default. Unknown plausible adjacent consumers block
+`approve_task` until refined, routed back, or explicitly accepted by human
+high-risk override.
 
 Authority Fan-out Scan output is mandatory when a canonical authority is
 consumed by multiple surfaces or roles. The task must inventory the relevant

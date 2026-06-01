@@ -461,11 +461,18 @@ Classify the bounded task by primary shape:
 Policy:
 1. Default to one primary shape per bounded task.
 2. A secondary shape is allowed only when the artifact can explicitly prove that the same bounded change closes both without adding separate recovery, coordination, or side-effect ordering risk.
-3. If the task introduces a new lock/mutex/lease/idempotency/serialization rule, `coordination_concurrency_hardening` is in scope and must be recorded explicitly.
-4. If the task introduces rollback/retry/cleanup/shared-state-preservation or failure-envelope tightening, `fail_closed_hardening` is in scope and must be recorded explicitly.
-5. If the task changes precondition ordering relative to side effects, record that explicitly and treat it as a split trigger when mixed with producer or shared-contract work.
-6. If the task mixes `authority_producer` with `fail_closed_hardening` or `coordination_concurrency_hardening` without an explicit bounded proof, route back to `CreatePlan`.
-7. If the task changes success/completion proof boundary and also changes compat result/status/event semantics, treat that as mixed-shape by default and route back to `CreatePlan` unless an explicit bounded proof says otherwise.
+3. Decompose each declared shape into concrete correctness closures; do not let
+   one label hide multiple independent closures.
+4. Inspect adjacent call-sites/entrypoints near changed authorities or contracts
+   for plausible consumer families. Uninspected plausible consumers are
+   `unknown`, not implicitly out of scope.
+5. If a declared shape decomposes into multiple independent closures, treat that
+   as split pressure, not as the allowed secondary adjacent shape.
+6. If the task introduces a new lock/mutex/lease/idempotency/serialization rule, `coordination_concurrency_hardening` is in scope and must be recorded explicitly.
+7. If the task introduces rollback/retry/cleanup/shared-state-preservation or failure-envelope tightening, `fail_closed_hardening` is in scope and must be recorded explicitly.
+8. If the task changes precondition ordering relative to side effects, record that explicitly and treat it as a split trigger when mixed with producer or shared-contract work.
+9. If the task mixes `authority_producer` with `fail_closed_hardening` or `coordination_concurrency_hardening` without an explicit bounded proof, route back to `CreatePlan`.
+10. If the task changes success/completion proof boundary and also changes compat result/status/event semantics, treat that as mixed-shape by default and route back to `CreatePlan` unless an explicit bounded proof says otherwise.
 
 ### 1k) Run the Complexity-Risk Gate
 
@@ -628,7 +635,10 @@ Required blockers for Task output:
    - whether this task is producer, consumer-family alignment, activation, read-model, or cleanup,
    - what producer/predecessor closure it depends on,
    - and which downstream closures remain for successor tasks.
-24. If the task cannot name a primary bounded-task shape, or mixes producer with fail-closed/coordination work without an explicit bounded proof, the task is not ready.
+24. If the task cannot name a primary bounded-task shape, if a declared shape
+   hides multiple independent closures, or if it mixes producer with
+   fail-closed/coordination work without an explicit bounded proof, the task is
+   not ready.
 25. If the Closed-Contract Drift Check applies, blockers also include:
    - repo-local source anchors,
    - canonical vs guard vs compat classification,
@@ -787,6 +797,9 @@ Run a document-level consistency gate:
    - read-model and cleanup consume have not been pulled into a producer task by accident.
 12. Re-check bounded-task shape fit:
    - the declared primary shape matches the actual L1 contract,
+   - declared shapes have been decomposed into concrete closures,
+   - adjacent call-sites/consumer families have been inspected or marked
+     `unknown`,
    - producer work has not silently absorbed fail-closed hardening or coordination work,
    - any secondary shape is explicitly justified.
 13. Re-check precondition and side-effect ordering:

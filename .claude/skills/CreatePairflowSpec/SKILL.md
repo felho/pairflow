@@ -434,12 +434,19 @@ Policy:
    - the same bounded code path closes both,
    - they preserve the same invariants,
    - and no separate side-effect ordering, recovery, or coordination risk is introduced.
-3. If a slice introduces a new lock/mutex/lease/idempotency/serialization rule, `coordination_concurrency_hardening` is in scope even if the motivating feature sounds like pure delivery.
-4. If a slice introduces rollback/retry/cleanup/shared-state-preservation work, `fail_closed_hardening` is in scope even if the motivating feature sounds like pure write-path delivery.
-5. If a slice changes precondition ordering relative to side effects, record it explicitly and treat it as a split trigger when mixed with producer or shared-contract work.
-6. If a slice mixes `authority_producer` with `fail_closed_hardening` or `coordination_concurrency_hardening`, treat it as a sequencing failure candidate and split by default.
-7. If the author cannot clearly classify the bounded slice, the artifact is not ready for implementable output yet.
-8. Plans may mention sequencing implications of task shape, but should not carry full per-phase shape math by default.
+3. Decompose each declared shape into concrete correctness closures before
+   accepting it as bounded. A declared shape that hides multiple independent
+   closures does not count as one adjacent shape without explicit proof.
+4. Inspect adjacent call-sites/entrypoints near changed authorities or contracts
+   for plausible consumer families. Uninspected plausible consumers are
+   `unknown`, and `unknown` blocks implementation approval until refined,
+   routed back, or explicitly accepted by human high-risk override.
+5. If a slice introduces a new lock/mutex/lease/idempotency/serialization rule, `coordination_concurrency_hardening` is in scope even if the motivating feature sounds like pure delivery.
+6. If a slice introduces rollback/retry/cleanup/shared-state-preservation work, `fail_closed_hardening` is in scope even if the motivating feature sounds like pure write-path delivery.
+7. If a slice changes precondition ordering relative to side effects, record it explicitly and treat it as a split trigger when mixed with producer or shared-contract work.
+8. If a slice mixes `authority_producer` with `fail_closed_hardening` or `coordination_concurrency_hardening`, treat it as a sequencing failure candidate and split by default.
+9. If the author cannot clearly classify the bounded slice, the artifact is not ready for implementable output yet.
+10. Plans may mention sequencing implications of task shape, but should not carry full per-phase shape math by default.
 
 ## Complexity-Risk Gate (Mandatory)
 

@@ -171,6 +171,8 @@ Include this section when the task modifies an existing mutation flow or introdu
 13. Bounded-task-shape decision:
    - primary shape: `<text>`
    - secondary shape: `<text or N/A>`
+   - decomposed closures: `<closure list per declared shape>`
+   - adjacent call-site/consumer-family scan: `<present|absent with evidence|unknown per plausible family>`
    - why this bounded mix is safe: `<text or N/A>`
 14. Contract-dense decision:
    - gate triggered: `<yes|no>`
