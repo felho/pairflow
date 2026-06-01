@@ -5,6 +5,7 @@
   "description": "Commit v11 temporarily preserves internal auto compatibility as staging-only behavior.",
   "input": {
     "auto": true,
+    "message": "feat(commit): satisfy auto compatibility",
     "fixture": {
       "scenario": "commit_result_invariant"
     }

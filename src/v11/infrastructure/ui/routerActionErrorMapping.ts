@@ -126,6 +126,13 @@ function buildBubbleActionErrorDetails(input: {
   };
 }
 
+function isCommitMessagePolicyReasonCode(reasonCode: string): boolean {
+  return (
+    reasonCode === "COMMIT_MESSAGE_REQUIRED" ||
+    reasonCode === "COMMIT_MESSAGE_POLICY_REJECTED"
+  );
+}
+
 async function mapBubbleCommitApiError(input: {
   environment: RouterActionMappingEnvironment;
   message: string;
@@ -135,6 +142,9 @@ async function mapBubbleCommitApiError(input: {
 }): Promise<UiApiError> {
   const details = buildBubbleActionErrorDetails(input);
   if (input.reasonCode === "REMOTE_STATUS_CONFIG_INVALID") {
+    return badRequest(input.message, details);
+  }
+  if (isCommitMessagePolicyReasonCode(input.reasonCode)) {
     return badRequest(input.message, details);
   }
   if (
@@ -186,6 +196,38 @@ function mapRemoteStatusApiError(input: {
     return conflict(input.message, details);
   }
   return internalError(input.message, details);
+}
+
+function mapRemoteCommitCommandApiError(input: {
+  message: string;
+  repoPath: string;
+  bubbleId: string;
+  reasonCode: string;
+}): UiApiError {
+  const details = buildBubbleActionErrorDetails(input);
+  return isCommitMessagePolicyReasonCode(input.reasonCode)
+    ? badRequest(input.message, details)
+    : internalError(input.message, details);
+}
+
+function mapRemoteCommitCommandApiErrorIfKnown(input: {
+  error: unknown;
+  message: string;
+  repoPath: string;
+  bubbleId: string;
+}): UiApiError | null {
+  if (
+    !isRemoteBubbleCommitCommandErrorLike(input.error) ||
+    typeof input.error.code !== "string"
+  ) {
+    return null;
+  }
+  return mapRemoteCommitCommandApiError({
+    message: input.message,
+    repoPath: input.repoPath,
+    bubbleId: input.bubbleId,
+    reasonCode: input.error.code
+  });
 }
 
 function mapAttachApiError(input: {
@@ -267,17 +309,9 @@ async function mapKnownActionError(input: {
     });
   }
 
-  const remoteCommitCommandError =
-    isRemoteBubbleCommitCommandErrorLike(input.error)
-      && typeof input.error.code === "string"
-      ? input.error
-      : null;
-  if (remoteCommitCommandError !== null) {
-    return internalError(input.message, {
-      bubbleId: input.bubbleId,
-      repoPath: input.repoPath,
-      reasonCode: remoteCommitCommandError.code
-    });
+  const remoteCommitApiError = mapRemoteCommitCommandApiErrorIfKnown(input);
+  if (remoteCommitApiError !== null) {
+    return remoteCommitApiError;
   }
 
   if (isConflictErrorMessage(input.message)) {

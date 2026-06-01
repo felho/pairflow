@@ -15,6 +15,9 @@ describe("CommitForm", () => {
       screen.getByPlaceholderText("artifacts/commit-evidence.md")
     ).toBeInTheDocument();
     expect(
+      screen.getByPlaceholderText("feat(scope): describe change")
+    ).toBeInTheDocument();
+    expect(
       screen.queryByPlaceholderText("artifacts/done-package.md")
     ).not.toBeInTheDocument();
   }
@@ -38,10 +41,17 @@ describe("CommitForm", () => {
     expect(stageAll).toBeChecked();
     expectStageAllInvariants();
 
-    await user.click(screen.getByRole("button", { name: "Submit Commit" }));
+    const submitButton = screen.getByRole("button", { name: "Submit Commit" });
+    expect(submitButton).toBeDisabled();
+    await user.type(
+      screen.getByLabelText("Message"),
+      "feat(commit): finalize bubble"
+    );
+    await user.click(submitButton);
 
     expect(onSubmit).toHaveBeenCalledWith({
-      stageAll: true
+      stageAll: true,
+      message: "feat(commit): finalize bubble"
     });
     const firstSubmit = onSubmit.mock.calls[0]?.[0];
     expect(firstSubmit).toBeDefined();
@@ -73,6 +83,10 @@ describe("CommitForm", () => {
     );
     expectStageAllInvariants();
     await user.type(
+      screen.getByLabelText("Message"),
+      "fix(commit): finalize selected files"
+    );
+    await user.type(
       screen.getByLabelText("Refs (optional, comma/newline separated)"),
       "artifacts/commit-evidence.md"
     );
@@ -80,6 +94,7 @@ describe("CommitForm", () => {
 
     expect(onSubmit).toHaveBeenCalledWith({
       stageAll: false,
+      message: "fix(commit): finalize selected files",
       refs: ["artifacts/commit-evidence.md"]
     });
     const secondSubmit = onSubmit.mock.calls[0]?.[0];

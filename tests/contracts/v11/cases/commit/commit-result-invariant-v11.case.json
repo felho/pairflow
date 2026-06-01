@@ -5,6 +5,7 @@
   "description": "Commit v11 preserves COMMIT_RESULT invariant and commit artifacts.",
   "input": {
     "stageAll": true,
+    "message": "feat(commit): satisfy result invariant",
     "fixture": {
       "scenario": "commit_result_invariant"
     }

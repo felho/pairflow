@@ -4,8 +4,9 @@ import type {
   ExtractTransferInput
 } from "../../extractCommandContract.js";
 import type { GitRunResult } from "../../../../ports/git.js";
+import { classifyCommitMessage } from "../../../../shared/commitPolicy/commitMessagePolicy.js";
 
-const DEFAULT_EXTRACT_COMMIT_MESSAGE_PREFIX = "extract";
+const DEFAULT_EXTRACT_COMMIT_MESSAGE = "docs(extract): copy selected ideation artifacts";
 
 interface CommitSelectedPathsInput extends ExtractTransferInput {
   copiedPaths: string[];
@@ -90,8 +91,26 @@ function samePathSet(left: string[], right: string[]): boolean {
   return left.every((path, index) => path === right[index]);
 }
 
-function defaultCommitMessage(bubbleId: string): string {
-  return `${DEFAULT_EXTRACT_COMMIT_MESSAGE_PREFIX}(${bubbleId}): copy selected ideation artifacts`;
+function resolveExtractCommitMessage(
+  input: CommitSelectedPathsInput
+): string | ExtractCommandResult {
+  const commitMessage = input.command.message ?? DEFAULT_EXTRACT_COMMIT_MESSAGE;
+  const policy = classifyCommitMessage(commitMessage);
+  if (policy.status === "accepted") {
+    return commitMessage;
+  }
+
+  return buildFailure({
+    ...input,
+    reasonCode: "EXTRACT_COMMIT_MESSAGE_POLICY_REJECTED",
+    diagnostics: {
+      resolvedBubbleRepoPath: input.resolvedBubbleRepoPath,
+      targetRepoPath: input.targetRepoPath,
+      copiedPaths: input.copiedPaths,
+      stagedPaths: input.stagedPaths,
+      stderr: policy.message
+    }
+  });
 }
 
 async function runExtractGit(input: {
@@ -319,7 +338,10 @@ async function verifyResolvedCommitSha(
 export async function commitSelectedPaths(
   input: CommitSelectedPathsInput
 ): Promise<ExtractCommandResult> {
-  const commitMessage = input.command.message ?? defaultCommitMessage(input.bubbleId);
+  const commitMessage = resolveExtractCommitMessage(input);
+  if (typeof commitMessage !== "string") {
+    return commitMessage;
+  }
   const base = await resolveBaseHead(input);
   if (base.status !== "base") {
     return base;

@@ -51,6 +51,7 @@ type CommitContractExtendedScenario =
   | "commit_result_invariant";
 
 interface ParsedCommitCaseInput {
+  message?: string;
   stageAll?: boolean;
   auto?: boolean;
   scenario: CommitContractExtendedScenario;
@@ -62,6 +63,10 @@ function buildCommitContractBubbleId(caseId: string): string {
 }
 
 function parseCommitCaseInput(input: ContractCase["input"]): ParsedCommitCaseInput {
+  const messageRaw = input.message;
+  if (messageRaw !== undefined && typeof messageRaw !== "string") {
+    throw new Error("commit contract input.message must be a string.");
+  }
   const stageAllRaw = input.stageAll;
   if (stageAllRaw !== undefined && typeof stageAllRaw !== "boolean") {
     throw new Error("commit contract input.stageAll must be a boolean.");
@@ -97,6 +102,7 @@ function parseCommitCaseInput(input: ContractCase["input"]): ParsedCommitCaseInp
     );
   }
   return {
+    ...(messageRaw !== undefined ? { message: messageRaw } : {}),
     ...(stageAllRaw !== undefined
       ? { stageAll: normalizedStageAll }
       : autoRaw === undefined
@@ -331,6 +337,7 @@ async function executeCommitCase(input: {
           ? { stageAll: parsedInput.stageAll }
           : {}),
         ...(parsedInput.auto !== undefined ? { auto: parsedInput.auto } : {}),
+        ...(parsedInput.message !== undefined ? { message: parsedInput.message } : {}),
         now: new Date("2026-03-20T13:10:00.000Z")
       });
       output = normalizeCommitResult(result);

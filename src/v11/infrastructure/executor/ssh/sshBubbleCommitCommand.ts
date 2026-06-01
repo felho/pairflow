@@ -114,6 +114,34 @@ function describeTransportFailure(input: {
   return `ssh transport failed (exit ${input.exitCode}): ${summarizeRemoteCommitTransportOutput(detailSource)}`;
 }
 
+function extractRemoteCommitPolicyFailure(input: {
+  stdout: string;
+  stderr: string;
+}): {
+  code: "COMMIT_MESSAGE_REQUIRED" | "COMMIT_MESSAGE_POLICY_REJECTED";
+  message: string;
+} | null {
+  const output = `${input.stderr}\n${input.stdout}`;
+  const match = output.match(
+    /\b(COMMIT_MESSAGE_REQUIRED|COMMIT_MESSAGE_POLICY_REJECTED):\s*([^\r\n]*)/u
+  );
+  const code = match?.[1];
+  if (
+    code !== "COMMIT_MESSAGE_REQUIRED" &&
+    code !== "COMMIT_MESSAGE_POLICY_REJECTED"
+  ) {
+    return null;
+  }
+  const detail = match?.[2]?.trim();
+  return {
+    code,
+    message:
+      detail !== undefined && detail.length > 0
+        ? `${code}: ${detail}`
+        : `${code}: remote commit message policy rejected the request.`
+  };
+}
+
 function parseRequiredLine(input: {
   raw: string;
   bubbleId: string;
@@ -189,6 +217,19 @@ export async function executeRemoteBubbleCommitCommand(
   });
 
   if (result.exitCode !== 0) {
+    const policyFailure = extractRemoteCommitPolicyFailure(result);
+    if (policyFailure !== null) {
+      throw new RemoteBubbleCommitCommandError({
+        code: policyFailure.code,
+        message: policyFailure.message,
+        context: {
+          bubble_id: input.bubbleId,
+          command_name: "commit",
+          remote_host: input.remoteTarget.host,
+          exit_code: result.exitCode
+        }
+      });
+    }
     throw new RemoteBubbleCommitCommandError({
       code: "REMOTE_COMMIT_TRANSPORT_FAILED",
       message: describeTransportFailure({

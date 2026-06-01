@@ -413,12 +413,17 @@ describe("ActionBar", () => {
     );
 
     await user.click(screen.getByRole("button", { name: "Commit" }));
+    await user.type(
+      screen.getByLabelText("Message"),
+      "feat(commit): finalize bubble"
+    );
     await user.click(screen.getByRole("button", { name: "Submit Commit" }));
 
     expect(onAction).toHaveBeenCalledWith({
       bubbleId: "b-commit",
       action: "commit",
-      stageAll: true
+      stageAll: true,
+      message: "feat(commit): finalize bubble"
     });
   });
 
@@ -452,12 +457,17 @@ describe("ActionBar", () => {
 
     await user.click(screen.getByRole("button", { name: "Commit" }));
     await user.click(screen.getByRole("checkbox", { name: "Stage all changes" }));
+    await user.type(
+      screen.getByLabelText("Message"),
+      "fix(commit): finalize selected files"
+    );
     await user.click(screen.getByRole("button", { name: "Submit Commit" }));
 
     expect(onAction).toHaveBeenCalledWith({
       bubbleId: "b-commit",
       action: "commit",
-      stageAll: false
+      stageAll: false,
+      message: "fix(commit): finalize selected files"
     });
     const actionInput = onAction.mock.calls[0]?.[0];
     expect(actionInput).toBeDefined();

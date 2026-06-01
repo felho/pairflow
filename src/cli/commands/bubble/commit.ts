@@ -30,20 +30,21 @@ export type ParsedBubbleCommitCommandOptions =
 export function getBubbleCommitHelpText(): string {
   return [
     "Usage:",
-    '  pairflow bubble commit --id <id> [--repo <path>] [--message "<text>"] [--ref <artifact-path>]... [--stage-all] [--force]',
+    '  pairflow bubble commit --id <id> [--repo <path>] --message "<text>" [--ref <artifact-path>]... [--stage-all] [--force]',
     "",
     "Options:",
     "  --id <id>             Bubble id",
     "  --repo <path>         Optional repository path (defaults to cwd ancestry lookup)",
-    "  --message <text>      Optional git commit message override",
+    "  --message <text>      Conventional git commit message required when creating a new commit",
     "  --ref <path>          Optional artifact reference (repeatable)",
     "  --stage-all           Stage all worktree changes before validating staged files",
-    "  --force               Allow an empty finalize commit when no files are staged",
+    "  --force               Allow an empty commit when used with an accepted --message",
     "  -h, --help            Show this help",
     "",
     "Notes:",
     "  Requires state APPROVED_FOR_COMMIT.",
-    "  Without --stage-all, commit expects staged files to already exist."
+    "  Without --stage-all, commit expects staged files to already exist.",
+    "  Clean clone retries may reuse an already committed HEAD without creating a new commit."
   ].join("\n");
 }
 

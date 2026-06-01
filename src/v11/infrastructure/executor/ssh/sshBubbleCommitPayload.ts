@@ -15,13 +15,17 @@ type CommitResultMetadata = {
 export class RemoteBubbleCommitCommandError extends Error {
   public readonly code:
     | "REMOTE_COMMIT_TRANSPORT_FAILED"
-    | "REMOTE_COMMIT_PAYLOAD_INVALID";
+    | "REMOTE_COMMIT_PAYLOAD_INVALID"
+    | "COMMIT_MESSAGE_REQUIRED"
+    | "COMMIT_MESSAGE_POLICY_REJECTED";
   public readonly context?: Record<string, string | number>;
 
   public constructor(input: {
     code:
       | "REMOTE_COMMIT_TRANSPORT_FAILED"
-      | "REMOTE_COMMIT_PAYLOAD_INVALID";
+      | "REMOTE_COMMIT_PAYLOAD_INVALID"
+      | "COMMIT_MESSAGE_REQUIRED"
+      | "COMMIT_MESSAGE_POLICY_REJECTED";
     message: string;
     context?: Record<string, string | number>;
     cause?: unknown;

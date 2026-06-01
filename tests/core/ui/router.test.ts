@@ -4657,6 +4657,74 @@ describe("createUiRouter action routes", () => {
     }
   });
 
+  it("maps commit message policy failures to HTTP 400 with commit taxonomy", async () => {
+    const repoPath = "/tmp/pairflow-ui-router-commit-message-policy";
+    const commitBubble = vi.fn(() =>
+      Promise.reject(
+        new BubbleCommitError({
+          reasonCode: "COMMIT_MESSAGE_REQUIRED",
+          message:
+            "A conventional --message is required for bubble commit (bubble_id=b-router-commit-message-policy)."
+        })
+      )
+    );
+    const router = createUiRouter({
+      repoScope: {
+        repos: [repoPath],
+        has: (value: string) => Promise.resolve(value === repoPath)
+      },
+      events: {
+        subscribe: () => () => undefined,
+        getSnapshot: () => ({
+          id: 1,
+          ts: "2026-02-25T00:00:00.000Z",
+          type: "snapshot",
+          repos: [],
+          bubbles: []
+        }),
+        refreshNow: () => Promise.resolve(undefined),
+        addRepo: () => Promise.resolve(false),
+        removeRepo: () => Promise.resolve(false),
+        close: () => Promise.resolve(undefined)
+      },
+      dependencies: {
+        commitBubble
+      }
+    });
+    const server = await startRouterServer(router);
+
+    try {
+      const response = await fetch(
+        `${server.url}/api/bubbles/b-router-commit-message-policy/commit?repo=${encodeURIComponent(repoPath)}`,
+        {
+          method: "POST",
+          headers: {
+            "content-type": "application/json"
+          },
+          body: JSON.stringify({
+            stageAll: true
+          })
+        }
+      );
+      const payload = (await response.json()) as {
+        error: {
+          code: string;
+          details?: Record<string, unknown>;
+        };
+      };
+
+      expect(response.status).toBe(400);
+      expect(payload.error.code).toBe("bad_request");
+      expect(payload.error.details).toMatchObject({
+        bubbleId: "b-router-commit-message-policy",
+        repoPath,
+        reasonCode: "COMMIT_MESSAGE_REQUIRED"
+      });
+    } finally {
+      await server.close();
+    }
+  });
+
   it("maps remote commit start-required failures to HTTP 409 conflict with commit taxonomy", async () => {
     const repoPath = "/tmp/pairflow-ui-router-commit-remote-created";
     const commitBubble = vi.fn(() =>
@@ -5464,6 +5532,73 @@ describe("createUiRouter action routes", () => {
         bubbleId: "b-router-merge-internal",
         repoPath,
         reasonCode
+      });
+    } finally {
+      await server.close();
+    }
+  });
+
+  it("maps raw remote commit message policy failures to HTTP 400", async () => {
+    const repoPath = "/tmp/pairflow-ui-router-commit-raw-policy";
+    const router = createUiRouter({
+      repoScope: {
+        repos: [repoPath],
+        has: (value: string) => Promise.resolve(value === repoPath)
+      },
+      events: {
+        subscribe: () => () => undefined,
+        getSnapshot: () => ({
+          id: 1,
+          ts: "2026-02-25T00:00:00.000Z",
+          type: "snapshot",
+          repos: [],
+          bubbles: []
+        }),
+        refreshNow: () => Promise.resolve(undefined),
+        addRepo: () => Promise.resolve(false),
+        removeRepo: () => Promise.resolve(false),
+        close: () => Promise.resolve(undefined)
+      },
+      dependencies: {
+        commitBubble: vi.fn(() =>
+          Promise.reject(
+            new RemoteBubbleCommitCommandError({
+              code: "COMMIT_MESSAGE_REQUIRED",
+              message:
+                "COMMIT_MESSAGE_REQUIRED: A conventional --message is required before Pairflow creates a new lifecycle commit."
+            })
+          )
+        )
+      }
+    });
+    const server = await startRouterServer(router);
+
+    try {
+      const response = await fetch(
+        `${server.url}/api/bubbles/b-router-commit-raw-policy/commit?repo=${encodeURIComponent(repoPath)}`,
+        {
+          method: "POST",
+          headers: {
+            "content-type": "application/json"
+          },
+          body: JSON.stringify({
+            stageAll: false
+          })
+        }
+      );
+      const payload = (await response.json()) as {
+        error: {
+          code: string;
+          details?: Record<string, unknown>;
+        };
+      };
+
+      expect(response.status).toBe(400);
+      expect(payload.error.code).toBe("bad_request");
+      expect(payload.error.details).toMatchObject({
+        bubbleId: "b-router-commit-raw-policy",
+        repoPath,
+        reasonCode: "COMMIT_MESSAGE_REQUIRED"
       });
     } finally {
       await server.close();
