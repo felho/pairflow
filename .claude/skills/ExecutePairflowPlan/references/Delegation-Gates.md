@@ -141,6 +141,19 @@ never sufficient.
    refreshed artifact until the decision is `approve_task`, `approve_plan`,
    `route_back_to_plan`, `split_task`, `split_plan`, `block_not_ready`, or a
    real blocker.
+8. When sub-agents are available, the first ReviewSpec pass in a plan/task
+   review route defaults to `full_lane_review`: metadata, scope, contract, and
+   capability lanes plus one final ReviewSpec decision over the refreshed
+   artifact and lane outputs.
+9. After a refinement changes an artifact, rerun ReviewSpec with
+   `targeted_lane_review` by default: rerun only failed/uncertain lanes and
+   lanes whose covered surfaces changed, then run final top-level
+   reconciliation. Do not repeat full lane fan-out unless identity, bounded
+   scope, split/no-split, parent sequencing, or gate-family relevance changed,
+   or skipped lanes cannot be proven unaffected.
+10. The route ledger must record `review_delegation.mode`, lane agent ids or
+    skipped-lane reasons, the final ReviewSpec decision source, and any reason
+    for escalating a refinement rerun back to `full_lane_review`.
 
 ## Common Violation
 
@@ -160,8 +173,9 @@ Correct:
 ```text
 Resolve route=task_review.
 Append route ledger entry with delegated_result=null.
-Delegate CreatePairflowSpec ReviewSpec task-mode in fresh sub-agent context.
-Record the sub-agent id and returned decision in the route ledger.
+Delegate first-pass CreatePairflowSpec ReviewSpec task-mode as full lane review.
+Record lane sub-agent ids, the final ReviewSpec decision, and review mode in
+the route ledger.
 Only if decision=approve_task, update status=approved and continue.
 ```
 

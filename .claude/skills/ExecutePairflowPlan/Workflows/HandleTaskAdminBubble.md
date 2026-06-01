@@ -197,9 +197,14 @@ Task-creation/review execution guard:
    reviewed artifact evidence. If no sub-agent id is available while sub-agents
    are supported, stop with `REVIEW_SPEC_DELEGATION_MISSING`.
 7. If `ReviewSpec task-mode` returns `refine_task` and the task is changed,
-   rerun `ReviewSpec task-mode` in a new fresh sub-agent over the refreshed task
-   and parent plan. Repeat until the decision is `approve_task`,
-   `route_back_to_plan`, `split_task`, `block_not_ready`, or a real blocker.
+   rerun `ReviewSpec task-mode` over the refreshed task and parent plan using
+   the ReviewSpec review-budget policy:
+   - the first review pass defaults to `full_lane_review`,
+   - refinement reruns default to `targeted_lane_review`,
+   - every rerun still needs one final ReviewSpec decision,
+   - and the route ledger must record lane ids or skipped-lane reasons.
+   Repeat until the decision is `approve_task`, `route_back_to_plan`,
+   `split_task`, `block_not_ready`, or a real blocker.
 
 Task-admin edit tooling guard:
 
@@ -229,17 +234,20 @@ For `CreateTask`:
 2. write the created task artifact, plan tracker row, and any directly related
    plan/progress/docs admin in the carrier worktree
 3. delegate `CreatePairflowSpec ReviewSpec` in `task-mode` for the latest
-   created task through a fresh sub-agent whenever the runtime supports
-   sub-agents; do this even when the initial artifact appears locally correct
+   created task through the ReviewSpec review-budget policy whenever the
+   runtime supports sub-agents; the first pass defaults to full lane review even
+   when the initial artifact appears locally correct
 4. an explicitly already-approved creation contract is acceptable only when it
    itself records the fresh sub-agent ReviewSpec evidence for the exact latest
    artifact; otherwise treat it as `under_review`
 
 For `ReviewTask`:
 
-1. delegate `CreatePairflowSpec ReviewSpec` in `task-mode`
+1. delegate `CreatePairflowSpec ReviewSpec` in `task-mode`; the first pass
+   defaults to `full_lane_review` when sub-agents are available
 2. if it returns `refine_task`, apply the refinement in the carrier worktree and
-   rerun `ReviewSpec task-mode` from refreshed task content
+   rerun `ReviewSpec task-mode` from refreshed task content using
+   `targeted_lane_review` by default
 3. if it returns `split_task`, `route_back_to_plan`, or `block_not_ready`, apply
    only the bounded admin state explicitly authorized by that decision
 

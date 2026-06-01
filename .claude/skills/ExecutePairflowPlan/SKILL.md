@@ -231,6 +231,43 @@ Plan/task review gates:
    required ReviewSpec pass, stop with `REVIEW_SPEC_DELEGATION_MISSING`
 13. `status=approved` may be written or committed only after the route ledger contains `ReviewSpec task-mode decision=approve_task` for the latest task artifact
 
+Review delegation budget:
+
+1. For the first `ReviewSpec` pass in a `ReviewPlan`, `CreateTask` approval, or
+   `ReviewTask` route, default to `full_lane_review` when sub-agents are
+   available. The first pass is the discovery pass; do not prematurely optimize
+   it away with narrow trigger heuristics.
+2. `full_lane_review` means the orchestrator spawns independent ReviewSpec
+   lanes, then obtains one final ReviewSpec decision over the refreshed artifact
+   and lane outputs:
+   - `metadata_lane`
+   - `scope_lane`
+   - `contract_lane`
+   - `capability_lane`
+3. ReviewSpec lane agents are siblings owned by the `ExecutePairflowPlan`
+   orchestrator. Do not ask a ReviewSpec lane sub-agent to spawn its own
+   sub-agents.
+4. After a refinement changes an artifact, default to `targeted_lane_review`,
+   not another full fan-out. Rerun only:
+   - lanes that previously returned `refine`, `fail`, `route_back`, `split`, or
+     uncertain coverage,
+   - lanes whose covered surfaces changed in the artifact diff,
+   - and a final top-level ReviewSpec reconciliation step.
+5. Escalate a refinement rerun back to `full_lane_review` only when:
+   - the task or plan identity changed,
+   - the bounded scope materially changed,
+   - the split/no-split decision changed or became uncertain,
+   - parent-plan sequencing changed,
+   - a previously untouched gate family became relevant,
+   - or the final reviewer cannot prove that skipped lanes remain unaffected.
+6. `single_thread_review` is allowed only when sub-agents are unavailable, or
+   when a later explicit policy introduces a low-risk fast path. Until then,
+   the first pass should spend the discovery budget and refinement passes should
+   save budget through targeted invalidation.
+7. Every ReviewSpec delegation result must record the selected review mode,
+   why that mode was selected, lane ids or explicit skipped-lane reasons, and
+   the final ReviewSpec decision.
+
 Fresh-context requirement:
 
 1. downstream specialized workflows must run in fresh context whenever feasible
@@ -263,6 +300,15 @@ delegation:
   input_artifacts:
     - <path or id>
   delegated_execution_method: <subagent|separate_local_step|not_applicable>
+  review_delegation:
+    mode: <full_lane_review|targeted_lane_review|single_thread_review|not_applicable>
+    reason: <short trigger or unavailable reason>
+    lanes:
+      metadata_lane: <agent_id|skipped:not_affected|skipped:unavailable|not_applicable>
+      scope_lane: <agent_id|skipped:not_affected|skipped:unavailable|not_applicable>
+      contract_lane: <agent_id|skipped:not_affected|skipped:unavailable|not_applicable>
+      capability_lane: <agent_id|skipped:not_affected|skipped:unavailable|not_applicable>
+    final_review: <agent_id|separate_local_step|not_applicable>
   delegated_result: null
 mutation_allowed: false
 ```
