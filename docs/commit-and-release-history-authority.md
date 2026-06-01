@@ -33,6 +33,37 @@ Release authority belongs to content commits, not Pairflow lifecycle events.
    bodies, footers, branch names, pull request titles, and release-tool defaults
    are not fallback release authority.
 
+## Canonical Classification Rules
+
+1. Classification is based on the deterministic first-line commit header only.
+2. Accepted conventional content types are exactly `feat`, `fix`, `perf`,
+   `refactor`, `docs`, `test`, `build`, `ci`, and `chore`, with optional
+   conventional scope and optional conventional breaking marker.
+3. Only first lines beginning `Merge branch ...` or
+   `Merge remote-tracking branch ...` are tolerated as merge integration
+   artifacts.
+4. Only standard Git revert headers beginning `Revert "..."` and conventional
+   revert headers beginning `revert` under conventional syntax are tolerated as
+   recovery commits.
+5. New finalize-style lifecycle commits, including `bubble(<id>): finalize`,
+   are rejected. Historical finalize commits are excluded from release
+   authority.
+6. Release automation inherits full reachable conventional commit selection.
+   First-parent-only semantic interpretation is forbidden when
+   release-relevant changes live in bubble branch content commits.
+7. Malformed, ambiguous, or unknown classes are rejected or marked
+   refinement-owned instead of receiving invented implementation behavior.
+8. This docs-only task does not introduce cutoff, safe-range,
+   compatibility-mode, or traversal implementation behavior.
+9. Body text, footer text, duplicate-looking body lines, and additional
+   conventional-looking candidates after the first line do not reclassify the
+   commit.
+10. If the first line is invalid but the body contains a valid-looking
+    conventional line, the commit remains invalid or ambiguous for validation.
+11. This document defines classification only. It does not require successor
+    implementations to rewrite, drop, retain, or normalize commit body/footer
+    content.
+
 ## Release Authority Classes
 
 | History Shape | Example | Existing History / New Validation | Release Authority Input | Default Semver Effect | Rule |
@@ -116,8 +147,9 @@ Required strategy:
    first-parent merge commits.
 2. Ignore merge commits as integration artifacts.
 3. Ignore historical lifecycle-finalize noise such as `bubble(<id>): finalize`.
-4. Treat standard Git revert commits and conventional `revert:` commits as
-   recovery input whose changelog/version effect is successor-owned.
+4. Treat standard Git revert commits and conventional revert headers beginning
+   `revert` under conventional syntax as recovery input whose changelog/version
+   effect is successor-owned.
 
 Optional future strategy:
 
@@ -154,21 +186,15 @@ Commit-message validation should:
 1. Accept conventional commit headers as the normal content path.
 2. Accept only the configured merge header exception forms as non-release
    history: `Merge branch ...` and `Merge remote-tracking branch ...`.
-3. Accept standard Git revert commits and conventional `revert:` commits as
-   recovery history.
+3. Accept standard Git revert commits and conventional revert headers beginning
+   `revert` under conventional syntax as recovery history.
 4. Reject new ambiguous prose.
 5. Reject `bubble(<id>): finalize` instead of accepting it as a normal future
    path.
 6. Print actionable guidance that points to the commit policy documentation.
-7. Validate deterministic new-commit ranges only when a safe local range is
-   available, and fail closed with a checkpoint otherwise. It must not scan all
-   pre-policy history as if it were subject to the new policy.
-8. Treat safe range sources as explicit authority only: an operator-provided
-   base/head range, a lifecycle-provided base/head range, or a CI-provided
-   base/head range. A range-validation command with no safe range must exit
-   non-zero with the checkpoint reason; broad commands may skip invoking range
-   validation only if they print that the new-commit range check was not
-   applicable and do not claim range validation passed.
+7. Leave deterministic safe-range validation mechanics to
+   `2b-commit-policy`. This authority classifies the commit-message inputs
+   that those checks consume; it does not activate a range validator.
 
 ## Operator Guidance
 

@@ -11,6 +11,12 @@ Classify commits by the first line only. Do not use commit body text, footers,
 branch names, pull request titles, or release-tool defaults to infer release
 meaning.
 
+If the first line is invalid, a valid-looking conventional line later in the
+body does not rescue the commit. Body text, footer text, duplicate-looking body
+lines, and later conventional-looking candidates are ignored for
+classification. This guidance does not require successor implementations to
+rewrite, drop, retain, or normalize commit body/footer content.
+
 Use one deterministic first line:
 
 ```text
@@ -61,7 +67,8 @@ must later use full reachable conventional history so release-relevant bubble
 branch commits remain visible.
 
 Reverts are a separate accepted recovery class, not conventional content
-commits. Use standard Git revert headers or conventional revert headers:
+commits. Use standard Git revert headers beginning `Revert "..."` or
+conventional revert headers beginning `revert` under conventional syntax:
 
 ```text
 Revert "feat(cli): add commit message validator"
