@@ -5,7 +5,7 @@ task_family_id: docs-site-pages
 sequence_key: "4"
 task_id: 4-docs-site-pages
 title: "Static Documentation Site and GitHub Pages Publish"
-status: implementable
+status: in_progress
 phase: phase4
 target_files:
   - "package.json"
@@ -20,7 +20,7 @@ system_context_ref: docs/pairflow-initial-design.md
 owners:
   - "felho"
 doc_bubble_id: 4-docs-site-pages-doc
-impl_bubble_id: null
+impl_bubble_id: 4-docs-site-pages-impl
 supersedes: []
 superseded_by: null
 archive_group: 2026-05-31-npm-release-dx-onboarding
