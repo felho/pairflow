@@ -10,6 +10,10 @@
 2. Implement in small, verifiable increments.
 3. Validate each increment before moving on.
 
+## Commit Messages
+
+When preparing a commit message, read `docs/commit-message-guidance.md`.
+
 ## Safety
 
 - Do not run destructive git/history commands (`reset --hard`, rebase, force push, etc.) without explicit user approval.

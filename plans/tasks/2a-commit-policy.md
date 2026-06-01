@@ -5,7 +5,7 @@ task_family_id: commit-policy
 sequence_key: "2a"
 task_id: 2a-commit-policy
 title: "Commit Policy Authority Foundation"
-status: under_review
+status: implementable
 phase: phase2
 target_files:
   - "AGENTS.md"
@@ -55,8 +55,8 @@ commit-policy tasks can consume without re-litigating release-history semantics.
    `docs/commit-message-guidance.md`; successor automation and validators read
    the authority taxonomy before implementing behavior.
 4. Forbidden fallback: do not duplicate the full commit policy in `AGENTS.md`;
-   do not infer release semantics from merge messages, branch names, old
-   finalize commits, or release-tool defaults.
+   do not infer release semantics from merge messages, body prose, footers,
+   branch names, PR titles, old finalize commits, or release-tool defaults.
 5. Allowed resolution path: document deterministic conventional first-line
    classes, exact merge-header exception forms, standard/conventional revert
    handling, and historical-finalize rejection for successor implementation.
@@ -68,8 +68,10 @@ commit-policy tasks can consume without re-litigating release-history semantics.
 1. Target-file reality:
    - `docs/commit-and-release-history-authority.md` already exists and must be
      adopted/updated, not recreated as an empty artifact.
-   - `docs/commit-message-guidance.md` does not exist yet.
-   - `AGENTS.md` currently has no dedicated commit-guidance pointer.
+   - `docs/commit-message-guidance.md` is created by this document bubble as
+     the operator-facing mirror of the authority taxonomy.
+   - `AGENTS.md` receives a dedicated commit-guidance pointer without inlining
+     the policy.
 2. Primary shape: `contract_or_persisted_authority_foundation`.
 3. Secondary shape: `N/A`.
 4. Mutation entrypoints: none; this task is docs-only.
@@ -191,7 +193,7 @@ L1, acceptance criteria, `docs/commit-and-release-history-authority.md`, and
 
 | Commit Class | New-Commit Validation Rule | Release Authority Input | Semver / Changelog Owner | Exact Accept / Reject Rule | Successor Owner |
 |---|---|---|---|---|---|
-| Conventional content commit | Accept deterministic first-line conventional commit headers whose type is one of: `feat`, `fix`, `perf`, `refactor`, `docs`, `test`, `build`, `ci`, `chore`, or the same types with a conventional breaking marker. | Included as full-history release authority according to type/scope. | `3-release-automation` consumes full reachable conventional history later. | Accept only deterministic first-line conventional headers; do not infer authority from body prose, branch names, PR titles, or tool defaults. | `2b` validates local commits; `3-release-automation` consumes release history. |
+| Conventional content commit | Accept deterministic first-line conventional commit headers whose type is one of: `feat`, `fix`, `perf`, `refactor`, `docs`, `test`, `build`, `ci`, `chore`, or the same types with a conventional breaking marker. | Included as full-history release authority according to type/scope. | `3-release-automation` consumes full reachable conventional history later. | Accept only deterministic first-line conventional headers; do not infer authority from body prose, footers, branch names, PR titles, or tool defaults. | `2b` validates local commits; `3-release-automation` consumes release history. |
 | Merge-header integration artifact | Tolerate only these exact first-line prefix forms: `Merge branch ...` and `Merge remote-tracking branch ...`. | Excluded from semver/changelog authority; underlying conventional content commits remain visible through full-history selection. | `2c` aligns Pairflow producer behavior; `3-release-automation` inherits full-history traversal and must not use first-parent-only semantic interpretation. | Accept as lifecycle/integration artifact only; reject malformed merge-like prose as ambiguous. | `2c`, then `3-release-automation`. |
 | Standard or conventional revert recovery | Tolerate standard Git revert headers beginning `Revert \"...\"` and conventional revert headers beginning `revert` under the documented conventional syntax. | Recovery input only; release effect belongs to successor full-history release interpretation. | `3-release-automation` consumes this as recovery input later. | Accept documented revert forms; do not treat arbitrary "undo" prose as a revert. | `2b` validation; `2c` merge/revert producer compatibility; `3-release-automation` interpretation. |
 | Historical finalize noise | Do not accept as new commit policy; reject new first lines matching the historical lifecycle-finalize shape `bubble(<id>): finalize`. | Excluded as historical lifecycle noise. | None for new behavior; `3-release-automation` inherits exclusion while selecting full reachable conventional history. | Reject new finalize-style lifecycle commits; do not add legacy cutoff behavior here. | `2b` rejects new local commits; `3-release-automation` inherits exclusion. |
@@ -234,8 +236,8 @@ L1, acceptance criteria, `docs/commit-and-release-history-authority.md`, and
 ### Structured Contract Rules
 
 1. First-line rule: classification is based on deterministic first-line commit
-   headers only. Bodies, branch names, PR titles, and tool defaults must not be
-   used as fallback release authority.
+   headers only. Bodies, footers, branch names, PR titles, and tool defaults
+   must not be used as fallback release authority.
 2. Conventional allowlist rule: the accepted content types are exactly `feat`,
    `fix`, `perf`, `refactor`, `docs`, `test`, `build`, `ci`, and `chore`,
    with optional conventional scope and optional conventional breaking marker.
