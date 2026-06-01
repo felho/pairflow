@@ -5,7 +5,7 @@ task_family_id: commit-policy
 sequence_key: "2c"
 task_id: 2c-commit-policy
 title: "Pairflow Commit Producer and Lifecycle Compatibility"
-status: in_progress
+status: archived
 phase: phase2
 target_files:
   - "src/v11/application/commit/commitCommandContract.ts"

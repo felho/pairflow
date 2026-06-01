@@ -326,6 +326,36 @@ describe("sshBubbleCommitCommand", () => {
     } satisfies Partial<RemoteBubbleCommitCommandError>);
   });
 
+  it("preserves remote commit message policy failures from routed command output", async () => {
+    await expect(
+      executeRemoteBubbleCommitCommand(
+        {
+          bubbleId: "b_remote_commit_policy_required_01",
+          remoteClonePath: "/srv/pairflow/repo--b_remote_commit_policy_required_01",
+          remoteTarget: {
+            alias: "prod",
+            host: "ssh.example.com",
+            user: "pairflow",
+            pairflowCommand: "pairflow"
+          },
+          refs: [],
+          stageAll: false
+        },
+        {
+          runCommand: vi.fn(async () => ({
+            stdout: "",
+            stderr:
+              "COMMIT_MESSAGE_REQUIRED: A conventional --message is required before Pairflow creates a new lifecycle commit. See docs/commit-message-guidance.md.",
+            exitCode: 1
+          }))
+        }
+      )
+    ).rejects.toMatchObject({
+      name: "RemoteBubbleCommitCommandError",
+      code: "COMMIT_MESSAGE_REQUIRED"
+    } satisfies Partial<RemoteBubbleCommitCommandError>);
+  });
+
   it("fails closed when the routed remote commit does not end in DONE", async () => {
     const stdout = [
       "__PAIRFLOW_REMOTE_COMMIT_STATE_START__",

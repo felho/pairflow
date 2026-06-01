@@ -21,6 +21,7 @@ export function CommitForm(props: CommitFormProps): JSX.Element {
   const [message, setMessage] = useState("");
   const [refsText, setRefsText] = useState("");
 
+  const trimmedMessage = message.trim();
   const parsedRefs = useMemo(() => parseRefs(refsText), [refsText]);
 
   return (
@@ -39,7 +40,7 @@ export function CommitForm(props: CommitFormProps): JSX.Element {
       </label>
 
       <label className="mt-3 block text-xs uppercase tracking-wide text-slate-400" htmlFor="commit-message">
-        Message (optional)
+        Message
       </label>
       <textarea
         id="commit-message"
@@ -49,7 +50,8 @@ export function CommitForm(props: CommitFormProps): JSX.Element {
           setMessage(event.target.value);
         }}
         disabled={props.isSubmitting}
-        placeholder="bubble(<id>): summary"
+        placeholder="feat(scope): describe change"
+        required
       />
 
       <label className="mt-3 block text-xs uppercase tracking-wide text-slate-400" htmlFor="commit-refs">
@@ -84,15 +86,14 @@ export function CommitForm(props: CommitFormProps): JSX.Element {
           type="button"
           className="rounded-md border border-cyan-300/60 bg-cyan-300/15 px-3 py-1.5 text-sm text-cyan-100 hover:bg-cyan-300/25 disabled:cursor-not-allowed disabled:opacity-60"
           onClick={() => {
-            const trimmedMessage = message.trim();
             const payload: CommitActionInput = {
               stageAll,
-              ...(trimmedMessage.length > 0 ? { message: trimmedMessage } : {}),
+              message: trimmedMessage,
               ...(parsedRefs.length > 0 ? { refs: parsedRefs } : {})
             };
             void props.onSubmit(payload);
           }}
-          disabled={props.isSubmitting}
+          disabled={props.isSubmitting || trimmedMessage.length === 0}
         >
           {props.isSubmitting ? "Committing..." : "Submit Commit"}
         </button>

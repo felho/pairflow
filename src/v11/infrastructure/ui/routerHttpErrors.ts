@@ -315,7 +315,9 @@ export function isRemoteBubbleCommitCommandErrorLike(
     candidate.name === "RemoteBubbleCommitCommandError" &&
     (
       candidate.code === "REMOTE_COMMIT_TRANSPORT_FAILED" ||
-      candidate.code === "REMOTE_COMMIT_PAYLOAD_INVALID"
+      candidate.code === "REMOTE_COMMIT_PAYLOAD_INVALID" ||
+      candidate.code === "COMMIT_MESSAGE_REQUIRED" ||
+      candidate.code === "COMMIT_MESSAGE_POLICY_REJECTED"
     )
   );
 }

@@ -247,7 +247,7 @@ describe("commitBubble", () => {
     ).rejects.toBeInstanceOf(BubbleCommitError);
   });
 
-  it("commits staged files, appends COMMIT_RESULT, and transitions to DONE without done-package", async () => {
+  it("commits staged files with an accepted message, appends COMMIT_RESULT, and transitions to DONE without done-package", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupApprovedBubble(repoPath, "b_commit_02");
 
@@ -262,6 +262,7 @@ describe("commitBubble", () => {
     const result = await commitBubble({
       bubbleId: bubble.bubbleId,
       cwd: repoPath,
+      message: "feat(commit): finalize approved bubble",
       now: new Date("2026-02-22T15:10:00.000Z")
     });
 
@@ -271,7 +272,7 @@ describe("commitBubble", () => {
     expect(result.envelope.type).toBe("COMMIT_RESULT");
     expect("donePackagePath" in result).toBe(false);
     expect(result.envelope.payload).toEqual({
-      commit_message: "bubble(b_commit_02): finalize",
+      commit_message: "feat(commit): finalize approved bubble",
       commit_sha: result.commitSha,
       staged_files: ["feature.txt"]
     });
@@ -288,7 +289,98 @@ describe("commitBubble", () => {
     });
 
     const log = await runGit(bubble.paths.worktreePath, ["log", "-1", "--pretty=%s"]);
-    expect(log.stdout.trim()).toBe("bubble(b_commit_02): finalize");
+    expect(log.stdout.trim()).toBe("feat(commit): finalize approved bubble");
+  });
+
+  it("fails before git commit when staged files have no explicit message", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupApprovedBubble(repoPath, "b_commit_message_required");
+
+    await writeFile(
+      join(bubble.paths.worktreePath, "feature.txt"),
+      "new behavior\n",
+      "utf8"
+    );
+    await runGit(bubble.paths.worktreePath, ["add", "feature.txt"]);
+    const headBefore = (
+      await runGit(bubble.paths.worktreePath, ["rev-parse", "HEAD"])
+    ).stdout.trim();
+
+    await expect(
+      commitBubble({
+        bubbleId: bubble.bubbleId,
+        cwd: repoPath
+      })
+    ).rejects.toThrow(/COMMIT_MESSAGE_REQUIRED/u);
+
+    const headAfter = (
+      await runGit(bubble.paths.worktreePath, ["rev-parse", "HEAD"])
+    ).stdout.trim();
+    expect(headAfter).toBe(headBefore);
+    const state = await readStateSnapshot(bubble.paths.statePath);
+    expect(state.state.state).toBe("APPROVED_FOR_COMMIT");
+    const transcript = await readTranscriptEnvelopes(bubble.paths.transcriptPath);
+    expect(transcript.some((envelope) => envelope.type === "COMMIT_RESULT")).toBe(false);
+  });
+
+  it("fails before staging changes when stageAll has no explicit message", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupApprovedBubble(repoPath, "b_commit_stage_all_message_required");
+
+    await writeFile(
+      join(bubble.paths.worktreePath, "feature-stage-all.txt"),
+      "new behavior\n",
+      "utf8"
+    );
+
+    await expect(
+      commitBubble({
+        bubbleId: bubble.bubbleId,
+        cwd: repoPath,
+        stageAll: true
+      })
+    ).rejects.toThrow(/COMMIT_MESSAGE_REQUIRED/u);
+
+    const cachedFiles = (
+      await runGit(bubble.paths.worktreePath, ["diff", "--cached", "--name-only"])
+    ).stdout.trim();
+    expect(cachedFiles).toBe("");
+    const state = await readStateSnapshot(bubble.paths.statePath);
+    expect(state.state.state).toBe("APPROVED_FOR_COMMIT");
+    const transcript = await readTranscriptEnvelopes(bubble.paths.transcriptPath);
+    expect(transcript.some((envelope) => envelope.type === "COMMIT_RESULT")).toBe(false);
+  });
+
+  it("fails before git commit when staged files have a rejected explicit message", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupApprovedBubble(repoPath, "b_commit_message_rejected");
+
+    await writeFile(
+      join(bubble.paths.worktreePath, "feature.txt"),
+      "new behavior\n",
+      "utf8"
+    );
+    await runGit(bubble.paths.worktreePath, ["add", "feature.txt"]);
+    const headBefore = (
+      await runGit(bubble.paths.worktreePath, ["rev-parse", "HEAD"])
+    ).stdout.trim();
+
+    await expect(
+      commitBubble({
+        bubbleId: bubble.bubbleId,
+        cwd: repoPath,
+        message: `bubble(${bubble.bubbleId}): finalize`
+      })
+    ).rejects.toThrow(/COMMIT_MESSAGE_POLICY_REJECTED/u);
+
+    const headAfter = (
+      await runGit(bubble.paths.worktreePath, ["rev-parse", "HEAD"])
+    ).stdout.trim();
+    expect(headAfter).toBe(headBefore);
+    const state = await readStateSnapshot(bubble.paths.statePath);
+    expect(state.state.state).toBe("APPROVED_FOR_COMMIT");
+    const transcript = await readTranscriptEnvelopes(bubble.paths.transcriptPath);
+    expect(transcript.some((envelope) => envelope.type === "COMMIT_RESULT")).toBe(false);
   });
 
   it("does not require done-package artifact before commit", async () => {
@@ -304,7 +396,8 @@ describe("commitBubble", () => {
 
     const result = await commitBubble({
       bubbleId: bubble.bubbleId,
-      cwd: repoPath
+      cwd: repoPath,
+      message: "fix(commit): finalize without done package"
     });
 
     expect(result.state.state).toBe("DONE");
@@ -325,6 +418,7 @@ describe("commitBubble", () => {
       bubbleId: bubble.bubbleId,
       cwd: repoPath,
       stageAll: true,
+      message: "feat(commit): stage all changes",
       now: new Date("2026-02-22T15:20:00.000Z")
     });
 
@@ -338,7 +432,7 @@ describe("commitBubble", () => {
     ).rejects.toMatchObject({ code: "ENOENT" });
   });
 
-  it("supports forced empty finalize commits", async () => {
+  it("supports forced empty commits with an accepted explicit message", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupApprovedBubble(repoPath, "b_commit_empty_force");
 
@@ -346,6 +440,7 @@ describe("commitBubble", () => {
       bubbleId: bubble.bubbleId,
       cwd: repoPath,
       force: true,
+      message: "chore(commit): record empty lifecycle checkpoint",
       now: new Date("2026-02-22T15:25:00.000Z")
     });
 
@@ -353,7 +448,7 @@ describe("commitBubble", () => {
     expect(result.stagedFiles).toEqual([]);
     expect(result.envelope.type).toBe("COMMIT_RESULT");
     expect(result.envelope.payload).toEqual({
-      commit_message: "bubble(b_commit_empty_force): finalize",
+      commit_message: "chore(commit): record empty lifecycle checkpoint",
       commit_sha: result.commitSha,
       staged_files: []
     });
@@ -363,7 +458,29 @@ describe("commitBubble", () => {
       "-1",
       "--pretty=%s"
     ]);
-    expect(log.stdout.trim()).toBe("bubble(b_commit_empty_force): finalize");
+    expect(log.stdout.trim()).toBe("chore(commit): record empty lifecycle checkpoint");
+  });
+
+  it("fails before forced empty commit when no explicit message is provided", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupApprovedBubble(repoPath, "b_commit_empty_force_missing");
+    const headBefore = (
+      await runGit(bubble.paths.worktreePath, ["rev-parse", "HEAD"])
+    ).stdout.trim();
+
+    await expect(
+      commitBubble({
+        bubbleId: bubble.bubbleId,
+        cwd: repoPath,
+        force: true,
+        now: new Date("2026-02-22T15:25:00.000Z")
+      })
+    ).rejects.toThrow(/COMMIT_MESSAGE_REQUIRED/u);
+
+    const headAfter = (
+      await runGit(bubble.paths.worktreePath, ["rev-parse", "HEAD"])
+    ).stdout.trim();
+    expect(headAfter).toBe(headBefore);
   });
 
   it("keeps temporary auto compatibility as staging-only", async () => {
@@ -380,6 +497,7 @@ describe("commitBubble", () => {
       bubbleId: bubble.bubbleId,
       cwd: repoPath,
       auto: true,
+      message: "feat(commit): stage auto compatibility changes",
       now: new Date("2026-02-22T15:21:00.000Z")
     });
 
@@ -443,6 +561,7 @@ describe("commitBubble", () => {
       commitBubble({
         bubbleId: bubble.bubbleId,
         cwd: repoPath,
+        message: "feat(clone): sync local clone change",
         now: new Date("2026-02-22T15:25:00.000Z")
       })
     ).rejects.toThrow(/COMMIT_CLONE_SOURCE_BRANCH_SYNC_FAILED/u);
@@ -477,6 +596,7 @@ describe("commitBubble", () => {
     const result = await commitBubble({
       bubbleId: bubble.bubbleId,
       cwd: repoPath,
+      message: "feat(clone): finalize fresh clone change",
       now: new Date("2026-02-22T15:27:00.000Z")
     });
 
@@ -790,7 +910,7 @@ describe("commitBubble", () => {
       round: 2,
       payload: {
         staged_files: ["feature-public.txt"],
-        commit_message: "bubble(b_commit_remote_public_01): finalize",
+        commit_message: "feat(remote): finalize public commit",
         commit_sha: "fedcba9876543210"
       },
       refs: []
@@ -800,6 +920,7 @@ describe("commitBubble", () => {
       {
         bubbleId: "b_commit_remote_public_01",
         cwd: repoPath,
+        message: "feat(remote): finalize public commit",
         now: new Date("2026-04-18T08:20:00.000Z")
       },
       {
@@ -830,7 +951,7 @@ describe("commitBubble", () => {
           stateContent: `${JSON.stringify(remoteState, null, 2)}\n`,
           transcriptContent: `${JSON.stringify(remoteEnvelope)}\n`,
           commitSha: "fedcba9876543210",
-          commitMessage: "bubble(b_commit_remote_public_01): finalize",
+          commitMessage: "feat(remote): finalize public commit",
           stagedFiles: ["feature-public.txt"]
         })),
         appendProtocolEnvelope: vi.fn(async () => {

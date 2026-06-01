@@ -14,7 +14,10 @@ import {
   persistCommittedThenDoneState
 } from "../finalization/commitCommandFinalization.js";
 import { syncRemoteCommitContinuityArtifacts } from "../../remoteCommitContinuitySync.js";
-import { runCommitGitStep } from "../git/commitCommandGitStep.js";
+import {
+  resolveAcceptedCommitMessage,
+  runCommitGitStep
+} from "../git/commitCommandGitStep.js";
 import {
   canonicalizeCommitExecutionPath,
   resolveRemoteCommitExecutionContextFromEnv
@@ -256,12 +259,28 @@ async function commitRemoteExecutionRoute(input: {
     );
   }
 
+  const commitMessage = input.command.message === undefined
+    ? (
+        input.stageAll
+          ? resolveAcceptedCommitMessage({
+              message: input.command.message,
+              bubbleId: input.context.resolved.bubbleId,
+              worktreePath: input.context.remotePointer.remoteClonePath
+            })
+          : undefined
+      )
+    : resolveAcceptedCommitMessage({
+        message: input.command.message,
+        bubbleId: input.context.resolved.bubbleId,
+        worktreePath: input.context.remotePointer.remoteClonePath
+      });
+
   const remoteResult = await input.dependencies.executeRemoteBubbleCommitCommand({
     bubbleId: input.command.bubbleId,
     remoteClonePath: input.context.remotePointer.remoteClonePath,
     remoteTarget: input.context.remoteTarget,
     refs: input.refs,
-    ...(input.command.message !== undefined ? { message: input.command.message } : {}),
+    ...(commitMessage !== undefined ? { message: commitMessage } : {}),
     stageAll: input.stageAll
   });
 

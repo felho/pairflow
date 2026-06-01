@@ -4,6 +4,7 @@ import type {
   CommitRuntimeContext
 } from "../../commitCommandApiContract.js";
 import type { RunGitPort } from "../../../../ports/git.js";
+import { classifyCommitMessage } from "../../../../shared/commitPolicy/commitMessagePolicy.js";
 import { BubbleCommitError } from "../error/commitCommandRuntime.js";
 import {
   assertStagedFilesWithinWorktree,
@@ -12,6 +13,8 @@ import {
 } from "./commitStagedFiles.js";
 
 const CLONE_SOURCE_BRANCH_SYNC_FAILED = "COMMIT_CLONE_SOURCE_BRANCH_SYNC_FAILED";
+const COMMIT_MESSAGE_REQUIRED = "COMMIT_MESSAGE_REQUIRED";
+const COMMIT_MESSAGE_POLICY_REJECTED = "COMMIT_MESSAGE_POLICY_REJECTED";
 
 function parseOutputLines(stdout: string): string[] {
   return [...new Set(stdout
@@ -27,6 +30,56 @@ function formatGitFailureDetail(result: {
 }): string {
   const detail = result.stderr.trim() || result.stdout.trim();
   return detail.length > 0 ? detail : `git exit code ${result.exitCode}`;
+}
+
+export function resolveAcceptedCommitMessage(input: {
+  message?: string | undefined;
+  bubbleId: string;
+  worktreePath: string;
+}): string {
+  if (input.message === undefined) {
+    throw new BubbleCommitError(
+      formatCommitErrorMessage({
+        reasonCode: COMMIT_MESSAGE_REQUIRED,
+        message:
+          "A conventional --message is required before Pairflow creates a new lifecycle commit. See docs/commit-message-guidance.md.",
+        context: {
+          bubble_id: input.bubbleId,
+          command_name: "commit",
+          worktree_path: input.worktreePath
+        }
+      })
+    );
+  }
+
+  const policy = classifyCommitMessage(input.message);
+  if (policy.status === "rejected") {
+    throw new BubbleCommitError(
+      formatCommitErrorMessage({
+        reasonCode: COMMIT_MESSAGE_POLICY_REJECTED,
+        message: policy.message,
+        context: {
+          bubble_id: input.bubbleId,
+          command_name: "commit",
+          policy_class: policy.class,
+          policy_reason_code: policy.reason_code,
+          worktree_path: input.worktreePath
+        }
+      })
+    );
+  }
+
+  return input.message;
+}
+
+function resolveOptionalAcceptedCommitMessage(input: {
+  message?: string | undefined;
+  bubbleId: string;
+  worktreePath: string;
+}): string | undefined {
+  return input.message === undefined
+    ? undefined
+    : resolveAcceptedCommitMessage(input);
 }
 
 function toCloneSourceSyncError(input: {
@@ -308,6 +361,18 @@ export async function runCommitGitStep(input: {
   force: boolean;
   runGit: RunGitPort;
 }): Promise<CommitGitResult> {
+  const prevalidatedCommitMessage = input.stageAll
+    ? resolveAcceptedCommitMessage({
+        message: input.command.message,
+        bubbleId: input.context.resolved.bubbleId,
+        worktreePath: input.context.resolved.bubblePaths.worktreePath
+      })
+    : resolveOptionalAcceptedCommitMessage({
+        message: input.command.message,
+        bubbleId: input.context.resolved.bubbleId,
+        worktreePath: input.context.resolved.bubblePaths.worktreePath
+      });
+
   if (input.stageAll) {
     await input.runGit(["add", "-A"], {
       cwd: input.context.resolved.bubblePaths.worktreePath
@@ -320,8 +385,12 @@ export async function runCommitGitStep(input: {
   );
   if (stagedFiles.length === 0) {
     if (input.force) {
-      const commitMessage =
-        input.command.message ?? `bubble(${input.context.resolved.bubbleId}): finalize`;
+      const commitMessage = prevalidatedCommitMessage
+        ?? resolveAcceptedCommitMessage({
+          message: input.command.message,
+          bubbleId: input.context.resolved.bubbleId,
+          worktreePath: input.context.resolved.bubblePaths.worktreePath
+        });
       await input.runGit(["commit", "--allow-empty", "-m", commitMessage], {
         cwd: input.context.resolved.bubblePaths.worktreePath
       });
@@ -377,7 +446,12 @@ export async function runCommitGitStep(input: {
     input.context.resolved.bubbleId
   );
 
-  const commitMessage = input.command.message ?? `bubble(${input.context.resolved.bubbleId}): finalize`;
+  const commitMessage = prevalidatedCommitMessage
+    ?? resolveAcceptedCommitMessage({
+      message: input.command.message,
+      bubbleId: input.context.resolved.bubbleId,
+      worktreePath: input.context.resolved.bubblePaths.worktreePath
+    });
   await input.runGit(["commit", "-m", commitMessage], {
     cwd: input.context.resolved.bubblePaths.worktreePath
   });

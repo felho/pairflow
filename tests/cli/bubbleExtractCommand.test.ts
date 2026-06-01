@@ -770,8 +770,36 @@ describe("extractBubble", () => {
     expect(result).toMatchObject({
       status: "success",
       commitSha: "def456",
-      commitMessage: "extract(b_extract_01): copy selected ideation artifacts"
+      commitMessage: "docs(extract): copy selected ideation artifacts"
     });
+  });
+
+  it("fails before creating an extract commit when the explicit message is rejected", async () => {
+    const commands: string[] = [];
+    const delegateRunGit = successfulExtractCommitRunGit();
+    const runGit: RunGitPort = async (args: string[]) => {
+      commands.push(args.join(" "));
+      return delegateRunGit(args, { cwd: "/repo", allowFailure: true });
+    };
+
+    const result = await extractBubble(
+      {
+        ...baseCommand,
+        commit: true,
+        message: "extract(b_extract_01): copy selected ideation artifacts"
+      },
+      dependencies({ runGit })
+    );
+
+    expect(result).toMatchObject({
+      status: "failed",
+      reasonCode: "EXTRACT_COMMIT_MESSAGE_POLICY_REJECTED",
+      diagnostics: {
+        stderr: "Commit message first line must use an accepted policy form. See docs/commit-message-guidance.md."
+      }
+    });
+    expect(commands.some((command) => command.startsWith("commit-tree "))).toBe(false);
+    expect(commands.some((command) => command.startsWith("update-ref "))).toBe(false);
   });
 
   it("fails before commit when staged scope differs from selected paths", async () => {
@@ -1051,8 +1079,8 @@ describe("extractBubble", () => {
         stderr: "cannot lock ref HEAD"
       }
     });
-    expect(commands).toContain("commit-tree tree123 -p base123 -m extract(b_extract_01): copy selected ideation artifacts");
-    expect(commands).toContain("update-ref -m extract(b_extract_01): copy selected ideation artifacts HEAD abc123 base123");
+    expect(commands).toContain("commit-tree tree123 -p base123 -m docs(extract): copy selected ideation artifacts");
+    expect(commands).toContain("update-ref -m docs(extract): copy selected ideation artifacts HEAD abc123 base123");
   });
 
   it("returns commit failure when commit creation fails", async () => {
