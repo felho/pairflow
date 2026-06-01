@@ -25,6 +25,22 @@ For authority-heavy scopes, also inspect consume families:
 3. read-model consumers,
 4. cleanup/recovery consumers.
 
+This inspection is discovery-first. Do not satisfy it by copying the consumer
+list declared by the task. For every plausibly relevant lifecycle role, record
+`present`, `absent`, or `unknown`:
+1. producer,
+2. validator/gate,
+3. persistence/replay,
+4. execution consumers,
+5. workflow/orchestration,
+6. read/presentation,
+7. recovery/cleanup,
+8. external/integration.
+
+`unknown` is not a pass state. If a role plausibly exists but target-file
+reality or adjacent entrypoint inspection did not inspect it, the artifact is
+not ready for implementation approval.
+
 ## Risk Axes
 
 Score each axis `0|1|2`.
@@ -110,7 +126,11 @@ Do not keep the scope as a single implementation task if any of the following is
 3. The task activates behavior that explicitly depends on unfinished milestone work.
 4. The task relies on multiple competing authority paths for the same decision.
 5. The task mixes contract cutover and UI consume cutover while the primary consumer depends on fragile identity matching.
-6. The same authority touches 3 or more consume families. In this case, `foundation -> delivery -> activation` is not a sufficient default split; producer-first plus consumer-family split is mandatory.
+6. A completed discovery scan confirms that the same authority touches 3 or
+   more consume families. In this case, `foundation -> delivery -> activation`
+   is not a sufficient default split; producer-first plus consumer-family split
+   is mandatory. If the scan still has plausible `unknown` families, require
+   refinement before applying this hard stop.
 7. The same bounded slice would change:
    - the authority producer,
    - a shared contract/result shape,

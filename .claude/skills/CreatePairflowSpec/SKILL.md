@@ -318,12 +318,30 @@ The scan must explicitly inventory the relevant generic authority buckets, eithe
 4. `workflow_orchestration_consumers`
 5. `read_model_consumers`
 6. `cleanup_recovery_consumers`
+7. `validator_gate_consumers`
+8. `external_integration_consumers`
 
 Bucket intent:
 1. `internal_execution_consumers`: runtime/execution paths that act on the authority.
 2. `workflow_orchestration_consumers`: orchestration, state-machine, routing, or decision-flow consumers.
 3. `read_model_consumers`: projections, reports, UI/API reads, or other consumer-facing views.
 4. `cleanup_recovery_consumers`: teardown, rollback, migration, cleanup, or recovery paths.
+5. `validator_gate_consumers`: hooks, CI checks, policy validators, precondition gates, or import-time checks.
+6. `external_integration_consumers`: shell commands, Git, remote transports, webhooks, package managers, auth providers, or other external serialization/transport boundaries.
+
+Discovery rule:
+1. The scan is discovery-first, not a restatement of the task's declared
+   consumers.
+2. Each bucket must be recorded as `present`, `absent`, or `unknown`.
+3. `absent` requires a short evidence note from target-file reality, adjacent
+   entrypoint inspection, parent-plan boundaries, or source-anchor context.
+4. Any plausibly relevant but uninspected bucket is `unknown`, not `absent`.
+5. `unknown` fan-out blocks implementation approval until refined, routed back,
+   or explicitly accepted by the human as a knowingly high-risk bundle.
+6. When a command, hook, runtime behavior, authority, or shared contract has
+   multiple execution variants, inspect for local/remote, interactive/batch,
+   retry/continuation, import/export, and UI/API/CLI variants before declaring
+   a bucket absent.
 
 Policy:
 1. Do not treat the scope as a single entrypoint-specific or feature task when the same authority fans out into multiple consume families.
@@ -338,7 +356,11 @@ Policy:
 4. Prefer the smallest safe split:
    - collapse adjacent closures when they are owned by the same code path, touch the same consumers, and do not introduce a distinct compatibility/read-model risk,
    - keep closures separate only when they cross a real boundary.
-5. If the scan reveals three or more consume families, producer-first sequencing is mandatory, but not necessarily six separate phases.
+5. If the completed scan confirms three or more consume families, the task is
+   not implementation-ready as a single bounded task unless it records an
+   explicit human override and a knowingly high-risk bundle rationale.
+   Producer-first sequencing is mandatory, but not necessarily six separate
+   phases.
 6. The output artifact may rename these buckets into domain-specific terms, but the generic-to-local mapping must remain explicit and auditable.
 7. In plans, use the scan only to justify decomposition and lightweight sequencing notes.
 8. In tasks and task reviews, use the scan to prove actual scope ownership.
@@ -516,65 +538,65 @@ Policy:
    outputs such as `risk_score`, `split_decision`, authority fan-out inventory,
    closure-budget triage, and bounded-task-shape classification must be present
    and auditable in the task artifact.
-19. For Plans with authority/read-model/multi-consumer relevance, a control-model section is mandatory. It must explicitly state:
+20. For Plans with authority/read-model/multi-consumer relevance, a control-model section is mandatory. It must explicitly state:
    - business invariant,
    - control model,
    - read-path rule,
    - forbidden fallback,
    - allowed resolution path when deterministic same-authority resolution matters,
    - missing-data rule.
-20. For Tasks with authority/read-model/multi-consumer relevance, the task must either inherit or restate those same control-model clauses explicitly enough for implementation.
-21. Tasks with authority/read-model/multi-consumer relevance should include an `Authority Boundary Map` capturing:
+21. For Tasks with authority/read-model/multi-consumer relevance, the task must either inherit or restate those same control-model clauses explicitly enough for implementation.
+22. Tasks with authority/read-model/multi-consumer relevance should include an `Authority Boundary Map` capturing:
    - authority producer,
    - stored authority,
    - in-scope consumers,
    - explicit out-of-scope consumers,
    - whether export surfaces are closed in this phase.
-22. If any of those control-model clauses are missing and materially affect correctness, the artifact must remain blocked until clarified.
-23. Tasks that refine or replace an existing canonicalization/resolution path must include a `Baseline Preservation` section with:
+23. If any of those control-model clauses are missing and materially affect correctness, the artifact must remain blocked until clarified.
+24. Tasks that refine or replace an existing canonicalization/resolution path must include a `Baseline Preservation` section with:
    - `must_preserve_behaviors`,
    - `allowed_resolution_paths`,
    - `forbidden_regression_interpretations`,
    - `replacement_proof_required_if_removed`.
-24. If a current behavior is being removed, the artifact must identify the exact replacement path and the equivalence or intentional-difference proof expected from validation.
-25. Tasks must record closure-budget triage explicitly when authority/runtime/read-model/shared-contract work is in scope:
+25. If a current behavior is being removed, the artifact must identify the exact replacement path and the equivalence or intentional-difference proof expected from validation.
+26. Tasks must record closure-budget triage explicitly when authority/runtime/read-model/shared-contract work is in scope:
    - closure buckets touched,
    - which closures are intentionally collapsed,
    - why that collapse is safe,
    - which closures are explicitly deferred.
-26. Tasks for mutable/runtime flows must record bounded-task-shape classification explicitly:
+27. Tasks for mutable/runtime flows must record bounded-task-shape classification explicitly:
    - primary shape,
    - secondary shape (if any),
    - why that mix is safe when present.
-27. Tasks that modify an existing mutation flow must include a `Precondition and Side-Effect Boundary` section capturing:
+28. Tasks that modify an existing mutation flow must include a `Precondition and Side-Effect Boundary` section capturing:
    - validations that must pass before side effects,
    - side effects forbidden before those validations pass,
    - invalid/precondition-failure behavior,
    - coordination primitives in scope or explicitly deferred.
-28. If a task changes mutation ordering or introduces coordination primitives, the test matrix must include at least one required-now invalid/precondition-failure scenario proving the expected zero-side-effect or bounded-side-effect behavior.
-29. `ReviewSpec plan-mode` is planning-only:
+29. If a task changes mutation ordering or introduces coordination primitives, the test matrix must include at least one required-now invalid/precondition-failure scenario proving the expected zero-side-effect or bounded-side-effect behavior.
+30. `ReviewSpec plan-mode` is planning-only:
    - check coverage, dependency, sequencing, and downstream viability,
    - do not turn it into implementation or code-review workflow.
-30. `ReviewSpec task-mode` must load the parent plan when `plan_ref` exists and treat parent-plan fit as mandatory review context, not optional background.
-31. `ReviewSpec task-mode` must inspect `target_files` when available and use the real touched scope to validate the bounded slice.
-32. Plan/task review must include a remaining-task viability check:
+31. `ReviewSpec task-mode` must load the parent plan when `plan_ref` exists and treat parent-plan fit as mandatory review context, not optional background.
+32. `ReviewSpec task-mode` must inspect `target_files` when available and use the real touched scope to validate the bounded slice.
+33. Plan/task review must include a remaining-task viability check:
    - whether downstream open tasks remain valid as written,
    - whether a plan/task refinement is needed,
    - whether a new split task is required,
    - whether a downstream task became obsolete,
    - whether phase ordering is invalidated.
-33. When a refined Plan or Task touches an already-closed authority/shared contract, a `Closed-Contract Drift Check` is mandatory:
+34. When a refined Plan or Task touches an already-closed authority/shared contract, a `Closed-Contract Drift Check` is mandatory:
    - source anchors,
    - canonical vs guard vs compat classification,
    - forbidden reinterpretations,
    - and drift status.
-34. A refined artifact must not be marked implementable/approvable if it is only locally coherent but contradicts repo-local source anchors for the same contract.
-35. Plans or tasks that claim a usable capability must record capability closure
+35. A refined artifact must not be marked implementable/approvable if it is only locally coherent but contradicts repo-local source anchors for the same contract.
+36. Plans or tasks that claim a usable capability must record capability closure
     classification and must keep Done Definition / acceptance wording aligned
     with that classification.
-36. `end_to_end` capability claims require a last-mile proof; hook/foundation/
+37. `end_to_end` capability claims require a last-mile proof; hook/foundation/
     deferred work must not be worded as fully usable automation.
-37. Ambiguous activation language such as `configured`, `wired`, `integrated`,
+38. Ambiguous activation language such as `configured`, `wired`, `integrated`,
     `available`, `supported`, or `ready` must name the configuration owner and
     shipped/external boundary before approval.
 

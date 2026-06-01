@@ -227,8 +227,23 @@ must name:
 
 Authority Fan-out Scan output is mandatory when a canonical authority is
 consumed by multiple surfaces or roles. The task must inventory the relevant
-consumer families and state whether the split is producer, consumer-family
-alignment, activation, read-model, or cleanup/rollout.
+consumer families through discovery, not by restating declared consumers from
+the task. For each lifecycle role, record `present`, `absent`, or `unknown`:
+1. producer
+2. validator/gate
+3. persistence/replay
+4. execution consumers
+5. workflow/orchestration
+6. read/presentation
+7. recovery/cleanup
+8. external/integration
+
+`unknown` means the role plausibly exists but was not inspected. Unknown
+plausible roles block `approve_task`. If three or more consumer families are
+confirmed, the task is not implementation-ready as one bounded task unless it
+records an explicit human override and a knowingly-high-risk bundle rationale.
+The task must state whether the split is producer, consumer-family alignment,
+activation, read-model, or cleanup/rollout.
 
 Outcome:
 1. If Complexity Risk Gate output is missing for an implementation-oriented
@@ -239,10 +254,12 @@ Outcome:
 3. If the output exists but omits specific required fields, return
    `refine_task` and list the missing fields.
 
-Optional parallel review lanes:
-1. For large task reviews, the orchestrator may split ReviewSpec task-mode into
-   independent sub-agent lanes, then combine the results into one final
-   ReviewSpec decision:
+Optional top-level parallel review lanes:
+1. For large task reviews, the top-level orchestrator/caller may split
+   ReviewSpec task-mode into independent sub-agent lanes, then combine the
+   results into one final ReviewSpec decision. Do not ask a ReviewSpec subagent
+   to spawn its own subagents when the runtime does not support nested
+   subagents.
    - `metadata_lane`: execution metadata, parent-plan linkage, remaining-task
      viability
    - `scope_lane`: target-file reality, authority fan-out, closure budget,
@@ -254,6 +271,9 @@ Optional parallel review lanes:
    be a single decision over the refreshed artifact.
 3. A lane may not approve the whole artifact. It can only report pass/fail for
    its assigned gate family and required refinements.
+4. If lane orchestration is unavailable, the single ReviewSpec pass must still
+   run the same gate-output audit and fan-out discovery itself; lane absence is
+   not a reason to skip scope discovery.
 
 ### 2b) Closed-Contract Drift Check (`plan-mode|task-mode` when applicable)
 
