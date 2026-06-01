@@ -29,6 +29,9 @@ Release authority belongs to content commits, not Pairflow lifecycle events.
 5. Commit-message validation applies to newly created commits after the policy
    is implemented. Existing history is not rewritten, revalidated as a whole, or
    made acceptable through cutoff, legacy-range, or compatibility modes.
+6. Classification uses only deterministic first-line commit headers. Commit
+   bodies, footers, branch names, pull request titles, and release-tool defaults
+   are not fallback release authority.
 
 ## Release Authority Classes
 
@@ -40,10 +43,14 @@ Release authority belongs to content commits, not Pairflow lifecycle events.
 | Breaking conventional content commit | `feat(cli)!: change command contract` | accepted for new validation | yes | breaking / major policy input | Breaking marker is explicit release input, regardless of conventional type. |
 | Internal refactor commit | `refactor(commit): isolate message parser` | accepted for new validation | yes | successor-owned, often none | Internal structure change without intended behavior change; release automation decides changelog/version effect. |
 | Conventional docs/test/build/ci/chore commit | `docs(release): document commit policy` | accepted for new validation | yes | successor-owned, often none | Accepted as conventional history; successor release automation decides changelog/version effect. |
-| Explicit merge header exception (tolerated integration artifact) | `Merge branch 'bubble/2-commit-policy-impl'` | accepted for new validation only in the exact configured header forms | no | none | Accepted only for the configured merge header forms so Pairflow/manual integration can remain compatible without widening validation; it is not the ideal release-authority path and must never be semver/changelog input. |
+| Explicit merge header exception (tolerated integration artifact) | `Merge branch 'bubble/2a-commit-policy-doc'` | accepted for new validation only in the exact configured header forms | no | none | Accepted only for the configured merge header forms so Pairflow/manual integration can remain compatible without widening validation; it is not the ideal release-authority path and must never be semver/changelog input. |
 | Standard or conventional revert commit | `Revert "feat(cli): add validator"` / `revert(cli): remove validator change` | accepted for new validation | recovery input | successor-owned | Recovery history remains valid; release automation decides whether and how the revert affects changelog/versioning. |
-| Historical Pairflow lifecycle finalize | `bubble(2-commit-policy-impl): finalize` | tolerated only when already present before this policy; rejected for new validation | no | none | Historical noise only; new policy must not accept or generate this message class. |
-| Ambiguous prose | `update stuff` | rejected for new validation | no | none | Reject with guidance. |
+| Historical Pairflow lifecycle finalize | `bubble(2c-commit-policy): finalize` | tolerated only when already present before this policy; rejected for new validation | no | none | Historical noise only; new policy must not accept or generate this message class. |
+| Ambiguous prose | `update stuff` | rejected for new validation | no | none | Reject with guidance or route to policy refinement when the taxonomy is incomplete. |
+
+Accepted conventional content types are exactly `feat`, `fix`, `perf`,
+`refactor`, `docs`, `test`, `build`, `ci`, and `chore`, with optional
+conventional scope and optional conventional breaking marker.
 
 ## Bubble Branch Commit Flow
 
@@ -163,15 +170,35 @@ Commit-message validation should:
    validation only if they print that the new-commit range check was not
    applicable and do not claim range validation passed.
 
+## Operator Guidance
+
+Operators and agents preparing commits should read
+`docs/commit-message-guidance.md`. That file mirrors this taxonomy for commit
+preparation, but it is not a competing source of truth.
+
 ## Successor Task Boundaries
 
-`2-commit-policy` owns:
+`2a-commit-policy` owns:
 
-1. local guidance,
-2. validation entrypoints,
-3. hook/check wiring,
-4. bubble commit message compatibility changes,
-5. tests for the classification contract.
+1. this authority document,
+2. operator-facing commit-message guidance,
+3. the lightweight `AGENTS.md` pointer,
+4. the canonical taxonomy and handoff boundary for successor tasks.
+
+`2b-commit-policy` owns:
+
+1. validation entrypoints,
+2. hook/check wiring,
+3. deterministic safe-range validation behavior for newly created commits,
+4. focused tests for the classification contract.
+
+`2c-commit-policy` owns:
+
+1. local and remote `pairflow bubble commit` producer alignment,
+2. merge/revert compatibility for Pairflow lifecycle operations,
+3. explicit classification, deferral, or alignment for adjacent producers such
+   as `bubble extract --commit`,
+4. lifecycle compatibility with the validation behavior from `2b`.
 
 `3-release-automation` owns:
 
