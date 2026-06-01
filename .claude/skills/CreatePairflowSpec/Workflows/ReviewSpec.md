@@ -142,10 +142,11 @@ For `task-mode`, apply:
 6. `Authority Fan-out Scan`
 7. `Closure-Budget Gate`
 8. `Bounded-Task-Shape Gate`
-9. `Complexity-Risk Gate`
-10. `Contract-Dense Task Gate` when applicable
-11. `Capability Closure Gate` when applicable
-12. `Remaining-Task Viability Check`
+9. `Scoped Invariant Gate` when applicable
+10. `Complexity-Risk Gate`
+11. `Contract-Dense Task Gate` when applicable
+12. `Capability Closure Gate` when applicable
+13. `Remaining-Task Viability Check`
 
 Policy:
 1. Review whether the artifact still fits the planning shape it claims.
@@ -264,6 +265,21 @@ confirmed, the task is not implementation-ready as one bounded task unless it
 records an explicit human override and a knowingly-high-risk bundle rationale.
 The task must state whether the split is producer, consumer-family alignment,
 activation, read-model, or cleanup/rollout.
+
+Scoped Invariant Gate output is mandatory when broad task-level invariant
+language is present in acceptance, Done Definition, safety defaults, or L1. For
+each broad invariant, the task must name:
+1. invariant text or token,
+2. `applies_to`,
+3. `does_not_apply_to`,
+4. `proof_surface`,
+5. `deferred_or_external_surfaces`,
+6. reviewer non-goals,
+7. split or route-back decision when the invariant cannot be bounded locally.
+
+Do not approve a task where universal-sounding phrases such as `compatible`,
+`deterministic`, `normal flow`, `must not block`, `always`, or `never` can be
+read to include adjacent consumer families that the task has not scoped.
 
 Outcome:
 1. If Complexity Risk Gate output is missing for an implementation-oriented
@@ -548,6 +564,8 @@ Always include:
     activation boundary status, and last-mile proof status
 16. in `task-mode`, the Mandatory Gate-Output Audit result, including triggered
     gates, missing output fields, and split/no-split decision status
+17. when the Scoped Invariant Gate applies, each broad invariant's scope
+    boundary and proof-surface status
 
 ### 7) Output rules
 

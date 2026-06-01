@@ -474,7 +474,27 @@ Policy:
 9. If the task mixes `authority_producer` with `fail_closed_hardening` or `coordination_concurrency_hardening` without an explicit bounded proof, route back to `CreatePlan`.
 10. If the task changes success/completion proof boundary and also changes compat result/status/event semantics, treat that as mixed-shape by default and route back to `CreatePlan` unless an explicit bounded proof says otherwise.
 
-### 1k) Run the Complexity-Risk Gate
+### 1k) Run the Scoped Invariant Gate
+
+Use `references/Scoped-Invariant-Gate.md`.
+
+Run this gate when task-level acceptance, Done Definition, safety defaults, or
+L1 rules use broad invariant language such as `must`, `must not`, `compatible`,
+`deterministic`, `normal flow`, `always`, `never`, or `all`.
+
+Policy:
+1. Keep system-wide policy in the parent artifact or authoritative document.
+2. In the task, name only the slice of that policy owned now.
+3. For each broad invariant, record:
+   - `applies_to`,
+   - `does_not_apply_to`,
+   - `proof_surface`,
+   - `deferred_or_external_surfaces`,
+   - reviewer non-goals.
+4. If the invariant cannot be bounded locally, split or route back before L1 is
+   finalized.
+
+### 1l) Run the Complexity-Risk Gate
 
 Use `references/Complexity-Risk-Gate.md`.
 
@@ -639,12 +659,20 @@ Required blockers for Task output:
    hides multiple independent closures, or if it mixes producer with
    fail-closed/coordination work without an explicit bounded proof, the task is
    not ready.
-25. If the Closed-Contract Drift Check applies, blockers also include:
+25. If the task uses broad invariant language, blockers also include a
+   `Scoped Invariants` record:
+   - invariant text or token,
+   - applies-to boundary,
+   - does-not-apply-to boundary,
+   - proof surface,
+   - deferred or external surfaces,
+   - reviewer non-goals.
+26. If the Closed-Contract Drift Check applies, blockers also include:
    - repo-local source anchors,
    - canonical vs guard vs compat classification,
    - forbidden reinterpretations,
    - drift status proving there is no unauthorized semantic change.
-26. If the task changes an existing mutable flow's success/completion semantics, blockers also include:
+27. If the task changes an existing mutable flow's success/completion semantics, blockers also include:
    - current canonical success/completion proof source,
    - target canonical success/completion proof source,
    - final result/status/event truth-surface mapping,
@@ -806,7 +834,13 @@ Run a document-level consistency gate:
    - invalid/precondition-failure behavior is explicit,
    - forbidden early side effects do not reappear elsewhere in L1,
    - any new lock/mutex/serialization primitive is reflected in the bounded task shape and test matrix.
-14. Re-check success/completion proof fit:
+14. Re-check scoped invariant fit:
+   - broad `must`, `compatible`, `deterministic`, `normal flow`, `always`, and
+     `never` claims have concrete apply/exclude boundaries,
+   - proof surfaces are strong enough for the scoped claim,
+   - adjacent consumer families are not being pulled into required-now scope by
+     implication.
+15. Re-check success/completion proof fit:
    - current vs target proof boundary is explicit,
    - final result/status/event surfaces are mapped,
    - no field is silently populated from a different proof phase than its surrounding surface implies,

@@ -448,6 +448,34 @@ Policy:
 9. If the author cannot clearly classify the bounded slice, the artifact is not ready for implementable output yet.
 10. Plans may mention sequencing implications of task shape, but should not carry full per-phase shape math by default.
 
+## Scoped Invariant Gate (Mandatory When Triggered)
+
+Before drafting or approving implementation-oriented Task artifacts, run the
+`Scoped Invariant Gate` when task-level acceptance, Done Definition, safety
+defaults, or L1 rules use broad invariant language such as `must`, `must not`,
+`compatible`, `deterministic`, `normal flow`, `always`, `never`, or `all`.
+
+Use `references/Scoped-Invariant-Gate.md`.
+
+Policy:
+1. Broad task-level invariants are allowed only when sliced to concrete
+   commands, files, entrypoints, inputs, or surfaces.
+2. A system-wide invariant belongs in an authoritative parent artifact or
+   policy document; the task must state which slice of that invariant it owns
+   now.
+3. Each broad invariant must name:
+   - `applies_to`,
+   - `does_not_apply_to`,
+   - `proof_surface`,
+   - `deferred_or_external_surfaces`,
+   - and reviewer non-goals.
+4. If proving the invariant requires consumer families outside the declared
+   bounded slice, route back to task or plan refinement instead of expanding
+   implementation acceptance implicitly.
+5. Do not let phrases like `merge remains compatible`, `normal flow must not be
+   blocked`, or `validation must be deterministic` pull every plausible edge
+   case into required-now scope without an explicit slice boundary.
+
 ## Complexity-Risk Gate (Mandatory)
 
 Before drafting implementation-oriented Plan or Task artifacts, run the `Complexity Risk Gate`.
@@ -521,6 +549,9 @@ Policy:
     before narrative wording.
 31. When one contract is mirrored across L0, L1, fallback, classification, and
     tests, maintain an explicit mirrored-surface checklist.
+32. Universal-sounding task invariants must be scoped before implementation:
+    record where they apply, where they do not apply, how this task proves
+    them, and which plausible adjacent surfaces are successor-owned or external.
 
 ## Minimum Contract Rules
 
@@ -600,29 +631,34 @@ Policy:
    - invalid/precondition-failure behavior,
    - coordination primitives in scope or explicitly deferred.
 29. If a task changes mutation ordering or introduces coordination primitives, the test matrix must include at least one required-now invalid/precondition-failure scenario proving the expected zero-side-effect or bounded-side-effect behavior.
-30. `ReviewSpec plan-mode` is planning-only:
+30. If the task uses broad invariant language such as `must`, `must not`,
+    `compatible`, `deterministic`, `normal flow`, `always`, `never`, or `all`,
+    it must include a scoped-invariant record naming `applies_to`,
+    `does_not_apply_to`, `proof_surface`, `deferred_or_external_surfaces`, and
+    reviewer non-goals.
+31. `ReviewSpec plan-mode` is planning-only:
    - check coverage, dependency, sequencing, and downstream viability,
    - do not turn it into implementation or code-review workflow.
-31. `ReviewSpec task-mode` must load the parent plan when `plan_ref` exists and treat parent-plan fit as mandatory review context, not optional background.
-32. `ReviewSpec task-mode` must inspect `target_files` when available and use the real touched scope to validate the bounded slice.
-33. Plan/task review must include a remaining-task viability check:
+32. `ReviewSpec task-mode` must load the parent plan when `plan_ref` exists and treat parent-plan fit as mandatory review context, not optional background.
+33. `ReviewSpec task-mode` must inspect `target_files` when available and use the real touched scope to validate the bounded slice.
+34. Plan/task review must include a remaining-task viability check:
    - whether downstream open tasks remain valid as written,
    - whether a plan/task refinement is needed,
    - whether a new split task is required,
    - whether a downstream task became obsolete,
    - whether phase ordering is invalidated.
-34. When a refined Plan or Task touches an already-closed authority/shared contract, a `Closed-Contract Drift Check` is mandatory:
+35. When a refined Plan or Task touches an already-closed authority/shared contract, a `Closed-Contract Drift Check` is mandatory:
    - source anchors,
    - canonical vs guard vs compat classification,
    - forbidden reinterpretations,
    - and drift status.
-35. A refined artifact must not be marked implementable/approvable if it is only locally coherent but contradicts repo-local source anchors for the same contract.
-36. Plans or tasks that claim a usable capability must record capability closure
+36. A refined artifact must not be marked implementable/approvable if it is only locally coherent but contradicts repo-local source anchors for the same contract.
+37. Plans or tasks that claim a usable capability must record capability closure
     classification and must keep Done Definition / acceptance wording aligned
     with that classification.
-37. `end_to_end` capability claims require a last-mile proof; hook/foundation/
+38. `end_to_end` capability claims require a last-mile proof; hook/foundation/
     deferred work must not be worded as fully usable automation.
-38. Ambiguous activation language such as `configured`, `wired`, `integrated`,
+39. Ambiguous activation language such as `configured`, `wired`, `integrated`,
     `available`, `supported`, or `ready` must name the configuration owner and
     shipped/external boundary before approval.
 
@@ -633,6 +669,7 @@ Policy:
 - PRD template: `Templates/prd-template.md`
 - Control-model readiness gate: `references/Control-Model-Readiness-Gate.md`
 - Closed-contract drift check: `references/Closed-Contract-Drift-Check.md`
+- Scoped-invariant gate: `references/Scoped-Invariant-Gate.md`
 - L1 boundaries checklist: `references/L1-Contract-Boundaries.md`
 - Reviewer tags snippet: `references/Reviewer-Guidelines.md`
 - Complexity risk gate: `references/Complexity-Risk-Gate.md`

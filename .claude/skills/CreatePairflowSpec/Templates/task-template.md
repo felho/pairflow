@@ -139,6 +139,16 @@ Include this section when the task modifies an existing mutation flow or introdu
 
 1. <default-safe behavior>
 
+### Scoped Invariants
+
+Include this section when acceptance, Done Definition, safety defaults, or L1
+uses broad language such as `must`, `must not`, `compatible`, `deterministic`,
+`normal flow`, `always`, `never`, or `all`. Otherwise say `N/A`.
+
+| Invariant | Applies To | Does Not Apply To | Proof Surface | Deferred / External Surfaces | Reviewer Non-Goals |
+|---|---|---|---|---|---|
+| <text or token> | <commands/files/entrypoints/inputs/surfaces> | <plausible adjacent surfaces excluded> | <tests/validation/doc anchor> | <successor/plan/external owner or `N/A`> | <edge cases not inferred into this task> |
+
 ### Contract Boundary / Blast Radius
 
 1. `contract_boundary_override`: `yes|no`
@@ -174,7 +184,11 @@ Include this section when the task modifies an existing mutation flow or introdu
    - decomposed closures: `<closure list per declared shape>`
    - adjacent call-site/consumer-family scan: `<present|absent with evidence|unknown per plausible family>`
    - why this bounded mix is safe: `<text or N/A>`
-14. Contract-dense decision:
+14. Scoped-invariant decision:
+   - gate triggered: `<yes|no>`
+   - scoped invariant records: `<section ref or N/A>`
+   - unbounded invariant route-back: `<yes|no + reason or N/A>`
+15. Contract-dense decision:
    - gate triggered: `<yes|no>`
    - trigger reasons: `<API/result shape|status taxonomy|structured payload|fallback/precedence|split ownership|downstream consumers|mirrored surfaces|N/A>`
    - canonical matrix source: `<section/ref or N/A>`

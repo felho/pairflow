@@ -67,6 +67,7 @@ CreatePairflowSpec/
 │   ├── Contract-Dense-Task-Gate.md
 │   ├── Refactoring-Guidance-Gate.md
 │   ├── Remaining-Task-Viability-Check.md
+│   ├── Scoped-Invariant-Gate.md
 │   ├── L1-Contract-Boundaries.md
 │   └── Reviewer-Guidelines.md
 └── Tools/
