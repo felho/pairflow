@@ -1,0 +1,118 @@
+name: Guarded npm publish
+
+on:
+  release:
+    types:
+      - published
+  workflow_dispatch:
+    inputs:
+      dry_run_only:
+        description: "Force the guard-closed dry-run path"
+        required: false
+        default: true
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: npm-publish-${{ github.repository }}
+  cancel-in-progress: false
+
+jobs:
+  package-dry-run:
+    name: Package and guard-closed proof
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout release source
+        uses: actions/checkout@v4
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          registry-url: https://registry.npmjs.org
+      - name: Install root dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Install UI dependencies
+        run: pnpm --dir ui install --frozen-lockfile
+      - name: Validate release automation config
+        run: pnpm release:validate
+      - name: Build package
+        run: pnpm build
+      - name: Inspect packed package
+        run: npm pack --dry-run
+      - name: Prove publish guard is closed
+        if: ${{ vars.PAIRFLOW_NPM_PUBLISH_ENABLED != 'true' || inputs.dry_run_only == true }}
+        run: |
+          echo "PAIRFLOW_NPM_PUBLISH_ENABLED is not true, or dry_run_only is set."
+          echo "Real npm publish is intentionally disabled; running npm publish --dry-run only."
+      - name: npm publish dry-run
+        run: npm publish --dry-run --access public
+
+  real-publish:
+    name: Publish to npm
+    needs: package-dry-run
+    if: ${{ github.event_name == 'release' && vars.PAIRFLOW_NPM_PUBLISH_ENABLED == 'true' }}
+    runs-on: ubuntu-latest
+    environment: npm-publish
+    steps:
+      - name: Checkout release source
+        uses: actions/checkout@v4
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          registry-url: https://registry.npmjs.org
+      - name: Require NPM_TOKEN before real publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          if [ -z "$NODE_AUTH_TOKEN" ]; then
+            echo "NPM_TOKEN is required for real npm publish and was not provided."
+            exit 1
+          fi
+      - name: Install root dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Install UI dependencies
+        run: pnpm --dir ui install --frozen-lockfile
+      - name: Validate release automation config
+        run: pnpm release:validate
+      - name: Verify release tag matches package version
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          version=$(node -p "JSON.parse(require('fs').readFileSync('package.json', 'utf8')).version")
+          expected_tag="v$version"
+          if [ "$RELEASE_TAG" != "$expected_tag" ]; then
+            echo "GitHub release tag $RELEASE_TAG does not match package.json version $expected_tag."
+            exit 1
+          fi
+      - name: Build package
+        run: pnpm build
+      - name: Inspect packed package
+        run: npm pack --dry-run
+      - name: Refuse duplicate npm publish
+        run: |
+          version=$(node -p "JSON.parse(require('fs').readFileSync('package.json', 'utf8')).version")
+          view_error="$(mktemp)"
+          if npm view "@pairflow/cli@$version" version > /dev/null 2> "$view_error"; then
+            echo "@pairflow/cli@$version already exists on npm; refusing duplicate publish."
+            exit 1
+          fi
+          if grep -Eq "(E404|404 Not Found|is not in this registry)" "$view_error"; then
+            echo "@pairflow/cli@$version is not present on npm; continuing to publish."
+            exit 0
+          fi
+          echo "Unable to verify whether @pairflow/cli@$version already exists on npm; refusing duplicate publish."
+          cat "$view_error"
+          exit 1
+      - name: Publish package
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: npm publish --access public
