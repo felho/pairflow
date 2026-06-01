@@ -5,12 +5,12 @@ task_family_id: release-automation
 sequence_key: "3"
 task_id: 3-release-automation
 title: "Release Automation and Guarded NPM Publish"
-status: approved
+status: implementable
 phase: phase3
 target_files:
   - "package.json"
   - "pnpm-lock.yaml"
-  - ".github/workflows/release-please.yml"
+  - ".github/workflows/release.yml"
   - ".github/workflows/npm-publish.yml"
   - "release-please-config.json"
   - ".release-please-manifest.json"
@@ -80,8 +80,9 @@ opens public publish.
 3. Unlocks / impacts successors: unlocks `4-docs-site-pages` release semantics
    docs and `7-release-pilot`; informs install/upgrade examples used by later
    onboarding tasks.
-4. Task-list impact: refines planned `3-release-automation` from
-   `not_created` to an approved document-refinement task when review passes.
+4. Task-list impact: refines the already-approved `3-release-automation`
+   document contract so the later implementation bubble can proceed from an
+   implementable release automation scope.
 5. Inherited validation / exit expectation: implementation must run
    `pnpm typecheck`, `pnpm lint`, `pnpm fitness:check:ci`, focused release
    workflow/config validation or dry-run checks, `pnpm test`, and `pnpm build`,
@@ -97,9 +98,12 @@ opens public publish.
    - `tools/commit-policy/commitMessagePolicy.ts`
    - `tools/commit-policy/validateCommitRange.ts`
 2. New release automation anchors to create:
-   - `release-please-config.json`
-   - `.release-please-manifest.json`
-   - `.github/workflows/release-please.yml`
+   - Release Please config/manifest files (`release-please-config.json` and
+     `.release-please-manifest.json`) when Release Please satisfies the
+     history-selection contract, or equivalent chosen-tool configuration and
+     baseline manifest when replanning selects another standard tool.
+   - `.github/workflows/release.yml` or an equivalently named release PR/tag
+     workflow.
    - `.github/workflows/npm-publish.yml`
    - `CHANGELOG.md`
 3. Canonical elements: `@pairflow/cli`, `package.json.version`, standard
@@ -114,6 +118,12 @@ opens public publish.
 6. Forbidden reinterpretations: do not switch to first-parent-only release
    semantics, custom `@v.0.2.0` trigger messages, local publish steps as the
    release source, or a second version authority outside `package.json`.
+7. Tool-selection constraint: using Release Please is preferred only if the
+   implementation can prove it preserves the selected full-reachable-history
+   release strategy or can be configured/wrapped to do so without duplicating
+   commit taxonomy. If discovery shows the chosen tool only observes
+   first-parent merge history for this repository shape, the implementation
+   must stop and request replanning instead of weakening the history contract.
 
 ### Scope Reality / Shape Proof
 
@@ -141,6 +151,11 @@ opens public publish.
      artifacts.
    - implementation of workflows, package metadata, release configs, tests, or
      source files belongs to the later implementation bubble.
+   - L1 implementation sketches, L2 acceptance checks, target file lists, and
+     workflow names in this task are planning context only while
+     `review_artifact_type=document` is active; they do not authorize this
+     document bubble to create release configs, workflows, generated changelog
+     output, package scripts, or runtime/build artefacts.
 
 ### Refactor Classification
 
@@ -157,7 +172,7 @@ opens public publish.
 | Bucket | Status | Evidence / Boundary |
 |---|---|---|
 | `authority_producer` | present, consumed | `package.json.version` and accepted conventional commits produce release truth. |
-| `persisted_authority` | present | `release-please-config.json`, `.release-please-manifest.json`, `CHANGELOG.md`, and workflow files persist release configuration/output. |
+| `persisted_authority` | present | Release tool config/baseline manifest, `CHANGELOG.md`, and workflow files persist release configuration/output. |
 | `internal_execution_consumers` | absent | Pairflow runtime code should not consume release workflow internals. |
 | `workflow_orchestration_consumers` | present | GitHub Actions consumes release config, package scripts, and npm token/guard settings. |
 | `validator_gate_consumers` | present | CI/release workflow must reuse the existing commit-policy range validation before release publication when feasible. |
@@ -179,11 +194,18 @@ opens public publish.
 | Changelog/version drift | Generated changelog/version differs from checked-in state | Release tool owns generated correction | Release PR update only | PR carries correction | CI/release-tool failure; no manual generated-output rewrite outside contract |
 | Invalid or ambiguous commit range | Release workflow cannot identify accepted conventional commits under the existing policy | Repo-local validator is used when range validation is wired in; workflow YAML must not duplicate taxonomy regexes | None | Not applicable | Fail closed with validator/config reason |
 
+History-selection proof: the implementation must record how the selected
+release tool determines the commit range and traversal shape. The proof may be
+a focused local config/dry-run inspection, a documented tool command/output, or
+a small repository-history fixture if the tool supports one. It must explicitly
+show that release-relevant conventional commits reachable through bubble branch
+history are not hidden by first-parent-only interpretation.
+
 ### Capability Closure
 
 | Capability Claim | Closure Classification | Activation Trigger | Entrypoint | Configuration Owner | Repo-Provided Parts | External Prerequisites | Success Output Contract | Failure Output Contract | Operator / User Path | Last-Mile Proof |
 |---|---|---|---|---|---|---|---|---|---|---|
-| Generate changelog, release PR, tags, and GitHub releases from accepted conventional commits | externally_activated | GitHub Actions event on `main` or release-tool controlled release PR merge | `.github/workflows/release-please.yml` plus release config | Repo workflow/config files; GitHub repository settings externally activate execution | release config, manifest, workflow, changelog baseline, validation commands | GitHub Actions enabled, repository permissions, accepted conventional commit history | Release PR or `v<semver>` tag/GitHub release matching `package.json.version` | CI/config failure or no-op release result with clear reason | Merge accepted conventional commits; let workflow open/land release PR | Release workflow dry-run/config validation locally plus GitHub run proof later |
+| Generate changelog, release PR, tags, and GitHub releases from accepted conventional commits | externally_activated | GitHub Actions event on `main` or release-tool controlled release PR merge | Release PR/tag workflow plus chosen release-tool config | Repo workflow/config files; GitHub repository settings externally activate execution | release config, baseline manifest, workflow, changelog baseline, validation commands | GitHub Actions enabled, repository permissions, accepted conventional commit history | Release PR or `v<semver>` tag/GitHub release matching `package.json.version` | CI/config failure or no-op release result with clear reason | Merge accepted conventional commits; let workflow open/land release PR | Release workflow dry-run/config validation locally plus GitHub run proof later |
 | Guarded npm publish for `@pairflow/cli` | deferred_activation | GitHub release/tag event after first-release guard opens | `.github/workflows/npm-publish.yml` | Repo workflow defines guard; `7-release-pilot` owns opening the guard | publish workflow, package build/pack steps, dry-run/disabled guard path | `NPM_TOKEN`, npm org/package permission, protected environment or repository variable, GitHub release event | Dry-run/disabled proof before pilot; real npm publish success only after guard opens | Missing token/permission/guard failure with no local publish fallback | Operator configures secrets/environment, then release pilot opens guard deliberately | Package pack/dry-run proof now; public publish proof in `7-release-pilot` |
 
 ### Ownership and Deferred Semantics
@@ -280,7 +302,10 @@ public publish or docs-site work.
 
 1. Add release automation configuration using a standard conventional-commit
    release tool, preferably Release Please for npm packages unless implementation
-   discovery finds a repo-specific blocker.
+   discovery finds a repo-specific blocker. The blocker threshold is not whether
+   another tool is easier; it is whether the tool can satisfy the canonical
+   history-selection, package-version, changelog, tag/release, and guarded
+   publish contracts without adding a competing release authority.
 2. Add or update `CHANGELOG.md` with an initial `0.1.0` baseline entry and make
    future entries generated by release automation.
 3. Add a GitHub workflow that validates the repo and opens/updates a release PR
@@ -293,6 +318,10 @@ public publish or docs-site work.
 6. Update `docs/commit-and-release-history-authority.md` only to document the
    concrete automation boundary, guard conditions, and failure behavior if the
    existing doc lacks those operational details.
+7. Do not implement a custom release engine when configuration of a standard
+   tool is sufficient. If custom glue is required, keep it limited to validation
+   or guard checks and make it call existing repo policy entrypoints rather than
+   re-encoding commit taxonomy.
 
 ### Release Workflow Contract
 
@@ -312,6 +341,14 @@ public publish or docs-site work.
    workflow YAML.
 5. If commit range validation is wired into release/publish automation, it must
    call the repo-local validator instead of duplicating regexes.
+6. The workflow/config evidence must name the selected last-release baseline
+   source for the first automated release. The expected initial baseline is
+   package version `0.1.0` and standard tag shape `v0.1.0`/`v<semver>`; if no
+   historical tag exists yet, implementation must either configure the manifest
+   baseline explicitly or fail closed with first-release setup guidance.
+7. Release PR generation must not depend on branch names, Pairflow transcript
+   text, task IDs, default lifecycle finalize messages, or manual changelog
+   edits as release input.
 
 ### Publish Guard Contract
 
@@ -329,6 +366,14 @@ public publish or docs-site work.
 6. Missing `NPM_TOKEN` must fail before real publish. A closed guard may still
    run package build/pack and disabled-path proof without requiring npm
    credentials.
+7. The guard check must run before any command capable of real publication.
+   Token checks may be skipped only on the explicitly disabled/dry-run path;
+   once the guard is open or a real-publish branch is selected, missing
+   `NPM_TOKEN` is a hard failure.
+8. Guard state must be readable from GitHub-controlled configuration, such as a
+   protected environment approval and/or repository variable. It must not be
+   inferred from local files, package version, branch names, actor identity, or
+   npm registry state.
 
 ### Failure Behavior
 
@@ -339,11 +384,20 @@ public publish or docs-site work.
 4. Changelog/version drift: fail or let the release PR carry the generated
    correction; do not silently hand-edit generated output outside the release
    tool contract.
+5. Tool/history mismatch: fail closed and request replanning if the selected
+   release tool cannot satisfy the full-reachable-history contract for Pairflow
+   bubble branch commits.
+6. Missing first-release baseline/tag/setup: fail closed with first-release setup
+   guidance; do not invent a version from commit text or npm registry state.
 
 ## L2 - Acceptance Checks
 
-1. `release-please-config.json` and `.release-please-manifest.json` exist and
-   target the root npm package `@pairflow/cli` starting from `0.1.0`.
+1. The chosen release-tool config and baseline manifest exist and target the root
+   npm package `@pairflow/cli` starting from `0.1.0`. If Release Please is the
+   selected tool, those files are `release-please-config.json` and
+   `.release-please-manifest.json`; if another standard tool is selected through
+   the documented blocker/replanning path, the implementation must name the
+   equivalent config and baseline files in its evidence.
 2. `CHANGELOG.md` exists with an initial baseline and is configured as the
    generated changelog surface.
 3. The release PR workflow is present under `.github/workflows/**`, has minimal
@@ -375,3 +429,15 @@ public publish or docs-site work.
    - `pnpm build`
 9. The implementation bubble records any skipped external publish proof as a
    deliberate guard, not as a validation failure.
+10. The implementation bubble records history-selection evidence for the chosen
+    release tool/config, including the first-release baseline and why
+    first-parent-only semantic interpretation is not being introduced.
+11. The publish workflow has two visibly separate paths: guard-closed
+    dry-run/disabled proof and guard-open real publish. Reviewers can determine
+    from workflow structure that real publish is unreachable while the guard is
+    closed.
+12. If implementation updates
+    `docs/commit-and-release-history-authority.md`, the update is limited to
+    concrete automation behavior that actually landed in the same implementation
+    bubble; it must not pre-document unimplemented external activation or public
+    publish readiness.
