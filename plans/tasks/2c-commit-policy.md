@@ -5,7 +5,7 @@ task_family_id: commit-policy
 sequence_key: "2c"
 task_id: 2c-commit-policy
 title: "Pairflow Commit Producer and Lifecycle Compatibility"
-status: approved
+status: implementable
 phase: phase2
 target_files:
   - "src/v11/application/commit/commitCommandContract.ts"
@@ -17,6 +17,7 @@ target_files:
   - "src/v11/infrastructure/executor/ssh/sshBubbleCommitCommand.ts"
   - "src/v11/infrastructure/executor/ssh/sshBubbleCommitPayload.ts"
   - "src/v11/infrastructure/executor/ssh/sshBubbleCommitContinuityImportCommand.ts"
+  - "src/v11/application/commit/remoteCommitContinuitySync.ts"
   - "src/v11/application/merge/internal/pipeline/localMergeStep.ts"
   - "src/v11/application/merge/internal/flow/mergeFlowFinalization.ts"
   - "src/v11/defaults/merge/mergeCommandDefaults.ts"
@@ -30,6 +31,7 @@ target_files:
   - "tests/cli/bubbleCommitCommand.test.ts"
   - "tests/cli/bubbleMergeCommand.test.ts"
   - "tests/cli/bubbleExtractCommand.test.ts"
+  - "tests/cli/index.test.ts"
 prd_ref: null
 plan_ref: plans/2026-05-31-npm-release-dx-onboarding-plan-v1.md
 system_context_ref: docs/pairflow-initial-design.md
@@ -148,6 +150,11 @@ close safety.
      `src/v11/application/extract/internal/commit/extractCommit.ts`
    - merge command and tests via `rg` over `bubble merge`, `finalize`, and
      commit-policy surfaces.
+   - remote continuity cleanup/sync helper:
+     `src/v11/application/commit/remoteCommitContinuitySync.ts`
+   - legacy CLI fixture coverage in `tests/cli/index.test.ts`, which may need
+     fixture updates only if implementation changes shared remote commit
+     presentation exercised there.
 2. Actual touched scope: mixed `consumer_family_alignment` plus
    `fail_closed_hardening`, because existing producers must consume validator
    authority and fail closed instead of emitting invalid lifecycle defaults.
@@ -175,6 +182,17 @@ close safety.
    for one policy family. It touches multiple command paths only where they
    create or preserve Git commit messages under the same taxonomy and
    fail-closed invariant.
+7. Document bubble source-code guard:
+   - this document-refinement bubble may edit only task/spec/progress/docs
+     artifacts.
+   - `target_files`, implementation sketches, acceptance checks, and reviewer
+     code findings in this artifact are planning context for a later
+     implementation bubble; they do not authorize product/runtime/source,
+     tests, UI, presenter, contract, or build/runtime config edits inside this
+     document bubble.
+   - if a requested outcome cannot be satisfied by document refinement alone,
+     the correct result is blocker or route-back/replan, not source
+     implementation.
 
 ### Refactor Classification
 
@@ -282,10 +300,14 @@ close safety.
      verified remote clone context.
    - `pairflow bubble merge` remains the lifecycle merge path; merge commits
      remain integration artifacts, not release authority.
+   - `bubble extract --commit` remains available as one command; the policy
+     change must not force operators to perform manual Git steps for ordinary
+     selected-artifact extraction.
 2. Allowed resolution paths:
    - explicit valid conventional `--message`
-   - deterministic valid conventional default only when the task contract
-     specifies it and tests prove it
+   - deterministic valid conventional default for extract commit only, using
+     `docs(extract): copy selected ideation artifacts`, unless implementation
+     discovers a concrete blocker and routes back before changing behavior
    - clean already-committed bubble branch head reuse when no new commit is
      needed
    - configured merge-header exception forms for merge commits
@@ -298,6 +320,11 @@ close safety.
    must have a tested replacement path that either validates an explicit
    conventional message, reuses an existing valid committed head, or fails
    closed before side effects.
+5. Explicit no-default decision for lifecycle commit: `pairflow bubble commit`
+   must not introduce a new automatic lifecycle content-message default in this
+   task. For any new local or remote lifecycle commit, the accepted message
+   source is explicit `--message`; clean-head reuse/import remains the
+   no-new-commit path.
 
 ### Success / Completion Proof Boundary
 
@@ -322,6 +349,9 @@ close safety.
 8. Mixed-truth surfaces allowed: remote continuity import may carry historical
    commit messages as compatibility evidence, but new remote commit creation
    must use the same validation policy as local creation.
+9. Failure truth surfaces affected: command failure objects/errors and CLI
+   text must expose policy failure distinctly from Git failure, with guidance
+   pointing to `docs/commit-message-guidance.md`.
 
 ### Precondition and Side-Effect Boundary
 
@@ -338,6 +368,7 @@ close safety.
    - `git commit`
    - force-empty commit creation
    - remote commit execution
+   - remote SSH commit dispatch for a new commit
    - extract commit creation
    - state transition or transcript append that claims commit success
 5. Invalid/precondition-failure behavior: zero new Git commit side effects for
@@ -360,9 +391,17 @@ close safety.
    accepted taxonomy.
 6. Preserve merge/revert compatibility with accepted merge-header and revert
    recovery classes.
-7. Add or update focused CLI/core tests for local commit, remote commit,
-   extract commit, merge compatibility, invalid-message fail-closed behavior,
-   and no-side-effect guarantees.
+7. Add or update focused tests for local commit, remote commit, extract
+   commit, merge compatibility, invalid-message fail-closed behavior, and
+   no-side-effect guarantees. Commit lifecycle parity requires CLI and core
+   proof; extract commit proof is CLI-first because the current repository has
+   `tests/cli/bubbleExtractCommand.test.ts` and no separate core extract suite.
+8. Update CLI help text for `bubble commit` so `--message` is described as
+   required whenever a new lifecycle commit will be created, and `--force` is
+   no longer described as creating an empty finalize commit.
+9. Update any legacy test fixtures or expected transcript payloads that assert
+   new finalize commits, while preserving fixtures that intentionally represent
+   already existing historical import/compatibility payloads.
 
 ### Out of Scope
 
@@ -392,7 +431,7 @@ close safety.
 |---|---|---|---|---|---|
 | `pairflow bubble commit` no longer creates new invalid lifecycle finalize commits. | end_to_end | Operator or close workflow runs `pairflow bubble commit --id <id> [--message ...] [--stage-all]`. | Repo owns command behavior; operator/close workflow owns providing an explicit message when needed. | Success returns existing commit result after accepted message or safe reuse; failure returns message-policy reason before Git commit/state success. | Core and CLI commit tests plus build. |
 | Remote `pairflow bubble commit` follows the same message precondition for new commits. | end_to_end | Laptop-routed remote commit or verified remote inner commit execution. | Repo owns local pre-dispatch validation and remote inner guard; remote executor owns transport only. | Invalid/missing message fails before SSH commit dispatch when local context has the candidate; remote inner command also rejects before Git commit as defense in depth. | Remote commit tests/payload tests. |
-| `pairflow bubble extract --commit` uses accepted commit messages. | end_to_end | Operator runs `pairflow bubble extract --commit [--message ...]`. | Repo owns deterministic default or explicit-message validation; operator owns path selection. | Success creates selected-scope commit with accepted message; invalid explicit message returns extract policy failure before commit. | Extract CLI/core tests. |
+| `pairflow bubble extract --commit` uses accepted commit messages. | end_to_end | Operator runs `pairflow bubble extract --commit [--message ...]`. | Repo owns deterministic default or explicit-message validation; operator owns path selection. | Success creates selected-scope commit with accepted message; invalid explicit message returns extract policy failure before commit. | Extract CLI tests, with core tests added only if implementation introduces or exposes a separate core extract test harness. |
 | Merge/revert compatibility remains bounded to accepted taxonomy classes. | foundation_only | Existing merge/revert lifecycle or tests encounter merge/revert first lines. | Validator authority owns accepted forms; merge command owns integration only. | Merge commits are tolerated integration artifacts, not release authority. | Existing validator tests plus merge tests only if merge runtime changes. |
 
 ### Scoped Invariants
@@ -496,7 +535,7 @@ close safety.
 | Control model | Docs/validator own taxonomy; command flows own commit creation timing. | Runtime code imports/uses the validator contract, not guidance prose. | P1 | required-now |
 | Read-path rule | Message policy comes from `tools/commit-policy`. | Do not duplicate regexes in lifecycle code unless wrapped behind a shared helper using the same source. | P1 | required-now |
 | Forbidden fallback | Bubble id, branch name, transcript text, and old finalize defaults are not valid message fallbacks. | Missing/invalid message fails before `git commit`. | P1 | required-now |
-| Allowed resolution path | Explicit valid message, deterministic valid default, or clean committed-head reuse. | Implement and test each supported branch. | P1 | required-now |
+| Allowed resolution path | Explicit valid lifecycle commit message, deterministic valid extract default, or clean committed-head reuse. | Implement and test each supported branch without adding a new lifecycle commit fallback message. | P1 | required-now |
 | Missing-data rule | No valid message means no new commit. | Return a typed failure with guidance to provide `--message`. | P1 | required-now |
 | Phase boundary | Producer alignment only. | Do not implement release automation or docs site in this task. | P2 | required-now |
 
@@ -513,11 +552,11 @@ close safety.
 
 | Producer / Flow | Current Risk | Required Behavior | Message Source | Side-Effect Rule | Result / Test Proof |
 |---|---|---|---|---|---|
-| Local `pairflow bubble commit` with staged files | Defaults to `bubble(<id>): finalize` when no message is provided. | Reject missing/invalid message unless a deterministic accepted default is explicitly implemented and tested. | explicit `--message` or accepted deterministic default only. | No `git commit`, state write, or transcript success before message acceptance. | Core and CLI tests cover accepted, missing, and invalid messages. |
+| Local `pairflow bubble commit` with staged files | Defaults to `bubble(<id>): finalize` when no message is provided. | Reject missing/invalid message; do not introduce a replacement lifecycle default. | explicit `--message` only. | No `git commit`, state write, or transcript success before message acceptance. | Core and CLI tests cover accepted, missing, and invalid messages. |
 | Local force-empty commit | Can create an empty finalize commit. | Require explicit accepted message for any forced empty commit. | explicit `--message`. | No empty commit before message acceptance. | Core tests cover fail-closed and accepted force-empty branches. |
 | Clean committed bubble head reuse | Existing content commit may already be the real work. | Reuse clean committed head when existing logic proves it is safe; do not create ceremony commit. If the reused head first line is rejected, report compatibility evidence and do not create a replacement commit automatically. | existing Git commit first line is evidence, not a new message source. | No new commit side effect; no release authority is inferred from a rejected reused historical head. | Core tests prove no new finalize commit is created and document valid/rejected reuse behavior. |
 | Remote `bubble commit` | Remote command may create or import finalize messages. | New remote commit creation follows the same accepted-message precondition; imported already-completed remote history is compatibility evidence, not new validation authority. | explicit accepted message for new remote commit; imported payload for already completed remote route. | Remote SSH commit dispatch counts as a side effect. Local routed command must reject invalid/missing messages before dispatch when creating a new remote commit; remote inner command must also reject before Git commit. | Remote command/payload tests cover parity and import compatibility. |
-| `bubble extract --commit` | Default is `extract(<id>): copy selected ideation artifacts`, outside the accepted taxonomy. | Use an accepted deterministic default or require explicit accepted message; validate explicit messages. | explicit `--message` or accepted deterministic extract default. | No extract commit before selected-path and message preconditions pass. | CLI tests cover default, explicit, and invalid messages. |
+| `bubble extract --commit` | Default is `extract(<id>): copy selected ideation artifacts`, outside the accepted taxonomy. | Use accepted deterministic default `docs(extract): copy selected ideation artifacts`; validate explicit messages. | explicit `--message` or accepted deterministic extract default. | No extract commit before selected-path and message preconditions pass. | CLI tests cover default, explicit, and invalid messages; add core tests only if a separate core extract suite is created by the implementation. |
 | `bubble merge` | Merge commits are integration artifacts. | Preserve fast-forward preference and tolerate only configured merge header forms when merge commit is required. | Git merge header, not release content. | Do not use merge message as semver/changelog authority. | Merge tests cover accepted header/result compatibility. |
 | Revert recovery | Recovery commits may be standard or conventional reverts. | Preserve acceptance of standard/conventional revert messages when lifecycle or tests encounter them. | validator policy. | No lifecycle producer-specific exception beyond validator. | Validator and lifecycle tests cover accepted recovery where relevant. |
 
@@ -551,9 +590,9 @@ close safety.
    created.
 3. Extract policy failure rule: `bubble extract --commit` policy failures use
    extract-specific failure reasons, not generic Git failure:
-   `EXTRACT_COMMIT_MESSAGE_POLICY_REJECTED` and
-   `EXTRACT_COMMIT_MESSAGE_REQUIRED`, unless implementation chooses an accepted
-   deterministic default for missing messages.
+   `EXTRACT_COMMIT_MESSAGE_POLICY_REJECTED` for rejected explicit messages.
+   `EXTRACT_COMMIT_MESSAGE_REQUIRED` is reserved only for a route-back-approved
+   future contract that removes the deterministic extract default.
 4. Remote dispatch rule: SSH remote commit dispatch is a side effect. The local
    routed command must reject invalid/missing messages before dispatch for new
    remote commits, and the remote inner command must enforce the same rule
@@ -583,7 +622,7 @@ close safety.
 | Local `bubble commit` | `COMMIT_MESSAGE_REQUIRED`; no Git commit, no state success. | `COMMIT_MESSAGE_POLICY_REJECTED`; no Git commit, no state success. | Existing success result with accepted `commitMessage`. | Existing reusable-head result; no new commit. |
 | Remote routed `bubble commit` | `COMMIT_MESSAGE_REQUIRED` before SSH commit dispatch. | `COMMIT_MESSAGE_POLICY_REJECTED` before SSH commit dispatch. | Remote command executes and returns existing success payload. | Remote already-completed import may sync compatibility payload without creating a new commit. |
 | Remote inner `bubble commit` | Same as local route before remote Git commit. | Same as local route before remote Git commit. | Existing success payload. | N/A unless already-completed import path is used by local route. |
-| `bubble extract --commit` | Either accepted deterministic default, or `EXTRACT_COMMIT_MESSAGE_REQUIRED`; no Git commit. | `EXTRACT_COMMIT_MESSAGE_POLICY_REJECTED`; no Git commit. | Existing extract success with accepted message. | N/A. |
+| `bubble extract --commit` | Use accepted deterministic default `docs(extract): copy selected ideation artifacts`; no missing-message failure expected unless implementation routes back with a blocker before changing behavior. | `EXTRACT_COMMIT_MESSAGE_POLICY_REJECTED`; no Git commit. | Existing extract success with accepted message. | N/A. |
 
 ### 1) Functional Requirements
 
@@ -603,13 +642,16 @@ close safety.
 6. Remote continuity import may preserve already completed historical payloads,
    but new tests must distinguish import compatibility from new commit
    creation.
-7. `bubble extract --commit` must either use an accepted deterministic
-   conventional default such as `docs(extract): copy selected ideation artifacts`
-   or require an explicit accepted `--message`; explicit invalid messages must
-   fail before Git commit.
+7. `bubble extract --commit` must use accepted deterministic conventional
+   default `docs(extract): copy selected ideation artifacts` when no
+   `--message` is provided; explicit invalid messages must fail before Git
+   commit.
 8. `bubble merge` must preserve fast-forward behavior and keep merge commits
    within the accepted merge-header exception forms when a merge commit is
    created.
+9. If implementation discovers that an explicit-message-only extract contract
+   is materially safer than preserving a deterministic default, it must stop
+   and route back to the plan/task instead of silently changing this contract.
 
 ### 2) Failure / Error Contract
 
@@ -634,10 +676,14 @@ close safety.
    - clean committed-head reuse does not create a new finalize commit,
    - remote commit creation parity for accepted/missing/invalid messages.
 2. Add or update CLI tests for:
-   - help text describes `--message` and accepted-message requirement,
+   - help text describes `--message` and accepted-message requirement for new
+     lifecycle commits,
    - invalid message output is actionable,
-   - removed `--auto` behavior remains unchanged,
+   - `--force` help no longer says it creates an empty finalize commit,
    - extract commit default/explicit/invalid branches.
+   Existing extract coverage is CLI-first; do not invent a separate core
+   extract suite solely for symmetry unless implementation creates a reusable
+   core extract testing boundary.
 3. Add merge compatibility tests only where implementation touches merge
    message behavior or result presentation; otherwise cite existing validator
    tests as the merge-header proof and leave merge runtime unchanged.
@@ -645,6 +691,8 @@ close safety.
    - `pnpm vitest tests/core/bubble/commitBubble.test.ts`
    - `pnpm vitest tests/cli/bubbleCommitCommand.test.ts`
    - `pnpm vitest tests/cli/bubbleExtractCommand.test.ts`
+   - `pnpm vitest tests/cli/index.test.ts` if shared CLI fixture expectations
+     are updated
    - merge-focused tests if merge code changes
 
 ### L2 - Acceptance Criteria
@@ -658,8 +706,10 @@ close safety.
    producers.
 4. Clean already-committed bubble branch/head reuse remains supported and does
    not create an extra ceremony commit.
-5. `bubble extract --commit` produces or requires accepted conventional commit
-   messages and rejects invalid explicit messages before commit side effects.
+5. `bubble extract --commit` produces accepted conventional commit message
+   `docs(extract): copy selected ideation artifacts` by default, accepts valid
+   explicit messages, and rejects invalid explicit messages before commit side
+   effects.
 6. Merge commit compatibility remains limited to the configured merge-header
    exception forms; merge commits are not release authority.
 7. The implementation does not modify release automation, changelog behavior,
