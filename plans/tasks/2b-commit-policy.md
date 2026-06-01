@@ -5,7 +5,7 @@ task_family_id: commit-policy
 sequence_key: "2b"
 task_id: 2b-commit-policy
 title: "Commit Policy Validation and Local Gate Alignment"
-status: draft
+status: implementable
 phase: phase2
 target_files:
   - "package.json"
@@ -25,7 +25,7 @@ plan_ref: plans/2026-05-31-npm-release-dx-onboarding-plan-v1.md
 system_context_ref: docs/pairflow-initial-design.md
 owners:
   - "felho"
-doc_bubble_id: null
+doc_bubble_id: 2b-commit-policy-doc
 impl_bubble_id: null
 supersedes: []
 superseded_by: null
@@ -415,9 +415,13 @@ truth:
    - Validator reads only the message file, classifies the first line, and exits
      zero/non-zero.
 2. Hook installation flow:
-   - `pnpm hooks:install` sets `core.hooksPath` to `.githooks`.
+   - `pnpm hooks:install` verifies `.githooks/pre-push` and
+     `.githooks/commit-msg` exist and are readable before mutating Git config or
+     filesystem mode.
+   - Only after successful preflight, it sets `core.hooksPath` to `.githooks`.
    - It marks both `.githooks/pre-push` and `.githooks/commit-msg` executable.
-   - It prints both active hooks.
+   - It prints both active hooks only after preflight, config, and executable-bit
+     updates succeed.
 3. Range validation flow:
    - Command verifies an explicit safe range exists.
    - It enumerates commits in that range deterministically.
@@ -448,7 +452,9 @@ truth:
 3. Add range validation tests covering explicit valid range, explicit invalid
    range, missing range fail-closed behavior, and body-only candidate rejection.
 4. Add hook/installer coverage proving `commit-msg` is installed alongside
-   existing `pre-push` behavior without dropping `pnpm ci:local`.
+   existing `pre-push` behavior without dropping `pnpm ci:local`, and proving
+   missing or unreadable required hook files stop before `core.hooksPath`,
+   executable-bit changes, or active-hook success output.
    Proof file: `tests/commitPolicy/installGitHooks.test.ts`.
 5. Add local CI coverage for:
    - explicit `PAIRFLOW_COMMIT_RANGE_FROM` / `PAIRFLOW_COMMIT_RANGE_TO` invokes
@@ -478,8 +484,11 @@ truth:
 4. `package.json` exposes scripts for message and range validation.
 5. `.githooks/commit-msg` invokes the message validator without duplicating
    policy logic.
-6. `scripts/install-git-hooks.sh` installs/marks executable both `pre-push` and
-   `commit-msg`, preserving the existing pre-push `pnpm ci:local` behavior.
+6. `scripts/install-git-hooks.sh` verifies required hook files exist and are
+   readable before writing `core.hooksPath`, changing executable bits, or
+   printing active-hook status; after that preflight, it installs/marks
+   executable both `pre-push` and `commit-msg`, preserving the existing
+   pre-push `pnpm ci:local` behavior.
 7. `scripts/ci-local.sh` supports `PAIRFLOW_COMMIT_RANGE_FROM`,
    `PAIRFLOW_COMMIT_RANGE_TO`, and `PAIRFLOW_COMMIT_RANGE_REQUIRED=1` with the
    fail-closed and honest-skip behavior defined in L1.
@@ -509,3 +518,10 @@ truth:
 2. `later-hardening`: add GitHub Actions commit-range enforcement only after
    the local safe-range behavior is proven and release automation wiring is
    planned.
+
+## Document Refinement Notes
+
+1. Document bubble `2b-commit-policy-doc` linked this approved task after the
+   ReviewSpec task-mode decision `approve_task`.
+2. The document-bubble close workflow applied the durable transition to
+   `status: implementable` in the bubble worktree before lifecycle commit.
