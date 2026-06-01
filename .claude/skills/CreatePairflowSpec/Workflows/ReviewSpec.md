@@ -339,6 +339,40 @@ Optional top-level parallel review lanes:
    run the same gate-output audit and fan-out discovery itself; lane absence is
    not a reason to skip scope discovery.
 
+Lane coverage reconciliation:
+1. When any parallel review lane is used, the top-level ReviewSpec result must
+   include a `Gate Coverage Matrix` before returning `approve_task`.
+2. The matrix must list every task-mode gate and mark one of:
+   - `covered_by_lane:<lane_name>`
+   - `covered_by_top_level`
+   - `not_triggered`
+   - `missing`
+3. Required matrix rows:
+   - execution metadata
+   - target-file reality
+   - refactoring guidance
+   - control-model readiness
+   - closed-contract drift
+   - authority fan-out
+   - closure-budget
+   - bounded-task-shape
+   - scoped invariant / review scope fence
+   - complexity-risk
+   - contract-dense task gate
+   - capability closure
+   - remaining-task viability
+   - mandatory gate-output audit
+   - final split/no-split consistency
+4. `missing` blocks `approve_task`.
+5. A lane `pass` is not enough when the lane did not explicitly cover a
+   triggered gate in its assigned family. The top-level reviewer must either
+   cover the gap directly or return `refine_task` / `route_back_to_plan`.
+6. The top-level reviewer owns final split/no-split consistency even when
+   scope, contract, and capability lanes all pass independently. In particular,
+   high-risk combinations such as `risk_score >= 7`, `split_required`, or
+   authority fan-out across three or more consumer families must be reconciled
+   explicitly before approval.
+
 ### 2b) Closed-Contract Drift Check (`plan-mode|task-mode` when applicable)
 
 Use `references/Closed-Contract-Drift-Check.md`.
