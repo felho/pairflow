@@ -5,7 +5,7 @@ task_family_id: commit-policy
 sequence_key: "2c"
 task_id: 2c-commit-policy
 title: "Pairflow Commit Producer and Lifecycle Compatibility"
-status: implementable
+status: in_progress
 phase: phase2
 target_files:
   - "src/v11/application/commit/commitCommandContract.ts"
@@ -38,7 +38,7 @@ system_context_ref: docs/pairflow-initial-design.md
 owners:
   - "felho"
 doc_bubble_id: 2c-commit-policy-doc
-impl_bubble_id: null
+impl_bubble_id: 2c-commit-policy-impl
 supersedes: []
 superseded_by: null
 archive_group: 2026-05-31-npm-release-dx-onboarding
