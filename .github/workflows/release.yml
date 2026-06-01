@@ -1,0 +1,94 @@
+name: Release Please
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      validate_from:
+        description: "Optional explicit commit-policy range start"
+        required: false
+        type: string
+      validate_to:
+        description: "Optional explicit commit-policy range end"
+        required: false
+        type: string
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+concurrency:
+  group: release-please-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    name: Validate release candidate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout full history
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - name: Install root dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Install UI dependencies
+        run: pnpm --dir ui install --frozen-lockfile
+      - name: Reject incomplete explicit commit range
+        env:
+          VALIDATE_FROM: ${{ inputs.validate_from }}
+          VALIDATE_TO: ${{ inputs.validate_to }}
+        run: |
+          if { [ -n "$VALIDATE_FROM" ] && [ -z "$VALIDATE_TO" ]; } || { [ -z "$VALIDATE_FROM" ] && [ -n "$VALIDATE_TO" ]; }; then
+            echo "Both validate_from and validate_to are required when requesting explicit commit-policy range validation."
+            exit 1
+          fi
+      - name: Validate optional explicit commit range
+        if: ${{ inputs.validate_from != '' && inputs.validate_to != '' }}
+        env:
+          VALIDATE_FROM: ${{ inputs.validate_from }}
+          VALIDATE_TO: ${{ inputs.validate_to }}
+        run: pnpm commit-policy:validate-range -- --from "$VALIDATE_FROM" --to "$VALIDATE_TO"
+      - name: Validate release automation config
+        run: pnpm release:validate
+      - name: Typecheck
+        run: pnpm typecheck
+      - name: Lint
+        run: pnpm lint
+      - name: Fitness checks
+        run: pnpm fitness:check:ci
+      - name: Test
+        run: pnpm test
+      - name: Build
+        run: pnpm build
+
+  release-please:
+    name: Open or publish release
+    needs: validate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require release automation token
+        env:
+          RELEASE_PLEASE_TOKEN: ${{ secrets.RELEASE_PLEASE_TOKEN }}
+        run: |
+          if [ -z "$RELEASE_PLEASE_TOKEN" ]; then
+            echo "RELEASE_PLEASE_TOKEN is required so Release Please-created releases can trigger downstream guarded publish workflows."
+            echo "Use a least-privilege PAT or GitHub App token instead of the default GITHUB_TOKEN."
+            exit 1
+          fi
+      - name: Release Please
+        uses: googleapis/release-please-action@v4
+        with:
+          token: ${{ secrets.RELEASE_PLEASE_TOKEN }}
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json

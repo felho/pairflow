@@ -8,9 +8,10 @@ changelog automation, which commits are history or lifecycle noise, and how
 Pairflow bubble lifecycle commands should behave so release semantics stay
 explicit.
 
-This document does not configure release automation, publish packages, create
-tags, or define npm credentials. The release automation task consumes this
-contract later.
+This document defines release-history authority. Release automation consumes
+the contract through Release Please manifest configuration, a guarded npm
+publish workflow, and repo-local validation checks. It does not define npm
+credentials or open the first public publish guard.
 
 ## Core Decision
 
@@ -162,6 +163,53 @@ Forbidden strategy:
 1. First-parent-only semantic interpretation when release-relevant changes live
    in bubble branch content commits. That would see merge commits but miss the
    conventional content commits.
+
+Implemented automation boundary:
+
+1. `release-please-config.json` and `.release-please-manifest.json` configure
+   Release Please manifest mode for the root npm package `@pairflow/cli`, with
+   `package.json.version` and `CHANGELOG.md` as the version and changelog
+   surfaces. The configuration includes a `bootstrap-sha` boundary so the first
+   automation run starts from the initial `0.1.0` baseline instead of scanning
+   unrelated repository history.
+2. The initial automation baseline is `0.1.0`; subsequent Release Please
+   changes advance `package.json` and `.release-please-manifest.json` together.
+   Release tags use the standard `v<semver>` shape without component prefixes.
+3. `.github/workflows/release.yml` checks out full history, runs the local
+   validation/build gates, requires `RELEASE_PLEASE_TOKEN`, and then invokes
+   Release Please. It does not publish to npm from ordinary `main` pushes.
+   The token must be a least-privilege PAT or GitHub App token rather than the
+   default `GITHUB_TOKEN`, so Release Please-created releases can trigger the
+   downstream guarded publish workflow when the publish guard is deliberately
+   opened.
+4. Optional explicit release-range checks in the workflow call
+   `pnpm commit-policy:validate-range` with shell-safe environment variables;
+   workflow YAML must not duplicate the conventional-commit taxonomy. If a
+   manual dispatch provides only one range endpoint, the workflow fails closed
+   before release automation runs.
+5. `.github/workflows/npm-publish.yml` is triggered by GitHub release events or
+   manual dispatch. The closed guard path proves real publish is disabled and
+   runs `npm publish --dry-run`; the real publish path is reachable only when
+   the GitHub-controlled `PAIRFLOW_NPM_PUBLISH_ENABLED` variable is `true`, the
+   `npm-publish` environment approves the job, and `NPM_TOKEN` is present. The
+   real publish path reruns `pnpm release:validate` immediately before building
+   and checks that the GitHub release tag equals `v<package.json.version>`.
+   It then checks npm for an already-published `@pairflow/cli@<version>`;
+   ambiguous npm lookup failures fail closed before invoking `npm publish`.
+6. Release Please owns the Node package version/changelog update surfaces. The
+   configuration does not list `pnpm-lock.yaml` as an arbitrary YAML extra-file,
+   because this repository's lockfile has no root `version` field for Release
+   Please to update by default.
+7. Release automation serializes same-ref runs, and npm publish serializes all
+   repository publish attempts with non-canceling GitHub Actions concurrency
+   groups so package-version duplicate checks cannot race across release tags.
+8. `pnpm release:validate` verifies release automation wiring, package publish
+   metadata, the matching semver package/manifest versions, workflow
+   concurrency, real-publish metadata validation, and duplicate-publish
+   preflight guards.
+9. Missing npm credentials, missing npm permissions, and a closed publish guard
+   fail closed or remain in dry-run mode. Local operator machines are never a
+   publication fallback.
 
 ## Historical Finalize Commits
 

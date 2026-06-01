@@ -6,7 +6,7 @@
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "bin": {
-    "pairflow": "./dist/cli/index.js"
+    "pairflow": "dist/cli/index.js"
   },
   "exports": {
     ".": {
@@ -39,6 +39,7 @@
     "hooks:install": "bash ./scripts/install-git-hooks.sh",
     "commit-policy:validate-message": "pnpm exec tsx ./tools/commit-policy/validateCommitMessage.ts",
     "commit-policy:validate-range": "pnpm exec tsx ./tools/commit-policy/validateCommitRange.ts",
+    "release:validate": "pnpm exec tsx ./tools/release/validateReleaseAutomation.ts",
     "test:contracts": "pnpm exec vitest run tests/contracts/v11/*.test.ts",
     "test:smoke": "pnpm codegen:reviewer-ontology && pnpm build && pnpm exec vitest run --config vitest.smoke.config.ts",
     "build": "pnpm codegen:reviewer-ontology && tsc -p tsconfig.build.json && pnpm --dir ui install --frozen-lockfile && pnpm --dir ui build",

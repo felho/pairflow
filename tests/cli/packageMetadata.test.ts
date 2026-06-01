@@ -64,10 +64,12 @@ describe("package metadata", () => {
     };
 
     expect(packageJson.name).toBe("@pairflow/cli");
-    expect(packageJson.version).toBe("0.1.0");
+    expect(packageJson.version).toEqual(
+      expect.stringMatching(/^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/u)
+    );
     expect(packageJson.private).toBeUndefined();
     expect(packageJson.bin).toEqual({
-      pairflow: "./dist/cli/index.js"
+      pairflow: "dist/cli/index.js"
     });
     expect(packageJson.publishConfig?.access).toBe("public");
     expect(packageJson.files).toEqual(["dist/**", "ui/dist/**", "README.md"]);

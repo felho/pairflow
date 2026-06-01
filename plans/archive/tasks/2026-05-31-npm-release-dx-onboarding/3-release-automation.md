@@ -5,7 +5,7 @@ task_family_id: release-automation
 sequence_key: "3"
 task_id: 3-release-automation
 title: "Release Automation and Guarded NPM Publish"
-status: in_progress
+status: archived
 phase: phase3
 target_files:
   - "package.json"
