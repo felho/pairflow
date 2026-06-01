@@ -116,7 +116,7 @@ Add a repo-local conventional-commit policy that is explicit enough for humans, 
    - `src/v11/application/commit/internal/git/commitCommandGitStep.ts` currently defaults to `bubble(<bubbleId>): finalize` when `pairflow bubble commit` has no `--message`.
    - `tests/cli/bubbleCommitCommand.test.ts` already covers parsing `--message`.
    - `tests/cli/bubbleMergeCommand.test.ts` covers merge command rendering, including started-remote wording.
-2. Actual touched scope: mixed `contract_or_persisted_authority_foundation` plus `workflow_orchestration`.
+2. Actual touched scope: mixed `contract_or_persisted_authority_foundation` plus `consumer_family_alignment` for local workflow/hook consumers.
 3. Mutation entrypoints in scope: commit-message validation scripts/hooks and bubble commit message selection.
 4. Hidden scope ruled out: changelog generation, release-please/semantic-release config, GitHub publish workflows, npm publish, tag creation, historical commit rewrite, and public docs site.
 5. Branch inventory note:
@@ -142,18 +142,102 @@ Add a repo-local conventional-commit policy that is explicit enough for humans, 
 4. Explicit out-of-scope consumers: release automation, changelog generation, GitHub Release creation, npm publish workflow, and hosted CI release gating.
 5. Export surfaces closed in this phase: yes for commit policy guidance and validation entrypoints; no for release automation interpretation beyond documented strategy.
 
-### Implementation Mapping
+### Complexity Risk Triage
+
+1. `risk_score`: 7
+2. `authority_risk`: 2, because this task introduces a repo-local commit-message authority document plus machine validation as a new shared policy boundary.
+3. `surface_spread`: 2, because the same commit-policy contract appears in docs, hook/CI scripts, validator code, package scripts, bubble commit behavior, and tests.
+4. `identity_join_risk`: 0, because no cross-seam identity matching is introduced; the contract is keyed by commit-message first line and explicit git ranges.
+5. `activation_coupling`: 1, because local hook/validator activation is included, while release automation activation is deferred.
+6. `prerequisite_risk`: 1, because package/version readiness must already be complete and archived before release-policy work can safely proceed.
+7. `acceptance_multiplicity`: 1, because the task proves guidance, validator behavior, hook wiring, range-check boundaries, and bubble commit/merge compatibility.
+8. `authority_fanout`: present across guidance/docs authority, validator gates, workflow/orchestration consumers, and external Git hook/Git merge surfaces.
+9. `split_decision`: `single_task_allowed: yes`, with safe-collapse proof below. The task remains one bounded slice because it establishes one commit-message contract and aligns the local consumers that would otherwise immediately contradict that contract.
+10. `single_task_allowed_reason`: the collapsed closures all serve the same invariant, "new release-relevant commits must be classifiable without treating lifecycle artifacts as semver authority"; no npm publish, changelog generation, GitHub Release creation, or hosted release CI activation is closed here.
+
+### Authority Fan-out Scan
+
+| Generic Bucket | Status | Evidence / Boundary |
+|---|---|---|
+| `authority_producer` | present | `docs/commit-and-release-history-authority.md`, `docs/commit-message-guidance.md`, validation helper/config, and bubble commit message selection produce the task-owned commit-policy authority. `bubble extract --commit` is a discovered adjacent commit producer, but its `commit-tree` default-message alignment is explicitly follow-up, not current-task ownership. |
+| `persisted_authority` | present | Git commit messages created after this task lands are the persisted authority consumed by hooks, range validation, and successor release automation. |
+| `internal_execution_consumers` | present | `pairflow bubble commit` consumes the message-selection policy when creating implementation/lifecycle commits. |
+| `workflow_orchestration_consumers` | present | Bubble close remains `approve -> commit -> merge`; commit policy affects commit/merge compatibility without changing lifecycle state transitions. |
+| `read_model_consumers` | absent | No UI/API/report/read-model surface is introduced in this task; release notes/changelog read-model generation is deferred to `3-release-automation`. |
+| `cleanup_recovery_consumers` | present | Standard Git revert messages and merge recovery compatibility are accepted so recovery paths do not require policy bypass. |
+| `validator_gate_consumers` | present | `.githooks/commit-msg`, package scripts, `scripts/ci-local.sh`, and focused tests consume the validation contract. |
+| `external_integration_consumers` | present | Git commit-message files, Git merge first lines, local hooks, shell scripts, remote bubble commit forwarding, `bubble extract --commit` / `git commit-tree`, and future GitHub/npm release automation boundaries serialize or consume the contract. |
+
+### Closure-Budget Gate
+
+| Closure Bucket | Status | Evidence / Boundary |
+|---|---|---|
+| `authority_producer` | present | This task creates/updates the authority documents and validator contract. |
+| `shared_contract` | present | The first-line allowlist/reject taxonomy is shared by docs, hooks, CI scripts, bubble command behavior, and successor release automation. |
+| `internal_execution_consumers` | present | `pairflow bubble commit` behavior is aligned with the contract. |
+| `workflow_orchestration_consumers` | present | Bubble commit/merge compatibility is preserved while release authority is clarified. |
+| `read_model_consumers` | absent | Changelog/release-note interpretation is not implemented here and is deferred to `3-release-automation`. |
+| `persisted_authority_or_schema` | present | New Git commit messages become persisted history; no database/schema persistence changes are in scope. |
+| `cleanup_recovery_consumers` | present | Revert and merge recovery compatibility are explicitly preserved. |
+
+1. `split_required_triggered`: yes by raw closure count.
+2. `split_resolution`: safe-collapse accepted for this task because the shared contract and its immediate local enforcement/producer consumers must land together to avoid a state where docs permit messages that hooks reject, or bubble commands generate messages that the repo rejects.
+3. `intentionally_collapsed_closures`: authority docs, validator command, commit-msg hook, local deterministic range entrypoint, bubble commit message compatibility, merge/revert compatibility tests.
+4. `safe_collapse_proof`: all collapsed closures share the same commit first-line contract, are validated by the same focused test matrix, and do not introduce separate read-model, release-publication, npm, GitHub Release, or changelog-generation behavior.
+5. `explicitly_deferred_closures`: semver bump calculation, changelog generation, release range selection in hosted CI, GitHub Release creation, npm publish, public release pilot proof, docs site publishing, and `bubble extract --commit` default-message alignment.
+6. `unknown_closures`: none accepted for this task; newly discovered hosted release, read-model, or publish surfaces must route to plan/task refinement instead of being absorbed silently.
+
+### Bounded Task Shape
+
+1. Primary shape: `contract_or_persisted_authority_foundation`.
+2. Secondary shape: `consumer_family_alignment`.
+3. Primary decomposed closures:
+   - define the canonical commit/release-history authority document
+   - define exact first-line validation taxonomy and failure behavior
+   - define local range-validation boundaries without historical compatibility fallback
+4. Secondary decomposed closures:
+   - align local hook/package-script/CI validation with the taxonomy
+   - align `pairflow bubble commit` message production with the taxonomy
+   - preserve merge/revert recovery compatibility as accepted integration/recovery surfaces
+5. Adjacent consumer-family scan:
+   - local validators/hooks: in scope
+   - local workflow commands: in scope for local and remote `pairflow bubble commit` message-contract handling
+   - merge/close flows: in scope only for merge-header compatibility and normal close flow preservation
+   - `bubble extract --commit` / `git commit-tree`: discovered adjacent producer; out of scope for this task and routed to follow-up unless the parent plan is refined to include it now
+   - hosted release CI: out of scope, successor-owned by `3-release-automation`
+   - changelog/read-model generation: out of scope, successor-owned by `3-release-automation`
+   - npm publish / GitHub Release: out of scope
+   - UI/API/read-model forms: absent
+   - historical rewrite/rebase/revalidation: out of scope and forbidden
+6. Why the shape mix is safe: the secondary consumer alignment is limited to the local consumers that would immediately enforce or produce the same first-line contract; no separate activation, read-model, publish, or cleanup correctness closure is closed here.
+7. Invalid/precondition-failure side-effect rule: invalid commit messages, unreadable message files, hook installation failures, and missing safe range sources must fail before accepting the commit or claiming range validation passed.
+8. Coordination primitives in scope: Git hook invocation and local validation command execution only; no locking, leases, remote coordination, or workflow state-machine changes.
+9. Fail-closed hardening in scope: validator/hook/range-check failure behavior only. Rollback, retry, merge conflict recovery, and release rollback are deferred or external.
+10. Split trigger resolution: the task may remain one bounded task only if the implementation keeps the collapsed local enforcement surfaces tied to the same canonical contract and does not implement release automation or hosted release behavior.
+
+### Capability Closure
+
+| Capability Claim | Closure Classification | Activation Trigger | Entry Point | Configuration Owner | Repo-Provided Parts | External Prerequisites | Success Output Contract | Failure Output Contract | Operator / User Path | Last-Mile Proof |
+|---|---|---|---|---|---|---|---|---|---|---|
+| Commit-message hook validates newly created commit messages locally | `end_to_end` | Git invokes `commit-msg` hook after `scripts/install-git-hooks.sh` installs hooks | `.githooks/commit-msg` -> validation command | repo hook installer plus local Git config | hook file, install script, validator command, guidance path | local Git hooks enabled through repo installer | valid message exits 0; invalid message exits non-zero with guidance path | unreadable file, invalid first line, or missing validator fails closed and names the failing path/reason | run `pnpm hooks:install`, then create a commit or invoke the hook with a fixture message file | hook invocation test or scripted fixture proving valid/invalid messages through the hook path |
+| Local validation command checks one or more commit messages without a real Git commit | `end_to_end` | operator/CI invokes package script or validator command | `tools/commit-policy/validateCommitMessage.ts` or package script | repo scripts | validator module/CLI, package script, tests | Node/pnpm runtime | valid examples pass; invalid examples fail with reason and guidance | malformed input or unreadable file fails closed | run documented package script or direct validator fixture command | focused validator tests for accepted/rejected first-line classes |
+| Local new-commit range validation is available only when a safe range is supplied | `hook_only` | operator, Pairflow lifecycle, or CI provides explicit `base..head` range | `tools/commit-policy/validateCommitRange.ts`; optional `scripts/ci-local.sh` integration | operator, Pairflow lifecycle, or CI source for safe range | range validator, explicit safe-range handling, not-applicable message when broader command skips it | a trustworthy local base/head range | supplied safe range validates every new commit message | missing safe range exits non-zero for standalone validator, or broader command prints not-applicable without claiming pass | run validator with explicit range; do not run it as historical full-repo validation | focused range-validator tests for explicit range and missing-range behavior |
+| Bubble commit and merge flows remain compatible with the policy | `end_to_end` | `pairflow bubble commit` / `pairflow bubble merge` are invoked in normal lifecycle | bubble commit command, local/remote commit pipeline, merge pipeline | Pairflow CLI | explicit `--message` support, default/fail-closed behavior, remote message forwarding, merge-header allowance tests | local or configured remote Git repository and normal Pairflow lifecycle prerequisites | release-relevant commits can use accepted conventional messages; explicit conventional messages are forwarded to the remote commit path; merge/revert compatibility remains allowed only through configured forms | no deterministic conventional message fails closed instead of generating new `bubble(<id>): finalize` for content changes; remote path must not create a remote-only bypass | use `pairflow bubble commit --message "<conventional message>"`; merge through normal Pairflow command | focused bubble commit/merge tests covering explicit message, remote forwarding/no-bypass behavior when targetable, finalize rejection, and merge header compatibility |
+| Release-history strategy is handed off to successor automation | `foundation_only` | `3-release-automation` reads this task's authority documents later | `docs/commit-and-release-history-authority.md` and successor task contract | successor release automation task | documented full-history conventional selection strategy and forbidden first-parent-only interpretation | release automation implementation, GitHub Actions permissions, npm credentials | successor has a deterministic policy to implement; this task does not produce changelog/version output | if successor cannot consume the taxonomy deterministically, route back to refinement instead of inventing semantics | successor task reads authority docs before implementing release automation | document review plus successor task validation; no current-task end-to-end release proof |
+
+### Canonical Contract Matrix
 
 `docs/commit-and-release-history-authority.md` is the canonical source for commit and release-history classification. This task must not duplicate or redefine that taxonomy. The implementation mapping below only states how this task turns the authority document into validator behavior, guidance, and tests.
 
-| Authority Doc Class | Task-Owned Validator Behavior | Task-Owned Guidance / Docs | Task-Owned Tests | Successor Ownership |
-|---|---|---|---|---|
-| Conventional content commits, including `feat`, `fix`, `perf`, `refactor`, docs/test/build/ci/chore, and breaking-marker forms | accept only the exact conventional header shape and allowlisted type/scope syntax | explain type selection, including that `fix` is bug/defect work and not the same as `feat` | valid examples for each allowlisted type plus malformed breaking marker cases | `3-release-automation` decides final semver/changelog effect |
-| Explicit merge header exception (tolerated integration artifact) | accept only the configured `Merge branch ...` and `Merge remote-tracking branch ...` first-line forms | document as tolerated history, not the ideal release-authority path, and never semver/changelog input | configured merge-header pass cases plus unsupported merge-header reject cases | `3-release-automation` must ignore these merge commits without treating them as semver authority |
-| Standard or conventional revert commit | accept standard Git revert header and conventional `revert:` form | document recovery compatibility | revert pass cases | `3-release-automation` decides how reverted changes affect changelog/versioning |
-| Historical finalize rejection | reject `bubble(<id>): finalize` for new commit-policy validation | document as historical noise only, not an accepted policy class | reject case proving new validation does not support finalize | none |
-| Invalid or ambiguous prose | reject with invalid first line, expected format, and guidance path | document common invalid examples | invalid message failure case | none |
-| Unreadable commit message file | fail closed with file-read error and guidance path | document hook failure behavior briefly | unreadable-file failure case if validator exposes file input | none |
+| Contract Row | Accepted Input / Condition | Task-Owned Validator Outcome | Failure / Reason Contract | Task-Owned Guidance / Docs | Required Tests | Successor Ownership |
+|---|---|---|---|---|---|---|
+| Conventional content commits | `feat`, `fix`, `perf`, `refactor`, docs/test/build/ci/chore, optional scope, and breaking-marker forms matching the exact first-line allowlist | accept | malformed type, scope, breaking marker, missing subject, or missing colon-space rejects with invalid first line, expected format, and guidance path | explain type selection, including that `fix` is bug/defect work and not the same as `feat` | valid examples for each allowlisted type plus malformed breaking marker cases | `3-release-automation` decides final semver/changelog effect |
+| Explicit merge header exception | configured `Merge branch ...` and `Merge remote-tracking branch ...` first-line forms only | accept as tolerated integration artifact | any other merge header form rejects unless this matrix and authority doc are refined | document as tolerated history, not ideal release-authority path, and never semver/changelog input | configured merge-header pass cases plus unsupported merge-header reject cases | `3-release-automation` must ignore these merge commits without treating them as semver authority |
+| Standard or conventional revert commit | standard Git revert header or conventional `revert:` first line | accept | malformed revert prose rejects as invalid/ambiguous message | document recovery compatibility | standard revert and conventional revert pass cases | `3-release-automation` decides how reverted changes affect changelog/versioning |
+| Historical finalize rejection | `bubble(<id>): finalize` or ambiguous `bubble(...)` message for new validation | reject | rejected as historical finalize/noise class with guidance path; no cutoff/legacy compatibility mode allowed | document as historical noise only, not an accepted policy class | reject case proving new validation does not support finalize | none |
+| Invalid or ambiguous prose | empty, whitespace-only, unknown type, vague prose, malformed first line | reject | rejected with invalid first line, expected format, and guidance path | document common invalid examples | invalid message failure cases | none |
+| Unreadable commit message file | file path cannot be read by hook/validator | fail closed | file-read error names the failing path and does not claim validation passed | document hook failure behavior briefly | unreadable-file failure case if validator exposes file input | none |
+| Missing safe range for range validator | standalone range validator has no operator/lifecycle/CI-provided safe range | fail closed for standalone command | checkpoint reason says no safe range was available; no full-history scan, cutoff, or legacy mode | document when range validation is applicable vs not applicable | missing-range failure case | hosted release CI range selection deferred to `3-release-automation` |
 
 ### Exact First-Line Acceptance Rules
 
@@ -171,6 +255,51 @@ The validator contract must be expressed as exact first-line allowlist and rejec
 4. Empty, whitespace-only, unknown type, missing colon-space, invalid scope characters, malformed breaking marker, vague prose, or historical Pairflow finalize messages such as `bubble(<id>): finalize`:
    - Meaning: rejected with an actionable message and `docs/commit-message-guidance.md`.
 
+### Structured Contract Rules
+
+1. Commit message validation input:
+   - required: first line from a commit message string or readable commit message file
+   - optional: body lines, which are not release authority in this task unless the first line is already accepted
+   - allowed variants: direct message string, file path used by `.githooks/commit-msg`, and commit first lines extracted from an explicit safe git range
+   - unknown fields: `N/A` for plain text input; additional CLI options must be rejected or ignored only when explicitly documented by the implemented validator
+2. Conventional first-line schema:
+   - required fields: allowlisted `type`, optional deterministic scope, optional `!`, colon-space separator, non-empty subject
+   - optional fields: scope and breaking marker
+   - malformed behavior: reject with invalid first line, expected format, and `docs/commit-message-guidance.md`
+3. Merge/revert first-line schema:
+   - allowed merge variants: exactly configured `Merge branch ...` and `Merge remote-tracking branch ...`
+   - allowed revert variants: standard `Revert "<subject>"` and conventional `revert...`
+   - unknown merge/revert variants: reject unless the authority document and canonical matrix are refined first
+4. Range validation input:
+   - required: explicit safe local `base..head` range from operator, Pairflow lifecycle, or CI
+   - missing safe range: standalone range validator exits non-zero with checkpoint reason
+   - forbidden fallback: no historical full-repo scan, no date/SHA cutoff, no legacy compatibility mode
+5. Retention/drop behavior:
+   - accepted messages are not rewritten by the validator
+   - rejected messages are not normalized into accepted messages
+   - historical finalize commits remain read-only context and are not reclassified as accepted new commits
+
+### Scoped Invariants
+
+| Invariant | Applies To | Does Not Apply To | Proof Surface | Deferred / External Surfaces | Reviewer Non-Goals |
+|---|---|---|---|---|---|
+| Commit-message validation must be deterministic and exact. | First-line validation for local hook, reusable validator, and explicit safe range validator. | Changelog generation, semver bump calculation, hosted release range selection, historical rewrite. | Commit-policy unit tests and hook/validator fixture tests. | `3-release-automation` owns final changelog/version interpretation. | Do not require release-tool behavior or hosted CI configuration in this task. |
+| New generic `bubble(<id>): finalize` messages must not be accepted or generated. | New commit-policy validation and `pairflow bubble commit` behavior touched by this task. | Existing historical commits and read-only release-history context. | Validator reject tests plus bubble commit behavior tests. | Historical cleanup/rewrite is deferred/future work. | Do not require rewriting old history or validating all old commits. |
+| Bubble commit/merge flows must remain compatible with the policy. | `pairflow bubble commit --message`, deterministic/default/fail-closed commit behavior, and configured merge-header exceptions. | Non-configured Git merge headers, remote hosted release semantics, merge conflict resolution policy. | Focused bubble commit and bubble merge tests. | Non-configured merge forms require authority/task refinement. | Do not widen accepted merge-message classes during implementation review. |
+| Local range validation must only claim success for explicit safe ranges. | Standalone range validator and any local script integration with operator/lifecycle/CI-provided range. | Hosted release CI range selection, old full repository history, release-tag range semantics. | Range validator tests for explicit range and missing-range checkpoint. | `3-release-automation` owns hosted release range selection. | Do not require this task to prove public release automation. |
+
+### Review Scope Fence
+
+| Edge Case Family | Why Not Required Now | Safe Current Behavior | If Discovered During Review | Route |
+|---|---|---|---|---|
+| Hosted release CI commit range selection | Release workflow is explicitly successor-owned. | This task records full-history strategy and local safe-range constraints only. | Require successor task coverage, not current-task expansion. | `follow_up` |
+| Historical full-history validation or rewrite | Parent plan defers historical rewrite and treats historical finalize as non-release noise. | Existing history remains read-only context. | Reject attempts to add cutoff/legacy compatibility; do not require rebase. | `accepted_limitation` |
+| Non-configured merge header forms | Current task only accepts configured merge header exception forms. | Unsupported merge headers fail validation until authority is refined. | Route to task refinement if a required Pairflow merge path produces one. | `route_back_to_plan` when it changes release model, otherwise `follow_up` |
+| `bubble extract --commit` default messages | Extract commits use a distinct `commit-tree` producer and are not the release-relevant bubble implementation commit path being aligned here. | Existing extract commit behavior remains unchanged; this task does not classify it as semver/changelog authority. | Record as follow-up if release automation or commit policy later needs extract commits classified. | `follow_up` |
+| Remote `pairflow bubble commit` forwarding | Remote execution is part of the bubble commit message-contract surface, but remote transport internals are not a separate release authority. | Explicit `--message` must forward to the remote commit command; remote path must not silently loosen the accepted message contract. | Require proof in focused pipeline/command tests when the implementation touches remote forwarding. | `follow_up` only for remote transport behavior outside message forwarding |
+| Release automation interpretation of accepted commits | This task defines classification; automation is not implemented here. | Successor must consume the authority docs or route back. | Do not add changelog/version code in this task. | `follow_up` |
+| npm publish, GitHub Release, or public pilot proof | Parent plan assigns these to release automation and pilot tasks. | No publish/tag/release workflow is added here. | Treat as out-of-scope implementation expansion. | `external` for account setup, `follow_up` for repo automation |
+
 ### Ownership and Deferred Semantics
 
 1. This task owns recording and enforcing commit-message classification policy for local development and repo-local CI/check reuse.
@@ -186,7 +315,7 @@ The validator contract must be expressed as exact first-line allowlist and rejec
 
 ### Mirrored Surface Checklist
 
-When changing the commit classification contract, keep these surfaces aligned with `docs/commit-and-release-history-authority.md`, the Implementation Mapping, and the Exact First-Line Acceptance Rules:
+When changing the commit classification contract, keep these surfaces aligned with `docs/commit-and-release-history-authority.md`, the Canonical Contract Matrix, the Structured Contract Rules, and the Exact First-Line Acceptance Rules:
 
 1. L0 policy summary and forbidden fallback.
 2. Scope reality / branch inventory.
@@ -197,10 +326,12 @@ When changing the commit classification contract, keep these surfaces aligned wi
 7. `docs/commit-message-guidance.md` examples.
 8. Focused commit-policy tests.
 9. Successor release-history notes for `3-release-automation`.
+10. Capability Closure rows for hook, validator, range, bubble compatibility, and release-history handoff.
+11. Scoped Invariants and Review Scope Fence rows.
 
 The release-history taxonomy itself must stay in
 `docs/commit-and-release-history-authority.md`; this task may mirror only the
-implementation mapping needed to validate, document, and test that authority.
+canonical matrix needed to validate, document, and test that authority.
 `docs/commit-message-guidance.md` is an operator-facing guide over the same
 authority. If the guidance document disagrees with the authority document, the
 task is not approvable.
@@ -236,8 +367,8 @@ task is not approvable.
 
 ### Precondition and Side-Effect Boundary
 
-1. Primary bounded task shape: `workflow_orchestration`.
-2. Secondary shape: `contract_or_persisted_authority_foundation`.
+1. Primary bounded task shape: `contract_or_persisted_authority_foundation`.
+2. Secondary shape: `consumer_family_alignment`.
 3. Preconditions that must pass before side effects: package identity task is archived; plan says `2-commit-policy` is active; release automation remains out of scope.
 4. Side effects forbidden before preconditions pass: no release tags, no GitHub Releases, no npm publish, no historical rebase.
 5. Invalid/precondition-failure behavior: if commit-message strategy cannot reconcile Pairflow lifecycle messages with release authority, route back to plan refinement before implementing release automation.
@@ -333,13 +464,15 @@ task is not approvable.
 2. `.githooks/commit-msg` validates the message file passed by Git and exits non-zero on failure.
 3. `scripts/install-git-hooks.sh` keeps installing `core.hooksPath .githooks` and ensures both `pre-push` and `commit-msg` hooks are executable.
 4. `pairflow bubble commit --message <message>` remains the operator override for release-relevant implementation commit messages.
-5. Default `pairflow bubble commit` behavior must not emit a new non-conventional `bubble(<id>): finalize` commit for content changes. It must use one of:
+5. Local and remote `pairflow bubble commit` variants must share the same message contract. The remote path may forward an explicit conventional `--message`, but it must not introduce a remote-only bypass or weaker default behavior.
+6. Default `pairflow bubble commit` behavior must not emit a new non-conventional `bubble(<id>): finalize` commit for content changes. It must use one of:
    - an explicit conventional `--message`,
    - a deterministic conventional default derived from task metadata,
    - branch-head reuse when content commits already exist and no staged changes remain,
    - fail-closed guidance asking for an explicit conventional message.
-6. `scripts/ci-local.sh` or a documented package script must invoke a deterministic new-commit range validation path only when an explicit safe range source exists. Safe sources are: operator-provided `base..head` arguments, Pairflow lifecycle-provided base/head refs, or CI-provided base/head refs. Hosted release CI selection remains deferred to `3-release-automation`.
-7. The standalone range validator must exit non-zero with a clear checkpoint reason when no safe new-commit range is available. Broader validation commands may skip invoking range validation only if they print that the new-commit range check was not applicable and do not claim range validation passed. The validator must not fall back to scanning all historical commits, adding a date/SHA cutoff, or accepting historical `bubble(...): finalize` messages through a legacy compatibility mode.
+7. `bubble extract --commit` / `git commit-tree` default-message alignment is out of scope for this task and must not be silently treated as accepted release authority. If implementation discovers that commit-policy enforcement would block extract commits required by the current workflow, route to refinement instead of broadening this task implicitly.
+8. `scripts/ci-local.sh` or a documented package script must invoke a deterministic new-commit range validation path only when an explicit safe range source exists. Safe sources are: operator-provided `base..head` arguments, Pairflow lifecycle-provided base/head refs, or CI-provided base/head refs. Hosted release CI selection remains deferred to `3-release-automation`.
+9. The standalone range validator must exit non-zero with a clear checkpoint reason when no safe new-commit range is available. Broader validation commands may skip invoking range validation only if they print that the new-commit range check was not applicable and do not claim range validation passed. The validator must not fall back to scanning all historical commits, adding a date/SHA cutoff, or accepting historical `bubble(...): finalize` messages through a legacy compatibility mode.
 
 ### Control Flow / Lifecycle Contract
 
@@ -352,8 +485,9 @@ task is not approvable.
    - derive a safe conventional default from task metadata when deterministic, or
    - reuse the already-committed bubble branch head when content commits already exist and no staged changes remain.
    If none of these applies, it must fail closed with guidance.
-3. Merge commits created by `pairflow bubble merge` must remain allowed by validation only when their first line matches the exact configured merge header exception, and must be excluded from release authority in the guidance.
-4. Revert commits must remain allowed so recovery does not require policy bypass.
+3. Remote implementation bubble commits must preserve the same explicit-message contract as local commits. If remote execution is available and an explicit conventional message is supplied, the message must be forwarded unchanged; if no deterministic message exists, remote execution must not create a weaker fallback.
+4. Merge commits created by `pairflow bubble merge` must remain allowed by validation only when their first line matches the exact configured merge header exception, and must be excluded from release authority in the guidance.
+5. Revert commits must remain allowed so recovery does not require policy bypass.
 
 ### Error / Fallback Contract
 
@@ -371,9 +505,10 @@ task is not approvable.
 
 1. Add focused unit tests for the validator.
 2. Update or add CLI tests for `pairflow bubble commit` behavior if message selection or help text changes.
-3. Update or add merge tests proving merge commit messages remain policy-compatible when relevant.
-4. Add tests for the exact first-line acceptance rules in this task and the authority document.
-5. Run at minimum:
+3. Update or add pipeline/command tests proving explicit conventional messages are preserved through the remote bubble commit forwarding path when that path is touched by the implementation.
+4. Update or add merge tests proving merge commit messages remain policy-compatible when relevant.
+5. Add tests for the exact first-line acceptance rules in this task and the authority document.
+6. Run at minimum:
    - `pnpm typecheck`
    - `pnpm lint`
    - `pnpm fitness:check:ci`
@@ -381,7 +516,7 @@ task is not approvable.
    - focused bubble commit/merge tests
    - `pnpm test`
    - `pnpm build`
-6. If changing lifecycle, transcript/state ordering, execution-context ownership, state transition derivation, or command orchestration boundaries, update or explicitly re-evaluate `tools/fitness/**`. If no fitness change is needed, record why.
+7. If changing lifecycle, transcript/state ordering, execution-context ownership, state transition derivation, or command orchestration boundaries, update or explicitly re-evaluate `tools/fitness/**`. If no fitness change is needed, record why.
 
 ## L2 - Acceptance Criteria
 
@@ -389,7 +524,7 @@ task is not approvable.
 2. `AGENTS.md` contains a short pointer to the guidance file for commit preparation.
 3. A reusable commit-message validation command exists and is wired into `.githooks/commit-msg`.
 4. `scripts/install-git-hooks.sh` installs/executability-checks both hooks.
-5. `scripts/ci-local.sh` or an explicitly documented package script proves deterministic local commit-message/new-commit-range behavior without claiming hosted release CI is complete.
+5. `scripts/ci-local.sh` or an explicitly documented package script proves deterministic local-only commit-message/new-commit-range behavior without claiming hosted release CI, release automation, or public release readiness is complete.
 6. With an explicit safe range source, the new-commit-range validation path validates that range.
 7. Without an explicit safe range source, the standalone range validator exits non-zero with a checkpoint reason, and any broader validation command that skips range validation prints the not-applicable reason without claiming range validation passed.
 8. Valid conventional commit examples pass.
@@ -397,7 +532,7 @@ task is not approvable.
 10. Configured merge header exception forms and standard/conventional revert messages pass.
 11. Pairflow `bubble(...): finalize` messages are rejected and are not generated by new Pairflow behavior.
 12. Exact first-line allowlist rules are covered by focused tests.
-13. `pairflow bubble commit --message "feat(...): ..."` remains supported and tested.
+13. `pairflow bubble commit --message "feat(...): ..."` remains supported and tested, including remote message forwarding when the implementation touches that path.
 14. Existing historical commits are not rewritten, revalidated as a whole, or made acceptable through cutoff/legacy compatibility modes.
 15. Full-history conventional commit selection is documented as the selected initial release-history strategy for successor automation, while exact release-range selection remains owned by `3-release-automation`.
 16. Release automation is not added.
@@ -412,6 +547,14 @@ task is not approvable.
    - `pnpm exec vitest run tests/cli/bubbleCommitCommand.test.ts tests/cli/bubbleMergeCommand.test.ts`
 2. Broad required commands are listed in the validation contract.
 3. This task does not require browser/UI validation unless implementation unexpectedly touches UI sources.
+
+## Hardening Backlog
+
+1. `later-hardening`: broaden merge-header support only if real Pairflow/Git history produces a required merge form outside the configured exception rows.
+2. `later-hardening`: add hosted release CI range-selection proof in `3-release-automation`, not in this task.
+3. `later-hardening`: consider richer structured validator output for downstream release tooling only after the initial local validator contract is stable.
+4. `later-hardening`: document advanced commit-message examples if early users need more guidance; keep `AGENTS.md` as a pointer only.
+5. `later-hardening`: classify and align `bubble extract --commit` default messages if release automation or future commit-policy enforcement needs extract commits to be first-class release-history inputs.
 
 ## Implementation Notes
 
