@@ -469,10 +469,14 @@ Policy:
    - `proof_surface`,
    - `deferred_or_external_surfaces`,
    - and reviewer non-goals.
-4. If proving the invariant requires consumer families outside the declared
+4. When plausible adjacent edge-case families are known, include a `Review
+   Scope Fence` that states why each family is not required-now, current safe
+   behavior, review handling if discovered, and the follow-up/route-back/
+   accepted-limitation/external route.
+5. If proving the invariant requires consumer families outside the declared
    bounded slice, route back to task or plan refinement instead of expanding
    implementation acceptance implicitly.
-5. Do not let phrases like `merge remains compatible`, `normal flow must not be
+6. Do not let phrases like `merge remains compatible`, `normal flow must not be
    blocked`, or `validation must be deterministic` pull every plausible edge
    case into required-now scope without an explicit slice boundary.
 
@@ -552,6 +556,10 @@ Policy:
 32. Universal-sounding task invariants must be scoped before implementation:
     record where they apply, where they do not apply, how this task proves
     them, and which plausible adjacent surfaces are successor-owned or external.
+33. Review scope fences are protocol boundaries, not delivery shortcuts:
+    known plausible edge-case families must say whether review should treat
+    them as follow-up, route-back-to-plan, accepted limitation, or external
+    instead of silently widening required-now scope.
 
 ## Minimum Contract Rules
 
@@ -636,29 +644,32 @@ Policy:
     it must include a scoped-invariant record naming `applies_to`,
     `does_not_apply_to`, `proof_surface`, `deferred_or_external_surfaces`, and
     reviewer non-goals.
-31. `ReviewSpec plan-mode` is planning-only:
+31. If plausible adjacent edge-case families are known, the task must include a
+    `Review Scope Fence` naming each family, why it is not required-now, current
+    safe behavior, review handling, and route.
+32. `ReviewSpec plan-mode` is planning-only:
    - check coverage, dependency, sequencing, and downstream viability,
    - do not turn it into implementation or code-review workflow.
-32. `ReviewSpec task-mode` must load the parent plan when `plan_ref` exists and treat parent-plan fit as mandatory review context, not optional background.
-33. `ReviewSpec task-mode` must inspect `target_files` when available and use the real touched scope to validate the bounded slice.
-34. Plan/task review must include a remaining-task viability check:
+33. `ReviewSpec task-mode` must load the parent plan when `plan_ref` exists and treat parent-plan fit as mandatory review context, not optional background.
+34. `ReviewSpec task-mode` must inspect `target_files` when available and use the real touched scope to validate the bounded slice.
+35. Plan/task review must include a remaining-task viability check:
    - whether downstream open tasks remain valid as written,
    - whether a plan/task refinement is needed,
    - whether a new split task is required,
    - whether a downstream task became obsolete,
    - whether phase ordering is invalidated.
-35. When a refined Plan or Task touches an already-closed authority/shared contract, a `Closed-Contract Drift Check` is mandatory:
+36. When a refined Plan or Task touches an already-closed authority/shared contract, a `Closed-Contract Drift Check` is mandatory:
    - source anchors,
    - canonical vs guard vs compat classification,
    - forbidden reinterpretations,
    - and drift status.
-36. A refined artifact must not be marked implementable/approvable if it is only locally coherent but contradicts repo-local source anchors for the same contract.
-37. Plans or tasks that claim a usable capability must record capability closure
+37. A refined artifact must not be marked implementable/approvable if it is only locally coherent but contradicts repo-local source anchors for the same contract.
+38. Plans or tasks that claim a usable capability must record capability closure
     classification and must keep Done Definition / acceptance wording aligned
     with that classification.
-38. `end_to_end` capability claims require a last-mile proof; hook/foundation/
+39. `end_to_end` capability claims require a last-mile proof; hook/foundation/
     deferred work must not be worded as fully usable automation.
-39. Ambiguous activation language such as `configured`, `wired`, `integrated`,
+40. Ambiguous activation language such as `configured`, `wired`, `integrated`,
     `available`, `supported`, or `ready` must name the configuration owner and
     shipped/external boundary before approval.
 

@@ -491,7 +491,15 @@ Policy:
    - `proof_surface`,
    - `deferred_or_external_surfaces`,
    - reviewer non-goals.
-4. If the invariant cannot be bounded locally, split or route back before L1 is
+4. When plausible adjacent edge-case families are known, include a `Review
+   Scope Fence` that records:
+   - edge-case family,
+   - why it is not required-now,
+   - safe current behavior,
+   - handling if discovered during review,
+   - route: `follow_up`, `route_back_to_plan`, `accepted_limitation`, or
+     `external`.
+5. If the invariant cannot be bounded locally, split or route back before L1 is
    finalized.
 
 ### 1l) Run the Complexity-Risk Gate
@@ -667,12 +675,15 @@ Required blockers for Task output:
    - proof surface,
    - deferred or external surfaces,
    - reviewer non-goals.
-26. If the Closed-Contract Drift Check applies, blockers also include:
+26. If plausible adjacent edge-case families are known, blockers also include a
+   `Review Scope Fence` record with route handling. The task must not use this
+   fence to hide work required for the current contract to be true.
+27. If the Closed-Contract Drift Check applies, blockers also include:
    - repo-local source anchors,
    - canonical vs guard vs compat classification,
    - forbidden reinterpretations,
    - drift status proving there is no unauthorized semantic change.
-27. If the task changes an existing mutable flow's success/completion semantics, blockers also include:
+28. If the task changes an existing mutable flow's success/completion semantics, blockers also include:
    - current canonical success/completion proof source,
    - target canonical success/completion proof source,
    - final result/status/event truth-surface mapping,
@@ -840,7 +851,12 @@ Run a document-level consistency gate:
    - proof surfaces are strong enough for the scoped claim,
    - adjacent consumer families are not being pulled into required-now scope by
      implication.
-15. Re-check success/completion proof fit:
+15. Re-check review scope fence fit:
+   - known plausible edge-case families have explicit review handling,
+   - fenced items are not required for the current task contract to be true,
+   - new review-discovered edge cases route through classification instead of
+     silently widening required-now scope.
+16. Re-check success/completion proof fit:
    - current vs target proof boundary is explicit,
    - final result/status/event surfaces are mapped,
    - no field is silently populated from a different proof phase than its surrounding surface implies,

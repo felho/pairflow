@@ -281,6 +281,19 @@ Do not approve a task where universal-sounding phrases such as `compatible`,
 `deterministic`, `normal flow`, `must not block`, `always`, or `never` can be
 read to include adjacent consumer families that the task has not scoped.
 
+When plausible adjacent edge-case families are known, the task must include a
+`Review Scope Fence` naming:
+1. edge-case family,
+2. why it is not required-now,
+3. safe current behavior,
+4. handling if discovered during review,
+5. route: `follow_up`, `route_back_to_plan`, `accepted_limitation`, or
+   `external`.
+
+The fence is invalid if the item is required for the current task contract to
+be true. In that case, return `refine_task` or `route_back_to_plan` instead of
+approving a fence that hides required work.
+
 Outcome:
 1. If Complexity Risk Gate output is missing for an implementation-oriented
    task where it applies, return `refine_task`; return `route_back_to_plan` when
@@ -566,6 +579,9 @@ Always include:
     gates, missing output fields, and split/no-split decision status
 17. when the Scoped Invariant Gate applies, each broad invariant's scope
     boundary and proof-surface status
+18. when a Review Scope Fence is present or needed, whether fenced edge-case
+    families have valid route handling and are not required for the current
+    contract
 
 ### 7) Output rules
 

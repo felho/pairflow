@@ -149,6 +149,15 @@ uses broad language such as `must`, `must not`, `compatible`, `deterministic`,
 |---|---|---|---|---|---|
 | <text or token> | <commands/files/entrypoints/inputs/surfaces> | <plausible adjacent surfaces excluded> | <tests/validation/doc anchor> | <successor/plan/external owner or `N/A`> | <edge cases not inferred into this task> |
 
+### Review Scope Fence
+
+Include this section when known plausible edge-case families should not be
+silently pulled into required-now scope. Otherwise say `N/A`.
+
+| Edge-Case Family | Why Not Required Now | Safe Current Behavior | If Discovered During Review | Route |
+|---|---|---|---|---|
+| <family> | <why current task contract remains true without it> | <fail-closed / unchanged / unsupported / external / N/A> | <follow-up finding / route-back / accepted limitation / external note> | <follow_up|route_back_to_plan|accepted_limitation|external> |
+
 ### Contract Boundary / Blast Radius
 
 1. `contract_boundary_override`: `yes|no`
@@ -188,7 +197,11 @@ uses broad language such as `must`, `must not`, `compatible`, `deterministic`,
    - gate triggered: `<yes|no>`
    - scoped invariant records: `<section ref or N/A>`
    - unbounded invariant route-back: `<yes|no + reason or N/A>`
-15. Contract-dense decision:
+15. Review-scope-fence decision:
+   - fence needed: `<yes|no>`
+   - fenced families: `<list or N/A>`
+   - invalid fence route-back: `<yes|no + reason or N/A>`
+16. Contract-dense decision:
    - gate triggered: `<yes|no>`
    - trigger reasons: `<API/result shape|status taxonomy|structured payload|fallback/precedence|split ownership|downstream consumers|mirrored surfaces|N/A>`
    - canonical matrix source: `<section/ref or N/A>`
