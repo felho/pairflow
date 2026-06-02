@@ -5,7 +5,7 @@ task_family_id: ui-service-lifecycle
 sequence_key: "6"
 task_id: 6-ui-service-lifecycle
 title: "Pairflow UI Service Lifecycle CLI"
-status: approved
+status: implementable
 phase: phase6
 target_files:
   - "src/cli/index.ts"
@@ -64,17 +64,26 @@ local service, while preserving the existing foreground `pairflow ui` behavior.
 7. Phase boundary: this task owns UI service lifecycle commands only. It must
    not implement skill install, release pilot publication, npm publishing, or
    document-bubble lifecycle behavior.
+8. Document-refinement boundary: this document bubble may refine only task,
+   plan, progress, and directly related docs artifacts. Target files, L2
+   implementation sketches, acceptance checks, and reviewer code findings in
+   this artifact are planning context for a later implementation bubble; they
+   do not authorize product/runtime/source edits during a
+   `review_artifact_type=document` pass.
 
 ### Plan Linkage
 
 1. Parent plan gap closed: durable local UI server lifecycle management.
 2. Depends on: `1-package-version`.
 3. Unlocks / impacts successors: `7-release-pilot` must prove UI lifecycle
-   behavior from source or packed install context.
+   behavior from an installed or packed package context after this task proves
+   source-checkout lifecycle behavior.
 4. Task-list impact: after this task is implemented and archived, the parent
    plan should advance to `7-release-pilot`.
 5. Inherited validation / exit expectation: run default repo validation for CLI
    and runtime source changes plus focused UI lifecycle tests.
+6. Document-refinement impact: this pass tightens the approved task contract
+   for later implementation without changing product/runtime/source behavior.
 
 ### Canonical Contract Anchors
 
@@ -120,6 +129,10 @@ local service, while preserving the existing foreground `pairflow ui` behavior.
    task. They are not the new canonical CLI lifecycle surface, and this task
    must not rewrite their tmux/pgrep behavior unless an existing focused test
    proves a direct regression caused by the new command parser.
+6. Source/package context split: this implementation task must prove lifecycle
+   behavior from the source checkout. Installed-package proof remains successor
+   work in `7-release-pilot`, unless a packaging boundary change made directly
+   by this task needs a local package-content inspection to avoid regressions.
 
 ### Refactor Classification
 
@@ -168,6 +181,9 @@ local service, while preserving the existing foreground `pairflow ui` behavior.
 6. Add focused tests for parsing, state handling, stale records, stop safety,
    restart behavior, and foreground compatibility.
 7. Update README and UI docs to describe supported background lifecycle usage.
+8. Keep source-checkout proof and installed-package proof separate: this task
+   documents and tests the source-checkout lifecycle; `7-release-pilot` proves
+   the same lifecycle after package installation.
 
 ### Out of Scope
 
@@ -180,6 +196,8 @@ local service, while preserving the existing foreground `pairflow ui` behavior.
 6. Changing Pairflow bubble lifecycle semantics.
 7. Replacing or deprecating existing `pnpm ui:*` helper scripts or
    `scripts/ui-server.sh`.
+8. Proving installed npm package execution of `pairflow ui start|stop|status|restart`;
+   that is successor scope for `7-release-pilot`.
 
 ### Safety Defaults
 
