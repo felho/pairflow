@@ -710,7 +710,7 @@ pairflow bubble attach --id feat_login --repo . --port-forward 3000 --port-forwa
 The web UI provides a real-time canvas dashboard for monitoring and managing all bubbles across repos.
 
 ```bash
-# Start the web UI (default: http://127.0.0.1:4173)
+# Start the web UI in the foreground (default: http://127.0.0.1:4173)
 pairflow ui
 
 # Serve bubbles from specific repos only
@@ -720,7 +720,35 @@ pairflow ui --repo /path/to/myapp --repo /path/to/other
 pairflow ui --host 0.0.0.0 --port 8080
 ```
 
-Managed local UI server commands (tmux-based, recommended for daily use):
+Supported background service lifecycle commands:
+
+```bash
+# Start a Pairflow-owned background UI service
+pairflow ui start
+
+# Inspect the recorded service state and verified process identity
+pairflow ui status
+
+# Restart through Pairflow-owned PID/state authority
+pairflow ui restart
+
+# Stop only the verified Pairflow-owned UI process
+pairflow ui stop
+```
+
+Lifecycle commands support startup options where meaningful. Use `start` to
+choose a host, port, repo scope, or assets directory. `restart` preserves the
+verified running service endpoint; to change host or port, run `stop` and then
+`start` with the new endpoint.
+
+```bash
+pairflow ui start --repo /path/to/myapp --host 0.0.0.0 --port 8080
+pairflow ui status --port 8080 --json
+```
+
+`stop` and `restart` use Pairflow-owned service state under the local repo and verify process identity before signaling. They do not kill unrelated processes just because a port is occupied; unmanaged port occupancy is reported as `unmanaged`.
+
+Repository helper scripts remain available as contributor shortcuts:
 
 ```bash
 pnpm ui:start
@@ -728,8 +756,6 @@ pnpm ui:status
 pnpm ui:restart
 pnpm ui:stop
 ```
-
-These helpers run the UI in a dedicated tmux session (`pf-ui-server` by default), which is more stable than ad-hoc background processes.
 
 The dashboard shows:
 - **Bubble cards** on a draggable canvas — one card per bubble with state, round count, and active agent
@@ -1095,6 +1121,10 @@ The registry is stored at `~/.pairflow/repos.json` (override with `PAIRFLOW_REPO
 | Command | Description |
 |---------|-------------|
 | `ui [--repo <path>]... [--host <host>] [--port <port>]` | Start the web dashboard (default: `http://127.0.0.1:4173`) |
+| `ui start [--repo <path>]... [--host <host>] [--port <port>] [--assets-dir <path>] [--json]` | Start the web dashboard as a Pairflow-owned background service |
+| `ui status [--host <host>] [--port <port>] [--json]` | Report the background service state (`running`, `stopped`, `stale`, `invalid`, or `unmanaged`) |
+| `ui stop [--host <host>] [--port <port>] [--json]` | Stop only a Pairflow-owned background service with verified process identity |
+| `ui restart [--repo <path>]... [--host <host>] [--port <port>] [--assets-dir <path>] [--json]` | Restart the verified Pairflow-owned background service |
 
 #### Metrics
 

@@ -5,7 +5,7 @@ task_family_id: ui-service-lifecycle
 sequence_key: "6"
 task_id: 6-ui-service-lifecycle
 title: "Pairflow UI Service Lifecycle CLI"
-status: in_progress
+status: archived
 phase: phase6
 target_files:
   - "src/cli/index.ts"

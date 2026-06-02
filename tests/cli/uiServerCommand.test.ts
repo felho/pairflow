@@ -7,7 +7,9 @@ import { describe, expect, it, vi } from "vitest";
 
 import {
   getUiServerHelpText,
+  isUiLifecycleCommand,
   parseUiServerCommandOptions,
+  parseUiServiceCommandOptions,
   runUiServerCommand
 } from "../../src/cli/commands/ui/server.js";
 import {
@@ -48,10 +50,78 @@ describe("parseUiServerCommandOptions", () => {
     expect(getUiServerHelpText()).toContain("--repo");
   });
 
+  it("accepts the hidden service token used for background process identity", () => {
+    const parsed = parseUiServerCommandOptions([
+      "--service-token",
+      "pairflow-ui-token"
+    ]);
+
+    expect(parsed.help).toBe(false);
+    if (!parsed.help) {
+      expect(parsed.serviceToken).toBe("pairflow-ui-token");
+    }
+  });
+
   it("rejects invalid port", () => {
     expect(() => parseUiServerCommandOptions(["--port", "abc"])).toThrow(
       /Invalid --port/u
     );
+  });
+
+  it("rejects unknown positional UI subcommands before foreground startup", async () => {
+    expect(() => parseUiServerCommandOptions(["bogus"])).toThrow();
+    await expect(() => runUiServerCommand(["bogus"])).rejects.toThrow(
+      /Unknown pairflow ui subcommand/u
+    );
+  });
+});
+
+describe("parseUiServiceCommandOptions", () => {
+  it("detects lifecycle subcommands", () => {
+    expect(isUiLifecycleCommand(["start"])).toBe(true);
+    expect(isUiLifecycleCommand(["--port", "4173"])).toBe(false);
+  });
+
+  it("parses lifecycle options and json output", () => {
+    const parsed = parseUiServiceCommandOptions([
+      "restart",
+      "--repo",
+      "/tmp/repo",
+      "--host",
+      "0.0.0.0",
+      "--port",
+      "4312",
+      "--assets-dir",
+      "/tmp/ui-dist",
+      "--json"
+    ]);
+
+    expect(parsed.help).toBe(false);
+    if (!parsed.help) {
+      expect(parsed.lifecycleCommand).toBe("restart");
+      expect(parsed.repos).toEqual(["/tmp/repo"]);
+      expect(parsed.host).toBe("0.0.0.0");
+      expect(parsed.port).toBe(4312);
+      expect(parsed.endpointHostFilter).toBe(true);
+      expect(parsed.endpointPortFilter).toBe(true);
+      expect(parsed.assetsDir).toBe("/tmp/ui-dist");
+      expect(parsed.json).toBe(true);
+    }
+  });
+
+  it("rejects port zero for background lifecycle commands", () => {
+    expect(() => parseUiServiceCommandOptions(["start", "--port", "0"])).toThrow(
+      /Invalid --port/u
+    );
+  });
+
+  it("rejects startup-only options for status and stop", () => {
+    expect(() =>
+      parseUiServiceCommandOptions(["status", "--repo", "/tmp/repo"])
+    ).toThrow(/--repo is not supported/u);
+    expect(() =>
+      parseUiServiceCommandOptions(["stop", "--assets-dir", "/tmp/ui-dist"])
+    ).toThrow(/--assets-dir is not supported/u);
   });
 });
 

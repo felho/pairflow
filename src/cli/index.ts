@@ -130,6 +130,9 @@ import {
 } from "./commands/agent/pass.js";
 import {
   getUiServerHelpText,
+  isUiLifecycleCommand,
+  renderUiServiceLifecycleText,
+  runUiServiceCommand,
   runUiServerCommand
 } from "./commands/ui/server.js";
 import {
@@ -324,6 +327,20 @@ function waitForShutdownSignal(closeServer: () => Promise<void>): Promise<void> 
 }
 
 async function handleUiCommand(args: string[]): Promise<number> {
+  if (isUiLifecycleCommand(args)) {
+    const lifecycle = await runUiServiceCommand(args, process.cwd(), process.argv[1] ?? "");
+    if (lifecycle === null) {
+      process.stdout.write(`${getUiServerHelpText()}\n`);
+      return 0;
+    }
+    if (lifecycle.json) {
+      process.stdout.write(`${JSON.stringify(lifecycle.result, null, 2)}\n`);
+    } else {
+      process.stdout.write(renderUiServiceLifecycleText(lifecycle.result));
+    }
+    return lifecycle.result.exitCode;
+  }
+
   const result = await runUiServerCommand(args);
   if (result === null) {
     process.stdout.write(`${getUiServerHelpText()}\n`);
