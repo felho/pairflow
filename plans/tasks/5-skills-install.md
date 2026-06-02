@@ -5,7 +5,7 @@ task_family_id: skills-install
 sequence_key: "5"
 task_id: 5-skills-install
 title: "Pairflow Skills Install CLI"
-status: implementable
+status: in_progress
 phase: phase5
 target_files:
   - "package.json"
@@ -25,7 +25,7 @@ system_context_ref: docs/pairflow-initial-design.md
 owners:
   - "felho"
 doc_bubble_id: 5-skills-install-doc
-impl_bubble_id: null
+impl_bubble_id: 5-skills-install-impl
 supersedes: []
 superseded_by: null
 archive_group: 2026-05-31-npm-release-dx-onboarding
