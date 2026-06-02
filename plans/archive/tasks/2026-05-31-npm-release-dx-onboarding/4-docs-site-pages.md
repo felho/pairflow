@@ -5,7 +5,7 @@ task_family_id: docs-site-pages
 sequence_key: "4"
 task_id: 4-docs-site-pages
 title: "Static Documentation Site and GitHub Pages Publish"
-status: in_progress
+status: archived
 phase: phase4
 target_files:
   - "package.json"
