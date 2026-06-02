@@ -50,7 +50,7 @@ task_tracker:
     status: archived
   - task_id: 6-ui-service-lifecycle
     task_path: plans/tasks/6-ui-service-lifecycle.md
-    status: approved
+    status: implementable
   - task_id: 7-release-pilot
     task_path: null
     status: not_created
@@ -188,7 +188,7 @@ This plan turns the current local-development install story into a release-quali
 | `3-release-automation` | `plans/archive/tasks/2026-05-31-npm-release-dx-onboarding/3-release-automation.md` | Add conventional-commit release configuration, changelog/version automation, release tagging/release workflow, and guarded npm publish GitHub Actions. | `1-package-version`, `2a-commit-policy`, `2b-commit-policy`, `2c-commit-policy` | Missing automated semver, changelog, release, and guarded npm publish path. | archived |
 | `4-docs-site-pages` | `plans/archive/tasks/2026-05-31-npm-release-dx-onboarding/4-docs-site-pages.md` | Add static documentation source/build/publish workflow covering install, upgrade, version pinning, CLI basics, UI, skills, and release semantics. | `1-package-version`, `2c-commit-policy`, `3-release-automation` | Missing public onboarding/docs surface. | archived |
 | `5-skills-install` | `plans/archive/tasks/2026-05-31-npm-release-dx-onboarding/5-skills-install.md` | Add `pairflow skills install` CLI support around the existing repo-local skill install policy, including target validation, dry-run/json output, and safe symlink/copy behavior. | `1-package-version` | Missing supported CLI path for skill installation. | archived |
-| `6-ui-service-lifecycle` | `plans/tasks/6-ui-service-lifecycle.md` | Add `pairflow ui start|stop|status|restart` with PID/state files, stale-PID cleanup, URL/status reporting, and foreground `pairflow ui` compatibility. | `1-package-version` | Missing durable local UI server lifecycle management. | approved |
+| `6-ui-service-lifecycle` | `plans/tasks/6-ui-service-lifecycle.md` | Add `pairflow ui start|stop|status|restart` with PID/state files, stale-PID cleanup, URL/status reporting, and foreground `pairflow ui` compatibility. | `1-package-version` | Missing durable local UI server lifecycle management. | implementable |
 | `7-release-pilot` | `null` | Prove package contents, local install, version output, UI asset availability, release workflow behavior, docs build, skill install behavior, guarded publish behavior, and first public publish readiness. | `3-release-automation`, `4-docs-site-pages`, `5-skills-install`, `6-ui-service-lifecycle` | Missing last-mile proof that the install/release/onboarding flow works end-to-end. | not_created |
 
 ## Coverage Map
@@ -217,7 +217,7 @@ This plan turns the current local-development install story into a release-quali
 6. `3-release-automation` must run after package readiness and all commit-policy split tasks because release automation should validate and publish the same package shape users install, using the same commit semantics that Pairflow lifecycle commands support.
 7. `4-docs-site-pages` can start after package/version decisions and release semantics are stable, because docs must name the real package and install/release commands.
 8. `5-skills-install` can run after package source-root packaging is understood, because an installed npm package may need a package-relative skill source root.
-9. `6-ui-service-lifecycle` can run after package asset inclusion is understood, because background UI startup must work from both source checkout and installed package layouts.
+9. `6-ui-service-lifecycle` can run after package asset inclusion is understood, because its source-checkout lifecycle implementation must preserve package-relative asset resolution without proving installed-package execution in this task.
 10. `7-release-pilot` must run last because it is the integrated proof across package, release, docs, skills, UI lifecycle, and guarded public publish readiness.
 
 ## Progress Updates
@@ -245,6 +245,11 @@ This plan turns the current local-development install story into a release-quali
    docs-only source-code guard, per-skill sync/link and `--force` semantics,
    status output meanings, and the boundary between package-content inspection
    and successor-owned installed-package execution proof.
+6. 2026-06-02: Document bubble `6-ui-service-lifecycle-doc` refined the
+   approved `6-ui-service-lifecycle` task contract for later implementation,
+   clarifying the docs-only source-code guard, source-checkout versus
+   installed-package proof boundary, helper-script preservation, and
+   Pairflow-owned UI service lifecycle authority.
 
 ## Risks and Assumptions
 
