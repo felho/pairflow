@@ -64,6 +64,11 @@ Then use:
 1. [How we use Pairflow in practice (agent + UI first)](#how-we-use-pairflow-in-practice-agent--ui-first)
 2. [API & CLI reference](#api--cli-reference)
 
+Public onboarding docs live under [`docs/site/pages`](./docs/site/pages) and can
+be generated locally with `pnpm docs:build`. The generated `docs/site-dist`
+directory is the GitHub Pages artifact and is intentionally not source
+authority.
+
 Historical note: [`docs/pairflow-initial-design.md`](./docs/pairflow-initial-design.md) is the original MVP baseline spec (implemented), kept for traceability.
 
 ## Key concepts

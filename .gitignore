@@ -1,6 +1,7 @@
 node_modules/
 .pnpm-store/
 dist/
+docs/site-dist/
 coverage/
 *.log
 *.tsbuildinfo

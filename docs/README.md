@@ -16,6 +16,7 @@ then the relevant implemented task/plan artifact, then historical context.
 Use these as current contract or governance inputs:
 
 - [pairflow-initial-design.md](./pairflow-initial-design.md) - implemented MVP baseline and retained protocol contract anchors.
+- [site/pages/](./site/pages/) - public onboarding docs source for install, CLI, UI, skills, release, and GitHub Pages activation notes. Build locally with `pnpm docs:build`; generated output goes to ignored `docs/site-dist/`.
 - [reviewer-severity-ontology.md](./reviewer-severity-ontology.md) - canonical reviewer severity policy and source for generated runtime ontology.
 - [reviewer-evidence-governance.md](./reviewer-evidence-governance.md) - active review/evidence trust, skip/run, and docs-only evidence policy.
 - [architecture/architecture-fitness-checks.md](./architecture/architecture-fitness-checks.md) - active architecture fitness policy and CI gate documentation.
