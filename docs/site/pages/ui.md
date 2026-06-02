@@ -1,12 +1,12 @@
 ---
 title: Web UI
-description: Current foreground Pairflow UI usage and helper-script boundary.
+description: Pairflow UI foreground and background service lifecycle usage.
 order: 5
 ---
 
 # Web UI
 
-The current Pairflow UI is started in the foreground with:
+Start the Pairflow UI in the foreground with:
 
 ```bash
 pairflow ui
@@ -19,9 +19,31 @@ pairflow ui --repo /path/to/repo
 pairflow ui --host 0.0.0.0 --port 8080
 ```
 
-## Current local helper scripts
+## Background service lifecycle
 
-The repository also has pnpm helper scripts for local development and daily operation:
+For daily operation, use the supported CLI lifecycle commands:
+
+```bash
+pairflow ui start
+pairflow ui status
+pairflow ui restart
+pairflow ui stop
+```
+
+Startup options work with `start`. `restart` preserves the verified running
+service endpoint; to change host or port, run `stop` and then `start` with the
+new endpoint.
+
+```bash
+pairflow ui start --repo /path/to/repo --host 0.0.0.0 --port 8080
+pairflow ui status --port 8080 --json
+```
+
+Background lifecycle commands use Pairflow-owned state under the local repo to record PID, URL, command, and process identity. `stop` and `restart` verify that identity before sending a signal. They do not kill unrelated processes just because a port is occupied; such cases are reported as `unmanaged`.
+
+## Local helper scripts
+
+The repository also has pnpm helper scripts for local development:
 
 ```bash
 pnpm ui:start
@@ -30,7 +52,7 @@ pnpm ui:restart
 pnpm ui:stop
 ```
 
-These are repository helper scripts, not the future Pairflow-owned UI lifecycle CLI. Do not treat `pairflow ui start`, `pairflow ui stop`, `pairflow ui status`, or `pairflow ui restart` as available commands in the current CLI.
+These remain contributor conveniences. The canonical local service lifecycle is `pairflow ui start|status|restart|stop`.
 
 ## What the UI is for
 

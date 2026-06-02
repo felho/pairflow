@@ -276,8 +276,22 @@ export {
 } from "./cli/commands/agent/pass.js";
 export {
   getUiServerHelpText,
+  isUiLifecycleCommand,
   parseUiServerCommandOptions,
+  parseUiServiceCommandOptions,
+  renderUiServiceLifecycleText,
+  runUiServiceCommand,
   runUiServerCommand
+} from "./cli/commands/ui/server.js";
+export type {
+  ParsedUiServiceCommandOptions,
+  ParsedUiServerCommandOptions,
+  UiServiceCommandDependencies,
+  UiServiceCommandOptions,
+  UiServiceHelpCommandOptions,
+  UiServerCommandDependencies,
+  UiServerCommandOptions,
+  UiServerHelpCommandOptions
 } from "./cli/commands/ui/server.js";
 export {
   getRepoAddHelpText,
