@@ -147,6 +147,12 @@ import {
   runRepoRemoveCommand
 } from "./commands/repo/remove.js";
 import {
+  getSkillsInstallHelpText,
+  parseSkillsInstallCommandOptions,
+  renderSkillsInstallText,
+  runSkillsInstallCommand
+} from "./commands/skills/install.js";
+import {
   getMetricsReportHelpText,
   runMetricsReportCommand
 } from "./commands/metrics/report.js";
@@ -377,6 +383,33 @@ async function handleRepoListCommand(args: string[]): Promise<number> {
     process.stdout.write(`${renderRepoListText(result)}\n`);
   }
   return 0;
+}
+
+async function handleSkillsInstallCommand(args: string[]): Promise<number> {
+  try {
+    const parsed = parseSkillsInstallCommandOptions(args);
+    if (parsed.help) {
+      process.stdout.write(`${getSkillsInstallHelpText()}\n`);
+      return 0;
+    }
+
+    const result = await runSkillsInstallCommand(args);
+    if (result === null) {
+      process.stdout.write(`${getSkillsInstallHelpText()}\n`);
+      return 0;
+    }
+
+    if (parsed.json) {
+      process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
+    } else {
+      process.stdout.write(`${renderSkillsInstallText(result)}\n`);
+    }
+    return 0;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    process.stderr.write(`${message}\n`);
+    return 1;
+  }
 }
 
 async function handleMetricsReportCommand(args: string[]): Promise<number> {
@@ -901,6 +934,12 @@ const repoSubcommandHandlers: Readonly<
   list: handleRepoListCommand
 };
 
+const skillsSubcommandHandlers: Readonly<
+  Record<string, (args: string[]) => Promise<number>>
+> = {
+  install: handleSkillsInstallCommand
+};
+
 const metricsSubcommandHandlers: Readonly<
   Record<string, (args: string[]) => Promise<number>>
 > = {
@@ -920,6 +959,9 @@ function buildSupportedCommandsText(): string {
   const repoCommands = Object.keys(repoSubcommandHandlers).map(
     (subcommand) => `repo ${subcommand}`
   );
+  const skillsCommands = Object.keys(skillsSubcommandHandlers).map(
+    (subcommand) => `skills ${subcommand}`
+  );
   const metricsCommands = Object.keys(metricsSubcommandHandlers).map(
     (subcommand) => `metrics ${subcommand}`
   );
@@ -930,6 +972,7 @@ function buildSupportedCommandsText(): string {
     "ui",
     ...bubbleCommands,
     ...repoCommands,
+    ...skillsCommands,
     ...metricsCommands,
     ...planCommands,
     "agent emit"
@@ -996,6 +1039,13 @@ export async function runCli(argv: string[]): Promise<number> {
     const repoHandler = repoSubcommandHandlers[subcommand];
     if (repoHandler !== undefined) {
       return repoHandler(rest);
+    }
+  }
+
+  if (command === "skills" && subcommand !== undefined) {
+    const skillsHandler = skillsSubcommandHandlers[subcommand];
+    if (skillsHandler !== undefined) {
+      return skillsHandler(rest);
     }
   }
 

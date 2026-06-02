@@ -189,14 +189,21 @@ After installation, you can configure both:
 
 Recommended if you operate Pairflow via Claude Code or Codex:
 
-1. Open this file in your coding-agent chat:
-   - `.claude/skills/INSTALL.md`
-2. Ask the agent to run it (for example: "run this install workflow").
-3. Pass install params as needed:
-   - `--skills all|UsePairflow|CreatePairflowSpec`
-   - `--target-dir .claude|.codex`
-   - `--link-other true|false` (optional cross-agent symlink)
-4. This installs/updates selected skills under `~/.claude/skills/` or `~/.codex/skills/`.
+```bash
+pairflow skills install --skills all --target-dir .claude
+```
+
+Useful options:
+
+- `--skills all|UsePairflow|CreatePairflowSpec|ExecutePairflowPlan`
+- `--target-dir .claude|.codex`
+- `--link-other` for optional cross-agent per-skill symlinks
+- `--dry-run --json` to preview without writes
+- `--force` to replace unsafe existing selected managed paths
+
+This installs or refreshes selected skills under `~/.claude/skills/` or `~/.codex/skills/`. Source files come from the Pairflow checkout or installed package `.claude/skills/**`; global skill directories are derived targets, not source.
+
+The policy reference and fallback manual workflow live at `.claude/skills/INSTALL.md`.
 
 ### Skill quick routing (`$UsePairflow` vs `$CreatePairflowSpec`)
 

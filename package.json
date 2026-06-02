@@ -17,13 +17,17 @@
   "files": [
     "dist/**",
     "ui/dist/**",
+    ".claude/skills/INSTALL.md",
+    ".claude/skills/UsePairflow/**",
+    ".claude/skills/CreatePairflowSpec/**",
+    ".claude/skills/ExecutePairflowPlan/**",
     "README.md"
   ],
   "publishConfig": {
     "access": "public"
   },
   "pairflow": {
-    "skillSourcePackaging": "deferred-to-5-skills-install"
+    "skillSourcePackaging": "included"
   },
   "packageManager": "pnpm@10.8.1",
   "engines": {

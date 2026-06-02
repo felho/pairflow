@@ -156,6 +156,16 @@ describe("runCli", () => {
     expect(stdoutSpy).toHaveBeenCalled();
   });
 
+  it("supports skills install help", async () => {
+    const exitCode = await runCli(["skills", "install", "--help"]);
+
+    expect(exitCode).toBe(0);
+    expect(stdoutSpy).toHaveBeenCalled();
+    const output = stdoutSpy.mock.calls.map((call) => String(call[0])).join("");
+    expect(output).toContain("pairflow skills install");
+    expect(output).toContain("--target-dir .claude|.codex");
+  });
+
   it("routes top-level ask-human help to removal guidance", async () => {
     const exitCode = await runCli(["ask-human", "--help"]);
 

@@ -5,7 +5,7 @@ task_family_id: skills-install
 sequence_key: "5"
 task_id: 5-skills-install
 title: "Pairflow Skills Install CLI"
-status: in_progress
+status: archived
 phase: phase5
 target_files:
   - "package.json"
