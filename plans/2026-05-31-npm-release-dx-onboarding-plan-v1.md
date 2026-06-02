@@ -19,8 +19,12 @@ task_order:
   - 4-docs-site-pages
   - 5-skills-install
   - 6-ui-service-lifecycle
-  - 7-release-pilot
-active_task_id: 7-release-pilot
+  - 7a-package-release-proof
+  - 7b-docs-readiness-proof
+  - 7c-skill-install-proof
+  - 7d-ui-lifecycle-proof
+  - 7e-release-go-no-go
+active_task_id: 7a-package-release-proof
 last_completed_task_id: 6-ui-service-lifecycle
 archive_group: 2026-05-31-npm-release-dx-onboarding
 task_tracker:
@@ -51,7 +55,19 @@ task_tracker:
   - task_id: 6-ui-service-lifecycle
     task_path: plans/archive/tasks/2026-05-31-npm-release-dx-onboarding/6-ui-service-lifecycle.md
     status: archived
-  - task_id: 7-release-pilot
+  - task_id: 7a-package-release-proof
+    task_path: null
+    status: not_created
+  - task_id: 7b-docs-readiness-proof
+    task_path: null
+    status: not_created
+  - task_id: 7c-skill-install-proof
+    task_path: null
+    status: not_created
+  - task_id: 7d-ui-lifecycle-proof
+    task_path: null
+    status: not_created
+  - task_id: 7e-release-go-no-go
     task_path: null
     status: not_created
 ---
@@ -82,8 +98,8 @@ This plan turns the current local-development install story into a release-quali
 
 | Capability Claim | Closure Classification | Activation Path | Repo-Provided Boundary | External Prerequisites | Last-Mile Proof |
 |---|---|---|---|---|---|
-| Install Pairflow as a CLI through npm | externally_activated | `npm install -g @pairflow/cli@<version>` then `pairflow --version` | npm package metadata, build output, bin entries, package contents, release workflow | npm account/org, `NPM_TOKEN`, package name availability, GitHub repository settings | Planned in `7-release-pilot` |
-| Generate changelog and releases from conventional commits | externally_activated | Merge conventional commits, release automation opens/lands release PR or publishes from tag/release event | release configuration, CI workflow, changelog policy docs | GitHub Actions enabled, repository permissions, conventional commit discipline | Commit policy planned across `2a-commit-policy`, `2b-commit-policy`, and `2c-commit-policy`; release automation planned in `3-release-automation`; public publish proven in `7-release-pilot` |
+| Install Pairflow as a CLI through npm | externally_activated | `npm install -g @pairflow/cli@<version>` then `pairflow --version` | npm package metadata, build output, bin entries, package contents, release workflow | npm account/org, `NPM_TOKEN`, package name availability, GitHub repository settings | Planned across `7a-package-release-proof` and final GO/NO-GO in `7e-release-go-no-go` |
+| Generate changelog and releases from conventional commits | externally_activated | Merge conventional commits, release automation opens/lands release PR or publishes from tag/release event | release configuration, CI workflow, changelog policy docs | GitHub Actions enabled, repository permissions, conventional commit discipline | Commit policy planned across `2a-commit-policy`, `2b-commit-policy`, and `2c-commit-policy`; release automation planned in `3-release-automation`; public publish proven across `7a-package-release-proof` and `7e-release-go-no-go` |
 | Publish static documentation through GitHub Pages | externally_activated | GitHub Pages workflow builds and deploys docs on pushes to `main` and on GitHub release `published` events | docs site source, build config, Pages artifact upload, and Pages deploy workflow config | GitHub Pages settings/domain, repository permissions | Planned in `4-docs-site-pages` |
 | Install Pairflow skills from the CLI | end_to_end | `pairflow skills install --skills ... --target-dir ...` | CLI command, validation, copy/symlink implementation, dry-run/json reporting | user filesystem permissions for `~/.claude` / `~/.codex` | Planned in `5-skills-install` |
 | Manage Pairflow UI as a background local service | end_to_end | `pairflow ui start|stop|status|restart` | CLI commands, PID/state persistence, stale process handling, foreground `pairflow ui` compatibility | local Node process permissions and an available port | Planned in `6-ui-service-lifecycle` |
@@ -95,7 +111,7 @@ This plan turns the current local-development install story into a release-quali
 3. Read-path rule: runtime `--version` must read from package metadata embedded in or shipped with the npm package. Release notes must be generated from newly created release-relevant conventional commits, without treating old generic lifecycle messages as release authority. Commit-message guidance must be read from the dedicated repo-local guidance file when commit preparation is in scope, not inlined into every agent session through `AGENTS.md`. Skill install must read source skills from the installed package or repo-local source root, then write only to explicit global target directories.
 4. Forbidden fallback: do not infer the installed version from git state, dist timestamps, npm registry lookups, or hardcoded duplicated constants. Do not generate changelog entries from arbitrary prose outside commit metadata. Do not let default Pairflow lifecycle messages such as `bubble(<id>): finalize` or default merge messages become accidental semver authority. Do not manually edit `~/.claude/skills` or `~/.codex/skills` as Pairflow source. Do not kill UI processes only by port when a Pairflow-owned PID/state record is available.
 5. Allowed resolution path: deterministic same-authority reconciliation is allowed for stale UI PID cleanup, package-content dry-run inspection, and release workflow idempotency checks. Skill install may support both source-tree and installed-package source roots if the selected source root is explicit and verified.
-6. Missing-data rule: if npm credentials, package-name ownership, GitHub Pages configuration, or repository release permissions are missing, the implementation must fail closed with clear operator guidance and keep local package/build validation available. Before `7-release-pilot` proves readiness, npm publish automation must remain disabled, dry-run-only, or protected by a manual GitHub environment approval.
+6. Missing-data rule: if npm credentials, package-name ownership, GitHub Pages configuration, or repository release permissions are missing, the implementation must fail closed with clear operator guidance and keep local package/build validation available. Before the split `7*` release-pilot proof chain proves readiness, npm publish automation must remain disabled, dry-run-only, or protected by a manual GitHub environment approval.
 7. Sequencing / boundary note:
    - producer-first rule: package/version surfaces must land before release automation, because automation depends on package metadata and build outputs.
    - downstream consume families that remain separate: package metadata, release automation, docs site, skill install CLI, and UI service lifecycle are separate ownership families and should not be merged into one broad implementation task.
@@ -189,7 +205,11 @@ This plan turns the current local-development install story into a release-quali
 | `4-docs-site-pages` | `plans/archive/tasks/2026-05-31-npm-release-dx-onboarding/4-docs-site-pages.md` | Add static documentation source/build/publish workflow covering install, upgrade, version pinning, CLI basics, UI, skills, and release semantics. | `1-package-version`, `2c-commit-policy`, `3-release-automation` | Missing public onboarding/docs surface. | archived |
 | `5-skills-install` | `plans/archive/tasks/2026-05-31-npm-release-dx-onboarding/5-skills-install.md` | Add `pairflow skills install` CLI support around the existing repo-local skill install policy, including target validation, dry-run/json output, and safe symlink/copy behavior. | `1-package-version` | Missing supported CLI path for skill installation. | archived |
 | `6-ui-service-lifecycle` | `plans/archive/tasks/2026-05-31-npm-release-dx-onboarding/6-ui-service-lifecycle.md` | Add `pairflow ui start|stop|status|restart` with PID/state files, stale-PID cleanup, URL/status reporting, and foreground `pairflow ui` compatibility. | `1-package-version` | Missing durable local UI server lifecycle management. | archived |
-| `7-release-pilot` | `null` | Prove package contents, local install, version output, UI asset availability, release workflow behavior, docs build, skill install behavior, guarded publish behavior, and first public publish readiness. | `3-release-automation`, `4-docs-site-pages`, `5-skills-install`, `6-ui-service-lifecycle` | Missing last-mile proof that the install/release/onboarding flow works end-to-end. | not_created |
+| `7a-package-release-proof` | `null` | Prove package contents, isolated packed install, version output, release workflow guard behavior, and publish prerequisite status. | `3-release-automation`, `6-ui-service-lifecycle` | Missing package/release/publish-guard proof for the final release pilot. | not_created |
+| `7b-docs-readiness-proof` | `null` | Prove docs build/readiness with the concrete docs build command and generated install, UI, skills, and release pages. | `4-docs-site-pages` | Missing public docs readiness proof for release onboarding. | not_created |
+| `7c-skill-install-proof` | `null` | Prove `pairflow skills install` from dry-run/json and isolated installed-package target behavior without treating global skill copies as source. | `5-skills-install`, `7a-package-release-proof` | Missing installed-package skill install proof. | not_created |
+| `7d-ui-lifecycle-proof` | `null` | Prove `pairflow ui start|status|restart|stop` from source and packed/installed context; repo-owned packed UI gaps block plan closure. | `6-ui-service-lifecycle`, `7a-package-release-proof` | Missing installed-package UI lifecycle proof. | not_created |
+| `7e-release-go-no-go` | `null` | Aggregate release-pilot evidence, keep or open publish guards based on explicit prerequisites, and produce the final GO/NO-GO readiness record. | `7a-package-release-proof`, `7b-docs-readiness-proof`, `7c-skill-install-proof`, `7d-ui-lifecycle-proof` | Missing final release-pilot decision record. | not_created |
 
 ## Coverage Map
 
@@ -201,11 +221,11 @@ This plan turns the current local-development install story into a release-quali
 | Release versions and changelog are manual. | `3-release-automation` | Prefer standard conventional commits and release tags/releases over a custom commit-message tag trigger. |
 | LLM-authored commit messages have no lightweight guidance or enforcement path. | `2a-commit-policy`, `2b-commit-policy` | Put detailed guidance in a separate repo-local file; keep `AGENTS.md` to a short "read this when preparing commits" pointer; enforce with `commit-msg` hook and CI after the authority foundation is approved. |
 | Pairflow bubble commit/merge messages can conflict with conventional-commit enforcement. | `2a-commit-policy`, `2b-commit-policy`, `2c-commit-policy` | `2a` defines the authority taxonomy, `2b` enforces it locally for validators/hooks/safe ranges, and `2c` aligns Pairflow commit producers and merge/revert compatibility. Full-history conventional commit selection remains preferred over first-parent-only semantic interpretation; historical finalize commits remain non-release noise without cutoff or legacy compatibility modes. |
-| npm publish is not automated. | `3-release-automation` | Requires `NPM_TOKEN` and publish workflow guarded by release/tag event plus dry-run/manual environment approval until `7-release-pilot` opens the guard. |
+| npm publish is not automated. | `3-release-automation` | Requires `NPM_TOKEN` and publish workflow guarded by release/tag event plus dry-run/manual environment approval until the split `7*` release-pilot proof chain opens the guard. |
 | Public docs and onboarding path are missing. | `4-docs-site-pages` | Keep initial docs small and operational: install, quickstart, CLI, UI, skills, release process. |
 | Skill install is documented but not CLI-supported. | `5-skills-install` | Must preserve repo-local source-of-truth and derived global copy rules. |
 | UI background operation lacks process ownership. | `6-ui-service-lifecycle` | PID/state file must own process identity; port-only kill is not sufficient. |
-| End-to-end release confidence is missing. | `7-release-pilot` | Prove package contents, local install, version check, UI, docs, skill install, automation, and guarded publish behavior before declaring release readiness. |
+| End-to-end release confidence is missing. | `7a-package-release-proof`, `7b-docs-readiness-proof`, `7c-skill-install-proof`, `7d-ui-lifecycle-proof`, `7e-release-go-no-go` | Split release-pilot proof by ownership family, then aggregate GO/NO-GO evidence before declaring release readiness. |
 
 ## Dependencies and Order
 
@@ -218,7 +238,7 @@ This plan turns the current local-development install story into a release-quali
 7. `4-docs-site-pages` can start after package/version decisions and release semantics are stable, because docs must name the real package and install/release commands.
 8. `5-skills-install` can run after package source-root packaging is understood, because an installed npm package may need a package-relative skill source root.
 9. `6-ui-service-lifecycle` can run after package asset inclusion is understood, because its source-checkout lifecycle implementation must preserve package-relative asset resolution without proving installed-package execution in this task.
-10. `7-release-pilot` must run last because it is the integrated proof across package, release, docs, skills, UI lifecycle, and guarded public publish readiness.
+10. The `7*` release-pilot proof tasks must run last because they are the integrated proof across package, release, docs, skills, UI lifecycle, and guarded public publish readiness. Start with `7a-package-release-proof`, then run independent docs/skills/UI proof tasks as dependencies allow, and finish with `7e-release-go-no-go`.
 
 ## Progress Updates
 
@@ -250,6 +270,13 @@ This plan turns the current local-development install story into a release-quali
    clarifying the docs-only source-code guard, source-checkout versus
    installed-package proof boundary, helper-script preservation, and
    Pairflow-owned UI service lifecycle authority.
+7. 2026-06-02: Task-admin review for the planned `7-release-pilot` task found
+   the integrated release pilot too wide for one implementation bubble. The
+   task was split in the plan into `7a-package-release-proof`,
+   `7b-docs-readiness-proof`, `7c-skill-install-proof`,
+   `7d-ui-lifecycle-proof`, and `7e-release-go-no-go` so each proof family can
+   be reviewed and executed with bounded ownership before the final release
+   readiness decision.
 
 ## Risks and Assumptions
 
@@ -265,7 +292,7 @@ This plan turns the current local-development install story into a release-quali
 10. Risk: skill install overwrites user-customized global skills. Mitigation: support dry-run, validate managed targets, and require explicit force for unsafe replacement.
 11. Risk: background UI stop kills an unrelated process. Mitigation: prefer Pairflow-owned PID/state records and verify process identity before termination.
 12. Risk: GitHub Pages or npm publish needs repository/account settings not present in code. Mitigation: classify these as external prerequisites and surface clear setup instructions.
-13. Risk: npm publish automation fires before release readiness is proven. Mitigation: `3-release-automation` must ship the publish workflow behind dry-run/manual approval/disabled-public-publish guard until `7-release-pilot` proves and explicitly opens it.
+13. Risk: npm publish automation fires before release readiness is proven. Mitigation: `3-release-automation` must ship the publish workflow behind dry-run/manual approval/disabled-public-publish guard until the split `7*` release-pilot proof chain proves and explicitly opens it.
 14. Risk: a removed legacy CLI alias becomes part of the public npm API by accident. Mitigation: complete the legacy public CLI cleanup before package-readiness work, because there are no current external users requiring compatibility.
 
 ## Validation Strategy
