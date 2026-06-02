@@ -5,7 +5,7 @@ task_family_id: ui-service-lifecycle
 sequence_key: "6"
 task_id: 6-ui-service-lifecycle
 title: "Pairflow UI Service Lifecycle CLI"
-status: implementable
+status: in_progress
 phase: phase6
 target_files:
   - "src/cli/index.ts"
@@ -25,7 +25,7 @@ system_context_ref: docs/pairflow-initial-design.md
 owners:
   - "felho"
 doc_bubble_id: 6-ui-service-lifecycle-doc
-impl_bubble_id: null
+impl_bubble_id: 6-ui-service-lifecycle-impl
 supersedes: []
 superseded_by: null
 archive_group: 2026-05-31-npm-release-dx-onboarding
