@@ -5,7 +5,7 @@ task_family_id: skills-install
 sequence_key: "5"
 task_id: 5-skills-install
 title: "Pairflow Skills Install CLI"
-status: approved
+status: implementable
 phase: phase5
 target_files:
   - "package.json"
@@ -66,6 +66,12 @@ of truth.
 7. Phase boundary: this task owns skill-install CLI behavior only. It must not
    implement UI service lifecycle commands, release pilot publication, or change
    Pairflow bubble lifecycle semantics.
+8. Document-refinement boundary: this document bubble may refine only task,
+   plan, progress, and directly related docs artifacts. L2 implementation
+   sketches, target files, acceptance checks, and reviewer code findings in
+   this artifact are planning context for a later implementation bubble; they
+   do not authorize product/runtime/source edits during a
+   `review_artifact_type=document` pass.
 
 ### Plan Linkage
 
@@ -79,6 +85,8 @@ of truth.
 5. Inherited validation / exit expectation: run default repo validation for CLI
    source changes plus focused skill-install unit/integration tests and package
    content inspection when package file allowlists change.
+6. Document-refinement impact: this pass tightens the approved task contract for
+   later implementation without changing product/runtime/source behavior.
 
 ### Canonical Contract Anchors
 
@@ -151,7 +159,7 @@ of truth.
 |---|---|---|---|---|---|---|---|
 | Install all Pairflow skills into an explicit agent dir | end_to_end | `pairflow skills install --skills all --target-dir .claude` | CLI command, source discovery, allowlist validation, copy/sync implementation | write permission to target root | text summary names source root, target root, installed skills, link setting, dry-run false | non-zero exit and clear missing-source/permission/invalid-option reason | focused install test with isolated HOME |
 | Preview installation without writes | end_to_end | `pairflow skills install --dry-run --json` | dry-run planner and JSON renderer | none beyond readable source root | JSON reports planned source/target/link operations with no filesystem writes | non-zero JSON/text error for invalid args or missing source | focused dry-run test proves target untouched |
-| Link the other agent directory | end_to_end | `pairflow skills install --target-dir .claude --link-other` | symlink planning and replacement behavior | target and other target root writable | summary reports other root and symlink targets | fail closed before partial success when unsafe existing path cannot be replaced according to policy | isolated HOME test verifies symlink target |
+| Link the other agent directory | end_to_end | `pairflow skills install --target-dir .claude --link-other` | symlink planning, preflight validation, and replacement behavior | target and other target root writable | summary reports other root and symlink targets | fail closed before partial success when any selected destination or opposite-agent link path is unsafe and cannot be replaced according to policy | isolated HOME test verifies symlink target |
 | Run from installed package | externally_activated | npm-installed `pairflow skills install` | package includes skill source files and command logic | package installed from npm or packed tarball | source root resolves package-local skills | clear missing packaged skills guidance | `7-release-pilot` package install proof |
 
 ### In Scope
@@ -206,6 +214,7 @@ of truth.
 | Target dirs | `.claude` and `.codex` only | Other values rejected before writes | P1 | required-now |
 | Package install story | npm-installed CLI can install packaged skills | Package allowlist includes required skill files or command fails closed | P1 | required-now |
 | Existing manual policy | `.claude/skills/INSTALL.md` summary and semantics | CLI mirrors or explicitly narrows documented behavior | P1 | required-now |
+| Document bubble guard | `review_artifact_type=document` is docs-only | Document refinement cannot implement CLI/source/runtime changes | P1 | required-now |
 
 ### 0b) Branch Inventory
 
@@ -219,10 +228,11 @@ of truth.
 | Dry run JSON | Structured success object only on stdout | Broken automation | JSON parse test |
 | Real copy | Destination mirrors source including deletion | Stale global skill files | isolated HOME sync test |
 | Link other | Other agent skill path becomes symlink to selected target | Broken derived copy policy | symlink test |
-| Existing non-symlink other path | Replacement follows documented policy or fails clearly | Data loss ambiguity | isolated temp test |
+| Existing non-symlink other path | Replacement follows documented policy, reports `replaced_existing` when forced, or fails clearly | Data loss ambiguity | isolated temp test |
 | Missing package source | Non-zero with clear guidance | False install success | source resolver test |
-| Unsafe existing target without `--force` | Non-zero before replacement | Accidental data loss | stale-target failure test |
-| Unsafe existing target with `--force` | Replaces only selected managed skill paths | Unbounded destructive write | force-scoped replacement test |
+| Existing selected target skill directory | Refreshes selected skill path only | Stale or over-broad writes | isolated HOME sync/update test |
+| Unsafe existing selected target path without `--force` | Non-zero before replacing a non-directory or otherwise unsafe managed path | Accidental data loss | stale-target failure test |
+| Unsafe existing selected target path with `--force` | Replaces only selected managed skill paths and reports `replaced_existing` | Unbounded destructive write | force-scoped replacement test |
 
 ### 0c) Precondition And Side-Effect Boundary
 
@@ -233,6 +243,7 @@ of truth.
 | Target dir is `.claude` or `.codex` | Target root write | Reject before writes |
 | Dry-run is false | mkdir/copy/delete/symlink | When true, report plan only |
 | Link-other target is derived from selected target | Symlink replacement | Reject impossible target pairing |
+| Every selected target skill path and selected opposite-agent link path is preflighted | Any copy, delete, mkdir, or symlink write | Fail before partial success when an unsafe path cannot be replaced |
 | Unsafe existing skill/link path is detected | Replacement of that path | Require `--force` or fail before writes |
 
 ### 0d) Canonical Contract Matrix
@@ -244,8 +255,8 @@ of truth.
 | Source root | canonical | package/source checkout | Use verified package-local or repo-local `.claude/skills`; never global installed dirs | control model, capability closure, source resolver tests |
 | Target root | canonical | CLI option parser | `$HOME/<.claude|.codex>/skills` only | command options, data contract, install tests |
 | Dry run | guard | CLI execution | Plan operations without creating, copying, deleting, or linking | safety defaults, T2 |
-| Link-other | canonical with guard | CLI execution | Create symlinks in the opposite agent dir only for selected skills | INSTALL.md parity, T5 |
-| Force replacement | guard | CLI execution | Unsafe existing managed skill/link paths require `--force`; force is scoped to selected skills only | branch inventory, precondition table, T4/T5 |
+| Link-other | canonical with guard | CLI execution | Create per-skill symlinks in the opposite agent dir only for selected skills; never replace the whole opposite `skills` root | INSTALL.md parity, T5 |
+| Force replacement | guard | CLI execution | Existing selected target directories may be refreshed; replacing non-directory selected target paths or non-symlink selected opposite-agent link paths requires `--force`; force is scoped to selected per-skill target/link paths only | branch inventory, precondition table, T8/T9 |
 | Package skill files | canonical package boundary | package manifest | Package contents include required skill source files when command is shipped | package file allowlist, T6, release pilot |
 | Installed-package execution proof | deferred activation | `7-release-pilot` | This task proves package contents; pilot proves npm/tarball installed execution | capability closure, acceptance checks |
 | Output contract | canonical | CLI renderer | Text summary and JSON fields identify source, target, skills, dry-run, link, status, operations | output contract, tests |
@@ -262,6 +273,11 @@ of truth.
 4. The manual `.claude/skills/INSTALL.md` workflow remains a source policy
    anchor. The CLI may intentionally narrow unsafe replacement by requiring
    `--force` before replacing existing non-symlink paths.
+5. Package-content inspection in this task is necessary but not sufficient for
+   installed-package runtime proof. A passing `npm pack --dry-run --json`
+   package file check only proves that source files are included; the successor
+   release pilot must still execute the command from the installed or packed
+   package layout before claiming last-mile npm-install readiness.
 
 ### 0f) Mirrored Surface Checklist
 
@@ -294,12 +310,19 @@ interface SkillsInstallPlan {
   force: boolean;
   linkOther: boolean;
   otherRoot?: string;
+  status: SkillsInstallStatus;
   operations: SkillsInstallOperation[];
 }
 
 type SkillsInstallOperation =
   | { kind: "sync_skill"; skill: PairflowSkillName; source: string; destination: string }
   | { kind: "link_other"; skill: PairflowSkillName; linkPath: string; target: string };
+
+type SkillsInstallStatus =
+  | "planned"
+  | "fresh_install"
+  | "updated_existing"
+  | "replaced_existing";
 ```
 
 ### 0h) CLI Output Contract
@@ -313,12 +336,33 @@ Text success output must include:
 5. force true/false
 6. link-other true/false
 7. other root or `n/a`
-8. status: planned, fresh install, or updated existing
+8. status: planned, fresh install, updated existing, or replaced existing
 
 JSON success output must include the same values as fields, plus operation
-records. On error, JSON mode may return a structured error object if consistent
-with existing CLI conventions; otherwise stderr plus non-zero is acceptable if
-tests pin the behavior.
+records. The JSON `status` field must use the `SkillsInstallStatus` enum tokens
+exactly: `planned`, `fresh_install`, `updated_existing`, or
+`replaced_existing`. Text output may render those statuses as human-readable
+labels, but JSON must not use spaced labels. On error, JSON mode may return a
+structured error object if consistent with existing CLI conventions; otherwise
+stderr plus non-zero is acceptable if tests pin the behavior.
+
+Status semantics:
+
+1. `planned`: dry-run only; no target directories, copies, deletions, or links
+   were written.
+2. `fresh_install`: every selected destination skill path was absent before the
+   real install, no opposite-agent symlink path was updated, and the selected
+   paths were created by the command.
+3. `updated_existing`: at least one selected destination skill directory already
+   existed and was refreshed by the command, or at least one opposite-agent
+   symlink path already existed and was updated by `--link-other`. Existing
+   directories at selected skill paths and existing symlinks at opposite-agent
+   paths are normal derived install targets, not automatically unsafe
+   replacement branches.
+4. `replaced_existing`: the command used `--force` to replace at least one
+   unsafe selected managed path or unsafe opposite-agent path. This status takes
+   precedence over `fresh_install` and `updated_existing` whenever any forced
+   replacement operation occurred.
 
 ### 0i) Closure-Budget Gate
 
@@ -387,11 +431,12 @@ contract tests pass.
 | T2 | `--dry-run --json --skills all --target-dir .claude` | JSON parses and target root remains absent |
 | T3 | `--skills UsePairflow,ExecutePairflowPlan` | only selected skill dirs copied |
 | T4 | invalid skill/target | non-zero before writes |
-| T5 | `--link-other` | symlink points to selected target skill dir |
+| T5 | `--link-other` | symlink points to selected target skill dir; updating an existing opposite-agent symlink reports `updated_existing` |
 | T6 | package file allowlist | `npm pack --dry-run --json` or equivalent proves skill source files included |
 | T7 | CLI dispatch | `pairflow skills install --help` routes through `src/cli/index.ts` |
-| T8 | unsafe existing managed path without `--force` | non-zero before replacement |
-| T9 | unsafe existing managed path with `--force` | replacement is scoped to selected skill path |
+| T8 | unsafe existing managed path without `--force` | non-zero before any copy, delete, mkdir, or symlink write |
+| T9 | unsafe existing managed path with `--force` | replacement is scoped to selected per-skill target/link path, preflight completes before writes, and status reports `replaced_existing` |
+| T10 | existing selected target skill directory | command refreshes the selected skill directory and reports `updated_existing` |
 
 ## L2 - Implementation Notes
 
@@ -408,7 +453,8 @@ contract tests pass.
 5. Keep installed-package and source-checkout source-root resolution covered by
    tests or package dry-run evidence.
 6. Update `docs/site/pages/skills.md` so it no longer says the CLI command is
-   future work after implementation lands.
+   future work after implementation lands. Do not change the page to claim the
+   command exists before the implementation bubble actually adds the command.
 7. Run `pnpm typecheck`, `pnpm lint`, `pnpm fitness:check:ci`, focused skills
    install tests, `pnpm test`, `pnpm build`, and package dry-run/package content
    inspection before closing the implementation bubble.
@@ -420,12 +466,23 @@ contract tests pass.
    output and performs no writes.
 3. Real install into an isolated temp HOME copies the selected skill directories
    from the verified source root.
-4. `--link-other` creates or updates symlinks in the opposite target directory
-   according to policy.
+4. `--link-other` creates or updates per-skill symlinks in the opposite target
+   directory according to policy; updating an existing opposite-agent symlink is
+   reflected in the single text/JSON `status` field as `updated_existing`.
 5. Invalid skills and target dirs fail before filesystem writes.
 6. Unsafe existing skill/link paths fail without `--force` and are replaced
-   only inside selected managed skill paths with `--force`.
+   only at selected per-skill managed paths with `--force`: selected target
+   skill paths and, when `--link-other` is set, selected opposite-agent link
+   paths. Any forced replacement is reflected in the single text/JSON `status`
+   field as `replaced_existing`. The implementation must preflight all selected
+   target skill paths and selected opposite-agent link paths before any copy,
+   delete, mkdir, or symlink write, so an unsafe later `--link-other` path cannot
+   leave a partial primary-target install.
 7. The package content boundary includes every skill source file required by an
-   installed npm package to run the command.
+   installed npm package to run the command, with the package-content proof
+   clearly separated from successor-owned installed-package execution proof.
 8. Documentation reflects the supported command without treating global copies
    as source.
+9. Refreshing an existing selected target skill directory reports
+   `updated_existing` and remains part of acceptance, matching the T10 test
+   matrix branch.
