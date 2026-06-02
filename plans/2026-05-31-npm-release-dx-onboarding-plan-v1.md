@@ -20,8 +20,8 @@ task_order:
   - 5-skills-install
   - 6-ui-service-lifecycle
   - 7-release-pilot
-active_task_id: 5-skills-install
-last_completed_task_id: 4-docs-site-pages
+active_task_id: 6-ui-service-lifecycle
+last_completed_task_id: 5-skills-install
 archive_group: 2026-05-31-npm-release-dx-onboarding
 task_tracker:
   - task_id: 0-remove-orchestra-bin
@@ -46,8 +46,8 @@ task_tracker:
     task_path: plans/archive/tasks/2026-05-31-npm-release-dx-onboarding/4-docs-site-pages.md
     status: archived
   - task_id: 5-skills-install
-    task_path: plans/tasks/5-skills-install.md
-    status: implementable
+    task_path: plans/archive/tasks/2026-05-31-npm-release-dx-onboarding/5-skills-install.md
+    status: archived
   - task_id: 6-ui-service-lifecycle
     task_path: null
     status: not_created
@@ -187,7 +187,7 @@ This plan turns the current local-development install story into a release-quali
 | `2c-commit-policy` | `plans/archive/tasks/2026-05-31-npm-release-dx-onboarding/2c-commit-policy.md` | Align Pairflow commit producers and lifecycle consumers with the approved taxonomy: local/remote `bubble commit`, merge/revert compatibility, and deterministic accepted default handling for `bubble extract --commit`. | `2b-commit-policy` | Pairflow bubble lifecycle message compatibility and adjacent commit-producer alignment. | archived |
 | `3-release-automation` | `plans/archive/tasks/2026-05-31-npm-release-dx-onboarding/3-release-automation.md` | Add conventional-commit release configuration, changelog/version automation, release tagging/release workflow, and guarded npm publish GitHub Actions. | `1-package-version`, `2a-commit-policy`, `2b-commit-policy`, `2c-commit-policy` | Missing automated semver, changelog, release, and guarded npm publish path. | archived |
 | `4-docs-site-pages` | `plans/archive/tasks/2026-05-31-npm-release-dx-onboarding/4-docs-site-pages.md` | Add static documentation source/build/publish workflow covering install, upgrade, version pinning, CLI basics, UI, skills, and release semantics. | `1-package-version`, `2c-commit-policy`, `3-release-automation` | Missing public onboarding/docs surface. | archived |
-| `5-skills-install` | `plans/tasks/5-skills-install.md` | Add `pairflow skills install` CLI support around the existing repo-local skill install policy, including target validation, dry-run/json output, and safe symlink/copy behavior. | `1-package-version` | Missing supported CLI path for skill installation. | implementable |
+| `5-skills-install` | `plans/archive/tasks/2026-05-31-npm-release-dx-onboarding/5-skills-install.md` | Add `pairflow skills install` CLI support around the existing repo-local skill install policy, including target validation, dry-run/json output, and safe symlink/copy behavior. | `1-package-version` | Missing supported CLI path for skill installation. | archived |
 | `6-ui-service-lifecycle` | `null` | Add `pairflow ui start|stop|status|restart` with PID/state files, stale-PID cleanup, URL/status reporting, and foreground `pairflow ui` compatibility. | `1-package-version` | Missing durable local UI server lifecycle management. | not_created |
 | `7-release-pilot` | `null` | Prove package contents, local install, version output, UI asset availability, release workflow behavior, docs build, skill install behavior, guarded publish behavior, and first public publish readiness. | `3-release-automation`, `4-docs-site-pages`, `5-skills-install`, `6-ui-service-lifecycle` | Missing last-mile proof that the install/release/onboarding flow works end-to-end. | not_created |
 

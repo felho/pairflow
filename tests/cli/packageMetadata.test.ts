@@ -72,8 +72,15 @@ describe("package metadata", () => {
       pairflow: "dist/cli/index.js"
     });
     expect(packageJson.publishConfig?.access).toBe("public");
-    expect(packageJson.files).toEqual(["dist/**", "ui/dist/**", "README.md"]);
-    expect(packageJson.pairflow?.skillSourcePackaging)
-      .toBe("deferred-to-5-skills-install");
+    expect(packageJson.files).toEqual([
+      "dist/**",
+      "ui/dist/**",
+      ".claude/skills/INSTALL.md",
+      ".claude/skills/UsePairflow/**",
+      ".claude/skills/CreatePairflowSpec/**",
+      ".claude/skills/ExecutePairflowPlan/**",
+      "README.md"
+    ]);
+    expect(packageJson.pairflow?.skillSourcePackaging).toBe("included");
   });
 });

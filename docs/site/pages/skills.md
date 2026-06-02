@@ -8,9 +8,13 @@ order: 6
 
 Pairflow ships agent skills for lifecycle operation and specification work. The repo-local source of truth is `.claude/skills/**`.
 
-## Current supported install path
+## Supported install path
 
-Open `.claude/skills/INSTALL.md` in your coding-agent chat and ask the agent to run that repo-local install workflow.
+Run the CLI installer from a Pairflow checkout or installed package:
+
+```bash
+pairflow skills install --skills all --target-dir .claude
+```
 
 Supported parameters include:
 
@@ -18,10 +22,12 @@ Supported parameters include:
 - `--skills UsePairflow,CreatePairflowSpec,ExecutePairflowPlan`
 - `--target-dir .claude`
 - `--target-dir .codex`
-- `--link-other true`
+- `--link-other`
+- `--dry-run --json`
+- `--force`
 
-The workflow copies from the repo-local skill source into global `~/.claude/skills` or `~/.codex/skills`. Global copies are derived artifacts, not editable source.
+The command copies from package-local or repo-local `.claude/skills/**` into global `~/.claude/skills` or `~/.codex/skills`. Global copies are derived artifacts, not editable source.
 
-## Future CLI boundary
+## Policy reference
 
-A future successor task owns any `pairflow skills install` command. This docs surface does not claim that command exists today.
+`.claude/skills/INSTALL.md` documents the same source-of-truth boundary and the fallback manual install workflow.
