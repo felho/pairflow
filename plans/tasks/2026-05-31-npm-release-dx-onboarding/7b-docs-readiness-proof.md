@@ -550,6 +550,92 @@ NODE
 | Docs search/versioned docs | P3 | later-hardening | Not required for first release readiness proof. |
 | Reusable docs proof script | P2 | later-hardening | If repeated often, extract the route/content/workflow audit into a tool after this pilot proves the command shape. |
 
+### Evidence
+
+```yaml
+docs_readiness_proof:
+  checked_at: "2026-06-07T23:31:12+02:00"
+  node_version: "v26.0.0"
+  pnpm_version: "10.8.1"
+  npm_version: "11.12.1"
+  package_name: "@pairflow/cli"
+  package_version: "0.1.0"
+
+  docs_validate_command: "pnpm docs:validate"
+  docs_validate_result: "passed"
+  docs_build_command: "pnpm docs:build"
+  generated_output_path: "docs/site-dist"
+  docs_validate_notes:
+    - "Built docs site in docs/site-dist: index.html, install.html, upgrade.html, cli-basics.html, ui.html, skills.html, release.html, pages.html."
+    - "Docs site validation passed."
+    - "Node emitted DEP0205 deprecation warnings for module.register(); non-blocking."
+
+  generated_pages:
+    required_present: true
+    required_pages_present:
+      - "docs/site-dist/index.html"
+      - "docs/site-dist/install.html"
+      - "docs/site-dist/upgrade.html"
+      - "docs/site-dist/cli-basics.html"
+      - "docs/site-dist/ui.html"
+      - "docs/site-dist/skills.html"
+      - "docs/site-dist/release.html"
+      - "docs/site-dist/pages.html"
+    missing_pages: []
+
+  content_boundaries:
+    html_files:
+      - "docs/site-dist/cli-basics.html"
+      - "docs/site-dist/index.html"
+      - "docs/site-dist/install.html"
+      - "docs/site-dist/pages.html"
+      - "docs/site-dist/release.html"
+      - "docs/site-dist/skills.html"
+      - "docs/site-dist/ui.html"
+      - "docs/site-dist/upgrade.html"
+    package_identity_present: true
+    guarded_publish_boundary_present: true
+    manual_skill_source_boundary_present: true
+    ui_lifecycle_boundary_present: true
+    pages_external_activation_boundary_present: true
+    public_pages_url_claim_absent: true
+    npm_publish_ready_claim_absent: true
+    public_registry_install_proven_claim_absent: true
+    installed_skill_execution_claim_absent: true
+    installed_ui_lifecycle_claim_absent: true
+    global_skill_copies_source_claim_absent: true
+    overclaim_findings: []
+
+  workflow:
+    workflow_file: ".github/workflows/docs-pages.yml"
+    triggers_main_push: true
+    triggers_release_published: true
+    triggers_workflow_dispatch: true
+    uses_docs_validate: true
+    uploads_site_dist: true
+    uses_upload_pages_artifact: true
+    uses_deploy_pages: true
+    pages_permissions_present: true
+    environment_name: "github-pages"
+
+  github_pages_prerequisites:
+    pages_settings_status: "missing"
+    github_pages_environment_status: "missing"
+    repository_permissions_status: "present"
+    public_url_status: "missing"
+    public_availability_decision: "external_no_go"
+    blocking_reason: "GitHub Pages is disabled, the github-pages environment is missing, and no public Pages URL exists. Repository Actions are enabled and the workflow requests Pages deploy permissions."
+    handoff_to_7e: "7e must verify or enable GitHub Pages settings, github-pages environment/deploy activation, repository permissions, and public URL proof before claiming public docs availability."
+
+  successor_handoff:
+    usable_for_7e: true
+    docs_regeneration_command: "pnpm docs:validate"
+
+  cleanup:
+    temporary_files_created: []
+    cleanup_result: "not_needed"
+```
+
 ### Exit Notes
 
 1. If local docs readiness passes but Pages prerequisites are unknown or
