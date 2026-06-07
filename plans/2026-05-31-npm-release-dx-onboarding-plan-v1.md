@@ -25,8 +25,8 @@ task_order:
   - 7d-ui-lifecycle-proof
   - 7e-release-go-no-go
   - 7f-registry-install-smoke
-active_task_id: 7a-package-release-proof
-last_completed_task_id: 6-ui-service-lifecycle
+active_task_id: 7b-docs-readiness-proof
+last_completed_task_id: 7a-package-release-proof
 archive_group: 2026-05-31-npm-release-dx-onboarding
 task_tracker:
   - task_id: 0-remove-orchestra-bin
@@ -57,8 +57,8 @@ task_tracker:
     task_path: plans/archive/tasks/2026-05-31-npm-release-dx-onboarding/6-ui-service-lifecycle.md
     status: archived
   - task_id: 7a-package-release-proof
-    task_path: plans/tasks/2026-05-31-npm-release-dx-onboarding/7a-package-release-proof.md
-    status: draft
+    task_path: plans/archive/tasks/2026-05-31-npm-release-dx-onboarding/7a-package-release-proof.md
+    status: archived
   - task_id: 7b-docs-readiness-proof
     task_path: null
     status: not_created
@@ -211,7 +211,7 @@ This plan turns the current local-development install story into a release-quali
 | `4-docs-site-pages` | `plans/archive/tasks/2026-05-31-npm-release-dx-onboarding/4-docs-site-pages.md` | Add static documentation source/build/publish workflow covering install, upgrade, version pinning, CLI basics, UI, skills, and release semantics. | `1-package-version`, `2c-commit-policy`, `3-release-automation` | Missing public onboarding/docs surface. | archived |
 | `5-skills-install` | `plans/archive/tasks/2026-05-31-npm-release-dx-onboarding/5-skills-install.md` | Add `pairflow skills install` CLI support around the existing repo-local skill install policy, including target validation, dry-run/json output, and safe symlink/copy behavior. | `1-package-version` | Missing supported CLI path for skill installation. | archived |
 | `6-ui-service-lifecycle` | `plans/archive/tasks/2026-05-31-npm-release-dx-onboarding/6-ui-service-lifecycle.md` | Add `pairflow ui start|stop|status|restart` with PID/state files, stale-PID cleanup, URL/status reporting, and foreground `pairflow ui` compatibility. | `1-package-version` | Missing durable local UI server lifecycle management. | archived |
-| `7a-package-release-proof` | `plans/tasks/2026-05-31-npm-release-dx-onboarding/7a-package-release-proof.md` | Prove package contents, isolated packed install, version output, release workflow guard behavior, and publish prerequisite status. | `3-release-automation`, `6-ui-service-lifecycle` | Missing package/release/publish-guard proof for the final release pilot. | draft |
+| `7a-package-release-proof` | `plans/archive/tasks/2026-05-31-npm-release-dx-onboarding/7a-package-release-proof.md` | Prove package contents, isolated packed install, version output, release workflow guard behavior, and publish prerequisite status. | `3-release-automation`, `6-ui-service-lifecycle` | Local tarball package proof completed; public publish readiness remains NO-GO until external GitHub/npm prerequisites are created or verified in `7e`. | archived |
 | `7b-docs-readiness-proof` | `null` | Prove docs build/readiness with the concrete docs build command and generated install, UI, skills, and release pages. | `4-docs-site-pages` | Missing public docs readiness proof for release onboarding. | not_created |
 | `7c-skill-install-proof` | `null` | Prove `pairflow skills install` from dry-run/json and isolated installed-package target behavior without treating global skill copies as source. | `5-skills-install`, `7a-package-release-proof` | Missing installed-package skill install proof. | not_created |
 | `7d-ui-lifecycle-proof` | `null` | Prove `pairflow ui start|status|restart|stop` from source and packed/installed context; repo-owned packed UI gaps block plan closure. | `6-ui-service-lifecycle`, `7a-package-release-proof` | Missing installed-package UI lifecycle proof. | not_created |
@@ -289,6 +289,13 @@ This plan turns the current local-development install story into a release-quali
    explicit post-publish proof task. Added `7f-registry-install-smoke` after
    `7e-release-go-no-go` so local tarball proof, guard-opening decision, and
    public registry install proof remain separate closures.
+9. 2026-06-07: Completed and archived `7a-package-release-proof`. Evidence
+   recorded `pnpm release:validate`, `pnpm build`, `npm pack --json`, tarball
+   content inspection, isolated temp-prefix install, and installed
+   `pairflow --version` / `pairflow -v` matching `0.1.0`. Publish activation
+   remains NO-GO for `7e` because GitHub Actions secrets/variables and the
+   `npm-publish` environment are missing, and npm org/package access was
+   unknown due to unauthenticated local npm CLI.
 
 ## Risks and Assumptions
 

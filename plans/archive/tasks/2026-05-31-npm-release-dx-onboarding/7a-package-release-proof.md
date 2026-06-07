@@ -5,10 +5,10 @@ task_family_id: package-release-proof
 sequence_key: "7a"
 task_id: 7a-package-release-proof
 title: "Package Release Proof"
-status: draft
+status: archived
 phase: phase7
 target_files:
-  - "plans/tasks/2026-05-31-npm-release-dx-onboarding/7a-package-release-proof.md"
+  - "plans/archive/tasks/2026-05-31-npm-release-dx-onboarding/7a-package-release-proof.md"
   - "plans/2026-05-31-npm-release-dx-onboarding-plan-v1.md"
 prd_ref: null
 plan_ref: plans/2026-05-31-npm-release-dx-onboarding-plan-v1.md
