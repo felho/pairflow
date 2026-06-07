@@ -74,11 +74,18 @@ const checks: Check[] = [
       packageBin?.pairflow === "dist/cli/index.js" &&
       Array.isArray(packageFiles) &&
       JSON.stringify(packageFiles) ===
-        JSON.stringify(["dist/**", "ui/dist/**", "README.md"]) &&
+        JSON.stringify([
+          "dist/**",
+          "ui/dist/**",
+          ".claude/skills/INSTALL.md",
+          ".claude/skills/UsePairflow/**",
+          ".claude/skills/CreatePairflowSpec/**",
+          ".claude/skills/ExecutePairflowPlan/**",
+          "README.md"
+        ]) &&
       publishConfig?.access === "public" &&
-      pairflowMetadata?.skillSourcePackaging ===
-        "deferred-to-5-skills-install",
-    "package.json must remain public, publish the expected files, and preserve pairflow CLI metadata"
+      pairflowMetadata?.skillSourcePackaging === "included",
+    "package.json must remain public, publish the expected runtime and skill source files, and preserve pairflow CLI metadata"
   ),
   check(
     "release please root package",
