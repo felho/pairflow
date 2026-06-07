@@ -25,8 +25,8 @@ task_order:
   - 7d-ui-lifecycle-proof
   - 7e-release-go-no-go
   - 7f-registry-install-smoke
-active_task_id: 7b-docs-readiness-proof
-last_completed_task_id: 7a-package-release-proof
+active_task_id: 7c-skill-install-proof
+last_completed_task_id: 7b-docs-readiness-proof
 archive_group: 2026-05-31-npm-release-dx-onboarding
 task_tracker:
   - task_id: 0-remove-orchestra-bin
@@ -60,8 +60,8 @@ task_tracker:
     task_path: plans/archive/tasks/2026-05-31-npm-release-dx-onboarding/7a-package-release-proof.md
     status: archived
   - task_id: 7b-docs-readiness-proof
-    task_path: plans/tasks/2026-05-31-npm-release-dx-onboarding/7b-docs-readiness-proof.md
-    status: draft
+    task_path: plans/archive/tasks/2026-05-31-npm-release-dx-onboarding/7b-docs-readiness-proof.md
+    status: archived
   - task_id: 7c-skill-install-proof
     task_path: null
     status: not_created
@@ -212,7 +212,7 @@ This plan turns the current local-development install story into a release-quali
 | `5-skills-install` | `plans/archive/tasks/2026-05-31-npm-release-dx-onboarding/5-skills-install.md` | Add `pairflow skills install` CLI support around the existing repo-local skill install policy, including target validation, dry-run/json output, and safe symlink/copy behavior. | `1-package-version` | Missing supported CLI path for skill installation. | archived |
 | `6-ui-service-lifecycle` | `plans/archive/tasks/2026-05-31-npm-release-dx-onboarding/6-ui-service-lifecycle.md` | Add `pairflow ui start|stop|status|restart` with PID/state files, stale-PID cleanup, URL/status reporting, and foreground `pairflow ui` compatibility. | `1-package-version` | Missing durable local UI server lifecycle management. | archived |
 | `7a-package-release-proof` | `plans/archive/tasks/2026-05-31-npm-release-dx-onboarding/7a-package-release-proof.md` | Prove package contents, isolated packed install, version output, release workflow guard behavior, and publish prerequisite status. | `3-release-automation`, `6-ui-service-lifecycle` | Local tarball package proof completed; public publish readiness remains NO-GO until external GitHub/npm prerequisites are created or verified in `7e`. | archived |
-| `7b-docs-readiness-proof` | `plans/tasks/2026-05-31-npm-release-dx-onboarding/7b-docs-readiness-proof.md` | Prove docs build/readiness with the concrete docs build command and generated install, UI, skills, and release pages. | `4-docs-site-pages`, `7a-package-release-proof` | Missing public docs readiness proof for release onboarding. | draft |
+| `7b-docs-readiness-proof` | `plans/archive/tasks/2026-05-31-npm-release-dx-onboarding/7b-docs-readiness-proof.md` | Prove docs build/readiness with the concrete docs build command and generated install, UI, skills, and release pages. | `4-docs-site-pages`, `7a-package-release-proof` | Local docs validation, generated route/content coverage, and Pages workflow proof completed; public Pages availability remains NO-GO until external GitHub Pages settings/environment/public URL are enabled or verified in `7e`. | archived |
 | `7c-skill-install-proof` | `null` | Prove `pairflow skills install` from dry-run/json and isolated installed-package target behavior without treating global skill copies as source. | `5-skills-install`, `7a-package-release-proof` | Missing installed-package skill install proof. | not_created |
 | `7d-ui-lifecycle-proof` | `null` | Prove `pairflow ui start|status|restart|stop` from source and packed/installed context; repo-owned packed UI gaps block plan closure. | `6-ui-service-lifecycle`, `7a-package-release-proof` | Missing installed-package UI lifecycle proof. | not_created |
 | `7e-release-go-no-go` | `null` | Aggregate release-pilot evidence, keep or open publish guards based on explicit prerequisites, and produce the GO/NO-GO readiness record for publish activation. | `7a-package-release-proof`, `7b-docs-readiness-proof`, `7c-skill-install-proof`, `7d-ui-lifecycle-proof` | Missing release-pilot publish activation decision record. | not_created |
@@ -301,6 +301,12 @@ This plan turns the current local-development install story into a release-quali
     docs route/content coverage, Pages workflow configuration, and external
     GitHub Pages prerequisite status without editing docs source or mutating
     GitHub Pages settings.
+11. 2026-06-07: Completed and archived `7b-docs-readiness-proof`. Evidence
+    recorded `pnpm docs:validate`, required generated page coverage,
+    generated-content boundary checks, and `.github/workflows/docs-pages.yml`
+    inspection. Public docs availability remains NO-GO for `7e` because GitHub
+    Pages is disabled, the `github-pages` environment is missing, and no public
+    Pages URL exists, while repository Actions permissions are present.
 
 ## Risks and Assumptions
 
