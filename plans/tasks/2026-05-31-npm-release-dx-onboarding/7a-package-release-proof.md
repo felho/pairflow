@@ -632,6 +632,114 @@ tar -tf "$tarball_path"
 | Reusable local proof script | P2 | later-hardening | If the manual proof sequence is repeated often, extract it into a tool after this pilot proves the command shape. |
 | Registry-published install smoke | P1 | successor | Public npm install proof is not part of `7a`; it belongs after `7e` records a GO decision and publish has actually occurred. |
 
+### Evidence
+
+```yaml
+package_release_proof:
+  checked_at: "2026-06-07T22:53:41+02:00"
+  node_version: "v26.0.0"
+  pnpm_version: "10.8.1"
+  npm_version: "11.12.1"
+  package_name: "@pairflow/cli"
+  package_version: "0.1.0"
+
+  release_validate_command: "pnpm release:validate"
+  release_validate_result: "passed"
+  release_validate_notes:
+    - "All validateReleaseAutomation.ts checks reported ok."
+    - "History-selection evidence confirms no first-parent-only traversal."
+    - "Node emitted DEP0205 deprecation warning for module.register(); non-blocking."
+
+  build_command: "pnpm build"
+  build_result: "passed"
+  build_notes:
+    - "UI build produced ui/dist/index.html, index-DsBzIu8W.css, and index-CVUt58pD.js."
+    - "pnpm warned that esbuild build scripts are ignored; build still completed successfully."
+
+  pack_command: "npm pack --json --pack-destination \"$tmp_root\""
+  pack_json_output_ref: "captured during proof; temporary file removed during cleanup"
+  tarball_filename: "pairflow-cli-0.1.0.tgz"
+  tarball_path: "/var/folders/4y/yw924nm97658pxnmc5mr7gt00000gn/T/tmp.8vIM4aOSj2/pairflow-cli-0.1.0.tgz"
+  tarball_path_note: "temporary proof path removed during cleanup; successors should regenerate"
+  tarball_shasum: "0d430d2cdf95e0398dde1c065e32c9bf97821588"
+  tarball_integrity: "sha512-4d+znhftoET/IOJ/4l0h20uykyP4jDXobD4SyaLQBAQ0UvSP9InrxZK8gGn5hU764b52DYgU0GdVAtXjFJ+Ajw=="
+  tarball_file_count: 8014
+  tarball_unpacked_size: 13442834
+  tarball_package_size: 2021670
+
+  isolated_install_prefix: "/var/folders/4y/yw924nm97658pxnmc5mr7gt00000gn/T/tmp.8vIM4aOSj2/prefix"
+  isolated_home: "/var/folders/4y/yw924nm97658pxnmc5mr7gt00000gn/T/tmp.8vIM4aOSj2/home"
+  isolated_npm_cache: "/var/folders/4y/yw924nm97658pxnmc5mr7gt00000gn/T/tmp.8vIM4aOSj2/npm-cache"
+  isolated_install_result: "passed"
+
+  version_outputs:
+    pairflow_version: "0.1.0"
+    pairflow_short_version: "0.1.0"
+  version_match: true
+
+  package_contents:
+    required_present: true
+    forbidden_absent: true
+    required_files_present:
+      - "package/package.json"
+      - "package/dist/index.js"
+      - "package/dist/cli/index.js"
+      - "package/ui/dist/index.html"
+      - "package/.claude/skills/INSTALL.md"
+      - "package/.claude/skills/UsePairflow/SKILL.md"
+      - "package/.claude/skills/CreatePairflowSpec/SKILL.md"
+      - "package/.claude/skills/ExecutePairflowPlan/SKILL.md"
+      - "package/README.md"
+    required_patterns_present:
+      type_surface:
+        required_when_build_produces_types: true
+        present: true
+        matched_paths:
+          - "package/dist/cli/commands/repo/add.d.ts"
+      ui_assets:
+        required: true
+        present: true
+        matched_paths:
+          - "package/ui/dist/assets/index-DsBzIu8W.css"
+          - "package/ui/dist/assets/index-CVUt58pD.js"
+    forbidden_classes_checked:
+      - ".git/**"
+      - ".pairflow/**"
+      - "node_modules/**"
+      - "plans/**"
+      - "tests/**"
+      - "tools/**"
+      - "local evidence logs"
+      - "local npm auth files"
+      - "raw workflow secrets or environment files"
+    unexpected_files: []
+    notes:
+      - "Tar listing was inspected during proof; temporary listing file removed during cleanup."
+
+  publish_guard:
+    workflow_guard_closed: true
+    workflow_file: ".github/workflows/npm-publish.yml"
+    npm_org_package_access_status: "unknown"
+    npm_org_package_access_notes: "Local npm CLI is not authenticated; npm whoami returned ENEEDAUTH."
+    npm_token_status: "missing"
+    release_please_token_status: "missing"
+    publish_enabled_var_status: "missing"
+    publish_enabled_guard_decision: "unknown_no_go"
+    publish_enabled_blocking_reason: "GitHub Actions secrets/variables are missing, npm-publish environment is missing, and local npm org/package access could not be verified because npm CLI is not authenticated."
+    handoff_to_7e: "7e must create/verify NPM_TOKEN, RELEASE_PLEASE_TOKEN, PAIRFLOW_NPM_PUBLISH_ENABLED, npm-publish environment approval, and npm org/package access before opening the publish guard."
+    npm_publish_environment_status: "missing"
+
+  successor_handoff:
+    usable_for_7c: true
+    usable_for_7d: true
+    tarball_reuse_note: "The generated tarball path was temporary and removed during cleanup; successors should regenerate the tarball."
+    regeneration_command: "tmp_root=\"$(mktemp -d)\" && pnpm release:validate && pnpm build && npm pack --json --pack-destination \"$tmp_root\""
+
+  cleanup:
+    cleanup_target: "/var/folders/4y/yw924nm97658pxnmc5mr7gt00000gn/T/tmp.8vIM4aOSj2"
+    cleanup_result: "removed"
+```
+
 ### Exit Notes
 
 1. If local package proof passes but external prerequisites are unknown or
