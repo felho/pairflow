@@ -3839,116 +3839,123 @@ describe("deleteBubble store method", () => {
   });
 
   it("retries expanded timeline refresh when detail transcript total is ahead of the timeline response", async () => {
-    vi.useFakeTimers();
-    try {
-      const initialSummary = bubbleSummary({
+    const initialSummary = bubbleSummary({
+      bubbleId: "b-a",
+      repoPath: "/repo-a",
+      round: 1,
+      activeAgent: "codex",
+      activeRole: "implementer"
+    });
+    const initialDetail = {
+      ...bubbleDetail({
         bubbleId: "b-a",
         repoPath: "/repo-a",
+        state: "RUNNING"
+      }),
+      round: 1,
+      activeAgent: "codex",
+      activeRole: "implementer",
+      transcript: {
+        totalMessages: 1,
+        lastMessageType: "TASK",
+        lastMessageTs: "2026-04-19T20:46:40.952Z",
+        lastMessageId: "msg_001"
+      }
+    } satisfies UiBubbleDetail;
+    const laggingDetail = {
+      ...bubbleDetail({
+        bubbleId: "b-a",
+        repoPath: "/repo-a",
+        state: "RUNNING"
+      }),
+      round: 1,
+      activeAgent: "claude",
+      activeRole: "reviewer",
+      transcript: {
+        totalMessages: 2,
+        lastMessageType: "PASS",
+        lastMessageTs: "2026-04-19T20:47:18.143Z",
+        lastMessageId: "msg_002"
+      }
+    } satisfies UiBubbleDetail;
+    const initialTimeline: UiTimelineDisplayItem[] = [
+      timelineDisplayItem({
+        id: "msg_001",
+        round: 0,
+        role: "system",
+        senderLabel: "orchestrator"
+      })
+    ];
+    const recoveredTimeline: UiTimelineDisplayItem[] = [
+      ...initialTimeline,
+      timelineDisplayItem({
+        id: "msg_002",
         round: 1,
-        activeAgent: "codex",
-        activeRole: "implementer"
-      });
-      const initialDetail = {
-        ...bubbleDetail({
-          bubbleId: "b-a",
-          repoPath: "/repo-a",
-          state: "RUNNING"
-        }),
-        round: 1,
-        activeAgent: "codex",
-        activeRole: "implementer",
-        transcript: {
-          totalMessages: 1,
-          lastMessageType: "TASK",
-          lastMessageTs: "2026-04-19T20:46:40.952Z",
-          lastMessageId: "msg_001"
+        role: "implementer",
+        senderLabel: "codex"
+      })
+    ];
+    const laggingDetailDeferred = createDeferred<UiBubbleDetail>();
+    const laggingTimelineDeferred = createDeferred<UiTimelineDisplayItem[]>();
+    const scheduledRetryCallbacks: Array<() => void> = [];
+
+    const getBubble = vi
+      .fn<(repoPath: string, bubbleId: string) => Promise<UiBubbleDetail>>()
+      .mockResolvedValueOnce(initialDetail)
+      .mockImplementationOnce(async () => laggingDetailDeferred.promise)
+      .mockResolvedValueOnce(laggingDetail);
+    const getBubbleTimeline = vi
+      .fn<(repoPath: string, bubbleId: string) => Promise<UiTimelineDisplayItem[]>>()
+      .mockResolvedValueOnce(initialTimeline)
+      .mockImplementationOnce(async () => laggingTimelineDeferred.promise)
+      .mockResolvedValueOnce(recoveredTimeline);
+
+    const store = createBubbleStore({
+      api: createApiStub({
+        getRepos: vi.fn(async () => ["/repo-a"]),
+        getBubbles: vi.fn(async () => ({
+          repo: repoSummary("/repo-a"),
+          bubbles: [initialSummary]
+        })),
+        getBubble,
+        getBubbleTimeline
+      }),
+      createEventsClient: () => {
+        return {
+          start: () => undefined,
+          stop: () => undefined,
+          refresh: () => undefined
+        };
+      },
+      expandedTimelineLagRetryScheduler: {
+        set(callback) {
+          scheduledRetryCallbacks.push(callback);
+          return callback;
+        },
+        clear(handle) {
+          const index = scheduledRetryCallbacks.indexOf(handle as () => void);
+          if (index >= 0) {
+            scheduledRetryCallbacks.splice(index, 1);
+          }
         }
-      } satisfies UiBubbleDetail;
-      const laggingDetail = {
-        ...bubbleDetail({
-          bubbleId: "b-a",
-          repoPath: "/repo-a",
-          state: "RUNNING"
-        }),
-        round: 1,
-        activeAgent: "claude",
-        activeRole: "reviewer",
-        transcript: {
-          totalMessages: 2,
-          lastMessageType: "PASS",
-          lastMessageTs: "2026-04-19T20:47:18.143Z",
-          lastMessageId: "msg_002"
-        }
-      } satisfies UiBubbleDetail;
-      const initialTimeline: UiTimelineDisplayItem[] = [
-        timelineDisplayItem({
-          id: "msg_001",
-          round: 0,
-          role: "system",
-          senderLabel: "orchestrator"
-        })
-      ];
-      const recoveredTimeline: UiTimelineDisplayItem[] = [
-        ...initialTimeline,
-        timelineDisplayItem({
-          id: "msg_002",
-          round: 1,
-          role: "implementer",
-          senderLabel: "codex"
-        })
-      ];
-      const laggingDetailDeferred = createDeferred<UiBubbleDetail>();
-      const laggingTimelineDeferred = createDeferred<UiTimelineDisplayItem[]>();
-      const recoveredTimelineRequestStarted = createDeferred<void>();
+      }
+    });
 
-      const getBubble = vi
-        .fn<(repoPath: string, bubbleId: string) => Promise<UiBubbleDetail>>()
-        .mockResolvedValueOnce(initialDetail)
-        .mockImplementationOnce(async () => laggingDetailDeferred.promise)
-        .mockResolvedValueOnce(laggingDetail);
-      const getBubbleTimeline = vi
-        .fn<(repoPath: string, bubbleId: string) => Promise<UiTimelineDisplayItem[]>>()
-        .mockResolvedValueOnce(initialTimeline)
-        .mockImplementationOnce(async () => laggingTimelineDeferred.promise)
-        .mockImplementationOnce(async () => {
-          recoveredTimelineRequestStarted.resolve();
-          return recoveredTimeline;
-        });
+    await store.getState().initialize();
+    await store.getState().toggleBubbleExpanded("b-a");
 
-      const store = createBubbleStore({
-        api: createApiStub({
-          getRepos: vi.fn(async () => ["/repo-a"]),
-          getBubbles: vi.fn(async () => ({
-            repo: repoSummary("/repo-a"),
-            bubbles: [initialSummary]
-          })),
-          getBubble,
-          getBubbleTimeline
-        }),
-        createEventsClient: () => {
-          return {
-            start: () => undefined,
-            stop: () => undefined,
-            refresh: () => undefined
-          };
-        }
-      });
+    const laggingRefresh = store.getState().refreshExpandedBubble("b-a");
+    expect(getBubbleTimeline).toHaveBeenCalledTimes(2);
+    laggingDetailDeferred.resolve(laggingDetail);
+    laggingTimelineDeferred.resolve(initialTimeline);
+    await laggingRefresh;
+    expect(store.getState().bubbleTimelines["b-a"]).toEqual(initialTimeline);
+    expect(scheduledRetryCallbacks).toHaveLength(1);
 
-      await store.getState().initialize();
-      await store.getState().toggleBubbleExpanded("b-a");
+    scheduledRetryCallbacks[0]?.();
+    await Promise.resolve();
+    await Promise.resolve();
 
-      const laggingRefresh = store.getState().refreshExpandedBubble("b-a");
-      expect(getBubbleTimeline).toHaveBeenCalledTimes(2);
-      laggingDetailDeferred.resolve(laggingDetail);
-      laggingTimelineDeferred.resolve(initialTimeline);
-      await laggingRefresh;
-      expect(store.getState().bubbleTimelines["b-a"]).toEqual(initialTimeline);
-
-      await vi.advanceTimersByTimeAsync(150);
-      await recoveredTimelineRequestStarted.promise;
-      expect(getBubbleTimeline).toHaveBeenCalledTimes(3);
-    } finally {
-      vi.useRealTimers();
-    }
+    expect(getBubbleTimeline).toHaveBeenCalledTimes(3);
   });
 });

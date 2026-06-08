@@ -120,6 +120,10 @@ export interface BubbleStoreDependencies {
   createEventsClient?: (input: RealtimeEventsClientInput) => RealtimeEventsClient;
   storage?: StorageLike | null;
   pollingIntervalMs?: number;
+  expandedTimelineLagRetryScheduler?: {
+    set(callback: () => void, delayMs: number): unknown;
+    clear(handle: unknown): void;
+  };
 }
 
 type BubblePositionSource = PlacementSource | "explicit";
@@ -1059,6 +1063,14 @@ export function createBubbleStore(
   const storage = dependencies.storage ?? getStorageFromWindow();
   const createEventsClient =
     dependencies.createEventsClient ?? createRealtimeEventsClient;
+  const expandedTimelineLagRetryScheduler =
+    dependencies.expandedTimelineLagRetryScheduler ?? {
+      set: (callback: () => void, delayMs: number): ReturnType<typeof setTimeout> =>
+        setTimeout(callback, delayMs),
+      clear: (handle: unknown): void => {
+        clearTimeout(handle as ReturnType<typeof setTimeout>);
+      }
+    };
 
   let eventsClient: RealtimeEventsClient | null = null;
   let latestInitializeId = 0;
@@ -1067,7 +1079,7 @@ export function createBubbleStore(
   const latestExpandedRefreshRequestIdByBubble = new Map<string, number>();
   const expandedTimelineLagRetryTimerByBubble = new Map<
     string,
-    ReturnType<typeof setTimeout>
+    unknown
   >();
   const expandedTimelineLagRetryStateByBubble = new Map<
     string,
@@ -1081,7 +1093,7 @@ export function createBubbleStore(
     const clearExpandedTimelineLagRetry = (bubbleId: string): void => {
       const timer = expandedTimelineLagRetryTimerByBubble.get(bubbleId);
       if (timer !== undefined) {
-        clearTimeout(timer);
+        expandedTimelineLagRetryScheduler.clear(timer);
         expandedTimelineLagRetryTimerByBubble.delete(bubbleId);
       }
       expandedTimelineLagRetryStateByBubble.delete(bubbleId);
@@ -1110,14 +1122,14 @@ export function createBubbleStore(
 
       const existingTimer = expandedTimelineLagRetryTimerByBubble.get(bubbleId);
       if (existingTimer !== undefined) {
-        clearTimeout(existingTimer);
+        expandedTimelineLagRetryScheduler.clear(existingTimer);
       }
 
       expandedTimelineLagRetryStateByBubble.set(bubbleId, {
         expectedCount,
         attempts
       });
-      const timer = setTimeout(() => {
+      const timer = expandedTimelineLagRetryScheduler.set(() => {
         expandedTimelineLagRetryTimerByBubble.delete(bubbleId);
         const latest = expandedTimelineLagRetryStateByBubble.get(bubbleId);
         if (latest?.expectedCount !== expectedCount) {
@@ -1791,7 +1803,7 @@ export function createBubbleStore(
         for (const bubbleId of expandedTimelineLagRetryTimerByBubble.keys()) {
           const timer = expandedTimelineLagRetryTimerByBubble.get(bubbleId);
           if (timer !== undefined) {
-            clearTimeout(timer);
+            expandedTimelineLagRetryScheduler.clear(timer);
           }
         }
         expandedTimelineLagRetryTimerByBubble.clear();
@@ -1808,7 +1820,7 @@ export function createBubbleStore(
           // Collapse only toggles the display mode. Existing card coordinates stay fixed.
           const timer = expandedTimelineLagRetryTimerByBubble.get(bubbleId);
           if (timer !== undefined) {
-            clearTimeout(timer);
+            expandedTimelineLagRetryScheduler.clear(timer);
           }
           expandedTimelineLagRetryTimerByBubble.delete(bubbleId);
           expandedTimelineLagRetryStateByBubble.delete(bubbleId);
@@ -1835,7 +1847,7 @@ export function createBubbleStore(
       collapseBubble(bubbleId: string): void {
         const timer = expandedTimelineLagRetryTimerByBubble.get(bubbleId);
         if (timer !== undefined) {
-          clearTimeout(timer);
+          expandedTimelineLagRetryScheduler.clear(timer);
         }
         expandedTimelineLagRetryTimerByBubble.delete(bubbleId);
         expandedTimelineLagRetryStateByBubble.delete(bubbleId);
