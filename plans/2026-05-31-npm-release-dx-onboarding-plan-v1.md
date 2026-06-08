@@ -69,8 +69,8 @@ task_tracker:
     task_path: plans/archive/tasks/2026-05-31-npm-release-dx-onboarding/7d-ui-lifecycle-proof.md
     status: archived
   - task_id: 7e-release-go-no-go
-    task_path: null
-    status: not_created
+    task_path: plans/tasks/2026-05-31-npm-release-dx-onboarding/7e-release-go-no-go.md
+    status: approved
   - task_id: 7f-registry-install-smoke
     task_path: null
     status: not_created
@@ -215,7 +215,7 @@ This plan turns the current local-development install story into a release-quali
 | `7b-docs-readiness-proof` | `plans/archive/tasks/2026-05-31-npm-release-dx-onboarding/7b-docs-readiness-proof.md` | Prove docs build/readiness with the concrete docs build command and generated install, UI, skills, and release pages. | `4-docs-site-pages`, `7a-package-release-proof` | Local docs validation, generated route/content coverage, and Pages workflow proof completed; public Pages availability remains NO-GO until external GitHub Pages settings/environment/public URL are enabled or verified in `7e`. | archived |
 | `7c-skill-install-proof` | `plans/archive/tasks/2026-05-31-npm-release-dx-onboarding/7c-skill-install-proof.md` | Prove `pairflow skills install` from dry-run/json and isolated installed-package target behavior without treating global skill copies as source. | `5-skills-install`, `7a-package-release-proof` | Installed-package skill install proof completed; real global skill directories were not used as source or mutated. | archived |
 | `7d-ui-lifecycle-proof` | `plans/archive/tasks/2026-05-31-npm-release-dx-onboarding/7d-ui-lifecycle-proof.md` | Prove `pairflow ui start|status|restart|stop` from source and packed/installed context; repo-owned packed UI gaps block plan closure. | `6-ui-service-lifecycle`, `7a-package-release-proof` | Source and installed-package UI lifecycle proof completed; a macOS `/var` versus `/private/var` false negative was resolved with realpath-based state-path auditing. | archived |
-| `7e-release-go-no-go` | `null` | Aggregate release-pilot evidence, keep or open publish guards based on explicit prerequisites, and produce the GO/NO-GO readiness record for publish activation. | `7a-package-release-proof`, `7b-docs-readiness-proof`, `7c-skill-install-proof`, `7d-ui-lifecycle-proof` | Missing release-pilot publish activation decision record. | not_created |
+| `7e-release-go-no-go` | `plans/tasks/2026-05-31-npm-release-dx-onboarding/7e-release-go-no-go.md` | Aggregate release-pilot evidence, keep or open publish guards based on explicit prerequisites, and produce the GO/NO-GO readiness record for publish activation. | `7a-package-release-proof`, `7b-docs-readiness-proof`, `7c-skill-install-proof`, `7d-ui-lifecycle-proof` | Missing release-pilot publish activation decision record. | approved |
 | `7f-registry-install-smoke` | `null` | After a `7e` GO decision and actual publish, prove registry install for `@pairflow/cli@latest` and the exact published version without relying on the local tarball or source checkout. | `7e-release-go-no-go` | Missing post-publish npm registry install proof for the user-facing install claim. | not_created |
 
 ## Coverage Map
@@ -344,6 +344,15 @@ This plan turns the current local-development install story into a release-quali
     checklist now uses realpath-based exact state-path comparison.
 19. 2026-06-08: Archived `7d-ui-lifecycle-proof` after evidence completion and
     advanced the active release-pilot task to `7e-release-go-no-go`.
+20. 2026-06-08: Created draft `7e-release-go-no-go` to aggregate completed
+    release-pilot proof evidence, verify current release/publish/docs guard
+    state, classify external GitHub/npm prerequisites, and record an explicit
+    first-release GO/NO-GO decision before any public publish activation.
+21. 2026-06-08: ReviewSpec task-mode approved `7e-release-go-no-go` after
+    targeted contract/capability refinement made `7a`/`7b` evidence consumption
+    schema-specific, made missing Pages prerequisites force release NO-GO,
+    separated observed publish variable state from post-GO authorization, and
+    preserved `7f` as the post-publish registry smoke boundary.
 
 ## Risks and Assumptions
 
