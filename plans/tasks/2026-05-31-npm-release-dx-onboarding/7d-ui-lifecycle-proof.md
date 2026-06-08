@@ -5,7 +5,7 @@ task_family_id: ui-lifecycle-proof
 sequence_key: "7d"
 task_id: 7d-ui-lifecycle-proof
 title: "UI Lifecycle Proof"
-status: approved
+status: completed
 phase: phase7
 target_files:
   - "plans/tasks/2026-05-31-npm-release-dx-onboarding/7d-ui-lifecycle-proof.md"
@@ -388,10 +388,12 @@ service state.
    const start = JSON.parse(fs.readFileSync(startPath, "utf8"));
    const status = JSON.parse(fs.readFileSync(statusPath, "utf8"));
    const expectedStatePath = path.resolve(repo, ".pairflow", "runtime", "ui-service.json");
+   const realStatePath = fs.realpathSync.native(start.statePath);
+   const realExpectedStatePath = fs.realpathSync.native(expectedStatePath);
    const proof = {
      start_running: start.status === "running" && start.reasonCode === "ui_service_started" && start.exitCode === 0,
      status_running: status.status === "running" && status.reasonCode === "ui_service_already_running" && status.exitCode === 0,
-     state_path_exact: path.resolve(start.statePath) === expectedStatePath,
+     state_path_exact: realStatePath === realExpectedStatePath,
      start_pid: start.pid,
      status_pid: status.pid,
      url: start.url
@@ -439,10 +441,12 @@ service state.
    const packageRoot = fs.realpathSync(path.resolve(prefix, "node_modules", "@pairflow", "cli"));
    const expectedStatePath = path.resolve(repo, ".pairflow", "runtime", "ui-service.json");
    const state = JSON.parse(fs.readFileSync(start.statePath, "utf8"));
+   const realStatePath = fs.realpathSync.native(start.statePath);
+   const realExpectedStatePath = fs.realpathSync.native(expectedStatePath);
    const proof = {
      start_running: start.status === "running" && start.reasonCode === "ui_service_started" && start.exitCode === 0,
      status_running: status.status === "running" && status.reasonCode === "ui_service_already_running" && status.exitCode === 0,
-     state_path_exact: path.resolve(start.statePath) === expectedStatePath,
+     state_path_exact: realStatePath === realExpectedStatePath,
      command_uses_installed_pairflow: state.command.some((part) => fs.existsSync(part) && fs.realpathSync(part).startsWith(packageRoot + path.sep)),
      command_has_no_assets_dir: !state.command.includes("--assets-dir"),
      start_pid: start.pid,
@@ -523,18 +527,89 @@ service state.
 Use this section after execution.
 
 ```yaml
-evidence_status: pending
-executed_at: null
-commands: []
-tool_versions: null
-build_and_pack: null
-isolated_paths: null
-ports: null
-source_lifecycle: null
-installed_lifecycle: null
-state_path_boundaries: null
-packaged_asset_boundary: null
-cleanup_status: null
-decision: null
-notes: []
+evidence_status: completed
+executed_at: "2026-06-08T10:11:19+02:00"
+commands:
+  - "git status --short"
+  - "node --version"
+  - "pnpm --version"
+  - "npm --version"
+  - "node -p \"require('./package.json').name + ' ' + require('./package.json').version\""
+  - "pnpm build"
+  - "npm pack --json --pack-destination \"$tmp_root\""
+  - "source-checkout pairflow ui start|status|restart|stop with explicit --assets-dir"
+  - "npm install --prefix \"$prefix\" \"$tarball_path\" with isolated HOME/cache"
+  - "\"$installed_pairflow\" --version"
+  - "installed-package pairflow ui start|status|restart|stop without --assets-dir"
+  - "packaged ui/dist/index.html and fallback-placeholder audit"
+  - "cleanup"
+tool_versions:
+  node_version: "v26.0.0"
+  pnpm_version: "10.8.1"
+  npm_version: "11.12.1"
+  package_name: "@pairflow/cli"
+  package_version: "0.1.0"
+build_and_pack:
+  fresh_build_result: "passed"
+  fresh_pack_result: "passed"
+  build_artifact_status_audit: "clean for dist/ui/dist/package lock surfaces"
+  tarball_source: "fresh local npm pack"
+isolated_paths:
+  source_repo: "/var/folders/4y/yw924nm97658pxnmc5mr7gt00000gn/T/tmp.9WulNehmo0/source-repo"
+  installed_repo: "/var/folders/4y/yw924nm97658pxnmc5mr7gt00000gn/T/tmp.9WulNehmo0/installed-repo"
+  prefix: "/var/folders/4y/yw924nm97658pxnmc5mr7gt00000gn/T/tmp.9WulNehmo0/prefix"
+  isolated_home: "/var/folders/4y/yw924nm97658pxnmc5mr7gt00000gn/T/tmp.9WulNehmo0/home"
+  isolated_npm_cache: "/var/folders/4y/yw924nm97658pxnmc5mr7gt00000gn/T/tmp.9WulNehmo0/npm-cache"
+  path_note: "temporary proof paths removed during cleanup; successors should regenerate"
+ports:
+  source_port: 57900
+  installed_port: 57901
+source_lifecycle:
+  start_running: true
+  status_running: true
+  state_path_exact: true
+  restart_running: true
+  stop_stopped: true
+  state_removed_after_stop: true
+  start_pid: 46807
+  status_pid: 46807
+  restart_pid: 46923
+  stopped_pid: 46923
+  url: "http://127.0.0.1:57900"
+installed_lifecycle:
+  installed_version_output: "0.1.0"
+  start_running: true
+  status_running: true
+  state_path_exact: true
+  command_uses_installed_pairflow: true
+  command_has_no_assets_dir: true
+  restart_running: true
+  stop_stopped: true
+  state_removed_after_stop: true
+  start_pid: 47064
+  status_pid: 47064
+  restart_pid: 47179
+  stopped_pid: 47179
+  url: "http://127.0.0.1:57901"
+state_path_boundaries:
+  source_state_path_exact_realpath: true
+  installed_state_path_exact_realpath: true
+  macos_var_private_var_alias_observed: true
+  first_string_exact_source_audit_result: false
+  realpath_rerun_source_audit_result: true
+packaged_asset_boundary:
+  package_local_index_html_present: true
+  installed_http_probe_succeeded: true
+  fallback_placeholder_absent: true
+  repo_local_assets_dir_not_passed_to_installed_command: true
+cleanup_status:
+  cleanup_target: "/var/folders/4y/yw924nm97658pxnmc5mr7gt00000gn/T/tmp.9WulNehmo0"
+  cleanup_result: "removed"
+git_status_after: "modified task evidence/checklist only"
+decision: "ui_lifecycle_proof_passed"
+notes:
+  - "The first source lifecycle audit failed on macOS /var versus /private/var path spelling; a diagnostic confirmed realpath equality."
+  - "The approved checklist was refined to compare lifecycle state paths by native realpath while preserving exact .pairflow/runtime/ui-service.json semantics."
+  - "pnpm build emitted the existing non-blocking esbuild ignored-build-scripts warning."
+  - "npm emitted a non-blocking notice that npm 11.16.0 is available."
 ```
