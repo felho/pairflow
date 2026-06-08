@@ -26,7 +26,7 @@ task_order:
   - 7e-release-go-no-go
   - 7f-external-release-setup
   - 7g-registry-install-smoke
-active_task_id: null
+active_task_id: 7g-registry-install-smoke
 last_completed_task_id: 7f-external-release-setup
 archive_group: 2026-05-31-npm-release-dx-onboarding
 task_tracker:
@@ -76,8 +76,8 @@ task_tracker:
     task_path: plans/tasks/2026-05-31-npm-release-dx-onboarding/7f-external-release-setup.md
     status: done
   - task_id: 7g-registry-install-smoke
-    task_path: null
-    status: not_created
+    task_path: plans/tasks/2026-05-31-npm-release-dx-onboarding/7g-registry-install-smoke.md
+    status: approved
 ---
 
 # Plan: NPM Release, CLI DX, and Onboarding
@@ -221,7 +221,7 @@ This plan turns the current local-development install story into a release-quali
 | `7d-ui-lifecycle-proof` | `plans/archive/tasks/2026-05-31-npm-release-dx-onboarding/7d-ui-lifecycle-proof.md` | Prove `pairflow ui start|status|restart|stop` from source and packed/installed context; repo-owned packed UI gaps block plan closure. | `6-ui-service-lifecycle`, `7a-package-release-proof` | Source and installed-package UI lifecycle proof completed; a macOS `/var` versus `/private/var` false negative was resolved with realpath-based state-path auditing. | archived |
 | `7e-release-go-no-go` | `plans/tasks/2026-05-31-npm-release-dx-onboarding/7e-release-go-no-go.md` | Aggregate release-pilot evidence, diagnose missing external prerequisites, and produce the GO/NO-GO readiness record without resolving setup or opening publish guards. | `7a-package-release-proof`, `7b-docs-readiness-proof`, `7c-skill-install-proof`, `7d-ui-lifecycle-proof` | Release-pilot GO/NO-GO decision recorded `release_no_go`; local proof passed, external GitHub/npm/Pages prerequisites route to `7f-external-release-setup`. | done |
 | `7f-external-release-setup` | `plans/tasks/2026-05-31-npm-release-dx-onboarding/7f-external-release-setup.md` | Verify and record operator-created external GitHub/npm release activation prerequisites named by `7e`; no agent-created secrets/tokens/environments/Pages/npm access, source/workflow edits, or real release/publish. | `7e-release-go-no-go` | External GitHub/npm/Pages setup verified: release and npm secrets present, publish guard variable present and false, protected npm publish environment present, Pages workflow source/public URL present, and npm user/org/package access confirmed before first public publish. | done |
-| `7g-registry-install-smoke` | `null` | After `7f` verifies external setup readiness and after the operator completes actual release plus successful npm publish workflow, prove registry install for `@pairflow/cli@latest` and the exact published version without relying on the local tarball or source checkout. | `7f-external-release-setup` | Missing post-publish npm registry install proof for the user-facing install claim. | not_created |
+| `7g-registry-install-smoke` | `plans/tasks/2026-05-31-npm-release-dx-onboarding/7g-registry-install-smoke.md` | After `7f` verifies external setup readiness and after the operator completes actual release plus successful npm publish workflow, prove registry install for `@pairflow/cli@latest` and the exact published version without relying on the local tarball or source checkout. | `7f-external-release-setup` | Missing post-publish npm registry install proof for the user-facing install claim. | approved |
 
 ## Coverage Map
 
@@ -384,6 +384,18 @@ This plan turns the current local-development install story into a release-quali
     the next checkpoint is actual release/publish execution, and
     `7g-registry-install-smoke` remains unavailable until a public npm publish
     succeeds.
+25. 2026-06-08: Created draft `7g-registry-install-smoke` to prove the
+    published npm registry artifact installs from `@pairflow/cli@latest` and
+    the exact published version after actual release plus successful npm
+    publish. The task is post-publish proof-only: it forbids release creation,
+    publish execution, GitHub/npm mutation, local tarball substitution, and
+    source/workflow fixes.
+26. 2026-06-08: ReviewSpec task-mode approved `7g-registry-install-smoke`
+    after first-pass metadata/scope/contract/capability lanes and targeted
+    scope/contract reruns. Refinement added separate latest/exact install
+    prefixes, explicit release tag/workflow run/version binding evidence,
+    guard-closed blocker vocabulary, and executable environment-variable wiring
+    for installed binary audits.
 
 ## Risks and Assumptions
 
