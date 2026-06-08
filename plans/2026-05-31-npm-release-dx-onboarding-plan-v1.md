@@ -25,8 +25,8 @@ task_order:
   - 7d-ui-lifecycle-proof
   - 7e-release-go-no-go
   - 7f-registry-install-smoke
-active_task_id: 7c-skill-install-proof
-last_completed_task_id: 7b-docs-readiness-proof
+active_task_id: 7d-ui-lifecycle-proof
+last_completed_task_id: 7c-skill-install-proof
 archive_group: 2026-05-31-npm-release-dx-onboarding
 task_tracker:
   - task_id: 0-remove-orchestra-bin
@@ -63,8 +63,8 @@ task_tracker:
     task_path: plans/archive/tasks/2026-05-31-npm-release-dx-onboarding/7b-docs-readiness-proof.md
     status: archived
   - task_id: 7c-skill-install-proof
-    task_path: plans/tasks/2026-05-31-npm-release-dx-onboarding/7c-skill-install-proof.md
-    status: done
+    task_path: plans/archive/tasks/2026-05-31-npm-release-dx-onboarding/7c-skill-install-proof.md
+    status: archived
   - task_id: 7d-ui-lifecycle-proof
     task_path: null
     status: not_created
@@ -213,7 +213,7 @@ This plan turns the current local-development install story into a release-quali
 | `6-ui-service-lifecycle` | `plans/archive/tasks/2026-05-31-npm-release-dx-onboarding/6-ui-service-lifecycle.md` | Add `pairflow ui start|stop|status|restart` with PID/state files, stale-PID cleanup, URL/status reporting, and foreground `pairflow ui` compatibility. | `1-package-version` | Missing durable local UI server lifecycle management. | archived |
 | `7a-package-release-proof` | `plans/archive/tasks/2026-05-31-npm-release-dx-onboarding/7a-package-release-proof.md` | Prove package contents, isolated packed install, version output, release workflow guard behavior, and publish prerequisite status. | `3-release-automation`, `6-ui-service-lifecycle` | Local tarball package proof completed; public publish readiness remains NO-GO until external GitHub/npm prerequisites are created or verified in `7e`. | archived |
 | `7b-docs-readiness-proof` | `plans/archive/tasks/2026-05-31-npm-release-dx-onboarding/7b-docs-readiness-proof.md` | Prove docs build/readiness with the concrete docs build command and generated install, UI, skills, and release pages. | `4-docs-site-pages`, `7a-package-release-proof` | Local docs validation, generated route/content coverage, and Pages workflow proof completed; public Pages availability remains NO-GO until external GitHub Pages settings/environment/public URL are enabled or verified in `7e`. | archived |
-| `7c-skill-install-proof` | `plans/tasks/2026-05-31-npm-release-dx-onboarding/7c-skill-install-proof.md` | Prove `pairflow skills install` from dry-run/json and isolated installed-package target behavior without treating global skill copies as source. | `5-skills-install`, `7a-package-release-proof` | Installed-package skill install proof completed; real global skill directories were not used as source or mutated. | done |
+| `7c-skill-install-proof` | `plans/archive/tasks/2026-05-31-npm-release-dx-onboarding/7c-skill-install-proof.md` | Prove `pairflow skills install` from dry-run/json and isolated installed-package target behavior without treating global skill copies as source. | `5-skills-install`, `7a-package-release-proof` | Installed-package skill install proof completed; real global skill directories were not used as source or mutated. | archived |
 | `7d-ui-lifecycle-proof` | `null` | Prove `pairflow ui start|status|restart|stop` from source and packed/installed context; repo-owned packed UI gaps block plan closure. | `6-ui-service-lifecycle`, `7a-package-release-proof` | Missing installed-package UI lifecycle proof. | not_created |
 | `7e-release-go-no-go` | `null` | Aggregate release-pilot evidence, keep or open publish guards based on explicit prerequisites, and produce the GO/NO-GO readiness record for publish activation. | `7a-package-release-proof`, `7b-docs-readiness-proof`, `7c-skill-install-proof`, `7d-ui-lifecycle-proof` | Missing release-pilot publish activation decision record. | not_created |
 | `7f-registry-install-smoke` | `null` | After a `7e` GO decision and actual publish, prove registry install for `@pairflow/cli@latest` and the exact published version without relying on the local tarball or source checkout. | `7e-release-go-no-go` | Missing post-publish npm registry install proof for the user-facing install claim. | not_created |
@@ -325,6 +325,8 @@ This plan turns the current local-development install story into a release-quali
     skill directory pre/post non-mutation, and cleanup. The first source-root
     audit hit a macOS `/var` versus `/private/var` path-alias false negative;
     a realpath rerun proved package-local source resolution.
+15. 2026-06-08: Archived `7c-skill-install-proof` after evidence completion and
+    advanced the active release-pilot task to `7d-ui-lifecycle-proof`.
 
 ## Risks and Assumptions
 

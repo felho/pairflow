@@ -5,10 +5,10 @@ task_family_id: skill-install-proof
 sequence_key: "7c"
 task_id: 7c-skill-install-proof
 title: "Skill Install Proof"
-status: done
+status: archived
 phase: phase7
 target_files:
-  - "plans/tasks/2026-05-31-npm-release-dx-onboarding/7c-skill-install-proof.md"
+  - "plans/archive/tasks/2026-05-31-npm-release-dx-onboarding/7c-skill-install-proof.md"
   - "plans/2026-05-31-npm-release-dx-onboarding-plan-v1.md"
 prd_ref: null
 plan_ref: plans/2026-05-31-npm-release-dx-onboarding-plan-v1.md
@@ -514,8 +514,8 @@ and no reliance on global installed skill copies as source.
 ### Acceptance Checks
 
 1. Task artifact exists at
-   `plans/tasks/2026-05-31-npm-release-dx-onboarding/7c-skill-install-proof.md`
-   with `status: approved` only after ReviewSpec task-mode approves it.
+   `plans/archive/tasks/2026-05-31-npm-release-dx-onboarding/7c-skill-install-proof.md`
+   with `status: archived` after ReviewSpec approval and completed evidence.
 2. Parent plan tracker points `7c-skill-install-proof` at the live task path
    before execution and later archives it only after proof evidence is
    recorded.
