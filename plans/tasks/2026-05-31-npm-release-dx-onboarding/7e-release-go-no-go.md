@@ -5,7 +5,7 @@ task_family_id: release-go-no-go
 sequence_key: "7e"
 task_id: 7e-release-go-no-go
 title: "Release GO/NO-GO"
-status: approved
+status: done
 phase: phase7
 target_files:
   - "plans/tasks/2026-05-31-npm-release-dx-onboarding/7e-release-go-no-go.md"
@@ -461,37 +461,55 @@ Use this section after execution.
 
 ```yaml
 release_go_no_go:
-  evidence_status: pending
-  executed_at: null
+  evidence_status: completed
+  executed_at: "2026-06-08T11:05:38+02:00"
   consumed_evidence:
-    package_release_proof: null
-    package_release_proof_source: null
-    docs_readiness_proof: null
-    docs_readiness_proof_source: null
-    skill_install_proof: null
-    ui_lifecycle_proof: null
+    package_release_proof: package_release_proof_passed
+    package_release_proof_source: derived_structured_fields
+    docs_readiness_proof: docs_readiness_proof_passed
+    docs_readiness_proof_source: derived_structured_fields
+    skill_install_proof: skill_install_proof_passed
+    ui_lifecycle_proof: ui_lifecycle_proof_passed
   current_local_validation:
-    release_validate: null
-    docs_validate: null
-    workflow_guard_inspection: null
+    release_validate: passed
+    docs_validate: passed
+    workflow_guard_inspection: passed
   external_prerequisites:
-    release_please_token: null
-    npm_token: null
-    npm_org_package_access: null
-    npm_publish_environment: null
-    pairflow_npm_publish_enabled_observed: null
-    publish_guard_authorization: null
-    github_pages_enabled: null
-    github_pages_environment: null
-    github_pages_public_url: null
-  decision: null
-  publish_guard_state: null
-  docs_public_state: null
+    release_please_token: missing
+    npm_token: missing
+    npm_org_package_access: unknown
+    npm_publish_environment: missing
+    pairflow_npm_publish_enabled_observed: missing
+    publish_guard_authorization: not_authorized
+    github_pages_enabled: missing
+    github_pages_environment: missing
+    github_pages_public_url: missing
+  decision: release_no_go
+  publish_guard_state: guard_closed
+  docs_public_state: public_docs_no_go
   publish_execution_handoff:
     actual_publish_completed: false
     required_before_7g: "GitHub release published and npm publish workflow completed successfully"
     registry_install_proof_status: "deferred_to_7g"
-  next_task: null
-  blockers: []
-  notes: []
+  next_task: 7f-external-release-setup
+  blockers:
+    - release_please_token_missing
+    - npm_token_missing
+    - npm_org_package_access_unknown
+    - npm_publish_environment_missing
+    - pairflow_npm_publish_enabled_missing
+    - github_pages_disabled_or_missing
+    - github_pages_environment_missing
+    - github_pages_public_url_missing
+    - npm_cli_unauthenticated
+    - npm_registry_package_lookup_404
+  notes:
+    - "Initial checkout was clean before evidence execution."
+    - "Tool versions: node v26.0.0, pnpm 10.8.1, npm 11.12.1, package @pairflow/cli 0.1.0."
+    - "Archived 7a-7d proof consumption returned all expected booleans true."
+    - "pnpm release:validate passed; pnpm docs:validate passed; both emitted DEP0205 module.register deprecation warnings only."
+    - "Workflow guard inspection passed for release token requirement, guard-closed dry-run, real publish gates, npm token requirement, npm-publish environment, duplicate publish preflight, docs validate, github-pages environment, and Pages artifact upload."
+    - "GitHub CLI read-only checks for felho/pairflow returned empty Actions secrets, empty Actions variables, and no environments."
+    - "GitHub Pages API returned HTTP 404, recorded as Pages missing/not enabled."
+    - "npm whoami failed with ENEEDAUTH; npm view @pairflow/cli version failed with E404."
 ```
