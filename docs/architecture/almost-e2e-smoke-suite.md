@@ -97,6 +97,33 @@ or unrelated to the bug class.
 | Git / filesystem (against fixture repo)           | **Real**  | Cheap; catches workspace bugs                                                |
 | Sequence allocator, envelope validation           | **Real**  | Bypassing these would erase most of the suite's value                        |
 
+## CI Parity And Test Isolation Lessons
+
+Local green tests and GitHub green tests are not the same business signal
+when a test depends on leaked state, global timers, or shared browser
+storage. GitHub may run the same suite with different timing, process
+ordering, or environment defaults, and that can expose hidden coupling that
+does not appear locally.
+
+The operational lesson from the expanded timeline retry failures is:
+
+- Treat a CI-only UI failure as an isolation suspect before assuming product
+  behavior is broken.
+- Browser and store tests must start from explicit, private state. Do not
+  rely on ambient `localStorage`, leftover expanded IDs, global timers, or
+  prior test order.
+- Tests that exercise retry behavior should control their scheduler and
+  assert the observable final state, not only internal call counts or
+  transient intermediate states.
+- The smoke layer should preserve real wiring, but still keep each scenario's
+  state and timing under explicit runner control.
+
+In business terms: a release gate is only valuable if a pass means the same
+thing every time. Shared test state turns the gate into a source of noise,
+slows down release readiness, and makes engineers spend time debugging the
+test environment instead of the product. Isolation is therefore part of the
+quality contract, not only a testing convenience.
+
 ### Injection discipline (harness rule)
 
 "Real defaults wiring" and "faked external adapters" coexist by following a
