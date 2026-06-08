@@ -5,13 +5,13 @@ task_family_id: release-go-no-go
 sequence_key: "7e"
 task_id: 7e-release-go-no-go
 title: "Release GO/NO-GO"
-status: done
+status: archived
 phase: phase7
 target_files:
-  - "plans/tasks/2026-05-31-npm-release-dx-onboarding/7e-release-go-no-go.md"
-  - "plans/2026-05-31-npm-release-dx-onboarding-plan-v1.md"
+  - "plans/archive/tasks/2026-05-31-npm-release-dx-onboarding/7e-release-go-no-go.md"
+  - "plans/archive/plans/2026-05-31-npm-release-dx-onboarding-plan-v1.md"
 prd_ref: null
-plan_ref: plans/2026-05-31-npm-release-dx-onboarding-plan-v1.md
+plan_ref: plans/archive/plans/2026-05-31-npm-release-dx-onboarding-plan-v1.md
 system_context_ref: docs/pairflow-initial-design.md
 owners:
   - "felho"
@@ -219,8 +219,8 @@ split_reason: >
 
 ### Allowed Edits
 
-1. `plans/tasks/2026-05-31-npm-release-dx-onboarding/7e-release-go-no-go.md`
-2. `plans/2026-05-31-npm-release-dx-onboarding-plan-v1.md`
+1. `plans/archive/tasks/2026-05-31-npm-release-dx-onboarding/7e-release-go-no-go.md`
+2. `plans/archive/plans/2026-05-31-npm-release-dx-onboarding-plan-v1.md`
 
 ### Forbidden Edits / Actions
 
@@ -289,7 +289,7 @@ release_go_no_go:
 ### Acceptance Criteria
 
 1. Task artifact exists at
-   `plans/tasks/2026-05-31-npm-release-dx-onboarding/7e-release-go-no-go.md`
+   `plans/archive/tasks/2026-05-31-npm-release-dx-onboarding/7e-release-go-no-go.md`
    with `status: approved` only after ReviewSpec task-mode approval.
 2. Parent plan tracker points `7e-release-go-no-go` at the live task path
    before execution.

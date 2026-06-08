@@ -5,13 +5,13 @@ task_family_id: external-release-setup
 sequence_key: "7f"
 task_id: 7f-external-release-setup
 title: "External Release Activation Setup"
-status: done
+status: archived
 phase: phase7
 target_files:
-  - "plans/tasks/2026-05-31-npm-release-dx-onboarding/7f-external-release-setup.md"
-  - "plans/2026-05-31-npm-release-dx-onboarding-plan-v1.md"
+  - "plans/archive/tasks/2026-05-31-npm-release-dx-onboarding/7f-external-release-setup.md"
+  - "plans/archive/plans/2026-05-31-npm-release-dx-onboarding-plan-v1.md"
 prd_ref: null
-plan_ref: plans/2026-05-31-npm-release-dx-onboarding-plan-v1.md
+plan_ref: plans/archive/plans/2026-05-31-npm-release-dx-onboarding-plan-v1.md
 system_context_ref: docs/pairflow-initial-design.md
 owners:
   - "felho"
@@ -88,7 +88,7 @@ authority outside the plan.
 ### Canonical Contract Anchors
 
 1. Decision/prerequisite evidence:
-   - `plans/tasks/2026-05-31-npm-release-dx-onboarding/7e-release-go-no-go.md`
+   - `plans/archive/tasks/2026-05-31-npm-release-dx-onboarding/7e-release-go-no-go.md`
 2. Release/publish/docs workflow surfaces:
    - `.github/workflows/release.yml`
    - `.github/workflows/npm-publish.yml`
@@ -157,8 +157,8 @@ split_reason: >
 
 ### Allowed Edits
 
-1. `plans/tasks/2026-05-31-npm-release-dx-onboarding/7f-external-release-setup.md`
-2. `plans/2026-05-31-npm-release-dx-onboarding-plan-v1.md`
+1. `plans/archive/tasks/2026-05-31-npm-release-dx-onboarding/7f-external-release-setup.md`
+2. `plans/archive/plans/2026-05-31-npm-release-dx-onboarding-plan-v1.md`
 
 ### Forbidden Edits / Actions
 
@@ -208,7 +208,7 @@ external_release_setup:
 ### Acceptance Criteria
 
 1. Task artifact exists at
-   `plans/tasks/2026-05-31-npm-release-dx-onboarding/7f-external-release-setup.md`
+   `plans/archive/tasks/2026-05-31-npm-release-dx-onboarding/7f-external-release-setup.md`
    with metadata matching the parent plan tracker.
 2. Parent plan orders `7f-external-release-setup` after
    `7e-release-go-no-go` and before `7g-registry-install-smoke`.
@@ -230,7 +230,7 @@ external_release_setup:
 1. Confirm the current `7e` decision or blocker state:
    ```bash
    rg -n "decision:|blockers:|release_go_no_go:" \
-     plans/tasks/2026-05-31-npm-release-dx-onboarding/7e-release-go-no-go.md
+     plans/archive/tasks/2026-05-31-npm-release-dx-onboarding/7e-release-go-no-go.md
    ```
 2. Operator action: in GitHub repository settings, create or verify Actions
    secrets:

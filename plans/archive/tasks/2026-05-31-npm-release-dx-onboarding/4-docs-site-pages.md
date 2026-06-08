@@ -15,7 +15,7 @@ target_files:
   - "docs/README.md"
   - "README.md"
 prd_ref: null
-plan_ref: plans/2026-05-31-npm-release-dx-onboarding-plan-v1.md
+plan_ref: plans/archive/plans/2026-05-31-npm-release-dx-onboarding-plan-v1.md
 system_context_ref: docs/pairflow-initial-design.md
 owners:
   - "felho"

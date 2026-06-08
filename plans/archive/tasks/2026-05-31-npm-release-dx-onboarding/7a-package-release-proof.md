@@ -9,9 +9,9 @@ status: archived
 phase: phase7
 target_files:
   - "plans/archive/tasks/2026-05-31-npm-release-dx-onboarding/7a-package-release-proof.md"
-  - "plans/2026-05-31-npm-release-dx-onboarding-plan-v1.md"
+  - "plans/archive/plans/2026-05-31-npm-release-dx-onboarding-plan-v1.md"
 prd_ref: null
-plan_ref: plans/2026-05-31-npm-release-dx-onboarding-plan-v1.md
+plan_ref: plans/archive/plans/2026-05-31-npm-release-dx-onboarding-plan-v1.md
 system_context_ref: docs/pairflow-initial-design.md
 owners:
   - "felho"
