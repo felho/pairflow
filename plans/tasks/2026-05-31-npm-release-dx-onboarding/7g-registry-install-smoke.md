@@ -5,7 +5,7 @@ task_family_id: registry-install-smoke
 sequence_key: "7g"
 task_id: 7g-registry-install-smoke
 title: "Registry Install Smoke"
-status: approved
+status: done
 phase: phase7
 target_files:
   - "plans/tasks/2026-05-31-npm-release-dx-onboarding/7g-registry-install-smoke.md"
@@ -351,59 +351,54 @@ Use this section after execution.
 ```yaml
 registry_install_smoke:
   evidence_status: completed
-  executed_at: "2026-06-08T12:58:02+02:00"
+  executed_at: "2026-06-08T23:02:17+02:00"
   prerequisites:
     external_setup_task: "7f-external-release-setup"
     external_setup_status: external_setup_verified
-    actual_release_published: missing
-    release_tag: null
-    release_version: null
-    release_url: null
-    publish_workflow_run_id: null
-    publish_workflow_conclusion: missing
-    npm_publish_workflow: missing
-    publish_guard_state_at_publish: guard_closed_blocker
-    release_publish_version_binding: unknown
+    actual_release_published: present
+    release_tag: "v0.2.0"
+    release_version: "0.2.0"
+    release_url: "https://github.com/felho/pairflow/releases/tag/v0.2.0"
+    publish_workflow_run_id: "27165905076"
+    publish_workflow_conclusion: success
+    npm_publish_workflow: succeeded
+    publish_guard_state_at_publish: guard_open_authorized
+    release_publish_version_binding: matched
   registry:
     package_name: "@pairflow/cli"
-    expected_version: "0.1.0"
-    latest_version: null
-    exact_version_available: missing
-    latest_matches_expected: unknown
+    expected_version: "0.2.0"
+    latest_version: "0.2.0"
+    exact_version_available: present
+    latest_matches_expected: true
   isolated_install:
-    tmp_root: null
-    latest_prefix: null
-    exact_prefix: null
-    home: null
-    npm_cache: null
-    install_latest: not_run
-    install_exact_version: not_run
-    installed_binary: unknown
+    tmp_root: "/var/folders/4y/yw924nm97658pxnmc5mr7gt00000gn/T/tmp.E0mFq1oRMC"
+    latest_prefix: "/var/folders/4y/yw924nm97658pxnmc5mr7gt00000gn/T/tmp.E0mFq1oRMC/prefix-latest"
+    exact_prefix: "/var/folders/4y/yw924nm97658pxnmc5mr7gt00000gn/T/tmp.E0mFq1oRMC/prefix-exact"
+    home: "/var/folders/4y/yw924nm97658pxnmc5mr7gt00000gn/T/tmp.E0mFq1oRMC/home"
+    npm_cache: "/var/folders/4y/yw924nm97658pxnmc5mr7gt00000gn/T/tmp.E0mFq1oRMC/npm-cache"
+    install_latest: passed
+    install_exact_version: passed
+    installed_binary: present
   cli_smoke:
-    version_long: null
-    version_short: null
-    version_outputs_match_expected: unknown
+    version_long: "0.2.0"
+    version_short: "0.2.0"
+    version_outputs_match_expected: true
   cleanup:
-    temp_artifacts_removed: not_run
+    temp_artifacts_removed: passed
   decision:
-    registry_install_smoke: registry_install_smoke_blocked
-    public_install_claim: not_ready
-    next_task: required_follow_up
-  blockers:
-    - actual_release_missing
-    - npm_publish_workflow_missing_or_not_visible_on_remote_default_branch
-    - publish_guard_closed
-    - npm_registry_package_lookup_404
-    - exact_version_lookup_404
-    - isolated_registry_install_not_run
-    - installed_cli_smoke_not_run
+    registry_install_smoke: registry_install_smoke_passed
+    public_install_claim: ready
+    next_task: plan_completion_admin
+  blockers: []
   notes:
-    - "git status --short returned clean."
-    - "gh release list --repo felho/pairflow --limit 5 returned no releases."
-    - "gh run list --repo felho/pairflow --workflow npm-publish.yml --limit 5 returned HTTP 404: workflow npm-publish.yml not found on the default branch."
-    - "gh workflow list --repo felho/pairflow --all returned no workflows, while the local checkout contains .github/workflows/npm-publish.yml and .github/workflows/release.yml."
-    - "gh variable list --repo felho/pairflow observed PAIRFLOW_NPM_PUBLISH_ENABLED=false."
-    - "Local package.json version read returned 0.1.0."
-    - "npm view @pairflow/cli version, npm view @pairflow/cli@0.1.0 version, and npm view @pairflow/cli dist-tags --json returned E404 Not Found."
-    - "Registry install and installed CLI smoke were intentionally not run because actual release, successful real npm publish, and registry package availability prerequisites were missing."
+    - "gh release list observed v0.2.0 as the latest release, published on 2026-06-08T20:46:10Z."
+    - "Guarded npm publish run 27165905076 completed successfully: https://github.com/felho/pairflow/actions/runs/27165905076."
+    - "Publish package log reported '+ @pairflow/cli@0.2.0'."
+    - "npm registry metadata initially propagated after the publish workflow completed; final npm view checks returned @pairflow/cli latest=0.2.0 and @pairflow/cli@0.2.0 version=0.2.0."
+    - "npm view @pairflow/cli dist-tags --json returned { latest: '0.2.0' }."
+    - "Installed @pairflow/cli@latest into the isolated latest prefix and @pairflow/cli@0.2.0 into the isolated exact prefix using isolated HOME and npm cache."
+    - "Latest install pairflow --version and pairflow -v both returned 0.2.0."
+    - "Exact install pairflow --version and pairflow -v both returned 0.2.0."
+    - "Installed binary audit found pairflow under both isolated prefixes before cleanup."
+    - "Temporary proof root was removed after the smoke run."
 ```

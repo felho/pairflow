@@ -4,8 +4,8 @@ artifact_id: plan_npm_release_dx_onboarding_v1
 plan_id: npm-release-dx-onboarding
 created_on: "2026-05-31"
 title: "NPM Release, CLI DX, and Onboarding Plan"
-status: in_progress
-plan_status: in_progress
+status: done
+plan_status: done
 prd_ref: null
 owners:
   - "felho"
@@ -26,8 +26,8 @@ task_order:
   - 7e-release-go-no-go
   - 7f-external-release-setup
   - 7g-registry-install-smoke
-active_task_id: 7g-registry-install-smoke
-last_completed_task_id: 7f-external-release-setup
+active_task_id: null
+last_completed_task_id: 7g-registry-install-smoke
 archive_group: 2026-05-31-npm-release-dx-onboarding
 task_tracker:
   - task_id: 0-remove-orchestra-bin
@@ -77,7 +77,7 @@ task_tracker:
     status: done
   - task_id: 7g-registry-install-smoke
     task_path: plans/tasks/2026-05-31-npm-release-dx-onboarding/7g-registry-install-smoke.md
-    status: approved
+    status: done
 ---
 
 # Plan: NPM Release, CLI DX, and Onboarding
@@ -404,6 +404,14 @@ This plan turns the current local-development install story into a release-quali
     dist-tags returned E404. Evidence was recorded as
     `registry_install_smoke_blocked`; public install readiness remains
     `not_ready` until actual release and successful npm publish complete.
+28. 2026-06-08: Completed `7g-registry-install-smoke` after Release Please
+    published GitHub release `v0.2.0` and the guarded npm publish workflow run
+    `27165905076` completed successfully. npm registry metadata confirmed
+    `@pairflow/cli@latest` and `@pairflow/cli@0.2.0` resolve to `0.2.0`; an
+    isolated registry install smoke installed both `latest` and exact `0.2.0`
+    package specs with isolated HOME/cache, and all installed version command
+    checks returned `0.2.0`. Public npm install readiness is now complete for
+    the first published release.
 
 ## Risks and Assumptions
 
