@@ -3897,16 +3897,18 @@ describe("deleteBubble store method", () => {
           senderLabel: "codex"
         })
       ];
+      const laggingDetailDeferred = createDeferred<UiBubbleDetail>();
+      const laggingTimelineDeferred = createDeferred<UiTimelineDisplayItem[]>();
 
       const getBubble = vi
         .fn<(repoPath: string, bubbleId: string) => Promise<UiBubbleDetail>>()
         .mockResolvedValueOnce(initialDetail)
-        .mockResolvedValueOnce(laggingDetail)
+        .mockImplementationOnce(async () => laggingDetailDeferred.promise)
         .mockResolvedValueOnce(laggingDetail);
       const getBubbleTimeline = vi
         .fn<(repoPath: string, bubbleId: string) => Promise<UiTimelineDisplayItem[]>>()
         .mockResolvedValueOnce(initialTimeline)
-        .mockResolvedValueOnce(initialTimeline)
+        .mockImplementationOnce(async () => laggingTimelineDeferred.promise)
         .mockResolvedValueOnce(recoveredTimeline);
 
       let emitEvent: (event: UiEvent) => void = () => undefined;
@@ -3948,6 +3950,9 @@ describe("deleteBubble store method", () => {
         })
       });
 
+      expect(getBubbleTimeline).toHaveBeenCalledTimes(2);
+      laggingDetailDeferred.resolve(laggingDetail);
+      laggingTimelineDeferred.resolve(initialTimeline);
       await Promise.resolve();
       await Promise.resolve();
       expect(store.getState().bubbleTimelines["b-a"]).toEqual(initialTimeline);
