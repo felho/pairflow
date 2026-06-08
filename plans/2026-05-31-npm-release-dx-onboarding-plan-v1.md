@@ -26,8 +26,8 @@ task_order:
   - 7e-release-go-no-go
   - 7f-external-release-setup
   - 7g-registry-install-smoke
-active_task_id: 7f-external-release-setup
-last_completed_task_id: 7e-release-go-no-go
+active_task_id: null
+last_completed_task_id: 7f-external-release-setup
 archive_group: 2026-05-31-npm-release-dx-onboarding
 task_tracker:
   - task_id: 0-remove-orchestra-bin
@@ -74,7 +74,7 @@ task_tracker:
     status: done
   - task_id: 7f-external-release-setup
     task_path: plans/tasks/2026-05-31-npm-release-dx-onboarding/7f-external-release-setup.md
-    status: approved
+    status: done
   - task_id: 7g-registry-install-smoke
     task_path: null
     status: not_created
@@ -220,7 +220,7 @@ This plan turns the current local-development install story into a release-quali
 | `7c-skill-install-proof` | `plans/archive/tasks/2026-05-31-npm-release-dx-onboarding/7c-skill-install-proof.md` | Prove `pairflow skills install` from dry-run/json and isolated installed-package target behavior without treating global skill copies as source. | `5-skills-install`, `7a-package-release-proof` | Installed-package skill install proof completed; real global skill directories were not used as source or mutated. | archived |
 | `7d-ui-lifecycle-proof` | `plans/archive/tasks/2026-05-31-npm-release-dx-onboarding/7d-ui-lifecycle-proof.md` | Prove `pairflow ui start|status|restart|stop` from source and packed/installed context; repo-owned packed UI gaps block plan closure. | `6-ui-service-lifecycle`, `7a-package-release-proof` | Source and installed-package UI lifecycle proof completed; a macOS `/var` versus `/private/var` false negative was resolved with realpath-based state-path auditing. | archived |
 | `7e-release-go-no-go` | `plans/tasks/2026-05-31-npm-release-dx-onboarding/7e-release-go-no-go.md` | Aggregate release-pilot evidence, diagnose missing external prerequisites, and produce the GO/NO-GO readiness record without resolving setup or opening publish guards. | `7a-package-release-proof`, `7b-docs-readiness-proof`, `7c-skill-install-proof`, `7d-ui-lifecycle-proof` | Release-pilot GO/NO-GO decision recorded `release_no_go`; local proof passed, external GitHub/npm/Pages prerequisites route to `7f-external-release-setup`. | done |
-| `7f-external-release-setup` | `plans/tasks/2026-05-31-npm-release-dx-onboarding/7f-external-release-setup.md` | Verify and record operator-created external GitHub/npm release activation prerequisites named by `7e`; no agent-created secrets/tokens/environments/Pages/npm access, source/workflow edits, or real release/publish. | `7e-release-go-no-go` | Missing remediation path for `7e` NO-GO blockers such as release token, npm token/access, publish environment, publish guard variable, GitHub Pages, and public docs URL. | approved |
+| `7f-external-release-setup` | `plans/tasks/2026-05-31-npm-release-dx-onboarding/7f-external-release-setup.md` | Verify and record operator-created external GitHub/npm release activation prerequisites named by `7e`; no agent-created secrets/tokens/environments/Pages/npm access, source/workflow edits, or real release/publish. | `7e-release-go-no-go` | External GitHub/npm/Pages setup verified: release and npm secrets present, publish guard variable present and false, protected npm publish environment present, Pages workflow source/public URL present, and npm user/org/package access confirmed before first public publish. | done |
 | `7g-registry-install-smoke` | `null` | After `7f` verifies external setup readiness and after the operator completes actual release plus successful npm publish workflow, prove registry install for `@pairflow/cli@latest` and the exact published version without relying on the local tarball or source checkout. | `7f-external-release-setup` | Missing post-publish npm registry install proof for the user-facing install claim. | not_created |
 
 ## Coverage Map
@@ -375,6 +375,15 @@ This plan turns the current local-development install story into a release-quali
     because Actions secrets/variables, environments, GitHub Pages/public URL,
     npm authentication, and npm package/org access are missing or unknown.
     Advanced active work to `7f-external-release-setup`.
+24. 2026-06-08: Completed `7f-external-release-setup`. Evidence recorded
+    operator-created GitHub secrets `NPM_TOKEN` and `RELEASE_PLEASE_TOKEN`,
+    repository variable `PAIRFLOW_NPM_PUBLISH_ENABLED=false`, environments
+    `npm-publish` and `github-pages`, GitHub Pages `build_type=workflow` with
+    public URL `https://felho.github.io/pairflow/`, npm CLI login `felho`, and
+    npm `pairflow` org ownership. Publish guard remains intentionally closed;
+    the next checkpoint is actual release/publish execution, and
+    `7g-registry-install-smoke` remains unavailable until a public npm publish
+    succeeds.
 
 ## Risks and Assumptions
 

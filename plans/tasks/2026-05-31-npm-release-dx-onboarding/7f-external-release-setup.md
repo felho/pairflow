@@ -5,7 +5,7 @@ task_family_id: external-release-setup
 sequence_key: "7f"
 task_id: 7f-external-release-setup
 title: "External Release Activation Setup"
-status: approved
+status: done
 phase: phase7
 target_files:
   - "plans/tasks/2026-05-31-npm-release-dx-onboarding/7f-external-release-setup.md"
@@ -272,32 +272,49 @@ Use this section after execution.
 
 ```yaml
 external_release_setup:
-  evidence_status: pending
-  executed_at: null
+  evidence_status: completed
+  executed_at: "2026-06-08T11:52:31+02:00"
   source_decision:
     task_id: "7e-release-go-no-go"
-    decision: null
-    blockers_consumed: []
+    decision: release_no_go
+    blockers_consumed:
+      - release_please_token_missing
+      - npm_token_missing
+      - npm_org_package_access_unknown
+      - npm_publish_environment_missing
+      - pairflow_npm_publish_enabled_missing
+      - github_pages_disabled_or_missing
+      - github_pages_environment_missing
+      - github_pages_public_url_missing
+      - npm_cli_unauthenticated
+      - npm_registry_package_lookup_404
   github_actions:
-    release_please_token: null
-    npm_token: null
-    pairflow_npm_publish_enabled_observed: null
-    publish_guard_authorization: null
+    release_please_token: present
+    npm_token: present
+    pairflow_npm_publish_enabled_observed: "false"
+    publish_guard_authorization: operator_may_open_after_setup_verified
   github_environments:
-    npm_publish_environment: null
-    npm_publish_environment_policy: null
-    github_pages_environment: null
+    npm_publish_environment: present
+    npm_publish_environment_policy: recorded
+    github_pages_environment: present
   github_pages:
-    enabled: null
-    source: null
-    public_url: null
+    enabled: present
+    source: github_actions
+    public_url: present
   npm:
-    whoami: null
-    account_or_org_access: null
-    package_access: null
+    whoami: passed
+    account_or_org_access: present
+    package_access: present
   decision:
-    setup_status: null
-    next_task: null
+    setup_status: external_setup_verified
+    next_task: actual_release_publish_required
   blockers: []
-  notes: []
+  notes:
+    - "GitHub repository secrets observed by name only: NPM_TOKEN and RELEASE_PLEASE_TOKEN."
+    - "Repository variable PAIRFLOW_NPM_PUBLISH_ENABLED observed as false; publish guard intentionally remains closed until the operator opens it for actual release/publish."
+    - "npm-publish environment observed with required reviewer felho and prevent_self_review=false."
+    - "github-pages environment observed present; Pages API reported build_type=workflow, public=true, https_enforced=true, and html_url=https://felho.github.io/pairflow/."
+    - "npm whoami returned felho; npm org ls pairflow reported felho as owner."
+    - "npm access get status @pairflow/cli returned private before first public publish; the real publish workflow must still publish with --access public."
+    - "No npm publish, GitHub release creation, release tag creation, workflow dispatch, or repository workflow/source edits were performed in this task."
 ```
