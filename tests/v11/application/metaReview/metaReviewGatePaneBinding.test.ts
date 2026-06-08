@@ -454,7 +454,8 @@ describe("metaReviewGatePaneBinding", () => {
       now: new Date("2026-04-13T00:10:00.000Z"),
       taskArtifactPath: "/repo/.pairflow/bubbles/b_meta_review_gate_respawn_fail/artifacts/task.md",
       pairflowCommandProfile: "external",
-      metaReviewerAgent: "codex"
+      metaReviewerAgent: "codex",
+      metaReviewerMcpPolicy: "enabled"
     });
 
     expect(result.shouldDeactivate).toBe(true);
@@ -501,7 +502,8 @@ describe("metaReviewGatePaneBinding", () => {
       now: new Date("2026-04-13T00:12:00.000Z"),
       taskArtifactPath: "/repo/.pairflow/bubbles/b_meta_review_gate_notify_missing_after_respawn/artifacts/task.md",
       pairflowCommandProfile: "external",
-      metaReviewerAgent: "codex"
+      metaReviewerAgent: "codex",
+      metaReviewerMcpPolicy: "enabled"
     });
 
     expect(result).toEqual({
@@ -564,7 +566,8 @@ describe("metaReviewGatePaneBinding", () => {
       now: new Date("2026-04-13T00:15:00.000Z"),
       taskArtifactPath: "/repo/.pairflow/bubbles/b_meta_review_gate_notify_forwarding/artifacts/task.md",
       pairflowCommandProfile: "external",
-      metaReviewerAgent: "codex"
+      metaReviewerAgent: "codex",
+      metaReviewerMcpPolicy: "enabled"
     });
 
     expect(result).toEqual({
@@ -647,7 +650,8 @@ describe("metaReviewGatePaneBinding", () => {
       now: new Date("2026-04-13T00:20:00.000Z"),
       taskArtifactPath: "/repo/.pairflow/bubbles/b_meta_review_gate_notify_runner_fallback/artifacts/task.md",
       pairflowCommandProfile: "external",
-      metaReviewerAgent: "codex"
+      metaReviewerAgent: "codex",
+      metaReviewerMcpPolicy: "enabled"
     });
 
     expect(result.delivery).toMatchObject({

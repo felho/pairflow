@@ -125,6 +125,11 @@ describe("refreshReviewerContext", () => {
         agents: {
           ...baseConfig.agents,
           reviewer: "codex"
+        },
+        role_mcp: {
+          implementer: "disabled",
+          reviewer: "enabled",
+          meta_reviewer: "disabled"
         }
       },
       sessionsPath: "/tmp/repo/.pairflow/runtime/sessions.json",
@@ -220,6 +225,11 @@ describe("refreshReviewerContext", () => {
         agents: {
           ...baseConfig.agents,
           reviewer: "codex"
+        },
+        role_mcp: {
+          implementer: "disabled",
+          reviewer: "enabled",
+          meta_reviewer: "disabled"
         }
       },
       sessionsPath: "/tmp/repo/.pairflow/runtime/sessions.json",

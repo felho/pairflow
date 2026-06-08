@@ -5,6 +5,74 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
+CODEX_SHIM_DIR=""
+
+cleanup_ci_path() {
+  if [[ -n "$CODEX_SHIM_DIR" ]]; then
+    rm -rf "$CODEX_SHIM_DIR"
+  fi
+}
+
+trap cleanup_ci_path EXIT
+
+path_entry_contains_codex() {
+  local path_entry="$1"
+  local codex_candidate="$path_entry/codex"
+  [[ -x "$codex_candidate" ]]
+}
+
+append_filtered_path_entry() {
+  local path_entry="$1"
+  if [[ -z "$FILTERED_PATH" ]]; then
+    FILTERED_PATH="$path_entry"
+  else
+    FILTERED_PATH="$FILTERED_PATH:$path_entry"
+  fi
+}
+
+if [[ "${PAIRFLOW_CI_ALLOW_CODEX:-0}" == "1" ]]; then
+  echo "ci:local PATH mode: local PATH preserved (PAIRFLOW_CI_ALLOW_CODEX=1)"
+else
+  CODEX_SHIM_DIR="$(mktemp -d "${TMPDIR:-/tmp}/pairflow-ci-local-path.XXXXXX")"
+  FILTERED_PATH=""
+  SHIM_PATH_APPENDED="0"
+  IFS=":" read -r -a PATH_ENTRIES <<< "$PATH"
+  for path_entry in "${PATH_ENTRIES[@]}"; do
+    if [[ -z "$path_entry" ]]; then
+      continue
+    fi
+    if path_entry_contains_codex "$path_entry"; then
+      for executable_path in "$path_entry"/*; do
+        if [[ ! -x "$executable_path" ]]; then
+          continue
+        fi
+        executable_name="$(basename "$executable_path")"
+        if [[ "$executable_name" == "codex" ]]; then
+          continue
+        fi
+        if [[ ! -e "$CODEX_SHIM_DIR/$executable_name" ]]; then
+          ln -s "$executable_path" "$CODEX_SHIM_DIR/$executable_name"
+        fi
+      done
+      if [[ "$SHIM_PATH_APPENDED" != "1" ]]; then
+        append_filtered_path_entry "$CODEX_SHIM_DIR"
+        SHIM_PATH_APPENDED="1"
+      fi
+      continue
+    fi
+    append_filtered_path_entry "$path_entry"
+  done
+  PATH="$FILTERED_PATH"
+  export PATH
+  echo "ci:local PATH mode: codex hidden (set PAIRFLOW_CI_ALLOW_CODEX=1 to preserve local PATH)"
+fi
+if command -v codex >/dev/null 2>&1; then
+  echo "ci:local codex visibility: visible ($(command -v codex))"
+else
+  echo "ci:local codex visibility: hidden"
+fi
+echo
+
 CI_VERBOSE="${PAIRFLOW_CI_VERBOSE:-0}"
 EVIDENCE_ROOT="${PAIRFLOW_CI_EVIDENCE_DIR:-.pairflow/evidence/ci-local}"
 RUN_ID="$(date -u +"%Y%m%dT%H%M%SZ")"

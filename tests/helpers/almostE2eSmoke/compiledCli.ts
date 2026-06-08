@@ -402,6 +402,30 @@ if (logPath) {
 `;
 }
 
+function buildCodexShimScript(): string {
+  return `#!/usr/bin/env node
+const { appendFileSync } = require("node:fs");
+
+const args = process.argv.slice(2);
+const logPath = process.env.PAIRFLOW_SMOKE_SIDE_EFFECT_LOG;
+if (logPath) {
+  appendFileSync(logPath, JSON.stringify({
+    tool: "codex",
+    args,
+    cwd: process.cwd()
+  }) + "\\n");
+}
+
+if (args[0] === "mcp" && args[1] === "list" && args[2] === "--json") {
+  process.stdout.write("[]\\n");
+  process.exit(0);
+}
+
+process.stderr.write("Unsupported smoke codex command: " + args.join(" ") + "\\n");
+process.exit(64);
+`;
+}
+
 export async function installCompiledCliShimEnvironment(
   fixture: AlmostE2eSmokeFixtureRepo
 ): Promise<CompiledCliShimEnvironment> {
@@ -420,10 +444,13 @@ export async function installCompiledCliShimEnvironment(
   ].join("\n"), "utf8");
   const tmuxShimPath = join(shimDir, "tmux");
   const openShimPath = join(shimDir, "pairflow-smoke-open");
+  const codexShimPath = join(shimDir, "codex");
   await writeFile(tmuxShimPath, buildTmuxShimScript(), "utf8");
   await writeFile(openShimPath, buildOpenShimScript(), "utf8");
+  await writeFile(codexShimPath, buildCodexShimScript(), "utf8");
   await chmod(tmuxShimPath, 0o755);
   await chmod(openShimPath, 0o755);
+  await chmod(codexShimPath, 0o755);
 
   return {
     shimDir,

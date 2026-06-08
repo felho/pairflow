@@ -40,6 +40,10 @@ async function createCiFixture(): Promise<{ fixtureDir: string; commandLog: stri
     [
       "#!/usr/bin/env bash",
       "set -euo pipefail",
+      "if [[ \"${PAIRFLOW_TEST_FAIL_ON_CODEX_VISIBLE:-0}\" == \"1\" ]] && command -v codex >/dev/null 2>&1; then",
+      `  echo "codex-visible:$(command -v codex)" >> "${commandLog}"`,
+      "  exit 42",
+      "fi",
       `echo "$*" >> "${commandLog}"`,
       "exit 0",
       ""
@@ -134,7 +138,9 @@ describe("ci-local commit range integration", () => {
 
   it("honestly skips range validation by default without claiming a pass", async () => {
     const { fixtureDir, commandLog } = await createCiFixture();
-    const result = await runCiFixture(fixtureDir);
+    const result = await runCiFixture(fixtureDir, {
+      PAIRFLOW_TEST_FAIL_ON_CODEX_VISIBLE: "1"
+    });
 
     expect(result.stdout).toContain("commit range not validated");
     expect(result.stdout).toContain("no safe range");
@@ -142,5 +148,21 @@ describe("ci-local commit range integration", () => {
 
     const commands = (await readFile(commandLog, "utf8")).trim().split("\n");
     expect(commands[0]).toBe("install --frozen-lockfile");
+  });
+
+  it("hides local codex from ci child commands by default", async () => {
+    const { fixtureDir, commandLog } = await createCiFixture();
+    const codexPath = join(fixtureDir, "bin", "codex");
+    await writeFile(
+      codexPath,
+      ["#!/usr/bin/env bash", "echo local-codex", ""].join("\n"),
+      "utf8"
+    );
+    await chmod(codexPath, 0o755);
+
+    const result = await runCiFixture(fixtureDir);
+
+    expect(result.stdout).toContain("codex visibility: hidden");
+    expect(await readFile(commandLog, "utf8")).not.toContain("codex-visible");
   });
 });

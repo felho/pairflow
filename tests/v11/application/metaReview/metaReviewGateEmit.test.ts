@@ -39,6 +39,23 @@ afterEach(async () => {
   );
 });
 
+async function enableMetaReviewerMcp(
+  bubble: Awaited<ReturnType<typeof setupRunningBubbleFixture>>
+): Promise<void> {
+  await writeFile(
+    bubble.paths.bubbleTomlPath,
+    renderBubbleConfigToml({
+      ...bubble.config,
+      role_mcp: {
+        implementer: "disabled",
+        reviewer: "disabled",
+        meta_reviewer: "enabled"
+      }
+    }),
+    "utf8"
+  );
+}
+
 async function applyWithResolvedDelivery(input: {
   delivery: MetaReviewRuntimeDeliveryObservation;
   shouldDeactivate: boolean;
@@ -274,6 +291,7 @@ describe("metaReviewGate V11 defaults", () => {
       bubbleId: "b_meta_review_apply_v11_custom_notify",
       task: "Verify explicit notify overrides preserve caller runtime."
     });
+    await enableMetaReviewerMcp(bubble);
     const observedRuntime: Array<
       NonNullable<NotifyMetaReviewerSubmissionRequestDependencies["runtime"]>
     > = [];
@@ -408,6 +426,7 @@ describe("metaReviewGate V11 defaults", () => {
       bubbleId: "b_meta_review_apply_v11_builtin_delivery",
       task: "Verify built-in pane-binding launch-prompt delivery."
     });
+    await enableMetaReviewerMcp(bubble);
     const submittedMessages: string[] = [];
     const notifyRunner = async () => ({
       stdout: submittedMessages.at(-1) ?? "",

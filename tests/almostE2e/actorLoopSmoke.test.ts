@@ -437,25 +437,28 @@ describe("actor loop smoke", () => {
         )
       ).toBe(true);
       expect(
-        sideEffects.every((record) =>
-          record.tool === "tmux"
-          && [
-            "has-session",
-            "new-session",
-            "set-option",
-            "set-window-option",
-            "set-environment",
-            "set-hook",
-            "run-shell",
-            "resize-pane",
-            "respawn-pane",
-            "split-window",
-            "display-message",
-            "capture-pane",
-            "send-keys",
-            "kill-session"
-          ].includes(record.args[0] ?? "")
-        )
+        sideEffects.every((record) => {
+          if (record.tool === "codex") {
+            return record.args.join(" ") === "mcp list --json";
+          }
+          return record.tool === "tmux"
+            && [
+              "has-session",
+              "new-session",
+              "set-option",
+              "set-window-option",
+              "set-environment",
+              "set-hook",
+              "run-shell",
+              "resize-pane",
+              "respawn-pane",
+              "split-window",
+              "display-message",
+              "capture-pane",
+              "send-keys",
+              "kill-session"
+            ].includes(record.args[0] ?? "");
+        })
       ).toBe(true);
 
       await cli.run(

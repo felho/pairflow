@@ -354,7 +354,8 @@ describe("reconcileRuntimeSessions", () => {
           );
         },
         launchBubbleSessionAck: () =>
-          Promise.resolve({ status: "running" as const, sessionName: "pf-b_reconcile_04" })
+          Promise.resolve({ status: "running" as const, sessionName: "pf-b_reconcile_04" }),
+        resolveCodexMcpDisableArgs: () => Promise.resolve([])
       }
     );
 
