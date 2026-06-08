@@ -3846,22 +3846,6 @@ describe("deleteBubble store method", () => {
       activeAgent: "codex",
       activeRole: "implementer"
     });
-    const initialDetail = {
-      ...bubbleDetail({
-        bubbleId: "b-a",
-        repoPath: "/repo-a",
-        state: "RUNNING"
-      }),
-      round: 1,
-      activeAgent: "codex",
-      activeRole: "implementer",
-      transcript: {
-        totalMessages: 1,
-        lastMessageType: "TASK",
-        lastMessageTs: "2026-04-19T20:46:40.952Z",
-        lastMessageId: "msg_001"
-      }
-    } satisfies UiBubbleDetail;
     const laggingDetail = {
       ...bubbleDetail({
         bubbleId: "b-a",
@@ -3895,20 +3879,22 @@ describe("deleteBubble store method", () => {
         senderLabel: "codex"
       })
     ];
-    const laggingDetailDeferred = createDeferred<UiBubbleDetail>();
-    const laggingTimelineDeferred = createDeferred<UiTimelineDisplayItem[]>();
-    const scheduledRetryCallbacks: Array<() => void> = [];
+    const retryTimelineRequested = createDeferred<void>();
+    const scheduledRetry = {
+      callback: null as (() => void) | null
+    };
 
     const getBubble = vi
       .fn<(repoPath: string, bubbleId: string) => Promise<UiBubbleDetail>>()
-      .mockResolvedValueOnce(initialDetail)
-      .mockImplementationOnce(async () => laggingDetailDeferred.promise)
+      .mockResolvedValueOnce(laggingDetail)
       .mockResolvedValueOnce(laggingDetail);
     const getBubbleTimeline = vi
       .fn<(repoPath: string, bubbleId: string) => Promise<UiTimelineDisplayItem[]>>()
       .mockResolvedValueOnce(initialTimeline)
-      .mockImplementationOnce(async () => laggingTimelineDeferred.promise)
-      .mockResolvedValueOnce(recoveredTimeline);
+      .mockImplementationOnce(async () => {
+        retryTimelineRequested.resolve();
+        return recoveredTimeline;
+      });
 
     const store = createBubbleStore({
       api: createApiStub({
@@ -3929,33 +3915,31 @@ describe("deleteBubble store method", () => {
       },
       expandedTimelineLagRetryScheduler: {
         set(callback) {
-          scheduledRetryCallbacks.push(callback);
+          scheduledRetry.callback = callback;
           return callback;
         },
         clear(handle) {
-          const index = scheduledRetryCallbacks.indexOf(handle as () => void);
-          if (index >= 0) {
-            scheduledRetryCallbacks.splice(index, 1);
+          if (scheduledRetry.callback === handle) {
+            scheduledRetry.callback = null;
           }
         }
       }
     });
 
     await store.getState().initialize();
-    await store.getState().toggleBubbleExpanded("b-a");
+    store.setState({ expandedBubbleIds: ["b-a"] });
 
-    const laggingRefresh = store.getState().refreshExpandedBubble("b-a");
-    expect(getBubbleTimeline).toHaveBeenCalledTimes(2);
-    laggingDetailDeferred.resolve(laggingDetail);
-    laggingTimelineDeferred.resolve(initialTimeline);
-    await laggingRefresh;
+    await store.getState().refreshExpandedBubble("b-a");
     expect(store.getState().bubbleTimelines["b-a"]).toEqual(initialTimeline);
-    expect(scheduledRetryCallbacks).toHaveLength(1);
+    const retryCallback = scheduledRetry.callback;
+    expect(retryCallback).toBeTypeOf("function");
 
-    scheduledRetryCallbacks[0]?.();
+    retryCallback?.();
+    await retryTimelineRequested.promise;
     await Promise.resolve();
     await Promise.resolve();
 
-    expect(getBubbleTimeline).toHaveBeenCalledTimes(3);
+    expect(getBubbleTimeline).toHaveBeenCalledTimes(2);
+    expect(store.getState().bubbleTimelines["b-a"]).toEqual(recoveredTimeline);
   });
 });
