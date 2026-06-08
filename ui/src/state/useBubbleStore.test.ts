@@ -3899,17 +3899,23 @@ describe("deleteBubble store method", () => {
       ];
       const laggingDetailDeferred = createDeferred<UiBubbleDetail>();
       const laggingTimelineDeferred = createDeferred<UiTimelineDisplayItem[]>();
+      const recoveredTimelineRequestStarted = createDeferred<void>();
+      const recoveredDetailDeferred = createDeferred<UiBubbleDetail>();
+      const recoveredTimelineDeferred = createDeferred<UiTimelineDisplayItem[]>();
 
       const getBubble = vi
         .fn<(repoPath: string, bubbleId: string) => Promise<UiBubbleDetail>>()
         .mockResolvedValueOnce(initialDetail)
         .mockImplementationOnce(async () => laggingDetailDeferred.promise)
-        .mockResolvedValueOnce(laggingDetail);
+        .mockImplementationOnce(async () => recoveredDetailDeferred.promise);
       const getBubbleTimeline = vi
         .fn<(repoPath: string, bubbleId: string) => Promise<UiTimelineDisplayItem[]>>()
         .mockResolvedValueOnce(initialTimeline)
         .mockImplementationOnce(async () => laggingTimelineDeferred.promise)
-        .mockResolvedValueOnce(recoveredTimeline);
+        .mockImplementationOnce(async () => {
+          recoveredTimelineRequestStarted.resolve();
+          return recoveredTimelineDeferred.promise;
+        });
 
       const store = createBubbleStore({
         api: createApiStub({
@@ -3941,11 +3947,22 @@ describe("deleteBubble store method", () => {
       expect(store.getState().bubbleTimelines["b-a"]).toEqual(initialTimeline);
 
       await vi.advanceTimersByTimeAsync(200);
-      await Promise.resolve();
-      await Promise.resolve();
+      await recoveredTimelineRequestStarted.promise;
+      expect(getBubbleTimeline).toHaveBeenCalledTimes(3);
+
+      const recoveredTimelineApplied = new Promise<void>((resolve) => {
+        const unsubscribe = store.subscribe((state) => {
+          if (state.bubbleTimelines["b-a"] === recoveredTimeline) {
+            unsubscribe();
+            resolve();
+          }
+        });
+      });
+      recoveredDetailDeferred.resolve(laggingDetail);
+      recoveredTimelineDeferred.resolve(recoveredTimeline);
+      await recoveredTimelineApplied;
 
       expect(store.getState().bubbleTimelines["b-a"]).toEqual(recoveredTimeline);
-      expect(getBubbleTimeline).toHaveBeenCalledTimes(3);
     } finally {
       vi.useRealTimers();
     }

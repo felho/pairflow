@@ -2436,13 +2436,16 @@ describe("agentRunnerBridge", () => {
         })
       }
     })}\n`;
+    const scriptPath = join(root, "emit-large-stdout.js");
+    await writeFile(
+      scriptPath,
+      `process.stdout.write(${JSON.stringify(line.repeat(5000))});\n`,
+      "utf8"
+    );
 
     const result = await runAgentRunnerCommand({
       command: process.execPath,
-      args: [
-        "-e",
-        `process.stdout.write(${JSON.stringify(line.repeat(5000))});`
-      ],
+      args: [scriptPath],
       cwd: process.cwd(),
       idleTimeoutMs: 1000,
       stdoutFilePath

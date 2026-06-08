@@ -517,10 +517,7 @@ describe("skills install command execution", () => {
       recursive: true,
       force: true
     });
-    await mkdir(destination, {
-      recursive: true
-    });
-    await writeFile(join(destination, "replacement.txt"), "concurrent directory\n", "utf8");
+    await writeFile(destination, "concurrent file\n", "utf8");
 
     await expect(
       nodeSkillsInstallFileSystem.replaceDirectoryFromSource({
@@ -530,9 +527,7 @@ describe("skills install command execution", () => {
       })
     ).rejects.toThrow("changed after preflight");
 
-    await expect(readFile(join(destination, "replacement.txt"), "utf8")).resolves.toBe(
-      "concurrent directory\n"
-    );
+    await expect(readFile(destination, "utf8")).resolves.toBe("concurrent file\n");
   });
 
   it("uses staged replacement primitives instead of remove-before-copy application flow", async () => {
