@@ -1530,6 +1530,33 @@ Use verbose mode if you want fully streamed command output:
 PAIRFLOW_CI_VERBOSE=1 pnpm ci:local
 ```
 
+### GitHub-like local release gate
+
+To reproduce the Release Please validation job in a Linux container before
+pushing, run:
+
+```bash
+pnpm ci:github-local
+```
+
+This requires Docker and mirrors the `.github/workflows/release.yml` validate job:
+root/UI lockfile installs, optional commit-range validation, `release:validate`,
+typecheck, lint, fitness, tests, and build. It uses Node 22 on `linux/amd64` by
+default and masks host `node_modules` with Docker volumes so macOS dependencies
+do not leak into the Linux run.
+
+Optional explicit commit-range validation uses the same env names as `ci:local`:
+
+```bash
+PAIRFLOW_COMMIT_RANGE_FROM=<from> PAIRFLOW_COMMIT_RANGE_TO=<to> pnpm ci:github-local
+```
+
+For Apple Silicon speed over x64 parity, override the platform:
+
+```bash
+PAIRFLOW_GITHUB_LOCAL_PLATFORM=linux/arm64 pnpm ci:github-local
+```
+
 ## Roadmap
 
 - Diff / changed files view in the web UI

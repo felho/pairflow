@@ -40,6 +40,7 @@
     "fitness:check": "pnpm exec tsx ./tools/fitness/run-check.ts",
     "fitness:check:ci": "bash ./scripts/fitness-check-ci.sh",
     "ci:local": "bash ./scripts/ci-local.sh",
+    "ci:github-local": "bash ./scripts/ci-github-local.sh",
     "hooks:install": "bash ./scripts/install-git-hooks.sh",
     "commit-policy:validate-message": "pnpm exec tsx ./tools/commit-policy/validateCommitMessage.ts",
     "commit-policy:validate-range": "pnpm exec tsx ./tools/commit-policy/validateCommitRange.ts",
