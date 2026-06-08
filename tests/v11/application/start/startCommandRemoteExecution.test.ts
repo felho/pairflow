@@ -165,6 +165,7 @@ function createRemoteExecutionDeps(overrides: Partial<ResolvedStartBubbleDepende
       }
     }),
     reportWarning: () => undefined,
+    resolveCodexMcpDisableArgs: async () => [],
     ...overrides
   } as ResolvedStartBubbleDependencies;
 }
@@ -248,7 +249,8 @@ describe("startCommandRemoteExecution", () => {
         launchSessionAck: async () => ({
           status: "running",
           sessionName: "pf-b_remote_execution_unit_01"
-        })
+        }),
+        resolveCodexMcpDisableArgs: async () => []
       } as unknown as ResolvedStartBubbleDependencies,
       progress: {
         workspaceBootstrapped: false,

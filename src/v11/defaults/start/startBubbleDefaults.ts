@@ -52,6 +52,9 @@ import {
 } from "../../infrastructure/workspace/worktreeManager.js";
 import { runGit as runGitCommandCanonical } from "../../infrastructure/workspace/git.js";
 import { writeStateSnapshot as writeStateSnapshotCanonical } from "../../infrastructure/state/stateStore.js";
+import {
+  resolveCodexMcpDisableArgs
+} from "../../shared/command/agentCommand.js";
 import type {
   ExecuteRemoteBubbleStartInput,
   ExecuteRemoteBubbleStartResult
@@ -105,6 +108,9 @@ import type {
 } from "../../ports/bubbleIdentity.js";
 import type { ResolveBubbleByIdPort } from "../../ports/bubbleLookup.js";
 import type { ResolveRemoteBubbleStatusTargetPort } from "../../shared/remote/commitRemoteExecution.js";
+import type {
+  ResolveCodexMcpDisableArgsInput
+} from "../../shared/command/agentCommand.js";
 import { configureStartBubbleDependencyDefaults } from "../../application/start/startBubbleDependencyDefaults.js";
 
 export interface StartBubbleDependencyDefaults {
@@ -144,6 +150,8 @@ export interface StartBubbleDependencyDefaults {
   resolveBubbleFromWorkspaceCwd: ResolveBubbleFromWorkspaceCwdPort;
   resolveReviewerTestExecutionDirective:
     ResolveReviewerTestExecutionDirectivePort;
+  resolveCodexMcpDisableArgs:
+    (input: ResolveCodexMcpDisableArgsInput) => Promise<string[]>;
 }
 
 export const bootstrapWorktreeWorkspace: BootstrapWorktreeWorkspacePort =
@@ -191,7 +199,8 @@ export const startBubbleDependencyDefaults: StartBubbleDependencyDefaults = {
   readReviewerBriefArtifact,
   readReviewerFocusArtifact,
   resolveBubbleFromWorkspaceCwd,
-  resolveReviewerTestExecutionDirective
+  resolveReviewerTestExecutionDirective,
+  resolveCodexMcpDisableArgs
 };
 
 configureStartBubbleDependencyDefaults(startBubbleDependencyDefaults);

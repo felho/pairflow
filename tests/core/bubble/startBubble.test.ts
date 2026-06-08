@@ -3,7 +3,7 @@ import { homedir, tmpdir } from "node:os";
 import { basename, join } from "node:path";
 import { spawn } from "node:child_process";
 
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { renderBubbleConfigToml } from "../../../src/config/bubbleConfig.js";
 import { createBubble } from "../../../src/v11/defaults/create/createBubbleApi.js";
@@ -80,6 +80,12 @@ import {
 } from "../../../src/v11/infrastructure/artifact/bubble/remoteExecutionArtifacts.js";
 import { runGit } from "../../helpers/git.js";
 import { writeStateSnapshotFixture as writeStateSnapshot } from "../../helpers/stateSnapshot.js";
+import {
+  configureStartBubbleDependencyDefaults
+} from "../../../src/v11/application/start/startBubbleDependencyDefaults.js";
+import {
+  startBubbleDependencyDefaults
+} from "../../../src/v11/defaults/start/startBubbleDefaults.js";
 const tempDirs: string[] = [];
 
 async function createTempRepo(prefix: string = "pairflow-start-bubble-"): Promise<string> {
@@ -218,7 +224,15 @@ function expectReviewerValidationClaimGuardrails(text: string | undefined): void
   );
 }
 
+beforeEach(() => {
+  configureStartBubbleDependencyDefaults({
+    ...startBubbleDependencyDefaults,
+    resolveCodexMcpDisableArgs: async () => []
+  });
+});
+
 afterEach(async () => {
+  configureStartBubbleDependencyDefaults(startBubbleDependencyDefaults);
   await Promise.all(
     tempDirs.splice(0).map((path) =>
       rm(path, { recursive: true, force: true })
@@ -2023,6 +2037,7 @@ describe("startBubble", () => {
             );
             return { status: "running" as const, sessionName: "pf-b_start_bootstrap_clone_authority_01" };
           },
+          resolveCodexMcpDisableArgs: async () => [],
           cleanupWorktreeWorkspace: async () => {
             cleanupCalled = true;
             return {
