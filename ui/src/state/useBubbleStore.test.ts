@@ -3839,7 +3839,7 @@ describe("deleteBubble store method", () => {
   });
 
   it("retries expanded timeline refresh when detail transcript total is ahead of the timeline response", async () => {
-    vi.useFakeTimers();
+    vi.useRealTimers();
     try {
       const initialSummary = bubbleSummary({
         bubbleId: "b-a",
@@ -3944,7 +3944,6 @@ describe("deleteBubble store method", () => {
       await laggingRefresh;
       expect(store.getState().bubbleTimelines["b-a"]).toEqual(initialTimeline);
 
-      await vi.advanceTimersByTimeAsync(200);
       await recoveredTimelineRequestStarted.promise;
       expect(getBubbleTimeline).toHaveBeenCalledTimes(3);
     } finally {
