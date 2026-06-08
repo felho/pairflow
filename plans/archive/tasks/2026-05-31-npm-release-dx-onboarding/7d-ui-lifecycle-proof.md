@@ -5,10 +5,10 @@ task_family_id: ui-lifecycle-proof
 sequence_key: "7d"
 task_id: 7d-ui-lifecycle-proof
 title: "UI Lifecycle Proof"
-status: completed
+status: archived
 phase: phase7
 target_files:
-  - "plans/tasks/2026-05-31-npm-release-dx-onboarding/7d-ui-lifecycle-proof.md"
+  - "plans/archive/tasks/2026-05-31-npm-release-dx-onboarding/7d-ui-lifecycle-proof.md"
   - "plans/2026-05-31-npm-release-dx-onboarding-plan-v1.md"
 prd_ref: null
 plan_ref: plans/2026-05-31-npm-release-dx-onboarding-plan-v1.md
@@ -321,7 +321,7 @@ service state.
 
 | Gate | Required Review Question |
 |---|---|
-| Metadata | Does frontmatter match `7d-ui-lifecycle-proof`, parent tracker, task order, archive group, and `draft`/review status? |
+| Metadata | Does frontmatter match `7d-ui-lifecycle-proof`, parent tracker, task order, archive group, and review/archive status? |
 | Scope | Is the task proof-only, with edits limited to task/plan evidence and no runtime/source/docs/workflow mutation? |
 | Contract | Are lifecycle JSON, state path, process cleanup, port selection, source versus installed execution, and packaged asset contracts concrete and auditable? |
 | Capability | Does the task avoid claiming public npm registry install, publish readiness, docs readiness, skill proof, or real operator service management? |
@@ -504,8 +504,9 @@ service state.
 ### Acceptance Checks
 
 1. Task artifact exists at
-   `plans/tasks/2026-05-31-npm-release-dx-onboarding/7d-ui-lifecycle-proof.md`
-   with `status: approved` only after ReviewSpec task-mode approves it.
+   `plans/archive/tasks/2026-05-31-npm-release-dx-onboarding/7d-ui-lifecycle-proof.md`
+   with `status: archived` only after ReviewSpec task-mode approval and
+   completed evidence.
 2. Parent plan tracker points `7d-ui-lifecycle-proof` at the live task path
    before execution and later archives it only after proof evidence is
    recorded.
