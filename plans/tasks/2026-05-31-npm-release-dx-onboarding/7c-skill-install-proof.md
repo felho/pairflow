@@ -5,7 +5,7 @@ task_family_id: skill-install-proof
 sequence_key: "7c"
 task_id: 7c-skill-install-proof
 title: "Skill Install Proof"
-status: approved
+status: done
 phase: phase7
 target_files:
   - "plans/tasks/2026-05-31-npm-release-dx-onboarding/7c-skill-install-proof.md"
@@ -423,9 +423,9 @@ and no reliance on global installed skill copies as source.
    const path = require("node:path");
    const [jsonPath, prefix, home] = process.argv.slice(2);
    const plan = JSON.parse(fs.readFileSync(jsonPath, "utf8"));
-   const sourceRoot = path.resolve(plan.sourceRoot);
+   const sourceRoot = fs.realpathSync(plan.sourceRoot);
    const targetRoot = path.resolve(plan.targetRoot);
-   const packageRoot = path.resolve(prefix, "node_modules", "@pairflow", "cli");
+   const packageRoot = fs.realpathSync(path.resolve(prefix, "node_modules", "@pairflow", "cli"));
    const isolatedHome = path.resolve(home);
    const targetExistsAfterDryRun = fs.existsSync(targetRoot);
    const requiredSkills = ["UsePairflow", "CreatePairflowSpec", "ExecutePairflowPlan"];
@@ -539,20 +539,115 @@ and no reliance on global installed skill copies as source.
 Use this section after execution.
 
 ```yaml
-evidence_status: pending
-executed_at: null
-commands: []
-tool_versions: null
-tarball_identity: null
-isolated_paths: null
-installed_binary: null
-installed_version_output: null
-dry_run_json_audit: null
-real_install_output: null
-installed_skill_file_audit: null
-link_other_audit: null
-global_boundary_status: null
-cleanup_status: null
-decision: null
-notes: []
+evidence_status: completed
+executed_at: "2026-06-07T23:52:13+02:00"
+commands:
+  - "git status --short"
+  - "node --version"
+  - "pnpm --version"
+  - "npm --version"
+  - "node -p \"require('./package.json').name + ' ' + require('./package.json').version\""
+  - "pnpm build"
+  - "npm pack --json --pack-destination \"$tmp_root\""
+  - "npm install --prefix \"$prefix\" \"$tarball_path\" with isolated HOME/cache"
+  - "\"$installed_pairflow\" --version"
+  - "\"$installed_pairflow\" skills install --skills all --target-dir .claude --dry-run --json"
+  - "\"$installed_pairflow\" skills install --skills all --target-dir .claude --link-other"
+  - "installed skill file and symlink audit"
+  - "real global skill directory pre/post audit"
+  - "cleanup"
+tool_versions:
+  node_version: "v26.0.0"
+  pnpm_version: "10.8.1"
+  npm_version: "11.12.1"
+  package_name: "@pairflow/cli"
+  package_version: "0.1.0"
+tarball_identity:
+  package_name: "@pairflow/cli"
+  package_version: "0.1.0"
+  tarball_filename: "pairflow-cli-0.1.0.tgz"
+  primary_temp_tarball_path: "/var/folders/4y/yw924nm97658pxnmc5mr7gt00000gn/T/tmp.UISNW7WHPX/pairflow-cli-0.1.0.tgz"
+  rerun_temp_tarball_path: "/var/folders/4y/yw924nm97658pxnmc5mr7gt00000gn/T/tmp.wgPCheiQ8h/pairflow-cli-0.1.0.tgz"
+  tarball_path_note: "temporary proof paths removed during cleanup; successors should regenerate"
+build_and_pack:
+  retained_7a_tarball_used: false
+  fresh_build_result: "passed"
+  fresh_pack_result: "passed"
+  build_artifact_status_audit: "clean"
+isolated_paths:
+  primary_tmp_root: "/var/folders/4y/yw924nm97658pxnmc5mr7gt00000gn/T/tmp.UISNW7WHPX"
+  primary_prefix: "/var/folders/4y/yw924nm97658pxnmc5mr7gt00000gn/T/tmp.UISNW7WHPX/prefix"
+  primary_home: "/var/folders/4y/yw924nm97658pxnmc5mr7gt00000gn/T/tmp.UISNW7WHPX/home"
+  primary_npm_cache: "/var/folders/4y/yw924nm97658pxnmc5mr7gt00000gn/T/tmp.UISNW7WHPX/npm-cache"
+installed_binary:
+  path: "/var/folders/4y/yw924nm97658pxnmc5mr7gt00000gn/T/tmp.UISNW7WHPX/prefix/node_modules/.bin/pairflow"
+  command_path_source: "isolated npm prefix"
+installed_version_output: "0.1.0"
+dry_run_json:
+  sourceRoot: "/private/var/folders/4y/yw924nm97658pxnmc5mr7gt00000gn/T/tmp.UISNW7WHPX/prefix/node_modules/@pairflow/cli/.claude/skills"
+  targetRoot: "/var/folders/4y/yw924nm97658pxnmc5mr7gt00000gn/T/tmp.UISNW7WHPX/home/.claude/skills"
+  targetDir: ".claude"
+  selectedSkills:
+    - "UsePairflow"
+    - "CreatePairflowSpec"
+    - "ExecutePairflowPlan"
+  dryRun: true
+  force: false
+  linkOther: false
+  status: "planned"
+  operation_count: 3
+dry_run_json_audit:
+  dry_run: true
+  status: "planned"
+  target_under_isolated_home: true
+  target_exists_after_dry_run: false
+  missing_sync_operations: []
+  original_source_under_package_audit: false
+  original_source_under_package_audit_note: "The first audit compared /var and /private/var spellings on macOS and produced a false negative."
+  realpath_source_under_package_rerun: true
+  realpath_rerun_sourceRoot: "/private/var/folders/4y/yw924nm97658pxnmc5mr7gt00000gn/T/tmp.wgPCheiQ8h/prefix/node_modules/@pairflow/cli/.claude/skills"
+  realpath_rerun_packageRoot: "/private/var/folders/4y/yw924nm97658pxnmc5mr7gt00000gn/T/tmp.wgPCheiQ8h/prefix/node_modules/@pairflow/cli"
+  realpath_rerun_target_under_isolated_home: true
+real_install_output:
+  text_summary_present: true
+  source_root: "/private/var/folders/4y/yw924nm97658pxnmc5mr7gt00000gn/T/tmp.UISNW7WHPX/prefix/node_modules/@pairflow/cli/.claude/skills"
+  target_root: "/var/folders/4y/yw924nm97658pxnmc5mr7gt00000gn/T/tmp.UISNW7WHPX/home/.claude/skills"
+  installed_skills: "UsePairflow, CreatePairflowSpec, ExecutePairflowPlan"
+  dry_run: false
+  force: false
+  link_other: true
+  other_root: "/var/folders/4y/yw924nm97658pxnmc5mr7gt00000gn/T/tmp.UISNW7WHPX/home/.codex/skills"
+  status: "fresh install"
+installed_skill_file_audit:
+  missing_skill_md: []
+link_other_audit:
+  bad_links: []
+global_boundary_status:
+  pre_status:
+    "/Users/felho/.claude/skills":
+      exists: true
+      mtimeMs: 1780389468227.4424
+    "/Users/felho/.codex/skills":
+      exists: true
+      mtimeMs: 1780776353045.9912
+  post_status:
+    "/Users/felho/.claude/skills":
+      exists: true
+      mtimeMs: 1780389468227.4424
+    "/Users/felho/.codex/skills":
+      exists: true
+      mtimeMs: 1780776353045.9912
+  real_global_unchanged: true
+  global_source_used: false
+cleanup_status:
+  primary_cleanup_target: "/var/folders/4y/yw924nm97658pxnmc5mr7gt00000gn/T/tmp.UISNW7WHPX"
+  primary_cleanup_result: "removed"
+  rerun_cleanup_target: "/var/folders/4y/yw924nm97658pxnmc5mr7gt00000gn/T/tmp.wgPCheiQ8h"
+  rerun_cleanup_result: "removed"
+git_status_after: "clean"
+decision: "skill_install_proof_passed"
+notes:
+  - "npm emitted a non-blocking notice that npm 11.16.0 is available."
+  - "pnpm build emitted the existing non-blocking esbuild ignored-build-scripts warning."
+  - "The approved task audit snippet was refined to use realpath for package-local source-root comparison on macOS /var versus /private/var aliases."
 ```

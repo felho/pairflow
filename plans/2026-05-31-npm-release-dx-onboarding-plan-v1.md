@@ -64,7 +64,7 @@ task_tracker:
     status: archived
   - task_id: 7c-skill-install-proof
     task_path: plans/tasks/2026-05-31-npm-release-dx-onboarding/7c-skill-install-proof.md
-    status: approved
+    status: done
   - task_id: 7d-ui-lifecycle-proof
     task_path: null
     status: not_created
@@ -213,7 +213,7 @@ This plan turns the current local-development install story into a release-quali
 | `6-ui-service-lifecycle` | `plans/archive/tasks/2026-05-31-npm-release-dx-onboarding/6-ui-service-lifecycle.md` | Add `pairflow ui start|stop|status|restart` with PID/state files, stale-PID cleanup, URL/status reporting, and foreground `pairflow ui` compatibility. | `1-package-version` | Missing durable local UI server lifecycle management. | archived |
 | `7a-package-release-proof` | `plans/archive/tasks/2026-05-31-npm-release-dx-onboarding/7a-package-release-proof.md` | Prove package contents, isolated packed install, version output, release workflow guard behavior, and publish prerequisite status. | `3-release-automation`, `6-ui-service-lifecycle` | Local tarball package proof completed; public publish readiness remains NO-GO until external GitHub/npm prerequisites are created or verified in `7e`. | archived |
 | `7b-docs-readiness-proof` | `plans/archive/tasks/2026-05-31-npm-release-dx-onboarding/7b-docs-readiness-proof.md` | Prove docs build/readiness with the concrete docs build command and generated install, UI, skills, and release pages. | `4-docs-site-pages`, `7a-package-release-proof` | Local docs validation, generated route/content coverage, and Pages workflow proof completed; public Pages availability remains NO-GO until external GitHub Pages settings/environment/public URL are enabled or verified in `7e`. | archived |
-| `7c-skill-install-proof` | `plans/tasks/2026-05-31-npm-release-dx-onboarding/7c-skill-install-proof.md` | Prove `pairflow skills install` from dry-run/json and isolated installed-package target behavior without treating global skill copies as source. | `5-skills-install`, `7a-package-release-proof` | Missing installed-package skill install proof. | approved |
+| `7c-skill-install-proof` | `plans/tasks/2026-05-31-npm-release-dx-onboarding/7c-skill-install-proof.md` | Prove `pairflow skills install` from dry-run/json and isolated installed-package target behavior without treating global skill copies as source. | `5-skills-install`, `7a-package-release-proof` | Installed-package skill install proof completed; real global skill directories were not used as source or mutated. | done |
 | `7d-ui-lifecycle-proof` | `null` | Prove `pairflow ui start|status|restart|stop` from source and packed/installed context; repo-owned packed UI gaps block plan closure. | `6-ui-service-lifecycle`, `7a-package-release-proof` | Missing installed-package UI lifecycle proof. | not_created |
 | `7e-release-go-no-go` | `null` | Aggregate release-pilot evidence, keep or open publish guards based on explicit prerequisites, and produce the GO/NO-GO readiness record for publish activation. | `7a-package-release-proof`, `7b-docs-readiness-proof`, `7c-skill-install-proof`, `7d-ui-lifecycle-proof` | Missing release-pilot publish activation decision record. | not_created |
 | `7f-registry-install-smoke` | `null` | After a `7e` GO decision and actual publish, prove registry install for `@pairflow/cli@latest` and the exact published version without relying on the local tarball or source checkout. | `7e-release-go-no-go` | Missing post-publish npm registry install proof for the user-facing install claim. | not_created |
@@ -317,6 +317,14 @@ This plan turns the current local-development install story into a release-quali
     tightened the retained-versus-fresh tarball branch, checkout build-artifact
     boundary, real install status expectation, Node stdin snippets, and real
     global skill directory pre/post audit.
+14. 2026-06-07: Completed `7c-skill-install-proof`. Evidence recorded
+    `pnpm build`, `npm pack --json`, isolated temp-prefix install, installed
+    `pairflow --version` output `0.1.0`, installed-package
+    `pairflow skills install --dry-run --json`, isolated real install with
+    `--link-other`, required skill `SKILL.md` and symlink audits, real global
+    skill directory pre/post non-mutation, and cleanup. The first source-root
+    audit hit a macOS `/var` versus `/private/var` path-alias false negative;
+    a realpath rerun proved package-local source resolution.
 
 ## Risks and Assumptions
 
