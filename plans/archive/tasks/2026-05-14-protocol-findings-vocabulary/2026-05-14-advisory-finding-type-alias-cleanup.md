@@ -1,8 +1,10 @@
 # Task: Advisory Finding Type Alias Cleanup
 
-**Source task**: `plans/tasks/2026-05-14-protocol-findings-vocabulary-task.md`  
-**Status**: implementation in progress  
+**Source task**: `plans/archive/tasks/2026-05-14-protocol-findings-vocabulary/2026-05-14-protocol-findings-vocabulary-task.md`
+**Status**: archived
 **Work type**: naming/contract cleanup
+
+**Archived note**: implemented by `07538787` (`Alias advisory finding projection types`).
 
 ## Goal
 

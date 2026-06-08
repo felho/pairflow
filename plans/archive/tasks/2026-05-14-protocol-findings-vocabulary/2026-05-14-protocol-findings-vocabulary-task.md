@@ -1,8 +1,8 @@
 # Task Discussion: Narrow Protocol and Findings Vocabulary
 
-**Source review**: `docs/modularity-review/2026-05-14-modularity-review-full-codebase.md`  
-**Issue**: `Protocol and findings vocabulary is still the widest volatile model`  
-**Status**: resolved in code through `f47b05ec` (`Narrow advisory protocol findings`)
+**Source review**: `docs/modularity-review/2026-05-14-modularity-review-full-codebase.md`
+**Issue**: `Protocol and findings vocabulary is still the widest volatile model`
+**Status**: archived; resolved in code through `f47b05ec` (`Narrow advisory protocol findings`)
 
 ## Implementation Progress
 

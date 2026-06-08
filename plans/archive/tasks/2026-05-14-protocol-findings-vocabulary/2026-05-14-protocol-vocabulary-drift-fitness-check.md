@@ -1,7 +1,7 @@
 # Task: Protocol Vocabulary Drift Fitness Check
 
-**Source task**: `plans/tasks/2026-05-14-protocol-findings-vocabulary-task.md`  
-**Status**: implemented  
+**Source task**: `plans/archive/tasks/2026-05-14-protocol-findings-vocabulary/2026-05-14-protocol-findings-vocabulary-task.md`
+**Status**: archived
 **Work type**: architecture fitness guardrail
 
 ## Goal

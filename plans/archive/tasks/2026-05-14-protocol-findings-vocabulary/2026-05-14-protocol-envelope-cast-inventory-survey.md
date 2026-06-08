@@ -1,7 +1,7 @@
 # Task: ProtocolEnvelope Cast Inventory Survey
 
-**Source guardrail**: `protocol_envelope_cast_inventory` fitness check  
-**Status**: surveyed  
+**Source guardrail**: `protocol_envelope_cast_inventory` fitness check
+**Status**: archived
 **Work type**: architecture inventory
 
 ## Goal
