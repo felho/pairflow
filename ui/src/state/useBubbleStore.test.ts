@@ -3897,6 +3897,7 @@ describe("deleteBubble store method", () => {
       });
 
     const store = createBubbleStore({
+      storage: new MemoryStorage(),
       api: createApiStub({
         getRepos: vi.fn(async () => ["/repo-a"]),
         getBubbles: vi.fn(async () => ({
