@@ -350,25 +350,25 @@ Use this section after execution.
 
 ```yaml
 registry_install_smoke:
-  evidence_status: pending
-  executed_at: "<ISO-8601 timestamp when executed>"
+  evidence_status: completed
+  executed_at: "2026-06-08T12:58:02+02:00"
   prerequisites:
     external_setup_task: "7f-external-release-setup"
-    external_setup_status: unknown
-    actual_release_published: unknown
+    external_setup_status: external_setup_verified
+    actual_release_published: missing
     release_tag: null
     release_version: null
     release_url: null
     publish_workflow_run_id: null
-    publish_workflow_conclusion: unknown
-    npm_publish_workflow: unknown
-    publish_guard_state_at_publish: unknown
+    publish_workflow_conclusion: missing
+    npm_publish_workflow: missing
+    publish_guard_state_at_publish: guard_closed_blocker
     release_publish_version_binding: unknown
   registry:
     package_name: "@pairflow/cli"
-    expected_version: null
+    expected_version: "0.1.0"
     latest_version: null
-    exact_version_available: unknown
+    exact_version_available: missing
     latest_matches_expected: unknown
   isolated_install:
     tmp_root: null
@@ -389,6 +389,21 @@ registry_install_smoke:
     registry_install_smoke: registry_install_smoke_blocked
     public_install_claim: not_ready
     next_task: required_follow_up
-  blockers: []
-  notes: []
+  blockers:
+    - actual_release_missing
+    - npm_publish_workflow_missing_or_not_visible_on_remote_default_branch
+    - publish_guard_closed
+    - npm_registry_package_lookup_404
+    - exact_version_lookup_404
+    - isolated_registry_install_not_run
+    - installed_cli_smoke_not_run
+  notes:
+    - "git status --short returned clean."
+    - "gh release list --repo felho/pairflow --limit 5 returned no releases."
+    - "gh run list --repo felho/pairflow --workflow npm-publish.yml --limit 5 returned HTTP 404: workflow npm-publish.yml not found on the default branch."
+    - "gh workflow list --repo felho/pairflow --all returned no workflows, while the local checkout contains .github/workflows/npm-publish.yml and .github/workflows/release.yml."
+    - "gh variable list --repo felho/pairflow observed PAIRFLOW_NPM_PUBLISH_ENABLED=false."
+    - "Local package.json version read returned 0.1.0."
+    - "npm view @pairflow/cli version, npm view @pairflow/cli@0.1.0 version, and npm view @pairflow/cli dist-tags --json returned E404 Not Found."
+    - "Registry install and installed CLI smoke were intentionally not run because actual release, successful real npm publish, and registry package availability prerequisites were missing."
 ```

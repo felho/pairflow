@@ -396,6 +396,14 @@ This plan turns the current local-development install story into a release-quali
     prefixes, explicit release tag/workflow run/version binding evidence,
     guard-closed blocker vocabulary, and executable environment-variable wiring
     for installed binary audits.
+27. 2026-06-08: Ran the initial `7g-registry-install-smoke` precondition
+    checks. The worktree was clean and local package version was `0.1.0`, but
+    no GitHub releases were listed, the remote default branch did not expose
+    `npm-publish.yml` workflow runs, `PAIRFLOW_NPM_PUBLISH_ENABLED=false`, and
+    npm registry lookups for `@pairflow/cli`, `@pairflow/cli@0.1.0`, and
+    dist-tags returned E404. Evidence was recorded as
+    `registry_install_smoke_blocked`; public install readiness remains
+    `not_ready` until actual release and successful npm publish complete.
 
 ## Risks and Assumptions
 
