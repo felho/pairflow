@@ -48,23 +48,27 @@ treated as allowed.
 3. Read-path rule: consume archived task evidence from `7a`, `7b`, `7c`, and
    `7d`; rerun local release/docs validation; inspect workflow guards; record
    external prerequisite statuses from GitHub/npm screens or CLI commands.
-   Treat missing/unknown external values as NO-GO unless an explicit operator
-   setup step proves them in this task.
+   Treat missing/unknown external values as NO-GO and route them to
+   `7f-external-release-setup`; this task records already-present
+   prerequisites only as diagnostic evidence and does not resolve missing
+   setup.
 4. Forbidden fallback: do not infer readiness from local tarball proof alone,
    from workflow YAML existing, from a token name appearing in YAML, from a
    successful unauthenticated npm registry lookup, from public docs source, or
    from user memory without fresh evidence. Do not trigger a GitHub release,
    run real `npm publish`, create a release tag, or claim the post-publish
    registry install smoke has passed.
-5. Allowed resolution path: if every prerequisite is verified present and the
-   operator explicitly chooses GO, this task may record a GO decision and the
-   intended guard-open state for `PAIRFLOW_NPM_PUBLISH_ENABLED=true` without
-   running the release or publish. If any required prerequisite is missing or
-   unknown, record NO-GO and keep publish guard closed.
+5. Allowed resolution path: if every prerequisite is already verified present,
+   this task may record a GO diagnostic handoff to
+   `actual_release_publish_required` without running the release, publishing,
+   resolving external setup, or opening the publish guard. If any required
+   prerequisite is missing or unknown, record NO-GO, keep publish guard closed,
+   and route setup to `7f-external-release-setup`.
 6. Missing-data rule: any missing or unknown external prerequisite, failed local
    validation, stale/missing archived proof decision, or ambiguous guard state
-   forces `release_no_go`. The task must name the blocker and route to external
-   setup or follow-up before `7f-registry-install-smoke`.
+   forces `release_no_go`. The task must name the blocker and route to
+   `7f-external-release-setup` or a follow-up before
+   `7g-registry-install-smoke`.
 7. Phase boundary: this task owns readiness aggregation and guard decision
    evidence only. It must not edit CLI/runtime/docs source, workflow YAML,
    package metadata, release config, GitHub settings, npm account settings, or
@@ -78,15 +82,18 @@ treated as allowed.
    `7c-skill-install-proof`, and `7d-ui-lifecycle-proof`.
 3. Unlocks / impacts successors:
    - If decision is `release_go`, the operator may trigger/allow the guarded
-     release/publish flow and then run `7f-registry-install-smoke`.
-   - If decision is `release_no_go`, `7f-registry-install-smoke` remains
-     blocked until the named prerequisites are fixed and this decision is
-     rerun or superseded.
+     release/publish flow through `actual_release_publish_required`.
+   - If decision is `release_no_go`, `7f-external-release-setup` owns resolving
+     and verifying the missing external prerequisites; after `7f` verifies
+     setup, the next handoff is actual release/publish execution, then
+     `7g-registry-install-smoke`.
 4. Task-list impact: after this task is proven and archived, the parent plan
    can proceed only according to the recorded decision.
 5. Exit expectation: record evidence decisions consumed from `7a` through `7d`,
    current local validation outputs, external GitHub/npm prerequisite statuses,
-   final `release_go` or `release_no_go`, guard state, and `7f` handoff.
+   final `release_go` or `release_no_go`, guard state, and the next handoff to
+   either `7f-external-release-setup` or `actual_release_publish_required`.
+   `7g-registry-install-smoke` is eligible only after actual publish succeeds.
 
 ### Canonical Contract Anchors
 
@@ -181,7 +188,8 @@ split_reason: >
 | Public docs availability | externally_activated | GitHub Pages workflow and public URL | docs build/workflow | Pages enabled, `github-pages` environment, public URL proof | archived `7b` decision plus external Pages status | local docs ready and external Pages present | missing/unknown Pages setup or no public URL |
 | Installed skill readiness | end_to_end | consume `7c` evidence | installed package skill sources/CLI | none beyond local proof | archived `7c` decision | `skill_install_proof_passed` | missing/stale evidence |
 | Installed UI lifecycle readiness | end_to_end | consume `7d` evidence | UI lifecycle CLI/package assets | available local port/process permissions | archived `7d` decision | `ui_lifecycle_proof_passed` | missing/stale evidence |
-| Published registry install readiness | externally_activated | `npm install -g @pairflow/cli@latest` after actual publish | npm package metadata | actual public publish completed | handoff only | not closed in this task | always deferred to `7f` |
+| External release activation setup | externally_activated | GitHub/npm operator setup after NO-GO blockers are named | GitHub/npm settings | operator-owned setup | handoff only | routed to `7f-external-release-setup` when prerequisites are missing | missing setup keeps release NO-GO |
+| Published registry install readiness | externally_activated | `npm install -g @pairflow/cli@latest` after actual publish | npm package metadata | actual public publish completed | handoff only | not closed in this task | always deferred to `7g` after setup, GO, and actual publish |
 
 ### Decision Matrix
 
@@ -199,7 +207,8 @@ split_reason: >
 | `npm-publish` environment | present with intended approval policy | npm publish NO-GO |
 | `PAIRFLOW_NPM_PUBLISH_ENABLED` | observed `false/missing` before GO; operator may open only after recorded GO | observed `true` before recorded GO is `unexpected_open_blocker` and `release_no_go` |
 | GitHub Pages enabled/environment/public URL | present for release GO | `release_no_go` |
-| Actual npm publish | not required here | `7f` remains pending |
+| External setup blockers | none missing for GO | route to `7f-external-release-setup` |
+| Actual npm publish | not required here | `7g` remains pending |
 
 `release_go` requires `docs_public_state: public_docs_ready`. If
 `github_pages_enabled`, `github_pages_environment`, or
@@ -222,7 +231,7 @@ split_reason: >
 3. Creating/editing GitHub secrets, variables, environments, or Pages settings
    from this task. If the operator performs external setup separately, this
    task may record fresh verification evidence.
-4. Claiming public npm install readiness before `7f-registry-install-smoke`.
+4. Claiming public npm install readiness before `7g-registry-install-smoke`.
 5. Treating local tarball install proof as public registry proof.
 
 ### Evidence Contract
@@ -257,9 +266,9 @@ release_go_no_go:
   docs_public_state: "public_docs_ready|public_docs_no_go"
   publish_execution_handoff:
     actual_publish_completed: false
-    required_before_7f: "GitHub release published and npm publish workflow completed successfully"
-    registry_install_proof_status: "deferred_to_7f"
-  next_task: "7f-registry-install-smoke|external_setup_required|follow_up_task_required"
+    required_before_7g: "GitHub release published and npm publish workflow completed successfully"
+    registry_install_proof_status: "deferred_to_7g"
+  next_task: "7f-external-release-setup|actual_release_publish_required|follow_up_task_required"
   blockers: []
   notes: []
 ```
@@ -298,7 +307,7 @@ release_go_no_go:
    prerequisites are present and explicit GO is recorded, the decision is
    `release_no_go` with `unexpected_open_blocker`.
 8. `release_go` does not claim public registry install proof; it only unlocks
-   actual publish and successor `7f-registry-install-smoke`.
+   actual publish and successor `7g-registry-install-smoke`.
 9. `release_no_go` names exact blockers and leaves publish guard closed.
 
 ### ReviewSpec Gate Coverage
@@ -438,8 +447,9 @@ release_go_no_go:
      prerequisites are present, workflow guards are intact,
      `PAIRFLOW_NPM_PUBLISH_ENABLED` is currently `false` or `missing`, and the
      operator explicitly wants the publish guard opened after this decision.
-   - Otherwise record `release_no_go`, keep publish guard closed, and name the
-     exact missing/unknown blockers.
+   - Otherwise record `release_no_go`, keep publish guard closed, name the
+     exact missing/unknown blockers, and route next work to
+     `7f-external-release-setup`.
 8. Confirm checkout remains limited to evidence edits:
    ```bash
    git status --short
@@ -479,8 +489,8 @@ release_go_no_go:
   docs_public_state: null
   publish_execution_handoff:
     actual_publish_completed: false
-    required_before_7f: "GitHub release published and npm publish workflow completed successfully"
-    registry_install_proof_status: "deferred_to_7f"
+    required_before_7g: "GitHub release published and npm publish workflow completed successfully"
+    registry_install_proof_status: "deferred_to_7g"
   next_task: null
   blockers: []
   notes: []
