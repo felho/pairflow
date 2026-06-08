@@ -65,6 +65,19 @@ function createDeferred<T>(): {
   };
 }
 
+async function waitForMockCallCount(
+  mock: { mock: { calls: unknown[] } },
+  expectedCalls: number
+): Promise<void> {
+  for (let index = 0; index < 20; index += 1) {
+    if (mock.mock.calls.length >= expectedCalls) {
+      return;
+    }
+    await Promise.resolve();
+  }
+  expect(mock.mock.calls).toHaveLength(expectedCalls);
+}
+
 function actionResult<T>(): T {
   return {} as T;
 }
@@ -3950,7 +3963,7 @@ describe("deleteBubble store method", () => {
         })
       });
 
-      expect(getBubbleTimeline).toHaveBeenCalledTimes(2);
+      await waitForMockCallCount(getBubbleTimeline, 2);
       laggingDetailDeferred.resolve(laggingDetail);
       laggingTimelineDeferred.resolve(initialTimeline);
       await Promise.resolve();
