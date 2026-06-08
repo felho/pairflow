@@ -65,19 +65,6 @@ function createDeferred<T>(): {
   };
 }
 
-async function waitForMockCallCount(
-  mock: { mock: { calls: unknown[] } },
-  expectedCalls: number
-): Promise<void> {
-  for (let index = 0; index < 20; index += 1) {
-    if (mock.mock.calls.length >= expectedCalls) {
-      return;
-    }
-    await Promise.resolve();
-  }
-  expect(mock.mock.calls).toHaveLength(expectedCalls);
-}
-
 function actionResult<T>(): T {
   return {} as T;
 }
@@ -3924,7 +3911,6 @@ describe("deleteBubble store method", () => {
         .mockImplementationOnce(async () => laggingTimelineDeferred.promise)
         .mockResolvedValueOnce(recoveredTimeline);
 
-      let emitEvent: (event: UiEvent) => void = () => undefined;
       const store = createBubbleStore({
         api: createApiStub({
           getRepos: vi.fn(async () => ["/repo-a"]),
@@ -3935,8 +3921,7 @@ describe("deleteBubble store method", () => {
           getBubble,
           getBubbleTimeline
         }),
-        createEventsClient: (input) => {
-          emitEvent = input.onEvent;
+        createEventsClient: () => {
           return {
             start: () => undefined,
             stop: () => undefined,
@@ -3948,26 +3933,11 @@ describe("deleteBubble store method", () => {
       await store.getState().initialize();
       await store.getState().toggleBubbleExpanded("b-a");
 
-      emitEvent({
-        id: 401,
-        ts: "2026-04-19T20:47:18.200Z",
-        type: "bubble.updated",
-        repoPath: "/repo-a",
-        bubbleId: "b-a",
-        bubble: bubbleSummary({
-          bubbleId: "b-a",
-          repoPath: "/repo-a",
-          round: 1,
-          activeAgent: "claude",
-          activeRole: "reviewer"
-        })
-      });
-
-      await waitForMockCallCount(getBubbleTimeline, 2);
+      const laggingRefresh = store.getState().refreshExpandedBubble("b-a");
+      expect(getBubbleTimeline).toHaveBeenCalledTimes(2);
       laggingDetailDeferred.resolve(laggingDetail);
       laggingTimelineDeferred.resolve(initialTimeline);
-      await Promise.resolve();
-      await Promise.resolve();
+      await laggingRefresh;
       expect(store.getState().bubbleTimelines["b-a"]).toEqual(initialTimeline);
 
       await vi.advanceTimersByTimeAsync(200);
