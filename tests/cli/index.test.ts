@@ -21,6 +21,16 @@ describe("runCli", () => {
   const stderrSpy = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
   const tempDirs: string[] = [];
 
+  async function readExpectedPackageVersion(): Promise<string> {
+    const packageJson = JSON.parse(await readFile("package.json", "utf8")) as {
+      version?: unknown;
+    };
+    if (typeof packageJson.version !== "string") {
+      throw new Error("package.json version must be a string");
+    }
+    return packageJson.version;
+  }
+
   async function setupDoneBubbleFixture(repoPath: string, bubbleId: string) {
     const bubble = await createBubble({
       repoPath,
@@ -114,18 +124,20 @@ describe("runCli", () => {
   });
 
   it("prints the package version for top-level --version", async () => {
+    const expectedVersion = await readExpectedPackageVersion();
     const exitCode = await runCli(["--version"]);
 
     expect(exitCode).toBe(0);
-    expect(stdoutSpy).toHaveBeenCalledWith("0.1.0\n");
+    expect(stdoutSpy).toHaveBeenCalledWith(`${expectedVersion}\n`);
     expect(stderrSpy).not.toHaveBeenCalled();
   });
 
   it("prints the package version for top-level -v", async () => {
+    const expectedVersion = await readExpectedPackageVersion();
     const exitCode = await runCli(["-v"]);
 
     expect(exitCode).toBe(0);
-    expect(stdoutSpy).toHaveBeenCalledWith("0.1.0\n");
+    expect(stdoutSpy).toHaveBeenCalledWith(`${expectedVersion}\n`);
     expect(stderrSpy).not.toHaveBeenCalled();
   });
 
