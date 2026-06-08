@@ -2,7 +2,7 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import {
   emitConvergedFromWorkspaceCommandOrchestration as emitConvergedFromWorkspace
@@ -18,6 +18,12 @@ import type { ProtocolEnvelope } from "../../../src/v11/shared/protocol/protocol
 import { initGitRepository } from "../../helpers/git.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
 import { buildWorktreeBootstrapResult } from "../../helpers/worktreeBootstrapResult.js";
+import {
+  configureStartBubbleDependencyDefaults
+} from "../../../src/v11/application/start/startBubbleDependencyDefaults.js";
+import {
+  startBubbleDependencyDefaults
+} from "../../../src/v11/defaults/start/startBubbleDefaults.js";
 
 const tempDirs: string[] = [];
 
@@ -34,7 +40,15 @@ async function createTempRepo(): Promise<string> {
   return root;
 }
 
+beforeEach(() => {
+  configureStartBubbleDependencyDefaults({
+    ...startBubbleDependencyDefaults,
+    resolveCodexMcpDisableArgs: () => Promise.resolve([])
+  });
+});
+
 afterEach(async () => {
+  configureStartBubbleDependencyDefaults(startBubbleDependencyDefaults);
   await Promise.all(
     tempDirs.splice(0).map((path) =>
       rm(path, { recursive: true, force: true })

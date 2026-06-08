@@ -2,7 +2,7 @@ import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { renderBubbleConfigToml } from "../../../src/config/bubbleConfig.js";
 import { emitConvergedFromWorkspaceCommandOrchestration as emitConvergedFromWorkspace } from "../../../src/v11/application/converged/convergedCommandOrchestration.js";
@@ -36,6 +36,12 @@ import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
 import { initGitRepository } from "../../helpers/git.js";
 import { buildWorktreeBootstrapResult } from "../../helpers/worktreeBootstrapResult.js";
 import { writeStateSnapshotFixture as writeStateSnapshot } from "../../helpers/stateSnapshot.js";
+import {
+  configureStartBubbleDependencyDefaults
+} from "../../../src/v11/application/start/startBubbleDependencyDefaults.js";
+import {
+  startBubbleDependencyDefaults
+} from "../../../src/v11/defaults/start/startBubbleDefaults.js";
 const tempDirs: string[] = [];
 const reconcileRuntimeSessionsDefaults = {
   ...reconcileRuntimeSessionsDefaultDependencies,
@@ -59,7 +65,15 @@ async function createTempRepo(prefix = "pairflow-restart-recovery-"): Promise<st
   return root;
 }
 
+beforeEach(() => {
+  configureStartBubbleDependencyDefaults({
+    ...startBubbleDependencyDefaults,
+    resolveCodexMcpDisableArgs: () => Promise.resolve([])
+  });
+});
+
 afterEach(async () => {
+  configureStartBubbleDependencyDefaults(startBubbleDependencyDefaults);
   await Promise.all(
     tempDirs.splice(0).map((path) =>
       rm(path, { recursive: true, force: true })

@@ -1,4 +1,4 @@
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -16,6 +16,7 @@ import type { SetMetaReviewerPaneBindingResult } from "../../../src/v11/infrastr
 import type { ContractCase, ContractCaseExpected } from "./schema.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
 import { initGitRepository } from "../../helpers/git.js";
+import { renderBubbleConfigToml } from "../../../src/config/bubbleConfig.js";
 
 export interface MetaReviewGateContractOutput {
   status: "ok" | "error";
@@ -267,6 +268,18 @@ async function executeMetaReviewGateCase(input: {
       bubbleId: `b_contract_${input.caseDef.id}`,
       task: input.caseDef.description
     });
+    await writeFile(
+      bubble.paths.bubbleTomlPath,
+      renderBubbleConfigToml({
+        ...bubble.config,
+        role_mcp: {
+          implementer: bubble.config.role_mcp?.implementer ?? "disabled",
+          reviewer: bubble.config.role_mcp?.reviewer ?? "disabled",
+          meta_reviewer: "enabled"
+        }
+      }),
+      "utf8"
+    );
 
     const caseInput = parseMetaReviewGateCaseInput(input.caseDef.input);
     const stateForApply = await readStateSnapshot(bubble.paths.statePath);
