@@ -8,6 +8,8 @@ function sleep(ms: number): Promise<void> {
 
 export interface SendAndSubmitTmuxPaneMessageOptions {
   requireSuccess?: boolean;
+  submitDelayMs?: number;
+  sleepForDelayMs?: (delayMs: number) => Promise<void>;
 }
 
 export type TmuxPaneMarkerStatus = "submitted" | "stuck_in_input" | "not_found";
@@ -19,6 +21,7 @@ export interface ConfirmTmuxPaneMarkerSubmissionInput {
   attempts?: number;
   settleDelayMs?: number;
   retryDelayMs?: number;
+  sleepForDelayMs?: (delayMs: number) => Promise<void>;
 }
 
 async function maybeExitTmuxCopyMode(input: {
@@ -100,7 +103,11 @@ export async function sendAndSubmitTmuxPaneMessage(
   // Brief gap lets the TUI process and render the pasted text before receiving
   // the Enter key as a distinct input event.  500ms was verified against Claude
   // Code v2.1.50 with messages up to 550 chars.
-  await sleep(500);
+  const submitDelayMs = options.submitDelayMs ?? 500;
+  if (submitDelayMs > 0) {
+    const sleepForDelayMs = options.sleepForDelayMs ?? sleep;
+    await sleepForDelayMs(submitDelayMs);
+  }
   const submitResult = await runner(["send-keys", "-t", targetPane, "Enter"], {
     allowFailure: true
   });
@@ -184,9 +191,12 @@ export async function confirmTmuxPaneMarkerSubmission(
   const attempts = Math.max(1, input.attempts ?? 3);
   const settleDelayMs = input.settleDelayMs ?? 800;
   const retryDelayMs = input.retryDelayMs ?? 900;
+  const sleepForDelayMs = input.sleepForDelayMs ?? sleep;
 
   for (let attempt = 0; attempt < attempts; attempt += 1) {
-    await sleep(settleDelayMs);
+    if (settleDelayMs > 0) {
+      await sleepForDelayMs(settleDelayMs);
+    }
     const status = await checkTmuxPaneMarkerStatus(
       input.runner,
       input.targetPane,
@@ -196,7 +206,9 @@ export async function confirmTmuxPaneMarkerSubmission(
       return true;
     }
     if (attempt < attempts - 1) {
-      await sleep(retryDelayMs);
+      if (retryDelayMs > 0) {
+        await sleepForDelayMs(retryDelayMs);
+      }
       await submitTmuxPaneInput(input.runner, input.targetPane);
     }
   }

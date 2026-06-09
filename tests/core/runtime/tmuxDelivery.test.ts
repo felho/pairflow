@@ -10,6 +10,7 @@ import {
   attemptTmuxDelivery,
   createAcceptedDeliveryAck,
   createRejectedDeliveryAck,
+  type TmuxDeliveryTimingOptions
 } from "../../../src/v11/infrastructure/channel/tmux/tmuxDeliveryRuntime.js";
 import {
   resolveEnvelopeTargetPane
@@ -206,6 +207,13 @@ type TestEmitDeliveryNotificationInput =
     recipientRole?: DeliveryTargetRole;
   };
 
+const fastDeliveryTiming: TmuxDeliveryTimingOptions = {
+  sleepForDelayMs: () => Promise.resolve(),
+  submitDelayMs: 0,
+  markerSettleDelayMs: 0,
+  markerRetryDelayMs: 0
+};
+
 function resolveLegacyRecipientRoleForTest(input: {
   envelope: CompatProtocolEnvelope;
   bubbleConfig: BubbleConfig;
@@ -235,6 +243,7 @@ async function emitDeliveryNotificationAck(
 ) {
   return emitDeliveryNotificationAckRuntime({
     ...input,
+    deliveryTiming: input.deliveryTiming ?? fastDeliveryTiming,
     ...(input.recipientRole !== undefined
       ? { recipientRole: input.recipientRole }
       : (() => {

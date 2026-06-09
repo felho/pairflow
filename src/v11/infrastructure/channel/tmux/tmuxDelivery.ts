@@ -7,7 +7,8 @@ import {
 import {
   attemptTmuxDelivery,
   createRejectedDeliveryAck,
-  readDeliverySessionContext
+  readDeliverySessionContext,
+  type TmuxDeliveryTimingOptions
 } from "./tmuxDeliveryRuntime.js";
 import {
   buildTmuxDeliveryMessage,
@@ -33,6 +34,7 @@ import type {
 interface EmitDeliveryNotificationRuntimeDependencies {
   runner?: TmuxRunner;
   readSessionsRegistry?: typeof readRuntimeSessionsRegistry;
+  deliveryTiming?: TmuxDeliveryTimingOptions;
 }
 
 export type EmitDeliveryNotificationRuntimeInput =
@@ -192,6 +194,7 @@ export async function emitDeliveryNotificationAck(
     targetPaneIndex,
     ...(input.initialDelayMs !== undefined ? { initialDelayMs: input.initialDelayMs } : {}),
     ...(input.deliveryAttempts !== undefined ? { deliveryAttempts: input.deliveryAttempts } : {}),
+    ...(input.deliveryTiming !== undefined ? { timing: input.deliveryTiming } : {}),
     ...(targetResolution.deliveryTargetReasonCode !== undefined
       ? { deliveryTargetReasonCode: targetResolution.deliveryTargetReasonCode }
       : {})

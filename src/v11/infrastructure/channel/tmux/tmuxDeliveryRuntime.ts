@@ -98,6 +98,13 @@ function sleep(ms: number): Promise<void> {
   });
 }
 
+export interface TmuxDeliveryTimingOptions {
+  sleepForDelayMs?: (delayMs: number) => Promise<void>;
+  submitDelayMs?: number;
+  markerSettleDelayMs?: number;
+  markerRetryDelayMs?: number;
+}
+
 export async function attemptTmuxDelivery(input: {
   runner: TmuxRunner;
   targetPane: string;
@@ -108,20 +115,37 @@ export async function attemptTmuxDelivery(input: {
   sessionName: string;
   targetPaneIndex: number;
   deliveryTargetReasonCode?: DeliveryTargetReasonCode;
+  timing?: TmuxDeliveryTimingOptions;
 }): Promise<DeliveryAck> {
   try {
     if ((input.initialDelayMs ?? 0) > 0) {
-      await sleep(input.initialDelayMs as number);
+      const sleepForDelayMs = input.timing?.sleepForDelayMs ?? sleep;
+      await sleepForDelayMs(input.initialDelayMs as number);
     }
     await maybeAcceptClaudeTrustPrompt(input.runner, input.targetPane).catch(() => undefined);
     await sendAndSubmitTmuxPaneMessage(input.runner, input.targetPane, input.message, {
-      requireSuccess: true
+      requireSuccess: true,
+      ...(input.timing?.submitDelayMs !== undefined
+        ? { submitDelayMs: input.timing.submitDelayMs }
+        : {}),
+      ...(input.timing?.sleepForDelayMs !== undefined
+        ? { sleepForDelayMs: input.timing.sleepForDelayMs }
+        : {})
     });
     const confirmed = await confirmTmuxPaneMarkerSubmission({
       runner: input.runner,
       targetPane: input.targetPane,
       marker: input.envelopeId,
-      ...(input.deliveryAttempts !== undefined ? { attempts: input.deliveryAttempts } : {})
+      ...(input.deliveryAttempts !== undefined ? { attempts: input.deliveryAttempts } : {}),
+      ...(input.timing?.markerSettleDelayMs !== undefined
+        ? { settleDelayMs: input.timing.markerSettleDelayMs }
+        : {}),
+      ...(input.timing?.markerRetryDelayMs !== undefined
+        ? { retryDelayMs: input.timing.markerRetryDelayMs }
+        : {}),
+      ...(input.timing?.sleepForDelayMs !== undefined
+        ? { sleepForDelayMs: input.timing.sleepForDelayMs }
+        : {})
     });
     if (confirmed) {
       return createAcceptedDeliveryAck({
