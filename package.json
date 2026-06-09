@@ -54,7 +54,7 @@
     "lint": "bash ./scripts/run-evidence.sh .pairflow/evidence/lint.log \"pnpm lint\" -- bash -lc \"pnpm codegen:reviewer-ontology && pnpm exec eslint .\"",
     "test:root": "pnpm codegen:reviewer-ontology && pnpm exec vitest run",
     "test:ui": "pnpm --dir ui test",
-    "test": "bash ./scripts/run-evidence.sh .pairflow/evidence/test.log \"pnpm test\" -- bash -lc 'root_exit=0; pnpm test:root || root_exit=$?; ui_exit=0; pnpm test:ui || ui_exit=$?; test $root_exit -eq 0 -a $ui_exit -eq 0'",
+    "test": "bash ./scripts/run-evidence.sh .pairflow/evidence/test.log \"pnpm test\" -- bash -lc 'root_exit=0; ui_exit=0; pnpm test:root & root_pid=$!; pnpm test:ui & ui_pid=$!; wait $root_pid || root_exit=$?; wait $ui_pid || ui_exit=$?; test $root_exit -eq 0 -a $ui_exit -eq 0'",
     "test:watch": "vitest",
     "check": "pnpm codegen:reviewer-ontology && pnpm lint && pnpm typecheck && pnpm test",
     "ui:start": "bash ./scripts/ui-server.sh start",
