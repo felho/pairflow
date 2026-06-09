@@ -520,6 +520,36 @@ describe("restart recovery", () => {
       restarted.state.execution_context?.execution_id
     );
     expect(authoritativeContext.expected_role).toBe("reviewer");
+
+    const freshResult = await emitActorProtocolFromWorkspace(
+      {
+        input: {
+          kind: "pass",
+          repo: repoPath,
+          bubble_id: bubble.bubbleId,
+          handoff_id: authoritativeContext.handoff_id,
+          execution_id: authoritativeContext.execution_id,
+          summary: "Use the fresh reviewer authority after resume.",
+          no_findings: true
+        },
+        authoritativeContext
+      },
+      {
+        pass: {
+          emitDeliveryNotificationAck: () =>
+            Promise.resolve({
+              status: "accepted",
+              message: "ok"
+            })
+        }
+      }
+    );
+
+    expect(freshResult.kind).toBe("pass");
+    if (freshResult.kind !== "pass") {
+      throw new Error("Expected pass result.");
+    }
+    expect(freshResult.pass.state.active_role).toBe("implementer");
   });
 
   it("keeps canonical meta-review submit routeable after delivery failure, restart recovery, and missing pane rebinding", async () => {

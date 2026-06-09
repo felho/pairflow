@@ -102,6 +102,20 @@ describe("validate commit range CLI", () => {
     expect(output).toContain("reason_code: range_validated");
   });
 
+  it("validates an explicit safe range through the package script entrypoint", async () => {
+    const base = await git(repoRoot, ["rev-parse", "HEAD~1"]);
+    const head = await git(repoRoot, ["rev-parse", "HEAD"]);
+
+    const result = await execFileAsync(
+      "pnpm",
+      ["commit-policy:validate-range", "--", "--from", base, "--to", head],
+      { cwd: repoRoot }
+    );
+
+    expect(result.stdout).toContain("commit-policy range: validated");
+    expect(result.stdout).toContain("reason_code: range_validated");
+  });
+
   it("reports all invalid commits in an explicit safe range", async () => {
     const repoDir = await createRepo();
     const base = await git(repoDir, ["rev-parse", "HEAD"]);

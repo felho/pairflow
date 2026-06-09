@@ -10,6 +10,14 @@ import { validateCommitMessageFile } from "../../tools/commit-policy/validateCom
 
 const execFileAsync = promisify(execFile);
 
+function outputFrom(error: unknown, stream: "stdout" | "stderr"): string {
+  if (typeof error === "object" && error !== null && stream in error) {
+    const value = (error as Record<typeof stream, unknown>)[stream];
+    return typeof value === "string" ? value : "";
+  }
+  return "";
+}
+
 async function writeMessage(content: string): Promise<string> {
   const tempDir = await mkdtemp(join(tmpdir(), "pairflow-commit-message-"));
   const messagePath = join(tempDir, "COMMIT_EDITMSG");
@@ -28,6 +36,31 @@ describe("validate commit message CLI", () => {
 
     expect(result.stdout).toContain("commit-policy: accepted");
     expect(result.stdout).toContain("reason_code: accepted_conventional");
+  });
+
+  it("rejects an invalid message through the package script entrypoint", async () => {
+    const messagePath = await writeMessage(
+      "update stuff\n\nfeat(cli): body cannot rescue this\n"
+    );
+
+    let failure: unknown;
+    try {
+      await execFileAsync(
+        "pnpm",
+        ["commit-policy:validate-message", "--", messagePath],
+        { cwd: process.cwd() }
+      );
+    } catch (error) {
+      failure = error;
+    }
+
+    expect(failure).toMatchObject({ code: 1 });
+    expect(outputFrom(failure, "stderr")).toContain(
+      "rejected_body_only_conventional"
+    );
+    expect(outputFrom(failure, "stderr")).toContain(
+      "docs/commit-message-guidance.md"
+    );
   });
 
   it("rejects invalid first lines with guidance output", async () => {
