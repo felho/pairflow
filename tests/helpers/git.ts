@@ -1,12 +1,18 @@
 import { spawn } from "node:child_process";
-import { writeFile } from "node:fs/promises";
+import { cp, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
+
+import { afterAll } from "vitest";
 
 export interface GitRunResult {
   stdout: string;
   stderr: string;
   exitCode: number;
 }
+
+const templateRepoPromises = new Map<string, Promise<string>>();
+const templateRepoPaths = new Set<string>();
 
 export async function runGit(
   cwd: string,
@@ -58,6 +64,39 @@ export async function initGitRepository(
   repoPath: string,
   initialBranch: string = "main"
 ): Promise<void> {
+  if (initialBranch === "main") {
+    const templatePath = await getTemplateRepository(initialBranch);
+    await cp(templatePath, repoPath, {
+      recursive: true,
+      force: true,
+      verbatimSymlinks: true
+    });
+    return;
+  }
+
+  await initGitRepositorySlow(repoPath, initialBranch);
+}
+
+async function getTemplateRepository(initialBranch: string): Promise<string> {
+  let templatePromise = templateRepoPromises.get(initialBranch);
+  if (templatePromise === undefined) {
+    templatePromise = createTemplateRepository(initialBranch);
+    templateRepoPromises.set(initialBranch, templatePromise);
+  }
+  return templatePromise;
+}
+
+async function createTemplateRepository(initialBranch: string): Promise<string> {
+  const templatePath = await mkdtemp(join(tmpdir(), "pairflow-git-template-"));
+  templateRepoPaths.add(templatePath);
+  await initGitRepositorySlow(templatePath, initialBranch);
+  return templatePath;
+}
+
+async function initGitRepositorySlow(
+  repoPath: string,
+  initialBranch: string
+): Promise<void> {
   await runGit(repoPath, ["init", "-b", initialBranch]);
   await runGit(repoPath, ["config", "user.email", "pairflow@example.test"]);
   await runGit(repoPath, ["config", "user.name", "Pairflow Test"]);
@@ -65,3 +104,13 @@ export async function initGitRepository(
   await runGit(repoPath, ["add", "README.md"]);
   await runGit(repoPath, ["commit", "-m", "init"]);
 }
+
+afterAll(async () => {
+  await Promise.all(
+    [...templateRepoPaths].map((templatePath) =>
+      rm(templatePath, { recursive: true, force: true })
+    )
+  );
+  templateRepoPaths.clear();
+  templateRepoPromises.clear();
+});
