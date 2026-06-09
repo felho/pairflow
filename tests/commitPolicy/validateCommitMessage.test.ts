@@ -4,17 +4,11 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+
+import { validateCommitMessageFile } from "../../tools/commit-policy/validateCommitMessage.js";
 
 const execFileAsync = promisify(execFile);
-
-function outputFrom(error: unknown, stream: "stdout" | "stderr"): string {
-  if (typeof error === "object" && error !== null && stream in error) {
-    const value = (error as Record<typeof stream, unknown>)[stream];
-    return typeof value === "string" ? value : "";
-  }
-  return "";
-}
 
 async function writeMessage(content: string): Promise<string> {
   const tempDir = await mkdtemp(join(tmpdir(), "pairflow-commit-message-"));
@@ -40,17 +34,15 @@ describe("validate commit message CLI", () => {
     const messagePath = await writeMessage(
       "update stuff\n\nfeat(cli): body cannot rescue this\n"
     );
+    const stderr = vi.spyOn(console, "error").mockImplementation(() => {});
 
-    let failure: unknown;
     try {
-      await execFileAsync("pnpm", ["commit-policy:validate-message", "--", messagePath], {
-        cwd: process.cwd()
-      });
-    } catch (error) {
-      failure = error;
+      await expect(validateCommitMessageFile(messagePath)).resolves.toBe(1);
+      expect(stderr).toHaveBeenCalledWith(
+        expect.stringContaining("docs/commit-message-guidance.md")
+      );
+    } finally {
+      stderr.mockRestore();
     }
-
-    expect(failure).toMatchObject({ code: 1 });
-    expect(outputFrom(failure, "stderr")).toContain("docs/commit-message-guidance.md");
   });
 });
