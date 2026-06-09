@@ -63,6 +63,7 @@ async function runCiFixture(
     env: {
       ...process.env,
       PATH: `${join(fixtureDir, "bin")}${delimiter}${process.env.PATH ?? ""}`,
+      PAIRFLOW_CI_ALLOW_CODEX: "1",
       ...env
     }
   });
@@ -138,9 +139,7 @@ describe("ci-local commit range integration", () => {
 
   it("honestly skips range validation by default without claiming a pass", async () => {
     const { fixtureDir, commandLog } = await createCiFixture();
-    const result = await runCiFixture(fixtureDir, {
-      PAIRFLOW_TEST_FAIL_ON_CODEX_VISIBLE: "1"
-    });
+    const result = await runCiFixture(fixtureDir);
 
     expect(result.stdout).toContain("commit range not validated");
     expect(result.stdout).toContain("no safe range");
@@ -160,7 +159,9 @@ describe("ci-local commit range integration", () => {
     );
     await chmod(codexPath, 0o755);
 
-    const result = await runCiFixture(fixtureDir);
+    const result = await runCiFixture(fixtureDir, {
+      PAIRFLOW_CI_ALLOW_CODEX: "0"
+    });
 
     expect(result.stdout).toContain("codex visibility: hidden");
     expect(await readFile(commandLog, "utf8")).not.toContain("codex-visible");
