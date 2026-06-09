@@ -104,3 +104,4 @@
 - https://github.com/nicobailon/pi-subagents
 - Experiment with turning parts of the specification into codes. Leverage the previous version of the approach cristalized as part of the early experiments (check: .claude/skills/CraftPRD).
 - https://github.com/mdoty4/batonbot
+- https://github.com/prakhar1114/ai_mime
