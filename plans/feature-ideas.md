@@ -108,3 +108,4 @@
 - https://github.com/paperclipai/paperclip
 - https://github.com/666ghj/MiroFish
 - https://github.com/karpathy/autoresearch
+- https://github.com/martian-engineering/lossless-claw
