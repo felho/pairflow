@@ -270,4 +270,55 @@ describe("assertReviewerNoFindingsSummaryConsistency", () => {
       /^REVIEWER_SUMMARY_FINDINGS_CONTRADICTION:/u
     );
   });
+
+  it.each([
+    "Reviewer clean. 0 findings (0 P0, 0 P1, 0 P2, 0 P3).",
+    "Reviewer clean. No open P2 findings remain.",
+    "No open P2,P3,and P1 findings remain.",
+    "No remaining findings.",
+    "No active findings.",
+    "No unresolved active findings.",
+    "No unresolved findings.",
+    "findings remain: 0",
+    "P2 findings remained 0.",
+    "Reviewer clean. P2 findings were not present in this round.",
+    "P2 findings were never really present.",
+    "Addressed P2 findings.",
+    "Reviewer clean. P2 findings were addressed in this round.",
+    "P2 findings had been resolved.",
+    "2 findings were cleared.",
+    "2 findings were never open.",
+    "P2 status is green."
+  ])("allows --no-findings clean summary variant: %s", (summary) => {
+    expect(() =>
+      assertReviewerNoFindingsSummaryConsistency({
+        summary,
+        noFindings: true,
+        createError
+      })
+    ).not.toThrow();
+  });
+
+  it.each([
+    "No findings from smoke-check, but P2 findings remain open.",
+    "No findings remain, P2 findings remain open.",
+    "No findings remain and 2 findings remain open.",
+    "No findings remain however P2 findings remain open.",
+    "No findings remain yet P2 findings remain open.",
+    "No findings remain despite P2 findings remain open.",
+    "P2 findings remain open.",
+    "0 findings and 1 P2 finding remain.",
+    "2 findings and 0 P2 findings.",
+    "findings =5"
+  ])("rejects --no-findings contradictory summary variant: %s", (summary) => {
+    expectDecisionError(
+      () =>
+        assertReviewerNoFindingsSummaryConsistency({
+          summary,
+          noFindings: true,
+          createError
+        }),
+      /^REVIEWER_SUMMARY_FINDINGS_CONTRADICTION:/u
+    );
+  });
 });
