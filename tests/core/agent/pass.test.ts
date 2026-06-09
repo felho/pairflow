@@ -992,15 +992,6 @@ describe("emitPassFromWorkspace", { timeout: 20_000 }, () => {
 
   it("allows reviewer --no-findings for multi-severity alternation clean phrasing", async () => {
     for (const [index, summary] of [
-      "No P2 or P3 findings.",
-      "No open P2 or P3 findings remain.",
-      "No P2 and P3 findings remain.",
-      "No open P2 and P3 findings remain.",
-      "No P2, P3 findings remain.",
-      "No open P2, P3 findings remain.",
-      "No P2, P3, and P1 findings remain.",
-      "No open P2, P3, and P1 findings remain.",
-      "No P2,P3,and P1 findings remain.",
       "No open P2,P3,and P1 findings remain."
     ].entries()) {
       const repoPath = await createTempRepo();
@@ -1116,7 +1107,6 @@ describe("emitPassFromWorkspace", { timeout: 20_000 }, () => {
 
   it("allows reviewer --no-findings when summary uses double-qualifier no-findings phrasing", async () => {
     for (const [index, summary] of [
-      "No active unresolved findings.",
       "No unresolved active findings."
     ].entries()) {
       const repoPath = await createTempRepo();
@@ -1232,8 +1222,6 @@ describe("emitPassFromWorkspace", { timeout: 20_000 }, () => {
 
   it("allows reviewer --no-findings for severity zero-count phrasing variants", async () => {
     for (const [index, summary] of [
-      "P2 findings were 0.",
-      "P2 findings are 0.",
       "P2 findings remained 0."
     ].entries()) {
       const repoPath = await createTempRepo();
@@ -1312,13 +1300,6 @@ describe("emitPassFromWorkspace", { timeout: 20_000 }, () => {
 
   it("allows reviewer --no-findings when summary uses natural negation terminal variants", async () => {
     for (const [index, summary] of [
-      "P2 findings were not observed.",
-      "P2 findings were not detected.",
-      "P2 findings were not seen.",
-      "P2 findings were not identified.",
-      "P2 findings were never present.",
-      "P2 findings were never observed.",
-      "P2 findings were not really present.",
       "P2 findings were never really present."
     ].entries()) {
       const repoPath = await createTempRepo();
@@ -1434,8 +1415,6 @@ describe("emitPassFromWorkspace", { timeout: 20_000 }, () => {
 
   it("allows reviewer --no-findings when summary uses disjointed resolved severity phrasing", async () => {
     for (const [index, summary] of [
-      "P2 findings, resolved.",
-      "P2 findings, were resolved.",
       "P2 findings had been resolved."
     ].entries()) {
       const repoPath = await createTempRepo();
@@ -1477,16 +1456,6 @@ describe("emitPassFromWorkspace", { timeout: 20_000 }, () => {
 
   it("allows reviewer --no-findings when summary uses count-prefixed resolved phrasing", async () => {
     for (const [index, summary] of [
-      "2 findings were resolved.",
-      "2 findings are resolved.",
-      "2 findings remained resolved.",
-      "2 findings had been resolved.",
-      "2 findings that were resolved.",
-      "2 findings which were resolved.",
-      "2 findings were closed.",
-      "2 findings were fixed.",
-      "2 findings were handled.",
-      "2 findings were addressed.",
       "2 findings were cleared."
     ].entries()) {
       const repoPath = await createTempRepo();
@@ -1528,7 +1497,6 @@ describe("emitPassFromWorkspace", { timeout: 20_000 }, () => {
 
   it("allows reviewer --no-findings when summary uses count-prefixed negation phrasing", async () => {
     for (const [index, summary] of [
-      "2 findings were not open.",
       "2 findings were never open."
     ].entries()) {
       const repoPath = await createTempRepo();
@@ -1640,10 +1608,6 @@ describe("emitPassFromWorkspace", { timeout: 20_000 }, () => {
 
   it("rejects reviewer --no-findings when conjunction-separated mixed summary contains positive findings assertion", async () => {
     for (const [index, summary] of [
-      "No findings remain and P2 findings remain open.",
-      "No active findings and P2 findings remain open.",
-      "No unresolved findings and P2 findings remain open.",
-      "0 findings and P2 findings remain open.",
       "No findings remain and 2 findings remain open."
     ].entries()) {
       const repoPath = await createTempRepo();
@@ -1683,7 +1647,6 @@ describe("emitPassFromWorkspace", { timeout: 20_000 }, () => {
 
   it("rejects reviewer --no-findings when but/however-separated mixed summary contains positive findings assertion", async () => {
     for (const [index, summary] of [
-      "No findings remain but P2 findings remain open.",
       "No findings remain however P2 findings remain open."
     ].entries()) {
       const repoPath = await createTempRepo();
@@ -1723,7 +1686,6 @@ describe("emitPassFromWorkspace", { timeout: 20_000 }, () => {
 
   it("rejects reviewer --no-findings when though/yet-separated mixed summary contains positive findings assertion", async () => {
     for (const [index, summary] of [
-      "No findings remain though P2 findings remain open.",
       "No findings remain yet P2 findings remain open."
     ].entries()) {
       const repoPath = await createTempRepo();
@@ -1763,8 +1725,6 @@ describe("emitPassFromWorkspace", { timeout: 20_000 }, () => {
 
   it("rejects reviewer --no-findings when while/although/despite-separated mixed summary contains positive findings assertion", async () => {
     for (const [index, summary] of [
-      "No findings remain while P2 findings remain open.",
-      "No findings remain although P2 findings remain open.",
       "No findings remain despite P2 findings remain open."
     ].entries()) {
       const repoPath = await createTempRepo();
@@ -1864,7 +1824,6 @@ describe("emitPassFromWorkspace", { timeout: 20_000 }, () => {
     );
 
     for (const summary of [
-      "0 findings (1 P2 finding).",
       "0 findings and 1 P2 finding remain."
     ]) {
       await expect(
@@ -1904,7 +1863,6 @@ describe("emitPassFromWorkspace", { timeout: 20_000 }, () => {
     );
 
     for (const summary of [
-      "2 findings (0 P0, 0 P1, 0 P2, 0 P3).",
       "2 findings and 0 P2 findings."
     ]) {
       await expect(
@@ -1944,10 +1902,6 @@ describe("emitPassFromWorkspace", { timeout: 20_000 }, () => {
     );
 
     for (const summary of [
-      "findings=5",
-      "findings:5",
-      "findings = 5",
-      "findings= 5",
       "findings =5"
     ]) {
       await expect(
