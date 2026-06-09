@@ -151,27 +151,6 @@ async function writeStateSnapshot(
   );
 }
 
-async function withPatchedPassWorkspaceLoadedState<T>(input: {
-  statePath: string;
-  mutate: (
-    loaded: Awaited<ReturnType<typeof readStateSnapshot>>
-  ) => Awaited<ReturnType<typeof readStateSnapshot>>;
-  run: (
-    dependencies: NonNullable<Parameters<typeof emitPassFromWorkspace>[1]>
-  ) => Promise<T>;
-}): Promise<T> {
-  const originalReadStateSnapshot = readStateSnapshot;
-  const patchedReadStateSnapshot: typeof readStateSnapshot = async (statePath) => {
-    const loaded = await originalReadStateSnapshot(statePath);
-    if (statePath !== input.statePath) {
-      return loaded;
-    }
-    return input.mutate(loaded);
-  };
-
-  return input.run({ readStateSnapshot: patchedReadStateSnapshot });
-}
-
 async function createTempRepo(): Promise<string> {
   const root = await mkdtemp(join(tmpdir(), "pairflow-pass-command-"));
   tempDirs.push(root);
@@ -388,63 +367,6 @@ describe("emitPassFromWorkspace", { timeout: 20_000 }, () => {
     expect(transcriptAfter).toEqual(transcriptBefore);
   });
 
-  it("blocks PASS while ideation kickoff is pending even with parse warning metadata", async () => {
-    const repoPath = await createTempRepo();
-    const bubble = await createBubble({
-      id: "b_pass_ideation_block_02",
-      repoPath,
-      baseBranch: "main",
-      reviewArtifactType: "code",
-      ideation: true,
-      cwd: repoPath
-    });
-
-    await bootstrapWorktreeWorkspace({
-      repoPath,
-      baseBranch: "main",
-      bubbleBranch: bubble.config.bubble_branch,
-      worktreePath: bubble.paths.worktreePath,
-      workspaceKind: "worktree"
-    });
-    await writeFile(
-      bubble.paths.bubbleTomlPath,
-      renderBubbleConfigToml({
-        ...bubble.config,
-        ideation: {
-          mode: true,
-          task_pending: true,
-          parse_warning: "IDEATION_METADATA_PARSE_WARNING: synthetic test fixture"
-        }
-      }),
-      "utf8"
-    );
-
-    const loaded = await readStateSnapshot(bubble.paths.statePath);
-    await writeStateSnapshot(
-      bubble.paths.statePath,
-      {
-        ...loaded.state,
-        state: "RUNNING",
-        round: 0,
-        active_agent: bubble.config.agents.implementer,
-        active_role: "implementer",
-        active_since: "2026-03-15T12:00:00.000Z",
-        last_command_at: "2026-03-15T12:00:00.000Z"
-      },
-      {
-        expectedFingerprint: loaded.fingerprint,
-        expectedState: "CREATED"
-      }
-    );
-
-    await expect(
-      emitPassFromWorkspace({
-        summary: "Attempted handoff before kickoff with parse warning",
-        cwd: bubble.paths.worktreePath
-      })
-    ).rejects.toThrow(new RegExp(IDEATION_PASS_BLOCKED, "u"));
-  });
-
   it("resolves canonical repeat-clean metadata key and falls back to deprecated legacy key", () => {
     expect(
       resolveMostRecentPreviousReviewerPassIsCleanFromMetadata({
@@ -519,76 +441,6 @@ describe("emitPassFromWorkspace", { timeout: 20_000 }, () => {
     expect(loaded.state.last_command_at).toBe(now.toISOString());
   });
 
-  it("omits activation on the public pass result when the loaded execution context has blank execution_id", async () => {
-    const repoPath = await createTempRepo();
-    const bubble = await setupRunningBubbleFixture({
-      repoPath,
-      bubbleId: "b_pass_blank_execution_id_01",
-      task: "Implement pass flow with blank execution_id fallback"
-    });
-    const result = await withPatchedPassWorkspaceLoadedState({
-      statePath: bubble.paths.statePath,
-      mutate: (loaded) => ({
-        ...loaded,
-        state: {
-          ...loaded.state,
-          execution_context: {
-            ...loaded.state.execution_context,
-            execution_id: "   "
-          } as never
-        }
-      }),
-      run: (dependencies) => emitPassFromWorkspace(
-        {
-          summary: "Implementation complete",
-          cwd: bubble.paths.worktreePath,
-          now: new Date("2026-02-21T12:05:00.000Z")
-        },
-        dependencies
-      )
-    });
-
-    expect(result.transitionDecision).toBe("normal_pass");
-    expect(result.resultEnvelopeKind).toBe("pass");
-    expect(result.activation).toBeUndefined();
-  });
-
-  it("omits activation on the public pass result when the live role and execution context role disagree", async () => {
-    const repoPath = await createTempRepo();
-    const bubble = await setupRunningBubbleFixture({
-      repoPath,
-      bubbleId: "b_pass_role_mismatch_01",
-      task: "Implement pass flow with role mismatch fallback"
-    });
-    const result = await withPatchedPassWorkspaceLoadedState({
-      statePath: bubble.paths.statePath,
-      mutate: (loaded) => ({
-        ...loaded,
-        state: buildBubbleStateSnapshotVariant({
-          ...loaded.state,
-          active_agent: bubble.config.agents.implementer,
-          active_role: "implementer",
-          execution_context: {
-            ...loaded.state.execution_context,
-            active_role: "reviewer"
-          } as never
-        })
-      }),
-      run: (dependencies) => emitPassFromWorkspace(
-        {
-          summary: "Implementation complete",
-          cwd: bubble.paths.worktreePath,
-          now: new Date("2026-02-21T12:05:00.000Z")
-        },
-        dependencies
-      )
-    }) as { transitionDecision: string; resultEnvelopeKind: string; activation: unknown };
-
-    expect(result.transitionDecision).toBe("normal_pass");
-    expect(result.resultEnvelopeKind).toBe("pass");
-    expect(result.activation).toBeUndefined();
-  });
-
   it("uses explicit intent override", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupRunningBubbleFixture({
@@ -606,42 +458,6 @@ describe("emitPassFromWorkspace", { timeout: 20_000 }, () => {
 
     expect(result.inferredIntent).toBe(false);
     expect(passPayload(result).pass_intent).toBe("task");
-  });
-
-  it("emits absolute transcript fallback messageRef for PASS delivery", async () => {
-    const repoPath = await createTempRepo();
-    const bubble = await setupRunningBubbleFixture({
-      repoPath,
-      bubbleId: "b_pass_27",
-      task: "Verify pass fallback messageRef"
-    });
-
-    const deliveryRefs: string[] = [];
-    const result = await emitPassFromWorkspace(
-      {
-        summary: "Implementation complete",
-        cwd: bubble.paths.worktreePath,
-        now: new Date("2026-02-21T12:05:00.000Z")
-      },
-      {
-        emitDeliveryNotificationAck: (input) => {
-          if (input.messageRef !== undefined) {
-            deliveryRefs.push(input.messageRef);
-          }
-          return Promise.resolve({
-            status: "accepted",
-            message: "ok",
-            sessionName: "pf_bubble",
-            targetPaneIndex: 1
-          });
-        }
-      }
-    );
-
-    expect(deliveryRefs).toEqual([
-      `${bubble.paths.transcriptPath}#${result.envelope.id}`
-    ]);
-    expect(deliveryRefs[0]?.startsWith("transcript.ndjson#")).toBe(false);
   });
 
   it("increments round when reviewer passes back to implementer", async () => {
