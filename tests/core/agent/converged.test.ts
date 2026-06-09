@@ -23,6 +23,9 @@ import {
   appendProtocolEnvelope,
   readTranscriptEnvelopes
 } from "../../../src/v11/infrastructure/artifact/transcript/transcriptStore.js";
+import type {
+  PassProtocolEnvelopePayload
+} from "../../../src/v11/shared/protocol/protocolEnvelopeContract.js";
 import { upsertRuntimeSession } from "../../../src/v11/infrastructure/executor/sessionRuntime/runtimeSessionsRegistry.js";
 import {
   buildRunningExecutionContext,
@@ -141,49 +144,160 @@ async function setupConvergedCandidateBubble(
       : {})
   });
 
-  await emitPassFromWorkspace({
-    summary: "Implementation pass 1",
-    cwd: bubble.paths.worktreePath,
-    now: new Date("2026-02-22T09:01:00.000Z")
-  });
-  await emitPassFromWorkspace({
-    summary: "Review pass 1 clean",
-    noFindings: true,
-    cwd: bubble.paths.worktreePath,
-    now: new Date("2026-02-22T09:02:00.000Z")
-  });
-  await emitPassFromWorkspace({
-    summary: "Implementation pass 2",
-    cwd: bubble.paths.worktreePath,
-    now: new Date("2026-02-22T09:03:00.000Z")
-  });
-  await emitPassFromWorkspace({
-    summary: "Review pass 2 findings",
-    findings: [
-      {
-        severity: "P2",
-        title: "Round-2 non-blocking follow-up"
+  const lockPath = join(bubble.paths.locksDir, `${bubble.bubbleId}.lock`);
+  const passEvents: Array<{
+    now: string;
+    sender: "codex" | "claude";
+    recipient: "codex" | "claude";
+    round: number;
+    payload: PassProtocolEnvelopePayload;
+  }> = [
+    {
+      now: "2026-02-22T09:01:00.000Z",
+      sender: bubble.config.agents.implementer,
+      recipient: bubble.config.agents.reviewer,
+      round: 1,
+      payload: {
+        summary: "Implementation pass 1",
+        pass_intent: "task"
       }
-    ],
-    cwd: bubble.paths.worktreePath,
-    now: new Date("2026-02-22T09:03:10.000Z")
-  });
-  await emitPassFromWorkspace({
-    summary: "Implementation pass 3",
-    cwd: bubble.paths.worktreePath,
-    now: new Date("2026-02-22T09:03:20.000Z")
-  });
-  await emitPassFromWorkspace({
-    summary: "Review pass 3 clean",
-    noFindings: true,
-    cwd: bubble.paths.worktreePath,
-    now: new Date("2026-02-22T09:03:30.000Z")
-  });
-  await emitPassFromWorkspace({
-    summary: "Implementation pass 4",
-    cwd: bubble.paths.worktreePath,
-    now: new Date("2026-02-22T09:03:40.000Z")
-  });
+    },
+    {
+      now: "2026-02-22T09:02:00.000Z",
+      sender: bubble.config.agents.reviewer,
+      recipient: bubble.config.agents.implementer,
+      round: 1,
+      payload: {
+        summary: "Review pass 1 clean",
+        pass_intent: "review",
+        findings_claim_state: "clean",
+        findings_claim_source: "payload_flags",
+        findings: []
+      }
+    },
+    {
+      now: "2026-02-22T09:03:00.000Z",
+      sender: bubble.config.agents.implementer,
+      recipient: bubble.config.agents.reviewer,
+      round: 2,
+      payload: {
+        summary: "Implementation pass 2",
+        pass_intent: "task"
+      }
+    },
+    {
+      now: "2026-02-22T09:03:10.000Z",
+      sender: bubble.config.agents.reviewer,
+      recipient: bubble.config.agents.implementer,
+      round: 2,
+      payload: {
+        summary: "Review pass 2 findings",
+        pass_intent: "fix_request",
+        findings_claim_state: "open_findings",
+        findings_claim_source: "payload_flags",
+        findings: [
+          {
+            severity: "P2",
+            title: "Round-2 non-blocking follow-up"
+          }
+        ]
+      }
+    },
+    {
+      now: "2026-02-22T09:03:20.000Z",
+      sender: bubble.config.agents.implementer,
+      recipient: bubble.config.agents.reviewer,
+      round: 3,
+      payload: {
+        summary: "Implementation pass 3",
+        pass_intent: "task"
+      }
+    },
+    {
+      now: "2026-02-22T09:03:30.000Z",
+      sender: bubble.config.agents.reviewer,
+      recipient: bubble.config.agents.implementer,
+      round: 3,
+      payload: {
+        summary: "Review pass 3 clean",
+        pass_intent: "review",
+        findings_claim_state: "clean",
+        findings_claim_source: "payload_flags",
+        findings: []
+      }
+    },
+    {
+      now: "2026-02-22T09:03:40.000Z",
+      sender: bubble.config.agents.implementer,
+      recipient: bubble.config.agents.reviewer,
+      round: 4,
+      payload: {
+        summary: "Implementation pass 4",
+        pass_intent: "task"
+      }
+    }
+  ];
+
+  for (const event of passEvents) {
+    await appendProtocolEnvelope({
+      transcriptPath: bubble.paths.transcriptPath,
+      lockPath,
+      now: new Date(event.now),
+      envelope: {
+        bubble_id: bubble.bubbleId,
+        sender: event.sender,
+        recipient: event.recipient,
+        type: "PASS",
+        round: event.round,
+        payload: event.payload,
+        refs: []
+      }
+    });
+  }
+
+  const loaded = await readStateSnapshot(bubble.paths.statePath);
+  await writeStateSnapshot(
+    bubble.paths.statePath,
+    {
+      ...loaded.state,
+      state: "RUNNING",
+      round: 4,
+      active_agent: bubble.config.agents.reviewer,
+      active_role: "reviewer",
+      active_since: "2026-02-22T09:03:40.000Z",
+      last_command_at: "2026-02-22T09:03:40.000Z",
+      round_role_history: [
+        {
+          round: 1,
+          implementer: bubble.config.agents.implementer,
+          reviewer: bubble.config.agents.reviewer,
+          switched_at: "2026-02-22T09:01:00.000Z"
+        },
+        {
+          round: 2,
+          implementer: bubble.config.agents.implementer,
+          reviewer: bubble.config.agents.reviewer,
+          switched_at: "2026-02-22T09:03:00.000Z"
+        },
+        {
+          round: 3,
+          implementer: bubble.config.agents.implementer,
+          reviewer: bubble.config.agents.reviewer,
+          switched_at: "2026-02-22T09:03:20.000Z"
+        },
+        {
+          round: 4,
+          implementer: bubble.config.agents.implementer,
+          reviewer: bubble.config.agents.reviewer,
+          switched_at: "2026-02-22T09:03:40.000Z"
+        }
+      ]
+    },
+    {
+      expectedFingerprint: loaded.fingerprint,
+      expectedState: "RUNNING"
+    }
+  );
 
   return bubble;
 }
