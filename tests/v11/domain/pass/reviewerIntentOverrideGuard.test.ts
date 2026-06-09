@@ -36,6 +36,21 @@ describe("assertReviewerIntentOverrideConsistency", () => {
     );
   });
 
+  it("rejects reviewer intent=task with --no-findings", () => {
+    expect(() =>
+      assertReviewerIntentOverrideConsistency({
+        intent: "task",
+        noFindings: true,
+        hasFindings: false,
+        createError
+      })
+    ).toThrowError(
+      new TestReviewerIntentOverrideError(
+        "REVIEWER_INTENT_OVERRIDE_INVALID: Reviewer PASS cannot use intent=task."
+      )
+    );
+  });
+
   it("rejects --no-findings with intent=fix_request", () => {
     expect(() =>
       assertReviewerIntentOverrideConsistency({
