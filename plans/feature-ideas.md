@@ -107,3 +107,4 @@
 - https://github.com/prakhar1114/ai_mime
 - https://github.com/paperclipai/paperclip
 - https://github.com/666ghj/MiroFish
+- https://github.com/karpathy/autoresearch
