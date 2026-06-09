@@ -31,6 +31,7 @@ import { toPersistedSnapshot } from "../../../src/v11/domain/state/snapshot/proj
 import { bootstrapWorktreeWorkspace } from "../../../src/v11/infrastructure/workspace/worktreeManager.js";
 import {
   appendProtocolEnvelope,
+  appendProtocolEnvelopes,
   readTranscriptEnvelopes
 } from "../../../src/v11/infrastructure/artifact/transcript/transcriptStore.js";
 import { deliveryTargetRoleMetadataKey } from "../../../src/v11/shared/delivery/deliveryTargetMetadataContract.js";
@@ -205,46 +206,112 @@ async function setReviewerActive(worktreeStatePath: string, reviewerAgent: "code
   );
 }
 
-async function advanceToReviewerRoundTwoWithCleanHistory(worktreePath: string): Promise<void> {
-  await emitPassFromWorkspace({
-    summary: "Implementer handoff round 1",
-    cwd: worktreePath,
-    now: new Date("2026-03-01T10:01:00.000Z")
-  });
-  await emitPassFromWorkspace({
-    summary: "Reviewer clean handoff round 1",
-    noFindings: true,
-    cwd: worktreePath,
-    now: new Date("2026-03-01T10:02:00.000Z")
-  });
-  await emitPassFromWorkspace({
-    summary: "Implementer handoff round 2",
-    cwd: worktreePath,
-    now: new Date("2026-03-01T10:03:00.000Z")
-  });
+async function advanceToReviewerRoundTwoWithCleanHistory(
+  bubble: Awaited<ReturnType<typeof setupRunningBubbleFixture>>
+): Promise<void> {
+  await seedReviewerRoundTwoWithCleanHistory({ bubble });
 }
 
 async function advanceToReviewerRoundTwoWithCleanHistoryAccuracyCritical(input: {
-  worktreePath: string;
+  bubble: Awaited<ReturnType<typeof setupRunningBubbleFixture>>;
   reviewerVerificationInputPath: string;
 }): Promise<void> {
-  await emitPassFromWorkspace({
-    summary: "Implementer handoff round 1",
-    cwd: input.worktreePath,
-    now: new Date("2026-03-01T10:01:00.000Z")
+  await seedReviewerRoundTwoWithCleanHistory({
+    bubble: input.bubble,
+    previousReviewerRefs: [input.reviewerVerificationInputPath]
   });
-  await emitPassFromWorkspace({
-    summary: "Reviewer clean handoff round 1",
-    noFindings: true,
-    refs: [input.reviewerVerificationInputPath],
-    cwd: input.worktreePath,
-    now: new Date("2026-03-01T10:02:00.000Z")
+}
+
+async function seedReviewerRoundTwoWithCleanHistory(input: {
+  bubble: Awaited<ReturnType<typeof setupRunningBubbleFixture>>;
+  previousReviewerRefs?: string[];
+}): Promise<void> {
+  const { bubble } = input;
+  const lockPath = join(bubble.paths.locksDir, `${bubble.bubbleId}.lock`);
+  await appendProtocolEnvelopes({
+    transcriptPath: bubble.paths.transcriptPath,
+    lockPath,
+    now: new Date("2026-03-01T10:01:00.000Z"),
+    entries: [
+      {
+        envelope: {
+          bubble_id: bubble.bubbleId,
+          sender: bubble.config.agents.implementer,
+          recipient: bubble.config.agents.reviewer,
+          type: "PASS",
+          round: 1,
+          payload: {
+            summary: "Implementer handoff round 1",
+            pass_intent: "task",
+            metadata: {
+              [deliveryTargetRoleMetadataKey]: "reviewer"
+            }
+          },
+          refs: []
+        }
+      },
+      {
+        envelope: {
+          bubble_id: bubble.bubbleId,
+          sender: bubble.config.agents.reviewer,
+          recipient: bubble.config.agents.implementer,
+          type: "PASS",
+          round: 1,
+          payload: {
+            summary: "Reviewer clean handoff round 1",
+            pass_intent: "review",
+            findings_claim_state: "clean",
+            findings_claim_source: "payload_flags",
+            findings: [],
+            metadata: {
+              [deliveryTargetRoleMetadataKey]: "implementer"
+            }
+          },
+          refs: input.previousReviewerRefs ?? []
+        }
+      },
+      {
+        envelope: {
+          bubble_id: bubble.bubbleId,
+          sender: bubble.config.agents.implementer,
+          recipient: bubble.config.agents.reviewer,
+          type: "PASS",
+          round: 2,
+          payload: {
+            summary: "Implementer handoff round 2",
+            pass_intent: "task",
+            metadata: {
+              [deliveryTargetRoleMetadataKey]: "reviewer"
+            }
+          },
+          refs: []
+        }
+      }
+    ]
   });
-  await emitPassFromWorkspace({
-    summary: "Implementer handoff round 2",
-    cwd: input.worktreePath,
-    now: new Date("2026-03-01T10:03:00.000Z")
-  });
+
+  const loaded = await readStateSnapshot(bubble.paths.statePath);
+  await writeStateSnapshot(
+    bubble.paths.statePath,
+    {
+      ...loaded.state,
+      state: "RUNNING",
+      round: 2,
+      active_agent: bubble.config.agents.reviewer,
+      active_role: "reviewer",
+      active_since: "2026-03-01T10:03:00.000Z",
+      last_command_at: "2026-03-01T10:03:00.000Z",
+      round_role_history: buildRoundRoleHistoryThroughRound({
+        throughRound: 2,
+        implementer: bubble.config.agents.implementer,
+        reviewer: bubble.config.agents.reviewer
+      })
+    },
+    {
+      expectedFingerprint: loaded.fingerprint,
+      expectedState: "RUNNING"
+    }
+  );
 }
 
 function buildRoundRoleHistoryThroughRound(input: {
@@ -1859,7 +1926,7 @@ describe("emitPassFromWorkspace", { timeout: 20_000 }, () => {
       bubbleId: "b_pass_repeat_clean_autoconverge_01",
       task: "Repeat-clean deterministic auto-converge"
     });
-    await advanceToReviewerRoundTwoWithCleanHistory(bubble.paths.worktreePath);
+    await advanceToReviewerRoundTwoWithCleanHistory(bubble);
     const result = await emitPassFromWorkspace({
       summary: "Reviewer clean handoff round 2",
       noFindings: true,
@@ -1899,7 +1966,7 @@ describe("emitPassFromWorkspace", { timeout: 20_000 }, () => {
       bubbleId: "b_pass_repeat_clean_autoconverge_metrics_01",
       task: "Repeat-clean auto-converge pass lifecycle metrics"
     });
-    await advanceToReviewerRoundTwoWithCleanHistory(bubble.paths.worktreePath);
+    await advanceToReviewerRoundTwoWithCleanHistory(bubble);
 
     const metricsRoot = await mkdtemp(join(tmpdir(), "pairflow-pass-metrics-"));
     tempDirs.push(metricsRoot);
@@ -1969,7 +2036,7 @@ describe("emitPassFromWorkspace", { timeout: 20_000 }, () => {
       task: "Repeat-clean deterministic auto-converge (doc scope)",
       reviewArtifactType: "document"
     });
-    await advanceToReviewerRoundTwoWithCleanHistory(bubble.paths.worktreePath);
+    await advanceToReviewerRoundTwoWithCleanHistory(bubble);
 
     const gateArtifactPath = resolveDocContractGateArtifactPath(bubble.paths.artifactsDir);
     const staleArtifact = createDocContractGateArtifact({
@@ -2045,7 +2112,7 @@ describe("emitPassFromWorkspace", { timeout: 20_000 }, () => {
       bubbleId: "b_pass_repeat_clean_delivery_01",
       task: "Repeat-clean delivery propagation"
     });
-    await advanceToReviewerRoundTwoWithCleanHistory(bubble.paths.worktreePath);
+    await advanceToReviewerRoundTwoWithCleanHistory(bubble);
     const deliveryRecipients: string[] = [];
     const result = await emitPassFromWorkspace(
       {
@@ -2090,7 +2157,7 @@ describe("emitPassFromWorkspace", { timeout: 20_000 }, () => {
       bubbleId: "b_pass_missing_execution_id_01",
       task: "Repeat-clean auto-converge without execution_id fallback"
     });
-    await advanceToReviewerRoundTwoWithCleanHistory(bubble.paths.worktreePath);
+    await advanceToReviewerRoundTwoWithCleanHistory(bubble);
     const result = await withPatchedPassWorkspaceLoadedState({
       statePath: bubble.paths.statePath,
       mutate: (loaded) => {
@@ -2135,7 +2202,7 @@ describe("emitPassFromWorkspace", { timeout: 20_000 }, () => {
       task: "Repeat-clean doc gate write warning",
       reviewArtifactType: "document"
     });
-    await advanceToReviewerRoundTwoWithCleanHistory(bubble.paths.worktreePath);
+    await advanceToReviewerRoundTwoWithCleanHistory(bubble);
 
     const gateArtifactPath = resolveDocContractGateArtifactPath(bubble.paths.artifactsDir);
     await rm(gateArtifactPath, { recursive: true, force: true });
@@ -2160,7 +2227,7 @@ describe("emitPassFromWorkspace", { timeout: 20_000 }, () => {
       bubbleId: "b_pass_repeat_clean_policy_reject_01",
       task: "Repeat-clean policy reject"
     });
-    await advanceToReviewerRoundTwoWithCleanHistory(bubble.paths.worktreePath);
+    await advanceToReviewerRoundTwoWithCleanHistory(bubble);
 
     const lockPath = join(
       bubble.paths.locksDir,
@@ -2220,7 +2287,7 @@ describe("emitPassFromWorkspace", { timeout: 20_000 }, () => {
       task: "Repeat-clean downstream rejection",
       reviewArtifactType: "document"
     });
-    await advanceToReviewerRoundTwoWithCleanHistory(bubble.paths.worktreePath);
+    await advanceToReviewerRoundTwoWithCleanHistory(bubble);
     await rm(resolveReviewerTestEvidenceArtifactPath(bubble.paths.artifactsDir), {
       force: true
     });
@@ -2283,7 +2350,7 @@ describe("emitPassFromWorkspace", { timeout: 20_000 }, () => {
     );
 
     await advanceToReviewerRoundTwoWithCleanHistoryAccuracyCritical({
-      worktreePath: bubble.paths.worktreePath,
+      bubble,
       reviewerVerificationInputPath: verificationInput
     });
 
@@ -2349,7 +2416,7 @@ describe("emitPassFromWorkspace", { timeout: 20_000 }, () => {
     );
 
     await advanceToReviewerRoundTwoWithCleanHistoryAccuracyCritical({
-      worktreePath: bubble.paths.worktreePath,
+      bubble,
       reviewerVerificationInputPath: verificationInput
     });
 
