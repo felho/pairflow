@@ -198,6 +198,50 @@ async function seedReviewerRoundTwoWithCleanHistory(input: {
   bubble: Awaited<ReturnType<typeof setupRunningBubbleFixture>>;
   previousReviewerRefs?: string[];
 }): Promise<void> {
+  await seedReviewerRoundTwoWithHistory({
+    ...input,
+    previousReviewerPayload: {
+      summary: "Reviewer clean handoff round 1",
+      pass_intent: "review",
+      findings_claim_state: "clean",
+      findings_claim_source: "payload_flags",
+      findings: [],
+      metadata: {
+        [deliveryTargetRoleMetadataKey]: "implementer"
+      }
+    }
+  });
+}
+
+async function seedReviewerRoundTwoWithNonCleanHistory(input: {
+  bubble: Awaited<ReturnType<typeof setupRunningBubbleFixture>>;
+}): Promise<void> {
+  await seedReviewerRoundTwoWithHistory({
+    ...input,
+    previousReviewerPayload: {
+      summary: "Reviewer found issues",
+      pass_intent: "fix_request",
+      findings_claim_state: "open_findings",
+      findings_claim_source: "payload_findings_count",
+      findings: [
+        {
+          priority: "P2",
+          severity: "P2",
+          title: "Needs changes"
+        }
+      ],
+      metadata: {
+        [deliveryTargetRoleMetadataKey]: "implementer"
+      }
+    }
+  });
+}
+
+async function seedReviewerRoundTwoWithHistory(input: {
+  bubble: Awaited<ReturnType<typeof setupRunningBubbleFixture>>;
+  previousReviewerPayload: PassProtocolEnvelopePayload;
+  previousReviewerRefs?: string[];
+}): Promise<void> {
   const { bubble } = input;
   const lockPath = join(bubble.paths.locksDir, `${bubble.bubbleId}.lock`);
   await appendProtocolEnvelopes({
@@ -229,16 +273,7 @@ async function seedReviewerRoundTwoWithCleanHistory(input: {
           recipient: bubble.config.agents.implementer,
           type: "PASS",
           round: 1,
-          payload: {
-            summary: "Reviewer clean handoff round 1",
-            pass_intent: "review",
-            findings_claim_state: "clean",
-            findings_claim_source: "payload_flags",
-            findings: [],
-            metadata: {
-              [deliveryTargetRoleMetadataKey]: "implementer"
-            }
-          },
+          payload: input.previousReviewerPayload,
           refs: input.previousReviewerRefs ?? []
         }
       },
@@ -1500,27 +1535,7 @@ describe("emitPassFromWorkspace", { timeout: 20_000 }, () => {
       task: "Repeat-clean not-clean classification"
     });
 
-    await emitPassFromWorkspace({
-      summary: "Implementer handoff round 1",
-      cwd: bubble.paths.worktreePath,
-      now: new Date("2026-03-01T10:01:00.000Z")
-    });
-    await emitPassFromWorkspace({
-      summary: "Reviewer found issues",
-      findings: [
-        {
-          severity: "P2",
-          title: "Needs changes"
-        }
-      ],
-      cwd: bubble.paths.worktreePath,
-      now: new Date("2026-03-01T10:02:00.000Z")
-    });
-    await emitPassFromWorkspace({
-      summary: "Implementer handoff round 2",
-      cwd: bubble.paths.worktreePath,
-      now: new Date("2026-03-01T10:03:00.000Z")
-    });
+    await seedReviewerRoundTwoWithNonCleanHistory({ bubble });
 
     const result = await emitPassFromWorkspace({
       summary: "Reviewer clean after prior non-clean pass",
