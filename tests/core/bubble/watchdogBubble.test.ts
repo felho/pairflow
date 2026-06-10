@@ -1,4 +1,4 @@
-import { chmod, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -64,45 +64,6 @@ afterEach(async () => {
     )
   );
 });
-
-async function installFakeTmuxForDeliveryConfirmation(stateFilePath: string): Promise<string> {
-  const binDir = await mkdtemp(join(tmpdir(), "pairflow-watchdog-fake-tmux-"));
-  tempDirs.push(binDir);
-  const scriptPath = join(binDir, "tmux");
-  const script = [
-    "#!/bin/sh",
-    "STATE_FILE=\"$PAIRFLOW_FAKE_TMUX_STATE\"",
-    "cmd=\"$1\"",
-    "shift",
-    "if [ \"$cmd\" = \"send-keys\" ]; then",
-    "  while [ \"$#\" -gt 0 ]; do",
-    "    if [ \"$1\" = \"-l\" ]; then",
-    "      shift",
-    "      if [ -n \"$STATE_FILE\" ]; then",
-    "        printf '%s\\n' \"$1\" > \"$STATE_FILE\"",
-    "      fi",
-    "      exit 0",
-    "    fi",
-    "    shift",
-    "  done",
-    "  exit 0",
-    "fi",
-    "if [ \"$cmd\" = \"capture-pane\" ]; then",
-    "  if [ -n \"$STATE_FILE\" ] && [ -f \"$STATE_FILE\" ]; then",
-    "    cat \"$STATE_FILE\"",
-    "    printf '\\n>\\n'",
-    "  fi",
-    "  exit 0",
-    "fi",
-    "exit 0"
-  ].join("\n");
-  await writeFile(scriptPath, `${script}\n`, "utf8");
-  await chmod(scriptPath, 0o755);
-
-  process.env.PAIRFLOW_FAKE_TMUX_STATE = stateFilePath;
-  process.env.PATH = `${binDir}${process.platform === "win32" ? ";" : ":"}${process.env.PATH ?? ""}`;
-  return binDir;
-}
 
 describe("runBubbleWatchdog", () => {
   async function moveToMetaReviewRunning(input: {
@@ -197,50 +158,43 @@ describe("runBubbleWatchdog", () => {
       throw new Error("Expected queued deferred rework result.");
     }
 
-    await upsertRuntimeSession({
-      sessionsPath: bubble.paths.sessionsPath,
-      bubbleId: bubble.bubbleId,
-      repoPath,
-      worktreePath: bubble.paths.worktreePath,
-      workspacePath: bubble.paths.worktreePath,
-      workspaceKind: "worktree",
-      tmuxSessionName: "pf-watchdog-rework",
-      now: new Date("2026-02-22T12:02:30.000Z")
-    });
-
-    const originalPath = process.env.PATH;
-    const originalFakeState = process.env.PAIRFLOW_FAKE_TMUX_STATE;
-    const fakeStatePath = join(repoPath, ".pairflow", "fake-tmux-state.txt");
-    await installFakeTmuxForDeliveryConfirmation(fakeStatePath);
-
-    try {
-      const result = await runBubbleWatchdog({
+    const deliveries: Array<Parameters<EmitDeliveryNotificationAckPort>[0]> = [];
+    const result = await runBubbleWatchdog(
+      {
         bubbleId: bubble.bubbleId,
         cwd: repoPath,
         now: new Date("2026-02-22T12:03:00.000Z")
-      });
-
-      expect(result.escalated).toBe(false);
-      expect(result.reason).toBe("rework_intent_applied");
-      expect(result.intentId).toBe(queued.intentId);
-      expect(result.state.state).toBe("RUNNING");
-      expect(result.state.round).toBe(2);
-      expect(result.state.active_agent).toBe(bubble.config.agents.implementer);
-      expect(result.state.pending_rework_intent).toBeNull();
-      expect(result.state.rework_intent_history).toContainEqual(
-        expect.objectContaining({
-          intent_id: queued.intentId,
-          status: "applied"
-        })
-      );
-    } finally {
-      process.env.PATH = originalPath;
-      if (originalFakeState === undefined) {
-        delete process.env.PAIRFLOW_FAKE_TMUX_STATE;
-      } else {
-        process.env.PAIRFLOW_FAKE_TMUX_STATE = originalFakeState;
+      },
+      {
+        emitDeliveryNotificationAck: (
+          input: Parameters<EmitDeliveryNotificationAckPort>[0]
+        ) => {
+          deliveries.push(input);
+          return Promise.resolve({
+            status: "accepted",
+            message: "ok",
+            sessionName: "pf-watchdog-rework",
+            targetPaneIndex: 1
+          });
+        }
       }
-    }
+    );
+
+    expect(deliveries).toHaveLength(1);
+    expect(deliveries[0]?.messageRef).toBe(`rework-intent://${queued.intentId}`);
+    expect(result.escalated).toBe(false);
+    expect(result.reason).toBe("rework_intent_applied");
+    expect(result.intentId).toBe(queued.intentId);
+    expect(result.state.state).toBe("RUNNING");
+    expect(result.state.round).toBe(2);
+    expect(result.state.active_agent).toBe(bubble.config.agents.implementer);
+    expect(result.state.pending_rework_intent).toBeNull();
+    expect(result.state.rework_intent_history).toContainEqual(
+      expect.objectContaining({
+        intent_id: queued.intentId,
+        status: "applied"
+      })
+    );
   });
 
   it("retains pending deferred rework intent when delivery is not confirmed", async () => {

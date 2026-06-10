@@ -96,6 +96,36 @@ async function setupDoneBubble(repoPath: string, bubbleId: string) {
   return bubble;
 }
 
+async function setupDoneBubbleStateOnly(repoPath: string, bubbleId: string) {
+  const bubble = await createBubble({
+    id: bubbleId,
+    repoPath,
+    baseBranch: "main",
+    reviewArtifactType: "code",
+    task: "Merge bubble test task",
+    cwd: repoPath
+  });
+
+  const loaded = await readStateSnapshot(bubble.paths.statePath);
+  await writeStateSnapshot(
+    bubble.paths.statePath,
+    buildBubbleStateSnapshotVariant({
+      ...loaded.state,
+      state: "DONE",
+      active_agent: null,
+      active_role: null,
+      active_since: null,
+      last_command_at: "2026-02-23T10:00:00.000Z"
+    }),
+    {
+      expectedFingerprint: loaded.fingerprint,
+      expectedState: "CREATED"
+    }
+  );
+
+  return bubble;
+}
+
 async function convertDoneBubbleToClone(
   repoPath: string,
   bubble: Awaited<ReturnType<typeof setupDoneBubble>>
@@ -517,7 +547,7 @@ describe("mergeBubble", () => {
   it("routes started remote merge through pre-cleanup handoff and local import/merge proof", async () => {
     const repoPath = await createTempRepo();
     const bubble = await convertDoneBubbleToRemoteStarted(
-      await setupDoneBubble(repoPath, "b_merge_remote_started_01")
+      await setupDoneBubbleStateOnly(repoPath, "b_merge_remote_started_01")
     );
 
     const executeRemoteBubbleMergeCommand = vi.fn(async () =>
@@ -624,7 +654,7 @@ describe("mergeBubble", () => {
   it("imports proven remote commit continuity before rejecting stale local state for started remote merge", async () => {
     const repoPath = await createTempRepo();
     const bubble = await convertDoneBubbleToRemoteStarted(
-      await setupDoneBubble(repoPath, "b_merge_remote_import_state_01")
+      await setupDoneBubbleStateOnly(repoPath, "b_merge_remote_import_state_01")
     );
     const loaded = await readStateSnapshot(bubble.paths.statePath);
     const staleState = {
@@ -711,7 +741,7 @@ describe("mergeBubble", () => {
   it("checks dirty local source repo before importing stale remote commit continuity", async () => {
     const repoPath = await createTempRepo();
     const bubble = await convertDoneBubbleToRemoteStarted(
-      await setupDoneBubble(repoPath, "b_merge_remote_dirty_import_01")
+      await setupDoneBubbleStateOnly(repoPath, "b_merge_remote_dirty_import_01")
     );
     const loaded = await readStateSnapshot(bubble.paths.statePath);
     const staleState = {
@@ -764,7 +794,7 @@ describe("mergeBubble", () => {
   it("wraps unavailable remote commit continuity import with merge reason code", async () => {
     const repoPath = await createTempRepo();
     const bubble = await convertDoneBubbleToRemoteStarted(
-      await setupDoneBubble(repoPath, "b_merge_remote_import_unavailable_01")
+      await setupDoneBubbleStateOnly(repoPath, "b_merge_remote_import_unavailable_01")
     );
     const loaded = await readStateSnapshot(bubble.paths.statePath);
     await writeStateSnapshot(
@@ -838,7 +868,7 @@ describe("mergeBubble", () => {
   it("wraps invalid remote commit continuity import with merge reason code", async () => {
     const repoPath = await createTempRepo();
     const bubble = await convertDoneBubbleToRemoteStarted(
-      await setupDoneBubble(repoPath, "b_merge_remote_import_invalid_01")
+      await setupDoneBubbleStateOnly(repoPath, "b_merge_remote_import_invalid_01")
     );
     const loaded = await readStateSnapshot(bubble.paths.statePath);
     await writeStateSnapshot(
@@ -893,7 +923,7 @@ describe("mergeBubble", () => {
   it("fails closed when remote commit continuity import cannot sync local artifacts", async () => {
     const repoPath = await createTempRepo();
     const bubble = await convertDoneBubbleToRemoteStarted(
-      await setupDoneBubble(repoPath, "b_merge_remote_import_sync_fail_01")
+      await setupDoneBubbleStateOnly(repoPath, "b_merge_remote_import_sync_fail_01")
     );
     const loaded = await readStateSnapshot(bubble.paths.statePath);
     const staleState = {
@@ -990,7 +1020,7 @@ describe("mergeBubble", () => {
   ])("fails closed for started remote merge when $name is requested", async ({ input }) => {
     const repoPath = await createTempRepo();
     const bubble = await convertDoneBubbleToRemoteStarted(
-      await setupDoneBubble(repoPath, "b_merge_remote_started_flags_01")
+      await setupDoneBubbleStateOnly(repoPath, "b_merge_remote_started_flags_01")
     );
 
     const executeRemoteBubbleMergeCommand = vi.fn(async () =>
@@ -1212,7 +1242,7 @@ describe("mergeBubble", () => {
     async ({ setupRemote, expectedKind }) => {
       const repoPath = await createTempRepo();
       const bubble = await setupRemote(
-        await setupDoneBubble(
+        await setupDoneBubbleStateOnly(
           repoPath,
           `b_merge_remote_start_required_${expectedKind}_01`
         )
@@ -1254,7 +1284,7 @@ describe("mergeBubble", () => {
   it("fails closed before remote dispatch when local source repo is dirty", async () => {
     const repoPath = await createTempRepo();
     const bubble = await convertDoneBubbleToRemoteStarted(
-      await setupDoneBubble(repoPath, "b_merge_remote_dirty_01")
+      await setupDoneBubbleStateOnly(repoPath, "b_merge_remote_dirty_01")
     );
     await writeFile(join(repoPath, "dirty.txt"), "dirty\n", "utf8");
 
@@ -1297,7 +1327,7 @@ describe("mergeBubble", () => {
   it("fails closed when local reconcile after remote merge cannot be persisted", async () => {
     const repoPath = await createTempRepo();
     const bubble = await convertDoneBubbleToRemoteStarted(
-      await setupDoneBubble(repoPath, "b_merge_remote_reconcile_01")
+      await setupDoneBubbleStateOnly(repoPath, "b_merge_remote_reconcile_01")
     );
 
     const runGitSpy = createRemoteRouteGitMock({
@@ -1334,7 +1364,7 @@ describe("mergeBubble", () => {
   it("fails closed when post-success remote cleanup cannot be dispatched after local reconcile", async () => {
     const repoPath = await createTempRepo();
     const bubble = await convertDoneBubbleToRemoteStarted(
-      await setupDoneBubble(repoPath, "b_merge_remote_cleanup_failed_01")
+      await setupDoneBubbleStateOnly(repoPath, "b_merge_remote_cleanup_failed_01")
     );
 
     const runGitSpy = createRemoteRouteGitMock({
@@ -1420,7 +1450,7 @@ describe("mergeBubble", () => {
   ])("fails closed when started remote merge does not prove $name", async ({ cleanupResult }) => {
     const repoPath = await createTempRepo();
     const bubble = await convertDoneBubbleToRemoteStarted(
-      await setupDoneBubble(repoPath, "b_merge_remote_cleanup_proof_01")
+      await setupDoneBubbleStateOnly(repoPath, "b_merge_remote_cleanup_proof_01")
     );
 
     await expect(
@@ -1455,7 +1485,7 @@ describe("mergeBubble", () => {
   it("fails closed when started remote cleanup returns a mismatched remote clone path", async () => {
     const repoPath = await createTempRepo();
     const bubble = await convertDoneBubbleToRemoteStarted(
-      await setupDoneBubble(repoPath, "b_merge_remote_cleanup_path_mismatch_01")
+      await setupDoneBubbleStateOnly(repoPath, "b_merge_remote_cleanup_path_mismatch_01")
     );
 
     await expect(
@@ -1492,7 +1522,7 @@ describe("mergeBubble", () => {
   it("preserves remote merge conflict taxonomy without local fallback", async () => {
     const repoPath = await createTempRepo();
     const bubble = await convertDoneBubbleToRemoteStarted(
-      await setupDoneBubble(repoPath, "b_merge_remote_conflict_01")
+      await setupDoneBubbleStateOnly(repoPath, "b_merge_remote_conflict_01")
     );
 
     const runGitSpy = vi.fn(async (args: string[]) => {
@@ -1539,7 +1569,7 @@ describe("mergeBubble", () => {
   it("fails closed before remote dispatch when the local base branch is missing", async () => {
     const repoPath = await createTempRepo();
     const bubble = await convertDoneBubbleToRemoteStarted(
-      await setupDoneBubble(repoPath, "b_merge_remote_missing_base_01")
+      await setupDoneBubbleStateOnly(repoPath, "b_merge_remote_missing_base_01")
     );
 
     const executeRemoteBubbleMergeCommand = vi.fn(async () =>
@@ -1574,7 +1604,7 @@ describe("mergeBubble", () => {
   it("does not require a local bubble branch before started remote merge dispatch", async () => {
     const repoPath = await createTempRepo();
     const bubble = await convertDoneBubbleToRemoteStarted(
-      await setupDoneBubble(repoPath, "b_merge_remote_missing_branch_01")
+      await setupDoneBubbleStateOnly(repoPath, "b_merge_remote_missing_branch_01")
     );
 
     const executeRemoteBubbleMergeCommand = vi.fn(async () =>
@@ -1618,7 +1648,7 @@ describe("mergeBubble", () => {
   it("fails closed when local fetch import fails after remote dispatch", async () => {
     const repoPath = await createTempRepo();
     const bubble = await convertDoneBubbleToRemoteStarted(
-      await setupDoneBubble(repoPath, "b_merge_remote_fetch_fail_01")
+      await setupDoneBubbleStateOnly(repoPath, "b_merge_remote_fetch_fail_01")
     );
 
     const runGitSpy = createRemoteRouteGitMock({
@@ -1673,7 +1703,7 @@ describe("mergeBubble", () => {
   it("uses an encoded ssh URL when importing from a remote clone path with reserved characters", async () => {
     const repoPath = await createTempRepo();
     const bubble = await convertDoneBubbleToRemoteStarted(
-      await setupDoneBubble(repoPath, "b_merge_remote_encoded_url_01")
+      await setupDoneBubbleStateOnly(repoPath, "b_merge_remote_encoded_url_01")
     );
 
     await writeFile(
@@ -1735,7 +1765,7 @@ describe("mergeBubble", () => {
   it("fails closed when the remote handoff ref does not match the expected hidden ref", async () => {
     const repoPath = await createTempRepo();
     const bubble = await convertDoneBubbleToRemoteStarted(
-      await setupDoneBubble(repoPath, "b_merge_remote_ref_mismatch_01")
+      await setupDoneBubbleStateOnly(repoPath, "b_merge_remote_ref_mismatch_01")
     );
 
     const runGitSpy = createRemoteRouteGitMock({
@@ -1777,7 +1807,7 @@ describe("mergeBubble", () => {
   it("fails closed when the remote handoff base branch does not match the expected local base branch", async () => {
     const repoPath = await createTempRepo();
     const bubble = await convertDoneBubbleToRemoteStarted(
-      await setupDoneBubble(repoPath, "b_merge_remote_base_mismatch_01")
+      await setupDoneBubbleStateOnly(repoPath, "b_merge_remote_base_mismatch_01")
     );
 
     const runGitSpy = createRemoteRouteGitMock({
@@ -1819,7 +1849,7 @@ describe("mergeBubble", () => {
   it("fails closed when the remote handoff bubble branch does not match the expected local bubble branch", async () => {
     const repoPath = await createTempRepo();
     const bubble = await convertDoneBubbleToRemoteStarted(
-      await setupDoneBubble(repoPath, "b_merge_remote_branch_mismatch_01")
+      await setupDoneBubbleStateOnly(repoPath, "b_merge_remote_branch_mismatch_01")
     );
 
     const runGitSpy = createRemoteRouteGitMock({
@@ -1861,7 +1891,7 @@ describe("mergeBubble", () => {
   it("fails closed with merge-specific import taxonomy when imported hidden-ref dereference fails", async () => {
     const repoPath = await createTempRepo();
     const bubble = await convertDoneBubbleToRemoteStarted(
-      await setupDoneBubble(repoPath, "b_merge_remote_rev_parse_fail_01")
+      await setupDoneBubbleStateOnly(repoPath, "b_merge_remote_rev_parse_fail_01")
     );
 
     const runGitSpy = createRemoteRouteGitMock({
@@ -1901,7 +1931,7 @@ describe("mergeBubble", () => {
   it("fails closed when local merge after import requires manual resolution", async () => {
     const repoPath = await createTempRepo();
     const bubble = await convertDoneBubbleToRemoteStarted(
-      await setupDoneBubble(repoPath, "b_merge_remote_local_conflict_01")
+      await setupDoneBubbleStateOnly(repoPath, "b_merge_remote_local_conflict_01")
     );
 
     const runGitSpy = createRemoteRouteGitMock({
@@ -1948,7 +1978,7 @@ describe("mergeBubble", () => {
   it("fails closed when imported hidden-ref commit does not match the handoff payload", async () => {
     const repoPath = await createTempRepo();
     const bubble = await convertDoneBubbleToRemoteStarted(
-      await setupDoneBubble(repoPath, "b_merge_remote_commit_mismatch_01")
+      await setupDoneBubbleStateOnly(repoPath, "b_merge_remote_commit_mismatch_01")
     );
 
     const runGitSpy = createRemoteRouteGitMock({
@@ -1986,7 +2016,7 @@ describe("mergeBubble", () => {
   it("fails closed when the parsed remote handoff import source is malformed", async () => {
     const repoPath = await createTempRepo();
     const bubble = await convertDoneBubbleToRemoteStarted(
-      await setupDoneBubble(repoPath, "b_merge_remote_import_source_invalid_01")
+      await setupDoneBubbleStateOnly(repoPath, "b_merge_remote_import_source_invalid_01")
     );
 
     const runGitSpy = createRemoteRouteGitMock({

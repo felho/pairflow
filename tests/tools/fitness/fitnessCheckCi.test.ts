@@ -7,6 +7,10 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { buildCheckReport } from "../../../tools/fitness/checks/index.js";
 import { runReport } from "../../../tools/fitness/run-report.js";
+import {
+  resolveFitnessCheckPaths,
+  runFitnessCheck
+} from "../../../tools/fitness/run-check.js";
 
 interface CommandResult {
   exitCode: number | null;
@@ -70,6 +74,45 @@ async function runReportQuiet(
   const stdout = vi.spyOn(process.stdout, "write").mockImplementation(() => true);
   try {
     return await runReport(input);
+  } finally {
+    stdout.mockRestore();
+  }
+}
+
+async function runFitnessCheckQuiet(
+  input: Parameters<typeof runFitnessCheck>[0]
+): Promise<{
+  exitCode: 0 | 1;
+  stdout: string;
+  stderr: string;
+}> {
+  let stdoutText = "";
+  let stderrText = "";
+  const stdout = vi.spyOn(process.stdout, "write").mockImplementation((chunk) => {
+    stdoutText += String(chunk);
+    return true;
+  });
+  try {
+    const result = await runFitnessCheck({
+      ...input,
+      stdout: {
+        write: (chunk) => {
+          stdoutText += String(chunk);
+          return true;
+        }
+      },
+      stderr: {
+        write: (chunk) => {
+          stderrText += String(chunk);
+          return true;
+        }
+      }
+    });
+    return {
+      exitCode: result.exitCode,
+      stdout: stdoutText,
+      stderr: stderrText
+    };
   } finally {
     stdout.mockRestore();
   }
@@ -148,7 +191,6 @@ describe("fitness:check:ci", () => {
       const root = await createTempRoot();
       const policyPath = join(root, "policy.json");
       const reportPath = join(root, "fitness-report.json");
-      const scriptPath = resolve(process.cwd(), "scripts/fitness-check-ci.sh");
 
       const fixtureRepoRoot = await createTempRoot();
       const fixtureRelativePath = "src/.fitness-complexity-ci";
@@ -187,16 +229,16 @@ describe("fitness:check:ci", () => {
         "utf8"
       );
 
-      const run = await runCommand({
-        command: "bash",
-        args: [scriptPath],
-        cwd: process.cwd(),
-        env: {
-          ...process.env,
-          PAIRFLOW_FITNESS_POLICY_PATH: policyPath,
-          PAIRFLOW_FITNESS_REPORT_PATH: reportPath,
-          PAIRFLOW_FITNESS_REPO_ROOT: fixtureRepoRoot
-        }
+      const paths = resolveFitnessCheckPaths({
+        repoRoot: process.cwd(),
+        scanRepoRoot: fixtureRepoRoot,
+        policyArg: policyPath,
+        outArg: reportPath
+      });
+      const run = await runFitnessCheckQuiet({
+        policyPath: paths.policyPath,
+        outPath: paths.outPath,
+        repoRoot: paths.scanRepoRoot
       });
 
       expect(run.exitCode).toBe(1);
@@ -454,7 +496,6 @@ describe("fitness:check:ci", () => {
       const root = await createTempRoot();
       const fixtureRepoRoot = await createTempRoot();
       const policyPath = join(root, "policy.json");
-      const scriptPath = resolve(process.cwd(), "scripts/fitness-check-ci.sh");
       const expectedReportPath = join(
         fixtureRepoRoot,
         ".pairflow",
@@ -485,19 +526,19 @@ describe("fitness:check:ci", () => {
         "utf8"
       );
 
-      const run = await runCommand({
-        command: "bash",
-        args: [scriptPath],
-        cwd: process.cwd(),
-        env: {
-          ...process.env,
-          PAIRFLOW_FITNESS_POLICY_PATH: policyPath,
-          PAIRFLOW_FITNESS_REPO_ROOT: fixtureRepoRoot
-        }
+      const paths = resolveFitnessCheckPaths({
+        repoRoot: process.cwd(),
+        scanRepoRoot: fixtureRepoRoot,
+        policyArg: policyPath
+      });
+      const run = await runFitnessCheckQuiet({
+        policyPath: paths.policyPath,
+        outPath: paths.outPath,
+        repoRoot: paths.scanRepoRoot
       });
 
       expect(run.exitCode).toBe(0);
-      expect(run.stdout).toContain(`out=${expectedReportPath}`);
+      expect(paths.outPath).toBe(expectedReportPath);
       const report = JSON.parse(await readFile(expectedReportPath, "utf8")) as {
         checks: Array<{ id: string; status: string }>;
       };
@@ -519,7 +560,6 @@ describe("fitness:check:ci", () => {
         "evidence",
         "fitness-report.json"
       );
-      const scriptPath = resolve(process.cwd(), "scripts/fitness-check-ci.sh");
 
       await writeFile(
         policyPath,
@@ -544,20 +584,20 @@ describe("fitness:check:ci", () => {
         "utf8"
       );
 
-      const run = await runCommand({
-        command: "bash",
-        args: [scriptPath],
-        cwd: process.cwd(),
-        env: {
-          ...process.env,
-          PAIRFLOW_FITNESS_POLICY_PATH: policyPath,
-          PAIRFLOW_FITNESS_REPO_ROOT: fixtureRepoRoot,
-          PAIRFLOW_FITNESS_REPORT_PATH: explicitReportPath
-        }
+      const paths = resolveFitnessCheckPaths({
+        repoRoot: process.cwd(),
+        scanRepoRoot: fixtureRepoRoot,
+        policyArg: policyPath,
+        outArg: explicitReportPath
+      });
+      const run = await runFitnessCheckQuiet({
+        policyPath: paths.policyPath,
+        outPath: paths.outPath,
+        repoRoot: paths.scanRepoRoot
       });
 
       expect(run.exitCode).toBe(0);
-      expect(run.stdout).toContain(`out=${explicitReportPath}`);
+      expect(paths.outPath).toBe(explicitReportPath);
       const report = JSON.parse(await readFile(explicitReportPath, "utf8")) as {
         checks: Array<{ id: string; status: string }>;
       };

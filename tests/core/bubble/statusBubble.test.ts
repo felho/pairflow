@@ -1,6 +1,7 @@
-import { chmod, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { chmod, mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { createHash } from "node:crypto";
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -25,10 +26,12 @@ import { statusCommandDependencyDefaults } from "../../../src/v11/defaults/statu
 import { writeWatchdogPaneActivity } from "../../../src/v11/infrastructure/artifact/watchdog/watchdogPaneActivityStore.js";
 import { buildMetaReviewExecutionContext } from "../../../src/v11/shared/metaReview/metaReviewExecutionContext.js";
 import { resolveWorktreePairflowEntrypoint } from "../../../src/v11/shared/command/pairflowCommandPathAssessment.js";
-import { metaReviewExecutionContextToRunningContext } from "../../../src/v11/domain/state/execution/executionContext.js";
+import {
+  buildRunningExecutionContext,
+  metaReviewExecutionContextToRunningContext
+} from "../../../src/v11/domain/state/execution/executionContext.js";
 import * as watchdogStatusModule from "../../../src/v11/shared/watchdog/watchdogStatus.js";
 import { initGitRepository } from "../../helpers/git.js";
-import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
 import { writeStateSnapshotFixture as writeStateSnapshot } from "../../helpers/stateSnapshot.js";
 const tempDirs: string[] = [];
 
@@ -41,6 +44,99 @@ async function createTempRepo(): Promise<string> {
   tempDirs.push(root);
   await initGitRepository(root);
   return root;
+}
+
+function normalizeTestBubbleId(id: string): string {
+  const trimmed = id.trim();
+  if (/^[a-z][a-z0-9_-]{2,39}$/u.test(trimmed)) {
+    return trimmed;
+  }
+
+  const hashSuffix = createHash("sha1")
+    .update(trimmed)
+    .digest("hex")
+    .slice(0, 10);
+  const prefixMaxLength = 40 - 1 - hashSuffix.length;
+  const normalizedPrefix = trimmed
+    .toLowerCase()
+    .replace(/[^a-z0-9_-]/gu, "-")
+    .replace(/^[^a-z]+/u, "")
+    .slice(0, prefixMaxLength)
+    .replace(/[-_]+$/u, "");
+
+  const safePrefix =
+    normalizedPrefix.length >= 3 ? normalizedPrefix : "bubble";
+  const candidate = `${safePrefix}-${hashSuffix}`.slice(0, 40);
+
+  if (/^[a-z][a-z0-9_-]{2,39}$/u.test(candidate)) {
+    return candidate;
+  }
+
+  return `bubble-${hashSuffix}`.slice(0, 40);
+}
+
+async function setupRunningBubbleFixture(input: {
+  repoPath: string;
+  bubbleId: string;
+  task: string;
+  reviewerBrief?: string;
+  accuracyCritical?: boolean;
+  reviewArtifactType?: "code" | "document";
+  pairflowCommandProfile?: "external" | "self_host";
+}) {
+  const bubble = await createBubble({
+    id: normalizeTestBubbleId(input.bubbleId),
+    repoPath: input.repoPath,
+    baseBranch: "main",
+    reviewArtifactType: input.reviewArtifactType ?? "code",
+    task: input.task,
+    ...(input.reviewerBrief !== undefined
+      ? { reviewerBrief: input.reviewerBrief }
+      : {}),
+    ...(input.accuracyCritical === true ? { accuracyCritical: true } : {}),
+    ...(input.pairflowCommandProfile !== undefined
+      ? { pairflowCommandProfile: input.pairflowCommandProfile }
+      : {}),
+    cwd: input.repoPath
+  });
+  await mkdir(join(bubble.paths.worktreePath, ".."), { recursive: true });
+  await symlink(input.repoPath, bubble.paths.worktreePath);
+
+  const loaded = await readStateSnapshot(bubble.paths.statePath);
+  const startedAt = "2026-02-21T12:00:00.000Z";
+  await writeStateSnapshot(
+    bubble.paths.statePath,
+    {
+      ...loaded.state,
+      state: "RUNNING",
+      round: 1,
+      active_agent: bubble.config.agents.implementer,
+      active_role: "implementer",
+      execution_context: buildRunningExecutionContext({
+        bubbleId: bubble.bubbleId,
+        round: 1,
+        activeRole: "implementer",
+        startedAt,
+        watchdogTimeoutMinutes: bubble.config.watchdog_timeout_minutes
+      }),
+      active_since: startedAt,
+      last_command_at: startedAt,
+      round_role_history: [
+        {
+          round: 1,
+          implementer: bubble.config.agents.implementer,
+          reviewer: bubble.config.agents.reviewer,
+          switched_at: startedAt
+        }
+      ]
+    },
+    {
+      expectedFingerprint: loaded.fingerprint,
+      expectedState: "CREATED"
+    }
+  );
+
+  return bubble;
 }
 
 afterEach(async () => {

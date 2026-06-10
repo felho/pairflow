@@ -531,6 +531,7 @@ export async function installCompiledCliShimEnvironment(
       HOME: homeDir,
       PATH: `${shimDir}${delimiter}${process.env.PATH ?? ""}`,
       PAIRFLOW_REPO_REGISTRY_PATH: repoRegistryPath,
+      PAIRFLOW_SMOKE_FAST_TMUX_DELIVERY: "1",
       PAIRFLOW_SMOKE_SIDE_EFFECT_LOG: sideEffectLogPath,
       PAIRFLOW_SMOKE_TMUX_STATE: tmuxStatePath
     },

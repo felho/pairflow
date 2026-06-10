@@ -1,4 +1,4 @@
-import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, mkdir, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createHash } from "node:crypto";
@@ -6,14 +6,8 @@ import { createHash } from "node:crypto";
 import { afterEach, describe, expect, it } from "vitest";
 
 import {
-  emitConvergedFromWorkspaceCommandOrchestration as emitConvergedFromWorkspace
-} from "../../../src/v11/application/converged/convergedCommandOrchestration.js";
-import {
   emitAskHumanFromWorkspace
 } from "../../../src/v11/application/askHuman/askHumanCommandApi.js";
-import {
-  emitPassFromWorkspace
-} from "../../../src/v11/application/pass/passCommandOrchestration.js";
 import {
   emitApprove,
   emitRequestRework,
@@ -27,6 +21,7 @@ import {
   MetaReviewGateError
 } from "../../../src/v11/defaults/metaReviewGate/metaReviewGateApi.js";
 import { createBubble } from "../../../src/v11/defaults/create/createBubbleApi.js";
+import type { BubbleCreateResult } from "../../../src/v11/application/create/createBubble.js";
 import {
   appendProtocolEnvelope,
   readTranscriptEnvelopes
@@ -38,6 +33,7 @@ import { toPersistedSnapshot } from "../../../src/v11/domain/state/snapshot/proj
 import { readStateSnapshot } from "../../../src/v11/infrastructure/state/stateStore.js";
 import { bootstrapWorktreeWorkspace } from "../../../src/v11/infrastructure/workspace/worktreeManager.js";
 import { deliveryTargetRoleMetadataKey } from "../../../src/v11/shared/delivery/deliveryTargetMetadataContract.js";
+import { buildRunningExecutionContext } from "../../../src/v11/domain/state/execution/executionContext.js";
 import { initGitRepository } from "../../helpers/git.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
 import { writeStateSnapshotFixture as writeStateSnapshot } from "../../helpers/stateSnapshot.js";
@@ -50,8 +46,37 @@ async function createTempRepo(): Promise<string> {
   return root;
 }
 
+function normalizeTestBubbleId(id: string): string {
+  const trimmed = id.trim();
+  if (/^[a-z][a-z0-9_-]{2,39}$/u.test(trimmed)) {
+    return trimmed;
+  }
+
+  const hashSuffix = createHash("sha1")
+    .update(trimmed)
+    .digest("hex")
+    .slice(0, 10);
+  const prefixMaxLength = 40 - 1 - hashSuffix.length;
+  const normalizedPrefix = trimmed
+    .toLowerCase()
+    .replace(/[^a-z0-9_-]/gu, "-")
+    .replace(/^[^a-z]+/u, "")
+    .slice(0, prefixMaxLength)
+    .replace(/[-_]+$/u, "");
+
+  const safePrefix =
+    normalizedPrefix.length >= 3 ? normalizedPrefix : "bubble";
+  const candidate = `${safePrefix}-${hashSuffix}`.slice(0, 40);
+
+  if (/^[a-z][a-z0-9_-]{2,39}$/u.test(candidate)) {
+    return candidate;
+  }
+
+  return `bubble-${hashSuffix}`.slice(0, 40);
+}
+
 async function writeMetaReviewFindingsArtifact(input: {
-  bubble: Awaited<ReturnType<typeof setupRunningBubbleFixture>>;
+  bubble: BubbleCreateResult;
   filename: string;
   findings: Array<{ severity: "P1" | "P2" | "P3"; title: string }>;
 }): Promise<{ artifactRef: string; digest: string }> {
@@ -73,7 +98,7 @@ async function writeMetaReviewFindingsArtifact(input: {
 }
 
 async function setMetaReviewAutoReworkMinSeverity(input: {
-  bubble: Awaited<ReturnType<typeof setupRunningBubbleFixture>>;
+  bubble: BubbleCreateResult;
   minSeverity: "P1" | "P2" | "P3";
 }): Promise<void> {
   await writeFile(
@@ -93,79 +118,112 @@ async function setMetaReviewAutoReworkMinSeverity(input: {
 }
 
 async function setupReadyForHumanApprovalBubble(repoPath: string, bubbleId: string) {
-  const bubble = await setupRunningBubbleFixture({
+  const bubble = await createBubble({
+    id: normalizeTestBubbleId(bubbleId),
     repoPath,
-    bubbleId,
-    task: "Implement + review"
+    baseBranch: "main",
+    reviewArtifactType: "code",
+    task: "Implement + review",
+    cwd: repoPath
   });
+  await mkdir(join(bubble.paths.worktreePath, ".."), { recursive: true });
+  await symlink(repoPath, bubble.paths.worktreePath);
 
-  await emitPassFromWorkspace({
-    summary: "Implementation pass 1",
-    cwd: bubble.paths.worktreePath,
-    now: new Date("2026-02-22T12:01:00.000Z")
-  });
-  await emitPassFromWorkspace({
-    summary: "Review pass 1 clean",
-    noFindings: true,
-    cwd: bubble.paths.worktreePath,
-    now: new Date("2026-02-22T12:02:00.000Z")
-  });
-  await emitPassFromWorkspace({
-    summary: "Implementation pass 2",
-    cwd: bubble.paths.worktreePath,
-    now: new Date("2026-02-22T12:03:00.000Z")
-  });
-  await emitConvergedFromWorkspace({
-    summary: "Ready for approval",
-    cwd: bubble.paths.worktreePath,
-    now: new Date("2026-02-22T12:04:00.000Z")
-  }, {
-    applyMetaReviewGateOnConvergence: async (input) =>
-      applyMetaReviewGateOnConvergence(input, {
-        setMetaReviewerPaneBinding: async ({ bubbleId: targetBubbleId, active }) => ({
-          updated: true,
-          record: {
-            bubbleId: targetBubbleId,
-            repoPath,
-            worktreePath: bubble.paths.worktreePath,
-            tmuxSessionName: "pf_approval_test",
-            updatedAt: "2026-02-22T12:04:00.000Z",
-            metaReviewerPane: {
-              role: "meta-reviewer",
-              paneIndex: 3,
-              active,
-              updatedAt: "2026-02-22T12:04:00.000Z"
-            }
-          }
-        }),
-        notifyMetaReviewerSubmissionRequest: async () => ({
-          status: "confirmed",
-          reasonCode: null,
-          message: "ok"
-        })
-      })
-  });
-
-  await submitMetaReviewResult(
-    {
+  const loaded = await readStateSnapshot(bubble.paths.statePath);
+  const startedAt = "2026-02-22T12:00:00.000Z";
+  const runningState = {
+    ...loaded.state,
+    state: "RUNNING" as const,
+    round: 2,
+    active_agent: bubble.config.agents.reviewer,
+    active_role: "reviewer" as const,
+    execution_context: buildRunningExecutionContext({
       bubbleId: bubble.bubbleId,
-      repoPath,
       round: 2,
-      recommendation: "inconclusive",
-      summary: "Autonomous review inconclusive; route to human gate.",
-      report_json: {
-        findings_claim_state: "unknown",
-        findings_claim_source: "meta_review_artifact",
-        findings_count: 0
+      activeRole: "reviewer",
+      startedAt,
+      watchdogTimeoutMinutes: bubble.config.watchdog_timeout_minutes
+    }),
+    active_since: startedAt,
+    last_command_at: startedAt,
+    round_role_history: [
+      {
+        round: 1,
+        implementer: bubble.config.agents.implementer,
+        reviewer: bubble.config.agents.reviewer,
+        switched_at: "2026-02-22T12:01:00.000Z"
+      },
+      {
+        round: 2,
+        implementer: bubble.config.agents.implementer,
+        reviewer: bubble.config.agents.reviewer,
+        switched_at: "2026-02-22T12:03:00.000Z"
       }
-    },
-    {
-      now: new Date("2026-02-22T12:04:01.000Z"),
-      readRuntimeSessionsRegistry: async () => ({})
+    ],
+    meta_review: {
+      ...(loaded.state.meta_review ?? {
+        auto_rework_count: 0,
+        auto_rework_limit: 5,
+        sticky_human_gate: false,
+        consecutive_clean_runs: 0
+      }),
+      sticky_human_gate: true,
+      consecutive_clean_runs: 0
     }
+  };
+  const readyState = toPersistedSnapshot(
+    applyStateTransition(buildBubbleStateSnapshotVariant(runningState), {
+      to: "READY_FOR_HUMAN_APPROVAL",
+      lastCommandAt: "2026-02-22T12:04:01.000Z"
+    })
   );
+  await writeStateSnapshot(bubble.paths.statePath, readyState, {
+    expectedFingerprint: loaded.fingerprint,
+    expectedState: "CREATED"
+  });
 
-  await readStateSnapshot(bubble.paths.statePath);
+  await appendProtocolEnvelope({
+    transcriptPath: bubble.paths.inboxPath,
+    mirrorPaths: [],
+    lockPath: join(bubble.paths.locksDir, `${bubble.bubbleId}.lock`),
+    now: new Date("2026-02-22T12:00:00.000Z"),
+    envelope: {
+      bubble_id: bubble.bubbleId,
+      sender: "orchestrator",
+      recipient: bubble.config.agents.implementer,
+      type: "TASK",
+      round: 1,
+      payload: {
+        summary: "Implement + review"
+      },
+      refs: []
+    }
+  });
+
+  await appendProtocolEnvelope({
+    transcriptPath: bubble.paths.transcriptPath,
+    mirrorPaths: [bubble.paths.inboxPath],
+    lockPath: join(bubble.paths.locksDir, `${bubble.bubbleId}.lock`),
+    now: new Date("2026-02-22T12:04:01.000Z"),
+    envelope: {
+      bubble_id: bubble.bubbleId,
+      sender: "orchestrator",
+      recipient: "human",
+      type: "APPROVAL_REQUEST",
+      round: 2,
+      payload: {
+        summary: "Autonomous review inconclusive; route to human gate.",
+        metadata: {
+          [deliveryTargetRoleMetadataKey]: "status",
+          actor: "meta-reviewer",
+          actor_agent: "codex",
+          latest_recommendation: "inconclusive"
+        }
+      },
+      refs: []
+    }
+  });
+
   const transcript = await readTranscriptEnvelopes(bubble.paths.transcriptPath);
   const gateEnvelope = transcript.at(-1);
   expect(gateEnvelope?.type).toBe("APPROVAL_REQUEST");

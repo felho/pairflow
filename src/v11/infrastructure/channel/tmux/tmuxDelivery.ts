@@ -61,6 +61,22 @@ export type {
 } from "../../../shared/delivery/tmuxDeliveryContract.js";
 export { buildTranscriptFallbackRef, resolveDeliveryMessageRef } from "./tmuxDeliveryRefs.js";
 
+function resolveDeliveryTiming(
+  deliveryTiming: TmuxDeliveryTimingOptions | undefined
+): TmuxDeliveryTimingOptions | undefined {
+  if (deliveryTiming !== undefined) {
+    return deliveryTiming;
+  }
+  if (process.env.PAIRFLOW_SMOKE_FAST_TMUX_DELIVERY !== "1") {
+    return undefined;
+  }
+  return {
+    submitDelayMs: 0,
+    markerSettleDelayMs: 0,
+    markerRetryDelayMs: 0
+  };
+}
+
 function buildRegistryReadFailedMessage(
   input: EmitDeliveryNotificationRuntimeInput
 ): string {
@@ -185,6 +201,7 @@ export async function emitDeliveryNotificationAck(
 
   const targetPane = `${sessionName}:0.${targetPaneIndex}`;
   const runner = input.runner ?? runTmux;
+  const deliveryTiming = resolveDeliveryTiming(input.deliveryTiming);
   const deliveryAck = await attemptTmuxDelivery({
     runner,
     targetPane,
@@ -194,7 +211,7 @@ export async function emitDeliveryNotificationAck(
     targetPaneIndex,
     ...(input.initialDelayMs !== undefined ? { initialDelayMs: input.initialDelayMs } : {}),
     ...(input.deliveryAttempts !== undefined ? { deliveryAttempts: input.deliveryAttempts } : {}),
-    ...(input.deliveryTiming !== undefined ? { timing: input.deliveryTiming } : {}),
+    ...(deliveryTiming !== undefined ? { timing: deliveryTiming } : {}),
     ...(targetResolution.deliveryTargetReasonCode !== undefined
       ? { deliveryTargetReasonCode: targetResolution.deliveryTargetReasonCode }
       : {})
