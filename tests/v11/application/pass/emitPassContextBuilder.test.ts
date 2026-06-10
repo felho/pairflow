@@ -684,6 +684,99 @@ describe("emitPassContextBuilder", () => {
     expect(context.activation).toBeUndefined();
   });
 
+  it("omits activation when live role and loaded execution context role disagree", async () => {
+    const context = await buildEmitPassContext(
+      {
+        commandInput: {
+          summary: "raw summary"
+        },
+        createError: (message: PairflowCommandErrorInput) => new Error(toErrorMessage(message)),
+        inferDefaultPassIntent: () => "review"
+      },
+      {
+        normalizePassCommandInput: () => ({
+          summary: "normalized summary",
+          refs: [],
+          now: new Date("2026-03-19T22:57:00.000Z")
+        }),
+        normalizePassCommandPayload: () => ({
+          findings: [],
+          hasFindings: false,
+          noFindings: false,
+          findingsPayloadInvalid: false
+        }),
+        preparePassWorkspaceContext: async () =>
+          ({
+            resolved: {
+              bubbleId: "b_emit_ctx_role_mismatch",
+              repoPath: "/repo",
+              worktreePath: "/repo/.pairflow/worktrees/b_emit_ctx_role_mismatch",
+              bubbleConfig: {
+                id: "b_emit_ctx_role_mismatch",
+                review_artifact_type: "code",
+                severity_gate_round: 4
+              },
+              bubblePaths: {
+                worktreePath: "/repo/.pairflow/worktrees/b_emit_ctx_role_mismatch",
+                transcriptPath: "/repo/.pairflow/bubbles/b_emit_ctx_role_mismatch/transcript.ndjson"
+              }
+            },
+            bubbleIdentity: {
+              bubbleInstanceId: "bi_1234567890_abcdef0123456789"
+            },
+            loadedState: {
+              fingerprint: "fp_emit_ctx_role_mismatch",
+              state: {
+                active_role: "implementer",
+                round: 2,
+                execution_context: {
+                  active_role: "reviewer",
+                  awaited_output_type: "pass_result",
+                  handoff_id: "implementer:b_emit_ctx_role_mismatch:round:2:attempt:1",
+                  execution_id: "exec_emit_ctx_role_mismatch",
+                  round: 2,
+                  started_at: "2026-03-19T22:00:00.000Z",
+                  deadline_at: "2026-03-19T23:00:00.000Z",
+                  attempt: 1
+                }
+              }
+            },
+            state: {
+              state: "RUNNING",
+              round: 2,
+              active_role: "implementer"
+            },
+            handoff: {
+              senderAgent: "codex",
+              senderRole: "implementer",
+              recipientAgent: "claude",
+              recipientRole: "reviewer",
+              envelopeRound: 2,
+              nextRound: 2
+            },
+            implementer: "codex",
+            reviewer: "claude"
+          }) as never,
+        preparePassRouting: async () =>
+          ({
+            intent: "review",
+            inferredIntent: true,
+            reviewerVerification: undefined,
+            transcript: [],
+            repeatCleanTrigger: {
+              reasonCode: "REPEAT_CLEAN_TRIGGER_NOT_MET",
+              reasonDetail: "base_precondition_not_met",
+              trigger: false,
+              mostRecentPreviousReviewerCleanPassEnvelope: false
+            }
+          }) as never,
+        createPassRoutingDependencies: () => ({}) as never
+      }
+    );
+
+    expect(context.activation).toBeUndefined();
+  });
+
   it("reuses workspace activation provenance when activated meta-only bypass is resolved", async () => {
     const context = await buildEmitPassContext(
       {

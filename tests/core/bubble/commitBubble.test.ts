@@ -30,6 +30,7 @@ import { readStateSnapshot } from "../../../src/v11/infrastructure/state/stateSt
 import { bootstrapWorktreeWorkspace } from "../../../src/v11/infrastructure/workspace/worktreeManager.js";
 import { initGitRepository, runGit } from "../../helpers/git.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
+import { writeStateSnapshotFixture as writeStateSnapshot } from "../../helpers/stateSnapshot.js";
 import { getBubblePaths } from "../../../src/v11/shared/bubble/bubblePaths.js";
 import { buildBubbleStateSnapshotVariant } from "../../../src/v11/domain/state/snapshot/buildBubbleStateSnapshot.js";
 const tempDirs: string[] = [];
@@ -127,7 +128,7 @@ function buildActiveMetaReviewerSession(input: {
   };
 }
 
-async function setupApprovedBubble(repoPath: string, bubbleId: string) {
+async function setupApprovedBubbleThroughLifecycle(repoPath: string, bubbleId: string) {
   const bubble = await setupRunningBubbleFixture({
     repoPath,
     bubbleId,
@@ -192,6 +193,42 @@ async function setupApprovedBubble(repoPath: string, bubbleId: string) {
   return bubble;
 }
 
+async function setupApprovedBubble(repoPath: string, bubbleId: string) {
+  const bubble = await setupRunningBubbleFixture({
+    repoPath,
+    bubbleId,
+    task: "Finalize task",
+    reviewPolicy: {
+      meta_review_consecutive_clean_runs_required: 1
+    }
+  });
+  const loaded = await readStateSnapshot(bubble.paths.statePath);
+  const approvedAt = "2026-02-22T15:04:00.000Z";
+
+  await writeStateSnapshot(
+    bubble.paths.statePath,
+    {
+      bubble_id: bubble.bubbleId,
+      state: "APPROVED_FOR_COMMIT",
+      round: 2,
+      active_agent: null,
+      active_role: null,
+      active_since: null,
+      execution_context: null,
+      round_role_history: loaded.state.round_role_history,
+      last_command_at: approvedAt,
+      pending_rework_intent: null,
+      rework_intent_history: []
+    } satisfies PersistedBubbleStateSnapshot,
+    {
+      expectedFingerprint: loaded.fingerprint,
+      expectedState: "RUNNING"
+    }
+  );
+
+  return bubble;
+}
+
 async function convertApprovedBubbleToClone(
   repoPath: string,
   bubble: Awaited<ReturnType<typeof setupApprovedBubble>>
@@ -249,7 +286,7 @@ describe("commitBubble", () => {
 
   it("commits staged files with an accepted message, appends COMMIT_RESULT, and transitions to DONE without done-package", async () => {
     const repoPath = await createTempRepo();
-    const bubble = await setupApprovedBubble(repoPath, "b_commit_02");
+    const bubble = await setupApprovedBubbleThroughLifecycle(repoPath, "b_commit_02");
 
     await writeFile(
       join(bubble.paths.worktreePath, "feature.txt"),

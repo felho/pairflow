@@ -23,9 +23,9 @@ import {
 import {
   getWatchdogTracePath
 } from "../../../../src/v11/infrastructure/artifact/watchdog/watchdogTraceStore.js";
-import { setupRunningBubbleFixture } from "../../../helpers/bubble.js";
 import { initGitRepository } from "../../../helpers/git.js";
 import { readStateSnapshot } from "../../../../src/v11/infrastructure/state/stateStore.js";
+import { createBubble } from "../../../../src/v11/defaults/create/createBubbleApi.js";
 import {
   buildRunningExecutionContext,
   metaReviewExecutionContextToRunningContext
@@ -42,6 +42,58 @@ async function createTempRepo(): Promise<string> {
   tempDirs.push(root);
   await initGitRepository(root);
   return root;
+}
+
+async function setupWatchdogRunningBubbleFixture(input: {
+  repoPath: string;
+  bubbleId: string;
+  task: string;
+  startedAt?: string;
+}) {
+  const bubble = await createBubble({
+    id: input.bubbleId,
+    repoPath: input.repoPath,
+    baseBranch: "main",
+    reviewArtifactType: "code",
+    task: input.task,
+    cwd: input.repoPath
+  });
+  const loaded = await readStateSnapshot(bubble.paths.statePath);
+  const startedAt = input.startedAt ?? "2026-02-22T12:00:00.000Z";
+
+  await writeStateSnapshot(
+    bubble.paths.statePath,
+    {
+      ...loaded.state,
+      state: "RUNNING",
+      round: 1,
+      active_agent: bubble.config.agents.implementer,
+      active_role: "implementer",
+      active_since: startedAt,
+      last_command_at: startedAt,
+      execution_context: buildRunningExecutionContext({
+        bubbleId: bubble.bubbleId,
+        round: 1,
+        activeRole: "implementer",
+        startedAt,
+        watchdogTimeoutMinutes: bubble.config.watchdog_timeout_minutes
+      }),
+      round_role_history: [
+        {
+          round: 1,
+          implementer: bubble.config.agents.implementer,
+          reviewer: bubble.config.agents.reviewer,
+          switched_at: startedAt
+        }
+      ]
+    },
+    {
+      expectedFingerprint: loaded.fingerprint,
+      expectedState: "CREATED"
+    }
+  );
+
+  return bubble;
 }
 
 afterEach(async () => {
@@ -152,7 +204,7 @@ describe("watchdogCommandApi", () => {
 
   it("seeds the first pane-activity record before timeout without escalating", async () => {
     const repoPath = await createTempRepo();
-    const bubble = await setupRunningBubbleFixture({
+    const bubble = await setupWatchdogRunningBubbleFixture({
       repoPath,
       bubbleId: "b_watchdog_v11_seed_01",
       task: "Watchdog v11 initial pane-activity sample",
@@ -226,7 +278,7 @@ describe("watchdogCommandApi", () => {
 
   it("rate-limits pane sampling to once per minute", async () => {
     const repoPath = await createTempRepo();
-    const bubble = await setupRunningBubbleFixture({
+    const bubble = await setupWatchdogRunningBubbleFixture({
       repoPath,
       bubbleId: "b_watchdog_v11_rate_01",
       task: "Watchdog v11 pane-activity rate limit",
@@ -305,7 +357,7 @@ describe("watchdogCommandApi", () => {
 
   it("re-samples immediately when the active role switches to a different pane target", async () => {
     const repoPath = await createTempRepo();
-    const bubble = await setupRunningBubbleFixture({
+    const bubble = await setupWatchdogRunningBubbleFixture({
       repoPath,
       bubbleId: "b_watchdog_v11_role_switch_01",
       task: "Watchdog v11 immediate pane resample on role switch",
@@ -385,7 +437,7 @@ describe("watchdogCommandApi", () => {
 
   it("surfaces BubbleWatchdogError from retryStuckAgentInput instead of swallowing the fail-closed boundary", async () => {
     const repoPath = await createTempRepo();
-    const bubble = await setupRunningBubbleFixture({
+    const bubble = await setupWatchdogRunningBubbleFixture({
       repoPath,
       bubbleId: "b_watchdog_v11_retry_fail_closed_01",
       task: "Watchdog v11 should preserve retry fail-closed errors",
@@ -410,7 +462,7 @@ describe("watchdogCommandApi", () => {
 
   it("keeps generic retryStuckAgentInput failures best-effort and returns not_expired", async () => {
     const repoPath = await createTempRepo();
-    const bubble = await setupRunningBubbleFixture({
+    const bubble = await setupWatchdogRunningBubbleFixture({
       repoPath,
       bubbleId: "b_watchdog_v11_retry_best_effort_01",
       task: "Watchdog v11 should ignore generic retry transport failures",
@@ -438,7 +490,7 @@ describe("watchdogCommandApi", () => {
   it("keeps RUNNING bubble active after timeout when pane changed recently", async () => {
     const repoPath = await createTempRepo();
     const startedAt = "2026-02-22T12:00:00.000Z";
-    const bubble = await setupRunningBubbleFixture({
+    const bubble = await setupWatchdogRunningBubbleFixture({
       repoPath,
       bubbleId: "b_watchdog_v11_recent_01",
       task: "Watchdog v11 recent pane activity no-op",
@@ -494,7 +546,7 @@ describe("watchdogCommandApi", () => {
   it("resets the quiet window when the raw pane hash changes", async () => {
     const repoPath = await createTempRepo();
     const startedAt = "2026-02-22T12:00:00.000Z";
-    const bubble = await setupRunningBubbleFixture({
+    const bubble = await setupWatchdogRunningBubbleFixture({
       repoPath,
       bubbleId: "b_watchdog_v11_diff_01",
       task: "Watchdog v11 raw pane diff resets quiet window",
@@ -549,7 +601,7 @@ describe("watchdogCommandApi", () => {
   it("escalates expired RUNNING watchdog after the quiet window is reached", async () => {
     const repoPath = await createTempRepo();
     const startedAt = "2026-02-22T12:00:00.000Z";
-    const bubble = await setupRunningBubbleFixture({
+    const bubble = await setupWatchdogRunningBubbleFixture({
       repoPath,
       bubbleId: "b_watchdog_v11_quiet_01",
       task: "Watchdog v11 quiet-window escalation",
@@ -595,7 +647,7 @@ describe("watchdogCommandApi", () => {
   it("retries stuck pane input before escalating an expired quiet RUNNING watchdog", async () => {
     const repoPath = await createTempRepo();
     const startedAt = "2026-02-22T12:00:00.000Z";
-    const bubble = await setupRunningBubbleFixture({
+    const bubble = await setupWatchdogRunningBubbleFixture({
       repoPath,
       bubbleId: "b_watchdog_v11_quiet_stuck_01",
       task: "Watchdog v11 quiet-window stuck input recovery",
@@ -647,7 +699,7 @@ describe("watchdogCommandApi", () => {
   it("escalates after timeout when the runtime session is missing", async () => {
     const repoPath = await createTempRepo();
     const startedAt = "2026-02-22T12:00:00.000Z";
-    const bubble = await setupRunningBubbleFixture({
+    const bubble = await setupWatchdogRunningBubbleFixture({
       repoPath,
       bubbleId: "b_watchdog_v11_missing_session_01",
       task: "Watchdog v11 missing session escalation",
@@ -680,7 +732,7 @@ describe("watchdogCommandApi", () => {
   it("mirrors watchdog escalation questions to the inbox", async () => {
     const repoPath = await createTempRepo();
     const startedAt = "2026-02-22T12:00:00.000Z";
-    const bubble = await setupRunningBubbleFixture({
+    const bubble = await setupWatchdogRunningBubbleFixture({
       repoPath,
       bubbleId: "b_watchdog_v11_inbox_mirror_01",
       task: "Watchdog v11 inbox mirror",
@@ -713,7 +765,7 @@ describe("watchdogCommandApi", () => {
   it("preserves transcript-first recovery when state write fails after append", async () => {
     const repoPath = await createTempRepo();
     const startedAt = "2026-02-22T12:00:00.000Z";
-    const bubble = await setupRunningBubbleFixture({
+    const bubble = await setupWatchdogRunningBubbleFixture({
       repoPath,
       bubbleId: "b_watchdog_v11_state_write_failure_01",
       task: "Watchdog v11 state write failure",
@@ -774,7 +826,7 @@ describe("watchdogCommandApi", () => {
   it("keeps escalation successful when delivery and notification side effects fail", async () => {
     const repoPath = await createTempRepo();
     const startedAt = "2026-02-22T12:00:00.000Z";
-    const bubble = await setupRunningBubbleFixture({
+    const bubble = await setupWatchdogRunningBubbleFixture({
       repoPath,
       bubbleId: "b_watchdog_v11_best_effort_notify_01",
       task: "Watchdog v11 best effort notification",
@@ -811,7 +863,7 @@ describe("watchdogCommandApi", () => {
   it("re-escalates on expired rate-limited cycle when the stored last sample already shows no_session", async () => {
     const repoPath = await createTempRepo();
     const startedAt = "2026-02-22T12:00:00.000Z";
-    const bubble = await setupRunningBubbleFixture({
+    const bubble = await setupWatchdogRunningBubbleFixture({
       repoPath,
       bubbleId: "b_watchdog_v11_missing_session_rate_01",
       task: "Watchdog v11 rate-limited hard signal escalation",
@@ -856,7 +908,7 @@ describe("watchdogCommandApi", () => {
   it("escalates after timeout when the target pane is unreadable", async () => {
     const repoPath = await createTempRepo();
     const startedAt = "2026-02-22T12:00:00.000Z";
-    const bubble = await setupRunningBubbleFixture({
+    const bubble = await setupWatchdogRunningBubbleFixture({
       repoPath,
       bubbleId: "b_watchdog_v11_unreadable_01",
       task: "Watchdog v11 unreadable pane escalation",
@@ -890,7 +942,7 @@ describe("watchdogCommandApi", () => {
 
   it("keeps meta-review timeout escalations resumable", async () => {
     const repoPath = await createTempRepo();
-    const bubble = await setupRunningBubbleFixture({
+    const bubble = await setupWatchdogRunningBubbleFixture({
       repoPath,
       bubbleId: "b_watchdog_v11_meta_resume_01",
       task: "Meta-review timeout should keep resumable human gate",
@@ -924,7 +976,7 @@ describe("watchdogCommandApi", () => {
   it("seeds a fresh record on the first expired run without escalating", async () => {
     const repoPath = await createTempRepo();
     const startedAt = "2026-02-22T12:00:00.000Z";
-    const bubble = await setupRunningBubbleFixture({
+    const bubble = await setupWatchdogRunningBubbleFixture({
       repoPath,
       bubbleId: "b_watchdog_v11_expired_seed_01",
       task: "Watchdog v11 first expired run seeds activity",
@@ -955,7 +1007,7 @@ describe("watchdogCommandApi", () => {
   it("rebuilds a corrupt pane-activity record on expired run without escalating", async () => {
     const repoPath = await createTempRepo();
     const startedAt = "2026-02-22T12:00:00.000Z";
-    const bubble = await setupRunningBubbleFixture({
+    const bubble = await setupWatchdogRunningBubbleFixture({
       repoPath,
       bubbleId: "b_watchdog_v11_corrupt_01",
       task: "Watchdog v11 corrupt pane-activity rebuild",

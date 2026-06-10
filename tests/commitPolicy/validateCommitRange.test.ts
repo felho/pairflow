@@ -6,10 +6,13 @@ import { promisify } from "node:util";
 
 import { describe, expect, it } from "vitest";
 
+import {
+  formatCommitRangeValidationResult,
+  validateCommitRange
+} from "../../tools/commit-policy/validateCommitRange.js";
+
 const execFileAsync = promisify(execFile);
 const repoRoot = process.cwd();
-const rangeCliPath = join(repoRoot, "tools/commit-policy/validateCommitRange.ts");
-const tsxBinPath = join(repoRoot, "node_modules/.bin/tsx");
 
 function outputFrom(error: unknown, stream: "stdout" | "stderr"): string {
   if (typeof error === "object" && error !== null && stream in error) {
@@ -32,6 +35,19 @@ async function expectCommandFailure(
 
   expect(failure).toMatchObject({ code: 1 });
   expect(outputFrom(failure, "stderr")).toContain(expectedStderr);
+}
+
+function validateRangeFromRepo(
+  cwd: string,
+  endpoints: Parameters<typeof validateCommitRange>[0]
+): ReturnType<typeof validateCommitRange> {
+  const previousCwd = process.cwd();
+  process.chdir(cwd);
+  try {
+    return validateCommitRange(endpoints);
+  } finally {
+    process.chdir(previousCwd);
+  }
 }
 
 async function git(cwd: string, args: string[]): Promise<string> {
@@ -79,10 +95,21 @@ describe("validate commit range CLI", () => {
     await commit(repoDir, "feat(cli): add range validator");
     const head = await git(repoDir, ["rev-parse", "HEAD"]);
 
+    const result = validateRangeFromRepo(repoDir, { from: base, to: head });
+    const output = formatCommitRangeValidationResult(result);
+
+    expect(output).toContain("commit-policy range: validated");
+    expect(output).toContain("reason_code: range_validated");
+  });
+
+  it("validates an explicit safe range through the package script entrypoint", async () => {
+    const base = await git(repoRoot, ["rev-parse", "HEAD~1"]);
+    const head = await git(repoRoot, ["rev-parse", "HEAD"]);
+
     const result = await execFileAsync(
-      tsxBinPath,
-      [rangeCliPath, "--from", base, "--to", head],
-      { cwd: repoDir }
+      "pnpm",
+      ["commit-policy:validate-range", "--", "--from", base, "--to", head],
+      { cwd: repoRoot }
     );
 
     expect(result.stdout).toContain("commit-policy range: validated");
@@ -96,21 +123,17 @@ describe("validate commit range CLI", () => {
     await commit(repoDir, "bubble(2b-commit-policy): finalize");
     const head = await git(repoDir, ["rev-parse", "HEAD"]);
 
-    await expectCommandFailure(
-      execFileAsync(
-        tsxBinPath,
-        [rangeCliPath, "--from", base, "--to", head],
-        { cwd: repoDir }
-      ),
+    const result = validateRangeFromRepo(repoDir, { from: base, to: head });
+    expect(result.status).toBe("failed");
+    expect(formatCommitRangeValidationResult(result)).toContain(
       "range_contains_invalid_commit"
     );
   });
 
   it("fails closed when explicit range endpoints are missing", async () => {
-    await expectCommandFailure(
-      execFileAsync("pnpm", ["commit-policy:validate-range"], {
-        cwd: process.cwd()
-      }),
+    const result = validateCommitRange({});
+    expect(result.status).toBe("failed");
+    expect(formatCommitRangeValidationResult(result)).toContain(
       "rejected_missing_safe_range"
     );
   });
@@ -119,12 +142,9 @@ describe("validate commit range CLI", () => {
     const repoDir = await createRepo();
     const head = await git(repoDir, ["rev-parse", "HEAD"]);
 
-    await expectCommandFailure(
-      execFileAsync(
-        tsxBinPath,
-        [rangeCliPath, "--from", head, "--to", head],
-        { cwd: repoDir }
-      ),
+    const result = validateRangeFromRepo(repoDir, { from: head, to: head });
+    expect(result.status).toBe("failed");
+    expect(formatCommitRangeValidationResult(result)).toContain(
       "explicit safe range contained no commits"
     );
   });
@@ -133,12 +153,12 @@ describe("validate commit range CLI", () => {
     const repoDir = await createRepo();
     const head = await git(repoDir, ["rev-parse", "HEAD"]);
 
-    await expectCommandFailure(
-      execFileAsync(
-        tsxBinPath,
-        [rangeCliPath, "--from", "missing-base", "--to", head],
-        { cwd: repoDir }
-      ),
+    const result = validateRangeFromRepo(repoDir, {
+      from: "missing-base",
+      to: head
+    });
+    expect(result.status).toBe("failed");
+    expect(formatCommitRangeValidationResult(result)).toContain(
       "rejected_missing_safe_range"
     );
   });
@@ -149,12 +169,9 @@ describe("validate commit range CLI", () => {
     await commitWithBody(repoDir);
     const head = await git(repoDir, ["rev-parse", "HEAD"]);
 
-    await expectCommandFailure(
-      execFileAsync(
-        tsxBinPath,
-        [rangeCliPath, "--from", base, "--to", head],
-        { cwd: repoDir }
-      ),
+    const result = validateRangeFromRepo(repoDir, { from: base, to: head });
+    expect(result.status).toBe("failed");
+    expect(formatCommitRangeValidationResult(result)).toContain(
       "rejected_body_only_conventional"
     );
   });

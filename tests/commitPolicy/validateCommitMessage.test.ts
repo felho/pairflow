@@ -4,7 +4,9 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+
+import { validateCommitMessageFile } from "../../tools/commit-policy/validateCommitMessage.js";
 
 const execFileAsync = promisify(execFile);
 
@@ -36,21 +38,44 @@ describe("validate commit message CLI", () => {
     expect(result.stdout).toContain("reason_code: accepted_conventional");
   });
 
-  it("rejects invalid first lines with guidance output", async () => {
+  it("rejects an invalid message through the package script entrypoint", async () => {
     const messagePath = await writeMessage(
       "update stuff\n\nfeat(cli): body cannot rescue this\n"
     );
 
     let failure: unknown;
     try {
-      await execFileAsync("pnpm", ["commit-policy:validate-message", "--", messagePath], {
-        cwd: process.cwd()
-      });
+      await execFileAsync(
+        "pnpm",
+        ["commit-policy:validate-message", "--", messagePath],
+        { cwd: process.cwd() }
+      );
     } catch (error) {
       failure = error;
     }
 
     expect(failure).toMatchObject({ code: 1 });
-    expect(outputFrom(failure, "stderr")).toContain("docs/commit-message-guidance.md");
+    expect(outputFrom(failure, "stderr")).toContain(
+      "rejected_body_only_conventional"
+    );
+    expect(outputFrom(failure, "stderr")).toContain(
+      "docs/commit-message-guidance.md"
+    );
+  });
+
+  it("rejects invalid first lines with guidance output", async () => {
+    const messagePath = await writeMessage(
+      "update stuff\n\nfeat(cli): body cannot rescue this\n"
+    );
+    const stderr = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    try {
+      await expect(validateCommitMessageFile(messagePath)).resolves.toBe(1);
+      expect(stderr).toHaveBeenCalledWith(
+        expect.stringContaining("docs/commit-message-guidance.md")
+      );
+    } finally {
+      stderr.mockRestore();
+    }
   });
 });

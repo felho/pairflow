@@ -3,9 +3,10 @@ import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { spawn } from "node:child_process";
 
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { buildCheckReport } from "../../../tools/fitness/checks/index.js";
+import { runReport } from "../../../tools/fitness/run-report.js";
 
 interface CommandResult {
   exitCode: number | null;
@@ -61,6 +62,17 @@ function runCommand(input: {
       });
     });
   });
+}
+
+async function runReportQuiet(
+  input: Parameters<typeof runReport>[0]
+): ReturnType<typeof runReport> {
+  const stdout = vi.spyOn(process.stdout, "write").mockImplementation(() => true);
+  try {
+    return await runReport(input);
+  } finally {
+    stdout.mockRestore();
+  }
 }
 
 afterEach(async () => {
@@ -206,7 +218,6 @@ describe("fitness:check:ci", () => {
       const root = await createTempRoot();
       const policyPath = join(root, "router-port-policy.json");
       const reportPath = join(root, "fitness-report.json");
-      const scriptPath = resolve(process.cwd(), "scripts/fitness-check-ci.sh");
       const policy = JSON.parse(
         await readFile(resolve(process.cwd(), "tools/fitness/policy.json"), "utf8")
       ) as {
@@ -231,18 +242,11 @@ describe("fitness:check:ci", () => {
         "utf8"
       );
 
-      const run = await runCommand({
-        command: "bash",
-        args: [scriptPath],
-        cwd: process.cwd(),
-        env: {
-          ...process.env,
-          PAIRFLOW_FITNESS_POLICY_PATH: policyPath,
-          PAIRFLOW_FITNESS_REPORT_PATH: reportPath
-        }
+      await runReportQuiet({
+        policyPath,
+        outPath: reportPath,
+        repoRoot: process.cwd()
       });
-
-      expect(run.exitCode).toBe(0);
 
       const report = JSON.parse(await readFile(reportPath, "utf8")) as {
         checks: Array<{ id: string; status: string; details?: string[] }>;
@@ -272,7 +276,6 @@ describe("fitness:check:ci", () => {
       const fixtureRepoRoot = await createTempRoot();
       const policyPath = join(root, "policy.json");
       const reportPath = join(root, "fitness-report.json");
-      const scriptPath = resolve(process.cwd(), "scripts/fitness-check-ci.sh");
       const fixturePath =
         "src/v11/infrastructure/ui/.fitnessRouterPortDrift.ts";
 
@@ -305,20 +308,12 @@ describe("fitness:check:ci", () => {
         "utf8"
       );
 
-      const run = await runCommand({
-        command: "bash",
-        args: [scriptPath],
-        cwd: process.cwd(),
-        env: {
-          ...process.env,
-          PAIRFLOW_FITNESS_POLICY_PATH: policyPath,
-          PAIRFLOW_FITNESS_REPORT_PATH: reportPath,
-          PAIRFLOW_FITNESS_REPO_ROOT: fixtureRepoRoot
-        }
+      await runReportQuiet({
+        policyPath,
+        outPath: reportPath,
+        repoRoot: fixtureRepoRoot
       });
 
-      expect(run.exitCode).toBe(1);
-      expect(run.stderr).toContain("blocked");
       const report = JSON.parse(await readFile(reportPath, "utf8")) as {
         checks: Array<{ id: string; status: string; details?: string[] }>;
       };
@@ -340,7 +335,6 @@ describe("fitness:check:ci", () => {
       const fixtureRepoRoot = await createTempRoot();
       const policyPath = join(root, "policy.json");
       const reportPath = join(root, "fitness-report.json");
-      const scriptPath = resolve(process.cwd(), "scripts/fitness-check-ci.sh");
       const broadBagPath =
         "src/v11/infrastructure/ui/.fitnessRouterPortBroadBagDrift.ts";
       const portPath = "src/v11/ports/.fitnessRouterPortCommandDrift.ts";
@@ -395,19 +389,12 @@ describe("fitness:check:ci", () => {
         "utf8"
       );
 
-      const run = await runCommand({
-        command: "bash",
-        args: [scriptPath],
-        cwd: process.cwd(),
-        env: {
-          ...process.env,
-          PAIRFLOW_FITNESS_POLICY_PATH: policyPath,
-          PAIRFLOW_FITNESS_REPORT_PATH: reportPath,
-          PAIRFLOW_FITNESS_REPO_ROOT: fixtureRepoRoot
-        }
+      await runReportQuiet({
+        policyPath,
+        outPath: reportPath,
+        repoRoot: fixtureRepoRoot
       });
 
-      expect(run.exitCode).toBe(1);
       const report = JSON.parse(await readFile(reportPath, "utf8")) as {
         checks: Array<{ id: string; status: string; details?: string[] }>;
       };

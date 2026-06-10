@@ -58,11 +58,12 @@ async function runCiFixture(
   fixtureDir: string,
   env: Record<string, string> = {}
 ): Promise<{ stdout: string; stderr: string }> {
+  const fixturePath = `${join(fixtureDir, "bin")}${delimiter}${process.env.PATH ?? ""}`;
   return execFileAsync("bash", ["scripts/ci-local.sh"], {
     cwd: fixtureDir,
     env: {
       ...process.env,
-      PATH: `${join(fixtureDir, "bin")}${delimiter}${process.env.PATH ?? ""}`,
+      PATH: fixturePath,
       PAIRFLOW_CI_ALLOW_CODEX: "1",
       ...env
     }
@@ -160,6 +161,7 @@ describe("ci-local commit range integration", () => {
     await chmod(codexPath, 0o755);
 
     const result = await runCiFixture(fixtureDir, {
+      PATH: `${join(fixtureDir, "bin")}${delimiter}/bin${delimiter}/usr/bin`,
       PAIRFLOW_CI_ALLOW_CODEX: "0"
     });
 

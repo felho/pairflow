@@ -161,6 +161,200 @@ describe("executePassDelivery", () => {
     });
   });
 
+  it("omits reviewer focus from delivery when the artifact is absent", async () => {
+    const tempDir = await mkdtemp(join(tmpdir(), "pairflow-reviewer-delivery-"));
+    const focusPath = join(tempDir, "reviewer-focus.json");
+    await writeFile(
+      focusPath,
+      JSON.stringify({
+        status: "absent",
+        source: "none",
+        reason_code: "REVIEWER_FOCUS_ABSENT"
+      }),
+      "utf8"
+    );
+
+    const emitCalls: unknown[] = [];
+    const result = await executePassDelivery(
+      {
+        bubbleId: "b_delivery_v11_01",
+        bubbleConfig: createBubbleConfig("persistent"),
+        sessionsPath: "/tmp/repo/.pairflow/runtime/sessions.json",
+        reviewerBriefArtifactPath: "/tmp/missing-brief.md",
+        reviewerFocusArtifactPath: focusPath,
+        envelope: createEnvelope(),
+        senderRole: "implementer",
+        recipientRole: "reviewer"
+      },
+      {
+        emitDeliveryNotificationAck: async (input) => {
+          emitCalls.push(input);
+          return {
+            status: "accepted",
+            message: "ok",
+            sessionName: "pf_bubble",
+            targetPaneIndex: 1
+          };
+        },
+        readReviewerBriefArtifact,
+        readReviewerFocusArtifact,
+        resolveDeliveryMessageRef
+      }
+    );
+
+    expect(emitCalls).toHaveLength(1);
+    expect(emitCalls[0]).not.toHaveProperty("reviewerFocus");
+    expect(result.retried).toBe(false);
+  });
+
+  it("omits invalid reviewer focus from refreshed reviewer startup prompt", async () => {
+    const tempDir = await mkdtemp(join(tmpdir(), "pairflow-reviewer-delivery-"));
+    const briefPath = join(tempDir, "reviewer-brief.md");
+    const focusPath = join(tempDir, "reviewer-focus.json");
+    await writeFile(briefPath, "Brief should still appear.\n", "utf8");
+    await writeFile(
+      focusPath,
+      JSON.stringify({
+        status: "present",
+        source: "none",
+        focus_text: "invalid payload"
+      }),
+      "utf8"
+    );
+
+    const refreshCalls: unknown[] = [];
+    const result = await executePassDelivery(
+      {
+        bubbleId: "b_delivery_v11_01",
+        bubbleConfig: createBubbleConfig("fresh"),
+        sessionsPath: "/tmp/repo/.pairflow/runtime/sessions.json",
+        reviewerBriefArtifactPath: briefPath,
+        reviewerFocusArtifactPath: focusPath,
+        envelope: createEnvelope(),
+        senderRole: "implementer",
+        recipientRole: "reviewer"
+      },
+      {
+        refreshReviewerContext: async (input) => {
+          refreshCalls.push(input);
+          return {
+            refreshed: true
+          };
+        },
+        emitDeliveryNotificationAck: async () => ({
+          status: "accepted",
+          message: "ok",
+          sessionName: "pf_bubble",
+          targetPaneIndex: 1
+        }),
+        readReviewerBriefArtifact,
+        readReviewerFocusArtifact,
+        resolveDeliveryMessageRef
+      }
+    );
+
+    expect(refreshCalls).toHaveLength(1);
+    expect(String((refreshCalls[0] as { reviewerStartupPrompt?: unknown }).reviewerStartupPrompt))
+      .toContain("Brief should still appear.");
+    expect(String((refreshCalls[0] as { reviewerStartupPrompt?: unknown }).reviewerStartupPrompt))
+      .not.toContain("Reviewer Focus (bridged from task artifact `reviewer-focus.json`):");
+    expect(result.retried).toBe(false);
+  });
+
+  it("keeps delivery fail-open when optional reviewer artifacts cannot be read", async () => {
+    const refreshCalls: unknown[] = [];
+    const emitCalls: unknown[] = [];
+
+    const result = await executePassDelivery(
+      {
+        bubbleId: "b_delivery_v11_01",
+        bubbleConfig: createBubbleConfig("fresh"),
+        sessionsPath: "/tmp/repo/.pairflow/runtime/sessions.json",
+        reviewerBriefArtifactPath: "/tmp/unreadable-brief.md",
+        reviewerFocusArtifactPath: "/tmp/unreadable-focus.json",
+        envelope: createEnvelope(),
+        senderRole: "implementer",
+        recipientRole: "reviewer"
+      },
+      {
+        refreshReviewerContext: async (input) => {
+          refreshCalls.push(input);
+          return {
+            refreshed: true
+          };
+        },
+        emitDeliveryNotificationAck: async (input) => {
+          emitCalls.push(input);
+          return {
+            status: "accepted",
+            message: "ok",
+            sessionName: "pf_bubble",
+            targetPaneIndex: 1
+          };
+        },
+        readReviewerBriefArtifact: async () => {
+          throw new Error("brief unreadable");
+        },
+        readReviewerFocusArtifact: async () => {
+          throw new Error("focus unreadable");
+        },
+        resolveDeliveryMessageRef
+      }
+    );
+
+    expect(refreshCalls).toHaveLength(1);
+    expect(refreshCalls[0]).not.toHaveProperty("reviewerStartupPrompt");
+    expect(emitCalls).toHaveLength(1);
+    expect(emitCalls[0]).not.toHaveProperty("reviewerBrief");
+    expect(emitCalls[0]).not.toHaveProperty("reviewerFocus");
+    expect(result).toEqual({
+      result: {
+        status: "accepted",
+        message: "ok",
+        sessionName: "pf_bubble",
+        targetPaneIndex: 1
+      },
+      retried: false
+    });
+  });
+
+  it("omits reviewer focus from reviewer-origin delivery", async () => {
+    const emitCalls: unknown[] = [];
+    const result = await executePassDelivery(
+      {
+        bubbleId: "b_delivery_v11_01",
+        bubbleConfig: createBubbleConfig("persistent"),
+        sessionsPath: "/tmp/repo/.pairflow/runtime/sessions.json",
+        reviewerBriefArtifactPath: "/tmp/unused-brief.md",
+        reviewerFocusArtifactPath: "/tmp/unused-focus.json",
+        envelope: createEnvelope({
+          sender: "claude",
+          recipient: "codex"
+        }),
+        senderRole: "reviewer",
+        recipientRole: "implementer"
+      },
+      {
+        emitDeliveryNotificationAck: async (input) => {
+          emitCalls.push(input);
+          return {
+            status: "accepted",
+            message: "ok",
+            sessionName: "pf_bubble",
+            targetPaneIndex: 1
+          };
+        },
+        readReviewerBriefArtifact,
+        readReviewerFocusArtifact,
+        resolveDeliveryMessageRef
+      }
+    );
+
+    expect(emitCalls).toHaveLength(1);
+    expect(emitCalls[0]).not.toHaveProperty("reviewerFocus");
+    expect(result.retried).toBe(false);
+  });
+
   it("retries once on unconfirmed delivery during implementer->reviewer handoff", async () => {
     const calls: unknown[] = [];
     const emitDeliveryNotificationAck: NonNullable<

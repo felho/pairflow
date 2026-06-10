@@ -8,6 +8,8 @@ import { renderBubbleConfigToml } from "../../../src/config/bubbleConfig.js";
 import { emitConvergedFromWorkspaceCommandOrchestration as emitConvergedFromWorkspace } from "../../../src/v11/application/converged/convergedCommandOrchestration.js";
 import { emitPassFromWorkspace } from "../../../src/v11/application/pass/passCommandOrchestration.js";
 import { runAgentEmitCommand } from "../../../src/cli/commands/agent/emit.js";
+import { emitActorProtocolFromWorkspace } from "../../../src/v11/application/actorProtocol/emitActorProtocol.js";
+import { resolveActorEmitContextByBubbleId } from "../../../src/v11/defaults/actorProtocol/actorEmitContextDefaults.js";
 import { createBubble } from "../../../src/v11/defaults/create/createBubbleApi.js";
 import { submitMetaReviewResult } from "../../../src/v11/defaults/metaReview/metaReviewApi.js";
 import { applyMetaReviewGateOnConvergence } from "../../../src/v11/defaults/metaReviewGate/metaReviewGateApi.js";
@@ -414,10 +416,7 @@ describe("restart recovery", () => {
     expect(result.human_question.delivery?.status).toBe("rejected");
   });
 
-  it(
-    "mints fresh reviewer authority on restart and rejects the pre-restart handoff",
-    { timeout: 15_000 },
-    async () => {
+  it("mints fresh reviewer authority on restart and rejects the pre-restart handoff", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupRunningBubbleFixture({
       repoPath,
@@ -495,47 +494,63 @@ describe("restart recovery", () => {
       reviewerExecutionContext.execution_id
     );
 
+    const authoritativeContext = await resolveActorEmitContextByBubbleId({
+      bubbleId: bubble.bubbleId,
+      repoPath
+    });
     await expect(
-      runAgentEmitCommand([
-        "--kind",
-        "pass",
-        "--repo",
-        repoPath,
-        "--bubble-id",
-        bubble.bubbleId,
-        "--handoff-id",
-        reviewerExecutionContext.handoff_id,
-        "--execution-id",
-        reviewerExecutionContext.execution_id,
-        "--summary",
-        "Is the stale reviewer authority still valid?",
-        "--no-findings"
-      ])
+      emitActorProtocolFromWorkspace({
+        input: {
+          kind: "pass",
+          repo: repoPath,
+          bubble_id: bubble.bubbleId,
+          handoff_id: reviewerExecutionContext.handoff_id,
+          execution_id: reviewerExecutionContext.execution_id,
+          summary: "Is the stale reviewer authority still valid?",
+          no_findings: true
+        },
+        authoritativeContext
+      })
     ).rejects.toThrow(/Canonical actor emit handoff mismatch/u);
 
-    const result = await runAgentEmitCommand([
-      "--kind",
-      "pass",
-      "--repo",
-      repoPath,
-      "--bubble-id",
-      bubble.bubbleId,
-      "--handoff-id",
-      "reviewer:b_restart_reviewer_01:round:1:attempt:2",
-      "--execution-id",
-      String(restarted.state.execution_context?.execution_id),
-      "--summary",
-      "Use the fresh reviewer authority after resume.",
-      "--no-findings"
-    ]);
+    expect(authoritativeContext.handoff_id).toBe(
+      "reviewer:b_restart_reviewer_01:round:1:attempt:2"
+    );
+    expect(authoritativeContext.execution_id).toBe(
+      restarted.state.execution_context?.execution_id
+    );
+    expect(authoritativeContext.expected_role).toBe("reviewer");
 
-    expect(result?.kind).toBe("pass");
-    if (result === null || result.kind !== "pass") {
+    const freshResult = await emitActorProtocolFromWorkspace(
+      {
+        input: {
+          kind: "pass",
+          repo: repoPath,
+          bubble_id: bubble.bubbleId,
+          handoff_id: authoritativeContext.handoff_id,
+          execution_id: authoritativeContext.execution_id,
+          summary: "Use the fresh reviewer authority after resume.",
+          no_findings: true
+        },
+        authoritativeContext
+      },
+      {
+        pass: {
+          emitDeliveryNotificationAck: () =>
+            Promise.resolve({
+              status: "accepted",
+              message: "ok"
+            })
+        }
+      }
+    );
+
+    expect(freshResult.kind).toBe("pass");
+    if (freshResult.kind !== "pass") {
       throw new Error("Expected pass result.");
     }
-    expect(result.pass.state.active_role).toBe("implementer");
-    }
-  );
+    expect(freshResult.pass.state.active_role).toBe("implementer");
+  });
 
   it("keeps canonical meta-review submit routeable after delivery failure, restart recovery, and missing pane rebinding", async () => {
     const repoPath = await createTempRepo();

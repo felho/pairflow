@@ -159,4 +159,72 @@ describe("runAutoConvergeFlow", () => {
 
     expect(finalizeCalled).toBe(false);
   });
+
+  it("stops before converged execution and finalization when preparation fails", async () => {
+    let executeCalled = false;
+    let finalizeCalled = false;
+
+    await expect(() =>
+      runAutoConvergeFlow(
+        {
+          summary: "auto-converge",
+          refs: [],
+          now: new Date("2026-03-19T12:00:00.000Z"),
+          nowIso: "2026-03-19T12:00:00.000Z",
+          bubbleId: "b_123",
+          bubbleInstanceId: "inst_1",
+          repoPath: "/tmp/repo",
+          bubbleConfig: {
+            review_artifact_type: "code"
+          } as never,
+          worktreePath: "/tmp/worktree",
+          artifactsDir: "/tmp/artifacts",
+          taskArtifactPath: "/tmp/task.md",
+          statePath: "/tmp/state.json",
+          reviewVerificationArtifactPath: "/tmp/review-verification.json",
+          handoff: {
+            senderRole: "reviewer",
+            senderAgent: "claude",
+            envelopeRound: 2
+          },
+          reviewer: "claude",
+          implementer: "codex",
+          roundRoleHistory: [],
+          transcript: [],
+          severityGateRound: 2,
+          expectedStateFingerprint: "fp_initial",
+          reviewerVerification: undefined,
+          passIntent: "review",
+          inferredIntent: true,
+          hasFindings: false,
+          noFindings: true,
+          findings: [],
+          repeatCleanReasonCode: "REPEAT_CLEAN_AUTOCONVERGE_TRIGGERED",
+          repeatCleanReasonDetail: "previous_reviewer_pass_clean",
+          repeatCleanTrigger: true,
+          mostRecentPreviousReviewerCleanPassEnvelope: true,
+          createError: (message: PairflowCommandErrorInput) => new Error(toErrorMessage(message)),
+          onDownstreamRejected: (reason) => {
+            throw new Error(`unexpected:${reason}`);
+          }
+        },
+        {
+          prepareRepeatCleanAutoConverge: async () => {
+            throw new Error("policy rejected");
+          },
+          executeAutoConvergeConverged: async () => {
+            executeCalled = true;
+            return {} as never;
+          },
+          finalizeAutoConvergePass: async () => {
+            finalizeCalled = true;
+            return { ok: true };
+          }
+        }
+      )
+    ).rejects.toThrow("policy rejected");
+
+    expect(executeCalled).toBe(false);
+    expect(finalizeCalled).toBe(false);
+  });
 });
