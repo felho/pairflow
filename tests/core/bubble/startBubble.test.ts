@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import { homedir, tmpdir } from "node:os";
 import { basename, join } from "node:path";
@@ -7,6 +8,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { renderBubbleConfigToml } from "../../../src/config/bubbleConfig.js";
 import { createBubble } from "../../../src/v11/defaults/create/createBubbleApi.js";
+import type { BubbleCreateResult } from "../../../src/v11/application/create/createBubble.js";
 import "../../../src/v11/defaults/start/startBubbleDefaults.js";
 import { buildMetaReviewExecutionContext } from "../../../src/v11/shared/metaReview/metaReviewExecutionContext.js";
 import {
@@ -193,6 +195,85 @@ async function updateBubbleState(
       expectedState: loaded.state.state
     }
   );
+}
+
+function normalizeTestBubbleId(id: string): string {
+  const trimmed = id.trim();
+  if (/^[a-z][a-z0-9_-]{2,39}$/u.test(trimmed)) {
+    return trimmed;
+  }
+
+  const hashSuffix = createHash("sha1")
+    .update(trimmed)
+    .digest("hex")
+    .slice(0, 10);
+  const prefixMaxLength = 40 - 1 - hashSuffix.length;
+  const normalizedPrefix = trimmed
+    .toLowerCase()
+    .replace(/[^a-z0-9_-]/gu, "-")
+    .replace(/^[^a-z]+/u, "")
+    .slice(0, prefixMaxLength)
+    .replace(/[-_]+$/u, "");
+  const safePrefix =
+    normalizedPrefix.length >= 3 ? normalizedPrefix : "bubble";
+
+  return `${safePrefix}-${hashSuffix}`.slice(0, 40);
+}
+
+async function setupRunningBubbleResumeFixture(input: {
+  repoPath: string;
+  bubbleId: string;
+  task: string;
+  reviewerBrief?: string;
+  reviewArtifactType?: "code" | "document";
+}): Promise<BubbleCreateResult> {
+  const created = await createBubble({
+    id: normalizeTestBubbleId(input.bubbleId),
+    repoPath: input.repoPath,
+    baseBranch: "main",
+    reviewArtifactType: input.reviewArtifactType ?? "code",
+    task: input.task,
+    ...(input.reviewerBrief !== undefined
+      ? { reviewerBrief: input.reviewerBrief }
+      : {}),
+    cwd: input.repoPath
+  });
+  const loaded = await readStateSnapshot(created.paths.statePath);
+  const startedAt = "2026-02-21T12:00:00.000Z";
+
+  await writeStateSnapshot(
+    created.paths.statePath,
+    {
+      ...loaded.state,
+      state: "RUNNING",
+      round: 1,
+      active_agent: created.config.agents.implementer,
+      active_role: "implementer",
+      execution_context: buildRunningExecutionContext({
+        bubbleId: created.bubbleId,
+        round: 1,
+        activeRole: "implementer",
+        startedAt,
+        watchdogTimeoutMinutes: created.config.watchdog_timeout_minutes
+      }),
+      active_since: startedAt,
+      last_command_at: startedAt,
+      round_role_history: [
+        {
+          round: 1,
+          implementer: created.config.agents.implementer,
+          reviewer: created.config.agents.reviewer,
+          switched_at: startedAt
+        }
+      ]
+    },
+    {
+      expectedFingerprint: loaded.fingerprint,
+      expectedState: "CREATED"
+    }
+  );
+
+  return created;
 }
 
 function expectNoForbiddenReviewerCommandGateTokens(text: string | undefined): void {
@@ -1422,7 +1503,7 @@ describe("startBubble", () => {
 
   it("resumes a remote clone bubble with verified remote clone workspace authority", async () => {
     const repoPath = await createTempRepo();
-    const bubble = await setupRunningBubbleFixture({
+    const bubble = await setupRunningBubbleResumeFixture({
       repoPath,
       bubbleId: "b_start_remote_clone_resume_01",
       task: "Remote clone resume uses verified clone root as tmux workspace authority"
@@ -2425,7 +2506,7 @@ describe("startBubble", () => {
     ] as const;
 
     for (const stateValue of resumableStates) {
-      const bubble = await setupRunningBubbleFixture({
+      const bubble = await setupRunningBubbleResumeFixture({
         repoPath,
         bubbleId: `b_start_clone_resume_${stateValue.toLowerCase()}`,
         task: `Clone resume ${stateValue}`
@@ -3742,7 +3823,7 @@ describe("startBubble", () => {
 
   it("resumes RUNNING bubble with resume prompts and active implementer kickoff", async () => {
     const repoPath = await createTempRepo();
-    const bubble = await setupRunningBubbleFixture({
+    const bubble = await setupRunningBubbleResumeFixture({
       repoPath,
       bubbleId: "b_start_resume_01",
       task: [
@@ -3859,7 +3940,7 @@ describe("startBubble", () => {
 
   it("resumes from canonical workspace authority returned by the runtime-session claim", async () => {
     const repoPath = await createTempRepo();
-    const bubble = await setupRunningBubbleFixture({
+    const bubble = await setupRunningBubbleResumeFixture({
       repoPath,
       bubbleId: "b_start_resume_workspace_authority_01",
       task: "Resume bubble keeps persisted canonical workspace authority"
@@ -3932,7 +4013,7 @@ describe("startBubble", () => {
 
   it("resumes from persisted clone workspace authority when runtime session is explicit", async () => {
     const repoPath = await createTempRepo();
-    const bubble = await setupRunningBubbleFixture({
+    const bubble = await setupRunningBubbleResumeFixture({
       repoPath,
       bubbleId: "b_start_resume_clone_workspace_authority_01",
       task: "Resume clone workspace authority uses the persisted canonical launch workspace"
@@ -3997,7 +4078,7 @@ describe("startBubble", () => {
 
   it("fails closed when clone resume only retains worktree fallback without workspacePath", async () => {
     const repoPath = await createTempRepo();
-    const bubble = await setupRunningBubbleFixture({
+    const bubble = await setupRunningBubbleResumeFixture({
       repoPath,
       bubbleId: "b_start_resume_clone_workspace_missing_path_01",
       task: "Resume clone workspace authority requires explicit workspacePath"
@@ -4070,7 +4151,7 @@ describe("startBubble", () => {
 
   it("fails closed when clone resume has no persisted runtime session authority", async () => {
     const repoPath = await createTempRepo();
-    const bubble = await setupRunningBubbleFixture({
+    const bubble = await setupRunningBubbleResumeFixture({
       repoPath,
       bubbleId: "b_start_resume_clone_runtime_session_missing_01",
       task: "Clone resume requires an existing persisted runtime session authority"
@@ -4146,7 +4227,7 @@ describe("startBubble", () => {
 
   it("preserves persisted canonical workspace authority when reclaiming a stale resume session", async () => {
     const repoPath = await createTempRepo();
-    const bubble = await setupRunningBubbleFixture({
+    const bubble = await setupRunningBubbleResumeFixture({
       repoPath,
       bubbleId: "b_start_resume_workspace_reclaim_01",
       task: "Resume reclaim keeps persisted canonical workspace authority"
@@ -4200,7 +4281,7 @@ describe("startBubble", () => {
 
   it("fails stale resume reclaim when explicit workspacePath matches worktreePath but workspaceKind is missing", async () => {
     const repoPath = await createTempRepo();
-    const bubble = await setupRunningBubbleFixture({
+    const bubble = await setupRunningBubbleResumeFixture({
       repoPath,
       bubbleId: "b_start_resume_workspace_reclaim_worktree_missing_kind_01",
       task: "Resume reclaim rejects same-path authority without explicit workspaceKind"
@@ -4260,7 +4341,7 @@ describe("startBubble", () => {
 
   it("fails stale resume reclaim when persisted workspacePath matches worktreePath but workspaceKind is missing", async () => {
     const repoPath = await createTempRepo();
-    const bubble = await setupRunningBubbleFixture({
+    const bubble = await setupRunningBubbleResumeFixture({
       repoPath,
       bubbleId: "b_start_resume_workspace_reclaim_missing_kind_01",
       task: "Resume reclaim rejects missing workspaceKind on explicit same-path authority"
@@ -4325,7 +4406,7 @@ describe("startBubble", () => {
 
   it("fails stale resume reclaim when clone runtime session only retains worktree fallback without workspacePath", async () => {
     const repoPath = await createTempRepo();
-    const bubble = await setupRunningBubbleFixture({
+    const bubble = await setupRunningBubbleResumeFixture({
       repoPath,
       bubbleId: "b_start_resume_workspace_reclaim_clone_missing_path_01",
       task: "Resume reclaim rejects clone stale session records without explicit workspacePath"
@@ -4392,7 +4473,7 @@ describe("startBubble", () => {
 
   it("skips reviewer focus injection in resume mode when reviewer-focus artifact is schema-invalid", async () => {
     const repoPath = await createTempRepo();
-    const bubble = await setupRunningBubbleFixture({
+    const bubble = await setupRunningBubbleResumeFixture({
       repoPath,
       bubbleId: "b_start_resume_focus_invalid_artifact_01",
       task: [
@@ -4443,7 +4524,7 @@ describe("startBubble", () => {
 
   it("uses docs-only runtime evidence guidance in resume implementer prompts", async () => {
     const repoPath = await createTempRepo();
-    const bubble = await setupRunningBubbleFixture({
+    const bubble = await setupRunningBubbleResumeFixture({
       repoPath,
       bubbleId: "b_start_resume_docs_01",
       task: "Docs-only resume bubble",
@@ -4514,7 +4595,7 @@ describe("startBubble", () => {
 
   it("routes resume kickoff to reviewer when reviewer is active in RUNNING", async () => {
     const repoPath = await createTempRepo();
-    const bubble = await setupRunningBubbleFixture({
+    const bubble = await setupRunningBubbleResumeFixture({
       repoPath,
       bubbleId: "b_start_resume_03",
       task: "Resume reviewer active"
@@ -4556,7 +4637,7 @@ describe("startBubble", () => {
 
   it("injects clean-path round>=2 command gate into reviewer resume kickoff", async () => {
     const repoPath = await createTempRepo();
-    const bubble = await setupRunningBubbleFixture({
+    const bubble = await setupRunningBubbleResumeFixture({
       repoPath,
       bubbleId: "b_start_resume_r2_clean_01",
       task: "Resume reviewer active round 2 clean"
@@ -4595,7 +4676,7 @@ describe("startBubble", () => {
 
   it("injects findings-path round>=2 command gate into reviewer resume kickoff", async () => {
     const repoPath = await createTempRepo();
-    const bubble = await setupRunningBubbleFixture({
+    const bubble = await setupRunningBubbleResumeFixture({
       repoPath,
       bubbleId: "b_start_resume_r2_findings_01",
       task: "Resume reviewer active round 2 findings"
@@ -4634,7 +4715,7 @@ describe("startBubble", () => {
 
   it("defaults to findings-path projection when resume summary cannot be parsed", async () => {
     const repoPath = await createTempRepo();
-    const bubble = await setupRunningBubbleFixture({
+    const bubble = await setupRunningBubbleResumeFixture({
       repoPath,
       bubbleId: "b_start_resume_r2_parse_fallback_01",
       task: "Resume reviewer projection parse fallback"
@@ -4672,12 +4753,12 @@ describe("startBubble", () => {
 
   it("keeps shared command-gate invariants across round>=2 clean and findings resume-kickoff projections", async () => {
     const repoPath = await createTempRepo();
-    const cleanBubble = await setupRunningBubbleFixture({
+    const cleanBubble = await setupRunningBubbleResumeFixture({
       repoPath,
       bubbleId: "b_start_resume_r2_proj_clean_01",
       task: "Resume reviewer projection clean"
     });
-    const findingsBubble = await setupRunningBubbleFixture({
+    const findingsBubble = await setupRunningBubbleResumeFixture({
       repoPath,
       bubbleId: "b_start_resume_r2_proj_findings_01",
       task: "Resume reviewer projection findings"
@@ -4988,7 +5069,7 @@ describe("startBubble", () => {
     ] as const;
 
     for (const stateValue of resumableStates) {
-      const bubble = await setupRunningBubbleFixture({
+      const bubble = await setupRunningBubbleResumeFixture({
         repoPath,
         bubbleId: `b_start_resume_state_${stateValue.toLowerCase()}`,
         task: `Resume ${stateValue}`
@@ -5025,7 +5106,7 @@ describe("startBubble", () => {
 
   it("sends explicit meta-reviewer kickoff when resuming RUNNING meta-review authority", async () => {
     const repoPath = await createTempRepo();
-    const bubble = await setupRunningBubbleFixture({
+    const bubble = await setupRunningBubbleResumeFixture({
       repoPath,
       bubbleId: "b_start_resume_meta_01",
       task: "Resume meta-review running"
@@ -5103,7 +5184,7 @@ describe("startBubble", () => {
 
   it("keeps resume start robust when injected summary builder throws", async () => {
     const repoPath = await createTempRepo();
-    const bubble = await setupRunningBubbleFixture({
+    const bubble = await setupRunningBubbleResumeFixture({
       repoPath,
       bubbleId: "b_start_resume_05",
       task: "Resume summary fallback"
@@ -5134,7 +5215,7 @@ describe("startBubble", () => {
 
   it("keeps runtime state unchanged when resume tmux launch fails", async () => {
     const repoPath = await createTempRepo();
-    const bubble = await setupRunningBubbleFixture({
+    const bubble = await setupRunningBubbleResumeFixture({
       repoPath,
       bubbleId: "b_start_resume_02",
       task: "Resume bubble failure"
