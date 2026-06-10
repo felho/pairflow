@@ -45,6 +45,9 @@ async function createCiFixture(): Promise<{ fixtureDir: string; commandLog: stri
       "  exit 42",
       "fi",
       `echo "$*" >> "${commandLog}"`,
+      "if [[ \"${PAIRFLOW_TEST_FAIL_PNPM_ARGS:-}\" == \"$*\" ]]; then",
+      "  exit 37",
+      "fi",
       "exit 0",
       ""
     ].join("\n"),
@@ -83,7 +86,10 @@ describe("ci-local commit range integration", () => {
       "commit-policy:validate-range -- --from base --to head"
     );
     expect(commands).toContain("install --frozen-lockfile");
-    expect(commands).toContain("check");
+    expect(commands).toContain("codegen:reviewer-ontology");
+    expect(commands).toContain("exec eslint .");
+    expect(commands).toContain("exec tsc --noEmit");
+    expect(commands).toContain("test");
   });
 
   it("fails closed before side-effectful steps when a range is required but missing", async () => {
@@ -148,6 +154,32 @@ describe("ci-local commit range integration", () => {
 
     const commands = (await readFile(commandLog, "utf8")).trim().split("\n");
     expect(commands[0]).toBe("install --frozen-lockfile");
+    expect(commands[1]).toBe("codegen:reviewer-ontology");
+    expect(commands).toContain("exec eslint .");
+    expect(commands).toContain("exec tsc --noEmit");
+    expect(commands).toContain("test");
+  });
+
+  it("waits for every parallel quality check before reporting failure", async () => {
+    const { fixtureDir, commandLog } = await createCiFixture();
+
+    let failure: unknown;
+    try {
+      await runCiFixture(fixtureDir, {
+        PAIRFLOW_TEST_FAIL_PNPM_ARGS: "exec eslint ."
+      });
+    } catch (error) {
+      failure = error;
+    }
+
+    expect(failure).toMatchObject({ code: 1 });
+    expect(outputFrom(failure, "stdout")).toContain("quality suite failed");
+
+    const commands = (await readFile(commandLog, "utf8")).trim().split("\n");
+    expect(commands).toContain("exec eslint .");
+    expect(commands).toContain("exec tsc --noEmit");
+    expect(commands).toContain("test");
+    expect(commands).not.toContain("fitness:check:ci");
   });
 
   it("hides local codex from ci child commands by default", async () => {

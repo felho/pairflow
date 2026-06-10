@@ -247,6 +247,120 @@ run_step() {
   echo
 }
 
+write_evidence_header() {
+  local log_file="$1"
+  local command_label="$2"
+  local timestamp_utc
+  local git_sha
+
+  timestamp_utc="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+  git_sha="$(git rev-parse --verify HEAD 2>/dev/null || echo UNKNOWN)"
+
+  {
+    echo "PAIRFLOW_EVIDENCE_HEADER_BEGIN"
+    echo "PAIRFLOW_EVIDENCE_TIMESTAMP_UTC=$timestamp_utc"
+    echo "PAIRFLOW_EVIDENCE_GIT_SHA=$git_sha"
+    echo "PAIRFLOW_EVIDENCE_COMMAND=$command_label"
+    echo "PAIRFLOW_EVIDENCE_HEADER_END"
+  } >"$log_file"
+}
+
+run_quality_child() {
+  local child_id="$1"
+  local command_label="$2"
+  shift 2
+  local log_file="$RUN_DIR/check-${child_id}.log"
+  local command_exit_code
+  local command_status
+
+  mkdir -p "$(dirname "$log_file")"
+  write_evidence_header "$log_file" "$command_label"
+
+  set +e
+  if [[ "$CI_VERBOSE" == "1" ]]; then
+    "$@" 2>&1 | tee -a "$log_file"
+    command_exit_code=${PIPESTATUS[0]}
+  else
+    "$@" >>"$log_file" 2>&1
+    command_exit_code=$?
+  fi
+  set -e
+
+  if [[ "$command_exit_code" -eq 0 ]]; then
+    command_status="pass"
+  else
+    command_status="failed"
+  fi
+
+  echo "PAIRFLOW_EVIDENCE_COMMAND_RESULT command=\"$command_label\" status=$command_status exit=$command_exit_code" >>"$log_file"
+  echo "PAIRFLOW_EVIDENCE_EXIT=$command_exit_code" >>"$log_file"
+
+  return "$command_exit_code"
+}
+
+run_quality_suite() {
+  local step_id="check"
+  local step_label="quality suite (lint/typecheck/test)"
+  local started_at
+  local finished_at
+  local duration_s
+  local lint_pid
+  local typecheck_pid
+  local test_pid
+  local lint_exit=0
+  local typecheck_exit=0
+  local test_exit=0
+  local failed=0
+
+  echo "ci:local step: $step_label"
+  echo "ci:local log: $RUN_DIR/check-{codegen,lint,typecheck,test}.log"
+  started_at="$(date +%s)"
+
+  if run_quality_child "codegen" "ci:local codegen" pnpm codegen:reviewer-ontology; then
+    :
+  else
+    local codegen_exit=$?
+    print_failure_summary "$step_id" "$step_label" "$RUN_DIR/check-codegen.log" "$codegen_exit" "pnpm codegen:reviewer-ontology"
+    exit "$codegen_exit"
+  fi
+
+  run_quality_child "lint" "ci:local lint" pnpm exec eslint . &
+  lint_pid=$!
+  run_quality_child "typecheck" "ci:local typecheck" pnpm exec tsc --noEmit &
+  typecheck_pid=$!
+  run_quality_child "test" "ci:local test" pnpm test &
+  test_pid=$!
+
+  wait "$lint_pid" || lint_exit=$?
+  wait "$typecheck_pid" || typecheck_exit=$?
+  wait "$test_pid" || test_exit=$?
+
+  if [[ "$lint_exit" -ne 0 ]]; then
+    failed=1
+    print_failure_summary "$step_id" "$step_label: lint" "$RUN_DIR/check-lint.log" "$lint_exit" "pnpm exec eslint ."
+  fi
+  if [[ "$typecheck_exit" -ne 0 ]]; then
+    failed=1
+    print_failure_summary "$step_id" "$step_label: typecheck" "$RUN_DIR/check-typecheck.log" "$typecheck_exit" "pnpm exec tsc --noEmit"
+  fi
+  if [[ "$test_exit" -ne 0 ]]; then
+    failed=1
+    print_failure_summary "$step_id" "$step_label: test" "$RUN_DIR/check-test.log" "$test_exit" "pnpm test"
+  fi
+  if [[ "$failed" -ne 0 ]]; then
+    echo "ci:local quality suite failed after all parallel checks completed"
+    echo "  lint_exit: $lint_exit"
+    echo "  typecheck_exit: $typecheck_exit"
+    echo "  test_exit: $test_exit"
+    exit 1
+  fi
+
+  finished_at="$(date +%s)"
+  duration_s=$((finished_at - started_at))
+  echo "ci:local step passed: $step_label (${duration_s}s)"
+  echo
+}
+
 echo "ci:local start"
 echo "ci:local run logs: $RUN_DIR"
 if [[ "$CI_VERBOSE" != "1" ]]; then
@@ -274,7 +388,7 @@ else
 fi
 
 run_step "install" "dependency lock validation" pnpm install --frozen-lockfile
-run_step "check" "quality suite (pnpm check)" pnpm check
+run_quality_suite
 
 run_step "fitness" "fitness gate" pnpm fitness:check:ci
 run_step "smoke" "almost-e2e smoke suite" pnpm test:smoke
