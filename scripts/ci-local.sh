@@ -361,6 +361,48 @@ run_quality_suite() {
   echo
 }
 
+run_final_validation_suite() {
+  local step_label="final validation suite (fitness/smoke)"
+  local started_at
+  local finished_at
+  local duration_s
+  local fitness_pid
+  local smoke_pid
+  local fitness_exit=0
+  local smoke_exit=0
+  local failed=0
+
+  echo "ci:local step: $step_label"
+  echo "ci:local log: $RUN_DIR/{fitness,smoke}.log"
+  started_at="$(date +%s)"
+
+  run_step "fitness" "fitness gate" pnpm fitness:check:ci &
+  fitness_pid=$!
+  run_step "smoke" "almost-e2e smoke suite" pnpm test:smoke &
+  smoke_pid=$!
+
+  wait "$fitness_pid" || fitness_exit=$?
+  wait "$smoke_pid" || smoke_exit=$?
+
+  if [[ "$fitness_exit" -ne 0 ]]; then
+    failed=1
+  fi
+  if [[ "$smoke_exit" -ne 0 ]]; then
+    failed=1
+  fi
+  if [[ "$failed" -ne 0 ]]; then
+    echo "ci:local final validation suite failed after all parallel checks completed"
+    echo "  fitness_exit: $fitness_exit"
+    echo "  smoke_exit: $smoke_exit"
+    exit 1
+  fi
+
+  finished_at="$(date +%s)"
+  duration_s=$((finished_at - started_at))
+  echo "ci:local step passed: $step_label (${duration_s}s)"
+  echo
+}
+
 echo "ci:local start"
 echo "ci:local run logs: $RUN_DIR"
 if [[ "$CI_VERBOSE" != "1" ]]; then
@@ -389,8 +431,6 @@ fi
 
 run_step "install" "dependency lock validation" pnpm install --frozen-lockfile
 run_quality_suite
-
-run_step "fitness" "fitness gate" pnpm fitness:check:ci
-run_step "smoke" "almost-e2e smoke suite" pnpm test:smoke
+run_final_validation_suite
 
 echo "ci:local passed"
