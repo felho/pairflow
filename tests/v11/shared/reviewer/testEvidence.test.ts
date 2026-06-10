@@ -17,7 +17,8 @@ import {
 import type { BubbleConfig } from "../../../../src/v11/shared/config/bubbleConfigTypes.js";
 import type { ReviewArtifactType } from "../../../../src/v11/shared/config/bubbleConfigVocabulary.js";
 import { initGitRepository } from "../../../helpers/git.js";
-import { setupRunningBubbleFixture } from "../../../helpers/bubble.js";
+import { createBubble } from "../../../../src/v11/defaults/create/createBubbleApi.js";
+import type { BubbleCreateResult } from "../../../../src/v11/application/create/createBubble.js";
 import { writeEvidenceLog } from "../../../helpers/evidence.js";
 
 const tempDirs: string[] = [];
@@ -27,6 +28,27 @@ async function createTempRepo(): Promise<string> {
   tempDirs.push(root);
   await initGitRepository(root);
   return root;
+}
+
+async function setupReviewerEvidenceFixture(input: {
+  repoPath: string;
+  bubbleId: string;
+  task: string;
+  reviewArtifactType?: "code" | "document";
+}): Promise<{ bubble: BubbleCreateResult; worktreePath: string }> {
+  const bubble = await createBubble({
+    id: input.bubbleId,
+    repoPath: input.repoPath,
+    baseBranch: "main",
+    reviewArtifactType: input.reviewArtifactType ?? "code",
+    task: input.task,
+    cwd: input.repoPath
+  });
+
+  return {
+    bubble,
+    worktreePath: input.repoPath
+  };
 }
 
 afterEach(async () => {
@@ -40,7 +62,7 @@ afterEach(async () => {
 describe("reviewer test evidence verification", () => {
   it("short-circuits docs-only verification without requiring runtime evidence", async () => {
     const repoPath = await createTempRepo();
-    const bubble = await setupRunningBubbleFixture({
+    const { bubble, worktreePath } = await setupReviewerEvidenceFixture({
       repoPath,
       bubbleId: "b_test_evidence_docs_01",
       task: "Docs-only task",
@@ -50,7 +72,7 @@ describe("reviewer test evidence verification", () => {
     const artifact = await verifyImplementerTestEvidence({
       bubbleId: bubble.bubbleId,
       bubbleConfig: bubble.config,
-      worktreePath: bubble.paths.worktreePath,
+      worktreePath,
       repoPath,
       envelope: {
         id: "msg_docs_001",
@@ -82,7 +104,7 @@ describe("reviewer test evidence verification", () => {
 
   it("keeps docs-only resolver output trusted without freshness checks", async () => {
     const repoPath = await createTempRepo();
-    const bubble = await setupRunningBubbleFixture({
+    const { bubble, worktreePath } = await setupReviewerEvidenceFixture({
       repoPath,
       bubbleId: "b_test_evidence_docs_02",
       task: "Docs-only task",
@@ -92,7 +114,7 @@ describe("reviewer test evidence verification", () => {
     const artifact = await verifyImplementerTestEvidence({
       bubbleId: bubble.bubbleId,
       bubbleConfig: bubble.config,
-      worktreePath: bubble.paths.worktreePath,
+      worktreePath,
       repoPath,
       envelope: {
         id: "msg_docs_002",
@@ -111,7 +133,7 @@ describe("reviewer test evidence verification", () => {
 
     const explicitDirective = await resolveReviewerTestExecutionDirectiveFromArtifact({
       artifact,
-      worktreePath: bubble.paths.worktreePath,
+      worktreePath,
       reviewArtifactType: "document"
     });
     expect(explicitDirective.skip_full_rerun).toBe(true);
@@ -123,7 +145,7 @@ describe("reviewer test evidence verification", () => {
 
     const compatibilityDirective = await resolveReviewerTestExecutionDirectiveFromArtifact({
       artifact,
-      worktreePath: bubble.paths.worktreePath
+      worktreePath
     });
     expect(compatibilityDirective.skip_full_rerun).toBe(true);
     expect(compatibilityDirective.reason_code).toBe("no_trigger");
@@ -132,7 +154,7 @@ describe("reviewer test evidence verification", () => {
 
   it("bypasses freshness check for docs-only directives even after worktree changes", async () => {
     const repoPath = await createTempRepo();
-    const bubble = await setupRunningBubbleFixture({
+    const { bubble, worktreePath } = await setupReviewerEvidenceFixture({
       repoPath,
       bubbleId: "b_test_evidence_docs_03",
       task: "Docs-only task",
@@ -142,7 +164,7 @@ describe("reviewer test evidence verification", () => {
     const artifact = await verifyImplementerTestEvidence({
       bubbleId: bubble.bubbleId,
       bubbleConfig: bubble.config,
-      worktreePath: bubble.paths.worktreePath,
+      worktreePath,
       repoPath,
       envelope: {
         id: "msg_docs_003",
@@ -159,11 +181,11 @@ describe("reviewer test evidence verification", () => {
       }
     });
 
-    await writeFile(join(bubble.paths.worktreePath, "docs-only-change.txt"), "x\n", "utf8");
+    await writeFile(join(worktreePath, "docs-only-change.txt"), "x\n", "utf8");
 
     const explicitDirective = await resolveReviewerTestExecutionDirectiveFromArtifact({
       artifact,
-      worktreePath: bubble.paths.worktreePath,
+      worktreePath,
       reviewArtifactType: "document"
     });
     expect(explicitDirective.skip_full_rerun).toBe(true);
@@ -172,7 +194,7 @@ describe("reviewer test evidence verification", () => {
 
     const compatibilityDirective = await resolveReviewerTestExecutionDirectiveFromArtifact({
       artifact,
-      worktreePath: bubble.paths.worktreePath
+      worktreePath
     });
     expect(compatibilityDirective.skip_full_rerun).toBe(true);
     expect(compatibilityDirective.reason_code).toBe("no_trigger");
@@ -181,7 +203,7 @@ describe("reviewer test evidence verification", () => {
 
   it("keeps strict behavior for explicit code review_artifact_type", async () => {
     const repoPath = await createTempRepo();
-    const bubble = await setupRunningBubbleFixture({
+    const { bubble, worktreePath } = await setupReviewerEvidenceFixture({
       repoPath,
       bubbleId: "b_test_evidence_code_01",
       task: "Code task",
@@ -191,7 +213,7 @@ describe("reviewer test evidence verification", () => {
     const artifact = await verifyImplementerTestEvidence({
       bubbleId: bubble.bubbleId,
       bubbleConfig: bubble.config,
-      worktreePath: bubble.paths.worktreePath,
+      worktreePath,
       repoPath,
       envelope: {
         id: "msg_code_001",
@@ -214,7 +236,7 @@ describe("reviewer test evidence verification", () => {
 
   it("keeps strict behavior when review_artifact_type is missing or invalid", async () => {
     const repoPath = await createTempRepo();
-    const bubble = await setupRunningBubbleFixture({
+    const { bubble, worktreePath } = await setupReviewerEvidenceFixture({
       repoPath,
       bubbleId: "b_test_evidence_invalid_01",
       task: "Invalid type task",
@@ -228,7 +250,7 @@ describe("reviewer test evidence verification", () => {
     const missingTypeArtifact = await verifyImplementerTestEvidence({
       bubbleId: bubble.bubbleId,
       bubbleConfig: missingTypeConfig,
-      worktreePath: bubble.paths.worktreePath,
+      worktreePath,
       repoPath,
       envelope: {
         id: "msg_invalid_001",
@@ -254,7 +276,7 @@ describe("reviewer test evidence verification", () => {
     const invalidTypeArtifact = await verifyImplementerTestEvidence({
       bubbleId: bubble.bubbleId,
       bubbleConfig: invalidTypeConfig,
-      worktreePath: bubble.paths.worktreePath,
+      worktreePath,
       repoPath,
       envelope: {
         id: "msg_invalid_002",
@@ -276,14 +298,14 @@ describe("reviewer test evidence verification", () => {
 
   it("marks evidence trusted when required commands include explicit success markers", async () => {
     const repoPath = await createTempRepo();
-    const bubble = await setupRunningBubbleFixture({
+    const { bubble, worktreePath } = await setupReviewerEvidenceFixture({
       repoPath,
       bubbleId: "b_test_evidence_01",
       task: "Verify test evidence"
     });
 
     const evidenceLogPath = await writeEvidenceLog(
-      bubble.paths.worktreePath,
+      worktreePath,
       "evidence.log",
       "pnpm typecheck exit=0 found 0 errors\npnpm test exit=0 406 tests passed\n",
     );
@@ -291,7 +313,7 @@ describe("reviewer test evidence verification", () => {
     const artifact = await verifyImplementerTestEvidence({
       bubbleId: bubble.bubbleId,
       bubbleConfig: bubble.config,
-      worktreePath: bubble.paths.worktreePath,
+      worktreePath,
       repoPath,
       envelope: {
         id: "msg_001",
@@ -315,7 +337,7 @@ describe("reviewer test evidence verification", () => {
 
   it("requires checks when evidence is missing", async () => {
     const repoPath = await createTempRepo();
-    const bubble = await setupRunningBubbleFixture({
+    const { bubble, worktreePath } = await setupReviewerEvidenceFixture({
       repoPath,
       bubbleId: "b_test_evidence_02",
       task: "Verify test evidence"
@@ -324,7 +346,7 @@ describe("reviewer test evidence verification", () => {
     const artifact = await verifyImplementerTestEvidence({
       bubbleId: bubble.bubbleId,
       bubbleConfig: bubble.config,
-      worktreePath: bubble.paths.worktreePath,
+      worktreePath,
       repoPath,
       envelope: {
         id: "msg_002",
@@ -347,14 +369,14 @@ describe("reviewer test evidence verification", () => {
 
   it("does not classify benign error wording as explicit command failure", async () => {
     const repoPath = await createTempRepo();
-    const bubble = await setupRunningBubbleFixture({
+    const { bubble, worktreePath } = await setupReviewerEvidenceFixture({
       repoPath,
       bubbleId: "b_test_evidence_04",
       task: "Verify false-positive handling"
     });
 
     const evidenceLogPath = await writeEvidenceLog(
-      bubble.paths.worktreePath,
+      worktreePath,
       "evidence-benign.log",
       "pnpm typecheck exit=0 found 0 errors\npnpm test exit=0 406 tests passed\n",
     );
@@ -362,7 +384,7 @@ describe("reviewer test evidence verification", () => {
     const artifact = await verifyImplementerTestEvidence({
       bubbleId: bubble.bubbleId,
       bubbleConfig: bubble.config,
-      worktreePath: bubble.paths.worktreePath,
+      worktreePath,
       repoPath,
       envelope: {
         id: "msg_004",
@@ -386,14 +408,14 @@ describe("reviewer test evidence verification", () => {
 
   it("does not treat unrelated status/code output as command exit failure", async () => {
     const repoPath = await createTempRepo();
-    const bubble = await setupRunningBubbleFixture({
+    const { bubble, worktreePath } = await setupReviewerEvidenceFixture({
       repoPath,
       bubbleId: "b_test_evidence_12",
       task: "Verify exit-failure pattern precision"
     });
 
     const evidenceLogPath = await writeEvidenceLog(
-      bubble.paths.worktreePath,
+      worktreePath,
       "evidence-status-code.log",
       [
         "pnpm typecheck exit=0 found 0 errors",
@@ -406,7 +428,7 @@ describe("reviewer test evidence verification", () => {
     const artifact = await verifyImplementerTestEvidence({
       bubbleId: bubble.bubbleId,
       bubbleConfig: bubble.config,
-      worktreePath: bubble.paths.worktreePath,
+      worktreePath,
       repoPath,
       envelope: {
         id: "msg_012",
@@ -429,7 +451,7 @@ describe("reviewer test evidence verification", () => {
 
   it("does not trust summary-only evidence without ref-backed provenance", async () => {
     const repoPath = await createTempRepo();
-    const bubble = await setupRunningBubbleFixture({
+    const { bubble, worktreePath } = await setupReviewerEvidenceFixture({
       repoPath,
       bubbleId: "b_test_evidence_07",
       task: "Verify summary-only provenance rejection"
@@ -438,7 +460,7 @@ describe("reviewer test evidence verification", () => {
     const artifact = await verifyImplementerTestEvidence({
       bubbleId: bubble.bubbleId,
       bubbleConfig: bubble.config,
-      worktreePath: bubble.paths.worktreePath,
+      worktreePath,
       repoPath,
       envelope: {
         id: "msg_007",
@@ -467,14 +489,14 @@ describe("reviewer test evidence verification", () => {
 
   it("does not trust mixed provenance when any required command is summary-only", async () => {
     const repoPath = await createTempRepo();
-    const bubble = await setupRunningBubbleFixture({
+    const { bubble, worktreePath } = await setupReviewerEvidenceFixture({
       repoPath,
       bubbleId: "b_test_evidence_10",
       task: "Verify mixed provenance rejection"
     });
 
     const typecheckLogPath = await writeEvidenceLog(
-      bubble.paths.worktreePath,
+      worktreePath,
       "typecheck-only.log",
       "pnpm typecheck exit=0 found 0 errors\n",
     );
@@ -482,7 +504,7 @@ describe("reviewer test evidence verification", () => {
     const artifact = await verifyImplementerTestEvidence({
       bubbleId: bubble.bubbleId,
       bubbleConfig: bubble.config,
-      worktreePath: bubble.paths.worktreePath,
+      worktreePath,
       repoPath,
       envelope: {
         id: "msg_010",
@@ -510,7 +532,7 @@ describe("reviewer test evidence verification", () => {
 
   it("ignores --ref files outside repo/worktree scope", async () => {
     const repoPath = await createTempRepo();
-    const bubble = await setupRunningBubbleFixture({
+    const { bubble, worktreePath } = await setupReviewerEvidenceFixture({
       repoPath,
       bubbleId: "b_test_evidence_05",
       task: "Verify ref path containment"
@@ -526,7 +548,7 @@ describe("reviewer test evidence verification", () => {
     const artifact = await verifyImplementerTestEvidence({
       bubbleId: bubble.bubbleId,
       bubbleConfig: bubble.config,
-      worktreePath: bubble.paths.worktreePath,
+      worktreePath,
       repoPath,
       envelope: {
         id: "msg_005",
@@ -549,7 +571,7 @@ describe("reviewer test evidence verification", () => {
 
   it("rejects symlink escapes under .pairflow/evidence with source_outside_repo_scope", async () => {
     const repoPath = await createTempRepo();
-    const bubble = await setupRunningBubbleFixture({
+    const { bubble, worktreePath } = await setupReviewerEvidenceFixture({
       repoPath,
       bubbleId: "b_test_evidence_13",
       task: "Verify symlink containment for refs"
@@ -565,7 +587,7 @@ describe("reviewer test evidence verification", () => {
     );
 
     const symlinkPath = join(
-      bubble.paths.worktreePath,
+      worktreePath,
       ".pairflow",
       "evidence",
       "outside-link.log"
@@ -576,7 +598,7 @@ describe("reviewer test evidence verification", () => {
     const artifact = await verifyImplementerTestEvidence({
       bubbleId: bubble.bubbleId,
       bubbleConfig: bubble.config,
-      worktreePath: bubble.paths.worktreePath,
+      worktreePath,
       repoPath,
       envelope: {
         id: "msg_013",
@@ -606,19 +628,19 @@ describe("reviewer test evidence verification", () => {
 
   it("keeps whitelist diagnostics for mixed allowed and rejected refs", async () => {
     const repoPath = await createTempRepo();
-    const bubble = await setupRunningBubbleFixture({
+    const { bubble, worktreePath } = await setupReviewerEvidenceFixture({
       repoPath,
       bubbleId: "b_test_evidence_policy_01",
       task: "Whitelist diagnostics for mixed refs"
     });
 
     const allowedLogPath = await writeEvidenceLog(
-      bubble.paths.worktreePath,
+      worktreePath,
       "policy-mixed.log",
       "pnpm typecheck exit=0 found 0 errors\npnpm test exit=0 406 tests passed\n"
     );
     const donePackagePath = join(
-      bubble.paths.worktreePath,
+      worktreePath,
       ".pairflow",
       "bubbles",
       "demo",
@@ -628,7 +650,7 @@ describe("reviewer test evidence verification", () => {
     await mkdir(join(donePackagePath, ".."), { recursive: true });
     await writeFile(donePackagePath, "# done package\n", "utf8");
     const reviewerArtifactPath = join(
-      bubble.paths.worktreePath,
+      worktreePath,
       ".pairflow",
       "bubbles",
       "demo",
@@ -640,7 +662,7 @@ describe("reviewer test evidence verification", () => {
     const artifact = await verifyImplementerTestEvidence({
       bubbleId: bubble.bubbleId,
       bubbleConfig: bubble.config,
-      worktreePath: bubble.paths.worktreePath,
+      worktreePath,
       repoPath,
       envelope: {
         id: "msg_policy_001",
@@ -669,14 +691,14 @@ describe("reviewer test evidence verification", () => {
 
   it("preserves EvidenceSourcePolicyDecision fields through source filtering and classification (T12)", async () => {
     const repoPath = await createTempRepo();
-    const bubble = await setupRunningBubbleFixture({
+    const { bubble, worktreePath } = await setupReviewerEvidenceFixture({
       repoPath,
       bubbleId: "b_test_evidence_policy_12",
       task: "Lifecycle binding coverage"
     });
 
     const allowedLogPath = await writeEvidenceLog(
-      bubble.paths.worktreePath,
+      worktreePath,
       "lifecycle-typecheck.log",
       "pnpm typecheck exit=0 found 0 errors\n"
     );
@@ -686,7 +708,7 @@ describe("reviewer test evidence verification", () => {
     await mkdir(join(outsidePath, ".."), { recursive: true });
     await writeFile(outsidePath, "pnpm test exit=0 406 tests passed\n", "utf8");
     const proseRef = join(
-      bubble.paths.worktreePath,
+      worktreePath,
       ".pairflow",
       "bubbles",
       "lifecycle",
@@ -699,7 +721,7 @@ describe("reviewer test evidence verification", () => {
     const artifact = await verifyImplementerTestEvidence({
       bubbleId: bubble.bubbleId,
       bubbleConfig: bubble.config,
-      worktreePath: bubble.paths.worktreePath,
+      worktreePath,
       repoPath,
       envelope: {
         id: "msg_policy_012",
@@ -736,7 +758,7 @@ describe("reviewer test evidence verification", () => {
 
   it("rejects protocol refs with source_protocol_not_allowed reason", async () => {
     const repoPath = await createTempRepo();
-    const bubble = await setupRunningBubbleFixture({
+    const { bubble, worktreePath } = await setupReviewerEvidenceFixture({
       repoPath,
       bubbleId: "b_test_evidence_policy_02",
       task: "Protocol ref rejection"
@@ -745,7 +767,7 @@ describe("reviewer test evidence verification", () => {
     const artifact = await verifyImplementerTestEvidence({
       bubbleId: bubble.bubbleId,
       bubbleConfig: bubble.config,
-      worktreePath: bubble.paths.worktreePath,
+      worktreePath,
       repoPath,
       envelope: {
         id: "msg_policy_002",
@@ -773,14 +795,14 @@ describe("reviewer test evidence verification", () => {
 
   it("rejects non-log and nested evidence refs with source_not_whitelisted", async () => {
     const repoPath = await createTempRepo();
-    const bubble = await setupRunningBubbleFixture({
+    const { bubble, worktreePath } = await setupReviewerEvidenceFixture({
       repoPath,
       bubbleId: "b_test_evidence_policy_03",
       task: "Whitelist extension and depth policy"
     });
 
     const wrongExtensionPath = join(
-      bubble.paths.worktreePath,
+      worktreePath,
       ".pairflow",
       "evidence",
       "policy.txt"
@@ -788,7 +810,7 @@ describe("reviewer test evidence verification", () => {
     await mkdir(join(wrongExtensionPath, ".."), { recursive: true });
     await writeFile(wrongExtensionPath, "pnpm test exit=0\n", "utf8");
     const nestedPath = join(
-      bubble.paths.worktreePath,
+      worktreePath,
       ".pairflow",
       "evidence",
       "subdir",
@@ -800,7 +822,7 @@ describe("reviewer test evidence verification", () => {
     const artifact = await verifyImplementerTestEvidence({
       bubbleId: bubble.bubbleId,
       bubbleConfig: bubble.config,
-      worktreePath: bubble.paths.worktreePath,
+      worktreePath,
       repoPath,
       envelope: {
         id: "msg_policy_003",
@@ -826,7 +848,7 @@ describe("reviewer test evidence verification", () => {
 
   it("rejects outside refs with source_outside_repo_scope for absolute and traversal paths", async () => {
     const repoPath = await createTempRepo();
-    const bubble = await setupRunningBubbleFixture({
+    const { bubble, worktreePath } = await setupReviewerEvidenceFixture({
       repoPath,
       bubbleId: "b_test_evidence_policy_04",
       task: "Outside-scope reason coverage"
@@ -841,12 +863,12 @@ describe("reviewer test evidence verification", () => {
       "pnpm typecheck exit=0 found 0 errors\npnpm test exit=0 406 tests passed\n",
       "utf8"
     );
-    const traversalRef = relative(bubble.paths.worktreePath, outsidePath);
+    const traversalRef = relative(worktreePath, outsidePath);
 
     const artifact = await verifyImplementerTestEvidence({
       bubbleId: bubble.bubbleId,
       bubbleConfig: bubble.config,
-      worktreePath: bubble.paths.worktreePath,
+      worktreePath,
       repoPath,
       envelope: {
         id: "msg_policy_004",
@@ -872,14 +894,14 @@ describe("reviewer test evidence verification", () => {
 
   it("rejects canonicalization failures with source_canonicalization_failed", async () => {
     const repoPath = await createTempRepo();
-    const bubble = await setupRunningBubbleFixture({
+    const { bubble, worktreePath } = await setupReviewerEvidenceFixture({
       repoPath,
       bubbleId: "b_test_evidence_policy_05",
       task: "Canonicalization failure policy"
     });
 
     const missingRefPath = join(
-      bubble.paths.worktreePath,
+      worktreePath,
       ".pairflow",
       "evidence",
       "missing.log"
@@ -887,7 +909,7 @@ describe("reviewer test evidence verification", () => {
     const artifact = await verifyImplementerTestEvidence({
       bubbleId: bubble.bubbleId,
       bubbleConfig: bubble.config,
-      worktreePath: bubble.paths.worktreePath,
+      worktreePath,
       repoPath,
       envelope: {
         id: "msg_policy_005",
@@ -913,14 +935,14 @@ describe("reviewer test evidence verification", () => {
 
   it("rejects unreadable log refs with source_canonicalization_failed", async () => {
     const repoPath = await createTempRepo();
-    const bubble = await setupRunningBubbleFixture({
+    const { bubble, worktreePath } = await setupReviewerEvidenceFixture({
       repoPath,
       bubbleId: "b_test_evidence_policy_13",
       task: "Read failure policy"
     });
 
     const unreadablePath = join(
-      bubble.paths.worktreePath,
+      worktreePath,
       ".pairflow",
       "evidence",
       "unreadable.log"
@@ -932,7 +954,7 @@ describe("reviewer test evidence verification", () => {
     const artifact = await verifyImplementerTestEvidence({
       bubbleId: bubble.bubbleId,
       bubbleConfig: bubble.config,
-      worktreePath: bubble.paths.worktreePath,
+      worktreePath,
       repoPath,
       envelope: {
         id: "msg_policy_013",
@@ -957,7 +979,7 @@ describe("reviewer test evidence verification", () => {
 
   it("rejects fragment-only refs with source_not_whitelisted", async () => {
     const repoPath = await createTempRepo();
-    const bubble = await setupRunningBubbleFixture({
+    const { bubble, worktreePath } = await setupReviewerEvidenceFixture({
       repoPath,
       bubbleId: "b_test_evidence_policy_14",
       task: "Fragment-only policy"
@@ -966,7 +988,7 @@ describe("reviewer test evidence verification", () => {
     const artifact = await verifyImplementerTestEvidence({
       bubbleId: bubble.bubbleId,
       bubbleConfig: bubble.config,
-      worktreePath: bubble.paths.worktreePath,
+      worktreePath,
       repoPath,
       envelope: {
         id: "msg_policy_014",
@@ -991,14 +1013,14 @@ describe("reviewer test evidence verification", () => {
 
   it("deduplicates canonical refs and keeps first-seen source", async () => {
     const repoPath = await createTempRepo();
-    const bubble = await setupRunningBubbleFixture({
+    const { bubble, worktreePath } = await setupReviewerEvidenceFixture({
       repoPath,
       bubbleId: "b_test_evidence_policy_06",
       task: "Duplicate ref dedupe behavior"
     });
 
     const logPath = await writeEvidenceLog(
-      bubble.paths.worktreePath,
+      worktreePath,
       "duplicate.log",
       "pnpm typecheck exit=0 found 0 errors\npnpm test exit=0 406 tests passed\n"
     );
@@ -1007,7 +1029,7 @@ describe("reviewer test evidence verification", () => {
     const artifact = await verifyImplementerTestEvidence({
       bubbleId: bubble.bubbleId,
       bubbleConfig: bubble.config,
-      worktreePath: bubble.paths.worktreePath,
+      worktreePath,
       repoPath,
       envelope: {
         id: "msg_policy_006",
@@ -1040,14 +1062,14 @@ describe("reviewer test evidence verification", () => {
 
   it("accepts relative in-scope evidence refs under .pairflow/evidence", async () => {
     const repoPath = await createTempRepo();
-    const bubble = await setupRunningBubbleFixture({
+    const { bubble, worktreePath } = await setupReviewerEvidenceFixture({
       repoPath,
       bubbleId: "b_test_evidence_policy_07",
       task: "Relative in-scope ref allowlist"
     });
 
     await writeEvidenceLog(
-      bubble.paths.worktreePath,
+      worktreePath,
       "relative.log",
       "pnpm typecheck exit=0 found 0 errors\npnpm test exit=0 406 tests passed\n"
     );
@@ -1055,7 +1077,7 @@ describe("reviewer test evidence verification", () => {
     const artifact = await verifyImplementerTestEvidence({
       bubbleId: bubble.bubbleId,
       bubbleConfig: bubble.config,
-      worktreePath: bubble.paths.worktreePath,
+      worktreePath,
       repoPath,
       envelope: {
         id: "msg_policy_007",
@@ -1080,7 +1102,7 @@ describe("reviewer test evidence verification", () => {
 
   it("classifies empty ref list as evidence_missing without fallback marker", async () => {
     const repoPath = await createTempRepo();
-    const bubble = await setupRunningBubbleFixture({
+    const { bubble, worktreePath } = await setupReviewerEvidenceFixture({
       repoPath,
       bubbleId: "b_test_evidence_policy_08",
       task: "Empty ref list policy"
@@ -1089,7 +1111,7 @@ describe("reviewer test evidence verification", () => {
     const artifact = await verifyImplementerTestEvidence({
       bubbleId: bubble.bubbleId,
       bubbleConfig: bubble.config,
-      worktreePath: bubble.paths.worktreePath,
+      worktreePath,
       repoPath,
       envelope: {
         id: "msg_policy_008",
@@ -1114,14 +1136,14 @@ describe("reviewer test evidence verification", () => {
 
   it("applies strict source policy fallback marker when evaluator fails", async () => {
     const repoPath = await createTempRepo();
-    const bubble = await setupRunningBubbleFixture({
+    const { bubble, worktreePath } = await setupReviewerEvidenceFixture({
       repoPath,
       bubbleId: "b_test_evidence_policy_09",
       task: "Forced source policy fallback"
     });
 
     const nestedPath = join(
-      bubble.paths.worktreePath,
+      worktreePath,
       ".pairflow",
       "evidence",
       "subdir",
@@ -1137,7 +1159,7 @@ describe("reviewer test evidence verification", () => {
     const artifact = await verifyImplementerTestEvidence({
       bubbleId: bubble.bubbleId,
       bubbleConfig: bubble.config,
-      worktreePath: bubble.paths.worktreePath,
+      worktreePath,
       repoPath,
       envelope: {
         id: "msg_policy_009",
@@ -1168,17 +1190,17 @@ describe("reviewer test evidence verification", () => {
 
   it("preserves fallback context when trust-anchor resolution triggers fallback mode", async () => {
     const repoPath = await createTempRepo();
-    const bubble = await setupRunningBubbleFixture({
+    const { bubble, worktreePath } = await setupReviewerEvidenceFixture({
       repoPath,
       bubbleId: "b_test_evidence_policy_20",
       task: "Fallback context diagnostics"
     });
-    const missingRepoPath = join(bubble.paths.worktreePath, "missing-repo-root");
+    const missingRepoPath = join(worktreePath, "missing-repo-root");
 
     const artifact = await verifyImplementerTestEvidence({
       bubbleId: bubble.bubbleId,
       bubbleConfig: bubble.config,
-      worktreePath: bubble.paths.worktreePath,
+      worktreePath,
       repoPath: missingRepoPath,
       envelope: {
         id: "msg_policy_020",
@@ -1203,14 +1225,14 @@ describe("reviewer test evidence verification", () => {
 
   it("keeps top-level and source-policy reason namespaces separated", async () => {
     const repoPath = await createTempRepo();
-    const bubble = await setupRunningBubbleFixture({
+    const { bubble, worktreePath } = await setupReviewerEvidenceFixture({
       repoPath,
       bubbleId: "b_test_evidence_policy_10",
       task: "Reason namespace boundary"
     });
 
     const donePackagePath = join(
-      bubble.paths.worktreePath,
+      worktreePath,
       ".pairflow",
       "bubbles",
       "namespace",
@@ -1223,7 +1245,7 @@ describe("reviewer test evidence verification", () => {
     const artifact = await verifyImplementerTestEvidence({
       bubbleId: bubble.bubbleId,
       bubbleConfig: bubble.config,
-      worktreePath: bubble.paths.worktreePath,
+      worktreePath,
       repoPath,
       envelope: {
         id: "msg_policy_010",
@@ -1248,19 +1270,19 @@ describe("reviewer test evidence verification", () => {
 
   it("verifies typecheck command from typecheck-specific completion marker even without pass token", async () => {
     const repoPath = await createTempRepo();
-    const bubble = await setupRunningBubbleFixture({
+    const { bubble, worktreePath } = await setupReviewerEvidenceFixture({
       repoPath,
       bubbleId: "b_test_evidence_06",
       task: "Verify typecheck completion marker branch ordering"
     });
 
     const testLogPath = await writeEvidenceLog(
-      bubble.paths.worktreePath,
+      worktreePath,
       "test-run.log",
       "pnpm test exit=0 406 tests passed\n",
     );
     const typecheckLogPath = await writeEvidenceLog(
-      bubble.paths.worktreePath,
+      worktreePath,
       "typecheck-run.log",
       "pnpm typecheck exit=0 found 0 errors\n",
     );
@@ -1268,7 +1290,7 @@ describe("reviewer test evidence verification", () => {
     const artifact = await verifyImplementerTestEvidence({
       bubbleId: bubble.bubbleId,
       bubbleConfig: bubble.config,
-      worktreePath: bubble.paths.worktreePath,
+      worktreePath,
       repoPath,
       envelope: {
         id: "msg_006",
@@ -1295,19 +1317,19 @@ describe("reviewer test evidence verification", () => {
 
   it("verifies typecheck from 'Found 0 errors' output without explicit exit markers", async () => {
     const repoPath = await createTempRepo();
-    const bubble = await setupRunningBubbleFixture({
+    const { bubble, worktreePath } = await setupReviewerEvidenceFixture({
       repoPath,
       bubbleId: "b_test_evidence_09",
       task: "Verify raw tsc success marker handling"
     });
 
     const typecheckLogPath = await writeEvidenceLog(
-      bubble.paths.worktreePath,
+      worktreePath,
       "typecheck-watch.log",
       "pnpm typecheck\nFound 0 errors. Watching for file changes.\n",
     );
     const testLogPath = await writeEvidenceLog(
-      bubble.paths.worktreePath,
+      worktreePath,
       "test-only.log",
       "pnpm test exit=0 406 tests passed\n"
     );
@@ -1315,7 +1337,7 @@ describe("reviewer test evidence verification", () => {
     const artifact = await verifyImplementerTestEvidence({
       bubbleId: bubble.bubbleId,
       bubbleConfig: bubble.config,
-      worktreePath: bubble.paths.worktreePath,
+      worktreePath,
       repoPath,
       envelope: {
         id: "msg_009",
@@ -1343,14 +1365,14 @@ describe("reviewer test evidence verification", () => {
 
   it("accepts alias-equivalent command forms when log provenance and completion markers are present", async () => {
     const repoPath = await createTempRepo();
-    const bubble = await setupRunningBubbleFixture({
+    const { bubble, worktreePath } = await setupReviewerEvidenceFixture({
       repoPath,
       bubbleId: "b_test_evidence_alias_01",
       task: "Verify closed-set command alias normalization"
     });
 
     const aliasLogPath = await writeEvidenceLog(
-      bubble.paths.worktreePath,
+      worktreePath,
       "alias-success.log",
       [
         "tsc --noEmit",
@@ -1363,7 +1385,7 @@ describe("reviewer test evidence verification", () => {
     const artifact = await verifyImplementerTestEvidence({
       bubbleId: bubble.bubbleId,
       bubbleConfig: bubble.config,
-      worktreePath: bubble.paths.worktreePath,
+      worktreePath,
       repoPath,
       envelope: {
         id: "msg_alias_001",
@@ -1389,14 +1411,14 @@ describe("reviewer test evidence verification", () => {
 
   it("normalizes alias lookup keys during construction for mixed-case command config values", async () => {
     const repoPath = await createTempRepo();
-    const bubble = await setupRunningBubbleFixture({
+    const { bubble, worktreePath } = await setupReviewerEvidenceFixture({
       repoPath,
       bubbleId: "b_test_evidence_alias_04",
       task: "Verify alias lookup normalization at construction"
     });
 
     const aliasLogPath = await writeEvidenceLog(
-      bubble.paths.worktreePath,
+      worktreePath,
       "alias-mixed-case.log",
       [
         "tsc --noEmit",
@@ -1417,7 +1439,7 @@ describe("reviewer test evidence verification", () => {
     const artifact = await verifyImplementerTestEvidence({
       bubbleId: bubble.bubbleId,
       bubbleConfig: mixedCaseConfig,
-      worktreePath: bubble.paths.worktreePath,
+      worktreePath,
       repoPath,
       envelope: {
         id: "msg_alias_004",
@@ -1443,14 +1465,14 @@ describe("reviewer test evidence verification", () => {
 
   it("accepts eslint alias family evidence when configured as a required command", async () => {
     const repoPath = await createTempRepo();
-    const bubble = await setupRunningBubbleFixture({
+    const { bubble, worktreePath } = await setupReviewerEvidenceFixture({
       repoPath,
       bubbleId: "b_test_evidence_alias_06",
       task: "Verify lint alias family coverage"
     });
 
     const aliasLogPath = await writeEvidenceLog(
-      bubble.paths.worktreePath,
+      worktreePath,
       "alias-eslint.log",
       [
         "eslint exit=0 success",
@@ -1470,7 +1492,7 @@ describe("reviewer test evidence verification", () => {
     const artifact = await verifyImplementerTestEvidence({
       bubbleId: bubble.bubbleId,
       bubbleConfig: eslintRequiredConfig,
-      worktreePath: bubble.paths.worktreePath,
+      worktreePath,
       repoPath,
       envelope: {
         id: "msg_alias_006",
@@ -1496,14 +1518,14 @@ describe("reviewer test evidence verification", () => {
 
   it("keeps alias evidence fail-closed when completion markers are missing", async () => {
     const repoPath = await createTempRepo();
-    const bubble = await setupRunningBubbleFixture({
+    const { bubble, worktreePath } = await setupReviewerEvidenceFixture({
       repoPath,
       bubbleId: "b_test_evidence_alias_02",
       task: "Verify alias marker strictness"
     });
 
     const aliasLogPath = await writeEvidenceLog(
-      bubble.paths.worktreePath,
+      worktreePath,
       "alias-missing-marker.log",
       [
         "tsc --noEmit",
@@ -1514,7 +1536,7 @@ describe("reviewer test evidence verification", () => {
     const artifact = await verifyImplementerTestEvidence({
       bubbleId: bubble.bubbleId,
       bubbleConfig: bubble.config,
-      worktreePath: bubble.paths.worktreePath,
+      worktreePath,
       repoPath,
       envelope: {
         id: "msg_alias_002",
@@ -1540,14 +1562,14 @@ describe("reviewer test evidence verification", () => {
 
   it("does not treat extended script names as alias-equivalent command evidence", async () => {
     const repoPath = await createTempRepo();
-    const bubble = await setupRunningBubbleFixture({
+    const { bubble, worktreePath } = await setupReviewerEvidenceFixture({
       repoPath,
       bubbleId: "b_test_evidence_alias_03",
       task: "Verify alias closed-set boundary"
     });
 
     const aliasLogPath = await writeEvidenceLog(
-      bubble.paths.worktreePath,
+      worktreePath,
       "alias-closed-set.log",
       [
         "pnpm run typecheck:ci exit=0 found 0 errors",
@@ -1558,7 +1580,7 @@ describe("reviewer test evidence verification", () => {
     const artifact = await verifyImplementerTestEvidence({
       bubbleId: bubble.bubbleId,
       bubbleConfig: bubble.config,
-      worktreePath: bubble.paths.worktreePath,
+      worktreePath,
       repoPath,
       envelope: {
         id: "msg_alias_003",
@@ -1584,14 +1606,14 @@ describe("reviewer test evidence verification", () => {
 
   it("does not treat vitest version tokens as executable alias evidence", async () => {
     const repoPath = await createTempRepo();
-    const bubble = await setupRunningBubbleFixture({
+    const { bubble, worktreePath } = await setupReviewerEvidenceFixture({
       repoPath,
       bubbleId: "b_test_evidence_alias_05",
       task: "Verify alias boundary against version strings"
     });
 
     const aliasLogPath = await writeEvidenceLog(
-      bubble.paths.worktreePath,
+      worktreePath,
       "alias-version-token.log",
       [
         "pnpm typecheck exit=0 found 0 errors",
@@ -1602,7 +1624,7 @@ describe("reviewer test evidence verification", () => {
     const artifact = await verifyImplementerTestEvidence({
       bubbleId: bubble.bubbleId,
       bubbleConfig: bubble.config,
-      worktreePath: bubble.paths.worktreePath,
+      worktreePath,
       repoPath,
       envelope: {
         id: "msg_alias_005",
@@ -1629,14 +1651,14 @@ describe("reviewer test evidence verification", () => {
 
   it("marks trusted artifact stale when worktree changes after verification", async () => {
     const repoPath = await createTempRepo();
-    const bubble = await setupRunningBubbleFixture({
+    const { bubble, worktreePath } = await setupReviewerEvidenceFixture({
       repoPath,
       bubbleId: "b_test_evidence_03",
       task: "Verify stale evidence"
     });
 
     const evidenceLogPath = await writeEvidenceLog(
-      bubble.paths.worktreePath,
+      worktreePath,
       "evidence-stale.log",
       "pnpm typecheck exit=0 found 0 errors\npnpm test exit=0 406 tests passed\n",
     );
@@ -1644,7 +1666,7 @@ describe("reviewer test evidence verification", () => {
     const artifact = await verifyImplementerTestEvidence({
       bubbleId: bubble.bubbleId,
       bubbleConfig: bubble.config,
-      worktreePath: bubble.paths.worktreePath,
+      worktreePath,
       repoPath,
       envelope: {
         id: "msg_003",
@@ -1666,11 +1688,11 @@ describe("reviewer test evidence verification", () => {
     );
     await writeReviewerTestEvidenceArtifact(artifactPath, artifact);
 
-    await writeFile(join(bubble.paths.worktreePath, "stale-change.txt"), "x\n", "utf8");
+    await writeFile(join(worktreePath, "stale-change.txt"), "x\n", "utf8");
 
     const directive = await resolveReviewerTestExecutionDirective({
       artifactPath,
-      worktreePath: bubble.paths.worktreePath
+      worktreePath
     });
 
     expect(directive.skip_full_rerun).toBe(false);
@@ -1679,7 +1701,7 @@ describe("reviewer test evidence verification", () => {
 
   it("resolves docs-only directive as skip_full_rerun through wrapper API", async () => {
     const repoPath = await createTempRepo();
-    const bubble = await setupRunningBubbleFixture({
+    const { bubble, worktreePath } = await setupReviewerEvidenceFixture({
       repoPath,
       bubbleId: "b_test_evidence_docs_wrapper_01",
       task: "Docs-only wrapper resolver coverage",
@@ -1689,7 +1711,7 @@ describe("reviewer test evidence verification", () => {
     const artifact = await verifyImplementerTestEvidence({
       bubbleId: bubble.bubbleId,
       bubbleConfig: bubble.config,
-      worktreePath: bubble.paths.worktreePath,
+      worktreePath,
       repoPath,
       envelope: {
         id: "msg_docs_wrap_001",
@@ -1710,11 +1732,11 @@ describe("reviewer test evidence verification", () => {
     );
     await writeReviewerTestEvidenceArtifact(artifactPath, artifact);
 
-    await writeFile(join(bubble.paths.worktreePath, "docs-wrapper-change.txt"), "x\n", "utf8");
+    await writeFile(join(worktreePath, "docs-wrapper-change.txt"), "x\n", "utf8");
 
     const directive = await resolveReviewerTestExecutionDirective({
       artifactPath,
-      worktreePath: bubble.paths.worktreePath,
+      worktreePath,
       reviewArtifactType: "document"
     });
 
@@ -1728,14 +1750,14 @@ describe("reviewer test evidence verification", () => {
 
   it("accepts workspacePath as canonical wrapper input for directive resolution", async () => {
     const repoPath = await createTempRepo();
-    const bubble = await setupRunningBubbleFixture({
+    const { bubble, worktreePath } = await setupReviewerEvidenceFixture({
       repoPath,
       bubbleId: "b_test_evidence_workspace_wrapper_01",
       task: "Workspace authority wrapper coverage"
     });
 
     const evidenceLogPath = await writeEvidenceLog(
-      bubble.paths.worktreePath,
+      worktreePath,
       "workspace-wrapper-evidence.log",
       "pnpm typecheck exit=0 found 0 errors\npnpm test exit=0 406 tests passed\n",
     );
@@ -1743,7 +1765,7 @@ describe("reviewer test evidence verification", () => {
     const artifact = await verifyImplementerTestEvidence({
       bubbleId: bubble.bubbleId,
       bubbleConfig: bubble.config,
-      worktreePath: bubble.paths.worktreePath,
+      worktreePath,
       repoPath,
       envelope: {
         id: "msg_workspace_wrap_001",
@@ -1763,11 +1785,11 @@ describe("reviewer test evidence verification", () => {
       bubble.paths.artifactsDir
     );
     await writeReviewerTestEvidenceArtifact(artifactPath, artifact);
-    await writeFile(join(bubble.paths.worktreePath, "workspace-wrapper-change.txt"), "x\n", "utf8");
+    await writeFile(join(worktreePath, "workspace-wrapper-change.txt"), "x\n", "utf8");
 
     const directive = await resolveReviewerTestExecutionDirective({
       artifactPath,
-      workspacePath: bubble.paths.worktreePath
+      workspacePath: worktreePath
     });
 
     expect(directive.skip_full_rerun).toBe(false);
@@ -1777,7 +1799,7 @@ describe("reviewer test evidence verification", () => {
 
   it("returns docs-only skip directive when artifact is missing through wrapper API", async () => {
     const repoPath = await createTempRepo();
-    const bubble = await setupRunningBubbleFixture({
+    const { bubble, worktreePath } = await setupReviewerEvidenceFixture({
       repoPath,
       bubbleId: "b_test_evidence_docs_wrapper_02",
       task: "Docs-only wrapper missing artifact coverage",
@@ -1786,7 +1808,7 @@ describe("reviewer test evidence verification", () => {
 
     const directive = await resolveReviewerTestExecutionDirective({
       artifactPath: join(bubble.paths.artifactsDir, "missing-reviewer-evidence.json"),
-      worktreePath: bubble.paths.worktreePath,
+      worktreePath,
       reviewArtifactType: "document"
     });
 
@@ -1800,7 +1822,7 @@ describe("reviewer test evidence verification", () => {
 
   it("keeps strict missing-artifact behavior for code wrapper inputs", async () => {
     const repoPath = await createTempRepo();
-    const bubble = await setupRunningBubbleFixture({
+    const { bubble, worktreePath } = await setupReviewerEvidenceFixture({
       repoPath,
       bubbleId: "b_test_evidence_wrapper_missing_code",
       task: "Wrapper missing artifact strict behavior code",
@@ -1809,7 +1831,7 @@ describe("reviewer test evidence verification", () => {
 
     const directive = await resolveReviewerTestExecutionDirective({
       artifactPath: join(bubble.paths.artifactsDir, "missing-reviewer-evidence.json"),
-      worktreePath: bubble.paths.worktreePath,
+      worktreePath,
       reviewArtifactType: "code"
     });
 
@@ -1823,7 +1845,7 @@ describe("reviewer test evidence verification", () => {
 
   it("returns docs-only skip directive when artifact read fails through wrapper API", async () => {
     const repoPath = await createTempRepo();
-    const bubble = await setupRunningBubbleFixture({
+    const { bubble, worktreePath } = await setupReviewerEvidenceFixture({
       repoPath,
       bubbleId: "b_test_evidence_docs_wrapper_03",
       task: "Docs-only wrapper read-failure coverage",
@@ -1832,7 +1854,7 @@ describe("reviewer test evidence verification", () => {
 
     const directive = await resolveReviewerTestExecutionDirective({
       artifactPath: bubble.paths.artifactsDir,
-      worktreePath: bubble.paths.worktreePath,
+      worktreePath,
       reviewArtifactType: "document"
     });
 
@@ -1846,7 +1868,7 @@ describe("reviewer test evidence verification", () => {
 
   it("overrides untrusted artifact to docs-only skip when reviewArtifactType is document", async () => {
     const repoPath = await createTempRepo();
-    const bubble = await setupRunningBubbleFixture({
+    const { bubble, worktreePath } = await setupReviewerEvidenceFixture({
       repoPath,
       bubbleId: "b_test_evidence_docs_untrusted_01",
       task: "Docs-only untrusted artifact override",
@@ -1856,7 +1878,7 @@ describe("reviewer test evidence verification", () => {
     const artifact = await verifyImplementerTestEvidence({
       bubbleId: bubble.bubbleId,
       bubbleConfig: bubble.config,
-      worktreePath: bubble.paths.worktreePath,
+      worktreePath,
       repoPath,
       envelope: {
         id: "msg_docs_untrusted_001",
@@ -1883,7 +1905,7 @@ describe("reviewer test evidence verification", () => {
 
     const directive = await resolveReviewerTestExecutionDirectiveFromArtifact({
       artifact: untrustedArtifact,
-      worktreePath: bubble.paths.worktreePath,
+      worktreePath,
       reviewArtifactType: "document"
     });
 
@@ -1894,7 +1916,7 @@ describe("reviewer test evidence verification", () => {
 
   it("does not trigger compatibility skip for partial docs-like artifacts", async () => {
     const repoPath = await createTempRepo();
-    const bubble = await setupRunningBubbleFixture({
+    const { bubble, worktreePath } = await setupReviewerEvidenceFixture({
       repoPath,
       bubbleId: "b_test_evidence_docs_compat_negative_01",
       task: "Docs-only compatibility negative coverage",
@@ -1904,7 +1926,7 @@ describe("reviewer test evidence verification", () => {
     const artifact = await verifyImplementerTestEvidence({
       bubbleId: bubble.bubbleId,
       bubbleConfig: bubble.config,
-      worktreePath: bubble.paths.worktreePath,
+      worktreePath,
       repoPath,
       envelope: {
         id: "msg_docs_compat_negative_001",
@@ -1926,7 +1948,7 @@ describe("reviewer test evidence verification", () => {
         ...artifact,
         reason_detail: "Evidence is verified, fresh, and complete."
       },
-      worktreePath: bubble.paths.worktreePath
+      worktreePath
     });
     expect(reasonMismatchDirective.skip_full_rerun).toBe(false);
     expect(reasonMismatchDirective.reason_code).toBe("evidence_stale");
@@ -1937,7 +1959,7 @@ describe("reviewer test evidence verification", () => {
         ...artifact,
         required_commands: ["pnpm test"]
       },
-      worktreePath: bubble.paths.worktreePath
+      worktreePath
     });
     expect(requiredCommandsMismatchDirective.skip_full_rerun).toBe(false);
     expect(requiredCommandsMismatchDirective.reason_code).toBe("evidence_stale");
@@ -1946,7 +1968,7 @@ describe("reviewer test evidence verification", () => {
 
   it("returns undefined for invalid JSON artifact content", async () => {
     const repoPath = await createTempRepo();
-    const bubble = await setupRunningBubbleFixture({
+    const { bubble, worktreePath } = await setupReviewerEvidenceFixture({
       repoPath,
       bubbleId: "b_test_evidence_08",
       task: "Verify invalid artifact parsing contract"
@@ -1962,7 +1984,7 @@ describe("reviewer test evidence verification", () => {
 
     const directive = await resolveReviewerTestExecutionDirective({
       artifactPath,
-      worktreePath: bubble.paths.worktreePath
+      worktreePath
     });
 
     expect(directive.skip_full_rerun).toBe(false);
@@ -1972,7 +1994,7 @@ describe("reviewer test evidence verification", () => {
 
   it("marks directive as unverifiable when artifact read fails", async () => {
     const repoPath = await createTempRepo();
-    const bubble = await setupRunningBubbleFixture({
+    const { bubble, worktreePath } = await setupReviewerEvidenceFixture({
       repoPath,
       bubbleId: "b_test_evidence_11",
       task: "Verify directive classification for artifact read I/O failures"
@@ -1980,7 +2002,7 @@ describe("reviewer test evidence verification", () => {
 
     const directive = await resolveReviewerTestExecutionDirective({
       artifactPath: bubble.paths.artifactsDir,
-      worktreePath: bubble.paths.worktreePath
+      worktreePath
     });
 
     expect(directive.skip_full_rerun).toBe(false);
