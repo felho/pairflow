@@ -213,9 +213,20 @@ function log() {
 
 function readState() {
   if (!statePath || !existsSync(statePath)) {
-    return { sessions: {}, nextPaneId: 100, nextPaneIndex: 1 };
+    return {
+      sessions: {},
+      nextPaneId: 100,
+      nextPaneIndex: 1,
+      paneAliases: {},
+      paneBuffers: {},
+      paneHistory: {}
+    };
   }
-  return JSON.parse(readFileSync(statePath, "utf8"));
+  const state = JSON.parse(readFileSync(statePath, "utf8"));
+  state.paneAliases ||= {};
+  state.paneBuffers ||= {};
+  state.paneHistory ||= {};
+  return state;
 }
 
 function writeState(state) {
@@ -257,6 +268,29 @@ function sessionHasPane(session, paneId) {
   return normalizeSession(session).panes.includes(paneId);
 }
 
+function registerPaneAlias(paneId, paneIndex, sessionName) {
+  const paneKey = paneId;
+  state.paneAliases[paneId] = paneKey;
+  state.paneAliases[paneIndex] = paneKey;
+  if (sessionName) {
+    state.paneAliases[sessionName + ":" + paneIndex] = paneKey;
+  }
+  state.paneBuffers[paneKey] ||= "";
+  state.paneHistory[paneKey] ||= [];
+}
+
+function paneKeyForTarget(target) {
+  if (!target) return undefined;
+  if (state.paneAliases[target]) return state.paneAliases[target];
+  if (target.startsWith("%")) return target;
+  const session = sessionNameForTarget(target);
+  const paneSelector = paneSelectorForTarget(target);
+  if (session && paneSelector) {
+    return state.paneAliases[session + ":" + paneSelector] || state.paneAliases[paneSelector] || target;
+  }
+  return target;
+}
+
 function paneTargetExists(target) {
   if (!target || !target.startsWith("%")) return false;
   return Object.values(state.sessions).some((session) => sessionHasPane(session, target));
@@ -295,7 +329,9 @@ if (command === "new-session") {
   }
   if (session) {
     const paneId = "%" + (state.nextPaneId || 100);
-    state.sessions[session] = { panes: [paneId, "0.0"] };
+    const paneIndex = "0.0";
+    state.sessions[session] = { panes: [paneId, paneIndex] };
+    registerPaneAlias(paneId, paneIndex, session);
     state.nextPaneIndex = 1;
     writeState(state);
   }
@@ -341,6 +377,7 @@ if (command === "split-window") {
   normalizedSession.panes.push(paneId);
   normalizedSession.panes.push(paneIndex);
   state.sessions[session] = normalizedSession;
+  registerPaneAlias(paneId, paneIndex, session);
   writeState(state);
   process.stdout.write(paneId + "\\n");
   process.exit(0);
@@ -361,19 +398,52 @@ if (command === "capture-pane") {
   if (target) {
     assertTargetExists(target);
   }
-  process.stdout.write("submitted\\n");
+  const paneKey = paneKeyForTarget(target);
+  const history = paneKey ? (state.paneHistory[paneKey] || []) : [];
+  const buffer = paneKey ? (state.paneBuffers[paneKey] || "") : "";
+  const lines = [...history];
+  lines.push(buffer.length > 0 ? "> " + buffer : "> ");
+  process.stdout.write(lines.join("\\n") + "\\n");
   process.exit(0);
 }
 
 if (command === "send-keys") {
   const target = valueAfter("-t");
   assertTargetExists(target);
+  const paneKey = paneKeyForTarget(target);
+  if (paneKey) {
+    const literalIndex = args.indexOf("-l");
+    if (literalIndex >= 0) {
+      state.paneBuffers[paneKey] = (state.paneBuffers[paneKey] || "") + (args[literalIndex + 1] || "");
+      writeState(state);
+      process.exit(0);
+    }
+    if (args.includes("Enter")) {
+      const buffer = state.paneBuffers[paneKey] || "";
+      if (buffer.length > 0) {
+        state.paneHistory[paneKey] ||= [];
+        state.paneHistory[paneKey].push(buffer);
+        state.paneBuffers[paneKey] = "";
+        writeState(state);
+      }
+      process.exit(0);
+    }
+  }
   process.exit(0);
 }
 
 if (command === "kill-session") {
   const session = valueAfter("-t");
   if (session && state.sessions[session]) {
+    for (const pane of normalizeSession(state.sessions[session]).panes) {
+      const paneKey = paneKeyForTarget(pane);
+      if (paneKey) {
+        delete state.paneBuffers[paneKey];
+        delete state.paneHistory[paneKey];
+      }
+      delete state.paneAliases[pane];
+      delete state.paneAliases[session + ":" + pane];
+    }
     delete state.sessions[session];
     writeState(state);
     process.exit(0);
