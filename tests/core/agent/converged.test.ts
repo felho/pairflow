@@ -1,4 +1,4 @@
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -15,6 +15,7 @@ import { buildMetaReviewExecutionContext } from "../../../src/v11/shared/metaRev
 import { emitPassFromWorkspace } from "../../../src/v11/application/pass/passCommandOrchestration.js";
 import { renderBubbleConfigToml } from "../../../src/config/bubbleConfig.js";
 import { createBubble } from "../../../src/v11/defaults/create/createBubbleApi.js";
+import type { BubbleCreateResult } from "../../../src/v11/application/create/createBubble.js";
 import { IDEATION_CONVERGED_BLOCKED } from "../../../src/v11/shared/ideation/ideationReasonCodes.js";
 import { applyMetaReviewGateOnConvergence } from "../../../src/v11/defaults/metaReviewGate/metaReviewGateApi.js";
 import { buildBubbleStateSnapshotVariant } from "../../../src/v11/domain/state/snapshot/buildBubbleStateSnapshot.js";
@@ -128,6 +129,60 @@ async function createTempRepo(): Promise<string> {
   return root;
 }
 
+async function setupRunningBubbleWorkspaceLinkFixture(input: {
+  repoPath: string;
+  bubbleId: string;
+  task: string;
+  reviewArtifactType?: "code" | "document";
+}): Promise<BubbleCreateResult> {
+  const bubble = await createBubble({
+    id: input.bubbleId,
+    repoPath: input.repoPath,
+    baseBranch: "main",
+    reviewArtifactType: input.reviewArtifactType ?? "code",
+    task: input.task,
+    cwd: input.repoPath
+  });
+  await mkdir(join(bubble.paths.worktreePath, ".."), { recursive: true });
+  await symlink(input.repoPath, bubble.paths.worktreePath);
+
+  const loaded = await readStateSnapshot(bubble.paths.statePath);
+  const startedAt = "2026-02-21T12:00:00.000Z";
+  await writeStateSnapshot(
+    bubble.paths.statePath,
+    {
+      ...loaded.state,
+      state: "RUNNING",
+      round: 1,
+      active_agent: bubble.config.agents.implementer,
+      active_role: "implementer",
+      execution_context: buildRunningExecutionContext({
+        bubbleId: bubble.bubbleId,
+        round: 1,
+        activeRole: "implementer",
+        startedAt,
+        watchdogTimeoutMinutes: bubble.config.watchdog_timeout_minutes
+      }),
+      active_since: startedAt,
+      last_command_at: startedAt,
+      round_role_history: [
+        {
+          round: 1,
+          implementer: bubble.config.agents.implementer,
+          reviewer: bubble.config.agents.reviewer,
+          switched_at: startedAt
+        }
+      ]
+    },
+    {
+      expectedFingerprint: loaded.fingerprint,
+      expectedState: "CREATED"
+    }
+  );
+
+  return bubble;
+}
+
 async function setupConvergedCandidateBubble(
   repoPath: string,
   bubbleId: string,
@@ -135,7 +190,7 @@ async function setupConvergedCandidateBubble(
     reviewArtifactType?: "code" | "document";
   }
 ) {
-  const bubble = await setupRunningBubbleFixture({
+  const bubble = await setupRunningBubbleWorkspaceLinkFixture({
     repoPath,
     bubbleId,
     task: "Implement + review",
