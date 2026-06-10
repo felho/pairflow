@@ -261,6 +261,63 @@ describe("executePassDelivery", () => {
     expect(result.retried).toBe(false);
   });
 
+  it("keeps delivery fail-open when optional reviewer artifacts cannot be read", async () => {
+    const refreshCalls: unknown[] = [];
+    const emitCalls: unknown[] = [];
+
+    const result = await executePassDelivery(
+      {
+        bubbleId: "b_delivery_v11_01",
+        bubbleConfig: createBubbleConfig("fresh"),
+        sessionsPath: "/tmp/repo/.pairflow/runtime/sessions.json",
+        reviewerBriefArtifactPath: "/tmp/unreadable-brief.md",
+        reviewerFocusArtifactPath: "/tmp/unreadable-focus.json",
+        envelope: createEnvelope(),
+        senderRole: "implementer",
+        recipientRole: "reviewer"
+      },
+      {
+        refreshReviewerContext: async (input) => {
+          refreshCalls.push(input);
+          return {
+            refreshed: true
+          };
+        },
+        emitDeliveryNotificationAck: async (input) => {
+          emitCalls.push(input);
+          return {
+            status: "accepted",
+            message: "ok",
+            sessionName: "pf_bubble",
+            targetPaneIndex: 1
+          };
+        },
+        readReviewerBriefArtifact: async () => {
+          throw new Error("brief unreadable");
+        },
+        readReviewerFocusArtifact: async () => {
+          throw new Error("focus unreadable");
+        },
+        resolveDeliveryMessageRef
+      }
+    );
+
+    expect(refreshCalls).toHaveLength(1);
+    expect(refreshCalls[0]).not.toHaveProperty("reviewerStartupPrompt");
+    expect(emitCalls).toHaveLength(1);
+    expect(emitCalls[0]).not.toHaveProperty("reviewerBrief");
+    expect(emitCalls[0]).not.toHaveProperty("reviewerFocus");
+    expect(result).toEqual({
+      result: {
+        status: "accepted",
+        message: "ok",
+        sessionName: "pf_bubble",
+        targetPaneIndex: 1
+      },
+      retried: false
+    });
+  });
+
   it("omits reviewer focus from reviewer-origin delivery", async () => {
     const emitCalls: unknown[] = [];
     const result = await executePassDelivery(
