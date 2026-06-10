@@ -10,14 +10,17 @@ function toErrorMessage(input: PairflowCommandErrorInput): string {
 import type { EmitConvergedResult } from "../../../../src/v11/shared/converged/convergedCommandTypes.js";
 import { finalizeAutoConvergePass } from "../../../../src/v11/application/pass/internal/autoConverge/autoConvergeFinalization.js";
 
-function buildConvergedResult(): EmitConvergedResult {
+function buildConvergedResult(
+  overrides: Partial<EmitConvergedResult> = {}
+): EmitConvergedResult {
   return {
     convergenceSequence: 10,
     convergenceEnvelope: { id: "conv" },
     state: { state: "READY_FOR_HUMAN_APPROVAL" },
     gateRoute: "human_gate_approve",
     approvalRequestSequence: 11,
-    approvalRequestEnvelope: { id: "approval" }
+    approvalRequestEnvelope: { id: "approval" },
+    ...overrides
   } as unknown as EmitConvergedResult;
 }
 
@@ -177,5 +180,57 @@ describe("finalizeAutoConvergePass", () => {
     );
 
     expect("activation" in (capturedResultInput ?? {})).toBe(false);
+  });
+
+  it("forwards converged delivery status into the auto-converge result-builder input", async () => {
+    let capturedResultInput: Record<string, unknown> | undefined;
+
+    await finalizeAutoConvergePass(
+      {
+        now: new Date("2026-03-19T12:00:00.000Z"),
+        bubbleConfig: {
+          review_artifact_type: "code"
+        } as never,
+        artifactsDir: "/tmp/artifacts",
+        taskArtifactPath: "/tmp/task.md",
+        round: 2,
+        senderRole: "reviewer",
+        findings: [],
+        createError: (message: PairflowCommandErrorInput) => new Error(toErrorMessage(message)),
+        repoPath: "/tmp/repo",
+        bubbleId: "b_123",
+        bubbleInstanceId: "inst_1",
+        passIntent: "review",
+        inferredIntent: true,
+        senderAgent: "claude",
+        refsCount: 0,
+        hasFindings: false,
+        noFindings: true,
+        repeatCleanReasonCode: "REPEAT_CLEAN_AUTOCONVERGE_TRIGGERED",
+        repeatCleanReasonDetail: "previous_reviewer_pass_clean",
+        repeatCleanTrigger: true,
+        mostRecentPreviousReviewerCleanPassEnvelope: true,
+        converged: buildConvergedResult({
+          delivery: {
+            status: "accepted",
+            retried: false
+          }
+        } as Partial<EmitConvergedResult>)
+      },
+      {
+        updateReviewerDocGateArtifact: async () => undefined,
+        emitBubbleLifecycleEventBestEffort: async () => undefined,
+        buildPassLifecycleMetricMetadata: () => ({ metric: "ok" }),
+        buildAutoConvergePassResult: (input) => {
+          capturedResultInput = input as unknown as Record<string, unknown>;
+          return input;
+        }
+      }
+    );
+
+    expect(capturedResultInput?.delivery).toEqual({
+      status: "accepted",
+      retried: false
+    });
   });
 });

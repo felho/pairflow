@@ -180,4 +180,59 @@ describe("prepareRepeatCleanAutoConverge", () => {
       )
     );
   });
+
+  it("writes review verification artifact before returning refreshed fingerprint", async () => {
+    let capturedPath: string | undefined;
+    let capturedArtifact: unknown;
+
+    const result = await prepareRepeatCleanAutoConverge(
+      buildInput({
+        reviewerVerification: buildReviewerVerification()
+      }),
+      {
+        validateConvergencePolicy: () => ({
+          ok: true,
+          errors: [],
+          diagnostics: []
+        }),
+        readStateSnapshot: async () => ({
+          state: buildBubbleStateSnapshotVariant({
+            bubble_id: "b_123",
+            state: "RUNNING",
+            round: 2,
+            active_agent: "claude",
+            active_since: "2026-03-19T12:00:00.000Z",
+            active_role: "reviewer",
+            round_role_history: [],
+            last_command_at: "2026-03-19T12:00:00.000Z"
+          }),
+          fingerprint: "fp_expected"
+        }),
+        writeReviewVerificationArtifactAtomic: async (path, artifact) => {
+          capturedPath = path;
+          capturedArtifact = artifact;
+        }
+      }
+    );
+
+    expect(result).toEqual({
+      expectedStateFingerprint: "fp_expected"
+    });
+    expect(capturedPath).toBe("/tmp/review-verification.json");
+    expect(capturedArtifact).toMatchObject({
+      schema: "review_verification_v1",
+      overall: "pass",
+      input_ref: "review-verification-input.json",
+      meta: {
+        bubble_id: "b_123",
+        round: 2,
+        reviewer: "claude",
+        generated_at: "2026-03-19T12:00:00.000Z"
+      },
+      validation: {
+        status: "valid",
+        errors: []
+      }
+    });
+  });
 });
