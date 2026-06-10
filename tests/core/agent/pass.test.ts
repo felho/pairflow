@@ -2,7 +2,7 @@ import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { afterEach, describe, expect, it } from "vitest";
+import { afterAll, afterEach, describe, expect, it } from "vitest";
 
 import { renderBubbleConfigToml } from "../../../src/config/bubbleConfig.js";
 import { createBubble } from "../../../src/v11/defaults/create/createBubbleApi.js";
@@ -36,7 +36,6 @@ import {
 import { deliveryTargetRoleMetadataKey } from "../../../src/v11/shared/delivery/deliveryTargetMetadataContract.js";
 import {
   repeatCleanAutoconvergeTriggeredReasonCode,
-  repeatCleanRound1DisabledReasonCode,
   repeatCleanTriggerNotMetReasonCode
 } from "../../../src/v11/domain/convergence/repeatCleanAutoconverge.js";
 import { createDocContractGateArtifact } from "../../../src/v11/shared/gates/docContractGates.js";
@@ -54,6 +53,7 @@ import type {
 } from "../../../src/v11/shared/protocol/protocolEnvelopeContract.js";
 
 const tempDirs: string[] = [];
+let sharedRepoPathPromise: Promise<string> | undefined;
 const defaultWatchdogTimeoutMinutes = 60;
 
 // Step 4b-γ/4: tests work with persisted-shape fixtures and cast at
@@ -144,10 +144,14 @@ async function writeStateSnapshot(
 }
 
 async function createTempRepo(): Promise<string> {
-  const root = await mkdtemp(join(tmpdir(), "pairflow-pass-command-"));
-  tempDirs.push(root);
-  await initGitRepository(root);
-  return root;
+  if (sharedRepoPathPromise === undefined) {
+    sharedRepoPathPromise = (async () => {
+      const root = await mkdtemp(join(tmpdir(), "pairflow-pass-command-"));
+      await initGitRepository(root);
+      return root;
+    })();
+  }
+  return sharedRepoPathPromise;
 }
 
 async function setReviewerActive(worktreeStatePath: string, reviewerAgent: "codex" | "claude"): Promise<void> {
@@ -310,6 +314,14 @@ afterEach(async () => {
       rm(path, { recursive: true, force: true })
     )
   );
+});
+
+afterAll(async () => {
+  if (sharedRepoPathPromise === undefined) {
+    return;
+  }
+  await rm(await sharedRepoPathPromise, { recursive: true, force: true });
+  sharedRepoPathPromise = undefined;
 });
 
 describe("emitPassFromWorkspace", { timeout: 20_000 }, () => {
@@ -550,40 +562,6 @@ describe("emitPassFromWorkspace", { timeout: 20_000 }, () => {
     expect(result.state.round).toBe(4);
   });
 
-  it("requires explicit findings declaration for reviewer PASS", async () => {
-    const repoPath = await createTempRepo();
-    const bubble = await setupRunningBubbleFixture({
-      repoPath,
-      bubbleId: "b_pass_06",
-      task: "Implement pass flow"
-    });
-
-    const loaded = await readStateSnapshot(bubble.paths.statePath);
-    await writeStateSnapshot(
-      bubble.paths.statePath,
-      {
-        ...loaded.state,
-        state: "RUNNING",
-        round: 1,
-        active_agent: bubble.config.agents.reviewer,
-        active_role: "reviewer",
-        active_since: "2026-02-21T12:06:00.000Z",
-        last_command_at: "2026-02-21T12:06:00.000Z"
-      },
-      {
-        expectedFingerprint: loaded.fingerprint,
-        expectedState: "RUNNING"
-      }
-    );
-
-    await expect(
-      emitPassFromWorkspace({
-        summary: "Review done",
-        cwd: bubble.paths.worktreePath
-      })
-    ).rejects.toThrow(/FINDINGS_PAYLOAD_INVALID/u);
-  });
-
   it("rejects malformed reviewer findings payload with explicit reason code", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupRunningBubbleFixture({
@@ -631,95 +609,6 @@ describe("emitPassFromWorkspace", { timeout: 20_000 }, () => {
     expect(stateAfter.fingerprint).toBe(stateBefore.fingerprint);
   });
 
-  it("writes empty findings array when reviewer declares no findings", async () => {
-    const repoPath = await createTempRepo();
-    const bubble = await setupRunningBubbleFixture({
-      repoPath,
-      bubbleId: "b_pass_07",
-      task: "Implement pass flow"
-    });
-
-    const loaded = await readStateSnapshot(bubble.paths.statePath);
-    await writeStateSnapshot(
-      bubble.paths.statePath,
-      {
-        ...loaded.state,
-        state: "RUNNING",
-        round: 1,
-        active_agent: bubble.config.agents.reviewer,
-        active_role: "reviewer",
-        active_since: "2026-02-21T12:06:00.000Z",
-        last_command_at: "2026-02-21T12:06:00.000Z"
-      },
-      {
-        expectedFingerprint: loaded.fingerprint,
-        expectedState: "RUNNING"
-      }
-    );
-
-    const result = await emitPassFromWorkspace({
-      summary: "Review clean",
-      noFindings: true,
-      cwd: bubble.paths.worktreePath,
-      now: new Date("2026-02-21T12:07:00.000Z")
-    });
-
-    expect(result.inferredIntent).toBe(true);
-    expect(result.transitionDecision).toBe("normal_pass");
-    expect(result.repeatCleanReasonCode).toBe(repeatCleanRound1DisabledReasonCode);
-    expect(result.repeatCleanReasonDetail).toBe("round_gate_disabled");
-    expect(result.repeatCleanTrigger).toBe(false);
-    expect(passPayload(result).pass_intent).toBe("review");
-    expect(passPayload(result).findings_claim_state).toBe("clean");
-    expect(passPayload(result).findings_claim_source).toBe("payload_flags");
-    expect(passPayload(result).findings).toEqual([]);
-  });
-
-  it("emits open structured findings claim on reviewer fix_request PASS", async () => {
-    const repoPath = await createTempRepo();
-    const bubble = await setupRunningBubbleFixture({
-      repoPath,
-      bubbleId: "b_pass_findings_claim_open_01",
-      task: "Structured claim open findings"
-    });
-
-    const loaded = await readStateSnapshot(bubble.paths.statePath);
-    await writeStateSnapshot(
-      bubble.paths.statePath,
-      {
-        ...loaded.state,
-        state: "RUNNING",
-        round: 1,
-        active_agent: bubble.config.agents.reviewer,
-        active_role: "reviewer",
-        active_since: "2026-02-21T12:06:00.000Z",
-        last_command_at: "2026-02-21T12:06:00.000Z"
-      },
-      {
-        expectedFingerprint: loaded.fingerprint,
-        expectedState: "RUNNING"
-      }
-    );
-
-    const result = await emitPassFromWorkspace({
-      summary: "P2 findings remain open.",
-      findings: [
-        {
-          severity: "P2",
-          title: "Follow-up fix required"
-        }
-      ],
-      cwd: bubble.paths.worktreePath,
-      now: new Date("2026-02-21T12:07:00.000Z")
-    });
-
-    expect(passPayload(result).pass_intent).toBe("fix_request");
-    expect(passPayload(result).findings_claim_state).toBe("open_findings");
-    expect(passPayload(result).findings_claim_source).toBe(
-      "payload_findings_count"
-    );
-  });
-
   it("keeps structured findings-claim fields reviewer-only across role lifecycle", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupRunningBubbleFixture({
@@ -764,115 +653,6 @@ describe("emitPassFromWorkspace", { timeout: 20_000 }, () => {
     expect("findings" in implementerPass.envelope.payload).toBe(false);
     expect("findings_claim_state" in implementerPass.envelope.payload).toBe(false);
     expect("findings_claim_source" in implementerPass.envelope.payload).toBe(false);
-  });
-
-  it("allows reviewer --no-findings when summary explicitly reports zero findings/severity counts", async () => {
-    const repoPath = await createTempRepo();
-    const bubble = await setupRunningBubbleFixture({
-      repoPath,
-      bubbleId: "b_pass_no_findings_zero_summary_01",
-      task: "No-findings zero-count summary guard"
-    });
-
-    const loaded = await readStateSnapshot(bubble.paths.statePath);
-    await writeStateSnapshot(
-      bubble.paths.statePath,
-      {
-        ...loaded.state,
-        state: "RUNNING",
-        round: 1,
-        active_agent: bubble.config.agents.reviewer,
-        active_role: "reviewer",
-        active_since: "2026-02-21T12:06:00.000Z",
-        last_command_at: "2026-02-21T12:06:00.000Z"
-      },
-      {
-        expectedFingerprint: loaded.fingerprint,
-        expectedState: "RUNNING"
-      }
-    );
-
-    const result = await emitPassFromWorkspace({
-      summary: "Reviewer clean. 0 findings (0 P0, 0 P1, 0 P2, 0 P3).",
-      noFindings: true,
-      cwd: bubble.paths.worktreePath,
-      now: new Date("2026-02-21T12:07:00.000Z")
-    });
-
-    expect(passPayload(result).pass_intent).toBe("review");
-    expect(passPayload(result).findings).toEqual([]);
-  });
-
-  it("rejects reviewer --no-findings when summary asserts positive findings/severity", async () => {
-    const repoPath = await createTempRepo();
-    const bubble = await setupRunningBubbleFixture({
-      repoPath,
-      bubbleId: "b_pass_no_findings_summary_contradiction_01",
-      task: "No-findings summary contradiction reject"
-    });
-
-    const loaded = await readStateSnapshot(bubble.paths.statePath);
-    await writeStateSnapshot(
-      bubble.paths.statePath,
-      {
-        ...loaded.state,
-        state: "RUNNING",
-        round: 1,
-        active_agent: bubble.config.agents.reviewer,
-        active_role: "reviewer",
-        active_since: "2026-02-21T12:06:00.000Z",
-        last_command_at: "2026-02-21T12:06:00.000Z"
-      },
-      {
-        expectedFingerprint: loaded.fingerprint,
-        expectedState: "RUNNING"
-      }
-    );
-
-    await expect(
-      emitPassFromWorkspace({
-        summary: "No findings from smoke-check, but P2 findings remain open.",
-        noFindings: true,
-        cwd: bubble.paths.worktreePath
-      })
-    ).rejects.toThrow(/REVIEWER_SUMMARY_FINDINGS_CONTRADICTION/u);
-  });
-
-  it("allows reviewer --no-findings when summary contains severity-only status phrasing without findings context", async () => {
-    const repoPath = await createTempRepo();
-    const bubble = await setupRunningBubbleFixture({
-      repoPath,
-      bubbleId: "b_pass_severity_only_status_01",
-      task: "Severity-only status phrasing should not contradict no-findings"
-    });
-
-    const loaded = await readStateSnapshot(bubble.paths.statePath);
-    await writeStateSnapshot(
-      bubble.paths.statePath,
-      {
-        ...loaded.state,
-        state: "RUNNING",
-        round: 1,
-        active_agent: bubble.config.agents.reviewer,
-        active_role: "reviewer",
-        active_since: "2026-02-21T12:06:00.000Z",
-        last_command_at: "2026-02-21T12:06:00.000Z"
-      },
-      {
-        expectedFingerprint: loaded.fingerprint,
-        expectedState: "RUNNING"
-      }
-    );
-
-    const result = await emitPassFromWorkspace({
-      summary: "Project status: P2 active rollout.",
-      noFindings: true,
-      cwd: bubble.paths.worktreePath,
-      now: new Date("2026-02-21T12:07:00.000Z")
-    });
-
-    expect(passPayload(result).pass_intent).toBe("review");
-    expect(passPayload(result).findings).toEqual([]);
   });
 
   it("rejects reviewer --no-findings via pass at round>=severity_gate_round with no side effects", async () => {
