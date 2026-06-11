@@ -1492,6 +1492,8 @@ pnpm check      # All of the above
 pnpm dev:ui     # Rebuild CLI + restart web UI server on port 4173
 ```
 
+Root vitest runs as two projects: `main` shares each worker's module registry (`isolate: false` on the forks pool) for speed, while module-mocking tests run fully isolated in the threads-pool `isolated` project. Test files using `vi.mock`/`vi.doMock`/`vi.doUnmock`/`vi.unmock`/`vi.resetModules` must be listed in `vitest.isolation.ts`; a guard test enforces this.
+
 PASS validation commands write evidence logs to `.pairflow/evidence/` (for example lint/typecheck/fitness), which can be attached in canonical actor emit refs such as `pairflow agent emit --kind pass ... --ref ...`. Full-suite test runs can be configured separately as meta-review approve validation.
 
 ### CI fitness gate
