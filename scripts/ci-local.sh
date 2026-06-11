@@ -370,7 +370,7 @@ run_final_validation_suite() {
 
   run_step "fitness" "fitness gate" pnpm fitness:check:ci &
   fitness_pid=$!
-  run_step "smoke" "almost-e2e smoke suite" bash -lc 'pnpm exec tsc -p tsconfig.build.json && pnpm --dir ui install --frozen-lockfile && pnpm --dir ui build && pnpm exec vitest run --config vitest.smoke.config.ts' &
+  run_step "smoke" "almost-e2e smoke suite" bash -lc 'pnpm exec tsc -p tsconfig.build.json && pnpm --dir ui build && pnpm exec vitest run --config vitest.smoke.config.ts' &
   smoke_pid=$!
 
   wait "$fitness_pid" || fitness_exit=$?
@@ -473,7 +473,7 @@ else
   echo
 fi
 
-run_step "install" "dependency lock validation" pnpm install --frozen-lockfile
+run_step "install" "dependency lock validation" bash -lc 'pnpm install --frozen-lockfile && pnpm --dir ui install --frozen-lockfile'
 run_validation_suites
 
 echo "ci:local passed"

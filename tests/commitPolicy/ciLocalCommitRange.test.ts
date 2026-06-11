@@ -88,6 +88,7 @@ describe("ci-local commit range integration", () => {
       "commit-policy:validate-range -- --from base --to head"
     );
     expect(commands).toContain("install --frozen-lockfile");
+    expect(commands).toContain("--dir ui install --frozen-lockfile");
     expect(commands).toContain("codegen:reviewer-ontology");
     expect(commands).toContain(ciLintCommand);
     expect(commands).toContain("exec tsc --noEmit");
@@ -97,6 +98,12 @@ describe("ci-local commit range integration", () => {
     expect(commands).toContain("exec tsc -p tsconfig.build.json");
     expect(commands).toContain("--dir ui build");
     expect(commands).toContain("exec vitest run --config vitest.smoke.config.ts");
+    expect(commands.indexOf("--dir ui install --frozen-lockfile")).toBeLessThan(
+      commands.indexOf("--dir ui test")
+    );
+    expect(commands.indexOf("--dir ui install --frozen-lockfile")).toBeLessThan(
+      commands.indexOf("--dir ui build")
+    );
   });
 
   it("fails closed before side-effectful steps when a range is required but missing", async () => {
@@ -161,7 +168,8 @@ describe("ci-local commit range integration", () => {
 
     const commands = (await readFile(commandLog, "utf8")).trim().split("\n");
     expect(commands[0]).toBe("install --frozen-lockfile");
-    expect(commands[1]).toBe("codegen:reviewer-ontology");
+    expect(commands[1]).toBe("--dir ui install --frozen-lockfile");
+    expect(commands[2]).toBe("codegen:reviewer-ontology");
     expect(commands).toContain(ciLintCommand);
     expect(commands).toContain("exec tsc --noEmit");
     expect(commands).toContain("exec vitest run");
@@ -170,6 +178,12 @@ describe("ci-local commit range integration", () => {
     expect(commands).toContain("exec tsc -p tsconfig.build.json");
     expect(commands).toContain("--dir ui build");
     expect(commands).toContain("exec vitest run --config vitest.smoke.config.ts");
+    expect(commands.indexOf("--dir ui install --frozen-lockfile")).toBeLessThan(
+      commands.indexOf("--dir ui test")
+    );
+    expect(commands.indexOf("--dir ui install --frozen-lockfile")).toBeLessThan(
+      commands.indexOf("--dir ui build")
+    );
   });
 
   it("waits for every parallel validation branch before reporting failure", async () => {
