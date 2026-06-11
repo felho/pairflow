@@ -316,19 +316,11 @@ run_quality_suite() {
   echo "ci:local log: $RUN_DIR/check-{codegen,lint,typecheck,test}.log"
   started_at="$(date +%s)"
 
-  if run_quality_child "codegen" "ci:local codegen" pnpm codegen:reviewer-ontology; then
-    :
-  else
-    local codegen_exit=$?
-    print_failure_summary "$step_id" "$step_label" "$RUN_DIR/check-codegen.log" "$codegen_exit" "pnpm codegen:reviewer-ontology"
-    exit "$codegen_exit"
-  fi
-
   run_quality_child "lint" "ci:local lint" pnpm exec eslint . &
   lint_pid=$!
   run_quality_child "typecheck" "ci:local typecheck" pnpm exec tsc --noEmit &
   typecheck_pid=$!
-  run_quality_child "test" "ci:local test" pnpm test &
+  run_quality_child "test" "ci:local test" bash -lc 'root_exit=0; ui_exit=0; pnpm exec vitest run & root_pid=$!; pnpm --dir ui test & ui_pid=$!; wait $root_pid || root_exit=$?; wait $ui_pid || ui_exit=$?; test $root_exit -eq 0 -a $ui_exit -eq 0' &
   test_pid=$!
 
   wait "$lint_pid" || lint_exit=$?
@@ -378,7 +370,7 @@ run_final_validation_suite() {
 
   run_step "fitness" "fitness gate" pnpm fitness:check:ci &
   fitness_pid=$!
-  run_step "smoke" "almost-e2e smoke suite" pnpm test:smoke &
+  run_step "smoke" "almost-e2e smoke suite" bash -lc 'pnpm exec tsc -p tsconfig.build.json && pnpm --dir ui install --frozen-lockfile && pnpm --dir ui build && pnpm exec vitest run --config vitest.smoke.config.ts' &
   smoke_pid=$!
 
   wait "$fitness_pid" || fitness_exit=$?
@@ -394,6 +386,58 @@ run_final_validation_suite() {
     echo "ci:local final validation suite failed after all parallel checks completed"
     echo "  fitness_exit: $fitness_exit"
     echo "  smoke_exit: $smoke_exit"
+    exit 1
+  fi
+
+  finished_at="$(date +%s)"
+  duration_s=$((finished_at - started_at))
+  echo "ci:local step passed: $step_label (${duration_s}s)"
+  echo
+}
+
+run_validation_suites() {
+  local step_label="validation suites"
+  local started_at
+  local finished_at
+  local duration_s
+  local quality_pid
+  local final_pid
+  local quality_exit=0
+  local final_exit=0
+  local failed=0
+
+  echo "ci:local step: shared codegen"
+  echo "ci:local log: $RUN_DIR/check-codegen.log"
+  if run_quality_child "codegen" "ci:local codegen" pnpm codegen:reviewer-ontology; then
+    :
+  else
+    local codegen_exit=$?
+    print_failure_summary "check" "shared codegen" "$RUN_DIR/check-codegen.log" "$codegen_exit" "pnpm codegen:reviewer-ontology"
+    exit "$codegen_exit"
+  fi
+
+  echo "ci:local step: $step_label"
+  echo "ci:local parallel branches: quality suite + final validation suite"
+  started_at="$(date +%s)"
+
+  run_quality_suite &
+  quality_pid=$!
+  run_final_validation_suite &
+  final_pid=$!
+
+  wait "$quality_pid" || quality_exit=$?
+  wait "$final_pid" || final_exit=$?
+
+  if [[ "$quality_exit" -ne 0 ]]; then
+    failed=1
+  fi
+  if [[ "$final_exit" -ne 0 ]]; then
+    failed=1
+  fi
+  if [[ "$failed" -ne 0 ]]; then
+    echo "ci:local validation suites failed after all parallel suites completed"
+    echo "  quality_exit: $quality_exit"
+    echo "  final_exit: $final_exit"
     exit 1
   fi
 
@@ -430,7 +474,6 @@ else
 fi
 
 run_step "install" "dependency lock validation" pnpm install --frozen-lockfile
-run_quality_suite
-run_final_validation_suite
+run_validation_suites
 
 echo "ci:local passed"

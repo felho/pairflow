@@ -89,7 +89,12 @@ describe("ci-local commit range integration", () => {
     expect(commands).toContain("codegen:reviewer-ontology");
     expect(commands).toContain("exec eslint .");
     expect(commands).toContain("exec tsc --noEmit");
-    expect(commands).toContain("test");
+    expect(commands).toContain("exec vitest run");
+    expect(commands).toContain("--dir ui test");
+    expect(commands).toContain("fitness:check:ci");
+    expect(commands).toContain("exec tsc -p tsconfig.build.json");
+    expect(commands).toContain("--dir ui build");
+    expect(commands).toContain("exec vitest run --config vitest.smoke.config.ts");
   });
 
   it("fails closed before side-effectful steps when a range is required but missing", async () => {
@@ -157,10 +162,15 @@ describe("ci-local commit range integration", () => {
     expect(commands[1]).toBe("codegen:reviewer-ontology");
     expect(commands).toContain("exec eslint .");
     expect(commands).toContain("exec tsc --noEmit");
-    expect(commands).toContain("test");
+    expect(commands).toContain("exec vitest run");
+    expect(commands).toContain("--dir ui test");
+    expect(commands).toContain("fitness:check:ci");
+    expect(commands).toContain("exec tsc -p tsconfig.build.json");
+    expect(commands).toContain("--dir ui build");
+    expect(commands).toContain("exec vitest run --config vitest.smoke.config.ts");
   });
 
-  it("waits for every parallel quality check before reporting failure", async () => {
+  it("waits for every parallel validation branch before reporting failure", async () => {
     const { fixtureDir, commandLog } = await createCiFixture();
 
     let failure: unknown;
@@ -178,8 +188,12 @@ describe("ci-local commit range integration", () => {
     const commands = (await readFile(commandLog, "utf8")).trim().split("\n");
     expect(commands).toContain("exec eslint .");
     expect(commands).toContain("exec tsc --noEmit");
-    expect(commands).toContain("test");
-    expect(commands).not.toContain("fitness:check:ci");
+    expect(commands).toContain("exec vitest run");
+    expect(commands).toContain("--dir ui test");
+    expect(commands).toContain("fitness:check:ci");
+    expect(commands).toContain("exec tsc -p tsconfig.build.json");
+    expect(commands).toContain("--dir ui build");
+    expect(commands).toContain("exec vitest run --config vitest.smoke.config.ts");
   });
 
   it("hides local codex from ci child commands by default", async () => {
