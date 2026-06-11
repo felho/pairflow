@@ -17,6 +17,8 @@
     },
     "skipLibCheck": true,
     "noEmit": true,
+    "incremental": true,
+    "tsBuildInfoFile": ".pairflow/typecheck.tsbuildinfo",
     "sourceMap": true,
     "types": [
       "node"

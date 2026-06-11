@@ -2,6 +2,7 @@
   "extends": "./tsconfig.json",
   "compilerOptions": {
     "noEmit": false,
+    "tsBuildInfoFile": ".pairflow/build.tsbuildinfo",
     "declaration": true,
     "declarationMap": true,
     "rootDir": "src",
