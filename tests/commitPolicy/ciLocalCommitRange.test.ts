@@ -91,14 +91,14 @@ describe("ci-local commit range integration", () => {
     expect(commands).toContain("codegen:reviewer-ontology");
     expect(commands).toContain(ciLintCommand);
     expect(commands).toContain("exec tsc --noEmit");
-    expect(commands).toContain("exec vitest run");
-    expect(commands).toContain("--dir ui test");
+    expect(commands).toContain("exec vitest run --maxWorkers=8");
+    expect(commands).toContain("--dir ui test --maxWorkers=2");
     expect(commands).toContain("fitness:check:ci");
     expect(commands).toContain("exec tsc -p tsconfig.build.json");
     expect(commands).toContain("--dir ui build");
     expect(commands).toContain("exec vitest run --config vitest.smoke.config.ts");
     expect(commands.indexOf("--dir ui install --frozen-lockfile")).toBeLessThan(
-      commands.indexOf("--dir ui test")
+      commands.indexOf("--dir ui test --maxWorkers=2")
     );
     expect(commands.indexOf("--dir ui install --frozen-lockfile")).toBeLessThan(
       commands.indexOf("--dir ui build")
@@ -171,14 +171,14 @@ describe("ci-local commit range integration", () => {
     expect(commands[2]).toBe("codegen:reviewer-ontology");
     expect(commands).toContain(ciLintCommand);
     expect(commands).toContain("exec tsc --noEmit");
-    expect(commands).toContain("exec vitest run");
-    expect(commands).toContain("--dir ui test");
+    expect(commands).toContain("exec vitest run --maxWorkers=8");
+    expect(commands).toContain("--dir ui test --maxWorkers=2");
     expect(commands).toContain("fitness:check:ci");
     expect(commands).toContain("exec tsc -p tsconfig.build.json");
     expect(commands).toContain("--dir ui build");
     expect(commands).toContain("exec vitest run --config vitest.smoke.config.ts");
     expect(commands.indexOf("--dir ui install --frozen-lockfile")).toBeLessThan(
-      commands.indexOf("--dir ui test")
+      commands.indexOf("--dir ui test --maxWorkers=2")
     );
     expect(commands.indexOf("--dir ui install --frozen-lockfile")).toBeLessThan(
       commands.indexOf("--dir ui build")
@@ -203,8 +203,8 @@ describe("ci-local commit range integration", () => {
     const commands = (await readFile(commandLog, "utf8")).trim().split("\n");
     expect(commands).toContain(ciLintCommand);
     expect(commands).toContain("exec tsc --noEmit");
-    expect(commands).toContain("exec vitest run");
-    expect(commands).toContain("--dir ui test");
+    expect(commands).toContain("exec vitest run --maxWorkers=8");
+    expect(commands).toContain("--dir ui test --maxWorkers=2");
     expect(commands).toContain("fitness:check:ci");
     expect(commands).toContain("exec tsc -p tsconfig.build.json");
     expect(commands).toContain("--dir ui build");

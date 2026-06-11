@@ -320,7 +320,7 @@ run_quality_suite() {
   lint_pid=$!
   run_quality_child "typecheck" "ci:local typecheck" pnpm exec tsc --noEmit &
   typecheck_pid=$!
-  run_quality_child "test" "ci:local test" bash -lc 'root_exit=0; ui_exit=0; pnpm exec vitest run & root_pid=$!; pnpm --dir ui test & ui_pid=$!; wait $root_pid || root_exit=$?; wait $ui_pid || ui_exit=$?; test $root_exit -eq 0 -a $ui_exit -eq 0' &
+  run_quality_child "test" "ci:local test" bash -lc 'root_exit=0; ui_exit=0; pnpm exec vitest run --maxWorkers=8 & root_pid=$!; pnpm --dir ui test --maxWorkers=2 & ui_pid=$!; wait $root_pid || root_exit=$?; wait $ui_pid || ui_exit=$?; test $root_exit -eq 0 -a $ui_exit -eq 0' &
   test_pid=$!
 
   wait "$lint_pid" || lint_exit=$?
