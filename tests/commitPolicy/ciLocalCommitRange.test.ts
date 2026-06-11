@@ -14,6 +14,8 @@ import { describe, expect, it } from "vitest";
 
 const execFileAsync = promisify(execFile);
 const repoRoot = process.cwd();
+const ciLintCommand =
+  "exec eslint . --cache --cache-strategy content --cache-location .pairflow/eslint-cache";
 
 function outputFrom(error: unknown, stream: "stdout" | "stderr"): string {
   if (typeof error === "object" && error !== null && stream in error) {
@@ -87,7 +89,7 @@ describe("ci-local commit range integration", () => {
     );
     expect(commands).toContain("install --frozen-lockfile");
     expect(commands).toContain("codegen:reviewer-ontology");
-    expect(commands).toContain("exec eslint .");
+    expect(commands).toContain(ciLintCommand);
     expect(commands).toContain("exec tsc --noEmit");
     expect(commands).toContain("exec vitest run");
     expect(commands).toContain("--dir ui test");
@@ -160,7 +162,7 @@ describe("ci-local commit range integration", () => {
     const commands = (await readFile(commandLog, "utf8")).trim().split("\n");
     expect(commands[0]).toBe("install --frozen-lockfile");
     expect(commands[1]).toBe("codegen:reviewer-ontology");
-    expect(commands).toContain("exec eslint .");
+    expect(commands).toContain(ciLintCommand);
     expect(commands).toContain("exec tsc --noEmit");
     expect(commands).toContain("exec vitest run");
     expect(commands).toContain("--dir ui test");
@@ -176,7 +178,7 @@ describe("ci-local commit range integration", () => {
     let failure: unknown;
     try {
       await runCiFixture(fixtureDir, {
-        PAIRFLOW_TEST_FAIL_PNPM_ARGS: "exec eslint ."
+        PAIRFLOW_TEST_FAIL_PNPM_ARGS: ciLintCommand
       });
     } catch (error) {
       failure = error;
@@ -186,7 +188,7 @@ describe("ci-local commit range integration", () => {
     expect(outputFrom(failure, "stdout")).toContain("quality suite failed");
 
     const commands = (await readFile(commandLog, "utf8")).trim().split("\n");
-    expect(commands).toContain("exec eslint .");
+    expect(commands).toContain(ciLintCommand);
     expect(commands).toContain("exec tsc --noEmit");
     expect(commands).toContain("exec vitest run");
     expect(commands).toContain("--dir ui test");

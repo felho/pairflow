@@ -51,7 +51,7 @@
     "test:smoke": "pnpm codegen:reviewer-ontology && pnpm build && pnpm exec vitest run --config vitest.smoke.config.ts",
     "build": "pnpm codegen:reviewer-ontology && tsc -p tsconfig.build.json && pnpm --dir ui install --frozen-lockfile && pnpm --dir ui build",
     "typecheck": "bash ./scripts/run-evidence.sh .pairflow/evidence/typecheck.log \"pnpm typecheck\" -- bash -lc \"pnpm codegen:reviewer-ontology && pnpm exec tsc --noEmit\"",
-    "lint": "bash ./scripts/run-evidence.sh .pairflow/evidence/lint.log \"pnpm lint\" -- bash -lc \"pnpm codegen:reviewer-ontology && pnpm exec eslint .\"",
+    "lint": "bash ./scripts/run-evidence.sh .pairflow/evidence/lint.log \"pnpm lint\" -- bash -lc \"pnpm codegen:reviewer-ontology && pnpm exec eslint . --cache --cache-strategy content --cache-location .pairflow/eslint-cache\"",
     "test:root": "pnpm codegen:reviewer-ontology && pnpm exec vitest run",
     "test:ui": "pnpm --dir ui test",
     "test": "bash ./scripts/run-evidence.sh .pairflow/evidence/test.log \"pnpm test\" -- bash -lc 'root_exit=0; ui_exit=0; pnpm test:root & root_pid=$!; pnpm test:ui & ui_pid=$!; wait $root_pid || root_exit=$?; wait $ui_pid || ui_exit=$?; test $root_exit -eq 0 -a $ui_exit -eq 0'",
