@@ -14,7 +14,7 @@ import { describe, expect, it } from "vitest";
 
 const execFileAsync = promisify(execFile);
 const repoRoot = process.cwd();
-const ciLintCommand = "exec eslint .";
+const ciLintCommand = "exec eslint . --concurrency 4";
 
 function outputFrom(error: unknown, stream: "stdout" | "stderr"): string {
   if (typeof error === "object" && error !== null && stream in error) {
