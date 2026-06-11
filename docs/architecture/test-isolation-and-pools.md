@@ -85,3 +85,56 @@ a deleted file, or when the pool wiring above drifts.
 - enforcement: `tests/config/isolationQuarantine.test.ts`
 - smoke-layer testing strategy (separate concern):
   [almost-e2e-smoke-suite.md](almost-e2e-smoke-suite.md)
+
+## Reference: local validation performance history
+
+> Scope note: this section records the broader `pnpm test` / `pnpm ci:local`
+> performance arc, of which the isolation split above is one step. It lives
+> here for now and may move to a dedicated performance doc later.
+
+Headline improvements (same hardware, unchanged coverage — test count grew
+from 3892 to 3854 + 233 after the project split):
+
+| Command | Before (`ee44cd25`, Jun 9) | After (`b815823e`) | Factor |
+|---|---|---|---|
+| `pnpm test` | ~146s | ~29s | ~5× |
+| `pnpm ci:local` | 279s (4:39) | ~44s | ~6.3× |
+
+`pnpm test` went from running the root and UI suites **serially** with per-file
+isolation (root vitest ~144s + UI ~2s) to running them **in parallel** with the
+shared-registry split (root vitest ~27s ∥ UI ~4s).
+
+### ci:local milestones
+
+| State | Commit | ci:local | Note |
+|---|---|---|---|
+| Original, fully serial | `ee44cd25` | 279s | install → `pnpm check` → fitness → smoke, each after the previous |
+| Pre-parallelization session start | `f3eb1479` | ~90s | after the bulk of the `perf(test)` fixture/timing work and first parallelization |
+| Current | `b815823e` | ~44s | two parallel validation suites, tuned |
+
+### Original baseline breakdown (`ee44cd25`)
+
+| Step | Time | Internals |
+|---|---|---|
+| install | 0s | |
+| quality (`pnpm check`) | 176s | root vitest 144s (setup **120s**, 3892 tests), UI vitest 2s, lint + typecheck + codegen ~30s — all serial |
+| fitness | 5s | |
+| smoke | 96s | vitest 88s, of which `actorLoopSmoke` alone **87s** |
+
+### Why it dropped
+
+The structural win is sum → max: the original total was the **sum** of serial
+steps (176 + 5 + 96 + install); the current total is the **max** of two
+concurrent branches (quality ~41s; final = smoke ~22s + fitness ~31s), so the
+wall time collapses onto the slowest branch.
+
+Each branch also got faster internally:
+
+- **279s → ~90s** (mostly before this work): real waits removed from tmux
+  delivery tests, fixtures seeded directly instead of via worktree setup, case
+  matrices narrowed (`actorLoopSmoke` 87s → ~20s), and the ci:local structure
+  flipped from serial to parallel.
+- **~90s → ~44s** (this work): worker-capped parallel suites, the unsound
+  eslint result cache removed from gates (kept as `lint:fast`), the
+  shared-registry isolation split documented above, incremental typecheck/build
+  via tsbuildinfo, and bounded `eslint --concurrency 4`.
