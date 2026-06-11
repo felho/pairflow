@@ -14,8 +14,7 @@ import { describe, expect, it } from "vitest";
 
 const execFileAsync = promisify(execFile);
 const repoRoot = process.cwd();
-const ciLintCommand =
-  "exec eslint . --cache --cache-strategy content --cache-location .pairflow/eslint-cache";
+const ciLintCommand = "exec eslint .";
 
 function outputFrom(error: unknown, stream: "stdout" | "stderr"): string {
   if (typeof error === "object" && error !== null && stream in error) {

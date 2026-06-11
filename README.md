@@ -1484,7 +1484,8 @@ Pairflow now injects startup protocol instructions into both agent panes, but ag
 ## Development
 
 ```bash
-pnpm lint       # ESLint
+pnpm lint       # ESLint (uncached; used by gates and evidence claims)
+pnpm lint:fast  # ESLint with local result cache; fast iteration only, not a gate
 pnpm typecheck  # TypeScript
 pnpm test       # Vitest
 pnpm check      # All of the above

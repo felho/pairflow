@@ -316,7 +316,7 @@ run_quality_suite() {
   echo "ci:local log: $RUN_DIR/check-{codegen,lint,typecheck,test}.log"
   started_at="$(date +%s)"
 
-  run_quality_child "lint" "ci:local lint" pnpm exec eslint . --cache --cache-strategy content --cache-location .pairflow/eslint-cache &
+  run_quality_child "lint" "ci:local lint" pnpm exec eslint . &
   lint_pid=$!
   run_quality_child "typecheck" "ci:local typecheck" pnpm exec tsc --noEmit &
   typecheck_pid=$!
@@ -329,7 +329,7 @@ run_quality_suite() {
 
   if [[ "$lint_exit" -ne 0 ]]; then
     failed=1
-    print_failure_summary "$step_id" "$step_label: lint" "$RUN_DIR/check-lint.log" "$lint_exit" "pnpm exec eslint . --cache --cache-strategy content --cache-location .pairflow/eslint-cache"
+    print_failure_summary "$step_id" "$step_label: lint" "$RUN_DIR/check-lint.log" "$lint_exit" "pnpm exec eslint ."
   fi
   if [[ "$typecheck_exit" -ne 0 ]]; then
     failed=1
