@@ -1517,9 +1517,11 @@ pnpm ci:local
 ```
 
 `ci:local` steps:
-1. `pnpm install --frozen-lockfile`
-2. `pnpm check`
-3. `pnpm fitness:check:ci`
+1. dependency lock validation (`pnpm install --frozen-lockfile` for root and `ui/`)
+2. shared codegen (`pnpm codegen:reviewer-ontology`)
+3. two parallel validation suites:
+   - quality suite: lint, typecheck, and root + ui tests (worker-capped vitest)
+   - final validation suite: fitness gate and the almost-e2e smoke suite (build + smoke tests)
 
 By default `ci:local` runs in compact mode:
 - each step writes a full log under `.pairflow/evidence/ci-local/<timestamp>/`
