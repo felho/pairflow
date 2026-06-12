@@ -735,6 +735,56 @@ task to a human are the same child-instance/task mechanics. The A2A graph and th
 human task inbox are two projections of one machine, and "who may ask whom" lives in
 the same grant system as every other permission.
 
+### 11.3 Errands as a Service
+
+Grace's hand-rolled errands DB (§10.2 item 2) becomes a kernel service. Five points:
+
+1. **The service API is the existing kernel primitives at errand granularity.**
+   `errand create` (start a loose-template instance), `errand wait-on` (register a
+   wait condition: "waiting on Cursor / on a human"), `errand update`, `errand done`.
+   Nothing new in the kernel — the same entry points scripted workflows use, on the
+   same Level-2 CLI-validation backbone: every call passes capability checks and
+   carries an op_id.
+2. **Why the agent complies — not incentive, but instruct → visible failure →
+   definition improvement.** An LLM agent has no preferences; token cost does not
+   motivate it. The mechanism runs on three layers that need no "caring":
+   - *Affordance shaping:* activations are ephemeral by construction (§11) — between
+     activations there is no agent, so an unregistered wait is not expensive but
+     **inert**: nothing will ever re-activate the agent about it. At activation end
+     the context packet offers the errand surface (open errands + available ops); an
+     LLM completing that context naturally calls `wait-on`. The alternative —
+     creating a polling schedule — is a §16.2 self-expansion act: a gated,
+     budget-attributed, default-expiring definition PR. The sanctioned path is the
+     path of least resistance *through the permission machinery*, not through
+     economics.
+   - *Hard walls:* if a wasteful pattern does get approved, it cannot run forever —
+     budget ceilings (§14) stop it, schedule expiry (§16.2) kills it without renewal.
+   - *Selection on definitions:* the failure is **visible and attributable, never
+     silent** — an unregistered errand stalls and the stuck inference (§6) flags it;
+     polling smokes in the cost ledger; a capability-wall bounce is logged
+     structurally. Each signal dictates a concrete definition PR (metacognition §16
+     proposes, human approves); the trust ladder (§17) keeps opaque agents at low
+     autonomy. Not the individual learning — the population of definitions drifting
+     toward kernel bookkeeping. The contrast with Abundly: there non-adherence is
+     *invisible* (prose runs as the LLM happens to read it; Grace's over-asking was
+     found by manual retro); here deviation either hits a logged wall or glows as a
+     stall in the fleet view. Not a better agent — **a better feedback loop.**
+3. **The wake-up contract.** When the wait resolves, the kernel starts a **new
+   ephemeral activation** (consistent with §11: no long-running loop) and hands over
+   a context packet: errand state + the resolving event + relevant artifacts — the
+   first mandatory application of context assembly (§10.2 item 4). The agent does
+   not "remember"; it continues from the packet. (Durable wait + re-activation: the
+   shape Temporal calls a signal, except our agent side is ephemeral too.)
+4. **Double bookkeeping drifts — testimony vs. evidence again.** If the agent also
+   keeps private notes about its errands (diary, memory), the kernel register is the
+   evidence and the agent's notes are testimony (§11.1). Metacognition can hunt the
+   divergence: "Grace believes she is waiting on Cursor — the kernel shows that wait
+   resolved two days ago." Concretely, this is the detector for the
+   over-asking-and-under-reading bug class.
+5. **Incremental adoption.** An agent arriving from an Abundly-like world (own DB)
+   can migrate stepwise: register waits first (the highest value), move full errand
+   state later.
+
 ---
 
 ## 12. The Gatekeeper, Concretely
