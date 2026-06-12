@@ -132,6 +132,60 @@ that proposes templates from recurring blackboard patterns ("these three steps a
 run in sequence — formalize?"). Template discovery is deferred (out of scope in the
 test set) but reserved.
 
+### 3.1 The Execution-Style Spectrum
+
+The scripted/goal-directed dichotomy (§10.2 item 1) hides the middle rung — in
+practice the most important one:
+
+- **a) Scripted:** transitions are fixed; the kernel walks the graph. (Today's
+  pairflow.)
+- **b) Judgment-routed:** the template *declares* the possible routes; an LLM
+  judgment picks among them. Grace's triage (trivial → build / unclear → ask /
+  complex → ticket) is exactly this — and in our vocabulary it is **a decision card
+  filled by an agent instead of a human.** The routing decision is a
+  schema-validated artifact (enum + reasons): auditable, evaluable (§17), and every
+  option's consequences are scripted. Closed option set, open choice.
+- **c) Goal-directed:** no enumerated options — a goal + done-criterion, with the
+  action space bounded by grants/budgets/gates instead of transitions. (Grace's full
+  mode.)
+
+Rung (b) is the key: most "improvisation" needs are really judgment routing, not full
+freedom — and there the security model is unchanged.
+
+**A loose template is not "no structure" — it is structure at a different altitude.**
+A goal-directed errand's template declares: the **goal** (NL) + a **done-criterion**
+(schema or human judgment: "an approved PR exists") + **guardrails** (grant bounds,
+budget, max duration, escalation conditions) + **non-bypassable gates** ("whatever
+leaves the org passes approval" — judgment cannot override these). The kernel's role
+does not weaken; it **re-weights: from enforcing the path to enforcing the
+invariants.** Every action still passes capability/grant checks, the lifecycle is the
+same enum, waits/timers/transcript stay kernel-owned (replacing the errands DB). Only
+the step graph to validate position against is absent.
+
+**The two styles nest in both directions — composition, not rivalry:**
+
+- A scripted workflow can contain a goal-directed *step* — **today's pairflow
+  implement step is exactly this**: the review loop is scripted, but "figure out and
+  build it" is goal-directed inside, gated outside. Style (c) is not new to our
+  system; it was just never named.
+- A goal-directed errand can spawn scripted *children* — Grace, needing a release,
+  does not improvise but invokes the Releaser's scripted template (WF-7 mechanics).
+
+**Goal-directed is the discovery mode — and it crystallizes.** Goal-directed
+transcripts are raw material: if Grace's errands keep walking the same path
+(triage → analyze → build → PR), metacognition (§16 Levels 1/3) can propose a
+**template PR** from it — the sibling of blackboard→template discovery above and the
+connector spectrum (§6); crystallization-through-use again. Goal-directed is thus not
+just an execution style but **the discovery mode for new workflows**: run loose,
+observe, harden what proves load-bearing. And trust closes the loop: the *mode
+itself* is trust-gated — an agent earns goal-directed errands above a given budget
+only with a track record (§17 ladder, applied to mode).
+
+(The ExecutePairflowPlan experience reconnects here too: the skill's orchestration
+was partly judgment routing at prompt level — the v3 form steers the same decision
+into a schema-validated decision artifact, where deviation is not "non-adherence"
+but an audited choice.)
+
 ---
 
 ## 4. The Correlation Problem
