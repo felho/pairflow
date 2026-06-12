@@ -782,6 +782,37 @@ Five details:
    its own authorization state. Usage-informed pruning, from the same read model as
    cost and trust.
 
+### 13.2 Argument Predicates
+
+The Grant's constraints field, unpacked — four points:
+
+1. **Predicate outcomes are the allow/deny/defer triad — and defer grows the
+   allowlist.** Abundly's No / Yes / With-an-Allowlist is really auto-allow /
+   always-ask / conditional. A call with non-matching args (Freddy emailing a
+   non-whitelisted recipient) should not hard-fail but spawn an Ask: "allow once /
+   add to the allowlist?" — where "add" is a grant amendment. **The allowlist is not
+   authored up front; it accumulates from approve-once decisions** —
+   crystallization-through-use (§6) applied to guardrails.
+2. **The predicate language stays boring — the LLM may only tighten.** Declarative,
+   finite forms only: allow/deny lists, numeric ranges, domain patterns, time
+   windows, max-uses counters. No arbitrary code, no LLM judgment in the decision
+   path (the PEP must not be persuadable, §12). LLM judgment has exactly one,
+   asymmetric place: an advisory pre-filter that may *tighten* (allow → defer: "this
+   call is out of pattern, ask the human") but never loosen (no deny → allow). The
+   deterministic layer decides; the persuadable layer may at most urge caution.
+3. **Layered constraints compose by intersection.** A single call may be constrained
+   from several sources (grant constraints + template policy + domain rule like "no
+   email to competitors, ever, from anyone"). Same composition as the budget
+   hierarchy (§14): **the most restrictive binds** — deny overrides everything,
+   defer overrides allow. Simple, predictable, auditable.
+4. **Same shape, different enforcement locus.** Gate policies and arg predicates
+   share the interface shape (context → allow/block/defer) but run in different
+   places: gate policies in the kernel at transitions, with full context (artifacts,
+   transcript, round history); arg predicates in the connector runtime (PEP) at call
+   time, with **deliberately narrow context** — just the call args + the grant.
+   That narrowness is a feature: the PEP must be fast and simple, and matching a
+   recipient against a list needs no transcript. One pattern, two instantiations.
+
 ---
 
 ## 14. Cost Governance and Model Routing (Deferred — Keep the Door Open)
