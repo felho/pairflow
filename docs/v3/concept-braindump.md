@@ -1183,6 +1183,54 @@ never holds edit power over his own definition except via gated definition PRs
 conversation's worked examples become golden cases, so a new template is born with a
 non-empty eval suite.
 
+### 16.2 Self-Expansion: Everything the Agent Creates Is a Definition
+
+Agent-initiated automation (§10.1 item 4) looks like three scattered things —
+schedules, datasets, scripts — but the existing vocabulary unifies them:
+
+- **Schedule ("alarm clock")** = a trigger binding, which per §11 is part of the
+  *agent definition* — Freddy's weekly schedule is literally a definition PR against
+  his own definition.
+- **Dataset + schema** = the *definition* of a first-class entity (§7).
+- **Script/tool** = the *definition* of a capability implementation (§6
+  crystallization spectrum).
+
+So self-expansion is not a new capability category but **three new types on the
+definition-PR channel (§16)** — one self-modification path, not three ad-hoc ones.
+That answers most of the governance question: per-type approval policy (auto/human),
+deterministic BC-01-analog validation (schema validity, trigger well-formedness),
+audit, versioning, trust-based relaxation (§17). And §13.1/§13.2 bound the new
+automation's *runtime*: Freddy's weekly report can only do what Freddy holds grants
+for.
+
+**Per-type risk profiles:**
+
+| Type | Main risk | Mitigation |
+|---|---|---|
+| Schedule/trigger | runaway recurrence (cost, attention) | budget attribution from the creator's quota (§14); visible in the fleet view; **default expiry** |
+| Dataset | data sprawl, shadow schemas, privacy | birth registers owner, schema, retention, privacy class, home node (§8); schema evolution = definition PRs too, append-only compatible |
+| Script | code execution — the sharpest | no raw credentials (§13 already halved it); its PR is a *code diff*, literally code review; the script version enters transcript provenance on every use |
+
+**Three principles not stated anywhere yet:**
+
+1. **No immortal automation without human blessing.** Agent-created schedules are
+   time-boxed by default: they expire unless renewed (renewal can be the sibling of
+   the §13.1 grant-hygiene review: "Freddy's weekly report has run for 90 days,
+   opened 12 times — renew?"). Human-blessed standing automation may exist;
+   agent-created eternal automation, silently, may not.
+2. **No shadow automation.** Everything an agent creates is mandatorily registered
+   and fleet-visible — owner, purpose, creating-instance provenance. Abundly's value
+   is frictionless self-expansion; our added value is that **nothing self-expanded is
+   unlisted.**
+3. **Distillation carries evidence.** When a script replaces LLM behavior (the
+   Releaser pattern), that is a behavior change — the script PR ships with eval cases
+   demonstrating equivalence (§17.4's bug→test pattern, here: behavior→test→script).
+   Crystallization becomes a regression-protected transition, not a quality gamble.
+
+Plus a ladder analogy: new automation can start **on probation** — the first N runs
+in "report every run" mode (kin of §17.3 spot-check), then graduating to silent. The
+trust machinery reused, applied to automations.
+
 ---
 
 ## 17. Trust Calibration and Evals (Deferred — Keep the Door Open)
@@ -1353,8 +1401,8 @@ Keep-open commitments (binding now):
   source_channel ("kernel"), keeping the router uniform?
 - How do datasets relate to artifacts: is a dataset entry an artifact with a collection
   id, or a separate entity with its own contract?
-- Agent-authored scripts/tools: sandboxing, review, deploy lifecycle — who approves a
-  new script, where does it run, what credentials does it get?
+- Agent-authored scripts remainder (§16.2 sets the governance, §13 the credentials):
+  which sandbox runtime do scripts execute in?
 - Context assembly: what exactly goes into a step's context packet, and who decides
   (template? kernel heuristics? the agent's own skill docs)?
 - External-system state as instance state ("the PR is the instance"): subscribe via
