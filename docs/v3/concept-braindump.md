@@ -1207,6 +1207,38 @@ informs a human may stay prose.** A prose convention can be hardened into a sche
 later when machines start depending on it — that hardening is itself a definition PR
 (§16).
 
+**Contracts as first-class entities.** Taking "the contracts are the system's real
+architecture" seriously has four consequences:
+
+1. **One shared entity, not two copies.** Today "Cursor's commit convention" lives
+   twice: in Cursor's instructions ("write commit messages like this") and in
+   Releaser's ("expect commit messages like this") — two copies guarantee drift. The
+   convention should be a **named contract entity in the registry**, referenced by
+   both definitions, changed via definition PRs, carrying producer and consumer
+   lists. Valuable side effect: **the system's dependency graph becomes explicit and
+   queryable** — the architecture diagram is *rendered from* the contract registry,
+   not drawn from memory.
+2. **Prose-contract drift is silent — it needs sensors.** Schema violations fail
+   loudly; if Cursor switches to one-line commit messages, Releaser's changelog
+   degrades and "nobody touched anything". Three detectors fall out of existing
+   machinery: the *downstream is the sensor* (the consumer's struggle is measurable —
+   more pulls (§11.4), more Asks, longer runs, higher cost in the ledger); *canary
+   spot-checks* (§17.3 sampling applied to contracts: an LLM judge periodically asks
+   "does this artifact follow the convention?"); and *cross-agent correlation* in
+   metacognition ("Releaser's cost/quality degraded since Cursor definition v3" —
+   queryable thanks to version-keyed provenance, §17.2).
+3. **Consumer-driven contract evals (the Pact pattern).** The consumer supplies the
+   test cases: Releaser attaches eval cases to the contract ("I must be able to
+   extract X from a commit message"), and these run in the **producer's**
+   definition-PR regression gate (§17.4). The producer cannot change in ways its
+   consumers would feel without the gate speaking up — cross-agent CI on the
+   existing eval machinery.
+4. **Evolution rules.** Additive changes are safe (a new field old consumers
+   ignore); breaking changes are coordinated — the contract PR requires re-eval of
+   every definition on the registry's producer/consumer lists (the v2 append-only
+   compatibility principle, generalized). Without the registry (point 1) this is
+   impossible; with it, mechanical.
+
 ### 15.2 Three Tiers: Card, Form, App
 
 1. **Decision card** — enumerated options + context (approve/rework/reject); schema is
