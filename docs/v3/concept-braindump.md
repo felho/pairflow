@@ -4,7 +4,9 @@ Status: draft — DIVERGENCE phase (intentionally bloated and unfiltered; conver
 Date: 2026-06-12
 Sources: working session 2026-06-11/12 (v2 implementation review, distributed-workflow
 problem exploration, Apache Camel assessment, Gmail-inbox and plan-execution workflow
-inputs, Abundly capability-map analysis)
+inputs, Abundly capability-map analysis, two Abundly video reverse-engineering reports
+(Freddy invoice router; Backlogger/Releaser/Grace dev team), agent-model and
+metacognition discussion)
 Companion: [test-workflows.md](test-workflows.md) — the fixed 7-scenario test set every
 iteration of this concept must be walked through.
 
@@ -205,7 +207,9 @@ sends the same invoice twice and no second instance starts.
   status, reminders, substitution rules (vacation fallback), escalation paths
 - **Participant/agent registry:** humans and agents uniformly, with capability
   descriptions; "create a new agent" = registration, not platform work; steps declare
-  needs ("someone who can validate an invoice") and the registry resolves
+  needs ("someone who can validate an invoice") and the registry resolves; agent
+  entries are durable identities (definition + grants + memory namespaces + trigger
+  bindings — see §11), local and global registries federate
 - **Skills stay local:** the substrate sees the contract (input/output schema), not the
   implementation (Claude Code skill, script, anything)
 - **Wait-condition register + matcher agents:** structured predicate + NL description;
@@ -226,6 +230,11 @@ sends the same invoice twice and no second instance starts.
   is stuck (partial gap, §9)
 - **Eval / trust calibration layer:** when may an agent step skip its human gate —
   driven by evals and historical override rates (deferred; v2 plan's Trust Profile)
+- **Learning/metacognition layer:** instance learnings → run reflection → agent
+  metacognition → system metacognition, with improvements expressed as gated
+  "definition PRs" (see §12)
+- **Context packet assembler:** the kernel composes the minimal context for each step
+  (step contract + relevant artifacts + agent skill docs) instead of one big prompt
 
 ---
 
@@ -337,7 +346,212 @@ Camel assessment, §10) — that is not where to compete.
 
 ---
 
-## 10. Existing-Tools Assessment
+## 10. Market Scan 2: Abundly in Operation (Two Video Reverse-Engineering Reports)
+
+Two reverse-engineered demo videos deepen the §9 treemap view: (1) "The Simplest Way to
+Make an Advanced AI Agent" — building Freddy, an invoice-router agent; (2) "The Human +
+AI-Agent Dev Team" — a running ecosystem of three agents (Backlogger, Releaser, Grace)
+plus humans, Cursor, GitHub, Slack, Notion. Reports:
+`~/ai-agent-video-reverse-engineering/report/index.html` and
+`~/human-ai-agent-dev-team-reverse-engineering/report/index.html`.
+
+### 10.1 From the Freddy demo (agent building UX)
+
+Fundamentally new for us:
+
+1. **Conversational authoring — the agent writes its own spec.** Freddy generates his
+   operating instructions from uploaded guideline documents and modifies them through
+   chat. Bridge to our thesis: **prose instructions can be the source from which formal
+   templates are compiled** — author in conversation, enforce the compiled template in
+   the kernel. Abundly cannot do the second half: their prose IS the running "workflow"
+   (Level 1 prompt enforcement).
+2. **Capability negotiation as a first-class flow.** The agent *requests* the
+   capabilities it needs for its mission; the human grants them; the grant is visible
+   state. Our capability profiles are static template data — runtime
+   request/grant/audit is a missing concept (and matters more in a distributed setting:
+   who may grant what to whom).
+3. **Argument-level guardrails.** Inside Send Email: Require Approval = No / Yes /
+   With an Allowlist + recipient whitelist. Our capability matrix is action-level
+   (role × state → action); this is one level deeper — **predicates over the action's
+   arguments**. Fits the PolicyModule abstraction (capability-attached arg-predicate
+   policies) but was never stated.
+4. **Agent-initiated automation (gated self-expansion).** Freddy schedules his own
+   weekly event ("alarm clock") and creates an internal database with schema on demand.
+   Agents creating new trigger rules and datasets at runtime — simultaneously the
+   biggest value and the biggest governance risk (which is exactly why items 2 and 3
+   must exist).
+5. **Diary / Approvals / Log as three distinct oversight surfaces.** Transcript =
+   machine truth; diary = human-facing reasoning narrative; approvals = a dedicated
+   pending-decisions queue (a specialization of the task inbox). Finer-grained than our
+   single transcript concept.
+6. **Agent-to-agent access graph as an explicit permission entity** ("Freddy can
+   access → compliance expert", graph view with toggles). We discussed kernel
+   federation but not configured, audited consultation rights between agent pairs
+   (ask? delegate? use the other's tools?).
+
+Minor but noteworthy: NL querying over own data ("total amount processed today");
+asset registry with publish/share lifecycle (uploaded docs, databases, and generated
+dashboard apps under one lifecycle with preview/publish); "Verify with all LLMs"
+multi-model cross-check as a step-level guardrail mechanism; a synchronous voice call
+during which a state-changing decision is made (sync conversation as gate resolution).
+
+### 10.2 From the dev-team demo (ecosystem operation)
+
+Fundamentally new for us:
+
+1. **Two execution styles exist; we only had one.** Our model is *scripted*: a template
+   prescribes steps. Grace is *goal-directed*: she has a goal ("take stakeholder
+   requests from triage to PR") and improvises within guardrails — asks, analyzes,
+   decides whether to build or hand off. Her clarity/risk/complexity triage (trivial →
+   build via Cursor; unclear → ask; complex → ticket for humans) is **judgment-based
+   routing**: the path is decided by LLM assessment, not template transitions. v3
+   foundations must host both styles or Grace-type agents are excluded.
+2. **Grace's errands database is evidence our kernel is missing.** She maintains her
+   own DB of active errands, waiting states, owners ("Am I waiting for a human, Cursor,
+   status?") — a hand-rolled workflow-instance store + wait-condition register.
+   Lessons: (a) agent-centric platforms don't escape instance state, they push the
+   bookkeeping onto the agent; (b) product idea: the kernel can offer **errand tracking
+   as a service** to goal-directed agents — register errands and waits with the kernel,
+   get triggers, reminders, and audit in return.
+3. **Agent-authored deterministic tools.** Releaser writes and maintains helper scripts
+   (get-my-prs.ts) because raw GitHub API calls are token-inefficient — distilling LLM
+   steps into deterministic steps as a cost/reliability optimization. A third
+   self-expansion artifact besides schedules and datasets; sandbox/review/deploy
+   lifecycle is open (intersection of skill registry and credential vault).
+4. **Context assembly as a kernel responsibility.** Releaser's instructions are
+   trigger-segmented, with detail outsourced to documents loaded only when needed —
+   explicit cost and reliability optimization. Generalization: the kernel should
+   assemble a **minimal context packet** per step (step contract + relevant artifacts)
+   instead of the agent swimming in one large prompt ocean.
+5. **Artifact quality as the inter-agent interface.** Cursor's structured commit
+   messages and PR descriptions are what Releaser builds changelogs from; Backlogger's
+   clean tickets are what humans AND coding agents implement from. **Upstream output
+   conventions are downstream input contracts** — prose-form schema contracts. Our
+   findings-artifact contract is the formalized ancestor; the generalization: every
+   inter-agent artifact type carries an (even informal) contract, and these contracts
+   are the system's real architecture.
+6. **Retrospective as a meta-workflow — "grow agents, don't build them".** After day
+   one, Grace searches her own logs/diary, names the failure pattern ("over-asking and
+   under-reading"), and updates her own instructions, scripts, and documents. Gives the
+   eval/trust layer a concrete mechanism (see §12) and sharpens the requirement that
+   definition versions be recorded in transcript provenance (v2 already has
+   agent_config provenance — this is why it is not optional).
+7. **Releaser is the choreography paradigm in the wild.** Four independent triggers
+   (weekday 13:00 release PR + approval ask; 13:37 nag check; "PR approved" → merge +
+   publish; Friday 14:02 weekly summary) coordinating over **shared external state**
+   (GitHub PR status). No workflow instance — "the PR is the instance". Validates the
+   §3 hybrid; new requirement: the substrate must be able to treat external-system
+   state as instance state, or at least subscribe to it via wait conditions.
+
+Minor but noteworthy: capability discovery via agent interviews (Grace "interviewed"
+Backlogger and Releaser about what they can do); self-authored skill documents (Grace
+distilled the Cursor Cloud API into her own skill doc); Usage & Limits in the nav (cost
+gap reconfirmed); the human role boundary stated cleanly (what/why decisions,
+architecture, PR review/merge).
+
+### 10.3 The reverse lesson, sharpened
+
+Both reports list the same blind spots as "missing details": idempotency, duplicate
+email handling, error handling, rollback, RBAC depth, audit retention, secrets scope.
+These are exactly our kernel strengths. The full picture: Abundly is strong in
+low-friction agent experience (authoring, capability negotiation, asset generation);
+we are strong in reliable execution. Not mutually exclusive — their values can be
+built ON TOP of our kernel (conversational authoring → compiled template; capability
+negotiation → grant workflow in the kernel; allowlists → arg-predicate policies).
+
+---
+
+## 11. Agent Model: Durable Identity, Ephemeral Activations
+
+The "agent-centric vs. workflow-centric" framing is a false dichotomy — it conflates an
+agent's *identity* with its *execution*. Resolution:
+
+- **Durable:** the agent's *definition* (versioned instructions/persona), its
+  *capability grants*, its *memory*, and its *addresses + trigger bindings*.
+- **Ephemeral:** every *activation* — a trigger pulls the agent into a workflow
+  instance; the run ends; nothing keeps running.
+
+Freddy is not a continuously running loop in Abundly either — "Freddy is always there"
+is a UX illusion over trigger → ephemeral run. What makes him feel alive is the
+continuity of definition + accumulated memory BETWEEN runs. (Classic actor-model
+insight: persistent identity, ephemeral activation.) The v2 seed already exists
+(`Actor` + `AgentConfig` on steps); what is missing is easy agent description tooling —
+which is why pairflow has so few agents.
+
+**An agent-registry entry contains:**
+
+1. **Definition:** persona/instructions, versioned — transcript provenance must record
+   which definition version ran each instance (v2's agent_config field points here)
+2. **Capability grants:** what it may access, with argument-level guardrails
+3. **Memory namespaces:** which durable stores it may read/write
+4. **Addresses + trigger bindings:** Freddy's email address, Releaser's four schedules —
+   i.e., "when this event/schedule fires → start this (templated or loose) workflow
+   with this agent". This unifies "the agent kicks off a workflow" and "the agent
+   participates in a predefined workflow": the former just means the trigger→workflow
+   binding lives in the agent definition rather than in a standalone template.
+
+**Memory is a special tool:** memory access goes through the same capability/grant
+system as everything else — the same matrix governs whether an activation may write the
+agent's diary as whether it may send email.
+
+**Three memory scopes** (we previously had two):
+
+- *Instance-scoped:* artifacts, transcript — the truth of one run
+- *Agent-scoped:* knowledge accumulating across runs, bound to the definition (diary,
+  skill docs, user mappings) — **the new middle layer**
+- *Org-scoped:* shared datasets, wiki
+
+The middle layer's governance is the sensitive part: what one activation writes leaks
+into all future activations — simultaneously the "grow agents" value and an
+audit/feedback surface (§12 handles this in a controlled way).
+
+**Registry federation:** if an agent is definition + memory (= data), agents are
+portable and homeable like instances. Local registries (definitions on your machine)
+and shared/global registries (the Abundly-like central case) coexist; **a step may
+reference either a local or a global agent definition.** Sharing a definition is cheap;
+sharing memory is not self-evident (company Freddy's memory is company data; your
+local agent's memory is private) — the hard half of federation is the homing and
+visibility of memory namespaces, the same pattern as the mailbox gatekeeper. Edge
+cases expected; to be discovered by walking the test workflows.
+
+Grace-style goal-directed execution also lands cleanly here: an "errand" is just a
+workflow instance with a very loose template, and Grace's continuity comes from her
+agent-scoped memory plus the kernel tracking her errands (instead of her own ad-hoc
+DB).
+
+---
+
+## 12. Learning and Metacognition Layers
+
+Sketch of a multi-level learning model (depends entirely on provenance being right —
+every learning must be linked to run, step, agent, and definition versions):
+
+- **Level 0 — instance learnings (default).** During/after a run, learnings are saved
+  as a matter of course, attached to the workflow instance with full provenance.
+- **Level 1 — workflow-run reflection.** When a run ends, query all learnings related
+  to that workflow, synthesize higher-level reflections, store them against the
+  run/workflow type. May emit a **"definition PR" against the workflow template**
+  ("this workflow could be improved by...").
+- **Level 2 — agent metacognition.** Periodically (every N instances, daily, whatever
+  cadence), the agent reviews all interactions it was involved in and extracts
+  patterns. Two uses: (a) patterns are **dynamically leveraged in future activations**
+  (retrieval at activation time); (b) the agent recommends improvements to **its own
+  definition as a PR**, with a per-agent setting for whether such PRs are auto-approved
+  or require human approval.
+- **Level 3 — system metacognition.** A periodic system-wide process reviews recent
+  learnings across all workflows/agents and evaluates whether a learning from one part
+  of the system applies elsewhere (cross-workflow, cross-agent transfer).
+
+**Unifying mechanic: every improvement is a pull request against a definition** —
+agent definition or workflow template — gated by a configurable approval policy. This
+reuses the existing gate machinery (auto-approve = trust-calibrated gate; human
+approval = human gate) and makes "grow agents, don't build them" auditable instead of
+silent self-modification. Grace's retrospective (§10.2) is Level 2 done manually; the
+v2 plan's Trust Profile is the calibration input for when auto-approve is safe.
+
+---
+
+## 13. Existing-Tools Assessment
 
 - **Temporal / Restate / Inngest:** durable execution + signals + timers out of the box
   (a step waiting for an external event = signal). Best technical fit under the kernel,
@@ -373,7 +587,7 @@ Camel assessment, §10) — that is not where to compete.
 
 ---
 
-## 11. Open Questions (Unordered)
+## 14. Open Questions (Unordered)
 
 - Where does a company-level kernel physically live for a small company (tiny server?
   shared repo + cron? someone's always-on machine?)
@@ -401,10 +615,24 @@ Camel assessment, §10) — that is not where to compete.
   source_channel ("kernel"), keeping the router uniform?
 - How do datasets relate to artifacts: is a dataset entry an artifact with a collection
   id, or a separate entity with its own contract?
+- Agent-authored scripts/tools: sandboxing, review, deploy lifecycle — who approves a
+  new script, where does it run, what credentials does it get?
+- Context assembly: what exactly goes into a step's context packet, and who decides
+  (template? kernel heuristics? the agent's own skill docs)?
+- External-system state as instance state ("the PR is the instance"): subscribe via
+  webhooks vs. poll; how are consistency and missed events handled?
+- Agent-scoped memory governance: what may an activation write into agent memory, and
+  how is cross-instance leakage audited?
+- Local vs. global agent definition references from a step: version pinning? what
+  happens to memory homing when a global definition runs locally?
+- Definition-PR mechanics (§12): how are auto-approve thresholds set, audited, and
+  revoked when an auto-approved change misbehaves?
+- Capability grant workflow: who may grant which capabilities to which agent in a
+  multi-user setting, and are grants time-boxed?
 
 ---
 
-## 12. What This Document Is Not
+## 15. What This Document Is Not
 
 Not a design. Not prioritized. Not consistent. It is the raw material for the
 convergence phase: the next step is to pick the load-bearing decisions (kernel
