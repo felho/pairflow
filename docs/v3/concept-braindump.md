@@ -231,7 +231,8 @@ sends the same invoice twice and no second instance starts.
 - **Operator observability surface:** fleet view — what runs, what waits on whom, what
   is stuck (partial gap, §9)
 - **Eval / trust calibration layer:** when may an agent step skip its human gate —
-  driven by evals and historical override rates (deferred; v2 plan's Trust Profile)
+  driven by evals and historical override rates (deferred; v2 plan's Trust Profile;
+  model in §17)
 - **Learning/metacognition layer:** instance learnings → run reflection → agent
   metacognition → system metacognition, with improvements expressed as gated
   "definition PRs" (see §16)
@@ -682,7 +683,7 @@ on-behalf-of claim semantics.
 - The remote-executor relay (BC-08) is reused: if a step runs in a cloud sandbox, the
   credential still does not travel — the external call relays BACK to B's gatekeeper
   with op_id idempotency. Same channel, new cargo.
-- The agent-authored-scripts question (§18) half-resolves: scripts get no raw
+- The agent-authored-scripts question (§19) half-resolves: scripts get no raw
   credentials either — they too invoke named capabilities, shrinking the sandbox
   problem.
 - Offline owner: B's node unreachable → the wait condition simply blocks (already a
@@ -984,7 +985,103 @@ v2 plan's Trust Profile is the calibration input for when auto-approve is safe.
 
 ---
 
-## 17. Existing-Tools Assessment
+## 17. Trust Calibration and Evals (Deferred — Keep the Door Open)
+
+Status: deferred. Decision for now: the production-signal approach below is sufficient;
+an explicit eval system is acknowledged as necessary in specific cases (cold start,
+regression gates, high-stakes cross-checks) and the door stays open for it. This point
+ties the other threads together: provenance (foundation), definition PRs (§16), grant
+trust ladder (§13), budget/routing (§14), Ask edit-distance (§15).
+
+### 17.1 The Key Insight: Human Gates ARE the Eval Harness
+
+Every human gate decision is a **labeled example**: approve = "the agent's output was
+good"; rework/reject = "it wasn't"; and the finest signal — when the human **edits**
+the proposed contribution before approving, the edit distance shows exactly *what* was
+wrong. The pairflow review loop is the same: findings are a quality signal against the
+implementer. If provenance is right (§16 already requires it), **trust-calibration
+training data is a byproduct of normal operation** — production is continuous
+evaluation. No separate eval infra needed to start; just record what the gates already
+see: outcome, override, edit distance, full provenance.
+
+### 17.2 Trust Is a Matrix, Not a Scalar
+
+The v2 Trust Profile (per-gate threshold/history/override_rate) generalizes to:
+
+```
+TrustProfile key: (gate, agent, definition version, context bucket)
+```
+
+Freddy is trusted for invoices under €1000, not above; Grace for trivial requests,
+not complex ones. The **definition version** is a critical dimension: after a
+definition PR (§16) the agent behaves partly differently — trust must not blindly
+inherit across the version boundary (how much it should decay with change magnitude
+is an open question).
+
+### 17.3 The Autonomy Ladder — and the Middle Rung Everyone Skips
+
+Gate modes (mirror of the §13 grant ladder):
+
+1. **always-human** — everything passes through a person
+2. **human-with-recommendation** — the agent pre-judges; the human one-click approves
+   (already a huge load reduction)
+3. **spot-check** — auto-approve, but an N% sample gets post-hoc human review
+4. **auto-with-monitoring** — fully automatic, post-hoc audit
+5. **full auto**
+
+Rung 3 is the crux and most systems skip it: **sampling keeps the label stream alive
+after automation.** Without it a full-auto system drifts silently — nobody looks
+anymore, so nobody notices. Spot-check is the drift detector.
+
+Two asymmetry rules: (a) **by reversibility** — cheaply reversible actions automate
+earlier; irreversible ones (an email left for the customer) stay gated longer;
+(b) **trust climbs slowly, falls fast** — a severe failure (P0-equivalent) means an
+immediate rung drop; climbing requires minimum sample size + override-rate threshold.
+
+### 17.4 Where Explicit Evals Are Still Needed
+
+Production signal is not enough in two places:
+
+1. **Cold start:** a new agent / new definition version has no history — golden test
+   sets needed (inputs + expected output properties).
+2. **Definition-PR regression gate:** a definition PR must pass the definition's eval
+   suite before merge — **CI for agent definitions** (§16). The retro workflow can
+   also *generate* eval cases: every production failure becomes a regression test —
+   TDD culture transplanted to the agent world (bug → test → fix).
+
+"Verify with all LLMs" (Abundly) is an *online* eval mechanism: N models judge
+independently, divergence → defer to human. Expensive — worth it at high-stakes
+gates; the §14 budget/routing system prices it.
+
+### 17.5 Distributed Sharpness: Whose Trust?
+
+Trust lives in the eye of the principal: B trusts Freddy differently than C does.
+Trust profiles are per-principal (or per-domain): org trust for org gates, personal
+trust for personal gates. Trust composes along delegation: the org trusts B's
+gatekeeper's auto-contributions to the extent B's matcher's track record warrants.
+Across federation, profiles are NOT directly portable (override standards differ) —
+**share evidence, not conclusions**.
+
+### 17.6 MVP and Keep-Open Commitments
+
+MVP (nearly free): (1) record gate outcomes with provenance — a few transcript
+fields; (2) a `pairflow trust` report (read model); (3) rung-setting stays *manual*,
+informed by the report, audited as a config change / definition PR; (4) spot-check
+mode as gate config. Rung-transition automation, calibration math (Wilson intervals
+etc.), multi-model cross-checks — all later, on demand.
+
+Keep-open commitments (binding now):
+
+1. **Gate outcome + edit distance recorded with provenance from day one** — the data
+   is the asset, it cannot be backfilled. Recommendation: this belongs in v2 already,
+   not deferred to v3 — every day without it loses data.
+2. **Gate mode is a config enum, not a human/auto boolean**
+3. **TrustProfile is keyed by definition version**
+4. **Templates/definitions can carry an eval suite** (even an empty one)
+
+---
+
+## 18. Existing-Tools Assessment
 
 - **Temporal / Restate / Inngest:** durable execution + signals + timers out of the box
   (a step waiting for an external event = signal). Best technical fit under the kernel,
@@ -1020,7 +1117,7 @@ v2 plan's Trust Profile is the calibration input for when auto-approve is safe.
 
 ---
 
-## 18. Open Questions (Unordered)
+## 19. Open Questions (Unordered)
 
 - Where does a company-level kernel physically live for a small company (tiny server?
   shared repo + cron? someone's always-on machine?)
@@ -1049,8 +1146,9 @@ v2 plan's Trust Profile is the calibration input for when auto-approve is safe.
   and what must the foundations preserve to keep it possible (§8)?
 - Node↔node edge cases within one personal domain: grant/memory visibility when an
   instance's home node differs from where a connector lives
-- Eval/trust loop: what minimal data must the transcript capture from day one so trust
-  calibration is computable later without migration?
+- Trust remainders (§17 sets the model): trust decay across definition versions;
+  calibration math for rung transitions; cross-principal evidence sharing format in
+  federation
 - Internal lifecycle events as a channel: are kernel events just another EventEnvelope
   source_channel ("kernel"), keeping the router uniform?
 - How do datasets relate to artifacts: is a dataset entry an artifact with a collection
@@ -1072,7 +1170,7 @@ v2 plan's Trust Profile is the calibration input for when auto-approve is safe.
 
 ---
 
-## 19. What This Document Is Not
+## 20. What This Document Is Not
 
 Not a design. Not prioritized. Not consistent. It is the raw material for the
 convergence phase: the next step is to pick the load-bearing decisions (kernel
