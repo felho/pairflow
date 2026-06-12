@@ -198,6 +198,21 @@ sends the same invoice twice and no second instance starts.
 
 - **Trigger/sensor layer:** mailbox watcher, webhook receiver, cron, manual entry, data
   scans — all normalize to EventEnvelope
+- **Connector strategy — adopt breadth, build depth:** we neither build nor compete on
+  connector breadth; we adopt ecosystems. The connector runtime (§12) can host MCP
+  servers — the MCP catalog (Gmail, Slack, GitHub, Notion, …) is inherited wholesale,
+  runs inside the trust domain with credentials from the local vault, and each MCP
+  tool surfaces as a named capability with Grant predicates layered on top (MCP
+  supplies "what can be called"; our layer supplies "who, when, with what
+  constraints" — the governance MCP itself lacks). MCP is not always needed either:
+  against a plain API an LLM can write client code directly, often more efficiently
+  than going through MCP. The connector spectrum mirrors fixed-vs-loose workflows:
+  start generic (MCP / ad-hoc API calls), let usage reveal the hot paths, distill
+  them into deterministic scripts (the §10.2 Releaser pattern), and harden what
+  proves load-bearing into a first-class connector. Same crystallization-through-use
+  meta-pattern as blackboard→template (§3) and prose→schema (§15.1). The same goes
+  for skills: existing skill formats (e.g., Claude Code skills) are ready building
+  blocks for step execution
 - **Event normalizer + router:** the three-way decision above
 - **Kernel:** template registry, instance manager, transition engine, policy/gate
   engine, capability engine — the pairflow v2 core, unchanged in shape
@@ -515,6 +530,10 @@ we are strong in reliable execution. Not mutually exclusive — their values can
 built ON TOP of our kernel (conversational authoring → compiled template; capability
 negotiation → grant workflow in the kernel; allowlists → arg-predicate policies).
 
+Strategy in one line: **adopt breadth (MCP for connectors, existing skill formats for
+execution), build depth (kernel, governance, correlation, trust) — nobody supplies
+the latter.** (Connector strategy details in §6.)
+
 ---
 
 ## 11. Agent Model: Durable Identity, Ephemeral Activations
@@ -600,7 +619,9 @@ requirements.
    APIs, executes named capabilities ("mailbox.search with invoice predicate") checking
    grant constraints at call time. It is critical that this is NOT an LLM: the
    enforcement point must not be persuadable. A prompt injection may fool the matcher —
-   it cannot fool the connector, which only evaluates predicates.
+   it cannot fool the connector, which only evaluates predicates. Internally the
+   runtime may host MCP servers or agent-distilled API client scripts — see the
+   connector strategy in §6.
 2. **Matcher — the only LLM component.** The connector hands it a new inbound event
    plus the open wait conditions; it judges "this resolves instance #42, the relevant
    datum is 2026-07-01". It has no credentials and calls no APIs. If fooled, the damage
@@ -938,7 +959,9 @@ router's three-way decision (§5) maps exactly:
 
 This is why "the form is a channel adapter": a web form is an inbound channel like
 email or Slack — it produces EventEnvelopes and does NOT decide whether an envelope
-feeds or starts; that is the router's job.
+feeds or starts; that is the router's job. Abundly's "Agent API Endpoint" is the
+machine twin of the standing intake form: a permanent inbound channel bound to a
+template/agent, with the same feed-vs-start routing.
 
 ### 15.5 The One Invariant That Matters, and Edge Cases
 
