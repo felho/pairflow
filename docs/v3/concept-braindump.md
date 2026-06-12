@@ -234,7 +234,7 @@ sends the same invoice twice and no second instance starts.
   driven by evals and historical override rates (deferred; v2 plan's Trust Profile)
 - **Learning/metacognition layer:** instance learnings → run reflection → agent
   metacognition → system metacognition, with improvements expressed as gated
-  "definition PRs" (see §14)
+  "definition PRs" (see §15)
 - **Context packet assembler:** the kernel composes the minimal context for each step
   (step contract + relevant artifacts + agent skill docs) instead of one big prompt
 
@@ -472,7 +472,7 @@ Fundamentally new for us:
 6. **Retrospective as a meta-workflow — "grow agents, don't build them".** After day
    one, Grace searches her own logs/diary, names the failure pattern ("over-asking and
    under-reading"), and updates her own instructions, scripts, and documents. Gives the
-   eval/trust layer a concrete mechanism (see §14) and sharpens the requirement that
+   eval/trust layer a concrete mechanism (see §15) and sharpens the requirement that
    definition versions be recorded in transcript provenance (v2 already has
    agent_config provenance — this is why it is not optional).
 7. **Releaser is the choreography paradigm in the wild.** Four independent triggers
@@ -542,7 +542,7 @@ agent's diary as whether it may send email.
 
 The middle layer's governance is the sensitive part: what one activation writes leaks
 into all future activations — simultaneously the "grow agents" value and an
-audit/feedback surface (§14 handles this in a controlled way).
+audit/feedback surface (§15 handles this in a controlled way).
 
 **Registry federation:** if an agent is definition + memory (= data), agents are
 portable and homeable like instances. Local registries (definitions on your machine)
@@ -659,7 +659,7 @@ requests, human grants) is this entity's creation flow — a mini-workflow with 
 gate on existing kernel machinery; and the **argument-level guardrails** (allowlist)
 are the Grant's constraints field. No new machinery, one new entity.
 
-**Trust ladder** (rhymes with §14 metacognition): per-use approval → instance-scoped
+**Trust ladder** (rhymes with §15 metacognition): per-use approval → instance-scoped
 grant → template-level standing grant → time-boxed standing grant with audit review.
 Each rung up is itself an audited decision; the Trust Profile is the calibration input.
 
@@ -682,7 +682,7 @@ on-behalf-of claim semantics.
 - The remote-executor relay (BC-08) is reused: if a step runs in a cloud sandbox, the
   credential still does not travel — the external call relays BACK to B's gatekeeper
   with op_id idempotency. Same channel, new cargo.
-- The agent-authored-scripts question (§16) half-resolves: scripts get no raw
+- The agent-authored-scripts question (§17) half-resolves: scripts get no raw
   credentials either — they too invoke named capabilities, shrinking the sandbox
   problem.
 - Offline owner: B's node unreachable → the wait condition simply blocks (already a
@@ -703,7 +703,103 @@ in workflow payloads/artifacts; secrets in LLM context; building our own crypto.
 
 ---
 
-## 14. Learning and Metacognition Layers
+## 14. Cost Governance and Model Routing (Deferred — Keep the Door Open)
+
+Status: enterprise-direction design sketch. NOT a current goal — this is a hobby
+project first, value-for-self first. Only the four keep-open invariants at the end of
+§14.2 are binding now; everything else builds on them later without retrofit.
+
+### 14.1 Metering and Budgets
+
+- **Metering points = enforcement points.** The deterministic runtimes (LLM-call
+  wrapper, connector/PEP) execute the actual calls, so they are the natural metering
+  points too — a second duty, exactly like the gatekeeper's. Every cost event is
+  written with full provenance: run_id, step_id, agent, definition version, principal.
+  Without provenance there are numbers but no attribution.
+- **The ledger is a first-class dataset** (§7): a stream of cost events, with a read
+  model providing per-instance / per-template / per-agent / per-person / per-day
+  aggregates (surfaced in the digest and the fleet view). v1's metrics eventsStore is
+  a seed.
+- **Two enforcement mechanisms, not one:**
+  1. *Pre-flight check (gate):* before an expensive step/fan-out, a budget policy
+     estimates projected cost — static estimates first, later per-step cost
+     distributions computed from transcript history. Overrun → block/defer.
+  2. *Metered cutoff (runtime guard):* hard limit in the runtime — the LLM wrapper
+     stops calling when the step/instance quota is exhausted. Exhaustion is a modeled
+     event (`budget_exhausted`), routed like any failure — typically defer with a
+     decision card: "instance #42 hit its €5 budget at step 3 — top up, abort, or
+     continue degraded?"
+- **Third policy outcome: allow_with_constraints (degradation).** For the WF-6
+  80-link trap the right answer is often not "stop" but "run the top-20 novelty
+  candidates" or "switch to a cheaper tier". Same pattern as WF-3 degraded
+  completion — policy-driven and audited, never silent.
+- **Budget hierarchy with quota leasing.** Budgets nest: step < instance < template
+  (monthly) < person/domain < org; the tightest binds. Do NOT implement as a central
+  check per LLM call (latency + the central kernel would see everything again):
+  the instance leases a quota from the domain budget at start, the runtime enforces
+  locally (token bucket), unused quota returns. Ledger is eventually consistent —
+  fine for soft limits; hard limits are local anyway.
+- **Cross-domain cost bearing: the Grant carries the budget.** When an org workflow
+  runs a step on B's personal node, the Grant's constraints field gains a budget
+  dimension ("max €X/month under this grant, charged to org" or "from B's quota").
+  Cost accounting follows the delegation chain on the §13 audit trail. Zero new
+  machinery.
+- **Attention is a resource.** Budgets are multi-dimensional: money, tokens, external
+  API quotas, wall-clock time — and human interruptions. A person can set "max 5
+  workflow interruptions/day; batch the rest into the morning digest". Grace's
+  over-asking pattern and Releaser's 13:37 nag are exactly this cost. Same budget
+  machinery, the counter is interrupts instead of dollars; ties into the task inbox
+  and degraded completion. In a human-centric substrate this guardrail matters as
+  much as the financial one (and goes beyond what Abundly shows).
+- **Build over adopt, exceptionally.** Calls already pass through our wrapper, so
+  metering is a few lines; the ledger is NDJSON + read model; enforcement is a policy
+  module. LiteLLM/OpenRouter budgets or Helicone tracking are optional; the 50/75/90%
+  alert ladder is a UX pattern worth stealing.
+- **MVP order:** (1) LLM-call metering with provenance → cost-event stream; (2) read
+  model aggregates; (3) budget policy module with pre-flight check; (4) runtime quota
+  cutoff with `budget_exhausted` routing; (5) degradation policies + attention budget
+  later.
+- **Anti-patterns:** central check on every call; silent degradation without audit;
+  metering without provenance; treating cost as money-only.
+
+### 14.2 Model Provider Routing
+
+- **A provider is just another connector.** Like Gmail or Slack: credential (API key)
+  in the vault, cost metadata (per-token price or "free/local"), and a descriptor —
+  quality tier, context size, modalities, plus a field especially valuable here:
+  **privacy class** (does data leave the node?). Local inference (e.g., a model on a
+  local DGX box) is a zero-marginal-cost, "private"-class connector. Provider calls
+  go through the same deterministic wrapper built for metering and credentials.
+- **Local inference strengthens the gatekeeper.** The §12 matcher is credential-less
+  but would still send email content to a cloud LLM; run it on local inference and
+  B's emails never reach even the model vendor — the privacy story completes. And the
+  high-volume, low-stakes work (triage of every inbound email, the WF-6 fan-out) is
+  exactly what hurts at cloud prices and is free locally. So cheap-model routing is
+  not the antechamber of enterprise cost control here — it is what makes the inbox
+  pipeline economical. Value-for-self, now.
+- **Selection cascade** (like CSS): step-level override > agent-definition default >
+  template default > node/domain default. v2's `agent_config` already carries
+  mode/approach keys — `model` is just another key, and transcript provenance already
+  plans to record `model_id`.
+- **Declarative requirements over pinning.** A step should preferably declare a need
+  ("cheap + high-volume + quality ≥ T2", or "private-only") rather than name a
+  provider; the router maps requirement → provider considering budget state and
+  availability. The budget policy's degrade outcome then concretizes naturally: not
+  "stop" but "same requirement, one tier cheaper". Direct pinning stays allowed —
+  at hobby scale simplicity wins; the schema must permit both.
+- **The four keep-open commitments (binding NOW, everything else later):**
+  1. *Single LLM chokepoint:* every model call goes through one shared wrapper —
+     needed for metering and credential injection anyway; THE key invariant (direct
+     provider calls scattered through agents make routing a painful retrofit).
+  2. *Model selection is config, not code:* `agent_config.model` / step override,
+     never hardcoded in step logic.
+  3. *Provenance records model_id + provider per step* (already planned in v2).
+  4. *Provider descriptors carry cost and privacy-class fields*, even while nothing
+     reads them.
+
+---
+
+## 15. Learning and Metacognition Layers
 
 Sketch of a multi-level learning model (depends entirely on provenance being right —
 every learning must be linked to run, step, agent, and definition versions):
@@ -733,7 +829,7 @@ v2 plan's Trust Profile is the calibration input for when auto-approve is safe.
 
 ---
 
-## 15. Existing-Tools Assessment
+## 16. Existing-Tools Assessment
 
 - **Temporal / Restate / Inngest:** durable execution + signals + timers out of the box
   (a step waiting for an external event = signal). Best technical fit under the kernel,
@@ -769,7 +865,7 @@ v2 plan's Trust Profile is the calibration input for when auto-approve is safe.
 
 ---
 
-## 16. Open Questions (Unordered)
+## 17. Open Questions (Unordered)
 
 - Where does a company-level kernel physically live for a small company (tiny server?
   shared repo + cron? someone's always-on machine?)
@@ -812,14 +908,14 @@ v2 plan's Trust Profile is the calibration input for when auto-approve is safe.
   how is cross-instance leakage audited?
 - Local vs. global agent definition references from a step: version pinning? what
   happens to memory homing when a global definition runs locally?
-- Definition-PR mechanics (§14): how are auto-approve thresholds set, audited, and
+- Definition-PR mechanics (§15): how are auto-approve thresholds set, audited, and
   revoked when an auto-approved change misbehaves?
 - Capability grant workflow: who may grant which capabilities to which agent in a
   multi-user setting, and are grants time-boxed?
 
 ---
 
-## 17. What This Document Is Not
+## 18. What This Document Is Not
 
 Not a design. Not prioritized. Not consistent. It is the raw material for the
 convergence phase: the next step is to pick the load-bearing decisions (kernel
