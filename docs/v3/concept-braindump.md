@@ -215,6 +215,7 @@ sends the same invoice twice and no second instance starts.
 - **Wait-condition register + matcher agents:** structured predicate + NL description;
   local (per-person) matchers for private sources
 - **Gatekeeper agents:** the privacy boundary — extract-and-contribute, never expose
+  (three-layer anatomy in §12)
 - **Two memory layers, kept separate:**
   - Instance-scoped artifacts + transcript (immutable, auditable — the machine's fuel)
   - Org memory: results and learnings of workflows, searchable (the machine's yield)
@@ -222,7 +223,8 @@ sends the same invoice twice and no second instance starts.
 - **Read model / cross-instance query:** digests and dashboards aggregate over many
   instances' outputs for a time window
 - **Identity + authz:** Role × State capability matrix becomes the security model
-- **Credential vault + on-behalf-of delegation** (gap identified in market scan, §9)
+- **Credential vault + on-behalf-of delegation** (gap identified in market scan §9;
+  model in §13)
 - **Cost metering + budget guards** (gap, §9)
 - **Structured human-input surfaces:** schema-rendered forms / decision cards / public
   tokenized form links (gap, §9)
@@ -232,7 +234,7 @@ sends the same invoice twice and no second instance starts.
   driven by evals and historical override rates (deferred; v2 plan's Trust Profile)
 - **Learning/metacognition layer:** instance learnings → run reflection → agent
   metacognition → system metacognition, with improvements expressed as gated
-  "definition PRs" (see §12)
+  "definition PRs" (see §14)
 - **Context packet assembler:** the kernel composes the minimal context for each step
   (step contract + relevant artifacts + agent skill docs) instead of one big prompt
 
@@ -264,22 +266,59 @@ Related step-type needs:
 
 ---
 
-## 8. Local vs. Global Topology
+## 8. Topology: Trust Domains × Execution Nodes
 
-**Not a type difference in the model — a deployment/topology difference.** Kernel
-semantics (envelope, state, gate, capability) are identical; what differs:
+**Not a type difference in the model — a topology difference.** And "local kernel"
+itself conflates two boundaries that must be separated:
 
-- where instance state is homed (local file vs. shared server)
-- the identity model (single trusted user vs. multi-user authz)
-- the available channels
+1. **Trust domain (ownership boundary):** personal domain (B's) vs. org domain (the
+   company's); later possibly org↔org. Governance attaches HERE: grants, memory
+   homing, privacy rules, vault ownership.
+2. **Execution node (placement):** within one domain there can be multiple nodes —
+   B's laptop, B's always-on online node (VPS/home server), a cloud sandbox.
+   Connector availability and capabilities attach HERE.
 
-Preferred shape: **kernel federation, not one global kernel.** A company-level instance
-assigns a task to person F; F's *local* kernel runs an entire local workflow (e.g., the
-plan-execution workflow) and reports back a single contribution to the global instance.
-Same pattern as the gatekeeper agent for private mailboxes — the local kernel is the
-gatekeeper of a person's local workflows. The mechanics already exist in the v2 plan:
-the remote executor relay/op_id/resume-token machinery (BC-08) is exactly the link two
-kernels can talk over.
+The gatekeeper principle was never about physical locality but about **control**: B's
+Gmail is already in the cloud; the mailbox's privacy comes from B controlling access.
+A B-controlled online node is exactly as "local" in trust terms as B's laptop. So the
+earlier three-way intuition (machine-local / person-online / global) resolves to: the
+first two are **one domain, two nodes**; the third is another domain. Making
+"person-online" a separate category would duplicate governance semantics — B's online
+node obeys exactly the same grant and privacy rules as B's laptop.
+
+Placement consequences:
+
+- The personal kernel is **logically one** (one identity, one grant set), **physically
+  spread** over nodes. The vault is per-node: the Gmail token lives on the online node
+  (it watches 24/7, independent of the laptop lid), dev tokens stay on the laptop; no
+  unnecessary secret replication.
+- The gatekeeper's layers (§12) spread accordingly: connector + matcher live where the
+  source needs them; the **owner UX is device-independent** — approvals, contribution
+  confirmations, and grant decisions must work from a phone/web, not only at the desk.
+- Workflows self-sort: WF-6 (inbox pipeline) is personal-online (runs with the laptop
+  closed); WF-7 (plan execution) is machine-local (repo, worktree, tmux); WF-1 is an
+  org instance fed by contributions from personal domains.
+- Each instance has **one home node**. Node↔node communication within a domain uses
+  the same relay/op_id/resume-token machinery (BC-08) as domain↔domain federation:
+  **one mechanism, three scales** (node↔node, personal↔org, org↔org).
+
+Preferred shape remains **kernel federation, not one global kernel.** An org-level
+instance assigns a task to person F; F's *personal* kernel runs an entire local
+workflow (e.g., plan execution) and reports back a single contribution. The personal
+kernel is the gatekeeper of a person's local workflows.
+
+**Warning — "web-based" means two very different things:**
+
+- *Self-hosted online node* (B's own VPS/home server): trust model intact, B controls
+  everything.
+- *Vendor-hosted personal node* (SaaS convenience): the trust model CHANGES — the host
+  can in principle see everything unless end-to-end encrypted. This is Abundly's path
+  (everything in their cloud); that is the price of their convenience.
+
+Foundations must make the self-hosted personal node first-class
+("owner-controlled-first", the extension of local-first), with vendor-hosted as a
+later convenience option — not the other way around, because the reverse direction is
+not recoverable.
 
 ---
 
@@ -433,7 +472,7 @@ Fundamentally new for us:
 6. **Retrospective as a meta-workflow — "grow agents, don't build them".** After day
    one, Grace searches her own logs/diary, names the failure pattern ("over-asking and
    under-reading"), and updates her own instructions, scripts, and documents. Gives the
-   eval/trust layer a concrete mechanism (see §12) and sharpens the requirement that
+   eval/trust layer a concrete mechanism (see §14) and sharpens the requirement that
    definition versions be recorded in transcript provenance (v2 already has
    agent_config provenance — this is why it is not optional).
 7. **Releaser is the choreography paradigm in the wild.** Four independent triggers
@@ -503,7 +542,7 @@ agent's diary as whether it may send email.
 
 The middle layer's governance is the sensitive part: what one activation writes leaks
 into all future activations — simultaneously the "grow agents" value and an
-audit/feedback surface (§12 handles this in a controlled way).
+audit/feedback surface (§14 handles this in a controlled way).
 
 **Registry federation:** if an agent is definition + memory (= data), agents are
 portable and homeable like instances. Local registries (definitions on your machine)
@@ -521,7 +560,150 @@ DB).
 
 ---
 
-## 12. Learning and Metacognition Layers
+## 12. The Gatekeeper, Concretely
+
+"Gatekeeper agent" is a convenient shorthand but misleading: it is **not one agent but
+three components of different natures bundled together**, with different security
+requirements.
+
+```
+            B'S PRIVATE WORLD                      │  TOWARD THE SUBSTRATE
+                                                   │
+  Gmail ◄── [1] CONNECTOR RUNTIME ──► [2] MATCHER ──► [3] OWNER UX ──► contribution
+  Slack DM      (deterministic,           (LLM, works     (B's decision,   (EventEnvelope
+  files         credentials LIVE here,    WITHOUT         task inbox /     to the org
+                named capabilities,       credentials)    notification)    kernel)
+                constraint checks)             │
+                                               │ ◄── open wait conditions,
+                                               │     capability invocation requests
+```
+
+1. **Connector runtime — the actual PEP (policy enforcement point).** Deterministic
+   code, zero LLM. Holds the OAuth tokens (from the vault), talks to the Gmail/Slack
+   APIs, executes named capabilities ("mailbox.search with invoice predicate") checking
+   grant constraints at call time. It is critical that this is NOT an LLM: the
+   enforcement point must not be persuadable. A prompt injection may fool the matcher —
+   it cannot fool the connector, which only evaluates predicates.
+2. **Matcher — the only LLM component.** The connector hands it a new inbound event
+   plus the open wait conditions; it judges "this resolves instance #42, the relevant
+   datum is 2026-07-01". It has no credentials and calls no APIs. If fooled, the damage
+   is a bad *suggestion* — caught by the next layer.
+3. **Owner UX — B's decision surface.** Suggestions reach B (notification, Slack DM,
+   task inbox): approve / reject / amend. The trust ladder lives here: initially every
+   suggestion stops for B; with standing grants, certain types pass automatically and
+   B sees them in the audit log.
+
+**Security rationale for the split: the persuadable component (LLM) has no power; the
+powerful component (connector) is not persuadable.**
+
+**Relation to the personal kernel:** the gatekeeper is not a separate product but a
+ROLE of the personal kernel — B's full representation toward the substrate: runs B's
+local workflows, guards B's private sources (connectors) and vault, exposes B's
+granted capabilities, and routes every contribution. The boundary is asymmetric:
+inward — raw emails, tokens, files; outward — **only EventEnvelopes** (contributions,
+capability results, grant decisions). Raw email and tokens never cross the line.
+Inbound from the substrate: wait conditions addressed to B, capability invocation
+requests with grant references, task asks.
+
+**Walkthrough (WF-1):** (1) org kernel registers wait condition "waiting for Acme
+PO-1234 contract terms", addressee B; (2) B's kernel, subscribed to wait conditions
+addressed to B, caches it; (3) an email arrives, the connector (it holds the token)
+detects it and hands it to the matcher with the open wait conditions; (4) the matcher
+flags a hit and extracts the fields; (5) B gets a notification with the proposed
+contribution and approves (or a standing grant auto-passes it); (6) B's kernel sends
+an EventEnvelope to the org kernel: contribution to #42, on-behalf-of B, grant id,
+op_id idempotency; (7) the org kernel's transcript records the full chain; the
+instance advances. The email never left B's machine.
+
+**MVP shape:** a small daemon on B's machine (launchd/cron-driven, or part of the
+pairflow personal kernel process) with connector plugins; the matcher is a per-event
+LLM call; the owner UX starts as an OS notification + a `pairflow inbox` command.
+Always-on needs move the same components to a home server or VPS — a deployment
+choice, not a model change (§8).
+
+---
+
+## 13. Credential and Delegation Model
+
+**Guiding principle: the credential never travels — only the capability invocation
+does.** B's tokens live in B's per-node vault and never enter the central substrate, a
+workflow payload, or — critically — **the LLM context**. A workflow invokes a *named,
+narrowed operation* through B's gatekeeper; the connector runtime injects the real
+token at call time. This solves three problems at once:
+
+1. **No central honeypot** — no single store whose compromise loses everything; at
+   small-company trust levels this is the only model people will actually join.
+2. **Prompt-injection-safe** — the LLM agent never saw a secret, so it cannot
+   exfiltrate one; it calls a tool name, the deterministic runtime holds the
+   credential. For agent systems this is mandatory, not optional.
+3. **Revocation is immediate and local** — enforcement happens at B's gatekeeper, so B
+   can kill a grant without synchronizing anything anywhere.
+
+**Grant — a first-class entity** (the external-authority counterpart of the internal
+capability matrix):
+
+```
+Grant {
+  id,
+  principal,        # who grants (B)
+  audience,         # to whom: agent definition / template / specific instance
+  capability,       # verb + resource: mailbox.search, email.send
+  constraints,      # arg predicates (recipient allowlist!), expiry, max uses, purpose
+  approval_policy,  # per-use / instance-scoped / standing
+  status            # active / revoked
+}
+```
+
+Two earlier threads converge here: the Freddy-style **capability negotiation** (agent
+requests, human grants) is this entity's creation flow — a mini-workflow with a human
+gate on existing kernel machinery; and the **argument-level guardrails** (allowlist)
+are the Grant's constraints field. No new machinery, one new entity.
+
+**Trust ladder** (rhymes with §14 metacognition): per-use approval → instance-scoped
+grant → template-level standing grant → time-boxed standing grant with audit review.
+Each rung up is itself an audited decision; the Trust Profile is the calibration input.
+
+**Delegation chain + audit:** every external action's transcript entry records the
+full chain — which agent acted, on behalf of whom, under which grant, in which
+instance/step, with an argument hash. The metacognition layer and trust calibration
+live off this data.
+
+**Patterns worth raiding** (concepts, not necessarily libraries): Macaroons/Biscuit
+tokens — *attenuation*: a capability can be narrowed offline with caveats ("only this
+instance", "only today") but never widened; UCAN — signed, offline-verifiable
+**delegation chains**, fits kernel federation (org kernel sub-delegates to a personal
+kernel, cryptographically traceable); OAuth Token Exchange (RFC 8693) — ready-made
+on-behalf-of claim semantics.
+
+**Fit with the existing architecture:**
+
+- The gatekeeper's connector runtime is the PEP (§12) — it gains a second duty:
+  besides filtering data outward, it guards credentials inward.
+- The remote-executor relay (BC-08) is reused: if a step runs in a cloud sandbox, the
+  credential still does not travel — the external call relays BACK to B's gatekeeper
+  with op_id idempotency. Same channel, new cargo.
+- The agent-authored-scripts question (§16) half-resolves: scripts get no raw
+  credentials either — they too invoke named capabilities, shrinking the sandbox
+  problem.
+- Offline owner: B's node unreachable → the wait condition simply blocks (already a
+  modeled state). Standing-grant capabilities can move to an always-on node (§8) — a
+  deployment decision.
+
+**Implementation pragmatics (small scale):** build no crypto and no vault — use the OS
+keychain, `age`/`sops`-encrypted files, or 1Password CLI. Agent/kernel identity is a
+keypair; requests are signed; grant audiences are identified by key. Company service
+credentials (e.g., the org GitHub bot token) live in a designated kernel's vault —
+"the company" is just another principal. MVP order: (1) local vault adapter + named
+capabilities in the gatekeeper, (2) Grant entity + request/approve flow through the
+task inbox, (3) on-behalf-of transcript entries, (4) signed delegation chains — but
+only when federation actually crosses machines.
+
+**Anti-patterns (state them explicitly):** a central token store for everyone; tokens
+in workflow payloads/artifacts; secrets in LLM context; building our own crypto.
+
+---
+
+## 14. Learning and Metacognition Layers
 
 Sketch of a multi-level learning model (depends entirely on provenance being right —
 every learning must be linked to run, step, agent, and definition versions):
@@ -551,7 +733,7 @@ v2 plan's Trust Profile is the calibration input for when auto-approve is safe.
 
 ---
 
-## 13. Existing-Tools Assessment
+## 15. Existing-Tools Assessment
 
 - **Temporal / Restate / Inngest:** durable execution + signals + timers out of the box
   (a step waiting for an external event = signal). Best technical fit under the kernel,
@@ -587,7 +769,7 @@ v2 plan's Trust Profile is the calibration input for when auto-approve is safe.
 
 ---
 
-## 14. Open Questions (Unordered)
+## 16. Open Questions (Unordered)
 
 - Where does a company-level kernel physically live for a small company (tiny server?
   shared repo + cron? someone's always-on machine?)
@@ -607,8 +789,13 @@ v2 plan's Trust Profile is the calibration input for when auto-approve is safe.
   the defer when a budget gate blocks?
 - Structured-input surfaces: who renders the form (substrate web surface? channel-native
   forms like Slack modals?), and how do tokenized public links expire/authenticate?
-- Credential vault: build vs. adopt (OS keychain? Vault? per-person local secrets with
-  scoped grants?), and what does an on-behalf-of audit entry look like?
+- On-behalf-of audit entry: exact schema (grant id, chain, action, argument hash) —
+  §13 sets the principles (adopt OS keychain/age/1Password, never build), the schema
+  is open
+- Vendor-hosted personal node: is an end-to-end-encrypted hosted option feasible later,
+  and what must the foundations preserve to keep it possible (§8)?
+- Node↔node edge cases within one personal domain: grant/memory visibility when an
+  instance's home node differs from where a connector lives
 - Eval/trust loop: what minimal data must the transcript capture from day one so trust
   calibration is computable later without migration?
 - Internal lifecycle events as a channel: are kernel events just another EventEnvelope
@@ -625,14 +812,14 @@ v2 plan's Trust Profile is the calibration input for when auto-approve is safe.
   how is cross-instance leakage audited?
 - Local vs. global agent definition references from a step: version pinning? what
   happens to memory homing when a global definition runs locally?
-- Definition-PR mechanics (§12): how are auto-approve thresholds set, audited, and
+- Definition-PR mechanics (§14): how are auto-approve thresholds set, audited, and
   revoked when an auto-approved change misbehaves?
 - Capability grant workflow: who may grant which capabilities to which agent in a
   multi-user setting, and are grants time-boxed?
 
 ---
 
-## 15. What This Document Is Not
+## 17. What This Document Is Not
 
 Not a design. Not prioritized. Not consistent. It is the raw material for the
 convergence phase: the next step is to pick the load-bearing decisions (kernel
