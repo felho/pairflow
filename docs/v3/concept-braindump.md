@@ -634,6 +634,53 @@ metacognition's token economy.
 | Diary | agent-scoped memory, activation epilogues | agent-written; testimony; informs humans/metacognition only |
 | Approvals | a view over open decision-Asks (§15) | a task-inbox filter — not a new entity |
 
+### 11.2 Agent-to-Agent Access
+
+The Abundly access graph's semantics ("can A ask B, delegate to B, or use B's
+tools?") get a sharp answer here — and for the third option the answer is *never*:
+
+1. **Consult:** agent A, mid-step, asks B and waits — a blocking subflow addressing
+   an **Ask to an agent**. The §15 Ask primitive generalizes: the addressee kind is
+   `{human, agent, external-token}`. The answer returns as a schema-validated
+   artifact. (Grace "interviewing" Backlogger was exactly this.)
+2. **Delegate:** A hands B a whole work item — a child instance (WF-7
+   workflow-of-workflows) with B as executing actor; A's instance waits on lifecycle
+   events.
+3. **Tool borrowing is forbidden.** If A could invoke B's grants directly, that is
+   the classic **confused deputy**: A borrows B's authority and B's guardrails
+   (arg predicates, budgets) apply unchecked to A's intentions. The correct shape is
+   always (1) or (2): *B's activation* does the work, *under B's grants*, returning a
+   contribution — the gatekeeper pattern, between agents. Raw authority transfer is
+   an anti-pattern.
+
+**The edge is a Grant whose resource is B's activation/attention** — granted by B's
+owner (§13.1 ownership rule). Two consequences: cost attribution is automatic (when B
+answers A, whose budget burns? the grant's budget dimension says — "Freddy may
+consult the compliance expert, up to €X/month, charged to the invoice template"); and
+B's guardrails stay live (B's arg predicates may include requester conditions:
+"accept consultation Asks only from agents in my org").
+
+**Chain protection is mandatory:** A asks B, B asks C, C asks A… The correlation
+chain already runs through provenance, so cycle detection and a max consultation
+depth are cheap kernel rules — but they must be stated.
+
+**The graph is a view, not an entity.** Abundly's toggle-graph suggests the graph is
+a thing; here the edges ARE the consult/delegate grants and the graph is read-model
+rendering over them — like the fleet view. Nothing extra to keep in sync.
+
+**Discovery:** A learns what B can do from the registry's static capability
+description (part of B's definition) plus a dynamic interview — itself just a
+consultation Ask. What A learns lands in A's agent-scoped memory (Grace's
+self-authored Cursor API skill doc). Metacognition bonus: B's *advertised*
+description vs. *actual* behavior can drift — the same divergence signal as diary
+vs. transcript (§11.1).
+
+**Closing unification: A2A is not a separate subsystem.** Consulting an agent and
+asking a human are the same Ask primitive; delegating to an agent and assigning a
+task to a human are the same child-instance/task mechanics. The A2A graph and the
+human task inbox are two projections of one machine, and "who may ask whom" lives in
+the same grant system as every other permission.
+
 ---
 
 ## 12. The Gatekeeper, Concretely
