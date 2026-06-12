@@ -186,6 +186,61 @@ was partly judgment routing at prompt level — the v3 form steers the same deci
 into a schema-validated decision artifact, where deviation is not "non-adherence"
 but an audited choice.)
 
+### 3.2 Choreography Over External State — Reassessed
+
+The Releaser (§10.2 item 7) first read as living proof of the choreography paradigm:
+four independent triggers coordinating over GitHub PR status, "the PR is the
+instance". On closer inspection **that framing was wrong: the Releaser's
+choreography is platform necessity, not process nature.** Its orchestrated form in
+our vocabulary:
+
+- Weekday 13:00 (cron): instance starts → diff analysis → release PR + docs PR →
+  approval Ask to the dev channel → **wait condition registered**: "PR approved".
+- The 13:37 "nag check" is not a separate trigger — it is the wait condition's
+  standard reminder/escalation rung, which the task-inbox machinery provides anyway.
+- "PR approved" resolves the wait → the *same* instance continues: merge, changelog,
+  publish → DONE.
+- The Friday 14:02 weekly summary is genuinely separate: a digest workflow (WF-3
+  shape).
+
+The four "independent triggers" collapse into one daily template (internal wait +
+escalation) + one weekly digest. And the 13:37 check is, literally, hand-rolled
+polling for "has the approval arrived?" — the §11.3 pattern: without wait
+registration as a service, agents simulate it with scheduled self-checks. Even the
+implicit state betrays it: "have we nagged already?" lives nowhere, or in Slack
+history — process state smeared into external systems' comments. **The Releaser is
+thus the second missing-kernel evidence after Grace's errands DB**: four triggers +
+external state is how you build a workflow when you have no instances and no waits.
+
+What survives the reassessment:
+
+1. **The non-duplication principle, sharpened.** The instance **references** PR state
+   (via wait conditions), never mirrors it — authoritative state has one home; a
+   kernel mirror would mean two truths and a permanent sync problem. The instance
+   holds only what GitHub *cannot*: "have we nagged", the release-PR ↔ docs-PR link,
+   gate context. The PR is not "the instance" — it is a referenced external entity;
+   the instance is ours.
+2. **Subscription mechanics: webhook + mandatory reconciliation + re-read before
+   acting.** Webhook delivery is unreliable → a periodic reconcile scan compares
+   expected vs. actual ("the PR is merged but we never saw the event") — pairflow
+   v1's `bubble reconcile` is the in-house precedent. And a trigger may fire on
+   stale data → the action re-reads current external state before executing — the
+   "verify before assuming / check state before destructive action" rule,
+   mechanized at kernel level.
+3. **Declared external state machines.** The template declares the external entity
+   (PR), its observable states, and which transitions our waits/handlers cover.
+   BC-01-style validation then checks coverage ("what happens on 'closed without
+   merge'? — unhandled external transition"), and an unexpected external state
+   becomes a detectable event, not a silent hole.
+4. **Pure choreography keeps a narrower, real place: stateless reactive rules.**
+   "Whenever a PR gets label X, post a Slack note" — single trigger→action, no
+   waits, no sequence, no process state. **The sharpened criterion: the moment there
+   is ANY process state — even a single 'already reminded' bit — there is an
+   instance.** Don't smear state into trigger handlers or external comments.
+5. **Virtual instances stay useful:** correlating activations by external entity ref
+   (repo#PR) stitches the story of stateless reactive rules, and lets the fleet view
+   show everything that happened around one external entity across instances.
+
 ---
 
 ## 4. The Correlation Problem
@@ -567,6 +622,9 @@ Fundamentally new for us:
    (GitHub PR status). No workflow instance — "the PR is the instance". Validates the
    §3 hybrid; new requirement: the substrate must be able to treat external-system
    state as instance state, or at least subscribe to it via wait conditions.
+   *(Reassessed in §3.2: this choreography is platform necessity, not process
+   nature — the orchestrated form is one instance with an external wait, and the
+   Releaser is the second missing-kernel evidence after the errands DB.)*
 
 Minor but noteworthy: capability discovery via agent interviews (Grace "interviewed"
 Backlogger and Releaser about what they can do); self-authored skill documents (Grace
@@ -1774,8 +1832,9 @@ Keep-open commitments (binding now):
 - Agent-authored scripts remainder (§16.2 sets the governance and the
   no-ambient-authority principle, §13 the credentials): which mechanism implements
   no-ambient-authority per node (restricted subprocess / WASM / container)?
-- External-system state as instance state ("the PR is the instance"): subscribe via
-  webhooks vs. poll; how are consistency and missed events handled?
+- External-state subscription remainder (§3.2 sets the model: reference don't mirror,
+  mandatory reconciliation, re-read before acting): per-connector tuning of webhook
+  vs. scan, and reconcile cadence
 - Agent-scoped memory governance: what may an activation write into agent memory, and
   how is cross-instance leakage audited?
 - Local vs. global agent definition references from a step: version pinning? what
