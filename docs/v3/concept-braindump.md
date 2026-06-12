@@ -346,7 +346,14 @@ sends the same invoice twice and no second instance starts.
 - **Datasets as first-class entities** with change feeds (see §7)
 - **Read model / cross-instance query:** digests and dashboards aggregate over many
   instances' outputs for a time window
-- **Identity + authz:** Role × State capability matrix becomes the security model
+- **Identity + authz:** Role × State capability matrix becomes the security model.
+  The human side is *declared*, not emergent (the v2 matrix's operator rows), and the
+  dev-team demo supplies the design heuristic for "what should humans keep":
+  **intent** (what/why to build → authoring conversations, plan-approval gates),
+  **irreversible externals** (merge, outbound email → the §17.3 reversibility
+  asymmetry: gated longest), and **taste/architecture** (review gates — which double
+  as the eval harness's labels, §17.1). A guide for template authors and the
+  authoring agent alike
 - **Credential vault + on-behalf-of delegation** (gap identified in market scan §9;
   model in §13)
 - **Cost metering + budget guards** (gap, §9)
@@ -898,6 +905,24 @@ not guess; the system measures.
 the manual prototype; the v3 kernel assembler is its automation, and the skill's
 heuristics are exactly the knowledge to encode in step contracts' push-set
 declarations. WF-7 plan execution is the first consumer.)
+
+**The memory→definition gradient.** Grace's self-authored Cursor API skill doc
+(§10.2 minor) reveals an unstated lifecycle. A skill doc is born as **agent-scoped
+memory** — written freely, no definition PR (memory writes are granted but not
+gated). Then the existing machinery moves it:
+
+```
+free private note (memory)
+  → pulled frequently for step type Y (§11.4 pull log)
+    → metacognition promotes it into the push-set = definition PR (part of the step contract)
+      → possibly shared with other agents = scope promotion (§15.7)
+```
+
+**Memory crystallizes into definition** — usage walks it across the boundary, gates
+included. The knowledge-side mirror of the §16.2 script spectrum (there: ad-hoc LLM
+behavior → script → connector; here: note → push-set → shared knowledge), closing
+the gradient: *nothing is born important — it becomes important, and then it comes
+under governance.*
 
 ---
 
