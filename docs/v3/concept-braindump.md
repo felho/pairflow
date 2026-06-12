@@ -785,6 +785,62 @@ Grace's hand-rolled errands DB (§10.2 item 2) becomes a kernel service. Five po
    can migrate stepwise: register waits first (the highest value), move full errand
    state later.
 
+### 11.4 The Context Packet: What an Activation Receives
+
+The natural continuation of §11.3's wake-up contract; answers the §19 question "what
+goes into the packet and who decides".
+
+**Anatomy — layers, not a dump:**
+
+- **Identity:** the agent definition (know-how prose), at a pinned version, from the
+  registry
+- **Assignment:** the step contract — what to do, input/output schema, the available
+  action surface (which CLI ops, who may be Asked), done-criterion
+- **State:** the instance position + the triggering event (on wake-up: the resolving
+  event, §11.3)
+- **Material:** the input artifacts the step contract declares
+- **Knowledge:** agent-scoped memory relevant to this step type (skill docs) —
+  retrieval, not a dump
+- **Boundaries:** what is not allowed, remaining budget, escalation affordances when
+  stuck
+
+**The governing principle: push the contract, pull the detail.** The Releaser pattern
+(lean main instruction, lazily loaded detail docs) generalized — and it answers "who
+decides", with three authorities in order:
+
+1. **The template declares:** the step contract lists required inputs —
+   deterministic, like a function's parameter list.
+2. **The kernel assembles:** mechanical work — ref resolution, state, budget. No
+   judgment in it.
+3. **The agent pulls:** the packet is the guaranteed *minimum*; alongside it the
+   agent gets references + a read capability and loads more on demand — its own
+   judgment, within its grants, and **every pull is logged.**
+
+**Why kernel-owned assembly — three arguments, the third the strongest:**
+
+- *Cost:* no prompt ocean (the Releaser's trigger-segmented instructions show the
+  win).
+- *Reliability:* lean packets counter context rot — the documented failure mode where
+  high context fill causes step-skipping and workflow conflation.
+- *Reproducibility — the packet is part of provenance.* Deterministic assembly from
+  declared refs makes an activation's input **reconstructible**: it is knowable
+  exactly what the agent saw when it did X. This enables replay — re-running a
+  definition version with the same packet turns evals (§17) into regression tests.
+  For an ocean-swimming agent this is impossible in principle: you never know what it
+  attended to.
+
+**The push-set itself crystallizes.** Because pulls are logged, metacognition (§16)
+sees the patterns — "this agent always pulls doc X for step type Y → add it to the
+push-set" (a definition PR against the step contract), and inversely "this pushed
+artifact is never used → prune it". **Packet composition is tuned from usage data** —
+crystallization-through-use, applied to context management. The template author does
+not guess; the system measures.
+
+(The ManageImpStep skill — hand-prepared focused context packets per plan step — is
+the manual prototype; the v3 kernel assembler is its automation, and the skill's
+heuristics are exactly the knowledge to encode in step contracts' push-set
+declarations. WF-7 plan execution is the first consumer.)
+
 ---
 
 ## 12. The Gatekeeper, Concretely
@@ -1647,8 +1703,6 @@ Keep-open commitments (binding now):
 - Agent-authored scripts remainder (§16.2 sets the governance and the
   no-ambient-authority principle, §13 the credentials): which mechanism implements
   no-ambient-authority per node (restricted subprocess / WASM / container)?
-- Context assembly: what exactly goes into a step's context packet, and who decides
-  (template? kernel heuristics? the agent's own skill docs)?
 - External-system state as instance state ("the PR is the instance"): subscribe via
   webhooks vs. poll; how are consistency and missed events handled?
 - Agent-scoped memory governance: what may an activation write into agent memory, and
