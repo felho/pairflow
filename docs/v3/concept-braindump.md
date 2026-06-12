@@ -1153,6 +1153,31 @@ Keep-open commitments (cheap, binding now):
 3. **Every surface is a channel adapter** (the invariant above)
 4. **External addressee = token-scoped capability, not an email address**
 
+### 15.7 Three Minor Surface Patterns
+
+1. **Scoped NL query — the matcher's read-side twin.** "How much went through
+   today?" is an LLM translating natural language into a read-model query. The
+   translator is persuadable, so **the query engine must be scoped**: it only exposes
+   the views the asker's domain permissions allow ("sees that, not why", §6). If the
+   translator is prompt-injected, it gains nothing past the scoped engine. The §12
+   pair, read-direction: persuadable translator + non-persuadable executor.
+2. **Publish = audited scope promotion.** "Publishing" an asset is not a UI action
+   but a visibility step on the memory-scope ladder: instance → agent → org →
+   external. An instance-born dashboard published to org level is a gated, audited
+   scope promotion; external publication is a tokenized standing surface (§15.4
+   mechanics). Publish is composition of existing scopes + gates + tokens, and it is
+   reversible (unpublish = token revocation).
+3. **Synchronous conversation as gate resolution.** Freddy calling Henrik adds three
+   properties over async forms: (a) *multi-turn interrogation* — the human can probe
+   live before deciding (the §16.1 explain-back loop, synchronous and interactive,
+   which is what makes it valuable at high stakes); (b) *evidence discipline* — a
+   verbally made decision must still materialize as a schema-validated EventEnvelope,
+   and since the agent summarizes what the human said, a **confirm-back is mandatory
+   before emitting** ("So: permanent rejection, flagged as fraud — correct?"), with
+   the call transcript attached as provenance artifact; (c) *the most expensive
+   attention currency* — a synchronous call is maximally interruptive, priced highest
+   in the attention budget (§14), reserved for high stakes/urgency.
+
 ---
 
 ## 16. Learning and Metacognition Layers
@@ -1386,7 +1411,11 @@ Production signal is not enough in two places:
 
 "Verify with all LLMs" (Abundly) is an *online* eval mechanism: N models judge
 independently, divergence → defer to human. Expensive — worth it at high-stakes
-gates; the §14 budget/routing system prices it.
+gates; the §14 budget/routing system prices it. One requirement: the panel must be
+**model-diverse** — three copies of the same model give correlated errors; different
+model families are needed, and the §14.2 provider registry + router is exactly what
+can supply "N independent judges", even across tiers (a cheap local model paired
+with a cloud one can be a valuable pair).
 
 ### 17.5 Distributed Sharpness: Whose Trust?
 
