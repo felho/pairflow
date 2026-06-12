@@ -1558,6 +1558,45 @@ trust machinery reused, applied to automations.
    (point 3 above) plus deterministic unit tests (cheaper than LLM evals) →
    probation → graduation; the hot LLM step became deterministic and ~free.
 
+### 16.3 The Retro, Concretely
+
+1. **The retro is pairflow's review loop, pointed at behavior.** The v2 plan called
+   the Findings pattern universal (code review, doc review, step validation); the
+   retro is its fourth instance: **behavior review.** Shape: gather (diaries +
+   signals for the period) → analyze → **findings artifact** (same contract:
+   severity, description, status — "over-asking and under-reading" is a P2 behavior
+   finding) → fixes as definition PRs per finding → human gate → apply. Not a new
+   workflow kind: the validate→fix cycle where the "code" is the agent's definition.
+2. **Trigger taxonomy — and the incident path is mandatory.** Cadence (every N days
+   / N instances); **severe failure → immediate, mandatory retro** (postmortem
+   culture; pairs with §17.3's fast trust drop); signal threshold; on demand.
+3. **The retro is the convergence point of every signal stream.** The doc has
+   quietly built a full signal inventory, scattered: gate outcomes + edit distances
+   (§17.1), testimony-evidence divergences (§11.1, §11.3), stalls (§6), ledger
+   anomalies (§14), pull patterns (§11.4), grant-narrowing patterns (§13.1),
+   contract-drift correlations (§15.1). The retro aggregates them per agent — design
+   consequence: the signal read models must be queryable per agent.
+4. **Self-retro is welcome — but the review must be decorrelated.** Nuance first:
+   because activations are ephemeral (§11), the retro-ing Grace is a *fresh session
+   reading past artifacts as data* — no continuous self, no ego, no defensive
+   motivation; the human self-review problem does not transfer directly. The
+   residual problem is **correlated error**: the retro session runs on the SAME
+   definition (same know-how prose, persona, model), so the blind spot that produced
+   the failure pattern is active in the reviewer too — and the diary it reads was
+   written by the same definition (double correlation). This is exactly the §17.4
+   model-diversity argument. Hence the pairing: **the agent drafts its own retro**
+   (cheap; the self-narrative is itself signal; the agent CAN improve itself) —
+   **a separate retro agent challenges it against transcript evidence** (different
+   definition, different know-how, possibly different model; testimony vs. evidence
+   operationalized) — human gate at the end. The general principle, third instance
+   included: wherever Abundly lets an agent act on itself (self-create, self-retro,
+   direct self-modification), we insert a decorrelated second party + a gate
+   (authoring agent §16.1; retro challenger; definition PRs). And the symmetry pays
+   forward: as the authoring agent accumulates house conventions, the **retro agent
+   accumulates retro craft** — failure taxonomies and cross-agent patterns ("this
+   over-asking shape is the third agent showing it") — making it the natural feeder
+   of Level-3 system metacognition.
+
 ---
 
 ## 17. Trust Calibration and Evals (Deferred — Keep the Door Open)
