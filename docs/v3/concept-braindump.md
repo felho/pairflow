@@ -229,7 +229,23 @@ sends the same invoice twice and no second instance starts.
 - **Structured human-input surfaces:** schema-rendered forms / decision cards / public
   tokenized form links (gap, §9)
 - **Operator observability surface:** fleet view — what runs, what waits on whom, what
-  is stuck (partial gap, §9)
+  is stuck (partial gap, §9). The data side and the architectural home fell out of the
+  other sections (transcript/diary/approvals/cost ledger/trust report as read models;
+  a fleet view is a tier-3 surface over them, §15.2). Four design notes not stated
+  elsewhere:
+  - **Person-centric primary axis:** the most frequent query is "what waits on ME"
+    (task inbox + approvals + expiring Asks), not "what runs" — the system-wide view
+    is the secondary, operator/admin view
+  - **"Stuck" is an inference, not a state:** wait condition past its *expected*
+    duration, orphaned child instance, piling unmatched events — where expected
+    durations come from the same per-step historical distributions that feed cost
+    estimation (§14) and trust calibration (§17); three features, one data asset
+  - **Observability is domain-bounded:** the org fleet view sees "waiting on B for
+    3 days" but not why — status-visibility depth is itself a grant dimension
+    ("sees that; not why")
+  - **Push alerts are Asks:** a stuck-alert goes through the existing Ask/notification
+    machinery, so it falls under the attention budget (§14) — alert-fatigue protection
+    comes free
 - **Eval / trust calibration layer:** when may an agent step skip its human gate —
   driven by evals and historical override rates (deferred; v2 plan's Trust Profile;
   model in §17)
