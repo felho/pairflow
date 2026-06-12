@@ -2,9 +2,9 @@
 
 Status: draft
 Date: 2026-06-12
-Purpose: Five theoretical workflows used as a fixed test set for the forming v3 concept
+Purpose: Seven theoretical workflows used as a fixed test set for the forming v3 concept
 (distributed, cross-person workflows coordinated by a shared kernel). Every iteration of
-the concept should be walked through these five scenarios on paper before any
+the concept should be walked through these scenarios on paper before any
 implementation decision is locked in.
 
 Each workflow is chosen to exercise a distinct combination of capabilities, and each one
@@ -160,20 +160,118 @@ detects that a contract expires within 60 days.
 
 ---
 
+## WF-6: Inbox Processing Pipeline
+
+**Trigger:** Two cooperating triggers — every inbound email (event trigger, high volume)
+and a daily cron (07:00) for the digest.
+
+**Flow:**
+1. Triage on every inbound email (config rules + LLM classification):
+   - drop (configured noise)
+   - surface as action item (the email implies something the owner must do)
+   - kick off a sub-workflow (e.g., newsletter processing)
+   - default: include in the next daily digest
+2. Newsletter sub-workflow: extract the N article links → **dynamic fan-out** — each link
+   gets fetch → summarize → novelty-rank, all in parallel (N is data-driven, unknown at
+   template-authoring time).
+3. Articles above the novelty threshold are written into a **bronze dataset** (raw
+   store of scored article summaries).
+4. A separate downstream workflow subscribes to the bronze dataset's change feed: new
+   entries are periodically examined for novel concepts/patterns worth extracting, and
+   promoted into the curated knowledge layer (personal wiki) — bronze → curated, in
+   medallion-architecture terms.
+5. Every morning the digest workflow aggregates across the previous day's instances:
+   triage outcomes, action items, top-ranked articles → one summary message.
+
+**Capabilities exercised:**
+- High-volume event trigger feeding a triage router (config rules + LLM hybrid)
+- **Dynamic fan-out over a data-driven item list** (map over collection; agent-only
+  parallelism, no human in the loop)
+- **Datasets as first-class entities with change feeds**: workflows compose through
+  persistent collections, not only through messages; a downstream workflow is triggered
+  by new entries in a dataset another workflow wrote
+- **Score-based gate**: the novelty rank is a number, routing thresholds on it
+  (non-binary policy output)
+- **Cross-instance aggregation (read model)**: the digest queries the outputs of many
+  instances over a time window
+
+**Embedded traps:**
+- A newsletter contains 80 links → fan-out bounds: concurrency cap, per-item failure
+  isolation (one dead link must not fail the batch), cost guard.
+- The same article arrives via two different newsletters → dataset-level dedupe (the
+  bronze layer, not the workflow, owns uniqueness).
+- The digest runs while a newsletter sub-workflow from yesterday is still in flight →
+  the digest must report on partial state honestly ("3 items still processing").
+
+---
+
+## WF-7: Plan Execution (Pairflow Self-Hosting)
+
+**Trigger:** Manual — an approved plan document exists and the owner starts execution.
+(Today this is the ExecutePairflowPlan skill plus the `pairflow plan watch` polling
+command; this workflow replaces both.)
+
+**Flow:**
+1. Parent workflow instance is created for the plan; it iterates over plan steps.
+2. For each step: generate/refine the task spec (agent step, with a human gate if the
+   spec deviates from the plan) → spawn a **child workflow instance** (a pairflow
+   bubble: implement/review loop) → the parent step blocks, waiting on the child's
+   lifecycle events.
+3. The parent's wait condition subscribes to **internal kernel events**: "child instance
+   reached READY_FOR_HUMAN_APPROVAL / DONE / FAILED". No polling.
+4. On child DONE: parent advances to the next plan step. On child FAILED or human
+   rework: parent routes per template (retry, re-spec, or escalate to owner).
+5. When all steps are done: aftermath handoff (plan marked complete, summary to owner).
+
+**Capabilities exercised:**
+- **Workflow-of-workflows**: a child is a full first-class instance with its own
+  lifecycle, not an embedded subflow; parent-child links are tracked
+- **Internal lifecycle events as a channel**: kernel-emitted instance transitions are
+  subscribable triggers, replacing the `plan watch` polling hack
+- Long-lived parent instance spanning many child instances and human gates
+- Orchestration moved out of agent prompts into the kernel: the observed
+  LLM non-adherence to the ExecutePairflowPlan skill is direct evidence for the
+  "workflow is the boss" principle — prompt-level (Level 1) enforcement is advisory,
+  kernel-level is not
+
+**Embedded traps:**
+- The child bubble is cancelled or deleted out-of-band (operator intervention outside
+  the parent's control) → the parent must detect the orphaned wait and route to a
+  recovery decision instead of waiting forever.
+- The human approves the child but requests a plan-level change → the parent's remaining
+  steps are now stale: re-spec gate before continuing.
+
+**Topology note (local vs. global):** this workflow is fully local — same kernel
+semantics as the company-level workflows, different topology. Local/global is a
+deployment attribute (where instance state is homed, which identity model and channels
+apply), not a type difference in the model. The intended long-term shape is kernel
+federation: a global instance assigns a task to a person, that person's local kernel
+runs an entire local workflow (e.g., this one) and reports back a single contribution —
+the same gatekeeper pattern used for private mailboxes, and the same relay/op_id
+mechanics as the v2 remote executor (BC-08).
+
+---
+
 ## Coverage Matrix
 
-| Capability | WF-1 | WF-2 | WF-3 | WF-4 | WF-5 |
-|---|---|---|---|---|---|
-| Trigger kind | email | manual | cron | email (external) | data condition |
-| Wait condition + fuzzy correlation | x | | | x | |
-| Private-data federation (gatekeeper agent) | x | | x | | |
-| Human gate / approval / decision | x | x | x | x | x |
-| Parallelism + join | | x | x | | |
-| Timer, reminder, escalation | | x | x | x | x |
-| Idempotency / singleton / dedupe | x | | x | | x |
-| Cancel / compensation / stale intent | ambiguity | x | degraded | x | x |
-| External participant | | signer | | x | x |
-| Org memory write | | | x | | x |
+| Capability | WF-1 | WF-2 | WF-3 | WF-4 | WF-5 | WF-6 | WF-7 |
+|---|---|---|---|---|---|---|---|
+| Trigger kind | email | manual | cron | email (external) | data condition | event + cron | manual |
+| Wait condition + fuzzy correlation | x | | | x | | | |
+| Private-data federation (gatekeeper agent) | x | | x | | | x | |
+| Human gate / approval / decision | x | x | x | x | x | | x |
+| Parallelism + join | | x | x | | | x | |
+| Dynamic fan-out over data-driven items | | | | | | x | |
+| Timer, reminder, escalation | | x | x | x | x | | |
+| Idempotency / singleton / dedupe | x | | x | | x | x | |
+| Cancel / compensation / stale intent | ambiguity | x | degraded | x | x | partial state | orphaned child |
+| External participant | | signer | | x | x | | |
+| Dataset layer + change-feed trigger | | | | | x | x | |
+| Score-based (non-binary) gate | | | | | | x | |
+| Cross-instance aggregation (read model) | | | x | | | x | |
+| Child instance as step (workflow-of-workflows) | | | | | | | x |
+| Internal lifecycle events as trigger | | | | | | | x |
+| Org memory write | | | x | | x | x | |
 
 ---
 
@@ -184,7 +282,8 @@ Two areas this set intentionally does not cover, deferred until the core concept
 1. **Blackboard-to-template discovery** — emergent formalization of recurring patterns
    into templates (a later, learning layer).
 2. **Multi-tenant / cross-company federation** — workflows spanning organizational
-   boundaries.
+   boundaries. (Local vs. company-level topology within one organization IS covered —
+   see the topology note in WF-7.)
 
 ---
 
@@ -195,5 +294,10 @@ Two areas this set intentionally does not cover, deferred until the core concept
    private mailbox.
 2. **WF-4 (RFP)** second: reveals whether the model survives a participant who is outside
    the system and behaves unstructuredly.
-3. WF-3, WF-2, WF-5 afterwards in any order — they primarily stress scheduling,
-   parallelism, and lifecycle edge cases on top of an already-validated core.
+3. **WF-7 (plan execution)** third: it is the dogfooding scenario — pairflow describing
+   its own orchestration — and the first to stress workflow composition and internal
+   lifecycle events; it also has an immediate practical payoff (retiring the
+   `plan watch` polling hack and the prompt-level skill orchestration).
+4. WF-3, WF-2, WF-5, WF-6 afterwards in any order — they primarily stress scheduling,
+   parallelism, dataset composition, and lifecycle edge cases on top of an
+   already-validated core.
