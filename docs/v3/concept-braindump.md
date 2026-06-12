@@ -1022,6 +1022,93 @@ approval = human gate) and makes "grow agents, don't build them" auditable inste
 silent self-modification. Grace's retrospective (§10.2) is Level 2 done manually; the
 v2 plan's Trust Profile is the calibration input for when auto-approve is safe.
 
+### 16.1 Authoring Is the First Definition PR
+
+Conversational authoring (§10.1 item 1) is not a new subsystem — it is a *surface* of
+the definition-PR machinery. **There is no separate "creation" flow: creating a
+template/agent is the first definition PR (with an empty predecessor); Freddy's
+mid-flight instruction update is the nth one.** Running instances stay on their
+version; new instances get the new one.
+
+**The prose splits in two.** Freddy's "Invoice Processing Instructions" mixes two
+kinds of content of different natures:
+
+- **Structure** (steps, branching conditions, who approves): this is what the kernel
+  enforces — it compiles to the YAML template.
+- **Know-how** (how to assess risk within a step): this stays prose, living in the
+  agent definition / step prompt. Harmless there — whatever the LLM concludes, the
+  kernel only permits what the capability matrix and gates allow.
+
+In Abundly the whole document is the running program (the LLM re-interprets the
+structure on every activation — hence Grace's deviations); here structure runs as
+YAML, the LLM only works inside steps.
+
+**Single source of truth: the compiled template.** The authority question applies to
+the structure part only, and of the two models only one is safe:
+
+- *(a) The template is the only runtime truth; the conversation/prose is provenance* —
+  stored as the authoring instance's transcript, never maintained as a parallel
+  artifact. Edits are template-first: the conversational UI proposes a **template
+  diff** ("raise the threshold to €2000" → one line changes), reviewed as a
+  definition PR. Human-facing prose summaries and diagrams (Freddy's self-drawn
+  process map) are **generated views, decompiled from the template** — always fresh
+  because derived.
+- *(b) Prose as source, template as build artifact* — tempting (fits the compilation
+  metaphor) but dangerous: the LLM compiler is nondeterministic, so re-compiling the
+  whole prose for a one-line change can silently alter unrelated structure. Silent
+  semantic drift.
+
+The risk is asymmetric, which settles the design: if an *explanation* is wrong, the
+human asks questions and it surfaces; if a *compilation* is wrong, it becomes runtime
+behavior. So the write path gets hard gates; the read path is just a view.
+
+**Verification loop at authoring time:**
+
+```
+human (intent, prose) ──► agent compiles ──► TEMPLATE ──► system explains back (generated prose)
+        │                                                          │
+        └────────────── human compares: "is this what I meant?" ◄──┘
+```
+
+**BC-01 is the compiler's type checker.** The v2 template loader's structural
+verification (dangling transitions, unreachable steps, unknown gate types) gates the
+LLM's draft BEFORE the human sees it. Same §12 principle, applied to the authoring
+pipeline: the persuadable component (LLM) proposes, the non-persuadable validator
+(BC-01) filters, the human decides. BC-01 only checks well-formedness, not intent —
+intent is covered by the explain-back loop and eval cases.
+
+**The authoring agent is an ordinary registry agent**, with an unusually narrow
+capability set: read the template schema and existing templates/registry; write
+drafts as definition PRs; **it cannot activate anything** (that is the human gate's
+job) — so despite "writing the workflows", it holds no power; its worst case is a bad
+proposal caught by BC-01 or the human. Its activations are ephemeral, inside an
+authoring meta-workflow (interview → draft → BC-01 hard gate → explain-back → human
+approval → activation) whose transcript IS the template's provenance. The gap-only
+interview behavior comes from its know-how prose plus the template schema as input
+artifact (what counts as a gap) — the sibling of the CreatePairflowSpec /
+CreateSkill pattern, where the skill file's content becomes the definition's know-how
+prose. Its agent-scoped memory accumulates house conventions ("max_rounds is usually
+8 here") so it asks less over time; and it is itself improvable via definition PRs
+(the first version is hand-written, like any seed).
+
+**The Freddy scene, decomposed.** One Abundly chat ("Henrik creates Freddy") bundles
+what is five typed, gated, versioned artifacts here:
+
+| Born in the conversation | What it is here |
+|---|---|
+| Freddy's persona, risk-assessment style | agent definition (know-how prose) in the registry |
+| "I need receive/send email, Slack" | grant requests → human approval (§13) |
+| Freddy's email address, "start on invoice arrival" | trigger binding in the agent definition (§11) |
+| process steps, threshold, who approves | **compiled template** (structure, kernel-enforced) |
+| "a €1200 invoice goes to approval, right?" | eval cases alongside the template (§17.4) |
+
+One role-casting difference: in Abundly the freshly created agent interviews itself
+(self-configuration). Here the authoring agent drafts *Freddy's* definition — Freddy
+never holds edit power over his own definition except via gated definition PRs
+(Grace's retro case). And eval co-authoring softens the §17.4 cold start: the
+conversation's worked examples become golden cases, so a new template is born with a
+non-empty eval suite.
+
 ---
 
 ## 17. Trust Calibration and Evals (Deferred — Keep the Door Open)
