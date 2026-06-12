@@ -1447,6 +1447,29 @@ Plus a ladder analogy: new automation can start **on probation** — the first N
 in "report every run" mode (kin of §17.3 spot-check), then graduating to silent. The
 trust machinery reused, applied to automations.
 
+**Scripts, three more notes:**
+
+1. **The sandbox's job is blocking ambient authority, not isolation in general.**
+   Scripts call named capabilities and get no raw credentials (§13), so the
+   sandbox's one critical duty is making **the capability layer the only door**: no
+   ambient network access, no free filesystem — every external effect goes through
+   injected capability handles. A script opening a socket directly would bypass the
+   grant system (arg predicates, budget, audit) — *that* is the threat, not "code
+   runs" in general. Tech choice becomes secondary and stageable: a subprocess with
+   a restricted env at hobby scale (review gate + probation protect), WASM/container
+   later. Sandbox strength is itself a trust-ladder dimension: fresh scripts run
+   tightly isolated on report-every-run probation; battle-tested ones graduate.
+2. **Invoking a script is granted like any capability; sharing it is scope
+   promotion.** Releaser's get-my-prs.ts is born scoped to Releaser. If Grace wants
+   it: publish = gated scope promotion (§15.7), or she gets her own. Script sharing
+   needs no separate rule system, and no shadow tool park ("called by everyone,
+   maintained by no one") can form.
+3. **The distillation pipeline is Level-2 metacognition's canonical play, not a
+   side effect:** cost ledger (§14) flags a hot, repeated LLM step → metacognition
+   (§16) proposes distillation → script definition PR with equivalence evidence
+   (point 3 above) plus deterministic unit tests (cheaper than LLM evals) →
+   probation → graduation; the hot LLM step became deterministic and ~free.
+
 ---
 
 ## 17. Trust Calibration and Evals (Deferred — Keep the Door Open)
@@ -1621,8 +1644,9 @@ Keep-open commitments (binding now):
   source_channel ("kernel"), keeping the router uniform?
 - How do datasets relate to artifacts: is a dataset entry an artifact with a collection
   id, or a separate entity with its own contract?
-- Agent-authored scripts remainder (§16.2 sets the governance, §13 the credentials):
-  which sandbox runtime do scripts execute in?
+- Agent-authored scripts remainder (§16.2 sets the governance and the
+  no-ambient-authority principle, §13 the credentials): which mechanism implements
+  no-ambient-authority per node (restricted subprocess / WASM / container)?
 - Context assembly: what exactly goes into a step's context packet, and who decides
   (template? kernel heuristics? the agent's own skill docs)?
 - External-system state as instance state ("the PR is the instance"): subscribe via
