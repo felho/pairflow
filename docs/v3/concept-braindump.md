@@ -739,6 +739,49 @@ only when federation actually crosses machines.
 **Anti-patterns (state them explicitly):** a central token store for everyone; tokens
 in workflow payloads/artifacts; secrets in LLM context; building our own crypto.
 
+### 13.1 Grant Negotiation, Concretely
+
+The Freddy-style capability negotiation (§10.1 item 2) is the Grant's creation flow.
+Five details:
+
+1. **Don't conflate the two "capabilities" — the static part stays static.** The
+   *internal* capability matrix (role × state → pass/converged/approve…) is workflow
+   semantics — correctly template-defined and non-negotiable (whether the implementer
+   may say converged is a game rule, not a permission). Only *external* authority
+   (email, Slack, GitHub) — the Grant layer — is subject to negotiation. Making the
+   internal matrix negotiable would be a security regression: the agent could
+   negotiate its way around gates. **Negotiation = grants-only.**
+2. **Negotiation has three moments:** at authoring (§16.1 — the conversation reveals
+   the needs; most grants are born here, one of the Freddy scene's five artifacts);
+   at activation/instance start (the template declares step needs; missing grants are
+   requested up front or lazily at the step); and mid-run — a runtime grant request
+   is a **blocking subflow** that pauses the step HELP_PENDING-style and routes an
+   Ask to the grantor. No new machinery: help-subflow + Ask.
+3. **A grant request is an Ask; the counter-offer is a human amendment.** The
+   decision card carries what is requested, for what purpose, and the options
+   (per-use / this instance / standing) with pre-filled constraints. The human may
+   approve, deny (with a reason the agent must adapt to), or **narrow** — editing the
+   constraints before approving ("email yes, but only to @ourco.hu, for 30 days").
+   That narrowing is the §15/§17 amendment mechanic, and the edit distance is a
+   training signal: if the human routinely narrows an agent's requests, the agent's
+   asking habits need recalibration (feed back into its know-how prose: "ask
+   narrower"). Grant requests fall under the attention budget (§14) — protection
+   against capability-begging loops.
+4. **Who may grant follows from ownership.** Grants come from the resource's owner in
+   the domain model (§8): B for B's mailbox, the org admin for the org GitHub bot,
+   the domain owner for budget dimensions. Meta-consistently, **granting is itself an
+   action governed by the internal capability matrix** (the domain-admin role may
+   grant org resources) — "who may grant what to whom" is a row in the existing
+   matrix, not a new rule system. A cross-domain request (org workflow asks B) is
+   simply an Ask in B's task inbox, enforced by B's personal kernel.
+5. **Grant hygiene against privilege creep.** Standing grants accumulate and nobody
+   revokes them. The fix is cheap because everything exists: a **scheduled review
+   workflow** reads usage statistics from the on-behalf-of audit stream and produces
+   Asks — "Freddy hasn't used the Twitter grant in 90 days; revoke?" An early,
+   concrete instance of §16 Level-3 system metacognition: the system reflecting on
+   its own authorization state. Usage-informed pruning, from the same read model as
+   cost and trust.
+
 ---
 
 ## 14. Cost Governance and Model Routing (Deferred — Keep the Door Open)
@@ -1291,8 +1334,8 @@ Keep-open commitments (binding now):
   happens to memory homing when a global definition runs locally?
 - Definition-PR mechanics (§16): how are auto-approve thresholds set, audited, and
   revoked when an auto-approved change misbehaves?
-- Capability grant workflow: who may grant which capabilities to which agent in a
-  multi-user setting, and are grants time-boxed?
+- Grant negotiation remainder (§13.1 sets the model): calibrating rate limits on
+  grant requests per agent
 
 ---
 
