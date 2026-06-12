@@ -234,7 +234,7 @@ sends the same invoice twice and no second instance starts.
   driven by evals and historical override rates (deferred; v2 plan's Trust Profile)
 - **Learning/metacognition layer:** instance learnings → run reflection → agent
   metacognition → system metacognition, with improvements expressed as gated
-  "definition PRs" (see §15)
+  "definition PRs" (see §16)
 - **Context packet assembler:** the kernel composes the minimal context for each step
   (step contract + relevant artifacts + agent skill docs) instead of one big prompt
 
@@ -472,7 +472,7 @@ Fundamentally new for us:
 6. **Retrospective as a meta-workflow — "grow agents, don't build them".** After day
    one, Grace searches her own logs/diary, names the failure pattern ("over-asking and
    under-reading"), and updates her own instructions, scripts, and documents. Gives the
-   eval/trust layer a concrete mechanism (see §15) and sharpens the requirement that
+   eval/trust layer a concrete mechanism (see §16) and sharpens the requirement that
    definition versions be recorded in transcript provenance (v2 already has
    agent_config provenance — this is why it is not optional).
 7. **Releaser is the choreography paradigm in the wild.** Four independent triggers
@@ -542,7 +542,7 @@ agent's diary as whether it may send email.
 
 The middle layer's governance is the sensitive part: what one activation writes leaks
 into all future activations — simultaneously the "grow agents" value and an
-audit/feedback surface (§15 handles this in a controlled way).
+audit/feedback surface (§16 handles this in a controlled way).
 
 **Registry federation:** if an agent is definition + memory (= data), agents are
 portable and homeable like instances. Local registries (definitions on your machine)
@@ -659,7 +659,7 @@ requests, human grants) is this entity's creation flow — a mini-workflow with 
 gate on existing kernel machinery; and the **argument-level guardrails** (allowlist)
 are the Grant's constraints field. No new machinery, one new entity.
 
-**Trust ladder** (rhymes with §15 metacognition): per-use approval → instance-scoped
+**Trust ladder** (rhymes with §16 metacognition): per-use approval → instance-scoped
 grant → template-level standing grant → time-boxed standing grant with audit review.
 Each rung up is itself an audited decision; the Trust Profile is the calibration input.
 
@@ -682,7 +682,7 @@ on-behalf-of claim semantics.
 - The remote-executor relay (BC-08) is reused: if a step runs in a cloud sandbox, the
   credential still does not travel — the external call relays BACK to B's gatekeeper
   with op_id idempotency. Same channel, new cargo.
-- The agent-authored-scripts question (§17) half-resolves: scripts get no raw
+- The agent-authored-scripts question (§18) half-resolves: scripts get no raw
   credentials either — they too invoke named capabilities, shrinking the sandbox
   problem.
 - Offline owner: B's node unreachable → the wait condition simply blocks (already a
@@ -799,7 +799,162 @@ project first, value-for-self first. Only the four keep-open invariants at the e
 
 ---
 
-## 15. Learning and Metacognition Layers
+## 15. Structured Human-Input Surfaces: the Ask Primitive
+
+Today's model: task inbox item + free-text reply parsed by an LLM. The upgrade:
+**every human-input request is an Ask entity**:
+
+```
+Ask {
+  id, instance/step,           # where it comes from
+  addressee,                   # who it is for (or: external token)
+  schema,                      # WHAT is requested: typed fields, options, constraints
+  context_refs,                # what the human must see to decide (artifact refs)
+  channel_hints, priority,     # delivery preferences; interruptive vs. batchable
+  expiry, escalation           # when it lapses, who it escalates to
+}
+```
+
+The reply is validated against the schema BEFORE it becomes a
+contribution/EventEnvelope. Free text does not disappear — it is the degenerate schema
+(`{ text: string }`); on rich schemas a text-channel reply is lifted into the schema by
+the matcher with a confirm-back. The schema is the *target*, not a constraint on
+channel richness.
+
+### 15.1 Ask Schemas Are Artifact Contracts
+
+The Ask's schema is the step's input contract — the same schema machinery as artifact
+contracts. The human's reply is a schema-validated artifact with provenance
+(`created_by: human:B`), immutable, on the same envelope contract. The system has no
+separate "human input" category: just artifacts whose producer happens to be human —
+so policies, gates, and downstream steps consume them uniformly.
+
+Artifact contracts themselves span a strictness scale:
+
+1. **Envelope contract** (identical for all artifacts): artifact_id, flow_id, step_id,
+   artifact_type, schema_version, created_by, content_ref; validated on write,
+   immutable (new version = new id), only referencable within its flow (v2 BC-07).
+2. **Type-specific content schema**: e.g., Findings { items: [{ severity, description,
+   status, evidence_refs }] } — the validate→fix contract. Its consumers are machines:
+   the p2-round-gate reads severity, the fixer works open items, the convergence gate
+   checks P0/P1 presence. Contract rigor is what makes producer output machine-judgeable.
+3. **Prose convention**: Cursor's structured commit messages (Releaser builds
+   changelogs from them), Backlogger's ticket format (humans AND coding agents
+   implement from them). No JSON schema, still an interface — the dependencies of the
+   system run through artifact formats, not component APIs.
+
+Rule of thumb: **whatever feeds a policy or gate must be schema-level; what only
+informs a human may stay prose.** A prose convention can be hardened into a schema
+later when machines start depending on it — that hardening is itself a definition PR
+(§16).
+
+### 15.2 Three Tiers: Card, Form, App
+
+1. **Decision card** — enumerated options + context (approve/rework/reject); schema is
+   an enum. The v2 human_gate and the parallel-human-queue `ui: decision-card` are this.
+2. **Form** — multiple typed fields (WF-1 contribution confirmation, vacation
+   substitution setup); schema is an object.
+3. **Generated app / dashboard** — a DIFFERENT beast: not an Ask but a *published
+   asset* — a persistent view over a dataset/read model (Abundly's invoice dashboard,
+   Grace's errands dashboard), under the §10.1 asset lifecycle (preview/publish).
+   Don't conflate the tiers — Abundly's UI is muddled precisely because all three are
+   "documents".
+
+### 15.3 Renderer Separation: One Ask, Many Surfaces
+
+The workflow **never describes UI — only schema + hints.** Rendering belongs to
+channel adapters:
+
+- **Slack:** Block Kit buttons / modal — native form experience
+- **Email:** link to a web form (or button-reply in simple cases)
+- **Web inbox:** the personal online node's task-inbox surface (§8 device-independent
+  owner UX), form rendered mechanically from the schema
+- **CLI:** `pairflow inbox answer`
+- **Voice:** the Freddy-style phone call is *also just a renderer* — the agent reads
+  the context, collects answers conversationally, fills the same schema. Synchronous
+  voice is not a separate mechanism but a conversational rendering of the Ask.
+
+Poor channels fall back to free text + matcher extraction + confirm-back. This mirrors
+the EventEnvelope philosophy outbound: one abstract request, channel-native renderings.
+No form designer gets built: schemas are JSON Schema (+ a UI-hint layer, RJSF-style);
+rendering is mechanical.
+
+### 15.4 External Participants: the Token IS the Capability
+
+WF-4's customer is outside the system: no account, no agent, no identity. Two
+problems: how do they give input *safely*, and how do we know *which* instance their
+answer belongs to? The email-thread answer is fragile (out-of-thread replies,
+forwarding, parse errors, nothing validates completeness).
+
+Instead: the Ask renders as a **unique, unguessable URL**
+(`https://flows.example.com/a/8f3kQ9xL2m...`). **No login, no registration —
+possession of the link is the authorization** (capability-based security; the
+Calendly/DocuSign/anyone-with-the-link pattern). The token's scope is deliberately
+minimal, macaroon-style:
+
+- **single-Ask scoped** — if leaked, the damage is one filled form; no access to the
+  instance or anything else
+- **expiring** — lapses with the offer's validity; a click on an expired link routes
+  to the stale-intent branch ("This offer expired — request a renewal?"), exactly
+  WF-4's trap
+- **revocable** — kill the link the moment the deal is off
+- **audited** — every use logged
+
+The submitted form (rendered from the Ask schema: accept yes/no, comments, PO number)
+arrives schema-validated as an EventEnvelope with provenance
+`external:customer@x via ask-token`. **The correlation problem disappears** — the
+token deterministically identifies the Ask and through it the instance. The
+email-thread path remains a fallback (some customers will reply by mail; the matcher
+handles it), but the link is the primary rail.
+
+**Standing intake forms — same machinery, different routing.** The ask-token above is
+created by a running instance, for one occasion. The same form mechanics also work as
+a permanent surface (`/forms/request-a-quote`): each submission does not answer a
+waiting instance but **starts a new one** — a template start trigger. The trigger
+router's three-way decision (§5) maps exactly:
+
+| | Ask-token link | Standing intake form |
+|---|---|---|
+| Created by | a running instance | the template (at deploy) |
+| Lifetime | one-shot, expiring | permanent |
+| Submission routes to | **feed**: the waiting instance | **start**: a new instance |
+
+This is why "the form is a channel adapter": a web form is an inbound channel like
+email or Slack — it produces EventEnvelopes and does NOT decide whether an envelope
+feeds or starts; that is the router's job.
+
+### 15.5 The One Invariant That Matters, and Edge Cases
+
+**Every UI surface is a channel adapter — it never mutates state directly, it only
+emits EventEnvelopes.** The Slack button, the web-form submit, the dashboard action
+button, the spoken "yes" on a call — all enter through the single kernel entry point,
+with capability checks and op_id idempotency. Consequences come free: answering a
+stale Ask = stale-intent rejection (already modeled); two competing answers =
+first-wins by op_id; validation runs at the renderer AND at the kernel boundary (never
+trust the surface).
+
+### 15.6 Ties, MVP, Keep-Open Commitments
+
+Ties: the Ask's `priority` field decides interrupt vs. digest-batch — clicks into the
+attention budget (§14). Conversational authoring (§10.1) may *draft* the form ("which
+fields does this decision need?"), but the compiled template holds the schema — the
+same prose→compiled bridge as for workflow templates.
+
+MVP at hobby scale: Ask entity with JSON Schema; CLI + web-inbox renderer on the
+personal node; OS notification with deep link; maybe a Slack Block Kit renderer;
+tokenized links only when an external actually appears.
+
+Keep-open commitments (cheap, binding now):
+
+1. **Ask-with-schema is the universal human-input primitive** — free text is the
+   degenerate schema, not a separate path
+2. **Renderer separation** — templates carry schema + hints, never UI
+3. **Every surface is a channel adapter** (the invariant above)
+4. **External addressee = token-scoped capability, not an email address**
+
+---
+
+## 16. Learning and Metacognition Layers
 
 Sketch of a multi-level learning model (depends entirely on provenance being right —
 every learning must be linked to run, step, agent, and definition versions):
@@ -829,7 +984,7 @@ v2 plan's Trust Profile is the calibration input for when auto-approve is safe.
 
 ---
 
-## 16. Existing-Tools Assessment
+## 17. Existing-Tools Assessment
 
 - **Temporal / Restate / Inngest:** durable execution + signals + timers out of the box
   (a step waiting for an external event = signal). Best technical fit under the kernel,
@@ -865,7 +1020,7 @@ v2 plan's Trust Profile is the calibration input for when auto-approve is safe.
 
 ---
 
-## 17. Open Questions (Unordered)
+## 18. Open Questions (Unordered)
 
 - Where does a company-level kernel physically live for a small company (tiny server?
   shared repo + cron? someone's always-on machine?)
@@ -883,8 +1038,10 @@ v2 plan's Trust Profile is the calibration input for when auto-approve is safe.
   (contract surface of a "contribution"), and how are op_ids namespaced across kernels?
 - Budget policy mechanics: pre-flight estimation vs. metered cutoff mid-run; who gets
   the defer when a budget gate blocks?
-- Structured-input surfaces: who renders the form (substrate web surface? channel-native
-  forms like Slack modals?), and how do tokenized public links expire/authenticate?
+- Ask UX remainders (§15 sets the model): partial saves / amendable answers on long
+  forms; standing intake-form governance (spam/abuse, rate limiting); is the
+  generated-apps tier (15.2/3) a goal at all, or do card+form plus read-only digest
+  views suffice?
 - On-behalf-of audit entry: exact schema (grant id, chain, action, argument hash) —
   §13 sets the principles (adopt OS keychain/age/1Password, never build), the schema
   is open
@@ -908,14 +1065,14 @@ v2 plan's Trust Profile is the calibration input for when auto-approve is safe.
   how is cross-instance leakage audited?
 - Local vs. global agent definition references from a step: version pinning? what
   happens to memory homing when a global definition runs locally?
-- Definition-PR mechanics (§15): how are auto-approve thresholds set, audited, and
+- Definition-PR mechanics (§16): how are auto-approve thresholds set, audited, and
   revoked when an auto-approved change misbehaves?
 - Capability grant workflow: who may grant which capabilities to which agent in a
   multi-user setting, and are grants time-boxed?
 
 ---
 
-## 18. What This Document Is Not
+## 19. What This Document Is Not
 
 Not a design. Not prioritized. Not consistent. It is the raw material for the
 convergence phase: the next step is to pick the load-bearing decisions (kernel
