@@ -594,6 +594,46 @@ workflow instance with a very loose template, and Grace's continuity comes from 
 agent-scoped memory plus the kernel tracking her errands (instead of her own ad-hoc
 DB).
 
+### 11.1 The Diary: Testimony, Not Evidence
+
+The transcript/diary distinction (§10.1 item 5) is epistemic, not a format question:
+
+- The **transcript** is written by the kernel: append-only events, machine truth.
+  *Evidence.*
+- The **diary** is written by the agent: a subjective narrative of what it *thinks* it
+  did and why. *Testimony.*
+
+**The two can diverge — and the divergence itself is signal.** If Grace's diary says
+"I did X because Y" but the transcript shows Z, that is confabulation or a reasoning
+bug — both auditable, provided diary entries link to transcript ranges (provenance).
+A §16 metacognition check can explicitly hunt testimony-vs-evidence divergences — a
+quality signal available from no other source.
+
+Hard rule that follows: **the diary never feeds a gate or policy.** On the §15.1
+strictness scale the diary is prose-tier — it informs humans (and metacognition);
+decisions are made from the transcript. (If machines ever start depending on diary
+content, the hardening rule kicks in.)
+
+**When it is written: the activation epilogue.** The natural place for a diary entry
+is the end of each activation — a short epilogue (what I did, why, what felt off).
+Cheap (one LLM call), and exactly the raw material Grace searched in her retro.
+
+**The economic argument: the diary makes metacognition affordable.** §16 Level 2
+("the agent reviews all its interactions") implemented naively is expensive —
+re-reading full transcripts. The diary is the **pre-digested self-summary layer**:
+metacognition reads diaries (terse, narrative) and drills down into transcripts only
+on suspicion. Same pattern as context assembly (§10.2 item 4): layered context,
+lazily loaded detail. The diary is not a luxury feature but a precondition of
+metacognition's token economy.
+
+**Abundly's three tabs, mapped:**
+
+| Abundly tab | Here | Nature |
+|---|---|---|
+| Log | rendered transcript | kernel-written; evidence; gates may consume |
+| Diary | agent-scoped memory, activation epilogues | agent-written; testimony; informs humans/metacognition only |
+| Approvals | a view over open decision-Asks (§15) | a task-inbox filter — not a new entity |
+
 ---
 
 ## 12. The Gatekeeper, Concretely
