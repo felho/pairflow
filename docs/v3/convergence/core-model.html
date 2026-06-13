@@ -1,0 +1,297 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>V3 Core Model — Convergence by Complexity Ramp</title>
+  <style>
+    :root {
+      --ink: #1a1e27;
+      --muted: #5d6675;
+      --line: #dde3ec;
+      --soft: #f4f6fb;
+      --panel: #ffffff;
+      --accent: #4f46e5;       /* indigo — structural */
+      --runtime: #0e7490;      /* cyan — runtime trace */
+      --domain: #7c3aed;       /* violet — domain model */
+      --config: #b45309;       /* amber — configuration */
+      --absent: #9aa3b2;
+      --good: #15803d;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      background: #fbfcfe;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.55;
+    }
+    a { color: var(--accent); text-decoration: none; }
+    .layout { display: grid; grid-template-columns: 270px minmax(0, 1fr); min-height: 100vh; }
+    nav {
+      position: sticky; top: 0; height: 100vh; overflow: auto;
+      border-right: 1px solid var(--line); background: #f7f9fc; padding: 24px 18px;
+    }
+    nav h1 { font-size: 16px; line-height: 1.3; margin: 0 0 6px; }
+    nav .sub { font-size: 12px; color: var(--muted); margin: 0 0 18px; }
+    nav a { display: block; color: var(--ink); padding: 6px 9px; border-radius: 6px; font-size: 14px; }
+    nav a:hover { background: #e9eef7; }
+    nav a.level { font-weight: 600; margin-top: 8px; }
+    nav a.level .tag { font-weight: 400; color: var(--muted); font-size: 12px; }
+    nav .future { color: var(--absent); font-size: 13px; padding: 5px 9px; }
+    main { max-width: 1080px; width: 100%; padding: 32px 44px 90px; }
+    header.page { border-bottom: 1px solid var(--line); padding-bottom: 22px; margin-bottom: 10px; }
+    header.page h2 { font-size: clamp(26px, 3.4vw, 40px); line-height: 1.1; margin: 0 0 10px; }
+    header.page p { max-width: 820px; color: var(--muted); font-size: 17px; margin: 0; }
+    section { margin: 40px 0; scroll-margin-top: 18px; }
+    h2.level-h { font-size: 26px; margin: 0 0 4px; display: flex; align-items: center; gap: 12px; }
+    .level-badge {
+      display: inline-flex; align-items: center; justify-content: center;
+      background: var(--accent); color: #fff; border-radius: 7px;
+      font-size: 15px; font-weight: 700; padding: 3px 10px; letter-spacing: .3px;
+    }
+    .level-sub { color: var(--muted); margin: 0 0 8px; font-size: 16px; }
+    h3 { font-size: 19px; margin: 28px 0 10px; }
+    .view-h { display: flex; align-items: center; gap: 9px; }
+    .view-tag {
+      font-size: 11px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase;
+      padding: 2px 8px; border-radius: 999px;
+    }
+    .view-tag.runtime { background: #cffafe; color: var(--runtime); }
+    .view-tag.domain  { background: #ede9fe; color: var(--domain); }
+    .view-tag.config  { background: #fef3c7; color: var(--config); }
+    .view-tag.absent  { background: #eef1f5; color: var(--absent); }
+    .view-tag.diff    { background: #dcfce7; color: var(--good); }
+    p { margin: 0 0 12px; }
+    ul { margin: 6px 0 14px 20px; padding: 0; }
+    li { margin: 4px 0; }
+    code { background: #eef1f7; padding: 1px 5px; border-radius: 4px; font-size: 13.5px; }
+    pre {
+      background: #1a1e27; color: #e6e9f0; border-radius: 9px; padding: 16px 18px;
+      overflow: auto; font-size: 13px; line-height: 1.5; margin: 12px 0;
+    }
+    pre .k { color: #c4b5fd; } pre .s { color: #86efac; } pre .c { color: #7d8597; } pre .n { color: #fdba74; }
+    .note {
+      border-left: 4px solid var(--accent); background: var(--soft);
+      padding: 12px 15px; margin: 16px 0; border-radius: 0 8px 8px 0;
+    }
+    .note.runtime { border-left-color: var(--runtime); }
+    .note.domain  { border-left-color: var(--domain); }
+    .note.config  { border-left-color: var(--config); }
+
+    /* runtime trace as a vertical sequence */
+    .trace { border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: var(--panel); }
+    .trace-row { display: grid; grid-template-columns: 38px 1fr; border-bottom: 1px solid var(--line); }
+    .trace-row:last-child { border-bottom: 0; }
+    .trace-n {
+      background: #f1f4fa; color: var(--muted); font-size: 13px; font-weight: 700;
+      display: flex; align-items: center; justify-content: center; border-right: 1px solid var(--line);
+    }
+    .trace-c { padding: 11px 14px; }
+    .trace-c .ev { font-weight: 600; }
+    .trace-c .meta { font-size: 13px; color: var(--muted); margin-top: 2px; }
+    .trace-c .meta b { color: var(--ink); font-weight: 600; }
+
+    /* domain model entity cards */
+    .agg { border: 1.5px dashed #c7bdf2; border-radius: 12px; padding: 14px; margin: 14px 0; background: #faf9ff; }
+    .agg > .agg-label { font-size: 12px; font-weight: 700; color: var(--domain); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 10px; }
+    .ents { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 10px; }
+    .ent { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 11px 13px; }
+    .ent .en { font-weight: 700; font-size: 14px; }
+    .ent .root { font-size: 10px; font-weight: 700; color: #fff; background: var(--domain); border-radius: 4px; padding: 1px 5px; margin-left: 6px; vertical-align: middle; }
+    .ent .fields { font-size: 12.5px; color: var(--muted); margin-top: 4px; }
+    .rel { font-size: 13.5px; color: var(--muted); margin: 10px 0 0; }
+    .rel b { color: var(--ink); }
+
+    /* absent list */
+    .absent-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 8px; }
+    .absent-item { border: 1px solid var(--line); border-radius: 7px; padding: 9px 11px; font-size: 13.5px; color: var(--muted); background: #fbfcfe; }
+    .absent-item b { color: var(--ink); font-weight: 600; }
+    .absent-item .at { color: var(--accent); font-weight: 600; }
+    @media (max-width: 880px) {
+      .layout { grid-template-columns: 1fr; }
+      nav { position: static; height: auto; }
+      main { padding: 22px 16px 60px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="layout">
+    <nav>
+      <h1>V3 Core Model</h1>
+      <p class="sub">Convergence by complexity ramp</p>
+      <a href="#how">How to read this</a>
+      <a class="level" href="#l0">L0 <span class="tag">· local pair loop</span></a>
+      <div class="future">L1 · capability check</div>
+      <div class="future">L2 · gate / policy</div>
+      <div class="future">L3 · human gate</div>
+      <div class="future">L4 · help / Ask</div>
+      <div class="future">L5+ · triggers, federation…</div>
+    </nav>
+
+    <main>
+      <header class="page">
+        <h2>V3 Core Model — built one level at a time</h2>
+        <p>The convergence companion to <a href="../concept-braindump.md">concept-braindump.md</a>.
+        The braindump is the raw material (divergence); this distils a coherent, buildable core by
+        growing it from the smallest possible kernel, one capability per level. Each level is shown
+        through three parallel views, plus what it deliberately leaves out.</p>
+      </header>
+
+      <section id="how">
+        <h2 class="level-h">How to read this</h2>
+        <p>Every level adds exactly one capability and is rendered through three views, so you can
+        follow the model and its configuration as complexity grows — rather than absorbing it all at
+        once:</p>
+        <ul>
+          <li><span class="view-tag runtime">Runtime</span> &nbsp;a concrete trace — what events arrive and what the kernel does, step by step.</li>
+          <li><span class="view-tag domain">Domain</span> &nbsp;the model (DDD) — entities, aggregate boundaries, and how they relate.</li>
+          <li><span class="view-tag config">Config</span> &nbsp;the template/definition that declares the behaviour.</li>
+          <li><span class="view-tag absent">Absent</span> &nbsp;what is deliberately not here yet, and which level introduces it.</li>
+        </ul>
+        <div class="note">
+          <strong>The ramp is also a coherence test.</strong> If each new capability sits cleanly on
+          the existing model (a new entity, or a new field — not a rewrite), the core is sound. If a
+          capability forces the structure to be torn up, that is a signal the core is wrong. Levels
+          are greenfield kernel concepts; occasional reality checks against the v1 code
+          (<code>src/v11/…</code>) keep them honest.
+        </div>
+      </section>
+
+      <section id="l0">
+        <h2 class="level-h"><span class="level-badge">L0</span> Local pair loop</h2>
+        <p class="level-sub">The smallest thing that is still a workflow: two roles passing work back
+        and forth on one machine, with no gates, no permissions, no humans-in-the-loop.</p>
+
+        <p>One implementer and one reviewer alternate. The implementer does work and passes; the
+        reviewer either passes back (found something to fix) or declares convergence (nothing left).
+        That is the entire system at L0 — the loop and nothing guarding it. The reviewer's judgement,
+        not a formal gate, ends the loop; the gate arrives at L2.</p>
+
+        <h3 class="view-h"><span class="view-tag runtime">Runtime</span> A concrete trace</h3>
+        <p>A two-round run that converges on the second review:</p>
+        <div class="trace">
+          <div class="trace-row"><div class="trace-n">1</div><div class="trace-c">
+            <div class="ev">START — instance created from template <code>local-pair-v0</code></div>
+            <div class="meta">state: <b>current_step=implement</b>, <b>round=1</b>, <b>status=RUNNING</b></div>
+          </div></div>
+          <div class="trace-row"><div class="trace-n">2</div><div class="trace-c">
+            <div class="ev">implementer (codex) works → emits <code>PASS</code></div>
+            <div class="meta">EventEnvelope { type: PASS, actor: codex, payload: { summary, ref } }</div>
+          </div></div>
+          <div class="trace-row"><div class="trace-n">3</div><div class="trace-c">
+            <div class="ev">kernel dispatches → transition <b>implement → review</b></div>
+            <div class="meta">appends envelope to transcript; state: <b>current_step=review</b></div>
+          </div></div>
+          <div class="trace-row"><div class="trace-n">4</div><div class="trace-c">
+            <div class="ev">reviewer (claude) finds issues → emits <code>PASS</code></div>
+            <div class="meta">EventEnvelope { type: PASS, actor: claude, payload: { findings } }</div>
+          </div></div>
+          <div class="trace-row"><div class="trace-n">5</div><div class="trace-c">
+            <div class="ev">kernel dispatches → transition <b>review → implement</b> (back)</div>
+            <div class="meta">state: <b>current_step=implement</b>, <b>round=2</b></div>
+          </div></div>
+          <div class="trace-row"><div class="trace-n">6</div><div class="trace-c">
+            <div class="ev">implementer fixes → emits <code>PASS</code> → transition <b>implement → review</b></div>
+            <div class="meta">state: <b>current_step=review</b></div>
+          </div></div>
+          <div class="trace-row"><div class="trace-n">7</div><div class="trace-c">
+            <div class="ev">reviewer is satisfied → emits <code>CONVERGED</code></div>
+            <div class="meta">EventEnvelope { type: CONVERGED, actor: claude }</div>
+          </div></div>
+          <div class="trace-row"><div class="trace-n">8</div><div class="trace-c">
+            <div class="ev">kernel dispatches → transition <b>review → done</b></div>
+            <div class="meta">state: <b>status=DONE</b> — terminal; transcript is the complete history</div>
+          </div></div>
+        </div>
+        <div class="note runtime">
+          The kernel only ever does three things here: <b>route</b> the envelope to a transition,
+          <b>append</b> it to the transcript, <b>update</b> the instance state. No decision logic of
+          its own yet — the actors decide, the kernel records and moves.
+        </div>
+
+        <h3 class="view-h"><span class="view-tag domain">Domain</span> The model</h3>
+        <p>Two aggregates: the <b>template</b> (the definition, immutable while running) and the
+        <b>instance</b> (the run). The EventEnvelope is the command/event that drives the instance
+        through the kernel.</p>
+
+        <div class="agg">
+          <div class="agg-label">Template aggregate — the definition (immutable at runtime)</div>
+          <div class="ents">
+            <div class="ent"><div class="en">WorkflowTemplate <span class="root">root</span></div><div class="fields">id, roles[], steps[], start</div></div>
+            <div class="ent"><div class="en">Step</div><div class="fields">id, role, transitions { on_pass, on_converged }</div></div>
+            <div class="ent"><div class="en">Role</div><div class="fields">name, actor binding</div></div>
+            <div class="ent"><div class="en">Actor</div><div class="fields">id (codex / claude)</div></div>
+          </div>
+        </div>
+
+        <div class="agg">
+          <div class="agg-label">Instance aggregate — the run (mutable, append-only history)</div>
+          <div class="ents">
+            <div class="ent"><div class="en">WorkflowInstance <span class="root">root</span></div><div class="fields">id, template_id, current_step, round, lifecycle_status</div></div>
+            <div class="ent"><div class="en">Transcript</div><div class="fields">append-only ordered EventEnvelopes</div></div>
+            <div class="ent"><div class="en">LifecycleStatus <span style="font-size:10px;color:var(--muted)">(value)</span></div><div class="fields">CREATED → RUNNING → DONE</div></div>
+          </div>
+        </div>
+
+        <div class="agg" style="border-style:solid;border-color:var(--line);background:var(--panel)">
+          <div class="agg-label" style="color:var(--runtime)">Message — crosses the boundary</div>
+          <div class="ents">
+            <div class="ent"><div class="en">EventEnvelope</div><div class="fields">event_id, instance_id, type (PASS / CONVERGED), actor, payload</div></div>
+          </div>
+        </div>
+
+        <p class="rel"><b>Relationships:</b> a <b>Template</b> defines <b>Step</b>s bound to <b>Role</b>s,
+        each filled by an <b>Actor</b>. A <b>WorkflowInstance</b> is created from a Template and owns its
+        <b>Transcript</b>. An <b>EventEnvelope</b> targets an instance; the kernel applies it as a
+        transition and appends it to the transcript.</p>
+        <div class="note domain">
+          <b>Why two aggregate roots.</b> The definition and the run have different lifecycles and
+          consistency rules: the template is shared and immutable while instances run; the instance
+          mutates but its transcript is append-only. This split is the seed of the braindump's
+          lifecycle-vs-execution-position (§2.2) and immutable-artifact / append-only-transcript
+          (§15.1) decisions — already present at L0, before any of the machinery that needs them.
+        </div>
+
+        <h3 class="view-h"><span class="view-tag config">Config</span> The template</h3>
+        <p>The whole of L0's behaviour is this declaration. No engine code encodes the loop — the loop
+        <em>is</em> the transitions:</p>
+        <pre><span class="k">template</span>:
+  <span class="k">id</span>: <span class="s">local-pair-v0</span>
+  <span class="k">roles</span>:
+    <span class="k">implementer</span>: { <span class="k">actor</span>: <span class="s">codex</span> }
+    <span class="k">reviewer</span>:    { <span class="k">actor</span>: <span class="s">claude</span> }
+  <span class="k">start</span>: <span class="s">implement</span>
+  <span class="k">steps</span>:
+    - <span class="k">id</span>: <span class="s">implement</span>
+      <span class="k">role</span>: <span class="s">implementer</span>
+      <span class="k">on_pass</span>: <span class="s">review</span>
+    - <span class="k">id</span>: <span class="s">review</span>
+      <span class="k">role</span>: <span class="s">reviewer</span>
+      <span class="k">on_pass</span>:      <span class="s">implement</span>   <span class="c"># found something → back</span>
+      <span class="k">on_converged</span>: <span class="s">done</span></pre>
+        <div class="note config">
+          <b>Template = configuration, not code</b> (braindump §2.1). L0 is "just one preset"; the
+          engine reads transitions from data. A reality check against v1: this is the
+          <code>review-loop</code> the v1 code hardcodes — here it is already external data.
+        </div>
+
+        <h3 class="view-h"><span class="view-tag absent">Absent</span> Deliberately not here yet</h3>
+        <p>The border of L0 — each of these is a later level, and seeing the border is half the point:</p>
+        <div class="absent-grid">
+          <div class="absent-item">No <b>capability check</b> — anyone can emit anything <span class="at">→ L1</span></div>
+          <div class="absent-item">No <b>gate / policy</b> — reviewer decides convergence directly <span class="at">→ L2</span></div>
+          <div class="absent-item">No <b>round limit</b> — formalised with the round gate <span class="at">→ L2</span></div>
+          <div class="absent-item">No <b>human gate / approval</b> <span class="at">→ L3</span></div>
+          <div class="absent-item">No <b>help subflow / Ask</b> <span class="at">→ L4</span></div>
+          <div class="absent-item">No <b>trigger</b> — manual start only <span class="at">→ L5</span></div>
+          <div class="absent-item">No <b>channels / task inbox</b> — direct emit <span class="at">→ L6</span></div>
+          <div class="absent-item">No <b>wait condition / correlation</b> <span class="at">→ L7</span></div>
+          <div class="absent-item">No <b>gatekeeper / federation</b> <span class="at">→ L8+</span></div>
+          <div class="absent-item">No <b>grants, sticky labels, trust, rollback</b> <span class="at">→ L9+</span></div>
+        </div>
+      </section>
+    </main>
+  </div>
+</body>
+</html>
