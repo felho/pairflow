@@ -1955,7 +1955,7 @@ Findings:
   **At an external party (org↔org, foreign system) perfect technical enforcement is
   impossible** — the classic DRM problem. There the label is part technical (if the
   receiver runs a compatible substrate) and part legal/contractual — the
-  "liability framework codesigned in advance" (§18.4). Sticky label + liability give
+  "liability framework codesigned in advance" (§18.5). Sticky label + liability give
   *practical* protection, not a mathematical guarantee; don't overpromise.
 - **Federation precondition.** When an instance re-homes or a contribution crosses a
   domain boundary, labels are the **only way the policy crosses too** (§8) — without
@@ -1965,6 +1965,49 @@ Findings:
   privacy thesis at the data-object level — and meeting §18.1's irreversible class:
   leaked confidential data is irreversible, so the label is a *prevention* tool
   controlling where data may go at all.
+
+### 18.4 Accountability Shell
+
+The fiduciary wedge's operational core. **Provenance ≠ accountability:** on-behalf-of
+provenance (§13) records *which agent* acted under *which grant*; accountability
+records *which named human/legal entity bears the consequence*. They often diverge —
+the agent executes, but the responsible party sits at the **top** of the delegation
+chain, not at the executing end.
+
+- **The chain closes upward with a human — "the buck stops here".** The §13 chain
+  delegates downward (A→B→C grants); accountability says a human/legal entity is
+  always at the top and responsibility does **not flow down** to agents. If Freddy
+  sends a bad email, Freddy does not answer for it — the named human who backs Freddy's
+  high-stakes actions does. That is the fiduciary.
+- **Not a new mechanism — a field plus an invariant.** High-stakes capabilities/grants
+  carry a mandatory `accountable_principal` (a named human/legal entity); the invariant
+  is that it **cannot be an agent** and **cannot be empty** at high stakes. The kernel
+  enforces it: a high-stakes action without an accountable principal cannot run. This
+  mechanizes the wedge — the point where the chain must reach a human.
+- **The key subtlety: autonomy rises, accountability does NOT fall — they are
+  orthogonal.** The trust ladder (§17) governs whether a human approves each step *in
+  advance*; accountability governs *who answers if it goes wrong*. Under spot-check
+  auto-approve (§17.3) the human does not look ahead — yet remains responsible
+  *afterward*. The naive "if the agent is autonomous, the agent is responsible" is
+  exactly the error the shell rules out: even a full-auto agent has a named human
+  accountable. Two separate ladders.
+- **Accountability is the human anchor of rollback/compensation.** Tied to §18.1: when
+  a high-stakes action fails and needs compensating, the accountable principal
+  authorizes it — the report's "approval rollback" routes there. The shell links the
+  failure to the responsible party.
+- **Audit: a mandatory transcript field at high stakes.** Every high-stakes entry
+  records the accountable principal (not just on-behalf-of), so postmortem/retro
+  (§16.3) and the purpose lens (§18.2) can always answer "who owned this?" — the
+  accountability side of the report's searchable-logs + human-review-queue requirement.
+- **Hobby scale: you are the fiduciary for every personal action.** In the personal
+  domain you are trivially the accountable principal for high-stakes actions — same
+  mechanism, and it is what makes federation possible later: when an org instance runs
+  on your node, the grant's `accountable_principal` says who answers for the outcome
+  (you, or the org fiduciary).
+- **Bridge to the external side.** Accountability is the wedge's *internal* side (who
+  answers inside one org). Its *external* counterpart — when two firms' agents transact
+  — is the liability framework codesigned in advance, in the cross-firm federation
+  section (§18.5). Two halves of one line.
 
 ---
 
