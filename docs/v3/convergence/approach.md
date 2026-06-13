@@ -190,6 +190,8 @@ available); L0c makes it explicit and recorded. The resolution cascade is the sa
 pattern as ActorBinding and as model selection (§14.2) — model routing itself stays
 deferred. Coherence: L0b runs L0c-free with vanilla actors (the loop still closes); L0c
 is a clean layer on top — which is why it is its own level, not an L0b appendix.
+Scope brake: in L0c, `skills/tools` are *declared configuration references / run intent
+only* — not provisioned capabilities, not credentials, and not proof of availability.
 Out of scope (later): tool installation / provisioning, skill-doc retrieval,
 memory / context assembly, model-routing optimization (§14.2), credential / grant
 enforcement (L7).
@@ -198,8 +200,11 @@ enforcement (L7).
 Concepts: `CapabilityProfile` (matrix `role × state → allowed actions`); the Capability
 Engine as the first dispatch step.
 Why: internal authorization — who may emit which protocol action in which state (the v2
-enforcement backbone, Level 2). The same matrix also *advertises* available actions to
-the agent (the protocol-navigation half of guidance). Not gates, not grants.
+enforcement backbone, Level 2). L1 does **not** introduce navigation — L0b already
+exposes the step's transition affordances (`available_ops`); L1 *filters/enforces* them
+by role/state authorization, and can annotate a denied action with a reason. In short:
+**L0b = which transitions exist from this step; L1 = which of those this actor/role may
+actually use.** Not gates, not grants.
 
 **L2 — Gate / policy.**
 Concepts: `Gate, PolicyModule, GateDecision` (allow/block/defer); the convergence gate;
