@@ -2009,6 +2009,61 @@ chain, not at the executing end.
   — is the liability framework codesigned in advance, in the cross-firm federation
   section (§18.5). Two halves of one line.
 
+### 18.5 Cross-Firm Federation (Deferred — Keep the Door Open)
+
+Status: deferred (pure enterprise, org↔org; the hobby project does not need it). The
+report's "Cross-Firm Agent Architecture — architecture, not goodwill" is literally our
+thesis raised to the org boundary: enforced structure, not trust/goodwill. Its three
+requirements are mostly existing pieces extended past the firm boundary:
+
+- **policy-controlled API surface** = the kernel's single entry point + grant per call
+  (§13) — already in place in principle; the receiver is just *another firm's* kernel.
+- **data-object metadata that travels** = sticky labels (§18.3) — already written.
+- **liability framework codesigned** = the accountability shell's (§18.4) external side
+  + the contract entity (§15.1) raised to federation level.
+
+So cross-firm federation is assembling existing parts at the org boundary, not new
+construction.
+
+**The new precondition: trusted events / signed provenance — and two kinds of trust.**
+Inside a domain, EventEnvelope provenance suffices (the kernel believes its own
+events). Cross-firm, the receiver cannot blindly believe the sender's claim →
+cryptographic source authentication: signed envelopes, the §13 UCAN/signed-delegation
+chain extended to the events themselves. Crucial distinction: **§17 trust** = "how much
+I trust the agent's *judgment*" (behavior, calibrated); **cross-firm trust** = "is it
+really *their* agent that sent this" (identity/origin, cryptographic). The federation
+needs the second; do not conflate them.
+
+Four more findings:
+
+- **Liability "codesigned in advance" = the contract entity, by both parties, up
+  front.** The §15.1 producer/consumer contract, at federation level, records not just
+  the data format but the **liability split** ("if your agent sends bad data, you
+  answer; if mine misreads it, I do") — the contract entity + accountability shell
+  fused: an API contract + SLA + liability clause both parties signed.
+- **The trust asymmetry is the whole difficulty.** Inside a domain everything is our
+  code → mechanical enforcement. Org↔org, we do not control the other side's code. So
+  what crosses must be (a) **self-carrying** (sticky label + signed provenance — not
+  reliant on the receiver's goodwill) and (b) covered by a **legal frame** (liability)
+  for the non-technically-enforceable part. The §18.3 DRM problem generalized to the
+  whole interaction.
+- **The §8 relay is the carrier.** Kernel federation's relay/op_id/resume-token is "one
+  mechanism at three scales" (node↔node, personal↔org, org↔org). Cross-firm is the same
+  relay, wrapped in signed envelopes, a foreign-firm-kernel receiver, sticky-labeled
+  data, and a codesigned liability contract. Org↔org now gets concrete requirements;
+  the carrier already exists.
+- **"Companies as protocols" — the vision fits.** The report's 2036 endpoint: firms as
+  protocols. That is the endpoint of our federation + contract-as-architecture line: if
+  a firm's interface is a policy-controlled API + sticky-labeled data + a codesigned
+  liability contract, then the firm is, from outside, a protocol. Nothing to build now;
+  good to know the model is consistent in that direction.
+
+**Keep-open invariants (cheap, binding now; nothing to build yet):** boundaries carry
+only EventEnvelopes and these are made signable (a provenance field that later grows a
+signature); every artifact carries a sticky-label-capable envelope (§18.3); every
+high-stakes action carries an accountable principal (§18.4); contracts are first-class
+entities (§15.1). Hold these and cross-firm later builds on top **without retrofit**.
+
 ---
 
 ## 19. Existing-Tools Assessment
