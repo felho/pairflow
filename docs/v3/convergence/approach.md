@@ -156,6 +156,14 @@ Why: a skeleton that routes but gives the agent no idea what to do is not yet us
 This is the minimum guidance to act — split from L0a because the context packet is a
 large concept later (§11.4) and must not slip in as an L0 afterthought; it gets its own
 line so its growth is visible.
+Out of scope (not L0b — stays a usable skeleton, not a mini orchestration platform):
+capability check / authorization (L1), gate / policy / round logic (L2), and general
+context assembly / retrieval (later). The detailed in/out scope is the L0b small-spec's
+job; this line only fixes the conceptual boundary so L0b cannot absorb L1/L2.
+Boundary resolved from L0a: the actor-supplied stale-intent question surfaced by the L0a
+pseudocode resolves here — once the context packet hands the actor the instance version,
+an envelope can carry an actor-supplied `expected_version`, and the kernel can return a
+true `Stale` (distinct from L0a's purely internal CAS).
 
 **L1 — Capability matrix.**
 Concepts: `CapabilityProfile` (matrix `role × state → allowed actions`); the Capability
