@@ -169,6 +169,30 @@ Boundary resolved from L0a: the actor-supplied stale-intent question surfaced by
 pseudocode resolves here — once the context packet hands the actor the instance version,
 an envelope can carry an actor-supplied `expected_version`, and the kernel can return a
 true `Stale` (distinct from L0a's purely internal CAS).
+Reality check (v2): the role→actor binding and a template-level `default_actor` are
+explicit v2 design (Role ←filled-by← Actor; `WorkflowTemplate.defaults`;
+`roles.implementer.default_actor: codex`) — L0b adopts that pattern: template
+`default_actor` → instance snapshot of the effective `actor_binding`, overridable at
+start. Dispatch produces a `DispatchIntent` / context packet for a local/manual driver,
+NOT durable delivery (channels / task inbox are L8). `Step.agent_config` (v2) is carried
+as a reserved/pass-through field here, interpreted only at L0c.
+
+**L0c — Agent run configuration.**
+Concepts: `AgentConfig` (v2: mode, approach, skills/tools, persona/profile, execution
+hints); effective-config resolution by cascade (role default → step override →
+start/run override → snapshot at dispatch); the context packet carries the
+`effective_agent_config`; the transcript records which config ran (provenance).
+Why: this answers "*how* should the actor be run", distinct from L0b's "*who* acts and
+what packet". It is context engineering — which kind of agent (e.g. an engineer/developer
+sub-agent with specific skills/tools) performs the work. In v1 this is implicit in
+instructions and merely assumed (e.g. "use sub-agent X" without guaranteeing X is
+available); L0c makes it explicit and recorded. The resolution cascade is the same
+pattern as ActorBinding and as model selection (§14.2) — model routing itself stays
+deferred. Coherence: L0b runs L0c-free with vanilla actors (the loop still closes); L0c
+is a clean layer on top — which is why it is its own level, not an L0b appendix.
+Out of scope (later): tool installation / provisioning, skill-doc retrieval,
+memory / context assembly, model-routing optimization (§14.2), credential / grant
+enforcement (L7).
 
 **L1 — Capability matrix.**
 Concepts: `CapabilityProfile` (matrix `role × state → allowed actions`); the Capability
