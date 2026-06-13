@@ -67,6 +67,7 @@
     .view-tag.invariant { background: #fee2e2; color: var(--invariant); }
     .view-tag.config    { background: #fef3c7; color: var(--config); }
     .view-tag.absent    { background: #eef1f5; color: var(--absent); }
+    .view-tag.evidence  { background: #dcfce7; color: var(--good); }
     p { margin: 0 0 12px; }
     ul { margin: 6px 0 14px 20px; padding: 0; }
     li { margin: 4px 0; }
@@ -87,6 +88,7 @@
     .note.domain    { border-left-color: var(--domain); }
     .note.invariant { border-left-color: var(--invariant); }
     .note.config    { border-left-color: var(--config); }
+    .note.evidence  { border-left-color: var(--good); background: #f3faf5; }
 
     /* runtime trace as a vertical sequence */
     .trace { border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: var(--panel); }
@@ -239,7 +241,9 @@
         </div>
         <div class="note runtime">
           The kernel has no decision logic of its own yet — the actors decide, the kernel routes,
-          records, and guarantees each event is applied <em>exactly once</em> (step 3′). Convergence
+          records, and guarantees each accepted event is applied <em>at most once per
+          (instance_id, op_id)</em> — duplicate delivery is a no-op (step 3′). (Not "exactly once":
+          delivery may repeat; idempotency makes the <em>apply</em> effectively-once.) Convergence
           here is the reviewer's bare judgement; the formal gate arrives at L2.
         </div>
 
@@ -248,13 +252,15 @@
         branches the trace never exercises:</p>
         <pre class="pseudo"><span class="kw">HANDLE</span> envelope <span class="c">→ Outcome</span>
   <span class="kw">IF</span> not valid_shape(envelope)            <span class="kw">THEN</span> <span class="kw">RETURN</span> <span class="out">Rejected(invalid_shape)</span>
+
   instance ← instanceStore.load(envelope.instance_id)
   <span class="kw">IF</span> instance is none                     <span class="kw">THEN</span> <span class="kw">RETURN</span> <span class="out">Rejected(unknown_instance)</span>
+  template ← definitionStore.load(instance.template_ref)   <span class="c"># separate store; pinned immutable version</span>
 
   <span class="c"># idempotency, key scope (instance_id, op_id)</span>
   <span class="kw">IF</span> instance.transcript.has(envelope.op_id) <span class="kw">THEN</span> <span class="kw">RETURN</span> <span class="out">Duplicate</span>   <span class="c"># no-op, no 2nd entry</span>
 
-  step   ← instance.template.step(instance.current_step)
+  step   ← template.step(instance.current_step)
   target ← step.transitions[envelope.type]   <span class="c"># on_pass / on_converged</span>
   <span class="kw">IF</span> target is none                       <span class="kw">THEN</span> <span class="kw">RETURN</span> <span class="out">Rejected(no_transition)</span>
 
@@ -264,7 +270,9 @@
     instance.current_step ← target
     <span class="kw">IF</span> target is terminal <span class="kw">THEN</span> instance.status ← DONE
     instance.version ← instance.version + 1
-  <span class="c"># on CAS conflict (concurrent writer): reload + retry</span>
+  <span class="c"># on CAS conflict: restart HANDLE from load —</span>
+  <span class="c">#   re-check idempotency and re-resolve the transition;</span>
+  <span class="c">#   never re-commit a target computed from stale state</span>
 
   <span class="kw">RETURN</span> <span class="out">Committed(instance.version)</span></pre>
         <div class="note pseudo">
@@ -386,6 +394,24 @@
           <div class="absent-item">No <b>channels / task inbox / general Ask</b> <span class="at">→ L8</span></div>
           <div class="absent-item">No <b>wait / correlation</b> <span class="at">→ L9</span></div>
           <div class="absent-item">No <b>gatekeeper / federation</b> <span class="at">→ L10</span></div>
+        </div>
+
+        <h3 class="view-h"><span class="view-tag evidence">Evidence</span> Why we accept L0a for now</h3>
+        <div class="note evidence">
+          <ul style="margin:0">
+            <li><b>Scenario coverage:</b> the local pair loop runs end-to-end (runtime trace);
+              forward-compatible with WF-7, whose child workflows build on exactly this kernel
+              (instance + transcript + atomic transitions).</li>
+            <li><b>Invariant coverage:</b> idempotency <code>(instance_id, op_id)</code> ✓; atomic
+              transition commit under expected_version ✓; dumb-store / kernel-owned semantics ✓;
+              template/instance boundary holds (pseudocode loads the template from the definition
+              store via <code>template_ref</code>, not from the instance) ✓.</li>
+            <li><b>Known gaps (intended):</b> no actor binding / guidance (L0b); no actor-supplied
+              stale-intent (L0b+); no gate (L2). Each is listed in Absent.</li>
+            <li><b>Decision:</b> accepted as the L0a baseline. Light evidence per the
+              <a href="design-method-playbook.md">playbook §2.1</a>; a full evidence gate is only
+              needed when L0a becomes an implementation input.</li>
+          </ul>
         </div>
       </section>
     </main>
