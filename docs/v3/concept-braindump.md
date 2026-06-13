@@ -2064,6 +2064,53 @@ signature); every artifact carries a sticky-label-capable envelope (§18.3); eve
 high-stakes action carries an accountable principal (§18.4); contracts are first-class
 entities (§15.1). Hold these and cross-firm later builds on top **without retrofit**.
 
+### 18.6 Validation Map and Non-Substrate Remainder
+
+**Non-substrate remainder.** The report's REWRITE methodology, Edge deployment,
+J-curve/turbulent transition, and middle-60% problem are organizational change
+management — correctly the source's normative layer, not ours. But three substrate
+seeds hide in them:
+
+- **The trust ladder IS the role-transition engine (middle 60%).** "People move from
+  execution to exception-handling and review" is the macro-consequence of the §17
+  trust ladder: as agents earn autonomy rungs, humans shift to the defer/escalation/
+  review side. We do not solve the org/HR problem, but the substrate's trust mechanism
+  is literally what drives the shift.
+- **The migration control plane is a workflow.** REWRITE (process mining, readiness
+  score, canary rollout, value tracking) is itself a workflow the substrate could run —
+  dogfooding like WF-7. Not a new capability; an application.
+- **Edge Twin sandbox = our isolation at org scale.** Isolated agent pod + mirrored
+  data is the worktree/sandbox isolation (§16.2 no-ambient-authority) at organizational
+  scale.
+
+**Validation map.** The report's "what the system must do" catalog, mapped to the
+braindump — documenting the "we're not far from this" feeling: most of it is already
+covered.
+
+| Report requirement | Where in the braindump | Status |
+|---|---|---|
+| MTP-as-protocol | §18.2 | new (this source) |
+| Enterprise OODA loop (sense→interpret→decide→orchestrate→learn) | §5 triggers, §4 correlation, §3.1 decide, kernel orchestrate, §16 learn | covered |
+| Agent registry & passport | §11 (durable identity) + §13 (grants) | covered |
+| Policy-controlled API surface | §13 grant per call; §18.5 cross-firm | covered / deferred |
+| Data-object metadata | §18.3 sticky labels | new (this source) |
+| Govern/Assure: trusted event | §5 EventEnvelope; §18.5 signed provenance | covered / deferred |
+| Govern/Assure: searchable logs | §6 observability + transcript | covered |
+| Govern/Assure: granular rollback | §18.1 | new (this source) |
+| Govern/Assure: human review queue | §15 Ask/approvals | covered |
+| Govern/Assure: watchdog agents | §18.2 purpose lens; §17.3 spot-check | covered |
+| Workflow migration control plane | §18.6 (a workflow, dogfooding) | non-substrate seed |
+| Human role transition support | §17 trust ladder drives it | non-substrate seed |
+| Edge Twin sandbox | §16.2 isolation at org scale | non-substrate seed |
+| Board/J-curve governance | — | non-substrate (change mgmt) |
+| Proprietary intelligence layer (the moat) | §15/§16 org memory + metacognition + provenance-as-asset | covered (our thesis) |
+| Curatorial judgment workflows | §6 what-humans-keep + §17.1 review-as-eval + §11.1 diary/rationale | covered |
+| Accountability shell / fiduciary wedge | §18.4 | new (this source) |
+
+Net: of the source's catalog, the majority is already covered, five items are genuine
+additions from this source (§18.1–18.5), three are non-substrate seeds, and one
+(board/J-curve) is purely organizational. The "not far from this" intuition holds.
+
 ---
 
 ## 19. Existing-Tools Assessment
