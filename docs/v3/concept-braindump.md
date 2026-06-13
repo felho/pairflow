@@ -1901,6 +1901,71 @@ definition PR (owner/board-level gate). And at hobby scale the personal domain h
 purpose too — the CLAUDE.md-analog — usable as an active lens over one's own
 activities ("I'm doing this, but is it what I actually wanted?"). Not just enterprise.
 
+### 18.3 Data-Object Metadata That Travels (Sticky Labels)
+
+The report asks for "data-object metadata that travels with the data". Our gatekeeper
+(§12) is **perimeter enforcement**: it checks at the domain *boundary* — what may
+leave/enter. That holds while data is inside the boundary. Once it leaves (a
+contribution from B into the org instance, org data to another firm), the perimeter no
+longer protects: the data is in another control domain. Sticky policy
+(data-centric security) is the complement: the policy **rides with the data object**
+and is enforced wherever it lands. The gatekeeper decides whether data *may leave*;
+the sticky label governs what may be done with it *after*.
+
+**Worked example (WF-1).** B (procurement) gets an Acme contract email: an effective
+date (2026-07-01) and a **confidential clause** ("30% discount, keep it secret, we
+don't give it to other customers"). B's gatekeeper extracts the clause for the #42
+invoice workflow.
+
+- *Without a sticky label:* the gatekeeper correctly let the data leave B's mailbox.
+  Now it moves freely, and each downstream step is individually permitted — the #42
+  workflow writes a monthly supplier report to a company-wide dashboard ("Acme: 30%
+  discount"), or a benchmark agent writes the clause into a dataset later sent to an
+  external partner. The gatekeeper no longer sees any of this; nothing explicit was
+  violated, yet the confidential clause leaked. **There is nowhere to remember where
+  the data came from and what its limit was.**
+- *With a sticky label:* the gatekeeper attaches `{ origin: B, confidential: true,
+  allowed_use: "invoice validation only", allowed_recipients: [finance-internal],
+  no_external: true }`, riding with the value. The report step → kernel reads the
+  label → blocks/flags writing the clause to the shared dashboard. The benchmark step
+  → `no_external: true` → kernel stops it. The label is the **memory that sticks to
+  the data**, present at every downstream step, not just at the boundary.
+
+Findings:
+
+- **The artifact envelope (§15.1 BC-07) is the natural carrier.** Every artifact
+  already has an envelope (artifact_id, flow_id, created_by, schema_version,
+  content_ref); the sticky label is a `policy` block extension — **not a new entity**.
+  Artifacts are immutable, so the label is too: an object's policy is fixed at birth
+  (change = new artifact, like schema evolution).
+- **Label contents** (the report's list, structured): provenance/origin (whose, §13
+  principal), allowed use (purpose binding — ties to the §13 grant purpose field),
+  allowed recipients (an allowlist like §13.2 arg predicates, but on the *data* not
+  the caller), retention/expiry (macaroon-caveat style), exposure/on-error policy, and
+  consent (the gatekeeper's "B consented to this use").
+- **Derivation inheritance is the delicate part — taint propagation.** Data derived
+  from a labeled object (summarize, extract, combine) **inherits the intersection** of
+  source labels (most restrictive binds — §13.2/§14 composition again): a number
+  derived from the Acme clause stays "Acme-origin, no_external" unless an explicit,
+  gated **declassification** step relaxes it ("this aggregate no longer traces back to
+  Acme") — itself a high-stakes, human-gated action. Default: taint spreads; loosening
+  needs an audited step.
+- **Enforcement — honest about own vs. external.** Inside our substrate (domain↔domain
+  on our kernel) the receiving kernel reads the label and enforces mechanically.
+  **At an external party (org↔org, foreign system) perfect technical enforcement is
+  impossible** — the classic DRM problem. There the label is part technical (if the
+  receiver runs a compatible substrate) and part legal/contractual — the
+  "liability framework codesigned in advance" (§18.4). Sticky label + liability give
+  *practical* protection, not a mathematical guarantee; don't overpromise.
+- **Federation precondition.** When an instance re-homes or a contribution crosses a
+  domain boundary, labels are the **only way the policy crosses too** (§8) — without
+  them the boundary forgets the rule. Not a federation luxury; a prerequisite.
+- **Useful at hobby scale already.** The gatekeeper labels the extracted date
+  ("B-origin, for this instance, don't log to an external dataset"), strengthening the
+  privacy thesis at the data-object level — and meeting §18.1's irreversible class:
+  leaked confidential data is irreversible, so the label is a *prevention* tool
+  controlling where data may go at all.
+
 ---
 
 ## 19. Existing-Tools Assessment
