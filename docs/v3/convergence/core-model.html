@@ -77,8 +77,12 @@
       overflow: auto; font-size: 13px; line-height: 1.5; margin: 12px 0;
     }
     pre.pseudo { background: #06251c; }
-    pre .k { color: #c4b5fd; } pre .s { color: #86efac; } pre .c { color: #7d8597; } pre .n { color: #fdba74; }
-    pre .kw { color: #fca5a5; } pre .out { color: #fcd34d; }
+    pre .k, .code-listing .k { color: #c4b5fd; }
+    pre .s, .code-listing .s { color: #86efac; }
+    pre .c, .code-listing .c { color: #7d8597; }
+    pre .n, .code-listing .n { color: #fdba74; }
+    pre .kw, .code-listing .kw { color: #fca5a5; }
+    pre .out, .code-listing .out { color: #fcd34d; }
     .note {
       border-left: 4px solid var(--accent); background: var(--soft);
       padding: 12px 15px; margin: 16px 0; border-radius: 0 8px 8px 0;
@@ -123,10 +127,56 @@
     .absent-item { border: 1px solid var(--line); border-radius: 7px; padding: 9px 11px; font-size: 13.5px; color: var(--muted); background: #fbfcfe; }
     .absent-item b { color: var(--ink); font-weight: 600; }
     .absent-item .at { color: var(--accent); font-weight: 600; }
+    /* IDE-like side-by-side pseudocode diff */
+    .diff-title { font-weight: 700; margin: 20px 0 8px; }
+    .code-diff {
+      border: 1px solid #223f35; border-radius: 10px; overflow: hidden; background: #071b15;
+      color: #d8f3e8; margin: 12px 0 18px; box-shadow: inset 0 1px 0 rgba(255,255,255,.04);
+    }
+    .diff-panes {
+      display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+      font-size: 12.5px; line-height: 1.45;
+    }
+    .diff-pane:first-child { border-right: 1px solid #245044; }
+    .diff-pane-head {
+      position: sticky; top: 0; z-index: 1; background: #0b2a21; color: #b9d9cf;
+      border-bottom: 1px solid #245044; font-weight: 700; padding: 8px 10px 8px 56px;
+    }
+    .diff-pane-scroll { overflow-x: auto; }
+    .diff-pane-body { min-width: 720px; }
+    .diff-line {
+      display: grid; grid-template-columns: 46px max-content; min-height: 27px;
+      border-bottom: 1px solid rgba(255,255,255,.035); align-items: center;
+    }
+    .diff-line:last-child { border-bottom: 0; }
+    .diff-ln {
+      color: #789189; text-align: right; user-select: none; padding: 2px 8px;
+      background: rgba(255,255,255,.025); border-right: 1px solid rgba(255,255,255,.06);
+      align-self: stretch; display: flex; align-items: center; justify-content: flex-end;
+    }
+    .diff-code { white-space: pre; padding: 2px 10px; }
+    .diff-line.ctx .diff-code { color: #bfd2cc; }
+    .diff-line.add .diff-ln, .diff-line.add .diff-code { background: rgba(22,163,74,.22); }
+    .diff-line.add .diff-code { box-shadow: inset 3px 0 0 #22c55e; color: #dfffee; }
+    .diff-line.change .diff-ln, .diff-line.change .diff-code { background: rgba(234,179,8,.20); }
+    .diff-line.change .diff-code { box-shadow: inset 3px 0 0 #eab308; color: #fff7d6; }
+    .diff-line.gap .diff-code { color: #668177; }
+    .diff-line.blank .diff-code { min-width: 640px; }
+    ol.code-listing {
+      background: #06251c; color: #e6e9f0; border-radius: 9px; padding: 16px 18px 16px 58px;
+      overflow: auto; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+      font-size: 13px; line-height: 1.5; margin: 12px 0;
+    }
+    ol.code-listing li { white-space: pre; padding-left: 10px; }
+    ol.code-listing li::marker { color: #789189; }
+    ol.code-listing li.blank { height: 1.5em; }
     @media (max-width: 880px) {
       .layout { grid-template-columns: 1fr; }
       nav { position: static; height: auto; }
       main { padding: 22px 16px 60px; }
+      .diff-panes { grid-template-columns: 1fr; }
+      .diff-pane:first-child { border-right: 0; border-bottom: 1px solid #245044; }
     }
   </style>
 </head>
@@ -473,42 +523,129 @@
         <p>Three entry points now: start the instance, handle an envelope, and the shared dispatch
         helper. Note that the commit only <em>records state</em>; the DispatchIntent is derived from
         committed state afterwards — the store never delivers.</p>
-        <pre class="pseudo"><span class="kw">START_INSTANCE</span>(template_ref, task, start_overrides) <span class="c">→ Started</span>
-  template ← definitionStore.load(template_ref)
-  binding  ← resolve_binding(template, start_overrides)        <span class="c"># template default_actor + start overrides</span>
-  <span class="kw">REQUIRE</span> binding covers every role reachable in template  <span class="c"># invariant: fail at start, not mid-run</span>
-  instance ← create { template_ref, task, binding, current_step: template.start, version: 1, status: RUNNING }
-  <span class="kw">COMMIT</span> instance creation
-  <span class="kw">RETURN</span> <span class="out">Started</span>(instance.version, dispatch_intent(instance, template, template.start))  <span class="c"># derive after commit</span>
+        <p class="diff-title">Delta from L0a — side-by-side pseudocode</p>
+        <div class="code-diff" aria-label="Pseudocode diff from L0a to L0b">
+          <div class="diff-panes">
+            <div class="diff-pane">
+              <div class="diff-pane-head">L0a baseline</div>
+              <div class="diff-pane-scroll">
+                <div class="diff-pane-body">
+                  <div class="diff-line blank"><div class="diff-ln"></div><div class="diff-code"></div></div>
+                  <div class="diff-line blank"><div class="diff-ln"></div><div class="diff-code"></div></div>
+                  <div class="diff-line blank"><div class="diff-ln"></div><div class="diff-code"></div></div>
+                  <div class="diff-line blank"><div class="diff-ln"></div><div class="diff-code"></div></div>
+                  <div class="diff-line blank"><div class="diff-ln"></div><div class="diff-code"></div></div>
+                  <div class="diff-line blank"><div class="diff-ln"></div><div class="diff-code"></div></div>
+                  <div class="diff-line blank"><div class="diff-ln"></div><div class="diff-code"></div></div>
+                  <div class="diff-line blank"><div class="diff-ln"></div><div class="diff-code"></div></div>
+                  <div class="diff-line ctx"><div class="diff-ln">1</div><div class="diff-code">HANDLE envelope → Outcome</div></div>
+                  <div class="diff-line ctx"><div class="diff-ln">2</div><div class="diff-code">  IF not valid_shape(envelope) THEN Rejected(invalid_shape)</div></div>
+                  <div class="diff-line ctx"><div class="diff-ln">3</div><div class="diff-code">  instance ← instanceStore.load(envelope.instance_id)</div></div>
+                  <div class="diff-line ctx"><div class="diff-ln">4</div><div class="diff-code">  IF instance is none THEN Rejected(unknown_instance)</div></div>
+                  <div class="diff-line ctx"><div class="diff-ln">5</div><div class="diff-code">  template ← definitionStore.load(instance.template_ref)</div></div>
+                  <div class="diff-line ctx"><div class="diff-ln">6</div><div class="diff-code">  IF transcript.has(op_id) THEN Duplicate</div></div>
+                  <div class="diff-line blank"><div class="diff-ln"></div><div class="diff-code"></div></div>
+                  <div class="diff-line blank"><div class="diff-ln"></div><div class="diff-code"></div></div>
+                  <div class="diff-line ctx"><div class="diff-ln">7</div><div class="diff-code">  step ← template.step(current_step)</div></div>
+                  <div class="diff-line ctx"><div class="diff-ln">8</div><div class="diff-code">  target ← step.transitions[type]</div></div>
+                  <div class="diff-line ctx"><div class="diff-ln">9</div><div class="diff-code">  IF target is none THEN Rejected(no_transition)</div></div>
+                  <div class="diff-line ctx"><div class="diff-ln">10</div><div class="diff-code">  COMMIT atomically at expected_version = instance.version:</div></div>
+                  <div class="diff-line ctx"><div class="diff-ln">11</div><div class="diff-code">    append envelope; current_step ← target; version ← version + 1</div></div>
+                  <div class="diff-line blank"><div class="diff-ln"></div><div class="diff-code"></div></div>
+                  <div class="diff-line change"><div class="diff-ln">12</div><div class="diff-code">  RETURN Committed(instance.version)</div></div>
+                  <div class="diff-line blank"><div class="diff-ln"></div><div class="diff-code"></div></div>
+                  <div class="diff-line blank"><div class="diff-ln"></div><div class="diff-code"></div></div>
+                  <div class="diff-line blank"><div class="diff-ln"></div><div class="diff-code"></div></div>
+                  <div class="diff-line blank"><div class="diff-ln"></div><div class="diff-code"></div></div>
+                  <div class="diff-line blank"><div class="diff-ln"></div><div class="diff-code"></div></div>
+                  <div class="diff-line blank"><div class="diff-ln"></div><div class="diff-code"></div></div>
+                  <div class="diff-line blank"><div class="diff-ln"></div><div class="diff-code"></div></div>
+                  <div class="diff-line blank"><div class="diff-ln"></div><div class="diff-code"></div></div>
+                </div>
+              </div>
+            </div>
+            <div class="diff-pane">
+              <div class="diff-pane-head">L0b current</div>
+              <div class="diff-pane-scroll">
+                <div class="diff-pane-body">
+                  <div class="diff-line add"><div class="diff-ln">1</div><div class="diff-code">START_INSTANCE(template_ref, task, start_overrides) → Started</div></div>
+                  <div class="diff-line add"><div class="diff-ln">2</div><div class="diff-code">  template ← definitionStore.load(template_ref)</div></div>
+                  <div class="diff-line add"><div class="diff-ln">3</div><div class="diff-code">  binding  ← resolve_binding(template, start_overrides)</div></div>
+                  <div class="diff-line add"><div class="diff-ln">4</div><div class="diff-code">  REQUIRE binding covers every role reachable in template</div></div>
+                  <div class="diff-line add"><div class="diff-ln">5</div><div class="diff-code">  instance ← create { template_ref, task, binding, current_step: template.start, version: 1, status: RUNNING }</div></div>
+                  <div class="diff-line add"><div class="diff-ln">6</div><div class="diff-code">  COMMIT instance creation</div></div>
+                  <div class="diff-line add"><div class="diff-ln">7</div><div class="diff-code">  RETURN Started(instance.version, dispatch_intent(instance, template, template.start))</div></div>
+                  <div class="diff-line blank"><div class="diff-ln"></div><div class="diff-code"></div></div>
+                  <div class="diff-line ctx"><div class="diff-ln">8</div><div class="diff-code">HANDLE envelope → Outcome</div></div>
+                  <div class="diff-line ctx"><div class="diff-ln">9</div><div class="diff-code">  IF not valid_shape(envelope) THEN Rejected(invalid_shape)</div></div>
+                  <div class="diff-line ctx"><div class="diff-ln">10</div><div class="diff-code">  instance ← instanceStore.load(envelope.instance_id)</div></div>
+                  <div class="diff-line ctx"><div class="diff-ln">11</div><div class="diff-code">  IF instance is none THEN Rejected(unknown_instance)</div></div>
+                  <div class="diff-line ctx"><div class="diff-ln">12</div><div class="diff-code">  template ← definitionStore.load(instance.template_ref)</div></div>
+                  <div class="diff-line ctx"><div class="diff-ln">13</div><div class="diff-code">  IF transcript.has(op_id) THEN Duplicate</div></div>
+                  <div class="diff-line add"><div class="diff-ln">14</div><div class="diff-code">  IF expected_version is missing THEN Rejected(missing_version)</div></div>
+                  <div class="diff-line add"><div class="diff-ln">15</div><div class="diff-code">  IF expected_version ≠ instance.version THEN Stale(instance.version)</div></div>
+                  <div class="diff-line ctx"><div class="diff-ln">16</div><div class="diff-code">  step ← template.step(current_step)</div></div>
+                  <div class="diff-line ctx"><div class="diff-ln">17</div><div class="diff-code">  target ← step.transitions[type]</div></div>
+                  <div class="diff-line ctx"><div class="diff-ln">18</div><div class="diff-code">  IF target is none THEN Rejected(no_transition)</div></div>
+                  <div class="diff-line ctx"><div class="diff-ln">19</div><div class="diff-code">  COMMIT atomically at expected_version = instance.version:</div></div>
+                  <div class="diff-line ctx"><div class="diff-ln">20</div><div class="diff-code">    append envelope; current_step ← target; version ← version + 1</div></div>
+                  <div class="diff-line add"><div class="diff-ln">21</div><div class="diff-code">  intent ← (status = DONE) ? none : dispatch_intent(instance, template, current_step)</div></div>
+                  <div class="diff-line change"><div class="diff-ln">22</div><div class="diff-code">  RETURN Committed(instance.version, intent)</div></div>
+                  <div class="diff-line blank"><div class="diff-ln"></div><div class="diff-code"></div></div>
+                  <div class="diff-line add"><div class="diff-ln">23</div><div class="diff-code">DISPATCH_INTENT(instance, template, step_id) → DispatchIntent</div></div>
+                  <div class="diff-line add"><div class="diff-ln">24</div><div class="diff-code">  step  ← template.step(step_id)</div></div>
+                  <div class="diff-line add"><div class="diff-ln">25</div><div class="diff-code">  actor ← instance.binding[step.role]</div></div>
+                  <div class="diff-line add"><div class="diff-ln">26</div><div class="diff-code">  packet ← ContextPacket {</div></div>
+                  <div class="diff-line add"><div class="diff-ln">27</div><div class="diff-code">    instance_id, expected_version: instance.version, task: instance.task,</div></div>
+                  <div class="diff-line add"><div class="diff-ln">28</div><div class="diff-code">    instruction: step.instruction,</div></div>
+                  <div class="diff-line add"><div class="diff-ln">29</div><div class="diff-code">    handoff: payload_of_transition_into(instance, step_id),</div></div>
+                  <div class="diff-line add"><div class="diff-ln">30</div><div class="diff-code">    available_ops: event_types_of(step.transitions), agent_config: step.agent_config }</div></div>
+                  <div class="diff-line add"><div class="diff-ln">31</div><div class="diff-code">  RETURN DispatchIntent { actor, packet }</div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <p class="diff-title">Full L0b pseudocode</p>
+        <ol class="code-listing">
+          <li><span class="kw">START_INSTANCE</span>(template_ref, task, start_overrides) <span class="c">→ Started</span></li>
+          <li>  template ← definitionStore.load(template_ref)</li>
+          <li>  binding  ← resolve_binding(template, start_overrides)        <span class="c"># template default_actor + start overrides</span></li>
+          <li>  <span class="kw">REQUIRE</span> binding covers every role reachable in template  <span class="c"># invariant: fail at start, not mid-run</span></li>
+          <li>  instance ← create { template_ref, task, binding, current_step: template.start, version: 1, status: RUNNING }</li>
+          <li>  <span class="kw">COMMIT</span> instance creation</li>
+          <li>  <span class="kw">RETURN</span> <span class="out">Started</span>(instance.version, dispatch_intent(instance, template, template.start))  <span class="c"># derive after commit</span></li>
+          <li class="blank"></li>
+          <li><span class="kw">HANDLE</span> envelope <span class="c">→ Outcome</span></li>
+          <li>  <span class="kw">IF</span> not valid_shape(envelope)            <span class="kw">THEN RETURN</span> <span class="out">Rejected(invalid_shape)</span></li>
+          <li>  instance ← instanceStore.load(envelope.instance_id)</li>
+          <li>  <span class="kw">IF</span> instance is none                     <span class="kw">THEN RETURN</span> <span class="out">Rejected(unknown_instance)</span></li>
+          <li>  template ← definitionStore.load(instance.template_ref)</li>
+          <li>  <span class="kw">IF</span> instance.transcript.has(envelope.op_id) <span class="kw">THEN RETURN</span> <span class="out">Duplicate</span>            <span class="c"># idempotency FIRST</span></li>
+          <li>  <span class="kw">IF</span> envelope.expected_version is missing  <span class="kw">THEN RETURN</span> <span class="out">Rejected(missing_version)</span>  <span class="c"># mandatory at L0b</span></li>
+          <li>  <span class="kw">IF</span> envelope.expected_version ≠ instance.version <span class="kw">THEN RETURN</span> <span class="out">Stale(instance.version)</span></li>
+          <li>  step   ← template.step(instance.current_step)</li>
+          <li>  target ← step.transitions[envelope.type]    <span class="c"># transitions: event_type → target</span></li>
+          <li>  <span class="kw">IF</span> target is none                       <span class="kw">THEN RETURN</span> <span class="out">Rejected(no_transition)</span></li>
+          <li>  <span class="kw">COMMIT</span> atomically at expected_version = instance.version:   <span class="c"># records state only; on conflict: restart from load</span></li>
+          <li>    instance.transcript.append(envelope); instance.current_step ← target</li>
+          <li>    <span class="kw">IF</span> target is terminal <span class="kw">THEN</span> instance.status ← DONE</li>
+          <li>    instance.version ← instance.version + 1</li>
+          <li>  intent ← (instance.status = DONE) ? none : dispatch_intent(instance, template, instance.current_step)  <span class="c"># derive after commit</span></li>
+          <li>  <span class="kw">RETURN</span> <span class="out">Committed</span>(instance.version, intent)</li>
+          <li class="blank"></li>
+          <li><span class="kw">DISPATCH_INTENT</span>(instance, template, step_id) <span class="c">→ DispatchIntent</span></li>
+          <li>  step  ← template.step(step_id)</li>
+          <li>  actor ← instance.binding[step.role]                  <span class="c"># guaranteed present by the start invariant</span></li>
+          <li>  packet ← <span class="n">ContextPacket</span> {</li>
+          <li>    instance_id, expected_version: instance.version, task: instance.task,</li>
+          <li>    instruction:   step.instruction,</li>
+          <li>    handoff:       payload_of_transition_into(instance, step_id),  <span class="c"># the envelope that brought us here; absent at start</span></li>
+          <li>    available_ops: event_types_of(step.transitions),              <span class="c"># PASS / CONVERGED — not on_pass; navigation, not L1</span></li>
+          <li>    agent_config:  step.agent_config }                            <span class="c"># reserved/pass-through until L0c</span></li>
+          <li>  <span class="kw">RETURN</span> <span class="out">DispatchIntent</span> { actor, packet }            <span class="c"># a local/manual driver delivers; durable channel is L8</span></li>
+        </ol>
 
-<span class="kw">HANDLE</span> envelope <span class="c">→ Outcome</span>
-  <span class="kw">IF</span> not valid_shape(envelope)            <span class="kw">THEN RETURN</span> <span class="out">Rejected(invalid_shape)</span>
-  instance ← instanceStore.load(envelope.instance_id)
-  <span class="kw">IF</span> instance is none                     <span class="kw">THEN RETURN</span> <span class="out">Rejected(unknown_instance)</span>
-  template ← definitionStore.load(instance.template_ref)
-  <span class="kw">IF</span> instance.transcript.has(envelope.op_id) <span class="kw">THEN RETURN</span> <span class="out">Duplicate</span>            <span class="c"># idempotency FIRST</span>
-  <span class="kw">IF</span> envelope.expected_version is missing  <span class="kw">THEN RETURN</span> <span class="out">Rejected(missing_version)</span>  <span class="c"># mandatory at L0b</span>
-  <span class="kw">IF</span> envelope.expected_version ≠ instance.version <span class="kw">THEN RETURN</span> <span class="out">Stale(instance.version)</span>
-  step   ← template.step(instance.current_step)
-  target ← step.transitions[envelope.type]    <span class="c"># transitions: event_type → target</span>
-  <span class="kw">IF</span> target is none                       <span class="kw">THEN RETURN</span> <span class="out">Rejected(no_transition)</span>
-  <span class="kw">COMMIT</span> atomically at expected_version = instance.version:   <span class="c"># records state only; on conflict: restart from load</span>
-    instance.transcript.append(envelope); instance.current_step ← target
-    <span class="kw">IF</span> target is terminal <span class="kw">THEN</span> instance.status ← DONE
-    instance.version ← instance.version + 1
-  intent ← (instance.status = DONE) ? none : dispatch_intent(instance, template, instance.current_step)  <span class="c"># derive after commit</span>
-  <span class="kw">RETURN</span> <span class="out">Committed</span>(instance.version, intent)
-
-<span class="kw">DISPATCH_INTENT</span>(instance, template, step_id) <span class="c">→ DispatchIntent</span>
-  step  ← template.step(step_id)
-  actor ← instance.binding[step.role]                  <span class="c"># guaranteed present by the start invariant</span>
-  packet ← <span class="n">ContextPacket</span> {
-    instance_id, expected_version: instance.version, task: instance.task,
-    instruction:   step.instruction,
-    handoff:       payload_of_transition_into(instance, step_id),  <span class="c"># the envelope that brought us here; absent at start</span>
-    available_ops: event_types_of(step.transitions),              <span class="c"># PASS / CONVERGED — not on_pass; navigation, not L1</span>
-    agent_config:  step.agent_config }                            <span class="c"># reserved/pass-through until L0c</span>
-  <span class="kw">RETURN</span> <span class="out">DispatchIntent</span> { actor, packet }            <span class="c"># a local/manual driver delivers; durable channel is L8</span></pre>
         <div class="note pseudo">
           <b>What the pseudocode surfaces:</b> the start was an implicit hole at L0a — here
           START_INSTANCE makes the first dispatch explicit, closing the loop at the front too. And the
