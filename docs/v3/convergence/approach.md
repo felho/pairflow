@@ -95,6 +95,10 @@ primitives.
 
 - **`core-model.html`** — the model itself, one section per level (runtime + domain +
   config + absent), growing as the ramp proceeds. Visual, because expressiveness helps.
+  **Caveat: currently out of sync.** It still shows the pre-reorder single "L0 · local
+  pair loop" (with guidance folded in) and "exactly one capability" wording; it will be
+  rebuilt to L0a/L0b and the revised ramp. Until then **`approach.md` is the source of
+  truth for the roadmap**; the HTML is a stale first sketch.
 - **`approach.md`** (this file) — the method and the level roadmap, for review.
 - Later: an implementation plan, derived from the converged core. Not yet.
 
@@ -188,6 +192,10 @@ unmatched); `Scheduler`. First only manual / internal / timeout triggers — *no
 full email/data-condition breadth.
 Why: workflows stop being manually started; event-driven operation and timing become
 first-class, in a minimal form before the channel stack.
+Staging note: the router itself matures in stages. At L6 the "feed waiting" branch
+covers only **internal/timeout waits** (the L4 child-wait and L6 timers); the
+**external unsolicited correlation** form of "feed waiting" arrives with L9. So L6 does
+not secretly require L9 — it uses the deterministic wait forms already present.
 
 **L7 — Grants & credentials (minimal).**
 Concepts: `Grant` (first-class entity); credential vault; on-behalf-of provenance;
@@ -250,6 +258,26 @@ Why: the governance and organizational-scale layer. Mostly deferred / keep-open;
 hobby project does not need it, but the invariants must be held so it can be added later
 without retrofit.
 
+### Deferred primitives — scenario-driven, not enterprise
+
+These exist in the braindump but the WF-7-biased ramp gives them no level yet — **not
+because they are enterprise/governance** (they are not L14 material), but because the
+WF-7 MVP does not need them. A WF-6-first roadmap would bring them early. Named here so
+they do not silently get absorbed into L14, with the scenario that drives each:
+
+- **Dataset + change-feed** (braindump §7) — WF-5 (data-condition trigger, org-memory
+  write), WF-6 (bronze layer, downstream subscription).
+- **Cross-instance read model** (§6) — WF-3 (weekly digest aggregating many instances),
+  WF-6 (digest).
+- **Dynamic fan-out over data-driven items** (§7) — WF-6 (newsletter → N article links).
+- **Cost / budget ledger** (§14) — partly value-for-self already (local-inference
+  routing, §14.2); any LLM-heavy workflow.
+- **Fleet / observability surface** (§6) — partial gap, not enterprise; any
+  multi-instance world.
+
+When the ramp turns toward WF-3/WF-5/WF-6 (after the WF-7 MVP), these become named
+levels — likely extensions of Block B/C rather than Block D.
+
 ---
 
 ## 5. What feedback we are looking for
@@ -263,18 +291,30 @@ the Ask primitive recognized as maturing in stages; "one capability per level" s
 to "one coherent capability or inseparable cluster"; and the MVP cut moved to "local
 WF-7 runs" rather than "end of Block A". All of the above is now reflected in §2 and §4.
 
+**Round 2 (incorporated).** A second review found no blocker and refined: the L6
+trigger-router "feed waiting" branch is scoped to internal/timeout waits (external/fuzzy
+correlation stays at L9, so L6 has no hidden L9 dependency); the non-enterprise deferred
+primitives (dataset/change-feed, cross-instance read model, dynamic fan-out, cost
+ledger, fleet observability) are now named in their own block rather than absorbed into
+L14; L5 confirmed as not-required-now for WF-7 (the spec-deviation decision is covered
+by the L3 human decision gate); and the core-model.html drift is flagged (§3). Reflected
+in §3 and §4.
+
 **Still open — most useful feedback now:**
 
-1. **Ramp ordering** — does each level still only depend on earlier ones after the
-   reorder? Any remaining hidden back-dependency?
-2. **Level boundaries** — is L5 (help subflow) correctly placed *after* the MVP cut, or
-   does WF-7 actually need it? Is L8 (channels + general Ask) too large a bundle?
-3. **Missing concepts** — anything in the braindump or scenarios that still no level
-   introduces?
-4. **Coherence risks** — places where a later level looks like it will force a rewrite
-   of an earlier one (a failed coherence test waiting to happen).
-5. **MVP scope inside the cut** — within "local WF-7 runs", is anything in L0a–L4 more
-   than the minimum, or is anything missing for an actual end-to-end run?
+1. **L8 split** — likely splits during implementation planning (channel normalization /
+   outbound delivery / inbox read-model / addressee kinds / external-token / rich schema
+   are roadmap-level one bundle, implementation-level several). Where are the seams?
+2. **Deferred-primitive leveling** — which of the scenario-driven deferred primitives
+   need named roadmap levels (as Block B/C extensions) versus staying a list, and in
+   what order, once the ramp turns past the WF-7 MVP?
+3. **Orphaned-child recovery** — its minimal behaviour at L4 needs pinning down during
+   the core-model build (what exactly happens to a parent whose child is deleted
+   out-of-band): a modelling task, not a roadmap gap.
+4. **core-model.html realignment** — should the HTML be rebuilt to the new ramp before
+   any further model work (the consensus is yes; it is the next concrete step).
+5. **Remaining coherence risks** — any other later level that looks like it will force a
+   rewrite of an earlier one.
 
 ---
 
