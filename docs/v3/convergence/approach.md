@@ -151,7 +151,8 @@ introduces them.
 Concepts: the `Actor` entity + role→actor binding; runtime actor/role assignment and
 next-work-item dispatch; `TASK` (the initial assignment); `Step.instruction` (per-step
 role guidance); a minimal **handoff / context-packet seed** (the kernel assembles what
-the next actor receives).
+the next actor receives), including the actor-visible `instance.version`; and
+`EventEnvelope.expected_version` as the actor-supplied stale-intent check.
 Why: a skeleton that routes but gives the agent no idea what to do is not yet usable.
 This is the minimum guidance to act — split from L0a because the context packet is a
 large concept later (§11.4) and must not slip in as an L0 afterthought; it gets its own
