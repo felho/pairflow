@@ -852,7 +852,7 @@ Grace's hand-rolled errands DB (§10.2 item 2) becomes a kernel service. Five po
 
 ### 11.4 The Context Packet: What an Activation Receives
 
-The natural continuation of §11.3's wake-up contract; answers the §19 question "what
+The natural continuation of §11.3's wake-up contract; answers the §20 question "what
 goes into the packet and who decides".
 
 **Anatomy — layers, not a dump:**
@@ -1050,7 +1050,7 @@ on-behalf-of claim semantics.
 - The remote-executor relay (BC-08) is reused: if a step runs in a cloud sandbox, the
   credential still does not travel — the external call relays BACK to B's gatekeeper
   with op_id idempotency. Same channel, new cargo.
-- The agent-authored-scripts question (§19) half-resolves: scripts get no raw
+- The agent-authored-scripts question (§20) half-resolves: scripts get no raw
   credentials either — they too invoke named capabilities, shrinking the sandbox
   problem.
 - Offline owner: B's node unreachable → the wait condition simply blocks (already a
@@ -1782,7 +1782,63 @@ Keep-open commitments (binding now):
 
 ---
 
-## 18. Existing-Tools Assessment
+## 18. Organizational-Scale Capabilities (Org-Singularity Source)
+
+Source: the "Organizational Singularity" / ExO 3.0 video reverse-engineering report
+(`~/organizational-singularity-reverse-engineering/report/index.html`) — an operating
+model for an AI-native firm, not a product. It validates the substrate from above (the
+*fiduciary wedge* — AI executes, a named human/legal entity stays accountable for
+high-stakes decisions — is "the workflow is the boss" at org scale, and the "what
+humans keep" triad §6). Most of its capability checklist already maps to the
+braindump; the subsections below cover what it genuinely adds. Several items are
+enterprise-direction (org↔org) and marked deferred with keep-open invariants.
+
+### 18.1 Rollback and Compensation
+
+The report asks for granular rollback (state snapshot, compensating action, approval
+rollback). In our model this splits into two distinct things, only one of which is
+literal rewinding:
+
+- **Internal state** — append-only event log + immutable artifacts + CAS state, so
+  state is reconstructible to any prior point (event sourcing).
+- **External effect** — a sent email, a completed merge, a wired payment cannot be
+  rewound; a **compensating action** is required (saga pattern): not unsend the email
+  but send a correction, revert-PR the merge, reverse the transfer.
+
+Six findings:
+
+- **Reversibility is already a model dimension; now it gets an operational twin.** The
+  §17.3 trust ladder already uses the reversibility asymmetry. Make it explicit: every
+  capability descriptor declares (a) its class — **reversible / compensable /
+  irreversible** — and (b) if compensable, its compensating capability. One piece of
+  metadata, two uses: trust calibration AND rollback.
+- **Append-only + rollback is not a contradiction — rollback is forward motion.** The
+  transcript is never rewritten; a "rollback" is a **compensating event sequence** that
+  takes state back to a prior *value* while the history stays complete (the error and
+  the compensation remain visible). The rollback itself is an audit event — time travel
+  would defeat auditability.
+- **Compensation is itself a gated workflow, not a magic undo.** A correction email is
+  email-sending under the same capability check, grant, and budget — and often
+  *higher* stakes (admitting an error outward), hence frequently human-gated. No silent
+  auto-undo.
+- **The irreversible class is the closing link to the human gate.** What has no
+  compensation (money at a foreign bank, leaked confidential data) has only
+  *prevention* — these stay human-gated longest (§17.3) and are **never
+  auto-approvable**. The reversibility class is thus both a rollback input and a trust
+  ceiling.
+- **Forward recovery often beats full rollback — the workflow decides.** WF-2's
+  cancel-with-compensation trap: the candidate withdraws → cancel the laptop order,
+  revoke the accesses, but the background-check result may be kept. Compensation is
+  selective and template-defined, not a global "undo everything".
+- **"Granular" = step/round checkpoints, not instance-level.** Because state is
+  two-level (lifecycle + execution position, §2.2) and the transcript is round/step
+  segmented, a rollback can target a specific round/step boundary (a review loop's 5th
+  round back to the 3rd without discarding the whole). A checkpoint = a transcript
+  position + the compensation requirement for the external actions taken since.
+
+---
+
+## 19. Existing-Tools Assessment
 
 - **Temporal / Restate / Inngest:** durable execution + signals + timers out of the box
   (a step waiting for an external event = signal). Best technical fit under the kernel,
@@ -1818,7 +1874,7 @@ Keep-open commitments (binding now):
 
 ---
 
-## 19. Open Questions (Unordered)
+## 20. Open Questions (Unordered)
 
 - Where does a company-level kernel physically live for a small company (tiny server?
   shared repo + cron? someone's always-on machine?)
@@ -1871,7 +1927,7 @@ Keep-open commitments (binding now):
 
 ---
 
-## 20. What This Document Is Not
+## 21. What This Document Is Not
 
 Not a design. Not prioritized. Not consistent. It is the raw material for the
 convergence phase: the next step is to pick the load-bearing decisions (kernel
