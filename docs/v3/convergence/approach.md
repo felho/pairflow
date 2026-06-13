@@ -70,13 +70,21 @@ existing model (a new entity, or a new field — not a rewrite), the core is sou
 capability forces the structure to be torn up, that is a signal the core is wrong. This
 is the architecture validator hidden inside the pedagogy.
 
-**Three views per level**, so the model and its configuration can be followed as
+**Multiple lenses per level**, so the model, rules, and configuration can be followed as
 complexity grows:
 
-- **Runtime** — a concrete trace: what events arrive, what the kernel does, step by step.
-- **Domain (DDD)** — the model: entities, aggregate boundaries, relationships.
+- **Runtime trace** — one concrete execution: what events arrive, what the kernel does,
+  step by step.
+- **Protocol pseudocode** — the general rule behind the trace, including branches the
+  trace does not exercise (duplicate, stale, invalid, rejected, no-op). This evolves
+  level by level: if a new capability can be inserted as a small guard/branch, the core
+  abstraction is holding; if the pseudocode has to be torn apart, the prior level hid a
+  missing concept.
+- **Domain (DDD)** — the model: entities, aggregate boundaries, relationships, and term
+  corrections.
+- **Invariants** — the rules that must remain true across transitions.
 - **Config** — the template/definition that declares the behaviour.
-- plus **Absent** — what is deliberately not there yet, and which level introduces it.
+- **Absent** — what is deliberately not there yet, and which level introduces it.
 
 **Greenfield kernel concepts, with reality checks against v1.** We define concepts
 cleanly rather than reverse-engineering the v1 code, but periodically check them against
@@ -93,12 +101,15 @@ primitives.
 
 ## 3. Output artifacts
 
-- **`core-model.html`** — the model itself, one section per level (runtime + domain +
-  invariant + config + absent), growing as the ramp proceeds. Visual, because
-  expressiveness helps. **Status: rebuilt to the revised ramp; L0a done, higher levels
-  in progress.** `approach.md` remains the source of truth for the roadmap; the HTML
-  realises it level by level.
+- **`core-model.html`** — the model itself, one section per level (runtime trace +
+  protocol pseudocode + domain + invariants + config + absent), growing as the ramp
+  proceeds. Visual, because expressiveness helps. **Status: rebuilt to the revised ramp;
+  L0a done, higher levels in progress.** `approach.md` remains the source of truth for
+  the roadmap; the HTML realises it level by level.
 - **`approach.md`** (this file) — the method and the level roadmap, for review.
+- **`design-method-playbook.md`** — how to use DDD, protocol pseudocode, ADRs, level
+  contracts, and evidence gates while designing v3. It is a method guide, not a source
+  of v3 product content.
 - Later: an implementation plan, derived from the converged core. Not yet.
 
 ---
