@@ -13,6 +13,7 @@
       --panel: #ffffff;
       --accent: #4f46e5;       /* indigo — structural */
       --runtime: #0e7490;      /* cyan — runtime trace */
+      --pseudo: #047857;       /* emerald — protocol pseudocode */
       --domain: #7c3aed;       /* violet — domain model */
       --invariant: #b91c1c;    /* red — hard invariant */
       --config: #b45309;       /* amber — configuration */
@@ -61,6 +62,7 @@
       padding: 2px 8px; border-radius: 999px;
     }
     .view-tag.runtime   { background: #cffafe; color: var(--runtime); }
+    .view-tag.pseudo    { background: #d1fae5; color: var(--pseudo); }
     .view-tag.domain    { background: #ede9fe; color: var(--domain); }
     .view-tag.invariant { background: #fee2e2; color: var(--invariant); }
     .view-tag.config    { background: #fef3c7; color: var(--config); }
@@ -73,12 +75,15 @@
       background: #1a1e27; color: #e6e9f0; border-radius: 9px; padding: 16px 18px;
       overflow: auto; font-size: 13px; line-height: 1.5; margin: 12px 0;
     }
+    pre.pseudo { background: #06251c; }
     pre .k { color: #c4b5fd; } pre .s { color: #86efac; } pre .c { color: #7d8597; } pre .n { color: #fdba74; }
+    pre .kw { color: #fca5a5; } pre .out { color: #fcd34d; }
     .note {
       border-left: 4px solid var(--accent); background: var(--soft);
       padding: 12px 15px; margin: 16px 0; border-radius: 0 8px 8px 0;
     }
     .note.runtime   { border-left-color: var(--runtime); }
+    .note.pseudo    { border-left-color: var(--pseudo); }
     .note.domain    { border-left-color: var(--domain); }
     .note.invariant { border-left-color: var(--invariant); }
     .note.config    { border-left-color: var(--config); }
@@ -157,33 +162,34 @@
     <main>
       <header class="page">
         <h2>V3 Core Model — built one level at a time</h2>
-        <p>The convergence companion to <a href="../concept-braindump.md">concept-braindump.md</a>
-        and <a href="approach.md">approach.md</a> (the method + roadmap; the source of truth for the
-        ramp). The braindump is the raw material; this distils a coherent, buildable core by growing
-        it from the smallest kernel, one coherent capability per level, each shown through parallel views.</p>
+        <p>The convergence companion to <a href="../concept-braindump.md">concept-braindump.md</a>,
+        <a href="approach.md">approach.md</a> (the method + roadmap; source of truth for the ramp), and
+        <a href="design-method-playbook.md">design-method-playbook.md</a> (how to use DDD, pseudocode,
+        and evidence while designing). Grows from the smallest kernel, one coherent capability per
+        level, each shown through multiple lenses.</p>
       </header>
 
       <section id="how">
         <h2 class="level-h">How to read this</h2>
         <p>Each level adds <strong>one coherent capability</strong> (a single concept, or an
-        inseparable cluster — not a convenience bundle) and is rendered through parallel views, so
-        the model and its configuration can be followed as complexity grows rather than absorbed all
-        at once:</p>
+        inseparable cluster — not a convenience bundle) and is rendered through multiple lenses, so
+        the model and its rules can be followed as complexity grows rather than absorbed all at once:</p>
         <ul>
-          <li><span class="view-tag runtime">Runtime</span> &nbsp;a concrete trace — what events arrive and what the kernel does, step by step.</li>
+          <li><span class="view-tag runtime">Runtime</span> &nbsp;one concrete trace — what events arrive and what the kernel does, step by step.</li>
+          <li><span class="view-tag pseudo">Pseudocode</span> &nbsp;the general rule behind the trace, including branches the trace does not exercise (duplicate, stale, invalid, reject, no-op).</li>
           <li><span class="view-tag domain">Domain</span> &nbsp;the model (DDD) — entities, aggregate boundaries, relationships.</li>
-          <li><span class="view-tag invariant">Invariant</span> &nbsp;hard rules stated at this level, not deferred (idempotency, store semantics…).</li>
+          <li><span class="view-tag invariant">Invariant</span> &nbsp;hard rules stated at this level, not deferred (idempotency, atomicity, store semantics).</li>
           <li><span class="view-tag config">Config</span> &nbsp;the template/definition that declares the behaviour.</li>
           <li><span class="view-tag absent">Absent</span> &nbsp;what is deliberately not here yet, and which level introduces it.</li>
         </ul>
         <div class="note">
-          <strong>The ramp is also a coherence test.</strong> If each new capability sits cleanly on
-          the existing model (a new entity or field — not a rewrite), the core is sound; if it forces
-          a rewrite, the core is wrong. Some primitives <em>mature in stages</em> across levels (the
-          Ask: human-decision → agent-help → general; the wait: internal-deterministic →
-          external-fuzzy) — the earliest level introduces only the narrowest form. Levels are
-          greenfield kernel concepts; occasional reality checks against the v1 code
-          (<code>src/v11/…</code>) keep them honest.
+          <strong>Two coherence tests run as the ramp grows.</strong> Structurally: if a new
+          capability sits cleanly on the model (a new entity or field, not a rewrite), the core is
+          sound. Algorithmically: if it slots into the pseudocode as a small guard/branch, the
+          abstraction holds; if the pseudocode must be torn apart, the earlier level hid a missing
+          concept. Some primitives <em>mature in stages</em> (the Ask: human-decision → agent-help →
+          general; the wait: internal-deterministic → external-fuzzy). Levels are greenfield kernel
+          concepts; reality checks against the v1 code (<code>src/v11/…</code>) keep them honest.
         </div>
       </section>
 
@@ -193,10 +199,10 @@
         foundational invariants in place — but no agent guidance yet (that is L0b).</p>
 
         <p>Two roles alternate on one machine; the kernel routes their events through transitions and
-        records everything. At L0a the kernel does only three things — <b>route</b>, <b>append</b>,
-        <b>update</b> — plus enforce the invariants below. There is deliberately no notion yet of
-        <em>what</em> an actor should do; an agent here would route correctly but have no task. That
-        gap is filled at L0b, and naming it is half the point.</p>
+        records everything. At L0a the kernel does only <b>route → atomic-commit (append + update)</b>,
+        plus enforce the invariants below. There is deliberately no notion yet of <em>what</em> an
+        actor should do; an agent here would route correctly but have no task. That gap is filled at
+        L0b, and naming it is half the point.</p>
 
         <h3 class="view-h"><span class="view-tag runtime">Runtime</span> A concrete trace</h3>
         <p>A two-round run that converges on the second review, including a re-delivered event to show
@@ -204,37 +210,71 @@
         <div class="trace">
           <div class="trace-row"><div class="trace-n">1</div><div class="trace-c">
             <div class="ev">START — instance created from template <code>local-pair-v0</code></div>
-            <div class="meta">instance store write; <b>template_ref</b> { id: local-pair-v0, version: 1 } snapshotted; state: <b>current_step=implement</b>, <b>round=1</b>, <b>status=RUNNING</b>, <b>version=1</b></div>
+            <div class="meta">instance store write; <b>template_ref</b> { id, version: 1 } snapshotted; state: <b>current_step=implement</b>, <b>round=1</b>, <b>status=RUNNING</b>, <b>version=1</b></div>
           </div></div>
           <div class="trace-row"><div class="trace-n">2</div><div class="trace-c">
             <div class="ev">the <b>implementer role</b> emits <code>PASS</code></div>
             <div class="meta">EventEnvelope { event_id, <b>op_id=a1</b>, instance_id, type: PASS, <b>actor_id</b> (provenance), payload: { ref } }</div>
           </div></div>
           <div class="trace-row"><div class="trace-n">3</div><div class="trace-c">
-            <div class="ev">kernel: op_id (instance_id, a1) unseen → route → transition <b>implement → review</b></div>
+            <div class="ev">kernel: (instance_id, a1) unseen → resolve transition <b>implement → review</b></div>
             <div class="meta"><b>atomic commit</b> — transcript append + state update under expected_version (1 → 2); <b>current_step=review</b></div>
           </div></div>
           <div class="trace-row idem"><div class="trace-n">3′</div><div class="trace-c">
             <div class="ev">same <code>PASS</code> re-delivered (retry, <b>op_id=a1</b>)</div>
-            <div class="meta">kernel: (instance_id, a1) already processed → <b>no-op</b>. No duplicate transition, no second workflow-transition entry. (idempotency; a separate duplicate-delivery audit is optional/later)</div>
+            <div class="meta">kernel: (instance_id, a1) already in transcript → <b>Duplicate</b>, no-op. No second transition entry. (idempotency; a separate duplicate-delivery audit is optional/later)</div>
           </div></div>
           <div class="trace-row"><div class="trace-n">4</div><div class="trace-c">
             <div class="ev">the <b>reviewer role</b> emits <code>PASS</code> (op_id=b2, payload: findings)</div>
-            <div class="meta">kernel: route → transition <b>review → implement</b>; atomic commit (2 → 3); <b>round=2</b>, <b>current_step=implement</b></div>
+            <div class="meta">kernel: resolve <b>review → implement</b>; atomic commit (2 → 3); <b>round=2</b>, <b>current_step=implement</b></div>
           </div></div>
           <div class="trace-row"><div class="trace-n">5</div><div class="trace-c">
-            <div class="ev">the implementer role emits <code>PASS</code> (op_id=c3) → transition <b>implement → review</b></div>
+            <div class="ev">the implementer role emits <code>PASS</code> (op_id=c3) → <b>implement → review</b></div>
             <div class="meta">atomic commit (3 → 4); <b>current_step=review</b></div>
           </div></div>
           <div class="trace-row"><div class="trace-n">6</div><div class="trace-c">
             <div class="ev">the reviewer role emits <code>CONVERGED</code> (op_id=d4)</div>
-            <div class="meta">kernel: route → transition <b>review → done</b>; atomic commit (4 → 5); <b>status=DONE</b> — terminal</div>
+            <div class="meta">kernel: resolve <b>review → done</b>; atomic commit (4 → 5); <b>status=DONE</b> — terminal</div>
           </div></div>
         </div>
         <div class="note runtime">
           The kernel has no decision logic of its own yet — the actors decide, the kernel routes,
           records, and guarantees each event is applied <em>exactly once</em> (step 3′). Convergence
           here is the reviewer's bare judgement; the formal gate arrives at L2.
+        </div>
+
+        <h3 class="view-h"><span class="view-tag pseudo">Pseudocode</span> The rule behind the trace</h3>
+        <p>The trace shows one happy path. The pseudocode states the general rule, including the
+        branches the trace never exercises:</p>
+        <pre class="pseudo"><span class="kw">HANDLE</span> envelope <span class="c">→ Outcome</span>
+  <span class="kw">IF</span> not valid_shape(envelope)            <span class="kw">THEN</span> <span class="kw">RETURN</span> <span class="out">Rejected(invalid_shape)</span>
+  instance ← instanceStore.load(envelope.instance_id)
+  <span class="kw">IF</span> instance is none                     <span class="kw">THEN</span> <span class="kw">RETURN</span> <span class="out">Rejected(unknown_instance)</span>
+
+  <span class="c"># idempotency, key scope (instance_id, op_id)</span>
+  <span class="kw">IF</span> instance.transcript.has(envelope.op_id) <span class="kw">THEN</span> <span class="kw">RETURN</span> <span class="out">Duplicate</span>   <span class="c"># no-op, no 2nd entry</span>
+
+  step   ← instance.template.step(instance.current_step)
+  target ← step.transitions[envelope.type]   <span class="c"># on_pass / on_converged</span>
+  <span class="kw">IF</span> target is none                       <span class="kw">THEN</span> <span class="kw">RETURN</span> <span class="out">Rejected(no_transition)</span>
+
+  <span class="c"># one atomic commit, CAS on instance.version</span>
+  <span class="kw">COMMIT</span> atomically at expected_version = instance.version:
+    instance.transcript.append(envelope)
+    instance.current_step ← target
+    <span class="kw">IF</span> target is terminal <span class="kw">THEN</span> instance.status ← DONE
+    instance.version ← instance.version + 1
+  <span class="c"># on CAS conflict (concurrent writer): reload + retry</span>
+
+  <span class="kw">RETURN</span> <span class="out">Committed(instance.version)</span></pre>
+        <div class="note pseudo">
+          <b>What the pseudocode surfaces that the trace hid:</b> three reject paths (invalid shape /
+          unknown instance / no transition for this event in this step), the Duplicate no-op, and the
+          exact atomic-commit boundary. <b>And a question it raises:</b> the CAS here is the kernel's
+          own version counter (internal consistency). An <em>actor-supplied</em> expected_version —
+          "I act against the version I last saw" → a true <code>Stale</code> rejection — needs the
+          actor to know the version, which arrives with the context packet at <b>L0b+</b>. The
+          pseudocode found a real boundary the trace could not: a small but genuine coherence signal.
         </div>
 
         <h3 class="view-h"><span class="view-tag domain">Domain</span> The model</h3>
@@ -288,7 +328,7 @@
           <div class="agg-label">Idempotency &amp; atomic commit</div>
           <div class="ents">
             <div class="ent"><div class="en">op_id idempotency</div><div class="fields">key scope <b>(instance_id, op_id)</b>; re-applying a seen key is a no-op (trace 3′). Scope matters for the later remote relay (BC-08).</div></div>
-            <div class="ent"><div class="en">atomic transition commit</div><div class="fields">transcript append + state update happen as <b>one logical commit</b> under expected_version — never append-then-CAS as separate steps, or a CAS failure would diverge transcript from state</div></div>
+            <div class="ent"><div class="en">atomic transition commit</div><div class="fields">transcript append + state update are <b>one logical commit</b> under expected_version — never append-then-CAS as separate steps, or a CAS failure would diverge transcript from state</div></div>
           </div>
         </div>
         <div class="agg invariant">
@@ -334,6 +374,7 @@
         <div class="absent-grid">
           <div class="absent-item">No <b>actor binding / work-item dispatch</b> — roles are bare names <span class="at">→ L0b</span></div>
           <div class="absent-item">No <b>agent guidance</b> — TASK, instruction, context-packet seed <span class="at">→ L0b</span></div>
+          <div class="absent-item">No <b>actor-supplied stale-intent</b> — needs the context packet <span class="at">→ L0b+</span></div>
           <div class="absent-item">No <b>capability check</b> — anyone can emit anything <span class="at">→ L1</span></div>
           <div class="absent-item">No <b>gate / policy</b> — reviewer decides convergence directly <span class="at">→ L2</span></div>
           <div class="absent-item">No <b>round limit</b> — formalised with the round gate <span class="at">→ L2</span></div>
