@@ -160,7 +160,7 @@
         <p>The convergence companion to <a href="../concept-braindump.md">concept-braindump.md</a>
         and <a href="approach.md">approach.md</a> (the method + roadmap; the source of truth for the
         ramp). The braindump is the raw material; this distils a coherent, buildable core by growing
-        it from the smallest kernel, one capability per level, each shown through parallel views.</p>
+        it from the smallest kernel, one coherent capability per level, each shown through parallel views.</p>
       </header>
 
       <section id="how">
@@ -204,31 +204,31 @@
         <div class="trace">
           <div class="trace-row"><div class="trace-n">1</div><div class="trace-c">
             <div class="ev">START — instance created from template <code>local-pair-v0</code></div>
-            <div class="meta">instance store write; state: <b>current_step=implement</b>, <b>round=1</b>, <b>status=RUNNING</b>, <b>version=1</b></div>
+            <div class="meta">instance store write; <b>template_ref</b> { id: local-pair-v0, version: 1 } snapshotted; state: <b>current_step=implement</b>, <b>round=1</b>, <b>status=RUNNING</b>, <b>version=1</b></div>
           </div></div>
           <div class="trace-row"><div class="trace-n">2</div><div class="trace-c">
-            <div class="ev">implementer (codex) emits <code>PASS</code></div>
-            <div class="meta">EventEnvelope { event_id, <b>op_id=a1</b>, type: PASS, actor: codex, payload: { ref } }</div>
+            <div class="ev">the <b>implementer role</b> emits <code>PASS</code></div>
+            <div class="meta">EventEnvelope { event_id, <b>op_id=a1</b>, instance_id, type: PASS, <b>actor_id</b> (provenance), payload: { ref } }</div>
           </div></div>
           <div class="trace-row"><div class="trace-n">3</div><div class="trace-c">
-            <div class="ev">kernel: op_id a1 unseen → route → transition <b>implement → review</b></div>
-            <div class="meta">append to transcript; CAS state update (expected version=1 → 2); <b>current_step=review</b></div>
+            <div class="ev">kernel: op_id (instance_id, a1) unseen → route → transition <b>implement → review</b></div>
+            <div class="meta"><b>atomic commit</b> — transcript append + state update under expected_version (1 → 2); <b>current_step=review</b></div>
           </div></div>
           <div class="trace-row idem"><div class="trace-n">3′</div><div class="trace-c">
             <div class="ev">same <code>PASS</code> re-delivered (retry, <b>op_id=a1</b>)</div>
-            <div class="meta">kernel: op_id a1 already processed → <b>no-op</b>. No duplicate transition, no second transcript entry. (idempotency)</div>
+            <div class="meta">kernel: (instance_id, a1) already processed → <b>no-op</b>. No duplicate transition, no second workflow-transition entry. (idempotency; a separate duplicate-delivery audit is optional/later)</div>
           </div></div>
           <div class="trace-row"><div class="trace-n">4</div><div class="trace-c">
-            <div class="ev">reviewer (claude) emits <code>PASS</code> (op_id=b2, payload: findings)</div>
-            <div class="meta">kernel: route → transition <b>review → implement</b>; CAS (2→3); <b>round=2</b>, <b>current_step=implement</b></div>
+            <div class="ev">the <b>reviewer role</b> emits <code>PASS</code> (op_id=b2, payload: findings)</div>
+            <div class="meta">kernel: route → transition <b>review → implement</b>; atomic commit (2 → 3); <b>round=2</b>, <b>current_step=implement</b></div>
           </div></div>
           <div class="trace-row"><div class="trace-n">5</div><div class="trace-c">
-            <div class="ev">implementer emits <code>PASS</code> (op_id=c3) → transition <b>implement → review</b></div>
-            <div class="meta">CAS (3→4); <b>current_step=review</b></div>
+            <div class="ev">the implementer role emits <code>PASS</code> (op_id=c3) → transition <b>implement → review</b></div>
+            <div class="meta">atomic commit (3 → 4); <b>current_step=review</b></div>
           </div></div>
           <div class="trace-row"><div class="trace-n">6</div><div class="trace-c">
-            <div class="ev">reviewer emits <code>CONVERGED</code> (op_id=d4)</div>
-            <div class="meta">kernel: route → transition <b>review → done</b>; CAS (4→5); <b>status=DONE</b> — terminal</div>
+            <div class="ev">the reviewer role emits <code>CONVERGED</code> (op_id=d4)</div>
+            <div class="meta">kernel: route → transition <b>review → done</b>; atomic commit (4 → 5); <b>status=DONE</b> — terminal</div>
           </div></div>
         </div>
         <div class="note runtime">
@@ -244,17 +244,16 @@
         <div class="agg">
           <div class="agg-label">Template aggregate — the definition (immutable at runtime)</div>
           <div class="ents">
-            <div class="ent"><div class="en">WorkflowTemplate <span class="root">root</span></div><div class="fields">id, roles[], steps[], start</div></div>
+            <div class="ent"><div class="en">WorkflowTemplate <span class="root">root</span></div><div class="fields">id, version, roles[] (names), steps[], start</div></div>
             <div class="ent"><div class="en">Step</div><div class="fields">id, role, transitions { on_pass, on_converged }</div></div>
-            <div class="ent"><div class="en">Role</div><div class="fields">name, actor binding</div></div>
-            <div class="ent"><div class="en">Actor</div><div class="fields">id (codex / claude)</div></div>
+            <div class="ent"><div class="en">Role <span style="font-size:10px;color:var(--muted)">(name only)</span></div><div class="fields">implementer / reviewer — no actor binding yet (L0b)</div></div>
           </div>
         </div>
 
         <div class="agg">
           <div class="agg-label">Instance aggregate — the run (mutable, append-only history)</div>
           <div class="ents">
-            <div class="ent"><div class="en">WorkflowInstance <span class="root">root</span></div><div class="fields">id, template_id, current_step, round, lifecycle_status, version</div></div>
+            <div class="ent"><div class="en">WorkflowInstance <span class="root">root</span></div><div class="fields">id, <b>template_ref { id, version }</b>, current_step, round, lifecycle_status, version</div></div>
             <div class="ent"><div class="en">Transcript</div><div class="fields">append-only ordered EventEnvelopes</div></div>
             <div class="ent"><div class="en">LifecycleStatus <span style="font-size:10px;color:var(--muted)">(value)</span></div><div class="fields">CREATED → RUNNING → DONE</div></div>
           </div>
@@ -263,14 +262,16 @@
         <div class="agg" style="border-style:solid;border-color:var(--line);background:var(--panel)">
           <div class="agg-label" style="color:var(--runtime)">Message — crosses the boundary</div>
           <div class="ents">
-            <div class="ent"><div class="en">EventEnvelope</div><div class="fields">event_id, <b>op_id</b>, instance_id, type (PASS / CONVERGED), actor, payload</div></div>
+            <div class="ent"><div class="en">EventEnvelope</div><div class="fields">event_id, <b>op_id</b>, instance_id, type (PASS / CONVERGED), <b>actor_id</b> (provenance), payload</div></div>
           </div>
         </div>
 
-        <p class="rel"><b>Relationships:</b> a <b>Template</b> defines <b>Step</b>s bound to <b>Role</b>s,
-        each filled by an <b>Actor</b>. A <b>WorkflowInstance</b> is created from a Template and owns its
-        <b>Transcript</b>. An <b>EventEnvelope</b> targets an instance; the kernel applies it as a
-        transition and appends it to the transcript.</p>
+        <p class="rel"><b>Relationships:</b> a <b>Template</b> (id + version) defines <b>Step</b>s bound to
+        <b>Role</b> names. A <b>WorkflowInstance</b> is created from a Template — snapshotting its
+        <b>template_ref { id, version }</b> so the run is pinned to an immutable definition — and owns
+        its <b>Transcript</b>. An <b>EventEnvelope</b> targets an instance and carries an
+        <b>actor_id</b> as provenance (who sent it); the kernel applies it as a transition. Which
+        concrete actor fills a role, and how the next work item is dispatched, is L0b.</p>
         <div class="note domain">
           <b>Why two aggregate roots.</b> Definition and run have different lifecycles and consistency
           rules: the template is shared and immutable while instances run; the instance mutates but
@@ -284,16 +285,16 @@
         correlation level reaches back to them, so they must exist at L0a or they look retrofitted.</p>
 
         <div class="agg invariant">
-          <div class="agg-label">Idempotency &amp; concurrency</div>
+          <div class="agg-label">Idempotency &amp; atomic commit</div>
           <div class="ents">
-            <div class="ent"><div class="en">op_id idempotency</div><div class="fields">each envelope carries an op_id; re-applying a seen op_id is a no-op (trace 3′)</div></div>
-            <div class="ent"><div class="en">CAS state update</div><div class="fields">transitions commit with expected_version; a stale write is rejected, not silently overwritten</div></div>
+            <div class="ent"><div class="en">op_id idempotency</div><div class="fields">key scope <b>(instance_id, op_id)</b>; re-applying a seen key is a no-op (trace 3′). Scope matters for the later remote relay (BC-08).</div></div>
+            <div class="ent"><div class="en">atomic transition commit</div><div class="fields">transcript append + state update happen as <b>one logical commit</b> under expected_version — never append-then-CAS as separate steps, or a CAS failure would diverge transcript from state</div></div>
           </div>
         </div>
         <div class="agg invariant">
           <div class="agg-label">Store semantics — dumb store, kernel-owned meaning</div>
           <div class="ents">
-            <div class="ent"><div class="en">definition store</div><div class="fields">templates</div></div>
+            <div class="ent"><div class="en">definition store</div><div class="fields">templates, versioned</div></div>
             <div class="ent"><div class="en">instance store</div><div class="fields">instance state + version</div></div>
             <div class="ent"><div class="en">transcript / event log</div><div class="fields">append-only</div></div>
             <div class="ent"><div class="en">artifact refs</div><div class="fields">content by reference</div></div>
@@ -310,9 +311,8 @@
         engine code encodes it:</p>
         <pre><span class="k">template</span>:
   <span class="k">id</span>: <span class="s">local-pair-v0</span>
-  <span class="k">roles</span>:
-    <span class="k">implementer</span>: { <span class="k">actor</span>: <span class="s">codex</span> }
-    <span class="k">reviewer</span>:    { <span class="k">actor</span>: <span class="s">claude</span> }
+  <span class="k">version</span>: <span class="n">1</span>
+  <span class="k">roles</span>: [<span class="s">implementer</span>, <span class="s">reviewer</span>]   <span class="c"># names only; actor binding is L0b</span>
   <span class="k">start</span>: <span class="s">implement</span>
   <span class="k">steps</span>:
     - <span class="k">id</span>: <span class="s">implement</span>
@@ -321,16 +321,18 @@
     - <span class="k">id</span>: <span class="s">review</span>
       <span class="k">role</span>: <span class="s">reviewer</span>
       <span class="k">on_pass</span>:      <span class="s">implement</span>   <span class="c"># found something → back</span>
-      <span class="k">on_converged</span>: <span class="s">done</span></pre>
+      <span class="k">on_converged</span>: <span class="s">done</span>       <span class="c"># 'done' is a terminal target, not a step</span></pre>
         <div class="note config">
           <b>Template = configuration, not code</b> (§2.1). L0a is "just one preset"; the engine reads
-          transitions from data. Reality check against v1: this is the <code>review-loop</code> the v1
-          code hardcodes — here it is already external data.
+          transitions from data. <code>roles</code> are bare names — binding them to concrete actors is
+          L0b. Reality check against v1: this is the <code>review-loop</code> the v1 code hardcodes —
+          here it is already external data.
         </div>
 
         <h3 class="view-h"><span class="view-tag absent">Absent</span> Deliberately not here yet</h3>
         <p>The border of L0a — each is a later level, and seeing the border is half the point:</p>
         <div class="absent-grid">
+          <div class="absent-item">No <b>actor binding / work-item dispatch</b> — roles are bare names <span class="at">→ L0b</span></div>
           <div class="absent-item">No <b>agent guidance</b> — TASK, instruction, context-packet seed <span class="at">→ L0b</span></div>
           <div class="absent-item">No <b>capability check</b> — anyone can emit anything <span class="at">→ L1</span></div>
           <div class="absent-item">No <b>gate / policy</b> — reviewer decides convergence directly <span class="at">→ L2</span></div>

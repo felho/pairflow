@@ -119,21 +119,28 @@ later open toward WF-1/WF-4/WF-6 — so those doors do not close.
 ### Block A — Local core (toward the WF-7 MVP)
 
 **L0a — Kernel skeleton.**
-Concepts: `WorkflowTemplate, Step, Role, Actor` (definition aggregate);
-`WorkflowInstance, Transcript, LifecycleStatus` (run aggregate); `EventEnvelope`;
-transitions. **Invariants stated here, not deferred:** CAS / `op_id` / idempotency
-(duplicate-event behaviour); store semantics — definition store, instance store,
-transcript/event log, artifact refs, *dumb store vs. kernel-owned semantics* (the state
-layer is dumb; the kernel owns meaning). No agent guidance yet — pure routing + state.
+Concepts: `WorkflowTemplate` (id + version), `Step`, `Role` (names only — actor binding
+is L0b) (definition aggregate); `WorkflowInstance` (with `template_ref { id, version }`
+snapshotted so a run is pinned to an immutable definition), `Transcript`,
+`LifecycleStatus` (run aggregate); `EventEnvelope` (carries `op_id` and `actor_id`
+provenance); transitions. **Invariants stated here, not deferred:** idempotency — key
+scope `(instance_id, op_id)`, re-applying a seen key is a no-op; **atomic transition
+commit** — transcript append + state update as one logical commit under
+expected_version (never append-then-CAS as separate steps); store semantics — definition
+store, instance store, transcript/event log, artifact refs, *dumb store vs. kernel-owned
+semantics* (the state layer is dumb; the kernel owns meaning). No agent guidance yet —
+pure routing + state.
 Why: the smallest mechanically-correct kernel. Two aggregate roots (definition vs. run)
-seed lifecycle-vs-execution and append-only-transcript. The idempotency/store invariants
-must be in the foundation because every later trigger/correlation level reaches back to
-them; surfacing them now prevents them looking like a later level introduces them.
+seed lifecycle-vs-execution and append-only-transcript. The idempotency/store/versioning
+invariants must be in the foundation because every later trigger/correlation/replay level
+reaches back to them; surfacing them now prevents them looking like a later level
+introduces them.
 
 **L0b — Actor assignment + context-packet seed.**
-Concepts: runtime actor/role assignment; `TASK` (the initial assignment); `Step.instruction`
-(per-step role guidance); a minimal **handoff / context-packet seed** (the kernel
-assembles what the next actor receives).
+Concepts: the `Actor` entity + role→actor binding; runtime actor/role assignment and
+next-work-item dispatch; `TASK` (the initial assignment); `Step.instruction` (per-step
+role guidance); a minimal **handoff / context-packet seed** (the kernel assembles what
+the next actor receives).
 Why: a skeleton that routes but gives the agent no idea what to do is not yet usable.
 This is the minimum guidance to act — split from L0a because the context packet is a
 large concept later (§11.4) and must not slip in as an L0 afterthought; it gets its own
