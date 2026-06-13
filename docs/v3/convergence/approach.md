@@ -248,35 +248,46 @@ autonomy ladder; gate-outcome + edit-distance recording; eval suites.
 Why: when a gate may be skipped — driven by production signal as continuous evaluation;
 accountability stays orthogonal to autonomy.
 
-### Block D — Org-scale (governance / largely enterprise, mostly deferred)
-
-**L14 — Org-scale capabilities.**
-Concepts: rollback / compensation (reversibility class); MTP steering protocol (the
-purpose lens); sticky labels (data-object metadata that travels); accountability shell;
-cross-firm federation (signed provenance, codesigned liability).
-Why: the governance and organizational-scale layer. Mostly deferred / keep-open; the
-hobby project does not need it, but the invariants must be held so it can be added later
-without retrofit.
-
-### Deferred primitives — scenario-driven, not enterprise
+### Post-MVP scenario primitives (deferred, not enterprise)
 
 These exist in the braindump but the WF-7-biased ramp gives them no level yet — **not
 because they are enterprise/governance** (they are not L14 material), but because the
-WF-7 MVP does not need them. A WF-6-first roadmap would bring them early. Named here so
-they do not silently get absorbed into L14, with the scenario that drives each:
+WF-7 MVP does not need them. Placed *before* Block D deliberately: they sit between the
+agent-native layer and org-scale governance, not as an enterprise appendix. A
+WF-6-first roadmap would bring them early. Each with the scenario that drives it:
 
 - **Dataset + change-feed** (braindump §7) — WF-5 (data-condition trigger, org-memory
   write), WF-6 (bronze layer, downstream subscription).
 - **Cross-instance read model** (§6) — WF-3 (weekly digest aggregating many instances),
   WF-6 (digest).
 - **Dynamic fan-out over data-driven items** (§7) — WF-6 (newsletter → N article links).
+- **Cancellation / compensation / forward recovery** (reversibility class; §18.1) —
+  WF-2 (candidate withdrawal: access revoke, laptop cancel), WF-5 (let-lapse timed
+  obligation). The *operational* form is scenario-driven and small-company, not
+  enterprise; L14 keeps only the governance vignette (board-level approval rollback).
+- **Participant registry + substitution + recurring-instance overlap policy** (§6) —
+  WF-3 (sales-on-vacation fallback contributor; overlapping weekly instances:
+  kill/queue/coexist). Related to but distinct from the L11 agent registry — human
+  participant/substitution is not agent durable identity.
 - **Cost / budget ledger** (§14) — partly value-for-self already (local-inference
   routing, §14.2); any LLM-heavy workflow.
 - **Fleet / observability surface** (§6) — partial gap, not enterprise; any
   multi-instance world.
 
-When the ramp turns toward WF-3/WF-5/WF-6 (after the WF-7 MVP), these become named
+When the ramp turns toward WF-2/WF-3/WF-5/WF-6 (after the WF-7 MVP), these become named
 levels — likely extensions of Block B/C rather than Block D.
+
+### Block D — Org-scale (governance / largely enterprise, mostly deferred)
+
+**L14 — Org-scale capabilities.**
+Concepts: high-stakes approval rollback (the *governance* vignette only — operational
+compensation is a scenario primitive above); MTP steering protocol (the purpose lens);
+sticky labels (data-object metadata that travels); accountability shell; cross-firm
+federation (signed provenance, codesigned liability).
+Why: the governance and organizational-scale layer. Mostly deferred / keep-open; the
+hobby project does not need it, but the invariants must be held so it can be added later
+without retrofit. (Note: some L14 concepts — sticky labels, MTP — are partly
+scenario-driven too; see the open question in §5 about what else may belong above.)
 
 ---
 
@@ -300,21 +311,33 @@ L14; L5 confirmed as not-required-now for WF-7 (the spec-deviation decision is c
 by the L3 human decision gate); and the core-model.html drift is flagged (§3). Reflected
 in §3 and §4.
 
+**Round 3 (incorporated).** A third review (no blocker) improved placement and
+completeness: the deferred-primitives block moved *before* Block D and renamed
+"Post-MVP scenario primitives" so it no longer reads as an enterprise appendix; two
+primitives added — cancellation/compensation/forward-recovery (WF-2/WF-5, operational
+form scenario-driven, governance vignette left in L14) and participant
+registry/substitution/overlap policy (WF-3, distinct from the L11 agent registry).
+Reflected in §4.
+
 **Still open — most useful feedback now:**
 
-1. **L8 split** — likely splits during implementation planning (channel normalization /
-   outbound delivery / inbox read-model / addressee kinds / external-token / rich schema
-   are roadmap-level one bundle, implementation-level several). Where are the seams?
-2. **Deferred-primitive leveling** — which of the scenario-driven deferred primitives
-   need named roadmap levels (as Block B/C extensions) versus staying a list, and in
-   what order, once the ramp turns past the WF-7 MVP?
-3. **Orphaned-child recovery** — its minimal behaviour at L4 needs pinning down during
-   the core-model build (what exactly happens to a parent whose child is deleted
-   out-of-band): a modelling task, not a roadmap gap.
-4. **core-model.html realignment** — should the HTML be rebuilt to the new ramp before
-   any further model work (the consensus is yes; it is the next concrete step).
-5. **Remaining coherence risks** — any other later level that looks like it will force a
-   rewrite of an earlier one.
+1. **L8 seams** — L8 almost certainly splits during implementation planning. Expected
+   seams: channel normalization; task inbox / outbound delivery; general Ask
+   schema/addressee model. The **external-token Ask** likely splits out separately —
+   security/identity-wise it is a different animal from an internal human/agent Ask
+   (§15.4). Confirm the seam set.
+2. **Misplaced under L14** — beyond compensation (now moved), which other L14 concepts
+   are really scenario-driven and should be promoted above Block D? Candidates: sticky
+   labels (the Acme case is small-company too, §18.3), MTP steering (the personal-domain
+   "constitution" is non-enterprise, §18.2).
+3. **Deferred-primitive leveling** — once the ramp turns past the WF-7 MVP, which
+   post-MVP scenario primitives become named levels (as Block B/C extensions), in what
+   order?
+4. **Orphaned-child recovery** — its minimal behaviour at L4 needs pinning down during
+   the core-model build (what happens to a parent whose child is deleted out-of-band):
+   a modelling task, not a roadmap gap.
+5. **core-model.html realignment** — rebuild the HTML to the new ramp before further
+   model work (consensus yes; the next concrete step).
 
 ---
 
