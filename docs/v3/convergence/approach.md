@@ -43,9 +43,27 @@ Instead we grow the model from the smallest possible kernel and let concrete beh
 force what is actually needed.
 
 **Complexity ramp.** Start from the smallest thing that is still a workflow (L0), and
-add **exactly one capability per level**. Understanding is the primary goal: a human can
-follow complexity that grows step by step far more easily than absorbing one large
+add **one coherent capability per level**. Understanding is the primary goal: a human
+can follow complexity that grows step by step far more easily than absorbing one large
 whole. Each level is a small, reviewable increment.
+
+"One capability" is a guideline, not a dogma. A level may introduce a single concept or
+an **inseparable cluster** (e.g. wait condition + correlation + stale-intent genuinely
+travel together) — but the cluster must be elements that truly must co-exist, not items
+bundled for convenience. The test cuts both ways: guidance is *not* inseparable from the
+routing core, so it gets its own level (L0b); correlation *is* inseparable from waiting,
+so it does not get split.
+
+**Concepts mature in stages.** A single primitive often arrives in graded forms across
+several levels rather than all at once. Two examples that shape this roadmap:
+- The **Ask** primitive: human decision (approval/rework) → agent-initiated help →
+  general (addressee kinds, external-token, multi-channel). Earliest level introduces
+  only the narrowest form.
+- The **wait condition**: deterministic internal (a parent waiting on a specific child's
+  lifecycle event, correlated by id) → general external + fuzzy (an unsolicited email
+  matched against open waits).
+Staging is itself a coherence signal: if a later, richer form of a primitive fits as an
+extension of the earlier form, the primitive was modelled right.
 
 **The ramp is also a coherence test.** If each new capability sits cleanly on the
 existing model (a new entity, or a new field — not a rewrite), the core is sound. If a
@@ -88,19 +106,37 @@ Each level lists the **concepts introduced** and **why it matters**. Levels are 
 into four blocks. The ordering and boundaries are a hypothesis: a level may split, two
 may merge, or the order may change as the play-through forces it.
 
-### Block A — Local core (this is pairflow v1, re-expressed on the kernel)
+**This roadmap is WF-7-biased — deliberately.** The ordering optimizes the fastest
+*self-validating* path (the WF-7 plan-execution workflow, which removes real pain: the
+ExecutePairflowPlan prompt-orchestration and the `plan watch` polling), not an abstract
+"clean" dependency ontology. A WF-1-first or WF-6-first roadmap would order things
+differently. The constraint is that the WF-7 path must hold the same invariants that
+later open toward WF-1/WF-4/WF-6 — so those doors do not close.
 
-**L0 — Local pair loop.**
+### Block A — Local core (toward the WF-7 MVP)
+
+**L0a — Kernel skeleton.**
 Concepts: `WorkflowTemplate, Step, Role, Actor` (definition aggregate);
-`WorkflowInstance, Transcript, LifecycleStatus` (run aggregate); `EventEnvelope`
-(PASS/CONVERGED); transitions; plus **guidance**: `TASK` (the initial assignment),
-`Step.instruction` (per-step role guidance), and a **handoff / context-packet seed**
-(the kernel assembles what the next actor receives).
-Why: the smallest thing that still *works* — event-sourced state, declarative routing,
-and the minimum guidance an agent needs to act at all. Two aggregate roots (definition
-vs. run) already seed lifecycle-vs-execution and append-only-transcript.
+`WorkflowInstance, Transcript, LifecycleStatus` (run aggregate); `EventEnvelope`;
+transitions. **Invariants stated here, not deferred:** CAS / `op_id` / idempotency
+(duplicate-event behaviour); store semantics — definition store, instance store,
+transcript/event log, artifact refs, *dumb store vs. kernel-owned semantics* (the state
+layer is dumb; the kernel owns meaning). No agent guidance yet — pure routing + state.
+Why: the smallest mechanically-correct kernel. Two aggregate roots (definition vs. run)
+seed lifecycle-vs-execution and append-only-transcript. The idempotency/store invariants
+must be in the foundation because every later trigger/correlation level reaches back to
+them; surfacing them now prevents them looking like a later level introduces them.
 
-**L1 — Capability check.**
+**L0b — Actor assignment + context-packet seed.**
+Concepts: runtime actor/role assignment; `TASK` (the initial assignment); `Step.instruction`
+(per-step role guidance); a minimal **handoff / context-packet seed** (the kernel
+assembles what the next actor receives).
+Why: a skeleton that routes but gives the agent no idea what to do is not yet usable.
+This is the minimum guidance to act — split from L0a because the context packet is a
+large concept later (§11.4) and must not slip in as an L0 afterthought; it gets its own
+line so its growth is visible.
+
+**L1 — Capability matrix.**
 Concepts: `CapabilityProfile` (matrix `role × state → allowed actions`); the Capability
 Engine as the first dispatch step.
 Why: internal authorization — who may emit which protocol action in which state (the v2
@@ -111,71 +147,94 @@ the agent (the protocol-navigation half of guidance). Not gates, not grants.
 Concepts: `Gate, PolicyModule, GateDecision` (allow/block/defer); the convergence gate;
 round logic (P0/P1 block, round gate).
 Why: lift the convergence decision out of the reviewer's bare judgement into an
-auditable, composable policy layer. This is the operational core of "the workflow is
-the boss".
+auditable, composable policy layer. The operational core of "the workflow is the boss".
 
-**L3 — Human gate.**
+**L3 — Human decision Ask.**
 Concepts: lifecycle states `WAITING_HUMAN, READY_FOR_HUMAN_APPROVAL`; the `operator`
-role; `human_gate` step type; approve / request-rework.
-Why: the human as decision-maker at high-stakes points — the seed of the fiduciary
-wedge and of "what humans keep".
+role; `human_gate` step type; **approve / request-rework only**. The narrowest form of
+the Ask primitive.
+Why: the human as decision-maker at high-stakes points — the seed of the fiduciary wedge
+and of "what humans keep". Deliberately *not* a general Ask platform yet.
+Absent (later levels): help ask, agent-to-agent ask, external-token ask, multi-channel
+delivery, rich schema.
 
-**L4 — Help subflow / Ask.**
-Concepts: `Subflow` (blocking / non-blocking); `Ask` (schema + addressee); `HELP_PENDING`.
-Why: the agent can ask for help or a decision and the human answers in a structured,
-schema-validated way. Establishes the Ask primitive that later generalizes to all human
-(and agent) input.
+**L4 — Child workflow instances + internal lifecycle events.**
+Concepts: `ChildWorkflowLink`; parent waits on a child lifecycle event; **kernel-emitted
+lifecycle events as an internal channel**; orphaned-child recovery. This is the
+deterministic-internal form of the wait condition (correlated by child id).
+Why: a child is a *full first-class instance* with its own lifecycle — not the embedded
+subflow of L5. This is the WF-7 unlock and it must come early, before the full
+distributed stack: it needs only internal events, not external channels or correlation.
+Note the coherence bonus: "internal lifecycle events as a channel" is the smallest form
+of the channel abstraction, prefiguring external channels (L8).
 
-*Milestone: L0–L4 ≈ full pairflow v1 running on the v3 kernel, entirely local.*
+> **MVP cut — build until local WF-7 runs:** parent plan workflow, child bubble
+> workflow, internal lifecycle events, human approval/rework gates, no polling. This
+> validates the most important self-value without private-mailbox federation, fuzzy
+> correlation, Slack/email channels, or the dataset layer.
+
+**L5 — Help subflow (agent-initiated Ask).**
+Concepts: `Subflow` (blocking / non-blocking); `HELP_PENDING`; the agent-initiated form
+of the Ask primitive (still local delivery).
+Why: the agent can ask for help/a decision mid-step. Completes the local pairflow-v1
+feature set; not required by the WF-7 MVP, so it sits just after the cut. (Block A ≈
+full local v1 once this lands.)
 
 ### Block B — Distribution (toward the distributed, multi-person workflow)
 
-**L5 — Triggers & scheduling.**
-Concepts: `Trigger`, the trigger router's three-way decision (feed waiting instance /
-start new / unmatched); `Scheduler`; trigger kinds (event, cron, manual, data-condition).
+**L6 — Triggers & scheduling (minimal).**
+Concepts: `Trigger`; the trigger router's three-way decision (feed waiting / start new /
+unmatched); `Scheduler`. First only manual / internal / timeout triggers — *not* the
+full email/data-condition breadth.
 Why: workflows stop being manually started; event-driven operation and timing become
-first-class.
+first-class, in a minimal form before the channel stack.
 
-**L6 — Channels & task inbox.**
-Concepts: `Channel` adapter; `EventNormalizer`; multi-channel delivery; the task inbox.
-Why: human/agent interaction becomes channel-independent (tmux / Slack / email / web);
-the kernel only ever sees EventEnvelopes.
-
-**L7 — Wait conditions & correlation.**
-Concepts: `WaitCondition` (structured predicate + NL description); the matcher;
-correlation (deterministic + fuzzy); stale-intent handling.
-Why: a step can wait for external data/events, and an incoming event must be correlated
-to the waiting instance — the core of distributed workflows. *(WF-1 starts to bite
-here.)*
-
-**L8 — Gatekeeper & private-data federation.**
-Concepts: the gatekeeper's three layers (connector runtime / matcher / owner UX);
-`contribution`; trust `domain`.
-Why: declared data flows in from private sources (a mailbox) without the substrate
-seeing the source — the multi-person coordination mechanism.
-
-**L9 — Grants & credentials.**
+**L7 — Grants & credentials (minimal).**
 Concepts: `Grant` (first-class entity); credential vault; on-behalf-of provenance;
-argument-level predicates.
+argument-level predicates. **This explicitly precedes the private-mailbox gatekeeper
+(L10)** — the gatekeeper's connector runtime holds credentials, so federation without
+grants/vault is only conceptual. The agent-definition-version-keyed grant refinement
+comes later, with the agent registry (L11).
 Why: authority toward the outside world, with scoped delegation; the credential never
 travels.
 
+**L8 — Channels & task inbox + general Ask.**
+Concepts: `Channel` adapter; `EventNormalizer`; multi-channel delivery; the task inbox;
+the **general Ask** (addressee kinds — help/agent/external-token; multi-channel
+rendering; rich schema) — the broadest form the L3/L5 primitive matures into.
+Why: human/agent interaction becomes channel-independent (tmux / Slack / email / web);
+the kernel only ever sees EventEnvelopes.
+
+**L9 — Wait conditions & external/fuzzy correlation.**
+Concepts: `WaitCondition` (structured predicate + NL description); the matcher; external
++ fuzzy correlation; stale-intent handling. The general form of the wait condition whose
+internal/deterministic form arrived at L4.
+Why: a step can wait for external data/events, and an unsolicited event must be
+correlated to the waiting instance — the core of distributed workflows. *(WF-1 bites
+here.)*
+
+**L10 — Gatekeeper & private-data federation.**
+Concepts: the gatekeeper's three layers (connector runtime / matcher / owner UX);
+`contribution`; trust `domain`. Builds on grants/vault (L7).
+Why: declared data flows in from private sources (a mailbox) without the substrate
+seeing the source — the multi-person coordination mechanism.
+
 ### Block C — Agent-native (the self-improving agent layer)
 
-**L10 — Agent registry & durable identity.**
+**L11 — Agent registry & durable identity.**
 Concepts: agent definition (versioned), memory scopes (instance / agent / org), trigger
-bindings, ephemeral activation.
+bindings, ephemeral activation; the agent-definition-version-keyed grant refinement.
 Why: the agent as durable identity (definition + memory) with ephemeral activations —
 the basis for "grow agents, don't build them".
 
-**L11 — Definition PRs & metacognition.**
+**L12 — Definition PRs & metacognition.**
 Concepts: the definition-PR channel; learning levels (instance / run / agent / system);
 retro as a meta-workflow; authoring agent; gated self-expansion (schedules, datasets,
 scripts).
 Why: the system evolves (template/agent-definition changes) through one audited, gated
 channel — and learns.
 
-**L12 — Trust calibration & evals.**
+**L13 — Trust calibration & evals.**
 Concepts: `TrustProfile` (keyed by gate, agent, definition version, context); the
 autonomy ladder; gate-outcome + edit-distance recording; eval suites.
 Why: when a gate may be skipped — driven by production signal as continuous evaluation;
@@ -183,7 +242,7 @@ accountability stays orthogonal to autonomy.
 
 ### Block D — Org-scale (governance / largely enterprise, mostly deferred)
 
-**L13 — Org-scale capabilities.**
+**L14 — Org-scale capabilities.**
 Concepts: rollback / compensation (reversibility class); MTP steering protocol (the
 purpose lens); sticky labels (data-object metadata that travels); accountability shell;
 cross-firm federation (signed provenance, codesigned liability).
@@ -195,19 +254,27 @@ without retrofit.
 
 ## 5. What feedback we are looking for
 
-For reviewers (human or LLM), the most useful feedback is on:
+**Round 1 (incorporated).** A first review reordered the roadmap around real
+dependencies: L0 split into L0a (kernel skeleton, now carrying the CAS/idempotency and
+store-semantics invariants) and L0b (actor assignment + context-packet seed); a new
+early level for child-workflow instances + internal lifecycle events as the WF-7 unlock;
+grants/credentials moved before the private-mailbox gatekeeper; the wait condition and
+the Ask primitive recognized as maturing in stages; "one capability per level" softened
+to "one coherent capability or inseparable cluster"; and the MVP cut moved to "local
+WF-7 runs" rather than "end of Block A". All of the above is now reflected in §2 and §4.
 
-1. **Ramp ordering** — is each level genuinely the smallest next step, and does it only
-   depend on earlier levels? Any level that secretly needs a later one?
-2. **Level boundaries** — should any level split (too much at once) or merge (too
-   thin)? L0 in particular: is the guidance/TASK addition right, or is it a separate
-   level?
-3. **Missing concepts** — anything in the braindump or the scenarios that no level
+**Still open — most useful feedback now:**
+
+1. **Ramp ordering** — does each level still only depend on earlier ones after the
+   reorder? Any remaining hidden back-dependency?
+2. **Level boundaries** — is L5 (help subflow) correctly placed *after* the MVP cut, or
+   does WF-7 actually need it? Is L8 (channels + general Ask) too large a bundle?
+3. **Missing concepts** — anything in the braindump or scenarios that still no level
    introduces?
 4. **Coherence risks** — places where a later level looks like it will force a rewrite
    of an earlier one (a failed coherence test waiting to happen).
-5. **MVP cut** — given value-for-self priority, where is the right "stop here and build"
-   line (e.g. end of Block A? a slice of Block B for WF-7)?
+5. **MVP scope inside the cut** — within "local WF-7 runs", is anything in L0a–L4 more
+   than the minimum, or is anything missing for an actual end-to-end run?
 
 ---
 
