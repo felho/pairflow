@@ -1836,6 +1836,71 @@ Six findings:
   round back to the 3rd without discarding the whole). A checkpoint = a transcript
   position + the compensation requirement for the external actions taken since.
 
+### 18.2 MTP as Steering Protocol
+
+The report's central element: the MTP (massive transformative purpose) is "not a
+poster" but a machine-readable steering protocol. The "purpose → protocol" rename
+emphasizes that purpose is not a passive compass but **an active filter you can run
+every activity through**.
+
+**Purpose as an active lens — a fifth judgment type.** We had four decision kinds:
+capability check (binary), gate/policy (allow/block/defer), trust (when a gate may be
+skipped), judgment routing (which path). The purpose protocol is a fifth, different in
+nature: **alignment assessment** — "does this activity serve the purpose?" — and
+crucially it is **not enforcement**. It does not block; it **surfaces**. An LLM
+judgment that runs over activities and flags what drifts, even when the action is
+fully permitted.
+
+**The gap only this catches.** Consider an action that (a) passed every capability
+check, (b) is within budget, (c) is even short-term *profitable* — all green — and yet
+runs against the firm's purpose. **No existing mechanism filters this**: capability is
+binary, gates are rule-based, budget is financial, trust is historical. The
+"permitted AND profitable BUT wrong" category is a blind spot, and the purpose lens is
+the only thing that catches it — the classic **local vs. global optimum** tension
+(cost-budget §14 represents the local financial optimum; purpose the global one).
+
+**Why it is LLM territory.** A "never lie" prohibition is binary and mechanical (that
+is the boundary, the smaller half). But "this is good for the company short-term yet
+contrary in spirit to the goal" is a soft, context-sensitive, partly philosophical
+judgment — what only humans used to do and cannot do manually for every action. A
+purpose-aware agent **scales** it: running over activities, surfacing the ones that
+are "technically fine but directionally off". This is the MTP's real value — not the
+prohibition list, but scaling ethical/alignment reflection.
+
+**How it fits — the watchdog/metacognition lane.** Not on the hot path (synchronous
+per-action filtering would be slow and costly): an **asynchronous review layer** (kin
+of spot-check §17.3 and retro §16.3) reading the transcript, decision artifacts, and
+cost ledger to surface misalignment — what the report calls **watchdog agents** in
+Govern/Assure. Retrospective by default (sampled/periodic); **prospective** for
+high-stakes irreversible actions (§18.1 reversibility class). And **flag, not block —
+the fiduciary decides**: on a profit-vs-purpose conflict the lens does not auto-decide
+but routes to a human (the fiduciary wedge's high-stakes call). Purpose surfaces; the
+accountable human decides.
+
+**The boundary is the smaller, hard half.** Hard prohibitions (deny predicates,
+kernel-enforced) live in an outermost org-policy ring — the policy hierarchy gains a
+top ring above arg predicate < gate < grant, composing by intersection (most
+restrictive binds), unoverridable by any template. Important distinction: *system*
+invariants (op_id idempotency, EventEnvelope-only boundaries, gatekeeper layering)
+stay in code — not org-specific; the org's own rules ("we never do X here") are
+**data** (org policy), not code. But this hard ring is the MTP's less interesting
+side.
+
+**Two registers of purpose steering.** (1) The generic alignment lens above — a new
+substrate capability. (2) Org-specific dedicated workflows and metric dashboards that
+collect/compute purpose-relevant data — and these need **no new substrate
+capability**: they are ordinary apps on the existing dataset / read-model / dashboard
+/ workflow primitives (§7, §15.7). The substrate does not try to solve every form of
+purpose monitoring generically; part of it is simply "another app on the platform".
+
+**Loose ends that close.** Purpose divergence is a metacognition signal — the lens's
+aggregated hits feed it (declared purpose vs. actual operation drifting → an MTP
+definition PR, §16; same divergence pattern as diary vs. transcript §11.1). The MTP
+itself is a definition (machine-readable, versioned), changed by the highest-stakes
+definition PR (owner/board-level gate). And at hobby scale the personal domain has a
+purpose too — the CLAUDE.md-analog — usable as an active lens over one's own
+activities ("I'm doing this, but is it what I actually wanted?"). Not just enterprise.
+
 ---
 
 ## 19. Existing-Tools Assessment
