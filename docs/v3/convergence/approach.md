@@ -94,11 +94,10 @@ primitives.
 ## 3. Output artifacts
 
 - **`core-model.html`** — the model itself, one section per level (runtime + domain +
-  config + absent), growing as the ramp proceeds. Visual, because expressiveness helps.
-  **Caveat: currently out of sync.** It still shows the pre-reorder single "L0 · local
-  pair loop" (with guidance folded in) and "exactly one capability" wording; it will be
-  rebuilt to L0a/L0b and the revised ramp. Until then **`approach.md` is the source of
-  truth for the roadmap**; the HTML is a stale first sketch.
+  invariant + config + absent), growing as the ramp proceeds. Visual, because
+  expressiveness helps. **Status: rebuilt to the revised ramp; L0a done, higher levels
+  in progress.** `approach.md` remains the source of truth for the roadmap; the HTML
+  realises it level by level.
 - **`approach.md`** (this file) — the method and the level roadmap, for review.
 - Later: an implementation plan, derived from the converged core. Not yet.
 
