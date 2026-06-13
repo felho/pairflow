@@ -137,8 +137,9 @@
       <p class="sub">Convergence by complexity ramp</p>
       <a href="#how">How to read this</a>
       <div class="block">Block A · local core</div>
-      <a class="level active" href="#l0a">L0a <span class="tag">· kernel skeleton</span></a>
-      <div class="future">L0b · actor + context seed</div>
+      <a class="level" href="#l0a">L0a <span class="tag">· kernel skeleton</span></a>
+      <a class="level active" href="#l0b">L0b <span class="tag">· actor + context</span></a>
+      <div class="future">L0c · agent run config</div>
       <div class="future">L1 · capability matrix</div>
       <div class="future">L2 · gate / policy</div>
       <div class="future">L3 · human decision Ask</div>
@@ -416,6 +417,192 @@
             <li><b>Decision:</b> accepted as the L0a baseline. Light evidence per the
               <a href="design-method-playbook.md">playbook §2.1</a>; a full evidence gate is only
               needed when L0a becomes an implementation input.</li>
+          </ul>
+        </div>
+      </section>
+
+      <section id="l0b">
+        <h2 class="level-h"><span class="level-badge">L0b</span> Actor binding + context packet</h2>
+        <p class="level-sub">Closes the loop L0a left open: the kernel resolves <em>who</em> acts next
+        and hands them a minimal context packet — so the skeleton becomes a usable system.</p>
+
+        <p>L0a was a reactive kernel: it processed envelopes but woke no one. L0b adds the other half
+        of the loop. On instance start, and after every commit, the kernel produces a
+        <b>DispatchIntent</b> — the next actor plus a context packet telling it: its task, the version
+        it sees, what to do this step, what it received, and which protocol outputs exist. The full
+        cycle: <b>start → initial DispatchIntent → actor works → envelope → handle → next
+        DispatchIntent</b>. The kernel still only <em>produces</em> the packet; a local/manual driver
+        delivers it (durable channels are L8).</p>
+
+        <h3 class="view-h"><span class="view-tag runtime">Runtime</span> A concrete trace</h3>
+        <p>The same two-round run, now driven by dispatch — plus a stale step where an actor replies
+        from an outdated packet:</p>
+        <div class="trace">
+          <div class="trace-row"><div class="trace-n">1</div><div class="trace-c">
+            <div class="ev">START_INSTANCE(<code>local-pair-v0</code>, task) — binding snapshot { implementer→codex, reviewer→claude }</div>
+            <div class="meta">invariant ✓ binding covers all roles; create at <b>implement</b>, <b>version=1</b>; commit creation → derive <b>DispatchIntent</b> { actor: <b>codex</b>, packet: task, instruction "build it", version=1, available_ops=[PASS] }</div>
+          </div></div>
+          <div class="trace-row"><div class="trace-n">2</div><div class="trace-c">
+            <div class="ev">codex works → emits <code>PASS</code>, <b>expected_version=1</b></div>
+            <div class="meta">kernel: new op_id ✓, 1 = 1 ✓ → commit <b>implement → review</b> (1 → 2) → derive DispatchIntent { actor: <b>claude</b>, handoff: codex diff, instruction "review it", version=2, available_ops=[PASS, CONVERGED] }</div>
+          </div></div>
+          <div class="trace-row"><div class="trace-n">3</div><div class="trace-c">
+            <div class="ev">claude reviews, finds issues → emits <code>PASS</code>, <b>expected_version=2</b></div>
+            <div class="meta">kernel: 2 = 2 ✓ → commit <b>review → implement</b> (2 → 3), <b>round=2</b> → DispatchIntent { codex, handoff: claude findings, version=3, available_ops=[PASS] }</div>
+          </div></div>
+          <div class="trace-row idem"><div class="trace-n">4</div><div class="trace-c">
+            <div class="ev">codex replies from an <b>old packet</b> → emits <code>PASS</code>, <b>expected_version=2</b></div>
+            <div class="meta">kernel: 2 ≠ 3 (instance is at 3) → <b>Stale(3)</b>. The actor acted on an outdated view; it must refresh to the version-3 packet. (idempotency checked first — this is not a duplicate, the op_id is new)</div>
+          </div></div>
+          <div class="trace-row"><div class="trace-n">5</div><div class="trace-c">
+            <div class="ev">codex refreshes → re-emits <code>PASS</code>, <b>expected_version=3</b></div>
+            <div class="meta">kernel: 3 = 3 ✓ → commit <b>implement → review</b> (3 → 4) → DispatchIntent { claude, version=4, available_ops=[PASS, CONVERGED] }</div>
+          </div></div>
+          <div class="trace-row"><div class="trace-n">6</div><div class="trace-c">
+            <div class="ev">claude is satisfied → emits <code>CONVERGED</code>, <b>expected_version=4</b></div>
+            <div class="meta">kernel: 4 = 4 ✓ → commit <b>review → done</b> (4 → 5); <b>status=DONE</b> — terminal, <b>no DispatchIntent</b></div>
+          </div></div>
+        </div>
+        <div class="note runtime">
+          The loop is now closed end-to-end: every commit either produces the next DispatchIntent or,
+          at a terminal target, produces none. Step 4 shows why the actor-visible version matters — an
+          actor working from a stale packet is caught, not silently committed.
+        </div>
+
+        <h3 class="view-h"><span class="view-tag pseudo">Pseudocode</span> The rule behind the trace</h3>
+        <p>Three entry points now: start the instance, handle an envelope, and the shared dispatch
+        helper. Note that the commit only <em>records state</em>; the DispatchIntent is derived from
+        committed state afterwards — the store never delivers.</p>
+        <pre class="pseudo"><span class="kw">START_INSTANCE</span>(template_ref, task, start_overrides) <span class="c">→ Started</span>
+  template ← definitionStore.load(template_ref)
+  binding  ← resolve_binding(template, start_overrides)        <span class="c"># template default_actor + start overrides</span>
+  <span class="kw">REQUIRE</span> binding covers every role reachable in template  <span class="c"># invariant: fail at start, not mid-run</span>
+  instance ← create { template_ref, task, binding, current_step: template.start, version: 1, status: RUNNING }
+  <span class="kw">COMMIT</span> instance creation
+  <span class="kw">RETURN</span> <span class="out">Started</span>(instance.version, dispatch_intent(instance, template, template.start))  <span class="c"># derive after commit</span>
+
+<span class="kw">HANDLE</span> envelope <span class="c">→ Outcome</span>
+  <span class="kw">IF</span> not valid_shape(envelope)            <span class="kw">THEN RETURN</span> <span class="out">Rejected(invalid_shape)</span>
+  instance ← instanceStore.load(envelope.instance_id)
+  <span class="kw">IF</span> instance is none                     <span class="kw">THEN RETURN</span> <span class="out">Rejected(unknown_instance)</span>
+  template ← definitionStore.load(instance.template_ref)
+  <span class="kw">IF</span> instance.transcript.has(envelope.op_id) <span class="kw">THEN RETURN</span> <span class="out">Duplicate</span>            <span class="c"># idempotency FIRST</span>
+  <span class="kw">IF</span> envelope.expected_version is missing  <span class="kw">THEN RETURN</span> <span class="out">Rejected(missing_version)</span>  <span class="c"># mandatory at L0b</span>
+  <span class="kw">IF</span> envelope.expected_version ≠ instance.version <span class="kw">THEN RETURN</span> <span class="out">Stale(instance.version)</span>
+  step   ← template.step(instance.current_step)
+  target ← step.transitions[envelope.type]    <span class="c"># transitions: event_type → target</span>
+  <span class="kw">IF</span> target is none                       <span class="kw">THEN RETURN</span> <span class="out">Rejected(no_transition)</span>
+  <span class="kw">COMMIT</span> atomically at expected_version = instance.version:   <span class="c"># records state only; on conflict: restart from load</span>
+    instance.transcript.append(envelope); instance.current_step ← target
+    <span class="kw">IF</span> target is terminal <span class="kw">THEN</span> instance.status ← DONE
+    instance.version ← instance.version + 1
+  intent ← (instance.status = DONE) ? none : dispatch_intent(instance, template, instance.current_step)  <span class="c"># derive after commit</span>
+  <span class="kw">RETURN</span> <span class="out">Committed</span>(instance.version, intent)
+
+<span class="kw">DISPATCH_INTENT</span>(instance, template, step_id) <span class="c">→ DispatchIntent</span>
+  step  ← template.step(step_id)
+  actor ← instance.binding[step.role]                  <span class="c"># guaranteed present by the start invariant</span>
+  packet ← <span class="n">ContextPacket</span> {
+    instance_id, expected_version: instance.version, task: instance.task,
+    instruction:   step.instruction,
+    handoff:       payload_of_transition_into(instance, step_id),  <span class="c"># the envelope that brought us here; absent at start</span>
+    available_ops: event_types_of(step.transitions),              <span class="c"># PASS / CONVERGED — not on_pass; navigation, not L1</span>
+    agent_config:  step.agent_config }                            <span class="c"># reserved/pass-through until L0c</span>
+  <span class="kw">RETURN</span> <span class="out">DispatchIntent</span> { actor, packet }            <span class="c"># a local/manual driver delivers; durable channel is L8</span></pre>
+        <div class="note pseudo">
+          <b>What the pseudocode surfaces:</b> the start was an implicit hole at L0a — here
+          START_INSTANCE makes the first dispatch explicit, closing the loop at the front too. And the
+          commit/derive split is explicit: the COMMIT writes state, the DispatchIntent is a kernel
+          output computed <em>after</em>, so the store stays a dumb recorder, never a deliverer.
+        </div>
+
+        <h3 class="view-h"><span class="view-tag domain">Domain</span> What L0b adds</h3>
+        <p>L0a's two aggregates stand; L0b fills in the actor side and the kernel's dispatch output.</p>
+        <div class="agg">
+          <div class="agg-label">Template aggregate — gains actor defaults &amp; guidance</div>
+          <div class="ents">
+            <div class="ent"><div class="en">Role</div><div class="fields">name, <b>default_actor</b> (v2)</div></div>
+            <div class="ent"><div class="en">Step</div><div class="fields">id, role, <b>instruction</b>, <b>agent_config</b> (pass-through → L0c), transitions <b>event_type → target</b></div></div>
+            <div class="ent"><div class="en">Actor</div><div class="fields">concrete executor — codex / claude</div></div>
+          </div>
+        </div>
+        <div class="agg">
+          <div class="agg-label">Instance aggregate — gains task &amp; effective binding</div>
+          <div class="ents">
+            <div class="ent"><div class="en">WorkflowInstance</div><div class="fields">… + <b>task</b>, <b>actor_binding</b> (role→actor snapshot)</div></div>
+          </div>
+        </div>
+        <div class="agg" style="border-style:solid;border-color:var(--line);background:var(--panel)">
+          <div class="agg-label" style="color:var(--runtime)">Kernel output — derived, not stored</div>
+          <div class="ents">
+            <div class="ent"><div class="en">DispatchIntent</div><div class="fields">{ actor, ContextPacket }</div></div>
+            <div class="ent"><div class="en">ContextPacket</div><div class="fields">instance_id, expected_version, task, instruction, handoff, available_ops, agent_config</div></div>
+          </div>
+        </div>
+        <div class="note domain">
+          <b>DDD correction:</b> a step's <code>transitions</code> map <b>event_type → target</b>
+          (PASS→review, CONVERGED→done); the config's <code>on_pass</code>/<code>on_converged</code> is
+          only the YAML form. So <code>available_ops</code> exposes the <em>event types</em> the actor
+          may emit, not the config keys. <b>ContextPacket / DispatchIntent are not persisted entities</b>
+          — they are kernel outputs derived from committed state.
+        </div>
+
+        <h3 class="view-h"><span class="view-tag invariant">Invariant</span> New at L0b</h3>
+        <div class="agg invariant">
+          <div class="agg-label">Added rules</div>
+          <div class="ents">
+            <div class="ent"><div class="en">expected_version mandatory</div><div class="fields">actor-emitted envelopes must carry it; check order: idempotency (Duplicate) → missing → stale</div></div>
+            <div class="ent"><div class="en">binding coverage at start</div><div class="fields">effective actor_binding must cover every reachable role — fail at start, never a post-commit half-state</div></div>
+            <div class="ent"><div class="en">commit ≠ deliver</div><div class="fields">the store records state under atomic commit; DispatchIntent is derived afterwards — the store never delivers</div></div>
+          </div>
+        </div>
+
+        <h3 class="view-h"><span class="view-tag config">Config</span> The template grows</h3>
+        <pre><span class="k">template</span>:
+  <span class="k">id</span>: <span class="s">local-pair-v0</span>
+  <span class="k">version</span>: <span class="n">1</span>
+  <span class="k">roles</span>:
+    <span class="k">implementer</span>: { <span class="k">default_actor</span>: <span class="s">codex</span> }
+    <span class="k">reviewer</span>:    { <span class="k">default_actor</span>: <span class="s">claude</span> }
+  <span class="k">start</span>: <span class="s">implement</span>
+  <span class="k">steps</span>:
+    - <span class="k">id</span>: <span class="s">implement</span>
+      <span class="k">role</span>: <span class="s">implementer</span>
+      <span class="k">instruction</span>: <span class="s">"Build the change for the task."</span>
+      <span class="k">on_pass</span>: <span class="s">review</span>            <span class="c"># PASS → review</span>
+    - <span class="k">id</span>: <span class="s">review</span>
+      <span class="k">role</span>: <span class="s">reviewer</span>
+      <span class="k">instruction</span>: <span class="s">"Review the diff; pass back or converge."</span>
+      <span class="k">on_pass</span>:      <span class="s">implement</span>     <span class="c"># PASS → implement</span>
+      <span class="k">on_converged</span>: <span class="s">done</span>         <span class="c"># CONVERGED → done</span></pre>
+        <div class="note config">
+          Roles gain <code>default_actor</code>; steps gain <code>instruction</code> (and an optional
+          <code>agent_config</code>, carried but uninterpreted until L0c). The
+          <code>on_pass</code>/<code>on_converged</code> keys are the YAML form of
+          <code>event_type → target</code>.
+        </div>
+
+        <h3 class="view-h"><span class="view-tag absent">Absent</span> Still not here</h3>
+        <div class="absent-grid">
+          <div class="absent-item">No <b>authorization</b> — available_ops is navigation only <span class="at">→ L1</span></div>
+          <div class="absent-item">No <b>agent_config interpretation</b> — carried, not read <span class="at">→ L0c</span></div>
+          <div class="absent-item">No <b>gate / policy / round</b> <span class="at">→ L2</span></div>
+          <div class="absent-item">No <b>durable delivery</b> — DispatchIntent goes to a manual driver <span class="at">→ L8</span></div>
+          <div class="absent-item">No <b>rich context assembly</b> — handoff is just the prior payload <span class="at">→ §11.4</span></div>
+        </div>
+
+        <h3 class="view-h"><span class="view-tag evidence">Evidence</span> Why we accept L0b for now</h3>
+        <div class="note evidence">
+          <ul style="margin:0">
+            <li><b>Scenario coverage:</b> the local pair loop now runs end-to-end <em>with dispatch</em>
+              — start → packet → actor → envelope → packet — no implicit external step. Forward-compatible
+              with WF-7 (a child bubble runs an assigned actor).</li>
+            <li><b>Invariant coverage:</b> expected_version mandatory + idempotency-before-stale ✓;
+              binding coverage at start ✓; commit-records-only / dispatch-derived ✓; all L0a invariants
+              still hold.</li>
+            <li><b>Known gaps (intended):</b> no authorization (L1), agent_config uninterpreted (L0c),
+              no durable delivery (L8). Each is in Absent.</li>
+            <li><b>Decision:</b> accepted as the L0b baseline (light evidence per playbook §2.1).</li>
           </ul>
         </div>
       </section>
