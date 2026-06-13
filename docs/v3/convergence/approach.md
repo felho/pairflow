@@ -151,9 +151,13 @@ introduces them.
 Concepts: the `Actor` entity + role→actor binding; runtime actor/role assignment and
 next-work-item dispatch; `TASK` (the initial assignment); `Step.instruction` (per-step
 role guidance); a minimal **handoff / context-packet seed** (the kernel assembles what
-the next actor receives), including the actor-visible `instance.version`; and
-`EventEnvelope.expected_version` as the actor-supplied stale-intent check.
+the next actor receives) — its `TASK`, the actor-visible `instance.version`, and the
+**protocol outputs this step exposes** (the step's transition keys, e.g. pass/converged —
+*navigation* guidance, NOT L1 authorization); and `EventEnvelope.expected_version` as the
+actor-supplied stale-intent check.
 Why: a skeleton that routes but gives the agent no idea what to do is not yet usable.
+L0b also **closes the loop the reactive L0a kernel leaves open** — L0a handles envelopes
+but never wakes an actor; L0b's dispatch hands the next work item to the next actor.
 This is the minimum guidance to act — split from L0a because the context packet is a
 large concept later (§11.4) and must not slip in as an L0 afterthought; it gets its own
 line so its growth is visible.

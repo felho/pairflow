@@ -205,6 +205,11 @@
         plus enforce the invariants below. There is deliberately no notion yet of <em>what</em> an
         actor should do; an agent here would route correctly but have no task. That gap is filled at
         L0b, and naming it is half the point.</p>
+        <p><b>L0a is a reactive kernel slice:</b> it handles envelopes that arrive (from a manual
+        driver here) but does not dispatch work or wake actors — the trace's "emits" is an external
+        stimulus, not the kernel activating anyone. Closing that loop (handing the next work item to
+        the next actor — its task, the version it sees, and the protocol outputs the step exposes) is
+        L0b's dispatch.</p>
 
         <h3 class="view-h"><span class="view-tag runtime">Runtime</span> A concrete trace</h3>
         <p>A two-round run that converges on the second review, including a re-delivered event to show
