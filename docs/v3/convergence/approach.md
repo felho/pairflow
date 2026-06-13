@@ -198,7 +198,8 @@ enforcement (L7).
 
 **L1 — Capability matrix.**
 Concepts: `CapabilityProfile` (matrix `role × state → allowed actions`); the Capability
-Engine as the first dispatch step.
+Engine as the **role/state authorization layer** — an early check inside `HandleEnvelope`,
+before the transition commits (not L0b's outbound `DispatchIntent`).
 Why: internal authorization — who may emit which protocol action in which state (the v2
 enforcement backbone, Level 2). L1 does **not** introduce navigation — L0b already
 exposes the step's transition affordances (`available_ops`); L1 *filters/enforces* them
