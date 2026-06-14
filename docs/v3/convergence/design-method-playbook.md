@@ -243,6 +243,25 @@ HandleEnvelope(envelope):
 - Avoid TypeScript syntax unless an interface shape is truly needed.
 - Avoid implementation infrastructure unless store semantics are the thing being designed.
 
+### Pseudocode Naming And Guard Conventions
+
+Use naming to signal what kind of thing the pseudocode line represents:
+
+- `UPPER_SNAKE_CASE` names are routed kernel inputs, protocol operations, or named events.
+  Examples: `CREATE_INSTANCE`, `START`, `KICKOFF`, `RUNTIME_CONTEXT_READY`.
+- `lower_snake_case(...)` names are internal helpers or derived computations.
+  Examples: `activate(instance)`, `resolve_agent_config(...)`, `dispatch_intent(...)`.
+- `PascalCase(...)` names are outcome or value constructors returned by the kernel.
+  Examples: `Created(...)`, `Accepted`, `Rejected(...)`, `Activated(...)`, `Committed(...)`.
+
+Use guard forms consistently:
+
+- `IF ... THEN RETURN Rejected(...)` is a named protocol/domain rejection for invalid external input
+  or a distinction the caller should be able to handle explicitly.
+- `REQUIRE ...` marks an operation precondition, correlation guard, or kernel invariant. Failure means
+  the operation is not applicable in the current state; do not invent a named business rejection unless
+  the distinction matters to the model.
+
 ### Core-Model Code Diff Convention
 
 In `core-model.html`, pseudocode and config snippets should use the reusable
