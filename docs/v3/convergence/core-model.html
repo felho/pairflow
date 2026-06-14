@@ -206,7 +206,8 @@
       <a class="level" href="#l0c">L0c <span class="tag">· agent run config</span></a>
       <a class="level" href="#l1">L1 <span class="tag">· capability matrix</span></a>
       <a class="level" href="#l0d">L0d <span class="tag">· lifecycle + activation</span></a>
-      <a class="level active" href="#l0e">L0e <span class="tag">· runtime context</span></a>
+      <a class="level" href="#l0e">L0e <span class="tag">· runtime context</span></a>
+      <a class="level active" href="#l0f">L0f <span class="tag">· project config + resolution</span></a>
       <div class="future">L2 · gate / policy</div>
       <div class="future">L2b · policy/gate context</div>
       <div class="future">L3 · human decision Ask</div>
@@ -1867,6 +1868,316 @@ template:
           </ul>
         </div>
       </section>
+
+      <section id="l0f">
+        <h2 class="level-h"><span class="level-badge">L0f</span> Project/repository configuration &amp; definition resolution</h2>
+        <p class="level-sub">A repository declares <em>which</em> workflow templates it runs and supplies
+        repo-scoped values for the <b>typed slots</b> a template declares. This is a <b>pre-kernel
+        resolution layer</b>: it runs <em>before</em> <code>CREATE_INSTANCE</code> and produces its inputs —
+        it adds <em>no</em> kernel handler.</p>
+
+        <p>L0e let a template declare a runtime-context requirement with a <code>config</code> block of
+        literal values (<code>base_branch</code>, <code>branch_pattern</code>). But those belong to the
+        repo where you deploy, not to the portable definition. The same split surfaces for v1's
+        <code>bootstrap</code> / <code>test</code> commands — repo toolchain values the workflow
+        <em>references</em> but cannot define. L0f separates the two responsibilities: <b>(J1) definition
+        resolution</b> — pick and pin the template (explicit or repo default, from a source) — and <b>(J2)
+        slot/value resolution</b> — fill the template's typed slots from a repo-local
+        <code>ProjectConfig</code> through a cascade. The fields with a meaningful universal default may
+        stay template defaults; the cascade resolves the rest.</p>
+
+        <p><b>Not the kernel.</b> The kernel still knows only <em>Template</em> + <em>Instance</em>. L0f is a
+        function <code>RESOLVE_START(command, project_config) → ResolvedStartRequest | Rejected</code> that
+        runs ahead of the kernel and hands a resolved bundle to <code>CREATE_INSTANCE</code> /
+        <code>START</code> / provider provisioning. No instance, transcript, or version exists during the
+        pass — a rejection means nothing was created.</p>
+
+        <h3 class="view-h"><span class="view-tag runtime">Runtime</span> A concrete trace</h3>
+        <p>Resolving a start in a repo whose <code>ProjectConfig</code> fills the selected template's slots:</p>
+        <div class="trace">
+          <div class="trace-row"><div class="trace-n">1</div><div class="trace-c">
+            <div class="ev">operator <code>StartCommand { template_id: none, target: ui, overrides: { runtime.worktree.base_branch: release } }</code></div>
+            <div class="meta">J1 — no explicit <code>template_id</code> → <code>default_workflow = local-pair-v0</code> (the default is optional convenience; an explicit id would win)</div>
+          </div></div>
+          <div class="trace-row"><div class="trace-n">2</div><div class="trace-c">
+            <div class="ev">source load + pin</div>
+            <div class="meta"><code>select_source(workflow_sources, …)</code> → <code>local(.pairflow/)</code> → <code>load(local-pair-v0)</code> = <code>local-pair-v0@1</code> (pinned by version)</div>
+          </div></div>
+          <div class="trace-row"><div class="trace-n">3</div><div class="trace-c">
+            <div class="ev">J2 — scoped strict check</div>
+            <div class="meta"><code>scope = { project_global, project_wf(local-pair-v0), target(ui), cli }</code>; every key in the workflow / target / CLI tiers is a declared slot ✓; an undeclared key in <em>global</em> defaults or another workflow's section is ignored</div>
+          </div></div>
+          <div class="trace-row"><div class="trace-n">4</div><div class="trace-c">
+            <div class="ev">cascade per slot (last non-none wins)</div>
+            <div class="meta"><code>validation.test_command</code>: global <code>"pnpm test"</code> → target ui <code>"pnpm --dir ui test"</code> = <b>ui test</b>; <code>runtime.worktree.base_branch</code>: global <code>main</code> → CLI <code>release</code> = <b>release</b>; <code>runtime.worktree.bootstrap</code>: workflow default = <b>install &amp; build</b></div>
+          </div></div>
+          <div class="trace-row"><div class="trace-n">5</div><div class="trace-c">
+            <div class="ev"><b>ResolvedStartRequest</b> { template_ref: local-pair-v0@1, resolved_slots, binding }</div>
+            <div class="meta">handed to <code>CREATE_INSTANCE</code> / <code>START</code>; the L0e provider later reads the <code>runtime.*</code> slice — L0f itself stays runtime-agnostic</div>
+          </div></div>
+          <div class="trace-row"><div class="trace-n">5b</div><div class="trace-c">
+            <div class="ev">(variants) resolution rejects before anything is created</div>
+            <div class="meta">a typo in the workflow/target/CLI scope → <b>Rejected(unknown_slot)</b>; an explicitly-selected target the workflow doesn't define → <b>Rejected(unknown_target)</b>; a required slot left unfilled → <b>Rejected(unbound_required_slot)</b>; neither <code>template_id</code> nor <code>default_workflow</code> → <b>Rejected(no_workflow_selected)</b></div>
+          </div></div>
+        </div>
+        <div class="note runtime">
+          The whole pass is pre-kernel: it assembles inputs and validates them, but touches no instance
+          state. v1 already does exactly this merge for one hard-wired workflow
+          (<code>repoValidationProfileResolver</code>); L0f generalizes it to <em>any</em> template's
+          declared slots.
+        </div>
+
+        <h3 class="view-h"><span class="view-tag pseudo">Pseudocode</span> The resolution module — not a kernel handler</h3>
+        <p>A standalone function (empty baseline — it is <em>not</em> diffed against the kernel, because it
+        is not part of it). It produces the bundle <code>CREATE_INSTANCE</code> consumes:</p>
+        <div class="code-diff" aria-label="L0f pseudocode" data-old-label="— (pre-kernel module, no kernel baseline)" data-new-label="L0f resolution">
+          <script type="text/plain" class="diff-source" data-code-old></script>
+          <script type="text/plain" class="diff-source" data-code-new data-code-id="l0f-pseudocode">
+# L0f runs BEFORE the kernel. It is not a HANDLE/handler: it consumes an operator
+# StartCommand + the repo's ProjectConfig and produces a ResolvedStartRequest that
+# CREATE_INSTANCE / START / provider provisioning then consume. No instance, no
+# transcript, no version exists yet.
+
+RESOLVE_START(command, project_config) → ResolvedStartRequest | Rejected
+  # J1 — definition resolution
+  template_id ← command.template_id ?? project_config.default_workflow    # default_workflow is optional convenience
+  IF template_id is none THEN RETURN Rejected(no_workflow_selected)        # neither explicit nor defaulted
+  source   ← select_source(project_config.workflow_sources, template_id)   # MVP: local(.pairflow/); central store is L11+
+  template ← source.load(template_id)                                      # pinned by version
+  IF template is none THEN RETURN Rejected(workflow_definition_unavailable)
+
+  # J2 — slot/value resolution
+  wf ← project_config.workflows[template_id] ?? empty_workflow_scope      # no per-workflow section → empty scope, not null
+  IF command.target is present AND wf.targets[command.target] is none
+     THEN RETURN Rejected(unknown_target(command.target))                 # an explicitly-selected target is intentional — a typo rejects (unlike a lenient global slot)
+  declared ← { s.id for s in template.slots }
+  scope    ← binding_scope(project_config, template_id, command)           # only THIS run's consulted tiers
+
+  # scoped strict reject — unambiguously-scoped tiers only; global defaults stay lenient
+  FOR key IN keys(scope.project_wf) ∪ keys(scope.target) ∪ keys(scope.cli):
+    IF key NOT IN declared THEN RETURN Rejected(unknown_slot(key))         # typo in a scoped section
+  # undeclared keys in shared global defaults — or in OTHER workflows' sections — are ignored for this run
+
+  resolved_slots ← {}
+  FOR slot IN template.slots:
+    value ← resolve_slot(slot, scope)
+    IF value is none AND slot.required THEN RETURN Rejected(unbound_required_slot(slot.id))
+    IF value is not none AND NOT type_ok(slot.type, value) THEN RETURN Rejected(slot_type_mismatch(slot.id))
+    resolved_slots[slot.id] ← value
+
+  RETURN ResolvedStartRequest {
+    template_ref:   pin(template),                                # the pinned definition (J1)
+    resolved_slots,                                               # generic map (J2); L0e reads the runtime.* slice — no L0f-specific coupling
+    binding:        project_binding(project_config, command) }    # role → actor: its OWN cascade, not a slot
+
+binding_scope(project_config, template_id, command) → Scope
+  wf ← project_config.workflows[template_id] ?? empty_workflow_scope   # no per-workflow section → empty scope, not null
+  RETURN Scope {
+    project_global: project_config.defaults,                      # global — shared across workflows (lenient)
+    project_wf:     wf.defaults,                                  # this workflow's section (strict)
+    target:         command.target ? wf.targets[command.target].defaults : { },   # target profile (existence already guarded in RESOLVE_START)
+    cli:            command.overrides }                           # explicit CLI/start override (strict)
+
+resolve_slot(slot, scope) → value | none                         # 5-tier cascade; last non-none wins
+  value ← slot.default                                            # tier 1: template default
+  IF scope.project_global has slot.id THEN value ← scope.project_global[slot.id]   # tier 2: project global
+  IF scope.project_wf     has slot.id THEN value ← scope.project_wf[slot.id]       # tier 3: project workflow
+  IF scope.target         has slot.id THEN value ← scope.target[slot.id]           # tier 4: target profile
+  IF scope.cli            has slot.id THEN value ← scope.cli[slot.id]              # tier 5: CLI/start override (highest)
+  RETURN value
+          </script>
+        </div>
+        <div class="note pseudo">
+          One entry point, no kernel coupling: <code>RESOLVE_START</code> returns a
+          <code>ResolvedStartRequest</code> (or rejects). <code>binding_scope</code> fixes <em>what</em> the
+          selected run consults — the per-workflow section, its target, and the CLI overrides are strict
+          (a non-declared key is a typo → <code>unknown_slot</code>); the shared <code>project_global</code>
+          and unrelated workflows' sections stay lenient. <code>resolve_slot</code> is the 5-tier cascade,
+          explicit CLI on top. <code>resolved_slots</code> is a generic map — L0e's <code>START</code>/provider
+          reads the <code>runtime.*</code> slice; the <code>role → actor</code> binding keeps its own cascade
+          (L0c), it is not a slot.
+        </div>
+
+        <h3 class="view-h"><span class="view-tag domain">Domain</span> What L0f adds</h3>
+        <div class="agg">
+          <div class="agg-label">Template side — declared, typed holes</div>
+          <div class="ents">
+            <div class="ent"><div class="en">Template</div><div class="fields">… + <b>slots</b>: <code>SlotDeclaration[]</code> — the typed holes a repo fills; the portable definition stays repo-independent</div></div>
+            <div class="ent"><div class="en">SlotDeclaration <span style="font-size:10px;color:var(--muted)">(value)</span></div><div class="fields"><code>{ id, type, default?, required }</code>; <code>type ∈ command | branch | branch_pattern | path | string</code> (minimal closed set — <em>not</em> a schema system)</div></div>
+          </div>
+        </div>
+        <div class="agg">
+          <div class="agg-label">Repo side — the resolution sources (pre-kernel)</div>
+          <div class="ents">
+            <div class="ent"><div class="en">ProjectConfig</div><div class="fields">repo-local aggregate (v1 = <code>pairflow.toml</code>): <code>{ default_workflow?, workflow_sources, defaults, workflows[id].{ defaults, targets[t].defaults } }</code> — global defaults + per-workflow sections</div></div>
+            <div class="ent"><div class="en">WorkflowSource</div><div class="fields"><code>load(template_id) → pinned Template</code>; <code>local(.pairflow/)</code> at L0f, <code>central_store</code> later (L11+)</div></div>
+            <div class="ent"><div class="en">StartCommand <span style="font-size:10px;color:var(--muted)">(operator intent)</span></div><div class="fields"><code>{ template_id?, target?, overrides }</code> — the explicit per-run inputs</div></div>
+            <div class="ent"><div class="en">ResolvedStartRequest <span style="font-size:10px;color:var(--muted)">(output)</span></div><div class="fields"><code>{ template_ref (pinned), resolved_slots, binding }</code> — the bundle the kernel/provider consume; generic, no runtime coupling</div></div>
+          </div>
+        </div>
+        <div class="agg" style="border-style:solid;border-color:var(--line);background:var(--panel)">
+          <div class="agg-label" style="color:var(--runtime)">New rejections — all pre-kernel, no state change</div>
+          <div class="ents">
+            <div class="ent"><div class="en">Rejected(no_workflow_selected)</div><div class="fields">neither <code>command.template_id</code> nor <code>default_workflow</code> present</div></div>
+            <div class="ent"><div class="en">Rejected(workflow_definition_unavailable)</div><div class="fields">the source cannot load the selected template</div></div>
+            <div class="ent"><div class="en">Rejected(unknown_target(t))</div><div class="fields">an explicitly-selected <code>target</code> the workflow does not define — an intentional selection, so it rejects (unlike a lenient global slot)</div></div>
+            <div class="ent"><div class="en">Rejected(unknown_slot(key))</div><div class="fields">a non-declared key in the workflow / target / CLI scope (typo guard)</div></div>
+            <div class="ent"><div class="en">Rejected(unbound_required_slot(id))</div><div class="fields">a <code>required</code> slot resolves to no value</div></div>
+            <div class="ent"><div class="en">Rejected(slot_type_mismatch(id))</div><div class="fields">a resolved value fails its slot's declared type (minimal check)</div></div>
+          </div>
+        </div>
+        <div class="note domain">
+          L0f is the <em>deployment-scope</em> sibling of L0c's step-scope cascade: L0c resolved an
+          <code>AgentConfig</code> through role/step/run scopes <em>inside</em> the template; L0f resolves
+          slot values through project/workflow/target/CLI scopes <em>outside</em> it. The
+          <code>role → actor</code> binding and agent/model config keep their own cascades — the project is
+          merely a new tier in those, never a scalar slot.
+        </div>
+
+        <h3 class="view-h"><span class="view-tag invariant">Invariant</span> New at L0f</h3>
+        <div class="agg invariant">
+          <div class="agg-label">Added rules</div>
+          <div class="ents">
+            <div class="ent"><div class="en">no kernel mutation</div><div class="fields">L0f runs <b>before</b> <code>CREATE_INSTANCE</code>; it produces inputs only — no transcript entry, no instance, no <code>version</code>. A rejection leaves the system untouched</div></div>
+            <div class="ent"><div class="en">template pinned at resolution</div><div class="fields"><code>template_ref</code> carries a version; later overrides change <em>slot values</em>, never the definition</div></div>
+            <div class="ent"><div class="en">required slots bound</div><div class="fields">every <code>required</code> slot in the selected template has a non-none value in the result, else <code>Rejected(unbound_required_slot)</code></div></div>
+            <div class="ent"><div class="en">typed values</div><div class="fields">a resolved value satisfies its slot's declared type (minimal <code>command | branch | branch_pattern | path | string</code>), else <code>Rejected(slot_type_mismatch)</code></div></div>
+            <div class="ent"><div class="en">deterministic 5-tier cascade</div><div class="fields">precedence <code>template default &lt; project global &lt; project workflow &lt; target &lt; CLI/start override</code>; same inputs → same <code>ResolvedStartRequest</code></div></div>
+            <div class="ent"><div class="en">scoped strict reject</div><div class="fields">unknown slot ids are rejected only in the unambiguously-scoped tiers (workflow section, target, CLI); the shared <code>global defaults</code> and unrelated workflows' sections are not rejected for this run</div></div>
+            <div class="ent"><div class="en">explicit target must exist</div><div class="fields">an operator-selected <code>command.target</code> the workflow does not define rejects with <code>unknown_target</code> — an intentional selection, distinct from the lenient global-slot path</div></div>
+          </div>
+        </div>
+
+        <h3 class="view-h"><span class="view-tag config">Config</span> Two artifacts — the template declares, the repo fills</h3>
+        <p>First the <b>template</b> gains a typed <code>slots:</code> block; the two repo-specific
+        <code>runtime_context</code> values become slot references (their defaults now live in
+        <code>slots</code>), while <code>repo</code> / <code>work_mode</code> stay literal — only what
+        benefits from repo-override becomes a slot:</p>
+        <div class="code-diff" aria-label="L0f template config" data-old-label="L0e baseline" data-new-label="L0f current">
+          <script type="text/plain" class="diff-source" data-code-old-ref="l0e-template-config"></script>
+          <script type="text/plain" class="diff-source" data-code-new data-code-id="l0f-template-config">
+template:
+  id: local-pair-v0
+  version: 1
+  roles:
+    implementer: { default_actor: codex,  default_agent_config: { mode: builder, model_ref: codex-default-engineer, prompt_profile_refs: [engineer-defaults] } }
+    reviewer:    { default_actor: claude, default_agent_config: { mode: critic } }
+  start: implement
+  activation:
+    mode: immediate          # after START + runtime_context ready, activate immediately; no KICKOFF hold
+    # deferred_kickoff → start in a WAITING(kickoff_pending) hold; an operator
+    # kickoff supplies the task and releases the first dispatch (the v1 ideation bubble)
+  slots:                        # L0f — typed holes the repo's ProjectConfig fills (default | required)
+    validation.test_command:         { type: command,        default: "pnpm test" }
+    runtime.worktree.base_branch:    { type: branch,         default: main }
+    runtime.worktree.branch_pattern: { type: branch_pattern, default: "bubble/{instance_id}" }
+    runtime.worktree.bootstrap:      { type: command,        required: false }   # no default — only the repo knows
+  runtime_context:              # RuntimeContextRequirement — required(spec) here; a context-free workflow declares: runtime_context: none
+    kind: worktree
+    provider: pairflow.worktree
+    config:
+      repo: current                                            # literal — not repo-overridable here
+      base_branch:    ${slot:runtime.worktree.base_branch}     # was literal main; default now lives in slots, repo may override
+      branch_pattern: ${slot:runtime.worktree.branch_pattern}  # provider materializes the actual name from instance_id
+      work_mode: worktree                                      # literal — provider-internal variant (worktree | clone)
+      # worktree path defaults to <repo-parent>/.pairflow-worktrees/<repo>/<instance_id>
+  steps:
+    - id: implement
+      role: implementer
+      instruction: "Build the change for the task."
+      agent_config: { approach: systematic }   # overrides/extends the role default
+      on_pass: review            # PASS → review
+    - id: review
+      role: reviewer
+      instruction: "Review the diff; pass back or converge."
+      agent_config: { approach: thorough, prompt_concern_refs: [reviewer-severity-ontology], skill_refs: [test-runner] }
+      on_pass:      implement     # PASS → implement
+      on_converged: done          # CONVERGED → done
+          </script>
+        </div>
+        <p>Then the repo-local <b>ProjectConfig</b> (a new file — empty baseline) fills those slots with the
+        values only the repo knows:</p>
+        <div class="code-diff" aria-label="L0f project config" data-old-label="— (new repo-local file)" data-new-label="ProjectConfig (.pairflow / pairflow.toml)">
+          <script type="text/plain" class="diff-source" data-code-old></script>
+          <script type="text/plain" class="diff-source" data-code-new data-code-id="l0f-project-config">
+# project config — repo-local (v1: pairflow.toml). NOT the portable template.
+# Fills the template's typed slots; lives with the repo, not the definition.
+
+default_workflow: local-pair-v0             # optional convenience — a StartCommand may name template_id explicitly
+workflow_sources:
+  - local: .pairflow/workflows/             # MVP: local source only; central store is L11+
+
+defaults:                                   # global — shared across workflows (lenient: undeclared keys ignored)
+  validation.test_command:      "pnpm test"
+  runtime.worktree.base_branch: main
+
+workflows:
+  local-pair-v0:                            # this workflow's scoped section (strict: undeclared keys rejected)
+    defaults:
+      runtime.worktree.bootstrap: "pnpm install --frozen-lockfile && pnpm build"
+    targets:                                # tier-4 per-run override profiles
+      ui:
+        defaults:
+          validation.test_command: "pnpm --dir ui test"
+      docs:
+        defaults:
+          validation.test_command: "pnpm test docs"
+          </script>
+        </div>
+        <div class="note config">
+          <code>default_workflow</code> is optional convenience — a <code>StartCommand</code> may name
+          <code>template_id</code> explicitly; with neither present, resolution rejects with
+          <code>no_workflow_selected</code>. Global <code>defaults</code> serve every workflow; a
+          <code>workflows[id]</code> section scopes values (and the strict typo check) to one template, and
+          <code>targets</code> are the highest config tier — only an explicit CLI override outranks them.
+        </div>
+
+        <h3 class="view-h"><span class="view-tag absent">Absent</span> Still not here</h3>
+        <div class="absent-grid">
+          <div class="absent-item">No <b>kernel mechanics</b> — no new transcript event, no instance state; L0f is pure pre-kernel input preparation <span class="at">→ by design</span></div>
+          <div class="absent-item">No <b>central store / registry</b> — only a local source; remote sourcing &amp; governance is <span class="at">→ L11+</span></div>
+          <div class="absent-item">No <b>definition PRs</b> (L12) or <b>trust</b> (L13) — authoring &amp; provenance of templates is later <span class="at">→ later</span></div>
+          <div class="absent-item">No <b>full schema system</b> — types are a minimal closed set; no constraints, regex, or cross-field validation <span class="at">→ later</span></div>
+          <div class="absent-item"><b>Global-leniency tradeoff:</b> a typo in a global <em>optional</em> slot may be silently ignored; <code>required</code> slots are still protected by <code>unbound_required_slot</code>, and stricter config linting can come later <span class="at">→ later</span></div>
+          <div class="absent-item">No <b>per-step / dynamic slot resolution</b> — slots resolve once at start; the per-step config cascade is L0c, conditional/per-step context is <span class="at">→ L2b</span></div>
+          <div class="absent-item">No <b>actor/model binding as slots</b> — the <code>role → actor</code> and agent/model cascades stay separate; the project is a new tier in them, not a scalar slot</div>
+          <div class="absent-item">No <b>slot interpolation</b> here — <code>branch_pattern</code> is resolved as a pattern; the actual branch name is materialized provider-side once <code>instance_id</code> exists <span class="at">→ L0e</span></div>
+        </div>
+
+        <h3 class="view-h"><span class="view-tag evidence">Evidence</span> Why we accept L0f for now</h3>
+        <div class="note evidence">
+          <ul style="margin:0">
+            <li><b>Scenario coverage:</b> a repo selects its default workflow, pins it from a local source,
+              and resolves the template's slots — global <code>test</code>, a <code>ui</code> target override,
+              a workflow-specific <code>bootstrap</code>, a CLI <code>base_branch</code> override — into a
+              <code>ResolvedStartRequest</code>. Typos in scoped sections, unbound required slots, and a
+              missing workflow selection all reject before any instance exists.</li>
+            <li><b>The layer is real, not invented (v11 verified):</b> v1 already stores these in
+              <code>pairflow.toml</code> <code>[validation.commands]</code> — <code>bootstrap</code> (optional,
+              no default), <code>test</code> (required, default <code>"pnpm test"</code>),
+              <code>typecheck</code>, <code>lint</code> (<code>commandConfigTypes.ts</code>,
+              <code>repoConfig.ts</code>) — plus per-target <code>[validation.targets.&lt;id&gt;.commands]</code>
+              and CLI <code>--bootstrap-command</code> / <code>--test-command</code>.</li>
+            <li><b>The cascade order is grounded:</b> <code>resolveRepoValidationProfileCommands</code> merges
+              legacy/default → <code>repoValidation.commands</code> → selected target → then
+              <code>applyExplicitValidationCommands</code> (explicit CLI) — i.e. default &lt; repo config &lt;
+              target &lt; explicit CLI, exactly the L0f tier order. <code>repoValidationProfileResolver.ts</code>
+              <em>is</em> the L0f cascade, hard-wired to one workflow; L0f generalizes it to any template's
+              declared slots. An explicitly-selected but undefined target rejects
+              (<code>unknown_target</code>) rather than silently proceeding, matching v1's handling of a
+              missing configured target.</li>
+            <li><b>Execution points grounded:</b> <code>bootstrap</code> runs after worktree creation
+              (<code>startCommandDefaults.ts</code>); <code>test</code> runs in the PASS validation gate
+              (<code>passValidationGate.ts</code>). Both are repo-specific values the workflow references but
+              cannot define — the J2 case.</li>
+            <li><b>Known gaps (intended):</b> no central store/registry (L11+), definition PRs (L12), trust
+              (L13); no full schema; per-step/dynamic resolution and slot interpolation deferred; global-slot
+              typo leniency accepted. All captured in Absent.</li>
+            <li><b>Decision:</b> accepted as the L0f baseline (light evidence per playbook §2.1); roadmap block
+              already in <code>approach.md</code>.</li>
+          </ul>
+        </div>
+      </section>
     </main>
   </div>
   <script>
@@ -1916,8 +2227,8 @@ template:
       }
       var html = escapeHtml(code)
         .replace(/("[^"]*"|'[^']*')/g, '<span class="s">$1</span>')
-        .replace(/\b(START_INSTANCE|CREATE_INSTANCE|RUNTIME_CONTEXT_READY|DISPATCH_INTENT|RECEIVE|HANDLE|KICKOFF|CANCEL|COMPLETE|FAIL|START|MATCH|INTERFACE|IF|THEN|RETURN|COMMIT|REQUIRE)\b/g, '<span class="kw">$1</span>')
-        .replace(/\b(Rejected\([^)]+\)|Stale\([^)]+\)|Committed\([^)]+\)|Started\([^)]+\)|Created\([^)]+\)|Activated\([^)]+\)|Terminated\([^)]+\)|Accepted|Duplicate|DispatchIntent|ContextPacket|Outcome)\b/g, '<span class="out">$1</span>')
+        .replace(/\b(START_INSTANCE|CREATE_INSTANCE|RUNTIME_CONTEXT_READY|RESOLVE_START|DISPATCH_INTENT|RECEIVE|HANDLE|KICKOFF|CANCEL|COMPLETE|FAIL|START|MATCH|INTERFACE|FOR|IF|THEN|RETURN|COMMIT|REQUIRE)\b/g, '<span class="kw">$1</span>')
+        .replace(/\b(Rejected\([^)]+\)|Stale\([^)]+\)|Committed\([^)]+\)|Started\([^)]+\)|Created\([^)]+\)|Activated\([^)]+\)|Terminated\([^)]+\)|Accepted|Duplicate|DispatchIntent|ContextPacket|ResolvedStartRequest|Outcome)\b/g, '<span class="out">$1</span>')
         .replace(/^(\s*-?\s*)([A-Za-z_][A-Za-z0-9_]*)(:)/, '$1<span class="k">$2</span>$3')
         .replace(/(:\s*)([0-9]+)(\b)/g, '$1<span class="n">$2</span>$3');
       if (comment) html += '<span class="c">' + escapeHtml(comment) + '</span>';

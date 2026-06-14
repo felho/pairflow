@@ -261,8 +261,8 @@ registry/store governance is L11+) with two responsibilities. (1) **Definition
 resolution** — select and load the workflow template(s) available in this repo
 (default workflow + sources: local `.pairflow/`, later a central store). (2)
 **Slot/value resolution** — supply repo-scope values for *typed, template-declared
-slots* through a cascade: `template default → project config → CLI/start override →
-run/target override`. The key addition is on the **template side**: the notion of
+slots* through a cascade: `template default → project global → project workflow →
+target → CLI/start override`. The key addition is on the **template side**: the notion of
 **typed slots/holes** — a minimal declaration (`type` + `default` + `required`), not
 yet a full schema system — so repo-specific values are typed bindings, not floating
 strings:
@@ -277,6 +277,10 @@ strings:
     defaults:
       validation.test_command:    "pnpm test -- --runInBand"
       runtime.worktree.bootstrap: "pnpm install --frozen-lockfile && pnpm build"
+
+(The example shows a flat global `defaults` for brevity; the full layout — global `defaults`
+plus per-workflow `workflows[id].defaults` and `targets[t].defaults`, matching the
+`project workflow → target` cascade tiers — is realized in core-model.html.)
 
 The `runtime.worktree.*` slots may feed the L0e provider config: L0e defines the
 runtime-context requirement and provider contract; L0f defines how repo-specific values
@@ -295,8 +299,8 @@ prepares the resolved inputs `CREATE_INSTANCE` / `START` / provider provisioning
 consume. No central registry/store governance (L11+), no definition PRs (L12), no
 trust (L13). Typed slots stay minimal (type + default + required), not a full
 schema/validation system.
-Conceptually L0-family (pre-kernel project binding/resolution); not yet realized in
-core-model.html.
+Conceptually L0-family (pre-kernel project binding/resolution). **Realized in
+core-model.html.**
 
 **L1 — Capability matrix.**
 Concepts: `CapabilityProfile` (matrix `role × current_step → allowed actions`); the Capability
