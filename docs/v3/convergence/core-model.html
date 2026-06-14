@@ -77,12 +77,12 @@
       overflow: auto; font-size: 13px; line-height: 1.5; margin: 12px 0;
     }
     pre.pseudo { background: #06251c; }
-    pre .k, .code-listing .k { color: #c4b5fd; }
-    pre .s, .code-listing .s { color: #86efac; }
-    pre .c, .code-listing .c { color: #7d8597; }
-    pre .n, .code-listing .n { color: #fdba74; }
-    pre .kw, .code-listing .kw { color: #fca5a5; }
-    pre .out, .code-listing .out { color: #fcd34d; }
+    pre .k, .code-diff .k { color: #c4b5fd; }
+    pre .s, .code-diff .s { color: #86efac; }
+    pre .c, .code-diff .c { color: #7d8597; }
+    pre .n, .code-diff .n { color: #fdba74; }
+    pre .kw, .code-diff .kw { color: #fca5a5; }
+    pre .out, .code-diff .out { color: #fcd34d; }
     .note {
       border-left: 4px solid var(--accent); background: var(--soft);
       padding: 12px 15px; margin: 16px 0; border-radius: 0 8px 8px 0;
@@ -150,15 +150,19 @@
       padding: 5px 10px; cursor: pointer;
     }
     .diff-toggle[aria-pressed="true"] { background: #d1fae5; color: #07543f; border-color: #d1fae5; }
+    .diff-source { display: none; }
     .diff-view[hidden] { display: none; }
-    .diff-view-split { padding: 16px 0; }
-    .diff-panes {
-      display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+    .diff-view {
+      padding: 16px 0; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
       font-size: 13px; line-height: 1.72;
     }
+    .full-scroll { overflow-x: auto; }
+    .full-body { min-width: 920px; }
+    .diff-panes {
+      display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    }
+    .diff-pane { min-width: 0; }
     .diff-pane:first-child { border-right: 1px solid #245044; }
-    .diff-pane-head { display: none; }
     .diff-pane-scroll { overflow-x: auto; }
     .diff-pane-body { min-width: 720px; }
     .diff-line {
@@ -175,19 +179,12 @@
     .diff-line.ctx .diff-code { color: #bfd2cc; }
     .diff-line.add .diff-ln, .diff-line.add .diff-code { background: rgba(22,163,74,.22); }
     .diff-line.add .diff-code { box-shadow: inset 3px 0 0 #22c55e; color: #dfffee; }
+    .diff-line.remove .diff-ln, .diff-line.remove .diff-code { background: rgba(185,28,28,.18); }
+    .diff-line.remove .diff-code { box-shadow: inset 3px 0 0 #ef4444; color: #fee2e2; }
     .diff-line.change .diff-ln, .diff-line.change .diff-code { background: rgba(234,179,8,.20); }
     .diff-line.change .diff-code { box-shadow: inset 3px 0 0 #eab308; color: #fff7d6; }
     .diff-line.gap .diff-code { color: #668177; }
     .diff-line.blank .diff-code { min-width: 640px; }
-    ol.code-listing {
-      background: #06251c; color: #e6e9f0; border-radius: 9px; padding: 16px 18px 16px 58px;
-      overflow: auto; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
-      font-size: 13px; line-height: 1.5; margin: 12px 0;
-    }
-    .code-diff ol.code-listing { margin: 0; border-radius: 0; background: transparent; }
-    ol.code-listing li { white-space: pre; padding-left: 10px; }
-    ol.code-listing li::marker { color: #789189; }
-    ol.code-listing li.blank { height: 1.5em; }
     @media (max-width: 880px) {
       .layout { grid-template-columns: 1fr; }
       nav { position: static; height: auto; }
@@ -323,31 +320,36 @@
         <h3 class="view-h"><span class="view-tag pseudo">Pseudocode</span> The rule behind the trace</h3>
         <p>The trace shows one happy path. The pseudocode states the general rule, including the
         branches the trace never exercises:</p>
-        <pre class="pseudo"><span class="kw">HANDLE</span> envelope <span class="c">→ Outcome</span>
-  <span class="kw">IF</span> not valid_shape(envelope)            <span class="kw">THEN</span> <span class="kw">RETURN</span> <span class="out">Rejected(invalid_shape)</span>
+        <div class="code-diff" aria-label="L0a pseudocode" data-old-label="Empty baseline" data-new-label="L0a current">
+          <script type="text/plain" class="diff-source" data-code-old></script>
+          <script type="text/plain" class="diff-source" data-code-new>
+HANDLE envelope → Outcome
+  IF not valid_shape(envelope)            THEN RETURN Rejected(invalid_shape)
 
   instance ← instanceStore.load(envelope.instance_id)
-  <span class="kw">IF</span> instance is none                     <span class="kw">THEN</span> <span class="kw">RETURN</span> <span class="out">Rejected(unknown_instance)</span>
-  template ← definitionStore.load(instance.template_ref)   <span class="c"># separate store; pinned immutable version</span>
+  IF instance is none                     THEN RETURN Rejected(unknown_instance)
+  template ← definitionStore.load(instance.template_ref)   # separate store; pinned immutable version
 
-  <span class="c"># idempotency, key scope (instance_id, op_id)</span>
-  <span class="kw">IF</span> instance.transcript.has(envelope.op_id) <span class="kw">THEN</span> <span class="kw">RETURN</span> <span class="out">Duplicate</span>   <span class="c"># no-op, no 2nd entry</span>
+  # idempotency, key scope (instance_id, op_id)
+  IF instance.transcript.has(envelope.op_id) THEN RETURN Duplicate   # no-op, no 2nd entry
 
   step   ← template.step(instance.current_step)
-  target ← step.transitions[envelope.type]   <span class="c"># on_pass / on_converged</span>
-  <span class="kw">IF</span> target is none                       <span class="kw">THEN</span> <span class="kw">RETURN</span> <span class="out">Rejected(no_transition)</span>
+  target ← step.transitions[envelope.type]   # on_pass / on_converged
+  IF target is none                       THEN RETURN Rejected(no_transition)
 
-  <span class="c"># one atomic commit, CAS on instance.version</span>
-  <span class="kw">COMMIT</span> atomically at expected_version = instance.version:
+  # one atomic commit, CAS on instance.version
+  COMMIT atomically at expected_version = instance.version:
     instance.transcript.append(envelope)
     instance.current_step ← target
-    <span class="kw">IF</span> target is terminal <span class="kw">THEN</span> instance.status ← DONE
+    IF target is terminal THEN instance.status ← DONE
     instance.version ← instance.version + 1
-  <span class="c"># on CAS conflict: restart HANDLE from load —</span>
-  <span class="c">#   re-check idempotency and re-resolve the transition;</span>
-  <span class="c">#   never re-commit a target computed from stale state</span>
+  # on CAS conflict: restart HANDLE from load —
+  #   re-check idempotency and re-resolve the transition;
+  #   never re-commit a target computed from stale state
 
-  <span class="kw">RETURN</span> <span class="out">Committed(instance.version)</span></pre>
+  RETURN Committed(instance.version)
+          </script>
+        </div>
         <div class="note pseudo">
           <b>What the pseudocode surfaces that the trace hid:</b> three reject paths (invalid shape /
           unknown instance / no transition for this event in this step), the Duplicate no-op, and the
@@ -430,19 +432,24 @@
         <h3 class="view-h"><span class="view-tag config">Config</span> The template</h3>
         <p>The whole of L0a's behaviour is this declaration — the loop <em>is</em> the transitions, no
         engine code encodes it:</p>
-        <pre><span class="k">template</span>:
-  <span class="k">id</span>: <span class="s">local-pair-v0</span>
-  <span class="k">version</span>: <span class="n">1</span>
-  <span class="k">roles</span>: [<span class="s">implementer</span>, <span class="s">reviewer</span>]   <span class="c"># names only; actor binding is L0b</span>
-  <span class="k">start</span>: <span class="s">implement</span>
-  <span class="k">steps</span>:
-    - <span class="k">id</span>: <span class="s">implement</span>
-      <span class="k">role</span>: <span class="s">implementer</span>
-      <span class="k">on_pass</span>: <span class="s">review</span>
-    - <span class="k">id</span>: <span class="s">review</span>
-      <span class="k">role</span>: <span class="s">reviewer</span>
-      <span class="k">on_pass</span>:      <span class="s">implement</span>   <span class="c"># found something → back</span>
-      <span class="k">on_converged</span>: <span class="s">done</span>       <span class="c"># 'done' is a terminal target, not a step</span></pre>
+        <div class="code-diff" aria-label="L0a template config" data-old-label="Empty baseline" data-new-label="L0a current">
+          <script type="text/plain" class="diff-source" data-code-old></script>
+          <script type="text/plain" class="diff-source" data-code-new>
+template:
+  id: local-pair-v0
+  version: 1
+  roles: [implementer, reviewer]   # names only; actor binding is L0b
+  start: implement
+  steps:
+    - id: implement
+      role: implementer
+      on_pass: review
+    - id: review
+      role: reviewer
+      on_pass:      implement   # found something → back
+      on_converged: done        # 'done' is a terminal target, not a step
+          </script>
+        </div>
         <div class="note config">
           <b>Template = configuration, not code</b> (§2.1). L0a is "just one preset"; the engine reads
           transitions from data. <code>roles</code> are bare names — binding them to concrete actors is
@@ -541,141 +548,72 @@
         helper. Note that the commit only <em>records state</em>; the DispatchIntent is derived from
         committed state afterwards — the store never delivers.</p>
         <p class="diff-title">L0b pseudocode</p>
-        <div class="code-diff" aria-label="L0b pseudocode with optional L0a diff">
-          <div class="diff-toolbar" role="group" aria-label="Diff view mode">
-            <div class="diff-labels" aria-hidden="true"><span>L0a baseline</span><span>L0b current</span></div>
-            <button class="diff-toggle" type="button" aria-pressed="false">Show diff</button>
-          </div>
-          <div class="diff-view diff-view-full">
-            <ol class="code-listing">
-              <li><span class="kw">START_INSTANCE</span>(template_ref, task, start_overrides) <span class="c">→ Started</span></li>
-              <li>  template ← definitionStore.load(template_ref)</li>
-              <li>  binding  ← resolve_binding(template, start_overrides)        <span class="c"># template default_actor + start overrides</span></li>
-              <li>  <span class="kw">REQUIRE</span> binding covers every role reachable in template  <span class="c"># invariant: fail at start, not mid-run</span></li>
-              <li>  instance ← create { template_ref, task, binding, current_step: template.start, version: 1, status: RUNNING }</li>
-              <li>  <span class="kw">COMMIT</span> instance creation</li>
-              <li>  <span class="kw">RETURN</span> <span class="out">Started</span>(instance.version, dispatch_intent(instance, template, template.start))  <span class="c"># derive after commit</span></li>
-              <li class="blank"></li>
-              <li><span class="kw">HANDLE</span> envelope <span class="c">→ Outcome</span></li>
-              <li>  <span class="kw">IF</span> not valid_shape(envelope)            <span class="kw">THEN RETURN</span> <span class="out">Rejected(invalid_shape)</span></li>
-              <li>  instance ← instanceStore.load(envelope.instance_id)</li>
-              <li>  <span class="kw">IF</span> instance is none                     <span class="kw">THEN RETURN</span> <span class="out">Rejected(unknown_instance)</span></li>
-              <li>  template ← definitionStore.load(instance.template_ref)</li>
-              <li>  <span class="kw">IF</span> instance.transcript.has(envelope.op_id) <span class="kw">THEN RETURN</span> <span class="out">Duplicate</span>            <span class="c"># idempotency FIRST</span></li>
-              <li>  <span class="kw">IF</span> envelope.expected_version is missing  <span class="kw">THEN RETURN</span> <span class="out">Rejected(missing_version)</span>  <span class="c"># mandatory at L0b</span></li>
-              <li>  <span class="kw">IF</span> envelope.expected_version ≠ instance.version <span class="kw">THEN RETURN</span> <span class="out">Stale(instance.version)</span></li>
-              <li>  step   ← template.step(instance.current_step)</li>
-              <li>  target ← step.transitions[envelope.type]    <span class="c"># transitions: event_type → target</span></li>
-              <li>  <span class="kw">IF</span> target is none                       <span class="kw">THEN RETURN</span> <span class="out">Rejected(no_transition)</span></li>
-              <li>  <span class="kw">COMMIT</span> atomically at expected_version = instance.version:   <span class="c"># records state only; on conflict: restart from load</span></li>
-              <li>    instance.transcript.append(envelope); instance.current_step ← target</li>
-              <li>    <span class="kw">IF</span> target is terminal <span class="kw">THEN</span> instance.status ← DONE</li>
-              <li>    instance.version ← instance.version + 1</li>
-              <li>  intent ← (instance.status = DONE) ? none : dispatch_intent(instance, template, instance.current_step)  <span class="c"># derive after commit</span></li>
-              <li>  <span class="kw">RETURN</span> <span class="out">Committed</span>(instance.version, intent)</li>
-              <li class="blank"></li>
-              <li><span class="kw">DISPATCH_INTENT</span>(instance, template, step_id) <span class="c">→ DispatchIntent</span></li>
-              <li>  step  ← template.step(step_id)</li>
-              <li>  actor ← instance.binding[step.role]                  <span class="c"># guaranteed present by the start invariant</span></li>
-              <li>  packet ← <span class="n">ContextPacket</span> {</li>
-              <li>    instance_id, expected_version: instance.version, task: instance.task,</li>
-              <li>    instruction:   step.instruction,</li>
-              <li>    handoff:       payload_of_transition_into(instance, step_id),  <span class="c"># the envelope that brought us here; absent at start</span></li>
-              <li>    available_ops: event_types_of(step.transitions),              <span class="c"># PASS / CONVERGED — not on_pass; navigation, not L1</span></li>
-              <li>    agent_config:  step.agent_config }                            <span class="c"># reserved/pass-through until L0c</span></li>
-              <li>  <span class="kw">RETURN</span> <span class="out">DispatchIntent</span> { actor, packet }            <span class="c"># a local/manual driver delivers; durable channel is L8</span></li>
-            </ol>
-          </div>
-          <div class="diff-view diff-view-split" hidden>
-            <div class="diff-panes">
-            <div class="diff-pane">
-              <div class="diff-pane-head">L0a baseline</div>
-              <div class="diff-pane-scroll">
-                <div class="diff-pane-body">
-                  <div class="diff-line blank"><div class="diff-ln"></div><div class="diff-code"></div></div>
-                  <div class="diff-line blank"><div class="diff-ln"></div><div class="diff-code"></div></div>
-                  <div class="diff-line blank"><div class="diff-ln"></div><div class="diff-code"></div></div>
-                  <div class="diff-line blank"><div class="diff-ln"></div><div class="diff-code"></div></div>
-                  <div class="diff-line blank"><div class="diff-ln"></div><div class="diff-code"></div></div>
-                  <div class="diff-line blank"><div class="diff-ln"></div><div class="diff-code"></div></div>
-                  <div class="diff-line blank"><div class="diff-ln"></div><div class="diff-code"></div></div>
-                  <div class="diff-line blank"><div class="diff-ln"></div><div class="diff-code"></div></div>
-                  <div class="diff-line ctx"><div class="diff-ln">1</div><div class="diff-code">HANDLE envelope → Outcome</div></div>
-                  <div class="diff-line ctx"><div class="diff-ln">2</div><div class="diff-code">  IF not valid_shape(envelope) THEN Rejected(invalid_shape)</div></div>
-                  <div class="diff-line ctx"><div class="diff-ln">3</div><div class="diff-code">  instance ← instanceStore.load(envelope.instance_id)</div></div>
-                  <div class="diff-line ctx"><div class="diff-ln">4</div><div class="diff-code">  IF instance is none THEN Rejected(unknown_instance)</div></div>
-                  <div class="diff-line ctx"><div class="diff-ln">5</div><div class="diff-code">  template ← definitionStore.load(instance.template_ref)</div></div>
-                  <div class="diff-line ctx"><div class="diff-ln">6</div><div class="diff-code">  IF transcript.has(op_id) THEN Duplicate</div></div>
-                  <div class="diff-line blank"><div class="diff-ln"></div><div class="diff-code"></div></div>
-                  <div class="diff-line blank"><div class="diff-ln"></div><div class="diff-code"></div></div>
-                  <div class="diff-line ctx"><div class="diff-ln">7</div><div class="diff-code">  step ← template.step(current_step)</div></div>
-                  <div class="diff-line ctx"><div class="diff-ln">8</div><div class="diff-code">  target ← step.transitions[type]</div></div>
-                  <div class="diff-line ctx"><div class="diff-ln">9</div><div class="diff-code">  IF target is none THEN Rejected(no_transition)</div></div>
-                  <div class="diff-line ctx"><div class="diff-ln">10</div><div class="diff-code">  COMMIT atomically at expected_version = instance.version:</div></div>
-                  <div class="diff-line ctx"><div class="diff-ln">11</div><div class="diff-code">    append envelope; current_step ← target; version ← version + 1</div></div>
-                  <div class="diff-line blank"><div class="diff-ln"></div><div class="diff-code"></div></div>
-                  <div class="diff-line blank"><div class="diff-ln"></div><div class="diff-code"></div></div>
-                  <div class="diff-line blank"><div class="diff-ln"></div><div class="diff-code"></div></div>
-                  <div class="diff-line change"><div class="diff-ln">12</div><div class="diff-code">  RETURN Committed(instance.version)</div></div>
-                  <div class="diff-line blank"><div class="diff-ln"></div><div class="diff-code"></div></div>
-                  <div class="diff-line blank"><div class="diff-ln"></div><div class="diff-code"></div></div>
-                  <div class="diff-line blank"><div class="diff-ln"></div><div class="diff-code"></div></div>
-                  <div class="diff-line blank"><div class="diff-ln"></div><div class="diff-code"></div></div>
-                  <div class="diff-line blank"><div class="diff-ln"></div><div class="diff-code"></div></div>
-                  <div class="diff-line blank"><div class="diff-ln"></div><div class="diff-code"></div></div>
-                  <div class="diff-line blank"><div class="diff-ln"></div><div class="diff-code"></div></div>
-                  <div class="diff-line blank"><div class="diff-ln"></div><div class="diff-code"></div></div>
-                  <div class="diff-line blank"><div class="diff-ln"></div><div class="diff-code"></div></div>
-                  <div class="diff-line blank"><div class="diff-ln"></div><div class="diff-code"></div></div>
-                  <div class="diff-line blank"><div class="diff-ln"></div><div class="diff-code"></div></div>
-                </div>
-              </div>
-            </div>
-            <div class="diff-pane">
-              <div class="diff-pane-head">L0b current</div>
-              <div class="diff-pane-scroll">
-                <div class="diff-pane-body">
-                  <div class="diff-line add"><div class="diff-ln">1</div><div class="diff-code">START_INSTANCE(template_ref, task, start_overrides) → Started</div></div>
-                  <div class="diff-line add"><div class="diff-ln">2</div><div class="diff-code">  template ← definitionStore.load(template_ref)</div></div>
-                  <div class="diff-line add"><div class="diff-ln">3</div><div class="diff-code">  binding  ← resolve_binding(template, start_overrides)</div></div>
-                  <div class="diff-line add"><div class="diff-ln">4</div><div class="diff-code">  REQUIRE binding covers every role reachable in template</div></div>
-                  <div class="diff-line add"><div class="diff-ln">5</div><div class="diff-code">  instance ← create { template_ref, task, binding, current_step: template.start, version: 1, status: RUNNING }</div></div>
-                  <div class="diff-line add"><div class="diff-ln">6</div><div class="diff-code">  COMMIT instance creation</div></div>
-                  <div class="diff-line add"><div class="diff-ln">7</div><div class="diff-code">  RETURN Started(instance.version, dispatch_intent(instance, template, template.start))</div></div>
-                  <div class="diff-line add blank"><div class="diff-ln">8</div><div class="diff-code"></div></div>
-                  <div class="diff-line ctx"><div class="diff-ln">9</div><div class="diff-code">HANDLE envelope → Outcome</div></div>
-                  <div class="diff-line ctx"><div class="diff-ln">10</div><div class="diff-code">  IF not valid_shape(envelope) THEN Rejected(invalid_shape)</div></div>
-                  <div class="diff-line ctx"><div class="diff-ln">11</div><div class="diff-code">  instance ← instanceStore.load(envelope.instance_id)</div></div>
-                  <div class="diff-line ctx"><div class="diff-ln">12</div><div class="diff-code">  IF instance is none THEN Rejected(unknown_instance)</div></div>
-                  <div class="diff-line ctx"><div class="diff-ln">13</div><div class="diff-code">  template ← definitionStore.load(instance.template_ref)</div></div>
-                  <div class="diff-line ctx"><div class="diff-ln">14</div><div class="diff-code">  IF instance.transcript.has(envelope.op_id) THEN Duplicate</div></div>
-                  <div class="diff-line add"><div class="diff-ln">15</div><div class="diff-code">  IF envelope.expected_version is missing THEN Rejected(missing_version)</div></div>
-                  <div class="diff-line add"><div class="diff-ln">16</div><div class="diff-code">  IF envelope.expected_version ≠ instance.version THEN Stale(instance.version)</div></div>
-                  <div class="diff-line ctx"><div class="diff-ln">17</div><div class="diff-code">  step   ← template.step(instance.current_step)</div></div>
-                  <div class="diff-line ctx"><div class="diff-ln">18</div><div class="diff-code">  target ← step.transitions[envelope.type]</div></div>
-                  <div class="diff-line ctx"><div class="diff-ln">19</div><div class="diff-code">  IF target is none THEN Rejected(no_transition)</div></div>
-                  <div class="diff-line ctx"><div class="diff-ln">20</div><div class="diff-code">  COMMIT atomically at expected_version = instance.version:</div></div>
-                  <div class="diff-line ctx"><div class="diff-ln">21</div><div class="diff-code">    instance.transcript.append(envelope); instance.current_step ← target</div></div>
-                  <div class="diff-line add"><div class="diff-ln">22</div><div class="diff-code">    IF target is terminal THEN instance.status ← DONE</div></div>
-                  <div class="diff-line add"><div class="diff-ln">23</div><div class="diff-code">    instance.version ← instance.version + 1</div></div>
-                  <div class="diff-line add"><div class="diff-ln">24</div><div class="diff-code">  intent ← (instance.status = DONE) ? none : dispatch_intent(instance, template, instance.current_step)</div></div>
-                  <div class="diff-line change"><div class="diff-ln">25</div><div class="diff-code">  RETURN Committed(instance.version, intent)</div></div>
-                  <div class="diff-line add blank"><div class="diff-ln">26</div><div class="diff-code"></div></div>
-                  <div class="diff-line add"><div class="diff-ln">27</div><div class="diff-code">DISPATCH_INTENT(instance, template, step_id) → DispatchIntent</div></div>
-                  <div class="diff-line add"><div class="diff-ln">28</div><div class="diff-code">  step  ← template.step(step_id)</div></div>
-                  <div class="diff-line add"><div class="diff-ln">29</div><div class="diff-code">  actor ← instance.binding[step.role]</div></div>
-                  <div class="diff-line add"><div class="diff-ln">30</div><div class="diff-code">  packet ← ContextPacket {</div></div>
-                  <div class="diff-line add"><div class="diff-ln">31</div><div class="diff-code">    instance_id, expected_version: instance.version, task: instance.task,</div></div>
-                  <div class="diff-line add"><div class="diff-ln">32</div><div class="diff-code">    instruction:   step.instruction,</div></div>
-                  <div class="diff-line add"><div class="diff-ln">33</div><div class="diff-code">    handoff:       payload_of_transition_into(instance, step_id),</div></div>
-                  <div class="diff-line add"><div class="diff-ln">34</div><div class="diff-code">    available_ops: event_types_of(step.transitions),</div></div>
-                  <div class="diff-line add"><div class="diff-ln">35</div><div class="diff-code">    agent_config:  step.agent_config }</div></div>
-                  <div class="diff-line add"><div class="diff-ln">36</div><div class="diff-code">  RETURN DispatchIntent { actor, packet }</div></div>
-                </div>
-              </div>
-            </div>
-          </div>
-          </div>
+        <div class="code-diff" aria-label="L0b pseudocode" data-old-label="L0a baseline" data-new-label="L0b current">
+          <script type="text/plain" class="diff-source" data-code-old>
+HANDLE envelope → Outcome
+  IF not valid_shape(envelope)            THEN RETURN Rejected(invalid_shape)
+
+  instance ← instanceStore.load(envelope.instance_id)
+  IF instance is none                     THEN RETURN Rejected(unknown_instance)
+  template ← definitionStore.load(instance.template_ref)   # separate store; pinned immutable version
+
+  # idempotency, key scope (instance_id, op_id)
+  IF instance.transcript.has(envelope.op_id) THEN RETURN Duplicate   # no-op, no 2nd entry
+
+  step   ← template.step(instance.current_step)
+  target ← step.transitions[envelope.type]   # on_pass / on_converged
+  IF target is none                       THEN RETURN Rejected(no_transition)
+
+  # one atomic commit, CAS on instance.version
+  COMMIT atomically at expected_version = instance.version:
+    instance.transcript.append(envelope)
+    instance.current_step ← target
+    IF target is terminal THEN instance.status ← DONE
+    instance.version ← instance.version + 1
+  # on CAS conflict: restart HANDLE from load —
+  #   re-check idempotency and re-resolve the transition;
+  #   never re-commit a target computed from stale state
+
+  RETURN Committed(instance.version)
+          </script>
+          <script type="text/plain" class="diff-source" data-code-new>
+START_INSTANCE(template_ref, task, start_overrides) → Started
+  template ← definitionStore.load(template_ref)
+  binding  ← resolve_binding(template, start_overrides)        # template default_actor + start overrides
+  REQUIRE binding covers every role reachable in template      # invariant: fail at start, not mid-run
+  instance ← create { template_ref, task, binding, current_step: template.start, version: 1, status: RUNNING }
+  COMMIT instance creation
+  RETURN Started(instance.version, dispatch_intent(instance, template, template.start))  # derive after commit
+
+HANDLE envelope → Outcome
+  IF not valid_shape(envelope)            THEN RETURN Rejected(invalid_shape)
+  instance ← instanceStore.load(envelope.instance_id)
+  IF instance is none                     THEN RETURN Rejected(unknown_instance)
+  template ← definitionStore.load(instance.template_ref)
+  IF instance.transcript.has(envelope.op_id) THEN RETURN Duplicate            # idempotency FIRST
+  IF envelope.expected_version is missing  THEN RETURN Rejected(missing_version)  # mandatory at L0b
+  IF envelope.expected_version ≠ instance.version THEN RETURN Stale(instance.version)
+  step   ← template.step(instance.current_step)
+  target ← step.transitions[envelope.type]    # transitions: event_type → target
+  IF target is none                       THEN RETURN Rejected(no_transition)
+  COMMIT atomically at expected_version = instance.version:   # records state only; on conflict: restart from load
+    instance.transcript.append(envelope); instance.current_step ← target
+    IF target is terminal THEN instance.status ← DONE
+    instance.version ← instance.version + 1
+  intent ← (instance.status = DONE) ? none : dispatch_intent(instance, template, instance.current_step)  # derive after commit
+  RETURN Committed(instance.version, intent)
+
+DISPATCH_INTENT(instance, template, step_id) → DispatchIntent
+  step  ← template.step(step_id)
+  actor ← instance.binding[step.role]                  # guaranteed present by the start invariant
+  packet ← ContextPacket {
+    instance_id, expected_version: instance.version, task: instance.task,
+    instruction:   step.instruction,
+    handoff:       payload_of_transition_into(instance, step_id),  # the envelope that brought us here; absent at start
+    available_ops: event_types_of(step.transitions),              # PASS / CONVERGED — not on_pass; navigation, not L1
+    agent_config:  step.agent_config }                            # reserved/pass-through until L0c
+  RETURN DispatchIntent { actor, packet }            # a local/manual driver delivers; durable channel is L8
+          </script>
         </div>
 
         <div class="note pseudo">
@@ -727,23 +665,42 @@
         </div>
 
         <h3 class="view-h"><span class="view-tag config">Config</span> The template grows</h3>
-        <pre><span class="k">template</span>:
-  <span class="k">id</span>: <span class="s">local-pair-v0</span>
-  <span class="k">version</span>: <span class="n">1</span>
-  <span class="k">roles</span>:
-    <span class="k">implementer</span>: { <span class="k">default_actor</span>: <span class="s">codex</span> }
-    <span class="k">reviewer</span>:    { <span class="k">default_actor</span>: <span class="s">claude</span> }
-  <span class="k">start</span>: <span class="s">implement</span>
-  <span class="k">steps</span>:
-    - <span class="k">id</span>: <span class="s">implement</span>
-      <span class="k">role</span>: <span class="s">implementer</span>
-      <span class="k">instruction</span>: <span class="s">"Build the change for the task."</span>
-      <span class="k">on_pass</span>: <span class="s">review</span>            <span class="c"># PASS → review</span>
-    - <span class="k">id</span>: <span class="s">review</span>
-      <span class="k">role</span>: <span class="s">reviewer</span>
-      <span class="k">instruction</span>: <span class="s">"Review the diff; pass back or converge."</span>
-      <span class="k">on_pass</span>:      <span class="s">implement</span>     <span class="c"># PASS → implement</span>
-      <span class="k">on_converged</span>: <span class="s">done</span>         <span class="c"># CONVERGED → done</span></pre>
+        <div class="code-diff" aria-label="L0b template config" data-old-label="L0a baseline" data-new-label="L0b current">
+          <script type="text/plain" class="diff-source" data-code-old>
+template:
+  id: local-pair-v0
+  version: 1
+  roles: [implementer, reviewer]   # names only; actor binding is L0b
+  start: implement
+  steps:
+    - id: implement
+      role: implementer
+      on_pass: review
+    - id: review
+      role: reviewer
+      on_pass:      implement   # found something → back
+      on_converged: done        # 'done' is a terminal target, not a step
+          </script>
+          <script type="text/plain" class="diff-source" data-code-new>
+template:
+  id: local-pair-v0
+  version: 1
+  roles:
+    implementer: { default_actor: codex }
+    reviewer:    { default_actor: claude }
+  start: implement
+  steps:
+    - id: implement
+      role: implementer
+      instruction: "Build the change for the task."
+      on_pass: review            # PASS → review
+    - id: review
+      role: reviewer
+      instruction: "Review the diff; pass back or converge."
+      on_pass:      implement     # PASS → implement
+      on_converged: done          # CONVERGED → done
+          </script>
+        </div>
         <div class="note config">
           Roles gain <code>default_actor</code>; steps gain <code>instruction</code> (and an optional
           <code>agent_config</code>, carried but uninterpreted until L0c). The
@@ -778,19 +735,272 @@
     </main>
   </div>
   <script>
-    document.querySelectorAll('.code-diff').forEach(function (panel) {
-      var full = panel.querySelector('.diff-view-full');
-      var split = panel.querySelector('.diff-view-split');
-      var toggle = panel.querySelector('.diff-toggle');
+    function readCode(panel, selector) {
+      var node = panel.querySelector(selector);
+      if (!node) return [];
+      var text = node.textContent.replace(/\r\n?/g, '\n');
+      var lines = text.split('\n');
+      if (lines[0] === '') lines.shift();
+      while (lines.length && /^\s*$/.test(lines[lines.length - 1])) lines.pop();
+      return lines;
+    }
+
+    function escapeHtml(value) {
+      return value
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+    }
+
+    function highlightLine(line) {
+      var comment = '';
+      var code = line;
+      var commentIndex = line.indexOf('#');
+      if (commentIndex >= 0) {
+        code = line.slice(0, commentIndex);
+        comment = line.slice(commentIndex);
+      }
+      var html = escapeHtml(code)
+        .replace(/("[^"]*"|'[^']*')/g, '<span class="s">$1</span>')
+        .replace(/\b(START_INSTANCE|HANDLE|DISPATCH_INTENT|IF|THEN|RETURN|COMMIT|REQUIRE)\b/g, '<span class="kw">$1</span>')
+        .replace(/\b(Rejected\([^)]+\)|Stale\([^)]+\)|Committed\([^)]+\)|Started\([^)]+\)|Duplicate|DispatchIntent|ContextPacket|Outcome)\b/g, '<span class="out">$1</span>')
+        .replace(/^(\s*-?\s*)([A-Za-z_][A-Za-z0-9_]*)(:)/, '$1<span class="k">$2</span>$3')
+        .replace(/(:\s*)([0-9]+)(\b)/g, '$1<span class="n">$2</span>$3');
+      if (comment) html += '<span class="c">' + escapeHtml(comment) + '</span>';
+      return html;
+    }
+
+    function renderLine(parent, line, index, kind) {
+      var row = document.createElement('div');
+      row.className = 'diff-line ' + kind + (line === '' || line == null ? ' blank' : '');
+      var number = document.createElement('div');
+      number.className = 'diff-ln';
+      number.textContent = index == null ? '' : String(index + 1);
+      var code = document.createElement('div');
+      code.className = 'diff-code';
+      code.innerHTML = line == null ? '' : highlightLine(line);
+      row.append(number, code);
+      parent.appendChild(row);
+    }
+
+    function diffKey(line) {
+      if (line == null || line.trim() === '') return null;
+      return line.replace(/\s+#.*$/, '').replace(/\s+/g, ' ').trim();
+    }
+
+    function lineSimilarity(left, right) {
+      var a = diffKey(left);
+      var b = diffKey(right);
+      if (!a || !b) return 0;
+      if (a === b) return 1;
+      var leftTokens = new Set(a.split(/[^A-Za-z0-9_]+/).filter(Boolean));
+      var rightTokens = new Set(b.split(/[^A-Za-z0-9_]+/).filter(Boolean));
+      if (!leftTokens.size || !rightTokens.size) return 0;
+      var shared = 0;
+      leftTokens.forEach(function (token) {
+        if (rightTokens.has(token)) shared += 1;
+      });
+      return shared / Math.max(leftTokens.size, rightTokens.size);
+    }
+
+    function pairChangeBlock(block) {
+      var oldItems = block.filter(function (row) { return row.kind === 'remove'; });
+      var newItems = block.filter(function (row) { return row.kind === 'add'; });
+      var pairedOld = new Set();
+      var pairedNew = new Set();
+      var pairs = [];
+
+      oldItems.forEach(function (oldRow, oldPos) {
+        var best = { score: 0, newPos: -1 };
+        newItems.forEach(function (newRow, newPos) {
+          if (pairedNew.has(newPos)) return;
+          var score = lineSimilarity(oldRow.oldLine, newRow.newLine);
+          if (score > best.score) best = { score: score, newPos: newPos };
+        });
+        if (best.score >= 0.45) {
+          pairedOld.add(oldPos);
+          pairedNew.add(best.newPos);
+          pairs.push({
+            order: Math.min(oldRow.order, newItems[best.newPos].order),
+            oldIndex: oldRow.oldIndex,
+            newIndex: newItems[best.newPos].newIndex,
+            oldLine: oldRow.oldLine,
+            newLine: newItems[best.newPos].newLine,
+            kind: oldRow.oldLine === newItems[best.newPos].newLine ? 'ctx' : 'change'
+          });
+        }
+      });
+
+      oldItems.forEach(function (row, index) {
+        if (!pairedOld.has(index)) pairs.push(row);
+      });
+      newItems.forEach(function (row, index) {
+        if (!pairedNew.has(index)) pairs.push(row);
+      });
+
+      function rowSortKey(row) {
+        if (row.oldIndex != null && row.newIndex != null) return Math.min(row.oldIndex, row.newIndex);
+        if (row.oldIndex != null) return row.oldIndex;
+        return row.newIndex;
+      }
+
+      return pairs.sort(function (a, b) {
+        var keyDelta = rowSortKey(a) - rowSortKey(b);
+        if (keyDelta) return keyDelta;
+        if (a.oldIndex != null && b.oldIndex == null) return -1;
+        if (a.oldIndex == null && b.oldIndex != null) return 1;
+        return a.order - b.order;
+      }).map(function (row) {
+        return {
+          oldIndex: row.oldIndex,
+          newIndex: row.newIndex,
+          oldLine: row.oldLine,
+          newLine: row.newLine,
+          kind: row.kind
+        };
+      });
+    }
+
+    function flushChangeBlock(rows, block) {
+      if (!block.length) return;
+      pairChangeBlock(block).forEach(function (row) { rows.push(row); });
+      block.length = 0;
+    }
+
+    function buildDiffRows(oldLines, newLines) {
+      var rows = [];
+      var block = [];
+      var table = Array.from({ length: oldLines.length + 1 }, function () {
+        return Array(newLines.length + 1).fill(0);
+      });
+      for (var i = oldLines.length - 1; i >= 0; i -= 1) {
+        for (var j = newLines.length - 1; j >= 0; j -= 1) {
+          table[i][j] = diffKey(oldLines[i]) && diffKey(oldLines[i]) === diffKey(newLines[j])
+            ? table[i + 1][j + 1] + 1
+            : Math.max(table[i + 1][j], table[i][j + 1]);
+        }
+      }
+      i = 0; j = 0;
+      while (i < oldLines.length || j < newLines.length) {
+        if (
+          i < oldLines.length && j < newLines.length &&
+          diffKey(oldLines[i]) && diffKey(oldLines[i]) === diffKey(newLines[j])
+        ) {
+          flushChangeBlock(rows, block);
+          rows.push({
+            oldIndex: i,
+            newIndex: j,
+            oldLine: oldLines[i],
+            newLine: newLines[j],
+            kind: oldLines[i] === newLines[j] ? 'ctx' : 'change'
+          });
+          i += 1; j += 1;
+        } else if (j < newLines.length && (i >= oldLines.length || table[i][j + 1] >= table[i + 1][j])) {
+          block.push({ order: rows.length + block.length, oldIndex: null, newIndex: j, oldLine: null, newLine: newLines[j], kind: 'add' });
+          j += 1;
+        } else {
+          block.push({ order: rows.length + block.length, oldIndex: i, newIndex: null, oldLine: oldLines[i], newLine: null, kind: 'remove' });
+          i += 1;
+        }
+      }
+      flushChangeBlock(rows, block);
+      return rows;
+    }
+
+    function renderCodePanel(panel) {
+      var oldLines = readCode(panel, '[data-code-old]');
+      var newLines = readCode(panel, '[data-code-new]');
+      var oldLabel = panel.dataset.oldLabel || 'Previous';
+      var newLabel = panel.dataset.newLabel || 'Current';
+
+      var toolbar = document.createElement('div');
+      toolbar.className = 'diff-toolbar';
+      toolbar.setAttribute('role', 'group');
+      toolbar.setAttribute('aria-label', 'Diff view mode');
+      toolbar.innerHTML = '<div class="diff-labels" aria-hidden="true"><span></span><span></span></div>';
+      toolbar.querySelectorAll('span')[0].textContent = oldLabel;
+      toolbar.querySelectorAll('span')[1].textContent = newLabel;
+      var toggle = document.createElement('button');
+      toggle.className = 'diff-toggle';
+      toggle.type = 'button';
+      toggle.setAttribute('aria-pressed', 'false');
+      toggle.textContent = 'Show diff';
+      toolbar.appendChild(toggle);
+
+      var full = document.createElement('div');
+      full.className = 'diff-view diff-view-full';
+      var fullScroll = document.createElement('div');
+      fullScroll.className = 'full-scroll';
+      var fullBody = document.createElement('div');
+      fullBody.className = 'full-body';
+      newLines.forEach(function (line, index) {
+        renderLine(fullBody, line, index, 'ctx');
+      });
+      fullScroll.appendChild(fullBody);
+      full.appendChild(fullScroll);
+
+      var split = document.createElement('div');
+      split.className = 'diff-view diff-view-split';
+      split.hidden = true;
+      var panes = document.createElement('div');
+      panes.className = 'diff-panes';
+      var oldPane = document.createElement('div');
+      oldPane.className = 'diff-pane';
+      var newPane = document.createElement('div');
+      newPane.className = 'diff-pane';
+      var oldScroll = document.createElement('div');
+      oldScroll.className = 'diff-pane-scroll';
+      var newScroll = document.createElement('div');
+      newScroll.className = 'diff-pane-scroll';
+      var oldBody = document.createElement('div');
+      oldBody.className = 'diff-pane-body';
+      var newBody = document.createElement('div');
+      newBody.className = 'diff-pane-body';
+
+      buildDiffRows(oldLines, newLines).forEach(function (row) {
+        renderLine(oldBody, row.oldLine, row.oldIndex, row.kind === 'add' ? 'blank' : row.kind);
+        renderLine(newBody, row.newLine, row.newIndex, row.kind === 'remove' ? 'blank' : row.kind);
+      });
+      oldScroll.appendChild(oldBody);
+      newScroll.appendChild(newBody);
+      oldPane.appendChild(oldScroll);
+      newPane.appendChild(newScroll);
+      panes.append(oldPane, newPane);
+      split.appendChild(panes);
+
+      var syncingScroll = false;
+      function syncHorizontalScroll(source, target) {
+        source.addEventListener('scroll', function () {
+          if (syncingScroll) return;
+          syncingScroll = true;
+          target.scrollLeft = source.scrollLeft;
+          syncingScroll = false;
+        });
+      }
+      syncHorizontalScroll(oldScroll, newScroll);
+      syncHorizontalScroll(newScroll, oldScroll);
+
+      function equalizePaneWidths() {
+        oldBody.style.minWidth = '';
+        newBody.style.minWidth = '';
+        var width = Math.max(oldBody.scrollWidth, newBody.scrollWidth, 720);
+        oldBody.style.minWidth = width + 'px';
+        newBody.style.minWidth = width + 'px';
+      }
+
+      panel.append(toolbar, full, split);
       toggle.addEventListener('click', function () {
         var diffOn = !panel.classList.contains('is-diff-on');
         panel.classList.toggle('is-diff-on', diffOn);
         full.hidden = diffOn;
         split.hidden = !diffOn;
+        if (diffOn) equalizePaneWidths();
         toggle.setAttribute('aria-pressed', String(diffOn));
         toggle.textContent = diffOn ? 'Show full' : 'Show diff';
       });
-    });
+    }
+
+    document.querySelectorAll('.code-diff').forEach(renderCodePanel);
   </script>
 </body>
 </html>
