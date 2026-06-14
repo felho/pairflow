@@ -624,7 +624,7 @@ DISPATCH_INTENT(instance, template, step_id) → DispatchIntent
     instruction:   step.instruction,
     handoff:       payload_of_transition_into(instance, step_id),  # the envelope that brought us here; absent at start
     available_ops: event_types_of(step.transitions),              # PASS / CONVERGED — not on_pass; navigation, not L1
-    agent_config:  step.agent_config }                            # reserved/pass-through until L0c
+    agent_config:  step.agent_config }                            # raw/optional pass-through until L0c (may be absent)
   RETURN DispatchIntent { actor, packet }            # a local/manual driver delivers; durable channel is L8
           </script>
         </div>
@@ -634,6 +634,9 @@ DISPATCH_INTENT(instance, template, step_id) → DispatchIntent
           START_INSTANCE makes the first dispatch explicit, closing the loop at the front too. And the
           commit/derive split is explicit: the COMMIT writes state, the DispatchIntent is a kernel
           output computed <em>after</em>, so the store stays a dumb recorder, never a deliverer.
+          The check order matters: basic envelope shape, then idempotency (Duplicate), then the
+          L0b-required <code>expected_version</code> — so a duplicate is never rejected as stale, and
+          <code>valid_shape</code> validates basic structure only, it does not require the version.
         </div>
 
         <h3 class="view-h"><span class="view-tag domain">Domain</span> What L0b adds</h3>
@@ -663,7 +666,9 @@ DISPATCH_INTENT(instance, template, step_id) → DispatchIntent
           <b>DDD correction:</b> a step's <code>transitions</code> map <b>event_type → target</b>
           (PASS→review, CONVERGED→done); the config's <code>on_pass</code>/<code>on_converged</code> is
           only the YAML form. So <code>available_ops</code> exposes the <em>event types</em> the actor
-          may emit, not the config keys. <b>ContextPacket / DispatchIntent are not persisted entities</b>
+          may emit, not the config keys. <code>agent_config</code> is a <em>raw/optional</em>
+          pass-through (may be absent), not yet an effective config — L0c resolves it.
+          <b>ContextPacket / DispatchIntent are not persisted entities</b>
           — they are kernel outputs derived from committed state.
         </div>
 
@@ -725,7 +730,7 @@ template:
         <div class="absent-grid">
           <div class="absent-item">No <b>authorization</b> — available_ops is navigation only <span class="at">→ L1</span></div>
           <div class="absent-item">No <b>agent_config interpretation</b> — carried, not read <span class="at">→ L0c</span></div>
-          <div class="absent-item">No <b>gate / policy / round</b> <span class="at">→ L2</span></div>
+          <div class="absent-item">No <b>gate / policy / round limit</b> — the round counter is state; its limit/gate is L2 <span class="at">→ L2</span></div>
           <div class="absent-item">No <b>durable delivery</b> — DispatchIntent goes to a manual driver <span class="at">→ L8</span></div>
           <div class="absent-item">No <b>rich context assembly</b> — handoff is just the prior payload <span class="at">→ §11.4</span></div>
         </div>
