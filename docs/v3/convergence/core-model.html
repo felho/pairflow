@@ -1079,6 +1079,7 @@ DISPATCH_INTENT(instance, template, step_id) → DispatchIntent
     }
 
     function lineSimilarity(left, right) {
+      if (left != null && right != null && left.trim() === '' && right.trim() === '') return 1;
       var a = diffKey(left);
       var b = diffKey(right);
       if (!a || !b) return 0;
@@ -1247,8 +1248,11 @@ DISPATCH_INTENT(instance, template, step_id) → DispatchIntent
       newBody.className = 'diff-pane-body';
 
       buildDiffRows(oldLines, newLines).forEach(function (row) {
-        renderLine(oldBody, row.oldLine, row.oldIndex, row.kind === 'add' ? 'blank' : row.kind);
-        renderLine(newBody, row.newLine, row.newIndex, row.kind === 'remove' ? 'blank' : row.kind);
+        var blankOnlyChange =
+          (row.oldLine == null && row.newLine === '') ||
+          (row.oldLine === '' && row.newLine == null);
+        renderLine(oldBody, row.oldLine, row.oldIndex, blankOnlyChange || row.kind === 'add' ? 'blank' : row.kind);
+        renderLine(newBody, row.newLine, row.newIndex, blankOnlyChange || row.kind === 'remove' ? 'blank' : row.kind);
       });
       oldScroll.appendChild(oldBody);
       newScroll.appendChild(newBody);
