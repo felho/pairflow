@@ -237,11 +237,13 @@ finalization tail (commit/merge) is later (→ L2/L3); only `kickoff_pending` wa
 (human → L3, child → L4, timeout → L9).
 
 **L0e — Runtime context spec / provider contract.**
-Concepts: `Template.runtime_context_spec` (declarative `{ kind, provider, config }`); the
-`RuntimeContextProvider` contract (`provision(instance, request_id, spec)` → eventually
-fires `RUNTIME_CONTEXT_READY`); `RuntimeContextRef` (opaque `{ kind, locator }`,
-provider-defined per kind); the actor-facing **projection** of the ref into the packet's
-`runtime_context`. MVP concrete provider: `pairflow.worktree` (worktree + branch).
+Concepts: `Template.runtime_context` = `RuntimeContextPolicy` = `none | required(spec)`
+(runtime context is **optional** — a context-free planning/decision workflow declares
+`none`); `RuntimeContextSpec` `{ kind, provider, config }`; the `RuntimeContextProvider`
+contract (`provision(instance, request_id, spec)` → eventually fires `RUNTIME_CONTEXT_READY`);
+`RuntimeContextRef` (opaque `{ kind, locator }`, provider-defined per kind); the actor-facing
+**projection** of the ref into the packet's `runtime_context` (or `none` for a context-free
+run). MVP concrete provider: `pairflow.worktree` (worktree + branch).
 Why: the v1 worktree/branch setup is the actor's working precondition — MVP-core, *not* L8
 delivery. This is the **third instance of the L0c pattern**: portable intent
 (`RuntimeContextSpec`) → named fulfiller (`RuntimeContextProvider`) → packet
@@ -251,8 +253,7 @@ implementation-specific; durable delivery remains L8. L0e fills in the opaque
 `request_runtime_context` L0d left, exactly as L2b fills L0c's prompt refs.
 Scope brake: no durable delivery (L8), no actor process launch, no credential/grant (L7),
 no provider-internal mechanics modelled, provider-availability validation deferred.
-Conceptually before L1; built after L0d. **Not yet realized in the HTML — small-spec
-pending.**
+Conceptually before L1; built after L0d. **Realized in core-model.html.**
 
 **L1 — Capability matrix.**
 Concepts: `CapabilityProfile` (matrix `role × current_step → allowed actions`); the Capability
