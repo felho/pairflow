@@ -110,3 +110,4 @@
 - https://github.com/karpathy/autoresearch
 - https://github.com/martian-engineering/lossless-claw
 - https://github.com/chopratejas/headroom
+- https://github.com/GoogleCloudPlatform/knowledge-catalog/blob/main/okf/SPEC.md
