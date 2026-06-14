@@ -1186,10 +1186,14 @@ DISPATCH_INTENT(instance, template, step_id) → DispatchIntent
           </div></div>
         </div>
         <div class="note runtime">
-          The <code>immediate</code> mode skips steps 3–4's hold: <code>RUNTIME_CONTEXT_READY</code> goes straight to
+          The <code>immediate</code> mode skips the hold after <code>RUNTIME_CONTEXT_READY</code>: it goes straight to
           <code>activate</code> and the first dispatch. The ideation hold is just <code>WAITING</code> with
           <code>kind: kickoff_pending</code> — the same machinery later carries <code>human_decision</code>
           (L3), <code>child_workflow</code> (L4) and <code>timeout</code> (L9).
+          <b>Note:</b> <code>immediate</code> does not mean <code>CREATE</code> starts the run by itself — it is a
+          <em>policy</em> for what happens <em>after</em> an operator <code>START</code> requests the runtime context
+          and <code>RUNTIME_CONTEXT_READY</code> arrives (activate now vs enter <code>WAITING(kickoff_pending)</code>).
+          A convenience operator command may compose <code>CREATE_INSTANCE</code> + <code>START</code>.
         </div>
 
         <h3 class="view-h"><span class="view-tag pseudo">Pseudocode</span> The rule behind the trace</h3>
@@ -1220,6 +1224,9 @@ RECEIVE(input) → Outcome                                               # one k
     kernel_event    → dispatch to RUNTIME_CONTEXT_READY / FAIL               # internal events (done is internal-only, below)
     actor_envelope  → HANDLE(input)                                           # the L0a–L1 actor handler, now lifecycle-guarded
 
+# Convenience operator API, not a kernel primitive: a single "start workflow" command may
+# compose CREATE_INSTANCE(...) then START(instance). activation_mode controls what happens
+# after RUNTIME_CONTEXT_READY (activate vs WAITING(kickoff_pending)) — not whether CREATE dispatches.
 CREATE_INSTANCE(template_ref, activation_mode, task, start_overrides, run_overrides) → Created   # operator_intent
   template ← definitionStore.load(template_ref)
   IF activation_mode = immediate AND task is absent THEN RETURN Rejected(task_required)
@@ -1417,7 +1424,7 @@ template:
     reviewer:    { default_actor: claude, default_agent_config: { mode: critic } }
   start: implement
   activation:
-    mode: immediate          # immediate → first dispatch as soon as the workspace is ready
+    mode: immediate          # after START + runtime_context ready, activate immediately; no KICKOFF hold
     # deferred_kickoff → start in a WAITING(kickoff_pending) hold; an operator
     # kickoff supplies the task and releases the first dispatch (the v1 ideation bubble)
   steps:
