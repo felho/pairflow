@@ -255,6 +255,49 @@ Scope brake: no durable delivery (L8), no actor process launch, no credential/gr
 no provider-internal mechanics modelled, provider-availability validation deferred.
 Conceptually before L1; built after L0d. **Realized in core-model.html.**
 
+**L0f — Project/repository configuration and definition resolution.**
+Concepts: a project/repository **resolution layer** (local binding only — central
+registry/store governance is L11+) with two responsibilities. (1) **Definition
+resolution** — select and load the workflow template(s) available in this repo
+(default workflow + sources: local `.pairflow/`, later a central store). (2)
+**Slot/value resolution** — supply repo-scope values for *typed, template-declared
+slots* through a cascade: `template default → project config → CLI/start override →
+run/target override`. The key addition is on the **template side**: the notion of
+**typed slots/holes** — a minimal declaration (`type` + `default` + `required`), not
+yet a full schema system — so repo-specific values are typed bindings, not floating
+strings:
+
+    # template side: typed slot declarations
+    slots:
+      validation.test_command:      { type: command, default: "pnpm test" }
+      runtime.worktree.base_branch: { type: branch,  default: main }
+      runtime.worktree.bootstrap:   { type: command, required: false }
+
+    # project config: repo-local fills
+    defaults:
+      validation.test_command:    "pnpm test -- --runInBand"
+      runtime.worktree.bootstrap: "pnpm install --frozen-lockfile && pnpm build"
+
+The `runtime.worktree.*` slots may feed the L0e provider config: L0e defines the
+runtime-context requirement and provider contract; L0f defines how repo-specific values
+for that requirement can be supplied through typed slots and cascade resolution. Fields
+with meaningful universal defaults may remain template defaults; repo-local values come
+from the project resolution scope.
+Why: v1 already has this layer (`pairflow.toml` `[validation.commands]` —
+`bootstrap`/`test`/`typecheck`/`lint`, plus `--bootstrap-command`/`--test-command`
+overrides). For "the v1 workflow as a v3 config" to work, the repo needs a clean home
+for the parts only it knows (toolchain commands, paths, branch patterns, actor/model
+defaults), kept separate from the **portable** workflow definition. This preserves the
+portable-definition vs repo-local-deployment split **without** forcing every
+`runtime_context` value out of the template.
+Scope brake: L0f adds **no kernel behavior** — it is a binding/resolution layer that
+prepares the resolved inputs `CREATE_INSTANCE` / `START` / provider provisioning
+consume. No central registry/store governance (L11+), no definition PRs (L12), no
+trust (L13). Typed slots stay minimal (type + default + required), not a full
+schema/validation system.
+Conceptually L0-family (project binding under the kernel); not yet realized in
+core-model.html.
+
 **L1 — Capability matrix.**
 Concepts: `CapabilityProfile` (matrix `role × current_step → allowed actions`); the Capability
 Engine as the **role/state authorization layer** — an early check inside `HandleEnvelope`,
