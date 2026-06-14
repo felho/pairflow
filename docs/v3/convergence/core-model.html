@@ -204,7 +204,8 @@
       <a class="level" href="#l0a">L0a <span class="tag">· kernel skeleton</span></a>
       <a class="level" href="#l0b">L0b <span class="tag">· actor + context</span></a>
       <a class="level" href="#l0c">L0c <span class="tag">· agent run config</span></a>
-      <a class="level active" href="#l1">L1 <span class="tag">· capability matrix</span></a>
+      <a class="level" href="#l1">L1 <span class="tag">· capability matrix</span></a>
+      <a class="level active" href="#l0d">L0d <span class="tag">· lifecycle + activation</span></a>
       <div class="future">L2 · gate / policy</div>
       <div class="future">L2b · policy/gate context</div>
       <div class="future">L3 · human decision Ask</div>
@@ -1138,6 +1139,360 @@ DISPATCH_INTENT(instance, template, step_id) → DispatchIntent
           </ul>
         </div>
       </section>
+
+      <section id="l0d">
+        <h2 class="level-h"><span class="level-badge">L0d</span> Instance lifecycle + activation</h2>
+        <p class="level-sub">Separates the instance's macro-<em>lifecycle</em> from its <em>position</em> in the
+        step graph: a run is created, activated once its runtime context is ready, may hold in a typed
+        <code>WAITING</code> state, and ends in exactly one terminal disposition. The kernel also stops
+        pretending every input is an actor envelope.</p>
+
+        <p>Until now the kernel modelled only the inside of an <em>active</em> run (<code>current_step</code>)
+        and assumed every input was an actor envelope. L0d adds <code>kernel_status</code> as a second
+        stored axis next to <code>current_step</code>, names three input <b>source classes</b>
+        (actor / operator / kernel), guards actor emits to <code>ACTIVE</code>, and folds v1's overloaded
+        <code>RUNNING</code> / <code>PREPARING_WORKSPACE</code> / ideation states into
+        <code>kernel_status</code> + a typed <code>wait</code>. Workflow "phase" stays <b>derived</b>, never
+        stored. It is an L0-family concern (foundational lifecycle) but realized <em>on top of</em> L1, so the
+        diff is against the L1 kernel — and the lifecycle guard sits logically <em>ahead</em> of L1's
+        role/action checks.</p>
+
+        <h3 class="view-h"><span class="view-tag runtime">Runtime</span> A concrete trace</h3>
+        <p>An ideation run — created without a task, held for an operator kickoff, then cancelled:</p>
+        <div class="trace">
+          <div class="trace-row"><div class="trace-n">1</div><div class="trace-c">
+            <div class="ev">operator <code>CREATE_INSTANCE</code> { mode: <b>deferred_kickoff</b>, task: ∅ }</div>
+            <div class="meta">binding covers every role ✓ → <code>kernel_status: CREATED</code>, <code>current_step: none</code>, <code>runtime_context: none</code>; no dispatch — not active</div>
+          </div></div>
+          <div class="trace-row"><div class="trace-n">2</div><div class="trace-c">
+            <div class="ev">operator <code>START</code></div>
+            <div class="meta">guarded: runtime_context = none ✓ → requests provisioning, <code>runtime_context ← requested(r1)</code>; status stays <code>CREATED</code> (this is v1's <code>PREPARING_WORKSPACE</code>)</div>
+          </div></div>
+          <div class="trace-row"><div class="trace-n">3</div><div class="trace-c">
+            <div class="ev">kernel event <code>RUNTIME_CONTEXT_READY(r1, ctx_ref{ kind: worktree, path, branch, repo })</code></div>
+            <div class="meta">correlation r1 ✓ → <code>runtime_context ← ready(runtime_context_ref)</code>; mode is deferred → <code>kernel_status ← WAITING</code>, <code>wait { kind: kickoff_pending, resume_events: [KICKOFF] }</code></div>
+          </div></div>
+          <div class="trace-row"><div class="trace-n">4</div><div class="trace-c">
+            <div class="ev">an actor emits <code>PASS</code> now</div>
+            <div class="meta">lifecycle guard: <code>kernel_status ≠ ACTIVE</code> → <b>Rejected(not_active)</b>; no transcript append, no state change</div>
+          </div></div>
+          <div class="trace-row"><div class="trace-n">5</div><div class="trace-c">
+            <div class="ev">operator <code>KICKOFF(task)</code></div>
+            <div class="meta">WAITING + kickoff_pending ✓ → task supplied, <code>activate</code> → <code>kernel_status ACTIVE</code>, <code>current_step implement</code>; first <b>DispatchIntent</b> produced (the L0b path)</div>
+          </div></div>
+          <div class="trace-row"><div class="trace-n">6</div><div class="trace-c">
+            <div class="ev">… the L0a–L1 pair loop runs … later operator <code>CANCEL</code></div>
+            <div class="meta">non-terminal ✓ → <code>kernel_status ← TERMINAL</code>, <code>terminal_disposition ← cancelled</code>; any further actor emit → Rejected(not_active)</div>
+          </div></div>
+        </div>
+        <div class="note runtime">
+          The <code>immediate</code> mode skips steps 3–4's hold: <code>RUNTIME_CONTEXT_READY</code> goes straight to
+          <code>activate</code> and the first dispatch. The ideation hold is just <code>WAITING</code> with
+          <code>kind: kickoff_pending</code> — the same machinery later carries <code>human_decision</code>
+          (L3), <code>child_workflow</code> (L4) and <code>timeout</code> (L9).
+        </div>
+
+        <h3 class="view-h"><span class="view-tag pseudo">Pseudocode</span> The rule behind the trace</h3>
+        <p>A source-routed entry, the lifecycle/activation handlers, and one guard prepended to
+        <code>HANDLE</code> — the first dispatch moves out of instance creation into <code>activate</code>.
+        The lifecycle handlers below omit the commit wrapper for brevity — each mutation is an atomic CAS commit
+        under <code>instance.version</code> unless noted:</p>
+        <div class="code-diff" aria-label="L0d pseudocode" data-old-label="L1 baseline" data-new-label="L0d current">
+          <script type="text/plain" class="diff-source" data-code-old-ref="l1-pseudocode"></script>
+          <script type="text/plain" class="diff-source" data-code-new data-code-id="l0d-pseudocode">
+RESOLVE_AGENT_CONFIG(template, step, instance) → AgentConfig
+  base      ← template.role(step.role).default_agent_config            # role default
+  with_step ← merge(base, step.agent_config)                           # step override (scalars overwrite; arrays/maps replace)
+  override  ← instance.run_overrides.get(step.id, empty_config)         # start/run override (optional per step)
+  # portable run intent; not actor-adapted, provisioned, or attested at L0c
+  RETURN      merge(with_step, override)
+
+CAPABILITY(template, role, step_id) → action set                       # role × step → allowed actions
+  step    ← template.step(step_id)
+  profile ← template.capability_profile.get((role, step_id))
+  IF profile is not none THEN RETURN profile.allowed                    # explicit restriction (none in the baseline)
+  IF role = step.role THEN RETURN event_types_of(step.transitions)      # default-derived: own role may emit the step's transitions
+  RETURN empty_set                                                      # any other role may emit nothing here
+
+RECEIVE(input) → Outcome                                               # one kernel entry; route by input source class
+  MATCH input.source:
+    operator_intent → dispatch to CREATE_INSTANCE / START / KICKOFF / CANCEL   # lifecycle intents
+    kernel_event    → dispatch to RUNTIME_CONTEXT_READY / FAIL               # internal events (done is internal-only, below)
+    actor_envelope  → HANDLE(input)                                           # the L0a–L1 actor handler, now lifecycle-guarded
+
+CREATE_INSTANCE(template_ref, activation_mode, task, start_overrides, run_overrides) → Created   # operator_intent
+  template ← definitionStore.load(template_ref)
+  IF activation_mode = immediate AND task is absent THEN RETURN Rejected(task_required)
+  binding  ← resolve_binding(template, start_overrides)        # template default_actor + start overrides
+  REQUIRE binding covers every role reachable in template      # invariant: fail at create, not mid-run
+  instance ← create { template_ref, task, binding, activation_mode,
+                      kernel_status: CREATED, current_step: none,        # position is meaningless until ACTIVE
+                      runtime_context: none, run_overrides: snapshot(run_overrides), version: 1 }
+  COMMIT instance creation
+  RETURN Created(instance.version)                             # no dispatch yet — not active
+
+START(instance) → Outcome                                             # operator_intent — guarded, single-shot
+  REQUIRE instance.kernel_status = CREATED AND instance.runtime_context = none
+  request_id ← new_request_id()
+  request_runtime_context(instance, request_id)             # placeholder call; provider contract defined at L0e; later fires RUNTIME_CONTEXT_READY
+  instance.runtime_context ← requested(request_id)          # marker; status stays CREATED (= v1 PREPARING_WORKSPACE)
+  RETURN Accepted
+
+RUNTIME_CONTEXT_READY(instance, request_id, runtime_context_ref) → Outcome   # kernel_event (v1: workspace/worktree ready)
+  REQUIRE instance.runtime_context = requested(request_id)   # correlation: the readiness for the request we issued
+  instance.runtime_context ← ready(runtime_context_ref)    # opaque ref { kind, locator }; v1 kind=worktree { path, branch, repo }
+  IF instance.activation_mode = immediate THEN RETURN activate(instance)
+  instance.kernel_status ← WAITING                             # deferred_kickoff: hold for an operator kickoff
+  instance.wait ← { kind: kickoff_pending, requested_by: "activation", resume_events: [KICKOFF] }
+  RETURN Accepted
+
+KICKOFF(instance, task) → Outcome                                     # operator_intent
+  REQUIRE instance.kernel_status = WAITING AND instance.wait.kind = kickoff_pending
+  instance.task ← task                                         # the deferred task, supplied now
+  RETURN activate(instance)
+
+activate(instance) → Outcome                                         # internal — produces the first dispatch
+  REQUIRE instance.runtime_context = ready AND instance.task present
+  template ← definitionStore.load(instance.template_ref)      # pinned immutable version — same template/instance boundary as HANDLE
+  instance.kernel_status ← ACTIVE
+  instance.current_step  ← template.start
+  RETURN Activated(dispatch_intent(instance, template, template.start))   # dispatch is a kernel output (L0b), not a side effect
+
+CANCEL(instance) → Outcome                                           # operator_intent — any non-terminal
+  REQUIRE instance.kernel_status ≠ TERMINAL
+  instance.kernel_status ← TERMINAL ; instance.terminal_disposition ← cancelled
+  RETURN Terminated(cancelled)
+
+COMPLETE(instance)                                                   # internal helper — done originates only from a terminal step (HANDLE), never routed
+  REQUIRE instance.kernel_status = ACTIVE
+  instance.kernel_status ← TERMINAL ; instance.terminal_disposition ← done
+
+FAIL(instance, reason) → Outcome                                     # kernel_event — any non-terminal
+  REQUIRE instance.kernel_status ≠ TERMINAL
+  instance.kernel_status ← TERMINAL ; instance.terminal_disposition ← failed ; instance.failure_reason ← reason
+  RETURN Terminated(failed)
+
+HANDLE envelope → Outcome
+  IF not valid_shape(envelope)            THEN RETURN Rejected(invalid_shape)
+
+  instance ← instanceStore.load(envelope.instance_id)
+  IF instance is none                     THEN RETURN Rejected(unknown_instance)
+  template ← definitionStore.load(instance.template_ref)   # separate store; pinned immutable version
+
+  # idempotency, key scope (instance_id, op_id)
+  IF instance.transcript.has(envelope.op_id) THEN RETURN Duplicate   # no-op, no 2nd entry
+
+  # L0d: lifecycle guard — actor emits only in actor-routable ACTIVE execution
+  IF instance.kernel_status ≠ ACTIVE       THEN RETURN Rejected(not_active)
+
+  # actor-supplied stale-intent — mandatory at L0b
+  IF envelope.expected_version is missing  THEN RETURN Rejected(missing_version)
+  IF envelope.expected_version ≠ instance.version THEN RETURN Stale(instance.version)
+
+  step   ← template.step(instance.current_step)
+
+  # L1: role authority — the claimed role must be this position's active role
+  IF envelope.expected_role is missing     THEN RETURN Rejected(missing_role)          # mandatory at L1
+  IF envelope.expected_role ≠ step.role    THEN RETURN Rejected(role_not_authorized)
+
+  target ← step.transitions[envelope.type]   # navigation (L0b): does this action exist here?
+  IF target is none                       THEN RETURN Rejected(no_transition)
+
+  # L1: action authorization — exists as a transition, but may this role emit it here?
+  IF envelope.type not in capability(template, step.role, instance.current_step)
+                                          THEN RETURN Rejected(not_authorized)
+
+  issued_config ← resolve_agent_config(template, step, instance)   # resolved only now — not for a rejected envelope
+
+  # one atomic commit, CAS on instance.version
+  COMMIT atomically at expected_version = instance.version:
+    instance.transcript.append(envelope, issued_agent_config: issued_config)   # provenance: issued, not proven runtime
+    instance.current_step ← target
+    IF target is terminal THEN COMPLETE(instance)                  # kernel-internal completion path → TERMINAL(done)
+    instance.version ← instance.version + 1
+  # on CAS conflict: restart HANDLE from load —
+  #   re-check idempotency and re-resolve the transition;
+  #   never re-commit a target computed from stale state
+
+  intent ← (instance.kernel_status = TERMINAL) ? none : dispatch_intent(instance, template, instance.current_step)  # derive after commit
+  RETURN Committed(instance.version, intent)
+
+DISPATCH_INTENT(instance, template, step_id) → DispatchIntent
+  step  ← template.step(step_id)
+  actor ← instance.binding[step.role]                  # guaranteed present by the start invariant
+  packet ← ContextPacket {
+    instance_id, expected_version: instance.version, task: instance.task,
+    role:          step.role,                                      # dispatched-as role → echoed back as expected_role
+    instruction:   step.instruction,
+    handoff:       payload_of_transition_into(instance, step_id),  # the envelope that brought us here; absent at start
+    available_ops: event_types_of(step.transitions),              # navigation affordances; L1 enforces capability in HANDLE
+    effective_agent_config: resolve_agent_config(template, step, instance) }  # resolved portable run intent (was raw agent_config at L0b)
+  RETURN DispatchIntent { actor, packet }            # a local/manual driver delivers; durable channel is L8
+          </script>
+        </div>
+        <div class="note pseudo">
+          <code>START_INSTANCE</code> splits into <code>CREATE_INSTANCE</code> (record + binding invariant,
+          <em>no</em> dispatch) and the activation path; the first <code>dispatch_intent</code> now leaves
+          <code>activate</code>, so a created-but-unactivated instance never dispatches. The lifecycle guard
+          sits right after idempotency (so a duplicate of an already-applied op is still <code>Duplicate</code>,
+          not <code>not_active</code>) and before the stale/role/action checks. The three terminal paths
+          differ by origin: <code>COMPLETE</code> is an internal helper HANDLE calls when a transition lands
+          on a terminal step (done is never routed), <code>FAIL</code> is a kernel event, <code>CANCEL</code>
+          an operator intent. Every lifecycle mutation here commits atomically under
+          <code>instance.version</code> just like HANDLE; a replayed actor op (same <code>op_id</code>) is
+          <code>Duplicate</code>, and the lifecycle transitions are single-shot — a second <code>START</code>
+          or a stale <code>RUNTIME_CONTEXT_READY</code> fails its precondition and mutates nothing (a guard
+          rejection, not a silent no-op).
+        </div>
+
+        <h3 class="view-h"><span class="view-tag domain">Domain</span> What L0d adds</h3>
+        <div class="agg">
+          <div class="agg-label">WorkflowInstance — a lifecycle axis beside the step position</div>
+          <div class="ents">
+            <div class="ent"><div class="en">WorkflowInstance</div><div class="fields">… + <b>kernel_status</b>, <b>terminal_disposition?</b>, <b>activation_mode</b>, <b>wait?</b> (when WAITING), <b>runtime_context</b>, <b>failure_reason?</b>; <code>task</code> becomes <b>optional</b> (absent until kickoff in deferred mode)</div></div>
+            <div class="ent"><div class="en">Template</div><div class="fields">… + <b>activation</b> { mode } (the kickoff supplies the deferred task; the start step + roles are already defined)</div></div>
+          </div>
+        </div>
+        <div class="agg">
+          <div class="agg-label">Value objects</div>
+          <div class="ents">
+            <div class="ent"><div class="en">KernelStatus <span style="font-size:10px;color:var(--muted)">(value)</span></div><div class="fields">CREATED | ACTIVE | WAITING | TERMINAL</div></div>
+            <div class="ent"><div class="en">TerminalDisposition <span style="font-size:10px;color:var(--muted)">(value)</span></div><div class="fields">done | failed | cancelled — written exactly once</div></div>
+            <div class="ent"><div class="en">WaitReason <span style="font-size:10px;color:var(--muted)">(value)</span></div><div class="fields">{ kind, requested_by, resume_events }; only <code>kickoff_pending</code> at L0d</div></div>
+            <div class="ent"><div class="en">RuntimeContext <span style="font-size:10px;color:var(--muted)">(value)</span></div><div class="fields">none | requested(request_id) | ready(runtime_context_ref)</div></div>
+            <div class="ent"><div class="en">RuntimeContextRef <span style="font-size:10px;color:var(--muted)">(value)</span></div><div class="fields">opaque { kind, locator }; provider-defined per kind — v1 <code>worktree</code> { path, branch, repo }, later <code>mailbox</code> / <code>browser_session</code>; its actor-facing projection into the packet is added at L0e (raw ref stays kernel-side)</div></div>
+            <div class="ent"><div class="en">ActivationMode <span style="font-size:10px;color:var(--muted)">(value)</span></div><div class="fields">immediate | deferred_kickoff</div></div>
+          </div>
+        </div>
+        <div class="agg">
+          <div class="agg-label">Kernel inputs — the entry is no longer actor-only</div>
+          <div class="ents">
+            <div class="ent"><div class="en">OperatorIntent</div><div class="fields">CREATE / START / KICKOFF / CANCEL — lifecycle intents</div></div>
+            <div class="ent"><div class="en">KernelEvent</div><div class="fields">RUNTIME_CONTEXT_READY / FAIL — internal events (COMPLETE is an internal helper, not routed: done comes only from a terminal step)</div></div>
+            <div class="ent"><div class="en">ActorEnvelope</div><div class="fields">unchanged; joins the others under an <code>input.source</code> discriminator</div></div>
+          </div>
+        </div>
+        <div class="agg" style="border-style:solid;border-color:var(--line);background:var(--panel)">
+          <div class="agg-label" style="color:var(--runtime)">New rejections — before any state change</div>
+          <div class="ents">
+            <div class="ent"><div class="en">Rejected(not_active)</div><div class="fields">an actor emit arrived while kernel_status ≠ ACTIVE</div></div>
+            <div class="ent"><div class="en">Rejected(task_required)</div><div class="fields">immediate activation without a task at create</div></div>
+          </div>
+        </div>
+        <div class="note domain">
+          v1's flat lifecycle enum is split: <code>kernel_status</code> is universal (every run has it),
+          while phase-like states (<code>READY_FOR_HUMAN_APPROVAL</code>, …) are <b>derived</b> from
+          <code>current_step</code>/<code>wait</code>, never a second stored truth. <code>PREPARING_WORKSPACE</code>
+          becomes <code>CREATED</code> + <code>runtime_context: requested</code>; the ideation bubble becomes
+          <code>WAITING(kickoff_pending)</code>. <b>Naming guard:</b> this <code>runtime_context</code> is the
+          actor's <em>workspace</em> (where work happens) — deliberately <em>not</em> v1's
+          <code>execution_context</code>, which is actor-authority/round state (active_role, round,
+          handoff_id, …). In v3 the actor-authority line is the per-emit snapshot (expected_version,
+          expected_role; round later), kept separate from this workspace ref — which is exactly why we
+          renamed it.
+        </div>
+
+        <h3 class="view-h"><span class="view-tag invariant">Invariant</span> New at L0d</h3>
+        <div class="agg invariant">
+          <div class="agg-label">Added rules</div>
+          <div class="ents">
+            <div class="ent"><div class="en">two-axis state</div><div class="fields"><code>current_step</code> is absent before first activation; after activation it stays the execution position across <code>ACTIVE</code> and resumable <code>WAITING</code> states; workflow phase is derived from current_step/wait, never stored</div></div>
+            <div class="ent"><div class="en">actor-routable execution</div><div class="fields">actor envelopes are accepted only when <code>kernel_status = ACTIVE</code> — guarded after idempotency, before stale/role/action</div></div>
+            <div class="ent"><div class="en">uniform commit discipline</div><div class="fields">every lifecycle mutation commits atomically under <code>instance.version</code> / CAS; actor envelopes keep <code>op_id</code> idempotency, while lifecycle inputs are guarded by preconditions and correlation ids (<code>request_id</code>) where applicable — the store stays dumb, the kernel writes meaning atomically</div></div>
+            <div class="ent"><div class="en">typed waiting</div><div class="fields"><code>WAITING</code> always carries a <code>wait.kind</code> and an explicit <code>resume_events</code> class</div></div>
+            <div class="ent"><div class="en">terminal is a sink</div><div class="fields"><code>TERMINAL</code> rejects every state-mutating input (dispatch, actor emit, operator mutation); reads/status queries still allowed; <code>terminal_disposition</code> is written exactly once via COMPLETE / FAIL / CANCEL</div></div>
+            <div class="ent"><div class="en">readiness gates dispatch</div><div class="fields">provisioning is fulfilled by a provider (→ L0e), but <code>activate</code> requires <code>runtime_context = ready</code> — no dispatch into a non-ready context; <code>START</code> is single-shot (requestable only from <code>none</code>)</div></div>
+          </div>
+        </div>
+
+        <h3 class="view-h"><span class="view-tag config">Config</span> The template — gains an activation mode</h3>
+        <div class="code-diff" aria-label="L0d template config" data-old-label="L0c baseline" data-new-label="L0d current">
+          <script type="text/plain" class="diff-source" data-code-old-ref="l0c-template-config"></script>
+          <script type="text/plain" class="diff-source" data-code-new data-code-id="l0d-template-config">
+template:
+  id: local-pair-v0
+  version: 1
+  roles:
+    implementer: { default_actor: codex,  default_agent_config: { mode: builder, model_ref: codex-default-engineer, prompt_profile_refs: [engineer-defaults] } }
+    reviewer:    { default_actor: claude, default_agent_config: { mode: critic } }
+  start: implement
+  activation:
+    mode: immediate          # immediate → first dispatch as soon as the workspace is ready
+    # deferred_kickoff → start in a WAITING(kickoff_pending) hold; an operator
+    # kickoff supplies the task and releases the first dispatch (the v1 ideation bubble)
+  steps:
+    - id: implement
+      role: implementer
+      instruction: "Build the change for the task."
+      agent_config: { approach: systematic }   # overrides/extends the role default
+      on_pass: review            # PASS → review
+    - id: review
+      role: reviewer
+      instruction: "Review the diff; pass back or converge."
+      agent_config: { approach: thorough, prompt_concern_refs: [reviewer-severity-ontology], skill_refs: [test-runner] }
+      on_pass:      implement     # PASS → implement
+      on_converged: done          # CONVERGED → done
+          </script>
+        </div>
+        <div class="note config">
+          <code>activation</code> configures only the birth <b>mode</b> — the start step and roles are already
+          in the template, so no second source of truth. <code>deferred_kickoff</code> is the v1 ideation
+          bubble normalized: a <code>WAITING(kickoff_pending)</code> hold released by an operator kickoff.
+          <em>Who</em> may issue kickoff/cancel is dormant (operator authority comes later), exactly as L1
+          left <code>not_authorized</code> dormant.
+        </div>
+
+        <h3 class="view-h"><span class="view-tag absent">Absent</span> Still not here</h3>
+        <div class="absent-grid">
+          <div class="absent-item">No <b>operator authority / identity</b> — who may issue START / KICKOFF / CANCEL is dormant, like L1's not_authorized <span class="at">→ L7 / L10</span></div>
+          <div class="absent-item">No <b>runtime-context spec / provider contract</b> — what context the template requires and which provider fulfills it (worktree / mailbox / …); L0d consumes only <code>RUNTIME_CONTEXT_READY</code> and stores an opaque ref, provider internals stay implementation <span class="at">→ L0e</span></div>
+          <div class="absent-item">No <b>kickoff payload materialization</b> — KICKOFF here models only task-supply + activation; v1 also writes a task artifact, flips ideation config (<code>task_pending=false</code>, <code>kicked_off_at</code>) and appends a TASK envelope — activation/input materialization (a persistence detail), not the runtime-context provider <span class="at">→ later / impl</span></div>
+          <div class="absent-item">No <b>workflow-specific finalization tail</b> — L0d owns the generic terminal disposition paths (COMPLETE / FAIL / CANCEL); the APPROVED_FOR_COMMIT → COMMITTED commit/merge tail is operator-controlled, later <span class="at">→ L2 / L3</span></div>
+          <div class="absent-item">No <b>human / child / timeout / external waits</b> — WAITING ships with only <code>kickoff_pending</code> <span class="at">→ L3 / L4 / L9</span></div>
+          <div class="absent-item">No <b>retry / compensation / rollback</b> on FAILED <span class="at">→ §18</span></div>
+          <div class="absent-item">No <b>operator-intent audit / provenance</b> — the source class is named, its full authority model is later <span class="at">→ L7 / L10</span></div>
+        </div>
+
+        <h3 class="view-h"><span class="view-tag evidence">Evidence</span> Why we accept L0d for now</h3>
+        <div class="note evidence">
+          <ul style="margin:0">
+            <li><b>Scenario coverage:</b> the v1 ideation lifecycle shape is reproduced/normalized from config — created without a
+              task, held in <code>WAITING(kickoff_pending)</code>, released by an operator kickoff; an actor
+              emit during the hold is rejected as <code>not_active</code>. Immediate runs skip the hold.</li>
+            <li><b>Invariant coverage:</b> two-axis state (current_step absent before first activation, then the execution position across ACTIVE and resumable WAITING) ✓;
+              lifecycle guard after idempotency, before stale/role ✓; typed WAITING + explicit resume class ✓;
+              terminal sink with single-write disposition ✓; readiness gates first dispatch ✓; all
+              L0a/L0b/L0c/L1 invariants still hold.</li>
+            <li><b>Reality check (v11):</b> normalizes — not copies — <code>src/contracts/kernel/lifecycle.ts</code>
+              (10 states) and the cyclic transitions in <code>src/v11/domain/state/transitions.ts</code> into
+              4 <code>kernel_status</code> + a disposition; <code>round</code>/<code>round_role_history</code>
+              in <code>…/state/snapshot/bubbleStateSnapshot.ts</code> confirm position is already separate from
+              lifecycle; kickoff is an operator intent with an ideation precondition
+              (<code>…/kickoff/kickoffCliCommand.ts</code>, mode in <code>…/ideation/ideationConfigTypes.ts</code>);
+              the actor (<code>agent …</code>) vs operator (<code>bubble …</code>) command surfaces are the two
+              input classes.</li>
+            <li><b>v1 cross-check (verified against source):</b> v1's <code>execution_context</code>
+              (<code>…/state/execution/executionContextTypes.ts</code>) is <b>actor-authority/round</b> state
+              (active_role, round, handoff_id, execution_id, attempt, deadline); the worktree path lives
+              separately (<code>runtimeSessionRecord</code> / <code>bubblePaths.worktreePath</code>) — hence our
+              workspace ref is renamed <code>runtime_context</code>, kept apart from the authority snapshot.
+              Provisioning is a <b>synchronous start pipeline</b> (PREPARING_WORKSPACE → bootstrap → session →
+              tmux → RUNNING; <code>…/start/internal/runtime/startCommandFlows.ts</code>) with no explicit event,
+              so <code>RUNTIME_CONTEXT_READY</code> is a v3 abstraction and PREPARING_WORKSPACE is the in-flight
+              marker <code>requested</code> generalizes. v1 ideation start is <b>RUNNING round=0, active_role set,
+              execution_context=null</b> (<code>…/state/startState.ts</code>, guard requires round ≥ 1) — a
+              "RUNNING-but-not-routable" shape v3 normalizes to <code>WAITING(kickoff_pending)</code>. v1 also
+              <b>clears</b> execution_context on waiting/terminal entry while round/active_role survive
+              (<code>…/state/machine.ts</code>), and allows FAILED from any active / CANCELLED from any non-final
+              (<code>…/state/transitions.ts</code>) — so position, actor authority and runtime ref are three
+              separate concerns, FAIL/CANCEL stay broad, and COMPLETE stays ACTIVE-only.</li>
+            <li><b>Known gaps (intended):</b> no operator authority (L7/L10); no runtime-context spec/provider (L0e); no
+              success finalization (L2/L3); only kickoff_pending waits; no retry on FAILED (§18). Each is in
+              Absent.</li>
+            <li><b>Decision:</b> accepted as the L0d baseline (light evidence per playbook §2.1).</li>
+          </ul>
+        </div>
+      </section>
     </main>
   </div>
   <script>
@@ -1187,8 +1542,8 @@ DISPATCH_INTENT(instance, template, step_id) → DispatchIntent
       }
       var html = escapeHtml(code)
         .replace(/("[^"]*"|'[^']*')/g, '<span class="s">$1</span>')
-        .replace(/\b(START_INSTANCE|HANDLE|DISPATCH_INTENT|IF|THEN|RETURN|COMMIT|REQUIRE)\b/g, '<span class="kw">$1</span>')
-        .replace(/\b(Rejected\([^)]+\)|Stale\([^)]+\)|Committed\([^)]+\)|Started\([^)]+\)|Duplicate|DispatchIntent|ContextPacket|Outcome)\b/g, '<span class="out">$1</span>')
+        .replace(/\b(START_INSTANCE|CREATE_INSTANCE|RUNTIME_CONTEXT_READY|DISPATCH_INTENT|RECEIVE|HANDLE|KICKOFF|CANCEL|COMPLETE|FAIL|START|MATCH|IF|THEN|RETURN|COMMIT|REQUIRE)\b/g, '<span class="kw">$1</span>')
+        .replace(/\b(Rejected\([^)]+\)|Stale\([^)]+\)|Committed\([^)]+\)|Started\([^)]+\)|Created\([^)]+\)|Activated\([^)]+\)|Terminated\([^)]+\)|Accepted|Duplicate|DispatchIntent|ContextPacket|Outcome)\b/g, '<span class="out">$1</span>')
         .replace(/^(\s*-?\s*)([A-Za-z_][A-Za-z0-9_]*)(:)/, '$1<span class="k">$2</span>$3')
         .replace(/(:\s*)([0-9]+)(\b)/g, '$1<span class="n">$2</span>$3');
       if (comment) html += '<span class="c">' + escapeHtml(comment) + '</span>';
