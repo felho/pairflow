@@ -203,13 +203,14 @@ Scope brake: in L0c, all `*_refs` are *declared configuration references / run i
 only* — not provisioned capabilities, not credentials, and not proof of availability.
 `model_ref` means "start this run with this model", not kernel model-routing (§14.2).
 Two named later layers resolve these refs: **ActorAdapter** translates run intent into
-actor-runtime-specific launch / tool / model / MCP config; **ContextAssembly** resolves
-`prompt_concern_refs` (together with policy / gate / role / step / runtime sources) into
-the packet's context blocks — distinct from L0b's `instruction`, which is the step's
-direct task. The v3 shift here: in v1 prompt concerns are code-owned (a new gate bakes in
-its prompt fragment); in v3, definitions live in a store, so prompt/context must be
-definition-driven — L0c only opens the slot (the ref), not the assembly.
-Out of scope (later): tool installation / provisioning, prompt/context assembly,
+actor-runtime-specific launch / tool / model / MCP config; **ContextAssembly** (first
+slice at L2b) resolves `prompt_concern_refs` (together with policy / gate / role / step /
+runtime sources) into the packet's context blocks — distinct from L0b's `instruction`,
+which is the step's direct task. The v3 shift here: in v1 prompt concerns are code-owned
+(a new gate bakes in its prompt fragment); in v3, definitions live in a store, so
+prompt/context must be definition-driven — L0c only opens the slot (the ref); it is
+resolved first at L2b, not here.
+Out of scope (later): tool installation / provisioning, prompt/context assembly (→ L2b),
 skill-doc retrieval, memory assembly, model-routing optimization (§14.2),
 credential / grant enforcement (L7).
 
@@ -229,6 +230,31 @@ Concepts: `Gate, PolicyModule, GateDecision` (allow/block/defer); the convergenc
 round logic (P0/P1 block, round gate).
 Why: lift the convergence decision out of the reviewer's bare judgement into an
 auditable, composable policy layer. The operational core of "the workflow is the boss".
+
+**L2b — Policy/gate context contribution (first ContextAssembly slice).**
+Concepts: `context_block` / `prompt_concern_ref` vocabulary; a gate/policy may declare a
+deterministic actor-facing context block; the kernel renders the relevant blocks into
+`ContextPacket.context_blocks` when the affected actor/step is active. This is also where
+the role/step `prompt_concern_refs` declared at L0c finally resolve — **one render
+mechanism, two sources** (AgentConfig refs + gate/policy blocks), so no L0c slot stays
+dangling.
+The L2 / L2b boundary is **enforcement vs communication**, and it is the point of this
+level. **L2 enforces** the rule: on an early `CONVERGED` the kernel/gate rejects, so the
+system stays correct even if the actor ignores its context. **L2b communicates** the
+rule: the reviewer sees in the packet, before acting, that it must not emit `CONVERGED`
+before the allowed round, so it does not burn a round on an emit that would be rejected.
+Both are needed for the MVP — enforcement makes it correct, communication makes the v1
+behaviour reproducible *from configuration*: v1 baked these operating rules into prompt
+prose; v3 must derive them from policy/gate config and decorate the instruction the actor
+sees.
+In scope: context_block ref vocabulary, deterministic resolution from
+template/role/step/policy/gate config, ordered render into `ContextPacket.context_blocks`,
+provenance of which block refs were issued.
+Out of scope (→ §11.4 rich context assembly): semantic retrieval, memory, skill-doc
+expansion, model-specific prompt shaping, adapter-specific prompt conversion.
+Note: placed *after* L2 by the "concrete use case first" rule — the API is designed
+against real `Gate`/`PolicyModule`/`GateDecision` objects, not abstractly. Anchor use
+case: "no `CONVERGED` before round 3". Its own core-model view is built once L2 lands.
 
 **L3 — Human decision Ask.**
 Concepts: lifecycle states `WAITING_HUMAN, READY_FOR_HUMAN_APPROVAL`; the `operator`
