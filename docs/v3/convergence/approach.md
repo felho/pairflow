@@ -237,7 +237,7 @@ finalization tail (commit/merge) is later (→ L2/L3); only `kickoff_pending` wa
 (human → L3, child → L4, timeout → L9).
 
 **L0e — Runtime context spec / provider contract.**
-Concepts: `Template.runtime_context` = `RuntimeContextPolicy` = `none | required(spec)`
+Concepts: `Template.runtime_context` = `RuntimeContextRequirement` = `none | required(spec)`
 (runtime context is **optional** — a context-free planning/decision workflow declares
 `none`); `RuntimeContextSpec` `{ kind, provider, config }`; the `RuntimeContextProvider`
 contract (`provision(instance, request_id, spec)` → eventually fires `RUNTIME_CONTEXT_READY`);

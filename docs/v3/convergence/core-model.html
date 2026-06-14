@@ -1192,7 +1192,7 @@ DISPATCH_INTENT(instance, template, step_id) → DispatchIntent
           <code>kind: kickoff_pending</code> — the same machinery later carries <code>human_decision</code>
           (L3), <code>child_workflow</code> (L4) and <code>timeout</code> (L9).
           <b>Note:</b> <code>immediate</code> does not mean <code>CREATE</code> starts the run by itself — it is a
-          <em>policy</em> for what happens <em>after</em> an operator <code>START</code> requests the runtime context
+          <em>rule</em> for what happens <em>after</em> an operator <code>START</code> requests the runtime context
           and <code>RUNTIME_CONTEXT_READY</code> arrives (activate now vs enter <code>WAITING(kickoff_pending)</code>).
           A convenience operator command may compose <code>CREATE_INSTANCE</code> + <code>START</code>.
         </div>
@@ -1511,7 +1511,7 @@ template:
 
         <p>L0d gave the runtime-context a lifecycle slot (<code>none | requested | ready</code>) and a
         readiness gate, but left <em>what</em> is requested and <em>who</em> fulfils it abstract. L0e adds a
-        <code>RuntimeContextPolicy</code> (<code>none | required(spec)</code>) on the template, the
+        <code>RuntimeContextRequirement</code> (<code>none | required(spec)</code>) on the template, the
         <code>RuntimeContextProvider</code> contract the kernel resolves at <code>START</code> when one is
         required, and the <code>project_for_actor</code> view that re-enters the packet. The kernel owns the
         spec and the contract; provider <em>internals</em> (the git mechanics) are implementation. It is
@@ -1598,14 +1598,14 @@ INTERFACE RuntimeContextProvider:
 START(instance) → Outcome                                             # operator_intent — guarded, single-shot
   REQUIRE instance.kernel_status = CREATED AND instance.runtime_context = none
   template ← definitionStore.load(instance.template_ref)
-  policy   ← template.runtime_context                                 # RuntimeContextPolicy: none | required(spec) — single source of truth
-  IF policy = none THEN                                               # the workflow declares no runtime context
+  requirement ← template.runtime_context                              # RuntimeContextRequirement: none | required(spec) — single source of truth
+  IF requirement = none THEN                                          # the workflow declares no runtime context
     instance.runtime_context ← ready(∅)                               # trivially ready — nothing to provision
     RETURN activate_or_hold(instance)
-  provider ← providerRegistry.resolve(policy.spec.provider)
+  provider ← providerRegistry.resolve(requirement.spec.provider)
   IF provider is none THEN RETURN Rejected(runtime_context_provider_unavailable)   # name-resolution failure = base contract error
   request_id ← new_request_id()
-  provider.provision(instance.id, request_id, policy.spec)  # provider internals run git branch/worktree/clone mechanics; later fires RUNTIME_CONTEXT_READY
+  provider.provision(instance.id, request_id, requirement.spec)  # provider internals run git branch/worktree/clone mechanics; later fires RUNTIME_CONTEXT_READY
   instance.runtime_context ← requested(request_id)          # the L0d single-shot marker; status stays CREATED (= v1 PREPARING_WORKSPACE)
   RETURN Accepted
 
@@ -1618,8 +1618,8 @@ activate_or_hold(instance) → Outcome                                 # shared 
 RUNTIME_CONTEXT_READY(instance, request_id, runtime_context_ref) → Outcome   # kernel_event (v1: workspace/worktree ready)
   REQUIRE instance.runtime_context = requested(request_id)   # L0d correlation: the readiness for the request we issued
   template ← definitionStore.load(instance.template_ref)
-  policy ← template.runtime_context
-  REQUIRE policy = required(spec)                            # a request was issued ⇒ the policy is required (made explicit)
+  requirement ← template.runtime_context
+  REQUIRE requirement = required(spec)                       # a request was issued ⇒ a context is required (made explicit)
   REQUIRE runtime_context_ref.kind = spec.kind              # L0e kind-boundary — a provider may only return a ref of the requested kind
   instance.runtime_context ← ready(runtime_context_ref)    # kernel guards kind + correlation only; the locator stays provider-defined, unvalidated
   RETURN activate_or_hold(instance)
@@ -1698,11 +1698,11 @@ HANDLE envelope → Outcome
 DISPATCH_INTENT(instance, template, step_id) → DispatchIntent
   step  ← template.step(step_id)
   actor ← instance.binding[step.role]                  # guaranteed present by the start invariant
-  policy ← template.runtime_context
+  requirement ← template.runtime_context
   IF instance.runtime_context = ready(∅) THEN                                       # the workflow declared no runtime context
     runtime_view ← none                                                            # explicit: the actor assumes no workspace
   ELSE
-    REQUIRE policy = required(spec)                                                 # provisioned path ⇒ required policy (made explicit)
+    REQUIRE requirement = required(spec)                                            # provisioned path ⇒ a context is required (made explicit)
     provider ← providerRegistry.resolve(spec.provider)                             # the same pinned-template provider that issued the request
     REQUIRE provider is not none                       # kernel/config invariant (not a business rejection): registry stable for an active run
     runtime_view ← provider.project_for_actor(instance.runtime_context.ready_ref)  # actor-facing projection (L0e); raw ref stays kernel-side
@@ -1718,7 +1718,7 @@ DISPATCH_INTENT(instance, template, step_id) → DispatchIntent
           </script>
         </div>
         <div class="note pseudo">
-          <code>START</code> stops being a placeholder: it reads the pinned <code>RuntimeContextPolicy</code>.
+          <code>START</code> stops being a placeholder: it reads the pinned <code>RuntimeContextRequirement</code>.
           If <code>none</code>, the run is trivially <code>ready(∅)</code> and goes straight to
           <code>activate_or_hold</code> — no provider, no provisioning. If <code>required(spec)</code>, it
           resolves the named provider (rejecting an unknown one) and hands off to <code>provision</code> —
@@ -1734,7 +1734,7 @@ DISPATCH_INTENT(instance, template, step_id) → DispatchIntent
         <div class="agg">
           <div class="agg-label">Template &amp; packet — the runtime context becomes declared and projected</div>
           <div class="ents">
-            <div class="ent"><div class="en">Template</div><div class="fields">… + <b>runtime_context</b>: <b>RuntimeContextPolicy</b> = <code>none | required(RuntimeContextSpec { kind, provider, config })</code> — declared, optional</div></div>
+            <div class="ent"><div class="en">Template</div><div class="fields">… + <b>runtime_context</b>: <b>RuntimeContextRequirement</b> = <code>none | required(RuntimeContextSpec { kind, provider, config })</code> — declared, optional</div></div>
             <div class="ent"><div class="en">ContextPacket</div><div class="fields">… + <b>runtime_context</b> (the actor-facing projection L0d deferred, or <code>none</code> for a context-free run)</div></div>
           </div>
         </div>
@@ -1745,7 +1745,7 @@ DISPATCH_INTENT(instance, template, step_id) → DispatchIntent
             <div class="ent"><div class="en">ProviderRegistry</div><div class="fields">resolves <code>spec.provider</code> → a provider; one entry at L0e (<code>pairflow.worktree</code>)</div></div>
             <div class="ent"><div class="en">RuntimeContextProjection <span style="font-size:10px;color:var(--muted)">(value)</span></div><div class="fields">kind-specific actor-facing view, e.g. worktree → { workspace: { path, branch, repo } }</div></div>
             <div class="ent"><div class="en">RuntimeContextRef <span style="font-size:10px;color:var(--muted)">(value, from L0d)</span></div><div class="fields">opaque { kind, locator }; the <b>locator is provider-defined</b> — the kernel guards only its <code>kind</code></div></div>
-            <div class="ent"><div class="en">RuntimeContextPolicy <span style="font-size:10px;color:var(--muted)">(value)</span></div><div class="fields"><code>none</code> (context-free) | <code>required(spec)</code>; lives on the template — a context-free workflow needs no provider at all</div></div>
+            <div class="ent"><div class="en">RuntimeContextRequirement <span style="font-size:10px;color:var(--muted)">(value)</span></div><div class="fields"><code>none</code> (context-free) | <code>required(spec)</code>; lives on the template — a context-free workflow needs no provider at all</div></div>
           </div>
         </div>
         <div class="agg" style="border-style:solid;border-color:var(--line);background:var(--panel)">
@@ -1759,7 +1759,7 @@ DISPATCH_INTENT(instance, template, step_id) → DispatchIntent
           <code>prompt_concern_refs</code>→ContextAssembly, <code>RuntimeContextSpec</code>→RuntimeContextProvider.
           All share one shape: a portable intent in the definition, a named fulfiller, and a projection into
           the packet — none of them L8. <b>Naming:</b> <code>template.runtime_context</code> is the declared
-          <em>policy</em> (<code>none | required(spec)</code>); <code>instance.runtime_context</code> is the L0d
+          <em>requirement</em> (<code>none | required(spec)</code>); <code>instance.runtime_context</code> is the L0d
           lifecycle <em>state</em> (<code>none | requested | ready</code>) — same name, different aggregate
           (definition vs run).
         </div>
@@ -1769,7 +1769,7 @@ DISPATCH_INTENT(instance, template, step_id) → DispatchIntent
           <div class="agg-label">Added rules</div>
           <div class="ents">
             <div class="ent"><div class="en">context is optional</div><div class="fields">a workflow may declare <code>runtime_context = none</code> — then <code>START</code> needs no provider, sets <code>ready(∅)</code>, and the packet carries <code>runtime_context: none</code>; readiness still gates dispatch only when a context is <code>required</code></div></div>
-            <div class="ent"><div class="en">policy is template-owned</div><div class="fields">the <code>RuntimeContextPolicy</code> lives on the pinned template (single source of truth), not snapshotted into instance state — a run-override cascade is possible later, same shape as AgentConfig (L0c)</div></div>
+            <div class="ent"><div class="en">requirement is template-owned</div><div class="fields">the <code>RuntimeContextRequirement</code> lives on the pinned template (single source of truth), not snapshotted into instance state — a run-override cascade is possible later, same shape as AgentConfig (L0c)</div></div>
             <div class="ent"><div class="en">provider resolved at START</div><div class="fields">when a context is required, an unknown <code>spec.provider</code> → <code>Rejected(runtime_context_provider_unavailable)</code> before any provisioning; deeper health/availability is deferred</div></div>
             <div class="ent"><div class="en">kind-boundary only</div><div class="fields">a provider may only return a ref whose <code>kind</code> = the requested spec kind; the kernel guards <b>kind + correlation</b> and treats the locator as opaque (provider-defined, not validated)</div></div>
             <div class="ent"><div class="en">projection, never the ref</div><div class="fields">the packet carries either <code>runtime_context: none</code> or only <code>project_for_actor(ref)</code>, resolved through the <em>same pinned-template provider</em> that issued the request — the raw ref stays kernel-side</div></div>
@@ -1792,7 +1792,7 @@ template:
     mode: immediate          # after START + runtime_context ready, activate immediately; no KICKOFF hold
     # deferred_kickoff → start in a WAITING(kickoff_pending) hold; an operator
     # kickoff supplies the task and releases the first dispatch (the v1 ideation bubble)
-  runtime_context:              # RuntimeContextPolicy — required(spec) here; a context-free workflow declares: runtime_context: none
+  runtime_context:              # RuntimeContextRequirement — required(spec) here; a context-free workflow declares: runtime_context: none
     kind: worktree
     provider: pairflow.worktree
     config:
@@ -1816,7 +1816,7 @@ template:
           </script>
         </div>
         <div class="note config">
-          <code>runtime_context</code> is the <code>RuntimeContextPolicy</code>: a spec block (<em>required</em>)
+          <code>runtime_context</code> is the <code>RuntimeContextRequirement</code>: a spec block (<em>required</em>)
           declares <em>what</em> environment the actor needs and <em>which</em> provider builds it; a
           planning/decision workflow that needs none declares <code>runtime_context: none</code>. The kernel
           never hard-codes worktrees. <code>work_mode: worktree | clone</code> stays inside <code>config</code>
@@ -1832,7 +1832,7 @@ template:
           <div class="absent-item">No <b>provisioning-failure handling</b> — a provider that accepts the name but fails to provision (or fails later) surfaces as a kernel <code>FAIL</code> event (L0d); retry / compensation is later <span class="at">→ later / §18</span></div>
           <div class="absent-item">No <b>run-override cascade</b> of the spec — template-only at L0e <span class="at">→ later</span></div>
           <div class="absent-item">No <b>durable delivery</b> (L8), <b>actor process launch</b> (tmux), or <b>credential / grant</b> (L7)</div>
-          <div class="absent-item">No <b>conditional / per-step runtime context</b> — the policy is whole-run (<code>none | required</code>); a step or child acquiring context later is category 3 <span class="at">→ later</span></div>
+          <div class="absent-item">No <b>conditional / per-step runtime context</b> — the requirement is whole-run (<code>none | required</code>); a step or child acquiring context later is category 3 <span class="at">→ later</span></div>
           <div class="absent-item">No <b>full ContextAssembly</b> — L0e adds only the runtime/workspace projection; general <code>context_blocks</code> rendering <span class="at">→ L2b</span></div>
         </div>
 
@@ -1860,9 +1860,9 @@ template:
             <li><b>Normalization:</b> v1's port is synchronous + worktree-only; v3 makes it async (fire →
               RUNTIME_CONTEXT_READY) and kind-discriminated. <code>work_mode</code> is the first taste of
               provider-internal variation within one kind.</li>
-            <li><b>Known gaps (intended):</b> no provider internals, teardown, health, run-override cascade (each
-              later); no durable delivery (L8) / launch / grant (L7); no full ContextAssembly (L2b). Each is in
-              Absent.</li>
+            <li><b>Known gaps (intended):</b> no provider internals, teardown, health, run-override cascade,
+              provisioning-failure handling, conditional/per-step context (each later); no durable delivery (L8)
+              / launch / grant (L7); no full ContextAssembly (L2b). All captured in Absent.</li>
             <li><b>Decision:</b> accepted as the L0e baseline (light evidence per playbook §2.1).</li>
           </ul>
         </div>
