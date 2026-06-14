@@ -985,8 +985,8 @@ DISPATCH_INTENT(instance, template, step_id) → DispatchIntent
           Roles gain <code>default_agent_config</code> (base profile); steps' <code>agent_config</code>
           now overrides/extends it. The <code>*_refs</code> fields (<code>model_ref</code>,
           <code>prompt_*_refs</code>, <code>skill_refs</code>, <code>tool_policy_ref</code>) are declared
-          references — run intent, not a guarantee the target is installed; <b>ActorAdapter</b> and
-          <b>ContextAssembly</b> resolve them later.
+          references — run intent, not a guarantee the target is installed; <b>ActorAdapter</b>
+          resolves the runtime refs later, <b>ContextAssembly</b> first resolves the prompt refs at L2b.
         </div>
 
         <h3 class="view-h"><span class="view-tag absent">Absent</span> Still not here</h3>
