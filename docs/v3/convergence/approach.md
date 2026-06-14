@@ -185,7 +185,8 @@ execution_id, role, round, state fingerprint) comes later; it matures in stages
 Concepts: `AgentConfig` (v2: mode, approach, skills/tools, persona/profile, execution
 hints); effective-config resolution by cascade (role default → step override →
 start/run override → snapshot at dispatch); the context packet carries the
-`effective_agent_config`; the transcript records which config ran (provenance).
+`effective_agent_config`; the transcript records which config the kernel issued
+(provenance — issued, not proven runtime).
 Why: this answers "*how* should the actor be run", distinct from L0b's "*who* acts and
 what packet". It is context engineering — which kind of agent (e.g. an engineer/developer
 sub-agent with specific skills/tools) performs the work. In v1 this is implicit in
