@@ -176,6 +176,10 @@ explicit v2 design (Role ←filled-by← Actor; `WorkflowTemplate.defaults`;
 start. Dispatch produces a `DispatchIntent` / context packet for a local/manual driver,
 NOT durable delivery (channels / task inbox are L8). `Step.agent_config` (v2) is carried
 as a reserved/pass-through field here, interpreted only at L0c.
+Reality check (v11): `expected_version` is the **minimal actor-authority-snapshot seed** —
+the actor's emit authority, not just a version. v11's richer snapshot (handoff_id,
+execution_id, role, round, state fingerprint) comes later; it matures in stages
+(role ≈ L1, round ≈ L2). Kept narrow now so it grows without over-design.
 
 **L0c — Agent run configuration.**
 Concepts: `AgentConfig` (v2: mode, approach, skills/tools, persona/profile, execution

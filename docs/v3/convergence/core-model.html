@@ -637,6 +637,9 @@ DISPATCH_INTENT(instance, template, step_id) → DispatchIntent
           The check order matters: basic envelope shape, then idempotency (Duplicate), then the
           L0b-required <code>expected_version</code> — so a duplicate is never rejected as stale, and
           <code>valid_shape</code> validates basic structure only, it does not require the version.
+          <code>START_INSTANCE</code> is an abstraction: v11 separates <em>create</em> and <em>start</em>;
+          the core model deliberately shows the persisted-initial-assignment + first-activation core as
+          one step.
         </div>
 
         <h3 class="view-h"><span class="view-tag domain">Domain</span> What L0b adds</h3>
@@ -670,6 +673,8 @@ DISPATCH_INTENT(instance, template, step_id) → DispatchIntent
           pass-through (may be absent), not yet an effective config — L0c resolves it.
           <b>ContextPacket / DispatchIntent are not persisted entities</b>
           — they are kernel outputs derived from committed state.
+          (Future audit/provenance refinement, not an L0b requirement: the round counter could grow
+          into a per-round binding history — v11's <code>round_role_history</code>.)
         </div>
 
         <h3 class="view-h"><span class="view-tag invariant">Invariant</span> New at L0b</h3>
@@ -680,6 +685,16 @@ DISPATCH_INTENT(instance, template, step_id) → DispatchIntent
             <div class="ent"><div class="en">binding coverage at start</div><div class="fields">effective actor_binding must cover every reachable role — fail at start, never a post-commit half-state</div></div>
             <div class="ent"><div class="en">commit ≠ deliver</div><div class="fields">the store records state under atomic commit; DispatchIntent is derived afterwards — the store never delivers</div></div>
           </div>
+        </div>
+        <div class="note invariant">
+          <b><code>expected_version</code> is the smallest form of an actor authority snapshot.</b> It
+          is the actor's <em>emit authority</em> — what it is entitled to act against — not just a
+          version number; the ContextPacket is therefore both <em>context</em> (what to do) and
+          <em>authority</em> (what the emit may assume). v11's richer snapshot adds handoff_id /
+          execution_id / expected_role / expected_round / state fingerprint
+          (<code>src/v11/…/actorEmitContext*</code>); L0b deliberately keeps only the version, and the
+          snapshot matures in stages (role ≈ L1, round ≈ L2, fingerprint later) — kept narrow now so it
+          can grow without over-design.
         </div>
 
         <h3 class="view-h"><span class="view-tag config">Config</span> The template grows</h3>
