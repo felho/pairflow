@@ -215,7 +215,7 @@ skill-doc retrieval, memory assembly, model-routing optimization (§14.2),
 credential / grant enforcement (L7).
 
 **L1 — Capability matrix.**
-Concepts: `CapabilityProfile` (matrix `role × state → allowed actions`); the Capability
+Concepts: `CapabilityProfile` (matrix `role × current_step → allowed actions`); the Capability
 Engine as the **role/state authorization layer** — an early check inside `HandleEnvelope`,
 before the transition commits (not L0b's outbound `DispatchIntent`).
 Why: internal authorization — who may emit which protocol action in which state (the v2

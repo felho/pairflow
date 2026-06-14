@@ -1118,7 +1118,7 @@ DISPATCH_INTENT(instance, template, step_id) → DispatchIntent
           <div class="absent-item">No <b>lifecycle-state authorization</b> — the state dimension is <code>current_step</code> only; "WAITING_HUMAN → operator" <span class="at">→ L3</span></div>
           <div class="absent-item">No <b>actor identity authentication</b> — no token/credential; only role-claim vs active role <span class="at">→ L7 / L10</span></div>
           <div class="absent-item">No <b>gate / policy</b> — capability is structural authorization, not a decision <span class="at">→ L2</span></div>
-          <div class="absent-item">No <b>explicit authored restrictions</b> — default-derived only; the mechanism is present but dormant <span class="at">→ later</span></div>
+          <div class="absent-item">No <b>authored capability restrictions in the baseline</b> — the profile abstraction exists, but derives from the step graph until explicit restrictions are introduced <span class="at">→ later</span></div>
           <div class="absent-item">No <b>capability-filtered packet ops</b> — available_ops still shows all transitions (coincides with the authorized set under default-derived) <span class="at">→ later</span></div>
         </div>
 
