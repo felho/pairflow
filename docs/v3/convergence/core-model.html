@@ -323,7 +323,7 @@
         branches the trace never exercises:</p>
         <div class="code-diff" aria-label="L0a pseudocode" data-old-label="Empty baseline" data-new-label="L0a current">
           <script type="text/plain" class="diff-source" data-code-old></script>
-          <script type="text/plain" class="diff-source" data-code-new>
+          <script type="text/plain" class="diff-source" data-code-new data-code-id="l0a-pseudocode">
 HANDLE envelope → Outcome
   IF not valid_shape(envelope)            THEN RETURN Rejected(invalid_shape)
 
@@ -435,7 +435,7 @@ HANDLE envelope → Outcome
         engine code encodes it:</p>
         <div class="code-diff" aria-label="L0a template config" data-old-label="Empty baseline" data-new-label="L0a current">
           <script type="text/plain" class="diff-source" data-code-old></script>
-          <script type="text/plain" class="diff-source" data-code-new>
+          <script type="text/plain" class="diff-source" data-code-new data-code-id="l0a-template-config">
 template:
   id: local-pair-v0
   version: 1
@@ -550,34 +550,8 @@ template:
         committed state afterwards — the store never delivers.</p>
         <p class="diff-title">L0b pseudocode</p>
         <div class="code-diff" aria-label="L0b pseudocode" data-old-label="L0a baseline" data-new-label="L0b current">
-          <script type="text/plain" class="diff-source" data-code-old>
-HANDLE envelope → Outcome
-  IF not valid_shape(envelope)            THEN RETURN Rejected(invalid_shape)
-
-  instance ← instanceStore.load(envelope.instance_id)
-  IF instance is none                     THEN RETURN Rejected(unknown_instance)
-  template ← definitionStore.load(instance.template_ref)   # separate store; pinned immutable version
-
-  # idempotency, key scope (instance_id, op_id)
-  IF instance.transcript.has(envelope.op_id) THEN RETURN Duplicate   # no-op, no 2nd entry
-
-  step   ← template.step(instance.current_step)
-  target ← step.transitions[envelope.type]   # on_pass / on_converged
-  IF target is none                       THEN RETURN Rejected(no_transition)
-
-  # one atomic commit, CAS on instance.version
-  COMMIT atomically at expected_version = instance.version:
-    instance.transcript.append(envelope)
-    instance.current_step ← target
-    IF target is terminal THEN instance.status ← DONE
-    instance.version ← instance.version + 1
-  # on CAS conflict: restart HANDLE from load —
-  #   re-check idempotency and re-resolve the transition;
-  #   never re-commit a target computed from stale state
-
-  RETURN Committed(instance.version)
-          </script>
-          <script type="text/plain" class="diff-source" data-code-new>
+          <script type="text/plain" class="diff-source" data-code-old-ref="l0a-pseudocode"></script>
+          <script type="text/plain" class="diff-source" data-code-new data-code-id="l0b-pseudocode">
 START_INSTANCE(template_ref, task, start_overrides) → Started
   template ← definitionStore.load(template_ref)
   binding  ← resolve_binding(template, start_overrides)        # template default_actor + start overrides
@@ -700,22 +674,8 @@ DISPATCH_INTENT(instance, template, step_id) → DispatchIntent
 
         <h3 class="view-h"><span class="view-tag config">Config</span> The template grows</h3>
         <div class="code-diff" aria-label="L0b template config" data-old-label="L0a baseline" data-new-label="L0b current">
-          <script type="text/plain" class="diff-source" data-code-old>
-template:
-  id: local-pair-v0
-  version: 1
-  roles: [implementer, reviewer]   # names only; actor binding is L0b
-  start: implement
-  steps:
-    - id: implement
-      role: implementer
-      on_pass: review
-    - id: review
-      role: reviewer
-      on_pass:      implement   # found something → back
-      on_converged: done        # 'done' is a terminal target, not a step
-          </script>
-          <script type="text/plain" class="diff-source" data-code-new>
+          <script type="text/plain" class="diff-source" data-code-old-ref="l0a-template-config"></script>
+          <script type="text/plain" class="diff-source" data-code-new data-code-id="l0b-template-config">
 template:
   id: local-pair-v0
   version: 1
@@ -804,58 +764,8 @@ template:
         <h3 class="view-h"><span class="view-tag pseudo">Pseudocode</span> The rule behind the trace</h3>
         <p>A new resolver, a changed packet field, and a provenance line — the rest of L0b is untouched:</p>
         <div class="code-diff" aria-label="L0c pseudocode" data-old-label="L0b baseline" data-new-label="L0c current">
-          <script type="text/plain" class="diff-source" data-code-old>
-START_INSTANCE(template_ref, task, start_overrides) → Started
-  template ← definitionStore.load(template_ref)
-  binding  ← resolve_binding(template, start_overrides)        # template default_actor + start overrides
-  REQUIRE binding covers every role reachable in template      # invariant: fail at start, not mid-run
-  instance ← create { template_ref, task, binding, current_step: template.start, version: 1, status: RUNNING }
-  COMMIT instance creation
-  RETURN Started(instance.version, dispatch_intent(instance, template, template.start))  # derive after commit
-
-HANDLE envelope → Outcome
-  IF not valid_shape(envelope)            THEN RETURN Rejected(invalid_shape)
-
-  instance ← instanceStore.load(envelope.instance_id)
-  IF instance is none                     THEN RETURN Rejected(unknown_instance)
-  template ← definitionStore.load(instance.template_ref)   # separate store; pinned immutable version
-
-  # idempotency, key scope (instance_id, op_id)
-  IF instance.transcript.has(envelope.op_id) THEN RETURN Duplicate   # no-op, no 2nd entry
-
-  # actor-supplied stale-intent — mandatory at L0b
-  IF envelope.expected_version is missing  THEN RETURN Rejected(missing_version)
-  IF envelope.expected_version ≠ instance.version THEN RETURN Stale(instance.version)
-
-  step   ← template.step(instance.current_step)
-  target ← step.transitions[envelope.type]   # transitions: event_type → target
-  IF target is none                       THEN RETURN Rejected(no_transition)
-
-  # one atomic commit, CAS on instance.version
-  COMMIT atomically at expected_version = instance.version:
-    instance.transcript.append(envelope)
-    instance.current_step ← target
-    IF target is terminal THEN instance.status ← DONE
-    instance.version ← instance.version + 1
-  # on CAS conflict: restart HANDLE from load —
-  #   re-check idempotency and re-resolve the transition;
-  #   never re-commit a target computed from stale state
-
-  intent ← (instance.status = DONE) ? none : dispatch_intent(instance, template, instance.current_step)  # derive after commit
-  RETURN Committed(instance.version, intent)
-
-DISPATCH_INTENT(instance, template, step_id) → DispatchIntent
-  step  ← template.step(step_id)
-  actor ← instance.binding[step.role]                  # guaranteed present by the start invariant
-  packet ← ContextPacket {
-    instance_id, expected_version: instance.version, task: instance.task,
-    instruction:   step.instruction,
-    handoff:       payload_of_transition_into(instance, step_id),  # the envelope that brought us here; absent at start
-    available_ops: event_types_of(step.transitions),              # PASS / CONVERGED — not on_pass; navigation, not L1
-    agent_config:  step.agent_config }                            # raw/optional pass-through until L0c (may be absent)
-  RETURN DispatchIntent { actor, packet }            # a local/manual driver delivers; durable channel is L8
-          </script>
-          <script type="text/plain" class="diff-source" data-code-new>
+          <script type="text/plain" class="diff-source" data-code-old-ref="l0b-pseudocode"></script>
+          <script type="text/plain" class="diff-source" data-code-new data-code-id="l0c-pseudocode">
 RESOLVE_AGENT_CONFIG(template, step, instance) → AgentConfig
   base      ← template.role(step.role).default_agent_config            # role default
   with_step ← merge(base, step.agent_config)                           # step override (scalars overwrite; arrays/maps replace)
@@ -964,26 +874,8 @@ DISPATCH_INTENT(instance, template, step_id) → DispatchIntent
 
         <h3 class="view-h"><span class="view-tag config">Config</span> The template grows</h3>
         <div class="code-diff" aria-label="L0c template config" data-old-label="L0b baseline" data-new-label="L0c current">
-          <script type="text/plain" class="diff-source" data-code-old>
-template:
-  id: local-pair-v0
-  version: 1
-  roles:
-    implementer: { default_actor: codex }
-    reviewer:    { default_actor: claude }
-  start: implement
-  steps:
-    - id: implement
-      role: implementer
-      instruction: "Build the change for the task."
-      on_pass: review            # PASS → review
-    - id: review
-      role: reviewer
-      instruction: "Review the diff; pass back or converge."
-      on_pass:      implement     # PASS → implement
-      on_converged: done          # CONVERGED → done
-          </script>
-          <script type="text/plain" class="diff-source" data-code-new>
+          <script type="text/plain" class="diff-source" data-code-old-ref="l0b-template-config"></script>
+          <script type="text/plain" class="diff-source" data-code-new data-code-id="l0c-template-config">
 template:
   id: local-pair-v0
   version: 1
@@ -1045,14 +937,33 @@ template:
     </main>
   </div>
   <script>
-    function readCode(panel, selector) {
-      var node = panel.querySelector(selector);
-      if (!node) return [];
-      var text = node.textContent.replace(/\r\n?/g, '\n');
-      var lines = text.split('\n');
+    function normalizeCodeText(text) {
+      var lines = text.replace(/\r\n?/g, '\n').split('\n');
       if (lines[0] === '') lines.shift();
       while (lines.length && /^\s*$/.test(lines[lines.length - 1])) lines.pop();
       return lines;
+    }
+
+    function buildCodeSourceRegistry() {
+      var registry = new Map();
+      document.querySelectorAll('[data-code-id]').forEach(function (node) {
+        registry.set(node.dataset.codeId, normalizeCodeText(node.textContent));
+      });
+      return registry;
+    }
+
+    var codeSourceRegistry = buildCodeSourceRegistry();
+
+    function readCode(panel, selector) {
+      var node = panel.querySelector(selector);
+      if (!node) return [];
+      var ref = node.dataset.codeRef || node.dataset.codeOldRef || node.dataset.codeNewRef;
+      if (ref) {
+        if (codeSourceRegistry.has(ref)) return codeSourceRegistry.get(ref);
+        console.warn('Missing code source ref:', ref, panel);
+        return ['# Missing code source: ' + ref];
+      }
+      return normalizeCodeText(node.textContent);
     }
 
     function escapeHtml(value) {
@@ -1222,8 +1133,8 @@ template:
     }
 
     function renderCodePanel(panel) {
-      var oldLines = readCode(panel, '[data-code-old]');
-      var newLines = readCode(panel, '[data-code-new]');
+      var oldLines = readCode(panel, '[data-code-old], [data-code-old-ref]');
+      var newLines = readCode(panel, '[data-code-new], [data-code-new-ref]');
       var oldLabel = panel.dataset.oldLabel || 'Previous';
       var newLabel = panel.dataset.newLabel || 'Current';
 
