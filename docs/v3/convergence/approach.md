@@ -209,9 +209,9 @@ the packet's context blocks — distinct from L0b's `instruction`, which is the 
 direct task. The v3 shift here: in v1 prompt concerns are code-owned (a new gate bakes in
 its prompt fragment); in v3, definitions live in a store, so prompt/context must be
 definition-driven — L0c only opens the slot (the ref), not the assembly.
-Out of scope (later): tool installation / provisioning, skill-doc retrieval,
-memory / context assembly, model-routing optimization (§14.2), credential / grant
-enforcement (L7).
+Out of scope (later): tool installation / provisioning, prompt/context assembly,
+skill-doc retrieval, memory assembly, model-routing optimization (§14.2),
+credential / grant enforcement (L7).
 
 **L1 — Capability matrix.**
 Concepts: `CapabilityProfile` (matrix `role × state → allowed actions`); the Capability

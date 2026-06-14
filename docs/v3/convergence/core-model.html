@@ -787,7 +787,7 @@ template:
           </div></div>
           <div class="trace-row"><div class="trace-n">2</div><div class="trace-c">
             <div class="ev">codex (builder/systematic) emits <code>PASS</code> (version=1)</div>
-            <div class="meta">kernel re-resolves issued_config for <b>implement</b> = same <code>{ mode: builder, approach: systematic }</code> → commit <b>implement → review</b>, transcript records <b>issued_agent_config</b>; next DispatchIntent { claude, effective_agent_config: resolve(review) = <code>{ mode: critic, approach: thorough, skills: [test-runner] }</code> }</div>
+            <div class="meta">kernel re-resolves issued_config for <b>implement</b> = same <code>{ mode: builder, approach: systematic }</code> → commit <b>implement → review</b>, transcript records <b>issued_agent_config</b>; next DispatchIntent { claude, effective_agent_config: resolve(review) = <code>{ mode: critic, approach: thorough, skill_refs: [test-runner] }</code> }</div>
           </div></div>
           <div class="trace-row"><div class="trace-n">3</div><div class="trace-c">
             <div class="ev">claude (critic/thorough) emits <code>CONVERGED</code> (version=2)</div>
@@ -928,7 +928,7 @@ DISPATCH_INTENT(instance, template, step_id) → DispatchIntent
           <div class="ents">
             <div class="ent"><div class="en">Role</div><div class="fields">… + <b>default_agent_config</b> (the base run profile)</div></div>
             <div class="ent"><div class="en">Step</div><div class="fields"><b>agent_config</b> now an override input (no longer raw pass-through)</div></div>
-            <div class="ent"><div class="en">AgentConfig <span style="font-size:10px;color:var(--muted)">(value)</span></div><div class="fields">inline: mode, approach, persona/profile, execution_hints; refs: model_ref, prompt_concern_refs, skill_refs, tool_refs, tool_policy_ref (e.g. MCP) — all portable run intent</div></div>
+            <div class="ent"><div class="en">AgentConfig <span style="font-size:10px;color:var(--muted)">(value)</span></div><div class="fields">inline: mode, approach, persona/profile, execution_hints; refs: model_ref/model_hint, prompt_profile_refs, prompt_concern_refs, skill_refs, tool_refs, tool_policy_ref (e.g. MCP) — all portable run intent</div></div>
           </div>
         </div>
         <div class="agg">
