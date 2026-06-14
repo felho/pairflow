@@ -202,8 +202,8 @@
       <a href="#how">How to read this</a>
       <div class="block">Block A · local core</div>
       <a class="level" href="#l0a">L0a <span class="tag">· kernel skeleton</span></a>
-      <a class="level active" href="#l0b">L0b <span class="tag">· actor + context</span></a>
-      <div class="future">L0c · agent run config</div>
+      <a class="level" href="#l0b">L0b <span class="tag">· actor + context</span></a>
+      <a class="level active" href="#l0c">L0c <span class="tag">· agent run config</span></a>
       <div class="future">L1 · capability matrix</div>
       <div class="future">L2 · gate / policy</div>
       <div class="future">L3 · human decision Ask</div>
@@ -762,6 +762,252 @@ template:
             <li><b>Known gaps (intended):</b> no authorization (L1), agent_config uninterpreted (L0c),
               no gate / round limit (L2), no durable delivery (L8). Each is in Absent.</li>
             <li><b>Decision:</b> accepted as the L0b baseline (light evidence per playbook §2.1).</li>
+          </ul>
+        </div>
+      </section>
+
+      <section id="l0c">
+        <h2 class="level-h"><span class="level-badge">L0c</span> Agent run configuration</h2>
+        <p class="level-sub">Resolves <em>how</em> the assigned actor is run — the effective AgentConfig
+        — so the right kind of agent does the work, not a vanilla one.</p>
+
+        <p>L0b decides <em>who</em> acts and hands them a packet, but carries <code>agent_config</code>
+        raw. L0c answers <em>how</em>: it resolves the effective config by cascade
+        (<b>role default → step override → run override</b>), puts the resolved config in the packet,
+        and records which config the kernel <em>issued</em> in the transcript. This closes the v1 gap
+        where "use sub-agent X" was implicit and merely assumed. It stays a portable <em>run intent</em>
+        — actual provisioning, skill loading, and attestation are later layers.</p>
+
+        <h3 class="view-h"><span class="view-tag runtime">Runtime</span> A concrete trace</h3>
+        <p>One round, showing the cascade resolving and the issued config recorded:</p>
+        <div class="trace">
+          <div class="trace-row"><div class="trace-n">1</div><div class="trace-c">
+            <div class="ev">START_INSTANCE → DispatchIntent { actor: codex, … }</div>
+            <div class="meta">packet <b>agent_config</b> = resolve(implement) = role <code>{ mode: builder }</code> ⊕ step <code>{ approach: systematic }</code> → <b>{ mode: builder, approach: systematic }</b></div>
+          </div></div>
+          <div class="trace-row"><div class="trace-n">2</div><div class="trace-c">
+            <div class="ev">codex (builder/systematic) emits <code>PASS</code> (version=1)</div>
+            <div class="meta">kernel re-resolves issued_config for <b>implement</b> = same <code>{ mode: builder, approach: systematic }</code> → commit <b>implement → review</b>, transcript records <b>issued_agent_config</b>; next DispatchIntent { claude, agent_config: resolve(review) = <code>{ mode: critic, approach: thorough, skills: [test-runner] }</code> }</div>
+          </div></div>
+          <div class="trace-row"><div class="trace-n">3</div><div class="trace-c">
+            <div class="ev">claude (critic/thorough) emits <code>CONVERGED</code> (version=2)</div>
+            <div class="meta">kernel re-resolves issued_config for <b>review</b> = <code>{ mode: critic, … }</code> → commit <b>review → done</b>, transcript records it; terminal — no dispatch</div>
+          </div></div>
+        </div>
+        <div class="note runtime">
+          The config the actor was issued is recomputed at commit from the same deterministic sources
+          the packet used — so the transcript's provenance always matches what was dispatched, without
+          the dispatch having to store anything.
+        </div>
+
+        <h3 class="view-h"><span class="view-tag pseudo">Pseudocode</span> The rule behind the trace</h3>
+        <p>A new resolver, a changed packet field, and a provenance line — the rest of L0b is untouched:</p>
+        <div class="code-diff" aria-label="L0c pseudocode" data-old-label="L0b baseline" data-new-label="L0c current">
+          <script type="text/plain" class="diff-source" data-code-old>
+START_INSTANCE(template_ref, task, start_overrides) → Started
+  template ← definitionStore.load(template_ref)
+  binding  ← resolve_binding(template, start_overrides)        # template default_actor + start overrides
+  REQUIRE binding covers every role reachable in template      # invariant: fail at start, not mid-run
+  instance ← create { template_ref, task, binding, current_step: template.start, version: 1, status: RUNNING }
+  COMMIT instance creation
+  RETURN Started(instance.version, dispatch_intent(instance, template, template.start))  # derive after commit
+
+HANDLE envelope → Outcome
+  IF not valid_shape(envelope)            THEN RETURN Rejected(invalid_shape)
+
+  instance ← instanceStore.load(envelope.instance_id)
+  IF instance is none                     THEN RETURN Rejected(unknown_instance)
+  template ← definitionStore.load(instance.template_ref)   # separate store; pinned immutable version
+
+  # idempotency, key scope (instance_id, op_id)
+  IF instance.transcript.has(envelope.op_id) THEN RETURN Duplicate   # no-op, no 2nd entry
+
+  # actor-supplied stale-intent — mandatory at L0b
+  IF envelope.expected_version is missing  THEN RETURN Rejected(missing_version)
+  IF envelope.expected_version ≠ instance.version THEN RETURN Stale(instance.version)
+
+  step   ← template.step(instance.current_step)
+  target ← step.transitions[envelope.type]   # transitions: event_type → target
+  IF target is none                       THEN RETURN Rejected(no_transition)
+
+  # one atomic commit, CAS on instance.version
+  COMMIT atomically at expected_version = instance.version:
+    instance.transcript.append(envelope)
+    instance.current_step ← target
+    IF target is terminal THEN instance.status ← DONE
+    instance.version ← instance.version + 1
+  # on CAS conflict: restart HANDLE from load —
+  #   re-check idempotency and re-resolve the transition;
+  #   never re-commit a target computed from stale state
+
+  intent ← (instance.status = DONE) ? none : dispatch_intent(instance, template, instance.current_step)  # derive after commit
+  RETURN Committed(instance.version, intent)
+
+DISPATCH_INTENT(instance, template, step_id) → DispatchIntent
+  step  ← template.step(step_id)
+  actor ← instance.binding[step.role]                  # guaranteed present by the start invariant
+  packet ← ContextPacket {
+    instance_id, expected_version: instance.version, task: instance.task,
+    instruction:   step.instruction,
+    handoff:       payload_of_transition_into(instance, step_id),  # the envelope that brought us here; absent at start
+    available_ops: event_types_of(step.transitions),              # PASS / CONVERGED — not on_pass; navigation, not L1
+    agent_config:  step.agent_config }                            # raw/optional pass-through until L0c (may be absent)
+  RETURN DispatchIntent { actor, packet }            # a local/manual driver delivers; durable channel is L8
+          </script>
+          <script type="text/plain" class="diff-source" data-code-new>
+RESOLVE_AGENT_CONFIG(template, step, instance) → AgentConfig
+  base      ← template.role(step.role).default_agent_config            # role default
+  with_step ← merge(base, step.agent_config)                           # step override (scalars overwrite; arrays/maps replace)
+  RETURN      merge(with_step, instance.run_overrides[step.id])         # start/run override
+  # portable run intent; not actor-adapted, provisioned, or attested at L0c
+
+START_INSTANCE(template_ref, task, start_overrides) → Started
+  template ← definitionStore.load(template_ref)
+  binding  ← resolve_binding(template, start_overrides)        # template default_actor + start overrides
+  REQUIRE binding covers every role reachable in template      # invariant: fail at start, not mid-run
+  instance ← create { template_ref, task, binding, current_step: template.start, version: 1, status: RUNNING }
+  COMMIT instance creation
+  RETURN Started(instance.version, dispatch_intent(instance, template, template.start))  # derive after commit
+
+HANDLE envelope → Outcome
+  IF not valid_shape(envelope)            THEN RETURN Rejected(invalid_shape)
+
+  instance ← instanceStore.load(envelope.instance_id)
+  IF instance is none                     THEN RETURN Rejected(unknown_instance)
+  template ← definitionStore.load(instance.template_ref)   # separate store; pinned immutable version
+
+  # idempotency, key scope (instance_id, op_id)
+  IF instance.transcript.has(envelope.op_id) THEN RETURN Duplicate   # no-op, no 2nd entry
+
+  # actor-supplied stale-intent — mandatory at L0b
+  IF envelope.expected_version is missing  THEN RETURN Rejected(missing_version)
+  IF envelope.expected_version ≠ instance.version THEN RETURN Stale(instance.version)
+
+  step   ← template.step(instance.current_step)
+  issued_config ← resolve_agent_config(template, step, instance)   # what the kernel issued; deterministic, no stored state
+  target ← step.transitions[envelope.type]   # transitions: event_type → target
+  IF target is none                       THEN RETURN Rejected(no_transition)
+
+  # one atomic commit, CAS on instance.version
+  COMMIT atomically at expected_version = instance.version:
+    instance.transcript.append(envelope, issued_agent_config: issued_config)   # provenance: issued, not proven runtime
+    instance.current_step ← target
+    IF target is terminal THEN instance.status ← DONE
+    instance.version ← instance.version + 1
+  # on CAS conflict: restart HANDLE from load —
+  #   re-check idempotency and re-resolve the transition;
+  #   never re-commit a target computed from stale state
+
+  intent ← (instance.status = DONE) ? none : dispatch_intent(instance, template, instance.current_step)  # derive after commit
+  RETURN Committed(instance.version, intent)
+
+DISPATCH_INTENT(instance, template, step_id) → DispatchIntent
+  step  ← template.step(step_id)
+  actor ← instance.binding[step.role]                  # guaranteed present by the start invariant
+  packet ← ContextPacket {
+    instance_id, expected_version: instance.version, task: instance.task,
+    instruction:   step.instruction,
+    handoff:       payload_of_transition_into(instance, step_id),  # the envelope that brought us here; absent at start
+    available_ops: event_types_of(step.transitions),              # PASS / CONVERGED — not on_pass; navigation, not L1
+    agent_config:  resolve_agent_config(template, step, instance) }  # resolved effective config (was raw pass-through at L0b)
+  RETURN DispatchIntent { actor, packet }            # a local/manual driver delivers; durable channel is L8
+          </script>
+        </div>
+        <div class="note pseudo">
+          The resolver is pure and deterministic, so the kernel recomputes the issued config at commit
+          rather than the dispatch storing it — which keeps DispatchIntent a stateless kernel output
+          (the L0b commit ≠ deliver rule holds). Note the cascade is the same shape as ActorBinding and
+          model selection (§14.2): one resolution pattern, three uses.
+        </div>
+
+        <h3 class="view-h"><span class="view-tag domain">Domain</span> What L0c adds</h3>
+        <div class="agg">
+          <div class="agg-label">Template aggregate — gains the run profile</div>
+          <div class="ents">
+            <div class="ent"><div class="en">Role</div><div class="fields">… + <b>default_agent_config</b> (the base run profile)</div></div>
+            <div class="ent"><div class="en">Step</div><div class="fields"><b>agent_config</b> now an override input (no longer raw pass-through)</div></div>
+            <div class="ent"><div class="en">AgentConfig <span style="font-size:10px;color:var(--muted)">(value)</span></div><div class="fields">mode, approach, skills/tools refs, persona, hints — portable run intent</div></div>
+          </div>
+        </div>
+        <div class="agg">
+          <div class="agg-label">Instance aggregate — gains run overrides</div>
+          <div class="ents">
+            <div class="ent"><div class="en">WorkflowInstance</div><div class="fields">… + <b>run_overrides</b> (per-step, snapshotted at start)</div></div>
+            <div class="ent"><div class="en">TranscriptEntry</div><div class="fields">… + <b>issued_agent_config</b> (provenance — what the kernel issued)</div></div>
+          </div>
+        </div>
+        <div class="agg" style="border-style:solid;border-color:var(--line);background:var(--panel)">
+          <div class="agg-label" style="color:var(--runtime)">Kernel output — derived, not stored</div>
+          <div class="ents">
+            <div class="ent"><div class="en">effective_agent_config</div><div class="fields">resolve(role default ⊕ step ⊕ run override); computed at dispatch and recomputed at commit</div></div>
+          </div>
+        </div>
+        <div class="note domain">
+          The effective config is never stored as instance state — it is recomputed from immutable
+          sources both when the packet is built and when provenance is recorded. <code>issued_agent_config</code>
+          says what the kernel <em>issued</em>, not that the actor-runtime <em>ran</em> exactly so —
+          that proof is a later executor/attestation concern.
+        </div>
+
+        <h3 class="view-h"><span class="view-tag invariant">Invariant</span> New at L0c</h3>
+        <div class="agg invariant">
+          <div class="agg-label">Added rules</div>
+          <div class="ents">
+            <div class="ent"><div class="en">deterministic provenance</div><div class="fields">issued config is recomputed at commit from the same sources the packet used — not a dispatch-stored value, not an actor echo</div></div>
+            <div class="ent"><div class="en">config sources immutable per dispatched step</div><div class="fields">role defaults, step config, and instance run_overrides cannot change for the dispatched step — else provenance would need a persisted dispatch record</div></div>
+            <div class="ent"><div class="en">issued ≠ proven runtime</div><div class="fields">L0c records what the kernel issued; that the actor ran exactly so is later attestation</div></div>
+          </div>
+        </div>
+
+        <h3 class="view-h"><span class="view-tag config">Config</span> The template grows</h3>
+        <pre><span class="k">template</span>:
+  <span class="k">id</span>: <span class="s">local-pair-v0</span>
+  <span class="k">version</span>: <span class="n">1</span>
+  <span class="k">roles</span>:
+    <span class="k">implementer</span>: { <span class="k">default_actor</span>: <span class="s">codex</span>,  <span class="k">default_agent_config</span>: { <span class="k">mode</span>: <span class="s">builder</span> } }
+    <span class="k">reviewer</span>:    { <span class="k">default_actor</span>: <span class="s">claude</span>, <span class="k">default_agent_config</span>: { <span class="k">mode</span>: <span class="s">critic</span> } }
+  <span class="k">start</span>: <span class="s">implement</span>
+  <span class="k">steps</span>:
+    - <span class="k">id</span>: <span class="s">implement</span>
+      <span class="k">role</span>: <span class="s">implementer</span>
+      <span class="k">instruction</span>: <span class="s">"Build the change for the task."</span>
+      <span class="k">agent_config</span>: { <span class="k">approach</span>: <span class="s">systematic</span> }   <span class="c"># overrides/extends the role default</span>
+      <span class="k">on_pass</span>: <span class="s">review</span>
+    - <span class="k">id</span>: <span class="s">review</span>
+      <span class="k">role</span>: <span class="s">reviewer</span>
+      <span class="k">instruction</span>: <span class="s">"Review the diff; pass back or converge."</span>
+      <span class="k">agent_config</span>: { <span class="k">approach</span>: <span class="s">thorough</span>, <span class="k">skills</span>: [<span class="s">test-runner</span>] }
+      <span class="k">on_pass</span>:      <span class="s">implement</span>
+      <span class="k">on_converged</span>: <span class="s">done</span></pre>
+        <div class="note config">
+          Roles gain <code>default_agent_config</code> (base profile); steps' <code>agent_config</code>
+          now overrides/extends it. <code>skills</code> are declared references — run intent, not a
+          guarantee the skill is installed.
+        </div>
+
+        <h3 class="view-h"><span class="view-tag absent">Absent</span> Still not here</h3>
+        <div class="absent-grid">
+          <div class="absent-item">No <b>tool installation / provisioning</b> — refs only <span class="at">→ later</span></div>
+          <div class="absent-item">No <b>skill-doc retrieval / memory assembly</b> <span class="at">→ §11.4</span></div>
+          <div class="absent-item">No <b>model-routing optimization</b> <span class="at">→ §14.2</span></div>
+          <div class="absent-item">No <b>credential / grant</b> <span class="at">→ L7</span></div>
+          <div class="absent-item">No <b>runtime attestation</b> — issued, not proven <span class="at">→ executor</span></div>
+          <div class="absent-item">No <b>authorization / gate</b> <span class="at">→ L1 / L2</span></div>
+        </div>
+
+        <h3 class="view-h"><span class="view-tag evidence">Evidence</span> Why we accept L0c for now</h3>
+        <div class="note evidence">
+          <ul style="margin:0">
+            <li><b>Scenario coverage:</b> a step declaring <code>mode: builder</code> or a specific
+              reviewer profile gets that <em>resolved</em> config in its packet — the v1 "assumed
+              sub-agent" gap is closed at the declaration level. The transcript shows which config each
+              emit was issued (provenance for later eval/metacognition §16/§17).</li>
+            <li><b>Invariant coverage:</b> deterministic kernel-resolved provenance ✓; config sources
+              immutable per dispatched step ✓; DispatchIntent stays a stateless output (commit ≠ deliver
+              holds) ✓; all L0a/L0b invariants still hold.</li>
+            <li><b>Known gaps (intended):</b> no provisioning/attestation; no skill-doc/memory (§11.4);
+              no model routing (§14.2); no authorization (L1). Each is in Absent.</li>
+            <li><b>Decision:</b> accepted as the L0c baseline (light evidence per playbook §2.1).</li>
           </ul>
         </div>
       </section>
