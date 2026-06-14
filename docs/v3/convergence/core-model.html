@@ -206,6 +206,7 @@
       <a class="level active" href="#l0c">L0c <span class="tag">· agent run config</span></a>
       <div class="future">L1 · capability matrix</div>
       <div class="future">L2 · gate / policy</div>
+      <div class="future">L2b · policy/gate context</div>
       <div class="future">L3 · human decision Ask</div>
       <div class="future">L4 · child workflow + events</div>
       <div class="cut">▲ MVP cut — local WF-7 runs</div>
@@ -962,25 +963,48 @@ DISPATCH_INTENT(instance, template, step_id) → DispatchIntent
         </div>
 
         <h3 class="view-h"><span class="view-tag config">Config</span> The template grows</h3>
-        <pre><span class="k">template</span>:
-  <span class="k">id</span>: <span class="s">local-pair-v0</span>
-  <span class="k">version</span>: <span class="n">1</span>
-  <span class="k">roles</span>:
-    <span class="k">implementer</span>: { <span class="k">default_actor</span>: <span class="s">codex</span>,  <span class="k">default_agent_config</span>: { <span class="k">mode</span>: <span class="s">builder</span>, <span class="k">model_ref</span>: <span class="s">codex-default-engineer</span>, <span class="k">prompt_profile_refs</span>: [<span class="s">engineer-defaults</span>] } }
-    <span class="k">reviewer</span>:    { <span class="k">default_actor</span>: <span class="s">claude</span>, <span class="k">default_agent_config</span>: { <span class="k">mode</span>: <span class="s">critic</span> } }
-  <span class="k">start</span>: <span class="s">implement</span>
-  <span class="k">steps</span>:
-    - <span class="k">id</span>: <span class="s">implement</span>
-      <span class="k">role</span>: <span class="s">implementer</span>
-      <span class="k">instruction</span>: <span class="s">"Build the change for the task."</span>
-      <span class="k">agent_config</span>: { <span class="k">approach</span>: <span class="s">systematic</span> }   <span class="c"># overrides/extends the role default</span>
-      <span class="k">on_pass</span>: <span class="s">review</span>
-    - <span class="k">id</span>: <span class="s">review</span>
-      <span class="k">role</span>: <span class="s">reviewer</span>
-      <span class="k">instruction</span>: <span class="s">"Review the diff; pass back or converge."</span>
-      <span class="k">agent_config</span>: { <span class="k">approach</span>: <span class="s">thorough</span>, <span class="k">prompt_concern_refs</span>: [<span class="s">reviewer-severity-ontology</span>], <span class="k">skill_refs</span>: [<span class="s">test-runner</span>] }
-      <span class="k">on_pass</span>:      <span class="s">implement</span>
-      <span class="k">on_converged</span>: <span class="s">done</span></pre>
+        <div class="code-diff" aria-label="L0c template config" data-old-label="L0b baseline" data-new-label="L0c current">
+          <script type="text/plain" class="diff-source" data-code-old>
+template:
+  id: local-pair-v0
+  version: 1
+  roles:
+    implementer: { default_actor: codex }
+    reviewer:    { default_actor: claude }
+  start: implement
+  steps:
+    - id: implement
+      role: implementer
+      instruction: "Build the change for the task."
+      on_pass: review            # PASS → review
+    - id: review
+      role: reviewer
+      instruction: "Review the diff; pass back or converge."
+      on_pass:      implement     # PASS → implement
+      on_converged: done          # CONVERGED → done
+          </script>
+          <script type="text/plain" class="diff-source" data-code-new>
+template:
+  id: local-pair-v0
+  version: 1
+  roles:
+    implementer: { default_actor: codex,  default_agent_config: { mode: builder, model_ref: codex-default-engineer, prompt_profile_refs: [engineer-defaults] } }
+    reviewer:    { default_actor: claude, default_agent_config: { mode: critic } }
+  start: implement
+  steps:
+    - id: implement
+      role: implementer
+      instruction: "Build the change for the task."
+      agent_config: { approach: systematic }   # overrides/extends the role default
+      on_pass: review            # PASS → review
+    - id: review
+      role: reviewer
+      instruction: "Review the diff; pass back or converge."
+      agent_config: { approach: thorough, prompt_concern_refs: [reviewer-severity-ontology], skill_refs: [test-runner] }
+      on_pass:      implement     # PASS → implement
+      on_converged: done          # CONVERGED → done
+          </script>
+        </div>
         <div class="note config">
           Roles gain <code>default_agent_config</code> (base profile); steps' <code>agent_config</code>
           now overrides/extends it. The <code>*_refs</code> fields (<code>model_ref</code>,
