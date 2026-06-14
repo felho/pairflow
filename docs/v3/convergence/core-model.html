@@ -600,7 +600,7 @@ HANDLE envelope → Outcome
   IF envelope.expected_version ≠ instance.version THEN RETURN Stale(instance.version)
 
   step   ← template.step(instance.current_step)
-  target ← step.transitions[envelope.type]   # on_pass / on_converged
+  target ← step.transitions[envelope.type]   # transitions: event_type → target
   IF target is none                       THEN RETURN Rejected(no_transition)
 
   # one atomic commit, CAS on instance.version
