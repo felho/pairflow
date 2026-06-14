@@ -243,6 +243,50 @@ HandleEnvelope(envelope):
 - Avoid TypeScript syntax unless an interface shape is truly needed.
 - Avoid implementation infrastructure unless store semantics are the thing being designed.
 
+### Core-Model Code Diff Convention
+
+In `core-model.html`, pseudocode and config snippets should use the reusable
+code-diff component instead of hand-written `<pre>` blocks or manually aligned
+HTML diff rows.
+
+Use it for:
+
+- protocol pseudocode,
+- template/config snippets,
+- any later level where the reader should compare the previous level with the
+  current one.
+
+The author-facing shape is:
+
+```html
+<div class="code-diff" aria-label="L0b pseudocode"
+     data-old-label="L0a baseline" data-new-label="L0b current">
+  <script type="text/plain" class="diff-source" data-code-old>
+previous code here
+  </script>
+  <script type="text/plain" class="diff-source" data-code-new>
+current code here
+  </script>
+</div>
+```
+
+Rules:
+
+- The default view is the full current code (`data-code-new`).
+- The toggle shows the generated side-by-side diff.
+- For a first-level snippet with no predecessor, keep `data-code-old` empty and
+  label it as an empty baseline.
+- Put meaningful comments directly in the source blocks; the renderer may ignore
+  comments for line matching, but it still renders them in the code view.
+- Do not hand-align rows, insert visual spacer rows, or duplicate the same code
+  as a separate full snippet. If alignment looks wrong, improve the component or
+  the source code structure.
+- Keep old/current snippets semantically comparable. If one side has explanatory
+  comments that are not part of the other side, they should still appear as
+  removed/added lines rather than being dropped.
+- Use the same component for config changes, not only pseudocode, so the
+  relationship between domain behavior and template shape stays visible.
+
 ### Pseudocode Quality Gate
 
 Pseudocode is not good enough until it answers:
