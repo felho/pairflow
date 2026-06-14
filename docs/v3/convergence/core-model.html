@@ -928,7 +928,7 @@ DISPATCH_INTENT(instance, template, step_id) → DispatchIntent
           <div class="ents">
             <div class="ent"><div class="en">Role</div><div class="fields">… + <b>default_agent_config</b> (the base run profile)</div></div>
             <div class="ent"><div class="en">Step</div><div class="fields"><b>agent_config</b> now an override input (no longer raw pass-through)</div></div>
-            <div class="ent"><div class="en">AgentConfig <span style="font-size:10px;color:var(--muted)">(value)</span></div><div class="fields">mode, approach, skills/tools refs, persona, hints — portable run intent</div></div>
+            <div class="ent"><div class="en">AgentConfig <span style="font-size:10px;color:var(--muted)">(value)</span></div><div class="fields">inline: mode, approach, persona/profile, execution_hints; refs: model_ref, prompt_concern_refs, skill_refs, tool_refs, tool_policy_ref (e.g. MCP) — all portable run intent</div></div>
           </div>
         </div>
         <div class="agg">
@@ -966,7 +966,7 @@ DISPATCH_INTENT(instance, template, step_id) → DispatchIntent
   <span class="k">id</span>: <span class="s">local-pair-v0</span>
   <span class="k">version</span>: <span class="n">1</span>
   <span class="k">roles</span>:
-    <span class="k">implementer</span>: { <span class="k">default_actor</span>: <span class="s">codex</span>,  <span class="k">default_agent_config</span>: { <span class="k">mode</span>: <span class="s">builder</span> } }
+    <span class="k">implementer</span>: { <span class="k">default_actor</span>: <span class="s">codex</span>,  <span class="k">default_agent_config</span>: { <span class="k">mode</span>: <span class="s">builder</span>, <span class="k">model_ref</span>: <span class="s">codex-default-engineer</span>, <span class="k">prompt_profile_refs</span>: [<span class="s">engineer-defaults</span>] } }
     <span class="k">reviewer</span>:    { <span class="k">default_actor</span>: <span class="s">claude</span>, <span class="k">default_agent_config</span>: { <span class="k">mode</span>: <span class="s">critic</span> } }
   <span class="k">start</span>: <span class="s">implement</span>
   <span class="k">steps</span>:
@@ -978,18 +978,21 @@ DISPATCH_INTENT(instance, template, step_id) → DispatchIntent
     - <span class="k">id</span>: <span class="s">review</span>
       <span class="k">role</span>: <span class="s">reviewer</span>
       <span class="k">instruction</span>: <span class="s">"Review the diff; pass back or converge."</span>
-      <span class="k">agent_config</span>: { <span class="k">approach</span>: <span class="s">thorough</span>, <span class="k">skills</span>: [<span class="s">test-runner</span>] }
+      <span class="k">agent_config</span>: { <span class="k">approach</span>: <span class="s">thorough</span>, <span class="k">prompt_concern_refs</span>: [<span class="s">reviewer-severity-ontology</span>], <span class="k">skill_refs</span>: [<span class="s">test-runner</span>] }
       <span class="k">on_pass</span>:      <span class="s">implement</span>
       <span class="k">on_converged</span>: <span class="s">done</span></pre>
         <div class="note config">
           Roles gain <code>default_agent_config</code> (base profile); steps' <code>agent_config</code>
-          now overrides/extends it. <code>skills</code> are declared references — run intent, not a
-          guarantee the skill is installed.
+          now overrides/extends it. The <code>*_refs</code> fields (<code>model_ref</code>,
+          <code>prompt_*_refs</code>, <code>skill_refs</code>, <code>tool_policy_ref</code>) are declared
+          references — run intent, not a guarantee the target is installed; <b>ActorAdapter</b> and
+          <b>ContextAssembly</b> resolve them later.
         </div>
 
         <h3 class="view-h"><span class="view-tag absent">Absent</span> Still not here</h3>
         <div class="absent-grid">
           <div class="absent-item">No <b>actor-runtime adaptation</b> — portable run intent only; a later <b>ActorAdapter</b> maps it to Codex / Claude Code / OpenCode launch/context/tool config <span class="at">→ executor</span></div>
+          <div class="absent-item">No <b>prompt/context assembly</b> — config/policy/gate-declared prompt concerns are not resolved or rendered yet; a later <b>ContextAssembly</b> builds the packet's context blocks <span class="at">→ later</span></div>
           <div class="absent-item">No <b>tool installation / provisioning</b> — refs only <span class="at">→ later</span></div>
           <div class="absent-item">No <b>skill-doc retrieval / memory assembly</b> <span class="at">→ §11.4</span></div>
           <div class="absent-item">No <b>model-routing optimization</b> <span class="at">→ §14.2</span></div>
@@ -1008,8 +1011,9 @@ DISPATCH_INTENT(instance, template, step_id) → DispatchIntent
             <li><b>Invariant coverage:</b> deterministic kernel-resolved provenance ✓; config sources
               immutable per dispatched step ✓; DispatchIntent stays a stateless output (commit ≠ deliver
               holds) ✓; all L0a/L0b invariants still hold.</li>
-            <li><b>Known gaps (intended):</b> no actor-runtime adaptation; no provisioning/attestation;
-              no skill-doc/memory (§11.4); no model routing (§14.2); no authorization (L1). Each is in Absent.</li>
+            <li><b>Known gaps (intended):</b> no actor-runtime adaptation; no prompt/context assembly;
+              no provisioning/attestation; no skill-doc/memory (§11.4); no model routing (§14.2);
+              no authorization (L1). Each is in Absent.</li>
             <li><b>Decision:</b> accepted as the L0c baseline (light evidence per playbook §2.1).</li>
           </ul>
         </div>

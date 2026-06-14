@@ -182,8 +182,11 @@ execution_id, role, round, state fingerprint) comes later; it matures in stages
 (role ≈ L1, round ≈ L2). Kept narrow now so it grows without over-design.
 
 **L0c — Agent run configuration.**
-Concepts: `AgentConfig` (v2: mode, approach, skills/tools, persona/profile, execution
-hints); effective-config resolution by cascade (role default → step override →
+Concepts: `AgentConfig` — inline run intent (mode, approach, persona/profile,
+`execution_hints`) plus declared references (`model_ref` / `model_hint`,
+`prompt_profile_refs` / `prompt_concern_refs`, `skill_refs`, `tool_refs`,
+`tool_policy_ref` — e.g. MCP policy); effective-config resolution by cascade
+(role default → step override →
 start/run override), computed at dispatch and recomputed at commit for provenance —
 never persisted as instance state; the context packet carries the
 `effective_agent_config`; the transcript records which config the kernel issued
@@ -196,8 +199,16 @@ available); L0c makes it explicit and recorded. The resolution cascade is the sa
 pattern as ActorBinding and as model selection (§14.2) — model routing itself stays
 deferred. Coherence: L0b runs L0c-free with vanilla actors (the loop still closes); L0c
 is a clean layer on top — which is why it is its own level, not an L0b appendix.
-Scope brake: in L0c, `skills/tools` are *declared configuration references / run intent
+Scope brake: in L0c, all `*_refs` are *declared configuration references / run intent
 only* — not provisioned capabilities, not credentials, and not proof of availability.
+`model_ref` means "start this run with this model", not kernel model-routing (§14.2).
+Two named later layers resolve these refs: **ActorAdapter** translates run intent into
+actor-runtime-specific launch / tool / model / MCP config; **ContextAssembly** resolves
+`prompt_concern_refs` (together with policy / gate / role / step / runtime sources) into
+the packet's context blocks — distinct from L0b's `instruction`, which is the step's
+direct task. The v3 shift here: in v1 prompt concerns are code-owned (a new gate bakes in
+its prompt fragment); in v3, definitions live in a store, so prompt/context must be
+definition-driven — L0c only opens the slot (the ref), not the assembly.
 Out of scope (later): tool installation / provisioning, skill-doc retrieval,
 memory / context assembly, model-routing optimization (§14.2), credential / grant
 enforcement (L7).
