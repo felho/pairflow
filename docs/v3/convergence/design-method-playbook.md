@@ -287,6 +287,17 @@ Rules:
 - Use the same component for config changes, not only pseudocode, so the
   relationship between domain behavior and template shape stays visible.
 
+**Minimal-diff discipline (carry into every level).** A line — code *or* comment —
+should change only when its *meaning* actually changed. On the old side, reproduce the
+previous level's snippet exactly (same comments, same line breaks, same blank lines); on
+the new side, keep every unchanged line byte-identical and let only the genuinely
+new/changed lines differ. A reworded comment, a collapsed two-line block, or a reflowed
+blank line that carries no new meaning reads as a **false change** and buries the real
+ones. Rule of thumb: if you cannot name what new behaviour a changed line introduces,
+revert it to the old form. A comment that *became wrong* because the logic changed must
+be updated; a comment that is merely a cosmetic rephrase must not. (Worth a quick check
+each level: does the side-by-side diff highlight only the real additions?)
+
 ### Pseudocode Quality Gate
 
 Pseudocode is not good enough until it answers:
