@@ -1071,6 +1071,10 @@ DISPATCH_INTENT(instance, template, step_id) → DispatchIntent
 
     function diffKey(line) {
       if (line == null || line.trim() === '') return null;
+      var trimmed = line.trim();
+      if (trimmed.startsWith('#')) {
+        return 'comment:' + trimmed.replace(/\s+/g, ' ');
+      }
       return line.replace(/\s+#.*$/, '').replace(/\s+/g, ' ').trim();
     }
 
@@ -1125,9 +1129,8 @@ DISPATCH_INTENT(instance, template, step_id) → DispatchIntent
       });
 
       function rowSortKey(row) {
-        if (row.oldIndex != null && row.newIndex != null) return Math.min(row.oldIndex, row.newIndex);
-        if (row.oldIndex != null) return row.oldIndex;
-        return row.newIndex;
+        if (row.newIndex != null) return row.newIndex;
+        return row.oldIndex;
       }
 
       return pairs.sort(function (a, b) {
