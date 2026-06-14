@@ -295,7 +295,7 @@ prepares the resolved inputs `CREATE_INSTANCE` / `START` / provider provisioning
 consume. No central registry/store governance (L11+), no definition PRs (L12), no
 trust (L13). Typed slots stay minimal (type + default + required), not a full
 schema/validation system.
-Conceptually L0-family (project binding under the kernel); not yet realized in
+Conceptually L0-family (pre-kernel project binding/resolution); not yet realized in
 core-model.html.
 
 **L1 — Capability matrix.**
