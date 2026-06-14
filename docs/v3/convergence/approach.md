@@ -184,7 +184,8 @@ execution_id, role, round, state fingerprint) comes later; it matures in stages
 **L0c — Agent run configuration.**
 Concepts: `AgentConfig` (v2: mode, approach, skills/tools, persona/profile, execution
 hints); effective-config resolution by cascade (role default → step override →
-start/run override → snapshot at dispatch); the context packet carries the
+start/run override), computed at dispatch and recomputed at commit for provenance —
+never persisted as instance state; the context packet carries the
 `effective_agent_config`; the transcript records which config the kernel issued
 (provenance — issued, not proven runtime).
 Why: this answers "*how* should the actor be run", distinct from L0b's "*who* acts and

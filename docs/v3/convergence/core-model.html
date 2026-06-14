@@ -858,8 +858,9 @@ DISPATCH_INTENT(instance, template, step_id) → DispatchIntent
 RESOLVE_AGENT_CONFIG(template, step, instance) → AgentConfig
   base      ← template.role(step.role).default_agent_config            # role default
   with_step ← merge(base, step.agent_config)                           # step override (scalars overwrite; arrays/maps replace)
+  override  ← instance.run_overrides.get(step.id, empty_config)         # start/run override (optional per step)
   # portable run intent; not actor-adapted, provisioned, or attested at L0c
-  RETURN      merge(with_step, instance.run_overrides[step.id])         # start/run override
+  RETURN      merge(with_step, override)
 
 START_INSTANCE(template_ref, task, start_overrides, run_overrides) → Started
   template ← definitionStore.load(template_ref)
@@ -1007,8 +1008,8 @@ DISPATCH_INTENT(instance, template, step_id) → DispatchIntent
             <li><b>Invariant coverage:</b> deterministic kernel-resolved provenance ✓; config sources
               immutable per dispatched step ✓; DispatchIntent stays a stateless output (commit ≠ deliver
               holds) ✓; all L0a/L0b invariants still hold.</li>
-            <li><b>Known gaps (intended):</b> no provisioning/attestation; no skill-doc/memory (§11.4);
-              no model routing (§14.2); no authorization (L1). Each is in Absent.</li>
+            <li><b>Known gaps (intended):</b> no actor-runtime adaptation; no provisioning/attestation;
+              no skill-doc/memory (§11.4); no model routing (§14.2); no authorization (L1). Each is in Absent.</li>
             <li><b>Decision:</b> accepted as the L0c baseline (light evidence per playbook §2.1).</li>
           </ul>
         </div>
