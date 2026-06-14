@@ -133,7 +133,8 @@ later open toward WF-1/WF-4/WF-6 — so those doors do not close.
 Concepts: `WorkflowTemplate` (id + version), `Step`, `Role` (names only — actor binding
 is L0b) (definition aggregate); `WorkflowInstance` (with `template_ref { id, version }`
 snapshotted so a run is pinned to an immutable definition), `Transcript`,
-`LifecycleStatus` (run aggregate); `EventEnvelope` (carries `op_id` and `actor_id`
+an early run-status seed — the first-class `kernel_status` lifecycle axis +
+`terminal_disposition` arrive at **L0d** (run aggregate); `EventEnvelope` (carries `op_id` and `actor_id`
 provenance); transitions. **Invariants stated here, not deferred:** idempotency — key
 scope `(instance_id, op_id)`, re-applying a seen key is a no-op; **atomic transition
 commit** — transcript append + state update as one logical commit under
@@ -214,6 +215,45 @@ Out of scope (later): tool installation / provisioning, prompt/context assembly 
 skill-doc retrieval, memory assembly, model-routing optimization (§14.2),
 credential / grant enforcement (L7).
 
+**L0d — Instance lifecycle + activation.**
+Concepts: `kernel_status` (CREATED | ACTIVE | WAITING | TERMINAL) as a second stored axis
+beside `current_step`; `terminal_disposition` (done | failed | cancelled); typed
+`wait { kind, requested_by, resume_events }` (only `kickoff_pending` here);
+`ActivationMode` (immediate | deferred_kickoff); three input **source classes** (actor
+envelope / operator intent / kernel event) behind a `RECEIVE` router; the
+`runtime_context` state (none | requested | ready) and a **lifecycle guard** (actor
+emits only when `ACTIVE`).
+Why: v1's flat lifecycle enum conflates several concerns; v3 keeps `kernel_status`
+universal and **derives** workflow phase from `current_step`/`wait` (never a second stored
+truth). The v1 ideation bubble normalizes to `WAITING(kickoff_pending)` released by an
+operator `KICKOFF`; `START_INSTANCE` splits into `CREATE_INSTANCE` + an activation path,
+so the first dispatch leaves `activate`. Conceptually L0d sits **before/under L1** — its
+lifecycle guard runs ahead of L1's role/action checks — but it was *built* in the HTML
+after L1, because each level diffs against the current baseline (conceptual order vs
+document build order).
+Scope brake: L0d owns the generic terminal disposition paths and the lifecycle guard;
+operator authority (who may START/KICKOFF/CANCEL) stays dormant (→ L7/L10); the success
+finalization tail (commit/merge) is later (→ L2/L3); only `kickoff_pending` waits exist
+(human → L3, child → L4, timeout → L9).
+
+**L0e — Runtime context spec / provider contract.**
+Concepts: `Template.runtime_context_spec` (declarative `{ kind, provider, config }`); the
+`RuntimeContextProvider` contract (`provision(instance, request_id, spec)` → eventually
+fires `RUNTIME_CONTEXT_READY`); `RuntimeContextRef` (opaque `{ kind, locator }`,
+provider-defined per kind); the actor-facing **projection** of the ref into the packet's
+`runtime_context`. MVP concrete provider: `pairflow.worktree` (worktree + branch).
+Why: the v1 worktree/branch setup is the actor's working precondition — MVP-core, *not* L8
+delivery. This is the **third instance of the L0c pattern**: portable intent
+(`RuntimeContextSpec`) → named fulfiller (`RuntimeContextProvider`) → packet
+projection, alongside `AgentConfig`→ActorAdapter and `prompt_concern_refs`→ContextAssembly.
+The kernel owns the spec + provider *contract*; provider internals are
+implementation-specific; durable delivery remains L8. L0e fills in the opaque
+`request_runtime_context` L0d left, exactly as L2b fills L0c's prompt refs.
+Scope brake: no durable delivery (L8), no actor process launch, no credential/grant (L7),
+no provider-internal mechanics modelled, provider-availability validation deferred.
+Conceptually before L1; built after L0d. **Not yet realized in the HTML — small-spec
+pending.**
+
 **L1 — Capability matrix.**
 Concepts: `CapabilityProfile` (matrix `role × current_step → allowed actions`); the Capability
 Engine as the **role/state authorization layer** — an early check inside `HandleEnvelope`,
@@ -257,9 +297,10 @@ against real `Gate`/`PolicyModule`/`GateDecision` objects, not abstractly. Ancho
 case: "no `CONVERGED` before round 3". Its own core-model view is built once L2 lands.
 
 **L3 — Human decision Ask.**
-Concepts: lifecycle states `WAITING_HUMAN, READY_FOR_HUMAN_APPROVAL`; the `operator`
-role; `human_gate` step type; **approve / request-rework only**. The narrowest form of
-the Ask primitive.
+Concepts: a new `wait.kind = human_decision` on the L0d `WAITING` axis (not a new kernel
+lifecycle enum); the `operator` role; `human_gate` step type; human **approve /
+request-rework** outcomes (the approval/rework phase is a *derived* view, routing back to
+`ACTIVE`). The narrowest form of the Ask primitive.
 Why: the human as decision-maker at high-stakes points — the seed of the fiduciary wedge
 and of "what humans keep". Deliberately *not* a general Ask platform yet.
 Absent (later levels): help ask, agent-to-agent ask, external-token ask, multi-channel
