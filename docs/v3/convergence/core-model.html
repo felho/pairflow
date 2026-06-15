@@ -1018,11 +1018,10 @@ RECEIVE(input) → Outcome                                               # one k
 # Convenience operator API, not a kernel primitive: a single "start workflow" command may
 # compose CREATE_INSTANCE(...) then START(instance). activation_mode controls what happens
 # after RUNTIME_CONTEXT_READY (activate vs WAITING(kickoff_pending)) — not whether CREATE dispatches.
-CREATE_INSTANCE(template_ref, activation_mode, task, start_overrides, run_overrides) → Created   # operator_intent
-  template ← definitionStore.load(template_ref)
+CREATE_INSTANCE(template_ref, activation_mode, task, binding, run_overrides) → Created   # operator_intent; template + binding resolved on the start path (formalized by L0f)
+  template ← definitionStore.load(template_ref)                # a pinned definition — a plain template, or an L0f-resolved definition (slots applied)
   IF activation_mode = immediate AND task is absent THEN RETURN Rejected(task_required)
-  binding  ← resolve_binding(template, start_overrides)        # template default_actor + start overrides
-  REQUIRE binding covers every role reachable in template      # invariant: fail at create, not mid-run
+  REQUIRE binding covers every role reachable in template      # binding resolved pre-kernel; the kernel only validates coverage (fail at create, not mid-run)
   instance ← create { template_ref, task, binding, activation_mode,
                       kernel_status: CREATED, current_step: none,        # position is meaningless until ACTIVE
                       runtime_context: none, run_overrides: snapshot(run_overrides), version: 1 }
@@ -1120,8 +1119,11 @@ DISPATCH_INTENT(instance, template, step_id) → DispatchIntent
           </script>
         </div>
         <div class="note pseudo">
-          <code>START_INSTANCE</code> splits into <code>CREATE_INSTANCE</code> (record + binding invariant,
-          <em>no</em> dispatch) and the activation path; the first <code>dispatch_intent</code> now leaves
+          <code>START_INSTANCE</code> splits into <code>CREATE_INSTANCE</code> (record + binding-coverage
+          invariant, <em>no</em> dispatch) and the activation path; binding resolution moves out of the
+          kernel to the start path (a plain default-actor + override merge now, the full pre-kernel
+          resolution at L0f), so <code>CREATE_INSTANCE</code> takes the binding as input and only validates
+          coverage. The first <code>dispatch_intent</code> now leaves
           <code>activate</code>, so a created-but-unactivated instance never dispatches. The lifecycle guard
           sits right after idempotency (so a duplicate of an already-applied op is still <code>Duplicate</code>,
           not <code>not_active</code>) and before the stale check (role/action authorization arrives at L1,
@@ -1354,11 +1356,10 @@ RECEIVE(input) → Outcome                                               # one k
 # Convenience operator API, not a kernel primitive: a single "start workflow" command may
 # compose CREATE_INSTANCE(...) then START(instance). activation_mode controls what happens
 # after RUNTIME_CONTEXT_READY (activate vs WAITING(kickoff_pending)) — not whether CREATE dispatches.
-CREATE_INSTANCE(template_ref, activation_mode, task, start_overrides, run_overrides) → Created   # operator_intent
-  template ← definitionStore.load(template_ref)
+CREATE_INSTANCE(template_ref, activation_mode, task, binding, run_overrides) → Created   # operator_intent; template + binding resolved on the start path (formalized by L0f)
+  template ← definitionStore.load(template_ref)                # a pinned definition — a plain template, or an L0f-resolved definition (slots applied)
   IF activation_mode = immediate AND task is absent THEN RETURN Rejected(task_required)
-  binding  ← resolve_binding(template, start_overrides)        # template default_actor + start overrides
-  REQUIRE binding covers every role reachable in template      # invariant: fail at create, not mid-run
+  REQUIRE binding covers every role reachable in template      # binding resolved pre-kernel; the kernel only validates coverage (fail at create, not mid-run)
   instance ← create { template_ref, task, binding, activation_mode,
                       kernel_status: CREATED, current_step: none,        # position is meaningless until ACTIVE
                       runtime_context: none, run_overrides: snapshot(run_overrides), version: 1 }
@@ -1653,8 +1654,9 @@ template:
 
         <p><b>Not the kernel.</b> The kernel still knows only <em>Template</em> + <em>Instance</em>. L0f is a
         function <code>RESOLVE_START(command, project_config) → ResolvedStartRequest | Rejected</code> that
-        runs ahead of the kernel and hands a resolved bundle to <code>CREATE_INSTANCE</code> /
-        <code>START</code> / provider provisioning. No instance, transcript, or version exists during the
+        runs ahead of the kernel and hands a resolved bundle to <code>CREATE_INSTANCE</code>; later
+        <code>START</code> and provider provisioning read the applied values from the pinned resolved
+        definition through normal template loading. No instance, transcript, or version exists during the
         pass — a rejection means nothing was created.</p>
 
         <h3 class="view-h"><span class="view-tag runtime">Runtime</span> A concrete trace</h3>
@@ -1700,8 +1702,8 @@ template:
           <script type="text/plain" class="diff-source" data-code-new data-code-id="l0f-pseudocode">
 # L0f runs BEFORE the kernel. It is not a HANDLE/handler: it consumes an operator
 # StartCommand + the repo's ProjectConfig and produces a ResolvedStartRequest that
-# CREATE_INSTANCE / START / provider provisioning then consume. No instance, no
-# transcript, no version exists yet.
+# CREATE_INSTANCE consumes; later START / provider provisioning read the applied values from
+# the pinned resolved definition. No instance, no transcript, no version exists yet.
 
 RESOLVE_START(command, project_config) → ResolvedStartRequest | Rejected
   # J1 — definition resolution
@@ -2018,11 +2020,10 @@ RECEIVE(input) → Outcome                                               # one k
 # Convenience operator API, not a kernel primitive: a single "start workflow" command may
 # compose CREATE_INSTANCE(...) then START(instance). activation_mode controls what happens
 # after RUNTIME_CONTEXT_READY (activate vs WAITING(kickoff_pending)) — not whether CREATE dispatches.
-CREATE_INSTANCE(template_ref, activation_mode, task, start_overrides, run_overrides) → Created   # operator_intent
-  template ← definitionStore.load(template_ref)
+CREATE_INSTANCE(template_ref, activation_mode, task, binding, run_overrides) → Created   # operator_intent; template + binding resolved on the start path (formalized by L0f)
+  template ← definitionStore.load(template_ref)                # a pinned definition — a plain template, or an L0f-resolved definition (slots applied)
   IF activation_mode = immediate AND task is absent THEN RETURN Rejected(task_required)
-  binding  ← resolve_binding(template, start_overrides)        # template default_actor + start overrides
-  REQUIRE binding covers every role reachable in template      # invariant: fail at create, not mid-run
+  REQUIRE binding covers every role reachable in template      # binding resolved pre-kernel; the kernel only validates coverage (fail at create, not mid-run)
   instance ← create { template_ref, task, binding, activation_mode,
                       kernel_status: CREATED, current_step: none,        # position is meaningless until ACTIVE
                       runtime_context: none, run_overrides: snapshot(run_overrides), version: 1 }
