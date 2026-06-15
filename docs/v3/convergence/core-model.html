@@ -951,9 +951,9 @@ template:
         (actor / operator / kernel), guards actor emits to <code>ACTIVE</code>, and folds v1's overloaded
         <code>RUNNING</code> / <code>PREPARING_WORKSPACE</code> / ideation states into
         <code>kernel_status</code> + a typed <code>wait</code>. Workflow "phase" stays <b>derived</b>, never
-        stored. It is an L0-family concern (foundational lifecycle) but realized <em>on top of</em> L1, so the
-        diff is against the L1 kernel — and the lifecycle guard sits logically <em>ahead</em> of L1's
-        role/action checks.</p>
+        stored. It is an L0-family concern (foundational lifecycle): it diffs against the L0c kernel, and
+        its lifecycle guard sits <em>ahead</em> of the role/action checks that L1 later layers on the full
+        L0e kernel.</p>
 
         <h3 class="view-h"><span class="view-tag runtime">Runtime</span> A concrete trace</h3>
         <p>An ideation run — created without a task, held for an operator kickoff, then cancelled:</p>
@@ -979,7 +979,7 @@ template:
             <div class="meta">WAITING + kickoff_pending ✓ → task supplied, <code>activate</code> → <code>kernel_status ACTIVE</code>, <code>current_step implement</code>; first <b>DispatchIntent</b> produced (the L0b path)</div>
           </div></div>
           <div class="trace-row"><div class="trace-n">6</div><div class="trace-c">
-            <div class="ev">… the L0a–L1 pair loop runs … later operator <code>CANCEL</code></div>
+            <div class="ev">… the L0a–L0c pair loop runs … later operator <code>CANCEL</code></div>
             <div class="meta">non-terminal ✓ → <code>kernel_status ← TERMINAL</code>, <code>terminal_disposition ← cancelled</code>; any further actor emit → Rejected(not_active)</div>
           </div></div>
         </div>
@@ -1013,7 +1013,7 @@ RECEIVE(input) → Outcome                                               # one k
   MATCH input.source:
     operator_intent → dispatch to CREATE_INSTANCE / START / KICKOFF / CANCEL   # lifecycle intents
     kernel_event    → dispatch to RUNTIME_CONTEXT_READY / FAIL               # internal events (done is internal-only, below)
-    actor_envelope  → HANDLE(input)                                           # the L0a–L1 actor handler, now lifecycle-guarded
+    actor_envelope  → HANDLE(input)                                           # the L0a–L0c actor handler, now lifecycle-guarded
 
 # Convenience operator API, not a kernel primitive: a single "start workflow" command may
 # compose CREATE_INSTANCE(...) then START(instance). activation_mode controls what happens
@@ -1228,13 +1228,13 @@ template:
           <code>activation</code> configures only the birth <b>mode</b> — the start step and roles are already
           in the template, so no second source of truth. <code>deferred_kickoff</code> is the v1 ideation
           bubble normalized: a <code>WAITING(kickoff_pending)</code> hold released by an operator kickoff.
-          <em>Who</em> may issue kickoff/cancel is dormant (operator authority comes later), exactly as L1
-          left <code>not_authorized</code> dormant.
+          <em>Who</em> may issue kickoff/cancel is dormant (operator authority comes later) — the same
+          dormant-until-restricted pattern L1 <em>later</em> uses for authored capability restrictions.
         </div>
 
         <h3 class="view-h"><span class="view-tag absent">Absent</span> Still not here</h3>
         <div class="absent-grid">
-          <div class="absent-item">No <b>operator authority / identity</b> — who may issue START / KICKOFF / CANCEL is dormant, like L1's not_authorized <span class="at">→ L7 / L10</span></div>
+          <div class="absent-item">No <b>operator authority / identity</b> — who may issue START / KICKOFF / CANCEL is dormant (the dormant-until-restricted shape L1 later reuses) <span class="at">→ L7 / L10</span></div>
           <div class="absent-item">No <b>runtime-context spec / provider contract</b> — what context the template requires and which provider fulfills it (worktree / mailbox / …); L0d consumes only <code>RUNTIME_CONTEXT_READY</code> and stores an opaque ref, provider internals stay implementation <span class="at">→ L0e</span></div>
           <div class="absent-item">No <b>kickoff payload materialization</b> — KICKOFF here models only task-supply + activation; v1 also writes a task artifact, flips ideation config (<code>task_pending=false</code>, <code>kicked_off_at</code>) and appends a TASK envelope — activation/input materialization (a persistence detail), not the runtime-context provider <span class="at">→ later / impl</span></div>
           <div class="absent-item">No <b>workflow-specific finalization tail</b> — L0d owns the generic terminal disposition paths (COMPLETE / FAIL / CANCEL); the APPROVED_FOR_COMMIT → COMMITTED commit/merge tail is operator-controlled, later <span class="at">→ L2 / L3</span></div>
@@ -1250,9 +1250,9 @@ template:
               task, held in <code>WAITING(kickoff_pending)</code>, released by an operator kickoff; an actor
               emit during the hold is rejected as <code>not_active</code>. Immediate runs skip the hold.</li>
             <li><b>Invariant coverage:</b> two-axis state (current_step absent before first activation, then the execution position across ACTIVE and resumable WAITING) ✓;
-              lifecycle guard after idempotency, before stale/role ✓; typed WAITING + explicit resume class ✓;
+              lifecycle guard after idempotency, before stale ✓; typed WAITING + explicit resume class ✓;
               terminal sink with single-write disposition ✓; readiness gates first dispatch ✓; all
-              L0a/L0b/L0c/L1 invariants still hold.</li>
+              L0a/L0b/L0c invariants still hold.</li>
             <li><b>Reality check (v11):</b> normalizes — not copies — <code>src/contracts/kernel/lifecycle.ts</code>
               (10 states) and the cyclic transitions in <code>src/v11/domain/state/transitions.ts</code> into
               4 <code>kernel_status</code> + a disposition; <code>round</code>/<code>round_role_history</code>
@@ -1349,7 +1349,7 @@ RECEIVE(input) → Outcome                                               # one k
   MATCH input.source:
     operator_intent → dispatch to CREATE_INSTANCE / START / KICKOFF / CANCEL   # lifecycle intents
     kernel_event    → dispatch to RUNTIME_CONTEXT_READY / FAIL               # internal events (done is internal-only, below)
-    actor_envelope  → HANDLE(input)                                           # the L0a–L1 actor handler, now lifecycle-guarded
+    actor_envelope  → HANDLE(input)                                           # the L0a–L0c actor handler, now lifecycle-guarded
 
 # Convenience operator API, not a kernel primitive: a single "start workflow" command may
 # compose CREATE_INSTANCE(...) then START(instance). activation_mode controls what happens
@@ -1677,8 +1677,8 @@ template:
             <div class="meta"><code>validation.test_command</code>: global <code>"pnpm test"</code> → target ui <code>"pnpm --dir ui test"</code> = <b>ui test</b>; <code>runtime.worktree.base_branch</code>: global <code>main</code> → CLI <code>release</code> = <b>release</b>; <code>runtime.worktree.bootstrap</code>: workflow default = <b>install &amp; build</b></div>
           </div></div>
           <div class="trace-row"><div class="trace-n">5</div><div class="trace-c">
-            <div class="ev"><b>ResolvedStartRequest</b> { template_ref: local-pair-v0@1, resolved_slots, binding }</div>
-            <div class="meta">handed to <code>CREATE_INSTANCE</code> / <code>START</code>; the L0e provider later reads the <code>runtime.*</code> slice — L0f itself stays runtime-agnostic</div>
+            <div class="ev"><b>ResolvedStartRequest</b> { resolved_template_ref: local-pair-v0@1 <i>(slots applied)</i>, binding }</div>
+            <div class="meta"><code>apply_slots</code> materializes the resolved values into a pinned <em>resolved definition</em>; <code>CREATE_INSTANCE</code> loads it like any Template, and L0e reads <code>runtime_context</code> from it — slot values already concrete, no mutable slot map at runtime</div>
           </div></div>
           <div class="trace-row"><div class="trace-n">5b</div><div class="trace-c">
             <div class="ev">(variants) resolution rejects before anything is created</div>
@@ -1730,10 +1730,14 @@ RESOLVE_START(command, project_config) → ResolvedStartRequest | Rejected
     IF value is not none AND NOT type_ok(slot.type, value) THEN RETURN Rejected(slot_type_mismatch(slot.id))
     resolved_slots[slot.id] ← value
 
+  # materialize the slot values INTO a resolved, immutable definition view (J1 template + J2 values).
+  # The kernel and L0e then read template.runtime_context (etc.) from this PINNED view, exactly as before —
+  # no extra mutable slot map at kernel runtime, and L0f stays runtime-agnostic.
+  resolved_definition ← apply_slots(template, resolved_slots)   # ${slot:…} refs → concrete values
+
   RETURN ResolvedStartRequest {
-    template_ref:   pin(template),                                # the pinned definition (J1)
-    resolved_slots,                                               # generic map (J2); L0e reads the runtime.* slice — no L0f-specific coupling
-    binding:        project_binding(project_config, command) }    # role → actor: its OWN cascade, not a slot
+    resolved_template_ref: pin(resolved_definition),             # pinned RESOLVED definition; CREATE_INSTANCE loads it like any Template
+    binding:               project_binding(project_config, command) }   # role → actor: its OWN cascade, not a slot
 
 binding_scope(project_config, template_id, command) → Scope
   wf ← project_config.workflows[template_id] ?? empty_workflow_scope   # no per-workflow section → empty scope, not null
@@ -1758,9 +1762,10 @@ resolve_slot(slot, scope) → value | none                         # 5-tier casc
           selected run consults — the per-workflow section, its target, and the CLI overrides are strict
           (a non-declared key is a typo → <code>unknown_slot</code>); the shared <code>project_global</code>
           and unrelated workflows' sections stay lenient. <code>resolve_slot</code> is the 5-tier cascade,
-          explicit CLI on top. <code>resolved_slots</code> is a generic map — L0e's <code>START</code>/provider
-          reads the <code>runtime.*</code> slice; the <code>role → actor</code> binding keeps its own cascade
-          (L0c), it is not a slot.
+          explicit CLI on top. <code>apply_slots</code> then bakes the resolved values into a <em>resolved
+          definition</em> — a pinned, immutable Template view — so the kernel and L0e keep reading
+          <code>runtime_context</code> from a pinned template, never from a mutable slot map. The
+          <code>role → actor</code> binding keeps its own cascade (L0c), it is not a slot.
         </div>
 
         <h3 class="view-h"><span class="view-tag domain">Domain</span> What L0f adds</h3>
@@ -1777,7 +1782,8 @@ resolve_slot(slot, scope) → value | none                         # 5-tier casc
             <div class="ent"><div class="en">ProjectConfig</div><div class="fields">repo-local aggregate (v1 = <code>pairflow.toml</code>): <code>{ default_workflow?, workflow_sources, defaults, workflows[id].{ defaults, targets[t].defaults } }</code> — global defaults + per-workflow sections</div></div>
             <div class="ent"><div class="en">WorkflowSource</div><div class="fields"><code>load(template_id) → pinned Template</code>; <code>local(.pairflow/)</code> at L0f, <code>central_store</code> later (L11+)</div></div>
             <div class="ent"><div class="en">StartCommand <span style="font-size:10px;color:var(--muted)">(operator intent)</span></div><div class="fields"><code>{ template_id?, target?, overrides }</code> — the explicit per-run inputs</div></div>
-            <div class="ent"><div class="en">ResolvedStartRequest <span style="font-size:10px;color:var(--muted)">(output)</span></div><div class="fields"><code>{ template_ref (pinned), resolved_slots, binding }</code> — the bundle the kernel/provider consume; generic, no runtime coupling</div></div>
+            <div class="ent"><div class="en">ResolvedDefinition <span style="font-size:10px;color:var(--muted)">(value)</span></div><div class="fields">the pinned Template with its slot values applied (<code>apply_slots</code>); an immutable definition view the kernel loads exactly like a Template — the slot values live in the pinned definition, not in runtime state</div></div>
+            <div class="ent"><div class="en">ResolvedStartRequest <span style="font-size:10px;color:var(--muted)">(output)</span></div><div class="fields"><code>{ resolved_template_ref (pinned ResolvedDefinition), binding }</code> — the handoff to <code>CREATE_INSTANCE</code>; L0e reads <code>runtime_context</code> from the pinned view, no separate slot map</div></div>
           </div>
         </div>
         <div class="agg" style="border-style:solid;border-color:var(--line);background:var(--panel)">
@@ -1950,8 +1956,9 @@ workflows:
         the current position — the role acting, and the action it may take. The first real "the workflow
         is the boss" rule.</p>
 
-        <p>By now the kernel has its full foundation — lifecycle (L0d), runtime context (L0e), and project
-        resolution (L0f); L1 is the authorization layer that sits on top of it. L0b exposes which
+        <p>By now the kernel has its full L0 foundation — lifecycle (L0d) and runtime context (L0e). L0f
+        prepares the resolved start input <em>before</em> the kernel (pre-kernel, outside the handler
+        chain); L1 is the authorization layer that sits on top of the kernel. L0b exposes which
         transitions <em>exist</em> from a step (navigation); L1 enforces which of
         them this actor/role may actually <em>use</em>. The envelope gains <code>expected_role</code> —
         the role dimension of the authority snapshot (<code>expected_version</code> → <code>+ expected_role</code>) —
