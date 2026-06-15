@@ -113,3 +113,4 @@
 - https://github.com/GoogleCloudPlatform/knowledge-catalog/blob/main/okf/SPEC.md
 - https://harness.bencium.io/
 - https://toonformat.dev/
+- https://github.com/omnigent-ai/omnigent
