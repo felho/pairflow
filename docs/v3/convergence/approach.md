@@ -227,10 +227,9 @@ Why: v1's flat lifecycle enum conflates several concerns; v3 keeps `kernel_statu
 universal and **derives** workflow phase from `current_step`/`wait` (never a second stored
 truth). The v1 ideation bubble normalizes to `WAITING(kickoff_pending)` released by an
 operator `KICKOFF`; `START_INSTANCE` splits into `CREATE_INSTANCE` + an activation path,
-so the first dispatch leaves `activate`. Conceptually L0d sits **before/under L1** — its
-lifecycle guard runs ahead of L1's role/action checks — but it was *built* in the HTML
-after L1, because each level diffs against the current baseline (conceptual order vs
-document build order).
+so the first dispatch leaves `activate`. L0d sits **before/under L1**: its lifecycle guard
+runs ahead of L1's role/action checks, and the document is ordered to match — L0d's
+pseudocode diffs against L0c, and L1 (placed last) diffs against the full L0e kernel.
 Scope brake: L0d owns the generic terminal disposition paths and the lifecycle guard;
 operator authority (who may START/KICKOFF/CANCEL) stays dormant (→ L7/L10); the success
 finalization tail (commit/merge) is later (→ L2/L3); only `kickoff_pending` waits exist
@@ -253,7 +252,7 @@ implementation-specific; durable delivery remains L8. L0e fills in the opaque
 `request_runtime_context` L0d left, exactly as L2b fills L0c's prompt refs.
 Scope brake: no durable delivery (L8), no actor process launch, no credential/grant (L7),
 no provider-internal mechanics modelled, provider-availability validation deferred.
-Conceptually before L1; built after L0d. **Realized in core-model.html.**
+Sits before L1, which builds on the full L0 kernel. **Realized in core-model.html.**
 
 **L0f — Project/repository configuration and definition resolution.**
 Concepts: a project/repository **resolution layer** (local binding only — central
