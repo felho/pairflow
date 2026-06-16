@@ -313,10 +313,43 @@ by role/state authorization, and can annotate a denied action with a reason. In 
 actually use.** Not gates, not grants.
 
 **L2 — Gate / policy.**
-Concepts: `Gate, PolicyModule, GateDecision` (allow/block/defer); the convergence gate;
-round logic (P0/P1 block, round gate).
+Concepts: `GateBinding` (a policy bound to a `(step, event_type)` transition), `GatePipeline`
+(ordered gates at one point), a common `GateEvaluator` interface, and `GateDecision`
+(`allow | block`); the convergence gate; `instance.round` (kernel-maintained,
+commit-derived, transcript-reconstructable); the policy-facing `gate_projection` read model.
+A gate is a **fourth filter** after L1: transition exists (L0b) → role/action authorized
+(L1) → **policy allows now (L2)** → commit. On `block` there is no commit, so the round is
+not burned. Two **orthogonal** axes organize the space: `implementation = declarative |
+packaged | process` and `execution = inline | deferred` — externality alone does not imply
+async (a process gate may be a git-hook-style inline check). L2 core realizes only the
+**inline** pipeline with declarative and packaged evaluators; the realized anchor is two
+inline gates at one point (`declarative.threshold` over `instance.round`, then a packaged
+`pairflow.previous_reviewer_verdict`). `PolicyModule` is no longer the shared name — it is
+just one kind of packaged gate; `route` is known vocabulary but lands in a later routing
+slice (it pulls in meta-review / human-wait lifecycle).
 Why: lift the convergence decision out of the reviewer's bare judgement into an
 auditable, composable policy layer. The operational core of "the workflow is the boss".
+Acceptance evidence is **"the v1 gate families are representable"** (convergence policy,
+reviewer-PASS policy, command gates, meta-review/human routing, doc/evidence gates), not
+"min_round works". **Realized (L2 core only) in core-model.html.**
+
+**L2a — External / process gate execution.**
+Concepts: the **process gate execution model** behind `external.*` gates — a structured
+`GateInvocation → GateDecision` contract over a process call, with a strict contract regardless
+of mode: bounded timeout, structured JSON input/output, no implicit transcript dump, stable
+exit-code mapping, stdout/stderr handling, failure mapped to `block` **or** infrastructure
+error (configurable), and projection access only through an authority packet + `projection_ref`
+(an SDK/query seam), never a raw state read. Two execution modes: **inline** process gate
+(runs in the L2 pipeline under a bounded timeout — the git-hook shape) and **deferred** process
+gate (`WAITING(gate_pending)` + a `GATE_RESULT` kernel_event, reusing the L0e provider pattern
+for long-running / side-effectful / evidence-producing checks).
+Why: external/process gates are MVP-critical — v1's `validation.required` on PASS,
+`meta_review_approve_required`, command exit-code gates, and repo-specific custom gates cannot
+be honestly represented without them. They are split out of L2 core because the process
+contract (and the deferred lifecycle) is heavier than the inline declarative/packaged pipeline;
+L2 core's pipeline shape can host inline process evaluators, but the process contract itself is
+specified here. No dynamic TS module loading in the MVP; the external process interface is the
+extension seam.
 
 **L2b — Policy/gate context contribution (first ContextAssembly slice).**
 Concepts: `context_block` / `prompt_concern_ref` vocabulary; a gate/policy may declare a
@@ -339,8 +372,8 @@ template/role/step/policy/gate config, ordered render into `ContextPacket.contex
 provenance of which block refs were issued.
 Out of scope (→ §11.4 rich context assembly): semantic retrieval, memory, skill-doc
 expansion, model-specific prompt shaping, adapter-specific prompt conversion.
-Note: placed *after* L2 by the "concrete use case first" rule — the API is designed
-against real `Gate`/`PolicyModule`/`GateDecision` objects, not abstractly. Anchor use
+Note: placed *after* L2 (and L2a) by the "concrete use case first" rule — the API is designed
+against real `GateBinding`/`GateEvaluator`/`GateDecision` objects, not abstractly. Anchor use
 case: "no `CONVERGED` before round 3". Its own core-model view is built once L2 lands.
 
 **L3 — Human decision Ask.**
