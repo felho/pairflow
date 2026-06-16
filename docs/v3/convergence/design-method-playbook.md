@@ -247,12 +247,22 @@ HandleEnvelope(envelope):
 
 Use naming to signal what kind of thing the pseudocode line represents:
 
-- `UPPER_SNAKE_CASE` names are routed kernel inputs, protocol operations, or named events.
-  Examples: `CREATE_INSTANCE`, `START`, `KICKOFF`, `RUNTIME_CONTEXT_READY`.
-- `lower_snake_case(...)` names are internal helpers or derived computations.
-  Examples: `activate(instance)`, `resolve_agent_config(...)`, `dispatch_intent(...)`.
+- `UPPER_SNAKE_CASE` names are the kernel's **routed surface**: routed inputs, protocol/lifecycle
+  events, and named lifecycle/action entrypoints. Examples: `CREATE_INSTANCE`, `START`, `KICKOFF`,
+  `CANCEL`, `RUNTIME_CONTEXT_READY`, `HANDLE`.
+- `lower_snake_case(...)` names are internal helpers, derived read-models, classifiers, resolvers,
+  or projectors. Examples: `classify_process_result(...)`, `run_process_gate(...)`,
+  `runner_outcome(...)`, `gate_projection(...)`, `resolve_agent_config(...)`, `dispatch_intent(...)`.
 - `PascalCase(...)` names are outcome or value constructors returned by the kernel.
   Examples: `Created(...)`, `Accepted`, `Rejected(...)`, `Activated(...)`, `Committed(...)`.
+
+**Symbol identity over headline feel.** A name is written *identically* at its definition and at
+every call site — the case is a property of the symbol, not a stylistic "this line is a definition
+headline" cue. A helper defined `classify_process_result(result, config) → …` is called
+`classify_process_result(...)`, never `CLASSIFY_PROCESS_RESULT(...)`; an `UPPER_SNAKE` definition that
+is invoked as `lower_snake` reads as two different symbols, which a specification cannot afford. So
+the case test is: *is this part of the routed kernel surface?* — if yes `UPPER_SNAKE` everywhere, if
+no `lower_snake` everywhere.
 
 Use guard forms consistently:
 

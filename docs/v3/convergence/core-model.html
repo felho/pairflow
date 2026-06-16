@@ -603,7 +603,7 @@ HANDLE envelope → Outcome
   intent ← (instance.status = DONE) ? none : dispatch_intent(instance, template, instance.current_step)  # derive after commit
   RETURN Committed(instance.version, intent)
 
-DISPATCH_INTENT(instance, template, step_id) → DispatchIntent
+dispatch_intent(instance, template, step_id) → DispatchIntent
   step  ← template.step(step_id)
   actor ← instance.binding[step.role]                  # guaranteed present by the start invariant
   packet ← ContextPacket {
@@ -778,7 +778,7 @@ template:
         <div class="code-diff" aria-label="L0c pseudocode" data-old-label="L0b baseline" data-new-label="L0c current">
           <script type="text/plain" class="diff-source" data-code-old-ref="l0b-pseudocode"></script>
           <script type="text/plain" class="diff-source" data-code-new data-code-id="l0c-pseudocode">
-RESOLVE_AGENT_CONFIG(template, step, instance) → AgentConfig
+resolve_agent_config(template, step, instance) → AgentConfig
   base      ← template.role(step.role).default_agent_config            # role default
   with_step ← merge(base, step.agent_config)                           # step override (scalars overwrite; arrays/maps replace)
   override  ← instance.run_overrides.get(step.id, empty_config)         # start/run override (optional per step)
@@ -826,7 +826,7 @@ HANDLE envelope → Outcome
   intent ← (instance.status = DONE) ? none : dispatch_intent(instance, template, instance.current_step)  # derive after commit
   RETURN Committed(instance.version, intent)
 
-DISPATCH_INTENT(instance, template, step_id) → DispatchIntent
+dispatch_intent(instance, template, step_id) → DispatchIntent
   step  ← template.step(step_id)
   actor ← instance.binding[step.role]                  # guaranteed present by the start invariant
   packet ← ContextPacket {
@@ -1011,7 +1011,7 @@ template:
         <div class="code-diff" aria-label="L0d pseudocode" data-old-label="L0c baseline" data-new-label="L0d current">
           <script type="text/plain" class="diff-source" data-code-old-ref="l0c-pseudocode"></script>
           <script type="text/plain" class="diff-source" data-code-new data-code-id="l0d-pseudocode">
-RESOLVE_AGENT_CONFIG(template, step, instance) → AgentConfig
+resolve_agent_config(template, step, instance) → AgentConfig
   base      ← template.role(step.role).default_agent_config            # role default
   with_step ← merge(base, step.agent_config)                           # step override (scalars overwrite; arrays/maps replace)
   override  ← instance.run_overrides.get(step.id, empty_config)         # start/run override (optional per step)
@@ -1115,7 +1115,7 @@ HANDLE envelope → Outcome
   intent ← (instance.kernel_status = TERMINAL) ? none : dispatch_intent(instance, template, instance.current_step)  # derive after commit
   RETURN Committed(instance.version, intent)
 
-DISPATCH_INTENT(instance, template, step_id) → DispatchIntent
+dispatch_intent(instance, template, step_id) → DispatchIntent
   step  ← template.step(step_id)
   actor ← instance.binding[step.role]                  # guaranteed present by the start invariant
   packet ← ContextPacket {
@@ -1349,7 +1349,7 @@ template:
         <div class="code-diff" aria-label="L0e pseudocode" data-old-label="L0d baseline" data-new-label="L0e current">
           <script type="text/plain" class="diff-source" data-code-old-ref="l0d-pseudocode"></script>
           <script type="text/plain" class="diff-source" data-code-new data-code-id="l0e-pseudocode">
-RESOLVE_AGENT_CONFIG(template, step, instance) → AgentConfig
+resolve_agent_config(template, step, instance) → AgentConfig
   base      ← template.role(step.role).default_agent_config            # role default
   with_step ← merge(base, step.agent_config)                           # step override (scalars overwrite; arrays/maps replace)
   override  ← instance.run_overrides.get(step.id, empty_config)         # start/run override (optional per step)
@@ -1472,7 +1472,7 @@ HANDLE envelope → Outcome
   intent ← (instance.kernel_status = TERMINAL) ? none : dispatch_intent(instance, template, instance.current_step)  # derive after commit
   RETURN Committed(instance.version, intent)
 
-DISPATCH_INTENT(instance, template, step_id) → DispatchIntent
+dispatch_intent(instance, template, step_id) → DispatchIntent
   step  ← template.step(step_id)
   actor ← instance.binding[step.role]                  # guaranteed present by the start invariant
   requirement ← template.runtime_context
@@ -1501,7 +1501,7 @@ DISPATCH_INTENT(instance, template, step_id) → DispatchIntent
           async, correlated by <code>request_id</code>. <code>activate_or_hold</code> shares the
           immediate-vs-hold decision between the provisioned and context-free paths. <code>RUNTIME_CONTEXT_READY</code>
           gains a <b>kind-boundary</b> check; the kernel validates only the kind and the correlation, never the
-          provider-defined locator. <code>DISPATCH_INTENT</code> projects via the <em>same</em> pinned-template
+          provider-defined locator. <code>dispatch_intent</code> projects via the <em>same</em> pinned-template
           provider's <code>project_for_actor</code>, or emits <code>runtime_context: none</code> for a
           context-free workflow — the actor sees the projection or an explicit none, never the raw ref.
         </div>
@@ -2006,14 +2006,14 @@ workflows:
         <div class="code-diff" aria-label="L1 pseudocode" data-old-label="L0e baseline" data-new-label="L1 current">
           <script type="text/plain" class="diff-source" data-code-old-ref="l0e-pseudocode"></script>
           <script type="text/plain" class="diff-source" data-code-new data-code-id="l1-pseudocode">
-RESOLVE_AGENT_CONFIG(template, step, instance) → AgentConfig
+resolve_agent_config(template, step, instance) → AgentConfig
   base      ← template.role(step.role).default_agent_config            # role default
   with_step ← merge(base, step.agent_config)                           # step override (scalars overwrite; arrays/maps replace)
   override  ← instance.run_overrides.get(step.id, empty_config)         # start/run override (optional per step)
   # portable run intent; not actor-adapted, provisioned, or attested at L0c
   RETURN      merge(with_step, override)
 
-CAPABILITY(template, role, step_id) → action set                       # role × step → allowed actions
+capability(template, role, step_id) → action set                       # role × step → allowed actions
   step    ← template.step(step_id)
   profile ← template.capability_profile.get((role, step_id))
   IF profile is not none THEN RETURN profile.allowed                    # explicit restriction (none in the baseline)
@@ -2144,7 +2144,7 @@ HANDLE envelope → Outcome
   intent ← (instance.kernel_status = TERMINAL) ? none : dispatch_intent(instance, template, instance.current_step)  # derive after commit
   RETURN Committed(instance.version, intent)
 
-DISPATCH_INTENT(instance, template, step_id) → DispatchIntent
+dispatch_intent(instance, template, step_id) → DispatchIntent
   step  ← template.step(step_id)
   actor ← instance.binding[step.role]                  # guaranteed present by the start invariant
   requirement ← template.runtime_context
@@ -2170,7 +2170,7 @@ DISPATCH_INTENT(instance, template, step_id) → DispatchIntent
           On top of the full lifecycle + runtime-context kernel, L1 adds two authorization gates around the
           existing <code>no_transition</code> check: role authority first (are you even the active role?),
           then — once the action is confirmed to exist as a transition — action authorization. It also adds
-          <code>CAPABILITY</code> and begins handing the dispatched <code>role</code> out in the packet to be
+          <code>capability</code> and begins handing the dispatched <code>role</code> out in the packet to be
           echoed back as <code>expected_role</code>. The <code>CapabilityProfile</code> is default-derived
           from the step graph, so no new config is needed; explicit authored restrictions enter the same
           profile later.
@@ -2310,14 +2310,14 @@ DISPATCH_INTENT(instance, template, step_id) → DispatchIntent
         <div class="code-diff" aria-label="L2 pseudocode" data-old-label="L1 baseline" data-new-label="L2 current">
           <script type="text/plain" class="diff-source" data-code-old-ref="l1-pseudocode"></script>
           <script type="text/plain" class="diff-source" data-code-new data-code-id="l2-pseudocode">
-RESOLVE_AGENT_CONFIG(template, step, instance) → AgentConfig
+resolve_agent_config(template, step, instance) → AgentConfig
   base      ← template.role(step.role).default_agent_config            # role default
   with_step ← merge(base, step.agent_config)                           # step override (scalars overwrite; arrays/maps replace)
   override  ← instance.run_overrides.get(step.id, empty_config)         # start/run override (optional per step)
   # portable run intent; not actor-adapted, provisioned, or attested at L0c
   RETURN      merge(with_step, override)
 
-CAPABILITY(template, role, step_id) → action set                       # role × step → allowed actions
+capability(template, role, step_id) → action set                       # role × step → allowed actions
   step    ← template.step(step_id)
   profile ← template.capability_profile.get((role, step_id))
   IF profile is not none THEN RETURN profile.allowed                    # explicit restriction (none in the baseline)
@@ -2330,7 +2330,7 @@ INTERFACE GateEvaluator:
   execution:      inline | deferred                      # L2 core runs inline evaluators; deferred ⇒ a later lifecycle slice (gate_pending + GATE_RESULT)
   evaluate(config, projection) → GateDecision            # GateDecision = { verdict: allow | warn | block, reason?, message?, evidence_refs? }
 
-GATE_PROJECTION(instance, template, envelope) → Projection   # policy-facing read model — read-only, derived; the policy reads, never mutates
+gate_projection(instance, template, envelope) → Projection   # policy-facing read model — read-only, derived; the policy reads, never mutates
   RETURN {
     round:        instance.round,                       # canonical, kernel-maintained, commit-derived, transcript-reconstructable
     current_step: instance.current_step,
@@ -2475,7 +2475,7 @@ HANDLE envelope → Outcome
   intent ← (instance.kernel_status = TERMINAL) ? none : dispatch_intent(instance, template, instance.current_step)  # derive after commit
   RETURN Committed(instance.version, intent)
 
-DISPATCH_INTENT(instance, template, step_id) → DispatchIntent
+dispatch_intent(instance, template, step_id) → DispatchIntent
   step  ← template.step(step_id)
   actor ← instance.binding[step.role]                  # guaranteed present by the start invariant
   requirement ← template.runtime_context
@@ -2704,14 +2704,14 @@ template:
         <div class="code-diff" aria-label="L2a pseudocode" data-old-label="L2 baseline" data-new-label="L2a current">
           <script type="text/plain" class="diff-source" data-code-old-ref="l2-pseudocode"></script>
           <script type="text/plain" class="diff-source" data-code-new data-code-id="l2a-pseudocode">
-RESOLVE_AGENT_CONFIG(template, step, instance) → AgentConfig
+resolve_agent_config(template, step, instance) → AgentConfig
   base      ← template.role(step.role).default_agent_config            # role default
   with_step ← merge(base, step.agent_config)                           # step override (scalars overwrite; arrays/maps replace)
   override  ← instance.run_overrides.get(step.id, empty_config)         # start/run override (optional per step)
   # portable run intent; not actor-adapted, provisioned, or attested at L0c
   RETURN      merge(with_step, override)
 
-CAPABILITY(template, role, step_id) → action set                       # role × step → allowed actions
+capability(template, role, step_id) → action set                       # role × step → allowed actions
   step    ← template.step(step_id)
   profile ← template.capability_profile.get((role, step_id))
   IF profile is not none THEN RETURN profile.allowed                    # explicit restriction (none in the baseline)
@@ -2722,9 +2722,9 @@ CAPABILITY(template, role, step_id) → action set                       # role 
 INTERFACE GateEvaluator:
   implementation: declarative | packaged | process      # L2a realizes inline process too; only DEFERRED execution stays out (later slice)
   execution:      inline | deferred                      # still inline only — deferred is a later lifecycle slice (gate_pending + GATE_RESULT)
-  evaluate(config, projection) → GateDecision            # in-process (declarative/packaged); a process gate runs via RUN_PROCESS_GATE instead
+  evaluate(config, projection) → GateDecision            # in-process (declarative/packaged); a process gate runs via run_process_gate instead
 
-GATE_PROJECTION(instance, template, envelope) → Projection   # policy-facing read model — read-only, derived; the policy reads, never mutates
+gate_projection(instance, template, envelope) → Projection   # policy-facing read model — read-only, derived; the policy reads, never mutates
   RETURN {
     round:        instance.round,                       # canonical, kernel-maintained, commit-derived, transcript-reconstructable
     current_step: instance.current_step,
@@ -2735,7 +2735,7 @@ GATE_PROJECTION(instance, template, envelope) → Projection   # policy-facing r
 INTERFACE ProcessGateRunner:
   run(command, { cwd, stdin, timeout_ms }) → ProcessResult   # { kind: ok | timeout | runner_error, exit_code?, stdout?, log_ref, duration_ms }
 
-RUN_PROCESS_GATE(gate, instance, template, envelope) → GateDecision   # L2a — inline external.process, in the workspace, bounded timeout
+run_process_gate(gate, instance, template, envelope) → GateDecision   # L2a — inline external.process, in the workspace, bounded timeout
   invocation ← GateInvocation {
     instance_id: instance.id, template_ref: instance.template_ref,
     step_id: instance.current_step, event_type: envelope.type, expected_version: instance.version,
@@ -2747,7 +2747,7 @@ RUN_PROCESS_GATE(gate, instance, template, envelope) → GateDecision   # L2a �
   # evidence (log + exit_code + duration + head_sha + git_status_hash) is persisted on EVERY run (v1-faithful)
   RETURN classify_process_result(result, gate.config)
 
-CLASSIFY_PROCESS_RESULT(result, config) → GateDecision
+classify_process_result(result, config) → GateDecision
   output_mode     ← config.output.mode      ?? exit_code             # contract defaults (absent ⇒ these) — resolved once
   on_runner_error ← config.on_runner_error  ?? block_transition
   on_timeout      ← config.on_timeout       ?? block_transition
@@ -2764,7 +2764,7 @@ runner_outcome(disposition, reason, log_ref) → GateDecision          # MVP rea
   # fail_instance is rejected at definition load (gate_config_not_supported), so block_transition is the only value that reaches here — fail-closed
   RETURN { verdict: block, reason, evidence_refs: [log_ref] }        # audited distinctly: runner_error / timeout / malformed, not test_failed
 
-VALIDATE_GATE_CONFIG(template) → ok | Rejected                       # run at definition load (CREATE_INSTANCE) — fail at create, not mid-run; the static analog of binding coverage
+validate_gate_config(template) → ok | Rejected                       # run at definition load (CREATE_INSTANCE) — fail at create, not mid-run; the static analog of binding coverage
   FOR gate IN all_gate_bindings(template):                            # every (step, event_type) gate in the pinned definition
     IF gate.uses ≠ external.process THEN CONTINUE                     # only process gates carry an execution config to validate
     cfg ← gate.config
@@ -2800,7 +2800,7 @@ CREATE_INSTANCE(template_ref, activation_mode, task, binding, run_overrides) →
   template ← definitionStore.load(template_ref)                # a pinned definition — a plain template, or an L0f-resolved definition (slots applied)
   IF activation_mode = immediate AND task is absent THEN RETURN Rejected(task_required)
   REQUIRE binding covers every role reachable in template      # binding resolved pre-kernel; the kernel only validates coverage (fail at create, not mid-run)
-  REQUIRE valid_gate_config(template)                          # L2a: static gate-config invariants (process↔workspace, no fail_instance) — definition-load validation, fail at create
+  REQUIRE validate_gate_config(template)                          # L2a: static gate-config invariants (process↔workspace, no fail_instance) — definition-load validation, fail at create
   instance ← create { template_ref, task, binding, activation_mode,
                       kernel_status: CREATED, current_step: none, round: 0,   # position + round meaningless until ACTIVE
                       runtime_context: none, run_overrides: snapshot(run_overrides), version: 1 }
@@ -2905,7 +2905,7 @@ HANDLE envelope → Outcome
     IF evaluator is none            THEN RETURN Rejected(gate_evaluator_unavailable)      # config invariant — unresolved gate name
     IF evaluator.execution ≠ inline THEN RETURN Rejected(gate_execution_not_supported)    # deferred ⇒ later lifecycle slice (gate_pending + GATE_RESULT)
     IF evaluator.implementation = process                                                 # L2a: inline process now runs (was rejected at L2 core)
-      THEN IF instance.runtime_context = ready(∅) THEN RETURN Rejected(runtime_context_required_for_process_gate)   # ready(∅) = context-free: VALIDATE_GATE_CONFIG rejects this at definition load; runtime backstop here
+      THEN IF instance.runtime_context = ready(∅) THEN RETURN Rejected(runtime_context_required_for_process_gate)   # ready(∅) = context-free: validate_gate_config rejects this at definition load; runtime backstop here
            decision ← run_process_gate(gate, instance, template, envelope)                # spawn in the workspace, bounded timeout
       ELSE decision ← evaluator.evaluate(gate.config, gate_projection(instance, template, envelope))   # declarative / packaged, in-process
     IF decision.verdict = block     THEN RETURN Rejected(gate_blocked(decision.reason), decision.evidence_refs)   # no commit ⇒ round not burned; refs surfaced
@@ -2928,7 +2928,7 @@ HANDLE envelope → Outcome
   intent ← (instance.kernel_status = TERMINAL) ? none : dispatch_intent(instance, template, instance.current_step)  # derive after commit
   RETURN Committed(instance.version, intent)
 
-DISPATCH_INTENT(instance, template, step_id) → DispatchIntent
+dispatch_intent(instance, template, step_id) → DispatchIntent
   step  ← template.step(step_id)
   actor ← instance.binding[step.role]                  # guaranteed present by the start invariant
   requirement ← template.runtime_context
@@ -2982,13 +2982,13 @@ DISPATCH_INTENT(instance, template, step_id) → DispatchIntent
               <tr><td>config.on_exit[nonzero]</td><td>if <code>exit_code</code></td><td><code>allow | warn | block</code></td><td>missing / unknown ⇒ <code>invalid_process_gate_config</code></td></tr>
               <tr><td>config.on_runner_error</td><td>no</td><td>absent ⇒ <code>block_transition</code>; else <code>block_transition</code></td><td><code>fail_instance</code> ⇒ <code>gate_config_not_supported</code>; other ⇒ <code>invalid_process_gate_config</code></td></tr>
               <tr><td>config.on_timeout</td><td>no</td><td>absent ⇒ <code>block_transition</code>; else <code>block_transition</code></td><td><code>fail_instance</code> ⇒ <code>gate_config_not_supported</code>; other ⇒ <code>invalid_process_gate_config</code></td></tr>
-              <tr class="grp"><td colspan="4">Runtime classification — CLASSIFY_PROCESS_RESULT</td></tr>
+              <tr class="grp"><td colspan="4">Runtime classification — classify_process_result</td></tr>
               <tr><td>result.kind = timeout</td><td>runtime</td><td>maps via <code>on_timeout</code> / default</td><td><code>gate_blocked(timeout)</code></td></tr>
               <tr><td>result.kind = runner_error</td><td>runtime</td><td>maps via <code>on_runner_error</code> / default</td><td><code>gate_blocked(runner_error)</code></td></tr>
               <tr><td>gate_decision_json verdict</td><td>runtime</td><td><code>allow | warn | block</code></td><td>malformed / route / unknown ⇒ <code>gate_blocked(malformed_gate_decision_json)</code></td></tr>
             </tbody>
           </table>
-          <div class="fields" style="margin-top:8px">This table is the contract; the pseudocode is its executable sketch — <code>VALIDATE_GATE_CONFIG</code> enforces the config rows at definition load, <code>CLASSIFY_PROCESS_RESULT</code> the runtime rows — and the config example below is one instance of it. Same runner, hard gate or warning gate, by <code>on_exit</code> alone.</div>
+          <div class="fields" style="margin-top:8px">This table is the contract; the pseudocode is its executable sketch — <code>validate_gate_config</code> enforces the config rows at definition load, <code>classify_process_result</code> the runtime rows — and the config example below is one instance of it. Same runner, hard gate or warning gate, by <code>on_exit</code> alone.</div>
         </div>
         <div class="note domain">
           <code>evidence_refs</code> on <code>GateDecision</code> become concrete here: every run persists a
@@ -3003,7 +3003,7 @@ DISPATCH_INTENT(instance, template, step_id) → DispatchIntent
           <div class="agg-label">Added rules</div>
           <div class="ents">
             <div class="ent"><div class="en">runs in the workspace</div><div class="fields">a process gate executes with <code>cwd = runtime_context</code> workspace (v1: the worktree); a workflow declaring <code>runtime_context: none</code> may not bind an <code>external.process</code> gate — the static mismatch is a definition error, and the kernel also guards it at run with <code>Rejected(runtime_context_required_for_process_gate)</code></div></div>
-            <div class="ent"><div class="en">gate config validated at definition load</div><div class="fields"><code>VALIDATE_GATE_CONFIG(template)</code> runs when the definition is loaded (in <code>CREATE_INSTANCE</code>, beside binding coverage): a process gate without a workspace (<code>runtime_context_required_for_process_gate</code>), a <code>fail_instance</code> disposition (<code>gate_config_not_supported</code>), or an incomplete/invalid config — missing <code>command</code>/<code>timeout_ms</code>, an unknown <code>output.mode</code> or runner disposition, or <code>exit_code</code> buckets that are missing or not <code>allow | warn | block</code> (<code>invalid_process_gate_config</code>) — is rejected at create, not mid-run. <code>output.mode</code> defaults to <code>exit_code</code> when absent</div></div>
+            <div class="ent"><div class="en">gate config validated at definition load</div><div class="fields"><code>validate_gate_config(template)</code> runs when the definition is loaded (in <code>CREATE_INSTANCE</code>, beside binding coverage): a process gate without a workspace (<code>runtime_context_required_for_process_gate</code>), a <code>fail_instance</code> disposition (<code>gate_config_not_supported</code>), or an incomplete/invalid config — missing <code>command</code>/<code>timeout_ms</code>, an unknown <code>output.mode</code> or runner disposition, or <code>exit_code</code> buckets that are missing or not <code>allow | warn | block</code> (<code>invalid_process_gate_config</code>) — is rejected at create, not mid-run. <code>output.mode</code> defaults to <code>exit_code</code> when absent</div></div>
             <div class="ent"><div class="en">bounded timeout mandatory</div><div class="fields">every process gate carries a <code>timeout_ms</code>; a timeout is a runner outcome, not an indefinite block (v1 had none)</div></div>
             <div class="ent"><div class="en">evidence on every run</div><div class="fields">a log + artifact is persisted whether the gate allows, warns, or blocks (v1-faithful); the ref is carried to the commit or the rejection</div></div>
             <div class="ent"><div class="en">explicit output mode</div><div class="fields">verdict source is <code>exit_code</code> or <code>gate_decision_json</code> by config — never guessed from whether stdout happens to parse</div></div>
@@ -3175,7 +3175,7 @@ template:
       }
       var html = escapeHtml(code)
         .replace(/("[^"]*"|'[^']*')/g, '<span class="s">$1</span>')
-        .replace(/\b(START_INSTANCE|CREATE_INSTANCE|RUNTIME_CONTEXT_READY|RESOLVE_START|DISPATCH_INTENT|GATE_PROJECTION|RUN_PROCESS_GATE|CLASSIFY_PROCESS_RESULT|VALIDATE_GATE_CONFIG|RECEIVE|HANDLE|KICKOFF|CANCEL|COMPLETE|FAIL|START|MATCH|INTERFACE|FOR|IF|THEN|ELSE|CONTINUE|RETURN|COMMIT|REQUIRE)\b/g, '<span class="kw">$1</span>')
+        .replace(/\b(START_INSTANCE|CREATE_INSTANCE|RUNTIME_CONTEXT_READY|RESOLVE_START|RECEIVE|HANDLE|KICKOFF|CANCEL|COMPLETE|FAIL|START|MATCH|INTERFACE|FOR|IF|THEN|ELSE|CONTINUE|RETURN|COMMIT|REQUIRE)\b/g, '<span class="kw">$1</span>')
         .replace(/\b(Rejected\([^)]+\)|Stale\([^)]+\)|Committed\([^)]+\)|Started\([^)]+\)|Created\([^)]+\)|Activated\([^)]+\)|Terminated\([^)]+\)|Accepted|Duplicate|DispatchIntent|ContextPacket|ResolvedStartRequest|GateDecision|GateEvaluator|GateInvocation|ProcessResult|ProcessGateRunner|Outcome)\b/g, '<span class="out">$1</span>')
         .replace(/^(\s*-?\s*)([A-Za-z_][A-Za-z0-9_]*)(:)/, '$1<span class="k">$2</span>$3')
         .replace(/(:\s*)([0-9]+)(\b)/g, '$1<span class="n">$2</span>$3');
