@@ -357,7 +357,10 @@ heavier than the inline declarative/packaged pipeline; until L2a, L2 core reject
 (`gate_execution_not_supported`). Static gate-config invariants are checked at **definition load**
 (the `VALIDATE_GATE_CONFIG` hook, fail-at-create): a process gate on a context-free workflow
 (`runtime_context_required_for_process_gate`) and a `fail_instance` disposition (`gate_config_not_supported`)
-are both rejected before any run. **Realized (inline only) in core-model.html.**
+are both rejected before any run. The exact field-by-field contract (required / default / valid values /
+invalid result) is canonicalized in the **Canonical Process Gate Contract** table in core-model.html — the
+single source of truth the pseudocode, config, and this block all defer to. **Realized (inline only) in
+core-model.html.**
 Out of scope (later): **deferred process gates** (`WAITING(gate_pending)` + a `GATE_RESULT` kernel_event,
 reusing the L0e provider pattern for long-running / non-blocking / evidence-producing checks) — a later
 lifecycle slice, **named but not numbered**, since it touches L0d lifecycle, the process gate, and L9-ish

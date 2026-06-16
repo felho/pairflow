@@ -127,6 +127,14 @@
     .absent-item { border: 1px solid var(--line); border-radius: 7px; padding: 9px 11px; font-size: 13.5px; color: var(--muted); background: #fbfcfe; }
     .absent-item b { color: var(--ink); font-weight: 600; }
     .absent-item .at { color: var(--accent); font-weight: 600; }
+    /* canonical contract matrix */
+    .contract { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 6px; }
+    .contract th, .contract td { border: 1px solid var(--line); padding: 5px 8px; text-align: left; vertical-align: top; }
+    .contract th { background: var(--panel); color: var(--ink); font-weight: 600; }
+    .contract td { color: var(--muted); }
+    .contract td:first-child { color: var(--ink); font-family: ui-monospace, monospace; white-space: nowrap; }
+    .contract tr.grp td { background: var(--panel); color: var(--ink); font-weight: 600; font-family: inherit; }
+    .contract code { font-size: 11px; }
     /* IDE-like side-by-side pseudocode diff */
     .diff-title { font-weight: 700; margin: 20px 0 8px; }
     .code-diff {
@@ -2740,13 +2748,16 @@ RUN_PROCESS_GATE(gate, instance, template, envelope) → GateDecision   # L2a �
   RETURN classify_process_result(result, gate.config)
 
 CLASSIFY_PROCESS_RESULT(result, config) → GateDecision
-  IF result.kind = timeout      THEN RETURN runner_outcome(config.on_timeout      ?? block_transition, timeout,      result.log_ref)   # absent disposition ⇒ block_transition (the default; fail_instance is rejected at definition load)
-  IF result.kind = runner_error THEN RETURN runner_outcome(config.on_runner_error ?? block_transition, runner_error, result.log_ref)   # spawn / workspace-missing (malformed JSON has its own branch below)
-  MATCH config.output.mode ?? exit_code:                             # exit_code is the default; never guess "JSON wins"
-    exit_code          → RETURN { verdict: config.on_exit[bucket(result.exit_code)],   # buckets: "0" | nonzero → allow | warn | block
+  output_mode     ← config.output.mode      ?? exit_code             # contract defaults (absent ⇒ these) — resolved once
+  on_runner_error ← config.on_runner_error  ?? block_transition
+  on_timeout      ← config.on_timeout       ?? block_transition
+  IF result.kind = timeout      THEN RETURN runner_outcome(on_timeout,      timeout,      result.log_ref)
+  IF result.kind = runner_error THEN RETURN runner_outcome(on_runner_error, runner_error, result.log_ref)   # spawn / workspace-missing (malformed JSON has its own branch below)
+  MATCH output_mode:                                                 # never guess "JSON wins"
+    exit_code          → RETURN { verdict: config.on_exit[bucket(result.exit_code)],   # buckets: "0" | nonzero → allow | warn | block (values allowlisted at definition load)
                                   reason: exit_reason(result.exit_code), evidence_refs: [result.log_ref] }
     gate_decision_json → parsed ← try_parse_gate_decision(result.stdout)               # opt-in; schema allowlists verdict ∈ { allow, warn, block } — route is invalid until the routing slice
-                         IF parsed is none THEN RETURN runner_outcome(config.on_runner_error ?? block_transition, malformed_gate_decision_json, result.log_ref)   # unparseable / schema-invalid (incl. a disallowed verdict) ⇒ runner outcome, NOT a business block
+                         IF parsed is none THEN RETURN runner_outcome(on_runner_error, malformed_gate_decision_json, result.log_ref)   # unparseable / schema-invalid (incl. a disallowed verdict) ⇒ runner outcome, NOT a business block
                          RETURN with_evidence(parsed, result.log_ref)
 
 runner_outcome(disposition, reason, log_ref) → GateDecision          # MVP realizes ONLY block_transition
@@ -2762,11 +2773,10 @@ VALIDATE_GATE_CONFIG(template) → ok | Rejected                       # run at 
     IF cfg.command is absent OR cfg.timeout_ms is absent
        THEN RETURN Rejected(invalid_process_gate_config)                      # command + bounded timeout are mandatory
     # disposition allowlist — block_transition is the only realized value (absent ⇒ block_transition default)
-    IF cfg.on_runner_error = fail_instance OR cfg.on_timeout = fail_instance
-       THEN RETURN Rejected(gate_config_not_supported)                        # fail_instance is a reserved future disposition (distinct reason)
-    IF (cfg.on_runner_error is present AND cfg.on_runner_error ≠ block_transition)
-       OR (cfg.on_timeout is present AND cfg.on_timeout ≠ block_transition)
-       THEN RETURN Rejected(invalid_process_gate_config)                      # any other disposition is unknown
+    FOR disposition IN [cfg.on_runner_error, cfg.on_timeout]:
+      IF disposition is absent          THEN CONTINUE                          # absent ⇒ block_transition default
+      IF disposition = fail_instance    THEN RETURN Rejected(gate_config_not_supported)    # reserved future disposition (distinct reason)
+      IF disposition ≠ block_transition THEN RETURN Rejected(invalid_process_gate_config)  # any other value is unknown
     # output mode — exit_code is the default; only an explicit-but-unknown value is invalid
     IF cfg.output.mode is present AND cfg.output.mode NOT IN { exit_code, gate_decision_json }
        THEN RETURN Rejected(invalid_process_gate_config)
@@ -2959,13 +2969,26 @@ DISPATCH_INTENT(instance, template, step_id) → DispatchIntent
           </div>
         </div>
         <div class="agg">
-          <div class="agg-label">external.process config — policy by parameterization</div>
-          <div class="ents">
-            <div class="ent"><div class="en">command · timeout_ms</div><div class="fields">what to run, and the bounded timeout (a v3 addition over v1's untimed runner)</div></div>
-            <div class="ent"><div class="en">output.mode</div><div class="fields"><code>exit_code</code> (default, v1-parity) | <code>gate_decision_json</code> (explicit opt-in for a structured verdict) — never an implicit "JSON wins"</div></div>
-            <div class="ent"><div class="en">on_exit</div><div class="fields">exit-code bucket (<code>"0"</code> | <code>nonzero</code>) → <code>allow | warn | block</code>; the same runner is a hard gate or a warning gate by config alone</div></div>
-            <div class="ent"><div class="en">on_runner_error · on_timeout</div><div class="fields"><code>block_transition</code> is the only MVP value and the default when absent — surfaced as <code>gate_blocked</code> with a distinct <code>runner_error</code> / <code>timeout</code> / <code>malformed_gate_decision_json</code> reason (malformed structured output is classified under this same runner-outcome policy). <code>fail_instance</code> is a reserved future disposition: configuring it is rejected at definition load (<code>gate_config_not_supported</code>)</div></div>
-          </div>
+          <div class="agg-label">Canonical Process Gate Contract — the single source of truth for <code>external.process</code></div>
+          <table class="contract">
+            <thead><tr><th>Field / case</th><th>Required?</th><th>Valid values / behavior</th><th>Invalid / absent behavior</th></tr></thead>
+            <tbody>
+              <tr><td>gate.uses</td><td>yes</td><td><code>external.process</code></td><td>non-process gates skip this contract</td></tr>
+              <tr><td>runtime_context</td><td>yes (process)</td><td>a provisioned workspace (not <code>none</code>)</td><td><code>runtime_context_required_for_process_gate</code></td></tr>
+              <tr><td>config.command</td><td>yes</td><td>command string / resolved slot</td><td><code>invalid_process_gate_config</code></td></tr>
+              <tr><td>config.timeout_ms</td><td>yes</td><td>positive duration</td><td><code>invalid_process_gate_config</code></td></tr>
+              <tr><td>config.output.mode</td><td>no</td><td>absent ⇒ <code>exit_code</code>; else <code>exit_code | gate_decision_json</code></td><td>present &amp; unknown ⇒ <code>invalid_process_gate_config</code></td></tr>
+              <tr><td>config.on_exit["0"]</td><td>if <code>exit_code</code></td><td><code>allow | warn | block</code></td><td>missing / unknown ⇒ <code>invalid_process_gate_config</code></td></tr>
+              <tr><td>config.on_exit[nonzero]</td><td>if <code>exit_code</code></td><td><code>allow | warn | block</code></td><td>missing / unknown ⇒ <code>invalid_process_gate_config</code></td></tr>
+              <tr><td>config.on_runner_error</td><td>no</td><td>absent ⇒ <code>block_transition</code>; else <code>block_transition</code></td><td><code>fail_instance</code> ⇒ <code>gate_config_not_supported</code>; other ⇒ <code>invalid_process_gate_config</code></td></tr>
+              <tr><td>config.on_timeout</td><td>no</td><td>absent ⇒ <code>block_transition</code>; else <code>block_transition</code></td><td><code>fail_instance</code> ⇒ <code>gate_config_not_supported</code>; other ⇒ <code>invalid_process_gate_config</code></td></tr>
+              <tr class="grp"><td colspan="4">Runtime classification — CLASSIFY_PROCESS_RESULT</td></tr>
+              <tr><td>result.kind = timeout</td><td>runtime</td><td>maps via <code>on_timeout</code> / default</td><td><code>gate_blocked(timeout)</code></td></tr>
+              <tr><td>result.kind = runner_error</td><td>runtime</td><td>maps via <code>on_runner_error</code> / default</td><td><code>gate_blocked(runner_error)</code></td></tr>
+              <tr><td>gate_decision_json verdict</td><td>runtime</td><td><code>allow | warn | block</code></td><td>malformed / route / unknown ⇒ <code>gate_blocked(malformed_gate_decision_json)</code></td></tr>
+            </tbody>
+          </table>
+          <div class="fields" style="margin-top:8px">This table is the contract; the pseudocode is its executable sketch — <code>VALIDATE_GATE_CONFIG</code> enforces the config rows at definition load, <code>CLASSIFY_PROCESS_RESULT</code> the runtime rows — and the config example below is one instance of it. Same runner, hard gate or warning gate, by <code>on_exit</code> alone.</div>
         </div>
         <div class="note domain">
           <code>evidence_refs</code> on <code>GateDecision</code> become concrete here: every run persists a
