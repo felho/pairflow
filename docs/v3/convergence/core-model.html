@@ -217,8 +217,8 @@
       <a class="level" href="#l0f">L0f <span class="tag">· project config + resolution</span></a>
       <a class="level" href="#l1">L1 <span class="tag">· capability matrix</span></a>
       <a class="level" href="#l2">L2 <span class="tag">· gate / policy</span></a>
-      <a class="level active" href="#l2a">L2a <span class="tag">· external/process gate</span></a>
-      <div class="future">L2b · policy/gate context</div>
+      <a class="level" href="#l2a">L2a <span class="tag">· external/process gate</span></a>
+      <a class="level active" href="#l2b">L2b <span class="tag">· policy/gate context</span></a>
       <div class="future">L3 · human decision Ask</div>
       <div class="future">L4 · child workflow + events</div>
       <div class="cut">▲ MVP cut — local WF-7 runs</div>
@@ -3126,6 +3126,497 @@ template:
           </ul>
         </div>
       </section>
+
+      <section id="l2b">
+        <h2 class="level-h"><span class="level-badge">L2b</span> Policy/gate context contribution</h2>
+        <p class="level-sub">L2 <b>enforces</b> a rule — an early <code>CONVERGED</code> is rejected. L2b
+        <b>communicates</b> it: the kernel renders a deterministic, actor-facing <code>context_block</code> into
+        the dispatched packet, so the reviewer is told the rule before it acts and never burns a round on an emit
+        that would be blocked. This is the first <b>ContextAssembly</b> slice — and where L0c’s
+        <code>prompt_concern_refs</code> finally resolve.</p>
+
+        <p><b>One render mechanism, two sources.</b> A template-level <code>context_blocks</code> catalog
+        (<code>id → { body }</code>) is the single body source; role/step <code>prompt_concern_refs</code> (from
+        L0c) and gate/policy <code>context_block_refs</code> are just id lists into it. The kernel resolves the
+        issued refs, orders and dedups them, and renders them into <code>ContextPacket.context_blocks</code> with
+        provenance. Nothing here changes a verdict: blocks are <b>communication only</b> — deleting one cannot
+        change what L2 enforces.</p>
+
+        <h3 class="view-h"><span class="view-tag runtime">Runtime</span> A concrete trace</h3>
+        <p>The reviewer is dispatched at <code>review</code>; the converge transition carries a round-threshold
+        gate (<code>round ≥ 2</code>) and a context block that states the rule:</p>
+        <div class="trace">
+          <div class="trace-row"><div class="trace-n">1</div><div class="trace-c">
+            <div class="ev">kernel dispatches the <code>reviewer</code> at <code>review</code> (round 1)</div>
+            <div class="meta"><code>assemble_context_blocks</code> renders two blocks into the packet: <code>reviewer-severity-ontology</code> (provenance <code>source: step_config</code>) and <code>no-converged-before-round-2</code> (provenance <code>source: gate_binding(review, CONVERGED)</code>) — the latter because <code>CONVERGED ∈ available_ops ∩ L1 capability</code> for the reviewer here</div>
+          </div></div>
+          <div class="trace-row"><div class="trace-n">2</div><div class="trace-c">
+            <div class="ev">the reviewer reads the packet and, at round 1, emits <code>PASS</code> (not <code>CONVERGED</code>)</div>
+            <div class="meta">it was <em>told</em> “no CONVERGED before round 2,” so it does not spend an emit on a doomed converge — contrast L2, where an uninformed reviewer emitted <code>CONVERGED</code> at round 1 and got <code>gate_blocked(round_below_min)</code>. Same enforcement; L2b removed the wasted attempt</div>
+          </div></div>
+          <div class="trace-row"><div class="trace-n">3</div><div class="trace-c">
+            <div class="ev">a round later the <code>implementer</code> is dispatched at <code>implement</code></div>
+            <div class="meta"><code>available_ops ∩ L1 capability = { PASS }</code>; the converge gate is bound to <code>review/CONVERGED</code>, not an op this actor may emit, so <code>no-converged-before-round-2</code> is <b>not</b> rendered — the reviewer-only rule does not leak into the implementer’s packet</div>
+          </div></div>
+        </div>
+        <div class="note runtime">
+          The block is communication, not control: if the reviewer ignored it and emitted <code>CONVERGED</code>
+          at round 1, the L2 gate would still reject it (<code>round_below_min</code>, round not burned). Deleting
+          <code>no-converged-before-round-2</code> from the catalog changes what the actor is <em>told</em>, never
+          what the kernel <em>enforces</em>.
+        </div>
+
+        <h3 class="view-h"><span class="view-tag pseudo">Pseudocode</span> The rule behind the trace</h3>
+        <p>Two helpers are added — <code>assemble_context_blocks</code> (dispatch-time render) and
+        <code>validate_context_refs</code> (definition-load check) — and the packet gains one field. The kernel
+        handlers are otherwise unchanged:</p>
+        <div class="code-diff" aria-label="L2b pseudocode" data-old-label="L2a baseline" data-new-label="L2b current">
+          <script type="text/plain" class="diff-source" data-code-old-ref="l2a-pseudocode"></script>
+          <script type="text/plain" class="diff-source" data-code-new data-code-id="l2b-pseudocode">
+resolve_agent_config(template, step, instance) → AgentConfig
+  base      ← template.role(step.role).default_agent_config            # role default
+  with_step ← merge(base, step.agent_config)                           # step override (scalars overwrite; arrays/maps replace)
+  override  ← instance.run_overrides.get(step.id, empty_config)         # start/run override (optional per step)
+  # portable run intent; not actor-adapted, provisioned, or attested at L0c
+  RETURN      merge(with_step, override)
+
+capability(template, role, step_id) → action set                       # role × step → allowed actions
+  step    ← template.step(step_id)
+  profile ← template.capability_profile.get((role, step_id))
+  IF profile is not none THEN RETURN profile.allowed                    # explicit restriction (none in the baseline)
+  IF role = step.role THEN RETURN event_types_of(step.transitions)      # default-derived: own role may emit the step's transitions
+  RETURN empty_set                                                      # any other role may emit nothing here
+
+# GateEvaluator — shared gate contract; L2a adds inline external.process to L2 core's declarative/packaged
+INTERFACE GateEvaluator:
+  implementation: declarative | packaged | process      # L2a realizes inline process too; only DEFERRED execution stays out (later slice)
+  execution:      inline | deferred                      # still inline only — deferred is a later lifecycle slice (gate_pending + GATE_RESULT)
+  evaluate(config, projection) → GateDecision            # in-process (declarative/packaged); a process gate runs via run_process_gate instead
+
+gate_projection(instance, template, envelope) → Projection   # policy-facing read model — read-only, derived; the policy reads, never mutates
+  RETURN {
+    round:        instance.round,                       # canonical, kernel-maintained, commit-derived, transcript-reconstructable
+    current_step: instance.current_step,
+    event_type:   envelope.type,
+    history:      derive_policy_view(instance.transcript) }   # derived view (prior verdicts / alternation); the projection exposes no raw transcript, though the kernel derives it from one
+
+# ProcessGateRunner — the executor that spawns an external gate process; the kernel owns the contract, the runner owns the spawn
+INTERFACE ProcessGateRunner:
+  run(command, { cwd, stdin, timeout_ms }) → ProcessResult   # { kind: ok | timeout | runner_error, exit_code?, stdout?, log_ref, duration_ms }
+
+run_process_gate(gate, instance, template, envelope) → GateDecision   # L2a — inline external.process, in the workspace, bounded timeout
+  invocation ← GateInvocation {
+    instance_id: instance.id, template_ref: instance.template_ref,
+    step_id: instance.current_step, event_type: envelope.type, expected_version: instance.version,
+    config:     gate.config,                                          # snapshot of the authored GateBinding.config
+    projection: compact(gate_projection(instance, template, envelope)) }   # MVP: small inline payload (NOT projection_ref + SDK)
+  result ← processRunner.run(gate.config.command, {
+    cwd: runtime_context_workspace(instance),                         # runs in the provisioned workspace (v1: the worktree)
+    stdin: json(invocation), timeout_ms: gate.config.timeout_ms })    # bounded timeout — a v3 addition (v1 had none)
+  # evidence (log + exit_code + duration + head_sha + git_status_hash) is persisted on EVERY run (v1-faithful)
+  RETURN classify_process_result(result, gate.config)
+
+classify_process_result(result, config) → GateDecision
+  output_mode     ← config.output.mode      ?? exit_code             # contract defaults (absent ⇒ these) — resolved once
+  on_runner_error ← config.on_runner_error  ?? block_transition
+  on_timeout      ← config.on_timeout       ?? block_transition
+  IF result.kind = timeout      THEN RETURN runner_outcome(on_timeout,      timeout,      result.log_ref)
+  IF result.kind = runner_error THEN RETURN runner_outcome(on_runner_error, runner_error, result.log_ref)   # spawn / workspace-missing (malformed JSON has its own branch below)
+  MATCH output_mode:                                                 # never guess "JSON wins"
+    exit_code          → RETURN { verdict: config.on_exit[bucket(result.exit_code)],   # buckets: "0" | nonzero → allow | warn | block (values allowlisted at definition load)
+                                  reason: exit_reason(result.exit_code), evidence_refs: [result.log_ref] }
+    gate_decision_json → parsed ← try_parse_gate_decision(result.stdout)               # opt-in; schema allowlists verdict ∈ { allow, warn, block } — route is invalid until the routing slice
+                         IF parsed is none THEN RETURN runner_outcome(on_runner_error, malformed_gate_decision_json, result.log_ref)   # unparseable / schema-invalid (incl. a disallowed verdict) ⇒ runner outcome, NOT a business block
+                         RETURN with_evidence(parsed, result.log_ref)
+
+runner_outcome(disposition, reason, log_ref) → GateDecision          # MVP realizes ONLY block_transition
+  # fail_instance is rejected at definition load (gate_config_not_supported), so block_transition is the only value that reaches here — fail-closed
+  RETURN { verdict: block, reason, evidence_refs: [log_ref] }        # audited distinctly: runner_error / timeout / malformed, not test_failed
+
+validate_gate_config(template) → ok | Rejected                       # run at definition load (CREATE_INSTANCE) — fail at create, not mid-run; the static analog of binding coverage
+  FOR gate IN all_gate_bindings(template):                            # every (step, event_type) gate in the pinned definition
+    IF gate.uses ≠ external.process THEN CONTINUE                     # only process gates carry an execution config to validate
+    cfg ← gate.config
+    IF template.runtime_context = none
+       THEN RETURN Rejected(runtime_context_required_for_process_gate)        # a process gate has no workspace in a context-free workflow
+    IF cfg.command is absent OR cfg.timeout_ms is absent
+       THEN RETURN Rejected(invalid_process_gate_config)                      # command + bounded timeout are mandatory
+    # disposition allowlist — block_transition is the only realized value (absent ⇒ block_transition default)
+    FOR disposition IN [cfg.on_runner_error, cfg.on_timeout]:
+      IF disposition is absent          THEN CONTINUE                          # absent ⇒ block_transition default
+      IF disposition = fail_instance    THEN RETURN Rejected(gate_config_not_supported)    # reserved future disposition (distinct reason)
+      IF disposition ≠ block_transition THEN RETURN Rejected(invalid_process_gate_config)  # any other value is unknown
+    # output mode — exit_code is the default; only an explicit-but-unknown value is invalid
+    IF cfg.output.mode is present AND cfg.output.mode NOT IN { exit_code, gate_decision_json }
+       THEN RETURN Rejected(invalid_process_gate_config)
+    IF (cfg.output.mode ?? exit_code) = exit_code THEN                        # exit_code mode (incl. the default when output.mode is absent)
+      IF cfg.on_exit["0"] is absent OR cfg.on_exit[nonzero] is absent
+         THEN RETURN Rejected(invalid_process_gate_config)                    # both exit buckets are required
+      IF cfg.on_exit["0"] NOT IN { allow, warn, block } OR cfg.on_exit[nonzero] NOT IN { allow, warn, block }
+         THEN RETURN Rejected(invalid_process_gate_config)                    # buckets map only to realized verdicts — no route smuggled in
+  RETURN ok
+
+validate_context_refs(template) → ok | Rejected                       # definition load (CREATE_INSTANCE) — fail at create; the static analog of binding coverage / validate_gate_config
+  catalog ← template.context_blocks                                   # id → { body }; the single body source
+  FOR ref IN all_issued_context_block_refs(template):                 # every role/step prompt_concern_ref + gate context_block_ref
+    IF ref NOT IN catalog THEN RETURN Rejected(unresolved_context_block_ref)
+  RETURN ok                                                           # existence only — NOT semantic parity between a block’s prose and the gate config it describes
+
+RECEIVE(input) → Outcome                                               # one kernel entry; route by input source class
+  MATCH input.source:
+    operator_intent → dispatch to CREATE_INSTANCE / START / KICKOFF / CANCEL   # lifecycle intents
+    kernel_event    → dispatch to RUNTIME_CONTEXT_READY / FAIL               # internal events (done is internal-only, below)
+    actor_envelope  → HANDLE(input)                                           # the L0a–L1 actor handler, now lifecycle-guarded
+
+# Convenience operator API, not a kernel primitive: a single "start workflow" command may
+# compose CREATE_INSTANCE(...) then START(instance). activation_mode controls what happens
+# after RUNTIME_CONTEXT_READY (activate vs WAITING(kickoff_pending)) — not whether CREATE dispatches.
+CREATE_INSTANCE(template_ref, activation_mode, task, binding, run_overrides) → Created   # operator_intent; template + binding resolved on the start path (formalized by L0f)
+  template ← definitionStore.load(template_ref)                # a pinned definition — a plain template, or an L0f-resolved definition (slots applied)
+  IF activation_mode = immediate AND task is absent THEN RETURN Rejected(task_required)
+  REQUIRE binding covers every role reachable in template      # binding resolved pre-kernel; the kernel only validates coverage (fail at create, not mid-run)
+  REQUIRE validate_gate_config(template)                          # L2a: static gate-config invariants (process↔workspace, no fail_instance) — definition-load validation, fail at create
+  REQUIRE validate_context_refs(template)                         # L2b: every issued context_block ref resolves in the catalog — fail at create, beside binding coverage
+  instance ← create { template_ref, task, binding, activation_mode,
+                      kernel_status: CREATED, current_step: none, round: 0,   # position + round meaningless until ACTIVE
+                      runtime_context: none, run_overrides: snapshot(run_overrides), version: 1 }
+  COMMIT instance creation
+  RETURN Created(instance.version)                             # no dispatch yet — not active
+
+# RuntimeContextProvider — a named, core-adjacent fulfiller; the kernel owns this CONTRACT, the provider owns the mechanics
+INTERFACE RuntimeContextProvider:
+  provision(instance_id, request_id, spec)            # async → later fires RUNTIME_CONTEXT_READY(request_id, ref)
+  project_for_actor(runtime_context_ref) → RuntimeContextProjection   # kind-specific actor-facing view; kernel-internal fields stay out
+
+START(instance) → Outcome                                             # operator_intent — guarded, single-shot
+  REQUIRE instance.kernel_status = CREATED AND instance.runtime_context = none
+  template ← definitionStore.load(instance.template_ref)
+  requirement ← template.runtime_context                              # RuntimeContextRequirement: none | required(spec) — single source of truth
+  IF requirement = none THEN                                          # the workflow declares no runtime context
+    instance.runtime_context ← ready(∅)                               # trivially ready — nothing to provision
+    RETURN activate_or_hold(instance)
+  provider ← providerRegistry.resolve(requirement.spec.provider)
+  IF provider is none THEN RETURN Rejected(runtime_context_provider_unavailable)   # name-resolution failure = base contract error
+  request_id ← new_request_id()
+  provider.provision(instance.id, request_id, requirement.spec)  # provider internals run git branch/worktree/clone mechanics; later fires RUNTIME_CONTEXT_READY
+  instance.runtime_context ← requested(request_id)          # the L0d single-shot marker; status stays CREATED (= v1 PREPARING_WORKSPACE)
+  RETURN Accepted
+
+activate_or_hold(instance) → Outcome                                 # shared post-readiness decision (provisioned or context-free)
+  IF instance.activation_mode = immediate THEN RETURN activate(instance)
+  instance.kernel_status ← WAITING                             # deferred_kickoff: hold for an operator kickoff
+  instance.wait ← { kind: kickoff_pending, requested_by: "activation", resume_events: [KICKOFF] }
+  RETURN Accepted
+
+RUNTIME_CONTEXT_READY(instance, request_id, runtime_context_ref) → Outcome   # kernel_event (v1: workspace/worktree ready)
+  REQUIRE instance.runtime_context = requested(request_id)   # L0d correlation: the readiness for the request we issued
+  template ← definitionStore.load(instance.template_ref)
+  requirement ← template.runtime_context
+  REQUIRE requirement = required(spec)                       # a request was issued ⇒ a context is required (made explicit)
+  REQUIRE runtime_context_ref.kind = spec.kind              # L0e kind-boundary — a provider may only return a ref of the requested kind
+  instance.runtime_context ← ready(runtime_context_ref)    # kernel guards kind + correlation only; the locator stays provider-defined, unvalidated
+  RETURN activate_or_hold(instance)
+
+KICKOFF(instance, task) → Outcome                                     # operator_intent
+  REQUIRE instance.kernel_status = WAITING AND instance.wait.kind = kickoff_pending
+  instance.task ← task                                         # the deferred task, supplied now
+  RETURN activate(instance)
+
+activate(instance) → Outcome                                         # internal — produces the first dispatch
+  REQUIRE instance.runtime_context = ready AND instance.task present
+  template ← definitionStore.load(instance.template_ref)      # pinned immutable version — same template/instance boundary as HANDLE
+  instance.kernel_status ← ACTIVE
+  instance.current_step  ← template.start
+  instance.round         ← 1                                  # first round begins at activation; meaningless before ACTIVE
+  RETURN Activated(dispatch_intent(instance, template, template.start))   # dispatch is a kernel output (L0b), not a side effect
+
+CANCEL(instance) → Outcome                                           # operator_intent — any non-terminal
+  REQUIRE instance.kernel_status ≠ TERMINAL
+  instance.kernel_status ← TERMINAL ; instance.terminal_disposition ← cancelled
+  RETURN Terminated(cancelled)
+
+COMPLETE(instance)                                                   # internal helper — done originates only from a terminal step (HANDLE), never routed
+  REQUIRE instance.kernel_status = ACTIVE
+  instance.kernel_status ← TERMINAL ; instance.terminal_disposition ← done
+
+FAIL(instance, reason) → Outcome                                     # kernel_event — any non-terminal
+  REQUIRE instance.kernel_status ≠ TERMINAL
+  instance.kernel_status ← TERMINAL ; instance.terminal_disposition ← failed ; instance.failure_reason ← reason
+  RETURN Terminated(failed)
+
+HANDLE envelope → Outcome
+  IF not valid_shape(envelope)            THEN RETURN Rejected(invalid_shape)
+
+  instance ← instanceStore.load(envelope.instance_id)
+  IF instance is none                     THEN RETURN Rejected(unknown_instance)
+  template ← definitionStore.load(instance.template_ref)   # separate store; pinned immutable version
+
+  # idempotency, key scope (instance_id, op_id)
+  IF instance.transcript.has(envelope.op_id) THEN RETURN Duplicate   # no-op, no 2nd entry
+
+  # L0d: lifecycle guard — actor emits only in actor-routable ACTIVE execution
+  IF instance.kernel_status ≠ ACTIVE       THEN RETURN Rejected(not_active)
+
+  # actor-supplied stale-intent — mandatory at L0b
+  IF envelope.expected_version is missing  THEN RETURN Rejected(missing_version)
+  IF envelope.expected_version ≠ instance.version THEN RETURN Stale(instance.version)
+
+  step   ← template.step(instance.current_step)
+
+  # L1: role authority — the claimed role must be this position's active role
+  IF envelope.expected_role is missing     THEN RETURN Rejected(missing_role)          # mandatory at L1
+  IF envelope.expected_role ≠ step.role    THEN RETURN Rejected(role_not_authorized)
+
+  target ← step.transitions[envelope.type]   # navigation (L0b): does this action exist here?
+  IF target is none                       THEN RETURN Rejected(no_transition)
+
+  # L1: action authorization — exists as a transition, but may this role emit it here?
+  IF envelope.type not in capability(template, step.role, instance.current_step)
+                                          THEN RETURN Rejected(not_authorized)
+
+  # L2: policy gate pipeline — the transition exists (L0b) and is authorized (L1); do the policies allow it now?
+  gate_decisions ← []                                                                       # retained allow/warn verdicts + evidence refs, carried to the commit
+  FOR gate IN template.gates_for(instance.current_step, envelope.type):   # ordered, authored; empty for ungated transitions
+    evaluator ← gateRegistry.resolve(gate.uses)
+    IF evaluator is none            THEN RETURN Rejected(gate_evaluator_unavailable)      # config invariant — unresolved gate name
+    IF evaluator.execution ≠ inline THEN RETURN Rejected(gate_execution_not_supported)    # deferred ⇒ later lifecycle slice (gate_pending + GATE_RESULT)
+    IF evaluator.implementation = process                                                 # L2a: inline process now runs (was rejected at L2 core)
+      THEN IF instance.runtime_context = ready(∅) THEN RETURN Rejected(runtime_context_required_for_process_gate)   # ready(∅) = context-free: validate_gate_config rejects this at definition load; runtime backstop here
+           decision ← run_process_gate(gate, instance, template, envelope)                # spawn in the workspace, bounded timeout
+      ELSE decision ← evaluator.evaluate(gate.config, gate_projection(instance, template, envelope))   # declarative / packaged, in-process
+    IF decision.verdict = block     THEN RETURN Rejected(gate_blocked(decision.reason), decision.evidence_refs)   # no commit ⇒ round not burned; refs surfaced
+    gate_decisions.append(decision)                                                       # allow or warn ⇒ retained (verdict + evidence_refs + diagnostics)
+    # allow or warn ⇒ next gate in the pipeline
+
+  issued_config ← resolve_agent_config(template, step, instance)   # resolved only now — not for a rejected envelope
+
+  # one atomic commit, CAS on instance.version
+  COMMIT atomically at expected_version = instance.version:
+    instance.transcript.append(envelope, issued_agent_config: issued_config, gate_decisions: gate_decisions)   # provenance: issued config + gate verdicts / evidence refs
+    instance.current_step ← target
+    IF advances_round(step, target) THEN instance.round ← instance.round + 1    # advance predicate = transition semantics; transcript-reconstructable
+    IF target is terminal THEN COMPLETE(instance)                  # kernel-internal completion path → TERMINAL(done)
+    instance.version ← instance.version + 1
+  # on CAS conflict: restart HANDLE from load —
+  #   re-check idempotency and re-resolve the transition;
+  #   never re-commit a target computed from stale state
+
+  intent ← (instance.kernel_status = TERMINAL) ? none : dispatch_intent(instance, template, instance.current_step)  # derive after commit
+  RETURN Committed(instance.version, intent)
+
+assemble_context_blocks(instance, template, step) → [ContextBlock]    # L2b — deterministic render; bodies resolved from the catalog only
+  catalog  ← template.context_blocks                                  # id → { body }; the single body source
+  rendered ← ordered_map()                                            # first-seen order; dedups by id, accumulates provenance.sources[]
+  emit(ref, source):                                                  # local — resolve once; on a repeat only append the provenance source
+    IF rendered.has(ref) THEN rendered[ref].provenance.sources.append(source) ; RETURN
+    rendered.put(ref, { id: ref, body: catalog[ref].body, provenance: { sources: [source] } })
+  # render order IS source order: role refs → step refs → gate/policy refs, declaration order within each — render-order, NOT precedence/override
+  FOR ref IN template.role(step.role).default_agent_config.prompt_concern_refs:   # 1) role identity / operating rules
+    emit(ref, { source: role_config })
+  FOR ref IN step.agent_config.prompt_concern_refs:                               # 2) the current step
+    emit(ref, { source: step_config })
+  authorized_ops ← capability(template, step.role, step.id) ∩ event_types_of(step.transitions)   # L1 authority ∩ transition existence — the ops this actor may legally emit
+  FOR event_type IN authorized_ops:                                              # 3) gates on transitions the actor may emit — not blind step membership
+    FOR gate IN template.gates_for(step.id, event_type):
+      FOR ref IN gate.context_block_refs:
+        emit(ref, { source: gate_binding, at: (step.id, event_type) })
+  RETURN rendered.values()                                            # ordered [{ id, body, provenance: { sources } }]
+
+dispatch_intent(instance, template, step_id) → DispatchIntent
+  step  ← template.step(step_id)
+  actor ← instance.binding[step.role]                  # guaranteed present by the start invariant
+  requirement ← template.runtime_context
+  IF instance.runtime_context = ready(∅) THEN                                       # the workflow declared no runtime context
+    runtime_view ← none                                                            # explicit: the actor assumes no workspace
+  ELSE
+    REQUIRE requirement = required(spec)                                            # provisioned path ⇒ a context is required (made explicit)
+    provider ← providerRegistry.resolve(spec.provider)                             # the same pinned-template provider that issued the request
+    REQUIRE provider is not none                       # kernel/config invariant (not a business rejection): registry stable for an active run
+    runtime_view ← provider.project_for_actor(instance.runtime_context.ready_ref)  # actor-facing projection (L0e); raw ref stays kernel-side
+  packet ← ContextPacket {
+    instance_id, expected_version: instance.version, task: instance.task,
+    role:          step.role,                                      # dispatched-as role → echoed back as expected_role
+    instruction:   step.instruction,
+    handoff:       payload_of_transition_into(instance, step_id),  # the envelope that brought us here; absent at start
+    available_ops: event_types_of(step.transitions),              # navigation affordances; L1 enforces capability in HANDLE
+    context_blocks: assemble_context_blocks(instance, template, step),   # L2b — rendered, ordered, deduped, with provenance; communication only
+    effective_agent_config: resolve_agent_config(template, step, instance),   # resolved portable run intent (was raw agent_config at L0b)
+    runtime_context: runtime_view }                              # the projection, or none for a context-free workflow
+  RETURN DispatchIntent { actor, packet }            # a local/manual driver delivers; durable channel is L8
+          </script>
+        </div>
+        <div class="note pseudo">
+          <code>assemble_context_blocks</code> is deterministic: bodies come only from the catalog, the source
+          order <em>is</em> the render order (role → step → gate), and a repeated id renders once while
+          <code>provenance.sources[]</code> accumulates every emitter. The gate branch reuses the same
+          <code>capability ∩ available_ops</code> the packet already computes — no fresh authority logic. None of
+          this touches <code>HANDLE</code>’s verdict path.
+        </div>
+
+        <h3 class="view-h"><span class="view-tag domain">Domain</span> What L2b adds</h3>
+        <div class="agg">
+          <div class="agg-label">Context blocks — a catalog and its rendered values</div>
+          <div class="ents">
+            <div class="ent"><div class="en">context_blocks catalog <span style="font-size:10px;color:var(--muted)">(template)</span></div><div class="fields">template-level <code>id → { body }</code> map; the <b>single body source</b>. Both ref kinds point into it; bodies never live inline at a ref site</div></div>
+            <div class="ent"><div class="en">ContextBlockRef</div><div class="fields">two sources, one vocabulary: role/step <code>prompt_concern_refs</code> (L0c) and gate/policy <code>context_block_refs</code> — id lists, resolved against the catalog</div></div>
+            <div class="ent"><div class="en">ContextBlock <span style="font-size:10px;color:var(--muted)">(value)</span></div><div class="fields"><code>{ id, body, provenance: { sources[] } }</code> rendered into <code>ContextPacket.context_blocks</code>; <code>sources[]</code> = <code>role_config | step_config | gate_binding(step, event)</code></div></div>
+          </div>
+        </div>
+        <div class="agg">
+          <div class="agg-label">Canonical Context Block Contract — the single source of truth for the render</div>
+          <table class="contract">
+            <thead><tr><th>Field / case</th><th>Required?</th><th>Valid values / behavior</th><th>Invalid / absent behavior</th></tr></thead>
+            <tbody>
+              <tr><td>template.context_blocks</td><td>yes, if any ref issued</td><td>catalog <code>id → { body }</code>; single body source</td><td>a ref with no entry ⇒ <code>unresolved_context_block_ref</code></td></tr>
+              <tr><td>context_blocks[id].body</td><td>yes</td><td>authored static text (no interpolation)</td><td>absent entry ⇒ <code>unresolved_context_block_ref</code></td></tr>
+              <tr><td>prompt_concern_refs (role/step)</td><td>no</td><td>id list into the catalog</td><td>unresolved ⇒ reject at create (<code>validate_context_refs</code>)</td></tr>
+              <tr><td>context_block_refs (gate/policy)</td><td>no</td><td>id list into the catalog</td><td>unresolved ⇒ reject at create (<code>validate_context_refs</code>)</td></tr>
+              <tr class="grp"><td colspan="4">Render — assemble_context_blocks</td></tr>
+              <tr><td>render order</td><td>runtime</td><td>role → step → gate; declaration order within each</td><td>render-order only, <b>not</b> precedence/override</td></tr>
+              <tr><td>gate ref predicate</td><td>runtime</td><td>renders iff its transition ∈ <code>available_ops ∩ L1 capability</code></td><td>otherwise not rendered (not this actor’s op)</td></tr>
+              <tr><td>dedup</td><td>runtime</td><td>same id ⇒ one rendered block</td><td>—</td></tr>
+              <tr><td>provenance.sources[]</td><td>runtime</td><td>every emitter retained (<code>role_config | step_config | gate_binding</code>)</td><td>—</td></tr>
+              <tr><td>ContextPacket.context_blocks</td><td>runtime</td><td>ordered <code>[{ id, body, provenance }]</code></td><td>—</td></tr>
+              <tr class="grp"><td colspan="4">Scope brake</td></tr>
+              <tr><td>semantic parity (prose ↔ gate config)</td><td>—</td><td><b>not</b> checked — existence only</td><td>drift (gate <code>value</code> vs block prose) not caught</td></tr>
+              <tr><td>computed / templated body</td><td>—</td><td>out of scope</td><td>interpolation like <code>{{ gate.config.value }}</code> is later</td></tr>
+            </tbody>
+          </table>
+          <div class="fields" style="margin-top:8px">This table is the contract; <code>assemble_context_blocks</code> is its executable sketch, <code>validate_context_refs</code> enforces the catalog rows at definition load, and the config below is one instance of it.</div>
+        </div>
+        <div class="note domain">
+          The boundary with L2 is <b>enforcement vs communication</b>. L2’s gate keeps the system correct; L2b’s
+          block makes the same rule legible from configuration — paying off v1, which baked these operating rules
+          into prompt prose. L2b proves a ref <em>resolves</em>, not that its prose <em>matches</em> the gate it
+          describes (see Absent).
+        </div>
+
+        <h3 class="view-h"><span class="view-tag invariant">Invariant</span> New at L2b</h3>
+        <div class="agg invariant">
+          <div class="agg-label">Added rules</div>
+          <div class="ents">
+            <div class="ent"><div class="en">single body source</div><div class="fields">a context block’s body lives only in <code>template.context_blocks</code>; refs are ids, never inline prose — one place to author, dedup, and validate</div></div>
+            <div class="ent"><div class="en">refs validated at definition load</div><div class="fields"><code>validate_context_refs(template)</code> runs in <code>CREATE_INSTANCE</code> beside binding coverage and <code>validate_gate_config</code>; an unresolved ref is <code>unresolved_context_block_ref</code> — fail at create, not a render-time drop</div></div>
+            <div class="ent"><div class="en">deterministic ordered render</div><div class="fields">role → step → gate, declaration order within each; same instance state + config ⇒ byte-identical <code>context_blocks</code>. Order is reading sequence, not precedence/override</div></div>
+            <div class="ent"><div class="en">authority-scoped gate blocks</div><div class="fields">a gate’s block renders only for a transition in <code>available_ops ∩ L1 capability</code> — the same snapshot the packet carries; never blind step membership</div></div>
+            <div class="ent"><div class="en">dedup with retained provenance</div><div class="fields">an id reached from several sources renders once; <code>provenance.sources[]</code> keeps every emitter, so the packet stays terse but auditable</div></div>
+            <div class="ent"><div class="en">communication only</div><div class="fields"><code>context_blocks</code> never enter a verdict or the commit; removing a block cannot change what L2 enforces (correctness is L2’s job, legibility is L2b’s)</div></div>
+          </div>
+        </div>
+
+        <h3 class="view-h"><span class="view-tag config">Config</span> The template — a catalog, and the converge gate communicates its rule</h3>
+        <p>The pre-existing <code>reviewer-severity-ontology</code> ref (declared at L0c) now resolves against a
+        new <code>context_blocks</code> catalog, and the L2 converge threshold gate gains a
+        <code>context_block_refs</code> that states the rule it enforces:</p>
+        <div class="code-diff" aria-label="L2b template config" data-old-label="L2a baseline" data-new-label="L2b current">
+          <script type="text/plain" class="diff-source" data-code-old-ref="l2a-template-config"></script>
+          <script type="text/plain" class="diff-source" data-code-new data-code-id="l2b-template-config">
+template:
+  id: local-pair-v0
+  version: 1
+  roles:
+    implementer: { default_actor: codex,  default_agent_config: { mode: builder, model_ref: codex-default-engineer, prompt_profile_refs: [engineer-defaults] } }
+    reviewer:    { default_actor: claude, default_agent_config: { mode: critic } }
+  start: implement
+  activation:
+    mode: immediate          # after START + runtime_context ready, activate immediately; no KICKOFF hold
+    # deferred_kickoff → start in a WAITING(kickoff_pending) hold; an operator
+    # kickoff supplies the task and releases the first dispatch (the v1 ideation bubble)
+  slots:                        # L0f — typed holes the repo's ProjectConfig fills (default | required)
+    validation.test_command:         { type: command,        default: "pnpm test" }
+    runtime.worktree.base_branch:    { type: branch,         default: main }
+    runtime.worktree.branch_pattern: { type: branch_pattern, default: "bubble/{instance_id}" }
+    runtime.worktree.bootstrap:      { type: command,        required: false }   # no default — only the repo knows
+  runtime_context:              # RuntimeContextRequirement — required(spec) here; a context-free workflow declares: runtime_context: none
+    kind: worktree
+    provider: pairflow.worktree
+    config:
+      repo: current                                            # literal — not repo-overridable here
+      base_branch:    ${slot:runtime.worktree.base_branch}     # was literal main; default now lives in slots, repo may override
+      branch_pattern: ${slot:runtime.worktree.branch_pattern}  # provider materializes the actual name from instance_id
+      work_mode: worktree                                      # literal — provider-internal variant (worktree | clone)
+      # worktree path defaults to <repo-parent>/.pairflow-worktrees/<repo>/<instance_id>
+  context_blocks:               # L2b — the catalog: id → { body }; the single body source for rendered packet blocks
+    reviewer-severity-ontology:
+      body: "Rate findings blocker / major / minor; converge only when no blocker or major finding remains."
+    no-converged-before-round-2:
+      body: "Do not emit CONVERGED before round 2 — the convergence gate rejects an earlier attempt and the round is not burned."
+  steps:
+    - id: implement
+      role: implementer
+      instruction: "Build the change for the task."
+      agent_config: { approach: systematic }   # overrides/extends the role default
+      on_pass:                    # PASS → review, now gated by inline test validation (L2a)
+        target: review
+        gates:
+          - uses: external.process               # inline process gate — runs in the worktree, bounded timeout
+            config:
+              command: "${slot:validation.test_command}"
+              output: { mode: exit_code }        # default; gate_decision_json is opt-in
+              on_exit: { "0": allow, nonzero: block }   # exit→verdict; a warning gate maps nonzero: warn
+              timeout_ms: 600000
+              on_runner_error: block_transition  # spawn / workspace-missing → not a business block (fail_instance is rejected until later)
+              on_timeout: block_transition
+          # Structured-output variant: the process writes a GateDecision JSON to stdout.
+          # Invalid JSON / invalid schema is a runner outcome, not a business block:
+          #   runner_outcome(on_runner_error, malformed_gate_decision_json, log_ref)
+          # - uses: external.process
+          #   config:
+          #     command: "node .pairflow/gates/security-check.js"
+          #     output: { mode: gate_decision_json }
+          #     timeout_ms: 300000
+          #     on_runner_error: block_transition
+          #     on_timeout: block_transition
+    - id: review
+      role: reviewer
+      instruction: "Review the diff; pass back or converge."
+      agent_config: { approach: thorough, prompt_concern_refs: [reviewer-severity-ontology], skill_refs: [test-runner] }
+      on_pass:      implement     # PASS → implement
+      on_converged:               # CONVERGED → done, now a gated transition (L2)
+        target: done
+        gates:                    # ordered inline pipeline; first block stops, round not burned
+          - uses: declarative.threshold              # declarative DSL: path / op / value over allowed gate_projection fields
+            config: { metric: round, op: ">=", value: 2 }
+            context_block_refs: [no-converged-before-round-2]   # L2b — communicate the rule this gate enforces
+          - uses: pairflow.previous_reviewer_verdict # packaged pure pairflow policy
+            config: { required: true }
+          </script>
+        </div>
+        <div class="note config">
+          The gate still enforces <code>round ≥ 2</code>; the block just says so in words. They are authored
+          separately on purpose at L2b — which is exactly why <em>semantic parity is not guaranteed</em>: bump the
+          gate to <code>value: 3</code> and the prose would silently lie until someone edits it. Closing that gap
+          needs computed bodies <span class="at">→ later</span>.
+        </div>
+
+        <h3 class="view-h"><span class="view-tag absent">Absent</span> Still not here</h3>
+        <div class="absent-grid">
+          <div class="absent-item">No <b>computed / templated bodies</b> — a block body is authored static text; interpolation like <code>{{ gate.config.value }}</code> (which would close gate-vs-prose drift) is later <span class="at">→ later</span></div>
+          <div class="absent-item">No <b>semantic parity check</b> — <code>validate_context_refs</code> proves a ref resolves, not that its prose matches the gate config it describes; drift is not detected <span class="at">→ later</span></div>
+          <div class="absent-item">No <b>rich context assembly</b> — semantic retrieval, memory, skill-doc expansion, model-specific prompt shaping <span class="at">→ §11.4</span></div>
+          <div class="absent-item">No <b>actor-adapter rendering</b> — <code>context_blocks</code> are kernel-level deterministic text; how an adapter folds them into a model-specific prompt is adapter work <span class="at">→ later</span></div>
+          <div class="absent-item">No <b>conditional block bodies</b> — selection is by the authority predicate only; round- or state-dependent body variants are a computed-body concern <span class="at">→ later</span></div>
+        </div>
+
+        <h3 class="view-h"><span class="view-tag evidence">Evidence</span> Why we accept L2b for now</h3>
+        <div class="agg">
+          <div class="agg-label">Acceptance evidence — operating rules are now derived from config, not prompt prose</div>
+          <div class="ents">
+            <div class="ent"><div class="en">no-CONVERGED-before-round-2</div><div class="fields">the reviewer’s packet carries the rule with <code>gate_binding</code> provenance; the implementer’s does not (predicate-scoped) · <b>L2b</b></div></div>
+            <div class="ent"><div class="en">L0c slot resolves</div><div class="fields">the role/step <code>prompt_concern_refs</code> declared at L0c finally render — one mechanism, two sources, no dangling slot · <b>L2b</b></div></div>
+            <div class="ent"><div class="en">fail at create</div><div class="fields">an unresolved ref is rejected in <code>CREATE_INSTANCE</code> (<code>unresolved_context_block_ref</code>), like binding coverage / gate config · <b>L2b</b></div></div>
+          </div>
+        </div>
+        <div class="note evidence">
+          <ul style="margin:0">
+            <li><b>Scenario coverage:</b> the rule renders for the actor who could emit the gated transition, is absent for one who could not, and is deduped to a single block with multi-source provenance.</li>
+            <li><b>Accepted tradeoff:</b> bodies are authored static text — L2b validates ref existence, not prose-vs-config parity; a gate-value change can leave stale prose until computed bodies land.</li>
+            <li><b>Invariant coverage:</b> communication-only (L2 enforcement unchanged) ✓; deterministic ordered render ✓; refs validated at create ✓; all L0a–L2a invariants still hold.</li>
+            <li><b>Known gaps (intended):</b> computed/templated bodies, semantic parity, rich context assembly, actor-adapter rendering. Each is in Absent.</li>
+            <li><b>Decision:</b> accepted as the L2b baseline (light evidence per playbook §2.1).</li>
+          </ul>
+        </div>
+      </section>
     </main>
   </div>
   <script>
@@ -3176,7 +3667,7 @@ template:
       var html = escapeHtml(code)
         .replace(/("[^"]*"|'[^']*')/g, '<span class="s">$1</span>')
         .replace(/\b(START_INSTANCE|CREATE_INSTANCE|RUNTIME_CONTEXT_READY|RESOLVE_START|RECEIVE|HANDLE|KICKOFF|CANCEL|COMPLETE|FAIL|START|MATCH|INTERFACE|FOR|IF|THEN|ELSE|CONTINUE|RETURN|COMMIT|REQUIRE)\b/g, '<span class="kw">$1</span>')
-        .replace(/\b(Rejected\([^)]+\)|Stale\([^)]+\)|Committed\([^)]+\)|Started\([^)]+\)|Created\([^)]+\)|Activated\([^)]+\)|Terminated\([^)]+\)|Accepted|Duplicate|DispatchIntent|ContextPacket|ResolvedStartRequest|GateDecision|GateEvaluator|GateInvocation|ProcessResult|ProcessGateRunner|Outcome)\b/g, '<span class="out">$1</span>')
+        .replace(/\b(Rejected\([^)]+\)|Stale\([^)]+\)|Committed\([^)]+\)|Started\([^)]+\)|Created\([^)]+\)|Activated\([^)]+\)|Terminated\([^)]+\)|Accepted|Duplicate|DispatchIntent|ContextPacket|ResolvedStartRequest|GateDecision|GateEvaluator|GateInvocation|ProcessResult|ProcessGateRunner|ContextBlock|Outcome)\b/g, '<span class="out">$1</span>')
         .replace(/^(\s*-?\s*)([A-Za-z_][A-Za-z0-9_]*)(:)/, '$1<span class="k">$2</span>$3')
         .replace(/(:\s*)([0-9]+)(\b)/g, '$1<span class="n">$2</span>$3');
       if (comment) html += '<span class="c">' + escapeHtml(comment) + '</span>';
