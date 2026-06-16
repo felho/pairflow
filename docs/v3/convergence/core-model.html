@@ -2319,7 +2319,7 @@ CAPABILITY(template, role, step_id) → action set                       # role 
 INTERFACE GateEvaluator:
   implementation: declarative | packaged | process      # orthogonal axes: L2 core realizes declarative + packaged; process ⇒ L2a
   execution:      inline | deferred                      # L2 core runs inline evaluators; deferred ⇒ L2a runner path (gate_pending)
-  evaluate(config, projection) → GateDecision            # GateDecision = { verdict: allow | block, reason?, message? }
+  evaluate(config, projection) → GateDecision            # GateDecision = { verdict: allow | warn | block, reason?, message?, evidence_refs? }
 
 GATE_PROJECTION(instance, template, envelope) → Projection   # policy-facing read model — read-only, derived; the policy reads, never mutates
   RETURN {
@@ -2446,7 +2446,8 @@ HANDLE envelope → Outcome
     IF evaluator.execution ≠ inline       THEN RETURN Rejected(gate_execution_not_supported)  # deferred runner path ⇒ L2a
     decision ← evaluator.evaluate(gate.config, gate_projection(instance, template, envelope))
     IF decision.verdict = block       THEN RETURN Rejected(gate_blocked(decision.reason)) # no commit ⇒ round not burned
-    # allow ⇒ next gate in the pipeline
+    IF decision.verdict = warn        THEN retain(decision)                               # non-blocking; diagnostics/evidence carried to the commit
+    # allow or warn ⇒ next gate in the pipeline
 
   issued_config ← resolve_agent_config(template, step, instance)   # resolved only now — not for a rejected envelope
 
@@ -2501,7 +2502,7 @@ DISPATCH_INTENT(instance, template, step_id) → DispatchIntent
         <div class="agg">
           <div class="agg-label">Template aggregate — gains the gate pipeline</div>
           <div class="ents">
-            <div class="ent"><div class="en">GateBinding</div><div class="fields"><code>where</code> (step + event_type) · <code>uses</code> (<code>declarative.*</code> | packaged <code>pairflow.*</code> | <code>external.*</code>) · <code>config</code></div></div>
+            <div class="ent"><div class="en">GateBinding</div><div class="fields"><code>where</code> (step + event_type) · <code>uses</code> (<code>declarative.*</code> | packaged <code>pairflow.*</code> | <code>external.*</code>) · <code>config</code> — the authored per-point policy parameterization, load-bearing for <em>every</em> gate kind (a threshold value, a required clean-run count), passed to the evaluator</div></div>
             <div class="ent"><div class="en">GatePipeline</div><div class="fields">ordered list of GateBindings at one <code>(step, event)</code> point; first <code>block</code> stops, later gates run only after <code>allow</code> — exposed as <code>gates_for(step, event)</code></div></div>
           </div>
         </div>
@@ -2509,7 +2510,7 @@ DISPATCH_INTENT(instance, template, step_id) → DispatchIntent
           <div class="agg-label">Evaluation — one shared interface, two value types</div>
           <div class="ents">
             <div class="ent"><div class="en">GateEvaluator</div><div class="fields">the shared contract <code>evaluate(config, projection) → GateDecision</code> over two orthogonal axes — <code>implementation: declarative | packaged | process</code> and <code>execution: inline | deferred</code>; L2 core realizes only inline <code>declarative.*</code> / packaged <code>pairflow.*</code>. <code>PolicyModule</code> is now just one kind of packaged gate</div></div>
-            <div class="ent"><div class="en">GateDecision <span style="font-size:10px;color:var(--muted)">(value)</span></div><div class="fields"><code>{ verdict: allow | block, reason?, message? }</code>; <code>route</code> is known vocabulary, deferred to a later slice</div></div>
+            <div class="ent"><div class="en">GateDecision <span style="font-size:10px;color:var(--muted)">(value)</span></div><div class="fields"><code>{ verdict: allow | warn | block, reason?, message?, evidence_refs? }</code> — <b>allow</b> continue · <b>warn</b> continue, retain diagnostics/evidence · <b>block</b> reject before commit; <code>route</code> is known vocabulary, deferred to a later slice</div></div>
           </div>
         </div>
         <div class="agg">
@@ -2541,7 +2542,7 @@ DISPATCH_INTENT(instance, template, step_id) → DispatchIntent
             <div class="ent"><div class="en">round is canonical &amp; reconstructable</div><div class="fields">only the HANDLE commit writes <code>instance.round</code> (in the same CAS window as <code>current_step</code>/<code>version</code>); <code>round_of(transcript)</code> must equal it</div></div>
             <div class="ent"><div class="en">inline declarative/packaged only in L2 core</div><div class="fields">L2 core executes only inline <code>declarative.*</code> / packaged <code>pairflow.*</code> evaluators; process-implementation and deferred evaluators are valid declarations but rejected at run (⇒ L2a)</div></div>
             <div class="ent"><div class="en">ordered, first-block-wins</div><div class="fields">the pipeline order is authored; evaluation stops at the first <code>block</code>, and a later gate runs only after every earlier gate returned <code>allow</code></div></div>
-            <div class="ent"><div class="en">gate is read-only</div><div class="fields">an evaluator reads the projection and returns a decision; it may not mutate instance state or the transcript</div></div>
+            <div class="ent"><div class="en">gate is read-only &amp; stateless</div><div class="fields">an evaluator reads <code>config</code> + the projection and returns a decision; it may not mutate instance state or the transcript, nor keep private state across rounds — any counter-like value is derived from transcript/instance/read-model state</div></div>
           </div>
         </div>
 
@@ -2608,7 +2609,8 @@ template:
         <h3 class="view-h"><span class="view-tag absent">Absent</span> Still not here</h3>
         <div class="absent-grid">
           <div class="absent-item">No <b>external / process gates</b> — MVP-critical (v1 <code>validation.required</code>, <code>meta_review_approve_required</code>, command exit-code gates) but they need the process execution model (inline strict-contract <em>or</em> deferred <code>WAITING(gate_pending)</code> + <code>GATE_RESULT</code>) <span class="at">→ L2a</span></div>
-          <div class="absent-item">No <b>route verdict / workflow redirection</b> — a gate may only allow or block, not redirect the target (meta-review auto-rework, human gate) <span class="at">→ routing slice / L3</span></div>
+          <div class="absent-item">No <b>route verdict / workflow redirection</b> — a gate may only allow, warn, or block, not redirect the target (meta-review auto-rework, human gate) <span class="at">→ routing slice / L3</span></div>
+          <div class="absent-item">No <b>gate-private mutable state</b> — gates are stateless over <code>config</code> + projection + evidence refs; cross-round counters are derived, never gate-owned. A gate returning state the kernel persists and re-passes is a future idea, only with a concrete use case <span class="at">→ later</span></div>
           <div class="absent-item">No <b>actor-facing communication</b> of gate rules — the reviewer is not yet told "no CONVERGED before round 2" in its packet, so it can still burn an emit on a block <span class="at">→ L2b</span></div>
           <div class="absent-item">No <b>findings vocabulary</b> — structured finding claim/parity and P0/P1 blocker grades, which several v1 convergence checks need <span class="at">→ later</span></div>
           <div class="absent-item">No <b>broad declarative DSL</b> — only <code>threshold</code> in the baseline (<code>required_previous_event</code> next); no general query language <span class="at">→ later</span></div>
