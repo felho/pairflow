@@ -339,7 +339,9 @@ Concepts: the **process gate execution model** behind `external.*` gates — a s
 `GateInvocation → GateDecision` contract over a process call, with a strict contract: bounded
 timeout, structured JSON input on stdin; the output is **either** exit-code mapped (`output.mode:
 exit_code`, the default) **or** a structured `GateDecision` JSON (`output.mode: gate_decision_json`,
-opt-in — never an implicit "JSON wins"); the exit-code path maps an `on_exit` bucket → `allow | warn |
+opt-in — never an implicit "JSON wins"; the structured-output schema allowlists only `allow | warn | block`,
+so a `route` or otherwise unrealized verdict is invalid until the routing slice); the exit-code path maps an
+`on_exit` bucket → `allow | warn |
 block` (the same
 runner is a hard gate or a warning gate by config alone), and a runner-error / timeout / malformed-output
 outcome mapped to `block_transition` with a **distinct audited reason**, kept separate from a business
@@ -352,7 +354,10 @@ Why: external/process gates are MVP-critical — v1's `validation.required` on P
 `meta_review_approve_required`, command exit-code gates, and repo-specific custom gates cannot
 be honestly represented without them. They are split out of L2 core because the process contract is
 heavier than the inline declarative/packaged pipeline; until L2a, L2 core rejects process implementations
-(`gate_execution_not_supported`). **Realized (inline only) in core-model.html.**
+(`gate_execution_not_supported`). Static gate-config invariants are checked at **definition load**
+(the `VALIDATE_GATE_CONFIG` hook, fail-at-create): a process gate on a context-free workflow
+(`runtime_context_required_for_process_gate`) and a `fail_instance` disposition (`gate_config_not_supported`)
+are both rejected before any run. **Realized (inline only) in core-model.html.**
 Out of scope (later): **deferred process gates** (`WAITING(gate_pending)` + a `GATE_RESULT` kernel_event,
 reusing the L0e provider pattern for long-running / non-blocking / evidence-producing checks) — a later
 lifecycle slice, **named but not numbered**, since it touches L0d lifecycle, the process gate, and L9-ish
