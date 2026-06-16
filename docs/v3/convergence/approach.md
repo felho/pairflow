@@ -347,9 +347,10 @@ Why: external/process gates are MVP-critical — v1's `validation.required` on P
 `meta_review_approve_required`, command exit-code gates, and repo-specific custom gates cannot
 be honestly represented without them. They are split out of L2 core because the process
 contract (and the deferred lifecycle) is heavier than the inline declarative/packaged pipeline;
-L2 core's pipeline shape can host inline process evaluators, but the process contract itself is
-specified here. No dynamic TS module loading in the MVP; the external process interface is the
-extension seam.
+L2 core's pipeline shape is the future insertion point for inline process evaluators once L2a
+defines the process contract; until then L2 core rejects process implementations
+(`gate_execution_not_supported`). No dynamic TS module loading in the MVP; the external process
+interface is the extension seam.
 
 **L2b — Policy/gate context contribution (first ContextAssembly slice).**
 Concepts: `context_block` / `prompt_concern_ref` vocabulary; a gate/policy may declare a

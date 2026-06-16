@@ -2315,17 +2315,18 @@ CAPABILITY(template, role, step_id) → action set                       # role 
   IF role = step.role THEN RETURN event_types_of(step.transitions)      # default-derived: own role may emit the step's transitions
   RETURN empty_set                                                      # any other role may emit nothing here
 
-# GateEvaluator — the shared INLINE contract; declarative.* and packaged pairflow.* both implement it
+# GateEvaluator — shared gate contract; L2 core executes only inline declarative/packaged evaluators
 INTERFACE GateEvaluator:
-  execution: inline | deferred                          # L2 core runs inline evaluators; deferred ⇒ L2a runner path (gate_pending)
-  evaluate(config, projection) → GateDecision           # GateDecision = { verdict: allow | block, reason?, message? }
+  implementation: declarative | packaged | process      # orthogonal axes: L2 core realizes declarative + packaged; process ⇒ L2a
+  execution:      inline | deferred                      # L2 core runs inline evaluators; deferred ⇒ L2a runner path (gate_pending)
+  evaluate(config, projection) → GateDecision            # GateDecision = { verdict: allow | block, reason?, message? }
 
 GATE_PROJECTION(instance, template, envelope) → Projection   # policy-facing read model — read-only, derived; the policy reads, never mutates
   RETURN {
     round:        instance.round,                       # canonical, kernel-maintained, commit-derived, transcript-reconstructable
     current_step: instance.current_step,
     event_type:   envelope.type,
-    history:      derive_policy_view(instance.transcript) }   # prior verdicts / alternation, derived — never a raw transcript dump
+    history:      derive_policy_view(instance.transcript) }   # derived view (prior verdicts / alternation); the projection exposes no raw transcript, though the kernel derives it from one
 
 RECEIVE(input) → Outcome                                               # one kernel entry; route by input source class
   MATCH input.source:
@@ -2440,8 +2441,9 @@ HANDLE envelope → Outcome
   # L2: policy gate pipeline — the transition exists (L0b) and is authorized (L1); do the policies allow it now?
   FOR gate IN template.gates_for(instance.current_step, envelope.type):   # ordered, authored; empty for ungated transitions
     evaluator ← gateRegistry.resolve(gate.uses)
-    IF evaluator is none              THEN RETURN Rejected(gate_evaluator_unavailable)    # config invariant — unresolved gate name
-    IF evaluator.execution ≠ inline   THEN RETURN Rejected(gate_execution_not_supported)  # deferred is declarable, not executable here ⇒ L2a
+    IF evaluator is none                  THEN RETURN Rejected(gate_evaluator_unavailable)    # config invariant — unresolved gate name
+    IF evaluator.implementation = process THEN RETURN Rejected(gate_execution_not_supported)  # process contract is L2a — even an inline process gate
+    IF evaluator.execution ≠ inline       THEN RETURN Rejected(gate_execution_not_supported)  # deferred runner path ⇒ L2a
     decision ← evaluator.evaluate(gate.config, gate_projection(instance, template, envelope))
     IF decision.verdict = block       THEN RETURN Rejected(gate_blocked(decision.reason)) # no commit ⇒ round not burned
     # allow ⇒ next gate in the pipeline
@@ -2487,9 +2489,11 @@ DISPATCH_INTENT(instance, template, step_id) → DispatchIntent
         <div class="note pseudo">
           The pipeline sits between L1's <code>not_authorized</code> and the commit, so a blocked gate never
           resolves <code>issued_config</code> and never reaches the CAS block — the round is preserved. A
-          <code>deferred</code> evaluator is a valid declaration but returns
-          <code>gate_execution_not_supported</code> here; its runner path (<code>WAITING(gate_pending)</code>
-          + <code>GATE_RESULT</code>) is L2a. The <code>advances_round</code> predicate is intentionally
+          <code>process</code>-implementation or <code>deferred</code> evaluator is a valid declaration but
+          returns <code>gate_execution_not_supported</code> here; the process contract and the deferred
+          runner path (<code>WAITING(gate_pending)</code> + <code>GATE_RESULT</code>) are L2a — even an
+          <em>inline</em> process gate is rejected, since the contract is unrealized at L2 core. The
+          <code>advances_round</code> predicate is intentionally
           left to transition semantics — only that it be transcript-reconstructable.
         </div>
 
@@ -2504,7 +2508,7 @@ DISPATCH_INTENT(instance, template, step_id) → DispatchIntent
         <div class="agg">
           <div class="agg-label">Evaluation — one shared interface, two value types</div>
           <div class="ents">
-            <div class="ent"><div class="en">GateEvaluator</div><div class="fields">the shared contract <code>evaluate(config, projection) → GateDecision</code> with <code>execution: inline | deferred</code>; <code>declarative.*</code> and packaged <code>pairflow.*</code> both implement it. <code>PolicyModule</code> is now just one kind of packaged gate</div></div>
+            <div class="ent"><div class="en">GateEvaluator</div><div class="fields">the shared contract <code>evaluate(config, projection) → GateDecision</code> over two orthogonal axes — <code>implementation: declarative | packaged | process</code> and <code>execution: inline | deferred</code>; L2 core realizes only inline <code>declarative.*</code> / packaged <code>pairflow.*</code>. <code>PolicyModule</code> is now just one kind of packaged gate</div></div>
             <div class="ent"><div class="en">GateDecision <span style="font-size:10px;color:var(--muted)">(value)</span></div><div class="fields"><code>{ verdict: allow | block, reason?, message? }</code>; <code>route</code> is known vocabulary, deferred to a later slice</div></div>
           </div>
         </div>
@@ -2520,7 +2524,7 @@ DISPATCH_INTENT(instance, template, step_id) → DispatchIntent
           <div class="ents">
             <div class="ent"><div class="en">Rejected(gate_blocked(reason))</div><div class="fields">a policy returned <code>block</code> for this state</div></div>
             <div class="ent"><div class="en">Rejected(gate_evaluator_unavailable)</div><div class="fields">the gate's <code>uses</code> name did not resolve (config invariant)</div></div>
-            <div class="ent"><div class="en">Rejected(gate_execution_not_supported)</div><div class="fields">a <code>deferred</code> evaluator reached in L2 core — declarable, not executable here (⇒ L2a)</div></div>
+            <div class="ent"><div class="en">Rejected(gate_execution_not_supported)</div><div class="fields">a <code>process</code> implementation or a <code>deferred</code> evaluator reached in L2 core — declarable, not executable here (⇒ L2a)</div></div>
           </div>
         </div>
         <div class="note domain">
@@ -2535,7 +2539,7 @@ DISPATCH_INTENT(instance, template, step_id) → DispatchIntent
           <div class="ents">
             <div class="ent"><div class="en">gate before commit</div><div class="fields">the pipeline runs after L1 authorization and before the atomic commit — a <code>block</code> changes no state and burns no round</div></div>
             <div class="ent"><div class="en">round is canonical &amp; reconstructable</div><div class="fields">only the HANDLE commit writes <code>instance.round</code> (in the same CAS window as <code>current_step</code>/<code>version</code>); <code>round_of(transcript)</code> must equal it</div></div>
-            <div class="ent"><div class="en">inline-only in L2 core</div><div class="fields">L2 core executes only <code>execution = inline</code> evaluators; deferred ones are valid declarations but rejected at run (⇒ L2a)</div></div>
+            <div class="ent"><div class="en">inline declarative/packaged only in L2 core</div><div class="fields">L2 core executes only inline <code>declarative.*</code> / packaged <code>pairflow.*</code> evaluators; process-implementation and deferred evaluators are valid declarations but rejected at run (⇒ L2a)</div></div>
             <div class="ent"><div class="en">ordered, first-block-wins</div><div class="fields">the pipeline order is authored; evaluation stops at the first <code>block</code>, and a later gate runs only after every earlier gate returned <code>allow</code></div></div>
             <div class="ent"><div class="en">gate is read-only</div><div class="fields">an evaluator reads the projection and returns a decision; it may not mutate instance state or the transcript</div></div>
           </div>
