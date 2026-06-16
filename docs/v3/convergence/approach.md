@@ -371,12 +371,11 @@ the compact inline projection); actor-facing trust / skip-rerun communication (�
 loading (the external process interface is the extension seam, not an in-process plugin loader).
 
 **L2b — Policy/gate context contribution (first ContextAssembly slice).**
-Concepts: `context_block` / `prompt_concern_ref` vocabulary; a gate/policy may declare a
-deterministic actor-facing context block; the kernel renders the relevant blocks into
-`ContextPacket.context_blocks` when the affected actor/step is active. This is also where
-the role/step `prompt_concern_refs` declared at L0c finally resolve — **one render
-mechanism, two sources** (AgentConfig refs + gate/policy blocks), so no L0c slot stays
-dangling.
+Concepts: a template-level `context_blocks` catalog (`id → { body }`) is the single body
+source; two ref sources point into it — role/step `prompt_concern_refs` (declared at L0c)
+and gate/policy `context_block_refs`. The kernel resolves the issued refs and renders the
+bodies into `ContextPacket.context_blocks` for the dispatched actor — **one render
+mechanism, two sources**, so no L0c slot stays dangling.
 The L2 / L2b boundary is **enforcement vs communication**, and it is the point of this
 level. **L2 enforces** the rule: on an early `CONVERGED` the kernel/gate rejects, so the
 system stays correct even if the actor ignores its context. **L2b communicates** the
@@ -384,13 +383,24 @@ rule: the reviewer sees in the packet, before acting, that it must not emit `CON
 before the allowed round, so it does not burn a round on an emit that would be rejected.
 Both are needed for the MVP — enforcement makes it correct, communication makes the v1
 behaviour reproducible *from configuration*: v1 baked these operating rules into prompt
-prose; v3 must derive them from policy/gate config and decorate the instruction the actor
-sees.
-In scope: context_block ref vocabulary, deterministic resolution from
-template/role/step/policy/gate config, ordered render into `ContextPacket.context_blocks`,
-provenance of which block refs were issued.
+prose; v3 derives them from policy/gate config and decorates the instruction the actor sees.
+Render contract (canonical matrix in core-model): bodies live only in the catalog; refs
+are id lists. Order is role refs → step refs → gate/policy refs, declaration order within
+each — render-order, *not* precedence/override. A gate ref renders only when its gated
+transition is present in the dispatched actor's `available_ops` — the same authority
+snapshot the packet already carries, not a fresh "may legally emit" check or blind step
+membership. A block id reached from several sources renders once, but `provenance.sources[]`
+retains every emitter (role / step / gate-binding). Unresolved refs are rejected at
+definition load (`validate_context_refs`, fail-at-create — the static analog of binding
+coverage and `validate_gate_config`).
+In scope: catalog + ref vocabulary, deterministic resolution and ordered render into
+`ContextPacket.context_blocks`, the `available_ops`-membership render predicate, dedup with
+multi-source provenance, definition-load ref validation.
 Out of scope (→ §11.4 rich context assembly): semantic retrieval, memory, skill-doc
-expansion, model-specific prompt shaping, adapter-specific prompt conversion.
+expansion, model-specific prompt shaping, adapter-specific prompt conversion; and
+computed/templated bodies — **L2b validates that referenced blocks exist, it does not prove
+authored prose semantically matches the gate config** (e.g. a `value: 3 → 4` gate change
+with stale "before round 3" prose is not caught; templated bodies come later).
 Note: placed *after* L2 (and L2a) by the "concrete use case first" rule — the API is designed
 against real `GateBinding`/`GateEvaluator`/`GateDecision` objects, not abstractly. Anchor use
 case: "no `CONVERGED` before round 3". Its own core-model view is built once L2 lands.
