@@ -317,7 +317,7 @@ revert it to the old form. A comment that *became wrong* because the logic chang
 be updated; a comment that is merely a cosmetic rephrase must not. (Worth a quick check
 each level: does the side-by-side diff highlight only the real additions?)
 
-**Canonical contract for contract-dense slices (carry into every level).** Some slices are
+**Canonical contract for contract-dense slices (apply when triggered — check each level).** Some slices are
 *contract-dense*: several contracts intersect at one point — e.g. L2a's process gate joined a
 policy verdict (`allow | warn | block`), a process IO contract (stdin/stdout/exit-code/timeout),
 a config contract (`output.mode`, `on_exit`, `on_runner_error`, `timeout_ms`), a lifecycle
