@@ -3009,7 +3009,7 @@ template:
               output: { mode: exit_code }        # default; gate_decision_json is opt-in
               on_exit: { "0": allow, nonzero: block }   # exit→verdict; a warning gate maps nonzero: warn
               timeout_ms: 600000
-              on_runner_error: block_transition  # spawn / workspace-missing → not a business block (fail_instance = later)
+              on_runner_error: block_transition  # spawn / workspace-missing → not a business block (fail_instance is rejected until later)
               on_timeout: block_transition
           # Structured-output variant: the process writes a GateDecision JSON to stdout.
           # Invalid JSON / invalid schema is a runner outcome, not a business block:
