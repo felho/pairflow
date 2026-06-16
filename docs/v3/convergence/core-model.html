@@ -2740,13 +2740,13 @@ RUN_PROCESS_GATE(gate, instance, template, envelope) → GateDecision   # L2a �
   RETURN classify_process_result(result, gate.config)
 
 CLASSIFY_PROCESS_RESULT(result, config) → GateDecision
-  IF result.kind = timeout      THEN RETURN runner_outcome(config.on_timeout,      timeout,      result.log_ref)
-  IF result.kind = runner_error THEN RETURN runner_outcome(config.on_runner_error, runner_error, result.log_ref)   # spawn / workspace-missing (malformed JSON has its own branch below)
+  IF result.kind = timeout      THEN RETURN runner_outcome(config.on_timeout      ?? block_transition, timeout,      result.log_ref)   # absent disposition ⇒ block_transition (the default; fail_instance is rejected at definition load)
+  IF result.kind = runner_error THEN RETURN runner_outcome(config.on_runner_error ?? block_transition, runner_error, result.log_ref)   # spawn / workspace-missing (malformed JSON has its own branch below)
   MATCH config.output.mode:                                          # EXPLICIT — never guess "JSON wins"
     exit_code          → RETURN { verdict: config.on_exit[bucket(result.exit_code)],   # buckets: "0" | nonzero → allow | warn | block
                                   reason: exit_reason(result.exit_code), evidence_refs: [result.log_ref] }
     gate_decision_json → parsed ← try_parse_gate_decision(result.stdout)               # opt-in; schema allowlists verdict ∈ { allow, warn, block } — route is invalid until the routing slice
-                         IF parsed is none THEN RETURN runner_outcome(config.on_runner_error, malformed_gate_decision_json, result.log_ref)   # unparseable / schema-invalid (incl. a disallowed verdict) ⇒ runner outcome, NOT a business block
+                         IF parsed is none THEN RETURN runner_outcome(config.on_runner_error ?? block_transition, malformed_gate_decision_json, result.log_ref)   # unparseable / schema-invalid (incl. a disallowed verdict) ⇒ runner outcome, NOT a business block
                          RETURN with_evidence(parsed, result.log_ref)
 
 runner_outcome(disposition, reason, log_ref) → GateDecision          # MVP realizes ONLY block_transition
@@ -2956,7 +2956,7 @@ DISPATCH_INTENT(instance, template, step_id) → DispatchIntent
             <div class="ent"><div class="en">command · timeout_ms</div><div class="fields">what to run, and the bounded timeout (a v3 addition over v1's untimed runner)</div></div>
             <div class="ent"><div class="en">output.mode</div><div class="fields"><code>exit_code</code> (default, v1-parity) | <code>gate_decision_json</code> (explicit opt-in for a structured verdict) — never an implicit "JSON wins"</div></div>
             <div class="ent"><div class="en">on_exit</div><div class="fields">exit-code bucket (<code>"0"</code> | <code>nonzero</code>) → <code>allow | warn | block</code>; the same runner is a hard gate or a warning gate by config alone</div></div>
-            <div class="ent"><div class="en">on_runner_error · on_timeout</div><div class="fields"><code>block_transition</code> is the only MVP value — surfaced as <code>gate_blocked</code> with a distinct <code>runner_error</code> / <code>timeout</code> / <code>malformed_gate_decision_json</code> reason (malformed structured output is classified under this same runner-outcome policy). <code>fail_instance</code> is a reserved future disposition: configuring it is rejected at definition load (<code>gate_config_not_supported</code>)</div></div>
+            <div class="ent"><div class="en">on_runner_error · on_timeout</div><div class="fields"><code>block_transition</code> is the only MVP value and the default when absent — surfaced as <code>gate_blocked</code> with a distinct <code>runner_error</code> / <code>timeout</code> / <code>malformed_gate_decision_json</code> reason (malformed structured output is classified under this same runner-outcome policy). <code>fail_instance</code> is a reserved future disposition: configuring it is rejected at definition load (<code>gate_config_not_supported</code>)</div></div>
           </div>
         </div>
         <div class="note domain">
