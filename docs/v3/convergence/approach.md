@@ -337,8 +337,10 @@ reviewer-PASS policy, command gates, meta-review/human routing, doc/evidence gat
 **L2a — External / process gate execution.**
 Concepts: the **process gate execution model** behind `external.*` gates — a structured
 `GateInvocation → GateDecision` contract over a process call, with a strict contract: bounded
-timeout, structured JSON input/output, an explicit `output.mode` (`exit_code` default / `gate_decision_json`
-opt-in — never an implicit "JSON wins"), an `on_exit` bucket → `allow | warn | block` mapping (the same
+timeout, structured JSON input on stdin; the output is **either** exit-code mapped (`output.mode:
+exit_code`, the default) **or** a structured `GateDecision` JSON (`output.mode: gate_decision_json`,
+opt-in — never an implicit "JSON wins"); the exit-code path maps an `on_exit` bucket → `allow | warn |
+block` (the same
 runner is a hard gate or a warning gate by config alone), and a runner-error / timeout / malformed-output
 outcome mapped to `block_transition` with a **distinct audited reason**, kept separate from a business
 block. Evidence (log + artifact: exit_code, duration, head_sha, git_status_hash) is persisted on every run

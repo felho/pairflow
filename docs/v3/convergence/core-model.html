@@ -2749,9 +2749,9 @@ CLASSIFY_PROCESS_RESULT(result, config) → GateDecision
                          IF parsed is none THEN RETURN runner_outcome(config.on_runner_error, malformed_gate_decision_json, result.log_ref)   # bad / unparseable / schema-invalid ⇒ runner outcome, NOT a business block
                          RETURN with_evidence(parsed, result.log_ref)
 
-runner_outcome(disposition, reason, log_ref) → GateDecision          # MVP realizes only block_transition
-  IF disposition = block_transition THEN RETURN { verdict: block, reason, evidence_refs: [log_ref] }   # audited distinctly: runner_error / timeout, not test_failed
-  # disposition = fail_instance → terminal FAIL — declared in the config vocabulary, NOT realized in L2a
+runner_outcome(disposition, reason, log_ref) → GateDecision          # MVP realizes ONLY block_transition
+  # fail_instance is rejected at definition load (gate_config_not_supported), so block_transition is the only value that reaches here — fail-closed
+  RETURN { verdict: block, reason, evidence_refs: [log_ref] }        # audited distinctly: runner_error / timeout / malformed, not test_failed
 
 RECEIVE(input) → Outcome                                               # one kernel entry; route by input source class
   MATCH input.source:
@@ -2939,7 +2939,7 @@ DISPATCH_INTENT(instance, template, step_id) → DispatchIntent
             <div class="ent"><div class="en">command · timeout_ms</div><div class="fields">what to run, and the bounded timeout (a v3 addition over v1's untimed runner)</div></div>
             <div class="ent"><div class="en">output.mode</div><div class="fields"><code>exit_code</code> (default, v1-parity) | <code>gate_decision_json</code> (explicit opt-in for a structured verdict) — never an implicit "JSON wins"</div></div>
             <div class="ent"><div class="en">on_exit</div><div class="fields">exit-code bucket (<code>"0"</code> | <code>nonzero</code>) → <code>allow | warn | block</code>; the same runner is a hard gate or a warning gate by config alone</div></div>
-            <div class="ent"><div class="en">on_runner_error · on_timeout</div><div class="fields"><code>block_transition</code> (MVP) — surfaced as <code>gate_blocked</code> with a <code>runner_error</code>/<code>timeout</code> reason; <code>fail_instance</code> is declared but not realized</div></div>
+            <div class="ent"><div class="en">on_runner_error · on_timeout</div><div class="fields"><code>block_transition</code> is the only MVP value — surfaced as <code>gate_blocked</code> with a distinct <code>runner_error</code> / <code>timeout</code> / <code>malformed_gate_decision_json</code> reason (malformed structured output is classified under this same runner-outcome policy). <code>fail_instance</code> is a reserved future disposition: configuring it is rejected at definition load (<code>gate_config_not_supported</code>)</div></div>
           </div>
         </div>
         <div class="note domain">
@@ -3037,7 +3037,7 @@ template:
         <div class="absent-grid">
           <div class="absent-item">No <b>deferred process gates</b> — long-running / non-blocking execution via <code>WAITING(gate_pending)</code> + <code>GATE_RESULT</code> (pending-envelope stash, replay/idempotency, timeout-recovery, cancel-cleanup, runner-retry) is a <b>later lifecycle slice</b>, named but not numbered <span class="at">→ later</span></div>
           <div class="absent-item">No <b>projection_ref + scoped-query SDK</b> — the process gets a compact inline projection; an authority-scoped query seam replaces it later <span class="at">→ later / L7-ish</span></div>
-          <div class="absent-item">No <b>fail_instance disposition</b> — a runner error can only <code>block_transition</code> in the MVP; terminating the instance waits on terminal-failure ownership + operator recovery <span class="at">→ later</span></div>
+          <div class="absent-item">No <b>fail_instance disposition</b> — a runner error can only <code>block_transition</code> in the MVP; configuring <code>fail_instance</code> is rejected (<code>gate_config_not_supported</code>) until terminal-failure ownership + operator recovery are modeled <span class="at">→ later</span></div>
           <div class="absent-item">No <b>route verdict</b> — a gate still cannot redirect the target (meta-review auto-rework, human gate) <span class="at">→ routing slice / L3</span></div>
           <div class="absent-item">No <b>actor-facing trust / skip-rerun communication</b> — missing vs explicit-null trust level is not surfaced to the reviewer yet <span class="at">→ L2b</span></div>
           <div class="absent-item">No <b>dynamic module loading</b> — the external process interface is the extension seam; no in-process plugin loader in the MVP <span class="at">→ later</span></div>
