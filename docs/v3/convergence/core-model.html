@@ -3449,8 +3449,8 @@ dispatch_intent(instance, template, step_id) → DispatchIntent
           <code>assemble_context_blocks</code> is deterministic: bodies come only from the catalog, the source
           order <em>is</em> the render order (role → step → gate), and a repeated id renders once while
           <code>provenance.sources[]</code> accumulates every emitter. The gate branch reuses the same
-          <code>capability ∩ available_ops</code> the packet already computes — no fresh authority logic. None of
-          this touches <code>HANDLE</code>’s verdict path.
+          transition-existence + L1 <code>capability</code> logic the kernel already defines — no fresh authority
+          logic. None of this touches <code>HANDLE</code>’s verdict path.
         </div>
 
         <h3 class="view-h"><span class="view-tag domain">Domain</span> What L2b adds</h3>
@@ -3498,7 +3498,7 @@ dispatch_intent(instance, template, step_id) → DispatchIntent
             <div class="ent"><div class="en">single body source</div><div class="fields">a context block’s body lives only in <code>template.context_blocks</code>; refs are ids, never inline prose — one place to author, dedup, and validate</div></div>
             <div class="ent"><div class="en">refs validated at definition load</div><div class="fields"><code>validate_context_refs(template)</code> runs in <code>CREATE_INSTANCE</code> beside binding coverage and <code>validate_gate_config</code>; an unresolved ref is <code>unresolved_context_block_ref</code> — fail at create, not a render-time drop</div></div>
             <div class="ent"><div class="en">deterministic ordered render</div><div class="fields">role → step → gate, declaration order within each; same instance state + config ⇒ byte-identical <code>context_blocks</code>. Order is reading sequence, not precedence/override</div></div>
-            <div class="ent"><div class="en">authority-scoped gate blocks</div><div class="fields">a gate’s block renders only for a transition in <code>available_ops ∩ L1 capability</code> — the same snapshot the packet carries; never blind step membership</div></div>
+            <div class="ent"><div class="en">authority-scoped gate blocks</div><div class="fields">a gate’s block renders only for a transition in <code>available_ops ∩ L1 capability</code> — transition existence plus the L1 role/<code>current_step</code> authority check; never blind step membership</div></div>
             <div class="ent"><div class="en">dedup with retained provenance</div><div class="fields">an id reached from several sources renders once; <code>provenance.sources[]</code> keeps every emitter, so the packet stays terse but auditable</div></div>
             <div class="ent"><div class="en">communication only</div><div class="fields"><code>context_blocks</code> never enter a verdict or the commit; removing a block cannot change what L2 enforces (correctness is L2’s job, legibility is L2b’s)</div></div>
           </div>
