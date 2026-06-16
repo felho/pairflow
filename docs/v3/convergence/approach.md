@@ -384,7 +384,7 @@ before the allowed round, so it does not burn a round on an emit that would be r
 Both are needed for the MVP — enforcement makes it correct, communication makes the v1
 behaviour reproducible *from configuration*: v1 baked these operating rules into prompt
 prose; v3 derives them from policy/gate config and decorates the instruction the actor sees.
-Render contract (to be canonicalized as a matrix in core-model): bodies live only in the catalog; refs
+Render contract (canonicalized as a matrix in core-model): bodies live only in the catalog; refs
 are id lists. Order is role refs → step refs → gate/policy refs, declaration order within
 each — render-order, *not* precedence/override. A gate ref renders only for a transition
 that passes both filters the kernel already defines: present in the step's `available_ops`
