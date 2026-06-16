@@ -437,7 +437,7 @@ help-ask, stashed and applied by a watchdog). Absent (later): agent-to-agent ask
 external-token ask (→ L7), multi-channel delivery (→ L8), rich decision schema, a timeout on a
 human wait (→ L9), the commit/merge finalization tail.
 Anchor: the converged result routes to a `human_approval` human_gate; approve → on_approve /
-finalization seam, request_rework → implement (new round). Planned core-model realization: a
+finalization seam, request_rework → implement (new round). **Realized in core-model.html** via a
 matrix-first **Human Decision Contract** (input · wait.kind · correlation · authority ·
 transcript entry · routing target · round effect · context cleanup · override · rejects).
 
