@@ -315,7 +315,8 @@ actually use.** Not gates, not grants.
 **L2 — Gate / policy.**
 Concepts: `GateBinding` (a policy bound to a `(step, event_type)` transition), `GatePipeline`
 (ordered gates at one point), a common `GateEvaluator` interface, and `GateDecision`
-(`allow | block`); the convergence gate; `instance.round` (kernel-maintained,
+(`allow | warn | block` — warn continues but retains diagnostics/evidence, block rejects
+before commit); the convergence gate; `instance.round` (kernel-maintained,
 commit-derived, transcript-reconstructable); the policy-facing `gate_projection` read model.
 A gate is a **fourth filter** after L1: transition exists (L0b) → role/action authorized
 (L1) → **policy allows now (L2)** → commit. On `block` there is no commit, so the round is

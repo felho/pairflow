@@ -2258,9 +2258,10 @@ DISPATCH_INTENT(instance, template, step_id) → DispatchIntent
         role/action authorized (L1) → <b>policy allows now (L2)</b> → commit. Two orthogonal axes organize
         the space: <code>implementation = declarative | packaged | process</code> and
         <code>execution = inline | deferred</code>. <b>L2 core realizes only the inline pipeline</b> with
-        declarative DSL primitives and packaged pure <code>pairflow.*</code> policies. External/process
-        gates and the deferred lifecycle are <span class="at">L2a</span>; the <code>route</code> verdict
-        (workflow redirection) is a later routing slice (<span class="at">L3</span>).</p>
+        declarative DSL primitives and packaged pure <code>pairflow.*</code> policies. Inline external/process
+        gates are <span class="at">L2a</span>; <b>deferred</b> execution is a separate later lifecycle slice
+        (named, not numbered); the <code>route</code> verdict (workflow redirection) is a later routing
+        slice (<span class="at">L3</span>).</p>
 
         <h3 class="view-h"><span class="view-tag runtime">Runtime</span> A concrete trace</h3>
         <p>An early converge blocked without burning the round, then the same emit allowed once the round
@@ -2318,7 +2319,7 @@ CAPABILITY(template, role, step_id) → action set                       # role 
 # GateEvaluator — shared gate contract; L2 core executes only inline declarative/packaged evaluators
 INTERFACE GateEvaluator:
   implementation: declarative | packaged | process      # orthogonal axes: L2 core realizes declarative + packaged; process ⇒ L2a
-  execution:      inline | deferred                      # L2 core runs inline evaluators; deferred ⇒ L2a runner path (gate_pending)
+  execution:      inline | deferred                      # L2 core runs inline evaluators; deferred ⇒ a later lifecycle slice (gate_pending + GATE_RESULT)
   evaluate(config, projection) → GateDecision            # GateDecision = { verdict: allow | warn | block, reason?, message?, evidence_refs? }
 
 GATE_PROJECTION(instance, template, envelope) → Projection   # policy-facing read model — read-only, derived; the policy reads, never mutates
@@ -2444,7 +2445,7 @@ HANDLE envelope → Outcome
     evaluator ← gateRegistry.resolve(gate.uses)
     IF evaluator is none                  THEN RETURN Rejected(gate_evaluator_unavailable)    # config invariant — unresolved gate name
     IF evaluator.implementation = process THEN RETURN Rejected(gate_execution_not_supported)  # process contract is L2a — even an inline process gate
-    IF evaluator.execution ≠ inline       THEN RETURN Rejected(gate_execution_not_supported)  # deferred runner path ⇒ L2a
+    IF evaluator.execution ≠ inline       THEN RETURN Rejected(gate_execution_not_supported)  # deferred ⇒ a later lifecycle slice (gate_pending + GATE_RESULT)
     decision ← evaluator.evaluate(gate.config, gate_projection(instance, template, envelope))
     IF decision.verdict = block       THEN RETURN Rejected(gate_blocked(decision.reason), decision.evidence_refs)  # no commit ⇒ round not burned; refs surfaced
     gate_decisions.append(decision)                                                       # allow or warn ⇒ retained (verdict + evidence_refs + diagnostics)
@@ -2492,9 +2493,10 @@ DISPATCH_INTENT(instance, template, step_id) → DispatchIntent
           The pipeline sits between L1's <code>not_authorized</code> and the commit, so a blocked gate never
           resolves <code>issued_config</code> and never reaches the CAS block — the round is preserved. A
           <code>process</code>-implementation or <code>deferred</code> evaluator is a valid declaration but
-          returns <code>gate_execution_not_supported</code> here; the process contract and the deferred
-          runner path (<code>WAITING(gate_pending)</code> + <code>GATE_RESULT</code>) are L2a — even an
-          <em>inline</em> process gate is rejected, since the contract is unrealized at L2 core. The
+          returns <code>gate_execution_not_supported</code> here; the inline process contract is realized at
+          <span class="at">L2a</span>, while the deferred runner path (<code>WAITING(gate_pending)</code> +
+          <code>GATE_RESULT</code>) is a separate later lifecycle slice — even an <em>inline</em> process gate
+          is rejected at L2 core, since the contract is unrealized here. The
           <code>advances_round</code> predicate is intentionally
           left to transition semantics — only that it be transcript-reconstructable.
         </div>
@@ -2526,7 +2528,7 @@ DISPATCH_INTENT(instance, template, step_id) → DispatchIntent
           <div class="ents">
             <div class="ent"><div class="en">Rejected(gate_blocked(reason))</div><div class="fields">a policy returned <code>block</code> for this state</div></div>
             <div class="ent"><div class="en">Rejected(gate_evaluator_unavailable)</div><div class="fields">the gate's <code>uses</code> name did not resolve (config invariant)</div></div>
-            <div class="ent"><div class="en">Rejected(gate_execution_not_supported)</div><div class="fields">a <code>process</code> implementation or a <code>deferred</code> evaluator reached in L2 core — declarable, not executable here (⇒ L2a)</div></div>
+            <div class="ent"><div class="en">Rejected(gate_execution_not_supported)</div><div class="fields">a <code>process</code> implementation (⇒ <span class="at">L2a</span>) or a <code>deferred</code> evaluator (⇒ a later lifecycle slice) reached in L2 core — declarable, not executable here</div></div>
           </div>
         </div>
         <div class="note domain">
@@ -2541,7 +2543,7 @@ DISPATCH_INTENT(instance, template, step_id) → DispatchIntent
           <div class="ents">
             <div class="ent"><div class="en">gate before commit</div><div class="fields">the pipeline runs after L1 authorization and before the atomic commit — a <code>block</code> changes no state and burns no round</div></div>
             <div class="ent"><div class="en">round is canonical &amp; reconstructable</div><div class="fields">only the HANDLE commit writes <code>instance.round</code> (in the same CAS window as <code>current_step</code>/<code>version</code>); <code>round_of(transcript)</code> must equal it</div></div>
-            <div class="ent"><div class="en">inline declarative/packaged only in L2 core</div><div class="fields">L2 core executes only inline <code>declarative.*</code> / packaged <code>pairflow.*</code> evaluators; process-implementation and deferred evaluators are valid declarations but rejected at run (⇒ L2a)</div></div>
+            <div class="ent"><div class="en">inline declarative/packaged only in L2 core</div><div class="fields">L2 core executes only inline <code>declarative.*</code> / packaged <code>pairflow.*</code> evaluators; a process-implementation (⇒ <span class="at">L2a</span>) or deferred (⇒ a later lifecycle slice) evaluator is a valid declaration but rejected at run</div></div>
             <div class="ent"><div class="en">ordered, first-block-wins</div><div class="fields">the pipeline order is authored; evaluation stops at the first <code>block</code>, and a later gate runs only after every earlier gate returned <code>allow</code></div></div>
             <div class="ent"><div class="en">gate is read-only &amp; stateless</div><div class="fields">an evaluator reads <code>config</code> + the projection and returns a decision; it may not mutate instance state or the transcript, nor keep private state across rounds — any counter-like value is derived from transcript/instance/read-model state</div></div>
           </div>
@@ -2609,7 +2611,7 @@ template:
 
         <h3 class="view-h"><span class="view-tag absent">Absent</span> Still not here</h3>
         <div class="absent-grid">
-          <div class="absent-item">No <b>external / process gates</b> — MVP-critical (v1 <code>validation.required</code>, <code>meta_review_approve_required</code>, command exit-code gates) but they need the process execution model (inline strict-contract <em>or</em> deferred <code>WAITING(gate_pending)</code> + <code>GATE_RESULT</code>) <span class="at">→ L2a</span></div>
+          <div class="absent-item">No <b>external / process gates</b> — MVP-critical (v1 <code>validation.required</code>, <code>meta_review_approve_required</code>, command exit-code gates); the inline process execution model is <span class="at">→ L2a</span>, while deferred execution (<code>WAITING(gate_pending)</code> + <code>GATE_RESULT</code>) is a separate later lifecycle slice</div>
           <div class="absent-item">No <b>route verdict / workflow redirection</b> — a gate may only allow, warn, or block, not redirect the target (meta-review auto-rework, human gate) <span class="at">→ routing slice / L3</span></div>
           <div class="absent-item">No <b>gate-private mutable state</b> — gates are stateless over <code>config</code> + projection + evidence refs; cross-round counters are derived, never gate-owned. A gate returning state the kernel persists and re-passes is a future idea, only with a concrete use case <span class="at">→ later</span></div>
           <div class="absent-item">No <b>actor-facing communication</b> of gate rules — the reviewer is not yet told "no CONVERGED before round 2" in its packet, so it can still burn an emit on a block <span class="at">→ L2b</span></div>
@@ -2868,7 +2870,8 @@ HANDLE envelope → Outcome
     IF evaluator is none            THEN RETURN Rejected(gate_evaluator_unavailable)      # config invariant — unresolved gate name
     IF evaluator.execution ≠ inline THEN RETURN Rejected(gate_execution_not_supported)    # deferred ⇒ later lifecycle slice (gate_pending + GATE_RESULT)
     IF evaluator.implementation = process                                                 # L2a: inline process now runs (was rejected at L2 core)
-      THEN decision ← run_process_gate(gate, instance, template, envelope)                # spawn in the workspace, bounded timeout
+      THEN IF instance.runtime_context = ready(∅) THEN RETURN Rejected(runtime_context_required_for_process_gate)   # ready(∅) = context-free: no workspace to run the process in (a definition-time mismatch, guarded here too)
+           decision ← run_process_gate(gate, instance, template, envelope)                # spawn in the workspace, bounded timeout
       ELSE decision ← evaluator.evaluate(gate.config, gate_projection(instance, template, envelope))   # declarative / packaged, in-process
     IF decision.verdict = block     THEN RETURN Rejected(gate_blocked(decision.reason), decision.evidence_refs)   # no commit ⇒ round not burned; refs surfaced
     gate_decisions.append(decision)                                                       # allow or warn ⇒ retained (verdict + evidence_refs + diagnostics)
@@ -2951,7 +2954,7 @@ DISPATCH_INTENT(instance, template, step_id) → DispatchIntent
         <div class="agg invariant">
           <div class="agg-label">Added rules</div>
           <div class="ents">
-            <div class="ent"><div class="en">runs in the workspace</div><div class="fields">a process gate executes with <code>cwd = runtime_context</code> workspace (v1: the worktree) — no workspace, no inline process gate</div></div>
+            <div class="ent"><div class="en">runs in the workspace</div><div class="fields">a process gate executes with <code>cwd = runtime_context</code> workspace (v1: the worktree); a workflow declaring <code>runtime_context: none</code> may not bind an <code>external.process</code> gate — the static mismatch is a definition error, and the kernel also guards it at run with <code>Rejected(runtime_context_required_for_process_gate)</code></div></div>
             <div class="ent"><div class="en">bounded timeout mandatory</div><div class="fields">every process gate carries a <code>timeout_ms</code>; a timeout is a runner outcome, not an indefinite block (v1 had none)</div></div>
             <div class="ent"><div class="en">evidence on every run</div><div class="fields">a log + artifact is persisted whether the gate allows, warns, or blocks (v1-faithful); the ref is carried to the commit or the rejection</div></div>
             <div class="ent"><div class="en">explicit output mode</div><div class="fields">verdict source is <code>exit_code</code> or <code>gate_decision_json</code> by config — never guessed from whether stdout happens to parse</div></div>
