@@ -2745,13 +2745,21 @@ CLASSIFY_PROCESS_RESULT(result, config) → GateDecision
   MATCH config.output.mode:                                          # EXPLICIT — never guess "JSON wins"
     exit_code          → RETURN { verdict: config.on_exit[bucket(result.exit_code)],   # buckets: "0" | nonzero → allow | warn | block
                                   reason: exit_reason(result.exit_code), evidence_refs: [result.log_ref] }
-    gate_decision_json → parsed ← try_parse_gate_decision(result.stdout)               # opt-in structured verdict
-                         IF parsed is none THEN RETURN runner_outcome(config.on_runner_error, malformed_gate_decision_json, result.log_ref)   # bad / unparseable / schema-invalid ⇒ runner outcome, NOT a business block
+    gate_decision_json → parsed ← try_parse_gate_decision(result.stdout)               # opt-in; schema allowlists verdict ∈ { allow, warn, block } — route is invalid until the routing slice
+                         IF parsed is none THEN RETURN runner_outcome(config.on_runner_error, malformed_gate_decision_json, result.log_ref)   # unparseable / schema-invalid (incl. a disallowed verdict) ⇒ runner outcome, NOT a business block
                          RETURN with_evidence(parsed, result.log_ref)
 
 runner_outcome(disposition, reason, log_ref) → GateDecision          # MVP realizes ONLY block_transition
   # fail_instance is rejected at definition load (gate_config_not_supported), so block_transition is the only value that reaches here — fail-closed
   RETURN { verdict: block, reason, evidence_refs: [log_ref] }        # audited distinctly: runner_error / timeout / malformed, not test_failed
+
+VALIDATE_GATE_CONFIG(template) → ok | Rejected                       # run at definition load (CREATE_INSTANCE) — fail at create, not mid-run; the static analog of binding coverage
+  FOR gate IN all_gate_bindings(template):                            # every (step, event_type) gate in the pinned definition
+    IF gate.uses = external.process AND template.runtime_context = none
+       THEN RETURN Rejected(runtime_context_required_for_process_gate)        # a process gate has no workspace in a context-free workflow
+    IF gate.config.on_runner_error = fail_instance OR gate.config.on_timeout = fail_instance
+       THEN RETURN Rejected(gate_config_not_supported)                        # fail_instance is a reserved future disposition
+  RETURN ok
 
 RECEIVE(input) → Outcome                                               # one kernel entry; route by input source class
   MATCH input.source:
@@ -2766,6 +2774,7 @@ CREATE_INSTANCE(template_ref, activation_mode, task, binding, run_overrides) →
   template ← definitionStore.load(template_ref)                # a pinned definition — a plain template, or an L0f-resolved definition (slots applied)
   IF activation_mode = immediate AND task is absent THEN RETURN Rejected(task_required)
   REQUIRE binding covers every role reachable in template      # binding resolved pre-kernel; the kernel only validates coverage (fail at create, not mid-run)
+  REQUIRE valid_gate_config(template)                          # L2a: static gate-config invariants (process↔workspace, no fail_instance) — definition-load validation, fail at create
   instance ← create { template_ref, task, binding, activation_mode,
                       kernel_status: CREATED, current_step: none, round: 0,   # position + round meaningless until ACTIVE
                       runtime_context: none, run_overrides: snapshot(run_overrides), version: 1 }
@@ -2870,7 +2879,7 @@ HANDLE envelope → Outcome
     IF evaluator is none            THEN RETURN Rejected(gate_evaluator_unavailable)      # config invariant — unresolved gate name
     IF evaluator.execution ≠ inline THEN RETURN Rejected(gate_execution_not_supported)    # deferred ⇒ later lifecycle slice (gate_pending + GATE_RESULT)
     IF evaluator.implementation = process                                                 # L2a: inline process now runs (was rejected at L2 core)
-      THEN IF instance.runtime_context = ready(∅) THEN RETURN Rejected(runtime_context_required_for_process_gate)   # ready(∅) = context-free: no workspace to run the process in (a definition-time mismatch, guarded here too)
+      THEN IF instance.runtime_context = ready(∅) THEN RETURN Rejected(runtime_context_required_for_process_gate)   # ready(∅) = context-free: VALIDATE_GATE_CONFIG rejects this at definition load; runtime backstop here
            decision ← run_process_gate(gate, instance, template, envelope)                # spawn in the workspace, bounded timeout
       ELSE decision ← evaluator.evaluate(gate.config, gate_projection(instance, template, envelope))   # declarative / packaged, in-process
     IF decision.verdict = block     THEN RETURN Rejected(gate_blocked(decision.reason), decision.evidence_refs)   # no commit ⇒ round not burned; refs surfaced
@@ -2955,6 +2964,7 @@ DISPATCH_INTENT(instance, template, step_id) → DispatchIntent
           <div class="agg-label">Added rules</div>
           <div class="ents">
             <div class="ent"><div class="en">runs in the workspace</div><div class="fields">a process gate executes with <code>cwd = runtime_context</code> workspace (v1: the worktree); a workflow declaring <code>runtime_context: none</code> may not bind an <code>external.process</code> gate — the static mismatch is a definition error, and the kernel also guards it at run with <code>Rejected(runtime_context_required_for_process_gate)</code></div></div>
+            <div class="ent"><div class="en">gate config validated at definition load</div><div class="fields"><code>VALIDATE_GATE_CONFIG(template)</code> runs when the definition is loaded (in <code>CREATE_INSTANCE</code>, beside binding coverage): a process gate without a workspace, or a <code>fail_instance</code> disposition, is rejected at create — fail at create, not mid-run</div></div>
             <div class="ent"><div class="en">bounded timeout mandatory</div><div class="fields">every process gate carries a <code>timeout_ms</code>; a timeout is a runner outcome, not an indefinite block (v1 had none)</div></div>
             <div class="ent"><div class="en">evidence on every run</div><div class="fields">a log + artifact is persisted whether the gate allows, warns, or blocks (v1-faithful); the ref is carried to the commit or the rejection</div></div>
             <div class="ent"><div class="en">explicit output mode</div><div class="fields">verdict source is <code>exit_code</code> or <code>gate_decision_json</code> by config — never guessed from whether stdout happens to parse</div></div>
@@ -3126,7 +3136,7 @@ template:
       }
       var html = escapeHtml(code)
         .replace(/("[^"]*"|'[^']*')/g, '<span class="s">$1</span>')
-        .replace(/\b(START_INSTANCE|CREATE_INSTANCE|RUNTIME_CONTEXT_READY|RESOLVE_START|DISPATCH_INTENT|GATE_PROJECTION|RUN_PROCESS_GATE|CLASSIFY_PROCESS_RESULT|RECEIVE|HANDLE|KICKOFF|CANCEL|COMPLETE|FAIL|START|MATCH|INTERFACE|FOR|IF|THEN|ELSE|RETURN|COMMIT|REQUIRE)\b/g, '<span class="kw">$1</span>')
+        .replace(/\b(START_INSTANCE|CREATE_INSTANCE|RUNTIME_CONTEXT_READY|RESOLVE_START|DISPATCH_INTENT|GATE_PROJECTION|RUN_PROCESS_GATE|CLASSIFY_PROCESS_RESULT|VALIDATE_GATE_CONFIG|RECEIVE|HANDLE|KICKOFF|CANCEL|COMPLETE|FAIL|START|MATCH|INTERFACE|FOR|IF|THEN|ELSE|RETURN|COMMIT|REQUIRE)\b/g, '<span class="kw">$1</span>')
         .replace(/\b(Rejected\([^)]+\)|Stale\([^)]+\)|Committed\([^)]+\)|Started\([^)]+\)|Created\([^)]+\)|Activated\([^)]+\)|Terminated\([^)]+\)|Accepted|Duplicate|DispatchIntent|ContextPacket|ResolvedStartRequest|GateDecision|GateEvaluator|GateInvocation|ProcessResult|ProcessGateRunner|Outcome)\b/g, '<span class="out">$1</span>')
         .replace(/^(\s*-?\s*)([A-Za-z_][A-Za-z0-9_]*)(:)/, '$1<span class="k">$2</span>$3')
         .replace(/(:\s*)([0-9]+)(\b)/g, '$1<span class="n">$2</span>$3');
