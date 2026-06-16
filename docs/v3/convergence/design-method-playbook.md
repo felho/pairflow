@@ -317,6 +317,24 @@ revert it to the old form. A comment that *became wrong* because the logic chang
 be updated; a comment that is merely a cosmetic rephrase must not. (Worth a quick check
 each level: does the side-by-side diff highlight only the real additions?)
 
+**Canonical contract for contract-dense slices (carry into every level).** Some slices are
+*contract-dense*: several contracts intersect at one point — e.g. L2a's process gate joined a
+policy verdict (`allow | warn | block`), a process IO contract (stdin/stdout/exit-code/timeout),
+a config contract (`output.mode`, `on_exit`, `on_runner_error`, `timeout_ms`), a lifecycle
+boundary (inline now, deferred later), an evidence/provenance rule, and a failure taxonomy
+(business block vs runner error vs malformed output). On such a slice a wording choice *is* a
+runtime-semantics choice: "default" decides whether an absent field normalizes or rejects;
+"structured JSON output" decides whether the schema admits a `route` verdict. We learned this the
+expensive way — L2a took many review rounds, each surfacing "one more edge," because the contract
+lived scattered across pseudocode, Domain prose, config, and the roadmap, so every tweak had to be
+re-reconciled in four places. The fix is a **single canonical contract table** (field · required? ·
+valid/default · invalid/absent, plus the runtime-classification rows) that *replaces* the scattered
+prose rather than sitting beside it — otherwise it is just a fifth thing to keep in sync. The
+pseudocode then becomes the table's executable sketch, the config example one instance of it, and
+the roadmap a pointer to it. Practical inversion: for a contract-dense slice, go **matrix-first** —
+write the canonical table, then derive the pseudocode — instead of pseudocode-first with the
+contract reverse-engineered afterwards. (Reference: the L2a "Canonical Process Gate Contract".)
+
 ### Pseudocode Quality Gate
 
 Pseudocode is not good enough until it answers:
