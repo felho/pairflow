@@ -386,16 +386,19 @@ behaviour reproducible *from configuration*: v1 baked these operating rules into
 prose; v3 derives them from policy/gate config and decorates the instruction the actor sees.
 Render contract (canonical matrix in core-model): bodies live only in the catalog; refs
 are id lists. Order is role refs → step refs → gate/policy refs, declaration order within
-each — render-order, *not* precedence/override. A gate ref renders only when its gated
-transition is present in the dispatched actor's `available_ops` — the same authority
-snapshot the packet already carries, not a fresh "may legally emit" check or blind step
-membership. A block id reached from several sources renders once, but `provenance.sources[]`
+each — render-order, *not* precedence/override. A gate ref renders only for a transition
+that passes both filters the kernel already defines: present in the step's `available_ops`
+(transition existence) *and* authorized by the L1 role × `current_step` capability check
+(authority). Until capability-filtered packet ops land, `available_ops` still lists all
+transitions, so L2b computes the authority half from the template + `CapabilityProfile`,
+not from `available_ops` alone — no blind step membership, no fresh "may legally emit"
+check. A block id reached from several sources renders once, but `provenance.sources[]`
 retains every emitter (role / step / gate-binding). Unresolved refs are rejected at
 definition load (`validate_context_refs`, fail-at-create — the static analog of binding
 coverage and `validate_gate_config`).
 In scope: catalog + ref vocabulary, deterministic resolution and ordered render into
-`ContextPacket.context_blocks`, the `available_ops`-membership render predicate, dedup with
-multi-source provenance, definition-load ref validation.
+`ContextPacket.context_blocks`, the render predicate (`available_ops` ∩ L1 capability),
+dedup with multi-source provenance, definition-load ref validation.
 Out of scope (→ §11.4 rich context assembly): semantic retrieval, memory, skill-doc
 expansion, model-specific prompt shaping, adapter-specific prompt conversion; and
 computed/templated bodies — **L2b validates that referenced blocks exist, it does not prove
