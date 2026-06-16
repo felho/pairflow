@@ -409,15 +409,37 @@ against real `GateBinding`/`GateEvaluator`/`GateDecision` objects, not abstractl
 case: "no `CONVERGED` before round 2" (the realized L2 converge gate is `round ≥ 2`).
 **Realized in core-model.html.**
 
-**L3 — Human decision Ask.**
-Concepts: a new `wait.kind = human_decision` on the L0d `WAITING` axis (not a new kernel
-lifecycle enum); the `operator` role; `human_gate` step type; human **approve /
-request-rework** outcomes (the approval/rework phase is a *derived* view, routing back to
-`ACTIVE`). The narrowest form of the Ask primitive.
-Why: the human as decision-maker at high-stakes points — the seed of the fiduciary wedge
-and of "what humans keep". Deliberately *not* a general Ask platform yet.
-Absent (later levels): help ask, agent-to-agent ask, external-token ask, multi-channel
-delivery, rich schema.
+**L3 — Human decision Ask (approval gate).**
+Scope: the narrowest Ask — the system parks on a human *decision-maker* whose verdict chooses
+a workflow route. A `human_gate` step parks the instance in `WAITING(human_decision)` (a new
+`wait.kind` on the L0d WAITING axis, not a new lifecycle enum) and, as one visible transition,
+records an `APPROVAL_REQUEST` for the bound `operator` (the decision context + the automated
+`recommendation`). The operator's `approve | request_rework` decision is recorded as an
+`APPROVAL_DECISION` and routes back to `ACTIVE` via the gate's transitions: `approve →
+on_approve` (a finalization seam, the done-tail later), `request_rework → on_rework` (e.g.
+implement) with a new round and the stale approval/review context cleared.
+Input model: a human decision is *not* an actor envelope through HANDLE's ACTIVE path; it is an
+operator-intent on a WAITING(human_decision) state — a sibling of KICKOFF. Guard: `wait.kind` +
+request correlation + operator authority + op_id idempotency + CAS. Operator authority is
+checked on this operator-intent path; the full operator authority model is later if needed (the
+L1 actor gate is a different input class).
+Override (the fiduciary core): if the pending request's `recommendation` is not `approve`, or
+its metadata marks this as not a clean approve path, an `approve` is valid only with an explicit,
+recorded `override` — a human may decide against the machine, but it is on the record.
+Boundary: no externally valid half-entered gate — the wait state and the request commit as one
+visible transition, or rollback / recovery semantics are explicit.
+Why: the human as decision-maker at high-stakes points — the seed of the fiduciary wedge and of
+"what humans keep". Deliberately *not* a general human-interaction platform.
+v1 reality check — "human" is ≥3 contracts; L3 takes only the approval gate. Absent (→ L5):
+agent-initiated **ask-human / help reply** (WAITING for a human REPLY, the active agent asks,
+same-context resume) and **deferred request-rework** (a rework intent arriving while parked on a
+help-ask, stashed and applied by a watchdog). Absent (later): agent-to-agent ask (→ L8),
+external-token ask (→ L7), multi-channel delivery (→ L8), rich decision schema, a timeout on a
+human wait (→ L9), the commit/merge finalization tail.
+Anchor: the converged result routes to a `human_approval` human_gate; approve → on_approve /
+finalization seam, request_rework → implement (new round). Planned core-model realization: a
+matrix-first **Human Decision Contract** (input · wait.kind · correlation · authority ·
+transcript entry · routing target · round effect · context cleanup · override · rejects).
 
 **L4 — Child workflow instances + internal lifecycle events.**
 Concepts: `ChildWorkflowLink`; parent waits on a child lifecycle event; **kernel-emitted
