@@ -402,12 +402,12 @@ dedup with multi-source provenance, definition-load ref validation.
 Out of scope (→ §11.4 rich context assembly): semantic retrieval, memory, skill-doc
 expansion, model-specific prompt shaping, adapter-specific prompt conversion; and
 computed/templated bodies — **L2b validates that referenced blocks exist, it does not prove
-authored prose semantically matches the gate config** (e.g. a `value: 3 → 4` gate change
-with stale "before round 3" prose is not caught; templated bodies come later).
+authored prose semantically matches the gate config** (e.g. a `value: 2 → 3` gate change
+with stale "before round 2" prose is not caught; templated bodies come later).
 Note: placed *after* L2 (and L2a) by the "concrete use case first" rule — the API is designed
 against real `GateBinding`/`GateEvaluator`/`GateDecision` objects, not abstractly. Anchor use
-case: "no `CONVERGED` before round 3". Not yet realized in core-model.html — its own
-core-model view is built next from this L2/L2a-grounded contract.
+case: "no `CONVERGED` before round 2" (the realized L2 converge gate is `round ≥ 2`).
+**Realized in core-model.html.**
 
 **L3 — Human decision Ask.**
 Concepts: a new `wait.kind = human_decision` on the L0d `WAITING` axis (not a new kernel
