@@ -3011,6 +3011,16 @@ template:
               timeout_ms: 600000
               on_runner_error: block_transition  # spawn / workspace-missing → not a business block (fail_instance = later)
               on_timeout: block_transition
+          # Structured-output variant: the process writes a GateDecision JSON to stdout.
+          # Invalid JSON / invalid schema is a runner outcome, not a business block:
+          #   runner_outcome(on_runner_error, malformed_gate_decision_json, log_ref)
+          # - uses: external.process
+          #   config:
+          #     command: "node .pairflow/gates/security-check.js"
+          #     output: { mode: gate_decision_json }
+          #     timeout_ms: 300000
+          #     on_runner_error: block_transition
+          #     on_timeout: block_transition
     - id: review
       role: reviewer
       instruction: "Review the diff; pass back or converge."
