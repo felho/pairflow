@@ -424,6 +424,109 @@ the extension seam.
 
 Do not let route policy perform L3 side effects. L2/routing decides; L3 executes.
 
+## Notable Alternatives And References
+
+These ideas were not selected as the primary design, but are worth preserving because they
+may become useful in later L2a/L2b or implementation work.
+
+### Decisions / Evidence / Messages Profile
+
+One proposal organized authoring config around:
+
+```text
+decisions -> what L2 allows or blocks
+evidence  -> what L2a commands/artifacts/trust proofs are required
+messages  -> what L2b tells implementers, reviewers, meta-reviewers, and humans
+```
+
+This is very readable and useful as a documentation lens. It was not chosen as the
+canonical model because it can obscure the actual runtime binding point: a gate is bound to
+a workflow transition. Still, the split is useful when explaining how one policy profile
+produces three outputs: enforcement, evidence collection, and actor guidance.
+
+### Stage Mode Pipeline
+
+Another proposal modeled every policy element as a `gate_pipeline.stage` with a mode:
+
+```text
+enforce     -> hard gate, block means no commit
+advisory    -> diagnostic/projection only, no block
+communicate -> L2b context contribution
+route       -> structured routing intent
+```
+
+This is strong as an internal/debug representation because it makes ordering and stage
+semantics explicit. It was not chosen as the primary authoring format because it is too
+verbose and ordering-sensitive. The selected design can still compile to a stage-like
+effective view for status/debug export.
+
+### Typed Transform Decisions
+
+The schema-focused proposal noted that not every gate output is just `allow`, `warn`, or
+`block`. Some v1-ish checks effectively transform the interpretation of a finding:
+
+```ts
+type GateTransform =
+  | { kind: "effective_priority"; from: "P0" | "P1"; to: "P2" | "P3" }
+  | { kind: "effective_timing"; from: "required-now"; to: "later-hardening" };
+```
+
+This is interesting for doc/review policy cases where missing evidence or invalid layer
+does not always hard-block, but downgrades or demotes a finding for projection/status. It
+should not complicate L2 core immediately, but the findings/doc-gate design should revisit
+whether `GateDecision` needs a typed transform/advisory output later.
+
+### L2b Emit Affordances
+
+The L2b-focused proposal introduced an actor-facing affordance shape:
+
+```ts
+interface EmitAffordance {
+  event_type: string;
+  target_step?: string;
+  status: "available_now" | "blocked_now" | "conditional" | "requires_external_gate";
+  gate_summary: GateSummary[];
+  required_payload?: SchemaRef;
+  required_evidence?: EvidenceRequirement[];
+}
+```
+
+This is likely a good future ContextPacket form. It makes L2b more precise than generic
+prompt blocks: the actor sees which emits are available, conditionally available, blocked,
+or dependent on external/process gates.
+
+### Explicit Gate Policy Decision Envelope
+
+The routing-focused proposal suggested a route decision envelope:
+
+```ts
+interface GatePolicyDecision {
+  route: PairflowGateRoute;
+  reason_code: string;
+  lifecycle_target?: "RUNNING" | "READY_FOR_HUMAN_APPROVAL" | "APPROVED_FOR_COMMIT";
+  sticky_human_gate?: boolean;
+  auto_rework_increment?: boolean;
+  required_human_action?: "approve" | "request_rework" | "inspect";
+  diagnostics: Record<string, unknown>;
+}
+```
+
+This is too route-heavy for L2 core, but valuable for the later routing/L3 slice. It
+captures the distinction between "what policy decided" and "what lifecycle/application
+side effect executes that decision".
+
+### Inline-Only Process MVP Cut
+
+The minimal MVP proposal argued for an initial L2a cut with only inline process gates:
+
+```text
+command ref + timeout + exit-code mapping + evidence ref
+```
+
+This is attractive for implementation sequencing. It does not cover the full long-running
+meta-review runner story, but it may be the right first executable L2a slice before
+`WAITING(gate_pending)` and deferred `GATE_RESULT` are added.
+
 ## Recommended Next Step
 
 Use this synthesis to refine the L2/L2a/L2b small specs:
