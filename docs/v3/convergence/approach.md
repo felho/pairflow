@@ -417,7 +417,10 @@ records an `APPROVAL_REQUEST` for the bound `operator` (the decision context + t
 `recommendation`). The operator's `approve | request_rework` decision is recorded as an
 `APPROVAL_DECISION` and routes back to `ACTIVE` via the gate's transitions: `approve →
 on_approve` (a finalization seam, the done-tail later), `request_rework → on_rework` (e.g.
-implement) with a new round and the stale approval/review context cleared.
+implement) with a new round and the stale approval/review context cleared. `request_rework`
+carries a **required, non-empty `instruction`** (+ optional `refs`) — the v1 `--message`, a
+first-class decision payload recorded in `APPROVAL_DECISION` and delivered to the implementer as
+its `handoff` (what to fix), not loose UI text; an empty/absent one is `rework_instruction_required`.
 Input model: a human decision is *not* an actor envelope through HANDLE's ACTIVE path; it is an
 operator-intent on a WAITING(human_decision) state — a sibling of KICKOFF. Guard: `wait.kind` +
 request correlation + operator authority + op_id idempotency + CAS. Operator authority is
