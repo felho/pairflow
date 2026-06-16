@@ -335,22 +335,28 @@ reviewer-PASS policy, command gates, meta-review/human routing, doc/evidence gat
 
 **L2a — External / process gate execution.**
 Concepts: the **process gate execution model** behind `external.*` gates — a structured
-`GateInvocation → GateDecision` contract over a process call, with a strict contract regardless
-of mode: bounded timeout, structured JSON input/output, no implicit transcript dump, stable
-exit-code mapping, stdout/stderr handling, failure mapped to `block` **or** infrastructure
-error (configurable), and projection access only through an authority packet + `projection_ref`
-(an SDK/query seam), never a raw state read. Two execution modes: **inline** process gate
-(runs in the L2 pipeline under a bounded timeout — the git-hook shape) and **deferred** process
-gate (`WAITING(gate_pending)` + a `GATE_RESULT` kernel_event, reusing the L0e provider pattern
-for long-running / side-effectful / evidence-producing checks).
+`GateInvocation → GateDecision` contract over a process call, with a strict contract: bounded
+timeout, structured JSON input/output, an explicit `output.mode` (`exit_code` default / `gate_decision_json`
+opt-in — never an implicit "JSON wins"), an `on_exit` bucket → `allow | warn | block` mapping (the same
+runner is a hard gate or a warning gate by config alone), and a runner-error / timeout / malformed-output
+outcome mapped to `block_transition` with a **distinct audited reason**, kept separate from a business
+block. Evidence (log + artifact: exit_code, duration, head_sha, git_status_hash) is persisted on every run
+and its refs ride to the commit entry (or the rejection). The MVP **runs inline**: a process gate executes
+in the L2 pipeline, in the `runtime_context` workspace, under the bounded timeout (the git-hook shape) —
+the v1-faithful synchronous command gate (v1's runner is itself synchronous, with no timeout — the bound is
+a v3 addition). The process receives a **compact inline projection** inside the GateInvocation.
 Why: external/process gates are MVP-critical — v1's `validation.required` on PASS,
 `meta_review_approve_required`, command exit-code gates, and repo-specific custom gates cannot
-be honestly represented without them. They are split out of L2 core because the process
-contract (and the deferred lifecycle) is heavier than the inline declarative/packaged pipeline;
-L2 core's pipeline shape is the future insertion point for inline process evaluators once L2a
-defines the process contract; until then L2 core rejects process implementations
-(`gate_execution_not_supported`). No dynamic TS module loading in the MVP; the external process
-interface is the extension seam.
+be honestly represented without them. They are split out of L2 core because the process contract is
+heavier than the inline declarative/packaged pipeline; until L2a, L2 core rejects process implementations
+(`gate_execution_not_supported`). **Realized (inline only) in core-model.html.**
+Out of scope (later): **deferred process gates** (`WAITING(gate_pending)` + a `GATE_RESULT` kernel_event,
+reusing the L0e provider pattern for long-running / non-blocking / evidence-producing checks) — a later
+lifecycle slice, **named but not numbered**, since it touches L0d lifecycle, the process gate, and L9-ish
+correlation / timeout / retry at once; the `fail_instance` runner-error disposition (terminal failure needs
+fuller ownership + operator-recovery modeling first); the `projection_ref` + scoped-query SDK seam (replacing
+the compact inline projection); actor-facing trust / skip-rerun communication (→ L2b); and dynamic module
+loading (the external process interface is the extension seam, not an in-process plugin loader).
 
 **L2b — Policy/gate context contribution (first ContextAssembly slice).**
 Concepts: `context_block` / `prompt_concern_ref` vocabulary; a gate/policy may declare a

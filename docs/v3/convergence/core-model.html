@@ -2439,21 +2439,22 @@ HANDLE envelope → Outcome
                                           THEN RETURN Rejected(not_authorized)
 
   # L2: policy gate pipeline — the transition exists (L0b) and is authorized (L1); do the policies allow it now?
+  gate_decisions ← []                                                                       # retained allow/warn verdicts + evidence refs, carried to the commit
   FOR gate IN template.gates_for(instance.current_step, envelope.type):   # ordered, authored; empty for ungated transitions
     evaluator ← gateRegistry.resolve(gate.uses)
     IF evaluator is none                  THEN RETURN Rejected(gate_evaluator_unavailable)    # config invariant — unresolved gate name
     IF evaluator.implementation = process THEN RETURN Rejected(gate_execution_not_supported)  # process contract is L2a — even an inline process gate
     IF evaluator.execution ≠ inline       THEN RETURN Rejected(gate_execution_not_supported)  # deferred runner path ⇒ L2a
     decision ← evaluator.evaluate(gate.config, gate_projection(instance, template, envelope))
-    IF decision.verdict = block       THEN RETURN Rejected(gate_blocked(decision.reason)) # no commit ⇒ round not burned
-    IF decision.verdict = warn        THEN retain(decision)                               # non-blocking; diagnostics/evidence carried to the commit
+    IF decision.verdict = block       THEN RETURN Rejected(gate_blocked(decision.reason), decision.evidence_refs)  # no commit ⇒ round not burned; refs surfaced
+    gate_decisions.append(decision)                                                       # allow or warn ⇒ retained (verdict + evidence_refs + diagnostics)
     # allow or warn ⇒ next gate in the pipeline
 
   issued_config ← resolve_agent_config(template, step, instance)   # resolved only now — not for a rejected envelope
 
   # one atomic commit, CAS on instance.version
   COMMIT atomically at expected_version = instance.version:
-    instance.transcript.append(envelope, issued_agent_config: issued_config)   # provenance: issued, not proven runtime
+    instance.transcript.append(envelope, issued_agent_config: issued_config, gate_decisions: gate_decisions)   # provenance: issued config + gate verdicts / evidence refs
     instance.current_step ← target
     IF advances_round(step, target) THEN instance.round ← instance.round + 1    # advance predicate = transition semantics; transcript-reconstructable
     IF target is terminal THEN COMPLETE(instance)                  # kernel-internal completion path → TERMINAL(done)
@@ -2742,7 +2743,9 @@ CLASSIFY_PROCESS_RESULT(result, config) → GateDecision
   MATCH config.output.mode:                                          # EXPLICIT — never guess "JSON wins"
     exit_code          → RETURN { verdict: config.on_exit[bucket(result.exit_code)],   # buckets: "0" | nonzero → allow | warn | block
                                   reason: exit_reason(result.exit_code), evidence_refs: [result.log_ref] }
-    gate_decision_json → RETURN with_evidence(parse_gate_decision(result.stdout), result.log_ref)   # opt-in structured verdict
+    gate_decision_json → parsed ← try_parse_gate_decision(result.stdout)               # opt-in structured verdict
+                         IF parsed is none THEN RETURN runner_outcome(config.on_runner_error, malformed_gate_decision_json, result.log_ref)   # bad / unparseable / schema-invalid ⇒ runner outcome, NOT a business block
+                         RETURN with_evidence(parsed, result.log_ref)
 
 runner_outcome(disposition, reason, log_ref) → GateDecision          # MVP realizes only block_transition
   IF disposition = block_transition THEN RETURN { verdict: block, reason, evidence_refs: [log_ref] }   # audited distinctly: runner_error / timeout, not test_failed
@@ -2859,6 +2862,7 @@ HANDLE envelope → Outcome
                                           THEN RETURN Rejected(not_authorized)
 
   # L2: policy gate pipeline — the transition exists (L0b) and is authorized (L1); do the policies allow it now?
+  gate_decisions ← []                                                                       # retained allow/warn verdicts + evidence refs, carried to the commit
   FOR gate IN template.gates_for(instance.current_step, envelope.type):   # ordered, authored; empty for ungated transitions
     evaluator ← gateRegistry.resolve(gate.uses)
     IF evaluator is none            THEN RETURN Rejected(gate_evaluator_unavailable)      # config invariant — unresolved gate name
@@ -2866,15 +2870,15 @@ HANDLE envelope → Outcome
     IF evaluator.implementation = process                                                 # L2a: inline process now runs (was rejected at L2 core)
       THEN decision ← run_process_gate(gate, instance, template, envelope)                # spawn in the workspace, bounded timeout
       ELSE decision ← evaluator.evaluate(gate.config, gate_projection(instance, template, envelope))   # declarative / packaged, in-process
-    IF decision.verdict = block     THEN RETURN Rejected(gate_blocked(decision.reason))   # no commit ⇒ round not burned
-    IF decision.verdict = warn      THEN retain(decision)                                 # non-blocking; diagnostics/evidence carried to the commit
+    IF decision.verdict = block     THEN RETURN Rejected(gate_blocked(decision.reason), decision.evidence_refs)   # no commit ⇒ round not burned; refs surfaced
+    gate_decisions.append(decision)                                                       # allow or warn ⇒ retained (verdict + evidence_refs + diagnostics)
     # allow or warn ⇒ next gate in the pipeline
 
   issued_config ← resolve_agent_config(template, step, instance)   # resolved only now — not for a rejected envelope
 
   # one atomic commit, CAS on instance.version
   COMMIT atomically at expected_version = instance.version:
-    instance.transcript.append(envelope, issued_agent_config: issued_config)   # provenance: issued, not proven runtime
+    instance.transcript.append(envelope, issued_agent_config: issued_config, gate_decisions: gate_decisions)   # provenance: issued config + gate verdicts / evidence refs
     instance.current_step ← target
     IF advances_round(step, target) THEN instance.round ← instance.round + 1    # advance predicate = transition semantics; transcript-reconstructable
     IF target is terminal THEN COMPLETE(instance)                  # kernel-internal completion path → TERMINAL(done)
@@ -2951,7 +2955,7 @@ DISPATCH_INTENT(instance, template, step_id) → DispatchIntent
             <div class="ent"><div class="en">bounded timeout mandatory</div><div class="fields">every process gate carries a <code>timeout_ms</code>; a timeout is a runner outcome, not an indefinite block (v1 had none)</div></div>
             <div class="ent"><div class="en">evidence on every run</div><div class="fields">a log + artifact is persisted whether the gate allows, warns, or blocks (v1-faithful); the ref is carried to the commit or the rejection</div></div>
             <div class="ent"><div class="en">explicit output mode</div><div class="fields">verdict source is <code>exit_code</code> or <code>gate_decision_json</code> by config — never guessed from whether stdout happens to parse</div></div>
-            <div class="ent"><div class="en">runner error ≠ business block</div><div class="fields"><code>runner_error</code>/<code>timeout</code> → <code>block_transition</code> with a distinct reason, separable in audit from a <code>test_failed</code> block</div></div>
+            <div class="ent"><div class="en">runner error ≠ business block</div><div class="fields"><code>runner_error</code> / <code>timeout</code> / <code>malformed_gate_decision_json</code> → <code>block_transition</code> with a distinct reason, separable in audit from a <code>test_failed</code> block</div></div>
             <div class="ent"><div class="en">still inline only</div><div class="fields">a <code>deferred</code> process gate is still rejected (<code>gate_execution_not_supported</code>) — the deferred lifecycle is a later slice</div></div>
           </div>
         </div>
