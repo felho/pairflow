@@ -2741,7 +2741,7 @@ RUN_PROCESS_GATE(gate, instance, template, envelope) → GateDecision   # L2a �
 
 CLASSIFY_PROCESS_RESULT(result, config) → GateDecision
   IF result.kind = timeout      THEN RETURN runner_outcome(config.on_timeout,      timeout,      result.log_ref)
-  IF result.kind = runner_error THEN RETURN runner_outcome(config.on_runner_error, runner_error, result.log_ref)   # spawn / workspace-missing / malformed
+  IF result.kind = runner_error THEN RETURN runner_outcome(config.on_runner_error, runner_error, result.log_ref)   # spawn / workspace-missing (malformed JSON has its own branch below)
   MATCH config.output.mode:                                          # EXPLICIT — never guess "JSON wins"
     exit_code          → RETURN { verdict: config.on_exit[bucket(result.exit_code)],   # buckets: "0" | nonzero → allow | warn | block
                                   reason: exit_reason(result.exit_code), evidence_refs: [result.log_ref] }

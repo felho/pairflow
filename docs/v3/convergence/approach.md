@@ -357,7 +357,8 @@ Out of scope (later): **deferred process gates** (`WAITING(gate_pending)` + a `G
 reusing the L0e provider pattern for long-running / non-blocking / evidence-producing checks) — a later
 lifecycle slice, **named but not numbered**, since it touches L0d lifecycle, the process gate, and L9-ish
 correlation / timeout / retry at once; the `fail_instance` runner-error disposition (terminal failure needs
-fuller ownership + operator-recovery modeling first); the `projection_ref` + scoped-query SDK seam (replacing
+fuller ownership + operator-recovery modeling first — until then configuring it is rejected as
+`gate_config_not_supported`, so the MVP stays fail-closed); the `projection_ref` + scoped-query SDK seam (replacing
 the compact inline projection); actor-facing trust / skip-rerun communication (→ L2b); and dynamic module
 loading (the external process interface is the extension seam, not an in-process plugin loader).
 
