@@ -406,7 +406,8 @@ authored prose semantically matches the gate config** (e.g. a `value: 3 → 4` g
 with stale "before round 3" prose is not caught; templated bodies come later).
 Note: placed *after* L2 (and L2a) by the "concrete use case first" rule — the API is designed
 against real `GateBinding`/`GateEvaluator`/`GateDecision` objects, not abstractly. Anchor use
-case: "no `CONVERGED` before round 3". Its own core-model view is built once L2 lands.
+case: "no `CONVERGED` before round 3". Not yet realized in core-model.html — its own
+core-model view is built next from this L2/L2a-grounded contract.
 
 **L3 — Human decision Ask.**
 Concepts: a new `wait.kind = human_decision` on the L0d `WAITING` axis (not a new kernel
