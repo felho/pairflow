@@ -2742,7 +2742,7 @@ RUN_PROCESS_GATE(gate, instance, template, envelope) → GateDecision   # L2a �
 CLASSIFY_PROCESS_RESULT(result, config) → GateDecision
   IF result.kind = timeout      THEN RETURN runner_outcome(config.on_timeout      ?? block_transition, timeout,      result.log_ref)   # absent disposition ⇒ block_transition (the default; fail_instance is rejected at definition load)
   IF result.kind = runner_error THEN RETURN runner_outcome(config.on_runner_error ?? block_transition, runner_error, result.log_ref)   # spawn / workspace-missing (malformed JSON has its own branch below)
-  MATCH config.output.mode:                                          # EXPLICIT — never guess "JSON wins"
+  MATCH config.output.mode ?? exit_code:                             # exit_code is the default; never guess "JSON wins"
     exit_code          → RETURN { verdict: config.on_exit[bucket(result.exit_code)],   # buckets: "0" | nonzero → allow | warn | block
                                   reason: exit_reason(result.exit_code), evidence_refs: [result.log_ref] }
     gate_decision_json → parsed ← try_parse_gate_decision(result.stdout)               # opt-in; schema allowlists verdict ∈ { allow, warn, block } — route is invalid until the routing slice
@@ -2756,17 +2756,25 @@ runner_outcome(disposition, reason, log_ref) → GateDecision          # MVP rea
 VALIDATE_GATE_CONFIG(template) → ok | Rejected                       # run at definition load (CREATE_INSTANCE) — fail at create, not mid-run; the static analog of binding coverage
   FOR gate IN all_gate_bindings(template):                            # every (step, event_type) gate in the pinned definition
     IF gate.uses ≠ external.process THEN CONTINUE                     # only process gates carry an execution config to validate
+    cfg ← gate.config
     IF template.runtime_context = none
        THEN RETURN Rejected(runtime_context_required_for_process_gate)        # a process gate has no workspace in a context-free workflow
-    IF gate.config.on_runner_error = fail_instance OR gate.config.on_timeout = fail_instance
-       THEN RETURN Rejected(gate_config_not_supported)                        # fail_instance is a reserved future disposition
-    # required process-gate fields — a complete, deterministic config or no run
-    IF gate.config.command is absent OR gate.config.timeout_ms is absent
+    IF cfg.command is absent OR cfg.timeout_ms is absent
        THEN RETURN Rejected(invalid_process_gate_config)                      # command + bounded timeout are mandatory
-    IF gate.config.output.mode NOT IN { exit_code, gate_decision_json }
-       THEN RETURN Rejected(invalid_process_gate_config)                      # output.mode must be explicit
-    IF gate.config.output.mode = exit_code AND (gate.config.on_exit["0"] is absent OR gate.config.on_exit[nonzero] is absent)
-       THEN RETURN Rejected(invalid_process_gate_config)                      # exit_code mode needs both buckets mapped to allow | warn | block
+    # disposition allowlist — block_transition is the only realized value (absent ⇒ block_transition default)
+    IF cfg.on_runner_error = fail_instance OR cfg.on_timeout = fail_instance
+       THEN RETURN Rejected(gate_config_not_supported)                        # fail_instance is a reserved future disposition (distinct reason)
+    IF (cfg.on_runner_error is present AND cfg.on_runner_error ≠ block_transition)
+       OR (cfg.on_timeout is present AND cfg.on_timeout ≠ block_transition)
+       THEN RETURN Rejected(invalid_process_gate_config)                      # any other disposition is unknown
+    # output mode — exit_code is the default; only an explicit-but-unknown value is invalid
+    IF cfg.output.mode is present AND cfg.output.mode NOT IN { exit_code, gate_decision_json }
+       THEN RETURN Rejected(invalid_process_gate_config)
+    IF (cfg.output.mode ?? exit_code) = exit_code THEN                        # exit_code mode (incl. the default when output.mode is absent)
+      IF cfg.on_exit["0"] is absent OR cfg.on_exit[nonzero] is absent
+         THEN RETURN Rejected(invalid_process_gate_config)                    # both exit buckets are required
+      IF cfg.on_exit["0"] NOT IN { allow, warn, block } OR cfg.on_exit[nonzero] NOT IN { allow, warn, block }
+         THEN RETURN Rejected(invalid_process_gate_config)                    # buckets map only to realized verdicts — no route smuggled in
   RETURN ok
 
 RECEIVE(input) → Outcome                                               # one kernel entry; route by input source class
@@ -2972,7 +2980,7 @@ DISPATCH_INTENT(instance, template, step_id) → DispatchIntent
           <div class="agg-label">Added rules</div>
           <div class="ents">
             <div class="ent"><div class="en">runs in the workspace</div><div class="fields">a process gate executes with <code>cwd = runtime_context</code> workspace (v1: the worktree); a workflow declaring <code>runtime_context: none</code> may not bind an <code>external.process</code> gate — the static mismatch is a definition error, and the kernel also guards it at run with <code>Rejected(runtime_context_required_for_process_gate)</code></div></div>
-            <div class="ent"><div class="en">gate config validated at definition load</div><div class="fields"><code>VALIDATE_GATE_CONFIG(template)</code> runs when the definition is loaded (in <code>CREATE_INSTANCE</code>, beside binding coverage): a process gate without a workspace (<code>runtime_context_required_for_process_gate</code>), a <code>fail_instance</code> disposition (<code>gate_config_not_supported</code>), or an incomplete config — missing <code>command</code>/<code>timeout_ms</code>, a non-explicit <code>output.mode</code>, or unmapped <code>exit_code</code> buckets (<code>invalid_process_gate_config</code>) — is rejected at create, not mid-run</div></div>
+            <div class="ent"><div class="en">gate config validated at definition load</div><div class="fields"><code>VALIDATE_GATE_CONFIG(template)</code> runs when the definition is loaded (in <code>CREATE_INSTANCE</code>, beside binding coverage): a process gate without a workspace (<code>runtime_context_required_for_process_gate</code>), a <code>fail_instance</code> disposition (<code>gate_config_not_supported</code>), or an incomplete/invalid config — missing <code>command</code>/<code>timeout_ms</code>, an unknown <code>output.mode</code> or runner disposition, or <code>exit_code</code> buckets that are missing or not <code>allow | warn | block</code> (<code>invalid_process_gate_config</code>) — is rejected at create, not mid-run. <code>output.mode</code> defaults to <code>exit_code</code> when absent</div></div>
             <div class="ent"><div class="en">bounded timeout mandatory</div><div class="fields">every process gate carries a <code>timeout_ms</code>; a timeout is a runner outcome, not an indefinite block (v1 had none)</div></div>
             <div class="ent"><div class="en">evidence on every run</div><div class="fields">a log + artifact is persisted whether the gate allows, warns, or blocks (v1-faithful); the ref is carried to the commit or the rejection</div></div>
             <div class="ent"><div class="en">explicit output mode</div><div class="fields">verdict source is <code>exit_code</code> or <code>gate_decision_json</code> by config — never guessed from whether stdout happens to parse</div></div>
