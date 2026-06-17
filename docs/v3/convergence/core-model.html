@@ -3829,6 +3829,10 @@ validate_context_refs(template) → ok | Rejected                       # defini
     IF ref NOT IN catalog THEN RETURN Rejected(unresolved_context_block_ref)
   RETURN ok                                                           # existence only — NOT semantic parity between a block’s prose and the gate config it describes
 
+# Loader-owned schema validation: this sketch names the load-bearing invariants the kernel requires from
+# the pinned template; it is NOT a full JSON Schema. It is this detailed because each rejected shape would
+# change runtime SEMANTICS (a dropped required field, a misrouted decision), not merely form. Further lexical
+# refinements (valid-identifier decision keys, field-name conventions) belong to the later general template schema.
 validate_decision_gates(template) → ok | Rejected                     # L3 — definition load (CREATE_INSTANCE); the generic decision vocabulary must not be a loose string-map. Fail at create, beside validate_gate_config / validate_context_refs
   FOR step IN human_gate_steps(template):
     IF step.decisions is absent OR step.decisions is not a map THEN RETURN Rejected(invalid_decision_gate_config)   # the decisions map must be a map (not a scalar/list) — a human_gate's transition vocabulary

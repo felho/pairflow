@@ -449,7 +449,9 @@ escalation / accept-risk / choose-strategy gate. Definition-load `validate_decis
 generic map honest, fail-closed at every level: `decisions` is a non-empty map, each decision entry is
 a closed map `{ target, payload? }` (an unknown key — e.g. a `paylod` typo — is rejected, not silently
 dropped), every `target` resolves, each `payload` is a map whose field specs are closed (`{ required:
-bool }`), and `recommends` only on an edge into a gate, naming a real decision key of that gate.
+bool }`), and `recommends` only on an edge into a gate, naming a real decision key of that gate. These
+detailed shape checks are loader-owned definition validation; the kernel consumes the normalized pinned
+contract and does not re-check shape at runtime.
 Scope note (bare wait + its resume): L3 introduces the minimal `type: wait` shape for the post-approval
 anchor (`commit_pending`) *and* the minimal resume that closes it — otherwise `commit_pending` dead-ends.
 Arrival parks `WAITING(step.wait.kind)` (no actor output); `RESUME_WAIT(event)` moves forward on an event
