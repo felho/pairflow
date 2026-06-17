@@ -3871,7 +3871,7 @@ SUBMIT_DECISION(decision) → Outcome                                  # operato
     ELSE                                                           # request_rework
       instance.transcript.append(APPROVAL_DECISION { op_id: decision.op_id, verdict: request_rework, instruction: decision.instruction, refs: decision.refs, by: decision.by, request_ref: decision.request_ref })   # instruction + refs are the rework payload ONLY; op_id ⇒ the Duplicate-check idempotency key
       clear_stale_decision_context(instance)                       # rework-transition semantics — drop the stale review/approval context (verdict-specific in L3; a transition property longer-term); the fresh decision's instruction stays as the handoff
-    apply_target_entry_effects(instance, template, step, target)                       # GENERIC arrival: the TARGET's type decides park / dispatch / complete — approve has no built-in finalize meaning. The SAME apply_target_entry_effects() HANDLE uses, so the two entry paths never drift
+    apply_target_entry_effects(instance, template, step.id, target)                       # GENERIC arrival: the TARGET's type decides park / dispatch / complete — approve has no built-in finalize meaning. The SAME apply_target_entry_effects() HANDLE uses, so the two entry paths never drift
     instance.version ← instance.version + 1
   RETURN Committed(instance.version, post_commit_output(instance, template))
 
@@ -3964,7 +3964,7 @@ HANDLE envelope → Outcome
   # one atomic commit, CAS on instance.version
   COMMIT atomically at expected_version = instance.version:
     instance.transcript.append(envelope, issued_agent_config: issued_config, gate_decisions: gate_decisions)   # provenance: issued config + gate verdicts / evidence refs
-    apply_target_entry_effects(instance, template, step, target)                       # L3 — generic arrival: target type decides advance / park / complete (the same apply_target_entry_effects() SUBMIT_DECISION uses)
+    apply_target_entry_effects(instance, template, step.id, target)                       # L3 — generic arrival: target type decides advance / park / complete (the same apply_target_entry_effects() SUBMIT_DECISION uses)
     instance.version ← instance.version + 1
   # on CAS conflict: restart HANDLE from load —
   #   re-check idempotency and re-resolve the transition;
@@ -3991,13 +3991,13 @@ assemble_context_blocks(instance, template, step) → [ContextBlock]    # L2b �
         emit(ref, { source: gate_binding, at: (step.id, event_type) })
   RETURN rendered.values()                                            # ordered [{ id, body, provenance: { sources } }]
 
-apply_target_entry_effects(instance, template, from_step, target) → void                # L3 — apply the kernel effects of entering the already-chosen target: position (current_step), round advancement, and the target-type lifecycle outcome below. Shared by HANDLE / SUBMIT_DECISION / RESUME_WAIT so the entry paths never drift
+apply_target_entry_effects(instance, template, from_step_id, target) → void                # L3 — apply the kernel effects of entering the already-chosen target: position (current_step), round advancement, and the target-type lifecycle outcome below. Shared by HANDLE / SUBMIT_DECISION / RESUME_WAIT so the entry paths never drift
   instance.current_step ← target
-  IF advances_round(from_step, target) THEN instance.round ← instance.round + 1   # transition semantics; transcript-reconstructable
+  IF advances_round(from_step_id, target) THEN instance.round ← instance.round + 1   # transition semantics; transcript-reconstructable
   IF target is terminal THEN COMPLETE(instance) ; RETURN            # the existing HANDLE terminal-step rule → TERMINAL(done); no new terminal semantics at L3
   step ← template.step(target)
   IF is_human_gate(template, target) THEN park_for_human_decision(instance, template, step) ; RETURN   # a DECISION wait — WAITING(human_decision) + APPROVAL_REQUEST + the Ask
-  IF is_wait_step(template, target)  THEN park_for_wait(instance, step)             ; RETURN          # a BARE wait — WAITING(step.wait.kind); the resumer is a later slice. NO privileged "finalization" — commit/merge/perf-test are just wait steps
+  IF is_wait_step(template, target)  THEN park_for_wait(instance, step)             ; RETURN          # a BARE wait — WAITING(step.wait.kind); RESUME_WAIT resumes it — only the resume ACTION (running the operation) is later. NO privileged "finalization" — commit/merge/perf-test are just wait steps
   instance.kernel_status ← ACTIVE ; instance.wait ← none           # an agent step ⇒ resume ACTIVE; the dispatch is derived post-commit
 
 human_gate_transition(step, verdict) → target | none               # a human_gate's transitions are keyed by verdict — approve | request_rework (the desugared transitions map)
@@ -4005,13 +4005,13 @@ human_gate_transition(step, verdict) → target | none               # a human_g
 
 park_for_wait(instance, step) → void                               # L3 — arrival at a type: wait step parks WAITING with the step's declared wait contract
   instance.kernel_status ← WAITING
-  instance.wait ← { kind: step.wait.kind, requested_by: step.id, resume_events: step.wait.resume_events }   # e.g. commit_pending ⇐ [COMMIT], merge_pending ⇐ [MERGE], process_pending ⇐ [PERF_TEST_RESULT]; the resume handler is a later slice; the L0d terminal set (done | failed | cancelled) is untouched
+  instance.wait ← { kind: step.wait.kind, requested_by: step.id, resume_events: step.wait.resume_events }   # e.g. commit_pending ⇐ [COMMIT], merge_pending ⇐ [MERGE], process_pending ⇐ [PERF_TEST_RESULT]; RESUME_WAIT is the handler (L3) — the resume ACTION is later; the L0d terminal set (done | failed | cancelled) is untouched
 
 post_commit_output(instance, template) → DispatchIntent | HumanDecisionRequest | none   # L3 — what to deliver after a commit
   IF instance.kernel_status = TERMINAL THEN RETURN none
   IF instance.kernel_status = WAITING THEN
      IF instance.wait.kind = human_decision THEN RETURN human_decision_request(instance, template)   # parked on a human_gate ⇒ the Ask
-     RETURN none                                                  # parked on a bare wait (e.g. commit_pending) ⇒ no output; the resumer is a later slice
+     RETURN none                                                  # parked on a bare wait (e.g. commit_pending) ⇒ no output; it waits for an inbound RESUME_WAIT event
   RETURN dispatch_intent(instance, template, instance.current_step)   # ACTIVE ⇒ agent dispatch
 
 park_for_human_decision(instance, template, step) → void           # L3 — runs INSIDE the arrival commit; state + request as one visible transition
@@ -4070,7 +4070,7 @@ dispatch_intent(instance, template, step_id) → DispatchIntent
           <div class="ents">
             <div class="ent"><div class="en">wait step + RESUME_WAIT <span style="font-size:10px;color:var(--muted)">(minimal shape at L3)</span></div><div class="fields">a <code>type: wait</code> step declares <code>wait: { kind, resume_events }</code> and <code>on_resume: { event → target }</code>; arrival parks <code>WAITING(kind)</code> (no Ask), and <code>RESUME_WAIT(event)</code> resumes on a matching event via <code>on_resume</code> → <code>apply_target_entry_effects(target)</code>. The <b>bare-wait dual</b> of the human_gate decision wait. L3 realizes it for <code>commit_pending</code> ⇐ <code>[COMMIT]</code> (<code>on_resume: { COMMIT: done }</code>) — no "finalization" type. Result payloads, the resume action, child-event sources (L4), timeouts/correlation (L9) are later</div></div>
             <div class="ent"><div class="en">human_gate <span style="font-size:10px;color:var(--muted)">(step type)</span></div><div class="fields"><code>type: human_gate</code>, <code>role: operator</code> — a <em>decision</em> wait: on arrival parks <code>WAITING(human_decision)</code> + APPROVAL_REQUEST + the Ask. Its <code>transitions</code> are <b>verdict-keyed</b> (<code>approve</code> / <code>request_rework</code>), resolved by <code>human_gate_transition(step, verdict)</code>. A verdict carries <b>no lifecycle meaning</b> — it just routes to a target</div></div>
-            <div class="ent"><div class="en">apply_target_entry_effects(...) <span style="font-size:10px;color:var(--muted)">(shared rule)</span></div><div class="fields">one <code>apply_target_entry_effects(instance, template, from_step, target)</code> — shared by HANDLE, SUBMIT_DECISION, and RESUME_WAIT so the entry paths never drift — routes by the target's nature: agent step ⇒ ACTIVE+dispatch, <code>type: human_gate</code> ⇒ park <code>human_decision</code> (a decision wait), <code>type: wait</code> ⇒ park <code>WAITING(step.wait.kind)</code> (a bare wait), terminal ⇒ the existing COMPLETE rule</div></div>
+            <div class="ent"><div class="en">apply_target_entry_effects(...) <span style="font-size:10px;color:var(--muted)">(shared rule)</span></div><div class="fields">one <code>apply_target_entry_effects(instance, template, from_step_id, target)</code> — shared by HANDLE, SUBMIT_DECISION, and RESUME_WAIT so the entry paths never drift — routes by the target's nature: agent step ⇒ ACTIVE+dispatch, <code>type: human_gate</code> ⇒ park <code>human_decision</code> (a decision wait), <code>type: wait</code> ⇒ park <code>WAITING(step.wait.kind)</code> (a bare wait), terminal ⇒ the existing COMPLETE rule</div></div>
             <div class="ent"><div class="en">HumanDecisionRequest <span style="font-size:10px;color:var(--muted)">(value)</span></div><div class="fields">the Ask: the human-facing analog of <code>DispatchIntent</code> (question, recommendation, decision context, allowed decisions, and <code>decision_requirements</code> — so the Ask is self-contained, e.g. <code>request_rework</code> requires an instruction); local/manual delivery, a durable channel is L8</div></div>
             <div class="ent"><div class="en">APPROVAL_REQUEST / APPROVAL_DECISION <span style="font-size:10px;color:var(--muted)">(transcript)</span></div><div class="fields">the request recorded on entry (recipient, <code>recommendation</code>, context_ref) and the decision recorded on resume (verdict, <code>override</code>, by, and — for <code>request_rework</code> — a required <code>instruction</code> + optional <code>refs</code>) — the v1 envelope pair</div></div>
           </div>
