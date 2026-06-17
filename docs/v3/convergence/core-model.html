@@ -3835,6 +3835,7 @@ validate_decision_gates(template) → ok | Rejected                     # L3 —
     FOR (key, choice) IN step.decisions:
       IF template.step(choice.target) is none THEN RETURN Rejected(decision_target_unresolved)   # every decision routes to a declared step
       FOR (field, spec) IN (choice.payload ?? {}):                    # MVP payload schema is minimal + CLOSED: per field only { required: bool } — keeps the generic map from being a loose string-map
+        IF spec is not a map                           THEN RETURN Rejected(invalid_decision_payload_schema)   # the field spec must be an object { required: bool } — not a scalar (e.g. instruction: true / "required")
         IF keys_of(spec) ⊄ { required }                THEN RETURN Rejected(invalid_decision_payload_schema)   # no nested types / unknown schema keys yet (e.g. type: markdown)
         IF spec.required is present AND spec.required NOT IN { true, false } THEN RETURN Rejected(invalid_decision_payload_schema)   # required must be a bool (e.g. NOT "yes")
   FOR edge IN transitions_with_recommends(template):                  # `recommends` is meaningful ONLY on an edge whose target is a human_gate
