@@ -1288,7 +1288,7 @@ template:
               (<code>…/state/transitions.ts</code>) — so position, actor authority and runtime ref are three
               separate concerns, FAIL/CANCEL stay broad, and COMPLETE is ACTIVE-only here (L3 generalizes it to a committed arrival into a terminal target, reachable from a resumed WAITING decision too).</li>
             <li><b>Known gaps (intended):</b> no operator authority (L7/L10); no runtime-context spec/provider (L0e); no
-              post-approval commit/merge resumers (later wait steps); only kickoff_pending waits; no retry on FAILED (§18). Each is in
+              post-approval resumer slices (likely wait steps once the bare-wait primitive is in scope); only kickoff_pending waits; no retry on FAILED (§18). Each is in
               Absent.</li>
             <li><b>Decision:</b> accepted as the L0d baseline (light evidence per playbook §2.1).</li>
           </ul>
