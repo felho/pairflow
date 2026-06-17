@@ -233,8 +233,9 @@ pseudocode diffs against L0c, and L1 (placed last) diffs against the full L0e ke
 Scope brake: L0d owns the generic terminal disposition paths and the lifecycle guard;
 operator authority (who may START/KICKOFF/CANCEL) stays dormant (→ L7/L10); the post-approval
 operator-wait resumers — v1's `APPROVED_FOR_COMMIT → COMMITTED → DONE` (commit before `DONE`), with the
-merge a *separate* post-`DONE` command and teardown — are later slices (ordinary wait steps, not a
-privileged finalization phase, and not L2/L3); only `kickoff_pending` waits exist
+merge a *separate* post-`DONE` command and teardown — are later post-approval resumer slices (likely
+modeled as wait steps once that primitive lands, not a privileged finalization phase, and not L2/L3);
+only `kickoff_pending` waits exist
 (human → L3, child → L4, timeout → L9).
 
 **L0e — Runtime context spec / provider contract.**
