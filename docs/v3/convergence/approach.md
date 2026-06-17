@@ -415,13 +415,18 @@ a workflow route. A `human_gate` step parks the instance in `WAITING(human_decis
 `wait.kind` on the L0d WAITING axis, not a new lifecycle enum) and, as one visible transition,
 records an `APPROVAL_REQUEST` for the bound `operator` (the decision context + the automated
 `recommendation`). The operator's `approve | request_rework` decision is recorded as an
-`APPROVAL_DECISION`: `approve` parks `WAITING(finalization_pending)` (a finalization seam,
-the done-tail later — it does *not* route back to ACTIVE), while `request_rework` routes back
-to `ACTIVE` via `on_request_rework` (e.g. implement) with a new round and the stale approval/review
-context cleared. `request_rework`
-carries a **required, non-empty `instruction`** (+ optional `refs`) — the v1 `--message`, a
-first-class decision payload recorded in `APPROVAL_DECISION` and delivered to the implementer as
-its `handoff` (what to fix), not loose UI text; an empty/absent one is `rework_instruction_required`.
+`APPROVAL_DECISION`. **A verdict carries no lifecycle meaning** — it routes via the human_gate's
+verdict-keyed `transitions` to a target, and one shared `arrive(...)` (used by both HANDLE and
+SUBMIT_DECISION, so the two entry paths never drift) decides by the *target's type*: an agent step
+⇒ ACTIVE + dispatch, a `human_gate` ⇒ park `WAITING(human_decision)`, a `type: finalization` step ⇒
+park `WAITING(finalization_pending)` (resume_events `[FINALIZE]`), a terminal step ⇒ the existing
+COMPLETE rule. So in the anchor `approve → finalize` (a finalization step) parks, but in a multi-gate
+workflow `approve` could target another gate or an agent step and continue — the kernel never bakes
+in "approve = finalize". `request_rework` carries a **required, non-empty `instruction`** (+ optional
+`refs`) — the v1 `--message`, a first-class decision payload recorded in `APPROVAL_DECISION` and
+delivered to the implementer as its `handoff` (what to fix), not loose UI text; an empty/absent one
+is `rework_instruction_required`. The stale-context cleanup is rework-*transition* semantics (kept
+verdict-specific in L3, a transition property longer-term).
 Input model: a human decision is *not* an actor envelope through HANDLE's ACTIVE path; it is an
 operator-intent on a WAITING(human_decision) state — a sibling of KICKOFF. Guard: `wait.kind` +
 request correlation + operator authority + op_id idempotency + CAS. Operator authority is
@@ -439,9 +444,14 @@ agent-initiated **ask-human / help reply** (WAITING for a human REPLY, the activ
 same-context resume) and **deferred request-rework** (a rework intent arriving while parked on a
 help-ask, stashed and applied by a watchdog). Absent (later): agent-to-agent ask (→ L8),
 external-token ask (→ L7), multi-channel delivery (→ L8), rich decision schema, a timeout on a
-human wait (→ L9), the commit/merge finalization tail.
-Anchor: the converged result routes to a `human_approval` human_gate; approve → on_approve /
-finalization seam, request_rework → implement (new round). **Realized in core-model.html** via a
+human wait (→ L9), and the FINALIZE handler / finalization tail — arrival at a `type: finalization`
+step parks `finalization_pending`, but the resumer is deferred. v1 order (reality-checked):
+`APPROVED_FOR_COMMIT → COMMITTED → DONE`, with the git commit *before* `DONE` and the **merge a
+separate command *after* `DONE`** (not before); runtime teardown (worktree/branch/session) is the
+symmetric close of L0e's provider, archiving is kernel-side.
+Anchor: the converged result routes to a `human_approval` human_gate; `transitions: { approve:
+finalize, request_rework: implement }`, where `finalize` is a `type: finalization` step. **Realized
+in core-model.html** via a
 matrix-first **Human Decision Contract** (input · wait.kind · correlation · authority ·
 transcript entry · routing target · round effect · context cleanup · override · rejects).
 
