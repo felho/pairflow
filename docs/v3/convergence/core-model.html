@@ -3659,6 +3659,46 @@ template:
           <code>human_decision</code> decision wait) that a one-off bare wait/resume would just reprise the
           finalization mistake.</div>
 
+        <h3 class="view-h"><span class="view-tag" style="background:#e2e8f0;color:#334155">Shape</span> How the L3 pieces fit (L3-specific aid)</h3>
+        <p>L3's pseudocode reads as a list of handlers, but the structure is a <b>funnel</b>: three entry
+        handlers share one commit spine; <code>apply_target_entry_effects</code> then fans out by the
+        <em>target's type</em>, and <code>post_commit_output</code> derives the outbound effect. (1) is the code
+        shape, (2) the per-target outcome, (3) the lifecycle it produces.</p>
+        <pre class="pseudo" style="font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size:12.5px; line-height:1.5">
+(1) THREE entry handlers funnel into ONE commit spine
+─────────────────────────────────────────────────────
+   actor envelope      ─▶  HANDLE            ┐
+   operator decision   ─▶  SUBMIT_DECISION   ├──▶  guards ─▶ COMMIT ─▶ apply_target_entry_effects(target)
+   resume event        ─▶  RESUME_WAIT       ┘
+
+(2) apply_target_entry_effects sets kernel_status by the TARGET's type; post_commit_output then derives the output
+──────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+   target = agent step  ─▶  ACTIVE                                       →  DispatchIntent
+   target = human_gate  ─▶  WAITING(human_decision) + APPROVAL_REQUEST   →  HumanDecisionRequest
+   target = type: wait  ─▶  WAITING(step.wait.kind)                      →  none  (awaits a resume event)
+   target = terminal    ─▶  TERMINAL(done)                               →  none
+
+(3) the lifecycle this produces (the anchor run)
+─────────────────────────────────────────────────
+   CREATED ─START/KICKOFF─▶ ACTIVE  ⇄  (implement ⇄ review loop)
+                              │  reviewer emits CONVERGED   (L2 gates allow)
+                              ▼
+                   WAITING(human_decision)    ←  operator is asked (APPROVAL_REQUEST / HumanDecisionRequest)
+                      │
+            approve   │   request_rework ─▶ back to ACTIVE  (new round, → implement)
+                      ▼
+                   WAITING(commit_pending)
+                      │  operator runs commit ─▶ COMMIT event ─▶ RESUME_WAIT
+                      ▼
+                   TERMINAL(done)
+        </pre>
+        <div class="note">
+          The same spine carries every level: L0a–L2b all enter through <code>HANDLE</code> and end at the commit;
+          L3 only adds the other two entry handlers (<code>SUBMIT_DECISION</code>, <code>RESUME_WAIT</code>) and
+          the target-type fan-out. <code>apply_target_entry_effects</code> sets the lifecycle status;
+          <code>post_commit_output</code> reads it back to decide what to deliver.
+        </div>
+
         <h3 class="view-h"><span class="view-tag runtime">Runtime</span> A concrete trace</h3>
         <p>The reviewer converges at round 2; the result routes to the <code>human_approval</code> gate instead
         of straight to <code>done</code>:</p>
