@@ -4363,59 +4363,61 @@ template:
     }
 
     function pairChangeBlock(block) {
+      // A change block is a contiguous run of removes (old order) + adds (new order). We pair
+      // similar lines into change rows, then MERGE using those pairs as anchors so the old side
+      // stays in oldIndex order and the new side in newIndex order. The previous single-key sort
+      // (newIndex ?? oldIndex) mixed the two coordinate systems and reordered rows when old/new
+      // indices diverged (a big add above), e.g. "228 after 229".
       var oldItems = block.filter(function (row) { return row.kind === 'remove'; });
       var newItems = block.filter(function (row) { return row.kind === 'add'; });
-      var pairedOld = new Set();
-      var pairedNew = new Set();
-      var pairs = [];
 
+      // 1. Greedily pair similar NON-blank old/new lines (best match ≥ 0.45). Blanks are never
+      //    paired — they render fine as unpaired add/remove, and pairing them only reorders.
+      var usedNew = new Set();
+      var rawPairs = [];
       oldItems.forEach(function (oldRow, oldPos) {
+        if (oldRow.oldLine == null || oldRow.oldLine.trim() === '') return;
         var best = { score: 0, newPos: -1 };
         newItems.forEach(function (newRow, newPos) {
-          if (pairedNew.has(newPos)) return;
+          if (usedNew.has(newPos)) return;
+          if (newRow.newLine == null || newRow.newLine.trim() === '') return;
           var score = lineSimilarity(oldRow.oldLine, newRow.newLine);
           if (score > best.score) best = { score: score, newPos: newPos };
         });
-        if (best.score >= 0.45) {
-          pairedOld.add(oldPos);
-          pairedNew.add(best.newPos);
-          pairs.push({
-            order: Math.min(oldRow.order, newItems[best.newPos].order),
-            oldIndex: oldRow.oldIndex,
-            newIndex: newItems[best.newPos].newIndex,
-            oldLine: oldRow.oldLine,
-            newLine: newItems[best.newPos].newLine,
-            kind: oldRow.oldLine === newItems[best.newPos].newLine ? 'ctx' : 'change'
-          });
-        }
+        if (best.score >= 0.45) { usedNew.add(best.newPos); rawPairs.push({ oldPos: oldPos, newPos: best.newPos }); }
       });
 
-      oldItems.forEach(function (row, index) {
-        if (!pairedOld.has(index)) pairs.push(row);
-      });
-      newItems.forEach(function (row, index) {
-        if (!pairedNew.has(index)) pairs.push(row);
+      // 2. Keep only pairs monotonic in BOTH coordinates (sorted by oldPos ⇒ newPos increasing);
+      //    a crossing pair is dropped back to unpaired add/remove so order can never invert.
+      rawPairs.sort(function (a, b) { return a.oldPos - b.oldPos; });
+      var pairedOld = new Set();
+      var pairedNew = new Set();
+      var anchors = [];
+      var maxNewPos = -1;
+      rawPairs.forEach(function (rp) {
+        if (rp.newPos > maxNewPos) { anchors.push(rp); pairedOld.add(rp.oldPos); pairedNew.add(rp.newPos); maxNewPos = rp.newPos; }
       });
 
-      function rowSortKey(row) {
-        if (row.newIndex != null) return row.newIndex;
-        return row.oldIndex;
-      }
+      // 3. Merge: between anchors emit unpaired removes (old order) and unpaired adds (new order),
+      //    then the anchor pair as one change/ctx row.
+      var rows = [];
+      var ri = 0, ai = 0;
+      anchors.forEach(function (rp) {
+        while (ri < rp.oldPos) { if (!pairedOld.has(ri)) rows.push(oldItems[ri]); ri += 1; }
+        while (ai < rp.newPos) { if (!pairedNew.has(ai)) rows.push(newItems[ai]); ai += 1; }
+        var oldRow = oldItems[rp.oldPos], newRow = newItems[rp.newPos];
+        rows.push({
+          oldIndex: oldRow.oldIndex, newIndex: newRow.newIndex,
+          oldLine: oldRow.oldLine, newLine: newRow.newLine,
+          kind: oldRow.oldLine === newRow.newLine ? 'ctx' : 'change'
+        });
+        ri = rp.oldPos + 1; ai = rp.newPos + 1;
+      });
+      while (ri < oldItems.length) { if (!pairedOld.has(ri)) rows.push(oldItems[ri]); ri += 1; }
+      while (ai < newItems.length) { if (!pairedNew.has(ai)) rows.push(newItems[ai]); ai += 1; }
 
-      return pairs.sort(function (a, b) {
-        var keyDelta = rowSortKey(a) - rowSortKey(b);
-        if (keyDelta) return keyDelta;
-        if (a.oldIndex != null && b.oldIndex == null) return -1;
-        if (a.oldIndex == null && b.oldIndex != null) return 1;
-        return a.order - b.order;
-      }).map(function (row) {
-        return {
-          oldIndex: row.oldIndex,
-          newIndex: row.newIndex,
-          oldLine: row.oldLine,
-          newLine: row.newLine,
-          kind: row.kind
-        };
+      return rows.map(function (row) {
+        return { oldIndex: row.oldIndex, newIndex: row.newIndex, oldLine: row.oldLine, newLine: row.newLine, kind: row.kind };
       });
     }
 
