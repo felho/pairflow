@@ -494,9 +494,9 @@ external-token ask (→ L7), multi-channel delivery (→ L8), a *dynamic* recomm
 upstream step emitting its own) plus any open predicate language for override/routing beyond the
 single *chosen ≠ recommended* rule, a timeout on a human wait (→ L9), and the post-approval resume *actions* — approve routes to ordinary later steps, not
 a privileged "finalization" phase. The minimal COMMIT resume *contract* is realized at L3 (`RESUME_WAIT`:
-`commit_pending` `on_resume: { COMMIT: done }`); the resume *actions/mechanics* — running git commit, the
-`MERGE` resume, teardown, archive — are later slices (`merge_pending` is another operator `type: wait`, a
-perf-test a process wait). v1 order (reality-checked): `APPROVED_FOR_COMMIT → COMMITTED → DONE`, with the git
+`commit_pending` `on_resume: { COMMIT: done }`); the resume *actions/mechanics* — running git commit and
+the `MERGE` resume — plus resource teardown / storage / archive concerns are later slices (`merge_pending`
+is another operator `type: wait`, a perf-test a process wait). v1 order (reality-checked): `APPROVED_FOR_COMMIT → COMMITTED → DONE`, with the git
 commit *before* `DONE` and the **merge a separate command *after* `DONE`**; runtime teardown + storage
 scope are their own milestone block (below, after L3 / before L4): the canonical record is born durable
 during the run, teardown only releases runtime resources, and archive is optional — not a preservation
@@ -539,16 +539,22 @@ Note: v3 already treats transcript/instance as durable abstract stores, so this 
 boundary explicit* + the evidence-ref rule — not a rewrite.
 
 **② Runtime Resource Teardown / Provider Close** *(capability slice — L0e's `release` mirror).*
-Capability: the kernel tracks a release obligation for a `ready` runtime_context; on terminal
-disposition the provider releases the resources it provisioned (worktree, temporary branch,
-tmux/runtime session, remote clone) plus engine support data (runtime-session registry entry, watchdog
-markers, locks), with explicit result/evidence/failure policy. Precondition (the teeth): durable-record
-closure complete — no canonical ref points into the resource being released (guaranteed by ①, asserted
-here fail-closed); **not** "everything archived". Why (① then ②): closes the current dangling provision
-— the model provisions a worktree (L0d/e) and never releases it. Depends: ① (so release is pure), L3
-terminal lifecycle (the trigger), L0e (provision). Not in scope: workflow-chosen cleanup (③), archive
-(④). L4-orthogonal: a child is just another runtime_context the same contract releases; L4 multiplies
-the count, not the contract.
+Capability: the kernel tracks a release obligation for a `ready` runtime_context, discharged at a
+**declared release boundary** — terminal disposition is the *default* boundary, not a hard invariant:
+it is deferred past any workflow-owned post-completion action that still needs the resource (v1: the
+worktree/branch survive `DONE` for the separate post-`DONE` merge command, and are released *there*). At
+the boundary the provider releases what it provisioned (worktree, temporary branch, tmux/runtime
+session, remote clone) plus engine support data (runtime-session registry entry, watchdog markers,
+locks), with explicit result/evidence/failure policy. The kernel guarantees the obligation is
+*eventually* discharged; it does not hardcode terminal as the release instant. Precondition (the teeth):
+durable-record closure complete — no canonical ref points into the resource being released (guaranteed
+by ①, asserted here fail-closed); **not** "everything archived". Ordering: ② release of a resource
+follows any ③ post-completion action that consumes it (e.g. release the worktree *after* the merge that
+needs it). Why (① then ②): closes the current dangling provision — the model provisions a worktree
+(L0d/e) and never releases it. Depends: ① (so release is pure), L3 terminal lifecycle (the earliest
+boundary), L0e (provision). Not in scope: workflow-chosen cleanup (③), archive (④). L4-orthogonal: a
+child is just another runtime_context the same contract releases; L4 multiplies the count, not the
+contract.
 
 **③ Workflow Cleanup / Post-Completion Actions** *(later, non-core).*
 Capability: steps the *workflow itself* chooses before/after completion (commit-wait, merge-wait,
