@@ -524,6 +524,15 @@ preserves history.** Operationally and checkably: **no canonical-record ref poin
 being released.** Storage Scope (①) guarantees this by construction; Teardown (②) only asserts it,
 fail-closed. Four strands — two core (next), two later:
 
+**Two axes, so "cleanup" never re-conflates the strands.** Each strand is one combination of *who owns
+the thing* (kernel/engine · runtime provider · workflow/author) × *the nature of the operation* (resource
+teardown · workflow post-action · storage/archive/purge). The word "cleanup" spanned both axes and caused
+drift, so it is retired as a category name. The v1 commands each span strands rather than mapping to one:
+**`bubble delete` = ② (runtime teardown: worktree/branch/tmux/session) + ④ (archive snapshot + per-bubble
+record purge)**; **`bubble merge` = ③ (the merge *post-action*) + ② (the same provider teardown)**
+(verified — both v1 commands run identical runtime teardown; only `delete` purges the record and archives).
+So `delete` is **not** ③, and the runtime teardown both commands share is **②**, not "workflow cleanup".
+
 **① Durable Run Record / Storage Scope** *(cross-cutting invariant, not a step — first-class milestone).*
 **Realized in core-model.html** (section `①`, after L3) — matrix-first, the **Canonical Home Table** as
 the central artifact, plus five invariants INV-1..INV-5 and three checkable predicates
@@ -551,32 +560,50 @@ boundary explicit* + the evidence-ref rule — not a rewrite.
 Capability: the kernel tracks a release obligation for a `ready` runtime_context, discharged at a
 **declared release boundary** — terminal disposition is the *default* boundary, not a hard invariant:
 it is deferred past any workflow-owned post-completion action that still needs the resource (v1: the
-worktree/branch survive `DONE` for the separate post-`DONE` merge command, and are released *there*). At
-the boundary the provider releases what it provisioned (worktree, temporary branch, tmux/runtime
-session, remote clone) plus engine support data (runtime-session registry entry, watchdog markers,
-locks), with explicit result/evidence/failure policy. The kernel guarantees the obligation is
+worktree/branch survive `DONE` for the separate post-`DONE` merge command, and are released *there*).
+Reached by either flow — verified: both v1 `merge` and `delete` run the **identical** runtime teardown,
+so the release boundary is "merge or delete," not merge-only. At the boundary the provider releases what
+it provisioned (worktree, temporary branch, tmux/runtime session, remote clone) plus engine support data
+(runtime-session registry entry, watchdog markers, locks), with explicit result/evidence/failure policy.
+This is the resource-teardown axis owned by the runtime provider — **not** "workflow cleanup" (③ is a
+different axis): worktree/branch/tmux are the runtime_context the provider provisioned, so releasing them
+is its `release` mirror, not an author-chosen step. The kernel guarantees the obligation is
 *eventually* discharged; it does not hardcode terminal as the release instant. Precondition (the teeth):
 durable-record closure complete — no canonical ref points into the resource being released (guaranteed
 by ①, asserted here fail-closed); **not** "everything archived". Ordering: ② release of a resource
 follows any ③ post-completion action that consumes it (e.g. release the worktree *after* the merge that
 needs it). Why (① then ②): closes the current dangling provision — the model provisions a worktree
 (L0d/e) and never releases it. Depends: ① (so release is pure), L3 terminal lifecycle (the earliest
-boundary), L0e (provision). Not in scope: workflow-chosen cleanup (③), archive (④). L4-orthogonal: a
+boundary), L0e (provision). Not in scope: workflow post-actions (③), archive/purge (④). L4-orthogonal: a
 child is just another runtime_context the same contract releases; L4 multiplies the count, not the
 contract.
 
-**③ Workflow Cleanup / Post-Completion Actions** *(later, non-core).*
-Capability: steps the *workflow itself* chooses before/after completion (commit-wait, merge-wait,
-perf-test, publish, notify, cleanup script) — expressed with existing `type: wait` / process primitives
-plus a later action/resumer slice (the resume *action*, e.g. actually running git commit). The
-framework may offer packaged building blocks; the workflow decides. This is **not** kernel teardown and
-**not** kernel archive. Depends: wait/resume (L3), process gates (L2a), a later action primitive.
+**③ Workflow Post-Actions** *(later, non-core).* *(Renamed from "Workflow Cleanup" — the old name let
+worktree/branch teardown leak in; that is ②. The category is author-chosen process steps; a "cleanup
+script" is merely one example, not the name.)*
+Capability: process steps the *workflow author* chooses before/after completion as part of the workflow's
+logic — **run git commit**, **run merge**, run a perf-test, publish a report, notify someone, or run a
+custom cleanup script for a side-effect the runtime provider does **not** own (e.g. a scratch bucket a
+build step created). Expressed with existing `type: wait` / process primitives plus a later action/resumer
+slice (the resume *action*, e.g. actually running the git commit/merge that L3 left deferred). The
+framework may offer packaged building blocks; the workflow decides. This is the *workflow-post-action* axis
+(author-owned), distinct from ②'s provider resource teardown and ④'s storage/archive/purge — it is
+**not** kernel teardown and **not** kernel archive. The merge action is a ③ post-action; the provider
+teardown that may follow it is ②. MVP note: the commit/merge *actions* (③) and the wait/resume that drive
+them are needed for a WF-7 run, so ③'s action core is closer than "later, non-core" suggests, even though
+the general post-action framework is deferred. Depends: wait/resume (L3), process gates (L2a), a later
+action primitive.
 
 **④ Archive / Export / Purge** *(later, optional ops — not correctness).*
-Capability: optional cold snapshot/export, retention/purge policy, archive index/query. **Not** the
-preservation path and **not** a teardown precondition — the system must compute metrics/audit/eval from
-the durable run record, never from an archived folder. Naming it early reimports the v1 mental model.
-Ops/tooling, ~L8 area. Depends: ① (which makes archive optional, not correctness).
+Capability: optional cold snapshot/export, retention/purge policy, archive index/query. This is the
+storage/archive/purge axis, and it is the v3 home of the *other* half of v1 `bubble delete` — the archive
+snapshot + the per-bubble **record purge** (the runtime-teardown half is ②). **Not** the preservation path
+and **not** a teardown precondition — the system must compute metrics/audit/eval from the durable run
+record, never from an archived folder. Crucially, under ① the v3 purge is *safe by construction*: evidence
+lives in the durable T3 store behind durable refs (INV-3), so a purge is an explicit, complete operation,
+not the v1 evidence-loss bug (where `delete` dropped the per-bubble dir and the 5-file archive left
+evidence artifacts dangling). Naming archive-as-preservation early reimports the v1 mental model.
+Ops/tooling, ~L8 area. Depends: ① (which makes archive optional, not correctness, and purge safe).
 
 Cross-ref: the **wait/resume contract** these build on is already realized at L3 (`RESUME_WAIT`); later
 resource/action slices reuse it.

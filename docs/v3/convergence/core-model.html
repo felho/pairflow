@@ -4555,7 +4555,7 @@ release_safe(resource) → bool
         <h3 class="view-h"><span class="view-tag absent">Absent</span> Not in this slice</h3>
         <div class="absent-grid">
           <div class="absent-item">No <b>release mechanics</b> — tracking the release obligation and actually releasing the worktree/branch/session is the teardown slice <span class="at">→ ②</span></div>
-          <div class="absent-item">No <b>workflow-chosen cleanup / post-completion actions</b> — commit-wait, merge-wait, perf-test, publish, notify, cleanup scripts are workflow steps over existing wait/process primitives + a later action slice <span class="at">→ ③</span></div>
+          <div class="absent-item">No <b>workflow post-actions</b> — author-chosen process steps (run git commit / merge, perf-test, publish, notify, a custom cleanup script for a side-effect the provider does not own) over existing wait/process primitives + a later action slice; distinct from ②'s provider resource teardown <span class="at">→ ③</span></div>
           <div class="absent-item">No <b>archive / export / purge / retention</b> — optional cold ops, computed from the durable record, never the preservation path nor a teardown precondition <span class="at">→ ④ (~L8 ops)</span></div>
           <div class="absent-item">No <b>storage-backend choice</b> — file vs object store vs DB for T1/T3 is an implementation concern; this slice fixes <em>placement &amp; authority</em>, not the medium <span class="at">→ impl</span></div>
           <div class="absent-item">No <b>multi-instance / federation storage</b> or <b>central registry/store governance</b> — a single run's homes only; cross-run/central stores are later <span class="at">→ L11+</span></div>
@@ -4578,7 +4578,7 @@ release_safe(resource) → bool
             <li><b>Scenario coverage:</b> every datum in the Canonical Home Table maps to exactly one home; the canonical homes (T1/T3) survive runtime teardown; the T2 projection is rebuildable from T1 (or a sealed snapshot anchored to it), not canonical on its own; only T4 is released.</li>
             <li><b>Invariant coverage:</b> born-durable record ✓; no workspace-sole-truth ✓; evidence-ref discipline ✓; projection subordination (incl. sealed snapshot anchored to T1) ✓; release-safe by construction ✓ — and all L0a–L3 invariants still hold (this slice adds no handler).</li>
             <li><b>Accepted tradeoff:</b> the durable-write <em>mechanism</em>, storage backend, and archive/retention are out — this slice fixes placement &amp; authority only. The genuinely new code is the one evidence-ref rule.</li>
-            <li><b>Known gaps (intended):</b> release mechanics (②), workflow cleanup (③), archive/export/purge (④), backend choice (impl), multi-instance/central stores (L11+). Each is in Absent.</li>
+            <li><b>Known gaps (intended):</b> release mechanics (②), workflow post-actions (③), archive/export/purge (④), backend choice (impl), multi-instance/central stores (L11+). Each is in Absent.</li>
             <li><b>Decision:</b> accepted as the ① baseline (light evidence per playbook §2.1); ② Teardown builds directly on INV-5.</li>
           </ul>
         </div>
