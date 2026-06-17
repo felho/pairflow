@@ -497,9 +497,10 @@ a privileged "finalization" phase. The minimal COMMIT resume *contract* is reali
 `commit_pending` `on_resume: { COMMIT: done }`); the resume *actions/mechanics* — running git commit, the
 `MERGE` resume, teardown, archive — are later slices (`merge_pending` is another operator `type: wait`, a
 perf-test a process wait). v1 order (reality-checked): `APPROVED_FOR_COMMIT → COMMITTED → DONE`, with the git
-commit *before* `DONE` and the **merge a separate command *after* `DONE`**; runtime teardown is the
-symmetric close of L0e's provider, archiving is kernel-side. "Finalization" stays an informal name, not
-a kernel step type.
+commit *before* `DONE` and the **merge a separate command *after* `DONE`**; runtime teardown + storage
+scope are their own milestone block (below, after L3 / before L4): the canonical record is born durable
+during the run, teardown only releases runtime resources, and archive is optional — not a preservation
+step. "Finalization" stays an informal name, not a kernel step type.
 Anchor: the converged result routes to a `human_approval` human_gate; `decisions: { approve: { target:
 commit_pending }, request_rework: { target: implement, payload: { instruction: { required: true }, refs: {
 required: false } } } }`, with `recommends: approve` on the `review.CONVERGED` edge, where `commit_pending`
@@ -509,6 +510,61 @@ is a generic `type: wait` step
 matrix-first **Human Decision Contract** (input · wait.kind · correlation · authority ·
 transcript entry · routing target · round effect · context cleanup · override · rejects), plus the
 bare-wait `RESUME_WAIT` resume that closes the `commit_pending` anchor.
+
+**Runtime-context lifecycle close — durable record + teardown.**
+*Build order: after L3, before L4 — L4's child instances must already inherit a durable record and a
+release-not-preservation teardown, or parent/child storage and cleanup collide. Conceptually this
+**completes L0e's runtime-context lifecycle** (`provision` ↔ `release`); realized here at the forcing
+point, per the `RESUME_WAIT` precedent — we do **not** renumber L0e. The v1 "archive" is a placement
+symptom, not a primitive — the same bias-removal as the finalization seam.*
+Core invariant (the whole topic in one line): **canonical run history is written during the run, into
+durable storage; teardown only releases runtime resources — teardown must never be the step that
+preserves history.** Operationally and checkably: **no canonical-record ref points into a resource
+being released.** Storage Scope (①) guarantees this by construction; Teardown (②) only asserts it,
+fail-closed. Four strands — two core (next), two later:
+
+**① Durable Run Record / Storage Scope** *(cross-cutting invariant, not a step — first-class milestone).*
+Capability: one canonical run record — the append-only history/event log — is authored to durable
+storage during the run (instance/template/project refs, lifecycle events, transcript/envelopes,
+decisions, gate outcomes, timings, actor/role metadata, terminal disposition, evidence **refs**). The
+current-state projection **may** be materialized for cheap reads, but is authoritative only when
+reconstructable/consistent from the record or under an explicit snapshot-authority rule — the runtime
+workspace is never the *only* truth. Evidence: the outcome/metadata is inline in the record; large
+blobs (test log, diff snapshot, report) live in a durable evidence store referenced by a durable ref —
+never the workspace's implicit contents.
+Why first: it is the boundary that keeps teardown and archive from re-entangling; ② can only assert an
+invariant ① establishes. Depends: L0a (transcript = the canonical log), L2 (gate evidence), L0e (where
+it runs vs where truth lives). Not in scope: release mechanics (②), optional archive/export (④).
+Note: v3 already treats transcript/instance as durable abstract stores, so this is mostly *making the
+boundary explicit* + the evidence-ref rule — not a rewrite.
+
+**② Runtime Resource Teardown / Provider Close** *(capability slice — L0e's `release` mirror).*
+Capability: the kernel tracks a release obligation for a `ready` runtime_context; on terminal
+disposition the provider releases the resources it provisioned (worktree, temporary branch,
+tmux/runtime session, remote clone) plus engine support data (runtime-session registry entry, watchdog
+markers, locks), with explicit result/evidence/failure policy. Precondition (the teeth): durable-record
+closure complete — no canonical ref points into the resource being released (guaranteed by ①, asserted
+here fail-closed); **not** "everything archived". Why (① then ②): closes the current dangling provision
+— the model provisions a worktree (L0d/e) and never releases it. Depends: ① (so release is pure), L3
+terminal lifecycle (the trigger), L0e (provision). Not in scope: workflow-chosen cleanup (③), archive
+(④). L4-orthogonal: a child is just another runtime_context the same contract releases; L4 multiplies
+the count, not the contract.
+
+**③ Workflow Cleanup / Post-Completion Actions** *(later, non-core).*
+Capability: steps the *workflow itself* chooses before/after completion (commit-wait, merge-wait,
+perf-test, publish, notify, cleanup script) — expressed with existing `type: wait` / process primitives
+plus a later action/resumer slice (the resume *action*, e.g. actually running git commit). The
+framework may offer packaged building blocks; the workflow decides. This is **not** kernel teardown and
+**not** kernel archive. Depends: wait/resume (L3), process gates (L2a), a later action primitive.
+
+**④ Archive / Export / Purge** *(later, optional ops — not correctness).*
+Capability: optional cold snapshot/export, retention/purge policy, archive index/query. **Not** the
+preservation path and **not** a teardown precondition — the system must compute metrics/audit/eval from
+the durable run record, never from an archived folder. Naming it early reimports the v1 mental model.
+Ops/tooling, ~L8 area. Depends: ① (which makes archive optional, not correctness).
+
+Cross-ref: the **wait/resume contract** these build on is already realized at L3 (`RESUME_WAIT`); later
+resource/action slices reuse it.
 
 **L4 — Child workflow instances + internal lifecycle events.**
 Concepts: `ChildWorkflowLink`; parent waits on a child lifecycle event; **kernel-emitted
