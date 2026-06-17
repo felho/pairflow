@@ -440,8 +440,10 @@ as well target another gate, an agent step (even a newly-added LLM step), or `do
 bakes in "approve = finalize".
 Foundational vs not: the *mechanism* — park `WAITING(human_decision)`, record a request, an
 operator-intent resume (correlated + authorized), route by a declared decision key, append to the
-transcript, enter via `apply_target_entry_effects` — is kernel. The *vocabulary* (`approve`,
-`request_rework`, the instruction rule, the override framing) is template data, not kernel. So the
+transcript, enter via `apply_target_entry_effects`, and the generic override rule (chosen ≠
+recommendation ⇒ `override` required) — is kernel. The *vocabulary* (`approve`, `request_rework`) and
+the payload requirements (the instruction rule) are template data; the old approve-specific override
+*framing* is replaced by that generic kernel rule. So the
 transcript entries are decision-agnostic (`DECISION_REQUEST` / `DECISION_MADE`), reusable by an
 escalation / accept-risk / choose-strategy gate. Definition-load `validate_decision_gates` keeps the
 generic map honest: non-empty `decisions`, every `target` resolves, and `recommends` only on an edge
