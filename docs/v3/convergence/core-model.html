@@ -4521,10 +4521,10 @@ release_safe(resource) → bool
             </tbody>
           </table>
           </div>
-          <div class="fields" style="margin-top:8px">Everything above the release cut is canonical and survives;
-          only T4 dies, and dying is safe precisely because no T1/T3 datum's only copy is there. The two
-          <b>bold</b> evidence rows are where the new INV-3 rule bites: the outcome inline in T1, the blob in T3
-          by durable ref — never a path into T4.</div>
+          <div class="fields" style="margin-top:8px">T1/T3 are canonical and survive; T2 is derived —
+          rebuildable from T1 or sealed against it, never canonical on its own; only T4 dies, and dying is safe
+          precisely because no T1/T3 datum's only copy is there. The two <b>bold</b> evidence rows are where the
+          new INV-3 rule bites: the outcome inline in T1, the blob in T3 by durable ref — never a path into T4.</div>
         </div>
         <div class="agg">
           <div class="agg-label">Sealed projection snapshot — a closed, verifiable projection, not a second truth</div>
