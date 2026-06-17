@@ -4377,19 +4377,24 @@ template:
         </div>
 
         <h3 class="view-h"><span class="view-tag" style="background:#e2e8f0;color:#334155">Shape</span> Four homes, one release cut (storage-scope aid)</h3>
-        <p>Everything <em>canonical</em> sits above the cut and survives; only the runtime workspace dies at
-        teardown — and dying is <b>safe</b> precisely because nothing canonical's only copy lives there. The
-        shape of the table below <em>is</em> the invariant.</p>
+        <p>The <em>canonical truth</em> (T1/T3) is born durable and survives teardown. The state projection
+        (T2) is <b>not</b> a canonical home — it is <em>derived</em>: droppable and rebuildable from T1, or a
+        sealed snapshot anchored to T1. Only the runtime workspace (T4) is released — <b>safe</b> precisely
+        because nothing canonical's only copy lives there. The shape of the table below <em>is</em> the invariant.</p>
         <pre class="pseudo" style="font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size:12.5px; line-height:1.5">
-  DURABLE / CANONICAL  (born durable, written during the run — survives teardown)
+  DURABLE / CANONICAL  (born durable, written during the run — the truth; survives teardown)
   ───────────────────────────────────────────────────────────────────────────────
    T1  durable run record   append-only history: lifecycle events, transcript/envelopes,
                             decisions, gate outcomes, timings, role metadata, terminal
                             disposition, evidence OUTCOMES (inline) + evidence REFS (durable)
    T3  evidence store        large blobs (test log, diff snapshot, report), addressed by a
                             durable ref carried in a T1 entry
-   T2  state projection      a cache of current state for cheap reads — authoritative ONLY when
-                            reconstructable from T1, or a sealed snapshot anchored to T1
+
+  DERIVED  (NOT canonical — rebuildable from T1, or a sealed snapshot anchored to T1)
+  ───────────────────────────────────────────────────────────────────────────────
+   T2  state projection      a cache of current state for cheap reads — droppable and rebuildable
+                            from T1; authoritative only as a sealed snapshot anchored to T1
+                            (record_ref + version) — never canonical on its own
   ═══════════════════════════════════ release cut ═══════════════════════════════════
    T4  runtime workspace     worktree, branch, tmux/session (L0e) — ephemeral; released by
                             teardown (②). NEVER a canonical home; no canonical ref points in.
@@ -4570,7 +4575,7 @@ release_safe(resource) → bool
         </div>
         <div class="note evidence">
           <ul style="margin:0">
-            <li><b>Scenario coverage:</b> every datum in the Canonical Home Table maps to exactly one home; canonical homes (T1/T3, plus a reconstructable/sealed T2) survive runtime teardown; only T4 is released.</li>
+            <li><b>Scenario coverage:</b> every datum in the Canonical Home Table maps to exactly one home; the canonical homes (T1/T3) survive runtime teardown; the T2 projection is rebuildable from T1 (or a sealed snapshot anchored to it), not canonical on its own; only T4 is released.</li>
             <li><b>Invariant coverage:</b> born-durable record ✓; no workspace-sole-truth ✓; evidence-ref discipline ✓; projection subordination (incl. sealed snapshot anchored to T1) ✓; release-safe by construction ✓ — and all L0a–L3 invariants still hold (this slice adds no handler).</li>
             <li><b>Accepted tradeoff:</b> the durable-write <em>mechanism</em>, storage backend, and archive/retention are out — this slice fixes placement &amp; authority only. The genuinely new code is the one evidence-ref rule.</li>
             <li><b>Known gaps (intended):</b> release mechanics (②), workflow cleanup (③), archive/export/purge (④), backend choice (impl), multi-instance/central stores (L11+). Each is in Absent.</li>
