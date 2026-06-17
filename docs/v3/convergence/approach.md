@@ -232,9 +232,10 @@ runs ahead of L1's role/action checks, and the document is ordered to match — 
 pseudocode diffs against L0c, and L1 (placed last) diffs against the full L0e kernel.
 Scope brake: L0d owns the generic terminal disposition paths and the lifecycle guard;
 operator authority (who may START/KICKOFF/CANCEL) stays dormant (→ L7/L10); the post-approval resume
-*actions/mechanics* — v1's `APPROVED_FOR_COMMIT → COMMITTED → DONE` (commit before `DONE`), with the
-merge a *separate* post-`DONE` command and teardown — are later (running git commit, the MERGE action,
-teardown/archive), while the minimal COMMIT resume *contract* lands at L3 (`RESUME_WAIT`); not a
+*actions/mechanics* — running git commit and the MERGE action (v1's `APPROVED_FOR_COMMIT → COMMITTED →
+DONE`, commit before `DONE`, with the merge a *separate* post-`DONE` command) — are later, and
+teardown/storage/archive are covered by the runtime-context lifecycle-close block (after L3), while the
+minimal COMMIT resume *contract* lands at L3 (`RESUME_WAIT`); not a
 privileged finalization phase; only `kickoff_pending` waits exist
 (human → L3, child → L4, timeout → L9). `KICKOFF` is the first *specialized* WAITING resume (activation);
 the generic bare-wait resume contract (`RESUME_WAIT`: resume any WAITING from a matching event → `apply_target_entry_effects`)
