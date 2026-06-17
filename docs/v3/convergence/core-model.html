@@ -4158,7 +4158,8 @@ template:
     - id: commit_pending
       type: wait                  # L3 — generic wait step: on arrival the kernel parks WAITING(commit_pending); the COMMIT resumer (operator-triggered) is a later slice
       wait: { kind: commit_pending, resume_events: [COMMIT] }
-      # later, just more steps (no privileged "finalization"): COMMIT handler → … → done; a merge_pending wait
+      # later resumer slice (illustrative, not L3-owned): COMMIT → done in this minimal workflow
+      # later, just more steps (no privileged "finalization"): COMMIT handler → done; a merge_pending wait
       # (resume_events: [MERGE]) and an automated performance_test_pending wait could be interleaved here
           </script>
         </div>

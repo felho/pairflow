@@ -466,7 +466,8 @@ symmetric close of L0e's provider, archiving is kernel-side. "Finalization" stay
 a kernel step type.
 Anchor: the converged result routes to a `human_approval` human_gate; `transitions: { approve:
 commit_pending, request_rework: implement }`, where `commit_pending` is a generic `type: wait` step
-(`wait: { kind: commit_pending, resume_events: [COMMIT] }`). **Realized
+(`wait: { kind: commit_pending, resume_events: [COMMIT] }`) and the illustrative later resumer route is
+`COMMIT → done` for the minimal anchor. **Realized
 in core-model.html** via a
 matrix-first **Human Decision Contract** (input · wait.kind · correlation · authority ·
 transcript entry · routing target · round effect · context cleanup · override · rejects).
