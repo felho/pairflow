@@ -236,7 +236,9 @@ operator-wait resumers — v1's `APPROVED_FOR_COMMIT → COMMITTED → DONE` (co
 merge a *separate* post-`DONE` command and teardown — are later post-approval resumer slices (likely
 modeled as wait steps once that primitive lands, not a privileged finalization phase, and not L2/L3);
 only `kickoff_pending` waits exist
-(human → L3, child → L4, timeout → L9).
+(human → L3, child → L4, timeout → L9). `KICKOFF` is the first *specialized* WAITING resume (activation);
+the generic bare-wait resume contract (`RESUME_WAIT`: resume any WAITING from a matching event → `arrive`)
+appears at L3, when `commit_pending` introduces the first non-activation bare wait.
 
 **L0e — Runtime context spec / provider contract.**
 Concepts: `Template.runtime_context` = `RuntimeContextRequirement` = `none | required(spec)`
@@ -428,13 +430,17 @@ just has more steps. So the v1-faithful anchor is `approve → commit_pending` (
 approval waits for the operator's `COMMIT`, which does not fire on its own), but `approve` could just
 as well target another gate, an agent step (even a newly-added LLM step), or `done` — the kernel never
 bakes in "approve = finalize".
-Scope note (bare wait): L3 uses the first minimal `type: wait` shape *only* to model the post-approval
-operator-wait anchor (`commit_pending`) — a narrow bare-wait arrival rule (park `WAITING(step.wait.kind)`,
-expose no actor output). The full wait/resumer/correlation contract — resumer handlers, result payloads,
-retries, child waits, timeouts, stale events — remains later (L4/L9 and the post-approval resumer slices).
-It is *not* a special seam: there are already enough WAITING-kind shapes (`kickoff_pending`, the
-`human_decision` decision wait) that modeling the bare wait as a one-off would just reprise the
-finalization mistake.
+Scope note (bare wait + its resume): L3 introduces the minimal `type: wait` shape for the post-approval
+anchor (`commit_pending`) *and* the minimal resume that closes it — otherwise `commit_pending` dead-ends.
+Arrival parks `WAITING(step.wait.kind)` (no actor output); `RESUME_WAIT(event)` moves forward on an event
+in `wait.resume_events` via the step's `on_resume` route → `arrive(target)`, guarded by idempotency +
+version (like HANDLE), with an `no_resume_transition` reject. This is the **bare-wait dual** of the
+`human_gate` decision wait — the missing other half of the WAITING axis. `KICKOFF` is the first
+*specialized* resume (activation), `SUBMIT_DECISION` the decision resume; `RESUME_WAIT` the bare one. What
+remains later: result payloads, the resume *action* (e.g. actually running git commit), child-event resume
+sources (L4), and timeouts / external-or-fuzzy correlation (L9). It is *not* a special seam: enough
+WAITING-kind shapes already exist that a one-off bare wait/resume would just reprise the finalization
+mistake.
 `request_rework` carries a **required, non-empty `instruction`** (+ optional
 `refs`) — the v1 `--message`, a first-class decision payload recorded in `APPROVAL_DECISION` and
 delivered to the implementer as its `handoff` (what to fix), not loose UI text; an empty/absent one
@@ -466,11 +472,11 @@ symmetric close of L0e's provider, archiving is kernel-side. "Finalization" stay
 a kernel step type.
 Anchor: the converged result routes to a `human_approval` human_gate; `transitions: { approve:
 commit_pending, request_rework: implement }`, where `commit_pending` is a generic `type: wait` step
-(`wait: { kind: commit_pending, resume_events: [COMMIT] }`) and the illustrative later resumer route is
-`COMMIT → done` for the minimal anchor. **Realized
-in core-model.html** via a
+(`wait: { kind: commit_pending, resume_events: [COMMIT] }`, `on_resume: { COMMIT: done }`) resumed by
+`RESUME_WAIT`. **Realized in core-model.html** via a
 matrix-first **Human Decision Contract** (input · wait.kind · correlation · authority ·
-transcript entry · routing target · round effect · context cleanup · override · rejects).
+transcript entry · routing target · round effect · context cleanup · override · rejects), plus the
+bare-wait `RESUME_WAIT` resume that closes the `commit_pending` anchor.
 
 **L4 — Child workflow instances + internal lifecycle events.**
 Concepts: `ChildWorkflowLink`; parent waits on a child lifecycle event; **kernel-emitted
