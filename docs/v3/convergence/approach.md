@@ -417,7 +417,7 @@ records an `APPROVAL_REQUEST` for the bound `operator` (the decision context + t
 `recommendation`). The operator's `approve | request_rework` decision is recorded as an
 `APPROVAL_DECISION`: `approve` parks `WAITING(finalization_pending)` (a finalization seam,
 the done-tail later — it does *not* route back to ACTIVE), while `request_rework` routes back
-to `ACTIVE` via `on_rework` (e.g. implement) with a new round and the stale approval/review
+to `ACTIVE` via `on_request_rework` (e.g. implement) with a new round and the stale approval/review
 context cleared. `request_rework`
 carries a **required, non-empty `instruction`** (+ optional `refs`) — the v1 `--message`, a
 first-class decision payload recorded in `APPROVAL_DECISION` and delivered to the implementer as

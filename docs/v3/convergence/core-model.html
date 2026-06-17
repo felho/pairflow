@@ -3832,7 +3832,7 @@ SUBMIT_DECISION(decision) → Outcome                                  # operato
   # request_rework carries a mandatory, non-empty instruction — the implementer must be told exactly what to fix (v1: --message)
   IF decision.verdict = request_rework AND (decision.instruction is absent OR empty)
                                                    THEN RETURN Rejected(rework_instruction_required)
-  target ← step.transitions[decision.verdict]                       # request_rework → on_rework (a real step); approve → on_approve (the declared finalization seam — existence checked; the human_gate type defines the park)
+  target ← step.transitions[decision.verdict]                       # request_rework → on_request_rework (a real step); approve → on_approve (the declared finalization seam — existence checked; the human_gate type defines the park)
   IF target is none                                THEN RETURN Rejected(no_transition)          # the gate must declare this outcome
   COMMIT atomically at expected_version = instance.version:
     IF decision.verdict = approve THEN                              # the human_gate's approve outcome IS the finalization handoff (declared step semantics) — PARK, do not terminate
@@ -4010,7 +4010,7 @@ dispatch_intent(instance, template, step_id) → DispatchIntent
           <div class="agg-label">Human decision — a wait, an Ask, and a transcript pair</div>
           <div class="ents">
             <div class="ent"><div class="en">wait.kind = human_decision / finalization_pending <span style="font-size:10px;color:var(--muted)">(value)</span></div><div class="fields">two new variants on the L0d WAITING axis (NOT new lifecycle enums): <code>human_decision</code> (carries <code>request_ref</code> + <code>resume_events: [approve, request_rework]</code>) and the approve-seam <code>finalization_pending</code> (carries <code>resume_events: [FINALIZE]</code>; the handler/resumer is a later slice)</div></div>
-            <div class="ent"><div class="en">human_gate <span style="font-size:10px;color:var(--muted)">(step type)</span></div><div class="fields"><code>type: human_gate</code>, <code>role: operator</code> — parks instead of dispatching to an agent; its transitions are <code>on_approve</code> / <code>on_rework</code></div></div>
+            <div class="ent"><div class="en">human_gate <span style="font-size:10px;color:var(--muted)">(step type)</span></div><div class="fields"><code>type: human_gate</code>, <code>role: operator</code> — parks instead of dispatching to an agent; its outcome event types are <code>approve</code> / <code>request_rework</code> (config form <code>on_approve</code> / <code>on_request_rework</code> — the same <code>event_type → target</code> YAML sugar as <code>on_pass</code> / <code>on_converged</code> for actor steps), so <code>step.transitions[verdict]</code> resolves directly</div></div>
             <div class="ent"><div class="en">HumanDecisionRequest <span style="font-size:10px;color:var(--muted)">(value)</span></div><div class="fields">the Ask: the human-facing analog of <code>DispatchIntent</code> (question, recommendation, decision context, allowed decisions, and <code>decision_requirements</code> — so the Ask is self-contained, e.g. <code>request_rework</code> requires an instruction); local/manual delivery, a durable channel is L8</div></div>
             <div class="ent"><div class="en">APPROVAL_REQUEST / APPROVAL_DECISION <span style="font-size:10px;color:var(--muted)">(transcript)</span></div><div class="fields">the request recorded on entry (recipient, <code>recommendation</code>, context_ref) and the decision recorded on resume (verdict, <code>override</code>, by, and — for <code>request_rework</code> — a required <code>instruction</code> + optional <code>refs</code>) — the v1 envelope pair</div></div>
           </div>
@@ -4024,11 +4024,11 @@ dispatch_intent(instance, template, step_id) → DispatchIntent
               <tr><td>enter gate</td><td>arrival at a <code>human_gate</code> (review CONVERGED, gates allow)</td><td>set <code>human_decision</code></td><td>new <code>request_ref</code></td><td>—</td><td><code>APPROVAL_REQUEST</code></td><td>→ <code>WAITING</code></td><td>no advance</td><td>—</td><td>—</td><td>append fails ⇒ rollback (no half-entered gate)</td></tr>
               <tr><td>approve</td><td><code>SUBMIT_DECISION(approve)</code></td><td>requires <code>human_decision</code></td><td><code>request_ref</code> = wait’s</td><td><code>by</code> = binding[operator]</td><td><code>APPROVAL_DECISION(approve)</code></td><td><code>on_approve</code> → <code>WAITING(finalization_pending)</code> seam</td><td>no advance (parks)</td><td>—</td><td>not needed iff <b>not</b> <code>requires_override</code> (clean approve)</td><td>not_awaiting_decision · decision_request_mismatch · operator_not_authorized · Stale · Duplicate</td></tr>
               <tr><td>approve + override</td><td><code>SUBMIT_DECISION(approve, override)</code></td><td><code>human_decision</code></td><td><code>request_ref</code> match</td><td>operator</td><td><code>APPROVAL_DECISION(approve, override:true)</code></td><td><code>on_approve</code> → <code>WAITING(finalization_pending)</code></td><td>no advance (parks)</td><td>—</td><td><b>required</b> when <code>requires_override</code> (recommendation / route / parity not a clean approve)</td><td><code>override_required</code> (if override absent)</td></tr>
-              <tr><td>request_rework</td><td><code>SUBMIT_DECISION(request_rework, instruction)</code></td><td><code>human_decision</code></td><td><code>request_ref</code> match</td><td>operator</td><td><code>APPROVAL_DECISION(request_rework, instruction)</code></td><td><code>on_rework</code> (→ implement)</td><td><b>new round</b></td><td>stale context cleared; instruction → handoff</td><td>—</td><td><code>no_transition</code> · <code>rework_instruction_required</code></td></tr>
+              <tr><td>request_rework</td><td><code>SUBMIT_DECISION(request_rework, instruction)</code></td><td><code>human_decision</code></td><td><code>request_ref</code> match</td><td>operator</td><td><code>APPROVAL_DECISION(request_rework, instruction)</code></td><td><code>on_request_rework</code> (→ implement)</td><td><b>new round</b></td><td>stale context cleared; instruction → handoff</td><td>—</td><td><code>no_transition</code> · <code>rework_instruction_required</code></td></tr>
             </tbody>
           </table>
           </div>
-          <div class="fields" style="margin-top:8px">This table is the contract; <code>park_for_human_decision</code> realizes the enter row, <code>SUBMIT_DECISION</code> the decision rows, and the config below is one instance of it. The <code>recommendation</code> is derived from the L2 gate verdicts that routed in — warn ⇒ not a clean approve. A <code>request_rework</code> decision carries a <b>required, non-empty</b> <code>instruction</code> (+ optional <code>refs</code>), recorded in <code>APPROVAL_DECISION</code> and delivered to the implementer as the <code>handoff</code> of the <code>on_rework</code> target’s first dispatch.</div>
+          <div class="fields" style="margin-top:8px">This table is the contract; <code>park_for_human_decision</code> realizes the enter row, <code>SUBMIT_DECISION</code> the decision rows, and the config below is one instance of it. The <code>recommendation</code> is derived from the L2 gate verdicts that routed in — warn ⇒ not a clean approve. A <code>request_rework</code> decision carries a <b>required, non-empty</b> <code>instruction</code> (+ optional <code>refs</code>), recorded in <code>APPROVAL_DECISION</code> and delivered to the implementer as the <code>handoff</code> of the <code>on_request_rework</code> target’s first dispatch.</div>
         </div>
         <div class="note domain">
           The override rule is the only place the machine’s recommendation and the human’s verdict meet — the
@@ -4132,8 +4132,8 @@ template:
       type: human_gate            # L3 — parks WAITING(human_decision); the operator decides, the kernel routes (not dispatched to an agent)
       role: operator
       instruction: "Approve the converged change, or request rework."
-      on_approve:   finalization_pending   # declared seam — the human_gate parks WAITING(finalization_pending); the commit/merge → done tail is a later slice
-      on_rework:    implement     # request_rework → implement: a new round, stale approval/review context cleared
+      on_approve:         finalization_pending   # YAML form of the 'approve' outcome → the declared finalization seam (park)
+      on_request_rework:  implement              # YAML form of the 'request_rework' outcome → implement: a new round, stale approval/review context cleared
           </script>
         </div>
         <div class="note config">
@@ -4160,7 +4160,7 @@ template:
           <div class="agg-label">Acceptance evidence — the v1 human approval gate is representable</div>
           <div class="ents">
             <div class="ent"><div class="en">meta-review approve gate</div><div class="fields">v1 <code>READY_FOR_HUMAN_APPROVAL</code> → a <code>human_gate</code> parking <code>WAITING(human_decision)</code> with an <code>APPROVAL_REQUEST</code> · <b>L3</b></div></div>
-            <div class="ent"><div class="en">approve / request-rework</div><div class="fields">v1 approve → finalization, rework → RUNNING new round + cleared snapshot → <code>on_approve</code> / <code>on_rework</code> routing · <b>L3</b></div></div>
+            <div class="ent"><div class="en">approve / request-rework</div><div class="fields">v1 approve → finalization, rework → RUNNING new round + cleared snapshot → <code>on_approve</code> / <code>on_request_rework</code> routing · <b>L3</b></div></div>
             <div class="ent"><div class="en">override semantics</div><div class="fields">v1 override-required when the recommendation/route is not a clean approve → the <code>override</code> guard on <code>SUBMIT_DECISION</code> · <b>L3</b></div></div>
           </div>
         </div>
