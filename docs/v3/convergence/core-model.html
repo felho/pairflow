@@ -219,7 +219,7 @@
       <a class="level" href="#l2">L2 <span class="tag">· gate / policy</span></a>
       <a class="level" href="#l2a">L2a <span class="tag">· external/process gate</span></a>
       <a class="level" href="#l2b">L2b <span class="tag">· policy/gate context</span></a>
-      <a class="level active" href="#l3">L3 <span class="tag">· human decision Ask</span></a>
+      <a class="level" href="#l3">L3 <span class="tag">· human decision Ask</span></a>
       <div class="future">L4 · child workflow + events</div>
       <div class="cut">▲ MVP cut — local WF-7 runs</div>
       <div class="future">L5 · help subflow</div>
@@ -4558,6 +4558,34 @@ template:
     }
 
     document.querySelectorAll('.code-diff').forEach(renderCodePanel);
+
+    // Sidebar scroll-spy: highlight the nav link for the section currently at the top.
+    (function () {
+      var links = {};
+      document.querySelectorAll('nav a[href^="#"]').forEach(function (a) {
+        links[a.getAttribute('href').slice(1)] = a;
+      });
+      var sections = Array.prototype.slice.call(document.querySelectorAll('section[id]'));
+      if (!sections.length) return;
+      var current = null;
+      function update() {
+        var marker = 120;                       // px below the viewport top
+        var active = sections[0];
+        for (var i = 0; i < sections.length; i++) {
+          if (sections[i].getBoundingClientRect().top <= marker) active = sections[i];
+          else break;
+        }
+        var id = active ? active.id : null;
+        if (id === current) return;
+        current = id;
+        for (var k in links) links[k].classList.toggle('active', k === id);
+      }
+      window.addEventListener('scroll', update, { passive: true });
+      window.addEventListener('resize', update, { passive: true });
+      window.addEventListener('hashchange', function () { setTimeout(update, 0); });
+      window.addEventListener('load', update);   // re-run after the browser scrolls to an initial #hash
+      update();
+    })();
   </script>
 </body>
 </html>
