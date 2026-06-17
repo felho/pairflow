@@ -3694,10 +3694,10 @@ template:
                    TERMINAL(done)
         </pre>
         <div class="note">
-          The same spine carries every level: L0a–L2b all enter through <code>HANDLE</code> and end at the commit;
+          The same target-entry pattern carries every level: L0a–L2b all enter through <code>HANDLE</code> and end at the commit;
           L3 only adds the other two entry handlers (<code>SUBMIT_DECISION</code>, <code>RESUME_WAIT</code>) and
-          the target-type fan-out. <code>apply_target_entry_effects</code> sets the lifecycle status;
-          <code>post_commit_output</code> reads it back to decide what to deliver.
+          the target-type fan-out. <code>apply_target_entry_effects</code> applies the target-entry effects;
+          <code>post_commit_output</code> reads the resulting status to decide what to deliver.
         </div>
 
         <h3 class="view-h"><span class="view-tag runtime">Runtime</span> A concrete trace</h3>
