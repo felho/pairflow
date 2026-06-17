@@ -3632,6 +3632,15 @@ template:
         and <code>WAITING</code> means "blocked on a human." The v1 reality check shows "human" is at least three
         contracts; L3 takes only the <b>approval gate</b> (the agent-initiated ask-human/help reply is L5).</p>
 
+        <div class="note">
+          <b>Scope note (bare wait).</b> L3 uses the first minimal <code>type: wait</code> shape only to model the
+          post-approval operator-wait anchor (<code>commit_pending</code>). This is a narrow bare-wait arrival
+          rule: park <code>WAITING(step.wait.kind)</code> and expose no actor output. The full wait / resumer /
+          correlation contract — resumer handlers, result payloads, retries, child waits, timeouts, stale events —
+          remains later (L4/L9 and the post-approval resumer slices). It is <em>not</em> a special seam: there are
+          already enough WAITING-kind shapes (<code>kickoff_pending</code>, the <code>human_decision</code>
+          decision wait) that modeling the bare wait as a one-off would just reprise the finalization mistake.</div>
+
         <h3 class="view-h"><span class="view-tag runtime">Runtime</span> A concrete trace</h3>
         <p>The reviewer converges at round 2; the result routes to the <code>human_approval</code> gate instead
         of straight to <code>done</code>:</p>
@@ -4019,7 +4028,7 @@ dispatch_intent(instance, template, step_id) → DispatchIntent
         <div class="agg">
           <div class="agg-label">Human decision — a wait, an Ask, and a transcript pair</div>
           <div class="ents">
-            <div class="ent"><div class="en">wait steps <span style="font-size:10px;color:var(--muted)">(step type + wait.kind)</span></div><div class="fields">a generic <code>type: wait</code> step declares <code>wait: { kind, resume_events }</code>; on arrival it parks <code>WAITING(kind)</code> on the L0d axis. Used for the v1 post-approval operator waits (<code>commit_pending</code> ⇐ <code>[COMMIT]</code>, <code>merge_pending</code> ⇐ <code>[MERGE]</code>) and automated waits (<code>process_pending</code> ⇐ <code>[PERF_TEST_RESULT]</code>) — there is NO "finalization" step type. The resumers are later slices</div></div>
+            <div class="ent"><div class="en">wait step <span style="font-size:10px;color:var(--muted)">(minimal shape at L3)</span></div><div class="fields">a <code>type: wait</code> step declares <code>wait: { kind, resume_events }</code>; arrival parks <code>WAITING(kind)</code> with no Ask. L3 introduces only this <b>bare-wait arrival rule</b>, for the post-approval anchor <code>commit_pending</code> ⇐ <code>[COMMIT]</code> (others like <code>merge_pending</code>/<code>process_pending</code> follow the same shape) — there is NO "finalization" step type. The full wait/resumer/correlation contract (resumer handlers, result payloads, retries, child waits, timeouts, stale events) is later (L4/L9)</div></div>
             <div class="ent"><div class="en">human_gate <span style="font-size:10px;color:var(--muted)">(step type)</span></div><div class="fields"><code>type: human_gate</code>, <code>role: operator</code> — a <em>decision</em> wait: on arrival parks <code>WAITING(human_decision)</code> + APPROVAL_REQUEST + the Ask. Its <code>transitions</code> are <b>verdict-keyed</b> (<code>approve</code> / <code>request_rework</code>), resolved by <code>human_gate_transition(step, verdict)</code>. A verdict carries <b>no lifecycle meaning</b> — it just routes to a target</div></div>
             <div class="ent"><div class="en">arrive(...) <span style="font-size:10px;color:var(--muted)">(shared rule)</span></div><div class="fields">one <code>arrive(instance, template, from_step, target)</code> — shared by HANDLE and SUBMIT_DECISION so the two entry paths never drift — routes by the target's nature: agent step ⇒ ACTIVE+dispatch, <code>type: human_gate</code> ⇒ park <code>human_decision</code> (a decision wait), <code>type: wait</code> ⇒ park <code>WAITING(step.wait.kind)</code> (a bare wait), terminal ⇒ the existing COMPLETE rule</div></div>
             <div class="ent"><div class="en">HumanDecisionRequest <span style="font-size:10px;color:var(--muted)">(value)</span></div><div class="fields">the Ask: the human-facing analog of <code>DispatchIntent</code> (question, recommendation, decision context, allowed decisions, and <code>decision_requirements</code> — so the Ask is self-contained, e.g. <code>request_rework</code> requires an instruction); local/manual delivery, a durable channel is L8</div></div>

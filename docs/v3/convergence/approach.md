@@ -427,7 +427,15 @@ existing COMPLETE rule. There is **no privileged "finalization" phase** — afte
 just has more steps. So the v1-faithful anchor is `approve → commit_pending` (a `type: wait` step:
 approval waits for the operator's `COMMIT`, which does not fire on its own), but `approve` could just
 as well target another gate, an agent step (even a newly-added LLM step), or `done` — the kernel never
-bakes in "approve = finalize". `request_rework` carries a **required, non-empty `instruction`** (+ optional
+bakes in "approve = finalize".
+Scope note (bare wait): L3 uses the first minimal `type: wait` shape *only* to model the post-approval
+operator-wait anchor (`commit_pending`) — a narrow bare-wait arrival rule (park `WAITING(step.wait.kind)`,
+expose no actor output). The full wait/resumer/correlation contract — resumer handlers, result payloads,
+retries, child waits, timeouts, stale events — remains later (L4/L9 and the post-approval resumer slices).
+It is *not* a special seam: there are already enough WAITING-kind shapes (`kickoff_pending`, the
+`human_decision` decision wait) that modeling the bare wait as a one-off would just reprise the
+finalization mistake.
+`request_rework` carries a **required, non-empty `instruction`** (+ optional
 `refs`) — the v1 `--message`, a first-class decision payload recorded in `APPROVAL_DECISION` and
 delivered to the implementer as its `handoff` (what to fix), not loose UI text; an empty/absent one
 is `rework_instruction_required`. The stale-context cleanup is rework-*transition* semantics (kept
