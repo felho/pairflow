@@ -2352,7 +2352,7 @@ CREATE_INSTANCE(template_ref, activation_mode, task, binding, run_overrides) →
   IF activation_mode = immediate AND task is absent THEN RETURN Rejected(task_required)
   REQUIRE binding covers every role reachable in template      # binding resolved pre-kernel; the kernel only validates coverage (fail at create, not mid-run)
   instance ← create { template_ref, task, binding, activation_mode,
-                      kernel_status: CREATED, current_step: none, round: 0,   # position + round meaningless until ACTIVE
+                      kernel_status: CREATED, current_step: none, round: 0,   # round 0 = prepared, no work cycle begun yet (position none until ACTIVE)
                       runtime_context: none, run_overrides: snapshot(run_overrides), version: 1 }
   COMMIT instance creation
   RETURN Created(instance.version)                             # no dispatch yet — not active
@@ -2401,7 +2401,7 @@ activate(instance) → Outcome                                         # interna
   template ← definitionStore.load(instance.template_ref)      # pinned immutable version — same template/instance boundary as HANDLE
   instance.kernel_status ← ACTIVE
   instance.current_step  ← template.start
-  instance.round         ← 1                                  # first round begins at activation; meaningless before ACTIVE
+  instance.round         ← 1                                  # the first work cycle begins at activation: round 0 → 1 (the start step is a round-start)
   RETURN Activated(dispatch_intent(instance, template, template.start))   # dispatch is a kernel output (L0b), not a side effect
 
 CANCEL(instance) → Outcome                                           # operator_intent — any non-terminal
@@ -2505,9 +2505,16 @@ dispatch_intent(instance, template, step_id) → DispatchIntent
           returns <code>gate_execution_not_supported</code> here; the inline process contract is realized at
           <span class="at">L2a</span>, while the deferred runner path (<code>WAITING(gate_pending)</code> +
           <code>GATE_RESULT</code>) is a separate later lifecycle slice — even an <em>inline</em> process gate
-          is rejected at L2 core, since the contract is unrealized here. The
-          <code>advances_round</code> predicate is intentionally
-          left to transition semantics — only that it be transcript-reconstructable.
+          is rejected at L2 core, since the contract is unrealized here.
+          <b>Round semantics (L2 owns them, because L2 makes <code>round</code> load-bearing — the
+          <code>declarative.threshold</code> gate reads it).</b> <code>round</code> starts at <b>0</b>
+          (prepared — no work cycle has begun yet); activation makes it <b>1</b> (the first cycle), and each
+          <em>advancing arrival</em> adds one. <code>advances_round</code> is <b>declared transition semantics</b>
+          in the normalized/pinned template — <b>never inferred</b> from role names, graph shape, target equality,
+          or naming. The authoring form may declare <code>round: { advance_on_arrival_at: [implement] }</code>;
+          the definition loader expands it into explicit per-transition <code>advances_round</code> flags (with
+          per-transition override), and the kernel consumes <em>only</em> the normalized flags — <code>round</code>
+          stays transcript-reconstructable.
         </div>
 
         <h3 class="view-h"><span class="view-tag domain">Domain</span> What L2 adds</h3>
@@ -2572,6 +2579,7 @@ template:
     implementer: { default_actor: codex,  default_agent_config: { mode: builder, model_ref: codex-default-engineer, prompt_profile_refs: [engineer-defaults] } }
     reviewer:    { default_actor: claude, default_agent_config: { mode: critic } }
   start: implement
+  round: { initial: 0, advance_on_arrival_at: [implement] }   # authoring sugar — the loader expands this into explicit per-transition advances_round flags; the kernel reads only those
   activation:
     mode: immediate          # after START + runtime_context ready, activate immediately; no KICKOFF hold
     # deferred_kickoff → start in a WAITING(kickoff_pending) hold; an operator
@@ -2803,7 +2811,7 @@ CREATE_INSTANCE(template_ref, activation_mode, task, binding, run_overrides) →
   REQUIRE binding covers every role reachable in template      # binding resolved pre-kernel; the kernel only validates coverage (fail at create, not mid-run)
   REQUIRE validate_gate_config(template)                          # L2a: static gate-config invariants (process↔workspace, no fail_instance) — definition-load validation, fail at create
   instance ← create { template_ref, task, binding, activation_mode,
-                      kernel_status: CREATED, current_step: none, round: 0,   # position + round meaningless until ACTIVE
+                      kernel_status: CREATED, current_step: none, round: 0,   # round 0 = prepared, no work cycle begun yet (position none until ACTIVE)
                       runtime_context: none, run_overrides: snapshot(run_overrides), version: 1 }
   COMMIT instance creation
   RETURN Created(instance.version)                             # no dispatch yet — not active
@@ -2852,7 +2860,7 @@ activate(instance) → Outcome                                         # interna
   template ← definitionStore.load(instance.template_ref)      # pinned immutable version — same template/instance boundary as HANDLE
   instance.kernel_status ← ACTIVE
   instance.current_step  ← template.start
-  instance.round         ← 1                                  # first round begins at activation; meaningless before ACTIVE
+  instance.round         ← 1                                  # the first work cycle begins at activation: round 0 → 1 (the start step is a round-start)
   RETURN Activated(dispatch_intent(instance, template, template.start))   # dispatch is a kernel output (L0b), not a side effect
 
 CANCEL(instance) → Outcome                                           # operator_intent — any non-terminal
@@ -3027,6 +3035,7 @@ template:
     implementer: { default_actor: codex,  default_agent_config: { mode: builder, model_ref: codex-default-engineer, prompt_profile_refs: [engineer-defaults] } }
     reviewer:    { default_actor: claude, default_agent_config: { mode: critic } }
   start: implement
+  round: { initial: 0, advance_on_arrival_at: [implement] }   # authoring sugar — the loader expands this into explicit per-transition advances_round flags; the kernel reads only those
   activation:
     mode: immediate          # after START + runtime_context ready, activate immediately; no KICKOFF hold
     # deferred_kickoff → start in a WAITING(kickoff_pending) hold; an operator
@@ -3279,7 +3288,7 @@ CREATE_INSTANCE(template_ref, activation_mode, task, binding, run_overrides) →
   REQUIRE validate_gate_config(template)                          # L2a: static gate-config invariants (process↔workspace, no fail_instance) — definition-load validation, fail at create
   REQUIRE validate_context_refs(template)                         # L2b: every issued context_block ref resolves in the catalog — fail at create, beside binding coverage
   instance ← create { template_ref, task, binding, activation_mode,
-                      kernel_status: CREATED, current_step: none, round: 0,   # position + round meaningless until ACTIVE
+                      kernel_status: CREATED, current_step: none, round: 0,   # round 0 = prepared, no work cycle begun yet (position none until ACTIVE)
                       runtime_context: none, run_overrides: snapshot(run_overrides), version: 1 }
   COMMIT instance creation
   RETURN Created(instance.version)                             # no dispatch yet — not active
@@ -3328,7 +3337,7 @@ activate(instance) → Outcome                                         # interna
   template ← definitionStore.load(instance.template_ref)      # pinned immutable version — same template/instance boundary as HANDLE
   instance.kernel_status ← ACTIVE
   instance.current_step  ← template.start
-  instance.round         ← 1                                  # first round begins at activation; meaningless before ACTIVE
+  instance.round         ← 1                                  # the first work cycle begins at activation: round 0 → 1 (the start step is a round-start)
   RETURN Activated(dispatch_intent(instance, template, template.start))   # dispatch is a kernel output (L0b), not a side effect
 
 CANCEL(instance) → Outcome                                           # operator_intent — any non-terminal
@@ -3519,6 +3528,7 @@ template:
     implementer: { default_actor: codex,  default_agent_config: { mode: builder, model_ref: codex-default-engineer, prompt_profile_refs: [engineer-defaults] } }
     reviewer:    { default_actor: claude, default_agent_config: { mode: critic } }
   start: implement
+  round: { initial: 0, advance_on_arrival_at: [implement] }   # authoring sugar — the loader expands this into explicit per-transition advances_round flags; the kernel reads only those
   activation:
     mode: immediate          # after START + runtime_context ready, activate immediately; no KICKOFF hold
     # deferred_kickoff → start in a WAITING(kickoff_pending) hold; an operator
@@ -3788,7 +3798,7 @@ CREATE_INSTANCE(template_ref, activation_mode, task, binding, run_overrides) →
   REQUIRE validate_gate_config(template)                          # L2a: static gate-config invariants (process↔workspace, no fail_instance) — definition-load validation, fail at create
   REQUIRE validate_context_refs(template)                         # L2b: every issued context_block ref resolves in the catalog — fail at create, beside binding coverage
   instance ← create { template_ref, task, binding, activation_mode,
-                      kernel_status: CREATED, current_step: none, round: 0,   # position + round meaningless until ACTIVE
+                      kernel_status: CREATED, current_step: none, round: 0,   # round 0 = prepared, no work cycle begun yet (position none until ACTIVE)
                       runtime_context: none, run_overrides: snapshot(run_overrides), version: 1 }
   COMMIT instance creation
   RETURN Created(instance.version)                             # no dispatch yet — not active
@@ -3885,7 +3895,7 @@ activate(instance) → Outcome                                         # interna
   template ← definitionStore.load(instance.template_ref)      # pinned immutable version — same template/instance boundary as HANDLE
   instance.kernel_status ← ACTIVE
   instance.current_step  ← template.start
-  instance.round         ← 1                                  # first round begins at activation; meaningless before ACTIVE
+  instance.round         ← 1                                  # the first work cycle begins at activation: round 0 → 1 (the start step is a round-start)
   RETURN Activated(dispatch_intent(instance, template, template.start))   # dispatch is a kernel output (L0b), not a side effect
 
 CANCEL(instance) → Outcome                                           # operator_intent — any non-terminal
@@ -4126,6 +4136,7 @@ template:
     reviewer:    { default_actor: claude, default_agent_config: { mode: critic } }
     operator:    { default_actor: human }                          # L3 — the human decision-maker bound to the approval gate
   start: implement
+  round: { initial: 0, advance_on_arrival_at: [implement] }   # authoring sugar — the loader expands this into explicit per-transition advances_round flags; the kernel reads only those
   activation:
     mode: immediate          # after START + runtime_context ready, activate immediately; no KICKOFF hold
     # deferred_kickoff → start in a WAITING(kickoff_pending) hold; an operator
