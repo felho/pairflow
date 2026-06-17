@@ -3834,7 +3834,9 @@ validate_decision_gates(template) → ok | Rejected                     # L3 —
     IF step.decisions is absent OR step.decisions is not a map THEN RETURN Rejected(invalid_decision_gate_config)   # the decisions map must be a map (not a scalar/list) — a human_gate's transition vocabulary
     IF step.decisions is empty THEN RETURN Rejected(decision_gate_empty)              # ...and must offer at least one decision
     FOR (key, choice) IN step.decisions:
-      IF template.step(choice.target) is none THEN RETURN Rejected(decision_target_unresolved)   # every decision routes to a declared step
+      IF choice is not a map                   THEN RETURN Rejected(invalid_decision_gate_config)   # each decision entry must be a map { target, payload? }
+      IF keys_of(choice) ⊄ { target, payload } THEN RETURN Rejected(invalid_decision_gate_config)   # CLOSED entry — an unknown key (e.g. a `paylod` typo) silently dropping the required-instruction rule is rejected, not ignored
+      IF template.step(choice.target) is none  THEN RETURN Rejected(decision_target_unresolved)   # every decision routes to a declared step
       IF choice.payload is present AND choice.payload is not a map THEN RETURN Rejected(invalid_decision_payload_schema)   # the payload schema itself must be a map (absent is fine) — not a scalar/list (e.g. payload: true / "instruction")
       FOR (field, spec) IN (choice.payload ?? {}):                    # MVP payload schema is minimal + CLOSED: per field only { required: bool } — keeps the generic map from being a loose string-map
         IF spec is not a map                           THEN RETURN Rejected(invalid_decision_payload_schema)   # the field spec must be an object { required: bool } — not a scalar (e.g. instruction: true / "required")

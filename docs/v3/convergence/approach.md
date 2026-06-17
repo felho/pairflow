@@ -446,9 +446,10 @@ the payload requirements (the instruction rule) are template data; the old appro
 *framing* is replaced by that generic kernel rule. So the
 transcript entries are decision-agnostic (`DECISION_REQUEST` / `DECISION_MADE`), reusable by an
 escalation / accept-risk / choose-strategy gate. Definition-load `validate_decision_gates` keeps the
-generic map honest: non-empty `decisions`, every `target` resolves, each per-decision `payload` field
-schema is closed (per field only `{ required: bool }` — a scalar, unknown key, or non-bool `required`
-is rejected), and `recommends` only on an edge into a gate, naming a real decision key of that gate.
+generic map honest, fail-closed at every level: `decisions` is a non-empty map, each decision entry is
+a closed map `{ target, payload? }` (an unknown key — e.g. a `paylod` typo — is rejected, not silently
+dropped), every `target` resolves, each `payload` is a map whose field specs are closed (`{ required:
+bool }`), and `recommends` only on an edge into a gate, naming a real decision key of that gate.
 Scope note (bare wait + its resume): L3 introduces the minimal `type: wait` shape for the post-approval
 anchor (`commit_pending`) *and* the minimal resume that closes it — otherwise `commit_pending` dead-ends.
 Arrival parks `WAITING(step.wait.kind)` (no actor output); `RESUME_WAIT(event)` moves forward on an event
