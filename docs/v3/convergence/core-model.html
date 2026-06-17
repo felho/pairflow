@@ -1248,7 +1248,7 @@ template:
           <div class="absent-item">No <b>operator authority / identity</b> — who may issue START / KICKOFF / CANCEL is dormant (the dormant-until-restricted shape L1 later reuses) <span class="at">→ L7 / L10</span></div>
           <div class="absent-item">No <b>runtime-context spec / provider contract</b> — what context the template requires and which provider fulfills it (worktree / mailbox / …); L0d consumes only <code>RUNTIME_CONTEXT_READY</code> and stores an opaque ref, provider internals stay implementation <span class="at">→ L0e</span></div>
           <div class="absent-item">No <b>kickoff payload materialization</b> — KICKOFF here models only task-supply + activation; v1 also writes a task artifact, flips ideation config (<code>task_pending=false</code>, <code>kicked_off_at</code>) and appends a TASK envelope — activation/input materialization (a persistence detail), not the runtime-context provider <span class="at">→ later / impl</span></div>
-          <div class="absent-item">No <b>workflow-specific finalization tail</b> — L0d owns the generic terminal disposition paths (COMPLETE / FAIL / CANCEL); v1's finalization tail is <code>APPROVED_FOR_COMMIT → COMMITTED → DONE</code> (the git commit precedes <code>DONE</code>), with the merge a <b>separate command after <code>DONE</code></b> and teardown post-<code>DONE</code> — a later FINALIZE slice, not L2/L3 <span class="at">→ later</span></div>
+          <div class="absent-item">No <b>workflow-specific post-approval resumers</b> — L0d owns the generic terminal disposition paths (COMPLETE / FAIL / CANCEL); v1's post-approval path is <code>APPROVED_FOR_COMMIT → COMMITTED → DONE</code> (the git commit precedes <code>DONE</code>), with the merge a <b>separate command after <code>DONE</code></b> and teardown post-<code>DONE</code> — these are ordinary later wait steps (commit/merge), not a privileged finalization phase and not L2/L3 <span class="at">→ later</span></div>
           <div class="absent-item">No <b>human / child / timeout / external waits</b> — WAITING ships with only <code>kickoff_pending</code> <span class="at">→ L3 / L4 / L9</span></div>
           <div class="absent-item">No <b>retry / compensation / rollback</b> on FAILED <span class="at">→ §18</span></div>
           <div class="absent-item">No <b>operator-intent audit / provenance</b> — the source class is named, its full authority model is later <span class="at">→ L7 / L10</span></div>
@@ -1288,7 +1288,7 @@ template:
               (<code>…/state/transitions.ts</code>) — so position, actor authority and runtime ref are three
               separate concerns, FAIL/CANCEL stay broad, and COMPLETE is ACTIVE-only here (L3 generalizes it to a committed arrival into a terminal target, reachable from a resumed WAITING decision too).</li>
             <li><b>Known gaps (intended):</b> no operator authority (L7/L10); no runtime-context spec/provider (L0e); no
-              success finalization (later FINALIZE slice); only kickoff_pending waits; no retry on FAILED (§18). Each is in
+              post-approval commit/merge resumers (later wait steps); only kickoff_pending waits; no retry on FAILED (§18). Each is in
               Absent.</li>
             <li><b>Decision:</b> accepted as the L0d baseline (light evidence per playbook §2.1).</li>
           </ul>
@@ -4065,7 +4065,7 @@ dispatch_intent(instance, template, step_id) → DispatchIntent
         <h3 class="view-h"><span class="view-tag config">Config</span> The template — converge routes to a human approval gate</h3>
         <p>An <code>operator</code> role is added, and the <code>review</code> <code>CONVERGED</code> transition
         now targets a <code>human_approval</code> <code>human_gate</code> (the L2 converge gates still guard the
-        transition); approve parks for finalization, request_rework returns to implement:</p>
+        transition); approve routes to a <code>commit_pending</code> wait step, request_rework returns to implement:</p>
         <div class="code-diff" aria-label="L3 template config" data-old-label="L2b baseline" data-new-label="L3 current">
           <script type="text/plain" class="diff-source" data-code-old-ref="l2b-template-config"></script>
           <script type="text/plain" class="diff-source" data-code-new data-code-id="l3-template-config">
@@ -4183,7 +4183,7 @@ template:
           <div class="agg-label">Acceptance evidence — the v1 human approval gate is representable</div>
           <div class="ents">
             <div class="ent"><div class="en">meta-review approve gate</div><div class="fields">v1 <code>READY_FOR_HUMAN_APPROVAL</code> → a <code>human_gate</code> parking <code>WAITING(human_decision)</code> with an <code>APPROVAL_REQUEST</code> · <b>L3</b></div></div>
-            <div class="ent"><div class="en">approve / request-rework</div><div class="fields">v1 approve → finalization, rework → RUNNING new round + cleared snapshot → verdict-keyed <code>transitions</code> routed by <code>arrive</code> · <b>L3</b></div></div>
+            <div class="ent"><div class="en">approve / request-rework</div><div class="fields">v1 approve → operator commit wait (<code>commit_pending</code>), rework → RUNNING new round + cleared snapshot → verdict-keyed <code>transitions</code> routed by <code>arrive</code> · <b>L3</b></div></div>
             <div class="ent"><div class="en">override semantics</div><div class="fields">v1 override-required when the recommendation/route is not a clean approve → the <code>override</code> guard on <code>SUBMIT_DECISION</code> · <b>L3</b></div></div>
           </div>
         </div>
@@ -4192,7 +4192,7 @@ template:
             <li><b>Scenario coverage:</b> a converged result parks for the operator; approve routes to a <code>commit_pending</code> wait step (no privileged finalization), request_rework returns to implement (new round, clean context, with the operator's instruction as the implementer's handoff), and approve against a non-approve recommendation needs an explicit override.</li>
             <li><b>Accepted tradeoff:</b> a parked decision blocks indefinitely (no timeout) — fine for the local MVP; escalation/timeout is the L9 slice.</li>
             <li><b>Invariant coverage:</b> one-visible-transition park ✓; operator-intent not actor-envelope ✓; honest WAITING ✓; override recorded ✓; idempotency/CAS reuse ✓; all L0a–L2b invariants still hold.</li>
-            <li><b>Known gaps (intended):</b> ask-human/help reply (L5), deferred rework (L5+watchdog), finalization tail, human-wait timeout (L9), rich schema/channels (L8). Each is in Absent.</li>
+            <li><b>Known gaps (intended):</b> ask-human/help reply (L5), deferred rework (L5+watchdog), post-approval commit/merge resumers, human-wait timeout (L9), rich schema/channels (L8). Each is in Absent.</li>
             <li><b>Decision:</b> accepted as the L3 baseline (light evidence per playbook §2.1).</li>
           </ul>
         </div>
