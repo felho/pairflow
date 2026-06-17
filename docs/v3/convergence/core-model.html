@@ -4362,6 +4362,19 @@ template:
       return shared / Math.max(leftTokens.size, rightTokens.size);
     }
 
+    function leadingToken(line) {
+      var key = diffKey(line);
+      if (!key) return null;
+      var match = key.match(/[A-Za-z_][A-Za-z0-9_]*/);
+      return match ? match[0] : null;
+    }
+
+    function shouldPairChangeLines(oldLine, newLine, score) {
+      if (oldLine != null && newLine != null && oldLine.trim() === '' && newLine.trim() === '') return true;
+      if (score >= 0.45) return true;
+      return score >= 0.35 && leadingToken(oldLine) === leadingToken(newLine);
+    }
+
     function pairChangeBlock(block) {
       // A change block is a contiguous run of removes (old order) + adds (new order). We pair
       // similar lines into change rows, then MERGE using those pairs as anchors so the old side
@@ -4371,20 +4384,25 @@ template:
       var oldItems = block.filter(function (row) { return row.kind === 'remove'; });
       var newItems = block.filter(function (row) { return row.kind === 'add'; });
 
-      // 1. Greedily pair similar NON-blank old/new lines (best match ≥ 0.45). Blanks are never
-      //    paired — they render fine as unpaired add/remove, and pairing them only reorders.
+      // 1. Greedily pair similar old/new lines. Blank↔blank pairs are kept as anchors so a
+      //    "blank + changed line" replacement stays compact instead of rendering as two
+      //    diagonal padding rows. Same-leading-token replacements get a slightly lower
+      //    threshold (e.g. intent ← old expression → intent ← new helper call).
       var usedNew = new Set();
       var rawPairs = [];
       oldItems.forEach(function (oldRow, oldPos) {
-        if (oldRow.oldLine == null || oldRow.oldLine.trim() === '') return;
+        if (oldRow.oldLine == null) return;
         var best = { score: 0, newPos: -1 };
         newItems.forEach(function (newRow, newPos) {
           if (usedNew.has(newPos)) return;
-          if (newRow.newLine == null || newRow.newLine.trim() === '') return;
+          if (newRow.newLine == null) return;
           var score = lineSimilarity(oldRow.oldLine, newRow.newLine);
           if (score > best.score) best = { score: score, newPos: newPos };
         });
-        if (best.score >= 0.45) { usedNew.add(best.newPos); rawPairs.push({ oldPos: oldPos, newPos: best.newPos }); }
+        if (best.newPos >= 0 && shouldPairChangeLines(oldRow.oldLine, newItems[best.newPos].newLine, best.score)) {
+          usedNew.add(best.newPos);
+          rawPairs.push({ oldPos: oldPos, newPos: best.newPos });
+        }
       });
 
       // 2. Keep only pairs monotonic in BOTH coordinates (sorted by oldPos ⇒ newPos increasing);
