@@ -237,7 +237,7 @@ merge a *separate* post-`DONE` command and teardown — are later (running git c
 teardown/archive), while the minimal COMMIT resume *contract* lands at L3 (`RESUME_WAIT`); not a
 privileged finalization phase; only `kickoff_pending` waits exist
 (human → L3, child → L4, timeout → L9). `KICKOFF` is the first *specialized* WAITING resume (activation);
-the generic bare-wait resume contract (`RESUME_WAIT`: resume any WAITING from a matching event → `arrive`)
+the generic bare-wait resume contract (`RESUME_WAIT`: resume any WAITING from a matching event → `apply_target_entry_effects`)
 appears at L3, when `commit_pending` introduces the first non-activation bare wait.
 
 **L0e — Runtime context spec / provider contract.**
@@ -427,7 +427,7 @@ a workflow route. A `human_gate` step parks the instance in `WAITING(human_decis
 records an `APPROVAL_REQUEST` for the bound `operator` (the decision context + the automated
 `recommendation`). The operator's `approve | request_rework` decision is recorded as an
 `APPROVAL_DECISION`. **A verdict carries no lifecycle meaning** — it routes via the human_gate's
-verdict-keyed `transitions` to a target, and one shared `arrive(...)` (used by both HANDLE and
+verdict-keyed `transitions` to a target, and one shared `apply_target_entry_effects(...)` (used by both HANDLE and
 SUBMIT_DECISION, so the two entry paths never drift) decides by the *target's type*: an agent step
 ⇒ ACTIVE + dispatch, a `type: human_gate` ⇒ park `WAITING(human_decision)` (a decision wait), a
 generic `type: wait` step ⇒ park `WAITING(step.wait.kind)` (a bare wait), a terminal step ⇒ the
@@ -439,7 +439,7 @@ bakes in "approve = finalize".
 Scope note (bare wait + its resume): L3 introduces the minimal `type: wait` shape for the post-approval
 anchor (`commit_pending`) *and* the minimal resume that closes it — otherwise `commit_pending` dead-ends.
 Arrival parks `WAITING(step.wait.kind)` (no actor output); `RESUME_WAIT(event)` moves forward on an event
-in `wait.resume_events` via the step's `on_resume` route → `arrive(target)`, guarded by idempotency +
+in `wait.resume_events` via the step's `on_resume` route → `apply_target_entry_effects(target)`, guarded by idempotency +
 version (like HANDLE), with an `no_resume_transition` reject. This is the **bare-wait dual** of the
 `human_gate` decision wait — the missing other half of the WAITING axis. `KICKOFF` is the first
 *specialized* resume (activation), `SUBMIT_DECISION` the decision resume; `RESUME_WAIT` the bare one. What
