@@ -419,11 +419,13 @@ records an `APPROVAL_REQUEST` for the bound `operator` (the decision context + t
 `APPROVAL_DECISION`. **A verdict carries no lifecycle meaning** — it routes via the human_gate's
 verdict-keyed `transitions` to a target, and one shared `arrive(...)` (used by both HANDLE and
 SUBMIT_DECISION, so the two entry paths never drift) decides by the *target's type*: an agent step
-⇒ ACTIVE + dispatch, a `human_gate` ⇒ park `WAITING(human_decision)`, a `type: finalization` step ⇒
-park `WAITING(finalization_pending)` (resume_events `[FINALIZE]`), a terminal step ⇒ the existing
-COMPLETE rule. So in the anchor `approve → finalize` (a finalization step) parks, but in a multi-gate
-workflow `approve` could target another gate or an agent step and continue — the kernel never bakes
-in "approve = finalize". `request_rework` carries a **required, non-empty `instruction`** (+ optional
+⇒ ACTIVE + dispatch, a `type: human_gate` ⇒ park `WAITING(human_decision)` (a decision wait), a
+generic `type: wait` step ⇒ park `WAITING(step.wait.kind)` (a bare wait), a terminal step ⇒ the
+existing COMPLETE rule. There is **no privileged "finalization" phase** — after approval the workflow
+just has more steps. So the v1-faithful anchor is `approve → commit_pending` (a `type: wait` step:
+approval waits for the operator's `COMMIT`, which does not fire on its own), but `approve` could just
+as well target another gate, an agent step (even a newly-added LLM step), or `done` — the kernel never
+bakes in "approve = finalize". `request_rework` carries a **required, non-empty `instruction`** (+ optional
 `refs`) — the v1 `--message`, a first-class decision payload recorded in `APPROVAL_DECISION` and
 delivered to the implementer as its `handoff` (what to fix), not loose UI text; an empty/absent one
 is `rework_instruction_required`. The stale-context cleanup is rework-*transition* semantics (kept
@@ -445,13 +447,16 @@ agent-initiated **ask-human / help reply** (WAITING for a human REPLY, the activ
 same-context resume) and **deferred request-rework** (a rework intent arriving while parked on a
 help-ask, stashed and applied by a watchdog). Absent (later): agent-to-agent ask (→ L8),
 external-token ask (→ L7), multi-channel delivery (→ L8), rich decision schema, a timeout on a
-human wait (→ L9), and the FINALIZE handler / finalization tail — arrival at a `type: finalization`
-step parks `finalization_pending`, but the resumer is deferred. v1 order (reality-checked):
-`APPROVED_FOR_COMMIT → COMMITTED → DONE`, with the git commit *before* `DONE` and the **merge a
-separate command *after* `DONE`** (not before); runtime teardown (worktree/branch/session) is the
-symmetric close of L0e's provider, archiving is kernel-side.
+human wait (→ L9), and the post-approval step resumers — approve routes to ordinary later steps, not
+a privileged "finalization" phase. `commit_pending` / `merge_pending` are operator-triggered
+`type: wait` steps; a perf-test is a process wait; the `COMMIT` / `MERGE` resumers + teardown + archive
+are later slices. v1 order (reality-checked): `APPROVED_FOR_COMMIT → COMMITTED → DONE`, with the git
+commit *before* `DONE` and the **merge a separate command *after* `DONE`**; runtime teardown is the
+symmetric close of L0e's provider, archiving is kernel-side. "Finalization" stays an informal name, not
+a kernel step type.
 Anchor: the converged result routes to a `human_approval` human_gate; `transitions: { approve:
-finalize, request_rework: implement }`, where `finalize` is a `type: finalization` step. **Realized
+commit_pending, request_rework: implement }`, where `commit_pending` is a generic `type: wait` step
+(`wait: { kind: commit_pending, resume_events: [COMMIT] }`). **Realized
 in core-model.html** via a
 matrix-first **Human Decision Contract** (input · wait.kind · correlation · authority ·
 transcript entry · routing target · round effect · context cleanup · override · rejects).
