@@ -3919,6 +3919,45 @@ SUBMIT_DECISION(decision) → Outcome                                  # operato
 human_gate_transition(step, verdict) → target | none               # a human_gate's transitions are keyed by verdict — approve | request_rework (the desugared transitions map)
   RETURN step.transitions[verdict]
 
+apply_target_entry_effects(instance, template, from_step_id, target) → void                # L3 — apply the kernel effects of entering the already-chosen target: position (current_step), round advancement, and the target-type lifecycle outcome below. Shared by HANDLE / SUBMIT_DECISION / RESUME_WAIT so the entry paths never drift
+  instance.current_step ← target
+  IF advances_round(from_step_id, target) THEN instance.round ← instance.round + 1   # transition semantics; transcript-reconstructable
+  IF target is terminal THEN COMPLETE(instance) ; RETURN            # the existing HANDLE terminal-step rule → TERMINAL(done); no new terminal semantics at L3
+  step ← template.step(target)
+  IF is_human_gate(template, target) THEN park_for_human_decision(instance, template, step) ; RETURN   # a DECISION wait — WAITING(human_decision) + APPROVAL_REQUEST + the Ask
+  IF is_wait_step(template, target)  THEN park_for_wait(instance, step)             ; RETURN          # a BARE wait — WAITING(step.wait.kind); RESUME_WAIT resumes it — only the resume ACTION (running the operation) is later. NO privileged "finalization" — commit/merge/perf-test are just wait steps
+  instance.kernel_status ← ACTIVE ; instance.wait ← none           # an agent step ⇒ resume ACTIVE; the dispatch is derived post-commit
+
+park_for_human_decision(instance, template, step) → void           # L3 — runs INSIDE the arrival commit; state + request as one visible transition
+  request_ref    ← new_request_ref()
+  recommendation    ← incoming_recommendation(instance, template, step)   # the machine’s verdict from the gates that routed us in (L2): all allow ⇒ approve, any warn ⇒ needs_rework
+  requires_override ← (recommendation ≠ approve) OR NOT clean_approve_path(instance, template, step)   # recommendation, route, or parity not a clean approve ⇒ an approve needs an explicit override
+  instance.transcript.append(APPROVAL_REQUEST { request_ref, recipient: operator, recommendation, requires_override, context_ref: payload_of_transition_into(instance, step.id) })
+  instance.kernel_status ← WAITING
+  instance.wait ← { kind: human_decision, requested_by: step.id, request_ref, resume_events: [approve, request_rework] }
+
+park_for_wait(instance, step) → void                               # L3 — arrival at a type: wait step parks WAITING with the step's declared wait contract
+  instance.kernel_status ← WAITING
+  instance.wait ← { kind: step.wait.kind, requested_by: step.id, resume_events: step.wait.resume_events }   # e.g. commit_pending ⇐ [COMMIT], merge_pending ⇐ [MERGE], process_pending ⇐ [PERF_TEST_RESULT]; RESUME_WAIT is the handler (L3) — the resume ACTION is later; the L0d terminal set (done | failed | cancelled) is untouched
+
+post_commit_output(instance, template) → DispatchIntent | HumanDecisionRequest | none   # L3 — pure derivation (NO mutation): read the post-commit kernel_status that apply_target_entry_effects just set and select the outbound effect. The read-side dual of apply_target_entry_effects (which sets the status; this returns what to deliver)
+  IF instance.kernel_status = TERMINAL THEN RETURN none
+  IF instance.kernel_status = WAITING THEN
+     IF instance.wait.kind = human_decision THEN RETURN human_decision_request(instance, template)   # parked on a human_gate ⇒ the Ask
+     RETURN none                                                  # parked on a bare wait (e.g. commit_pending) ⇒ no output; it waits for an inbound RESUME_WAIT event
+  RETURN dispatch_intent(instance, template, instance.current_step)   # ACTIVE ⇒ agent dispatch
+
+human_decision_request(instance, template) → HumanDecisionRequest   # L3 — the human-facing analog of DispatchIntent (the Ask); local/manual delivery, durable channel L8
+  step     ← template.step(instance.current_step)
+  request  ← pending_approval_request(instance)
+  operator ← instance.binding[step.role]                            # the human bound to the operator role
+  RETURN HumanDecisionRequest {
+    instance_id, expected_version: instance.version, request_ref: request.request_ref,
+    operator, question: step.instruction, recommendation: request.recommendation, requires_override: request.requires_override,
+    context: project_decision_context(instance, request),          # the task + handoff/diff the human needs to decide
+    allowed_decisions: event_types_of(step.transitions),            # approve | request_rework
+    decision_requirements: requirements_for(step.transitions) }     # derived from the SAME declared outcomes as allowed_decisions — e.g. request_rework ⇒ instruction required (the submit path rejects an empty one); absent if the gate declares no request_rework
+
 RESUME_WAIT(event) → Outcome                                         # operator/kernel event resumes a type: wait step — the BARE-wait dual of SUBMIT_DECISION; generalizes KICKOFF. event = { instance_id, op_id, expected_version, type }
   instance ← instanceStore.load(event.instance_id)
   IF instance is none                              THEN RETURN Rejected(unknown_instance)
@@ -4017,23 +4056,23 @@ HANDLE envelope → Outcome
   intent ← post_commit_output(instance, template)                # derive after commit: TERMINAL ⇒ none, parked on a human_gate ⇒ the Ask, else dispatch
   RETURN Committed(instance.version, intent)
 
-post_commit_output(instance, template) → DispatchIntent | HumanDecisionRequest | none   # L3 — pure derivation (NO mutation): read the post-commit kernel_status that apply_target_entry_effects just set and select the outbound effect. The read-side dual of apply_target_entry_effects (which sets the status; this returns what to deliver)
-  IF instance.kernel_status = TERMINAL THEN RETURN none
-  IF instance.kernel_status = WAITING THEN
-     IF instance.wait.kind = human_decision THEN RETURN human_decision_request(instance, template)   # parked on a human_gate ⇒ the Ask
-     RETURN none                                                  # parked on a bare wait (e.g. commit_pending) ⇒ no output; it waits for an inbound RESUME_WAIT event
-  RETURN dispatch_intent(instance, template, instance.current_step)   # ACTIVE ⇒ agent dispatch
-
-human_decision_request(instance, template) → HumanDecisionRequest   # L3 — the human-facing analog of DispatchIntent (the Ask); local/manual delivery, durable channel L8
-  step     ← template.step(instance.current_step)
-  request  ← pending_approval_request(instance)
-  operator ← instance.binding[step.role]                            # the human bound to the operator role
-  RETURN HumanDecisionRequest {
-    instance_id, expected_version: instance.version, request_ref: request.request_ref,
-    operator, question: step.instruction, recommendation: request.recommendation, requires_override: request.requires_override,
-    context: project_decision_context(instance, request),          # the task + handoff/diff the human needs to decide
-    allowed_decisions: event_types_of(step.transitions),            # approve | request_rework
-    decision_requirements: requirements_for(step.transitions) }     # derived from the SAME declared outcomes as allowed_decisions — e.g. request_rework ⇒ instruction required (the submit path rejects an empty one); absent if the gate declares no request_rework
+assemble_context_blocks(instance, template, step) → [ContextBlock]    # L2b — deterministic render; bodies resolved from the catalog only
+  catalog  ← template.context_blocks                                  # id → { body }; the single body source
+  rendered ← ordered_map()                                            # first-seen order; dedups by id, accumulates provenance.sources[]
+  emit(ref, source):                                                  # local closure — resolve once; on a repeat only append the provenance source
+    IF rendered.has(ref) THEN rendered[ref].provenance.sources.append(source) ; RETURN
+    rendered.put(ref, { id: ref, body: catalog[ref].body, provenance: { sources: [source] } })
+  # render order IS source order: role refs → step refs → gate/policy refs, declaration order within each — render-order, NOT precedence/override
+  FOR ref IN template.role(step.role).default_agent_config.prompt_concern_refs:   # 1) role identity / operating rules
+    emit(ref, { source: role_config })
+  FOR ref IN step.agent_config.prompt_concern_refs:                               # 2) the current step
+    emit(ref, { source: step_config })
+  authorized_ops ← capability(template, step.role, step.id) ∩ event_types_of(step.transitions)   # L1 authority ∩ transition existence — the ops this actor may legally emit
+  FOR event_type IN authorized_ops:                                              # 3) gates on transitions the actor may emit — not blind step membership
+    FOR gate IN template.gates_for(step.id, event_type):
+      FOR ref IN gate.context_block_refs:
+        emit(ref, { source: gate_binding, at: (step.id, event_type) })
+  RETURN rendered.values()                                            # ordered [{ id, body, provenance: { sources } }]
 
 dispatch_intent(instance, template, step_id) → DispatchIntent
   step  ← template.step(step_id)
@@ -4056,45 +4095,6 @@ dispatch_intent(instance, template, step_id) → DispatchIntent
     effective_agent_config: resolve_agent_config(template, step, instance),   # resolved portable run intent (was raw agent_config at L0b)
     runtime_context: runtime_view }                              # the projection, or none for a context-free workflow
   RETURN DispatchIntent { actor, packet }            # a local/manual driver delivers; durable channel is L8
-
-assemble_context_blocks(instance, template, step) → [ContextBlock]    # L2b — deterministic render; bodies resolved from the catalog only
-  catalog  ← template.context_blocks                                  # id → { body }; the single body source
-  rendered ← ordered_map()                                            # first-seen order; dedups by id, accumulates provenance.sources[]
-  emit(ref, source):                                                  # local closure — resolve once; on a repeat only append the provenance source
-    IF rendered.has(ref) THEN rendered[ref].provenance.sources.append(source) ; RETURN
-    rendered.put(ref, { id: ref, body: catalog[ref].body, provenance: { sources: [source] } })
-  # render order IS source order: role refs → step refs → gate/policy refs, declaration order within each — render-order, NOT precedence/override
-  FOR ref IN template.role(step.role).default_agent_config.prompt_concern_refs:   # 1) role identity / operating rules
-    emit(ref, { source: role_config })
-  FOR ref IN step.agent_config.prompt_concern_refs:                               # 2) the current step
-    emit(ref, { source: step_config })
-  authorized_ops ← capability(template, step.role, step.id) ∩ event_types_of(step.transitions)   # L1 authority ∩ transition existence — the ops this actor may legally emit
-  FOR event_type IN authorized_ops:                                              # 3) gates on transitions the actor may emit — not blind step membership
-    FOR gate IN template.gates_for(step.id, event_type):
-      FOR ref IN gate.context_block_refs:
-        emit(ref, { source: gate_binding, at: (step.id, event_type) })
-  RETURN rendered.values()                                            # ordered [{ id, body, provenance: { sources } }]
-
-apply_target_entry_effects(instance, template, from_step_id, target) → void                # L3 — apply the kernel effects of entering the already-chosen target: position (current_step), round advancement, and the target-type lifecycle outcome below. Shared by HANDLE / SUBMIT_DECISION / RESUME_WAIT so the entry paths never drift
-  instance.current_step ← target
-  IF advances_round(from_step_id, target) THEN instance.round ← instance.round + 1   # transition semantics; transcript-reconstructable
-  IF target is terminal THEN COMPLETE(instance) ; RETURN            # the existing HANDLE terminal-step rule → TERMINAL(done); no new terminal semantics at L3
-  step ← template.step(target)
-  IF is_human_gate(template, target) THEN park_for_human_decision(instance, template, step) ; RETURN   # a DECISION wait — WAITING(human_decision) + APPROVAL_REQUEST + the Ask
-  IF is_wait_step(template, target)  THEN park_for_wait(instance, step)             ; RETURN          # a BARE wait — WAITING(step.wait.kind); RESUME_WAIT resumes it — only the resume ACTION (running the operation) is later. NO privileged "finalization" — commit/merge/perf-test are just wait steps
-  instance.kernel_status ← ACTIVE ; instance.wait ← none           # an agent step ⇒ resume ACTIVE; the dispatch is derived post-commit
-
-park_for_human_decision(instance, template, step) → void           # L3 — runs INSIDE the arrival commit; state + request as one visible transition
-  request_ref    ← new_request_ref()
-  recommendation    ← incoming_recommendation(instance, template, step)   # the machine’s verdict from the gates that routed us in (L2): all allow ⇒ approve, any warn ⇒ needs_rework
-  requires_override ← (recommendation ≠ approve) OR NOT clean_approve_path(instance, template, step)   # recommendation, route, or parity not a clean approve ⇒ an approve needs an explicit override
-  instance.transcript.append(APPROVAL_REQUEST { request_ref, recipient: operator, recommendation, requires_override, context_ref: payload_of_transition_into(instance, step.id) })
-  instance.kernel_status ← WAITING
-  instance.wait ← { kind: human_decision, requested_by: step.id, request_ref, resume_events: [approve, request_rework] }
-
-park_for_wait(instance, step) → void                               # L3 — arrival at a type: wait step parks WAITING with the step's declared wait contract
-  instance.kernel_status ← WAITING
-  instance.wait ← { kind: step.wait.kind, requested_by: step.id, resume_events: step.wait.resume_events }   # e.g. commit_pending ⇐ [COMMIT], merge_pending ⇐ [MERGE], process_pending ⇐ [PERF_TEST_RESULT]; RESUME_WAIT is the handler (L3) — the resume ACTION is later; the L0d terminal set (done | failed | cancelled) is untouched
           </script>
         </div>
         <div class="note pseudo">
