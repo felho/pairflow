@@ -325,8 +325,10 @@ before commit); the convergence gate; `instance.round` (kernel-maintained,
 commit-derived, transcript-reconstructable; starts at 0 — a fixed convention — activation = 1,
 then each advancing arrival +1). Round advancement is **declared transition semantics** in the
 normalized/pinned template: the authoring sugar `round.advance_on_arrival_at` is desugared by the
-loader into explicit per-transition `advances_round` flags, and the kernel **never infers** it (from
-role names, graph shape, or target). The policy-facing `gate_projection` read model.
+loader into explicit per-transition `advances_round` flags (for committed transitions only — activation
+has no incoming edge, so it is not desugared as a transition; the activate handler sets the 0 → 1), and
+the kernel **never infers** it (from role names, graph shape, or target). The policy-facing
+`gate_projection` read model.
 A gate is a **fourth filter** after L1: transition exists (L0b) → role/action authorized
 (L1) → **policy allows now (L2)** → commit. On `block` there is no commit, so the round is
 not burned. Two **orthogonal** axes organize the space: `implementation = declarative |
