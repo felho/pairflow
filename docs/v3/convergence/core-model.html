@@ -3972,7 +3972,7 @@ human_decision_request(instance, template) → HumanDecisionRequest   # L3 — t
     operator, question: step.instruction, recommendation: request.recommendation, requires_override: request.requires_override,
     context: project_decision_context(instance, request),          # the task + handoff/diff the human needs to decide
     allowed_decisions: event_types_of(step.transitions),            # approve | request_rework
-    decision_requirements: { request_rework: { instruction: required } } }   # self-contained Ask: request_rework must carry an instruction (the submit path rejects an empty one)
+    decision_requirements: requirements_for(step.transitions) }     # derived from the SAME declared outcomes as allowed_decisions — e.g. request_rework ⇒ instruction required (the submit path rejects an empty one); absent if the gate declares no request_rework
 
 dispatch_intent(instance, template, step_id) → DispatchIntent
   step  ← template.step(step_id)
@@ -4009,7 +4009,7 @@ dispatch_intent(instance, template, step_id) → DispatchIntent
         <div class="agg">
           <div class="agg-label">Human decision — a wait, an Ask, and a transcript pair</div>
           <div class="ents">
-            <div class="ent"><div class="en">wait.kind = human_decision / finalization_pending <span style="font-size:10px;color:var(--muted)">(value)</span></div><div class="fields">two new variants on the L0d WAITING axis (NOT new lifecycle enums): <code>human_decision</code> (carries <code>request_ref</code> + <code>resume_events: [approve, request_rework]</code>) and the approve-seam <code>finalization_pending</code> (resumer is a later slice)</div></div>
+            <div class="ent"><div class="en">wait.kind = human_decision / finalization_pending <span style="font-size:10px;color:var(--muted)">(value)</span></div><div class="fields">two new variants on the L0d WAITING axis (NOT new lifecycle enums): <code>human_decision</code> (carries <code>request_ref</code> + <code>resume_events: [approve, request_rework]</code>) and the approve-seam <code>finalization_pending</code> (carries <code>resume_events: [FINALIZE]</code>; the handler/resumer is a later slice)</div></div>
             <div class="ent"><div class="en">human_gate <span style="font-size:10px;color:var(--muted)">(step type)</span></div><div class="fields"><code>type: human_gate</code>, <code>role: operator</code> — parks instead of dispatching to an agent; its transitions are <code>on_approve</code> / <code>on_rework</code></div></div>
             <div class="ent"><div class="en">HumanDecisionRequest <span style="font-size:10px;color:var(--muted)">(value)</span></div><div class="fields">the Ask: the human-facing analog of <code>DispatchIntent</code> (question, recommendation, decision context, allowed decisions, and <code>decision_requirements</code> — so the Ask is self-contained, e.g. <code>request_rework</code> requires an instruction); local/manual delivery, a durable channel is L8</div></div>
             <div class="ent"><div class="en">APPROVAL_REQUEST / APPROVAL_DECISION <span style="font-size:10px;color:var(--muted)">(transcript)</span></div><div class="fields">the request recorded on entry (recipient, <code>recommendation</code>, context_ref) and the decision recorded on resume (verdict, <code>override</code>, by, and — for <code>request_rework</code> — a required <code>instruction</code> + optional <code>refs</code>) — the v1 envelope pair</div></div>
