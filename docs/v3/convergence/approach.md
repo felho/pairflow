@@ -232,7 +232,8 @@ runs ahead of L1's role/action checks, and the document is ordered to match — 
 pseudocode diffs against L0c, and L1 (placed last) diffs against the full L0e kernel.
 Scope brake: L0d owns the generic terminal disposition paths and the lifecycle guard;
 operator authority (who may START/KICKOFF/CANCEL) stays dormant (→ L7/L10); the success
-finalization tail (commit/merge) is later (→ L2/L3); only `kickoff_pending` waits exist
+finalization tail — v1's `APPROVED_FOR_COMMIT → COMMITTED → DONE` (commit before `DONE`), with the
+merge a *separate* post-`DONE` command and teardown — is a later FINALIZE slice (not L2/L3); only `kickoff_pending` waits exist
 (human → L3, child → L4, timeout → L9).
 
 **L0e — Runtime context spec / provider contract.**

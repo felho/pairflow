@@ -1248,7 +1248,7 @@ template:
           <div class="absent-item">No <b>operator authority / identity</b> — who may issue START / KICKOFF / CANCEL is dormant (the dormant-until-restricted shape L1 later reuses) <span class="at">→ L7 / L10</span></div>
           <div class="absent-item">No <b>runtime-context spec / provider contract</b> — what context the template requires and which provider fulfills it (worktree / mailbox / …); L0d consumes only <code>RUNTIME_CONTEXT_READY</code> and stores an opaque ref, provider internals stay implementation <span class="at">→ L0e</span></div>
           <div class="absent-item">No <b>kickoff payload materialization</b> — KICKOFF here models only task-supply + activation; v1 also writes a task artifact, flips ideation config (<code>task_pending=false</code>, <code>kicked_off_at</code>) and appends a TASK envelope — activation/input materialization (a persistence detail), not the runtime-context provider <span class="at">→ later / impl</span></div>
-          <div class="absent-item">No <b>workflow-specific finalization tail</b> — L0d owns the generic terminal disposition paths (COMPLETE / FAIL / CANCEL); the APPROVED_FOR_COMMIT → COMMITTED commit/merge tail is operator-controlled, later <span class="at">→ L2 / L3</span></div>
+          <div class="absent-item">No <b>workflow-specific finalization tail</b> — L0d owns the generic terminal disposition paths (COMPLETE / FAIL / CANCEL); v1's finalization tail is <code>APPROVED_FOR_COMMIT → COMMITTED → DONE</code> (the git commit precedes <code>DONE</code>), with the merge a <b>separate command after <code>DONE</code></b> and teardown post-<code>DONE</code> — a later FINALIZE slice, not L2/L3 <span class="at">→ later</span></div>
           <div class="absent-item">No <b>human / child / timeout / external waits</b> — WAITING ships with only <code>kickoff_pending</code> <span class="at">→ L3 / L4 / L9</span></div>
           <div class="absent-item">No <b>retry / compensation / rollback</b> on FAILED <span class="at">→ §18</span></div>
           <div class="absent-item">No <b>operator-intent audit / provenance</b> — the source class is named, its full authority model is later <span class="at">→ L7 / L10</span></div>
@@ -1286,7 +1286,7 @@ template:
               <b>clears</b> execution_context on waiting/terminal entry while round/active_role survive
               (<code>…/state/machine.ts</code>), and allows FAILED from any active / CANCELLED from any non-final
               (<code>…/state/transitions.ts</code>) — so position, actor authority and runtime ref are three
-              separate concerns, FAIL/CANCEL stay broad, and COMPLETE stays ACTIVE-only.</li>
+              separate concerns, FAIL/CANCEL stay broad, and COMPLETE is ACTIVE-only here (L3 generalizes it to a committed arrival into a terminal target, reachable from a resumed WAITING decision too).</li>
             <li><b>Known gaps (intended):</b> no operator authority (L7/L10); no runtime-context spec/provider (L0e); no
               success finalization (L2/L3); only kickoff_pending waits; no retry on FAILED (§18). Each is in
               Absent.</li>
@@ -3857,8 +3857,8 @@ CANCEL(instance) → Outcome                                           # operato
   instance.kernel_status ← TERMINAL ; instance.terminal_disposition ← cancelled
   RETURN Terminated(cancelled)
 
-COMPLETE(instance)                                                   # internal helper — done originates only from a terminal step (HANDLE), never routed
-  REQUIRE instance.kernel_status = ACTIVE
+COMPLETE(instance)                                                   # internal helper — finalizes a COMMITTED ARRIVAL into a terminal target (a HANDLE actor transition OR a resumed human decision, both via arrive)
+  REQUIRE instance.kernel_status ≠ TERMINAL                            # was ACTIVE-only; arrive() may complete from a resumed WAITING(human_decision) arrival too — only double-completion is barred
   instance.kernel_status ← TERMINAL ; instance.terminal_disposition ← done
 
 FAIL(instance, reason) → Outcome                                     # kernel_event — any non-terminal
