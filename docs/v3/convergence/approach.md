@@ -424,10 +424,12 @@ case: "no `CONVERGED` before round 2" (the realized L2 converge gate is `round �
 Scope: the narrowest Ask — the system parks on a human *decision-maker* whose verdict chooses
 a workflow route. A `human_gate` step parks the instance in `WAITING(human_decision)` (a new
 `wait.kind` on the L0d WAITING axis, not a new lifecycle enum) and, as one visible transition,
-records an `APPROVAL_REQUEST` for the bound `operator` (the decision context + the automated
-`recommendation`). The operator's `approve | request_rework` decision is recorded as an
-`APPROVAL_DECISION`. **A verdict carries no lifecycle meaning** — it routes via the human_gate's
-verdict-keyed `transitions` to a target, and one shared `apply_target_entry_effects(...)` (used by both HANDLE and
+records a `DECISION_REQUEST` for the bound `operator` (the declared decision keys + the decision
+context + the automated `recommendation` with its `recommendation_source`). The operator's decision
+is recorded as a `DECISION_MADE`. The gate's `decisions` map **IS its transition map**, keyed by
+decision key — `approve | request_rework` are just this anchor's keys; the kernel knows no decision
+names. **A decision carries no lifecycle meaning** — it routes via `decisions[key].target` to a
+target, and one shared `apply_target_entry_effects(...)` (used by both HANDLE and
 SUBMIT_DECISION, so the two entry paths never drift) decides by the *target's type*: an agent step
 ⇒ ACTIVE + dispatch, a `type: human_gate` ⇒ park `WAITING(human_decision)` (a decision wait), a
 generic `type: wait` step ⇒ park `WAITING(step.wait.kind)` (a bare wait), a terminal step ⇒ the
@@ -436,6 +438,14 @@ just has more steps. So the v1-faithful anchor is `approve → commit_pending` (
 approval waits for the operator's `COMMIT`, which does not fire on its own), but `approve` could just
 as well target another gate, an agent step (even a newly-added LLM step), or `done` — the kernel never
 bakes in "approve = finalize".
+Foundational vs not: the *mechanism* — park `WAITING(human_decision)`, record a request, an
+operator-intent resume (correlated + authorized), route by a declared decision key, append to the
+transcript, enter via `apply_target_entry_effects` — is kernel. The *vocabulary* (`approve`,
+`request_rework`, the instruction rule, the override framing) is template data, not kernel. So the
+transcript entries are decision-agnostic (`DECISION_REQUEST` / `DECISION_MADE`), reusable by an
+escalation / accept-risk / choose-strategy gate. Definition-load `validate_decision_gates` keeps the
+generic map honest: non-empty `decisions`, every `target` resolves, and `recommends` only on an edge
+into a gate, naming a real decision key of that gate.
 Scope note (bare wait + its resume): L3 introduces the minimal `type: wait` shape for the post-approval
 anchor (`commit_pending`) *and* the minimal resume that closes it — otherwise `commit_pending` dead-ends.
 Arrival parks `WAITING(step.wait.kind)` (no actor output); `RESUME_WAIT(event)` moves forward on an event
@@ -447,19 +457,25 @@ remains later: result payloads, the resume *action* (e.g. actually running git c
 sources (L4), and timeouts / external-or-fuzzy correlation (L9). It is *not* a special seam: enough
 WAITING-kind shapes already exist that a one-off bare wait/resume would just reprise the finalization
 mistake.
-`request_rework` carries a **required, non-empty `instruction`** (+ optional
-`refs`) — the v1 `--message`, a first-class decision payload recorded in `APPROVAL_DECISION` and
-delivered to the implementer as its `handoff` (what to fix), not loose UI text; an empty/absent one
-is `rework_instruction_required`. The stale-context cleanup is rework-*transition* semantics (kept
-verdict-specific in L3, a transition property longer-term).
+Required payload fields are declared **per decision** in the gate's `decisions` map: the anchor's
+`request_rework` requires a non-empty `instruction` (+ optional `refs`) — the v1 `--message`,
+recorded in `DECISION_MADE` and delivered to the implementer as its `handoff` (what to fix), not
+loose UI text; a missing one is the generic `missing_required_field` (no hardcoded rework rule).
+The stale-context cleanup is keyed on round advancement (`advances_round` — a loop-back like
+rework → implement), not on a verdict name.
 Input model: a human decision is *not* an actor envelope through HANDLE's ACTIVE path; it is an
 operator-intent on a WAITING(human_decision) state — a sibling of KICKOFF. Guard: `wait.kind` +
 request correlation + operator authority + op_id idempotency + CAS. Operator authority is
 checked on this operator-intent path; the full operator authority model is later if needed (the
 L1 actor gate is a different input class).
-Override (the fiduciary core): if the pending request's `recommendation` is not `approve`, or
-its metadata marks this as not a clean approve path, an `approve` is valid only with an explicit,
-recorded `override` — a human may decide against the machine, but it is on the record.
+Override (the fiduciary invariant): override is meaningful **only** against a recorded
+recommendation. The recommendation is the firing incoming edge's `recommends` (a build-time
+*possibility* declared per edge, runtime-*selected* by which edge fired) — not a property of the
+gate. The single rule: a decision **≠** the recommendation requires an explicit, recorded `override`
+(`override_required`); with no recommendation, or agreeing with it, an `override` is
+`override_not_applicable`. A human may decide against the machine, but it is on the record. (In the
+anchor `review.CONVERGED` recommends `approve`, so the off-recommendation choice is `request_rework`;
+a warn-sensitive *dynamic* recommendation is deferred.)
 Boundary: no externally valid half-entered gate — the wait state and the request commit as one
 visible transition, or rollback / recovery semantics are explicit.
 Why: the human as decision-maker at high-stakes points — the seed of the fiduciary wedge and of
@@ -468,8 +484,9 @@ v1 reality check — "human" is ≥3 contracts; L3 takes only the approval gate.
 agent-initiated **ask-human / help reply** (WAITING for a human REPLY, the active agent asks,
 same-context resume) and **deferred request-rework** (a rework intent arriving while parked on a
 help-ask, stashed and applied by a watchdog). Absent (later): agent-to-agent ask (→ L8),
-external-token ask (→ L7), multi-channel delivery (→ L8), rich decision schema, a timeout on a
-human wait (→ L9), and the post-approval resume *actions* — approve routes to ordinary later steps, not
+external-token ask (→ L7), multi-channel delivery (→ L8), a *dynamic* recommendation (a smarter
+upstream step emitting its own) plus any open predicate language for override/routing beyond the
+single *chosen ≠ recommended* rule, a timeout on a human wait (→ L9), and the post-approval resume *actions* — approve routes to ordinary later steps, not
 a privileged "finalization" phase. The minimal COMMIT resume *contract* is realized at L3 (`RESUME_WAIT`:
 `commit_pending` `on_resume: { COMMIT: done }`); the resume *actions/mechanics* — running git commit, the
 `MERGE` resume, teardown, archive — are later slices (`merge_pending` is another operator `type: wait`, a
@@ -477,8 +494,10 @@ perf-test a process wait). v1 order (reality-checked): `APPROVED_FOR_COMMIT → 
 commit *before* `DONE` and the **merge a separate command *after* `DONE`**; runtime teardown is the
 symmetric close of L0e's provider, archiving is kernel-side. "Finalization" stays an informal name, not
 a kernel step type.
-Anchor: the converged result routes to a `human_approval` human_gate; `transitions: { approve:
-commit_pending, request_rework: implement }`, where `commit_pending` is a generic `type: wait` step
+Anchor: the converged result routes to a `human_approval` human_gate; `decisions: { approve: { target:
+commit_pending }, request_rework: { target: implement, payload: { instruction: { required: true }, refs: {
+required: false } } } }`, with `recommends: approve` on the `review.CONVERGED` edge, where `commit_pending`
+is a generic `type: wait` step
 (`wait: { kind: commit_pending, resume_events: [COMMIT] }`, `on_resume: { COMMIT: done }`) resumed by
 `RESUME_WAIT`. **Realized in core-model.html** via a
 matrix-first **Human Decision Contract** (input · wait.kind · correlation · authority ·
