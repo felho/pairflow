@@ -3660,19 +3660,20 @@ template:
           finalization mistake.</div>
 
         <h3 class="view-h"><span class="view-tag" style="background:#e2e8f0;color:#334155">Shape</span> How the L3 pieces fit (L3-specific aid)</h3>
-        <p>L3's pseudocode reads as a list of handlers, but the structure is a <b>funnel</b>: three entry
-        handlers share one commit spine; <code>apply_target_entry_effects</code> then fans out by the
-        <em>target's type</em>, and <code>post_commit_output</code> derives the outbound effect. (1) is the code
-        shape, (2) the per-target outcome, (3) the lifecycle it produces.</p>
+        <p>L3's pseudocode reads as a list of handlers, but the structure converges: three entry
+        handlers — each with its own guards and its own commit — <b>share the same post-commit target-entry
+        pattern</b>. <code>apply_target_entry_effects</code> fans out by the <em>target's type</em>, and
+        <code>post_commit_output</code> derives the outbound effect. (1) is the code shape, (2) the per-target
+        outcome, (3) the lifecycle it produces.</p>
         <pre class="pseudo" style="font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size:12.5px; line-height:1.5">
-(1) THREE entry handlers funnel into ONE commit spine
-─────────────────────────────────────────────────────
-   actor envelope      ─▶  HANDLE            ┐
-   operator decision   ─▶  SUBMIT_DECISION   ├──▶  guards ─▶ COMMIT ─▶ apply_target_entry_effects(target)
-   resume event        ─▶  RESUME_WAIT       ┘
+(1) THREE entry handlers, each its own guards + COMMIT, sharing one target-entry spine
+──────────────────────────────────────────────────────────────────────────────────────
+   actor envelope      ─▶  HANDLE           ─▶ own guards ─▶ COMMIT  ┐
+   operator decision   ─▶  SUBMIT_DECISION  ─▶ own guards ─▶ COMMIT  ├──▶  apply_target_entry_effects(target)
+   resume event        ─▶  RESUME_WAIT      ─▶ own guards ─▶ COMMIT  ┘            ─▶ post_commit_output
 
-(2) apply_target_entry_effects sets kernel_status by the TARGET's type; post_commit_output then derives the output
-──────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+(2) apply_target_entry_effects applies target-entry effects; the target type decides the resulting lifecycle status; post_commit_output then derives the output
+──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
    target = agent step  ─▶  ACTIVE                                       →  DispatchIntent
    target = human_gate  ─▶  WAITING(human_decision) + APPROVAL_REQUEST   →  HumanDecisionRequest
    target = type: wait  ─▶  WAITING(step.wait.kind)                      →  none  (awaits a resume event)
