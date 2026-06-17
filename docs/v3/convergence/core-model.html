@@ -4328,7 +4328,10 @@ template:
       number.textContent = index == null ? '' : String(index + 1);
       var code = document.createElement('div');
       code.className = 'diff-code';
-      code.innerHTML = line == null ? '' : highlightLine(line);
+      // blank/empty cells get a zero-width space so their line box matches content rows —
+      // otherwise empty cells fall back to min-height and a sub-pixel mismatch accumulates,
+      // drifting the two panes out of alignment across a long run of add/remove rows.
+      code.innerHTML = (line == null || line === '') ? '​' : highlightLine(line);
       row.append(number, code);
       parent.appendChild(row);
     }
