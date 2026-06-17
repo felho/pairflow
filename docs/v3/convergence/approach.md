@@ -525,6 +525,14 @@ being released.** Storage Scope (①) guarantees this by construction; Teardown 
 fail-closed. Four strands — two core (next), two later:
 
 **① Durable Run Record / Storage Scope** *(cross-cutting invariant, not a step — first-class milestone).*
+**Realized in core-model.html** (section `①`, after L3) — matrix-first, the **Canonical Home Table** as
+the central artifact, plus five invariants INV-1..INV-5 and three checkable predicates
+(`evidence_ref_ok` / `projection_authoritative` / `release_safe`). Two review refinements baked in: the
+v1 grounding does **not** overclaim (the v1 bubble dir is workspace-separated but still delete-sensitive,
+*not* a born-durable T1 authority — which is why archive currently preserves history), and
+snapshot-authority is narrowed to a **sealed projection snapshot anchored to its T1 source
+range/version** (never a rival truth). The lone new runtime-affecting rule is the evidence-ref discipline
+(INV-3); `release_safe` (INV-5) is the handle ② asserts.
 Capability: one canonical run record — the append-only history/event log — is authored to durable
 storage during the run (instance/template/project refs, lifecycle events, transcript/envelopes,
 decisions, gate outcomes, timings, actor/role metadata, terminal disposition, evidence **refs**). The
