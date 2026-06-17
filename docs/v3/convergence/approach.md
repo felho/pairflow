@@ -463,10 +463,11 @@ agent-initiated **ask-human / help reply** (WAITING for a human REPLY, the activ
 same-context resume) and **deferred request-rework** (a rework intent arriving while parked on a
 help-ask, stashed and applied by a watchdog). Absent (later): agent-to-agent ask (→ L8),
 external-token ask (→ L7), multi-channel delivery (→ L8), rich decision schema, a timeout on a
-human wait (→ L9), and the post-approval step resumers — approve routes to ordinary later steps, not
-a privileged "finalization" phase. `commit_pending` / `merge_pending` are operator-triggered
-`type: wait` steps; a perf-test is a process wait; the `COMMIT` / `MERGE` resumers + teardown + archive
-are later slices. v1 order (reality-checked): `APPROVED_FOR_COMMIT → COMMITTED → DONE`, with the git
+human wait (→ L9), and the post-approval resume *actions* — approve routes to ordinary later steps, not
+a privileged "finalization" phase. The minimal COMMIT resume *contract* is realized at L3 (`RESUME_WAIT`:
+`commit_pending` `on_resume: { COMMIT: done }`); the resume *actions/mechanics* — running git commit, the
+`MERGE` resume, teardown, archive — are later slices (`merge_pending` is another operator `type: wait`, a
+perf-test a process wait). v1 order (reality-checked): `APPROVED_FOR_COMMIT → COMMITTED → DONE`, with the git
 commit *before* `DONE` and the **merge a separate command *after* `DONE`**; runtime teardown is the
 symmetric close of L0e's provider, archiving is kernel-side. "Finalization" stays an informal name, not
 a kernel step type.

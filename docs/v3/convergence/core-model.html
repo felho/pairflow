@@ -1248,7 +1248,7 @@ template:
           <div class="absent-item">No <b>operator authority / identity</b> — who may issue START / KICKOFF / CANCEL is dormant (the dormant-until-restricted shape L1 later reuses) <span class="at">→ L7 / L10</span></div>
           <div class="absent-item">No <b>runtime-context spec / provider contract</b> — what context the template requires and which provider fulfills it (worktree / mailbox / …); L0d consumes only <code>RUNTIME_CONTEXT_READY</code> and stores an opaque ref, provider internals stay implementation <span class="at">→ L0e</span></div>
           <div class="absent-item">No <b>kickoff payload materialization</b> — KICKOFF here models only task-supply + activation; v1 also writes a task artifact, flips ideation config (<code>task_pending=false</code>, <code>kicked_off_at</code>) and appends a TASK envelope — activation/input materialization (a persistence detail), not the runtime-context provider <span class="at">→ later / impl</span></div>
-          <div class="absent-item">No <b>workflow-specific post-approval resumers</b> — L0d owns the generic terminal disposition paths (COMPLETE / FAIL / CANCEL); v1's post-approval path is <code>APPROVED_FOR_COMMIT → COMMITTED → DONE</code> (the git commit precedes <code>DONE</code>), with the merge a <b>separate command after <code>DONE</code></b> and teardown post-<code>DONE</code> — these are later post-approval resumer slices (commit/merge; likely wait steps once that primitive lands), not a privileged finalization phase and not L2/L3 <span class="at">→ later</span></div>
+          <div class="absent-item">No <b>post-approval resume <em>actions</em></b> — L0d owns the generic terminal disposition paths (COMPLETE / FAIL / CANCEL); v1's post-approval path is <code>APPROVED_FOR_COMMIT → COMMITTED → DONE</code> (the git commit precedes <code>DONE</code>), with the merge a <b>separate command after <code>DONE</code></b>. The minimal <em>resume contract</em> for such waits is realized at L3 (<code>RESUME_WAIT</code>: <code>COMMIT</code> → done); the resume <em>actions/mechanics</em> (running git commit, merge, teardown) are later — not a privileged finalization phase <span class="at">→ L3 contract / later actions</span></div>
           <div class="absent-item">No <b>human / child / timeout / external waits</b> — WAITING ships with only <code>kickoff_pending</code> <span class="at">→ L3 / L4 / L9</span></div>
           <div class="absent-item">No <b>generic wait-resume contract</b> — <code>KICKOFF</code> is the first <em>specialized</em> WAITING resume (activation). The generic bare-wait resume (resume any <code>WAITING</code> from a matching event → <code>arrive</code>) appears at L3, when <code>commit_pending</code> introduces the first non-activation bare wait; child-event and timeout/external resume sources reuse it later <span class="at">→ L3 / L4 / L9</span></div>
           <div class="absent-item">No <b>retry / compensation / rollback</b> on FAILED <span class="at">→ §18</span></div>
@@ -3870,7 +3870,8 @@ RESUME_WAIT(event) → Outcome                                         # operato
   IF event.type ∉ instance.wait.resume_events      THEN RETURN Rejected(resume_event_mismatch)  # correlation to THIS open wait's declared resume class
   IF event.expected_version ≠ instance.version     THEN RETURN Stale(instance.version)          # CAS precheck
   template ← definitionStore.load(instance.template_ref)
-  step     ← template.step(instance.current_step)                   # a type: wait step (the only kind RESUME_WAIT handles)
+  IF NOT is_wait_step(template, instance.current_step)  THEN RETURN Rejected(not_bare_wait)     # RESUME_WAIT resumes ONLY a type: wait step; a decision wait resumes via SUBMIT_DECISION
+  step     ← template.step(instance.current_step)
   target   ← step.on_resume[event.type]
   IF target is none                                THEN RETURN Rejected(no_resume_transition)   # the wait step must declare this resume route
   COMMIT atomically at expected_version = instance.version:
@@ -4075,6 +4076,18 @@ dispatch_intent(instance, template, step_id) → DispatchIntent
           </table>
           </div>
           <div class="fields" style="margin-top:8px">This table is the contract; <code>park_for_human_decision</code> realizes the enter row, <code>SUBMIT_DECISION</code> the decision rows, and the config below is one instance of it. The <code>recommendation</code> is derived from the L2 gate verdicts that routed in — warn ⇒ not a clean approve. A <code>request_rework</code> decision carries a <b>required, non-empty</b> <code>instruction</code> (+ optional <code>refs</code>), recorded in <code>APPROVAL_DECISION</code> and delivered to the implementer as the <code>handoff</code> of the rework target’s first dispatch.</div>
+        </div>
+        <div class="agg">
+          <div class="agg-label">Bare Wait Resume Contract — the dual of the decision contract, for a <code>type: wait</code> step</div>
+          <div style="overflow-x:auto">
+          <table class="contract">
+            <thead><tr><th>Input</th><th>Allowed wait type</th><th>Correlation</th><th>Authority</th><th>Transcript</th><th>Routing target</th><th>Rejects</th></tr></thead>
+            <tbody>
+              <tr><td><code>RESUME_WAIT(event)</code> (e.g. <code>COMMIT</code>)</td><td><code>type: wait</code> only (a <code>human_gate</code> ⇒ <code>not_bare_wait</code>)</td><td><code>event.type ∈ wait.resume_events</code></td><td>— (an optional authority hook is later)</td><td><code>WAIT_RESUMED</code></td><td><code>on_resume[event.type]</code> → arrive (here <code>done</code>)</td><td>not_waiting · not_bare_wait · resume_event_mismatch · no_resume_transition · Stale · Duplicate</td></tr>
+            </tbody>
+          </table>
+          </div>
+          <div class="fields" style="margin-top:8px"><code>RESUME_WAIT</code> realizes this row; it is the bare-wait counterpart of the decision contract above (no Ask, no verdict, no override). The resume <em>action</em> (e.g. running git commit) and result payloads are later slices.</div>
         </div>
         <div class="note domain">
           The override rule is the only place the machine’s recommendation and the human’s verdict meet — the
