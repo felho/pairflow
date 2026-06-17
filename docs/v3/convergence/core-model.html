@@ -4244,7 +4244,7 @@ template:
             <li><b>Scenario coverage:</b> a converged result parks for the operator; approve routes to a <code>commit_pending</code> wait step (no privileged finalization), request_rework returns to implement (new round, clean context, with the operator's instruction as the implementer's handoff), and approve against a non-approve recommendation needs an explicit override.</li>
             <li><b>Accepted tradeoff:</b> a parked decision blocks indefinitely (no timeout) — fine for the local MVP; escalation/timeout is the L9 slice.</li>
             <li><b>Invariant coverage:</b> one-visible-transition park ✓; operator-intent not actor-envelope ✓; honest WAITING ✓; override recorded ✓; idempotency/CAS reuse ✓; all L0a–L2b invariants still hold.</li>
-            <li><b>Known gaps (intended):</b> ask-human/help reply (L5), deferred rework (L5+watchdog), post-approval commit/merge resumers, human-wait timeout (L9), rich schema/channels (L8). Each is in Absent.</li>
+            <li><b>Known gaps (intended):</b> ask-human/help reply (L5), deferred rework (L5+watchdog), post-approval resume actions/mechanics (running git commit, the MERGE action, teardown/archive — the COMMIT resume contract is done), human-wait timeout (L9), rich schema/channels (L8). Each is in Absent.</li>
             <li><b>Decision:</b> accepted as the L3 baseline (light evidence per playbook §2.1).</li>
           </ul>
         </div>
