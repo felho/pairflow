@@ -5819,10 +5819,10 @@ action_request(instance, template) → ActionRequest                 # ③ — t
 
 RUN_ACTION(trigger) → Outcome                                      # ③ operator_intent — the AUTOMATED sibling of SUBMIT_DECISION (the RUNNER's result picks the outcome, not a human). trigger = { instance_id, op_id, expected_version, action_key, payload, by }
   instance ← load(trigger.instance_id)
-  IF instance.kernel_status ≠ WAITING OR instance.wait.kind ≠ action_pending THEN RETURN Rejected(not_awaiting_action)   # action_running ⇒ a claim already won (single-winner); a parked action is the only runnable state
+  IF duplicate(trigger.op_id)                                                THEN RETURN Duplicate   # idempotency FIRST — transcript-backed (op_id rides ACTION_RUNNING / ACTION_RESULT): a replay returns Duplicate even after the first claim already moved us to action_running, never not_awaiting_action
+  IF instance.kernel_status ≠ WAITING OR instance.wait.kind ≠ action_pending THEN RETURN Rejected(not_awaiting_action)   # action_running ⇒ a (different) claim already won (single-winner); a parked action is the only runnable state
   IF trigger.action_key ∉ instance.wait.resume_events                        THEN RETURN Rejected(action_trigger_mismatch)
   IF trigger.expected_version ≠ instance.version                             THEN RETURN Stale(instance.version)   # the ActionRequest the operator holds is stale — a destructive action MUST NOT run from it (like SUBMIT_DECISION / RESUME_WAIT)
-  IF duplicate(trigger.op_id)                                                THEN RETURN Duplicate   # idempotency — transcript-backed: op_id rides ACTION_RUNNING and ACTION_RESULT
   template ← definitionStore.load(instance.template_ref) ; step ← template.step(instance.current_step)
   REQUIRE trigger.by = instance.binding[step.role]                 # operator authority on THIS path (like SUBMIT_DECISION; not the L1 actor gate)
   # TRIGGER-VALIDATION — PAYLOAD ONLY (NOT workspace state), BEFORE the claim so a bad payload starts nothing: the human_gate missing_required_field analog
@@ -5831,6 +5831,7 @@ RUN_ACTION(trigger) → Outcome                                      # ③ opera
   # PHASE 1 — CAS CLAIM (marker-first, single-winner): take the action_pending EXCLUSIVELY before the runner side effect, so two concurrent RUN_ACTION never both reach the (git-mutating) runner
   request_id ← new_request_id()
   COMMIT atomically at expected_version = instance.version:
+    REQUIRE instance.wait.kind = action_pending                  # the single-winner CAS guard (like ② release's REQUIRE ready(ref)): a concurrent claim that already won loses here on reload ⇒ not_awaiting_action
     instance.wait ← { kind: action_running, op_id: trigger.op_id, request_id, action_key: trigger.action_key, requested_by: step.id }   # in-flight marker; a concurrent RUN_ACTION now sees action_running ⇒ not_awaiting_action
     instance.transcript.append(ACTION_RUNNING { op_id: trigger.op_id, action_key: trigger.action_key, request_id })
     instance.version ← instance.version + 1
