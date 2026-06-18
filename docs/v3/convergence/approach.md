@@ -318,9 +318,12 @@ unknown mode at start, or a tag naming an undeclared mode, is rejected, like slo
 the *surface* scope-brake, not the mechanism. Three surfaces (v1 reality-checked, file:line):
 - **gate presence** — `gates[].modes` (v1: the runtime validation gate runs only in `code`, doc skips it —
   `passValidationGate.ts:407-414`); the resolved variant simply has / omits the gate.
-- **context-block presence** — `context_blocks[].modes` (v1: the docs-only edit guard "refine only
-  docs/task/spec/progress; product/runtime/source code forbidden" — `documentBubbleSourceEditGuard.ts`,
-  `rolePromptImplementerScope.ts`); the resolved variant includes / omits the block.
+- **context contribution presence** — the `modes:` tag rides the **ref / binding** (a `prompt_concern_refs` entry
+  on a role/step, a `context_block_refs` entry on a gate), **not** the catalog `context_blocks` entry — since L2b
+  renders by ref into a shared catalog, tagging the catalog block alone would leave dangling refs. Mode-filtering
+  prunes the *contribution*; the catalog block stays (harmlessly unreferenced in the other mode). v1: the docs-only
+  edit guard "refine only docs/task/spec/progress; product/runtime/source code forbidden"
+  (`documentBubbleSourceEditGuard.ts`, `rolePromptImplementerScope.ts`).
 - **named policy profiles** — `mode_profiles[mode]` binds **closed, loader-validated policy refs** (NOT overlay,
   NOT arbitrary override) for evidence + reviewer behavior. This is the correction to a "gate + context only"
   reading: v1's docs-only behavior is **not merely a consequence of omitting the validation gate** — it is an
@@ -328,8 +331,10 @@ the *surface* scope-brake, not the mechanism. Three surfaces (v1 reality-checked
   `verification_status: trusted` — `reviewerTestDirectiveResolver.ts:81-94`) and finding-priority is demoted
   (doc-scope P0/P1 → P2 except strict required-now + L1). So a `mode` resolves to an `evidence_policy_ref` /
   `review_policy_ref`.
-v1 does **not** condition the step graph (same flow), the model / agent_config, or the reviewer blocking
-structure — so the cut excludes mode-on-steps and mode-on-agent_config. Placement: an **L0f-family /
+v1 does **not** condition the step graph (same flow), the model / agent_config, or the reviewer **loop topology**
+— so the cut excludes mode-on-steps and mode-on-agent_config. (Reviewer/evidence policy *evaluation* **is**
+mode-conditioned — the finding-priority demotion above — but through the named policy profiles, not by changing
+the loop.) Placement: an **L0f-family /
 resolution-layer extension**, not an L2 runtime conditional; L2 / L2b / the evidence-reviewer policy are pure
 **consumers** (gates appear/disappear in the resolved template, context blocks are included, policy refs come
 from the resolved mode profile). Parallel to the lifecycle-close and L4 work; does not block them. Deferred to a
