@@ -222,6 +222,7 @@
       <a class="level" href="#l3">L3 <span class="tag">· human decision Ask</span></a>
       <a class="level" href="#storage-scope">① <span class="tag">· durable run record / storage scope</span></a>
       <a class="level" href="#runtime-teardown">② <span class="tag">· runtime resource teardown</span></a>
+      <a class="level" href="#workflow-actions">③a <span class="tag">· workflow actions (commit / merge)</span></a>
       <div class="future">L4 · child workflow + events</div>
       <div class="cut">▲ MVP cut — local WF-7 runs</div>
       <div class="future">L5 · help subflow</div>
@@ -4556,7 +4557,7 @@ release_safe(resource) → bool
         <h3 class="view-h"><span class="view-tag absent">Absent</span> Not in this slice</h3>
         <div class="absent-grid">
           <div class="absent-item">No <b>release mechanics</b> — tracking the release obligation and actually releasing the worktree/branch/session is the teardown slice <span class="at">→ ②</span></div>
-          <div class="absent-item">No <b>workflow post-actions</b> — author-chosen process steps over existing wait/process primitives + a later action slice, distinct from ②'s provider resource teardown: <b>③a</b> the commit/merge <em>actions</em> (run git commit / merge — MVP-adjacent), <b>③b</b> the general framework (perf-test, publish, notify, a custom cleanup script for a side-effect the provider does not own) <span class="at">→ ③a / ③b</span></div>
+          <div class="absent-item">No <b>workflow actions</b> — author-chosen <code>type: action</code> steps (the automated <code>human_gate</code> sibling) over the L2a runner family, distinct from ②'s provider resource teardown: <b>③a</b> the commit/merge actions (operator-triggered — MVP), <b>③b</b> the general library + <code>auto</code> trigger (perf-test, publish, notify) <span class="at">→ ③a / ③b</span></div>
           <div class="absent-item">No <b>archive / export / purge / retention</b> — optional cold ops, computed from the durable record, never the preservation path nor a teardown precondition <span class="at">→ ④ (~L8 ops)</span></div>
           <div class="absent-item">No <b>storage-backend choice</b> — file vs object store vs DB for T1/T3 is an implementation concern; this slice fixes <em>placement &amp; authority</em>, not the medium <span class="at">→ impl</span></div>
           <div class="absent-item">No <b>multi-instance / federation storage</b> or <b>central registry/store governance</b> — a single run's homes only; cross-run/central stores are later <span class="at">→ L11+</span></div>
@@ -4579,7 +4580,7 @@ release_safe(resource) → bool
             <li><b>Scenario coverage:</b> every datum in the Canonical Home Table maps to exactly one home; the canonical homes (T1/T3) survive runtime teardown; the T2 projection is rebuildable from T1 (or a sealed snapshot anchored to it), not canonical on its own; only T4 is released.</li>
             <li><b>Invariant coverage:</b> born-durable record ✓; no workspace-sole-truth ✓; evidence-ref discipline ✓; projection subordination (incl. sealed snapshot anchored to T1) ✓; release-safe by construction ✓ — and all L0a–L3 invariants still hold (this slice adds no handler).</li>
             <li><b>Accepted tradeoff:</b> the durable-write <em>mechanism</em>, storage backend, and archive/retention are out — this slice fixes placement &amp; authority only. The genuinely new code is the one evidence-ref rule.</li>
-            <li><b>Known gaps (intended):</b> release mechanics (②), workflow post-actions (③a commit/merge actions · ③b general), archive/export/purge (④), backend choice (impl), multi-instance/central stores (L11+). Each is in Absent.</li>
+            <li><b>Known gaps (intended):</b> release mechanics (②), workflow actions (③a commit/merge · ③b general), archive/export/purge (④), backend choice (impl), multi-instance/central stores (L11+). Each is in Absent.</li>
             <li><b>Decision:</b> accepted as the ① baseline (light evidence per playbook §2.1); ② Teardown builds directly on INV-5.</li>
           </ul>
         </div>
@@ -5359,7 +5360,7 @@ template:
           <div class="absent-item">No <b>eventual-liveness guarantee</b> — no auto-retry, backoff, timeout, or watchdog on a <code>release_failed</code> obligation; the kernel tracks it but does not re-drive it. The retry that turns "tracked" into "eventually discharged" is later <span class="at">→ L9</span></div>
           <div class="absent-item">No <b>deferred release boundary realized</b> — the parameterized hook is in (<code>initiate_release(instance, boundary_event)</code>, guard <code>boundary_event ∉ release_boundaries(template)</code>), but no post-completion action emits a non-terminal boundary yet; the merge / commit <em>actions</em> that do are <span class="at">→ ③a</span></div>
           <div class="absent-item">No <b>retained / external release policy exercised</b> — the policy vocabulary and load-time rule are in, but the anchor only uses <code>required</code>; a long-lived (<code>retained</code>) or externally-owned (<code>external</code>) runtime_context is a later, explicit ownership choice <span class="at">→ later</span></div>
-          <div class="absent-item">No <b>workflow post-actions</b> — running the git commit / merge, perf-test, publish, notify (the events that can <em>cause</em> a deferred boundary) <span class="at">→ ③a / ③b</span></div>
+          <div class="absent-item">No <b>workflow actions</b> — the <code>type: action</code> steps that run git commit / merge (and emit a deferred boundary like merge_completed), perf-test, publish, notify <span class="at">→ ③a / ③b</span></div>
           <div class="absent-item">No <b>archive / export / purge</b> — the record-purge half of v1 <code>delete</code> is a storage-axis op, not resource teardown <span class="at">→ ④</span></div>
           <div class="absent-item">No <b>provider internals</b> — the git worktree / branch / tmux removal mechanics are the provider's, opaque to the kernel, exactly as on the provision side <span class="at">→ impl</span></div>
           <div class="absent-item">No <b>remote / distributed release proofs</b> — a remote or async release with verifiable completion (the merge-as-distribution concern) is later <span class="at">→ L8 / L10</span></div>
@@ -5383,6 +5384,812 @@ template:
             <li><b>Accepted tradeoff:</b> no eventual-liveness (retry / timeout / watchdog) — a failed release is tracked, not re-driven; fine for the local MVP, the L9 slice adds liveness. The deferred boundary is hooked but not realized (no ③a action yet).</li>
             <li><b>Known gaps (intended):</b> eventual-liveness retry (L9), deferred-boundary realization + the commit/merge actions (③a), archive/purge (④), provider internals (impl), remote release proofs (L8/L10), child fan-out (L4). Each is in Absent.</li>
             <li><b>Decision:</b> accepted as the ② baseline (light evidence per playbook §2.1); L4 inherits the obligation + release contract per child runtime_context.</li>
+          </ul>
+        </div>
+      </section>
+      <section id="workflow-actions">
+        <h2 class="level-h"><span class="level-badge">③a</span> Workflow actions — commit / merge</h2>
+        <p class="level-sub">A <code>type: action</code> step — the <b>automated sibling of <code>human_gate</code></b>: a declared
+        operation runs (via a runner), produces a structured <b>outcome</b>, and the outcome <b>selects a route</b> from an
+        <code>outcomes</code> map. It closes the L3-deferred &ldquo;resume action&rdquo; hole (the anchor’s <code>commit_pending</code>
+        <code>type: wait</code> step grows up into a <code>type: action</code>). <b>③ Workflow Actions</b> is the general capability;
+        <b>③a</b> is the realized cut: <code>trigger: operator_intent</code>, anchored on COMMIT + MERGE. The <code>auto</code>
+        trigger (run on arrival, e.g. a perf-test) is the same contract, later. Kernel-touching — the pseudocode diffs against ②.</p>
+
+        <p><b>Action vs gate.</b> A <b>gate</b> (L2) sits before an <em>already-chosen</em> transition and says <code>allow | warn |
+        block</code> — it never picks a target. An <b>action</b> runs as a step, <em>produces</em> an <code>outcome_key</code>, and
+        <code>outcomes[outcome_key].target</code> picks the next transition. Same runner family (L2a), different graph-role: a gate
+        filters, an action selects.</p>
+
+        <div class="note">
+          <b>Scope note (a v3 semantic shift, stated).</b> The anchor routes <code>approve → commit_action → merge_action → done</code>,
+          so workflow-<code>done</code> lands <em>after</em> merge. v1’s <code>DONE</code> was a <em>commit-complete</em> state with merge a
+          separate post-<code>DONE</code> command. We accept the cleaner v3 model (merge is a normal pre-terminal action step, the
+          worktree lives through it, release fires at <code>merge_completed</code>) — the alternative (keep v1’s DONE-before-merge)
+          would need a post-terminal action shape, which we deliberately avoid here.</div>
+
+        <h3 class="view-h"><span class="view-tag" style="background:#e2e8f0;color:#334155">Shape</span> action ⟷ human_gate (workflow-actions aid)</h3>
+        <p>Both are keyed routing maps over <code>apply_target_entry_effects</code>; only the <b>selector</b> differs — a human picks
+        a decision key, a runner’s result picks an outcome key. The kernel knows neither key’s meaning (de-vocabularized, as at L3).</p>
+        <pre class="pseudo" style="font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size:12.5px; line-height:1.5">
+  human_gate (L3)                         action (③)
+  ─────────────────────────────          ─────────────────────────────
+  a HUMAN picks a decision key            a RUNNER’s result picks an outcome key
+  decisions: { approve: {target},         outcomes: { committed: {target},
+               request_rework: {target,                 merged: {target, emits},
+                                payload} }               conflict: {target} }
+  SUBMIT_DECISION → decisions[verdict]     RUN_ACTION → run → outcomes[outcome_key]
+                  ↓                                         ↓
+              apply_target_entry_effects(target)  ← the SAME generic arrival
+
+  the action-step lifecycle (operator-triggered, MVP):
+    arrive(action step) → WAITING(action_pending)        [output: ActionRequest — what to run, what payload]
+         operator RUN_ACTION(key, payload)
+            ├─ payload invalid          → Rejected(missing_required_field)   (trigger-validation; no run)
+            └─ run action in workspace  → outcome_key
+                   ├─ ok (committed/merged)  → outcomes[key].target  (+ emits → ② release)
+                   ├─ business_failure       → self-target ⇒ stay parked, operator retries
+                   └─ infra_error            → stay parked (audited), operator retries
+        </pre>
+
+        <h3 class="view-h"><span class="view-tag runtime">Runtime</span> A concrete trace</h3>
+        <div class="trace">
+          <div class="trace-row"><div class="trace-n">1</div><div class="trace-c">
+            <div class="ev">the operator approves; <code>apply_target_entry_effects</code> arrives at <code>commit_action</code></div>
+            <div class="meta">it is a <code>type: action</code> step (<code>trigger: operator_intent</code>) → <code>park_for_action</code> sets <b>WAITING(action_pending)</b>; the output is an <code>ActionRequest { action_key: COMMIT, runner: pairflow.git_commit, required_payload: { message } }</code> — the operator-facing surface (no agent dispatched)</div>
+          </div></div>
+          <div class="trace-row"><div class="trace-n">2</div><div class="trace-c">
+            <div class="ev">operator runs <code>RUN_ACTION(COMMIT, payload: { message: &quot;feat: add X&quot; })</code></div>
+            <div class="meta">guards pass (action_pending ✓ · trigger correlates ✓ · operator authorized ✓ · op_id fresh); <b>trigger-validation</b> (payload only): <code>message</code> present ✓ → the runner runs <code>git commit</code> in the worktree → <code>classify → committed</code> (commit_sha) → append <code>ACTION_RESULT { outcome: committed, commit_sha }</code> → route <code>outcomes[committed].target = merge_action</code> → re-park <b>WAITING(action_pending)</b> for MERGE</div>
+          </div></div>
+          <div class="trace-row"><div class="trace-n">3</div><div class="trace-c">
+            <div class="ev">operator runs <code>RUN_ACTION(MERGE)</code></div>
+            <div class="meta">runner runs <code>git merge --no-ff</code> into base → <code>merged</code> (merge_sha) → append <code>ACTION_RESULT</code> → route <code>outcomes[merged].target = done</code> <b>and</b> <code>emits: merge_completed</code> → <code>apply_target_entry_effects(done)</code> = <b>TERMINAL(done)</b>. Post-commit, <code>boundary_events_of</code> = <code>[merge_completed, terminal]</code>; the template declares <code>release.boundaries: [merge_completed]</code> → <code>initiate_release(merge_completed)</code> releases the worktree (②); <code>terminal</code> no-ops (not declared)</div>
+          </div></div>
+          <div class="trace-row"><div class="trace-n">4</div><div class="trace-c">
+            <div class="ev">(alternate, at step 3) the merge conflicts</div>
+            <div class="meta">the runner auto-aborts (<code>git merge --abort</code>) → <code>classify → conflict</code> → append <code>ACTION_RESULT { outcome: conflict }</code> → route <code>outcomes[conflict].target = merge_action</code> (self) → <b>re-park action_pending</b>; the operator resolves the conflict and re-triggers <code>MERGE</code>. A bad/empty commit message at step 2 instead is <code>Rejected(missing_required_field)</code> — the action never runs</div>
+          </div></div>
+        </div>
+        <div class="note runtime">
+          The split <b>trigger-validation vs action-outcome</b> is the load-bearing line: the trigger validates only the
+          <em>payload</em> (the commit message) — a missing one is rejected before anything runs; <em>workspace reality</em>
+          (nothing staged, merge conflict) is an <b>action business_failure</b> that stays parked for a retry; a crashed runner
+          (git unavailable) is <code>infra_error</code>, also a parked retry.</div>
+
+        <h3 class="view-h"><span class="view-tag pseudo">Pseudocode</span> The action step + RUN_ACTION</h3>
+        <p>A new operator-intent handler <code>RUN_ACTION</code> (the automated <code>SUBMIT_DECISION</code>), an <code>ActionRunner</code>
+        contract (the L2a runner family), <code>park_for_action</code> / <code>action_request</code>, and <code>boundary_events_of</code>
+        extended so an outcome’s <code>emits</code> reaches ②. Diffs against ②:</p>
+        <div class="code-diff" aria-label="Workflow actions pseudocode" data-old-label="② baseline" data-new-label="③a workflow actions">
+          <script type="text/plain" class="diff-source" data-code-old-ref="release-pseudocode"></script>
+          <script type="text/plain" class="diff-source" data-code-new data-code-id="action-pseudocode">
+resolve_agent_config(template, step, instance) → AgentConfig
+  base      ← template.role(step.role).default_agent_config            # role default
+  with_step ← merge(base, step.agent_config)                           # step override (scalars overwrite; arrays/maps replace)
+  override  ← instance.run_overrides.get(step.id, empty_config)         # start/run override (optional per step)
+  # portable run intent; not actor-adapted, provisioned, or attested at L0c
+  RETURN      merge(with_step, override)
+
+capability(template, role, step_id) → action set                       # role × step → allowed actions
+  step    ← template.step(step_id)
+  profile ← template.capability_profile.get((role, step_id))
+  IF profile is not none THEN RETURN profile.allowed                    # explicit restriction (none in the baseline)
+  IF role = step.role THEN RETURN event_types_of(step.transitions)      # default-derived: own role may emit the step's transitions
+  RETURN empty_set                                                      # any other role may emit nothing here
+
+# GateEvaluator — shared gate contract; L2a adds inline external.process to L2 core's declarative/packaged
+INTERFACE GateEvaluator:
+  implementation: declarative | packaged | process      # L2a realizes inline process too; only DEFERRED execution stays out (later slice)
+  execution:      inline | deferred                      # still inline only — deferred is a later lifecycle slice (gate_pending + GATE_RESULT)
+  evaluate(config, projection) → GateDecision            # in-process (declarative/packaged); a process gate runs via run_process_gate instead
+
+gate_projection(instance, template, envelope) → Projection   # policy-facing read model — read-only, derived; the policy reads, never mutates
+  RETURN {
+    round:        instance.round,                       # canonical, kernel-maintained, commit-derived, transcript-reconstructable
+    current_step: instance.current_step,
+    event_type:   envelope.type,
+    history:      derive_policy_view(instance.transcript) }   # derived view (prior verdicts / alternation); the projection exposes no raw transcript, though the kernel derives it from one
+
+# ProcessGateRunner — the executor that spawns an external gate process; the kernel owns the contract, the runner owns the spawn
+INTERFACE ProcessGateRunner:
+  run(command, { cwd, stdin, timeout_ms }) → ProcessResult   # { kind: ok | timeout | runner_error, exit_code?, stdout?, log_ref, duration_ms }
+
+run_process_gate(gate, instance, template, envelope) → GateDecision   # L2a — inline external.process, in the workspace, bounded timeout
+  invocation ← GateInvocation {
+    instance_id: instance.id, template_ref: instance.template_ref,
+    step_id: instance.current_step, event_type: envelope.type, expected_version: instance.version,
+    config:     gate.config,                                          # snapshot of the authored GateBinding.config
+    projection: compact(gate_projection(instance, template, envelope)) }   # MVP: small inline payload (NOT projection_ref + SDK)
+  result ← processRunner.run(gate.config.command, {
+    cwd: runtime_context_workspace(instance),                         # runs in the provisioned workspace (v1: the worktree)
+    stdin: json(invocation), timeout_ms: gate.config.timeout_ms })    # bounded timeout — a v3 addition (v1 had none)
+  # evidence (log + exit_code + duration + head_sha + git_status_hash) is persisted on EVERY run (v1-faithful)
+  RETURN classify_process_result(result, gate.config)
+
+classify_process_result(result, config) → GateDecision
+  output_mode     ← config.output.mode      ?? exit_code             # contract defaults (absent ⇒ these) — resolved once
+  on_runner_error ← config.on_runner_error  ?? block_transition
+  on_timeout      ← config.on_timeout       ?? block_transition
+  IF result.kind = timeout      THEN RETURN runner_outcome(on_timeout,      timeout,      result.log_ref)
+  IF result.kind = runner_error THEN RETURN runner_outcome(on_runner_error, runner_error, result.log_ref)   # spawn / workspace-missing (malformed JSON has its own branch below)
+  MATCH output_mode:                                                 # never guess "JSON wins"
+    exit_code          → RETURN { verdict: config.on_exit[bucket(result.exit_code)],   # buckets: "0" | nonzero → allow | warn | block (values allowlisted at definition load)
+                                  reason: exit_reason(result.exit_code), evidence_refs: [result.log_ref] }
+    gate_decision_json → parsed ← try_parse_gate_decision(result.stdout)               # opt-in; schema allowlists verdict ∈ { allow, warn, block } — route is invalid until the routing slice
+                         IF parsed is none THEN RETURN runner_outcome(on_runner_error, malformed_gate_decision_json, result.log_ref)   # unparseable / schema-invalid (incl. a disallowed verdict) ⇒ runner outcome, NOT a business block
+                         RETURN with_evidence(parsed, result.log_ref)
+
+runner_outcome(disposition, reason, log_ref) → GateDecision          # MVP realizes ONLY block_transition
+  # fail_instance is rejected at definition load (gate_config_not_supported), so block_transition is the only value that reaches here — fail-closed
+  RETURN { verdict: block, reason, evidence_refs: [log_ref] }        # audited distinctly: runner_error / timeout / malformed, not test_failed
+
+validate_gate_config(template) → ok | Rejected                       # run at definition load (CREATE_INSTANCE) — fail at create, not mid-run; the static analog of binding coverage
+  FOR gate IN all_gate_bindings(template):                            # every (step, event_type) gate in the pinned definition
+    IF gate.uses ≠ external.process THEN CONTINUE                     # only process gates carry an execution config to validate
+    cfg ← gate.config
+    IF template.runtime_context = none
+       THEN RETURN Rejected(runtime_context_required_for_process_gate)        # a process gate has no workspace in a context-free workflow
+    IF cfg.command is absent OR cfg.timeout_ms is absent
+       THEN RETURN Rejected(invalid_process_gate_config)                      # command + bounded timeout are mandatory
+    # disposition allowlist — block_transition is the only realized value (absent ⇒ block_transition default)
+    FOR disposition IN [cfg.on_runner_error, cfg.on_timeout]:
+      IF disposition is absent          THEN CONTINUE                          # absent ⇒ block_transition default
+      IF disposition = fail_instance    THEN RETURN Rejected(gate_config_not_supported)    # reserved future disposition (distinct reason)
+      IF disposition ≠ block_transition THEN RETURN Rejected(invalid_process_gate_config)  # any other value is unknown
+    # output mode — exit_code is the default; only an explicit-but-unknown value is invalid
+    IF cfg.output.mode is present AND cfg.output.mode NOT IN { exit_code, gate_decision_json }
+       THEN RETURN Rejected(invalid_process_gate_config)
+    IF (cfg.output.mode ?? exit_code) = exit_code THEN                        # exit_code mode (incl. the default when output.mode is absent)
+      IF cfg.on_exit["0"] is absent OR cfg.on_exit[nonzero] is absent
+         THEN RETURN Rejected(invalid_process_gate_config)                    # both exit buckets are required
+      IF cfg.on_exit["0"] NOT IN { allow, warn, block } OR cfg.on_exit[nonzero] NOT IN { allow, warn, block }
+         THEN RETURN Rejected(invalid_process_gate_config)                    # buckets map only to realized verdicts — no route smuggled in
+  RETURN ok
+
+validate_context_refs(template) → ok | Rejected                       # definition load (CREATE_INSTANCE) — fail at create; the static analog of binding coverage / validate_gate_config
+  catalog ← template.context_blocks                                   # id → { body }; the single body source
+  FOR ref IN all_issued_context_block_refs(template):                 # every role/step prompt_concern_ref + gate context_block_ref
+    IF ref NOT IN catalog THEN RETURN Rejected(unresolved_context_block_ref)
+  RETURN ok                                                           # existence only — NOT semantic parity between a block’s prose and the gate config it describes
+
+# Loader-owned schema validation: this sketch names the load-bearing invariants the kernel requires from
+# the pinned template; it is NOT a full JSON Schema. It is this detailed because each rejected shape would
+# change runtime SEMANTICS (a dropped required field, a misrouted decision), not merely form. Further lexical
+# refinements (valid-identifier decision keys, field-name conventions) belong to the later general template schema.
+validate_decision_gates(template) → ok | Rejected                     # L3 — definition load (CREATE_INSTANCE); the generic decision vocabulary must not be a loose string-map. Fail at create, beside validate_gate_config / validate_context_refs
+  FOR step IN human_gate_steps(template):
+    IF step.decisions is absent OR step.decisions is not a map THEN RETURN Rejected(invalid_decision_gate_config)   # the decisions map must be a map (not a scalar/list) — a human_gate's transition vocabulary
+    IF step.decisions is empty THEN RETURN Rejected(decision_gate_empty)              # ...and must offer at least one decision
+    FOR (key, choice) IN step.decisions:
+      IF choice is not a map                   THEN RETURN Rejected(invalid_decision_gate_config)   # each decision entry must be a map { target, payload? }
+      IF keys_of(choice) ⊄ { target, payload } THEN RETURN Rejected(invalid_decision_gate_config)   # CLOSED entry — an unknown key (e.g. a `paylod` typo) silently dropping the required-instruction rule is rejected, not ignored
+      IF template.step(choice.target) is none  THEN RETURN Rejected(decision_target_unresolved)   # every decision routes to a declared step
+      IF choice.payload is present AND choice.payload is not a map THEN RETURN Rejected(invalid_decision_payload_schema)   # the payload schema itself must be a map (absent is fine) — not a scalar/list (e.g. payload: true / "instruction")
+      FOR (field, spec) IN (choice.payload ?? {}):                    # MVP payload schema is minimal + CLOSED: per field only { required: bool } — keeps the generic map from being a loose string-map
+        IF spec is not a map                           THEN RETURN Rejected(invalid_decision_payload_schema)   # the field spec must be an object { required: bool } — not a scalar (e.g. instruction: true / "required")
+        IF keys_of(spec) ⊄ { required }                THEN RETURN Rejected(invalid_decision_payload_schema)   # no nested types / unknown schema keys yet (e.g. type: markdown)
+        IF spec.required is present AND spec.required NOT IN { true, false } THEN RETURN Rejected(invalid_decision_payload_schema)   # required must be a bool (e.g. NOT "yes")
+  FOR edge IN transitions_with_recommends(template):                  # `recommends` is meaningful ONLY on an edge whose target is a human_gate
+    IF NOT is_human_gate(template, edge.target) THEN RETURN Rejected(recommends_on_non_gate)
+    IF edge.recommends NOT IN keys_of(template.step(edge.target).decisions)
+       THEN RETURN Rejected(recommends_unknown_decision)              # a recommendation must name an existing decision key of its target gate
+  RETURN ok
+
+RECEIVE(input) → Outcome                                               # one kernel entry; route by input source class
+  outcome ← MATCH input.source:
+    operator_intent → dispatch to CREATE_INSTANCE / START / KICKOFF / SUBMIT_DECISION / RESUME_WAIT / RUN_ACTION / CANCEL   # lifecycle + human-decision + wait-resume + action-run intents
+    kernel_event    → dispatch to RUNTIME_CONTEXT_READY / RUNTIME_CONTEXT_RELEASED / FAIL               # internal events (done is internal-only, below)
+    actor_envelope  → HANDLE(input)                                           # the L0a–L1 actor handler, now lifecycle-guarded
+  FOR boundary_event IN boundary_events_of(outcome, instance):   # ② the release-boundary events THIS committed transition produced (now: terminal; ③a actions add merge_completed etc.)
+    initiate_release(instance, boundary_event)                    # POST-COMMIT side effect; the declared release.boundaries decides — terminal is NOT a kernel default, just a possible event
+  RETURN outcome
+
+# Convenience operator API, not a kernel primitive: a single "start workflow" command may
+# compose CREATE_INSTANCE(...) then START(instance). activation_mode controls what happens
+# after RUNTIME_CONTEXT_READY (activate vs WAITING(kickoff_pending)) — not whether CREATE dispatches.
+CREATE_INSTANCE(template_ref, activation_mode, task, binding, run_overrides) → Created   # operator_intent; template + binding resolved on the start path (formalized by L0f)
+  template ← definitionStore.load(template_ref)                # a pinned definition — a plain template, or an L0f-resolved definition (slots applied)
+  IF activation_mode = immediate AND task is absent THEN RETURN Rejected(task_required)
+  REQUIRE binding covers every role reachable in template      # binding resolved pre-kernel; the kernel only validates coverage (fail at create, not mid-run)
+  REQUIRE validate_gate_config(template)                          # L2a: static gate-config invariants (process↔workspace, no fail_instance) — definition-load validation, fail at create
+  REQUIRE validate_context_refs(template)                         # L2b: every issued context_block ref resolves in the catalog — fail at create, beside binding coverage
+  REQUIRE validate_decision_gates(template)                       # L3: every human_gate's decisions resolve, and every `recommends` names a real decision key of its target gate
+  REQUIRE validate_release_policy(template)                       # ②: a teardown-managed runtime_context MUST declare runtime_context.release (policy + non-empty boundaries when required)
+  REQUIRE validate_action_steps(template)                         # ③: every type: action step has a runner + non-empty outcomes whose targets resolve
+  instance ← create { template_ref, task, binding, activation_mode,
+                      kernel_status: CREATED, current_step: none, round: 0,   # round 0 = prepared, no work cycle begun yet (position none until ACTIVE)
+                      runtime_context: none, run_overrides: snapshot(run_overrides), version: 1 }
+  COMMIT instance creation
+  RETURN Created(instance.version)                             # no dispatch yet — not active
+
+# RuntimeContextProvider — a named, core-adjacent fulfiller; the kernel owns this CONTRACT, the provider owns the mechanics
+INTERFACE RuntimeContextProvider:
+  provision(instance_id, request_id, spec)            # async → later fires RUNTIME_CONTEXT_READY(request_id, ref)
+  project_for_actor(runtime_context_ref) → RuntimeContextProjection   # kind-specific actor-facing view; kernel-internal fields stay out
+  release(instance_id, request_id, runtime_context_ref)               # ② async → later fires RUNTIME_CONTEXT_RELEASED(request_id, result); the `provision` mirror
+  teardown_managed → bool                                             # ② does the kernel own this resource's release? worktree = true; a shared / externally-managed provider = false
+# instance.runtime_context lifecycle: none | requested(req) | ready(ref) | releasing(req, ref) | released | release_failed(ref, reason, evidence_refs)
+#   ② under release.policy: required, ready(ref) carries a RELEASE OBLIGATION (retained / external carry none); released = tombstone (provisioned-then-released ≠ never-provisioned); release_failed(ref) = retriable release handle, NOT a usable runtime
+
+# ② definition load (CREATE_INSTANCE): a teardown-managed provider MUST declare how it is released — the release contract is the provision contract's pair
+validate_release_policy(template) → ok | Rejected
+  req ← template.runtime_context
+  IF req = none THEN RETURN ok                                       # context-free: nothing provisioned ⇒ nothing to release
+  IF NOT providerRegistry.resolve(req.spec.provider).teardown_managed THEN RETURN ok   # a shared / external provider owns its own lifecycle; no kernel release contract required
+  IF req.release is absent THEN RETURN Rejected(release_policy_undeclared)              # teardown-managed ⇒ runtime_context.release is mandatory
+  MATCH req.release.policy:
+    required            → IF req.release.boundaries is empty THEN RETURN Rejected(release_boundaries_empty) ELSE RETURN ok
+    retained | external → IF req.release.boundaries is present AND non-empty THEN RETURN Rejected(release_boundaries_not_allowed) ELSE RETURN ok   # EXPLICIT no-obligation ownership (retained = intentionally kept; external = owned elsewhere); declaring boundaries here would LOOK like release but never fire ⇒ reject
+    _                   → RETURN Rejected(invalid_release_policy)
+
+boundary_events_of(outcome, instance) → [boundary_event]            # ② which release-boundary events this committed transition produced
+  events ← outcome.boundary_events ?? [ ]                            # ③ an action outcome may declare `emits:` a boundary (the merge_action's `merged` ⇒ merge_completed)
+  IF outcome ∈ { Committed, Terminated } AND instance.kernel_status = TERMINAL THEN events ← events + [terminal]   # the terminal transition also EMITS `terminal`; release.policy decides whether either is a boundary
+  RETURN events
+
+release_boundaries(template) → [boundary_event]                     # ② the declared boundaries: requirement.release.boundaries under policy: required; empty for retained / external / absent ⇒ those NEVER auto-release
+  req ← template.runtime_context
+  IF req = none OR req.release is absent OR req.release.policy ≠ required THEN RETURN [ ]
+  RETURN req.release.boundaries
+
+START(instance) → Outcome                                             # operator_intent — guarded, single-shot
+  REQUIRE instance.kernel_status = CREATED AND instance.runtime_context = none
+  template ← definitionStore.load(instance.template_ref)
+  requirement ← template.runtime_context                              # RuntimeContextRequirement: none | required(spec) — single source of truth
+  IF requirement = none THEN                                          # the workflow declares no runtime context
+    instance.runtime_context ← ready(∅)                               # trivially ready — nothing to provision
+    RETURN activate_or_hold(instance)
+  provider ← providerRegistry.resolve(requirement.spec.provider)
+  IF provider is none THEN RETURN Rejected(runtime_context_provider_unavailable)   # name-resolution failure = base contract error
+  request_id ← new_request_id()
+  provider.provision(instance.id, request_id, requirement.spec)  # provider internals run git branch/worktree/clone mechanics; later fires RUNTIME_CONTEXT_READY
+  instance.runtime_context ← requested(request_id)          # the L0d single-shot marker; status stays CREATED (= v1 PREPARING_WORKSPACE)
+  RETURN Accepted
+
+activate_or_hold(instance) → Outcome                                 # shared post-readiness decision (provisioned or context-free)
+  IF instance.activation_mode = immediate THEN RETURN activate(instance)
+  instance.kernel_status ← WAITING                             # deferred_kickoff: hold for an operator kickoff
+  instance.wait ← { kind: kickoff_pending, requested_by: "activation", resume_events: [KICKOFF] }
+  RETURN Accepted
+
+RUNTIME_CONTEXT_READY(instance, request_id, runtime_context_ref) → Outcome   # kernel_event (v1: workspace/worktree ready)
+  REQUIRE instance.runtime_context = requested(request_id)   # L0d correlation: the readiness for the request we issued
+  template ← definitionStore.load(instance.template_ref)
+  requirement ← template.runtime_context
+  REQUIRE requirement = required(spec)                       # a request was issued ⇒ a context is required (made explicit)
+  REQUIRE runtime_context_ref.kind = spec.kind              # L0e kind-boundary — a provider may only return a ref of the requested kind
+  instance.runtime_context ← ready(runtime_context_ref)    # kernel guards kind + correlation only; the locator stays provider-defined, unvalidated
+  RETURN activate_or_hold(instance)
+
+initiate_release(instance, boundary_event)                         # ② discharge the release obligation at a DECLARED boundary; runs POST-COMMIT from RECEIVE, never inside another transition's commit
+  IF instance.runtime_context = ready(∅) THEN RETURN               # context-free: nothing was provisioned (the empty sentinel) — no obligation
+  IF instance.runtime_context is not ready(ref) THEN RETURN         # nothing else to release: none / requested / already releasing|released|release_failed (ready(∅) handled above)
+  template     ← definitionStore.load(instance.template_ref)
+  requirement  ← template.runtime_context                          # required(spec) — a ready(ref) implies it was required
+  IF boundary_event ∉ release_boundaries(template) THEN RETURN      # not a declared release boundary for THIS run: the hook offers `terminal`, ③a will offer `merge_completed` — release.boundaries (policy: required) decides; empty for retained / external ⇒ never auto-release. terminal is just an event, not a kernel default
+  IF NOT release_safe(instance) THEN                                # ① INV-5: a canonical ref still points into the resource ⇒ releasing would orphan it — do NOT release
+    COMMIT atomically at expected_version = instance.version:       # CAS-guarded like every state write — a concurrent hook on the same ready(ref) records the failure at most once
+      REQUIRE instance.runtime_context = ready(ref)
+      instance.runtime_context ← release_failed(ref, reason: not_safe)
+      instance.transcript.append(RUNTIME_CONTEXT_RELEASE_FAILED { phase: precondition, reason: not_safe })
+      instance.version ← instance.version + 1
+    RETURN
+  provider ← providerRegistry.resolve(requirement.spec.provider)    # the same pinned-template provider that provisioned
+  IF provider is none THEN                                          # pre-dispatch INITIATION failure, before any in-flight marker
+    COMMIT atomically at expected_version = instance.version:       # same CAS single-winner guard — no marker, just the failure transition
+      REQUIRE instance.runtime_context = ready(ref)
+      instance.runtime_context ← release_failed(ref, reason: provider_unavailable)
+      instance.transcript.append(RUNTIME_CONTEXT_RELEASE_FAILED { phase: initiation, reason: provider_unavailable })
+      instance.version ← instance.version + 1
+    RETURN
+  request_id ← new_request_id()
+  # CAS SINGLE-WINNER + marker-first: only one initiation wins the move from ready(ref); the durable marker is
+  # persisted BEFORE dispatch so the correlation target exists before the provider can fire. A crash in the
+  # persist→dispatch window leaves a durable releasing(req, ref) the L9 watchdog reconciles (no auto-retry here).
+  COMMIT atomically at expected_version = instance.version:
+    REQUIRE instance.runtime_context = ready(ref)                  # the CAS guard: a concurrent initiation that already won (now releasing) loses on reload ⇒ not ready ⇒ no-op
+    instance.runtime_context ← releasing(request_id, ref)          # durable IN-FLIGHT marker; carries the ref for the completion handler / retry
+    instance.transcript.append(RUNTIME_CONTEXT_RELEASING { request_id })
+    instance.version ← instance.version + 1
+  TRY provider.release(instance.id, request_id, ref)              # POST-COMMIT side effect → later fires RUNTIME_CONTEXT_RELEASED(request_id, result)
+  ON dispatch_error(reason):                                       # could not even START the release → a follow-up versioned transition records it
+    COMMIT atomically at expected_version = instance.version:
+      REQUIRE instance.runtime_context = releasing(request_id, ref)   # still OUR in-flight release (a racing RUNTIME_CONTEXT_RELEASED may have moved it) — else write no wrong release_failed
+      instance.runtime_context ← release_failed(ref, reason: initiation(reason))
+      instance.transcript.append(RUNTIME_CONTEXT_RELEASE_FAILED { phase: initiation, reason })
+      instance.version ← instance.version + 1
+
+RUNTIME_CONTEXT_RELEASED(instance, request_id, result) → Outcome    # kernel_event — the provider finished (the RUNTIME_CONTEXT_READY mirror); ORTHOGONAL: never changes kernel_status / current_step / terminal_disposition
+  REQUIRE instance.runtime_context = releasing(request_id, ref)     # correlation: the release WE dispatched, binding the ref it carries (a stale / duplicate event ⇒ Rejected)
+  IF result.kind = ok THEN
+    instance.runtime_context ← released                            # tombstone — the obligation is DISCHARGED
+    instance.transcript.append(RUNTIME_CONTEXT_RELEASED { request_id, evidence_refs: result.evidence_refs })
+    RETURN Accepted
+  instance.runtime_context ← release_failed(ref, reason: result.reason, evidence_refs: result.evidence_refs)   # the ref bound from releasing(request_id, ref); provider-reported failure, possibly PARTIAL (worktree gone, branch not) — a retriable release handle, NOT a usable runtime
+  instance.transcript.append(RUNTIME_CONTEXT_RELEASE_FAILED { phase: provider, reason: result.reason })
+  RETURN Accepted                                                   # obligation RETAINED (tracked through failure until discharged); auto-retry / timeout / watchdog = L9
+
+KICKOFF(instance, task) → Outcome                                     # operator_intent
+  REQUIRE instance.kernel_status = WAITING AND instance.wait.kind = kickoff_pending
+  instance.task ← task                                         # the deferred task, supplied now
+  RETURN activate(instance)
+
+SUBMIT_DECISION(decision) → Outcome                                  # operator_intent — a KICKOFF sibling; resumes WAITING(human_decision). decision = { instance_id, op_id, expected_version, request_ref, verdict, override?, payload?, by }. verdict is a DECLARED decision key — the kernel knows no decision names
+  instance ← instanceStore.load(decision.instance_id)
+  IF instance is none                              THEN RETURN Rejected(unknown_instance)
+  IF instance.transcript.has(decision.op_id)       THEN RETURN Duplicate                       # idempotency — same (instance_id, op_id) scope as HANDLE
+  IF instance.kernel_status ≠ WAITING OR instance.wait.kind ≠ human_decision
+                                                   THEN RETURN Rejected(not_awaiting_decision)  # only a parked human_gate accepts a decision
+  IF decision.request_ref ≠ instance.wait.request_ref  THEN RETURN Rejected(decision_request_mismatch)   # correlation to THIS pending DECISION_REQUEST
+  IF decision.expected_version ≠ instance.version  THEN RETURN Stale(instance.version)          # CAS precheck (actor-supplied stale-intent, as in HANDLE)
+  template ← definitionStore.load(instance.template_ref)
+  step     ← template.step(instance.current_step)                   # the human_gate
+  IF decision.by ≠ instance.binding[step.role]     THEN RETURN Rejected(operator_not_authorized)   # operator authority on THIS path — NOT the L1 actor-envelope gate (a human decision is a different input class)
+  choice   ← step.decisions[decision.verdict]                       # a human_gate's decisions map IS its transition map, keyed by decision key; the kernel routes by the key — it does not know what "approve" means
+  IF choice is none                                THEN RETURN Rejected(unknown_decision)        # the verdict must be one of the gate's declared decision keys
+  # required payload fields — declared per decision (the anchor's request_rework requires a non-empty instruction); generic, NO verdict name is hardcoded
+  FOR field IN required_fields(choice):
+    IF decision.payload[field] is absent OR empty  THEN RETURN Rejected(missing_required_field)
+  request  ← pending_decision_request(instance)                     # the DECISION_REQUEST recorded on entry
+  # override (the fiduciary invariant): override is meaningful ONLY against a recorded recommendation — choosing against the machine must be explicit and recorded
+  against_recommendation ← request.recommendation is present AND decision.verdict ≠ request.recommendation
+  IF against_recommendation     AND NOT decision.override THEN RETURN Rejected(override_required)        # went against the recommendation without flagging it
+  IF NOT against_recommendation AND decision.override     THEN RETURN Rejected(override_not_applicable)  # no recommendation, or agreeing with it ⇒ there is nothing to override
+  COMMIT atomically at expected_version = instance.version:
+    entry ← DECISION_MADE { op_id: decision.op_id, decision: decision.verdict, payload: decision.payload, by: decision.by, request_ref: decision.request_ref }   # one generic entry; payload carries the decision's declared fields (e.g. rework's instruction + refs); op_id ⇒ the Duplicate-check idempotency key
+    IF decision.override THEN entry.override ← true                                            # recorded ONLY against a recommendation (guarded above: present iff chosen ≠ recommended) — absent otherwise, audit-clean
+    instance.transcript.append(entry)
+    IF advances_round(step.id, choice.target) THEN clear_stale_decision_context(instance)       # a loop-back (e.g. rework → implement) opens a new round and drops the stale review/approval context — keyed on round advancement, NOT a verdict name; the fresh payload stays as the handoff
+    apply_target_entry_effects(instance, template, step.id, choice.target)                      # GENERIC arrival: the TARGET's type decides park / dispatch / complete — the decision carries no lifecycle meaning. The SAME apply_target_entry_effects() HANDLE uses, so the entry paths never drift
+    instance.version ← instance.version + 1
+  RETURN Committed(instance.version, post_commit_output(instance, template))
+
+required_fields(choice) → [field]                                   # the payload fields a decision declares required (e.g. request_rework ⇒ instruction); empty when the decision needs no payload — the generic replacement for the hardcoded rework-instruction rule
+  RETURN [ f FOR (f, spec) IN (choice.payload ?? {}) WHERE spec.required ]
+
+apply_target_entry_effects(instance, template, from_step_id, target) → void                # L3 — apply the kernel effects of entering the already-chosen target: position (current_step), round advancement, and the target-type lifecycle outcome below. Shared by HANDLE / SUBMIT_DECISION / RESUME_WAIT so the entry paths never drift
+  instance.current_step ← target
+  IF advances_round(from_step_id, target) THEN instance.round ← instance.round + 1   # transition semantics; transcript-reconstructable
+  IF target is terminal THEN COMPLETE(instance) ; RETURN            # the existing HANDLE terminal-step rule → TERMINAL(done); no new terminal semantics at L3
+  step ← template.step(target)
+  IF is_human_gate(template, target) THEN park_for_human_decision(instance, template, step) ; RETURN   # a DECISION wait — WAITING(human_decision) + DECISION_REQUEST + the Ask
+  IF is_action_step(template, target) THEN park_for_action(instance, template, step) ; RETURN   # ③ a WORKFLOW ACTION — operator-triggered: park WAITING(action_pending) for the operator's RUN_ACTION trigger; the auto trigger (run on arrival) is later
+  IF is_wait_step(template, target)  THEN park_for_wait(instance, step)             ; RETURN          # a BARE wait — WAITING(step.wait.kind); RESUME_WAIT resumes it — only the resume ACTION (running the operation) is later. NO privileged "finalization" — commit/merge/perf-test are just wait steps
+  instance.kernel_status ← ACTIVE ; instance.wait ← none           # an agent step ⇒ resume ACTIVE; the dispatch is derived post-commit
+
+park_for_human_decision(instance, template, step) → void           # L3 — runs INSIDE the arrival commit; state + request as one visible transition
+  request_ref ← new_request_ref()
+  rec         ← incoming_recommendation(instance, template, step)   # the route that brought us here may carry a recommendation; none when the firing edge declared no `recommends`
+  instance.transcript.append(DECISION_REQUEST {
+    request_ref, recipient: step.role,
+    decisions:             decision_keys(step),                     # the gate's declared decision keys — the affordances offered to the human
+    recommendation:        rec.verdict,                             # the firing edge's `recommends` (a decision key); absent ⇒ every decision is equal, override never applies
+    recommendation_source: rec.source,                             # { from_step, event_type } of the edge that carried it — audit: WHERE the recommendation came from, not just what
+    context_ref:           payload_of_transition_into(instance, step.id) })
+  instance.kernel_status ← WAITING
+  instance.wait ← { kind: human_decision, requested_by: step.id, request_ref, resume_events: decision_keys(step) }
+
+incoming_recommendation(instance, template, step) → { verdict?, source? }   # L3 — read the `recommends` off the transition that routed the run into this gate. Build time declares the possibilities (per edge); runtime selects WHICH edge fired — the recommendation is the context of the arrival route, not a property of the gate
+  edge ← firing_transition_into(instance, step.id)                 # the (from_step, event_type) reconstructed from the arrival; parallels payload_of_transition_into
+  IF edge is none OR edge.recommends is absent THEN RETURN { }      # no recommendation on this route
+  RETURN { verdict: edge.recommends, source: { from_step: edge.from_step, event_type: edge.event_type } }
+
+decision_keys(step) → [key]                                         # a human_gate's declared decision keys = its transition vocabulary (the keys of step.decisions)
+  RETURN keys_of(step.decisions)
+
+park_for_wait(instance, step) → void                               # L3 — arrival at a type: wait step parks WAITING with the step's declared wait contract
+  instance.kernel_status ← WAITING
+  instance.wait ← { kind: step.wait.kind, requested_by: step.id, resume_events: step.wait.resume_events }   # e.g. commit_pending ⇐ [COMMIT], merge_pending ⇐ [MERGE], process_pending ⇐ [PERF_TEST_RESULT]; RESUME_WAIT is the handler (L3) — the resume ACTION is later; the L0d terminal set (done | failed | cancelled) is untouched
+
+post_commit_output(instance, template) → DispatchIntent | HumanDecisionRequest | none   # L3 — pure derivation (NO mutation): read the post-commit kernel_status that apply_target_entry_effects just set and select the outbound effect. The read-side dual of apply_target_entry_effects (which sets the status; this returns what to deliver)
+  IF instance.kernel_status = TERMINAL THEN RETURN none
+  IF instance.kernel_status = WAITING THEN
+     IF instance.wait.kind = human_decision THEN RETURN human_decision_request(instance, template)   # parked on a human_gate ⇒ the Ask
+     IF instance.wait.kind = action_pending THEN RETURN action_request(instance, template)   # ③ parked on a type: action ⇒ the ActionRequest (operator-facing surface; the decision-less HumanDecisionRequest analog)
+     RETURN none                                                  # parked on a bare wait (e.g. commit_pending) ⇒ no output; it waits for an inbound RESUME_WAIT event
+  RETURN dispatch_intent(instance, template, instance.current_step)   # ACTIVE ⇒ agent dispatch
+
+INTERFACE ActionRunner:                                            # ③ — runs a workflow action; the ProcessGateRunner family (L2a), but its result SELECTS a route (an action), not allow/block a chosen one (a gate)
+  run(action_spec, { cwd, payload, timeout_ms }) → ActionResult { kind: ok | business_failure | infra_error, outputs, evidence_refs }   # cwd = the runtime_context workspace; execution inline (MVP) | deferred (later). outputs carry e.g. commit_sha / merge_sha
+
+validate_action_steps(template) → ok | Rejected                    # ③ definition load (CREATE_INSTANCE): every type: action step is well-formed
+  FOR step IN action_steps(template):
+    IF step.action is absent OR step.action.uses is absent          THEN RETURN Rejected(invalid_action_step)
+    IF step.outcomes is absent OR step.outcomes is empty            THEN RETURN Rejected(action_outcomes_empty)
+    FOR (key, choice) IN step.outcomes:
+      IF template.step(choice.target) is none                       THEN RETURN Rejected(action_outcome_target_unresolved)
+  RETURN ok
+
+park_for_action(instance, template, step) → void                   # ③ — arrival at an operator-triggered type: action step; parks for the operator's RUN_ACTION trigger (no transcript entry — the ActionRequest is DERIVED, lighter than the human_gate's recorded DECISION_REQUEST)
+  instance.kernel_status ← WAITING
+  instance.wait ← { kind: action_pending, requested_by: step.id, resume_events: [step.action.key] }   # the action key (e.g. COMMIT, MERGE) is the trigger the operator sends
+
+action_request(instance, template) → ActionRequest                 # ③ — the operator-facing surface for a parked action; the decision-less analog of HumanDecisionRequest, DERIVED from the step (no stored request)
+  step     ← template.step(instance.current_step)
+  operator ← instance.binding[step.role]
+  RETURN ActionRequest {
+    instance_id, expected_version: instance.version,
+    action_key:       step.action.key,                             # the trigger to send (e.g. COMMIT, MERGE)
+    runner:           step.action.uses,
+    required_payload: requirements_for(step.action.payload),       # the SAME per-field {required} shape as a decision payload — TRIGGER-validation, not workspace state
+    context:          project_action_context(instance), operator }
+
+RUN_ACTION(trigger) → Outcome                                      # ③ operator_intent — run a parked action; the AUTOMATED sibling of SUBMIT_DECISION (the RUNNER's result picks the outcome, not a human)
+  instance ← load(trigger.instance_id)
+  IF instance.kernel_status ≠ WAITING OR instance.wait.kind ≠ action_pending THEN RETURN Rejected(not_awaiting_action)
+  IF trigger.action_key ∉ instance.wait.resume_events                        THEN RETURN Rejected(action_trigger_mismatch)
+  template ← definitionStore.load(instance.template_ref) ; step ← template.step(instance.current_step)
+  REQUIRE trigger.by = instance.binding[step.role]                 # operator authority on THIS path (like SUBMIT_DECISION; not the L1 actor gate)
+  REQUIRE not duplicate(trigger.op_id)                             # idempotency
+  # TRIGGER-VALIDATION — PAYLOAD ONLY (NOT workspace state): the human_gate missing_required_field analog
+  FOR field IN required_fields(step.action.payload):
+    IF trigger.payload[field] is absent OR empty THEN RETURN Rejected(missing_required_field)   # reject the trigger; NO action runs, no state change — operator fixes + retries
+  # run the ACTION (a side effect): the runner executes in the runtime_context workspace; the result classifies into an outcome_key
+  result      ← actionRunner(step.action.uses).run(step.action.spec, { cwd: runtime_context_workspace(instance), payload: trigger.payload })
+  outcome_key ← classify_action_result(step, result)              # committed | merged | conflict | nothing_staged | infra_error … — the WORKSPACE reality (unlike the payload-only trigger-validation)
+  IF outcome_key = infra_error AND infra_error ∉ keys_of(step.outcomes) THEN
+    instance.transcript.append(ACTION_RESULT { action_key: trigger.action_key, kind: infra_error, reason: result.reason, evidence_refs: result.evidence_refs })
+    RETURN Accepted                                               # stays WAITING(action_pending); operator retries — infra is not a business route by default
+  IF outcome_key ∉ keys_of(step.outcomes) THEN RETURN Rejected(unknown_action_outcome)   # a business result with no declared route = a config gap
+  choice ← step.outcomes[outcome_key]
+  COMMIT atomically at expected_version = instance.version:
+    instance.transcript.append(ACTION_RESULT { action_key: trigger.action_key, outcome: outcome_key, outputs: result.outputs, evidence_refs: result.evidence_refs })   # evidence (① INV-3): commit_sha / merge_sha / exit / hash inline (T1), logs T3
+    apply_target_entry_effects(instance, template, step.id, choice.target)   # ROUTE by the outcome — same generic arrival; a self-target (conflict → merge_action, nothing_staged → commit_action) re-parks action_pending (operator re-triggers)
+    instance.version ← instance.version + 1
+  RETURN Committed(instance.version, post_commit_output(instance, template), boundary_events: emits_of(choice))   # an outcome may `emits:` a release boundary (merged ⇒ merge_completed) → ② initiate_release
+
+human_decision_request(instance, template) → HumanDecisionRequest   # L3 — the human-facing analog of DispatchIntent (the Ask); local/manual delivery, durable channel L8
+  step     ← template.step(instance.current_step)
+  request  ← pending_decision_request(instance)
+  operator ← instance.binding[step.role]                            # the human bound to the operator role
+  RETURN HumanDecisionRequest {
+    instance_id, expected_version: instance.version, request_ref: request.request_ref,
+    operator, question: step.instruction,
+    recommendation: request.recommendation,                         # what the routing edge recommended (may be absent); the UI flags any choice ≠ recommendation as needing an explicit override
+    context: project_decision_context(instance, request),          # the task + handoff/diff the human needs to decide
+    allowed_decisions: decision_keys(step),                         # the gate's declared decision keys (anchor: approve | request_rework)
+    decision_requirements: requirements_for(step.decisions) }       # per-decision required payload fields, from the SAME declared decisions — e.g. request_rework ⇒ instruction required (the submit path rejects an empty one)
+
+RESUME_WAIT(event) → Outcome                                         # operator/kernel event resumes a type: wait step — the BARE-wait dual of SUBMIT_DECISION; generalizes KICKOFF. event = { instance_id, op_id, expected_version, type }
+  instance ← instanceStore.load(event.instance_id)
+  IF instance is none                              THEN RETURN Rejected(unknown_instance)
+  IF instance.transcript.has(event.op_id)          THEN RETURN Duplicate                       # idempotency — same (instance_id, op_id) scope as HANDLE
+  IF instance.kernel_status ≠ WAITING              THEN RETURN Rejected(not_waiting)            # only a parked instance can be resumed
+  IF event.type ∉ instance.wait.resume_events      THEN RETURN Rejected(resume_event_mismatch)  # correlation to THIS open wait's declared resume class
+  IF event.expected_version ≠ instance.version     THEN RETURN Stale(instance.version)          # CAS precheck
+  template ← definitionStore.load(instance.template_ref)
+  IF NOT is_wait_step(template, instance.current_step)  THEN RETURN Rejected(not_bare_wait)     # RESUME_WAIT resumes ONLY a type: wait step; a decision wait resumes via SUBMIT_DECISION
+  step     ← template.step(instance.current_step)
+  target   ← step.on_resume[event.type]
+  IF target is none                                THEN RETURN Rejected(no_resume_transition)   # the wait step must declare this resume route
+  COMMIT atomically at expected_version = instance.version:
+    instance.transcript.append(WAIT_RESUMED { op_id: event.op_id, kind: instance.wait.kind, event: event.type })   # the resume rides the transcript; a result payload, an authority hook, and the actual action (e.g. running git commit) are later slices
+    apply_target_entry_effects(instance, template, step.id, target)                     # the SAME apply_target_entry_effects() — routes by the target's type (here done ⇒ COMPLETE)
+    instance.version ← instance.version + 1
+  RETURN Committed(instance.version, post_commit_output(instance, template))
+
+activate(instance) → Outcome                                         # internal — produces the first dispatch
+  REQUIRE instance.runtime_context = ready AND instance.task present
+  template ← definitionStore.load(instance.template_ref)      # pinned immutable version — same template/instance boundary as HANDLE
+  instance.kernel_status ← ACTIVE
+  instance.current_step  ← template.start
+  instance.round         ← 1                                  # the first work cycle begins at activation: round 0 → 1 (the start step is a round-start)
+  RETURN Activated(dispatch_intent(instance, template, template.start))   # dispatch is a kernel output (L0b), not a side effect
+
+CANCEL(instance) → Outcome                                           # operator_intent — any non-terminal
+  REQUIRE instance.kernel_status ≠ TERMINAL
+  instance.kernel_status ← TERMINAL ; instance.terminal_disposition ← cancelled   # ② emits the terminal boundary event; RECEIVE's post-commit hook releases ONLY if terminal is a declared release boundary — never inside this mutation
+  RETURN Terminated(cancelled)
+
+COMPLETE(instance)                                                   # internal helper — finalizes a COMMITTED ARRIVAL into a terminal target (a HANDLE actor transition OR a resumed human decision, both via apply_target_entry_effects)
+  REQUIRE instance.kernel_status ≠ TERMINAL                            # was ACTIVE-only; apply_target_entry_effects() may complete from a resumed WAITING(human_decision) arrival too — only double-completion is barred
+  instance.kernel_status ← TERMINAL ; instance.terminal_disposition ← done   # ② emits the terminal boundary event; RECEIVE's post-commit hook initiates release ONLY if terminal ∈ the declared release.boundaries (a deferred boundary, e.g. merge_completed, is ③a)
+
+FAIL(instance, reason) → Outcome                                     # kernel_event — any non-terminal
+  REQUIRE instance.kernel_status ≠ TERMINAL
+  instance.kernel_status ← TERMINAL ; instance.terminal_disposition ← failed ; instance.failure_reason ← reason   # ② a failed run emits the terminal boundary event too — released ONLY if terminal is a declared boundary, post-commit via RECEIVE's hook
+  RETURN Terminated(failed)
+
+HANDLE envelope → Outcome
+  IF not valid_shape(envelope)            THEN RETURN Rejected(invalid_shape)
+
+  instance ← instanceStore.load(envelope.instance_id)
+  IF instance is none                     THEN RETURN Rejected(unknown_instance)
+  template ← definitionStore.load(instance.template_ref)   # separate store; pinned immutable version
+
+  # idempotency, key scope (instance_id, op_id)
+  IF instance.transcript.has(envelope.op_id) THEN RETURN Duplicate   # no-op, no 2nd entry
+
+  # L0d: lifecycle guard — actor emits only in actor-routable ACTIVE execution
+  IF instance.kernel_status ≠ ACTIVE       THEN RETURN Rejected(not_active)
+
+  # actor-supplied stale-intent — mandatory at L0b
+  IF envelope.expected_version is missing  THEN RETURN Rejected(missing_version)
+  IF envelope.expected_version ≠ instance.version THEN RETURN Stale(instance.version)
+
+  step   ← template.step(instance.current_step)
+
+  # L1: role authority — the claimed role must be this position's active role
+  IF envelope.expected_role is missing     THEN RETURN Rejected(missing_role)          # mandatory at L1
+  IF envelope.expected_role ≠ step.role    THEN RETURN Rejected(role_not_authorized)
+
+  target ← step.transitions[envelope.type]   # navigation (L0b): does this action exist here?
+  IF target is none                       THEN RETURN Rejected(no_transition)
+
+  # L1: action authorization — exists as a transition, but may this role emit it here?
+  IF envelope.type not in capability(template, step.role, instance.current_step)
+                                          THEN RETURN Rejected(not_authorized)
+
+  # L2: policy gate pipeline — the transition exists (L0b) and is authorized (L1); do the policies allow it now?
+  gate_decisions ← []                                                                       # retained allow/warn verdicts + evidence refs, carried to the commit
+  FOR gate IN template.gates_for(instance.current_step, envelope.type):   # ordered, authored; empty for ungated transitions
+    evaluator ← gateRegistry.resolve(gate.uses)
+    IF evaluator is none            THEN RETURN Rejected(gate_evaluator_unavailable)      # config invariant — unresolved gate name
+    IF evaluator.execution ≠ inline THEN RETURN Rejected(gate_execution_not_supported)    # deferred ⇒ later lifecycle slice (gate_pending + GATE_RESULT)
+    IF evaluator.implementation = process                                                 # L2a: inline process now runs (was rejected at L2 core)
+      THEN IF instance.runtime_context = ready(∅) THEN RETURN Rejected(runtime_context_required_for_process_gate)   # ready(∅) = context-free: validate_gate_config rejects this at definition load; runtime backstop here
+           decision ← run_process_gate(gate, instance, template, envelope)                # spawn in the workspace, bounded timeout
+      ELSE decision ← evaluator.evaluate(gate.config, gate_projection(instance, template, envelope))   # declarative / packaged, in-process
+    IF decision.verdict = block     THEN RETURN Rejected(gate_blocked(decision.reason), decision.evidence_refs)   # no commit ⇒ round not burned; refs surfaced
+    gate_decisions.append(decision)                                                       # allow or warn ⇒ retained (verdict + evidence_refs + diagnostics)
+    # allow or warn ⇒ next gate in the pipeline
+
+  issued_config ← resolve_agent_config(template, step, instance)   # resolved only now — not for a rejected envelope
+
+  # one atomic commit, CAS on instance.version
+  COMMIT atomically at expected_version = instance.version:
+    instance.transcript.append(envelope, issued_agent_config: issued_config, gate_decisions: gate_decisions)   # provenance: issued config + gate verdicts / evidence refs
+    apply_target_entry_effects(instance, template, step.id, target)                       # L3 — generic arrival: target type decides advance / park / complete (the same apply_target_entry_effects() SUBMIT_DECISION uses)
+    instance.version ← instance.version + 1
+  # on CAS conflict: restart HANDLE from load —
+  #   re-check idempotency and re-resolve the transition;
+  #   never re-commit a target computed from stale state
+
+  intent ← post_commit_output(instance, template)                # derive after commit: TERMINAL ⇒ none, parked on a human_gate ⇒ the Ask, else dispatch
+  RETURN Committed(instance.version, intent)
+
+assemble_context_blocks(instance, template, step) → [ContextBlock]    # L2b — deterministic render; bodies resolved from the catalog only
+  catalog  ← template.context_blocks                                  # id → { body }; the single body source
+  rendered ← ordered_map()                                            # first-seen order; dedups by id, accumulates provenance.sources[]
+  emit(ref, source):                                                  # local closure — resolve once; on a repeat only append the provenance source
+    IF rendered.has(ref) THEN rendered[ref].provenance.sources.append(source) ; RETURN
+    rendered.put(ref, { id: ref, body: catalog[ref].body, provenance: { sources: [source] } })
+  # render order IS source order: role refs → step refs → gate/policy refs, declaration order within each — render-order, NOT precedence/override
+  FOR ref IN template.role(step.role).default_agent_config.prompt_concern_refs:   # 1) role identity / operating rules
+    emit(ref, { source: role_config })
+  FOR ref IN step.agent_config.prompt_concern_refs:                               # 2) the current step
+    emit(ref, { source: step_config })
+  authorized_ops ← capability(template, step.role, step.id) ∩ event_types_of(step.transitions)   # L1 authority ∩ transition existence — the ops this actor may legally emit
+  FOR event_type IN authorized_ops:                                              # 3) gates on transitions the actor may emit — not blind step membership
+    FOR gate IN template.gates_for(step.id, event_type):
+      FOR ref IN gate.context_block_refs:
+        emit(ref, { source: gate_binding, at: (step.id, event_type) })
+  RETURN rendered.values()                                            # ordered [{ id, body, provenance: { sources } }]
+
+dispatch_intent(instance, template, step_id) → DispatchIntent
+  step  ← template.step(step_id)
+  actor ← instance.binding[step.role]                  # guaranteed present by the start invariant
+  requirement ← template.runtime_context
+  IF instance.runtime_context = ready(∅) THEN                                       # the workflow declared no runtime context
+    runtime_view ← none                                                            # explicit: the actor assumes no workspace
+  ELSE
+    REQUIRE requirement = required(spec)                                            # provisioned path ⇒ a context is required (made explicit)
+    provider ← providerRegistry.resolve(spec.provider)                             # the same pinned-template provider that issued the request
+    REQUIRE provider is not none                       # kernel/config invariant (not a business rejection): registry stable for an active run
+    runtime_view ← provider.project_for_actor(instance.runtime_context.ready_ref)  # actor-facing projection (L0e); raw ref stays kernel-side
+  packet ← ContextPacket {
+    instance_id, expected_version: instance.version, task: instance.task,
+    role:          step.role,                                      # dispatched-as role → echoed back as expected_role
+    instruction:   step.instruction,
+    handoff:       payload_of_transition_into(instance, step_id),  # the envelope that brought us here; absent at start
+    available_ops: event_types_of(step.transitions),              # navigation affordances; L1 enforces capability in HANDLE
+    context_blocks: assemble_context_blocks(instance, template, step),   # L2b — rendered, ordered, deduped, with provenance; communication only
+    effective_agent_config: resolve_agent_config(template, step, instance),   # resolved portable run intent (was raw agent_config at L0b)
+    runtime_context: runtime_view }                              # the projection, or none for a context-free workflow
+  RETURN DispatchIntent { actor, packet }            # a local/manual driver delivers; durable channel is L8
+
+
+          </script>
+        </div>
+
+        <h3 class="view-h"><span class="view-tag domain">Domain</span> The workflow-action contract</h3>
+        <div class="agg">
+          <div class="agg-label">Workflow Action Contract — the single source of truth for a type: action step</div>
+          <div style="overflow-x:auto">
+          <table class="contract">
+            <thead><tr><th>Aspect</th><th>Contract</th></tr></thead>
+            <tbody>
+              <tr><td><b>step</b></td><td><code>type: action</code>; declares <code>trigger</code>, <code>action</code> (runner + spec + key), <code>outcomes</code> (key → { target, payload?, emits? })</td></tr>
+              <tr><td><b>trigger</b></td><td><code>operator_intent</code> (<b>MVP</b> — parks <code>WAITING(action_pending)</code>; an operator <code>RUN_ACTION</code> runs it) ｜ <code>auto</code> (<b>later</b> — runs on arrival)</td></tr>
+              <tr><td><b>runner</b></td><td>a named <code>ActionRunner</code> (the L2a <code>ProcessGateRunner</code> family); runs in the <code>runtime_context</code> workspace; <code>execution = inline | deferred</code></td></tr>
+              <tr><td><b>outcome</b></td><td>the runner result classifies into an <code>outcome_key</code> (<code>committed</code> / <code>merged</code> / <code>conflict</code> / … or <code>infra_error</code>) — the <em>workspace reality</em></td></tr>
+              <tr><td><b>route</b></td><td><code>outcomes[outcome_key].target</code> → <code>apply_target_entry_effects</code> (the kernel knows no key meanings); a <b>self-target</b> re-parks (stay + retry)</td></tr>
+              <tr><td><b>payload</b></td><td><code>outcomes[key].payload</code> → the target’s <b>handoff</b> (e.g. a <code>regression</code> outcome → <code>implement</code> with an instruction — the automated <code>request_rework</code>)</td></tr>
+              <tr><td><b>trigger-validation</b></td><td><b>payload only</b>: required trigger fields (e.g. commit <code>message</code> policy) — missing ⇒ <code>Rejected(missing_required_field)</code>, <b>no run</b> (the <code>human_gate</code> analog). <em>Not</em> workspace state</td></tr>
+              <tr><td><b>evidence</b></td><td><code>ACTION_RESULT</code>: outcome + outputs (<code>commit_sha</code>/<code>merge_sha</code>/exit/hash) inline in <b>T1</b>; logs in <b>T3</b> by durable ref (① INV-3)</td></tr>
+              <tr><td><b>failure</b></td><td>business outcomes route (incl. self = stay); <code>infra_error</code> stays parked + audited (or a declared route) — the L2a business-vs-infra split</td></tr>
+              <tr><td><b>boundary</b></td><td>an outcome may <code>emits:</code> a release boundary event (<code>merged ⇒ merge_completed</code>) → ② <code>initiate_release</code></td></tr>
+            </tbody>
+          </table>
+          </div>
+        </div>
+        <div class="agg">
+          <div class="agg-label">action ⟷ human_gate — same mechanism, different selector</div>
+          <div class="ents">
+            <div class="ent"><div class="en">routing map</div><div class="fields"><code>human_gate.decisions</code> and <code>action.outcomes</code> are the <b>same</b> keyed map (key → { target, payload? }); the kernel knows no key meanings (de-vocabularized at L3). Both route via the one <code>apply_target_entry_effects</code></div></div>
+            <div class="ent"><div class="en">selector</div><div class="fields"><code>human_gate</code>: a <b>human</b> picks the key (<code>SUBMIT_DECISION</code>). <code>action</code>: a <b>runner’s result</b> picks the key (<code>RUN_ACTION</code> — the automated sibling). Neither an actor (that’s an agent step + gate) nor a filter (that’s a gate)</div></div>
+            <div class="ent"><div class="en">ActionRequest</div><div class="fields">the operator-facing surface for a parked action — the decision-less analog of <code>HumanDecisionRequest</code>: <code>{ action_key, runner, required_payload, context }</code>, <b>derived</b> from the step (no recorded request; lighter than the <code>human_gate</code>’s <code>DECISION_REQUEST</code> pair, which the override-audit needs)</div></div>
+          </div>
+        </div>
+
+        <h3 class="view-h"><span class="view-tag invariant">Invariant</span> New at ③a</h3>
+        <div class="agg invariant">
+          <div class="agg-label">Added rules</div>
+          <div class="ents">
+            <div class="ent"><div class="en">the outcome selects, the kernel does not</div><div class="fields">an action routes to <code>outcomes[outcome_key].target</code>; the kernel knows no outcome meanings (de-vocabularized, like decisions). An undeclared business outcome is <code>unknown_action_outcome</code>; targets resolve at load (<code>validate_action_steps</code>)</div></div>
+            <div class="ent"><div class="en">trigger validates payload; action examines the workspace</div><div class="fields">the <code>RUN_ACTION</code> trigger validates only the <b>payload</b> (required fields, e.g. the commit message) — missing ⇒ <code>missing_required_field</code>, <b>no run</b>. Workspace reality (nothing staged, conflict) is an <b>action business_failure</b>, surfaced as an <code>outcome_key</code>, never a trigger reject</div></div>
+            <div class="ent"><div class="en">a self-routing outcome stays parked</div><div class="fields">a business_failure (or any outcome) whose <code>target</code> is the action step itself re-parks <code>WAITING(action_pending)</code> — the operator fixes the workspace (resolve conflict, stage files) and re-triggers; an <code>infra_error</code> with no declared route stays parked + audited (retry is L9)</div></div>
+            <div class="ent"><div class="en">the action result is recorded with evidence</div><div class="fields">every run appends an <code>ACTION_RESULT</code> (outcome + outputs + evidence_refs) before routing — the outcome inline in T1, logs in T3 (① INV-3); a parked instance carries no agent dispatch (honest WAITING)</div></div>
+            <div class="ent"><div class="en">an outcome may emit a release boundary</div><div class="fields">an outcome’s <code>emits</code> adds a boundary event to the committed outcome; <code>boundary_events_of</code> carries it to ② (<code>merged ⇒ merge_completed ⇒</code> worktree release). The action does <b>not</b> release — it only emits the boundary; ② owns the release</div></div>
+            <div class="ent"><div class="en">action is select, gate is filter</div><div class="fields">a <code>type: action</code> step <em>produces</em> the routing key; a gate (L2) only <code>allow|warn|block</code>s a key an actor already chose. Same runner family, disjoint graph-roles — an action is never a gate and vice versa</div></div>
+          </div>
+        </div>
+
+        <h3 class="view-h"><span class="view-tag config">Config</span> The template — commit / merge as action steps</h3>
+        <p>The L3 <code>commit_pending</code> <code>type: wait</code> step becomes a <code>commit_action</code>; a <code>merge_action</code>
+        follows; the release boundary moves to <code>merge_completed</code> (the ② deferral, now realized). Diffs against ②:</p>
+        <div class="code-diff" aria-label="③a template config" data-old-label="② baseline" data-new-label="③a current">
+          <script type="text/plain" class="diff-source" data-code-old-ref="release-template-config"></script>
+          <script type="text/plain" class="diff-source" data-code-new data-code-id="action-template-config">
+template:
+  id: local-pair-v0
+  version: 1
+  roles:
+    implementer: { default_actor: codex,  default_agent_config: { mode: builder, model_ref: codex-default-engineer, prompt_profile_refs: [engineer-defaults] } }
+    reviewer:    { default_actor: claude, default_agent_config: { mode: critic } }
+    operator:    { default_actor: human }                          # L3 — the human decision-maker bound to the approval gate
+  start: implement
+  round: { advance_on_arrival_at: [implement] }   # authoring sugar — the loader expands this into explicit per-transition advances_round flags; the kernel reads only those (round always starts at 0 — a fixed convention, not configurable)
+  activation:
+    mode: immediate          # after START + runtime_context ready, activate immediately; no KICKOFF hold
+    # deferred_kickoff → start in a WAITING(kickoff_pending) hold; an operator
+    # kickoff supplies the task and releases the first dispatch (the v1 ideation bubble)
+  slots:                        # L0f — typed holes the repo's ProjectConfig fills (default | required)
+    validation.test_command:         { type: command,        default: "pnpm test" }
+    runtime.worktree.base_branch:    { type: branch,         default: main }
+    runtime.worktree.branch_pattern: { type: branch_pattern, default: "bubble/{instance_id}" }
+    runtime.worktree.bootstrap:      { type: command,        required: false }   # no default — only the repo knows
+  runtime_context:              # RuntimeContextRequirement — required(spec) here; a context-free workflow declares: runtime_context: none
+    kind: worktree
+    provider: pairflow.worktree
+    config:
+      repo: current                                            # literal — not repo-overridable here
+      base_branch:    ${slot:runtime.worktree.base_branch}     # was literal main; default now lives in slots, repo may override
+      branch_pattern: ${slot:runtime.worktree.branch_pattern}  # provider materializes the actual name from instance_id
+      work_mode: worktree                                      # literal — provider-internal variant (worktree | clone)
+      # worktree path defaults to <repo-parent>/.pairflow-worktrees/<repo>/<instance_id>
+    release:                      # ② — worktree is teardown-managed, so a release policy is MANDATORY (validate_release_policy at load)
+      policy: required            # required | retained | external — retained/external carry NO kernel release obligation
+      boundaries: [merge_completed]   # ③ the merge_action's `merged` outcome emits this; ② releases the worktree when the merge completes
+      #   (was [terminal] at the L3 anchor; now a post-commit action exists, so the boundary moves past commit/merge — exactly the ② deferral)
+  context_blocks:               # L2b — the catalog: id → { body }; the single body source for rendered packet blocks
+    reviewer-severity-ontology:
+      body: "Rate findings blocker / major / minor; converge only when no blocker or major finding remains."
+    no-converged-before-round-2:
+      body: "Do not emit CONVERGED before round 2 — the convergence gate rejects an earlier attempt and the round is not burned."
+  steps:
+    - id: implement
+      role: implementer
+      instruction: "Build the change for the task."
+      agent_config: { approach: systematic }   # overrides/extends the role default
+      on_pass:                    # PASS → review, now gated by inline test validation (L2a)
+        target: review
+        gates:
+          - uses: external.process               # inline process gate — runs in the worktree, bounded timeout
+            config:
+              command: "${slot:validation.test_command}"
+              output: { mode: exit_code }        # default; gate_decision_json is opt-in
+              on_exit: { "0": allow, nonzero: block }   # exit→verdict; a warning gate maps nonzero: warn
+              timeout_ms: 600000
+              on_runner_error: block_transition  # spawn / workspace-missing → not a business block (fail_instance is rejected until later)
+              on_timeout: block_transition
+          # Structured-output variant: the process writes a GateDecision JSON to stdout.
+          # Invalid JSON / invalid schema is a runner outcome, not a business block:
+          #   runner_outcome(on_runner_error, malformed_gate_decision_json, log_ref)
+          # - uses: external.process
+          #   config:
+          #     command: "node .pairflow/gates/security-check.js"
+          #     output: { mode: gate_decision_json }
+          #     timeout_ms: 300000
+          #     on_runner_error: block_transition
+          #     on_timeout: block_transition
+    - id: review
+      role: reviewer
+      instruction: "Review the diff; pass back or converge."
+      agent_config: { approach: thorough, prompt_concern_refs: [reviewer-severity-ontology], skill_refs: [test-runner] }
+      on_pass:      implement     # PASS → implement
+      on_converged:               # CONVERGED → human_approval (L3); the L2 converge gates still guard this transition
+        target: human_approval
+        recommends: approve       # build-time: THIS route recommends approve; on arrival the kernel records it (with its source) in DECISION_REQUEST, and choosing against it needs an explicit override. Warn-sensitive (dynamic) recommendation is deferred
+        gates:                    # ordered inline pipeline; first block stops, round not burned
+          - uses: declarative.threshold              # declarative DSL: path / op / value over allowed gate_projection fields
+            config: { metric: round, op: ">=", value: 2 }
+            context_block_refs: [no-converged-before-round-2]   # L2b — communicate the rule this gate enforces
+          - uses: pairflow.previous_reviewer_verdict # packaged pure pairflow policy
+            config: { required: true }
+    - id: human_approval
+      type: human_gate            # L3 — on arrival the kernel parks WAITING(human_decision); the operator decides, the kernel routes (not dispatched to an agent)
+      role: operator
+      instruction: "Approve the converged change, or request rework."
+      decisions:                  # the human_gate's decisions map IS its transition map, keyed by decision key. A decision carries no lifecycle meaning — the TARGET decides. approve/request_rework are just THIS anchor's keys; the kernel knows no decision names
+        approve:
+          target: commit_action   # → a type: action step (③): approve routes into the operator-triggered commit action; a different workflow could target an agent step, another gate, or done
+        request_rework:
+          target: implement       # → implement: an agent step → a new round, the operator's instruction as the handoff
+          payload:                # per-decision required fields — the generic home of the old hardcoded rework-instruction rule
+            instruction: { required: true }   # the implementer must be told exactly what to fix (v1: --message)
+            refs:        { required: false }
+    - id: commit_action
+      type: action               # ③ — the AUTOMATED sibling of human_gate: a runner produces the outcome, the outcome routes (kernel knows no outcome meanings)
+      role: operator             # operator-triggered: parks WAITING(action_pending) until the operator sends COMMIT
+      trigger: operator_intent
+      action:
+        key: COMMIT               # the trigger event the operator sends
+        uses: pairflow.git_commit # runs `git commit` in the runtime_context workspace (the ProcessGateRunner family)
+        payload: { message: { required: true } }   # TRIGGER-VALIDATION (payload only): conventional message policy (v1 --message); missing/invalid ⇒ reject the trigger, no action runs
+      outcomes:                   # outcome_key → { target, payload?, emits? } — de-vocabularized, like a human_gate's decisions
+        committed:      { target: merge_action }    # ok (carries commit_sha)
+        nothing_staged: { target: commit_action }   # business_failure (workspace reality): nothing to commit ⇒ stay parked, operator retries
+    - id: merge_action
+      type: action
+      role: operator
+      trigger: operator_intent
+      action:
+        key: MERGE
+        uses: pairflow.git_merge  # runs `git merge --no-ff` of the bubble branch into base_branch
+      outcomes:
+        merged:   { target: done, emits: merge_completed }   # ok → done; emits the ② release boundary (release.boundaries: [merge_completed])
+        conflict: { target: merge_action }                   # business_failure: merge conflict ⇒ stay parked, operator resolves + re-triggers
+      # an AUTO action (later, same contract): a perf_test step — trigger: auto, outcomes: { pass: { target: human_approval },
+      #   regression: { target: implement, payload: { instruction: "optimize the changed path" } } } — the perf result routes, no human/LLM decides
+
+
+          </script>
+        </div>
+        <div class="note config">
+          <code>committed → merge_action</code> and <code>merged → done (emits merge_completed)</code> are ordinary outcome routes;
+          <code>nothing_staged</code> / <code>conflict</code> route to the <em>same</em> step (stay + retry). The commented <code>perf_test</code>
+          shows the same contract with <code>trigger: auto</code> and a <code>regression → implement</code> route — a mid-flow automated
+          decision point, not built here.</div>
+
+        <h3 class="view-h"><span class="view-tag absent">Absent</span> Still not here</h3>
+        <div class="absent-grid">
+          <div class="absent-item">No <b>auto trigger</b> — an action that runs <em>on arrival</em> (e.g. a perf-test) is the same contract but a later trigger mode, with its own lifecycle questions (when it runs, retry, does it block dispatch, a <code>WAITING(action_pending)</code> self-loop) <span class="at">→ later</span></div>
+          <div class="absent-item">No <b>rich outcome-condition language</b> — <code>classify_action_result</code> is exit-code / structured-JSON (L2a-style); a general predicate DSL over outputs is later <span class="at">→ later</span></div>
+          <div class="absent-item">No <b>packaged action library</b> — only the anchor runners (<code>pairflow.git_commit</code> / <code>pairflow.git_merge</code>); a general catalog (publish, notify, perf-test) is later <span class="at">→ ③b</span></div>
+          <div class="absent-item">No <b>operator delete</b> — <code>delete_requested</code> is an explicit operator storage/lifecycle intent (a <code>CANCEL</code> sibling) that may <em>emit</em> a release boundary to ②, but it is <b>not</b> a workflow action; it + the record purge are <span class="at">→ ④</span></div>
+          <div class="absent-item">No <b>exactly-once / action retry</b> — the runner side effect runs before the routing commit (like an L2a gate); a mid-write failure is transcript-canonical recovery (v1-faithful), but retry / idempotent re-run guarantees are later <span class="at">→ L9</span></div>
+          <div class="absent-item">No <b>remote / distributed action proofs</b> — a remote action with verifiable completion (the merge-as-distribution concern) is later <span class="at">→ L8 / L10</span></div>
+        </div>
+
+        <h3 class="view-h"><span class="view-tag evidence">Evidence</span> Why we accept ③a for now</h3>
+        <div class="agg">
+          <div class="agg-label">Acceptance evidence — the v1 commit / merge actions are representable</div>
+          <div class="ents">
+            <div class="ent"><div class="en">commit action</div><div class="fields">v1 <code>commitCommandPipeline</code> RUNS <code>git commit -m &lt;msg&gt;</code> in the worktree (<code>commitCommandGitStep.ts:455</code>), records <code>COMMIT_RESULT { commit_sha, message, staged_files }</code> → a <code>commit_action</code> with a <code>committed</code> outcome + <code>ACTION_RESULT</code> evidence · <b>③a</b></div></div>
+            <div class="ent"><div class="en">merge action + boundary</div><div class="fields">v1 <code>mergeCommandPipeline</code> RUNS <code>git merge --no-ff</code> (<code>localMergeStep.ts:21</code>), then bundles teardown; v3 <b>unbundles</b> — the <code>merge_action</code> emits <code>merge_completed</code> and ② releases the worktree · <b>③a + ②</b></div></div>
+            <div class="ent"><div class="en">trigger-validation</div><div class="fields">v1 rejects a non-conventional / missing commit message before running (<code>commitMessagePolicy</code>) → trigger-validation on the <code>message</code> payload (<code>missing_required_field</code>) · <b>③a</b></div></div>
+            <div class="ent"><div class="en">business-vs-infra failure</div><div class="fields">v1 merge conflict → auto-abort + <code>MERGE_CONFLICT_REQUIRES_MANUAL_RESOLUTION</code> (stay, retry); distinct from infra (cleanup / state-persist) reason codes → a <code>conflict</code> business outcome (self-route) vs <code>infra_error</code> · <b>③a</b></div></div>
+          </div>
+        </div>
+        <div class="note evidence">
+          <ul style="margin:0">
+            <li><b>Scenario coverage:</b> approve → commit action (message-validated) → merge action (emits merge_completed → ② release) → done; a conflict or nothing-staged stays parked for a retry; a bad message is rejected before any git runs.</li>
+            <li><b>Invariant coverage:</b> outcome selects not the kernel ✓; trigger validates payload only ✓; self-route stays parked ✓; ACTION_RESULT evidence ✓; outcome emits the ② boundary ✓; action-is-select vs gate-is-filter ✓ — and all L0a–L3 + ① + ② invariants still hold.</li>
+            <li><b>Accepted tradeoff:</b> a v3 semantic shift (workflow-done after merge, vs v1’s DONE-before-merge) — stated and accepted to keep merge a normal pre-terminal action; the auto trigger and a packaged action library are out.</li>
+            <li><b>Known gaps (intended):</b> auto trigger (later), rich outcome predicates (later), packaged actions (③b), operator delete + purge (④), exactly-once / retry (L9), remote action proofs (L8/L10). Each is in Absent.</li>
+            <li><b>Decision:</b> accepted as the ③a baseline (light evidence per playbook §2.1); ③b generalizes the action library, L4 inherits action steps per child.</li>
           </ul>
         </div>
       </section>
@@ -5435,8 +6242,8 @@ template:
       }
       var html = escapeHtml(code)
         .replace(/("[^"]*"|'[^']*')/g, '<span class="s">$1</span>')
-        .replace(/\b(START_INSTANCE|CREATE_INSTANCE|RUNTIME_CONTEXT_READY|RUNTIME_CONTEXT_RELEASED|RESOLVE_START|RECEIVE|HANDLE|KICKOFF|SUBMIT_DECISION|RESUME_WAIT|CANCEL|COMPLETE|FAIL|START|MATCH|INTERFACE|FOR|IF|THEN|ELSE|CONTINUE|RETURN|COMMIT|REQUIRE)\b/g, '<span class="kw">$1</span>')
-        .replace(/\b(Rejected\([^)]+\)|Stale\([^)]+\)|Committed\([^)]+\)|Started\([^)]+\)|Created\([^)]+\)|Activated\([^)]+\)|Terminated\([^)]+\)|Accepted|Duplicate|DispatchIntent|ContextPacket|ResolvedStartRequest|GateDecision|GateEvaluator|GateInvocation|ProcessResult|ProcessGateRunner|ContextBlock|HumanDecisionRequest|DECISION_REQUEST|DECISION_MADE|APPROVAL_REQUEST|APPROVAL_DECISION|WAIT_RESUMED|RUNTIME_CONTEXT_RELEASING|RUNTIME_CONTEXT_RELEASE_FAILED|Outcome)\b/g, '<span class="out">$1</span>')
+        .replace(/\b(START_INSTANCE|CREATE_INSTANCE|RUNTIME_CONTEXT_READY|RUNTIME_CONTEXT_RELEASED|RESOLVE_START|RECEIVE|HANDLE|KICKOFF|SUBMIT_DECISION|RESUME_WAIT|RUN_ACTION|CANCEL|COMPLETE|FAIL|START|MATCH|INTERFACE|FOR|IF|THEN|ELSE|CONTINUE|RETURN|COMMIT|REQUIRE)\b/g, '<span class="kw">$1</span>')
+        .replace(/\b(Rejected\([^)]+\)|Stale\([^)]+\)|Committed\([^)]+\)|Started\([^)]+\)|Created\([^)]+\)|Activated\([^)]+\)|Terminated\([^)]+\)|Accepted|Duplicate|DispatchIntent|ContextPacket|ResolvedStartRequest|GateDecision|GateEvaluator|GateInvocation|ProcessResult|ProcessGateRunner|ContextBlock|HumanDecisionRequest|DECISION_REQUEST|DECISION_MADE|APPROVAL_REQUEST|APPROVAL_DECISION|WAIT_RESUMED|RUNTIME_CONTEXT_RELEASING|RUNTIME_CONTEXT_RELEASE_FAILED|ACTION_RESULT|ActionRequest|ActionResult|ActionRunner|Outcome)\b/g, '<span class="out">$1</span>')
         .replace(/^(\s*-?\s*)([A-Za-z_][A-Za-z0-9_]*)(:)/, '$1<span class="k">$2</span>$3')
         .replace(/(:\s*)([0-9]+)(\b)/g, '$1<span class="n">$2</span>$3');
       if (comment) html += '<span class="c">' + escapeHtml(comment) + '</span>';

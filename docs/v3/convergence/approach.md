@@ -522,16 +522,16 @@ Core invariant (the whole topic in one line): **canonical run history is written
 durable storage; teardown only releases runtime resources — teardown must never be the step that
 preserves history.** Operationally and checkably: **no canonical-record ref points into a resource
 being released.** Storage Scope (①) guarantees this by construction; Teardown (②) only asserts it,
-fail-closed. Strands across the two axes below: **①/② are the next core**; **③ splits by maturity** —
-③a commit/merge *actions* are an MVP-adjacent action core, ③b the general post-action framework is later;
-**④** is later ops, except the purge semantics v1 `delete` already exercises:
+fail-closed. Strands across the two axes below: **①/② are core**; **③ splits by maturity** —
+③a commit/merge *actions* are realized (operator-triggered), ③b the general action library + `auto` trigger is
+later; **④** is later ops, except the purge semantics v1 `delete` already exercises:
 
 **Two axes, so "cleanup" never re-conflates the strands.** Each strand is one combination of *who owns
 the thing* (kernel/engine · runtime provider · workflow/author) × *the nature of the operation* (resource
-teardown · workflow post-action · storage/archive/purge). The word "cleanup" spanned both axes and caused
+teardown · workflow action · storage/archive/purge). The word "cleanup" spanned both axes and caused
 drift, so it is retired as a category name. The v1 commands each span strands rather than mapping to one:
 **`bubble delete` = ② (runtime teardown: worktree/branch/tmux/session) + ④ (archive snapshot + per-bubble
-record purge)**; **`bubble merge` = ③a (the merge *post-action*) + ② (the same provider teardown)**
+record purge)**; **`bubble merge` = ③a (the merge *action*) + ② (the same provider teardown)**
 (verified — both v1 commands run identical runtime teardown; only `delete` purges the record and archives).
 So `delete` is **not** ③, and the runtime teardown both commands share is **②**, not "workflow cleanup".
 
@@ -600,33 +600,43 @@ by ①, asserted here fail-closed); **not** "everything archived". Ordering: ②
 follows any ③a post-completion action that consumes it (e.g. release the worktree *after* the merge that
 needs it). Why (① then ②): closes the current dangling provision — the model provisions a worktree
 (L0d/e) and never releases it. Depends: ① (so release is pure), L3 terminal lifecycle (the earliest
-boundary), L0e (provision). Not in scope: workflow post-actions (③), archive/purge (④). L4-orthogonal: a
+boundary), L0e (provision). Not in scope: workflow actions (③), archive/purge (④). L4-orthogonal: a
 child is just another runtime_context the same contract releases; L4 multiplies the count, not the
 contract.
 
-**③ Workflow Post-Actions** *(author-owned axis — process steps the workflow chooses; split by maturity.
-Renamed from "Workflow Cleanup": the old name let worktree/branch teardown leak in, which is ②. A "cleanup
-script" is merely one example here, not the category.)*
-Capability (the axis): process steps the *workflow author* puts in the step graph as part of the workflow's
-logic — distinct from ②'s provider resource teardown and ④'s storage/archive/purge, and **not** kernel
-teardown nor kernel archive. Expressed with existing `type: wait` / process primitives plus a later
-action/resumer slice (the resume *action* L3 left deferred). The two sub-strands differ only by maturity:
+**③ Workflow Actions** *(author-owned axis — `type: action` steps the workflow chooses; split by maturity.
+Renamed from "Workflow Post-Actions": "post" was first-anchor bias — an action can run anywhere in the graph,
+not only at the end.)*
+Capability (the axis): a `type: action` step is the **automated sibling of `human_gate`** — a declared
+operation runs (via a runner), produces a structured **outcome**, and the outcome **selects a route** from an
+`outcomes` map. Same de-vocabularized keyed routing map as a `human_gate`'s `decisions` (kernel knows no key
+meanings), same `apply_target_entry_effects`; only the *selector* differs — a human picks (`SUBMIT_DECISION`)
+vs a runner's result picks (`RUN_ACTION`). **Action vs gate:** a gate (L2) *filters* an already-chosen
+transition (`allow|warn|block`); an action *produces* the key that *selects* the transition. Distinct from ②'s
+provider resource teardown and ④'s storage/archive/purge.
 
-> **③a Commit / Merge Actions** *(MVP-adjacent).* The concrete resume *actions* L3 parked for: actually
-> running `git commit` on a `commit_pending` wait and `git merge` on the post-`DONE` merge — with their
-> action result, payload/evidence, and failure policy. ③a owns the *action*; it is **driven by the existing
-> L3 wait/resume contract** (`RESUME_WAIT`), which it consumes, not re-owns. Needed for a real WF-7 run, so
-> this is **not** "later/non-core": it is the action core the MVP exercises (v1 `merge` = this ③a merge
-> action + ② teardown). Specified *after* ①/② as a later roadmap item, but at **runtime** any ③a action
-> that consumes a resource runs *before* the ② release boundary (e.g. the merge before the worktree
-> release — see ②'s ordering note); the build/spec order and the runtime order are opposite here.
+> **③a Workflow Actions — commit / merge (operator-triggered).** **Realized in core-model.html** (section
+> `③a`, after ②, diffed against ②). The first cut: `trigger: operator_intent`, anchored on COMMIT + MERGE.
+> A `type: action` step parks `WAITING(action_pending)` with an `ActionRequest` (the decision-less
+> `HumanDecisionRequest` analog); the operator's `RUN_ACTION` validates the **payload** only (commit message
+> policy — `missing_required_field`, the `human_gate` analog), runs the action in the runtime_context
+> workspace, and the classified `outcome_key` routes via `outcomes` (a self-target = stay parked + retry).
+> Workspace reality (nothing staged, merge conflict) is an **action business_failure** outcome, not a trigger
+> reject; a crashed runner is `infra_error`. An outcome may `emits:` a release boundary — `merged ⇒
+> merge_completed` → ② releases the worktree (the ② deferral, now realized; the anchor's `release.boundaries`
+> moves `[terminal] → [merge_completed]`). Evidence: `ACTION_RESULT` (sha/exit/hash inline T1, logs T3 — ①
+> INV-3). v1 grounding: commit/merge commands RUN git in the workspace, conflict → abort + retry, distinct
+> business-vs-infra reason codes. **v3 semantic shift (stated):** the anchor puts workflow-`done` *after*
+> merge (merge is a normal pre-terminal action step); v1's `DONE` was commit-complete with merge a separate
+> post-`DONE` command — accepted to avoid a post-terminal action shape.
 
-> **③b General Workflow Post-Actions** *(later, non-core).* The generalized framework: perf-test, publish a
-> report, notify someone, a custom cleanup script for a provider-unowned side-effect (e.g. a scratch bucket
-> a build step created), plus any packaged building blocks the framework offers. Deferred until a concrete
-> use case motivates it.
+> **③b General Workflow Actions** *(later, non-core).* The generalized library + modes: the `auto` trigger
+> (run on arrival, e.g. a mid-flow `perf_test` whose `regression` outcome routes back to `implement` with an
+> instruction — the automated `request_rework`), a rich outcome-predicate language, and packaged action
+> blocks (publish, notify). Deferred until a concrete use case motivates it.
 
-Depends: wait/resume (L3), process gates (L2a), a later action primitive.
+Depends: L3 (the de-vocabularized routing + `apply_target_entry_effects`, the wait machinery), L2a (the
+process-runner family), ② (the release boundary an action outcome emits).
 
 **④ Archive / Export / Purge** *(later, optional ops — not correctness).*
 Capability: optional cold snapshot/export, retention/purge policy, archive index/query. This is the
