@@ -5422,14 +5422,15 @@ template:
                   ↓                                         ↓
               apply_target_entry_effects(target)  ← the SAME generic arrival
 
-  the action-step lifecycle (operator-triggered, MVP):
-    arrive(action step) → WAITING(action_pending)        [output: ActionRequest — what to run, what payload]
-         operator RUN_ACTION(key, payload)
-            ├─ payload invalid          → Rejected(missing_required_field)   (trigger-validation; no run)
-            └─ run action in workspace  → outcome_key
-                   ├─ ok (committed/merged)  → outcomes[key].target  (+ emits → ② release)
-                   ├─ business_failure       → self-target ⇒ stay parked, operator retries
-                   └─ infra_error            → stay parked (audited), operator retries
+  the action-step lifecycle (operator-triggered, MVP) — marker-first, single-winner:
+    arrive(action step) → WAITING(action_pending)        [output: ActionRequest { expected_version, action_key, required_payload }]
+         operator RUN_ACTION(expected_version, key, payload)
+            ├─ stale version / dup op_id / bad payload → Stale | Duplicate | missing_required_field   (no claim, no run)
+            └─ CAS CLAIM: action_pending → action_running(request_id)   [+ ACTION_RUNNING]   (a 2nd RUN_ACTION now loses ⇒ not_awaiting_action)
+                   run action in workspace → outcome_key   [+ ACTION_RESULT { op_id, outcome }]
+                      ├─ ok (committed/merged)  → outcomes[key].target  (+ emits → ② release)
+                      ├─ business_failure       → self-target ⇒ re-park action_pending, operator retries
+                      └─ infra_error / undeclared → re-park action_pending (audited), operator retries
         </pre>
 
         <h3 class="view-h"><span class="view-tag runtime">Runtime</span> A concrete trace</h3>
@@ -5439,8 +5440,8 @@ template:
             <div class="meta">it is a <code>type: action</code> step (<code>trigger: operator_intent</code>) → <code>park_for_action</code> sets <b>WAITING(action_pending)</b>; the output is an <code>ActionRequest { action_key: COMMIT, runner: pairflow.git_commit, required_payload: { message } }</code> — the operator-facing surface (no agent dispatched)</div>
           </div></div>
           <div class="trace-row"><div class="trace-n">2</div><div class="trace-c">
-            <div class="ev">operator runs <code>RUN_ACTION(COMMIT, payload: { message: &quot;feat: add X&quot; })</code></div>
-            <div class="meta">guards pass (action_pending ✓ · trigger correlates ✓ · operator authorized ✓ · op_id fresh); <b>trigger-validation</b> (payload only): <code>message</code> present ✓ → the runner runs <code>git commit</code> in the worktree → <code>classify → committed</code> (commit_sha) → append <code>ACTION_RESULT { outcome: committed, commit_sha }</code> → route <code>outcomes[committed].target = merge_action</code> → re-park <b>WAITING(action_pending)</b> for MERGE</div>
+            <div class="ev">operator runs <code>RUN_ACTION(expected_version, COMMIT, payload: { message: &quot;feat: add X&quot; })</code></div>
+            <div class="meta">guards pass (action_pending ✓ · trigger correlates ✓ · version current ✓ · op_id fresh ✓ · operator authorized ✓); <b>trigger-validation</b> (payload only): <code>message</code> present ✓ → <b>CAS-claim</b>: <code>action_pending → action_running(request_id)</code> + <code>ACTION_RUNNING</code> (a concurrent <code>RUN_ACTION</code> now loses ⇒ <code>not_awaiting_action</code>) → the runner runs <code>git commit</code> in the worktree → <code>classify → committed</code> (commit_sha) → CAS-result: append <code>ACTION_RESULT { op_id, outcome: committed, commit_sha }</code> → route <code>outcomes[committed].target = merge_action</code> → re-park <b>WAITING(action_pending)</b> for MERGE</div>
           </div></div>
           <div class="trace-row"><div class="trace-n">3</div><div class="trace-c">
             <div class="ev">operator runs <code>RUN_ACTION(MERGE)</code></div>
@@ -5796,6 +5797,7 @@ INTERFACE ActionRunner:                                            # ③ — run
 validate_action_steps(template) → ok | Rejected                    # ③ definition load (CREATE_INSTANCE): every type: action step is well-formed
   FOR step IN action_steps(template):
     IF step.action is absent OR step.action.uses is absent          THEN RETURN Rejected(invalid_action_step)
+    IF step.trigger ≠ operator_intent                              THEN RETURN Rejected(unsupported_action_trigger)   # ③a cut: operator-triggered only; the auto trigger (run on arrival) is later
     IF step.outcomes is absent OR step.outcomes is empty            THEN RETURN Rejected(action_outcomes_empty)
     FOR (key, choice) IN step.outcomes:
       IF template.step(choice.target) is none                       THEN RETURN Rejected(action_outcome_target_unresolved)
@@ -5815,29 +5817,36 @@ action_request(instance, template) → ActionRequest                 # ③ — t
     required_payload: requirements_for(step.action.payload),       # the SAME per-field {required} shape as a decision payload — TRIGGER-validation, not workspace state
     context:          project_action_context(instance), operator }
 
-RUN_ACTION(trigger) → Outcome                                      # ③ operator_intent — run a parked action; the AUTOMATED sibling of SUBMIT_DECISION (the RUNNER's result picks the outcome, not a human)
+RUN_ACTION(trigger) → Outcome                                      # ③ operator_intent — the AUTOMATED sibling of SUBMIT_DECISION (the RUNNER's result picks the outcome, not a human). trigger = { instance_id, op_id, expected_version, action_key, payload, by }
   instance ← load(trigger.instance_id)
-  IF instance.kernel_status ≠ WAITING OR instance.wait.kind ≠ action_pending THEN RETURN Rejected(not_awaiting_action)
+  IF instance.kernel_status ≠ WAITING OR instance.wait.kind ≠ action_pending THEN RETURN Rejected(not_awaiting_action)   # action_running ⇒ a claim already won (single-winner); a parked action is the only runnable state
   IF trigger.action_key ∉ instance.wait.resume_events                        THEN RETURN Rejected(action_trigger_mismatch)
+  IF trigger.expected_version ≠ instance.version                             THEN RETURN Stale(instance.version)   # the ActionRequest the operator holds is stale — a destructive action MUST NOT run from it (like SUBMIT_DECISION / RESUME_WAIT)
+  IF duplicate(trigger.op_id)                                                THEN RETURN Duplicate   # idempotency — transcript-backed: op_id rides ACTION_RUNNING and ACTION_RESULT
   template ← definitionStore.load(instance.template_ref) ; step ← template.step(instance.current_step)
   REQUIRE trigger.by = instance.binding[step.role]                 # operator authority on THIS path (like SUBMIT_DECISION; not the L1 actor gate)
-  REQUIRE not duplicate(trigger.op_id)                             # idempotency
-  # TRIGGER-VALIDATION — PAYLOAD ONLY (NOT workspace state): the human_gate missing_required_field analog
+  # TRIGGER-VALIDATION — PAYLOAD ONLY (NOT workspace state), BEFORE the claim so a bad payload starts nothing: the human_gate missing_required_field analog
   FOR field IN required_fields(step.action.payload):
-    IF trigger.payload[field] is absent OR empty THEN RETURN Rejected(missing_required_field)   # reject the trigger; NO action runs, no state change — operator fixes + retries
-  # run the ACTION (a side effect): the runner executes in the runtime_context workspace; the result classifies into an outcome_key
+    IF trigger.payload[field] is absent OR empty THEN RETURN Rejected(missing_required_field)
+  # PHASE 1 — CAS CLAIM (marker-first, single-winner): take the action_pending EXCLUSIVELY before the runner side effect, so two concurrent RUN_ACTION never both reach the (git-mutating) runner
+  request_id ← new_request_id()
+  COMMIT atomically at expected_version = instance.version:
+    instance.wait ← { kind: action_running, op_id: trigger.op_id, request_id, action_key: trigger.action_key, requested_by: step.id }   # in-flight marker; a concurrent RUN_ACTION now sees action_running ⇒ not_awaiting_action
+    instance.transcript.append(ACTION_RUNNING { op_id: trigger.op_id, action_key: trigger.action_key, request_id })
+    instance.version ← instance.version + 1
+  # PHASE 2 — run the ACTION exclusively (the claim is committed; only this handler reaches the runner). A crash here leaves a durable action_running the L9 watchdog reconciles
   result      ← actionRunner(step.action.uses).run(step.action.spec, { cwd: runtime_context_workspace(instance), payload: trigger.payload })
   outcome_key ← classify_action_result(step, result)              # committed | merged | conflict | nothing_staged | infra_error … — the WORKSPACE reality (unlike the payload-only trigger-validation)
-  IF outcome_key = infra_error AND infra_error ∉ keys_of(step.outcomes) THEN
-    instance.transcript.append(ACTION_RESULT { action_key: trigger.action_key, kind: infra_error, reason: result.reason, evidence_refs: result.evidence_refs })
-    RETURN Accepted                                               # stays WAITING(action_pending); operator retries — infra is not a business route by default
-  IF outcome_key ∉ keys_of(step.outcomes) THEN RETURN Rejected(unknown_action_outcome)   # a business result with no declared route = a config gap
-  choice ← step.outcomes[outcome_key]
+  # PHASE 3 — CAS RESULT: record (with op_id) + route, or revert to action_pending for a retry; NEVER leave action_running on a handled result, NEVER Reject after the side effect ran
   COMMIT atomically at expected_version = instance.version:
-    instance.transcript.append(ACTION_RESULT { action_key: trigger.action_key, outcome: outcome_key, outputs: result.outputs, evidence_refs: result.evidence_refs })   # evidence (① INV-3): commit_sha / merge_sha / exit / hash inline (T1), logs T3
-    apply_target_entry_effects(instance, template, step.id, choice.target)   # ROUTE by the outcome — same generic arrival; a self-target (conflict → merge_action, nothing_staged → commit_action) re-parks action_pending (operator re-triggers)
+    REQUIRE instance.wait.kind = action_running AND instance.wait.request_id = request_id   # still OUR run (defensive)
+    instance.transcript.append(ACTION_RESULT { op_id: trigger.op_id, action_key: trigger.action_key, outcome: outcome_key, outputs: result.outputs, evidence_refs: result.evidence_refs })   # evidence (① INV-3): commit_sha / merge_sha / exit / hash inline (T1), logs T3 — op_id makes the Duplicate check transcript-backed
+    IF outcome_key ∈ keys_of(step.outcomes) THEN
+      apply_target_entry_effects(instance, template, step.id, step.outcomes[outcome_key].target)   # ROUTE by the outcome — same generic arrival; a self-target (conflict → merge_action, nothing_staged → commit_action) re-parks action_pending (operator re-triggers)
+    ELSE
+      instance.wait ← { kind: action_pending, requested_by: step.id, resume_events: [step.action.key] }   # infra_error or an undeclared outcome ⇒ stay parked for a retry (auto-retry is L9); a recurring undeclared outcome is a config smell, visible in the ACTION_RESULT
     instance.version ← instance.version + 1
-  RETURN Committed(instance.version, post_commit_output(instance, template), boundary_events: emits_of(choice))   # an outcome may `emits:` a release boundary (merged ⇒ merge_completed) → ② initiate_release
+  RETURN Committed(instance.version, post_commit_output(instance, template), boundary_events: emits_of(step.outcomes[outcome_key]))   # an outcome may `emits:` a release boundary (merged ⇒ merge_completed) → ② initiate_release; emits_of(none) = [ ]
 
 human_decision_request(instance, template) → HumanDecisionRequest   # L3 — the human-facing analog of DispatchIntent (the Ask); local/manual delivery, durable channel L8
   step     ← template.step(instance.current_step)
@@ -6010,6 +6019,7 @@ dispatch_intent(instance, template, step_id) → DispatchIntent
               <tr><td><b>evidence</b></td><td><code>ACTION_RESULT</code>: outcome + outputs (<code>commit_sha</code>/<code>merge_sha</code>/exit/hash) inline in <b>T1</b>; logs in <b>T3</b> by durable ref (① INV-3)</td></tr>
               <tr><td><b>failure</b></td><td>business outcomes route (incl. self = stay); <code>infra_error</code> stays parked + audited (or a declared route) — the L2a business-vs-infra split</td></tr>
               <tr><td><b>boundary</b></td><td>an outcome may <code>emits:</code> a release boundary event (<code>merged ⇒ merge_completed</code>) → ② <code>initiate_release</code></td></tr>
+              <tr><td><b>concurrency</b></td><td><b>marker-first, single-winner</b> (like ② release): the trigger is <code>{ instance_id, op_id, expected_version, action_key, payload, by }</code> — stale ⇒ <code>Stale</code>, replay ⇒ <code>Duplicate</code>; a <b>CAS claim</b> <code>action_pending → action_running(request_id)</code> is committed <em>before</em> the runner, so two concurrent <code>RUN_ACTION</code> never both reach the git-mutating runner (the loser sees <code>action_running</code> ⇒ <code>not_awaiting_action</code>). The result is a second CAS commit; a crash in between leaves a durable <code>action_running</code> the L9 watchdog reconciles</td></tr>
             </tbody>
           </table>
           </div>
@@ -6027,7 +6037,8 @@ dispatch_intent(instance, template, step_id) → DispatchIntent
         <div class="agg invariant">
           <div class="agg-label">Added rules</div>
           <div class="ents">
-            <div class="ent"><div class="en">the outcome selects, the kernel does not</div><div class="fields">an action routes to <code>outcomes[outcome_key].target</code>; the kernel knows no outcome meanings (de-vocabularized, like decisions). An undeclared business outcome is <code>unknown_action_outcome</code>; targets resolve at load (<code>validate_action_steps</code>)</div></div>
+            <div class="ent"><div class="en">single-winner action claim (CAS, marker-first)</div><div class="fields">because the runner mutates git, the action is claimed <b>before</b> it runs: a CAS commit takes <code>action_pending → action_running(request_id)</code> + <code>ACTION_RUNNING</code>; only the winner reaches the runner (a concurrent <code>RUN_ACTION</code> sees <code>action_running</code> ⇒ <code>not_awaiting_action</code>). The trigger is version-checked (<code>Stale</code>) and op_id-idempotent (<code>Duplicate</code>) before the claim — like <code>SUBMIT_DECISION</code> / <code>RESUME_WAIT</code>. The same marker-first shape as ② release</div></div>
+            <div class="ent"><div class="en">the outcome selects, the kernel does not</div><div class="fields">an action routes to <code>outcomes[outcome_key].target</code>; the kernel knows no outcome meanings (de-vocabularized, like decisions). Targets resolve at load (<code>validate_action_steps</code>); an outcome <em>not</em> in the map (or <code>infra_error</code>) re-parks <code>action_pending</code> + audits the <code>ACTION_RESULT</code> — never a post-side-effect reject (the side effect already ran)</div></div>
             <div class="ent"><div class="en">trigger validates payload; action examines the workspace</div><div class="fields">the <code>RUN_ACTION</code> trigger validates only the <b>payload</b> (required fields, e.g. the commit message) — missing ⇒ <code>missing_required_field</code>, <b>no run</b>. Workspace reality (nothing staged, conflict) is an <b>action business_failure</b>, surfaced as an <code>outcome_key</code>, never a trigger reject</div></div>
             <div class="ent"><div class="en">a self-routing outcome stays parked</div><div class="fields">a business_failure (or any outcome) whose <code>target</code> is the action step itself re-parks <code>WAITING(action_pending)</code> — the operator fixes the workspace (resolve conflict, stage files) and re-triggers; an <code>infra_error</code> with no declared route stays parked + audited (retry is L9)</div></div>
             <div class="ent"><div class="en">the action result is recorded with evidence</div><div class="fields">every run appends an <code>ACTION_RESULT</code> (outcome + outputs + evidence_refs) before routing — the outcome inline in T1, logs in T3 (① INV-3); a parked instance carries no agent dispatch (honest WAITING)</div></div>
@@ -6169,7 +6180,7 @@ template:
           <div class="absent-item">No <b>rich outcome-condition language</b> — <code>classify_action_result</code> is exit-code / structured-JSON (L2a-style); a general predicate DSL over outputs is later <span class="at">→ later</span></div>
           <div class="absent-item">No <b>packaged action library</b> — only the anchor runners (<code>pairflow.git_commit</code> / <code>pairflow.git_merge</code>); a general catalog (publish, notify, perf-test) is later <span class="at">→ ③b</span></div>
           <div class="absent-item">No <b>operator delete</b> — <code>delete_requested</code> is an explicit operator storage/lifecycle intent (a <code>CANCEL</code> sibling) that may <em>emit</em> a release boundary to ②, but it is <b>not</b> a workflow action; it + the record purge are <span class="at">→ ④</span></div>
-          <div class="absent-item">No <b>exactly-once / action retry</b> — the runner side effect runs before the routing commit (like an L2a gate); a mid-write failure is transcript-canonical recovery (v1-faithful), but retry / idempotent re-run guarantees are later <span class="at">→ L9</span></div>
+          <div class="absent-item">No <b>action_running recovery / exactly-once</b> — the side effect runs after the CAS claim and before the result commit; a crash in that window leaves a durable <code>action_running</code> (no double-run, since the claim is single-winner), but <b>reconciling a stuck <code>action_running</code></b> (re-claim, idempotent re-run, watchdog) is later — the same crash-window class as ② release <span class="at">→ L9</span></div>
           <div class="absent-item">No <b>remote / distributed action proofs</b> — a remote action with verifiable completion (the merge-as-distribution concern) is later <span class="at">→ L8 / L10</span></div>
         </div>
 
@@ -6243,7 +6254,7 @@ template:
       var html = escapeHtml(code)
         .replace(/("[^"]*"|'[^']*')/g, '<span class="s">$1</span>')
         .replace(/\b(START_INSTANCE|CREATE_INSTANCE|RUNTIME_CONTEXT_READY|RUNTIME_CONTEXT_RELEASED|RESOLVE_START|RECEIVE|HANDLE|KICKOFF|SUBMIT_DECISION|RESUME_WAIT|RUN_ACTION|CANCEL|COMPLETE|FAIL|START|MATCH|INTERFACE|FOR|IF|THEN|ELSE|CONTINUE|RETURN|COMMIT|REQUIRE)\b/g, '<span class="kw">$1</span>')
-        .replace(/\b(Rejected\([^)]+\)|Stale\([^)]+\)|Committed\([^)]+\)|Started\([^)]+\)|Created\([^)]+\)|Activated\([^)]+\)|Terminated\([^)]+\)|Accepted|Duplicate|DispatchIntent|ContextPacket|ResolvedStartRequest|GateDecision|GateEvaluator|GateInvocation|ProcessResult|ProcessGateRunner|ContextBlock|HumanDecisionRequest|DECISION_REQUEST|DECISION_MADE|APPROVAL_REQUEST|APPROVAL_DECISION|WAIT_RESUMED|RUNTIME_CONTEXT_RELEASING|RUNTIME_CONTEXT_RELEASE_FAILED|ACTION_RESULT|ActionRequest|ActionResult|ActionRunner|Outcome)\b/g, '<span class="out">$1</span>')
+        .replace(/\b(Rejected\([^)]+\)|Stale\([^)]+\)|Committed\([^)]+\)|Started\([^)]+\)|Created\([^)]+\)|Activated\([^)]+\)|Terminated\([^)]+\)|Accepted|Duplicate|DispatchIntent|ContextPacket|ResolvedStartRequest|GateDecision|GateEvaluator|GateInvocation|ProcessResult|ProcessGateRunner|ContextBlock|HumanDecisionRequest|DECISION_REQUEST|DECISION_MADE|APPROVAL_REQUEST|APPROVAL_DECISION|WAIT_RESUMED|RUNTIME_CONTEXT_RELEASING|RUNTIME_CONTEXT_RELEASE_FAILED|ACTION_RUNNING|ACTION_RESULT|ActionRequest|ActionResult|ActionRunner|Outcome)\b/g, '<span class="out">$1</span>')
         .replace(/^(\s*-?\s*)([A-Za-z_][A-Za-z0-9_]*)(:)/, '$1<span class="k">$2</span>$3')
         .replace(/(:\s*)([0-9]+)(\b)/g, '$1<span class="n">$2</span>$3');
       if (comment) html += '<span class="c">' + escapeHtml(comment) + '</span>';

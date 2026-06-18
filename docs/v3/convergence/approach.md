@@ -618,9 +618,12 @@ provider resource teardown and ④'s storage/archive/purge.
 > **③a Workflow Actions — commit / merge (operator-triggered).** **Realized in core-model.html** (section
 > `③a`, after ②, diffed against ②). The first cut: `trigger: operator_intent`, anchored on COMMIT + MERGE.
 > A `type: action` step parks `WAITING(action_pending)` with an `ActionRequest` (the decision-less
-> `HumanDecisionRequest` analog); the operator's `RUN_ACTION` validates the **payload** only (commit message
-> policy — `missing_required_field`, the `human_gate` analog), runs the action in the runtime_context
-> workspace, and the classified `outcome_key` routes via `outcomes` (a self-target = stay parked + retry).
+> `HumanDecisionRequest` analog); the operator's `RUN_ACTION` (trigger `{ instance_id, op_id, expected_version,
+> action_key, payload, by }`) is version-checked (`Stale`) + op_id-idempotent (`Duplicate`), validates the
+> **payload** only (commit message policy — `missing_required_field`, the `human_gate` analog), then — **marker-first,
+> single-winner, like ② release** — CAS-claims `action_pending → action_running` before running the runner (so two
+> concurrent triggers never both reach the git-mutating runner), and the classified `outcome_key` routes via
+> `outcomes` (a self-target = re-park + retry; `infra_error` / undeclared = re-park + audit, never a post-side-effect reject).
 > Workspace reality (nothing staged, merge conflict) is an **action business_failure** outcome, not a trigger
 > reject; a crashed runner is `infra_error`. An outcome may `emits:` a release boundary — `merged ⇒
 > merge_completed` → ② releases the worktree (the ② deferral, now realized; the anchor's `release.boundaries`
