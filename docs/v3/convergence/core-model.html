@@ -4667,8 +4667,9 @@ release_safe(resource) → bool
           recorded by a <b>follow-up versioned transition</b> (<code>releasing → release_failed</code>, guarded by
           <code>REQUIRE releasing</code>) — not the same commit as the marker; only a crash in the persist→dispatch
           window leaves an orphan <code>releasing</code>, which L9 reconciles. A <code>CANCEL</code> or
-          <code>FAIL</code> terminal reaches the identical boundary: a cancelled or failed run releases its
-          provisioned worktree by the same rule.
+          <code>FAIL</code> terminal emits the same <code>terminal</code> boundary event; <em>this</em> anchor
+          releases its provisioned worktree because <code>terminal</code> is a declared boundary — a template that
+          did not declare it would keep the obligation open.
         </div>
 
         <h3 class="view-h"><span class="view-tag pseudo">Pseudocode</span> The release mirror</h3>
