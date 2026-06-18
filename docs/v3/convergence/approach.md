@@ -556,9 +556,9 @@ Core invariant (the whole topic in one line): **canonical run history is written
 durable storage; teardown only releases runtime resources — teardown must never be the step that
 preserves history.** Operationally and checkably: **no canonical-record ref points into a resource
 being released.** Storage Scope (①) guarantees this by construction; Teardown (②) only asserts it,
-fail-closed. Strands across the two axes below: **①/② are core**; **③ splits by maturity** —
-③a commit/merge *actions* (operator-triggered) and ③b *auto* actions (the `auto` trigger, e.g. `perf_test`) are
-realized; **④** is later ops, except the purge semantics v1 `delete` already exercises:
+fail-closed. **All four strands are now realized in core-model.html** across the two axes below: ① storage scope,
+② runtime teardown, ③ workflow actions (③a operator commit/merge, ③b auto `perf_test`), and ④ archive/export/purge
+(storage-lifecycle ops). The lifecycle-close topic is complete; what follows is the per-strand record:
 
 **Two axes, so "cleanup" never re-conflates the strands.** Each strand is one combination of *who owns
 the thing* (kernel/engine · runtime provider · workflow/author) × *the nature of the operation* (resource
@@ -687,16 +687,28 @@ provider resource teardown and ④'s storage/archive/purge.
 Depends: L3 (the de-vocabularized routing + `apply_target_entry_effects`, the wait machinery), L2a (the
 process-runner family), ② (the release boundary an action outcome emits).
 
-**④ Archive / Export / Purge** *(later, optional ops — not correctness).*
-Capability: optional cold snapshot/export, retention/purge policy, archive index/query. This is the
-storage/archive/purge axis, and it is the v3 home of the *other* half of v1 `bubble delete` — the archive
-snapshot + the per-bubble **record purge** (the runtime-teardown half is ②). **Not** the preservation path
-and **not** a teardown precondition — the system must compute metrics/audit/eval from the durable run
-record, never from an archived folder. Crucially, under ① the v3 purge is *safe by construction*: evidence
-lives in the durable T3 store behind durable refs (INV-3), so a purge is an explicit, complete operation,
-not the v1 evidence-loss bug (where `delete` dropped the per-bubble dir and the 5-file archive left
-evidence artifacts dangling). Naming archive-as-preservation early reimports the v1 mental model.
-Ops/tooling, ~L8 area. Depends: ① (which makes archive optional, not correctness, and purge safe).
+**④ Archive / Export / Purge** *(storage-lifecycle ops — not correctness).*
+**Realized in core-model.html** (section `④`, after ③b) — matrix-first (operation · operator intent · allowed
+state · lifecycle · release interaction · storage effect · surviving audit · idempotency · rejects · v1 map),
+a **standalone ops contract** like ①. Three independent axes: **delete-intent · release (②) · storage**.
+The v3 home of the *other* half of v1 `bubble delete` (the archive + per-bubble **record purge**; the
+runtime-teardown half is ②). Settled with two review refinements:
+- **The destructive precondition is on the purge commit, not the delete intent.** `DELETE_REQUESTED` (a
+  `CANCEL`-sibling operator intent, **not** a workflow action) is accepted on a live run (with `force`) and
+  drives **cancel → ② release → purge**; the irreversible `hard_purge` runs **only** when **terminal &&
+  release discharged** (else deferred). `delete_requested` is an operator **force**-release boundary — ②
+  honors it even when not in the template's `release.boundaries`.
+- **Purge is closure-scoped, not a blanket "this run's evidence."** It removes the T1 record and the T3 blobs
+  the run's **canonical ref-closure owns** (MVP: run-owned); a future shared/dedup blob with another owner is
+  retained until all owners release it.
+Under ① the purge is *safe by construction* — evidence is durable + ref-disciplined (INV-3), so it is complete
+with **no dangling refs** (the v1 evidence-loss bug is impossible). **Not** the preservation path: audit /
+metrics / eval compute from the durable record (or the surviving **global metrics stream** — self-contained,
+untouched by purge); archive/export is an optional cold copy, never read back. A purge leaves an index
+tombstone. No author config (operator/ops commands). Out (later/ops): retention / auto-purge / TTL / GC, an
+archive query CLI, restore/re-hydration, a shared/dedup blob store, export formats, federation purge (L11+).
+Ops/tooling, ~L8 area. Depends: ① (makes archive optional + purge safe), ② (release before purge), L3 (CANCEL
+sibling). **This closes the lifecycle-close topic (①②③④).**
 
 Cross-ref: the **wait/resume contract** these build on is already realized at L3 (`RESUME_WAIT`); later
 resource/action slices reuse it.
