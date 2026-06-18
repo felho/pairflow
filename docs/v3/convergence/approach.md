@@ -514,7 +514,7 @@ bare-wait `RESUME_WAIT` resume that closes the `commit_pending` anchor.
 
 **Runtime-context lifecycle close — durable record + teardown.**
 *Build order: after L3, before L4 — L4's child instances must already inherit a durable record and a
-release-not-preservation teardown, or parent/child storage and cleanup collide. Conceptually this
+release-not-preservation teardown, or parent/child storage and resource release collide. Conceptually this
 **completes L0e's runtime-context lifecycle** (`provision` ↔ `release`); realized here at the forcing
 point, per the `RESUME_WAIT` precedent — we do **not** renumber L0e. The v1 "archive" is a placement
 symptom, not a primitive — the same bias-removal as the finalization seam.*
@@ -522,14 +522,16 @@ Core invariant (the whole topic in one line): **canonical run history is written
 durable storage; teardown only releases runtime resources — teardown must never be the step that
 preserves history.** Operationally and checkably: **no canonical-record ref points into a resource
 being released.** Storage Scope (①) guarantees this by construction; Teardown (②) only asserts it,
-fail-closed. Four strands — two core (next), two later:
+fail-closed. Strands across the two axes below: **①/② are the next core**; **③ splits by maturity** —
+③a commit/merge *actions* are an MVP-adjacent action core, ③b the general post-action framework is later;
+**④** is later ops, except the purge semantics v1 `delete` already exercises:
 
 **Two axes, so "cleanup" never re-conflates the strands.** Each strand is one combination of *who owns
 the thing* (kernel/engine · runtime provider · workflow/author) × *the nature of the operation* (resource
 teardown · workflow post-action · storage/archive/purge). The word "cleanup" spanned both axes and caused
 drift, so it is retired as a category name. The v1 commands each span strands rather than mapping to one:
 **`bubble delete` = ② (runtime teardown: worktree/branch/tmux/session) + ④ (archive snapshot + per-bubble
-record purge)**; **`bubble merge` = ③ (the merge *post-action*) + ② (the same provider teardown)**
+record purge)**; **`bubble merge` = ③a (the merge *post-action*) + ② (the same provider teardown)**
 (verified — both v1 commands run identical runtime teardown; only `delete` purges the record and archives).
 So `delete` is **not** ③, and the runtime teardown both commands share is **②**, not "workflow cleanup".
 
@@ -571,28 +573,33 @@ is its `release` mirror, not an author-chosen step. The kernel guarantees the ob
 *eventually* discharged; it does not hardcode terminal as the release instant. Precondition (the teeth):
 durable-record closure complete — no canonical ref points into the resource being released (guaranteed
 by ①, asserted here fail-closed); **not** "everything archived". Ordering: ② release of a resource
-follows any ③ post-completion action that consumes it (e.g. release the worktree *after* the merge that
+follows any ③a post-completion action that consumes it (e.g. release the worktree *after* the merge that
 needs it). Why (① then ②): closes the current dangling provision — the model provisions a worktree
 (L0d/e) and never releases it. Depends: ① (so release is pure), L3 terminal lifecycle (the earliest
 boundary), L0e (provision). Not in scope: workflow post-actions (③), archive/purge (④). L4-orthogonal: a
 child is just another runtime_context the same contract releases; L4 multiplies the count, not the
 contract.
 
-**③ Workflow Post-Actions** *(later, non-core).* *(Renamed from "Workflow Cleanup" — the old name let
-worktree/branch teardown leak in; that is ②. The category is author-chosen process steps; a "cleanup
-script" is merely one example, not the name.)*
-Capability: process steps the *workflow author* chooses before/after completion as part of the workflow's
-logic — **run git commit**, **run merge**, run a perf-test, publish a report, notify someone, or run a
-custom cleanup script for a side-effect the runtime provider does **not** own (e.g. a scratch bucket a
-build step created). Expressed with existing `type: wait` / process primitives plus a later action/resumer
-slice (the resume *action*, e.g. actually running the git commit/merge that L3 left deferred). The
-framework may offer packaged building blocks; the workflow decides. This is the *workflow-post-action* axis
-(author-owned), distinct from ②'s provider resource teardown and ④'s storage/archive/purge — it is
-**not** kernel teardown and **not** kernel archive. The merge action is a ③ post-action; the provider
-teardown that may follow it is ②. MVP note: the commit/merge *actions* (③) and the wait/resume that drive
-them are needed for a WF-7 run, so ③'s action core is closer than "later, non-core" suggests, even though
-the general post-action framework is deferred. Depends: wait/resume (L3), process gates (L2a), a later
-action primitive.
+**③ Workflow Post-Actions** *(author-owned axis — process steps the workflow chooses; split by maturity.
+Renamed from "Workflow Cleanup": the old name let worktree/branch teardown leak in, which is ②. A "cleanup
+script" is merely one example here, not the category.)*
+Capability (the axis): process steps the *workflow author* puts in the step graph as part of the workflow's
+logic — distinct from ②'s provider resource teardown and ④'s storage/archive/purge, and **not** kernel
+teardown nor kernel archive. Expressed with existing `type: wait` / process primitives plus a later
+action/resumer slice (the resume *action* L3 left deferred). The two sub-strands differ only by maturity:
+
+> **③a Commit / Merge Actions** *(MVP-adjacent).* The concrete resume *actions* L3 parked for: actually
+> running `git commit` on a `commit_pending` wait and `git merge` on the post-`DONE` merge — plus the
+> wait/resume that drives them. Needed for a real WF-7 run, so this is **not** "later/non-core": it is the
+> action core the MVP exercises (v1 `merge` = this ③a merge action + ② teardown). Still sequenced *after*
+> ① and ②, but the next post-teardown work, not far-future.
+
+> **③b General Workflow Post-Actions** *(later, non-core).* The generalized framework: perf-test, publish a
+> report, notify someone, a custom cleanup script for a provider-unowned side-effect (e.g. a scratch bucket
+> a build step created), plus any packaged building blocks the framework offers. Deferred until a concrete
+> use case motivates it.
+
+Depends: wait/resume (L3), process gates (L2a), a later action primitive.
 
 **④ Archive / Export / Purge** *(later, optional ops — not correctness).*
 Capability: optional cold snapshot/export, retention/purge policy, archive index/query. This is the
