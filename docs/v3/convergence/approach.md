@@ -696,20 +696,16 @@ runtime-teardown half is ②). Settled with two review refinements:
 - **The destructive precondition is on the purge commit, not the delete intent.** `DELETE_REQUESTED` (a
   `CANCEL`-sibling operator intent, **not** a workflow action) is accepted on a live run (with `force`) and
   drives **cancel → ② release → purge**; the irreversible `hard_purge` runs **only** when **terminal &&
-  release discharged** (else deferred). An operator delete uses `force_release` — ②'s release machinery minus the declared-boundary gate (the
-  operator delete is the authority; `release_safe` still holds), so a `delete_requested` that is not in the
-  template's `release.boundaries` still releases; a normal declared boundary keeps the membership-gated `initiate_release`.
-- **Purge is closure-scoped, not a blanket "this run's evidence."** It removes the full T1 run record and the T3 blobs
-  the run's **canonical ref-closure owns** (MVP: run-owned); a future shared/dedup blob with another owner is
-  retained until all owners release it.
-Under ① the purge is *safe by construction* — evidence is durable + ref-disciplined (INV-3), so it is complete
-with **no dangling refs** (the v1 evidence-loss bug is impossible). **Not** the preservation path: audit /
-metrics / eval compute from the durable record (or the surviving **global metrics stream** — self-contained,
-untouched by purge); archive/export is an optional cold copy, never read back. A purge leaves a tombstone in the `run_index` — itself **T1-family
-canonical storage** (a minimal catalog: run_id, template/project refs, status, purged_at): hard purge removes the
-full T1 run record, not the index, so the run_index is the minimum surviving T1 metadata and the idempotency
-authority (a purge-induced refinement of ①'s monolithic T1; from v1's `archive/index.json` lesson, but **not** the
-archive). No author config (operator/ops commands). Out (later/ops): retention / auto-purge / TTL / GC, an
+  release discharged** (else deferred). The delete chain releases via `force_release` — ②'s machinery minus the
+  declared-boundary gate (`release_safe` still holds), not a declared boundary.
+- **Purge is closure-scoped and crash-safe.** It removes the full T1 run record + the run's closure-owned T3
+  blobs (MVP: run-owned), write-ahead the `run_index` tombstone first — the surviving **T1-family** idempotency
+  authority (`purged` is not an instance axis). Per-operation / per-state / ordering authority lives in the
+  core-model ④ tables (Operation Contract · State Authority · Hard-Purge Ordering).
+Under ① the purge is *safe by construction* — durable + ref-disciplined evidence (INV-3) ⇒ complete with **no
+dangling refs** (the v1 evidence-loss bug is impossible). **Not** the preservation path: audit / metrics / eval
+compute from the durable record (or the surviving **global metrics stream**); archive/export is an optional cold
+copy (read-only w.r.t. the run record/runtime, writes a `run_index` catalog entry), never read back. No author config (operator/ops commands). Out (later/ops): retention / auto-purge / TTL / GC, an
 archive query CLI, restore/re-hydration, a shared/dedup blob store, export formats, federation purge (L11+).
 Ops/tooling, ~L8 area. Depends: ① (makes archive optional + purge safe), ② (release before purge), L3 (CANCEL
 sibling). **This closes the lifecycle-close topic (①②③④).**

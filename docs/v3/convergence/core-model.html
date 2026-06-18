@@ -7088,7 +7088,7 @@ template:
       └─ purge_state ← purge_pending
                   ↓   (ops reconciler, once wound down)
          hard_purge  — precond: terminal && release discharged && closure purge-ready
-            run_index tombstone (write-ahead, purged) → remove closure-owned T3 blobs → remove FULL run record
+            hard_purge → write-ahead run_index tombstone, then remove closure-owned evidence + record   (ordering / crash-safety: see the table)
                                                           GLOBAL metrics/audit stream SURVIVES
 
   archive / export (optional, read-only, any time): a cold copy of the durable record — NOT preservation.
@@ -7104,7 +7104,7 @@ template:
           </div></div>
           <div class="trace-row"><div class="trace-n">2</div><div class="trace-c">
             <div class="ev">the ops reconciler runs <code>hard_purge</code></div>
-            <div class="meta">precond holds (terminal ✓ · release discharged ✓ · closure purge-ready ✓) → <code>run_index</code> tombstone <code>{ status: purged, purged_at }</code> write-ahead (the idempotency authority) → remove the T3 blobs this run's ref-closure owns → remove the full T1 run record last — the tombstone is the authority for purged (no <code>instance.purge_state</code>; the full T1 run record is gone, the T1 run_index tombstone survives). The full transcript + evidence are gone (deliberately); the <b>global metrics/audit stream survives</b> as the floor — no dangling refs (① INV-3)</div>
+            <div class="meta">precond holds (terminal ✓ · release discharged ✓ · closure purge-ready ✓) → <code>hard_purge</code> runs the write-ahead purge sequence (tombstone first — see the hard-purge ordering table). The full transcript + evidence are gone (deliberately); the <b>global metrics/audit stream survives</b> as the floor — no dangling refs (① INV-3)</div>
           </div></div>
           <div class="trace-row"><div class="trace-n">3</div><div class="trace-c">
             <div class="ev">(alternate) <code>delete --force</code> on a RUNNING run</div>
@@ -7777,11 +7777,7 @@ archive_or_export(instance, sink) → ArchiveRef                      # ④ — 
             </tbody>
           </table>
           </div>
-          <div class="fields" style="margin-top:8px"><b>Closure rule:</b> purge removes the full T1 run record and every T3
-          blob the run's <b>canonical ref-closure owns</b> (MVP: run-owned). The wording stays open to a future
-          shared/dedup blob store — a blob with another owning run is purged only once all owners release it — so it
-          is not a blanket "delete this run's evidence". <b>run_index:</b> the purged / archived tombstone authority is itself <b>T1-family canonical storage</b> — durable canonical metadata, <b>not</b> a T2 projection, <b>not</b> T3 evidence, <b>not</b> the archive. T1 carries two things: the <b>run record</b> (transcript / decisions / evidence refs — the purge target) and the <b>run_index</b> (run_id, template / project refs, status, <code>purged_at</code> / <code>deleted_at</code> — a minimal catalog / tombstone). <code>hard_purge</code> removes the <b>full T1 run record</b>, not the run_index; the run_index is the <b>minimum surviving T1 metadata</b> and the idempotency authority — a purge-induced refinement of ①'s T1 (where, with no purge, the monolithic "durable run record" is the right abstraction). From v1's <code>archive/index.json</code> lesson, but <b>not</b> the archive (the archive is the optional cold copy, not the registry). <b>④↔②:</b> an operator delete uses <code>force_release</code> — ②'s release machinery minus the
-          declared-boundary gate (the operator delete is the authority; release_safe still applies). A normal declared boundary still goes through the membership-gated <code>initiate_release</code>.</div>
+          <div class="fields" style="margin-top:8px"><b>Closure rule &amp; run_index — the <em>why</em> behind the tables.</b> A purge is closure-scoped: it removes exactly the T3 blobs the run’s <b>canonical ref-closure owns</b> (MVP: run-owned; a blob shared with another owning run is purged only once all owners release it), never a blanket “delete this run’s evidence”. <code>run_index</code> is itself <b>T1-family canonical storage</b> — T1 carries the <b>run record</b> (the purge target) <em>and</em> the <b>run_index</b> catalog / tombstone (the minimum surviving T1 metadata + idempotency authority), a purge-induced refinement of ①’s monolithic T1. The per-operation, per-state, and ordering authority is the three tables above; <code>force_release</code> is the contract row where the delete chain diverges from a declared-boundary ② release.</div>
         </div>
 
         <div class="agg">
@@ -7820,9 +7816,9 @@ archive_or_export(instance, sink) → ArchiveRef                      # ④ — 
           <div class="agg-label">Added rules</div>
           <div class="ents">
             <div class="ent"><div class="en">archive is not the preservation path</div><div class="fields">audit / metrics / eval are computed from the durable run record (or the surviving global metrics stream), <b>never</b> from an archive. Archive / export is an optional cold copy; deleting all archives changes no correctness property. Naming archive-as-preservation reimports the v1 mental model</div></div>
-            <div class="ent"><div class="en">purge is complete and closure-scoped</div><div class="fields">a hard purge removes the full T1 run record and exactly the T3 blobs the run's canonical ref-closure owns — <b>no dangling refs</b> (the ① INV-3 payoff; the v1 evidence-loss bug is impossible). A shared / deduped blob with another owner is retained until all owners release it</div></div>
+            <div class="ent"><div class="en">purge is complete &amp; closure-scoped</div><div class="fields"><b>no dangling refs</b> (the ① INV-3 payoff; the v1 evidence-loss bug is impossible) — a hard purge removes the full run record and exactly the closure-owned T3 blobs (mechanics in the contract + ordering tables)</div></div>
             <div class="ent"><div class="en">the destructive precondition is on the purge, not the intent</div><div class="fields"><code>DELETE_REQUESTED</code> is accepted on a live run (with <code>force</code>) and drives cancel → ② release → purge; the irreversible <code>hard_purge</code> commit runs <b>only</b> when <b>terminal &amp;&amp; release discharged</b> (else <code>deferred</code>). So the operator can start the chain early, but nothing is destroyed before the run is wound down</div></div>
-            <div class="ent"><div class="en">a purge leaves a tombstone; the global audit survives</div><div class="fields">a purged run is recorded in the index (<code>status: purged, purged_at</code>) — the <b>tombstone is the authority</b> for <code>purged</code> (the full T1 run record is gone but the T1 <code>run_index</code> tombstone survives, so there is no <code>instance.purge_state</code> to persist; the idempotent already-purged check is a tombstone lookup). The <b>global metrics/audit stream</b> (self-contained, not record-referential) is untouched — the full canonical run record is gone, the coarse audit floor remains</div></div>
+            <div class="ent"><div class="en">a purge leaves a tombstone; the global audit survives</div><div class="fields">a purged run survives only as its <code>run_index</code> tombstone — the <b>authority</b> for <code>purged</code> (there is no <code>instance.purge_state ← purged</code>; see the state authority table) — plus the self-contained <b>global metrics/audit stream</b> (the coarse audit floor). The full canonical run record is gone</div></div>
             <div class="ent"><div class="en">delete is an operator intent, not a workflow action</div><div class="fields"><code>DELETE_REQUESTED</code> is a <code>CANCEL</code>-sibling operator lifecycle intent that drives <code>force_release</code> (② release minus the declared-boundary gate) then purge — it is <b>not</b> a <code>type: action</code> step (no runner, no outcome routing). ④ is storage-lifecycle ops, the L2/L2b/③ machinery is not involved</div></div>
           </div>
         </div>
