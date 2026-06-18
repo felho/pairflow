@@ -5581,7 +5581,7 @@ validate_decision_gates(template) → ok | Rejected                     # L3 —
 RECEIVE(input) → Outcome                                               # one kernel entry; route by input source class
   outcome ← MATCH input.source:
     operator_intent → dispatch to CREATE_INSTANCE / START / KICKOFF / SUBMIT_DECISION / RESUME_WAIT / RUN_ACTION / CANCEL   # lifecycle + human-decision + wait-resume + action-run intents
-    kernel_event    → dispatch to RUNTIME_CONTEXT_READY / RUNTIME_CONTEXT_RELEASED / ACTION_RESULT / FAIL               # internal events (done is internal-only, below)
+    kernel_event    → dispatch to RUNTIME_CONTEXT_READY / RUNTIME_CONTEXT_RELEASED / FAIL               # internal events (done is internal-only, below)
     actor_envelope  → HANDLE(input)                                           # the L0a–L1 actor handler, now lifecycle-guarded
   FOR boundary_event IN boundary_events_of(outcome, instance):   # ② the release-boundary events THIS committed transition produced (now: terminal; ③a actions add merge_completed etc.)
     initiate_release(instance, boundary_event)                    # POST-COMMIT side effect; the declared release.boundaries decides — terminal is NOT a kernel default, just a possible event
@@ -5756,7 +5756,7 @@ apply_target_entry_effects(instance, template, from_step_id, target) → void   
   IF target is terminal THEN COMPLETE(instance) ; RETURN            # the existing HANDLE terminal-step rule → TERMINAL(done); no new terminal semantics at L3
   step ← template.step(target)
   IF is_human_gate(template, target) THEN park_for_human_decision(instance, template, step) ; RETURN   # a DECISION wait — WAITING(human_decision) + DECISION_REQUEST + the Ask
-  IF is_action_step(template, target) THEN park_for_action(instance, template, step) ; RETURN   # ③ a WORKFLOW ACTION — operator_intent ⇒ park WAITING(action_pending); auto ⇒ claim WAITING(action_running) + ActionIntent (③b)
+  IF is_action_step(template, target) THEN park_for_action(instance, template, step) ; RETURN   # ③ a WORKFLOW ACTION — operator-triggered: park WAITING(action_pending) for the operator's RUN_ACTION trigger; the auto trigger (run on arrival) is later
   IF is_wait_step(template, target)  THEN park_for_wait(instance, step)             ; RETURN          # a BARE wait — WAITING(step.wait.kind); RESUME_WAIT resumes it — only the resume ACTION (running the operation) is later. NO privileged "finalization" — commit/merge/perf-test are just wait steps
   instance.kernel_status ← ACTIVE ; instance.wait ← none           # an agent step ⇒ resume ACTIVE; the dispatch is derived post-commit
 
@@ -5789,7 +5789,6 @@ post_commit_output(instance, template) → DispatchIntent | HumanDecisionRequest
   IF instance.kernel_status = WAITING THEN
      IF instance.wait.kind = human_decision THEN RETURN human_decision_request(instance, template)   # parked on a human_gate ⇒ the Ask
      IF instance.wait.kind = action_pending THEN RETURN action_request(instance, template)   # ③ parked on a type: action ⇒ the ActionRequest (operator-facing surface; the decision-less HumanDecisionRequest analog)
-     IF instance.wait.kind = action_running THEN RETURN action_intent(instance, template)   # ③b an auto action just claimed ⇒ ActionIntent (run X) — produce-not-perform (the DispatchIntent analog); the runner runs POST-COMMIT, the result returns as ACTION_RESULT
      RETURN none                                                  # parked on a bare wait (e.g. commit_pending) ⇒ no output; it waits for an inbound RESUME_WAIT event
   RETURN dispatch_intent(instance, template, instance.current_step)   # ACTIVE ⇒ agent dispatch
 
@@ -5799,24 +5798,15 @@ INTERFACE ActionRunner:                                            # ③ — run
 validate_action_steps(template) → ok | Rejected                    # ③ definition load (CREATE_INSTANCE): every type: action step is well-formed
   FOR step IN action_steps(template):
     IF step.action is absent OR step.action.uses is absent          THEN RETURN Rejected(invalid_action_step)
-    IF step.trigger ∉ { operator_intent, auto }                    THEN RETURN Rejected(unsupported_action_trigger)   # ③b: operator_intent | auto
+    IF step.trigger ≠ operator_intent                              THEN RETURN Rejected(unsupported_action_trigger)   # ③a cut: operator-triggered only; the auto trigger (run on arrival) is later
     IF step.outcomes is absent OR step.outcomes is empty            THEN RETURN Rejected(action_outcomes_empty)
     FOR (key, choice) IN step.outcomes:
-      IF choice.target is present AND template.step(choice.target) is none           THEN RETURN Rejected(action_outcome_target_unresolved)
-      IF choice.retry  is present AND template.step(choice.retry.on_exhausted) is none THEN RETURN Rejected(retry_escalation_target_unresolved)   # ③b: a bounded-retry outcome's escalation target must resolve
-      IF choice.target is absent AND choice.retry is absent          THEN RETURN Rejected(action_outcome_no_route)
+      IF template.step(choice.target) is none                       THEN RETURN Rejected(action_outcome_target_unresolved)
   RETURN ok
 
-park_for_action(instance, template, step) → void                   # ③ — arrival at a type: action step; the trigger decides the park
-  IF step.trigger = operator_intent THEN                             # ③a — wait for the operator's RUN_ACTION (no transcript entry; the ActionRequest is DERIVED)
-    instance.kernel_status ← WAITING
-    instance.wait ← { kind: action_pending, requested_by: step.id, resume_events: [step.action.key] }
-    RETURN
-  # ③b auto — CLAIM the run AS the arrival (single auto trigger, no operator); the runner runs POST-COMMIT via the ActionIntent, NEVER inside this arrival commit
-  request_id ← new_request_id() ; episode ← new_episode_ref()        # episode anchors the bounded-retry attempt count (transcript-reconstructable)
+park_for_action(instance, template, step) → void                   # ③ — arrival at an operator-triggered type: action step; parks for the operator's RUN_ACTION trigger (no transcript entry — the ActionRequest is DERIVED, lighter than the human_gate's recorded DECISION_REQUEST)
   instance.kernel_status ← WAITING
-  instance.wait ← { kind: action_running, request_id, action_key: step.action.key, episode_ref: episode, requested_by: step.id }
-  instance.transcript.append(ACTION_RUNNING { request_id, action_key: step.action.key, episode_ref: episode, trigger: auto })   # the marker — committed in THIS arrival commit; the side effect is post-commit
+  instance.wait ← { kind: action_pending, requested_by: step.id, resume_events: [step.action.key] }   # the action key (e.g. COMMIT, MERGE) is the trigger the operator sends
 
 action_request(instance, template) → ActionRequest                 # ③ — the operator-facing surface for a parked action; the decision-less analog of HumanDecisionRequest, DERIVED from the step (no stored request)
   step     ← template.step(instance.current_step)
@@ -5827,39 +5817,6 @@ action_request(instance, template) → ActionRequest                 # ③ — t
     runner:           step.action.uses,
     required_payload: requirements_for(step.action.payload),       # the SAME per-field {required} shape as a decision payload — TRIGGER-validation, not workspace state
     context:          project_action_context(instance), operator }
-
-action_intent(instance, template) → ActionIntent                   # ③b — an auto action's run effect; produce-not-perform (the DispatchIntent analog). The runner runs POST-COMMIT, NEVER inside the arrival commit
-  step ← template.step(instance.current_step)
-  RETURN ActionIntent { instance_id, request_id: instance.wait.request_id, runner: step.action.uses, action_spec: step.action.spec, cwd: runtime_context_workspace(instance) }   # a local/driver runner runs it; the result returns as ACTION_RESULT (inline ⇒ immediately, deferred ⇒ later — same contract)
-
-attempt_count_in_episode(instance, episode_ref) → int               # ③b — transcript-reconstructable: how many ACTION_RUNNING entries this auto-action EPISODE has had. A fresh entry into the step opens a NEW episode_ref, so a later round's attempts never leak in
-  RETURN count of ACTION_RUNNING entries in instance.transcript WHERE entry.episode_ref = episode_ref
-
-ACTION_RESULT(instance, request_id, raw_result) → Outcome           # ③b kernel_event — an auto action's result (the RUNTIME_CONTEXT_READY sibling); inline ⇒ it arrives immediately, deferred ⇒ later (same contract)
-  IF instance.wait.kind ≠ action_running OR instance.wait.request_id ≠ request_id THEN RETURN Rejected(action_result_mismatch)   # correlation: the run WE issued (a stale / duplicate result ⇒ Rejected)
-  template ← definitionStore.load(instance.template_ref) ; step ← template.step(instance.current_step)
-  outcome_key ← classify_action_result(step, raw_result)            # workspace reality (exit / structured JSON, like L2a)
-  choice      ← step.outcomes[outcome_key]
-  IF choice is present AND choice.retry is present THEN              # BOUNDED RETRY — ONLY for an outcome that DECLARES a retry policy (NOT a general negative-outcome rule): infra_flake retries, regression routes
-    IF attempt_count_in_episode(instance, instance.wait.episode_ref) < choice.retry.max_attempts THEN
-      new_id ← new_request_id()
-      COMMIT atomically at expected_version = instance.version:
-        instance.transcript.append(ACTION_RESULT { episode_ref: instance.wait.episode_ref, outcome: outcome_key, evidence_refs: raw_result.evidence_refs })   # the failed attempt, recorded
-        instance.wait ← { kind: action_running, request_id: new_id, action_key: step.action.key, episode_ref: instance.wait.episode_ref, requested_by: step.id }   # RE-CLAIM within the SAME episode (attempt accumulates; a fresh arrival would open a new episode_ref)
-        instance.transcript.append(ACTION_RUNNING { request_id: new_id, action_key: step.action.key, episode_ref: instance.wait.episode_ref, trigger: auto })
-        instance.version ← instance.version + 1
-      RETURN Committed(instance.version, action_intent(instance, template))   # re-issue the run (post-commit)
-    choice ← { target: choice.retry.on_exhausted }                  # budget exhausted ⇒ escalate (ends the episode)
-  IF choice is none THEN                                            # an undeclared outcome with no route: record + stay WAITING(action_running) — a config gap, recovered at L9 (no operator to nudge an auto action)
-    COMMIT atomically at expected_version = instance.version:
-      instance.transcript.append(ACTION_RESULT { episode_ref: instance.wait.episode_ref, outcome: outcome_key, kind: unhandled, evidence_refs: raw_result.evidence_refs })
-      instance.version ← instance.version + 1
-    RETURN Accepted
-  COMMIT atomically at expected_version = instance.version:
-    instance.transcript.append(ACTION_RESULT { episode_ref: instance.wait.episode_ref, outcome: outcome_key, outputs: raw_result.outputs, evidence_refs: raw_result.evidence_refs })   # evidence (① INV-3): inline T1 + durable T3 refs
-    apply_target_entry_effects(instance, template, step.id, choice.target)   # ROUTE by the outcome — ends the episode (a later fresh entry opens a new episode_ref)
-    instance.version ← instance.version + 1
-  RETURN Committed(instance.version, post_commit_output(instance, template), boundary_events: emits_of(choice))   # an outcome may emits: a release boundary → ②
 
 RUN_ACTION(trigger) → Outcome                                      # ③ operator_intent — the AUTOMATED sibling of SUBMIT_DECISION (the RUNNER's result picks the outcome, not a human). trigger = { instance_id, op_id, expected_version, action_key, payload, by }
   instance ← load(trigger.instance_id)
@@ -6635,7 +6592,7 @@ post_commit_output(instance, template) → DispatchIntent | HumanDecisionRequest
   IF instance.kernel_status = WAITING THEN
      IF instance.wait.kind = human_decision THEN RETURN human_decision_request(instance, template)   # parked on a human_gate ⇒ the Ask
      IF instance.wait.kind = action_pending THEN RETURN action_request(instance, template)   # ③ parked on a type: action ⇒ the ActionRequest (operator-facing surface; the decision-less HumanDecisionRequest analog)
-     IF instance.wait.kind = action_running THEN RETURN action_intent(instance, template)   # ③b an auto action just claimed ⇒ ActionIntent (run X) — produce-not-perform (the DispatchIntent analog); the runner runs POST-COMMIT, the result returns as ACTION_RESULT
+     IF instance.wait.kind = action_running AND template.step(instance.current_step).trigger = auto THEN RETURN action_intent(instance, template)   # ③b ONLY an AUTO action re-issues the run (ActionIntent, produce-not-perform). An operator action_running (③a, mid-run / recovery) returns none below — NEVER auto-issued without the operator (the ③a/③b boundary)
      RETURN none                                                  # parked on a bare wait (e.g. commit_pending) ⇒ no output; it waits for an inbound RESUME_WAIT event
   RETURN dispatch_intent(instance, template, instance.current_step)   # ACTIVE ⇒ agent dispatch
 
@@ -6646,11 +6603,15 @@ validate_action_steps(template) → ok | Rejected                    # ③ defin
   FOR step IN action_steps(template):
     IF step.action is absent OR step.action.uses is absent          THEN RETURN Rejected(invalid_action_step)
     IF step.trigger ∉ { operator_intent, auto }                    THEN RETURN Rejected(unsupported_action_trigger)   # ③b: operator_intent | auto
+    IF step.trigger = auto AND step.action.payload is present       THEN RETURN Rejected(auto_action_payload_unsupported)   # ③b: an auto action has no operator to supply a trigger payload; its inputs are the template-fixed action_spec
     IF step.outcomes is absent OR step.outcomes is empty            THEN RETURN Rejected(action_outcomes_empty)
-    FOR (key, choice) IN step.outcomes:
-      IF choice.target is present AND template.step(choice.target) is none           THEN RETURN Rejected(action_outcome_target_unresolved)
-      IF choice.retry  is present AND template.step(choice.retry.on_exhausted) is none THEN RETURN Rejected(retry_escalation_target_unresolved)   # ③b: a bounded-retry outcome's escalation target must resolve
-      IF choice.target is absent AND choice.retry is absent          THEN RETURN Rejected(action_outcome_no_route)
+    FOR (key, choice) IN step.outcomes:                              # ③b CLOSED UNION: each outcome is EXACTLY one of { target … } | { retry … }
+      IF choice.target is present AND choice.retry is present        THEN RETURN Rejected(action_outcome_ambiguous_route)   # both ⇒ the stray target would be silently ignored (retry takes precedence at runtime)
+      IF choice.target is absent  AND choice.retry is absent         THEN RETURN Rejected(action_outcome_no_route)
+      IF choice.target is present AND template.step(choice.target) is none THEN RETURN Rejected(action_outcome_target_unresolved)
+      IF choice.retry is present THEN
+        IF choice.retry.max_attempts is not a positive integer       THEN RETURN Rejected(invalid_retry_budget)
+        IF template.step(choice.retry.on_exhausted) is none          THEN RETURN Rejected(retry_escalation_target_unresolved)
   RETURN ok
 
 park_for_action(instance, template, step) → void                   # ③ — arrival at a type: action step; the trigger decides the park
@@ -6919,8 +6880,9 @@ dispatch_intent(instance, template, step_id) → DispatchIntent
           <div class="agg-label">Added rules</div>
           <div class="ents">
             <div class="ent"><div class="en">auto is marker-first too</div><div class="fields">an auto action's arrival commit only CLAIMS <code>WAITING(action_running)</code> + <code>ACTION_RUNNING</code>; the runner runs <b>post-commit</b> via an <code>ActionIntent</code> (produce-not-perform), never inside the arrival commit. &ldquo;Inline&rdquo; is just an immediate result event, not in-commit execution</div></div>
+            <div class="ent"><div class="en">only an auto step re-issues the run (the ③a/③b boundary)</div><div class="fields"><code>post_commit_output</code> emits an <code>ActionIntent</code> for <code>action_running</code> <b>only when the step's trigger is auto</b>; an operator <code>action_running</code> (③a, mid-run or under recovery) returns <code>none</code> — a stuck COMMIT/MERGE is never auto-issued without the operator (recovery is L9). An auto step also declares <b>no</b> trigger-payload (no operator to supply it — <code>auto_action_payload_unsupported</code> at load); its inputs are the template-fixed <code>action_spec</code></div></div>
             <div class="ent"><div class="en">the result is a correlated kernel-event</div><div class="fields"><code>ACTION_RESULT(request_id)</code> is matched against <code>action_running.request_id</code> (a stale / duplicate result ⇒ <code>action_result_mismatch</code>), exactly like <code>RUNTIME_CONTEXT_READY</code>; inline vs deferred is only when it arrives</div></div>
-            <div class="ent"><div class="en">bounded retry is opt-in and episode-anchored</div><div class="fields">retry fires <b>only</b> for an outcome that declares <code>retry { max_attempts, on_exhausted }</code> — not a general negative-outcome rule. The attempt count is the <code>ACTION_RUNNING</code> count for the current <code>episode_ref</code> (transcript-reconstructable, not a hidden field); a fresh arrival opens a new episode; exhausted ⇒ route <code>on_exhausted</code> (escalate)</div></div>
+            <div class="ent"><div class="en">bounded retry is opt-in and episode-anchored</div><div class="fields">retry fires <b>only</b> for an outcome that declares <code>retry { max_attempts, on_exhausted }</code> — not a general negative-outcome rule. The attempt count is the <code>ACTION_RUNNING</code> count for the current <code>episode_ref</code> (transcript-reconstructable, not a hidden field); a fresh arrival opens a new episode; exhausted ⇒ route <code>on_exhausted</code> (escalate). Each outcome is a <b>closed union</b> — exactly one of <code>{ target … }</code> or <code>{ retry … }</code> (both ⇒ <code>action_outcome_ambiguous_route</code> at load; <code>max_attempts</code> must be a positive int; <code>on_exhausted</code> must resolve)</div></div>
             <div class="ent"><div class="en">the recommendation rides the firing edge</div><div class="fields">inserting <code>perf_test</code> between converge and the human gate moves <code>recommends: approve</code> onto <code>perf_test.pass</code> (the edge that now enters the gate) — a clean L3 consequence (recommends is per incoming edge, runtime-selected), not a new mechanism</div></div>
           </div>
         </div>
