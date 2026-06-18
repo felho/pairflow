@@ -589,10 +589,13 @@ teardown nor kernel archive. Expressed with existing `type: wait` / process prim
 action/resumer slice (the resume *action* L3 left deferred). The two sub-strands differ only by maturity:
 
 > **③a Commit / Merge Actions** *(MVP-adjacent).* The concrete resume *actions* L3 parked for: actually
-> running `git commit` on a `commit_pending` wait and `git merge` on the post-`DONE` merge — plus the
-> wait/resume that drives them. Needed for a real WF-7 run, so this is **not** "later/non-core": it is the
-> action core the MVP exercises (v1 `merge` = this ③a merge action + ② teardown). Still sequenced *after*
-> ① and ②, but the next post-teardown work, not far-future.
+> running `git commit` on a `commit_pending` wait and `git merge` on the post-`DONE` merge — with their
+> action result, payload/evidence, and failure policy. ③a owns the *action*; it is **driven by the existing
+> L3 wait/resume contract** (`RESUME_WAIT`), which it consumes, not re-owns. Needed for a real WF-7 run, so
+> this is **not** "later/non-core": it is the action core the MVP exercises (v1 `merge` = this ③a merge
+> action + ② teardown). Specified *after* ①/② as a later roadmap item, but at **runtime** any ③a action
+> that consumes a resource runs *before* the ② release boundary (e.g. the merge before the worktree
+> release — see ②'s ordering note); the build/spec order and the runtime order are opposite here.
 
 > **③b General Workflow Post-Actions** *(later, non-core).* The generalized framework: perf-test, publish a
 > report, notify someone, a custom cleanup script for a provider-unowned side-effect (e.g. a scratch bucket
