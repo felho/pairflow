@@ -7068,7 +7068,7 @@ template:
         under ① the canonical record (T1) and evidence (T3) are already durable, so ④ is just the explicit operator
         operations: <b>delete</b> from active scope, optional <b>archive / export</b> snapshot, and a safe <b>hard
         purge</b>. Only one kernel-adjacent piece — the <code>DELETE_REQUESTED</code> operator intent (a
-        <code>CANCEL</code> sibling) that drives the chain and emits the ② release boundary; purge / archive are
+        <code>CANCEL</code> sibling) that drives the chain and invokes ② <code>force_release</code> (it does <b>not</b> emit a release boundary); purge / archive are
         storage ops, not kernel handlers. A standalone contract (empty baseline), like ①.</p>
 
         <div class="note">
@@ -7715,8 +7715,8 @@ dispatch_intent(instance, template, step_id) → DispatchIntent
 # ④ Archive / Export / Purge runs AFTER the kernel — storage-lifecycle ops on the durable run record (①).
 # It is NOT a preservation path: audit / metrics / eval compute from the durable record (or the surviving
 # global metrics stream), never from an archive. Only ONE kernel-adjacent piece — the DELETE_REQUESTED operator
-# intent (a CANCEL sibling) that drives the chain and emits the ② release boundary. purge / archive are STORAGE
-# ops, not kernel handlers. New instance axis: purge_state = none | purge_pending | purged.
+# intent (a CANCEL sibling) that drives the chain and invokes ② force_release (NOT a boundary event). purge / archive are STORAGE
+# ops, not kernel handlers. New instance axis: purge_state = none | purge_pending (purged is NOT an instance axis — it lives in the run_index tombstone).
 
 # kernel-adjacent — RECEIVE operator_intent dispatch gains DELETE_REQUESTED (alongside CANCEL / SUBMIT_DECISION / RUN_ACTION)
 DELETE_REQUESTED(intent) → Outcome                                  # ④ operator intent — a CANCEL sibling; starts cancel → release → purge. NOT a workflow action
