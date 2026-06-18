@@ -4637,10 +4637,11 @@ release_safe(resource) → bool
         <div class="note">
           The boundary is a <b>declared event, not a kernel default, not the release API, and not an operator
           command</b>: this anchor declares <code>terminal</code> in <code>release.boundaries</code>; a later
-          workflow declares <code>merge_completed</code> / <code>delete_requested</code> / another event. An
-          operator issues an intent (v1's <code>merge</code> / <code>delete</code> command)
-          that <em>results in</em> a boundary; the kernel initiates the release <em>after</em> the boundary — it
-          never conflates the boundary-causing command with the release operation.
+          workflow declares <code>merge_completed</code> / another event. An operator issues an intent: a v1
+          <code>merge</code> <em>results in</em> a <code>merge_completed</code> boundary and the kernel initiates the
+          release <em>after</em> it — never conflating the boundary-causing command with the release operation. A v1
+          <code>delete</code> is instead handled by ④ <code>force_release</code> (an operator storage/lifecycle
+          intent, <b>not</b> a declared boundary).
         </div>
 
         <h3 class="view-h"><span class="view-tag runtime">Runtime</span> A concrete trace</h3>
@@ -5374,7 +5375,7 @@ template:
           <div class="agg-label">Acceptance evidence — the v1 runtime teardown is representable as the provision mirror</div>
           <div class="ents">
             <div class="ent"><div class="en">the release bundle</div><div class="fields">v1 <code>cleanupWorktreeWorkspace</code> (worktree + branch) + <code>terminateBubbleTmuxSession</code> + <code>removeRuntimeSession</code> — verified identical in <b>both</b> the merge and delete commands — is the <code>provider.release</code> bundle · <b>②</b></div></div>
-            <div class="ent"><div class="en">boundary is declared, not terminal-default</div><div class="fields">v1 releases at the <code>merge</code> / <code>delete</code> command (post-<code>DONE</code>), <b>not</b> at <code>DONE</code> itself — so terminal is <em>not</em> the release instant. This is exactly why the boundary must be a declared <code>release.boundaries</code> event, not a kernel default · <b>declared policy</b></div></div>
+            <div class="ent"><div class="en">boundary is declared, not terminal-default</div><div class="fields">v1 releases at the <code>merge</code> / <code>delete</code> command (post-<code>DONE</code>), <b>not</b> at <code>DONE</code> itself — so terminal is <em>not</em> the release instant. The <code>merge</code> path is exactly why the boundary must be a declared <code>release.boundaries</code> event (the deferred <code>merge_completed</code> boundary), not a kernel default; the <code>delete</code> path is the explicit operator ④ <code>force_release</code> route — <b>not</b> a declared boundary · <b>declared policy + ④ force_release</b></div></div>
             <div class="ent"><div class="en">dangling provision closed</div><div class="fields">L0d/e provisions a worktree and never releases it; ② adds the obligation + the <code>release</code> mirror, so every provision now has a discharge path · <b>②</b></div></div>
             <div class="ent"><div class="en">release-safe vs the v1 bug</div><div class="fields">v1 deletes / releases with no record-closure guarantee (the evidence-loss bug's neighbour); ② gates release on <code>release_safe</code> (① INV-5), so no canonical ref is ever orphaned by a release · <b>①+②</b></div></div>
           </div>

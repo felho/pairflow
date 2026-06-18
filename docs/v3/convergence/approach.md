@@ -621,7 +621,7 @@ kernel default, only a boundary if the template lists it; it is deferred past an
 action that still needs the resource (v1: the worktree/branch survive `DONE` for the separate post-`DONE` merge
 command, and are released *there*).
 Reached by either flow — verified: both v1 `merge` and `delete` run the **identical** runtime teardown,
-so the release boundary is "merge or delete," not merge-only. At the boundary the provider releases what
+so release is reached by either path — a `merge_completed` declared boundary or a `delete` ④ `force_release` (delete is **not** a declared boundary). At the boundary the provider releases what
 it provisioned (worktree, temporary branch, tmux/runtime session, remote clone) plus engine support data
 (runtime-session registry entry, watchdog markers, locks), with explicit result/evidence/failure policy.
 This is the resource-teardown axis owned by the runtime provider — **not** "workflow cleanup" (③ is a
