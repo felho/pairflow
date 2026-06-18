@@ -5784,7 +5784,7 @@ park_for_wait(instance, step) → void                               # L3 — ar
   instance.kernel_status ← WAITING
   instance.wait ← { kind: step.wait.kind, requested_by: step.id, resume_events: step.wait.resume_events }   # e.g. commit_pending ⇐ [COMMIT], merge_pending ⇐ [MERGE], process_pending ⇐ [PERF_TEST_RESULT]; RESUME_WAIT is the handler (L3) — the resume ACTION is later; the L0d terminal set (done | failed | cancelled) is untouched
 
-post_commit_output(instance, template) → DispatchIntent | HumanDecisionRequest | none   # L3 — pure derivation (NO mutation): read the post-commit kernel_status that apply_target_entry_effects just set and select the outbound effect. The read-side dual of apply_target_entry_effects (which sets the status; this returns what to deliver)
+post_commit_output(instance, template) → DispatchIntent | HumanDecisionRequest | ActionRequest | none   # L3 — pure derivation (NO mutation): read the post-commit kernel_status that apply_target_entry_effects just set and select the outbound effect. The read-side dual of apply_target_entry_effects (which sets the status; this returns what to deliver)
   IF instance.kernel_status = TERMINAL THEN RETURN none
   IF instance.kernel_status = WAITING THEN
      IF instance.wait.kind = human_decision THEN RETURN human_decision_request(instance, template)   # parked on a human_gate ⇒ the Ask
@@ -5800,7 +5800,8 @@ validate_action_steps(template) → ok | Rejected                    # ③ defin
     IF step.action is absent OR step.action.uses is absent          THEN RETURN Rejected(invalid_action_step)
     IF step.trigger ≠ operator_intent                              THEN RETURN Rejected(unsupported_action_trigger)   # ③a cut: operator-triggered only; the auto trigger (run on arrival) is later
     IF step.outcomes is absent OR step.outcomes is empty            THEN RETURN Rejected(action_outcomes_empty)
-    FOR (key, choice) IN step.outcomes:
+    FOR (key, choice) IN step.outcomes:                              # ③ each outcome is a route { target, … }
+      IF keys_of(choice) ⊄ { target, payload, emits }               THEN RETURN Rejected(invalid_action_outcome_schema)   # closed keys — a typo (e.g. emitts) must NOT silently drop a boundary
       IF template.step(choice.target) is none                       THEN RETURN Rejected(action_outcome_target_unresolved)
   RETURN ok
 
@@ -6587,7 +6588,7 @@ park_for_wait(instance, step) → void                               # L3 — ar
   instance.kernel_status ← WAITING
   instance.wait ← { kind: step.wait.kind, requested_by: step.id, resume_events: step.wait.resume_events }   # e.g. commit_pending ⇐ [COMMIT], merge_pending ⇐ [MERGE], process_pending ⇐ [PERF_TEST_RESULT]; RESUME_WAIT is the handler (L3) — the resume ACTION is later; the L0d terminal set (done | failed | cancelled) is untouched
 
-post_commit_output(instance, template) → DispatchIntent | HumanDecisionRequest | none   # L3 — pure derivation (NO mutation): read the post-commit kernel_status that apply_target_entry_effects just set and select the outbound effect. The read-side dual of apply_target_entry_effects (which sets the status; this returns what to deliver)
+post_commit_output(instance, template) → DispatchIntent | HumanDecisionRequest | ActionRequest | ActionIntent | none   # L3 — pure derivation (NO mutation): read the post-commit kernel_status that apply_target_entry_effects just set and select the outbound effect. The read-side dual of apply_target_entry_effects (which sets the status; this returns what to deliver)
   IF instance.kernel_status = TERMINAL THEN RETURN none
   IF instance.kernel_status = WAITING THEN
      IF instance.wait.kind = human_decision THEN RETURN human_decision_request(instance, template)   # parked on a human_gate ⇒ the Ask
@@ -6608,8 +6609,12 @@ validate_action_steps(template) → ok | Rejected                    # ③ defin
     FOR (key, choice) IN step.outcomes:                              # ③b CLOSED UNION: each outcome is EXACTLY one of { target … } | { retry … }
       IF choice.target is present AND choice.retry is present        THEN RETURN Rejected(action_outcome_ambiguous_route)   # both ⇒ the stray target would be silently ignored (retry takes precedence at runtime)
       IF choice.target is absent  AND choice.retry is absent         THEN RETURN Rejected(action_outcome_no_route)
-      IF choice.target is present AND template.step(choice.target) is none THEN RETURN Rejected(action_outcome_target_unresolved)
-      IF choice.retry is present THEN
+      IF choice.target is present THEN                               # a ROUTE outcome
+        IF keys_of(choice) ⊄ { target, payload, emits, recommends }  THEN RETURN Rejected(invalid_action_outcome_schema)   # closed keys — a typo (emitts / recomendss) must NOT silently drop a boundary / recommendation
+        IF template.step(choice.target) is none                      THEN RETURN Rejected(action_outcome_target_unresolved)
+      ELSE                                                           # a RETRY outcome
+        IF keys_of(choice) ⊄ { retry }                              THEN RETURN Rejected(invalid_action_outcome_schema)
+        IF keys_of(choice.retry) ⊄ { max_attempts, on_exhausted }    THEN RETURN Rejected(invalid_action_outcome_schema)
         IF choice.retry.max_attempts is not a positive integer       THEN RETURN Rejected(invalid_retry_budget)
         IF template.step(choice.retry.on_exhausted) is none          THEN RETURN Rejected(retry_escalation_target_unresolved)
   RETURN ok
