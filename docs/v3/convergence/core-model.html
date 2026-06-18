@@ -7738,7 +7738,7 @@ DELETE_REQUESTED(intent) → Outcome                                  # ④ oper
 force_release(instance) → void                                     # ④ — IDENTICAL to ② initiate_release — release_safe (① INV-5), provider, the marker-first CAS-claim → provider.release → RUNTIME_CONTEXT_RELEASED — EXCEPT it skips the single guard (boundary_event ∉ release_boundaries(template)): an operator delete is the authority to release regardless of the declared boundaries. release_safe is NOT skipped — a forced release is still a safe release. Resolves the gap where delete_requested ∉ a run’s release.boundaries would otherwise no-op
 
 # storage op (NOT a kernel handler) — keyed by run_id so it SURVIVES the record it removes; the precondition is HERE
-hard_purge(run_id) → ok | deferred                                  # ④ — invoked by the delete-chain re-drive once the run winds down (a still-pending purge is retried — the re-drive is L9)
+hard_purge(run_id) → ok | deferred                                  # ④ — invoked by the delete-chain re-drive once the run winds down; a still-pending purge is re-driven by the delete-chain purge contract (baseline) — only a scheduled / automatic retention re-drive is L9/ops
   tomb ← run_index.lookup(run_id)
   IF tomb.status = purged THEN                                      # RE-DRIVE PATH: the write-ahead tombstone already committed — finish cleanup from the tombstone’s closure MANIFEST, never the record (which may be partly / fully gone)
     FOR blob IN tomb.closure_manifest: evidence_store.remove(blob)   # idempotent — an already-removed blob is a no-op
