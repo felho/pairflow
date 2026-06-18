@@ -572,7 +572,8 @@ initiations race, one wins, the rest no-op; a dispatch error is a follow-up vers
 releasing(req, ref)`; (4) release initiation is a **post-commit** boundary hook (never inside another transition's
 commit); (5) the boundary is **not** a kernel default — the template declares a **release policy**
 (`release: { policy: required, boundaries: [...] }`); a **teardown-managed** provider (worktree) MUST declare it
-(`validate_release_policy` → `Rejected(release_policy_undeclared)` / `release_boundaries_empty`), keyed on the
+(`validate_release_policy` → `Rejected(release_policy_undeclared)` / `release_boundaries_empty` /
+`release_boundaries_not_allowed` for non-empty boundaries under retained/external), keyed on the
 provider, *not* on `runtime_context: required` (preserving the retained / external space). The terminal transition
 only **emits** a `terminal` event; `release.boundaries` decides if it is a boundary. The anchor declares
 `release: { policy: required, boundaries: [terminal] }` (the earlier "zero new author config / terminal default"
