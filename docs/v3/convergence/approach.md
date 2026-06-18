@@ -566,10 +566,11 @@ obligation is **tracked through failure until discharged, and never dropped sile
 released" (auto-retry/timeout/watchdog is L9); `retained` / `external` carry **no** obligation (explicit
 ownership); (2) a failed release lands in a new **`release_failed(ref)`** state — a retriable release handle,
 *not* a usable runtime (partial release lands here, not back in `ready`); (3) the durable in-flight marker
-**`releasing(req, ref)`** (carrying the ref) is written **before** dispatch, the `ready(ref) → releasing` move
-being a **CAS single-winner** (`COMMIT atomically at expected_version`, `REQUIRE ready(ref)`) — concurrent
-initiations race, one wins, the rest no-op; a dispatch error is a follow-up versioned commit guarded by `REQUIRE
-releasing(req, ref)`; (4) release initiation is a **post-commit** boundary hook (never inside another transition's
+**`releasing(req, ref)`** (carrying the ref) is written **before** dispatch, and **every** `initiate_release`
+state write is a **CAS single-winner** (`COMMIT atomically at expected_version`, `REQUIRE ready(ref)`) — the
+marker *and* the two pre-dispatch failure transitions alike — so concurrent boundary hooks on the same
+`ready(ref)` race, exactly one wins, the rest no-op; a dispatch error is a follow-up versioned commit guarded by
+`REQUIRE releasing(req, ref)`; (4) release initiation is a **post-commit** boundary hook (never inside another transition's
 commit); (5) the boundary is **not** a kernel default — the template declares a **release policy**
 (`release: { policy: required, boundaries: [...] }`); a **teardown-managed** provider (worktree) MUST declare it
 (`validate_release_policy` → `Rejected(release_policy_undeclared)` / `release_boundaries_empty` /
