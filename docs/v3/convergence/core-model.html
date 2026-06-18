@@ -7710,10 +7710,6 @@ dispatch_intent(instance, template, step_id) → DispatchIntent
     runtime_context: runtime_view }                              # the projection, or none for a context-free workflow
   RETURN DispatchIntent { actor, packet }            # a local/manual driver delivers; durable channel is L8
 
-
-
-
-
 # ════════════════════════════════════════════════════════════════════════════════════════════════
 # ④ Archive / Export / Purge runs AFTER the kernel — storage-lifecycle ops on the durable run record (①).
 # It is NOT a preservation path: audit / metrics / eval compute from the durable record (or the surviving
