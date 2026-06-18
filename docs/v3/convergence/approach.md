@@ -699,8 +699,8 @@ runtime-teardown half is ②). Settled with two review refinements:
   release discharged** (else deferred). The delete chain releases via `force_release` — ②'s machinery minus the
   declared-boundary gate (`release_safe` still holds), not a declared boundary.
 - **Purge is closure-scoped and crash-safe.** It removes the full T1 run record + the run's closure-owned T3
-  blobs (MVP: run-owned), write-ahead the `run_index` tombstone first — the surviving **T1-family** idempotency
-  authority (`purged` is not an instance axis). Per-operation / per-state / ordering authority lives in the
+  blobs (MVP: run-owned), write-ahead the `run_index` tombstone (carrying the closure manifest) first — the surviving **T1-family** idempotency
+  authority and re-drive source (`purged` is not an instance axis). Per-operation / per-state / ordering authority lives in the
   core-model ④ tables (Operation Contract · State Authority · Hard-Purge Ordering).
 Under ① the purge is *safe by construction* — durable + ref-disciplined evidence (INV-3) ⇒ complete with **no
 dangling refs** (the v1 evidence-loss bug is impossible). **Not** the preservation path: audit / metrics / eval

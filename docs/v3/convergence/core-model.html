@@ -7861,7 +7861,7 @@ archive_or_export(instance, sink) → ArchiveRef                      # ④ — 
             <li><b>Scenario coverage:</b> delete a terminal run → release (no-op if already released) → purge → tombstone; delete --force a live run → cancel → force-release → purge; archive/export is an optional cold copy — read-only w.r.t. the run record/runtime, but it writes a run_index catalog entry.</li>
             <li><b>Invariant coverage:</b> archive not preservation ✓; purge complete + closure-scoped ✓; precondition on the purge not the intent ✓; tombstone + surviving global audit ✓; delete is an operator intent not a workflow action ✓ — and all L0a–L3 + ①②③ invariants still hold.</li>
             <li><b>Accepted tradeoff:</b> retention / auto-purge, a query CLI, restore, and a multi-owner blob store are out — ④ is the explicit operator ops + the safe purge contract.</li>
-            <li><b>Known gaps (intended):</b> retention / re-drive (L9/ops), archive query (ops), restore (later), shared-evidence ownership (later), export formats (ops), federation purge (L11+). Each is in Absent.</li>
+            <li><b>Known gaps (intended):</b> retention / scheduled auto-purge policy (L9/ops), archive query (ops), restore (later), shared-evidence ownership (later), export formats (ops), federation purge (L11+). Each is in Absent.</li>
             <li><b>Decision:</b> accepted as the ④ baseline (light evidence per playbook §2.1). This closes the lifecycle-close topic (①②③④); L4 (child workflows) inherits all four per child runtime_context / record.</li>
           </ul>
         </div>
