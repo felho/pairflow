@@ -705,9 +705,11 @@ runtime-teardown half is ②). Settled with two review refinements:
 Under ① the purge is *safe by construction* — evidence is durable + ref-disciplined (INV-3), so it is complete
 with **no dangling refs** (the v1 evidence-loss bug is impossible). **Not** the preservation path: audit /
 metrics / eval compute from the durable record (or the surviving **global metrics stream** — self-contained,
-untouched by purge); archive/export is an optional cold copy, never read back. A purge leaves a tombstone in a minimal durable `run_index` (a storage-lifecycle index — run_id,
-template/project refs, status, purged_at — that survives the hard purge and is the idempotency authority; from
-v1's `archive/index.json` lesson, but **not** the archive). No author config (operator/ops commands). Out (later/ops): retention / auto-purge / TTL / GC, an
+untouched by purge); archive/export is an optional cold copy, never read back. A purge leaves a tombstone in the `run_index` — itself **T1-family
+canonical storage** (a minimal catalog: run_id, template/project refs, status, purged_at): hard purge removes the
+full T1 run record, not the index, so the run_index is the minimum surviving T1 metadata and the idempotency
+authority (a purge-induced refinement of ①'s monolithic T1; from v1's `archive/index.json` lesson, but **not** the
+archive). No author config (operator/ops commands). Out (later/ops): retention / auto-purge / TTL / GC, an
 archive query CLI, restore/re-hydration, a shared/dedup blob store, export formats, federation purge (L11+).
 Ops/tooling, ~L8 area. Depends: ① (makes archive optional + purge safe), ② (release before purge), L3 (CANCEL
 sibling). **This closes the lifecycle-close topic (①②③④).**

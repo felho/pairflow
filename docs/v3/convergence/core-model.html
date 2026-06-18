@@ -7087,7 +7087,7 @@ template:
       └─ purge_state ← purge_pending
                   ↓   (ops reconciler, once wound down)
          hard_purge  — precond: terminal && release discharged && closure purge-ready
-            remove T1 record + closure-owned T3 blobs   → tombstone (run_index: purged)
+            remove FULL run record + closure-owned T3 blobs → run_index tombstone (purged)
                                                           GLOBAL metrics/audit stream SURVIVES
 
   archive / export (optional, read-only, any time): a cold copy of the durable record — NOT preservation.
@@ -7103,7 +7103,7 @@ template:
           </div></div>
           <div class="trace-row"><div class="trace-n">2</div><div class="trace-c">
             <div class="ev">the ops reconciler runs <code>hard_purge</code></div>
-            <div class="meta">precond holds (terminal ✓ · release discharged ✓ · closure purge-ready ✓) → remove the T1 record + the T3 blobs this run's ref-closure owns → <code>run_index</code> tombstone <code>{ status: purged, purged_at }</code> — the tombstone is the authority for purged (no <code>instance.purge_state</code>, the T1 record is gone). The full transcript + evidence are gone (deliberately); the <b>global metrics/audit stream survives</b> as the floor — no dangling refs (① INV-3)</div>
+            <div class="meta">precond holds (terminal ✓ · release discharged ✓ · closure purge-ready ✓) → remove the T1 record + the T3 blobs this run's ref-closure owns → <code>run_index</code> tombstone <code>{ status: purged, purged_at }</code> — the tombstone is the authority for purged (no <code>instance.purge_state</code>; the full T1 run record is gone, the T1 run_index tombstone survives). The full transcript + evidence are gone (deliberately); the <b>global metrics/audit stream survives</b> as the floor — no dangling refs (① INV-3)</div>
           </div></div>
           <div class="trace-row"><div class="trace-n">3</div><div class="trace-c">
             <div class="ev">(alternate) <code>delete --force</code> on a RUNNING run</div>
@@ -7725,7 +7725,7 @@ dispatch_intent(instance, template, step_id) → DispatchIntent
 DELETE_REQUESTED(intent) → Outcome                                  # ④ operator intent — a CANCEL sibling; starts cancel → release → purge. NOT a workflow action
   instance ← load(intent.instance_id)
   IF duplicate(intent.op_id) THEN RETURN Duplicate                  # idempotency-first
-  IF run_index.status(instance.id) = purged THEN RETURN Rejected(already_purged)   # the run_index TOMBSTONE is the authority for purged — a purged run has no T1 record to read
+  IF run_index.status(instance.id) = purged THEN RETURN Rejected(already_purged)   # the run_index TOMBSTONE is the authority for purged — a purged run has no full run record to read (the run_index is itself T1-family)
   REQUIRE intent.by = instance.binding[operator]                    # operator authority on THIS path (like CANCEL / SUBMIT_DECISION)
   IF instance.kernel_status ≠ TERMINAL AND NOT intent.force THEN RETURN Rejected(delete_confirmation_required)   # a LIVE run needs explicit force (v1: --force)
   COMMIT atomically at expected_version = instance.version:
@@ -7745,16 +7745,16 @@ hard_purge(instance) → ok | deferred                                # ④ — 
   IF instance.kernel_status ≠ TERMINAL                  THEN RETURN deferred   # wait: terminal
   IF instance.runtime_context ∉ { released, none, ready(∅) } THEN RETURN deferred   # wait: ② release discharged (NOT releasing / release_failed)
   IF NOT purge_closure_ready(instance)                  THEN RETURN deferred   # wait: every owned evidence blob is purge-eligible (no other live owner)
-  record_store.remove(canonical_record(instance))                   # the T1 run record
+  run_record_store.remove(canonical_run_record(instance))           # the FULL T1 run record — NOT the run_index, which survives as the tombstone
   FOR blob IN closure_owned_evidence(instance): evidence_store.remove(blob)   # the T3 blobs this run's canonical ref-closure OWNS — a shared / deduped blob with another owner is NOT removed (future blob-store; MVP: run-owned)
   run_index.upsert(instance.id, status: purged, purged_at: now())   # TOMBSTONE in the run_index (a minimal durable storage-lifecycle index — run_id, template/project refs, status, purged_at — NOT the archive); the GLOBAL metrics/audit stream is untouched (the audit floor)
-  # NOTE: no instance.purge_state ← purged — the T1 record is gone; the run_index TOMBSTONE above IS the authority for purged
+  # NOTE: no instance.purge_state ← purged — the FULL T1 run record is gone; the T1 run_index tombstone above SURVIVES and IS the authority for purged
   RETURN ok
 
 # optional ops (read-only) — a cold snapshot/export; NOT the preservation path
 archive_or_export(instance, sink) → ArchiveRef                      # ④ — copy the durable record + its closure-owned evidence to a cold sink; the system still computes audit/eval from the LIVE durable record / global metrics, never from this copy
   REQUIRE run_index.status(instance.id) ≠ purged                    # input must be NON-PURGED: a purged run has no full record — only the tombstone + global audit floor remain (not a full-run export)
-  RETURN cold_copy(canonical_record(instance), closure_owned_evidence(instance), sink)
+  RETURN cold_copy(canonical_run_record(instance), closure_owned_evidence(instance), sink)
 
 # closure_owned_evidence / purge_closure_ready: the run's canonical ref-closure over its ① T3 evidence refs.
 # MVP = run-owned (every ref the run's record holds). A future shared/dedup blob store purges a blob only once
@@ -7779,7 +7779,7 @@ archive_or_export(instance, sink) → ArchiveRef                      # ④ — 
           <div class="fields" style="margin-top:8px"><b>Closure rule:</b> purge removes the T1 record and every T3
           blob the run's <b>canonical ref-closure owns</b> (MVP: run-owned). The wording stays open to a future
           shared/dedup blob store — a blob with another owning run is purged only once all owners release it — so it
-          is not a blanket "delete this run's evidence". <b>run_index:</b> the purged / archived tombstone authority is a minimal durable storage-lifecycle index (run_id, template / project refs, status, <code>purged_at</code> / <code>deleted_at</code>) that <b>survives</b> the T1 record's hard purge and is the idempotency authority — from v1's <code>archive/index.json</code> lesson, but <b>not</b> the archive (the archive is the optional cold copy, not the registry). <b>④↔②:</b> an operator delete uses <code>force_release</code> — ②'s release machinery minus the
+          is not a blanket "delete this run's evidence". <b>run_index:</b> the purged / archived tombstone authority is itself <b>T1-family canonical storage</b> — durable canonical metadata, <b>not</b> a T2 projection, <b>not</b> T3 evidence, <b>not</b> the archive. T1 carries two things: the <b>run record</b> (transcript / decisions / evidence refs — the purge target) and the <b>run_index</b> (run_id, template / project refs, status, <code>purged_at</code> / <code>deleted_at</code> — a minimal catalog / tombstone). <code>hard_purge</code> removes the <b>full T1 run record</b>, not the run_index; the run_index is the <b>minimum surviving T1 metadata</b> and the idempotency authority — a purge-induced refinement of ①'s T1 (where, with no purge, the monolithic "durable run record" is the right abstraction). From v1's <code>archive/index.json</code> lesson, but <b>not</b> the archive (the archive is the optional cold copy, not the registry). <b>④↔②:</b> an operator delete uses <code>force_release</code> — ②'s release machinery minus the
           declared-boundary gate (the operator delete is the authority; release_safe still applies). A normal declared boundary still goes through the membership-gated <code>initiate_release</code>.</div>
         </div>
 
