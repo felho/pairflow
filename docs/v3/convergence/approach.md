@@ -561,14 +561,17 @@ boundary explicit* + the evidence-ref rule — not a rewrite.
 **② Runtime Resource Teardown / Provider Close** *(capability slice — L0e's `release` mirror).*
 **Realized in core-model.html** (section `②`, after `①`) — matrix-first, the **Runtime Resource Lifecycle
 Contract** as the central artifact (provision recap + release initiate / complete / failed / initiation-failed /
-context-free rows), diffed against L3. Four review refinements baked in: (1) the obligation is **tracked until
-discharged, never dropped silently** — *not* "eventually released" (auto-retry/timeout/watchdog is L9); (2) a
-failed release lands in a new **`release_failed(ref)`** state — a retriable release handle, *not* a usable
-runtime (partial release lands here, not back in `ready`); (3) an explicit **initiation-failure** branch
-(provider unavailable / dispatch error / not-safe) so we never sit in `releasing(req)` without a dispatched
-request; (4) the boundary is a **declared event** (terminal default ｜ merge_completed ｜ delete_requested ｜
-later), distinct from the operator command that causes it. Release is orthogonal to lifecycle; zero new author
-config (default terminal boundary).
+context-free rows), diffed against L3. Review refinements baked in: (1) the obligation is **tracked through
+failure until discharged, and never dropped silently** — *not* "eventually released" (auto-retry/timeout/watchdog
+is L9); (2) a failed release lands in a new **`release_failed(ref)`** state — a retriable release handle, *not* a
+usable runtime (partial release lands here, not back in `ready`); (3) the durable in-flight marker
+**`releasing(req, ref)`** (carrying the ref) is written **before** dispatch in one atomic, non-reentrant step, so
+the correlation target exists before the provider can fire — a dispatch error rolls forward to
+`release_failed(initiation)` in the same step; (4) release initiation is a **post-commit** boundary hook (never
+inside the atomic commit); (5) the boundary is a **declared, parameterized event** —
+`initiate_release(instance, boundary_event)` (terminal default ｜ merge_completed ｜ delete_requested ｜ later),
+distinct from the operator command that causes it. Release is orthogonal to lifecycle; zero new author config
+(default terminal boundary).
 Capability: the kernel tracks a release obligation for a `ready` runtime_context, discharged at a
 **declared release boundary** — terminal disposition is the *default* boundary, not a hard invariant:
 it is deferred past any workflow-owned post-completion action that still needs the resource (v1: the
@@ -580,7 +583,7 @@ it provisioned (worktree, temporary branch, tmux/runtime session, remote clone) 
 This is the resource-teardown axis owned by the runtime provider — **not** "workflow cleanup" (③ is a
 different axis): worktree/branch/tmux are the runtime_context the provider provisioned, so releasing them
 is its `release` mirror, not an author-chosen step. The kernel guarantees the obligation is
-**tracked until discharged or failed, and never dropped silently** (eventual liveness — auto-retry/timeout/
+**tracked through failure until discharged, and never dropped silently** (eventual liveness — auto-retry/timeout/
 watchdog — is the L9 slice); it does not hardcode terminal as the release instant. Precondition (the teeth):
 durable-record closure complete — no canonical ref points into the resource being released (guaranteed
 by ①, asserted here fail-closed); **not** "everything archived". Ordering: ② release of a resource
