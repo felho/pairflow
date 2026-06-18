@@ -699,7 +699,7 @@ runtime-teardown half is ②). Settled with two review refinements:
   release discharged** (else deferred). an operator delete uses `force_release` — ②'s release machinery minus the declared-boundary gate (the
   operator delete is the authority; `release_safe` still holds), so a `delete_requested` that is not in the
   template's `release.boundaries` still releases; a normal declared boundary keeps the membership-gated `initiate_release`.
-- **Purge is closure-scoped, not a blanket "this run's evidence."** It removes the T1 record and the T3 blobs
+- **Purge is closure-scoped, not a blanket "this run's evidence."** It removes the full T1 run record and the T3 blobs
   the run's **canonical ref-closure owns** (MVP: run-owned); a future shared/dedup blob with another owner is
   retained until all owners release it.
 Under ① the purge is *safe by construction* — evidence is durable + ref-disciplined (INV-3), so it is complete
