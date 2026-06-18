@@ -4603,7 +4603,7 @@ release_safe(resource) → bool
         <div class="note">
           <b>What the kernel can promise.</b> With no auto-retry / timeout / watchdog in this slice (that is L9),
           the kernel does <em>not</em> promise the resource is <em>eventually</em> released. It promises the weaker,
-          true thing: the release obligation is <b>tracked until discharged and never dropped silently</b> — a run
+          true thing: the release obligation is <b>tracked through failure until discharged, never dropped silently</b> — a run
           is not "closed" until <code>RUNTIME_CONTEXT_RELEASED</code>, and any failure (initiation or provider) lands
           in <code>release_failed(ref)</code>, a <b>retriable release handle, not a usable runtime</b>. Eventual
           liveness is the L9 retry slice.
@@ -4648,7 +4648,7 @@ release_safe(resource) → bool
           </div></div>
           <div class="trace-row"><div class="trace-n">2</div><div class="trace-c">
             <div class="ev"><code>initiate_release</code> checks the precondition and dispatches</div>
-            <div class="meta"><code>release_safe(instance)</code> holds (① INV-5: no canonical ref points into the worktree — the record, evidence outcomes, and durable evidence refs are all off in T1/T3) → resolve the pinned-template provider → <code>provider.release(ref)</code> async → <code>runtime_context ← releasing(req, ref)</code>, append <code>RUNTIME_CONTEXT_RELEASING</code></div>
+            <div class="meta"><code>release_safe(instance)</code> holds (① INV-5: no canonical ref points into the worktree — the record, evidence outcomes, and durable evidence refs are all off in T1/T3) → resolve the pinned-template provider → in one atomic step <b>persist the marker first</b> (<code>runtime_context ← releasing(req, ref)</code> + append <code>RUNTIME_CONTEXT_RELEASING</code>), <b>then</b> dispatch <code>provider.release(ref)</code> async — so the durable correlation target exists before the provider can fire back</div>
           </div></div>
           <div class="trace-row"><div class="trace-n">3</div><div class="trace-c">
             <div class="ev">the provider finishes; <code>RUNTIME_CONTEXT_RELEASED(req, ok)</code> arrives</div>
@@ -4881,7 +4881,7 @@ RUNTIME_CONTEXT_RELEASED(instance, request_id, result) → Outcome    # kernel_e
     RETURN Accepted
   instance.runtime_context ← release_failed(ref, reason: result.reason, evidence_refs: result.evidence_refs)   # the ref bound from releasing(request_id, ref); provider-reported failure, possibly PARTIAL (worktree gone, branch not) — a retriable release handle, NOT a usable runtime
   instance.transcript.append(RUNTIME_CONTEXT_RELEASE_FAILED { phase: provider, reason: result.reason })
-  RETURN Accepted                                                   # obligation RETAINED (tracked until discharged); auto-retry / timeout / watchdog = L9
+  RETURN Accepted                                                   # obligation RETAINED (tracked through failure until discharged); auto-retry / timeout / watchdog = L9
 
 KICKOFF(instance, task) → Outcome                                     # operator_intent
   REQUIRE instance.kernel_status = WAITING AND instance.wait.kind = kickoff_pending
@@ -5137,7 +5137,8 @@ dispatch_intent(instance, template, step_id) → DispatchIntent
               <tr><td><b>release initiate</b></td><td><code>ready(ref) → releasing(req, ref)</code></td><td><b>release boundary reached</b> (default: terminal)</td><td><code>release(ref)</code> (async)</td><td><code>RUNTIME_CONTEXT_RELEASING</code></td><td><b><code>release_safe</code></b> (① INV-5) + provider resolves + dispatch ok</td><td>—</td></tr>
               <tr><td><b>release complete</b></td><td><code>releasing → released</code></td><td>provider event (ok)</td><td>—</td><td><code>RUNTIME_CONTEXT_RELEASED</code> { evidence_refs }</td><td>correlation by <code>request_id</code> + CAS</td><td>—</td></tr>
               <tr><td><b>release failed</b> <span style="font-size:10px;color:var(--muted)">(provider, may be partial)</span></td><td><code>releasing → release_failed(ref)</code></td><td>provider event (failed)</td><td>—</td><td><code>RUNTIME_CONTEXT_RELEASE_FAILED</code> { phase: provider }</td><td>correlation</td><td><b>audited + obligation retained</b></td></tr>
-              <tr><td><b>release initiation failed</b></td><td><code>ready(ref) → release_failed(ref)</code></td><td>boundary, but provider unavailable / dispatch error / not&#8209;safe</td><td>— (none dispatched)</td><td><code>RUNTIME_CONTEXT_RELEASE_FAILED</code> { phase: initiation ｜ precondition }</td><td>—</td><td><b>audited + obligation retained</b> (never <code>releasing</code> without a request)</td></tr>
+              <tr><td><b>pre-dispatch failure</b> <span style="font-size:10px;color:var(--muted)">(before any marker)</span></td><td><code>ready(ref) → release_failed(ref)</code></td><td>boundary, but not&#8209;safe / provider unavailable</td><td>— (none dispatched)</td><td><code>RUNTIME_CONTEXT_RELEASE_FAILED</code> { phase: precondition ｜ initiation }</td><td>fails before the marker</td><td><b>audited + obligation retained</b> (no marker written)</td></tr>
+              <tr><td><b>dispatch error</b> <span style="font-size:10px;color:var(--muted)">(after marker, same atomic step)</span></td><td><code>ready(ref) → releasing(req, ref) → release_failed(ref)</code></td><td>marker persisted, then <code>release</code> dispatch errors</td><td><code>release(ref)</code> attempted</td><td><code>RUNTIME_CONTEXT_RELEASING</code> then <code>RUNTIME_CONTEXT_RELEASE_FAILED</code> { phase: initiation }</td><td>one atomic, non-reentrant step</td><td><b>rolled forward to release_failed</b> in the same step (no orphan <code>releasing</code>)</td></tr>
               <tr><td>retry <span style="font-size:10px;color:var(--muted)">(named, not realized)</span></td><td><code>release_failed(ref) → releasing(req, ref)</code></td><td>retry / watchdog / timeout</td><td><code>release(ref)</code></td><td>—</td><td>—</td><td><b>L9</b></td></tr>
               <tr><td>context-free</td><td><code>none</code> / <code>ready(∅)</code></td><td>boundary</td><td>—</td><td>—</td><td>nothing provisioned</td><td>no obligation — skip</td></tr>
             </tbody>
@@ -5167,7 +5168,7 @@ dispatch_intent(instance, template, step_id) → DispatchIntent
         <div class="agg invariant">
           <div class="agg-label">Added rules</div>
           <div class="ents">
-            <div class="ent"><div class="en">release obligation is never dropped silently</div><div class="fields">every <code>ready(ref)</code> carries a release obligation that is <b>tracked until discharged</b> (<code>RUNTIME_CONTEXT_RELEASED</code>); a failed release — initiation or provider — retains it in <code>release_failed(ref)</code>. This closes L0d/e's dangling provision. <b>Not</b> "eventually released": auto-retry / timeout / watchdog (the liveness guarantee) is L9</div></div>
+            <div class="ent"><div class="en">release obligation is never dropped silently</div><div class="fields">every <code>ready(ref)</code> carries a release obligation that is <b>tracked through failure until discharged</b> (<code>RUNTIME_CONTEXT_RELEASED</code>); a failed release — initiation or provider — does <b>not</b> close it, it is retained in <code>release_failed(ref)</code>. This closes L0d/e's dangling provision. <b>Not</b> "eventually released": auto-retry / timeout / watchdog (the liveness guarantee) is L9</div></div>
             <div class="ent"><div class="en">release_failed is a handle, not a runtime</div><div class="fields"><code>release_failed(ref)</code> is a retriable release handle, <b>not</b> a usable runtime — a terminal instance with a failed release is a flagged resource leak pending retry, never re-dispatchable as a live context. A partial release (worktree gone, branch not) lands here, not back in <code>ready</code></div></div>
             <div class="ent"><div class="en">release-safe precondition</div><div class="fields">release initiates only when <code>release_safe(instance)</code> holds (① INV-5: no canonical-record ref points into the resource). ① guarantees it by construction; ② asserts it fail-closed — an unsafe release becomes <code>release_failed(precondition)</code>, never an orphaned canonical ref</div></div>
             <div class="ent"><div class="en">release is orthogonal to lifecycle</div><div class="fields">release moves only the <code>runtime_context</code> axis (<code>ready → releasing → released | release_failed</code>); it never changes <code>kernel_status</code> / <code>current_step</code> / <code>terminal_disposition</code>. A terminal instance stays terminal whether release succeeds, fails, or is still in flight</div></div>
