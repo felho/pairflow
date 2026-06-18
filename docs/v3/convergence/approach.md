@@ -523,8 +523,8 @@ durable storage; teardown only releases runtime resources — teardown must neve
 preserves history.** Operationally and checkably: **no canonical-record ref points into a resource
 being released.** Storage Scope (①) guarantees this by construction; Teardown (②) only asserts it,
 fail-closed. Strands across the two axes below: **①/② are core**; **③ splits by maturity** —
-③a commit/merge *actions* are realized (operator-triggered), ③b the general action library + `auto` trigger is
-later; **④** is later ops, except the purge semantics v1 `delete` already exercises:
+③a commit/merge *actions* (operator-triggered) and ③b *auto* actions (the `auto` trigger, e.g. `perf_test`) are
+realized; **④** is later ops, except the purge semantics v1 `delete` already exercises:
 
 **Two axes, so "cleanup" never re-conflates the strands.** Each strand is one combination of *who owns
 the thing* (kernel/engine · runtime provider · workflow/author) × *the nature of the operation* (resource
@@ -633,10 +633,22 @@ provider resource teardown and ④'s storage/archive/purge.
 > merge (merge is a normal pre-terminal action step); v1's `DONE` was commit-complete with merge a separate
 > post-`DONE` command — accepted to avoid a post-terminal action shape.
 
-> **③b General Workflow Actions** *(later, non-core).* The generalized library + modes: the `auto` trigger
-> (run on arrival, e.g. a mid-flow `perf_test` whose `regression` outcome routes back to `implement` with an
-> instruction — the automated `request_rework`), a rich outcome-predicate language, and packaged action
-> blocks (publish, notify). Deferred until a concrete use case motivates it.
+> **③b Auto Workflow Actions.** **Realized in core-model.html** (section `③b`, after ③a, diffed against ③a).
+> The `auto` trigger: an action runs **on arrival** (no operator), still **marker-first** — the arrival commit
+> claims `WAITING(action_running)` + `ACTION_RUNNING`, then an `ActionIntent` (produce-not-perform, the
+> `DispatchIntent` analog) is delivered **post-commit**, the runner runs, and the result returns as an
+> `ACTION_RESULT` **kernel-event** (correlated by `request_id`, the `RUNTIME_CONTEXT_READY` sibling; inline ⇒
+> immediate, deferred ⇒ later — same contract). Outcome-routing: `pass → human_approval` (the L3 `recommends`
+> moves onto `perf_test.pass`, the edge that now enters the gate), `regression → implement` + instruction (the
+> automated `request_rework`). **Bounded retry**, opt-in per outcome that declares `retry { max_attempts,
+> on_exhausted }`: re-claims within an **episode** (attempt = transcript `ACTION_RUNNING` count for the
+> `episode_ref`, reconstructable — a fresh arrival opens a new episode), exhausted ⇒ escalate. Anchor: a
+> `perf_test` between converge and the human gate (an action can be anywhere, not a "post" phase). v1 grounding:
+> auto-run-and-route exists inline (`passValidationGate` *filters*, `auto_rework` *routes* + bounded
+> `auto_rework_count/limit`); async delivery is the greenfield generalization. **Out** (thin / later): the
+> deferred async driver + timeout (L9), unbounded retry / watchdog (L9), **pure computed-routing** (verdict +
+> counter with no runner — v1 `auto_rework`'s process-less half, a routing-policy concern), a rich
+> outcome-predicate DSL, a packaged action library (publish/notify are examples).
 
 Depends: L3 (the de-vocabularized routing + `apply_target_entry_effects`, the wait machinery), L2a (the
 process-runner family), ② (the release boundary an action outcome emits).
