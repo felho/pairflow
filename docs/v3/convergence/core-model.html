@@ -7800,6 +7800,21 @@ archive_or_export(instance, sink) → ArchiveRef                      # ④ — 
           <div class="fields" style="margin-top:8px">The recurring trap this kills: <code>purged</code> is <b>not</b> an instance axis (there is no <code>instance.purge_state ← purged</code>) — it lives in the <code>run_index</code> tombstone because the full run record is gone. <code>runtime_context</code>'s full enum is owned by ②.</div>
         </div>
 
+        <div class="agg">
+          <div class="agg-label">Hard-purge ordering — write-ahead &amp; crash-safe (a different kind of truth: not "what the op is" but "in what order it is safe")</div>
+          <div style="overflow-x:auto">
+          <table class="contract">
+            <thead><tr><th>#</th><th>Action</th><th>Why this order (crash-safety)</th></tr></thead>
+            <tbody>
+              <tr><td><b>1</b></td><td><code>run_index.upsert(status: purged, purged_at)</code> — <b>write-ahead the tombstone</b></td><td>it is the idempotency authority, and the record / evidence / index need not share one storage transaction — writing it first means a crash mid-purge never leaves a removed record with <b>no</b> tombstone</td></tr>
+              <tr><td><b>2</b></td><td>remove the closure-owned T3 evidence blobs</td><td>enumerated <b>while the full run record is still readable</b> (the record holds the canonical ref-closure)</td></tr>
+              <tr><td><b>3</b></td><td>remove the full T1 run record</td><td><b>last</b> — it was needed to enumerate the closure; the <code>run_index</code> tombstone survives it as the authority</td></tr>
+            </tbody>
+          </table>
+          </div>
+          <div class="fields" style="margin-top:8px"><b>Re-drive:</b> an interrupted purge (<code>purge_pending</code> still set, the run not yet fully removed) is re-run by the ops reconciler; every step is idempotent (tombstone upsert, blob remove, record remove), so the safe residue is "tombstone + a not-yet-finished removal", <b>never</b> "removed record + no tombstone". Full crash-consistent reconciliation is L9.</div>
+        </div>
+
         <h3 class="view-h"><span class="view-tag invariant">Invariant</span> New at ④</h3>
         <div class="agg invariant">
           <div class="agg-label">Added rules</div>
