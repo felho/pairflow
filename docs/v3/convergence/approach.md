@@ -307,6 +307,35 @@ schema/validation system.
 Conceptually L0-family (pre-kernel project binding/resolution). **Realized in
 core-model.html.**
 
+**Run-scoped mode / variants — an L0f-family resolution extension (named future capability, not built).**
+A single workflow that runs in two modes — v1's `review_artifact_type` (create-time, immutable, run-scoped;
+default `code`). The v3 cut: a **start-fixed run-scoped `mode`** (values `code | doc` — shorter than v1's
+`document`) that the **L0f resolution normalizes into a pinned, mode-specific `ResolvedDefinition`** — the kernel
+then runs a **mode-agnostic** template. No runtime mode-conditional, no expression DSL, no overlay/patch system,
+no step-graph rewrite, no agent_config override. Mechanism: a uniform `modes: [...]` membership tag, allowed only
+on a small set of surfaces, resolved at start, **fail-closed** mode set (the template declares its modes; an
+unknown mode at start, or a tag naming an undeclared mode, is rejected, like slots). The breadth is bounded by
+the *surface* scope-brake, not the mechanism. Three surfaces (v1 reality-checked, file:line):
+- **gate presence** — `gates[].modes` (v1: the runtime validation gate runs only in `code`, doc skips it —
+  `passValidationGate.ts:407-414`); the resolved variant simply has / omits the gate.
+- **context-block presence** — `context_blocks[].modes` (v1: the docs-only edit guard "refine only
+  docs/task/spec/progress; product/runtime/source code forbidden" — `documentBubbleSourceEditGuard.ts`,
+  `rolePromptImplementerScope.ts`); the resolved variant includes / omits the block.
+- **named policy profiles** — `mode_profiles[mode]` binds **closed, loader-validated policy refs** (NOT overlay,
+  NOT arbitrary override) for evidence + reviewer behavior. This is the correction to a "gate + context only"
+  reading: v1's docs-only behavior is **not merely a consequence of omitting the validation gate** — it is an
+  explicit policy decision: the reviewer test directive is a synthetic trusted skip (`skip_full_rerun: true`,
+  `verification_status: trusted` — `reviewerTestDirectiveResolver.ts:81-94`) and finding-priority is demoted
+  (doc-scope P0/P1 → P2 except strict required-now + L1). So a `mode` resolves to an `evidence_policy_ref` /
+  `review_policy_ref`.
+v1 does **not** condition the step graph (same flow), the model / agent_config, or the reviewer blocking
+structure — so the cut excludes mode-on-steps and mode-on-agent_config. Placement: an **L0f-family /
+resolution-layer extension**, not an L2 runtime conditional; L2 / L2b / the evidence-reviewer policy are pure
+**consumers** (gates appear/disappear in the resolved template, context blocks are included, policy refs come
+from the resolved mode profile). Parallel to the lifecycle-close and L4 work; does not block them. Deferred to a
+small-spec when scheduled (the v1 reality check is done). **Invariant to preserve even in a minimal first cut:**
+docs-only evidence/review behavior is a *named policy-profile effect, not inferred from gate absence*.
+
 **L1 — Capability matrix.**
 Concepts: `CapabilityProfile` (matrix `role × current_step → allowed actions`); the Capability
 Engine as the **role/state authorization layer** — an early check inside `HandleEnvelope`,
