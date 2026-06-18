@@ -7088,7 +7088,7 @@ template:
       └─ purge_state ← purge_pending
                   ↓   (ops reconciler, once wound down)
          hard_purge  — precond: terminal && release discharged && closure purge-ready
-            remove FULL run record + closure-owned T3 blobs → run_index tombstone (purged)
+            run_index tombstone (write-ahead, purged) → remove closure-owned T3 blobs → remove FULL run record
                                                           GLOBAL metrics/audit stream SURVIVES
 
   archive / export (optional, read-only, any time): a cold copy of the durable record — NOT preservation.
@@ -7104,7 +7104,7 @@ template:
           </div></div>
           <div class="trace-row"><div class="trace-n">2</div><div class="trace-c">
             <div class="ev">the ops reconciler runs <code>hard_purge</code></div>
-            <div class="meta">precond holds (terminal ✓ · release discharged ✓ · closure purge-ready ✓) → remove the full T1 run record + the T3 blobs this run's ref-closure owns → <code>run_index</code> tombstone <code>{ status: purged, purged_at }</code> — the tombstone is the authority for purged (no <code>instance.purge_state</code>; the full T1 run record is gone, the T1 run_index tombstone survives). The full transcript + evidence are gone (deliberately); the <b>global metrics/audit stream survives</b> as the floor — no dangling refs (① INV-3)</div>
+            <div class="meta">precond holds (terminal ✓ · release discharged ✓ · closure purge-ready ✓) → <code>run_index</code> tombstone <code>{ status: purged, purged_at }</code> write-ahead (the idempotency authority) → remove the T3 blobs this run's ref-closure owns → remove the full T1 run record last — the tombstone is the authority for purged (no <code>instance.purge_state</code>; the full T1 run record is gone, the T1 run_index tombstone survives). The full transcript + evidence are gone (deliberately); the <b>global metrics/audit stream survives</b> as the floor — no dangling refs (① INV-3)</div>
           </div></div>
           <div class="trace-row"><div class="trace-n">3</div><div class="trace-c">
             <div class="ev">(alternate) <code>delete --force</code> on a RUNNING run</div>
@@ -7722,7 +7722,7 @@ dispatch_intent(instance, template, step_id) → DispatchIntent
 DELETE_REQUESTED(intent) → Outcome                                  # ④ operator intent — a CANCEL sibling; starts cancel → release → purge. NOT a workflow action
   instance ← load(intent.instance_id)
   IF duplicate(intent.op_id) THEN RETURN Duplicate                  # idempotency-first
-  IF run_index.status(instance.id) = purged THEN RETURN Rejected(already_purged)   # the run_index TOMBSTONE is the authority for purged — a purged run has no full run record to read (the run_index is itself T1-family)
+  IF run_index.status(instance.id) = purged THEN RETURN Rejected(already_purged)   # the run_index TOMBSTONE is the authority for purged — checked BEFORE the operator-authority REQUIRE because a purged run has no full run record (hence no binding[operator]) to authorize against; only the surviving T1-family tombstone remains to read
   REQUIRE intent.by = instance.binding[operator]                    # operator authority on THIS path (like CANCEL / SUBMIT_DECISION)
   IF instance.purge_state = purge_pending THEN RETURN Committed(instance.version, none)   # already pending — a re-issue (fresh op_id) is an idempotent no-op (matrix: no-op once pending / purged); checked AFTER authority so an unauthorized re-delete still gets operator_not_authorized
   IF instance.kernel_status ≠ TERMINAL AND NOT intent.force THEN RETURN Rejected(delete_confirmation_required)   # a LIVE run needs explicit force (v1: --force)
@@ -7772,7 +7772,7 @@ archive_or_export(instance, sink) → ArchiveRef                      # ④ — 
             <tbody>
               <tr><td><b>delete (request)</b></td><td><code>DELETE_REQUESTED</code> (CANCEL sibling)</td><td>any non-purged (live needs <code>force</code>)</td><td>terminalize if live (cancel)</td><td><code>force_release</code> (② release minus the declared-boundary gate)</td><td>sets <code>purge_pending</code></td><td>—</td><td><code>op_id</code> (re-issue ⇒ no-op once pending/purged)</td><td>operator_not_authorized · already_purged · delete_confirmation_required</td><td><code>bubble delete</code> entry</td></tr>
               <tr><td><b>archive / export</b></td><td><code>ARCHIVE</code> / <code>EXPORT</code> (optional)</td><td>non-purged (read-only)</td><td>none</td><td>none</td><td>cold copy of the durable record (+ closure evidence) — <b>not</b> preservation</td><td>the snapshot + a <code>run_index</code> entry</td><td>yes (re-snapshot)</td><td>—</td><td>the delete-triggered archive (5 files + manifest + <code>index.json</code>)</td></tr>
-              <tr><td><b>hard purge</b></td><td>— (chain tail / ops reconciler)</td><td><b>terminal &amp;&amp; release discharged</b></td><td>none (already terminal)</td><td>requires release discharged</td><td>remove full T1 run record + <b>closure-owned</b> T3 blobs</td><td><code>run_index</code> tombstone (<code>purged</code>) + <b>global metrics stream</b></td><td>already-purged ⇒ no-op</td><td>not_terminal · release_not_discharged</td><td><code>rm -rf</code> the per-bubble dir (but v1 lost evidence; v3 closure-complete)</td></tr>
+              <tr><td><b>hard purge</b></td><td>— (chain tail / ops reconciler)</td><td><b>terminal &amp;&amp; release discharged</b></td><td>none (already terminal)</td><td>requires release discharged</td><td>remove full T1 run record + <b>closure-owned</b> T3 blobs</td><td><code>run_index</code> tombstone (<code>purged</code>) + <b>global metrics stream</b></td><td>tombstone upsert idempotent; re-drives cleanup while record / owned blobs remain — no-op only once the closure is already removed</td><td>not_terminal · release_not_discharged</td><td><code>rm -rf</code> the per-bubble dir (but v1 lost evidence; v3 closure-complete)</td></tr>
             </tbody>
           </table>
           </div>
@@ -7822,7 +7822,7 @@ archive_or_export(instance, sink) → ArchiveRef                      # ④ — 
         </div>
         <div class="note evidence">
           <ul style="margin:0">
-            <li><b>Scenario coverage:</b> delete a terminal run → release (no-op if already released) → purge → tombstone; delete --force a live run → cancel → force-release → purge; archive/export is an optional read-only cold copy.</li>
+            <li><b>Scenario coverage:</b> delete a terminal run → release (no-op if already released) → purge → tombstone; delete --force a live run → cancel → force-release → purge; archive/export is an optional cold copy — read-only w.r.t. the run record/runtime, but it writes a run_index catalog entry.</li>
             <li><b>Invariant coverage:</b> archive not preservation ✓; purge complete + closure-scoped ✓; precondition on the purge not the intent ✓; tombstone + surviving global audit ✓; delete is an operator intent not a workflow action ✓ — and all L0a–L3 + ①②③ invariants still hold.</li>
             <li><b>Accepted tradeoff:</b> retention / auto-purge, a query CLI, restore, and a multi-owner blob store are out — ④ is the explicit operator ops + the safe purge contract.</li>
             <li><b>Known gaps (intended):</b> retention / re-drive (L9/ops), archive query (ops), restore (later), shared-evidence ownership (later), export formats (ops), federation purge (L11+). Each is in Absent.</li>
