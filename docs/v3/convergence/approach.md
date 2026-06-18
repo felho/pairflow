@@ -561,21 +561,29 @@ boundary explicit* + the evidence-ref rule — not a rewrite.
 **② Runtime Resource Teardown / Provider Close** *(capability slice — L0e's `release` mirror).*
 **Realized in core-model.html** (section `②`, after `①`) — matrix-first, the **Runtime Resource Lifecycle
 Contract** as the central artifact (provision recap + release initiate / complete / failed / initiation-failed /
-context-free rows), diffed against L3. Review refinements baked in: (1) the obligation is **tracked through
-failure until discharged, and never dropped silently** — *not* "eventually released" (auto-retry/timeout/watchdog
-is L9); (2) a failed release lands in a new **`release_failed(ref)`** state — a retriable release handle, *not* a
-usable runtime (partial release lands here, not back in `ready`); (3) the durable in-flight marker
-**`releasing(req, ref)`** (carrying the ref) is written **before** dispatch in one atomic, non-reentrant step, so
-the correlation target exists before the provider can fire — a dispatch error rolls forward to
-`release_failed(initiation)` in the same step; (4) release initiation is a **post-commit** boundary hook (never
-inside the atomic commit); (5) the boundary is a **declared, parameterized event** —
-`initiate_release(instance, boundary_event)` (terminal default ｜ merge_completed ｜ delete_requested ｜ later),
-distinct from the operator command that causes it. Release is orthogonal to lifecycle; zero new author config
-(default terminal boundary).
-Capability: the kernel tracks a release obligation for a `ready` runtime_context, discharged at a
-**declared release boundary** — terminal disposition is the *default* boundary, not a hard invariant:
-it is deferred past any workflow-owned post-completion action that still needs the resource (v1: the
-worktree/branch survive `DONE` for the separate post-`DONE` merge command, and are released *there*).
+context-free rows), diffed against L3. Review refinements baked in: (1) under `release.policy: required` the
+obligation is **tracked through failure until discharged, and never dropped silently** — *not* "eventually
+released" (auto-retry/timeout/watchdog is L9); `retained` / `external` carry **no** obligation (explicit
+ownership); (2) a failed release lands in a new **`release_failed(ref)`** state — a retriable release handle,
+*not* a usable runtime (partial release lands here, not back in `ready`); (3) the durable in-flight marker
+**`releasing(req, ref)`** (carrying the ref) is written **before** dispatch, the `ready(ref) → releasing` move
+being a **CAS single-winner** (`COMMIT atomically at expected_version`, `REQUIRE ready(ref)`) — concurrent
+initiations race, one wins, the rest no-op; a dispatch error is a follow-up versioned commit guarded by `REQUIRE
+releasing(req, ref)`; (4) release initiation is a **post-commit** boundary hook (never inside another transition's
+commit); (5) the boundary is **not** a kernel default — the template declares a **release policy**
+(`release: { policy: required, boundaries: [...] }`); a **teardown-managed** provider (worktree) MUST declare it
+(`validate_release_policy` → `Rejected(release_policy_undeclared)` / `release_boundaries_empty`), keyed on the
+provider, *not* on `runtime_context: required` (preserving the retained / external space). The terminal transition
+only **emits** a `terminal` event; `release.boundaries` decides if it is a boundary. The anchor declares
+`release: { policy: required, boundaries: [terminal] }` (the earlier "zero new author config / terminal default"
+claim was itself the bias, now retracted). `Committed` stays a kernel-outcome term (a namespace note disambiguates
+it from the workflow `COMMIT` event and a later git-commit ③a action — no rename). Release is orthogonal to
+lifecycle.
+Capability: under `release.policy: required` the kernel tracks a release obligation for a `ready`
+runtime_context, discharged at a **declared release boundary** (`release.boundaries`) — terminal is **not** a
+kernel default, only a boundary if the template lists it; it is deferred past any workflow-owned post-completion
+action that still needs the resource (v1: the worktree/branch survive `DONE` for the separate post-`DONE` merge
+command, and are released *there*).
 Reached by either flow — verified: both v1 `merge` and `delete` run the **identical** runtime teardown,
 so the release boundary is "merge or delete," not merge-only. At the boundary the provider releases what
 it provisioned (worktree, temporary branch, tmux/runtime session, remote clone) plus engine support data
