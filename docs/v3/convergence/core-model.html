@@ -7723,6 +7723,7 @@ DELETE_REQUESTED(intent) → Outcome                                  # ④ oper
   instance ← load(intent.instance_id)
   IF duplicate(intent.op_id) THEN RETURN Duplicate                  # idempotency-first
   IF run_index.status(instance.id) = purged THEN RETURN Rejected(already_purged)   # the run_index TOMBSTONE is the authority for purged — a purged run has no full run record to read (the run_index is itself T1-family)
+  IF instance.purge_state = purge_pending THEN RETURN Committed(instance.version, none)   # already pending — a re-issue (fresh op_id) is an idempotent no-op (matrix: no-op once pending / purged); the purge is already winding down
   REQUIRE intent.by = instance.binding[operator]                    # operator authority on THIS path (like CANCEL / SUBMIT_DECISION)
   IF instance.kernel_status ≠ TERMINAL AND NOT intent.force THEN RETURN Rejected(delete_confirmation_required)   # a LIVE run needs explicit force (v1: --force)
   COMMIT atomically at expected_version = instance.version:
@@ -7751,7 +7752,9 @@ hard_purge(instance) → ok | deferred                                # ④ — 
 # optional ops (read-only) — a cold snapshot/export; NOT the preservation path
 archive_or_export(instance, sink) → ArchiveRef                      # ④ — copy the durable record + its closure-owned evidence to a cold sink; the system still computes audit/eval from the LIVE durable record / global metrics, never from this copy
   REQUIRE run_index.status(instance.id) ≠ purged                    # input must be NON-PURGED: a purged run has no full record — only the tombstone + global audit floor remain (not a full-run export)
-  RETURN cold_copy(canonical_run_record(instance), closure_owned_evidence(instance), sink)
+  ref ← cold_copy(canonical_run_record(instance), closure_owned_evidence(instance), sink)
+  run_index.upsert(instance.id, status: archived, archive_ref: ref)   # catalog the cold copy in the run_index — a metadata note, NOT preservation; the durable record stays the authority until purge
+  RETURN ref
 
 # closure_owned_evidence / purge_closure_ready: the run's canonical ref-closure over its ① T3 evidence refs.
 # MVP = run-owned (every ref the run's record holds). A future shared/dedup blob store purges a blob only once
