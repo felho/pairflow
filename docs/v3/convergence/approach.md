@@ -580,7 +580,8 @@ it provisioned (worktree, temporary branch, tmux/runtime session, remote clone) 
 This is the resource-teardown axis owned by the runtime provider — **not** "workflow cleanup" (③ is a
 different axis): worktree/branch/tmux are the runtime_context the provider provisioned, so releasing them
 is its `release` mirror, not an author-chosen step. The kernel guarantees the obligation is
-*eventually* discharged; it does not hardcode terminal as the release instant. Precondition (the teeth):
+**tracked until discharged or failed, and never dropped silently** (eventual liveness — auto-retry/timeout/
+watchdog — is the L9 slice); it does not hardcode terminal as the release instant. Precondition (the teeth):
 durable-record closure complete — no canonical ref points into the resource being released (guaranteed
 by ①, asserted here fail-closed); **not** "everything archived". Ordering: ② release of a resource
 follows any ③a post-completion action that consumes it (e.g. release the worktree *after* the merge that
