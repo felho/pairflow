@@ -696,8 +696,9 @@ runtime-teardown half is ②). Settled with two review refinements:
 - **The destructive precondition is on the purge commit, not the delete intent.** `DELETE_REQUESTED` (a
   `CANCEL`-sibling operator intent, **not** a workflow action) is accepted on a live run (with `force`) and
   drives **cancel → ② release → purge**; the irreversible `hard_purge` runs **only** when **terminal &&
-  release discharged** (else deferred). `delete_requested` is an operator **force**-release boundary — ②
-  honors it even when not in the template's `release.boundaries`.
+  release discharged** (else deferred). an operator delete uses `force_release` — ②'s release machinery minus the declared-boundary gate (the
+  operator delete is the authority; `release_safe` still holds), so a `delete_requested` that is not in the
+  template's `release.boundaries` still releases; a normal declared boundary keeps the membership-gated `initiate_release`.
 - **Purge is closure-scoped, not a blanket "this run's evidence."** It removes the T1 record and the T3 blobs
   the run's **canonical ref-closure owns** (MVP: run-owned); a future shared/dedup blob with another owner is
   retained until all owners release it.
