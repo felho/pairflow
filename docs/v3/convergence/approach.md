@@ -559,6 +559,16 @@ Note: v3 already treats transcript/instance as durable abstract stores, so this 
 boundary explicit* + the evidence-ref rule — not a rewrite.
 
 **② Runtime Resource Teardown / Provider Close** *(capability slice — L0e's `release` mirror).*
+**Realized in core-model.html** (section `②`, after `①`) — matrix-first, the **Runtime Resource Lifecycle
+Contract** as the central artifact (provision recap + release initiate / complete / failed / initiation-failed /
+context-free rows), diffed against L3. Four review refinements baked in: (1) the obligation is **tracked until
+discharged, never dropped silently** — *not* "eventually released" (auto-retry/timeout/watchdog is L9); (2) a
+failed release lands in a new **`release_failed(ref)`** state — a retriable release handle, *not* a usable
+runtime (partial release lands here, not back in `ready`); (3) an explicit **initiation-failure** branch
+(provider unavailable / dispatch error / not-safe) so we never sit in `releasing(req)` without a dispatched
+request; (4) the boundary is a **declared event** (terminal default ｜ merge_completed ｜ delete_requested ｜
+later), distinct from the operator command that causes it. Release is orthogonal to lifecycle; zero new author
+config (default terminal boundary).
 Capability: the kernel tracks a release obligation for a `ready` runtime_context, discharged at a
 **declared release boundary** — terminal disposition is the *default* boundary, not a hard invariant:
 it is deferred past any workflow-owned post-completion action that still needs the resource (v1: the
