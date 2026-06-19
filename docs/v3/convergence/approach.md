@@ -332,7 +332,7 @@ directive — `skip_full_rerun: true`, `verification_status: trusted`, "docs-onl
 (`reviewerTestDirectiveResolver.ts:80`), plus the skip-claim-vs-runtime-refs conflict guard
 (`docsOnlyRuntimeSkipGuard.ts`) — is evidence **production**, not a boolean check. It is modeled as a
 `docs_only_runtime_evidence` **gate** (`[doc]`, same `implement.PASS` point as the `[code]` validation gate) whose
-`allow` result **records** that evidence into the run record (a `GateDecision` carries `evidence_refs` — L2/L2a).
+`allow` result produces that as **durable evidence** and records its **ref** (`GateDecision.evidence_refs` — L2/L2a; ① INV-3, no inline blob).
 So "docs-only is an explicit gate, not gate-absence" is preserved, with a **visible consumer** — unlike a
 free-floating `mode_profiles` policy-ref map, which had none (in this kernel a policy is only ever applied at a
 gate). v1 does **not** condition the step graph, the model / `agent_config`, or the reviewer loop topology — the
