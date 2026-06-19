@@ -227,7 +227,6 @@
       <a class="level" href="#archive-purge">④ <span class="tag">· archive / export / purge</span></a>
       <a class="level" href="#l0f-mode">L0f+ <span class="tag">· run-scoped mode / variants</span></a>
       <a class="level" href="#l4-child">L4 <span class="tag">· child workflow instances</span></a>
-      <div class="future">L4 · child workflow + events</div>
       <div class="cut">▲ MVP cut — local WF-7 runs</div>
       <div class="future">L5 · help subflow</div>
       <div class="block">Block B · distribution</div>
@@ -8300,7 +8299,7 @@ template:
   PARENT instance                                              CHILD instance (a FULL instance: own record / runtime_context / ①②③④)
   ───────────────                                              ──────────────────────────────────────────────────────────────────
   arrive(type: child_workflow step)
-    ├─ ChildWorkflowLink { child_key } ──────── idempotent ── (same parent + step + child_key ⇒ at most ONE active link; retry never double-spawns)
+    ├─ ChildWorkflowLink { child_key } ──────── idempotent ── (≤ 1 ACTIVE link; a crash-replay reuses it — a terminal link ⇒ a fresh retry attempt, never a double-spawn)
     ├─ WAITING(child_event)   (parks on the DECLARED wait_for lifecycle keys)
     └─ SpawnIntent  (produce-not-perform) ─────────────────►  CREATE_INSTANCE(child_template_ref, …, parent_ref)
                                                                   START → implement / review / … / merge_action → done
@@ -8321,7 +8320,7 @@ template:
           </div></div>
           <div class="trace-row"><div class="trace-n">2</div><div class="trace-c">
             <div class="ev"><b>SpawnIntent</b> (post-commit) → child <code>CREATE_INSTANCE(local-pair-v0, …, parent_ref)</code></div>
-            <div class="meta">the child is a FULL instance: its own L0f resolution, runtime_context (a fresh worktree), transcript, and ①②③④ lifecycle. Its <code>child_id</code> is written back into the parent link (<code>spawning ⇒ active</code>). The parent is asleep — <b>no polling</b></div>
+            <div class="meta">the child is a FULL instance: its own L0f resolution, runtime_context (a fresh worktree), transcript, and ①②③④ lifecycle. Its <code>child_id</code> lands in the parent link via a <code>CHILD_SPAWNED</code> event (the <code>RUNTIME_CONTEXT_READY</code> analog — CAS'd, transcript-backed): <code>spawning ⇒ active</code>. The parent is asleep — <b>no polling</b></div>
           </div></div>
           <div class="trace-row"><div class="trace-n">3</div><div class="trace-c">
             <div class="ev">the child runs its own loop: implement → review → converge → human_approval → commit → <code>merge_action</code> → <code>done</code></div>
@@ -8459,7 +8458,7 @@ validate_decision_gates(template) → ok | Rejected                     # L3 —
 RECEIVE(input) → Outcome                                               # one kernel entry; route by input source class
   outcome ← MATCH input.source:
     operator_intent → dispatch to CREATE_INSTANCE / START / KICKOFF / SUBMIT_DECISION / RESUME_WAIT / RUN_ACTION / CANCEL   # lifecycle + human-decision + wait-resume + action-run intents
-    kernel_event    → dispatch to RUNTIME_CONTEXT_READY / RUNTIME_CONTEXT_RELEASED / ACTION_RESULT / CHILD_LIFECYCLE / FAIL   # internal events; CHILD_LIFECYCLE (L4) delivers one instance's lifecycle to another — the smallest internal channel
+    kernel_event    → dispatch to RUNTIME_CONTEXT_READY / RUNTIME_CONTEXT_RELEASED / ACTION_RESULT / CHILD_SPAWNED / CHILD_LIFECYCLE / FAIL   # internal events; CHILD_SPAWNED (spawn write-back) + CHILD_LIFECYCLE (L4) deliver one instance's events to another — the smallest internal channel
     actor_envelope  → HANDLE(input)                                           # the L0a–L1 actor handler, now lifecycle-guarded
   FOR boundary_event IN boundary_events_of(outcome, instance):   # ② the release-boundary events THIS committed transition produced (now: terminal; ③a actions add merge_completed etc.)
     initiate_release(instance, boundary_event)                    # POST-COMMIT side effect; the declared release.boundaries decides — terminal is NOT a kernel default, just a possible event
@@ -8950,24 +8949,35 @@ validate_child_steps(template) → ok | Rejected                   # L4 definiti
       IF NOT resolves(template, step.wait_for[k].target) THEN RETURN Rejected(child_wait_target_unresolved(step.id, k))
   RETURN ok
 
-park_for_child(instance, template, step) → void                  # L4 — arrival at a type: child_workflow step: SPAWN + WAIT, idempotent on child_key
+park_for_child(instance, template, step) → void                  # L4 — arrival at a type: child_workflow step: SPAWN + WAIT, idempotent on the ACTIVE link
   key  ← resolve_child_key(instance, step)                        # materialize the declared child_key for THIS arrival (e.g. { task_id, role })
-  link ← instance.child_links.find(step.id, key)                  # IDEMPOTENT: same (instance, step, child_key) ⇒ the existing link (re-entry / retry never double-spawns)
-  IF link is none THEN
-    link ← ChildWorkflowLink { link_id: fresh, step_id: step.id, child_key: key, child_id: none, status: spawning }   # CANONICAL link in the PARENT record; child_id is filled when the SpawnIntent's CREATE_INSTANCE returns
+  link ← instance.child_links.find_active(step.id, key)           # IDEMPOTENT on the ACTIVE link only (status ∈ spawning | active): a crash-replay re-entry reuses it — never a double-spawn
+  IF link is none THEN                                            # no LIVE link ⇒ a FRESH ATTEMPT. A prior TERMINAL link (a done / failed / cancelled attempt) does NOT block — recovery re-entry (same child_key) spawns a new attempt, so retry is not a deadlock
+    link ← ChildWorkflowLink { link_id: fresh, request_id: fresh, step_id: step.id, child_key: key, child_id: none, status: spawning }   # CANONICAL link + the durable spawn MARKER — persisted in `spawning` BEFORE the post-commit SpawnIntent fires; child_id lands via CHILD_SPAWNED
     instance.child_links.append(link) ; spawn_pending ← true       # a FRESH link ⇒ post_commit_output issues the SpawnIntent
   ELSE
-    spawn_pending ← false                                         # an EXISTING link ⇒ just (re-)park and wait; the child already exists
+    spawn_pending ← false                                         # a LIVE link (spawning / active) ⇒ just (re-)park and wait; the child already exists or is being created
   instance.kernel_status ← WAITING
   instance.wait ← { kind: child_event, requested_by: step.id, link_id: link.link_id, resume_events: keys(step.wait_for), spawn_pending }   # park on the child's DECLARED lifecycle keys
 
 child_intent(instance, template) → SpawnIntent                   # L4 — produce-not-perform (the ActionIntent / DispatchIntent analog): the child CREATE_INSTANCE runs POST-COMMIT, never inside the arrival commit
   step ← template.step(instance.current_step) ; link ← instance.child_links.by_id(instance.wait.link_id)
   RETURN SpawnIntent {
-    parent_ref:         { parent_id: instance.id, link_id: link.link_id, child_key: link.child_key },   # the back-link the child carries; the kernel delivers CHILD_LIFECYCLE here
-    child_template_ref: step.child.template_ref,                  # the child is a FULL instance — CREATE_INSTANCE + its own L0f resolution / runtime_context / ①②③④ lifecycle
-    binding:            step.child.binding, task: step.child.inputs,
-    on_created:         BIND child_id INTO link }                 # the created child's id is written back into the parent link (spawning ⇒ active)
+    request_id:         link.request_id,                         # correlation: the child's CREATE_INSTANCE replies with CHILD_SPAWNED { parent_ref, child_id } — the RUNTIME_CONTEXT_READY analog
+    parent_ref:         { parent_id: instance.id, link_id: link.link_id, child_key: link.child_key },   # the back-link the child carries; the kernel routes CHILD_SPAWNED + CHILD_LIFECYCLE here
+    child_template_ref: step.child.template_ref,                  # the child is a FULL instance — CREATE_INSTANCE(…, parent_ref) + its own L0f resolution / runtime_context / ①②③④ lifecycle
+    binding:            step.child.binding, task: step.child.inputs }   # NO inline write-back: the child_id lands via the CHILD_SPAWNED handler below (CAS'd, transcript-backed) — never a lost shorthand
+
+CHILD_SPAWNED(event) → Outcome                                   # L4 kernel_event — the child's CREATE_INSTANCE finished (the RUNTIME_CONTEXT_READY analog): write child_id back into the parent link, CAS'd + transcript-backed
+  instance ← load(event.parent_ref.parent_id) ; template ← template_of(instance)
+  link ← instance.child_links.by_id(event.parent_ref.link_id)
+  IF link is none THEN RETURN Rejected(child_link_unknown)
+  IF link.status ≠ spawning THEN RETURN Duplicate               # already bound (a replayed CHILD_SPAWNED) ⇒ idempotent no-op
+  COMMIT atomically at instance.version:                         # marker-first / CAS, like ② RUNTIME_CONTEXT_RELEASED's correlated commit
+    REQUIRE link.status = spawning
+    link.child_id ← event.child_id ; link.status ← active
+    instance.transcript.append(CHILD_SPAWNED { link_id: link.link_id, child_id: event.child_id })
+  RETURN Committed(instance.version, none)                       # no routing — the parent stays WAITING(child_event) for the child's lifecycle
 
 child_lifecycles_of(outcome, instance) → [lifecycle]             # L4 — the subscribable lifecycle transitions THIS commit produced
   IF outcome ∈ { Committed, Terminated } AND instance.kernel_status = TERMINAL    # MVP anchor: only TERMINAL transitions are subscribable
@@ -8980,8 +8990,10 @@ emit_child_lifecycle(instance, lifecycle) → void                 # L4 — POST
 
 CHILD_LIFECYCLE(event) → Outcome                                 # L4 kernel_event — delivered to the PARENT (the ACTION_RESULT / RUNTIME_CONTEXT_READY sibling). event = { parent_ref, child_id, lifecycle }
   instance ← load(event.parent_ref.parent_id) ; template ← template_of(instance)   # the PARENT instance
-  link ← instance.child_links.by_id(event.parent_ref.link_id)
-  IF link is none OR link.child_id ≠ event.child_id THEN RETURN Rejected(child_link_mismatch)   # correlation: the event must match the canonical link
+  link ← instance.child_links.by_id(event.parent_ref.link_id)    # PRIMARY correlation is the link_id (stable from spawn), NOT child_id
+  IF link is none THEN RETURN Rejected(child_link_unknown)
+  IF link.child_id = none THEN link.child_id ← event.child_id    # SELF-HEAL: a lost CHILD_SPAWNED ⇒ bind the id now from the (clearly real) child that just finished — no child_id: none deadlock
+  ELSE IF link.child_id ≠ event.child_id THEN RETURN Rejected(child_link_mismatch)   # a DIFFERENT child than the one bound ⇒ reject
   IF instance.kernel_status ≠ WAITING OR instance.wait.kind ≠ child_event OR instance.wait.link_id ≠ link.link_id
      THEN RETURN Rejected(not_awaiting_this_child)               # the parent is not parked on THIS child (already routed, or a duplicate delivery — idempotent)
   step ← template.step(instance.current_step)
@@ -9011,10 +9023,10 @@ CHILD_LIFECYCLE(event) → Outcome                                 # L4 kernel_e
             <thead><tr><th>Primitive</th><th>What it is</th><th>Reuses (already built)</th><th>Idempotency / correlation</th></tr></thead>
             <tbody>
               <tr><td><code>type: child_workflow</code> step</td><td>the parent-side launch/link step: <code>{ template_ref, child_key, binding?, inputs?, wait_for }</code></td><td>the <code>type: action</code> / <code>human_gate</code> step family</td><td>validated at load (<code>validate_child_steps</code>)</td></tr>
-              <tr><td><code>ChildWorkflowLink</code></td><td>the <b>canonical</b> parent↔child link in the parent record (<code>{ link_id, step_id, child_key, child_id, status }</code>); the child carries a <code>parent_ref</code> back-link</td><td>① T1 run record</td><td>keyed by <code>(instance, step, child_key)</code> — ≤ 1 active link</td></tr>
+              <tr><td><code>ChildWorkflowLink</code></td><td>the <b>canonical</b> parent↔child link in the parent record (<code>{ link_id, request_id, step_id, child_key, child_id, status: spawning|active|&lt;terminal&gt; }</code>); the child carries a <code>parent_ref</code> back-link</td><td>① T1 run record</td><td>≤ 1 <b>ACTIVE</b> link per <code>(instance, step, child_key)</code>; a terminal link ⇒ a fresh attempt</td></tr>
               <tr><td><code>WAITING(child_event)</code></td><td>the parent parks on the child's <b>declared</b> lifecycle keys (<code>resume_events = keys(wait_for)</code>)</td><td>the L0d WAITING axis (kickoff / human_decision / action_running precedent)</td><td>resumes only a subscribed lifecycle on the matching link</td></tr>
               <tr><td><code>CHILD_LIFECYCLE</code> event</td><td>an internal kernel event from a child's <b>subscribable lifecycle transition commit</b>, delivered to the parent — the smallest internal channel</td><td>the <code>RUNTIME_CONTEXT_RELEASED</code> / <code>ACTION_RESULT</code> kernel-event + post-commit-hook pattern</td><td>correlated by <code>parent_ref</code> / <code>child_id</code></td></tr>
-              <tr><td><code>child_key</code></td><td>the idempotent spawn key (e.g. <code>task_id + role</code>): re-entry / retry reuses the link, never double-spawns</td><td>the marker-first single-winner pattern (the op_id analog)</td><td><b>load-bearing</b> — the link's identity</td></tr>
+              <tr><td><code>child_key</code></td><td>the idempotent spawn key (e.g. <code>task_id + role</code>): a crash-replay reuses the ACTIVE link; a terminal link ⇒ a fresh attempt</td><td>the marker-first single-winner pattern (the op_id analog)</td><td><b>load-bearing</b> — identifies the live link</td></tr>
             </tbody>
           </table>
           </div>
@@ -9023,8 +9035,10 @@ CHILD_LIFECYCLE(event) → Outcome                                 # L4 kernel_e
           <div class="agg-label">New values + rejections</div>
           <div class="ents">
             <div class="ent"><div class="en">SpawnIntent <span style="font-size:10px;color:var(--muted)">(produce, not perform)</span></div><div class="fields"><code>{ parent_ref, child_template_ref, binding, task }</code> — the child <code>CREATE_INSTANCE</code> runs post-commit; the DispatchIntent / ActionIntent analog</div></div>
+            <div class="ent"><div class="en">CHILD_SPAWNED <span style="font-size:10px;color:var(--muted)">(kernel event)</span></div><div class="fields"><code>{ parent_ref, child_id }</code> — the spawn write-back: the child's CREATE_INSTANCE finished ⇒ CAS the id into the parent link (<code>spawning ⇒ active</code>). The <code>RUNTIME_CONTEXT_READY</code> analog</div></div>
             <div class="ent"><div class="en">CHILD_LIFECYCLE <span style="font-size:10px;color:var(--muted)">(kernel event)</span></div><div class="fields"><code>{ parent_ref, child_id, lifecycle }</code> — <code>lifecycle ∈</code> the child's subscribable transitions; MVP anchor: terminal (<code>done | failed | cancelled</code>)</div></div>
-            <div class="ent"><div class="en">Rejected(child_link_mismatch)</div><div class="fields">a <code>CHILD_LIFECYCLE</code> whose <code>child_id</code> ≠ the link's bound child</div></div>
+            <div class="ent"><div class="en">Rejected(child_link_unknown)</div><div class="fields">a <code>CHILD_SPAWNED</code> / <code>CHILD_LIFECYCLE</code> for a link the parent does not have</div></div>
+            <div class="ent"><div class="en">Rejected(child_link_mismatch)</div><div class="fields">a <code>CHILD_LIFECYCLE</code> whose <code>child_id</code> ≠ the link's already-bound child</div></div>
             <div class="ent"><div class="en">Rejected(not_awaiting_this_child)</div><div class="fields">the parent is not parked on this child (already routed, or a duplicate delivery)</div></div>
             <div class="ent"><div class="en">Rejected(child_lifecycle_not_subscribed)</div><div class="fields">a lifecycle the parent's <code>wait_for</code> does not declare</div></div>
             <div class="ent"><div class="en">Rejected(child_key_missing / child_wait_for_empty / child_wait_target_unresolved)</div><div class="fields">load-time <code>validate_child_steps</code> failures</div></div>
@@ -9036,7 +9050,8 @@ CHILD_LIFECYCLE(event) → Outcome                                 # L4 kernel_e
           <div class="agg-label">Added rules</div>
           <div class="ents">
             <div class="ent"><div class="en">a child is a full instance, not a subflow</div><div class="fields">the child is created by the ordinary <code>CREATE_INSTANCE</code> with its own L0f resolution, runtime_context, record, and ①②③④ lifecycle. L4 adds linkage + an event, not a new embedded execution model</div></div>
-            <div class="ent"><div class="en">idempotent spawn (child_key)</div><div class="fields">the same <code>(parent instance, child step, child_key)</code> yields <b>at most one active canonical link</b>; a re-entry / retry reuses it and never spawns a second child. <code>child_key</code> is the link's identity, not a convenience</div></div>
+            <div class="ent"><div class="en">idempotent spawn (child_key) — on the ACTIVE link</div><div class="fields">the same <code>(parent instance, child step, child_key)</code> yields <b>at most one ACTIVE link</b> (status <code>spawning | active</code>): a crash-replay re-entry reuses it and never double-spawns. A <b>terminal</b> link (a finished / failed / cancelled attempt) does <b>not</b> block — a recovery re-entry with the same <code>child_key</code> spawns a <b>fresh attempt</b> (new <code>link_id</code>). So retry is not a deadlock, and the idempotency is on the live link</div></div>
+            <div class="ent"><div class="en">spawn write-back is correlated + CAS'd</div><div class="fields">the child's <code>child_id</code> lands in the parent link via a <code>CHILD_SPAWNED</code> kernel event (the <code>RUNTIME_CONTEXT_READY</code> analog), CAS'd + transcript-backed (<code>spawning ⇒ active</code>) — never an inline shorthand that could be lost. A lost <code>CHILD_SPAWNED</code> <b>self-heals</b> on the first <code>CHILD_LIFECYCLE</code> (the link binds the id then); the crash window (link durably <code>spawning</code>) is reconciled at L9</div></div>
             <div class="ent"><div class="en">the parent owns the link; the child carries the back-ref</div><div class="fields">the canonical <code>ChildWorkflowLink</code> lives in the <b>parent</b> record; the child carries a <code>parent_ref</code>. (v1 had only a child id in plan metadata — no reverse link, so no reconciliation)</div></div>
             <div class="ent"><div class="en">CHILD_LIFECYCLE is transition-based; the anchor is terminal</div><div class="fields">the event is produced by a child's <b>subscribable lifecycle transition commit</b>; the mechanism is general, but the MVP anchor subscribes only terminal transitions (<code>done | failed | cancelled</code>). Intermediate subscription (e.g. <code>ready_for_human_approval</code>) is a valid extension on the same channel</div></div>
             <div class="ent"><div class="en">routing is fail-closed on the subscription</div><div class="fields">the parent resumes only on a lifecycle in its <code>wait_for</code>, on the matching link, while parked — else <code>Rejected</code>. The kernel knows no lifecycle meanings; <code>wait_for</code> keys route via the shared <code>arrive()</code></div></div>
@@ -9098,7 +9113,7 @@ template:
           <code>refine_task</code> / <code>split_task</code> / <code>route_back_to_plan</code>) is ordinary parent
           authoring on the existing gate / decision / agent-step primitives, working off the plan <em>document</em>
           as data — <b>not</b> a kernel route-taxonomy. <code>split_task</code> just edits the plan document to add
-          tasks; the loop processes them one at a time.
+          tasks; the loop processes them one at a time. A <code>failed</code> / <code>cancelled</code> child routes to <code>recover_task → spec_gate → run_task</code> with the <em>same</em> <code>child_key</code>: because the prior link is terminal, <code>find_active</code> returns none and a <b>fresh attempt</b> is spawned — no deadlock.
         </div>
 
         <h3 class="view-h"><span class="view-tag absent">Absent</span> Still not here</h3>
@@ -9185,7 +9200,7 @@ template:
       }
       var html = escapeHtml(code)
         .replace(/("[^"]*"|'[^']*')/g, '<span class="s">$1</span>')
-        .replace(/\b(START_INSTANCE|CREATE_INSTANCE|RUNTIME_CONTEXT_READY|RUNTIME_CONTEXT_RELEASED|RESOLVE_START|RECEIVE|HANDLE|KICKOFF|SUBMIT_DECISION|RESUME_WAIT|RUN_ACTION|CHILD_LIFECYCLE|DELETE_REQUESTED|CANCEL|COMPLETE|FAIL|START|MATCH|INTERFACE|FOR|IF|THEN|ELSE|CONTINUE|RETURN|COMMIT|REQUIRE)\b/g, '<span class="kw">$1</span>')
+        .replace(/\b(START_INSTANCE|CREATE_INSTANCE|RUNTIME_CONTEXT_READY|RUNTIME_CONTEXT_RELEASED|RESOLVE_START|RECEIVE|HANDLE|KICKOFF|SUBMIT_DECISION|RESUME_WAIT|RUN_ACTION|CHILD_SPAWNED|CHILD_LIFECYCLE|DELETE_REQUESTED|CANCEL|COMPLETE|FAIL|START|MATCH|INTERFACE|FOR|IF|THEN|ELSE|CONTINUE|RETURN|COMMIT|REQUIRE)\b/g, '<span class="kw">$1</span>')
         .replace(/\b(Rejected\([^)]+\)|Stale\([^)]+\)|Committed\([^)]+\)|Started\([^)]+\)|Created\([^)]+\)|Activated\([^)]+\)|Terminated\([^)]+\)|Accepted|Duplicate|DispatchIntent|ContextPacket|ResolvedStartRequest|GateDecision|GateEvaluator|GateInvocation|ProcessResult|ProcessGateRunner|ContextBlock|HumanDecisionRequest|DECISION_REQUEST|DECISION_MADE|APPROVAL_REQUEST|APPROVAL_DECISION|WAIT_RESUMED|RUNTIME_CONTEXT_RELEASING|RUNTIME_CONTEXT_RELEASE_FAILED|ACTION_RUNNING|ACTION_RESULT|ActionRequest|ActionResult|ActionRunner|ActionIntent|CHILD_LIFECYCLE_RECEIVED|ChildWorkflowLink|SpawnIntent|Outcome)\b/g, '<span class="out">$1</span>')
         .replace(/^(\s*-?\s*)([A-Za-z_][A-Za-z0-9_]*)(:)/, '$1<span class="k">$2</span>$3')
         .replace(/(:\s*)([0-9]+)(\b)/g, '$1<span class="n">$2</span>$3');
