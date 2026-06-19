@@ -717,7 +717,7 @@ sibling). **This closes the lifecycle-close topic (①②③④).**
 Cross-ref: the **wait/resume contract** these build on is already realized at L3 (`RESUME_WAIT`); later
 resource/action slices reuse it.
 
-**L4 — Child workflow instances + internal lifecycle events.**
+**L4 — Child workflow instances + internal lifecycle events. Realized in core-model.html (L4 section after L0f+).**
 Concepts: `ChildWorkflowLink`; parent waits on a child lifecycle event; **kernel-emitted
 lifecycle events as an internal channel**; orphaned-child recovery. This is the
 deterministic-internal form of the wait condition (correlated by child id).
@@ -726,6 +726,18 @@ subflow of L5. This is the WF-7 unlock and it must come early, before the full
 distributed stack: it needs only internal events, not external channels or correlation.
 Note the coherence bonus: "internal lifecycle events as a channel" is the smallest form
 of the channel abstraction, prefiguring external channels (L8).
+Realized as five kernel primitives (the rest is parent-template authoring): a `type: child_workflow`
+step; the canonical `ChildWorkflowLink` (parent record) + a `parent_ref` back-link on the child;
+`WAITING(child_event)`; the `CHILD_LIFECYCLE` internal kernel event (a child's subscribable lifecycle
+transition commit, delivered to the parent — the `RUNTIME_CONTEXT_RELEASED` / `ACTION_RESULT` sibling);
+and a load-bearing `child_key` for idempotent spawn (≤1 active link per parent+step+child_key). Spawn is
+produce-not-perform (`SpawnIntent`); resume reuses `arrive()`. The mechanism is transition-based but the
+MVP anchor subscribes only **terminal** lifecycles (`done | failed | cancelled`); `wait_for` keys are
+`lifecycle → route config`; round is instance-local. Config anchor = a new `plan-exec-v0` parent template
+(the task list is the plan **document**, not kernel state). Absent (→ later / L9 / L8): fan-out / fan-in,
+intermediate-lifecycle subscription (`ready_for_human_approval`), lost-event reconciliation, and the
+durable / external channel. v1 reality check (Explore): `plan watch` is external polling (read each child's
+`state.json` ~60s) with no event / join / reverse link; L4 replaces it with a first-class link + channel.
 
 > **MVP cut — build until local WF-7 runs:** parent plan workflow, child bubble
 > workflow, internal lifecycle events, human approval/rework gates, no polling. This
