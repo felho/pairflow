@@ -7921,14 +7921,14 @@ archive_or_export(instance, sink) → ArchiveRef                      # ④ — 
           </div></div>
           <div class="trace-row"><div class="trace-n">4</div><div class="trace-c">
             <div class="ev">pinned, mode-specific <code>ResolvedDefinition</code> → <code>CREATE_INSTANCE</code></div>
-            <div class="meta">at <code>implement.PASS</code> the surviving <code>docs_only_runtime_evidence</code> gate runs: it does <b>not</b> execute a test — it returns <code>allow</code> with an <b>evidence record</b> (<code>verification_status: trusted</code>, <code>skip_full_rerun: true</code>) written to the run record. No runtime mode field, no kernel branch on the mode; the gate ran because its binding survived resolution</div>
+            <div class="meta">at <code>implement.PASS</code> the surviving <code>docs_only_runtime_evidence</code> gate runs: it does <b>not</b> execute a test — it returns <code>allow</code> plus a <b>durable evidence record</b> (<code>verification_status: trusted</code>, <code>skip_full_rerun: true</code>) — its <b>ref rides the gate decision</b> (<code>evidence_refs</code>) into the run record (① INV-3, no inline blob). No runtime mode field, no kernel branch on the mode; the gate ran because its binding survived resolution</div>
           </div></div>
         </div>
         <div class="note runtime">
           The doc variant's "runtime checks skipped, trusted" is <b>not gate-absence</b> — it is an <b>explicit
           gate</b> (<code>docs_only_runtime_evidence</code>) producing a canonical evidence record. A gate result is
-          structured (<code>verdict</code> + <code>evidence_refs</code>) and is persisted to the durable run record
-          (L2 / L2a), so a gate can <em>record</em> the intended skip, not just check a boolean. The later
+          structured (<code>verdict</code> + <code>evidence_refs</code>): the evidence lives in the durable evidence store and
+          its <b>ref</b> rides the decision into the run record (L2 / L2a; ① INV-3 — no inline blob), so a gate can <em>record</em> the intended skip, not just check a boolean. The later
           reviewer / converge flow reads that evidence from the transcript — there is no free-floating policy map.
         </div>
 
@@ -8023,11 +8023,15 @@ apply_mode(definition, mode) → ResolvedDefinition                # prune to th
   FOR step IN definition.steps:
     FOR transition IN step.transitions:
       transition.gates ← [ g for g in transition.gates if in_mode(g, mode) ]
-  # surface 2 — context-contribution presence: prune the tagged REFS on each carrier, NEVER the catalog block
-  #   (a tagged catalog context_blocks entry would dangle; the catalog stays whole, harmlessly unreferenced in the other mode)
+  # surface 2 — context-contribution presence: prune the tagged REFS on EVERY ref-bearing carrier — a role/step
+  #   prompt_concern_refs AND a SURVIVING gate's context_block_refs — NEVER the shared catalog context_blocks entry
+  #   (a tagged catalog entry would dangle; the catalog stays whole, harmlessly unreferenced in the other mode)
   FOR carrier IN definition.{roles, steps}:
     carrier.prompt_concern_refs ← [ r for r in carrier.prompt_concern_refs if in_mode(r, mode) ]
-    carrier.context_block_refs  ← [ r for r in carrier.context_block_refs  if in_mode(r, mode) ]
+  FOR step IN definition.steps:
+    FOR transition IN step.transitions:
+      FOR gate IN transition.gates:                              # the bindings that survived surface 1
+        gate.context_block_refs ← [ r for r in gate.context_block_refs if in_mode(r, mode) ]
   RETURN pin(definition)                                         # immutable, mode-specific — the kernel loads it like any Template; no policy map, no runtime mode field
 
 in_mode(tagged, mode) ≜ tagged.modes is empty OR mode IN tagged.modes   # membership predicate; untagged ⇒ present in every mode
