@@ -8979,7 +8979,7 @@ CHILD_SPAWNED(event) → Outcome                                   # L4 kernel_e
   COMMIT atomically at instance.version:                         # marker-first / CAS, like ② RUNTIME_CONTEXT_RELEASED's correlated commit
     REQUIRE link.status = spawning
     link.child_id ← event.child_id ; link.status ← active
-    instance.transcript.append(CHILD_SPAWNED { link_id: link.link_id, child_id: event.child_id })
+    instance.transcript.append(CHILD_SPAWNED { link_id: link.link_id, request_id: event.request_id, child_id: event.child_id })
   RETURN Committed(instance.version, none)                       # no routing — the parent stays WAITING(child_event) for the child's lifecycle
 
 child_lifecycles_of(outcome, instance) → [lifecycle]             # L4 — the subscribable lifecycle transitions THIS commit produced
@@ -9038,11 +9038,11 @@ CHILD_LIFECYCLE(event) → Outcome                                 # L4 kernel_e
         <div class="agg">
           <div class="agg-label">New values + rejections</div>
           <div class="ents">
-            <div class="ent"><div class="en">SpawnIntent <span style="font-size:10px;color:var(--muted)">(produce, not perform)</span></div><div class="fields"><code>{ parent_ref, child_template_ref, binding, task }</code> — the child <code>CREATE_INSTANCE</code> runs post-commit; the DispatchIntent / ActionIntent analog</div></div>
-            <div class="ent"><div class="en">CHILD_SPAWNED <span style="font-size:10px;color:var(--muted)">(kernel event)</span></div><div class="fields"><code>{ parent_ref, child_id }</code> — the spawn write-back: the child's CREATE_INSTANCE finished ⇒ CAS the id into the parent link (<code>spawning ⇒ active</code>). The <code>RUNTIME_CONTEXT_READY</code> analog</div></div>
+            <div class="ent"><div class="en">SpawnIntent <span style="font-size:10px;color:var(--muted)">(produce, not perform)</span></div><div class="fields"><code>{ request_id, parent_ref, child_template_ref, binding, task }</code> — the child <code>CREATE_INSTANCE</code> runs post-commit; <code>request_id</code> correlates the <code>CHILD_SPAWNED</code> reply. The DispatchIntent / ActionIntent analog</div></div>
+            <div class="ent"><div class="en">CHILD_SPAWNED <span style="font-size:10px;color:var(--muted)">(kernel event)</span></div><div class="fields"><code>{ parent_ref, request_id, child_id }</code> — the spawn write-back: the child's CREATE_INSTANCE finished ⇒ correlate <code>request_id</code> + CAS the id into the parent link (<code>spawning ⇒ active</code>). The <code>RUNTIME_CONTEXT_READY</code> analog</div></div>
             <div class="ent"><div class="en">CHILD_LIFECYCLE <span style="font-size:10px;color:var(--muted)">(kernel event)</span></div><div class="fields"><code>{ parent_ref, child_id, lifecycle }</code> — <code>lifecycle ∈</code> the child's subscribable transitions; MVP anchor: terminal (<code>done | failed | cancelled</code>)</div></div>
             <div class="ent"><div class="en">Rejected(child_link_unknown)</div><div class="fields">a <code>CHILD_SPAWNED</code> / <code>CHILD_LIFECYCLE</code> for a link the parent does not have</div></div>
-            <div class="ent"><div class="en">Rejected(child_link_mismatch)</div><div class="fields">a <code>CHILD_LIFECYCLE</code> whose <code>child_id</code> ≠ the link's already-bound child</div></div>
+            <div class="ent"><div class="en">Rejected(child_link_mismatch)</div><div class="fields">a <code>CHILD_SPAWNED</code> with a stale / mis-routed <code>request_id</code> or a different <code>child_id</code> on a bound link, or a <code>CHILD_LIFECYCLE</code> whose <code>child_id</code> ≠ the link's already-bound child</div></div>
             <div class="ent"><div class="en">Rejected(not_awaiting_this_child)</div><div class="fields">the parent is not parked on this child (already routed, or a duplicate delivery)</div></div>
             <div class="ent"><div class="en">Rejected(child_lifecycle_not_subscribed)</div><div class="fields">a lifecycle the parent's <code>wait_for</code> does not declare</div></div>
             <div class="ent"><div class="en">Rejected(child_key_missing / child_wait_for_empty / child_wait_target_unresolved)</div><div class="fields">load-time <code>validate_child_steps</code> failures</div></div>
