@@ -307,44 +307,43 @@ schema/validation system.
 Conceptually L0-family (pre-kernel project binding/resolution). **Realized in
 core-model.html.**
 
-**Run-scoped mode / variants — an L0f-family resolution extension. Realized in core-model.html as a separate `L0f+` section after ④ (a delta on the L0f baselines, not folded into L0f).**
+**Run-scoped mode / variants — an L0f-family resolution extension. Realized in core-model.html as a separate `L0f+`
+section after ④ (a delta on the ③b / L0f baselines, not folded in).**
 A single workflow that runs in two modes — v1's `review_artifact_type` (create-time, immutable, run-scoped;
-default `code`). The v3 cut: a **start-fixed run-scoped `mode`** (values `code | doc` — shorter than v1's
-`document`) that the **L0f resolution normalizes into a pinned, mode-specific `ResolvedDefinition`** — the kernel
-then runs a **mode-agnostic** template. No runtime mode-conditional, no expression DSL, no overlay/patch system,
-no step-graph rewrite, no agent_config override. Mechanism: a uniform `modes: [...]` membership tag, allowed only
-on a small set of surfaces, resolved at start, **fail-closed** mode set (the template declares its modes; an
-unknown mode at start, or a tag naming an undeclared mode, is rejected, like slots). The breadth is bounded by
-the *surface* scope-brake, not the mechanism. Three surfaces (v1 reality-checked, file:line):
-- **gate presence** — `gates[].modes` (v1: the runtime validation gate runs only in `code`, doc skips it —
-  `passValidationGate.ts:407-414`); the resolved variant simply has / omits the gate.
-- **context contribution presence** — the `modes:` tag rides the **ref / binding** (a `prompt_concern_refs` entry
-  on a role/step, a `context_block_refs` entry on a gate), **not** the catalog `context_blocks` entry — since L2b
-  renders by ref into a shared catalog, tagging the catalog block alone would leave dangling refs. Mode-filtering
-  prunes the *contribution*; the catalog block stays (harmlessly unreferenced in the other mode). v1: the docs-only
-  edit guard "refine only docs/task/spec/progress; product/runtime/source code forbidden"
-  (`documentBubbleSourceEditGuard.ts`, `rolePromptImplementerScope.ts`).
-- **named policy profiles** — `mode_profiles[mode]` carries a **closed, loader-validated `policy_refs` map** (NOT
-  overlay, NOT arbitrary override) for evidence + reviewer behavior. This is the correction to a "gate + context only"
-  reading: v1's docs-only behavior is **not merely a consequence of omitting the validation gate** — it is an
-  explicit policy decision: the reviewer test directive is a synthetic trusted skip (`skip_full_rerun: true`,
-  `verification_status: trusted` — `reviewerTestDirectiveResolver.ts:81-94`) and finding-priority is demoted
-  (doc-scope P0/P1 → P2 except strict required-now + L1). So a `mode` resolves to a `policy_refs` map (anchor keys
-  `evidence` / `review`); the keys are **opaque to L0f**, owned by the policy layer. Every declared mode declares the
-  **same key set** (a missing/extra key rejects — no implicit inherit/overlay), each value a known policy ref or the
-  reserved `not_applicable` (an explicit opt-out).
-v1 does **not** condition the step graph (same flow), the model / agent_config, or the reviewer **loop topology**
-— so the cut excludes mode-on-steps and mode-on-agent_config. (Reviewer/evidence policy *evaluation* **is**
-mode-conditioned — the finding-priority demotion above — but through the named policy profiles, not by changing
-the loop.) Placement: an **L0f-family resolution-layer extension**, not an L2 runtime conditional; L2 / L2b / the
-evidence-reviewer policy are pure **consumers** (gates appear/disappear in the resolved template, context blocks
-are included, policy refs come from the resolved mode profile). Parallel to the lifecycle-close and L4 work; does
-not block them. Realized in core-model.html as a separate **`L0f+`** section placed after ④: a *delta on the L0f
-baselines* (the Pseudocode/Config lenses diff against `l0f-pseudocode` / `l0f-template-config` and leave them
-untouched, so no later level's diff baseline is disturbed), with a forward pointer left in L0f. Covers the three
-surfaces, the fail-closed mode set (start mode, tags, profile keys, `default_mode` all in `template.modes`; a
-mono-mode template carries no mode surface), and no runtime mode-conditional. **Invariant preserved:** docs-only
-evidence/review behavior is a *named policy-profile effect, not inferred from gate absence*.
+default `code`). The v3 cut: a **start-fixed run-scoped `mode`** (values `code | doc`) that the **L0f resolution
+normalizes into a pinned, mode-specific `ResolvedDefinition`** — the kernel then runs a **mode-agnostic** template.
+No runtime mode-conditional, no expression DSL, no overlay/patch, no step-graph rewrite, no agent_config override.
+Mechanism: a uniform `modes: [...]` membership tag on **two carriers**, resolved at start, **fail-closed** (an
+unknown start mode, a tag on an unsupported surface, or a tag naming an undeclared mode is rejected, like slots).
+Breadth is fenced by the *mechanism* (a membership tag), not by adding surfaces. Two surfaces (v1 reality-checked):
+- **gate binding** — `gates[].modes`. A transition point may declare a `[code]` binding **and** a `[doc]` binding
+  (same `uses` / different `config`, or a different `uses`); resolution keeps the mode’s. This covers both gate
+  *presence* (v1: the runtime validation gate runs only in `code` — `passValidationGate.ts:407`) and mode-specific
+  *policy config* (v1: doc-contract reviewer gate `docContractGates.ts`; finding-priority demotion
+  `docContractReviewerGatePolicy.ts`; meta-review approve docs-only-null `metaReviewApproveValidationPolicy.ts`).
+  The surviving gate’s evaluator is the consumer; the kernel passes it **no mode** — mode-specific behavior is
+  already in the surviving binding’s `config` (one source of truth, no runtime mode check inside the policy).
+- **context contribution** — the `modes:` tag rides a `*_refs` entry (a `prompt_concern_refs` on a role/step, a
+  `context_block_refs` on a gate), **not** the catalog `context_blocks` entry (tagging the shared catalog block
+  would dangle the other mode’s refs). v1: the docs-only edit guard (`documentBubbleSourceEditGuard.ts`,
+  `rolePromptImplementerScope.ts`), reviewer doc-scope guidance, "runtime checks not required" (`roleActionGuidance.ts`).
+**The one not-a-transition-gate piece** (why an earlier `mode_profiles` surface was dropped): v1’s doc default test
+directive — `skip_full_rerun: true`, `verification_status: trusted`, "docs-only scope, runtime checks not required"
+(`reviewerTestDirectiveResolver.ts:80`), plus the skip-claim-vs-runtime-refs conflict guard
+(`docsOnlyRuntimeSkipGuard.ts`) — is evidence **production**, not a boolean check. It is modeled as a
+`docs_only_runtime_evidence` **gate** (`[doc]`, same `implement.PASS` point as the `[code]` validation gate) whose
+`allow` result **records** that evidence into the run record (a `GateDecision` carries `evidence_refs` — L2/L2a).
+So "docs-only is an explicit gate, not gate-absence" is preserved, with a **visible consumer** — unlike a
+free-floating `mode_profiles` policy-ref map, which had none (in this kernel a policy is only ever applied at a
+gate). v1 does **not** condition the step graph, the model / `agent_config`, or the reviewer loop topology — the
+cut excludes mode-on-steps / mode-on-agent_config (a tag there is `mode_tag_on_unsupported_surface`). Placement:
+an **L0f-family resolution-layer extension**, not an L2 runtime conditional; **L2 (gates) / L2b (context)** are the
+pure **consumers**. Parallel to the lifecycle-close and L4 work; does not block them. Realized in core-model.html
+as a separate **`L0f+`** section after ④: the Pseudocode lens diffs against `l0f-pseudocode`, the Config lens
+against `auto-action-template-config` (③b, the latest template), both leaving the baselines untouched, with a
+forward pointer in L0f. **Invariant preserved:** docs-only evidence/review behavior is an *explicit gate/policy
+binding, not inferred from gate absence*; and the kernel never passes `mode` to a gate evaluator (mode selects the
+binding, behavior rides its `config`).
 
 **L1 — Capability matrix.**
 Concepts: `CapabilityProfile` (matrix `role × current_step → allowed actions`); the Capability
