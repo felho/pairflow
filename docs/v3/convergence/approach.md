@@ -731,7 +731,7 @@ step; the canonical `ChildWorkflowLink` (parent record) + a `parent_ref` back-li
 `WAITING(child_event)`; the `CHILD_LIFECYCLE` internal kernel event (a child's subscribable lifecycle
 transition commit, delivered to the parent — the `RUNTIME_CONTEXT_RELEASED` / `ACTION_RESULT` sibling);
 and a load-bearing `child_key` for idempotent spawn (≤1 active link per parent+step+child_key). Spawn is
-produce-not-perform (`SpawnIntent`); resume reuses `arrive()`. The mechanism is transition-based but the
+produce-not-perform (`SpawnIntent`), with the child's id written back into the link by a correlated, CAS'd `CHILD_SPAWNED` event (the `RUNTIME_CONTEXT_READY` analog); resume reuses `arrive()`. The mechanism is transition-based but the
 MVP anchor subscribes only **terminal** lifecycles (`done | failed | cancelled`); `wait_for` keys are
 `lifecycle → route config`; round is instance-local. Config anchor = a new `plan-exec-v0` parent template
 (the task list is the plan **document**, not kernel state). Absent (→ later / L9 / L8): fan-out / fan-in,

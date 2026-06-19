@@ -8968,11 +8968,14 @@ child_intent(instance, template) → SpawnIntent                   # L4 — prod
     child_template_ref: step.child.template_ref,                  # the child is a FULL instance — CREATE_INSTANCE(…, parent_ref) + its own L0f resolution / runtime_context / ①②③④ lifecycle
     binding:            step.child.binding, task: step.child.inputs }   # NO inline write-back: the child_id lands via the CHILD_SPAWNED handler below (CAS'd, transcript-backed) — never a lost shorthand
 
-CHILD_SPAWNED(event) → Outcome                                   # L4 kernel_event — the child's CREATE_INSTANCE finished (the RUNTIME_CONTEXT_READY analog): write child_id back into the parent link, CAS'd + transcript-backed
+CHILD_SPAWNED(event) → Outcome                                   # L4 kernel_event — the child's CREATE_INSTANCE finished (the RUNTIME_CONTEXT_READY analog). event = { parent_ref, request_id, child_id }: write child_id back into the parent link, CAS'd + transcript-backed
   instance ← load(event.parent_ref.parent_id) ; template ← template_of(instance)
   link ← instance.child_links.by_id(event.parent_ref.link_id)
   IF link is none THEN RETURN Rejected(child_link_unknown)
-  IF link.status ≠ spawning THEN RETURN Duplicate               # already bound (a replayed CHILD_SPAWNED) ⇒ idempotent no-op
+  IF link.request_id ≠ event.request_id THEN RETURN Rejected(child_link_mismatch)   # correlation: a stale / mis-routed spawn-completion for a DIFFERENT attempt
+  IF link.status ≠ spawning THEN                                 # already bound — idempotent ONLY for the SAME child
+    IF link.child_id = event.child_id THEN RETURN Duplicate      # a replayed CHILD_SPAWNED for this child ⇒ no-op
+    ELSE RETURN Rejected(child_link_mismatch)                    # a DIFFERENT child_id on a bound link (double-create / mis-route) ⇒ never swallow (the orphan child is L9)
   COMMIT atomically at instance.version:                         # marker-first / CAS, like ② RUNTIME_CONTEXT_RELEASED's correlated commit
     REQUIRE link.status = spawning
     link.child_id ← event.child_id ; link.status ← active
@@ -8992,15 +8995,16 @@ CHILD_LIFECYCLE(event) → Outcome                                 # L4 kernel_e
   instance ← load(event.parent_ref.parent_id) ; template ← template_of(instance)   # the PARENT instance
   link ← instance.child_links.by_id(event.parent_ref.link_id)    # PRIMARY correlation is the link_id (stable from spawn), NOT child_id
   IF link is none THEN RETURN Rejected(child_link_unknown)
-  IF link.child_id = none THEN link.child_id ← event.child_id    # SELF-HEAL: a lost CHILD_SPAWNED ⇒ bind the id now from the (clearly real) child that just finished — no child_id: none deadlock
-  ELSE IF link.child_id ≠ event.child_id THEN RETURN Rejected(child_link_mismatch)   # a DIFFERENT child than the one bound ⇒ reject
+  IF link.child_id ≠ none AND link.child_id ≠ event.child_id THEN RETURN Rejected(child_link_mismatch)   # bound to a DIFFERENT child ⇒ reject (NO mutation on this path)
   IF instance.kernel_status ≠ WAITING OR instance.wait.kind ≠ child_event OR instance.wait.link_id ≠ link.link_id
      THEN RETURN Rejected(not_awaiting_this_child)               # the parent is not parked on THIS child (already routed, or a duplicate delivery — idempotent)
   step ← template.step(instance.current_step)
   IF event.lifecycle NOT IN keys(step.wait_for) THEN RETURN Rejected(child_lifecycle_not_subscribed)
-  link.status ← event.lifecycle
-  instance.transcript.append(CHILD_LIFECYCLE_RECEIVED { link_id: link.link_id, child_id: event.child_id, lifecycle: event.lifecycle })
-  apply_target_entry_effects(instance, template, instance.current_step, step.wait_for[event.lifecycle].target)   # route per the parent template — the SAME arrive(); done ⇒ next task, failed / cancelled ⇒ recover
+  COMMIT atomically at instance.version:                         # all guards passed — mutate ONLY here; no reject path ever touches the canonical link
+    IF link.child_id = none THEN link.child_id ← event.child_id  # SELF-HEAL a lost CHILD_SPAWNED — in the SAME atomic transaction that records the event
+    link.status ← event.lifecycle
+    instance.transcript.append(CHILD_LIFECYCLE_RECEIVED { link_id: link.link_id, child_id: event.child_id, lifecycle: event.lifecycle })
+    apply_target_entry_effects(instance, template, instance.current_step, step.wait_for[event.lifecycle].target)   # route per the parent template — the SAME arrive(); done ⇒ next task, failed / cancelled ⇒ recover
   RETURN Committed(instance.version, post_commit_output(instance, template))
           </script>
         </div>
@@ -9092,7 +9096,7 @@ template:
       type: child_workflow      # L4 — spawn + link + wait on a full child instance
       child:
         template_ref: local-pair-v0          # the child is the ordinary pair workflow (implement / review / merge / done)
-        child_key: { task_id: ${task.id}, role: implementation }   # IDEMPOTENT — re-entry / retry reuses the link, never double-spawns
+        child_key: { task_id: ${task.id}, role: implementation }   # IDEMPOTENT on the ACTIVE link — a crash-replay reuses it; a terminal link ⇒ a fresh retry attempt
         binding: ${task.binding}             # role → actor for the child (its own cascade)
         inputs:  { task: ${task.spec} }
       wait_for:                 # lifecycle key → route config (the decisions / outcomes map shape — payload / result projection fits here later)
