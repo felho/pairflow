@@ -225,6 +225,7 @@
       <a class="level" href="#workflow-actions">③a <span class="tag">· workflow actions (commit / merge)</span></a>
       <a class="level" href="#auto-workflow-actions">③b <span class="tag">· auto actions (perf-test)</span></a>
       <a class="level" href="#archive-purge">④ <span class="tag">· archive / export / purge</span></a>
+      <a class="level" href="#l0f-mode">L0f+ <span class="tag">· run-scoped mode / variants</span></a>
       <div class="future">L4 · child workflow + events</div>
       <div class="cut">▲ MVP cut — local WF-7 runs</div>
       <div class="future">L5 · help subflow</div>
@@ -1930,6 +1931,7 @@ workflows:
           <div class="absent-item">No <b>per-step / dynamic slot resolution</b> — slots resolve once at start; the per-step config cascade is L0c, conditional/per-step context is <span class="at">→ L2b</span></div>
           <div class="absent-item">No <b>actor/model binding as slots</b> — the <code>role → actor</code> and agent/model cascades stay separate; the project is a new tier in them, not a scalar slot</div>
           <div class="absent-item">No <b>slot interpolation</b> here — <code>branch_pattern</code> is resolved as a pattern; the actual branch name is materialized provider-side once <code>instance_id</code> exists <span class="at">→ L0e</span></div>
+          <div class="absent-item">No <b>run-scoped mode / variants</b> — a single template running in <code>code | doc</code> modes is an L0f-family resolution extension, realized as a delta on top of this baseline <span class="at">→ L0f+ (run-scoped mode / variants)</span></div>
         </div>
 
         <h3 class="view-h"><span class="view-tag evidence">Evidence</span> Why we accept L0f for now</h3>
@@ -7863,6 +7865,310 @@ archive_or_export(instance, sink) → ArchiveRef                      # ④ — 
             <li><b>Accepted tradeoff:</b> retention / auto-purge, a query CLI, restore, and a multi-owner blob store are out — ④ is the explicit operator ops + the safe purge contract.</li>
             <li><b>Known gaps (intended):</b> retention / scheduled auto-purge policy (L9/ops), archive query (ops), restore (later), shared-evidence ownership (later), export formats (ops), federation purge (L11+). Each is in Absent.</li>
             <li><b>Decision:</b> accepted as the ④ baseline (light evidence per playbook §2.1). This closes the lifecycle-close topic (①②③④); L4 (child workflows) inherits all four per child runtime_context / record.</li>
+          </ul>
+        </div>
+      </section>
+      <section id="l0f-mode">
+        <h2 class="level-h"><span class="level-badge">L0f+</span> Run-scoped mode / variants</h2>
+        <p class="level-sub">A single workflow can run in more than one <em>mode</em> (v1's <code>code | doc</code>) —
+        the same step graph, but the gates, context contributions, and evidence/review policy differ. This is
+        <b>not</b> a runtime kernel branch: a <b>start-fixed</b>, run-scoped <code>mode</code> that <b>L0f
+        resolution</b> normalizes into a <b>pinned, mode-specific <code>ResolvedDefinition</code></b>, so the kernel
+        runs a <b>mode-agnostic</b> template and never sees the mode at runtime. An <b>L0f-family extension</b> —
+        it lives entirely in the pre-kernel resolution pass.</p>
+
+        <div class="note">
+          <b>An L0f delta, kept off the L0f baseline.</b> Mode could read as "just more L0f", but folding
+          <code>modes:</code> / <code>gates[].modes</code> / <code>mode_profiles:</code> into the
+          <code>l0f-template-config</code> baseline would push the mode machinery into <em>every</em> later level's
+          diff baseline. So it is realized here as a <b>delta on top of L0f</b> — the Pseudocode and Config lenses
+          diff against the <code>l0f-*</code> baselines and leave them untouched, and L0f carries only a forward
+          pointer. L2 / L2b / the evidence-reviewer policy are pure <b>consumers</b> of the resolved variant: a gate
+          is present or pruned, a context block is contributed or not, a policy ref is bound — none of them gain
+          mode logic.</div>
+
+        <h3 class="view-h"><span class="view-tag" style="background:#e2e8f0;color:#334155">Shape</span> One template, resolved to a variant at start</h3>
+        <pre class="pseudo" style="font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size:12.5px; line-height:1.5">
+  StartCommand { mode? }  +  Template { modes, default_mode, gates[].modes, *_refs[].modes, mode_profiles }
+        │
+        ▼   L0f resolution (start-fixed)
+  mode ← command.mode ?? template.default_mode          (modes declared ⇒ must resolve, else no_mode_selected)
+        │
+        ▼   apply_mode — prune to the variant; NO runtime conditional remains
+   surface 1   gate presence          gates[].modes        →  keep / drop the gate
+   surface 2   context contribution   *_refs[].modes       →  keep / drop the REF   (catalog block untouched)
+   surface 3   named policy profile   mode_profiles[mode]  →  bind evidence / review policy refs
+        │
+        ▼
+  pinned, mode-specific ResolvedDefinition   →   the kernel runs it mode-agnostically
+        </pre>
+
+        <h3 class="view-h"><span class="view-tag runtime">Runtime</span> A concrete trace</h3>
+        <p>Starting <code>local-pair-v0</code> in <code>doc</code> mode (the template declares <code>modes: [code, doc]</code>):</p>
+        <div class="trace">
+          <div class="trace-row"><div class="trace-n">1</div><div class="trace-c">
+            <div class="ev">operator <code>StartCommand { template_id: local-pair-v0, mode: doc }</code></div>
+            <div class="meta"><code>mode = command.mode = doc</code> (no fallback to <code>default_mode</code> needed); <code>doc</code> ∈ <code>template.modes = [code, doc]</code> ✓ — an undeclared mode here would be <code>Rejected(unknown_mode)</code></div>
+          </div></div>
+          <div class="trace-row"><div class="trace-n">2</div><div class="trace-c">
+            <div class="ev"><code>valid_mode_declaration(template)</code> — load-time, fail-closed</div>
+            <div class="meta"><code>default_mode = code</code> ∈ modes ✓ · <code>keys(mode_profiles) = {code, doc}</code> ⊆ modes ✓ · every <code>gates[].modes</code> / <code>*_refs[].modes</code> tag names a declared mode ✓ · each profile's <code>evidence_policy_ref</code> / <code>review_policy_ref</code> resolves ✓</div>
+          </div></div>
+          <div class="trace-row"><div class="trace-n">3</div><div class="trace-c">
+            <div class="ev"><code>apply_mode(definition, doc)</code> — prune + bind into the pinned definition</div>
+            <div class="meta"><b>surface 1</b> the <code>validation</code> gate (<code>modes:[code]</code>) is <b>pruned</b> — the doc variant has no runtime test gate; <b>surface 2</b> the <code>docs-only-edit-scope</code> context ref (<code>modes:[doc]</code>) is <b>kept</b> while the catalog block stays in place (untouched); <b>surface 3</b> <code>mode_profiles[doc]</code> binds <code>evidence: trusted-skip · review: demote-doc-findings</code></div>
+          </div></div>
+          <div class="trace-row"><div class="trace-n">4</div><div class="trace-c">
+            <div class="ev">pinned, mode-specific <code>ResolvedDefinition</code> → <code>CREATE_INSTANCE</code></div>
+            <div class="meta">the kernel dispatches the review step against this definition with no validation gate, the docs-only concern in the packet, and the demoted evidence/review policy — all <b>baked in</b>; there is no runtime mode field and no kernel branch on the mode</div>
+          </div></div>
+        </div>
+        <div class="note runtime">
+          The doc variant's review behavior — trusted-skip evidence + demoted finding-priority — comes from
+          <code>mode_profiles[doc]</code>, <b>not</b> from the pruned gate. Pruning the validation gate (surface 1)
+          and demoting review (surface 3) are independent decisions made at resolution time.
+        </div>
+
+        <h3 class="view-h"><span class="view-tag pseudo">Pseudocode</span> RESOLVE_START gains a J3 step (diff vs L0f)</h3>
+        <p>The mode extension adds a third resolution responsibility to <code>RESOLVE_START</code> and two helpers;
+        every other line is the L0f baseline, unchanged:</p>
+        <div class="code-diff" aria-label="L0f mode pseudocode" data-old-label="L0f baseline" data-new-label="L0f + mode">
+          <script type="text/plain" class="diff-source" data-code-old-ref="l0f-pseudocode"></script>
+          <script type="text/plain" class="diff-source" data-code-new data-code-id="l0f-mode-pseudocode">
+
+# L0f runs BEFORE the kernel. It is not a HANDLE/handler: it consumes an operator
+# StartCommand + the repo's ProjectConfig and produces a ResolvedStartRequest that
+# CREATE_INSTANCE consumes; later START / provider provisioning read the applied values from
+# the pinned resolved definition. No instance, no transcript, no version exists yet.
+
+RESOLVE_START(command, project_config) → ResolvedStartRequest | Rejected
+  # J1 — definition resolution
+  template_id ← command.template_id ?? project_config.default_workflow    # default_workflow is optional convenience
+  IF template_id is none THEN RETURN Rejected(no_workflow_selected)        # neither explicit nor defaulted
+  source   ← select_source(project_config.workflow_sources, template_id)   # MVP: local(.pairflow/); central store is L11+
+  template ← source.load(template_id)                                      # pinned by version
+  IF template is none THEN RETURN Rejected(workflow_definition_unavailable)
+
+  # J2 — slot/value resolution
+  wf ← project_config.workflows[template_id] ?? empty_workflow_scope      # no per-workflow section → empty scope, not null
+  IF command.target is present AND wf.targets[command.target] is none
+     THEN RETURN Rejected(unknown_target(command.target))                 # an explicitly-selected target is intentional — a typo rejects (unlike a lenient global slot)
+  declared ← { s.id for s in template.slots }
+  scope    ← slot_scope(project_config, template_id, command)           # only THIS run's consulted tiers
+
+  # scoped strict reject — unambiguously-scoped tiers only; global defaults stay lenient
+  FOR key IN keys(scope.project_wf) ∪ keys(scope.target) ∪ keys(scope.cli):
+    IF key NOT IN declared THEN RETURN Rejected(unknown_slot(key))         # typo in a scoped section
+  # undeclared keys in shared global defaults — or in OTHER workflows' sections — are ignored for this run
+
+  resolved_slots ← {}
+  FOR slot IN template.slots:
+    value ← resolve_slot(slot, scope)
+    IF value is none AND slot.required THEN RETURN Rejected(unbound_required_slot(slot.id))
+    IF value is not none AND NOT type_ok(slot.type, value) THEN RETURN Rejected(slot_type_mismatch(slot.id))
+    resolved_slots[slot.id] ← value
+
+  # J3 — variant/mode resolution (start-fixed; the kernel stays mode-agnostic)
+  REQUIRE valid_mode_declaration(template)                       # authoring / load-time consistency — fail-closed (see below)
+  mode ← command.mode ?? template.default_mode                   # start-fixed; absent ⇒ the template's DECLARED default variant
+  IF template.modes is not empty AND mode is none THEN RETURN Rejected(no_mode_selected)   # modes declared but neither command nor default_mode picks one — an explicit authoring choice, never a kernel default
+  IF mode is not none AND mode NOT IN template.modes THEN RETURN Rejected(unknown_mode(mode))   # fail-closed: a start mode the template does not declare
+
+  # materialize: slot values, then prune to the mode variant — ONE pinned, immutable definition (J1 template + J2 values + J3 variant).
+  # The kernel and L0e read template.runtime_context (etc.) from this PINNED view, exactly as before — no mutable slot map, no runtime mode field.
+  resolved_definition ← apply_mode(apply_slots(template, resolved_slots), mode)   # ${slot:…} → values, then prune to the mode variant
+
+  RETURN ResolvedStartRequest {
+    resolved_template_ref: pin(resolved_definition),             # pinned RESOLVED definition; CREATE_INSTANCE loads it like any Template
+    binding:               project_binding(project_config, command) }   # role → actor: its OWN cascade, not a slot
+
+slot_scope(project_config, template_id, command) → Scope
+  wf ← project_config.workflows[template_id] ?? empty_workflow_scope   # no per-workflow section → empty scope, not null
+  RETURN Scope {
+    project_global: project_config.defaults,                      # global — shared across workflows (lenient)
+    project_wf:     wf.defaults,                                  # this workflow's section (strict)
+    target:         command.target ? wf.targets[command.target].defaults : { },   # target profile (existence already guarded in RESOLVE_START)
+    cli:            command.overrides }                           # explicit CLI/start override (strict)
+
+resolve_slot(slot, scope) → value | none                         # 5-tier cascade; last non-none wins
+  value ← slot.default                                            # tier 1: template default
+  IF scope.project_global has slot.id THEN value ← scope.project_global[slot.id]   # tier 2: project global
+  IF scope.project_wf     has slot.id THEN value ← scope.project_wf[slot.id]       # tier 3: project workflow
+  IF scope.target         has slot.id THEN value ← scope.target[slot.id]           # tier 4: target profile
+  IF scope.cli            has slot.id THEN value ← scope.cli[slot.id]              # tier 5: CLI/start override (highest)
+  RETURN value
+          
+
+valid_mode_declaration(template) → ok | Rejected                 # authoring / load-time consistency — all fail-closed
+  IF template.modes is empty THEN                                # a mono-mode template must carry NO mode surface at all
+    IF template.default_mode is not none OR template.mode_profiles is not empty OR mode_tags(template) is not empty
+       THEN RETURN Rejected(mode_surface_without_modes)
+    RETURN ok
+  IF template.default_mode is not none AND template.default_mode NOT IN template.modes
+     THEN RETURN Rejected(default_mode_undeclared)               # default_mode ∈ modes
+  FOR tag IN mode_tags(template):                                # every gates[].modes / *_refs[].modes / mode_profiles key
+    IF tag NOT IN template.modes THEN RETURN Rejected(undeclared_mode_tag(tag))   # tags & profile keys ⊆ modes
+  FOR p IN values(template.mode_profiles):                       # each profile's policy refs resolve to a KNOWN closed policy
+    IF NOT policy_ref_ok(p.evidence_policy_ref) OR NOT policy_ref_ok(p.review_policy_ref)
+       THEN RETURN Rejected(unknown_policy_ref)
+  RETURN ok
+
+apply_mode(definition, mode) → ResolvedDefinition                # prune to the mode variant at START — NO runtime conditional survives
+  IF mode is none THEN RETURN definition                         # mono-mode template — nothing to prune
+  # surface 1 — gate presence: keep a gate iff the mode is in its membership set (an untagged gate ⇒ every mode)
+  gates ← [ g for g in definition.gates if g.modes is empty OR mode IN g.modes ]
+  # surface 2 — context-contribution presence: prune the REFS/bindings, NEVER the catalog block
+  #   (a tagged catalog context_blocks entry would dangle; the catalog entry stays, harmlessly unreferenced in the other mode)
+  FOR carrier IN definition.{roles, steps, gates}:
+    carrier.prompt_concern_refs ← [ r for r in carrier.prompt_concern_refs if r.modes is empty OR mode IN r.modes ]
+    carrier.context_block_refs  ← [ r for r in carrier.context_block_refs  if r.modes is empty OR mode IN r.modes ]
+  # surface 3 — named policy profiles: BIND the mode's closed, loader-validated policy refs (NOT overlay, NOT override)
+  profile         ← definition.mode_profiles[mode] ?? empty_profile
+  evidence_policy ← bind_policy(profile.evidence_policy_ref)     # doc ⇒ trusted-skip; code ⇒ standard
+  review_policy   ← bind_policy(profile.review_policy_ref)       # doc ⇒ demoted finding-priority; code ⇒ standard
+  RETURN pin(definition with { gates, pruned refs, evidence_policy, review_policy })   # immutable, mode-specific — the kernel loads it like any Template
+          </script>
+        </div>
+        <div class="note pseudo">
+          <code>valid_mode_declaration</code> is a <b>load-time / authoring</b> consistency check (fail-closed, the
+          slot discipline applied to modes): <code>default_mode</code> and every tag / profile key name a declared
+          mode, each policy ref resolves, and a mono-mode template carries <em>no</em> mode surface at all.
+          <code>apply_mode</code> then prunes gates and context refs and <b>binds</b> the mode's policy profile into
+          the same pinned definition — so the variant is fixed at start, never branched on at runtime.
+          <code>default_mode</code> is an explicit <em>authoring</em> choice, not a kernel default — a template that
+          declares <code>modes</code> with nothing to select one rejects (<code>no_mode_selected</code>).
+        </div>
+
+        <h3 class="view-h"><span class="view-tag domain">Domain</span> What the mode extension adds</h3>
+        <div class="agg">
+          <div class="agg-label">Template side — declared variants (modes)</div>
+          <div class="ents">
+            <div class="ent"><div class="en">modes / default_mode</div><div class="fields"><code>modes: ModeId[]</code> + optional <code>default_mode ∈ modes</code> — the closed variant set; <code>default_mode</code> is an explicit authoring choice (no kernel default). An empty <code>modes</code> ⇒ a mono-mode template that may carry <em>no</em> mode surface at all</div></div>
+            <div class="ent"><div class="en"><code>modes:</code> membership tag</div><div class="fields">an optional tag on exactly three carriers — a <code>gates[]</code> entry, a <code>*_refs</code> contribution entry, a <code>mode_profiles</code> key; untagged ⇒ present in every mode. The tag rides the <b>ref</b>, never the catalog <code>context_blocks</code> entry</div></div>
+            <div class="ent"><div class="en">ModeProfile <span style="font-size:10px;color:var(--muted)">(value)</span></div><div class="fields"><code>mode_profiles[mode] = { evidence_policy_ref, review_policy_ref }</code> — <b>closed, loader-validated</b> policy refs (not overlay/override). This is where docs-only behavior lives — a named policy effect, not gate-absence</div></div>
+          </div>
+        </div>
+        <div class="agg" style="border-style:solid;border-color:var(--line);background:var(--panel)">
+          <div class="agg-label" style="color:var(--runtime)">New rejections — all pre-kernel, fail-closed</div>
+          <div class="ents">
+            <div class="ent"><div class="en">Rejected(no_mode_selected)</div><div class="fields">the template declares <code>modes</code> but neither <code>command.mode</code> nor <code>default_mode</code> selects one</div></div>
+            <div class="ent"><div class="en">Rejected(unknown_mode(m))</div><div class="fields">a start <code>mode</code> the template does not declare (fail-closed, like an unknown slot)</div></div>
+            <div class="ent"><div class="en">Rejected(undeclared_mode_tag(t))</div><div class="fields">a <code>modes:</code> tag or <code>mode_profiles</code> key naming a mode outside <code>template.modes</code></div></div>
+            <div class="ent"><div class="en">Rejected(default_mode_undeclared)</div><div class="fields"><code>default_mode</code> names a mode outside <code>template.modes</code></div></div>
+            <div class="ent"><div class="en">Rejected(mode_surface_without_modes)</div><div class="fields">a template with no <code>modes</code> still carries a <code>default_mode</code>, <code>mode_profiles</code>, or a <code>modes:</code> tag</div></div>
+            <div class="ent"><div class="en">Rejected(unknown_policy_ref)</div><div class="fields">a <code>mode_profiles[*]</code> evidence/review policy ref does not resolve to a known closed policy</div></div>
+          </div>
+        </div>
+
+        <h3 class="view-h"><span class="view-tag invariant">Invariant</span> New at the mode extension</h3>
+        <div class="agg invariant">
+          <div class="agg-label">Added rules</div>
+          <div class="ents">
+            <div class="ent"><div class="en">fail-closed mode set</div><div class="fields">the start <code>mode</code>, every <code>modes:</code> membership tag, every <code>mode_profiles</code> key, and <code>default_mode</code> all name a mode in <code>template.modes</code>; a mono-mode template (empty <code>modes</code>) carries no mode surface — else <code>Rejected</code>. Same fail-closed discipline as slots</div></div>
+            <div class="ent"><div class="en">mode is start-fixed &amp; baked in</div><div class="fields"><code>apply_mode</code> prunes gates / context refs and binds the policy profile into a <b>pinned, mode-specific definition</b>; the kernel reads that definition and <b>never branches on the mode at runtime</b> — there is no runtime mode field</div></div>
+            <div class="ent"><div class="en">docs-only is a policy-profile effect, not gate-absence</div><div class="fields">the doc variant's trusted-skip + demoted finding-priority come from <code>mode_profiles[doc]</code>'s evidence/review policy refs — <b>not</b> inferred from "the validation gate is absent". Pruning the gate (surface 1) and demoting review (surface 3) are independent decisions</div></div>
+            <div class="ent"><div class="en">catalog blocks are never mode-pruned</div><div class="fields">surface 2 prunes only the <b>contribution / ref</b> (a <code>*_refs</code> entry); the shared catalog <code>context_blocks</code> entry always stays — a mode-tagged catalog block would leave dangling refs (the L2b render-by-ref hazard)</div></div>
+          </div>
+        </div>
+
+        <h3 class="view-h"><span class="view-tag config">Config</span> The template declares modes; the surfaces carry tags (diff vs L0f)</h3>
+        <p>The template gains <code>modes</code> + <code>default_mode</code>, a <code>mode_profiles</code> block, and
+        a membership tag on each of the three surfaces; every other line is the L0f baseline:</p>
+        <div class="code-diff" aria-label="L0f mode template config" data-old-label="L0f baseline" data-new-label="L0f + mode">
+          <script type="text/plain" class="diff-source" data-code-old-ref="l0f-template-config"></script>
+          <script type="text/plain" class="diff-source" data-code-new data-code-id="l0f-mode-template-config">
+
+template:
+  id: local-pair-v0
+  version: 1
+  modes: [code, doc]            # mode extension — declared workflow variants (NOT the agent_config persona `mode:` below); fail-closed
+  default_mode: code            # explicit authoring default; a StartCommand may pass mode: doc. Omit ⇒ a multi-mode start must choose one
+  roles:
+    implementer: { default_actor: codex,  default_agent_config: { mode: builder, model_ref: codex-default-engineer, prompt_profile_refs: [engineer-defaults] } }
+    reviewer:    { default_actor: claude, default_agent_config: { mode: critic } }
+  start: implement
+  activation:
+    mode: immediate          # after START + runtime_context ready, activate immediately; no KICKOFF hold
+    # deferred_kickoff → start in a WAITING(kickoff_pending) hold; an operator
+    # kickoff supplies the task and releases the first dispatch (the v1 ideation bubble)
+  slots:                        # L0f — typed holes the repo's ProjectConfig fills (default | required)
+    validation.test_command:         { type: command,        default: "pnpm test" }
+    runtime.worktree.base_branch:    { type: branch,         default: main }
+    runtime.worktree.branch_pattern: { type: branch_pattern, default: "bubble/{instance_id}" }
+    runtime.worktree.bootstrap:      { type: command,        required: false }   # no default — only the repo knows
+  runtime_context:              # RuntimeContextRequirement — required(spec) here; a context-free workflow declares: runtime_context: none
+    kind: worktree
+    provider: pairflow.worktree
+    config:
+      repo: current                                            # literal — not repo-overridable here
+      base_branch:    ${slot:runtime.worktree.base_branch}     # was literal main; default now lives in slots, repo may override
+      branch_pattern: ${slot:runtime.worktree.branch_pattern}  # provider materializes the actual name from instance_id
+      work_mode: worktree                                      # literal — provider-internal variant (worktree | clone)
+      # worktree path defaults to <repo-parent>/.pairflow-worktrees/<repo>/<instance_id>
+  gates:                        # surface 1 — gate MECHANICS are L2; here only the mode membership tag
+    - id: validation
+      modes: [code]             # runs only in code; the doc variant resolves WITHOUT this gate
+      command: ${slot:validation.test_command}
+  mode_profiles:                # surface 3 — named, CLOSED policy refs per mode (loader-validated; not overlay/override)
+    code: { evidence_policy_ref: standard,     review_policy_ref: standard }
+    doc:  { evidence_policy_ref: trusted-skip, review_policy_ref: demote-doc-findings }   # docs-only behavior is THIS — not "gate absent"
+  steps:
+    - id: implement
+      role: implementer
+      instruction: "Build the change for the task."
+      agent_config: { approach: systematic }   # overrides/extends the role default
+      on_pass: review            # PASS → review
+    - id: review
+      role: reviewer
+      instruction: "Review the diff; pass back or converge."
+      agent_config: { approach: thorough, prompt_concern_refs: [reviewer-severity-ontology, { ref: docs-only-edit-scope, modes: [doc] }], skill_refs: [test-runner] }   # surface 2 — the modes: tag rides the REF, not the catalog context_blocks entry
+      on_pass:      implement     # PASS → implement
+      on_converged: done          # CONVERGED → done
+          
+          </script>
+        </div>
+        <div class="note config">
+          The three surfaces are visible at once: <code>gates[].modes</code> (surface 1) makes the validation gate
+          <code>code</code>-only; the <code>modes: [doc]</code> tag on the <code>prompt_concern_refs</code> entry
+          (surface 2) rides the ref, never the catalog block; and <code>mode_profiles</code> (surface 3) binds the
+          closed evidence/review policy refs — the docs-only behavior is <em>this</em>, not the pruned gate. Note the
+          unrelated <code>agent_config.mode: builder|critic</code> is the agent persona, a different axis from the
+          workflow <code>modes</code>.
+        </div>
+
+        <h3 class="view-h"><span class="view-tag absent">Absent</span> Still not here</h3>
+        <div class="absent-grid">
+          <div class="absent-item">No <b>runtime mode-conditional</b> — the mode is resolved &amp; baked at start; the kernel never branches on it, there is no runtime mode field <span class="at">→ by design</span></div>
+          <div class="absent-item">No <b>mode expression DSL / overlay / patch / step-graph rewrite</b> — the whole mechanism is a <code>modes:</code> membership tag; breadth is fenced by the mechanism, not by dropping a surface <span class="at">→ by design</span></div>
+          <div class="absent-item">No <b>mode on agent_config or on steps</b> — v1 does not condition the model / agent_config or the step graph by mode; modes tag only gates, context refs, and policy profiles <span class="at">→ by design</span></div>
+          <div class="absent-item">No <b>dynamic recommendation / computed policy</b> — a mode binds a <em>named</em> policy ref; deriving the profile from runtime signals is later <span class="at">→ later</span></div>
+          <div class="absent-item">No <b>post-start mode change</b> — mode is create-time immutable (v1 parity); a run does not switch variant mid-flight <span class="at">→ by design</span></div>
+        </div>
+
+        <h3 class="view-h"><span class="view-tag evidence">Evidence</span> Why we accept this cut</h3>
+        <div class="note evidence">
+          <ul style="margin:0">
+            <li><b>The layer is real (v1 verified):</b> v1 has <code>review_artifact_type ∈ { code, document }</code>
+              — set in <code>bubble.toml</code> via <code>--review-artifact-type</code>, <b>create-time immutable</b>,
+              run-scoped. The v3 cut keeps exactly that shape (start-fixed, immutable) and shortens
+              <code>document → doc</code>.</li>
+            <li><b>Three surfaces, each grounded:</b> gate presence — the runtime validation gate runs only in
+              <code>code</code>, doc skips it (<code>passValidationGate.ts:407-414</code>); context contribution —
+              the docs-only edit guard "refine only docs/task/spec; product/runtime/source code forbidden"
+              (<code>documentBubbleSourceEditGuard.ts</code>, <code>rolePromptImplementerScope.ts</code>); named
+              policy — the reviewer test directive is a synthetic trusted skip
+              (<code>reviewerTestDirectiveResolver.ts:81-94</code>, <code>skip_full_rerun: true</code>,
+              <code>verification_status: trusted</code>) and finding-priority is demoted (doc-scope P0/P1 → P2).</li>
+            <li><b>The load-bearing correction:</b> v1's docs-only evidence/review behavior is <b>not</b> merely a
+              consequence of omitting the validation gate — it is an <em>explicit policy decision</em>. Modelling it
+              as a named <code>mode_profiles</code> ref (surface 3), not as gate-absence inference, is what keeps the
+              cut faithful: without it, "doc ⇒ no test ⇒ trusted" would be an implicit, too-loose inference.</li>
+            <li><b>Breadth fenced by mechanism, not by dropping a surface:</b> the membership tag is the only knob —
+              no expression DSL, overlay/patch, step-graph rewrite, or runtime conditional. v1 conditions none of
+              the step graph / model / agent_config by mode, so the exclusions match reality.</li>
+            <li><b>Placement:</b> an L0f-family resolution extension realized as a delta on top of the L0f baselines
+              (Pseudocode/Config diff against <code>l0f-*</code>); L0f, L1, L2+ baselines are untouched. L2 / L2b /
+              the evidence-reviewer policy are pure consumers.</li>
           </ul>
         </div>
       </section>

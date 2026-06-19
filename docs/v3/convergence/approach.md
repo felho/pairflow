@@ -307,7 +307,7 @@ schema/validation system.
 Conceptually L0-family (pre-kernel project binding/resolution). **Realized in
 core-model.html.**
 
-**Run-scoped mode / variants — an L0f-family resolution extension (named future capability, not built).**
+**Run-scoped mode / variants — an L0f-family resolution extension. Realized in core-model.html as a separate `L0f+` section after ④ (a delta on the L0f baselines, not folded into L0f).**
 A single workflow that runs in two modes — v1's `review_artifact_type` (create-time, immutable, run-scoped;
 default `code`). The v3 cut: a **start-fixed run-scoped `mode`** (values `code | doc` — shorter than v1's
 `document`) that the **L0f resolution normalizes into a pinned, mode-specific `ResolvedDefinition`** — the kernel
@@ -334,12 +334,15 @@ the *surface* scope-brake, not the mechanism. Three surfaces (v1 reality-checked
 v1 does **not** condition the step graph (same flow), the model / agent_config, or the reviewer **loop topology**
 — so the cut excludes mode-on-steps and mode-on-agent_config. (Reviewer/evidence policy *evaluation* **is**
 mode-conditioned — the finding-priority demotion above — but through the named policy profiles, not by changing
-the loop.) Placement: an **L0f-family /
-resolution-layer extension**, not an L2 runtime conditional; L2 / L2b / the evidence-reviewer policy are pure
-**consumers** (gates appear/disappear in the resolved template, context blocks are included, policy refs come
-from the resolved mode profile). Parallel to the lifecycle-close and L4 work; does not block them. Deferred to a
-small-spec when scheduled (the v1 reality check is done). **Invariant to preserve even in a minimal first cut:**
-docs-only evidence/review behavior is a *named policy-profile effect, not inferred from gate absence*.
+the loop.) Placement: an **L0f-family resolution-layer extension**, not an L2 runtime conditional; L2 / L2b / the
+evidence-reviewer policy are pure **consumers** (gates appear/disappear in the resolved template, context blocks
+are included, policy refs come from the resolved mode profile). Parallel to the lifecycle-close and L4 work; does
+not block them. Realized in core-model.html as a separate **`L0f+`** section placed after ④: a *delta on the L0f
+baselines* (the Pseudocode/Config lenses diff against `l0f-pseudocode` / `l0f-template-config` and leave them
+untouched, so no later level's diff baseline is disturbed), with a forward pointer left in L0f. Covers the three
+surfaces, the fail-closed mode set (start mode, tags, profile keys, `default_mode` all in `template.modes`; a
+mono-mode template carries no mode surface), and no runtime mode-conditional. **Invariant preserved:** docs-only
+evidence/review behavior is a *named policy-profile effect, not inferred from gate absence*.
 
 **L1 — Capability matrix.**
 Concepts: `CapabilityProfile` (matrix `role × current_step → allowed actions`); the Capability
