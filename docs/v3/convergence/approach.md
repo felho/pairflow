@@ -733,7 +733,11 @@ transition commit, delivered to the parent — the `RUNTIME_CONTEXT_RELEASED` / 
 and a load-bearing `child_key` for idempotent spawn (≤1 active link per parent+step+child_key). Spawn is
 produce-not-perform (`SpawnIntent`), with the child's id written back into the link by a correlated, CAS'd `CHILD_SPAWNED` event (the `RUNTIME_CONTEXT_READY` analog); resume reuses `arrive()`. The mechanism is transition-based but the
 MVP anchor subscribes only **terminal** lifecycles (`done | failed | cancelled`); `wait_for` keys are
-`lifecycle → route config`; round is instance-local. Config anchor = a new `plan-exec-v0` parent template
+`lifecycle → route config`, and `validate_child_steps` requires a route for **every** terminal disposition
+(fail-closed, so no terminal is ever unhandled). A spawn that cannot start (a child `CREATE_INSTANCE` rejected
+past load — a static / typo'd `template_ref` is caught at load) is delivered as `CHILD_SPAWN_FAILED` (the ②
+initiation-failure analog) and routes through the required `failed` path; a transient spawn-dispatch crash leaves
+the link durably `spawning` → L9. Round is instance-local. Config anchor = a new `plan-exec-v0` parent template
 (the task list is the plan **document**, not kernel state). Absent (→ later / L9 / L8): fan-out / fan-in,
 intermediate-lifecycle subscription (`ready_for_human_approval`), lost-event reconciliation, and the
 durable / external channel. v1 reality check (Explore): `plan watch` is external polling (read each child's
