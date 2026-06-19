@@ -7926,10 +7926,10 @@ archive_or_export(instance, sink) → ArchiveRef                      # ④ — 
         </div>
         <div class="note runtime">
           The doc variant's "runtime checks skipped, trusted" is <b>not gate-absence</b> — it is an <b>explicit
-          gate</b> (<code>docs_only_runtime_evidence</code>) producing a canonical evidence record. A gate result is
+          gate</b> (<code>docs_only_runtime_evidence</code>) producing <b>durable evidence</b> for the trusted-skip. A gate result is
           structured (<code>verdict</code> + <code>evidence_refs</code>): the evidence lives in the durable evidence store and
           its <b>ref</b> rides the decision into the run record (L2 / L2a; ① INV-3 — no inline blob), so a gate can <em>record</em> the intended skip, not just check a boolean. The later
-          reviewer / converge flow reads that evidence from the transcript — there is no free-floating policy map.
+          reviewer / converge flow reads the <b>ref</b> from the transcript (T1) and resolves the evidence from the durable store (T3) — there is no free-floating policy map.
         </div>
 
         <h3 class="view-h"><span class="view-tag pseudo">Pseudocode</span> RESOLVE_START gains a J3 step (diff vs L0f)</h3>
@@ -8145,7 +8145,7 @@ template:
               timeout_ms: 600000
               on_runner_error: block_transition  # spawn / workspace-missing → not a business block (fail_instance is rejected until later)
               on_timeout: block_transition
-          - uses: pairflow.docs_only_runtime_evidence   # surface 1, DOC binding — same on_pass point; NOT a test runner: its allow RECORDS the intended skip as evidence
+          - uses: pairflow.docs_only_runtime_evidence   # surface 1, DOC binding — same on_pass point; NOT a test runner: its allow produces durable evidence for the intended skip and records its ref on the GateDecision
             modes: [doc]
             config:
               verification_status: trusted              # the gate's allow result produces this as DURABLE evidence; its ref rides GateDecision.evidence_refs into the run record (L2/L2a; ① INV-3)
