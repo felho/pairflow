@@ -8946,6 +8946,7 @@ validate_child_steps(template) → ok | Rejected                   # L4 definiti
     IF step.child.template_ref is literal AND NOT definition_resolves(step.child.template_ref) THEN RETURN Rejected(child_template_ref_unresolved(step.id))   # a static typo / unknown template fails AT CREATE — never a durable spawning link that can never spawn (a DYNAMIC ref's create-reject is CHILD_SPAWN_FAILED below)
     IF step.child.child_key is none    THEN RETURN Rejected(child_key_missing(step.id))          # the idempotency key — load-bearing, not optional
     IF step.wait_for is empty          THEN RETURN Rejected(child_wait_for_empty(step.id))
+    IF NOT terminal_dispositions ⊆ keys(step.wait_for) THEN RETURN Rejected(child_wait_for_incomplete(step.id))   # FAIL-CLOSED: a child can terminate done | failed | cancelled (the L0d disposition set) — the parent MUST declare a route for EVERY one, so no terminal (incl. a CHILD_SPAWN_FAILED ⇒ failed) is ever unhandled at runtime
     FOR k IN keys(step.wait_for):                                 # each lifecycle key routes to a real target
       IF NOT resolves(template, step.wait_for[k].target) THEN RETURN Rejected(child_wait_target_unresolved(step.id, k))
   RETURN ok
@@ -8986,11 +8987,13 @@ CHILD_SPAWNED(event) → Outcome                                   # L4 kernel_e
 CHILD_SPAWN_FAILED(event) → Outcome                              # L4 kernel_event — the child's CREATE_INSTANCE was REJECTED past load (e.g. a dynamic binding / input invalid) — the spawn could not start (the ② initiation-failure analog). event = { parent_ref, request_id, reason }
   instance ← load(event.parent_ref.parent_id) ; template ← template_of(instance)
   link ← instance.child_links.by_id(event.parent_ref.link_id)
-  IF link is none OR link.request_id ≠ event.request_id THEN RETURN Rejected(child_link_unknown)
-  IF link.status ≠ spawning THEN RETURN Duplicate               # already resolved (bound or failed) ⇒ idempotent no-op
+  IF link is none THEN RETURN Rejected(child_link_unknown)
+  IF link.request_id ≠ event.request_id THEN RETURN Rejected(child_link_mismatch)   # a stale / mis-routed spawn-completion for a DIFFERENT attempt
+  IF link.status ≠ spawning THEN                                # the spawn already resolved for this attempt
+    IF link.status = failed THEN RETURN Duplicate                # a replayed CHILD_SPAWN_FAILED ⇒ idempotent no-op
+    ELSE RETURN Rejected(child_spawn_already_resolved)           # CHILD_SPAWNED already bound this attempt (active / a later terminal) — a CONTRADICTORY completion ⇒ never swallow (the orphan child is L9)
   IF instance.kernel_status ≠ WAITING OR instance.wait.kind ≠ child_event OR instance.wait.link_id ≠ link.link_id THEN RETURN Rejected(not_awaiting_this_child)
-  step ← template.step(instance.current_step)
-  IF failed NOT IN keys(step.wait_for) THEN RETURN Rejected(child_spawn_failure_unhandled)   # a parent that spawns MUST declare a `failed` route to recover a spawn that could not start; else the link stays spawning — a config gap reconciled at L9
+  step ← template.step(instance.current_step)                    # `failed` ∈ wait_for is GUARANTEED at load (child_wait_for_incomplete) — no runtime route-missing branch
   COMMIT atomically at instance.version:                         # a spawn that could not start IS a failed attempt — reuse the `failed` route (no child exists; child_id stays none)
     link.status ← failed ; link.fail_reason ← event.reason
     instance.transcript.append(CHILD_SPAWN_FAILED { link_id: link.link_id, request_id: event.request_id, reason: event.reason })
@@ -9057,12 +9060,12 @@ CHILD_LIFECYCLE(event) → Outcome                                 # L4 kernel_e
             <div class="ent"><div class="en">CHILD_SPAWNED <span style="font-size:10px;color:var(--muted)">(kernel event)</span></div><div class="fields"><code>{ parent_ref, request_id, child_id }</code> — the spawn write-back: the child's CREATE_INSTANCE finished ⇒ correlate <code>request_id</code> + CAS the id into the parent link (<code>spawning ⇒ active</code>). The <code>RUNTIME_CONTEXT_READY</code> analog</div></div>
             <div class="ent"><div class="en">CHILD_SPAWN_FAILED <span style="font-size:10px;color:var(--muted)">(kernel event)</span></div><div class="fields"><code>{ parent_ref, request_id, reason }</code> — a child CREATE_INSTANCE rejected past load (a dynamic binding / input invalid) ⇒ the link goes <code>failed</code> and the parent routes its <code>failed</code> path. The ② initiation-failure analog</div></div>
             <div class="ent"><div class="en">CHILD_LIFECYCLE <span style="font-size:10px;color:var(--muted)">(kernel event)</span></div><div class="fields"><code>{ parent_ref, child_id, lifecycle }</code> — <code>lifecycle ∈</code> the child's subscribable transitions; MVP anchor: terminal (<code>done | failed | cancelled</code>)</div></div>
-            <div class="ent"><div class="en">Rejected(child_link_unknown)</div><div class="fields">a <code>CHILD_SPAWNED</code> / <code>CHILD_LIFECYCLE</code> for a link the parent does not have</div></div>
+            <div class="ent"><div class="en">Rejected(child_link_unknown)</div><div class="fields">a <code>CHILD_SPAWNED</code> / <code>CHILD_SPAWN_FAILED</code> / <code>CHILD_LIFECYCLE</code> for a link the parent does not have</div></div>
             <div class="ent"><div class="en">Rejected(child_link_mismatch)</div><div class="fields">a <code>CHILD_SPAWNED</code> with a stale / mis-routed <code>request_id</code> or a different <code>child_id</code> on a bound link, or a <code>CHILD_LIFECYCLE</code> whose <code>child_id</code> ≠ the link's already-bound child</div></div>
             <div class="ent"><div class="en">Rejected(not_awaiting_this_child)</div><div class="fields">the parent is not parked on this child (already routed, or a duplicate delivery)</div></div>
             <div class="ent"><div class="en">Rejected(child_lifecycle_not_subscribed)</div><div class="fields">a lifecycle the parent's <code>wait_for</code> does not declare</div></div>
-            <div class="ent"><div class="en">Rejected(child_template_ref_unresolved / child_key_missing / child_wait_for_empty / child_wait_target_unresolved)</div><div class="fields">load-time <code>validate_child_steps</code> failures (a static <code>template_ref</code> that does not resolve is caught here)</div></div>
-            <div class="ent"><div class="en">Rejected(child_spawn_failure_unhandled)</div><div class="fields">a <code>CHILD_SPAWN_FAILED</code> arrives but the parent declares no <code>failed</code> route — a config gap; the link stays <code>spawning</code> (→ L9)</div></div>
+            <div class="ent"><div class="en">Rejected(child_template_ref_unresolved / child_key_missing / child_wait_for_empty / child_wait_for_incomplete / child_wait_target_unresolved)</div><div class="fields">load-time <code>validate_child_steps</code> failures (a static <code>template_ref</code> that does not resolve, and a <code>wait_for</code> missing a terminal disposition, are caught here)</div></div>
+            <div class="ent"><div class="en">Rejected(child_spawn_already_resolved)</div><div class="fields">a <code>CHILD_SPAWN_FAILED</code> on an already-bound (active / terminal) link — a contradictory completion for a spawn that <code>CHILD_SPAWNED</code> already won</div></div>
           </div>
         </div>
 
@@ -9077,7 +9080,7 @@ CHILD_LIFECYCLE(event) → Outcome                                 # L4 kernel_e
             <div class="ent"><div class="en">CHILD_LIFECYCLE is transition-based; the anchor is terminal</div><div class="fields">the event is produced by a child's <b>subscribable lifecycle transition commit</b>; the mechanism is general, but the MVP anchor subscribes only terminal transitions (<code>done | failed | cancelled</code>). Intermediate subscription (e.g. <code>ready_for_human_approval</code>) is a valid extension on the same channel</div></div>
             <div class="ent"><div class="en">routing is fail-closed on the subscription</div><div class="fields">the parent resumes only on a lifecycle in its <code>wait_for</code>, on the matching link, while parked — else <code>Rejected</code>. The kernel knows no lifecycle meanings; <code>wait_for</code> keys route via the shared <code>arrive()</code></div></div>
             <div class="ent"><div class="en">round is instance-local</div><div class="fields">the parent's round (a delivered-task cycle) and the child's round (the child's own loop) measure different things but use the <b>same</b> kernel mechanics — they are two independent instances, neither reads the other's round</div></div>
-            <div class="ent"><div class="en">a spawn that cannot start is a failed attempt</div><div class="fields">a static / typo'd <code>template_ref</code> is caught at load (<code>child_template_ref_unresolved</code>); a child CREATE_INSTANCE rejected <em>past</em> load (a dynamic binding / input invalid) emits <code>CHILD_SPAWN_FAILED</code> (the ② initiation-failure analog) → the parent's <code>failed</code> route, link terminal-failed. A <b>transient</b> spawn-dispatch crash (no event) leaves the link durably <code>spawning</code> → L9 re-drive (idempotent by <code>request_id</code>) — never a silent forever-wait</div></div>
+            <div class="ent"><div class="en">a spawn that cannot start is a failed attempt</div><div class="fields">a static / typo'd <code>template_ref</code> is caught at load (<code>child_template_ref_unresolved</code>); a child CREATE_INSTANCE rejected <em>past</em> load (a dynamic binding / input invalid) emits <code>CHILD_SPAWN_FAILED</code> (the ② initiation-failure analog) → the parent's <code>failed</code> route (present by load — <code>validate_child_steps</code> requires a route for every terminal disposition), link terminal-failed. A <b>transient</b> spawn-dispatch crash (no event) leaves the link durably <code>spawning</code> → L9 re-drive (idempotent by <code>request_id</code>) — never a silent forever-wait</div></div>
           </div>
         </div>
 
