@@ -21,7 +21,11 @@ channelled in the level roadmap?"*
 > outer-layer bets from studies 1–10. Studies **11 (gastown)** and **12 (gstack)** were
 > pulled in afterwards (both relevant to the parked agent-runtime topic); their deltas are
 > consolidated in **§8 — Addendum**, which amends the named matrix rows rather than rewriting
-> them in place. Read §8 alongside §4.
+> them in place. Read §8 alongside §4. Study **13 (the ETCLOVG survey)** is a different kind of
+> artifact — not a codebase but an *external academic taxonomy of the whole problem space*; it
+> acts as a **checksum on the level map** and is consolidated in **§9 — Addendum**, which records
+> where an independent decomposition agrees with v3's joints (and where the two informative
+> mismatches fall). Read §9 as a meta-layer over §4, not another row in it.
 
 The twelve studies (in order written), and the two pre-existing reference notes:
 
@@ -39,6 +43,7 @@ The twelve studies (in order written), and the two pre-existing reference notes:
 | 10 | [`langgraph-study.md`](langgraph-study.md) | orchestration library (Python) | **the closest analogue** — validates the commit-based bet |
 | 11 | [`gastown-study.md`](gastown-study.md) | multi-agent workspace manager (Go) | **the parallel-universe v3**; the TMUX cautionary tale; **the dedicated watchdog** + the **first federation reference** |
 | 12 | [`gstack-study.md`](gstack-study.md) | role-team Claude Code setup (Markdown) | **the 2nd methodology lens**; "roles without actors"; **the deterministic L2 gate primitive** |
+| 13 | [`agent-harness-survey-study.md`](agent-harness-survey-study.md) | academic survey / **ETCLOVG taxonomy** (71pp paper) | **the external checksum** — 6/7 layers map clean; the 2 mismatches (no transactional kernel; no channels layer) ARE v3's deepest bets |
 | — | [`ruflo-v3-sdlc-workflow.md`](ruflo-v3-sdlc-workflow.md) | SPARC/DDD method study | adopt concepts not framework (pre-series) |
 | — | [`v3-gate-policy-config-design-synthesis.md`](v3-gate-policy-config-design-synthesis.md) | gate/policy/config synthesis | L2 design input (pre-series) |
 
@@ -502,14 +507,36 @@ are its external evidence.
   "claim is intent, not a lock" wild-west mode is a correctness hole v3 must not inherit).
 - **The L2 gate enforcement mechanism** — gstack's deterministic three-valued PreToolUse check.
 
+**Now meta-corroborated by study 13 (the external taxonomy, see §9):**
+- **The two central bets** — an independent academic group named v3's thesis verbatim
+  ("agent frameworks → agent platforms") and confirmed the *corpus is blind to the transactional
+  kernel* (the ETCLOVG L-layer never mentions idempotency/CAS/exactly-once — §9). v3 frames
+  idempotency as a field blind-spot, not a debate it wins.
+- **The verify gate** — a FOURTH corroboration, now from the meta-level: the survey promotes
+  Verification to a *first-class layer* co-equal with Execution/Lifecycle.
+- **Record-not-replay & durable-artifact recovery** — the survey's open-problem §12.2 endorses
+  v3's fix verbatim ("reconstruct missing state from durable artifacts rather than compressed
+  history"), even as its §5.6 mis-files the *mechanism* under context management (the conflation
+  v3 disambiguates).
+
 **Still open / v3-must-design-itself (little or no prior art):**
 - **L9 fuzzy/external correlation** — the standout open question; every studied system is exact-only.
+  **Study 13 confirms this field-wide:** no fuzzy/heuristic correlation mechanism appears anywhere in
+  the survey's ~138-project corpus or its five open problems; the richest external description is the
+  survey's own §12.4 (posed as *open*), whose handoff field-list v3 should adopt as the ContextPacket
+  checklist (§9).
 - **L10 cross-firm private-data federation** — now has a *cautionary* first reference (gastown), but a
   correct claim-arbitration/trust-gate model is still v3's own work.
 - **L13 trust calibration** and **L14 org-scale governance** — gastown's reputation/Spider design is a
   first input; the rest is essentially v3-original.
 - **L4 fan-in synthesis** — the *pieces* exist (slot + barrier + discipline); combining them into one
   coherent v3 contract is v3's own work (the convergence L4 slice).
+- **NEW (study 13): self-ablating gates + Observability-as-first-class.** The survey's open-problem
+  §12.5 names a concern no studied system solves — every gate/wrapper encodes an assumption about model
+  weakness that must be *re-estimated, not assumed*, as models improve; v3 has no "is this gate still
+  load-bearing?" ablation mechanism. And the survey promotes **Observability to a first-class layer with
+  cost tracking as an output** (§7) — v3 has only a cross-cutting observe-seam, no home for cost/trace as
+  operational outputs. Both are v3-must-design (see §9 reconsiderations).
 
 **Recommended next step:** channel the §4 matrix + §5 mapping into the convergence build —
 specifically, fold the resolved items into `approach.md`'s level notes and realize the
@@ -616,6 +643,134 @@ cautionary (gastown) reference ready for when it resumes.
 
 ---
 
+## 9. Addendum — study 13 (the ETCLOVG survey): the external checksum
+
+Study 13 ([`agent-harness-survey-study.md`](agent-harness-survey-study.md)) is the inverse of every
+other study and the only one of its kind: not a reverse-engineered codebase but an **independent
+academic taxonomy of the entire harness problem space** — Li et al. 2026, *Agent Harness Engineering:
+A Survey* (the **ETCLOVG** seven-layer model: Execution / Tooling / Context / Lifecycle / Observability
+/ Verification / Governance, coding ~138 open-source projects). Its job in this synthesis is a
+**checksum on v3's level map**: does a group that never heard of pairflow carve the harness at the same
+joints? It changes none of the two central bets; it **validates the decomposition from the outside** and
+locates v3's contribution precisely at the two places the external taxonomy is *silent*.
+
+### The crosswalk verdict — 6/7 clean, the 2 mismatches are the whole signal
+
+| ETCLOVG | v3 home | Fit |
+|---|---|---|
+| **E** Execution & Sandbox | L0e runtime-context (+ the parked agent-runtime topic) | clean — and "sandbox abstraction layer" is a *named* pattern (SWE-ReX, smolagents `executor_type`, k8s Agent-Sandbox CRD) = the strongest proof L0e should be a layer, not a per-actor feature |
+| **T** Tool & Protocol | L0c adapter · L1 capability · L5 skills | clean — but the survey's *four boundaries* (Model↔Function / **Agent↔Capability=MCP** / **Agent↔Agent=A2A** / Agent↔Repo=AGENTS.md) say v3 needs **distinct seams for actor-invocation vs inter-actor delegation** |
+| **C** Context & Memory | L0b packet · L11 memory · L12 learning | clean — adopt "horizon" as the axis label; the C=9 "thin" reading is *corrected* (rich standalone-memory market, §below) |
+| **L** Lifecycle & Orchestration | L0a · L0d · L4 · L6 | **partial — THE mismatch:** the survey folds the durable kernel into orchestration and **never names idempotency/CAS/exactly-once** (§6.1 "durable"=resumable, not transactional). v3's L0a is the missing inner discipline of this 47-project layer |
+| **O** Observability & Operations | the observe-seam (no numbered level) | **gap in v3** — the survey makes O a first-class layer with cost/trace outputs; v3 has only a cross-cutting seam (reconsider, §below) |
+| **V** Verification & Evaluation | L2 gates + the `verify` gate | clean+ — V is a *first-class layer*; tells v3 the verify gate is **layer-sized**, with a 5-stage sub-structure |
+| **G** Governance & Security | L2 · L3 · L7 · L10 · L13 | clean — "declarative constitution" = the policy-config's user-facing name; audit-record **must hash/sign** |
+
+**No ETCLOVG home for** v3's **L8 channels** (dispersed across T/L/O) or **L9 fuzzy correlation** (nobody
+has it) or the **L0a idempotency kernel** (folded into L). The external taxonomy being silent at exactly
+v3's two deepest bets (L0a, L8) is the evidence those bets are *non-obvious differentiators*, not errors.
+
+### Per-level matrix amendments (study 13)
+
+- **L0a** — *meta-confirms the §3.1 idempotency hole at field scale.* The survey's densest layer
+  (L = 47 of ~138 primary projects) is built **without any named durability protocol**: §6.1 enumerates
+  *what* state to persist but its only axis is stateless/stateful/hybrid; "stateful" is an unaudited label
+  ("stores state outside the prompt"), no system credited with dedup/CAS/outbox. Tellingly the corpus's
+  *most durable* system (Anthropic Managed Agents) is filed under **Observability (§7.4)** and is still
+  **event-sourced replay-resume**, not commit/CAS. **v3 must frame L0a as the gap the corpus is blind to**
+  (the survey never *debates* commit-vs-replay at the orchestration level — it doesn't raise the question).
+- **L0b** — *adopt the survey's vocabulary.* "Horizon" as the context axis label (short active-window /
+  mid-term session / long-term persistent); the KV-cache constraint (**append-only, stable-ordering,
+  deterministic-serialization** packet assembly — cached $0.30 vs uncached $3.00/MTok). Honcho's
+  `(observer, observed)` edge is named precisely in §5.5.2 ("models users not facts; per-agent perspective
+  prevents cross-contamination while a shared user-model accumulates").
+- **L0e** — *the parked agent-runtime topic gets its clean split named.* The survey's own E/T/O division
+  *is* the disambiguation the parked doc reached for: **substrate = E-category choice; I/O-transport
+  (screen-scrape vs API vs shell) = a property of that category; observation = the O-seam.** tmux
+  screen-scraping is a low-fidelity point in the computer-use/shell I/O space — an adapter detail below the
+  kernel line (confirms gastown's cautionary reading, §8). *Adopt:* the **self-hosted / cloud / hybrid-BYOC**
+  deployment triad and the **Local/Remote-Workspace split** as L0e's first-class abstraction (the parked
+  topic's MVP-scope question). Design rule: **"minimal, not maximally capable"** substrate.
+- **L1 / L5** — *no longer purely v3-original on tooling.* "**Fewer but better tools**" is empirically
+  backed: oversized menus degrade reliability → L1 should be **pruned per-step**, not just enumerated.
+  Skill-selection is a *distinct* retrieval problem from tool-selection (SkillRouter/SkillRet) → confirms
+  L5 as a separate retrieval surface above L1.
+- **L2 / verify gate** — *the FOURTH corroboration, and a sub-structure.* V is a first-class layer; the
+  root framing "**a score is a property of the model–harness *pair***" and "**the evaluator is a component
+  under test, not an oracle**" are the academic root of durable-state-over-self-report. The 5 stages give
+  the `verify` gate its shape: **pre-execution readiness = a FRONT gate** (3 sub-checks: env reset / tool-
+  context-permission consistency / **versioned grader**); **multi-level judgement = a panel layered by
+  *level* not voter** (outcome / trajectory / evaluator); **continuous regression = the deferred-gate-into-
+  a-layered-suite**, **re-fired by *harness* changes, not just model changes** (a gate/policy edit must
+  re-trigger the suite). Gates should carry **cost/latency**, not just correctness.
+- **L3** — *the four canonical hook points = a gate-placement spec.* H1 input-guardrail / H2 action-
+  validation (= gstack's PreToolUse) / H3 post-exec info-flow / **H4 human-in-the-loop (= v3's
+  DECISION_REQUEST)**. HITL hooks have three named design dimensions — validation-scope / alert-richness /
+  recurrence (allow-once vs allow-always) — that parameterize the L3 payload. The Android-permission
+  warning (17% read dialogs) argues for **rich, infrequent** decisions.
+- **L7** — *credential-never-travels is the survey's exact pattern* (Skyvern: vault + placeholders to the
+  LLM + raw substitution at the execution layer), with a **named unsolved part v3 inherits**: secret
+  lifecycle over long-horizon sessions (tokens expire/revoke mid-trajectory; renewed creds must stay
+  outside model context). Identity model: authenticated-delegation token chain (User-ID + Agent-ID +
+  scoped Delegation Tokens).
+- **L8** — *confirms the two-classes instinct by negative space.* The survey has **no first-class channel
+  layer**; it disperses handoffs across T (protocol) / L (orchestration) / O (observability) and elevates
+  them only as open-problem §12.4. **The §12.4 handoff field-list = the ContextPacket checklist:** nine
+  payload fields (*intent, constraints, permissions, artifacts, provenance, budget state, risk level, trace
+  history, unresolved decisions*) **+ five responsibility clauses** (*who authorized / which state
+  transferred / which evidence / what the receiver may do / when control returns*). Adopt as a two-section
+  ContextPacket spec — v3 making L8 a first-class level is *ahead* of the field.
+- **L9** — *meta-confirms the standout open gap.* No fuzzy/heuristic/external-correlation mechanism appears
+  anywhere in §9–§13 or the corpus; every handoff/identity/correlation surveyed is exact/explicit. The
+  survey poses rich-handoff (§12.4) as *open*. L9 has no prior art — confirmed field-wide.
+- **L11** — *the C=9 "thin" reading is corrected.* The low count is a *primary-label artifact*: §5.5
+  documents a **rich standalone-memory market** (MemGPT paging, Mem0 ~14M downloads, A-MEM retroactive
+  links, Honcho, cq MCP-native fleet memory, MemoryBank decay+contradiction-resolution). honcho's
+  standalone-memory bet is **strengthened**, not merely validated. *Vocabulary:* context **rot**
+  (single-step degradation, begins before window-full) vs context **drift** (trajectory-level, 100+ turns).
+- **G / policy-config** — *the constitution is a YAML *file*, enforcement is *hooks*.* AutoHarness schema =
+  the policy-config field list (pipeline-mode / risk-patterns / allow+deny tool patterns / token-budget /
+  audit-destinations); position v3's config consciously on the **YAML → policy-DSL → hard-coded spectrum**
+  (no portable standard exists — define v3's own, MCP-analogously). Audit-record field list (§9.5) = the
+  paperclip-ledger spec, with the warning **"few sign or hash records, leaving trails susceptible to
+  tampering by a compromised agent"** → v3's ledger must hash/sign. Detection splits **inline per-commit
+  gate + async trajectory-level ledger-scan**.
+
+### New reconsiderations study 13 raises for the convergence build
+
+1. **Promote Observability to a named concern with cost as an output.** The survey's O-layer (15 projects,
+   5 subcategories) is owned by a different team/stack in production — the argument for a boundary. v3 has
+   the observe-seam (read side) but no home for traces/cost/reliability as operational outputs. The
+   **AgentSight out-of-process eBPF model** (monitors from outside the process at the SSL boundary,
+   uncircumventable by a compromised agent) says the observe-seam belongs *below* the actor, in the
+   kernel/runtime — which v3's commit-log is well-positioned to be.
+2. **Resolve capability–control as one-config-surface-over-five-levels.** §11.2 states capability+control is
+   **one design axis** "linking tool schemas, context policy, runtime permissions, identity, auditability,
+   human approval" — *because* it threads v3's L1/L2/L3/L7/L13. This **resolves** the apparent fragmentation:
+   one *config surface* (the "constitution") projecting onto five *mechanism levels*. Document it in
+   `approach.md`.
+3. **Add a self-ablation discipline for gates (§12.5).** Every gate encodes an assumption about model
+   weakness that must be re-estimated as models improve (Anthropic: context-resets useful for one model
+   became dispensable for a stronger one). v3 needs gates to be **ablatable / shadow-testable**, with the
+   O-layer meta-monitoring which interventions still pay.
+4. **Naming hygiene at zero cost:** adopt "horizon" (C axis), "constitution" (policy-config), "task runner"
+   (the WF-1 abstraction §6.4 names) to align v3 with the field vocabulary.
+
+### The §9 throughline
+
+An independent academic group decomposed the harness into seven layers and **six of them land on v3's
+existing joints** — the level map is not idiosyncratic. The taxonomy's two silences — no name for the
+transactional kernel (it folds durability into orchestration *and* mis-files it under context, §6.1/§5.6),
+no first-class channel layer (handoffs dispersed, rich-handoff left as open-problem §12.4) — fall **exactly
+on v3's two deepest, least-obvious bets (L0a, L8)**. The survey's headline arc — *"from agent frameworks to
+agent platforms"* — is v3's positioning verbatim, and it places v3 precisely: a **kernel under the platform
+tier**, the thing that makes a fleet's actions "inspectable and reversible over time" (the commit log). Net:
+study 13 leaves the §6 synthesis line intact and **hardens it** — the verify gate is now four-times
+corroborated, L9's emptiness is confirmed field-wide, and the two things the external taxonomy can't name
+are the two things v3 should say loudest.
+
+---
+
 ## Caveats
 
 - **This is a meta-layer, not a re-summary.** Each claim here is backed by a specific study's
@@ -625,5 +780,10 @@ cautionary (gastown) reference ready for when it resumes.
   wrong for v3's distributed-kernel-for-LLM-actors goal," not "wrong."
 - **The studies' glossary is simplified.** §5 maps it onto the convergence roadmap; where a study said
   "L9" it meant the broad wait/correlation concern, which the convergence work splits more finely.
-- **Snapshot in time.** Twelve studies over 2026-06-19/20, against same-recent HEADs. The synthesis reflects
-  those HEADs; the design conclusions are intended to outlast them.
+- **Snapshot in time.** Twelve reverse-engineering studies + one external survey (study 13) over
+  2026-06-19/20, against same-recent HEADs. The synthesis reflects those HEADs; the design conclusions are
+  intended to outlast them.
+- **Study 13 is a different artifact class.** §1–§8 distil *reverse-engineered codebases* with `file:line`
+  grounding; §9 distils an *academic taxonomy* — it contributes boundaries and vocabulary, not mechanisms.
+  Cite it for *where a concern lives* and *whether the field has solved it*, never for an implementation
+  choice (every mechanism-level claim in §9 is imported from studies 1–12).
