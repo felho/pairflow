@@ -39,11 +39,14 @@ Twelfth in a series; the convergence bridge over the first ten is
 - [`gastown-study.md`](gastown-study.md) — the gate-bead (the structural `verify` gate); Seance (raw-fork continuity, the opposite of gstack's distilled checkpoint).
 - [`honcho-study.md`](honcho-study.md) — the distilled-memory reference (gstack's continuity sits on this axis but flat-Markdown).
 
-> Method: four parallel sub-agent analyses (a leaner fan-out, proportionate to a
-> methodology/skills package), each reading full SKILL.md command files + the TS build
-> machinery, with `file:line` citations. Slices: the role taxonomy (L0b); the
-> slash-command format + power tools + multi-host (L5); the SDLC methodology as a v3
-> workflow; context-continuity + safety tools (L11/L2).
+> Method: first pass used four parallel sub-agent analyses (a leaner fan-out,
+> proportionate to a methodology/skills package), each reading full SKILL.md command
+> files + the TS build machinery, with `file:line` citations. A second independent
+> pass used ten lenses: state/source-of-truth, lifecycle/recovery, concurrency/
+> ownership, runtime adapter, policy/security, delegation/scheduling, channels/events,
+> memory/context, operator UX, and modularity/testability. The second-pass deltas
+> below add the browse/design runtime lessons that the first methodology-focused pass
+> underweighted.
 
 ## Executive Summary
 
@@ -100,6 +103,13 @@ Where gstack sits: the **second methodology lens**, orthogonal to the kernel-spe
 than it changes — but its distinctive gifts (the deterministic three-valued gate, authority-as-role-attribute,
 the CEO-front-gate + security-gate workflow additions, the verify-gate's third corroboration, the codegen
 portability alternative, and the "roles without actors" mirror) sharpen v3's L0b/L2/L5 and its workflow library.
+
+The second pass adds a sharper runtime lesson: **gstack is also a serious local
+daemon/tooling laboratory.** Its browse/design subsystems are not workflow kernels,
+but they contain high-quality primitives v3 should copy: explicit state roots,
+small daemon pointer files, health-check liveness, atomic writes and locks, scoped
+tokens and leases, a separate live activity feed vs durable audit ledger, physical
+local/tunnel surface separation, and command registries reused by runtime/docs/tests.
 
 The synthesis line, lightly extended:
 
@@ -355,6 +365,9 @@ fix) are observers, not gates.
   explicitly superseded" decision rule is exactly the cross-session-decision primitive a distributed kernel needs.
 - **Freeze = directory-scoped edit boundary** — a clean, generalizable capability-confinement primitive: scope a worker to a
   path, deny edits outside it.
+- **Identity is not authority.** The browse PTY model separates stable, loggable `sessionId` from short-lived bearer
+  `attachToken`; reattach validates a lease and mints a fresh token rather than reusing identity as a credential. That
+  is directly applicable to v3 worker/session resume.
 
 **AVOID**
 - **Fail-open + session-scoped + opt-in** — `freeze` allows everything with no state file and on parse failure; hooks vanish
@@ -364,12 +377,125 @@ fix) are observers, not gates.
   trivially bypass; enforce at the capability layer, not by string-matching one tool's input.
 - **Continuity-by-model-self-summary is lossy and non-deterministic** (the agent decides what to record). For kernel-level
   handoff where correctness matters, prefer a structured/verifiable record.
+- **Fail-open shell hooks as authority-grade policy.** The `freeze`/`careful` hooks are useful UX guardrails, but parse
+  failures and missing paths can allow. Keep this pattern for local assistive safety, not for v3's hard capability boundary.
 
 **ORTHOGONAL** — `canary` (live visual monitoring) and `health` (code-quality dashboard) are developer conveniences, not
 kernel concerns; the AskUserQuestion decision-brief apparatus is a human-UX layer; the shared preamble is distribution
 machinery.
 
 ---
+
+## Second-pass deltas
+
+The ten-lens pass confirmed the first report's methodology findings and added one major correction of emphasis:
+gstack is not only a role/skill package. Its browser, design, PDF, memory, and deployment tooling contain reusable
+runtime mechanics for v3's local execution and operator surfaces.
+
+### State, lifecycle, and ownership
+
+- **Use an explicit state root and fallback chain.** `gstack-paths` separates durable state, plan root, and temp
+  root, with an ordered fallback from env override to plugin data to `~/.gstack` to local `.gstack`. v3 should
+  avoid implicit "where did this run write state?" behavior.
+- **Daemon discovery state should be a small pointer, not the state itself.** Browse uses `.gstack/browse.json`
+  for pid/port/token/version metadata, validated by health check; design uses a typed `DaemonState` with
+  pid/port/version/serverPath/cmdlineMarker. This maps well to Pairflow worker and bubble-daemon discovery.
+- **Liveness should be health-check based, not PID based.** gstack treats `/health` as the cross-platform truth,
+  especially because PID checks are unreliable on Windows and vulnerable to reuse. PID is useful only with an
+  identity marker.
+- **Atomic write + lock is a baseline local-daemon primitive.** Browse writes pointer files via temp file + rename,
+  and the CLI uses `wx` lockfiles with stale-lock reclaim. The design daemon also uses atomic state writes,
+  exclusive locks, and lock-under-reread attach. v3 should use this pattern for local process pointers.
+- **Do not restart busy or config-mismatched daemons silently.** Browse distinguishes dead from busy, retries
+  health briefly, and refuses silent restart on headed/proxy/config mismatch because tab/cookie/session state
+  would be lost. v3 should distinguish "unreachable", "busy", "stale binary", and "config mismatch" as separate
+  lifecycle outcomes.
+- **Context save is append-only human checkpointing, not restore mutation.** `context-save` writes timestamped
+  Markdown summaries; `context-restore` reads and summarizes, explicitly not modifying files. Useful as low-cost
+  continuity, but not a replacement for structured kernel state.
+- **Audit and activity are separate media.** Activity is an in-memory/ring-buffer/SSE live feed with gap detection;
+  audit is append-only JSONL and survives restart. Pairflow should keep UI activity, replayable workflow events,
+  and forensic audit distinct instead of overloading one stream.
+
+### Capabilities, security, and relay surfaces
+
+- **Root token vs scoped token is the security model to copy.** Root tokens mint/revoke; scoped tokens carry scope,
+  domain, tab policy, rate limit, and expiry. Child processes get per-spawn scoped tokens and the root token never
+  enters untrusted environments.
+- **Stable id and bearer token are separate.** PTY session id is non-secret and stable; attach token is short-lived
+  and re-minted on reattach. Reattach swaps the live websocket, replays a ring buffer, and restores keepalive rather
+  than starting a fresh process.
+- **Local and tunnel surfaces are physically separated.** Tunnel is a separate listener with path allowlist,
+  command allowlist, root-token denial, and disk-output restrictions. This is stronger than "same server, route
+  check" and is a useful remote-worker pattern for v3.
+- **Denials are their own audit stream.** Tunnel-denial logging is async, rate-capped, append-only, and does not
+  block the request path under attack. Pairflow should keep denial telemetry robust under flood.
+- **Purpose-bound cookies/tokens reduce confused authority.** SSE cookies are read-only SSE credentials; PTY
+  cookies are PTY-only; neither works for `/command`. v3 should avoid general-purpose session cookies for all
+  operator/control APIs.
+- **LLM-facing content needs its own security layer.** gstack treats hidden DOM/ARIA injection, sentinel escaping,
+  data marking, and exfil-domain blocking as prompt/content-security concerns, distinct from transport auth. v3
+  should do the same for browser-derived context packets.
+- **Health/discovery endpoints should not expose root tokens.** gstack still carries comments and edge cases around
+  `/health` token leakage; the second pass treats that as an avoid item for Pairflow.
+
+### Events, commands, and operator UX
+
+- **Command registry as source of truth.** Browse keeps READ/WRITE/META command sets in an importable registry used
+  by runtime, validation, docs, and reporting. Pairflow should model lifecycle/protocol commands similarly rather
+  than scattering switch cases.
+- **Every command should emit structured start/end activity and durable audit.** gstack emits `command_start` and
+  `command_end` with client id, tab count, mode, duration, and status, while audit records command, args, origin,
+  duration, status, cookies, and mode. v3 should add a stronger request/correlation id, but the split is right.
+- **SSE should be cursorable and gap-aware.** The monotonic event id, `after` cursor, and explicit gap event are a
+  good reconnect contract for operator views. The ring buffer is not a replay log, so v3 still needs a durable event
+  store for lifecycle truth.
+- **CDP/browser command concurrency is explicit.** Tab-scoped CDP calls use tab mutexes; browser-scoped calls use a
+  global lock, with timeout and `finally` release. This is a useful shape for resource-scoped command execution in v3.
+- **Network capture defaults to metadata, body capture opt-in.** gstack avoids materializing response bodies by
+  default due to OOM risk. Pairflow should use the same "cheap metadata by default, expensive payload capture by
+  explicit request" rule for external channels.
+- **Machine output and human progress are separated.** PDF generation writes stage progress to stderr and only the
+  output path to stdout. Pairflow command surfaces should preserve this property for scripting and automation.
+- **Artifact gates use multiple oracles.** PDF gates combine text extraction, pixel counts, `pdfinfo`, and OOXML/XML
+  assertions. The transfer is not PDF-specific: high-value artifacts should have invariant checks beyond screenshots
+  or model judgment.
+- **Eval-watch is a useful terminal dashboard pattern.** Heartbeat, current test, partial results, cost, duration,
+  last tool, log path, and stale detection are exactly the kind of long-running bubble/eval status v3 needs.
+
+### Memory, domain knowledge, and skill packaging
+
+- **Context checkpoints should be timestamp-prefix ordered, not mtime ordered.** gstack restore treats filename
+  prefix as canonical ordering so copy/rsync does not change meaning.
+- **Memory loading is layered and bounded.** Skill frontmatter can declare `gbrain.context_queries`, fallback
+  manifests provide defaults, the loader uses short timeouts and repo filtering, and output is wrapped as data.
+  This is a good v3 pattern for contextual memory injection.
+- **Trust decisions should be per remote/source.** setup-gbrain separates `read-write`, `read-only`, and `deny`
+  decisions per remote and separates transcript ingest from artifact sync. v3 should avoid a global memory on/off
+  switch.
+- **Memory schema wants typed pages and link verbs.** gstack's schema pack defines page kinds, fields, retention,
+  and relationships. v3 needs equivalent schemas for tasks, decisions, skill runs, context packets, and memories.
+- **Model overlays are subordinate patches.** gstack overlays provide model-specific nudges, but workflow STOP/gate
+  rules win. v3 should keep model-specific behavior as lower-precedence preferences, not alternate protocols.
+- **Section manifests are passive registries, not dispatch engines.** gstack skeletons decide what to read; tests
+  enforce required reads and stranded gates. v3 should separate skill packaging metadata from runtime dispatch policy.
+
+### Modularity and testability
+
+- **Host/provider config is typed, but the registry is manual.** HostConfig is a useful declaration surface for
+  paths, frontmatter, install strategy, runtime assets, sidecars, and boundary instructions. The manual
+  `hosts/index.ts` registry and an apparently unused OpenClaw adapter show the risk: declarative seams need discovery
+  and live tests or they become decorative.
+- **Central choke points work, but large server modules accumulate ownership.** Browse has a strong sanitizing
+  command wrapper, yet `server.ts` owns BrowserManager, auth, tunnel, SSE, terminal, proxy, xvfb, and audit imports.
+  v3 should copy the choke point, not the module concentration.
+- **make-pdf is a cleaner pipeline boundary.** Pure renderer, typed browse shell adapter, and orchestrator with
+  dedicated tab cleanup form a better modular example for v3 artifact pipelines.
+- **Tests are contracts.** Host uniqueness/freshness, schema invariants, generator idempotency, daemon lifecycle, and
+  artifact copy-paste gates are explicit tests. v3 should use tests to freeze provider/command/schema contracts, not
+  just behavioral end states.
+- **Avoid regex frontmatter transforms for durable contracts.** gstack uses several hand-rolled YAML/frontmatter
+  transforms. For v3 task/skill/progress documents, use structured parsers or typed ASTs.
 
 ## Consolidated Direction for v3
 
@@ -380,6 +506,10 @@ machinery.
 | **L2/L3 workflow gates** | Two new gate types: the **CEO product-review FRONT-gate** (premise + mandatory alternatives + scope-mode) and a **security OWASP/STRIDE gate** (confidence-tunable, reads real repo+git). Plus the verify-gate's third corroboration. | **Add the CEO front-gate to WF-1 and a block-eligible security gate to the library.** Corroborates the `verify` gate. |
 | **L5 skills** | Portability-by-codegen (typed HostConfig → 10 host dialects, `suppressedResolvers`, `preamble-tier`); richer evals (gate/periodic, LLM-judge, routing E2E); power-tool=mechanism vs persona=prose. | **Adopt the config-schema concept + capability-gated step elision + graded bootstrap + gate-tier evals.** Reject heavy AOT materialization. |
 | **L11 continuity** | Distilled 4-field Markdown checkpoint (append-only, sortable-filename-keyed) + a decisions ledger ("settled unless superseded"). | **Adopt as a low-cost continuity option + the decisions-ledger primitive.** On the honcho-distilled axis; gastown-Seance is the raw-fork opposite. |
+| **Runtime context / daemon state** | Explicit state roots; small daemon pointer files; health-check liveness; atomic write + lock; version/config mismatch handling. | **Adopt for local worker/bubble daemons.** Do not use PID alone as liveness or silently restart when state could be lost. |
+| **Security/capability model** | Root-vs-scoped tokens, purpose-bound cookies, PTY lease/reattach, child-process token revocation, physical tunnel separation. | **Adopt as a local capability model.** Add durable/cluster-safe lease semantics where v3 needs cross-process recovery. |
+| **Events/observability** | SSE activity with monotonic ids and gaps; durable JSONL audit; command registry; artifact invariant gates; eval-watch. | **Adopt the split between live activity, forensic audit, and command registry.** Add stronger correlation ids and replayable lifecycle events. |
+| **Memory/schema** | Append-only context checkpoints, per-source trust decisions, typed memory schema pack, subordinate model overlays, passive section manifests. | **Adopt typed memory/context schemas and explicit trust decisions.** Avoid treating external gbrain behavior as proven by gstack alone. |
 
 ## Reconsiderations for v3
 
@@ -413,8 +543,8 @@ machinery.
   not touch kernel/durability mechanism. Many "AVOID" verdicts mean "appropriate for a single-human-in-the-loop tool, wrong for
   a distributed kernel," not "wrong."
 - **Leaner four-agent fan-out**, proportionate to the smaller scope; the agents read full SKILL.md command files + the TS build
-  machinery. Findings about the role model, the gate mechanism, the methodology, and continuity are high-confidence; the deep TS
-  tooling (browse daemon, iOS-QA) was out of scope.
+  machinery. A second ten-lens pass covered the deeper TS tooling; findings about browse/design runtime mechanics are now
+  higher-confidence than the first pass, but still judged as local-tooling lessons rather than workflow-kernel proof.
 - **The "23 tools" framing is marketing-rounded** — the repo has ~55 skill dirs (role specialists + power tools + variants). The
   study uses the actual on-disk inventory.
 - **Same-recent HEAD.** Analyzed at `a861c00`, pushed 2026-06-18. Line numbers are a snapshot.

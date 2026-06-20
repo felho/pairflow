@@ -40,10 +40,13 @@ Ninth in a series. Read alongside (esp. the L5 and methodology references):
 - [`ruflo-v3-sdlc-workflow.md`](ruflo-v3-sdlc-workflow.md) — the other studied SDLC-workflow reference.
 - (also: omnigent / symphony / paperclip / dbos / honcho — the systems studies.)
 
-> Method: four parallel sub-agent analyses (a leaner fan-out, proportionate to the smaller,
-> content-rather-than-architecture scope), each reading whole `SKILL.md` files (they're short)
-> with `file:line` citations. Slices: L5 skill-system; the SDLC methodology as a v3 workflow;
-> L4 subagent orchestration; skill-authoring discipline + process automation.
+> Method: first pass used four parallel sub-agent analyses (a leaner fan-out, proportionate
+> to the smaller, content-rather-than-architecture scope), each reading whole `SKILL.md` files
+> with `file:line` citations. A second independent pass used ten lenses: state/source-of-truth,
+> lifecycle/recovery, concurrency/ownership, runtime adapter, policy/security,
+> delegation/scheduling, channels/events, memory/context, operator UX, and modularity. The
+> second-pass deltas below add only the details that were missing or too coarsely stated in the
+> first pass.
 
 ## Executive Summary
 
@@ -176,6 +179,9 @@ identical diff, guarded by `tests/codex-plugin-sync`.
   structure.
 - **Per-harness hand-written adapters with duplicated bootstrap-injection logic** (the JSON-escape + wrap logic is
   re-implemented in bash, `.ts`, and `.js`) — generate adapters from one spec.
+- **No machine-readable capability schema** — the provider capability model exists, but it lives mostly in Markdown
+  mapping files and adapter glue. v3 should promote `session-start injection`, `skill discovery`, `subagent`, `todo`,
+  `shell`, `file IO`, and `web/browser` into a typed capability descriptor instead of parsing prose.
 - **Coercion-heavy prose ("1% chance you MUST", "not negotiable") as the trigger mechanism** — a workaround for the
   absence of a real router. A kernel routes to subflows structurally; don't import the all-caps pressure as control flow.
 
@@ -265,6 +271,9 @@ is exactly the failure mode v3 must guard structurally.
 - **Process-rule bloat encoded as persuasion prose** (TDD's 11-row rationalization table aimed at one agent's psychology) —
   v3 is a kernel; it should encode these as *machine-checkable gate conditions* (test exit code, diff presence), not import
   the persuasion text. The prose works because there's one LLM to convince; a kernel enforces, it doesn't persuade.
+- **The moralizing evidence language as product UX** — the underlying rule is excellent, but words like "lying" and
+  "dishonesty" are better translated into an evidence contract in Pairflow: "claim blocked until fresh command output,
+  exit code, diff, or checklist evidence exists."
 - **Human-trust heuristics baked into mechanism** ("be skeptical of external reviewers") — keep gate verdicts independent of
   the orchestrator's wishes (the anti-pre-judging rule is good), but that skepticism is policy, not kernel mechanism.
 - **The linear single-branch / one-human-partner assumption** — v3's distributed multi-instance model should not inherit the
@@ -337,6 +346,9 @@ spawned agent is actually permitted to write** (`sdd-workspace:8-12`).
   gets (a) its brief-as-file, (b) cross-instance interfaces, (c) the parent's ambiguity resolutions, (d) a result-channel path.
   v3 should make ContextPacket a file handle, not inlined payload — the "42k-char, 99%-pasted" failure is the anti-pattern a
   kernel should make impossible by construction.
+- **Scratch artifact space belongs in the repo worktree, but outside tracked source.** `.superpowers/sdd` is local to the
+  working tree and self-ignored, so handoff files and review packages are writeable by spawned agents without polluting git.
+  Treat this as a temporary artifact bus, not canonical workflow state.
 - **Fan-in = partition-then-verify, empirically.** Correlate results not by trusting them but by partitioning into
   non-overlapping domains then conflict-check + full-suite. The concrete *methodology* fill for vibe-kanban's open fan-in gap:
   integration is a reconciliation step the parent owns. (Complements Temporal's *mechanism* fill: the initiated-event-id slot.)
@@ -354,6 +366,9 @@ spawned agent is actually permitted to write** (`sdd-workspace:8-12`).
   (worktrees/branches) need not inherit it.
 - **Correlation-by-naming-convention** (`task-N-brief.md → task-N-report.md`) — correlate by *identity* (Temporal's slot), not
   string matching, which silently breaks under concurrency.
+- **Scratch files without lock/atomic-write protocol as durable state.** The helper scripts use simple file writes and
+  predictable names; the repo contains no evidence of lockfiles, owner ids, or atomic rename discipline for concurrent
+  controllers. v3 can borrow the artifact layout but needs a real run id, lock/lease, and atomic write protocol.
 
 **ORTHOGONAL** — model-selection economics; the anti-pre-judging review-quality rules; the pre-flight plan conflict scan.
 
@@ -411,14 +426,96 @@ property: same upstream SHA → identical PR diff); graphviz tooling, shell-lint
 
 ---
 
+## Second-pass deltas
+
+The ten-lens pass mostly confirmed the first report. It added sharper boundaries around what Superpowers is:
+a portable skill-methodology distribution and test harness, not a runtime kernel, lock manager, or product
+dashboard.
+
+### State, recovery, and ownership
+
+- **Scratch state is useful, but deliberately non-canonical.** `.superpowers/sdd` is a repo-local, self-ignored
+  handoff space for task briefs, progress ledgers, and review packages. It is ideal for transient controller/agent
+  artifacts, but Superpowers itself notes that `git clean -fdx` can remove it and recovery then falls back to
+  `git log`. v3 should treat this pattern as a local artifact cache, not the durable instance store.
+- **Commit ranges are the real checkpoint primitive.** Review packages are based on explicit `BASE..HEAD`, with
+  commit list, stat, and diff written to a file. That is stronger than conversation memory and weaker than a
+  kernel transcript. v3 should keep the idea that "completed work" is tied to a concrete VCS range, while still
+  storing the lifecycle transition in its own log.
+- **Do not checkpoint uncertain ownership.** The brainstorm companion only persists port/token data when it owns
+  the non-fallback server state; fallback ports deliberately do not overwrite persisted state. That is a small but
+  useful principle for v3 leases: uncertain owner means "observe, don't commit."
+- **Process ownership needs identity, not PID alone.** The stop script validates an instance id in the command line
+  before signaling a PID and fails closed on stale/impostor metadata. v3 should apply the same idea to worker,
+  branch, and runtime-context cleanup.
+- **There is no visible lock or lease model for concurrent controllers.** File names such as `task-N-brief.md` and
+  review-package paths are predictable and per-worktree. The methodology avoids conflicts by policy: isolated
+  worktrees, serial implementation tasks, read-only reviewers, and post-fan-in conflict checks.
+
+### Adapter, channel, and provider contracts
+
+- **Provider integration has three recurring shapes.** Superpowers ports through shell hooks, in-process plugins,
+  and instruction/context files. That is more realistic than pretending every harness can satisfy one universal
+  adapter API.
+- **Session-start injection is the decisive provider contract.** Skill files without bootstrap are inert; the
+  acceptance test is behavioral, not static: start a clean session, ask for a React todo list, and verify
+  `brainstorming` triggers before coding. v3 provider adapters should prove how lifecycle/protocol context enters
+  the model before work begins.
+- **Hook/message shapes are provider-owned contracts.** Claude/Codex use nested `hookSpecificOutput.additionalContext`,
+  Cursor uses `additional_context`, SDK/Copilot use top-level `additionalContext`, OpenCode mutates message parts, and
+  Pi reinjects after compaction. Superpowers tests these exact shapes. v3 should make adapter message-shape tests
+  first-class, not rely on docs.
+- **Routing tests check event order, not only final behavior.** Explicit skill request tests warn if any other tool
+  call happens before the first skill invocation, and multi-turn tests isolate the relevant later turn. This is a
+  strong pattern for v3 route/order regressions around resume, continuation, and compaction.
+- **The browser companion is a useful miniature relay, but not a general event bus.** Browser choice events flow over
+  WebSocket to stdout and append newline JSON to `state/events`; file changes broadcast a simple `reload`. There is
+  no general request id, trace/span envelope, ack/backpressure, or runtime stream protocol.
+- **Stateful local UI still needs real auth.** The companion uses a per-session key, constant-time comparison,
+  query/cookie bootstrap, security headers, origin checks, and file-serving guards. v3 should not treat loopback as
+  a security boundary by itself.
+
+### Skills, context, and operator experience
+
+- **Trigger metadata is an anti-shortcut mechanism.** The `description` field should say when to use a skill, not
+  summarize the workflow, because a summary can cause the agent to follow the summary and skip the body. This is
+  worth making part of v3's skill authoring checks.
+- **Context loading is deliberately staged.** Frequently loaded skill bodies are kept short; heavier references are
+  loaded on demand, and `@` force-loading is discouraged for required sub-skills because it can pull huge context.
+  v3 should prefer explicit dependency metadata plus lazy loading over implicit large imports.
+- **Evidence-first UX is the real operator interface.** Superpowers has no full product dashboard in this repo; its
+  operator UX is structured CLI/menu output, short child summaries, report paths, review packages, transcript
+  analyzers, and strict completion gates. That is still valuable: Pairflow should make evidence easy to inspect
+  without flooding the controller context.
+- **Behavior tests measure the agent, not just the artifact.** The test harness checks transcript markers, skill
+  invocation, subagent dispatch count, task tracking, commits, test runs, and token/cost breakdown. v3 should keep
+  workflow conformance tests at the event/behavior layer, not only final file state.
+
+### Modularity and distribution
+
+- **The main seam is content core vs provider adapter.** `skills/` is the shared source of truth; provider packages
+  supply discovery, bootstrap, and tool mapping. That maps cleanly to v3 as: reusable workflow/skill definition plus
+  provider capability binding.
+- **Capability mapping is too implicit for a kernel.** Superpowers has good Markdown mappings for Codex, Claude,
+  Gemini, Pi, Antigravity, OpenCode, Kimi, etc., but no single machine-readable provider capability schema. v3 should
+  have one if runtime routing depends on these capabilities.
+- **Manifest/version skew is a real distribution risk.** `.version-bump.json` enumerates multiple harness manifests,
+  and the Codex sync preserves platform-owned OpenAI metadata while overlaying shared source. v3 should treat provider
+  package sync as a tested release pipeline, not a manual copy.
+- **Some contracts require live-harness tests.** OpenCode tests can skip when the harness is unavailable, and the
+  porting guide explicitly calls for live session acceptance. v3 should distinguish CI-safe adapter unit tests from
+  live provider conformance tests.
+
 ## Consolidated Direction for v3
 
 | v3 level | What Superpowers contributes | Verdict |
 |---|---|---|
 | **L2 gates** | The **verification gate**: a step's self-report does NOT satisfy a downstream gate — check an independent artifact (diff/test-output/checklist). | **Adopt `verify` as a kernel-enforced gate type.** The structural cure for "agents over-claim done"; validates "durable state > self-report". |
 | **L3 human-decision** | Closed-enum decision gates with validation on the irreversible route; round caps that escalate into a human gate. | **Adopt closed-enum + per-route validation + escalating round caps.** |
-| **L4 spawn/fan-in** | ContextPacket as a *file handle* (never pasted); fan-in = partition-then-verify; durable progress ledger; typed child-completion protocol; write-permission boundary. | **Adopt the file-handle ContextPacket + the partition-then-verify fan-in discipline** (methodology complement to Temporal's slot-correlation mechanism). |
-| **L5 skills** | Action-indirection portability (one source → N hosts); bootstrap-as-coercive-contract; `description` = trigger-only; TDD'd skills. | **Adopt action-indirection + trigger-only descriptions + active-entry bootstrap.** A second L5 data point past Hermes. |
+| **L4 spawn/fan-in** | ContextPacket as a *file handle* (never pasted); fan-in = partition-then-verify; durable progress ledger; typed child-completion protocol; write-permission boundary; scratch artifact bus. | **Adopt the file-handle ContextPacket + the partition-then-verify fan-in discipline** (methodology complement to Temporal's slot-correlation mechanism), but back it with kernel ids/locks instead of naming conventions. |
+| **L5 skills** | Action-indirection portability (one source → N hosts); bootstrap-as-coercive-contract; `description` = trigger-only; TDD'd skills; short core + lazy references. | **Adopt action-indirection + trigger-only descriptions + active-entry bootstrap.** Add machine-readable dependency/capability metadata that Superpowers lacks. |
+| **Provider adapters** | Shared skill core with provider-specific discovery, session-start injection, message shape, and tool mapping; contracts tested per harness. | **Adopt capability-bound adapters.** Treat session-start injection and message/event ordering as conformance tests, not documentation. |
+| **Operator evidence** | Review packages, short child summaries, transcript/token analysis, and evidence-first completion gates; no product dashboard. | **Adopt evidence packages and behavior telemetry; do not mistake this for a runtime UI model.** |
 | **L12 authoring** | "Match the Form to the Failure"; behavioral regression tests; red-flags-as-encoded-failure-memory. | **Adopt the form-matching law + a conformance harness for curated procedures.** Human-curated complements Hermes's agent-authored. |
 | **Workflow templates / WF-1..WF-7** | A worked reference SDLC: brainstorm-gate → durable plan → status-routed steps → escalating review rounds → verification gate → closed-enum finish. | **Use as the reference instance for v3's canonical test workflow.** |
 
@@ -450,9 +547,10 @@ property: same upstream SHA → identical PR diff); graphviz tooling, shell-lint
 
 ## Caveats
 
-- **A small, content-not-architecture study, deliberately scoped lighter.** Four agents (vs the usual six-seven) read the SKILL.md files
-  in full. Findings about the *skill format, triggering, methodology shape, and authoring discipline* are high-confidence; this study
-  does not — and is not meant to — touch kernel/durability mechanism.
+- **A small, content-not-architecture study.** The first pass used four agents over the core methodology files; the second pass used
+  ten lenses over source, docs, hooks, scripts, and tests. Findings about the *skill format, triggering, methodology shape, provider
+  adapters, and authoring discipline* are high-confidence; this study does not — and is not meant to — supply kernel/durability
+  mechanism.
 - **A methodology, not a system.** Superpowers' "gates" are *prose disciplines* aimed at one LLM's psychology (rationalization tables,
   all-caps Iron Laws), not machine-checked kernel conditions. The study's job is to extract the *structural intent* (a `verify` gate, a
   file-handle packet, a closed-enum decision) and leave the persuasion prose behind — a kernel enforces, it does not persuade.

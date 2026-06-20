@@ -29,10 +29,14 @@ of v3's L0b/L0d a BEAM substrate hands you for free, and (b) what a competent
 orchestrator looks like when it **deliberately skips v3's L0a kernel** and borrows
 durability from an external SaaS instead.
 
-> Method: six parallel sub-agent analyses, each mapping one slice of Symphony onto
-> specific v3 levels, with `file:line` citations relative to the Symphony repo root
-> (`elixir/lib/symphony_elixir/…` unless noted; `SPEC.md` at repo root). Analysis
-> was multi-perspective per slice, not single-axis.
+> Method: first pass used six parallel sub-agent analyses, each mapping one slice of
+> Symphony onto specific v3 levels, with `file:line` citations relative to the
+> Symphony repo root (`elixir/lib/symphony_elixir/…` unless noted; `SPEC.md` at repo
+> root). A second independent pass used ten lenses: state/source-of-truth,
+> lifecycle/recovery, concurrency/ownership, runtime adapter, policy/security,
+> delegation/scheduling, channels/events, memory/context, operator UX, and
+> modularity. The deltas below only add findings that were missing or too coarsely
+> stated in the first pass.
 
 ## Executive Summary
 
@@ -80,6 +84,15 @@ What Symphony **validates / offers to steal** (mostly outer-layer and methodolog
 - **Clean RuntimeContext lifecycle + path-safety** — `provision → ready-hook →
   release` with symlink-escape rejection, and an optional SSH remote-worker backend
   behind the same interface (v3 L0e).
+- **Reconcile-before-dispatch + fresh revalidation** — every dispatch cycle first
+  reconciles running/blocked entries against tracker reality, then re-fetches the
+  candidate issue immediately before spawning work (`orchestrator.ex:248,302,909,995`).
+  This is a practical anti-TOCTOU pattern v3 should keep even with a durable kernel.
+- **Explicitly separate retry, continuation, and human-input blockers** — normal
+  worker exit schedules a short continuation re-check, abnormal exit schedules
+  exponential backoff, while approval/input/MCP elicitation moves the issue to
+  `blocked` instead of retrying (`orchestrator.ex:200,234,652,740,1023,1192`).
+  The policy is volatile, but the taxonomy is useful.
 
 What Symphony **warns** about (v3's choices are the fix, or the trap to avoid):
 
@@ -90,10 +103,22 @@ What Symphony **warns** about (v3's choices are the fix, or the trap to avoid):
 - **No L4 whatsoever.** Only flat orchestrator→worker process spawn, correlated by
   `issue_id`. No child *workflow* instances, no parent/child correlation, no
   join/await. Symphony offers v3's most-wanted feature *nothing*.
+- **Blocked/retry/session state is not merely weakly modeled; it is volatile.**
+  The first pass correctly called out missing L0a, but the sharper finding is that
+  `blocked`, `retry_attempts`, live `session_id`, timer refs, and remote worker
+  ownership are all process-memory facts. A restart can preserve the workspace and
+  re-poll Linear, but cannot restore "waiting for this approval" or "continue this
+  exact thread" (`SPEC.md:1591,1598,2111`; `agent_runner.ex:91,100,143`).
 - **The human decision gate lives in the ticket, not the kernel.** When an agent
   needs approval, Symphony moves the run to a `blocked` map and the human resolves
   it **out-of-band in Linear**; the decision is **never recorded as a kernel audit
   event** (no recommendation, no override record). This is an L3 anti-pattern.
+- **Policy and protocol boundaries are high-trust.** The shipped workflow defaults
+  to `approval_policy: never`, `networkAccess: true`, and inherited environment in
+  its example workflow, the dashboard/API are unauthenticated on the configured
+  bind address, and the `linear_graphql` dynamic tool is a raw GraphQL passthrough
+  using Symphony's token (`elixir/WORKFLOW.md:32`; `router.ex:31`;
+  `dynamic_tool.ex:8,56`). Fine for an engineering preview; not a v3 security model.
 - **The 2000-line god-module.** `status_dashboard.ex` fuses GenServer lifecycle +
   render-throttling + ANSI formatting + a ~900-line event-humanization catalog, and
   is then secretly depended on by the web layer. A cautionary structure.
@@ -691,22 +716,137 @@ precisely the thing Symphony chose not to build.
 
 ---
 
+## Second-pass deltas
+
+The ten-lens reread mostly confirmed the first report's thesis, but it added several
+important details that change what v3 should copy or avoid.
+
+### State, lifecycle, and ownership
+
+- **The useful pattern is "single scheduler authority + reconciliation," not "no
+  kernel needed."** The orchestrator owns `running`, `claimed`, `blocked`,
+  `retry_attempts`, and token/accounting state in one GenServer (`orchestrator.ex:24`),
+  and every poll cycle reconciles before dispatching (`orchestrator.ex:248`). That
+  is a good shape for one local scheduler. It does not replace a durable L0a store,
+  because those maps disappear on restart.
+- **Claiming is broader than running.** `claimed` excludes already-running,
+  retry-queued, and blocked issues from dispatch (`orchestrator.ex:804,812,951,978`).
+  That distinction matters for v3: "not active" is not the same as "available."
+- **Timer refs are fenced, but not durable operation ids.** Retry and tick timers use
+  fresh references to ignore stale messages (`orchestrator.ex:1029,1064`), which is
+  a useful in-process dedup pattern. It should not be mistaken for v3's durable
+  `(instance_id, op_id)` idempotency.
+- **Workspace durability is artifact durability, not run durability.** Per-issue
+  workspaces are deterministic and retained across non-terminal interruptions
+  (`workspace.ex:196`; `orchestrator.ex:1106,1141`). That helps recovery by
+  preserving files, but it does not preserve lifecycle, step position, approval
+  state, thread ownership, or idempotency.
+- **Remote worker ownership is deliberately sticky.** Once selected, a run's worker
+  host is part of execution identity; retry prefers the same host rather than
+  silently failing over (`orchestrator.ex:1241,1293`; `agent_runner.ex:22`). v3
+  should model execution-location ownership explicitly when leases can span hosts.
+
+### Delegation and event flow
+
+- **Symphony fan-out is issue-worker fan-out, not subagent delegation.** The child
+  unit is an OTP `Task` running `AgentRunner`, monitored by the orchestrator and
+  fanning events back as `{:codex_worker_update, issue_id, message}`
+  (`symphony_elixir.ex:26`; `orchestrator.ex:943`; `agent_runner.ex:57`). There is
+  no parent/child workflow tree, but the supervision and fan-in mechanics are worth
+  stealing for L4 execution plumbing.
+- **Concurrency limits are multidimensional.** Dispatch is gated by global slots,
+  tracker state, routability, blocked-by links, and optional per-worker-host caps
+  (`config/schema.ex:137`; `orchestrator.ex:822,864,1241`). v3 should avoid a single
+  flat "max children" number if execution hosts, ownership, and external workflow
+  state also constrain runnable work.
+- **PubSub is only an invalidation channel.** The web dashboard receives a
+  content-free update ping and then pulls the authoritative snapshot; it does not
+  treat the pushed event as truth (`observability_pubsub.ex:6,15`;
+  `dashboard_live.ex:18,33`). This is cleaner than mixing durable event semantics
+  with UI refresh notifications.
+- **Codex protocol events are not normalized enough.** Symphony stores mostly the
+  last event/message plus extracted tokens/rate limits (`orchestrator.ex:1468,1534`),
+  with many payload-shape branches for token/rate extraction
+  (`orchestrator.ex:1703,1727,1760`). v3 should put that into a versioned event
+  normalizer and keep a timeline, not just a last-message projection.
+- **The JSON-RPC receive loop has demux risk.** The app-server client waits for
+  responses while also receiving notifications, and some notification handling can
+  be dropped or sidelined during `await_response` paths (`app_server.ex:922,956`).
+  v3's adapter boundary should make response correlation and notification fan-out a
+  first-class protocol concern.
+
+### Policy, memory, and UX
+
+- **Symphony has a workpad memory pattern worth naming.** Durable task memory is
+  externalized into the Linear issue/workpad and workflow instructions, while the
+  actual prompt render is intentionally small: workflow template + normalized issue
+  + attempt metadata (`elixir/WORKFLOW.md:141,294`; `prompt_builder.ex:8,44`). That
+  is a useful "small prompt, durable external workpad" model, but v3 should not make
+  the tracker the only durable memory.
+- **`WORKFLOW.md` is both policy and live config, with last-known-good semantics.**
+  Frontmatter/body parsing is watched and invalid edits keep the last valid workflow
+  (`workflow.ex:63`; `workflow_store.ex:61,150`). This is a good operator UX pattern
+  for editable policy, provided v3 separates "policy text" from enforceable kernel
+  gates.
+- **Skills are prompt references, not verified runtime capabilities.** The workflow
+  can tell the agent to use skills, but Symphony does not verify that those skills
+  exist or are available in the runtime; only the hard-coded dynamic tool registry is
+  checked (`elixir/WORKFLOW.md:98,104`; `dynamic_tool.ex:45`). v3 should bind skill
+  availability into the run contract if skills are semantically required.
+- **Operator surfaces share one snapshot, but lack action history.** Web, JSON, and
+  terminal views all derive from the orchestrator snapshot via a presenter
+  (`presenter.ex:1`; `observability_api_controller.ex:12`; `dashboard_live.ex:15`).
+  That prevents renderer drift. The missing piece is a durable per-run event
+  timeline; current "issue logs" are mostly placeholders and latest-status summaries
+  (`presenter.ex:82,210`).
+- **URL and display hardening exists in small places.** The dashboard sanitizes
+  external issue URLs before rendering (`dashboard_live.ex:365`), which is worth
+  keeping in v3's operator views even if the broader API/auth story is stronger.
+
+### Modularity and drift
+
+- **The cleanest seam is the tracker behaviour, but provider language leaks inward.**
+  `Tracker` is a small behaviour and the Linear adapter is testable
+  (`tracker.ex:8,14`), yet core modules still import or type against
+  `Linear.Issue` (`orchestrator.ex:10`; `agent_runner.ex:8`;
+  `tracker/memory.ex:8`). v3 should keep provider-normalized records out of the
+  core domain namespace once multiple channels/providers exist.
+- **`AppServer` owns too much policy.** The Codex client module handles protocol
+  framing, approval decisions, dynamic tool dispatch, sandbox options, response
+  waiting, and event summarization hooks (`app_server.ex:39,329,466,548`). As a
+  reference implementation it is valuable; as a v3 module boundary it is too broad.
+- **Remote execution weakens otherwise good local guards.** Local workspace cwd/path
+  validation is strong (`workspace.ex:358,371`; `app_server.ex:147,160`), while
+  remote mode necessarily trusts host-side paths and marker parsing more
+  (`workspace.ex:386,412`; `app_server.ex:175`). v3 should make "local verified
+  path" and "remote attested path" different runtime-context variants.
+- **There is a concrete spec/test drift.** The spec describes `linear_graphql` as a
+  single-operation tool (`SPEC.md:1080,1084`), while the dynamic-tool tests allow a
+  multi-operation payload (`dynamic_tool_test.exs:102`; `dynamic_tool.ex:68`). This
+  is exactly why v3's spec-as-code aspiration needs executable behavioral checks,
+  not only prose plus type/spec coverage.
+- **Critical modules are excluded from coverage gates.** The coverage setup excludes
+  modules such as generated/console-facing surfaces (`mix.exs:11,15`), while some of
+  those surfaces contain protocol and operator logic. v3 should be cautious about
+  excluding "just UI/adapter" files when those files own policy decisions.
+
 ## Consolidated direction table
 
 | v3 level | Symphony's stance | Verdict for v3 | The one thing to take/avoid |
 |---|---|---|---|
-| **L0a** kernel (transcript, op_id, version CAS) | Absent by design; Linear is the event store | **AVOID — negative example** | Symphony is what skipping L0a looks like: re-dispatches fresh sessions on crash, no resume. Confirms L0a is the differentiator. |
-| **L0b** actor + role→actor | Native via OTP GenServer/Task/monitor | **LEARN FROM** | Actor model + monitors come free on BEAM; orchestrator-as-reader vs agent-as-writer is a clean role split. |
-| **L0c** AgentConfig + ActorAdapter | One hard-coded Codex JSON-RPC/stdio client | **AVOID arch / LEARN protocol** | Lift `app_server.ex` as a Codex-protocol ActorAdapter reference; supply the abstraction Symphony never defined. |
-| **L0d** lifecycle FSM | Derived from collection membership + Linear states; no typed FSM | **AVOID (weak); LEARN state rendering** | Build the typed FSM v3 plans; but adopt the snapshot→Presenter→renderers + dirty-bit-ping pattern. |
-| **L0e** RuntimeContextProvider | `mkdir` dirs + hooks + path-safety + SSH backend | **LEARN FROM** | provision/ready/release lifecycle, symlink-escape guard, SSH as a second backend. Don't copy `remote:true` skipping canonicalization. |
+| **L0a** kernel (transcript, op_id, version CAS) | Absent by design; Linear/workspace artifacts are the reconstructable truth | **AVOID — negative example** | Symphony is what skipping L0a looks like: re-dispatches fresh sessions on crash, no durable blocked/retry/thread state. Confirms L0a is the differentiator. |
+| **L0b** actor + role→actor | Native via OTP GenServer/Task/monitor | **LEARN FROM** | Actor model + monitors come free on BEAM; orchestrator-as-reader vs agent-as-writer is a clean role split; supervised Task fan-in maps well to child execution plumbing. |
+| **L0c** AgentConfig + ActorAdapter | One hard-coded Codex JSON-RPC/stdio client | **AVOID arch / LEARN protocol** | Lift `app_server.ex` as a Codex-protocol ActorAdapter reference, but split protocol demux, approval policy, dynamic tools, and sandbox config into explicit seams. |
+| **L0d** lifecycle FSM | Derived from collection membership + Linear states; no typed FSM | **AVOID (weak); LEARN state rendering** | Build the typed FSM v3 plans; adopt reconcile-before-dispatch, retry-token fencing, blocked-vs-retry taxonomy, and snapshot→Presenter→renderers + dirty-bit-ping. |
+| **L0e** RuntimeContextProvider | `mkdir` dirs + hooks + path-safety + SSH backend | **LEARN FROM** | provision/ready/release lifecycle, symlink-escape guard, SSH as a second backend. Don't copy `remote:true` skipping canonicalization; model remote path trust separately. |
 | **L0f** config + typed slots | Ecto-validated global config; no run slots | **LEARN (config) / ORTHOGONAL (slots)** | Typed, per-section validated config with `$REF` resolution. |
-| **L3** human decision | Gate detected, but decision lives in the ticket, unaudited | **AVOID** | Keep the decision a first-class **audited kernel event**, not a ticket field bounced through polling. |
-| **L4** child instances | Absent; only flat process spawn | **ORTHOGONAL** | Nothing to take — v3's most-wanted feature is simply not here. |
-| **L7** credentials | Central read token; agent writes via host auth; no broker | **LEARN FROM (the split)** | credential-never-travels by construction; sandbox agent network + broker only the API you need. |
-| **L8** channels + EventNormalizer | One channel (Linear), poll-only, clean `%Issue{}` normalization | **LEARN the seam / AVOID the shape** | Steal the behaviour+normalize seam; generalize beyond one tracker-shaped channel. |
-| **L9** wait + fuzzy correlation | Identity-only, in-memory, never needed (pull model) | **AVOID / ORTHOGONAL** | Only the deterministic exact-match key derivation transfers. |
-| **spec-as-code** (methodology) | 2185-line RFC-2119 SPEC + tiered conformance matrix + DoD; `@spec` lint | **LEARN FROM (best in project)** | Ship the spec as the authority with its own conformance tiers; go further than Symphony with *executable* spec assertions. |
+| **L3** human decision | Gate detected, but decision lives in the ticket, unaudited | **AVOID** | Keep the decision a first-class **audited kernel event**, not a ticket field bounced through polling; preserve "input required blocks, not retries." |
+| **L4** child instances | Absent; only flat issue-worker spawn | **ORTHOGONAL with plumbing lessons** | No child workflow model, but monitored Task spawn, issue-keyed fan-in, and multidimensional scheduler caps are useful execution mechanics. |
+| **L7** credentials | Central read token; agent writes via host auth; raw GraphQL dynamic tool | **LEARN split / AVOID passthrough** | credential-never-travels by construction; sandbox agent network + broker only the APIs you need, but do not expose raw provider GraphQL as the durable action boundary. |
+| **L8** channels + EventNormalizer | One channel (Linear), poll-only, clean `%Issue{}` normalization | **LEARN the seam / AVOID the shape** | Steal the behaviour+normalize seam and PubSub-as-invalidation; generalize beyond one tracker-shaped channel and store a real event timeline. |
+| **L9** wait + fuzzy correlation | Identity-only, in-memory, never needed (pull model) | **AVOID / ORTHOGONAL** | Only deterministic exact-match key derivation and stable workspace naming transfer; no evidence for fuzzy inbound correlation. |
+| **Memory/context** | Linear workpad + small prompt render + live workflow reload | **LEARN with caution** | Small prompt + durable external workpad is useful, but v3 should not make tracker state its only durable task memory; verify required skills/tools at runtime. |
+| **spec-as-code** (methodology) | 2185-line RFC-2119 SPEC + tiered conformance matrix + DoD; `@spec` lint | **LEARN FROM (best in project)** | Ship the spec as the authority with its own conformance tiers; go further than Symphony with *executable* spec assertions and drift checks. |
 
 ## Two reconsiderations Symphony forces
 

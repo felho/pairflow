@@ -47,10 +47,13 @@ Eleventh in a series, and the convergence bridge over the first ten is
 - [`honcho-study.md`](honcho-study.md) — the memory reference (vs Gas Town's Seance "re-animate the raw session" continuity).
 - [`paperclip-study.md`](paperclip-study.md) — the audited-decision / capability-gatekeeper reference.
 
-> Method: seven parallel sub-agent analyses with `file:line` citations. Slices: the actor
-> model & identity; the tmux runtime (the parked-topic slice); the Beads/Dolt durability;
+> Method: initial report from seven parallel sub-agent analyses with `file:line` citations,
+> then a second independent ten-lens review before rereading this report. Initial slices: the
+> actor model & identity; the tmux runtime (the parked-topic slice); the Beads/Dolt durability;
 > Molecules/Formulas & the merge queue; mail/ACP/scheduler; the watchdog/escalation system;
-> federation (Wasteland) & session continuity (Seance).
+> federation (Wasteland) & session continuity (Seance). Second-pass lenses: state, lifecycle,
+> concurrency, runtime adapters, policy/security, fan-out/fan-in, events/relay, memory/context,
+> operator observability, and modularity/extensibility.
 
 ## Executive Summary
 
@@ -137,6 +140,81 @@ The synthesis line, lightly extended:
 > mail-pollution, and wild-west-claim pains are exactly the things v3's split-transport,
 > light-ledger, (instance_id, op_id)-idempotency, ephemeral-by-default-comms, and
 > real-claim-arbitration choices are designed to avoid.**
+
+---
+
+## Second-Pass Deltas from the Independent Ten-Lens Review
+
+The second pass mostly **confirmed** the first report's major claims, but it added five concrete
+implementation-level corrections/refinements that matter for v3.
+
+1. **Gas Town's state model is more explicit than "Dolt plus tmux": it has operational, ledger,
+   and observability planes that must not be conflated.** Dolt is the live operational store;
+   JSONL-in-git is a disaster-recovery ledger/export, not the primary state store
+   (`docs/design/dolt-storage.md:11-16,205-220`); `.events.jsonl` is an activity/audit feed, not
+   recovery truth (`internal/events/events.go:1-18,82`). Within the operational plane, the second
+   pass found a useful pattern and a warning: cross-process read-modify-write needs a real lock
+   around the whole cycle (`internal/beads/beads_agent.go:19,449`), temp+rename only makes the
+   write atomic (`internal/lock/lock.go:207`), and PID-only stale-lock detection is too weak
+   (`internal/lock/lock.go:39`). v3 should separate **durable state**, **disaster ledger**,
+   **observable events**, and **coordination leases** as first-class things rather than letting
+   one store pretend to be all four.
+
+2. **The runtime/provider surface is stronger as a config and security reference than the first
+   report emphasized.** `AgentPresetInfo` is effectively the single source of truth for binary,
+   args, env, process names, readiness, hook, resume, and ACP quirks (`internal/config/agents.go:55,226`);
+   ACP support is not one shape but native binary, subcommand, or flag mode (`internal/config/agents.go:174,1150`);
+   `AgentEnv` centralizes identity/env isolation (`internal/config/env.go:77,146,166`). The host
+   proxy is a concrete capability-boundary pattern: mTLS identity from cert CN, command/subcommand
+   allowlists, rate/concurrency limits, timeouts, minimal subprocess env, and server-side git branch
+   authorization for `refs/heads/polecat/<name>-*` (`internal/proxy/exec.go:50,83,218`;
+   `internal/proxy/git.go:26,207`). The caution is equally concrete: a declared sandbox mode must
+   fail closed, because Gas Town's proxy client can silently fall back to local execution when proxy
+   env is absent (`cmd/gt-proxy-client/main.go:47,127`), and local-only admin cert issuance is not a
+   strong multi-user trust boundary (`internal/proxy/server.go:282,412,490`).
+
+3. **The scheduling/event layer has three separate ideas v3 should keep separate: dispatch
+   governance, channel triggers, and correlated observability.** Capacity scheduling is a clean
+   host-wide governor: `max_polecats`, `batch_size`, and `spawn_delay` bound deferred dispatch
+   (`internal/scheduler/capacity/config.go:8,23,28`), while `PlanDispatch` computes
+   `min(capacity,batch,ready)` and filters messaging artifacts before worker dispatch
+   (`internal/scheduler/capacity/pipeline.go:126,152`). Convoy fan-out/fan-in is a staged DAG with
+   Kahn-computed waves and a separate synthesis gate once tracked legs close
+   (`internal/cmd/convoy_stage.go:936,975`; `internal/cmd/synthesis.go:160,527,633`). Separately,
+   channel events are filesystem trigger files under `~/gt/events/<channel>/*.event`, with
+   path-safe names and timestamp+seq+pid uniqueness (`internal/channelevents/channelevents.go:3,22,90`),
+   while `.events.jsonl` has its own flocked append path (`internal/events/events.go:107,127`).
+   v3 should not reproduce "three overlapping event systems"; it should encode these as one event
+   model with explicit durability tiers, trigger semantics, and correlation (`run.id` is the closest
+   Gas Town has: `internal/telemetry/recorder.go:27,236`).
+
+4. **The context/memory/operator UX lesson is more actionable than Seance alone.** `gt prime`
+   rebuilds role, identity, and work context after compaction/session loss (`AGENTS.md:127-133`;
+   `templates/polecat-CLAUDE.md:101-104`), and the polecat contract says durable reasoning belongs
+   in structured bead fields like `notes`/`design`, not transient LLM memory
+   (`templates/polecat-CLAUDE.md:234-244`). Formula metadata is a useful typed schema
+   (`type`, `version`, `agent`, `review_only`, `steps`, `vars`, `acceptance`) with duplicate/cycle
+   validation (`internal/formula/types.go:27-36,120-129`; `internal/formula/parser.go:129,150`).
+   On the operator side, `gt status` is both human and machine UX (`--json`, `--fast`, `--watch`,
+   `--verbose`) and caches the last good watch result to avoid false "everything is down" moments
+   (`internal/cmd/status.go:55-64,481-545`); Dolt incident docs require evidence capture before restart
+   (`docs/dolt-health-guide.md:16,23,40`); telemetry is opt-in and sensitive content is redacted or
+   truncated by default (`internal/telemetry/telemetry.go:6,105`; `internal/telemetry/recorder.go:293,438,793`).
+
+5. **The modularity story is mixed: Gas Town has excellent narrow seams, but the CLI/cmd layer still
+   owns too much orchestration.** Good seams: plugin discovery is a simple filesystem contract
+   (`plugin.md` plus optional `run.sh`, town overridden by rig: `internal/plugin/scanner.go:26,63,138`);
+   plugin sync reports hash-based missing/drift/extra states (`internal/plugin/sync.go:13,91,257`);
+   the scheduler core is a pure domain package with callback-injected I/O
+   (`internal/scheduler/capacity/config.go:1`; `internal/scheduler/capacity/dispatch.go:48`);
+   formula resolution has rig > town > embedded precedence (`internal/formula/embed.go:47,61,77`);
+   and ACP has an explicit provider interface (`internal/agent/provider/provider.go:31`). Weak seams:
+   `capacity_dispatch.go` still lock-loads config, mutates context state, dispatches, logs events, and
+   saves state in one command path (`internal/cmd/capacity_dispatch.go:76,93,140,246`); some provider
+   launch logic is still string/shell-command branching (`internal/config/types.go:862,888,895,900`);
+   structured domain state is parsed out of issue descriptions (`internal/beads/fields.go:31,48,60`);
+   and plugin sync's "atomic" replacement deletes the target before rename (`internal/plugin/sync.go:123,150`).
+   v3 should copy the seams, not the command-layer accumulation.
 
 ---
 
@@ -663,11 +741,15 @@ implemented).
 |---|---|---|
 | **L0b actor** | Identity (agent bead) / Sandbox (worktree) / Session (context+pane) three-layer split; context regenerated from a `hook_bead` pointer. | **Adopt the three-layer vocabulary** (refines v3's two-way split); ContextPacket reconstructible from durable pointers. Reject identity-as-repurposed-issue-bead. |
 | **L0e runtime (parked topic)** | tmux conflates substrate+transport+observation; ALL I/O screen-scraping; no pane-layout config; rejected a backend interface. `ExecWrapper` sandbox seam + declarative agent presets. | **Cautionary confirmation of the parked reframe.** Adopt Identity/Sandbox/Session vocab + ExecWrapper + presets; reject tmux-as-transport, welded observation, baked substrate, no-layout-config. |
+| **L0c/L7 provider+security boundary** | `AgentPresetInfo` as a provider-quirk registry; centralized `AgentEnv`; mTLS host proxy with command/subcommand allowlists, minimal env, rate/concurrency limits, and server-side git branch authorization. | **Adopt config-driven provider adapters and capability-bound host relays.** Require sandbox-intent fail-closed behavior; do not treat local admin cert issuance or tmux separation as a strong security boundary. |
 | **L0a durability** | Beads (mutable SQL rows) on Dolt (git-for-data) — versioned history free; but commit-graph-as-storage-cost (GC-daemon fleet), all-on-main last-write-wins, the four-project idempotency hole. | **Steal the capability (fork-to-restore, time-travel) + tiered durability; reject the Dolt engine + last-write-wins + exists-check idempotency.** v3 = light aggregate + `(instance_id,op_id)` ledger + `expected_version`. |
 | **L0f/L2/L3 templates+gates** | Formulas→Molecules→wisps (TOML DAG + the `pour` persistence knob); Refinery Bors merge queue (= ③ commit/merge + L2 gate); **the gate-bead = the structural `verify` gate**; two-phase post-squash gates. | **Adopt the gate-bead `verify` pattern, two-phase gates, the merge-queue-as-③-action, and the `pour` knob.** Reject NL-prose step bodies. |
 | **L6 scheduling** | The Scheduler: health-gated capacity governor, generic DispatchCycle, scheduling-state-on-a-separate-bead, circuit breaker. | **Adopt the capacity governor (the cleanest spawn-rate reference) + governor/policy split + at-most-once dispatch.** |
-| **L8 channels** | Mail (durable beads-to-identity) vs Nudge (ephemeral turn-boundary poke); standard ACP for the agent boundary. | **Adopt the nudge-vs-mail ephemeral-by-default doctrine + standard-ACP boundary.** Reject mail-as-permanent-commit + N-copy fan-out + 3 overlapping event systems. |
+| **L6 fan-out/fan-in** | Convoy staging builds a DAG, computes waves, launches Wave 1 immediately, and triggers synthesis only after tracked legs close. | **Adopt staged fan-out plus explicit synthesis gate; require idempotent synthesis and one dispatch path.** Avoid mixing direct launch with a separate deferred scheduler unless their ownership guarantees are unified. |
+| **L8 channels/events** | Mail (durable beads-to-identity) vs Nudge (ephemeral turn-boundary poke); standard ACP for the agent boundary; `.events.jsonl` activity feed; separate channel-event trigger files; `run.id` telemetry correlation. | **Adopt the nudge-vs-mail ephemeral-by-default doctrine + standard-ACP boundary + explicit durability tiers for events.** Reject mail-as-permanent-commit + N-copy fan-out + 3 overlapping event systems. |
 | **L9/L3/L13 watchdog** | The four-tier "discover-don't-track" cascade; **"stuck is intelligence not a timer"**; restart-first recovery; estop-exempts-coordinator; escalation-as-bead with unack-auto-promotion. | **The dedicated liveness reference — adopt the dead-vs-stuck split, restart-first/work-durable recovery, the completion invariant, escalation-auto-promotion, estop.** Reject mechanical-autonomous-kill + tmux-welded liveness. |
+| **Operator evidence/observability** | `gt status` supports human and JSON/watch modes with stale-cache handling; Dolt health docs require evidence capture before restart; telemetry is opt-in and redacted/truncated by default. | **Adopt evidence-first diagnostics and dual human/machine status surfaces.** Do not let restart/cleanup destroy the evidence needed for RCA. |
+| **Modularity/extensibility** | Good seams: plugin filesystem contract + drift sync, pure capacity scheduler core, callback-injected dispatch, formula overlay precedence, ACP provider interface. Weak seams: command-layer orchestration accumulation, provider shell-branching, description-field parsing. | **Copy the seams, not the accumulation.** Keep v3 domain packages pure and typed; avoid issue-description parsing and command-local mega-workflows. |
 | **L10/L14 federation** | The FIRST external reference: git-for-data sovereign-fork coordination; reputation stamps + hash-chained passbook + Spider fraud detection + distinct-validators + multi-criteria tier escalation. | **Adopt git-for-data-remote federation + diverse-attestation reputation + statistical-fraud-on-public-data.** Reject "claim is intent not a lock" — v3 needs real claim arbitration. |
 | **L11 continuity** | Seance: read-only fork of the predecessor's literal session. | **Adopt as a fallback continuity primitive; for cross-many-predecessor memory, honcho's distilled model is better.** |
 
@@ -709,10 +791,11 @@ implemented).
 
 ## Caveats
 
-- **Large repo, focused reads, blob-filtered clone.** ~243K LOC Go; the seven agents read the load-bearing files + design
-  docs (`internal/{polecat,tmux,beads,refinery,witness,deacon,mail,wasteland}`, `docs/design/*`). The clone used
-  `--filter=blob:limit=1m` (large binaries excluded) — code/docs are complete; build artifacts are not. Contract-level
-  findings are high-confidence.
+- **Large repo, focused reads, blob-filtered clone.** ~243K LOC Go; the initial seven-agent pass plus the second
+  independent ten-lens pass read the load-bearing files + design docs (`internal/{polecat,tmux,beads,refinery,witness,
+  deacon,mail,wasteland,proxy,plugin,scheduler,formula,telemetry}`, `docs/design/*`, `docs/guides/*`,
+  `gt-model-eval/*`). The clone used `--filter=blob:limit=1m` (large binaries excluded) — code/docs are complete;
+  build artifacts are not. Contract-level findings are high-confidence.
 - **Some subsystems are partly design-stage.** The mountain-eater four-layer model, parts of the escalation category-routing,
   and the `hop://` federation delegation are roadmap/design docs, not all shipped — flagged where it matters.
 - **A pragmatic production system judged against v3's bar.** Most "AVOID" verdicts mean "the price Gas Town pays for shipping
