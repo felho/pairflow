@@ -49,13 +49,16 @@ Fifth in a series. Read alongside:
   (deterministic id + `INSERT … ON CONFLICT` + memoized replay) unifies idempotency,
   spawn, scheduling, recovery; exactly-once without event-sourcing or `expected_version`.
 
-> Method: seven parallel sub-agent analyses, each mapping one slice of Hermes onto
-> specific v3 levels, with `file:line` citations relative to the repo root. The codebase
-> is far too large to read whole; each agent read 400–700 lines of the files most load-
-> bearing for its slice (the seams: `gateway/platforms/base.py`, `gateway/session.py`,
+> Method: first-pass seven-slice analysis plus a second, independent 10-lens pass
+> performed before rereading this report. The second pass looked specifically at state
+> ownership, lifecycle/recovery, concurrency, runtime adapters, policy/security,
+> delegation, channels, memory, operator UX, and modularity, with `file:line` citations
+> relative to the repo root. The codebase is far too large to read whole; both passes
+> targeted the load-bearing seams (`gateway/platforms/base.py`, `gateway/session.py`,
 > `agent/transports/base.py`, `tools/environments/base.py`, `cron/jobs.py`,
 > `tools/approval.py`, `hermes_state.py`, `acp_adapter/*`, `agent/background_review.py`,
-> `agent/curator.py`).
+> `agent/curator.py`, `tools/checkpoint_manager.py`, `gateway/platform_registry.py`,
+> `agent/session_context.py`, `apps/desktop/src/**`).
 
 ## Executive Summary
 
@@ -108,6 +111,19 @@ The synthesis line for the series so far:
 > **v3 = DBOS's kernel discipline + paperclip's control-plane mechanics + Hermes's
 > outer-layer breadth (channels/memory/skills/cron) — with the audit ledger, the
 > credential broker, and the fuzzy-correlation layer that none of the three got right.**
+
+Second-pass refinement: Hermes is not just "chat store instead of kernel." It is a
+set of **several adjacent sources of truth** — SQLite chat state, gateway session-key
+maps, cron JSON, shadow Git checkpoints, compressed-message lineage, in-memory API run
+streams — that are each reasonable locally but never converge into one durable
+operation record. v3 should treat that as the precise anti-pattern: do not merely add
+persistence; define which layer owns each fact.
+
+Second-pass refinement: Hermes's operator UX is stronger than its API observability.
+The desktop app embeds status, subagent traces, gateway controls, and preview-console
+state directly in the working surface; the HTTP/API side still keeps run streams and
+statuses in memory. v3 should copy the embedded work-surface pattern, but back it with
+a durable event store.
 
 ---
 
@@ -865,23 +881,204 @@ registration, edit-approval policy (agent-runtime concerns).
 
 ---
 
+## Second-pass deltas — what the independent 10-lens pass adds
+
+These are not replacements for the slices above. They are the extra or sharper findings
+from a separate pass performed before this report was reread.
+
+### 1. The state model has multiple adjacent truths, not one weak truth
+
+The first-pass kernel verdict is right but slightly too coarse. Hermes does not have
+one accidental source of truth; it has several: `state.db` for chat sessions and
+messages, gateway session-key/session-id routing maps, `jobs.json` for cron, a shadow
+Git checkpoint store, compressed-message lineage, and in-memory API run streams. Each
+one works locally, but there is no durable operation envelope tying them together.
+
+Two details matter for v3. First, Hermes already separates **canonical transcript** from
+**provider/API projection** in places: thinking-signature recovery rebuilds
+`api_messages` without mutating canonical `messages` (`agent/conversation_loop.py:2447`,
+`:2458`). That separation is worth copying. Second, compression has lineage semantics:
+root/tip projected sessions are tracked in `hermes_state.py` (`:2297`, `:2917`, `:2938`).
+v3 should make both distinctions explicit in the model instead of reconstructing them
+from helper behavior.
+
+The shadow Git checkpoint system is another useful but separate truth:
+`tools/checkpoint_manager.py` defines per-session checkpoint repositories and commands
+(`:1`, `:10`, `:13`, `:38`, `:601`, `:649`), and tool execution hooks it around writes
+(`agent/tool_executor.py:905`, `:917`). That is valuable for workspace rollback, but it
+is not a substitute for operation idempotency.
+
+### 2. Recovery is a policy matrix, not just "retry the turn"
+
+Cron has a more nuanced recovery policy than the first-pass summary suggests. Recurring
+jobs advance before execution (`cron/jobs.py:1034-1043`), so a failed run is usually
+skipped rather than duplicated; one-shot jobs use different retry/terminal behavior
+(`cron/scheduler.py:2158-2164`). External scheduler dispatch adds a short-lived
+`fire_claim` lease (`cron/scheduler_provider.py:85-105`; `cron/jobs.py:1080-1124`), and
+recovery can repair, skip, fast-forward, retry, or terminalize malformed schedule state
+(`cron/jobs.py:1152-1221`).
+
+This is a useful v3 distinction: lifecycle recovery should be a table of explicit
+policies per operation class, not a single global retry rule. Hermes also uses shutdown
+cause and exit code as recovery evidence (`gateway/status.py:862-879`, `:991-1007`;
+`gateway/run.py:17224-17300`, `:17495-17508`). The avoid case is equally important:
+`Future.cancel()` is not a hard abort for an already-running tool
+(`agent/tool_executor.py:572-604`), and provider notify/reconcile paths remain
+best-effort.
+
+### 3. Ownership has better local contracts than the report credited
+
+Hermes has a good local pattern for worker ownership in Kanban/task processing: a live
+concurrency cap counts already-running tasks, not just tick spawn budget
+(`hermes_cli/kanban_db.py:6115`, `:6186`, `:6221`;
+`tests/hermes_cli/test_kanban_per_profile_cap.py:73`). Lease renewal must prove
+ownership by matching the claim token (`hermes_cli/kanban_db.py:3171`), with stale/crash
+reclaim paths nearby (`:3202`, `:5530`).
+
+The v3 lesson is to model claim, heartbeat, and reclaim as one ownership contract. The
+cron provider split points the same way: trigger providers select delivery windows but
+do not own execution semantics (`cron/scheduler_provider.py:10`;
+`cron/scheduler.py:2040`). Avoid file locks, process-local `_running_job_ids`, and any
+fail-open lock behavior as correctness mechanisms.
+
+### 4. Runtime context is propagation, while `TurnContext` is a side-effect boundary
+
+Hermes has several good context-propagation mechanisms that are distinct from its
+agent-core state mutation. Platform registration is explicit through a registry and
+factory path (`gateway/platform_registry.py:38`, `:48`, `:144`, `:208`), and
+session/runtime context is propagated with contextvars (`gateway/session_context.py:1`,
+`:10`, `:51`, `:101`, `:174`; `agent/runtime_cwd.py:1`, `:20`).
+
+The caution is `TurnContext`: it heavily mutates the agent and runtime surface
+(`agent/turn_context.py:15`, `:37`, `:91`, `:95`, `:112`, `:144`). v3 should keep
+propagated execution context as explicit values and avoid turning the per-turn object
+into an implicit side-effect orchestrator. The same applies to adapters: `PluginLLM`
+is a host-owned facade (`agent/plugin_llm.py:17`, `:28`, `:33`, `:34`, `:50`, `:202`),
+and code execution uses parent-mediated RPC/capability-token mechanics
+(`tools/code_execution_tool.py:8`, `:59`, `:259`, `:1108`, `:1212`, `:1222-1232`).
+Those are the right shapes; mega-adapter branching is the part to avoid.
+
+### 5. Security boundaries are sharper at the surface than in the credential model
+
+Hermes's best security lesson is that a session id is a routing handle, not authority.
+The security docs say external surfaces must fail closed (`SECURITY.md:192`, `:202`,
+`:207`), and gateway authorization defaults to deny (`gateway/authz_mixin.py:176`,
+`:311`, `:325`). Slack approval callbacks perform independent authorization before
+bridging decisions (`gateway/platforms/slack.py:3026`, `:3086`, `:3205`, `:3216`).
+
+Approval state itself is still not a durable audit ledger, but it has useful mechanics:
+session-scoped queues, timeout-deny behavior, and explicit pending records
+(`tools/approval.py:32`, `:109`, `:681`, `:728`, `:1553`). Credential scoping also has
+a better local primitive than the process-global critique alone implies:
+context-local secret scope defaults closed (`agent/secret_scope.py:1`, `:123`, `:149`).
+v3 should combine those with paperclip's broker/ref architecture. Do not treat
+heuristic prompt rules (`SECURITY.md:137`, `:142`), non-interactive auto-approval
+(`tools/approval.py:1183`, `:1197`, `:1421`), write-approval opt-in
+(`tools/write_approval.py:18`, `:74`, `:264`, `:279`), or narrow MCP heuristics
+(`hermes_cli/mcp_security.py:1`, `:64`) as hard boundaries.
+
+### 6. Delegation is turn-scoped; scheduling is the durable shape
+
+The first pass correctly says Hermes subagents are not durable. The sharper distinction
+is that `delegate_task` is a turn-scoped convenience, while cron/Kanban are the durable
+or semi-durable orchestration shapes. The delegation docs warn that parent interruption
+can lose work (`tools/delegate_tool.py:2858-2864`; see also
+`website/docs/user-guide/features/delegation.md:227-239`).
+
+Hermes does have good scoping ideas for spawned work: child toolsets are intersected
+with parent capability (`tools/delegate_tool.py:44-52`), cron has a denylist
+(`cron/scheduler.py:115-160`), and per-job toolsets are explicit
+(`tools/cronjob_tools.py:843-850`). Fan-in must not be inferred from context injection:
+cron's `context_from` passes latest output (`cron/jobs.py:653-655`;
+`tools/cronjob_tools.py:830-840`) but is not a dependency gate. Kanban parent links are
+closer to a true gate (`skills/devops/kanban-orchestrator/SKILL.md:118-120`).
+
+### 7. Inbound message events and outbound presentation streams should stay separate
+
+The existing L8/L9 section captures `MessageEvent` + `SessionSource`. The additional
+point is to preserve a separate outbound event model for presentation streams. Hermes
+has inbound platform normalization, outbound streaming consumers, and API/SSE relay
+events as different concerns (`gateway/platforms/api_server.py:1626`, `:1632`, `:1655`,
+`:1666`, `:1683`).
+
+v3 should make that split explicit: inbound normalized command/message envelopes,
+internal durable operation events, and outbound presentation/progress events are not
+the same type. Avoid ad-hoc string event names and callback-only surfaces
+(`gateway/stream_events.py:11`; `agent/tool_executor.py:437`, `:1353`;
+`gateway/platforms/api_server.py:1659`). Also keep platform routing exceptions outside
+the correlation oracle; correlation should be deterministic and inspectable.
+
+### 8. Memory is four layers, not one "memory system"
+
+Hermes really has four knowledge layers: frozen declarative memory (`MEMORY.md` and
+profile files), searchable transcript DB, procedural skills, and ephemeral provider
+recall. Dynamic recall is injected into the current user message, not persisted as
+history (`agent/conversation_loop.py:716`, `:719`, `:767`). Skills are indexed by
+frontmatter/description and only expanded through progressive disclosure
+(`tools/skills_tool.py:9`, `:28`, `:687`, `:862`;
+`agent/prompt_builder.py:1244`, `:1251`, `:1258`, `:1426`).
+
+The sidecar model for usage/provenance is worth copying: skill use is tracked outside
+frontmatter (`tools/skill_usage.py:1`, `:8`, `:18`, `:622`). The avoid case is treating
+long-term memory as a progress ledger (`agent/prompt_builder.py:144-156`). v3 should
+scan assembled context after expansion, not just raw user input; Hermes's cron prompt
+assembly includes that kind of late scan (`cron/scheduler.py:1094`, `:1115`, `:1144`,
+`:1297`).
+
+### 9. Operator UX is embedded; API observability is too ephemeral
+
+Hermes's desktop UX provides a concrete v3 pattern: show operational state inside the
+work surface. Composer status has a stack of active states
+(`apps/desktop/src/store/composer-status.ts:11`, `:58`, `:123`, `:132`), subagents have
+their own trace store (`apps/desktop/src/store/subagents.ts:13`, `:31`), and the agent
+view exposes subagent progress in context (`apps/desktop/src/app/agents/index.tsx:321`,
+`:324`, `:373`). Gateway controls and preview-console state are also first-class
+surface elements (`apps/desktop/src/app/shell/gateway-menu-panel.tsx:64`, `:102`,
+`:126`; `apps/desktop/src/app/preview-pane.tsx:237`, `:244`, `:267`, `:522`;
+`apps/desktop/src/app/preview-console.tsx:193`).
+
+The API side is weaker: run streams/statuses live in memory
+(`gateway/platforms/api_server.py:771`, `:778`, `:3645`), SSE filtering handles
+thinking/subagent progress imperatively (`:3664`, `:3680`, `:3706`), and detailed
+health is exposed separately (`:1099`, `:1104`, `:1109`). v3 should back the rich work
+surface with a durable event table keyed by `run_id`, `event_id`, `parent_event_id`,
+`session_id`, timestamp, type, and visibility.
+
+### 10. The extension model is strong, but registry paths must not coexist with legacy switches
+
+Hermes has the right target shape: provider profiles, transport normalization, plugin
+discovery, platform registries, and reset hooks. Tests around transport and plugin
+discovery show this can be contract-tested (`tests/agent/transports/test_transport.py:13`;
+`tests/providers/test_plugin_discovery.py:90`), and registries expose reset hooks where
+testability was designed in (`agent/tts_registry.py:130`).
+
+The anti-pattern is coexistence: registry-first paths still live beside `if/elif`
+dispatch and downstream switches (`gateway/run.py:6915`, `:6940`;
+`gateway/config.py:462`, `:597`; `tools/send_message_tool.py:468`, `:774`, `:901`).
+v3 should require new provider/platform/tool integrations to enter through one
+registry contract and a small contract-test suite, not through another switch site.
+
 ## Consolidated Direction for v3
 
 | v3 level | What Hermes contributes | Verdict |
 |---|---|---|
 | **L0a kernel** | A durable *chat* store (WAL + jitter-retry, soft-delete undo, incremental flush) but **no op-log, no idempotency key, no CAS, no resume-mid-op**. | **Anti-example.** Keep DBOS's kernel; steal only the soft-delete-undo-with-audit and the SQLite contention tricks. |
+| **L0a adjacent truth layers** | Chat DB, gateway routing maps, cron JSON, shadow Git checkpoints, compressed lineage, and API run streams are separate truths with no shared operation envelope. | **Sharper anti-example.** Persistence is not enough; v3 must state which layer owns each fact and bind facts with durable op ids. |
 | **L0b actors** | None — "who acts" is a `role` string; no actor type, no context-packet. | **Gap.** v3's first-class actor + context-packet has no precedent here. |
 | **L0c adapters** | Stateless format-shim registry + host-owned transparent `messages[]` session + per-message `provider_data` escape hatch. The Codex *projection* of a foreign stateful agent into the host shape. | **Adopt the projection + escape-hatch ideas.** But add the immutable `AgentConfig` value object Hermes lacks. |
 | **L0e runtime** | Clean two-method `BaseEnvironment` ABC, six backends, hibernate/wake keyed by `task_id`, **sandbox FS = cache, host owns durable state, re-push on wake**. | **Strong — adopt the hibernation model and the FileSync-host-owns-state stance.** |
 | **L3 human gate** | Layered fail-closed approval with a hardline floor + import-frozen bypass + normalize-before-match + textbook DM-pairing — **but every decision is unaudited**. | **Adopt the gate mechanics; reject the missing ledger.** Pair with paperclip's audited decision row. |
+| **L3/L7 surface security** | Session ids are routing handles, not authority; callbacks re-authorize; context-local secret scope defaults closed, but credential brokering is still not architectural. | **Adopt fail-closed surface authz and context-local scoping; still require broker/ref credentials.** |
 | **L5 skills** | Directory + agentskills.io frontmatter + 3 generic tools + cached prompt index + lifecycle states + trust-tiered scan. | **The reference. Adopt the open standard and the primitive shape.** Namespace by origin (Hermes's flat scheme didn't scale); govern creation. |
 | **L6 triggers** | File-backed cron with pre-advance at-most-once, a real `claim_job_for_fire` CAS for multi-replica, provider/execution split, Chronos scale-to-zero, fire-time delivery resolution. | **Strong — adopt the CAS, the provider/body split, and late-bound delivery.** Replace JSON-file storage with a transactional store. |
 | **L4 spawn** | Child = full first-class `AIAgent` (own session/transcript/`parent_session_id`), toolset-intersected, cost-rollup, result-as-a-new-turn. **Not durable** (in-memory thread). | **Confirms "child = full instance" (third time). Adopt result-as-a-new-turn + cost-rollup.** Make children durable/resumable (Hermes doesn't). |
 | **L7 grants** | Process-global `os.environ`, blocklist-filtered, "useful not a boundary"; Bitwarden as startup hydration. | **Anti-example for credential-never-travels.** Keep paperclip's broker/ref; reuse only the secrets-CLI hygiene. |
 | **L8 channels** | 10+ live platforms behind one capability-negotiating adapter contract; `MessageEvent`+`SessionSource` two-struct envelope; relay/connector contract. | **The reference for the series. Adopt the envelope split, capability-flag degradation, and the relay contract.** Collapse the 20 hand-written normalizers into one declarative engine. |
 | **L9 correlation** | A single pure `build_session_key()` → deterministic hierarchical key, **exact-only, the documented conformance oracle**. | **Adopt the pure-function-as-oracle idea.** v3 still must build the *fuzzy* correlation layer none of the five projects has. |
+| **L10/operator UX** | Desktop work surface exposes composer status, subagent traces, gateway controls, and preview-console state; API run streams/statuses are in-memory. | **Adopt embedded observability, but persist the event stream.** |
 | **L11 memory** | Flat Markdown (`MEMORY.md`/`USER.md`), agent-curated, pluggable provider layer with off-thread serialized writes, profile-scoped. | **The first real L11 reference. Adopt scopes-as-directories + the forked-writer + off-thread serialized writes.** Add the per-conversation/per-project scopes Hermes lacks. |
 | **L12 learning** | Forked-reviewer reflection on a fixed counter; durable Markdown artifacts; curator GC; anti-poisoning rules. **Structurally closed, not metric-driven.** | **Adopt the forked-reviewer + two-tier cadence + anti-poisoning rules.** Don't oversell it as autonomous self-improvement. |
+| **Extension seams** | Provider/platform/plugin registries and contract tests exist, but legacy switch sites still coexist. | **Adopt registry + contract-test discipline; reject mixed registry/switch ownership.** |
 
 ## Reconsiderations for v3
 

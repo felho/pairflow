@@ -37,7 +37,9 @@ Fourth in a series. Read alongside:
   Postgres kernel, but a mutable-state-row + audit-feed, no event-sourcing, no
   uniform version column, status-strings not a typed FSM, exact-only correlation.
 
-> Method: six parallel sub-agent analyses, each mapping one slice of DBOS onto
+> Method: first-pass slice research plus a second independent 10-lens sub-agent pass
+> (kernel state, lifecycle, ownership, runtime context, policy, child/schedule,
+> channels, metadata/versioning, operator UX, provider seams), each mapping DBOS onto
 > specific v3 levels, with `file:line` citations relative to the DBOS repo root
 > (`src/…`, `schemas/…`, `packages/…`). The codebase is small enough that the core
 > files were read thoroughly.
@@ -129,6 +131,17 @@ What DBOS **warns** about / where v3 must decide or go further:
   dispatcher are poll loops (NOTIFY is an optimization layer); the cron `nextWakeupTime`
   steps one second at a time (perf smell at scale). v3's push-wake design is better on
   latency — keep it, but borrow DBOS's "the wait is a durable checkpoint" framing.
+- **Control-plane safety is not the same thing as kernel correctness.** DBOS has a rich
+  admin surface, but the local admin server registers cancel/resume/restart/fork/list
+  endpoints by default and emits wildcard CORS (`adminserver.ts:49-68,105-124`;
+  `config.ts:213-221`). v3 should copy the operation catalog, not the safety defaults:
+  lifecycle intervention must be privileged, audited, reasoned, and redacted by default.
+- **Provider seams are present but too singleton-coupled for v3 federation.** DBOS's
+  monorepo/provider-package shape is good (`package.json:33`; provider peer deps), but
+  datasource/receiver adapters still read global `DBOS.workflowID`/`DBOS.stepID` or call
+  static `DBOS.startWorkflow()` (`packages/nodepg-datasource/index.ts:182`;
+  `packages/kafkajs-receive/index.ts:38-86`). v3 providers should receive explicit
+  runtime ports and invocation-context DTOs.
 
 ---
 
@@ -515,6 +528,177 @@ v3 doesn't need.
 
 ---
 
+## Second-pass deltas — what the independent 10-lens pass adds
+
+The first-pass report already captured DBOS's kernel story. The independent second pass
+mostly adds **edge contracts** around that kernel: how context enters it, how operators
+touch it, how providers extend it, and which failure modes must be made explicit in v3.
+
+### 1. State machine as database contract, not just runner lifecycle
+
+DBOS's lifecycle is not merely "a runner restarts work"; the database schema itself is
+the state-machine contract. `workflow_status` carries status, executor ownership,
+application version, recovery attempts, deadline, deduplication id, parent/fork lineage,
+serialization, and attributes (`schemas/system_db_schema.ts:3`;
+`system_database.ts:185`). `operation_outputs` is the step checkpoint table, while
+datasource transactions use a second, datasource-local `transaction_completion` table
+(`src/datasource.ts:325`; `packages/nodepg-datasource/index.ts:96-216`).
+
+**v3 delta:** keep the report's `workflow_status + operation_outputs` kernel, but name
+the two checkpoint layers separately:
+
+- **System checkpoint:** `operation_outputs` records replayable orchestration steps.
+- **Business-transaction checkpoint:** `transaction_completion` is the only place DBOS
+  gets true business-write + completion-record atomicity on the same app DB client.
+
+This matters because generic steps are not automatically atomic with their side effects;
+v3 should not overclaim exactly-once effects outside a provider that can put the effect
+and checkpoint in one transaction.
+
+### 2. Idempotency is four separate contracts, not one slogan
+
+The original study correctly identifies DBOS's unifying primitive. The sharper second
+pass finding is that "idempotency" has multiple keys and failure modes:
+
+- whole workflow: `workflow_uuid`;
+- step replay: `(workflow_uuid, function_id)` plus `function_name` drift assertion;
+- queue dedup: `(queue_name, deduplication_id)` unique partial index;
+- message delivery: `message_uuid` with `ON CONFLICT DO NOTHING`
+  (`system_database.ts:1891-1957`).
+
+**v3 delta:** specs and tests should name which idempotency layer a change touches. A
+single "idempotent" label will hide bugs, especially around queues and message delivery.
+
+### 3. Claim must be coupled to dispatch, or explicitly rolled back/requeued
+
+DBOS's queue SQL is strong, but the tests document a concrete historical failure:
+claiming work across partitions and dispatching later can leave an orphan `PENDING`
+workflow if a later partition hits lock contention (`tests/wfqueue.test.ts:2527-2537`).
+The fix dispatches each partition's claimed workflows immediately after marking them
+`PENDING` (`src/wfqueue.ts:569-581`).
+
+**v3 delta:** add a kernel invariant: a command that changes work from available to
+claimed must either dispatch in the same local control path, persist a recoverable
+handoff record, or revert/requeue before returning. "Claim many, dispatch later" is an
+anti-pattern, even if the claim itself is transactional.
+
+### 4. Communication has three primitives, not one event bus
+
+The report already covers `send`/`recv` and `setEvent`/`getEvent`. The second pass adds
+the taxonomy v3 should preserve:
+
+- **consumed message inbox:** `notifications(destination_uuid, topic, message_uuid,
+  consumed)` for one-shot delivery;
+- **last-value event latch:** `workflow_events(workflow_uuid, key)` for durable
+  set/get state, with `_history` for fork support;
+- **append-only stream:** `streams(workflow_uuid, key, offset)` for workflow-owned
+  ordered read-model output (`migrations.ts:177`; `dbos.ts:1619-1657`).
+
+`LISTEN/NOTIFY` is only a wakeup layer; DBOS itself documents the subscribe-then-read
+pattern and poll fallback because notifications can be dropped and PgBouncer transaction
+pooling breaks assumptions (`system_database.ts:611-637,3951-3971`).
+
+**v3 delta:** do not collapse command messages, event latches, and streams into a vague
+"event" primitive. Also, if v3 adopts DB-backed streams, avoid DBOS's simple
+`SELECT MAX(offset)+1` offset allocation for high-throughput or multi-writer streams
+(`system_database.ts:2311-2326`); use an explicit per-stream sequence/claim primitive.
+
+### 5. Execution context is propagation, not isolation
+
+DBOS uses `AsyncLocalStorage` to propagate workflow id, function id, auth/request data,
+deadline and serialization (`context.ts:21-75`). `runWithContext` and wrappers such as
+`withNextWorkflowID`, `withAuthedContext`, `withWorkflowQueue`, and `withWorkflowTimeout`
+assemble ambient context at entry boundaries (`dbos.ts:1194-1265`).
+
+**v3 delta:** this is a good propagation pattern, but not a sandbox or security boundary.
+For Pairflow, every run should materialize an **Execution Context Snapshot** up front:
+`run_id`, `task_id`, `definition_id`, allowed/forbidden paths, mode, selected skills,
+agent/runtime version, input hash, actor/auth metadata, and normalized attributes. Agent
+decisions should not depend on invisible ambient state that is absent from the persisted
+run record.
+
+### 6. Definition/run/version separation needs stable IDs, not only names
+
+DBOS separates workflow definition config (`maxRecoveryAttempts`, `name`,
+`serialization`, `inputSchema`) from run params (`WorkflowParams`) and durable run state
+(`workflow.ts:43-77`; `system_database.ts:185`). It also stamps `application_version`
+and recovers only matching versions (`dbos.ts:443`; `dbos-executor.ts:510,1329`;
+`system_database.ts:867`). The weak spot: recovery maps persisted `workflowClassName` +
+`workflowName` back to an in-memory registry and errors if code moved
+(`dbos-executor.ts:1195-1224`).
+
+**v3 delta:** use DBOS's definition/run split, but make the definition reference a
+stable ID plus content/schema hash. Names and paths are operator-friendly labels; they
+should not be the sole recovery contract for tasks, skills, or agent workflows.
+
+### 7. Admin surface is a useful operation catalog with unsafe defaults
+
+DBOS exposes a broad admin surface: health, recovery, perf, deactivate, conductor,
+cancel, resume, restart, fork, list/get workflows, steps, queued workflows and GC
+(`adminserver.ts:105-124`). That is exactly the sort of operation catalog v3 needs. But
+the local admin server is enabled by default (`config.ts:213-221`), sets
+`Access-Control-Allow-Origin: *`, and the control endpoints are not visibly protected by
+the same auth gate as application routes (`adminserver.ts:49-68,393-510`).
+
+**v3 delta:** lifecycle commands are privileged operations. v3 should require actor,
+policy check, reason, audit record, idempotency key, and redaction defaults for
+cancel/resume/restart/fork/deactivate/GC. The CLI/API should default to compact views;
+input/output loading must be explicit to avoid leaking or overloading (`manage-workflows.ts:38-105`).
+
+### 8. Observability needs productized telemetry state, not only OTLP emission
+
+DBOS has good introspection: step listing includes output/error/childWorkflowID/timing
+(`adminserver.ts:513-529`; `workflow_management.ts:23-50`), workflow listing has rich
+filters and attributes containment (`adminserver.ts:532-586`;
+`system_database.ts:2718-2897`), and aggregate status/name/queue/executor/app-version
+metrics exist (`system_database.ts:2900-2955`). OTLP logs/traces exist, including
+legacy-vs-semconv attributes (`telemetry/logs.ts:75-188`;
+`telemetry/traces.ts:14-41`; `dbos-executor.ts:173-183`).
+
+**v3 delta:** OTLP compatibility is not enough. Expose exporter health, buffer depth,
+drop counts, flush errors, and backpressure policy; DBOS's collector is a simple
+interval queue (`telemetry/collector.ts:20-66`; `telemetry/exporters.ts:35-65`).
+
+### 9. Provider seams should be explicit ports, not singleton reads
+
+DBOS's package architecture is a good v3 model: root SDK + `packages/*`, provider peer
+dependencies, and published subpath contracts (`package.json:25,33`;
+`packages/nodepg-datasource/package.json:22`). The datasource seam is also promising:
+`DataSourceTransactionHandler` separates lifecycle and transaction invocation
+(`src/datasource.ts:19-49,272`).
+
+The weak spot is coupling direction. Datasource providers read `DBOS.workflowID` and
+`DBOS.stepID` (`packages/nodepg-datasource/index.ts:182`); receiver packages call static
+`DBOS.registerLifecycleCallback`, `DBOS.getAssociatedInfo`, `DBOS.startWorkflow`, and
+`DBOS.logger` (`packages/kafkajs-receive/index.ts:38-86`); HTTP adapters depend on
+internal registration shapes (`packages/koa-serve/src/dboshttp.ts:5`;
+`packages/koa-serve/src/dboskoa.ts:169-231`).
+
+**v3 delta:** provider packages should receive explicit ports:
+
+- `InvocationContext` / `TransactionInvocation` for datasource calls;
+- `ReceiverRuntimePort` for lifecycle, registration lookup, workflow start, logging and
+  shutdown;
+- stable `OperationDescriptor` DTO instead of exported internal method registration.
+
+Also avoid duplicating durable idempotency policy in every provider: DBOS repeats
+`transaction_completion` replay/output/error logic across SQL adapters. v3 should make
+that a shared contract utility or core policy, with providers supplying storage and
+transaction primitives.
+
+### 10. Provider contract tests are part of the boundary
+
+DBOS has useful E2E provider tests, but many require real external systems (Kafka/SQS)
+and skip based on availability (`packages/kafkajs-receive/tests/kafkajs.test.ts:143,204`;
+`packages/sqs-receive/tests/sqs.test.ts:64-81`). That proves integration, but not a
+stable provider contract.
+
+**v3 delta:** every provider should run a shared contract suite against a core-supplied
+fake runtime port, plus targeted E2E tests for the actual service. This is especially
+important for L10/federation: boundaries that only fail in live E2E will drift.
+
+---
+
 ## Consolidated direction table
 
 | v3 level | DBOS's stance | Verdict | The one thing to take/avoid |
@@ -531,6 +715,9 @@ v3 doesn't need.
 | **L9** durable wait | send/recv + setEvent/getEvent; block IS a checkpoint; debouncer coalescing | **LEARN the durable-wait half** | Atomic consume+checkpoint; durable deadline; debouncer as L9-coalescing skeleton. |
 | **L9** correlation | **Always exact** (`dest_uuid::topic`) — no fuzzy/external | **BUILD yourself** | v3 must compute the `destination_uuid` DBOS assumes you already have. |
 | **distribution** | No leader/lease/heartbeat; Postgres is the control plane; **no dead-executor detection** | **LEARN FROM (over symphony)** | Add a TTL/lease sweep for self-healing orphan recovery. |
+| **operator surface** | Rich admin/read-model API, but local admin defaults are broad and CORS-open | **LEARN catalog, AVOID defaults** | Privileged lifecycle commands need auth, audit, reason, redaction, and safer CLI defaults. |
+| **context/modeling** | ALS context + definition/run/version split + queryable attributes | **LEARN, REFINE** | Persist an execution-context snapshot and stable definition IDs/hashes. |
+| **provider seams** | Good provider packages, but adapters read singleton state / static DBOS APIs | **LEARN shape, REWORK coupling** | Use explicit runtime ports, operation descriptors, and shared provider contract tests. |
 | L0c / L0e / L7 / L11 / L14 | Absent (DBOS is a kernel, not a control plane) | **ORTHOGONAL** | Source agent/runtime/credential/registry/org layers from paperclip/omnigent. |
 
 ## Three reconsiderations DBOS forces

@@ -32,11 +32,14 @@ This is the third in a series. Read alongside:
 - [`symphony-study.md`](symphony-study.md) — a ~20K-line OTP orchestrator; skips
   L0a entirely and outsources durability to an external SaaS (Linear).
 
-> Method: seven parallel sub-agent analyses, each mapping one slice of Paperclip
-> onto specific v3 levels, with `file:line` citations relative to the Paperclip
-> repo root. The repo is too large to read fully — each agent was selective
-> (grep-to-locate, read the core files). Paths are `server/src/…`,
-> `packages/db/src/schema/…`, `packages/adapters/…`, or `doc/…` as cited.
+> Method: first-pass seven-slice analysis plus a second, independent 10-lens pass
+> performed before rereading this report. The second pass looked specifically at state
+> ownership, lifecycle/recovery, concurrency, runtime adapters, policy/security,
+> delegation, channels/events, memory/context, operator UX, and modularity, with
+> `file:line` citations relative to the Paperclip repo root. The repo is too large to
+> read fully — each pass was selective (grep-to-locate, read the core files). Paths are
+> `server/src/…`, `packages/db/src/schema/…`, `packages/adapters/…`, `packages/plugins/…`,
+> `ui/src/…`, or `doc/…` as cited.
 
 ## Executive Summary
 
@@ -120,6 +123,18 @@ What Paperclip **warns** about (where v3's design must go further, or not copy):
 - **"Atomic" is sometimes marketing.** Budget enforcement is a *preflight* check,
   not one transaction with checkout — a real (narrow) TOCTOU window. Config
   revisioning/rollback is real only for documents/routines, not budgets/grants/trust.
+
+Second-pass refinement: Paperclip's strongest operational pattern is the distinction
+between **notification intent**, **execution run**, **domain lock**, **runtime session**,
+and **operator-facing log/event stream**. The first report already names wakeups and
+runs; the sharper v3 lesson is that each has a separate lifecycle and failure mode.
+Do not collapse them into one "task run" object.
+
+Second-pass refinement: Paperclip is better at operator control loops than the first
+report emphasized. A run is inspectable, cancellable, retryable, tied to activity and
+cost events, streamed live with polling fallback, and interpreted by liveness semantics
+that distinguish "process succeeded" from "work advanced." v3 should make that a core
+product contract, not a dashboard afterthought.
 
 ---
 
@@ -674,28 +689,206 @@ ORTHOGONAL** (heuristic monitoring, not metacognition).
 
 ---
 
+## Second-pass deltas — what the independent 10-lens pass adds
+
+These are the additions or sharper readings from the independent pass, after filtering
+out findings already covered by the seven slices above.
+
+### 1. Separate wakeup intent, execution run, issue lock, runtime session, and log stream
+
+The existing report correctly says Paperclip has DB-backed wakeups and runs. The
+additional lesson is that these are intentionally **different objects**:
+`agent_wakeup_requests` records source/reason/payload/status/idempotency/run linkage
+(`packages/db/src/schema/agent_wakeup_requests.ts:5`, `:15`, `:19`, `:20`),
+`heartbeat_runs` records execution status, session before/after, log refs, retry
+lineage, output progress, liveness, and `contextSnapshot`
+(`packages/db/src/schema/heartbeat_runs.ts:6`, `:21`, `:25`, `:37`, `:45`, `:51`,
+`:56`), while `issues.checkoutRunId`/`executionRunId` own domain execution rights
+(`packages/db/src/schema/issues.ts:38`, `:46`).
+
+v3 should preserve this split. A notification can be coalesced or deferred without
+being an execution; a queued run need not yet own an issue; a running run may have an
+adapter session; a log stream is evidence, not state.
+
+### 2. Delayed execution lock is a stronger pattern than eager queue ownership
+
+Paperclip does not set the issue's execution lock merely because a wakeup was queued.
+The run is first claimed with an atomic `queued -> running` update
+(`server/src/services/heartbeat.ts:6968`, `:6976`), and only then does the issue get
+bound to the live execution (`server/src/services/heartbeat.ts:7000`, `:11033`). This
+prevents a queued-but-never-started run from holding work hostage.
+
+Finalization and cleanup also compare against the run that still owns the row:
+terminal cleanup locks all affected issues in deterministic order
+(`server/src/services/heartbeat.ts:9812`, `:9822`) and clears only locks pointing at
+that run (`:9864`). Reassignment/status changes explicitly release checkout/execution
+locks (`server/src/services/issues.ts:5214`, `:5220`). v3 should model "queued
+interest" separately from "active execution ownership."
+
+### 3. Recovery taxonomy is richer than "rerun failed work"
+
+Paperclip distinguishes process loss, zombie running state, silent-but-live work,
+successful process with no issue disposition, stale execution locks, transient upstream
+failure, max-turn continuation, and intentional pause/hold. Examples: zombie detection
+checks DB `running` state against in-memory execution (`server/src/services/heartbeat.ts:2193`,
+`:2207`, `:2220`); process-loss retry has bounded local-child handling (`:7591`,
+`:7600`, `:7633`, `:7665`); "successful run, but issue still in progress" creates a
+corrective handoff (`server/src/services/recovery/successful-run-handoff.ts:359`,
+`:375`, `:399`); stale lock sweeping handles terminal or missing run references
+(`server/src/services/recovery/service.ts:3824`, `:3865`, `:3877`).
+
+v3 should encode recovery reason as data. One `failed` status is too weak to drive the
+right retry, handoff, pause, or human-review behavior.
+
+### 4. Durable fan-out/fan-in is child-issue orchestration, not subagent threads
+
+The first report covers issue threads as the universal channel. The extra finding is
+that Paperclip's "subagent" shape is durable child-issue delegation: child creation
+inherits project/goal/workspace context, increments request depth, and writes acceptance
+criteria (`server/src/services/issues.ts:4523`, `:4549`, `:4554`, `:4557`). Accepted-plan
+decomposition uses a durable claim/fingerprint row before fan-out and records progress
+as children are created (`server/src/services/issues.ts:4601`, `:4628`, `:4672`,
+`:4732`; `packages/db/src/schema/issue_plan_decompositions.ts:10`, `:21`, `:24`, `:42`).
+
+Fan-in is state-triggered: a parent is only woken when every child is `done` or
+`cancelled`, with summaries and truncation flags in the wake payload
+(`server/src/services/issues.ts:4451`, `:4480`, `:4514`;
+`server/src/routes/issues.ts:5763`, `:5771`). v3 should not treat delegated work as
+lost background process state; it should be resumable task graph state.
+
+### 5. Durable run stream plus ephemeral live push is the right observability split
+
+Paperclip has two event surfaces. `heartbeat_run_events` is durable and sequenced by
+run (`packages/db/src/schema/heartbeat_run_events.ts:6`), and append publishes the same
+event live (`server/src/services/heartbeat.ts:5304`, `:5317`, `:11624`). `LiveEvent`
+is a lightweight company-scoped invalidation/push envelope (`packages/shared/src/types/live.ts:3`),
+with process-local IDs (`server/src/services/live-events.ts:10`, `:17`).
+
+The UI respects this split: global live updates ignore high-frequency run event/log
+payloads (`ui/src/context/LiveUpdatesProvider.tsx:820`, `:839`), while run detail uses
+run-specific events/logs and deduplicates by `seq` (`ui/src/pages/AgentDetail.tsx:3880`,
+`:3890`, `:3921`). v3 should not use a process-local live ID as a replay cursor; use
+durable per-stream sequence for replay and live push only as acceleration.
+
+### 6. Operator UX is part of the control-plane contract
+
+Paperclip treats a run as an inspectable and controllable object. Run detail loads
+events, streams via WebSocket, and falls back to log polling (`ui/src/pages/AgentDetail.tsx:3645`,
+`:3818`, `:3840`); long logs are offset-readable NDJSON (`server/src/services/run-log-store.ts:30`,
+`:109`, `:138`); the UI offers "Jump to live" and "Load more log" controls
+(`ui/src/pages/AgentDetail.tsx:4040`, `:4068`). Human controls are immediate and
+audited: cancel writes activity (`server/src/routes/agents.ts:3580`), pause cancels
+active work (`:2963`, `:2975`), and approval resolution wakes the requesting agent with
+approval context (`server/src/routes/approvals.ts:168`, `:182`).
+
+Two avoid points follow. First, do not confuse "recent" with "live"; Paperclip's route
+comment explicitly warns that `minCount` padding can make historical runs look live
+(`server/src/routes/agents.ts:3482`). Second, do not make cost reporting passive:
+cost events attach to agent/issue/project/goal/run (`packages/db/src/schema/cost_events.ts:12`),
+hard thresholds pause/cancel work (`server/src/services/budgets.ts:252`, `:692`), and
+incident resolution either raises budget and resumes or leaves the scope paused
+(`:880`, `:922`).
+
+### 7. Prompt, skill, memory, and document state are different persistence classes
+
+Paperclip's memory landscape explicitly argues for a small portable core and provider
+adapters rather than one monolithic memory engine (`doc/memory-landscape.md:9`, `:14`,
+`:16`, `:117`, `:135`, `:139`, `:141`). Instructions are moving from legacy prompt
+strings to managed/external AGENTS.md bundles (`server/src/services/agent-instructions.ts:6`,
+`:12`, `:28`), and new agents reject the deprecated prompt fields
+(`server/src/routes/agents.ts:1326`, `:1333`). Skills carry provenance, source refs,
+trust level, file inventory, versions, and metadata (`packages/db/src/schema/company_skills.ts:21`,
+`:25`, `:26`, `:29`, `:31`, `:46`, `:64`, `:72`), with external executable imports and
+unpinned refs rejected (`server/src/services/company-skills.ts:189`, `:191`, `:201`).
+
+The most transferable snapshot model is document anchoring: annotations store quote,
+prefix, suffix, and position (`packages/shared/src/document-anchors.ts:116`, `:123`,
+`:128`), then remap exact/duplicate/fuzzy/missing across revisions and audit anchor
+snapshots (`:195`, `:212`; `server/src/services/document-annotations.ts:447`, `:480`).
+v3 should use this for prompt/context/knowledge citations instead of byte offsets.
+
+### 8. Plugin/provider seams are strong, but their drift risks are visible
+
+The report already praises `OPERATION_CAPABILITIES`. The extra modularity finding is
+about contract shape and drift. Plugin manifests declare extension points, including
+tools and environment drivers (`packages/shared/src/types/plugin.ts:102`, `:121`), and
+validators enforce cross-field rules (`packages/shared/src/validators/plugin.ts:574`).
+Provider lifecycle is a real RPC seam: validate/probe/acquire/resume/release/destroy/
+execute (`packages/plugins/sdk/src/define-plugin.ts:246`, `:259`, `:264`, `:279`,
+`:284`; `packages/plugins/sdk/src/protocol.ts:580`, `:613`, `:629`, `:633`).
+
+The avoid case is central and duplicated knowledge. `server/src/adapters/registry.ts`
+imports many built-ins directly (`:13`) and defines a large built-in module set
+(`:268`); capability knowledge is also hardcoded in shared constants, environment
+support, UI fallback maps, and forms (`packages/shared/src/constants.ts:30`;
+`packages/shared/src/environment-support.ts:33`; `ui/src/adapters/use-adapter-capabilities.ts:18`;
+`ui/src/components/AgentConfigForm.tsx:617`). The Kubernetes plugin documents a
+cross-package duplicated registry shape that must stay synced by hand
+(`packages/plugins/sandbox-providers/kubernetes/src/adapter-registry.ts:7`, `:10`,
+`:11`). v3 should require generated/shared schemas or golden compatibility tests.
+
+### 9. Fail-closed auth and secret binding are even stronger than the summary states
+
+Paperclip request auth builds explicit actor variants, not a bool:
+`local_implicit`, board user/session, `board_key`, `agent_key`, `agent_jwt`, and
+`cloud_tenant`, with company/membership/key/run metadata (`server/src/middleware/auth.ts:22`,
+`:110`, `:132`, `:162`, `:190`). Authorization decisions include reason,
+explanation, and optional matching grant (`server/src/services/authorization.ts:69`,
+`:454`, `:498`), while company boundaries and low-trust boundaries are first-order
+denials (`server/src/routes/authz.ts:53`, `:63`, `:77`;
+`server/src/services/authorization.ts:725`, `:756`).
+
+Secrets are not just encrypted refs. Runtime resolution requires consumer type/id and
+config-path binding, optionally narrowed by low-trust allowed binding ids
+(`server/src/services/secrets.ts:376`, `:398`, `:410`), and every access is audited in
+`secret_access_events` (`packages/db/src/schema/secret_access_events.ts:8`). Strict mode
+rejects plain sensitive env persistence, and low-trust dispatch blocks inline sensitive
+env values (`server/src/services/secrets.ts:726`, `:747`;
+`server/src/services/heartbeat.ts:434`, `:471`).
+
+### 10. Some "good enough" local mechanisms must not become v3 invariants
+
+Several Paperclip mechanisms are useful locally but should stay below the correctness
+line in v3. `withAgentStartLock` is an in-memory Map with timeout, not a distributed
+claim (`server/src/services/agent-start-lock.ts:3`, `:32`). File `mkdir` lockdirs are
+good for local skill materialization and workspace restore artifacts
+(`packages/adapter-utils/src/server-utils.ts:1933`, `:1970`, `:2019`;
+`packages/adapter-utils/src/workspace-restore-merge.ts:137`), but not for durable work
+ownership. `agent_wakeup_requests.idempotencyKey` exists without the uniform unique
+constraint that v3 should demand (`packages/db/src/schema/agent_wakeup_requests.ts:19`,
+`:28`).
+
+Use these as local coordination aids, not as the authoritative v3 kernel contract.
+
 ## Consolidated direction table
 
 | v3 level | Paperclip's stance | Verdict | The one thing to take/avoid |
 |---|---|---|---|
 | **L0a** kernel | Durable Postgres; atomic checkout (locks+CAS); DB-idempotency on one entity; immutable audit feed — but **no event-sourced transcript, no version column** | **LEARN FROM** | Take the catch-unique-violation idempotency pattern + lock-then-CAS discipline. Add what's missing: a replayable Transcript + a uniform `expected_version`. |
+| **L0a adjacent records** | Wakeup intent, execution run, issue lock, runtime session, run events, run log, and activity log are distinct records with distinct failure modes. | **LEARN FROM** | Preserve the split; do not collapse notification, ownership, execution, session, and observability into one object. |
 | **L0b** actor + binding | Durable identity; role→adapter binding via `adapterType`+`adapterConfig`; config-revision rollback | **LEARN FROM** | Stable role bound to swappable adapter, with audited config revisions. |
 | **L0b** context-packet | Flat snapshot; goal/instructions **pulled** on demand; thin by design | **AVOID as template** | Borrow only the per-issue Continuation Summary; design the layered packet natively. |
 | **L0c** AgentConfig + adapter | 2-method `ServerAdapterModule`; ~13 adapters + process/http/socket; host-owned session codec; out-of-tree plugins | **LEARN FROM (best of 3)** | The host-owned opaque session codec + split context object + minimal interface. Make AgentConfig typed (Paperclip's is an untyped bag). |
 | **L0d** lifecycle | DB-durable runs + real resume + staleness/pause-hold recovery — but **status strings, not a typed FSM**; recovery re-wakes not resumes | **LEARN the guard, AVOID the modeling** | Take the staleness sweep + pause-hold guard + bounded idempotent retry. Build the typed FSM + resume-on-recovery. |
+| **L0d recovery taxonomy** | Zombie, process loss, silence, success-without-disposition, stale locks, transient upstream, and intentional pause are separate recovery classes. | **LEARN FROM** | Encode recovery reason as data; one `failed` bucket is too weak. |
 | **L0e** runtime | git-worktree-per-run + multi-backend realization record + per-instance control-plane isolation | **LEARN FROM** | Worktree lifecycle + realization-record/transport abstraction + base-drift detection. |
 | **L0f** config + slots | Zod discriminated-union per driver + `format:"secret-ref"` typed slots | **LEARN FROM** | Typed-slots-hold-refs-not-values. |
 | **L1** capability matrix | `authorization.decide()` with enumerable reasons + scoped grants + fail-closed | **LEARN FROM** | Self-explaining decision object; fail-closed on unknown policy. |
 | **L2** gates/policies | Per-issue staged review as a **pure transition function**; instance allow/deny in the run guard | **LEARN FROM** | Pure-function gate transitions; security gate at the run, not middleware. |
 | **L3** human decision | First-class audited approval rows + **transactional `issue_execution_decisions`** w/ rationale; mandatory comment | **LEARN FROM (the symphony fix)** | Transactional, rationale-bearing gate-decision record. |
 | **L6** triggers/scheduling | cron/webhook/assignment/mention; concurrency × catch-up policy matrix; atomic claim-on-tick | **LEARN FROM** | The policy matrix + pre-computed `next_run_at` + atomic claim. (Use a vetted cron lib.) |
+| **L6/L4 delegation** | Child work is durable child issues with claim/cursor fan-out and state-triggered fan-in, not process-local subagent work. | **LEARN FROM** | Model delegated work as resumable task graph state. |
 | **L7** credentials | UUID refs; host-only decryption; scrubbed-env fork; host-side broker; AWS/KMS | **LEARN FROM (best of 3)** | The whole credential-never-travels posture; push the agent path toward the broker too. |
 | **L8** channels + inbox | Threads-as-bus; derived inbox + timestamp-versioned dismissal — but ephemeral in-process events, **no normalizer** | **MIXED** | Take the inbox pattern; don't model v3's event spine on the in-memory emitter. |
+| **L8 observability streams** | Durable `heartbeat_run_events` and NDJSON logs feed live WS/polling UI; process-local live events are only invalidation. | **LEARN FROM** | Durable replay cursor first, live push second. |
 | **L9** wait + correlation | Durable wakeup rows + `(agentId, issueId)` key + two-level coalescing — but **exact/internal only, no fuzzy** | **LEARN FROM** | The durable coalescing/correlation engine; add fuzzy external correlation v3 needs. |
 | **L10** gatekeeper/federation | `OPERATION_CAPABILITIES` + install+runtime validation + scoped invoker + per-plugin DB namespace | **LEARN FROM (best of 3)** | The capability map + unavoidable scoped invoker. |
+| **L10 provider contracts** | Manifest + validator + SDK + out-of-process JSON-RPC are strong; hardcoded adapter maps and duplicated schemas create drift risk. | **LEARN/AVOID** | Use shared/generated contracts and golden compatibility tests; avoid scattered adapter-type branching. |
 | **L11** registry / memory | Strong durable registry; **memory is an explicit anti-goal** | **LEARN registry, ORTHOGONAL memory** | The per-company registry + config biography; memory punted to plugins. |
+| **L11 snapshots** | Skills, instruction bundles, document revisions, and anchors are distinct persistence classes with provenance. | **LEARN FROM** | Use quote/prefix/suffix anchor snapshots for context citations; do not store only byte offsets. |
 | **L12** metacognition | Heuristic stuck-work detection → review issue; no learning | **ORTHOGONAL** | The escalate-as-an-issue pattern only. |
 | **L13** trust | Trust-by-merge+intersect → preset+boundary → authz pre-check → runtime containment | **LEARN FROM** | Trust as a gate input + mandatory sandbox/isolation on low trust. |
+| **Operator UX** | Runs are inspectable/cancellable/retryable, with log pagination, WS+poll fallback, activity links, budget enforcement, and health/admin guardrails. | **LEARN FROM** | Treat control loops and observability as product contracts, not dashboard decoration. |
 | **L14** org-scale | Company = tenant + portable unit; secret-scrubbing export + org-chart README | **LEARN FROM** | Portable-org export with secret-as-requirement; centralize tenant scoping (Paperclip is per-query). |
 
 ## Three reconsiderations Paperclip forces
