@@ -537,6 +537,13 @@ are its external evidence.
   load-bearing?" ablation mechanism. And the survey promotes **Observability to a first-class layer with
   cost tracking as an output** (§7) — v3 has only a cross-cutting observe-seam, no home for cost/trace as
   operational outputs. Both are v3-must-design (see §9 reconsiderations).
+- **NEW (second-pass sweep, §10): internal-event delivery durability + the substrate question.** The L4
+  fan-in design corners *creation/correlation* but not the **durability of internal-event delivery** — a
+  created-but-undelivered `CHILD_LIFECYCLE` wake re-parks the parent forever (omnigent's sharpest live
+  failure); v3 must deliver internal events at-least-once with retry + a deliverability timeout (§10.1).
+  And **"which substrate"** is an unexamined default — symphony erases hand-built concurrency control by
+  running on BEAM; the whole §4 matrix silently assumes Node/TS-on-Postgres, and that choice deserves an
+  explicit, evidence-based answer rather than an implicit one (§10.3).
 
 **Recommended next step:** channel the §4 matrix + §5 mapping into the convergence build —
 specifically, fold the resolved items into `approach.md`'s level notes and realize the
@@ -771,6 +778,258 @@ are the two things v3 should say loudest.
 
 ---
 
+## 10. Addendum — the second-pass delta sweep
+
+An independent 10-lens *second pass* was run over **all twelve** studies. §1–§9 above were written from the
+*first* pass. This section folds back only the second-pass findings that **move a cross-study conclusion**
+— it does not re-summarize the deltas, and it deliberately leaves the original first-pass matrix rows (§4)
+untouched as the record, layering the sharpenings on top with explicit cross-references. The signal that
+earned a finding its place here is **convergence**: most of the load-bearing items are points where *two or
+more* studies independently sharpened the same conclusion. §10.1–§10.3 fold the first eight studies
+(omnigent, symphony, paperclip, dbos, hermes, superpowers, gstack, gastown); **§10.4** folds the round-two
+pass over the final four (vibe-kanban, honcho, temporal, langgraph), which produced the corpus's single
+strongest *new* theme — the identity/durability decomposition.
+
+### 10.1 Convergent sharpenings (≥2 studies independently)
+
+- **The event model is under-specified: delivery durability + one unified model** *(omnigent, gastown)*.
+  The §4 L4 matrix models fan-in *creation/correlation* (slot + barrier + partition) but never the
+  **durability of internal-event *delivery***: omnigent's single most safety-critical live failure is a
+  `CHILD_LIFECYCLE` wake that is created-but-not-delivered → the parent re-parks forever. Gastown shows the
+  dual disease from the other side — *three overlapping* event/trigger systems (capacity dispatch, convoy
+  DAG, filesystem channel-triggers, flocked audit log) accreted with no unified model. **Adopt:** v3 needs
+  **one** internal event model with explicit durability tiers, trigger semantics, and a correlation id
+  (`run.id`), and internal kernel events must be delivered **at-least-once with retry + a deliverability
+  timeout** — delivery gets the same rigor as creation. *(Sharpens §3.3 / L4 "Adopt"; flips L4 "Open" from
+  "—" to: internal-event-delivery durability is the residual L4 edge.)*
+
+- **Recovery is typed data, not one `failed` bucket** *(paperclip, hermes)*. The §4 L0d row only states the
+  *negative* ("reject mark-failed-as-only-recovery"). Both second passes supply the *positive*: paperclip
+  distinguishes ~8 recovery classes (zombie / process-loss / silent-live / success-without-disposition /
+  stale-lock / transient-upstream / max-turn / intentional-pause), each routing different
+  retry/handoff/pause/human-review behavior; hermes frames it as an explicit **per-operation-class policy
+  table** (repair / skip / fast-forward / retry / terminalize) and adds that cooperative cancellation
+  (`Future.cancel`) is **not** a hard abort — a kernel needs a durable abort path. **Adopt into L0d:**
+  encode *recovery reason* as typed data driving a per-operation-class policy table; one global retry rule
+  (and one `failed` status) is too weak. *(Sharpens §4 L0d "Adopt"; extends gastown's §8 binary
+  restart-vs-mark-failed into a policy-matrix axis.)*
+
+- **Ownership-claim ≠ live-reachability; the lease is one (claim + heartbeat + reclaim) contract**
+  *(omnigent, hermes, gastown)*. §2 Bet 2 reserves the fencing token for multi-step leases but never states
+  the contract shape. Three studies converge: omnigent binds a durable `runner_id` via a `WHERE runner_id
+  IS NULL` CAS (the leaderless analogue of Temporal's lease), **orthogonal** to heartbeat liveness — so
+  dispatch distinguishes *conflict* (no owner bound) from *unavailable* (owner offline); hermes models the
+  lease as one contract proven by **matching a claim token on renewal**, with the live concurrency cap
+  counting *running* work not spawn budget; gastown shows the failure mode — a cross-process
+  read-modify-write needs a lock around the **whole** cycle, and PID-only stale-lock detection is too weak.
+  **Adopt:** model the multi-step lease as one claim+heartbeat+reclaim contract with a renewal token;
+  separate durable ownership from live reachability; **reject** file-locks, process-local running-sets, and
+  any fail-open lock as correctness mechanisms. *(Sharpens §2 Bet 2 + §4 L0d/L6.)*
+
+- **Fan-in must be durable state — and context-injection is not a gate** *(paperclip, hermes)*. The
+  corpus's biggest open question (§3.3) gets two sharpenings. Paperclip is the **durable** instance the
+  pattern lacked: fan-out writes a claim/fingerprint decomposition row + child issues, and fan-in is a
+  **state predicate over committed child rows** (parent wakes only when every child is `done`/`cancelled`),
+  not an in-process subagent handle. Hermes supplies the **named anti-pattern**: its cron `context_from`
+  injects the predecessor's latest output into the prompt but is *not* a dependency gate — **context-
+  injection masquerading as fan-in** is the trap; a real join needs a barrier on identity (LangGraph's
+  `NamedBarrierValue`), not output-passing. *(Sharpens §3.3: add paperclip as the durable reference + the
+  context-injection-is-not-a-barrier AVOID.)*
+
+- **The observe-seam is three media; never use the live cursor as the replay cursor** *(paperclip, hermes,
+  gstack, gastown — four-study convergence)*. The cross-cutting observe-seam row adopts vibe-kanban's
+  `MsgStore` but understates the durable/live split. Convergence: paperclip — a durable per-run **sequenced**
+  event stream is the replay cursor; the process-local live envelope is acceleration/invalidation only
+  (never use the live id as a replay cursor). Hermes — **three distinct event types** (inbound normalized
+  command · internal durable op-event · outbound presentation/progress) must not be one type, and the
+  correlation oracle must stay free of platform-routing exceptions (reinforces L9). Gstack — **three media**
+  (in-memory live ring-buffer/cursorable-SSE with monotonic id + `after` cursor + explicit gap event ·
+  durable replayable lifecycle events · append-only JSONL forensic audit); the ring buffer is explicitly
+  **not** the replay log. Gastown — the same three planes (operational / disaster-ledger / observable-events)
+  must be distinct stores, not one store pretending to be all. **Adopt:** back the seam with a durable event
+  table keyed `(run_id, event_id, parent_event_id, session_id, ts, type, visibility)` — note the
+  `parent_event_id` (event-tree) and `visibility` (operator-facing vs internal) columns the in-memory
+  variants lack — and keep live-push, durable-replay-log, and forensic-audit as three media. *(Sharpens the
+  cross-cutting observe-seam row + gives §9's "promote Observability to a first-class layer" reconsideration
+  the concrete schema it lacked.)*
+
+- **The verify gate: verify at the transaction boundary, with multiple independent oracles** *(paperclip,
+  gstack)*. Paperclip is the cautionary exhibit — its README claims "atomic" budget enforcement and
+  "revisioned" config, but budgets are a preflight TOCTOU check and revisioning covers only docs/routines;
+  the *only* genuinely-atomic move is the §3.2 decision-insert-in-same-transaction. Lesson: v3's own
+  invariants (atomic commit, idempotency, audited decision) must be **verified at the transaction boundary,
+  not asserted in docs**. Gstack adds the **oracle-multiplicity** dimension: high-value artifacts should
+  carry invariant checks across *multiple independent* non-model oracles (e.g. text-extraction + pixel/
+  structural assertions), explicitly not screenshots or model judgment alone. *(Sharpens §3.5.)*
+
+- **Adapters & capabilities need a generated/shared schema + conformance tests** *(paperclip, superpowers)*.
+  Paperclip's `OPERATION_CAPABILITIES` is the §4 L10 federation reference, but the second pass shows the
+  capability/adapter knowledge is duplicated across registry, shared constants, env-support, UI maps, and
+  per-plugin registries → hand-sync **drift**. Superpowers shows the same gap from the adapter side: it has
+  no machine-readable provider capability schema, and provider contracts (session-start context injection,
+  hook message-shape, skill-routing **event-order**) are documented, not conformance-tested. **Adopt:**
+  v3's federation/capability + adapter layer should use a **single generated/shared schema** with **golden
+  compatibility / conformance tests** (including event-order regression tests), not scattered adapter-type
+  branching. *(Sharpens §4 L0c + L10.)*
+
+- **Fail-closed is a cross-layer rule, and the scan surface is *post-expansion*** *(superpowers, hermes,
+  gastown, gstack)*. Four security sharpenings converge on "fail closed, check identity, scan the right
+  surface": superpowers — cleanup/teardown must validate a durable **instance identity** (not PID/path
+  alone) and fail closed on stale/impostor metadata; an uncertain owner must **observe, not commit** (never
+  overwrite persisted state it doesn't own). Hermes — gate/scan the **assembled** context *after*
+  skill-expansion and dynamic-recall injection, not just raw user input (that is where the injection surface
+  is). Gastown — a declared sandbox mode must **error rather than silently degrade** to local execution
+  (its proxy client falls back to local exec when the proxy env is absent — an anti-pattern); its host proxy
+  is also a copyable capability boundary (mTLS CN identity, command allowlists, **server-side git-branch
+  authorization** — directly relevant to a commit-based kernel's write-scope-per-actor question). Gstack —
+  root tokens mint/revoke and never enter untrusted environments while children get per-spawn **scoped**
+  tokens, and external/browser-derived context packets need a **content-security** layer (injection
+  sanitizing, exfil-domain blocking) distinct from transport auth. *(Sharpens §4 L0e + L7 + L2; gives the
+  per-actor write-scope question a concrete reference.)*
+
+### 10.2 Precision correction to a central bet
+
+- **DBOS exactly-once is two-layered — don't over-claim it at the *effect* level** *(dbos)*. §2 Bet 1 credits
+  DBOS with flat "exactly-once via step-memoization." The second pass corrects: `operation_outputs` memoizes
+  orchestration steps (replay-safe **orchestration**), but true exactly-once **effects** require the side
+  effect *and* its checkpoint to co-commit in **one** transaction (DBOS's datasource-local
+  `transaction_completion`). A generic step is **not** atomic with its side effect. v3 must claim
+  exactly-once *effects* only for a provider that co-commits effect + checkpoint; otherwise it is
+  exactly-once *orchestration* with at-least-once effects. The same pass adds a leaderless-dispatch invariant
+  the synthesis omitted: a transition from available→claimed must **dispatch in the same local control path**
+  (or persist a recoverable handoff / revert) before returning — "claim many, dispatch later" orphans work
+  (a real DBOS `wfqueue` bug). And idempotency is **one mechanism over four keyed contracts** (whole-run /
+  step+name-drift / queue-dedup / message-delivery) — specs/tests must name *which* key layer a change
+  touches. *(Sharpens §2 Bet 1 + §3.1/§3.4 + §4 L6.)*
+
+### 10.3 Singletons worth recording
+
+- **Substrate is an unexamined default, not a settled choice** *(symphony)* — symphony ships a working
+  orchestrator with *zero* concurrency-control code because BEAM serializes mutations and supervises crashes
+  natively. The whole §4 matrix silently assumes a Node/TS-on-Postgres substrate that hand-builds mailboxes,
+  role→actor dispatch, and version guards. Not a recommendation to adopt OTP — a flag that **"which
+  substrate" deserves an explicit, evidence-based answer** rather than an implicit default. *(New §7 open
+  item.)*
+- **The fork-ownership rule + named checkpoint scope** *(omnigent)* — operationalizes gastown's §8
+  Identity/Sandbox/Session split: a fork copies replayable history + portable context but must **not** copy
+  live-ownership facts (`external_session_id`, `workspace`, `git_branch`) — the new instance re-acquires its
+  own Sandbox/Session; and checkpoint/approval **scope** (run / session-tree / user-day / op) must be named
+  explicitly. *(Sharpens §8 L0b.)*
+- **Five-record separation + two-phase lock acquisition** *(paperclip)* — "durable kernel" ≠ "one durable
+  table": notification-intent / execution-run / issue-lock / runtime-session / durable-log-stream are five
+  records with distinct failure modes; and ownership is acquired in two phases (atomic run-claim
+  `queued→running` *before* binding the durable work-lock) so a queued-but-never-started run can't hold work
+  hostage. *(Sharpens §4 L0a.)*
+
+### 10.4 Round-two deltas — the final four studies (vibe-kanban, honcho, temporal, langgraph)
+
+The round-two pass over the four previously-undeltaed studies produced the corpus's strongest *new*
+cross-study theme plus several sharp refinements. None overturned a bet; the headline (identity
+decomposition) is genuinely new.
+
+- **The identity/durability decomposition — do NOT collapse distinct durable identities into one "run
+  state"** *(langgraph, temporal, paperclip §10.3, honcho — four-study convergence; the strongest new
+  theme)*. LangGraph proves **five** distinct durable identities — timeline (`thread_id`), attempt (`run`),
+  state-point (`checkpoint`), task-scoped idempotency record (`pending write`), cross-thread memory
+  (`store`) — *and* four distinct runtime ports (context / state / config / store) that must not silently
+  substitute for each other. Temporal adds that the **current-execution pointer is a separate mutable
+  pointer from the durable history row** (write modes brand-new / update-current / bypass / ignore-current):
+  once reruns/forks exist, *instance identity is a pointer, not a row*. Temporal also separates **three
+  context-durability classes** — durable transcript truth / queryable projections (memo, search attrs) /
+  runtime in-flight registries (query waiters, in-flight updates) — where a live operation is
+  registry-backed while pending and *graduates* to history-backed on completion. Honcho shows the dual
+  discipline: name **one** correlation/partition key (`work_unit_key`) in the task spec itself, so
+  idempotency-dedupe, queue-ownership, operator-status, and fan-in all speak one domain language. **Adopt:**
+  v3 must keep timeline / attempt / commit / recorded-effect / long-term-memory as distinct durable
+  identities (the idempotency ledger is *task-scoped*, not attempt- or thread-scoped), keep the
+  current-run *pointer* separate from the durable instance *row*, and name the correlation key in the task
+  contract rather than synthesizing it per-subsystem. *(Sharpens §4 L0a/L0b; generalizes §10.3's paperclip
+  five-record singleton into a four-study theme.)*
+
+- **Fan-out is identity-preserving; the slot generalizes to a three-record deferred-correlate primitive**
+  *(langgraph, temporal)*. The synthesis's §3.3 AVOID ("anonymous reduction loses child→result identity")
+  is real but the loss is **purely a join-side choice**: LangGraph's `Send` is a durable write carrying a
+  deterministic `task_id`/`path`/`checkpoint_ns`, so fan-*out* is identity-preserving — v3 keeps that spawn
+  id and carries it through the barrier rather than reducing into an anonymous aggregate. Temporal
+  generalizes Temporal's own slot (§3.3) into *the* universal primitive: every deferred-correlate operation
+  (child start, activity schedule, external signal, retry) is **three records** — (a) the durable domain
+  fact, (b) a pending record keyed by the issued event-id/request-id (this **is** the authorization slot),
+  (c) a transfer/timer task that merely drives delivery. Correlation-is-authorization lives in (b);
+  delivery durability lives in (c). *(Sharpens §3.3 — the corpus's most-open question.)*
+
+- **Merge/reducer laws are unproven even in the closest analogue — type them or route to explicit conflict
+  states** *(langgraph)*. The §2 validation rested on LangGraph's superstep-commit + reducer model, but the
+  second pass shows LangGraph does **not** prove associativity/commutativity for user reducers — order
+  invariance is a documented-but-unenforced contract, safe only because it is single-writer. In v3's
+  *leaderless* kernel, merge order is genuinely nondeterministic, so v3 must either make reducer laws
+  typed/testable or **route non-commutative merges into explicit conflict states** — never rely on
+  arrival-order accidents. *(Sharpens §2 Bet 2 + §3.3; a real caveat on the validation, not just a witness.)*
+
+- **The ownership decomposition: three axes, and the fence must be an inline write-predicate** *(temporal)*.
+  §2 Bet 2 treats ownership as one axis (per-instance CAS / the fencing token). Temporal's second pass
+  separates **three**: instance/history ownership, dispatch-queue ownership (its own range-ID lease +
+  read/write partition split), and sticky actor affinity — independent decisions, not one lease. And the
+  real fence is the `rangeID` check **composed inline into the state-mutating write transaction**; a
+  separate "am I still owner?" preflight is theater (the SQL `AssertShardOwnership` can be a no-op).
+  **Adopt:** keep the conceptual three-axis split even though v3 wants none of the partitioning, and make
+  any lease/ownership check an *inline predicate of the mutating write*, never a preflight. *(Sharpens §2
+  Bet 2 + the §10.1 lease cluster.)*
+
+- **The aggregate-scoped lock backed by a uniqueness invariant** *(honcho)*. Honcho assigns linear
+  per-session sequence numbers by taking a `pg_advisory_xact_lock(workspace, session)` and enforcing DB
+  uniqueness on `(workspace, session, seq)`: **lock the aggregate, not the world, and back the lock with a
+  uniqueness invariant** so the sequence stays correct even if the lock is bypassed. This is the concrete
+  per-aggregate ordering primitive the leaderless kernel's event-numbering needs. *(Sharpens §4 L0a.)*
+
+- **Authority must equal the *checked* authority; the four-input decision shape** *(vibe-kanban, temporal)*.
+  Vibe-kanban's `ApprovalResponse` DTO carries a `process_id`, but `respond()` authorizes purely by
+  `approval_id` map-removal — the recorded authority is richer than the checked authority. Bind the durable
+  decision row to `(approval_id, process_id, actor_id)` so they are equal. Temporal supplies the general
+  shape: an authorization decision separates **four inputs** — action (API name), target resource
+  (namespace/endpoint), caller claims (mapped roles), transport trust (TLS for bearer) — and token-derived
+  identity **cannot** be overridden by request-body fields, with cross-resource ops getting a second
+  target-side check. *(Sharpens §3.2 + §4 L3; the only structured authority model in the corpus.)*
+
+- **Smaller round-two sharpenings** *(bundle)*: **control plane ≠ state plane** (langgraph — lifecycle
+  commands, approvals, resume inputs, child-routing are typed `Command` envelopes with explicit target
+  scope incl. cross-boundary parent targeting, never generic state patches; adopt its persisted *id-keyed*
+  gate identity + reserved system keyspace `__interrupt__`/`__resume__` even while replacing its unaudited
+  resume value with an audited record → §4 L3). **The replay→live handoff needs an explicit
+  "snapshot-complete" marker** (vibe-kanban's `LogMsg::Ready`) so clients don't infer readiness from timing
+  — pair it with the in-band terminator so both stream edges are typed signals (→ observe-seam). **L6 timer
+  refinement** (temporal — don't materialize every conceptual timer edge; store waiting *intent* in state
+  and emit only the earliest next wake-up for a family of deadlines, using status bits to dedupe → §4 L6).
+  **Adapter discipline must be *uniform*** (honcho — a clean `ProviderBackend` LLM seam alongside hardcoded
+  vector-store/embedding/webhook globals proves the lesson is not "add adapters" but "enforce the adapter
+  pattern at *every* volatile boundary" → §10.1 adapter theme).
+
+- **Round-two confirming witnesses** (no new text needed): all four studies independently re-confirmed the
+  §10.1 themes — recovery-as-typed-data (vibe-kanban's Killed≠Failed≠Completed + two-phase graceful
+  shutdown), event-delivery durability (honcho's outbox gap *before* the queue; webhooks-given-less-rigor-
+  than-telemetry-in-one-codebase), the three-media observe-seam (temporal's metadata-only history notifier;
+  honcho's SSE-is-chat-UX-not-an-observe-seam; langgraph's seq-not-timestamp typed projections),
+  transaction-boundary verification (langgraph's publish-barrier: a checkpoint must not be visible before
+  its writes are durable; temporal's `OperationPossiblySucceeded` ambiguous-commit type), and
+  adapter-conformance (langgraph's shipped checkpointer conformance suite; the recurring "generated artifact
+  without a CI drift gate" gap). The convergence is now corpus-wide.
+
+### The §10 throughline
+
+The second pass — across all twelve studies — moved **no** first-pass conclusion and overturned **neither**
+central bet — it *sharpened*, and at one point added a genuinely new theme. The highest-value additions are
+convergent: the observe-seam three-media split and the ownership-lease contract each came from 3–4 studies
+independently, and the round-two **identity/durability decomposition** (don't collapse timeline / attempt /
+commit / effect / memory into one "run state") is a four-study theme the first pass never crystallized. The
+one genuine correction (DBOS exactly-once is orchestration-level unless effects co-commit) tightens a claim
+the synthesis risked over-stating, and one round-two caveat (LangGraph never proves reducer commutativity —
+unsafe to assume in a *leaderless* kernel) flags a real obligation. Net: the spine in §1–§9 holds; §10 adds
+the operational-grade detail — the identity decomposition, event-delivery durability, typed recovery, the
+inline-fence lease contract, identity-preserving durable fan-in, the three-media observe-seam,
+transaction-boundary verification, generated adapter schemas, and fail-closed-by-default — that a *kernel*,
+as opposed to a research sketch, has to get right.
+
+---
+
 ## Caveats
 
 - **This is a meta-layer, not a re-summary.** Each claim here is backed by a specific study's
@@ -787,3 +1046,9 @@ are the two things v3 should say loudest.
   grounding; §9 distils an *academic taxonomy* — it contributes boundaries and vocabulary, not mechanisms.
   Cite it for *where a concern lives* and *whether the field has solved it*, never for an implementation
   choice (every mechanism-level claim in §9 is imported from studies 1–12).
+- **§10 is a second-pass overlay, not a rewrite.** §1–§9 are the first-pass record; §10 folds back an
+  independent 10-lens second pass over **all 12** studies (§10.1–§10.3 = the first eight; §10.4 = the
+  round-two pass over vibe-kanban / honcho / temporal / langgraph), keeping the original §4 matrix rows
+  intact and layering the convergent sharpenings on top with cross-references. It moved no first-pass
+  conclusion and overturned neither central bet — read it as the operational-grade detail on top of the
+  spine, and follow the `(Sharpens §X)` pointers to see where each lands.
