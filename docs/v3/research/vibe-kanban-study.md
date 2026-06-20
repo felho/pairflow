@@ -45,12 +45,14 @@ Sixth in a series. Read alongside:
 - [`dbos-study.md`](dbos-study.md) — the canonical L0a reference; one primitive (deterministic id + `INSERT … ON CONFLICT` + memoized replay) unifies idempotency/spawn/scheduling/recovery.
 - [`hermes-agent-study.md`](hermes-agent-study.md) — channel/memory/skills reference, kernel anti-example; "one central contract, N decentralized implementations, best-effort guarantees."
 
-> Method: seven parallel sub-agent analyses, each mapping one slice onto specific v3
-> levels, with `file:line` citations relative to the repo root. The codebase is large;
-> each agent read 400–700 lines of the most load-bearing files (`crates/db/migrations/*`,
-> `crates/executors/src/{executors,actions,logs}`, `crates/utils/src/msg_store.rs`,
-> `crates/services/src/services/{container,approvals}.rs`, `crates/relay-*`, the React
-> board/review components). One agent surfaced a late schema refactor
+> Method: the original study used seven parallel sub-agent analyses, each mapping one
+> slice onto specific v3 levels, with `file:line` citations relative to the repo root.
+> A later second-pass audit used ten fresh source-only lenses before rereading this
+> report: durable state, lifecycle/recovery, concurrency/ownership, runtime adapters,
+> policy/security, fan-out/scheduling, events/streaming, memory/context, operator UX,
+> and modularity/extensibility. The codebase is large; agents read the most
+> load-bearing schema, service, executor, relay, event-stream, and React workspace files.
+> One original agent surfaced a late schema refactor
 > (`20251216142123_refactor_task_attempts_to_workspaces_sessions.sql`) that renamed
 > `task_attempts → workspaces` and split out `sessions` + `coding_agent_turns`; the
 > findings below reflect the current model, not the original `init.sql`.
@@ -116,6 +118,77 @@ attributed `issue_execution_decisions` row. v3's L3 must make the audited decisi
 kernel primitive.
 
 ---
+
+## Second-Pass Audit Deltas
+
+The ten-lens second pass did **not** overturn the core verdicts above. It did add several
+precision points that matter for v3 design:
+
+1. **Lifecycle is more nuanced than "failed or completed."** `ExecutionProcessStatus`
+   includes a distinct `Killed` state (`crates/db/src/models/execution_process.rs:43-47`).
+   The older service-level orphan sweep marks abandoned rows `Failed`
+   (`crates/services/src/services/container.rs:272-326`), but the local deployment startup
+   path actively kills remaining running processes as `Killed`
+   (`crates/local-deployment/src/container.rs:1603-1624`). Manual stop is a two-phase
+   shutdown: mark completion, cancel, wait up to 5s, then force-kill the process group
+   (`crates/local-deployment/src/container.rs:1405-1452`). v3 should keep these as separate
+   terminal meanings: "the agent failed" and "the operator/runtime stopped it" are not the
+   same fact.
+
+2. **The follow-up queue is a UX queue, not durable scheduling.** Queued follow-ups live in
+   an in-memory `DashMap`, one queued message per session
+   (`crates/services/src/services/queued_message.rs:31-69`). The exit monitor consumes the
+   queue only after a successful process, discards it after `Failed`/`Killed`, and then
+   finalizes (`crates/local-deployment/src/container.rs:619-665`). This strengthens the L4
+   warning: Vibe Kanban has a nice serialized follow-up UX, but v3 must not treat that as a
+   scheduler primitive.
+
+3. **Worktree ownership has a real single-process lock, but not a distributed lease.** The
+   worktree manager serializes create/recreate by path with a global per-worktree
+   `tokio::sync::Mutex` and rechecks under the lock
+   (`crates/services/src/services/worktree_manager.rs:15-107`). That is useful for a desktop
+   local runtime, but it is not a cross-process or cross-node claim. v3's runtime handle
+   model needs a durable lease/CAS if multiple controllers can touch the same workspace.
+
+4. **The live entity streams have a second useful pattern besides `MsgStore`: snapshot,
+   `Ready`, then patches.** The event stream builds an initial JSON-Patch snapshot, emits
+   `LogMsg::Ready`, then switches to live patches
+   (`crates/services/src/services/events/streams.rs:40-141,176-222,246-314`). The frontend
+   treats `Ready` and clean `finished` as protocol markers, reconnecting only on unexpected
+   close. v3 should copy the explicit "initial state is complete now" marker, not leave
+   clients to infer readiness from timing.
+
+5. **Vibe Kanban has no global event cursor.** JSON-Patch streams are excellent for current
+   observers, but there is no durable monotonic event sequence/resume cursor for entity
+   streams. Slow clients either reconnect and resnapshot or, for raw logs, rely on the
+   bounded `MsgStore`/persisted-log path. v3's observe seam should combine Vibe Kanban's
+   snapshot-plus-tail ergonomics with an operation-log cursor when the event matters to the
+   kernel.
+
+6. **Approval identity is weaker than the DTO suggests.** `ApprovalResponse` carries an
+   `execution_process_id` (`crates/utils/src/approvals.rs:74-77`), and the route forwards
+   the whole body (`crates/server/src/routes/approvals.rs:24-40`), but
+   `Approvals::respond` resolves by approval id and removes the pending waiter from the
+   map (`crates/services/src/services/approvals.rs:143-166`). The response's process id is
+   useful telemetry context, not the authority check. v3 should bind approval response
+   authority to `(approval_id, process_id, actor_id)` in the durable decision row.
+
+7. **Operator observability is richer than the first summary emphasized.** The UI does not
+   just show logs; it protects against stale log streams, replaces history on reconnect,
+   virtualizes large logs, disables auto-scroll when the operator scrolls back, renders
+   ANSI/stdout/stderr/URLs/search highlights, and streams diffs with large-content omit
+   policy. The broader lesson is that v3's operator console needs explicit degraded states
+   and size policy, not only a backend stream.
+
+8. **The modularity picture is strong at provider boundaries and weak at shared/frontend
+   ownership boundaries.** Good seams: `StandardCodingAgentExecutor`, explicit
+   `BaseAgentCapability`, `GitHostProvider`, relay transport traits, and generated Rust→TS
+   contracts (`crates/executors/src/executors/mod.rs:58-177`,
+   `crates/git-host/src/lib.rs:19-54`). Weak seams: central provider matches multiply, Azure
+   lacks `list_open_prs` support (`crates/git-host/src/azure/mod.rs:250-255`), the type
+   generator hand-lists many internal modules, and the frontend `shared` area is a broad
+   dependency sink. v3 should keep explicit provider capability matrices and avoid letting
+   "shared" become the default architecture.
 
 ## L0a/L0b — Kernel & Data Model
 
@@ -873,10 +946,11 @@ adaptation (TOML vs JSON); worktree/git reconciliation mechanics.
 
 ## Caveats
 
-- **Scale forced sampling.** ~109K LOC Rust across 33 crates + ~110K LOC TS; the seven agents read the
-  load-bearing files (~400–700 lines each), not the whole tree. Contract-level findings (the traits, the schema,
-  the `MsgStore` mechanism, the approval path) are high-confidence; "there is no X" claims are grep-backed across
-  `crates/` but a large `crates/remote` (24K) and the React frontend leave room for a missed corner.
+- **Scale forced sampling.** ~109K LOC Rust across 33 crates + ~110K LOC TS; the original seven agents and
+  later ten-lens second-pass audit read the load-bearing files, not the whole tree. Contract-level findings
+  (the traits, the schema, the `MsgStore` mechanism, the approval path) are high-confidence; "there is no X"
+  claims are grep-backed across `crates/` but a large `crates/remote` (24K) and the React frontend leave room
+  for a missed corner.
 - **A heavily-refactored, sunsetting codebase.** The schema was refactored mid-life (`task_attempts → workspaces +
   sessions`), and the README announces a shutdown. Migration filenames occasionally lie (`masked_by_restore` → the
   actual column is `dropped`). Line numbers are a snapshot at `4deb7ec`. The product is mature and the patterns are

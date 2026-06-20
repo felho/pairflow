@@ -41,10 +41,15 @@ Tenth in a series. Read alongside the load-bearing prior studies:
 - [`superpowers-study.md`](superpowers-study.md) — the verification gate; partition-then-verify fan-in; file-handle ContextPacket.
 - (also: omnigent / symphony / paperclip / hermes / honcho.)
 
-> Method: six parallel sub-agent analyses with `file:line` citations, the central instruction
-> being a precise comparison of LangGraph's orchestration to v3's kernel and to Temporal/DBOS.
-> Slices: the Pregel execution model; the channel/state model; checkpointing/time-travel;
-> interrupts (L3); subgraphs/Send/functional-API (L4); replay/recovery/determinism semantics.
+> Method: original six parallel sub-agent analyses with `file:line` citations, the central
+> instruction being a precise comparison of LangGraph's orchestration to v3's kernel and to
+> Temporal/DBOS, followed by a later ten-lens source-only second-pass audit before re-reading
+> this report. The original slices were the Pregel execution model; the channel/state model;
+> checkpointing/time-travel; interrupts (L3); subgraphs/Send/functional-API (L4);
+> replay/recovery/determinism semantics. The second pass widened the audit across durable
+> state/checkpoint/store, lifecycle/recovery, concurrency/ownership, runtime/adapters,
+> policy/security, scheduling/fan-in, streaming/observability, memory/context, operator UX,
+> and modularity/extensibility.
 
 ## Executive Summary
 
@@ -115,6 +120,118 @@ The synthesis line for the series, lightly extended:
 > single-process single-writer), MANDATORY record-not-replay (every LLM call an atomic recorded commit,
 > not an opt-in `@task`), an audited human-decision record (not a replayed resume value), and an
 > idempotency ledger as the durability truth (instead of a full snapshot per superstep).**
+
+---
+
+## Second-Pass Audit Deltas
+
+The second-pass audit did not change the report's main conclusion: LangGraph remains the
+closest orchestration analogue and the strongest validation of v3's commit-based kernel
+shape. It did add important precision around the operational and extension surfaces that the
+first pass intentionally skimmed.
+
+1. **Checkpoint visibility has a stricter barrier than "write checkpoint after step."** The
+   first pass identifies pending writes as the idempotency ledger; the second pass sharpened
+   the ordering invariant: LangGraph waits for prior checkpoint saves and pending/delta write
+   futures before publishing the next checkpoint. A checkpoint must not become visible before
+   the writes/blobs it references are durable, or ancestor/history walks can observe a partial
+   state. v3 should encode the same rule for transcript/state/effect commits.
+
+2. **Thread, run, checkpoint, pending write, and store are five separate identities.** The
+   durable timeline is keyed by `thread_id`; a run is an execution attempt; a checkpoint is a
+   parent-linked state point; pending writes are task-scoped idempotency records; the Store is
+   cross-thread memory keyed by namespace/key. v3 should avoid collapsing bubble/session,
+   attempt, checkpoint, recorded effect, and long-term memory into one "run state" concept.
+
+3. **Lifecycle is status + control writes + checkpoint, not a single enum.** LangGraph has
+   explicit loop statuses (`input`, `pending`, `done`, `draining`, interrupt states,
+   `out_of_steps`), while interrupts/resumes/errors are persisted as control writes and
+   checkpointed separately. This is a useful v3 model: lifecycle state should describe where
+   the engine is, while durable control records explain why it can resume, retry, or await
+   input.
+
+4. **Interrupt resume has a stronger authority contract than the first pass described, even
+   though it remains unaudited.** `Command(resume=...)` requires a checkpointer; multiple
+   pending interrupts require explicit interrupt IDs; interrupt IDs are derived from namespace
+   hashing; reserved keys like `__interrupt__`, `__resume__`, `__pregel_*`, `checkpoint_*`,
+   and `thread_id` separate system control from user metadata. v3 should copy the persisted,
+   id-keyed gate identity and reserved keyspace, while still rejecting LangGraph's unaudited
+   replayed resume value as the final human-gate model.
+
+5. **`Command` is a control envelope, not a state update.** LangGraph separates `update`,
+   `resume`, `goto`, and parent-graph targeting; parent commands intentionally bubble across
+   subgraph boundaries. Pairflow should treat lifecycle commands, approvals, resume inputs,
+   and child-routing requests as typed control envelopes with target scope, not as generic
+   state patches.
+
+6. **Dynamic fan-out has two distinct primitives: `Send` packets and barrier/reducer join
+   state.** The first pass covered anonymous reducer fan-in and `NamedBarrierValue`; the
+   second pass adds that `Send` is not direct execution but a write to a reserved `TASKS`
+   channel, then materialized as `PUSH` tasks with deterministic `task_id`, `path`, and
+   `checkpoint_ns`. v3 should preserve this split: spawning work is a durable command/write,
+   while joining results is an explicit state/reducer/barrier choice.
+
+7. **Streaming is a typed projection layer over a raw event envelope.** LangGraph defines
+   named stream modes (`values`, `updates`, `checkpoints`, `tasks`, `debug`, `messages`,
+   `custom`), carries namespace on stream parts, and its v3 protocol uses a raw event envelope
+   with optional `seq`; timestamps are explicitly not the ordering source. Pairflow's observe
+   seam should likewise expose a stable raw event contract plus typed projections, with sequence
+   numbers for ordering and namespace as first-class data.
+
+8. **Debug output filters framework noise and sensitive config.** LangGraph debug task/checkpoint
+   payloads remove internal framework metadata while preserving user-relevant tags, and tests
+   assert that safe identifiers like thread/checkpoint/run/assistant/graph propagate while
+   arbitrary nested config and API-key-like fields do not. v3 should treat debug/transcript
+   payload shaping as an API contract, not a dump of internal state.
+
+9. **Runtime context, graph state, config, and store are separate dependencies.** LangGraph's
+   `context_schema` replaces the older `config_schema` for run-scoped immutable context;
+   `Runtime` injects context, store, stream writer, previous value, and execution metadata
+   while explicitly not being the config; Store is namespace/key cross-thread memory, not
+   checkpoint state. Pairflow's execution context should mirror that separation so user
+   configuration, runtime ports, durable state, and long-term memory cannot silently substitute
+   for each other.
+
+10. **Reducer determinism is a real contract gap.** LangGraph documents arbitrary update
+    order and requires deterministic/batching-invariant reducers in some channels, but it
+    does not generally prove associativity/commutativity for user reducers. v3 should either
+    make reducer laws typed/testable or route non-commutative merges into explicit conflict
+    states instead of relying on arrival/order accidents.
+
+11. **Operator UX is much richer than the first pass captured.** `langgraph up` prints concrete
+    API/docs/Studio URLs; deploy commands can emit both human text and JSON-lines events
+    (`step`, `info`, `warn`, `status_change`, `heartbeat`, `result`); long-running commands
+    report elapsed time and heartbeat; failures surface last relevant build log lines; logs
+    have type/revision/level/query/time-window/follow controls. Pairflow's bubble lifecycle
+    should offer machine-readable event output and targeted last-error context, not require
+    scraping prose or progress notes.
+
+12. **Config and version validation are operator-facing safety rails.** LangGraph validates
+    runtime versions, deprecated distributions, missing graph declarations, unknown keys with
+    suggestions, unsafe install/build command characters, and resolves compatible API versions
+    rather than blindly accepting a tag. v3 should give task/plan/progress and hook/bootstrap
+    config the same quality of diagnostics and compatibility gates.
+
+13. **Checkpoint conformance is a reusable test pattern.** LangGraph ships a conformance suite
+    for checkpoint saver implementations with base/extended capability checks, progress
+    callbacks, and reports; sync/async API parity is also tested. v3 should have equivalent
+    contract suites for state stores, effect/idempotency ledgers, lifecycle adapters, and any
+    sync/async or local/remote execution lanes.
+
+14. **Extension seams are strong where they are contract-owned, weak where convenience layers
+    collapse concepts.** Checkpoint backends live in separate packages behind
+    `BaseCheckpointSaver`; Store is batch-first; graph builder and compiled runtime are
+    separate; `StreamTransformer` has lifecycle methods and explicit mutation warnings; public
+    exports are small. Conversely, the main package depends on higher-level prebuilt/SDK
+    packages, `state.py` is a broad builder hotspot, type introspection creates implicit runtime
+    contracts, and prebuilt tool/agent code combines LangChain tools, state, store, runtime,
+    interception, validation, and error formatting. v3 should keep core ports small and avoid
+    letting convenience layers become kernel dependencies.
+
+15. **Generated/schema artifacts need drift governance.** LangGraph has a canonical CLI schema
+    source and generated JSON Schema artifact, but the second pass could not prove a CI drift
+    gate. Pairflow should use generated artifacts where they reduce contract ambiguity, but only
+    with explicit checks that source and generated output stay synchronized.
 
 ---
 
@@ -579,7 +696,9 @@ model, would only affect *when commits flush*, not actor re-execution.
 - **Two execution surfaces, one runtime.** Findings distinguish the graph DSL (node-granularity recovery, the determinism hazard)
   from the functional `@task` API (DBOS-style memoization). The hazard verdict is about the *default* graph-node path; `@task` is the
   (opt-in) mitigation — both are characterized so v3 doesn't conflate them.
-- **Focused reads on a large repo.** Six agents read the load-bearing files (`pregel/_loop.py`, `_algo.py`, `_runner.py`, `_call.py`;
-  `channels/*`; `checkpoint/base` + postgres; `types.py`). The orchestration/durability/determinism findings are high-confidence; the
-  SDK/CLI/prebuilt layers were out of scope.
+- **Focused reads on a large repo.** The original six-agent pass read the load-bearing files (`pregel/_loop.py`,
+  `_algo.py`, `_runner.py`, `_call.py`; `channels/*`; `checkpoint/base` + postgres; `types.py`). The later
+  ten-lens second pass widened coverage to lifecycle/recovery, concurrency, runtime adapters, policy/security,
+  scheduling, streaming/observability, memory/context, operator UX, and modularity. The orchestration/durability/
+  determinism findings are high-confidence; the full server implementation was still not present in this checkout.
 - **Same-recent HEAD.** Analyzed at `711b315`, pushed 2026-06-19 — an actively-developed library. Line numbers are a snapshot.

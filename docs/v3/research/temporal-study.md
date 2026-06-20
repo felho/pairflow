@@ -47,11 +47,15 @@ Eighth in a series. Read alongside:
 - [`vibe-kanban-study.md`](vibe-kanban-study.md) — human-review board; `MsgStore` observe-seam; git-anchored checkpoints; **left the L4 fan-in gap open**.
 - [`honcho-study.md`](honcho-study.md) — perspectival memory engine (L11/L12 reference); immutable `ModelConfig` (L0c); the four-project idempotency hole.
 
-> Method: seven parallel sub-agent analyses, each mapping one slice onto specific v3
-> levels, with `file:line` citations. Temporal ships excellent architecture docs
-> (`docs/architecture/*.md`) which each agent read first as authoritative, then verified
-> against the code (`service/history/{workflow,shard,queues,api}`, `service/matching/`,
-> `chasm/`).
+> Method: original seven parallel sub-agent analyses, each mapping one slice onto specific
+> v3 levels, with `file:line` citations, followed by a later ten-lens source-only
+> second-pass audit before re-reading this report. Temporal ships excellent architecture
+> docs (`docs/architecture/*.md`) which the original agents read first as authoritative,
+> then verified against the code (`service/history/{workflow,shard,queues,api}`,
+> `service/matching/`, `chasm/`). The second pass intentionally emphasized edges the
+> first pass was likely to compress: raw persistence contracts, lifecycle/recovery,
+> ownership fencing, adapter boundaries, policy/security, dispatch/fan-out,
+> history/visibility/replication streams, memory/context, operator UX, and modular seams.
 
 ## Executive Summary
 
@@ -137,6 +141,117 @@ The synthesis line for the series so far:
 > component-registry generalization + paperclip's credential broker & audit ledger + Hermes/
 > vibe-kanban/honcho's outer-layer breadth (channels, observe-seam, perspectival memory) —
 > with LLM calls modeled as recorded Activities, never replayed.**
+
+---
+
+## Second-Pass Audit Deltas
+
+The second-pass audit did not overturn the report's main recommendation. It sharpened the
+boundary between Temporal mechanisms v3 should copy and mechanisms v3 should only treat as
+scale-specific cautionary tales.
+
+1. **Current-execution identity is a separate mutable pointer, not just "the workflow row."**
+   Temporal splits append-only history nodes, derived mutable state, and the current-execution
+   pointer. The persistence contract has explicit current-workflow write modes
+   (brand-new, update-current, bypass, ignore-current) so run identity, run state, and the
+   namespace/workflow "current run" pointer can move independently. For v3 this is the missing
+   precision behind "instance identity": if retries/forks/reruns ever exist, the durable state
+   row and the user-facing current pointer must be separate concepts.
+
+2. **MutableState has an explicit state/status validator and transition-history guard.** The
+   first report correctly describes MutableState as a materialized view, but the second pass
+   found two finer recovery tools: Temporal validates workflow state/status combinations
+   (`CREATED`/`RUNNING`/`COMPLETED`/`ZOMBIE` plus close status), and stores compact transition
+   history/version metadata used to reject stale tasks. v3 should not rely only on an
+   `expected_version`; lifecycle state should have its own legal-transition contract, and
+   background tasks should carry enough causal stamp to prove they still target the right state.
+
+3. **Recovery treats uncertain commits as a first-class outcome.** Temporal has paths where a
+   persistence call may have succeeded even though the caller cannot prove it
+   (`OperationPossiblySucceeded`), and recovery/rebuild tooling assumes "retry blindly" can be
+   wrong. Pairflow's command-local persistence should model this outcome explicitly: after a
+   process crash, reconnect, or ambiguous filesystem/git boundary, the next step should
+   reconcile durable facts before issuing a second side effect.
+
+4. **The real ownership boundary is the persistence write, not membership or an assert call.**
+   The first report already recommends stealing the fencing token without leaderful sharding.
+   The correction is sharper: SQL `AssertShardOwnership` can be effectively a no-op; the true
+   fence is the `rangeID` check composed into the write transaction. If v3 adds worker leases,
+   the lease check must be inline with the state mutation, never a separate "still owner?"
+   preflight.
+
+5. **Matching has its own lease and partition policy separate from history ownership.** Beyond
+   sticky queues and sync-match, Temporal's task queue manager uses its own range-ID lease,
+   renews task-ID blocks, and separates write partition selection from read partition selection
+   (writes distributed among partitions; reads biased by outstanding poller load). v3 likely
+   does not need the partitioning, but it should keep the conceptual split: instance ownership,
+   dispatch-queue ownership, and actor affinity are three different axes.
+
+6. **Scheduling/fan-out is a three-record pattern: domain event, pending mutable-state record,
+   dispatch task.** The child-workflow section captured initiated-event fan-in, but the second
+   pass made the broader shape clearer. Activity schedules, child starts, external signals, and
+   retries all separate (a) the durable domain fact, (b) a pending record keyed by event id /
+   request id, and (c) a transfer/timer task that merely drives delivery. This is the clean v3
+   primitive for any "do this later and correlate the result" feature.
+
+7. **Timers materialize the next actionable deadline, not every conceptual timer edge.** The
+   L6 section already recommends look-ahead timers. The second pass adds that Temporal's
+   activity/user-timer machinery uses flags/status bits to avoid duplicate timer tasks and often
+   materializes only the earliest next timer for a family of deadlines. For v3, "one durable row
+   per conceptual waiting condition" may already be too much; store intent in state, emit only
+   the next necessary wake-up.
+
+8. **History observation is paginated fetch plus long-poll notification, not a durable event
+   stream.** Temporal's history notifier is in-memory pub/sub carrying "something changed"
+   metadata (workflow key, next event id, status/version history), while the actual events are
+   read from history pages. Visibility/search is a separate query/index surface updated by
+   durable visibility tasks. v3 should keep observe-streams honest: use wake notifications as
+   latency hints, but make the durable read model page/replay from committed state or transcript.
+
+9. **Visibility/search is a transactional-outbox projection with ordering hazards of its own.**
+   Temporal creates start/upsert/close visibility tasks from workflow transactions, collapses
+   redundant visibility tasks before commit, releases the mutable-state lock before calling the
+   visibility manager, and protects close-before-delete ordering so a late close cannot resurrect
+   a deleted visibility row. If v3 adds searchable run indexes, they should be treated as
+   projections with their own task queue, not inline writes sprinkled through lifecycle code.
+
+10. **Memory/context has three distinct durability classes.** Workflow history is durable truth;
+    memo/search attributes are queryable projections; query registries, update registries, and
+    request metadata are runtime/in-flight context. Temporal also makes completed update outcomes
+    history-backed while live update polling remains registry-backed. For v3 this is a useful
+    vocabulary: do not put transient agent session state, query waiters, and durable transcript
+    facts into the same "context" bucket.
+
+11. **Authorization is more structured than a namespace check.** Temporal's authorization seam
+    passes an explicit `CallTarget` containing API name, namespace, Nexus endpoint, and request;
+    JWT claims map system and namespace roles; task-token namespace enforcement prevents request
+    body namespace from overriding token-derived namespace; cross-namespace workflow operations
+    get a second target-namespace authorization check; bearer auth for remote clusters requires
+    TLS. v3's approval/authority model should preserve that shape: action, target resource,
+    caller claims, and transport trust are separate inputs to the decision.
+
+12. **Operator UX is a separate product surface.** Temporal's `tdbg` groups debug/admin commands
+    by object (`execution`, `shard`, `history-host`, `taskqueue`, `membership`, `dlq`, `schedule`,
+    `decode`), has raw history export/import with payload decode, compares cache mutable state to
+    database mutable state, gates shard task listing, and makes DLQ read/purge/merge bounded or
+    prompt-confirmed, with v2 async job tokens for long operations. Pairflow should not bury
+    destructive lifecycle/debug actions inside normal user flows; it needs an operator surface
+    with bounded commands, progress tokens, and explicit cache-vs-durable diagnostics.
+
+13. **Generated/contract-first boundaries are a real complexity reducer, but need drift gates.**
+    Temporal uses proto-owned internal service contracts and generated history client wrappers to
+    absorb repetitive routing/metrics/retry glue. The second pass also found replay-history tests
+    used as backwards-compatibility contracts for scheduler/worker-deployment logic. If v3 adopts
+    generated boundaries for lifecycle/runtime APIs, the matching requirement is CI drift checks
+    plus replay/fixture tests for state-machine migrations.
+
+14. **The modularity warning is broader than the 10K-LOC MutableState monolith.** Temporal has
+    good extension seams (worker component registration via small interfaces and DI groups,
+    HSM/CHASM registries, layered persistence factories), but also a large `admin_handler`
+    hotspot that imports many domain and infrastructure concepts. For Pairflow, the caution is
+    direct: lifecycle coordinators and CLI handlers must not become the place where state store,
+    transition policy, transcript ordering, worker routing, validation, and operator repair all
+    meet without a typed boundary.
 
 ---
 
@@ -693,10 +808,12 @@ instead of replaying); the in-memory timer queue; Build-ID routing/matching.
 
 ## Caveats
 
-- **Large codebase, focused reads.** At ~410K LOC the seven agents read the load-bearing files (the architecture
-  docs first as authoritative, then `service/history/{workflow,shard,queues,api}`, `service/matching/`, `chasm/`).
-  Contract-level findings are high-confidence; some breadth (multi-cluster replication, the full matching fairness
-  layer) was deliberately skimmed as out-of-scope.
+- **Large codebase, focused reads.** At ~410K LOC the original seven-agent pass read the load-bearing files
+  (the architecture docs first as authoritative, then `service/history/{workflow,shard,queues,api}`,
+  `service/matching/`, `chasm/`), and the later ten-lens second pass widened the audit across persistence,
+  lifecycle/recovery, ownership, adapters, policy/security, scheduling, streaming/visibility, memory/context,
+  operator UX, and modularity. Contract-level findings are high-confidence; some breadth (multi-cluster
+  replication, the full matching fairness layer) was still deliberately skimmed as out-of-scope.
 - **CHASM is mid-migration.** The findings reflect a production-but-incomplete framework (no feature flag, five
   shipping libraries, but the Workflow component is a hybrid shim and ~30 roadmap TODOs). v3 should treat CHASM as a
   strong *direction* indicator, not a finished blueprint — its unfinished edges (partial loading, speculative-transition

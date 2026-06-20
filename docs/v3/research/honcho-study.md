@@ -42,10 +42,14 @@ Seventh in a series. Read alongside:
 - [`hermes-agent-study.md`](hermes-agent-study.md) — channel/memory/skills reference; flat-Markdown profile-global memory, forked-reviewer L12; **delegated dialectic user-modeling to Honcho**.
 - [`vibe-kanban-study.md`](vibe-kanban-study.md) — human-review board; `MsgStore` observe-seam; git-anchored checkpoints; durable execution_process rows but no op-log/idempotency.
 
-> Method: six parallel sub-agent analyses, each mapping one slice onto specific v3 levels,
-> with `file:line` citations relative to the repo root. The core is compact enough that
-> each agent read the load-bearing files thoroughly (`src/models.py`, `src/deriver/*`,
-> `src/dialectic/*`, `src/dreamer/*`, `src/llm/*`, `src/crud/*`).
+> Method: the original study used six parallel sub-agent analyses, each mapping one
+> slice onto specific v3 levels, with `file:line` citations relative to the repo root.
+> A later second-pass audit used ten fresh source-only lenses before rereading this
+> report: durable state, lifecycle/recovery, concurrency/ownership, runtime adapters,
+> policy/security, fan-out/scheduling, events/streaming, memory/context, operator UX,
+> and modularity/extensibility. The core is compact enough that both passes could read
+> the load-bearing files thoroughly (`src/models.py`, `src/deriver/*`, `src/reconciler/*`,
+> `src/dialectic/*`, `src/dreamer/*`, `src/llm/*`, `src/crud/*`, SDK/CLI/MCP surfaces).
 
 ## Executive Summary
 
@@ -116,6 +120,92 @@ The synthesis line for the series so far:
 > `ModelConfig` (L0c) — with the audit ledger, the credential broker, the
 > result-correlation/fan-in, and the fuzzy-correlation layer that none of the seven got
 > fully right.**
+
+---
+
+## Second-Pass Audit Deltas
+
+The ten-lens second pass confirmed the main verdicts, but added several findings that the
+original memory-focused study underweighted:
+
+1. **Message ordering has a narrow, useful concurrency primitive.** `create_messages()` takes
+   `pg_advisory_xact_lock(hashtext(workspace), hashtext(session))` before assigning
+   `seq_in_session`, then the DB also enforces uniqueness on
+   `(workspace_name, session_name, seq_in_session)` (`src/crud/message.py:237-261`,
+   `src/models.py:258`). This is a concrete v3 pattern for linear transcript/event numbering:
+   lock the aggregate, not the world, and back the lock with a uniqueness invariant.
+
+2. **The `work_unit_key` is a domain correlation key, not just an implementation id.**
+   Honcho has explicit key constructors for representation, summary, dream, webhook,
+   deletion, and reconciler jobs (`src/utils/work_unit.py:44-71`). This sharpens the L0a/L6
+   lesson: v3 should name the partition/correlation key in the task spec itself, so dedupe,
+   queue ownership, operator status, and fan-in all speak the same domain language.
+
+3. **API-triggered background work has an outbox gap before it even reaches the queue.**
+   Message creation commits primary rows, then FastAPI `BackgroundTasks` enqueue the deriver
+   and immediate embedding work (`src/crud/message.py:308`, `src/routers/messages.py:123-147`).
+   If the process dies between commit and background enqueue, the message exists but the
+   derived work may never be scheduled. The original queue critique still stands, but v3
+   should also close this earlier boundary with same-transaction outbox writes for critical
+   derivations.
+
+4. **Security is capability-token scoped, but not actor/principal rich.** `require_auth()`
+   centralizes Bearer JWT decoding and checks admin/workspace/peer/session scopes
+   (`src/security.py:115-192`), and admin-only key creation issues explicitly scoped tokens
+   (`src/routers/keys.py:17-45`). However, disabled auth returns admin capability
+   (`src/security.py:166`), no revocation registry was found, route-level manual create checks
+   can drift, and MCP/API share the same Bearer capability without a distinct human-vs-agent
+   authority model. v3 should keep the capability hierarchy, but bind it to durable actors,
+   revocation, and tool-specific authority/confirmation policy.
+
+5. **Events are two separate systems: product webhooks and telemetry CloudEvents.** Product
+   webhooks are queued (`task_type="webhook"`) and HMAC-signed, but the payload is only
+   `{type,data,timestamp}`, with no event id, delivery attempt, retry count, or per-endpoint
+   delivery log (`src/webhooks/events.py:46-71`, `src/webhooks/webhook_delivery.py:33-94`).
+   Telemetry, by contrast, uses typed CloudEvents with deterministic ids, schema versions,
+   categories, run-id sampling, batching, shutdown flush, and Prometheus health metrics
+   (`src/telemetry/events/base.py:17-109`, `src/telemetry/emitter.py:30-339`). v3 should not
+   conflate these: lifecycle/product events need the delivery rigor that Honcho mostly gives
+   telemetry, not only best-effort webhook POSTs.
+
+6. **SSE streaming is intentionally a text-delta UX, not an observe-seam.** The dialectic
+   streaming API emits simple `data: {"delta":{"content":...},"done":false}` chunks followed
+   by `done=true` (`src/routers/peers.py:193-202`, `src/schemas/api.py:579-589`), after DB
+   preflight is closed (`src/dialectic/chat.py:103-139`). It streams only the final synthesis,
+   not tool/context events (`src/dialectic/core.py:472-511`), and has no `event:`, `id:`, retry,
+   or resume contract. Good for chat UX; insufficient for v3's durable run observation API.
+
+7. **Operator UX is stronger than the study said.** Honcho exposes queue status through API,
+   CLI, SDK, and MCP, with global and per-session counts for user-facing task types only
+   (`representation`, `summary`, `dream`) (`src/routers/workspaces.py:158-178`,
+   `src/crud/deriver.py:78-214`, `mcp/src/tools/system.ts:46-51`). The CLI is explicitly an
+   admin/debug tool, resolves config as flag -> env -> config -> default, auto-switches TTY
+   tables vs JSON, emits structured errors, and has a doctor-style check
+   (`honcho-cli/src/honcho_cli/main.py:57-87`, `honcho-cli/src/honcho_cli/output.py:35-82`,
+   `honcho-cli/src/honcho_cli/commands/setup.py:209-257`). The caveat: queue `completed`
+   is an operational count after cleanup, not an audit trail.
+
+8. **The public API boundary is clean, but SDK contracts are hand-mirrored.** Backend public
+   schemas alias external `id`/`peer_id` language away from internal `name`/`peer_name`
+   (`src/schemas/api.py:97-246`), and SDK/MCP/CLI integrate through public APIs rather than
+   backend internals (`sdks/typescript/src/api-version.ts:4`, `mcp/src/config.ts:55`,
+   `honcho-cli/src/honcho_cli/common.py:68`). But TS and Python SDK API types are manually
+   mirrored from Pydantic (`sdks/typescript/src/types/api.ts:1`,
+   `sdks/python/src/honcho/api_types.py:1`), and no in-repo OpenAPI-to-SDK generation gate was
+   found. v3 should make this either generated or CI-checked for schema drift.
+
+9. **Queue payload contracts are validated late, not fully produced as typed commands.**
+   Consumers validate Pydantic queue payloads with `extra="forbid"`
+   (`src/utils/queue_payload.py:9-44`, `src/deriver/consumer.py:63-137`), but regular and
+   upload message routes still build similar payload dicts by hand (`src/routers/messages.py:123`,
+   `src/routers/messages.py:200`). v3 should use the same typed command factory on the producer
+   side, not rely only on consumer validation.
+
+10. **The LLM seam is cleaner than adjacent seams.** `ProviderBackend` + `CompletionResult` +
+    provider-specific history adapters are good, but vector-store selection, embedding client
+    branching, and webhook delivery are more hardcoded/global-singleton shaped. The v3 lesson is
+    not just "make adapters"; it is "enforce the adapter pattern consistently at every volatile
+    boundary."
 
 ---
 
