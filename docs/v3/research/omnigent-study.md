@@ -23,11 +23,12 @@ was about *method*): Omnigent is about **substance** — a working instance of t
 actor/runtime/credential/child-instance machinery v3 models abstractly. Because
 it is a real system, its **design decisions and its scars** are both evidence.
 
-> Method: seven parallel sub-agent analyses, each mapping one slice of Omnigent
-> onto specific v3 levels, with `file:line` citations. Citations are relative to
-> the Omnigent repo root. A few deep-store paths (e.g. `stores/…`,
-> `runner/app.py`, `inner/…`) were reached by sub-search and are flagged where
-> not personally line-verified.
+> Method: first-pass seven-slice analysis plus a second, independent 10-lens pass
+> performed before rereading this report. The second pass looked specifically at
+> state ownership, lifecycle/recovery, concurrency, runtime adapters,
+> policy/security, delegation, channels/events, memory/context, operator UX, and
+> modularity. Citations are relative to the Omnigent repo root. A few deep-store
+> paths (e.g. `stores/…`, `runner/app.py`, `inner/…`) were reached by sub-search.
 
 ## Executive Summary
 
@@ -72,6 +73,18 @@ What Omnigent is **missing** that becomes a v3 *strength*:
   `{recommendation, verdict, override}` tuple*.
 - No bounded-subprocess process gate (its "process" policies are in-process
   callables) — so L2a is genuinely net-new.
+
+Second-pass refinement: Omnigent is not simply "weak on the kernel." It has a
+useful split between a durable session row, a positioned append-only item log, a
+single-writer transcript rule per harness, and transient relay indexes. v3 should
+copy the split and strengthen the missing piece: a first-class operation id and
+durable outcome row for every mutation.
+
+Second-pass refinement: Omnigent's operator surface is unusually rich for liveness
+diagnostics. It distinguishes runner-online from host-online, gives different
+recovery actions for `runner_asleep`, `host_offline`, and `local_stranded`, and
+uses push-first observability with targeted polling fallback. v3 should treat this
+as part of the lifecycle model, not merely UI polish.
 
 ---
 
@@ -493,13 +506,194 @@ untrusted-actor workflows — real-world stress tests of v3's distributed scenar
 
 ---
 
+## Second-pass deltas — what the independent 10-lens pass adds
+
+These are the additions or sharper readings from the independent pass, after
+filtering out findings already covered by the slices above.
+
+### 1. Session row, item log, and transient relay indexes are separate truths
+
+Omnigent has a stronger state split than the first pass credited. The
+`conversations` row is the session/source-of-truth row, while
+`conversation_items` is a positioned transcript log with a unique
+`(conversation_id, position)` constraint (`omnigent/db/db_models.py:236`, `:364`,
+`:452`, `:496`). Append ordering normally comes from `conversations.next_position`
+under a conversation lock, including a SQLite no-op update to force a write lock
+(`omnigent/stores/conversation_store/sqlalchemy_store.py:487`, `:1350`, `:1383`,
+`:1445`).
+
+The avoid point is that Omnigent has many local ids — `persisted_item_id`,
+`response_id`, `call_id`, `pending_id` — but no uniform operation id for every
+durable mutation (`omnigent/server/routes/sessions.py:7598`, `:16621`, `:16928`).
+v3 should copy the state/log split and add a kernel-level `operation_id` with a
+stored outcome.
+
+### 2. Single-writer ownership is explicit per harness
+
+Omnigent does not let every path write every transcript item. Non-native paths
+persist-before-forward, while native terminal paths rely on the runtime transcript
+forwarder as the durable writer (`omnigent/server/routes/sessions.py:7490`,
+`:7598`, `:7629`, `:7667`, `:7687`, `:7704`). That is a useful invariant: "who
+writes durable history" is decided by harness mode, not by retry happenstance.
+
+The same idea appears in the one-way native session latch:
+`external_session_id` is idempotent for the same value and errors on a different
+value (`omnigent/stores/conversation_store/sqlalchemy_store.py:1954`, `:1983`;
+`tests/stores/test_conversation_store.py:2725`). v3 should use this one-way bind
+for source/run/runtime ownership ids.
+
+### 3. Runner claim is durable affinity; liveness is a separate freshness fact
+
+Session `runner_id` is a DB claim: initially `None`, then bound by an update guarded
+with `WHERE runner_id IS NULL` so exactly one runner wins
+(`omnigent/entities/conversation.py:54`; `omnigent/db/db_models.py:270`;
+`omnigent/stores/conversation_store/__init__.py:788`;
+`omnigent/stores/conversation_store/sqlalchemy_store.py:1761`). Dispatch then reads
+the already-bound runner; if none is bound, it returns conflict, and if the runner is
+offline, it returns unavailable (`omnigent/runner/routing.py:88`, `:109`, `:229`).
+
+Freshness is separate. Host online status requires both stored `status=="online"`
+and a recent heartbeat (`omnigent/stores/host_store.py:26`, `:79`, `:435`), while
+runner liveness comes from the live tunnel registry (`omnigent/server/app.py:1208`,
+`:1235`). v3 should separate durable ownership from live reachability in the same
+way.
+
+### 4. Fork/checkpoint must not copy instance ownership
+
+Forking copies replayable transcript state but intentionally does not copy
+instance-owned facts like `external_session_id`, `workspace`, and `git_branch`, and
+filters instance-scoped bridge/context labels (`omnigent/stores/conversation_store/sqlalchemy_store.py:2122`,
+`:2130`, `:2294`, `:2318`; `tests/stores/test_conversation_store.py:3155`). This is
+a concrete v3 checkpoint rule: forks may copy history and portable context, but not
+live runtime ownership.
+
+Cost approval is another scoped checkpoint: the highest approved threshold lives in
+session/root-conversation state, while daily spend is a separate user/day row
+(`omnigent/policies/builtins/cost.py:9`, `:85`;
+`omnigent/runtime/policies/engine.py:480`, `:503`; `omnigent/db/db_models.py:746`).
+v3 should name checkpoint scope explicitly: run, session tree, user/day, or op.
+
+### 5. Lifecycle has sticky failure and observable retry, but transient waits remain weak
+
+The first pass says lifecycle is conflated. The sharper reading is that Omnigent has
+good transient lifecycle behavior but not a durable wait model. Snapshot status is
+small (`idle|running|failed`), while SSE lifecycle is richer
+(`launching|running|waiting|idle|failed`) (`omnigent/server/schemas.py:1593`,
+`:2006`, `:2051`). A sticky failure guard prevents a trailing idle from hiding an
+error (`omnigent/server/routes/sessions.py:4704`), and recovery clears it only when
+there is proven new activity (`:4794`).
+
+Retry is also protocol-visible: LLM/tool retry emits `response.retry` with attempt,
+max, delay, and error (`omnigent/runtime/llm_retry.py:343`;
+`omnigent/runtime/tool_retry.py:168`), and the UI renders it as a retry block
+(`ap-web/src/lib/blockStream.ts:742`). v3 should make retries lifecycle events, not
+log lines. But parked waits such as pending input/elicitation are still in-memory
+and process-affine (`omnigent/runtime/pending_inputs.py:50`, `:75`;
+`omnigent/runtime/pending_elicitations.py:29`), so durable WAITING remains v3's job.
+
+### 6. Stream semantics require readiness, snapshot, and multiple correlation ids
+
+Omnigent uses several channels for different purposes: per-conversation SSE
+live-tail, session-list WebSocket watch sets, and per-user discovery fan-out
+(`omnigent/runtime/session_stream.py:1`;
+`omnigent/runtime/user_session_stream.py:1`;
+`omnigent/server/routes/sessions.py:12900`). The stream has no replay buffer, so
+the route and client rely on snapshot plus item-id dedupe
+(`omnigent/server/routes/sessions.py:9924`; `ap-web/src/store/chatStore.ts:2260`).
+
+Start sequencing matters: the server sends a ready heartbeat after subscription,
+and the runner relay waits for runner stream readiness before forwarding input
+(`omnigent/server/routes/sessions.py:9952`;
+`omnigent/runtime/session_stream.py:166`;
+`omnigent/server/routes/sessions.py:8715`). Correlation is not one generic event id:
+approval uses `elicitation_id`, optimistic input uses `pending_id`, terminal-observed
+text uses `message_id/index/final`, and tool results map `call_id -> response_id`
+(`omnigent/server/schemas.py:2544`; `omnigent/runtime/policies/approval.py:127`;
+`omnigent/runtime/pending_inputs.py:96`; `omnigent/server/routes/sessions.py:8248`).
+v3 should keep distinct correlation ids per contract.
+
+### 7. Context assembly is a projection pipeline, not the transcript itself
+
+Omnigent builds prompt context through a clear pipeline:
+`build_instructions` -> file reference resolution -> persisted history projection
+into provider input items -> token-budget calculation (`omnigent/runtime/workflow.py:1706`,
+`:1735`, `:1740`, `:1747`). The store contains both prompt content and lifecycle or
+metadata items, and `NON_CONTENT_ITEM_TYPES` excludes compaction, error, resource,
+slash-command, and terminal-command items from LLM context
+(`omnigent/entities/conversation.py:377`, `:423`, `:539`).
+
+Compaction is also layered: prune old/binary tool output, summarize, then emergency
+truncate (`omnigent/runtime/compaction.py:1`). A `CompactionData` carries a
+`last_item_id` cursor (`omnigent/entities/conversation.py:377`), later reinserted as
+a synthetic user/assistant pair (`omnigent/runtime/compaction.py:463`). Guards reject
+empty or bogus cursors because otherwise the runtime may believe context is tiny while
+executor-internal history continues growing (`omnigent/runtime/workflow.py:1971`,
+`:2159`). v3 should validate compaction cursors as hard invariants.
+
+### 8. Skills are lazy knowledge, but host-skill discovery is too implicit
+
+Omnigent's skill model has useful progressive disclosure: frontmatter requires
+`name` and `description`, content is separate (`omnigent/spec/parser.py:1919`,
+`:1961`), `load_skill` loads by name and lists resource files
+(`omnigent/tools/builtins/load_skill.py:13`, `:138`), and `read_skill_file` enforces
+relative-path containment (`omnigent/tools/builtins/read_skill_file.py:121`).
+
+The avoid point is default host-skill bleed-through. The parser defaults
+`skills: all` and searches ancestor `.claude/.agents` plus home directories
+(`omnigent/spec/parser.py:1736`, `:1796`). Omnigent has to preserve explicit
+`skills: none` across subprocess env handoff (`omnigent/runtime/workflow.py:951`,
+`:1171`). v3 should prefer task-scope skill allowlists or opt-in host skill import.
+
+### 9. Operator liveness is a multi-state UX contract
+
+Omnigent's operator UX does not treat liveness as a boolean. It combines
+`runner_online` and `host_online` into states such as `online`, `starting`,
+`runner_asleep`, `host_offline`, `local_stranded`, and `unknown`
+(`ap-web/src/hooks/useSessionLiveness.ts:57`, `:90`;
+`omnigent/server/app.py:1208`, `:1273`). Recovery UX is state-specific:
+host-offline opens reconnect/clone, non-owners default to clone, and local-stranded
+shows a concrete `omnigent ... --resume` command
+(`ap-web/src/shell/ReconnectSessionDialog.tsx:24`, `:54`, `:84`, `:141`).
+
+The observability path is push-first with targeted polling fallback:
+session-list updates use WebSocket, but the open session health path polls because a
+dropped runner tunnel can otherwise leave stale-online state
+(`ap-web/src/hooks/RunnerHealthProvider.tsx:5`, `:121`;
+`ap-web/src/hooks/useRunnerHealth.ts:47`;
+`ap-web/src/hooks/SessionUpdatesProvider.tsx:1`). The server `/health` endpoint
+batches liveness computation and offloads blocking DB work (`omnigent/server/app.py:1190`,
+`:1195`, `:1303`, `:1315`). v3 should make "what should the operator do next?"
+part of lifecycle design.
+
+### 10. Contract drift is the modularity risk
+
+Omnigent has good seams: process-backed harnesses via registry and UDS HTTP client
+(`omnigent/runtime/harnesses/__init__.py:27`;
+`omnigent/runtime/harnesses/process_manager.py:1`, `:152`), shared harness scaffold
+for turn lifecycle/tool dispatch/cancellation/policy (`omnigent/runtime/harnesses/_scaffold.py:351`,
+`:447`, `:609`, `:714`), and contract tests for stream event union, wire type
+uniqueness, OpenAPI appearance, and emit-site drift (`tests/server/test_stream_events.py:43`,
+`:67`, `:96`, `:146`).
+
+The avoid case is duplicated taxonomy. Harness/provider meaning is manually mirrored
+in Python aliases, spec compat allowlists, UI native agent lists, and fork logic
+(`omnigent/harness_aliases.py:9`, `:26`; `omnigent/spec/_omnigent_compat.py:76`;
+`ap-web/src/lib/nativeCodingAgents.ts:21`; `ap-web/src/lib/forkHarness.ts:21`,
+`:42`). The web README says TS reducer/types mirror Python manually and lack a
+cross-language CI gate (`ap-web/README.md:86`;
+`ap-web/src/lib/events.ts:1`; `ap-web/src/lib/types.ts:1`; `ap-web/src/lib/sse.ts:1`).
+v3 should use one generated/typed provider catalog plus fixture-based parity tests.
+
 ## Consolidated direction
 
 | v3 level | Omnigent verdict | One-line lesson |
 |---|---|---|
 | **L0a** idempotency / atomic-commit | ⚠️ absent → proves the need | keyed no-op + persist-before-publish; the duplicate-bubble bug is the textbook argument |
+| **L0a state/log split** | ✅ useful but incomplete | keep session row + positioned item log + single-writer rules; add uniform operation ids/outcomes |
 | **L0d** lifecycle | ⚠️ conflated (computed-on-read, RAM-parked) | store `kernel_status` + `disposition` + `wait{}`; lifecycle guard |
+| **L0d liveness UX** | ✅ refined transient model | distinguish host/runner/live/session states; sticky failures and retry events are protocol-visible |
 | **L0c** ActorAdapter | ✅ pattern, but leaky (duck-typed) | explicit Protocol; adapter declares capability; intent→invocation fully adapter-owned |
+| **L0c native bridge** | ✅ important special case | native/CLI adapters need active-session guard, injection serialization, and transcript source-of-truth |
 | **L0e** runtime provider | ✅ strongly validates | async provision + ready-event; ref identity ≠ sandbox; worktree = remote-exec + request_id |
 | **L0f** project config | ⚠️ no split → that *is* the lesson | hoist auth/env/path/command values into typed slots |
 | **L1 vs L2** | ✅ validates the split | who-may (permission) ≠ allowed-now (gate); read-only bars even parking |
@@ -509,8 +703,12 @@ untrusted-actor workflows — real-world stress tests of v3's distributed scenar
 | **L4** child workflow | ✅✅ strongest validation | child = full instance + parent_ref + child_key; **make lifecycle-event delivery durable** |
 | **L6** triggers | ✅ + ⚠️ | trigger = external-state reconciliation; permission-gated label > `/comment` |
 | **L7** grants/credentials | ✅✅ crown jewel | swap-on-access; credential never travels; only if the proxy is the sole egress |
-| **L8** channels | ✅ validates | snapshot + tail + id-dedup; one normalized envelope; durable log is truth |
+| **L8** channels | ✅ validates | snapshot + tail + id-dedup; durable log is truth; add readiness heartbeat and stable envelope shape |
+| **L8/L9 correlation** | ✅ multiple ids by contract | use `elicitation_id`, `pending_id`, `message_id`, `call_id` for distinct jobs; don't infer approval from tool results |
+| **L11 context/skills** | ✅ useful projection model | prompt context is a projection pipeline; skills lazy-load resources; avoid implicit host-skill bleed-through |
 | **L10** trust/federation | ✅ + ⚠️ | re-gate per instance, not by tenure; agent output advisory, never authority |
+| **Modularity** | ✅ seams, ⚠️ duplicated taxonomy | process-backed harness seam + contract tests are strong; generate provider catalogs instead of hand-mirroring them |
+| **Operator UX** | ✅ high-signal liveness/recovery | multi-state liveness, reconnect/clone/resume paths, raw debug logs plus higher-level explanations |
 
 ## Two things to reconsider in the v3 model because of Omnigent
 
