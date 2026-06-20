@@ -5,7 +5,7 @@ Date: 2026-06-20
 ## Purpose
 
 This document is the **bridge between the research-study series and the convergence
-build**. The series reverse-engineered ten external systems (plus two pre-existing
+build**. The series reverse-engineered twelve external systems (plus two pre-existing
 reference notes), each producing a `*-study.md` that maps its mechanisms onto v3 levels
 with `file:line` citations and per-slice LEARN/AVOID/ORTHOGONAL verdicts. This note does
 **not** re-summarize those studies — it distils the *cross-study* result: the
@@ -13,11 +13,17 @@ load-bearing decisions every study converged on, the verdicts where studies disa
 and a single per-level decision matrix that the convergence work (`approach.md` +
 `core-model.html`) can consume directly.
 
-Read it as the answer to: *"after looking at ten systems, what has v3's design actually
+Read it as the answer to: *"after looking at twelve systems, what has v3's design actually
 learned, what are its resolved bets, what is still open, and where does each lesson get
 channelled in the level roadmap?"*
 
-The ten studies (in order written), and the two pre-existing reference notes:
+> **Coverage note.** §1–§7 below were written after study 10 and corner the *kernel* and
+> outer-layer bets from studies 1–10. Studies **11 (gastown)** and **12 (gstack)** were
+> pulled in afterwards (both relevant to the parked agent-runtime topic); their deltas are
+> consolidated in **§8 — Addendum**, which amends the named matrix rows rather than rewriting
+> them in place. Read §8 alongside §4.
+
+The twelve studies (in order written), and the two pre-existing reference notes:
 
 | # | Study | What it is | One-line role |
 |---|---|---|---|
@@ -31,6 +37,8 @@ The ten studies (in order written), and the two pre-existing reference notes:
 | 8 | [`temporal-study.md`](temporal-study.md) | durable-execution platform (Go) | **the heavy kernel reference**; CHASM; **the determinism finding**; fan-in slot |
 | 9 | [`superpowers-study.md`](superpowers-study.md) | SDLC methodology (skills) | **the verification gate**; reference workflow; file-handle ContextPacket |
 | 10 | [`langgraph-study.md`](langgraph-study.md) | orchestration library (Python) | **the closest analogue** — validates the commit-based bet |
+| 11 | [`gastown-study.md`](gastown-study.md) | multi-agent workspace manager (Go) | **the parallel-universe v3**; the TMUX cautionary tale; **the dedicated watchdog** + the **first federation reference** |
+| 12 | [`gstack-study.md`](gstack-study.md) | role-team Claude Code setup (Markdown) | **the 2nd methodology lens**; "roles without actors"; **the deterministic L2 gate primitive** |
 | — | [`ruflo-v3-sdlc-workflow.md`](ruflo-v3-sdlc-workflow.md) | SPARC/DDD method study | adopt concepts not framework (pre-series) |
 | — | [`v3-gate-policy-config-design-synthesis.md`](v3-gate-policy-config-design-synthesis.md) | gate/policy/config synthesis | L2 design input (pre-series) |
 
@@ -126,10 +134,14 @@ Beyond the two bets, five patterns recurred across studies and shaped v3's desig
 
 ### 3.1 The idempotency hole (the cautionary pattern)
 
-**Four projects (hermes, vibe-kanban, honcho, + symphony at the limit) built a durable-looking
-Postgres/SQLite store WITHOUT `(instance_id, op_id)` idempotency**, ending up at-least-once with
+**Five projects (hermes, vibe-kanban, honcho, gastown, + symphony at the limit) built a
+durable-looking store WITHOUT `(instance_id, op_id)` idempotency**, ending up at-least-once with
 terminal mark-failed recovery, and patched the gap *downstream* (honcho's `sync_vectors`
-reconciler is the explicit admission). **v3 must close idempotency at the source** (DBOS's
+reconciler is the explicit admission). Gastown is the newest and most instructive instance: its
+Beads/Dolt (git-for-data) store gives *versioned history for free* yet still runs **all-on-main,
+newest-`updated_at`-wins** concurrency — so it can *audit and revert* a racing op after the fact
+(`AS OF`/`dolt_diff`) but cannot *prevent* it at write time. Versioning ≠ idempotency. **v3 must
+close idempotency at the source** (DBOS's
 same-transaction id+CAS / LangGraph's pending-writes ledger), so it never needs a compensating
 reconciler. The reconciler/outbox is for genuinely external side-effects, not the load-bearing
 durability story.
@@ -193,6 +205,14 @@ best-effort everything, LangGraph's trust-the-node-report). **Superpowers turns 
 structural rule:** a step's own success report does NOT satisfy a downstream gate — the gate checks
 an *independent* artifact (VCS diff, test exit-code, requirements checklist). This is the structural
 form of v3's core contract "durable state is authority, agent self-report is not evidence."
+
+**This is now the most-validated single addition in the corpus — three independent corroborations:**
+Superpowers (the principle), **gastown's gate-bead** (the *structural* implementation — a memoryless
+verifier bead blocked-by all implementation tasks; "verifier ≠ implementer" enforced via the blocking
+dependency; plus two-phase post-squash gates on the *combined* tree no worker saw), and **gstack**
+(three independent-evidence stages — QA reads a real browser, review uses fresh-context/cross-model
+reviewers ("'This looks fine' is not a finding"), the pre-emit gate requires quoting the source). After
+three systems independently arrive at it, the `verify` gate should be a non-negotiable L2 gate kind.
 
 > Channels to: **L2** (a `verify` gate kind whose evaluator reads an independent artifact, never the
 > actor's self-report).
@@ -473,10 +493,21 @@ are its external evidence.
 - Look-ahead durable timers + idempotent-re-execution — L6 matrix.
 - Credential-never-travels (architectural broker) — L7 matrix.
 
-**Open / v3-must-design-itself (little or no prior art):**
+**Now-corroborated by studies 11-12 (were open / thin, see §8):**
+- **The verify gate** — now THREE independent corroborations (§3.5); the most-validated addition.
+- **Watchdog / liveness / dead-executor recovery** — gastown is the dedicated reference (the
+  "stuck is an intelligence problem, not a timer" law + restart-first/work-durable recovery).
+- **L10/L14 federation & org-scale** — gastown's Wasteland is the *first* external reference
+  (git-for-data sovereign forks + reputation/Spider-fraud-detection), though cautionary (its
+  "claim is intent, not a lock" wild-west mode is a correctness hole v3 must not inherit).
+- **The L2 gate enforcement mechanism** — gstack's deterministic three-valued PreToolUse check.
+
+**Still open / v3-must-design-itself (little or no prior art):**
 - **L9 fuzzy/external correlation** — the standout open question; every studied system is exact-only.
-- **L10 cross-firm private-data federation** — lightly covered.
-- **L13 trust calibration** and **L14 org-scale governance** — essentially v3-original.
+- **L10 cross-firm private-data federation** — now has a *cautionary* first reference (gastown), but a
+  correct claim-arbitration/trust-gate model is still v3's own work.
+- **L13 trust calibration** and **L14 org-scale governance** — gastown's reputation/Spider design is a
+  first input; the rest is essentially v3-original.
 - **L4 fan-in synthesis** — the *pieces* exist (slot + barrier + discipline); combining them into one
   coherent v3 contract is v3's own work (the convergence L4 slice).
 
@@ -489,6 +520,102 @@ home.
 
 ---
 
+## 8. Addendum — studies 11–12 (gastown, gstack)
+
+Two studies were pulled in after the §1–§7 synthesis, both relevant to the **parked agent-runtime
+topic** ([`_open-agent-runtime-and-pane-layout.md`](_open-agent-runtime-and-pane-layout.md)).
+**Gastown** (`gastownhall/gastown`, Go ~243K LOC) is the *parallel-universe v3* — a production
+multi-agent workspace manager that runs/coordinates many coding agents on real repos. **gstack**
+(`garrytan/gstack`, Markdown) is the *second methodology lens* after Superpowers. Neither moves the
+two central bets (§2); together they **corroborate** the verify gate (§3.5), the idempotency hole
+(§3.1), and the actor model, and they **fill** two previously-open dimensions (watchdog, federation).
+
+### New dimension — Watchdog / liveness / dead-executor recovery (gastown is the reference)
+
+No prior study had a dedicated liveness subsystem; gastown does (its four-tier "discover, don't
+track" cascade). The two laws to adopt:
+- **"Stuck is an intelligence problem, not a timer problem."** A kernel primitive may kill only what
+  it can prove *dead*; killing what merely looks *stuck* must route to a judgment tier (the named
+  "Deacon murder spree" bug is the cautionary origin).
+- **Restart-first / work-durable / agent-ephemeral recovery** — resurrect the execution in place
+  (preserve worktree+branch+ledger), re-derive position from the durable record. The *opposite* of the
+  mark-failed-only anti-pattern (L0d matrix). Plus a crisp **completion invariant** (work pinned +
+  sandbox persists + someone respawns ⇒ eventual completion), escalation-as-bead with
+  unack-auto-promotion (the timeout is itself a liveness signal), and an **estop kill-switch that
+  exempts the coordinator** ("stop the world but keep the brain").
+
+> Channels to: **L9 / a new watchdog slice** (dead-vs-stuck split; restart-first recovery; the
+> completion invariant) — and to **L3** (escalation-auto-promotion-on-unack).
+
+### Per-level matrix amendments
+
+- **L0a** — *add* gastown: Beads/Dolt **git-for-data** gives *versioned history for free* (fork =
+  `DOLT_BRANCH`, restore = `AS OF`), which aligns with v3's *restore-never-mutate (fork)* principle —
+  **steal the capability, not the engine** (Dolt's commit-graph-as-storage-cost needs a fleet of GC
+  daemons; all-on-main last-write-wins is the §3.1 hole). Tiered durability (operational / immutable-
+  ledger / design planes) corroborates the materialized-aggregate + periodic-snapshot shape.
+- **L0b** — *no longer "mostly v3-original."* gastown is the strongest validation of
+  identity-durable/activation-ephemeral, **refined to a three-layer split: Identity (durable record) /
+  Sandbox (worktree, reusable) / Session (context+pane, ephemeral)** — adopt the vocabulary, consider
+  the explicit middle tier. Context is *regenerated from a durable pointer*, not handed over. gstack is
+  the negative-space proof: **"roles without actors"** (stateless personas, one implicit actor) — the
+  inverse of v3's actor-bound-to-role. *Lift from gstack:* promote **blocking-vs-advisory authority** to
+  a schema field on the role→actor binding ("only the eng review gates shipping" — concept present,
+  left in prose).
+- **L0e** — *add* gastown as the **cautionary tmux reference** for the parked topic: tmux conflates
+  substrate+transport+observation, all I/O is screen-scraping (self-labeled a "ZFC violation"), no
+  pane-layout config (session=agent, never pane=step), and they *rejected* a backend interface. *Lift:*
+  the **Identity/Sandbox/Session** vocabulary + the **`ExecWrapper` sandbox seam + declarative agent
+  presets**. (vibe-kanban remains the *clean* PTY reference; gastown is the *cautionary* one.)
+- **L2** — *add* gstack: **the deterministic three-valued PreToolUse gate** (`{allow | ask | deny}`
+  from a deterministic script, **model out of the enforcement loop**, two strengths: soft `ask` /
+  hard `deny`=directory-confinement) is v3's L2 gate *enforcement mechanism* — but make it **default-on
+  + fail-closed at the capability layer** (gstack is opt-in/fail-open/session-scoped — a convenience
+  guardrail, not a trust boundary). *Add* gastown's **gate-bead** as the structural `verify` gate
+  (§3.5). **Two new gate types for the WF-1..WF-7 library:** a CEO **product-premise FRONT-gate**
+  (rethink-the-right-thing + mandatory 2-3 alternatives before any code) and a dedicated **security
+  OWASP/STRIDE gate** (confidence-tunable = the allow/warn/block sensitivity knob, reads the real
+  repo+git). gstack also shows **prose-bypass of a human gate is a *named bug*** → L3 must be
+  kernel-enforced, not instruction-enforced.
+- **L5** — *add* gstack as a third data point: **portability-by-codegen** (typed `HostConfig` → 10 host
+  dialects, **`suppressedResolvers`** = capability-gated step elision, **`preamble-tier`** = graded
+  bootstrap dial) — the AOT alternative to Superpowers' runtime action-indirection (adopt the
+  config-schema concept, not the materialized 55×10 files). Richer **gate-tier evals** (LLM-judge +
+  routing E2E + diff-selected). Clean **power-tool=mechanism vs persona=prose** split.
+- **L6** — *add* gastown's **Scheduler** as the cleanest spawn-rate governor: `toDispatch = min(capacity,
+  batch, ready)`, **dispatch gated on system health, not just queue depth**, a generic `DispatchCycle`
+  with injected callbacks (governor/policy split), scheduling-state-on-a-separate-bead (never mutate the
+  work item), circuit breaker, at-most-once "OnSuccess-failure counts as dispatch-failure."
+- **L8** — *add* the gastown **nudge-vs-mail doctrine**: ephemeral filesystem poke drained at the turn
+  boundary (never cancels in-flight) vs durable addressed message — "ephemeral by default, durable only
+  if it must survive death." *Reject* mail-as-permanent-commit + N-copy fan-out.
+- **L10 / L14** — *add* gastown's **Wasteland** as the **first external federation reference**:
+  git-for-data sovereign forks (sync = `fetch`+`merge`, no central server/consensus) + multi-dimensional
+  **reputation stamps** + a hash-chained passbook + **statistical fraud detection on public data (the
+  Spider Protocol)** + a **distinct-validators** requirement + multi-criteria time-gated tier escalation.
+  *Reject* "claim is intent, not a lock" (wild-west mode) — v3 needs real claim arbitration (a lease/CAS
+  in the shared substrate).
+- **L11** — *add* two continuity points on the existing honcho↔raw axis: gastown **Seance** (read-only
+  *fork of the predecessor's literal session* — zero distillation, the raw-fork end) and gstack's
+  **distilled 4-field Markdown checkpoint + a decisions ledger** ("settled unless explicitly
+  superseded" — the cross-session-decision primitive). Both are *fallbacks*; honcho's perspectival model
+  remains the reference for cross-many-predecessor memory.
+- **L13** — *add* gastown's reputation design (**diverse attestation + statistical fraud detection on
+  public data**) + gstack's gate-tier evals as concrete first inputs to trust calibration.
+
+### The §8 throughline
+
+Gastown is the **production existence-proof that v3's ambition is buildable**, and its specific pains
+(tmux-conflation, the Dolt GC-fleet, the idempotency hole, mail-as-commit, wild-west claims) map
+one-to-one onto exactly the things v3's cleaner choices avoid. gstack supplies v3's **L2 gate
+enforcement mechanism** (the deterministic three-valued check) and the **"roles without actors" mirror**
+that confirms the actor-bound-to-role inversion. The two together leave the §6 final synthesis line
+intact and **strengthen it**: the verify gate is now thrice-corroborated, the watchdog and federation
+dimensions now have references, and the parked agent-runtime topic has both a clean (vibe-kanban) and a
+cautionary (gastown) reference ready for when it resumes.
+
+---
+
 ## Caveats
 
 - **This is a meta-layer, not a re-summary.** Each claim here is backed by a specific study's
@@ -498,5 +625,5 @@ home.
   wrong for v3's distributed-kernel-for-LLM-actors goal," not "wrong."
 - **The studies' glossary is simplified.** §5 maps it onto the convergence roadmap; where a study said
   "L9" it meant the broad wait/correlation concern, which the convergence work splits more finely.
-- **Snapshot in time.** Ten studies over 2026-06-19/20, against same-recent HEADs. The synthesis reflects
+- **Snapshot in time.** Twelve studies over 2026-06-19/20, against same-recent HEADs. The synthesis reflects
   those HEADs; the design conclusions are intended to outlast them.
