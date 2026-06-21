@@ -25,9 +25,13 @@ channelled in the level roadmap?"*
 > artifact — not a codebase but an *external academic taxonomy of the whole problem space*; it
 > acts as a **checksum on the level map** and is consolidated in **§9 — Addendum**, which records
 > where an independent decomposition agrees with v3's joints (and where the two informative
-> mismatches fall). Read §9 as a meta-layer over §4, not another row in it.
+> mismatches fall). Read §9 as a meta-layer over §4, not another row in it. Study **14 (OneCLI)** is a
+> third kind of artifact — not an engine and not a taxonomy but a **single layer (L7, the credential/
+> capability boundary) shipped as standalone infrastructure**, and the real component behind the BitSafe
+> egress narrative. Its deltas are in **§11 — Addendum**: it sharpens the L7/L2/L13 verdicts and supplies
+> a cross-source divergence anchor (article-prose vs. first-party code). It adds no new central bet.
 
-The twelve studies (in order written), and the two pre-existing reference notes:
+The studies (in order written), and the two pre-existing reference notes:
 
 | # | Study | What it is | One-line role |
 |---|---|---|---|
@@ -44,6 +48,7 @@ The twelve studies (in order written), and the two pre-existing reference notes:
 | 11 | [`gastown-study.md`](gastown-study.md) | multi-agent workspace manager (Go) | **the parallel-universe v3**; the TMUX cautionary tale; **the dedicated watchdog** + the **first federation reference** |
 | 12 | [`gstack-study.md`](gstack-study.md) | role-team Claude Code setup (Markdown) | **the 2nd methodology lens**; "roles without actors"; **the deterministic L2 gate primitive** |
 | 13 | [`agent-harness-survey-study.md`](agent-harness-survey-study.md) | academic survey / **ETCLOVG taxonomy** (71pp paper) | **the external checksum** — 6/7 layers map clean; the 2 mismatches (no transactional kernel; no channels layer) ARE v3's deepest bets |
+| 14 | [`onecli-study.md`](onecli-study.md) | credential gateway / **Agent Vault** (Rust+TS) | **the L7 capability boundary, shipped** — the survey's "credential never travels" pattern as standalone infra; produce-not-perform for secrets; a divergence anchor |
 | — | [`ruflo-v3-sdlc-workflow.md`](ruflo-v3-sdlc-workflow.md) | SPARC/DDD method study | adopt concepts not framework (pre-series) |
 | — | [`v3-gate-policy-config-design-synthesis.md`](v3-gate-policy-config-design-synthesis.md) | gate/policy/config synthesis | L2 design input (pre-series) |
 
@@ -1030,6 +1035,79 @@ as opposed to a research sketch, has to get right.
 
 ---
 
+## 11. Addendum — study 14 (OneCLI): the L7 capability boundary, shipped
+
+Study 14 ([`onecli-study.md`](onecli-study.md)) is the third artifact class in the series: not a
+workflow engine (1–12) and not a taxonomy (13), but a **single v3 layer realised as standalone
+infrastructure** — OneCLI, the credential gateway / "Agent Vault" that mediates every outbound API call
+an agent makes. It is the **concrete reference implementation of the abstract L7 pattern study 13 only
+named** ("credential never travels; vault + placeholder to the LLM + raw substitution at the execution
+layer," §L7 Skyvern), and the **real component behind the BitSafe egress narrative** that the NanoClaw
+harness consumes but does not contain. It changes none of the central bets; it **hardens L7, gives L2/L3
+a working human-gate payload, and supplies a cross-source divergence anchor.**
+
+### Per-level matrix amendments (study 14)
+
+- **L7** — *the pattern is now triangulated and shipped.* Studies 3 (paperclip "credential broker"),
+  13 (survey "credential never travels"), and 14 (OneCLI, the running instance) name the same seam.
+  Mechanism, confirmed from both ends of the wire: agent makes a **credential-less call to the real URL**
+  (`HTTPS_PROXY`), a MITM proxy injects the secret by **(host, path) match**, decrypt-at-request-time,
+  never entering the model's address space; MCP servers that need a local file get a `0600`
+  **`"onecli-managed"` placeholder stub** swapped on the wire; a miss returns an inert `connect_url`, never
+  a silent unauthenticated fallback. **Adopt as a first-class port:** a `CapabilityIntent` produced by the
+  actor and performed by the kernel/provider, symmetric with `ActionIntent`/`SpawnIntent` — the actor names
+  the capability by ref and never receives the value. **Inherit the named-unsolved part** (study 13 flagged
+  it; OneCLI doesn't close it): **secret freshness at resume** — a token can expire/revoke mid-trajectory,
+  so a parked L4 child or long parent may wake against a dead credential; renewal must stay outside model
+  context. Make "capability freshness at resume" an explicit L7 concern.
+- **L2 / L3 / ② DECISION_REQUEST** — *a working human-gate at the I/O boundary, with the transport to
+  reject.* OneCLI's credential-approval flow is structurally v3's ②: the gateway marks a request for
+  approval, a durable `pending_approvals` row is written, an approver is resolved by a policy order
+  (scoped-admin → global-admin → owner), and **expiry is a real disposition** (`deny`). **Adopt the
+  payload** (record + approver-policy + timeout-route) as the DECISION_REQUEST shape; this is H4 (study 13)
+  with a concrete schema. **Reject the transport:** approval is implemented by **holding a live HTTP socket
+  open** until a human clicks — if the host callback dies, *every credentialed call hangs to timeout*, and
+  the two independently-configured sides (gateway rule ⟷ host callback) can desync. v3's **durable
+  WAITING(decision) + committed disposition** is strictly better, and OneCLI is the concrete "why durable
+  park beats synchronous hold" example for `approach.md`.
+- **L0a / load-time validation** — *fail-closed wiring is the I/O twin of `validate_*`.* Spawn refuses if
+  the capability seam can't be established (`ensureAgent()`; no open-egress fallback). Same discipline as
+  `validate_child_steps`/`validate_action_steps` rejecting at definition load: *a seam that can't be
+  established is a hard reject, never a soft default.*
+- **L13 (governance / audit)** — *audit-at-the-boundary the agent can't reach.* The choke point owns the
+  trail; "see what every agent is doing" is a property of topology, not of model honesty — the inboard twin
+  is v3's out-of-process commit log. Pairs with study-13's "hash/sign the ledger."
+- **G / policy-config ("constitution")** — *a cautionary data point.* OneCLI's security-critical
+  **approval policy is settable only in the web UI** (CLI exposes only `block | rate_limit` as of
+  `onecli@1.3.0`). Click-ops for a gate is non-reproducible, non-reviewable config — the exact failure
+  the **constitution-as-checked-in-YAML** bet (study 13, §G) exists to prevent. Reinforces: v3 policy is a
+  diffable, version-gated artifact, never UI state.
+
+### The divergence anchor (a discipline note, not a level)
+
+The BitSafe article describes egress control as "**iptables rules + a config-file allowlist + a reload
+MCP call**." First-party code shows a different and stronger mechanism: enforcement by **network
+topology** — agents on a Docker `--internal` network with the gateway as the only reachable hop, non-root
+and no `NET_ADMIN` so the agent can't undo it; **no host firewall on the agent**, and on macOS the
+substrate is `pfctl` NAT, **not** `iptables`. The allowlist/policy and the "reload" handshake live **inside
+OneCLI**, a separately-pinned component, not in the consuming harness. Verdict for the series: **verify
+mechanism claims against source, not prose** — a system's description of its own security layer can diverge
+from its implementation *and* its cross-platform reality.
+
+### The §11 throughline
+
+The series' three artifact classes now triangulate the credential seam from three angles: a control-plane
+app that *had* a broker (paperclip, study 3), an academic taxonomy that *named* the pattern (survey,
+study 13), and a standalone gateway that *ships* it (OneCLI, study 14). All three say the same thing —
+**the actor names a capability and never holds it; the boundary performs the privileged act and owns the
+audit** — which is **produce-not-perform, extended from actions and spawns to secrets.** OneCLI's one new
+obligation for v3 is the part none of the three closes: **capability freshness across a durable wait.** Its
+one cautionary tale — approval-by-held-socket and click-ops policy — is a clean argument *for* v3's durable
+park and declarative constitution. Net: §11 leaves the §6 synthesis line intact and adds a fourth corner to
+the L7 verdict, now the most heavily corroborated single seam outside the kernel itself.
+
+---
+
 ## Caveats
 
 - **This is a meta-layer, not a re-summary.** Each claim here is backed by a specific study's
@@ -1052,3 +1130,7 @@ as opposed to a research sketch, has to get right.
   intact and layering the convergent sharpenings on top with cross-references. It moved no first-pass
   conclusion and overturned neither central bet — read it as the operational-grade detail on top of the
   spine, and follow the `(Sharpens §X)` pointers to see where each lands.
+- **§11 is a single-layer reference, not an engine study.** Study 14 (OneCLI) reverse-engineers one
+  layer (L7) shipped as standalone infra; its consumer-side evidence is line-precise (NanoClaw checkout),
+  its OneCLI-internal facts are repo/README-granularity. It adds no central bet — read it as the L7/L2/L13
+  sharpening plus a divergence anchor.
