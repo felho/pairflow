@@ -29,7 +29,12 @@ channelled in the level roadmap?"*
 > third kind of artifact — not an engine and not a taxonomy but a **single layer (L7, the credential/
 > capability boundary) shipped as standalone infrastructure**, and the real component behind the BitSafe
 > egress narrative. Its deltas are in **§11 — Addendum**: it sharpens the L7/L2/L13 verdicts and supplies
-> a cross-source divergence anchor (article-prose vs. first-party code). It adds no new central bet.
+> a cross-source divergence anchor (article-prose vs. first-party code). It adds no new central bet. Study
+> **15 (mnemon)** is the same artifact class as study 14 — a **single pair of layers (L11/L12, agent
+> memory) shipped as standalone infra**, and the second memory reference opposite Honcho (study 7):
+> *deterministic store + intent protocol + compaction-trigger* against Honcho's *perspectival derived
+> edges + two-speed loop*. Its deltas are in **§12 — Addendum**: it sharpens the L11/L12 verdicts and
+> supplies the **memory-must-be-a-kernel-port** cautionary anchor. It adds no new central bet.
 
 The studies (in order written), and the two pre-existing reference notes:
 
@@ -49,6 +54,7 @@ The studies (in order written), and the two pre-existing reference notes:
 | 12 | [`gstack-study.md`](gstack-study.md) | role-team Claude Code setup (Markdown) | **the 2nd methodology lens**; "roles without actors"; **the deterministic L2 gate primitive** |
 | 13 | [`agent-harness-survey-study.md`](agent-harness-survey-study.md) | academic survey / **ETCLOVG taxonomy** (71pp paper) | **the external checksum** — 6/7 layers map clean; the 2 mismatches (no transactional kernel; no channels layer) ARE v3's deepest bets |
 | 14 | [`onecli-study.md`](onecli-study.md) | credential gateway / **Agent Vault** (Rust+TS) | **the L7 capability boundary, shipped** — the survey's "credential never travels" pattern as standalone infra; produce-not-perform for secrets; a divergence anchor |
+| 15 | [`mnemon-study.md`](mnemon-study.md) | persistent agent memory (Go+SQLite) | **the L11/L12 deterministic-store reference, opposite Honcho** — LLM-supervises/binary-performs; intent-native `remember`/`link`/`recall`; compaction-boundary writeback; memory-must-be-a-port cautionary anchor |
 | — | [`ruflo-v3-sdlc-workflow.md`](ruflo-v3-sdlc-workflow.md) | SPARC/DDD method study | adopt concepts not framework (pre-series) |
 | — | [`v3-gate-policy-config-design-synthesis.md`](v3-gate-policy-config-design-synthesis.md) | gate/policy/config synthesis | L2 design input (pre-series) |
 
@@ -1108,6 +1114,89 @@ the L7 verdict, now the most heavily corroborated single seam outside the kernel
 
 ---
 
+## 12. Addendum — study 15 (mnemon): the deterministic memory store, opposite Honcho
+
+Study 15 reverse-engineers **mnemon** ([`mnemon-study.md`](mnemon-study.md)) — a persistent
+cross-session agent memory shipped as a single deterministic binary (Go + SQLite, **no LLM in the
+pipeline**). It is the same artifact class as study 14 (one layer-pair as standalone infra, not an
+engine), and the **second L11/L12 reference**, sitting opposite **Honcho (study 7)**. The two
+triangulate memory from opposite ends: **Honcho** owns *perspective and derivation* (directed
+`(observer, observed)` edges + a two-speed LLM-in-the-loop consolidation loop); **mnemon** owns
+*deterministic write and protocol* (the actor supervises, the binary performs; `remember`/`link`/`recall`
+as intent verbs; event-boundary hooks). Neither is the whole answer — v3 composes them: **the write is
+deterministic (mnemon); the perspective/derivation is Honcho's.**
+
+### New dimension — memory as a produce-not-perform port (the write is deterministic)
+
+Mnemon's thesis — *"your host LLM is the supervisor; the binary is deterministic"* — is **record-not-
+replay applied to memory**: the non-deterministic actor *produces* a `remember` / `link` intent; a
+deterministic component *performs* the durable write, dedup, and edge-link, returning **structured JSON
+with signal**, not rows (`mnemon-study.md` Slices 1–2). This is the memory analogue of `ActionIntent`
+(study 1+), `SpawnIntent` (L4), `CapabilityIntent` (study 14): v3 should expose memory as
+**`RememberIntent` / `LinkIntent`** produced by the actor and performed by a **kernel-owned memory
+provider**. Honcho proved the *derivation* can be LLM-driven on a deferred path; mnemon proves the *write*
+can — and should — be deterministic and out-of-actor. They compose on Honcho's two-speed loop: cheap
+deterministic write on the hot path, perspectival consolidation deferred.
+
+### New trigger — the compaction boundary is a first-class L12 writeback signal
+
+Mnemon's **Nudge** hook (prompt a durable writeback *before* the context window is compacted) is the
+mechanism the BitSafe Part-1 thread circled — *"structured plans survive compaction because the plan is
+externalised."* It adds a second concrete trigger beside Honcho's idle+threshold: **pre-compaction =
+consolidate-or-lose-it.** Hooks driving recall/writeback from *outside* the actor loop is also an
+**observe-seam** instance (structure over self-report), consistent with the cross-cutting seam and the
+commit log.
+
+### The cautionary anchor — memory must be a kernel port, not an actor-adapter hook
+
+The load-bearing consumer-side fact (line-precise from the NanoClaw `add-mnemon` skill): mnemon's hooks
+**fire only under `--target claude-code`**; switch a group to `opencode`/Codex and memory **silently
+stops**, because that provider never invokes the `claude` CLI the hooks attach to. A separate
+`migrate-memory` skill exists precisely because *"each provider keeps its own store."* This is the
+series' sharpest argument that **memory must be resolved per instance as a kernel-owned port, independent
+of the actor adapter** (the L0c `AgentConfig` ⟂ `ActorAdapter` separation), and that "memory unavailable"
+must be an **explicit, observable state** (study-14's fail-closed), never mnemon's silent no-op.
+
+### Per-level matrix amendments (read against §4)
+
+- **L11 — Agent registry & memory scopes.** *Best references* → add **mnemon (deterministic store + edge-
+  kind), the simpler-scope/non-perspectival end**, beside Honcho (perspectival) and hermes (flat-Markdown).
+  *Adopt* → **carry an edge-*kind* on the `(observer, observed)` directed edge** (mnemon's temporal /
+  entity / **causal** / semantic split; causal = decision-provenance the `source_ids` tree only partly
+  covers). *Reject* → **flat non-perspectival memory** (mnemon has no observer/observed — keep Honcho's
+  5-coordinate address; mnemon is the *store* reference, not the *scope* reference) and **memory coupled to
+  one actor runtime** (provider-coupled hooks → silent loss on switch).
+- **L12 — Metacognition / learning.** *Best references* → add **mnemon (deterministic-write + intent
+  protocol)**. *Adopt* → **the memory write is produce-not-perform** (actor intent, deterministic
+  performer), **intent-native verbs** (`remember`/`link`/`recall`, signal-bearing JSON), and
+  **pre-compaction as a writeback trigger** (joins Honcho's idle+threshold). *Reject* → **graph-over-vector
+  as dogma** (mnemon's GNN≈attention claim is marketing-grade, the same "research theater" caution already
+  applied to Honcho's surprisal tree) and **what-to-remember as actor-side prose only** (`GUIDELINE.md`
+  echoes the BitSafe "`noted`" rule — useful, but it does not close the memory-to-definition gradient).
+- **L0c / port abstraction & Cross-cutting observe-seam.** Reinforced: memory triggers are **kernel
+  events**, not actor-config edits; the memory port is adapter-independent and fail-explicit.
+
+### The memory-to-definition gradient (connection to the convergence work)
+
+Mnemon is a concrete **midpoint** on the convergence work's memory-to-definition gradient: it hardens
+ephemeral recall into durable, *typed* graph edges — past raw context, short of a checked-in definition.
+The gradient's hard end (promoting a durable memory into a **definition** guarded by `validate_*` / the
+constitution) is exactly what **neither** memory reference closes: Honcho derives, mnemon stores, but the
+*what-rises-to-a-rule* judgment stays actor-side prose. That open end is v3-original work, and §12 marks
+where the two best external memory systems stop.
+
+### The §12 throughline
+
+Memory now has **two corners, deliberately opposite**: Honcho (perspective + derivation) and mnemon
+(deterministic write + protocol + boundary hooks). v3 takes **both halves** — a kernel-owned memory port
+whose *write* is produce-not-perform (mnemon) and whose *model* is perspectival directed edges with
+edge-kind (Honcho + mnemon's causal), triggered at idle, threshold, **and pre-compaction**, and which
+fails *explicitly* when unavailable. §12 leaves the §6 synthesis line and both central bets intact; it
+sharpens L11/L12 and adds the **memory-is-a-port** discipline to the same family as study-14's
+**capability-is-a-port**.
+
+---
+
 ## Caveats
 
 - **This is a meta-layer, not a re-summary.** Each claim here is backed by a specific study's
@@ -1134,3 +1223,10 @@ the L7 verdict, now the most heavily corroborated single seam outside the kernel
   layer (L7) shipped as standalone infra; its consumer-side evidence is line-precise (NanoClaw checkout),
   its OneCLI-internal facts are repo/README-granularity. It adds no central bet — read it as the L7/L2/L13
   sharpening plus a divergence anchor.
+- **§12 is a layer-pair reference, same class as §11.** Study 15 (mnemon) reverse-engineers L11/L12
+  shipped as standalone infra; its consumer-side mechanics (install, mount, hooks-into-`settings.json`, the
+  provider-coupling silent-loss) are **line-precise** from the NanoClaw `add-mnemon` skill, its
+  mnemon-internal facts (four-graph edges, `remember`/`link`/`recall`, lifecycle-hook names, the
+  GNN-isomorphism philosophy) are **repo/README-granularity and not line-verified** — the hook-event
+  mapping is inferred. It adds no central bet — read it as the L11/L12 sharpening (deterministic write +
+  intent protocol + compaction trigger + edge-kind) plus the memory-must-be-a-port anchor opposite Honcho.
