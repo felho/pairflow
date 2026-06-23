@@ -582,6 +582,96 @@ privileged operation actually happened.
   Avoid transports that keep an HTTP socket open until a human clicks; a stalled
   callback must not stall every credentialed call until timeout.
 
+### L8 — Channels, task inbox, and EventNormalizer
+
+Source: the §4 L8 matrix row and later channel addenda (§8, §9). The
+`approach.md` L8 baseline names `Channel`, `EventNormalizer`, multi-channel
+delivery, task inbox, and the general Ask. The future work is to split L8 into
+clear channel seams instead of designing one monolithic "delivery" layer.
+
+#### 1. Two channel classes with different correlation oracles
+
+L8 should distinguish message-source channels from transport-access channels.
+They both produce kernel-facing envelopes, but they do not correlate or
+authenticate in the same way.
+
+- **Message-source channels** normalize heterogeneous platform content into a
+  common envelope: Slack message, email, webhook payload, or inbox item.
+- **Transport-access channels** tunnel access to an opaque external API or
+  transport and correlate by exact transport identity, not fuzzy message
+  content.
+- Channel authentication belongs in the channel contract. Do not assume a
+  caller is trusted because it arrived through a local adapter.
+- L9 owns fuzzy/external wait matching; L8 should preserve enough identity for
+  L9 to decide, not perform fuzzy correlation by accident.
+
+#### 2. Envelope split: content plus identity
+
+Channel envelopes should separate the message content from the external identity
+and routing facts that make the message safe to correlate and reply to.
+
+- `content` carries the normalized body, attachments, structured payload, or
+  rendered Ask answer.
+- `identity` carries platform, channel, thread, sender, recipient, transport id,
+  connector id, and other stable correlation handles.
+- Use local artifact/file refs for large or sensitive payloads rather than
+  platform URLs that may expire, leak authority, or be inaccessible to the
+  runtime.
+- The split should make replay/audit possible without giving the actor raw
+  transport authority.
+
+#### 3. One normalizer / relay contract, not many hand-written paths
+
+Platform-specific adapters should plug into one declared connector contract,
+not duplicate normalization logic in every workflow or plugin.
+
+- A connector should map its platform into the common channel wire contract.
+- Capability flags should advertise which channel features are available, with
+  explicit graceful degradation or default stubs where a feature is absent.
+- Avoid a built-in checklist of hardcoded platform branches. New platforms
+  should enter through the connector/relay contract.
+- Normalization behavior should be testable with golden fixtures so platform
+  edge cases do not become hidden prompt conventions.
+
+#### 4. Task inbox and outbound delivery idempotency
+
+L8 is also the outbound delivery layer. Ask messages, actor dispatches, and
+channel notifications need a durable delivery ledger so crash recovery does not
+duplicate or lose sends.
+
+- Outbound messages should carry a stable delivery id / idempotency key.
+- Retry should resend or reconcile against the same delivery record, not create
+  a new independent notification by default.
+- Delivery state should distinguish queued, sent, acknowledged, failed,
+  expired, and superseded outcomes.
+- Multi-recipient fan-out should be represented as per-recipient delivery state,
+  not N uncontrolled copies with no shared parent record.
+
+#### 5. Ephemeral nudge versus durable addressed message
+
+Not every signal deserves durable mail. L8 should distinguish cheap local nudges
+from messages that must survive process death.
+
+- Ephemeral nudges can be turn-boundary hints and may be cleared when the actor
+  turn ends.
+- Durable messages are addressed records with delivery state and audit; use them
+  when the signal must survive crash, restart, or cross-process delivery.
+- Do not treat mail as a permanent commit log by default; commit the underlying
+  workflow fact separately, then send a durable message only when delivery
+  matters.
+- Do not rely on ephemeral filesystem nudges for load-bearing workflow progress.
+
+#### 6. Expected implementation seams
+
+L8 will probably split during implementation planning. Keep these seams
+separate unless a later design proves they can safely share one contract.
+
+- Channel normalization.
+- Task inbox and outbound delivery.
+- General Ask schema and addressee model.
+- External-token Ask, likely crossing L7/L10 because security and identity are
+  materially different from internal human/agent Ask.
+
 ### L9 — Wait conditions, liveness, and recovery
 
 Source: the L0d anti-pattern ("do not mark failed as the only recovery") plus
