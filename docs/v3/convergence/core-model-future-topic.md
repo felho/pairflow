@@ -449,6 +449,56 @@ need a typed, machine-readable schema.
 
 ## Block B — Distribution
 
+### L6 — Triggers and scheduling
+
+Source: the §4 L6 matrix row and later scheduler addenda (§8, §10). The
+`approach.md` L6 baseline names the trigger router and scheduler, scoped first
+to manual, internal, and timeout triggers. The future work is the scheduler's
+durability and dispatch contract, not a broader external-channel model.
+
+#### 1. Durable look-ahead timer model
+
+Timers should be represented as durable next wake-ups, not polling tickers or
+process-local sleeps.
+
+- A long sleep should become a stored timer/deadline row, not repeated wake-up
+  polling.
+- For a family of conceptual waits, store the waiting intent in state and emit
+  only the earliest next wake-up needed to drive progress.
+- Timer state should dedupe equivalent pending wake-ups with explicit status
+  bits, so recovery can tell "not fired yet" from "claimed", "completed", or
+  "obsolete".
+
+#### 2. Idempotent timer and retry firing with CAS claim
+
+Timer firing and retry execution should be exactly-once by idempotent
+re-execution, not by assuming exactly-once delivery.
+
+- A fired timer should reload the live instance/work item and discard itself if
+  the state is stale, already advanced, or no longer waiting for that deadline.
+- Retries should be materialized as durable timer rows, not in-memory retry
+  loops.
+- Multi-replica schedulers need a store-backed claim, such as a
+  `claim_job_for_fire` CAS, so only one runner owns a fire attempt.
+- Completion should be delete-or-advance after the work outcome is known; an
+  ack failure must remain recoverable as scheduler state, not disappear as a
+  silent success.
+
+#### 3. Scheduler dispatch governor and separate scheduling state
+
+The scheduler should govern dispatch from system capacity and health, not only
+from queue depth.
+
+- Dispatch should be bounded by a rule like `min(capacity, batch, ready)`, with
+  capacity informed by system health and circuit breakers.
+- The governor/policy decision should be separated from the callback that
+  performs the actual dispatch, so different work types can share the same
+  scheduling contract.
+- Scheduling bookkeeping should live in scheduler-owned state, not mutate the
+  work item as an incidental lock or progress marker.
+- If post-dispatch success handling fails, count it as a dispatch failure unless
+  the system can prove the work item reached a durable, recoverable state.
+
 ### L7 — Grants and credentials
 
 Source: the §4 L0c row's two-level secret-ref pattern, plus the roadmap's L7
