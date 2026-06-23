@@ -674,12 +674,74 @@ separate unless a later design proves they can safely share one contract.
 
 ### L9 — Wait conditions, liveness, and recovery
 
-Source: the L0d anti-pattern ("do not mark failed as the only recovery") plus
-the later gastown/watchdog addenda. This is not part of the L0d baseline
-lifecycle; it becomes relevant when the runtime needs to distinguish a dead
-executor from a merely stuck workflow and recover without losing durable work.
+Source: the §4 L9 matrix row, the L0d anti-pattern ("do not mark failed as the
+only recovery"), and the later gastown/watchdog addenda. L9 owns two related but
+distinct problems: wait/correlation for events that arrive later or externally,
+and liveness/recovery when expected progress does not happen. Exact correlation
+has useful references; fuzzy external correlation is explicitly greenfield in
+the synthesis.
 
-#### 1. Watchdog and dead-executor recovery
+#### 1. Exact correlation oracle contract
+
+When an incoming event carries enough identity to correlate deterministically,
+the correlation oracle should be a pure, testable contract rather than a pile of
+platform-specific exceptions.
+
+- A wait definition should declare the discriminator set used to build its
+  correlation key.
+- The oracle should be referentially transparent: same normalized channel
+  identity and discriminator values produce the same key.
+- Exact correlation should remain separate from fuzzy matching. Do not add
+  "helpful" platform-routing exceptions to the exact path.
+- Golden fixtures should prove that each channel/connector maps raw platform
+  identity into the declared correlation key without hidden prompt logic.
+
+#### 2. WaitCondition as a durable checkpoint
+
+External waits should be durable state, not prompt convention or actor memory.
+The instance should record what it is waiting for, how matching works, and when
+the wait expires or becomes stale.
+
+- A `WaitCondition` should include exact/fuzzy mode, expected event classes,
+  correlation discriminators, deadline/escalation policy, and stale-intent
+  rules.
+- Matching should read the current committed instance state before resuming; a
+  stale event can be related to the workflow and still no longer be allowed to
+  advance it.
+- Wait state should survive crash and make timeout / escalation auditable.
+- Internal deterministic waits (child lifecycle, timers) are the simpler forms;
+  L9 generalizes them to external and potentially fuzzy arrivals.
+
+#### 3. Fuzzy matcher proposes, it does not mutate directly
+
+Fuzzy external correlation has no strong reference in the research corpus. Treat
+it as an advisory matching layer unless a later design proves a narrower
+automatic path is safe.
+
+- The matcher should produce a `MatchProposal`: candidate instance/wait,
+  confidence, evidence, rationale, and alternative candidates.
+- A proposal should not directly resume a workflow when ambiguity or impact is
+  meaningful. Route through policy, verify, or human review as appropriate.
+- The proposal and final decision should be recorded separately so audits can
+  distinguish "the matcher suggested" from "the system accepted".
+- Low-confidence or multi-candidate matches should become inbox/review work, not
+  silent drops or arbitrary first-match behavior.
+
+#### 4. Stale-intent handling for late external events
+
+An event can match the right conversation but the wrong moment. L9 needs a first
+class stale-intent model for external events, not just a version mismatch error.
+
+- A matched event should be evaluated against the wait's expected version,
+  state fingerprint, deadline, and allowed intent window.
+- Late replies may be recorded as related evidence/history without resuming the
+  workflow.
+- Superseded waits should reject or reclassify late events explicitly, so the
+  system does not apply an old answer to a new question.
+- The response path should be configurable: ignore, attach as note, ask for
+  confirmation, reopen a decision, or escalate to an operator.
+
+#### 5. Watchdog and dead-executor recovery
 
 A watchdog should only kill or restart what it can prove is dead. "Stuck" is
 not just a timer condition: it may require judgment, evidence, or human/operator
