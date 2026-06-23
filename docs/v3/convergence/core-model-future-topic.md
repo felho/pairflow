@@ -501,9 +501,10 @@ from queue depth.
 
 ### L7 — Grants and credentials
 
-Source: the §4 L0c row's two-level secret-ref pattern, plus the roadmap's L7
-rule that credentials never travel. L0c may carry credential-related references
-as run intent, but credential resolution itself is owned by L7.
+Source: the §4 L7 matrix row and later survey / OneCLI addenda (§9, §11), plus
+the roadmap's L7 rule that credentials never travel. L0c may carry
+credential-related references as run intent, but credential resolution,
+capability execution, and credential audit are owned by L7.
 
 #### 1. Secret refs resolve only at the runtime boundary
 
@@ -516,6 +517,70 @@ adapter/provider that is allowed to use them.
   argument-level predicate where relevant.
 - Missing or unavailable credentials must be explicit and fail-closed, not a
   silent adapter fallback.
+
+#### 2. CapabilityIntent is the credential-side produce-not-perform port
+
+Actors should name the privileged capability they want to use, not receive the
+secret value needed to perform it. The boundary/provider executes the privileged
+act on the actor's behalf.
+
+- Model this as a first-class `CapabilityIntent`, symmetric with `ActionIntent`
+  and `SpawnIntent`: the actor produces a durable intent; the privileged boundary
+  performs it after grant and policy checks.
+- The intent should reference a capability/grant and structured arguments, never
+  the raw credential.
+- Capability execution should record on-behalf-of provenance and the grant /
+  policy identity used to authorize it.
+- If a capability seam cannot be established, reject or fail closed. Do not
+  fall back to open egress or raw credential injection.
+
+#### 3. Credential freshness across durable waits
+
+Long-running workflows cannot assume a credential that was valid at park time is
+still valid at resume time. Tokens may expire, rotate, or be revoked while an
+instance or child workflow is waiting.
+
+- Resume should re-check capability availability and freshness outside the actor
+  context, at the boundary that owns the credential.
+- Refresh or re-consent must not put the renewed credential into the model
+  prompt, transcript payload, or actor filesystem.
+- A parked parent or child that wakes against a missing/revoked credential should
+  get a typed L7 outcome: refresh required, re-approval required, denied,
+  unavailable, or terminal policy failure.
+- Evidence of freshness should be tied to the capability/grant identity and the
+  operation, not to a stale actor self-report.
+
+#### 4. Allowlist broker and secret hygiene
+
+Credential control should be allowlist / grant based, not blocklist based. The
+system should assume an LLM-driven shell, plugin, or skill can inspect anything
+placed in its process environment.
+
+- Avoid process-global `os.environ` secrets for actor runtimes; every tool,
+  shell command, and plugin in that process can inherit them.
+- A broker may substitute secrets at call time by host/path/capability match, or
+  provide inert placeholder files for tools that require a local path.
+- Placeholder files must be safe if read by the actor, e.g. a `0600` managed
+  stub rather than the actual secret.
+- Secret CLI helper behavior, if used, should verify installation/source,
+  control cache permissions, and make resolution failures explicit.
+
+#### 5. Boundary-owned audit and channel trust
+
+The privileged boundary should own the audit trail for credential use. The agent
+can request a capability, but it should not be the source of truth for what
+privileged operation actually happened.
+
+- Audit records should be written by the broker/provider that performs the
+  credentialed operation, not reconstructed from actor prose.
+- The audit should include actor/run identity, grant identity, operation
+  arguments or safe digests, policy decision, outcome, and timing.
+- The channel into the broker needs an authenticated trust story, such as
+  pairing plus signed requests, so a local caller cannot impersonate an
+  authorized actor by convention alone.
+- Human approval at this boundary should use durable request / decision records.
+  Avoid transports that keep an HTTP socket open until a human clicks; a stalled
+  callback must not stall every credentialed call until timeout.
 
 ### L9 — Wait conditions, liveness, and recovery
 
