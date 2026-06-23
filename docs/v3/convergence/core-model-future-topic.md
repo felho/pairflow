@@ -116,6 +116,32 @@ model/tool/context configuration was actually applied.
 - The transcript should keep the distinction explicit so evaluation and
   debugging do not confuse intended configuration with proven runtime behavior.
 
+### L0d — Instance lifecycle + activation
+
+Source: the §4 L0d matrix row and later recovery addenda (§8, §10). The current
+L0d model is acceptable as the baseline: two-axis lifecycle state, typed
+`WAITING`, source-routed inputs, lifecycle guard, CAS commit discipline, and a
+single terminal disposition. The future edge is recovery semantics after the
+baseline can already say "this instance failed".
+
+#### 1. Typed recovery reasons, not one `failed` bucket
+
+`TERMINAL(failed)` is too coarse to drive safe recovery. Later recovery design
+should store a typed reason that selects a per-operation-class policy, not a
+single global retry or mark-failed rule.
+
+- Candidate reason families include process loss, zombie worker, stale lock,
+  transient upstream failure, max-turn exhaustion, intentional pause,
+  success-without-disposition, and hard abort.
+- Each reason may imply a different action: restart in place, retry the
+  operation, fast-forward from durable evidence, pause for human review,
+  terminalize, or refuse automatic recovery.
+- Cooperative cancellation is not a hard abort. If the kernel needs to stop
+  work definitively, it needs a durable abort path and observable completion
+  state.
+- This extends L0d's `failure_reason` from a diagnostic string into typed data
+  that can drive policy.
+
 ## Block B — Distribution
 
 ### L7 — Grants and credentials
@@ -135,6 +161,30 @@ adapter/provider that is allowed to use them.
   argument-level predicate where relevant.
 - Missing or unavailable credentials must be explicit and fail-closed, not a
   silent adapter fallback.
+
+### L9 — Wait conditions, liveness, and recovery
+
+Source: the L0d anti-pattern ("do not mark failed as the only recovery") plus
+the later gastown/watchdog addenda. This is not part of the L0d baseline
+lifecycle; it becomes relevant when the runtime needs to distinguish a dead
+executor from a merely stuck workflow and recover without losing durable work.
+
+#### 1. Watchdog and dead-executor recovery
+
+A watchdog should only kill or restart what it can prove is dead. "Stuck" is
+not just a timer condition: it may require judgment, evidence, or human/operator
+review.
+
+- Prefer restart-first / work-durable / actor-ephemeral recovery: preserve the
+  worktree, branch, ledger, transcript, and durable context, then respawn the
+  ephemeral actor/runtime when death is proven.
+- A merely slow or suspiciously inactive worker should route to a judgment tier
+  rather than being auto-killed.
+- The recovery contract should preserve completion invariants: if work is
+  pinned, the sandbox persists, and a replacement can be spawned, the system
+  should converge to completion or an explicit recoverable failure.
+- A global stop/estop path should stop execution while preserving durable state,
+  so operators can recover the work instead of losing it.
 
 ## Block C — Agent-native
 
