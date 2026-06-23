@@ -287,6 +287,166 @@ security-critical approval or gate rule should not live only as mutable UI state
   L13 because organization-level approval and policy-change governance come
   later.
 
+### L4 — Child workflow fan-out and parent/child policy
+
+Source: the §4 L4 matrix row and the §3.3 fan-in synthesis. The current L4 model
+is acceptable as the single-child primitive: a full child instance, a durable
+`ChildWorkflowLink`, correlated spawn write-back, and terminal
+`CHILD_LIFECYCLE` delivery. `core-model-todo.md` Part D captures the active
+contract for identity-preserving fan-in. These topics are later extensions once
+the primitive grows beyond one sequential child.
+
+#### 1. Child cost and token roll-up
+
+Parent workflows need a durable way to account for child execution cost, token
+usage, and other resource totals without treating the child as an in-memory
+subtask.
+
+- Child instances should record their own cost/resource facts in their own run
+  records.
+- The parent should be able to roll up those facts through the child link, with
+  per-child attribution preserved.
+- Roll-up should be derived from durable child records or committed child
+  summaries, not from the parent's memory of what it spawned.
+
+#### 2. Parent-close policy for live children
+
+If a parent reaches `done`, `failed`, or `cancelled` while children are still
+live, the system needs an explicit policy rather than accidental orphaning.
+
+- Possible policies include cancel children, wait for children, detach children,
+  or keep them running under an explicit ownership transfer.
+- The policy must respect each child's own runtime-context release obligations
+  and terminal audit record.
+- Parent close must not erase the link state needed to observe or recover child
+  outcomes later.
+
+#### 3. Intermediate lifecycle subscriptions
+
+The L4 MVP subscribes to terminal child lifecycle events. Later workflows may
+need parent waits on named intermediate checkpoints such as
+`ready_for_human_approval`, `review_ready`, or `artifact_published`.
+
+- Intermediate subscriptions should reuse the same parent/child link and
+  correlation discipline as terminal events.
+- The subscribed transition must be a committed child lifecycle/checkpoint fact,
+  not a prompt convention or a child-local UI state.
+- Delivery durability and replay behavior must be specified before intermediate
+  events become load-bearing.
+
+#### 4. N-child fan-out execution controls
+
+The current L4 model is intentionally sequential. Real fan-out needs quantitative
+controls and explicit join semantics on top of the identity-preserving link
+model.
+
+- Fan-out should declare concurrency caps and generation/round scoping, so a
+  re-entered parent step does not count a prior generation's children.
+- Join predicates should cover wait-all, wait-any, quorum, and terminal-set
+  forms over committed child-link rows.
+- Per-generation barrier reset should be explicit; do not rely on an in-memory
+  channel `consume()` or anonymous reducer.
+- This is the execution-control counterpart to Part D's fan-in contract.
+
+### L5 — Skill surface and portable capability packaging
+
+Source: the §4 L5 matrix row and later tooling addenda (§8-§10). The
+`approach.md` L5 baseline is the agent-initiated help / Ask subflow. The research
+adds a different, adjacent concern: how actor-facing skills and tool capabilities
+are packaged, selected, and made portable across agent runtimes.
+
+#### 1. Adopt a standard skill package format
+
+Prefer an `agentskills.io`-style package shape over a Pairflow-specific skill
+format: a directory with frontmatter Markdown and machine-readable metadata.
+
+- Keep the skill body portable and readable by agents.
+- Keep metadata machine-readable enough for indexing, validation, and UI.
+- Avoid inventing a custom one-off format until the standard shape is proven
+  insufficient.
+
+#### 2. Skill discovery and cached prompt index
+
+Skill selection should use an explicit discovery surface and a cached prompt
+index, not ad hoc filesystem scanning or a pasted full catalog.
+
+- Provide list/view/manage style operations for available skills.
+- Build an actor-facing index that can be deterministically refreshed and
+  audited.
+- Context assembly should reference the selected skills; it should not dump an
+  unbounded skill library into every packet.
+
+#### 3. Action-indirection portability
+
+A skill should name capabilities, not host-specific tool calls. The host or
+adapter maps those capability names to concrete tools.
+
+- One skill source should run on multiple agent hosts when their capability maps
+  satisfy the same declared requirements.
+- The mapping belongs at the host/adapter boundary, not inside prose
+  instructions.
+- Missing capability bindings should fail closed or make the skill unavailable,
+  not silently degrade to a weaker behavior.
+
+#### 4. Trigger-only descriptions
+
+The skill `description` should be used only for selection: when should this
+skill be loaded or shown?
+
+- Do not turn the description into a workflow summary.
+- The executable guidance belongs in the skill body.
+- This avoids the failure mode where an agent reads the summary, skips the body,
+  and misses the actual procedure.
+
+#### 5. Skill selection is separate from tool selection
+
+Choosing the right skill is its own retrieval/pruning problem. It should not be
+collapsed into "give the actor all tools".
+
+- Keep per-step actor surfaces small: fewer, relevant skills and tools.
+- Treat skill retrieval / ranking as distinct from concrete tool authorization.
+- Use the L1 capability and L2b context predicates to decide which skill
+  guidance is even eligible for the current step.
+
+#### 6. Skill lifecycle and trust governance
+
+External or generated skills need lifecycle and trust metadata, not first-seen
+wins behavior.
+
+- Names should be origin-scoped to avoid flat namespace collisions.
+- Skill manifests should declare dependencies and capability requirements in a
+  machine-checkable form.
+- Track lifecycle states such as installed, enabled, disabled, quarantined, and
+  deprecated.
+- Do not auto-delete skills without a durable record, and do not allow
+  autonomous skill creation without governance.
+- Run trust-tiered security scans for external skills before exposing them to an
+  actor.
+
+#### 7. Bootstrap as an active entry gate
+
+The skill surface should be checked at entry, not treated as a passive catalog.
+
+- Before dispatch, verify that required skills and their capability bindings are
+  present, compatible, and trusted.
+- A missing required skill should be a clear configuration/runtime error, not a
+  prompt-time surprise.
+- Optional skills can degrade explicitly, but the degradation should be visible
+  in the issued context/config.
+
+#### 8. Typed host capability schema / codegen seam
+
+The gstack `HostConfig` / codegen pattern is a useful alternative to purely
+runtime action-indirection, but the shared lesson is the same: host capabilities
+need a typed, machine-readable schema.
+
+- A host capability schema should describe tools, MCP endpoints, hooks, skill
+  routing, and launch/context constraints.
+- Runtime mapping and ahead-of-time codegen are both implementation strategies;
+  the contract is the schema.
+- Cross-reference L0c: this is the skill/tool side of the ActorAdapter schema
+  and conformance-test future topic.
+
 ## Block B — Distribution
 
 ### L7 — Grants and credentials
