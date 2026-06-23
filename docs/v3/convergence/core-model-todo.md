@@ -36,6 +36,18 @@ detection. Keep the semantics, but clarify the implementation contract:
   the correctness mechanism. If only the pre-check exists, concurrent delivery can race.
 - The correct write boundary is: insert/append the operation record and update the
   materialized instance state under one transaction/CAS boundary.
+- The ledger stores a canonical operation `payload_digest` alongside each entry; the
+  uniqueness key stays `(instance_id, op_id)`, not `(instance_id, op_id, payload_digest)`
+  (a 3-column key would let a re-used `op_id` under a new payload slip in as a fresh row).
+  On lookup: same `op_id` + same digest → Duplicate; same `op_id` + different digest →
+  `Rejected(op_id_collision)`, so idempotency-key misuse is visible instead of silently
+  dropping the second payload. The digest is a stable, versioned canonicalization of the
+  operation payload (the same canonical operation canonicalization that content-addressed
+  `op_id` derivation would use when that strategy is selected, A3), never the raw CLI/wire
+  string. The digest must include the emit-contract identity:
+  the operation kind, the template/op payload-schema identity (E2), and any referenced
+  vocabulary/catalog versions (E3), so idempotency is pinned to the full contract under which
+  the payload was accepted.
 - A separate `IdempotencyLedger` is an escape hatch for later cases where an operation
   needs dedupe but has no committed transcript entry, such as a remote relay boundary.
 - Do not let rejected/non-committed events accidentally consume the apply-idempotency
@@ -280,6 +292,177 @@ Prevent overlapping child work at spawn time; verify is the backstop.
 - This is mostly orchestration / template / gate responsibility, but the L4 contract must
   not permit the implicit "spawn a few children and let a reducer add them up" pattern.
 
+## Part E — Actor emit contract (ingress)
+
+An actor emit (`PASS`, `CONVERGED`, …) is not just an event name; it is a machine-validated
+contract. The v1 reality check is the pressure-test that shows which capabilities the
+contract machine must have — it is not the v3 spec. The kernel stays de-vocabularized:
+generic capabilities validated against a template-declared schema and a referenced
+vocabulary catalog; v1's code-review vocabulary (severity grades, summary, findings,
+timing/layer) is declared data, not kernel-baked meaning. De-bias test: a non-review op
+(e.g. `PROCESSED { row_count, checksum_ref }`) must fit the same machine with only different
+declared data.
+
+Two concerns must not be merged:
+- **Kernel actor authority** — who may emit, against which issued context, with which
+  `op_id`. Kernel-owned protocol, not template config (E1).
+- **Template payload contract** — the shape of this op's payload (E2–E7).
+
+### E1. Kernel-owned authority binding is not template config
+
+- Authority binding is kernel-owned and issued with the context packet; the kernel checks it
+  at emit. The template cannot decide whether a correctness/security guard (e.g.
+  `expected_version`) applies. Its field set is derived from the active kernel/workflow shape,
+  not from the per-op payload schema.
+- Universal: `instance_id`, `op_id`, `expected_version`, `execution_id` (an issued-context
+  token) — every run needs these. Shape-derived: `expected_role` (role-bound workflow),
+  `expected_round` (round-aware loop), `handoff_id` (handoff/dispatch artifact),
+  `state_fingerprint` (snapshot guard issued) — present only if the shape has them.
+- This generalizes the existing `expected_version` CAS (Part A/B): CAS and the authority
+  snapshot are two members of one family. It is the emit's provenance binding (which context
+  the actor acted FROM), distinct from the evidence's currency binding (Part F).
+
+### E2. Template-declared per-op payload contract, generically validated
+
+- Each op kind declares its payload schema (required/optional fields, types, value domains).
+  The kernel validates generically against the template-declared schema; it does not hardcode
+  op meaning.
+- New check `validate_emit_contract(envelope, template, step)` runs AFTER
+  instance/template/authority resolution and BEFORE the gates. `valid_shape(envelope)` stays a
+  basic, kind-agnostic envelope check at the front — it runs before template load, so it
+  cannot carry the per-op schema; the per-op schema is a separate step, not a `valid_shape`
+  widening.
+- Check order: `basic valid_shape → load instance/template/step → op_id ledger lookup
+  (Duplicate / op_id_collision, A1) → kernel authority checks (E1) → transition/capability →
+  validate_emit_contract → policy/verify gates → commit`.
+- Worked example: `PASS` and `CONVERGED` both require a `summary` but carry different payloads
+  — the per-op schema is what distinguishes them (`pass.ts`, `converged.ts`).
+
+### E3. Value-domain constraints reference a versioned vocabulary catalog
+
+- A field can be constrained to a subset of a declared value domain, differing per op. The
+  kernel knows "enum/subset constraint", not the domain's meaning.
+- The vocabulary is a versioned catalog (e.g. `pairflow.findings.v1`): template-referenced,
+  packaged-module-interpreted, never kernel-baked. The catalog may carry arbitrary typed
+  dimensions (the v1 finding has `severity`, `priority`, `title`, `timing`, `layer`, `refs`);
+  the kernel validates structure, not their semantics. Versioning pins a transcript's meaning:
+  a payload referencing `pairflow.findings.v1` is read under v1 rules forever; an incompatible
+  change is a new version (`v2`), never a silent rewrite.
+- Worked example: `CONVERGED` permits `{P2,P3}` (the type forbids P0/P1), `PASS` permits
+  `{P0..P3}` (`converged.ts`, `pass.ts`).
+
+### E4. Cross-field invariants and explicit assertions
+
+- The schema can declare cross-field consistency rules and forbid silent/ambiguous states by
+  requiring an explicit assertion rather than a silent default.
+- Worked example: `PASS` `--no-findings` is an explicit clean assertion — assert clean, do
+  not silently omit (`pass.ts`).
+
+### E5. Summary is a human headline; structured fields are the authority
+
+- A `summary` (or any free text) is a required human-readable headline only: not evidence,
+  not the findings source of truth, not policy authority, not counted, not parsed for
+  structured truth.
+- The load-bearing claims live in structured fields (findings, claim state/source, refs,
+  counts where needed). The v1 summary↔findings consistency regex is a negative guardrail
+  (catch a contradiction), never a truth source — see F5.
+
+### E6. The structured claim model is a named open sub-area
+
+- Define the structured claim model separately; v1's `findings_claim_state` /
+  `findings_claim_source` is a worked example, not necessarily the final generic claim
+  abstraction. Open: per-emit vs per-finding claims; lifecycle/state machine
+  (open → resolved → verified); claim-source as catalog vs template vocabulary; what claims
+  non-review workflows need. The verify gate (Part F) builds on this.
+
+### E7. Evidence obligations are scoped and producer-side
+
+- The schema can require a typed backing REFERENCE for a claim, conditional on its value,
+  scoped to the specific claim (an envelope-level ref does not satisfy a claim-level
+  obligation). The schema DECLARES the obligation (e.g. `claim: runtime_clean → ref_kind:
+  command_log, command_family: test`); the verify gate (Part F) CHECKS that the evidence is
+  trusted and current.
+- Worked example: a `P0/P1` finding requires a finding-level ref; an envelope `--ref` "does
+  not satisfy P0/P1 finding evidence binding by itself" (`pass.ts`); summary text is never a
+  valid evidence source (v1 `reviewer-evidence-governance`).
+
+### E8. The actor packet projects the contract (guidance only)
+
+- The context packet carries, per available op, the authority values to echo and the
+  payload-contract projection (required fields, allowed domains, evidence obligations), so the
+  actor can emit correctly. This is L2b guidance; the source of truth is the kernel protocol +
+  template schema + gates, never the prompt.
+
+## Part F — Gate semantics: policy vs verify
+
+§3.5's lesson: durable state is the authority, an actor's self-report is not evidence. The
+gate MECHANISM already exists (L2 declarative/packaged, L2a process, `evidence_refs`). What is
+missing is the SEMANTIC distinction between two gate families and the verify discipline.
+(Naming note: v1's `converged_validation` gate is a verify / evidence-consistency gate, not an
+ingress schema check — the schema is Part E. Avoid calling both "validation".)
+
+### F1. Policy and verify are distinct gate families
+
+- Policy gate: run-state authorization — is the transition allowed now given the run's state
+  (round threshold, prior verdict, severity-by-round routing)? Configurable.
+- Verify gate: independent-evidence check — reads an artifact or runs a command, never the
+  actor's claim. Non-negotiable for load-bearing transitions that depend on an evidence-backed
+  or externally checkable claim.
+- The implementation axis (declarative / packaged / process) is orthogonal: the same
+  implementation can serve either family. The semantic family is what this part names.
+- Worked example: v1 runs `converged_policy` (policy) AND `converged_validation` (a verify
+  gate); and the `severity_gate_round` rule — `PASS --no-findings` validity depends on the
+  round — is policy, not schema (so the same "findings" concept splits across E3 schema and F1
+  policy).
+
+### F2. Policy and verify read structured fields, never the summary
+
+- Policy reads workflow state and structured claims (e.g. `findings[].severity`); verify reads
+  the structured obligation it is checking plus independent evidence — it does not treat the
+  claim as evidence. Neither uses the summary / free text as authority (the gate-side of E5).
+
+### F3. Self-report is never evidence
+
+- An actor's success emit (`PASS` / `CONVERGED`) is a claim, not evidence; a bare LLM reviewer
+  verdict ("looks fine") is also self-report. A verify gate reads an independent,
+  machine-checkable artifact (test exit code, VCS diff, build result), not the claim, and not
+  the summary text.
+- A "prior actor verdict exists" check (e.g. `previous_reviewer_verdict`) provides separation
+  (verifier ≠ implementer), not artifact verification — a robust completion gate wants both.
+
+### F4. Evidence currency: bound to the state it certifies (no stale-green)
+
+- A verify gate's evidence is trusted only if bound to the state it certifies. This is distinct
+  from the emit's authority binding (E1):
+  - emit authority binding (E1): `handoff / execution / role / round / expected_version /
+    fingerprint` — the snapshot the actor acted FROM.
+  - evidence currency binding (here): `head_sha / diff-fingerprint / artifact-digest /
+    command-identity / exit-code / log-ref / gate-invocation-id` — the state the evidence
+    CERTIFIES.
+- A green result from version N cannot satisfy a version-M transition. An emit can be current
+  while its evidence is stale (the attached test log ran on an old commit). Inline process gates
+  get currency by construction (they run now, against the current state); deferred gates and
+  committed-state-reading gates (e.g. `previous_reviewer_verdict`) must record and re-check the
+  certified state, or stale-green slips through.
+
+### F5. Free-text consistency is a negative guardrail, not authority
+
+- A summary↔structured-fields consistency check may catch a contradiction (a negative
+  guardrail), but it is never a truth source. The structured fields and verified evidence are
+  the authority (E5).
+
+### F6. Verifier independence is structural; L2b is guidance only
+
+- Where verifier ≠ implementer is required, the binding/gate config must enforce it, not prompt
+  discipline. The kernel-run process gate gives the strongest form: the verifier is a
+  deterministic process, not an actor.
+- Empirical anchor: even Superpowers — the §3.5 source — leaves verification to procedural skill
+  discipline ("Do Not Trust the Report"), with test evidence often in the implementer's report;
+  v3 makes the same a runtime-enforced verify contract.
+- Cross-reference: Part E's emit contract DEFINES the evidence obligation (producer side); Part
+  F's verify gate VALIDATES it (checker side). L2b may project the requirements but is never the
+  source of truth.
+
 ## Non-goals
 
 Keep the guardrails collected here, but grouped by the logical part they protect.
@@ -312,6 +495,33 @@ Keep the guardrails collected here, but grouped by the logical part they protect
   be evaluable over committed child-link state.
 - Do not assume internal `CHILD_LIFECYCLE` delivery is reliable without an explicit
   durability contract (transfer record + retry/timeout, or a declared L8/L9 boundary).
+
+### Part E guardrails
+
+- Do not put kernel authority binding (`expected_version`, `execution_id`, `expected_role`, …)
+  into template config; it is kernel-owned and issued with the context packet.
+- Do not treat the actor payload as opaque past `valid_shape`; the per-op payload schema is
+  enforced (`validate_emit_contract`), not advisory.
+- Do not hardcode the findings/decision vocabulary into the kernel; it is a versioned,
+  template-referenced catalog interpreted by packaged modules.
+- Do not treat the summary / free text as evidence, a findings source, counted, or policy
+  authority; the structured fields are the authority.
+- Do not let an envelope-level reference satisfy a claim-scoped evidence obligation.
+- Do not specify the structured claim model as final from v1; it is a named open sub-area.
+- Do not let the actor-packet contract projection (L2b) be the source of truth; enforcement is
+  the template-declared schema plus kernel/gate checks.
+
+### Part F guardrails
+
+- Do not let an actor's self-report (an emitted `PASS` / `CONVERGED`, or a bare LLM "looks
+  fine") satisfy a verify gate.
+- Do not let a policy or verify gate read the summary / free text as authority; read the
+  structured fields and independent evidence.
+- Do not treat "a prior actor verdict exists" as independent-artifact verification.
+- Do not accept verify evidence without a currency binding to the state it certifies (no
+  stale-green).
+- Do not rely on prompt/skill discipline for load-bearing verification; enforcement is runtime
+  (schema + gates).
 
 ### Shared kernel-shape guardrails
 
