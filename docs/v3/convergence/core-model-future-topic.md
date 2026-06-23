@@ -845,12 +845,69 @@ inside L10.
 
 ### L11 — Memory and durable agent identity
 
-Source: later synthesis addenda that sharpen L0c with provider-specific memory
-failure cases. This is not part of L0c's run-intent resolver; it belongs with the
-agent-native layer where agent identity, memory scopes, and activations become
-first-class.
+Source: the §4 L11 matrix row and later memory addenda (§8, §12). This is not
+part of L0c's run-intent resolver; it belongs with the agent-native layer where
+agent identity, memory scopes, and activations become first-class. The key
+future design problem is to combine Honcho's perspective model with mnemon's
+deterministic write protocol.
 
-#### 1. Memory must be an adapter-independent kernel port
+#### 1. Perspective-aware directed memory edges
+
+Memory should not be a single global profile. Model durable memory as directed
+edges keyed by who observes and who/what is observed.
+
+- Use an `(observer, observed)` shape so self-memory (`observer == observed`)
+  and theory-of-mind style memory use the same primitive.
+- Preserve the broader address shape from the research:
+  `(workspace, observer, observed, session | null, level)`.
+- Keep perspective and episode orthogonal. Session-scoped memory may later be
+  promoted to a broader scope, but promotion should be an explicit operation.
+- Do not store identity summaries as anonymous JSONB blobs when the identity or
+  perspective is load-bearing; give them first-class tables/records.
+
+#### 2. Memory edges carry type and provenance
+
+The memory graph should distinguish why a memory edge exists, not only that it
+exists.
+
+- Candidate edge kinds include temporal, entity, causal, and semantic.
+- Causal edges are especially important for decision provenance: "A caused B"
+  is not the same as "A was mentioned near B".
+- Keep provenance trees (`source_ids`) and reinforcement counters, so durable
+  memory can explain where a claim came from and how often it was confirmed.
+- Avoid treating vector similarity as the whole memory model. Retrieval may use
+  embeddings, but the stored memory needs typed structure.
+
+#### 3. Memory write is produce-not-perform
+
+Actors should not mutate the durable memory store directly. They should produce
+memory intents that a deterministic, kernel-owned provider validates and
+executes.
+
+- Treat `RememberIntent` / `LinkIntent` as the memory analogs of
+  `ActionIntent`, `SpawnIntent`, and `CapabilityIntent`.
+- The non-deterministic actor proposes what should be remembered; the provider
+  performs durable writes, deduplication, and link creation.
+- The provider should return structured, signal-bearing results, not raw table
+  rows or prose.
+- Memory writes should be idempotent and auditable; retries must not create
+  duplicate or contradictory memories silently.
+
+#### 4. Retrieval has deterministic and synthesis layers
+
+Separate the durable representation from the actor-facing synthesis of that
+representation.
+
+- A static retrieval layer should return typed records, refs, scores, and
+  provenance.
+- An agent/LLM synthesis layer may summarize or prioritize retrieved memories,
+  but its output should be derived, not the source of truth.
+- The context packet should make the difference visible: retrieved facts,
+  synthesized interpretation, and missing-memory state are different things.
+- This split lets workflows run with deterministic memory only, synthesized
+  memory, or no memory, without silently changing the contract.
+
+#### 5. Memory must be an adapter-independent kernel port
 
 Memory triggers and retrieval should not be hidden inside a specific actor
 adapter hook. If memory depends on a provider-specific CLI hook, changing actor
@@ -862,6 +919,20 @@ provider can silently turn memory off.
   no-op.
 - Adapter-specific memory stores may exist, but the workflow contract should
   name the memory scope and failure mode outside the adapter.
+
+#### 6. Continuity fallbacks are not the memory model
+
+Raw session forks and compact checkpoints are useful continuity tools, but they
+should not replace first-class memory.
+
+- A read-only fork of a predecessor session is a raw continuity fallback, not a
+  structured memory scope.
+- A distilled checkpoint plus decisions ledger is useful when a new activation
+  needs settled context, but it should be labeled as checkpoint state.
+- "Settled unless explicitly superseded" decisions should live in a durable
+  ledger, not only in Markdown prose.
+- These fallbacks can help activation/recovery, but the cross-run memory model
+  should remain perspective-aware and typed.
 
 ## Cross-level seams
 
