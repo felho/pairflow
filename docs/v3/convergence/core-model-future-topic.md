@@ -231,6 +231,62 @@ the provider cannot supply it, the run should reject or fail explicitly.
 - The failure should be observable enough for policy/gates to decide whether an
   operator may retry with a different provider.
 
+### L2 / L2a — Gate library and verification governance
+
+Source: the §4 L2 matrix row and later verification / policy addenda (§8-§11).
+The current L2/L2a model is acceptable as the mechanism: ordered
+`allow | warn | block` gate pipelines, inline process gates, read-only/stateless
+evaluation, and durable `evidence_refs`. `core-model-todo.md` Part F already
+captures the semantic verify discipline. The future work is to mature the gate
+catalog and the governance around evidence-producing evaluators.
+
+#### 1. Packaged gate library and workflow templates
+
+L2 should stay a generic mechanism. Concrete gates such as a product-premise
+front gate, an OWASP/STRIDE security gate, or workflow-family gates for WF-1..WF-7
+belong in a packaged gate library and template set, not as kernel primitives.
+
+- A workflow should bind named packaged gates with explicit config; the kernel
+  should only see the standard `GateEvaluator` / `GateDecision` contract.
+- The gate library should become an acceptance surface for common workflow
+  patterns: product premise check before code, security review before release,
+  docs-only evidence gates, and command/test gates.
+- New gates should prove whether they are policy gates, verify gates, or both;
+  do not infer the semantic family from the implementation type.
+
+#### 2. Verify evaluator governance and freshness beyond one run
+
+A verify gate is stronger than actor self-report, but the evaluator itself is
+still a component that can be stale, misconfigured, or too weak for the claim it
+certifies.
+
+- Evidence should record the evaluator / harness / grader identity and version,
+  not just the checked artifact. A green result from an obsolete grader is
+  different from a green result from the current one.
+- Changing a gate, policy, harness, or grader should invalidate or retrigger the
+  affected evidence where the old result no longer certifies the transition.
+- High-value transitions may need multiple independent oracles, not a single
+  verifier verdict.
+- Gate metadata should include cost and latency expectations so workflow
+  authors can choose where expensive verification is justified.
+- This extends Part F's "no stale-green" rule from run state to evaluator state;
+  L13 may later own the broader trust/eval governance model.
+
+#### 3. Policy config is a reviewable artifact, not UI click-state
+
+Gate and policy behavior should be diffable, reviewable, and reproducible. A
+security-critical approval or gate rule should not live only as mutable UI state.
+
+- Policy config should be stored as a versioned definition artifact or an
+  equivalent auditable record, not hidden behind click-only admin state.
+- Runs should record the policy/gate config identity they evaluated against, so
+  later audit can explain why a transition was allowed, warned, or blocked.
+- UI editing can exist, but it should produce the same durable config change
+  record as a file or definition update.
+- This is primarily L2 because gates consume the config, and it cross-references
+  L13 because organization-level approval and policy-change governance come
+  later.
+
 ## Block B — Distribution
 
 ### L7 — Grants and credentials
