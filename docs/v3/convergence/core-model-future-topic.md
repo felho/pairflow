@@ -758,6 +758,89 @@ review.
 - A global stop/estop path should stop execution while preserving durable state,
   so operators can recover the work instead of losing it.
 
+### L10 — Gatekeeper and private-data federation
+
+Source: the §4 L10 matrix row and later federation / capability-schema addenda
+(§8, §10). L10 builds on L7 grants and L8 channels: it is not just credential
+handling, but the boundary where private-source data becomes an approved,
+auditable workflow contribution.
+
+#### 1. Gatekeeper three-layer contract
+
+The gatekeeper should separate private-source access from matching and owner
+approval. A workflow should see only the approved contribution, not the private
+source itself.
+
+- The connector runtime owns access to the private source, such as a mailbox,
+  private dataset, or organization system.
+- The matcher proposes relevant items or slices, with evidence and scope.
+- The owner UX decides what may cross the boundary, with explicit allow/deny,
+  redaction, recurrence, and expiry where applicable.
+- The workflow/substrate receives a contribution envelope, not raw source
+  authority.
+
+#### 2. Contribution envelope
+
+Private-data federation needs a durable object for what crossed the boundary.
+That object should be small enough to audit and rich enough to support later
+trust/governance layers.
+
+- A contribution should record source kind, source identity or safe digest,
+  selected content/artifact refs, scope, redactions, owner decision, policy
+  identity, and trust domain.
+- The envelope should distinguish provenance from authorization: where the data
+  came from is not the same as why it was allowed into this workflow.
+- Contributions should be replayable/auditable without reopening the private
+  source.
+- Do not treat a connector's raw event as the contribution. The contribution is
+  the approved, policy-shaped artifact.
+
+#### 3. Capability-gated federation boundary
+
+Federated/private-data operations should go through a capability-gated boundary,
+not ad hoc connector calls.
+
+- Each operation should declare the capability it requires and the predicates on
+  allowed arguments/resources.
+- Capability knowledge should come from a shared/generated schema, not drift
+  across registries, UI maps, environment flags, and plugin-local config.
+- Adapters/connectors need conformance tests, including event-order and
+  message-shape regressions.
+- Missing or unsupported capability should fail closed or produce an explicit
+  unavailable contribution path, not silently degrade to broad access.
+
+#### 4. Claim arbitration for federated work
+
+The research gives a cautionary first federation reference: "claim is intent"
+is not enough when multiple parties or forks can act on shared data. L10 needs a
+real arbitration story where shared claims matter.
+
+- A claim that grants exclusive or authoritative action should be backed by a
+  lease/CAS or equivalent shared-substrate contract.
+- Intent-only claims may be useful as proposals, but they must not be treated as
+  locks.
+- Cross-org/fork synchronization should preserve which party claimed what,
+  under which authority, and whether the claim was accepted, expired, or
+  contested.
+- This should align with L9 exact correlation and L13/L14 governance, but the
+  first correctness boundary is L10's claim arbitration.
+
+#### 5. Trust domain and provenance seam
+
+L10 should capture enough trust/provenance structure for later reputation,
+fraud-detection, and org-scale governance without implementing those layers
+inside L10.
+
+- Contributions should carry a trust domain and signed/hashable provenance where
+  the source and policy justify it.
+- Multiple validators, reputation stamps, and fraud-detection are later
+  L13/L14 concerns, but L10 must not flatten the data in a way that prevents
+  them.
+- Audit records should identify the boundary component that admitted the data,
+  not rely on the actor's description of what it received.
+- Private-source minimization is part of the trust story: pass only the
+  approved slice, not a raw mailbox/dataset dump.
+
 ## Block C — Agent-native
 
 ### L11 — Memory and durable agent identity
