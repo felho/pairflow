@@ -142,6 +142,95 @@ single global retry or mark-failed rule.
 - This extends L0d's `failure_reason` from a diagnostic string into typed data
   that can drive policy.
 
+### L0e — Runtime context provider
+
+Source: the §4 L0e matrix row and later sandbox/provider addenda (§8, §9, §10).
+The current L0e model is acceptable as the baseline: optional
+`RuntimeContextRequirement`, a named provider contract, opaque provider-owned
+refs, and actor-facing projection. The future work is in provider internals and
+provider-family design, not in the kernel's core L0e contract.
+
+#### 1. Prove the provider abstraction with at least two real backends
+
+Avoid a single-implementation "generic" provider interface that only looks
+pluggable. The abstraction should be pressure-tested against at least two real
+substrates.
+
+- `pairflow.worktree` is the MVP backend.
+- A second backend should be materially different: remote sandbox, container,
+  clone workspace, or hybrid BYOC runtime.
+- Provider tests should assert the shared contract, while provider internals
+  remain free to use different mechanics.
+
+#### 2. Separate substrate, transport, and observation
+
+Do not collapse runtime substrate, I/O transport, and observation into one
+session abstraction. The tmux/screen-scraping shape is useful as a cautionary
+reference because it mixes these concerns and makes correctness depend on a
+low-fidelity observation channel.
+
+- **Substrate**: where work runs, such as worktree, clone, container, local
+  workspace, remote workspace, or cloud sandbox.
+- **Transport**: how commands/interactions reach the substrate, such as shell,
+  API, PTY, browser/computer-use, or screen-scrape.
+- **Observation**: how the kernel/runtime sees outputs, logs, traces,
+  screenshots, filesystem changes, and lifecycle signals.
+- The runtime-context provider may own the substrate; adapter/runner layers may
+  own transport; observe-seams should make observations explicit and typed.
+
+#### 3. Provisioning should be idempotent `ensure`, not blind create
+
+Provider provisioning should converge on the requested runtime context when
+called again with the same durable identity and spec, rather than creating a
+second resource blindly.
+
+- Re-provisioning after a crash should find or repair the intended context where
+  possible.
+- A provider may return the existing ref, repair the resource, or fail with a
+  typed reason; it should not silently create an unrelated sandbox for the same
+  identity.
+- This is provider-side idempotency, complementary to the kernel's request-id
+  correlation.
+
+#### 4. Cleanup needs orphan reconciliation and TTL expiry
+
+Provider cleanup is more than "delete this path". The system needs a two-level
+reconciliation story for durable records and physical resources.
+
+- DB says no live context, disk/runtime still has one: orphan cleanup or
+  quarantine.
+- DB says context exists, disk/runtime is missing: typed recovery / repair /
+  failure classification.
+- TTL expiry can clean intentionally retained resources, but should not be the
+  only release mechanism.
+- This complements the already-modeled release contract; it is background
+  reconciliation, not a replacement for declared release boundaries.
+
+#### 5. Remote sandbox and hibernate need stable identity
+
+Remote/hybrid sandbox providers should treat the sandbox filesystem as cache,
+not the source of truth. Durable state stays host/kernel-owned; wake-up
+reconstructs or re-pushes the required projection.
+
+- A stable sandbox id should key hibernate/resume, not a transient process or
+  screen session.
+- Wake-up should rehydrate from durable records, artifacts, and refs; it should
+  not assume the remote filesystem is authoritative.
+- This is the remote-sandbox version of "work durable, actor/session
+  ephemeral".
+
+#### 6. Sandbox mode must fail closed, never silently downgrade
+
+If the definition asks for a remote, hardened, or otherwise isolated sandbox and
+the provider cannot supply it, the run should reject or fail explicitly.
+
+- Do not silently fall back from remote sandbox to local bare-host execution.
+- Local bare-host execution can be a deliberate dev/MVP mode, but it must be
+  declared as such and must not inherit the trust assumptions of an isolated
+  sandbox.
+- The failure should be observable enough for policy/gates to decide whether an
+  operator may retry with a different provider.
+
 ## Block B — Distribution
 
 ### L7 — Grants and credentials
