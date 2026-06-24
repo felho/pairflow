@@ -289,6 +289,28 @@ the provider cannot supply it, the run should reject or fail explicitly.
 - The failure should be observable enough for policy/gates to decide whether an
   operator may retry with a different provider.
 
+#### 7. Provider execution is one primitive across run reasons
+
+Setup, cleanup, dev scripts, action runners, and actor processes should not grow
+separate ad hoc execution paths. They are all provider-managed execution
+processes over a runtime context; what differs is the typed run reason and the
+policy attached to that reason.
+
+- A future provider execution contract should cover command/script launch,
+  working directory / sandbox binding, environment projection, output capture,
+  cancellation, timeout, and result classification.
+- Run reasons should be explicit, such as `setup`, `cleanup`, `dev`, `action`,
+  `gate`, or `actor`, so policy can decide which authority, evidence, retry, and
+  release rules apply.
+- Lifecycle scripts are not special hidden hooks. If setup or cleanup is
+  load-bearing, it should produce typed results and evidence like any other
+  execution process.
+- Keep this below the L0e provider boundary: the kernel should depend on the
+  common execution contract, not on provider-specific shell/script mechanics.
+- This complements the ③ action-runner model. Actions route workflow state;
+  L0e provider execution supplies the lower-level process primitive those
+  actions, scripts, and actor runs can share.
+
 ### L2 / L2a — Gate library and verification governance
 
 Source: the §4 L2 matrix row and later verification / policy addenda (§8-§11).
