@@ -934,6 +934,106 @@ should not replace first-class memory.
 - These fallbacks can help activation/recovery, but the cross-run memory model
   should remain perspective-aware and typed.
 
+### L12 — Definition PRs and metacognition
+
+Source: the §4 L12 matrix row and later memory/learning addenda (§8, §12). The
+`approach.md` L12 baseline already names the definition-PR channel and learning
+levels. The future work is the discipline that turns observations and memory
+into audited definition changes without self-reinforcing noise.
+
+#### 1. Two-speed learning loop
+
+Learning should not rewrite durable definitions on the hot path. Capture cheap,
+explicit signals during work; consolidate them later under a controlled trigger.
+
+- The hot path records observations, decisions, evidence refs, memory intents,
+  and candidate lessons with source linkage.
+- A delayed consolidation pass can run on idle, threshold, or pre-compaction
+  triggers.
+- The delayed pass should be replayable and auditable; it should not depend on
+  transient actor memory.
+- Keep anti-feedback discipline: a consolidation output must not immediately
+  become its own unverified input.
+
+#### 2. Structural reconciliation, not LLM rewrite
+
+Metacognition should reconcile typed structures, not ask an LLM to rewrite a
+bag of memories or procedures.
+
+- Deduplicate by stable identity, source refs, and semantic/typed keys where
+  possible.
+- Preserve source linkage and reinforcement counters when merging claims.
+- Type inferred claims, and require evidence/source linkage for any claim that
+  may later influence behavior.
+- LLM synthesis can propose a merge or interpretation, but the durable result
+  should be a structured record with provenance.
+
+#### 3. Memory-to-definition promotion channel
+
+The hard L12 boundary is deciding when an observation or memory becomes a
+durable rule, skill, policy, schedule, dataset, or agent-definition change.
+
+- Promotion should produce a proposal, not mutate the definition directly.
+- The proposal should travel through the definition-PR channel with author,
+  rationale, source memories/evidence, and affected scope.
+- Acceptance should run the relevant gates/evals before the definition becomes
+  active.
+- The system should distinguish "remembered", "candidate lesson", "proposed
+  definition change", and "accepted definition".
+
+#### 4. Independent curator / forked reviewer
+
+High-impact learning proposals should not be validated only by the actor that
+created them.
+
+- Use a fresh-context or forked reviewer for non-trivial definition changes.
+- The reviewer should have an explicit tool/capability whitelist appropriate to
+  the learning task.
+- Record the reviewer decision and evidence separately from the author's
+  proposal.
+- For low-risk local memories, lightweight review may be enough; for agent/org
+  definitions, independent review should be the default.
+
+#### 5. Behavioral regression and eval discipline
+
+Learned procedures need tests or evals proportional to their risk and blast
+radius.
+
+- A promoted skill, gate, or policy should carry a way to verify the behavior it
+  claims to improve.
+- Regression tests can be examples, command/evidence checks, golden fixtures,
+  or behavioral evals depending on the artifact.
+- Do not impose hand-written TDD on every small memory; match the verification
+  form to the failure mode and impact.
+- Store eval outcomes with the proposal/definition identity so later changes can
+  retrigger or invalidate them.
+
+#### 6. Pre-compaction is a first-class learning trigger
+
+Before an actor context is compressed or discarded, the system may need to write
+back structured state that should survive the compaction.
+
+- Pre-compaction should trigger a controlled memory/lesson extraction path, not
+  rely on the actor remembering to summarize itself.
+- The trigger should emit memory intents or definition-change proposals through
+  the same produce-not-perform paths as other learning writes.
+- Missing or unavailable memory writeback should be observable, not a silent
+  loss hidden by compaction.
+- This trigger joins idle and threshold triggers as a learning boundary, not as
+  an ordinary actor prompt instruction.
+
+#### 7. Learning guardrails
+
+Keep the learning layer conservative until it has evidence.
+
+- Reject "autonomous self-improvement" claims that are just fixed counters or
+  repeated self-feedback.
+- Avoid research-theater mechanisms such as surprisal/spatial trees or
+  graph-over-vector dogma unless they prove operational value.
+- Do not let actor prose decide what becomes a rule; use the proposal/gate/eval
+  channel.
+- Do not feed unverified learned output back into the same learner as authority.
+
 ## Cross-level seams
 
 These topics do not have a single `approach.md` owner yet. They should stay here
