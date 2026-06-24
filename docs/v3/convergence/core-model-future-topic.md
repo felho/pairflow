@@ -1034,6 +1034,91 @@ Keep the learning layer conservative until it has evidence.
   channel.
 - Do not feed unverified learned output back into the same learner as authority.
 
+### L13 — Trust calibration and evals
+
+Source: the §4 L13 matrix row. The `approach.md` baseline already names
+`TrustProfile`, the autonomy ladder, gate-outcome / edit-distance recording, and
+eval suites. The matrix adds two concrete pressure tests: a Superpowers-style
+conformance harness over emitted event streams, and a Temporal `BAD_BINARY`-like
+way to quarantine bad agent/prompt/build versions. This is not a change to the
+current L2/L2a gate mechanism; it is the later layer that decides how much
+autonomy a specific agent/version/context has earned.
+
+#### 1. TrustProfile as production signal, not a static label
+
+Trust should be computed from observed behavior, not assigned once by operator
+intuition.
+
+- Key trust profiles by the dimensions that affect behavior: gate, agent,
+  definition version, prompt/model/build version, workflow family, and context
+  class.
+- Record gate outcomes, reviewer corrections, edit distance, override rates,
+  post-run defects, and eval outcomes as inputs to the profile.
+- Keep accountability orthogonal to autonomy: a highly trusted agent may skip a
+  gate under policy, but its actions still remain attributed and auditable.
+- Treat low sample size and context drift as first-class states; absence of
+  failures is not yet earned trust.
+
+#### 2. Autonomy ladder driven by evidence
+
+The future autonomy ladder should say which controls may be relaxed, and why.
+
+- Define explicit rungs such as "always require review", "warn-only for this
+  gate", "skip full rerun when trusted evidence exists", or "auto-apply within
+  bounded scope".
+- Tie every rung transition to recorded eval / production evidence, not to
+  actor self-report or one successful run.
+- Make downshifts as important as promotions: a regression, failed eval, or
+  suspicious override pattern should reduce autonomy automatically or require
+  re-approval.
+- Keep the ladder scoped; trust earned for one workflow family or gate should
+  not silently generalize to unrelated work.
+
+#### 3. Conformance harness over emitted event streams
+
+The useful Superpowers pattern is behavioral regression testing, not hand-TDD
+for every skill.
+
+- A harness should run a known procedure against a fresh agent activation and
+  assert over the emitted operation/event stream, transcript records, evidence
+  refs, and final state.
+- Assertions should focus on protocol behavior: correct op kinds, required
+  evidence, no forbidden emits, stable idempotency behavior, correct decision
+  shape, and expected gate interactions.
+- Store harness results with the tested agent / prompt / definition version so
+  later trust decisions can cite the exact conformance evidence.
+- Use the harness as an acceptance surface for model upgrades, prompt changes,
+  skill changes, and definition PRs.
+
+#### 4. BAD_BINARY-style quarantine for agent/prompt/build versions
+
+Temporal's `BAD_BINARY` idea maps well to agent-native systems: sometimes a
+version is known bad and should stop receiving work.
+
+- Keep a durable blocklist / quarantine record for agent definition versions,
+  prompt versions, model versions, adapter builds, or packaged evaluator builds
+  that are known to produce unsafe or incompatible behavior.
+- Pin running and historical instances to the versions they actually used, so
+  audit can explain behavior and recovery can avoid accidental upgrades.
+- A quarantine should be scoped and explainable: affected workflow families,
+  gates, failure evidence, replacement version, and whether already-running
+  instances may continue.
+- Recovery should prefer explicit migration or re-evaluation over silently
+  replaying old work under a different agent/prompt version.
+
+#### 5. Eval lineage and invalidation
+
+Eval outcomes are useful only if their scope and freshness are clear.
+
+- Record the eval suite identity, version, fixtures, grader/evaluator identity,
+  and checked artifact/version.
+- Changing a definition, prompt, model, gate, evaluator, or fixture should make
+  it clear which trust profiles need recomputation or revalidation.
+- This extends L2/L2a evaluator freshness and L12 behavioral regression: L13
+  aggregates those facts into trust and autonomy decisions.
+- Do not use a green eval from one version or context as a blanket proof for a
+  different version or context.
+
 ## Cross-level seams
 
 These topics do not have a single `approach.md` owner yet. They should stay here
