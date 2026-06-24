@@ -15,6 +15,44 @@ across.
 
 ## Block A — Local core
 
+### L0a — Durable kernel edge cases
+
+Source: the §10 second-pass addenda. The current L0a model and
+`core-model-todo.md` Parts A/B already capture the active kernel contract:
+commit-based state, CAS, idempotency, and record-not-replay. The following are
+future precision edges for effect boundaries and dispatch handoff design.
+
+#### 1. Exactly-once orchestration is not exactly-once effect
+
+Step memoization or operation-output dedup can make orchestration replay-safe,
+but it does not by itself make an external side effect exactly-once.
+
+- Claim exactly-once effect only when the side effect and its checkpoint can
+  co-commit in one transactional boundary owned by the effect provider or
+  datasource.
+- Otherwise describe the contract as exactly-once orchestration with
+  at-least-once effect issuance, protected by idempotency keys and recovery
+  markers.
+- Tests and specs should name which idempotency key layer they exercise:
+  whole-run, step, queue/message delivery, or provider effect.
+- This sharpens Part B's record-not-replay language without changing the core
+  model's current hot path.
+
+#### 2. Claim-to-dispatch must leave no orphaned work
+
+An `available -> claimed` transition is not complete if the work can be left
+claimed but undispatched with no recoverable handoff.
+
+- A claim path should either dispatch in the same local control path before
+  returning, persist a recoverable transfer/handoff record, or roll the claim
+  back / mark it retryable.
+- Avoid "claim many, dispatch later" shapes unless the later dispatch is itself
+  durable and recoverable.
+- If post-claim dispatch fails, the failure should be visible as scheduler or
+  transfer state, not as a silent success.
+- This complements L6 scheduler idempotency and Part A's ledger discipline: a
+  claimed unit needs a durable next owner or a durable way back to readiness.
+
 ### L0b — Actor binding + context packet
 
 Source: the §4 L0b matrix row and its later addenda (§8, §9, §10). The current
@@ -141,6 +179,26 @@ single global retry or mark-failed rule.
   state.
 - This extends L0d's `failure_reason` from a diagnostic string into typed data
   that can drive policy.
+
+#### 2. Multi-step ownership is claim + heartbeat + reclaim
+
+If a later slice introduces a real multi-step ownership lease, model it as one
+contract, not as a loose set of process-local flags.
+
+- Durable ownership and live reachability are different facts: a worker can own
+  a claim while temporarily unreachable, or be alive without still owning the
+  right to mutate.
+- The lease shape should include a durable claim token, a heartbeat/reachability
+  signal, a reclaim policy, and a renewal token that proves the worker still
+  owns the claim.
+- Any fence/ownership check that protects a state mutation must be composed
+  inline into the mutating write predicate, not run as a separate preflight
+  "am I still owner?" check.
+- Reject file locks, PID checks, process-local running sets, and fail-open locks
+  as correctness mechanisms. They can be diagnostics, not authority.
+- This is the conditional version of `core-model-todo.md` B2: the current model
+  avoids takeover of in-flight claims; this is the contract if a future level
+  adds takeover.
 
 ### L0e — Runtime context provider
 
@@ -306,6 +364,59 @@ workflow definitions improve.
   autonomy an agent/version has earned; L2 asks whether each gate remains the
   right control for the risk it claims to cover.
 
+#### 5. Scan after expansion, not only before
+
+Input/security scans should cover the actual material the actor or tool will
+consume, not just the raw user request.
+
+- Run injection/security/policy scans after skill expansion, dynamic recall,
+  context assembly, and channel payload normalization where those steps can add
+  executable or instruction-like content.
+- Preserve the distinction between transport authentication and content
+  security: a trusted channel can still carry hostile or stale instructions.
+- Gate evidence should identify the assembled context or artifact fingerprint
+  it scanned, so a later expanded packet cannot reuse a green result from a
+  smaller pre-expansion surface.
+- This connects L2 scanning to L5 skills, L8 channels, and Part F's evidence
+  currency rule.
+
+### L3 — Human decision ergonomics and payload shape
+
+Source: the §9 survey hook taxonomy, the §8/gstack human-gate bypass warning,
+and the §11 OneCLI approval flow. The current L3 model already owns the durable
+human decision record and validate-before-mutate contract. The future work is
+the shape and ergonomics of human waits once more approval patterns appear.
+
+#### 1. Human gates need explicit design dimensions
+
+Human approval should not be just a boolean prompt. Later human-gate definitions
+should declare what the human is validating, how much context the human sees,
+and whether the decision recurs.
+
+- **Validation scope**: what exact action, resource, payload, or transition the
+  human is authorizing.
+- **Alert richness**: the minimum context/evidence shown to make the decision
+  meaningful without flooding the reviewer.
+- **Recurrence**: whether the decision is one-shot, allow-once, allow-for-this
+  run, allow-for-this actor, or allow-until-policy-change.
+- Rich, rare decisions are safer than frequent thin prompts that train users to
+  click through.
+
+#### 2. Approval requests need durable payload and timeout disposition
+
+OneCLI's credential approval flow is useful as a payload reference, but its
+held-open socket transport is the anti-pattern.
+
+- A pending approval should be a durable row/record with requested action,
+  target resource, requester, approver-resolution policy, expiry, and the
+  evidence/context needed to decide.
+- Timeout should produce a real disposition such as `deny`, `expired`, or
+  `escalated`, not an ambiguous missing callback.
+- Do not keep a live HTTP/socket request open while waiting for a human. Park
+  the workflow durably and resume through ordinary kernel ingress.
+- The approver-resolution policy should be auditable and versioned like other
+  gate/policy config, not hidden in click-only admin state.
+
 ### L4 — Child workflow fan-out and parent/child policy
 
 Source: the §4 L4 matrix row and the §3.3 fan-in synthesis. The current L4 model
@@ -366,6 +477,40 @@ model.
 - Per-generation barrier reset should be explicit; do not rely on an in-memory
   channel `consume()` or anonymous reducer.
 - This is the execution-control counterpart to Part D's fan-in contract.
+
+#### 5. Internal kernel events need durability levels
+
+Part D names the `CHILD_LIFECYCLE` delivery edge. The broader future topic is
+one internal event model with explicit durability and trigger semantics, not a
+collection of ad hoc wake-up paths.
+
+- Internal events should carry a correlation identity such as run/instance/link
+  id, event id, causation id, and delivery class.
+- Load-bearing internal events need at-least-once delivery, retry, and a
+  deliverability timeout or reconciliation path.
+- Cheap invalidation nudges can stay ephemeral, but the definition should say
+  which events are ephemeral and which are durable transfers.
+- The event model should explain trigger semantics: whether an event routes a
+  waiting instance, schedules future work, updates a projection, or only informs
+  observers.
+- This cuts across L4, L6, L8, and the observe seam; keep it unified before
+  adding more special event paths.
+
+#### 6. Reducer and merge laws must be explicit
+
+Leaderless fan-in must not depend on accidental arrival order. If N children or
+parallel branches merge into one parent state, the merge contract needs teeth.
+
+- A reducer used for unordered fan-in should declare and test associativity,
+  commutativity, and idempotency where those properties are required.
+- Non-commutative or order-sensitive merges should route into an explicit
+  conflict state or require an ordered join, not silently pick the observed
+  arrival order.
+- A "single writer" reference system does not prove the reducer is safe for a
+  leaderless kernel.
+- This extends Part D's "anonymous reduction only where identity does not
+  matter" rule with a second condition: even anonymous reduction needs valid
+  merge laws.
 
 ### L5 — Skill surface and portable capability packaging
 
@@ -777,6 +922,21 @@ review.
 - A global stop/estop path should stop execution while preserving durable state,
   so operators can recover the work instead of losing it.
 
+#### 6. Unacknowledged human waits can become liveness escalations
+
+A human wait timeout is not always a simple reject or retry. In approval-heavy
+flows, "nobody acknowledged this" can be a liveness signal that should route to
+a higher judgment tier.
+
+- Wait conditions should distinguish no acknowledgement, explicit denial,
+  expiry, and operator-unreachable cases.
+- A timeout policy may promote the item to another approver, an operations
+  inbox, or a watchdog/judgment queue instead of killing the work.
+- The escalation decision should be durable and auditable, not inferred from a
+  missing UI callback.
+- This is the L9 side of the L3 human-gate payload: L3 records the approval
+  wait; L9 owns timeout, unacknowledged, and stale-response handling.
+
 ### L10 — Gatekeeper and private-data federation
 
 Source: the §4 L10 matrix row and later federation / capability-schema addenda
@@ -1163,8 +1323,20 @@ replayable history and portable context, but must not copy live ownership facts
 such as `workspace`, `git_branch`, `external_session_id`, or a process-local
 session. A fresh attempt should reacquire its own sandbox/session authority.
 
-This belongs to the broader identity/durability decomposition topic, alongside
-timeline / attempt / commit / recorded-effect / memory identity.
+This belongs to the broader identity/durability decomposition topic:
+
+- **Timeline identity**: the durable history line or thread being continued.
+- **Attempt identity**: one execution attempt, retry, fork, or run over that
+  timeline.
+- **Commit identity**: one atomic state transition in the transcript.
+- **Recorded-effect identity**: a memoized actor output, activity result,
+  action result, child lifecycle, or external effect checkpoint.
+- **Memory identity**: durable long-horizon facts and edges that outlive one
+  attempt or timeline.
+
+If reruns/forks exist, keep the current-run pointer separate from the durable
+instance/history row. Moving "current" should update a pointer; it should not
+rewrite the durable line of history it points at.
 
 ### Observe seam — external run observation and control
 
@@ -1190,7 +1362,24 @@ between "read history" and "subscribe live".
 - Reconnect should resume from a durable offset or explicitly request a fresh
   replay; do not rely on best-effort "latest state" reads for continuity.
 
-#### 2. Typed observable event envelope
+#### 2. Live push, durable replay, and forensic audit are separate media
+
+The observe seam should not pretend that one event store can serve every
+consumer with the same semantics.
+
+- **Live push** is for low-latency UI/CLI updates and may use bounded buffers,
+  reconnect hints, and lag markers.
+- **Durable replay** is the authoritative stream a consumer can resume from by
+  offset after disconnect or restart.
+- **Forensic audit** is an append-only diagnostic/compliance record that may
+  retain lower-level facts than the user-visible stream.
+- Do not use live cursor ids as durable replay cursors. If the live stream drops
+  data, it must force replay or emit a typed gap marker.
+- Durable observable events should carry enough structure for reconstruction:
+  `run_id`, `event_id`, optional `parent_event_id`, session/source identity,
+  timestamp, event type, visibility, and payload schema/version.
+
+#### 3. Typed observable event envelope
 
 The stream contract should be typed and versioned, not an unstructured UI feed.
 
@@ -1204,7 +1393,7 @@ The stream contract should be typed and versioned, not an unstructured UI feed.
 - If the boundary spans TypeScript/Rust or another language pair, keep generated
   contract types and CI drift checks in place.
 
-#### 3. Addressed streams and offsets
+#### 4. Addressed streams and offsets
 
 Observation should be addressable at the unit the consumer actually needs.
 
@@ -1217,7 +1406,7 @@ Observation should be addressable at the unit the consumer actually needs.
 - Cross-run/fleet observation can build on this later without changing the
   per-run contract.
 
-#### 4. Backpressure, lag, and terminal markers
+#### 5. Backpressure, lag, and terminal markers
 
 A stream is an operational contract, so slow consumers and closure must be
 explicit.
@@ -1231,7 +1420,7 @@ explicit.
 - Consumers should be able to tell "temporarily disconnected" from "the run is
   closed".
 
-#### 5. External typed protocol adapter
+#### 6. External typed protocol adapter
 
 External control surfaces should speak a declared protocol, not scrape internal
 state.
@@ -1245,7 +1434,7 @@ state.
   rather than assuming every client understands every event/control shape.
 - Keep protocol conformance tests with golden streams and command examples.
 
-#### 6. Control commands re-enter through normal kernel ingress
+#### 7. Control commands re-enter through normal kernel ingress
 
 Observation can be external; authority must remain internal.
 
