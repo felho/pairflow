@@ -287,6 +287,25 @@ security-critical approval or gate rule should not live only as mutable UI state
   L13 because organization-level approval and policy-change governance come
   later.
 
+#### 4. Gate ablation and recalibration
+
+Every gate encodes an assumption about a model, actor, workflow, or runtime
+weakness. That assumption can become stale as models, prompts, tools, or
+workflow definitions improve.
+
+- Treat each non-trivial gate as carrying a load-bearing hypothesis: what
+  failure mode it prevents, what evidence would show that it still matters, and
+  what evidence would justify relaxing or replacing it.
+- Store enough gate outcome, override, reviewer-correction, latency, and cost
+  signal to evaluate whether the gate is still worth its friction.
+- Run controlled ablation or shadow-mode checks before removing a gate: compare
+  what would have happened without it against actual outcomes.
+- Recalibration can tighten as well as loosen. A gate that misses real defects
+  should be revised, not merely kept because it exists.
+- This is the gate-side counterpart to L13 trust calibration: L13 asks how much
+  autonomy an agent/version has earned; L2 asks whether each gate remains the
+  right control for the risk it claims to cover.
+
 ### L4 — Child workflow fan-out and parent/child policy
 
 Source: the §4 L4 matrix row and the §3.3 fan-in synthesis. The current L4 model
@@ -1239,3 +1258,57 @@ Observation can be external; authority must remain internal.
   the source of truth for whether it applies.
 - This keeps observe/control compatible with Part A idempotency, L1/L7
   authorization, and L10 federation boundaries.
+
+### Operational observability, cost, and trace outputs
+
+Source: the §7 open-list addendum that promotes Observability to a first-class
+concern and calls out cost tracking as an output. This is adjacent to the
+Observe seam, but not the same thing: Observe defines how external consumers
+see a run; operational observability defines what the system records as durable
+facts about cost, latency, traces, and resource use.
+
+#### 1. Observability facts are operational outputs
+
+Cost, trace, latency, and resource usage should not be only dashboard side
+effects.
+
+- Record run/step/actor/gate/resource metrics as durable facts with source,
+  timestamp, version, and aggregation scope.
+- Preserve the difference between canonical workflow facts and operational
+  telemetry. Telemetry can guide trust, cost, and governance decisions, but it
+  must not masquerade as the authoritative workflow transcript.
+- Keep attribution: metrics should identify the actor, definition version,
+  model/prompt/build version, runtime provider, gate/evaluator, and child link
+  where relevant.
+- Make missing telemetry explicit for high-value runs; silent metric gaps make
+  later trust and cost decisions misleading.
+
+#### 2. Cost ledger and roll-ups
+
+Cost tracking needs a stable home before it becomes an autonomy or governance
+input.
+
+- Track token spend, model/API cost, runtime/sandbox cost, connector/credential
+  cost, and human-review cost where those are available.
+- Roll up costs across child workflows, retries, gates, and external
+  providers while preserving per-source attribution.
+- Keep cost records tied to the version/config that produced them, so later
+  comparisons between model/prompt/gate choices are meaningful.
+- Cost data should feed L13 trust/autonomy and future L14 governance, but it
+  should be collected below those layers as operational evidence.
+
+#### 3. Trace lineage for diagnosis and eval
+
+Traces should help explain why a run behaved as it did without becoming a
+second source of truth.
+
+- A trace should link operations, gate invocations, process executions,
+  external calls, child lifecycle events, and evidence refs by causation and
+  correlation ids.
+- Traces should be reconstructable from durable records where possible, or
+  clearly marked as sampled/partial operational telemetry where not.
+- Eval and conformance harnesses should be able to consume traces for
+  diagnostics while treating transcript/evidence records as the deeper
+  authority.
+- Retention/purge rules should specify what happens to operational metrics and
+  traces when the canonical run record is archived or purged.
