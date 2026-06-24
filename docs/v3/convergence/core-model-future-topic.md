@@ -1146,3 +1146,96 @@ session. A fresh attempt should reacquire its own sandbox/session authority.
 
 This belongs to the broader identity/durability decomposition topic, alongside
 timeline / attempt / commit / recorded-effect / memory identity.
+
+### Observe seam — external run observation and control
+
+Source: the §4 cross-cutting Observe-seam matrix row. This cuts across L0a's
+durable transcript, L8 channels/streams, L10/L7 authority boundaries, and the
+later fleet/observability surface. The useful pattern is a typed external API
+for observing and controlling a run; it must not become a bypass around the
+kernel ingress path.
+
+#### 1. Atomic history-plus-tail subscription
+
+An observer should be able to join a run without missing the event that occurs
+between "read history" and "subscribe live".
+
+- Provide a `history_plus_stream()`-style primitive that atomically snapshots
+  the durable history and subscribes to the live tail.
+- The returned stream should make the snapshot boundary explicit: source
+  instance/run, starting offset/version, last replayed offset, and then live
+  events.
+- Persistence, dashboards, CLIs, and external orchestrators should consume the
+  same replay-then-tail contract rather than each inventing a local polling
+  loop.
+- Reconnect should resume from a durable offset or explicitly request a fresh
+  replay; do not rely on best-effort "latest state" reads for continuity.
+
+#### 2. Typed observable event envelope
+
+The stream contract should be typed and versioned, not an unstructured UI feed.
+
+- Each event should carry kind, schema/version, source run/instance, offset or
+  transcript version, timestamp, causation/correlation ids where available, and
+  payload.
+- Use self-describing envelope metadata so live and historical consumers can
+  decode the same record shape.
+- Avoid `payload: any` streaming APIs where the UI or adapter must reverse
+  engineer event meaning.
+- If the boundary spans TypeScript/Rust or another language pair, keep generated
+  contract types and CI drift checks in place.
+
+#### 3. Addressed streams and offsets
+
+Observation should be addressable at the unit the consumer actually needs.
+
+- Support stream addresses such as run, instance, child link, channel, or task
+  inbox rather than forcing consumers to filter one global log.
+- Store offsets per addressed stream, with enough identity to distinguish replay
+  from live delivery.
+- A materialized projection may subscribe like any other consumer; persistence
+  should not require a special hidden path.
+- Cross-run/fleet observation can build on this later without changing the
+  per-run contract.
+
+#### 4. Backpressure, lag, and terminal markers
+
+A stream is an operational contract, so slow consumers and closure must be
+explicit.
+
+- Define what happens when a consumer lags: bounded buffering, durable replay,
+  lag-drop marker, or forced reconnect from offset.
+- Terminal states should be sent in-band, such as done, failed, cancelled,
+  purged, or closed, so consumers do not infer completion from timeout.
+- A terminal marker should name whether more historical replay remains possible,
+  especially after purge or archive/export operations.
+- Consumers should be able to tell "temporarily disconnected" from "the run is
+  closed".
+
+#### 5. External typed protocol adapter
+
+External control surfaces should speak a declared protocol, not scrape internal
+state.
+
+- Implement an ACP-style or equivalent typed third-party protocol so IDEs,
+  external orchestrators, and dashboards can observe/control v3 through a
+  stable contract.
+- The protocol should expose stream subscription, read-model queries, and
+  command submission without leaking internal storage layout.
+- Protocol adapters should advertise capabilities and version compatibility,
+  rather than assuming every client understands every event/control shape.
+- Keep protocol conformance tests with golden streams and command examples.
+
+#### 6. Control commands re-enter through normal kernel ingress
+
+Observation can be external; authority must remain internal.
+
+- A control command from an external protocol should become an ordinary kernel
+  operation with `op_id`, authority checks, capability/grant checks, CAS, and
+  idempotency.
+- Do not let an observer mutate workflow state by writing directly to a
+  projection, stream store, or adapter-local state.
+- The protocol may help a client construct the command, but the kernel remains
+  the source of truth for whether it applies.
+- This keeps observe/control compatible with Part A idempotency, L1/L7
+  authorization, and L10 federation boundaries.
