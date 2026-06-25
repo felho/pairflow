@@ -1,10 +1,11 @@
 # Open Topic — Agent Runtime & Pane Layout (how we run agents)
 
-Date: 2026-06-20 · Updated: 2026-06-24 (resumed — studies 11–12 folded in; omnigent re-examined at the source-code level)
-Status: **RESUMED.** The two studies pending at parking (gastown #11, gstack #12) are in, and
-omnigent was re-read at the **code** level for this topic. The central decision (Q1) now has a
-settled direction; the pane-binding dimension (Q2) and the configurable-layout grid remain the
-open **v3-original** part, pending a read of the v1 tmux/pane code.
+Date: 2026-06-20 · Updated: 2026-06-25 (resumed — studies 11–12 folded in; omnigent re-examined at the source-code level; v1 pane layer grounded)
+Status: **RESUMED.** The two studies pending at parking (gastown #11, gstack #12) are in,
+omnigent was re-read at the **code** level, and the existing pairflow tmux/pane layer was read to
+ground the v1 reality (§7). The central decision (Q1) and the config-location (Q3) now have a
+settled direction; what stays open is the **v3 design choice** of pane-binding dimension (Q2) — now
+that v1 is known to use a fixed per-role grid — and one MVP-scope sub-decision for the user.
 
 Relation to the rest of the research corpus: this is an **MVP-driven design topic**, not a
 reverse-engineering study. It sits at the convergence layer (mostly **L0e** runtime-context,
@@ -74,7 +75,7 @@ dissolve the binary:
 The one sub-decision still genuinely open here is **MVP-scope-gated**: does the MVP need the
 headless/cloud provider now, or is local-worktree enough for the first cut? (See §6 Q1, §7.4.)
 
-### 3.2 The pane-layout binding dimension (Q2) — still open
+### 3.2 The pane-layout binding dimension (Q2) — v1-grounded, v3 choice open
 
 The pane layout is a **presentation config**, not a kernel concept. The hard part: the workflow is
 a dynamic graph (rounds, child-spawn), the pane grid is static. The binding dimension is the real
@@ -89,9 +90,14 @@ question:
 - **per-active-dispatch (dynamic)** — as many panes as active dispatches, dynamically. Mirrors
   exactly what's running; but the layout is unstable / jumps, hard to track by eye during a long run.
 
-omnigent's instinct here is **per-conversation/run resource** (each run has its own terminal
-resource; the UI composes the view) — the per-runtime-context dimension, with no shared grid. Still
-needs the v1 pane code to settle. → open question Q2, §6.
+Two reference points now bracket the choice. **v1** uses **per-actor/role**: a fixed four-pane grid
+— `status` + the three agent roles (`implementer` / `reviewer` / `meta_reviewer`), each role bound
+to a fixed pane index (`topologySlotCatalog.ts`, `topologySlotPaneProjection.ts`; see §7).
+**omnigent's** instinct is the opposite — **per-conversation/run resource** (each run owns its
+terminal resource; the UI composes the view), the per-runtime-context dimension, with no shared
+grid. So Q2 is no longer "unknown": it is the **v3 design choice** between keeping v1's per-role grid
+and moving to per-runtime-context (leaning the latter — it fits the execution-process primitive and
+survives child-spawn). → open question Q2, §6.
 
 ### 3.3 Where the layout config lives (Q3) — settled direction
 
@@ -99,7 +105,8 @@ The **runtime-adapter / presentation config**, NOT the workflow definition — s
 platform-independent and a different runtime (web/cloud) simply ignores it. The alternative (an
 optional presentation block in the template) keeps everything in one place for the author but
 leaks tmux into the definition. omnigent confirms the split: layout is the UI's job, and its
-`terminals:` config is for ad-hoc shells, not agent launch (§4). → open question Q3, §6.
+`terminals:` config is for ad-hoc shells, not agent launch (§4). The **location** is settled; what
+remains open is only the concrete **config form and binding policy** (§6 Q3).
 
 Note: a "pane" content is not necessarily a *step* but an *execution-process* (agent-turn,
 dev-server, shell) — vibe-kanban's unified primitive.
@@ -114,12 +121,15 @@ A shipped meta-harness that runs many vendor agents. Re-read at the source level
 is the most complete external answer because it **separates the channels within a single actor**
 instead of conflating them onto a pane:
 
-- **Default execution layer = `HarnessProcessManager`, NOT tmux.** Per conversation it lazily
-  spawns a harness **subprocess**, waits for a **Unix domain socket** to appear, and returns an
-  `httpx.AsyncClient` over it — process + UDS + HTTP/SSE, with crash-detect-and-respawn and a
+- **Outer control/execution layer = `HarnessProcessManager` (process + UDS + HTTP/SSE), not a pane.**
+  Per conversation it lazily spawns a harness **subprocess**, waits for a **Unix domain socket** to
+  appear, and returns an `httpx.AsyncClient` over it — with crash-detect-and-respawn and a
   per-conversation spawn lock (`omnigent/runtime/harnesses/process_manager.py:460` `get_client`,
   `:759` `_spawn_entry`; the runner's control-plane auth secret is stripped from the harness env so
-  the agent payload cannot impersonate the runner). This is the clean "run the actor" layer.
+  the agent payload cannot impersonate the runner). This is the "run the actor" control plane —
+  **under it, a native-TUI adapter may still host the vendor's interactive TUI in tmux** (next
+  bullet); the point is that tmux is never the *outer* execution/transport layer, only at most one
+  adapter's surface beneath it.
 - **Native interactive TUI = a special adapter** layered on top — and even there the channels are
   split, not welded:
   - **claude-native** (the hybrid): **tools** over an MCP stdio server Claude launches as a child
@@ -219,7 +229,8 @@ remains **v3-original, no external reference** — like the L9 fuzzy-correlation
 
 ## 5. The clean target architecture (sharpened)
 
-Two layers, under a kernel/definition that stays platform-independent:
+Two runtime layers plus one presentation layer, under a kernel/definition that stays
+platform-independent:
 
 **(1) Substrate = L0e runtime-context provider.** An opaque, provider-issued ref (path /
 container-id / sandbox-url). Providers: `pairflow.worktree` (MVP), later cloud sandbox (omnigent
@@ -273,37 +284,50 @@ input fallback); the layout is a presentation detail at the edge.**
   (MVP-scope-gated):* does the MVP ship the headless/cloud provider now, or local-worktree only?
   (omnigent shows the cloud-provider shape is well-trodden if needed; the worktree provider is cheap
   either way.)
-- **Q2 — Pane-binding dimension: STILL OPEN.** per-runtime-context (worktree/sandbox) /
-  per-actor-role / per-active-dispatch. Leaning per-runtime-context (fits the execution-process
-  primitive; omnigent's per-conversation resource is the same instinct). Needs the v1 pane code to
-  ground.
-- **Q3 — Layout config location: SETTLED direction.** Runtime-adapter / presentation config, not the
-  workflow definition — keeps the template platform-independent. (omnigent confirms: layout is the
-  UI's job; the `terminals:` config is for ad-hoc shells, not agent launch.)
+- **Q2 — Pane-binding dimension: OPEN as a v3 design choice (no longer a grounding gap).** v1 is
+  now known to use **per-actor/role** — a fixed four-pane grid (`status` + `implementer` /
+  `reviewer` / `meta_reviewer`, role→pane-index, see §7). The choice for v3 is **keep per-role** or
+  **move to per-runtime-context** (worktree/sandbox) / per-active-dispatch. Leaning
+  per-runtime-context (fits the execution-process primitive and survives child-spawn; omnigent's
+  per-conversation resource is the same instinct).
+- **Q3 — Layout config location: SETTLED (runtime-adapter / presentation layer); config form open.**
+  The *location* is settled — presentation config, not the workflow definition or kernel — which
+  keeps the template platform-independent. (omnigent confirms: layout is the UI's job; the
+  `terminals:` config is for ad-hoc shells, not agent launch.) What stays open is only the concrete
+  **config form and binding policy**, which follows from Q2.
 
-## 7. Clarifying questions still owed to the user
+## 7. v1 grounding results
 
-Three of these are now answerable from the v1 code (the grounding step); only the fourth is a
-genuine product decision:
+The first three questions owed at parking are now answered from the existing pairflow tmux/pane
+layer (`src/v11/infrastructure/channel/tmux/`, `src/v11/shared/topology/`,
+`src/v11/application/watchdog/`); only the fourth remains a genuine product decision:
 
-1. **What is TMUX actually used for in v1 today?** — does a human attach and type/intervene, or just
-   glance? (decides whether live-attach/takeover is a real requirement) — *read from v1 code.*
-2. **What does the v1 pane layout concretely look like?** — how many panes, what they show, the
-   logic. (grounds Q2) — *read from v1 code.*
-3. **What is the actual I/O today?** — `send-keys`/`capture-pane`, or does the agent already run a
-   stdio/protocol and tmux is just the visual frame? (decides how cheap the transport split is — the
-   omnigent claude-vs-codex question, applied to v1) — *read from v1 code.*
-4. **MVP scope:** local/tmux only, or is headless/cloud execution (CI, remote) also an MVP
-   requirement? — *genuine user decision; gates Q1's remaining sub-decision.*
+1. **What the v1 pane layout concretely is — a fixed per-role grid.** Four topology slots: `status`
+   (pane 0) + `implementer` (1) / `reviewer` (2) / `meta_reviewer` (3), each agent role bound to a
+   fixed pane index (`topologySlotCatalog.ts:24-42`, `topologySlotPaneProjection.ts`). This grounds
+   Q2: v1's binding dimension is **per-actor/role**.
+2. **What the I/O actually is — screen-scraping.** Input is tmux `send-keys` (text, then a separate
+   `Enter`; `tmuxInput.ts:91,111`); readiness/observation is `capture-pane` (`tmuxInput.ts:154,226`,
+   `watchdogPaneActivitySampler.ts:58`). So the transport *is* the fragile path — the split into
+   structured channels (§5) is real work, not a no-op (the omnigent claude-vs-codex question,
+   applied to v1: v1 sits at the claude-send-keys end).
+3. **Whether live-attach/intervention is real — yes, partially.** There is a `stuck_in_input` marker
+   and a watchdog-driven **stuck-input retry** loop (`tmuxInput.ts:15,172,193-210`,
+   `tmuxDelivery.ts:223`), plus a session **registry** the delivery path reads
+   (`tmuxDelivery.ts:169`). The pane is a live, watched, recoverable surface — so an
+   observe/takeover channel (§5) is a real requirement, not just cosmetics.
+4. **MVP scope (still owed):** local/tmux only, or is headless/cloud execution (CI, remote) also an
+   MVP requirement? — *genuine user decision; gates Q1's remaining sub-decision (§6 Q1).*
 
 ## 8. Resume pointer
 
 Studies 11–12 (gastown, gstack) are folded in; omnigent is re-examined at the code level and
-reframed as the **hybrid channel-split** reference. **Next concrete step:** read the v1 tmux/pane
-code (likely the v1 runtime/bubble layer — the [[v3-concept-divergence]] memory mentions
-`terminateBubbleTmuxSession` / `removeRuntimeSession` and `bubblePaths.ts`) to answer §7.1–3 and
-ground Q2, then settle Q1's MVP-scope sub-decision (§7.4) with the user. The **four-channel
-ActorAdapter over a swappable substrate (§5)** is the target primitive; **omnigent + vibe-kanban**
-are the clean references, **gastown** the cautionary one, **gstack** the secure-attach pattern. A
-follow-up should also fold this transport-layer read back into
-[`omnigent-study.md`](omnigent-study.md), whose §5 L0e did not examine the harness-transport layer.
+reframed as the **hybrid channel-split** reference; the v1 pane layer is read and folded into §7
+(fixed per-role grid, `send-keys`/`capture-pane` I/O, stuck-input retry + session registry).
+**Next concrete step:** settle the **v3 pane-binding choice (Q2)** — keep v1's per-role grid vs move
+to per-runtime-context — and the **MVP-scope sub-decision of Q1** (§7.4) with the user; both feed
+Q3's concrete config form. The **four-channel ActorAdapter over a swappable substrate (§5)** is the
+target primitive; **omnigent + vibe-kanban** are the clean references, **gastown** the cautionary
+one, **gstack** the secure-attach pattern. A follow-up should also fold this transport-layer read
+back into [`omnigent-study.md`](omnigent-study.md), whose §5 L0e did not examine the
+harness-transport layer.
