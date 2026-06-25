@@ -173,6 +173,160 @@ instead of conflating them onto a pane:
 > **adapter-owned, kernel-invisible**. Reframed from the earlier note: omnigent is a **hybrid,
 > channel-split native runtime reference**, not a "clean no-tmux" one.
 
+#### Live-run reference: sessions, communication, observation
+
+The live Polly run made one layer distinction sharper than the source-only read: Omnigent's
+visible "child" is primarily a **session** concept, not a pane and not necessarily a full child
+workflow.
+
+Omnigent session model:
+
+- A **session** is an independent agent conversation/runtime container: it has history, status,
+  runner/harness binding, resources, optional terminal resources, and an inbox queue.
+- The top-level user-started Polly conversation is a session.
+- A Polly-dispatched worker is also a session. It is a **child** because it carries
+  `parent_session_id`, appears under Polly in the Subagents/Agents panel, and delivers its result
+  to Polly's inbox.
+- A child can become a parent of its own children if the tool surface allows it. So "inbox exists
+  per session"; "sub-agent completion is delivered to the parent session's inbox" is the
+  coordination pattern.
+
+The communication path is separate from the observation path:
+
+```text
+Omnigent server/core
+  -> runner / harness API
+  -> actor session input
+  <- structured or external output events
+  <- status/completion/inbox result
+
+Browser terminal
+  -> WebSocket attach
+  -> tmux attach PTY
+  -> native agent TUI
+```
+
+The first path is the coordination/authority path. It creates or continues sessions, sends turns,
+receives output/status, updates history, and delivers child completion to the parent inbox. The
+second path is a human observe/takeover surface.
+
+For **structured/headless harnesses**, a turn ends when the executor emits `TurnComplete`; the
+scaffold turns that into `response.completed` and `session.status: idle`. For **native CLI
+harnesses**, the adapter may return `TurnComplete(response=None)` after input injection; the real
+completion is then observed through the native forwarder as `external_session_status: idle` (or
+`failed`). If the native session is tracked as a sub-agent, that terminal status is transformed
+into a parent-inbox payload:
+
+```text
+child session idle
+  -> mark sub-agent work completed
+  -> put sub_agent result into parent inbox
+  -> wake parent with "call sys_read_inbox"
+```
+
+This is close to, but weaker than, v3's desired emit discipline. Omnigent often derives "done" from
+session lifecycle/status plus forwarded transcript output. v3 should keep the stronger rule:
+
+```text
+actor emits structured output
+  -> kernel validates authority/op_id/schema/CAS
+  -> commit becomes durable truth
+  -> wake/routing derives from committed facts
+```
+
+The live run also clarifies the v3 mapping:
+
+| Omnigent term | Better v3 reading |
+|---|---|
+| child session | usually an `actor_session` / runtime conversation used by a step+role dispatch |
+| child workflow | only when the delegated unit is itself a full kernel-modeled workflow instance |
+| terminal tab | observe/takeover surface for the actor session |
+| parent inbox item | completion/wake delivery; in v3 this should derive from committed emit/lifecycle facts |
+
+So do **not** read Omnigent's "child" as v3 L4 `child_workflow` by default. The child session is
+often closer to "the runtime conversation used inside a step for a role." A full v3 L4
+`child_workflow` is appropriate only when the delegated unit has its own kernel workflow and
+lifecycle.
+
+The same live run exposed a second, adjacent topic: Polly behaves like a **dynamic orchestrator
+workflow**. It plans, creates/continues child sessions, waits on inbox results, and decides
+follow-up delegation at runtime. That is not only a pane/runtime concern; it is a workflow-model
+gap tracked separately in
+[`_dynamic-orchestrator-workflow.md`](_dynamic-orchestrator-workflow.md).
+
+#### Practical notes from the live run
+
+These are not new v3 decisions, but they were useful concrete learnings from running Omnigent and
+watching Polly in the browser.
+
+**The web UI has two separate layers.** The right-side Agents/Subagents panel is Omnigent's own
+structured session tree: parent session, child sessions, statuses, previews, and resources. The
+black terminal panel is not the truth model; it is an attached terminal view for one selected
+session/resource.
+
+**The browser terminal is xterm.js over a WebSocket.** The browser runs an xterm.js terminal
+emulator. It does not understand "Claude" or "Codex"; it renders terminal bytes. The attach URL is
+resource-addressed:
+
+```text
+WS /v1/sessions/{session_id}/resources/terminals/{terminal_id}/attach
+```
+
+Server to browser is binary frames containing PTY output bytes. Browser to server is:
+
+- JSON text control messages for resize, e.g. `{"type":"resize","cols":120,"rows":40}`;
+- binary input bytes for keystrokes, paste, and mouse-mode reports.
+
+**Attach is a tmux client, not a direct stdout tap.** On the runner side, Omnigent starts a
+`tmux attach` client on a fresh PTY and bridges that PTY to the browser WebSocket. So the browser
+acts like another terminal attached to the same running tmux session. This preserves cursor motion,
+ANSI colors, alternate screen, and native TUI behavior.
+
+**Read-only observe and takeover are the same bridge with different authority.** In read-only mode,
+Omnigent drops inbound binary input and also uses read-only tmux attach (`tmux attach -r`) as
+defense in depth. Interactive takeover writes raw input bytes into the PTY and is owner-only,
+because those keystrokes carry no separate end-user identity once they hit the native TUI.
+
+**Claude native is hybrid.** The Claude Code native session is a real Claude TUI in tmux, but not
+all channels go through screen scraping:
+
+- tools go through an MCP stdio server;
+- authoritative output is tailed from Claude Code's structured transcript JSONL by a forwarder;
+- input may fall back to tmux `send-keys` because the cleaner Channels-MCP input path is blocked by
+  org policy in Omnigent's environment.
+
+So the terminal display is human-facing; it is not where Omnigent primarily derives history.
+
+**Codex native is cleaner on input.** Codex native uses a Codex app-server / RPC path for turn
+control (`turn/start`, `turn/steer`, interrupt/settings-style operations). The TUI can still be
+visible/attachable, but input control does not have to be pane keystroke injection in the same way
+Claude native does.
+
+**Forwarders are the bridge from vendor-native history to Omnigent history.** For native sessions,
+the executor may only inject input and return `TurnComplete(response=None)`. The durable Omnigent
+history/status then arrives via a forwarder reading the vendor-native transcript/app-server stream
+and posting `external_conversation_item`, `external_session_status`, usage/model changes, and
+similar events back into Omnigent.
+
+**`idle` means different things at different layers.** In a structured/headless harness,
+`TurnComplete` leads to `response.completed` and `session.status: idle`. In native harnesses,
+`external_session_status: idle` is often the practical "the native turn finished" edge. For a
+tracked sub-agent, Omnigent transforms that idle/failed edge into a parent-inbox result.
+
+**The local demo has an API-only trap.** A globally installed/source Omnigent server may answer
+`http://localhost:6767/` with JSON if the web UI bundle is not built. For a source checkout, the
+practical live-demo path is:
+
+```text
+omnigent server start
+omnigent host --server http://localhost:6767
+cd ap-web && npm install && npm run dev
+open the Vite URL, usually http://localhost:5173/
+```
+
+This matters because seeing only the root JSON does not mean the server failed; it means the API is
+running without a built/served SPA.
+
 ### vibe-kanban — the clean minimal PTY reference
 
 - **`PtyService`** (`crates/local-deployment/src/pty.rs`) — native PTY (`portable_pty`), an

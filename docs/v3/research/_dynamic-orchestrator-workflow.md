@@ -1,0 +1,302 @@
+# Open Topic - Dynamic Orchestrator Workflow
+
+Date: 2026-06-25
+Status: **OPEN.** This is a model-gap memo, extracted from the Omnigent live run and the
+follow-up discussion about whether Omnigent's "child session" maps to v3 `child_workflow`.
+
+Relation to other research:
+
+- [`_open-agent-runtime-and-pane-layout.md`](_open-agent-runtime-and-pane-layout.md) covers how
+  an actor runtime is executed and observed.
+- [`_agent-runtime-prototype/`](_agent-runtime-prototype/) is a channel-separation prototype for
+  one actor turn.
+- This memo covers a different issue: whether v3 needs a first-class dynamic orchestrator
+  workflow shape, where an actor plans, delegates, waits, and re-delegates at runtime.
+
+---
+
+## 1. The correction
+
+The word "child" is misleading across the two systems.
+
+In Omnigent, a **child session** is mainly a session-ownership and coordination concept:
+
+- it was created by a parent session;
+- it appears under that parent in the UI;
+- its terminal/completion can be observed separately;
+- its result is delivered back to the parent inbox.
+
+That does **not** automatically mean it maps to v3 L4 `child_workflow`.
+
+The better v3 mapping is conditional:
+
+| Omnigent concept | Usually closer v3 concept | When it becomes v3 `child_workflow` |
+|---|---|---|
+| child session used for one delegated read/review/implementation task | an `actor_session` or runtime conversation used by a step/role dispatch | only if the delegated unit has its own kernel-modeled workflow instance and lifecycle |
+| parent/child session tree | coordination metadata over actor sessions | L4 only when the parent waits on a full child workflow lifecycle |
+| terminal for a child session | observe/takeover surface for the actor runtime | not a workflow primitive |
+
+So the useful conclusion is:
+
+```text
+Omnigent child session != v3 child_workflow by default.
+Omnigent child session is often closer to "the actor runtime conversation used inside a v3 step".
+```
+
+---
+
+## 2. What Omnigent demonstrates
+
+Polly behaves like a workflow, but not like a static template-authored workflow. It is a
+**dynamic orchestrator workflow**:
+
+```text
+human goal
+  -> Polly plans at runtime
+  -> Polly dispatches child sessions
+  -> child sessions run independently
+  -> Polly waits on inbox results
+  -> Polly may dispatch follow-up work, reviews, fixes, or summaries
+  -> Polly eventually answers the user
+```
+
+The workflow shape is authored by Polly during the run, not fully declared ahead of time by a
+static kernel template.
+
+Omnigent's key runtime primitives:
+
+- `sys_session_send(agent, title, args)` creates or continues a child session.
+- In named mode, `(agent, title)` is a reuse key:
+
+  ```text
+  first send(agent="codex", title="auth-review") -> create child session
+  later send(agent="codex", title="auth-review") -> continue same child session
+  ```
+
+- `sys_session_send(session_id=...)` can address an existing child session directly.
+- `sys_session_create(...)` can create a child session explicitly.
+- `sys_read_inbox` lets the parent drain completed async work.
+- A child can become a parent of its own children if it has the tool surface to spawn them.
+
+This is not a free global agent-to-agent bus. The default topology is still parent/child oriented:
+
+```text
+parent can send to its children
+child results return to parent inbox
+child may spawn its own children if allowed
+sibling-to-sibling direct messaging is not the primary model
+```
+
+But it is much more dynamic than a static step graph.
+
+---
+
+## 3. What current v3 models well
+
+Current v3 is strongest when the workflow shape is known and authored as a template:
+
+```text
+template step
+  -> role/actor binding
+  -> actor receives issued context
+  -> actor emits a structured output
+  -> kernel validates/dedups/CAS-commits
+  -> template routes to the next step
+```
+
+This gives v3 strong correctness properties:
+
+- actor output is accepted through explicit `emit`;
+- authority binding, `op_id`, payload digest, and CAS can be enforced at ingress;
+- step routing is owned by the kernel/template, not inferred from chat text;
+- human decisions, gates, child lifecycle events, and action results can become audited kernel
+  facts.
+
+L4 `child_workflow` is one particular extension of this static model:
+
+```text
+parent child_workflow step
+  -> ChildWorkflowLink
+  -> SpawnIntent
+  -> CREATE_INSTANCE child
+  -> parent WAITING(child_event)
+  -> CHILD_LIFECYCLE routes parent
+```
+
+This is appropriate when the delegated unit is itself a full workflow instance with its own
+kernel-modeled lifecycle.
+
+---
+
+## 4. What current v3 does not model yet
+
+The current v3 model does not yet have a clear first-class shape for Omnigent/Polly-style dynamic
+orchestration:
+
+- An actor receives a high-level goal and dynamically creates work items.
+- The actor decides at runtime how many worker sessions to use.
+- The actor can continue a named worker conversation rather than always spawning a fresh
+  invocation.
+- The actor can wait on inbox results, inspect them, then decide whether to send follow-up work.
+- The actor can manage a task/review/fix loop without that loop being fully pre-authored as a
+  static template graph.
+
+Current L4 explicitly covers a stricter shape:
+
+- child execution is a declared `child_workflow` step;
+- the parent waits on declared lifecycle keys;
+- MVP is sequential, one child link per parent step;
+- a terminal child link means a future re-entry with the same `child_key` spawns a fresh attempt,
+  not a continued conversation;
+- parent-driven live child steering is deferred.
+
+That is a feature for correctness, but it means Omnigent's dynamic session workflow is not yet
+represented.
+
+---
+
+## 5. Candidate missing concept: ActorSessionRef
+
+The missing concept may be an `ActorSessionRef`: a durable reference to a runtime conversation used
+by a step/role dispatch, separate from L4 `ChildWorkflowLink`.
+
+Possible shape:
+
+```text
+ActorSessionRef {
+  session_id,
+  owner_instance_id,
+  owner_step_id?,
+  role,
+  actor,
+  title_or_key,
+  status,
+  reuse_policy,
+  observe_surface_refs
+}
+```
+
+This would model a reusable worker conversation without forcing it to be a full child workflow
+instance.
+
+Useful reuse policies:
+
+```text
+fresh_per_invocation
+reuse_per_step_instance
+reuse_per_role_in_workflow
+reuse_by_named_task_thread
+explicit_session_id
+close_or_tombstone_on_completion
+```
+
+Omnigent's `(agent, title)` mode is closest to:
+
+```text
+reuse_by_named_task_thread
+```
+
+---
+
+## 6. Candidate missing mode: Dynamic Orchestrator Step
+
+Another missing concept is a step or workflow mode where the actor is allowed to orchestrate
+sub-work dynamically through kernel-owned primitives:
+
+```text
+dynamic_orchestrator step
+  -> actor can create/continue actor sessions
+  -> actor can send turns to actor sessions
+  -> actor can wait/drain inbox
+  -> actor can close/tombstone actor sessions
+  -> actor eventually emits a final structured result
+```
+
+The key v3 requirement: dynamic must not mean unaudited chat-only behavior. The orchestrator's
+actions should still become committed intents/facts:
+
+```text
+ACTOR_SESSION_CREATE_OR_CONTINUE intent
+ACTOR_SESSION_SEND intent
+ACTOR_SESSION_CLOSED
+INBOX_ITEM_DELIVERED
+ORCHESTRATOR_FINAL_EMIT
+```
+
+This preserves v3's source-closed discipline while allowing Omnigent-like flexibility.
+
+---
+
+## 7. Relationship to step, role, and child workflow
+
+The likely hierarchy:
+
+```text
+workflow instance
+  -> step
+    -> role binding
+      -> actor dispatch
+        -> actor session / runtime conversation
+          -> observe surface
+```
+
+L4 `child_workflow` is different:
+
+```text
+workflow instance
+  -> child_workflow step
+    -> child workflow instance
+      -> its own steps/roles/actor sessions
+```
+
+So:
+
+- If the delegated unit is "ask Codex to investigate and report", it can be an actor session inside
+  a step.
+- If the delegated unit is "run a full implement/review/merge workflow", it may deserve L4
+  `child_workflow`.
+- If Polly itself dynamically decides which of those to do, Polly is acting as a dynamic
+  orchestrator workflow.
+
+---
+
+## 8. Open design questions
+
+1. Should v3 support `ActorSessionRef` as a first-class durable object, or keep actor sessions
+   adapter-local until a later level?
+2. Should dynamic orchestration be a workflow mode, a step type, or just a packaged tool surface
+   available to selected roles?
+3. Which session reuse policies should be kernel-owned versus adapter/presentation-owned?
+4. How should dynamic actor-session sends relate to v3 `emit`?
+   - Is "send to actor session" a committed intent?
+   - Is the worker response a normal actor emit?
+   - Does parent wake derive from an inbox item, a wait condition, or both?
+5. How much of Omnigent's parent inbox model belongs in v3 L8 channel/task-inbox work versus an
+   earlier dynamic-orchestrator slice?
+6. How should observe/takeover attach to an `ActorSessionRef` without becoming part of workflow
+   truth?
+
+---
+
+## 9. Design pressure summary
+
+Omnigent demonstrates something current v3 does not yet model cleanly:
+
+```text
+a long-lived LLM orchestrator can dynamically construct and supervise a workflow at runtime
+using reusable child agent sessions and inbox completion.
+```
+
+Current v3 demonstrates something Omnigent does not enforce as strongly:
+
+```text
+every load-bearing transition should be an explicit, validated, idempotent, committed kernel fact.
+```
+
+The synthesis is not to replace one with the other. The promising direction is:
+
+```text
+Omnigent-style dynamic actor-session orchestration
++ v3-style committed intents, emit contracts, idempotency, and wait resolution.
+```
+
