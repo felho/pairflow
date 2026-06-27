@@ -797,6 +797,11 @@ Concepts: the gatekeeper's three layers (connector runtime / matcher / owner UX)
 `contribution`; trust `domain`. Builds on grants/vault (L7).
 Why: declared data flows in from private sources (a mailbox) without the substrate
 seeing the source — the multi-person coordination mechanism.
+Scope note: the load-bearing requirement is the private-data contribution boundary,
+not full kernel federation. Personal<->org kernel federation remains a keep-open
+topology for separate authority domains; the near-term L10 shape may be a central
+org kernel plus gatekeeper boundary. See
+[`../research/_open-private-data-boundary-vs-federation.md`](../research/_open-private-data-boundary-vs-federation.md).
 
 ### Block C — Agent-native (the self-improving agent layer)
 

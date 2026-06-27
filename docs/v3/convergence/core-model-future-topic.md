@@ -990,6 +990,14 @@ Source: the §4 L10 matrix row and later federation / capability-schema addenda
 handling, but the boundary where private-source data becomes an approved,
 auditable workflow contribution.
 
+Scope clarification: "federation" here names a keep-open topology, not the
+minimum requirement. The required primitive is the controlled private-data
+contribution boundary: raw private sources and credentials stay behind a
+gatekeeper, while the workflow receives only an approved contribution envelope.
+Full personal<->org or org<->org kernel federation should remain possible, but
+it is not an MVP dependency. See
+[`../research/_open-private-data-boundary-vs-federation.md`](../research/_open-private-data-boundary-vs-federation.md).
+
 #### 1. Gatekeeper three-layer contract
 
 The gatekeeper should separate private-source access from matching and owner
