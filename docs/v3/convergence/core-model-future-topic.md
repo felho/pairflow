@@ -402,6 +402,30 @@ consume, not just the raw user request.
 - This connects L2 scanning to L5 skills, L8 channels, and Part F's evidence
   currency rule.
 
+#### 6. Stateful policy plane: policy state and guardrail labels
+
+Omnigent's policy model shows a useful future extension for stateful gates:
+policies can carry small durable decision memory and shared classification
+labels without turning that memory into workflow/domain state.
+
+- `policy_state` should be policy-local, namespaced decision memory for
+  budgets, rate limits, risk accumulation, approval checkpoints, and similar
+  guardrail bookkeeping.
+- `guardrail_labels` should be shared typed classification metadata that other
+  policies can use as conditions, such as sensitivity, risk level, or
+  "requires approval" facts.
+- Policies should not write either store directly. A gate result may propose
+  state or label updates; the kernel commits accepted updates under the same
+  ordering, idempotency, and audit rules as the gated transition.
+- `ASK` updates must remain pending and apply only on approval. Decline,
+  cancel, or timeout should leave no policy-state or label side effect.
+- Keep the boundary explicit: transcript and instance state own workflow facts;
+  `policy_state` owns guardrail memory; `guardrail_labels` own cross-policy
+  classification.
+- This is a future L2 extension to the already-modeled gate mechanism, not a
+  new workflow level. It cross-references Part F's verify/policy distinction
+  and Part A's idempotent commit discipline.
+
 ### L3 — Human decision ergonomics and payload shape
 
 Source: the §9 survey hook taxonomy, the §8/gstack human-gate bypass warning,
