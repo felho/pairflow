@@ -106,6 +106,28 @@ not absorb the whole authority model.
   distinction matters, make it a schema/configured policy fact that the kernel
   or gate pipeline enforces.
 
+#### 4. Emit affordances should become structured, not only text blocks
+
+`ContextPacket.available_ops` is currently a small navigation surface and L2b
+adds deterministic `context_blocks` as communication-only prose. A later
+context-packet slice should make the actor-facing "what can I emit now?" surface
+structured enough for adapters and agents to reason over directly.
+
+- Represent each reachable emit as an affordance with event type, target step
+  where known, availability status, gate summaries, required payload schema,
+  and required evidence obligations.
+- Useful statuses include `available_now`, `blocked_now`, `conditional`, and
+  `requires_external_gate`.
+- Gate-derived summaries should come from the same gate declarations that
+  enforce the rule, not from separately maintained prompt text.
+- This is guidance, not authority: a stale or ignored affordance still fails at
+  L1/L2/L2a ingress.
+- This generalizes the Omnigent lesson that an actor sees a structured tool /
+  session surface such as `sys_session_send` or `sys_read_inbox`, while v3 keeps
+  enforcement in the kernel. The v3 version should cover emits, action requests,
+  dynamic-orchestrator tools, and human-decision UI affordances through the same
+  "available operation" projection family.
+
 ### L0c — Agent run configuration + ActorAdapter seam
 
 Source: the §4 L0c matrix row and later adapter/memory addenda. The current L0c
@@ -313,8 +335,9 @@ policy attached to that reason.
 
 ### L2 / L2a — Gate library and verification governance
 
-Source: the §4 L2 matrix row and later verification / policy addenda (§8-§11).
-The current L2/L2a model is acceptable as the mechanism: ordered
+Source: the §4 L2 matrix row, the
+`v3-gate-policy-config-design-synthesis.md` note, and later verification /
+policy addenda (§8-§11). The current L2/L2a model is acceptable as the mechanism: ordered
 `allow | warn | block` gate pipelines, inline process gates, read-only/stateless
 evaluation, and durable `evidence_refs`. `core-model-todo.md` Part F already
 captures the semantic verify discipline. The future work is to mature the gate
@@ -334,7 +357,44 @@ belong in a packaged gate library and template set, not as kernel primitives.
 - New gates should prove whether they are policy gates, verify gates, or both;
   do not infer the semantic family from the implementation type.
 
-#### 2. Verify evaluator governance and freshness beyond one run
+#### 2. Authoring profiles should compile to normalized GatePipeline
+
+The hand-authored policy surface and the runtime gate surface should not be the
+same object. Authors need compact, domain-close parameters; the kernel needs an
+explicit, ordered, typed `GatePipeline`.
+
+- Authoring config may name a workflow package/profile and override domain
+  parameters such as severity threshold, required command set, evidence policy,
+  or human-approval behavior.
+- Definition resolution should validate that surface and compile it into pinned
+  gate bindings at concrete `(step, event)` points.
+- The normalized runtime form should carry exact ordering, evaluator identity,
+  implementation/execution mode, typed config, and debug/audit identity.
+- The kernel should consume only the normalized gate bindings. It should not
+  interpret a free-floating profile at run time.
+- This mirrors L0f: `StartCommand + ProjectConfig` resolves to a pinned
+  definition before the kernel runs.
+
+#### 3. V1 review-loop policy is a package profile, not kernel vocabulary
+
+The v1 review-loop rules are useful migration assets, but they should live in a
+versioned workflow/policy package, not inside the workflow-agnostic kernel.
+
+- A package such as `pairflow.review_loop.v1@1` may own the workflow template,
+  roles, steps, packaged gates, L2b contributions, policy profiles, and typed
+  parameter schema.
+- A profile such as `strict_code_review` is scoped to that package. It compiles
+  into concrete gate bindings and context contributions for the selected
+  workflow.
+- Runs should record the package/profile/config identity and the resolved
+  pipeline identity they evaluated against.
+- Avoid global profile names such as "strict review" as kernel concepts. The
+  kernel should see `GateEvaluator` / `GateDecision` and pinned definitions, not
+  code-review vocabulary.
+- This keeps packaged v1 compatibility without weakening the
+  de-vocabularized-kernel principle.
+
+#### 4. Verify evaluator governance and freshness beyond one run
 
 A verify gate is stronger than actor self-report, but the evaluator itself is
 still a component that can be stale, misconfigured, or too weak for the claim it
@@ -352,7 +412,7 @@ certifies.
 - This extends Part F's "no stale-green" rule from run state to evaluator state;
   L13 may later own the broader trust/eval governance model.
 
-#### 3. Policy config is a reviewable artifact, not UI click-state
+#### 5. Policy config is a reviewable artifact, not UI click-state
 
 Gate and policy behavior should be diffable, reviewable, and reproducible. A
 security-critical approval or gate rule should not live only as mutable UI state.
@@ -367,7 +427,7 @@ security-critical approval or gate rule should not live only as mutable UI state
   L13 because organization-level approval and policy-change governance come
   later.
 
-#### 4. Gate ablation and recalibration
+#### 6. Gate ablation and recalibration
 
 Every gate encodes an assumption about a model, actor, workflow, or runtime
 weakness. That assumption can become stale as models, prompts, tools, or
@@ -386,7 +446,7 @@ workflow definitions improve.
   autonomy an agent/version has earned; L2 asks whether each gate remains the
   right control for the risk it claims to cover.
 
-#### 5. Scan after expansion, not only before
+#### 7. Scan after expansion, not only before
 
 Input/security scans should cover the actual material the actor or tool will
 consume, not just the raw user request.
@@ -402,7 +462,44 @@ consume, not just the raw user request.
 - This connects L2 scanning to L5 skills, L8 channels, and Part F's evidence
   currency rule.
 
-#### 6. Stateful policy plane: policy state and guardrail labels
+#### 8. Typed route reasons without lifecycle mutation
+
+Policy/routing decisions may need richer reasons than `allow | warn | block`,
+especially for v1-style review-loop paths that all enter a human gate for
+different reasons.
+
+- A policy gate may propose a typed route reason such as
+  `human_gate_threshold_not_met`, `human_gate_budget_exhausted`,
+  `human_gate_inconclusive`, `human_gate_sticky_bypass`, or `auto_rework`.
+- The route reason should be recorded for audit, UI explanation, and later
+  trust/policy analysis even when several reasons map to the same lifecycle
+  target.
+- The policy module must not mutate lifecycle state or park the instance
+  directly. It returns a decision/reason; the kernel/L3 path applies the target
+  through the ordinary validated transition machinery.
+- This is the route version of the stateful-policy guardrail below: gates may
+  propose, classify, or route; the kernel owns commit, ordering, idempotency, and
+  lifecycle effects.
+
+#### 9. Typed advisory or transform outputs may be needed later
+
+Some policy checks are neither pure block nor pure allow. They may reinterpret a
+structured claim for projection or downstream policy, such as demoting a finding
+from "required now" to "later hardening" under an explicit docs-only/evidence
+rule.
+
+- Do not add arbitrary mutation power to `GateDecision`; keep any transform
+  typed, narrow, and auditable.
+- Candidate outputs include effective priority, effective timing, advisory
+  diagnostics, or projection-only classification.
+- The original actor claim and the transformed/effective policy view should both
+  remain inspectable. A transform is not a rewrite of the transcript fact.
+- Revisit this in the findings/doc-gate design once the structured claim model
+  from `core-model-todo.md` Part E is specified.
+- MVP L2 can stay `allow | warn | block`; typed advisory/transform output is a
+  later extension only when a concrete policy family needs it.
+
+#### 10. Stateful policy plane: policy state and guardrail labels
 
 Omnigent's policy model shows a useful future extension for stateful gates:
 policies can carry small durable decision memory and shared classification
@@ -425,6 +522,31 @@ labels without turning that memory into workflow/domain state.
 - This is a future L2 extension to the already-modeled gate mechanism, not a
   new workflow level. It cross-references Part F's verify/policy distinction
   and Part A's idempotent commit discipline.
+
+#### 11. Gate / policy / routing taxonomy needs sharper names
+
+`Policy` is too broad as a design word. A later L2 spec should name the semantic
+role of each rule rather than using one umbrella term for admission, routing,
+verification, capability, scheduling, and guidance behavior.
+
+- A **gate** should answer whether a concrete transition may proceed now:
+  `allow`, `warn`, `block`, or `ask`.
+- A **verify gate** should check independent evidence for an evidence-backed
+  claim. It is a gate family, not just an implementation type.
+- A **routing policy** should choose or propose the next route, escalation, wait,
+  or terminal target. Its output is not the same shape as a gate decision.
+- A **capability policy** should decide whether an actor/role/step may see or
+  invoke an operation, tool, grant, or runtime capability.
+- A **timing / scheduling policy** should govern retry, backoff, deadlines, and
+  scheduler pressure without becoming lifecycle authority.
+- A **presentation / guidance policy** may shape actor-facing context or UI
+  hints, but it is advisory and must not be a source of authority.
+- Keep `GateDecision` and `RoutingDecision` conceptually separate. If a module
+  both gates and routes, make both outputs explicit so route selection cannot
+  bypass ingress, authority, idempotency, CAS, or audit.
+- The kernel/template applies lifecycle effects through the ordinary validated
+  transition machinery. Gates and policies may decide, classify, or propose;
+  they should not directly mutate lifecycle state.
 
 ### L3 — Human decision ergonomics and payload shape
 
