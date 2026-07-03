@@ -1,6 +1,7 @@
 # Omnigent Study — What v3 Can Learn From a Shipped Meta-Harness
 
-Date: 2026-06-19
+Date: 2026-06-19 · Updated: 2026-07-04 (§5.1 harness-transport fold-back from
+[`../topics/_open-agent-runtime-and-pane-layout.md`](../topics/_open-agent-runtime-and-pane-layout.md))
 
 ## Purpose
 
@@ -252,6 +253,11 @@ skill wiring is a **separate** per-harness augment step (`augment_claude_args`,
 > adapter — keep the kernel free of any per-runtime model matrix. Give tooling its
 > own `apply_tooling()` step.
 
+The adapter picture above is invocation-level (how a run-intent becomes a
+launch). The **channel-level** view of the same layer — how input, authoritative
+output, tool calls, and observation actually flow per harness — was examined in a
+later pass and is folded back in **§5.1**.
+
 ---
 
 ## 5. L0e — Runtime context provider (validation)
@@ -283,6 +289,92 @@ skill wiring is a **separate** per-harness augment step (`augment_claude_args`,
 > **v3 action:** async provision + explicit ready-event; teardown mirrors every
 > failure path; `RuntimeContextRef` identity ≠ physical sandbox; the worktree
 > provider is a request-id-correlated remote-exec contract, not a local op.
+
+### 5.1 The harness transport layer (fold-back, 2026-07-04)
+
+The first pass did not examine *how* the server actually talks to a running
+actor. A later source-level re-read plus a live Polly run — done for
+[`../topics/_open-agent-runtime-and-pane-layout.md`](../topics/_open-agent-runtime-and-pane-layout.md)
+(§4 there) — filled that gap; the findings are folded back here. Net reframe:
+Omnigent is a **hybrid, channel-split native runtime reference**, not a "clean
+no-tmux" one.
+
+**The outer control/execution layer is a process manager, not a pane.**
+`HarnessProcessManager` lazily spawns a harness **subprocess** per conversation,
+waits for a **Unix domain socket** to appear, and returns an `httpx.AsyncClient`
+over it — with crash-detect-and-respawn and a per-conversation spawn lock
+(`omnigent/runtime/harnesses/process_manager.py:460` `get_client`, `:759`
+`_spawn_entry`). The runner's control-plane auth secret is stripped from the
+harness env so the agent payload cannot impersonate the runner. Where tmux
+exists at all, it is one adapter's surface *beneath* this layer — never the
+outer execution/transport layer itself.
+
+**Within a single actor, the channels are split, not welded.** Three harnesses,
+three different mixes:
+
+- **claude-native (the hybrid):** **tools** over an MCP stdio server Claude
+  launches as a child (`serve-mcp`); **authoritative output** by tailing Claude
+  Code's structured transcript JSONL at an offset
+  (`claude_native_forwarder.py` — `read_transcript_items_from_offset`,
+  `read_message_deltas_from_offset`), **not** `capture-pane`; **input** via tmux
+  `send-keys` + `capture-pane` confirm — and the bridge docstring is explicit
+  that the clean Channels-MCP input path was original and is **org-policy
+  blocked**, so send-keys is a *forced fallback*, not a design choice
+  (`claude_native_bridge.py` header).
+- **codex-native (cleaner):** a Codex **app-server process + JSON-RPC client** —
+  `turn/start` for a new turn, `turn/steer` for mid-turn steering,
+  lock-protected; no send-keys (`codex_native_app_server.py`;
+  `inner/codex_native_executor.py:48-104`).
+- **claude-SDK (fully headless):** a stdio executor with live
+  `_stdin_stream`/`_stdout_stream`, no tmux at all
+  (`inner/claude_sdk_executor.py:1070`, `:206-207`, `:451`).
+
+**Forwarders bridge vendor-native history into Omnigent history — so "done" is
+derived, not committed.** For native sessions the executor may only inject input
+and return `TurnComplete(response=None)`; durable history/status then arrives
+via a forwarder reading the vendor-native transcript / app-server stream and
+posting `external_conversation_item` / `external_session_status` events back.
+(The normalization-cost view of these same forwarders is §8.) `idle` means
+different things per layer: `TurnComplete → response.completed` at the SDK
+layer, but `external_session_status: idle` is the practical turn-finished edge
+for native harnesses; a tracked sub-agent's idle/failed edge is *transformed*
+into a parent-inbox item. This is weaker than v3's target discipline: v3 derives
+wake/routing from a validated, committed structured emit (authority + op_id +
+schema + CAS), never from session status plus forwarded transcript output.
+
+**Observation/attach is a clean, separate surface — the same bridge with
+different authority.** A **PTY ↔ WebSocket bridge** (`terminals/ws_bridge.py`):
+server→client every PTY read is a binary frame; client→server text frames are
+JSON control (resize), binary frames are raw input — **dropped when
+`read_only`**, with read-only tmux attach (`tmux attach -r`) as defense in
+depth; interactive takeover is owner-only (keystrokes carry no separate end-user
+identity once they hit the native TUI). A **terminal registry** keyed
+`(conversation_id, terminal_name, session_key)` (`terminals/registry.py`) plus
+tmux **lockdown** commands (removing user pane/window creation) keep managed
+terminals under registry control (`inner/terminal.py:144`, `:665`). Browser-side
+it is xterm.js rendering PTY bytes; attach is effectively another tmux client on
+a fresh PTY. The rendered terminal is human-facing — it is **not** where
+Omnigent derives history.
+
+**No configured pane *layout* exists.** The `terminals:` config is for ad-hoc /
+long-running shells (dev servers, watchers, log tails), explicitly **not** for
+launching coding agents — those go through `sys_session_send`
+(`examples/polly/config.yaml:264`). Each sub-agent is its own conversation with
+its own terminal resource; the UI composes the view. There is no shared
+per-role grid — so a declarative step/actor → pane-layout config remains
+**v3-original, with no external reference** (the agent-runtime memo reaches the
+same conclusion across all studied systems).
+
+> **v3 action:** the ActorAdapter declares **four logical channels** — input /
+> authoritative output / tool calls / observe-takeover — over a swappable
+> substrate. They may share physical wires, but each role is *declared*, never
+> implicitly conflated onto a pane. Screen-scraping may exist only as a flagged
+> **input fallback**, never as authority; the rendered TUI/pane is a
+> self-presentation (per Part E/F: the structured emit is the authority). Full
+> design rationale, the live-run session-model mapping (child session ≠ L4
+> `child_workflow`), and the open pane-binding question live in the
+> agent-runtime memo (§5–§6 there) and
+> [`../topics/_dynamic-orchestrator-workflow.md`](../topics/_dynamic-orchestrator-workflow.md).
 
 ---
 

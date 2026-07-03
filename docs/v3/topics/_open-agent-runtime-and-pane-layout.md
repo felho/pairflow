@@ -482,6 +482,5 @@ reframed as the **hybrid channel-split** reference; the v1 pane layer is read an
 to per-runtime-context — and the **MVP-scope sub-decision of Q1** (§7.4) with the user; both feed
 Q3's concrete config form. The **four-channel ActorAdapter over a swappable substrate (§5)** is the
 target primitive; **omnigent + vibe-kanban** are the clean references, **gastown** the cautionary
-one, **gstack** the secure-attach pattern. A follow-up should also fold this transport-layer read
-back into [`omnigent-study.md`](../research/omnigent-study.md), whose §5 L0e did not examine the
-harness-transport layer.
+one, **gstack** the secure-attach pattern. The transport-layer read is folded back into
+[`omnigent-study.md`](../research/omnigent-study.md) §5.1 (done 2026-07-04).
