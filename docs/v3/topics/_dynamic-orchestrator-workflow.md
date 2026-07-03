@@ -8,8 +8,6 @@ Relation to other research:
 
 - [`_open-agent-runtime-and-pane-layout.md`](_open-agent-runtime-and-pane-layout.md) covers how
   an actor runtime is executed and observed.
-- [`_agent-runtime-prototype/`](_agent-runtime-prototype/) is a channel-separation prototype for
-  one actor turn.
 - This memo covers a different issue: whether v3 needs a first-class dynamic orchestrator
   workflow shape, where an actor plans, delegates, waits, and re-delegates at runtime.
 
