@@ -16,7 +16,7 @@ idempotency hole, mail-as-permanent-commits, wild-west federation) precisely val
 v3's cleaner architectural bets.
 
 Crucially, Gas Town is **the single best external reference for the parked agent-runtime
-topic** ([`_open-agent-runtime-and-pane-layout.md`](_open-agent-runtime-and-pane-layout.md)):
+topic** ([`_open-agent-runtime-and-pane-layout.md`](../topics/_open-agent-runtime-and-pane-layout.md)):
 it runs its agents in tmux, and its experience is a *cautionary confirmation* of that
 note's reframe.
 

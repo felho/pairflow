@@ -56,7 +56,7 @@ The studies (in order written), and the two pre-existing reference notes:
 | 14 | [`onecli-study.md`](onecli-study.md) | credential gateway / **Agent Vault** (Rust+TS) | **the L7 capability boundary, shipped** — the survey's "credential never travels" pattern as standalone infra; produce-not-perform for secrets; a divergence anchor |
 | 15 | [`mnemon-study.md`](mnemon-study.md) | persistent agent memory (Go+SQLite) | **the L11/L12 deterministic-store reference, opposite Honcho** — LLM-supervises/binary-performs; intent-native `remember`/`link`/`recall`; compaction-boundary writeback; memory-must-be-a-port cautionary anchor |
 | — | [`ruflo-v3-sdlc-workflow.md`](ruflo-v3-sdlc-workflow.md) | SPARC/DDD method study | adopt concepts not framework (pre-series) |
-| — | [`v3-gate-policy-config-design-synthesis.md`](v3-gate-policy-config-design-synthesis.md) | gate/policy/config synthesis | L2 design input (pre-series) |
+| — | [`v3-gate-policy-config-design-synthesis.md`](../topics/v3-gate-policy-config-design-synthesis.md) | gate/policy/config synthesis | L2 design input (pre-series) |
 
 > **A note on level vocabulary.** The studies use a *simplified* v3-level glossary
 > (L0a..L14) chosen to make cross-project comparison legible. The convergence build's
@@ -568,7 +568,7 @@ home.
 ## 8. Addendum — studies 11–12 (gastown, gstack)
 
 Two studies were pulled in after the §1–§7 synthesis, both relevant to the **parked agent-runtime
-topic** ([`_open-agent-runtime-and-pane-layout.md`](_open-agent-runtime-and-pane-layout.md)).
+topic** ([`_open-agent-runtime-and-pane-layout.md`](../topics/_open-agent-runtime-and-pane-layout.md)).
 **Gastown** (`gastownhall/gastown`, Go ~243K LOC) is the *parallel-universe v3* — a production
 multi-agent workspace manager that runs/coordinates many coding agents on real repos. **gstack**
 (`garrytan/gstack`, Markdown) is the *second methodology lens* after Superpowers. Neither moves the

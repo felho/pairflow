@@ -1118,7 +1118,7 @@ contribution boundary: raw private sources and credentials stay behind a
 gatekeeper, while the workflow receives only an approved contribution envelope.
 Full personal<->org or org<->org kernel federation should remain possible, but
 it is not an MVP dependency. See
-[`../research/_open-private-data-boundary-vs-federation.md`](../research/_open-private-data-boundary-vs-federation.md).
+[`../topics/_open-private-data-boundary-vs-federation.md`](../topics/_open-private-data-boundary-vs-federation.md).
 
 #### 1. Gatekeeper three-layer contract
 

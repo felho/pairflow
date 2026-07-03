@@ -10,7 +10,7 @@ that v1 is known to use a fixed per-role grid — and one MVP-scope sub-decision
 Relation to the rest of the research corpus: this is an **MVP-driven design topic**, not a
 reverse-engineering study. It sits at the convergence layer (mostly **L0e** runtime-context,
 **L0c** ActorAdapter, **L7** grants, and the cross-cutting **observe-seam**), and draws on the
-[`_synthesis.md`](_synthesis.md) decision matrix (see its §8 addendum for studies 11–12).
+[`_synthesis.md`](../research/_synthesis.md) decision matrix (see its §8 addendum for studies 11–12).
 
 ---
 
@@ -355,7 +355,7 @@ process to send-keys") — a choice the gastown study notes is *contingent on ke
 collapses once a real transport exists. Liftable despite the cautionary core: the **Identity /
 Sandbox / Session** three-way vocabulary, the **`ExecWrapper`** sandbox seam, and **declarative
 agent presets** (per-agent TUI quirks in config, not code). See
-[`gastown-study.md`](gastown-study.md) §L0e.
+[`gastown-study.md`](../research/gastown-study.md) §L0e.
 
 ### gstack — the secure-attach pattern
 
@@ -483,5 +483,5 @@ to per-runtime-context — and the **MVP-scope sub-decision of Q1** (§7.4) with
 Q3's concrete config form. The **four-channel ActorAdapter over a swappable substrate (§5)** is the
 target primitive; **omnigent + vibe-kanban** are the clean references, **gastown** the cautionary
 one, **gstack** the secure-attach pattern. A follow-up should also fold this transport-layer read
-back into [`omnigent-study.md`](omnigent-study.md), whose §5 L0e did not examine the
+back into [`omnigent-study.md`](../research/omnigent-study.md), whose §5 L0e did not examine the
 harness-transport layer.

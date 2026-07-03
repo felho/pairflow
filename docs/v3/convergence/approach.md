@@ -801,7 +801,7 @@ Scope note: the load-bearing requirement is the private-data contribution bounda
 not full kernel federation. Personal<->org kernel federation remains a keep-open
 topology for separate authority domains; the near-term L10 shape may be a central
 org kernel plus gatekeeper boundary. See
-[`../research/_open-private-data-boundary-vs-federation.md`](../research/_open-private-data-boundary-vs-federation.md).
+[`../topics/_open-private-data-boundary-vs-federation.md`](../topics/_open-private-data-boundary-vs-federation.md).
 
 ### Block C — Agent-native (the self-improving agent layer)
 
