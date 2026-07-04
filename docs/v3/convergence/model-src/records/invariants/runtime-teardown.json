@@ -1,0 +1,55 @@
+{
+  "section": "runtime-teardown",
+  "blocks": [
+    {
+      "indent": "            ",
+      "items": [
+        {
+          "id": "release-obligation-is-never-dropped-silently",
+          "name_html": "release obligation is never dropped silently",
+          "body_html": "under <code>release.policy: required</code>, every <code>ready(ref)</code> carries a release obligation that is <b>tracked through failure until discharged</b> (<code>RUNTIME_CONTEXT_RELEASED</code>); a failed release — initiation or provider — does <b>not</b> close it, it is retained in <code>release_failed(ref)</code>. This closes L0d/e's dangling provision. (<code>retained</code> / <code>external</code> carry <b>no</b> obligation — explicit ownership.) <b>Not</b> \"eventually released\": auto-retry / timeout / watchdog (the liveness guarantee) is L9"
+        },
+        {
+          "id": "release-failed-is-a-handle-not-a-runtime",
+          "name_html": "release_failed is a handle, not a runtime",
+          "body_html": "<code>release_failed(ref)</code> is a retriable release handle, <b>not</b> a usable runtime — a terminal instance with a failed release is a flagged resource leak pending retry, never re-dispatchable as a live context. A partial release (worktree gone, branch not) lands here, not back in <code>ready</code>"
+        },
+        {
+          "id": "release-safe-precondition",
+          "name_html": "release-safe precondition",
+          "body_html": "release initiates only when <code>release_safe(instance)</code> holds (① INV-5: no canonical-record ref points into the resource). ① guarantees it by construction; ② asserts it fail-closed — an unsafe release becomes <code>release_failed(precondition)</code>, never an orphaned canonical ref"
+        },
+        {
+          "id": "release-is-orthogonal-to-lifecycle",
+          "name_html": "release is orthogonal to lifecycle",
+          "body_html": "release moves only the <code>runtime_context</code> axis (<code>ready → releasing → released | release_failed</code>); it never changes <code>kernel_status</code> / <code>current_step</code> / <code>terminal_disposition</code>. A terminal instance stays terminal whether release succeeds, fails, or is still in flight"
+        },
+        {
+          "id": "release-initiation-is-post-commit",
+          "name_html": "release initiation is post-commit",
+          "body_html": "the provider side effect is <b>never</b> inside an atomic commit: the transition commits first, and <b>if</b> that committed outcome emits a declared release boundary, <code>RECEIVE</code>'s post-commit hook initiates the release <b>only after</b> the commit landed. A CAS-failed transition returns <code>Rejected</code>/<code>Stale</code> and emits no boundary; a duplicate <em>boundary hook</em> is a no-op via <code>initiate_release</code>'s <code>ready(ref)</code> guard — whereas a duplicate or stale <code>RUNTIME_CONTEXT_RELEASED</code> <em>event</em> is <b>rejected</b> on the correlation <code>REQUIRE</code> (two distinct mechanisms)"
+        },
+        {
+          "id": "single-winner-release-initiation-cas",
+          "name_html": "single-winner release initiation (CAS)",
+          "body_html": "<b>every</b> state write in <code>initiate_release</code> is a <code>COMMIT atomically at expected_version</code> with <code>REQUIRE ready(ref)</code> inside — the <code>releasing(req, ref)</code> marker <b>and</b> the two pre-dispatch failure transitions (not-safe, provider-unavailable) alike. So concurrent boundary events on the same <code>ready(ref)</code> race on one version: <b>exactly one</b> applies (marker or failure), the rest reload, observe non-ready, and no-op. The marker is persisted <b>before</b> dispatch, so the correlation target exists before the provider can fire; the dispatch-error follow-up is itself a versioned commit guarded by <code>REQUIRE releasing(request_id, ref)</code>, so a racing <code>RUNTIME_CONTEXT_RELEASED</code> never gets a wrong <code>release_failed</code>"
+        },
+        {
+          "id": "correlated-idempotent",
+          "name_html": "correlated + idempotent",
+          "body_html": "the <code>RUNTIME_CONTEXT_RELEASED</code> event correlates by <code>request_id</code> against <code>releasing(req, ref)</code> + CAS, exactly like <code>RUNTIME_CONTEXT_READY</code>; a stale or duplicate release event is rejected"
+        },
+        {
+          "id": "teardown-managed-release-policy-declared",
+          "name_html": "teardown-managed ⇒ release policy declared",
+          "body_html": "a teardown-managed provider (worktree = yes) MUST declare <code>runtime_context.release</code> at definition load (<code>validate_release_policy</code>): <code>policy: required</code> needs non-empty <code>boundaries</code>, <code>retained</code> / <code>external</code> are explicit no-obligation choices, absent ⇒ <code>Rejected(release_policy_undeclared)</code>. Keyed on the provider, <b>not</b> on <code>runtime_context: required</code> — preserving the retained / external space"
+        },
+        {
+          "id": "boundary-is-declared-not-hardcoded",
+          "name_html": "boundary is declared, not hardcoded",
+          "body_html": "the kernel reads the declared <code>release.boundaries</code> (under <code>policy: required</code>); it does <b>not</b> hardcode terminal as the release instant. The terminal transition only <b>emits</b> a <code>terminal</code> event — a possible boundary, acted on solely if declared. The boundary is an <b>event</b> (terminal ｜ merge_completed ｜ later), distinct from the operator command that produces it (operator delete is not a boundary — it drives force_release in ④)"
+        }
+      ]
+    }
+  ]
+}

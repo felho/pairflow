@@ -1,0 +1,35 @@
+{
+  "section": "auto-workflow-actions",
+  "blocks": [
+    {
+      "indent": "            ",
+      "items": [
+        {
+          "id": "auto-is-marker-first-too",
+          "name_html": "auto is marker-first too",
+          "body_html": "an auto action's arrival commit only CLAIMS <code>WAITING(action_running)</code> + <code>ACTION_RUNNING</code>; the runner runs <b>post-commit</b> via an <code>ActionIntent</code> (produce-not-perform), never inside the arrival commit. &ldquo;Inline&rdquo; is just an immediate result event, not in-commit execution"
+        },
+        {
+          "id": "only-an-auto-step-re-issues-the-run-the-a-b-boundary",
+          "name_html": "only an auto step re-issues the run (the ③a/③b boundary)",
+          "body_html": "<b>both</b> sides are guarded: <code>post_commit_output</code> emits an <code>ActionIntent</code> for <code>action_running</code> only when the step's trigger is auto, and <code>ACTION_RESULT</code> rejects a non-auto step (<code>action_result_not_auto_action</code>) — an operator <code>action_running</code> (③a, whose result is recorded inline in <code>RUN_ACTION</code>) is neither auto-issued nor completed by a kernel-event. A stuck operator action is L9 recovery. An auto step also declares <b>no</b> trigger-payload (no operator to supply it — <code>auto_action_payload_unsupported</code> at load); its inputs are the template-fixed <code>action_spec</code>"
+        },
+        {
+          "id": "the-result-is-a-correlated-kernel-event",
+          "name_html": "the result is a correlated kernel-event",
+          "body_html": "<code>ACTION_RESULT(request_id)</code> is matched against <code>action_running.request_id</code> (a stale / duplicate result ⇒ <code>action_result_mismatch</code>), exactly like <code>RUNTIME_CONTEXT_READY</code>; inline vs deferred is only when it arrives"
+        },
+        {
+          "id": "bounded-retry-is-opt-in-and-episode-anchored",
+          "name_html": "bounded retry is opt-in and episode-anchored",
+          "body_html": "retry fires <b>only</b> for an outcome that declares <code>retry { max_attempts, on_exhausted }</code> — not a general negative-outcome rule — and <b>only on an auto step</b> (a <code>retry</code> outcome on an operator action is <code>action_retry_requires_auto</code> at load; an operator action's &ldquo;retry&rdquo; is the operator re-triggering a self-routed outcome). The attempt count is the <code>ACTION_RUNNING</code> count for the current <code>episode_ref</code> (transcript-reconstructable, not a hidden field); a fresh arrival opens a new episode; exhausted ⇒ route <code>on_exhausted</code> (escalate). Each outcome is a <b>closed union</b> — exactly one of <code>{ target … }</code> or <code>{ retry … }</code> (both ⇒ <code>action_outcome_ambiguous_route</code> at load; <code>max_attempts</code> must be a positive int; <code>on_exhausted</code> must resolve)"
+        },
+        {
+          "id": "the-recommendation-rides-the-firing-edge",
+          "name_html": "the recommendation rides the firing edge",
+          "body_html": "inserting <code>perf_test</code> between converge and the human gate moves <code>recommends: approve</code> onto <code>perf_test.pass</code> (the edge that now enters the gate) — a clean L3 consequence (recommends is per incoming edge, runtime-selected). The L3 helpers generalize to cover it: <code>routing_edges_with_recommends</code> (load validation) and <code>firing_routing_edge_into</code> (runtime read) now span actor transitions <b>and</b> action outcomes, so <code>perf_test.pass.recommends</code> is both validated (target is a human_gate, key exists) and read at the gate — not a new mechanism"
+        }
+      ]
+    }
+  ]
+}

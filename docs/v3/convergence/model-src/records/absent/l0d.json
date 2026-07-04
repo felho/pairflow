@@ -1,0 +1,38 @@
+{
+  "section": "l0d",
+  "indent": "          ",
+  "items": [
+    {
+      "id": "operator-authority-identity",
+      "html": "No <b>operator authority / identity</b> — who may issue START / KICKOFF / CANCEL is dormant (the dormant-until-restricted shape L1 later reuses) <span class=\"at\">→ L7 / L10</span>"
+    },
+    {
+      "id": "runtime-context-spec-provider-contract",
+      "html": "No <b>runtime-context spec / provider contract</b> — what context the template requires and which provider fulfills it (worktree / mailbox / …); L0d consumes only <code>RUNTIME_CONTEXT_READY</code> and stores an opaque ref, provider internals stay implementation <span class=\"at\">→ L0e</span>"
+    },
+    {
+      "id": "kickoff-payload-materialization",
+      "html": "No <b>kickoff payload materialization</b> — KICKOFF here models only task-supply + activation; v1 also writes a task artifact, flips ideation config (<code>task_pending=false</code>, <code>kicked_off_at</code>) and appends a TASK envelope — activation/input materialization (a persistence detail), not the runtime-context provider <span class=\"at\">→ later / impl</span>"
+    },
+    {
+      "id": "post-approval-resume-actions",
+      "html": "No <b>post-approval resume <em>actions</em></b> — L0d owns the generic terminal disposition paths (COMPLETE / FAIL / CANCEL); v1's post-approval path is <code>APPROVED_FOR_COMMIT → COMMITTED → DONE</code> (the git commit precedes <code>DONE</code>), with the merge a <b>separate command after <code>DONE</code></b>. The minimal <em>resume contract</em> for such waits is realized at L3 (<code>RESUME_WAIT</code>: <code>COMMIT</code> → done); the resume <em>actions/mechanics</em> (running git commit, merge, teardown) are later — not a privileged finalization phase <span class=\"at\">→ L3 contract / later actions</span>"
+    },
+    {
+      "id": "human-child-timeout-external-waits",
+      "html": "No <b>human / child / timeout / external waits</b> — WAITING ships with only <code>kickoff_pending</code> <span class=\"at\">→ L3 / L4 / L9</span>"
+    },
+    {
+      "id": "generic-wait-resume-contract",
+      "html": "No <b>generic wait-resume contract</b> — <code>KICKOFF</code> is the first <em>specialized</em> WAITING resume (activation). The generic bare-wait resume (resume any <code>WAITING</code> from a matching event → <code>apply_target_entry_effects</code>) appears at L3, when <code>commit_pending</code> introduces the first non-activation bare wait; child-event and timeout/external resume sources reuse it later <span class=\"at\">→ L3 / L4 / L9</span>"
+    },
+    {
+      "id": "retry-compensation-rollback",
+      "html": "No <b>retry / compensation / rollback</b> on FAILED <span class=\"at\">→ §18</span>"
+    },
+    {
+      "id": "operator-intent-audit-provenance",
+      "html": "No <b>operator-intent audit / provenance</b> — the source class is named, its full authority model is later <span class=\"at\">→ L7 / L10</span>"
+    }
+  ]
+}

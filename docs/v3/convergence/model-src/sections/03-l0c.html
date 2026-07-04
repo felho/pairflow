@@ -78,9 +78,7 @@
         <div class="agg invariant">
           <div class="agg-label">Added rules</div>
           <div class="ents">
-            <div class="ent"><div class="en">deterministic provenance</div><div class="fields">issued config is recomputed at commit from the same sources the packet used — not a dispatch-stored value, not an actor echo</div></div>
-            <div class="ent"><div class="en">config sources immutable per dispatched step</div><div class="fields">role defaults, step config, and instance run_overrides cannot change for the dispatched step — else provenance would need a persisted dispatch record</div></div>
-            <div class="ent"><div class="en">issued ≠ proven runtime</div><div class="fields">L0c records what the kernel issued; that the actor ran exactly so is later attestation</div></div>
+[[@invariants l0c 0]]
           </div>
         </div>
 
@@ -99,14 +97,7 @@
 
         <h3 class="view-h"><span class="view-tag absent">Absent</span> Still not here</h3>
         <div class="absent-grid">
-          <div class="absent-item">No <b>actor-runtime adaptation</b> — portable run intent only; a later <b>ActorAdapter</b> maps it to Codex / Claude Code / OpenCode launch/context/tool config <span class="at">→ executor</span></div>
-          <div class="absent-item">No <b>prompt/context assembly</b> — config/policy/gate-declared prompt concerns are not resolved or rendered yet; the first <b>ContextAssembly</b> slice builds the packet's context blocks <span class="at">→ L2b</span></div>
-          <div class="absent-item">No <b>tool installation / provisioning</b> — refs only <span class="at">→ later</span></div>
-          <div class="absent-item">No <b>skill-doc retrieval / memory assembly</b> <span class="at">→ §11.4</span></div>
-          <div class="absent-item">No <b>model-routing optimization</b> <span class="at">→ §14.2</span></div>
-          <div class="absent-item">No <b>credential / grant</b> <span class="at">→ L7</span></div>
-          <div class="absent-item">No <b>runtime attestation</b> — issued, not proven <span class="at">→ executor</span></div>
-          <div class="absent-item">No <b>authorization / gate</b> <span class="at">→ L1 / L2</span></div>
+[[@absent l0c]]
         </div>
 
         <h3 class="view-h"><span class="view-tag evidence">Evidence</span> Why we accept L0c for now</h3>

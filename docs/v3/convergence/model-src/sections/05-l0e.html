@@ -104,12 +104,7 @@
         <div class="agg invariant">
           <div class="agg-label">Added rules</div>
           <div class="ents">
-            <div class="ent"><div class="en">context is optional</div><div class="fields">a workflow may declare <code>runtime_context = none</code> — then <code>START</code> needs no provider, sets <code>ready(∅)</code>, and the packet carries <code>runtime_context: none</code>; readiness still gates dispatch only when a context is <code>required</code></div></div>
-            <div class="ent"><div class="en">requirement is template-owned</div><div class="fields">the <code>RuntimeContextRequirement</code> lives on the pinned template (single source of truth), not snapshotted into instance state — a run-override cascade is possible later, same shape as AgentConfig (L0c)</div></div>
-            <div class="ent"><div class="en">provider resolved at START</div><div class="fields">when a context is required, an unknown <code>spec.provider</code> → <code>Rejected(runtime_context_provider_unavailable)</code> before any provisioning; deeper health/availability is deferred</div></div>
-            <div class="ent"><div class="en">kind-boundary only</div><div class="fields">a provider may only return a ref whose <code>kind</code> = the requested spec kind; the kernel guards <b>kind + correlation</b> and treats the locator as opaque (provider-defined, not validated)</div></div>
-            <div class="ent"><div class="en">projection, never the ref</div><div class="fields">the packet carries either <code>runtime_context: none</code> or only <code>project_for_actor(ref)</code>, resolved through the <em>same pinned-template provider</em> that issued the request — the raw ref stays kernel-side</div></div>
-            <div class="ent"><div class="en">registry stable for the run</div><div class="fields">a provider used by an active instance stays resolvable for the life of the run (pinned spec); dispatch <code>REQUIRE</code>s it as a kernel/config invariant, not a business rejection</div></div>
+[[@invariants l0e 0]]
           </div>
         </div>
 
@@ -129,14 +124,7 @@
 
         <h3 class="view-h"><span class="view-tag absent">Absent</span> Still not here</h3>
         <div class="absent-grid">
-          <div class="absent-item">No <b>provider internals</b> — the git branch / worktree / clone mechanics are implementation (v1 <code>worktreeManager</code>); L0e models only the contract <span class="at">→ impl</span></div>
-          <div class="absent-item">No <b>teardown lifecycle</b> — <code>teardown(ref)</code> on terminal/cancel is a future extension (v1 <code>cleanupWorktreeWorkspace</code>), not in the L0e contract <span class="at">→ later</span></div>
-          <div class="absent-item">No <b>provider health / availability</b> validation beyond name resolution <span class="at">→ later</span></div>
-          <div class="absent-item">No <b>provisioning-failure handling</b> — a provider that accepts the name but fails to provision (or fails later) surfaces as a kernel <code>FAIL</code> event (L0d); retry / compensation is later <span class="at">→ later / §18</span></div>
-          <div class="absent-item">No <b>run-override cascade</b> of the spec — template-only at L0e <span class="at">→ later</span></div>
-          <div class="absent-item">No <b>durable delivery</b> (L8), <b>actor process launch</b> (tmux), or <b>credential / grant</b> (L7)</div>
-          <div class="absent-item">No <b>conditional / per-step runtime context</b> — the requirement is whole-run (<code>none | required</code>); a step or child acquiring context later is category 3 <span class="at">→ later</span></div>
-          <div class="absent-item">No <b>full ContextAssembly</b> — L0e adds only the runtime/workspace projection; general <code>context_blocks</code> rendering <span class="at">→ L2b</span></div>
+[[@absent l0e]]
         </div>
 
         <h3 class="view-h"><span class="view-tag evidence">Evidence</span> Why we accept L0e for now</h3>

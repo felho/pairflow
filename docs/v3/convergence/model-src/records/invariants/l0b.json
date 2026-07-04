@@ -1,0 +1,25 @@
+{
+  "section": "l0b",
+  "blocks": [
+    {
+      "indent": "            ",
+      "items": [
+        {
+          "id": "expected-version-mandatory",
+          "name_html": "expected_version mandatory",
+          "body_html": "actor-emitted envelopes must carry it; check order: idempotency (Duplicate) → missing → stale"
+        },
+        {
+          "id": "binding-coverage-at-start",
+          "name_html": "binding coverage at start",
+          "body_html": "effective actor_binding must cover every reachable role — fail at start, never a post-commit half-state"
+        },
+        {
+          "id": "commit-deliver",
+          "name_html": "commit ≠ deliver",
+          "body_html": "the store records state under atomic commit; DispatchIntent is derived afterwards — the store never delivers"
+        }
+      ]
+    }
+  ]
+}

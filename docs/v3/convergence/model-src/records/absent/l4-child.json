@@ -1,0 +1,34 @@
+{
+  "section": "l4-child",
+  "indent": "          ",
+  "items": [
+    {
+      "id": "fan-out-fan-in",
+      "html": "No <b>fan-out / fan-in</b> — one child link per parent step, sequential (the v1 plan-watch reality and WF-7's one-task-at-a-time). N concurrent children + wait-all / wait-any + a concurrency cap are a quantitative extension once the channel exists <span class=\"at\">→ later</span>"
+    },
+    {
+      "id": "intermediate-lifecycle-subscription",
+      "html": "No <b>intermediate-lifecycle subscription</b> — the MVP anchor subscribes only terminal child transitions; <code>ready_for_human_approval</code> (the v1 plan-watch trigger) is a valid extension on the same channel, for a child that deliberately runs to a checkpoint, not <code>done</code> <span class=\"at\">→ extension</span>"
+    },
+    {
+      "id": "lost-event-orphan-reconciliation",
+      "html": "No <b>lost-event / orphan reconciliation</b> — an out-of-band cancel still emits <code>cancelled</code>; but a child purged before the parent consumes the event (a delivery race) is reconciled from the surviving link + <code>parent_ref</code> <span class=\"at\">→ L9</span>"
+    },
+    {
+      "id": "durable-external-channel",
+      "html": "No <b>durable / external channel</b> — <code>CHILD_LIFECYCLE</code> is an in-process kernel event; cross-kernel / durable / multi-recipient delivery (the full channel abstraction, kernel federation) is <span class=\"at\">→ L8</span>"
+    },
+    {
+      "id": "kernel-held-task-queue",
+      "html": "No <b>kernel-held task queue</b> — the parent iterates the plan <em>document</em> (an artifact the agent steps read / write), not a typed task list in instance state; <code>split_task</code> edits the document <span class=\"at\">→ by design</span>"
+    },
+    {
+      "id": "auto-recovery-of-a-transient-spawn-dispatch-crash",
+      "html": "No <b>auto-recovery of a transient spawn-dispatch crash</b> — a definitive child-create reject routes the parent's <code>failed</code> path (<code>CHILD_SPAWN_FAILED</code>), but a TRANSIENT crash before the child is created (the SpawnIntent never delivered) leaves the link durably <code>spawning</code>, re-driven (idempotent by <code>request_id</code>) at <span class=\"at\">→ L9</span>"
+    },
+    {
+      "id": "parent-driven-child-control",
+      "html": "No <b>parent-driven child control</b> beyond spawn — the parent does not pause / step / re-parameterize a running child; it spawns and awaits a lifecycle. Steering a live child is <span class=\"at\">→ later</span>"
+    }
+  ]
+}

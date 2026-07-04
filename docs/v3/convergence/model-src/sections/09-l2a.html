@@ -99,13 +99,7 @@
         <div class="agg invariant">
           <div class="agg-label">Added rules</div>
           <div class="ents">
-            <div class="ent"><div class="en">runs in the workspace</div><div class="fields">a process gate executes with <code>cwd = runtime_context</code> workspace (v1: the worktree); a workflow declaring <code>runtime_context: none</code> may not bind an <code>external.process</code> gate — the static mismatch is a definition error, and the kernel also guards it at run with <code>Rejected(runtime_context_required_for_process_gate)</code></div></div>
-            <div class="ent"><div class="en">gate config validated at definition load</div><div class="fields"><code>validate_gate_config(template)</code> runs when the definition is loaded (in <code>CREATE_INSTANCE</code>, beside binding coverage): a process gate without a workspace (<code>runtime_context_required_for_process_gate</code>), a <code>fail_instance</code> disposition (<code>gate_config_not_supported</code>), or an incomplete/invalid config — missing <code>command</code>/<code>timeout_ms</code>, an unknown <code>output.mode</code> or runner disposition, or <code>exit_code</code> buckets that are missing or not <code>allow | warn | block</code> (<code>invalid_process_gate_config</code>) — is rejected at create, not mid-run. <code>output.mode</code> defaults to <code>exit_code</code> when absent</div></div>
-            <div class="ent"><div class="en">bounded timeout mandatory</div><div class="fields">every process gate carries a <code>timeout_ms</code>; a timeout is a runner outcome, not an indefinite block (v1 had none)</div></div>
-            <div class="ent"><div class="en">evidence on every run</div><div class="fields">a log + artifact is persisted whether the gate allows, warns, or blocks (v1-faithful); the ref is carried to the commit or the rejection</div></div>
-            <div class="ent"><div class="en">explicit output mode</div><div class="fields">verdict source is <code>exit_code</code> or <code>gate_decision_json</code> by config — never guessed from whether stdout happens to parse</div></div>
-            <div class="ent"><div class="en">runner error ≠ business block</div><div class="fields"><code>runner_error</code> / <code>timeout</code> / <code>malformed_gate_decision_json</code> → <code>block_transition</code> with a distinct reason, separable in audit from a <code>test_failed</code> block</div></div>
-            <div class="ent"><div class="en">still inline only</div><div class="fields">a <code>deferred</code> process gate is still rejected (<code>gate_execution_not_supported</code>) — the deferred lifecycle is a later slice</div></div>
+[[@invariants l2a 0]]
           </div>
         </div>
 
@@ -127,12 +121,7 @@
 
         <h3 class="view-h"><span class="view-tag absent">Absent</span> Still not here</h3>
         <div class="absent-grid">
-          <div class="absent-item">No <b>deferred process gates</b> — long-running / non-blocking execution via <code>WAITING(gate_pending)</code> + <code>GATE_RESULT</code> (pending-envelope stash, replay/idempotency, timeout-recovery, cancel-cleanup, runner-retry) is a <b>later lifecycle slice</b>, named but not numbered <span class="at">→ later</span></div>
-          <div class="absent-item">No <b>projection_ref + scoped-query SDK</b> — the process gets a compact inline projection; an authority-scoped query seam replaces it later <span class="at">→ later / L7-ish</span></div>
-          <div class="absent-item">No <b>fail_instance disposition</b> — a runner error can only <code>block_transition</code> in the MVP; configuring <code>fail_instance</code> is rejected (<code>gate_config_not_supported</code>) until terminal-failure ownership + operator recovery are modeled <span class="at">→ later</span></div>
-          <div class="absent-item">No <b>route verdict</b> — a gate still cannot redirect the target (meta-review auto-rework, human gate) <span class="at">→ routing slice / L3</span></div>
-          <div class="absent-item">No <b>actor-facing trust / skip-rerun communication</b> — missing vs explicit-null trust level is not surfaced to the reviewer yet <span class="at">→ L2b</span></div>
-          <div class="absent-item">No <b>dynamic module loading</b> — the external process interface is the extension seam; no in-process plugin loader in the MVP <span class="at">→ later</span></div>
+[[@absent l2a]]
         </div>
 
         <h3 class="view-h"><span class="view-tag evidence">Evidence</span> Why we accept L2a for now</h3>

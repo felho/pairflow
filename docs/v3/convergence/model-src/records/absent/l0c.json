@@ -1,0 +1,38 @@
+{
+  "section": "l0c",
+  "indent": "          ",
+  "items": [
+    {
+      "id": "actor-runtime-adaptation",
+      "html": "No <b>actor-runtime adaptation</b> — portable run intent only; a later <b>ActorAdapter</b> maps it to Codex / Claude Code / OpenCode launch/context/tool config <span class=\"at\">→ executor</span>"
+    },
+    {
+      "id": "prompt-context-assembly",
+      "html": "No <b>prompt/context assembly</b> — config/policy/gate-declared prompt concerns are not resolved or rendered yet; the first <b>ContextAssembly</b> slice builds the packet's context blocks <span class=\"at\">→ L2b</span>"
+    },
+    {
+      "id": "tool-installation-provisioning",
+      "html": "No <b>tool installation / provisioning</b> — refs only <span class=\"at\">→ later</span>"
+    },
+    {
+      "id": "skill-doc-retrieval-memory-assembly",
+      "html": "No <b>skill-doc retrieval / memory assembly</b> <span class=\"at\">→ §11.4</span>"
+    },
+    {
+      "id": "model-routing-optimization",
+      "html": "No <b>model-routing optimization</b> <span class=\"at\">→ §14.2</span>"
+    },
+    {
+      "id": "credential-grant",
+      "html": "No <b>credential / grant</b> <span class=\"at\">→ L7</span>"
+    },
+    {
+      "id": "runtime-attestation",
+      "html": "No <b>runtime attestation</b> — issued, not proven <span class=\"at\">→ executor</span>"
+    },
+    {
+      "id": "authorization-gate",
+      "html": "No <b>authorization / gate</b> <span class=\"at\">→ L1 / L2</span>"
+    }
+  ]
+}

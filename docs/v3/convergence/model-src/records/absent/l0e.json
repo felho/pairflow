@@ -1,0 +1,38 @@
+{
+  "section": "l0e",
+  "indent": "          ",
+  "items": [
+    {
+      "id": "provider-internals",
+      "html": "No <b>provider internals</b> — the git branch / worktree / clone mechanics are implementation (v1 <code>worktreeManager</code>); L0e models only the contract <span class=\"at\">→ impl</span>"
+    },
+    {
+      "id": "teardown-lifecycle",
+      "html": "No <b>teardown lifecycle</b> — <code>teardown(ref)</code> on terminal/cancel is a future extension (v1 <code>cleanupWorktreeWorkspace</code>), not in the L0e contract <span class=\"at\">→ later</span>"
+    },
+    {
+      "id": "provider-health-availability",
+      "html": "No <b>provider health / availability</b> validation beyond name resolution <span class=\"at\">→ later</span>"
+    },
+    {
+      "id": "provisioning-failure-handling",
+      "html": "No <b>provisioning-failure handling</b> — a provider that accepts the name but fails to provision (or fails later) surfaces as a kernel <code>FAIL</code> event (L0d); retry / compensation is later <span class=\"at\">→ later / §18</span>"
+    },
+    {
+      "id": "run-override-cascade",
+      "html": "No <b>run-override cascade</b> of the spec — template-only at L0e <span class=\"at\">→ later</span>"
+    },
+    {
+      "id": "durable-delivery",
+      "html": "No <b>durable delivery</b> (L8), <b>actor process launch</b> (tmux), or <b>credential / grant</b> (L7)"
+    },
+    {
+      "id": "conditional-per-step-runtime-context",
+      "html": "No <b>conditional / per-step runtime context</b> — the requirement is whole-run (<code>none | required</code>); a step or child acquiring context later is category 3 <span class=\"at\">→ later</span>"
+    },
+    {
+      "id": "full-contextassembly",
+      "html": "No <b>full ContextAssembly</b> — L0e adds only the runtime/workspace projection; general <code>context_blocks</code> rendering <span class=\"at\">→ L2b</span>"
+    }
+  ]
+}

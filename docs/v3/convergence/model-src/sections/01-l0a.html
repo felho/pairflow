@@ -122,17 +122,13 @@
         <div class="agg invariant">
           <div class="agg-label">Idempotency &amp; atomic commit</div>
           <div class="ents">
-            <div class="ent"><div class="en">op_id idempotency</div><div class="fields">key scope <b>(instance_id, op_id)</b>; re-applying a seen key is a no-op (trace 3′). Scope matters for the later remote relay (BC-08).</div></div>
-            <div class="ent"><div class="en">atomic transition commit</div><div class="fields">transcript append + state update are <b>one logical commit</b> under expected_version — never append-then-CAS as separate steps, or a CAS failure would diverge transcript from state</div></div>
+[[@invariants l0a 0]]
           </div>
         </div>
         <div class="agg invariant">
           <div class="agg-label">Store semantics — dumb store, kernel-owned meaning</div>
           <div class="ents">
-            <div class="ent"><div class="en">definition store</div><div class="fields">templates, versioned</div></div>
-            <div class="ent"><div class="en">instance store</div><div class="fields">instance state + version</div></div>
-            <div class="ent"><div class="en">transcript / event log</div><div class="fields">append-only</div></div>
-            <div class="ent"><div class="en">artifact refs</div><div class="fields">content by reference</div></div>
+[[@invariants l0a 1]]
           </div>
         </div>
         <div class="note invariant">
@@ -158,20 +154,7 @@
         <h3 class="view-h"><span class="view-tag absent">Absent</span> Deliberately not here yet</h3>
         <p>The border of L0a — each is a later level, and seeing the border is half the point:</p>
         <div class="absent-grid">
-          <div class="absent-item">No <b>actor binding / work-item dispatch</b> — roles are bare names <span class="at">→ L0b</span></div>
-          <div class="absent-item">No <b>agent guidance</b> — TASK, instruction, context-packet seed <span class="at">→ L0b</span></div>
-          <div class="absent-item">No <b>actor-supplied stale-intent</b> — needs the context packet <span class="at">→ L0b+</span></div>
-          <div class="absent-item">No <b>capability check</b> — anyone can emit anything <span class="at">→ L1</span></div>
-          <div class="absent-item">No <b>gate / policy</b> — reviewer decides convergence directly <span class="at">→ L2</span></div>
-          <div class="absent-item">No <b>round limit</b> — formalised with the round gate <span class="at">→ L2</span></div>
-          <div class="absent-item">No <b>human gate / approval</b> <span class="at">→ L3</span></div>
-          <div class="absent-item">No <b>child workflows / internal events</b> <span class="at">→ L4</span></div>
-          <div class="absent-item">No <b>help subflow</b> <span class="at">→ L5</span></div>
-          <div class="absent-item">No <b>triggers</b> — manual start only <span class="at">→ L6</span></div>
-          <div class="absent-item">No <b>grants / credentials</b> <span class="at">→ L7</span></div>
-          <div class="absent-item">No <b>channels / task inbox / general Ask</b> <span class="at">→ L8</span></div>
-          <div class="absent-item">No <b>wait / correlation</b> <span class="at">→ L9</span></div>
-          <div class="absent-item">No <b>gatekeeper / federation</b> <span class="at">→ L10</span></div>
+[[@absent l0a]]
         </div>
 
         <h3 class="view-h"><span class="view-tag evidence">Evidence</span> Why we accept L0a for now</h3>

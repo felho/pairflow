@@ -1,0 +1,30 @@
+{
+  "section": "l2a",
+  "indent": "          ",
+  "items": [
+    {
+      "id": "deferred-process-gates",
+      "html": "No <b>deferred process gates</b> — long-running / non-blocking execution via <code>WAITING(gate_pending)</code> + <code>GATE_RESULT</code> (pending-envelope stash, replay/idempotency, timeout-recovery, cancel-cleanup, runner-retry) is a <b>later lifecycle slice</b>, named but not numbered <span class=\"at\">→ later</span>"
+    },
+    {
+      "id": "projection-ref-scoped-query-sdk",
+      "html": "No <b>projection_ref + scoped-query SDK</b> — the process gets a compact inline projection; an authority-scoped query seam replaces it later <span class=\"at\">→ later / L7-ish</span>"
+    },
+    {
+      "id": "fail-instance-disposition",
+      "html": "No <b>fail_instance disposition</b> — a runner error can only <code>block_transition</code> in the MVP; configuring <code>fail_instance</code> is rejected (<code>gate_config_not_supported</code>) until terminal-failure ownership + operator recovery are modeled <span class=\"at\">→ later</span>"
+    },
+    {
+      "id": "route-verdict",
+      "html": "No <b>route verdict</b> — a gate still cannot redirect the target (meta-review auto-rework, human gate) <span class=\"at\">→ routing slice / L3</span>"
+    },
+    {
+      "id": "actor-facing-trust-skip-rerun-communication",
+      "html": "No <b>actor-facing trust / skip-rerun communication</b> — missing vs explicit-null trust level is not surfaced to the reviewer yet <span class=\"at\">→ L2b</span>"
+    },
+    {
+      "id": "dynamic-module-loading",
+      "html": "No <b>dynamic module loading</b> — the external process interface is the extension seam; no in-process plugin loader in the MVP <span class=\"at\">→ later</span>"
+    }
+  ]
+}

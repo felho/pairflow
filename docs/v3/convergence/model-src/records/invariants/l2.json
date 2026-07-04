@@ -1,0 +1,35 @@
+{
+  "section": "l2",
+  "blocks": [
+    {
+      "indent": "            ",
+      "items": [
+        {
+          "id": "gate-before-commit",
+          "name_html": "gate before commit",
+          "body_html": "the pipeline runs after L1 authorization and before the atomic commit — a <code>block</code> changes no state and burns no round"
+        },
+        {
+          "id": "round-is-canonical-reconstructable",
+          "name_html": "round is canonical &amp; reconstructable",
+          "body_html": "only the HANDLE commit writes <code>instance.round</code> (in the same CAS window as <code>current_step</code>/<code>version</code>); <code>round_of(transcript)</code> must equal it"
+        },
+        {
+          "id": "inline-declarative-packaged-only-in-l2-core",
+          "name_html": "inline declarative/packaged only in L2 core",
+          "body_html": "L2 core executes only inline <code>declarative.*</code> / packaged <code>pairflow.*</code> evaluators; a process-implementation (⇒ <span class=\"at\">L2a</span>) or deferred (⇒ a later lifecycle slice) evaluator is a valid declaration but rejected at run"
+        },
+        {
+          "id": "ordered-first-block-wins",
+          "name_html": "ordered, first-block-wins",
+          "body_html": "the pipeline order is authored; evaluation stops at the first <code>block</code>, and a later gate runs only after every earlier gate returned <code>allow</code>"
+        },
+        {
+          "id": "gate-is-read-only-stateless",
+          "name_html": "gate is read-only &amp; stateless",
+          "body_html": "an evaluator reads <code>config</code> + the projection and returns a decision; it may not mutate instance state or the transcript, nor keep private state across rounds — any counter-like value is derived from transcript/instance/read-model state"
+        }
+      ]
+    }
+  ]
+}

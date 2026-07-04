@@ -16,6 +16,24 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parents[2]
 SRC = REPO / "docs/v3/convergence/model-src"
 MARKER_RE = re.compile(r"\[\[@code ([^\]]+)\]\]")
+ABSENT_MARK_RE = re.compile(r"^\[\[@absent (\S+)\]\]$", re.M)
+INV_MARK_RE = re.compile(r"^\[\[@invariants (\S+) (\d+)\]\]$", re.M)
+
+
+def render_absent(match: re.Match) -> str:
+    data = json.loads((SRC / "records/absent" / f"{match.group(1)}.json").read_text())
+    ind = data["indent"]
+    return "\n".join(f'{ind}<div class="absent-item">{it["html"]}</div>' for it in data["items"])
+
+
+def render_invariants(match: re.Match) -> str:
+    data = json.loads((SRC / "records/invariants" / f"{match.group(1)}.json").read_text())
+    block = data["blocks"][int(match.group(2))]
+    ind = block["indent"]
+    return "\n".join(
+        f'{ind}<div class="ent"><div class="en">{it["name_html"]}</div><div class="fields">{it["body_html"]}</div></div>'
+        for it in block["items"]
+    )
 
 
 def main() -> None:
@@ -38,6 +56,8 @@ def main() -> None:
     parts = [(SRC / "_prelude.html").read_text()]
     for section in manifest["sections"]:
         chunk = (SRC / section["file"]).read_text()
+        chunk = ABSENT_MARK_RE.sub(render_absent, chunk)
+        chunk = INV_MARK_RE.sub(render_invariants, chunk)
         parts.append(MARKER_RE.sub(inject, chunk))
     parts.append((SRC / "_postlude.html").read_text())
 

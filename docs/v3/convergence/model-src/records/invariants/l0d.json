@@ -1,0 +1,40 @@
+{
+  "section": "l0d",
+  "blocks": [
+    {
+      "indent": "            ",
+      "items": [
+        {
+          "id": "two-axis-state",
+          "name_html": "two-axis state",
+          "body_html": "<code>current_step</code> is absent before first activation; after activation it stays the execution position across <code>ACTIVE</code> and resumable <code>WAITING</code> states; workflow phase is derived from current_step/wait, never stored"
+        },
+        {
+          "id": "actor-routable-execution",
+          "name_html": "actor-routable execution",
+          "body_html": "actor envelopes are accepted only when <code>kernel_status = ACTIVE</code> — guarded after idempotency, before the stale check (role/action authorization is layered on at L1)"
+        },
+        {
+          "id": "uniform-commit-discipline",
+          "name_html": "uniform commit discipline",
+          "body_html": "every lifecycle mutation commits atomically under <code>instance.version</code> / CAS; actor envelopes keep <code>op_id</code> idempotency, while lifecycle inputs are guarded by preconditions and correlation ids (<code>request_id</code>) where applicable — the store stays dumb, the kernel writes meaning atomically"
+        },
+        {
+          "id": "typed-waiting",
+          "name_html": "typed waiting",
+          "body_html": "<code>WAITING</code> always carries a <code>wait.kind</code> and an explicit <code>resume_events</code> class"
+        },
+        {
+          "id": "terminal-is-a-sink",
+          "name_html": "terminal is a sink",
+          "body_html": "<code>TERMINAL</code> rejects every state-mutating input (dispatch, actor emit, operator mutation); reads/status queries still allowed; <code>terminal_disposition</code> is written exactly once via COMPLETE / FAIL / CANCEL"
+        },
+        {
+          "id": "readiness-gates-dispatch",
+          "name_html": "readiness gates dispatch",
+          "body_html": "provisioning is fulfilled by a provider (→ L0e), but <code>activate</code> requires <code>runtime_context = ready</code> — no dispatch into a non-ready context; <code>START</code> is single-shot (requestable only from <code>none</code>)"
+        }
+      ]
+    }
+  ]
+}

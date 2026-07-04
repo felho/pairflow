@@ -1,0 +1,45 @@
+{
+  "section": "l0a",
+  "blocks": [
+    {
+      "indent": "            ",
+      "items": [
+        {
+          "id": "op-id-idempotency",
+          "name_html": "op_id idempotency",
+          "body_html": "key scope <b>(instance_id, op_id)</b>; re-applying a seen key is a no-op (trace 3′). Scope matters for the later remote relay (BC-08)."
+        },
+        {
+          "id": "atomic-transition-commit",
+          "name_html": "atomic transition commit",
+          "body_html": "transcript append + state update are <b>one logical commit</b> under expected_version — never append-then-CAS as separate steps, or a CAS failure would diverge transcript from state"
+        }
+      ]
+    },
+    {
+      "indent": "            ",
+      "items": [
+        {
+          "id": "definition-store",
+          "name_html": "definition store",
+          "body_html": "templates, versioned"
+        },
+        {
+          "id": "instance-store",
+          "name_html": "instance store",
+          "body_html": "instance state + version"
+        },
+        {
+          "id": "transcript-event-log",
+          "name_html": "transcript / event log",
+          "body_html": "append-only"
+        },
+        {
+          "id": "artifact-refs",
+          "name_html": "artifact refs",
+          "body_html": "content by reference"
+        }
+      ]
+    }
+  ]
+}

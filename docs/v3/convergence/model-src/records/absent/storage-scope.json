@@ -1,0 +1,34 @@
+{
+  "section": "storage-scope",
+  "indent": "          ",
+  "items": [
+    {
+      "id": "release-mechanics",
+      "html": "No <b>release mechanics</b> — tracking the release obligation and actually releasing the worktree/branch/session is the teardown slice <span class=\"at\">→ ②</span>"
+    },
+    {
+      "id": "workflow-actions",
+      "html": "No <b>workflow actions</b> — author-chosen <code>type: action</code> steps (the automated <code>human_gate</code> sibling) over the L2a runner family, distinct from ②'s provider resource teardown: <b>③a</b> the commit/merge actions (operator-triggered — MVP), <b>③b</b> the general library + <code>auto</code> trigger (perf-test, publish, notify) <span class=\"at\">→ ③a / ③b</span>"
+    },
+    {
+      "id": "archive-export-purge-retention",
+      "html": "No <b>archive / export / purge / retention</b> — optional cold ops, computed from the durable record, never the preservation path nor a teardown precondition <span class=\"at\">→ ④ (~L8 ops)</span>"
+    },
+    {
+      "id": "storage-backend-choice",
+      "html": "No <b>storage-backend choice</b> — file vs object store vs DB for T1/T3 is an implementation concern; this slice fixes <em>placement &amp; authority</em>, not the medium <span class=\"at\">→ impl</span>"
+    },
+    {
+      "id": "multi-instance-federation-storage",
+      "html": "No <b>multi-instance / federation storage</b> or <b>central registry/store governance</b> — a single run's homes only; cross-run/central stores are later <span class=\"at\">→ L11+</span>"
+    },
+    {
+      "id": "durable-write-mechanism",
+      "html": "No <b>durable-write <em>mechanism</em></b> — v3 already treats transcript/instance as durable abstract stores; this slice makes the boundary + the evidence-ref rule explicit, it does not re-implement the store"
+    },
+    {
+      "id": "computed-templated-evidence-bodies",
+      "html": "No <b>computed / templated evidence bodies</b> or <b>evidence-blob GC</b> — referenced blobs are write-once durable; lifecycle/retention of the T3 store is ④"
+    }
+  ]
+}

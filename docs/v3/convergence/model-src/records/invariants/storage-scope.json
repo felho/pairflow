@@ -1,0 +1,35 @@
+{
+  "section": "storage-scope",
+  "blocks": [
+    {
+      "indent": "            ",
+      "items": [
+        {
+          "id": "inv-1-canonical-durability",
+          "name_html": "INV-1 · canonical durability",
+          "body_html": "every T1 datum is written to durable storage <b>during the run</b>, not at teardown — the record is born durable, not rescued later"
+        },
+        {
+          "id": "inv-2-no-workspace-sole-truth",
+          "name_html": "INV-2 · no workspace-sole-truth",
+          "body_html": "no T1/T3 datum has its <b>only</b> copy in the runtime workspace (T4); the canonical record never depends on the workspace surviving"
+        },
+        {
+          "id": "inv-3-evidence-ref-discipline-the-one-new-runtime-rule",
+          "name_html": "INV-3 · evidence-ref discipline <span style=\"font-size:10px;color:var(--muted)\">(the one new runtime rule)</span>",
+          "body_html": "a canonical record ref resolves <b>inline</b> (T1) or into the <b>durable evidence store</b> (T3) — <b>never</b> into T4 (<code>evidence_ref_ok</code>). This is the rule whose absence is the v1 evidence-loss bug"
+        },
+        {
+          "id": "inv-4-projection-subordination",
+          "name_html": "INV-4 · projection subordination",
+          "body_html": "a materialized current-state projection is authoritative only if reconstructable/consistent from T1, <b>or</b> it is a sealed snapshot anchored to T1 (<code>projection_authoritative</code>); the runtime workspace is never the <em>only</em> truth"
+        },
+        {
+          "id": "inv-5-release-safety-the-bridge-to",
+          "name_html": "INV-5 · release safety <span style=\"font-size:10px;color:var(--muted)\">(the bridge to ②)</span>",
+          "body_html": "no canonical-record ref points into a resource being released (<code>release_safe</code>). ① guarantees this <b>by construction</b> (canonical never homes in T4); ② Teardown only <b>asserts</b> it, fail-closed"
+        }
+      ]
+    }
+  ]
+}

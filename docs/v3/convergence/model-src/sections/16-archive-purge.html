@@ -115,11 +115,7 @@
         <div class="agg invariant">
           <div class="agg-label">Added rules</div>
           <div class="ents">
-            <div class="ent"><div class="en">archive is not the preservation path</div><div class="fields">audit / metrics / eval are computed from the durable run record (or the surviving global metrics stream), <b>never</b> from an archive. Archive / export is an optional cold copy; deleting all archives changes no correctness property. Naming archive-as-preservation reimports the v1 mental model</div></div>
-            <div class="ent"><div class="en">purge is complete &amp; closure-scoped</div><div class="fields"><b>no dangling refs</b> (the ① INV-3 payoff; the v1 evidence-loss bug is impossible) — a hard purge removes the full run record and exactly the closure-owned T3 blobs (mechanics in the contract + ordering tables)</div></div>
-            <div class="ent"><div class="en">the destructive precondition is on the purge, not the intent</div><div class="fields"><code>DELETE_REQUESTED</code> is accepted on a live run (with <code>force</code>) and drives cancel → ② release → purge; the irreversible <code>hard_purge</code> commit runs <b>only</b> when <b>terminal &amp;&amp; release discharged</b> (else <code>deferred</code>). So the operator can start the chain early, but nothing is destroyed before the run is wound down</div></div>
-            <div class="ent"><div class="en">a purge leaves a tombstone; the global audit survives</div><div class="fields">a purged run survives only as its <code>run_index</code> tombstone — the <b>authority</b> for <code>purged</code> (there is no <code>instance.purge_state ← purged</code>; see the state authority table) — plus the self-contained <b>global metrics/audit stream</b> (the coarse audit floor). The full canonical run record is gone</div></div>
-            <div class="ent"><div class="en">delete is an operator intent, not a workflow action</div><div class="fields"><code>DELETE_REQUESTED</code> is a <code>CANCEL</code>-sibling operator lifecycle intent that drives <code>force_release</code> (② release minus the declared-boundary gate) then purge — it is <b>not</b> a <code>type: action</code> step (no runner, no outcome routing). ④ is storage-lifecycle ops, the L2/L2b/③ machinery is not involved</div></div>
+[[@invariants archive-purge 0]]
           </div>
         </div>
 
@@ -130,12 +126,7 @@
 
         <h3 class="view-h"><span class="view-tag absent">Absent</span> Still not here</h3>
         <div class="absent-grid">
-          <div class="absent-item">No <b>retention / auto-purge</b> — TTL, max-count, scheduled GC, a <em>scheduled / automatic</em> retention reconciler; purge is operator-initiated here (v1 has none either). The delete-chain purge <b>re-drive</b> (re-running a deferred / interrupted <code>hard_purge</code> to completion) is already part of the ④ baseline — what is absent is a <em>policy</em> engine that decides <em>when</em> to purge unprompted <span class="at">→ L9 / ops</span></div>
-          <div class="absent-item">No <b>archive query / list CLI</b> — the index tombstones purged/archived runs, but listing / inspecting / searching them is ops tooling <span class="at">→ ops</span></div>
-          <div class="absent-item">No <b>restore / re-hydration</b> — an archive is forensic, write-only; bringing a run back as a live instance is not a goal (eval-replay from the durable record is a separate concern) <span class="at">→ later</span></div>
-          <div class="absent-item">No <b>shared / dedup evidence ownership</b> realized — the closure rule is open to a multi-owner T3 blob store, but the MVP is run-owned evidence <span class="at">→ later (blob store)</span></div>
-          <div class="absent-item">No <b>export formats / sharing</b> — <code>cold_copy</code> is abstract; concrete bundle formats, redaction, and sharing are ops <span class="at">→ ops</span></div>
-          <div class="absent-item">No <b>cross-run / federation purge</b> — purging across a central store or other installations is governance <span class="at">→ L11+</span></div>
+[[@absent archive-purge]]
         </div>
 
         <h3 class="view-h"><span class="view-tag evidence">Evidence</span> Why we accept ④ for now</h3>

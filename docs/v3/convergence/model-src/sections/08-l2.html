@@ -119,11 +119,7 @@
         <div class="agg invariant">
           <div class="agg-label">Added rules</div>
           <div class="ents">
-            <div class="ent"><div class="en">gate before commit</div><div class="fields">the pipeline runs after L1 authorization and before the atomic commit — a <code>block</code> changes no state and burns no round</div></div>
-            <div class="ent"><div class="en">round is canonical &amp; reconstructable</div><div class="fields">only the HANDLE commit writes <code>instance.round</code> (in the same CAS window as <code>current_step</code>/<code>version</code>); <code>round_of(transcript)</code> must equal it</div></div>
-            <div class="ent"><div class="en">inline declarative/packaged only in L2 core</div><div class="fields">L2 core executes only inline <code>declarative.*</code> / packaged <code>pairflow.*</code> evaluators; a process-implementation (⇒ <span class="at">L2a</span>) or deferred (⇒ a later lifecycle slice) evaluator is a valid declaration but rejected at run</div></div>
-            <div class="ent"><div class="en">ordered, first-block-wins</div><div class="fields">the pipeline order is authored; evaluation stops at the first <code>block</code>, and a later gate runs only after every earlier gate returned <code>allow</code></div></div>
-            <div class="ent"><div class="en">gate is read-only &amp; stateless</div><div class="fields">an evaluator reads <code>config</code> + the projection and returns a decision; it may not mutate instance state or the transcript, nor keep private state across rounds — any counter-like value is derived from transcript/instance/read-model state</div></div>
+[[@invariants l2 0]]
           </div>
         </div>
 
@@ -145,13 +141,7 @@
 
         <h3 class="view-h"><span class="view-tag absent">Absent</span> Still not here</h3>
         <div class="absent-grid">
-          <div class="absent-item">No <b>external / process gates</b> — MVP-critical (v1 <code>validation.required</code>, <code>meta_review_approve_required</code>, command exit-code gates); the inline process execution model is <span class="at">→ L2a</span>, while deferred execution (<code>WAITING(gate_pending)</code> + <code>GATE_RESULT</code>) is a separate later lifecycle slice</div>
-          <div class="absent-item">No <b>route verdict / workflow redirection</b> — a gate may only allow, warn, or block, not redirect the target (meta-review auto-rework, human gate) <span class="at">→ routing slice / L3</span></div>
-          <div class="absent-item">No <b>gate-private mutable state</b> — gates are stateless over <code>config</code> + projection + evidence refs; cross-round counters are derived, never gate-owned. A gate returning state the kernel persists and re-passes is a future idea, only with a concrete use case <span class="at">→ later</span></div>
-          <div class="absent-item">No <b>actor-facing communication</b> of gate rules — the reviewer is not yet told "no CONVERGED before round 2" in its packet, so it can still burn an emit on a block <span class="at">→ L2b</span></div>
-          <div class="absent-item">No <b>findings vocabulary</b> — structured finding claim/parity and P0/P1 blocker grades, which several v1 convergence checks need <span class="at">→ later</span></div>
-          <div class="absent-item">No <b>broad declarative DSL</b> — only <code>threshold</code> in the baseline (<code>required_previous_event</code> next); no general query language <span class="at">→ later</span></div>
-          <div class="absent-item">No <b>dynamic module loading</b> — packaged gates ship with pairflow; the external process interface is the only extension seam (not an MVP TS plugin loader) <span class="at">→ L2a</span></div>
+[[@absent l2]]
         </div>
 
         <h3 class="view-h"><span class="view-tag evidence">Evidence</span> Why we accept L2 for now</h3>

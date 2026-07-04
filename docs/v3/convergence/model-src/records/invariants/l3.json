@@ -1,0 +1,50 @@
+{
+  "section": "l3",
+  "blocks": [
+    {
+      "indent": "            ",
+      "items": [
+        {
+          "id": "park-is-one-visible-transition",
+          "name_html": "park is one visible transition",
+          "body_html": "entering a <code>human_gate</code> sets <code>WAITING(human_decision)</code> AND records <code>DECISION_REQUEST</code> atomically; a failed append rolls back — no externally valid half-entered gate (we do not bind to a write order)"
+        },
+        {
+          "id": "decision-is-operator-intent-not-actor-envelope",
+          "name_html": "decision is operator-intent, not actor-envelope",
+          "body_html": "a KICKOFF sibling guarded by <code>wait.kind</code> + request correlation + operator authority + <code>op_id</code> + CAS; operator authority is checked here, the full operator authority model is later — the L1 actor gate is a different input class"
+        },
+        {
+          "id": "waiting-is-honest",
+          "name_html": "WAITING is honest",
+          "body_html": "no agent is dispatched while parked on a human decision; the human is the only mover until the decision resumes the instance"
+        },
+        {
+          "id": "override-is-explicit-and-recorded",
+          "name_html": "override is explicit and recorded",
+          "body_html": "a decision against the recorded <code>recommendation</code> (chosen ≠ recommended) requires <code>override: true</code>, written into <code>DECISION_MADE</code> — the fiduciary core. Override is meaningful <b>only</b> against a recommendation: with none recorded, or when agreeing with it, an <code>override</code> is <code>override_not_applicable</code>"
+        },
+        {
+          "id": "a-loop-back-resumes-clean",
+          "name_html": "a loop-back resumes clean",
+          "body_html": "a decision whose target <code>advances_round</code> (a loop-back, e.g. rework → implement) clears the stale review/decision context and opens a new round — keyed on round advancement, <b>not</b> on a verdict name; the fresh decision payload stays as the handoff"
+        },
+        {
+          "id": "a-decision-carries-its-required-payload",
+          "name_html": "a decision carries its required payload",
+          "body_html": "a decision's required payload fields are declared <b>per decision</b> in the gate's <code>decisions</code> map (anchor: <code>request_rework ⇒ instruction</code> required, + optional <code>refs</code>) — a missing one is <code>missing_required_field</code> (the generic replacement for the old hardcoded rework rule); the payload is recorded in <code>DECISION_MADE</code> and delivered actor-facing as the <code>handoff</code> of the target’s first dispatch. <code>approve</code> declares none"
+        },
+        {
+          "id": "decisions-carry-no-lifecycle-meaning",
+          "name_html": "decisions carry no lifecycle meaning",
+          "body_html": "a decision routes to <code>decisions[verdict].target</code>; the <b>target's type</b> decides arrival (agent ⇒ ACTIVE, <code>type: human_gate</code> ⇒ park <code>human_decision</code>, <code>type: wait</code> ⇒ park <code>WAITING(step.wait.kind)</code>, terminal ⇒ COMPLETE), via the one <code>apply_target_entry_effects(...)</code> HANDLE and SUBMIT_DECISION share. So <code>approve</code> can target another gate, an agent step (even a newly-added LLM step), a wait step, or <code>done</code> — there is <b>no privileged \"finalization\" phase</b> and the kernel never bakes in \"approve = finalize\"; the kernel knows no decision names. An undeclared key is <code>unknown_decision</code>; the L0d closed terminal set <code>done | failed | cancelled</code> is untouched"
+        },
+        {
+          "id": "a-parked-wait-resumes-only-on-a-matching-event",
+          "name_html": "a parked wait resumes only on a matching event",
+          "body_html": "a <code>WAITING</code> instance moves forward only via <code>RESUME_WAIT</code> on an event whose type is in <code>wait.resume_events</code>, routed by the step's <code>on_resume</code> — guarded by idempotency (<code>op_id</code>) + version (CAS), like HANDLE; an unrouted resume is <code>no_resume_transition</code>. <code>KICKOFF</code> and <code>SUBMIT_DECISION</code> are the specialized resumes (activation / decision); <code>RESUME_WAIT</code> is the bare one. The resume <em>action</em> (e.g. running git commit) is not the kernel's job here"
+        }
+      ]
+    }
+  ]
+}

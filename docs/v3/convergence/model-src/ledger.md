@@ -1,0 +1,442 @@
+# Core-model derived registries
+
+> GENERATED — do not edit. Regenerate: `python3 tools/v3-model/report_ledger.py`
+> (check.sh fails when this file is stale.)
+
+## 1 · Deferral ledger — 128 Absent items by pointer target
+
+### L0b (2)
+
+- `l0a` · actor-binding-work-item-dispatch — → L0b
+- `l0a` · agent-guidance — → L0b
+
+### L0b+ (1)
+
+- `l0a` · actor-supplied-stale-intent — → L0b+
+
+### L0c (1)
+
+- `l0b` · agent-config-interpretation — → L0c
+
+### L0e (2)
+
+- `l0d` · runtime-context-spec-provider-contract — → L0e
+- `l0f` · slot-interpolation — → L0e
+
+### L0f+ (1)
+
+- `l0f` · run-scoped-mode-variants — → L0f+ (run-scoped mode / variants)
+
+### L1 (3)
+
+- `l0a` · capability-check — → L1
+- `l0b` · authorization — → L1
+- `l0c` · authorization-gate — → L1 / L2
+
+### L2 (5)
+
+- `l0a` · gate-policy — → L2
+- `l0a` · round-limit — → L2
+- `l0b` · gate-policy-round-limit — → L2
+- `l0c` · authorization-gate — → L1 / L2
+- `l1` · gate-policy — → L2
+
+### L2a (2)
+
+- `l2` · external-process-gates — → L2a
+- `l2` · dynamic-module-loading — → L2a
+
+### L2b (5)
+
+- `l0c` · prompt-context-assembly — → L2b
+- `l0e` · full-contextassembly — → L2b
+- `l0f` · per-step-dynamic-slot-resolution — → L2b
+- `l2` · actor-facing-communication — → L2b
+- `l2a` · actor-facing-trust-skip-rerun-communication — → L2b
+
+### L3 (7)
+
+- `l0a` · human-gate-approval — → L3
+- `l0d` · post-approval-resume-actions — → L3 contract / later actions
+- `l0d` · human-child-timeout-external-waits — → L3 / L4 / L9
+- `l0d` · generic-wait-resume-contract — → L3 / L4 / L9
+- `l1` · lifecycle-state-authorization — → L3
+- `l2` · route-verdict-workflow-redirection — → routing slice / L3
+- `l2a` · route-verdict — → routing slice / L3
+
+### L4 (4)
+
+- `l0a` · child-workflows-internal-events — → L4
+- `l0d` · human-child-timeout-external-waits — → L3 / L4 / L9
+- `l0d` · generic-wait-resume-contract — → L3 / L4 / L9
+- `runtime-teardown` · child-release-fan-out — → L4
+
+### L5 (3)
+
+- `l0a` · help-subflow — → L5
+- `l3` · agent-initiated-ask-human-help-reply — → L5
+- `l3` · deferred-request-rework — → L5 + watchdog (L6/L9)
+
+### L6 (2)
+
+- `l0a` · triggers — → L6
+- `l3` · deferred-request-rework — → L5 + watchdog (L6/L9)
+
+### L7 (7)
+
+- `l0a` · grants-credentials — → L7
+- `l0c` · credential-grant — → L7
+- `l0d` · operator-authority-identity — → L7 / L10
+- `l0d` · operator-intent-audit-provenance — → L7 / L10
+- `l1` · actor-identity-authentication — → L7 / L10
+- `l2a` · projection-ref-scoped-query-sdk — → later / L7-ish
+- `l3` · agent-to-agent-or-external-token-ask — → L7 / L8
+
+### L8 (8)
+
+- `l0a` · channels-task-inbox-general-ask — → L8
+- `l0b` · durable-delivery — → L8
+- `l3` · multi-channel-delivery-rich-input-forms — → L8
+- `l3` · agent-to-agent-or-external-token-ask — → L7 / L8
+- `storage-scope` · archive-export-purge-retention — → ④ (~L8 ops)
+- `runtime-teardown` · remote-distributed-release-proofs — → L8 / L10
+- `workflow-actions` · remote-distributed-action-proofs — → L8 / L10
+- `l4-child` · durable-external-channel — → L8
+
+### L9 (14)
+
+- `l0a` · wait-correlation — → L9
+- `l0d` · human-child-timeout-external-waits — → L3 / L4 / L9
+- `l0d` · generic-wait-resume-contract — → L3 / L4 / L9
+- `l3` · deferred-request-rework — → L5 + watchdog (L6/L9)
+- `l3` · non-operator-resume-sources — → L9
+- `l3` · timeout-on-a-human-wait — → L9
+- `runtime-teardown` · eventual-liveness-guarantee — → L9
+- `workflow-actions` · action-running-recovery-exactly-once — → L9
+- `auto-workflow-actions` · deferred-async-mechanics — → L9
+- `auto-workflow-actions` · unbounded-retry-watchdog — → L9
+- `auto-workflow-actions` · undeclared-outcome-recovery — → L9
+- `archive-purge` · retention-auto-purge — → L9 / ops
+- `l4-child` · lost-event-orphan-reconciliation — → L9
+- `l4-child` · auto-recovery-of-a-transient-spawn-dispatch-crash — → L9
+
+### L10 (6)
+
+- `l0a` · gatekeeper-federation — → L10
+- `l0d` · operator-authority-identity — → L7 / L10
+- `l0d` · operator-intent-audit-provenance — → L7 / L10
+- `l1` · actor-identity-authentication — → L7 / L10
+- `runtime-teardown` · remote-distributed-release-proofs — → L8 / L10
+- `workflow-actions` · remote-distributed-action-proofs — → L8 / L10
+
+### L11+ (3)
+
+- `l0f` · central-store-registry — → L11+
+- `storage-scope` · multi-instance-federation-storage — → L11+
+- `archive-purge` · cross-run-federation-purge — → L11+
+
+### ② (2)
+
+- `l3` · resume-actions-post-approval-mechanics — → ③a · ② · ④
+- `storage-scope` · release-mechanics — → ②
+
+### ③a (4)
+
+- `l3` · resume-actions-post-approval-mechanics — → ③a · ② · ④
+- `storage-scope` · workflow-actions — → ③a / ③b
+- `runtime-teardown` · deferred-release-boundary-realized — → ③a
+- `runtime-teardown` · workflow-actions — → ③a / ③b
+
+### ③b (3)
+
+- `storage-scope` · workflow-actions — → ③a / ③b
+- `runtime-teardown` · workflow-actions — → ③a / ③b
+- `workflow-actions` · packaged-action-library — → ③b
+
+### ④ (4)
+
+- `l3` · resume-actions-post-approval-mechanics — → ③a · ② · ④
+- `storage-scope` · archive-export-purge-retention — → ④ (~L8 ops)
+- `runtime-teardown` · archive-export-purge — → ④
+- `workflow-actions` · operator-delete — → ④
+
+### §11.4 (3)
+
+- `l0b` · rich-context-assembly — → §11.4
+- `l0c` · skill-doc-retrieval-memory-assembly — → §11.4
+- `l2b` · rich-context-assembly — → §11.4
+
+### §14.2 (1)
+
+- `l0c` · model-routing-optimization — → §14.2
+
+### §18 (2)
+
+- `l0d` · retry-compensation-rollback — → §18
+- `l0e` · provisioning-failure-handling — → later / §18
+
+### (no pointer) (4)
+
+- `l0e` · durable-delivery — → (no pointer)
+- `l0f` · actor-model-binding-as-slots — → (no pointer)
+- `storage-scope` · durable-write-mechanism — → (no pointer)
+- `storage-scope` · computed-templated-evidence-bodies — → (no pointer)
+
+### by design (6)
+
+- `l0f` · kernel-mechanics — → by design
+- `l0f-mode` · runtime-mode-conditional — → by design
+- `l0f-mode` · mode-expression-dsl-overlay-patch-step-graph-rewrite — → by design
+- `l0f-mode` · mode-on-agent-config-or-on-steps — → by design
+- `l0f-mode` · post-start-mode-change — → by design
+- `l4-child` · kernel-held-task-queue — → by design
+
+### executor (2)
+
+- `l0c` · actor-runtime-adaptation — → executor
+- `l0c` · runtime-attestation — → executor
+
+### extension (1)
+
+- `l4-child` · intermediate-lifecycle-subscription — → extension
+
+### impl (3)
+
+- `l0e` · provider-internals — → impl
+- `storage-scope` · storage-backend-choice — → impl
+- `runtime-teardown` · provider-internals — → impl
+
+### later (31)
+
+- `l0c` · tool-installation-provisioning — → later
+- `l0e` · teardown-lifecycle — → later
+- `l0e` · provider-health-availability — → later
+- `l0e` · run-override-cascade — → later
+- `l0e` · conditional-per-step-runtime-context — → later
+- `l0f` · definition-prs — → later
+- `l0f` · full-schema-system — → later
+- `l0f` · global-leniency-tradeoff — → later
+- `l1` · authored-capability-restrictions-in-the-baseline — → later
+- `l1` · capability-filtered-packet-ops — → later
+- `l2` · gate-private-mutable-state — → later
+- `l2` · findings-vocabulary — → later
+- `l2` · broad-declarative-dsl — → later
+- `l2a` · deferred-process-gates — → later
+- `l2a` · fail-instance-disposition — → later
+- `l2a` · dynamic-module-loading — → later
+- `l2b` · computed-templated-bodies — → later
+- `l2b` · semantic-parity-check — → later
+- `l2b` · actor-adapter-rendering — → later
+- `l2b` · conditional-block-bodies — → later
+- `l3` · dynamic-recommendation-decision-condition-language — → later
+- `runtime-teardown` · retained-external-release-policy-exercised — → later
+- `workflow-actions` · auto-trigger — → later
+- `workflow-actions` · rich-outcome-condition-language — → later
+- `auto-workflow-actions` · pure-computed-routing — → later
+- `auto-workflow-actions` · rich-outcome-predicate-dsl — → later
+- `auto-workflow-actions` · packaged-action-library — → later
+- `archive-purge` · restore-re-hydration — → later
+- `l0f-mode` · run-level-policy-map-engine — → later
+- `l4-child` · fan-out-fan-in — → later
+- `l4-child` · parent-driven-child-control — → later
+
+### later (blob store) (1)
+
+- `archive-purge` · shared-dedup-evidence-ownership — → later (blob store)
+
+### later / impl (1)
+
+- `l0d` · kickoff-payload-materialization — → later / impl
+
+### ops (2)
+
+- `archive-purge` · archive-query-list-cli — → ops
+- `archive-purge` · export-formats-sharing — → ops
+
+## 2 · Invariant catalog — 104 rules
+
+- `l0a` · **op-id-idempotency** — op_id idempotency
+- `l0a` · **atomic-transition-commit** — atomic transition commit
+- `l0a` · **definition-store** — definition store
+- `l0a` · **instance-store** — instance store
+- `l0a` · **transcript-event-log** — transcript / event log
+- `l0a` · **artifact-refs** — artifact refs
+- `l0b` · **expected-version-mandatory** — expected_version mandatory
+- `l0b` · **binding-coverage-at-start** — binding coverage at start
+- `l0b` · **commit-deliver** — commit ≠ deliver
+- `l0c` · **deterministic-provenance** — deterministic provenance
+- `l0c` · **config-sources-immutable-per-dispatched-step** — config sources immutable per dispatched step
+- `l0c` · **issued-proven-runtime** — issued ≠ proven runtime
+- `l0d` · **two-axis-state** — two-axis state
+- `l0d` · **actor-routable-execution** — actor-routable execution
+- `l0d` · **uniform-commit-discipline** — uniform commit discipline
+- `l0d` · **typed-waiting** — typed waiting
+- `l0d` · **terminal-is-a-sink** — terminal is a sink
+- `l0d` · **readiness-gates-dispatch** — readiness gates dispatch
+- `l0e` · **context-is-optional** — context is optional
+- `l0e` · **requirement-is-template-owned** — requirement is template-owned
+- `l0e` · **provider-resolved-at-start** — provider resolved at START
+- `l0e` · **kind-boundary-only** — kind-boundary only
+- `l0e` · **projection-never-the-ref** — projection, never the ref
+- `l0e` · **registry-stable-for-the-run** — registry stable for the run
+- `l0f` · **no-kernel-mutation** — no kernel mutation
+- `l0f` · **template-pinned-at-resolution** — template pinned at resolution
+- `l0f` · **required-slots-bound** — required slots bound
+- `l0f` · **typed-values** — typed values
+- `l0f` · **deterministic-5-tier-cascade** — deterministic 5-tier cascade
+- `l0f` · **scoped-strict-reject** — scoped strict reject
+- `l0f` · **explicit-target-must-exist** — explicit target must exist
+- `l1` · **expected-role-mandatory** — expected_role mandatory
+- `l1` · **authorization-before-commit** — authorization before commit
+- `l1` · **capability-default-derived** — capability default-derived
+- `l2` · **gate-before-commit** — gate before commit
+- `l2` · **round-is-canonical-reconstructable** — round is canonical &amp; reconstructable
+- `l2` · **inline-declarative-packaged-only-in-l2-core** — inline declarative/packaged only in L2 core
+- `l2` · **ordered-first-block-wins** — ordered, first-block-wins
+- `l2` · **gate-is-read-only-stateless** — gate is read-only &amp; stateless
+- `l2a` · **runs-in-the-workspace** — runs in the workspace
+- `l2a` · **gate-config-validated-at-definition-load** — gate config validated at definition load
+- `l2a` · **bounded-timeout-mandatory** — bounded timeout mandatory
+- `l2a` · **evidence-on-every-run** — evidence on every run
+- `l2a` · **explicit-output-mode** — explicit output mode
+- `l2a` · **runner-error-business-block** — runner error ≠ business block
+- `l2a` · **still-inline-only** — still inline only
+- `l2b` · **single-body-source** — single body source
+- `l2b` · **refs-validated-at-definition-load** — refs validated at definition load
+- `l2b` · **deterministic-ordered-render** — deterministic ordered render
+- `l2b` · **authority-scoped-gate-blocks** — authority-scoped gate blocks
+- `l2b` · **dedup-with-retained-provenance** — dedup with retained provenance
+- `l2b` · **communication-only** — communication only
+- `l3` · **park-is-one-visible-transition** — park is one visible transition
+- `l3` · **decision-is-operator-intent-not-actor-envelope** — decision is operator-intent, not actor-envelope
+- `l3` · **waiting-is-honest** — WAITING is honest
+- `l3` · **override-is-explicit-and-recorded** — override is explicit and recorded
+- `l3` · **a-loop-back-resumes-clean** — a loop-back resumes clean
+- `l3` · **a-decision-carries-its-required-payload** — a decision carries its required payload
+- `l3` · **decisions-carry-no-lifecycle-meaning** — decisions carry no lifecycle meaning
+- `l3` · **a-parked-wait-resumes-only-on-a-matching-event** — a parked wait resumes only on a matching event
+- `storage-scope` · **inv-1-canonical-durability** — INV-1 · canonical durability
+- `storage-scope` · **inv-2-no-workspace-sole-truth** — INV-2 · no workspace-sole-truth
+- `storage-scope` · **inv-3-evidence-ref-discipline-the-one-new-runtime-rule** — INV-3 · evidence-ref discipline (the one new runtime rule)
+- `storage-scope` · **inv-4-projection-subordination** — INV-4 · projection subordination
+- `storage-scope` · **inv-5-release-safety-the-bridge-to** — INV-5 · release safety (the bridge to ②)
+- `runtime-teardown` · **release-obligation-is-never-dropped-silently** — release obligation is never dropped silently
+- `runtime-teardown` · **release-failed-is-a-handle-not-a-runtime** — release_failed is a handle, not a runtime
+- `runtime-teardown` · **release-safe-precondition** — release-safe precondition
+- `runtime-teardown` · **release-is-orthogonal-to-lifecycle** — release is orthogonal to lifecycle
+- `runtime-teardown` · **release-initiation-is-post-commit** — release initiation is post-commit
+- `runtime-teardown` · **single-winner-release-initiation-cas** — single-winner release initiation (CAS)
+- `runtime-teardown` · **correlated-idempotent** — correlated + idempotent
+- `runtime-teardown` · **teardown-managed-release-policy-declared** — teardown-managed ⇒ release policy declared
+- `runtime-teardown` · **boundary-is-declared-not-hardcoded** — boundary is declared, not hardcoded
+- `workflow-actions` · **single-winner-action-claim-cas-marker-first** — single-winner action claim (CAS, marker-first)
+- `workflow-actions` · **the-outcome-selects-the-kernel-does-not** — the outcome selects, the kernel does not
+- `workflow-actions` · **trigger-validates-payload-action-examines-the-workspace** — trigger validates payload; action examines the workspace
+- `workflow-actions` · **a-self-routing-outcome-stays-parked** — a self-routing outcome stays parked
+- `workflow-actions` · **the-action-result-is-recorded-with-evidence** — the action result is recorded with evidence
+- `workflow-actions` · **an-outcome-may-emit-a-release-boundary** — an outcome may emit a release boundary
+- `workflow-actions` · **action-is-select-gate-is-filter** — action is select, gate is filter
+- `auto-workflow-actions` · **auto-is-marker-first-too** — auto is marker-first too
+- `auto-workflow-actions` · **only-an-auto-step-re-issues-the-run-the-a-b-boundary** — only an auto step re-issues the run (the ③a/③b boundary)
+- `auto-workflow-actions` · **the-result-is-a-correlated-kernel-event** — the result is a correlated kernel-event
+- `auto-workflow-actions` · **bounded-retry-is-opt-in-and-episode-anchored** — bounded retry is opt-in and episode-anchored
+- `auto-workflow-actions` · **the-recommendation-rides-the-firing-edge** — the recommendation rides the firing edge
+- `archive-purge` · **archive-is-not-the-preservation-path** — archive is not the preservation path
+- `archive-purge` · **purge-is-complete-closure-scoped** — purge is complete &amp; closure-scoped
+- `archive-purge` · **the-destructive-precondition-is-on-the-purge-not-the-intent** — the destructive precondition is on the purge, not the intent
+- `archive-purge` · **a-purge-leaves-a-tombstone-the-global-audit-survives** — a purge leaves a tombstone; the global audit survives
+- `archive-purge` · **delete-is-an-operator-intent-not-a-workflow-action** — delete is an operator intent, not a workflow action
+- `l0f-mode` · **fail-closed-mode-set** — fail-closed mode set
+- `l0f-mode` · **mode-is-start-fixed-baked-in** — mode is start-fixed &amp; baked in
+- `l0f-mode` · **mode-is-not-a-gate-input** — mode is not a gate input
+- `l0f-mode` · **docs-only-is-an-explicit-gate-not-gate-absence** — docs-only is an explicit gate, not gate-absence
+- `l0f-mode` · **catalog-blocks-are-never-mode-pruned** — catalog blocks are never mode-pruned
+- `l4-child` · **a-child-is-a-full-instance-not-a-subflow** — a child is a full instance, not a subflow
+- `l4-child` · **idempotent-spawn-child-key-on-the-active-link** — idempotent spawn (child_key) — on the ACTIVE link
+- `l4-child` · **spawn-write-back-is-correlated-cas-d** — spawn write-back is correlated + CAS'd
+- `l4-child` · **the-parent-owns-the-link-the-child-carries-the-back-ref** — the parent owns the link; the child carries the back-ref
+- `l4-child` · **child-lifecycle-is-transition-based-the-anchor-is-terminal** — CHILD_LIFECYCLE is transition-based; the anchor is terminal
+- `l4-child` · **routing-is-fail-closed-on-the-subscription** — routing is fail-closed on the subscription
+- `l4-child` · **round-is-instance-local** — round is instance-local
+- `l4-child` · **a-spawn-that-cannot-start-is-a-failed-attempt** — a spawn that cannot start is a failed attempt
+
+## 3 · Rejection registry — 78 distinct `Rejected(...)` reasons
+
+- `action_outcome_ambiguous_route` — first appears in `auto-action-pseudocode`
+- `action_outcome_no_route` — first appears in `auto-action-pseudocode`
+- `action_outcome_target_unresolved` — first appears in `action-pseudocode`
+- `action_outcomes_empty` — first appears in `action-pseudocode`
+- `action_result_mismatch` — first appears in `auto-action-pseudocode`
+- `action_result_not_auto_action` — first appears in `auto-action-pseudocode`
+- `action_retry_requires_auto` — first appears in `auto-action-pseudocode`
+- `action_trigger_mismatch` — first appears in `action-pseudocode`
+- `already_purged` — first appears in `complete-pseudocode`
+- `auto_action_payload_unsupported` — first appears in `auto-action-pseudocode`
+- `child_key_missing` — first appears in `l4-pseudocode`
+- `child_lifecycle_not_subscribed` — first appears in `l4-pseudocode`
+- `child_link_mismatch` — first appears in `l4-pseudocode`
+- `child_link_unknown` — first appears in `l4-pseudocode`
+- `child_spawn_already_resolved` — first appears in `l4-pseudocode`
+- `child_template_ref_missing` — first appears in `l4-pseudocode`
+- `child_template_ref_unresolved` — first appears in `l4-pseudocode`
+- `child_wait_for_empty` — first appears in `l4-pseudocode`
+- `child_wait_for_incomplete` — first appears in `l4-pseudocode`
+- `child_wait_target_unresolved` — first appears in `l4-pseudocode`
+- `decision_gate_empty` — first appears in `l3-pseudocode`
+- `decision_request_mismatch` — first appears in `l3-pseudocode`
+- `decision_target_unresolved` — first appears in `l3-pseudocode`
+- `default_mode_undeclared` — first appears in `l0f-mode-pseudocode`
+- `delete_confirmation_required` — first appears in `complete-pseudocode`
+- `gate_blocked` — first appears in `l2-pseudocode`
+- `gate_config_not_supported` — first appears in `l2a-pseudocode`
+- `gate_evaluator_unavailable` — first appears in `l2-pseudocode`
+- `gate_execution_not_supported` — first appears in `l2-pseudocode`
+- `invalid_action_outcome_schema` — first appears in `action-pseudocode`
+- `invalid_action_step` — first appears in `action-pseudocode`
+- `invalid_decision_gate_config` — first appears in `l3-pseudocode`
+- `invalid_decision_payload_schema` — first appears in `l3-pseudocode`
+- `invalid_process_gate_config` — first appears in `l2a-pseudocode`
+- `invalid_release_policy` — first appears in `release-pseudocode`
+- `invalid_retry_budget` — first appears in `auto-action-pseudocode`
+- `invalid_shape` — first appears in `l0a-pseudocode`
+- `missing_required_field` — first appears in `l3-pseudocode`
+- `missing_role` — first appears in `l1-pseudocode`
+- `missing_version` — first appears in `l0b-pseudocode`
+- `mode_surface_without_modes` — first appears in `l0f-mode-pseudocode`
+- `mode_tag_on_unsupported_surface` — first appears in `l0f-mode-pseudocode`
+- `no_mode_selected` — first appears in `l0f-mode-pseudocode`
+- `no_resume_transition` — first appears in `l3-pseudocode`
+- `no_transition` — first appears in `l0a-pseudocode`
+- `no_workflow_selected` — first appears in `l0f-pseudocode`
+- `not_active` — first appears in `l0d-pseudocode`
+- `not_authorized` — first appears in `l1-pseudocode`
+- `not_awaiting_action` — first appears in `action-pseudocode`
+- `not_awaiting_decision` — first appears in `l3-pseudocode`
+- `not_awaiting_this_child` — first appears in `l4-pseudocode`
+- `not_bare_wait` — first appears in `l3-pseudocode`
+- `not_waiting` — first appears in `l3-pseudocode`
+- `operator_not_authorized` — first appears in `l3-pseudocode`
+- `override_not_applicable` — first appears in `l3-pseudocode`
+- `override_required` — first appears in `l3-pseudocode`
+- `recommends_on_non_gate` — first appears in `l3-pseudocode`
+- `recommends_unknown_decision` — first appears in `l3-pseudocode`
+- `release_boundaries_empty` — first appears in `release-pseudocode`
+- `release_boundaries_not_allowed` — first appears in `release-pseudocode`
+- `release_policy_undeclared` — first appears in `release-pseudocode`
+- `resume_event_mismatch` — first appears in `l3-pseudocode`
+- `retry_escalation_target_unresolved` — first appears in `auto-action-pseudocode`
+- `role_not_authorized` — first appears in `l1-pseudocode`
+- `runtime_context_provider_unavailable` — first appears in `l0e-pseudocode`
+- `runtime_context_required_for_process_gate` — first appears in `l2a-pseudocode`
+- `slot_type_mismatch` — first appears in `l0f-pseudocode`
+- `task_required` — first appears in `l0d-pseudocode`
+- `unbound_required_slot` — first appears in `l0f-pseudocode`
+- `undeclared_mode_tag` — first appears in `l0f-mode-pseudocode`
+- `unknown_decision` — first appears in `l3-pseudocode`
+- `unknown_instance` — first appears in `l0a-pseudocode`
+- `unknown_mode` — first appears in `l0f-mode-pseudocode`
+- `unknown_slot` — first appears in `l0f-pseudocode`
+- `unknown_target` — first appears in `l0f-pseudocode`
+- `unresolved_context_block_ref` — first appears in `l2b-pseudocode`
+- `unsupported_action_trigger` — first appears in `action-pseudocode`
+- `workflow_definition_unavailable` — first appears in `l0f-pseudocode`

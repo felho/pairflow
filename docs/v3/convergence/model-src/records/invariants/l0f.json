@@ -1,0 +1,45 @@
+{
+  "section": "l0f",
+  "blocks": [
+    {
+      "indent": "            ",
+      "items": [
+        {
+          "id": "no-kernel-mutation",
+          "name_html": "no kernel mutation",
+          "body_html": "L0f runs <b>before</b> <code>CREATE_INSTANCE</code>; it produces inputs only — no transcript entry, no instance, no <code>version</code>. A rejection leaves the system untouched"
+        },
+        {
+          "id": "template-pinned-at-resolution",
+          "name_html": "template pinned at resolution",
+          "body_html": "<code>template_ref</code> carries a version; later overrides change <em>slot values</em>, never the definition"
+        },
+        {
+          "id": "required-slots-bound",
+          "name_html": "required slots bound",
+          "body_html": "every <code>required</code> slot in the selected template has a non-none value in the result, else <code>Rejected(unbound_required_slot)</code>"
+        },
+        {
+          "id": "typed-values",
+          "name_html": "typed values",
+          "body_html": "a resolved value satisfies its slot's declared type (minimal <code>command | branch | branch_pattern | path | string</code>), else <code>Rejected(slot_type_mismatch)</code>"
+        },
+        {
+          "id": "deterministic-5-tier-cascade",
+          "name_html": "deterministic 5-tier cascade",
+          "body_html": "precedence <code>template default &lt; project global &lt; project workflow &lt; target &lt; CLI/start override</code>; same inputs → same <code>ResolvedStartRequest</code>"
+        },
+        {
+          "id": "scoped-strict-reject",
+          "name_html": "scoped strict reject",
+          "body_html": "unknown slot ids are rejected only in the unambiguously-scoped tiers (workflow section, target, CLI); the shared <code>global defaults</code> and unrelated workflows' sections are not rejected for this run"
+        },
+        {
+          "id": "explicit-target-must-exist",
+          "name_html": "explicit target must exist",
+          "body_html": "an operator-selected <code>command.target</code> the workflow does not define rejects with <code>unknown_target</code> — an intentional selection, distinct from the lenient global-slot path"
+        }
+      ]
+    }
+  ]
+}

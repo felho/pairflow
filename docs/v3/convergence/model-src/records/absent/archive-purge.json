@@ -1,0 +1,30 @@
+{
+  "section": "archive-purge",
+  "indent": "          ",
+  "items": [
+    {
+      "id": "retention-auto-purge",
+      "html": "No <b>retention / auto-purge</b> — TTL, max-count, scheduled GC, a <em>scheduled / automatic</em> retention reconciler; purge is operator-initiated here (v1 has none either). The delete-chain purge <b>re-drive</b> (re-running a deferred / interrupted <code>hard_purge</code> to completion) is already part of the ④ baseline — what is absent is a <em>policy</em> engine that decides <em>when</em> to purge unprompted <span class=\"at\">→ L9 / ops</span>"
+    },
+    {
+      "id": "archive-query-list-cli",
+      "html": "No <b>archive query / list CLI</b> — the index tombstones purged/archived runs, but listing / inspecting / searching them is ops tooling <span class=\"at\">→ ops</span>"
+    },
+    {
+      "id": "restore-re-hydration",
+      "html": "No <b>restore / re-hydration</b> — an archive is forensic, write-only; bringing a run back as a live instance is not a goal (eval-replay from the durable record is a separate concern) <span class=\"at\">→ later</span>"
+    },
+    {
+      "id": "shared-dedup-evidence-ownership",
+      "html": "No <b>shared / dedup evidence ownership</b> realized — the closure rule is open to a multi-owner T3 blob store, but the MVP is run-owned evidence <span class=\"at\">→ later (blob store)</span>"
+    },
+    {
+      "id": "export-formats-sharing",
+      "html": "No <b>export formats / sharing</b> — <code>cold_copy</code> is abstract; concrete bundle formats, redaction, and sharing are ops <span class=\"at\">→ ops</span>"
+    },
+    {
+      "id": "cross-run-federation-purge",
+      "html": "No <b>cross-run / federation purge</b> — purging across a central store or other installations is governance <span class=\"at\">→ L11+</span>"
+    }
+  ]
+}

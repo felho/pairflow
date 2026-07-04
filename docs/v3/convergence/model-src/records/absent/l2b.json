@@ -1,0 +1,26 @@
+{
+  "section": "l2b",
+  "indent": "          ",
+  "items": [
+    {
+      "id": "computed-templated-bodies",
+      "html": "No <b>computed / templated bodies</b> — a block body is authored static text; interpolation like <code>{{ gate.config.value }}</code> (which would close gate-vs-prose drift) is later <span class=\"at\">→ later</span>"
+    },
+    {
+      "id": "semantic-parity-check",
+      "html": "No <b>semantic parity check</b> — <code>validate_context_refs</code> proves a ref resolves, not that its prose matches the gate config it describes; drift is not detected <span class=\"at\">→ later</span>"
+    },
+    {
+      "id": "rich-context-assembly",
+      "html": "No <b>rich context assembly</b> — semantic retrieval, memory, skill-doc expansion, model-specific prompt shaping <span class=\"at\">→ §11.4</span>"
+    },
+    {
+      "id": "actor-adapter-rendering",
+      "html": "No <b>actor-adapter rendering</b> — <code>context_blocks</code> are kernel-level deterministic text; how an adapter folds them into a model-specific prompt is adapter work <span class=\"at\">→ later</span>"
+    },
+    {
+      "id": "conditional-block-bodies",
+      "html": "No <b>conditional block bodies</b> — selection is by the authority predicate only; round- or state-dependent body variants are a computed-body concern <span class=\"at\">→ later</span>"
+    }
+  ]
+}

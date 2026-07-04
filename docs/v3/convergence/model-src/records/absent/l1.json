@@ -1,0 +1,26 @@
+{
+  "section": "l1",
+  "indent": "          ",
+  "items": [
+    {
+      "id": "lifecycle-state-authorization",
+      "html": "No <b>lifecycle-state authorization</b> — L1 authorizes on role × <code>current_step</code>, not on <code>kernel_status</code> (the ACTIVE guard is L0d's <code>not_active</code>); state-specific rights like \"WAITING_HUMAN → operator\" <span class=\"at\">→ L3</span>"
+    },
+    {
+      "id": "actor-identity-authentication",
+      "html": "No <b>actor identity authentication</b> — no token/credential; only role-claim vs active role <span class=\"at\">→ L7 / L10</span>"
+    },
+    {
+      "id": "gate-policy",
+      "html": "No <b>gate / policy</b> — capability is structural authorization, not a decision <span class=\"at\">→ L2</span>"
+    },
+    {
+      "id": "authored-capability-restrictions-in-the-baseline",
+      "html": "No <b>authored capability restrictions in the baseline</b> — the profile abstraction exists, but derives from the step graph until explicit restrictions are introduced <span class=\"at\">→ later</span>"
+    },
+    {
+      "id": "capability-filtered-packet-ops",
+      "html": "No <b>capability-filtered packet ops</b> — available_ops still shows all transitions (coincides with the authorized set under default-derived) <span class=\"at\">→ later</span>"
+    }
+  ]
+}

@@ -1,0 +1,62 @@
+{
+  "section": "l0a",
+  "indent": "          ",
+  "items": [
+    {
+      "id": "actor-binding-work-item-dispatch",
+      "html": "No <b>actor binding / work-item dispatch</b> — roles are bare names <span class=\"at\">→ L0b</span>"
+    },
+    {
+      "id": "agent-guidance",
+      "html": "No <b>agent guidance</b> — TASK, instruction, context-packet seed <span class=\"at\">→ L0b</span>"
+    },
+    {
+      "id": "actor-supplied-stale-intent",
+      "html": "No <b>actor-supplied stale-intent</b> — needs the context packet <span class=\"at\">→ L0b+</span>"
+    },
+    {
+      "id": "capability-check",
+      "html": "No <b>capability check</b> — anyone can emit anything <span class=\"at\">→ L1</span>"
+    },
+    {
+      "id": "gate-policy",
+      "html": "No <b>gate / policy</b> — reviewer decides convergence directly <span class=\"at\">→ L2</span>"
+    },
+    {
+      "id": "round-limit",
+      "html": "No <b>round limit</b> — formalised with the round gate <span class=\"at\">→ L2</span>"
+    },
+    {
+      "id": "human-gate-approval",
+      "html": "No <b>human gate / approval</b> <span class=\"at\">→ L3</span>"
+    },
+    {
+      "id": "child-workflows-internal-events",
+      "html": "No <b>child workflows / internal events</b> <span class=\"at\">→ L4</span>"
+    },
+    {
+      "id": "help-subflow",
+      "html": "No <b>help subflow</b> <span class=\"at\">→ L5</span>"
+    },
+    {
+      "id": "triggers",
+      "html": "No <b>triggers</b> — manual start only <span class=\"at\">→ L6</span>"
+    },
+    {
+      "id": "grants-credentials",
+      "html": "No <b>grants / credentials</b> <span class=\"at\">→ L7</span>"
+    },
+    {
+      "id": "channels-task-inbox-general-ask",
+      "html": "No <b>channels / task inbox / general Ask</b> <span class=\"at\">→ L8</span>"
+    },
+    {
+      "id": "wait-correlation",
+      "html": "No <b>wait / correlation</b> <span class=\"at\">→ L9</span>"
+    },
+    {
+      "id": "gatekeeper-federation",
+      "html": "No <b>gatekeeper / federation</b> <span class=\"at\">→ L10</span>"
+    }
+  ]
+}

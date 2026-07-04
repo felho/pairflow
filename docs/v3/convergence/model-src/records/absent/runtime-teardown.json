@@ -1,0 +1,38 @@
+{
+  "section": "runtime-teardown",
+  "indent": "          ",
+  "items": [
+    {
+      "id": "eventual-liveness-guarantee",
+      "html": "No <b>eventual-liveness guarantee</b> — no auto-retry, backoff, timeout, or watchdog on a <code>release_failed</code> obligation; the kernel tracks it but does not re-drive it. The retry that turns \"tracked\" into \"eventually discharged\" is later <span class=\"at\">→ L9</span>"
+    },
+    {
+      "id": "deferred-release-boundary-realized",
+      "html": "No <b>deferred release boundary realized</b> — the parameterized hook is in (<code>initiate_release(instance, boundary_event)</code>, guard <code>boundary_event ∉ release_boundaries(template)</code>), but no post-completion action emits a non-terminal boundary yet; the merge / commit <em>actions</em> that do are <span class=\"at\">→ ③a</span>"
+    },
+    {
+      "id": "retained-external-release-policy-exercised",
+      "html": "No <b>retained / external release policy exercised</b> — the policy vocabulary and load-time rule are in, but the anchor only uses <code>required</code>; a long-lived (<code>retained</code>) or externally-owned (<code>external</code>) runtime_context is a later, explicit ownership choice <span class=\"at\">→ later</span>"
+    },
+    {
+      "id": "workflow-actions",
+      "html": "No <b>workflow actions</b> — the <code>type: action</code> steps that run git commit / merge (and emit a deferred boundary like merge_completed), perf-test, publish, notify <span class=\"at\">→ ③a / ③b</span>"
+    },
+    {
+      "id": "archive-export-purge",
+      "html": "No <b>archive / export / purge</b> — the record-purge half of v1 <code>delete</code> is a storage-axis op, not resource teardown <span class=\"at\">→ ④</span>"
+    },
+    {
+      "id": "provider-internals",
+      "html": "No <b>provider internals</b> — the git worktree / branch / tmux removal mechanics are the provider's, opaque to the kernel, exactly as on the provision side <span class=\"at\">→ impl</span>"
+    },
+    {
+      "id": "remote-distributed-release-proofs",
+      "html": "No <b>remote / distributed release proofs</b> — a remote or async release with verifiable completion (the merge-as-distribution concern) is later <span class=\"at\">→ L8 / L10</span>"
+    },
+    {
+      "id": "child-release-fan-out",
+      "html": "No <b>child release fan-out</b> — a child is just another runtime_context the same contract releases; L4 multiplies the count, not the contract <span class=\"at\">→ L4</span>"
+    }
+  ]
+}

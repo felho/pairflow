@@ -1,0 +1,26 @@
+{
+  "section": "l0f-mode",
+  "indent": "          ",
+  "items": [
+    {
+      "id": "runtime-mode-conditional",
+      "html": "No <b>runtime mode-conditional</b> — the mode is resolved &amp; baked at start; the kernel never branches on it, there is no runtime mode field <span class=\"at\">→ by design</span>"
+    },
+    {
+      "id": "run-level-policy-map-engine",
+      "html": "No <b>run-level policy map / engine</b> — there is no free-floating mode → policy selection; mode-specific policy lives in the <b>gate binding where it runs</b> (its <code>config</code>). A DRY central profile (one place to set a policy across many gates) is deferred until a concrete need <span class=\"at\">→ later</span>"
+    },
+    {
+      "id": "mode-expression-dsl-overlay-patch-step-graph-rewrite",
+      "html": "No <b>mode expression DSL / overlay / patch / step-graph rewrite</b> — the whole mechanism is a <code>modes:</code> membership tag; breadth is fenced by the mechanism, not by dropping a surface <span class=\"at\">→ by design</span>"
+    },
+    {
+      "id": "mode-on-agent-config-or-on-steps",
+      "html": "No <b>mode on agent_config or on steps</b> — v1 does not condition the model / agent_config or the step graph by mode; modes tag only gate bindings and context refs, and a tag anywhere else is rejected at load (<code>mode_tag_on_unsupported_surface</code>) <span class=\"at\">→ by design</span>"
+    },
+    {
+      "id": "post-start-mode-change",
+      "html": "No <b>post-start mode change</b> — mode is create-time immutable (v1 parity); a run does not switch variant mid-flight <span class=\"at\">→ by design</span>"
+    }
+  ]
+}

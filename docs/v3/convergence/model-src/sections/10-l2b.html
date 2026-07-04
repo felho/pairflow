@@ -95,12 +95,7 @@
         <div class="agg invariant">
           <div class="agg-label">Added rules</div>
           <div class="ents">
-            <div class="ent"><div class="en">single body source</div><div class="fields">a context block’s body lives only in <code>template.context_blocks</code>; refs are ids, never inline prose — one place to author, dedup, and validate</div></div>
-            <div class="ent"><div class="en">refs validated at definition load</div><div class="fields"><code>validate_context_refs(template)</code> runs in <code>CREATE_INSTANCE</code> beside binding coverage and <code>validate_gate_config</code>; an unresolved ref is <code>unresolved_context_block_ref</code> — fail at create, not a render-time drop</div></div>
-            <div class="ent"><div class="en">deterministic ordered render</div><div class="fields">role → step → gate, declaration order within each; same instance state + config ⇒ byte-identical <code>context_blocks</code>. Order is reading sequence, not precedence/override</div></div>
-            <div class="ent"><div class="en">authority-scoped gate blocks</div><div class="fields">a gate’s block renders only for a transition in <code>available_ops ∩ L1 capability</code> — transition existence plus the L1 role/<code>current_step</code> authority check; never blind step membership</div></div>
-            <div class="ent"><div class="en">dedup with retained provenance</div><div class="fields">an id reached from several sources renders once; <code>provenance.sources[]</code> keeps every emitter, so the packet stays terse but auditable</div></div>
-            <div class="ent"><div class="en">communication only</div><div class="fields"><code>context_blocks</code> never enter a verdict or the commit; removing a block cannot change what L2 enforces (correctness is L2’s job, legibility is L2b’s)</div></div>
+[[@invariants l2b 0]]
           </div>
         </div>
 
@@ -121,11 +116,7 @@
 
         <h3 class="view-h"><span class="view-tag absent">Absent</span> Still not here</h3>
         <div class="absent-grid">
-          <div class="absent-item">No <b>computed / templated bodies</b> — a block body is authored static text; interpolation like <code>{{ gate.config.value }}</code> (which would close gate-vs-prose drift) is later <span class="at">→ later</span></div>
-          <div class="absent-item">No <b>semantic parity check</b> — <code>validate_context_refs</code> proves a ref resolves, not that its prose matches the gate config it describes; drift is not detected <span class="at">→ later</span></div>
-          <div class="absent-item">No <b>rich context assembly</b> — semantic retrieval, memory, skill-doc expansion, model-specific prompt shaping <span class="at">→ §11.4</span></div>
-          <div class="absent-item">No <b>actor-adapter rendering</b> — <code>context_blocks</code> are kernel-level deterministic text; how an adapter folds them into a model-specific prompt is adapter work <span class="at">→ later</span></div>
-          <div class="absent-item">No <b>conditional block bodies</b> — selection is by the authority predicate only; round- or state-dependent body variants are a computed-body concern <span class="at">→ later</span></div>
+[[@absent l2b]]
         </div>
 
         <h3 class="view-h"><span class="view-tag evidence">Evidence</span> Why we accept L2b for now</h3>

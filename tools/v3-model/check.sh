@@ -19,3 +19,13 @@ else
   cmp docs/v3/convergence/core-model.html "$tmp" | head -5 >&2 || true
   exit 1
 fi
+
+ledger_tmp="$(mktemp -t core-model-ledger.XXXXXX.md)"
+trap 'rm -f "$tmp" "$ledger_tmp"' EXIT
+python3 tools/v3-model/report_ledger.py --stdout > "$ledger_tmp"
+if cmp -s docs/v3/convergence/model-src/ledger.md "$ledger_tmp"; then
+  echo "check: OK — ledger.md is fresh"
+else
+  echo "check: FAIL — ledger.md is stale; run tools/v3-model/report_ledger.py" >&2
+  exit 1
+fi

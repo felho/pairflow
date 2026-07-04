@@ -87,9 +87,7 @@
         <div class="agg invariant">
           <div class="agg-label">Added rules</div>
           <div class="ents">
-            <div class="ent"><div class="en">expected_role mandatory</div><div class="fields">every actor-emitted envelope must claim a role from L1 on — like expected_version at L0b, the snapshot field becomes required when introduced</div></div>
-            <div class="ent"><div class="en">authorization before commit</div><div class="fields">role authority and the capability check both run before the atomic commit — a rejected emit never changes state</div></div>
-            <div class="ent"><div class="en">capability default-derived</div><div class="fields">absent an explicit profile, allowed(role, step) = the step's transitions for its own role — so not_authorized is dormant until a restriction or multi-role action enters the same profile</div></div>
+[[@invariants l1 0]]
           </div>
         </div>
 
@@ -108,11 +106,7 @@
 
         <h3 class="view-h"><span class="view-tag absent">Absent</span> Still not here</h3>
         <div class="absent-grid">
-          <div class="absent-item">No <b>lifecycle-state authorization</b> — L1 authorizes on role × <code>current_step</code>, not on <code>kernel_status</code> (the ACTIVE guard is L0d's <code>not_active</code>); state-specific rights like "WAITING_HUMAN → operator" <span class="at">→ L3</span></div>
-          <div class="absent-item">No <b>actor identity authentication</b> — no token/credential; only role-claim vs active role <span class="at">→ L7 / L10</span></div>
-          <div class="absent-item">No <b>gate / policy</b> — capability is structural authorization, not a decision <span class="at">→ L2</span></div>
-          <div class="absent-item">No <b>authored capability restrictions in the baseline</b> — the profile abstraction exists, but derives from the step graph until explicit restrictions are introduced <span class="at">→ later</span></div>
-          <div class="absent-item">No <b>capability-filtered packet ops</b> — available_ops still shows all transitions (coincides with the authorized set under default-derived) <span class="at">→ later</span></div>
+[[@absent l1]]
         </div>
 
         <h3 class="view-h"><span class="view-tag evidence">Evidence</span> Why we accept L1 for now</h3>

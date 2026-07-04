@@ -1,0 +1,25 @@
+{
+  "section": "l0c",
+  "blocks": [
+    {
+      "indent": "            ",
+      "items": [
+        {
+          "id": "deterministic-provenance",
+          "name_html": "deterministic provenance",
+          "body_html": "issued config is recomputed at commit from the same sources the packet used — not a dispatch-stored value, not an actor echo"
+        },
+        {
+          "id": "config-sources-immutable-per-dispatched-step",
+          "name_html": "config sources immutable per dispatched step",
+          "body_html": "role defaults, step config, and instance run_overrides cannot change for the dispatched step — else provenance would need a persisted dispatch record"
+        },
+        {
+          "id": "issued-proven-runtime",
+          "name_html": "issued ≠ proven runtime",
+          "body_html": "L0c records what the kernel issued; that the actor ran exactly so is later attestation"
+        }
+      ]
+    }
+  ]
+}

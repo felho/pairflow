@@ -1,0 +1,40 @@
+{
+  "section": "l0e",
+  "blocks": [
+    {
+      "indent": "            ",
+      "items": [
+        {
+          "id": "context-is-optional",
+          "name_html": "context is optional",
+          "body_html": "a workflow may declare <code>runtime_context = none</code> — then <code>START</code> needs no provider, sets <code>ready(∅)</code>, and the packet carries <code>runtime_context: none</code>; readiness still gates dispatch only when a context is <code>required</code>"
+        },
+        {
+          "id": "requirement-is-template-owned",
+          "name_html": "requirement is template-owned",
+          "body_html": "the <code>RuntimeContextRequirement</code> lives on the pinned template (single source of truth), not snapshotted into instance state — a run-override cascade is possible later, same shape as AgentConfig (L0c)"
+        },
+        {
+          "id": "provider-resolved-at-start",
+          "name_html": "provider resolved at START",
+          "body_html": "when a context is required, an unknown <code>spec.provider</code> → <code>Rejected(runtime_context_provider_unavailable)</code> before any provisioning; deeper health/availability is deferred"
+        },
+        {
+          "id": "kind-boundary-only",
+          "name_html": "kind-boundary only",
+          "body_html": "a provider may only return a ref whose <code>kind</code> = the requested spec kind; the kernel guards <b>kind + correlation</b> and treats the locator as opaque (provider-defined, not validated)"
+        },
+        {
+          "id": "projection-never-the-ref",
+          "name_html": "projection, never the ref",
+          "body_html": "the packet carries either <code>runtime_context: none</code> or only <code>project_for_actor(ref)</code>, resolved through the <em>same pinned-template provider</em> that issued the request — the raw ref stays kernel-side"
+        },
+        {
+          "id": "registry-stable-for-the-run",
+          "name_html": "registry stable for the run",
+          "body_html": "a provider used by an active instance stays resolvable for the life of the run (pinned spec); dispatch <code>REQUIRE</code>s it as a kernel/config invariant, not a business rejection"
+        }
+      ]
+    }
+  ]
+}

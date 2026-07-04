@@ -133,12 +133,7 @@
         <div class="agg invariant">
           <div class="agg-label">Added rules</div>
           <div class="ents">
-            <div class="ent"><div class="en">two-axis state</div><div class="fields"><code>current_step</code> is absent before first activation; after activation it stays the execution position across <code>ACTIVE</code> and resumable <code>WAITING</code> states; workflow phase is derived from current_step/wait, never stored</div></div>
-            <div class="ent"><div class="en">actor-routable execution</div><div class="fields">actor envelopes are accepted only when <code>kernel_status = ACTIVE</code> — guarded after idempotency, before the stale check (role/action authorization is layered on at L1)</div></div>
-            <div class="ent"><div class="en">uniform commit discipline</div><div class="fields">every lifecycle mutation commits atomically under <code>instance.version</code> / CAS; actor envelopes keep <code>op_id</code> idempotency, while lifecycle inputs are guarded by preconditions and correlation ids (<code>request_id</code>) where applicable — the store stays dumb, the kernel writes meaning atomically</div></div>
-            <div class="ent"><div class="en">typed waiting</div><div class="fields"><code>WAITING</code> always carries a <code>wait.kind</code> and an explicit <code>resume_events</code> class</div></div>
-            <div class="ent"><div class="en">terminal is a sink</div><div class="fields"><code>TERMINAL</code> rejects every state-mutating input (dispatch, actor emit, operator mutation); reads/status queries still allowed; <code>terminal_disposition</code> is written exactly once via COMPLETE / FAIL / CANCEL</div></div>
-            <div class="ent"><div class="en">readiness gates dispatch</div><div class="fields">provisioning is fulfilled by a provider (→ L0e), but <code>activate</code> requires <code>runtime_context = ready</code> — no dispatch into a non-ready context; <code>START</code> is single-shot (requestable only from <code>none</code>)</div></div>
+[[@invariants l0d 0]]
           </div>
         </div>
 
@@ -157,14 +152,7 @@
 
         <h3 class="view-h"><span class="view-tag absent">Absent</span> Still not here</h3>
         <div class="absent-grid">
-          <div class="absent-item">No <b>operator authority / identity</b> — who may issue START / KICKOFF / CANCEL is dormant (the dormant-until-restricted shape L1 later reuses) <span class="at">→ L7 / L10</span></div>
-          <div class="absent-item">No <b>runtime-context spec / provider contract</b> — what context the template requires and which provider fulfills it (worktree / mailbox / …); L0d consumes only <code>RUNTIME_CONTEXT_READY</code> and stores an opaque ref, provider internals stay implementation <span class="at">→ L0e</span></div>
-          <div class="absent-item">No <b>kickoff payload materialization</b> — KICKOFF here models only task-supply + activation; v1 also writes a task artifact, flips ideation config (<code>task_pending=false</code>, <code>kicked_off_at</code>) and appends a TASK envelope — activation/input materialization (a persistence detail), not the runtime-context provider <span class="at">→ later / impl</span></div>
-          <div class="absent-item">No <b>post-approval resume <em>actions</em></b> — L0d owns the generic terminal disposition paths (COMPLETE / FAIL / CANCEL); v1's post-approval path is <code>APPROVED_FOR_COMMIT → COMMITTED → DONE</code> (the git commit precedes <code>DONE</code>), with the merge a <b>separate command after <code>DONE</code></b>. The minimal <em>resume contract</em> for such waits is realized at L3 (<code>RESUME_WAIT</code>: <code>COMMIT</code> → done); the resume <em>actions/mechanics</em> (running git commit, merge, teardown) are later — not a privileged finalization phase <span class="at">→ L3 contract / later actions</span></div>
-          <div class="absent-item">No <b>human / child / timeout / external waits</b> — WAITING ships with only <code>kickoff_pending</code> <span class="at">→ L3 / L4 / L9</span></div>
-          <div class="absent-item">No <b>generic wait-resume contract</b> — <code>KICKOFF</code> is the first <em>specialized</em> WAITING resume (activation). The generic bare-wait resume (resume any <code>WAITING</code> from a matching event → <code>apply_target_entry_effects</code>) appears at L3, when <code>commit_pending</code> introduces the first non-activation bare wait; child-event and timeout/external resume sources reuse it later <span class="at">→ L3 / L4 / L9</span></div>
-          <div class="absent-item">No <b>retry / compensation / rollback</b> on FAILED <span class="at">→ §18</span></div>
-          <div class="absent-item">No <b>operator-intent audit / provenance</b> — the source class is named, its full authority model is later <span class="at">→ L7 / L10</span></div>
+[[@absent l0d]]
         </div>
 
         <h3 class="view-h"><span class="view-tag evidence">Evidence</span> Why we accept L0d for now</h3>

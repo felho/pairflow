@@ -108,9 +108,7 @@
         <div class="agg invariant">
           <div class="agg-label">Added rules</div>
           <div class="ents">
-            <div class="ent"><div class="en">expected_version mandatory</div><div class="fields">actor-emitted envelopes must carry it; check order: idempotency (Duplicate) → missing → stale</div></div>
-            <div class="ent"><div class="en">binding coverage at start</div><div class="fields">effective actor_binding must cover every reachable role — fail at start, never a post-commit half-state</div></div>
-            <div class="ent"><div class="en">commit ≠ deliver</div><div class="fields">the store records state under atomic commit; DispatchIntent is derived afterwards — the store never delivers</div></div>
+[[@invariants l0b 0]]
           </div>
         </div>
         <div class="note invariant">
@@ -138,11 +136,7 @@
 
         <h3 class="view-h"><span class="view-tag absent">Absent</span> Still not here</h3>
         <div class="absent-grid">
-          <div class="absent-item">No <b>authorization</b> — available_ops is navigation only <span class="at">→ L1</span></div>
-          <div class="absent-item">No <b>agent_config interpretation</b> — carried, not read <span class="at">→ L0c</span></div>
-          <div class="absent-item">No <b>gate / policy / round limit</b> — the round counter is state; its limit/gate is L2 <span class="at">→ L2</span></div>
-          <div class="absent-item">No <b>durable delivery</b> — DispatchIntent goes to a manual driver <span class="at">→ L8</span></div>
-          <div class="absent-item">No <b>rich context assembly</b> — handoff is just the prior payload <span class="at">→ §11.4</span></div>
+[[@absent l0b]]
         </div>
 
         <h3 class="view-h"><span class="view-tag evidence">Evidence</span> Why we accept L0b for now</h3>

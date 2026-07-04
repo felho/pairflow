@@ -1,0 +1,34 @@
+{
+  "section": "l2",
+  "indent": "          ",
+  "items": [
+    {
+      "id": "external-process-gates",
+      "html": "No <b>external / process gates</b> — MVP-critical (v1 <code>validation.required</code>, <code>meta_review_approve_required</code>, command exit-code gates); the inline process execution model is <span class=\"at\">→ L2a</span>, while deferred execution (<code>WAITING(gate_pending)</code> + <code>GATE_RESULT</code>) is a separate later lifecycle slice"
+    },
+    {
+      "id": "route-verdict-workflow-redirection",
+      "html": "No <b>route verdict / workflow redirection</b> — a gate may only allow, warn, or block, not redirect the target (meta-review auto-rework, human gate) <span class=\"at\">→ routing slice / L3</span>"
+    },
+    {
+      "id": "gate-private-mutable-state",
+      "html": "No <b>gate-private mutable state</b> — gates are stateless over <code>config</code> + projection + evidence refs; cross-round counters are derived, never gate-owned. A gate returning state the kernel persists and re-passes is a future idea, only with a concrete use case <span class=\"at\">→ later</span>"
+    },
+    {
+      "id": "actor-facing-communication",
+      "html": "No <b>actor-facing communication</b> of gate rules — the reviewer is not yet told \"no CONVERGED before round 2\" in its packet, so it can still burn an emit on a block <span class=\"at\">→ L2b</span>"
+    },
+    {
+      "id": "findings-vocabulary",
+      "html": "No <b>findings vocabulary</b> — structured finding claim/parity and P0/P1 blocker grades, which several v1 convergence checks need <span class=\"at\">→ later</span>"
+    },
+    {
+      "id": "broad-declarative-dsl",
+      "html": "No <b>broad declarative DSL</b> — only <code>threshold</code> in the baseline (<code>required_previous_event</code> next); no general query language <span class=\"at\">→ later</span>"
+    },
+    {
+      "id": "dynamic-module-loading",
+      "html": "No <b>dynamic module loading</b> — packaged gates ship with pairflow; the external process interface is the only extension seam (not an MVP TS plugin loader) <span class=\"at\">→ L2a</span>"
+    }
+  ]
+}

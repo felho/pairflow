@@ -1,0 +1,35 @@
+{
+  "section": "archive-purge",
+  "blocks": [
+    {
+      "indent": "            ",
+      "items": [
+        {
+          "id": "archive-is-not-the-preservation-path",
+          "name_html": "archive is not the preservation path",
+          "body_html": "audit / metrics / eval are computed from the durable run record (or the surviving global metrics stream), <b>never</b> from an archive. Archive / export is an optional cold copy; deleting all archives changes no correctness property. Naming archive-as-preservation reimports the v1 mental model"
+        },
+        {
+          "id": "purge-is-complete-closure-scoped",
+          "name_html": "purge is complete &amp; closure-scoped",
+          "body_html": "<b>no dangling refs</b> (the ① INV-3 payoff; the v1 evidence-loss bug is impossible) — a hard purge removes the full run record and exactly the closure-owned T3 blobs (mechanics in the contract + ordering tables)"
+        },
+        {
+          "id": "the-destructive-precondition-is-on-the-purge-not-the-intent",
+          "name_html": "the destructive precondition is on the purge, not the intent",
+          "body_html": "<code>DELETE_REQUESTED</code> is accepted on a live run (with <code>force</code>) and drives cancel → ② release → purge; the irreversible <code>hard_purge</code> commit runs <b>only</b> when <b>terminal &amp;&amp; release discharged</b> (else <code>deferred</code>). So the operator can start the chain early, but nothing is destroyed before the run is wound down"
+        },
+        {
+          "id": "a-purge-leaves-a-tombstone-the-global-audit-survives",
+          "name_html": "a purge leaves a tombstone; the global audit survives",
+          "body_html": "a purged run survives only as its <code>run_index</code> tombstone — the <b>authority</b> for <code>purged</code> (there is no <code>instance.purge_state ← purged</code>; see the state authority table) — plus the self-contained <b>global metrics/audit stream</b> (the coarse audit floor). The full canonical run record is gone"
+        },
+        {
+          "id": "delete-is-an-operator-intent-not-a-workflow-action",
+          "name_html": "delete is an operator intent, not a workflow action",
+          "body_html": "<code>DELETE_REQUESTED</code> is a <code>CANCEL</code>-sibling operator lifecycle intent that drives <code>force_release</code> (② release minus the declared-boundary gate) then purge — it is <b>not</b> a <code>type: action</code> step (no runner, no outcome routing). ④ is storage-lifecycle ops, the L2/L2b/③ machinery is not involved"
+        }
+      ]
+    }
+  ]
+}

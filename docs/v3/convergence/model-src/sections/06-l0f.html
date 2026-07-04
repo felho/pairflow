@@ -117,13 +117,7 @@
         <div class="agg invariant">
           <div class="agg-label">Added rules</div>
           <div class="ents">
-            <div class="ent"><div class="en">no kernel mutation</div><div class="fields">L0f runs <b>before</b> <code>CREATE_INSTANCE</code>; it produces inputs only — no transcript entry, no instance, no <code>version</code>. A rejection leaves the system untouched</div></div>
-            <div class="ent"><div class="en">template pinned at resolution</div><div class="fields"><code>template_ref</code> carries a version; later overrides change <em>slot values</em>, never the definition</div></div>
-            <div class="ent"><div class="en">required slots bound</div><div class="fields">every <code>required</code> slot in the selected template has a non-none value in the result, else <code>Rejected(unbound_required_slot)</code></div></div>
-            <div class="ent"><div class="en">typed values</div><div class="fields">a resolved value satisfies its slot's declared type (minimal <code>command | branch | branch_pattern | path | string</code>), else <code>Rejected(slot_type_mismatch)</code></div></div>
-            <div class="ent"><div class="en">deterministic 5-tier cascade</div><div class="fields">precedence <code>template default &lt; project global &lt; project workflow &lt; target &lt; CLI/start override</code>; same inputs → same <code>ResolvedStartRequest</code></div></div>
-            <div class="ent"><div class="en">scoped strict reject</div><div class="fields">unknown slot ids are rejected only in the unambiguously-scoped tiers (workflow section, target, CLI); the shared <code>global defaults</code> and unrelated workflows' sections are not rejected for this run</div></div>
-            <div class="ent"><div class="en">explicit target must exist</div><div class="fields">an operator-selected <code>command.target</code> the workflow does not define rejects with <code>unknown_target</code> — an intentional selection, distinct from the lenient global-slot path</div></div>
+[[@invariants l0f 0]]
           </div>
         </div>
 
@@ -152,15 +146,7 @@
 
         <h3 class="view-h"><span class="view-tag absent">Absent</span> Still not here</h3>
         <div class="absent-grid">
-          <div class="absent-item">No <b>kernel mechanics</b> — no new transcript event, no instance state; L0f is pure pre-kernel input preparation <span class="at">→ by design</span></div>
-          <div class="absent-item">No <b>central store / registry</b> — only a local source; remote sourcing &amp; governance is <span class="at">→ L11+</span></div>
-          <div class="absent-item">No <b>definition PRs</b> (L12) or <b>trust</b> (L13) — authoring &amp; provenance of templates is later <span class="at">→ later</span></div>
-          <div class="absent-item">No <b>full schema system</b> — types are a minimal closed set; no constraints, regex, or cross-field validation <span class="at">→ later</span></div>
-          <div class="absent-item"><b>Global-leniency tradeoff:</b> a typo in a global <em>optional</em> slot may be silently ignored; <code>required</code> slots are still protected by <code>unbound_required_slot</code>, and stricter config linting can come later <span class="at">→ later</span></div>
-          <div class="absent-item">No <b>per-step / dynamic slot resolution</b> — slots resolve once at start; the per-step config cascade is L0c, conditional/per-step context is <span class="at">→ L2b</span></div>
-          <div class="absent-item">No <b>actor/model binding as slots</b> — the <code>role → actor</code> and agent/model cascades stay separate; the project is a new tier in them, not a scalar slot</div>
-          <div class="absent-item">No <b>slot interpolation</b> here — <code>branch_pattern</code> is resolved as a pattern; the actual branch name is materialized provider-side once <code>instance_id</code> exists <span class="at">→ L0e</span></div>
-          <div class="absent-item">No <b>run-scoped mode / variants</b> — a single template running in <code>code | doc</code> modes is an L0f-family resolution extension, realized as a delta on top of this baseline <span class="at">→ L0f+ (run-scoped mode / variants)</span></div>
+[[@absent l0f]]
         </div>
 
         <h3 class="view-h"><span class="view-tag evidence">Evidence</span> Why we accept L0f for now</h3>

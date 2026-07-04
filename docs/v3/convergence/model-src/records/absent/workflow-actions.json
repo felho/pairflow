@@ -1,0 +1,30 @@
+{
+  "section": "workflow-actions",
+  "indent": "          ",
+  "items": [
+    {
+      "id": "auto-trigger",
+      "html": "No <b>auto trigger</b> — an action that runs <em>on arrival</em> (e.g. a perf-test) is the same contract but a later trigger mode, with its own lifecycle questions (when it runs, retry, does it block dispatch, a <code>WAITING(action_pending)</code> self-loop) <span class=\"at\">→ later</span>"
+    },
+    {
+      "id": "rich-outcome-condition-language",
+      "html": "No <b>rich outcome-condition language</b> — <code>classify_action_result</code> is exit-code / structured-JSON (L2a-style); a general predicate DSL over outputs is later <span class=\"at\">→ later</span>"
+    },
+    {
+      "id": "packaged-action-library",
+      "html": "No <b>packaged action library</b> — only the anchor runners (<code>pairflow.git_commit</code> / <code>pairflow.git_merge</code>); a general catalog (publish, notify, perf-test) is later <span class=\"at\">→ ③b</span>"
+    },
+    {
+      "id": "operator-delete",
+      "html": "No <b>operator delete</b> — <code>delete_requested</code> is an explicit operator storage/lifecycle intent (a <code>CANCEL</code> sibling) that drives <code>force_release</code> in ④ (② release minus the declared-boundary gate) — <b>not</b> an emitted boundary and <b>not</b> a workflow action; it + the record purge are <span class=\"at\">→ ④</span>"
+    },
+    {
+      "id": "action-running-recovery-exactly-once",
+      "html": "No <b>action_running recovery / exactly-once</b> — the side effect runs after the CAS claim and before the result commit; a crash in that window leaves a durable <code>action_running</code> (no double-run, since the claim is single-winner), but <b>reconciling a stuck <code>action_running</code></b> (re-claim, idempotent re-run, watchdog) is later — the same crash-window class as ② release <span class=\"at\">→ L9</span>"
+    },
+    {
+      "id": "remote-distributed-action-proofs",
+      "html": "No <b>remote / distributed action proofs</b> — a remote action with verifiable completion (the merge-as-distribution concern) is later <span class=\"at\">→ L8 / L10</span>"
+    }
+  ]
+}

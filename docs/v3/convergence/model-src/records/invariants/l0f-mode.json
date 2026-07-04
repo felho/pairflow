@@ -1,0 +1,35 @@
+{
+  "section": "l0f-mode",
+  "blocks": [
+    {
+      "indent": "            ",
+      "items": [
+        {
+          "id": "fail-closed-mode-set",
+          "name_html": "fail-closed mode set",
+          "body_html": "the start <code>mode</code>, every <code>modes:</code> tag, and <code>default_mode</code> all name a mode in <code>template.modes</code>; tags are allowed <b>only on the two supported surfaces</b> (a gate binding, a <code>*_ref</code>) — elsewhere is <code>mode_tag_on_unsupported_surface</code>; a mono-mode template (empty <code>modes</code>) carries no mode surface. Same fail-closed discipline as slots"
+        },
+        {
+          "id": "mode-is-start-fixed-baked-in",
+          "name_html": "mode is start-fixed &amp; baked in",
+          "body_html": "<code>apply_mode</code> prunes gate bindings and context refs into a <b>pinned, mode-specific definition</b>; the kernel reads that definition and <b>never branches on the mode at runtime</b> — there is no runtime mode field"
+        },
+        {
+          "id": "mode-is-not-a-gate-input",
+          "name_html": "mode is not a gate input",
+          "body_html": "the kernel passes <b>no <code>mode</code></b> to a gate evaluator. Mode resolution decides <em>which binding survives</em>; mode-specific behavior comes from the surviving binding's <code>config</code> (two bindings, same <code>uses</code>, different <code>config</code>) — not from the policy inspecting the mode. One source of truth, no hidden runtime mode dependency"
+        },
+        {
+          "id": "docs-only-is-an-explicit-gate-not-gate-absence",
+          "name_html": "docs-only is an explicit gate, not gate-absence",
+          "body_html": "the doc variant does not merely <em>drop</em> the runtime-validation gate — it <b>keeps</b> a <code>docs_only_runtime_evidence</code> gate whose <code>allow</code> result produces <b>durable evidence</b> for the intended trusted-skip and records its <b>ref</b> on the <code>GateDecision</code> (① INV-3). Removing a gate alone would not say \"this skip is intended &amp; trusted\"; the explicit doc gate does"
+        },
+        {
+          "id": "catalog-blocks-are-never-mode-pruned",
+          "name_html": "catalog blocks are never mode-pruned",
+          "body_html": "surface 2 prunes only the <b>contribution / ref</b> (a <code>*_refs</code> entry); the shared catalog <code>context_blocks</code> entry always stays — a mode-tagged catalog block would leave dangling refs (the L2b render-by-ref hazard)"
+        }
+      ]
+    }
+  ]
+}

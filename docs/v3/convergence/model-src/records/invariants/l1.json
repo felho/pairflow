@@ -1,0 +1,25 @@
+{
+  "section": "l1",
+  "blocks": [
+    {
+      "indent": "            ",
+      "items": [
+        {
+          "id": "expected-role-mandatory",
+          "name_html": "expected_role mandatory",
+          "body_html": "every actor-emitted envelope must claim a role from L1 on — like expected_version at L0b, the snapshot field becomes required when introduced"
+        },
+        {
+          "id": "authorization-before-commit",
+          "name_html": "authorization before commit",
+          "body_html": "role authority and the capability check both run before the atomic commit — a rejected emit never changes state"
+        },
+        {
+          "id": "capability-default-derived",
+          "name_html": "capability default-derived",
+          "body_html": "absent an explicit profile, allowed(role, step) = the step's transitions for its own role — so not_authorized is dormant until a restriction or multi-role action enters the same profile"
+        }
+      ]
+    }
+  ]
+}

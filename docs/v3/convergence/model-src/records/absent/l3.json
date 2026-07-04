@@ -1,0 +1,38 @@
+{
+  "section": "l3",
+  "indent": "          ",
+  "items": [
+    {
+      "id": "agent-initiated-ask-human-help-reply",
+      "html": "No <b>agent-initiated ask-human / help reply</b> — WAITING for a human <em>reply</em>, the active agent asks (round ≥ 1), same-context resume; a different primitive <span class=\"at\">→ L5</span>"
+    },
+    {
+      "id": "deferred-request-rework",
+      "html": "No <b>deferred request-rework</b> — a rework intent arriving while parked on a help-ask, stashed as <code>pending_rework_intent</code> and applied by a watchdog <span class=\"at\">→ L5 + watchdog (L6/L9)</span>"
+    },
+    {
+      "id": "resume-actions-post-approval-mechanics",
+      "html": "No <b>resume <em>actions</em> / post-approval mechanics</b> — the resume <em>contract</em> is in (<code>RESUME_WAIT</code>: <code>COMMIT</code> moves <code>commit_pending</code> forward), but the kernel does not run the git commit/merge <em>actions</em> (③a), the resource teardown (②), or archive (④); those + result payloads, retries, and stale-event recovery are later slices. v1 order (reality-checked): <code>APPROVED_FOR_COMMIT → COMMITTED → DONE</code> (commit before <code>DONE</code>), with the <b>merge a separate command after <code>DONE</code></b>. \"Finalization\" stays an informal name, not a kernel step type <span class=\"at\">→ ③a · ② · ④</span>"
+    },
+    {
+      "id": "non-operator-resume-sources",
+      "html": "No <b>non-operator resume sources</b> — <code>RESUME_WAIT</code> here is driven by an operator event (<code>COMMIT</code>); internal <b>child-lifecycle</b> resume events arrive at <span class=\"at\">→ L4</span>, and timeout / external / fuzzy correlation at <span class=\"at\">→ L9</span>, reusing the same contract"
+    },
+    {
+      "id": "timeout-on-a-human-wait",
+      "html": "No <b>timeout on a human wait</b> — a parked decision waits indefinitely in the MVP; escalation/timeout correlation is later <span class=\"at\">→ L9</span>"
+    },
+    {
+      "id": "multi-channel-delivery-rich-input-forms",
+      "html": "No <b>multi-channel delivery / rich input forms</b> — the gate already carries a generic <code>decisions</code> map (N keys, per-decision required <code>payload</code>), but the Ask is delivered locally; durable channels and rich forms are later <span class=\"at\">→ L8</span>"
+    },
+    {
+      "id": "dynamic-recommendation-decision-condition-language",
+      "html": "No <b>dynamic recommendation / decision-condition language</b> — the recommendation is the firing edge's static <code>recommends</code>; a smarter upstream step emitting its own recommendation in its output, and any open predicate language for override/routing beyond the single <em>chosen ≠ recommended</em> rule, are deliberately out <span class=\"at\">→ later</span>"
+    },
+    {
+      "id": "agent-to-agent-or-external-token-ask",
+      "html": "No <b>agent-to-agent or external-token ask</b> — only a bound human operator decides here <span class=\"at\">→ L7 / L8</span>"
+    }
+  ]
+}

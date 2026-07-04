@@ -1,0 +1,26 @@
+{
+  "section": "l0b",
+  "indent": "          ",
+  "items": [
+    {
+      "id": "authorization",
+      "html": "No <b>authorization</b> — available_ops is navigation only <span class=\"at\">→ L1</span>"
+    },
+    {
+      "id": "agent-config-interpretation",
+      "html": "No <b>agent_config interpretation</b> — carried, not read <span class=\"at\">→ L0c</span>"
+    },
+    {
+      "id": "gate-policy-round-limit",
+      "html": "No <b>gate / policy / round limit</b> — the round counter is state; its limit/gate is L2 <span class=\"at\">→ L2</span>"
+    },
+    {
+      "id": "durable-delivery",
+      "html": "No <b>durable delivery</b> — DispatchIntent goes to a manual driver <span class=\"at\">→ L8</span>"
+    },
+    {
+      "id": "rich-context-assembly",
+      "html": "No <b>rich context assembly</b> — handoff is just the prior payload <span class=\"at\">→ §11.4</span>"
+    }
+  ]
+}
