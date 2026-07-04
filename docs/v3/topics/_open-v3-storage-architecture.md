@@ -1,6 +1,6 @@
 # Open Topic - V3 Storage Architecture
 
-Date: 2026-06-27
+Date: 2026-06-27 · Updated: 2026-07-04 (instance homing / multi-kernel topology)
 Status: draft open research note
 
 ## Question
@@ -30,6 +30,11 @@ committed atomically under CAS
 Everything else should be classified by whether it is canonical, referenced
 evidence, rebuildable projection, operational stream, tombstone/index, or
 runtime-provider-local state.
+
+Topology corollary (detailed in "Instance homing and multi-kernel topology"
+below): **the unit of authority is the instance, not the database** — every
+instance has exactly one home store; between kernels only events and durable
+refs travel, never shared authority.
 
 ## Already decided by the core model
 
@@ -286,6 +291,76 @@ The important thing is not to choose the final infrastructure too early. The
 important thing is to keep the transactional boundary and reference contracts
 clear enough that a local implementation can be promoted later.
 
+## Instance homing and multi-kernel topology
+
+Added 2026-07-04, from the v3-scoping discussion. The forcing trade-off: if an
+org adopts v3 with one central T1 and developers only run workflows locally
+(local runtime, remote truth), then every local dev-loop transition — each
+emit, gate, CAS commit — rides a remote store round-trip and the org kernel's
+availability. Offline work becomes impossible, and flaky connectivity or a
+central deploy stalls everyone's local loop. Central-T1-only is therefore one
+deployment option, not the canonical shape.
+
+The principle:
+
+```text
+the unit of authority is the instance, not the database.
+every instance has exactly one home store (its T1 authority).
+different instances may home in different kernels/stores.
+between kernels only events and durable refs travel — never shared authority.
+```
+
+Why this is nearly free — the existing invariants already carry it:
+
+- Cross-instance composition is already event-shaped, not shared-state-shaped
+  (L4 links, request-id correlation, at-least-once delivery + idempotent
+  consumption). Two instances homed in different kernels link exactly the same
+  way; a disconnected home only delays delivery.
+- Waits are durable, so a parent waiting on a remote-homed child that goes
+  offline simply waits longer. **Offline is a latency problem, not a
+  correctness problem.**
+- Operator intents toward a remote-homed instance carry `op_id` +
+  `expected_version`, so they can be queued locally and replayed on reconnect:
+  each either applies or returns an honest `Duplicate`/`Stale`.
+
+Concrete deployment reading: a developer-local kernel homes locally started
+instances and locally spawned child instances (the full implement/review loop,
+including the developer's own operator decisions, commits against local T1 —
+offline-capable, low-latency); an org kernel homes org workflows (for example
+externally triggered ones); composition across homes is an L4-style link. The
+"central org kernel" is then just the special case where most instances happen
+to home in one place.
+
+Hard guardrail (the anti-shape):
+
+```text
+never replicate one instance's T1 across stores in a writable / multi-master way
+```
+
+Two stores accepting commits for the same instance would require history
+merge, which breaks atomic-commit-under-CAS and `(instance_id, op_id)`
+uniqueness — the `core-model-todo.md` Part B leaderless/CAS boundary and the
+shared kernel-shape guardrails effectively forbid it. The topology is
+actor-model-like (messages between single-writer homes), not git-like (merged
+histories).
+
+Accepted costs — all projection/config-level, none authority-level:
+
+- fleet / org-wide views aggregate read models from multiple kernels (one-way,
+  rebuildable T4/T5 export);
+- definition distribution is T2 sync (versioned, immutable — cacheable,
+  offline-friendly);
+- grant/credential resolution (L7) may stay online-only (the domain actions
+  needing credentials are online anyway);
+- assigning *new* work across homes (a task-inbox claim) requires connectivity
+  at claim time — acceptable, since accepting new work is communication by
+  definition.
+
+Relation: this is the storage-side counterpart of
+[`_open-private-data-boundary-vs-federation.md`](_open-private-data-boundary-vs-federation.md)
+— the same "envelopes and events cross, authority does not" stance, applied
+intra-org. It also gives the direction for open question 10 below.
+
 ## Event-sourcing caution
 
 V3 has a transcript, but it is not trying to be full event sourcing.
@@ -329,5 +404,7 @@ never replay nondeterministic actors as recovery.
 9. Where do dynamic `ActorSessionRef` records belong if that model is adopted:
    T1 as kernel state, T7 as adapter-local state, or a split between the two?
 10. What storage surfaces are allowed to cross a future private-data/federation
-    boundary?
+    boundary? (Direction set by "Instance homing and multi-kernel topology"
+    above: only events and durable refs cross; per-instance authority never
+    splits.)
 
