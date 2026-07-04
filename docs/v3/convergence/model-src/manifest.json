@@ -8,13 +8,11 @@
         {
           "id": "l0a-pseudocode",
           "baseline": null,
-          "old": "code/l0a-pseudocode.old.txt",
           "new": "code/l0a-pseudocode.new.txt"
         },
         {
           "id": "l0a-template-config",
           "baseline": null,
-          "old": "code/l0a-template-config.old.txt",
           "new": "code/l0a-template-config.new.txt"
         }
       ]
@@ -26,13 +24,11 @@
         {
           "id": "l0b-pseudocode",
           "baseline": "l0a-pseudocode",
-          "old": "code/l0b-pseudocode.old.txt",
           "new": "code/l0b-pseudocode.new.txt"
         },
         {
           "id": "l0b-template-config",
           "baseline": "l0a-template-config",
-          "old": "code/l0b-template-config.old.txt",
           "new": "code/l0b-template-config.new.txt"
         }
       ]
@@ -44,13 +40,11 @@
         {
           "id": "l0c-pseudocode",
           "baseline": "l0b-pseudocode",
-          "old": "code/l0c-pseudocode.old.txt",
           "new": "code/l0c-pseudocode.new.txt"
         },
         {
           "id": "l0c-template-config",
           "baseline": "l0b-template-config",
-          "old": "code/l0c-template-config.old.txt",
           "new": "code/l0c-template-config.new.txt"
         }
       ]
@@ -62,13 +56,11 @@
         {
           "id": "l0d-pseudocode",
           "baseline": "l0c-pseudocode",
-          "old": "code/l0d-pseudocode.old.txt",
           "new": "code/l0d-pseudocode.new.txt"
         },
         {
           "id": "l0d-template-config",
           "baseline": "l0c-template-config",
-          "old": "code/l0d-template-config.old.txt",
           "new": "code/l0d-template-config.new.txt"
         }
       ]
@@ -80,13 +72,11 @@
         {
           "id": "l0e-pseudocode",
           "baseline": "l0d-pseudocode",
-          "old": "code/l0e-pseudocode.old.txt",
           "new": "code/l0e-pseudocode.new.txt"
         },
         {
           "id": "l0e-template-config",
           "baseline": "l0d-template-config",
-          "old": "code/l0e-template-config.old.txt",
           "new": "code/l0e-template-config.new.txt"
         }
       ]
@@ -98,19 +88,16 @@
         {
           "id": "l0f-pseudocode",
           "baseline": null,
-          "old": "code/l0f-pseudocode.old.txt",
           "new": "code/l0f-pseudocode.new.txt"
         },
         {
           "id": "l0f-template-config",
           "baseline": "l0e-template-config",
-          "old": "code/l0f-template-config.old.txt",
           "new": "code/l0f-template-config.new.txt"
         },
         {
           "id": "l0f-project-config",
           "baseline": null,
-          "old": "code/l0f-project-config.old.txt",
           "new": "code/l0f-project-config.new.txt"
         }
       ]
@@ -122,7 +109,6 @@
         {
           "id": "l1-pseudocode",
           "baseline": "l0e-pseudocode",
-          "old": "code/l1-pseudocode.old.txt",
           "new": "code/l1-pseudocode.new.txt"
         }
       ]
@@ -134,13 +120,11 @@
         {
           "id": "l2-pseudocode",
           "baseline": "l1-pseudocode",
-          "old": "code/l2-pseudocode.old.txt",
           "new": "code/l2-pseudocode.new.txt"
         },
         {
           "id": "l2-template-config",
           "baseline": "l0f-template-config",
-          "old": "code/l2-template-config.old.txt",
           "new": "code/l2-template-config.new.txt"
         }
       ]
@@ -152,13 +136,11 @@
         {
           "id": "l2a-pseudocode",
           "baseline": "l2-pseudocode",
-          "old": "code/l2a-pseudocode.old.txt",
           "new": "code/l2a-pseudocode.new.txt"
         },
         {
           "id": "l2a-template-config",
           "baseline": "l2-template-config",
-          "old": "code/l2a-template-config.old.txt",
           "new": "code/l2a-template-config.new.txt"
         }
       ]
@@ -170,13 +152,11 @@
         {
           "id": "l2b-pseudocode",
           "baseline": "l2a-pseudocode",
-          "old": "code/l2b-pseudocode.old.txt",
           "new": "code/l2b-pseudocode.new.txt"
         },
         {
           "id": "l2b-template-config",
           "baseline": "l2a-template-config",
-          "old": "code/l2b-template-config.old.txt",
           "new": "code/l2b-template-config.new.txt"
         }
       ]
@@ -188,13 +168,11 @@
         {
           "id": "l3-pseudocode",
           "baseline": "l2b-pseudocode",
-          "old": "code/l3-pseudocode.old.txt",
           "new": "code/l3-pseudocode.new.txt"
         },
         {
           "id": "l3-template-config",
           "baseline": "l2b-template-config",
-          "old": "code/l3-template-config.old.txt",
           "new": "code/l3-template-config.new.txt"
         }
       ]
@@ -206,7 +184,6 @@
         {
           "id": "storage-scope-pseudocode",
           "baseline": null,
-          "old": "code/storage-scope-pseudocode.old.txt",
           "new": "code/storage-scope-pseudocode.new.txt"
         }
       ]
@@ -218,13 +195,11 @@
         {
           "id": "release-pseudocode",
           "baseline": "l3-pseudocode",
-          "old": "code/release-pseudocode.old.txt",
           "new": "code/release-pseudocode.new.txt"
         },
         {
           "id": "release-template-config",
           "baseline": "l3-template-config",
-          "old": "code/release-template-config.old.txt",
           "new": "code/release-template-config.new.txt"
         }
       ]
@@ -236,13 +211,11 @@
         {
           "id": "action-pseudocode",
           "baseline": "release-pseudocode",
-          "old": "code/action-pseudocode.old.txt",
           "new": "code/action-pseudocode.new.txt"
         },
         {
           "id": "action-template-config",
           "baseline": "release-template-config",
-          "old": "code/action-template-config.old.txt",
           "new": "code/action-template-config.new.txt"
         }
       ]
@@ -254,13 +227,11 @@
         {
           "id": "auto-action-pseudocode",
           "baseline": "action-pseudocode",
-          "old": "code/auto-action-pseudocode.old.txt",
           "new": "code/auto-action-pseudocode.new.txt"
         },
         {
           "id": "auto-action-template-config",
           "baseline": "action-template-config",
-          "old": "code/auto-action-template-config.old.txt",
           "new": "code/auto-action-template-config.new.txt"
         }
       ]
@@ -272,7 +243,6 @@
         {
           "id": "complete-pseudocode",
           "baseline": "auto-action-pseudocode",
-          "old": "code/complete-pseudocode.old.txt",
           "new": "code/complete-pseudocode.new.txt"
         }
       ]
@@ -284,13 +254,11 @@
         {
           "id": "l0f-mode-pseudocode",
           "baseline": "l0f-pseudocode",
-          "old": "code/l0f-mode-pseudocode.old.txt",
           "new": "code/l0f-mode-pseudocode.new.txt"
         },
         {
           "id": "l0f-mode-template-config",
           "baseline": "auto-action-template-config",
-          "old": "code/l0f-mode-template-config.old.txt",
           "new": "code/l0f-mode-template-config.new.txt"
         }
       ]
@@ -302,13 +270,11 @@
         {
           "id": "l4-pseudocode",
           "baseline": "auto-action-pseudocode",
-          "old": "code/l4-pseudocode.old.txt",
           "new": "code/l4-pseudocode.new.txt"
         },
         {
           "id": "l4-parent-template",
           "baseline": null,
-          "old": "code/l4-parent-template.old.txt",
           "new": "code/l4-parent-template.new.txt"
         }
       ]

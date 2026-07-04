@@ -33,10 +33,9 @@ side was edited.
   `diff-source` `<script>` blocks are replaced by `[[@code <relpath>]]`
   markers.
 - `code/<id>.new.txt` — each code block's full snapshot (`data-code-new`).
-- `code/<id>.old.txt` — the stored old side. Note: the viewer resolves most
-  baselines **by reference** (`data-code-old-ref` → recorded as `baseline` in
-  `manifest.json`), so these files are empty except for genuinely
-  empty-baseline blocks.
+  There are no `.old.txt` files: the viewer resolves the old side **by
+  reference** (`data-code-old-ref`, recorded as `baseline` in
+  `manifest.json`), so every old body in the HTML is empty and stays inline.
 - `manifest.json` — section order + code-block inventory + baseline refs.
 
 ## Notes

@@ -92,19 +92,19 @@ def extract_codes(section_id: str, chunk: str, code_dir: Path):
         base_m = re.search(r'data-code-old-ref="([^"]+)"', old_m.group(1))
         baseline = base_m.group(1) if base_m else None  # None = empty baseline
 
+        record = {"id": code_id, "baseline": baseline, "new": f"code/{code_id}.new.txt"}
         for m, kind in ((old_m, "old"), (new_m, "new")):
+            if m.group(2) == "":
+                continue  # old sides are empty in the HTML (baseline is by-ref); keep empty bodies inline, no file
             relpath = f"code/{code_id}.{kind}.txt"
             (code_dir / f"{code_id}.{kind}.txt").write_text(m.group(2))
             marker = MARKER_FMT.format(relpath=relpath)
             if marker in chunk:
                 fail(f"{section_id}: marker collision for {relpath}")
             replacements.append((m.start(2), m.end(2), marker))
-        records.append({
-            "id": code_id,
-            "baseline": baseline,
-            "old": f"code/{code_id}.old.txt",
-            "new": f"code/{code_id}.new.txt",
-        })
+            if kind == "old":
+                record["old"] = relpath  # only present if a stored old body ever appears
+        records.append(record)
 
     for start, end, marker in sorted(replacements, reverse=True):
         chunk = chunk[:start] + marker + chunk[end:]
