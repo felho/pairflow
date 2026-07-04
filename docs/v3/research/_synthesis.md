@@ -34,7 +34,14 @@ channelled in the level roadmap?"*
 > memory) shipped as standalone infra**, and the second memory reference opposite Honcho (study 7):
 > *deterministic store + intent protocol + compaction-trigger* against Honcho's *perspectival derived
 > edges + two-speed loop*. Its deltas are in **§12 — Addendum**: it sharpens the L11/L12 verdicts and
-> supplies the **memory-must-be-a-kernel-port** cautionary anchor. It adds no new central bet.
+> supplies the **memory-must-be-a-kernel-port** cautionary anchor. It adds no new central bet. Study
+**16 (nanoclaw)** is a **full codebase** whose verdict is *"not a kernel"* — the runtime/supervision/
+isolation layer **behind the BitSafe fleet** ("BitSafe's v3"), read at source (six slices). Its deltas
+are in **§13 — Addendum**: it grounds the BitSafe narrative in first-party code, **confirms §11 (OneCLI
+fail-closed credentials) and §12 (mnemon memory-is-a-port) at the source**, contributes one new
+mechanism (the **integration-point contract** as machine-checkable L12), and supplies the corpus's
+cleanest **negative proof** of the kernel discipline (its duplicate/loss delivery seams). It adds no
+new central bet.
 
 The studies (in order written), and the two pre-existing reference notes:
 
@@ -55,6 +62,7 @@ The studies (in order written), and the two pre-existing reference notes:
 | 13 | [`agent-harness-survey-study.md`](agent-harness-survey-study.md) | academic survey / **ETCLOVG taxonomy** (71pp paper) | **the external checksum** — 6/7 layers map clean; the 2 mismatches (no transactional kernel; no channels layer) ARE v3's deepest bets |
 | 14 | [`onecli-study.md`](onecli-study.md) | credential gateway / **Agent Vault** (Rust+TS) | **the L7 capability boundary, shipped** — the survey's "credential never travels" pattern as standalone infra; produce-not-perform for secrets; a divergence anchor |
 | 15 | [`mnemon-study.md`](mnemon-study.md) | persistent agent memory (Go+SQLite) | **the L11/L12 deterministic-store reference, opposite Honcho** — LLM-supervises/binary-performs; intent-native `remember`/`link`/`recall`; compaction-boundary writeback; memory-must-be-a-port cautionary anchor |
+| 16 | [`nanoclaw-study.md`](nanoclaw-study.md) | containerized agent runtime (TS) | **the runtime/supervision/isolation layer, NOT a kernel** — the component behind the BitSafe fleet; best L0d supervision + L7/L0e sandbox reference; the **integration-point contract** (machine-checkable L12); the delivery-seam negative proof; confirms §11/§12 at the source |
 | — | [`ruflo-v3-sdlc-workflow.md`](ruflo-v3-sdlc-workflow.md) | SPARC/DDD method study | adopt concepts not framework (pre-series) |
 | — | [`v3-gate-policy-config-design-synthesis.md`](../topics/v3-gate-policy-config-design-synthesis.md) | gate/policy/config synthesis | L2 design input (pre-series) |
 
@@ -1197,6 +1205,156 @@ sharpens L11/L12 and adds the **memory-is-a-port** discipline to the same family
 
 ---
 
+## 13. Addendum — study 16 (nanoclaw): the runtime/supervision layer, not a kernel
+
+Study 16 reverse-engineers **nanoclaw** ([`nanoclaw-study.md`](nanoclaw-study.md)) — a small
+(~34K host + ~8K container LOC, TypeScript) system that runs AI agents in per-session Docker
+containers, analyzed via six parallel **source-verified** slices. It is a different artifact from
+studies 14–15: a *full codebase*, but one whose verdict is **"not a kernel."** Its significance is
+twofold. First, it is **the runtime component behind the BitSafe fleet** (`bitsafe-ai-os-capture.md`)
+— effectively "BitSafe's v3" — so it grounds the BitSafe narrative in first-party code, and it
+**closes the loop on §11–§12**: OneCLI (§11) and mnemon (§15/§12) were read *through* nanoclaw's
+`add-*` skills, and this study reads nanoclaw itself. Second, it is the corpus's cleanest statement
+of the **two-axis split**: nanoclaw sits **below** the discipline axis (no `(instance_id, op_id)`
+idempotency, no CAS/`expected_version`, no canonical transcript/**T1**, no typed wait kinds — state
+mutated in place across two single-writer SQLite files) yet **above** most of the corpus on the
+runtime/isolation axis. Placement: `symphony ── nanoclaw ── LangGraph ── … ── DBOS ── Temporal`.
+It adds **no central bet**; it sharpens L0d/L6/L7/L8/L11/L12 and supplies the corpus's cleanest
+**negative proof** of why v3's kernel discipline exists. (Doc-drift note in the study's own idiom:
+nanoclaw's `architecture.md` had drifted to "one DB, WAL" while source is two single-writer files —
+the fourth study to catch a high-level doc lagging a schema-level truth; treat every architecture.md
+as a hypothesis.)
+
+### New details — the L0d supervision loop (sharpens §8's watchdog dimension)
+
+§8 named gastown the watchdog reference; nanoclaw adds three details gastown did *not* give, all
+worth folding into the L9/L0d recovery contract:
+1. **Workload-declared silence budgets.** The executor publishes "running tool X, declared timeout T"
+   into shared state (a PreToolUse hook → `container_state`), and the watchdog's tolerance becomes
+   `max(floor, T)` — the agent's own `Bash(timeout: 45min)` widens its SLA. A cheap tier *below*
+   gastown's judgment tier: before routing "stuck" to intelligence, let the work declare how long
+   silence is legitimate.
+2. **Recovery consumes its own evidence.** After a kill, the host deletes the orphan `processing`
+   claim (and grants a one-tick grace), or the next sweep reads the stale claim and SIGKILLs the
+   freshly respawned replacement before its startup cleanup runs. Any claim+heartbeat+reclaim design
+   (which v3's is) must make this explicit; gastown's discover-don't-track model sidesteps it.
+3. **Executor-side self-exit on unhealable local failure.** A corruption streak (poisoned VirtioFS
+   page cache) makes the container `exit(75)` so the supervisor respawns it with a fresh mount — a
+   typed "I am poisoned, respawn me" path so the watchdog's kill tier is the last resort, not the only
+   one. Also: heartbeat is a **file mtime off the contended data plane**, and a **startup circuit
+   breaker** lets a dumb supervisor (launchd `KeepAlive`) stay dumb.
+The one place nanoclaw is *weaker* than gastown: "stuck" never escalates to a judgment tier or a
+human — failure collapses into one silent `failed` bucket (the "one failed bucket" v3's L9
+typed-recovery-reasons item avoids).
+
+### New mechanism — the integration-point contract as machine-checkable L12
+
+The sharpest single idea in the study. A customization's coupling to the evolving host is quantified
+as an explicit list of **reach-in points**, each guarded by a **red/green test that fails when the
+wiring drifts** — "the failing list *is* the set of skills to update" — behind a **single
+self-updating, fail-closed upgrade channel** (a gitignore-sealed marker + a boot tripwire whose error
+text is addressed to the coding agent). This turns v3's L12 "definition changes flow through one
+audited channel" from *policy* into a *machine-checkable seam contract*: drift is detected by
+construction, not by review. It is also what makes a heavily-customized downstream fork (the BitSafe
+pattern) viable — "a fork is a recipe of skills," rebuildable from clean upstream — the governance
+precondition §-nothing-prior named.
+
+### The confirmation — provider-shaped memory, now source-verified (closes §12's anchor)
+
+§12 inferred mnemon's "memory-must-be-a-port" cautionary anchor from the provider-coupled hooks in
+nanoclaw's `add-mnemon` skill. Study 16 confirms it **at nanoclaw's own source** and generalizes it:
+nanoclaw's *native* memory is provider-shaped too — Claude gets a flat `CLAUDE.local.md` (auto-loaded),
+Codex gets a `memory/` scaffold, and crossing providers needs `/migrate-memory`, a human-invoked LLM
+distillation. This is v3's named L11 failure mode in production, now with a **second, source-verified
+witness** beside mnemon: the argument for an adapter-independent, kernel-owned memory port with
+memory-unavailable as an explicit state is now doubly grounded.
+
+### The negative-proof catalog — why markers come before effects (L0a/L8)
+
+Nanoclaw is the cleanest catalog of the seams v3's produce-not-perform + idempotency ledger close.
+Three distinct, source-located leaks: **marker-after-effect** delivery (the `delivered` row written
+*after* the platform send → duplicate on crash); **mark-complete-before-processing** (follow-up
+pushes marked done *before* the agent sees them → silent loss window); and the single worst hole,
+**mark-delivered-on-undefined** (an offline adapter's `deliver()` returns `undefined` not throw → the
+loop logs "delivered", deletes the outbox attachments, and marks it delivered → permanent silent
+loss, on the path whose own comment claims it feeds the retry path). Each is exactly what v3's
+"durable marker before external effect" + `UNIQUE(instance_id, op_id)` eliminate.
+
+### Per-level matrix amendments (read against §4)
+
+- **L0a — kernel/idempotency/atomic-commit.** *Best references* → add **nanoclaw as the negative
+  proof** (single-writer mailbox topology + apply/ack ledger, but no op-id exactly-once, no CAS, no
+  transcript; delivery marker-after-effect). *Adopt* → the **single-writer-per-plane topology**
+  (one authority per plane, reconciliation not shared mutation) and the discipline of treating
+  **SQLite-across-a-mount as a fragile file protocol, not a database** (T1 on one side of any
+  virtualization boundary, T7 physically separate). *Reject* → **marker-after-effect delivery** and
+  **comment-enforced invariants** (nanoclaw's seq-parity rule is violated by its own code).
+- **L0c — AgentConfig + ActorAdapter.** *Adopt* → a **typed provider contract with capability flags**
+  ("a capability, never a provider name" — the direct antidote to omnigent's §4 duck-typed drift) +
+  **per-provider continuation slots** (provider identity ⟂ workflow identity) + **checkpoint-at-init**
+  record-not-replay. *Reject* → **authoritative output as in-band model-text parsing** (nanoclaw's
+  `<message>` XML + MCP-tool split is two prompt-fragile output channels — the §4 "structured emit =
+  authority" rule, violated).
+- **L0d — Instance lifecycle & supervision.** *Best references* → add **nanoclaw (the supervision loop
+  reference)** beside gastown (the watchdog reference). *Adopt* → **pure `decideStuckAction` over
+  durable signals**, **workload-declared silence budgets**, **recovery-consumes-its-own-evidence**,
+  **executor self-exit on unhealable local fault**, **startup circuit breaker**. *Reject* → **liveness
+  as in-memory state** (nanoclaw's `activeContainers` map dies on restart → blunt kill-all-labeled
+  reconcile) and **flat status columns with no typed wait kinds** (a container waiting on a human
+  burns a live container, indistinguishable from busy).
+- **L0e — Runtime-context provider.** *Best references* → add **nanoclaw (best stock-Docker OS-level
+  sandbox in the corpus, with lockdown on)**. *Adopt* → **container = zero durable identity**
+  (session = conversation identity, group = memory/config, container = nothing), **install-label-scoped
+  orphan reaping**, **idempotent wake via an in-flight promise map**, **fail-closed spawn** (refuse
+  without credentials/egress, never silent downgrade). *Note the gap* → nanoclaw has **no
+  provision→ready event** (omnigent §5 does); wake is fire-and-forget, workable only because it
+  *pulls* from a durable queue.
+- **L6 — Triggers & scheduling.** *Adopt* → **durable `process_after` rows** + **drift-free cron
+  recurrence in the user's TZ** (completion = advance). *Reject* → the **60s polling ticker scanning
+  every session DB** (O(sessions)/tick — the anti-look-ahead shape) and **at-least-once firing with no
+  self-discard** (nanoclaw is *half* of L6: copy the storage, not the firing).
+- **L7 — Grants & credentials.** *Best references* → **nanoclaw sharpens §11 (OneCLI) with the
+  source-verified consumer side**: **fail-closed spawn** (grant unavailable ⇒ no execution at all) +
+  **egress lockdown via `docker network --internal` without a MITM CA**. *Adopt* both. *Reject* →
+  **default-open egress** (nanoclaw ships lockdown *off* → "credentials safe, data exfiltratable") and
+  **fail-open module seams** ("table absent ⇒ allow all" — enforcement that evaporates when a module
+  is missing; posture, not mechanism). Confirms §11's **held-open approval socket** anti-pattern at
+  the source (pending approval must be durable data, not a live socket).
+- **L8 — Channels & task inbox.** *Adopt* → the **exact correlation oracle as a `UNIQUE` constraint**
+  (`(channel_type, platform_id, instance)`, exact-only inbound, auto-create over hijack — the
+  DB-enforced form of §4's oracle), the **inbound non-delivery ledger** (`dropped_messages` — the
+  mirror of v3's outbound-only ledger), **session-existence-as-subscription**, and
+  **correlation-by-stored-state** for responses (re-derive the address from a persisted row, never
+  trust the echoed payload). *Reject* → the **two-format envelope** (content/identity not separated;
+  sender identity buried in an opaque blob) and **per-adapter inbound dedup** (host backstop is
+  idempotency-by-crash — v3 owns the key at the ledger boundary). Worst hole = the mark-delivered-on-
+  undefined loss above.
+- **L11 / L12 — Memory & metacognition.** *L11 Reject* → **provider-shaped memory** (now a
+  source-verified second witness beside mnemon §12 — memory keyed to each provider's native surface →
+  provider-switch is a lossy human-driven migration). *L12 Adopt* → the **integration-point contract**
+  (reach-in points + red/green guards + self-updating fail-closed audited channel) as the
+  machine-checkable form of "definitions through one audited channel"; and **skill-lifecycle operations
+  must be deterministic host ops, not LLM-run prose** (nanoclaw's prose-package-manager is the AVOID).
+- **L0f / templates.** *Adopt* → the **portable-definition / repo-local-deployment split, enforced**
+  (template carries no provider/model/secrets — the anti-omnigent-leak, §9's concern realized).
+  *Note the gap* → nanoclaw's templates are **untyped** (no declared slots, no cascade, no
+  template→instance version link) — v3's typed-slot L0f is still ahead of it.
+
+### The §13 throughline
+
+Nanoclaw is the study that most cleanly separates v3's **two axes of value**: it is at once the
+corpus's best *runtime/supervision/isolation* reference and its clearest demonstration of what a
+*kernel* is *for* — every duplicate/loss seam it exhibits is one the idempotency ledger +
+produce-not-perform + typed lifecycle close. It grounds the BitSafe narrative in first-party code,
+confirms two prior addenda at the source (§11 OneCLI fail-closed credential plane; §12 mnemon
+memory-is-a-port), and contributes one genuinely new mechanism — the **integration-point contract**
+as machine-checkable L12. It leaves the §6 synthesis line and both central bets intact; it sharpens
+L0d/L0e/L6/L7/L8/L11/L12 and adds the **runtime-is-not-the-kernel** discipline: the layer that runs
+and supervises the actor is real, hard, and worth a best-in-class reference — and it is *below* the
+commit log, never a substitute for it.
+
+---
+
 ## Caveats
 
 - **This is a meta-layer, not a re-summary.** Each claim here is backed by a specific study's
@@ -1206,9 +1364,9 @@ sharpens L11/L12 and adds the **memory-is-a-port** discipline to the same family
   wrong for v3's distributed-kernel-for-LLM-actors goal," not "wrong."
 - **The studies' glossary is simplified.** §5 maps it onto the convergence roadmap; where a study said
   "L9" it meant the broad wait/correlation concern, which the convergence work splits more finely.
-- **Snapshot in time.** Twelve reverse-engineering studies + one external survey (study 13) over
-  2026-06-19/20, against same-recent HEADs. The synthesis reflects those HEADs; the design conclusions are
-  intended to outlast them.
+- **Snapshot in time.** Fifteen reverse-engineering studies + one external survey (study 13), written
+  2026-06-19 through 2026-07-04, against same-recent HEADs (studies 1–13 §1–§10; 14–16 added in §11–§13).
+  The synthesis reflects those HEADs; the design conclusions are intended to outlast them.
 - **Study 13 is a different artifact class.** §1–§8 distil *reverse-engineered codebases* with `file:line`
   grounding; §9 distils an *academic taxonomy* — it contributes boundaries and vocabulary, not mechanisms.
   Cite it for *where a concern lives* and *whether the field has solved it*, never for an implementation
@@ -1223,6 +1381,12 @@ sharpens L11/L12 and adds the **memory-is-a-port** discipline to the same family
   layer (L7) shipped as standalone infra; its consumer-side evidence is line-precise (NanoClaw checkout),
   its OneCLI-internal facts are repo/README-granularity. It adds no central bet — read it as the L7/L2/L13
   sharpening plus a divergence anchor.
+- **§13 is a full codebase whose verdict is "not a kernel."** Study 16 (nanoclaw) is source-verified
+  across six slices (unlike §11/§12, whose consumer side was read through nanoclaw's `add-*` skills —
+  §13 reads nanoclaw itself, closing that loop). It contributes no central bet: read it as the
+  L0d/L0e/L6/L7/L8/L11/L12 sharpening, the source-grounding of the BitSafe narrative, and the corpus's
+  cleanest negative proof of the kernel discipline. Its "two-axis split" (below discipline, above
+  runtime/isolation) is the frame; its one new mechanism is the integration-point L12 contract.
 - **§12 is a layer-pair reference, same class as §11.** Study 15 (mnemon) reverse-engineers L11/L12
   shipped as standalone infra; its consumer-side mechanics (install, mount, hooks-into-`settings.json`, the
   provider-coupling silent-loss) are **line-precise** from the NanoClaw `add-mnemon` skill, its
