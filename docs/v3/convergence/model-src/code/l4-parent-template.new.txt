@@ -1,0 +1,41 @@
+
+template:
+  id: plan-exec-v0              # the PARENT — a plan executor (WF-7). Long-lived, spans many child instances + human gates
+  version: 1
+  roles:
+    planner:  { default_actor: claude, default_agent_config: { mode: planner } }
+    operator: { default_actor: human }                          # the plan owner — approves spec deviations
+  start: next_task
+  runtime_context: none         # the parent needs no worktree; the CHILDREN each get their own (local-pair-v0 declares worktree)
+  steps:
+    - id: next_task
+      role: planner
+      instruction: "Pick the next unstarted plan task; produce/refine its spec from the plan document."
+      on_pass:                  # spec ready → spec gate (a human gate only if the spec DEVIATES from the plan — ordinary L3 authoring)
+        target: spec_gate
+      on_done: done             # no tasks left → finish (the plan document is the task list — not kernel state)
+    - id: spec_gate
+      type: human_gate          # L3 — owner approves a deviating spec; a non-deviating spec can auto-approve via a gate (authoring choice)
+      role: operator
+      instruction: "Approve the task spec (only deviations from the plan need you)."
+      decisions:
+        approve:      { target: run_task }
+        request_rework: { target: next_task, payload: { instruction: { required: true } } }
+    - id: run_task
+      type: child_workflow      # L4 — spawn + link + wait on a full child instance
+      child:
+        template_ref: local-pair-v0          # the child is the ordinary pair workflow (implement / review / merge / done)
+        child_key: { task_id: ${task.id}, role: implementation }   # IDEMPOTENT on the ACTIVE link — a crash-replay reuses it; a terminal link ⇒ a fresh retry attempt
+        binding: ${task.binding}             # role → actor for the child (its own cascade)
+        inputs:  { task: ${task.spec} }
+      wait_for:                 # lifecycle key → route config (the decisions / outcomes map shape — payload / result projection fits here later)
+        done:      { target: next_task }      # child finished ⇒ advance to the next plan task
+        failed:    { target: recover_task }
+        cancelled: { target: recover_task }   # out-of-band delete ⇒ the cancelled event routes here — never a forever-wait
+    - id: recover_task
+      role: planner
+      instruction: "The child did not complete. Decide: retry, re-spec, or escalate to the owner."
+      on_pass: spec_gate        # ordinary routing — recovery is parent-template authoring, not a kernel primitive
+    - id: done
+      type: terminal
+          

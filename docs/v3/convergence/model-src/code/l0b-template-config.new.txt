@@ -1,0 +1,19 @@
+
+template:
+  id: local-pair-v0
+  version: 1
+  roles:
+    implementer: { default_actor: codex }
+    reviewer:    { default_actor: claude }
+  start: implement
+  steps:
+    - id: implement
+      role: implementer
+      instruction: "Build the change for the task."
+      on_pass: review            # PASS → review
+    - id: review
+      role: reviewer
+      instruction: "Review the diff; pass back or converge."
+      on_pass:      implement     # PASS → implement
+      on_converged: done          # CONVERGED → done
+          

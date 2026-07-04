@@ -1,0 +1,163 @@
+<section id="l2a">
+        <h2 class="level-h"><span class="level-badge">L2a</span> External / process gate execution</h2>
+        <p class="level-sub">L2 core declared the <code>external.*</code> gate but rejected it at run. L2a
+        realizes the <b>inline</b> process path — a gate that spawns a process in the workspace, under a
+        bounded timeout, and maps its result to <code>allow | warn | block</code>. The deferred path stays
+        a later slice.</p>
+
+        <p>This is the v1-faithful command gate: v1's PASS validation and <code>meta_review_approve_required</code>
+        run a command <em>synchronously, blocking</em>, in the worktree, with exit-code 0 = pass / ≠0 = block.
+        L2a models exactly that, plus three disciplines v1 left implicit: a <b>bounded timeout</b>, a
+        <b>structured <code>GateInvocation → GateDecision</code> contract</b>, and an explicit
+        <b>runner-error vs business-block</b> distinction. The L2 core process guard flips from "reject" to
+        "run"; everything else in the kernel is unchanged. Deferred execution
+        (<code>WAITING(gate_pending)</code> + <code>GATE_RESULT</code>) and the
+        <code>projection_ref</code>+SDK seam remain <span class="at">later</span>.</p>
+
+        <h3 class="view-h"><span class="view-tag runtime">Runtime</span> A concrete trace</h3>
+        <p>An implementer PASS gated by the repo's test command — a clean run, a failing test, and a runner
+        error that is audited distinctly from a test failure:</p>
+        <div class="trace">
+          <div class="trace-row"><div class="trace-n">1</div><div class="trace-c">
+            <div class="ev">codex emits <code>PASS</code> on <code>implement</code> { expected_role: implementer } (version=1, round=1)</div>
+            <div class="meta">authorized ✓ → gate <code>external.process</code>: <code>run("pnpm test", cwd=worktree, timeout_ms)</code> → exit <b>0</b> → <code>on_exit["0"] = allow</code> → commit <b>implement → review</b>; evidence log ref recorded on the entry</div>
+          </div></div>
+          <div class="trace-row"><div class="trace-n">2</div><div class="trace-c">
+            <div class="ev">(a later round) codex emits <code>PASS</code> on <code>implement</code></div>
+            <div class="meta"><code>pnpm test</code> → exit <b>1</b> (a test failed) → <code>on_exit[nonzero] = block</code> → <b>Rejected(gate_blocked(reason=test_failed))</b>; no commit, <b>round not burned</b>, still on implement, evidence ref returned in the outcome</div>
+          </div></div>
+          <div class="trace-row"><div class="trace-n">3</div><div class="trace-c">
+            <div class="ev">codex emits <code>PASS</code> with a mis-configured command path</div>
+            <div class="meta"><code>processRunner.run</code> → <code>kind=runner_error</code> (spawn failed) → <code>on_runner_error = block_transition</code> → <b>Rejected(gate_blocked(reason=runner_error))</b> — audited <em>distinctly</em> from <code>test_failed</code>; the transition is held back because the gate did not run reliably, not because the work is wrong</div>
+          </div></div>
+        </div>
+        <div class="note runtime">
+          Same runner, different policy by config alone: <code>on_exit { nonzero: block }</code> is a hard
+          gate; <code>{ nonzero: warn }</code> turns it into a warning gate (continue, evidence retained).
+          <code>block_transition</code> for a runner error / timeout still surfaces as
+          <code>gate_blocked</code>, but with a <code>runner_error</code> / <code>timeout</code> reason, never
+          conflated with a business <code>test_failed</code>.
+        </div>
+
+        <h3 class="view-h"><span class="view-tag pseudo">Pseudocode</span> The rule behind the trace</h3>
+        <p>The L2 core process reject becomes a run branch; a <code>ProcessGateRunner</code> contract and a
+        <code>classify</code> step turn a process result into a <code>GateDecision</code>. Deferred execution
+        is still rejected:</p>
+        <div class="code-diff" aria-label="L2a pseudocode" data-old-label="L2 baseline" data-new-label="L2a current">
+          <script type="text/plain" class="diff-source" data-code-old-ref="l2-pseudocode">[[@code code/l2a-pseudocode.old.txt]]</script>
+          <script type="text/plain" class="diff-source" data-code-new data-code-id="l2a-pseudocode">[[@code code/l2a-pseudocode.new.txt]]</script>
+        </div>
+        <div class="note pseudo">
+          The only kernel change is the gate-pipeline branch: a process evaluator no longer hits
+          <code>gate_execution_not_supported</code> (unless it is <code>deferred</code>) — it runs via
+          <code>run_process_gate</code>, which spawns in the workspace under a bounded timeout and feeds the
+          result to <code>classify_process_result</code>. The classifier is explicit: a runner error or
+          timeout maps to <code>block_transition</code> (a distinct reason), and only <code>output.mode</code>
+          decides whether the verdict comes from the exit code or a parsed <code>GateDecision</code> JSON.
+        </div>
+
+        <h3 class="view-h"><span class="view-tag domain">Domain</span> What L2a adds</h3>
+        <div class="agg">
+          <div class="agg-label">Execution contract — a named runner and its values</div>
+          <div class="ents">
+            <div class="ent"><div class="en">ProcessGateRunner</div><div class="fields">the contract <code>run(command, {cwd, stdin, timeout_ms}) → ProcessResult</code>; the kernel owns the contract, the runner owns the spawn (mirrors <code>RuntimeContextProvider</code>)</div></div>
+            <div class="ent"><div class="en">GateInvocation <span style="font-size:10px;color:var(--muted)">(value)</span></div><div class="fields">the small JSON handed to the process on stdin: instance/step/event/version + the <code>config</code> snapshot + a <b>compact inline projection</b> (not a ref+SDK yet)</div></div>
+            <div class="ent"><div class="en">ProcessResult <span style="font-size:10px;color:var(--muted)">(value)</span></div><div class="fields"><code>{ kind: ok | timeout | runner_error, exit_code?, stdout?, log_ref, duration_ms }</code></div></div>
+          </div>
+        </div>
+        <div class="agg">
+          <div class="agg-label">Canonical Process Gate Contract — the single source of truth for <code>external.process</code></div>
+          <table class="contract">
+            <thead><tr><th>Field / case</th><th>Required?</th><th>Valid values / behavior</th><th>Invalid / absent behavior</th></tr></thead>
+            <tbody>
+              <tr><td>gate.uses</td><td>yes</td><td><code>external.process</code></td><td>non-process gates skip this contract</td></tr>
+              <tr><td>runtime_context</td><td>yes (process)</td><td>a provisioned workspace (not <code>none</code>)</td><td><code>runtime_context_required_for_process_gate</code></td></tr>
+              <tr><td>config.command</td><td>yes</td><td>command string / resolved slot</td><td><code>invalid_process_gate_config</code></td></tr>
+              <tr><td>config.timeout_ms</td><td>yes</td><td>positive duration</td><td><code>invalid_process_gate_config</code></td></tr>
+              <tr><td>config.output.mode</td><td>no</td><td>absent ⇒ <code>exit_code</code>; else <code>exit_code | gate_decision_json</code></td><td>present &amp; unknown ⇒ <code>invalid_process_gate_config</code></td></tr>
+              <tr><td>config.on_exit["0"]</td><td>if <code>exit_code</code></td><td><code>allow | warn | block</code></td><td>missing / unknown ⇒ <code>invalid_process_gate_config</code></td></tr>
+              <tr><td>config.on_exit[nonzero]</td><td>if <code>exit_code</code></td><td><code>allow | warn | block</code></td><td>missing / unknown ⇒ <code>invalid_process_gate_config</code></td></tr>
+              <tr><td>config.on_runner_error</td><td>no</td><td>absent ⇒ <code>block_transition</code>; else <code>block_transition</code></td><td><code>fail_instance</code> ⇒ <code>gate_config_not_supported</code>; other ⇒ <code>invalid_process_gate_config</code></td></tr>
+              <tr><td>config.on_timeout</td><td>no</td><td>absent ⇒ <code>block_transition</code>; else <code>block_transition</code></td><td><code>fail_instance</code> ⇒ <code>gate_config_not_supported</code>; other ⇒ <code>invalid_process_gate_config</code></td></tr>
+              <tr class="grp"><td colspan="4">Runtime classification — classify_process_result</td></tr>
+              <tr><td>result.kind = timeout</td><td>runtime</td><td>maps via <code>on_timeout</code> / default</td><td><code>gate_blocked(timeout)</code></td></tr>
+              <tr><td>result.kind = runner_error</td><td>runtime</td><td>maps via <code>on_runner_error</code> / default</td><td><code>gate_blocked(runner_error)</code></td></tr>
+              <tr><td>gate_decision_json verdict</td><td>runtime</td><td><code>allow | warn | block</code></td><td>malformed / route / unknown ⇒ <code>gate_blocked(malformed_gate_decision_json)</code></td></tr>
+            </tbody>
+          </table>
+          <div class="fields" style="margin-top:8px">This table is the contract; the pseudocode is its executable sketch — <code>validate_gate_config</code> enforces the config rows at definition load, <code>classify_process_result</code> the runtime rows — and the config example below is one instance of it. Same runner, hard gate or warning gate, by <code>on_exit</code> alone.</div>
+        </div>
+        <div class="note domain">
+          <code>evidence_refs</code> on <code>GateDecision</code> become concrete here: every run persists a
+          log (and a JSON artifact with <code>head_sha</code>/<code>git_status_hash</code>), and the ref rides
+          along — recorded on the committed transcript entry, or returned in the <code>Rejected</code> outcome
+          on a block. The gate stays stateless: it consumes <code>config</code> + invocation, emits a verdict
+          + evidence, and keeps nothing across rounds.
+        </div>
+
+        <h3 class="view-h"><span class="view-tag invariant">Invariant</span> New at L2a</h3>
+        <div class="agg invariant">
+          <div class="agg-label">Added rules</div>
+          <div class="ents">
+            <div class="ent"><div class="en">runs in the workspace</div><div class="fields">a process gate executes with <code>cwd = runtime_context</code> workspace (v1: the worktree); a workflow declaring <code>runtime_context: none</code> may not bind an <code>external.process</code> gate — the static mismatch is a definition error, and the kernel also guards it at run with <code>Rejected(runtime_context_required_for_process_gate)</code></div></div>
+            <div class="ent"><div class="en">gate config validated at definition load</div><div class="fields"><code>validate_gate_config(template)</code> runs when the definition is loaded (in <code>CREATE_INSTANCE</code>, beside binding coverage): a process gate without a workspace (<code>runtime_context_required_for_process_gate</code>), a <code>fail_instance</code> disposition (<code>gate_config_not_supported</code>), or an incomplete/invalid config — missing <code>command</code>/<code>timeout_ms</code>, an unknown <code>output.mode</code> or runner disposition, or <code>exit_code</code> buckets that are missing or not <code>allow | warn | block</code> (<code>invalid_process_gate_config</code>) — is rejected at create, not mid-run. <code>output.mode</code> defaults to <code>exit_code</code> when absent</div></div>
+            <div class="ent"><div class="en">bounded timeout mandatory</div><div class="fields">every process gate carries a <code>timeout_ms</code>; a timeout is a runner outcome, not an indefinite block (v1 had none)</div></div>
+            <div class="ent"><div class="en">evidence on every run</div><div class="fields">a log + artifact is persisted whether the gate allows, warns, or blocks (v1-faithful); the ref is carried to the commit or the rejection</div></div>
+            <div class="ent"><div class="en">explicit output mode</div><div class="fields">verdict source is <code>exit_code</code> or <code>gate_decision_json</code> by config — never guessed from whether stdout happens to parse</div></div>
+            <div class="ent"><div class="en">runner error ≠ business block</div><div class="fields"><code>runner_error</code> / <code>timeout</code> / <code>malformed_gate_decision_json</code> → <code>block_transition</code> with a distinct reason, separable in audit from a <code>test_failed</code> block</div></div>
+            <div class="ent"><div class="en">still inline only</div><div class="fields">a <code>deferred</code> process gate is still rejected (<code>gate_execution_not_supported</code>) — the deferred lifecycle is a later slice</div></div>
+          </div>
+        </div>
+
+        <h3 class="view-h"><span class="view-tag config">Config</span> The template — the PASS transition gains a process gate</h3>
+        <p>The <code>implement</code> step's <code>PASS</code> transition gains an <code>external.process</code>
+        gate running the repo's test command (the L2 <code>review</code>/<code>CONVERGED</code> pipeline is
+        unchanged):</p>
+        <div class="code-diff" aria-label="L2a template config" data-old-label="L2 baseline" data-new-label="L2a current">
+          <script type="text/plain" class="diff-source" data-code-old-ref="l2-template-config">[[@code code/l2a-template-config.old.txt]]</script>
+          <script type="text/plain" class="diff-source" data-code-new data-code-id="l2a-template-config">[[@code code/l2a-template-config.new.txt]]</script>
+        </div>
+        <div class="note config">
+          The same <code>${slot:validation.test_command}</code> the repo already fills (L0f) is what the gate
+          runs — L2a wires the resolved slot into a gate, it does not add new repo config. Whether a missing
+          gate means "untrusted, reviewer must rerun" vs an explicit-null "trusted skip" is a reviewer-facing
+          trust nuance that belongs with communication <span class="at">→ L2b</span>; here the model is just
+          gate present / absent.
+        </div>
+
+        <h3 class="view-h"><span class="view-tag absent">Absent</span> Still not here</h3>
+        <div class="absent-grid">
+          <div class="absent-item">No <b>deferred process gates</b> — long-running / non-blocking execution via <code>WAITING(gate_pending)</code> + <code>GATE_RESULT</code> (pending-envelope stash, replay/idempotency, timeout-recovery, cancel-cleanup, runner-retry) is a <b>later lifecycle slice</b>, named but not numbered <span class="at">→ later</span></div>
+          <div class="absent-item">No <b>projection_ref + scoped-query SDK</b> — the process gets a compact inline projection; an authority-scoped query seam replaces it later <span class="at">→ later / L7-ish</span></div>
+          <div class="absent-item">No <b>fail_instance disposition</b> — a runner error can only <code>block_transition</code> in the MVP; configuring <code>fail_instance</code> is rejected (<code>gate_config_not_supported</code>) until terminal-failure ownership + operator recovery are modeled <span class="at">→ later</span></div>
+          <div class="absent-item">No <b>route verdict</b> — a gate still cannot redirect the target (meta-review auto-rework, human gate) <span class="at">→ routing slice / L3</span></div>
+          <div class="absent-item">No <b>actor-facing trust / skip-rerun communication</b> — missing vs explicit-null trust level is not surfaced to the reviewer yet <span class="at">→ L2b</span></div>
+          <div class="absent-item">No <b>dynamic module loading</b> — the external process interface is the extension seam; no in-process plugin loader in the MVP <span class="at">→ later</span></div>
+        </div>
+
+        <h3 class="view-h"><span class="view-tag evidence">Evidence</span> Why we accept L2a for now</h3>
+        <div class="agg">
+          <div class="agg-label">Acceptance evidence — the v1 command-gate family is now representable</div>
+          <div class="ents">
+            <div class="ent"><div class="en">PASS validation</div><div class="fields">v1 <code>validation.required</code> on PASS (test/typecheck/lint), exit 0 = pass / ≠0 = block → <code>external.process</code> on the <code>implement</code> PASS transition · <b>L2a</b></div></div>
+            <div class="ent"><div class="en">meta-review approve gate</div><div class="fields">v1 <code>meta_review_approve_required</code> (same runner) → an <code>external.process</code> gate on the approve route once routing lands · <b>L2a</b> contract, routing later</div></div>
+            <div class="ent"><div class="en">evidence artifact</div><div class="fields">v1's mandatory log + JSON evidence (exit_code, duration, head_sha, git_status_hash) → <code>evidence_refs</code> on the decision · <b>L2a</b></div></div>
+          </div>
+        </div>
+        <div class="note evidence">
+          <ul style="margin:0">
+            <li><b>Scenario coverage:</b> a clean test allows the PASS; a failing test blocks it without
+              burning the round; a runner error blocks the transition with a distinct, auditable reason.</li>
+            <li><b>Accepted tradeoff:</b> an inline gate blocks <code>HANDLE</code> up to <code>timeout_ms</code> —
+              exactly as v1's synchronous PASS does. Fine for the local MVP; the <em>deferred</em> slice is the
+              explicit escape hatch when blocking is unacceptable (long runs, concurrency).</li>
+            <li><b>Invariant coverage:</b> round not burned on block ✓; gate read-only &amp; stateless ✓;
+              evidence persisted every run ✓; all L0a–L2 invariants still hold.</li>
+            <li><b>Known gaps (intended):</b> deferred execution, projection_ref/SDK, fail_instance, route,
+              trust communication (L2b). Each is in Absent.</li>
+            <li><b>Decision:</b> accepted as the L2a baseline (light evidence per playbook §2.1).</li>
+          </ul>
+        </div>
+      </section>
+
+      

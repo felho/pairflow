@@ -1,0 +1,25 @@
+
+template:
+  id: local-pair-v0
+  version: 1
+  roles:
+    implementer: { default_actor: codex,  default_agent_config: { mode: builder, model_ref: codex-default-engineer, prompt_profile_refs: [engineer-defaults] } }
+    reviewer:    { default_actor: claude, default_agent_config: { mode: critic } }
+  start: implement
+  activation:
+    mode: immediate          # after START + runtime_context ready, activate immediately; no KICKOFF hold
+    # deferred_kickoff → start in a WAITING(kickoff_pending) hold; an operator
+    # kickoff supplies the task and releases the first dispatch (the v1 ideation bubble)
+  steps:
+    - id: implement
+      role: implementer
+      instruction: "Build the change for the task."
+      agent_config: { approach: systematic }   # overrides/extends the role default
+      on_pass: review            # PASS → review
+    - id: review
+      role: reviewer
+      instruction: "Review the diff; pass back or converge."
+      agent_config: { approach: thorough, prompt_concern_refs: [reviewer-severity-ontology], skill_refs: [test-runner] }
+      on_pass:      implement     # PASS → implement
+      on_converged: done          # CONVERGED → done
+          

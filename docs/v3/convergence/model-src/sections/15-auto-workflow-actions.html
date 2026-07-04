@@ -1,0 +1,140 @@
+<section id="auto-workflow-actions">
+        <h2 class="level-h"><span class="level-badge">③b</span> Auto workflow actions — perf-test</h2>
+        <p class="level-sub">③a was operator-triggered actions. ③b adds the <code>trigger: auto</code> mode: an action runs
+        <b>on arrival</b> (no operator), still <b>marker-first</b> — the arrival commit claims <code>WAITING(action_running)</code> +
+        <code>ACTION_RUNNING</code>, then an <code>ActionIntent</code> (produce-not-perform, the <code>DispatchIntent</code> analog) is
+        delivered <b>post-commit</b>, the runner runs, and the result returns as an <code>ACTION_RESULT</code> kernel-event that routes
+        by outcome. Same Workflow Action Contract, new trigger + result-delivery. Diffs against ③a.</p>
+
+        <div class="note">
+          <b>The runner never runs in the arrival commit.</b> &ldquo;Inline&rdquo; is only a <em>latency</em> mode of the result event —
+          the sequence is always: <code>ACTION_RUNNING</code> marker committed → <code>ActionIntent</code> delivered → runner runs →
+          <code>ACTION_RESULT</code> event → route. Inline = the event arrives immediately; deferred = later (the async driver /
+          timeout mechanics are thin here, an L9 concern); the contract is identical.</div>
+
+        <h3 class="view-h"><span class="view-tag" style="background:#e2e8f0;color:#334155">Shape</span> auto vs operator (auto-actions aid)</h3>
+        <pre class="pseudo" style="font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size:12.5px; line-height:1.5">
+  operator (③a)                                 auto (③b)
+  ───────────────────────────                   ───────────────────────────
+  arrive → WAITING(action_pending)              arrive → CLAIM WAITING(action_running) + ACTION_RUNNING   [arrival commit]
+       ActionRequest (operator surface)              ActionIntent (run X)   [post-commit, produce-not-perform]
+  operator RUN_ACTION → claim → run → result         driver runs the runner → ACTION_RESULT kernel-event
+                                                            ↓ classify → outcome_key
+                                                 ┌─ business → outcomes[key].target            (route, end episode)
+                                                 ├─ business → self-loop e.g. regression→implement (+payload)
+                                                 └─ declares retry → attempt &lt; max ? re-claim same episode (re-run)
+                                                                                  : route on_exhausted (escalate)
+
+  episode: opened at each FRESH arrival (new episode_ref); retries re-claim within it (attempt accumulates),
+           so a later round's entry into the step starts a clean count — transcript-reconstructable.
+        </pre>
+
+        <h3 class="view-h"><span class="view-tag runtime">Runtime</span> A concrete trace</h3>
+        <div class="trace">
+          <div class="trace-row"><div class="trace-n">1</div><div class="trace-c">
+            <div class="ev">the reviewer converges; the L2 gates allow <code>review → perf_test</code></div>
+            <div class="meta"><code>perf_test</code> is a <code>type: action</code>, <code>trigger: auto</code> → <code>park_for_action</code> (auto branch) CLAIMS <b>WAITING(action_running, request_id)</b> + appends <code>ACTION_RUNNING { episode_ref, trigger: auto }</code> in the arrival commit; post-commit the output is an <code>ActionIntent { runner: pairflow.perf_test, cwd: workspace }</code> — no agent, no operator</div>
+          </div></div>
+          <div class="trace-row"><div class="trace-n">2</div><div class="trace-c">
+            <div class="ev">the driver runs the perf suite; <code>ACTION_RESULT(request_id, raw)</code> arrives</div>
+            <div class="meta">correlation ✓ → <code>classify → pass</code> → CAS-commit: append <code>ACTION_RESULT { outcome: pass }</code> → route <code>outcomes[pass].target = human_approval</code>. The edge carries <code>recommends: approve</code>, so the human gate records the recommendation (the firing edge into the gate is now <code>perf_test.pass</code>, not <code>review.CONVERGED</code>)</div>
+          </div></div>
+          <div class="trace-row"><div class="trace-n">3</div><div class="trace-c">
+            <div class="ev">(alternate) <code>classify → regression</code></div>
+            <div class="meta">a <b>business</b> outcome with a route → <code>outcomes[regression].target = implement</code> with <code>payload.instruction</code> → the implementer's handoff on its next dispatch (the <b>automated <code>request_rework</code></b>). Not a retry — regression is a real result, not execution noise</div>
+          </div></div>
+          <div class="trace-row"><div class="trace-n">4</div><div class="trace-c">
+            <div class="ev">(alternate) <code>classify → infra_flake</code> (the perf runner crashed)</div>
+            <div class="meta">the outcome <b>declares a retry policy</b>: <code>attempt_count_in_episode &lt; 3</code> → RE-CLAIM within the SAME <code>episode_ref</code> (append <code>ACTION_RESULT</code> + a new <code>ACTION_RUNNING</code>, attempt accumulates) → re-issue the <code>ActionIntent</code>. On the 3rd failure → route <code>on_exhausted = human_approval</code> (escalate). The budget is counted from the transcript, not a hidden field</div>
+          </div></div>
+        </div>
+        <div class="note runtime">
+          Bounded retry is <b>not</b> a general rule for negative outcomes — it fires only for an outcome that <em>declares</em>
+          <code>retry</code>. <code>regression</code> (a business result) routes to <code>implement</code>; <code>infra_flake</code>
+          (execution uncertainty) retries then escalates. The attempt count is anchored to the <code>episode_ref</code> opened at the
+          fresh arrival, so a later round's re-entry starts clean.</div>
+
+        <h3 class="view-h"><span class="view-tag pseudo">Pseudocode</span> auto trigger + ACTION_RESULT event</h3>
+        <p><code>park_for_action</code> branches by trigger (auto ⇒ claim <code>action_running</code> + <code>ACTION_RUNNING</code>);
+        <code>post_commit_output</code> emits an <code>ActionIntent</code>; a new <code>ACTION_RESULT</code> kernel-event handler
+        (the <code>RUNTIME_CONTEXT_READY</code> sibling) classifies + routes, with the episode-anchored bounded retry. Diffs against ③a:</p>
+        <div class="code-diff" aria-label="auto workflow actions pseudocode" data-old-label="③a baseline" data-new-label="③b auto actions">
+          <script type="text/plain" class="diff-source" data-code-old-ref="action-pseudocode">[[@code code/auto-action-pseudocode.old.txt]]</script>
+          <script type="text/plain" class="diff-source" data-code-new data-code-id="auto-action-pseudocode">[[@code code/auto-action-pseudocode.new.txt]]</script>
+        </div>
+
+        <h3 class="view-h"><span class="view-tag domain">Domain</span> The auto-action delta</h3>
+        <div class="agg">
+          <div class="agg-label">Auto Workflow Action — the ③a contract + the auto trigger</div>
+          <div style="overflow-x:auto">
+          <table class="contract">
+            <thead><tr><th>Aspect</th><th>③a (operator)</th><th>③b (auto)</th></tr></thead>
+            <tbody>
+              <tr><td><b>trigger</b></td><td><code>operator_intent</code> (<code>RUN_ACTION</code>)</td><td><code>auto</code> — the arrival is the trigger</td></tr>
+              <tr><td><b>claim</b></td><td><code>RUN_ACTION</code> CAS-claim</td><td>the <b>arrival commit</b> claims <code>action_running</code> + <code>ACTION_RUNNING</code> (singular — no concurrent claim)</td></tr>
+              <tr><td><b>run effect</b></td><td>runner in <code>RUN_ACTION</code> (post-claim)</td><td><code>ActionIntent</code> (post-commit, produce-not-perform — the <code>DispatchIntent</code> analog); runner NEVER in the arrival commit</td></tr>
+              <tr><td><b>result</b></td><td>synchronous in the handler</td><td><code>ACTION_RESULT</code> <b>kernel-event</b> (correlated by <code>request_id</code>) — inline ⇒ immediate, deferred ⇒ later</td></tr>
+              <tr><td><b>retry</b></td><td>self-route ⇒ re-park (operator re-triggers)</td><td>an outcome that <b>declares</b> <code>retry { max_attempts, on_exhausted }</code> re-claims within the <b>episode</b> (attempt = transcript <code>ACTION_RUNNING</code> count for the <code>episode_ref</code>); exhausted ⇒ escalate</td></tr>
+            </tbody>
+          </table>
+          </div>
+          <div class="fields" style="margin-top:8px">The <b>episode</b> (<code>episode_ref</code>, opened at each fresh arrival)
+          scopes the retry budget so a later round's re-entry starts a clean count. Bounded retry is opt-in per outcome — a business
+          outcome (<code>regression</code>) routes; only an execution-uncertainty outcome (<code>infra_flake</code>) declares retry.</div>
+        </div>
+
+        <h3 class="view-h"><span class="view-tag invariant">Invariant</span> New at ③b</h3>
+        <div class="agg invariant">
+          <div class="agg-label">Added rules</div>
+          <div class="ents">
+            <div class="ent"><div class="en">auto is marker-first too</div><div class="fields">an auto action's arrival commit only CLAIMS <code>WAITING(action_running)</code> + <code>ACTION_RUNNING</code>; the runner runs <b>post-commit</b> via an <code>ActionIntent</code> (produce-not-perform), never inside the arrival commit. &ldquo;Inline&rdquo; is just an immediate result event, not in-commit execution</div></div>
+            <div class="ent"><div class="en">only an auto step re-issues the run (the ③a/③b boundary)</div><div class="fields"><b>both</b> sides are guarded: <code>post_commit_output</code> emits an <code>ActionIntent</code> for <code>action_running</code> only when the step's trigger is auto, and <code>ACTION_RESULT</code> rejects a non-auto step (<code>action_result_not_auto_action</code>) — an operator <code>action_running</code> (③a, whose result is recorded inline in <code>RUN_ACTION</code>) is neither auto-issued nor completed by a kernel-event. A stuck operator action is L9 recovery. An auto step also declares <b>no</b> trigger-payload (no operator to supply it — <code>auto_action_payload_unsupported</code> at load); its inputs are the template-fixed <code>action_spec</code></div></div>
+            <div class="ent"><div class="en">the result is a correlated kernel-event</div><div class="fields"><code>ACTION_RESULT(request_id)</code> is matched against <code>action_running.request_id</code> (a stale / duplicate result ⇒ <code>action_result_mismatch</code>), exactly like <code>RUNTIME_CONTEXT_READY</code>; inline vs deferred is only when it arrives</div></div>
+            <div class="ent"><div class="en">bounded retry is opt-in and episode-anchored</div><div class="fields">retry fires <b>only</b> for an outcome that declares <code>retry { max_attempts, on_exhausted }</code> — not a general negative-outcome rule — and <b>only on an auto step</b> (a <code>retry</code> outcome on an operator action is <code>action_retry_requires_auto</code> at load; an operator action's &ldquo;retry&rdquo; is the operator re-triggering a self-routed outcome). The attempt count is the <code>ACTION_RUNNING</code> count for the current <code>episode_ref</code> (transcript-reconstructable, not a hidden field); a fresh arrival opens a new episode; exhausted ⇒ route <code>on_exhausted</code> (escalate). Each outcome is a <b>closed union</b> — exactly one of <code>{ target … }</code> or <code>{ retry … }</code> (both ⇒ <code>action_outcome_ambiguous_route</code> at load; <code>max_attempts</code> must be a positive int; <code>on_exhausted</code> must resolve)</div></div>
+            <div class="ent"><div class="en">the recommendation rides the firing edge</div><div class="fields">inserting <code>perf_test</code> between converge and the human gate moves <code>recommends: approve</code> onto <code>perf_test.pass</code> (the edge that now enters the gate) — a clean L3 consequence (recommends is per incoming edge, runtime-selected). The L3 helpers generalize to cover it: <code>routing_edges_with_recommends</code> (load validation) and <code>firing_routing_edge_into</code> (runtime read) now span actor transitions <b>and</b> action outcomes, so <code>perf_test.pass.recommends</code> is both validated (target is a human_gate, key exists) and read at the gate — not a new mechanism</div></div>
+          </div>
+        </div>
+
+        <h3 class="view-h"><span class="view-tag config">Config</span> The template — a perf_test auto action</h3>
+        <p><code>review</code> <code>CONVERGED</code> now routes to a <code>perf_test</code> auto action (the converge gates still guard it);
+        <code>perf_test</code> routes <code>pass → human_approval</code> (carrying the recommendation), <code>regression → implement</code>,
+        <code>infra_flake</code> retries. Diffs against ③a:</p>
+        <div class="code-diff" aria-label="③b template config" data-old-label="③a baseline" data-new-label="③b current">
+          <script type="text/plain" class="diff-source" data-code-old-ref="action-template-config">[[@code code/auto-action-template-config.old.txt]]</script>
+          <script type="text/plain" class="diff-source" data-code-new data-code-id="auto-action-template-config">[[@code code/auto-action-template-config.new.txt]]</script>
+        </div>
+        <div class="note config">
+          <code>perf_test</code> sits <em>between</em> converge and the human gate — showing an action is not a &ldquo;post&rdquo; phase
+          thing: it can be anywhere. <code>pass</code>/<code>regression</code> are business routes; only <code>infra_flake</code> declares
+          a retry budget. The v1 <code>pass-validation</code> gate stays the contrast: it <em>filters</em> the PASS, it does not route.</div>
+
+        <h3 class="view-h"><span class="view-tag absent">Absent</span> Still not here</h3>
+        <div class="absent-grid">
+          <div class="absent-item">No <b>deferred async mechanics</b> — the <code>ACTION_RESULT</code> event contract serves inline AND deferred, but the genuinely-async driver (long-running runs, in-flight tracking) + a <b>timeout</b> on a pending auto action are later <span class="at">→ L9</span></div>
+          <div class="absent-item">No <b>unbounded retry / watchdog</b> — retry is a declared bounded budget that escalates; auto-retry beyond it, backoff, and a stuck-<code>action_running</code> watchdog are later (the same crash-window class as ② / ③a) <span class="at">→ L9</span></div>
+          <div class="absent-item">No <b>pure computed-routing</b> — routing on a verdict + counter with <b>no runner / side effect / ACTION_RESULT</b> (v1's <code>auto_rework</code>) is a routing-policy concern, not a workflow action <span class="at">→ later</span></div>
+          <div class="absent-item">No <b>rich outcome-predicate DSL</b> — <code>classify_action_result</code> stays exit-code / structured-JSON (L2a-style) <span class="at">→ later</span></div>
+          <div class="absent-item">No <b>packaged action library</b> — <code>pairflow.perf_test</code> is the anchor; publish / notify / a general catalog are examples, not built <span class="at">→ later</span></div>
+          <div class="absent-item">No <b>undeclared-outcome recovery</b> — a classified outcome with no declared route records an <code>unhandled</code> ACTION_RESULT and stays <code>action_running</code> (a config gap, no operator to nudge); reconciling it is later <span class="at">→ L9</span></div>
+        </div>
+
+        <h3 class="view-h"><span class="view-tag evidence">Evidence</span> Why we accept ③b for now</h3>
+        <div class="agg">
+          <div class="agg-label">Acceptance evidence — auto-run-and-route is v1-grounded (inline); the async event is the v3 generalization</div>
+          <div class="ents">
+            <div class="ent"><div class="en">auto-run-and-route exists</div><div class="fields">v1 <code>passValidationGate</code> auto-runs on PASS arrival, and <code>auto_rework</code> auto-routes on a rework verdict — both <b>inline</b>. So the auto trigger is v1-grounded; ③b's <code>ACTION_RESULT</code> <b>event</b> (async delivery) is the greenfield generalization (v1 is all-synchronous) · <b>③b</b></div></div>
+            <div class="ent"><div class="en">bounded retry → escalate</div><div class="fields">v1 <code>auto_rework_count / auto_rework_limit</code> (default 10) auto-loops rework then falls through to the human gate — grounds the per-outcome retry budget + escalation; here it is transcript-reconstructable, not a hidden counter · <b>③b</b></div></div>
+            <div class="ent"><div class="en">action vs gate</div><div class="fields"><code>perf_test</code> runs → classifies → routes 3 ways; v1 <code>passValidationGate</code> runs → <em>filters</em> (pass / block) the PASS. The contrast is the point: an action selects, a gate filters · <b>③b</b></div></div>
+          </div>
+        </div>
+        <div class="note evidence">
+          <ul style="margin:0">
+            <li><b>Scenario coverage:</b> converge → perf_test (auto) → pass routes to the human gate (with the recommendation), regression loops to implement, infra_flake retries within the episode then escalates.</li>
+            <li><b>Invariant coverage:</b> auto is marker-first ✓; result is a correlated kernel-event ✓; retry opt-in + episode-anchored ✓; recommendation rides the firing edge ✓ — and all L0a–L3 + ① + ② + ③a invariants still hold.</li>
+            <li><b>Accepted tradeoff:</b> the deferred async driver + timeout are thin (L9); pure computed-routing, a rich predicate DSL, and a packaged library are out.</li>
+            <li><b>Known gaps (intended):</b> deferred mechanics + timeout (L9), unbounded retry / watchdog (L9), pure computed-routing (later), predicate DSL (later), packaged library (later), undeclared-outcome recovery (L9). Each is in Absent.</li>
+            <li><b>Decision:</b> accepted as the ③b baseline (light evidence per playbook §2.1); L4 inherits action steps per child.</li>
+          </ul>
+        </div>
+      </section>
+      

@@ -1,0 +1,151 @@
+<section id="l2b">
+        <h2 class="level-h"><span class="level-badge">L2b</span> Policy/gate context contribution</h2>
+        <p class="level-sub">L2 <b>enforces</b> a rule — an early <code>CONVERGED</code> is rejected. L2b
+        <b>communicates</b> it: the kernel renders a deterministic, actor-facing <code>context_block</code> into
+        the dispatched packet, so the reviewer is told the rule before it acts and never burns a round on an emit
+        that would be blocked. This is the first <b>ContextAssembly</b> slice — and where L0c’s
+        <code>prompt_concern_refs</code> finally resolve.</p>
+
+        <p><b>One render mechanism, two sources.</b> A template-level <code>context_blocks</code> catalog
+        (<code>id → { body }</code>) is the single body source; role/step <code>prompt_concern_refs</code> (from
+        L0c) and gate/policy <code>context_block_refs</code> are just id lists into it. The kernel resolves the
+        issued refs, orders and dedups them, and renders them into <code>ContextPacket.context_blocks</code> with
+        provenance. Nothing here changes a verdict: blocks are <b>communication only</b> — deleting one cannot
+        change what L2 enforces.</p>
+
+        <h3 class="view-h"><span class="view-tag runtime">Runtime</span> A concrete trace</h3>
+        <p>The reviewer is dispatched at <code>review</code>; the converge transition carries a round-threshold
+        gate (<code>round ≥ 2</code>) and a context block that states the rule:</p>
+        <div class="trace">
+          <div class="trace-row"><div class="trace-n">1</div><div class="trace-c">
+            <div class="ev">kernel dispatches the <code>reviewer</code> at <code>review</code> (round 1)</div>
+            <div class="meta"><code>assemble_context_blocks</code> renders two blocks into the packet: <code>reviewer-severity-ontology</code> (provenance <code>source: step_config</code>) and <code>no-converged-before-round-2</code> (provenance <code>source: gate_binding(review, CONVERGED)</code>) — the latter because <code>CONVERGED ∈ available_ops ∩ L1 capability</code> for the reviewer here</div>
+          </div></div>
+          <div class="trace-row"><div class="trace-n">2</div><div class="trace-c">
+            <div class="ev">the reviewer reads the packet and, at round 1, emits <code>PASS</code> (not <code>CONVERGED</code>)</div>
+            <div class="meta">it was <em>told</em> “no CONVERGED before round 2,” so it does not spend an emit on a doomed converge — contrast L2, where an uninformed reviewer emitted <code>CONVERGED</code> at round 1 and got <code>gate_blocked(round_below_min)</code>. Same enforcement; L2b removed the wasted attempt</div>
+          </div></div>
+          <div class="trace-row"><div class="trace-n">3</div><div class="trace-c">
+            <div class="ev">a round later the <code>implementer</code> is dispatched at <code>implement</code></div>
+            <div class="meta"><code>available_ops ∩ L1 capability = { PASS }</code>; the converge gate is bound to <code>review/CONVERGED</code>, not an op this actor may emit, so <code>no-converged-before-round-2</code> is <b>not</b> rendered — the reviewer-only rule does not leak into the implementer’s packet</div>
+          </div></div>
+        </div>
+        <div class="note runtime">
+          The block is communication, not control: if the reviewer ignored it and emitted <code>CONVERGED</code>
+          at round 1, the L2 gate would still reject it (<code>round_below_min</code>, round not burned). Deleting
+          <code>no-converged-before-round-2</code> from the catalog changes what the actor is <em>told</em>, never
+          what the kernel <em>enforces</em>.
+        </div>
+
+        <h3 class="view-h"><span class="view-tag pseudo">Pseudocode</span> The rule behind the trace</h3>
+        <p>Two helpers are added — <code>assemble_context_blocks</code> (dispatch-time render) and
+        <code>validate_context_refs</code> (definition-load check) — and the packet gains one field. The kernel
+        handlers are otherwise unchanged:</p>
+        <div class="code-diff" aria-label="L2b pseudocode" data-old-label="L2a baseline" data-new-label="L2b current">
+          <script type="text/plain" class="diff-source" data-code-old-ref="l2a-pseudocode">[[@code code/l2b-pseudocode.old.txt]]</script>
+          <script type="text/plain" class="diff-source" data-code-new data-code-id="l2b-pseudocode">[[@code code/l2b-pseudocode.new.txt]]</script>
+        </div>
+        <div class="note pseudo">
+          <code>assemble_context_blocks</code> is deterministic: bodies come only from the catalog, the source
+          order <em>is</em> the render order (role → step → gate), and a repeated id renders once while
+          <code>provenance.sources[]</code> accumulates every emitter. The gate branch reuses the same
+          transition-existence + L1 <code>capability</code> logic the kernel already defines — no fresh authority
+          logic. None of this touches <code>HANDLE</code>’s verdict path.
+        </div>
+
+        <h3 class="view-h"><span class="view-tag domain">Domain</span> What L2b adds</h3>
+        <div class="agg">
+          <div class="agg-label">Context blocks — a catalog and its rendered values</div>
+          <div class="ents">
+            <div class="ent"><div class="en">context_blocks catalog <span style="font-size:10px;color:var(--muted)">(template)</span></div><div class="fields">template-level <code>id → { body }</code> map; the <b>single body source</b>. Both ref kinds point into it; bodies never live inline at a ref site</div></div>
+            <div class="ent"><div class="en">ContextBlockRef</div><div class="fields">two sources, one vocabulary: role/step <code>prompt_concern_refs</code> (L0c) and gate/policy <code>context_block_refs</code> — id lists, resolved against the catalog</div></div>
+            <div class="ent"><div class="en">ContextBlock <span style="font-size:10px;color:var(--muted)">(value)</span></div><div class="fields"><code>{ id, body, provenance: { sources[] } }</code> rendered into <code>ContextPacket.context_blocks</code>; <code>sources[]</code> = <code>role_config | step_config | gate_binding(step, event)</code></div></div>
+          </div>
+        </div>
+        <div class="agg">
+          <div class="agg-label">Canonical Context Block Contract — the single source of truth for the render</div>
+          <table class="contract">
+            <thead><tr><th>Field / case</th><th>Required?</th><th>Valid values / behavior</th><th>Invalid / absent behavior</th></tr></thead>
+            <tbody>
+              <tr><td>template.context_blocks</td><td>yes, if any ref issued</td><td>catalog <code>id → { body }</code>; single body source</td><td>a ref with no entry ⇒ <code>unresolved_context_block_ref</code></td></tr>
+              <tr><td>context_blocks[id].body</td><td>yes</td><td>authored static text (no interpolation)</td><td>absent entry ⇒ <code>unresolved_context_block_ref</code></td></tr>
+              <tr><td>prompt_concern_refs (role/step)</td><td>no</td><td>id list into the catalog</td><td>unresolved ⇒ reject at create (<code>validate_context_refs</code>)</td></tr>
+              <tr><td>context_block_refs (gate/policy)</td><td>no</td><td>id list into the catalog</td><td>unresolved ⇒ reject at create (<code>validate_context_refs</code>)</td></tr>
+              <tr class="grp"><td colspan="4">Render — assemble_context_blocks</td></tr>
+              <tr><td>render order</td><td>runtime</td><td>role → step → gate; declaration order within each</td><td>render-order only, <b>not</b> precedence/override</td></tr>
+              <tr><td>gate ref predicate</td><td>runtime</td><td>renders iff its transition ∈ <code>available_ops ∩ L1 capability</code></td><td>otherwise not rendered (not this actor’s op)</td></tr>
+              <tr><td>dedup</td><td>runtime</td><td>same id ⇒ one rendered block</td><td>—</td></tr>
+              <tr><td>provenance.sources[]</td><td>runtime</td><td>every emitter retained (<code>role_config | step_config | gate_binding</code>)</td><td>—</td></tr>
+              <tr><td>ContextPacket.context_blocks</td><td>runtime</td><td>ordered <code>[{ id, body, provenance }]</code></td><td>—</td></tr>
+              <tr class="grp"><td colspan="4">Scope brake</td></tr>
+              <tr><td>semantic parity (prose ↔ gate config)</td><td>—</td><td><b>not</b> checked — existence only</td><td>drift (gate <code>value</code> vs block prose) not caught</td></tr>
+              <tr><td>computed / templated body</td><td>—</td><td>out of scope</td><td>interpolation like <code>{{ gate.config.value }}</code> is later</td></tr>
+            </tbody>
+          </table>
+          <div class="fields" style="margin-top:8px">This table is the contract; <code>assemble_context_blocks</code> is its executable sketch, <code>validate_context_refs</code> enforces the catalog rows at definition load, and the config below is one instance of it.</div>
+        </div>
+        <div class="note domain">
+          The boundary with L2 is <b>enforcement vs communication</b>. L2’s gate keeps the system correct; L2b’s
+          block makes the same rule legible from configuration — paying off v1, which baked these operating rules
+          into prompt prose. L2b proves a ref <em>resolves</em>, not that its prose <em>matches</em> the gate it
+          describes (see Absent).
+        </div>
+
+        <h3 class="view-h"><span class="view-tag invariant">Invariant</span> New at L2b</h3>
+        <div class="agg invariant">
+          <div class="agg-label">Added rules</div>
+          <div class="ents">
+            <div class="ent"><div class="en">single body source</div><div class="fields">a context block’s body lives only in <code>template.context_blocks</code>; refs are ids, never inline prose — one place to author, dedup, and validate</div></div>
+            <div class="ent"><div class="en">refs validated at definition load</div><div class="fields"><code>validate_context_refs(template)</code> runs in <code>CREATE_INSTANCE</code> beside binding coverage and <code>validate_gate_config</code>; an unresolved ref is <code>unresolved_context_block_ref</code> — fail at create, not a render-time drop</div></div>
+            <div class="ent"><div class="en">deterministic ordered render</div><div class="fields">role → step → gate, declaration order within each; same instance state + config ⇒ byte-identical <code>context_blocks</code>. Order is reading sequence, not precedence/override</div></div>
+            <div class="ent"><div class="en">authority-scoped gate blocks</div><div class="fields">a gate’s block renders only for a transition in <code>available_ops ∩ L1 capability</code> — transition existence plus the L1 role/<code>current_step</code> authority check; never blind step membership</div></div>
+            <div class="ent"><div class="en">dedup with retained provenance</div><div class="fields">an id reached from several sources renders once; <code>provenance.sources[]</code> keeps every emitter, so the packet stays terse but auditable</div></div>
+            <div class="ent"><div class="en">communication only</div><div class="fields"><code>context_blocks</code> never enter a verdict or the commit; removing a block cannot change what L2 enforces (correctness is L2’s job, legibility is L2b’s)</div></div>
+          </div>
+        </div>
+
+        <h3 class="view-h"><span class="view-tag config">Config</span> The template — a catalog, and the converge gate communicates its rule</h3>
+        <p>The pre-existing <code>reviewer-severity-ontology</code> ref (declared at L0c) now resolves against a
+        new <code>context_blocks</code> catalog, and the L2 converge threshold gate gains a
+        <code>context_block_refs</code> that states the rule it enforces:</p>
+        <div class="code-diff" aria-label="L2b template config" data-old-label="L2a baseline" data-new-label="L2b current">
+          <script type="text/plain" class="diff-source" data-code-old-ref="l2a-template-config">[[@code code/l2b-template-config.old.txt]]</script>
+          <script type="text/plain" class="diff-source" data-code-new data-code-id="l2b-template-config">[[@code code/l2b-template-config.new.txt]]</script>
+        </div>
+        <div class="note config">
+          The gate still enforces <code>round ≥ 2</code>; the block just says so in words. They are authored
+          separately on purpose at L2b — which is exactly why <em>semantic parity is not guaranteed</em>: bump the
+          gate to <code>value: 3</code> and the prose would silently lie until someone edits it. Closing that gap
+          needs computed bodies <span class="at">→ later</span>.
+        </div>
+
+        <h3 class="view-h"><span class="view-tag absent">Absent</span> Still not here</h3>
+        <div class="absent-grid">
+          <div class="absent-item">No <b>computed / templated bodies</b> — a block body is authored static text; interpolation like <code>{{ gate.config.value }}</code> (which would close gate-vs-prose drift) is later <span class="at">→ later</span></div>
+          <div class="absent-item">No <b>semantic parity check</b> — <code>validate_context_refs</code> proves a ref resolves, not that its prose matches the gate config it describes; drift is not detected <span class="at">→ later</span></div>
+          <div class="absent-item">No <b>rich context assembly</b> — semantic retrieval, memory, skill-doc expansion, model-specific prompt shaping <span class="at">→ §11.4</span></div>
+          <div class="absent-item">No <b>actor-adapter rendering</b> — <code>context_blocks</code> are kernel-level deterministic text; how an adapter folds them into a model-specific prompt is adapter work <span class="at">→ later</span></div>
+          <div class="absent-item">No <b>conditional block bodies</b> — selection is by the authority predicate only; round- or state-dependent body variants are a computed-body concern <span class="at">→ later</span></div>
+        </div>
+
+        <h3 class="view-h"><span class="view-tag evidence">Evidence</span> Why we accept L2b for now</h3>
+        <div class="agg">
+          <div class="agg-label">Acceptance evidence — operating rules are now derived from config, not prompt prose</div>
+          <div class="ents">
+            <div class="ent"><div class="en">no-CONVERGED-before-round-2</div><div class="fields">the reviewer’s packet carries the rule with <code>gate_binding</code> provenance; the implementer’s does not (predicate-scoped) · <b>L2b</b></div></div>
+            <div class="ent"><div class="en">L0c slot resolves</div><div class="fields">the role/step <code>prompt_concern_refs</code> declared at L0c finally render — one mechanism, two sources, no dangling slot · <b>L2b</b></div></div>
+            <div class="ent"><div class="en">fail at create</div><div class="fields">an unresolved ref is rejected in <code>CREATE_INSTANCE</code> (<code>unresolved_context_block_ref</code>), like binding coverage / gate config · <b>L2b</b></div></div>
+          </div>
+        </div>
+        <div class="note evidence">
+          <ul style="margin:0">
+            <li><b>Scenario coverage:</b> the rule renders for the actor who could emit the gated transition, is absent for one who could not, and is deduped to a single block with multi-source provenance.</li>
+            <li><b>Accepted tradeoff:</b> bodies are authored static text — L2b validates ref existence, not prose-vs-config parity; a gate-value change can leave stale prose until computed bodies land.</li>
+            <li><b>Invariant coverage:</b> communication-only (L2 enforcement unchanged) ✓; deterministic ordered render ✓; refs validated at create ✓; all L0a–L2a invariants still hold.</li>
+            <li><b>Known gaps (intended):</b> computed/templated bodies, semantic parity, rich context assembly, actor-adapter rendering. Each is in Absent.</li>
+            <li><b>Decision:</b> accepted as the L2b baseline (light evidence per playbook §2.1).</li>
+          </ul>
+        </div>
+      </section>
+
+      

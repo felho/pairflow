@@ -1,0 +1,233 @@
+<section id="runtime-teardown">
+        <h2 class="level-h"><span class="level-badge">②</span> Runtime resource teardown / provider close</h2>
+        <p class="level-sub">The symmetric half of L0e: <code>provision</code> built the runtime_context
+        (worktree / branch / tmux session); ② <b>releases</b> it. The kernel tracks a <b>release obligation</b>
+        for every <code>ready</code> runtime_context and closes L0d/e's current dangling provision (we provision a
+        worktree and never release it). A kernel-touching slice — the pseudocode diffs against L3. Conceptually
+        this still <b>completes L0e's runtime-context lifecycle</b>; realized here, after ① (so release is pure),
+        before L4 (children inherit the contract).</p>
+
+        <p><b>Release mirrors provision, exactly.</b> A <em>declared release boundary</em> (the template's
+        <code>release.boundaries</code>, e.g. <code>[terminal]</code> for this anchor)
+        initiates <code>provider.release(ref)</code> asynchronously, correlated by <code>request_id</code>, completed
+        by a <code>RUNTIME_CONTEXT_RELEASED</code> kernel event — the same shape as
+        <code>provision → RUNTIME_CONTEXT_READY</code>. Release is <b>orthogonal to lifecycle</b>: it moves only the
+        <code>runtime_context</code> axis (<code>ready → releasing → released</code>), never
+        <code>kernel_status</code> / <code>current_step</code> / <code>terminal_disposition</code>.</p>
+
+        <div class="note">
+          <b>What the kernel can promise.</b> With no auto-retry / timeout / watchdog in this slice (that is L9),
+          the kernel does <em>not</em> promise the resource is <em>eventually</em> released. It promises the weaker,
+          true thing: the release obligation is <b>tracked through failure until discharged, never dropped silently</b> — a run
+          is not "closed" until <code>RUNTIME_CONTEXT_RELEASED</code>, and any failure (initiation or provider) lands
+          in <code>release_failed(ref)</code>, a <b>retriable release handle, not a usable runtime</b>. Eventual
+          liveness is the L9 retry slice.
+        </div>
+
+        <h3 class="view-h"><span class="view-tag" style="background:#e2e8f0;color:#334155">Shape</span> Provision ↔ release symmetry (teardown aid)</h3>
+        <p>The release path is the provision path read backwards — same async/correlated/event shape, plus a
+        failure state that keeps the obligation visible:</p>
+        <pre class="pseudo" style="font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size:12.5px; line-height:1.5">
+  PROVISION (L0e)                                  RELEASE (②, the mirror)
+  ──────────────────────────────                   ──────────────────────────────
+  START, required(spec)                            declared release boundary reached (e.g. terminal)
+        │ provider.provision (async)                     │ release_safe ✓ , provider resolved
+        ▼                                                ▼ provider.release (async)
+  requested(req)                                   releasing(req, ref)
+        │ RUNTIME_CONTEXT_READY                           │ RUNTIME_CONTEXT_RELEASED
+        ▼                                                ▼
+  ready(ref) ──────────────── carries the release obligation ──────────────▶ released  (tombstone)
+
+  state machine (the runtime_context axis only — kernel_status is untouched):
+    none ─▶ requested(req) ─▶ ready(ref) ─▶ releasing(req, ref) ─▶ released
+                                  ▲                  │
+                                  └── (provided)     ▼  initiation OR provider failure
+                                            release_failed(ref)   ← retriable release handle, NOT a usable runtime
+                                                                    (obligation retained; retry = L9)
+        </pre>
+        <div class="note">
+          The boundary is a <b>declared event, not a kernel default, not the release API, and not an operator
+          command</b>: this anchor declares <code>terminal</code> in <code>release.boundaries</code>; a later
+          workflow declares <code>merge_completed</code> / another event. An operator issues an intent: a v1
+          <code>merge</code> <em>results in</em> a <code>merge_completed</code> boundary and the kernel initiates the
+          release <em>after</em> it — never conflating the boundary-causing command with the release operation. A v1
+          <code>delete</code> is instead handled by ④ <code>force_release</code> (an operator storage/lifecycle
+          intent, <b>not</b> a declared boundary).
+        </div>
+
+        <h3 class="view-h"><span class="view-tag runtime">Runtime</span> A concrete trace</h3>
+        <p>The <code>local-pair-v0</code> run reaches <code>done</code>; this template declares <code>terminal</code>
+        in <code>release.boundaries</code> (no post-completion action needs the worktree), so it is released right there:</p>
+        <div class="trace">
+          <div class="trace-row"><div class="trace-n">1</div><div class="trace-c">
+            <div class="ev">the <code>commit_pending</code> wait resumes on <code>COMMIT</code> → <code>done</code></div>
+            <div class="meta"><code>COMPLETE</code> sets <code>TERMINAL(done)</code> <b>inside the atomic commit</b>; the terminal transition emits the <code>terminal</code> boundary event. <b>After the commit lands</b>, <code>RECEIVE</code>'s post-commit hook calls <code>initiate_release(instance, terminal)</code>, which proceeds because <code>terminal ∈</code> this template's declared <code>release.boundaries</code> and <code>runtime_context = ready(ref)</code>. The provider side effect runs <b>only post-commit</b>, never inside the mutation; the instance is already terminal, so release runs <b>orthogonally</b></div>
+          </div></div>
+          <div class="trace-row"><div class="trace-n">2</div><div class="trace-c">
+            <div class="ev"><code>initiate_release</code> checks the precondition and dispatches</div>
+            <div class="meta"><code>release_safe(instance)</code> holds (① INV-5: no canonical ref points into the worktree — the record, evidence outcomes, and durable evidence refs are all off in T1/T3) → resolve the pinned-template provider → <b>persist the marker first</b> in a CAS atomic commit (<code>REQUIRE ready(ref)</code> → <code>releasing(req, ref)</code> + <code>RUNTIME_CONTEXT_RELEASING</code>), <b>then</b> dispatch <code>provider.release(ref)</code> async <b>post-commit</b> — so the durable correlation target exists before the provider can fire back</div>
+          </div></div>
+          <div class="trace-row"><div class="trace-n">3</div><div class="trace-c">
+            <div class="ev">the provider finishes; <code>RUNTIME_CONTEXT_RELEASED(req, ok)</code> arrives</div>
+            <div class="meta">correlation ✓ (the release we dispatched) → <code>runtime_context ← released</code> (tombstone), append <code>RUNTIME_CONTEXT_RELEASED { evidence_refs }</code>. The worktree / branch / tmux session / registry entry / locks are gone; the durable run record (T1) and evidence (T3) are untouched. The obligation is discharged</div>
+          </div></div>
+          <div class="trace-row"><div class="trace-n">4</div><div class="trace-c">
+            <div class="ev">(an alternate run) the provider reports a partial failure — worktree removed, branch deletion failed</div>
+            <div class="meta"><code>RUNTIME_CONTEXT_RELEASED(req, failed)</code> → <code>runtime_context ← release_failed(ref, reason)</code> + <code>RUNTIME_CONTEXT_RELEASE_FAILED</code> with evidence. The <code>ref</code> is now a <b>retriable release handle, not a usable runtime</b>; the obligation is <b>retained</b> (tracked, not dropped). A retry / timeout / watchdog is L9. The instance stays <code>TERMINAL(done)</code> regardless — release failure cannot un-terminate it</div>
+          </div></div>
+        </div>
+        <div class="note runtime">
+          A <b>pre-dispatch</b> failure (not-safe / provider unavailable) lands in <code>release_failed(ref)</code>
+          before any marker. A <b>dispatch error</b> (the dispatch itself errors after the marker committed) is
+          recorded by a <b>follow-up versioned transition</b> (<code>releasing → release_failed</code>, guarded by
+          <code>REQUIRE releasing</code>) — not the same commit as the marker; only a crash in the persist→dispatch
+          window leaves an orphan <code>releasing</code>, which L9 reconciles. A <code>CANCEL</code> or
+          <code>FAIL</code> terminal emits the same <code>terminal</code> boundary event; <em>this</em> anchor
+          releases its provisioned worktree because <code>terminal</code> is a declared boundary — a template that
+          did not declare it would keep the obligation open.
+        </div>
+
+        <h3 class="view-h"><span class="view-tag pseudo">Pseudocode</span> The release mirror</h3>
+        <p>The provider contract gains <code>release</code>; <code>initiate_release</code> runs at the boundary
+        (guarded by <code>release_safe</code>); a <code>RUNTIME_CONTEXT_RELEASED</code> kernel-event handler mirrors
+        <code>RUNTIME_CONTEXT_READY</code>; the three terminal setters emit the <code>terminal</code> boundary event:</p>
+        <div class="code-diff" aria-label="Runtime teardown pseudocode" data-old-label="L3 baseline" data-new-label="② runtime teardown">
+          <script type="text/plain" class="diff-source" data-code-old-ref="l3-pseudocode">[[@code code/release-pseudocode.old.txt]]</script>
+          <script type="text/plain" class="diff-source" data-code-new data-code-id="release-pseudocode">[[@code code/release-pseudocode.new.txt]]</script>
+        </div>
+        <div class="note pseudo">
+          The marker commit is a <b>CAS single-winner</b>: <code>COMMIT atomically at expected_version</code> with
+          <code>REQUIRE runtime_context = ready(ref)</code>, so two concurrent <code>initiate_release</code> calls
+          race on the same version — one applies <code>releasing(req, ref)</code>, the rest reload, see non-ready,
+          and no-op. The marker is persisted <b>before</b> <code>provider.release</code> (so the correlation target
+          exists before the provider can fire); a dispatch error is recorded by a follow-up versioned transition
+          guarded by <code>REQUIRE releasing(request_id, ref)</code> (so a racing <code>RUNTIME_CONTEXT_RELEASED</code>
+          never gets a wrong <code>release_failed</code>); a crash in the persist→dispatch window leaves a durable
+          <code>releasing</code> the L9 watchdog reconciles. The boundary is a <b>parameter</b>: the hook calls
+          <code>initiate_release(instance, terminal)</code>, ③a will call
+          <code>initiate_release(instance, merge_completed)</code>, and the guard is
+          <code>boundary_event ∉ release_boundaries(template)</code> — so the deferral hook actually works later.
+        </div>
+
+        <h3 class="view-h"><span class="view-tag domain">Domain</span> The runtime-resource lifecycle</h3>
+        <div class="agg">
+          <div class="agg-label">Runtime Resource Lifecycle Contract — the single source of truth for provision and release</div>
+          <div style="overflow-x:auto">
+          <table class="contract">
+            <thead><tr><th>Phase</th><th><code>runtime_context</code></th><th>Trigger</th><th>Provider call</th><th>Transcript</th><th>Guard / precondition</th><th>Failure policy</th></tr></thead>
+            <tbody>
+              <tr><td>provision <span style="font-size:10px;color:var(--muted)">(L0e recap)</span></td><td><code>none → requested(req)</code></td><td>START, <code>required(spec)</code></td><td><code>provision</code> (async)</td><td>—</td><td>provider resolves</td><td>(L0e)</td></tr>
+              <tr><td>ready <span style="font-size:10px;color:var(--muted)">(L0e recap)</span></td><td><code>requested → ready(ref)</code></td><td>provider event</td><td>—</td><td><code>RUNTIME_CONTEXT_READY</code></td><td>kind-boundary + correlation</td><td>—</td></tr>
+              <tr><td><b>release initiate</b></td><td><code>ready(ref) → releasing(req, ref)</code></td><td><b>declared release boundary reached</b> (e.g. terminal)</td><td><code>release(ref)</code> (async)</td><td><code>RUNTIME_CONTEXT_RELEASING</code></td><td><b><code>release_safe</code></b> (① INV-5) + provider resolves + dispatch ok</td><td>—</td></tr>
+              <tr><td><b>release complete</b></td><td><code>releasing(req, ref) → released</code></td><td>provider event (ok)</td><td>—</td><td><code>RUNTIME_CONTEXT_RELEASED</code> { evidence_refs }</td><td>correlation by <code>request_id</code> + CAS</td><td>—</td></tr>
+              <tr><td><b>release failed</b> <span style="font-size:10px;color:var(--muted)">(provider, may be partial)</span></td><td><code>releasing(req, ref) → release_failed(ref)</code></td><td>provider event (failed)</td><td>—</td><td><code>RUNTIME_CONTEXT_RELEASE_FAILED</code> { phase: provider }</td><td>correlation</td><td><b>audited + obligation retained</b></td></tr>
+              <tr><td><b>pre-dispatch failure</b> <span style="font-size:10px;color:var(--muted)">(before any marker)</span></td><td><code>ready(ref) → release_failed(ref)</code></td><td>boundary, but not&#8209;safe / provider unavailable</td><td>— (none dispatched)</td><td><code>RUNTIME_CONTEXT_RELEASE_FAILED</code> { phase: precondition ｜ initiation }</td><td>CAS-guarded (<code>REQUIRE ready(ref)</code>), no marker</td><td><b>audited + obligation retained</b> (single-winner)</td></tr>
+              <tr><td><b>dispatch error</b> <span style="font-size:10px;color:var(--muted)">(after the marker commit)</span></td><td><code>ready(ref) → releasing(req, ref) → release_failed(ref)</code></td><td>marker committed, then <code>release</code> dispatch errors</td><td><code>release(ref)</code> attempted</td><td><code>RUNTIME_CONTEXT_RELEASING</code> then <code>RUNTIME_CONTEXT_RELEASE_FAILED</code> { phase: initiation }</td><td>follow-up versioned transition (<code>REQUIRE releasing</code>)</td><td><b>recorded by the follow-up transition</b>; only a persist→dispatch crash leaves an orphan <code>releasing</code> (L9 reconciles)</td></tr>
+              <tr><td>retry <span style="font-size:10px;color:var(--muted)">(named, not realized)</span></td><td><code>release_failed(ref) → releasing(req, ref)</code></td><td>retry / watchdog / timeout</td><td><code>release(ref)</code></td><td>—</td><td>—</td><td><b>L9</b></td></tr>
+              <tr><td>context-free</td><td><code>none</code> / <code>ready(∅)</code></td><td>boundary</td><td>—</td><td>—</td><td>nothing provisioned</td><td>no obligation — skip</td></tr>
+            </tbody>
+          </table>
+          </div>
+          <div class="fields" style="margin-top:8px">The provider's <code>release</code> bundle (what it provisioned)
+          is opaque to the kernel — worktree, temporary branch, tmux / runtime session, remote clone, plus engine
+          support data (runtime-session registry entry, watchdog markers, locks). The kernel tracks only the
+          obligation, the correlation, and the state; the mechanics are the provider's, exactly as on the provision
+          side (the locator stays provider-defined).</div>
+        </div>
+        <div class="agg">
+          <div class="agg-label">Release policy — the release contract is the provision contract's declared pair</div>
+          <div class="ents">
+            <div class="ent"><div class="en"><code>policy: required</code></div><div class="fields">the kernel owns the release: a <b>release obligation</b> exists and must be discharged at one of the declared <code>boundaries</code> (non-empty — else <code>Rejected(release_boundaries_empty)</code> at load). This is the worktree anchor: <code>boundaries: [terminal]</code></div></div>
+            <div class="ent"><div class="en"><code>policy: retained</code></div><div class="fields">the resource is <b>intentionally kept</b> past the run — an explicit ownership decision, <b>not</b> "cleanup later". <b>No</b> kernel release obligation; the kernel never auto-releases</div></div>
+            <div class="ent"><div class="en"><code>policy: external</code></div><div class="fields">the resource lifecycle is <b>owned by an external system / provider policy</b>; the kernel is not the release-owner. <b>No</b> kernel release obligation</div></div>
+            <div class="ent"><div class="en">load-time rule</div><div class="fields">a <b>teardown-managed</b> provider (worktree = yes) MUST declare <code>runtime_context.release</code> — provision implies a declared release path (<code>Rejected(release_policy_undeclared)</code> otherwise). A shared / external provider opts out. Keyed on the provider, <b>not</b> on <code>runtime_context: required</code> — so the retained / external space is preserved. Boundary coherence is enforced too: under <code>required</code>, <code>boundaries</code> must be <b>non-empty</b>; under <code>retained</code> / <code>external</code> they must be <b>absent or empty</b> (a <em>non-empty</em> list ⇒ <code>release_boundaries_not_allowed</code>) — a config that looks like release but never fires is rejected, not silently ignored</div></div>
+          </div>
+        </div>
+        <div class="agg">
+          <div class="agg-label">Release boundary — a declared event, distinct from the command that causes it</div>
+          <div class="ents">
+            <div class="ent"><div class="en">declared, per policy</div><div class="fields">under <code>policy: required</code>, <code>release.boundaries</code> lists the events that discharge the obligation. The anchor declares <code>[terminal]</code> (no post-completion action needs the worktree yet); a v1-faithful later form is <code>[merge_completed]</code> — operator <code>delete</code> is <b>not</b> a template boundary; it drives <code>force_release</code> in ④</div></div>
+            <div class="ent"><div class="en">terminal is an event, not a default</div><div class="fields">the terminal transition <b>emits</b> a <code>terminal</code> boundary event; whether it triggers release is the template's <code>release.policy</code> decision (<code>boundary_event ∉ release_boundaries(template) ⇒</code> no-op). The kernel never bakes in "terminal = release"</div></div>
+            <div class="ent"><div class="en">deferred (later)</div><div class="fields">a boundary past terminal — <code>merge_completed</code> — when a ③a post-completion action still needs the resource (v1: the worktree survives <code>DONE</code> for the post-<code>DONE</code> merge). The hook is <b>parameterized</b>: ③a will emit that boundary event and call <code>initiate_release(instance, merge_completed)</code>; only the action emitting the event is later. Operator <code>delete</code> is <b>not</b> such a boundary — it is a separate storage/lifecycle intent that drives <code>force_release</code> in ④</div></div>
+            <div class="ent"><div class="en">not the API</div><div class="fields">an operator never calls "release"; it issues an intent. A v1 <code>merge</code> <em>results in</em> a <code>merge_completed</code> boundary event and the kernel initiates release after it; a v1 <code>delete</code> is handled by ④ <code>force_release</code> — an operator storage/lifecycle intent, <b>not</b> a boundary event</div></div>
+          </div>
+        </div>
+        <div class="note domain">
+          <code>release_failed(ref)</code> is the load-bearing refinement: a failed release (initiation or provider,
+          possibly partial) is <b>not</b> a return to <code>ready</code>. The <code>ref</code> is a retriable release
+          handle — a flagged resource leak pending retry — never a runtime that can be dispatched to an actor again.
+        </div>
+        <div class="note domain">
+          <b>Three meanings of "commit", kept in separate namespaces</b> (no rename needed): <code>Committed(...)</code>
+          is the <b>kernel outcome</b> — the kernel accepted and durably committed a state/transcript mutation
+          (the same atomic <code>COMMIT</code> the release marker uses); <code>COMMIT</code> is an <b>authored
+          workflow / operator event</b> in this anchor (the <code>commit_pending</code> resume); and <em>git commit</em>
+          is a later <b>③a action</b>. Same word, three layers — the namespaces stay distinct, so no term is renamed.
+        </div>
+
+        <h3 class="view-h"><span class="view-tag invariant">Invariant</span> New at ②</h3>
+        <div class="agg invariant">
+          <div class="agg-label">Added rules</div>
+          <div class="ents">
+            <div class="ent"><div class="en">release obligation is never dropped silently</div><div class="fields">under <code>release.policy: required</code>, every <code>ready(ref)</code> carries a release obligation that is <b>tracked through failure until discharged</b> (<code>RUNTIME_CONTEXT_RELEASED</code>); a failed release — initiation or provider — does <b>not</b> close it, it is retained in <code>release_failed(ref)</code>. This closes L0d/e's dangling provision. (<code>retained</code> / <code>external</code> carry <b>no</b> obligation — explicit ownership.) <b>Not</b> "eventually released": auto-retry / timeout / watchdog (the liveness guarantee) is L9</div></div>
+            <div class="ent"><div class="en">release_failed is a handle, not a runtime</div><div class="fields"><code>release_failed(ref)</code> is a retriable release handle, <b>not</b> a usable runtime — a terminal instance with a failed release is a flagged resource leak pending retry, never re-dispatchable as a live context. A partial release (worktree gone, branch not) lands here, not back in <code>ready</code></div></div>
+            <div class="ent"><div class="en">release-safe precondition</div><div class="fields">release initiates only when <code>release_safe(instance)</code> holds (① INV-5: no canonical-record ref points into the resource). ① guarantees it by construction; ② asserts it fail-closed — an unsafe release becomes <code>release_failed(precondition)</code>, never an orphaned canonical ref</div></div>
+            <div class="ent"><div class="en">release is orthogonal to lifecycle</div><div class="fields">release moves only the <code>runtime_context</code> axis (<code>ready → releasing → released | release_failed</code>); it never changes <code>kernel_status</code> / <code>current_step</code> / <code>terminal_disposition</code>. A terminal instance stays terminal whether release succeeds, fails, or is still in flight</div></div>
+            <div class="ent"><div class="en">release initiation is post-commit</div><div class="fields">the provider side effect is <b>never</b> inside an atomic commit: the transition commits first, and <b>if</b> that committed outcome emits a declared release boundary, <code>RECEIVE</code>'s post-commit hook initiates the release <b>only after</b> the commit landed. A CAS-failed transition returns <code>Rejected</code>/<code>Stale</code> and emits no boundary; a duplicate <em>boundary hook</em> is a no-op via <code>initiate_release</code>'s <code>ready(ref)</code> guard — whereas a duplicate or stale <code>RUNTIME_CONTEXT_RELEASED</code> <em>event</em> is <b>rejected</b> on the correlation <code>REQUIRE</code> (two distinct mechanisms)</div></div>
+            <div class="ent"><div class="en">single-winner release initiation (CAS)</div><div class="fields"><b>every</b> state write in <code>initiate_release</code> is a <code>COMMIT atomically at expected_version</code> with <code>REQUIRE ready(ref)</code> inside — the <code>releasing(req, ref)</code> marker <b>and</b> the two pre-dispatch failure transitions (not-safe, provider-unavailable) alike. So concurrent boundary events on the same <code>ready(ref)</code> race on one version: <b>exactly one</b> applies (marker or failure), the rest reload, observe non-ready, and no-op. The marker is persisted <b>before</b> dispatch, so the correlation target exists before the provider can fire; the dispatch-error follow-up is itself a versioned commit guarded by <code>REQUIRE releasing(request_id, ref)</code>, so a racing <code>RUNTIME_CONTEXT_RELEASED</code> never gets a wrong <code>release_failed</code></div></div>
+            <div class="ent"><div class="en">correlated + idempotent</div><div class="fields">the <code>RUNTIME_CONTEXT_RELEASED</code> event correlates by <code>request_id</code> against <code>releasing(req, ref)</code> + CAS, exactly like <code>RUNTIME_CONTEXT_READY</code>; a stale or duplicate release event is rejected</div></div>
+            <div class="ent"><div class="en">teardown-managed ⇒ release policy declared</div><div class="fields">a teardown-managed provider (worktree = yes) MUST declare <code>runtime_context.release</code> at definition load (<code>validate_release_policy</code>): <code>policy: required</code> needs non-empty <code>boundaries</code>, <code>retained</code> / <code>external</code> are explicit no-obligation choices, absent ⇒ <code>Rejected(release_policy_undeclared)</code>. Keyed on the provider, <b>not</b> on <code>runtime_context: required</code> — preserving the retained / external space</div></div>
+            <div class="ent"><div class="en">boundary is declared, not hardcoded</div><div class="fields">the kernel reads the declared <code>release.boundaries</code> (under <code>policy: required</code>); it does <b>not</b> hardcode terminal as the release instant. The terminal transition only <b>emits</b> a <code>terminal</code> event — a possible boundary, acted on solely if declared. The boundary is an <b>event</b> (terminal ｜ merge_completed ｜ later), distinct from the operator command that produces it (operator delete is not a boundary — it drives force_release in ④)</div></div>
+          </div>
+        </div>
+
+        <h3 class="view-h"><span class="view-tag config">Config</span> The template — a declared release policy</h3>
+        <p>Because the worktree provider is teardown-managed, <code>local-pair-v0</code> <b>must</b> declare how it
+        is released — provision implies a declared release path. The only delta from L3 is a <code>release</code>
+        policy on the <code>runtime_context</code> block (the earlier "zero new author config" claim was itself the
+        terminal-default bias, now retracted):</p>
+        <div class="code-diff" aria-label="② template config" data-old-label="L3 baseline" data-new-label="② current">
+          <script type="text/plain" class="diff-source" data-code-old-ref="l3-template-config">[[@code code/release-template-config.old.txt]]</script>
+          <script type="text/plain" class="diff-source" data-code-new data-code-id="release-template-config">[[@code code/release-template-config.new.txt]]</script>
+        </div>
+        <div class="note config">
+          <code>terminal</code> here is a <b>declared</b> boundary, not a kernel default: the kernel only acts on the
+          <code>terminal</code> event because this template lists it in <code>release.boundaries</code>. A
+          <code>retained</code> or <code>external</code> policy would carry no kernel release obligation at all
+          (explicit ownership elsewhere). When ③a adds the merge action, the boundary moves to
+          <code>merge_completed</code> by changing this list — no kernel change.
+        </div>
+
+        <h3 class="view-h"><span class="view-tag absent">Absent</span> Still not here</h3>
+        <div class="absent-grid">
+          <div class="absent-item">No <b>eventual-liveness guarantee</b> — no auto-retry, backoff, timeout, or watchdog on a <code>release_failed</code> obligation; the kernel tracks it but does not re-drive it. The retry that turns "tracked" into "eventually discharged" is later <span class="at">→ L9</span></div>
+          <div class="absent-item">No <b>deferred release boundary realized</b> — the parameterized hook is in (<code>initiate_release(instance, boundary_event)</code>, guard <code>boundary_event ∉ release_boundaries(template)</code>), but no post-completion action emits a non-terminal boundary yet; the merge / commit <em>actions</em> that do are <span class="at">→ ③a</span></div>
+          <div class="absent-item">No <b>retained / external release policy exercised</b> — the policy vocabulary and load-time rule are in, but the anchor only uses <code>required</code>; a long-lived (<code>retained</code>) or externally-owned (<code>external</code>) runtime_context is a later, explicit ownership choice <span class="at">→ later</span></div>
+          <div class="absent-item">No <b>workflow actions</b> — the <code>type: action</code> steps that run git commit / merge (and emit a deferred boundary like merge_completed), perf-test, publish, notify <span class="at">→ ③a / ③b</span></div>
+          <div class="absent-item">No <b>archive / export / purge</b> — the record-purge half of v1 <code>delete</code> is a storage-axis op, not resource teardown <span class="at">→ ④</span></div>
+          <div class="absent-item">No <b>provider internals</b> — the git worktree / branch / tmux removal mechanics are the provider's, opaque to the kernel, exactly as on the provision side <span class="at">→ impl</span></div>
+          <div class="absent-item">No <b>remote / distributed release proofs</b> — a remote or async release with verifiable completion (the merge-as-distribution concern) is later <span class="at">→ L8 / L10</span></div>
+          <div class="absent-item">No <b>child release fan-out</b> — a child is just another runtime_context the same contract releases; L4 multiplies the count, not the contract <span class="at">→ L4</span></div>
+        </div>
+
+        <h3 class="view-h"><span class="view-tag evidence">Evidence</span> Why we accept ② for now</h3>
+        <div class="agg">
+          <div class="agg-label">Acceptance evidence — the v1 runtime teardown is representable as the provision mirror</div>
+          <div class="ents">
+            <div class="ent"><div class="en">the release bundle</div><div class="fields">v1 <code>cleanupWorktreeWorkspace</code> (worktree + branch) + <code>terminateBubbleTmuxSession</code> + <code>removeRuntimeSession</code> — verified identical in <b>both</b> the merge and delete commands — is the <code>provider.release</code> bundle · <b>②</b></div></div>
+            <div class="ent"><div class="en">boundary is declared, not terminal-default</div><div class="fields">v1 releases at the <code>merge</code> / <code>delete</code> command (post-<code>DONE</code>), <b>not</b> at <code>DONE</code> itself — so terminal is <em>not</em> the release instant. The <code>merge</code> path is exactly why the boundary must be a declared <code>release.boundaries</code> event (the deferred <code>merge_completed</code> boundary), not a kernel default; the <code>delete</code> path is the explicit operator ④ <code>force_release</code> route — <b>not</b> a declared boundary · <b>declared policy + ④ force_release</b></div></div>
+            <div class="ent"><div class="en">dangling provision closed</div><div class="fields">L0d/e provisions a worktree and never releases it; ② adds the obligation + the <code>release</code> mirror, so every provision now has a discharge path · <b>②</b></div></div>
+            <div class="ent"><div class="en">release-safe vs the v1 bug</div><div class="fields">v1 deletes / releases with no record-closure guarantee (the evidence-loss bug's neighbour); ② gates release on <code>release_safe</code> (① INV-5), so no canonical ref is ever orphaned by a release · <b>①+②</b></div></div>
+          </div>
+        </div>
+        <div class="note evidence">
+          <ul style="margin:0">
+            <li><b>Scenario coverage:</b> a run reaches a terminal disposition (done / failed / cancelled) → the worktree is released because this template declared <code>terminal</code> in <code>release.boundaries</code>; a provider or initiation failure parks a retriable <code>release_failed(ref)</code> obligation; a <code>retained</code> / <code>external</code> policy (or a context-free run) has nothing for the kernel to release.</li>
+            <li><b>Invariant coverage:</b> obligation never dropped silently (under <code>required</code>) ✓; release_failed is a handle not a runtime ✓; release-safe precondition ✓; orthogonal to lifecycle ✓; single-winner CAS initiation ✓; correlated + idempotent ✓; teardown-managed ⇒ release policy declared ✓; boundary declared not hardcoded ✓ — and all L0a–L3 + ① invariants still hold.</li>
+            <li><b>Accepted tradeoff:</b> no eventual-liveness (retry / timeout / watchdog) — a failed release is tracked, not re-driven; fine for the local MVP, the L9 slice adds liveness. The deferred boundary is hooked but not realized (no ③a action yet).</li>
+            <li><b>Known gaps (intended):</b> eventual-liveness retry (L9), deferred-boundary realization + the commit/merge actions (③a), archive/purge (④), provider internals (impl), remote release proofs (L8/L10), child fan-out (L4). Each is in Absent.</li>
+            <li><b>Decision:</b> accepted as the ② baseline (light evidence per playbook §2.1); L4 inherits the obligation + release contract per child runtime_context.</li>
+          </ul>
+        </div>
+      </section>
+      

@@ -1,0 +1,161 @@
+<section id="archive-purge">
+        <h2 class="level-h"><span class="level-badge">④</span> Archive / export / purge</h2>
+        <p class="level-sub">The storage-lifecycle <b>ops</b> on durable run records — <b>not correctness, not a
+        preservation path</b>. v1's archive existed only because keep-worthy data lived in a delete-sensitive folder;
+        under ① the canonical record (T1) and evidence (T3) are already durable, so ④ is just the explicit operator
+        operations: <b>delete</b> from active scope, optional <b>archive / export</b> snapshot, and a safe <b>hard
+        purge</b>. Only one kernel-adjacent piece — the <code>DELETE_REQUESTED</code> operator intent (a
+        <code>CANCEL</code> sibling) that drives the chain and invokes ② <code>force_release</code> (it does <b>not</b> emit a release boundary); purge / archive are
+        storage ops, not kernel handlers. A standalone contract (empty baseline), like ①.</p>
+
+        <div class="note">
+          <b>The ①-payoff.</b> v1 <code>delete</code> dropped the per-bubble dir and rescued only 5 files — evidence
+          artifacts were lost and transcript <code>refs</code> dangled (the evidence-loss bug). Because ① made
+          evidence durable + ref-disciplined (INV-3), a v3 purge is <b>complete and closure-scoped</b>: it removes
+          the full T1 run record and exactly the T3 blobs the run's canonical ref-closure owns — no dangling refs, the v1 bug
+          is impossible. And archive is demoted to <em>optional</em>: the system never reads it back for audit.</div>
+
+        <h3 class="view-h"><span class="view-tag" style="background:#e2e8f0;color:#334155">Shape</span> The delete → cancel → release → purge chain (④ aid)</h3>
+        <p>The destructive precondition is on the <b>purge commit</b>, not the delete intent — so a delete on a live
+        run drives the lifecycle first, and the hard purge only fires once the run is wound down:</p>
+        <pre class="pseudo" style="font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size:12.5px; line-height:1.5">
+  operator DELETE_REQUESTED (force if live)
+      ├─ live run?   → CANCEL / terminalize         (lifecycle, unbundled from purge)
+      ├─ force_release  → ② release WITHOUT the declared-boundary gate   (operator delete is the authority)
+      └─ purge_state ← purge_pending
+                  ↓   (ops reconciler, once wound down)
+         hard_purge  — precond: terminal && release discharged && closure purge-ready
+            hard_purge → write-ahead run_index tombstone, then remove closure-owned evidence + record   (ordering / crash-safety: see the table)
+                                                          GLOBAL metrics/audit stream SURVIVES
+
+  archive / export (optional, read-only, any time): a cold copy of the durable record — NOT preservation.
+
+  three independent axes:  delete-intent (lifecycle)  ·  release (②)  ·  storage (archive / purge)
+        </pre>
+
+        <h3 class="view-h"><span class="view-tag runtime">Runtime</span> A concrete trace</h3>
+        <div class="trace">
+          <div class="trace-row"><div class="trace-n">1</div><div class="trace-c">
+            <div class="ev">the operator runs <code>delete</code> on a DONE run (worktree already released at <code>merge_completed</code>)</div>
+            <div class="meta"><code>DELETE_REQUESTED</code>: authority ✓ · not already purged ✓ · terminal (no force needed) → commit <code>purge_state ← purge_pending</code> + <code>DELETE_REQUESTED</code> entry; then <code>force_release</code> (② release minus the declared-boundary gate) finds the runtime already <code>released</code> (no-op). The run is terminal + released</div>
+          </div></div>
+          <div class="trace-row"><div class="trace-n">2</div><div class="trace-c">
+            <div class="ev">the ops reconciler runs <code>hard_purge</code></div>
+            <div class="meta">precond holds (terminal ✓ · release discharged ✓ · closure purge-ready ✓) → <code>hard_purge</code> runs the write-ahead purge sequence (tombstone first — see the hard-purge ordering table). The full transcript + evidence are gone (deliberately); the <b>global metrics/audit stream survives</b> as the floor — no dangling refs (① INV-3)</div>
+          </div></div>
+          <div class="trace-row"><div class="trace-n">3</div><div class="trace-c">
+            <div class="ev">(alternate) <code>delete --force</code> on a RUNNING run</div>
+            <div class="meta">force ✓ → the commit terminalizes first (<code>TERMINAL(cancelled)</code>) + <code>purge_pending</code>; <code>force_release</code> releases the still-held worktree (② release minus the declared-boundary gate — the operator delete is the authority, even though no declared boundary fired); <code>hard_purge</code> waits until that release discharges, then removes the record. Cancel → release → purge, as one operator-initiated chain</div>
+          </div></div>
+          <div class="trace-row"><div class="trace-n">4</div><div class="trace-c">
+            <div class="ev">(alternate) the operator runs <code>archive</code> / <code>export</code> before deleting</div>
+            <div class="meta">read-only w.r.t. the run record &amp; runtime (it writes only catalog metadata): a cold copy of the durable record + closure-owned evidence to a sink → an <code>ArchiveRef</code> + a <code>run_index</code> entry (status: archived). It mutates no canonical run state and is never read back for audit; the durable record stays the authority until purge</div>
+          </div></div>
+        </div>
+
+        <h3 class="view-h"><span class="view-tag pseudo">Pseudocode</span> The complete pseudocode (kernel + ④ ops)</h3>
+        <p>④'s only kernel touch is one operator intent (<code>DELETE_REQUESTED</code>, added to <code>RECEIVE</code>);
+        <code>force_release</code> / <code>hard_purge</code> / <code>archive_or_export</code> are storage-lifecycle ops, not
+        kernel handlers. Shown here as the <b>complete pseudocode</b> — the full kernel through ③b <em>plus</em> the ④
+        additions — so the whole model is visible in one place; diffed against ③b (the ④ delta is highlighted):</p>
+        <div class="code-diff" aria-label="④ complete pseudocode" data-old-label="③b baseline" data-new-label="④ — complete kernel + storage-lifecycle ops">
+          <script type="text/plain" class="diff-source" data-code-old-ref="auto-action-pseudocode">[[@code code/complete-pseudocode.old.txt]]</script>
+          <script type="text/plain" class="diff-source" data-code-new data-code-id="complete-pseudocode">[[@code code/complete-pseudocode.new.txt]]</script>
+        </div>
+
+        <h3 class="view-h"><span class="view-tag domain">Domain</span> The storage-lifecycle operations</h3>
+        <div class="agg">
+          <div class="agg-label">Archive / Export / Purge — three independent axes (delete-intent · release · storage)</div>
+          <div style="overflow-x:auto">
+          <table class="contract">
+            <thead><tr><th>Operation</th><th>Operator intent</th><th>Allowed input state</th><th>Lifecycle effect</th><th>Release interaction</th><th>Storage effect</th><th>Surviving audit</th><th>Idempotency</th><th>Rejects</th><th>v1 mapping</th></tr></thead>
+            <tbody>
+              <tr><td><b>delete (request)</b></td><td><code>DELETE_REQUESTED</code> (CANCEL sibling)</td><td>any non-purged (live needs <code>force</code>)</td><td>terminalize if live (cancel)</td><td><code>force_release</code> (② release minus the declared-boundary gate)</td><td>sets <code>purge_pending</code></td><td>—</td><td><code>op_id</code> (re-issue ⇒ no-op once pending/purged)</td><td>operator_not_authorized · already_purged · delete_confirmation_required</td><td><code>bubble delete</code> entry</td></tr>
+              <tr><td><b>force_release</b></td><td>— (invoked by the delete chain, not a separate operator intent)</td><td>any (post delete-commit)</td><td>none (release only)</td><td>② release machinery <b>minus</b> the declared-boundary membership gate — <code>release_safe</code> (① INV-5) still required</td><td>none (runtime teardown, not storage)</td><td><code>RUNTIME_CONTEXT_RELEASED</code></td><td>marker-first CAS + <code>ready(ref)</code> guard ⇒ re-release no-op (as ② <code>initiate_release</code>)</td><td>— (<code>release_failed</code> is tracked; retry / re-drive is L9)</td><td>the teardown that runs inside <b>both</b> v1 merge &amp; delete</td></tr>
+              <tr><td><b>archive / export</b></td><td><code>ARCHIVE</code> / <code>EXPORT</code> (optional)</td><td>non-purged (read-only)</td><td>none</td><td>none</td><td>cold copy of the durable record (+ closure evidence) — <b>not</b> preservation</td><td>the snapshot + a <code>run_index</code> entry</td><td>yes (re-snapshot)</td><td>—</td><td>the delete-triggered archive (5 files + manifest + <code>index.json</code>)</td></tr>
+              <tr><td><b>hard purge</b></td><td>— (chain tail / ops reconciler)</td><td><b>terminal &amp;&amp; release discharged</b></td><td>none (already terminal)</td><td>requires release discharged</td><td>remove full T1 run record + <b>closure-owned</b> T3 blobs</td><td><code>run_index</code> tombstone (<code>purged</code>) + <b>global metrics stream</b></td><td>keyed by run_id; tombstone upsert idempotent; re-drives cleanup from the tombstone manifest while record / owned blobs remain — no-op only once the closure is already removed</td><td>not_terminal · release_not_discharged</td><td><code>rm -rf</code> the per-bubble dir (but v1 lost evidence; v3 closure-complete)</td></tr>
+            </tbody>
+          </table>
+          </div>
+          <div class="fields" style="margin-top:8px"><b>Closure rule &amp; run_index — the <em>why</em> behind the tables.</b> A purge is closure-scoped: it removes exactly the T3 blobs the run’s <b>canonical ref-closure owns</b> (MVP: run-owned; a blob shared with another owning run is purged only once all owners release it), never a blanket “delete this run’s evidence”. <code>run_index</code> is itself <b>T1-family canonical storage</b> — T1 carries the <b>run record</b> (the purge target) <em>and</em> the <b>run_index</b> catalog / tombstone (the minimum surviving T1 metadata + idempotency authority), a purge-induced refinement of ①’s monolithic T1. The per-operation, per-state, and ordering authority is the three tables above; <code>force_release</code> is the contract row where the delete chain diverges from a declared-boundary ② release.</div>
+        </div>
+
+        <div class="agg">
+          <div class="agg-label">State authority — which storage-lifecycle state lives where (so it is never re-derived in the wrong place)</div>
+          <div style="overflow-x:auto">
+          <table class="contract">
+            <thead><tr><th>State</th><th>Lives in</th><th>Authority</th><th>Set by</th><th>Survives <code>hard_purge</code></th></tr></thead>
+            <tbody>
+              <tr><td><code>purge_pending</code></td><td>the instance full run record</td><td>instance (CAS on <code>version</code>)</td><td><code>DELETE_REQUESTED</code> commit</td><td><b>no</b> — gone with the record</td></tr>
+              <tr><td><code>purged</code></td><td>the <code>run_index</code> tombstone</td><td><code>run_index</code> (T1-family)</td><td><code>hard_purge</code> write-ahead upsert</td><td><b>yes</b> — it is the surviving authority</td></tr>
+              <tr><td><code>archived</code></td><td>the <code>run_index</code> catalog entry</td><td><code>run_index</code> (T1-family)</td><td><code>archive_or_export</code> upsert</td><td><b>yes</b> — catalog metadata</td></tr>
+              <tr><td><code>released</code></td><td><code>runtime_context</code> on the instance record (② tombstone)</td><td>instance</td><td>② <code>initiate_release</code> / ④ <code>force_release</code></td><td><b>no, except as a prior precondition / audit</b> — the record is gone with purge; that release was discharged beforehand survives only in ops precondition history / the audit floor</td></tr>
+            </tbody>
+          </table>
+          </div>
+          <div class="fields" style="margin-top:8px">The recurring trap this kills: <code>purged</code> is <b>not</b> an instance axis (there is no <code>instance.purge_state ← purged</code>) — it lives in the <code>run_index</code> tombstone because the full run record is gone. <code>runtime_context</code>'s full enum is owned by ②.</div>
+        </div>
+
+        <div class="agg">
+          <div class="agg-label">Hard-purge ordering — write-ahead &amp; crash-safe (a different kind of truth: not "what the op is" but "in what order it is safe")</div>
+          <div style="overflow-x:auto">
+          <table class="contract">
+            <thead><tr><th>#</th><th>Action</th><th>Why this order (crash-safety)</th></tr></thead>
+            <tbody>
+              <tr><td><b>1</b></td><td><code>run_index.upsert(status: purged, purged_at, <b>closure_manifest</b>)</code> — <b>write-ahead the tombstone</b> (carrying the manifest)</td><td>it is the idempotency authority <b>and</b> the re-drive source; the record / evidence / index need not share one storage transaction — writing it first (with the manifest) means a crash mid-purge never leaves a removed record with <b>no</b> tombstone, and cleanup stays re-drivable after the record is gone</td></tr>
+              <tr><td><b>2</b></td><td>remove the closure-owned T3 evidence blobs</td><td>driven from the tombstone’s <b>manifest</b> (captured at step 1 while the record was readable), <b>not</b> re-enumerated from the record — so it survives the record removal in step 3</td></tr>
+              <tr><td><b>3</b></td><td>remove the full T1 run record</td><td><b>last</b> — it was the source for the manifest at step 1; the <code>run_index</code> tombstone (with its manifest) survives it as the authority + re-drive source</td></tr>
+            </tbody>
+          </table>
+          </div>
+          <div class="fields" style="margin-top:8px"><b>Re-drive:</b> <code>hard_purge(run_id)</code> is keyed by run_id, not the instance, so it survives the record it removes. On re-drive it reads the <code>run_index</code> tombstone first: if <code>purged</code>, it finishes cleanup from the tombstone’s <b>manifest</b> (every step idempotent — already-removed blobs / already-gone record are no-ops); if not yet purged, the full record is still the authority for the preconditions. So the safe residue is always "tombstone + manifest + a not-yet-finished removal", <b>never</b> "removed record + no tombstone". Full crash-consistent reconciliation is L9.</div>
+        </div>
+
+        <h3 class="view-h"><span class="view-tag invariant">Invariant</span> New at ④</h3>
+        <div class="agg invariant">
+          <div class="agg-label">Added rules</div>
+          <div class="ents">
+            <div class="ent"><div class="en">archive is not the preservation path</div><div class="fields">audit / metrics / eval are computed from the durable run record (or the surviving global metrics stream), <b>never</b> from an archive. Archive / export is an optional cold copy; deleting all archives changes no correctness property. Naming archive-as-preservation reimports the v1 mental model</div></div>
+            <div class="ent"><div class="en">purge is complete &amp; closure-scoped</div><div class="fields"><b>no dangling refs</b> (the ① INV-3 payoff; the v1 evidence-loss bug is impossible) — a hard purge removes the full run record and exactly the closure-owned T3 blobs (mechanics in the contract + ordering tables)</div></div>
+            <div class="ent"><div class="en">the destructive precondition is on the purge, not the intent</div><div class="fields"><code>DELETE_REQUESTED</code> is accepted on a live run (with <code>force</code>) and drives cancel → ② release → purge; the irreversible <code>hard_purge</code> commit runs <b>only</b> when <b>terminal &amp;&amp; release discharged</b> (else <code>deferred</code>). So the operator can start the chain early, but nothing is destroyed before the run is wound down</div></div>
+            <div class="ent"><div class="en">a purge leaves a tombstone; the global audit survives</div><div class="fields">a purged run survives only as its <code>run_index</code> tombstone — the <b>authority</b> for <code>purged</code> (there is no <code>instance.purge_state ← purged</code>; see the state authority table) — plus the self-contained <b>global metrics/audit stream</b> (the coarse audit floor). The full canonical run record is gone</div></div>
+            <div class="ent"><div class="en">delete is an operator intent, not a workflow action</div><div class="fields"><code>DELETE_REQUESTED</code> is a <code>CANCEL</code>-sibling operator lifecycle intent that drives <code>force_release</code> (② release minus the declared-boundary gate) then purge — it is <b>not</b> a <code>type: action</code> step (no runner, no outcome routing). ④ is storage-lifecycle ops, the L2/L2b/③ machinery is not involved</div></div>
+          </div>
+        </div>
+
+        <h3 class="view-h"><span class="view-tag config">Config</span> No author config</h3>
+        <p>Archive / export / purge are <b>operator / ops commands</b>, not workflow-declared behavior — the template
+        gains nothing. (A future <em>retention</em> policy — TTL, scheduled auto-purge — would live in project/ops
+        config, not the portable template, and is deferred.)</p>
+
+        <h3 class="view-h"><span class="view-tag absent">Absent</span> Still not here</h3>
+        <div class="absent-grid">
+          <div class="absent-item">No <b>retention / auto-purge</b> — TTL, max-count, scheduled GC, a <em>scheduled / automatic</em> retention reconciler; purge is operator-initiated here (v1 has none either). The delete-chain purge <b>re-drive</b> (re-running a deferred / interrupted <code>hard_purge</code> to completion) is already part of the ④ baseline — what is absent is a <em>policy</em> engine that decides <em>when</em> to purge unprompted <span class="at">→ L9 / ops</span></div>
+          <div class="absent-item">No <b>archive query / list CLI</b> — the index tombstones purged/archived runs, but listing / inspecting / searching them is ops tooling <span class="at">→ ops</span></div>
+          <div class="absent-item">No <b>restore / re-hydration</b> — an archive is forensic, write-only; bringing a run back as a live instance is not a goal (eval-replay from the durable record is a separate concern) <span class="at">→ later</span></div>
+          <div class="absent-item">No <b>shared / dedup evidence ownership</b> realized — the closure rule is open to a multi-owner T3 blob store, but the MVP is run-owned evidence <span class="at">→ later (blob store)</span></div>
+          <div class="absent-item">No <b>export formats / sharing</b> — <code>cold_copy</code> is abstract; concrete bundle formats, redaction, and sharing are ops <span class="at">→ ops</span></div>
+          <div class="absent-item">No <b>cross-run / federation purge</b> — purging across a central store or other installations is governance <span class="at">→ L11+</span></div>
+        </div>
+
+        <h3 class="view-h"><span class="view-tag evidence">Evidence</span> Why we accept ④ for now</h3>
+        <div class="agg">
+          <div class="agg-label">Acceptance evidence — v1's delete-archive maps on, and the evidence-loss bug is closed by ①</div>
+          <div class="ents">
+            <div class="ent"><div class="en">delete = cancel + release + purge</div><div class="fields">v1 <code>bubble delete</code> stops a live bubble by lifecycle state, tears down the runtime, then <code>rm -rf</code> the dir — v3 unbundles it: <code>DELETE_REQUESTED</code> (cancel) → ② release → <code>hard_purge</code> · <b>④</b></div></div>
+            <div class="ent"><div class="en">archive is optional, indexed</div><div class="fields">v1 writes a 5-file snapshot + manifest under <code>~/.pairflow/archive</code> with an <code>index.json</code> (<code>status: active|deleted|purged</code>) — v3 keeps the optional snapshot but moves the tombstone authority to a separate <code>run_index</code> (a storage-lifecycle index, <b>not</b> the archive); archive is <em>not</em> preservation · <b>④</b></div></div>
+            <div class="ent"><div class="en">evidence-loss bug closed</div><div class="fields">v1 archived only 5 files; evidence artifacts were lost and transcript <code>refs</code> dangled. ① makes evidence durable + ref-disciplined, so the v3 purge is closure-complete — no dangling refs · <b>①+④</b></div></div>
+            <div class="ent"><div class="en">global metrics survive</div><div class="fields">v1 metrics events (<code>~/.pairflow/metrics/</code>) are self-contained, not workspace-referential, and survive delete — v3 keeps them as the audit floor after purge · <b>④</b></div></div>
+          </div>
+        </div>
+        <div class="note evidence">
+          <ul style="margin:0">
+            <li><b>Scenario coverage:</b> delete a terminal run → release (no-op if already released) → purge → tombstone; delete --force a live run → cancel → force-release → purge; archive/export is an optional cold copy — read-only w.r.t. the run record/runtime, but it writes a run_index catalog entry.</li>
+            <li><b>Invariant coverage:</b> archive not preservation ✓; purge complete + closure-scoped ✓; precondition on the purge not the intent ✓; tombstone + surviving global audit ✓; delete is an operator intent not a workflow action ✓ — and all L0a–L3 + ①②③ invariants still hold.</li>
+            <li><b>Accepted tradeoff:</b> retention / auto-purge, a query CLI, restore, and a multi-owner blob store are out — ④ is the explicit operator ops + the safe purge contract.</li>
+            <li><b>Known gaps (intended):</b> retention / scheduled auto-purge policy (L9/ops), archive query (ops), restore (later), shared-evidence ownership (later), export formats (ops), federation purge (L11+). Each is in Absent.</li>
+            <li><b>Decision:</b> accepted as the ④ baseline (light evidence per playbook §2.1). This closes the lifecycle-close topic (①②③④); L4 (child workflows) inherits all four per child runtime_context / record.</li>
+          </ul>
+        </div>
+      </section>
+      

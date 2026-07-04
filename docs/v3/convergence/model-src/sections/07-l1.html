@@ -1,0 +1,133 @@
+<section id="l1">
+        <h2 class="level-h"><span class="level-badge">L1</span> Capability matrix — role/state authorization</h2>
+        <p class="level-sub">Before any commit, the kernel decides whether an emit is <em>legitimate</em> for
+        the current position — the role acting, and the action it may take. The first real "the workflow
+        is the boss" rule.</p>
+
+        <p>By now the kernel has its full L0 foundation — lifecycle (L0d) and runtime context (L0e). L0f
+        prepares the resolved start input <em>before</em> the kernel (pre-kernel, outside the handler
+        chain); L1 is the authorization layer that sits on top of the kernel. L0b exposes which
+        transitions <em>exist</em> from a step (navigation); L1 enforces which of
+        them this actor/role may actually <em>use</em>. The envelope gains <code>expected_role</code> —
+        the role dimension of the authority snapshot (<code>expected_version</code> → <code>+ expected_role</code>) —
+        and the kernel checks, before the transition commits, that the claimed role is the position's
+        active role and that a <code>CapabilityProfile</code> allows the action. The profile is
+        <b>derived from the step graph</b> by default, so no new config is needed yet. L1 is
+        <em>not</em> identity authentication and <em>not</em> a gate/policy.</p>
+
+        <h3 class="view-h"><span class="view-tag runtime">Runtime</span> A concrete trace</h3>
+        <p>The happy path plus a wrong-role emit rejected before any state change:</p>
+        <div class="trace">
+          <div class="trace-row"><div class="trace-n">1</div><div class="trace-c">
+            <div class="ev">codex emits <code>PASS</code> on <code>implement</code> (version=1)</div>
+            <div class="meta">envelope { expected_version: 1, <b>expected_role: implementer</b>, type: PASS } → role implementer = <code>implement</code>.role ✓ · PASS is a transition ✓ · <code>capability(implementer, implement)</code> = {PASS} allows ✓ → commit <b>implement → review</b></div>
+          </div></div>
+          <div class="trace-row"><div class="trace-n">2</div><div class="trace-c">
+            <div class="ev">a stray emit on <code>review</code> claims <code>expected_role: implementer</code> (version=2)</div>
+            <div class="meta"><code>review</code>.role is reviewer → expected_role ≠ step.role → <b>Rejected(role_not_authorized)</b>; no transcript append, version stays 2</div>
+          </div></div>
+          <div class="trace-row"><div class="trace-n">3</div><div class="trace-c">
+            <div class="ev">claude emits <code>CONVERGED</code> on <code>review</code> { <b>expected_role: reviewer</b> } (version=2)</div>
+            <div class="meta">role reviewer = <code>review</code>.role ✓ · CONVERGED is a transition ✓ · capability allows ✓ → commit <b>review → done</b>; terminal — no dispatch</div>
+          </div></div>
+        </div>
+        <div class="note runtime">
+          With the default-derived profile, <code>capability</code> equals the step's transitions, so
+          <code>not_authorized</code> stays dormant. The live teeth here is <b>role authority</b>: an
+          emit claiming the wrong role is rejected before the kernel touches state.
+        </div>
+
+        <h3 class="view-h"><span class="view-tag pseudo">Pseudocode</span> The rule behind the trace</h3>
+        <p>A derived-capability helper and two authorization gates in <code>HANDLE</code> — issued config
+        now resolves only on the commit path; the packet hands out the role to echo back:</p>
+        <div class="code-diff" aria-label="L1 pseudocode" data-old-label="L0e baseline" data-new-label="L1 current">
+          <script type="text/plain" class="diff-source" data-code-old-ref="l0e-pseudocode">[[@code code/l1-pseudocode.old.txt]]</script>
+          <script type="text/plain" class="diff-source" data-code-new data-code-id="l1-pseudocode">[[@code code/l1-pseudocode.new.txt]]</script>
+        </div>
+        <div class="note pseudo">
+          On top of the full lifecycle + runtime-context kernel, L1 adds two authorization gates around the
+          existing <code>no_transition</code> check: role authority first (are you even the active role?),
+          then — once the action is confirmed to exist as a transition — action authorization. It also adds
+          <code>capability</code> and begins handing the dispatched <code>role</code> out in the packet to be
+          echoed back as <code>expected_role</code>. The <code>CapabilityProfile</code> is default-derived
+          from the step graph, so no new config is needed; explicit authored restrictions enter the same
+          profile later.
+        </div>
+
+        <h3 class="view-h"><span class="view-tag domain">Domain</span> What L1 adds</h3>
+        <div class="agg">
+          <div class="agg-label">Envelope &amp; packet — the authority snapshot grows a role dimension</div>
+          <div class="ents">
+            <div class="ent"><div class="en">EventEnvelope</div><div class="fields">… + <b>expected_role</b> (the role the actor claims to act as; mandatory at L1)</div></div>
+            <div class="ent"><div class="en">ContextPacket</div><div class="fields">… + <b>role</b> (dispatched-as role; the actor echoes it back as expected_role)</div></div>
+          </div>
+        </div>
+        <div class="agg">
+          <div class="agg-label">Template aggregate — gains the authorization profile</div>
+          <div class="ents">
+            <div class="ent"><div class="en">CapabilityProfile <span style="font-size:10px;color:var(--muted)">(value)</span></div><div class="fields">(role × step_id) → allowed action set; <b>default-derived</b> from the step's transitions, explicit restrictions narrow it later</div></div>
+          </div>
+        </div>
+        <div class="agg" style="border-style:solid;border-color:var(--line);background:var(--panel)">
+          <div class="agg-label" style="color:var(--runtime)">New rejections — before commit, no state change</div>
+          <div class="ents">
+            <div class="ent"><div class="en">Rejected(missing_role)</div><div class="fields">the envelope did not claim a role</div></div>
+            <div class="ent"><div class="en">Rejected(role_not_authorized)</div><div class="fields">claimed role ≠ the position's active role</div></div>
+            <div class="ent"><div class="en">Rejected(not_authorized)</div><div class="fields">action exists as a transition but the profile forbids it for this role (dormant under default-derived)</div></div>
+          </div>
+        </div>
+        <div class="note domain">
+          The role dimension matures the L0b authority seed: <code>expected_version</code> answered
+          "on which state version do I act"; <code>expected_role</code> answers "as which role". The
+          kernel verifies the claim against the position's active role — it does not prove the actor's
+          identity (no token), exactly as v11 derives authority from context match, not a credential.
+        </div>
+
+        <h3 class="view-h"><span class="view-tag invariant">Invariant</span> New at L1</h3>
+        <div class="agg invariant">
+          <div class="agg-label">Added rules</div>
+          <div class="ents">
+            <div class="ent"><div class="en">expected_role mandatory</div><div class="fields">every actor-emitted envelope must claim a role from L1 on — like expected_version at L0b, the snapshot field becomes required when introduced</div></div>
+            <div class="ent"><div class="en">authorization before commit</div><div class="fields">role authority and the capability check both run before the atomic commit — a rejected emit never changes state</div></div>
+            <div class="ent"><div class="en">capability default-derived</div><div class="fields">absent an explicit profile, allowed(role, step) = the step's transitions for its own role — so not_authorized is dormant until a restriction or multi-role action enters the same profile</div></div>
+          </div>
+        </div>
+
+        <h3 class="view-h"><span class="view-tag config">Config</span> The template — unchanged at L1</h3>
+        <pre><span class="c"># L1 adds no template config — the CapabilityProfile is derived from the step graph:</span>
+<span class="c">#   capability(role, step) = the step's transition keys, when role = step.role</span>
+
+<span class="c"># a later explicit restriction would enter the SAME profile (not in the baseline), e.g.:</span>
+<span class="k">capability_profile</span>:
+  - { <span class="k">role</span>: <span class="s">reviewer</span>, <span class="k">step</span>: <span class="s">review</span>, <span class="k">allow</span>: [<span class="s">converged</span>] }   <span class="c"># narrows: reviewer may converge, not pass back</span></pre>
+        <div class="note config">
+          The whole point of default-derivation: the simple pair loop needs zero authorization config,
+          yet the kernel still enforces who-may-do-what. Config appears only when a real restriction or a
+          multi-role action (e.g. <code>human_question</code> from either role) is introduced.
+        </div>
+
+        <h3 class="view-h"><span class="view-tag absent">Absent</span> Still not here</h3>
+        <div class="absent-grid">
+          <div class="absent-item">No <b>lifecycle-state authorization</b> — L1 authorizes on role × <code>current_step</code>, not on <code>kernel_status</code> (the ACTIVE guard is L0d's <code>not_active</code>); state-specific rights like "WAITING_HUMAN → operator" <span class="at">→ L3</span></div>
+          <div class="absent-item">No <b>actor identity authentication</b> — no token/credential; only role-claim vs active role <span class="at">→ L7 / L10</span></div>
+          <div class="absent-item">No <b>gate / policy</b> — capability is structural authorization, not a decision <span class="at">→ L2</span></div>
+          <div class="absent-item">No <b>authored capability restrictions in the baseline</b> — the profile abstraction exists, but derives from the step graph until explicit restrictions are introduced <span class="at">→ later</span></div>
+          <div class="absent-item">No <b>capability-filtered packet ops</b> — available_ops still shows all transitions (coincides with the authorized set under default-derived) <span class="at">→ later</span></div>
+        </div>
+
+        <h3 class="view-h"><span class="view-tag evidence">Evidence</span> Why we accept L1 for now</h3>
+        <div class="note evidence">
+          <ul style="margin:0">
+            <li><b>Scenario coverage:</b> a wrong-role emit is rejected before any state change; only the
+              position's active role can drive it. The pair loop runs unchanged with <code>expected_role</code>
+              now mandatory, and the kernel — not the actor's goodwill — decides legitimacy.</li>
+            <li><b>Invariant coverage:</b> role authority + capability gate before commit ✓; idempotency,
+              lifecycle guard, and stale precede authorization ✓; all L0a–L0f invariants still hold.</li>
+            <li><b>Known gaps (intended):</b> not_authorized dormant under default-derived; no lifecycle
+              authorization (L3); no identity authentication (L7/L10); no gate/policy (L2). Each is in Absent.</li>
+            <li><b>Decision:</b> accepted as the L1 baseline (light evidence per playbook §2.1).</li>
+          </ul>
+        </div>
+      </section>
+
+      

@@ -1,0 +1,185 @@
+<section id="l2">
+        <h2 class="level-h"><span class="level-badge">L2</span> Gate / policy — runtime authorization</h2>
+        <p class="level-sub">A legitimate emit is not yet a permitted one. Before the commit, an ordered
+        pipeline of policy gates decides whether the run's <em>current state</em> allows this action — and a
+        block never burns a round.</p>
+
+        <p>By now the kernel has its full L0 foundation and L1 authorization. L1 decided whether an emit is
+        <em>structurally</em> legitimate (role × <code>current_step</code>); L2 adds a <em>runtime</em>
+        decision on top — even a legitimate emit may be blocked by policy given the run's state. This is the
+        operational core of "the workflow is the boss": an early <code>CONVERGED</code> is rejected even
+        though the reviewer judged it ready. The gate is a <b>fourth filter</b> — transition exists (L0b) →
+        role/action authorized (L1) → <b>policy allows now (L2)</b> → commit. Two orthogonal axes organize
+        the space: <code>implementation = declarative | packaged | process</code> and
+        <code>execution = inline | deferred</code>. <b>L2 core realizes only the inline pipeline</b> with
+        declarative DSL primitives and packaged pure <code>pairflow.*</code> policies. Inline external/process
+        gates are <span class="at">L2a</span>; <b>deferred</b> execution is a separate later lifecycle slice
+        (named, not numbered); the <code>route</code> verdict (workflow redirection) is a later routing
+        slice (<span class="at">L3</span>).</p>
+
+        <h3 class="view-h"><span class="view-tag runtime">Runtime</span> A concrete trace</h3>
+        <p>An early converge blocked without burning the round, then the same emit allowed once the round
+        threshold is met — and the pipeline's second gate runs only after the first allows:</p>
+        <div class="trace">
+          <div class="trace-row"><div class="trace-n">1</div><div class="trace-c">
+            <div class="ev">codex emits <code>PASS</code> on <code>implement</code> { expected_role: implementer } (version=1, <b>round=1</b>)</div>
+            <div class="meta">authorized ✓ · <code>gates_for(implement, PASS)</code> = ∅ → no gate → commit <b>implement → review</b>; version=2, round=1</div>
+          </div></div>
+          <div class="trace-row"><div class="trace-n">2</div><div class="trace-c">
+            <div class="ev">claude emits <code>CONVERGED</code> on <code>review</code> { expected_role: reviewer } (version=2, <b>round=1</b>)</div>
+            <div class="meta">role ✓ · transition ✓ · capability ✓ → gate pipeline: <code>declarative.threshold</code> (<code>round ≥ 2</code>) → round=1 → <b>block</b> → <b>Rejected(gate_blocked(round_below_min))</b>; no commit, version stays 2, <b>round not burned</b>, still on review</div>
+          </div></div>
+          <div class="trace-row"><div class="trace-n">3</div><div class="trace-c">
+            <div class="ev">claude emits <code>PASS</code> on <code>review</code> (pass back) { expected_role: reviewer } (version=2)</div>
+            <div class="meta">authorized ✓ · <code>gates_for(review, PASS)</code> = ∅ → commit <b>review → implement</b>; version=3, <b>round advances to 2</b></div>
+          </div></div>
+          <div class="trace-row"><div class="trace-n">4</div><div class="trace-c">
+            <div class="ev">codex emits <code>PASS</code> on <code>implement</code> (version=3, <b>round=2</b>)</div>
+            <div class="meta">authorized ✓ · no gate → commit <b>implement → review</b>; version=4, round=2</div>
+          </div></div>
+          <div class="trace-row"><div class="trace-n">5</div><div class="trace-c">
+            <div class="ev">claude emits <code>CONVERGED</code> on <code>review</code> { expected_role: reviewer } (version=4, <b>round=2</b>)</div>
+            <div class="meta">gate pipeline: <code>threshold</code> round=2 ≥ 2 <b>allow</b> → next gate <code>pairflow.previous_reviewer_verdict</code> (required) → a prior reviewer verdict exists ✓ <b>allow</b> → commit <b>review → done</b>; terminal — no dispatch</div>
+          </div></div>
+        </div>
+        <div class="note runtime">
+          The teeth: on <code>block</code> the kernel returns <em>before</em> the commit, so
+          <code>current_step</code>, <code>version</code> and <code>round</code> are all untouched — an early
+          converge costs nothing and the reviewer can retry later. The pipeline is ordered and
+          first-block-wins; the second gate is reached only because the first returned <code>allow</code>.
+        </div>
+
+        <h3 class="view-h"><span class="view-tag pseudo">Pseudocode</span> The rule behind the trace</h3>
+        <p>One inline gate-pipeline block in <code>HANDLE</code> (after L1 authorization, before the commit),
+        a <code>GateEvaluator</code> contract, a policy-facing <code>gate_projection</code>, and a
+        commit-maintained <code>instance.round</code>:</p>
+        <div class="code-diff" aria-label="L2 pseudocode" data-old-label="L1 baseline" data-new-label="L2 current">
+          <script type="text/plain" class="diff-source" data-code-old-ref="l1-pseudocode">[[@code code/l2-pseudocode.old.txt]]</script>
+          <script type="text/plain" class="diff-source" data-code-new data-code-id="l2-pseudocode">[[@code code/l2-pseudocode.new.txt]]</script>
+        </div>
+        <div class="note pseudo">
+          The pipeline sits between L1's <code>not_authorized</code> and the commit, so a blocked gate never
+          resolves <code>issued_config</code> and never reaches the CAS block — the round is preserved. A
+          <code>process</code>-implementation or <code>deferred</code> evaluator is a valid declaration but
+          returns <code>gate_execution_not_supported</code> here; the inline process contract is realized at
+          <span class="at">L2a</span>, while the deferred runner path (<code>WAITING(gate_pending)</code> +
+          <code>GATE_RESULT</code>) is a separate later lifecycle slice — even an <em>inline</em> process gate
+          is rejected at L2 core, since the contract is unrealized here.
+          <b>Round semantics (L2 owns them, because L2 makes <code>round</code> load-bearing — the
+          <code>declarative.threshold</code> gate reads it).</b> <code>round</code> always starts at <b>0</b>
+          (prepared — no work cycle yet); that is a <b>fixed convention, not configurable</b> (like 0-indexing,
+          not a knob). Activation is the first work-cycle arrival and sets <code>round</code> to <b>1</b> (the
+          start step being a round-start); each later <em>advancing arrival</em> adds one. <code>advances_round</code>
+          is <b>declared transition semantics</b> in the normalized/pinned template — <b>never inferred</b> from
+          role names, graph shape, target equality, or naming. The authoring form may declare
+          <code>round: { advance_on_arrival_at: [implement] }</code>; the definition loader expands it into explicit
+          per-transition <code>advances_round</code> flags (with per-transition override) for the <em>committed
+          transitions after activation</em> — it does <b>not</b> synthesize a flag for activation (which has no
+          incoming edge). The kernel consumes <em>only</em> the normalized flags — <code>round</code> stays
+          transcript-reconstructable.
+        </div>
+
+        <h3 class="view-h"><span class="view-tag domain">Domain</span> What L2 adds</h3>
+        <div class="agg">
+          <div class="agg-label">Template aggregate — gains the gate pipeline</div>
+          <div class="ents">
+            <div class="ent"><div class="en">GateBinding</div><div class="fields"><code>where</code> (step + event_type) · <code>uses</code> (<code>declarative.*</code> | packaged <code>pairflow.*</code> | <code>external.*</code>) · <code>config</code> — the authored per-point policy parameterization, load-bearing for <em>every</em> gate kind (a threshold value, a required clean-run count), passed to the evaluator</div></div>
+            <div class="ent"><div class="en">GatePipeline</div><div class="fields">ordered list of GateBindings at one <code>(step, event)</code> point; first <code>block</code> stops, later gates run only after <code>allow</code> — exposed as <code>gates_for(step, event)</code></div></div>
+          </div>
+        </div>
+        <div class="agg">
+          <div class="agg-label">Evaluation — one shared interface, two value types</div>
+          <div class="ents">
+            <div class="ent"><div class="en">GateEvaluator</div><div class="fields">the shared contract <code>evaluate(config, projection) → GateDecision</code> over two orthogonal axes — <code>implementation: declarative | packaged | process</code> and <code>execution: inline | deferred</code>; L2 core realizes only inline <code>declarative.*</code> / packaged <code>pairflow.*</code>. <code>PolicyModule</code> is now just one kind of packaged gate</div></div>
+            <div class="ent"><div class="en">GateDecision <span style="font-size:10px;color:var(--muted)">(value)</span></div><div class="fields"><code>{ verdict: allow | warn | block, reason?, message?, evidence_refs? }</code> — <b>allow</b> continue · <b>warn</b> continue, retain diagnostics/evidence · <b>block</b> reject before commit; <code>route</code> is known vocabulary, deferred to a later slice</div></div>
+          </div>
+        </div>
+        <div class="agg">
+          <div class="agg-label">Instance &amp; read model — a canonical round and a policy-facing view</div>
+          <div class="ents">
+            <div class="ent"><div class="en">WorkflowInstance</div><div class="fields">… + <b>round</b> (canonical, kernel-maintained, commit-derived, transcript-reconstructable; only the HANDLE commit advances it)</div></div>
+            <div class="ent"><div class="en">gate_projection</div><div class="fields">policy-facing read model (<code>round</code>, position, event, derived history) — the policy-side mirror of <code>ContextPacket</code>; read-only, never a raw transcript dump</div></div>
+          </div>
+        </div>
+        <div class="agg" style="border-style:solid;border-color:var(--line);background:var(--panel)">
+          <div class="agg-label" style="color:var(--runtime)">New rejections — before commit, no state change, no round burned</div>
+          <div class="ents">
+            <div class="ent"><div class="en">Rejected(gate_blocked(reason))</div><div class="fields">a policy returned <code>block</code> for this state</div></div>
+            <div class="ent"><div class="en">Rejected(gate_evaluator_unavailable)</div><div class="fields">the gate's <code>uses</code> name did not resolve (config invariant)</div></div>
+            <div class="ent"><div class="en">Rejected(gate_execution_not_supported)</div><div class="fields">a <code>process</code> implementation (⇒ <span class="at">L2a</span>) or a <code>deferred</code> evaluator (⇒ a later lifecycle slice) reached in L2 core — declarable, not executable here</div></div>
+          </div>
+        </div>
+        <div class="note domain">
+          The gate is pure: it reads <code>gate_projection</code> and returns a verdict, never mutating the
+          instance or transcript. That keeps "the workflow is the boss" auditable — the decision is a
+          function of declared policy and reconstructable state, not of the actor's goodwill.
+        </div>
+
+        <h3 class="view-h"><span class="view-tag invariant">Invariant</span> New at L2</h3>
+        <div class="agg invariant">
+          <div class="agg-label">Added rules</div>
+          <div class="ents">
+            <div class="ent"><div class="en">gate before commit</div><div class="fields">the pipeline runs after L1 authorization and before the atomic commit — a <code>block</code> changes no state and burns no round</div></div>
+            <div class="ent"><div class="en">round is canonical &amp; reconstructable</div><div class="fields">only the HANDLE commit writes <code>instance.round</code> (in the same CAS window as <code>current_step</code>/<code>version</code>); <code>round_of(transcript)</code> must equal it</div></div>
+            <div class="ent"><div class="en">inline declarative/packaged only in L2 core</div><div class="fields">L2 core executes only inline <code>declarative.*</code> / packaged <code>pairflow.*</code> evaluators; a process-implementation (⇒ <span class="at">L2a</span>) or deferred (⇒ a later lifecycle slice) evaluator is a valid declaration but rejected at run</div></div>
+            <div class="ent"><div class="en">ordered, first-block-wins</div><div class="fields">the pipeline order is authored; evaluation stops at the first <code>block</code>, and a later gate runs only after every earlier gate returned <code>allow</code></div></div>
+            <div class="ent"><div class="en">gate is read-only &amp; stateless</div><div class="fields">an evaluator reads <code>config</code> + the projection and returns a decision; it may not mutate instance state or the transcript, nor keep private state across rounds — any counter-like value is derived from transcript/instance/read-model state</div></div>
+          </div>
+        </div>
+
+        <h3 class="view-h"><span class="view-tag config">Config</span> The template — the converge transition gains a gate pipeline</h3>
+        <p>Only the <code>review</code> step's <code>CONVERGED</code> transition changes: the scalar target
+        becomes a <code>{ target, gates }</code> form with an ordered, two-gate pipeline (every other line is
+        unchanged):</p>
+        <div class="code-diff" aria-label="L2 template config" data-old-label="L0f baseline" data-new-label="L2 current">
+          <script type="text/plain" class="diff-source" data-code-old-ref="l0f-template-config">[[@code code/l2-template-config.old.txt]]</script>
+          <script type="text/plain" class="diff-source" data-code-new data-code-id="l2-template-config">[[@code code/l2-template-config.new.txt]]</script>
+        </div>
+        <div class="note config">
+          The declarative DSL is deliberately tiny: a <code>metric</code> (an allowlisted
+          <code>gate_projection</code> path, here <code>round</code>), an <code>op</code>, and a
+          <code>value</code> — not a general expression language. Richer judgement lives in packaged
+          <code>pairflow.*</code> policies shipped with pairflow; repo-specific custom logic enters later as
+          an <code>external.*</code> process gate (L2a), not as authored code in the template.
+        </div>
+
+        <h3 class="view-h"><span class="view-tag absent">Absent</span> Still not here</h3>
+        <div class="absent-grid">
+          <div class="absent-item">No <b>external / process gates</b> — MVP-critical (v1 <code>validation.required</code>, <code>meta_review_approve_required</code>, command exit-code gates); the inline process execution model is <span class="at">→ L2a</span>, while deferred execution (<code>WAITING(gate_pending)</code> + <code>GATE_RESULT</code>) is a separate later lifecycle slice</div>
+          <div class="absent-item">No <b>route verdict / workflow redirection</b> — a gate may only allow, warn, or block, not redirect the target (meta-review auto-rework, human gate) <span class="at">→ routing slice / L3</span></div>
+          <div class="absent-item">No <b>gate-private mutable state</b> — gates are stateless over <code>config</code> + projection + evidence refs; cross-round counters are derived, never gate-owned. A gate returning state the kernel persists and re-passes is a future idea, only with a concrete use case <span class="at">→ later</span></div>
+          <div class="absent-item">No <b>actor-facing communication</b> of gate rules — the reviewer is not yet told "no CONVERGED before round 2" in its packet, so it can still burn an emit on a block <span class="at">→ L2b</span></div>
+          <div class="absent-item">No <b>findings vocabulary</b> — structured finding claim/parity and P0/P1 blocker grades, which several v1 convergence checks need <span class="at">→ later</span></div>
+          <div class="absent-item">No <b>broad declarative DSL</b> — only <code>threshold</code> in the baseline (<code>required_previous_event</code> next); no general query language <span class="at">→ later</span></div>
+          <div class="absent-item">No <b>dynamic module loading</b> — packaged gates ship with pairflow; the external process interface is the only extension seam (not an MVP TS plugin loader) <span class="at">→ L2a</span></div>
+        </div>
+
+        <h3 class="view-h"><span class="view-tag evidence">Evidence</span> Why we accept L2 for now</h3>
+        <div class="agg">
+          <div class="agg-label">Acceptance evidence — the v1 gate families map onto the L2 primitives</div>
+          <div class="ents">
+            <div class="ent"><div class="en">convergence policy</div><div class="fields">round-gate, alternation, previous-verdict, threshold → <code>declarative.threshold</code> + packaged <code>pairflow.convergence_policy</code> · <b>L2 core</b></div></div>
+            <div class="ent"><div class="en">reviewer-PASS policy</div><div class="fields">explicit finding, post-gate clean-PASS block → packaged <code>pairflow.reviewer_pass_policy</code> · <b>L2 core</b></div></div>
+            <div class="ent"><div class="en">findings claim/parity, P0/P1 blocker</div><div class="fields">packaged policy + a findings vocabulary · L2 core mechanism, findings later</div></div>
+            <div class="ent"><div class="en">command gates</div><div class="fields"><code>validation.required</code> on PASS, exit-code hard block, explicit-null → <code>external.process</code> · L2a</div></div>
+            <div class="ent"><div class="en">meta-review / human-gate routing</div><div class="fields">auto-rework, budget, sticky gate → <code>route</code> verdict + human wait · routing slice / L3</div></div>
+            <div class="ent"><div class="en">doc / evidence gates</div><div class="fields">packaged advisory/blocking gate family · L2 core mechanism, concrete hard-block semantics later</div></div>
+          </div>
+        </div>
+        <div class="note evidence">
+          <ul style="margin:0">
+            <li><b>Scenario coverage:</b> an early <code>CONVERGED</code> is blocked without burning the
+              round; the pipeline runs in order and only converges once the threshold and the previous-verdict
+              gate both allow. Ungated transitions run exactly as at L1.</li>
+            <li><b>Invariant coverage:</b> gate before commit ✓; round canonical &amp; transcript-reconstructable ✓;
+              gates read-only ✓; all L0a–L1 invariants still hold.</li>
+            <li><b>Acceptance evidence:</b> success is "the v1 gate families are representable" (table above),
+              not "min_round works" — the mechanism hosts every family, even where the depth lands later.</li>
+            <li><b>Known gaps (intended):</b> external/process gates (L2a); route/redirection (routing slice/L3);
+              actor-facing communication (L2b); findings vocabulary (later). Each is in Absent.</li>
+            <li><b>Decision:</b> accepted as the L2 core baseline (light evidence per playbook §2.1).</li>
+          </ul>
+        </div>
+      </section>
+
+      

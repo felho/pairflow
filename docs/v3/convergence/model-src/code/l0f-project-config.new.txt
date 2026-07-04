@@ -1,0 +1,24 @@
+
+# project config — repo-local (v1: pairflow.toml). NOT the portable template.
+# Fills the template's typed slots; lives with the repo, not the definition.
+
+default_workflow: local-pair-v0             # optional convenience — a StartCommand may name template_id explicitly
+workflow_sources:
+  - local: .pairflow/workflows/             # MVP: local source only; central store is L11+
+
+defaults:                                   # global — shared across workflows (lenient: undeclared keys ignored)
+  validation.test_command:      "pnpm test"
+  runtime.worktree.base_branch: main
+
+workflows:
+  local-pair-v0:                            # this workflow's scoped section (strict: undeclared keys rejected)
+    defaults:
+      runtime.worktree.bootstrap: "pnpm install --frozen-lockfile && pnpm build"
+    targets:                                # tier-4 per-run override profiles
+      ui:
+        defaults:
+          validation.test_command: "pnpm --dir ui test"
+      docs:
+        defaults:
+          validation.test_command: "pnpm test docs"
+          

@@ -1,0 +1,130 @@
+<section id="l0c">
+        <h2 class="level-h"><span class="level-badge">L0c</span> Agent run configuration</h2>
+        <p class="level-sub">Resolves <em>how</em> the assigned actor is run — the effective AgentConfig
+        — so the right kind of agent does the work, not a vanilla one.</p>
+
+        <p>L0b decides <em>who</em> acts and hands them a packet, but carries <code>agent_config</code>
+        raw. L0c answers <em>how</em>: it resolves the effective config by cascade
+        (<b>role default → step override → run override</b>), puts the resolved config in the packet,
+        and records which config the kernel <em>issued</em> in the transcript. This closes the v1 gap
+        where "use sub-agent X" was implicit and merely assumed. It stays a portable <em>run intent</em>
+        — actual provisioning, skill loading, and attestation are later layers.</p>
+
+        <h3 class="view-h"><span class="view-tag runtime">Runtime</span> A concrete trace</h3>
+        <p>One round, showing the cascade resolving and the issued config recorded:</p>
+        <div class="trace">
+          <div class="trace-row"><div class="trace-n">1</div><div class="trace-c">
+            <div class="ev">START_INSTANCE → DispatchIntent { actor: codex, … }</div>
+            <div class="meta">packet <b>effective_agent_config</b> = resolve(implement) = role <code>{ mode: builder }</code> ⊕ step <code>{ approach: systematic }</code> → <b>{ mode: builder, approach: systematic }</b></div>
+          </div></div>
+          <div class="trace-row"><div class="trace-n">2</div><div class="trace-c">
+            <div class="ev">codex (builder/systematic) emits <code>PASS</code> (version=1)</div>
+            <div class="meta">kernel re-resolves issued_config for <b>implement</b> = same <code>{ mode: builder, approach: systematic }</code> → commit <b>implement → review</b>, transcript records <b>issued_agent_config</b>; next DispatchIntent { claude, effective_agent_config: resolve(review) = <code>{ mode: critic, approach: thorough, skill_refs: [test-runner] }</code> }</div>
+          </div></div>
+          <div class="trace-row"><div class="trace-n">3</div><div class="trace-c">
+            <div class="ev">claude (critic/thorough) emits <code>CONVERGED</code> (version=2)</div>
+            <div class="meta">kernel re-resolves issued_config for <b>review</b> = <code>{ mode: critic, … }</code> → commit <b>review → done</b>, transcript records it; terminal — no dispatch</div>
+          </div></div>
+        </div>
+        <div class="note runtime">
+          The config the actor was issued is recomputed at commit from the same deterministic sources
+          the packet used — so the transcript's provenance always matches what was dispatched, without
+          the dispatch having to store anything.
+        </div>
+
+        <h3 class="view-h"><span class="view-tag pseudo">Pseudocode</span> The rule behind the trace</h3>
+        <p>A new resolver, a changed packet field, and a provenance line — the rest of L0b is untouched:</p>
+        <div class="code-diff" aria-label="L0c pseudocode" data-old-label="L0b baseline" data-new-label="L0c current">
+          <script type="text/plain" class="diff-source" data-code-old-ref="l0b-pseudocode">[[@code code/l0c-pseudocode.old.txt]]</script>
+          <script type="text/plain" class="diff-source" data-code-new data-code-id="l0c-pseudocode">[[@code code/l0c-pseudocode.new.txt]]</script>
+        </div>
+        <div class="note pseudo">
+          The resolver is pure and deterministic, so the kernel recomputes the issued config at commit
+          rather than the dispatch storing it — which keeps DispatchIntent a stateless kernel output
+          (the L0b commit ≠ deliver rule holds). Note the cascade is the same shape as ActorBinding and
+          model selection (§14.2): one resolution pattern, three uses.
+        </div>
+
+        <h3 class="view-h"><span class="view-tag domain">Domain</span> What L0c adds</h3>
+        <div class="agg">
+          <div class="agg-label">Template aggregate — gains the run profile</div>
+          <div class="ents">
+            <div class="ent"><div class="en">Role</div><div class="fields">… + <b>default_agent_config</b> (the base run profile)</div></div>
+            <div class="ent"><div class="en">Step</div><div class="fields"><b>agent_config</b> now an override input (no longer raw pass-through)</div></div>
+            <div class="ent"><div class="en">AgentConfig <span style="font-size:10px;color:var(--muted)">(value)</span></div><div class="fields">inline: mode, approach, persona/profile, execution_hints; refs: model_ref/model_hint, prompt_profile_refs, prompt_concern_refs, skill_refs, tool_refs, tool_policy_ref (e.g. MCP) — all portable run intent</div></div>
+          </div>
+        </div>
+        <div class="agg">
+          <div class="agg-label">Instance aggregate — gains run overrides</div>
+          <div class="ents">
+            <div class="ent"><div class="en">WorkflowInstance</div><div class="fields">… + <b>run_overrides</b> (per-step, snapshotted at start)</div></div>
+            <div class="ent"><div class="en">TranscriptEntry</div><div class="fields">… + <b>issued_agent_config</b> (provenance — what the kernel issued)</div></div>
+          </div>
+        </div>
+        <div class="agg" style="border-style:solid;border-color:var(--line);background:var(--panel)">
+          <div class="agg-label" style="color:var(--runtime)">Kernel output — derived, not stored</div>
+          <div class="ents">
+            <div class="ent"><div class="en">effective_agent_config</div><div class="fields">resolve(role default ⊕ step ⊕ run override); computed at dispatch and recomputed at commit</div></div>
+          </div>
+        </div>
+        <div class="note domain">
+          The effective config is never stored as instance state — it is recomputed from immutable
+          sources both when the packet is built and when provenance is recorded. <code>issued_agent_config</code>
+          says what the kernel <em>issued</em>, not that the actor-runtime <em>ran</em> exactly so —
+          that proof is a later executor/attestation concern.
+        </div>
+
+        <h3 class="view-h"><span class="view-tag invariant">Invariant</span> New at L0c</h3>
+        <div class="agg invariant">
+          <div class="agg-label">Added rules</div>
+          <div class="ents">
+            <div class="ent"><div class="en">deterministic provenance</div><div class="fields">issued config is recomputed at commit from the same sources the packet used — not a dispatch-stored value, not an actor echo</div></div>
+            <div class="ent"><div class="en">config sources immutable per dispatched step</div><div class="fields">role defaults, step config, and instance run_overrides cannot change for the dispatched step — else provenance would need a persisted dispatch record</div></div>
+            <div class="ent"><div class="en">issued ≠ proven runtime</div><div class="fields">L0c records what the kernel issued; that the actor ran exactly so is later attestation</div></div>
+          </div>
+        </div>
+
+        <h3 class="view-h"><span class="view-tag config">Config</span> The template grows</h3>
+        <div class="code-diff" aria-label="L0c template config" data-old-label="L0b baseline" data-new-label="L0c current">
+          <script type="text/plain" class="diff-source" data-code-old-ref="l0b-template-config">[[@code code/l0c-template-config.old.txt]]</script>
+          <script type="text/plain" class="diff-source" data-code-new data-code-id="l0c-template-config">[[@code code/l0c-template-config.new.txt]]</script>
+        </div>
+        <div class="note config">
+          Roles gain <code>default_agent_config</code> (base profile); steps' <code>agent_config</code>
+          now overrides/extends it. The <code>*_refs</code> fields (<code>model_ref</code>,
+          <code>prompt_*_refs</code>, <code>skill_refs</code>, <code>tool_policy_ref</code>) are declared
+          references — run intent, not a guarantee the target is installed; <b>ActorAdapter</b>
+          resolves the runtime refs later, <b>ContextAssembly</b> first resolves the prompt refs at L2b.
+        </div>
+
+        <h3 class="view-h"><span class="view-tag absent">Absent</span> Still not here</h3>
+        <div class="absent-grid">
+          <div class="absent-item">No <b>actor-runtime adaptation</b> — portable run intent only; a later <b>ActorAdapter</b> maps it to Codex / Claude Code / OpenCode launch/context/tool config <span class="at">→ executor</span></div>
+          <div class="absent-item">No <b>prompt/context assembly</b> — config/policy/gate-declared prompt concerns are not resolved or rendered yet; the first <b>ContextAssembly</b> slice builds the packet's context blocks <span class="at">→ L2b</span></div>
+          <div class="absent-item">No <b>tool installation / provisioning</b> — refs only <span class="at">→ later</span></div>
+          <div class="absent-item">No <b>skill-doc retrieval / memory assembly</b> <span class="at">→ §11.4</span></div>
+          <div class="absent-item">No <b>model-routing optimization</b> <span class="at">→ §14.2</span></div>
+          <div class="absent-item">No <b>credential / grant</b> <span class="at">→ L7</span></div>
+          <div class="absent-item">No <b>runtime attestation</b> — issued, not proven <span class="at">→ executor</span></div>
+          <div class="absent-item">No <b>authorization / gate</b> <span class="at">→ L1 / L2</span></div>
+        </div>
+
+        <h3 class="view-h"><span class="view-tag evidence">Evidence</span> Why we accept L0c for now</h3>
+        <div class="note evidence">
+          <ul style="margin:0">
+            <li><b>Scenario coverage:</b> a step declaring <code>mode: builder</code> or a specific
+              reviewer profile gets that <em>resolved</em> config in its packet — the v1 "assumed
+              sub-agent" gap is closed at the declaration level. The transcript shows which config each
+              emit was issued (provenance for later eval/metacognition §16/§17).</li>
+            <li><b>Invariant coverage:</b> deterministic kernel-resolved provenance ✓; config sources
+              immutable per dispatched step ✓; DispatchIntent stays a stateless output (commit ≠ deliver
+              holds) ✓; all L0a/L0b invariants still hold.</li>
+            <li><b>Known gaps (intended):</b> no actor-runtime adaptation; no prompt/context assembly;
+              no provisioning/attestation; no skill-doc/memory (§11.4); no model routing (§14.2);
+              no authorization (L1). Each is in Absent.</li>
+            <li><b>Decision:</b> accepted as the L0c baseline (light evidence per playbook §2.1).</li>
+          </ul>
+        </div>
+      </section>
+
+      

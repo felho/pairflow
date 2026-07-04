@@ -1,0 +1,46 @@
+
+template:
+  id: local-pair-v0
+  version: 1
+  roles:
+    implementer: { default_actor: codex,  default_agent_config: { mode: builder, model_ref: codex-default-engineer, prompt_profile_refs: [engineer-defaults] } }
+    reviewer:    { default_actor: claude, default_agent_config: { mode: critic } }
+  start: implement
+  round: { advance_on_arrival_at: [implement] }   # authoring sugar — the loader expands this into explicit per-transition advances_round flags; the kernel reads only those (round always starts at 0 — a fixed convention, not configurable)
+  activation:
+    mode: immediate          # after START + runtime_context ready, activate immediately; no KICKOFF hold
+    # deferred_kickoff → start in a WAITING(kickoff_pending) hold; an operator
+    # kickoff supplies the task and releases the first dispatch (the v1 ideation bubble)
+  slots:                        # L0f — typed holes the repo's ProjectConfig fills (default | required)
+    validation.test_command:         { type: command,        default: "pnpm test" }
+    runtime.worktree.base_branch:    { type: branch,         default: main }
+    runtime.worktree.branch_pattern: { type: branch_pattern, default: "bubble/{instance_id}" }
+    runtime.worktree.bootstrap:      { type: command,        required: false }   # no default — only the repo knows
+  runtime_context:              # RuntimeContextRequirement — required(spec) here; a context-free workflow declares: runtime_context: none
+    kind: worktree
+    provider: pairflow.worktree
+    config:
+      repo: current                                            # literal — not repo-overridable here
+      base_branch:    ${slot:runtime.worktree.base_branch}     # was literal main; default now lives in slots, repo may override
+      branch_pattern: ${slot:runtime.worktree.branch_pattern}  # provider materializes the actual name from instance_id
+      work_mode: worktree                                      # literal — provider-internal variant (worktree | clone)
+      # worktree path defaults to <repo-parent>/.pairflow-worktrees/<repo>/<instance_id>
+  steps:
+    - id: implement
+      role: implementer
+      instruction: "Build the change for the task."
+      agent_config: { approach: systematic }   # overrides/extends the role default
+      on_pass: review            # PASS → review
+    - id: review
+      role: reviewer
+      instruction: "Review the diff; pass back or converge."
+      agent_config: { approach: thorough, prompt_concern_refs: [reviewer-severity-ontology], skill_refs: [test-runner] }
+      on_pass:      implement     # PASS → implement
+      on_converged:               # CONVERGED → done, now a gated transition (L2)
+        target: done
+        gates:                    # ordered inline pipeline; first block stops, round not burned
+          - uses: declarative.threshold              # declarative DSL: path / op / value over allowed gate_projection fields
+            config: { metric: round, op: ">=", value: 2 }
+          - uses: pairflow.previous_reviewer_verdict # packaged pure pairflow policy
+            config: { required: true }
+          

@@ -1,0 +1,272 @@
+
+resolve_agent_config(template, step, instance) → AgentConfig
+  base      ← template.role(step.role).default_agent_config            # role default
+  with_step ← merge(base, step.agent_config)                           # step override (scalars overwrite; arrays/maps replace)
+  override  ← instance.run_overrides.get(step.id, empty_config)         # start/run override (optional per step)
+  # portable run intent; not actor-adapted, provisioned, or attested at L0c
+  RETURN      merge(with_step, override)
+
+capability(template, role, step_id) → action set                       # role × step → allowed actions
+  step    ← template.step(step_id)
+  profile ← template.capability_profile.get((role, step_id))
+  IF profile is not none THEN RETURN profile.allowed                    # explicit restriction (none in the baseline)
+  IF role = step.role THEN RETURN event_types_of(step.transitions)      # default-derived: own role may emit the step's transitions
+  RETURN empty_set                                                      # any other role may emit nothing here
+
+# GateEvaluator — shared gate contract; L2a adds inline external.process to L2 core's declarative/packaged
+INTERFACE GateEvaluator:
+  implementation: declarative | packaged | process      # L2a realizes inline process too; only DEFERRED execution stays out (later slice)
+  execution:      inline | deferred                      # still inline only — deferred is a later lifecycle slice (gate_pending + GATE_RESULT)
+  evaluate(config, projection) → GateDecision            # in-process (declarative/packaged); a process gate runs via run_process_gate instead
+
+gate_projection(instance, template, envelope) → Projection   # policy-facing read model — read-only, derived; the policy reads, never mutates
+  RETURN {
+    round:        instance.round,                       # canonical, kernel-maintained, commit-derived, transcript-reconstructable
+    current_step: instance.current_step,
+    event_type:   envelope.type,
+    history:      derive_policy_view(instance.transcript) }   # derived view (prior verdicts / alternation); the projection exposes no raw transcript, though the kernel derives it from one
+
+# ProcessGateRunner — the executor that spawns an external gate process; the kernel owns the contract, the runner owns the spawn
+INTERFACE ProcessGateRunner:
+  run(command, { cwd, stdin, timeout_ms }) → ProcessResult   # { kind: ok | timeout | runner_error, exit_code?, stdout?, log_ref, duration_ms }
+
+run_process_gate(gate, instance, template, envelope) → GateDecision   # L2a — inline external.process, in the workspace, bounded timeout
+  invocation ← GateInvocation {
+    instance_id: instance.id, template_ref: instance.template_ref,
+    step_id: instance.current_step, event_type: envelope.type, expected_version: instance.version,
+    config:     gate.config,                                          # snapshot of the authored GateBinding.config
+    projection: compact(gate_projection(instance, template, envelope)) }   # MVP: small inline payload (NOT projection_ref + SDK)
+  result ← processRunner.run(gate.config.command, {
+    cwd: runtime_context_workspace(instance),                         # runs in the provisioned workspace (v1: the worktree)
+    stdin: json(invocation), timeout_ms: gate.config.timeout_ms })    # bounded timeout — a v3 addition (v1 had none)
+  # evidence (log + exit_code + duration + head_sha + git_status_hash) is persisted on EVERY run (v1-faithful)
+  RETURN classify_process_result(result, gate.config)
+
+classify_process_result(result, config) → GateDecision
+  output_mode     ← config.output.mode      ?? exit_code             # contract defaults (absent ⇒ these) — resolved once
+  on_runner_error ← config.on_runner_error  ?? block_transition
+  on_timeout      ← config.on_timeout       ?? block_transition
+  IF result.kind = timeout      THEN RETURN runner_outcome(on_timeout,      timeout,      result.log_ref)
+  IF result.kind = runner_error THEN RETURN runner_outcome(on_runner_error, runner_error, result.log_ref)   # spawn / workspace-missing (malformed JSON has its own branch below)
+  MATCH output_mode:                                                 # never guess "JSON wins"
+    exit_code          → RETURN { verdict: config.on_exit[bucket(result.exit_code)],   # buckets: "0" | nonzero → allow | warn | block (values allowlisted at definition load)
+                                  reason: exit_reason(result.exit_code), evidence_refs: [result.log_ref] }
+    gate_decision_json → parsed ← try_parse_gate_decision(result.stdout)               # opt-in; schema allowlists verdict ∈ { allow, warn, block } — route is invalid until the routing slice
+                         IF parsed is none THEN RETURN runner_outcome(on_runner_error, malformed_gate_decision_json, result.log_ref)   # unparseable / schema-invalid (incl. a disallowed verdict) ⇒ runner outcome, NOT a business block
+                         RETURN with_evidence(parsed, result.log_ref)
+
+runner_outcome(disposition, reason, log_ref) → GateDecision          # MVP realizes ONLY block_transition
+  # fail_instance is rejected at definition load (gate_config_not_supported), so block_transition is the only value that reaches here — fail-closed
+  RETURN { verdict: block, reason, evidence_refs: [log_ref] }        # audited distinctly: runner_error / timeout / malformed, not test_failed
+
+validate_gate_config(template) → ok | Rejected                       # run at definition load (CREATE_INSTANCE) — fail at create, not mid-run; the static analog of binding coverage
+  FOR gate IN all_gate_bindings(template):                            # every (step, event_type) gate in the pinned definition
+    IF gate.uses ≠ external.process THEN CONTINUE                     # only process gates carry an execution config to validate
+    cfg ← gate.config
+    IF template.runtime_context = none
+       THEN RETURN Rejected(runtime_context_required_for_process_gate)        # a process gate has no workspace in a context-free workflow
+    IF cfg.command is absent OR cfg.timeout_ms is absent
+       THEN RETURN Rejected(invalid_process_gate_config)                      # command + bounded timeout are mandatory
+    # disposition allowlist — block_transition is the only realized value (absent ⇒ block_transition default)
+    FOR disposition IN [cfg.on_runner_error, cfg.on_timeout]:
+      IF disposition is absent          THEN CONTINUE                          # absent ⇒ block_transition default
+      IF disposition = fail_instance    THEN RETURN Rejected(gate_config_not_supported)    # reserved future disposition (distinct reason)
+      IF disposition ≠ block_transition THEN RETURN Rejected(invalid_process_gate_config)  # any other value is unknown
+    # output mode — exit_code is the default; only an explicit-but-unknown value is invalid
+    IF cfg.output.mode is present AND cfg.output.mode NOT IN { exit_code, gate_decision_json }
+       THEN RETURN Rejected(invalid_process_gate_config)
+    IF (cfg.output.mode ?? exit_code) = exit_code THEN                        # exit_code mode (incl. the default when output.mode is absent)
+      IF cfg.on_exit["0"] is absent OR cfg.on_exit[nonzero] is absent
+         THEN RETURN Rejected(invalid_process_gate_config)                    # both exit buckets are required
+      IF cfg.on_exit["0"] NOT IN { allow, warn, block } OR cfg.on_exit[nonzero] NOT IN { allow, warn, block }
+         THEN RETURN Rejected(invalid_process_gate_config)                    # buckets map only to realized verdicts — no route smuggled in
+  RETURN ok
+
+validate_context_refs(template) → ok | Rejected                       # definition load (CREATE_INSTANCE) — fail at create; the static analog of binding coverage / validate_gate_config
+  catalog ← template.context_blocks                                   # id → { body }; the single body source
+  FOR ref IN all_issued_context_block_refs(template):                 # every role/step prompt_concern_ref + gate context_block_ref
+    IF ref NOT IN catalog THEN RETURN Rejected(unresolved_context_block_ref)
+  RETURN ok                                                           # existence only — NOT semantic parity between a block’s prose and the gate config it describes
+
+RECEIVE(input) → Outcome                                               # one kernel entry; route by input source class
+  MATCH input.source:
+    operator_intent → dispatch to CREATE_INSTANCE / START / KICKOFF / CANCEL   # lifecycle intents
+    kernel_event    → dispatch to RUNTIME_CONTEXT_READY / FAIL               # internal events (done is internal-only, below)
+    actor_envelope  → HANDLE(input)                                           # the L0a–L1 actor handler, now lifecycle-guarded
+
+# Convenience operator API, not a kernel primitive: a single "start workflow" command may
+# compose CREATE_INSTANCE(...) then START(instance). activation_mode controls what happens
+# after RUNTIME_CONTEXT_READY (activate vs WAITING(kickoff_pending)) — not whether CREATE dispatches.
+CREATE_INSTANCE(template_ref, activation_mode, task, binding, run_overrides) → Created   # operator_intent; template + binding resolved on the start path (formalized by L0f)
+  template ← definitionStore.load(template_ref)                # a pinned definition — a plain template, or an L0f-resolved definition (slots applied)
+  IF activation_mode = immediate AND task is absent THEN RETURN Rejected(task_required)
+  REQUIRE binding covers every role reachable in template      # binding resolved pre-kernel; the kernel only validates coverage (fail at create, not mid-run)
+  REQUIRE validate_gate_config(template)                          # L2a: static gate-config invariants (process↔workspace, no fail_instance) — definition-load validation, fail at create
+  REQUIRE validate_context_refs(template)                         # L2b: every issued context_block ref resolves in the catalog — fail at create, beside binding coverage
+  instance ← create { template_ref, task, binding, activation_mode,
+                      kernel_status: CREATED, current_step: none, round: 0,   # round 0 = prepared, no work cycle begun yet (position none until ACTIVE)
+                      runtime_context: none, run_overrides: snapshot(run_overrides), version: 1 }
+  COMMIT instance creation
+  RETURN Created(instance.version)                             # no dispatch yet — not active
+
+# RuntimeContextProvider — a named, core-adjacent fulfiller; the kernel owns this CONTRACT, the provider owns the mechanics
+INTERFACE RuntimeContextProvider:
+  provision(instance_id, request_id, spec)            # async → later fires RUNTIME_CONTEXT_READY(request_id, ref)
+  project_for_actor(runtime_context_ref) → RuntimeContextProjection   # kind-specific actor-facing view; kernel-internal fields stay out
+
+START(instance) → Outcome                                             # operator_intent — guarded, single-shot
+  REQUIRE instance.kernel_status = CREATED AND instance.runtime_context = none
+  template ← definitionStore.load(instance.template_ref)
+  requirement ← template.runtime_context                              # RuntimeContextRequirement: none | required(spec) — single source of truth
+  IF requirement = none THEN                                          # the workflow declares no runtime context
+    instance.runtime_context ← ready(∅)                               # trivially ready — nothing to provision
+    RETURN activate_or_hold(instance)
+  provider ← providerRegistry.resolve(requirement.spec.provider)
+  IF provider is none THEN RETURN Rejected(runtime_context_provider_unavailable)   # name-resolution failure = base contract error
+  request_id ← new_request_id()
+  provider.provision(instance.id, request_id, requirement.spec)  # provider internals run git branch/worktree/clone mechanics; later fires RUNTIME_CONTEXT_READY
+  instance.runtime_context ← requested(request_id)          # the L0d single-shot marker; status stays CREATED (= v1 PREPARING_WORKSPACE)
+  RETURN Accepted
+
+activate_or_hold(instance) → Outcome                                 # shared post-readiness decision (provisioned or context-free)
+  IF instance.activation_mode = immediate THEN RETURN activate(instance)
+  instance.kernel_status ← WAITING                             # deferred_kickoff: hold for an operator kickoff
+  instance.wait ← { kind: kickoff_pending, requested_by: "activation", resume_events: [KICKOFF] }
+  RETURN Accepted
+
+RUNTIME_CONTEXT_READY(instance, request_id, runtime_context_ref) → Outcome   # kernel_event (v1: workspace/worktree ready)
+  REQUIRE instance.runtime_context = requested(request_id)   # L0d correlation: the readiness for the request we issued
+  template ← definitionStore.load(instance.template_ref)
+  requirement ← template.runtime_context
+  REQUIRE requirement = required(spec)                       # a request was issued ⇒ a context is required (made explicit)
+  REQUIRE runtime_context_ref.kind = spec.kind              # L0e kind-boundary — a provider may only return a ref of the requested kind
+  instance.runtime_context ← ready(runtime_context_ref)    # kernel guards kind + correlation only; the locator stays provider-defined, unvalidated
+  RETURN activate_or_hold(instance)
+
+KICKOFF(instance, task) → Outcome                                     # operator_intent
+  REQUIRE instance.kernel_status = WAITING AND instance.wait.kind = kickoff_pending
+  instance.task ← task                                         # the deferred task, supplied now
+  RETURN activate(instance)
+
+activate(instance) → Outcome                                         # internal — produces the first dispatch
+  REQUIRE instance.runtime_context = ready AND instance.task present
+  template ← definitionStore.load(instance.template_ref)      # pinned immutable version — same template/instance boundary as HANDLE
+  instance.kernel_status ← ACTIVE
+  instance.current_step  ← template.start
+  instance.round         ← 1                                  # the first work cycle begins at activation: round 0 → 1 (the start step is a round-start)
+  RETURN Activated(dispatch_intent(instance, template, template.start))   # dispatch is a kernel output (L0b), not a side effect
+
+CANCEL(instance) → Outcome                                           # operator_intent — any non-terminal
+  REQUIRE instance.kernel_status ≠ TERMINAL
+  instance.kernel_status ← TERMINAL ; instance.terminal_disposition ← cancelled
+  RETURN Terminated(cancelled)
+
+COMPLETE(instance)                                                   # internal helper — done originates only from a terminal step (HANDLE), never routed
+  REQUIRE instance.kernel_status = ACTIVE
+  instance.kernel_status ← TERMINAL ; instance.terminal_disposition ← done
+
+FAIL(instance, reason) → Outcome                                     # kernel_event — any non-terminal
+  REQUIRE instance.kernel_status ≠ TERMINAL
+  instance.kernel_status ← TERMINAL ; instance.terminal_disposition ← failed ; instance.failure_reason ← reason
+  RETURN Terminated(failed)
+
+HANDLE envelope → Outcome
+  IF not valid_shape(envelope)            THEN RETURN Rejected(invalid_shape)
+
+  instance ← instanceStore.load(envelope.instance_id)
+  IF instance is none                     THEN RETURN Rejected(unknown_instance)
+  template ← definitionStore.load(instance.template_ref)   # separate store; pinned immutable version
+
+  # idempotency, key scope (instance_id, op_id)
+  IF instance.transcript.has(envelope.op_id) THEN RETURN Duplicate   # no-op, no 2nd entry
+
+  # L0d: lifecycle guard — actor emits only in actor-routable ACTIVE execution
+  IF instance.kernel_status ≠ ACTIVE       THEN RETURN Rejected(not_active)
+
+  # actor-supplied stale-intent — mandatory at L0b
+  IF envelope.expected_version is missing  THEN RETURN Rejected(missing_version)
+  IF envelope.expected_version ≠ instance.version THEN RETURN Stale(instance.version)
+
+  step   ← template.step(instance.current_step)
+
+  # L1: role authority — the claimed role must be this position's active role
+  IF envelope.expected_role is missing     THEN RETURN Rejected(missing_role)          # mandatory at L1
+  IF envelope.expected_role ≠ step.role    THEN RETURN Rejected(role_not_authorized)
+
+  target ← step.transitions[envelope.type]   # navigation (L0b): does this action exist here?
+  IF target is none                       THEN RETURN Rejected(no_transition)
+
+  # L1: action authorization — exists as a transition, but may this role emit it here?
+  IF envelope.type not in capability(template, step.role, instance.current_step)
+                                          THEN RETURN Rejected(not_authorized)
+
+  # L2: policy gate pipeline — the transition exists (L0b) and is authorized (L1); do the policies allow it now?
+  gate_decisions ← []                                                                       # retained allow/warn verdicts + evidence refs, carried to the commit
+  FOR gate IN template.gates_for(instance.current_step, envelope.type):   # ordered, authored; empty for ungated transitions
+    evaluator ← gateRegistry.resolve(gate.uses)
+    IF evaluator is none            THEN RETURN Rejected(gate_evaluator_unavailable)      # config invariant — unresolved gate name
+    IF evaluator.execution ≠ inline THEN RETURN Rejected(gate_execution_not_supported)    # deferred ⇒ later lifecycle slice (gate_pending + GATE_RESULT)
+    IF evaluator.implementation = process                                                 # L2a: inline process now runs (was rejected at L2 core)
+      THEN IF instance.runtime_context = ready(∅) THEN RETURN Rejected(runtime_context_required_for_process_gate)   # ready(∅) = context-free: validate_gate_config rejects this at definition load; runtime backstop here
+           decision ← run_process_gate(gate, instance, template, envelope)                # spawn in the workspace, bounded timeout
+      ELSE decision ← evaluator.evaluate(gate.config, gate_projection(instance, template, envelope))   # declarative / packaged, in-process
+    IF decision.verdict = block     THEN RETURN Rejected(gate_blocked(decision.reason), decision.evidence_refs)   # no commit ⇒ round not burned; refs surfaced
+    gate_decisions.append(decision)                                                       # allow or warn ⇒ retained (verdict + evidence_refs + diagnostics)
+    # allow or warn ⇒ next gate in the pipeline
+
+  issued_config ← resolve_agent_config(template, step, instance)   # resolved only now — not for a rejected envelope
+
+  # one atomic commit, CAS on instance.version
+  COMMIT atomically at expected_version = instance.version:
+    instance.transcript.append(envelope, issued_agent_config: issued_config, gate_decisions: gate_decisions)   # provenance: issued config + gate verdicts / evidence refs
+    instance.current_step ← target
+    IF advances_round(step, target) THEN instance.round ← instance.round + 1    # advance predicate = transition semantics; transcript-reconstructable
+    IF target is terminal THEN COMPLETE(instance)                  # kernel-internal completion path → TERMINAL(done)
+    instance.version ← instance.version + 1
+  # on CAS conflict: restart HANDLE from load —
+  #   re-check idempotency and re-resolve the transition;
+  #   never re-commit a target computed from stale state
+
+  intent ← (instance.kernel_status = TERMINAL) ? none : dispatch_intent(instance, template, instance.current_step)  # derive after commit
+  RETURN Committed(instance.version, intent)
+
+assemble_context_blocks(instance, template, step) → [ContextBlock]    # L2b — deterministic render; bodies resolved from the catalog only
+  catalog  ← template.context_blocks                                  # id → { body }; the single body source
+  rendered ← ordered_map()                                            # first-seen order; dedups by id, accumulates provenance.sources[]
+  emit(ref, source):                                                  # local closure — resolve once; on a repeat only append the provenance source
+    IF rendered.has(ref) THEN rendered[ref].provenance.sources.append(source) ; RETURN
+    rendered.put(ref, { id: ref, body: catalog[ref].body, provenance: { sources: [source] } })
+  # render order IS source order: role refs → step refs → gate/policy refs, declaration order within each — render-order, NOT precedence/override
+  FOR ref IN template.role(step.role).default_agent_config.prompt_concern_refs:   # 1) role identity / operating rules
+    emit(ref, { source: role_config })
+  FOR ref IN step.agent_config.prompt_concern_refs:                               # 2) the current step
+    emit(ref, { source: step_config })
+  authorized_ops ← capability(template, step.role, step.id) ∩ event_types_of(step.transitions)   # L1 authority ∩ transition existence — the ops this actor may legally emit
+  FOR event_type IN authorized_ops:                                              # 3) gates on transitions the actor may emit — not blind step membership
+    FOR gate IN template.gates_for(step.id, event_type):
+      FOR ref IN gate.context_block_refs:
+        emit(ref, { source: gate_binding, at: (step.id, event_type) })
+  RETURN rendered.values()                                            # ordered [{ id, body, provenance: { sources } }]
+
+dispatch_intent(instance, template, step_id) → DispatchIntent
+  step  ← template.step(step_id)
+  actor ← instance.binding[step.role]                  # guaranteed present by the start invariant
+  requirement ← template.runtime_context
+  IF instance.runtime_context = ready(∅) THEN                                       # the workflow declared no runtime context
+    runtime_view ← none                                                            # explicit: the actor assumes no workspace
+  ELSE
+    REQUIRE requirement = required(spec)                                            # provisioned path ⇒ a context is required (made explicit)
+    provider ← providerRegistry.resolve(spec.provider)                             # the same pinned-template provider that issued the request
+    REQUIRE provider is not none                       # kernel/config invariant (not a business rejection): registry stable for an active run
+    runtime_view ← provider.project_for_actor(instance.runtime_context.ready_ref)  # actor-facing projection (L0e); raw ref stays kernel-side
+  packet ← ContextPacket {
+    instance_id, expected_version: instance.version, task: instance.task,
+    role:          step.role,                                      # dispatched-as role → echoed back as expected_role
+    instruction:   step.instruction,
+    handoff:       payload_of_transition_into(instance, step_id),  # the envelope that brought us here; absent at start
+    available_ops: event_types_of(step.transitions),              # navigation affordances; L1 enforces capability in HANDLE
+    context_blocks: assemble_context_blocks(instance, template, step),   # L2b — rendered, ordered, deduped, with provenance; communication only
+    effective_agent_config: resolve_agent_config(template, step, instance),   # resolved portable run intent (was raw agent_config at L0b)
+    runtime_context: runtime_view }                              # the projection, or none for a context-free workflow
+  RETURN DispatchIntent { actor, packet }            # a local/manual driver delivers; durable channel is L8
+          

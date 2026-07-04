@@ -1,0 +1,233 @@
+<section id="l3">
+        <h2 class="level-h"><span class="level-badge">L3</span> Human decision Ask — approval gate</h2>
+        <p class="level-sub">L2 / L2a / L2b gated and communicated <em>machine</em> policy. L3 introduces the
+        human as <b>decision-maker</b>: a <code>human_gate</code> step parks the instance in
+        <code>WAITING(human_decision)</code>, records a <code>DECISION_REQUEST</code> for the bound
+        <code>operator</code>, and the operator’s decision routes the workflow. The gate's
+        <code>decisions</code> map is generic — <code>approve | request_rework</code> are just this anchor's keys;
+        the kernel knows no decision names. The narrowest Ask — not a general human platform.</p>
+
+        <p><b>The human is a different mover.</b> A decision is <em>not</em> an actor envelope through
+        <code>HANDLE</code>’s ACTIVE path; it is an <b>operator-intent</b> on a <code>WAITING(human_decision)</code>
+        state — a sibling of <code>KICKOFF</code>. So <code>ACTIVE</code> stays honest ("an agent is working")
+        and <code>WAITING</code> means "blocked on a human." The v1 reality check shows "human" is at least three
+        contracts; L3 takes only the <b>approval gate</b> (the agent-initiated ask-human/help reply is L5).</p>
+
+        <div class="note">
+          <b>Scope note (bare wait + its resume).</b> L3 introduces the minimal <code>type: wait</code> shape for
+          the post-approval anchor (<code>commit_pending</code>) <em>and</em> the minimal resume that closes it:
+          arrival parks <code>WAITING(step.wait.kind)</code> (no actor output), and <code>RESUME_WAIT</code> moves
+          forward on a matching event via the step's <code>on_resume</code> route. This is the <b>bare-wait dual</b>
+          of the <code>human_gate</code> decision wait — the missing other half of the WAITING axis, surfaced now
+          because <code>commit_pending</code> would otherwise dead-end. What remains later: result payloads, the
+          resume <em>action</em> (e.g. actually running git commit), child-event resume sources (L4), and
+          timeouts / external-or-fuzzy correlation (L9). It is <em>not</em> a special seam: enough WAITING-kind
+          shapes already exist (<code>kickoff_pending</code> as the first specialized resume, the
+          <code>human_decision</code> decision wait) that a one-off bare wait/resume would just reprise the
+          finalization mistake.</div>
+
+        <h3 class="view-h"><span class="view-tag" style="background:#e2e8f0;color:#334155">Shape</span> How the L3 pieces fit (L3-specific aid)</h3>
+        <p>L3's pseudocode reads as a list of handlers, but the structure converges: three entry
+        handlers — each with its own guards and its own commit — <b>share the same post-commit target-entry
+        pattern</b>. <code>apply_target_entry_effects</code> fans out by the <em>target's type</em>, and
+        <code>post_commit_output</code> derives the outbound effect. (1) is the code shape, (2) the per-target
+        outcome, (3) the lifecycle it produces.</p>
+        <pre class="pseudo" style="font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size:12.5px; line-height:1.5">
+(1) THREE entry handlers, each its own guards + COMMIT, sharing one target-entry spine
+──────────────────────────────────────────────────────────────────────────────────────
+   actor envelope      ─▶  HANDLE           ─▶ own guards ─▶ COMMIT  ┐
+   operator decision   ─▶  SUBMIT_DECISION  ─▶ own guards ─▶ COMMIT  ├──▶  apply_target_entry_effects(target)
+   resume event        ─▶  RESUME_WAIT      ─▶ own guards ─▶ COMMIT  ┘            ─▶ post_commit_output
+
+(2) apply_target_entry_effects applies target-entry effects; the target type decides the resulting lifecycle status; post_commit_output then derives the output
+──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+   target = agent step  ─▶  ACTIVE                                       →  DispatchIntent
+   target = human_gate  ─▶  WAITING(human_decision) + DECISION_REQUEST   →  HumanDecisionRequest
+   target = type: wait  ─▶  WAITING(step.wait.kind)                      →  none  (awaits a resume event)
+   target = terminal    ─▶  TERMINAL(done)                               →  none
+
+(3) the lifecycle this produces (the anchor run)
+─────────────────────────────────────────────────
+   CREATED ─START/KICKOFF─▶ ACTIVE  ⇄  (implement ⇄ review loop)
+                              │  reviewer emits CONVERGED   (L2 gates allow)
+                              ▼
+                   WAITING(human_decision)    ←  operator is asked (DECISION_REQUEST / HumanDecisionRequest)
+                      │
+            approve   │   request_rework ─▶ back to ACTIVE  (new round, → implement)
+                      ▼
+                   WAITING(commit_pending)
+                      │  operator runs commit ─▶ COMMIT event ─▶ RESUME_WAIT
+                      ▼
+                   TERMINAL(done)
+        </pre>
+        <div class="note">
+          The same target-entry pattern carries every level: L0a–L2b all enter through <code>HANDLE</code> and end at the commit;
+          L3 only adds the other two entry handlers (<code>SUBMIT_DECISION</code>, <code>RESUME_WAIT</code>) and
+          the target-type fan-out. <code>apply_target_entry_effects</code> applies the target-entry effects;
+          <code>post_commit_output</code> reads the resulting status to decide what to deliver.
+        </div>
+
+        <h3 class="view-h"><span class="view-tag runtime">Runtime</span> A concrete trace</h3>
+        <p>The reviewer converges at round 2; the result routes to the <code>human_approval</code> gate instead
+        of straight to <code>done</code>:</p>
+        <div class="trace">
+          <div class="trace-row"><div class="trace-n">1</div><div class="trace-c">
+            <div class="ev">the reviewer emits <code>CONVERGED</code> at round 2 (<code>expected_version=N</code>)</div>
+            <div class="meta">L2 converge gates allow → commit routes <b>review → human_approval</b>; the kernel parks <code>WAITING(human_decision)</code> and records <code>DECISION_REQUEST { recommendation: approve, recommendation_source: { from_step: review, event_type: CONVERGED } }</code> as <b>one visible transition</b>; the output is a <code>HumanDecisionRequest</code> to the operator — <b>no agent is dispatched</b>, round not advanced</div>
+          </div></div>
+          <div class="trace-row"><div class="trace-n">2</div><div class="trace-c">
+            <div class="ev">the operator submits <code>SUBMIT_DECISION(approve)</code></div>
+            <div class="meta">guards pass (wait.kind ✓ · request_ref correlates ✓ · operator authorized ✓ · version ✓); <code>approve</code> = the recommended decision, so no override is needed (an <code>override</code> here would be <code>override_not_applicable</code>) → append <code>DECISION_MADE(approve)</code> → <code>apply_target_entry_effects</code> routes to <code>decisions[approve].target = commit_pending</code> (a <code>type: wait</code> step) → park <b>WAITING(commit_pending)</b>, awaiting the operator's <code>COMMIT</code>. The decision didn’t decide this — the target type did; a different target (agent step, another gate, <code>done</code>) would continue or park differently</div>
+          </div></div>
+          <div class="trace-row"><div class="trace-n">3</div><div class="trace-c">
+            <div class="ev">the operator runs the commit; a <code>COMMIT</code> event arrives for the parked instance</div>
+            <div class="meta"><code>RESUME_WAIT</code>: guards pass (WAITING ✓ · <code>COMMIT ∈ resume_events</code> ✓ · version ✓ · op_id fresh) → append <code>WAIT_RESUMED(COMMIT)</code> → <code>apply_target_entry_effects</code> resolves <code>on_resume[COMMIT] = done</code> → <b>TERMINAL(done)</b>. This is the resume <em>contract</em>; the actual git commit, merge, and teardown are later runtime slices</div>
+          </div></div>
+          <div class="trace-row"><div class="trace-n">4</div><div class="trace-c">
+            <div class="ev">(an alternate run, at step 2) the operator submits <code>SUBMIT_DECISION(request_rework, override, payload: { instruction: "fix the failing auth test; leave the public API untouched" })</code></div>
+            <div class="meta">the required <code>instruction</code> is non-empty ✓, and <code>override</code> flags going against the recommended <code>approve</code> ✓ → append <code>DECISION_MADE(request_rework, override:true, payload)</code> → route <code>decisions[request_rework].target</code> = <b>human_approval → implement</b>; the target <code>advances_round</code>, so <b>a new round</b> opens and the stale review/decision context is cleared → <code>ACTIVE</code>; the implementer is dispatched with the instruction as its <code>handoff</code> (exactly what to fix)</div>
+          </div></div>
+        </div>
+        <div class="note runtime">
+          The override case: the converge route <code>recommends: approve</code>, so the agreeing
+          <code>approve</code> needs none. Going the other way — <code>request_rework</code> — is a decision
+          <em>against</em> the recommendation: without <code>override</code> it is
+          <code>Rejected(override_required)</code>, and with <code>override: true</code> it records
+          <code>DECISION_MADE(request_rework, override: true)</code> — a human deciding against the machine, on the
+          record. (A warn-sensitive recommendation — one that would instead flag <code>approve</code> as the
+          off-recommendation choice — is the deferred <em>dynamic</em> recommendation.) A wrong operator, a stale
+          version, or a replayed <code>op_id</code> are all rejected on this path.
+        </div>
+
+        <h3 class="view-h"><span class="view-tag pseudo">Pseudocode</span> The rule behind the trace</h3>
+        <p>A new operator-intent handler <code>SUBMIT_DECISION</code> (a KICKOFF sibling), an atomic
+        <code>park_for_human_decision</code> inside the arrival commit, and a <code>post_commit_output</code> that
+        delivers either a dispatch or the Ask. HANDLE is otherwise unchanged:</p>
+        <div class="code-diff" aria-label="L3 pseudocode" data-old-label="L2b baseline" data-new-label="L3 current">
+          <script type="text/plain" class="diff-source" data-code-old-ref="l2b-pseudocode">[[@code code/l3-pseudocode.old.txt]]</script>
+          <script type="text/plain" class="diff-source" data-code-new data-code-id="l3-pseudocode">[[@code code/l3-pseudocode.new.txt]]</script>
+        </div>
+        <div class="note pseudo">
+          Entering a <code>human_gate</code> parks <em>inside</em> the same atomic commit that moves the step, so
+          the wait state and the <code>DECISION_REQUEST</code> are one visible transition (no half-entered gate).
+          The decision resumes on a dedicated path guarded by <code>wait.kind</code> + request correlation +
+          operator authority + <code>op_id</code> + CAS — deliberately not HANDLE’s actor gate. The override
+          guard is the only place the machine’s <code>recommendation</code> and the human’s verdict meet.
+        </div>
+
+        <h3 class="view-h"><span class="view-tag domain">Domain</span> What L3 adds</h3>
+        <div class="agg">
+          <div class="agg-label">Human decision — a wait, an Ask, and a transcript pair</div>
+          <div class="ents">
+            <div class="ent"><div class="en">wait step + RESUME_WAIT <span style="font-size:10px;color:var(--muted)">(minimal shape at L3)</span></div><div class="fields">a <code>type: wait</code> step declares <code>wait: { kind, resume_events }</code> and <code>on_resume: { event → target }</code>; arrival parks <code>WAITING(kind)</code> (no Ask), and <code>RESUME_WAIT(event)</code> resumes on a matching event via <code>on_resume</code> → <code>apply_target_entry_effects(target)</code>. The <b>bare-wait dual</b> of the human_gate decision wait. L3 realizes it for <code>commit_pending</code> ⇐ <code>[COMMIT]</code> (<code>on_resume: { COMMIT: done }</code>) — no "finalization" type. Result payloads, the resume action, child-event sources (L4), timeouts/correlation (L9) are later</div></div>
+            <div class="ent"><div class="en">human_gate <span style="font-size:10px;color:var(--muted)">(step type)</span></div><div class="fields"><code>type: human_gate</code>, <code>role: operator</code> — a <em>decision</em> wait: on arrival parks <code>WAITING(human_decision)</code> + <code>DECISION_REQUEST</code> + the Ask. Its <code>decisions</code> map <b>IS its transition map</b>, keyed by decision key (anchor: <code>approve</code> / <code>request_rework</code>); each key declares a <code>target</code> and optional required <code>payload</code> fields. A decision carries <b>no lifecycle meaning</b> — it just routes to a target, and the kernel knows no decision names</div></div>
+            <div class="ent"><div class="en">apply_target_entry_effects(...) <span style="font-size:10px;color:var(--muted)">(shared rule)</span></div><div class="fields">one <code>apply_target_entry_effects(instance, template, from_step_id, target)</code> — shared by HANDLE, SUBMIT_DECISION, and RESUME_WAIT so the entry paths never drift — routes by the target's nature: agent step ⇒ ACTIVE+dispatch, <code>type: human_gate</code> ⇒ park <code>human_decision</code> (a decision wait), <code>type: wait</code> ⇒ park <code>WAITING(step.wait.kind)</code> (a bare wait), terminal ⇒ the existing COMPLETE rule</div></div>
+            <div class="ent"><div class="en">HumanDecisionRequest <span style="font-size:10px;color:var(--muted)">(value)</span></div><div class="fields">the Ask: the human-facing analog of <code>DispatchIntent</code> (question, recommendation, decision context, allowed decisions, and <code>decision_requirements</code> — so the Ask is self-contained, e.g. <code>request_rework</code> requires an instruction); local/manual delivery, a durable channel is L8</div></div>
+            <div class="ent"><div class="en">DECISION_REQUEST / DECISION_MADE <span style="font-size:10px;color:var(--muted)">(transcript)</span></div><div class="fields">generic, decision-agnostic names (no <code>APPROVAL_</code> bias, so an escalation / accept-risk / choose-strategy gate reuses them): the request recorded on entry (recipient, declared <code>decisions</code>, <code>recommendation</code> + <code>recommendation_source</code>, context_ref) and the decision recorded on resume (<code>decision</code> key, <code>payload</code>, by, and <code>override</code> <b>only</b> when the choice went against the recommendation)</div></div>
+          </div>
+        </div>
+        <div class="agg">
+          <div class="agg-label">Human Decision Contract — the single source of truth for the gate and the decision</div>
+          <div style="overflow-x:auto">
+          <table class="contract">
+            <thead><tr><th>Operation</th><th>Input</th><th>wait.kind</th><th>Correlation</th><th>Authority</th><th>Transcript</th><th>Routing target</th><th>Round</th><th>Context cleanup</th><th>Override rule</th><th>Rejects</th></tr></thead>
+            <tbody>
+              <tr><td>enter gate</td><td>arrival at a <code>human_gate</code> (review CONVERGED, gates allow)</td><td>set <code>human_decision</code></td><td>new <code>request_ref</code></td><td>—</td><td><code>DECISION_REQUEST</code> (keys + recommendation + source)</td><td>→ <code>WAITING</code></td><td>no advance</td><td>—</td><td>—</td><td>append fails ⇒ rollback (no half-entered gate)</td></tr>
+              <tr><td>approve <span style="font-size:10px;color:var(--muted)">(= recommendation)</span></td><td><code>SUBMIT_DECISION(approve)</code></td><td>requires <code>human_decision</code></td><td><code>request_ref</code> = wait’s</td><td><code>by</code> = binding[operator]</td><td><code>DECISION_MADE(approve)</code></td><td><code>decisions[approve].target</code> → apply_target_entry_effects (here <code>commit_pending</code>, a <code>type: wait</code> step ⇒ <code>WAITING(commit_pending)</code>)</td><td>per target (here no advance)</td><td>—</td><td><b>not applicable</b> — approve = the recommended decision (an <code>override</code> here ⇒ <code>override_not_applicable</code>)</td><td>not_awaiting_decision · decision_request_mismatch · operator_not_authorized · Stale · Duplicate</td></tr>
+              <tr><td>request_rework <span style="font-size:10px;color:var(--muted)">(≠ recommendation)</span></td><td><code>SUBMIT_DECISION(request_rework, override, payload.instruction)</code></td><td><code>human_decision</code></td><td><code>request_ref</code> match</td><td>operator</td><td><code>DECISION_MADE(request_rework, override:true, payload)</code></td><td><code>decisions[request_rework].target</code> → apply_target_entry_effects (here <code>implement</code>, an agent step)</td><td><b>new round</b> (per target)</td><td>stale context cleared; instruction → handoff</td><td><b>required</b> — request_rework ≠ the recommended approve (<code>override_required</code> if absent)</td><td><code>unknown_decision</code> · <code>missing_required_field</code> · <code>override_required</code></td></tr>
+            </tbody>
+          </table>
+          </div>
+          <div class="fields" style="margin-top:8px">This table is the contract; <code>park_for_human_decision</code> realizes the enter row, <code>SUBMIT_DECISION</code> the decision rows, and the config below is one instance of it. The <code>recommendation</code> is the firing edge's <code>recommends</code> (here <code>review.CONVERGED ⇒ approve</code>), recorded with its <code>recommendation_source</code>; <code>override</code> is required <b>exactly when</b> the chosen decision ≠ the recommendation. Required payload fields are declared <b>per decision</b> (here <code>request_rework ⇒</code> a non-empty <code>instruction</code> + optional <code>refs</code>), recorded in <code>DECISION_MADE</code> and delivered to the implementer as the <code>handoff</code> of the rework target’s first dispatch. Warn-sensitive (dynamic) recommendation is deferred.</div>
+        </div>
+        <div class="agg">
+          <div class="agg-label">Bare Wait Resume Contract — the dual of the decision contract, for a <code>type: wait</code> step</div>
+          <div style="overflow-x:auto">
+          <table class="contract">
+            <thead><tr><th>Input</th><th>Allowed wait type</th><th>Correlation</th><th>Authority</th><th>Transcript</th><th>Routing target</th><th>Rejects</th></tr></thead>
+            <tbody>
+              <tr><td><code>RESUME_WAIT(event)</code> (e.g. <code>COMMIT</code>)</td><td><code>type: wait</code> only (a <code>human_gate</code> ⇒ <code>not_bare_wait</code>)</td><td><code>event.type ∈ wait.resume_events</code></td><td>— (an optional authority hook is later)</td><td><code>WAIT_RESUMED</code></td><td><code>on_resume[event.type]</code> → apply_target_entry_effects (here <code>done</code>)</td><td>not_waiting · not_bare_wait · resume_event_mismatch · no_resume_transition · Stale · Duplicate</td></tr>
+            </tbody>
+          </table>
+          </div>
+          <div class="fields" style="margin-top:8px"><code>RESUME_WAIT</code> realizes this row; it is the bare-wait counterpart of the decision contract above (no Ask, no verdict, no override). The resume <em>action</em> (e.g. running git commit) and result payloads are later slices.</div>
+        </div>
+        <div class="note domain">
+          The override rule is the only place the machine’s recommendation and the human’s verdict meet — the
+          seed of the fiduciary wedge: a human may decide against the machine, but explicitly and on the record.
+          Everything else (correlation, authority, CAS, idempotency) is ordinary kernel correctness on a new
+          input class.
+        </div>
+
+        <h3 class="view-h"><span class="view-tag invariant">Invariant</span> New at L3</h3>
+        <div class="agg invariant">
+          <div class="agg-label">Added rules</div>
+          <div class="ents">
+            <div class="ent"><div class="en">park is one visible transition</div><div class="fields">entering a <code>human_gate</code> sets <code>WAITING(human_decision)</code> AND records <code>DECISION_REQUEST</code> atomically; a failed append rolls back — no externally valid half-entered gate (we do not bind to a write order)</div></div>
+            <div class="ent"><div class="en">decision is operator-intent, not actor-envelope</div><div class="fields">a KICKOFF sibling guarded by <code>wait.kind</code> + request correlation + operator authority + <code>op_id</code> + CAS; operator authority is checked here, the full operator authority model is later — the L1 actor gate is a different input class</div></div>
+            <div class="ent"><div class="en">WAITING is honest</div><div class="fields">no agent is dispatched while parked on a human decision; the human is the only mover until the decision resumes the instance</div></div>
+            <div class="ent"><div class="en">override is explicit and recorded</div><div class="fields">a decision against the recorded <code>recommendation</code> (chosen ≠ recommended) requires <code>override: true</code>, written into <code>DECISION_MADE</code> — the fiduciary core. Override is meaningful <b>only</b> against a recommendation: with none recorded, or when agreeing with it, an <code>override</code> is <code>override_not_applicable</code></div></div>
+            <div class="ent"><div class="en">a loop-back resumes clean</div><div class="fields">a decision whose target <code>advances_round</code> (a loop-back, e.g. rework → implement) clears the stale review/decision context and opens a new round — keyed on round advancement, <b>not</b> on a verdict name; the fresh decision payload stays as the handoff</div></div>
+            <div class="ent"><div class="en">a decision carries its required payload</div><div class="fields">a decision's required payload fields are declared <b>per decision</b> in the gate's <code>decisions</code> map (anchor: <code>request_rework ⇒ instruction</code> required, + optional <code>refs</code>) — a missing one is <code>missing_required_field</code> (the generic replacement for the old hardcoded rework rule); the payload is recorded in <code>DECISION_MADE</code> and delivered actor-facing as the <code>handoff</code> of the target’s first dispatch. <code>approve</code> declares none</div></div>
+            <div class="ent"><div class="en">decisions carry no lifecycle meaning</div><div class="fields">a decision routes to <code>decisions[verdict].target</code>; the <b>target's type</b> decides arrival (agent ⇒ ACTIVE, <code>type: human_gate</code> ⇒ park <code>human_decision</code>, <code>type: wait</code> ⇒ park <code>WAITING(step.wait.kind)</code>, terminal ⇒ COMPLETE), via the one <code>apply_target_entry_effects(...)</code> HANDLE and SUBMIT_DECISION share. So <code>approve</code> can target another gate, an agent step (even a newly-added LLM step), a wait step, or <code>done</code> — there is <b>no privileged "finalization" phase</b> and the kernel never bakes in "approve = finalize"; the kernel knows no decision names. An undeclared key is <code>unknown_decision</code>; the L0d closed terminal set <code>done | failed | cancelled</code> is untouched</div></div>
+            <div class="ent"><div class="en">a parked wait resumes only on a matching event</div><div class="fields">a <code>WAITING</code> instance moves forward only via <code>RESUME_WAIT</code> on an event whose type is in <code>wait.resume_events</code>, routed by the step's <code>on_resume</code> — guarded by idempotency (<code>op_id</code>) + version (CAS), like HANDLE; an unrouted resume is <code>no_resume_transition</code>. <code>KICKOFF</code> and <code>SUBMIT_DECISION</code> are the specialized resumes (activation / decision); <code>RESUME_WAIT</code> is the bare one. The resume <em>action</em> (e.g. running git commit) is not the kernel's job here</div></div>
+          </div>
+        </div>
+
+        <h3 class="view-h"><span class="view-tag config">Config</span> The template — converge routes to a human approval gate</h3>
+        <p>An <code>operator</code> role is added, and the <code>review</code> <code>CONVERGED</code> transition
+        now targets a <code>human_approval</code> <code>human_gate</code> (the L2 converge gates still guard the
+        transition); approve routes to a <code>commit_pending</code> wait step, request_rework returns to implement:</p>
+        <div class="code-diff" aria-label="L3 template config" data-old-label="L2b baseline" data-new-label="L3 current">
+          <script type="text/plain" class="diff-source" data-code-old-ref="l2b-template-config">[[@code code/l3-template-config.old.txt]]</script>
+          <script type="text/plain" class="diff-source" data-code-new data-code-id="l3-template-config">[[@code code/l3-template-config.new.txt]]</script>
+        </div>
+        <div class="note config">
+          A decision carries no lifecycle meaning: <code>approve</code> routes to <code>decisions[approve].target</code>
+          and the <em>target</em> decides. There is <b>no privileged "finalization" phase</b> — after approval the
+          workflow just has more steps. Here approve targets <code>commit_pending</code>, a generic
+          <code>type: wait</code> step (v1-faithful: approval waits for the operator's <code>COMMIT</code>, which
+          does not fire on its own), so arrival parks <code>WAITING(commit_pending)</code> (a wait.kind on the L0d
+          WAITING axis, NOT a terminal disposition; the closed set <code>done | failed | cancelled</code> is
+          untouched). A different workflow could target another <code>human_gate</code>, an agent step (even a
+          newly-added LLM step), or <code>done</code>. You could interleave a <code>merge_pending</code> wait or an
+          automated <code>performance_test_pending</code> wait — all ordinary steps. The COMMIT resume <em>contract</em>
+          is realized here; the actual git-commit <em>action</em>, the MERGE action, and teardown
+          (v1: <code>APPROVED_FOR_COMMIT → COMMITTED → DONE</code>, then a <em>separate</em> post-<code>DONE</code>
+          merge + teardown) are later slices. The <code>operator</code> is bound exactly like the agent roles, so
+          the existing "binding covers every reachable role" invariant already requires a human to be assigned.
+        </div>
+
+        <h3 class="view-h"><span class="view-tag absent">Absent</span> Still not here</h3>
+        <div class="absent-grid">
+          <div class="absent-item">No <b>agent-initiated ask-human / help reply</b> — WAITING for a human <em>reply</em>, the active agent asks (round ≥ 1), same-context resume; a different primitive <span class="at">→ L5</span></div>
+          <div class="absent-item">No <b>deferred request-rework</b> — a rework intent arriving while parked on a help-ask, stashed as <code>pending_rework_intent</code> and applied by a watchdog <span class="at">→ L5 + watchdog (L6/L9)</span></div>
+          <div class="absent-item">No <b>resume <em>actions</em> / post-approval mechanics</b> — the resume <em>contract</em> is in (<code>RESUME_WAIT</code>: <code>COMMIT</code> moves <code>commit_pending</code> forward), but the kernel does not run the git commit/merge <em>actions</em> (③a), the resource teardown (②), or archive (④); those + result payloads, retries, and stale-event recovery are later slices. v1 order (reality-checked): <code>APPROVED_FOR_COMMIT → COMMITTED → DONE</code> (commit before <code>DONE</code>), with the <b>merge a separate command after <code>DONE</code></b>. "Finalization" stays an informal name, not a kernel step type <span class="at">→ ③a · ② · ④</span></div>
+          <div class="absent-item">No <b>non-operator resume sources</b> — <code>RESUME_WAIT</code> here is driven by an operator event (<code>COMMIT</code>); internal <b>child-lifecycle</b> resume events arrive at <span class="at">→ L4</span>, and timeout / external / fuzzy correlation at <span class="at">→ L9</span>, reusing the same contract</div>
+          <div class="absent-item">No <b>timeout on a human wait</b> — a parked decision waits indefinitely in the MVP; escalation/timeout correlation is later <span class="at">→ L9</span></div>
+          <div class="absent-item">No <b>multi-channel delivery / rich input forms</b> — the gate already carries a generic <code>decisions</code> map (N keys, per-decision required <code>payload</code>), but the Ask is delivered locally; durable channels and rich forms are later <span class="at">→ L8</span></div>
+          <div class="absent-item">No <b>dynamic recommendation / decision-condition language</b> — the recommendation is the firing edge's static <code>recommends</code>; a smarter upstream step emitting its own recommendation in its output, and any open predicate language for override/routing beyond the single <em>chosen ≠ recommended</em> rule, are deliberately out <span class="at">→ later</span></div>
+          <div class="absent-item">No <b>agent-to-agent or external-token ask</b> — only a bound human operator decides here <span class="at">→ L7 / L8</span></div>
+        </div>
+
+        <h3 class="view-h"><span class="view-tag evidence">Evidence</span> Why we accept L3 for now</h3>
+        <div class="agg">
+          <div class="agg-label">Acceptance evidence — the v1 human approval gate is representable</div>
+          <div class="ents">
+            <div class="ent"><div class="en">meta-review approve gate</div><div class="fields">v1 <code>READY_FOR_HUMAN_APPROVAL</code> → a <code>human_gate</code> parking <code>WAITING(human_decision)</code> with a <code>DECISION_REQUEST</code> · <b>L3</b></div></div>
+            <div class="ent"><div class="en">approve / request-rework</div><div class="fields">v1 approve → operator commit wait (<code>commit_pending</code>), rework → RUNNING new round + cleared snapshot → the gate's decision-keyed <code>decisions</code> map routed by <code>apply_target_entry_effects</code>; <code>approve</code> / <code>request_rework</code> are this anchor's keys, not kernel vocabulary · <b>L3</b></div></div>
+            <div class="ent"><div class="en">override semantics</div><div class="fields">v1 override-required when the human decides against the machine → the generic rule <em>chosen ≠ recorded recommendation</em> on <code>SUBMIT_DECISION</code> (here <code>request_rework</code> ≠ the recommended <code>approve</code>) · <b>L3</b></div></div>
+          </div>
+        </div>
+        <div class="note evidence">
+          <ul style="margin:0">
+            <li><b>Scenario coverage:</b> a converged result parks for the operator; approve routes to a <code>commit_pending</code> wait step (no privileged finalization), request_rework returns to implement (new round, clean context, with the operator's instruction as the implementer's handoff), and approve against a non-approve recommendation needs an explicit override.</li>
+            <li><b>Accepted tradeoff:</b> a parked decision blocks indefinitely (no timeout) — fine for the local MVP; escalation/timeout is the L9 slice.</li>
+            <li><b>Invariant coverage:</b> one-visible-transition park ✓; operator-intent not actor-envelope ✓; honest WAITING ✓; override recorded ✓; idempotency/CAS reuse ✓; all L0a–L2b invariants still hold.</li>
+            <li><b>Known gaps (intended):</b> ask-human/help reply (L5), deferred rework (L5+watchdog), post-approval resume actions/mechanics (the git commit/merge <em>actions</em> ③a, resource teardown ②, archive ④ — the COMMIT resume <em>contract</em> is done), human-wait timeout (L9), rich schema/channels (L8). Each is in Absent.</li>
+            <li><b>Decision:</b> accepted as the L3 baseline (light evidence per playbook §2.1).</li>
+          </ul>
+        </div>
+      </section>
+
+      

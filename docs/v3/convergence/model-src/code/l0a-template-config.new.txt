@@ -1,0 +1,15 @@
+
+template:
+  id: local-pair-v0
+  version: 1
+  roles: [implementer, reviewer]   # names only; actor binding is L0b
+  start: implement
+  steps:
+    - id: implement
+      role: implementer
+      on_pass: review
+    - id: review
+      role: reviewer
+      on_pass:      implement   # found something → back
+      on_converged: done        # 'done' is a terminal target, not a step
+          

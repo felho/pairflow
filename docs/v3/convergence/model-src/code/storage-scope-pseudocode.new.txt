@@ -1,0 +1,42 @@
+
+# Storage Scope is NOT a handler. It is a placement/authority contract over the writes the
+# kernel and runtime already make. It adds ONE runtime-affecting rule (evidence_ref_ok, INV-3);
+# the rest names where each datum's canonical copy lives. No new transcript entry, no step type,
+# no template config.
+
+StorageTier = T1_record | T2_projection | T3_evidence | T4_workspace
+
+# T1  durable run record  — append-only history, born durable, written DURING the run:
+#                           lifecycle events, transcript/envelopes, decisions, gate outcomes,
+#                           timings, role metadata, terminal disposition, and evidence OUTCOMES
+#                           (inline) + evidence REFS (durable).
+# T3  evidence store      — large blobs (test log, diff snapshot, report), addressed by a durable
+#                           ref carried in a T1 entry.
+# T2  state projection    — a cache of current state for cheap reads; derived from T1.
+# T4  runtime workspace   — ephemeral (L0e); released by teardown (②). NEVER a canonical home.
+
+# INV-3 — the one new rule: a canonical record ref resolves inline (T1) or into T3; never into T4.
+evidence_ref_ok(ref) → bool
+  RETURN ref.kind = inline                                     # the outcome itself, in the T1 entry
+      OR (ref.kind = durable AND durable_store_holds(ref))     # a T3 blob, by durable address
+  # a workspace path (T4) is NOT a valid canonical ref — it dies at teardown
+
+# INV-4 — a materialized current-state projection (T2) is a CACHE, not a truth, UNLESS it is a
+#         sealed projection snapshot anchored to the record it was derived from. A sealed snapshot
+#         is a readable authoritative PROJECTION; it never overwrites T1, which stays the deeper
+#         authority on audit/replay.
+projection_authoritative(projection) → bool
+  IF reconstructable_and_consistent(projection, record) THEN RETURN true   # pure cache: replay agrees
+  IF projection.sealed THEN                                                # sealed projection snapshot
+    REQUIRE projection.source.record_ref is present                        # anchored to T1 …
+        AND projection.source.version   is present                        # … by version (range/hash)
+        AND made_at_declared_boundary(projection.sealed_at)               # e.g. terminal
+    RETURN true
+  RETURN false                            # an unanchored materialized view is a cache only
+
+# INV-5 — the bridge to ② Teardown: a resource is releasable only when nothing canonical points in.
+release_safe(resource) → bool
+  RETURN for every ref in canonical_refs(record): NOT points_into(ref, resource)
+  # Storage Scope guarantees this BY CONSTRUCTION (canonical never homes in T4);
+  # ② Teardown only ASSERTS it, fail-closed, before releasing.
+          

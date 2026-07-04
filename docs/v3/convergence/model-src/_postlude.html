@@ -1,0 +1,350 @@
+
+    </main>
+  </div>
+  <script>
+    function normalizeCodeText(text) {
+      var lines = text.replace(/\r\n?/g, '\n').split('\n');
+      if (lines[0] === '') lines.shift();
+      while (lines.length && /^\s*$/.test(lines[lines.length - 1])) lines.pop();
+      return lines;
+    }
+
+    function buildCodeSourceRegistry() {
+      var registry = new Map();
+      document.querySelectorAll('[data-code-id]').forEach(function (node) {
+        registry.set(node.dataset.codeId, normalizeCodeText(node.textContent));
+      });
+      return registry;
+    }
+
+    var codeSourceRegistry = buildCodeSourceRegistry();
+
+    function readCode(panel, selector) {
+      var node = panel.querySelector(selector);
+      if (!node) return [];
+      var ref = node.dataset.codeRef || node.dataset.codeOldRef || node.dataset.codeNewRef;
+      if (ref) {
+        if (codeSourceRegistry.has(ref)) return codeSourceRegistry.get(ref);
+        console.warn('Missing code source ref:', ref, panel);
+        return ['# Missing code source: ' + ref];
+      }
+      return normalizeCodeText(node.textContent);
+    }
+
+    function escapeHtml(value) {
+      return value
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+    }
+
+    function highlightLine(line) {
+      var comment = '';
+      var code = line;
+      var commentIndex = line.indexOf('#');
+      if (commentIndex >= 0) {
+        code = line.slice(0, commentIndex);
+        comment = line.slice(commentIndex);
+      }
+      var html = escapeHtml(code)
+        .replace(/("[^"]*"|'[^']*')/g, '<span class="s">$1</span>')
+        .replace(/\b(START_INSTANCE|CREATE_INSTANCE|RUNTIME_CONTEXT_READY|RUNTIME_CONTEXT_RELEASED|RESOLVE_START|RECEIVE|HANDLE|KICKOFF|SUBMIT_DECISION|RESUME_WAIT|RUN_ACTION|CHILD_SPAWN_FAILED|CHILD_SPAWNED|CHILD_LIFECYCLE|DELETE_REQUESTED|CANCEL|COMPLETE|FAIL|START|MATCH|INTERFACE|FOR|IF|THEN|ELSE|CONTINUE|RETURN|COMMIT|REQUIRE)\b/g, '<span class="kw">$1</span>')
+        .replace(/\b(Rejected\([^)]+\)|Stale\([^)]+\)|Committed\([^)]+\)|Started\([^)]+\)|Created\([^)]+\)|Activated\([^)]+\)|Terminated\([^)]+\)|Accepted|Duplicate|DispatchIntent|ContextPacket|ResolvedStartRequest|GateDecision|GateEvaluator|GateInvocation|ProcessResult|ProcessGateRunner|ContextBlock|HumanDecisionRequest|DECISION_REQUEST|DECISION_MADE|APPROVAL_REQUEST|APPROVAL_DECISION|WAIT_RESUMED|RUNTIME_CONTEXT_RELEASING|RUNTIME_CONTEXT_RELEASE_FAILED|ACTION_RUNNING|ACTION_RESULT|ActionRequest|ActionResult|ActionRunner|ActionIntent|CHILD_LIFECYCLE_RECEIVED|ChildWorkflowLink|SpawnIntent|Outcome)\b/g, '<span class="out">$1</span>')
+        .replace(/^(\s*-?\s*)([A-Za-z_][A-Za-z0-9_]*)(:)/, '$1<span class="k">$2</span>$3')
+        .replace(/(:\s*)([0-9]+)(\b)/g, '$1<span class="n">$2</span>$3');
+      if (comment) html += '<span class="c">' + escapeHtml(comment) + '</span>';
+      return html;
+    }
+
+    function renderLine(parent, line, index, kind) {
+      var row = document.createElement('div');
+      row.className = 'diff-line ' + kind + (line === '' || line == null ? ' blank' : '');
+      var number = document.createElement('div');
+      number.className = 'diff-ln';
+      number.textContent = index == null ? '' : String(index + 1);
+      var code = document.createElement('div');
+      code.className = 'diff-code';
+      // blank/empty cells get a zero-width space so their line box matches content rows —
+      // otherwise empty cells fall back to min-height and a sub-pixel mismatch accumulates,
+      // drifting the two panes out of alignment across a long run of add/remove rows.
+      code.innerHTML = (line == null || line === '') ? '​' : highlightLine(line);
+      row.append(number, code);
+      parent.appendChild(row);
+    }
+
+    function diffKey(line) {
+      if (line == null || line.trim() === '') return null;
+      var trimmed = line.trim();
+      if (trimmed.startsWith('#')) {
+        return 'comment:' + trimmed.replace(/\s+/g, ' ');
+      }
+      return line.replace(/\s+#.*$/, '').replace(/\s+/g, ' ').trim();
+    }
+
+    function lineSimilarity(left, right) {
+      if (left != null && right != null && left.trim() === '' && right.trim() === '') return 1;
+      var a = diffKey(left);
+      var b = diffKey(right);
+      if (!a || !b) return 0;
+      if (a === b) return 1;
+      var leftTokens = new Set(a.split(/[^A-Za-z0-9_]+/).filter(Boolean));
+      var rightTokens = new Set(b.split(/[^A-Za-z0-9_]+/).filter(Boolean));
+      if (!leftTokens.size || !rightTokens.size) return 0;
+      var shared = 0;
+      leftTokens.forEach(function (token) {
+        if (rightTokens.has(token)) shared += 1;
+      });
+      return shared / Math.max(leftTokens.size, rightTokens.size);
+    }
+
+    function leadingToken(line) {
+      var key = diffKey(line);
+      if (!key) return null;
+      var match = key.match(/[A-Za-z_][A-Za-z0-9_]*/);
+      return match ? match[0] : null;
+    }
+
+    function shouldPairChangeLines(oldLine, newLine, score) {
+      if (oldLine != null && newLine != null && oldLine.trim() === '' && newLine.trim() === '') return true;
+      if (score >= 0.45) return true;
+      return score >= 0.35 && leadingToken(oldLine) === leadingToken(newLine);
+    }
+
+    function pairChangeBlock(block) {
+      // A change block is a contiguous run of removes (old order) + adds (new order). We pair
+      // similar lines into change rows, then MERGE using those pairs as anchors so the old side
+      // stays in oldIndex order and the new side in newIndex order. The previous single-key sort
+      // (newIndex ?? oldIndex) mixed the two coordinate systems and reordered rows when old/new
+      // indices diverged (a big add above), e.g. "228 after 229".
+      var oldItems = block.filter(function (row) { return row.kind === 'remove'; });
+      var newItems = block.filter(function (row) { return row.kind === 'add'; });
+
+      // 1. Greedily pair similar old/new lines. Blank↔blank pairs are kept as anchors so a
+      //    "blank + changed line" replacement stays compact instead of rendering as two
+      //    diagonal padding rows. Same-leading-token replacements get a slightly lower
+      //    threshold (e.g. intent ← old expression → intent ← new helper call).
+      var usedNew = new Set();
+      var rawPairs = [];
+      oldItems.forEach(function (oldRow, oldPos) {
+        if (oldRow.oldLine == null) return;
+        var best = { score: 0, newPos: -1 };
+        newItems.forEach(function (newRow, newPos) {
+          if (usedNew.has(newPos)) return;
+          if (newRow.newLine == null) return;
+          var score = lineSimilarity(oldRow.oldLine, newRow.newLine);
+          if (score > best.score) best = { score: score, newPos: newPos };
+        });
+        if (best.newPos >= 0 && shouldPairChangeLines(oldRow.oldLine, newItems[best.newPos].newLine, best.score)) {
+          usedNew.add(best.newPos);
+          rawPairs.push({ oldPos: oldPos, newPos: best.newPos });
+        }
+      });
+
+      // 2. Keep only pairs monotonic in BOTH coordinates (sorted by oldPos ⇒ newPos increasing);
+      //    a crossing pair is dropped back to unpaired add/remove so order can never invert.
+      rawPairs.sort(function (a, b) { return a.oldPos - b.oldPos; });
+      var pairedOld = new Set();
+      var pairedNew = new Set();
+      var anchors = [];
+      var maxNewPos = -1;
+      rawPairs.forEach(function (rp) {
+        if (rp.newPos > maxNewPos) { anchors.push(rp); pairedOld.add(rp.oldPos); pairedNew.add(rp.newPos); maxNewPos = rp.newPos; }
+      });
+
+      // 3. Merge: between anchors emit unpaired removes (old order) and unpaired adds (new order),
+      //    then the anchor pair as one change/ctx row.
+      var rows = [];
+      var ri = 0, ai = 0;
+      anchors.forEach(function (rp) {
+        while (ri < rp.oldPos) { if (!pairedOld.has(ri)) rows.push(oldItems[ri]); ri += 1; }
+        while (ai < rp.newPos) { if (!pairedNew.has(ai)) rows.push(newItems[ai]); ai += 1; }
+        var oldRow = oldItems[rp.oldPos], newRow = newItems[rp.newPos];
+        rows.push({
+          oldIndex: oldRow.oldIndex, newIndex: newRow.newIndex,
+          oldLine: oldRow.oldLine, newLine: newRow.newLine,
+          kind: oldRow.oldLine === newRow.newLine ? 'ctx' : 'change'
+        });
+        ri = rp.oldPos + 1; ai = rp.newPos + 1;
+      });
+      while (ri < oldItems.length) { if (!pairedOld.has(ri)) rows.push(oldItems[ri]); ri += 1; }
+      while (ai < newItems.length) { if (!pairedNew.has(ai)) rows.push(newItems[ai]); ai += 1; }
+
+      return rows.map(function (row) {
+        return { oldIndex: row.oldIndex, newIndex: row.newIndex, oldLine: row.oldLine, newLine: row.newLine, kind: row.kind };
+      });
+    }
+
+    function flushChangeBlock(rows, block) {
+      if (!block.length) return;
+      pairChangeBlock(block).forEach(function (row) { rows.push(row); });
+      block.length = 0;
+    }
+
+    function buildDiffRows(oldLines, newLines) {
+      var rows = [];
+      var block = [];
+      var table = Array.from({ length: oldLines.length + 1 }, function () {
+        return Array(newLines.length + 1).fill(0);
+      });
+      for (var i = oldLines.length - 1; i >= 0; i -= 1) {
+        for (var j = newLines.length - 1; j >= 0; j -= 1) {
+          table[i][j] = diffKey(oldLines[i]) && diffKey(oldLines[i]) === diffKey(newLines[j])
+            ? table[i + 1][j + 1] + 1
+            : Math.max(table[i + 1][j], table[i][j + 1]);
+        }
+      }
+      i = 0; j = 0;
+      while (i < oldLines.length || j < newLines.length) {
+        if (
+          i < oldLines.length && j < newLines.length &&
+          diffKey(oldLines[i]) && diffKey(oldLines[i]) === diffKey(newLines[j])
+        ) {
+          flushChangeBlock(rows, block);
+          rows.push({
+            oldIndex: i,
+            newIndex: j,
+            oldLine: oldLines[i],
+            newLine: newLines[j],
+            kind: oldLines[i] === newLines[j] ? 'ctx' : 'change'
+          });
+          i += 1; j += 1;
+        } else if (j < newLines.length && (i >= oldLines.length || table[i][j + 1] >= table[i + 1][j])) {
+          block.push({ order: rows.length + block.length, oldIndex: null, newIndex: j, oldLine: null, newLine: newLines[j], kind: 'add' });
+          j += 1;
+        } else {
+          block.push({ order: rows.length + block.length, oldIndex: i, newIndex: null, oldLine: oldLines[i], newLine: null, kind: 'remove' });
+          i += 1;
+        }
+      }
+      flushChangeBlock(rows, block);
+      return rows;
+    }
+
+    function renderCodePanel(panel) {
+      var oldLines = readCode(panel, '[data-code-old], [data-code-old-ref]');
+      var newLines = readCode(panel, '[data-code-new], [data-code-new-ref]');
+      var oldLabel = panel.dataset.oldLabel || 'Previous';
+      var newLabel = panel.dataset.newLabel || 'Current';
+
+      var toolbar = document.createElement('div');
+      toolbar.className = 'diff-toolbar';
+      toolbar.setAttribute('role', 'group');
+      toolbar.setAttribute('aria-label', 'Diff view mode');
+      toolbar.innerHTML = '<div class="diff-labels" aria-hidden="true"><span></span><span></span></div>';
+      toolbar.querySelectorAll('span')[0].textContent = oldLabel;
+      toolbar.querySelectorAll('span')[1].textContent = newLabel;
+      var toggle = document.createElement('button');
+      toggle.className = 'diff-toggle';
+      toggle.type = 'button';
+      toggle.setAttribute('aria-pressed', 'false');
+      toggle.textContent = 'Show diff';
+      toolbar.appendChild(toggle);
+
+      var full = document.createElement('div');
+      full.className = 'diff-view diff-view-full';
+      var fullScroll = document.createElement('div');
+      fullScroll.className = 'full-scroll';
+      var fullBody = document.createElement('div');
+      fullBody.className = 'full-body';
+      newLines.forEach(function (line, index) {
+        renderLine(fullBody, line, index, 'ctx');
+      });
+      fullScroll.appendChild(fullBody);
+      full.appendChild(fullScroll);
+
+      var split = document.createElement('div');
+      split.className = 'diff-view diff-view-split';
+      split.hidden = true;
+      var panes = document.createElement('div');
+      panes.className = 'diff-panes';
+      var oldPane = document.createElement('div');
+      oldPane.className = 'diff-pane';
+      var newPane = document.createElement('div');
+      newPane.className = 'diff-pane';
+      var oldScroll = document.createElement('div');
+      oldScroll.className = 'diff-pane-scroll';
+      var newScroll = document.createElement('div');
+      newScroll.className = 'diff-pane-scroll';
+      var oldBody = document.createElement('div');
+      oldBody.className = 'diff-pane-body';
+      var newBody = document.createElement('div');
+      newBody.className = 'diff-pane-body';
+
+      buildDiffRows(oldLines, newLines).forEach(function (row) {
+        var blankOnlyChange =
+          (row.oldLine == null && row.newLine === '') ||
+          (row.oldLine === '' && row.newLine == null);
+        renderLine(oldBody, row.oldLine, row.oldIndex, blankOnlyChange || row.kind === 'add' ? 'blank' : row.kind);
+        renderLine(newBody, row.newLine, row.newIndex, blankOnlyChange || row.kind === 'remove' ? 'blank' : row.kind);
+      });
+      oldScroll.appendChild(oldBody);
+      newScroll.appendChild(newBody);
+      oldPane.appendChild(oldScroll);
+      newPane.appendChild(newScroll);
+      panes.append(oldPane, newPane);
+      split.appendChild(panes);
+
+      var syncingScroll = false;
+      function syncHorizontalScroll(source, target) {
+        source.addEventListener('scroll', function () {
+          if (syncingScroll) return;
+          syncingScroll = true;
+          target.scrollLeft = source.scrollLeft;
+          syncingScroll = false;
+        });
+      }
+      syncHorizontalScroll(oldScroll, newScroll);
+      syncHorizontalScroll(newScroll, oldScroll);
+
+      function equalizePaneWidths() {
+        oldBody.style.minWidth = '';
+        newBody.style.minWidth = '';
+        var width = Math.max(oldBody.scrollWidth, newBody.scrollWidth, 720);
+        oldBody.style.minWidth = width + 'px';
+        newBody.style.minWidth = width + 'px';
+      }
+
+      panel.append(toolbar, full, split);
+      toggle.addEventListener('click', function () {
+        var diffOn = !panel.classList.contains('is-diff-on');
+        panel.classList.toggle('is-diff-on', diffOn);
+        full.hidden = diffOn;
+        split.hidden = !diffOn;
+        if (diffOn) equalizePaneWidths();
+        toggle.setAttribute('aria-pressed', String(diffOn));
+        toggle.textContent = diffOn ? 'Show full' : 'Show diff';
+      });
+    }
+
+    document.querySelectorAll('.code-diff').forEach(renderCodePanel);
+
+    // Sidebar scroll-spy: highlight the nav link for the section currently at the top.
+    (function () {
+      var links = {};
+      document.querySelectorAll('nav a[href^="#"]').forEach(function (a) {
+        links[a.getAttribute('href').slice(1)] = a;
+      });
+      var sections = Array.prototype.slice.call(document.querySelectorAll('section[id]'));
+      if (!sections.length) return;
+      var current = null;
+      function update() {
+        var marker = 120;                       // px below the viewport top
+        var active = sections[0];
+        for (var i = 0; i < sections.length; i++) {
+          if (sections[i].getBoundingClientRect().top <= marker) active = sections[i];
+          else break;
+        }
+        var id = active ? active.id : null;
+        if (id === current) return;
+        current = id;
+        for (var k in links) links[k].classList.toggle('active', k === id);
+      }
+      window.addEventListener('scroll', update, { passive: true });
+      window.addEventListener('resize', update, { passive: true });
+      window.addEventListener('hashchange', function () { setTimeout(update, 0); });
+      window.addEventListener('load', update);   // re-run after the browser scrolls to an initial #hash
+      update();
+    })();
+  </script>
+</body>
+</html>

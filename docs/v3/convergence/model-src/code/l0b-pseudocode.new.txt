@@ -1,0 +1,51 @@
+
+START_INSTANCE(template_ref, task, start_overrides) → Started
+  template ← definitionStore.load(template_ref)
+  binding  ← resolve_binding(template, start_overrides)        # template default_actor + start overrides
+  REQUIRE binding covers every role reachable in template      # invariant: fail at start, not mid-run
+  instance ← create { template_ref, task, binding, current_step: template.start, version: 1, status: RUNNING }
+  COMMIT instance creation
+  RETURN Started(instance.version, dispatch_intent(instance, template, template.start))  # derive after commit
+
+HANDLE envelope → Outcome
+  IF not valid_shape(envelope)            THEN RETURN Rejected(invalid_shape)
+
+  instance ← instanceStore.load(envelope.instance_id)
+  IF instance is none                     THEN RETURN Rejected(unknown_instance)
+  template ← definitionStore.load(instance.template_ref)   # separate store; pinned immutable version
+
+  # idempotency, key scope (instance_id, op_id)
+  IF instance.transcript.has(envelope.op_id) THEN RETURN Duplicate   # no-op, no 2nd entry
+
+  # actor-supplied stale-intent — mandatory at L0b
+  IF envelope.expected_version is missing  THEN RETURN Rejected(missing_version)
+  IF envelope.expected_version ≠ instance.version THEN RETURN Stale(instance.version)
+
+  step   ← template.step(instance.current_step)
+  target ← step.transitions[envelope.type]   # transitions: event_type → target
+  IF target is none                       THEN RETURN Rejected(no_transition)
+
+  # one atomic commit, CAS on instance.version
+  COMMIT atomically at expected_version = instance.version:
+    instance.transcript.append(envelope)
+    instance.current_step ← target
+    IF target is terminal THEN instance.status ← DONE
+    instance.version ← instance.version + 1
+  # on CAS conflict: restart HANDLE from load —
+  #   re-check idempotency and re-resolve the transition;
+  #   never re-commit a target computed from stale state
+
+  intent ← (instance.status = DONE) ? none : dispatch_intent(instance, template, instance.current_step)  # derive after commit
+  RETURN Committed(instance.version, intent)
+
+dispatch_intent(instance, template, step_id) → DispatchIntent
+  step  ← template.step(step_id)
+  actor ← instance.binding[step.role]                  # guaranteed present by the start invariant
+  packet ← ContextPacket {
+    instance_id, expected_version: instance.version, task: instance.task,
+    instruction:   step.instruction,
+    handoff:       payload_of_transition_into(instance, step_id),  # the envelope that brought us here; absent at start
+    available_ops: event_types_of(step.transitions),              # PASS / CONVERGED — not on_pass; navigation, not L1
+    agent_config:  step.agent_config }                            # raw/optional pass-through until L0c (may be absent)
+  RETURN DispatchIntent { actor, packet }            # a local/manual driver delivers; durable channel is L8
+          

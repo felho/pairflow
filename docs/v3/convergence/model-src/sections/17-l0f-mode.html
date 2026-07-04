@@ -1,0 +1,176 @@
+<section id="l0f-mode">
+        <h2 class="level-h"><span class="level-badge">L0f+</span> Run-scoped mode / variants</h2>
+        <p class="level-sub">A single workflow can run in more than one <em>mode</em> (v1's <code>code | doc</code>) —
+        the same step graph, but different gates and context. This is <b>not</b> a runtime kernel branch: a
+        <b>start-fixed</b>, run-scoped <code>mode</code> that <b>L0f resolution</b> normalizes into a <b>pinned,
+        mode-specific <code>ResolvedDefinition</code></b>, so the kernel runs a <b>mode-agnostic</b> template and
+        never sees the mode at runtime. One mechanism — the <code>modes:</code> <b>membership tag</b> — on <b>two
+        carriers</b>: a <b>gate binding</b> and a <b>context ref</b>. An <b>L0f-family extension</b>, living entirely
+        in the pre-kernel resolution pass.</p>
+
+        <div class="note">
+          <b>Why two surfaces, not three.</b> An earlier draft added a third surface — a run-level
+          <code>mode_profiles</code> policy-ref map. It was dropped: in this kernel a policy is <b>only ever applied
+          at a gate</b> (<code>uses:</code> = the policy, <code>config:</code> = its parameters) — there is no global
+          run-level policy engine, so a free-floating policy map had <b>no consumer</b>. Mode-specific policy instead
+          rides a <b>gate binding</b>: a transition point may declare a <code>[code]</code> binding <em>and</em> a
+          <code>[doc]</code> binding (same <code>uses</code> with different <code>config</code>, or a different
+          <code>uses</code>); resolution keeps the mode's. The consumer is the surviving gate's evaluator — visible,
+          not a dangling map. An L0f delta kept <b>off</b> the L0f / ③b baselines (the lenses diff against them and
+          leave them untouched); L2 (gates) and L2b (context) are the pure consumers.</div>
+
+        <h3 class="view-h"><span class="view-tag" style="background:#e2e8f0;color:#334155">Shape</span> One template, resolved to a variant at start</h3>
+        <pre class="pseudo" style="font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size:12.5px; line-height:1.5">
+  StartCommand { mode? }  +  Template { modes, default_mode, gates[].modes, *_refs[].modes }
+        │
+        ▼   L0f resolution (start-fixed)
+  mode ← command.mode ?? template.default_mode          (modes declared ⇒ must resolve, else no_mode_selected)
+        │
+        ▼   apply_mode — prune to the variant; NO runtime conditional remains
+   surface 1   gate binding   gates[].modes    →  keep / drop each binding   (a point may hold a code- AND a doc-binding; one survives)
+   surface 2   context ref    *_refs[].modes   →  keep / drop the REF        (the catalog block is untouched)
+        │
+        ▼
+  pinned, mode-specific ResolvedDefinition   →   the kernel runs it mode-agnostically
+        </pre>
+
+        <h3 class="view-h"><span class="view-tag runtime">Runtime</span> A concrete trace</h3>
+        <p>Starting <code>local-pair-v0</code> in <code>doc</code> mode (the template declares <code>modes: [code, doc]</code>):</p>
+        <div class="trace">
+          <div class="trace-row"><div class="trace-n">1</div><div class="trace-c">
+            <div class="ev">operator <code>StartCommand { template_id: local-pair-v0, mode: doc }</code></div>
+            <div class="meta"><code>mode = command.mode = doc</code> (no fallback to <code>default_mode</code> needed); <code>doc</code> ∈ <code>template.modes = [code, doc]</code> ✓ — an undeclared mode here would be <code>Rejected(unknown_mode)</code></div>
+          </div></div>
+          <div class="trace-row"><div class="trace-n">2</div><div class="trace-c">
+            <div class="ev"><code>valid_mode_declaration(template)</code> — load-time, fail-closed</div>
+            <div class="meta"><code>default_mode = code</code> ∈ modes ✓ · every <code>modes:</code> tag sits on a <b>supported surface</b> (a gate binding or a <code>*_ref</code>) and names a declared mode ✓ — a tag on a step / <code>agent_config</code> / a catalog block would be <code>Rejected(mode_tag_on_unsupported_surface)</code></div>
+          </div></div>
+          <div class="trace-row"><div class="trace-n">3</div><div class="trace-c">
+            <div class="ev"><code>apply_mode(definition, doc)</code> — prune to the variant</div>
+            <div class="meta"><b>surface 1</b> on the <code>implement.PASS</code> pipeline the <code>runtime_validation</code> gate (<code>[code]</code>) is <b>dropped</b> and the <code>docs_only_runtime_evidence</code> gate (<code>[doc]</code>) is <b>kept</b>; <b>surface 2</b> the <code>docs-only-edit-scope</code> context ref (<code>[doc]</code>) is <b>kept</b> while the catalog block stays in place (untouched)</div>
+          </div></div>
+          <div class="trace-row"><div class="trace-n">4</div><div class="trace-c">
+            <div class="ev">pinned, mode-specific <code>ResolvedDefinition</code> → <code>CREATE_INSTANCE</code></div>
+            <div class="meta">at <code>implement.PASS</code> the surviving <code>docs_only_runtime_evidence</code> gate runs: it does <b>not</b> execute a test — it returns <code>allow</code> plus a <b>durable evidence record</b> (<code>verification_status: trusted</code>, <code>skip_full_rerun: true</code>) — its <b>ref rides the gate decision</b> (<code>evidence_refs</code>) into the run record (① INV-3, no inline blob). No runtime mode field, no kernel branch on the mode; the gate ran because its binding survived resolution</div>
+          </div></div>
+        </div>
+        <div class="note runtime">
+          The doc variant's "runtime checks skipped, trusted" is <b>not gate-absence</b> — it is an <b>explicit
+          gate</b> (<code>docs_only_runtime_evidence</code>) producing <b>durable evidence</b> for the trusted-skip. A gate result is
+          structured (<code>verdict</code> + <code>evidence_refs</code>): the evidence lives in the durable evidence store and
+          its <b>ref</b> rides the decision into the run record (L2 / L2a; ① INV-3 — no inline blob), so a gate can <em>record</em> the intended skip, not just check a boolean. The later
+          reviewer / converge flow reads the <b>ref</b> from the transcript (T1) and resolves the evidence from the durable store (T3) — there is no free-floating policy map.
+        </div>
+
+        <h3 class="view-h"><span class="view-tag pseudo">Pseudocode</span> RESOLVE_START gains a J3 step (diff vs L0f)</h3>
+        <p>The mode extension adds a third resolution responsibility to <code>RESOLVE_START</code> and two helpers;
+        every other line is the L0f baseline, unchanged:</p>
+        <div class="code-diff" aria-label="L0f mode pseudocode" data-old-label="L0f baseline" data-new-label="L0f + mode">
+          <script type="text/plain" class="diff-source" data-code-old-ref="l0f-pseudocode">[[@code code/l0f-mode-pseudocode.old.txt]]</script>
+          <script type="text/plain" class="diff-source" data-code-new data-code-id="l0f-mode-pseudocode">[[@code code/l0f-mode-pseudocode.new.txt]]</script>
+        </div>
+        <div class="note pseudo">
+          <code>valid_mode_declaration</code> is a <b>load-time / authoring</b> consistency check (fail-closed, the
+          slot discipline applied to modes): <code>default_mode</code> names a declared mode, and every
+          <code>modes:</code> tag sits on one of the <b>two supported surfaces</b> (a gate binding or a
+          <code>*_ref</code> — elsewhere is <code>mode_tag_on_unsupported_surface</code>) and names a declared mode;
+          a mono-mode template carries <em>no</em> mode surface at all. <code>apply_mode</code> then prunes the gate
+          bindings and context refs into a pinned, mode-specific definition — so the variant is fixed at start, never
+          branched on at runtime. The kernel passes <b>no <code>mode</code></b> to a gate evaluator: a gate runs
+          because its binding survived resolution, and any mode-specific behavior rides the binding's own
+          <code>config</code> — one source of truth, not a runtime mode check inside the policy.
+        </div>
+
+        <h3 class="view-h"><span class="view-tag domain">Domain</span> What the mode extension adds</h3>
+        <div class="agg">
+          <div class="agg-label">Template side — declared variants (modes) + the membership tag</div>
+          <div class="ents">
+            <div class="ent"><div class="en">modes / default_mode</div><div class="fields"><code>modes: ModeId[]</code> + optional <code>default_mode ∈ modes</code> — the closed variant set; <code>default_mode</code> is an explicit authoring choice (no kernel default). An empty <code>modes</code> ⇒ a mono-mode template that may carry <em>no</em> mode surface at all</div></div>
+            <div class="ent"><div class="en"><code>modes:</code> membership tag</div><div class="fields">an optional tag on exactly <b>two carriers</b> — a <b>gate binding</b> (<code>gates[].modes</code>) and a <b>context ref</b> (a <code>*_refs</code> entry); untagged ⇒ present in every mode. The tag rides the <b>ref / binding</b>, never a step, <code>agent_config</code>, or the catalog <code>context_blocks</code> entry</div></div>
+            <div class="ent"><div class="en">mode-specific gate binding</div><div class="fields">a transition point may declare more than one binding — a <code>[code]</code> and a <code>[doc]</code> — with the same <code>uses</code> and different <code>config</code>, or a different <code>uses</code> entirely. Resolution keeps the mode's; the surviving gate's evaluator is the consumer. The kernel never tells the evaluator the mode — mode-specific behavior is already in the surviving binding's <code>config</code></div></div>
+          </div>
+        </div>
+        <div class="agg" style="border-style:solid;border-color:var(--line);background:var(--panel)">
+          <div class="agg-label" style="color:var(--runtime)">New rejections — all pre-kernel, fail-closed</div>
+          <div class="ents">
+            <div class="ent"><div class="en">Rejected(no_mode_selected)</div><div class="fields">the template declares <code>modes</code> but neither <code>command.mode</code> nor <code>default_mode</code> selects one</div></div>
+            <div class="ent"><div class="en">Rejected(unknown_mode(m))</div><div class="fields">a start <code>mode</code> the template does not declare (fail-closed, like an unknown slot)</div></div>
+            <div class="ent"><div class="en">Rejected(default_mode_undeclared)</div><div class="fields"><code>default_mode</code> names a mode outside <code>template.modes</code></div></div>
+            <div class="ent"><div class="en">Rejected(undeclared_mode_tag(t))</div><div class="fields">a <code>modes:</code> tag naming a mode outside <code>template.modes</code></div></div>
+            <div class="ent"><div class="en">Rejected(mode_tag_on_unsupported_surface)</div><div class="fields">a <code>modes:</code> tag on a surface other than a gate binding or a <code>*_refs</code> entry — e.g. a step, <code>agent_config</code>, or a catalog <code>context_blocks</code> entry</div></div>
+            <div class="ent"><div class="en">Rejected(mode_surface_without_modes)</div><div class="fields">a template with no <code>modes</code> still carries a <code>default_mode</code> or a <code>modes:</code> tag</div></div>
+          </div>
+        </div>
+
+        <h3 class="view-h"><span class="view-tag invariant">Invariant</span> New at the mode extension</h3>
+        <div class="agg invariant">
+          <div class="agg-label">Added rules</div>
+          <div class="ents">
+            <div class="ent"><div class="en">fail-closed mode set</div><div class="fields">the start <code>mode</code>, every <code>modes:</code> tag, and <code>default_mode</code> all name a mode in <code>template.modes</code>; tags are allowed <b>only on the two supported surfaces</b> (a gate binding, a <code>*_ref</code>) — elsewhere is <code>mode_tag_on_unsupported_surface</code>; a mono-mode template (empty <code>modes</code>) carries no mode surface. Same fail-closed discipline as slots</div></div>
+            <div class="ent"><div class="en">mode is start-fixed &amp; baked in</div><div class="fields"><code>apply_mode</code> prunes gate bindings and context refs into a <b>pinned, mode-specific definition</b>; the kernel reads that definition and <b>never branches on the mode at runtime</b> — there is no runtime mode field</div></div>
+            <div class="ent"><div class="en">mode is not a gate input</div><div class="fields">the kernel passes <b>no <code>mode</code></b> to a gate evaluator. Mode resolution decides <em>which binding survives</em>; mode-specific behavior comes from the surviving binding's <code>config</code> (two bindings, same <code>uses</code>, different <code>config</code>) — not from the policy inspecting the mode. One source of truth, no hidden runtime mode dependency</div></div>
+            <div class="ent"><div class="en">docs-only is an explicit gate, not gate-absence</div><div class="fields">the doc variant does not merely <em>drop</em> the runtime-validation gate — it <b>keeps</b> a <code>docs_only_runtime_evidence</code> gate whose <code>allow</code> result produces <b>durable evidence</b> for the intended trusted-skip and records its <b>ref</b> on the <code>GateDecision</code> (① INV-3). Removing a gate alone would not say "this skip is intended &amp; trusted"; the explicit doc gate does</div></div>
+            <div class="ent"><div class="en">catalog blocks are never mode-pruned</div><div class="fields">surface 2 prunes only the <b>contribution / ref</b> (a <code>*_refs</code> entry); the shared catalog <code>context_blocks</code> entry always stays — a mode-tagged catalog block would leave dangling refs (the L2b render-by-ref hazard)</div></div>
+          </div>
+        </div>
+
+        <h3 class="view-h"><span class="view-tag config">Config</span> Mode-tagged gate bindings + context refs (diff vs ③b — the latest template)</h3>
+        <p>The template gains <code>modes</code> + <code>default_mode</code>, and a membership tag on the two
+        surfaces: the runtime-validation gate becomes <code>[code]</code> with a sibling <code>[doc]</code> evidence
+        gate at the same point, and a <code>[doc]</code> context ref on the reviewer. Every other line is the ③b
+        baseline (the latest template — gates, actions, release already present):</p>
+        <div class="code-diff" aria-label="L0f mode template config" data-old-label="③b baseline" data-new-label="③b + mode">
+          <script type="text/plain" class="diff-source" data-code-old-ref="auto-action-template-config">[[@code code/l0f-mode-template-config.old.txt]]</script>
+          <script type="text/plain" class="diff-source" data-code-new data-code-id="l0f-mode-template-config">[[@code code/l0f-mode-template-config.new.txt]]</script>
+        </div>
+        <div class="note config">
+          The two surfaces are visible at once. <b>Surface 1</b>: at <code>implement.PASS</code> the
+          <code>runtime_validation</code> gate is <code>[code]</code> and a sibling <code>docs_only_runtime_evidence</code>
+          gate is <code>[doc]</code> — same point, mode selects which survives; the doc gate's <code>allow</code> result
+          records the trusted-skip evidence (a gate decision carries <code>evidence_refs</code> — L2 / L2a), so the
+          consumer is visible, not a dangling map. The same pattern handles the v1 finding-priority demotion: a converge
+          gate with a <code>[doc]</code> binding whose <code>config</code> demotes doc-scope findings. <b>Surface 2</b>:
+          the <code>modes: [doc]</code> tag rides the <code>prompt_concern_refs</code> entry, never the catalog block.
+          Note the unrelated <code>agent_config.mode: builder|critic</code> is the agent persona — a different axis from
+          the workflow <code>modes</code>.
+        </div>
+
+        <h3 class="view-h"><span class="view-tag absent">Absent</span> Still not here</h3>
+        <div class="absent-grid">
+          <div class="absent-item">No <b>runtime mode-conditional</b> — the mode is resolved &amp; baked at start; the kernel never branches on it, there is no runtime mode field <span class="at">→ by design</span></div>
+          <div class="absent-item">No <b>run-level policy map / engine</b> — there is no free-floating mode → policy selection; mode-specific policy lives in the <b>gate binding where it runs</b> (its <code>config</code>). A DRY central profile (one place to set a policy across many gates) is deferred until a concrete need <span class="at">→ later</span></div>
+          <div class="absent-item">No <b>mode expression DSL / overlay / patch / step-graph rewrite</b> — the whole mechanism is a <code>modes:</code> membership tag; breadth is fenced by the mechanism, not by dropping a surface <span class="at">→ by design</span></div>
+          <div class="absent-item">No <b>mode on agent_config or on steps</b> — v1 does not condition the model / agent_config or the step graph by mode; modes tag only gate bindings and context refs, and a tag anywhere else is rejected at load (<code>mode_tag_on_unsupported_surface</code>) <span class="at">→ by design</span></div>
+          <div class="absent-item">No <b>post-start mode change</b> — mode is create-time immutable (v1 parity); a run does not switch variant mid-flight <span class="at">→ by design</span></div>
+        </div>
+
+        <h3 class="view-h"><span class="view-tag evidence">Evidence</span> Why this cut is v1-faithful</h3>
+        <div class="note evidence">
+          <p style="margin:0 0 8px">A v1 reality check on <code>review_artifact_type ∈ { code, document }</code>
+          (<code>bubble.toml</code>, <code>--review-artifact-type</code>, create-time immutable) shows every mode
+          behavior maps onto the two surfaces:</p>
+          <ul style="margin:0">
+            <li><b>Gate surface (presence + per-mode config):</b> the runtime PASS validation gate runs only in
+              <code>code</code> (<code>passValidationGate.ts:407</code>); the doc-contract reviewer gate is
+              <code>document</code>-only (<code>docContractGates.ts</code>); the reviewer finding-priority demotion
+              and the meta-review approve "docs-only null policy" (<code>docContractReviewerGatePolicy.ts</code>,
+              <code>metaReviewApproveValidationPolicy.ts</code>) are the same gate with a <code>[doc]</code> binding /
+              <code>config</code>.</li>
+            <li><b>Context surface:</b> the docs-only edit guard ("refine only docs/task/spec; source code forbidden",
+              <code>documentBubbleSourceEditGuard.ts</code>, <code>rolePromptImplementerScope.ts</code>), the reviewer
+              doc-scope guidance, and the "runtime checks not required" wording (<code>roleActionGuidance.ts</code>)
+              are mode-tagged context refs.</li>
+            <li><b>The one not-a-transition-gate piece:</b> v1's doc default test directive — <code>skip_full_rerun: true</code>,
+              <code>verification_status: trusted</code>, "docs-only scope, runtime checks not required"
+              (<code>reviewerTestDirectiveResolver.ts:80</code>), plus the guard that a skip-claim with runtime log
+              refs is a conflict (<code>docsOnlyRuntimeSkipGuard.ts</code>). This is evidence <em>production</em>, not a
+              boolean check — so it is the <code>docs_only_runtime_evidence</code> gate whose <code>allow</code> result
+              produces that durable evidence and records its <b>ref</b> on the <code>GateDecision</code> (① INV-3 — no inline blob). It stays on the gate surface with a visible consumer.</li>
+          </ul>
+          <p style="margin:8px 0 0"><b>Why <code>mode_profiles</code> was dropped:</b> the model has no free-floating
+          run-level policy consumer (a policy always runs at a gate), so a <code>policy_refs</code> map had nowhere to
+          land. Folding it into mode-tagged gate bindings keeps the "explicit policy, not gate-absence" insight while
+          making the consumer visible.</p>
+        </div>
+      </section>
+      

@@ -1,0 +1,169 @@
+<section id="workflow-actions">
+        <h2 class="level-h"><span class="level-badge">③a</span> Workflow actions — commit / merge</h2>
+        <p class="level-sub">A <code>type: action</code> step — the <b>automated sibling of <code>human_gate</code></b>: a declared
+        operation runs (via a runner), produces a structured <b>outcome</b>, and the outcome <b>selects a route</b> from an
+        <code>outcomes</code> map. It closes the L3-deferred &ldquo;resume action&rdquo; hole (the anchor’s <code>commit_pending</code>
+        <code>type: wait</code> step grows up into a <code>type: action</code>). <b>③ Workflow Actions</b> is the general capability;
+        <b>③a</b> is the realized cut: <code>trigger: operator_intent</code>, anchored on COMMIT + MERGE. The <code>auto</code>
+        trigger (run on arrival, e.g. a perf-test) is the same contract, later. Kernel-touching — the pseudocode diffs against ②.</p>
+
+        <p><b>Action vs gate.</b> A <b>gate</b> (L2) sits before an <em>already-chosen</em> transition and says <code>allow | warn |
+        block</code> — it never picks a target. An <b>action</b> runs as a step, <em>produces</em> an <code>outcome_key</code>, and
+        <code>outcomes[outcome_key].target</code> picks the next transition. Same runner family (L2a), different graph-role: a gate
+        filters, an action selects.</p>
+
+        <div class="note">
+          <b>Scope note (a v3 semantic shift, stated).</b> The anchor routes <code>approve → commit_action → merge_action → done</code>,
+          so workflow-<code>done</code> lands <em>after</em> merge. v1’s <code>DONE</code> was a <em>commit-complete</em> state with merge a
+          separate post-<code>DONE</code> command. We accept the cleaner v3 model (merge is a normal pre-terminal action step, the
+          worktree lives through it, release fires at <code>merge_completed</code>) — the alternative (keep v1’s DONE-before-merge)
+          would need a post-terminal action shape, which we deliberately avoid here.</div>
+
+        <h3 class="view-h"><span class="view-tag" style="background:#e2e8f0;color:#334155">Shape</span> action ⟷ human_gate (workflow-actions aid)</h3>
+        <p>Both are keyed routing maps over <code>apply_target_entry_effects</code>; only the <b>selector</b> differs — a human picks
+        a decision key, a runner’s result picks an outcome key. The kernel knows neither key’s meaning (de-vocabularized, as at L3).</p>
+        <pre class="pseudo" style="font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size:12.5px; line-height:1.5">
+  human_gate (L3)                         action (③)
+  ─────────────────────────────          ─────────────────────────────
+  a HUMAN picks a decision key            a RUNNER’s result picks an outcome key
+  decisions: { approve: {target},         outcomes: { committed: {target},
+               request_rework: {target,                 merged: {target, emits},
+                                payload} }               conflict: {target} }
+  SUBMIT_DECISION → decisions[verdict]     RUN_ACTION → run → outcomes[outcome_key]
+                  ↓                                         ↓
+              apply_target_entry_effects(target)  ← the SAME generic arrival
+
+  the action-step lifecycle (operator-triggered, MVP) — marker-first, single-winner:
+    arrive(action step) → WAITING(action_pending)        [output: ActionRequest { expected_version, action_key, required_payload }]
+         operator RUN_ACTION(expected_version, key, payload)
+            ├─ stale version / dup op_id / bad payload → Stale | Duplicate | missing_required_field   (no claim, no run)
+            └─ CAS CLAIM: action_pending → action_running(request_id)   [+ ACTION_RUNNING]   (a concurrent RUN_ACTION with a different op_id loses ⇒ not_awaiting_action; same op_id ⇒ Duplicate)
+                   run action in workspace → outcome_key   [+ ACTION_RESULT { op_id, outcome }]
+                      ├─ ok (committed/merged)  → outcomes[key].target  (+ emits → ② release)
+                      ├─ business_failure       → self-target ⇒ re-park action_pending, operator retries
+                      └─ infra_error / undeclared → re-park action_pending (audited), operator retries
+        </pre>
+
+        <h3 class="view-h"><span class="view-tag runtime">Runtime</span> A concrete trace</h3>
+        <div class="trace">
+          <div class="trace-row"><div class="trace-n">1</div><div class="trace-c">
+            <div class="ev">the operator approves; <code>apply_target_entry_effects</code> arrives at <code>commit_action</code></div>
+            <div class="meta">it is a <code>type: action</code> step (<code>trigger: operator_intent</code>) → <code>park_for_action</code> sets <b>WAITING(action_pending)</b>; the output is an <code>ActionRequest { action_key: COMMIT, runner: pairflow.git_commit, required_payload: { message } }</code> — the operator-facing surface (no agent dispatched)</div>
+          </div></div>
+          <div class="trace-row"><div class="trace-n">2</div><div class="trace-c">
+            <div class="ev">operator runs <code>RUN_ACTION(expected_version, COMMIT, payload: { message: &quot;feat: add X&quot; })</code></div>
+            <div class="meta">guards pass (action_pending ✓ · trigger correlates ✓ · version current ✓ · op_id fresh ✓ · operator authorized ✓); <b>trigger-validation</b> (payload only): <code>message</code> present ✓ → <b>CAS-claim</b>: <code>action_pending → action_running(request_id)</code> + <code>ACTION_RUNNING</code> (a concurrent <code>RUN_ACTION</code> with a different op_id loses ⇒ <code>not_awaiting_action</code>; same op_id ⇒ <code>Duplicate</code>) → the runner runs <code>git commit</code> in the worktree → <code>classify → committed</code> (commit_sha) → CAS-result: append <code>ACTION_RESULT { op_id, outcome: committed, commit_sha }</code> → route <code>outcomes[committed].target = merge_action</code> → re-park <b>WAITING(action_pending)</b> for MERGE</div>
+          </div></div>
+          <div class="trace-row"><div class="trace-n">3</div><div class="trace-c">
+            <div class="ev">operator runs <code>RUN_ACTION(MERGE)</code></div>
+            <div class="meta">runner runs <code>git merge --no-ff</code> into base → <code>merged</code> (merge_sha) → append <code>ACTION_RESULT</code> → route <code>outcomes[merged].target = done</code> <b>and</b> <code>emits: merge_completed</code> → <code>apply_target_entry_effects(done)</code> = <b>TERMINAL(done)</b>. Post-commit, <code>boundary_events_of</code> = <code>[merge_completed, terminal]</code>; the template declares <code>release.boundaries: [merge_completed]</code> → <code>initiate_release(merge_completed)</code> releases the worktree (②); <code>terminal</code> no-ops (not declared)</div>
+          </div></div>
+          <div class="trace-row"><div class="trace-n">4</div><div class="trace-c">
+            <div class="ev">(alternate, at step 3) the merge conflicts</div>
+            <div class="meta">the runner auto-aborts (<code>git merge --abort</code>) → <code>classify → conflict</code> → append <code>ACTION_RESULT { outcome: conflict }</code> → route <code>outcomes[conflict].target = merge_action</code> (self) → <b>re-park action_pending</b>; the operator resolves the conflict and re-triggers <code>MERGE</code>. A bad/empty commit message at step 2 instead is <code>Rejected(missing_required_field)</code> — the action never runs</div>
+          </div></div>
+        </div>
+        <div class="note runtime">
+          The split <b>trigger-validation vs action-outcome</b> is the load-bearing line: the trigger validates only the
+          <em>payload</em> (the commit message) — a missing one is rejected before anything runs; <em>workspace reality</em>
+          (nothing staged, merge conflict) is an <b>action business_failure</b> that stays parked for a retry; a crashed runner
+          (git unavailable) is <code>infra_error</code>, also a parked retry.</div>
+
+        <h3 class="view-h"><span class="view-tag pseudo">Pseudocode</span> The action step + RUN_ACTION</h3>
+        <p>A new operator-intent handler <code>RUN_ACTION</code> (the automated <code>SUBMIT_DECISION</code>), an <code>ActionRunner</code>
+        contract (the L2a runner family), <code>park_for_action</code> / <code>action_request</code>, and <code>boundary_events_of</code>
+        extended so an outcome’s <code>emits</code> reaches ②. Diffs against ②:</p>
+        <div class="code-diff" aria-label="Workflow actions pseudocode" data-old-label="② baseline" data-new-label="③a workflow actions">
+          <script type="text/plain" class="diff-source" data-code-old-ref="release-pseudocode">[[@code code/action-pseudocode.old.txt]]</script>
+          <script type="text/plain" class="diff-source" data-code-new data-code-id="action-pseudocode">[[@code code/action-pseudocode.new.txt]]</script>
+        </div>
+
+        <h3 class="view-h"><span class="view-tag domain">Domain</span> The workflow-action contract</h3>
+        <div class="agg">
+          <div class="agg-label">Workflow Action Contract — the single source of truth for a type: action step</div>
+          <div style="overflow-x:auto">
+          <table class="contract">
+            <thead><tr><th>Aspect</th><th>Contract</th></tr></thead>
+            <tbody>
+              <tr><td><b>step</b></td><td><code>type: action</code>; declares <code>trigger</code>, <code>action</code> (runner + spec + key), <code>outcomes</code> (key → { target, payload?, emits? })</td></tr>
+              <tr><td><b>trigger</b></td><td><code>operator_intent</code> (<b>MVP</b> — parks <code>WAITING(action_pending)</code>; an operator <code>RUN_ACTION</code> runs it) ｜ <code>auto</code> (<b>later</b> — runs on arrival)</td></tr>
+              <tr><td><b>runner</b></td><td>a named <code>ActionRunner</code> (the L2a <code>ProcessGateRunner</code> family); runs in the <code>runtime_context</code> workspace; <code>execution = inline | deferred</code></td></tr>
+              <tr><td><b>outcome</b></td><td>the runner result classifies into an <code>outcome_key</code> (<code>committed</code> / <code>merged</code> / <code>conflict</code> / … or <code>infra_error</code>) — the <em>workspace reality</em></td></tr>
+              <tr><td><b>route</b></td><td><code>outcomes[outcome_key].target</code> → <code>apply_target_entry_effects</code> (the kernel knows no key meanings); a <b>self-target</b> re-parks (stay + retry)</td></tr>
+              <tr><td><b>payload</b></td><td><code>outcomes[key].payload</code> → the target’s <b>handoff</b> (e.g. a <code>regression</code> outcome → <code>implement</code> with an instruction — the automated <code>request_rework</code>)</td></tr>
+              <tr><td><b>trigger-validation</b></td><td><b>payload only</b>: required trigger fields (e.g. commit <code>message</code> policy) — missing ⇒ <code>Rejected(missing_required_field)</code>, <b>no run</b> (the <code>human_gate</code> analog). <em>Not</em> workspace state</td></tr>
+              <tr><td><b>evidence</b></td><td><code>ACTION_RESULT</code>: outcome + outputs (<code>commit_sha</code>/<code>merge_sha</code>/exit/hash) inline in <b>T1</b>; logs in <b>T3</b> by durable ref (① INV-3)</td></tr>
+              <tr><td><b>failure</b></td><td>business outcomes route (incl. self = stay); <code>infra_error</code> stays parked + audited (or a declared route) — the L2a business-vs-infra split</td></tr>
+              <tr><td><b>boundary</b></td><td>an outcome may <code>emits:</code> a release boundary event (<code>merged ⇒ merge_completed</code>) → ② <code>initiate_release</code></td></tr>
+              <tr><td><b>concurrency</b></td><td><b>marker-first, single-winner</b> (like ② release): the trigger is <code>{ instance_id, op_id, expected_version, action_key, payload, by }</code> — stale ⇒ <code>Stale</code>, replay ⇒ <code>Duplicate</code>; a <b>CAS claim</b> <code>action_pending → action_running(request_id)</code> is committed <em>before</em> the runner, so two concurrent <code>RUN_ACTION</code> never both reach the git-mutating runner (the loser — a <em>different</em> op_id — sees <code>action_running</code> ⇒ <code>not_awaiting_action</code>; a replay of the winner is <code>Duplicate</code>). The result is a second CAS commit; a crash in between leaves a durable <code>action_running</code> the L9 watchdog reconciles</td></tr>
+            </tbody>
+          </table>
+          </div>
+        </div>
+        <div class="agg">
+          <div class="agg-label">action ⟷ human_gate — same mechanism, different selector</div>
+          <div class="ents">
+            <div class="ent"><div class="en">routing map</div><div class="fields"><code>human_gate.decisions</code> and <code>action.outcomes</code> are the <b>same</b> keyed map (key → { target, payload? }); the kernel knows no key meanings (de-vocabularized at L3). Both route via the one <code>apply_target_entry_effects</code></div></div>
+            <div class="ent"><div class="en">selector</div><div class="fields"><code>human_gate</code>: a <b>human</b> picks the key (<code>SUBMIT_DECISION</code>). <code>action</code>: a <b>runner’s result</b> picks the key (<code>RUN_ACTION</code> — the automated sibling). Neither an actor (that’s an agent step + gate) nor a filter (that’s a gate)</div></div>
+            <div class="ent"><div class="en">ActionRequest</div><div class="fields">the operator-facing surface for a parked action — the decision-less analog of <code>HumanDecisionRequest</code>: <code>{ action_key, runner, required_payload, context }</code>, <b>derived</b> from the step (no recorded request; lighter than the <code>human_gate</code>’s <code>DECISION_REQUEST</code> pair, which the override-audit needs)</div></div>
+          </div>
+        </div>
+
+        <h3 class="view-h"><span class="view-tag invariant">Invariant</span> New at ③a</h3>
+        <div class="agg invariant">
+          <div class="agg-label">Added rules</div>
+          <div class="ents">
+            <div class="ent"><div class="en">single-winner action claim (CAS, marker-first)</div><div class="fields">because the runner mutates git, the action is claimed <b>before</b> it runs: a CAS commit takes <code>action_pending → action_running(request_id)</code> + <code>ACTION_RUNNING</code>; only the winner reaches the runner (a concurrent <code>RUN_ACTION</code> with a <em>different</em> op_id sees <code>action_running</code> ⇒ <code>not_awaiting_action</code>; the winner replayed is <code>Duplicate</code>). The trigger is version-checked (<code>Stale</code>) and op_id-idempotent (<code>Duplicate</code>) before the claim — like <code>SUBMIT_DECISION</code> / <code>RESUME_WAIT</code>. The same marker-first shape as ② release</div></div>
+            <div class="ent"><div class="en">the outcome selects, the kernel does not</div><div class="fields">an action routes to <code>outcomes[outcome_key].target</code>; the kernel knows no outcome meanings (de-vocabularized, like decisions). Targets resolve at load (<code>validate_action_steps</code>); an outcome <em>not</em> in the map (or <code>infra_error</code>) re-parks <code>action_pending</code> + audits the <code>ACTION_RESULT</code> — never a post-side-effect reject (the side effect already ran)</div></div>
+            <div class="ent"><div class="en">trigger validates payload; action examines the workspace</div><div class="fields">the <code>RUN_ACTION</code> trigger validates only the <b>payload</b> (required fields, e.g. the commit message) — missing ⇒ <code>missing_required_field</code>, <b>no run</b>. Workspace reality (nothing staged, conflict) is an <b>action business_failure</b>, surfaced as an <code>outcome_key</code>, never a trigger reject</div></div>
+            <div class="ent"><div class="en">a self-routing outcome stays parked</div><div class="fields">a business_failure (or any outcome) whose <code>target</code> is the action step itself re-parks <code>WAITING(action_pending)</code> — the operator fixes the workspace (resolve conflict, stage files) and re-triggers; an <code>infra_error</code> with no declared route stays parked + audited (retry is L9)</div></div>
+            <div class="ent"><div class="en">the action result is recorded with evidence</div><div class="fields">every run appends an <code>ACTION_RESULT</code> (outcome + outputs + evidence_refs) before routing — the outcome inline in T1, logs in T3 (① INV-3); a parked instance carries no agent dispatch (honest WAITING)</div></div>
+            <div class="ent"><div class="en">an outcome may emit a release boundary</div><div class="fields">an outcome’s <code>emits</code> adds a boundary event to the committed outcome; <code>boundary_events_of</code> carries it to ② (<code>merged ⇒ merge_completed ⇒</code> worktree release). The action does <b>not</b> release — it only emits the boundary; ② owns the release</div></div>
+            <div class="ent"><div class="en">action is select, gate is filter</div><div class="fields">a <code>type: action</code> step <em>produces</em> the routing key; a gate (L2) only <code>allow|warn|block</code>s a key an actor already chose. Same runner family, disjoint graph-roles — an action is never a gate and vice versa</div></div>
+          </div>
+        </div>
+
+        <h3 class="view-h"><span class="view-tag config">Config</span> The template — commit / merge as action steps</h3>
+        <p>The L3 <code>commit_pending</code> <code>type: wait</code> step becomes a <code>commit_action</code>; a <code>merge_action</code>
+        follows; the release boundary moves to <code>merge_completed</code> (the ② deferral, now realized). Diffs against ②:</p>
+        <div class="code-diff" aria-label="③a template config" data-old-label="② baseline" data-new-label="③a current">
+          <script type="text/plain" class="diff-source" data-code-old-ref="release-template-config">[[@code code/action-template-config.old.txt]]</script>
+          <script type="text/plain" class="diff-source" data-code-new data-code-id="action-template-config">[[@code code/action-template-config.new.txt]]</script>
+        </div>
+        <div class="note config">
+          <code>committed → merge_action</code> and <code>merged → done (emits merge_completed)</code> are ordinary outcome routes;
+          <code>nothing_staged</code> / <code>conflict</code> route to the <em>same</em> step (stay + retry). The commented <code>perf_test</code>
+          shows the same contract with <code>trigger: auto</code> and a <code>regression → implement</code> route — a mid-flow automated
+          decision point, not built here.</div>
+
+        <h3 class="view-h"><span class="view-tag absent">Absent</span> Still not here</h3>
+        <div class="absent-grid">
+          <div class="absent-item">No <b>auto trigger</b> — an action that runs <em>on arrival</em> (e.g. a perf-test) is the same contract but a later trigger mode, with its own lifecycle questions (when it runs, retry, does it block dispatch, a <code>WAITING(action_pending)</code> self-loop) <span class="at">→ later</span></div>
+          <div class="absent-item">No <b>rich outcome-condition language</b> — <code>classify_action_result</code> is exit-code / structured-JSON (L2a-style); a general predicate DSL over outputs is later <span class="at">→ later</span></div>
+          <div class="absent-item">No <b>packaged action library</b> — only the anchor runners (<code>pairflow.git_commit</code> / <code>pairflow.git_merge</code>); a general catalog (publish, notify, perf-test) is later <span class="at">→ ③b</span></div>
+          <div class="absent-item">No <b>operator delete</b> — <code>delete_requested</code> is an explicit operator storage/lifecycle intent (a <code>CANCEL</code> sibling) that drives <code>force_release</code> in ④ (② release minus the declared-boundary gate) — <b>not</b> an emitted boundary and <b>not</b> a workflow action; it + the record purge are <span class="at">→ ④</span></div>
+          <div class="absent-item">No <b>action_running recovery / exactly-once</b> — the side effect runs after the CAS claim and before the result commit; a crash in that window leaves a durable <code>action_running</code> (no double-run, since the claim is single-winner), but <b>reconciling a stuck <code>action_running</code></b> (re-claim, idempotent re-run, watchdog) is later — the same crash-window class as ② release <span class="at">→ L9</span></div>
+          <div class="absent-item">No <b>remote / distributed action proofs</b> — a remote action with verifiable completion (the merge-as-distribution concern) is later <span class="at">→ L8 / L10</span></div>
+        </div>
+
+        <h3 class="view-h"><span class="view-tag evidence">Evidence</span> Why we accept ③a for now</h3>
+        <div class="agg">
+          <div class="agg-label">Acceptance evidence — the v1 commit / merge actions are representable</div>
+          <div class="ents">
+            <div class="ent"><div class="en">commit action</div><div class="fields">v1 <code>commitCommandPipeline</code> RUNS <code>git commit -m &lt;msg&gt;</code> in the worktree (<code>commitCommandGitStep.ts:455</code>), records <code>COMMIT_RESULT { commit_sha, message, staged_files }</code> → a <code>commit_action</code> with a <code>committed</code> outcome + <code>ACTION_RESULT</code> evidence · <b>③a</b></div></div>
+            <div class="ent"><div class="en">merge action + boundary</div><div class="fields">v1 <code>mergeCommandPipeline</code> RUNS <code>git merge --no-ff</code> (<code>localMergeStep.ts:21</code>), then bundles teardown; v3 <b>unbundles</b> — the <code>merge_action</code> emits <code>merge_completed</code> and ② releases the worktree · <b>③a + ②</b></div></div>
+            <div class="ent"><div class="en">trigger-validation</div><div class="fields">v1 rejects a non-conventional / missing commit message before running (<code>commitMessagePolicy</code>) → trigger-validation on the <code>message</code> payload (<code>missing_required_field</code>) · <b>③a</b></div></div>
+            <div class="ent"><div class="en">business-vs-infra failure</div><div class="fields">v1 merge conflict → auto-abort + <code>MERGE_CONFLICT_REQUIRES_MANUAL_RESOLUTION</code> (stay, retry); distinct from infra (cleanup / state-persist) reason codes → a <code>conflict</code> business outcome (self-route) vs <code>infra_error</code> · <b>③a</b></div></div>
+          </div>
+        </div>
+        <div class="note evidence">
+          <ul style="margin:0">
+            <li><b>Scenario coverage:</b> approve → commit action (message-validated) → merge action (emits merge_completed → ② release) → done; a conflict or nothing-staged stays parked for a retry; a bad message is rejected before any git runs.</li>
+            <li><b>Invariant coverage:</b> outcome selects not the kernel ✓; trigger validates payload only ✓; self-route stays parked ✓; ACTION_RESULT evidence ✓; outcome emits the ② boundary ✓; action-is-select vs gate-is-filter ✓ — and all L0a–L3 + ① + ② invariants still hold.</li>
+            <li><b>Accepted tradeoff:</b> a v3 semantic shift (workflow-done after merge, vs v1’s DONE-before-merge) — stated and accepted to keep merge a normal pre-terminal action; the auto trigger and a packaged action library are out.</li>
+            <li><b>Known gaps (intended):</b> auto trigger (later), rich outcome predicates (later), packaged actions (③b), operator delete + purge (④), exactly-once / retry (L9), remote action proofs (L8/L10). Each is in Absent.</li>
+            <li><b>Decision:</b> accepted as the ③a baseline (light evidence per playbook §2.1); ③b generalizes the action library, L4 inherits action steps per child.</li>
+          </ul>
+        </div>
+      </section>
+      
