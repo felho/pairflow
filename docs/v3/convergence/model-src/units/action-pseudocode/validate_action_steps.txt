@@ -1,0 +1,10 @@
+
+validate_action_steps(template) → ok | Rejected                    # ③ definition load (CREATE_INSTANCE): every type: action step is well-formed
+  FOR step IN action_steps(template):
+    IF step.action is absent OR step.action.uses is absent          THEN RETURN Rejected(invalid_action_step)
+    IF step.trigger ≠ operator_intent                              THEN RETURN Rejected(unsupported_action_trigger)   # ③a cut: operator-triggered only; the auto trigger (run on arrival) is later
+    IF step.outcomes is absent OR step.outcomes is empty            THEN RETURN Rejected(action_outcomes_empty)
+    FOR (key, choice) IN step.outcomes:                              # ③ each outcome is a route { target, … }
+      IF keys_of(choice) ⊄ { target, payload, emits }               THEN RETURN Rejected(invalid_action_outcome_schema)   # closed keys — a typo (e.g. emitts) must NOT silently drop a boundary
+      IF template.step(choice.target) is none                       THEN RETURN Rejected(action_outcome_target_unresolved)
+  RETURN ok

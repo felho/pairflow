@@ -1,0 +1,13 @@
+
+# INV-4 — a materialized current-state projection (T2) is a CACHE, not a truth, UNLESS it is a
+#         sealed projection snapshot anchored to the record it was derived from. A sealed snapshot
+#         is a readable authoritative PROJECTION; it never overwrites T1, which stays the deeper
+#         authority on audit/replay.
+projection_authoritative(projection) → bool
+  IF reconstructable_and_consistent(projection, record) THEN RETURN true   # pure cache: replay agrees
+  IF projection.sealed THEN                                                # sealed projection snapshot
+    REQUIRE projection.source.record_ref is present                        # anchored to T1 …
+        AND projection.source.version   is present                        # … by version (range/hash)
+        AND made_at_declared_boundary(projection.sealed_at)               # e.g. terminal
+    RETURN true
+  RETURN false                            # an unanchored materialized view is a cache only

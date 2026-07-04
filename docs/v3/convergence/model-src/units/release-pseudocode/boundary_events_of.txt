@@ -1,0 +1,4 @@
+
+boundary_events_of(outcome, instance) → [boundary_event]            # ② which release-boundary events this committed transition produced
+  IF outcome ∈ { Committed, Terminated } AND instance.kernel_status = TERMINAL THEN RETURN [terminal]   # the terminal transition EMITS `terminal`; whether it is a release boundary is the template's release.policy decision, NOT a kernel default
+  RETURN [ ]                                                         # ③a actions will add their own boundary events here (e.g. merge_completed)

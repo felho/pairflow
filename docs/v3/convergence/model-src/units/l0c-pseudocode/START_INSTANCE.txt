@@ -1,0 +1,9 @@
+
+START_INSTANCE(template_ref, task, start_overrides, run_overrides) → Started
+  template ← definitionStore.load(template_ref)
+  binding  ← resolve_binding(template, start_overrides)        # template default_actor + start overrides
+  REQUIRE binding covers every role reachable in template      # invariant: fail at start, not mid-run
+  instance ← create { template_ref, task, binding, current_step: template.start, version: 1, status: RUNNING,
+                      run_overrides: snapshot(run_overrides) }  # per-step run config, frozen at start (L0c)
+  COMMIT instance creation
+  RETURN Started(instance.version, dispatch_intent(instance, template, template.start))  # derive after commit

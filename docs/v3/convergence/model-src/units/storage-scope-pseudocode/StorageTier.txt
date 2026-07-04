@@ -1,0 +1,11 @@
+
+StorageTier = T1_record | T2_projection | T3_evidence | T4_workspace
+
+# T1  durable run record  — append-only history, born durable, written DURING the run:
+#                           lifecycle events, transcript/envelopes, decisions, gate outcomes,
+#                           timings, role metadata, terminal disposition, and evidence OUTCOMES
+#                           (inline) + evidence REFS (durable).
+# T3  evidence store      — large blobs (test log, diff snapshot, report), addressed by a durable
+#                           ref carried in a T1 entry.
+# T2  state projection    — a cache of current state for cheap reads; derived from T1.
+# T4  runtime workspace   — ephemeral (L0e); released by teardown (②). NEVER a canonical home.

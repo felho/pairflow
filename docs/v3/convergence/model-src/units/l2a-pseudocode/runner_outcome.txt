@@ -1,0 +1,4 @@
+
+runner_outcome(disposition, reason, log_ref) → GateDecision          # MVP realizes ONLY block_transition
+  # fail_instance is rejected at definition load (gate_config_not_supported), so block_transition is the only value that reaches here — fail-closed
+  RETURN { verdict: block, reason, evidence_refs: [log_ref] }        # audited distinctly: runner_error / timeout / malformed, not test_failed

@@ -1,0 +1,10 @@
+
+RUNTIME_CONTEXT_RELEASED(instance, request_id, result) → Outcome    # kernel_event — the provider finished (the RUNTIME_CONTEXT_READY mirror); ORTHOGONAL: never changes kernel_status / current_step / terminal_disposition
+  REQUIRE instance.runtime_context = releasing(request_id, ref)     # correlation: the release WE dispatched, binding the ref it carries (a stale / duplicate event ⇒ Rejected)
+  IF result.kind = ok THEN
+    instance.runtime_context ← released                            # tombstone — the obligation is DISCHARGED
+    instance.transcript.append(RUNTIME_CONTEXT_RELEASED { request_id, evidence_refs: result.evidence_refs })
+    RETURN Accepted
+  instance.runtime_context ← release_failed(ref, reason: result.reason, evidence_refs: result.evidence_refs)   # the ref bound from releasing(request_id, ref); provider-reported failure, possibly PARTIAL (worktree gone, branch not) — a retriable release handle, NOT a usable runtime
+  instance.transcript.append(RUNTIME_CONTEXT_RELEASE_FAILED { phase: provider, reason: result.reason })
+  RETURN Accepted                                                   # obligation RETAINED (tracked through failure until discharged); auto-retry / timeout / watchdog = L9

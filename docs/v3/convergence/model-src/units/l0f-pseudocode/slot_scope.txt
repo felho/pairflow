@@ -1,0 +1,8 @@
+
+slot_scope(project_config, template_id, command) → Scope
+  wf ← project_config.workflows[template_id] ?? empty_workflow_scope   # no per-workflow section → empty scope, not null
+  RETURN Scope {
+    project_global: project_config.defaults,                      # global — shared across workflows (lenient)
+    project_wf:     wf.defaults,                                  # this workflow's section (strict)
+    target:         command.target ? wf.targets[command.target].defaults : { },   # target profile (existence already guarded in RESOLVE_START)
+    cli:            command.overrides }                           # explicit CLI/start override (strict)

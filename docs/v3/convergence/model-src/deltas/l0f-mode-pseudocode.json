@@ -1,0 +1,13 @@
+{
+  "id": "l0f-mode-pseudocode",
+  "baseline": "l0f-pseudocode",
+  "order": [
+    "__preamble__",
+    "RESOLVE_START",
+    "slot_scope",
+    "resolve_slot",
+    "valid_mode_declaration",
+    "apply_mode",
+    "in_mode"
+  ]
+}

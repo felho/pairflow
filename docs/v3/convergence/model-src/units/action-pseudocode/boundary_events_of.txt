@@ -1,0 +1,5 @@
+
+boundary_events_of(outcome, instance) → [boundary_event]            # ② which release-boundary events this committed transition produced
+  events ← outcome.boundary_events ?? [ ]                            # ③ an action outcome may declare `emits:` a boundary (the merge_action's `merged` ⇒ merge_completed)
+  IF outcome ∈ { Committed, Terminated } AND instance.kernel_status = TERMINAL THEN events ← events + [terminal]   # the terminal transition also EMITS `terminal`; release.policy decides whether either is a boundary
+  RETURN events

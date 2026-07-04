@@ -1,0 +1,5 @@
+
+# Storage Scope is NOT a handler. It is a placement/authority contract over the writes the
+# kernel and runtime already make. It adds ONE runtime-affecting rule (evidence_ref_ok, INV-3);
+# the rest names where each datum's canonical copy lives. No new transcript entry, no step type,
+# no template config.

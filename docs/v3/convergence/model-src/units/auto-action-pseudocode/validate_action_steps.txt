@@ -1,0 +1,20 @@
+
+validate_action_steps(template) → ok | Rejected                    # ③ definition load (CREATE_INSTANCE): every type: action step is well-formed
+  FOR step IN action_steps(template):
+    IF step.action is absent OR step.action.uses is absent          THEN RETURN Rejected(invalid_action_step)
+    IF step.trigger ∉ { operator_intent, auto }                    THEN RETURN Rejected(unsupported_action_trigger)   # ③b: operator_intent | auto
+    IF step.trigger = auto AND step.action.payload is present       THEN RETURN Rejected(auto_action_payload_unsupported)   # ③b: an auto action has no operator to supply a trigger payload; its inputs are the template-fixed action_spec
+    IF step.outcomes is absent OR step.outcomes is empty            THEN RETURN Rejected(action_outcomes_empty)
+    FOR (key, choice) IN step.outcomes:                              # ③b CLOSED UNION: each outcome is EXACTLY one of { target … } | { retry … }
+      IF choice.target is present AND choice.retry is present        THEN RETURN Rejected(action_outcome_ambiguous_route)   # both ⇒ the stray target would be silently ignored (retry takes precedence at runtime)
+      IF choice.target is absent  AND choice.retry is absent         THEN RETURN Rejected(action_outcome_no_route)
+      IF choice.target is present THEN                               # a ROUTE outcome
+        IF keys_of(choice) ⊄ { target, payload, emits, recommends }  THEN RETURN Rejected(invalid_action_outcome_schema)   # closed keys — a typo (emitts / recomendss) must NOT silently drop a boundary / recommendation
+        IF template.step(choice.target) is none                      THEN RETURN Rejected(action_outcome_target_unresolved)
+      ELSE                                                           # a RETRY outcome
+        IF step.trigger ≠ auto                                      THEN RETURN Rejected(action_retry_requires_auto)   # bounded retry is an AUTO capability — an operator action's RUN_ACTION has no retry branch (its "retry" is the operator re-triggering a self-routed outcome)
+        IF keys_of(choice) ⊄ { retry }                              THEN RETURN Rejected(invalid_action_outcome_schema)
+        IF keys_of(choice.retry) ⊄ { max_attempts, on_exhausted }    THEN RETURN Rejected(invalid_action_outcome_schema)
+        IF choice.retry.max_attempts is not a positive integer       THEN RETURN Rejected(invalid_retry_budget)
+        IF template.step(choice.retry.on_exhausted) is none          THEN RETURN Rejected(retry_escalation_target_unresolved)
+  RETURN ok

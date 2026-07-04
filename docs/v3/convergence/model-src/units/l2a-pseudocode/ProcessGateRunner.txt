@@ -1,0 +1,4 @@
+
+# ProcessGateRunner — the executor that spawns an external gate process; the kernel owns the contract, the runner owns the spawn
+INTERFACE ProcessGateRunner:
+  run(command, { cwd, stdin, timeout_ms }) → ProcessResult   # { kind: ok | timeout | runner_error, exit_code?, stdout?, log_ref, duration_ms }

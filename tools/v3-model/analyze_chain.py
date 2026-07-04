@@ -17,17 +17,14 @@ per unit, which levels touch it — i.e. the true blast radius of a change.
 
 import difflib
 import json
-import re
 import sys
 from collections import defaultdict
 from pathlib import Path
 
+import foldlib
+
 REPO = Path(__file__).resolve().parents[2]
 SRC = REPO / "docs/v3/convergence/model-src"
-
-# a top-level unit starts at column 0: `name(...)`, `NAME ... → ...`, or INTERFACE
-UNIT_RE = re.compile(r"^(?:INTERFACE\s+)?([A-Za-z_][A-Za-z0-9_]*)")
-
 
 def norm_lines(text: str) -> list[str]:
     lines = [ln.rstrip() for ln in text.split("\n")]
@@ -38,19 +35,23 @@ def norm_lines(text: str) -> list[str]:
     return lines
 
 
-def split_units(lines: list[str]) -> dict[str, list[str]]:
-    """Split a pseudocode snapshot into top-level units by column-0 headers."""
-    units: dict[str, list[str]] = {}
-    current = None
-    for ln in lines:
-        if ln and not ln[0].isspace() and not ln.startswith("#"):
-            m = UNIT_RE.match(ln)
-            if m:
-                current = m.group(1)
-                units.setdefault(current, [])
-        if current is not None:
-            units[current].append(ln)
-    return units
+def unit_touchers_from_deltas(manifest: dict) -> dict[str, list[str]]:
+    """Precise per-unit touch lists from the unit-delta layout: a block touches
+    a unit iff it stores a version of it (add = not in the baseline's order)."""
+    touchers: dict[str, list[str]] = defaultdict(list)
+    for section in manifest["sections"]:
+        for code in section["codes"]:
+            if not code.get("fold"):
+                continue
+            delta = foldlib._delta(code["id"])
+            base = delta["baseline"]
+            base_units = set(foldlib._delta(base)["order"]) if base else set()
+            unit_dir = SRC / "units" / code["id"]
+            for f in sorted(unit_dir.glob("*.txt")):
+                unit = f.stem
+                kind = "mod" if unit in base_units else "add"
+                touchers[unit].append(f"{code['id']} ({kind})")
+    return touchers
 
 
 def main() -> None:
@@ -62,12 +63,10 @@ def main() -> None:
     print(f"{'section':22} {'block':34} {'baseline':30} {'+':>5} {'-':>5}")
     print("-" * 100)
 
-    unit_touchers: dict[str, list[str]] = defaultdict(list)  # unit -> [block ids]
-
     for section in manifest["sections"]:
         for code in section["codes"]:
             cid, base = code["id"], code["baseline"]
-            new = norm_lines((SRC / code["new"]).read_text())
+            new = norm_lines(foldlib.code_text(code))
             blocks[cid] = {"new": new}
 
             if base is None:
@@ -89,17 +88,9 @@ def main() -> None:
             minus = sum(1 for d in diff if d.startswith("- "))
             print(f"{section['id']:22} {cid:34} {base_label:30} {plus:5} {minus:5}")
 
-            # unit-level attribution for pseudocode blocks
-            if "pseudocode" in cid:
-                base_units = split_units(base_lines)
-                new_units = split_units(new)
-                for name, body in new_units.items():
-                    if name not in base_units:
-                        unit_touchers[name].append(f"{cid} (add)")
-                    elif base_units[name] != body:
-                        unit_touchers[name].append(f"{cid} (mod)")
-
             order.append(cid)
+
+    unit_touchers = unit_touchers_from_deltas(manifest)
 
     print("\n== unit blast radius (pseudocode units touched by >1 block) ==")
     multi = {u: t for u, t in sorted(unit_touchers.items()) if len(t) > 1}

@@ -1,0 +1,38 @@
+
+initiate_release(instance, boundary_event)                         # ② discharge the release obligation at a DECLARED boundary; runs POST-COMMIT from RECEIVE, never inside another transition's commit
+  IF instance.runtime_context = ready(∅) THEN RETURN               # context-free: nothing was provisioned (the empty sentinel) — no obligation
+  IF instance.runtime_context is not ready(ref) THEN RETURN         # nothing else to release: none / requested / already releasing|released|release_failed (ready(∅) handled above)
+  template     ← definitionStore.load(instance.template_ref)
+  requirement  ← template.runtime_context                          # required(spec) — a ready(ref) implies it was required
+  IF boundary_event ∉ release_boundaries(template) THEN RETURN      # not a declared release boundary for THIS run: the hook offers `terminal`, ③a will offer `merge_completed` — release.boundaries (policy: required) decides; empty for retained / external ⇒ never auto-release. terminal is just an event, not a kernel default
+  IF NOT release_safe(instance) THEN                                # ① INV-5: a canonical ref still points into the resource ⇒ releasing would orphan it — do NOT release
+    COMMIT atomically at expected_version = instance.version:       # CAS-guarded like every state write — a concurrent hook on the same ready(ref) records the failure at most once
+      REQUIRE instance.runtime_context = ready(ref)
+      instance.runtime_context ← release_failed(ref, reason: not_safe)
+      instance.transcript.append(RUNTIME_CONTEXT_RELEASE_FAILED { phase: precondition, reason: not_safe })
+      instance.version ← instance.version + 1
+    RETURN
+  provider ← providerRegistry.resolve(requirement.spec.provider)    # the same pinned-template provider that provisioned
+  IF provider is none THEN                                          # pre-dispatch INITIATION failure, before any in-flight marker
+    COMMIT atomically at expected_version = instance.version:       # same CAS single-winner guard — no marker, just the failure transition
+      REQUIRE instance.runtime_context = ready(ref)
+      instance.runtime_context ← release_failed(ref, reason: provider_unavailable)
+      instance.transcript.append(RUNTIME_CONTEXT_RELEASE_FAILED { phase: initiation, reason: provider_unavailable })
+      instance.version ← instance.version + 1
+    RETURN
+  request_id ← new_request_id()
+  # CAS SINGLE-WINNER + marker-first: only one initiation wins the move from ready(ref); the durable marker is
+  # persisted BEFORE dispatch so the correlation target exists before the provider can fire. A crash in the
+  # persist→dispatch window leaves a durable releasing(req, ref) the L9 watchdog reconciles (no auto-retry here).
+  COMMIT atomically at expected_version = instance.version:
+    REQUIRE instance.runtime_context = ready(ref)                  # the CAS guard: a concurrent initiation that already won (now releasing) loses on reload ⇒ not ready ⇒ no-op
+    instance.runtime_context ← releasing(request_id, ref)          # durable IN-FLIGHT marker; carries the ref for the completion handler / retry
+    instance.transcript.append(RUNTIME_CONTEXT_RELEASING { request_id })
+    instance.version ← instance.version + 1
+  TRY provider.release(instance.id, request_id, ref)              # POST-COMMIT side effect → later fires RUNTIME_CONTEXT_RELEASED(request_id, result)
+  ON dispatch_error(reason):                                       # could not even START the release → a follow-up versioned transition records it
+    COMMIT atomically at expected_version = instance.version:
+      REQUIRE instance.runtime_context = releasing(request_id, ref)   # still OUR in-flight release (a racing RUNTIME_CONTEXT_RELEASED may have moved it) — else write no wrong release_failed
+      instance.runtime_context ← release_failed(ref, reason: initiation(reason))
+      instance.transcript.append(RUNTIME_CONTEXT_RELEASE_FAILED { phase: initiation, reason })
+      instance.version ← instance.version + 1

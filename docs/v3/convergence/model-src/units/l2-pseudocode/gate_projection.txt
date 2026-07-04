@@ -1,0 +1,7 @@
+
+gate_projection(instance, template, envelope) → Projection   # policy-facing read model — read-only, derived; the policy reads, never mutates
+  RETURN {
+    round:        instance.round,                       # canonical, kernel-maintained, commit-derived, transcript-reconstructable
+    current_step: instance.current_step,
+    event_type:   envelope.type,
+    history:      derive_policy_view(instance.transcript) }   # derived view (prior verdicts / alternation); the projection exposes no raw transcript, though the kernel derives it from one

@@ -1,0 +1,12 @@
+
+human_decision_request(instance, template) → HumanDecisionRequest   # L3 — the human-facing analog of DispatchIntent (the Ask); local/manual delivery, durable channel L8
+  step     ← template.step(instance.current_step)
+  request  ← pending_decision_request(instance)
+  operator ← instance.binding[step.role]                            # the human bound to the operator role
+  RETURN HumanDecisionRequest {
+    instance_id, expected_version: instance.version, request_ref: request.request_ref,
+    operator, question: step.instruction,
+    recommendation: request.recommendation,                         # what the routing edge recommended (may be absent); the UI flags any choice ≠ recommendation as needing an explicit override
+    context: project_decision_context(instance, request),          # the task + handoff/diff the human needs to decide
+    allowed_decisions: decision_keys(step),                         # the gate's declared decision keys (anchor: approve | request_rework)
+    decision_requirements: requirements_for(step.decisions) }       # per-decision required payload fields, from the SAME declared decisions — e.g. request_rework ⇒ instruction required (the submit path rejects an empty one)

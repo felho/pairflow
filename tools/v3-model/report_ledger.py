@@ -19,6 +19,8 @@ import sys
 from collections import OrderedDict
 from pathlib import Path
 
+import foldlib
+
 REPO = Path(__file__).resolve().parents[2]
 SRC = REPO / "docs/v3/convergence/model-src"
 
@@ -89,7 +91,7 @@ def main() -> None:
     first_seen: "OrderedDict[str, str]" = OrderedDict()
     for section in manifest["sections"]:
         for code in section["codes"]:
-            body = (SRC / code["new"]).read_text()
+            body = foldlib.code_text(code)
             for reason in REJECT_RE.findall(body):
                 first_seen.setdefault(reason, code["id"])
     lines += [f"## 3 · Rejection registry — {len(first_seen)} distinct `Rejected(...)` reasons", ""]

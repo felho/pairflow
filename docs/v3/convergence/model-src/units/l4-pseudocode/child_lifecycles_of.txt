@@ -1,0 +1,5 @@
+
+child_lifecycles_of(outcome, instance) → [lifecycle]             # L4 — the subscribable lifecycle transitions THIS commit produced
+  IF outcome ∈ { Committed, Terminated } AND instance.kernel_status = TERMINAL    # MVP anchor: only TERMINAL transitions are subscribable
+     THEN RETURN [ instance.terminal_disposition ]                # done | failed | cancelled — the disposition IS the lifecycle key
+  RETURN [ ]                                                      # intermediate transitions (e.g. ready_for_human_approval) are a declared-subscription EXTENSION — Absent

@@ -1,0 +1,3 @@
+
+decision_keys(step) → [key]                                         # a human_gate's declared decision keys = its transition vocabulary (the keys of step.decisions)
+  RETURN keys_of(step.decisions)

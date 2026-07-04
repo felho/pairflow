@@ -1,4 +1,4 @@
-# v3-model — core-model source/render split (Phase 0 + 1)
+# v3-model — core-model source/render split (Phase 0 + 1 + 2)
 
 Tooling for `docs/v3/convergence/core-model.html`. The HTML is decomposed into
 addressable source files under `docs/v3/convergence/model-src/`; the HTML is
@@ -9,10 +9,12 @@ core-model document without content changes.
 
 | Script | Role |
 |---|---|
-| `extract.py` | HTML → `model-src/` (mechanical cut: per-section files + code blocks + Absent/Invariant records + manifest). Deterministic; safe to re-run. |
-| `build.py [--out PATH]` | `model-src/` → HTML (paste-back + record rendering). |
+| `extract.py` | HTML → `model-src/` (mechanical cut: per-section files + code blocks + Absent/Invariant records + manifest). **Bootstrap only** — refuses to run once `deltas/` exists (it would clobber the unit-delta layout). |
+| `build.py [--out PATH]` | `model-src/` → HTML (paste-back + record rendering + unit folding). |
 | `check.sh` | Golden test: the built HTML must be byte-identical to the canonical `core-model.html`; also verifies `ledger.md` freshness. |
-| `analyze_chain.py` | Read-only report: the baseline graph of the code blocks (`data-code-old-ref`), per-block delta size, and per-unit blast radius (which levels touch which pseudocode unit). |
+| `foldlib.py` | Shared fold logic: reassembles a pseudocode block from its unit deltas along the baseline chain. |
+| `migrate_units.py` | One-shot Phase 2 migration (snapshots → unit deltas); kept for provenance, guarded no-op now. |
+| `analyze_chain.py` | Read-only report: the baseline graph of the code blocks (`data-code-old-ref`), per-block delta size, and the precise per-unit blast radius (from the `units/` layout). |
 | `report_ledger.py` | Generates `model-src/ledger.md`: the deferral ledger (Absent items bucketed by pointer target — the L9 bucket is the recovery-obligations list), the invariant catalog, and the rejection registry. |
 
 ## Editing workflow (until a later phase changes it)
@@ -33,10 +35,22 @@ side was edited.
 - `sections/NN-<id>.html` — one file per level section; the bodies of the
   `diff-source` `<script>` blocks are replaced by `[[@code <relpath>]]`
   markers.
-- `code/<id>.new.txt` — each code block's full snapshot (`data-code-new`).
+- `code/<id>.new.txt` — full snapshot for the *template-config* blocks only.
   There are no `.old.txt` files: the viewer resolves the old side **by
   reference** (`data-code-old-ref`, recorded as `baseline` in
   `manifest.json`), so every old body in the HTML is empty and stays inline.
+- `deltas/<block>.json` + `units/<block>/<unit>.txt` — the *pseudocode*
+  blocks in unit-delta form (Phase 2). A block stores only the unit versions
+  it adds or changes plus its unit `order`; everything else is inherited
+  along the baseline chain and reassembled by `foldlib.fold()` at build
+  time. Sections carry `[[@fold <id>]]` markers for these.
+  - **Editing a unit at level X**: edit `units/<X>/<unit>.txt`. Blast radius
+    first: `ls units/*/<unit>.txt` shows every block holding a version — only
+    those need review; all downstream snapshots recompute.
+  - **A new level**: a new `deltas/<id>.json` (baseline + order) + unit files
+    for what it adds/changes — no full-snapshot copying.
+  - A unit's leading column-0 comment run travels with the unit; the
+    `__preamble__` pseudo-unit holds bytes before the first unit.
 - `records/absent/<sid>.json` — one record per Absent item (`{id, html}`);
   the section keeps the grid wrapper plus an `[[@absent <sid>]]` marker.
 - `records/invariants/<sid>.json` — one record per invariant rule

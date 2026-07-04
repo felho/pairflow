@@ -8,7 +8,7 @@
         {
           "id": "l0a-pseudocode",
           "baseline": null,
-          "new": "code/l0a-pseudocode.new.txt"
+          "fold": true
         },
         {
           "id": "l0a-template-config",
@@ -24,7 +24,7 @@
         {
           "id": "l0b-pseudocode",
           "baseline": "l0a-pseudocode",
-          "new": "code/l0b-pseudocode.new.txt"
+          "fold": true
         },
         {
           "id": "l0b-template-config",
@@ -40,7 +40,7 @@
         {
           "id": "l0c-pseudocode",
           "baseline": "l0b-pseudocode",
-          "new": "code/l0c-pseudocode.new.txt"
+          "fold": true
         },
         {
           "id": "l0c-template-config",
@@ -56,7 +56,7 @@
         {
           "id": "l0d-pseudocode",
           "baseline": "l0c-pseudocode",
-          "new": "code/l0d-pseudocode.new.txt"
+          "fold": true
         },
         {
           "id": "l0d-template-config",
@@ -72,7 +72,7 @@
         {
           "id": "l0e-pseudocode",
           "baseline": "l0d-pseudocode",
-          "new": "code/l0e-pseudocode.new.txt"
+          "fold": true
         },
         {
           "id": "l0e-template-config",
@@ -88,7 +88,7 @@
         {
           "id": "l0f-pseudocode",
           "baseline": null,
-          "new": "code/l0f-pseudocode.new.txt"
+          "fold": true
         },
         {
           "id": "l0f-template-config",
@@ -109,7 +109,7 @@
         {
           "id": "l1-pseudocode",
           "baseline": "l0e-pseudocode",
-          "new": "code/l1-pseudocode.new.txt"
+          "fold": true
         }
       ]
     },
@@ -120,7 +120,7 @@
         {
           "id": "l2-pseudocode",
           "baseline": "l1-pseudocode",
-          "new": "code/l2-pseudocode.new.txt"
+          "fold": true
         },
         {
           "id": "l2-template-config",
@@ -136,7 +136,7 @@
         {
           "id": "l2a-pseudocode",
           "baseline": "l2-pseudocode",
-          "new": "code/l2a-pseudocode.new.txt"
+          "fold": true
         },
         {
           "id": "l2a-template-config",
@@ -152,7 +152,7 @@
         {
           "id": "l2b-pseudocode",
           "baseline": "l2a-pseudocode",
-          "new": "code/l2b-pseudocode.new.txt"
+          "fold": true
         },
         {
           "id": "l2b-template-config",
@@ -168,7 +168,7 @@
         {
           "id": "l3-pseudocode",
           "baseline": "l2b-pseudocode",
-          "new": "code/l3-pseudocode.new.txt"
+          "fold": true
         },
         {
           "id": "l3-template-config",
@@ -184,7 +184,7 @@
         {
           "id": "storage-scope-pseudocode",
           "baseline": null,
-          "new": "code/storage-scope-pseudocode.new.txt"
+          "fold": true
         }
       ]
     },
@@ -195,7 +195,7 @@
         {
           "id": "release-pseudocode",
           "baseline": "l3-pseudocode",
-          "new": "code/release-pseudocode.new.txt"
+          "fold": true
         },
         {
           "id": "release-template-config",
@@ -211,7 +211,7 @@
         {
           "id": "action-pseudocode",
           "baseline": "release-pseudocode",
-          "new": "code/action-pseudocode.new.txt"
+          "fold": true
         },
         {
           "id": "action-template-config",
@@ -227,7 +227,7 @@
         {
           "id": "auto-action-pseudocode",
           "baseline": "action-pseudocode",
-          "new": "code/auto-action-pseudocode.new.txt"
+          "fold": true
         },
         {
           "id": "auto-action-template-config",
@@ -243,7 +243,7 @@
         {
           "id": "complete-pseudocode",
           "baseline": "auto-action-pseudocode",
-          "new": "code/complete-pseudocode.new.txt"
+          "fold": true
         }
       ]
     },
@@ -254,7 +254,7 @@
         {
           "id": "l0f-mode-pseudocode",
           "baseline": "l0f-pseudocode",
-          "new": "code/l0f-mode-pseudocode.new.txt"
+          "fold": true
         },
         {
           "id": "l0f-mode-template-config",
@@ -270,7 +270,7 @@
         {
           "id": "l4-pseudocode",
           "baseline": "auto-action-pseudocode",
-          "new": "code/l4-pseudocode.new.txt"
+          "fold": true
         },
         {
           "id": "l4-parent-template",

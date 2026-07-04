@@ -1,0 +1,11 @@
+
+park_for_action(instance, template, step) → void                   # ③ — arrival at a type: action step; the trigger decides the park
+  IF step.trigger = operator_intent THEN                             # ③a — wait for the operator's RUN_ACTION (no transcript entry; the ActionRequest is DERIVED)
+    instance.kernel_status ← WAITING
+    instance.wait ← { kind: action_pending, requested_by: step.id, resume_events: [step.action.key] }
+    RETURN
+  # ③b auto — CLAIM the run AS the arrival (single auto trigger, no operator); the runner runs POST-COMMIT via the ActionIntent, NEVER inside this arrival commit
+  request_id ← new_request_id() ; episode ← new_episode_ref()        # episode anchors the bounded-retry attempt count (transcript-reconstructable)
+  instance.kernel_status ← WAITING
+  instance.wait ← { kind: action_running, request_id, action_key: step.action.key, episode_ref: episode, requested_by: step.id }
+  instance.transcript.append(ACTION_RUNNING { request_id, action_key: step.action.key, episode_ref: episode, trigger: auto })   # the marker — committed in THIS arrival commit; the side effect is post-commit

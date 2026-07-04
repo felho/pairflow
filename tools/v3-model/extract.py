@@ -235,6 +235,10 @@ def extract_codes(section_id: str, chunk: str, code_dir: Path):
 
 
 def main() -> None:
+    if (OUT / "deltas").exists():
+        fail("model-src/ uses the unit-delta layout (deltas/ exists); extract.py is the "
+             "pre-phase-2 bootstrapper and would clobber it. To re-bootstrap from the HTML, "
+             "remove model-src/ entirely first — the delta decomposition would be lost.")
     src = HTML.read_text()
     prelude, chunks, postlude = split_sections(src)
 

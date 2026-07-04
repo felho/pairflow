@@ -1,0 +1,4 @@
+
+emit_child_lifecycle(instance, lifecycle) → void                 # L4 — POST-COMMIT (the initiate_release sibling): deliver a child's lifecycle to its parent
+  IF instance.parent_ref is none THEN RETURN                      # not anyone's child — nothing to deliver
+  deliver CHILD_LIFECYCLE { parent_ref: instance.parent_ref, child_id: instance.id, lifecycle }   # an INTERNAL kernel event, correlated by parent_ref / child_id (L8 generalizes the channel to external / durable)

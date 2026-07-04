@@ -1,0 +1,21 @@
+{
+  "id": "l1-pseudocode",
+  "baseline": "l0e-pseudocode",
+  "order": [
+    "resolve_agent_config",
+    "capability",
+    "RECEIVE",
+    "CREATE_INSTANCE",
+    "RuntimeContextProvider",
+    "START",
+    "activate_or_hold",
+    "RUNTIME_CONTEXT_READY",
+    "KICKOFF",
+    "activate",
+    "CANCEL",
+    "COMPLETE",
+    "FAIL",
+    "HANDLE",
+    "dispatch_intent"
+  ]
+}

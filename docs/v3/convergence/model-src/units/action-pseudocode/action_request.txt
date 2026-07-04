@@ -1,0 +1,10 @@
+
+action_request(instance, template) → ActionRequest                 # ③ — the operator-facing surface for a parked action; the decision-less analog of HumanDecisionRequest, DERIVED from the step (no stored request)
+  step     ← template.step(instance.current_step)
+  operator ← instance.binding[step.role]
+  RETURN ActionRequest {
+    instance_id, expected_version: instance.version,
+    action_key:       step.action.key,                             # the trigger to send (e.g. COMMIT, MERGE)
+    runner:           step.action.uses,
+    required_payload: requirements_for(step.action.payload),       # the SAME per-field {required} shape as a decision payload — TRIGGER-validation, not workspace state
+    context:          project_action_context(instance), operator }

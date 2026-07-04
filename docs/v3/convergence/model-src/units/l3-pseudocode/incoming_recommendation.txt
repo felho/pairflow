@@ -1,0 +1,5 @@
+
+incoming_recommendation(instance, template, step) → { verdict?, source? }   # L3 — read the `recommends` off the transition that routed the run into this gate. Build time declares the possibilities (per edge); runtime selects WHICH edge fired — the recommendation is the context of the arrival route, not a property of the gate
+  edge ← firing_transition_into(instance, step.id)                 # the (from_step, event_type) reconstructed from the arrival; parallels payload_of_transition_into
+  IF edge is none OR edge.recommends is absent THEN RETURN { }      # no recommendation on this route
+  RETURN { verdict: edge.recommends, source: { from_step: edge.from_step, event_type: edge.event_type } }

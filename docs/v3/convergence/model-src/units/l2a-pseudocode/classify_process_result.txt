@@ -1,0 +1,13 @@
+
+classify_process_result(result, config) → GateDecision
+  output_mode     ← config.output.mode      ?? exit_code             # contract defaults (absent ⇒ these) — resolved once
+  on_runner_error ← config.on_runner_error  ?? block_transition
+  on_timeout      ← config.on_timeout       ?? block_transition
+  IF result.kind = timeout      THEN RETURN runner_outcome(on_timeout,      timeout,      result.log_ref)
+  IF result.kind = runner_error THEN RETURN runner_outcome(on_runner_error, runner_error, result.log_ref)   # spawn / workspace-missing (malformed JSON has its own branch below)
+  MATCH output_mode:                                                 # never guess "JSON wins"
+    exit_code          → RETURN { verdict: config.on_exit[bucket(result.exit_code)],   # buckets: "0" | nonzero → allow | warn | block (values allowlisted at definition load)
+                                  reason: exit_reason(result.exit_code), evidence_refs: [result.log_ref] }
+    gate_decision_json → parsed ← try_parse_gate_decision(result.stdout)               # opt-in; schema allowlists verdict ∈ { allow, warn, block } — route is invalid until the routing slice
+                         IF parsed is none THEN RETURN runner_outcome(on_runner_error, malformed_gate_decision_json, result.log_ref)   # unparseable / schema-invalid (incl. a disallowed verdict) ⇒ runner outcome, NOT a business block
+                         RETURN with_evidence(parsed, result.log_ref)

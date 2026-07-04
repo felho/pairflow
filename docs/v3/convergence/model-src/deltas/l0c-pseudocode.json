@@ -1,0 +1,10 @@
+{
+  "id": "l0c-pseudocode",
+  "baseline": "l0b-pseudocode",
+  "order": [
+    "resolve_agent_config",
+    "START_INSTANCE",
+    "HANDLE",
+    "dispatch_intent"
+  ]
+}

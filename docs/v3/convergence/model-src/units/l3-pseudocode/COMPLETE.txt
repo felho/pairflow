@@ -1,0 +1,4 @@
+
+COMPLETE(instance)                                                   # internal helper — finalizes a COMMITTED ARRIVAL into a terminal target (a HANDLE actor transition OR a resumed human decision, both via apply_target_entry_effects)
+  REQUIRE instance.kernel_status ≠ TERMINAL                            # was ACTIVE-only; apply_target_entry_effects() may complete from a resumed WAITING(human_decision) arrival too — only double-completion is barred
+  instance.kernel_status ← TERMINAL ; instance.terminal_disposition ← done

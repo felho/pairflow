@@ -1,0 +1,3 @@
+
+required_fields(choice) → [field]                                   # the payload fields a decision declares required (e.g. request_rework ⇒ instruction); empty when the decision needs no payload — the generic replacement for the hardcoded rework-instruction rule
+  RETURN [ f FOR (f, spec) IN (choice.payload ?? {}) WHERE spec.required ]

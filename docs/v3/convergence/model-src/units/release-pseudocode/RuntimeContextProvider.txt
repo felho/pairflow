@@ -1,0 +1,9 @@
+
+# RuntimeContextProvider — a named, core-adjacent fulfiller; the kernel owns this CONTRACT, the provider owns the mechanics
+INTERFACE RuntimeContextProvider:
+  provision(instance_id, request_id, spec)            # async → later fires RUNTIME_CONTEXT_READY(request_id, ref)
+  project_for_actor(runtime_context_ref) → RuntimeContextProjection   # kind-specific actor-facing view; kernel-internal fields stay out
+  release(instance_id, request_id, runtime_context_ref)               # ② async → later fires RUNTIME_CONTEXT_RELEASED(request_id, result); the `provision` mirror
+  teardown_managed → bool                                             # ② does the kernel own this resource's release? worktree = true; a shared / externally-managed provider = false
+# instance.runtime_context lifecycle: none | requested(req) | ready(ref) | releasing(req, ref) | released | release_failed(ref, reason, evidence_refs)
+#   ② under release.policy: required, ready(ref) carries a RELEASE OBLIGATION (retained / external carry none); released = tombstone (provisioned-then-released ≠ never-provisioned); release_failed(ref) = retriable release handle, NOT a usable runtime

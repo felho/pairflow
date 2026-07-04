@@ -1,0 +1,8 @@
+
+resolve_slot(slot, scope) → value | none                         # 5-tier cascade; last non-none wins
+  value ← slot.default                                            # tier 1: template default
+  IF scope.project_global has slot.id THEN value ← scope.project_global[slot.id]   # tier 2: project global
+  IF scope.project_wf     has slot.id THEN value ← scope.project_wf[slot.id]       # tier 3: project workflow
+  IF scope.target         has slot.id THEN value ← scope.target[slot.id]           # tier 4: target profile
+  IF scope.cli            has slot.id THEN value ← scope.cli[slot.id]              # tier 5: CLI/start override (highest)
+  RETURN value

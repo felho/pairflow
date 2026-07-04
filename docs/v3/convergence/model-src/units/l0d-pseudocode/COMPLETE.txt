@@ -1,0 +1,4 @@
+
+COMPLETE(instance)                                                   # internal helper — done originates only from a terminal step (HANDLE), never routed
+  REQUIRE instance.kernel_status = ACTIVE
+  instance.kernel_status ← TERMINAL ; instance.terminal_disposition ← done

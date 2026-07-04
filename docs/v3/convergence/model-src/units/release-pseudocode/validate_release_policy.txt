@@ -1,0 +1,11 @@
+
+# ② definition load (CREATE_INSTANCE): a teardown-managed provider MUST declare how it is released — the release contract is the provision contract's pair
+validate_release_policy(template) → ok | Rejected
+  req ← template.runtime_context
+  IF req = none THEN RETURN ok                                       # context-free: nothing provisioned ⇒ nothing to release
+  IF NOT providerRegistry.resolve(req.spec.provider).teardown_managed THEN RETURN ok   # a shared / external provider owns its own lifecycle; no kernel release contract required
+  IF req.release is absent THEN RETURN Rejected(release_policy_undeclared)              # teardown-managed ⇒ runtime_context.release is mandatory
+  MATCH req.release.policy:
+    required            → IF req.release.boundaries is empty THEN RETURN Rejected(release_boundaries_empty) ELSE RETURN ok
+    retained | external → IF req.release.boundaries is present AND non-empty THEN RETURN Rejected(release_boundaries_not_allowed) ELSE RETURN ok   # EXPLICIT no-obligation ownership (retained = intentionally kept; external = owned elsewhere); declaring boundaries here would LOOK like release but never fire ⇒ reject
+    _                   → RETURN Rejected(invalid_release_policy)

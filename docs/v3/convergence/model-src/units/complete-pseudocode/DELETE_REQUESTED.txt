@@ -1,0 +1,17 @@
+
+# kernel-adjacent — RECEIVE operator_intent dispatch gains DELETE_REQUESTED (alongside CANCEL / SUBMIT_DECISION / RUN_ACTION)
+DELETE_REQUESTED(intent) → Outcome                                  # ④ operator intent — a CANCEL sibling; starts cancel → release → purge. NOT a workflow action
+  instance ← load(intent.instance_id)
+  IF duplicate(intent.op_id) THEN RETURN Duplicate                  # idempotency-first
+  IF run_index.status(instance.id) = purged THEN RETURN Rejected(already_purged)   # the run_index TOMBSTONE is the authority for purged — checked BEFORE the operator-authority REQUIRE because a purged run has no full run record (hence no binding[operator]) to authorize against; only the surviving T1-family tombstone remains to read
+  REQUIRE intent.by = instance.binding[operator]                    # operator authority on THIS path (like CANCEL / SUBMIT_DECISION)
+  IF instance.purge_state = purge_pending THEN RETURN Committed(instance.version, none)   # already pending — a re-issue (fresh op_id) is an idempotent no-op (matrix: no-op once pending / purged); checked AFTER authority so an unauthorized re-delete still gets operator_not_authorized
+  IF instance.kernel_status ≠ TERMINAL AND NOT intent.force THEN RETURN Rejected(delete_confirmation_required)   # a LIVE run needs explicit force (v1: --force)
+  COMMIT atomically at expected_version = instance.version:
+    IF instance.kernel_status ≠ TERMINAL THEN                       # live run ⇒ terminalize first (the lifecycle, unbundled from purge)
+      instance.kernel_status ← TERMINAL ; instance.terminal_disposition ← cancelled
+    instance.purge_state ← purge_pending                           # MARK only; the destructive purge waits for release (the teeth are on hard_purge, not here)
+    instance.transcript.append(DELETE_REQUESTED { op_id: intent.op_id, by: intent.by })
+    instance.version ← instance.version + 1
+  force_release(instance)                                          # ④ post-commit operator-FORCED release (below) — NOT the membership-gated boundary hook; the runtime MUST go for purge
+  RETURN Committed(instance.version, none)

@@ -1,0 +1,18 @@
+
+assemble_context_blocks(instance, template, step) → [ContextBlock]    # L2b — deterministic render; bodies resolved from the catalog only
+  catalog  ← template.context_blocks                                  # id → { body }; the single body source
+  rendered ← ordered_map()                                            # first-seen order; dedups by id, accumulates provenance.sources[]
+  emit(ref, source):                                                  # local closure — resolve once; on a repeat only append the provenance source
+    IF rendered.has(ref) THEN rendered[ref].provenance.sources.append(source) ; RETURN
+    rendered.put(ref, { id: ref, body: catalog[ref].body, provenance: { sources: [source] } })
+  # render order IS source order: role refs → step refs → gate/policy refs, declaration order within each — render-order, NOT precedence/override
+  FOR ref IN template.role(step.role).default_agent_config.prompt_concern_refs:   # 1) role identity / operating rules
+    emit(ref, { source: role_config })
+  FOR ref IN step.agent_config.prompt_concern_refs:                               # 2) the current step
+    emit(ref, { source: step_config })
+  authorized_ops ← capability(template, step.role, step.id) ∩ event_types_of(step.transitions)   # L1 authority ∩ transition existence — the ops this actor may legally emit
+  FOR event_type IN authorized_ops:                                              # 3) gates on transitions the actor may emit — not blind step membership
+    FOR gate IN template.gates_for(step.id, event_type):
+      FOR ref IN gate.context_block_refs:
+        emit(ref, { source: gate_binding, at: (step.id, event_type) })
+  RETURN rendered.values()                                            # ordered [{ id, body, provenance: { sources } }]

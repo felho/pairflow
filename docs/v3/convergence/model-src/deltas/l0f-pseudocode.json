@@ -1,0 +1,10 @@
+{
+  "id": "l0f-pseudocode",
+  "baseline": null,
+  "order": [
+    "__preamble__",
+    "RESOLVE_START",
+    "slot_scope",
+    "resolve_slot"
+  ]
+}

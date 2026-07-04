@@ -1,0 +1,6 @@
+
+RECEIVE(input) → Outcome                                               # one kernel entry; route by input source class
+  MATCH input.source:
+    operator_intent → dispatch to CREATE_INSTANCE / START / KICKOFF / CANCEL   # lifecycle intents
+    kernel_event    → dispatch to RUNTIME_CONTEXT_READY / FAIL               # internal events (done is internal-only, below)
+    actor_envelope  → HANDLE(input)                                           # the L0a–L0c actor handler, now lifecycle-guarded

@@ -1,0 +1,28 @@
+{
+  "id": "l2a-pseudocode",
+  "baseline": "l2-pseudocode",
+  "order": [
+    "resolve_agent_config",
+    "capability",
+    "GateEvaluator",
+    "gate_projection",
+    "ProcessGateRunner",
+    "run_process_gate",
+    "classify_process_result",
+    "runner_outcome",
+    "validate_gate_config",
+    "RECEIVE",
+    "CREATE_INSTANCE",
+    "RuntimeContextProvider",
+    "START",
+    "activate_or_hold",
+    "RUNTIME_CONTEXT_READY",
+    "KICKOFF",
+    "activate",
+    "CANCEL",
+    "COMPLETE",
+    "FAIL",
+    "HANDLE",
+    "dispatch_intent"
+  ]
+}

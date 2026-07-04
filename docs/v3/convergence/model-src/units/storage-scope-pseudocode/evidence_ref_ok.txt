@@ -1,0 +1,6 @@
+
+# INV-3 — the one new rule: a canonical record ref resolves inline (T1) or into T3; never into T4.
+evidence_ref_ok(ref) → bool
+  RETURN ref.kind = inline                                     # the outcome itself, in the T1 entry
+      OR (ref.kind = durable AND durable_store_holds(ref))     # a T3 blob, by durable address
+  # a workspace path (T4) is NOT a valid canonical ref — it dies at teardown

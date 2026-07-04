@@ -1,0 +1,6 @@
+
+validate_context_refs(template) → ok | Rejected                       # definition load (CREATE_INSTANCE) — fail at create; the static analog of binding coverage / validate_gate_config
+  catalog ← template.context_blocks                                   # id → { body }; the single body source
+  FOR ref IN all_issued_context_block_refs(template):                 # every role/step prompt_concern_ref + gate context_block_ref
+    IF ref NOT IN catalog THEN RETURN Rejected(unresolved_context_block_ref)
+  RETURN ok                                                           # existence only — NOT semantic parity between a block’s prose and the gate config it describes

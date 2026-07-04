@@ -13,9 +13,12 @@ import re
 import sys
 from pathlib import Path
 
+import foldlib
+
 REPO = Path(__file__).resolve().parents[2]
 SRC = REPO / "docs/v3/convergence/model-src"
 MARKER_RE = re.compile(r"\[\[@code ([^\]]+)\]\]")
+FOLD_RE = re.compile(r"\[\[@fold ([^\]]+)\]\]")
 ABSENT_MARK_RE = re.compile(r"^\[\[@absent (\S+)\]\]$", re.M)
 INV_MARK_RE = re.compile(r"^\[\[@invariants (\S+) (\d+)\]\]$", re.M)
 
@@ -58,6 +61,7 @@ def main() -> None:
         chunk = (SRC / section["file"]).read_text()
         chunk = ABSENT_MARK_RE.sub(render_absent, chunk)
         chunk = INV_MARK_RE.sub(render_invariants, chunk)
+        chunk = FOLD_RE.sub(lambda m: foldlib.fold(m.group(1)), chunk)
         parts.append(MARKER_RE.sub(inject, chunk))
     parts.append((SRC / "_postlude.html").read_text())
 

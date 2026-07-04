@@ -1,0 +1,14 @@
+
+CHILD_SPAWNED(event) → Outcome                                   # L4 kernel_event — the child's CREATE_INSTANCE finished (the RUNTIME_CONTEXT_READY analog). event = { parent_ref, request_id, child_id }: write child_id back into the parent link, CAS'd + transcript-backed
+  instance ← load(event.parent_ref.parent_id) ; template ← template_of(instance)
+  link ← instance.child_links.by_id(event.parent_ref.link_id)
+  IF link is none THEN RETURN Rejected(child_link_unknown)
+  IF link.request_id ≠ event.request_id THEN RETURN Rejected(child_link_mismatch)   # correlation: a stale / mis-routed spawn-completion for a DIFFERENT attempt
+  IF link.status ≠ spawning THEN                                 # already bound — idempotent ONLY for the SAME child
+    IF link.child_id = event.child_id THEN RETURN Duplicate      # a replayed CHILD_SPAWNED for this child ⇒ no-op
+    ELSE RETURN Rejected(child_link_mismatch)                    # a DIFFERENT child_id on a bound link (double-create / mis-route) ⇒ never swallow (the orphan child is L9)
+  COMMIT atomically at instance.version:                         # marker-first / CAS, like ② RUNTIME_CONTEXT_RELEASED's correlated commit
+    REQUIRE link.status = spawning
+    link.child_id ← event.child_id ; link.status ← active
+    instance.transcript.append(CHILD_SPAWNED { link_id: link.link_id, request_id: event.request_id, child_id: event.child_id })
+  RETURN Committed(instance.version, none)                       # no routing — the parent stays WAITING(child_event) for the child's lifecycle

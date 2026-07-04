@@ -1,0 +1,41 @@
+
+RESOLVE_START(command, project_config) → ResolvedStartRequest | Rejected
+  # J1 — definition resolution
+  template_id ← command.template_id ?? project_config.default_workflow    # default_workflow is optional convenience
+  IF template_id is none THEN RETURN Rejected(no_workflow_selected)        # neither explicit nor defaulted
+  source   ← select_source(project_config.workflow_sources, template_id)   # MVP: local(.pairflow/); central store is L11+
+  template ← source.load(template_id)                                      # pinned by version
+  IF template is none THEN RETURN Rejected(workflow_definition_unavailable)
+
+  # J2 — slot/value resolution
+  wf ← project_config.workflows[template_id] ?? empty_workflow_scope      # no per-workflow section → empty scope, not null
+  IF command.target is present AND wf.targets[command.target] is none
+     THEN RETURN Rejected(unknown_target(command.target))                 # an explicitly-selected target is intentional — a typo rejects (unlike a lenient global slot)
+  declared ← { s.id for s in template.slots }
+  scope    ← slot_scope(project_config, template_id, command)           # only THIS run's consulted tiers
+
+  # scoped strict reject — unambiguously-scoped tiers only; global defaults stay lenient
+  FOR key IN keys(scope.project_wf) ∪ keys(scope.target) ∪ keys(scope.cli):
+    IF key NOT IN declared THEN RETURN Rejected(unknown_slot(key))         # typo in a scoped section
+  # undeclared keys in shared global defaults — or in OTHER workflows' sections — are ignored for this run
+
+  resolved_slots ← {}
+  FOR slot IN template.slots:
+    value ← resolve_slot(slot, scope)
+    IF value is none AND slot.required THEN RETURN Rejected(unbound_required_slot(slot.id))
+    IF value is not none AND NOT type_ok(slot.type, value) THEN RETURN Rejected(slot_type_mismatch(slot.id))
+    resolved_slots[slot.id] ← value
+
+  # J3 — variant/mode resolution (start-fixed; the kernel stays mode-agnostic)
+  REQUIRE valid_mode_declaration(template)                       # authoring / load-time consistency — fail-closed (see below)
+  mode ← command.mode ?? template.default_mode                   # start-fixed; absent ⇒ the template's DECLARED default variant
+  IF template.modes is not empty AND mode is none THEN RETURN Rejected(no_mode_selected)   # modes declared but neither command nor default_mode picks one — an explicit authoring choice, never a kernel default
+  IF mode is not none AND mode NOT IN template.modes THEN RETURN Rejected(unknown_mode(mode))   # fail-closed: a start mode the template does not declare
+
+  # materialize: slot values, then prune to the mode variant — ONE pinned, immutable definition (J1 template + J2 values + J3 variant).
+  # The kernel and L0e read template.runtime_context (etc.) from this PINNED view, exactly as before — no mutable slot map, no runtime mode field.
+  resolved_definition ← apply_mode(apply_slots(template, resolved_slots), mode)   # ${slot:…} → values, then prune to the mode variant
+
+  RETURN ResolvedStartRequest {
+    resolved_template_ref: pin(resolved_definition),             # pinned RESOLVED definition; CREATE_INSTANCE loads it like any Template
+    binding:               project_binding(project_config, command) }   # role → actor: its OWN cascade, not a slot

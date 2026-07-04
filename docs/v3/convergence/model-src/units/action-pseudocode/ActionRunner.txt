@@ -1,0 +1,3 @@
+
+INTERFACE ActionRunner:                                            # ③ — runs a workflow action; the ProcessGateRunner family (L2a), but its result SELECTS a route (an action), not allow/block a chosen one (a gate)
+  run(action_spec, { cwd, payload, timeout_ms }) → ActionResult { kind: ok | business_failure | infra_error, outputs, evidence_refs }   # cwd = the runtime_context workspace; execution inline (MVP) | deferred (later). outputs carry e.g. commit_sha / merge_sha

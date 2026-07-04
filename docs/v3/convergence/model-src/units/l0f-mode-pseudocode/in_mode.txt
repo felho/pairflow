@@ -1,0 +1,3 @@
+
+in_mode(tagged, mode) ≜ tagged.modes is empty OR mode IN tagged.modes   # membership predicate; untagged ⇒ present in every mode
+          

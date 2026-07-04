@@ -1,0 +1,18 @@
+
+apply_mode(definition, mode) → ResolvedDefinition                # prune to the mode variant at START — NO runtime conditional survives
+  IF mode is none THEN RETURN definition                         # mono-mode template — nothing to prune
+  # surface 1 — gate-binding presence: in every transition's gate pipeline, keep the bindings whose membership set includes the mode
+  #   (a point may declare a code-binding AND a doc-binding — same `uses` / different `config`, or a different `uses`; pruning leaves the mode's)
+  FOR step IN definition.steps:
+    FOR transition IN step.transitions:
+      transition.gates ← [ g for g in transition.gates if in_mode(g, mode) ]
+  # surface 2 — context-contribution presence: prune the tagged REFS on EVERY ref-bearing carrier — a role/step
+  #   prompt_concern_refs AND a SURVIVING gate's context_block_refs — NEVER the shared catalog context_blocks entry
+  #   (a tagged catalog entry would dangle; the catalog stays whole, harmlessly unreferenced in the other mode)
+  FOR carrier IN definition.{roles, steps}:
+    carrier.prompt_concern_refs ← [ r for r in carrier.prompt_concern_refs if in_mode(r, mode) ]
+  FOR step IN definition.steps:
+    FOR transition IN step.transitions:
+      FOR gate IN transition.gates:                              # the bindings that survived surface 1
+        gate.context_block_refs ← [ r for r in gate.context_block_refs if in_mode(r, mode) ]
+  RETURN pin(definition)                                         # immutable, mode-specific — the kernel loads it like any Template; no policy map, no runtime mode field

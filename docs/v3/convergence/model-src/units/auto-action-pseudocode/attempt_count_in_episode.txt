@@ -1,0 +1,3 @@
+
+attempt_count_in_episode(instance, episode_ref) → int               # ③b — transcript-reconstructable: how many ACTION_RUNNING entries this auto-action EPISODE has had. A fresh entry into the step opens a NEW episode_ref, so a later round's attempts never leak in
+  RETURN count of ACTION_RUNNING entries in instance.transcript WHERE entry.episode_ref = episode_ref

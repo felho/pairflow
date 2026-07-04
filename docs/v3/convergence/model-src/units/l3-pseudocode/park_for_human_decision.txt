@@ -1,0 +1,12 @@
+
+park_for_human_decision(instance, template, step) → void           # L3 — runs INSIDE the arrival commit; state + request as one visible transition
+  request_ref ← new_request_ref()
+  rec         ← incoming_recommendation(instance, template, step)   # the route that brought us here may carry a recommendation; none when the firing edge declared no `recommends`
+  instance.transcript.append(DECISION_REQUEST {
+    request_ref, recipient: step.role,
+    decisions:             decision_keys(step),                     # the gate's declared decision keys — the affordances offered to the human
+    recommendation:        rec.verdict,                             # the firing edge's `recommends` (a decision key); absent ⇒ every decision is equal, override never applies
+    recommendation_source: rec.source,                             # { from_step, event_type } of the edge that carried it — audit: WHERE the recommendation came from, not just what
+    context_ref:           payload_of_transition_into(instance, step.id) })
+  instance.kernel_status ← WAITING
+  instance.wait ← { kind: human_decision, requested_by: step.id, request_ref, resume_events: decision_keys(step) }

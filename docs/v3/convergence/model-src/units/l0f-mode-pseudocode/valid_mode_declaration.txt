@@ -1,0 +1,16 @@
+          
+
+valid_mode_declaration(template) → ok | Rejected                 # authoring / load-time consistency — fail-closed
+  IF template.modes is empty THEN                                # a mono-mode template carries NO mode surface at all
+    IF template.default_mode is not none OR any_mode_tag(template)
+       THEN RETURN Rejected(mode_surface_without_modes)
+    RETURN ok
+  IF unsupported_mode_tags(template) is not empty               # a modes: tag OUTSIDE the 2 supported surfaces —
+     THEN RETURN Rejected(mode_tag_on_unsupported_surface)      #   a step, an agent_config, or a catalog context_blocks entry
+  IF template.default_mode is not none AND template.default_mode NOT IN template.modes
+     THEN RETURN Rejected(default_mode_undeclared)               # default_mode ∈ modes
+  FOR tag IN allowed_mode_tags(template):                        # gates[].modes / *_refs[].modes
+    IF tag NOT IN template.modes THEN RETURN Rejected(undeclared_mode_tag(tag))
+  RETURN ok
+  # allowed_mode_tags     = modes: tags on the 2 supported surfaces — a gate binding (gates[].modes), a context ref (*_refs[].modes)
+  # unsupported_mode_tags = a modes: tag anywhere else (a step, an agent_config, a catalog context_blocks entry); any_mode_tag = either set non-empty

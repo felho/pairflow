@@ -1,0 +1,11 @@
+{
+  "id": "storage-scope-pseudocode",
+  "baseline": null,
+  "order": [
+    "__preamble__",
+    "StorageTier",
+    "evidence_ref_ok",
+    "projection_authoritative",
+    "release_safe"
+  ]
+}

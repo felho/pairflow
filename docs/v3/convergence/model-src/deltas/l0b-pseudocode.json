@@ -1,0 +1,9 @@
+{
+  "id": "l0b-pseudocode",
+  "baseline": "l0a-pseudocode",
+  "order": [
+    "START_INSTANCE",
+    "HANDLE",
+    "dispatch_intent"
+  ]
+}

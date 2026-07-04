@@ -1,0 +1,10 @@
+
+apply_target_entry_effects(instance, template, from_step_id, target) → void                # L3 — apply the kernel effects of entering the already-chosen target: position (current_step), round advancement, and the target-type lifecycle outcome below. Shared by HANDLE / SUBMIT_DECISION / RESUME_WAIT so the entry paths never drift
+  instance.current_step ← target
+  IF advances_round(from_step_id, target) THEN instance.round ← instance.round + 1   # transition semantics; transcript-reconstructable
+  IF target is terminal THEN COMPLETE(instance) ; RETURN            # the existing HANDLE terminal-step rule → TERMINAL(done); no new terminal semantics at L3
+  step ← template.step(target)
+  IF is_human_gate(template, target) THEN park_for_human_decision(instance, template, step) ; RETURN   # a DECISION wait — WAITING(human_decision) + DECISION_REQUEST + the Ask
+  IF is_action_step(template, target) THEN park_for_action(instance, template, step) ; RETURN   # ③ a WORKFLOW ACTION — operator-triggered: park WAITING(action_pending) for the operator's RUN_ACTION trigger; the auto trigger (run on arrival) is later
+  IF is_wait_step(template, target)  THEN park_for_wait(instance, step)             ; RETURN          # a BARE wait — WAITING(step.wait.kind); RESUME_WAIT resumes it — only the resume ACTION (running the operation) is later. NO privileged "finalization" — commit/merge/perf-test are just wait steps
+  instance.kernel_status ← ACTIVE ; instance.wait ← none           # an agent step ⇒ resume ACTIVE; the dispatch is derived post-commit

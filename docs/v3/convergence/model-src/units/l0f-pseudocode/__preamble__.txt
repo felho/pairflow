@@ -1,0 +1,5 @@
+
+# L0f runs BEFORE the kernel. It is not a HANDLE/handler: it consumes an operator
+# StartCommand + the repo's ProjectConfig and produces a ResolvedStartRequest that
+# CREATE_INSTANCE consumes; later START / provider provisioning read the applied values from
+# the pinned resolved definition. No instance, no transcript, no version exists yet.

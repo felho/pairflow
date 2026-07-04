@@ -1,0 +1,4 @@
+
+park_for_wait(instance, step) → void                               # L3 — arrival at a type: wait step parks WAITING with the step's declared wait contract
+  instance.kernel_status ← WAITING
+  instance.wait ← { kind: step.wait.kind, requested_by: step.id, resume_events: step.wait.resume_events }   # e.g. commit_pending ⇐ [COMMIT], merge_pending ⇐ [MERGE], process_pending ⇐ [PERF_TEST_RESULT]; RESUME_WAIT is the handler (L3) — the resume ACTION is later; the L0d terminal set (done | failed | cancelled) is untouched

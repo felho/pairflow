@@ -1,0 +1,27 @@
+
+ACTION_RESULT(instance, request_id, raw_result) → Outcome           # ③b kernel_event — an auto action's result (the RUNTIME_CONTEXT_READY sibling); inline ⇒ it arrives immediately, deferred ⇒ later (same contract)
+  IF instance.wait.kind ≠ action_running OR instance.wait.request_id ≠ request_id THEN RETURN Rejected(action_result_mismatch)   # correlation: the run WE issued (a stale / duplicate result ⇒ Rejected)
+  template ← definitionStore.load(instance.template_ref) ; step ← template.step(instance.current_step)
+  IF step.trigger ≠ auto THEN RETURN Rejected(action_result_not_auto_action)   # ③a/③b boundary: an operator action_running (③a — its result is recorded INLINE in RUN_ACTION) is NEVER completed by a kernel-event
+  outcome_key ← classify_action_result(step, raw_result)            # workspace reality (exit / structured JSON, like L2a)
+  choice      ← step.outcomes[outcome_key]
+  IF choice is present AND choice.retry is present THEN              # BOUNDED RETRY — ONLY for an outcome that DECLARES a retry policy (NOT a general negative-outcome rule): infra_flake retries, regression routes
+    IF attempt_count_in_episode(instance, instance.wait.episode_ref) < choice.retry.max_attempts THEN
+      new_id ← new_request_id()
+      COMMIT atomically at expected_version = instance.version:
+        instance.transcript.append(ACTION_RESULT { episode_ref: instance.wait.episode_ref, outcome: outcome_key, evidence_refs: raw_result.evidence_refs })   # the failed attempt, recorded
+        instance.wait ← { kind: action_running, request_id: new_id, action_key: step.action.key, episode_ref: instance.wait.episode_ref, requested_by: step.id }   # RE-CLAIM within the SAME episode (attempt accumulates; a fresh arrival would open a new episode_ref)
+        instance.transcript.append(ACTION_RUNNING { request_id: new_id, action_key: step.action.key, episode_ref: instance.wait.episode_ref, trigger: auto })
+        instance.version ← instance.version + 1
+      RETURN Committed(instance.version, action_intent(instance, template))   # re-issue the run (post-commit)
+    choice ← { target: choice.retry.on_exhausted }                  # budget exhausted ⇒ escalate (ends the episode)
+  IF choice is none THEN                                            # an undeclared outcome with no route: record + stay WAITING(action_running) — a config gap, recovered at L9 (no operator to nudge an auto action)
+    COMMIT atomically at expected_version = instance.version:
+      instance.transcript.append(ACTION_RESULT { episode_ref: instance.wait.episode_ref, outcome: outcome_key, kind: unhandled, evidence_refs: raw_result.evidence_refs })
+      instance.version ← instance.version + 1
+    RETURN Accepted
+  COMMIT atomically at expected_version = instance.version:
+    instance.transcript.append(ACTION_RESULT { episode_ref: instance.wait.episode_ref, outcome: outcome_key, outputs: raw_result.outputs, evidence_refs: raw_result.evidence_refs })   # evidence (① INV-3): inline T1 + durable T3 refs
+    apply_target_entry_effects(instance, template, step.id, choice.target)   # ROUTE by the outcome — ends the episode (a later fresh entry opens a new episode_ref)
+    instance.version ← instance.version + 1
+  RETURN Committed(instance.version, post_commit_output(instance, template), boundary_events: emits_of(choice))   # an outcome may emits: a release boundary → ②

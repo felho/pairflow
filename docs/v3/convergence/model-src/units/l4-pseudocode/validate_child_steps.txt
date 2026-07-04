@@ -1,0 +1,11 @@
+
+validate_child_steps(template) → ok | Rejected                   # L4 definition load (CREATE_INSTANCE): every type: child_workflow step is well-formed
+  FOR step IN template.steps WHERE is_child_workflow_step(template, step.id):
+    IF step.child.template_ref is none THEN RETURN Rejected(child_template_ref_missing(step.id))
+    IF step.child.template_ref is literal AND NOT definition_resolves(step.child.template_ref) THEN RETURN Rejected(child_template_ref_unresolved(step.id))   # a static typo / unknown template fails AT CREATE — never a durable spawning link that can never spawn (a DYNAMIC ref's create-reject is CHILD_SPAWN_FAILED below)
+    IF step.child.child_key is none    THEN RETURN Rejected(child_key_missing(step.id))          # the idempotency key — load-bearing, not optional
+    IF step.wait_for is empty          THEN RETURN Rejected(child_wait_for_empty(step.id))
+    IF NOT terminal_dispositions ⊆ keys(step.wait_for) THEN RETURN Rejected(child_wait_for_incomplete(step.id))   # FAIL-CLOSED: a child can terminate done | failed | cancelled (the L0d disposition set) — the parent MUST declare a route for EVERY one, so no terminal (incl. a CHILD_SPAWN_FAILED ⇒ failed) is ever unhandled at runtime
+    FOR k IN keys(step.wait_for):                                 # each lifecycle key routes to a real target
+      IF NOT resolves(template, step.wait_for[k].target) THEN RETURN Rejected(child_wait_target_unresolved(step.id, k))
+  RETURN ok

@@ -1,0 +1,8 @@
+
+post_commit_output(instance, template) → DispatchIntent | HumanDecisionRequest | ActionRequest | none   # L3 — pure derivation (NO mutation): read the post-commit kernel_status that apply_target_entry_effects just set and select the outbound effect. The read-side dual of apply_target_entry_effects (which sets the status; this returns what to deliver)
+  IF instance.kernel_status = TERMINAL THEN RETURN none
+  IF instance.kernel_status = WAITING THEN
+     IF instance.wait.kind = human_decision THEN RETURN human_decision_request(instance, template)   # parked on a human_gate ⇒ the Ask
+     IF instance.wait.kind = action_pending THEN RETURN action_request(instance, template)   # ③ parked on a type: action ⇒ the ActionRequest (operator-facing surface; the decision-less HumanDecisionRequest analog)
+     RETURN none                                                  # parked on a bare wait (e.g. commit_pending) ⇒ no output; it waits for an inbound RESUME_WAIT event
+  RETURN dispatch_intent(instance, template, instance.current_step)   # ACTIVE ⇒ agent dispatch

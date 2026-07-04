@@ -1,0 +1,11 @@
+
+park_for_child(instance, template, step) → void                  # L4 — arrival at a type: child_workflow step: SPAWN + WAIT, idempotent on the ACTIVE link
+  key  ← resolve_child_key(instance, step)                        # materialize the declared child_key for THIS arrival (e.g. { task_id, role })
+  link ← instance.child_links.find_active(step.id, key)           # IDEMPOTENT on the ACTIVE link only (status ∈ spawning | active): a crash-replay re-entry reuses it — never a double-spawn
+  IF link is none THEN                                            # no LIVE link ⇒ a FRESH ATTEMPT. A prior TERMINAL link (a done / failed / cancelled attempt) does NOT block — recovery re-entry (same child_key) spawns a new attempt, so retry is not a deadlock
+    link ← ChildWorkflowLink { link_id: fresh, request_id: fresh, step_id: step.id, child_key: key, child_id: none, status: spawning }   # CANONICAL link + the durable spawn MARKER — persisted in `spawning` BEFORE the post-commit SpawnIntent fires; child_id lands via CHILD_SPAWNED
+    instance.child_links.append(link) ; spawn_pending ← true       # a FRESH link ⇒ post_commit_output issues the SpawnIntent
+  ELSE
+    spawn_pending ← false                                         # a LIVE link (spawning / active) ⇒ just (re-)park and wait; the child already exists or is being created
+  instance.kernel_status ← WAITING
+  instance.wait ← { kind: child_event, requested_by: step.id, link_id: link.link_id, resume_events: keys(step.wait_for), spawn_pending }   # park on the child's DECLARED lifecycle keys
