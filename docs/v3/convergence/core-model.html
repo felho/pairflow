@@ -1614,7 +1614,7 @@ template:
           <div class="absent-item">No <b>provider health / availability</b> validation beyond name resolution <span class="at">→ later</span></div>
           <div class="absent-item">No <b>provisioning-failure handling</b> — a provider that accepts the name but fails to provision (or fails later) surfaces as a kernel <code>FAIL</code> event (L0d); retry / compensation is later <span class="at">→ later / §18</span></div>
           <div class="absent-item">No <b>run-override cascade</b> of the spec — template-only at L0e <span class="at">→ later</span></div>
-          <div class="absent-item">No <b>durable delivery</b> (L8), <b>actor process launch</b> (tmux), or <b>credential / grant</b> (L7)</div>
+          <div class="absent-item">No <b>durable delivery</b> (L8), <b>actor process launch</b> (tmux), or <b>credential / grant</b> (L7) <span class="at">→ L8 / L7</span></div>
           <div class="absent-item">No <b>conditional / per-step runtime context</b> — the requirement is whole-run (<code>none | required</code>); a step or child acquiring context later is category 3 <span class="at">→ later</span></div>
           <div class="absent-item">No <b>full ContextAssembly</b> — L0e adds only the runtime/workspace projection; general <code>context_blocks</code> rendering <span class="at">→ L2b</span></div>
         </div>
@@ -1929,7 +1929,7 @@ workflows:
           <div class="absent-item">No <b>full schema system</b> — types are a minimal closed set; no constraints, regex, or cross-field validation <span class="at">→ later</span></div>
           <div class="absent-item"><b>Global-leniency tradeoff:</b> a typo in a global <em>optional</em> slot may be silently ignored; <code>required</code> slots are still protected by <code>unbound_required_slot</code>, and stricter config linting can come later <span class="at">→ later</span></div>
           <div class="absent-item">No <b>per-step / dynamic slot resolution</b> — slots resolve once at start; the per-step config cascade is L0c, conditional/per-step context is <span class="at">→ L2b</span></div>
-          <div class="absent-item">No <b>actor/model binding as slots</b> — the <code>role → actor</code> and agent/model cascades stay separate; the project is a new tier in them, not a scalar slot</div>
+          <div class="absent-item">No <b>actor/model binding as slots</b> — the <code>role → actor</code> and agent/model cascades stay separate; the project is a new tier in them, not a scalar slot <span class="at">→ by design</span></div>
           <div class="absent-item">No <b>slot interpolation</b> here — <code>branch_pattern</code> is resolved as a pattern; the actual branch name is materialized provider-side once <code>instance_id</code> exists <span class="at">→ L0e</span></div>
           <div class="absent-item">No <b>run-scoped mode / variants</b> — a single template running in <code>code | doc</code> modes is an L0f-family resolution extension, realized as a delta on top of this baseline <span class="at">→ L0f+ (run-scoped mode / variants)</span></div>
         </div>
@@ -4565,8 +4565,8 @@ release_safe(resource) → bool
           <div class="absent-item">No <b>archive / export / purge / retention</b> — optional cold ops, computed from the durable record, never the preservation path nor a teardown precondition <span class="at">→ ④ (~L8 ops)</span></div>
           <div class="absent-item">No <b>storage-backend choice</b> — file vs object store vs DB for T1/T3 is an implementation concern; this slice fixes <em>placement &amp; authority</em>, not the medium <span class="at">→ impl</span></div>
           <div class="absent-item">No <b>multi-instance / federation storage</b> or <b>central registry/store governance</b> — a single run's homes only; cross-run/central stores are later <span class="at">→ L11+</span></div>
-          <div class="absent-item">No <b>durable-write <em>mechanism</em></b> — v3 already treats transcript/instance as durable abstract stores; this slice makes the boundary + the evidence-ref rule explicit, it does not re-implement the store</div>
-          <div class="absent-item">No <b>computed / templated evidence bodies</b> or <b>evidence-blob GC</b> — referenced blobs are write-once durable; lifecycle/retention of the T3 store is ④</div>
+          <div class="absent-item">No <b>durable-write <em>mechanism</em></b> — v3 already treats transcript/instance as durable abstract stores; this slice makes the boundary + the evidence-ref rule explicit, it does not re-implement the store <span class="at">→ impl</span></div>
+          <div class="absent-item">No <b>computed / templated evidence bodies</b> or <b>evidence-blob GC</b> — referenced blobs are write-once durable; lifecycle/retention of the T3 store is ④ <span class="at">→ ④</span></div>
         </div>
 
         <h3 class="view-h"><span class="view-tag evidence">Evidence</span> Why we accept ① for now</h3>

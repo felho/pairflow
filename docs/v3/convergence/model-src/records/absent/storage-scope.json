@@ -24,11 +24,11 @@
     },
     {
       "id": "durable-write-mechanism",
-      "html": "No <b>durable-write <em>mechanism</em></b> — v3 already treats transcript/instance as durable abstract stores; this slice makes the boundary + the evidence-ref rule explicit, it does not re-implement the store"
+      "html": "No <b>durable-write <em>mechanism</em></b> — v3 already treats transcript/instance as durable abstract stores; this slice makes the boundary + the evidence-ref rule explicit, it does not re-implement the store <span class=\"at\">→ impl</span>"
     },
     {
       "id": "computed-templated-evidence-bodies",
-      "html": "No <b>computed / templated evidence bodies</b> or <b>evidence-blob GC</b> — referenced blobs are write-once durable; lifecycle/retention of the T3 store is ④"
+      "html": "No <b>computed / templated evidence bodies</b> or <b>evidence-blob GC</b> — referenced blobs are write-once durable; lifecycle/retention of the T3 store is ④ <span class=\"at\">→ ④</span>"
     }
   ]
 }

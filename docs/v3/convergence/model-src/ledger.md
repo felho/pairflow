@@ -82,20 +82,22 @@
 - `l0a` · triggers — → L6
 - `l3` · deferred-request-rework — → L5 + watchdog (L6/L9)
 
-### L7 (7)
+### L7 (8)
 
 - `l0a` · grants-credentials — → L7
 - `l0c` · credential-grant — → L7
 - `l0d` · operator-authority-identity — → L7 / L10
 - `l0d` · operator-intent-audit-provenance — → L7 / L10
+- `l0e` · durable-delivery — → L8 / L7
 - `l1` · actor-identity-authentication — → L7 / L10
 - `l2a` · projection-ref-scoped-query-sdk — → later / L7-ish
 - `l3` · agent-to-agent-or-external-token-ask — → L7 / L8
 
-### L8 (8)
+### L8 (9)
 
 - `l0a` · channels-task-inbox-general-ask — → L8
 - `l0b` · durable-delivery — → L8
+- `l0e` · durable-delivery — → L8 / L7
 - `l3` · multi-channel-delivery-rich-input-forms — → L8
 - `l3` · agent-to-agent-or-external-token-ask — → L7 / L8
 - `storage-scope` · archive-export-purge-retention — → ④ (~L8 ops)
@@ -153,10 +155,11 @@
 - `runtime-teardown` · workflow-actions — → ③a / ③b
 - `workflow-actions` · packaged-action-library — → ③b
 
-### ④ (4)
+### ④ (5)
 
 - `l3` · resume-actions-post-approval-mechanics — → ③a · ② · ④
 - `storage-scope` · archive-export-purge-retention — → ④ (~L8 ops)
+- `storage-scope` · computed-templated-evidence-bodies — → ④
 - `runtime-teardown` · archive-export-purge — → ④
 - `workflow-actions` · operator-delete — → ④
 
@@ -175,16 +178,10 @@
 - `l0d` · retry-compensation-rollback — → §18
 - `l0e` · provisioning-failure-handling — → later / §18
 
-### (no pointer) (4)
-
-- `l0e` · durable-delivery — → (no pointer)
-- `l0f` · actor-model-binding-as-slots — → (no pointer)
-- `storage-scope` · durable-write-mechanism — → (no pointer)
-- `storage-scope` · computed-templated-evidence-bodies — → (no pointer)
-
-### by design (6)
+### by design (7)
 
 - `l0f` · kernel-mechanics — → by design
+- `l0f` · actor-model-binding-as-slots — → by design
 - `l0f-mode` · runtime-mode-conditional — → by design
 - `l0f-mode` · mode-expression-dsl-overlay-patch-step-graph-rewrite — → by design
 - `l0f-mode` · mode-on-agent-config-or-on-steps — → by design
@@ -200,10 +197,11 @@
 
 - `l4-child` · intermediate-lifecycle-subscription — → extension
 
-### impl (3)
+### impl (4)
 
 - `l0e` · provider-internals — → impl
 - `storage-scope` · storage-backend-choice — → impl
+- `storage-scope` · durable-write-mechanism — → impl
 - `runtime-teardown` · provider-internals — → impl
 
 ### later (31)

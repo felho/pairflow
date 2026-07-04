@@ -28,7 +28,7 @@
     },
     {
       "id": "actor-model-binding-as-slots",
-      "html": "No <b>actor/model binding as slots</b> — the <code>role → actor</code> and agent/model cascades stay separate; the project is a new tier in them, not a scalar slot"
+      "html": "No <b>actor/model binding as slots</b> — the <code>role → actor</code> and agent/model cascades stay separate; the project is a new tier in them, not a scalar slot <span class=\"at\">→ by design</span>"
     },
     {
       "id": "slot-interpolation",

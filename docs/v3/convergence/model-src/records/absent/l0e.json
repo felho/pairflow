@@ -24,7 +24,7 @@
     },
     {
       "id": "durable-delivery",
-      "html": "No <b>durable delivery</b> (L8), <b>actor process launch</b> (tmux), or <b>credential / grant</b> (L7)"
+      "html": "No <b>durable delivery</b> (L8), <b>actor process launch</b> (tmux), or <b>credential / grant</b> (L7) <span class=\"at\">→ L8 / L7</span>"
     },
     {
       "id": "conditional-per-step-runtime-context",
