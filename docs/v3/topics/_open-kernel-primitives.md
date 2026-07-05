@@ -24,7 +24,11 @@ reserved for L9), the correlation field-class correction (`request_id` /
 not correlation), the P4 rung-count fix, the stale "exception" bullet
 aligned with the form taxonomy, and two §3 label fixes; the ③a ask-row
 correlation cell was verified against the pseudocode source and is accurate
-as written (`resume_events: [step.action.key]` is the actual field).
+as written (`resume_events: [step.action.key]` is the actual field). Two
+micro-refinements followed: the kernel-classified bullet names the
+event-keyed resumes precisely (validated-and-routed, not classified), and
+the P1 dimension list points at the four forms instead of the superseded
+binary marker distinction.
 
 Relation to other documents:
 
@@ -77,8 +81,8 @@ durable claim/marker committed (carries request_id)
 ```
 
 Declared dimensions: marker slot & its home, intent + addressee class,
-completion event(s), correlation rule, on_ok / on_fail routing, and whether
-the marker is durable (crash-recoverable) or in-handler (inline).
+completion event(s), correlation rule, on_ok / on_fail routing, and which of
+the four forms below the errand takes.
 
 The diagram shows the FULL form; the table below contains four declared
 forms, and an implementation must not force them onto one mechanism:
@@ -164,9 +168,10 @@ its slot ready-made:
 
 - **principal-committed** — an authorized principal picks, and the commit is
   theirs (an actor's emit, an operator's decision);
-- **kernel-classified** — no accountable selector: the kernel classifies a
-  result into a key and commits (a runner's classified outcome, a child's
-  terminal disposition, a resume event's type);
+- **kernel-classified** — no accountable selector: the kernel derives the
+  key and commits — by classifying a result (a runner's outcome, a child's
+  terminal disposition) or, in the event-keyed resumes, by validating and
+  routing the incoming event's type as the key (validated, not classified);
 - **proposed** (reserved — L9, not instantiated today) — the selector may
   only propose, never commit (the L9 fuzzy matcher's `MatchProposal`; §4).
 
