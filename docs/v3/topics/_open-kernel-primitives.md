@@ -1,7 +1,9 @@
 # Open Topic — Kernel Primitives (dissolving additive complexity)
 
 Date: 2026-07-05
-Status: **DECIDED — review closed, execution pending.** Joint reading result: the
+Status: **DECIDED — the primitive set and the review decisions are final; the
+rebaseline is BLOCKED on the L5 paper test (§4),** which is a mandatory
+acceptance check, not an open design question. Joint reading result: the
 core-model pseudocode (L0a–L4 complete) was re-read independently by the user and
 by the assistant; both readings converged on the same two structural observations.
 This memo names the primitives, maps every current kernel unit onto them, and
@@ -12,7 +14,10 @@ in: the ③a row split into two chained errands + the errand-composition rule
 (§2 P1), the LC renumbering amendment (§6.2), the rung-order reconciliation
 checksum (§6.4), the deferred-gate de-bias instance (§4), the three
 selector-authority values + the EmitAffordance cross-ref (§2 P2), and the
-Admission first-use contrast + alias table (§7).
+Admission first-use contrast + alias table (§7). Review round 3 (an external
+reviewer, on the round-1 text) folded in: the status precision above, the P1
+form taxonomy, the Warrant field-class split, the P3 schematic-ladder
+demotion, and the criteria-first naming record.
 
 Relation to other documents:
 
@@ -67,6 +72,21 @@ durable claim/marker committed (carries request_id)
 Declared dimensions: marker slot & its home, intent + addressee class,
 completion event(s), correlation rule, on_ok / on_fail routing, and whether
 the marker is durable (crash-recoverable) or in-handler (inline).
+
+The diagram shows the FULL form; the table below contains four declared
+forms, and an implementation must not force them onto one mechanism:
+
+- **full** — durable marker + outbound directive + async correlated
+  completion (provision, release, auto action, spawn, human decision, the
+  ③a ask);
+- **inline** — durable marker claimed, then the work AND the completion run
+  in the same handler invocation, bracketed by two CAS commits (the ③a run;
+  a crash between them leaves the durable marker for L9);
+- **marker-less inline** — no durable marker at all, synchronous invocation
+  (the process gate; its deferred variant is the same errand upgraded to the
+  full form — §4);
+- **open-door** — marker only, no outbound directive: the kernel waits for
+  the world to come to it (bare wait, kickoff, child await).
 
 | Instance | Claim marker | Intent (addressee) | Completion | Correlation | Failure shape | Irreducible logic |
 |---|---|---|---|---|---|---|
@@ -159,13 +179,34 @@ load instance → idempotency (op_id → Duplicate) → state guard (ACTIVE / wa
 
 Canonical rules the ladder pins once: idempotency-before-stale (todo A1),
 lifecycle-guard-after-idempotency (L0d), authority-on-this-path-not-L1 (L3).
-todo Part E2's check order is this ladder's actor-envelope instantiation.
+
+This ladder is **schematic, not a third normative source**: todo Part E2
+fixes the precise actor-envelope order (basic `valid_shape` → load → op_id
+ledger incl. `op_id_collision` → kernel authority → transition/capability →
+`validate_emit_contract` → gates → commit), including cases the schematic
+above omits (the basic-shape vs per-op-schema split, `op_id_collision`, the
+transition/capability check, the gate pipeline's position). The norms are E2
+plus each handler's current code order; the §6.4 reconciliation checksum
+checks every path instantiation against THEM, not against this sketch.
 
 ### P4 — Warrant (the acting-from authority snapshot)
 
-`expected_version`, `expected_role`, `request_ref`, `episode_ref`, `op_id` —
-one family: what the sender was entitled to act *from*. Universal vs
-shape-derived fields; already named as todo Part E1. P3 consumes P4.
+The warrant is the INBOUND act-from bundle — one name for what an input
+carries, but internally it is three distinct field classes, and the model
+(todo Parts A/E) deliberately keeps them apart because a DIFFERENT admission
+rung consumes each:
+
+- **operation identity** — `op_id`: idempotency (todo A1); consumed by the
+  idempotency rung and the ledger, never by an authority check;
+- **context authority** — `expected_version`, `expected_role`, …: freshness
+  and role — what the sender was entitled to act *from* (todo E1's universal
+  vs shape-derived split lives here);
+- **errand correlation** — `request_ref`, `episode_ref`: WHICH open errand
+  this input answers; consumed by the correlation rung.
+
+The bundle-level name is still useful (one thing the sender assembles and
+the packet projects), but the rebaseline must keep the three classes named —
+collapsing them would undo exactly the A1/E1 separation.
 
 ### P5 — Directive (the outbound ask family)
 
@@ -285,7 +326,17 @@ self-heal; round semantics; the gate pipeline placement.
 
 ## 7. Naming (decided via a six-lens brainstorm)
 
-Method: six parallel brainstorm agents, each with a distinct lens
+The durable selection criteria — any future rename must satisfy the same
+list: (a) greppable and TypeScript-clean (no ecosystem collisions, no
+substring traps); (b) no false friend — a confident cold guess must not be
+wrong on a load-bearing property; (c) the five names mutually non-confusable
+(letters, shapes, registers), with adjacent pairs disambiguated by a stated
+contrast (inbound-carried Warrant vs outbound-issued Directive); (d)
+first-reader clarity — the name predicts the meaning; (e) native to the
+document's idiom, so the existing vocabulary (produce-not-perform,
+marker-first, arrive, park) keeps living inside them.
+
+Method (provenance): six parallel brainstorm agents, each with a distinct lens
 (distributed-systems literature · plain-English domain · the document's own
 idiom · metaphor systems · TypeScript API surface · first-time-reader
 pedagogy), all anti-anchored: none saw the working names. The final set was
