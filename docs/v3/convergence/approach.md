@@ -748,9 +748,43 @@ durable / external channel. v1 reality check (Explore): `plan watch` is external
 > validates the most important self-value without private-mailbox federation, fuzzy
 > correlation, Slack/email channels, or the dataset layer.
 
+**Kernel-primitives rebaseline (P1–P5) — a pass over Block A, not a new level. In progress.**
+Source: [`../topics/_open-kernel-primitives.md`](../topics/_open-kernel-primitives.md)
+(decided + ratified; the L5 paper test passed — L5-core reduces to six declarations).
+Two independent re-reads of the finished L0a–L4 kernel converged on the same finding:
+the pseudocode repeats five shapes under different names. The rebaseline names them as
+contracts and re-expresses the kernel on them — **in place, at the level where each
+primitive's second instance historically appeared**, so the ramp itself demonstrates the
+dissolution and earlier levels stay untouched (the `arrive()` precedent from L3, applied
+four more times).
+Concepts: **Errand** (P1 — claim → post-commit directive → correlated completion; four
+declared forms); **ChoicePoint** (P2 — the guarded keyed selection behind all five
+routing maps); **Admission** (P3 — the one ordered guard ladder; steps are *rungs*);
+**Warrant** (P4 — the inbound act-from bundle: operation identity · context authority ·
+errand correlation); **Directive** (P5 — the outbound ask family; the existing
+`*Intent` nouns become members).
+Waves (each = its own small-spec + review round + commit; flips recorded here):
+- [ ] Wave 1 — L0d: **Admission** born (the second entry path arrives there); the entry
+  guard heads re-expressed; downstream `HANDLE`-family versions follow.
+- [ ] Wave 2 — L1: **Warrant** born (`expected_role` joins `expected_version`).
+- [ ] Wave 3 — LC2: **Errand** born (release joins provision); LC3a/b, LC4, L4
+  re-expressed as errand instances.
+- [ ] Wave 4 — L3: **ChoicePoint + Directive** born (`decisions` joins `transitions`;
+  `HumanDecisionRequest` joins `DispatchIntent`); the entry handlers become instances.
+- [ ] Wave 5 — closing sweep: LC3a→L4 fully instance-form; the memo's §3
+  reclassification realized; the §8 findings folded in (the P1 opener dimension, the
+  P2 stay route, marker-home carrying blocking/non-blocking).
+Safety rails: **behavior does not change** — templates, traces, and the
+rejection/invariant sets are invariants of the pass (the derived registries are diffed
+as semantic checksums at every wave; rung-order divergences against todo A1/C2/E2 + the
+handlers' code order are findings, never silent fixes); the source↔render golden check
+stays green throughout. Forward rule: a future primitive is named at its own second
+instance.
+
 **L5 — Help subflow (agent-initiated Ask).**
 Concepts: `Subflow` (blocking / non-blocking); `HELP_PENDING`; the agent-initiated form
-of the Ask primitive (still local delivery).
+of the Ask primitive (still local delivery). The primitives rebaseline (above) precedes
+it: L5 is then a handful of declarations over the contracts (the memo's §8 paper test).
 Why: the agent can ask for help/a decision mid-step. Completes the local pairflow-v1
 feature set; not required by the WF-7 MVP, so it sits just after the cut. (Block A ≈
 full local v1 once this lands.)
