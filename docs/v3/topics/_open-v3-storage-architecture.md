@@ -73,6 +73,27 @@ The store should enforce CAS, uniqueness, durability, and retrieval. It should n
 know workflow semantics. The kernel owns the meaning of transitions, lifecycle,
 gates, decisions, waits, and routing.
 
+> **Reference — nanoclaw (`../research/nanoclaw-study.md`, `_synthesis.md` §13).**
+> Nanoclaw is a source-verified illustration of two disciplines this memo asserts,
+> and one negative proof.
+> - **Single-writer-per-plane, reconciliation not shared mutation.** Its host and
+>   its container each write only their own SQLite file; neither mutates the other's,
+>   and outcomes for the peer's rows are recorded in the writer's own file. "One
+>   authority per plane, the other polls read-only" is exactly the T1-vs-T7 (and
+>   host-vs-runtime) writer boundary — a clean physical realization worth copying.
+> - **SQLite across a mount boundary is a fragile file protocol, not a database.**
+>   It needs `journal_mode=DELETE` + `mmap_size=0` + open-write-close-per-op because
+>   WAL's mmapped shared-memory does not propagate across the VirtioFS guest boundary.
+>   The lesson for the planes below: **T1 must live on one side of any virtualization
+>   boundary, with T7 runtime-provider-local state physically separate** — never one
+>   store spanning the boundary (bears on open question 1, the prototype substrate).
+> - **Negative proof — no T1.** Nanoclaw has *no* canonical run store, transcript, or
+>   EventEnvelope: message rows are mutated in place and the only "history" lives
+>   inside the provider (a T7 concern). History is unreconstructable. This is the
+>   single biggest gap between a runtime/supervision layer and a workflow kernel, and
+>   the clearest argument for why the canonical-truth plane (T1) is the load-bearing
+>   one this whole memo is organized around.
+
 ### Evidence by reference, not inline blob
 
 The transcript may carry small structured outcomes and refs, but logs, test

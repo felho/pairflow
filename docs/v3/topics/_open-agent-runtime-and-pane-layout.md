@@ -372,6 +372,35 @@ a human attaches to a live session securely (identity is not authority).
   `BaseEnvironment` ABC + hibernate. The survey shape for a **pluggable runtime provider**; omnigent
   is the shipped instance of the same idea.
 
+### nanoclaw — the four-channel scorecard, source-verified ([`../research/nanoclaw-study.md`](../research/nanoclaw-study.md), `_synthesis.md` §13)
+
+A containerized per-session agent runtime — a fourth native-runtime data point beside omnigent, and
+the one that most cleanly scores against §5's four adapter channels:
+
+- **input — clean.** A durable SQLite queue + a typed `push` into the live stream, with the one case
+  where push semantics break (slash-commands force a stream restart) handled correctly. Cleaner than
+  omnigent's stdin writes.
+- **tool calls — clean.** Typed MCP config + an allowlist, SDK hooks for policy and telemetry, zero
+  scraping. Its PreToolUse hook writing the current tool + declared timeout into shared state — which
+  the host's liveness SLA then reads — is the best tool-call/runtime integration in the reference set.
+- **authoritative output — conflated, and prompt-fragile.** The transport (outbound rows) is clean,
+  but *authority* is split between in-band `<message to="…">` XML parsing of the model's own text
+  (with a detect-and-nudge retry) **and** a `send_message` MCP tool — two authoritative paths, one
+  depending on the model emitting routing markup correctly. This is gastown's screen-scraping problem
+  one level up, and the concrete AVOID that §5's "structured emit = the only authority, in-band text
+  is never authoritative" rule is written against.
+- **observe/takeover — mostly absent.** `activity`/`progress` collapse into a heartbeat mtime + log
+  lines; there is no persisted observable event stream (vibe-kanban's `MsgStore` is strictly better)
+  and no takeover affordance — the only operator intervention is kill/restart.
+
+Two structural notes. Its substrate layer confirms §5's split cleanly — **container = zero durable
+identity** (session = conversation identity, group = memory/config, container = nothing), the literal
+"work durable, actor/session ephemeral" — with per-provider continuation *slots* that keep provider
+identity orthogonal to workflow identity. But it has **no provision→ready event** (omnigent's shape):
+wake is fire-and-forget, readiness implicit in the first heartbeat/claim, workable only because the
+runtime *pulls* from a durable queue. And, like every runtime here, it has **no configurable pane
+layout** — one more confirmation of the gap below.
+
 ### What NONE of them offers
 
 A **configurable pane *layout*** (a declarative step/actor → pane-grid mapping). gastown confirms

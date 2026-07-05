@@ -77,6 +77,17 @@ post-commit outputs versus durable, retryable side-effect work.
   identity across the boundary; otherwise recovery can duplicate the outside effect.
 - Reconciler/outbox is for real external effects, not for repairing the kernel's own
   state consistency.
+- Empirical anchor (nanoclaw study, `_synthesis.md` §13): nanoclaw is the corpus's
+  source-verified **negative proof** of this boundary. It writes the delivery marker
+  *after* the platform send (crash between them → duplicate send), marks follow-up
+  work complete *before* the actor processes it (loss window), and — worst — marks a
+  message delivered when the send returned an ambiguous no-error/no-ack `undefined`,
+  deleting the evidence. Three distinct seams, all closed by marker-before-effect +
+  the A1 `(instance_id, op_id)` ledger. Two design rules the failure sharpens: the
+  marker must follow a *confirmed* effect (a no-error/no-ack outcome is a distinct
+  non-terminal state, not success), and retry budget is durable ledger state, never
+  an in-memory counter (nanoclaw's resets on restart, so a stuck send oscillates
+  forever). The delivery-ledger state machine itself is L8 work (future-topic L8 #4).
 
 ### A3. Define the `op_id` generation contract
 

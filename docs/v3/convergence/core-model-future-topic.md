@@ -150,6 +150,17 @@ capabilities.
   hook message shape, and skill-routing order.
 - This is L0c-originated because the run intent points at it, but it also
   cross-references L10/federation-style capability schemas.
+- Nanoclaw (§13) is the positive reference for this exact contract: it expresses
+  per-provider variance as typed optional methods *plus boolean capability flags*
+  ("a capability, never a provider name"), the direct antidote to omnigent's
+  duck-typed harness drift (study 1, §4). Two adopt-worthy specifics: per-provider
+  **continuation slots** keep provider identity orthogonal to workflow identity
+  (a provider flip is a lossless round-trip, never a Codex thread id fed to
+  Claude), and the continuation token is checkpointed at session *init*, not turn
+  end, so a mid-turn crash still resumes — record-not-replay realized at the
+  adapter seam. The matching AVOID (authoritative output carried as in-band model
+  text plus an MCP tool — two prompt-fragile paths) belongs to the four-channel
+  adapter split; see [`../topics/_open-agent-runtime-and-pane-layout.md`](../topics/_open-agent-runtime-and-pane-layout.md).
 
 #### 2. Portable session handoff must not depend on provider-local state
 
@@ -201,6 +212,11 @@ single global retry or mark-failed rule.
   state.
 - This extends L0d's `failure_reason` from a diagnostic string into typed data
   that can drive policy.
+- Nanoclaw (§13) is the AVOID witness here: its ladder collapses every failure
+  into one silent `failed` bucket with no escalation tier — exactly the coarse
+  bucket this item replaces. Its concrete recovery-loop *mechanics* (silence
+  budget, evidence-consuming recovery, executor self-exit) are folded into
+  L9 #5.
 
 #### 2. Multi-step ownership is claim + heartbeat + reclaim
 
@@ -224,11 +240,21 @@ contract, not as a loose set of process-local flags.
 
 ### L0e — Runtime context provider
 
-Source: the §4 L0e matrix row and later sandbox/provider addenda (§8, §9, §10).
-The current L0e model is acceptable as the baseline: optional
-`RuntimeContextRequirement`, a named provider contract, opaque provider-owned
-refs, and actor-facing projection. The future work is in provider internals and
-provider-family design, not in the kernel's core L0e contract.
+Source: the §4 L0e matrix row and later sandbox/provider addenda (§8, §9, §10),
+plus the nanoclaw runtime findings (§13 — the best stock-Docker OS-level sandbox
+reference in the corpus, with lockdown on). The current L0e model is acceptable
+as the baseline: optional `RuntimeContextRequirement`, a named provider contract,
+opaque provider-owned refs, and actor-facing projection. The future work is in
+provider internals and provider-family design, not in the kernel's core L0e
+contract.
+
+**One gap nanoclaw highlights up front:** it has **no provision→ready event** —
+wake is fire-and-forget and readiness is implicit in the first heartbeat/claim.
+This works *only* because the runtime pulls work from a durable queue rather than
+being handed a turn. v3's L0e ready-event (`RUNTIME_CONTEXT_READY`, the omnigent
+managed-host shape, study 1 §5) is the stronger contract; nanoclaw is the
+data-point that the event can be elided when the runtime is pull-based, not a
+reason to elide it.
 
 #### 1. Prove the provider abstraction with at least two real backends
 
@@ -271,6 +297,13 @@ second resource blindly.
   identity.
 - This is provider-side idempotency, complementary to the kernel's request-id
   correlation.
+- Nanoclaw (§13) is the concrete reference: its wake is idempotent via an
+  in-flight promise map (concurrent wakes for one session dedupe to one spawn, so
+  two containers never attach to the same workspace), and its spawn **fails
+  closed** — it refuses to start without credentials/egress applied, never a
+  silent downgrade. Adopt both shapes: idempotent ensure, and provision that
+  refuses rather than degrades when a precondition (grant, egress, mount) is
+  unmet.
 
 #### 4. Cleanup needs orphan reconciliation and TTL expiry
 
@@ -285,6 +318,13 @@ reconciliation story for durable records and physical resources.
   only release mechanism.
 - This complements the already-modeled release contract; it is background
   reconciliation, not a replacement for declared release boundaries.
+- Nanoclaw (§13) contributes the multi-tenant guard the prior references lacked:
+  every runtime resource is stamped with an install-scoped label, and startup
+  orphan-reaping is scoped to that label — co-located installs cannot reap each
+  other's resources. Adopt install/tenant-scoping as part of the reconciliation
+  key. (Its blunter half — kill-all-labeled at boot because liveness state was
+  in-memory — is the AVOID: reconciliation must read durable state, not rebuild
+  from a lost in-memory registry.)
 
 #### 5. Remote sandbox and hibernate need stable identity
 
@@ -783,10 +823,23 @@ need a typed, machine-readable schema.
 
 ### L6 — Triggers and scheduling
 
-Source: the §4 L6 matrix row and later scheduler addenda (§8, §10). The
-`approach.md` L6 baseline names the trigger router and scheduler, scoped first
-to manual, internal, and timeout triggers. The future work is the scheduler's
-durability and dispatch contract, not a broader external-channel model.
+Source: the §4 L6 matrix row and later scheduler addenda (§8, §10), plus the
+nanoclaw scheduling findings (§13 — "half of L6"). The `approach.md` L6 baseline
+names the trigger router and scheduler, scoped first to manual, internal, and
+timeout triggers. The future work is the scheduler's durability and dispatch
+contract, not a broader external-channel model.
+
+Nanoclaw (§13) is a two-sided reference here — adopt its storage, reject its
+firing: scheduled tasks are **durable rows carrying `process_after` + a cron
+`recurrence`**, everything reconstructable after a crash, and recurrence advances
+**drift-free** via a cron-parser in the user's timezone (next occurrence computed
+from the schedule, never `last + interval`) with completion = advance. That is
+exactly the L6 storage leaning below. But its *firing* is the anti-shape this
+level warns against: a 60s host sweep that scans every session's DB per tick
+(O(sessions)), plus at-least-once firing with no CAS-claimed self-discard, and a
+non-atomic recurrence advance (insert-next then clear-current as two statements →
+a crash between them re-clones the occurrence). Copy the row schema and the
+`series_id` recurring-identity model; do not copy the ticker or the split advance.
 
 #### 1. Durable look-ahead timer model
 
@@ -834,9 +887,10 @@ from queue depth.
 ### L7 — Grants and credentials
 
 Source: the §4 L7 matrix row and later survey / OneCLI addenda (§9, §11), plus
-the roadmap's L7 rule that credentials never travel. L0c may carry
-credential-related references as run intent, but credential resolution,
-capability execution, and credential audit are owned by L7.
+the nanoclaw source-verified consumer side (§13) — nanoclaw is the runtime that
+integrates OneCLI, so §13 grounds §11's credential-boundary claims in first-party
+code. L0c may carry credential-related references as run intent, but credential
+resolution, capability execution, and credential audit are owned by L7.
 
 #### 1. Secret refs resolve only at the runtime boundary
 
@@ -849,6 +903,17 @@ adapter/provider that is allowed to use them.
   argument-level predicate where relevant.
 - Missing or unavailable credentials must be explicit and fail-closed, not a
   silent adapter fallback.
+- Nanoclaw (§13) is the source-verified positive reference: the real credential
+  lives only in the vault, the container gets a placeholder header the gateway
+  rewrites on the wire, and **spawn refuses to start without credentials/egress
+  applied** — grant unavailable ⇒ no execution at all (fail-closed, no silent
+  downgrade). Its egress lockdown reaches omnigent's "sole egress" goal *without*
+  a MITM CA, from stock container primitives (`--internal` network, non-root, no
+  NET_ADMIN). Two AVOIDs to carry as guardrails: it ships lockdown **off by
+  default** (credentials safe, but mounted data exfiltratable — v3 should invert
+  the default and treat DNS as inside the egress boundary), and its module seams
+  **fail open** ("table absent ⇒ allow all" for admin and cross-channel sends) —
+  enforcement that evaporates when a module is missing is posture, not mechanism.
 
 #### 2. CapabilityIntent is the credential-side produce-not-perform port
 
@@ -916,10 +981,11 @@ privileged operation actually happened.
 
 ### L8 — Channels, task inbox, and EventNormalizer
 
-Source: the §4 L8 matrix row and later channel addenda (§8, §9). The
-`approach.md` L8 baseline names `Channel`, `EventNormalizer`, multi-channel
-delivery, task inbox, and the general Ask. The future work is to split L8 into
-clear channel seams instead of designing one monolithic "delivery" layer.
+Source: the §4 L8 matrix row and later channel addenda (§8, §9), plus the
+nanoclaw channel-layer findings (§13). The `approach.md` L8 baseline names
+`Channel`, `EventNormalizer`, multi-channel delivery, task inbox, and the general
+Ask. The future work is to split L8 into clear channel seams instead of designing
+one monolithic "delivery" layer.
 
 #### 1. Two channel classes with different correlation oracles
 
@@ -936,6 +1002,15 @@ authenticate in the same way.
   caller is trusted because it arrived through a local adapter.
 - L9 owns fuzzy/external wait matching; L8 should preserve enough identity for
   L9 to decide, not perform fuzzy correlation by accident.
+- Nanoclaw (§13) is the positive reference for the exact side: its correlation
+  key `(channel_type, platform_id, instance)` is a DB `UNIQUE` constraint —
+  exact-only inbound, auto-create over hijack — the exact correlation oracle
+  enforced by the store, not by convention. It also surfaces an asymmetry worth
+  keeping: exact-only inbound resolution vs a deliberate default-first outbound
+  convenience, documented as such. The AVOID: `platform_id` shape is a fragile
+  cross-adapter string convention (any writer must reproduce the shape the
+  adapter later emits or lookups silently miss) — the argument for treating the
+  transport id as opaque and adapter-owned, never synthesized elsewhere.
 
 #### 2. Envelope split: content plus identity
 
@@ -951,8 +1026,13 @@ and routing facts that make the message safe to correlate and reply to.
   runtime.
 - The split should make replay/audit possible without giving the actor raw
   transport authority.
-
-#### 3. One normalizer / relay contract, not many hand-written paths
+- Nanoclaw (§13) is the AVOID witness: it does *not* separate content from
+  identity — sender identity is buried in an opaque content blob (three shapes to
+  sniff), and there are two message-kind schemas downstream code branches on.
+  Live proof of the two-format tax this one-envelope split avoids. It also names
+  a refinement worth keeping: the identity block carries *two* addresses (source
+  vs delivery/reply-to) with different trust levels — reply-to is an
+  operator/router-level fact the actor must not set.
 
 Platform-specific adapters should plug into one declared connector contract,
 not duplicate normalization logic in every workflow or plugin.
@@ -978,6 +1058,46 @@ duplicate or lose sends.
   expired, and superseded outcomes.
 - Multi-recipient fan-out should be represented as per-recipient delivery state,
   not N uncontrolled copies with no shared parent record.
+- Nanoclaw (§13) is the negative proof for exactly why the ledger and its states
+  matter. Its outbound ledger is two-state (`delivered|failed`, no acknowledged/
+  expired/superseded), its retry count lives in an in-memory map that resets on
+  restart, and its worst hole is a **mark-delivered-on-undefined** path: an
+  offline adapter's send returns `undefined` (not an error), so the loop logs
+  "delivered", deletes the outbox attachments, and marks the message delivered —
+  permanent silent loss, on the path whose own comment claims it feeds the retry
+  path. The lesson: the delivery marker must be written *after a confirmed
+  effect*, an ambiguous "no error but no ack" outcome must be a distinct
+  non-terminal state, and retry budget is durable ledger state, never in-memory.
+
+#### 4a. Correlation-by-stored-state, not by echoed transport payload
+
+Nanoclaw (§13) handles interactive responses (a button click / reply) by
+dispatching only an opaque question id + value and re-deriving the delivery
+address from the request row persisted at send time — the platform cannot spoof
+*where* a response lands, only *which* open request it answers. Adopt this: a
+reply's routing authority is the durable request record, never the correlation
+handles echoed back through the untrusted transport. (This is the L8 delivery-
+side analog of L3's decision correlation and L9's exact wait matching.)
+
+#### 4b. An inbound non-delivery ledger, mirroring the outbound one
+
+The delivery ledger (#4) is outbound-only in the current design. Nanoclaw (§13)
+shows the inbound mirror: structural drops (no route wired, no agent engaged) and
+policy refusals are recorded as first-class ledger entries with reason codes and
+split ownership (core records the structural drop; the gate that refused records
+the policy drop). Adopt this so "a message arrived and was *not* processed" is an
+auditable fact, not silence. Pairs with a security-conscious rule worth keeping:
+a gate-refused message must not be accumulated as silent context, because staging
+an untrusted sender's payload to disk is itself a boundary crossing.
+
+#### 4c. Session-existence-as-subscription (engagement without a parallel table)
+
+Nanoclaw's "mention-sticky" engagement fires when a mention arrives *or* when a
+session already exists for the (agent, channel, thread) correlation — so the
+correlation store doubles as the engagement/subscription state, idempotent by
+construction, with no separate subscription table to drift out of sync. A useful
+pattern for the task-inbox / Ask-subscription design: derive "are we engaged on
+this thread?" from committed correlation state rather than a second store.
 
 #### 5. Ephemeral nudge versus durable addressed message
 
@@ -1007,9 +1127,10 @@ separate unless a later design proves they can safely share one contract.
 ### L9 — Wait conditions, liveness, and recovery
 
 Source: the §4 L9 matrix row, the L0d anti-pattern ("do not mark failed as the
-only recovery"), and the later gastown/watchdog addenda. L9 owns two related but
-distinct problems: wait/correlation for events that arrive later or externally,
-and liveness/recovery when expected progress does not happen. Exact correlation
+only recovery"), and the later gastown/watchdog addenda (§8) plus the nanoclaw
+supervision-loop details (§13). L9 owns two related but distinct problems:
+wait/correlation for events that arrive later or externally, and
+liveness/recovery when expected progress does not happen. Exact correlation
 has useful references; fuzzy external correlation is explicitly greenfield in
 the synthesis.
 
@@ -1089,6 +1210,24 @@ review.
   should converge to completion or an explicit recoverable failure.
 - A global stop/estop path should stop execution while preserving durable state,
   so operators can recover the work instead of losing it.
+- **Nanoclaw (§13) adds three net-new details gastown did not give**, all worth
+  folding into the recovery contract:
+  - *Workload-declared silence budget.* The executor publishes what it is doing
+    and how long silence is legitimate (a tool call plus its declared timeout);
+    the watchdog's tolerance becomes `max(floor, declared_timeout)`. This is a
+    cheap tier *below* the judgment tier: let the work declare its own liveness
+    expectation before routing "stuck" to intelligence. Keep the signal on a
+    cheap channel (a heartbeat mtime), off the contended data plane.
+  - *Recovery must consume its own evidence.* After a kill, the recovery action
+    must delete the stale claim/marker that triggered it (and grant a one-tick
+    grace), or the next watchdog pass reads the same stale evidence and kills the
+    freshly spawned replacement. Any claim+heartbeat+reclaim design (L0d #2) must
+    make this explicit; gastown's discover-don't-track model sidesteps it.
+  - *Executor self-exit on unhealable local fault.* Give the runtime a typed "I
+    am poisoned, respawn me" exit (distinct exit code, heartbeat-silenced first)
+    for faults only a fresh runtime-context can heal, so the watchdog's kill tier
+    is the last resort, not the only one. Pairs with a startup circuit breaker so
+    a dumb supervisor (launchd `KeepAlive`) can stay dumb without thrashing.
 
 #### 6. Unacknowledged human waits can become liveness escalations
 
@@ -1274,6 +1413,13 @@ provider can silently turn memory off.
   no-op.
 - Adapter-specific memory stores may exist, but the workflow contract should
   name the memory scope and failure mode outside the adapter.
+- Nanoclaw (§13) is now the **second, source-verified witness** of this exact
+  failure mode, beside mnemon (§12, whose provider-coupling was inferred through
+  nanoclaw's own skill). Nanoclaw's *native* memory is provider-shaped too — flat
+  `CLAUDE.local.md` for Claude (auto-loaded), a `memory/` scaffold for Codex — so
+  crossing providers requires a human-invoked LLM distillation step, not a port
+  swap. Two source-verified witnesses make the case doubly grounded: the memory
+  model must be a kernel-owned port, and memory-unavailable an explicit state.
 
 #### 6. Continuity fallbacks are not the memory model
 
@@ -1291,10 +1437,13 @@ should not replace first-class memory.
 
 ### L12 — Definition PRs and metacognition
 
-Source: the §4 L12 matrix row and later memory/learning addenda (§8, §12). The
-`approach.md` L12 baseline already names the definition-PR channel and learning
-levels. The future work is the discipline that turns observations and memory
-into audited definition changes without self-reinforcing noise.
+Source: the §4 L12 matrix row and later memory/learning addenda (§8, §12), plus
+the nanoclaw integration-point contract (§13 — the one genuinely new mechanism
+that study contributes). The `approach.md` L12 baseline already names the
+definition-PR channel and learning levels. The future work is the discipline
+that turns observations and memory into audited definition changes without
+self-reinforcing noise — and the mechanism that makes "one audited channel"
+machine-checkable rather than policy-only.
 
 #### 1. Two-speed learning loop
 
@@ -1388,6 +1537,35 @@ Keep the learning layer conservative until it has evidence.
 - Do not let actor prose decide what becomes a rule; use the proposal/gate/eval
   channel.
 - Do not feed unverified learned output back into the same learner as authority.
+
+#### 8. The integration-point contract makes "one audited channel" machine-checkable
+
+Nanoclaw (§13) is the first study to show a *mechanism* — not just a policy —
+that turns "definition changes flow through one audited channel" into something
+detectable by construction. It is the sharpest single idea that study contributes.
+
+- **Quantify a change's coupling as an explicit list of reach-in points**, and
+  guard each reach-in with a red/green test that fails when the wiring drifts.
+  "The failing list *is* the set of definitions/skills to update" — drift is
+  detected mechanically, not by review vigilance.
+- **The audited channel should be self-updating and fail-closed.** The upgrade
+  path refreshes its own instructions before running (so it never upgrades with
+  stale steps), and a boot-time tripwire (a tamper-evident marker outside the
+  code's own version control) refuses to run on an out-of-band change until the
+  sanctioned flow stamps it. The failure is structural, not policed; the refusal
+  text can be addressed to the coding agent that must clear it.
+- **Lifecycle operations on definitions must be deterministic host operations,
+  not LLM-run prose.** Nanoclaw's AVOID is a prose "package manager" (apply/
+  remove/upgrade as natural-language steps): the failure modes it must catalog —
+  half-applied changes, stale reach-in targets, incomplete removals — are exactly
+  what a deterministic operation does not have. Reserve prose for judgment, not
+  for the `cp`/install mechanics.
+- This is the governance precondition for a heavily-customized fork ("a fork is a
+  recipe of changes, rebuildable from clean upstream") — the shape that makes the
+  bitsafe-style downstream customization viable without diverging into an
+  unmergeable snowflake. It composes with #3 (promotion channel) and #5 (eval
+  discipline): the reach-in guard is the seam contract between an accepted
+  definition and the evolving kernel.
 
 ### L13 — Trust calibration and evals
 
