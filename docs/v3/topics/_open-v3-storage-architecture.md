@@ -76,11 +76,15 @@ gates, decisions, waits, and routing.
 > **Reference — nanoclaw (`../research/nanoclaw-study.md`, `_synthesis.md` §13).**
 > Nanoclaw is a source-verified illustration of two disciplines this memo asserts,
 > and one negative proof.
-> - **Single-writer-per-plane, reconciliation not shared mutation.** Its host and
->   its container each write only their own SQLite file; neither mutates the other's,
->   and outcomes for the peer's rows are recorded in the writer's own file. "One
->   authority per plane, the other polls read-only" is exactly the T1-vs-T7 (and
->   host-vs-runtime) writer boundary — a clean physical realization worth copying.
+> - **Single-writer-*at-a-time*-per-plane, reconciliation not shared mutation.** On
+>   the steady-state path the host and container each write only their own SQLite
+>   file, and outcomes for the peer's rows are recorded in the writer's own file —
+>   "one authority per plane, the other polls read-only," the T1-vs-T7 (host-vs-
+>   runtime) writer boundary worth copying. Caveat (verified): it is single-writer
+>   *at a time*, not *ever* — the host does write the container's file in two spots
+>   (`writeOutboundDirect`, `resetStuckProcessingRows`), both guarded on "no live
+>   container." So the invariant to copy is "one writer at a time per plane,
+>   exceptions explicitly quiesced," not an absolute one-writer-ever rule.
 > - **SQLite across a mount boundary is a fragile file protocol, not a database.**
 >   It needs `journal_mode=DELETE` + `mmap_size=0` + open-write-close-per-op because
 >   WAL's mmapped shared-memory does not propagate across the VirtioFS guest boundary.

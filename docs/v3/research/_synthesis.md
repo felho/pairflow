@@ -62,7 +62,7 @@ The studies (in order written), and the two pre-existing reference notes:
 | 13 | [`agent-harness-survey-study.md`](agent-harness-survey-study.md) | academic survey / **ETCLOVG taxonomy** (71pp paper) | **the external checksum** — 6/7 layers map clean; the 2 mismatches (no transactional kernel; no channels layer) ARE v3's deepest bets |
 | 14 | [`onecli-study.md`](onecli-study.md) | credential gateway / **Agent Vault** (Rust+TS) | **the L7 capability boundary, shipped** — the survey's "credential never travels" pattern as standalone infra; produce-not-perform for secrets; a divergence anchor |
 | 15 | [`mnemon-study.md`](mnemon-study.md) | persistent agent memory (Go+SQLite) | **the L11/L12 deterministic-store reference, opposite Honcho** — LLM-supervises/binary-performs; intent-native `remember`/`link`/`recall`; compaction-boundary writeback; memory-must-be-a-port cautionary anchor |
-| 16 | [`nanoclaw-study.md`](nanoclaw-study.md) | containerized agent runtime (TS) | **the runtime/supervision/isolation layer, NOT a kernel** — the component behind the BitSafe fleet; best L0d supervision + L7/L0e sandbox reference; the **integration-point contract** (machine-checkable L12); the delivery-seam negative proof; confirms §11/§12 at the source |
+| 16 | [`nanoclaw-study.md`](nanoclaw-study.md) | containerized agent runtime (TS) | **the runtime/supervision/isolation layer, NOT a kernel** — the component behind the BitSafe fleet; the most operationally concrete L0d supervision loop + best L7/L0e sandbox reference (lockdown on); the **integration-point contract** (machine-checkable L12); the delivery-seam negative proof; confirms §11/§12 at the source |
 | — | [`ruflo-v3-sdlc-workflow.md`](ruflo-v3-sdlc-workflow.md) | SPARC/DDD method study | adopt concepts not framework (pre-series) |
 | — | [`v3-gate-policy-config-design-synthesis.md`](../topics/v3-gate-policy-config-design-synthesis.md) | gate/policy/config synthesis | L2 design input (pre-series) |
 
@@ -1208,7 +1208,7 @@ sharpens L11/L12 and adds the **memory-is-a-port** discipline to the same family
 ## 13. Addendum — study 16 (nanoclaw): the runtime/supervision layer, not a kernel
 
 Study 16 reverse-engineers **nanoclaw** ([`nanoclaw-study.md`](nanoclaw-study.md)) — a small
-(~34K host + ~8K container LOC, TypeScript) system that runs AI agents in per-session Docker
+(~26K host `src/` incl. tests + ~6.5K container agent-runner, TypeScript) system that runs AI agents in per-session Docker
 containers, analyzed via six parallel **source-verified** slices. It is a different artifact from
 studies 14–15: a *full codebase*, but one whose verdict is **"not a kernel."** Its significance is
 twofold. First, it is **the runtime component behind the BitSafe fleet** (`bitsafe-ai-os-capture.md`)
@@ -1243,9 +1243,10 @@ worth folding into the L9/L0d recovery contract:
    typed "I am poisoned, respawn me" path so the watchdog's kill tier is the last resort, not the only
    one. Also: heartbeat is a **file mtime off the contended data plane**, and a **startup circuit
    breaker** lets a dumb supervisor (launchd `KeepAlive`) stay dumb.
-The one place nanoclaw is *weaker* than gastown: "stuck" never escalates to a judgment tier or a
-human — failure collapses into one silent `failed` bucket (the "one failed bucket" v3's L9
-typed-recovery-reasons item avoids).
+The one place nanoclaw is *weaker* than gastown: its **retry-exhaustion** ladder never escalates to a
+judgment tier or a human — that path collapses into one silent `failed` bucket (the "one failed
+bucket" v3's L9 typed-recovery-reasons item avoids). (Other paths do escalate — channel-registration
+approvals and billing-error notices — so the gap is specific to host-side max-retry, not absolute.)
 
 ### New mechanism — the integration-point contract as machine-checkable L12
 

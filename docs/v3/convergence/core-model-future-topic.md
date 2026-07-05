@@ -1217,7 +1217,10 @@ review.
     the watchdog's tolerance becomes `max(floor, declared_timeout)`. This is a
     cheap tier *below* the judgment tier: let the work declare its own liveness
     expectation before routing "stuck" to intelligence. Keep the signal on a
-    cheap channel (a heartbeat mtime), off the contended data plane.
+    cheap channel (a heartbeat mtime), off the contended data plane. (Fidelity
+    note: nanoclaw honors this for the `Bash` tool only — the hook records a
+    declared timeout just for Bash; v3's generalization is any long tool call
+    declaring its own budget.)
   - *Recovery must consume its own evidence.* After a kill, the recovery action
     must delete the stale claim/marker that triggered it (and grant a one-tick
     grace), or the next watchdog pass reads the same stale evidence and kills the

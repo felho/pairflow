@@ -5,7 +5,7 @@ Date: 2026-07-04
 ## Purpose
 
 This note captures what Pairflow v3 can learn from **NanoClaw** (nanocoai/nanoclaw,
-v2), a small (~34K LOC host + ~8K LOC container agent-runner, TypeScript) system that
+v2), a small (~26K LOC host `src/` incl. tests, ~16K excl.; ~6.5K container agent-runner; TypeScript) system that
 "runs AI agents securely in their own containers." It is deliberately built to be
 *small enough for one person to fully understand* and *forked per user*, in explicit
 reaction to larger frameworks whose security is "at the application level rather than
@@ -81,11 +81,14 @@ What NanoClaw **validates** (v3 already plans it this way):
 - **L7 credential-never-travels, fail-closed** — real credentials live only in the
   OneCLI vault; the container gets a placeholder header the gateway rewrites on the
   wire; spawn **refuses** if credentials/egress aren't applied (no silent downgrade).
-- **The best L0d supervision loop in the corpus** — a pure, unit-testable
-  `decideStuckAction` over three durable signals, with a *workload-declared* silence
-  budget (the agent's own `Bash(timeout:…)` widens the SLA) and the rule that **recovery
-  consumes its own evidence** (delete stale claims + one-tick grace, or the watchdog
-  serially kills every replacement it spawns).
+- **The most operationally concrete supervision loop in the corpus** (and the reference
+  for the claim-tracking, pull-based shape v3 actually uses) — a pure, unit-testable
+  `decideStuckAction` over durable signals, with a *workload-declared* silence budget (the
+  agent's own `Bash(timeout:…)` widens the SLA — Bash-only in nanoclaw's implementation)
+  and the rule that **recovery consumes its own evidence** (delete stale claims + one-tick
+  grace, or the watchdog serially kills every replacement it spawns). Not "best" outright:
+  it stays in the timer paradigm gastown argued against and lacks gastown's escalation tier
+  (finding 32) — the three *details* are the load-bearing contribution, not a crown.
 - **Exact correlation as a `UNIQUE` constraint** — `(channel_type, platform_id,
   instance)`, exact-only inbound (auto-create over hijack), the DB-enforced form of v3's
   "exact correlation oracle."
@@ -141,16 +144,23 @@ a hypothesis until checked.)
 
 ## 1. L0a — Kernel, state, idempotency (the cautionary core)
 
-**1. LEARN — Single-writer-per-file mailbox IPC.** Host writes `inbound.db` + central
-`v2.db`; the container writes only `outbound.db`. The container never updates
-`messages_in.status`; it acks through its own file (`processing_ack`), and the host
-reconciles (`syncProcessingAcks`, `src/db/session-db.ts:169-182`). Delivery outcomes
-likewise go in the *host's* file (`delivered` table in inbound.db, `schema.ts:191-198`)
-so the host never writes container-owned storage (`src/delivery.ts:5-9`). "Each party
-appends only to its own ledger, the other polls read-only" removes cross-process lock
-contention by construction — the cleanest statement in the corpus of v3's T1-canonical
-vs T7-provider-local writer boundary: one authority per plane, reconciliation not shared
-mutation.
+**1. LEARN (with a caveat) — Single-writer-per-file mailbox IPC.** On the *steady-state
+delivery path* the host writes `inbound.db` + central `v2.db` and the container writes
+only `outbound.db`: the container never updates `messages_in.status` (it acks through its
+own `processing_ack` and the host reconciles via `syncProcessingAcks`,
+`src/db/session-db.ts:169-182`), and delivery outcomes go in the *host's* file (`delivered`
+table in inbound.db, `schema.ts:191-198`) so the delivery poll never writes container-owned
+storage (`src/delivery.ts:5-9`). "Each party appends only to its own ledger, the other polls
+read-only" removes cross-process lock contention by construction — a clean realization of
+v3's T1-canonical vs T7-provider-local writer boundary. **The caveat (verified): it is
+single-writer-*at-a-time*, not single-writer-*ever*.** The host does write the
+container-owned `outbound.db` in two guarded spots — `writeOutboundDirect`
+(`session-manager.ts:372-393`, finding 3, the parity-violating one) and
+`resetStuckProcessingRows` opening it read-write (`host-sweep.ts:344-351` via
+`openOutboundDbRw`, whose own doc says "only safe when no container is running") — both
+gated on no live container. So the invariant v3 should copy is "one writer at a time per
+plane, exceptions explicitly quiesced," not the stronger "one writer ever" the mailbox
+framing suggests.
 
 **2. LEARN — Seq parity as a disjoint ID namespace (verified even=host / odd=container).**
 Host assigns even seqs in `messages_in` (`nextEvenSeq`, `session-db.ts:89-92`); the
@@ -352,8 +362,10 @@ gateway (separate container) holds real creds and injects `Authorization` on the
 only the vault (`setup/auth.ts:93-114`, never logged); spawn calls `onecli.ensureAgent` +
 **refuses to spawn** without it ("refusing to spawn container without credentials",
 `container-runner.ts:492-498`); custom endpoints use `ANTHROPIC_AUTH_TOKEN=placeholder`
-rewritten on the wire (`providers/claude.ts:20-28`). Container env is only `TZ` + provider
-contributions — no credential passthrough exists in-tree. The closest real-world
+rewritten on the wire (`providers/claude.ts:20-28`). The container env carries no NanoClaw
+*secret* — what it does carry is `TZ`, provider contributions, `HOME` for non-1000 UIDs, and
+the OneCLI proxy/cert config that `applyContainerConfig` injects (`container-runner.ts:448-455,
+471, 495`; the proxy config is the *mechanism*, not a credential). The closest real-world
 implementation of v3's L7 "secret refs resolve only at the runtime boundary" in the series,
 **including the fail-closed spawn** — grant unavailable ⇒ no execution at all, which is
 precisely v3's L7 semantics.
@@ -475,12 +487,17 @@ file (missing = "fresh, give grace" not "infinitely stale"). **A recovery action
 consume the evidence that triggered it** — a contract v3's claim+heartbeat+reclaim design
 needs explicitly (gastown's discovery model sidesteps it; any claim-tracking design can't).
 
-**32. AVOID — "Stuck" never escalates to judgment or a human.** The ladder is kill → reset
-with backoff → `MAX_TRIES` → `status='failed'` + `log.warn`. No notification, no quarantine,
-no judgment tier — a permanently failing message goes dark; the user notices only by
-silence. Kill *reasons* are typed strings, but message failure collapses into one `failed`
-bucket — the "one failed bucket" v3's L9 typed-recovery-reasons item avoids. (gastown's
-escalation-as-bead is the stronger reference here.)
+**32. AVOID — The *retry-exhaustion* ladder never escalates to judgment or a human.** For a
+message that keeps failing, the ladder is kill → reset with backoff → `MAX_TRIES` →
+`status='failed'` + `log.warn`. No notification, no quarantine, no judgment tier — that
+message goes dark; the user notices only by silence. Kill *reasons* are typed strings, but
+retry-exhaustion collapses into one `failed` bucket — the "one failed bucket" v3's L9
+typed-recovery-reasons item avoids. (gastown's escalation-as-bead is the stronger reference
+here.) Scope note (verified): NanoClaw *does* escalate on other paths — unknown-channel
+registration routes an approval card to the owner (`router.ts:228,251`), and non-retryable
+provider errors (billing/quota) are pushed to the origin chat (`deliverErrorResult`,
+`poll-loop.ts:582-593`). The gap is specific to host-side max-retry `failed`, not "no
+escalation anywhere."
 
 **33. LEARN — Idle-kill deliberately removed; on_wake race fixed in the query.** "No
 host-side idle timeout… avoids killing long-running legitimate work on a wall-clock timer"
@@ -571,13 +588,16 @@ crash.** "The host does not deduplicate — if the adapter forwards it, the host
 *error-logged*. Native adapters each reinvent dedup. v3's L8 should own an idempotency key
 at the ledger boundary.
 
-**43. AVOID — The outbound ledger is two-state and mixes crash vs platform-fail; retry state
-is in-memory.** `delivered` has only `delivered|failed` ("queued" implicit); no
-acknowledged/expired/superseded. Retry counting is an in-memory Map that resets on restart,
-so the 3-attempt cap is per-process and a persistently-failing message oscillates forever;
-`failed` is terminal and silent. v3's six-state ledger with a stable delivery id is strictly
-richer. (a2a reply correlation additionally degrades to fuzzy: exact `in_reply_to` →
-"peer-affinity" heuristic → newest-active-session — L8/L9 contamination v3 forbids.)
+**43. AVOID — The *outbound* ledger is two-state and mixes crash vs platform-fail; its retry
+counter is in-memory.** `delivered` has only `delivered|failed` ("queued" implicit); no
+acknowledged/expired/superseded. The **outbound delivery** retry counter is an in-memory Map
+that resets on restart, so the 3-attempt cap is per-process and a persistently-failing send
+oscillates forever; `failed` is terminal and silent. (Contrast — verified: the *inbound* side
+*does* have durable retry state, `messages_in.tries` + `process_after` surviving restart,
+`schema.ts:169-172`; the in-memory-counter defect is specific to outbound delivery.) v3's
+six-state ledger with a stable delivery id is strictly richer. (a2a reply correlation
+additionally degrades to fuzzy: exact `in_reply_to` → "peer-affinity" heuristic →
+newest-active-session — L8/L9 contamination v3 forbids.)
 
 **44. AVOID — The single worst delivery hole: offline adapter ⇒ marked delivered and
 destroyed.** `deliver()` returns `undefined` (not throw) when the exact-instance adapter is
@@ -642,14 +662,19 @@ declarative-ish list of skills, not thousands of diverged lines. Plugin-like com
 **51. LEARN — Integration-point tests as the upgrade contract (the most v3-relevant idea in
 this slice).** Upgrade risk is quantified as the count of "reach-ins" into existing code, and
 *every functional reach-in ships a test that goes red if the wiring drifts*
-(`skill-guidelines.md:161-184`); "the failing list *is* the set of skills to update"
+(`skill-guidelines.md:22-34`, "red if the wiring is deleted or drifts"; the `:161-184` range
+is the "Worked examples" section); "the failing list *is* the set of skills to update"
 (`skills-model.md:87`). Behavior tests run through the real barrel (a structural parse "stays
 green when the barrel can't evaluate — exactly when the thing is broken"). This is the
 missing third leg beyond superpowers/gstack skill *methodology*: how a skill proves it still
-*works* after the host changed underneath it. Directly reusable for v3 **L12** as a
-machine-checkable seam contract between accepted definitions and the evolving core: it turns
-"definition changes through one audited channel" from policy into mechanism — drift is
-detected by construction.
+*works* after the host changed underneath it. Reusable for v3 **L12** as a machine-checkable
+seam contract between accepted definitions and the evolving core: it turns "definition
+changes through one audited channel" from policy into mechanism — drift is detected by
+construction. Altitude note: this is really a *fork/upgrade governance discipline* (keeping a
+downstream's customizations wired as trunk moves) that L12's audited channel can **adopt as a
+mechanism** — it is adjacent to, not identical with, L12's core memory→definition learning
+loop; the shared thread is "definition/customization change must be drift-detected and
+audited."
 
 **52. LEARN — The upgrade path is a single audited, self-updating, fail-closed channel.**
 `/update-nanoclaw` is the only sanctioned way in: it refreshes its own instructions *first*

@@ -85,9 +85,11 @@ post-commit outputs versus durable, retryable side-effect work.
   deleting the evidence. Three distinct seams, all closed by marker-before-effect +
   the A1 `(instance_id, op_id)` ledger. Two design rules the failure sharpens: the
   marker must follow a *confirmed* effect (a no-error/no-ack outcome is a distinct
-  non-terminal state, not success), and retry budget is durable ledger state, never
-  an in-memory counter (nanoclaw's resets on restart, so a stuck send oscillates
-  forever). The delivery-ledger state machine itself is L8 work (future-topic L8 #4).
+  non-terminal state, not success), and the delivery retry budget is durable ledger
+  state, never an in-memory counter (nanoclaw's *outbound-delivery* counter resets on
+  restart, so a stuck send oscillates forever — note its *inbound* retry state IS
+  durable, so the defect is delivery-specific). The delivery-ledger state machine
+  itself is L8 work (future-topic L8 #4).
 
 ### A3. Define the `op_id` generation contract
 
