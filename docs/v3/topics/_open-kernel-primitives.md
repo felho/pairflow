@@ -1,11 +1,13 @@
 # Open Topic — Kernel Primitives (dissolving additive complexity)
 
 Date: 2026-07-05
-Status: **OPEN — first draft for review.** Joint reading result: the core-model
-pseudocode (L0a–L4 complete) was re-read independently by the user and by the
-assistant; both readings converged on the same two structural observations.
-This memo names the candidate primitives, maps every current kernel unit onto
-them, and defines the acceptance tests. Nothing here changes the model yet.
+Status: **DECIDED — review closed, execution pending.** Joint reading result: the
+core-model pseudocode (L0a–L4 complete) was re-read independently by the user and
+by the assistant; both readings converged on the same two structural observations.
+This memo names the primitives, maps every current kernel unit onto them, and
+defines the acceptance tests. The review questions are resolved — decisions in
+§6, final naming in §7. The model itself changes only in the upcoming in-place
+rebaseline, gated by the L5 paper test (§4).
 
 Relation to other documents:
 
@@ -47,7 +49,7 @@ components — the same direction, shipped.
 
 ## 2. Candidate primitives
 
-### P1 — Exchange (async request/reply with a claimed marker)
+### P1 — Errand (async request/reply with a claimed marker)
 
 ```text
 durable claim/marker committed (carries request_id)
@@ -78,22 +80,22 @@ What the table itself surfaces (this is the payoff of naming the primitive):
 
 - **Completions arrive over two transports today**: kernel events for
   machines, operator intents for humans. The input source classes are
-  *transport*; the exchange is the concept. `SUBMIT_DECISION` is not a
+  *transport*; the errand is the concept. `SUBMIT_DECISION` is not a
   different kind of thing from `ACTION_RESULT` — it is the human-addressed
-  exchange's completion.
-- **The process gate is the one exchange without a durable marker** — by
+  errand's completion.
+- **The process gate is the one errand without a durable marker** — by
   design (inline under timeout; the A2 test says its result is not
   re-derivable but the transition simply blocks). The table makes this an
   explicit, named exception instead of an invisible one.
 - The "competes with what?" question (user's (c)) becomes systematic: every
-  single-winner race in the model is a race *within one exchange* (two
+  single-winner race in the model is a race *within one errand* (two
   RUN_ACTIONs on one claim; a late RELEASED vs the dispatch-error follow-up;
   SPAWNED vs SPAWN_FAILED on one attempt).
 - core-model-todo cross-refs: A2 (derived vs durable marker) is the rule for
   the marker column; B2 (in-band `request_id` correlation) is the correlation
   column; D1–D4 is the spawn/child-await pair's contract.
 
-### P2 — Guarded Keyed Selection (the "switch")
+### P2 — ChoicePoint (guarded keyed selection — the "switch")
 
 One structure behind all five routing maps: *a position offers a declared key
 set; an authorized selector picks one key; guards validate; the commit routes
@@ -108,12 +110,12 @@ by the key through the shared arrival.*
 | `on_resume` | wait step | the resume event's type | result payloads later | — |
 
 The step-type zoo then stops being six kinds of step: a step is one concept
-configured by {who selects, what claim/exchange precedes the selection, what
+configured by {who selects, what claim/errand precedes the selection, what
 payload contract applies, what outbound surface is derived}. The kernel
 already knows no key *names* (de-vocabularized per map); P2 is the same move
 one level up — de-vocabularizing the *map kinds* themselves.
 
-### P3 — Admission ladder (one guard protocol, parameterized)
+### P3 — Admission (one ordered guard ladder, parameterized; a step is a *rung*)
 
 Every entry path runs the same ordered ladder with per-input-class
 parameters; today it exists only as repeated code order plus prose:
@@ -128,13 +130,13 @@ Canonical rules the ladder pins once: idempotency-before-stale (todo A1),
 lifecycle-guard-after-idempotency (L0d), authority-on-this-path-not-L1 (L3).
 todo Part E2's check order is this ladder's actor-envelope instantiation.
 
-### P4 — Authority binding (the acting-from snapshot)
+### P4 — Warrant (the acting-from authority snapshot)
 
 `expected_version`, `expected_role`, `request_ref`, `episode_ref`, `op_id` —
 one family: what the sender was entitled to act *from*. Universal vs
 shape-derived fields; already named as todo Part E1. P3 consumes P4.
 
-### P5 — The Ask/Intent family (outbound surfaces)
+### P5 — Directive (the outbound ask family)
 
 `DispatchIntent`, `HumanDecisionRequest`, `ActionRequest`, `ActionIntent`,
 `SpawnIntent` = one concept — *the kernel asks someone to do something* —
@@ -149,13 +151,13 @@ not five unrelated objects.
 | Handler | Class | Becomes |
 |---|---|---|
 | HANDLE | admission + selection | P3 + P2(transitions) + gate pipeline |
-| SUBMIT_DECISION | admission + exchange completion + selection | P3 + P1(human) + P2(decisions) + override rule |
+| SUBMIT_DECISION | admission + errand completion + selection | P3 + P1(human) + P2(decisions) + override rule |
 | RESUME_WAIT | admission + selection | P3 + P2(on_resume) |
-| RUN_ACTION | admission + claim + inline exchange + selection | P3 + P1(operator action) + P2(outcomes) |
+| RUN_ACTION | admission + claim + inline errand + selection | P3 + P1(operator action) + P2(outcomes) |
 | KICKOFF | admission + specialized resume | P3 + P1(kickoff) + task supply |
-| RUNTIME_CONTEXT_READY / RELEASED | exchange completions | P1(provision) / P1(release) |
-| ACTION_RESULT | exchange completion + selection | P1(auto action) + P2(outcomes) + retry budget |
-| CHILD_SPAWNED / SPAWN_FAILED / LIFECYCLE | exchange completions (+ selection) | P1(spawn) / P1(child await) + P2(wait_for) |
+| RUNTIME_CONTEXT_READY / RELEASED | errand completions | P1(provision) / P1(release) |
+| ACTION_RESULT | errand completion + selection | P1(auto action) + P2(outcomes) + retry budget |
+| CHILD_SPAWNED / SPAWN_FAILED / LIFECYCLE | errand completions (+ selection) | P1(spawn) / P1(child await) + P2(wait_for) |
 | CREATE / START / CANCEL / FAIL / DELETE_REQUESTED | lifecycle intents | stay: macro-axis moves + load-time validators + the ④ chain |
 | dispatch_intent / *_request / *_intent builders | outbound projections | P5 instances |
 | resolvers / validators / providers / predicates | unchanged layers | P3/P1 consume them; not dissolved |
@@ -168,7 +170,7 @@ self-heal; round semantics; the gate pipeline placement.
 
 ## 4. De-bias tests (does a non-anchor case fit?)
 
-- **L6 timer**: exchange {marker: durable timer row, intent: scheduler wake,
+- **L6 timer**: an errand {marker: durable timer row, intent: scheduler wake,
   completion: TIMER_FIRED, correlation: timer id, on_fire: reload-and-discard
   if stale} — fits P1 exactly (and the future-topic L6 §1–2 text already
   describes it in these terms without the name).
@@ -199,20 +201,94 @@ self-heal; round semantics; the gate pipeline placement.
   guard order and the CAS points must remain visible in it — the point is to
   reveal structure, not to abstract it out of sight.
 
-## 6. Open questions (the review agenda)
+## 6. Decisions (review closed, 2026-07-05)
 
-1. **How deep does the pseudocode change?** Three options: (a) descriptive
-   only — the tables above enter the doc, pseudocode unchanged; (b) the
-   kernel pseudocode gains the primitives as named contracts and the handlers
-   become their instances (recommended aim); (c) a fully generic engine where
-   handlers disappear into declarations (too far — traces and evidence lose
-   their concreteness).
-2. **Naming.** Exchange / Selection / Admission / Authority / Ask are working
-   names; the doc's existing vocabulary (produce-not-perform, marker-first,
-   arrive) should survive inside them.
-3. **Where do primitives live in the ramp?** A new early "primitives" lens is
-   premature; more likely: each primitive is *named at the level where its
-   second instance appears* (the point where the model historically earned
-   generalizations), and a consolidated primitives section lands near the end.
-4. **Does P1 unify the two completion transports** (kernel event vs operator
-   intent) in the model text, or stay a documented observation?
+1. **Depth — primitives as named contracts in the pseudocode.** P1–P5 are
+   defined once as contracts; the handlers become their instances
+   (parameterization + their short irreducible logic, §3). The guard order and
+   the CAS points stay visible inside the contract definitions — reveal, not
+   hide. The fully generic engine (handlers dissolve into declarations) is
+   rejected: traces and evidence would lose their concreteness.
+2. **Placement — in-place rebaseline at the earned points.** Each primitive is
+   introduced where its second instance historically appeared (P3 at L0d, P4
+   at L1, P1 at ②, P2+P5 at L3), and every later level is re-expressed on the
+   primitives — the ramp itself demonstrates the dissolution, and L0a–L2b
+   barely move. Rationale: the new-reader and implementation-foundation
+   priorities outweigh historical fidelity (git is the archive; the
+   2026-06-15 conceptual-order rebaseline is the precedent). The
+   second-instance rule stays the FORWARD-going principle: a future primitive
+   is named at its own second instance.
+   - **Renumbering rides the same effort, as a mechanical, grep-verified
+     rename-pass BEFORE the semantic work:** ① → L3a, ② → L3b, ③a → L3c,
+     ③b → L3d, ④ → L3e (the L2a/L2b sub-slice pattern); the L0f+ display name
+     is fixed in the same pass. Full corpus renumbering (L4 → L8 …) is
+     rejected — it would rewrite the shared vocabulary of the research corpus.
+     Until the rename-pass lands, this memo keeps the current notation.
+3. **Transports — unified at the primitive level.** The three input classes
+   (actor / operator / kernel event) stay, with their distinct guards; the
+   errand-completion contract is one, with a declared transport + authority
+   dimension. Collapsing the input classes themselves is rejected.
+4. **Safety rails for the rebaseline** (a deliberate one-time effort): the L5
+   paper test gates the start; per-level commits; the derived registries (the
+   78 rejection reasons, the 104 invariants, the deferral ledger) serve as
+   semantic checksums diffed at every step — the sets must survive
+   re-expression; the runtime traces serve as behavior fixtures.
+
+## 7. Naming (decided via a six-lens brainstorm)
+
+Method: six parallel brainstorm agents, each with a distinct lens
+(distributed-systems literature · plain-English domain · the document's own
+idiom · metaphor systems · TypeScript API surface · first-time-reader
+pedagogy), all anti-anchored: none saw the working names. The final set was
+chosen where lenses converged; a working name survived only where it was
+re-derived independently.
+
+| Primitive | Final name | Was | Evidence |
+|---|---|---|---|
+| P1 | **Errand** | Exchange | Exchange demoted by two lenses (AMQP/finance noise; weakest API inflection). Roundtrip won three lenses but carries a synchronous-RPC false friend for exactly this document's audience. Errand is idiom-native (the park/claim/bubble register), inherently asynchronous, and nobody reads it synchronous. |
+| P2 | **ChoicePoint** | Guarded Keyed Selection | Three-lens convergence; the working name was a description, not a name; near-exact cold-guess result ("a place where one of several predeclared options gets picked"). |
+| P3 | **Admission** (a step is a **rung**) | Admission Ladder | Confirmed by 5/6 lenses — the strongest validation of a working name. "Rung" adopted for the steps ("stops at the idempotency rung"); the ladder image is the only one that carries the load-bearing ORDER in the name itself. |
+| P4 | **Warrant** | Authority Binding | All six lenses landed in the legal register (Warrant 4×, Standing 2×). Verbs cleanly (verify the warrant), composes with P3 ("the authority rung checks the warrant"), and its scoped/expiring connotation pre-explains staleness. |
+| P5 | **Directive** | Ask/Intent | Three-lens convergence. "Ask" as a code identifier is un-greppable (`ask` ⊂ `task`) — it survives in prose only. The existing `DispatchIntent` / `ActionIntent` / `SpawnIntent` (+ `HumanDecisionRequest`, `ActionRequest`) become the family's members; no rename of the members is required. |
+
+The sentence test — the kernel's whole path in the final vocabulary:
+
+> An **errand** opens marker-first: the durable claim commits, and only then
+> is its **directive** produced — produced, not performed — and handed to its
+> addressee. When the answer returns, it climbs the **admission** ladder rung
+> by rung; its **warrant** is checked — is this our errand, did the sender act
+> from current state, in the right role? If it holds, the answer turns its key
+> at the **choice point**: one atomic commit settles the errand, routes the
+> workflow, and derives the next directives.
+
+Confusability: first letters E·C·A·W·D all distinct; five different registers
+(errand/branching/climbing/law/command). The one adjacent pair — Warrant and
+Directive are both official-document words — is disambiguated by direction: a
+warrant is what an inbound sender *carries*, a directive is what the kernel
+*issues* outbound; state this contrast once at first use.
+
+Clarifications recorded during review:
+
+- **An errand is not a "job."** A job names the work; an errand names the
+  round — the kernel's open, correlated expectation. An errand's completion is
+  not a terminal state but an input that routes a parked position; and the
+  kernel never executes (produce-not-perform) — job vocabulary belongs to the
+  addressee's side (a runner may fulfil an errand by running a job). A `Job`
+  type would also collide with the model's `task` and drown in cron/CI/k8s
+  grep noise.
+- **The bare wait is a degenerate errand** — a marker with no outbound
+  directive ("an errand without the errand-boy"). Accepted name cost: the
+  fully general concept is "open correlated expectation," and errand names the
+  majority shape.
+
+Poisoned words (collected across the six lenses — do NOT use in this model or
+its codebase): `Conversation` (reads as LLM chat), `Saga` (implies
+compensation semantics), `Token` (doubly poisoned: auth + LLM), `Lease`
+(implies TTL + renewal; the model has none), `Pick` (TypeScript built-in
+`Pick<T, K>`), `Turnout` + `Turnstile` together (visual near-collision), bare
+`Ask` in code (`ask` ⊂ `task`), bare `Intent` as a standalone type (drowns
+among the `*Intent` members), `Attestation` / `Credential` for P4
+(over-promise crypto / authn), `Ingress` (K8s L7 routing), any `Gate*` wording
+near Admission (the Gate nouns are a different concept — rungs, not gates),
+and 2PC-flavored `Prepare`/`Commit` naming pairs (the model is single-commit
+CAS, not distributed commit).
