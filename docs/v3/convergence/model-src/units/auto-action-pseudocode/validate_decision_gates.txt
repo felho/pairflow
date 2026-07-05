@@ -16,7 +16,7 @@ validate_decision_gates(template) → ok | Rejected                     # L3 —
         IF spec is not a map                           THEN RETURN Rejected(invalid_decision_payload_schema)   # the field spec must be an object { required: bool } — not a scalar (e.g. instruction: true / "required")
         IF keys_of(spec) ⊄ { required }                THEN RETURN Rejected(invalid_decision_payload_schema)   # no nested types / unknown schema keys yet (e.g. type: markdown)
         IF spec.required is present AND spec.required NOT IN { true, false } THEN RETURN Rejected(invalid_decision_payload_schema)   # required must be a bool (e.g. NOT "yes")
-  FOR edge IN routing_edges_with_recommends(template):                # ③b — ANY routing edge carrying `recommends`: actor transitions (on_pass / on_converged) AND action outcomes (e.g. perf_test.pass); meaningful ONLY when the edge target is a human_gate
+  FOR edge IN routing_edges_with_recommends(template):                # LC3b — ANY routing edge carrying `recommends`: actor transitions (on_pass / on_converged) AND action outcomes (e.g. perf_test.pass); meaningful ONLY when the edge target is a human_gate
     IF NOT is_human_gate(template, edge.target) THEN RETURN Rejected(recommends_on_non_gate)
     IF edge.recommends NOT IN keys_of(template.step(edge.target).decisions)
        THEN RETURN Rejected(recommends_unknown_decision)              # a recommendation must name an existing decision key of its target gate

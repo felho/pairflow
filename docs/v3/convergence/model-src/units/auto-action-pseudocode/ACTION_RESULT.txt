@@ -1,8 +1,8 @@
 
-ACTION_RESULT(instance, request_id, raw_result) → Outcome           # ③b kernel_event — an auto action's result (the RUNTIME_CONTEXT_READY sibling); inline ⇒ it arrives immediately, deferred ⇒ later (same contract)
+ACTION_RESULT(instance, request_id, raw_result) → Outcome           # LC3b kernel_event — an auto action's result (the RUNTIME_CONTEXT_READY sibling); inline ⇒ it arrives immediately, deferred ⇒ later (same contract)
   IF instance.wait.kind ≠ action_running OR instance.wait.request_id ≠ request_id THEN RETURN Rejected(action_result_mismatch)   # correlation: the run WE issued (a stale / duplicate result ⇒ Rejected)
   template ← definitionStore.load(instance.template_ref) ; step ← template.step(instance.current_step)
-  IF step.trigger ≠ auto THEN RETURN Rejected(action_result_not_auto_action)   # ③a/③b boundary: an operator action_running (③a — its result is recorded INLINE in RUN_ACTION) is NEVER completed by a kernel-event
+  IF step.trigger ≠ auto THEN RETURN Rejected(action_result_not_auto_action)   # LC3a/LC3b boundary: an operator action_running (LC3a — its result is recorded INLINE in RUN_ACTION) is NEVER completed by a kernel-event
   outcome_key ← classify_action_result(step, raw_result)            # workspace reality (exit / structured JSON, like L2a)
   choice      ← step.outcomes[outcome_key]
   IF choice is present AND choice.retry is present THEN              # BOUNDED RETRY — ONLY for an outcome that DECLARES a retry policy (NOT a general negative-outcome rule): infra_flake retries, regression routes
@@ -21,7 +21,7 @@ ACTION_RESULT(instance, request_id, raw_result) → Outcome           # ③b ker
       instance.version ← instance.version + 1
     RETURN Accepted
   COMMIT atomically at expected_version = instance.version:
-    instance.transcript.append(ACTION_RESULT { episode_ref: instance.wait.episode_ref, outcome: outcome_key, outputs: raw_result.outputs, evidence_refs: raw_result.evidence_refs })   # evidence (① INV-3): inline T1 + durable T3 refs
+    instance.transcript.append(ACTION_RESULT { episode_ref: instance.wait.episode_ref, outcome: outcome_key, outputs: raw_result.outputs, evidence_refs: raw_result.evidence_refs })   # evidence (LC1 INV-3): inline T1 + durable T3 refs
     apply_target_entry_effects(instance, template, step.id, choice.target)   # ROUTE by the outcome — ends the episode (a later fresh entry opens a new episode_ref)
     instance.version ← instance.version + 1
-  RETURN Committed(instance.version, post_commit_output(instance, template), boundary_events: emits_of(choice))   # an outcome may emits: a release boundary → ②
+  RETURN Committed(instance.version, post_commit_output(instance, template), boundary_events: emits_of(choice))   # an outcome may emits: a release boundary → LC2

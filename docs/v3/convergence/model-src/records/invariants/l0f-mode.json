@@ -22,7 +22,7 @@
         {
           "id": "docs-only-is-an-explicit-gate-not-gate-absence",
           "name_html": "docs-only is an explicit gate, not gate-absence",
-          "body_html": "the doc variant does not merely <em>drop</em> the runtime-validation gate — it <b>keeps</b> a <code>docs_only_runtime_evidence</code> gate whose <code>allow</code> result produces <b>durable evidence</b> for the intended trusted-skip and records its <b>ref</b> on the <code>GateDecision</code> (① INV-3). Removing a gate alone would not say \"this skip is intended &amp; trusted\"; the explicit doc gate does"
+          "body_html": "the doc variant does not merely <em>drop</em> the runtime-validation gate — it <b>keeps</b> a <code>docs_only_runtime_evidence</code> gate whose <code>allow</code> result produces <b>durable evidence</b> for the intended trusted-skip and records its <b>ref</b> on the <code>GateDecision</code> (LC1 INV-3). Removing a gate alone would not say \"this skip is intended &amp; trusted\"; the explicit doc gate does"
         },
         {
           "id": "catalog-blocks-are-never-mode-pruned",

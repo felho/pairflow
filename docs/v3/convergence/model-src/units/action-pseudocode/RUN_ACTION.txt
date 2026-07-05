@@ -1,5 +1,5 @@
 
-RUN_ACTION(trigger) → Outcome                                      # ③ operator_intent — the AUTOMATED sibling of SUBMIT_DECISION (the RUNNER's result picks the outcome, not a human). trigger = { instance_id, op_id, expected_version, action_key, payload, by }
+RUN_ACTION(trigger) → Outcome                                      # LC3 operator_intent — the AUTOMATED sibling of SUBMIT_DECISION (the RUNNER's result picks the outcome, not a human). trigger = { instance_id, op_id, expected_version, action_key, payload, by }
   instance ← load(trigger.instance_id)
   IF duplicate(trigger.op_id)                                                THEN RETURN Duplicate   # idempotency FIRST — transcript-backed (op_id rides ACTION_RUNNING / ACTION_RESULT): a replay returns Duplicate even after the first claim already moved us to action_running, never not_awaiting_action
   IF instance.kernel_status ≠ WAITING OR instance.wait.kind ≠ action_pending THEN RETURN Rejected(not_awaiting_action)   # action_running ⇒ a (different) claim already won (single-winner); a parked action is the only runnable state
@@ -13,7 +13,7 @@ RUN_ACTION(trigger) → Outcome                                      # ③ opera
   # PHASE 1 — CAS CLAIM (marker-first, single-winner): take the action_pending EXCLUSIVELY before the runner side effect, so two concurrent RUN_ACTION never both reach the (git-mutating) runner
   request_id ← new_request_id()
   COMMIT atomically at expected_version = instance.version:
-    REQUIRE instance.wait.kind = action_pending                  # the single-winner CAS guard (like ② release's REQUIRE ready(ref)): a different concurrent claim that already won loses here on reload ⇒ not_awaiting_action (same op_id ⇒ Duplicate, checked first)
+    REQUIRE instance.wait.kind = action_pending                  # the single-winner CAS guard (like LC2 release's REQUIRE ready(ref)): a different concurrent claim that already won loses here on reload ⇒ not_awaiting_action (same op_id ⇒ Duplicate, checked first)
     instance.wait ← { kind: action_running, op_id: trigger.op_id, request_id, action_key: trigger.action_key, requested_by: step.id }   # in-flight marker; a concurrent RUN_ACTION with a different op_id sees action_running ⇒ not_awaiting_action (same op_id ⇒ Duplicate)
     instance.transcript.append(ACTION_RUNNING { op_id: trigger.op_id, action_key: trigger.action_key, request_id })
     instance.version ← instance.version + 1
@@ -23,10 +23,10 @@ RUN_ACTION(trigger) → Outcome                                      # ③ opera
   # PHASE 3 — CAS RESULT: record (with op_id) + route, or revert to action_pending for a retry; NEVER leave action_running on a handled result, NEVER Reject after the side effect ran
   COMMIT atomically at expected_version = instance.version:
     REQUIRE instance.wait.kind = action_running AND instance.wait.request_id = request_id   # still OUR run (defensive)
-    instance.transcript.append(ACTION_RESULT { op_id: trigger.op_id, action_key: trigger.action_key, outcome: outcome_key, outputs: result.outputs, evidence_refs: result.evidence_refs })   # evidence (① INV-3): commit_sha / merge_sha / exit / hash inline (T1), logs T3 — op_id makes the Duplicate check transcript-backed
+    instance.transcript.append(ACTION_RESULT { op_id: trigger.op_id, action_key: trigger.action_key, outcome: outcome_key, outputs: result.outputs, evidence_refs: result.evidence_refs })   # evidence (LC1 INV-3): commit_sha / merge_sha / exit / hash inline (T1), logs T3 — op_id makes the Duplicate check transcript-backed
     IF outcome_key ∈ keys_of(step.outcomes) THEN
       apply_target_entry_effects(instance, template, step.id, step.outcomes[outcome_key].target)   # ROUTE by the outcome — same generic arrival; a self-target (conflict → merge_action, nothing_staged → commit_action) re-parks action_pending (operator re-triggers)
     ELSE
       instance.wait ← { kind: action_pending, requested_by: step.id, resume_events: [step.action.key] }   # infra_error or an undeclared outcome ⇒ stay parked for a retry (auto-retry is L9); a recurring undeclared outcome is a config smell, visible in the ACTION_RESULT
     instance.version ← instance.version + 1
-  RETURN Committed(instance.version, post_commit_output(instance, template), boundary_events: emits_of(step.outcomes[outcome_key]))   # an outcome may `emits:` a release boundary (merged ⇒ merge_completed) → ② initiate_release; emits_of(none) = [ ]
+  RETURN Committed(instance.version, post_commit_output(instance, template), boundary_events: emits_of(step.outcomes[outcome_key]))   # an outcome may `emits:` a release boundary (merged ⇒ merge_completed) → LC2 initiate_release; emits_of(none) = [ ]

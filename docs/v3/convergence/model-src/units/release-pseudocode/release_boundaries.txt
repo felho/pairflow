@@ -1,5 +1,5 @@
 
-release_boundaries(template) → [boundary_event]                     # ② the declared boundaries: requirement.release.boundaries under policy: required; empty for retained / external / absent ⇒ those NEVER auto-release
+release_boundaries(template) → [boundary_event]                     # LC2 the declared boundaries: requirement.release.boundaries under policy: required; empty for retained / external / absent ⇒ those NEVER auto-release
   req ← template.runtime_context
   IF req = none OR req.release is absent OR req.release.policy ≠ required THEN RETURN [ ]
   RETURN req.release.boundaries

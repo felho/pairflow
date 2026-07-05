@@ -8,7 +8,7 @@
     },
     {
       "id": "unbounded-retry-watchdog",
-      "html": "No <b>unbounded retry / watchdog</b> — retry is a declared bounded budget that escalates; auto-retry beyond it, backoff, and a stuck-<code>action_running</code> watchdog are later (the same crash-window class as ② / ③a) <span class=\"at\">→ L9</span>"
+      "html": "No <b>unbounded retry / watchdog</b> — retry is a declared bounded budget that escalates; auto-retry beyond it, backoff, and a stuck-<code>action_running</code> watchdog are later (the same crash-window class as LC2 / LC3a) <span class=\"at\">→ L9</span>"
     },
     {
       "id": "pure-computed-routing",

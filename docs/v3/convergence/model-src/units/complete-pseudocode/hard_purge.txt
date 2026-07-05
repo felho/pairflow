@@ -1,6 +1,6 @@
 
 # storage op (NOT a kernel handler) — keyed by run_id so it SURVIVES the record it removes; the precondition is HERE
-hard_purge(run_id) → ok | deferred                                  # ④ — invoked by the delete-chain re-drive once the run winds down; a still-pending purge is re-driven by the delete-chain purge contract (baseline) — only a scheduled / automatic retention re-drive is L9/ops
+hard_purge(run_id) → ok | deferred                                  # LC4 — invoked by the delete-chain re-drive once the run winds down; a still-pending purge is re-driven by the delete-chain purge contract (baseline) — only a scheduled / automatic retention re-drive is L9/ops
   tomb ← run_index.lookup(run_id)
   IF tomb.status = purged THEN                                      # RE-DRIVE PATH: the write-ahead tombstone already committed — finish cleanup from the tombstone’s closure MANIFEST, never the record (which may be partly / fully gone)
     FOR blob IN tomb.closure_manifest: evidence_store.remove(blob)   # idempotent — an already-removed blob is a no-op
@@ -10,7 +10,7 @@ hard_purge(run_id) → ok | deferred                                  # ④ — 
   instance ← load(run_id)
   REQUIRE instance.purge_state = purge_pending
   IF instance.kernel_status ≠ TERMINAL                  THEN RETURN deferred   # wait: terminal
-  IF instance.runtime_context ∉ { released, none, ready(∅) } THEN RETURN deferred   # wait: ② release discharged (NOT releasing / release_failed)
+  IF instance.runtime_context ∉ { released, none, ready(∅) } THEN RETURN deferred   # wait: LC2 release discharged (NOT releasing / release_failed)
   IF NOT purge_closure_ready(instance)                  THEN RETURN deferred   # wait: every owned evidence blob is purge-eligible (no other live owner)
   manifest ← closure_owned_evidence(instance)                       # CAPTURE the closure manifest WHILE the record is readable — it rides the tombstone so cleanup is re-drivable AFTER the record is gone
   run_index.upsert(run_id, status: purged, purged_at: now(), closure_manifest: manifest)   # 1. WRITE-AHEAD the TOMBSTONE FIRST (carrying the manifest) — the idempotency authority AND the re-drive source; the record / evidence / index need not share one storage transaction, so a crash mid-purge never leaves a removed record with NO tombstone. The GLOBAL metrics/audit stream is untouched (the audit floor)

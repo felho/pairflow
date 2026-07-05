@@ -12,7 +12,7 @@
     },
     {
       "id": "resume-actions-post-approval-mechanics",
-      "html": "No <b>resume <em>actions</em> / post-approval mechanics</b> — the resume <em>contract</em> is in (<code>RESUME_WAIT</code>: <code>COMMIT</code> moves <code>commit_pending</code> forward), but the kernel does not run the git commit/merge <em>actions</em> (③a), the resource teardown (②), or archive (④); those + result payloads, retries, and stale-event recovery are later slices. v1 order (reality-checked): <code>APPROVED_FOR_COMMIT → COMMITTED → DONE</code> (commit before <code>DONE</code>), with the <b>merge a separate command after <code>DONE</code></b>. \"Finalization\" stays an informal name, not a kernel step type <span class=\"at\">→ ③a · ② · ④</span>"
+      "html": "No <b>resume <em>actions</em> / post-approval mechanics</b> — the resume <em>contract</em> is in (<code>RESUME_WAIT</code>: <code>COMMIT</code> moves <code>commit_pending</code> forward), but the kernel does not run the git commit/merge <em>actions</em> (LC3a), the resource teardown (LC2), or archive (LC4); those + result payloads, retries, and stale-event recovery are later slices. v1 order (reality-checked): <code>APPROVED_FOR_COMMIT → COMMITTED → DONE</code> (commit before <code>DONE</code>), with the <b>merge a separate command after <code>DONE</code></b>. \"Finalization\" stays an informal name, not a kernel step type <span class=\"at\">→ LC3a · LC2 · LC4</span>"
     },
     {
       "id": "non-operator-resume-sources",

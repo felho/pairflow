@@ -4,15 +4,15 @@
   "items": [
     {
       "id": "release-mechanics",
-      "html": "No <b>release mechanics</b> — tracking the release obligation and actually releasing the worktree/branch/session is the teardown slice <span class=\"at\">→ ②</span>"
+      "html": "No <b>release mechanics</b> — tracking the release obligation and actually releasing the worktree/branch/session is the teardown slice <span class=\"at\">→ LC2</span>"
     },
     {
       "id": "workflow-actions",
-      "html": "No <b>workflow actions</b> — author-chosen <code>type: action</code> steps (the automated <code>human_gate</code> sibling) over the L2a runner family, distinct from ②'s provider resource teardown: <b>③a</b> the commit/merge actions (operator-triggered — MVP), <b>③b</b> the general library + <code>auto</code> trigger (perf-test, publish, notify) <span class=\"at\">→ ③a / ③b</span>"
+      "html": "No <b>workflow actions</b> — author-chosen <code>type: action</code> steps (the automated <code>human_gate</code> sibling) over the L2a runner family, distinct from LC2's provider resource teardown: <b>LC3a</b> the commit/merge actions (operator-triggered — MVP), <b>LC3b</b> the general library + <code>auto</code> trigger (perf-test, publish, notify) <span class=\"at\">→ LC3a / LC3b</span>"
     },
     {
       "id": "archive-export-purge-retention",
-      "html": "No <b>archive / export / purge / retention</b> — optional cold ops, computed from the durable record, never the preservation path nor a teardown precondition <span class=\"at\">→ ④ (~L8 ops)</span>"
+      "html": "No <b>archive / export / purge / retention</b> — optional cold ops, computed from the durable record, never the preservation path nor a teardown precondition <span class=\"at\">→ LC4 (~L8 ops)</span>"
     },
     {
       "id": "storage-backend-choice",
@@ -28,7 +28,7 @@
     },
     {
       "id": "computed-templated-evidence-bodies",
-      "html": "No <b>computed / templated evidence bodies</b> or <b>evidence-blob GC</b> — referenced blobs are write-once durable; lifecycle/retention of the T3 store is ④ <span class=\"at\">→ ④</span>"
+      "html": "No <b>computed / templated evidence bodies</b> or <b>evidence-blob GC</b> — referenced blobs are write-once durable; lifecycle/retention of the T3 store is LC4 <span class=\"at\">→ LC4</span>"
     }
   ]
 }

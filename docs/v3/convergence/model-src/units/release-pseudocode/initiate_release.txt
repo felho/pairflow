@@ -1,11 +1,11 @@
 
-initiate_release(instance, boundary_event)                         # ② discharge the release obligation at a DECLARED boundary; runs POST-COMMIT from RECEIVE, never inside another transition's commit
+initiate_release(instance, boundary_event)                         # LC2 discharge the release obligation at a DECLARED boundary; runs POST-COMMIT from RECEIVE, never inside another transition's commit
   IF instance.runtime_context = ready(∅) THEN RETURN               # context-free: nothing was provisioned (the empty sentinel) — no obligation
   IF instance.runtime_context is not ready(ref) THEN RETURN         # nothing else to release: none / requested / already releasing|released|release_failed (ready(∅) handled above)
   template     ← definitionStore.load(instance.template_ref)
   requirement  ← template.runtime_context                          # required(spec) — a ready(ref) implies it was required
-  IF boundary_event ∉ release_boundaries(template) THEN RETURN      # not a declared release boundary for THIS run: the hook offers `terminal`, ③a will offer `merge_completed` — release.boundaries (policy: required) decides; empty for retained / external ⇒ never auto-release. terminal is just an event, not a kernel default
-  IF NOT release_safe(instance) THEN                                # ① INV-5: a canonical ref still points into the resource ⇒ releasing would orphan it — do NOT release
+  IF boundary_event ∉ release_boundaries(template) THEN RETURN      # not a declared release boundary for THIS run: the hook offers `terminal`, LC3a will offer `merge_completed` — release.boundaries (policy: required) decides; empty for retained / external ⇒ never auto-release. terminal is just an event, not a kernel default
+  IF NOT release_safe(instance) THEN                                # LC1 INV-5: a canonical ref still points into the resource ⇒ releasing would orphan it — do NOT release
     COMMIT atomically at expected_version = instance.version:       # CAS-guarded like every state write — a concurrent hook on the same ready(ref) records the failure at most once
       REQUIRE instance.runtime_context = ready(ref)
       instance.runtime_context ← release_failed(ref, reason: not_safe)

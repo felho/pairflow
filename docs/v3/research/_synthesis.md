@@ -291,7 +291,7 @@ For each v3 concern: the **best reference** the series produced, what to **adopt
 | **Best references** | hermes (six backends + hibernate), vibe-kanban (git-worktree), Temporal (none — orthogonal) |
 | **Adopt** | The opaque provider-issued handle (vibe-kanban `container_ref: String` — path *or* container id *or* sandbox url). Scripts-as-execution-processes (setup/cleanup/dev = the same primitive as the agent run, differing by run-reason). Two-tier cleanup (DB-vs-disk orphan reconciliation + TTL expiry). `ensure_*` idempotent re-provisioning. Hibernate keyed by a stable id + "sandbox FS is cache, host owns durable state, re-push on wake" (hermes) — for the remote-sandbox archetype. |
 | **Reject** | Single-impl "generic" trait that pretends to be pluggable (vibe-kanban — design against ≥2 real backends). No-isolation bare-host execution for untrusted agents. Conflating remote *access* (tunnel) with remote *execution*. |
-| **Open** | The teardown/release contract (the convergence work's ② strand already covers this — the L0e provision↔release mirror). |
+| **Open** | The teardown/release contract (the convergence work's LC2 strand already covers this — the L0e provision↔release mirror). |
 
 ### L0f — Project/repo config + definition resolution
 
@@ -451,7 +451,7 @@ are its external evidence.
 | **L0b actor + packet** | File-handle ContextPacket (§Superpowers). First-class actor (the gap all systems leave). |
 | **L0c AgentConfig** | Immutable `ModelConfig` value object + two-tier secret-ref→resolved + call-site routing (Honcho). Serialized run-intent in the durable record (vibe-kanban). |
 | **L0d lifecycle** | Commit-then-observe; close-command-last invariant; no mark-failed-only recovery. |
-| **L0e runtime-context** | Opaque handle; scripts-as-processes; two-tier cleanup; provision↔release mirror (the ② strand). |
+| **L0e runtime-context** | Opaque handle; scripts-as-processes; two-tier cleanup; provision↔release mirror (the LC2 strand). |
 | **L0f project config** | Typed slots cascade (already built); durable plan artifact with constraints+interfaces. |
 | **L1 capability** | (v3-original; no strong external reference) |
 | **L2 / L2a / L2b gates** | The `verify` gate (independent-evidence, §3.5); read-only stateless gates; WARN verdict; declarative/packaged/process × inline/deferred (already built). |
@@ -1074,8 +1074,8 @@ a working human-gate payload, and supplies a cross-source divergence anchor.**
   it; OneCLI doesn't close it): **secret freshness at resume** — a token can expire/revoke mid-trajectory,
   so a parked L4 child or long parent may wake against a dead credential; renewal must stay outside model
   context. Make "capability freshness at resume" an explicit L7 concern.
-- **L2 / L3 / ② DECISION_REQUEST** — *a working human-gate at the I/O boundary, with the transport to
-  reject.* OneCLI's credential-approval flow is structurally v3's ②: the gateway marks a request for
+- **L2 / L3 / LC2 DECISION_REQUEST** — *a working human-gate at the I/O boundary, with the transport to
+  reject.* OneCLI's credential-approval flow is structurally v3's LC2: the gateway marks a request for
   approval, a durable `pending_approvals` row is written, an approver is resolved by a policy order
   (scoped-admin → global-admin → owner), and **expiry is a real disposition** (`deny`). **Adopt the
   payload** (record + approver-policy + timeout-route) as the DECISION_REQUEST shape; this is H4 (study 13)

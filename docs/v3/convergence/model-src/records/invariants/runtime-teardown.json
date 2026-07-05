@@ -17,7 +17,7 @@
         {
           "id": "release-safe-precondition",
           "name_html": "release-safe precondition",
-          "body_html": "release initiates only when <code>release_safe(instance)</code> holds (① INV-5: no canonical-record ref points into the resource). ① guarantees it by construction; ② asserts it fail-closed — an unsafe release becomes <code>release_failed(precondition)</code>, never an orphaned canonical ref"
+          "body_html": "release initiates only when <code>release_safe(instance)</code> holds (LC1 INV-5: no canonical-record ref points into the resource). LC1 guarantees it by construction; LC2 asserts it fail-closed — an unsafe release becomes <code>release_failed(precondition)</code>, never an orphaned canonical ref"
         },
         {
           "id": "release-is-orthogonal-to-lifecycle",
@@ -47,7 +47,7 @@
         {
           "id": "boundary-is-declared-not-hardcoded",
           "name_html": "boundary is declared, not hardcoded",
-          "body_html": "the kernel reads the declared <code>release.boundaries</code> (under <code>policy: required</code>); it does <b>not</b> hardcode terminal as the release instant. The terminal transition only <b>emits</b> a <code>terminal</code> event — a possible boundary, acted on solely if declared. The boundary is an <b>event</b> (terminal ｜ merge_completed ｜ later), distinct from the operator command that produces it (operator delete is not a boundary — it drives force_release in ④)"
+          "body_html": "the kernel reads the declared <code>release.boundaries</code> (under <code>policy: required</code>); it does <b>not</b> hardcode terminal as the release instant. The terminal transition only <b>emits</b> a <code>terminal</code> event — a possible boundary, acted on solely if declared. The boundary is an <b>event</b> (terminal ｜ merge_completed ｜ later), distinct from the operator command that produces it (operator delete is not a boundary — it drives force_release in LC4)"
         }
       ]
     }

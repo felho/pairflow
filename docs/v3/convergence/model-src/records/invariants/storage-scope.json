@@ -26,8 +26,8 @@
         },
         {
           "id": "inv-5-release-safety-the-bridge-to",
-          "name_html": "INV-5 · release safety <span style=\"font-size:10px;color:var(--muted)\">(the bridge to ②)</span>",
-          "body_html": "no canonical-record ref points into a resource being released (<code>release_safe</code>). ① guarantees this <b>by construction</b> (canonical never homes in T4); ② Teardown only <b>asserts</b> it, fail-closed"
+          "name_html": "INV-5 · release safety <span style=\"font-size:10px;color:var(--muted)\">(the bridge to LC2)</span>",
+          "body_html": "no canonical-record ref points into a resource being released (<code>release_safe</code>). LC1 guarantees this <b>by construction</b> (canonical never homes in T4); LC2 Teardown only <b>asserts</b> it, fail-closed"
         }
       ]
     }

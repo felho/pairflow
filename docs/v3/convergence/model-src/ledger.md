@@ -23,9 +23,9 @@
 - `l0d` · runtime-context-spec-provider-contract — → L0e
 - `l0f` · slot-interpolation — → L0e
 
-### L0f+ (1)
+### L0g (1)
 
-- `l0f` · run-scoped-mode-variants — → L0f+ (run-scoped mode / variants)
+- `l0f` · run-scoped-mode-variants — → L0g (run-scoped mode / variants)
 
 ### L1 (3)
 
@@ -64,6 +64,32 @@
 - `l2` · route-verdict-workflow-redirection — → routing slice / L3
 - `l2a` · route-verdict — → routing slice / L3
 
+### LC2 (2)
+
+- `l3` · resume-actions-post-approval-mechanics — → LC3a · LC2 · LC4
+- `storage-scope` · release-mechanics — → LC2
+
+### LC3a (4)
+
+- `l3` · resume-actions-post-approval-mechanics — → LC3a · LC2 · LC4
+- `storage-scope` · workflow-actions — → LC3a / LC3b
+- `runtime-teardown` · deferred-release-boundary-realized — → LC3a
+- `runtime-teardown` · workflow-actions — → LC3a / LC3b
+
+### LC3b (3)
+
+- `storage-scope` · workflow-actions — → LC3a / LC3b
+- `runtime-teardown` · workflow-actions — → LC3a / LC3b
+- `workflow-actions` · packaged-action-library — → LC3b
+
+### LC4 (5)
+
+- `l3` · resume-actions-post-approval-mechanics — → LC3a · LC2 · LC4
+- `storage-scope` · archive-export-purge-retention — → LC4 (~L8 ops)
+- `storage-scope` · computed-templated-evidence-bodies — → LC4
+- `runtime-teardown` · archive-export-purge — → LC4
+- `workflow-actions` · operator-delete — → LC4
+
 ### L4 (4)
 
 - `l0a` · child-workflows-internal-events — → L4
@@ -100,7 +126,7 @@
 - `l0e` · durable-delivery — → L8 / L7
 - `l3` · multi-channel-delivery-rich-input-forms — → L8
 - `l3` · agent-to-agent-or-external-token-ask — → L7 / L8
-- `storage-scope` · archive-export-purge-retention — → ④ (~L8 ops)
+- `storage-scope` · archive-export-purge-retention — → LC4 (~L8 ops)
 - `runtime-teardown` · remote-distributed-release-proofs — → L8 / L10
 - `workflow-actions` · remote-distributed-action-proofs — → L8 / L10
 - `l4-child` · durable-external-channel — → L8
@@ -136,32 +162,6 @@
 - `l0f` · central-store-registry — → L11+
 - `storage-scope` · multi-instance-federation-storage — → L11+
 - `archive-purge` · cross-run-federation-purge — → L11+
-
-### ② (2)
-
-- `l3` · resume-actions-post-approval-mechanics — → ③a · ② · ④
-- `storage-scope` · release-mechanics — → ②
-
-### ③a (4)
-
-- `l3` · resume-actions-post-approval-mechanics — → ③a · ② · ④
-- `storage-scope` · workflow-actions — → ③a / ③b
-- `runtime-teardown` · deferred-release-boundary-realized — → ③a
-- `runtime-teardown` · workflow-actions — → ③a / ③b
-
-### ③b (3)
-
-- `storage-scope` · workflow-actions — → ③a / ③b
-- `runtime-teardown` · workflow-actions — → ③a / ③b
-- `workflow-actions` · packaged-action-library — → ③b
-
-### ④ (5)
-
-- `l3` · resume-actions-post-approval-mechanics — → ③a · ② · ④
-- `storage-scope` · archive-export-purge-retention — → ④ (~L8 ops)
-- `storage-scope` · computed-templated-evidence-bodies — → ④
-- `runtime-teardown` · archive-export-purge — → ④
-- `workflow-actions` · operator-delete — → ④
 
 ### §11.4 (3)
 
@@ -317,7 +317,7 @@
 - `storage-scope` · **inv-2-no-workspace-sole-truth** — INV-2 · no workspace-sole-truth
 - `storage-scope` · **inv-3-evidence-ref-discipline-the-one-new-runtime-rule** — INV-3 · evidence-ref discipline (the one new runtime rule)
 - `storage-scope` · **inv-4-projection-subordination** — INV-4 · projection subordination
-- `storage-scope` · **inv-5-release-safety-the-bridge-to** — INV-5 · release safety (the bridge to ②)
+- `storage-scope` · **inv-5-release-safety-the-bridge-to** — INV-5 · release safety (the bridge to LC2)
 - `runtime-teardown` · **release-obligation-is-never-dropped-silently** — release obligation is never dropped silently
 - `runtime-teardown` · **release-failed-is-a-handle-not-a-runtime** — release_failed is a handle, not a runtime
 - `runtime-teardown` · **release-safe-precondition** — release-safe precondition
@@ -335,7 +335,7 @@
 - `workflow-actions` · **an-outcome-may-emit-a-release-boundary** — an outcome may emit a release boundary
 - `workflow-actions` · **action-is-select-gate-is-filter** — action is select, gate is filter
 - `auto-workflow-actions` · **auto-is-marker-first-too** — auto is marker-first too
-- `auto-workflow-actions` · **only-an-auto-step-re-issues-the-run-the-a-b-boundary** — only an auto step re-issues the run (the ③a/③b boundary)
+- `auto-workflow-actions` · **only-an-auto-step-re-issues-the-run-the-a-b-boundary** — only an auto step re-issues the run (the LC3a/LC3b boundary)
 - `auto-workflow-actions` · **the-result-is-a-correlated-kernel-event** — the result is a correlated kernel-event
 - `auto-workflow-actions` · **bounded-retry-is-opt-in-and-episode-anchored** — bounded retry is opt-in and episode-anchored
 - `auto-workflow-actions` · **the-recommendation-rides-the-firing-edge** — the recommendation rides the firing edge

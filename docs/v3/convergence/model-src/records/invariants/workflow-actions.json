@@ -7,7 +7,7 @@
         {
           "id": "single-winner-action-claim-cas-marker-first",
           "name_html": "single-winner action claim (CAS, marker-first)",
-          "body_html": "because the runner mutates git, the action is claimed <b>before</b> it runs: a CAS commit takes <code>action_pending → action_running(request_id)</code> + <code>ACTION_RUNNING</code>; only the winner reaches the runner (a concurrent <code>RUN_ACTION</code> with a <em>different</em> op_id sees <code>action_running</code> ⇒ <code>not_awaiting_action</code>; the winner replayed is <code>Duplicate</code>). The trigger is version-checked (<code>Stale</code>) and op_id-idempotent (<code>Duplicate</code>) before the claim — like <code>SUBMIT_DECISION</code> / <code>RESUME_WAIT</code>. The same marker-first shape as ② release"
+          "body_html": "because the runner mutates git, the action is claimed <b>before</b> it runs: a CAS commit takes <code>action_pending → action_running(request_id)</code> + <code>ACTION_RUNNING</code>; only the winner reaches the runner (a concurrent <code>RUN_ACTION</code> with a <em>different</em> op_id sees <code>action_running</code> ⇒ <code>not_awaiting_action</code>; the winner replayed is <code>Duplicate</code>). The trigger is version-checked (<code>Stale</code>) and op_id-idempotent (<code>Duplicate</code>) before the claim — like <code>SUBMIT_DECISION</code> / <code>RESUME_WAIT</code>. The same marker-first shape as LC2 release"
         },
         {
           "id": "the-outcome-selects-the-kernel-does-not",
@@ -27,12 +27,12 @@
         {
           "id": "the-action-result-is-recorded-with-evidence",
           "name_html": "the action result is recorded with evidence",
-          "body_html": "every run appends an <code>ACTION_RESULT</code> (outcome + outputs + evidence_refs) before routing — the outcome inline in T1, logs in T3 (① INV-3); a parked instance carries no agent dispatch (honest WAITING)"
+          "body_html": "every run appends an <code>ACTION_RESULT</code> (outcome + outputs + evidence_refs) before routing — the outcome inline in T1, logs in T3 (LC1 INV-3); a parked instance carries no agent dispatch (honest WAITING)"
         },
         {
           "id": "an-outcome-may-emit-a-release-boundary",
           "name_html": "an outcome may emit a release boundary",
-          "body_html": "an outcome’s <code>emits</code> adds a boundary event to the committed outcome; <code>boundary_events_of</code> carries it to ② (<code>merged ⇒ merge_completed ⇒</code> worktree release). The action does <b>not</b> release — it only emits the boundary; ② owns the release"
+          "body_html": "an outcome’s <code>emits</code> adds a boundary event to the committed outcome; <code>boundary_events_of</code> carries it to LC2 (<code>merged ⇒ merge_completed ⇒</code> worktree release). The action does <b>not</b> release — it only emits the boundary; LC2 owns the release"
         },
         {
           "id": "action-is-select-gate-is-filter",

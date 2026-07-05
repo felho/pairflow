@@ -4,5 +4,5 @@ child_intent(instance, template) → SpawnIntent                   # L4 — prod
   RETURN SpawnIntent {
     request_id:         link.request_id,                         # correlation: the child's CREATE_INSTANCE replies with CHILD_SPAWNED { parent_ref, child_id } — the RUNTIME_CONTEXT_READY analog
     parent_ref:         { parent_id: instance.id, link_id: link.link_id, child_key: link.child_key },   # the back-link the child carries; the kernel routes CHILD_SPAWNED + CHILD_LIFECYCLE here
-    child_template_ref: step.child.template_ref,                  # the child is a FULL instance — CREATE_INSTANCE(…, parent_ref) + its own L0f resolution / runtime_context / ①②③④ lifecycle
+    child_template_ref: step.child.template_ref,                  # the child is a FULL instance — CREATE_INSTANCE(…, parent_ref) + its own L0f resolution / runtime_context / LC1–LC4 lifecycle
     binding:            step.child.binding, task: step.child.inputs }   # NO inline write-back: the child_id lands via the CHILD_SPAWNED handler below (CAS'd, transcript-backed) — never a lost shorthand

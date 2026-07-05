@@ -10,7 +10,7 @@ This memo names the primitives, maps every current kernel unit onto them, and
 defines the acceptance tests. The review questions are resolved — decisions in
 §6, final naming in §7. The model itself changes only in the upcoming in-place
 rebaseline, gated by the L5 paper test (§4). Review round 2 (same day) folded
-in: the ③a row split into two chained errands + the errand-composition rule
+in: the LC3a row split into two chained errands + the errand-composition rule
 (§2 P1), the LC renumbering amendment (§6.2), the rung-order reconciliation
 checksum (§6.4), the deferred-gate de-bias instance (§4), the three
 selector-authority values + the EmitAffordance cross-ref (§2 P2), and the
@@ -22,7 +22,7 @@ reviews) folded in: the selector-authority recount (two values today, one
 reserved for L9), the correlation field-class correction (`request_id` /
 `request_ref` / `link_id` / `child_id`; `episode_ref` is attempt identity,
 not correlation), the P4 rung-count fix, the stale "exception" bullet
-aligned with the form taxonomy, and two §3 label fixes; the ③a ask-row
+aligned with the form taxonomy, and two §3 label fixes; the LC3a ask-row
 correlation cell was verified against the pseudocode source and is accurate
 as written (`resume_events: [step.action.key]` is the actual field). Two
 micro-refinements followed: the kernel-classified bullet names the
@@ -91,9 +91,9 @@ forms, and an implementation must not force them onto one mechanism:
 
 - **full** — durable marker + outbound directive + async correlated
   completion (provision, release, auto action, spawn, human decision, the
-  ③a ask);
+  LC3a ask);
 - **inline** — durable marker claimed, then the work AND the completion run
-  in the same handler invocation, bracketed by two CAS commits (the ③a run;
+  in the same handler invocation, bracketed by two CAS commits (the LC3a run;
   a crash between them leaves the durable marker for L9);
 - **marker-less inline** — no durable marker at all, synchronous invocation
   (the process gate; its deferred variant is the same errand upgraded to the
@@ -104,10 +104,10 @@ forms, and an implementation must not force them onto one mechanism:
 | Instance | Claim marker | Intent (addressee) | Completion | Correlation | Failure shape | Irreducible logic |
 |---|---|---|---|---|---|---|
 | provision (L0e) | `requested(req)` | `provider.provision` | `RUNTIME_CONTEXT_READY` | request_id | kernel `FAIL` (L0d) | kind-boundary check |
-| release (②) | `releasing(req, ref)` | `provider.release` | `RUNTIME_CONTEXT_RELEASED` | request_id + CAS | `release_failed(ref)` — obligation retained | release_safe precondition (① INV-5); partial failure is a handle, not a runtime |
-| auto action (③b) | `action_running(req, episode)` | `ActionIntent` (runner) | `ACTION_RESULT` | request_id | re-park / unhandled parked | episode-anchored retry budget |
-| operator action — ask (③a) | `WAITING(action_pending)` | `ActionRequest` (operator) | `RUN_ACTION` | `action_key ∈ resume_events` + expected_version | no timeout (L9); a failure outcome re-parks = a fresh ask | trigger-validation (payload) runs before any claim |
-| operator action — run (③a) | `action_running(op_id, req)` — claimed inside `RUN_ACTION` | — (the runner runs inline, post-claim) | inline phase-3 commit | `REQUIRE request_id` | re-park `action_pending` (opens the next ask-errand); a crash in the window leaves the durable marker → L9 | workspace-reality (outcome) vs trigger split |
+| release (LC2) | `releasing(req, ref)` | `provider.release` | `RUNTIME_CONTEXT_RELEASED` | request_id + CAS | `release_failed(ref)` — obligation retained | release_safe precondition (LC1 INV-5); partial failure is a handle, not a runtime |
+| auto action (LC3b) | `action_running(req, episode)` | `ActionIntent` (runner) | `ACTION_RESULT` | request_id | re-park / unhandled parked | episode-anchored retry budget |
+| operator action — ask (LC3a) | `WAITING(action_pending)` | `ActionRequest` (operator) | `RUN_ACTION` | `action_key ∈ resume_events` + expected_version | no timeout (L9); a failure outcome re-parks = a fresh ask | trigger-validation (payload) runs before any claim |
+| operator action — run (LC3a) | `action_running(op_id, req)` — claimed inside `RUN_ACTION` | — (the runner runs inline, post-claim) | inline phase-3 commit | `REQUIRE request_id` | re-park `action_pending` (opens the next ask-errand); a crash in the window leaves the durable marker → L9 | workspace-reality (outcome) vs trigger split |
 | spawn (L4) | link `spawning` (request_id) | `SpawnIntent` (kernel CREATE_INSTANCE) | `CHILD_SPAWNED` / `CHILD_SPAWN_FAILED` | link_id + request_id | `failed` route (guaranteed at load) | contradictory-completion reject |
 | child await (L4) | link `active` + `WAITING(child_event)` | — (child already running) | `CHILD_LIFECYCLE` | link_id + child_id | L9 reconciliation edge | lost-CHILD_SPAWNED self-heal bind |
 | human decision (L3) | `DECISION_REQUEST` + `WAITING(human_decision)` | `HumanDecisionRequest` (operator) | `SUBMIT_DECISION` | request_ref | no timeout (L9) | override iff chosen ≠ recommendation |
@@ -135,10 +135,10 @@ What the table itself surfaces (this is the payoff of naming the primitive):
 - core-model-todo cross-refs: A2 (derived vs durable marker) is the rule for
   the marker column; B2 (in-band `request_id` correlation) is the correlation
   column; D1–D4 is the spawn/child-await pair's contract.
-- **Errands compose without a sixth primitive.** The ③a step is two chained
+- **Errands compose without a sixth primitive.** The LC3a step is two chained
   errands — the ask-errand's completion (`RUN_ACTION`) opens the run-errand in
   the same handler; a failure outcome that re-parks opens a fresh ask-errand;
-  the ④ delete chain is an errand sequence behind one operator intent; L5's
+  the LC4 delete chain is an errand sequence behind one operator intent; L5's
   help-ask will complete back onto the same position (§4). Composition is
   ordinary committed state: inter-step chains route through ChoicePoints,
   intra-step chains are a completion opening the next errand — never a hidden
@@ -224,7 +224,7 @@ each, context authority two (the CAS precheck and the authority rung):
   correlation rung.
 
 `episode_ref` is deliberately NOT in the correlation class: it is
-attempt/retry-episode identity — kernel-side wait state feeding the ③b retry
+attempt/retry-episode identity — kernel-side wait state feeding the LC3b retry
 budget — and it stays with that irreducible logic, not in the warrant.
 
 The bundle-level name is still useful (one thing the sender assembles and
@@ -248,12 +248,12 @@ not five unrelated objects.
 | HANDLE | admission + selection | P3 + P2(transitions) + gate pipeline |
 | SUBMIT_DECISION | admission + errand completion + selection | P3 + P1(human) + P2(decisions) + override rule |
 | RESUME_WAIT | admission + errand completion + selection | P3 + P1(bare wait) + P2(on_resume) |
-| RUN_ACTION | admission + claim + inline errand + selection | P3 + P1(③a ask completion → run errand) + P2(outcomes) |
+| RUN_ACTION | admission + claim + inline errand + selection | P3 + P1(LC3a ask completion → run errand) + P2(outcomes) |
 | KICKOFF | admission + specialized resume | P3 + P1(kickoff) + task supply |
 | RUNTIME_CONTEXT_READY / RELEASED | errand completions | P1(provision) / P1(release) |
 | ACTION_RESULT | errand completion + selection | P1(auto action) + P2(outcomes) + retry budget |
 | CHILD_SPAWNED / SPAWN_FAILED / LIFECYCLE | errand completions (+ selection) | P1(spawn) / P1(child await) + P2(wait_for) |
-| CREATE / START / CANCEL / FAIL / DELETE_REQUESTED | lifecycle intents | stay: macro-axis moves + load-time validators + the ④ chain |
+| CREATE / START / CANCEL / FAIL / DELETE_REQUESTED | lifecycle intents | stay: macro-axis moves + load-time validators + the LC4 chain |
 | dispatch_intent / *_request / *_intent builders | outbound projections | P5 instances |
 | resolvers / validators / providers / predicates | unchanged layers | P3/P1 consume them; not dissolved |
 
@@ -289,7 +289,7 @@ self-heal; round semantics; the gate pipeline placement.
 ## 5. Guardrails
 
 - **Unification must not erase deliberate distinctions.** The decision-wait /
-  bare-wait split, the ③a/③b boundary, operator-intent vs actor-envelope as
+  bare-wait split, the LC3a/LC3b boundary, operator-intent vs actor-envelope as
   separate input classes — these stay as *declared dimensions* of the
   primitives, never collapsed away.
 - **The acceptance test is the next consumer, not elegance.** L5 and todo
@@ -311,7 +311,7 @@ self-heal; round semantics; the gate pipeline placement.
    rejected: traces and evidence would lose their concreteness.
 2. **Placement — in-place rebaseline at the earned points.** Each primitive is
    introduced where its second instance historically appeared (P3 at L0d, P4
-   at L1, P1 at ②, P2+P5 at L3), and every later level is re-expressed on the
+   at L1, P1 at LC2, P2+P5 at L3), and every later level is re-expressed on the
    primitives — the ramp itself demonstrates the dissolution, and L0a–L2b
    barely move. Rationale: the new-reader and implementation-foundation
    priorities outweigh historical fidelity (git is the archive; the
@@ -321,17 +321,20 @@ self-heal; round semantics; the gate pipeline placement.
    - **Renumbering rides the same effort, as a mechanical, grep-verified
      rename-pass BEFORE the semantic work.** AMENDED in review round 2: the
      first cut (① → L3a … ④ → L3e) hid a false-containment trap — the L2a/L2b
-     precedent works because those ARE L2-family, whereas ① is a cross-cutting
-     storage invariant, ② is explicitly L0e's release mirror, and ④ is ops;
+     precedent works because those ARE L2-family, whereas LC1 is a cross-cutting
+     storage invariant, LC2 is explicitly L0e's release mirror, and LC4 is ops;
      "L3b" would wrongly claim L3 membership and clash with the future-topic
      owning-level idiom. Final scheme: **LC (lifecycle-close) slices** —
      ① → LC1, ② → LC2, ③a → LC3a, ③b → LC3b, ④ → LC4. The internal ③a/③b
      pairing survives, and "lifecycle-close" is existing corpus vocabulary.
      The rename-pass header must state: LC names a BUILD-ORDER strand (landed
      between L3 and L4 in the ramp); ownership stays with the owning level
-     (LC2 completes L0e, etc.). The L0f+ display name is fixed in the same
-     pass. Full corpus renumbering (L4 → L8 …) stays rejected. Until the
-     rename-pass lands, this memo keeps the current notation.
+     (LC2 completes L0e, etc.). The L0f+ display name became **L0g** in the same pass — the natural
+     continuation of the L0a–L0f letter pattern (run-scoped variant
+     resolution is one coherent capability); internal ids (`l0f-mode`) stay
+     as frozen slugs. Full corpus renumbering (L4 → L8 …) stays rejected. The rename-pass
+     has landed; this memo now uses the LC notation (the mapping above is
+     the historical record).
 3. **Transports — unified at the primitive level.** The three input classes
    (actor / operator / kernel event) stay, with their distinct guards; the
    errand-completion contract is one, with a declared transport + authority

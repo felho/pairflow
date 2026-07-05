@@ -12,15 +12,15 @@
     },
     {
       "id": "packaged-action-library",
-      "html": "No <b>packaged action library</b> — only the anchor runners (<code>pairflow.git_commit</code> / <code>pairflow.git_merge</code>); a general catalog (publish, notify, perf-test) is later <span class=\"at\">→ ③b</span>"
+      "html": "No <b>packaged action library</b> — only the anchor runners (<code>pairflow.git_commit</code> / <code>pairflow.git_merge</code>); a general catalog (publish, notify, perf-test) is later <span class=\"at\">→ LC3b</span>"
     },
     {
       "id": "operator-delete",
-      "html": "No <b>operator delete</b> — <code>delete_requested</code> is an explicit operator storage/lifecycle intent (a <code>CANCEL</code> sibling) that drives <code>force_release</code> in ④ (② release minus the declared-boundary gate) — <b>not</b> an emitted boundary and <b>not</b> a workflow action; it + the record purge are <span class=\"at\">→ ④</span>"
+      "html": "No <b>operator delete</b> — <code>delete_requested</code> is an explicit operator storage/lifecycle intent (a <code>CANCEL</code> sibling) that drives <code>force_release</code> in LC4 (LC2 release minus the declared-boundary gate) — <b>not</b> an emitted boundary and <b>not</b> a workflow action; it + the record purge are <span class=\"at\">→ LC4</span>"
     },
     {
       "id": "action-running-recovery-exactly-once",
-      "html": "No <b>action_running recovery / exactly-once</b> — the side effect runs after the CAS claim and before the result commit; a crash in that window leaves a durable <code>action_running</code> (no double-run, since the claim is single-winner), but <b>reconciling a stuck <code>action_running</code></b> (re-claim, idempotent re-run, watchdog) is later — the same crash-window class as ② release <span class=\"at\">→ L9</span>"
+      "html": "No <b>action_running recovery / exactly-once</b> — the side effect runs after the CAS claim and before the result commit; a crash in that window leaves a durable <code>action_running</code> (no double-run, since the claim is single-winner), but <b>reconciling a stuck <code>action_running</code></b> (re-claim, idempotent re-run, watchdog) is later — the same crash-window class as LC2 release <span class=\"at\">→ L9</span>"
     },
     {
       "id": "remote-distributed-action-proofs",

@@ -26,17 +26,16 @@ SRC = REPO / "docs/v3/convergence/model-src"
 
 AT_RE = re.compile(r'<span class="at">→\s*(.*?)</span>')
 TAG_RE = re.compile(r"<[^>]+>")
-LEVEL_TOKEN_RE = re.compile(r"L\d+[a-f]?\+?|[③][ab]|[①②③④]|§[\d.]+\d")
+LEVEL_TOKEN_RE = re.compile(r"LC\d[ab]?|L\d+[a-g]?\+?|§[\d.]+\d")
 REJECT_RE = re.compile(r"Rejected\(([a-z_][a-z_0-9]*)")
 
 
 def level_sort_key(token: str):
-    m = re.match(r"L(\d+)([a-f]?)(\+?)", token)
+    if token.startswith("LC"):
+        return (0, 3.5, token, "")  # lifecycle-close strand: between L3 and L4
+    m = re.match(r"L(\d+)([a-g]?)(\+?)", token)
     if m:
         return (0, int(m.group(1)), m.group(2), m.group(3))
-    if token in "①②③④" or token in ("③a", "③b"):
-        order = {"①": 1, "②": 2, "③": 3, "③a": 3.1, "③b": 3.2, "④": 4}
-        return (1, order[token], "", "")
     if token.startswith("§"):
         return (2, float(token[1:].split(".")[0]), token, "")
     return (3, 0, token, "")

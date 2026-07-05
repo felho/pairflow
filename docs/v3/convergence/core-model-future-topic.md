@@ -369,7 +369,7 @@ policy attached to that reason.
   execution process.
 - Keep this below the L0e provider boundary: the kernel should depend on the
   common execution contract, not on provider-specific shell/script mechanics.
-- This complements the ③ action-runner model. Actions route workflow state;
+- This complements the LC3 action-runner model. Actions route workflow state;
   L0e provider execution supplies the lower-level process primitive those
   actions, scripts, and actor runs can share.
 

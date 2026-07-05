@@ -4,6 +4,6 @@ RECEIVE(input) → Outcome                                               # one k
     operator_intent → dispatch to CREATE_INSTANCE / START / KICKOFF / SUBMIT_DECISION / RESUME_WAIT / RUN_ACTION / DELETE_REQUESTED / CANCEL   # lifecycle + human-decision + wait-resume + action-run intents
     kernel_event    → dispatch to RUNTIME_CONTEXT_READY / RUNTIME_CONTEXT_RELEASED / ACTION_RESULT / FAIL               # internal events (done is internal-only, below)
     actor_envelope  → HANDLE(input)                                           # the L0a–L1 actor handler, now lifecycle-guarded
-  FOR boundary_event IN boundary_events_of(outcome, instance):   # ② the release-boundary events THIS committed transition produced (now: terminal; ③a actions add merge_completed etc.)
+  FOR boundary_event IN boundary_events_of(outcome, instance):   # LC2 the release-boundary events THIS committed transition produced (now: terminal; LC3a actions add merge_completed etc.)
     initiate_release(instance, boundary_event)                    # POST-COMMIT side effect; the declared release.boundaries decides — terminal is NOT a kernel default, just a possible event
   RETURN outcome

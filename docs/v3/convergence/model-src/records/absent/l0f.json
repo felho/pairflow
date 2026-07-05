@@ -36,7 +36,7 @@
     },
     {
       "id": "run-scoped-mode-variants",
-      "html": "No <b>run-scoped mode / variants</b> — a single template running in <code>code | doc</code> modes is an L0f-family resolution extension, realized as a delta on top of this baseline <span class=\"at\">→ L0f+ (run-scoped mode / variants)</span>"
+      "html": "No <b>run-scoped mode / variants</b> — a single template running in <code>code | doc</code> modes is an L0f-family resolution extension, realized as a delta on top of this baseline <span class=\"at\">→ L0g (run-scoped mode / variants)</span>"
     }
   ]
 }

@@ -8,4 +8,4 @@ StorageTier = T1_record | T2_projection | T3_evidence | T4_workspace
 # T3  evidence store      — large blobs (test log, diff snapshot, report), addressed by a durable
 #                           ref carried in a T1 entry.
 # T2  state projection    — a cache of current state for cheap reads; derived from T1.
-# T4  runtime workspace   — ephemeral (L0e); released by teardown (②). NEVER a canonical home.
+# T4  runtime workspace   — ephemeral (L0e); released by teardown (LC2). NEVER a canonical home.

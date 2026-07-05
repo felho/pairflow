@@ -1,11 +1,11 @@
 <section id="workflow-actions">
-        <h2 class="level-h"><span class="level-badge">③a</span> Workflow actions — commit / merge</h2>
+        <h2 class="level-h"><span class="level-badge">LC3a</span> Workflow actions — commit / merge</h2>
         <p class="level-sub">A <code>type: action</code> step — the <b>automated sibling of <code>human_gate</code></b>: a declared
         operation runs (via a runner), produces a structured <b>outcome</b>, and the outcome <b>selects a route</b> from an
         <code>outcomes</code> map. It closes the L3-deferred &ldquo;resume action&rdquo; hole (the anchor’s <code>commit_pending</code>
-        <code>type: wait</code> step grows up into a <code>type: action</code>). <b>③ Workflow Actions</b> is the general capability;
-        <b>③a</b> is the realized cut: <code>trigger: operator_intent</code>, anchored on COMMIT + MERGE. The <code>auto</code>
-        trigger (run on arrival, e.g. a perf-test) is the same contract, later. Kernel-touching — the pseudocode diffs against ②.</p>
+        <code>type: wait</code> step grows up into a <code>type: action</code>). <b>LC3 Workflow Actions</b> is the general capability;
+        <b>LC3a</b> is the realized cut: <code>trigger: operator_intent</code>, anchored on COMMIT + MERGE. The <code>auto</code>
+        trigger (run on arrival, e.g. a perf-test) is the same contract, later. Kernel-touching — the pseudocode diffs against LC2.</p>
 
         <p><b>Action vs gate.</b> A <b>gate</b> (L2) sits before an <em>already-chosen</em> transition and says <code>allow | warn |
         block</code> — it never picks a target. An <b>action</b> runs as a step, <em>produces</em> an <code>outcome_key</code>, and
@@ -23,7 +23,7 @@
         <p>Both are keyed routing maps over <code>apply_target_entry_effects</code>; only the <b>selector</b> differs — a human picks
         a decision key, a runner’s result picks an outcome key. The kernel knows neither key’s meaning (de-vocabularized, as at L3).</p>
         <pre class="pseudo" style="font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size:12.5px; line-height:1.5">
-  human_gate (L3)                         action (③)
+  human_gate (L3)                         action (LC3)
   ─────────────────────────────          ─────────────────────────────
   a HUMAN picks a decision key            a RUNNER’s result picks an outcome key
   decisions: { approve: {target},         outcomes: { committed: {target},
@@ -39,7 +39,7 @@
             ├─ stale version / dup op_id / bad payload → Stale | Duplicate | missing_required_field   (no claim, no run)
             └─ CAS CLAIM: action_pending → action_running(request_id)   [+ ACTION_RUNNING]   (a concurrent RUN_ACTION with a different op_id loses ⇒ not_awaiting_action; same op_id ⇒ Duplicate)
                    run action in workspace → outcome_key   [+ ACTION_RESULT { op_id, outcome }]
-                      ├─ ok (committed/merged)  → outcomes[key].target  (+ emits → ② release)
+                      ├─ ok (committed/merged)  → outcomes[key].target  (+ emits → LC2 release)
                       ├─ business_failure       → self-target ⇒ re-park action_pending, operator retries
                       └─ infra_error / undeclared → re-park action_pending (audited), operator retries
         </pre>
@@ -56,7 +56,7 @@
           </div></div>
           <div class="trace-row"><div class="trace-n">3</div><div class="trace-c">
             <div class="ev">operator runs <code>RUN_ACTION(MERGE)</code></div>
-            <div class="meta">runner runs <code>git merge --no-ff</code> into base → <code>merged</code> (merge_sha) → append <code>ACTION_RESULT</code> → route <code>outcomes[merged].target = done</code> <b>and</b> <code>emits: merge_completed</code> → <code>apply_target_entry_effects(done)</code> = <b>TERMINAL(done)</b>. Post-commit, <code>boundary_events_of</code> = <code>[merge_completed, terminal]</code>; the template declares <code>release.boundaries: [merge_completed]</code> → <code>initiate_release(merge_completed)</code> releases the worktree (②); <code>terminal</code> no-ops (not declared)</div>
+            <div class="meta">runner runs <code>git merge --no-ff</code> into base → <code>merged</code> (merge_sha) → append <code>ACTION_RESULT</code> → route <code>outcomes[merged].target = done</code> <b>and</b> <code>emits: merge_completed</code> → <code>apply_target_entry_effects(done)</code> = <b>TERMINAL(done)</b>. Post-commit, <code>boundary_events_of</code> = <code>[merge_completed, terminal]</code>; the template declares <code>release.boundaries: [merge_completed]</code> → <code>initiate_release(merge_completed)</code> releases the worktree (LC2); <code>terminal</code> no-ops (not declared)</div>
           </div></div>
           <div class="trace-row"><div class="trace-n">4</div><div class="trace-c">
             <div class="ev">(alternate, at step 3) the merge conflicts</div>
@@ -72,8 +72,8 @@
         <h3 class="view-h"><span class="view-tag pseudo">Pseudocode</span> The action step + RUN_ACTION</h3>
         <p>A new operator-intent handler <code>RUN_ACTION</code> (the automated <code>SUBMIT_DECISION</code>), an <code>ActionRunner</code>
         contract (the L2a runner family), <code>park_for_action</code> / <code>action_request</code>, and <code>boundary_events_of</code>
-        extended so an outcome’s <code>emits</code> reaches ②. Diffs against ②:</p>
-        <div class="code-diff" aria-label="Workflow actions pseudocode" data-old-label="② baseline" data-new-label="③a workflow actions">
+        extended so an outcome’s <code>emits</code> reaches LC2. Diffs against LC2:</p>
+        <div class="code-diff" aria-label="Workflow actions pseudocode" data-old-label="LC2 baseline" data-new-label="LC3a workflow actions">
           <script type="text/plain" class="diff-source" data-code-old-ref="release-pseudocode"></script>
           <script type="text/plain" class="diff-source" data-code-new data-code-id="action-pseudocode">[[@fold action-pseudocode]]</script>
         </div>
@@ -92,10 +92,10 @@
               <tr><td><b>route</b></td><td><code>outcomes[outcome_key].target</code> → <code>apply_target_entry_effects</code> (the kernel knows no key meanings); a <b>self-target</b> re-parks (stay + retry)</td></tr>
               <tr><td><b>payload</b></td><td><code>outcomes[key].payload</code> → the target’s <b>handoff</b> (e.g. a <code>regression</code> outcome → <code>implement</code> with an instruction — the automated <code>request_rework</code>)</td></tr>
               <tr><td><b>trigger-validation</b></td><td><b>payload only</b>: required trigger fields (e.g. commit <code>message</code> policy) — missing ⇒ <code>Rejected(missing_required_field)</code>, <b>no run</b> (the <code>human_gate</code> analog). <em>Not</em> workspace state</td></tr>
-              <tr><td><b>evidence</b></td><td><code>ACTION_RESULT</code>: outcome + outputs (<code>commit_sha</code>/<code>merge_sha</code>/exit/hash) inline in <b>T1</b>; logs in <b>T3</b> by durable ref (① INV-3)</td></tr>
+              <tr><td><b>evidence</b></td><td><code>ACTION_RESULT</code>: outcome + outputs (<code>commit_sha</code>/<code>merge_sha</code>/exit/hash) inline in <b>T1</b>; logs in <b>T3</b> by durable ref (LC1 INV-3)</td></tr>
               <tr><td><b>failure</b></td><td>business outcomes route (incl. self = stay); <code>infra_error</code> stays parked + audited (or a declared route) — the L2a business-vs-infra split</td></tr>
-              <tr><td><b>boundary</b></td><td>an outcome may <code>emits:</code> a release boundary event (<code>merged ⇒ merge_completed</code>) → ② <code>initiate_release</code></td></tr>
-              <tr><td><b>concurrency</b></td><td><b>marker-first, single-winner</b> (like ② release): the trigger is <code>{ instance_id, op_id, expected_version, action_key, payload, by }</code> — stale ⇒ <code>Stale</code>, replay ⇒ <code>Duplicate</code>; a <b>CAS claim</b> <code>action_pending → action_running(request_id)</code> is committed <em>before</em> the runner, so two concurrent <code>RUN_ACTION</code> never both reach the git-mutating runner (the loser — a <em>different</em> op_id — sees <code>action_running</code> ⇒ <code>not_awaiting_action</code>; a replay of the winner is <code>Duplicate</code>). The result is a second CAS commit; a crash in between leaves a durable <code>action_running</code> the L9 watchdog reconciles</td></tr>
+              <tr><td><b>boundary</b></td><td>an outcome may <code>emits:</code> a release boundary event (<code>merged ⇒ merge_completed</code>) → LC2 <code>initiate_release</code></td></tr>
+              <tr><td><b>concurrency</b></td><td><b>marker-first, single-winner</b> (like LC2 release): the trigger is <code>{ instance_id, op_id, expected_version, action_key, payload, by }</code> — stale ⇒ <code>Stale</code>, replay ⇒ <code>Duplicate</code>; a <b>CAS claim</b> <code>action_pending → action_running(request_id)</code> is committed <em>before</em> the runner, so two concurrent <code>RUN_ACTION</code> never both reach the git-mutating runner (the loser — a <em>different</em> op_id — sees <code>action_running</code> ⇒ <code>not_awaiting_action</code>; a replay of the winner is <code>Duplicate</code>). The result is a second CAS commit; a crash in between leaves a durable <code>action_running</code> the L9 watchdog reconciles</td></tr>
             </tbody>
           </table>
           </div>
@@ -109,7 +109,7 @@
           </div>
         </div>
 
-        <h3 class="view-h"><span class="view-tag invariant">Invariant</span> New at ③a</h3>
+        <h3 class="view-h"><span class="view-tag invariant">Invariant</span> New at LC3a</h3>
         <div class="agg invariant">
           <div class="agg-label">Added rules</div>
           <div class="ents">
@@ -119,8 +119,8 @@
 
         <h3 class="view-h"><span class="view-tag config">Config</span> The template — commit / merge as action steps</h3>
         <p>The L3 <code>commit_pending</code> <code>type: wait</code> step becomes a <code>commit_action</code>; a <code>merge_action</code>
-        follows; the release boundary moves to <code>merge_completed</code> (the ② deferral, now realized). Diffs against ②:</p>
-        <div class="code-diff" aria-label="③a template config" data-old-label="② baseline" data-new-label="③a current">
+        follows; the release boundary moves to <code>merge_completed</code> (the LC2 deferral, now realized). Diffs against LC2:</p>
+        <div class="code-diff" aria-label="LC3a template config" data-old-label="LC2 baseline" data-new-label="LC3a current">
           <script type="text/plain" class="diff-source" data-code-old-ref="release-template-config"></script>
           <script type="text/plain" class="diff-source" data-code-new data-code-id="action-template-config">[[@code code/action-template-config.new.txt]]</script>
         </div>
@@ -135,23 +135,23 @@
 [[@absent workflow-actions]]
         </div>
 
-        <h3 class="view-h"><span class="view-tag evidence">Evidence</span> Why we accept ③a for now</h3>
+        <h3 class="view-h"><span class="view-tag evidence">Evidence</span> Why we accept LC3a for now</h3>
         <div class="agg">
           <div class="agg-label">Acceptance evidence — the v1 commit / merge actions are representable</div>
           <div class="ents">
-            <div class="ent"><div class="en">commit action</div><div class="fields">v1 <code>commitCommandPipeline</code> RUNS <code>git commit -m &lt;msg&gt;</code> in the worktree (<code>commitCommandGitStep.ts:455</code>), records <code>COMMIT_RESULT { commit_sha, message, staged_files }</code> → a <code>commit_action</code> with a <code>committed</code> outcome + <code>ACTION_RESULT</code> evidence · <b>③a</b></div></div>
-            <div class="ent"><div class="en">merge action + boundary</div><div class="fields">v1 <code>mergeCommandPipeline</code> RUNS <code>git merge --no-ff</code> (<code>localMergeStep.ts:21</code>), then bundles teardown; v3 <b>unbundles</b> — the <code>merge_action</code> emits <code>merge_completed</code> and ② releases the worktree · <b>③a + ②</b></div></div>
-            <div class="ent"><div class="en">trigger-validation</div><div class="fields">v1 rejects a non-conventional / missing commit message before running (<code>commitMessagePolicy</code>) → trigger-validation on the <code>message</code> payload (<code>missing_required_field</code>) · <b>③a</b></div></div>
-            <div class="ent"><div class="en">business-vs-infra failure</div><div class="fields">v1 merge conflict → auto-abort + <code>MERGE_CONFLICT_REQUIRES_MANUAL_RESOLUTION</code> (stay, retry); distinct from infra (cleanup / state-persist) reason codes → a <code>conflict</code> business outcome (self-route) vs <code>infra_error</code> · <b>③a</b></div></div>
+            <div class="ent"><div class="en">commit action</div><div class="fields">v1 <code>commitCommandPipeline</code> RUNS <code>git commit -m &lt;msg&gt;</code> in the worktree (<code>commitCommandGitStep.ts:455</code>), records <code>COMMIT_RESULT { commit_sha, message, staged_files }</code> → a <code>commit_action</code> with a <code>committed</code> outcome + <code>ACTION_RESULT</code> evidence · <b>LC3a</b></div></div>
+            <div class="ent"><div class="en">merge action + boundary</div><div class="fields">v1 <code>mergeCommandPipeline</code> RUNS <code>git merge --no-ff</code> (<code>localMergeStep.ts:21</code>), then bundles teardown; v3 <b>unbundles</b> — the <code>merge_action</code> emits <code>merge_completed</code> and LC2 releases the worktree · <b>LC3a + LC2</b></div></div>
+            <div class="ent"><div class="en">trigger-validation</div><div class="fields">v1 rejects a non-conventional / missing commit message before running (<code>commitMessagePolicy</code>) → trigger-validation on the <code>message</code> payload (<code>missing_required_field</code>) · <b>LC3a</b></div></div>
+            <div class="ent"><div class="en">business-vs-infra failure</div><div class="fields">v1 merge conflict → auto-abort + <code>MERGE_CONFLICT_REQUIRES_MANUAL_RESOLUTION</code> (stay, retry); distinct from infra (cleanup / state-persist) reason codes → a <code>conflict</code> business outcome (self-route) vs <code>infra_error</code> · <b>LC3a</b></div></div>
           </div>
         </div>
         <div class="note evidence">
           <ul style="margin:0">
-            <li><b>Scenario coverage:</b> approve → commit action (message-validated) → merge action (emits merge_completed → ② release) → done; a conflict or nothing-staged stays parked for a retry; a bad message is rejected before any git runs.</li>
-            <li><b>Invariant coverage:</b> outcome selects not the kernel ✓; trigger validates payload only ✓; self-route stays parked ✓; ACTION_RESULT evidence ✓; outcome emits the ② boundary ✓; action-is-select vs gate-is-filter ✓ — and all L0a–L3 + ① + ② invariants still hold.</li>
+            <li><b>Scenario coverage:</b> approve → commit action (message-validated) → merge action (emits merge_completed → LC2 release) → done; a conflict or nothing-staged stays parked for a retry; a bad message is rejected before any git runs.</li>
+            <li><b>Invariant coverage:</b> outcome selects not the kernel ✓; trigger validates payload only ✓; self-route stays parked ✓; ACTION_RESULT evidence ✓; outcome emits the LC2 boundary ✓; action-is-select vs gate-is-filter ✓ — and all L0a–L3 + LC1 + LC2 invariants still hold.</li>
             <li><b>Accepted tradeoff:</b> a v3 semantic shift (workflow-done after merge, vs v1’s DONE-before-merge) — stated and accepted to keep merge a normal pre-terminal action; the auto trigger and a packaged action library are out.</li>
-            <li><b>Known gaps (intended):</b> auto trigger (later), rich outcome predicates (later), packaged actions (③b), operator delete + purge (④), exactly-once / retry (L9), remote action proofs (L8/L10). Each is in Absent.</li>
-            <li><b>Decision:</b> accepted as the ③a baseline (light evidence per playbook §2.1); ③b generalizes the action library, L4 inherits action steps per child.</li>
+            <li><b>Known gaps (intended):</b> auto trigger (later), rich outcome predicates (later), packaged actions (LC3b), operator delete + purge (LC4), exactly-once / retry (L9), remote action proofs (L8/L10). Each is in Absent.</li>
+            <li><b>Decision:</b> accepted as the LC3a baseline (light evidence per playbook §2.1); LC3b generalizes the action library, L4 inherits action steps per child.</li>
           </ul>
         </div>
       </section>

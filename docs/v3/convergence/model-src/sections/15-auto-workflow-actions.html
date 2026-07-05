@@ -1,10 +1,10 @@
 <section id="auto-workflow-actions">
-        <h2 class="level-h"><span class="level-badge">③b</span> Auto workflow actions — perf-test</h2>
-        <p class="level-sub">③a was operator-triggered actions. ③b adds the <code>trigger: auto</code> mode: an action runs
+        <h2 class="level-h"><span class="level-badge">LC3b</span> Auto workflow actions — perf-test</h2>
+        <p class="level-sub">LC3a was operator-triggered actions. LC3b adds the <code>trigger: auto</code> mode: an action runs
         <b>on arrival</b> (no operator), still <b>marker-first</b> — the arrival commit claims <code>WAITING(action_running)</code> +
         <code>ACTION_RUNNING</code>, then an <code>ActionIntent</code> (produce-not-perform, the <code>DispatchIntent</code> analog) is
         delivered <b>post-commit</b>, the runner runs, and the result returns as an <code>ACTION_RESULT</code> kernel-event that routes
-        by outcome. Same Workflow Action Contract, new trigger + result-delivery. Diffs against ③a.</p>
+        by outcome. Same Workflow Action Contract, new trigger + result-delivery. Diffs against LC3a.</p>
 
         <div class="note">
           <b>The runner never runs in the arrival commit.</b> &ldquo;Inline&rdquo; is only a <em>latency</em> mode of the result event —
@@ -14,7 +14,7 @@
 
         <h3 class="view-h"><span class="view-tag" style="background:#e2e8f0;color:#334155">Shape</span> auto vs operator (auto-actions aid)</h3>
         <pre class="pseudo" style="font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size:12.5px; line-height:1.5">
-  operator (③a)                                 auto (③b)
+  operator (LC3a)                                 auto (LC3b)
   ───────────────────────────                   ───────────────────────────
   arrive → WAITING(action_pending)              arrive → CLAIM WAITING(action_running) + ACTION_RUNNING   [arrival commit]
        ActionRequest (operator surface)              ActionIntent (run X)   [post-commit, produce-not-perform]
@@ -57,18 +57,18 @@
         <h3 class="view-h"><span class="view-tag pseudo">Pseudocode</span> auto trigger + ACTION_RESULT event</h3>
         <p><code>park_for_action</code> branches by trigger (auto ⇒ claim <code>action_running</code> + <code>ACTION_RUNNING</code>);
         <code>post_commit_output</code> emits an <code>ActionIntent</code>; a new <code>ACTION_RESULT</code> kernel-event handler
-        (the <code>RUNTIME_CONTEXT_READY</code> sibling) classifies + routes, with the episode-anchored bounded retry. Diffs against ③a:</p>
-        <div class="code-diff" aria-label="auto workflow actions pseudocode" data-old-label="③a baseline" data-new-label="③b auto actions">
+        (the <code>RUNTIME_CONTEXT_READY</code> sibling) classifies + routes, with the episode-anchored bounded retry. Diffs against LC3a:</p>
+        <div class="code-diff" aria-label="auto workflow actions pseudocode" data-old-label="LC3a baseline" data-new-label="LC3b auto actions">
           <script type="text/plain" class="diff-source" data-code-old-ref="action-pseudocode"></script>
           <script type="text/plain" class="diff-source" data-code-new data-code-id="auto-action-pseudocode">[[@fold auto-action-pseudocode]]</script>
         </div>
 
         <h3 class="view-h"><span class="view-tag domain">Domain</span> The auto-action delta</h3>
         <div class="agg">
-          <div class="agg-label">Auto Workflow Action — the ③a contract + the auto trigger</div>
+          <div class="agg-label">Auto Workflow Action — the LC3a contract + the auto trigger</div>
           <div style="overflow-x:auto">
           <table class="contract">
-            <thead><tr><th>Aspect</th><th>③a (operator)</th><th>③b (auto)</th></tr></thead>
+            <thead><tr><th>Aspect</th><th>LC3a (operator)</th><th>LC3b (auto)</th></tr></thead>
             <tbody>
               <tr><td><b>trigger</b></td><td><code>operator_intent</code> (<code>RUN_ACTION</code>)</td><td><code>auto</code> — the arrival is the trigger</td></tr>
               <tr><td><b>claim</b></td><td><code>RUN_ACTION</code> CAS-claim</td><td>the <b>arrival commit</b> claims <code>action_running</code> + <code>ACTION_RUNNING</code> (singular — no concurrent claim)</td></tr>
@@ -83,7 +83,7 @@
           outcome (<code>regression</code>) routes; only an execution-uncertainty outcome (<code>infra_flake</code>) declares retry.</div>
         </div>
 
-        <h3 class="view-h"><span class="view-tag invariant">Invariant</span> New at ③b</h3>
+        <h3 class="view-h"><span class="view-tag invariant">Invariant</span> New at LC3b</h3>
         <div class="agg invariant">
           <div class="agg-label">Added rules</div>
           <div class="ents">
@@ -94,8 +94,8 @@
         <h3 class="view-h"><span class="view-tag config">Config</span> The template — a perf_test auto action</h3>
         <p><code>review</code> <code>CONVERGED</code> now routes to a <code>perf_test</code> auto action (the converge gates still guard it);
         <code>perf_test</code> routes <code>pass → human_approval</code> (carrying the recommendation), <code>regression → implement</code>,
-        <code>infra_flake</code> retries. Diffs against ③a:</p>
-        <div class="code-diff" aria-label="③b template config" data-old-label="③a baseline" data-new-label="③b current">
+        <code>infra_flake</code> retries. Diffs against LC3a:</p>
+        <div class="code-diff" aria-label="LC3b template config" data-old-label="LC3a baseline" data-new-label="LC3b current">
           <script type="text/plain" class="diff-source" data-code-old-ref="action-template-config"></script>
           <script type="text/plain" class="diff-source" data-code-new data-code-id="auto-action-template-config">[[@code code/auto-action-template-config.new.txt]]</script>
         </div>
@@ -109,22 +109,22 @@
 [[@absent auto-workflow-actions]]
         </div>
 
-        <h3 class="view-h"><span class="view-tag evidence">Evidence</span> Why we accept ③b for now</h3>
+        <h3 class="view-h"><span class="view-tag evidence">Evidence</span> Why we accept LC3b for now</h3>
         <div class="agg">
           <div class="agg-label">Acceptance evidence — auto-run-and-route is v1-grounded (inline); the async event is the v3 generalization</div>
           <div class="ents">
-            <div class="ent"><div class="en">auto-run-and-route exists</div><div class="fields">v1 <code>passValidationGate</code> auto-runs on PASS arrival, and <code>auto_rework</code> auto-routes on a rework verdict — both <b>inline</b>. So the auto trigger is v1-grounded; ③b's <code>ACTION_RESULT</code> <b>event</b> (async delivery) is the greenfield generalization (v1 is all-synchronous) · <b>③b</b></div></div>
-            <div class="ent"><div class="en">bounded retry → escalate</div><div class="fields">v1 <code>auto_rework_count / auto_rework_limit</code> (default 10) auto-loops rework then falls through to the human gate — grounds the per-outcome retry budget + escalation; here it is transcript-reconstructable, not a hidden counter · <b>③b</b></div></div>
-            <div class="ent"><div class="en">action vs gate</div><div class="fields"><code>perf_test</code> runs → classifies → routes 3 ways; v1 <code>passValidationGate</code> runs → <em>filters</em> (pass / block) the PASS. The contrast is the point: an action selects, a gate filters · <b>③b</b></div></div>
+            <div class="ent"><div class="en">auto-run-and-route exists</div><div class="fields">v1 <code>passValidationGate</code> auto-runs on PASS arrival, and <code>auto_rework</code> auto-routes on a rework verdict — both <b>inline</b>. So the auto trigger is v1-grounded; LC3b's <code>ACTION_RESULT</code> <b>event</b> (async delivery) is the greenfield generalization (v1 is all-synchronous) · <b>LC3b</b></div></div>
+            <div class="ent"><div class="en">bounded retry → escalate</div><div class="fields">v1 <code>auto_rework_count / auto_rework_limit</code> (default 10) auto-loops rework then falls through to the human gate — grounds the per-outcome retry budget + escalation; here it is transcript-reconstructable, not a hidden counter · <b>LC3b</b></div></div>
+            <div class="ent"><div class="en">action vs gate</div><div class="fields"><code>perf_test</code> runs → classifies → routes 3 ways; v1 <code>passValidationGate</code> runs → <em>filters</em> (pass / block) the PASS. The contrast is the point: an action selects, a gate filters · <b>LC3b</b></div></div>
           </div>
         </div>
         <div class="note evidence">
           <ul style="margin:0">
             <li><b>Scenario coverage:</b> converge → perf_test (auto) → pass routes to the human gate (with the recommendation), regression loops to implement, infra_flake retries within the episode then escalates.</li>
-            <li><b>Invariant coverage:</b> auto is marker-first ✓; result is a correlated kernel-event ✓; retry opt-in + episode-anchored ✓; recommendation rides the firing edge ✓ — and all L0a–L3 + ① + ② + ③a invariants still hold.</li>
+            <li><b>Invariant coverage:</b> auto is marker-first ✓; result is a correlated kernel-event ✓; retry opt-in + episode-anchored ✓; recommendation rides the firing edge ✓ — and all L0a–L3 + LC1 + LC2 + LC3a invariants still hold.</li>
             <li><b>Accepted tradeoff:</b> the deferred async driver + timeout are thin (L9); pure computed-routing, a rich predicate DSL, and a packaged library are out.</li>
             <li><b>Known gaps (intended):</b> deferred mechanics + timeout (L9), unbounded retry / watchdog (L9), pure computed-routing (later), predicate DSL (later), packaged library (later), undeclared-outcome recovery (L9). Each is in Absent.</li>
-            <li><b>Decision:</b> accepted as the ③b baseline (light evidence per playbook §2.1); L4 inherits action steps per child.</li>
+            <li><b>Decision:</b> accepted as the LC3b baseline (light evidence per playbook §2.1); L4 inherits action steps per child.</li>
           </ul>
         </div>
       </section>

@@ -1,5 +1,5 @@
 
 CANCEL(instance) → Outcome                                           # operator_intent — any non-terminal
   REQUIRE instance.kernel_status ≠ TERMINAL
-  instance.kernel_status ← TERMINAL ; instance.terminal_disposition ← cancelled   # ② emits the terminal boundary event; RECEIVE's post-commit hook releases ONLY if terminal is a declared release boundary — never inside this mutation
+  instance.kernel_status ← TERMINAL ; instance.terminal_disposition ← cancelled   # LC2 emits the terminal boundary event; RECEIVE's post-commit hook releases ONLY if terminal is a declared release boundary — never inside this mutation
   RETURN Terminated(cancelled)

@@ -1,5 +1,5 @@
 <section id="l0f-mode">
-        <h2 class="level-h"><span class="level-badge">L0f+</span> Run-scoped mode / variants</h2>
+        <h2 class="level-h"><span class="level-badge">L0g</span> Run-scoped mode / variants</h2>
         <p class="level-sub">A single workflow can run in more than one <em>mode</em> (v1's <code>code | doc</code>) —
         the same step graph, but different gates and context. This is <b>not</b> a runtime kernel branch: a
         <b>start-fixed</b>, run-scoped <code>mode</code> that <b>L0f resolution</b> normalizes into a <b>pinned,
@@ -16,7 +16,7 @@
           rides a <b>gate binding</b>: a transition point may declare a <code>[code]</code> binding <em>and</em> a
           <code>[doc]</code> binding (same <code>uses</code> with different <code>config</code>, or a different
           <code>uses</code>); resolution keeps the mode's. The consumer is the surviving gate's evaluator — visible,
-          not a dangling map. An L0f delta kept <b>off</b> the L0f / ③b baselines (the lenses diff against them and
+          not a dangling map. An L0f delta kept <b>off</b> the L0f / LC3b baselines (the lenses diff against them and
           leave them untouched); L2 (gates) and L2b (context) are the pure consumers.</div>
 
         <h3 class="view-h"><span class="view-tag" style="background:#e2e8f0;color:#334155">Shape</span> One template, resolved to a variant at start</h3>
@@ -51,14 +51,14 @@
           </div></div>
           <div class="trace-row"><div class="trace-n">4</div><div class="trace-c">
             <div class="ev">pinned, mode-specific <code>ResolvedDefinition</code> → <code>CREATE_INSTANCE</code></div>
-            <div class="meta">at <code>implement.PASS</code> the surviving <code>docs_only_runtime_evidence</code> gate runs: it does <b>not</b> execute a test — it returns <code>allow</code> plus a <b>durable evidence record</b> (<code>verification_status: trusted</code>, <code>skip_full_rerun: true</code>) — its <b>ref rides the gate decision</b> (<code>evidence_refs</code>) into the run record (① INV-3, no inline blob). No runtime mode field, no kernel branch on the mode; the gate ran because its binding survived resolution</div>
+            <div class="meta">at <code>implement.PASS</code> the surviving <code>docs_only_runtime_evidence</code> gate runs: it does <b>not</b> execute a test — it returns <code>allow</code> plus a <b>durable evidence record</b> (<code>verification_status: trusted</code>, <code>skip_full_rerun: true</code>) — its <b>ref rides the gate decision</b> (<code>evidence_refs</code>) into the run record (LC1 INV-3, no inline blob). No runtime mode field, no kernel branch on the mode; the gate ran because its binding survived resolution</div>
           </div></div>
         </div>
         <div class="note runtime">
           The doc variant's "runtime checks skipped, trusted" is <b>not gate-absence</b> — it is an <b>explicit
           gate</b> (<code>docs_only_runtime_evidence</code>) producing <b>durable evidence</b> for the trusted-skip. A gate result is
           structured (<code>verdict</code> + <code>evidence_refs</code>): the evidence lives in the durable evidence store and
-          its <b>ref</b> rides the decision into the run record (L2 / L2a; ① INV-3 — no inline blob), so a gate can <em>record</em> the intended skip, not just check a boolean. The later
+          its <b>ref</b> rides the decision into the run record (L2 / L2a; LC1 INV-3 — no inline blob), so a gate can <em>record</em> the intended skip, not just check a boolean. The later
           reviewer / converge flow reads the <b>ref</b> from the transcript (T1) and resolves the evidence from the durable store (T3) — there is no free-floating policy map.
         </div>
 
@@ -110,12 +110,12 @@
           </div>
         </div>
 
-        <h3 class="view-h"><span class="view-tag config">Config</span> Mode-tagged gate bindings + context refs (diff vs ③b — the latest template)</h3>
+        <h3 class="view-h"><span class="view-tag config">Config</span> Mode-tagged gate bindings + context refs (diff vs LC3b — the latest template)</h3>
         <p>The template gains <code>modes</code> + <code>default_mode</code>, and a membership tag on the two
         surfaces: the runtime-validation gate becomes <code>[code]</code> with a sibling <code>[doc]</code> evidence
-        gate at the same point, and a <code>[doc]</code> context ref on the reviewer. Every other line is the ③b
+        gate at the same point, and a <code>[doc]</code> context ref on the reviewer. Every other line is the LC3b
         baseline (the latest template — gates, actions, release already present):</p>
-        <div class="code-diff" aria-label="L0f mode template config" data-old-label="③b baseline" data-new-label="③b + mode">
+        <div class="code-diff" aria-label="L0f mode template config" data-old-label="LC3b baseline" data-new-label="LC3b + mode">
           <script type="text/plain" class="diff-source" data-code-old-ref="auto-action-template-config"></script>
           <script type="text/plain" class="diff-source" data-code-new data-code-id="l0f-mode-template-config">[[@code code/l0f-mode-template-config.new.txt]]</script>
         </div>
@@ -157,7 +157,7 @@
               (<code>reviewerTestDirectiveResolver.ts:80</code>), plus the guard that a skip-claim with runtime log
               refs is a conflict (<code>docsOnlyRuntimeSkipGuard.ts</code>). This is evidence <em>production</em>, not a
               boolean check — so it is the <code>docs_only_runtime_evidence</code> gate whose <code>allow</code> result
-              produces that durable evidence and records its <b>ref</b> on the <code>GateDecision</code> (① INV-3 — no inline blob). It stays on the gate surface with a visible consumer.</li>
+              produces that durable evidence and records its <b>ref</b> on the <code>GateDecision</code> (LC1 INV-3 — no inline blob). It stays on the gate surface with a visible consumer.</li>
           </ul>
           <p style="margin:8px 0 0"><b>Why <code>mode_profiles</code> was dropped:</b> the model has no free-floating
           run-level policy consumer (a policy always runs at a gate), so a <code>policy_refs</code> map had nowhere to

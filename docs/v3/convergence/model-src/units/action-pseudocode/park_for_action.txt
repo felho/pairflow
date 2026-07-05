@@ -1,4 +1,4 @@
 
-park_for_action(instance, template, step) → void                   # ③ — arrival at an operator-triggered type: action step; parks for the operator's RUN_ACTION trigger (no transcript entry — the ActionRequest is DERIVED, lighter than the human_gate's recorded DECISION_REQUEST)
+park_for_action(instance, template, step) → void                   # LC3 — arrival at an operator-triggered type: action step; parks for the operator's RUN_ACTION trigger (no transcript entry — the ActionRequest is DERIVED, lighter than the human_gate's recorded DECISION_REQUEST)
   instance.kernel_status ← WAITING
   instance.wait ← { kind: action_pending, requested_by: step.id, resume_events: [step.action.key] }   # the action key (e.g. COMMIT, MERGE) is the trigger the operator sends

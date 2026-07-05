@@ -1,7 +1,7 @@
 
-# INV-5 — the bridge to ② Teardown: a resource is releasable only when nothing canonical points in.
+# INV-5 — the bridge to LC2 Teardown: a resource is releasable only when nothing canonical points in.
 release_safe(resource) → bool
   RETURN for every ref in canonical_refs(record): NOT points_into(ref, resource)
   # Storage Scope guarantees this BY CONSTRUCTION (canonical never homes in T4);
-  # ② Teardown only ASSERTS it, fail-closed, before releasing.
+  # LC2 Teardown only ASSERTS it, fail-closed, before releasing.
           

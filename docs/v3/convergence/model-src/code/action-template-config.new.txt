@@ -26,10 +26,10 @@ template:
       branch_pattern: ${slot:runtime.worktree.branch_pattern}  # provider materializes the actual name from instance_id
       work_mode: worktree                                      # literal — provider-internal variant (worktree | clone)
       # worktree path defaults to <repo-parent>/.pairflow-worktrees/<repo>/<instance_id>
-    release:                      # ② — worktree is teardown-managed, so a release policy is MANDATORY (validate_release_policy at load)
+    release:                      # LC2 — worktree is teardown-managed, so a release policy is MANDATORY (validate_release_policy at load)
       policy: required            # required | retained | external — retained/external carry NO kernel release obligation
-      boundaries: [merge_completed]   # ③ the merge_action's `merged` outcome emits this; ② releases the worktree when the merge completes
-      #   (was [terminal] at the L3 anchor; now a post-commit action exists, so the boundary moves past commit/merge — exactly the ② deferral)
+      boundaries: [merge_completed]   # LC3 the merge_action's `merged` outcome emits this; LC2 releases the worktree when the merge completes
+      #   (was [terminal] at the L3 anchor; now a post-commit action exists, so the boundary moves past commit/merge — exactly the LC2 deferral)
   context_blocks:               # L2b — the catalog: id → { body }; the single body source for rendered packet blocks
     reviewer-severity-ontology:
       body: "Rate findings blocker / major / minor; converge only when no blocker or major finding remains."
@@ -81,14 +81,14 @@ template:
       instruction: "Approve the converged change, or request rework."
       decisions:                  # the human_gate's decisions map IS its transition map, keyed by decision key. A decision carries no lifecycle meaning — the TARGET decides. approve/request_rework are just THIS anchor's keys; the kernel knows no decision names
         approve:
-          target: commit_action   # → a type: action step (③): approve routes into the operator-triggered commit action; a different workflow could target an agent step, another gate, or done
+          target: commit_action   # → a type: action step (LC3): approve routes into the operator-triggered commit action; a different workflow could target an agent step, another gate, or done
         request_rework:
           target: implement       # → implement: an agent step → a new round, the operator's instruction as the handoff
           payload:                # per-decision required fields — the generic home of the old hardcoded rework-instruction rule
             instruction: { required: true }   # the implementer must be told exactly what to fix (v1: --message)
             refs:        { required: false }
     - id: commit_action
-      type: action               # ③ — the AUTOMATED sibling of human_gate: a runner produces the outcome, the outcome routes (kernel knows no outcome meanings)
+      type: action               # LC3 — the AUTOMATED sibling of human_gate: a runner produces the outcome, the outcome routes (kernel knows no outcome meanings)
       role: operator             # operator-triggered: parks WAITING(action_pending) until the operator sends COMMIT
       trigger: operator_intent
       action:
@@ -106,7 +106,7 @@ template:
         key: MERGE
         uses: pairflow.git_merge  # runs `git merge --no-ff` of the bubble branch into base_branch
       outcomes:
-        merged:   { target: done, emits: merge_completed }   # ok → done; emits the ② release boundary (release.boundaries: [merge_completed])
+        merged:   { target: done, emits: merge_completed }   # ok → done; emits the LC2 release boundary (release.boundaries: [merge_completed])
         conflict: { target: merge_action }                   # business_failure: merge conflict ⇒ stay parked, operator resolves + re-triggers
       # an AUTO action (later, same contract): a perf_test step — trigger: auto, outcomes: { pass: { target: human_approval },
       #   regression: { target: implement, payload: { instruction: "optimize the changed path" } } } — the perf result routes, no human/LLM decides

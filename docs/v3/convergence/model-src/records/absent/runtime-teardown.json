@@ -8,7 +8,7 @@
     },
     {
       "id": "deferred-release-boundary-realized",
-      "html": "No <b>deferred release boundary realized</b> — the parameterized hook is in (<code>initiate_release(instance, boundary_event)</code>, guard <code>boundary_event ∉ release_boundaries(template)</code>), but no post-completion action emits a non-terminal boundary yet; the merge / commit <em>actions</em> that do are <span class=\"at\">→ ③a</span>"
+      "html": "No <b>deferred release boundary realized</b> — the parameterized hook is in (<code>initiate_release(instance, boundary_event)</code>, guard <code>boundary_event ∉ release_boundaries(template)</code>), but no post-completion action emits a non-terminal boundary yet; the merge / commit <em>actions</em> that do are <span class=\"at\">→ LC3a</span>"
     },
     {
       "id": "retained-external-release-policy-exercised",
@@ -16,11 +16,11 @@
     },
     {
       "id": "workflow-actions",
-      "html": "No <b>workflow actions</b> — the <code>type: action</code> steps that run git commit / merge (and emit a deferred boundary like merge_completed), perf-test, publish, notify <span class=\"at\">→ ③a / ③b</span>"
+      "html": "No <b>workflow actions</b> — the <code>type: action</code> steps that run git commit / merge (and emit a deferred boundary like merge_completed), perf-test, publish, notify <span class=\"at\">→ LC3a / LC3b</span>"
     },
     {
       "id": "archive-export-purge",
-      "html": "No <b>archive / export / purge</b> — the record-purge half of v1 <code>delete</code> is a storage-axis op, not resource teardown <span class=\"at\">→ ④</span>"
+      "html": "No <b>archive / export / purge</b> — the record-purge half of v1 <code>delete</code> is a storage-axis op, not resource teardown <span class=\"at\">→ LC4</span>"
     },
     {
       "id": "provider-internals",

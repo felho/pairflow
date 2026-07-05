@@ -9,8 +9,8 @@ CREATE_INSTANCE(template_ref, activation_mode, task, binding, run_overrides, par
   REQUIRE validate_gate_config(template)                          # L2a: static gate-config invariants (process↔workspace, no fail_instance) — definition-load validation, fail at create
   REQUIRE validate_context_refs(template)                         # L2b: every issued context_block ref resolves in the catalog — fail at create, beside binding coverage
   REQUIRE validate_decision_gates(template)                       # L3: every human_gate's decisions resolve, and every `recommends` names a real decision key of its target gate
-  REQUIRE validate_release_policy(template)                       # ②: a teardown-managed runtime_context MUST declare runtime_context.release (policy + non-empty boundaries when required)
-  REQUIRE validate_action_steps(template)                         # ③: every type: action step has a runner + non-empty outcomes whose targets resolve
+  REQUIRE validate_release_policy(template)                       # LC2: a teardown-managed runtime_context MUST declare runtime_context.release (policy + non-empty boundaries when required)
+  REQUIRE validate_action_steps(template)                         # LC3: every type: action step has a runner + non-empty outcomes whose targets resolve
   REQUIRE validate_child_steps(template)                          # L4: every type: child_workflow step has a template_ref + child_key + non-empty wait_for whose targets resolve
   instance ← create { template_ref, task, binding, activation_mode,
                       kernel_status: CREATED, current_step: none, round: 0,   # round 0 = prepared, no work cycle begun yet (position none until ACTIVE)

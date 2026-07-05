@@ -220,12 +220,12 @@
       <a class="level" href="#l2a">L2a <span class="tag">· external/process gate</span></a>
       <a class="level" href="#l2b">L2b <span class="tag">· policy/gate context</span></a>
       <a class="level" href="#l3">L3 <span class="tag">· human decision Ask</span></a>
-      <a class="level" href="#storage-scope">① <span class="tag">· durable run record / storage scope</span></a>
-      <a class="level" href="#runtime-teardown">② <span class="tag">· runtime resource teardown</span></a>
-      <a class="level" href="#workflow-actions">③a <span class="tag">· workflow actions (commit / merge)</span></a>
-      <a class="level" href="#auto-workflow-actions">③b <span class="tag">· auto actions (perf-test)</span></a>
-      <a class="level" href="#archive-purge">④ <span class="tag">· archive / export / purge</span></a>
-      <a class="level" href="#l0f-mode">L0f+ <span class="tag">· run-scoped mode / variants</span></a>
+      <a class="level" href="#storage-scope">LC1 <span class="tag">· durable run record / storage scope</span></a>
+      <a class="level" href="#runtime-teardown">LC2 <span class="tag">· runtime resource teardown</span></a>
+      <a class="level" href="#workflow-actions">LC3a <span class="tag">· workflow actions (commit / merge)</span></a>
+      <a class="level" href="#auto-workflow-actions">LC3b <span class="tag">· auto actions (perf-test)</span></a>
+      <a class="level" href="#archive-purge">LC4 <span class="tag">· archive / export / purge</span></a>
+      <a class="level" href="#l0f-mode">L0g <span class="tag">· run-scoped mode / variants</span></a>
       <a class="level" href="#l4-child">L4 <span class="tag">· child workflow instances</span></a>
       <div class="cut">▲ MVP cut — local WF-7 runs</div>
       <div class="future">L5 · help subflow</div>
@@ -276,6 +276,14 @@
           concept. Some primitives <em>mature in stages</em> (the Ask: human-decision → agent-help →
           general; the wait: internal-deterministic → external-fuzzy). Levels are greenfield kernel
           concepts; reality checks against the v1 code (<code>src/v11/…</code>) keep them honest.
+        </div>
+        <div class="note">
+          <strong>Naming note.</strong> The <strong>LC1–LC4</strong> slices (durable run record ·
+          runtime teardown · workflow actions · archive/purge) are the <em>lifecycle-close</em>
+          strand — a build-order sequence that landed between L3 and L4. LC names ramp
+          <em>position</em>, not ownership: LC2 completes L0e's runtime-context lifecycle, LC1 is a
+          cross-cutting storage contract. <strong>L0g</strong> (run-scoped mode / variants) is the
+          L0f-family resolution extension.
         </div>
       </section>
 

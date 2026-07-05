@@ -5,7 +5,7 @@ apply_target_entry_effects(instance, template, from_step_id, target) → void   
   IF target is terminal THEN COMPLETE(instance) ; RETURN            # the existing HANDLE terminal-step rule → TERMINAL(done); no new terminal semantics at L3
   step ← template.step(target)
   IF is_human_gate(template, target) THEN park_for_human_decision(instance, template, step) ; RETURN   # a DECISION wait — WAITING(human_decision) + DECISION_REQUEST + the Ask
-  IF is_action_step(template, target) THEN park_for_action(instance, template, step) ; RETURN   # ③ a WORKFLOW ACTION — operator_intent ⇒ park WAITING(action_pending); auto ⇒ claim WAITING(action_running) + ActionIntent (③b)
+  IF is_action_step(template, target) THEN park_for_action(instance, template, step) ; RETURN   # LC3 a WORKFLOW ACTION — operator_intent ⇒ park WAITING(action_pending); auto ⇒ claim WAITING(action_running) + ActionIntent (LC3b)
   IF is_child_workflow_step(template, target) THEN park_for_child(instance, template, step) ; RETURN   # L4 — SPAWN + WAIT: claim WAITING(child_event) + an idempotent (child_key'd) ChildWorkflowLink; the child CREATE_INSTANCE is produced post-commit
   IF is_wait_step(template, target)  THEN park_for_wait(instance, step)             ; RETURN          # a BARE wait — WAITING(step.wait.kind); RESUME_WAIT resumes it — only the resume ACTION (running the operation) is later. NO privileged "finalization" — commit/merge/perf-test are just wait steps
   instance.kernel_status ← ACTIVE ; instance.wait ← none           # an agent step ⇒ resume ACTIVE; the dispatch is derived post-commit

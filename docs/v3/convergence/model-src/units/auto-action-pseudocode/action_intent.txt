@@ -1,4 +1,4 @@
 
-action_intent(instance, template) → ActionIntent                   # ③b — an auto action's run effect; produce-not-perform (the DispatchIntent analog). The runner runs POST-COMMIT, NEVER inside the arrival commit
+action_intent(instance, template) → ActionIntent                   # LC3b — an auto action's run effect; produce-not-perform (the DispatchIntent analog). The runner runs POST-COMMIT, NEVER inside the arrival commit
   step ← template.step(instance.current_step)
   RETURN ActionIntent { instance_id, request_id: instance.wait.request_id, runner: step.action.uses, action_spec: step.action.spec, cwd: runtime_context_workspace(instance) }   # a local/driver runner runs it; the result returns as ACTION_RESULT (inline ⇒ immediately, deferred ⇒ later — same contract)

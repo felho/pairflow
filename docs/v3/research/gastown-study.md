@@ -471,7 +471,7 @@ a frozen template (`Protomolecule`) and instantiated either as a lightweight **r
 prime time, no DB rows) or a heavyweight **poured molecule** (steps materialized as recoverable sub-wisps) — i.e.
 v3's L0f Template-with-typed-steps plus a runtime/persistence knob. The **Refinery** merge queue is a **Bors-style
 batch-then-bisect engine**: stack N squash-merges, run configurable shell *gates* once on the stack tip, fast-forward
-on green, binary-search to isolate the culprit on red — v3's ③ commit/merge action fused with an L2 gate that routes
+on green, binary-search to isolate the culprit on red — v3's LC3 commit/merge action fused with an L2 gate that routes
 by outcome. The whole thing rests on "state lives in the data (beads/git), not in any agent's memory," which is
 *why* its verification gates are independent-evidence gates by construction.
 
@@ -492,7 +492,7 @@ weights`), then **batch-then-bisect** — `BuildRebaseStack` squash-merges up to
 runs gates **once on the stack tip**; green → fast-forward push all; red → flaky-retry once, then **binary-search to
 isolate culprit(s)**, merge the good subset. Failed MRs route via a `FailureType→label→reassign` table
 (`conflict→needs-rebase`, `tests_fail→needs-fix`, …) back to the originating polecat; a merge-slot lock serializes the
-default-branch push. **This *is* v3's ③ commit/merge action** (runs `git merge --squash` + `git push`, routes by
+default-branch push. **This *is* v3's LC3 commit/merge action** (runs `git merge --squash` + `git push`, routes by
 outcome) fused with an **L2 block-on-evidence gate**.
 
 ### The gate-bead = the structural `verify` gate
@@ -517,7 +517,7 @@ state; stateless periodic re-derivation) — though partly design-stage.
   v3's WF-1..WF-7 should expose this axis.
 - **The gate-bead is the reference implementation of the L2 `verify` gate** — a fresh, memoryless verifier blocked-by all
   implementation tasks, judging only the artifact. Steal verbatim: "verifier ≠ implementer" enforced via the blocking dep.
-- **Two-phase gates (pre-merge on source + post-squash on the combined tree)** — v3's ③ merge action should re-verify the
+- **Two-phase gates (pre-merge on source + post-squash on the combined tree)** — v3's LC3 merge action should re-verify the
   *merged* tree, the independent artifact no worker saw; catches integration-only failures per-branch CI misses.
 - **Batch-then-bisect with flaky-retry + a phase state machine + `FailureType→label→reassign` routing + a merge-slot lock** —
   an excellent reference for v3's merge-queue-as-commit-action.
@@ -743,7 +743,7 @@ implemented).
 | **L0e runtime (parked topic)** | tmux conflates substrate+transport+observation; ALL I/O screen-scraping; no pane-layout config; rejected a backend interface. `ExecWrapper` sandbox seam + declarative agent presets. | **Cautionary confirmation of the parked reframe.** Adopt Identity/Sandbox/Session vocab + ExecWrapper + presets; reject tmux-as-transport, welded observation, baked substrate, no-layout-config. |
 | **L0c/L7 provider+security boundary** | `AgentPresetInfo` as a provider-quirk registry; centralized `AgentEnv`; mTLS host proxy with command/subcommand allowlists, minimal env, rate/concurrency limits, and server-side git branch authorization. | **Adopt config-driven provider adapters and capability-bound host relays.** Require sandbox-intent fail-closed behavior; do not treat local admin cert issuance or tmux separation as a strong security boundary. |
 | **L0a durability** | Beads (mutable SQL rows) on Dolt (git-for-data) — versioned history free; but commit-graph-as-storage-cost (GC-daemon fleet), all-on-main last-write-wins, the four-project idempotency hole. | **Steal the capability (fork-to-restore, time-travel) + tiered durability; reject the Dolt engine + last-write-wins + exists-check idempotency.** v3 = light aggregate + `(instance_id,op_id)` ledger + `expected_version`. |
-| **L0f/L2/L3 templates+gates** | Formulas→Molecules→wisps (TOML DAG + the `pour` persistence knob); Refinery Bors merge queue (= ③ commit/merge + L2 gate); **the gate-bead = the structural `verify` gate**; two-phase post-squash gates. | **Adopt the gate-bead `verify` pattern, two-phase gates, the merge-queue-as-③-action, and the `pour` knob.** Reject NL-prose step bodies. |
+| **L0f/L2/L3 templates+gates** | Formulas→Molecules→wisps (TOML DAG + the `pour` persistence knob); Refinery Bors merge queue (= LC3 commit/merge + L2 gate); **the gate-bead = the structural `verify` gate**; two-phase post-squash gates. | **Adopt the gate-bead `verify` pattern, two-phase gates, the merge-queue-as-LC3-action, and the `pour` knob.** Reject NL-prose step bodies. |
 | **L6 scheduling** | The Scheduler: health-gated capacity governor, generic DispatchCycle, scheduling-state-on-a-separate-bead, circuit breaker. | **Adopt the capacity governor (the cleanest spawn-rate reference) + governor/policy split + at-most-once dispatch.** |
 | **L6 fan-out/fan-in** | Convoy staging builds a DAG, computes waves, launches Wave 1 immediately, and triggers synthesis only after tracked legs close. | **Adopt staged fan-out plus explicit synthesis gate; require idempotent synthesis and one dispatch path.** Avoid mixing direct launch with a separate deferred scheduler unless their ownership guarantees are unified. |
 | **L8 channels/events** | Mail (durable beads-to-identity) vs Nudge (ephemeral turn-boundary poke); standard ACP for the agent boundary; `.events.jsonl` activity feed; separate channel-event trigger files; `run.id` telemetry correlation. | **Adopt the nudge-vs-mail ephemeral-by-default doctrine + standard-ACP boundary + explicit durability tiers for events.** Reject mail-as-permanent-commit + N-copy fan-out + 3 overlapping event systems. |

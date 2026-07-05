@@ -1,5 +1,5 @@
 
-# ② definition load (CREATE_INSTANCE): a teardown-managed provider MUST declare how it is released — the release contract is the provision contract's pair
+# LC2 definition load (CREATE_INSTANCE): a teardown-managed provider MUST declare how it is released — the release contract is the provision contract's pair
 validate_release_policy(template) → ok | Rejected
   req ← template.runtime_context
   IF req = none THEN RETURN ok                                       # context-free: nothing provisioned ⇒ nothing to release

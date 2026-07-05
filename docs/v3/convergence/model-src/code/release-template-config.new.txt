@@ -26,11 +26,11 @@ template:
       branch_pattern: ${slot:runtime.worktree.branch_pattern}  # provider materializes the actual name from instance_id
       work_mode: worktree                                      # literal — provider-internal variant (worktree | clone)
       # worktree path defaults to <repo-parent>/.pairflow-worktrees/<repo>/<instance_id>
-    release:                      # ② — worktree is teardown-managed, so a release policy is MANDATORY (validate_release_policy at load)
+    release:                      # LC2 — worktree is teardown-managed, so a release policy is MANDATORY (validate_release_policy at load)
       policy: required            # required | retained | external — retained/external carry NO kernel release obligation
       boundaries: [terminal]      # non-empty under policy: required; terminal is a DECLARED boundary here (no post-completion action
-                                  # needs the worktree). A v1-faithful later form, once ③a emits the event:
-                                  #   boundaries: [merge_completed]   # operator delete is NOT a boundary — it drives force_release in ④
+                                  # needs the worktree). A v1-faithful later form, once LC3a emits the event:
+                                  #   boundaries: [merge_completed]   # operator delete is NOT a boundary — it drives force_release in LC4
   context_blocks:               # L2b — the catalog: id → { body }; the single body source for rendered packet blocks
     reviewer-severity-ontology:
       body: "Rate findings blocker / major / minor; converge only when no blocker or major finding remains."

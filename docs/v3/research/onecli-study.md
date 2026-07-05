@@ -51,7 +51,7 @@ a *different and stronger* mechanism (network-membership topology + a MITM proxy
    (`container/skills/onecli-gateway/SKILL.md`; `bitsafe-ai-os-capture.md:3842,3881`). This is the
    cleanest real-world instance of v3's **"the actor names the capability, the kernel performs it."**
 
-3. **The approval-hold is a human-decision gate living at the I/O boundary** (v3 **②/L2/L3
+3. **The approval-hold is a human-decision gate living at the I/O boundary** (v3 **LC2/L2/L3
    DECISION_REQUEST**). When a rule says a credentialed call needs sign-off, the gateway **holds the
    HTTP connection open** and fires a callback; the host persists a durable `pending_approvals` row,
    routes an ask-card to an admin, and resolves on click or denies on expiry
@@ -104,7 +104,7 @@ A NanoClaw-specific second proxy exists and must not be conflated: a separate Do
 ### LEARN / AVOID / ORTHOGONAL (Slice 1)
 
 - **LEARN** — **A capability boundary wants to be a single enforced choke point, not a per-tool check.**
-  This is the L0f+ insight ("policy is only ever applied *at* a gate; there is no free-floating policy
+  This is the L0g insight ("policy is only ever applied *at* a gate; there is no free-floating policy
   engine") realised at the I/O layer: every outbound capability passes one seam where identity, policy,
   and audit co-locate. v3's commit log is the natural inboard analogue of this outboard choke point.
 - **LEARN** — **Match-by-(host, path) is the capability-routing primitive.** It is the runtime twin of
@@ -165,7 +165,7 @@ long-polls `GET /api/approvals/pending` via `@onecli-sh/sdk`). The host then
 3. waits on an in-memory Promise resolved by the admin click or a local expiry timer;
 4. on expiry edits the card to "Expired" and returns `deny`.
 
-This is, structurally, v3's **②-style human-decision gate** (`HumanDecisionRequest` / `DECISION_REQUEST`):
+This is, structurally, v3's **LC2-style human-decision gate** (`HumanDecisionRequest` / `DECISION_REQUEST`):
 a request parks, a durable record is written, a human disposition routes it, expiry is a real path.
 
 ### LEARN / AVOID / ORTHOGONAL (Slice 3)
@@ -267,7 +267,7 @@ policy-enforcing, auditing proxy; failure to establish that = no spawn.*
 | v3 level | What OneCLI contributes | Verdict |
 |---|---|---|
 | **L7 (credential / capability)** | The **reference implementation** of the survey's "credential never travels" pattern: vault + placeholder + late substitution at an enforced boundary; identity-scoped, per-request resolution; inert `connect_url` miss. | **Adopt the pattern + the port abstraction.** Model the seam; the proxy is a provider behind it. |
-| **L2 / L3 / ② DECISION_REQUEST** | A working **human-decision gate at the I/O boundary**: durable pending record, approver-resolution order, explicit expiry disposition. | **Learn the shape; reject the transport** (durable park, not a held socket; one committed gate, not two desyncing sides). |
+| **L2 / L3 / LC2 DECISION_REQUEST** | A working **human-decision gate at the I/O boundary**: durable pending record, approver-resolution order, explicit expiry disposition. | **Learn the shape; reject the transport** (durable park, not a held socket; one committed gate, not two desyncing sides). |
 | **L0a / load-time validation** | **Fail-closed wiring** — refuse to spawn if the capability seam can't be established. | **Adopt the framing** as the I/O twin of `validate_*` rejects. |
 | **L13 (governance / audit)** | **Audit-at-the-boundary** the agent can't reach; the choke-point owns the trail. | **Adopt**; pairs with study-13's "hash/sign the ledger." |
 | **G / policy-config ("constitution")** | A **cautionary** data point: security-critical policy settable only via web UI. | **AVOID** click-ops; v3 policy is a checked-in declarative artifact. |

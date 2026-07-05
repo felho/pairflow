@@ -22,8 +22,8 @@ dispatch_intent(instance, template, step_id) → DispatchIntent
   RETURN DispatchIntent { actor, packet }            # a local/manual driver delivers; durable channel is L8
 
 # ════════════════════════════════════════════════════════════════════════════════════════════════
-# ④ Archive / Export / Purge runs AFTER the kernel — storage-lifecycle ops on the durable run record (①).
+# LC4 Archive / Export / Purge runs AFTER the kernel — storage-lifecycle ops on the durable run record (LC1).
 # It is NOT a preservation path: audit / metrics / eval compute from the durable record (or the surviving
 # global metrics stream), never from an archive. Only ONE kernel-adjacent piece — the DELETE_REQUESTED operator
-# intent (a CANCEL sibling) that drives the chain and invokes ② force_release (NOT a boundary event). purge / archive are STORAGE
+# intent (a CANCEL sibling) that drives the chain and invokes LC2 force_release (NOT a boundary event). purge / archive are STORAGE
 # ops, not kernel handlers. New instance axis: purge_state = none | purge_pending (purged is NOT an instance axis — it lives in the run_index tombstone).

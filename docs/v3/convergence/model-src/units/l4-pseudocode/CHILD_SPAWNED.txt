@@ -7,7 +7,7 @@ CHILD_SPAWNED(event) → Outcome                                   # L4 kernel_e
   IF link.status ≠ spawning THEN                                 # already bound — idempotent ONLY for the SAME child
     IF link.child_id = event.child_id THEN RETURN Duplicate      # a replayed CHILD_SPAWNED for this child ⇒ no-op
     ELSE RETURN Rejected(child_link_mismatch)                    # a DIFFERENT child_id on a bound link (double-create / mis-route) ⇒ never swallow (the orphan child is L9)
-  COMMIT atomically at instance.version:                         # marker-first / CAS, like ② RUNTIME_CONTEXT_RELEASED's correlated commit
+  COMMIT atomically at instance.version:                         # marker-first / CAS, like LC2 RUNTIME_CONTEXT_RELEASED's correlated commit
     REQUIRE link.status = spawning
     link.child_id ← event.child_id ; link.status ← active
     instance.transcript.append(CHILD_SPAWNED { link_id: link.link_id, request_id: event.request_id, child_id: event.child_id })

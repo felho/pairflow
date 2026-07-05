@@ -1,8 +1,8 @@
 <section id="storage-scope">
-        <h2 class="level-h"><span class="level-badge">①</span> Durable run record / storage scope</h2>
+        <h2 class="level-h"><span class="level-badge">LC1</span> Durable run record / storage scope</h2>
         <p class="level-sub">A <b>cross-cutting placement/authority contract</b>, not a kernel step — no new
         handler, no new transcript entry, no template config. It declares <em>where each kind of run datum
-        canonically lives</em> and the rules that keep teardown (②) and archive (④) from re-entangling.
+        canonically lives</em> and the rules that keep teardown (LC2) and archive (LC4) from re-entangling.
         Conceptually this <b>completes L0e's runtime-context lifecycle on the storage side</b>; realized here, at
         the forcing point before L4 (children must inherit a durable record), per the <code>RESUME_WAIT</code>
         precedent — we do <b>not</b> renumber L0e. The central artifact is the <b>Canonical Home Table</b>.</p>
@@ -10,7 +10,7 @@
         <p><b>The whole topic in one line:</b> canonical run history is written <em>during the run</em>, into
         durable storage; teardown only releases runtime resources — teardown is never the step that
         <em>preserves</em> history. Operationally checkable as: <b>no canonical-record ref points into a resource
-        being released.</b> This slice guarantees that <b>by construction</b>; ② Teardown only asserts it,
+        being released.</b> This slice guarantees that <b>by construction</b>; LC2 Teardown only asserts it,
         fail-closed.</p>
 
         <div class="note">
@@ -42,15 +42,15 @@
                             (record_ref + version) — never canonical on its own
   ═══════════════════════════════════ release cut ═══════════════════════════════════
    T4  runtime workspace     worktree, branch, tmux/session (L0e) — ephemeral; released by
-                            teardown (②). NEVER a canonical home; no canonical ref points in.
+                            teardown (LC2). NEVER a canonical home; no canonical ref points in.
   ───────────────────────────────────────────────────────────────────────────────
-  (T5  archive               OPTIONAL cold export (④) — not a tier, not correctness, not a
+  (T5  archive               OPTIONAL cold export (LC4) — not a tier, not correctness, not a
                             teardown precondition; named only to exclude)
         </pre>
         <div class="note">
           The v1 "archive" is a <em>placement symptom</em>, not a primitive: it exists only because keep-worthy
           history lives in a deletable folder. Once T1 is a born-durable authority, archive becomes optional
-          ops (④), never the preservation path — the same bias-removal as the L3 "finalization" seam.
+          ops (LC4), never the preservation path — the same bias-removal as the L3 "finalization" seam.
         </div>
 
         <h3 class="view-h"><span class="view-tag runtime">Runtime</span> Where each write lands during a run</h3>
@@ -69,7 +69,7 @@
             <div class="meta">served from the materialized <b>T2</b> projection (the <code>state.json</code>-style view) for a cheap read — legitimate because it is <em>reconstructable/consistent</em> from T1, so <code>projection_authoritative</code> ✓ as a cache. A sealed terminal snapshot would also qualify, but only anchored to its T1 source range/version</div>
           </div></div>
           <div class="trace-row"><div class="trace-n">4</div><div class="trace-c">
-            <div class="ev">(forward to ②) at the declared release boundary the worktree/branch/tmux are released</div>
+            <div class="ev">(forward to LC2) at the declared release boundary the worktree/branch/tmux are released</div>
             <div class="meta"><code>release_safe(T4)</code> holds: <b>no canonical ref points into T4</b>, so the run record (T1) and its evidence refs (T1→T3) survive intact. Contrast v1: deleting the per-bubble folder here would orphan the transcript's <code>refs</code> into the deleted directory — the <b>evidence-loss bug</b>, made <em>impossible</em> by INV-3</div>
           </div></div>
         </div>
@@ -77,15 +77,15 @@
         <h3 class="view-h"><span class="view-tag pseudo">Pseudocode</span> The placement contract — three checkable predicates</h3>
         <p>A standalone contract (empty baseline — it is <em>not</em> a kernel handler; it constrains writes the
         kernel/runtime already make). The predicates are what make the invariants fail-closed:</p>
-        <div class="code-diff" aria-label="Storage scope pseudocode" data-old-label="— (placement contract, no kernel baseline)" data-new-label="① storage scope">
+        <div class="code-diff" aria-label="Storage scope pseudocode" data-old-label="— (placement contract, no kernel baseline)" data-new-label="LC1 storage scope">
           <script type="text/plain" class="diff-source" data-code-old></script>
           <script type="text/plain" class="diff-source" data-code-new data-code-id="storage-scope-pseudocode">[[@fold storage-scope-pseudocode]]</script>
         </div>
         <div class="note pseudo">
           Three predicates, three invariants: <code>evidence_ref_ok</code> (INV-3, the new rule),
           <code>projection_authoritative</code> (INV-4, the sealed-snapshot rule), and
-          <code>release_safe</code> (INV-5, the handle ② grabs). The first is enforced at the write site; the
-          last is asserted by ② before any release.
+          <code>release_safe</code> (INV-5, the handle LC2 grabs). The first is enforced at the write site; the
+          last is asserted by LC2 before any release.
         </div>
 
         <h3 class="view-h"><span class="view-tag domain">Domain</span> The storage model — tiers and canonical homes</h3>
@@ -144,7 +144,7 @@
           template config</b> for it — it constrains kernel/runtime writes, not the workflow definition.
         </div>
 
-        <h3 class="view-h"><span class="view-tag invariant">Invariant</span> New at ①</h3>
+        <h3 class="view-h"><span class="view-tag invariant">Invariant</span> New at LC1</h3>
         <div class="agg invariant">
           <div class="agg-label">Added rules</div>
           <div class="ents">
@@ -157,14 +157,14 @@
 [[@absent storage-scope]]
         </div>
 
-        <h3 class="view-h"><span class="view-tag evidence">Evidence</span> Why we accept ① for now</h3>
+        <h3 class="view-h"><span class="view-tag evidence">Evidence</span> Why we accept LC1 for now</h3>
         <div class="agg">
           <div class="agg-label">Acceptance evidence — every v1 storage fact maps to a tier, and the evidence-loss bug becomes impossible</div>
           <div class="ents">
             <div class="ent"><div class="en">metrics events</div><div class="fields">v1 <code>~/.pairflow/metrics/events/</code> is <b>already global/durable</b> — the T1 model in the wild; current state aggregates from it · <b>T1</b></div></div>
             <div class="ent"><div class="en">active bubble state</div><div class="fields">v1 already separates the per-bubble dir (<code>transcript.ndjson</code>, <code>state.json</code>) from the worktree, but <b>not yet as a born-durable T1 authority</b>: the active bubble directory is still delete-sensitive — which is why <code>archive</code> currently preserves history. v3 turns that active record into a durable authority written during the run · <b>T1 (made durable)</b></div></div>
             <div class="ent"><div class="en">evidence-loss bug</div><div class="fields">v1 transcript <code>refs</code> point into the deletable bubble folder and evidence artifacts are not archived → dangling refs after <code>delete</code>. Exactly an <b>INV-3 violation</b>, now <b>impossible by construction</b> (inline T1 outcome + durable T3 ref) · <b>fixed by INV-3</b></div></div>
-            <div class="ent"><div class="en">archive as symptom</div><div class="fields">v1 archive exists only because keep-worthy data lives in a deletable folder; once T1 is the born-durable authority, archive is optional ops (④), not correctness · <b>boundary made explicit</b></div></div>
+            <div class="ent"><div class="en">archive as symptom</div><div class="fields">v1 archive exists only because keep-worthy data lives in a deletable folder; once T1 is the born-durable authority, archive is optional ops (LC4), not correctness · <b>boundary made explicit</b></div></div>
           </div>
         </div>
         <div class="note evidence">
@@ -172,8 +172,8 @@
             <li><b>Scenario coverage:</b> every datum in the Canonical Home Table maps to exactly one home; the canonical homes (T1/T3) survive runtime teardown; the T2 projection is rebuildable from T1 (or a sealed snapshot anchored to it), not canonical on its own; only T4 is released.</li>
             <li><b>Invariant coverage:</b> born-durable record ✓; no workspace-sole-truth ✓; evidence-ref discipline ✓; projection subordination (incl. sealed snapshot anchored to T1) ✓; release-safe by construction ✓ — and all L0a–L3 invariants still hold (this slice adds no handler).</li>
             <li><b>Accepted tradeoff:</b> the durable-write <em>mechanism</em>, storage backend, and archive/retention are out — this slice fixes placement &amp; authority only. The genuinely new code is the one evidence-ref rule.</li>
-            <li><b>Known gaps (intended):</b> release mechanics (②), workflow actions (③a commit/merge · ③b general), archive/export/purge (④), backend choice (impl), multi-instance/central stores (L11+). Each is in Absent.</li>
-            <li><b>Decision:</b> accepted as the ① baseline (light evidence per playbook §2.1); ② Teardown builds directly on INV-5.</li>
+            <li><b>Known gaps (intended):</b> release mechanics (LC2), workflow actions (LC3a commit/merge · LC3b general), archive/export/purge (LC4), backend choice (impl), multi-instance/central stores (L11+). Each is in Absent.</li>
+            <li><b>Decision:</b> accepted as the LC1 baseline (light evidence per playbook §2.1); LC2 Teardown builds directly on INV-5.</li>
           </ul>
         </div>
       </section>
