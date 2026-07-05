@@ -17,7 +17,14 @@ selector-authority values + the EmitAffordance cross-ref (§2 P2), and the
 Admission first-use contrast + alias table (§7). Review round 3 (an external
 reviewer, on the round-1 text) folded in: the status precision above, the P1
 form taxonomy, the Warrant field-class split, the P3 schematic-ladder
-demotion, and the criteria-first naming record.
+demotion, and the criteria-first naming record. Review round 4 (two parallel
+reviews) folded in: the selector-authority recount (two values today, one
+reserved for L9), the correlation field-class correction (`request_id` /
+`request_ref` / `link_id` / `child_id`; `episode_ref` is attempt identity,
+not correlation), the P4 rung-count fix, the stale "exception" bullet
+aligned with the form taxonomy, and two §3 label fixes; the ③a ask-row
+correlation cell was verified against the pseudocode source and is accurate
+as written (`resume_events: [step.action.key]` is the actual field).
 
 Relation to other documents:
 
@@ -109,10 +116,12 @@ What the table itself surfaces (this is the payoff of naming the primitive):
   *transport*; the errand is the concept. `SUBMIT_DECISION` is not a
   different kind of thing from `ACTION_RESULT` — it is the human-addressed
   errand's completion.
-- **The process gate is the one errand without a durable marker** — by
-  design (inline under timeout; the A2 test says its result is not
-  re-derivable but the transition simply blocks). The table makes this an
-  explicit, named exception instead of an invisible one.
+- **The process gate is the only marker-less errand** — by design (inline
+  under timeout; the A2 test says its result is not re-derivable but the
+  transition simply blocks). Under the form taxonomy above this is a named
+  FORM (marker-less inline), not an exception — and its deferred variant
+  (§4) upgrades the same errand to the full form: a gradation, not an
+  anomaly.
 - The "competes with what?" question (user's (c)) becomes systematic: every
   single-winner race in the model is a race *within one errand* (two
   RUN_ACTIONs on one claim; a late RELEASED vs the dispatch-error follow-up;
@@ -149,16 +158,17 @@ payload contract applies, what outbound surface is derived}. The kernel
 already knows no key *names* (de-vocabularized per map); P2 is the same move
 one level up — de-vocabularizing the *map kinds* themselves.
 
-The selector-authority dimension already has three values in today's model —
-naming them now gives L9 its slot ready-made:
+The selector-authority dimension has two values in today's model, plus a
+third that the L9 design question reserves — naming all three now gives L9
+its slot ready-made:
 
 - **principal-committed** — an authorized principal picks, and the commit is
   theirs (an actor's emit, an operator's decision);
 - **kernel-classified** — no accountable selector: the kernel classifies a
   result into a key and commits (a runner's classified outcome, a child's
   terminal disposition, a resume event's type);
-- **proposed** — the selector may only propose, never commit (the L9 fuzzy
-  matcher's `MatchProposal`; §4).
+- **proposed** (reserved — L9, not instantiated today) — the selector may
+  only propose, never commit (the L9 fuzzy matcher's `MatchProposal`; §4).
 
 Packet-side projection (cross-ref): the structured emit-affordance surface
 (future-topic L0b #4; the EmitAffordance direction in
@@ -193,16 +203,22 @@ checks every path instantiation against THEM, not against this sketch.
 
 The warrant is the INBOUND act-from bundle — one name for what an input
 carries, but internally it is three distinct field classes, and the model
-(todo Parts A/E) deliberately keeps them apart because a DIFFERENT admission
-rung consumes each:
+(todo Parts A/E) deliberately keeps them apart because different admission
+rungs consume them — operation identity and errand correlation one rung
+each, context authority two (the CAS precheck and the authority rung):
 
 - **operation identity** — `op_id`: idempotency (todo A1); consumed by the
   idempotency rung and the ledger, never by an authority check;
 - **context authority** — `expected_version`, `expected_role`, …: freshness
   and role — what the sender was entitled to act *from* (todo E1's universal
   vs shape-derived split lives here);
-- **errand correlation** — `request_ref`, `episode_ref`: WHICH open errand
-  this input answers; consumed by the correlation rung.
+- **errand correlation** — `request_id` / `request_ref` / `link_id` /
+  `child_id`: WHICH open errand this input answers; consumed by the
+  correlation rung.
+
+`episode_ref` is deliberately NOT in the correlation class: it is
+attempt/retry-episode identity — kernel-side wait state feeding the ③b retry
+budget — and it stays with that irreducible logic, not in the warrant.
 
 The bundle-level name is still useful (one thing the sender assembles and
 the packet projects), but the rebaseline must keep the three classes named —
@@ -224,8 +240,8 @@ not five unrelated objects.
 |---|---|---|
 | HANDLE | admission + selection | P3 + P2(transitions) + gate pipeline |
 | SUBMIT_DECISION | admission + errand completion + selection | P3 + P1(human) + P2(decisions) + override rule |
-| RESUME_WAIT | admission + selection | P3 + P2(on_resume) |
-| RUN_ACTION | admission + claim + inline errand + selection | P3 + P1(operator action) + P2(outcomes) |
+| RESUME_WAIT | admission + errand completion + selection | P3 + P1(bare wait) + P2(on_resume) |
+| RUN_ACTION | admission + claim + inline errand + selection | P3 + P1(③a ask completion → run errand) + P2(outcomes) |
 | KICKOFF | admission + specialized resume | P3 + P1(kickoff) + task supply |
 | RUNTIME_CONTEXT_READY / RELEASED | errand completions | P1(provision) / P1(release) |
 | ACTION_RESULT | errand completion + selection | P1(auto action) + P2(outcomes) + retry budget |
