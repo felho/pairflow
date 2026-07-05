@@ -1,10 +1,9 @@
 # Open Topic — Kernel Primitives (dissolving additive complexity)
 
 Date: 2026-07-05
-Status: **DECIDED — the primitive set and the review decisions are final; the
-L5 paper test has been EXECUTED — PASS with three findings (§8), pending the
-user's review.** Once §8 is ratified, the rebaseline is unblocked (next: the
-LC rename-pass). Joint reading result: the
+Status: **DECIDED — the primitive set, the review decisions, and the L5 paper
+test (§8, PASS) are all ratified. The rebaseline is UNBLOCKED; execution
+order: the LC rename-pass, then the in-place rebaseline level by level.** Joint reading result: the
 core-model pseudocode (L0a–L4 complete) was re-read independently by the user and
 by the assistant; both readings converged on the same two structural observations.
 This memo names the primitives, maps every current kernel unit onto them, and
