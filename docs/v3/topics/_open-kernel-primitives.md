@@ -2,8 +2,9 @@
 
 Date: 2026-07-05
 Status: **DECIDED — the primitive set and the review decisions are final; the
-rebaseline is BLOCKED on the L5 paper test (§4),** which is a mandatory
-acceptance check, not an open design question. Joint reading result: the
+L5 paper test has been EXECUTED — PASS with three findings (§8), pending the
+user's review.** Once §8 is ratified, the rebaseline is unblocked (next: the
+LC rename-pass). Joint reading result: the
 core-model pseudocode (L0a–L4 complete) was re-read independently by the user and
 by the assistant; both readings converged on the same two structural observations.
 This memo names the primitives, maps every current kernel unit onto them, and
@@ -28,7 +29,9 @@ as written (`resume_events: [step.action.key]` is the actual field). Two
 micro-refinements followed: the kernel-classified bullet names the
 event-keyed resumes precisely (validated-and-routed, not classified), and
 the P1 dimension list points at the four forms instead of the superseded
-binary marker distinction.
+binary marker distinction. The L5 paper test was then pulled FORWARD of the
+rename-pass (fail-fast: the two are independent, and the gate should fail
+before any further machinery) and executed as §8.
 
 Relation to other documents:
 
@@ -282,7 +285,7 @@ self-heal; round semantics; the gate pipeline placement.
   stay-continuation, or help is a bare wait whose on_resume routes to the
   same step — and it is an instance of errand composition (§2 P1). If L5
   cannot be expressed as a few declarations over P1/P2/P5, the primitives are
-  wrong.
+  wrong. **Executed → §8: PASS, three findings.**
 
 ## 5. Guardrails
 
@@ -428,3 +431,53 @@ among the `*Intent` members), `Attestation` / `Credential` for P4
 near Admission (the Gate nouns are a different concept — rungs, not gates),
 and 2PC-flavored `Prepare`/`Commit` naming pairs (the model is single-commit
 CAS, not distributed commit).
+
+## 8. The L5 paper test — executed (PASS, three findings)
+
+The slice under test (approach.md L5 block + the L3 Absent items): the
+agent-initiated Ask — an ACTIVE actor asks for help mid-step; `Subflow`
+blocking / non-blocking; `HELP_PENDING`; local delivery; v1 grounding =
+`WAITING_HUMAN` (active agent asks, round ≥ 1, same-context resume, no
+routing). The deferred request-rework composite (`pending_rework_intent` +
+watchdog) is explicitly owned by the watchdog slice (L6/L9), not L5-core.
+
+### The declarations (the whole L5-core, expressed on the primitives)
+
+| # | Declaration | Primitive | Notes |
+|---|---|---|---|
+| 1 | op `HELP_REQUEST` — declared per step/role, payload schema (question + refs) | P2 key + P3 payload rung (+ an L1 capability entry) | admitted through HANDLE's existing ladder; its commit parks instead of routing |
+| 2 | wait kind `help_pending` + durable `HELP_REQUEST` transcript entry (fresh `request_ref`) | P1 marker (full form) | one more value on the L0d WAITING axis — the precedented extension point |
+| 3 | `HelpRequest` (operator-addressed, free-form reply — not a decisions map) | P5 member | derived post-commit from `wait.kind = help_pending` |
+| 4 | completion `HELP_REPLY` (operator intent) | P1 human-transport completion + P3 rungs | rungs: op_id · wait-kind · `request_ref` · CAS · `binding[operator]` · reply required — the same contract family as `SUBMIT_DECISION`, different parameters |
+| 5 | selection: **stay** — same `current_step`, `advances_round = false`, next dispatch's handoff = original ⊕ reply | P2 (degenerate, single-key) | "same-context resume" at the kernel = same position + enriched handoff; SESSION continuity is adapter-side (L0c/executor), not kernel |
+| 6 | variant: blocking (marker homed in the wait slot) vs non-blocking (marker homed in a help-link record collection — the `ChildWorkflowLink` precedent) | P1 "marker home" dimension | dimension values, no new machinery; the non-blocking form can be deferred without touching the shape |
+
+Zero new mechanisms: one new operator-intent entry point (`HELP_REPLY`),
+which is itself an instance of the existing human-transport completion
+contract. Corroboration from the roadmap itself: approach.md's L8 block
+already speaks of "the **general Ask** … the broadest form the **L3/L5
+primitive** matures into" — singular; the Directive family IS that maturation
+path (`HumanDecisionRequest` L3 → `HelpRequest` L5 → external-token asks L8).
+
+### Findings (feed the rebaseline)
+
+- **F1 — P1 gains a declared *opener* dimension**: arrival-opened (the kernel
+  opens the errand on entering a step — every instance so far) vs
+  emit-opened (an actor opens it mid-step — `HELP_REQUEST`). A dimension on
+  the existing admission+commit machinery, not new machinery.
+- **F2 — P2's *stay* route is confirmed needed** and now concrete: stay =
+  same position + no round advance + handoff enrichment. (Anticipated by the
+  composition rule; L5 is its first load-bearing instance.)
+- **F3 — the marker-home dimension carries blocking vs non-blocking**:
+  wait-slot home = blocking subflow; record-collection home = non-blocking
+  (child links are the existing precedent for collection-homed errand
+  markers). The "≤ 1 open wait" shape is a property of wait-slot-homed
+  errands only, not of errands per se.
+
+Out of scope, compatible: the deferred-rework stash is one more marker with a
+declared apply-on-completion rule — watchdog-slice work; the primitives do
+not obstruct it.
+
+**Verdict: PASS.** L5-core reduces to six declarations over P1/P2/P3/P5 with
+no new handlers beyond a parameterized completion entry. The acceptance gate
+of §6.4 is satisfied pending review of this section.
