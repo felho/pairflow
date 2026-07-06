@@ -781,7 +781,7 @@ no explicit COMMIT block — consistent with the L0d-era convention; the
 in-code comments carry the atomicity claim, and if the early blocks ever
 switch to the explicit COMMIT form, the appends move with them.
 
-### L5 landing — the §8 paper test cashed in (executed, record awaits review)
+### L5 landing — the §8 paper test cashed in; reviewed, findings fixed, record RATIFIED (2026-07-06)
 
 The first NEW level built on the five primitives. Six declarations
 promised (§8), six landed: (1) the `HELP_REQUEST` op — a separate HANDLE
@@ -849,3 +849,22 @@ the follow-up commit before ratification:
   `step_id` + `round`; the reply pair needs no copy of its own
   (request_ref joins them), and the filter now names the request fact's
   own fields.
+
+Ratification round (2026-07-06): F-L5-1/2 and the record ratified; the
+F-L5-3/4 fixes verified independently (zero multiset delta, ledger
+unchanged, the offer-condition and the gate-condition compared
+expression-for-expression). Two closing touches from the round:
+(a) the "offer and gate agree" claim was NARROWED — it holds on the
+default-derived capability path (same condition on both sides); under an
+explicit authored profile the offer does not yet consult the profile, so
+the packet could offer what the gate rejects — profile-filtered
+affordances are a named later seam, stated in both units' comments;
+(b) the L5 section's Domain field list caught up with the F-L5-4 fields
+(step_id + round on the ask fact). And the class lesson the review earned,
+booked where it belongs: **introducing a new op-family means the
+capability DEFINITION is part of the change inventory, not just its
+check** — the L5 spec listed the guard but not the override behind it,
+and only the second reviewer's pull-through of the inherited definition
+caught the contradiction. Future op-family small-specs must enumerate the
+definition sites (capability, available_ops, validators) alongside the
+handler.

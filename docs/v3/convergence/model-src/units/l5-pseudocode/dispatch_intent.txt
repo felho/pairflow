@@ -15,7 +15,7 @@ dispatch_intent(instance, template, step_id) → DispatchIntent
     role:          step.role,                                      # dispatched-as role → echoed back as expected_role
     instruction:   step.instruction,
     handoff:       payload_of_transition_into(instance, step_id) ⊕ help_exchange_for(instance, step_id),  # L5 — the stay enrichment: the envelope that brought us here ⊕ this step/round's answered asks (transcript-derived)
-    available_ops: event_types_of(step.transitions) ∪ ({ HELP_REQUEST } IF step.help is declared),   # navigation affordances + the L5 ask affordance; L1 enforces capability in HANDLE
+    available_ops: event_types_of(step.transitions) ∪ ({ HELP_REQUEST } IF step.help is declared),   # navigation affordances + the L5 ask affordance; L1 enforces capability in HANDLE. Offer and gate agree on the DEFAULT-derived path (same condition); an explicit authored profile may exclude the op and the offer does not yet consult it — profile-filtered affordances are a later seam
     context_blocks: assemble_context_blocks(instance, template, step),   # L2b — rendered, ordered, deduped, with provenance; communication only
     effective_agent_config: resolve_agent_config(template, step, instance),   # resolved portable run intent (was raw agent_config at L0b)
     runtime_context: runtime_view }                              # the projection, or none for a context-free workflow
