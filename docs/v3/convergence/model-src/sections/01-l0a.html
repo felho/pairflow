@@ -72,6 +72,21 @@
           pseudocode found a real boundary the trace could not: a small but genuine coherence signal.
         </div>
 
+        <div class="note">
+          <b>Two kernel contracts, named</b> (the synthesis todo's Part B, stated here where the
+          durable kernel is born). <b>Record, not replay:</b> an accepted actor emit is the durable
+          fact — committed to the transcript with its provenance (issued config, actor identity/role,
+          operation identity, output refs). Recovery may re-derive the deterministic skeleton
+          (routing, gates, dispatch, post-commit outputs) from committed state, but it never re-runs
+          an LLM/actor to reconstruct a previously accepted result — the default kernel contract, not
+          a per-step opt-in. <b>Leaderless by construction:</b> any worker may handle any instance
+          event; correctness comes from the store-backed <code>(instance_id, op_id)</code> operation
+          ledger plus per-instance <code>expected_version</code>/CAS — never from a leader-per-shard,
+          a process-local single writer, or an in-memory version map. In-band correlation is the
+          fencing: a completion must still match the committed marker (<code>request_id</code>), so a
+          superseded worker's late result loses against the newer state.
+        </div>
+
         <h3 class="view-h"><span class="view-tag domain">Domain</span> The model</h3>
         <p>Two aggregates — the <b>template</b> (definition, immutable while running) and the
         <b>instance</b> (the run) — and the EventEnvelope that drives the instance through the kernel.</p>

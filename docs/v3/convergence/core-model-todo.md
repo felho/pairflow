@@ -196,10 +196,12 @@ The L3 model should state the minimal durable audit fields for a human decision 
 The L3 `SUBMIT_DECISION` path should keep all validation before the decision mutates
 workflow state.
 
-- Validate wait kind, request correlation, idempotency (`op_id` Duplicate), stale
-  version, operator authority, declared decision key, required payload fields, and
-  override applicability before appending `DECISION_MADE`. Keep idempotency before
-  stale, as in A1.
+- Validate — in the admission ladder's canonical order — idempotency (`op_id`
+  Duplicate) FIRST after load, then lifecycle/wait kind, request correlation, stale
+  version, and operator authority; then the declared decision key, required payload
+  fields, and override applicability — all before appending `DECISION_MADE`.
+  (Reworded to the normative code order per the kernel-primitives memo F-W1-1;
+  realized in the model by the wave-4 `admit_input` fold.)
 - A rejected decision must not route the workflow and must not consume the committed
   decision audit slot. If rejected attempts need audit, model them as rejected-attempt
   audit, not as `DECISION_MADE`.
@@ -297,7 +299,10 @@ Two concerns must not be merged:
   widening.
 - Check order: `basic valid_shape → load instance/template/step → op_id ledger lookup
   (Duplicate / op_id_collision, A1) → kernel authority checks (E1) → transition/capability →
-  validate_emit_contract → policy/verify gates → commit`.
+  validate_emit_contract → policy/verify gates → commit`. ("Kernel authority checks (E1)" is
+  a compressed item: it stands for the admission ladder's lifecycle/state → correlation →
+  staleness → authority rungs, in that canonical order — the parenthetical the
+  kernel-primitives memo's F-W2-1 asked for; no code or rung-order change.)
 - Worked example: `PASS` and `CONVERGED` both require a `summary` but carry different payloads
   — the per-op schema is what distinguishes them (`pass.ts`, `converged.ts`).
 

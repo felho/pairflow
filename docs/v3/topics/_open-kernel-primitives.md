@@ -517,6 +517,8 @@ ratified in the wave's review.
   makes a replayed duplicate a no-op regardless of the instance's current
   wait); C2's enumeration is a listing, not a sequence, and should be
   reworded to match when the todo is next touched. No behavior change.
+  *(Disposition APPLIED 2026-07-06: C2 reworded to the normative order in
+  the todo review round.)*
 - **F-W1-2 · operator intents at L0d carry no operation identity.**
   `KICKOFF` / `START` / `CANCEL` have no `op_id` — their idempotency rests on
   single-shot state preconditions. Wave 1 makes this VISIBLE (their
@@ -543,7 +545,9 @@ ratified in the wave's review.
   itself counts `expected_version` among its fields — so state + staleness +
   role travel inside that one bullet. Proposed disposition: when todo E2 is
   next touched, add a clarifying parenthetical unpacking the compressed item
-  to the full ladder order; no code or rung-order change.
+  to the full ladder order; no code or rung-order change. *(Disposition
+  APPLIED 2026-07-06: the E2 check-order line carries the parenthetical,
+  from the todo review round.)*
 - **Wave record (not a finding).** The `step ← template.step(...)` lookup
   hoisted above the ladder at the four HANDLE heads because the authority
   rung consumes `step.role`. The hoist is order-neutral ONLY because the

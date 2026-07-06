@@ -23,6 +23,9 @@
 # opener (which committed move opens the claim: a step arrival, a lifecycle move, a completion
 # opening the next errand — or an agent emit: the opener reserved here went live at L5 with the
 # help ask). Guards that run BEFORE the claim commits are pre-open guards, not errand phases.
+# The derived-vs-durable test (todo A2): after a crash, can the output be safely re-derived from
+# committed kernel state alone? If yes, it may stay a DERIVED post-commit output (the dispatch);
+# if no, it needs a committed marker BEFORE the effect runs — which is exactly the claim phase.
 # Forms — an implementation must not force them onto one mechanism:
 #   full               claim + outbound directive + async correlated completion
 #   inline             claim, then work AND completion inside one handler invocation,
