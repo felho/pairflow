@@ -8,7 +8,7 @@ failure modes the kernel-spectrum synthesis documented. Extracted from
 `core-model.html`.
 
 **Process rule (the reason this file exists):** the implementation plan's FIRST
-chapter consumes this file. Every item below maps to exactly one of: an
+chapter consumes this file. Every item below maps to one or more of: an
 acceptance/contract test, a schema/lint/CI check, or an ADR that records a
 deliberate deviation. An item with none of the three is a planning gap. Items
 are numbered `IC-*` for referencing from the plan, tests, and ADRs.
