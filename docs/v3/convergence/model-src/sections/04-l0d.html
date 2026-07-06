@@ -79,7 +79,12 @@
           <code>instance.version</code> just like HANDLE; a replayed actor op (same <code>op_id</code>) is
           <code>Duplicate</code>, and the lifecycle transitions are single-shot — a second <code>START</code>
           or a stale <code>RUNTIME_CONTEXT_READY</code> fails its precondition and mutates nothing (a guard
-          rejection, not a silent no-op).
+          rejection, not a silent no-op). The guard heads are the birth of the <b>Admission</b> ladder
+          (kernel-primitives rebaseline, wave 1): one ordered rung protocol — load → idempotency →
+          lifecycle/state → correlation → staleness — that every entry path climbs via
+          <code>admit_loaded</code>, each path parameterizing its own rungs; the later rungs (authority,
+          payload contract) arrive at L1/L3. Behavior is unchanged — the ladder names what the guards
+          already did.
         </div>
 
         <h3 class="view-h"><span class="view-tag domain">Domain</span> What L0d adds</h3>
@@ -191,6 +196,9 @@
             <li><b>Known gaps (intended):</b> no operator authority (L7/L10); no runtime-context spec/provider (L0e); no
               post-approval resume <em>actions/mechanics</em> (the minimal COMMIT resume contract appears at L3); only kickoff_pending waits here; no retry on FAILED (§18). Each is in
               Absent.</li>
+            <li><b>Rebaseline (wave 1):</b> the <b>Admission</b> ladder (P3) is born here — see the
+              kernel-primitives memo (§6/§9); behavior unchanged, the rejection/invariant registries are
+              identical before and after.</li>
             <li><b>Decision:</b> accepted as the L0d baseline (light evidence per playbook §2.1).</li>
           </ul>
         </div>

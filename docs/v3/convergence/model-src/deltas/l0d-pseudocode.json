@@ -3,6 +3,7 @@
   "baseline": "l0c-pseudocode",
   "order": [
     "resolve_agent_config",
+    "admit_loaded",
     "RECEIVE",
     "CREATE_INSTANCE",
     "START",

@@ -1,5 +1,5 @@
 
 CANCEL(instance) → Outcome                                           # operator_intent — any non-terminal
-  REQUIRE instance.kernel_status ≠ TERMINAL
+  REQUIRE admit_loaded(instance, expect: { state: kernel_status ≠ TERMINAL })   # ADMISSION: state rung — terminal is a sink
   instance.kernel_status ← TERMINAL ; instance.terminal_disposition ← cancelled
   RETURN Terminated(cancelled)

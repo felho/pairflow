@@ -483,3 +483,31 @@ not obstruct it.
 **Verdict: PASS.** L5-core reduces to six declarations over P1/P2/P3/P5 with
 no new handlers beyond a parameterized completion entry. The acceptance gate
 of §6.4 is satisfied pending review of this section.
+
+## 9. Rebaseline findings log
+
+Per §6.4, divergences found during the waves are recorded here as findings
+with proposed dispositions — never silently normalized. Each disposition is
+ratified in the wave's review.
+
+### Wave 1 (L0d — Admission born)
+
+- **F-W1-1 · rung-order wording divergence (todo C2 vs the code).** The
+  `SUBMIT_DECISION` code (and todo A1) put idempotency BEFORE the
+  wait-kind/state and correlation checks; todo Part C2's prose enumeration
+  begins with "wait kind, request correlation, idempotency, …", though it
+  also says "keep idempotency before stale, as in A1". Proposed disposition:
+  the CODE order is normative (idempotency first after load — that is what
+  makes a replayed duplicate a no-op regardless of the instance's current
+  wait); C2's enumeration is a listing, not a sequence, and should be
+  reworded to match when the todo is next touched. No behavior change.
+- **F-W1-2 · operator intents at L0d carry no operation identity.**
+  `KICKOFF` / `START` / `CANCEL` have no `op_id` — their idempotency rests on
+  single-shot state preconditions. Wave 1 makes this VISIBLE (their
+  `admit_loaded` expects omit the op_id rung, with a pointer here) but does
+  not fix it. Expected resolution — recorded now so the explicit gap does not
+  normalize into an accepted state: todo A1/A3 expect stable operation
+  identity on this input class too (C2 is explicit for `SUBMIT_DECISION`);
+  operator intents gain `op_id` when their paths are next rebased (wave 4
+  for the L3-born ops; a dedicated ingress-idempotency touch for
+  `KICKOFF`/`START`/`CANCEL`).

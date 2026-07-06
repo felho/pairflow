@@ -1,5 +1,5 @@
 
 KICKOFF(instance, task) → Outcome                                     # operator_intent
-  REQUIRE instance.kernel_status = WAITING AND instance.wait.kind = kickoff_pending
+  REQUIRE admit_loaded(instance, expect: { state: kernel_status = WAITING AND wait.kind = kickoff_pending })   # ADMISSION: state rung, bare-REQUIRE (unnamed) — semantics unchanged. No op_id rung yet: operator intents gain operation identity later (finding F-W1-2, memo §9)
   instance.task ← task                                         # the deferred task, supplied now
   RETURN activate(instance)

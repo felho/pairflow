@@ -6,15 +6,13 @@ HANDLE envelope → Outcome
   IF instance is none                     THEN RETURN Rejected(unknown_instance)
   template ← definitionStore.load(instance.template_ref)   # separate store; pinned immutable version
 
-  # idempotency, key scope (instance_id, op_id)
-  IF instance.transcript.has(envelope.op_id) THEN RETURN Duplicate   # no-op, no 2nd entry
-
-  # L0d: lifecycle guard — actor emits only in actor-routable ACTIVE execution
-  IF instance.kernel_status ≠ ACTIVE       THEN RETURN Rejected(not_active)
-
-  # actor-supplied stale-intent — mandatory at L0b
-  IF envelope.expected_version is missing  THEN RETURN Rejected(missing_version)
-  IF envelope.expected_version ≠ instance.version THEN RETURN Stale(instance.version)
+  # ADMISSION (born at L0d) — the actor-envelope rungs: idempotency → lifecycle/state → staleness
+  outcome ← admit_loaded(instance, expect: {
+    op_id:   envelope.op_id,                                    # a duplicate is a no-op, no 2nd entry
+    state:   kernel_status = ACTIVE → Rejected(not_active),     # L0d lifecycle guard: actor emits only in actor-routable ACTIVE execution
+    version: envelope.expected_version },                       # actor-supplied stale-intent — mandatory at L0b
+    envelope)
+  IF outcome ≠ Accepted THEN RETURN outcome                     # Duplicate | Stale(v) | Rejected(…) pass through unchanged
 
   step   ← template.step(instance.current_step)
 

@@ -1,6 +1,6 @@
 
 RUNTIME_CONTEXT_READY(instance, request_id, runtime_context_ref) → Outcome   # kernel_event (v1: workspace/worktree ready)
-  REQUIRE instance.runtime_context = requested(request_id)   # correlation: the readiness for the request we issued
+  REQUIRE admit_loaded(instance, expect: { correlate: runtime_context = requested(request_id) })   # ADMISSION: correlation rung — the readiness for the request WE issued
   instance.runtime_context ← ready(runtime_context_ref)    # opaque ref { kind, locator }; v1 kind=worktree { path, branch, repo }
   IF instance.activation_mode = immediate THEN RETURN activate(instance)
   instance.kernel_status ← WAITING                             # deferred_kickoff: hold for an operator kickoff

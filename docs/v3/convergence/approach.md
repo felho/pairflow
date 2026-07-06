@@ -764,8 +764,11 @@ routing maps); **Admission** (P3 — the one ordered guard ladder; steps are *ru
 errand correlation); **Directive** (P5 — the outbound ask family; the existing
 `*Intent` nouns become members).
 Waves (each = its own small-spec + review round + commit; flips recorded here):
-- [ ] Wave 1 — L0d: **Admission** born (the second entry path arrives there); the entry
-  guard heads re-expressed; downstream `HANDLE`-family versions follow.
+- [x] Wave 1 — L0d: **Admission** born (the second entry path arrives there); the entry
+  guard heads re-expressed; downstream `HANDLE`-family versions follow. *(Realized:
+  `admit_loaded` + the canonical rung order at L0d; heads re-expressed at
+  L0d/L0e/L1/L2/L2a/L3/LC2; the L3-born operator ops deliberately wait for wave 4;
+  findings F-W1-1/2 in the memo §9.)*
 - [ ] Wave 2 — L1: **Warrant** born (`expected_role` joins `expected_version`).
 - [ ] Wave 3 — LC2: **Errand** born (release joins provision); LC3a/b, LC4, L4
   re-expressed as errand instances.

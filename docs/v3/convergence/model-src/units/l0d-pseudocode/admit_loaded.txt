@@ -1,0 +1,26 @@
+
+# ─── ADMISSION (P3) — the one ordered guard ladder every entering input climbs; steps are RUNGS ───
+# Born at L0d: this is where the entry paths multiply (actor envelope + operator intent + kernel event),
+# so the ladder stops being HANDLE-private and becomes the kernel's admission protocol.
+# Rung 0 (pre-load, kind-agnostic): basic valid_shape — it stays at the caller, before any store access.
+# Canonical rung order after load (load-bearing; later levels ADD rungs at declared positions, never
+# reorder): load → idempotency → lifecycle/state → correlation → staleness → authority (rung arrives at
+# L1/L3) → payload contract (arrives at L3 / todo Part E2). A duplicate is never reported as stale; a
+# state rejection never masks a duplicate (idempotency first after load, todo A1).
+# NOT rungs: the template/definition load (callers load it where they always did — no semantic move
+# intended in this pass) and the L2 gate pipeline (gates are runtime policy, not admission — rungs are
+# not gates, and vice versa).
+# expect.* parameterizes the rungs per entry path; an absent expectation skips its rung. A rung's reject
+# name rides the expectation (the ladder knows no vocabulary); an expectation without a named reject
+# keeps bare-REQUIRE precondition semantics (a guard rejection, not a named reason). The load-first
+# companion (admit_input: load → unknown_instance → admit_loaded) arrives with the L3-born operator
+# ops — no handler boundary changes in this pass (who receives a loaded instance is unchanged).
+admit_loaded(instance, expect, input?) → Accepted | Duplicate | Stale | Rejected
+  IF expect.op_id     is present AND instance.transcript.has(expect.op_id)  THEN RETURN Duplicate               # idempotency rung — key scope (instance_id, op_id)
+  IF expect.state     is present AND NOT expect.state.holds(instance)       THEN RETURN expect.state.reject     # lifecycle/state rung; an unnamed reject ⇒ bare-REQUIRE semantics
+  IF expect.correlate is present AND NOT expect.correlate.holds(instance)   THEN RETURN expect.correlate.reject # correlation rung (request_id here; request_ref / link_id arrive with their errands)
+  # version-presence is the staleness rung's ENTRY GUARD (an input carrying no version cannot be judged
+  # stale) — it is not a separate rung and not a payload check
+  IF expect.version   is expected AND expect.version is missing             THEN RETURN Rejected(missing_version)
+  IF expect.version   is expected AND expect.version ≠ instance.version     THEN RETURN Stale(instance.version)
+  RETURN Accepted

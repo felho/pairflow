@@ -1,5 +1,5 @@
 
 FAIL(instance, reason) → Outcome                                     # kernel_event — any non-terminal
-  REQUIRE instance.kernel_status ≠ TERMINAL
+  REQUIRE admit_loaded(instance, expect: { state: kernel_status ≠ TERMINAL })   # ADMISSION: state rung — terminal is a sink
   instance.kernel_status ← TERMINAL ; instance.terminal_disposition ← failed ; instance.failure_reason ← reason
   RETURN Terminated(failed)

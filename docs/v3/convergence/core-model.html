@@ -1032,6 +1032,32 @@ resolve_agent_config(template, step, instance) → AgentConfig
   # portable run intent; not actor-adapted, provisioned, or attested at L0c
   RETURN      merge(with_step, override)
 
+# ─── ADMISSION (P3) — the one ordered guard ladder every entering input climbs; steps are RUNGS ───
+# Born at L0d: this is where the entry paths multiply (actor envelope + operator intent + kernel event),
+# so the ladder stops being HANDLE-private and becomes the kernel's admission protocol.
+# Rung 0 (pre-load, kind-agnostic): basic valid_shape — it stays at the caller, before any store access.
+# Canonical rung order after load (load-bearing; later levels ADD rungs at declared positions, never
+# reorder): load → idempotency → lifecycle/state → correlation → staleness → authority (rung arrives at
+# L1/L3) → payload contract (arrives at L3 / todo Part E2). A duplicate is never reported as stale; a
+# state rejection never masks a duplicate (idempotency first after load, todo A1).
+# NOT rungs: the template/definition load (callers load it where they always did — no semantic move
+# intended in this pass) and the L2 gate pipeline (gates are runtime policy, not admission — rungs are
+# not gates, and vice versa).
+# expect.* parameterizes the rungs per entry path; an absent expectation skips its rung. A rung's reject
+# name rides the expectation (the ladder knows no vocabulary); an expectation without a named reject
+# keeps bare-REQUIRE precondition semantics (a guard rejection, not a named reason). The load-first
+# companion (admit_input: load → unknown_instance → admit_loaded) arrives with the L3-born operator
+# ops — no handler boundary changes in this pass (who receives a loaded instance is unchanged).
+admit_loaded(instance, expect, input?) → Accepted | Duplicate | Stale | Rejected
+  IF expect.op_id     is present AND instance.transcript.has(expect.op_id)  THEN RETURN Duplicate               # idempotency rung — key scope (instance_id, op_id)
+  IF expect.state     is present AND NOT expect.state.holds(instance)       THEN RETURN expect.state.reject     # lifecycle/state rung; an unnamed reject ⇒ bare-REQUIRE semantics
+  IF expect.correlate is present AND NOT expect.correlate.holds(instance)   THEN RETURN expect.correlate.reject # correlation rung (request_id here; request_ref / link_id arrive with their errands)
+  # version-presence is the staleness rung's ENTRY GUARD (an input carrying no version cannot be judged
+  # stale) — it is not a separate rung and not a payload check
+  IF expect.version   is expected AND expect.version is missing             THEN RETURN Rejected(missing_version)
+  IF expect.version   is expected AND expect.version ≠ instance.version     THEN RETURN Stale(instance.version)
+  RETURN Accepted
+
 RECEIVE(input) → Outcome                                               # one kernel entry; route by input source class
   MATCH input.source:
     operator_intent → dispatch to CREATE_INSTANCE / START / KICKOFF / CANCEL   # lifecycle intents
@@ -1052,14 +1078,14 @@ CREATE_INSTANCE(template_ref, activation_mode, task, binding, run_overrides) →
   RETURN Created(instance.version)                             # no dispatch yet — not active
 
 START(instance) → Outcome                                             # operator_intent — guarded, single-shot
-  REQUIRE instance.kernel_status = CREATED AND instance.runtime_context = none
+  REQUIRE admit_loaded(instance, expect: { state: kernel_status = CREATED AND runtime_context = none })   # ADMISSION: state rung — single-shot start
   request_id ← new_request_id()
   request_runtime_context(instance, request_id)             # placeholder call; provider contract defined at L0e; later fires RUNTIME_CONTEXT_READY
   instance.runtime_context ← requested(request_id)          # marker; status stays CREATED (= v1 PREPARING_WORKSPACE)
   RETURN Accepted
 
 RUNTIME_CONTEXT_READY(instance, request_id, runtime_context_ref) → Outcome   # kernel_event (v1: workspace/worktree ready)
-  REQUIRE instance.runtime_context = requested(request_id)   # correlation: the readiness for the request we issued
+  REQUIRE admit_loaded(instance, expect: { correlate: runtime_context = requested(request_id) })   # ADMISSION: correlation rung — the readiness for the request WE issued
   instance.runtime_context ← ready(runtime_context_ref)    # opaque ref { kind, locator }; v1 kind=worktree { path, branch, repo }
   IF instance.activation_mode = immediate THEN RETURN activate(instance)
   instance.kernel_status ← WAITING                             # deferred_kickoff: hold for an operator kickoff
@@ -1067,7 +1093,7 @@ RUNTIME_CONTEXT_READY(instance, request_id, runtime_context_ref) → Outcome   #
   RETURN Accepted
 
 KICKOFF(instance, task) → Outcome                                     # operator_intent
-  REQUIRE instance.kernel_status = WAITING AND instance.wait.kind = kickoff_pending
+  REQUIRE admit_loaded(instance, expect: { state: kernel_status = WAITING AND wait.kind = kickoff_pending })   # ADMISSION: state rung, bare-REQUIRE (unnamed) — semantics unchanged. No op_id rung yet: operator intents gain operation identity later (finding F-W1-2, memo §9)
   instance.task ← task                                         # the deferred task, supplied now
   RETURN activate(instance)
 
@@ -1079,7 +1105,7 @@ activate(instance) → Outcome                                         # interna
   RETURN Activated(dispatch_intent(instance, template, template.start))   # dispatch is a kernel output (L0b), not a side effect
 
 CANCEL(instance) → Outcome                                           # operator_intent — any non-terminal
-  REQUIRE instance.kernel_status ≠ TERMINAL
+  REQUIRE admit_loaded(instance, expect: { state: kernel_status ≠ TERMINAL })   # ADMISSION: state rung — terminal is a sink
   instance.kernel_status ← TERMINAL ; instance.terminal_disposition ← cancelled
   RETURN Terminated(cancelled)
 
@@ -1088,7 +1114,7 @@ COMPLETE(instance)                                                   # internal 
   instance.kernel_status ← TERMINAL ; instance.terminal_disposition ← done
 
 FAIL(instance, reason) → Outcome                                     # kernel_event — any non-terminal
-  REQUIRE instance.kernel_status ≠ TERMINAL
+  REQUIRE admit_loaded(instance, expect: { state: kernel_status ≠ TERMINAL })   # ADMISSION: state rung — terminal is a sink
   instance.kernel_status ← TERMINAL ; instance.terminal_disposition ← failed ; instance.failure_reason ← reason
   RETURN Terminated(failed)
 
@@ -1099,15 +1125,13 @@ HANDLE envelope → Outcome
   IF instance is none                     THEN RETURN Rejected(unknown_instance)
   template ← definitionStore.load(instance.template_ref)   # separate store; pinned immutable version
 
-  # idempotency, key scope (instance_id, op_id)
-  IF instance.transcript.has(envelope.op_id) THEN RETURN Duplicate   # no-op, no 2nd entry
-
-  # L0d: lifecycle guard — actor emits only in actor-routable ACTIVE execution
-  IF instance.kernel_status ≠ ACTIVE       THEN RETURN Rejected(not_active)
-
-  # actor-supplied stale-intent — mandatory at L0b
-  IF envelope.expected_version is missing  THEN RETURN Rejected(missing_version)
-  IF envelope.expected_version ≠ instance.version THEN RETURN Stale(instance.version)
+  # ADMISSION (born at L0d) — the actor-envelope rungs: idempotency → lifecycle/state → staleness
+  outcome ← admit_loaded(instance, expect: {
+    op_id:   envelope.op_id,                                    # a duplicate is a no-op, no 2nd entry
+    state:   kernel_status = ACTIVE → Rejected(not_active),     # L0d lifecycle guard: actor emits only in actor-routable ACTIVE execution
+    version: envelope.expected_version },                       # actor-supplied stale-intent — mandatory at L0b
+    envelope)
+  IF outcome ≠ Accepted THEN RETURN outcome                     # Duplicate | Stale(v) | Rejected(…) pass through unchanged
 
   step   ← template.step(instance.current_step)
 
@@ -1157,7 +1181,12 @@ dispatch_intent(instance, template, step_id) → DispatchIntent
           <code>instance.version</code> just like HANDLE; a replayed actor op (same <code>op_id</code>) is
           <code>Duplicate</code>, and the lifecycle transitions are single-shot — a second <code>START</code>
           or a stale <code>RUNTIME_CONTEXT_READY</code> fails its precondition and mutates nothing (a guard
-          rejection, not a silent no-op).
+          rejection, not a silent no-op). The guard heads are the birth of the <b>Admission</b> ladder
+          (kernel-primitives rebaseline, wave 1): one ordered rung protocol — load → idempotency →
+          lifecycle/state → correlation → staleness — that every entry path climbs via
+          <code>admit_loaded</code>, each path parameterizing its own rungs; the later rungs (authority,
+          payload contract) arrive at L1/L3. Behavior is unchanged — the ladder names what the guards
+          already did.
         </div>
 
         <h3 class="view-h"><span class="view-tag domain">Domain</span> What L0d adds</h3>
@@ -1305,6 +1334,9 @@ template:
             <li><b>Known gaps (intended):</b> no operator authority (L7/L10); no runtime-context spec/provider (L0e); no
               post-approval resume <em>actions/mechanics</em> (the minimal COMMIT resume contract appears at L3); only kickoff_pending waits here; no retry on FAILED (§18). Each is in
               Absent.</li>
+            <li><b>Rebaseline (wave 1):</b> the <b>Admission</b> ladder (P3) is born here — see the
+              kernel-primitives memo (§6/§9); behavior unchanged, the rejection/invariant registries are
+              identical before and after.</li>
             <li><b>Decision:</b> accepted as the L0d baseline (light evidence per playbook §2.1).</li>
           </ul>
         </div>
@@ -1396,7 +1428,7 @@ INTERFACE RuntimeContextProvider:
   project_for_actor(runtime_context_ref) → RuntimeContextProjection   # kind-specific actor-facing view; kernel-internal fields stay out
 
 START(instance) → Outcome                                             # operator_intent — guarded, single-shot
-  REQUIRE instance.kernel_status = CREATED AND instance.runtime_context = none
+  REQUIRE admit_loaded(instance, expect: { state: kernel_status = CREATED AND runtime_context = none })   # ADMISSION: state rung — single-shot start
   template ← definitionStore.load(instance.template_ref)
   requirement ← template.runtime_context                              # RuntimeContextRequirement: none | required(spec) — single source of truth
   IF requirement = none THEN                                          # the workflow declares no runtime context
@@ -1416,7 +1448,7 @@ activate_or_hold(instance) → Outcome                                 # shared 
   RETURN Accepted
 
 RUNTIME_CONTEXT_READY(instance, request_id, runtime_context_ref) → Outcome   # kernel_event (v1: workspace/worktree ready)
-  REQUIRE instance.runtime_context = requested(request_id)   # L0d correlation: the readiness for the request we issued
+  REQUIRE admit_loaded(instance, expect: { correlate: runtime_context = requested(request_id) })   # ADMISSION correlation rung (L0d) — the readiness for the request WE issued
   template ← definitionStore.load(instance.template_ref)
   requirement ← template.runtime_context
   REQUIRE requirement = required(spec)                       # a request was issued ⇒ a context is required (made explicit)
@@ -1425,7 +1457,7 @@ RUNTIME_CONTEXT_READY(instance, request_id, runtime_context_ref) → Outcome   #
   RETURN activate_or_hold(instance)
 
 KICKOFF(instance, task) → Outcome                                     # operator_intent
-  REQUIRE instance.kernel_status = WAITING AND instance.wait.kind = kickoff_pending
+  REQUIRE admit_loaded(instance, expect: { state: kernel_status = WAITING AND wait.kind = kickoff_pending })   # ADMISSION: state rung, bare-REQUIRE (unnamed) — semantics unchanged. No op_id rung yet: operator intents gain operation identity later (finding F-W1-2, memo §9)
   instance.task ← task                                         # the deferred task, supplied now
   RETURN activate(instance)
 
@@ -1437,7 +1469,7 @@ activate(instance) → Outcome                                         # interna
   RETURN Activated(dispatch_intent(instance, template, template.start))   # dispatch is a kernel output (L0b), not a side effect
 
 CANCEL(instance) → Outcome                                           # operator_intent — any non-terminal
-  REQUIRE instance.kernel_status ≠ TERMINAL
+  REQUIRE admit_loaded(instance, expect: { state: kernel_status ≠ TERMINAL })   # ADMISSION: state rung — terminal is a sink
   instance.kernel_status ← TERMINAL ; instance.terminal_disposition ← cancelled
   RETURN Terminated(cancelled)
 
@@ -1446,7 +1478,7 @@ COMPLETE(instance)                                                   # internal 
   instance.kernel_status ← TERMINAL ; instance.terminal_disposition ← done
 
 FAIL(instance, reason) → Outcome                                     # kernel_event — any non-terminal
-  REQUIRE instance.kernel_status ≠ TERMINAL
+  REQUIRE admit_loaded(instance, expect: { state: kernel_status ≠ TERMINAL })   # ADMISSION: state rung — terminal is a sink
   instance.kernel_status ← TERMINAL ; instance.terminal_disposition ← failed ; instance.failure_reason ← reason
   RETURN Terminated(failed)
 
@@ -1457,15 +1489,13 @@ HANDLE envelope → Outcome
   IF instance is none                     THEN RETURN Rejected(unknown_instance)
   template ← definitionStore.load(instance.template_ref)   # separate store; pinned immutable version
 
-  # idempotency, key scope (instance_id, op_id)
-  IF instance.transcript.has(envelope.op_id) THEN RETURN Duplicate   # no-op, no 2nd entry
-
-  # L0d: lifecycle guard — actor emits only in actor-routable ACTIVE execution
-  IF instance.kernel_status ≠ ACTIVE       THEN RETURN Rejected(not_active)
-
-  # actor-supplied stale-intent — mandatory at L0b
-  IF envelope.expected_version is missing  THEN RETURN Rejected(missing_version)
-  IF envelope.expected_version ≠ instance.version THEN RETURN Stale(instance.version)
+  # ADMISSION (born at L0d) — the actor-envelope rungs: idempotency → lifecycle/state → staleness
+  outcome ← admit_loaded(instance, expect: {
+    op_id:   envelope.op_id,                                    # a duplicate is a no-op, no 2nd entry
+    state:   kernel_status = ACTIVE → Rejected(not_active),     # L0d lifecycle guard: actor emits only in actor-routable ACTIVE execution
+    version: envelope.expected_version },                       # actor-supplied stale-intent — mandatory at L0b
+    envelope)
+  IF outcome ≠ Accepted THEN RETURN outcome                     # Duplicate | Stale(v) | Rejected(…) pass through unchanged
 
   step   ← template.step(instance.current_step)
 
@@ -2061,7 +2091,7 @@ INTERFACE RuntimeContextProvider:
   project_for_actor(runtime_context_ref) → RuntimeContextProjection   # kind-specific actor-facing view; kernel-internal fields stay out
 
 START(instance) → Outcome                                             # operator_intent — guarded, single-shot
-  REQUIRE instance.kernel_status = CREATED AND instance.runtime_context = none
+  REQUIRE admit_loaded(instance, expect: { state: kernel_status = CREATED AND runtime_context = none })   # ADMISSION: state rung — single-shot start
   template ← definitionStore.load(instance.template_ref)
   requirement ← template.runtime_context                              # RuntimeContextRequirement: none | required(spec) — single source of truth
   IF requirement = none THEN                                          # the workflow declares no runtime context
@@ -2081,7 +2111,7 @@ activate_or_hold(instance) → Outcome                                 # shared 
   RETURN Accepted
 
 RUNTIME_CONTEXT_READY(instance, request_id, runtime_context_ref) → Outcome   # kernel_event (v1: workspace/worktree ready)
-  REQUIRE instance.runtime_context = requested(request_id)   # L0d correlation: the readiness for the request we issued
+  REQUIRE admit_loaded(instance, expect: { correlate: runtime_context = requested(request_id) })   # ADMISSION correlation rung (L0d) — the readiness for the request WE issued
   template ← definitionStore.load(instance.template_ref)
   requirement ← template.runtime_context
   REQUIRE requirement = required(spec)                       # a request was issued ⇒ a context is required (made explicit)
@@ -2090,7 +2120,7 @@ RUNTIME_CONTEXT_READY(instance, request_id, runtime_context_ref) → Outcome   #
   RETURN activate_or_hold(instance)
 
 KICKOFF(instance, task) → Outcome                                     # operator_intent
-  REQUIRE instance.kernel_status = WAITING AND instance.wait.kind = kickoff_pending
+  REQUIRE admit_loaded(instance, expect: { state: kernel_status = WAITING AND wait.kind = kickoff_pending })   # ADMISSION: state rung, bare-REQUIRE (unnamed) — semantics unchanged. No op_id rung yet: operator intents gain operation identity later (finding F-W1-2, memo §9)
   instance.task ← task                                         # the deferred task, supplied now
   RETURN activate(instance)
 
@@ -2102,7 +2132,7 @@ activate(instance) → Outcome                                         # interna
   RETURN Activated(dispatch_intent(instance, template, template.start))   # dispatch is a kernel output (L0b), not a side effect
 
 CANCEL(instance) → Outcome                                           # operator_intent — any non-terminal
-  REQUIRE instance.kernel_status ≠ TERMINAL
+  REQUIRE admit_loaded(instance, expect: { state: kernel_status ≠ TERMINAL })   # ADMISSION: state rung — terminal is a sink
   instance.kernel_status ← TERMINAL ; instance.terminal_disposition ← cancelled
   RETURN Terminated(cancelled)
 
@@ -2111,7 +2141,7 @@ COMPLETE(instance)                                                   # internal 
   instance.kernel_status ← TERMINAL ; instance.terminal_disposition ← done
 
 FAIL(instance, reason) → Outcome                                     # kernel_event — any non-terminal
-  REQUIRE instance.kernel_status ≠ TERMINAL
+  REQUIRE admit_loaded(instance, expect: { state: kernel_status ≠ TERMINAL })   # ADMISSION: state rung — terminal is a sink
   instance.kernel_status ← TERMINAL ; instance.terminal_disposition ← failed ; instance.failure_reason ← reason
   RETURN Terminated(failed)
 
@@ -2122,15 +2152,13 @@ HANDLE envelope → Outcome
   IF instance is none                     THEN RETURN Rejected(unknown_instance)
   template ← definitionStore.load(instance.template_ref)   # separate store; pinned immutable version
 
-  # idempotency, key scope (instance_id, op_id)
-  IF instance.transcript.has(envelope.op_id) THEN RETURN Duplicate   # no-op, no 2nd entry
-
-  # L0d: lifecycle guard — actor emits only in actor-routable ACTIVE execution
-  IF instance.kernel_status ≠ ACTIVE       THEN RETURN Rejected(not_active)
-
-  # actor-supplied stale-intent — mandatory at L0b
-  IF envelope.expected_version is missing  THEN RETURN Rejected(missing_version)
-  IF envelope.expected_version ≠ instance.version THEN RETURN Stale(instance.version)
+  # ADMISSION (born at L0d) — the actor-envelope rungs: idempotency → lifecycle/state → staleness
+  outcome ← admit_loaded(instance, expect: {
+    op_id:   envelope.op_id,                                    # a duplicate is a no-op, no 2nd entry
+    state:   kernel_status = ACTIVE → Rejected(not_active),     # L0d lifecycle guard: actor emits only in actor-routable ACTIVE execution
+    version: envelope.expected_version },                       # actor-supplied stale-intent — mandatory at L0b
+    envelope)
+  IF outcome ≠ Accepted THEN RETURN outcome                     # Duplicate | Stale(v) | Rejected(…) pass through unchanged
 
   step   ← template.step(instance.current_step)
 
@@ -2378,7 +2406,7 @@ INTERFACE RuntimeContextProvider:
   project_for_actor(runtime_context_ref) → RuntimeContextProjection   # kind-specific actor-facing view; kernel-internal fields stay out
 
 START(instance) → Outcome                                             # operator_intent — guarded, single-shot
-  REQUIRE instance.kernel_status = CREATED AND instance.runtime_context = none
+  REQUIRE admit_loaded(instance, expect: { state: kernel_status = CREATED AND runtime_context = none })   # ADMISSION: state rung — single-shot start
   template ← definitionStore.load(instance.template_ref)
   requirement ← template.runtime_context                              # RuntimeContextRequirement: none | required(spec) — single source of truth
   IF requirement = none THEN                                          # the workflow declares no runtime context
@@ -2398,7 +2426,7 @@ activate_or_hold(instance) → Outcome                                 # shared 
   RETURN Accepted
 
 RUNTIME_CONTEXT_READY(instance, request_id, runtime_context_ref) → Outcome   # kernel_event (v1: workspace/worktree ready)
-  REQUIRE instance.runtime_context = requested(request_id)   # L0d correlation: the readiness for the request we issued
+  REQUIRE admit_loaded(instance, expect: { correlate: runtime_context = requested(request_id) })   # ADMISSION correlation rung (L0d) — the readiness for the request WE issued
   template ← definitionStore.load(instance.template_ref)
   requirement ← template.runtime_context
   REQUIRE requirement = required(spec)                       # a request was issued ⇒ a context is required (made explicit)
@@ -2407,7 +2435,7 @@ RUNTIME_CONTEXT_READY(instance, request_id, runtime_context_ref) → Outcome   #
   RETURN activate_or_hold(instance)
 
 KICKOFF(instance, task) → Outcome                                     # operator_intent
-  REQUIRE instance.kernel_status = WAITING AND instance.wait.kind = kickoff_pending
+  REQUIRE admit_loaded(instance, expect: { state: kernel_status = WAITING AND wait.kind = kickoff_pending })   # ADMISSION: state rung, bare-REQUIRE (unnamed) — semantics unchanged. No op_id rung yet: operator intents gain operation identity later (finding F-W1-2, memo §9)
   instance.task ← task                                         # the deferred task, supplied now
   RETURN activate(instance)
 
@@ -2420,7 +2448,7 @@ activate(instance) → Outcome                                         # interna
   RETURN Activated(dispatch_intent(instance, template, template.start))   # dispatch is a kernel output (L0b), not a side effect
 
 CANCEL(instance) → Outcome                                           # operator_intent — any non-terminal
-  REQUIRE instance.kernel_status ≠ TERMINAL
+  REQUIRE admit_loaded(instance, expect: { state: kernel_status ≠ TERMINAL })   # ADMISSION: state rung — terminal is a sink
   instance.kernel_status ← TERMINAL ; instance.terminal_disposition ← cancelled
   RETURN Terminated(cancelled)
 
@@ -2429,7 +2457,7 @@ COMPLETE(instance)                                                   # internal 
   instance.kernel_status ← TERMINAL ; instance.terminal_disposition ← done
 
 FAIL(instance, reason) → Outcome                                     # kernel_event — any non-terminal
-  REQUIRE instance.kernel_status ≠ TERMINAL
+  REQUIRE admit_loaded(instance, expect: { state: kernel_status ≠ TERMINAL })   # ADMISSION: state rung — terminal is a sink
   instance.kernel_status ← TERMINAL ; instance.terminal_disposition ← failed ; instance.failure_reason ← reason
   RETURN Terminated(failed)
 
@@ -2440,15 +2468,13 @@ HANDLE envelope → Outcome
   IF instance is none                     THEN RETURN Rejected(unknown_instance)
   template ← definitionStore.load(instance.template_ref)   # separate store; pinned immutable version
 
-  # idempotency, key scope (instance_id, op_id)
-  IF instance.transcript.has(envelope.op_id) THEN RETURN Duplicate   # no-op, no 2nd entry
-
-  # L0d: lifecycle guard — actor emits only in actor-routable ACTIVE execution
-  IF instance.kernel_status ≠ ACTIVE       THEN RETURN Rejected(not_active)
-
-  # actor-supplied stale-intent — mandatory at L0b
-  IF envelope.expected_version is missing  THEN RETURN Rejected(missing_version)
-  IF envelope.expected_version ≠ instance.version THEN RETURN Stale(instance.version)
+  # ADMISSION (born at L0d) — the actor-envelope rungs: idempotency → lifecycle/state → staleness
+  outcome ← admit_loaded(instance, expect: {
+    op_id:   envelope.op_id,                                    # a duplicate is a no-op, no 2nd entry
+    state:   kernel_status = ACTIVE → Rejected(not_active),     # L0d lifecycle guard: actor emits only in actor-routable ACTIVE execution
+    version: envelope.expected_version },                       # actor-supplied stale-intent — mandatory at L0b
+    envelope)
+  IF outcome ≠ Accepted THEN RETURN outcome                     # Duplicate | Stale(v) | Rejected(…) pass through unchanged
 
   step   ← template.step(instance.current_step)
 
@@ -2840,7 +2866,7 @@ INTERFACE RuntimeContextProvider:
   project_for_actor(runtime_context_ref) → RuntimeContextProjection   # kind-specific actor-facing view; kernel-internal fields stay out
 
 START(instance) → Outcome                                             # operator_intent — guarded, single-shot
-  REQUIRE instance.kernel_status = CREATED AND instance.runtime_context = none
+  REQUIRE admit_loaded(instance, expect: { state: kernel_status = CREATED AND runtime_context = none })   # ADMISSION: state rung — single-shot start
   template ← definitionStore.load(instance.template_ref)
   requirement ← template.runtime_context                              # RuntimeContextRequirement: none | required(spec) — single source of truth
   IF requirement = none THEN                                          # the workflow declares no runtime context
@@ -2860,7 +2886,7 @@ activate_or_hold(instance) → Outcome                                 # shared 
   RETURN Accepted
 
 RUNTIME_CONTEXT_READY(instance, request_id, runtime_context_ref) → Outcome   # kernel_event (v1: workspace/worktree ready)
-  REQUIRE instance.runtime_context = requested(request_id)   # L0d correlation: the readiness for the request we issued
+  REQUIRE admit_loaded(instance, expect: { correlate: runtime_context = requested(request_id) })   # ADMISSION correlation rung (L0d) — the readiness for the request WE issued
   template ← definitionStore.load(instance.template_ref)
   requirement ← template.runtime_context
   REQUIRE requirement = required(spec)                       # a request was issued ⇒ a context is required (made explicit)
@@ -2869,7 +2895,7 @@ RUNTIME_CONTEXT_READY(instance, request_id, runtime_context_ref) → Outcome   #
   RETURN activate_or_hold(instance)
 
 KICKOFF(instance, task) → Outcome                                     # operator_intent
-  REQUIRE instance.kernel_status = WAITING AND instance.wait.kind = kickoff_pending
+  REQUIRE admit_loaded(instance, expect: { state: kernel_status = WAITING AND wait.kind = kickoff_pending })   # ADMISSION: state rung, bare-REQUIRE (unnamed) — semantics unchanged. No op_id rung yet: operator intents gain operation identity later (finding F-W1-2, memo §9)
   instance.task ← task                                         # the deferred task, supplied now
   RETURN activate(instance)
 
@@ -2882,7 +2908,7 @@ activate(instance) → Outcome                                         # interna
   RETURN Activated(dispatch_intent(instance, template, template.start))   # dispatch is a kernel output (L0b), not a side effect
 
 CANCEL(instance) → Outcome                                           # operator_intent — any non-terminal
-  REQUIRE instance.kernel_status ≠ TERMINAL
+  REQUIRE admit_loaded(instance, expect: { state: kernel_status ≠ TERMINAL })   # ADMISSION: state rung — terminal is a sink
   instance.kernel_status ← TERMINAL ; instance.terminal_disposition ← cancelled
   RETURN Terminated(cancelled)
 
@@ -2891,7 +2917,7 @@ COMPLETE(instance)                                                   # internal 
   instance.kernel_status ← TERMINAL ; instance.terminal_disposition ← done
 
 FAIL(instance, reason) → Outcome                                     # kernel_event — any non-terminal
-  REQUIRE instance.kernel_status ≠ TERMINAL
+  REQUIRE admit_loaded(instance, expect: { state: kernel_status ≠ TERMINAL })   # ADMISSION: state rung — terminal is a sink
   instance.kernel_status ← TERMINAL ; instance.terminal_disposition ← failed ; instance.failure_reason ← reason
   RETURN Terminated(failed)
 
@@ -2902,15 +2928,13 @@ HANDLE envelope → Outcome
   IF instance is none                     THEN RETURN Rejected(unknown_instance)
   template ← definitionStore.load(instance.template_ref)   # separate store; pinned immutable version
 
-  # idempotency, key scope (instance_id, op_id)
-  IF instance.transcript.has(envelope.op_id) THEN RETURN Duplicate   # no-op, no 2nd entry
-
-  # L0d: lifecycle guard — actor emits only in actor-routable ACTIVE execution
-  IF instance.kernel_status ≠ ACTIVE       THEN RETURN Rejected(not_active)
-
-  # actor-supplied stale-intent — mandatory at L0b
-  IF envelope.expected_version is missing  THEN RETURN Rejected(missing_version)
-  IF envelope.expected_version ≠ instance.version THEN RETURN Stale(instance.version)
+  # ADMISSION (born at L0d) — the actor-envelope rungs: idempotency → lifecycle/state → staleness
+  outcome ← admit_loaded(instance, expect: {
+    op_id:   envelope.op_id,                                    # a duplicate is a no-op, no 2nd entry
+    state:   kernel_status = ACTIVE → Rejected(not_active),     # L0d lifecycle guard: actor emits only in actor-routable ACTIVE execution
+    version: envelope.expected_version },                       # actor-supplied stale-intent — mandatory at L0b
+    envelope)
+  IF outcome ≠ Accepted THEN RETURN outcome                     # Duplicate | Stale(v) | Rejected(…) pass through unchanged
 
   step   ← template.step(instance.current_step)
 
@@ -3317,7 +3341,7 @@ INTERFACE RuntimeContextProvider:
   project_for_actor(runtime_context_ref) → RuntimeContextProjection   # kind-specific actor-facing view; kernel-internal fields stay out
 
 START(instance) → Outcome                                             # operator_intent — guarded, single-shot
-  REQUIRE instance.kernel_status = CREATED AND instance.runtime_context = none
+  REQUIRE admit_loaded(instance, expect: { state: kernel_status = CREATED AND runtime_context = none })   # ADMISSION: state rung — single-shot start
   template ← definitionStore.load(instance.template_ref)
   requirement ← template.runtime_context                              # RuntimeContextRequirement: none | required(spec) — single source of truth
   IF requirement = none THEN                                          # the workflow declares no runtime context
@@ -3337,7 +3361,7 @@ activate_or_hold(instance) → Outcome                                 # shared 
   RETURN Accepted
 
 RUNTIME_CONTEXT_READY(instance, request_id, runtime_context_ref) → Outcome   # kernel_event (v1: workspace/worktree ready)
-  REQUIRE instance.runtime_context = requested(request_id)   # L0d correlation: the readiness for the request we issued
+  REQUIRE admit_loaded(instance, expect: { correlate: runtime_context = requested(request_id) })   # ADMISSION correlation rung (L0d) — the readiness for the request WE issued
   template ← definitionStore.load(instance.template_ref)
   requirement ← template.runtime_context
   REQUIRE requirement = required(spec)                       # a request was issued ⇒ a context is required (made explicit)
@@ -3346,7 +3370,7 @@ RUNTIME_CONTEXT_READY(instance, request_id, runtime_context_ref) → Outcome   #
   RETURN activate_or_hold(instance)
 
 KICKOFF(instance, task) → Outcome                                     # operator_intent
-  REQUIRE instance.kernel_status = WAITING AND instance.wait.kind = kickoff_pending
+  REQUIRE admit_loaded(instance, expect: { state: kernel_status = WAITING AND wait.kind = kickoff_pending })   # ADMISSION: state rung, bare-REQUIRE (unnamed) — semantics unchanged. No op_id rung yet: operator intents gain operation identity later (finding F-W1-2, memo §9)
   instance.task ← task                                         # the deferred task, supplied now
   RETURN activate(instance)
 
@@ -3359,7 +3383,7 @@ activate(instance) → Outcome                                         # interna
   RETURN Activated(dispatch_intent(instance, template, template.start))   # dispatch is a kernel output (L0b), not a side effect
 
 CANCEL(instance) → Outcome                                           # operator_intent — any non-terminal
-  REQUIRE instance.kernel_status ≠ TERMINAL
+  REQUIRE admit_loaded(instance, expect: { state: kernel_status ≠ TERMINAL })   # ADMISSION: state rung — terminal is a sink
   instance.kernel_status ← TERMINAL ; instance.terminal_disposition ← cancelled
   RETURN Terminated(cancelled)
 
@@ -3368,7 +3392,7 @@ COMPLETE(instance)                                                   # internal 
   instance.kernel_status ← TERMINAL ; instance.terminal_disposition ← done
 
 FAIL(instance, reason) → Outcome                                     # kernel_event — any non-terminal
-  REQUIRE instance.kernel_status ≠ TERMINAL
+  REQUIRE admit_loaded(instance, expect: { state: kernel_status ≠ TERMINAL })   # ADMISSION: state rung — terminal is a sink
   instance.kernel_status ← TERMINAL ; instance.terminal_disposition ← failed ; instance.failure_reason ← reason
   RETURN Terminated(failed)
 
@@ -3379,15 +3403,13 @@ HANDLE envelope → Outcome
   IF instance is none                     THEN RETURN Rejected(unknown_instance)
   template ← definitionStore.load(instance.template_ref)   # separate store; pinned immutable version
 
-  # idempotency, key scope (instance_id, op_id)
-  IF instance.transcript.has(envelope.op_id) THEN RETURN Duplicate   # no-op, no 2nd entry
-
-  # L0d: lifecycle guard — actor emits only in actor-routable ACTIVE execution
-  IF instance.kernel_status ≠ ACTIVE       THEN RETURN Rejected(not_active)
-
-  # actor-supplied stale-intent — mandatory at L0b
-  IF envelope.expected_version is missing  THEN RETURN Rejected(missing_version)
-  IF envelope.expected_version ≠ instance.version THEN RETURN Stale(instance.version)
+  # ADMISSION (born at L0d) — the actor-envelope rungs: idempotency → lifecycle/state → staleness
+  outcome ← admit_loaded(instance, expect: {
+    op_id:   envelope.op_id,                                    # a duplicate is a no-op, no 2nd entry
+    state:   kernel_status = ACTIVE → Rejected(not_active),     # L0d lifecycle guard: actor emits only in actor-routable ACTIVE execution
+    version: envelope.expected_version },                       # actor-supplied stale-intent — mandatory at L0b
+    envelope)
+  IF outcome ≠ Accepted THEN RETURN outcome                     # Duplicate | Stale(v) | Rejected(…) pass through unchanged
 
   step   ← template.step(instance.current_step)
 
@@ -3895,7 +3917,7 @@ INTERFACE RuntimeContextProvider:
   project_for_actor(runtime_context_ref) → RuntimeContextProjection   # kind-specific actor-facing view; kernel-internal fields stay out
 
 START(instance) → Outcome                                             # operator_intent — guarded, single-shot
-  REQUIRE instance.kernel_status = CREATED AND instance.runtime_context = none
+  REQUIRE admit_loaded(instance, expect: { state: kernel_status = CREATED AND runtime_context = none })   # ADMISSION: state rung — single-shot start
   template ← definitionStore.load(instance.template_ref)
   requirement ← template.runtime_context                              # RuntimeContextRequirement: none | required(spec) — single source of truth
   IF requirement = none THEN                                          # the workflow declares no runtime context
@@ -3915,7 +3937,7 @@ activate_or_hold(instance) → Outcome                                 # shared 
   RETURN Accepted
 
 RUNTIME_CONTEXT_READY(instance, request_id, runtime_context_ref) → Outcome   # kernel_event (v1: workspace/worktree ready)
-  REQUIRE instance.runtime_context = requested(request_id)   # L0d correlation: the readiness for the request we issued
+  REQUIRE admit_loaded(instance, expect: { correlate: runtime_context = requested(request_id) })   # ADMISSION correlation rung (L0d) — the readiness for the request WE issued
   template ← definitionStore.load(instance.template_ref)
   requirement ← template.runtime_context
   REQUIRE requirement = required(spec)                       # a request was issued ⇒ a context is required (made explicit)
@@ -3924,7 +3946,7 @@ RUNTIME_CONTEXT_READY(instance, request_id, runtime_context_ref) → Outcome   #
   RETURN activate_or_hold(instance)
 
 KICKOFF(instance, task) → Outcome                                     # operator_intent
-  REQUIRE instance.kernel_status = WAITING AND instance.wait.kind = kickoff_pending
+  REQUIRE admit_loaded(instance, expect: { state: kernel_status = WAITING AND wait.kind = kickoff_pending })   # ADMISSION: state rung, bare-REQUIRE (unnamed) — semantics unchanged. No op_id rung yet: operator intents gain operation identity later (finding F-W1-2, memo §9)
   instance.task ← task                                         # the deferred task, supplied now
   RETURN activate(instance)
 
@@ -4040,7 +4062,7 @@ activate(instance) → Outcome                                         # interna
   RETURN Activated(dispatch_intent(instance, template, template.start))   # dispatch is a kernel output (L0b), not a side effect
 
 CANCEL(instance) → Outcome                                           # operator_intent — any non-terminal
-  REQUIRE instance.kernel_status ≠ TERMINAL
+  REQUIRE admit_loaded(instance, expect: { state: kernel_status ≠ TERMINAL })   # ADMISSION: state rung — terminal is a sink
   instance.kernel_status ← TERMINAL ; instance.terminal_disposition ← cancelled
   RETURN Terminated(cancelled)
 
@@ -4049,7 +4071,7 @@ COMPLETE(instance)                                                   # internal 
   instance.kernel_status ← TERMINAL ; instance.terminal_disposition ← done
 
 FAIL(instance, reason) → Outcome                                     # kernel_event — any non-terminal
-  REQUIRE instance.kernel_status ≠ TERMINAL
+  REQUIRE admit_loaded(instance, expect: { state: kernel_status ≠ TERMINAL })   # ADMISSION: state rung — terminal is a sink
   instance.kernel_status ← TERMINAL ; instance.terminal_disposition ← failed ; instance.failure_reason ← reason
   RETURN Terminated(failed)
 
@@ -4060,15 +4082,13 @@ HANDLE envelope → Outcome
   IF instance is none                     THEN RETURN Rejected(unknown_instance)
   template ← definitionStore.load(instance.template_ref)   # separate store; pinned immutable version
 
-  # idempotency, key scope (instance_id, op_id)
-  IF instance.transcript.has(envelope.op_id) THEN RETURN Duplicate   # no-op, no 2nd entry
-
-  # L0d: lifecycle guard — actor emits only in actor-routable ACTIVE execution
-  IF instance.kernel_status ≠ ACTIVE       THEN RETURN Rejected(not_active)
-
-  # actor-supplied stale-intent — mandatory at L0b
-  IF envelope.expected_version is missing  THEN RETURN Rejected(missing_version)
-  IF envelope.expected_version ≠ instance.version THEN RETURN Stale(instance.version)
+  # ADMISSION (born at L0d) — the actor-envelope rungs: idempotency → lifecycle/state → staleness
+  outcome ← admit_loaded(instance, expect: {
+    op_id:   envelope.op_id,                                    # a duplicate is a no-op, no 2nd entry
+    state:   kernel_status = ACTIVE → Rejected(not_active),     # L0d lifecycle guard: actor emits only in actor-routable ACTIVE execution
+    version: envelope.expected_version },                       # actor-supplied stale-intent — mandatory at L0b
+    envelope)
+  IF outcome ≠ Accepted THEN RETURN outcome                     # Duplicate | Stale(v) | Rejected(…) pass through unchanged
 
   step   ← template.step(instance.current_step)
 
@@ -4861,7 +4881,7 @@ release_boundaries(template) → [boundary_event]                     # LC2 the 
   RETURN req.release.boundaries
 
 START(instance) → Outcome                                             # operator_intent — guarded, single-shot
-  REQUIRE instance.kernel_status = CREATED AND instance.runtime_context = none
+  REQUIRE admit_loaded(instance, expect: { state: kernel_status = CREATED AND runtime_context = none })   # ADMISSION: state rung — single-shot start
   template ← definitionStore.load(instance.template_ref)
   requirement ← template.runtime_context                              # RuntimeContextRequirement: none | required(spec) — single source of truth
   IF requirement = none THEN                                          # the workflow declares no runtime context
@@ -4881,7 +4901,7 @@ activate_or_hold(instance) → Outcome                                 # shared 
   RETURN Accepted
 
 RUNTIME_CONTEXT_READY(instance, request_id, runtime_context_ref) → Outcome   # kernel_event (v1: workspace/worktree ready)
-  REQUIRE instance.runtime_context = requested(request_id)   # L0d correlation: the readiness for the request we issued
+  REQUIRE admit_loaded(instance, expect: { correlate: runtime_context = requested(request_id) })   # ADMISSION correlation rung (L0d) — the readiness for the request WE issued
   template ← definitionStore.load(instance.template_ref)
   requirement ← template.runtime_context
   REQUIRE requirement = required(spec)                       # a request was issued ⇒ a context is required (made explicit)
@@ -4938,7 +4958,7 @@ RUNTIME_CONTEXT_RELEASED(instance, request_id, result) → Outcome    # kernel_e
   RETURN Accepted                                                   # obligation RETAINED (tracked through failure until discharged); auto-retry / timeout / watchdog = L9
 
 KICKOFF(instance, task) → Outcome                                     # operator_intent
-  REQUIRE instance.kernel_status = WAITING AND instance.wait.kind = kickoff_pending
+  REQUIRE admit_loaded(instance, expect: { state: kernel_status = WAITING AND wait.kind = kickoff_pending })   # ADMISSION: state rung, bare-REQUIRE (unnamed) — semantics unchanged. No op_id rung yet: operator intents gain operation identity later (finding F-W1-2, memo §9)
   instance.task ← task                                         # the deferred task, supplied now
   RETURN activate(instance)
 
@@ -5054,7 +5074,7 @@ activate(instance) → Outcome                                         # interna
   RETURN Activated(dispatch_intent(instance, template, template.start))   # dispatch is a kernel output (L0b), not a side effect
 
 CANCEL(instance) → Outcome                                           # operator_intent — any non-terminal
-  REQUIRE instance.kernel_status ≠ TERMINAL
+  REQUIRE admit_loaded(instance, expect: { state: kernel_status ≠ TERMINAL })   # ADMISSION: state rung — terminal is a sink
   instance.kernel_status ← TERMINAL ; instance.terminal_disposition ← cancelled   # LC2 emits the terminal boundary event; RECEIVE's post-commit hook releases ONLY if terminal is a declared release boundary — never inside this mutation
   RETURN Terminated(cancelled)
 
@@ -5063,7 +5083,7 @@ COMPLETE(instance)                                                   # internal 
   instance.kernel_status ← TERMINAL ; instance.terminal_disposition ← done   # LC2 emits the terminal boundary event; RECEIVE's post-commit hook initiates release ONLY if terminal ∈ the declared release.boundaries (a deferred boundary, e.g. merge_completed, is LC3a)
 
 FAIL(instance, reason) → Outcome                                     # kernel_event — any non-terminal
-  REQUIRE instance.kernel_status ≠ TERMINAL
+  REQUIRE admit_loaded(instance, expect: { state: kernel_status ≠ TERMINAL })   # ADMISSION: state rung — terminal is a sink
   instance.kernel_status ← TERMINAL ; instance.terminal_disposition ← failed ; instance.failure_reason ← reason   # LC2 a failed run emits the terminal boundary event too — released ONLY if terminal is a declared boundary, post-commit via RECEIVE's hook
   RETURN Terminated(failed)
 
@@ -5074,15 +5094,13 @@ HANDLE envelope → Outcome
   IF instance is none                     THEN RETURN Rejected(unknown_instance)
   template ← definitionStore.load(instance.template_ref)   # separate store; pinned immutable version
 
-  # idempotency, key scope (instance_id, op_id)
-  IF instance.transcript.has(envelope.op_id) THEN RETURN Duplicate   # no-op, no 2nd entry
-
-  # L0d: lifecycle guard — actor emits only in actor-routable ACTIVE execution
-  IF instance.kernel_status ≠ ACTIVE       THEN RETURN Rejected(not_active)
-
-  # actor-supplied stale-intent — mandatory at L0b
-  IF envelope.expected_version is missing  THEN RETURN Rejected(missing_version)
-  IF envelope.expected_version ≠ instance.version THEN RETURN Stale(instance.version)
+  # ADMISSION (born at L0d) — the actor-envelope rungs: idempotency → lifecycle/state → staleness
+  outcome ← admit_loaded(instance, expect: {
+    op_id:   envelope.op_id,                                    # a duplicate is a no-op, no 2nd entry
+    state:   kernel_status = ACTIVE → Rejected(not_active),     # L0d lifecycle guard: actor emits only in actor-routable ACTIVE execution
+    version: envelope.expected_version },                       # actor-supplied stale-intent — mandatory at L0b
+    envelope)
+  IF outcome ≠ Accepted THEN RETURN outcome                     # Duplicate | Stale(v) | Rejected(…) pass through unchanged
 
   step   ← template.step(instance.current_step)
 
@@ -5648,7 +5666,7 @@ release_boundaries(template) → [boundary_event]                     # LC2 the 
   RETURN req.release.boundaries
 
 START(instance) → Outcome                                             # operator_intent — guarded, single-shot
-  REQUIRE instance.kernel_status = CREATED AND instance.runtime_context = none
+  REQUIRE admit_loaded(instance, expect: { state: kernel_status = CREATED AND runtime_context = none })   # ADMISSION: state rung — single-shot start
   template ← definitionStore.load(instance.template_ref)
   requirement ← template.runtime_context                              # RuntimeContextRequirement: none | required(spec) — single source of truth
   IF requirement = none THEN                                          # the workflow declares no runtime context
@@ -5668,7 +5686,7 @@ activate_or_hold(instance) → Outcome                                 # shared 
   RETURN Accepted
 
 RUNTIME_CONTEXT_READY(instance, request_id, runtime_context_ref) → Outcome   # kernel_event (v1: workspace/worktree ready)
-  REQUIRE instance.runtime_context = requested(request_id)   # L0d correlation: the readiness for the request we issued
+  REQUIRE admit_loaded(instance, expect: { correlate: runtime_context = requested(request_id) })   # ADMISSION correlation rung (L0d) — the readiness for the request WE issued
   template ← definitionStore.load(instance.template_ref)
   requirement ← template.runtime_context
   REQUIRE requirement = required(spec)                       # a request was issued ⇒ a context is required (made explicit)
@@ -5725,7 +5743,7 @@ RUNTIME_CONTEXT_RELEASED(instance, request_id, result) → Outcome    # kernel_e
   RETURN Accepted                                                   # obligation RETAINED (tracked through failure until discharged); auto-retry / timeout / watchdog = L9
 
 KICKOFF(instance, task) → Outcome                                     # operator_intent
-  REQUIRE instance.kernel_status = WAITING AND instance.wait.kind = kickoff_pending
+  REQUIRE admit_loaded(instance, expect: { state: kernel_status = WAITING AND wait.kind = kickoff_pending })   # ADMISSION: state rung, bare-REQUIRE (unnamed) — semantics unchanged. No op_id rung yet: operator intents gain operation identity later (finding F-W1-2, memo §9)
   instance.task ← task                                         # the deferred task, supplied now
   RETURN activate(instance)
 
@@ -5902,7 +5920,7 @@ activate(instance) → Outcome                                         # interna
   RETURN Activated(dispatch_intent(instance, template, template.start))   # dispatch is a kernel output (L0b), not a side effect
 
 CANCEL(instance) → Outcome                                           # operator_intent — any non-terminal
-  REQUIRE instance.kernel_status ≠ TERMINAL
+  REQUIRE admit_loaded(instance, expect: { state: kernel_status ≠ TERMINAL })   # ADMISSION: state rung — terminal is a sink
   instance.kernel_status ← TERMINAL ; instance.terminal_disposition ← cancelled   # LC2 emits the terminal boundary event; RECEIVE's post-commit hook releases ONLY if terminal is a declared release boundary — never inside this mutation
   RETURN Terminated(cancelled)
 
@@ -5911,7 +5929,7 @@ COMPLETE(instance)                                                   # internal 
   instance.kernel_status ← TERMINAL ; instance.terminal_disposition ← done   # LC2 emits the terminal boundary event; RECEIVE's post-commit hook initiates release ONLY if terminal ∈ the declared release.boundaries (a deferred boundary, e.g. merge_completed, is LC3a)
 
 FAIL(instance, reason) → Outcome                                     # kernel_event — any non-terminal
-  REQUIRE instance.kernel_status ≠ TERMINAL
+  REQUIRE admit_loaded(instance, expect: { state: kernel_status ≠ TERMINAL })   # ADMISSION: state rung — terminal is a sink
   instance.kernel_status ← TERMINAL ; instance.terminal_disposition ← failed ; instance.failure_reason ← reason   # LC2 a failed run emits the terminal boundary event too — released ONLY if terminal is a declared boundary, post-commit via RECEIVE's hook
   RETURN Terminated(failed)
 
@@ -5922,15 +5940,13 @@ HANDLE envelope → Outcome
   IF instance is none                     THEN RETURN Rejected(unknown_instance)
   template ← definitionStore.load(instance.template_ref)   # separate store; pinned immutable version
 
-  # idempotency, key scope (instance_id, op_id)
-  IF instance.transcript.has(envelope.op_id) THEN RETURN Duplicate   # no-op, no 2nd entry
-
-  # L0d: lifecycle guard — actor emits only in actor-routable ACTIVE execution
-  IF instance.kernel_status ≠ ACTIVE       THEN RETURN Rejected(not_active)
-
-  # actor-supplied stale-intent — mandatory at L0b
-  IF envelope.expected_version is missing  THEN RETURN Rejected(missing_version)
-  IF envelope.expected_version ≠ instance.version THEN RETURN Stale(instance.version)
+  # ADMISSION (born at L0d) — the actor-envelope rungs: idempotency → lifecycle/state → staleness
+  outcome ← admit_loaded(instance, expect: {
+    op_id:   envelope.op_id,                                    # a duplicate is a no-op, no 2nd entry
+    state:   kernel_status = ACTIVE → Rejected(not_active),     # L0d lifecycle guard: actor emits only in actor-routable ACTIVE execution
+    version: envelope.expected_version },                       # actor-supplied stale-intent — mandatory at L0b
+    envelope)
+  IF outcome ≠ Accepted THEN RETURN outcome                     # Duplicate | Stale(v) | Rejected(…) pass through unchanged
 
   step   ← template.step(instance.current_step)
 
@@ -6452,7 +6468,7 @@ release_boundaries(template) → [boundary_event]                     # LC2 the 
   RETURN req.release.boundaries
 
 START(instance) → Outcome                                             # operator_intent — guarded, single-shot
-  REQUIRE instance.kernel_status = CREATED AND instance.runtime_context = none
+  REQUIRE admit_loaded(instance, expect: { state: kernel_status = CREATED AND runtime_context = none })   # ADMISSION: state rung — single-shot start
   template ← definitionStore.load(instance.template_ref)
   requirement ← template.runtime_context                              # RuntimeContextRequirement: none | required(spec) — single source of truth
   IF requirement = none THEN                                          # the workflow declares no runtime context
@@ -6472,7 +6488,7 @@ activate_or_hold(instance) → Outcome                                 # shared 
   RETURN Accepted
 
 RUNTIME_CONTEXT_READY(instance, request_id, runtime_context_ref) → Outcome   # kernel_event (v1: workspace/worktree ready)
-  REQUIRE instance.runtime_context = requested(request_id)   # L0d correlation: the readiness for the request we issued
+  REQUIRE admit_loaded(instance, expect: { correlate: runtime_context = requested(request_id) })   # ADMISSION correlation rung (L0d) — the readiness for the request WE issued
   template ← definitionStore.load(instance.template_ref)
   requirement ← template.runtime_context
   REQUIRE requirement = required(spec)                       # a request was issued ⇒ a context is required (made explicit)
@@ -6529,7 +6545,7 @@ RUNTIME_CONTEXT_RELEASED(instance, request_id, result) → Outcome    # kernel_e
   RETURN Accepted                                                   # obligation RETAINED (tracked through failure until discharged); auto-retry / timeout / watchdog = L9
 
 KICKOFF(instance, task) → Outcome                                     # operator_intent
-  REQUIRE instance.kernel_status = WAITING AND instance.wait.kind = kickoff_pending
+  REQUIRE admit_loaded(instance, expect: { state: kernel_status = WAITING AND wait.kind = kickoff_pending })   # ADMISSION: state rung, bare-REQUIRE (unnamed) — semantics unchanged. No op_id rung yet: operator intents gain operation identity later (finding F-W1-2, memo §9)
   instance.task ← task                                         # the deferred task, supplied now
   RETURN activate(instance)
 
@@ -6758,7 +6774,7 @@ activate(instance) → Outcome                                         # interna
   RETURN Activated(dispatch_intent(instance, template, template.start))   # dispatch is a kernel output (L0b), not a side effect
 
 CANCEL(instance) → Outcome                                           # operator_intent — any non-terminal
-  REQUIRE instance.kernel_status ≠ TERMINAL
+  REQUIRE admit_loaded(instance, expect: { state: kernel_status ≠ TERMINAL })   # ADMISSION: state rung — terminal is a sink
   instance.kernel_status ← TERMINAL ; instance.terminal_disposition ← cancelled   # LC2 emits the terminal boundary event; RECEIVE's post-commit hook releases ONLY if terminal is a declared release boundary — never inside this mutation
   RETURN Terminated(cancelled)
 
@@ -6767,7 +6783,7 @@ COMPLETE(instance)                                                   # internal 
   instance.kernel_status ← TERMINAL ; instance.terminal_disposition ← done   # LC2 emits the terminal boundary event; RECEIVE's post-commit hook initiates release ONLY if terminal ∈ the declared release.boundaries (a deferred boundary, e.g. merge_completed, is LC3a)
 
 FAIL(instance, reason) → Outcome                                     # kernel_event — any non-terminal
-  REQUIRE instance.kernel_status ≠ TERMINAL
+  REQUIRE admit_loaded(instance, expect: { state: kernel_status ≠ TERMINAL })   # ADMISSION: state rung — terminal is a sink
   instance.kernel_status ← TERMINAL ; instance.terminal_disposition ← failed ; instance.failure_reason ← reason   # LC2 a failed run emits the terminal boundary event too — released ONLY if terminal is a declared boundary, post-commit via RECEIVE's hook
   RETURN Terminated(failed)
 
@@ -6778,15 +6794,13 @@ HANDLE envelope → Outcome
   IF instance is none                     THEN RETURN Rejected(unknown_instance)
   template ← definitionStore.load(instance.template_ref)   # separate store; pinned immutable version
 
-  # idempotency, key scope (instance_id, op_id)
-  IF instance.transcript.has(envelope.op_id) THEN RETURN Duplicate   # no-op, no 2nd entry
-
-  # L0d: lifecycle guard — actor emits only in actor-routable ACTIVE execution
-  IF instance.kernel_status ≠ ACTIVE       THEN RETURN Rejected(not_active)
-
-  # actor-supplied stale-intent — mandatory at L0b
-  IF envelope.expected_version is missing  THEN RETURN Rejected(missing_version)
-  IF envelope.expected_version ≠ instance.version THEN RETURN Stale(instance.version)
+  # ADMISSION (born at L0d) — the actor-envelope rungs: idempotency → lifecycle/state → staleness
+  outcome ← admit_loaded(instance, expect: {
+    op_id:   envelope.op_id,                                    # a duplicate is a no-op, no 2nd entry
+    state:   kernel_status = ACTIVE → Rejected(not_active),     # L0d lifecycle guard: actor emits only in actor-routable ACTIVE execution
+    version: envelope.expected_version },                       # actor-supplied stale-intent — mandatory at L0b
+    envelope)
+  IF outcome ≠ Accepted THEN RETURN outcome                     # Duplicate | Stale(v) | Rejected(…) pass through unchanged
 
   step   ← template.step(instance.current_step)
 
@@ -7304,7 +7318,7 @@ release_boundaries(template) → [boundary_event]                     # LC2 the 
   RETURN req.release.boundaries
 
 START(instance) → Outcome                                             # operator_intent — guarded, single-shot
-  REQUIRE instance.kernel_status = CREATED AND instance.runtime_context = none
+  REQUIRE admit_loaded(instance, expect: { state: kernel_status = CREATED AND runtime_context = none })   # ADMISSION: state rung — single-shot start
   template ← definitionStore.load(instance.template_ref)
   requirement ← template.runtime_context                              # RuntimeContextRequirement: none | required(spec) — single source of truth
   IF requirement = none THEN                                          # the workflow declares no runtime context
@@ -7324,7 +7338,7 @@ activate_or_hold(instance) → Outcome                                 # shared 
   RETURN Accepted
 
 RUNTIME_CONTEXT_READY(instance, request_id, runtime_context_ref) → Outcome   # kernel_event (v1: workspace/worktree ready)
-  REQUIRE instance.runtime_context = requested(request_id)   # L0d correlation: the readiness for the request we issued
+  REQUIRE admit_loaded(instance, expect: { correlate: runtime_context = requested(request_id) })   # ADMISSION correlation rung (L0d) — the readiness for the request WE issued
   template ← definitionStore.load(instance.template_ref)
   requirement ← template.runtime_context
   REQUIRE requirement = required(spec)                       # a request was issued ⇒ a context is required (made explicit)
@@ -7381,7 +7395,7 @@ RUNTIME_CONTEXT_RELEASED(instance, request_id, result) → Outcome    # kernel_e
   RETURN Accepted                                                   # obligation RETAINED (tracked through failure until discharged); auto-retry / timeout / watchdog = L9
 
 KICKOFF(instance, task) → Outcome                                     # operator_intent
-  REQUIRE instance.kernel_status = WAITING AND instance.wait.kind = kickoff_pending
+  REQUIRE admit_loaded(instance, expect: { state: kernel_status = WAITING AND wait.kind = kickoff_pending })   # ADMISSION: state rung, bare-REQUIRE (unnamed) — semantics unchanged. No op_id rung yet: operator intents gain operation identity later (finding F-W1-2, memo §9)
   instance.task ← task                                         # the deferred task, supplied now
   RETURN activate(instance)
 
@@ -7610,7 +7624,7 @@ activate(instance) → Outcome                                         # interna
   RETURN Activated(dispatch_intent(instance, template, template.start))   # dispatch is a kernel output (L0b), not a side effect
 
 CANCEL(instance) → Outcome                                           # operator_intent — any non-terminal
-  REQUIRE instance.kernel_status ≠ TERMINAL
+  REQUIRE admit_loaded(instance, expect: { state: kernel_status ≠ TERMINAL })   # ADMISSION: state rung — terminal is a sink
   instance.kernel_status ← TERMINAL ; instance.terminal_disposition ← cancelled   # LC2 emits the terminal boundary event; RECEIVE's post-commit hook releases ONLY if terminal is a declared release boundary — never inside this mutation
   RETURN Terminated(cancelled)
 
@@ -7619,7 +7633,7 @@ COMPLETE(instance)                                                   # internal 
   instance.kernel_status ← TERMINAL ; instance.terminal_disposition ← done   # LC2 emits the terminal boundary event; RECEIVE's post-commit hook initiates release ONLY if terminal ∈ the declared release.boundaries (a deferred boundary, e.g. merge_completed, is LC3a)
 
 FAIL(instance, reason) → Outcome                                     # kernel_event — any non-terminal
-  REQUIRE instance.kernel_status ≠ TERMINAL
+  REQUIRE admit_loaded(instance, expect: { state: kernel_status ≠ TERMINAL })   # ADMISSION: state rung — terminal is a sink
   instance.kernel_status ← TERMINAL ; instance.terminal_disposition ← failed ; instance.failure_reason ← reason   # LC2 a failed run emits the terminal boundary event too — released ONLY if terminal is a declared boundary, post-commit via RECEIVE's hook
   RETURN Terminated(failed)
 
@@ -7630,15 +7644,13 @@ HANDLE envelope → Outcome
   IF instance is none                     THEN RETURN Rejected(unknown_instance)
   template ← definitionStore.load(instance.template_ref)   # separate store; pinned immutable version
 
-  # idempotency, key scope (instance_id, op_id)
-  IF instance.transcript.has(envelope.op_id) THEN RETURN Duplicate   # no-op, no 2nd entry
-
-  # L0d: lifecycle guard — actor emits only in actor-routable ACTIVE execution
-  IF instance.kernel_status ≠ ACTIVE       THEN RETURN Rejected(not_active)
-
-  # actor-supplied stale-intent — mandatory at L0b
-  IF envelope.expected_version is missing  THEN RETURN Rejected(missing_version)
-  IF envelope.expected_version ≠ instance.version THEN RETURN Stale(instance.version)
+  # ADMISSION (born at L0d) — the actor-envelope rungs: idempotency → lifecycle/state → staleness
+  outcome ← admit_loaded(instance, expect: {
+    op_id:   envelope.op_id,                                    # a duplicate is a no-op, no 2nd entry
+    state:   kernel_status = ACTIVE → Rejected(not_active),     # L0d lifecycle guard: actor emits only in actor-routable ACTIVE execution
+    version: envelope.expected_version },                       # actor-supplied stale-intent — mandatory at L0b
+    envelope)
+  IF outcome ≠ Accepted THEN RETURN outcome                     # Duplicate | Stale(v) | Rejected(…) pass through unchanged
 
   step   ← template.step(instance.current_step)
 
@@ -8524,7 +8536,7 @@ release_boundaries(template) → [boundary_event]                     # LC2 the 
   RETURN req.release.boundaries
 
 START(instance) → Outcome                                             # operator_intent — guarded, single-shot
-  REQUIRE instance.kernel_status = CREATED AND instance.runtime_context = none
+  REQUIRE admit_loaded(instance, expect: { state: kernel_status = CREATED AND runtime_context = none })   # ADMISSION: state rung — single-shot start
   template ← definitionStore.load(instance.template_ref)
   requirement ← template.runtime_context                              # RuntimeContextRequirement: none | required(spec) — single source of truth
   IF requirement = none THEN                                          # the workflow declares no runtime context
@@ -8544,7 +8556,7 @@ activate_or_hold(instance) → Outcome                                 # shared 
   RETURN Accepted
 
 RUNTIME_CONTEXT_READY(instance, request_id, runtime_context_ref) → Outcome   # kernel_event (v1: workspace/worktree ready)
-  REQUIRE instance.runtime_context = requested(request_id)   # L0d correlation: the readiness for the request we issued
+  REQUIRE admit_loaded(instance, expect: { correlate: runtime_context = requested(request_id) })   # ADMISSION correlation rung (L0d) — the readiness for the request WE issued
   template ← definitionStore.load(instance.template_ref)
   requirement ← template.runtime_context
   REQUIRE requirement = required(spec)                       # a request was issued ⇒ a context is required (made explicit)
@@ -8601,7 +8613,7 @@ RUNTIME_CONTEXT_RELEASED(instance, request_id, result) → Outcome    # kernel_e
   RETURN Accepted                                                   # obligation RETAINED (tracked through failure until discharged); auto-retry / timeout / watchdog = L9
 
 KICKOFF(instance, task) → Outcome                                     # operator_intent
-  REQUIRE instance.kernel_status = WAITING AND instance.wait.kind = kickoff_pending
+  REQUIRE admit_loaded(instance, expect: { state: kernel_status = WAITING AND wait.kind = kickoff_pending })   # ADMISSION: state rung, bare-REQUIRE (unnamed) — semantics unchanged. No op_id rung yet: operator intents gain operation identity later (finding F-W1-2, memo §9)
   instance.task ← task                                         # the deferred task, supplied now
   RETURN activate(instance)
 
@@ -8832,7 +8844,7 @@ activate(instance) → Outcome                                         # interna
   RETURN Activated(dispatch_intent(instance, template, template.start))   # dispatch is a kernel output (L0b), not a side effect
 
 CANCEL(instance) → Outcome                                           # operator_intent — any non-terminal
-  REQUIRE instance.kernel_status ≠ TERMINAL
+  REQUIRE admit_loaded(instance, expect: { state: kernel_status ≠ TERMINAL })   # ADMISSION: state rung — terminal is a sink
   instance.kernel_status ← TERMINAL ; instance.terminal_disposition ← cancelled   # LC2 emits the terminal boundary event; RECEIVE's post-commit hook releases ONLY if terminal is a declared release boundary — never inside this mutation
   RETURN Terminated(cancelled)
 
@@ -8841,7 +8853,7 @@ COMPLETE(instance)                                                   # internal 
   instance.kernel_status ← TERMINAL ; instance.terminal_disposition ← done   # LC2 emits the terminal boundary event; RECEIVE's post-commit hook initiates release ONLY if terminal ∈ the declared release.boundaries (a deferred boundary, e.g. merge_completed, is LC3a)
 
 FAIL(instance, reason) → Outcome                                     # kernel_event — any non-terminal
-  REQUIRE instance.kernel_status ≠ TERMINAL
+  REQUIRE admit_loaded(instance, expect: { state: kernel_status ≠ TERMINAL })   # ADMISSION: state rung — terminal is a sink
   instance.kernel_status ← TERMINAL ; instance.terminal_disposition ← failed ; instance.failure_reason ← reason   # LC2 a failed run emits the terminal boundary event too — released ONLY if terminal is a declared boundary, post-commit via RECEIVE's hook
   RETURN Terminated(failed)
 
@@ -8852,15 +8864,13 @@ HANDLE envelope → Outcome
   IF instance is none                     THEN RETURN Rejected(unknown_instance)
   template ← definitionStore.load(instance.template_ref)   # separate store; pinned immutable version
 
-  # idempotency, key scope (instance_id, op_id)
-  IF instance.transcript.has(envelope.op_id) THEN RETURN Duplicate   # no-op, no 2nd entry
-
-  # L0d: lifecycle guard — actor emits only in actor-routable ACTIVE execution
-  IF instance.kernel_status ≠ ACTIVE       THEN RETURN Rejected(not_active)
-
-  # actor-supplied stale-intent — mandatory at L0b
-  IF envelope.expected_version is missing  THEN RETURN Rejected(missing_version)
-  IF envelope.expected_version ≠ instance.version THEN RETURN Stale(instance.version)
+  # ADMISSION (born at L0d) — the actor-envelope rungs: idempotency → lifecycle/state → staleness
+  outcome ← admit_loaded(instance, expect: {
+    op_id:   envelope.op_id,                                    # a duplicate is a no-op, no 2nd entry
+    state:   kernel_status = ACTIVE → Rejected(not_active),     # L0d lifecycle guard: actor emits only in actor-routable ACTIVE execution
+    version: envelope.expected_version },                       # actor-supplied stale-intent — mandatory at L0b
+    envelope)
+  IF outcome ≠ Accepted THEN RETURN outcome                     # Duplicate | Stale(v) | Rejected(…) pass through unchanged
 
   step   ← template.step(instance.current_step)
 

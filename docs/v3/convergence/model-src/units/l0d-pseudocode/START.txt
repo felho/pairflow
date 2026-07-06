@@ -1,6 +1,6 @@
 
 START(instance) → Outcome                                             # operator_intent — guarded, single-shot
-  REQUIRE instance.kernel_status = CREATED AND instance.runtime_context = none
+  REQUIRE admit_loaded(instance, expect: { state: kernel_status = CREATED AND runtime_context = none })   # ADMISSION: state rung — single-shot start
   request_id ← new_request_id()
   request_runtime_context(instance, request_id)             # placeholder call; provider contract defined at L0e; later fires RUNTIME_CONTEXT_READY
   instance.runtime_context ← requested(request_id)          # marker; status stays CREATED (= v1 PREPARING_WORKSPACE)

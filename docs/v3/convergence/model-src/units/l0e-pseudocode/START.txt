@@ -1,6 +1,6 @@
 
 START(instance) → Outcome                                             # operator_intent — guarded, single-shot
-  REQUIRE instance.kernel_status = CREATED AND instance.runtime_context = none
+  REQUIRE admit_loaded(instance, expect: { state: kernel_status = CREATED AND runtime_context = none })   # ADMISSION: state rung — single-shot start
   template ← definitionStore.load(instance.template_ref)
   requirement ← template.runtime_context                              # RuntimeContextRequirement: none | required(spec) — single source of truth
   IF requirement = none THEN                                          # the workflow declares no runtime context
