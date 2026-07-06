@@ -1077,11 +1077,15 @@ CREATE_INSTANCE(template_ref, activation_mode, task, binding, run_overrides) →
   COMMIT instance creation
   RETURN Created(instance.version)                             # no dispatch yet — not active
 
-START(instance) → Outcome                                             # operator_intent — guarded, single-shot
-  REQUIRE admit_loaded(instance, expect: { state: kernel_status = CREATED AND runtime_context = none })   # ADMISSION: state rung — single-shot start
+START(instance, intent) → Outcome                                     # operator_intent — guarded, single-shot; intent = { op_id } (operation identity: F-W1-2 resolved, ingress touch)
+  admitted ← admit_loaded(instance, expect: {
+    op_id: intent.op_id,                                              # a replay of the same intent ⇒ Duplicate; a FRESH retry still hits the single-shot state guard
+    state: kernel_status = CREATED AND runtime_context = none })      # state rung stays unnamed — bare-REQUIRE semantics
+  IF admitted ≠ Accepted THEN RETURN admitted
   request_id ← new_request_id()
   request_runtime_context(instance, request_id)             # placeholder call; provider contract defined at L0e; later fires RUNTIME_CONTEXT_READY
   instance.runtime_context ← requested(request_id)          # marker; status stays CREATED (= v1 PREPARING_WORKSPACE)
+  instance.transcript.append(STARTED { op_id: intent.op_id })   # the op_id fact rides the SAME atomic move as the marker — a rejected attempt never consumes the op_id
   RETURN Accepted
 
 RUNTIME_CONTEXT_READY(instance, request_id, runtime_context_ref) → Outcome   # kernel_event (v1: workspace/worktree ready)
@@ -1092,9 +1096,15 @@ RUNTIME_CONTEXT_READY(instance, request_id, runtime_context_ref) → Outcome   #
   instance.wait ← { kind: kickoff_pending, requested_by: "activation", resume_events: [KICKOFF] }
   RETURN Accepted
 
-KICKOFF(instance, task) → Outcome                                     # operator_intent
-  REQUIRE admit_loaded(instance, expect: { state: kernel_status = WAITING AND wait.kind = kickoff_pending })   # ADMISSION: state rung, bare-REQUIRE (unnamed) — semantics unchanged. No op_id rung yet: operator intents gain operation identity later (finding F-W1-2, memo §9)
-  instance.task ← task                                         # the deferred task, supplied now
+KICKOFF(instance, intent) → Outcome                                   # operator_intent — intent = { op_id, task }: operation identity arrived (F-W1-2 resolved, ingress touch)
+  # ADMISSION — the op_id rung joins the state rung; Duplicate must flow out, so the head propagates
+  # outcomes (the state expectation stays unnamed ⇒ bare-REQUIRE semantics, per the ladder's rule)
+  admitted ← admit_loaded(instance, expect: {
+    op_id: intent.op_id,                                              # a replay of the same intent ⇒ Duplicate (no-op); a FRESH retry still hits the state guard
+    state: kernel_status = WAITING AND wait.kind = kickoff_pending })
+  IF admitted ≠ Accepted THEN RETURN admitted
+  instance.task ← intent.task                                  # the deferred task, supplied now
+  instance.transcript.append(TASK_SUPPLIED { op_id: intent.op_id })   # the op_id fact — SAME atomic move as the task supply (activate commits it); a rejected attempt never consumes the op_id
   RETURN activate(instance)
 
 activate(instance) → Outcome                                         # internal — produces the first dispatch
@@ -1104,9 +1114,13 @@ activate(instance) → Outcome                                         # interna
   instance.current_step  ← template.start
   RETURN Activated(dispatch_intent(instance, template, template.start))   # dispatch is a kernel output (L0b), not a side effect
 
-CANCEL(instance) → Outcome                                           # operator_intent — any non-terminal
-  REQUIRE admit_loaded(instance, expect: { state: kernel_status ≠ TERMINAL })   # ADMISSION: state rung — terminal is a sink
+CANCEL(instance, intent) → Outcome                                   # operator_intent — any non-terminal; intent = { op_id } (operation identity: F-W1-2 resolved, ingress touch)
+  admitted ← admit_loaded(instance, expect: {
+    op_id: intent.op_id,                                              # a replayed CANCEL ⇒ Duplicate (no-op), not a terminal-sink rejection
+    state: kernel_status ≠ TERMINAL })                                # state rung stays unnamed — terminal is a sink
+  IF admitted ≠ Accepted THEN RETURN admitted
   instance.kernel_status ← TERMINAL ; instance.terminal_disposition ← cancelled
+  instance.transcript.append(CANCELLED { op_id: intent.op_id })       # the op_id fact — SAME atomic move as the terminal flip
   RETURN Terminated(cancelled)
 
 COMPLETE(instance)                                                   # internal helper — done originates only from a terminal step (HANDLE), never routed
@@ -1178,9 +1192,12 @@ dispatch_intent(instance, template, step_id) → DispatchIntent
           differ by origin: <code>COMPLETE</code> is an internal helper HANDLE calls when a transition lands
           on a terminal step (done is never routed), <code>FAIL</code> is a kernel event, <code>CANCEL</code>
           an operator intent. Every lifecycle mutation here commits atomically under
-          <code>instance.version</code> just like HANDLE; a replayed actor op (same <code>op_id</code>) is
-          <code>Duplicate</code>, and the lifecycle transitions are single-shot — a second <code>START</code>
-          or a stale <code>RUNTIME_CONTEXT_READY</code> fails its precondition and mutates nothing (a guard
+          <code>instance.version</code> just like HANDLE; a replayed op (same <code>op_id</code>) is
+          <code>Duplicate</code> — since the F-W1-2 ingress touch the lifecycle intents carry
+          <code>op_id</code> too, recording their fact entries (<code>STARTED</code> /
+          <code>CANCELLED</code> / <code>TASK_SUPPLIED</code>) in the same atomic move — and the lifecycle
+          transitions stay single-shot: a <em>fresh</em> retry of <code>START</code> or a stale
+          <code>RUNTIME_CONTEXT_READY</code> still fails its precondition and mutates nothing (a guard
           rejection, not a silent no-op). The guard heads are the birth of the <b>Admission</b> ladder
           (kernel-primitives rebaseline, wave 1): one ordered rung protocol — load → idempotency →
           lifecycle/state → correlation → staleness — that every entry path climbs via
@@ -1337,6 +1354,10 @@ template:
             <li><b>Rebaseline (wave 1):</b> the <b>Admission</b> ladder (P3) is born here — see the
               kernel-primitives memo (§6/§9); behavior unchanged, the rejection/invariant registries are
               identical before and after.</li>
+            <li><b>Hardening (F-W1-2 ingress touch):</b> the lifecycle intents (<code>KICKOFF</code> /
+              <code>START</code> / <code>CANCEL</code>) gained <code>op_id</code> and their transcript fact
+              entries — a same-op replay is now <code>Duplicate</code> instead of a guard rejection; a
+              deliberate, ratified behavior delta (memo §9), not part of the rebaseline waves.</li>
             <li><b>Decision:</b> accepted as the L0d baseline (light evidence per playbook §2.1).</li>
           </ul>
         </div>
@@ -1427,18 +1448,23 @@ INTERFACE RuntimeContextProvider:
   provision(instance_id, request_id, spec)            # async → later fires RUNTIME_CONTEXT_READY(request_id, ref)
   project_for_actor(runtime_context_ref) → RuntimeContextProjection   # kind-specific actor-facing view; kernel-internal fields stay out
 
-START(instance) → Outcome                                             # operator_intent — guarded, single-shot
-  REQUIRE admit_loaded(instance, expect: { state: kernel_status = CREATED AND runtime_context = none })   # ADMISSION: state rung — single-shot start
+START(instance, intent) → Outcome                                     # operator_intent — guarded, single-shot; intent = { op_id } (operation identity: F-W1-2 resolved, ingress touch)
+  admitted ← admit_loaded(instance, expect: {
+    op_id: intent.op_id,                                              # a replay of the same intent ⇒ Duplicate; a FRESH retry still hits the single-shot state guard
+    state: kernel_status = CREATED AND runtime_context = none })      # state rung stays unnamed — bare-REQUIRE semantics
+  IF admitted ≠ Accepted THEN RETURN admitted
   template ← definitionStore.load(instance.template_ref)
   requirement ← template.runtime_context                              # RuntimeContextRequirement: none | required(spec) — single source of truth
   IF requirement = none THEN                                          # the workflow declares no runtime context
     instance.runtime_context ← ready(∅)                               # trivially ready — nothing to provision
+    instance.transcript.append(STARTED { op_id: intent.op_id })       # the op_id fact — SAME atomic move as the state change
     RETURN activate_or_hold(instance)
   provider ← providerRegistry.resolve(requirement.spec.provider)
-  IF provider is none THEN RETURN Rejected(runtime_context_provider_unavailable)   # name-resolution failure = base contract error
+  IF provider is none THEN RETURN Rejected(runtime_context_provider_unavailable)   # name-resolution failure = base contract error — a PRE-COMMIT reject: the op_id is NOT consumed, a corrected retry may reuse it
   request_id ← new_request_id()
   provider.provision(instance.id, request_id, requirement.spec)  # provider internals run git branch/worktree/clone mechanics; later fires RUNTIME_CONTEXT_READY
   instance.runtime_context ← requested(request_id)          # the L0d single-shot marker; status stays CREATED (= v1 PREPARING_WORKSPACE)
+  instance.transcript.append(STARTED { op_id: intent.op_id })   # the op_id fact rides the SAME atomic move as the marker
   RETURN Accepted
 
 activate_or_hold(instance) → Outcome                                 # shared post-readiness decision (provisioned or context-free)
@@ -1456,9 +1482,15 @@ RUNTIME_CONTEXT_READY(instance, request_id, runtime_context_ref) → Outcome   #
   instance.runtime_context ← ready(runtime_context_ref)    # kernel guards kind + correlation only; the locator stays provider-defined, unvalidated
   RETURN activate_or_hold(instance)
 
-KICKOFF(instance, task) → Outcome                                     # operator_intent
-  REQUIRE admit_loaded(instance, expect: { state: kernel_status = WAITING AND wait.kind = kickoff_pending })   # ADMISSION: state rung, bare-REQUIRE (unnamed) — semantics unchanged. No op_id rung yet: operator intents gain operation identity later (finding F-W1-2, memo §9)
-  instance.task ← task                                         # the deferred task, supplied now
+KICKOFF(instance, intent) → Outcome                                   # operator_intent — intent = { op_id, task }: operation identity arrived (F-W1-2 resolved, ingress touch)
+  # ADMISSION — the op_id rung joins the state rung; Duplicate must flow out, so the head propagates
+  # outcomes (the state expectation stays unnamed ⇒ bare-REQUIRE semantics, per the ladder's rule)
+  admitted ← admit_loaded(instance, expect: {
+    op_id: intent.op_id,                                              # a replay of the same intent ⇒ Duplicate (no-op); a FRESH retry still hits the state guard
+    state: kernel_status = WAITING AND wait.kind = kickoff_pending })
+  IF admitted ≠ Accepted THEN RETURN admitted
+  instance.task ← intent.task                                  # the deferred task, supplied now
+  instance.transcript.append(TASK_SUPPLIED { op_id: intent.op_id })   # the op_id fact — SAME atomic move as the task supply (activate commits it); a rejected attempt never consumes the op_id
   RETURN activate(instance)
 
 activate(instance) → Outcome                                         # internal — produces the first dispatch
@@ -1468,9 +1500,13 @@ activate(instance) → Outcome                                         # interna
   instance.current_step  ← template.start
   RETURN Activated(dispatch_intent(instance, template, template.start))   # dispatch is a kernel output (L0b), not a side effect
 
-CANCEL(instance) → Outcome                                           # operator_intent — any non-terminal
-  REQUIRE admit_loaded(instance, expect: { state: kernel_status ≠ TERMINAL })   # ADMISSION: state rung — terminal is a sink
+CANCEL(instance, intent) → Outcome                                   # operator_intent — any non-terminal; intent = { op_id } (operation identity: F-W1-2 resolved, ingress touch)
+  admitted ← admit_loaded(instance, expect: {
+    op_id: intent.op_id,                                              # a replayed CANCEL ⇒ Duplicate (no-op), not a terminal-sink rejection
+    state: kernel_status ≠ TERMINAL })                                # state rung stays unnamed — terminal is a sink
+  IF admitted ≠ Accepted THEN RETURN admitted
   instance.kernel_status ← TERMINAL ; instance.terminal_disposition ← cancelled
+  instance.transcript.append(CANCELLED { op_id: intent.op_id })       # the op_id fact — SAME atomic move as the terminal flip
   RETURN Terminated(cancelled)
 
 COMPLETE(instance)                                                   # internal helper — done originates only from a terminal step (HANDLE), never routed
@@ -2122,18 +2158,23 @@ INTERFACE RuntimeContextProvider:
   provision(instance_id, request_id, spec)            # async → later fires RUNTIME_CONTEXT_READY(request_id, ref)
   project_for_actor(runtime_context_ref) → RuntimeContextProjection   # kind-specific actor-facing view; kernel-internal fields stay out
 
-START(instance) → Outcome                                             # operator_intent — guarded, single-shot
-  REQUIRE admit_loaded(instance, expect: { state: kernel_status = CREATED AND runtime_context = none })   # ADMISSION: state rung — single-shot start
+START(instance, intent) → Outcome                                     # operator_intent — guarded, single-shot; intent = { op_id } (operation identity: F-W1-2 resolved, ingress touch)
+  admitted ← admit_loaded(instance, expect: {
+    op_id: intent.op_id,                                              # a replay of the same intent ⇒ Duplicate; a FRESH retry still hits the single-shot state guard
+    state: kernel_status = CREATED AND runtime_context = none })      # state rung stays unnamed — bare-REQUIRE semantics
+  IF admitted ≠ Accepted THEN RETURN admitted
   template ← definitionStore.load(instance.template_ref)
   requirement ← template.runtime_context                              # RuntimeContextRequirement: none | required(spec) — single source of truth
   IF requirement = none THEN                                          # the workflow declares no runtime context
     instance.runtime_context ← ready(∅)                               # trivially ready — nothing to provision
+    instance.transcript.append(STARTED { op_id: intent.op_id })       # the op_id fact — SAME atomic move as the state change
     RETURN activate_or_hold(instance)
   provider ← providerRegistry.resolve(requirement.spec.provider)
-  IF provider is none THEN RETURN Rejected(runtime_context_provider_unavailable)   # name-resolution failure = base contract error
+  IF provider is none THEN RETURN Rejected(runtime_context_provider_unavailable)   # name-resolution failure = base contract error — a PRE-COMMIT reject: the op_id is NOT consumed, a corrected retry may reuse it
   request_id ← new_request_id()
   provider.provision(instance.id, request_id, requirement.spec)  # provider internals run git branch/worktree/clone mechanics; later fires RUNTIME_CONTEXT_READY
   instance.runtime_context ← requested(request_id)          # the L0d single-shot marker; status stays CREATED (= v1 PREPARING_WORKSPACE)
+  instance.transcript.append(STARTED { op_id: intent.op_id })   # the op_id fact rides the SAME atomic move as the marker
   RETURN Accepted
 
 activate_or_hold(instance) → Outcome                                 # shared post-readiness decision (provisioned or context-free)
@@ -2151,9 +2192,15 @@ RUNTIME_CONTEXT_READY(instance, request_id, runtime_context_ref) → Outcome   #
   instance.runtime_context ← ready(runtime_context_ref)    # kernel guards kind + correlation only; the locator stays provider-defined, unvalidated
   RETURN activate_or_hold(instance)
 
-KICKOFF(instance, task) → Outcome                                     # operator_intent
-  REQUIRE admit_loaded(instance, expect: { state: kernel_status = WAITING AND wait.kind = kickoff_pending })   # ADMISSION: state rung, bare-REQUIRE (unnamed) — semantics unchanged. No op_id rung yet: operator intents gain operation identity later (finding F-W1-2, memo §9)
-  instance.task ← task                                         # the deferred task, supplied now
+KICKOFF(instance, intent) → Outcome                                   # operator_intent — intent = { op_id, task }: operation identity arrived (F-W1-2 resolved, ingress touch)
+  # ADMISSION — the op_id rung joins the state rung; Duplicate must flow out, so the head propagates
+  # outcomes (the state expectation stays unnamed ⇒ bare-REQUIRE semantics, per the ladder's rule)
+  admitted ← admit_loaded(instance, expect: {
+    op_id: intent.op_id,                                              # a replay of the same intent ⇒ Duplicate (no-op); a FRESH retry still hits the state guard
+    state: kernel_status = WAITING AND wait.kind = kickoff_pending })
+  IF admitted ≠ Accepted THEN RETURN admitted
+  instance.task ← intent.task                                  # the deferred task, supplied now
+  instance.transcript.append(TASK_SUPPLIED { op_id: intent.op_id })   # the op_id fact — SAME atomic move as the task supply (activate commits it); a rejected attempt never consumes the op_id
   RETURN activate(instance)
 
 activate(instance) → Outcome                                         # internal — produces the first dispatch
@@ -2163,9 +2210,13 @@ activate(instance) → Outcome                                         # interna
   instance.current_step  ← template.start
   RETURN Activated(dispatch_intent(instance, template, template.start))   # dispatch is a kernel output (L0b), not a side effect
 
-CANCEL(instance) → Outcome                                           # operator_intent — any non-terminal
-  REQUIRE admit_loaded(instance, expect: { state: kernel_status ≠ TERMINAL })   # ADMISSION: state rung — terminal is a sink
+CANCEL(instance, intent) → Outcome                                   # operator_intent — any non-terminal; intent = { op_id } (operation identity: F-W1-2 resolved, ingress touch)
+  admitted ← admit_loaded(instance, expect: {
+    op_id: intent.op_id,                                              # a replayed CANCEL ⇒ Duplicate (no-op), not a terminal-sink rejection
+    state: kernel_status ≠ TERMINAL })                                # state rung stays unnamed — terminal is a sink
+  IF admitted ≠ Accepted THEN RETURN admitted
   instance.kernel_status ← TERMINAL ; instance.terminal_disposition ← cancelled
+  instance.transcript.append(CANCELLED { op_id: intent.op_id })       # the op_id fact — SAME atomic move as the terminal flip
   RETURN Terminated(cancelled)
 
 COMPLETE(instance)                                                   # internal helper — done originates only from a terminal step (HANDLE), never routed
@@ -2447,18 +2498,23 @@ INTERFACE RuntimeContextProvider:
   provision(instance_id, request_id, spec)            # async → later fires RUNTIME_CONTEXT_READY(request_id, ref)
   project_for_actor(runtime_context_ref) → RuntimeContextProjection   # kind-specific actor-facing view; kernel-internal fields stay out
 
-START(instance) → Outcome                                             # operator_intent — guarded, single-shot
-  REQUIRE admit_loaded(instance, expect: { state: kernel_status = CREATED AND runtime_context = none })   # ADMISSION: state rung — single-shot start
+START(instance, intent) → Outcome                                     # operator_intent — guarded, single-shot; intent = { op_id } (operation identity: F-W1-2 resolved, ingress touch)
+  admitted ← admit_loaded(instance, expect: {
+    op_id: intent.op_id,                                              # a replay of the same intent ⇒ Duplicate; a FRESH retry still hits the single-shot state guard
+    state: kernel_status = CREATED AND runtime_context = none })      # state rung stays unnamed — bare-REQUIRE semantics
+  IF admitted ≠ Accepted THEN RETURN admitted
   template ← definitionStore.load(instance.template_ref)
   requirement ← template.runtime_context                              # RuntimeContextRequirement: none | required(spec) — single source of truth
   IF requirement = none THEN                                          # the workflow declares no runtime context
     instance.runtime_context ← ready(∅)                               # trivially ready — nothing to provision
+    instance.transcript.append(STARTED { op_id: intent.op_id })       # the op_id fact — SAME atomic move as the state change
     RETURN activate_or_hold(instance)
   provider ← providerRegistry.resolve(requirement.spec.provider)
-  IF provider is none THEN RETURN Rejected(runtime_context_provider_unavailable)   # name-resolution failure = base contract error
+  IF provider is none THEN RETURN Rejected(runtime_context_provider_unavailable)   # name-resolution failure = base contract error — a PRE-COMMIT reject: the op_id is NOT consumed, a corrected retry may reuse it
   request_id ← new_request_id()
   provider.provision(instance.id, request_id, requirement.spec)  # provider internals run git branch/worktree/clone mechanics; later fires RUNTIME_CONTEXT_READY
   instance.runtime_context ← requested(request_id)          # the L0d single-shot marker; status stays CREATED (= v1 PREPARING_WORKSPACE)
+  instance.transcript.append(STARTED { op_id: intent.op_id })   # the op_id fact rides the SAME atomic move as the marker
   RETURN Accepted
 
 activate_or_hold(instance) → Outcome                                 # shared post-readiness decision (provisioned or context-free)
@@ -2476,9 +2532,15 @@ RUNTIME_CONTEXT_READY(instance, request_id, runtime_context_ref) → Outcome   #
   instance.runtime_context ← ready(runtime_context_ref)    # kernel guards kind + correlation only; the locator stays provider-defined, unvalidated
   RETURN activate_or_hold(instance)
 
-KICKOFF(instance, task) → Outcome                                     # operator_intent
-  REQUIRE admit_loaded(instance, expect: { state: kernel_status = WAITING AND wait.kind = kickoff_pending })   # ADMISSION: state rung, bare-REQUIRE (unnamed) — semantics unchanged. No op_id rung yet: operator intents gain operation identity later (finding F-W1-2, memo §9)
-  instance.task ← task                                         # the deferred task, supplied now
+KICKOFF(instance, intent) → Outcome                                   # operator_intent — intent = { op_id, task }: operation identity arrived (F-W1-2 resolved, ingress touch)
+  # ADMISSION — the op_id rung joins the state rung; Duplicate must flow out, so the head propagates
+  # outcomes (the state expectation stays unnamed ⇒ bare-REQUIRE semantics, per the ladder's rule)
+  admitted ← admit_loaded(instance, expect: {
+    op_id: intent.op_id,                                              # a replay of the same intent ⇒ Duplicate (no-op); a FRESH retry still hits the state guard
+    state: kernel_status = WAITING AND wait.kind = kickoff_pending })
+  IF admitted ≠ Accepted THEN RETURN admitted
+  instance.task ← intent.task                                  # the deferred task, supplied now
+  instance.transcript.append(TASK_SUPPLIED { op_id: intent.op_id })   # the op_id fact — SAME atomic move as the task supply (activate commits it); a rejected attempt never consumes the op_id
   RETURN activate(instance)
 
 activate(instance) → Outcome                                         # internal — produces the first dispatch
@@ -2489,9 +2551,13 @@ activate(instance) → Outcome                                         # interna
   instance.round         ← 1                                  # the first work cycle begins at activation: round 0 → 1 (the start step is a round-start)
   RETURN Activated(dispatch_intent(instance, template, template.start))   # dispatch is a kernel output (L0b), not a side effect
 
-CANCEL(instance) → Outcome                                           # operator_intent — any non-terminal
-  REQUIRE admit_loaded(instance, expect: { state: kernel_status ≠ TERMINAL })   # ADMISSION: state rung — terminal is a sink
+CANCEL(instance, intent) → Outcome                                   # operator_intent — any non-terminal; intent = { op_id } (operation identity: F-W1-2 resolved, ingress touch)
+  admitted ← admit_loaded(instance, expect: {
+    op_id: intent.op_id,                                              # a replayed CANCEL ⇒ Duplicate (no-op), not a terminal-sink rejection
+    state: kernel_status ≠ TERMINAL })                                # state rung stays unnamed — terminal is a sink
+  IF admitted ≠ Accepted THEN RETURN admitted
   instance.kernel_status ← TERMINAL ; instance.terminal_disposition ← cancelled
+  instance.transcript.append(CANCELLED { op_id: intent.op_id })       # the op_id fact — SAME atomic move as the terminal flip
   RETURN Terminated(cancelled)
 
 COMPLETE(instance)                                                   # internal helper — done originates only from a terminal step (HANDLE), never routed
@@ -2908,18 +2974,23 @@ INTERFACE RuntimeContextProvider:
   provision(instance_id, request_id, spec)            # async → later fires RUNTIME_CONTEXT_READY(request_id, ref)
   project_for_actor(runtime_context_ref) → RuntimeContextProjection   # kind-specific actor-facing view; kernel-internal fields stay out
 
-START(instance) → Outcome                                             # operator_intent — guarded, single-shot
-  REQUIRE admit_loaded(instance, expect: { state: kernel_status = CREATED AND runtime_context = none })   # ADMISSION: state rung — single-shot start
+START(instance, intent) → Outcome                                     # operator_intent — guarded, single-shot; intent = { op_id } (operation identity: F-W1-2 resolved, ingress touch)
+  admitted ← admit_loaded(instance, expect: {
+    op_id: intent.op_id,                                              # a replay of the same intent ⇒ Duplicate; a FRESH retry still hits the single-shot state guard
+    state: kernel_status = CREATED AND runtime_context = none })      # state rung stays unnamed — bare-REQUIRE semantics
+  IF admitted ≠ Accepted THEN RETURN admitted
   template ← definitionStore.load(instance.template_ref)
   requirement ← template.runtime_context                              # RuntimeContextRequirement: none | required(spec) — single source of truth
   IF requirement = none THEN                                          # the workflow declares no runtime context
     instance.runtime_context ← ready(∅)                               # trivially ready — nothing to provision
+    instance.transcript.append(STARTED { op_id: intent.op_id })       # the op_id fact — SAME atomic move as the state change
     RETURN activate_or_hold(instance)
   provider ← providerRegistry.resolve(requirement.spec.provider)
-  IF provider is none THEN RETURN Rejected(runtime_context_provider_unavailable)   # name-resolution failure = base contract error
+  IF provider is none THEN RETURN Rejected(runtime_context_provider_unavailable)   # name-resolution failure = base contract error — a PRE-COMMIT reject: the op_id is NOT consumed, a corrected retry may reuse it
   request_id ← new_request_id()
   provider.provision(instance.id, request_id, requirement.spec)  # provider internals run git branch/worktree/clone mechanics; later fires RUNTIME_CONTEXT_READY
   instance.runtime_context ← requested(request_id)          # the L0d single-shot marker; status stays CREATED (= v1 PREPARING_WORKSPACE)
+  instance.transcript.append(STARTED { op_id: intent.op_id })   # the op_id fact rides the SAME atomic move as the marker
   RETURN Accepted
 
 activate_or_hold(instance) → Outcome                                 # shared post-readiness decision (provisioned or context-free)
@@ -2937,9 +3008,15 @@ RUNTIME_CONTEXT_READY(instance, request_id, runtime_context_ref) → Outcome   #
   instance.runtime_context ← ready(runtime_context_ref)    # kernel guards kind + correlation only; the locator stays provider-defined, unvalidated
   RETURN activate_or_hold(instance)
 
-KICKOFF(instance, task) → Outcome                                     # operator_intent
-  REQUIRE admit_loaded(instance, expect: { state: kernel_status = WAITING AND wait.kind = kickoff_pending })   # ADMISSION: state rung, bare-REQUIRE (unnamed) — semantics unchanged. No op_id rung yet: operator intents gain operation identity later (finding F-W1-2, memo §9)
-  instance.task ← task                                         # the deferred task, supplied now
+KICKOFF(instance, intent) → Outcome                                   # operator_intent — intent = { op_id, task }: operation identity arrived (F-W1-2 resolved, ingress touch)
+  # ADMISSION — the op_id rung joins the state rung; Duplicate must flow out, so the head propagates
+  # outcomes (the state expectation stays unnamed ⇒ bare-REQUIRE semantics, per the ladder's rule)
+  admitted ← admit_loaded(instance, expect: {
+    op_id: intent.op_id,                                              # a replay of the same intent ⇒ Duplicate (no-op); a FRESH retry still hits the state guard
+    state: kernel_status = WAITING AND wait.kind = kickoff_pending })
+  IF admitted ≠ Accepted THEN RETURN admitted
+  instance.task ← intent.task                                  # the deferred task, supplied now
+  instance.transcript.append(TASK_SUPPLIED { op_id: intent.op_id })   # the op_id fact — SAME atomic move as the task supply (activate commits it); a rejected attempt never consumes the op_id
   RETURN activate(instance)
 
 activate(instance) → Outcome                                         # internal — produces the first dispatch
@@ -2950,9 +3027,13 @@ activate(instance) → Outcome                                         # interna
   instance.round         ← 1                                  # the first work cycle begins at activation: round 0 → 1 (the start step is a round-start)
   RETURN Activated(dispatch_intent(instance, template, template.start))   # dispatch is a kernel output (L0b), not a side effect
 
-CANCEL(instance) → Outcome                                           # operator_intent — any non-terminal
-  REQUIRE admit_loaded(instance, expect: { state: kernel_status ≠ TERMINAL })   # ADMISSION: state rung — terminal is a sink
+CANCEL(instance, intent) → Outcome                                   # operator_intent — any non-terminal; intent = { op_id } (operation identity: F-W1-2 resolved, ingress touch)
+  admitted ← admit_loaded(instance, expect: {
+    op_id: intent.op_id,                                              # a replayed CANCEL ⇒ Duplicate (no-op), not a terminal-sink rejection
+    state: kernel_status ≠ TERMINAL })                                # state rung stays unnamed — terminal is a sink
+  IF admitted ≠ Accepted THEN RETURN admitted
   instance.kernel_status ← TERMINAL ; instance.terminal_disposition ← cancelled
+  instance.transcript.append(CANCELLED { op_id: intent.op_id })       # the op_id fact — SAME atomic move as the terminal flip
   RETURN Terminated(cancelled)
 
 COMPLETE(instance)                                                   # internal helper — done originates only from a terminal step (HANDLE), never routed
@@ -3384,18 +3465,23 @@ INTERFACE RuntimeContextProvider:
   provision(instance_id, request_id, spec)            # async → later fires RUNTIME_CONTEXT_READY(request_id, ref)
   project_for_actor(runtime_context_ref) → RuntimeContextProjection   # kind-specific actor-facing view; kernel-internal fields stay out
 
-START(instance) → Outcome                                             # operator_intent — guarded, single-shot
-  REQUIRE admit_loaded(instance, expect: { state: kernel_status = CREATED AND runtime_context = none })   # ADMISSION: state rung — single-shot start
+START(instance, intent) → Outcome                                     # operator_intent — guarded, single-shot; intent = { op_id } (operation identity: F-W1-2 resolved, ingress touch)
+  admitted ← admit_loaded(instance, expect: {
+    op_id: intent.op_id,                                              # a replay of the same intent ⇒ Duplicate; a FRESH retry still hits the single-shot state guard
+    state: kernel_status = CREATED AND runtime_context = none })      # state rung stays unnamed — bare-REQUIRE semantics
+  IF admitted ≠ Accepted THEN RETURN admitted
   template ← definitionStore.load(instance.template_ref)
   requirement ← template.runtime_context                              # RuntimeContextRequirement: none | required(spec) — single source of truth
   IF requirement = none THEN                                          # the workflow declares no runtime context
     instance.runtime_context ← ready(∅)                               # trivially ready — nothing to provision
+    instance.transcript.append(STARTED { op_id: intent.op_id })       # the op_id fact — SAME atomic move as the state change
     RETURN activate_or_hold(instance)
   provider ← providerRegistry.resolve(requirement.spec.provider)
-  IF provider is none THEN RETURN Rejected(runtime_context_provider_unavailable)   # name-resolution failure = base contract error
+  IF provider is none THEN RETURN Rejected(runtime_context_provider_unavailable)   # name-resolution failure = base contract error — a PRE-COMMIT reject: the op_id is NOT consumed, a corrected retry may reuse it
   request_id ← new_request_id()
   provider.provision(instance.id, request_id, requirement.spec)  # provider internals run git branch/worktree/clone mechanics; later fires RUNTIME_CONTEXT_READY
   instance.runtime_context ← requested(request_id)          # the L0d single-shot marker; status stays CREATED (= v1 PREPARING_WORKSPACE)
+  instance.transcript.append(STARTED { op_id: intent.op_id })   # the op_id fact rides the SAME atomic move as the marker
   RETURN Accepted
 
 activate_or_hold(instance) → Outcome                                 # shared post-readiness decision (provisioned or context-free)
@@ -3413,9 +3499,15 @@ RUNTIME_CONTEXT_READY(instance, request_id, runtime_context_ref) → Outcome   #
   instance.runtime_context ← ready(runtime_context_ref)    # kernel guards kind + correlation only; the locator stays provider-defined, unvalidated
   RETURN activate_or_hold(instance)
 
-KICKOFF(instance, task) → Outcome                                     # operator_intent
-  REQUIRE admit_loaded(instance, expect: { state: kernel_status = WAITING AND wait.kind = kickoff_pending })   # ADMISSION: state rung, bare-REQUIRE (unnamed) — semantics unchanged. No op_id rung yet: operator intents gain operation identity later (finding F-W1-2, memo §9)
-  instance.task ← task                                         # the deferred task, supplied now
+KICKOFF(instance, intent) → Outcome                                   # operator_intent — intent = { op_id, task }: operation identity arrived (F-W1-2 resolved, ingress touch)
+  # ADMISSION — the op_id rung joins the state rung; Duplicate must flow out, so the head propagates
+  # outcomes (the state expectation stays unnamed ⇒ bare-REQUIRE semantics, per the ladder's rule)
+  admitted ← admit_loaded(instance, expect: {
+    op_id: intent.op_id,                                              # a replay of the same intent ⇒ Duplicate (no-op); a FRESH retry still hits the state guard
+    state: kernel_status = WAITING AND wait.kind = kickoff_pending })
+  IF admitted ≠ Accepted THEN RETURN admitted
+  instance.task ← intent.task                                  # the deferred task, supplied now
+  instance.transcript.append(TASK_SUPPLIED { op_id: intent.op_id })   # the op_id fact — SAME atomic move as the task supply (activate commits it); a rejected attempt never consumes the op_id
   RETURN activate(instance)
 
 activate(instance) → Outcome                                         # internal — produces the first dispatch
@@ -3426,9 +3518,13 @@ activate(instance) → Outcome                                         # interna
   instance.round         ← 1                                  # the first work cycle begins at activation: round 0 → 1 (the start step is a round-start)
   RETURN Activated(dispatch_intent(instance, template, template.start))   # dispatch is a kernel output (L0b), not a side effect
 
-CANCEL(instance) → Outcome                                           # operator_intent — any non-terminal
-  REQUIRE admit_loaded(instance, expect: { state: kernel_status ≠ TERMINAL })   # ADMISSION: state rung — terminal is a sink
+CANCEL(instance, intent) → Outcome                                   # operator_intent — any non-terminal; intent = { op_id } (operation identity: F-W1-2 resolved, ingress touch)
+  admitted ← admit_loaded(instance, expect: {
+    op_id: intent.op_id,                                              # a replayed CANCEL ⇒ Duplicate (no-op), not a terminal-sink rejection
+    state: kernel_status ≠ TERMINAL })                                # state rung stays unnamed — terminal is a sink
+  IF admitted ≠ Accepted THEN RETURN admitted
   instance.kernel_status ← TERMINAL ; instance.terminal_disposition ← cancelled
+  instance.transcript.append(CANCELLED { op_id: intent.op_id })       # the op_id fact — SAME atomic move as the terminal flip
   RETURN Terminated(cancelled)
 
 COMPLETE(instance)                                                   # internal helper — done originates only from a terminal step (HANDLE), never routed
@@ -4020,18 +4116,23 @@ INTERFACE RuntimeContextProvider:
   provision(instance_id, request_id, spec)            # async → later fires RUNTIME_CONTEXT_READY(request_id, ref)
   project_for_actor(runtime_context_ref) → RuntimeContextProjection   # kind-specific actor-facing view; kernel-internal fields stay out
 
-START(instance) → Outcome                                             # operator_intent — guarded, single-shot
-  REQUIRE admit_loaded(instance, expect: { state: kernel_status = CREATED AND runtime_context = none })   # ADMISSION: state rung — single-shot start
+START(instance, intent) → Outcome                                     # operator_intent — guarded, single-shot; intent = { op_id } (operation identity: F-W1-2 resolved, ingress touch)
+  admitted ← admit_loaded(instance, expect: {
+    op_id: intent.op_id,                                              # a replay of the same intent ⇒ Duplicate; a FRESH retry still hits the single-shot state guard
+    state: kernel_status = CREATED AND runtime_context = none })      # state rung stays unnamed — bare-REQUIRE semantics
+  IF admitted ≠ Accepted THEN RETURN admitted
   template ← definitionStore.load(instance.template_ref)
   requirement ← template.runtime_context                              # RuntimeContextRequirement: none | required(spec) — single source of truth
   IF requirement = none THEN                                          # the workflow declares no runtime context
     instance.runtime_context ← ready(∅)                               # trivially ready — nothing to provision
+    instance.transcript.append(STARTED { op_id: intent.op_id })       # the op_id fact — SAME atomic move as the state change
     RETURN activate_or_hold(instance)
   provider ← providerRegistry.resolve(requirement.spec.provider)
-  IF provider is none THEN RETURN Rejected(runtime_context_provider_unavailable)   # name-resolution failure = base contract error
+  IF provider is none THEN RETURN Rejected(runtime_context_provider_unavailable)   # name-resolution failure = base contract error — a PRE-COMMIT reject: the op_id is NOT consumed, a corrected retry may reuse it
   request_id ← new_request_id()
   provider.provision(instance.id, request_id, requirement.spec)  # provider internals run git branch/worktree/clone mechanics; later fires RUNTIME_CONTEXT_READY
   instance.runtime_context ← requested(request_id)          # the L0d single-shot marker; status stays CREATED (= v1 PREPARING_WORKSPACE)
+  instance.transcript.append(STARTED { op_id: intent.op_id })   # the op_id fact rides the SAME atomic move as the marker
   RETURN Accepted
 
 activate_or_hold(instance) → Outcome                                 # shared post-readiness decision (provisioned or context-free)
@@ -4049,9 +4150,15 @@ RUNTIME_CONTEXT_READY(instance, request_id, runtime_context_ref) → Outcome   #
   instance.runtime_context ← ready(runtime_context_ref)    # kernel guards kind + correlation only; the locator stays provider-defined, unvalidated
   RETURN activate_or_hold(instance)
 
-KICKOFF(instance, task) → Outcome                                     # operator_intent
-  REQUIRE admit_loaded(instance, expect: { state: kernel_status = WAITING AND wait.kind = kickoff_pending })   # ADMISSION: state rung, bare-REQUIRE (unnamed) — semantics unchanged. No op_id rung yet: operator intents gain operation identity later (finding F-W1-2, memo §9)
-  instance.task ← task                                         # the deferred task, supplied now
+KICKOFF(instance, intent) → Outcome                                   # operator_intent — intent = { op_id, task }: operation identity arrived (F-W1-2 resolved, ingress touch)
+  # ADMISSION — the op_id rung joins the state rung; Duplicate must flow out, so the head propagates
+  # outcomes (the state expectation stays unnamed ⇒ bare-REQUIRE semantics, per the ladder's rule)
+  admitted ← admit_loaded(instance, expect: {
+    op_id: intent.op_id,                                              # a replay of the same intent ⇒ Duplicate (no-op); a FRESH retry still hits the state guard
+    state: kernel_status = WAITING AND wait.kind = kickoff_pending })
+  IF admitted ≠ Accepted THEN RETURN admitted
+  instance.task ← intent.task                                  # the deferred task, supplied now
+  instance.transcript.append(TASK_SUPPLIED { op_id: intent.op_id })   # the op_id fact — SAME atomic move as the task supply (activate commits it); a rejected attempt never consumes the op_id
   RETURN activate(instance)
 
 SUBMIT_DECISION(decision) → Outcome                                  # operator_intent — a KICKOFF sibling; resumes WAITING(human_decision). decision = { instance_id, op_id, expected_version, request_ref, verdict, override?, payload?, by }. verdict is a DECLARED decision key — the kernel knows no decision names
@@ -4171,9 +4278,13 @@ activate(instance) → Outcome                                         # interna
   instance.round         ← 1                                  # the first work cycle begins at activation: round 0 → 1 (the start step is a round-start)
   RETURN Activated(dispatch_intent(instance, template, template.start))   # dispatch is a kernel output (L0b), not a side effect
 
-CANCEL(instance) → Outcome                                           # operator_intent — any non-terminal
-  REQUIRE admit_loaded(instance, expect: { state: kernel_status ≠ TERMINAL })   # ADMISSION: state rung — terminal is a sink
+CANCEL(instance, intent) → Outcome                                   # operator_intent — any non-terminal; intent = { op_id } (operation identity: F-W1-2 resolved, ingress touch)
+  admitted ← admit_loaded(instance, expect: {
+    op_id: intent.op_id,                                              # a replayed CANCEL ⇒ Duplicate (no-op), not a terminal-sink rejection
+    state: kernel_status ≠ TERMINAL })                                # state rung stays unnamed — terminal is a sink
+  IF admitted ≠ Accepted THEN RETURN admitted
   instance.kernel_status ← TERMINAL ; instance.terminal_disposition ← cancelled
+  instance.transcript.append(CANCELLED { op_id: intent.op_id })       # the op_id fact — SAME atomic move as the terminal flip
   RETURN Terminated(cancelled)
 
 COMPLETE(instance)                                                   # internal helper — finalizes a COMMITTED ARRIVAL into a terminal target (a HANDLE actor transition OR a resumed human decision, both via apply_target_entry_effects)
@@ -5047,18 +5158,23 @@ release_boundaries(template) → [boundary_event]                     # LC2 the 
   IF req = none OR req.release is absent OR req.release.policy ≠ required THEN RETURN [ ]
   RETURN req.release.boundaries
 
-START(instance) → Outcome                                             # operator_intent — guarded, single-shot
-  REQUIRE admit_loaded(instance, expect: { state: kernel_status = CREATED AND runtime_context = none })   # ADMISSION: state rung — single-shot start
+START(instance, intent) → Outcome                                     # operator_intent — guarded, single-shot; intent = { op_id } (operation identity: F-W1-2 resolved, ingress touch)
+  admitted ← admit_loaded(instance, expect: {
+    op_id: intent.op_id,                                              # a replay of the same intent ⇒ Duplicate; a FRESH retry still hits the single-shot state guard
+    state: kernel_status = CREATED AND runtime_context = none })      # state rung stays unnamed — bare-REQUIRE semantics
+  IF admitted ≠ Accepted THEN RETURN admitted
   template ← definitionStore.load(instance.template_ref)
   requirement ← template.runtime_context                              # RuntimeContextRequirement: none | required(spec) — single source of truth
   IF requirement = none THEN                                          # the workflow declares no runtime context
     instance.runtime_context ← ready(∅)                               # trivially ready — nothing to provision
+    instance.transcript.append(STARTED { op_id: intent.op_id })       # the op_id fact — SAME atomic move as the state change
     RETURN activate_or_hold(instance)
   provider ← providerRegistry.resolve(requirement.spec.provider)
-  IF provider is none THEN RETURN Rejected(runtime_context_provider_unavailable)   # name-resolution failure = base contract error
+  IF provider is none THEN RETURN Rejected(runtime_context_provider_unavailable)   # name-resolution failure = base contract error — a PRE-COMMIT reject: the op_id is NOT consumed, a corrected retry may reuse it
   request_id ← new_request_id()
   provider.provision(instance.id, request_id, requirement.spec)  # provider internals run git branch/worktree/clone mechanics; later fires RUNTIME_CONTEXT_READY
   instance.runtime_context ← requested(request_id)          # the L0d single-shot marker; status stays CREATED (= v1 PREPARING_WORKSPACE)
+  instance.transcript.append(STARTED { op_id: intent.op_id })   # the op_id fact rides the SAME atomic move as the marker
   RETURN Accepted
 
 activate_or_hold(instance) → Outcome                                 # shared post-readiness decision (provisioned or context-free)
@@ -5126,9 +5242,15 @@ RUNTIME_CONTEXT_RELEASED(instance, request_id, result) → Outcome    # kernel_e
   instance.transcript.append(RUNTIME_CONTEXT_RELEASE_FAILED { phase: provider, reason: result.reason })
   RETURN Accepted                                                   # obligation RETAINED (tracked through failure until discharged); auto-retry / timeout / watchdog = L9
 
-KICKOFF(instance, task) → Outcome                                     # operator_intent
-  REQUIRE admit_loaded(instance, expect: { state: kernel_status = WAITING AND wait.kind = kickoff_pending })   # ADMISSION: state rung, bare-REQUIRE (unnamed) — semantics unchanged. No op_id rung yet: operator intents gain operation identity later (finding F-W1-2, memo §9)
-  instance.task ← task                                         # the deferred task, supplied now
+KICKOFF(instance, intent) → Outcome                                   # operator_intent — intent = { op_id, task }: operation identity arrived (F-W1-2 resolved, ingress touch)
+  # ADMISSION — the op_id rung joins the state rung; Duplicate must flow out, so the head propagates
+  # outcomes (the state expectation stays unnamed ⇒ bare-REQUIRE semantics, per the ladder's rule)
+  admitted ← admit_loaded(instance, expect: {
+    op_id: intent.op_id,                                              # a replay of the same intent ⇒ Duplicate (no-op); a FRESH retry still hits the state guard
+    state: kernel_status = WAITING AND wait.kind = kickoff_pending })
+  IF admitted ≠ Accepted THEN RETURN admitted
+  instance.task ← intent.task                                  # the deferred task, supplied now
+  instance.transcript.append(TASK_SUPPLIED { op_id: intent.op_id })   # the op_id fact — SAME atomic move as the task supply (activate commits it); a rejected attempt never consumes the op_id
   RETURN activate(instance)
 
 SUBMIT_DECISION(decision) → Outcome                                  # operator_intent — a KICKOFF sibling; resumes WAITING(human_decision). decision = { instance_id, op_id, expected_version, request_ref, verdict, override?, payload?, by }. verdict is a DECLARED decision key — the kernel knows no decision names
@@ -5248,9 +5370,13 @@ activate(instance) → Outcome                                         # interna
   instance.round         ← 1                                  # the first work cycle begins at activation: round 0 → 1 (the start step is a round-start)
   RETURN Activated(dispatch_intent(instance, template, template.start))   # dispatch is a kernel output (L0b), not a side effect
 
-CANCEL(instance) → Outcome                                           # operator_intent — any non-terminal
-  REQUIRE admit_loaded(instance, expect: { state: kernel_status ≠ TERMINAL })   # ADMISSION: state rung — terminal is a sink
+CANCEL(instance, intent) → Outcome                                   # operator_intent — any non-terminal; intent = { op_id } (operation identity: F-W1-2 resolved, ingress touch)
+  admitted ← admit_loaded(instance, expect: {
+    op_id: intent.op_id,                                              # a replayed CANCEL ⇒ Duplicate (no-op), not a terminal-sink rejection
+    state: kernel_status ≠ TERMINAL })                                # state rung stays unnamed — terminal is a sink
+  IF admitted ≠ Accepted THEN RETURN admitted
   instance.kernel_status ← TERMINAL ; instance.terminal_disposition ← cancelled   # LC2 emits the terminal boundary event; RECEIVE's post-commit hook releases ONLY if terminal is a declared release boundary — never inside this mutation
+  instance.transcript.append(CANCELLED { op_id: intent.op_id })       # the op_id fact — SAME atomic move as the terminal flip
   RETURN Terminated(cancelled)
 
 COMPLETE(instance)                                                   # internal helper — finalizes a COMMITTED ARRIVAL into a terminal target (a HANDLE actor transition OR a resumed human decision, both via apply_target_entry_effects)
@@ -5851,18 +5977,23 @@ release_boundaries(template) → [boundary_event]                     # LC2 the 
   IF req = none OR req.release is absent OR req.release.policy ≠ required THEN RETURN [ ]
   RETURN req.release.boundaries
 
-START(instance) → Outcome                                             # operator_intent — guarded, single-shot
-  REQUIRE admit_loaded(instance, expect: { state: kernel_status = CREATED AND runtime_context = none })   # ADMISSION: state rung — single-shot start
+START(instance, intent) → Outcome                                     # operator_intent — guarded, single-shot; intent = { op_id } (operation identity: F-W1-2 resolved, ingress touch)
+  admitted ← admit_loaded(instance, expect: {
+    op_id: intent.op_id,                                              # a replay of the same intent ⇒ Duplicate; a FRESH retry still hits the single-shot state guard
+    state: kernel_status = CREATED AND runtime_context = none })      # state rung stays unnamed — bare-REQUIRE semantics
+  IF admitted ≠ Accepted THEN RETURN admitted
   template ← definitionStore.load(instance.template_ref)
   requirement ← template.runtime_context                              # RuntimeContextRequirement: none | required(spec) — single source of truth
   IF requirement = none THEN                                          # the workflow declares no runtime context
     instance.runtime_context ← ready(∅)                               # trivially ready — nothing to provision
+    instance.transcript.append(STARTED { op_id: intent.op_id })       # the op_id fact — SAME atomic move as the state change
     RETURN activate_or_hold(instance)
   provider ← providerRegistry.resolve(requirement.spec.provider)
-  IF provider is none THEN RETURN Rejected(runtime_context_provider_unavailable)   # name-resolution failure = base contract error
+  IF provider is none THEN RETURN Rejected(runtime_context_provider_unavailable)   # name-resolution failure = base contract error — a PRE-COMMIT reject: the op_id is NOT consumed, a corrected retry may reuse it
   request_id ← new_request_id()
   provider.provision(instance.id, request_id, requirement.spec)  # provider internals run git branch/worktree/clone mechanics; later fires RUNTIME_CONTEXT_READY
   instance.runtime_context ← requested(request_id)          # the L0d single-shot marker; status stays CREATED (= v1 PREPARING_WORKSPACE)
+  instance.transcript.append(STARTED { op_id: intent.op_id })   # the op_id fact rides the SAME atomic move as the marker
   RETURN Accepted
 
 activate_or_hold(instance) → Outcome                                 # shared post-readiness decision (provisioned or context-free)
@@ -5930,9 +6061,15 @@ RUNTIME_CONTEXT_RELEASED(instance, request_id, result) → Outcome    # kernel_e
   instance.transcript.append(RUNTIME_CONTEXT_RELEASE_FAILED { phase: provider, reason: result.reason })
   RETURN Accepted                                                   # obligation RETAINED (tracked through failure until discharged); auto-retry / timeout / watchdog = L9
 
-KICKOFF(instance, task) → Outcome                                     # operator_intent
-  REQUIRE admit_loaded(instance, expect: { state: kernel_status = WAITING AND wait.kind = kickoff_pending })   # ADMISSION: state rung, bare-REQUIRE (unnamed) — semantics unchanged. No op_id rung yet: operator intents gain operation identity later (finding F-W1-2, memo §9)
-  instance.task ← task                                         # the deferred task, supplied now
+KICKOFF(instance, intent) → Outcome                                   # operator_intent — intent = { op_id, task }: operation identity arrived (F-W1-2 resolved, ingress touch)
+  # ADMISSION — the op_id rung joins the state rung; Duplicate must flow out, so the head propagates
+  # outcomes (the state expectation stays unnamed ⇒ bare-REQUIRE semantics, per the ladder's rule)
+  admitted ← admit_loaded(instance, expect: {
+    op_id: intent.op_id,                                              # a replay of the same intent ⇒ Duplicate (no-op); a FRESH retry still hits the state guard
+    state: kernel_status = WAITING AND wait.kind = kickoff_pending })
+  IF admitted ≠ Accepted THEN RETURN admitted
+  instance.task ← intent.task                                  # the deferred task, supplied now
+  instance.transcript.append(TASK_SUPPLIED { op_id: intent.op_id })   # the op_id fact — SAME atomic move as the task supply (activate commits it); a rejected attempt never consumes the op_id
   RETURN activate(instance)
 
 SUBMIT_DECISION(decision) → Outcome                                  # operator_intent — a KICKOFF sibling; resumes WAITING(human_decision). decision = { instance_id, op_id, expected_version, request_ref, verdict, override?, payload?, by }. verdict is a DECLARED decision key — the kernel knows no decision names
@@ -6043,13 +6180,20 @@ action_request(instance, template) → ActionRequest                 # LC3 — t
 RUN_ACTION(trigger) → Outcome                                      # LC3 operator_intent — the AUTOMATED sibling of SUBMIT_DECISION (the RUNNER's result picks the outcome, not a human). trigger = { instance_id, op_id, expected_version, action_key, payload, by }
 # TWO CHAINED ERRANDS meet in this handler: the ask-errand COMPLETES here (its correlation guards below),
 # and — only after trigger-validation — its completion OPENS the run-errand at the PHASE 1 claim
-  instance ← load(trigger.instance_id)
-  IF duplicate(trigger.op_id)                                                THEN RETURN Duplicate   # idempotency FIRST — transcript-backed (op_id rides ACTION_RUNNING / ACTION_RESULT): a replay returns Duplicate even after the first claim already moved us to action_running, never not_awaiting_action
-  IF instance.kernel_status ≠ WAITING OR instance.wait.kind ≠ action_pending THEN RETURN Rejected(not_awaiting_action)   # action_running ⇒ a (different) claim already won (single-winner); a parked action is the only runnable state
-  IF trigger.action_key ∉ instance.wait.resume_events                        THEN RETURN Rejected(action_trigger_mismatch)
-  IF trigger.expected_version ≠ instance.version                             THEN RETURN Stale(instance.version)   # the ActionRequest the operator holds is stale — a destructive action MUST NOT run from it (like SUBMIT_DECISION / RESUME_WAIT)
+  # ADMISSION via admit_input (load-first) — F-W4-1 resolved (ingress touch): the load gains its
+  # unknown_instance guard, and the authority REQUIRE gains its name, both branches declared (the
+  # F-W4-3 house style)
+  admitted ← admit_input(trigger, expect: {
+    op_id:     trigger.op_id,                                        # idempotency FIRST — transcript-backed (op_id rides ACTION_RUNNING / ACTION_RESULT): a replay returns Duplicate even after the first claim already moved us to action_running, never not_awaiting_action
+    state:     kernel_status = WAITING AND wait.kind = action_pending → Rejected(not_awaiting_action),   # action_running ⇒ a (different) claim already won (single-winner); a parked action is the only runnable state
+    correlate: trigger.action_key ∈ wait.resume_events → Rejected(action_trigger_mismatch),
+    version:   trigger.expected_version,                             # the ActionRequest the operator holds is stale — a destructive action MUST NOT run from it (like SUBMIT_DECISION / RESUME_WAIT)
+    authority: { claim:   trigger.by,                                # operator authority on THIS path (like SUBMIT_DECISION; not the L1 actor gate)
+                 granted: instance.binding[template.step(instance.current_step).role],   # lazy rung-local read — the pinned-template load happens at this rung
+                 missing → Rejected(operator_not_authorized), mismatch → Rejected(operator_not_authorized) } })   # named now (was a bare REQUIRE) — the SUBMIT_DECISION family's name
+  IF admitted ≠ Accepted THEN RETURN admitted                        # Duplicate | Stale(v) | Rejected(…) pass through unchanged
+  instance ← admitted.instance
   template ← definitionStore.load(instance.template_ref) ; step ← template.step(instance.current_step)
-  REQUIRE trigger.by = instance.binding[step.role]                 # operator authority on THIS path (like SUBMIT_DECISION; not the L1 actor gate)
   # TRIGGER-VALIDATION — PAYLOAD ONLY (NOT workspace state), BEFORE the claim so a bad payload starts nothing: the human_gate missing_required_field analog. A pre-open guard of the run-errand, not part of its claim
   FOR field IN required_fields(step.action.payload):
     IF trigger.payload[field] is absent OR empty THEN RETURN Rejected(missing_required_field)
@@ -6115,9 +6259,13 @@ activate(instance) → Outcome                                         # interna
   instance.round         ← 1                                  # the first work cycle begins at activation: round 0 → 1 (the start step is a round-start)
   RETURN Activated(dispatch_intent(instance, template, template.start))   # dispatch is a kernel output (L0b), not a side effect
 
-CANCEL(instance) → Outcome                                           # operator_intent — any non-terminal
-  REQUIRE admit_loaded(instance, expect: { state: kernel_status ≠ TERMINAL })   # ADMISSION: state rung — terminal is a sink
+CANCEL(instance, intent) → Outcome                                   # operator_intent — any non-terminal; intent = { op_id } (operation identity: F-W1-2 resolved, ingress touch)
+  admitted ← admit_loaded(instance, expect: {
+    op_id: intent.op_id,                                              # a replayed CANCEL ⇒ Duplicate (no-op), not a terminal-sink rejection
+    state: kernel_status ≠ TERMINAL })                                # state rung stays unnamed — terminal is a sink
+  IF admitted ≠ Accepted THEN RETURN admitted
   instance.kernel_status ← TERMINAL ; instance.terminal_disposition ← cancelled   # LC2 emits the terminal boundary event; RECEIVE's post-commit hook releases ONLY if terminal is a declared release boundary — never inside this mutation
+  instance.transcript.append(CANCELLED { op_id: intent.op_id })       # the op_id fact — SAME atomic move as the terminal flip
   RETURN Terminated(cancelled)
 
 COMPLETE(instance)                                                   # internal helper — finalizes a COMMITTED ARRIVAL into a terminal target (a HANDLE actor transition OR a resumed human decision, both via apply_target_entry_effects)
@@ -6435,6 +6583,10 @@ template:
             <li><b>Rebaseline (wave 4):</b> the <code>outcomes</code> route is labeled a <b>ChoicePoint</b>
               (kernel-classified — the runner's classified result) and <code>ActionRequest</code> a
               <b>Directive</b> member; behavior unchanged.</li>
+            <li><b>Hardening (F-W1-2 ingress touch):</b> <code>RUN_ACTION</code>'s head folded into
+              <code>admit_input</code> — the load gained its <code>unknown_instance</code> guard and the
+              authority REQUIRE its name (<code>operator_not_authorized</code>, both branches declared);
+              deliberate, ratified behavior deltas (memo §9).</li>
             <li><b>Decision:</b> accepted as the LC3a baseline (light evidence per playbook §2.1); LC3b generalizes the action library, L4 inherits action steps per child.</li>
           </ul>
         </div>
@@ -6671,18 +6823,23 @@ release_boundaries(template) → [boundary_event]                     # LC2 the 
   IF req = none OR req.release is absent OR req.release.policy ≠ required THEN RETURN [ ]
   RETURN req.release.boundaries
 
-START(instance) → Outcome                                             # operator_intent — guarded, single-shot
-  REQUIRE admit_loaded(instance, expect: { state: kernel_status = CREATED AND runtime_context = none })   # ADMISSION: state rung — single-shot start
+START(instance, intent) → Outcome                                     # operator_intent — guarded, single-shot; intent = { op_id } (operation identity: F-W1-2 resolved, ingress touch)
+  admitted ← admit_loaded(instance, expect: {
+    op_id: intent.op_id,                                              # a replay of the same intent ⇒ Duplicate; a FRESH retry still hits the single-shot state guard
+    state: kernel_status = CREATED AND runtime_context = none })      # state rung stays unnamed — bare-REQUIRE semantics
+  IF admitted ≠ Accepted THEN RETURN admitted
   template ← definitionStore.load(instance.template_ref)
   requirement ← template.runtime_context                              # RuntimeContextRequirement: none | required(spec) — single source of truth
   IF requirement = none THEN                                          # the workflow declares no runtime context
     instance.runtime_context ← ready(∅)                               # trivially ready — nothing to provision
+    instance.transcript.append(STARTED { op_id: intent.op_id })       # the op_id fact — SAME atomic move as the state change
     RETURN activate_or_hold(instance)
   provider ← providerRegistry.resolve(requirement.spec.provider)
-  IF provider is none THEN RETURN Rejected(runtime_context_provider_unavailable)   # name-resolution failure = base contract error
+  IF provider is none THEN RETURN Rejected(runtime_context_provider_unavailable)   # name-resolution failure = base contract error — a PRE-COMMIT reject: the op_id is NOT consumed, a corrected retry may reuse it
   request_id ← new_request_id()
   provider.provision(instance.id, request_id, requirement.spec)  # provider internals run git branch/worktree/clone mechanics; later fires RUNTIME_CONTEXT_READY
   instance.runtime_context ← requested(request_id)          # the L0d single-shot marker; status stays CREATED (= v1 PREPARING_WORKSPACE)
+  instance.transcript.append(STARTED { op_id: intent.op_id })   # the op_id fact rides the SAME atomic move as the marker
   RETURN Accepted
 
 activate_or_hold(instance) → Outcome                                 # shared post-readiness decision (provisioned or context-free)
@@ -6750,9 +6907,15 @@ RUNTIME_CONTEXT_RELEASED(instance, request_id, result) → Outcome    # kernel_e
   instance.transcript.append(RUNTIME_CONTEXT_RELEASE_FAILED { phase: provider, reason: result.reason })
   RETURN Accepted                                                   # obligation RETAINED (tracked through failure until discharged); auto-retry / timeout / watchdog = L9
 
-KICKOFF(instance, task) → Outcome                                     # operator_intent
-  REQUIRE admit_loaded(instance, expect: { state: kernel_status = WAITING AND wait.kind = kickoff_pending })   # ADMISSION: state rung, bare-REQUIRE (unnamed) — semantics unchanged. No op_id rung yet: operator intents gain operation identity later (finding F-W1-2, memo §9)
-  instance.task ← task                                         # the deferred task, supplied now
+KICKOFF(instance, intent) → Outcome                                   # operator_intent — intent = { op_id, task }: operation identity arrived (F-W1-2 resolved, ingress touch)
+  # ADMISSION — the op_id rung joins the state rung; Duplicate must flow out, so the head propagates
+  # outcomes (the state expectation stays unnamed ⇒ bare-REQUIRE semantics, per the ladder's rule)
+  admitted ← admit_loaded(instance, expect: {
+    op_id: intent.op_id,                                              # a replay of the same intent ⇒ Duplicate (no-op); a FRESH retry still hits the state guard
+    state: kernel_status = WAITING AND wait.kind = kickoff_pending })
+  IF admitted ≠ Accepted THEN RETURN admitted
+  instance.task ← intent.task                                  # the deferred task, supplied now
+  instance.transcript.append(TASK_SUPPLIED { op_id: intent.op_id })   # the op_id fact — SAME atomic move as the task supply (activate commits it); a rejected attempt never consumes the op_id
   RETURN activate(instance)
 
 SUBMIT_DECISION(decision) → Outcome                                  # operator_intent — a KICKOFF sibling; resumes WAITING(human_decision). decision = { instance_id, op_id, expected_version, request_ref, verdict, override?, payload?, by }. verdict is a DECLARED decision key — the kernel knows no decision names
@@ -6915,13 +7078,20 @@ ACTION_RESULT(instance, request_id, raw_result) → Outcome           # LC3b ker
 RUN_ACTION(trigger) → Outcome                                      # LC3 operator_intent — the AUTOMATED sibling of SUBMIT_DECISION (the RUNNER's result picks the outcome, not a human). trigger = { instance_id, op_id, expected_version, action_key, payload, by }
 # TWO CHAINED ERRANDS meet in this handler: the ask-errand COMPLETES here (its correlation guards below),
 # and — only after trigger-validation — its completion OPENS the run-errand at the PHASE 1 claim
-  instance ← load(trigger.instance_id)
-  IF duplicate(trigger.op_id)                                                THEN RETURN Duplicate   # idempotency FIRST — transcript-backed (op_id rides ACTION_RUNNING / ACTION_RESULT): a replay returns Duplicate even after the first claim already moved us to action_running, never not_awaiting_action
-  IF instance.kernel_status ≠ WAITING OR instance.wait.kind ≠ action_pending THEN RETURN Rejected(not_awaiting_action)   # action_running ⇒ a (different) claim already won (single-winner); a parked action is the only runnable state
-  IF trigger.action_key ∉ instance.wait.resume_events                        THEN RETURN Rejected(action_trigger_mismatch)
-  IF trigger.expected_version ≠ instance.version                             THEN RETURN Stale(instance.version)   # the ActionRequest the operator holds is stale — a destructive action MUST NOT run from it (like SUBMIT_DECISION / RESUME_WAIT)
+  # ADMISSION via admit_input (load-first) — F-W4-1 resolved (ingress touch): the load gains its
+  # unknown_instance guard, and the authority REQUIRE gains its name, both branches declared (the
+  # F-W4-3 house style)
+  admitted ← admit_input(trigger, expect: {
+    op_id:     trigger.op_id,                                        # idempotency FIRST — transcript-backed (op_id rides ACTION_RUNNING / ACTION_RESULT): a replay returns Duplicate even after the first claim already moved us to action_running, never not_awaiting_action
+    state:     kernel_status = WAITING AND wait.kind = action_pending → Rejected(not_awaiting_action),   # action_running ⇒ a (different) claim already won (single-winner); a parked action is the only runnable state
+    correlate: trigger.action_key ∈ wait.resume_events → Rejected(action_trigger_mismatch),
+    version:   trigger.expected_version,                             # the ActionRequest the operator holds is stale — a destructive action MUST NOT run from it (like SUBMIT_DECISION / RESUME_WAIT)
+    authority: { claim:   trigger.by,                                # operator authority on THIS path (like SUBMIT_DECISION; not the L1 actor gate)
+                 granted: instance.binding[template.step(instance.current_step).role],   # lazy rung-local read — the pinned-template load happens at this rung
+                 missing → Rejected(operator_not_authorized), mismatch → Rejected(operator_not_authorized) } })   # named now (was a bare REQUIRE) — the SUBMIT_DECISION family's name
+  IF admitted ≠ Accepted THEN RETURN admitted                        # Duplicate | Stale(v) | Rejected(…) pass through unchanged
+  instance ← admitted.instance
   template ← definitionStore.load(instance.template_ref) ; step ← template.step(instance.current_step)
-  REQUIRE trigger.by = instance.binding[step.role]                 # operator authority on THIS path (like SUBMIT_DECISION; not the L1 actor gate)
   # TRIGGER-VALIDATION — PAYLOAD ONLY (NOT workspace state), BEFORE the claim so a bad payload starts nothing: the human_gate missing_required_field analog. A pre-open guard of the run-errand, not part of its claim
   FOR field IN required_fields(step.action.payload):
     IF trigger.payload[field] is absent OR empty THEN RETURN Rejected(missing_required_field)
@@ -6987,9 +7157,13 @@ activate(instance) → Outcome                                         # interna
   instance.round         ← 1                                  # the first work cycle begins at activation: round 0 → 1 (the start step is a round-start)
   RETURN Activated(dispatch_intent(instance, template, template.start))   # dispatch is a kernel output (L0b), not a side effect
 
-CANCEL(instance) → Outcome                                           # operator_intent — any non-terminal
-  REQUIRE admit_loaded(instance, expect: { state: kernel_status ≠ TERMINAL })   # ADMISSION: state rung — terminal is a sink
+CANCEL(instance, intent) → Outcome                                   # operator_intent — any non-terminal; intent = { op_id } (operation identity: F-W1-2 resolved, ingress touch)
+  admitted ← admit_loaded(instance, expect: {
+    op_id: intent.op_id,                                              # a replayed CANCEL ⇒ Duplicate (no-op), not a terminal-sink rejection
+    state: kernel_status ≠ TERMINAL })                                # state rung stays unnamed — terminal is a sink
+  IF admitted ≠ Accepted THEN RETURN admitted
   instance.kernel_status ← TERMINAL ; instance.terminal_disposition ← cancelled   # LC2 emits the terminal boundary event; RECEIVE's post-commit hook releases ONLY if terminal is a declared release boundary — never inside this mutation
+  instance.transcript.append(CANCELLED { op_id: intent.op_id })       # the op_id fact — SAME atomic move as the terminal flip
   RETURN Terminated(cancelled)
 
 COMPLETE(instance)                                                   # internal helper — finalizes a COMMITTED ARRIVAL into a terminal target (a HANDLE actor transition OR a resumed human decision, both via apply_target_entry_effects)
@@ -7539,18 +7713,23 @@ release_boundaries(template) → [boundary_event]                     # LC2 the 
   IF req = none OR req.release is absent OR req.release.policy ≠ required THEN RETURN [ ]
   RETURN req.release.boundaries
 
-START(instance) → Outcome                                             # operator_intent — guarded, single-shot
-  REQUIRE admit_loaded(instance, expect: { state: kernel_status = CREATED AND runtime_context = none })   # ADMISSION: state rung — single-shot start
+START(instance, intent) → Outcome                                     # operator_intent — guarded, single-shot; intent = { op_id } (operation identity: F-W1-2 resolved, ingress touch)
+  admitted ← admit_loaded(instance, expect: {
+    op_id: intent.op_id,                                              # a replay of the same intent ⇒ Duplicate; a FRESH retry still hits the single-shot state guard
+    state: kernel_status = CREATED AND runtime_context = none })      # state rung stays unnamed — bare-REQUIRE semantics
+  IF admitted ≠ Accepted THEN RETURN admitted
   template ← definitionStore.load(instance.template_ref)
   requirement ← template.runtime_context                              # RuntimeContextRequirement: none | required(spec) — single source of truth
   IF requirement = none THEN                                          # the workflow declares no runtime context
     instance.runtime_context ← ready(∅)                               # trivially ready — nothing to provision
+    instance.transcript.append(STARTED { op_id: intent.op_id })       # the op_id fact — SAME atomic move as the state change
     RETURN activate_or_hold(instance)
   provider ← providerRegistry.resolve(requirement.spec.provider)
-  IF provider is none THEN RETURN Rejected(runtime_context_provider_unavailable)   # name-resolution failure = base contract error
+  IF provider is none THEN RETURN Rejected(runtime_context_provider_unavailable)   # name-resolution failure = base contract error — a PRE-COMMIT reject: the op_id is NOT consumed, a corrected retry may reuse it
   request_id ← new_request_id()
   provider.provision(instance.id, request_id, requirement.spec)  # provider internals run git branch/worktree/clone mechanics; later fires RUNTIME_CONTEXT_READY
   instance.runtime_context ← requested(request_id)          # the L0d single-shot marker; status stays CREATED (= v1 PREPARING_WORKSPACE)
+  instance.transcript.append(STARTED { op_id: intent.op_id })   # the op_id fact rides the SAME atomic move as the marker
   RETURN Accepted
 
 activate_or_hold(instance) → Outcome                                 # shared post-readiness decision (provisioned or context-free)
@@ -7618,9 +7797,15 @@ RUNTIME_CONTEXT_RELEASED(instance, request_id, result) → Outcome    # kernel_e
   instance.transcript.append(RUNTIME_CONTEXT_RELEASE_FAILED { phase: provider, reason: result.reason })
   RETURN Accepted                                                   # obligation RETAINED (tracked through failure until discharged); auto-retry / timeout / watchdog = L9
 
-KICKOFF(instance, task) → Outcome                                     # operator_intent
-  REQUIRE admit_loaded(instance, expect: { state: kernel_status = WAITING AND wait.kind = kickoff_pending })   # ADMISSION: state rung, bare-REQUIRE (unnamed) — semantics unchanged. No op_id rung yet: operator intents gain operation identity later (finding F-W1-2, memo §9)
-  instance.task ← task                                         # the deferred task, supplied now
+KICKOFF(instance, intent) → Outcome                                   # operator_intent — intent = { op_id, task }: operation identity arrived (F-W1-2 resolved, ingress touch)
+  # ADMISSION — the op_id rung joins the state rung; Duplicate must flow out, so the head propagates
+  # outcomes (the state expectation stays unnamed ⇒ bare-REQUIRE semantics, per the ladder's rule)
+  admitted ← admit_loaded(instance, expect: {
+    op_id: intent.op_id,                                              # a replay of the same intent ⇒ Duplicate (no-op); a FRESH retry still hits the state guard
+    state: kernel_status = WAITING AND wait.kind = kickoff_pending })
+  IF admitted ≠ Accepted THEN RETURN admitted
+  instance.task ← intent.task                                  # the deferred task, supplied now
+  instance.transcript.append(TASK_SUPPLIED { op_id: intent.op_id })   # the op_id fact — SAME atomic move as the task supply (activate commits it); a rejected attempt never consumes the op_id
   RETURN activate(instance)
 
 SUBMIT_DECISION(decision) → Outcome                                  # operator_intent — a KICKOFF sibling; resumes WAITING(human_decision). decision = { instance_id, op_id, expected_version, request_ref, verdict, override?, payload?, by }. verdict is a DECLARED decision key — the kernel knows no decision names
@@ -7783,13 +7968,20 @@ ACTION_RESULT(instance, request_id, raw_result) → Outcome           # LC3b ker
 RUN_ACTION(trigger) → Outcome                                      # LC3 operator_intent — the AUTOMATED sibling of SUBMIT_DECISION (the RUNNER's result picks the outcome, not a human). trigger = { instance_id, op_id, expected_version, action_key, payload, by }
 # TWO CHAINED ERRANDS meet in this handler: the ask-errand COMPLETES here (its correlation guards below),
 # and — only after trigger-validation — its completion OPENS the run-errand at the PHASE 1 claim
-  instance ← load(trigger.instance_id)
-  IF duplicate(trigger.op_id)                                                THEN RETURN Duplicate   # idempotency FIRST — transcript-backed (op_id rides ACTION_RUNNING / ACTION_RESULT): a replay returns Duplicate even after the first claim already moved us to action_running, never not_awaiting_action
-  IF instance.kernel_status ≠ WAITING OR instance.wait.kind ≠ action_pending THEN RETURN Rejected(not_awaiting_action)   # action_running ⇒ a (different) claim already won (single-winner); a parked action is the only runnable state
-  IF trigger.action_key ∉ instance.wait.resume_events                        THEN RETURN Rejected(action_trigger_mismatch)
-  IF trigger.expected_version ≠ instance.version                             THEN RETURN Stale(instance.version)   # the ActionRequest the operator holds is stale — a destructive action MUST NOT run from it (like SUBMIT_DECISION / RESUME_WAIT)
+  # ADMISSION via admit_input (load-first) — F-W4-1 resolved (ingress touch): the load gains its
+  # unknown_instance guard, and the authority REQUIRE gains its name, both branches declared (the
+  # F-W4-3 house style)
+  admitted ← admit_input(trigger, expect: {
+    op_id:     trigger.op_id,                                        # idempotency FIRST — transcript-backed (op_id rides ACTION_RUNNING / ACTION_RESULT): a replay returns Duplicate even after the first claim already moved us to action_running, never not_awaiting_action
+    state:     kernel_status = WAITING AND wait.kind = action_pending → Rejected(not_awaiting_action),   # action_running ⇒ a (different) claim already won (single-winner); a parked action is the only runnable state
+    correlate: trigger.action_key ∈ wait.resume_events → Rejected(action_trigger_mismatch),
+    version:   trigger.expected_version,                             # the ActionRequest the operator holds is stale — a destructive action MUST NOT run from it (like SUBMIT_DECISION / RESUME_WAIT)
+    authority: { claim:   trigger.by,                                # operator authority on THIS path (like SUBMIT_DECISION; not the L1 actor gate)
+                 granted: instance.binding[template.step(instance.current_step).role],   # lazy rung-local read — the pinned-template load happens at this rung
+                 missing → Rejected(operator_not_authorized), mismatch → Rejected(operator_not_authorized) } })   # named now (was a bare REQUIRE) — the SUBMIT_DECISION family's name
+  IF admitted ≠ Accepted THEN RETURN admitted                        # Duplicate | Stale(v) | Rejected(…) pass through unchanged
+  instance ← admitted.instance
   template ← definitionStore.load(instance.template_ref) ; step ← template.step(instance.current_step)
-  REQUIRE trigger.by = instance.binding[step.role]                 # operator authority on THIS path (like SUBMIT_DECISION; not the L1 actor gate)
   # TRIGGER-VALIDATION — PAYLOAD ONLY (NOT workspace state), BEFORE the claim so a bad payload starts nothing: the human_gate missing_required_field analog. A pre-open guard of the run-errand, not part of its claim
   FOR field IN required_fields(step.action.payload):
     IF trigger.payload[field] is absent OR empty THEN RETURN Rejected(missing_required_field)
@@ -7855,9 +8047,13 @@ activate(instance) → Outcome                                         # interna
   instance.round         ← 1                                  # the first work cycle begins at activation: round 0 → 1 (the start step is a round-start)
   RETURN Activated(dispatch_intent(instance, template, template.start))   # dispatch is a kernel output (L0b), not a side effect
 
-CANCEL(instance) → Outcome                                           # operator_intent — any non-terminal
-  REQUIRE admit_loaded(instance, expect: { state: kernel_status ≠ TERMINAL })   # ADMISSION: state rung — terminal is a sink
+CANCEL(instance, intent) → Outcome                                   # operator_intent — any non-terminal; intent = { op_id } (operation identity: F-W1-2 resolved, ingress touch)
+  admitted ← admit_loaded(instance, expect: {
+    op_id: intent.op_id,                                              # a replayed CANCEL ⇒ Duplicate (no-op), not a terminal-sink rejection
+    state: kernel_status ≠ TERMINAL })                                # state rung stays unnamed — terminal is a sink
+  IF admitted ≠ Accepted THEN RETURN admitted
   instance.kernel_status ← TERMINAL ; instance.terminal_disposition ← cancelled   # LC2 emits the terminal boundary event; RECEIVE's post-commit hook releases ONLY if terminal is a declared release boundary — never inside this mutation
+  instance.transcript.append(CANCELLED { op_id: intent.op_id })       # the op_id fact — SAME atomic move as the terminal flip
   RETURN Terminated(cancelled)
 
 COMPLETE(instance)                                                   # internal helper — finalizes a COMMITTED ARRIVAL into a terminal target (a HANDLE actor transition OR a resumed human decision, both via apply_target_entry_effects)
@@ -7978,10 +8174,12 @@ DELETE_REQUESTED(intent) → Outcome                                  # LC4 oper
 # The delete chain behind this one intent: a forced release ERRAND (force_release, below) followed by the
 # purge contract — hard_purge is a preconditioned storage re-drive, NOT an errand (no request/reply, no completion event)
   instance ← load(intent.instance_id)
+  IF instance is none THEN                                          # F-W4-1 resolved (ingress touch): the none path exists — tombstone-before-authority holds STRUCTURALLY here (a purged run has no full run record, hence no binding[operator] to authorize against; only the surviving T1-family tombstone remains to read)
+    IF run_index.status(intent.instance_id) = purged THEN RETURN Rejected(already_purged)   # keyed by the INTENT's id — the tombstone survives the record it marks
+    RETURN Rejected(unknown_instance)                               # no record and no tombstone ⇒ this run never existed
   IF duplicate(intent.op_id) THEN RETURN Duplicate                  # idempotency-first
-  IF run_index.status(instance.id) = purged THEN RETURN Rejected(already_purged)   # the run_index TOMBSTONE is the authority for purged — checked BEFORE the operator-authority REQUIRE because a purged run has no full run record (hence no binding[operator]) to authorize against; only the surviving T1-family tombstone remains to read
-  REQUIRE intent.by = instance.binding[operator]                    # operator authority on THIS path (like CANCEL / SUBMIT_DECISION)
-  IF instance.purge_state = purge_pending THEN RETURN Committed(instance.version, none)   # already pending — a re-issue (fresh op_id) is an idempotent no-op (matrix: no-op once pending / purged); checked AFTER authority so an unauthorized re-delete still gets operator_not_authorized
+  REQUIRE intent.by = instance.binding[operator]                    # operator authority on THIS path (like SUBMIT_DECISION) — BEFORE the purge_pending no-op, so an unauthorized re-delete still gets operator_not_authorized
+  IF instance.purge_state = purge_pending THEN RETURN Committed(instance.version, none)   # already pending — a re-issue (fresh op_id) is an idempotent no-op (matrix: no-op once pending / purged)
   IF instance.kernel_status ≠ TERMINAL AND NOT intent.force THEN RETURN Rejected(delete_confirmation_required)   # a LIVE run needs explicit force (v1: --force)
   COMMIT atomically at expected_version = instance.version:
     IF instance.kernel_status ≠ TERMINAL THEN                       # live run ⇒ terminalize first (the lifecycle, unbundled from purge)
@@ -8123,6 +8321,12 @@ archive_or_export(instance, sink) → ArchiveRef                      # LC4 — 
               force-opened release <b>Errand</b> (the same LC2 instance), while <code>hard_purge</code> is
               deliberately NOT an errand (a preconditioned storage re-drive with no request/reply or completion
               event). See the kernel-primitives memo (§6/§9); behavior unchanged.</li>
+            <li><b>Hardening (F-W1-2 ingress touch):</b> <code>DELETE_REQUESTED</code> gained its
+              none-instance path — the tombstone answers <code>already_purged</code> (keyed by the
+              intent's id), no tombstone answers <code>unknown_instance</code>; the existing-instance
+              path keeps authority BEFORE the purge_pending no-op, and its old tombstone re-check drops
+              as unreachable (purged ⇒ the record is gone ⇒ load returns none); deliberate, ratified
+              behavior deltas (memo §9).</li>
             <li><b>Decision:</b> accepted as the LC4 baseline (light evidence per playbook §2.1). This closes the lifecycle-close topic (LC1–LC4); L4 (child workflows) inherits all four per child runtime_context / record.</li>
           </ul>
         </div>
@@ -8774,18 +8978,23 @@ release_boundaries(template) → [boundary_event]                     # LC2 the 
   IF req = none OR req.release is absent OR req.release.policy ≠ required THEN RETURN [ ]
   RETURN req.release.boundaries
 
-START(instance) → Outcome                                             # operator_intent — guarded, single-shot
-  REQUIRE admit_loaded(instance, expect: { state: kernel_status = CREATED AND runtime_context = none })   # ADMISSION: state rung — single-shot start
+START(instance, intent) → Outcome                                     # operator_intent — guarded, single-shot; intent = { op_id } (operation identity: F-W1-2 resolved, ingress touch)
+  admitted ← admit_loaded(instance, expect: {
+    op_id: intent.op_id,                                              # a replay of the same intent ⇒ Duplicate; a FRESH retry still hits the single-shot state guard
+    state: kernel_status = CREATED AND runtime_context = none })      # state rung stays unnamed — bare-REQUIRE semantics
+  IF admitted ≠ Accepted THEN RETURN admitted
   template ← definitionStore.load(instance.template_ref)
   requirement ← template.runtime_context                              # RuntimeContextRequirement: none | required(spec) — single source of truth
   IF requirement = none THEN                                          # the workflow declares no runtime context
     instance.runtime_context ← ready(∅)                               # trivially ready — nothing to provision
+    instance.transcript.append(STARTED { op_id: intent.op_id })       # the op_id fact — SAME atomic move as the state change
     RETURN activate_or_hold(instance)
   provider ← providerRegistry.resolve(requirement.spec.provider)
-  IF provider is none THEN RETURN Rejected(runtime_context_provider_unavailable)   # name-resolution failure = base contract error
+  IF provider is none THEN RETURN Rejected(runtime_context_provider_unavailable)   # name-resolution failure = base contract error — a PRE-COMMIT reject: the op_id is NOT consumed, a corrected retry may reuse it
   request_id ← new_request_id()
   provider.provision(instance.id, request_id, requirement.spec)  # provider internals run git branch/worktree/clone mechanics; later fires RUNTIME_CONTEXT_READY
   instance.runtime_context ← requested(request_id)          # the L0d single-shot marker; status stays CREATED (= v1 PREPARING_WORKSPACE)
+  instance.transcript.append(STARTED { op_id: intent.op_id })   # the op_id fact rides the SAME atomic move as the marker
   RETURN Accepted
 
 activate_or_hold(instance) → Outcome                                 # shared post-readiness decision (provisioned or context-free)
@@ -8853,9 +9062,15 @@ RUNTIME_CONTEXT_RELEASED(instance, request_id, result) → Outcome    # kernel_e
   instance.transcript.append(RUNTIME_CONTEXT_RELEASE_FAILED { phase: provider, reason: result.reason })
   RETURN Accepted                                                   # obligation RETAINED (tracked through failure until discharged); auto-retry / timeout / watchdog = L9
 
-KICKOFF(instance, task) → Outcome                                     # operator_intent
-  REQUIRE admit_loaded(instance, expect: { state: kernel_status = WAITING AND wait.kind = kickoff_pending })   # ADMISSION: state rung, bare-REQUIRE (unnamed) — semantics unchanged. No op_id rung yet: operator intents gain operation identity later (finding F-W1-2, memo §9)
-  instance.task ← task                                         # the deferred task, supplied now
+KICKOFF(instance, intent) → Outcome                                   # operator_intent — intent = { op_id, task }: operation identity arrived (F-W1-2 resolved, ingress touch)
+  # ADMISSION — the op_id rung joins the state rung; Duplicate must flow out, so the head propagates
+  # outcomes (the state expectation stays unnamed ⇒ bare-REQUIRE semantics, per the ladder's rule)
+  admitted ← admit_loaded(instance, expect: {
+    op_id: intent.op_id,                                              # a replay of the same intent ⇒ Duplicate (no-op); a FRESH retry still hits the state guard
+    state: kernel_status = WAITING AND wait.kind = kickoff_pending })
+  IF admitted ≠ Accepted THEN RETURN admitted
+  instance.task ← intent.task                                  # the deferred task, supplied now
+  instance.transcript.append(TASK_SUPPLIED { op_id: intent.op_id })   # the op_id fact — SAME atomic move as the task supply (activate commits it); a rejected attempt never consumes the op_id
   RETURN activate(instance)
 
 SUBMIT_DECISION(decision) → Outcome                                  # operator_intent — a KICKOFF sibling; resumes WAITING(human_decision). decision = { instance_id, op_id, expected_version, request_ref, verdict, override?, payload?, by }. verdict is a DECLARED decision key — the kernel knows no decision names
@@ -9020,13 +9235,20 @@ ACTION_RESULT(instance, request_id, raw_result) → Outcome           # LC3b ker
 RUN_ACTION(trigger) → Outcome                                      # LC3 operator_intent — the AUTOMATED sibling of SUBMIT_DECISION (the RUNNER's result picks the outcome, not a human). trigger = { instance_id, op_id, expected_version, action_key, payload, by }
 # TWO CHAINED ERRANDS meet in this handler: the ask-errand COMPLETES here (its correlation guards below),
 # and — only after trigger-validation — its completion OPENS the run-errand at the PHASE 1 claim
-  instance ← load(trigger.instance_id)
-  IF duplicate(trigger.op_id)                                                THEN RETURN Duplicate   # idempotency FIRST — transcript-backed (op_id rides ACTION_RUNNING / ACTION_RESULT): a replay returns Duplicate even after the first claim already moved us to action_running, never not_awaiting_action
-  IF instance.kernel_status ≠ WAITING OR instance.wait.kind ≠ action_pending THEN RETURN Rejected(not_awaiting_action)   # action_running ⇒ a (different) claim already won (single-winner); a parked action is the only runnable state
-  IF trigger.action_key ∉ instance.wait.resume_events                        THEN RETURN Rejected(action_trigger_mismatch)
-  IF trigger.expected_version ≠ instance.version                             THEN RETURN Stale(instance.version)   # the ActionRequest the operator holds is stale — a destructive action MUST NOT run from it (like SUBMIT_DECISION / RESUME_WAIT)
+  # ADMISSION via admit_input (load-first) — F-W4-1 resolved (ingress touch): the load gains its
+  # unknown_instance guard, and the authority REQUIRE gains its name, both branches declared (the
+  # F-W4-3 house style)
+  admitted ← admit_input(trigger, expect: {
+    op_id:     trigger.op_id,                                        # idempotency FIRST — transcript-backed (op_id rides ACTION_RUNNING / ACTION_RESULT): a replay returns Duplicate even after the first claim already moved us to action_running, never not_awaiting_action
+    state:     kernel_status = WAITING AND wait.kind = action_pending → Rejected(not_awaiting_action),   # action_running ⇒ a (different) claim already won (single-winner); a parked action is the only runnable state
+    correlate: trigger.action_key ∈ wait.resume_events → Rejected(action_trigger_mismatch),
+    version:   trigger.expected_version,                             # the ActionRequest the operator holds is stale — a destructive action MUST NOT run from it (like SUBMIT_DECISION / RESUME_WAIT)
+    authority: { claim:   trigger.by,                                # operator authority on THIS path (like SUBMIT_DECISION; not the L1 actor gate)
+                 granted: instance.binding[template.step(instance.current_step).role],   # lazy rung-local read — the pinned-template load happens at this rung
+                 missing → Rejected(operator_not_authorized), mismatch → Rejected(operator_not_authorized) } })   # named now (was a bare REQUIRE) — the SUBMIT_DECISION family's name
+  IF admitted ≠ Accepted THEN RETURN admitted                        # Duplicate | Stale(v) | Rejected(…) pass through unchanged
+  instance ← admitted.instance
   template ← definitionStore.load(instance.template_ref) ; step ← template.step(instance.current_step)
-  REQUIRE trigger.by = instance.binding[step.role]                 # operator authority on THIS path (like SUBMIT_DECISION; not the L1 actor gate)
   # TRIGGER-VALIDATION — PAYLOAD ONLY (NOT workspace state), BEFORE the claim so a bad payload starts nothing: the human_gate missing_required_field analog. A pre-open guard of the run-errand, not part of its claim
   FOR field IN required_fields(step.action.payload):
     IF trigger.payload[field] is absent OR empty THEN RETURN Rejected(missing_required_field)
@@ -9092,9 +9314,13 @@ activate(instance) → Outcome                                         # interna
   instance.round         ← 1                                  # the first work cycle begins at activation: round 0 → 1 (the start step is a round-start)
   RETURN Activated(dispatch_intent(instance, template, template.start))   # dispatch is a kernel output (L0b), not a side effect
 
-CANCEL(instance) → Outcome                                           # operator_intent — any non-terminal
-  REQUIRE admit_loaded(instance, expect: { state: kernel_status ≠ TERMINAL })   # ADMISSION: state rung — terminal is a sink
+CANCEL(instance, intent) → Outcome                                   # operator_intent — any non-terminal; intent = { op_id } (operation identity: F-W1-2 resolved, ingress touch)
+  admitted ← admit_loaded(instance, expect: {
+    op_id: intent.op_id,                                              # a replayed CANCEL ⇒ Duplicate (no-op), not a terminal-sink rejection
+    state: kernel_status ≠ TERMINAL })                                # state rung stays unnamed — terminal is a sink
+  IF admitted ≠ Accepted THEN RETURN admitted
   instance.kernel_status ← TERMINAL ; instance.terminal_disposition ← cancelled   # LC2 emits the terminal boundary event; RECEIVE's post-commit hook releases ONLY if terminal is a declared release boundary — never inside this mutation
+  instance.transcript.append(CANCELLED { op_id: intent.op_id })       # the op_id fact — SAME atomic move as the terminal flip
   RETURN Terminated(cancelled)
 
 COMPLETE(instance)                                                   # internal helper — finalizes a COMMITTED ARRIVAL into a terminal target (a HANDLE actor transition OR a resumed human decision, both via apply_target_entry_effects)

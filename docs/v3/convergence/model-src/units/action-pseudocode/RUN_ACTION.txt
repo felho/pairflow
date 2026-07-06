@@ -2,13 +2,20 @@
 RUN_ACTION(trigger) → Outcome                                      # LC3 operator_intent — the AUTOMATED sibling of SUBMIT_DECISION (the RUNNER's result picks the outcome, not a human). trigger = { instance_id, op_id, expected_version, action_key, payload, by }
 # TWO CHAINED ERRANDS meet in this handler: the ask-errand COMPLETES here (its correlation guards below),
 # and — only after trigger-validation — its completion OPENS the run-errand at the PHASE 1 claim
-  instance ← load(trigger.instance_id)
-  IF duplicate(trigger.op_id)                                                THEN RETURN Duplicate   # idempotency FIRST — transcript-backed (op_id rides ACTION_RUNNING / ACTION_RESULT): a replay returns Duplicate even after the first claim already moved us to action_running, never not_awaiting_action
-  IF instance.kernel_status ≠ WAITING OR instance.wait.kind ≠ action_pending THEN RETURN Rejected(not_awaiting_action)   # action_running ⇒ a (different) claim already won (single-winner); a parked action is the only runnable state
-  IF trigger.action_key ∉ instance.wait.resume_events                        THEN RETURN Rejected(action_trigger_mismatch)
-  IF trigger.expected_version ≠ instance.version                             THEN RETURN Stale(instance.version)   # the ActionRequest the operator holds is stale — a destructive action MUST NOT run from it (like SUBMIT_DECISION / RESUME_WAIT)
+  # ADMISSION via admit_input (load-first) — F-W4-1 resolved (ingress touch): the load gains its
+  # unknown_instance guard, and the authority REQUIRE gains its name, both branches declared (the
+  # F-W4-3 house style)
+  admitted ← admit_input(trigger, expect: {
+    op_id:     trigger.op_id,                                        # idempotency FIRST — transcript-backed (op_id rides ACTION_RUNNING / ACTION_RESULT): a replay returns Duplicate even after the first claim already moved us to action_running, never not_awaiting_action
+    state:     kernel_status = WAITING AND wait.kind = action_pending → Rejected(not_awaiting_action),   # action_running ⇒ a (different) claim already won (single-winner); a parked action is the only runnable state
+    correlate: trigger.action_key ∈ wait.resume_events → Rejected(action_trigger_mismatch),
+    version:   trigger.expected_version,                             # the ActionRequest the operator holds is stale — a destructive action MUST NOT run from it (like SUBMIT_DECISION / RESUME_WAIT)
+    authority: { claim:   trigger.by,                                # operator authority on THIS path (like SUBMIT_DECISION; not the L1 actor gate)
+                 granted: instance.binding[template.step(instance.current_step).role],   # lazy rung-local read — the pinned-template load happens at this rung
+                 missing → Rejected(operator_not_authorized), mismatch → Rejected(operator_not_authorized) } })   # named now (was a bare REQUIRE) — the SUBMIT_DECISION family's name
+  IF admitted ≠ Accepted THEN RETURN admitted                        # Duplicate | Stale(v) | Rejected(…) pass through unchanged
+  instance ← admitted.instance
   template ← definitionStore.load(instance.template_ref) ; step ← template.step(instance.current_step)
-  REQUIRE trigger.by = instance.binding[step.role]                 # operator authority on THIS path (like SUBMIT_DECISION; not the L1 actor gate)
   # TRIGGER-VALIDATION — PAYLOAD ONLY (NOT workspace state), BEFORE the claim so a bad payload starts nothing: the human_gate missing_required_field analog. A pre-open guard of the run-errand, not part of its claim
   FOR field IN required_fields(step.action.payload):
     IF trigger.payload[field] is absent OR empty THEN RETURN Rejected(missing_required_field)

@@ -1,5 +1,9 @@
 
-CANCEL(instance) → Outcome                                           # operator_intent — any non-terminal
-  REQUIRE admit_loaded(instance, expect: { state: kernel_status ≠ TERMINAL })   # ADMISSION: state rung — terminal is a sink
+CANCEL(instance, intent) → Outcome                                   # operator_intent — any non-terminal; intent = { op_id } (operation identity: F-W1-2 resolved, ingress touch)
+  admitted ← admit_loaded(instance, expect: {
+    op_id: intent.op_id,                                              # a replayed CANCEL ⇒ Duplicate (no-op), not a terminal-sink rejection
+    state: kernel_status ≠ TERMINAL })                                # state rung stays unnamed — terminal is a sink
+  IF admitted ≠ Accepted THEN RETURN admitted
   instance.kernel_status ← TERMINAL ; instance.terminal_disposition ← cancelled   # LC2 emits the terminal boundary event; RECEIVE's post-commit hook releases ONLY if terminal is a declared release boundary — never inside this mutation
+  instance.transcript.append(CANCELLED { op_id: intent.op_id })       # the op_id fact — SAME atomic move as the terminal flip
   RETURN Terminated(cancelled)

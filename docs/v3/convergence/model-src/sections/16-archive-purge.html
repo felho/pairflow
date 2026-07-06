@@ -149,6 +149,12 @@
               force-opened release <b>Errand</b> (the same LC2 instance), while <code>hard_purge</code> is
               deliberately NOT an errand (a preconditioned storage re-drive with no request/reply or completion
               event). See the kernel-primitives memo (§6/§9); behavior unchanged.</li>
+            <li><b>Hardening (F-W1-2 ingress touch):</b> <code>DELETE_REQUESTED</code> gained its
+              none-instance path — the tombstone answers <code>already_purged</code> (keyed by the
+              intent's id), no tombstone answers <code>unknown_instance</code>; the existing-instance
+              path keeps authority BEFORE the purge_pending no-op, and its old tombstone re-check drops
+              as unreachable (purged ⇒ the record is gone ⇒ load returns none); deliberate, ratified
+              behavior deltas (memo §9).</li>
             <li><b>Decision:</b> accepted as the LC4 baseline (light evidence per playbook §2.1). This closes the lifecycle-close topic (LC1–LC4); L4 (child workflows) inherits all four per child runtime_context / record.</li>
           </ul>
         </div>

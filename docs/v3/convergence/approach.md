@@ -749,8 +749,9 @@ durable / external channel. v1 reality check (Explore): `plan watch` is external
 > correlation, Slack/email channels, or the dataset layer.
 
 **Kernel-primitives rebaseline (P1–P5) — a pass over Block A, not a new level. COMPLETE
-(waves 1–5, all ratified); remaining named debt: the dedicated F-W1-2 ingress/idempotency
-hardening touch (operator op_id + the F-W4-1 guards + the RUN_ACTION reject-name decision).**
+(waves 1–5, all ratified); the named debt — the dedicated F-W1-2 ingress/idempotency
+hardening touch (operator op_id + the F-W4-1 guards + the RUN_ACTION reject-name
+decision) — landed 2026-07-06, discharging the strand fully.**
 Source: [`../topics/_open-kernel-primitives.md`](../topics/_open-kernel-primitives.md)
 (decided + ratified; the L5 paper test passed — L5-core reduces to six declarations).
 Two independent re-reads of the finished L0a–L4 kernel converged on the same finding:

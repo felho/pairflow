@@ -6,9 +6,10 @@ acceptance gate ran as the L5 paper test (§8, PASS), was reviewed and
 ratified, and the rebaseline executed as waves 1–5 (all ratified, §9): the
 five primitives are named contracts in the corpus at their earned birth
 points, with instance/phase labels corpus-wide. Kernel-primitives rebaseline
-complete; remaining named debt: the dedicated F-W1-2 ingress/idempotency
+complete. The named debt — the dedicated F-W1-2 ingress/idempotency
 hardening touch (operator op_id + the F-W4-1 guards + the RUN_ACTION
-reject-name decision).** Joint reading result: the
+reject-name decision) — was DISCHARGED by the ingress touch (2026-07-06,
+§9 last section), pending its review round.** Joint reading result: the
 core-model pseudocode (L0a–L4 complete) was re-read independently by the user and
 by the assistant; both readings converged on the same two structural observations.
 This memo names the primitives, maps every current kernel unit onto them, and
@@ -523,7 +524,8 @@ ratified in the wave's review.
   identity on this input class too (C2 is explicit for `SUBMIT_DECISION`);
   operator intents gain `op_id` when their paths are next rebased (wave 4
   for the L3-born ops; a dedicated ingress-idempotency touch for
-  `KICKOFF`/`START`/`CANCEL`).
+  `KICKOFF`/`START`/`CANCEL`). *(RESOLVED by the ingress touch — the last
+  §9 section.)*
 
 ### Wave 2 (L1 — Warrant born) — wave reviewed, both dispositions RATIFIED (2026-07-06)
 
@@ -610,7 +612,9 @@ ratified in the wave's review.
   own heads this wave; the guards (and the RUN_ACTION reject-name decision)
   land in a later, separately ratified touch — candidates: the wave-5
   sweep if ratified as in-scope, else the dedicated ingress-idempotency
-  touch that F-W1-2 already owns for KICKOFF/START/CANCEL.
+  touch that F-W1-2 already owns for KICKOFF/START/CANCEL. *(Scoped to the
+  dedicated touch by the wave-4 ratification; RESOLVED by the ingress
+  touch — the last §9 section.)*
 - **F-W4-2 · the operator paths gain the ladder's `missing_version` entry
   guard — a deliberate, ratify-me behavior delta.** Today a malformed
   SUBMIT_DECISION / RESUME_WAIT with NO `expected_version` field falls
@@ -722,3 +726,51 @@ No new births. The wave's items and their outcomes:
   (PASS, ratified, re-affirmed in this wave's review) → waves 1–5 executed;
   the §3 reclassification table is marked REALIZED; the stale "pending
   review" clause on the §8 verdict is resolved.
+
+### F-W1-2 ingress/idempotency hardening touch — executed (NOT a rebaseline wave), awaits review
+
+The inverted rails applied: behavior changes are the POINT here, so every
+delta was pre-declared in the touch's small-spec and is listed for
+ratification. The deltas:
+
+1. **Operator op_id on the lifecycle intents** (KICKOFF / START / CANCEL —
+   resolves F-W1-2): the intents carry `op_id`; the heads switch from the
+   `REQUIRE admit_loaded(...)` wrapper to the outcome-propagating form
+   (Duplicate must flow out; the state expectations stay unnamed =
+   bare-REQUIRE semantics per the ladder's rule); each op records its fact
+   entry (`STARTED` / `CANCELLED` / `TASK_SUPPLIED { op_id }`) in the SAME
+   atomic move as its lifecycle effect — a rejected attempt never consumes
+   the op_id (the L0e provider-unavailable reject is pre-commit and
+   explicitly does not). Deliberately NO `by` field: operator authority
+   remains L0d's declared absence (L7/L10). A same-op replay is now
+   `Duplicate`; a fresh retry still hits the single-shot state guard.
+   Rejected-multiset delta: none (Duplicate and appends are not literals).
+2. **RUN_ACTION folds into admit_input** (resolves F-W4-1's first half):
+   the load gains its `unknown_instance` guard (the literal lives in the
+   admit_input definition, printed at L3 only); the authority REQUIRE gains
+   its name — `operator_not_authorized`, BOTH branches declared (the
+   F-W4-3 house style; the trigger declares `by` mandatory, so an
+   undeclared missing branch would have reproduced F-W4-3). Payload
+   trigger-validation stays outside (pre-open, key-scoped); the phase-1
+   CAS claim and all LC3a labels untouched.
+3. **DELETE_REQUESTED gains its none-instance path** (resolves F-W4-1's
+   second half): load → if none: tombstone lookup keyed by the INTENT's
+   id → `already_purged`, else `unknown_instance`. Tombstone-before-
+   authority now holds STRUCTURALLY (on the none path there is no record
+   to authorize against). The existing-instance path keeps
+   duplicate → authority → purge_pending → confirmation — authority stays
+   BEFORE the purge_pending no-op (load-bearing: an unauthorized re-delete
+   gets the authority rejection, not a Committed no-op). Structural note,
+   stated not silent: the old tombstone re-check drops from the
+   existing-instance path as UNREACHABLE (purged ⇒ the T1 record is gone ⇒
+   load returns none).
+
+Checksums, verified: ledger untouched (78 distinct, first_seen intact);
+per-block multiset deltas exactly the pre-declared table —
+`operator_not_authorized` +2 in action/auto-action/complete/l4 (the folded
+RUN_ACTION renders in all four), `unknown_instance` +1 in complete
+(DELETE_REQUESTED renders only there); the lifecycle-op blocks show zero
+literal deltas. Prose: the 04-l0d single-shot sentence updated (replay =
+Duplicate, fresh retry = guard rejection); Hardening lis at L0d / LC3a /
+LC4 evidence. With this touch, **F-W1-2 and F-W4-1 are RESOLVED** — the
+rebaseline's named debt is discharged.

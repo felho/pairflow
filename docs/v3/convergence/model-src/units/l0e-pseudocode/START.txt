@@ -1,14 +1,19 @@
 
-START(instance) → Outcome                                             # operator_intent — guarded, single-shot
-  REQUIRE admit_loaded(instance, expect: { state: kernel_status = CREATED AND runtime_context = none })   # ADMISSION: state rung — single-shot start
+START(instance, intent) → Outcome                                     # operator_intent — guarded, single-shot; intent = { op_id } (operation identity: F-W1-2 resolved, ingress touch)
+  admitted ← admit_loaded(instance, expect: {
+    op_id: intent.op_id,                                              # a replay of the same intent ⇒ Duplicate; a FRESH retry still hits the single-shot state guard
+    state: kernel_status = CREATED AND runtime_context = none })      # state rung stays unnamed — bare-REQUIRE semantics
+  IF admitted ≠ Accepted THEN RETURN admitted
   template ← definitionStore.load(instance.template_ref)
   requirement ← template.runtime_context                              # RuntimeContextRequirement: none | required(spec) — single source of truth
   IF requirement = none THEN                                          # the workflow declares no runtime context
     instance.runtime_context ← ready(∅)                               # trivially ready — nothing to provision
+    instance.transcript.append(STARTED { op_id: intent.op_id })       # the op_id fact — SAME atomic move as the state change
     RETURN activate_or_hold(instance)
   provider ← providerRegistry.resolve(requirement.spec.provider)
-  IF provider is none THEN RETURN Rejected(runtime_context_provider_unavailable)   # name-resolution failure = base contract error
+  IF provider is none THEN RETURN Rejected(runtime_context_provider_unavailable)   # name-resolution failure = base contract error — a PRE-COMMIT reject: the op_id is NOT consumed, a corrected retry may reuse it
   request_id ← new_request_id()
   provider.provision(instance.id, request_id, requirement.spec)  # provider internals run git branch/worktree/clone mechanics; later fires RUNTIME_CONTEXT_READY
   instance.runtime_context ← requested(request_id)          # the L0d single-shot marker; status stays CREATED (= v1 PREPARING_WORKSPACE)
+  instance.transcript.append(STARTED { op_id: intent.op_id })   # the op_id fact rides the SAME atomic move as the marker
   RETURN Accepted

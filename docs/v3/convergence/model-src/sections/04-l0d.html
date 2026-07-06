@@ -76,9 +76,12 @@
           differ by origin: <code>COMPLETE</code> is an internal helper HANDLE calls when a transition lands
           on a terminal step (done is never routed), <code>FAIL</code> is a kernel event, <code>CANCEL</code>
           an operator intent. Every lifecycle mutation here commits atomically under
-          <code>instance.version</code> just like HANDLE; a replayed actor op (same <code>op_id</code>) is
-          <code>Duplicate</code>, and the lifecycle transitions are single-shot — a second <code>START</code>
-          or a stale <code>RUNTIME_CONTEXT_READY</code> fails its precondition and mutates nothing (a guard
+          <code>instance.version</code> just like HANDLE; a replayed op (same <code>op_id</code>) is
+          <code>Duplicate</code> — since the F-W1-2 ingress touch the lifecycle intents carry
+          <code>op_id</code> too, recording their fact entries (<code>STARTED</code> /
+          <code>CANCELLED</code> / <code>TASK_SUPPLIED</code>) in the same atomic move — and the lifecycle
+          transitions stay single-shot: a <em>fresh</em> retry of <code>START</code> or a stale
+          <code>RUNTIME_CONTEXT_READY</code> still fails its precondition and mutates nothing (a guard
           rejection, not a silent no-op). The guard heads are the birth of the <b>Admission</b> ladder
           (kernel-primitives rebaseline, wave 1): one ordered rung protocol — load → idempotency →
           lifecycle/state → correlation → staleness — that every entry path climbs via
@@ -199,6 +202,10 @@
             <li><b>Rebaseline (wave 1):</b> the <b>Admission</b> ladder (P3) is born here — see the
               kernel-primitives memo (§6/§9); behavior unchanged, the rejection/invariant registries are
               identical before and after.</li>
+            <li><b>Hardening (F-W1-2 ingress touch):</b> the lifecycle intents (<code>KICKOFF</code> /
+              <code>START</code> / <code>CANCEL</code>) gained <code>op_id</code> and their transcript fact
+              entries — a same-op replay is now <code>Duplicate</code> instead of a guard rejection; a
+              deliberate, ratified behavior delta (memo §9), not part of the rebaseline waves.</li>
             <li><b>Decision:</b> accepted as the L0d baseline (light evidence per playbook §2.1).</li>
           </ul>
         </div>

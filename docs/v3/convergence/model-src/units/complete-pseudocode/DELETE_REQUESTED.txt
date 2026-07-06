@@ -4,10 +4,12 @@ DELETE_REQUESTED(intent) → Outcome                                  # LC4 oper
 # The delete chain behind this one intent: a forced release ERRAND (force_release, below) followed by the
 # purge contract — hard_purge is a preconditioned storage re-drive, NOT an errand (no request/reply, no completion event)
   instance ← load(intent.instance_id)
+  IF instance is none THEN                                          # F-W4-1 resolved (ingress touch): the none path exists — tombstone-before-authority holds STRUCTURALLY here (a purged run has no full run record, hence no binding[operator] to authorize against; only the surviving T1-family tombstone remains to read)
+    IF run_index.status(intent.instance_id) = purged THEN RETURN Rejected(already_purged)   # keyed by the INTENT's id — the tombstone survives the record it marks
+    RETURN Rejected(unknown_instance)                               # no record and no tombstone ⇒ this run never existed
   IF duplicate(intent.op_id) THEN RETURN Duplicate                  # idempotency-first
-  IF run_index.status(instance.id) = purged THEN RETURN Rejected(already_purged)   # the run_index TOMBSTONE is the authority for purged — checked BEFORE the operator-authority REQUIRE because a purged run has no full run record (hence no binding[operator]) to authorize against; only the surviving T1-family tombstone remains to read
-  REQUIRE intent.by = instance.binding[operator]                    # operator authority on THIS path (like CANCEL / SUBMIT_DECISION)
-  IF instance.purge_state = purge_pending THEN RETURN Committed(instance.version, none)   # already pending — a re-issue (fresh op_id) is an idempotent no-op (matrix: no-op once pending / purged); checked AFTER authority so an unauthorized re-delete still gets operator_not_authorized
+  REQUIRE intent.by = instance.binding[operator]                    # operator authority on THIS path (like SUBMIT_DECISION) — BEFORE the purge_pending no-op, so an unauthorized re-delete still gets operator_not_authorized
+  IF instance.purge_state = purge_pending THEN RETURN Committed(instance.version, none)   # already pending — a re-issue (fresh op_id) is an idempotent no-op (matrix: no-op once pending / purged)
   IF instance.kernel_status ≠ TERMINAL AND NOT intent.force THEN RETURN Rejected(delete_confirmation_required)   # a LIVE run needs explicit force (v1: --force)
   COMMIT atomically at expected_version = instance.version:
     IF instance.kernel_status ≠ TERMINAL THEN                       # live run ⇒ terminalize first (the lifecycle, unbundled from purge)

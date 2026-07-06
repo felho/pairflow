@@ -1,5 +1,11 @@
 
-KICKOFF(instance, task) → Outcome                                     # operator_intent
-  REQUIRE admit_loaded(instance, expect: { state: kernel_status = WAITING AND wait.kind = kickoff_pending })   # ADMISSION: state rung, bare-REQUIRE (unnamed) — semantics unchanged. No op_id rung yet: operator intents gain operation identity later (finding F-W1-2, memo §9)
-  instance.task ← task                                         # the deferred task, supplied now
+KICKOFF(instance, intent) → Outcome                                   # operator_intent — intent = { op_id, task }: operation identity arrived (F-W1-2 resolved, ingress touch)
+  # ADMISSION — the op_id rung joins the state rung; Duplicate must flow out, so the head propagates
+  # outcomes (the state expectation stays unnamed ⇒ bare-REQUIRE semantics, per the ladder's rule)
+  admitted ← admit_loaded(instance, expect: {
+    op_id: intent.op_id,                                              # a replay of the same intent ⇒ Duplicate (no-op); a FRESH retry still hits the state guard
+    state: kernel_status = WAITING AND wait.kind = kickoff_pending })
+  IF admitted ≠ Accepted THEN RETURN admitted
+  instance.task ← intent.task                                  # the deferred task, supplied now
+  instance.transcript.append(TASK_SUPPLIED { op_id: intent.op_id })   # the op_id fact — SAME atomic move as the task supply (activate commits it); a rejected attempt never consumes the op_id
   RETURN activate(instance)
