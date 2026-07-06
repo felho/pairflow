@@ -128,6 +128,23 @@ structured enough for adapters and agents to reason over directly.
   dynamic-orchestrator tools, and human-decision UI affordances through the same
   "available operation" projection family.
 
+#### 5. Binding-relation constraints beyond coverage
+
+Source: the BitSafe workflow simulation (research/bitsafe-workflow-simulation.md,
+GAP-14 / S13). CREATE-time validation checks binding coverage (every reachable
+role bound), never binding relations — separation of powers holds per input
+path but not across the binding map.
+
+- A template should be able to declare role-disjointness constraints
+  (`binding[approver] ≠ binding[applier]`), validated at CREATE beside the
+  coverage rule.
+- Self-reference must be statable: a governance workflow needs "no bound
+  principal is the change's target", which requires the target ref to be a
+  kernel-visible field, not opaque task payload.
+- Without this, four-eyes separation is template-author vigilance; one
+  mis-bound principal ships self-approved changes over a formally clean
+  transcript.
+
 ### L0c — Agent run configuration + ActorAdapter seam
 
 Source: the §4 L0c matrix row and later adapter/memory addenda. The current L0c
@@ -186,6 +203,15 @@ model/tool/context configuration was actually applied.
   resolver.
 - The transcript should keep the distinction explicit so evaluation and
   debugging do not confuse intended configuration with proven runtime behavior.
+
+- Two seams sharpened by the BitSafe workflow simulation (GAP-8, GAP-13): a
+  *precedence rule* is unwritten — when runtime fleet policy (e.g. a cost
+  throttle in `hard`) contradicts kernel-issued run config, nothing states
+  which wins or how divergence is recorded ("manual escalation always wins" is
+  silently violable); and *isolation intent* (fresh session, distinct
+  principal, memory namespace) is issuable but not attestable — a warm-reused
+  session silently degrades a declared two-round independent review to one
+  round.
 
 ### L0d — Instance lifecycle + activation
 
@@ -800,6 +826,34 @@ Fan-in guardrails (moved from `core-model-todo.md` Part D guardrails,
   explicit durability contract (transfer record + retry/timeout, or a declared
   L8/L9 boundary).
 
+#### 11. Detached spawn: mint-without-parking with a durable link
+
+Source: the BitSafe workflow simulation (GAP-9 / S9, S12). `SpawnIntent` exists
+only as `park_for_child`'s output — spawn means park — while planner/dispatcher
+workloads must mint N workers and exit within one tick.
+
+- A detached spawn form should mint a child/worker instance without parking the
+  minter, while keeping a durable, routable provenance link (which tick minted
+  which worker, against which queue row).
+- Ingress-minted workers today carry provenance only as task-payload
+  convention; lifecycle routing and cost roll-up (#1) are lost.
+- Parent-close "detach" (#2) is a close-time policy, not a spawn mode — this is
+  a different construct.
+
+#### 12. Runtime-sized, data-driven fan-out
+
+Source: the BitSafe workflow simulation (GAP-3 / S3, S9). #4's controls assume
+a declared fan-out position; the harder case is N discovered mid-run (five
+action items extracted from a meeting → five sibling errands).
+
+- The step list is static and the parent parks on one link at a time; a
+  runtime-sized N fits only as a sequential self-target loop with no declared
+  collection-exhausted route.
+- Kernel-grain per-item tracking ("which two of five are missing after a
+  crash") currently requires pushing the item ledger behind P5.
+- The reserved non-blocking marker-home names the mechanism but targets the
+  help subflow, not N data-driven siblings.
+
 ### L5 — Skill surface and portable capability packaging
 
 Source: the §4 L5 matrix row and later tooling addenda (§8-§10). The
@@ -901,6 +955,22 @@ need a typed, machine-readable schema.
 
 ## Block B — Distribution
 
+#### 9. Agent-addressed help completion
+
+Source: the BitSafe workflow simulation (GAP-12 / S14 — the persona-graph
+consult, the first real-world witness of the help-ask shape). The landed help
+subflow is operator-parameterized: `HelpRequest` is operator-addressed and
+`HELP_REPLY` an operator intent (authority `binding[operator]`).
+
+- The actor-helper parameterization is unwritten: how a help directive is
+  addressed and delivered to an actor bound to no step of the asking instance,
+  whose warrant its completion carries, and over which transport it enters.
+- The composition is reachable from declared dimensions (agent-emit opener +
+  collection-homed marker + child-await-style completion) — declare it rather
+  than let each template improvise.
+- A persona graph makes helper legs N×N; each ask needs a completion whose
+  authority the kernel can check against something.
+
 ### L6 — Triggers and scheduling
 
 Source: the §4 L6 matrix row and later scheduler addenda (§8, §10), plus the
@@ -963,6 +1033,58 @@ from queue depth.
   work item as an incidental lock or progress marker.
 - If post-dispatch success handling fails, count it as a dispatch failure unless
   the system can prove the work item reached a durable, recoverable state.
+
+#### 4. Externally-derived deadlines need a maintenance contract
+
+Source: the BitSafe workflow simulation (GAP-5 / S4 — "an hour before each
+meeting"). A timer row whose fire time is a projection of external mutable
+state (a calendar event that moves or cancels) has fire mechanics (§§1–2) and
+change ingestion (L8 §1), but no owner for the seam between them.
+
+- Who upserts/obsoletes a materialized row when the external fact moves or
+  cancels; the *obsolete* status bit is vocabulary awaiting a writer.
+- Fire-claim vs concurrent-move/cancel must be arbitrated (CAS claim vs
+  obsolete write), including move-after-fire (who cancels the running
+  instance).
+- Cron-only recurrence fits nothing ad hoc: an advisory call has no cron
+  expression to parse.
+
+#### 5. Scheduler-owned cross-run state: suppression, quotas, breakers
+
+Source: the BitSafe workflow simulation (GAP-6, GAP-10, S17 R4/R5). Three
+recurring shapes of durable state consulted before firing, all currently
+provider-side files the kernel cannot read; §3 names scheduler-owned
+bookkeeping as the home and writes none of the semantics.
+
+- Alert suppression: cooldown + dedup per source across runs (the planned L2
+  `policy_state` is gate-scoped; L8 §4's ledger dedupes sends, not repeating
+  conditions).
+- Calendar-windowed quotas: durable counter + window reset + count-vs-mint
+  crash atomicity, shared across series; cross-scheduler joins (burst
+  detection) have no owner at all.
+- Per-series failure breakers: N same-category classified failures across
+  consecutive runs trip a breaker the §3 governor consults; state home,
+  trip/reset/half-open authority, and the category dimension (= classified
+  outcome keys) are unwritten — jointly owned with L9 #7 (R5).
+
+#### 6. Series provisioning and retirement: the declared-trigger seam
+
+Source: the BitSafe workflow simulation (GAP-16 / S16 — the skill reconciler;
+BitSafe's paid lesson `feedback_skill-built-but-not-scheduled`). No written
+ingress creates or retires a timer series; every simulated workload presumed
+its series existed.
+
+- A definition's own schedule should be declarable (L0f definitions and L5
+  packages carry no trigger field today), and the series set should be a
+  projection of declared config: insert-if-missing, deactivate-if-removed,
+  with a deterministic declaration→`series_id` derivation.
+- Series-grain creation needs the same mint-or-return-existing identity as
+  instances (the creation-identity topic memo) or overlapping reconciler runs
+  double-insert and a skill's cron fires twice hourly thereafter.
+- Deactivate-vs-claimed-fire arbitration is #4's race at series grain. L12 §3
+  already lists "schedule" among promotable definition artifacts and L12 §8's
+  reach-in contract is the drift detector this seam needs — the seam between
+  the definition store and the series store is written in neither.
 
 ### L7 — Grants and credentials
 
@@ -1327,6 +1449,44 @@ a higher judgment tier.
 - This is the L9 side of the L3 human-gate payload: L3 records the approval
   wait; L9 owns timeout, unacknowledged, and stale-response handling.
 
+#### 7. Contract requirements from the BitSafe workload simulation (R1–R8)
+
+Source: research/bitsafe-workflow-simulation.md — GAP-4's disposition input:
+S17's synthesis over nine sections' accumulated parked-forever and
+crashed-in-flight instances plus four production liveness mechanisms. When
+§§2/4/5/6 are written as contracts, they should satisfy:
+
+- **R1 — Deadline-bearing waits.** Every wait class accepts a declared
+  deadline/escalation policy in the wait itself (§2), materialized as an L6
+  timer row and obsoleted when a real resume wins; expiry routes to a declared
+  disposition (deny/expired/escalated; promote-to-ops-inbox per §6) —
+  park-forever must be impossible to declare accidentally.
+- **R2 — In-flight marker reconciliation with proof-of-death.** The watchdog
+  owns every durable `action_running`/`spawning` marker: on silence beyond
+  budget or a supervisor-reported death signal (e.g. rc=137), commit a
+  kernel-readable death fact and route the declared retry/failure path; never
+  kill on suspicion (§5's judgment tier).
+- **R3 — Workload-declared silence budgets** on a cheap channel; tolerance =
+  max(floor, declared timeout) (§5, generalized past Bash).
+- **R4 — Recovery consumes its own evidence, and suppression is a recorded
+  fact.** Post-crash backoff state durable and kernel-readable; every
+  suppressed fire logged as a first-class entry (mirrors L8 §4b).
+- **R5 — Cross-run per-series failure breaker** consulted by the L6 §3
+  governor: state home + trip/reset/half-open authority + category =
+  classified outcome keys — jointly owned with L6 #5.
+- **R6 — Arrival-without-claim sweep.** Reconcile ingress arrival evidence
+  against the correlation store; a triggering arrival with neither an instance
+  nor a recorded non-delivery entry is an alert. Prevention is L8 §1's
+  creation identity; the 16-stuck-threads incident is the documented casualty.
+- **R7 — Stale-intent disposition for late completions** (§4 as written:
+  evaluated, recorded as related evidence, configurable response — never
+  silently applied or dropped).
+- **R8 — The watchdog is itself watchable, off-host.** The supervision plane
+  pushes liveness evidence to a monitor outside the host's failure domain
+  (every on-host monitor dies simultaneously); the pager is external by
+  design, the kernel's contribution capped at durable queryable silence
+  evidence plus a state-preserving estop.
+
 ### L10 — Gatekeeper and private-data federation
 
 Source: the §4 L10 matrix row and later federation / capability-schema addenda
@@ -1650,6 +1810,23 @@ detectable by construction. It is the sharpest single idea that study contribute
   discipline): the reach-in guard is the seam contract between an accepted
   definition and the evolving kernel.
 
+#### 9. The definition-store write path and versioning contract
+
+Source: the BitSafe workflow simulation (GAP-7's residual / S5, S13, S16).
+Kernel-resident definitions dissolve the external-mutable-source problem
+architecturally — pin-per-run records which version ran; change history =
+version sequence + change-instance transcripts — but only if the store's write
+path exists.
+
+- `select_source` is "MVP: local(.pairflow/); central store is L11+"; how an
+  accepted proposal lands version N+1 (the deterministic apply of #2/#3/#8),
+  the version identity/lineage model, and concurrent-apply arbitration are
+  unwritten.
+- While definitions live in external mutable pages, behavior identity escapes
+  the pin between syncs and a redelivered fire may resolve a different
+  definition than the first attempt; the snapshot/sync workaround (S16's
+  reconciler) should be replaced by residence, not specified as a mechanism.
+
 ### L13 — Trust calibration and evals
 
 Source: the §4 L13 matrix row. The `approach.md` baseline already names
@@ -1774,6 +1951,26 @@ This belongs to the broader identity/durability decomposition topic:
 If reruns/forks exist, keep the current-run pointer separate from the durable
 instance/history row. Moving "current" should update a pointer; it should not
 rewrite the durable line of history it points at.
+
+Two additions from the BitSafe workflow simulation:
+
+- **Actor registry / principal status gating (GAP-15 / S13).** The
+  definition-side law ("not in the store ⇒ does not run") has no actor-side
+  counterpart: binding principals are opaque ids validated for presence only —
+  a Retired agent's principal keeps receiving dispatches, and "this principal
+  is the registered owner" is not kernel-consultable. The Identity concept's
+  "durable actor record" should grow into a fleet-level registry with
+  lifecycle status gating (nearest named fragments: L13 §4's per-version
+  quarantine; this bullet).
+- **Declarable step-level context isolation (GAP-13 / S15).** Produce-not-
+  perform makes committed-payload handoff the structural default (reasoning
+  never enters the kernel), but isolation exists only as emergent convention —
+  distinct bindings, per-step config, catalog-scoped context blocks — never as
+  a declared fact enforced and attested: session continuity is adapter-side
+  with attestation unwritten (L0c §§2–3), planned L11 memory has perspective
+  addressing but no step-scoped access policy, and the L0e runtime context is
+  instance-scoped. A declared-isolation surface spans exactly this seam's
+  three concepts.
 
 ### Observe seam — external run observation and control
 
