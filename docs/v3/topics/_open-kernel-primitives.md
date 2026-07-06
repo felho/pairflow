@@ -8,8 +8,8 @@ five primitives are named contracts in the corpus at their earned birth
 points, with instance/phase labels corpus-wide. Kernel-primitives rebaseline
 complete. The named debt — the dedicated F-W1-2 ingress/idempotency
 hardening touch (operator op_id + the F-W4-1 guards + the RUN_ACTION
-reject-name decision) — was DISCHARGED by the ingress touch (2026-07-06,
-§9 last section), pending its review round.** Joint reading result: the
+reject-name decision) — was DISCHARGED by the ingress touch and its delta
+list RATIFIED (2026-07-06, §9 last section). The strand is fully closed.** Joint reading result: the
 core-model pseudocode (L0a–L4 complete) was re-read independently by the user and
 by the assistant; both readings converged on the same two structural observations.
 This memo names the primitives, maps every current kernel unit onto them, and
@@ -727,7 +727,7 @@ No new births. The wave's items and their outcomes:
   the §3 reclassification table is marked REALIZED; the stale "pending
   review" clause on the §8 verdict is resolved.
 
-### F-W1-2 ingress/idempotency hardening touch — executed (NOT a rebaseline wave), awaits review
+### F-W1-2 ingress/idempotency hardening touch — reviewed, delta list RATIFIED (2026-07-06); the strand's debt is discharged
 
 The inverted rails applied: behavior changes are the POINT here, so every
 delta was pre-declared in the touch's small-spec and is listed for
@@ -774,3 +774,9 @@ literal deltas. Prose: the 04-l0d single-shot sentence updated (replay =
 Duplicate, fresh retry = guard rejection); Hardening lis at L0d / LC3a /
 LC4 evidence. With this touch, **F-W1-2 and F-W4-1 are RESOLVED** — the
 rebaseline's named debt is discharged.
+
+Review note (ratification round, not a finding): the KICKOFF/CANCEL fact
+entries ride the ops' implicit commits (activate / the terminal flip) with
+no explicit COMMIT block — consistent with the L0d-era convention; the
+in-code comments carry the atomicity claim, and if the early blocks ever
+switch to the explicit COMMIT form, the appends move with them.
