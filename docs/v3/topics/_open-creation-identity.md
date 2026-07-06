@@ -1,7 +1,7 @@
 # Creation Identity — Exactly-Once Instance Minting from External Triggers
 
-Status: open design decision
-Date: 2026-07-06
+Status: **settled direction (2026-07-07)** — fork branch 1 (kernel-edge construct); see "Settled direction" below. The binding form lands later as an F-W1-2-style small-spec touch on `CREATE_INSTANCE`.
+Date: 2026-07-06 · Settled: 2026-07-07
 Source: the BitSafe workflow simulation (`research/bitsafe-workflow-simulation.md`, GAP-1 — surfaced by 16 of 17 simulated workflows)
 
 ## Question
@@ -62,6 +62,50 @@ Sub-questions either way: the key's shape (opaque caller identity vs typed
 until re-triage; `park_for_child`'s terminal-doesn't-block precedent points the
 other way); and whether the oracle returns the existing instance's identity
 (mint-or-return) or a `Duplicate`-style reject.
+
+## Settled direction (2026-07-07, ratified)
+
+**Fork branch 1 — the kernel-edge construct.** `CREATE_INSTANCE` gains an
+optional `creation_key` with mint-or-return-existing semantics, backed by a
+kernel-owned key registry (store-enforced UNIQUE).
+
+Why branch 1 over the split (recorded from the decision discussion):
+
+- Both documented incidents happened on the bare/API path — exactly the path
+  the split leaves on convention.
+- One mechanism instead of three: the channel layer (L8) and the scheduler
+  (L6) become *clients* of the kernel contract (message id / series+occurrence
+  as the key) rather than each owning its own dedup story; the L6 fire→create
+  seam dissolves into "the fire's occurrence identity is the key". GAP-16's
+  series-grain case inherits the same pattern.
+- It applies the corpus's own close-at-source idempotency principle and is
+  the direct continuation of the F-W1-2 ingress touch: **`creation_key` is to
+  CREATE what `op_id` is to everything after it.**
+- It is also the kernel's only native duplicate-work exclusion at task grain
+  (S9/S12) — the capability `_open-kernel-floor.md` §2 leans on.
+
+Sub-decisions, all ratified:
+
+1. **Key shape:** caller-supplied, namespaced opaque pair `{namespace,
+   external_id}` (e.g. `{arq, row-4711}`, `{timer, series#occurrence}`).
+   Re-work generations are encoded *in* the key by the caller
+   (`row-4711@2`) — the kernel knows no generation mechanism.
+2. **Semantics:** mint-or-return-existing, never a reject — the second caller
+   receives the existing instance's identity (+ a `found_existing` signal), so
+   a retried create-then-kickoff chain is replay-safe end to end, and the
+   zero-instances failure face is served too (the caller always learns who
+   owns the work). Same-key-different-template is a caller bug made visible by
+   the returned instance (whether it earns a distinct signal is a spec detail).
+3. **Key lifetime:** forever — the registry row survives the instance
+   (LC4-tombstone precedent, T1-family), so there is no kernel-side
+   active-uniqueness state machine; deliberate re-runs use a new key.
+4. **Optionality, three-layer:** optional at the kernel edge (an interactive
+   one-shot start has no stable external identity — a synthesized per-call key
+   would protect nothing); **required by contract on the machine ingress
+   paths** (the L6 scheduler and L8 connector contracts must supply keys);
+   and **template-declarable as required** (a definition known to be
+   machine-fed can declare keyed creation, making a bare CREATE against it a
+   reject — fail-closed exactly where the failure class lives).
 
 ## Related
 
