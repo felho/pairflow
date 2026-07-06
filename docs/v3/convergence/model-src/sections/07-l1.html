@@ -51,7 +51,13 @@
           <code>capability</code> and begins handing the dispatched <code>role</code> out in the packet to be
           echoed back as <code>expected_role</code>. The <code>CapabilityProfile</code> is default-derived
           from the step graph, so no new config is needed; explicit authored restrictions enter the same
-          profile later.
+          profile later. The role check is the birth of the <b>Warrant</b> (kernel-primitives rebaseline,
+          wave 2): with <code>expected_role</code> joining <code>expected_version</code>, the act-from
+          fields an input carries become a named contract — operation identity · context authority ·
+          request correlation — and the Admission ladder gains its authority rung at the slot L0d
+          reserved (after staleness). The <code>step</code> lookup hoists above the ladder as a positional
+          read — infallible by load-time validation, so it cannot reject or mask a rung. Behavior is
+          unchanged.
         </div>
 
         <h3 class="view-h"><span class="view-tag domain">Domain</span> What L1 adds</h3>
@@ -119,6 +125,9 @@
               lifecycle guard, and stale precede authorization ✓; all L0a–L0f invariants still hold.</li>
             <li><b>Known gaps (intended):</b> not_authorized dormant under default-derived; no lifecycle
               authorization (L3); no identity authentication (L7/L10); no gate/policy (L2). Each is in Absent.</li>
+            <li><b>Rebaseline (wave 2):</b> the <b>Warrant</b> (P4) is born here and the Admission ladder
+              gains its authority rung — see the kernel-primitives memo (§6/§9); behavior unchanged, the
+              rejection/invariant registries are identical before and after.</li>
             <li><b>Decision:</b> accepted as the L1 baseline (light evidence per playbook §2.1).</li>
           </ul>
         </div>

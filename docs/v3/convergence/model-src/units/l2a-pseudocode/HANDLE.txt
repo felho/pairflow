@@ -5,20 +5,21 @@ HANDLE envelope → Outcome
   instance ← instanceStore.load(envelope.instance_id)
   IF instance is none                     THEN RETURN Rejected(unknown_instance)
   template ← definitionStore.load(instance.template_ref)   # separate store; pinned immutable version
+  step     ← template.step(instance.current_step)           # positional read, NOT a rung — infallible over committed
+                                                            # state (load-time validation: every reachable step id
+                                                            # resolves in the pinned template), so hoisting it cannot
+                                                            # reject or mask a rung; consumed by the authority rung
 
-  # ADMISSION (born at L0d) — the actor-envelope rungs: idempotency → lifecycle/state → staleness
+  # ADMISSION (born at L0d) — the actor-envelope rungs: idempotency → lifecycle/state → staleness → authority (born at L1)
   outcome ← admit_loaded(instance, expect: {
-    op_id:   envelope.op_id,                                    # a duplicate is a no-op, no 2nd entry
-    state:   kernel_status = ACTIVE → Rejected(not_active),     # L0d lifecycle guard: actor emits only in actor-routable ACTIVE execution
-    version: envelope.expected_version },                       # actor-supplied stale-intent — mandatory at L0b
+    op_id:     envelope.op_id,                                  # a duplicate is a no-op, no 2nd entry
+    state:     kernel_status = ACTIVE → Rejected(not_active),   # L0d lifecycle guard: actor emits only in actor-routable ACTIVE execution
+    version:   envelope.expected_version,                       # actor-supplied stale-intent — mandatory at L0b
+    authority: { claim:   envelope.expected_role,               # L1 role authority — mandatory at L1 (shape-derived, todo E1)
+                 granted: step.role,                            # this position's active role — read only at the authority rung
+                 missing → Rejected(missing_role), mismatch → Rejected(role_not_authorized) } },
     envelope)
   IF outcome ≠ Accepted THEN RETURN outcome                     # Duplicate | Stale(v) | Rejected(…) pass through unchanged
-
-  step   ← template.step(instance.current_step)
-
-  # L1: role authority — the claimed role must be this position's active role
-  IF envelope.expected_role is missing     THEN RETURN Rejected(missing_role)          # mandatory at L1
-  IF envelope.expected_role ≠ step.role    THEN RETURN Rejected(role_not_authorized)
 
   target ← step.transitions[envelope.type]   # navigation (L0b): does this action exist here?
   IF target is none                       THEN RETURN Rejected(no_transition)

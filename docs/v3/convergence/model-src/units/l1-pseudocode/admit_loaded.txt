@@ -1,0 +1,19 @@
+
+# ─── ADMISSION grows its authority rung (L1) — the same ladder, one more rung at its declared slot ───
+# The L0d contract reserved the position: … → staleness → authority (L1/L3). The rung verifies the
+# warrant's context-authority pair — what the sender claims to act as (claim) against what this
+# position grants (granted); granted is read only at this rung, never earlier. Reject names still
+# ride the expectation (the ladder knows no vocabulary): both role literals stay at the call sites.
+admit_loaded(instance, expect, input?) → Accepted | Duplicate | Stale | Rejected
+  IF expect.op_id     is present AND instance.transcript.has(expect.op_id)  THEN RETURN Duplicate               # idempotency rung — key scope (instance_id, op_id)
+  IF expect.state     is present AND NOT expect.state.holds(instance)       THEN RETURN expect.state.reject     # lifecycle/state rung; an unnamed reject ⇒ bare-REQUIRE semantics
+  IF expect.correlate is present AND NOT expect.correlate.holds(instance)   THEN RETURN expect.correlate.reject # correlation rung (request_id here; request_ref / link_id arrive with their errands)
+  # version-presence is the staleness rung's ENTRY GUARD (an input carrying no version cannot be judged
+  # stale) — it is not a separate rung and not a payload check
+  IF expect.version   is expected AND expect.version is missing             THEN RETURN Rejected(missing_version)
+  IF expect.version   is expected AND expect.version ≠ instance.version     THEN RETURN Stale(instance.version)
+  # authority rung (arrives here, L1) — presence then match, the same two-step shape as staleness
+  IF expect.authority is present AND expect.authority.claim is missing      THEN RETURN expect.authority.missing
+  IF expect.authority is present AND expect.authority.claim ≠ expect.authority.granted
+                                                                            THEN RETURN expect.authority.mismatch
+  RETURN Accepted

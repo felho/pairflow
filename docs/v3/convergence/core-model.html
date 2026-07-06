@@ -2066,6 +2066,38 @@ capability(template, role, step_id) → action set                       # role 
   IF role = step.role THEN RETURN event_types_of(step.transitions)      # default-derived: own role may emit the step's transitions
   RETURN empty_set                                                      # any other role may emit nothing here
 
+# ─── WARRANT (P4) — the act-from bundle an inbound input carries; admission verifies it rung by rung ───
+# Born at L1: a second context-authority field arrives (expected_role joins expected_version), so the
+# act-from data stops being one field and becomes a named contract. Its field classes stay apart —
+# different rungs consume them (todo A1/E1) — and each class grows along the ramp. At L1 it holds:
+Warrant — assembled by the sender, projected into the input; the kernel verifies it, never invents it
+  operation identity    op_id                              # → the idempotency rung (todo A1)
+  context authority     expected_version, expected_role    # → the staleness + authority rungs (todo E1: universal vs shape-derived)
+  request correlation   request_id                         # → the correlation rung (kernel events, L0e): WHICH open request
+                                                           #   this input answers; request_ref (L3) and link_id / child_id (L4)
+                                                           #   join the class at their levels
+# NOT in the bundle (deliberate): attempt/retry-episode identity (episode_ref, → LC3b) is kernel-side
+# wait state — what the kernel remembers, not what the sender acts FROM.
+
+# ─── ADMISSION grows its authority rung (L1) — the same ladder, one more rung at its declared slot ───
+# The L0d contract reserved the position: … → staleness → authority (L1/L3). The rung verifies the
+# warrant's context-authority pair — what the sender claims to act as (claim) against what this
+# position grants (granted); granted is read only at this rung, never earlier. Reject names still
+# ride the expectation (the ladder knows no vocabulary): both role literals stay at the call sites.
+admit_loaded(instance, expect, input?) → Accepted | Duplicate | Stale | Rejected
+  IF expect.op_id     is present AND instance.transcript.has(expect.op_id)  THEN RETURN Duplicate               # idempotency rung — key scope (instance_id, op_id)
+  IF expect.state     is present AND NOT expect.state.holds(instance)       THEN RETURN expect.state.reject     # lifecycle/state rung; an unnamed reject ⇒ bare-REQUIRE semantics
+  IF expect.correlate is present AND NOT expect.correlate.holds(instance)   THEN RETURN expect.correlate.reject # correlation rung (request_id here; request_ref / link_id arrive with their errands)
+  # version-presence is the staleness rung's ENTRY GUARD (an input carrying no version cannot be judged
+  # stale) — it is not a separate rung and not a payload check
+  IF expect.version   is expected AND expect.version is missing             THEN RETURN Rejected(missing_version)
+  IF expect.version   is expected AND expect.version ≠ instance.version     THEN RETURN Stale(instance.version)
+  # authority rung (arrives here, L1) — presence then match, the same two-step shape as staleness
+  IF expect.authority is present AND expect.authority.claim is missing      THEN RETURN expect.authority.missing
+  IF expect.authority is present AND expect.authority.claim ≠ expect.authority.granted
+                                                                            THEN RETURN expect.authority.mismatch
+  RETURN Accepted
+
 RECEIVE(input) → Outcome                                               # one kernel entry; route by input source class
   MATCH input.source:
     operator_intent → dispatch to CREATE_INSTANCE / START / KICKOFF / CANCEL   # lifecycle intents
@@ -2151,20 +2183,21 @@ HANDLE envelope → Outcome
   instance ← instanceStore.load(envelope.instance_id)
   IF instance is none                     THEN RETURN Rejected(unknown_instance)
   template ← definitionStore.load(instance.template_ref)   # separate store; pinned immutable version
+  step     ← template.step(instance.current_step)           # positional read, NOT a rung — infallible over committed
+                                                            # state (load-time validation: every reachable step id
+                                                            # resolves in the pinned template), so hoisting it cannot
+                                                            # reject or mask a rung; consumed by the authority rung
 
-  # ADMISSION (born at L0d) — the actor-envelope rungs: idempotency → lifecycle/state → staleness
+  # ADMISSION (born at L0d) — the actor-envelope rungs: idempotency → lifecycle/state → staleness → authority (born at L1)
   outcome ← admit_loaded(instance, expect: {
-    op_id:   envelope.op_id,                                    # a duplicate is a no-op, no 2nd entry
-    state:   kernel_status = ACTIVE → Rejected(not_active),     # L0d lifecycle guard: actor emits only in actor-routable ACTIVE execution
-    version: envelope.expected_version },                       # actor-supplied stale-intent — mandatory at L0b
+    op_id:     envelope.op_id,                                  # a duplicate is a no-op, no 2nd entry
+    state:     kernel_status = ACTIVE → Rejected(not_active),   # L0d lifecycle guard: actor emits only in actor-routable ACTIVE execution
+    version:   envelope.expected_version,                       # actor-supplied stale-intent — mandatory at L0b
+    authority: { claim:   envelope.expected_role,               # L1 role authority — mandatory at L1 (shape-derived, todo E1)
+                 granted: step.role,                            # this position's active role — read only at the authority rung
+                 missing → Rejected(missing_role), mismatch → Rejected(role_not_authorized) } },
     envelope)
   IF outcome ≠ Accepted THEN RETURN outcome                     # Duplicate | Stale(v) | Rejected(…) pass through unchanged
-
-  step   ← template.step(instance.current_step)
-
-  # L1: role authority — the claimed role must be this position's active role
-  IF envelope.expected_role is missing     THEN RETURN Rejected(missing_role)          # mandatory at L1
-  IF envelope.expected_role ≠ step.role    THEN RETURN Rejected(role_not_authorized)
 
   target ← step.transitions[envelope.type]   # navigation (L0b): does this action exist here?
   IF target is none                       THEN RETURN Rejected(no_transition)
@@ -2217,7 +2250,13 @@ dispatch_intent(instance, template, step_id) → DispatchIntent
           <code>capability</code> and begins handing the dispatched <code>role</code> out in the packet to be
           echoed back as <code>expected_role</code>. The <code>CapabilityProfile</code> is default-derived
           from the step graph, so no new config is needed; explicit authored restrictions enter the same
-          profile later.
+          profile later. The role check is the birth of the <b>Warrant</b> (kernel-primitives rebaseline,
+          wave 2): with <code>expected_role</code> joining <code>expected_version</code>, the act-from
+          fields an input carries become a named contract — operation identity · context authority ·
+          request correlation — and the Admission ladder gains its authority rung at the slot L0d
+          reserved (after staleness). The <code>step</code> lookup hoists above the ladder as a positional
+          read — infallible by load-time validation, so it cannot reject or mask a rung. Behavior is
+          unchanged.
         </div>
 
         <h3 class="view-h"><span class="view-tag domain">Domain</span> What L1 adds</h3>
@@ -2291,6 +2330,9 @@ dispatch_intent(instance, template, step_id) → DispatchIntent
               lifecycle guard, and stale precede authorization ✓; all L0a–L0f invariants still hold.</li>
             <li><b>Known gaps (intended):</b> not_authorized dormant under default-derived; no lifecycle
               authorization (L3); no identity authentication (L7/L10); no gate/policy (L2). Each is in Absent.</li>
+            <li><b>Rebaseline (wave 2):</b> the <b>Warrant</b> (P4) is born here and the Admission ladder
+              gains its authority rung — see the kernel-primitives memo (§6/§9); behavior unchanged, the
+              rejection/invariant registries are identical before and after.</li>
             <li><b>Decision:</b> accepted as the L1 baseline (light evidence per playbook §2.1).</li>
           </ul>
         </div>
@@ -2467,20 +2509,21 @@ HANDLE envelope → Outcome
   instance ← instanceStore.load(envelope.instance_id)
   IF instance is none                     THEN RETURN Rejected(unknown_instance)
   template ← definitionStore.load(instance.template_ref)   # separate store; pinned immutable version
+  step     ← template.step(instance.current_step)           # positional read, NOT a rung — infallible over committed
+                                                            # state (load-time validation: every reachable step id
+                                                            # resolves in the pinned template), so hoisting it cannot
+                                                            # reject or mask a rung; consumed by the authority rung
 
-  # ADMISSION (born at L0d) — the actor-envelope rungs: idempotency → lifecycle/state → staleness
+  # ADMISSION (born at L0d) — the actor-envelope rungs: idempotency → lifecycle/state → staleness → authority (born at L1)
   outcome ← admit_loaded(instance, expect: {
-    op_id:   envelope.op_id,                                    # a duplicate is a no-op, no 2nd entry
-    state:   kernel_status = ACTIVE → Rejected(not_active),     # L0d lifecycle guard: actor emits only in actor-routable ACTIVE execution
-    version: envelope.expected_version },                       # actor-supplied stale-intent — mandatory at L0b
+    op_id:     envelope.op_id,                                  # a duplicate is a no-op, no 2nd entry
+    state:     kernel_status = ACTIVE → Rejected(not_active),   # L0d lifecycle guard: actor emits only in actor-routable ACTIVE execution
+    version:   envelope.expected_version,                       # actor-supplied stale-intent — mandatory at L0b
+    authority: { claim:   envelope.expected_role,               # L1 role authority — mandatory at L1 (shape-derived, todo E1)
+                 granted: step.role,                            # this position's active role — read only at the authority rung
+                 missing → Rejected(missing_role), mismatch → Rejected(role_not_authorized) } },
     envelope)
   IF outcome ≠ Accepted THEN RETURN outcome                     # Duplicate | Stale(v) | Rejected(…) pass through unchanged
-
-  step   ← template.step(instance.current_step)
-
-  # L1: role authority — the claimed role must be this position's active role
-  IF envelope.expected_role is missing     THEN RETURN Rejected(missing_role)          # mandatory at L1
-  IF envelope.expected_role ≠ step.role    THEN RETURN Rejected(role_not_authorized)
 
   target ← step.transitions[envelope.type]   # navigation (L0b): does this action exist here?
   IF target is none                       THEN RETURN Rejected(no_transition)
@@ -2927,20 +2970,21 @@ HANDLE envelope → Outcome
   instance ← instanceStore.load(envelope.instance_id)
   IF instance is none                     THEN RETURN Rejected(unknown_instance)
   template ← definitionStore.load(instance.template_ref)   # separate store; pinned immutable version
+  step     ← template.step(instance.current_step)           # positional read, NOT a rung — infallible over committed
+                                                            # state (load-time validation: every reachable step id
+                                                            # resolves in the pinned template), so hoisting it cannot
+                                                            # reject or mask a rung; consumed by the authority rung
 
-  # ADMISSION (born at L0d) — the actor-envelope rungs: idempotency → lifecycle/state → staleness
+  # ADMISSION (born at L0d) — the actor-envelope rungs: idempotency → lifecycle/state → staleness → authority (born at L1)
   outcome ← admit_loaded(instance, expect: {
-    op_id:   envelope.op_id,                                    # a duplicate is a no-op, no 2nd entry
-    state:   kernel_status = ACTIVE → Rejected(not_active),     # L0d lifecycle guard: actor emits only in actor-routable ACTIVE execution
-    version: envelope.expected_version },                       # actor-supplied stale-intent — mandatory at L0b
+    op_id:     envelope.op_id,                                  # a duplicate is a no-op, no 2nd entry
+    state:     kernel_status = ACTIVE → Rejected(not_active),   # L0d lifecycle guard: actor emits only in actor-routable ACTIVE execution
+    version:   envelope.expected_version,                       # actor-supplied stale-intent — mandatory at L0b
+    authority: { claim:   envelope.expected_role,               # L1 role authority — mandatory at L1 (shape-derived, todo E1)
+                 granted: step.role,                            # this position's active role — read only at the authority rung
+                 missing → Rejected(missing_role), mismatch → Rejected(role_not_authorized) } },
     envelope)
   IF outcome ≠ Accepted THEN RETURN outcome                     # Duplicate | Stale(v) | Rejected(…) pass through unchanged
-
-  step   ← template.step(instance.current_step)
-
-  # L1: role authority — the claimed role must be this position's active role
-  IF envelope.expected_role is missing     THEN RETURN Rejected(missing_role)          # mandatory at L1
-  IF envelope.expected_role ≠ step.role    THEN RETURN Rejected(role_not_authorized)
 
   target ← step.transitions[envelope.type]   # navigation (L0b): does this action exist here?
   IF target is none                       THEN RETURN Rejected(no_transition)
@@ -3402,20 +3446,21 @@ HANDLE envelope → Outcome
   instance ← instanceStore.load(envelope.instance_id)
   IF instance is none                     THEN RETURN Rejected(unknown_instance)
   template ← definitionStore.load(instance.template_ref)   # separate store; pinned immutable version
+  step     ← template.step(instance.current_step)           # positional read, NOT a rung — infallible over committed
+                                                            # state (load-time validation: every reachable step id
+                                                            # resolves in the pinned template), so hoisting it cannot
+                                                            # reject or mask a rung; consumed by the authority rung
 
-  # ADMISSION (born at L0d) — the actor-envelope rungs: idempotency → lifecycle/state → staleness
+  # ADMISSION (born at L0d) — the actor-envelope rungs: idempotency → lifecycle/state → staleness → authority (born at L1)
   outcome ← admit_loaded(instance, expect: {
-    op_id:   envelope.op_id,                                    # a duplicate is a no-op, no 2nd entry
-    state:   kernel_status = ACTIVE → Rejected(not_active),     # L0d lifecycle guard: actor emits only in actor-routable ACTIVE execution
-    version: envelope.expected_version },                       # actor-supplied stale-intent — mandatory at L0b
+    op_id:     envelope.op_id,                                  # a duplicate is a no-op, no 2nd entry
+    state:     kernel_status = ACTIVE → Rejected(not_active),   # L0d lifecycle guard: actor emits only in actor-routable ACTIVE execution
+    version:   envelope.expected_version,                       # actor-supplied stale-intent — mandatory at L0b
+    authority: { claim:   envelope.expected_role,               # L1 role authority — mandatory at L1 (shape-derived, todo E1)
+                 granted: step.role,                            # this position's active role — read only at the authority rung
+                 missing → Rejected(missing_role), mismatch → Rejected(role_not_authorized) } },
     envelope)
   IF outcome ≠ Accepted THEN RETURN outcome                     # Duplicate | Stale(v) | Rejected(…) pass through unchanged
-
-  step   ← template.step(instance.current_step)
-
-  # L1: role authority — the claimed role must be this position's active role
-  IF envelope.expected_role is missing     THEN RETURN Rejected(missing_role)          # mandatory at L1
-  IF envelope.expected_role ≠ step.role    THEN RETURN Rejected(role_not_authorized)
 
   target ← step.transitions[envelope.type]   # navigation (L0b): does this action exist here?
   IF target is none                       THEN RETURN Rejected(no_transition)
@@ -4081,20 +4126,21 @@ HANDLE envelope → Outcome
   instance ← instanceStore.load(envelope.instance_id)
   IF instance is none                     THEN RETURN Rejected(unknown_instance)
   template ← definitionStore.load(instance.template_ref)   # separate store; pinned immutable version
+  step     ← template.step(instance.current_step)           # positional read, NOT a rung — infallible over committed
+                                                            # state (load-time validation: every reachable step id
+                                                            # resolves in the pinned template), so hoisting it cannot
+                                                            # reject or mask a rung; consumed by the authority rung
 
-  # ADMISSION (born at L0d) — the actor-envelope rungs: idempotency → lifecycle/state → staleness
+  # ADMISSION (born at L0d) — the actor-envelope rungs: idempotency → lifecycle/state → staleness → authority (born at L1)
   outcome ← admit_loaded(instance, expect: {
-    op_id:   envelope.op_id,                                    # a duplicate is a no-op, no 2nd entry
-    state:   kernel_status = ACTIVE → Rejected(not_active),     # L0d lifecycle guard: actor emits only in actor-routable ACTIVE execution
-    version: envelope.expected_version },                       # actor-supplied stale-intent — mandatory at L0b
+    op_id:     envelope.op_id,                                  # a duplicate is a no-op, no 2nd entry
+    state:     kernel_status = ACTIVE → Rejected(not_active),   # L0d lifecycle guard: actor emits only in actor-routable ACTIVE execution
+    version:   envelope.expected_version,                       # actor-supplied stale-intent — mandatory at L0b
+    authority: { claim:   envelope.expected_role,               # L1 role authority — mandatory at L1 (shape-derived, todo E1)
+                 granted: step.role,                            # this position's active role — read only at the authority rung
+                 missing → Rejected(missing_role), mismatch → Rejected(role_not_authorized) } },
     envelope)
   IF outcome ≠ Accepted THEN RETURN outcome                     # Duplicate | Stale(v) | Rejected(…) pass through unchanged
-
-  step   ← template.step(instance.current_step)
-
-  # L1: role authority — the claimed role must be this position's active role
-  IF envelope.expected_role is missing     THEN RETURN Rejected(missing_role)          # mandatory at L1
-  IF envelope.expected_role ≠ step.role    THEN RETURN Rejected(role_not_authorized)
 
   target ← step.transitions[envelope.type]   # navigation (L0b): does this action exist here?
   IF target is none                       THEN RETURN Rejected(no_transition)
@@ -5093,20 +5139,21 @@ HANDLE envelope → Outcome
   instance ← instanceStore.load(envelope.instance_id)
   IF instance is none                     THEN RETURN Rejected(unknown_instance)
   template ← definitionStore.load(instance.template_ref)   # separate store; pinned immutable version
+  step     ← template.step(instance.current_step)           # positional read, NOT a rung — infallible over committed
+                                                            # state (load-time validation: every reachable step id
+                                                            # resolves in the pinned template), so hoisting it cannot
+                                                            # reject or mask a rung; consumed by the authority rung
 
-  # ADMISSION (born at L0d) — the actor-envelope rungs: idempotency → lifecycle/state → staleness
+  # ADMISSION (born at L0d) — the actor-envelope rungs: idempotency → lifecycle/state → staleness → authority (born at L1)
   outcome ← admit_loaded(instance, expect: {
-    op_id:   envelope.op_id,                                    # a duplicate is a no-op, no 2nd entry
-    state:   kernel_status = ACTIVE → Rejected(not_active),     # L0d lifecycle guard: actor emits only in actor-routable ACTIVE execution
-    version: envelope.expected_version },                       # actor-supplied stale-intent — mandatory at L0b
+    op_id:     envelope.op_id,                                  # a duplicate is a no-op, no 2nd entry
+    state:     kernel_status = ACTIVE → Rejected(not_active),   # L0d lifecycle guard: actor emits only in actor-routable ACTIVE execution
+    version:   envelope.expected_version,                       # actor-supplied stale-intent — mandatory at L0b
+    authority: { claim:   envelope.expected_role,               # L1 role authority — mandatory at L1 (shape-derived, todo E1)
+                 granted: step.role,                            # this position's active role — read only at the authority rung
+                 missing → Rejected(missing_role), mismatch → Rejected(role_not_authorized) } },
     envelope)
   IF outcome ≠ Accepted THEN RETURN outcome                     # Duplicate | Stale(v) | Rejected(…) pass through unchanged
-
-  step   ← template.step(instance.current_step)
-
-  # L1: role authority — the claimed role must be this position's active role
-  IF envelope.expected_role is missing     THEN RETURN Rejected(missing_role)          # mandatory at L1
-  IF envelope.expected_role ≠ step.role    THEN RETURN Rejected(role_not_authorized)
 
   target ← step.transitions[envelope.type]   # navigation (L0b): does this action exist here?
   IF target is none                       THEN RETURN Rejected(no_transition)
@@ -5939,20 +5986,21 @@ HANDLE envelope → Outcome
   instance ← instanceStore.load(envelope.instance_id)
   IF instance is none                     THEN RETURN Rejected(unknown_instance)
   template ← definitionStore.load(instance.template_ref)   # separate store; pinned immutable version
+  step     ← template.step(instance.current_step)           # positional read, NOT a rung — infallible over committed
+                                                            # state (load-time validation: every reachable step id
+                                                            # resolves in the pinned template), so hoisting it cannot
+                                                            # reject or mask a rung; consumed by the authority rung
 
-  # ADMISSION (born at L0d) — the actor-envelope rungs: idempotency → lifecycle/state → staleness
+  # ADMISSION (born at L0d) — the actor-envelope rungs: idempotency → lifecycle/state → staleness → authority (born at L1)
   outcome ← admit_loaded(instance, expect: {
-    op_id:   envelope.op_id,                                    # a duplicate is a no-op, no 2nd entry
-    state:   kernel_status = ACTIVE → Rejected(not_active),     # L0d lifecycle guard: actor emits only in actor-routable ACTIVE execution
-    version: envelope.expected_version },                       # actor-supplied stale-intent — mandatory at L0b
+    op_id:     envelope.op_id,                                  # a duplicate is a no-op, no 2nd entry
+    state:     kernel_status = ACTIVE → Rejected(not_active),   # L0d lifecycle guard: actor emits only in actor-routable ACTIVE execution
+    version:   envelope.expected_version,                       # actor-supplied stale-intent — mandatory at L0b
+    authority: { claim:   envelope.expected_role,               # L1 role authority — mandatory at L1 (shape-derived, todo E1)
+                 granted: step.role,                            # this position's active role — read only at the authority rung
+                 missing → Rejected(missing_role), mismatch → Rejected(role_not_authorized) } },
     envelope)
   IF outcome ≠ Accepted THEN RETURN outcome                     # Duplicate | Stale(v) | Rejected(…) pass through unchanged
-
-  step   ← template.step(instance.current_step)
-
-  # L1: role authority — the claimed role must be this position's active role
-  IF envelope.expected_role is missing     THEN RETURN Rejected(missing_role)          # mandatory at L1
-  IF envelope.expected_role ≠ step.role    THEN RETURN Rejected(role_not_authorized)
 
   target ← step.transitions[envelope.type]   # navigation (L0b): does this action exist here?
   IF target is none                       THEN RETURN Rejected(no_transition)
@@ -6793,20 +6841,21 @@ HANDLE envelope → Outcome
   instance ← instanceStore.load(envelope.instance_id)
   IF instance is none                     THEN RETURN Rejected(unknown_instance)
   template ← definitionStore.load(instance.template_ref)   # separate store; pinned immutable version
+  step     ← template.step(instance.current_step)           # positional read, NOT a rung — infallible over committed
+                                                            # state (load-time validation: every reachable step id
+                                                            # resolves in the pinned template), so hoisting it cannot
+                                                            # reject or mask a rung; consumed by the authority rung
 
-  # ADMISSION (born at L0d) — the actor-envelope rungs: idempotency → lifecycle/state → staleness
+  # ADMISSION (born at L0d) — the actor-envelope rungs: idempotency → lifecycle/state → staleness → authority (born at L1)
   outcome ← admit_loaded(instance, expect: {
-    op_id:   envelope.op_id,                                    # a duplicate is a no-op, no 2nd entry
-    state:   kernel_status = ACTIVE → Rejected(not_active),     # L0d lifecycle guard: actor emits only in actor-routable ACTIVE execution
-    version: envelope.expected_version },                       # actor-supplied stale-intent — mandatory at L0b
+    op_id:     envelope.op_id,                                  # a duplicate is a no-op, no 2nd entry
+    state:     kernel_status = ACTIVE → Rejected(not_active),   # L0d lifecycle guard: actor emits only in actor-routable ACTIVE execution
+    version:   envelope.expected_version,                       # actor-supplied stale-intent — mandatory at L0b
+    authority: { claim:   envelope.expected_role,               # L1 role authority — mandatory at L1 (shape-derived, todo E1)
+                 granted: step.role,                            # this position's active role — read only at the authority rung
+                 missing → Rejected(missing_role), mismatch → Rejected(role_not_authorized) } },
     envelope)
   IF outcome ≠ Accepted THEN RETURN outcome                     # Duplicate | Stale(v) | Rejected(…) pass through unchanged
-
-  step   ← template.step(instance.current_step)
-
-  # L1: role authority — the claimed role must be this position's active role
-  IF envelope.expected_role is missing     THEN RETURN Rejected(missing_role)          # mandatory at L1
-  IF envelope.expected_role ≠ step.role    THEN RETURN Rejected(role_not_authorized)
 
   target ← step.transitions[envelope.type]   # navigation (L0b): does this action exist here?
   IF target is none                       THEN RETURN Rejected(no_transition)
@@ -7643,20 +7692,21 @@ HANDLE envelope → Outcome
   instance ← instanceStore.load(envelope.instance_id)
   IF instance is none                     THEN RETURN Rejected(unknown_instance)
   template ← definitionStore.load(instance.template_ref)   # separate store; pinned immutable version
+  step     ← template.step(instance.current_step)           # positional read, NOT a rung — infallible over committed
+                                                            # state (load-time validation: every reachable step id
+                                                            # resolves in the pinned template), so hoisting it cannot
+                                                            # reject or mask a rung; consumed by the authority rung
 
-  # ADMISSION (born at L0d) — the actor-envelope rungs: idempotency → lifecycle/state → staleness
+  # ADMISSION (born at L0d) — the actor-envelope rungs: idempotency → lifecycle/state → staleness → authority (born at L1)
   outcome ← admit_loaded(instance, expect: {
-    op_id:   envelope.op_id,                                    # a duplicate is a no-op, no 2nd entry
-    state:   kernel_status = ACTIVE → Rejected(not_active),     # L0d lifecycle guard: actor emits only in actor-routable ACTIVE execution
-    version: envelope.expected_version },                       # actor-supplied stale-intent — mandatory at L0b
+    op_id:     envelope.op_id,                                  # a duplicate is a no-op, no 2nd entry
+    state:     kernel_status = ACTIVE → Rejected(not_active),   # L0d lifecycle guard: actor emits only in actor-routable ACTIVE execution
+    version:   envelope.expected_version,                       # actor-supplied stale-intent — mandatory at L0b
+    authority: { claim:   envelope.expected_role,               # L1 role authority — mandatory at L1 (shape-derived, todo E1)
+                 granted: step.role,                            # this position's active role — read only at the authority rung
+                 missing → Rejected(missing_role), mismatch → Rejected(role_not_authorized) } },
     envelope)
   IF outcome ≠ Accepted THEN RETURN outcome                     # Duplicate | Stale(v) | Rejected(…) pass through unchanged
-
-  step   ← template.step(instance.current_step)
-
-  # L1: role authority — the claimed role must be this position's active role
-  IF envelope.expected_role is missing     THEN RETURN Rejected(missing_role)          # mandatory at L1
-  IF envelope.expected_role ≠ step.role    THEN RETURN Rejected(role_not_authorized)
 
   target ← step.transitions[envelope.type]   # navigation (L0b): does this action exist here?
   IF target is none                       THEN RETURN Rejected(no_transition)
@@ -8863,20 +8913,21 @@ HANDLE envelope → Outcome
   instance ← instanceStore.load(envelope.instance_id)
   IF instance is none                     THEN RETURN Rejected(unknown_instance)
   template ← definitionStore.load(instance.template_ref)   # separate store; pinned immutable version
+  step     ← template.step(instance.current_step)           # positional read, NOT a rung — infallible over committed
+                                                            # state (load-time validation: every reachable step id
+                                                            # resolves in the pinned template), so hoisting it cannot
+                                                            # reject or mask a rung; consumed by the authority rung
 
-  # ADMISSION (born at L0d) — the actor-envelope rungs: idempotency → lifecycle/state → staleness
+  # ADMISSION (born at L0d) — the actor-envelope rungs: idempotency → lifecycle/state → staleness → authority (born at L1)
   outcome ← admit_loaded(instance, expect: {
-    op_id:   envelope.op_id,                                    # a duplicate is a no-op, no 2nd entry
-    state:   kernel_status = ACTIVE → Rejected(not_active),     # L0d lifecycle guard: actor emits only in actor-routable ACTIVE execution
-    version: envelope.expected_version },                       # actor-supplied stale-intent — mandatory at L0b
+    op_id:     envelope.op_id,                                  # a duplicate is a no-op, no 2nd entry
+    state:     kernel_status = ACTIVE → Rejected(not_active),   # L0d lifecycle guard: actor emits only in actor-routable ACTIVE execution
+    version:   envelope.expected_version,                       # actor-supplied stale-intent — mandatory at L0b
+    authority: { claim:   envelope.expected_role,               # L1 role authority — mandatory at L1 (shape-derived, todo E1)
+                 granted: step.role,                            # this position's active role — read only at the authority rung
+                 missing → Rejected(missing_role), mismatch → Rejected(role_not_authorized) } },
     envelope)
   IF outcome ≠ Accepted THEN RETURN outcome                     # Duplicate | Stale(v) | Rejected(…) pass through unchanged
-
-  step   ← template.step(instance.current_step)
-
-  # L1: role authority — the claimed role must be this position's active role
-  IF envelope.expected_role is missing     THEN RETURN Rejected(missing_role)          # mandatory at L1
-  IF envelope.expected_role ≠ step.role    THEN RETURN Rejected(role_not_authorized)
 
   target ← step.transitions[envelope.type]   # navigation (L0b): does this action exist here?
   IF target is none                       THEN RETURN Rejected(no_transition)

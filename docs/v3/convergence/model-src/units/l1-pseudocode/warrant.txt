@@ -1,0 +1,13 @@
+
+# ─── WARRANT (P4) — the act-from bundle an inbound input carries; admission verifies it rung by rung ───
+# Born at L1: a second context-authority field arrives (expected_role joins expected_version), so the
+# act-from data stops being one field and becomes a named contract. Its field classes stay apart —
+# different rungs consume them (todo A1/E1) — and each class grows along the ramp. At L1 it holds:
+Warrant — assembled by the sender, projected into the input; the kernel verifies it, never invents it
+  operation identity    op_id                              # → the idempotency rung (todo A1)
+  context authority     expected_version, expected_role    # → the staleness + authority rungs (todo E1: universal vs shape-derived)
+  request correlation   request_id                         # → the correlation rung (kernel events, L0e): WHICH open request
+                                                           #   this input answers; request_ref (L3) and link_id / child_id (L4)
+                                                           #   join the class at their levels
+# NOT in the bundle (deliberate): attempt/retry-episode identity (episode_ref, → LC3b) is kernel-side
+# wait state — what the kernel remembers, not what the sender acts FROM.

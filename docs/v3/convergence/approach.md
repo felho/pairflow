@@ -769,7 +769,11 @@ Waves (each = its own small-spec + review round + commit; flips recorded here):
   `admit_loaded` + the canonical rung order at L0d; heads re-expressed at
   L0d/L0e/L1/L2/L2a/L3/LC2; the L3-born operator ops deliberately wait for wave 4;
   findings F-W1-1/2 in the memo §9.)*
-- [ ] Wave 2 — L1: **Warrant** born (`expected_role` joins `expected_version`).
+- [x] Wave 2 — L1: **Warrant** born (`expected_role` joins `expected_version`). *(Realized:
+  the `Warrant` contract (three field classes, ramp-neutral correlation naming) + the ladder
+  re-printed with its authority rung at L1; the role rungs fold into the expect bundle at the
+  four HANDLE heads (L1/L2/L2a/L3, ten rendered blocks via inheritance); the `step` lookup
+  hoisted as an infallible positional read; finding F-W2-1 in the memo §9.)*
 - [ ] Wave 3 — LC2: **Errand** born (release joins provision); LC3a/b, LC4, L4
   re-expressed as errand instances.
 - [ ] Wave 4 — L3: **ChoicePoint + Directive** born (`decisions` joins `transitions`;

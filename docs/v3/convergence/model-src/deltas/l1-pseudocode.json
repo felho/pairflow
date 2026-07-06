@@ -4,6 +4,8 @@
   "order": [
     "resolve_agent_config",
     "capability",
+    "warrant",
+    "admit_loaded",
     "RECEIVE",
     "CREATE_INSTANCE",
     "RuntimeContextProvider",

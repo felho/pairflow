@@ -511,3 +511,32 @@ ratified in the wave's review.
   operator intents gain `op_id` when their paths are next rebased (wave 4
   for the L3-born ops; a dedicated ingress-idempotency touch for
   `KICKOFF`/`START`/`CANCEL`).
+
+### Wave 2 (L1 — Warrant born) — executed, findings await review
+
+- **F-W2-1 · todo E2's rung enumeration needs reconciliation wording, not a
+  code change.** E2's actor-envelope order reads "basic `valid_shape` → load
+  → op_id ledger → kernel authority → transition/capability → …" with no
+  lifecycle/state or staleness entry between the ledger and the authority
+  check, while the code order (normative, per F-W1-1's principle) is
+  idempotency → lifecycle/state → staleness → authority →
+  transition/capability → payload/gates. This is almost certainly
+  prose granularity, not a semantic divergence: E2's "kernel authority
+  checks (E1)" item compresses the whole context-authority family — E1
+  itself counts `expected_version` among its fields — so state + staleness +
+  role travel inside that one bullet. Proposed disposition: when todo E2 is
+  next touched, add a clarifying parenthetical unpacking the compressed item
+  to the full ladder order; no code or rung-order change.
+- **Wave record (not a finding).** The `step ← template.step(...)` lookup
+  hoisted above the ladder at the four HANDLE heads because the authority
+  rung consumes `step.role`. The hoist is order-neutral ONLY because the
+  lookup is infallible over committed state (load-time validation: binding
+  coverage + graph validation guarantee every reachable step id resolves in
+  the pinned template) — it cannot reject, so it cannot mask a
+  Duplicate/state/Stale outcome. If a reject/assert branch ever grows on
+  that lookup, that is a new finding, not a silent property. Checksum note:
+  the per-block `Rejected(...)` multiset check flagged exactly one delta —
+  `missing_version` +1 in the rendered L1 block — which is the ladder
+  re-print itself (the staleness rung's vocabulary lives in the ladder,
+  Wave 1 decision), not a moved role literal; `missing_role` /
+  `role_not_authorized` counts are unchanged in every rendered block.
