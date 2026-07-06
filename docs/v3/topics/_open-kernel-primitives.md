@@ -677,7 +677,7 @@ ratified in the wave's review.
   (`[a-z_]`-anchored), so the ledger is untouched; informal greps should
   exclude the placeholder.
 
-### Wave 5 (closing sweep) — executed, record awaits review
+### Wave 5 (closing sweep) — record reviewed, RATIFIED (2026-07-06); the rebaseline pass is closed
 
 No new births. The wave's items and their outcomes:
 
