@@ -807,6 +807,13 @@ handlers' code order are findings, never silent fixes); the source↔render gold
 stays green throughout. Forward rule: a future primitive is named at its own second
 instance.
 
+**Implementation contract.** [`implementation-contract.md`](implementation-contract.md)
+holds the binding constraints the Block A implementation must satisfy (extracted from the
+`core-model-todo.md` review, 2026-07-06): idempotency enforcement, egress/confirmed-effect
+rules, the op_id edge contract, leaderless mechanics, decision-audit mechanics, and the
+kernel-shape non-goals. Process rule: it is the implementation plan's MANDATORY first
+chapter — every `IC-*` item maps to an acceptance test, a schema/lint/CI check, or an ADR.
+
 **L5 — Help subflow (agent-initiated Ask).**
 Concepts: `Subflow` (blocking / non-blocking); `HELP_PENDING`; the agent-initiated form
 of the Ask primitive (still local delivery). The primitives rebaseline (above) precedes

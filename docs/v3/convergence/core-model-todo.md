@@ -2,6 +2,13 @@
 
 Follow-up clarifications for `core-model.html` based on the kernel-spectrum synthesis.
 
+> **Status (reviewed 2026-07-06, against the post-rebaseline corpus):** this file now
+> holds only what binds the Block A MODEL, with a status line per part. What binds the
+> implementation (not the model) moved to
+> [`implementation-contract.md`](implementation-contract.md) (`IC-*` items — the
+> implementation plan's mandatory first chapter); what binds future levels lives in
+> [`core-model-future-topic.md`](core-model-future-topic.md).
+
 ## Part A — Source-closed idempotency kernel
 
 These three TODOs are one logical part, not independent cleanups. They form the
@@ -19,158 +26,85 @@ dedupe does not automatically make the outside world idempotent.
 
 ### A1. Make the idempotency ledger explicit
 
-The current model uses `instance.transcript.has(envelope.op_id)` to express duplicate
-detection. Keep the semantics, but clarify the implementation contract:
+> STATUS: the identity side is REALIZED — the admission ladder's op_id rung names the
+> `(instance_id, op_id)` scope (rebaseline wave 1), and the ingress touch extended
+> operation identity to the lifecycle intents with fact entries, including "a rejected
+> attempt never consumes the op_id". The store-backed enforcement mechanics moved to
+> `implementation-contract.md` IC-A1. OPEN here (model backlog): the digest/collision
+> refinement below.
 
 - `(instance_id, op_id)` is a kernel-level unique operation record.
 - For L0a, default to **transcript-as-ledger** for accepted/committed operations:
   presence in the append-only transcript means the operation has already applied.
-- The source of truth must be a store-backed uniqueness guarantee such as
-  `UNIQUE(instance_id, op_id)`, enforced in the same atomic commit as the instance CAS.
-- Version CAS and the `op_id` ledger are distinct guards. Per-instance
-  `expected_version`/CAS prevents lost updates from a stale view; `(instance_id, op_id)`
-  uniqueness prevents a re-delivered logical operation from applying twice. Versioned
-  history by itself is not idempotency: a transcript only serves as the ledger if it
-  enforces stable operation identity and uniqueness.
-- `instance.transcript.has(op_id)` may remain as a pseudocode fast path, but it is not
-  the correctness mechanism. If only the pre-check exists, concurrent delivery can race.
-- The correct write boundary is: insert/append the operation record and update the
-  materialized instance state under one transaction/CAS boundary.
-- The ledger stores a canonical operation `payload_digest` alongside each entry; the
-  uniqueness key stays `(instance_id, op_id)`, not `(instance_id, op_id, payload_digest)`
-  (a 3-column key would let a re-used `op_id` under a new payload slip in as a fresh row).
-  On lookup: same `op_id` + same digest → Duplicate; same `op_id` + different digest →
-  `Rejected(op_id_collision)`, so idempotency-key misuse is visible instead of silently
-  dropping the second payload. The digest is a stable, versioned canonicalization of the
-  operation payload (the same canonical operation canonicalization that content-addressed
-  `op_id` derivation would use when that strategy is selected, A3), never the raw CLI/wire
-  string. The digest must include the emit-contract identity:
-  the operation kind, the template/op payload-schema identity (E2), and any referenced
-  vocabulary/catalog versions (E3), so idempotency is pinned to the full contract under which
-  the payload was accepted.
-- A separate `IdempotencyLedger` is an escape hatch for later cases where an operation
-  needs dedupe but has no committed transcript entry, such as a remote relay boundary.
-- Do not let rejected/non-committed events accidentally consume the apply-idempotency
-  key. If rejected attempts need audit, model that as audit, not as the committed
-  operation ledger.
+- OPEN — payload digest + `op_id_collision`: the ledger stores a canonical operation
+  `payload_digest` alongside each entry; the uniqueness key stays `(instance_id, op_id)`,
+  not `(instance_id, op_id, payload_digest)` (a 3-column key would let a re-used `op_id`
+  under a new payload slip in as a fresh row). On lookup: same `op_id` + same digest →
+  Duplicate; same `op_id` + different digest → `Rejected(op_id_collision)`, so
+  idempotency-key misuse is visible instead of silently dropping the second payload. The
+  digest is a stable, versioned canonicalization of the operation payload (the same
+  canonicalization content-addressed `op_id` derivation would use, IC-A3), never the raw
+  CLI/wire string, and it must include the emit-contract identity (the operation kind,
+  the template/op payload-schema identity (E2), and any referenced vocabulary/catalog
+  versions (E3)) — idempotency pinned to the full contract under which the payload was
+  accepted. This lands in the model as the idempotency rung's refinement, together with
+  Part E2.
 
 ### A2. Clarify derived output vs durable pending-effect boundaries
 
-The model already uses `DispatchIntent`, `ActionIntent`, `SpawnIntent`, and durable
-markers such as `action_running` / `spawning`. Clarify when these are merely derived
-post-commit outputs versus durable, retryable side-effect work.
+> STATUS: REALIZED by the Errand contract (rebaseline wave 3) — the claim-marker-first
+> discipline, produce-not-perform, and the derived post-commit outputs ARE this pattern,
+> named corpus-wide; the derived-vs-durable test sentence now lives in the errand
+> declaration itself (2026-07-06). The egress/confirmed-effect mechanics moved to
+> `implementation-contract.md` IC-A2 (with the nanoclaw negative-proof design rules;
+> the delivery-ledger state machine itself stays future-topic L8 #4).
 
-- Use this test: **after a crash, can the output be safely re-derived from committed
-  kernel state alone?**
-- If yes, it can remain a derived output. Actor `DispatchIntent` can stay derived until
-  durable delivery arrives at L8.
+- The test, as stated in the model: **after a crash, can the output be safely re-derived
+  from committed kernel state alone?** If yes it may stay derived (actor `DispatchIntent`,
+  until L8 durable delivery); if no, a committed marker precedes the effect — the errand's
+  claim phase (`action_running`, provisioning requests, `spawning` links are the named
+  instances).
 - Derived dispatch is safe only because actor/event apply is idempotent via A1:
   at-least-once dispatch + idempotent apply = effectively-once state transition.
-- External or crash-sensitive side effects need a committed marker/outbox/pending-effect
-  record before the side effect runs.
-- `action_running`, runtime provisioning requests, and child `spawning` links should be
-  described as concrete instances of this pattern.
-- The pending-effect marker/request id should be passed to the external system as an
-  idempotency key where the external system supports it. Marker-before-effect alone
-  still gives at-least-once effect execution after a crash between effect and result.
-- For non-idempotent external effects, the egress contract must carry the operation
-  identity across the boundary; otherwise recovery can duplicate the outside effect.
-- Reconciler/outbox is for real external effects, not for repairing the kernel's own
-  state consistency.
-- Empirical anchor (nanoclaw study, `_synthesis.md` §13): nanoclaw is the corpus's
-  source-verified **negative proof** of this boundary. It writes the delivery marker
-  *after* the platform send (crash between them → duplicate send), marks follow-up
-  work complete *before* the actor processes it (loss window), and — worst — marks a
-  message delivered when the send returned an ambiguous no-error/no-ack `undefined`,
-  deleting the evidence. Three distinct seams, all closed by marker-before-effect +
-  the A1 `(instance_id, op_id)` ledger. Two design rules the failure sharpens: the
-  marker must follow a *confirmed* effect (a no-error/no-ack outcome is a distinct
-  non-terminal state, not success), and the delivery retry budget is durable ledger
-  state, never an in-memory counter (nanoclaw's *outbound-delivery* counter resets on
-  restart, so a stuck send oscillates forever — note its *inbound* retry state IS
-  durable, so the defect is delivery-specific). The delivery-ledger state machine
-  itself is L8 work (future-topic L8 #4).
 
 ### A3. Define the `op_id` generation contract
 
-The model should state what makes an `op_id` stable enough for retries:
-
-- `op_id` stability is an edge/actor/relay contract. The kernel can enforce the
-  identity it receives, but it cannot infer that two fresh IDs were intended to be the
-  same logical operation.
-- The same logical operation retry must reuse the same `op_id`.
-- A new `op_id` means a new attempted operation, not "retry the same one."
-- Distinguish retransmission from re-attempt. If the actor resends the same envelope
-  because it did not receive an acknowledgement, it must reuse the same `op_id`. If the
-  kernel returns `Stale` and the actor refreshes to a newer context packet, the next
-  emit is a new logical operation with a new `op_id`, because the packet/input changed.
-- Use content-addressed IDs when the operation is naturally identified by its content,
-  such as "submit this exact decision payload."
-- Use request-scoped nonces when two identical-looking payloads may be two legitimate
-  operations, such as "increment twice." Pure content-addressing would incorrectly
-  collapse those operations into one.
-- Later relay/channel levels must preserve this identity across process, host, or
-  network retries.
+> STATUS: MOVED — this is an edge/actor/relay contract, not model content; it lives in
+> `implementation-contract.md` IC-A3 (retransmission vs re-attempt, content-addressed vs
+> request-scoped nonce, identity preserved across relays).
 
 ## Part B — Commit-based actor output and leaderless concurrency
 
-This section is the second logical part from the synthesis. The core model already
-leans this way through atomic commits, `expected_version`, and transcript entries, but
-the two central bets should be named explicitly so implementation does not drift toward
-replay or leaderful coordination.
+> STATUS: REALIZED — both bets are now NAMED kernel contracts in the model (the L0a
+> "Two kernel contracts, named" note, 2026-07-06): record-not-replay (the transcript
+> fact + provenance + never re-run the actor) and leaderless-by-construction (op_id
+> ledger + CAS as the two authorities; in-band `request_id` correlation as the fencing).
+> The mechanics — SKIP LOCKED as scheduling, caches never authority, content-addressed
+> output refs, the fencing-token watch rule — moved to `implementation-contract.md` IC-B.
 
 ### B1. Make record-not-replay an actor-output invariant
 
-The model should state that actor/LLM work is never recovered by replaying the actor.
-The deterministic orchestration skeleton may be re-derived from committed kernel state;
-the actor's output is the durable fact once accepted.
-
-- Every accepted actor emit commits the actor output as an immutable transcript fact,
-  ideally by content-addressed artifact/evidence refs rather than ephemeral process
-  output.
-- Recovery may re-derive routing, dispatch, gates, and post-commit outputs from
-  committed state, but it must not re-run an LLM/actor to reconstruct a previously
-  accepted result.
-- Record-not-replay is the default kernel contract, not an opt-in `@task`-style
-  annotation on selected steps.
-- The transcript should preserve enough provenance to audit the accepted actor output:
-  issued context/config, actor identity/role, operation identity, and output refs.
-- This is related to, but distinct from, A1 idempotency. A1 prevents applying the same
-  operation twice; record-not-replay prevents treating non-deterministic actor work as
-  something the kernel can regenerate.
+Stated in the model (L0a note). The distinction worth keeping here: this is related to,
+but distinct from, A1 idempotency — A1 prevents applying the same operation twice;
+record-not-replay prevents treating non-deterministic actor work as something the
+kernel can regenerate.
 
 ### B2. Name the leaderless/CAS/fencing boundary
 
-The model should state that v3 correctness does not depend on a leader-per-shard,
-process-local single writer, or in-memory version map. It should also separate in-band
-`request_id` correlation from true external fencing tokens.
-
-- Any worker may handle an instance event; correctness comes from store-backed
-  `(instance_id, op_id)` uniqueness plus per-instance `expected_version`/CAS.
-- Worker claiming mechanisms such as `SELECT ... FOR UPDATE SKIP LOCKED` are scheduling
-  tools, not semantic authority. They do not replace idempotency or CAS.
-- Process-local state such as `versions_seen` may be a cache/optimization only; the
-  store-backed instance version is authoritative.
-- In-band correlation is the default, and it already covers every external effect in
-  the current model. Action running, runtime provision/release, and child spawn
-  write-back each commit a `request_id` marker and return their result through the
-  kernel as a CAS-guarded event.
-- Result handlers must require the current committed marker to still match the
-  `request_id`, so a stale or zombie worker's late result is rejected against the newer
-  state. This is what fences a zombie here, not a separate token.
-- A true fencing token, monotonic and enforced by an external system, is not required by
-  anything in the current model. Out-of-band writes do occur, such as the runner's
-  `git commit` / `merge` in the worktree, but the model never takes over an in-flight
-  claim while the original worker may still be live: a single CAS claim has no
-  timeout-driven or forced successor, and re-park happens only on a returned failure
-  classification. A superseded worker and a replacement therefore cannot write
-  out-of-band concurrently.
-- Introduce a fencing token only if a future level adds that shape: a worker holding a
-  lease that writes directly to a shared external resource where a superseded worker
-  could corrupt it out-of-band. Watch retry of partially completed external effects and
-  L8 durable delivery. Such a scoped per-operation lease is not leader-per-shard.
+Stated in the model (L0a note). The in-band-correlation observation stands as the model
+fact: every external effect in the current model commits a `request_id` marker and
+returns through the kernel as a CAS-guarded event, and the result handler requires the
+committed marker to still match — that is what fences a zombie, not a separate token.
+Nothing in Block A needs a true external fencing token (a single CAS claim has no
+timeout-driven successor); the introduce-only-if rule is `implementation-contract.md`
+IC-B's watch item.
 
 ## Part C — Audited human decisions as kernel records
+
+> STATUS: C2 is REALIZED (the wave-4 `admit_input` fold; enumeration reworded to the
+> normative order per F-W1-1). C1's field list is largely modeled at L3; the
+> timestamp-source rule and C3's analytics/audit-floor rules are implementation-side —
+> moved to `implementation-contract.md` IC-C.
 
 This section captures the synthesis point that most studied systems treated human
 decisions as ephemeral UI/config/analytics facts. The current L3 model already makes
@@ -186,8 +120,8 @@ The L3 model should state the minimal durable audit fields for a human decision 
 - `DECISION_MADE` is the durable answer: request identity, operator identity, decision
   key, validated payload, override marker when applicable, operation identity, and
   commit timestamp or transcript commit metadata.
-- The timestamp must come from the kernel commit/append boundary, not from UI display
-  time or an analytics event.
+- The timestamp source (kernel commit/append boundary, never UI/analytics time) is
+  enforced implementation-side → `implementation-contract.md` IC-C.
 - A decision record is generic and decision-agnostic. `approve`, `request_rework`,
   `accept_risk`, or `choose_strategy` are template decision keys, not kernel verbs.
 
@@ -210,17 +144,16 @@ workflow state.
 
 ### C3. Keep analytics derived from audit, never the audit itself
 
-The model should explicitly distinguish authoritative decision audit from metrics or
-telemetry streams.
-
-- Metrics, analytics feeds, UI state, and activity streams may derive from
-  `DECISION_REQUEST` / `DECISION_MADE`, but they are not the decision source of truth.
-- A telemetry event cannot stand in for a missing decision record, even if it contains
-  similar fields.
-- Purge/archive/storage-lifecycle work must preserve whatever audit floor is declared
-  for decisions, rather than relying on optional exports or UI history.
+MOVED to `implementation-contract.md` IC-C — analytics/telemetry derive from the
+decision records and never stand in for them; purge preserves the declared audit floor
+(the LC4 model already carries the surviving-audit contract; IC-C keeps the
+implementation from weakening it).
 
 ## Part D — Child fan-in correlation and durable join state
+
+> STATUS: D1 HOLDS — the single-child model meets it (verified in the L4 build); it is
+> the Block A contract and stays. D2–D5 + the fan-in guardrails moved to
+> `core-model-future-topic.md` L4 #7–#10 (2026-07-06).
 
 This section is the synthesis fan-in point. The current L4 model already builds the
 correct single-child primitive: a parent-owned durable `ChildWorkflowLink` (`child_key`,
@@ -258,6 +191,14 @@ the internal-delivery durability contract, and partition-then-verify) lives with
 the fan-out future topics it binds, together with its guardrails (2026-07-06).
 
 ## Part E — Actor emit contract (ingress)
+
+> STATUS: E1 is REALIZED in concept by the Warrant (P4, rebaseline wave 2 — its
+> context-authority class carries E1's universal vs shape-derived split); the extended
+> field family (`execution_id`, `expected_round`, `handoff_id`, `state_fingerprint`)
+> is open with it. E2–E8 are OPEN — together with Part F this is the model's main
+> remaining backlog, and it is needed for full v1 parity (v1 machine-validates emit
+> payloads: `pass.ts`, `converged.ts`). The E2 check-order line carries the F-W2-1
+> parenthetical.
 
 An actor emit (`PASS`, `CONVERGED`, …) is not just an event name; it is a machine-validated
 contract. The v1 reality check is the pressure-test that shows which capabilities the
@@ -363,6 +304,10 @@ Two concerns must not be merged:
 
 ## Part F — Gate semantics: policy vs verify
 
+> STATUS: OPEN — the gate MECHANISM exists (L2 declarative/packaged, L2a process,
+> `evidence_refs`); the policy-vs-verify semantic families and the evidence-currency
+> contract are unmodeled. With Part E, the model's main remaining backlog.
+
 §3.5's lesson: durable state is the authority, an actor's self-report is not evidence. The
 gate MECHANISM already exists (L2 declarative/packaged, L2a process, `evidence_refs`). What is
 missing is the SEMANTIC distinction between two gate families and the verify discipline.
@@ -437,23 +382,21 @@ Keep the guardrails collected here, but grouped by the logical part they protect
 
 ### Part A guardrails
 
-- Do not use a reconciler/outbox to repair the kernel's own internal state consistency.
+- MOVED to `implementation-contract.md` IC-A2/IC-N (no reconciler/outbox for the
+  kernel's own internal state consistency).
 
 ### Part B guardrails
 
-- Do not introduce Temporal-style deterministic replay for actor/LLM work.
-- Do not introduce leader-per-shard coordination for the L0a kernel.
-- Do not treat worker-local locks, caches, or in-memory version maps as correctness
-  authority.
+- MOVED to `implementation-contract.md` IC-B/IC-N (no deterministic replay for
+  actor/LLM work; no leader-per-shard; local locks/caches/version maps are never
+  correctness authority).
 
 ### Part C guardrails
 
-- Do not treat analytics, telemetry, UI state, or optional archive/export artifacts as
-  the authoritative audit trail for human decisions.
-- Do not let a human decision mutate workflow state before request correlation,
-  idempotency (`op_id` Duplicate), stale/CAS, operator authority, required payload, and
-  override checks pass. Keep the L3 check order aligned with A1: idempotency before
-  stale.
+- The analytics/audit-trail guardrail MOVED to `implementation-contract.md` IC-C.
+- The validate-before-mutate order guardrail is REALIZED in the model: the wave-4
+  `admit_input` fold enforces the canonical rung order (idempotency first after load,
+  before stale) structurally — see C2.
 
 ### Part D guardrails
 
@@ -490,6 +433,6 @@ Keep the guardrails collected here, but grouped by the logical part they protect
 
 ### Shared kernel-shape guardrails
 
-- Do not move toward full event-sourcing as the source of truth.
-- Keep the current materialized `WorkflowInstance` + transcript/audit + per-instance
-  version/CAS shape.
+- MOVED to `implementation-contract.md` IC-N (no full event-sourcing as the source of
+  truth; keep the materialized `WorkflowInstance` + transcript/audit + per-instance
+  version/CAS shape) — ADR-gated there.
