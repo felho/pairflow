@@ -1,0 +1,9 @@
+
+help_request(instance, template) → HelpRequest                     # L5 — the agent-initiated ask; DIRECTIVE member (addressee: operator). ERRAND help, directive phase. FREE-FORM reply — deliberately NOT a decisions map (no declared keys, no ChoicePoint: the reply enriches, it does not select)
+  step    ← template.step(instance.current_step)
+  request ← instance.transcript.find(HELP_REQUEST, request_ref: instance.wait.request_ref)   # the durable fact recorded at the park
+  RETURN HelpRequest {
+    instance_id, expected_version: instance.version, request_ref: instance.wait.request_ref,
+    operator: instance.binding[operator],                          # the bound operator answers (routing beyond the binding is deferred)
+    question: request.question, refs: request.refs,                # what the agent asked, verbatim from the record
+    context:  project_help_context(instance, step) }               # the step + task the question was asked FROM — enough to answer without opening the run

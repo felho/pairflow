@@ -1,0 +1,11 @@
+
+RECEIVE(input) → Outcome                                               # one kernel entry; route by input source class
+  outcome ← MATCH input.source:
+    operator_intent → dispatch to CREATE_INSTANCE / START / KICKOFF / SUBMIT_DECISION / RESUME_WAIT / RUN_ACTION / HELP_REPLY / CANCEL   # lifecycle + human-decision + wait-resume + action-run + help-reply (L5) intents
+    kernel_event    → dispatch to RUNTIME_CONTEXT_READY / RUNTIME_CONTEXT_RELEASED / ACTION_RESULT / CHILD_SPAWNED / CHILD_SPAWN_FAILED / CHILD_LIFECYCLE / FAIL   # internal events; CHILD_SPAWNED / CHILD_SPAWN_FAILED (spawn write-back / initiation failure) + CHILD_LIFECYCLE (L4) deliver one instance's events to another — the smallest internal channel
+    actor_envelope  → HANDLE(input)                                           # the L0a–L1 actor handler, now lifecycle-guarded; L5 adds the HELP_REQUEST emit branch inside it
+  FOR boundary_event IN boundary_events_of(outcome, instance):   # LC2 the release-boundary events THIS committed transition produced (now: terminal; LC3a actions add merge_completed etc.)
+    initiate_release(instance, boundary_event)                    # POST-COMMIT side effect; the declared release.boundaries decides — terminal is NOT a kernel default, just a possible event
+  FOR lifecycle IN child_lifecycles_of(outcome, instance):       # L4 — subscribable lifecycle transitions THIS commit produced (MVP: a terminal commit ⇒ done | failed | cancelled)
+    emit_child_lifecycle(instance, lifecycle)                    # POST-COMMIT side effect: IF this instance has a parent_ref, deliver CHILD_LIFECYCLE to the parent (the initiate_release sibling)
+  RETURN outcome

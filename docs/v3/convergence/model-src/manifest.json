@@ -278,6 +278,22 @@
           "new": "code/l4-parent-template.new.txt"
         }
       ]
+    },
+    {
+      "id": "l5",
+      "file": "sections/19-l5.html",
+      "codes": [
+        {
+          "id": "l5-pseudocode",
+          "baseline": "l4-pseudocode",
+          "fold": true
+        },
+        {
+          "id": "l5-template-config",
+          "baseline": null,
+          "new": "code/l5-template-config.new.txt"
+        }
+      ]
     }
   ]
 }

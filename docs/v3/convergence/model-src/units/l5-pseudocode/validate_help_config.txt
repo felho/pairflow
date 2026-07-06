@@ -1,0 +1,6 @@
+
+validate_help_config(template) → ok | error                        # L5 — definition-load validation, fail at create (the house pattern beside the gate/context/decision/release/action/child validators)
+  FOR step IN template.steps WHERE step.help is declared:
+    REQUIRE step.type = agent                                      # help is the AGENT's mid-step ask — a human_gate / wait / action step has its own contract
+    REQUIRE step.help.payload declares question as required        # the ask must carry a question; further fields (refs, …) are authoring freedom
+  RETURN ok

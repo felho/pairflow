@@ -1,0 +1,11 @@
+{
+  "indent": "          ",
+  "items": [
+    {"id": "help-timeout-escalation", "html": "No <b>help timeout / escalation</b> — a parked <code>help_pending</code> blocks indefinitely, like the human_gate; a reminder, a timeout route, or an escalation target is watchdog territory <span class=\"at\">→ L9</span>"},
+    {"id": "non-blocking-help", "html": "No <b>non-blocking help</b> — the declared variant where the marker homes in a help-link <b>record collection</b> (the <code>ChildWorkflowLink</code> precedent) and the agent keeps working while the ask is open. The blocking wait-slot form ships here; the dimension value is declared, the machinery is not <span class=\"at\">→ later</span>"},
+    {"id": "durable-ask-channels", "html": "No <b>durable ask channels</b> — the <code>HelpRequest</code> is local/manual delivery like every directive; Slack/email/token-bearing external asks are the transport generalization <span class=\"at\">→ L8</span>"},
+    {"id": "help-routing", "html": "No <b>help routing beyond the bound operator</b> — the ask goes to <code>binding[operator]</code>, full stop; routing by expertise, on-call, or org structure needs identity + channels <span class=\"at\">→ L8/L10</span>"},
+    {"id": "help-emit-gating", "html": "No <b>policy gating on help emits</b> — the L2 pipeline filters state-moving transitions; whether policies should also filter <em>asks</em> (rate limits, question schemas per role) is deliberately open <span class=\"at\">→ later</span>"},
+    {"id": "deferred-rework-stash", "html": "No <b>deferred-rework stash</b> — the composite \"park a rework instruction, apply it on completion\" is one more marker with a declared apply-on-completion rule; explicitly owned by the watchdog slice, not L5-core <span class=\"at\">→ L6/L9</span>"}
+  ]
+}

@@ -1,0 +1,17 @@
+
+handle_help_request(instance, template, step, envelope) → Outcome    # L5 — the emit-opened help errand OPENS: park + durable fact, one atomic commit. ERRAND help (full form, blocking variant) — the claim
+  help_spec ← step.help                                             # opt-in, template-declared per step (validate_help_config guarantees the shape at create)
+  IF help_spec is none THEN RETURN Rejected(help_not_declared)      # an emit at a step with no help: declaration starts nothing
+  IF HELP_REQUEST ∉ capability(template, step.role, instance.current_step)
+                       THEN RETURN Rejected(not_authorized)         # the L1 gate covers the help op-family: a declared help: puts HELP_REQUEST into this role's capability at this step
+  FOR field IN required_fields(help_spec.payload):                  # template-declared payload schema (the anchor: question required) — the generic guard, one vocabulary
+    IF envelope.payload[field] is absent OR empty THEN RETURN Rejected(missing_required_field)
+  # deliberately NOT gated at L5: the gate pipeline filters state-moving transitions; a help-ask
+  # moves no workflow state beyond parking (policy filters on asks are an open, deferred question)
+  request_ref ← new_request_ref()
+  COMMIT atomically at expected_version = instance.version:         # one visible transition — the park and the fact land together (the human_gate precedent)
+    instance.transcript.append(HELP_REQUEST { op_id: envelope.op_id, request_ref, question: envelope.payload.question, refs: envelope.payload.refs })   # THE durable fact: the one op_id-carrying entry for this emit — no separate generic envelope append (one emit, one entry)
+    instance.kernel_status ← WAITING
+    instance.wait ← { kind: help_pending, requested_by: step.id, request_ref }   # blocking variant: the marker homes in the wait slot — "≤ 1 open help" is THIS home's property, not the errand's
+    instance.version ← instance.version + 1
+  RETURN Committed(instance.version, post_commit_output(instance, template))   # help_pending ⇒ the HelpRequest leaves post-commit

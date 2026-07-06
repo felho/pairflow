@@ -1,0 +1,20 @@
+
+# Convenience operator API, not a kernel primitive: a single "start workflow" command may
+# compose CREATE_INSTANCE(...) then START(instance). activation_mode controls what happens
+# after RUNTIME_CONTEXT_READY (activate vs WAITING(kickoff_pending)) — not whether CREATE dispatches.
+CREATE_INSTANCE(template_ref, activation_mode, task, binding, run_overrides, parent_ref?) → Created   # operator_intent OR a parent's SpawnIntent (L4); template + binding resolved on the start path (formalized by L0f). parent_ref set ONLY for a spawned child, stored on the instance
+  template ← definitionStore.load(template_ref)                # a pinned definition — a plain template, or an L0f-resolved definition (slots applied)
+  IF activation_mode = immediate AND task is absent THEN RETURN Rejected(task_required)
+  REQUIRE binding covers every role reachable in template      # binding resolved pre-kernel; the kernel only validates coverage (fail at create, not mid-run)
+  REQUIRE validate_gate_config(template)                          # L2a: static gate-config invariants (process↔workspace, no fail_instance) — definition-load validation, fail at create
+  REQUIRE validate_context_refs(template)                         # L2b: every issued context_block ref resolves in the catalog — fail at create, beside binding coverage
+  REQUIRE validate_decision_gates(template)                       # L3: every human_gate's decisions resolve, and every `recommends` names a real decision key of its target gate
+  REQUIRE validate_release_policy(template)                       # LC2: a teardown-managed runtime_context MUST declare runtime_context.release (policy + non-empty boundaries when required)
+  REQUIRE validate_action_steps(template)                         # LC3: every type: action step has a runner + non-empty outcomes whose targets resolve
+  REQUIRE validate_child_steps(template)                          # L4: every type: child_workflow step has a template_ref + child_key + non-empty wait_for whose targets resolve
+  REQUIRE validate_help_config(template)                          # L5: every step.help lives on an agent step and declares question as a required payload field
+  instance ← create { template_ref, task, binding, activation_mode,
+                      kernel_status: CREATED, current_step: none, round: 0,   # round 0 = prepared, no work cycle begun yet (position none until ACTIVE)
+                      runtime_context: none, run_overrides: snapshot(run_overrides), version: 1 }
+  COMMIT instance creation
+  RETURN Created(instance.version)                             # no dispatch yet — not active

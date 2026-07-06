@@ -1,0 +1,120 @@
+<section id="l5">
+        <h2 class="level-h"><span class="level-badge">L5</span> Help subflow — the agent-initiated ask</h2>
+        <p class="level-sub">An <b>ACTIVE</b> agent can ask its human for help <em>mid-step</em> — a question, not a
+        decision — and continue <b>exactly where it was</b> with the answer folded into its context. The v1 grounding
+        is <code>WAITING_HUMAN</code> (an active agent asks, round ≥ 1, same-context resume, no routing). This is the
+        first level built ON the five kernel primitives: per the kernel-primitives memo's paper test (§8), L5-core is
+        <b>six declarations</b> over the existing contracts — one new operator intent (<code>HELP_REPLY</code>) and
+        zero new machinery.</p>
+
+        <div class="note">
+          <b>The boundary.</b> A help ask is <b>not</b> a decision: no declared keys, no <code>decisions</code> map,
+          no routing — the reply <em>enriches</em>, it never <em>selects</em>. Kernel-level "same-context resume"
+          means the same position plus an enriched handoff; keeping the agent's <em>session</em> alive across the
+          wait is adapter territory (L0c / the executor), not kernel state. And the ask is <b>emit-opened</b>: the
+          errand contract reserved this opener at LC2, and the help ask is its first live instance — the kernel does
+          not open this errand on arrival; the actor opens it mid-step.
+        </div>
+
+        <h3 class="view-h"><span class="view-tag runtime">Runtime</span> A concrete trace (mid-step question, same-round resume)</h3>
+        <div class="trace">
+          <div class="trace-row"><div class="trace-n">1</div><div class="trace-c">
+            <div class="ev">the implementer agent, ACTIVE on <code>implement</code> (round 2), hits an ambiguity: <em>"OAuth or API-key auth for the webhook?"</em></div>
+            <div class="meta">it emits <code>HELP_REQUEST { op_id, expected_version, expected_role, payload: { question, refs: [diff] } }</code> — the ordinary actor envelope, through HANDLE's ordinary Admission ladder</div>
+          </div></div>
+          <div class="trace-row"><div class="trace-n">2</div><div class="trace-c">
+            <div class="ev">the kernel parks: <code>WAITING(help_pending)</code> + a durable <code>HELP_REQUEST</code> fact (fresh <code>request_ref</code>) — one atomic commit</div>
+            <div class="meta"><code>implement</code> declares <code>help:</code> ✓, <code>HELP_REQUEST</code> ∈ capability ✓, <code>question</code> present ✓ ⇒ park; <code>current_step</code> and <code>round</code> do NOT move. Post-commit: a <b>HelpRequest</b> leaves for <code>binding[operator]</code> with the question + context</div>
+          </div></div>
+          <div class="trace-row idem"><div class="trace-n">3</div><div class="trace-c">
+            <div class="ev">a second <code>HELP_REQUEST</code> arrives (the agent's client retried)</div>
+            <div class="meta">same <code>op_id</code> ⇒ <b>Duplicate</b> (the fact entry carries it); a different emit would hit <b>Rejected(not_active)</b> — the instance is WAITING now, and the blocking home holds ≤ 1 open ask</div>
+          </div></div>
+          <div class="trace-row"><div class="trace-n">4</div><div class="trace-c">
+            <div class="ev">the operator answers: <code>HELP_REPLY { op_id, expected_version, request_ref, reply: "API-key; OAuth is phase 2 — see ADR-14", by }</code></div>
+            <div class="meta">admitted via <code>admit_input</code> (op_id · <code>help_pending</code> · <code>request_ref</code> correlation · CAS · operator authority) ⇒ <code>HELP_REPLIED</code> fact + back to <b>ACTIVE</b> — <b>stay</b>: same <code>implement</code>, still round 2, no arrival effects</div>
+          </div></div>
+          <div class="trace-row"><div class="trace-n">5</div><div class="trace-c">
+            <div class="ev">the next dispatch goes out — same step, handoff = original ⊕ the answered ask</div>
+            <div class="meta"><code>help_exchange_for</code> derives the question→answer pair from the transcript (by <code>request_ref</code>); the agent continues the SAME work item with the answer in its packet — no round burned, no position moved</div>
+          </div></div>
+        </div>
+
+        <h3 class="view-h"><span class="view-tag pseudo">Pseudocode</span> The help handlers (diff vs L4)</h3>
+        <p>Six declarations over the primitives: a HANDLE branch (the emit-opened errand's opening), a park+fact
+        helper, a <b>Directive</b> member, one operator-intent completion on the hardened ingress, a transcript-derived
+        handoff enrichment, and a load-time validator. Every guard is an existing contract with new parameters:</p>
+        <div class="code-diff" aria-label="L5 pseudocode" data-old-label="L4 kernel" data-new-label="+ L5 help">
+          <script type="text/plain" class="diff-source" data-code-old-ref="l4-pseudocode"></script>
+          <script type="text/plain" class="diff-source" data-code-new data-code-id="l5-pseudocode">[[@fold l5-pseudocode]]</script>
+        </div>
+        <div class="note pseudo">
+          The <code>HELP_REQUEST</code> emit is a <b>separate HANDLE branch</b>, deliberately not a
+          <code>transitions</code> key: it has no target, calls no <code>apply_target_entry_effects</code>, and its
+          commit parks. One emit produces <b>one</b> transcript entry — the <code>HELP_REQUEST</code> fact IS the
+          op_id-carrying record (no generic envelope append beside it). The reply path is the
+          <code>SUBMIT_DECISION</code> contract family with different parameters, and its commit is the <b>stay</b>
+          route's first live instance: same position <em>without re-arrival</em> — unlike a self-target, which
+          genuinely re-arrives through the shared arrival. The reply's one required field is validated with the
+          generic <code>missing_required_field</code> guard (one vocabulary — contract-fixed rather than
+          template-declared, deliberately not a new reject name). Help emits are deliberately <b>not gated</b> at L5:
+          the L2 pipeline filters state-moving transitions, and an ask moves no workflow state beyond parking —
+          policy filters on asks are an open deferral (Absent).
+        </div>
+
+        <h3 class="view-h"><span class="view-tag domain">Domain</span> What L5 adds</h3>
+        <div class="agg">
+          <div class="agg-label">Help — an ask, a wait, and a transcript pair</div>
+          <div class="ents">
+            <div class="ent"><div class="en">help_pending <span style="font-size:10px;color:var(--muted)">(wait kind)</span></div><div class="fields">one more value on the L0d WAITING axis — the precedented extension point. Blocking variant: the marker homes in the single wait slot (≤ 1 open ask is this home's property); the record-collection-homed non-blocking variant is declared but deferred</div></div>
+            <div class="ent"><div class="en">HELP_REQUEST / HELP_REPLIED <span style="font-size:10px;color:var(--muted)">(transcript)</span></div><div class="fields">the ask fact (<code>op_id</code>, <code>request_ref</code>, question, refs) and the completion fact (<code>op_id</code>, <code>request_ref</code>, reply, by) — the pair is auditable from the record alone, matched by <code>request_ref</code></div></div>
+            <div class="ent"><div class="en">HelpRequest <span style="font-size:10px;color:var(--muted)">(value)</span></div><div class="fields">the agent-initiated ask — a <b>Directive</b> member (addressee: operator), derived post-commit from <code>wait.kind = help_pending</code>; free-form reply, deliberately NOT a decisions map. The P5 maturation path the memo names: <code>HumanDecisionRequest</code> (L3) → <code>HelpRequest</code> (L5) → external-token asks (L8)</div></div>
+            <div class="ent"><div class="en">step.help <span style="font-size:10px;color:var(--muted)">(template)</span></div><div class="fields">opt-in per agent step, with a declared payload schema (question required); puts <code>HELP_REQUEST</code> into the role's capability at that step; <code>validate_help_config</code> fails a bad shape at create</div></div>
+            <div class="ent"><div class="en">stay <span style="font-size:10px;color:var(--muted)">(route)</span></div><div class="fields">the ChoicePoint contract's reserved route value, now live: same <code>current_step</code>, <code>advances_round = false</code>, no arrival effects; the enriched handoff (original ⊕ reply) belongs to the next dispatch, derived by <code>help_exchange_for</code></div></div>
+          </div>
+        </div>
+
+        <h3 class="view-h"><span class="view-tag invariant">Invariant</span> New at L5</h3>
+        <div class="agg invariant">
+          <div class="agg-label">Help invariants</div>
+          <div class="ents">
+[[@invariants l5 0]]
+          </div>
+        </div>
+
+        <h3 class="view-h"><span class="view-tag config">Config</span> The template — a step opts in</h3>
+        <p>One declaration on the asking step; a step without it rejects the emit. No new template machinery —
+        the payload schema reuses the per-field <code>{ required }</code> shape decisions and actions already use:</p>
+        <div class="code-diff" aria-label="L5 template config" data-old-label="— (the steps, before)" data-new-label="+ help:">
+          <script type="text/plain" class="diff-source" data-code-old></script>
+          <script type="text/plain" class="diff-source" data-code-new data-code-id="l5-template-config">[[@code code/l5-template-config.new.txt]]</script>
+        </div>
+
+        <h3 class="view-h"><span class="view-tag absent">Absent</span> Still not here</h3>
+        <div class="absent-grid">
+[[@absent l5]]
+        </div>
+
+        <h3 class="view-h"><span class="view-tag evidence">Evidence</span> Why we accept L5 for now</h3>
+        <div class="note evidence">
+          <ul style="margin:0">
+            <li><b>Scenario coverage:</b> a mid-step ambiguity parks the run and asks the bound operator; the answer
+              resumes the SAME step and round with the exchange in the handoff; a retried emit is Duplicate; an ask at
+              a step with no <code>help:</code> is rejected before any state change; an unanswered ask blocks (the
+              human_gate's accepted tradeoff, timeout → L9).</li>
+            <li><b>Invariant coverage:</b> one-visible-transition park ✓; one emit, one entry ✓; stay is not an
+              arrival ✓; the reply rides the record ✓; undeclared/unauthorized asks start nothing ✓; the blocking
+              home's ≤ 1 open ask ✓ — and all L0a–L4 + LC1–LC4 invariants still hold.</li>
+            <li><b>Paper-test reconciliation (memo §8):</b> six declarations promised, six landed — the op + schema,
+              the wait kind + durable fact, the Directive member, the completion on the hardened ingress, the stay
+              route (its reserved slot resolved), and the blocking/non-blocking variant (blocking shipped,
+              non-blocking declared + Absent). One scope choice the paper test left open is recorded in the memo §9:
+              help emits are not gated at L5.</li>
+            <li><b>Known gaps (intended):</b> timeout/escalation (L9), non-blocking form (later), durable channels
+              (L8), routing beyond the binding (L8/L10), help-emit gating (later), deferred-rework stash (L6/L9).
+              Each is in Absent.</li>
+            <li><b>Decision:</b> accepted as the L5 baseline (light evidence per playbook §2.1). Block A ≈ the full
+              local pairflow-v1 feature set with this level landed.</li>
+          </ul>
+        </div>
+      </section>

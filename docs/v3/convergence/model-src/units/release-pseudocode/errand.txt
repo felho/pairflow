@@ -12,16 +12,17 @@
 #           → keyed routing / state advance, one CAS commit (the keyed route is a ChoicePoint)
 #
 # Declared dimensions per instance: marker slot & its home — the home also carries blocking vs
-# non-blocking (→ L5): a wait-slot home is necessarily blocking (the "≤ 1 open wait" shape is a
+# non-blocking (blocking landed at L5; the non-blocking form stays deferred): a wait-slot home is
+# necessarily blocking (the "≤ 1 open wait" shape is a
 # property of wait-slot-homed errands, not of errands per se); a record-collection home PERMITS a
 # non-blocking form because the marker lives outside the single wait slot (the child links are the
 # precedent for collection-homed markers — not proof that every collection-homed errand is
 # non-blocking: the L4 parent still parks) · directive + addressee class ·
 # completion event(s) · correlation rule (the warrant class you met at L1 — request
 # correlation — is the errand's completion-matching rule) · on_ok / on_fail routes · form ·
-# opener (which committed move opens the claim: a step arrival, a lifecycle move, or a
-# completion opening the next errand; an agent-emit opener is reserved — the L5 help-ask
-# claims it). Guards that run BEFORE the claim commits are pre-open guards, not errand phases.
+# opener (which committed move opens the claim: a step arrival, a lifecycle move, a completion
+# opening the next errand — or an agent emit: the opener reserved here went live at L5 with the
+# help ask). Guards that run BEFORE the claim commits are pre-open guards, not errand phases.
 # Forms — an implementation must not force them onto one mechanism:
 #   full               claim + outbound directive + async correlated completion
 #   inline             claim, then work AND completion inside one handler invocation,
@@ -37,4 +38,5 @@
 #   bare wait (L3)       open-door   WAITING(kind) → RESUME_WAIT, by the resume_events class
 #   process gate (L2a)   marker-less inline, synchronous under timeout
 # Later instances are labeled in their own blocks: the LC3a ask/run chained pair, the LC3b
-# auto action, the LC4 forced release, the L4 spawn and child await.
+# auto action, the LC4 forced release, the L4 spawn and child await, the L5 help ask
+# (the emit-opened instance).

@@ -1,0 +1,15 @@
+{
+  "blocks": [
+    {
+      "indent": "            ",
+      "items": [
+        {"id": "one-visible-transition-park", "name_html": "the ask parks in one visible transition", "body_html": "the <code>HELP_REQUEST</code> fact and the <code>help_pending</code> park land in the SAME atomic commit (the human_gate precedent) — there is never a half-asked state"},
+        {"id": "one-emit-one-entry", "name_html": "one emit, one entry", "body_html": "the <code>HELP_REQUEST</code> transcript entry IS the op_id-carrying fact for the emit — no separate generic envelope append, so audit and idempotency read one record, not two"},
+        {"id": "stay-is-not-an-arrival", "name_html": "stay is not an arrival", "body_html": "the reply commit keeps <code>current_step</code>, does not advance the round, and deliberately does NOT call <code>apply_target_entry_effects</code> — same position without re-arrival; the self-target route (which genuinely re-arrives) stays a different thing"},
+        {"id": "reply-rides-the-record", "name_html": "the reply rides the record", "body_html": "the next dispatch's handoff is derived from the transcript (<code>HELP_REQUEST</code> → <code>HELP_REPLIED</code> pairs by <code>request_ref</code>), never from wait-state memory — record, not replay"},
+        {"id": "undeclared-help-starts-nothing", "name_html": "an undeclared or unauthorized ask starts nothing", "body_html": "no <code>step.help</code> declaration ⇒ <code>help_not_declared</code>; outside the capability ⇒ <code>not_authorized</code>; a malformed payload ⇒ <code>missing_required_field</code> — all before any state change"},
+        {"id": "blocking-home-one-open-help", "name_html": "the wait-slot home admits one open ask", "body_html": "\"≤ 1 open help\" is a property of the blocking variant's marker HOME (the single wait slot), not of the help errand per se — the deferred non-blocking form homes its markers in a record collection"}
+      ]
+    }
+  ]
+}

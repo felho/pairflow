@@ -780,3 +780,49 @@ entries ride the ops' implicit commits (activate / the terminal flip) with
 no explicit COMMIT block — consistent with the L0d-era convention; the
 in-code comments carry the atomicity claim, and if the early blocks ever
 switch to the explicit COMMIT form, the appends move with them.
+
+### L5 landing — the §8 paper test cashed in (executed, record awaits review)
+
+The first NEW level built on the five primitives. Six declarations
+promised (§8), six landed: (1) the `HELP_REQUEST` op — a separate HANDLE
+branch behind the ordinary Admission ladder, whose commit parks and never
+routes; (2) `help_pending` + the durable `HELP_REQUEST` fact (op_id +
+request_ref — one emit, ONE entry); (3) the `HelpRequest` Directive member
+(operator-addressed, free-form); (4) the `HELP_REPLY` completion on the
+hardened ingress via `admit_input`, both authority branches declared;
+(5) the STAY route's first live instance (no re-arrival —
+`apply_target_entry_effects` deliberately not called; the handoff
+enrichment is transcript-derived via `help_exchange_for`); (6) the
+blocking/non-blocking variant — blocking shipped (wait-slot home),
+non-blocking declared + Absent. Checksums: EXACTLY the pre-declared growth
+(absent 128→134, invariants 104→110, rejections 78→81 — the three new
+names: `help_not_declared`, `not_awaiting_help`, `help_request_mismatch`;
+the reply's required field deliberately reuses `missing_required_field`);
+the mirror check is clean — every pre-L5 block's multiset is unchanged,
+the ledger diff is additions-only.
+
+- **F-L5-1 · scope choice: help emits are NOT gated at L5.** One wave-spec
+  reviewer suggested help ops should be gateable like other actor emits.
+  The landed choice: the L2 pipeline filters state-moving transitions; a
+  help-ask moves no workflow state beyond parking, so it bypasses the
+  pipeline, and "policy filters on asks" is an explicit Absent deferral
+  (help-emit-gating → later). Recorded for ratification, not silently
+  decided.
+- **F-L5-2 · §8 declaration-1's "P2 key" cell is loose against the landed
+  form.** The paper test's table classified the HELP_REQUEST op as "P2 key
+  + P3 payload rung (+ an L1 capability entry)"; the landed form is an
+  op-family BRANCH (P3 payload rung + L1 capability entry), deliberately
+  NOT a transitions/ChoicePoint key — a key would have implied routing and
+  blurred the stay/self-target boundary. The offered-affordance side
+  survives (dispatch_intent projects HELP_REQUEST into available_ops), but
+  selection it is not. Same prose-granularity class as F-W1-1/F-W2-1/
+  F-W3-1; disposition: the §8 cell gains a clarifying parenthetical when
+  next touched; no code change.
+- **Wave-record-style notes.** (a) The three declaration-unit
+  retro-touches landed with the level (the errand opener + instance list +
+  F3 tag; the choice_point stay line resolved from "reserved / no live
+  instance" to live-at-L5; the directive member list gained HelpRequest
+  with the §8 maturation path) — the reserved-slot pattern paid out
+  exactly as designed. (b) The viewer's highlight vocabularies gained the
+  L5 + ingress-touch tokens (HELP_REQUEST / HELP_REPLIED / HELP_REPLY /
+  HelpRequest / STARTED / CANCELLED / TASK_SUPPLIED) — render-side only.

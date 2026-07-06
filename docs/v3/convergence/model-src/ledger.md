@@ -3,7 +3,7 @@
 > GENERATED — do not edit. Regenerate: `python3 tools/v3-model/report_ledger.py`
 > (check.sh fails when this file is stale.)
 
-## 1 · Deferral ledger — 128 Absent items by pointer target
+## 1 · Deferral ledger — 134 Absent items by pointer target
 
 ### L0b (2)
 
@@ -103,10 +103,11 @@
 - `l3` · agent-initiated-ask-human-help-reply — → L5
 - `l3` · deferred-request-rework — → L5 + watchdog (L6/L9)
 
-### L6 (2)
+### L6 (3)
 
 - `l0a` · triggers — → L6
 - `l3` · deferred-request-rework — → L5 + watchdog (L6/L9)
+- `l5` · deferred-rework-stash — → L6/L9
 
 ### L7 (8)
 
@@ -119,7 +120,7 @@
 - `l2a` · projection-ref-scoped-query-sdk — → later / L7-ish
 - `l3` · agent-to-agent-or-external-token-ask — → L7 / L8
 
-### L8 (9)
+### L8 (11)
 
 - `l0a` · channels-task-inbox-general-ask — → L8
 - `l0b` · durable-delivery — → L8
@@ -130,8 +131,10 @@
 - `runtime-teardown` · remote-distributed-release-proofs — → L8 / L10
 - `workflow-actions` · remote-distributed-action-proofs — → L8 / L10
 - `l4-child` · durable-external-channel — → L8
+- `l5` · durable-ask-channels — → L8
+- `l5` · help-routing — → L8/L10
 
-### L9 (14)
+### L9 (16)
 
 - `l0a` · wait-correlation — → L9
 - `l0d` · human-child-timeout-external-waits — → L3 / L4 / L9
@@ -147,8 +150,10 @@
 - `archive-purge` · retention-auto-purge — → L9 / ops
 - `l4-child` · lost-event-orphan-reconciliation — → L9
 - `l4-child` · auto-recovery-of-a-transient-spawn-dispatch-crash — → L9
+- `l5` · help-timeout-escalation — → L9
+- `l5` · deferred-rework-stash — → L6/L9
 
-### L10 (6)
+### L10 (7)
 
 - `l0a` · gatekeeper-federation — → L10
 - `l0d` · operator-authority-identity — → L7 / L10
@@ -156,6 +161,7 @@
 - `l1` · actor-identity-authentication — → L7 / L10
 - `runtime-teardown` · remote-distributed-release-proofs — → L8 / L10
 - `workflow-actions` · remote-distributed-action-proofs — → L8 / L10
+- `l5` · help-routing — → L8/L10
 
 ### L11+ (3)
 
@@ -204,7 +210,7 @@
 - `storage-scope` · durable-write-mechanism — → impl
 - `runtime-teardown` · provider-internals — → impl
 
-### later (31)
+### later (33)
 
 - `l0c` · tool-installation-provisioning — → later
 - `l0e` · teardown-lifecycle — → later
@@ -237,6 +243,8 @@
 - `l0f-mode` · run-level-policy-map-engine — → later
 - `l4-child` · fan-out-fan-in — → later
 - `l4-child` · parent-driven-child-control — → later
+- `l5` · non-blocking-help — → later
+- `l5` · help-emit-gating — → later
 
 ### later (blob store) (1)
 
@@ -251,7 +259,7 @@
 - `archive-purge` · archive-query-list-cli — → ops
 - `archive-purge` · export-formats-sharing — → ops
 
-## 2 · Invariant catalog — 104 rules
+## 2 · Invariant catalog — 110 rules
 
 - `l0a` · **op-id-idempotency** — op_id idempotency
 - `l0a` · **atomic-transition-commit** — atomic transition commit
@@ -357,8 +365,14 @@
 - `l4-child` · **routing-is-fail-closed-on-the-subscription** — routing is fail-closed on the subscription
 - `l4-child` · **round-is-instance-local** — round is instance-local
 - `l4-child` · **a-spawn-that-cannot-start-is-a-failed-attempt** — a spawn that cannot start is a failed attempt
+- `l5` · **one-visible-transition-park** — the ask parks in one visible transition
+- `l5` · **one-emit-one-entry** — one emit, one entry
+- `l5` · **stay-is-not-an-arrival** — stay is not an arrival
+- `l5` · **reply-rides-the-record** — the reply rides the record
+- `l5` · **undeclared-help-starts-nothing** — an undeclared or unauthorized ask starts nothing
+- `l5` · **blocking-home-one-open-help** — the wait-slot home admits one open ask
 
-## 3 · Rejection registry — 78 distinct `Rejected(...)` reasons
+## 3 · Rejection registry — 81 distinct `Rejected(...)` reasons
 
 - `action_outcome_ambiguous_route` — first appears in `auto-action-pseudocode`
 - `action_outcome_no_route` — first appears in `auto-action-pseudocode`
@@ -389,6 +403,8 @@
 - `gate_config_not_supported` — first appears in `l2a-pseudocode`
 - `gate_evaluator_unavailable` — first appears in `l2-pseudocode`
 - `gate_execution_not_supported` — first appears in `l2-pseudocode`
+- `help_not_declared` — first appears in `l5-pseudocode`
+- `help_request_mismatch` — first appears in `l5-pseudocode`
 - `invalid_action_outcome_schema` — first appears in `action-pseudocode`
 - `invalid_action_step` — first appears in `action-pseudocode`
 - `invalid_decision_gate_config` — first appears in `l3-pseudocode`
@@ -410,6 +426,7 @@
 - `not_authorized` — first appears in `l1-pseudocode`
 - `not_awaiting_action` — first appears in `action-pseudocode`
 - `not_awaiting_decision` — first appears in `l3-pseudocode`
+- `not_awaiting_help` — first appears in `l5-pseudocode`
 - `not_awaiting_this_child` — first appears in `l4-pseudocode`
 - `not_bare_wait` — first appears in `l3-pseudocode`
 - `not_waiting` — first appears in `l3-pseudocode`

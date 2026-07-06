@@ -10,5 +10,7 @@
 #   DispatchIntent       (L0b)   addressee: actor      the step dispatch
 #   HumanDecisionRequest (L3)    addressee: operator   the decision ask (recommendation + declared keys)
 # Later members are labeled in their own blocks: ActionRequest (LC3a, operator), ActionIntent (LC3b,
-# runner), SpawnIntent (L4, kernel CREATE_INSTANCE). Future members already anticipated by the
-# deferred levels: CapabilityIntent (L7), RememberIntent / LinkIntent (L11).
+# runner), SpawnIntent (L4, kernel CREATE_INSTANCE), HelpRequest (L5, operator — the agent-initiated
+# ask; the family's maturation path: HumanDecisionRequest L3 → HelpRequest L5 → external-token asks
+# L8). Future members already anticipated by the deferred levels: CapabilityIntent (L7),
+# RememberIntent / LinkIntent (L11).

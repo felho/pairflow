@@ -814,6 +814,14 @@ it: L5 is then a handful of declarations over the contracts (the memo's §8 pape
 Why: the agent can ask for help/a decision mid-step. Completes the local pairflow-v1
 feature set; not required by the WF-7 MVP, so it sits just after the cut. (Block A ≈
 full local v1 once this lands.)
+**Realized (2026-07-06):** landed as the §8 paper test's six declarations, exactly —
+`step.help` (opt-in, validated at create), `help_pending` + the durable `HELP_REQUEST`
+fact, the `HelpRequest` Directive member, the `HELP_REPLY` completion on the hardened
+ingress, the stay route's first live instance, and the blocking variant (non-blocking
+declared + Absent). Checksum growth exactly as pre-declared (absent +6, invariants +6,
+rejections +3); the mirror check clean. Findings F-L5-1 (help emits not gated — scope
+choice) and F-L5-2 (§8's "P2 key" cell vs the landed op-family branch) in the memo §9.
+Block A = the full local pairflow-v1 feature set is now modeled.
 
 ### Block B — Distribution (toward the distributed, multi-person workflow)
 

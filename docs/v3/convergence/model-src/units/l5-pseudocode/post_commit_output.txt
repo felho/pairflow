@@ -1,0 +1,11 @@
+
+post_commit_output(instance, template) → DispatchIntent | HumanDecisionRequest | ActionRequest | ActionIntent | SpawnIntent | HelpRequest | none   # L3 — pure derivation (NO mutation): read the post-commit kernel_status that apply_target_entry_effects just set and select the outbound effect. The read-side dual of apply_target_entry_effects (which sets the status; this returns what to deliver) — selects which DIRECTIVE (if any) leaves post-commit
+  IF instance.kernel_status = TERMINAL THEN RETURN none
+  IF instance.kernel_status = WAITING THEN
+     IF instance.wait.kind = human_decision THEN RETURN human_decision_request(instance, template)   # parked on a human_gate ⇒ the Ask
+     IF instance.wait.kind = help_pending THEN RETURN help_request(instance, template)   # L5 parked on the agent's own ask ⇒ the HelpRequest (derived from the wait, per the declaration)
+     IF instance.wait.kind = action_pending THEN RETURN action_request(instance, template)   # LC3 parked on a type: action ⇒ the ActionRequest (operator-facing surface; the decision-less HumanDecisionRequest analog)
+     IF instance.wait.kind = action_running AND template.step(instance.current_step).trigger = auto THEN RETURN action_intent(instance, template)   # LC3b ONLY an AUTO action re-issues the run (ActionIntent, produce-not-perform). An operator action_running (LC3a, mid-run / recovery) returns none below — NEVER auto-issued without the operator (the LC3a/LC3b boundary)
+     IF instance.wait.kind = child_event AND instance.wait.spawn_pending THEN RETURN child_intent(instance, template)   # L4 — a FRESH ChildWorkflowLink ⇒ produce the child CREATE_INSTANCE (SpawnIntent). A re-entered (idempotent) link ⇒ none, just keep waiting
+     RETURN none                                                  # parked on a bare wait (e.g. commit_pending) ⇒ no output; it waits for an inbound RESUME_WAIT event
+  RETURN dispatch_intent(instance, template, instance.current_step)   # ACTIVE ⇒ agent dispatch

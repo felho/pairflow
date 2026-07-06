@@ -1,0 +1,19 @@
+  steps:
+    implement:
+      type: agent
+      role: implementer
+      instruction: "Implement the task; emit READY_FOR_REVIEW when done."
+      help:                       # L5 — opt-in: THIS step's actor may ask for help mid-step
+        payload:
+          question: { required: true }   # the ask must carry a question (validate_help_config: fail at create)
+          refs:     { required: false }  # optional evidence refs (files, diffs, run output)
+      transitions:
+        READY_FOR_REVIEW: review
+    review:
+      type: agent
+      role: reviewer
+      instruction: "Review the diff; emit APPROVED or REWORK_NEEDED."
+      # no help: declared — a HELP_REQUEST emitted here is Rejected(help_not_declared)
+      transitions:
+        APPROVED:      approval_gate
+        REWORK_NEEDED: implement

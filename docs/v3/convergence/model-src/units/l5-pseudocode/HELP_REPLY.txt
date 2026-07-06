@@ -1,0 +1,25 @@
+
+HELP_REPLY(reply) → Outcome                                        # L5 operator_intent — the help errand's completion; the SUBMIT_DECISION contract family with different parameters, born on the hardened ingress. reply = { instance_id, op_id, expected_version, request_ref, reply, by }
+  # ADMISSION via admit_input (load-first) — the operator-intent rungs
+  admitted ← admit_input(reply, expect: {
+    op_id:     reply.op_id,                                                                   # same (instance_id, op_id) scope as HANDLE
+    state:     kernel_status = WAITING AND wait.kind = help_pending → Rejected(not_awaiting_help),   # only a parked help accepts a reply
+    correlate: wait.request_ref = reply.request_ref → Rejected(help_request_mismatch),        # correlation to THIS open ask
+    version:   reply.expected_version,                                                        # CAS precheck — the HelpRequest the operator holds must be current
+    authority: { claim:   reply.by,
+                 granted: instance.binding[operator],                                         # the bound operator — the same authority the ask was addressed to
+                 missing → Rejected(operator_not_authorized), mismatch → Rejected(operator_not_authorized) } })   # both branches declared (the house style)
+  IF admitted ≠ Accepted THEN RETURN admitted                       # Duplicate | Stale(v) | Rejected(…) pass through unchanged
+  instance ← admitted.instance
+  template ← definitionStore.load(instance.template_ref)
+  # the reply is the contract's one required field — validated with the GENERIC guard (one
+  # vocabulary: contract-fixed rather than template-declared, deliberately not a new reject name)
+  IF reply.reply is absent OR empty THEN RETURN Rejected(missing_required_field)
+  # STAY — the reserved route's first live instance: same position, NO re-arrival
+  # (apply_target_entry_effects is deliberately NOT called), no round advance;
+  # the enriched handoff belongs to the NEXT dispatch, derived from the record below
+  COMMIT atomically at expected_version = instance.version:
+    instance.transcript.append(HELP_REPLIED { op_id: reply.op_id, request_ref: reply.request_ref, reply: reply.reply, by: reply.by })   # the completion fact — request_ref makes the question→answer pair auditable from the record alone
+    instance.kernel_status ← ACTIVE ; instance.wait ← none
+    instance.version ← instance.version + 1
+  RETURN Committed(instance.version, post_commit_output(instance, template))   # ACTIVE ⇒ the next dispatch; its handoff = original ⊕ the reply (help_exchange_for, below)

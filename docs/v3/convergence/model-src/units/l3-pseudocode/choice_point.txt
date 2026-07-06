@@ -21,7 +21,6 @@
 # wait_for (L4 — the child's terminal commit).
 # Route values: a route normally names a target entered through the shared arrival — including a
 # SELF-TARGET, which genuinely re-arrives (re-park, arrival effects run; the LC3a conflict →
-# merge_action re-park). A *stay* route is reserved (→ L5, its first load-bearing instance): same
-# position WITHOUT re-arrival — no arrival effects, no round advance; the enriched handoff belongs
-# to the next dispatch. Stay is a route value, not a selector authority, and has no live instance
-# today.
+# merge_action re-park). A *stay* route: same position WITHOUT re-arrival — no arrival effects, no
+# round advance; the enriched handoff belongs to the next dispatch. Stay went LIVE at L5 (the help
+# reply's commit is its first load-bearing instance); it is a route value, not a selector authority.

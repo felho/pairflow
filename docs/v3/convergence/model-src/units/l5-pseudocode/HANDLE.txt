@@ -1,0 +1,62 @@
+
+HANDLE envelope → Outcome
+  IF not valid_shape(envelope)            THEN RETURN Rejected(invalid_shape)
+
+  instance ← instanceStore.load(envelope.instance_id)
+  IF instance is none                     THEN RETURN Rejected(unknown_instance)
+  template ← definitionStore.load(instance.template_ref)   # separate store; pinned immutable version
+  step     ← template.step(instance.current_step)           # positional read, NOT a rung — infallible over committed
+                                                            # state (load-time validation: every reachable step id
+                                                            # resolves in the pinned template), so hoisting it cannot
+                                                            # reject or mask a rung; consumed by the authority rung
+
+  # ADMISSION (born at L0d) — the actor-envelope rungs: idempotency → lifecycle/state → staleness → authority (born at L1)
+  outcome ← admit_loaded(instance, expect: {
+    op_id:     envelope.op_id,                                  # a duplicate is a no-op, no 2nd entry
+    state:     kernel_status = ACTIVE → Rejected(not_active),   # L0d lifecycle guard: actor emits only in actor-routable ACTIVE execution
+    version:   envelope.expected_version,                       # actor-supplied stale-intent — mandatory at L0b
+    authority: { claim:   envelope.expected_role,               # L1 role authority — mandatory at L1 (shape-derived, todo E1)
+                 granted: step.role,                            # this position's active role — read only at the authority rung
+                 missing → Rejected(missing_role), mismatch → Rejected(role_not_authorized) } },
+    envelope)
+  IF outcome ≠ Accepted THEN RETURN outcome                     # Duplicate | Stale(v) | Rejected(…) pass through unchanged
+
+  # L5: agent-initiated help — a SEPARATE branch, deliberately NOT a transitions key: its commit
+  # parks, it never routes (no target, no arrival). The EMIT-OPENED errand: the opener slot the
+  # errand contract reserved at LC2 goes live here — an actor opens the errand mid-step
+  IF envelope.type = HELP_REQUEST THEN RETURN handle_help_request(instance, template, step, envelope)
+
+  target ← step.transitions[envelope.type]   # navigation (L0b): does this action exist here? CHOICEPOINT transitions: principal-committed selection by the bound actor
+  IF target is none                       THEN RETURN Rejected(no_transition)
+
+  # L1: action authorization — exists as a transition, but may this role emit it here?
+  IF envelope.type not in capability(template, step.role, instance.current_step)
+                                          THEN RETURN Rejected(not_authorized)
+
+  # L2: policy gate pipeline — the transition exists (L0b) and is authorized (L1); do the policies allow it now?
+  gate_decisions ← []                                                                       # retained allow/warn verdicts + evidence refs, carried to the commit
+  FOR gate IN template.gates_for(instance.current_step, envelope.type):   # ordered, authored; empty for ungated transitions
+    evaluator ← gateRegistry.resolve(gate.uses)
+    IF evaluator is none            THEN RETURN Rejected(gate_evaluator_unavailable)      # config invariant — unresolved gate name
+    IF evaluator.execution ≠ inline THEN RETURN Rejected(gate_execution_not_supported)    # deferred ⇒ later lifecycle slice (gate_pending + GATE_RESULT)
+    IF evaluator.implementation = process                                                 # L2a: inline process now runs (was rejected at L2 core)
+      THEN IF instance.runtime_context = ready(∅) THEN RETURN Rejected(runtime_context_required_for_process_gate)   # ready(∅) = context-free: validate_gate_config rejects this at definition load; runtime backstop here
+           decision ← run_process_gate(gate, instance, template, envelope)                # spawn in the workspace, bounded timeout
+      ELSE decision ← evaluator.evaluate(gate.config, gate_projection(instance, template, envelope))   # declarative / packaged, in-process
+    IF decision.verdict = block     THEN RETURN Rejected(gate_blocked(decision.reason), decision.evidence_refs)   # no commit ⇒ round not burned; refs surfaced
+    gate_decisions.append(decision)                                                       # allow or warn ⇒ retained (verdict + evidence_refs + diagnostics)
+    # allow or warn ⇒ next gate in the pipeline
+
+  issued_config ← resolve_agent_config(template, step, instance)   # resolved only now — not for a rejected envelope
+
+  # one atomic commit, CAS on instance.version
+  COMMIT atomically at expected_version = instance.version:
+    instance.transcript.append(envelope, issued_agent_config: issued_config, gate_decisions: gate_decisions)   # provenance: issued config + gate verdicts / evidence refs
+    apply_target_entry_effects(instance, template, step.id, target)                       # L3 — generic arrival: target type decides advance / park / complete (the same apply_target_entry_effects() SUBMIT_DECISION uses)
+    instance.version ← instance.version + 1
+  # on CAS conflict: restart HANDLE from load —
+  #   re-check idempotency and re-resolve the transition;
+  #   never re-commit a target computed from stale state
+
+  intent ← post_commit_output(instance, template)                # derive after commit: TERMINAL ⇒ none, parked on a human_gate ⇒ the Ask, else dispatch
+  RETURN Committed(instance.version, intent)
