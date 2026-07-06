@@ -490,7 +490,7 @@ Per §6.4, divergences found during the waves are recorded here as findings
 with proposed dispositions — never silently normalized. Each disposition is
 ratified in the wave's review.
 
-### Wave 1 (L0d — Admission born)
+### Wave 1 (L0d — Admission born) — wave reviewed, both dispositions RATIFIED (2026-07-06)
 
 - **F-W1-1 · rung-order wording divergence (todo C2 vs the code).** The
   `SUBMIT_DECISION` code (and todo A1) put idempotency BEFORE the
