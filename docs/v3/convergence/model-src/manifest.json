@@ -290,7 +290,7 @@
         },
         {
           "id": "l5-template-config",
-          "baseline": null,
+          "baseline": "l0f-mode-template-config",
           "new": "code/l5-template-config.new.txt"
         }
       ]
