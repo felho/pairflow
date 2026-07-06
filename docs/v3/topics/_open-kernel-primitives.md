@@ -512,7 +512,7 @@ ratified in the wave's review.
   for the L3-born ops; a dedicated ingress-idempotency touch for
   `KICKOFF`/`START`/`CANCEL`).
 
-### Wave 2 (L1 — Warrant born) — executed, findings await review
+### Wave 2 (L1 — Warrant born) — wave reviewed, both dispositions RATIFIED (2026-07-06)
 
 - **F-W2-1 · todo E2's rung enumeration needs reconciliation wording, not a
   code change.** E2's actor-envelope order reads "basic `valid_shape` → load
@@ -540,3 +540,12 @@ ratified in the wave's review.
   re-print itself (the staleness rung's vocabulary lives in the ladder,
   Wave 1 decision), not a moved role literal; `missing_role` /
   `role_not_authorized` counts are unchanged in every rendered block.
+- **Forward cross-ref (review note, not a finding).** The Warrant's
+  "operation identity: op_id" class is universal per todo E1, while F-W1-2
+  records that operator intents carry no op_id today. No contradiction —
+  the Warrant is born on the L1 actor-envelope path, where op_id exists —
+  but the coupling is deliberate: when F-W1-2 resolves (wave 4 for the
+  L3-born ops + the dedicated ingress-idempotency touch for
+  `KICKOFF`/`START`/`CANCEL`), the operator intents' warrant grows into a
+  slot the contract already holds open; one cross-ref line at resolution
+  time suffices.
