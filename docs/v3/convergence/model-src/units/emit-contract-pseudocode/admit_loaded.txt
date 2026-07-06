@@ -1,0 +1,22 @@
+
+# ─── ADMISSION's idempotency rung grows its digest branch (EC) — the ladder's third re-print ───
+# The rung compared identity only; now it also compares the CONTRACT the identity was used under.
+# The digest rides the expectation (computed by the caller via payload_digest — the ladder knows no
+# canonicalization); an expectation without a digest keeps the plain Duplicate semantics, so the
+# operator/lifecycle paths are UNCHANGED until their digest arrives (a named Absent).
+admit_loaded(instance, expect, input?) → Accepted | Duplicate | Stale | Rejected
+  IF expect.op_id     is present AND instance.transcript.has(expect.op_id)  THEN                                # idempotency rung — key scope (instance_id, op_id)
+    IF expect.digest is absent OR expect.digest = recorded_digest_of(instance, expect.op_id)
+                                                                            THEN RETURN Duplicate               # same operation, same contract ⇒ a replay: no-op
+    RETURN Rejected(op_id_collision)                                                                            # same op_id, DIFFERENT payload/contract ⇒ key misuse made VISIBLE (never silently dropped) — the rung's own generic reject, like missing_version below
+  IF expect.state     is present AND NOT expect.state.holds(instance)       THEN RETURN expect.state.reject     # lifecycle/state rung; an unnamed reject ⇒ bare-REQUIRE semantics
+  IF expect.correlate is present AND NOT expect.correlate.holds(instance)   THEN RETURN expect.correlate.reject # correlation rung (request_id here; request_ref / link_id arrive with their errands)
+  # version-presence is the staleness rung's ENTRY GUARD (an input carrying no version cannot be judged
+  # stale) — it is not a separate rung and not a payload check
+  IF expect.version   is expected AND expect.version is missing             THEN RETURN Rejected(missing_version)
+  IF expect.version   is expected AND expect.version ≠ instance.version     THEN RETURN Stale(instance.version)
+  # authority rung (arrived at L1) — presence then match, the same two-step shape as staleness
+  IF expect.authority is present AND expect.authority.claim is missing      THEN RETURN expect.authority.missing
+  IF expect.authority is present AND expect.authority.claim ≠ expect.authority.granted
+                                                                            THEN RETURN expect.authority.mismatch
+  RETURN Accepted

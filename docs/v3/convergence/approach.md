@@ -830,6 +830,23 @@ rejections +3); the mirror check clean. Findings F-L5-1 (help emits not gated �
 choice) and F-L5-2 (§8's "P2 key" cell vs the landed op-family branch) in the memo §9.
 Block A = the full local pairflow-v1 feature set is now modeled.
 
+**EC — Emit contract + verify gates (todo Parts E/F + the A1 digest).**
+Concepts: per-op `EmitContract` (payload schemas on transition edges + op-family
+declarations, ONE lookup for the validator, the digest, and the packet projection); the
+versioned `vocabularies:` catalog; the gate `family: policy | verify` dimension with a
+mandatory verify `currency_binding` (no stale-green); `payload_digest` + the idempotency
+rung's digest branch (`op_id_collision`); `offerable_ops` (the offer CALLS `capability` —
+the L5-named seam closed). Why: the last v1-parity gap — v1 machine-validates emit payloads
+(`pass.ts`/`converged.ts`) and runs verify gates; the model now carries that contract
+machine, de-vocabularized.
+**Realized (2026-07-07):** landed as the emit-contract memo's 11 paper-test declarations
+with both review rounds folded (the help branch under the generic validator; the
+same-function offer; four precisely-scoped new rejection names — registry 81→85; the
+digest's ordering-necessity definition). Inventories grew exactly as pre-declared (absent
+134→140, invariants 110→116); the mirror check clean. Two ratified behavior deltas: the
+digest delta (actor-emit path) and the offer delta. E6 (claim model) + E1's extended fields
+stay open as named Absents. Findings log: the emit-contract memo §4.
+
 ### Block B — Distribution (toward the distributed, multi-person workflow)
 
 **L6 — Triggers & scheduling (minimal).**

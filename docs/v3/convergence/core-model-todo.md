@@ -26,17 +26,17 @@ dedupe does not automatically make the outside world idempotent.
 
 ### A1. Make the idempotency ledger explicit
 
-> STATUS: the identity side is REALIZED — the admission ladder's op_id rung names the
-> `(instance_id, op_id)` scope (rebaseline wave 1), and the ingress touch extended
-> operation identity to the lifecycle intents with fact entries, including "a rejected
-> attempt never consumes the op_id". The store-backed enforcement mechanics moved to
-> `implementation-contract.md` IC-A1. OPEN here (model backlog): the digest/collision
-> refinement below.
+> STATUS: REALIZED — the identity side by the admission ladder's op_id rung (rebaseline
+> wave 1) + the ingress touch (lifecycle intents, fact entries, "a rejected attempt never
+> consumes the op_id"); the digest/collision refinement by the EC slice (2026-07-07:
+> `payload_digest` + the idempotency rung's digest branch, `op_id_collision` — actor-emit
+> path; the operator/lifecycle paths are a named Absent). The store-backed enforcement
+> mechanics live in `implementation-contract.md` IC-A1.
 
 - `(instance_id, op_id)` is a kernel-level unique operation record.
 - For L0a, default to **transcript-as-ledger** for accepted/committed operations:
   presence in the append-only transcript means the operation has already applied.
-- OPEN — payload digest + `op_id_collision`: the ledger stores a canonical operation
+- REALIZED at the EC slice — payload digest + `op_id_collision`: the ledger stores a canonical operation
   `payload_digest` alongside each entry; the uniqueness key stays `(instance_id, op_id)`,
   not `(instance_id, op_id, payload_digest)` (a 3-column key would let a re-used `op_id`
   under a new payload slip in as a fresh row). On lookup: same `op_id` + same digest →
@@ -192,13 +192,14 @@ the fan-out future topics it binds, together with its guardrails (2026-07-06).
 
 ## Part E — Actor emit contract (ingress)
 
-> STATUS: E1 is REALIZED in concept by the Warrant (P4, rebaseline wave 2 — its
-> context-authority class carries E1's universal vs shape-derived split); the extended
-> field family (`execution_id`, `expected_round`, `handoff_id`, `state_fingerprint`)
-> is open with it. E2–E8 are OPEN — together with Part F this is the model's main
-> remaining backlog, and it is needed for full v1 parity (v1 machine-validates emit
-> payloads: `pass.ts`, `converged.ts`). The E2 check-order line carries the F-W2-1
-> parenthetical.
+> STATUS: REALIZED at the EC slice (2026-07-07, section EC in `core-model.html`) —
+> E2 (`validate_emit_contract` + `emit_contract_of`, the announced payload rung at its
+> call-site home), E3 (the versioned `vocabularies:` catalog + `validate_emit_contracts`
+> at create), E4 (cross-field rules + explicit assertions), E5 (summary-is-a-headline
+> invariant), E7 (claim-scoped evidence obligations), E8 (`op_contracts` projection from
+> the same lookup; `available_ops ← offerable_ops`). E1 was realized in concept by the
+> Warrant (wave 2); its extended field family and E6 (the claim model) stay open as the
+> EC section's named Absents. The E2 check-order line carries the F-W2-1 parenthetical.
 
 An actor emit (`PASS`, `CONVERGED`, …) is not just an event name; it is a machine-validated
 contract. The v1 reality check is the pressure-test that shows which capabilities the
@@ -304,9 +305,11 @@ Two concerns must not be merged:
 
 ## Part F — Gate semantics: policy vs verify
 
-> STATUS: OPEN — the gate MECHANISM exists (L2 declarative/packaged, L2a process,
-> `evidence_refs`); the policy-vs-verify semantic families and the evidence-currency
-> contract are unmodeled. With Part E, the model's main remaining backlog.
+> STATUS: REALIZED at the EC slice (2026-07-07) — the `family: policy | verify`
+> dimension on the gate declaration (default policy, zero migration; verify opt-in with
+> a MANDATORY `currency_binding`, `invalid_gate_config` at create otherwise), the
+> no-stale-green and self-report-never-evidence invariants, and F6's structural
+> independence note. Deferred verify-gate currency mechanics → L9 (Absent).
 
 §3.5's lesson: durable state is the authority, an actor's self-report is not evidence. The
 gate MECHANISM already exists (L2 declarative/packaged, L2a process, `evidence_refs`). What is
@@ -354,9 +357,16 @@ ingress schema check — the schema is Part E. Avoid calling both "validation".)
     CERTIFIES.
 - A green result from version N cannot satisfy a version-M transition. An emit can be current
   while its evidence is stale (the attached test log ran on an old commit). Inline process gates
-  get currency by construction (they run now, against the current state); deferred gates and
-  committed-state-reading gates (e.g. `previous_reviewer_verdict`) must record and re-check the
-  certified state, or stale-green slips through.
+  get currency by construction (they run now, against the current state); deferred VERIFY gates
+  must record and re-check the certified state, or stale-green slips through.
+- Two distinct concepts, not to be mixed (the emit-contract memo's F-EC-1, clarified here as
+  Part F folded into the EC build): **evidence currency** is the VERIFY family's contract —
+  which code/state the independent evidence certifies; **committed-policy-input freshness** is
+  a POLICY-family concern — a policy gate reads committed state (e.g.
+  `previous_reviewer_verdict`, which provides separation, not artifact verification), and that
+  input can age. The currency-binding obligation applies to the verify family; a
+  committed-input policy gate's staleness question is a policy-design concern, not an evidence
+  contract.
 
 ### F5. Free-text consistency is a negative guardrail, not authority
 

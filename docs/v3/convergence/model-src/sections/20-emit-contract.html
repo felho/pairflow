@@ -1,0 +1,129 @@
+<section id="emit-contract">
+        <h2 class="level-h"><span class="level-badge">EC</span> The emit contract — validated payloads, gate families, pinned idempotency</h2>
+        <p class="level-sub">An actor emit (<code>PASS</code>, <code>CONVERGED</code>, …) stops being just an event
+        name: it is a <b>machine-validated contract</b>. The template declares each op's payload schema against a
+        <b>versioned vocabulary catalog</b>; the kernel validates generically (structure, never meaning — the
+        de-vocabularization rule held); gates split into two <b>semantic families</b> (policy: may you move NOW;
+        verify: is the claim TRUE, by independent evidence, currency-bound); and idempotency pins to the full
+        contract the payload was accepted under. This closes the last v1-parity gap: v1's <code>pass.ts</code> /
+        <code>converged.ts</code> machine-validation and its verify discipline, de-vocabularized. Realizes
+        <code>core-model-todo.md</code> Parts E (except E6) and F, and the A1 digest — the build-order slice the
+        emit-contract memo's paper test measured (11 declarations, zero new machinery).</p>
+
+        <div class="note">
+          <b>Three boundaries, drawn once.</b> The <b>summary is a headline</b>: required for humans, never
+          parsed, counted, or used as authority — the structured fields carry the load. <b>Self-report is never
+          evidence</b>: a verify gate reads an independent artifact (exit code, diff, build result), never the
+          actor's claim; "a prior actor verdict exists" is <em>separation</em>, not verification — it stays a
+          policy gate. And <b>no stale-green</b>: verify evidence is trusted only with a currency binding to the
+          state it certifies; a green run on an old commit proves nothing about this one.
+        </div>
+
+        <h3 class="view-h"><span class="view-tag runtime">Runtime</span> A concrete trace (a contradiction, a reused key, a clean pass)</h3>
+        <div class="trace">
+          <div class="trace-row"><div class="trace-n">1</div><div class="trace-c">
+            <div class="ev">the reviewer emits <code>CONVERGED</code> — summary says "all good", but <code>findings</code> carries a <code>P1</code></div>
+            <div class="meta">admission passes (op_id fresh, digest recorded); the payload rung reads the op's declared contract: <code>CONVERGED</code> permits severities <code>{P2, P3}</code> only ⇒ <b>Rejected(invalid_field_value, { field_path: findings[0].severity, rule_id: converged.subset })</b> — the diagnostics name the field AND the rule; no state change, the round is not burned</div>
+          </div></div>
+          <div class="trace-row idem"><div class="trace-n">2</div><div class="trace-c">
+            <div class="ev">the reviewer's client retries with a CORRECTED payload — but reuses the same <code>op_id</code></div>
+            <div class="meta">the idempotency rung compares digests: same <code>op_id</code>, different payload/contract identity ⇒ <b>Rejected(op_id_collision)</b> — key misuse is VISIBLE, never a silent drop of the second payload (before the digest, this was a silent <code>Duplicate</code>; the ratified behavior delta). A corrected re-attempt is a NEW logical operation ⇒ fresh <code>op_id</code></div>
+          </div></div>
+          <div class="trace-row"><div class="trace-n">3</div><div class="trace-c">
+            <div class="ev">fresh <code>op_id</code>: <code>CONVERGED { summary, findings: [P2…], … }</code> — well-formed</div>
+            <div class="meta">payload rung ✓ (subset ✓, no contradiction) → the gate pipeline: <code>declarative.threshold</code> (<b>family: policy</b> — round ≥ 2 ✓) and <code>previous_reviewer_verdict</code> (<b>family: policy</b> — separation, not artifact verification) → commit, route to <code>perf_test</code></div>
+          </div></div>
+          <div class="trace-row"><div class="trace-n">4</div><div class="trace-c">
+            <div class="ev">meanwhile on <code>implement.on_pass</code>: the test gate runs (<b>family: verify</b>)</div>
+            <div class="meta">an inline process gate — current BY CONSTRUCTION: it runs now, in this workspace, and its <code>currency_binding</code> records what state the exit code certifies on the <code>GateDecision</code>. A committed-state verify gate would have to record + re-check the same binding — stale-green blocks (a <code>gate_blocked</code> reason, not a new rejection)</div>
+          </div></div>
+          <div class="trace-row"><div class="trace-n">5</div><div class="trace-c">
+            <div class="ev">the next dispatch carries the contract</div>
+            <div class="meta"><code>op_contracts</code> projects, per offerable op, the required fields, domains, assertions, and evidence obligations — from THE SAME lookup the validator uses (<code>emit_contract_of</code>), and <code>available_ops</code> now CALLS <code>capability</code> (the offer↔gate seam closed: an authored profile's filter reaches the packet)</div>
+          </div></div>
+        </div>
+
+        <h3 class="view-h"><span class="view-tag pseudo">Pseudocode</span> The contract machine (diff vs L5)</h3>
+        <p>One lookup (<code>emit_contract_of</code>), one validator (<code>validate_emit_contract</code> — the
+        announced payload rung at its admit-declared call-site home), one offer source (<code>offerable_ops</code>),
+        one digest (<code>payload_digest</code>), the ladder's third re-print (the idempotency rung grows its digest
+        branch), a create-time validator, and the gate family rules in <code>validate_gate_config</code>:</p>
+        <div class="code-diff" aria-label="EC pseudocode" data-old-label="L5 kernel" data-new-label="+ emit contract">
+          <script type="text/plain" class="diff-source" data-code-old-ref="l5-pseudocode"></script>
+          <script type="text/plain" class="diff-source" data-code-new data-code-id="emit-contract-pseudocode">[[@fold emit-contract-pseudocode]]</script>
+        </div>
+        <div class="note pseudo">
+          The help branch calls the SAME <code>validate_emit_contract</code> — its bespoke required-fields loop is
+          gone, and <code>step.help</code> is simply the <code>HELP_REQUEST</code> op's contract (the per-key
+          payload pattern's third instance, now consumed by the fourth's machine). The digest is computed from the
+          <em>basic-valid</em> payload bytes plus the contract identity — never the schema-normalized value, by
+          NECESSITY: the idempotency rung is the ladder's first, the payload rung runs after selection. A
+          schema-less op still digests (collision detection never depends on a schema existing). The digest rides
+          the actor-emit path only in this slice — the operator/lifecycle paths keep plain <code>Duplicate</code>
+          semantics until their contract identity is designed (a named Absent, so the two-regime state is
+          declared, not silent). Behavior deltas, both ratified: the digest delta (a silent Duplicate over a
+          client bug becomes a visible collision, actor-emit path) and the offer delta (the false offer under an
+          authored capability profile disappears).
+        </div>
+
+        <h3 class="view-h"><span class="view-tag domain">Domain</span> What EC adds</h3>
+        <div class="agg">
+          <div class="agg-label">The emit contract — a schema, a catalog, a family, a digest</div>
+          <div class="ents">
+            <div class="ent"><div class="en">EmitContract <span style="font-size:10px;color:var(--muted)">(per op, opt-in)</span></div><div class="fields">declared on the transition edge (<code>payload:</code>) or the op-family declaration (<code>step.help</code>): required fields + mandatory assertions, typed value domains, versioned-vocabulary subsets, cross-field rules, claim-scoped evidence obligations. Resolved by ONE lookup (<code>emit_contract_of</code>) for the validator, the digest, and the projection</div></div>
+            <div class="ent"><div class="en">vocabularies <span style="font-size:10px;color:var(--muted)">(catalog)</span></div><div class="fields">versioned, template-referenced (<code>pairflow.findings.v1</code>: severity/timing/layer) — the kernel validates STRUCTURE (enum/subset), packaged modules interpret meaning; a version pins the transcript's meaning forever</div></div>
+            <div class="ent"><div class="en">gate family <span style="font-size:10px;color:var(--muted)">(policy | verify)</span></div><div class="fields">a semantic dimension on the existing gate declaration, orthogonal to the declarative/packaged/process implementation axis; default <code>policy</code> (zero migration); <code>verify</code> is opt-in and REQUIRES a <code>currency_binding</code> at create (<code>invalid_gate_config</code> otherwise)</div></div>
+            <div class="ent"><div class="en">payload_digest <span style="font-size:10px;color:var(--muted)">(identity)</span></div><div class="fields">basic-valid payload bytes ⊕ op kind ⊕ schema id ⊕ vocabulary versions — idempotency pinned to the FULL contract the payload was accepted under; the idempotency rung's third re-print compares it: same digest ⇒ Duplicate, different ⇒ <code>op_id_collision</code></div></div>
+            <div class="ent"><div class="en">op_contracts <span style="font-size:10px;color:var(--muted)">(packet)</span></div><div class="fields">the E8 projection: per offerable op, the contract requirements the actor must meet — guidance from the same source the kernel enforces, never the source of truth; <code>available_ops ← offerable_ops</code> (the offer calls <code>capability</code>)</div></div>
+          </div>
+        </div>
+
+        <h3 class="view-h"><span class="view-tag invariant">Invariant</span> New at EC</h3>
+        <div class="agg invariant">
+          <div class="agg-label">Emit-contract invariants</div>
+          <div class="ents">
+[[@invariants emit-contract 0]]
+          </div>
+        </div>
+
+        <h3 class="view-h"><span class="view-tag config">Config</span> The template — ops declare their contracts</h3>
+        <p>The reviewer's two emits get their schemas (the per-op schema is what distinguishes <code>PASS</code>
+        from <code>CONVERGED</code>), the findings vocabulary becomes a versioned catalog, and the existing gates
+        get their family tags — diff against the L5 template to see the slice:</p>
+        <div class="code-diff" aria-label="EC template config" data-old-label="L5 template" data-new-label="+ emit contracts">
+          <script type="text/plain" class="diff-source" data-code-old-ref="l5-template-config"></script>
+          <script type="text/plain" class="diff-source" data-code-new data-code-id="emit-contract-template-config">[[@code code/emit-contract-template-config.new.txt]]</script>
+        </div>
+
+        <h3 class="view-h"><span class="view-tag absent">Absent</span> Still not here</h3>
+        <div class="absent-grid">
+[[@absent emit-contract]]
+        </div>
+
+        <h3 class="view-h"><span class="view-tag evidence">Evidence</span> Why we accept EC for now</h3>
+        <div class="note evidence">
+          <ul style="margin:0">
+            <li><b>Scenario coverage:</b> a contradictory CONVERGED (P1 finding) is rejected with field-level
+              diagnostics before any state change; a reused op_id under a corrected payload surfaces as a visible
+              collision; a well-formed emit passes the payload rung, the policy gates, and commits; the verify
+              test gate certifies THIS workspace state; the packet tells the actor the contract up front.</li>
+            <li><b>Invariant coverage:</b> offer = gate (by identity) ✓; summary never authority ✓; self-report
+              never evidence ✓; no stale-green ✓; digest pinned to the full contract ✓; catalog versions pin
+              meaning ✓ — and all L0a–L5 + LC1–LC4 invariants still hold.</li>
+            <li><b>Paper-test reconciliation (emit-contract memo §2):</b> eleven declarations promised, eleven
+              landed — incl. the review round's refinements: the help branch under the generic validator, the
+              same-function offer, the four precisely-scoped rejection names, and the digest's ordering-necessity
+              definition. The two ratified behavior deltas are stated in the pseudocode note.</li>
+            <li><b>v1 parity:</b> this slice models v1's <code>pass.ts</code> / <code>converged.ts</code>
+              machine-validation (required summary, findings vocabulary + subsets, the no-findings explicit
+              assertion, P0/P1 evidence obligations) and the <code>converged_validation</code>-class verify
+              discipline — the last feature-level gap named by todo Parts E/F.</li>
+            <li><b>Known gaps (intended):</b> the structured claim model (E6, later), digest on the
+              operator/lifecycle paths (later), emit contracts on operator intents (later), extended authority
+              fields (later), verify governance across runs (L2), deferred verify currency (L9). Each is in
+              Absent.</li>
+            <li><b>Decision:</b> accepted as the EC baseline (light evidence per playbook §2.1). With this slice,
+              Block A models the full local pairflow-v1 feature set INCLUDING its contract machine.</li>
+          </ul>
+        </div>
+      </section>

@@ -1,0 +1,5 @@
+
+offerable_ops(template, role, step_id) → op set                    # EC — the ONE offer source (Q4 closed): the packet offers exactly what the gate admits
+  step ← template.step(step_id)
+  RETURN (event_types_of(step.transitions) ∪ ({ HELP_REQUEST } IF step.help is declared))   # the offerable surface: transition ops + the declared op-family ops
+         ∩ capability(template, role, step_id)                      # capability CALLED as the function — same-function, not same-condition: an authored profile's filter comes free, and offer↔gate agreement is IDENTITY, not convention (the L5 lesson's strongest form)

@@ -10,12 +10,14 @@ dispatch_intent(instance, template, step_id) → DispatchIntent
     provider ← providerRegistry.resolve(spec.provider)                             # the same pinned-template provider that issued the request
     REQUIRE provider is not none                       # kernel/config invariant (not a business rejection): registry stable for an active run
     runtime_view ← provider.project_for_actor(instance.runtime_context.ready_ref)  # actor-facing projection (L0e); raw ref stays kernel-side
+  ops ← offerable_ops(template, step.role, step_id)                                # EC (Q4 closed) — the offer CALLS capability: an authored profile's filter reaches the packet, the false offer is gone
   packet ← ContextPacket {
     instance_id, expected_version: instance.version, task: instance.task,
     role:          step.role,                                      # dispatched-as role → echoed back as expected_role
     instruction:   step.instruction,
     handoff:       payload_of_transition_into(instance, step_id) ⊕ help_exchange_for(instance, step_id),  # L5 — the stay enrichment: the envelope that brought us here ⊕ this step/round's answered asks (transcript-derived)
-    available_ops: event_types_of(step.transitions) ∪ ({ HELP_REQUEST } IF step.help is declared),   # navigation affordances + the L5 ask affordance; L1 enforces capability in HANDLE. Offer and gate agree on the DEFAULT-derived path (same condition); an explicit authored profile may exclude the op and the offer does not yet consult it — a seam CLOSED at the emit-contract slice (offerable_ops: the offer calls capability itself)
+    available_ops: ops,                                            # exactly what the gate admits — same function, not a mirrored condition
+    op_contracts:  { op → emit_contract_of(step, op) FOR op IN ops },   # EC (E8) — the per-op contract projection, from THE lookup the validator uses: required fields, domains, assertions, evidence obligations (guidance; the source of truth is the template schema + the kernel checks)
     context_blocks: assemble_context_blocks(instance, template, step),   # L2b — rendered, ordered, deduped, with provenance; communication only
     effective_agent_config: resolve_agent_config(template, step, instance),   # resolved portable run intent (was raw agent_config at L0b)
     runtime_context: runtime_view }                              # the projection, or none for a context-free workflow

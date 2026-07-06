@@ -1,0 +1,14 @@
+
+validate_emit_contract(envelope, contract, template) → ok | Rejected   # EC — the announced PAYLOAD rung at its admit-declared home: key-scoped, at the call site, AFTER the selection. One machine, two declared sources (the transition edge's schema / step.help) — both call sites resolve via emit_contract_of
+  IF contract is none THEN RETURN ok                                 # an undeclared op carries no payload contract
+  FOR field IN required_fields(contract):                            # required fields AND mandatory explicit assertions — a missing assertion IS a missing required field (one vocabulary)
+    IF envelope.payload[field] is absent OR empty THEN RETURN Rejected(missing_required_field)
+  FOR field, value IN envelope.payload:                              # PRESENT but forbidden/contradictory values — one name, mandatory diagnostics
+    IF NOT contract.permits(field, value, vocabulary: template.vocabularies)   # type / value domain / versioned-vocabulary subset (the kernel checks STRUCTURE, never meaning)
+       THEN RETURN Rejected(invalid_field_value, { field_path, rule_id: contract.rule_for(field) })   # diagnostics are MANDATORY: field path + the violated rule/schema id
+    IF contract.cross_field_rules.violated_by(field, value, envelope.payload)
+       THEN RETURN Rejected(invalid_field_value, { field_path, rule_id })      # declared consistency rules — the declarative-DSL precedent: structure, not meaning
+  FOR obligation IN contract.evidence_obligations:                   # E7 — claim-scoped, conditional on the claim's value; an envelope-level ref never satisfies a claim-level obligation
+    IF obligation.triggered_by(envelope.payload) AND obligation.ref is absent at the claim
+       THEN RETURN Rejected(missing_evidence_ref, { claim_path, obligation_id })
+  RETURN ok                                                          # the summary (any free text) is NEVER parsed, counted, or consulted here — a human headline only (E5)

@@ -1,0 +1,15 @@
+{
+  "blocks": [
+    {
+      "indent": "            ",
+      "items": [
+        {"id": "offer-equals-gate", "name_html": "the offer IS the gate's answer", "body_html": "<code>available_ops</code> and the contract projection come from <code>offerable_ops</code>, which CALLS <code>capability</code> and reads the same declarations the validator enforces — agreement by identity, never by a mirrored condition"},
+        {"id": "summary-is-a-headline", "name_html": "the summary is a headline, never authority", "body_html": "free text is required for humans and NEVER parsed, counted, or consulted by validation, policy, or verify; the load-bearing claims live in structured fields; a text↔fields consistency check is a negative guardrail only"},
+        {"id": "self-report-is-never-evidence", "name_html": "self-report is never evidence", "body_html": "an actor's success emit is a CLAIM; a verify-family gate reads an independent, machine-checkable artifact (exit code, diff, build result) — never the claim, never the summary; \"a prior actor verdict exists\" is separation, not verification"},
+        {"id": "no-stale-green", "name_html": "no stale-green", "body_html": "a verify gate's evidence is trusted only with a currency binding to the state it certifies — a green result from version N cannot satisfy a version-M transition; the inline process form is current by construction, STATED in its binding, not exempted"},
+        {"id": "digest-pinned-to-the-contract", "name_html": "idempotency is pinned to the full contract", "body_html": "the <code>payload_digest</code> binds the basic-valid payload bytes + op kind + schema id + vocabulary versions — and NEVER the schema-normalized value (the idempotency rung runs first; the payload rung runs after selection); same <code>op_id</code> under a different digest is a visible <code>op_id_collision</code>, never a silent drop"},
+        {"id": "a-version-pins-meaning-forever", "name_html": "a catalog version pins meaning forever", "body_html": "a payload referencing <code>pairflow.findings.v1</code> is read under v1 rules for the life of the transcript; an incompatible vocabulary change is a NEW version, never a silent rewrite"}
+      ]
+    }
+  ]
+}

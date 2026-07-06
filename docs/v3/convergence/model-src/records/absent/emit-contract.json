@@ -1,0 +1,11 @@
+{
+  "indent": "          ",
+  "items": [
+    {"id": "structured-claim-model", "html": "No <b>structured claim model</b> — v1's <code>findings_claim_state</code> / <code>findings_claim_source</code> is a worked example, deliberately NOT finalized from v1 (todo E6, a named open sub-area): per-emit vs per-finding claims, the open → resolved → verified lifecycle, claim-source as catalog vs template vocabulary <span class=\"at\">→ later</span>"},
+    {"id": "digest-on-operator-paths", "html": "No <b>digest on the operator/lifecycle ingress</b> — the idempotency rung's digest branch is supplied by the actor-emit path only; a replayed operator intent with a different payload is still a silent <code>Duplicate</code> until those paths declare their contract identity (the warrant pattern: fields join at their own level) <span class=\"at\">→ later</span>"},
+    {"id": "emit-contract-on-operator-intents", "html": "No <b>per-op payload schemas on the operator intents</b> — decisions and action triggers keep their per-key schemas; generalizing the full emit-contract machine (vocabularies, cross-field rules, evidence obligations) to the operator ingress is a later unification <span class=\"at\">→ later</span>"},
+    {"id": "extended-authority-fields", "html": "No <b>extended authority fields</b> — <code>execution_id</code> (an issued-context token), <code>expected_round</code>, <code>handoff_id</code>, <code>state_fingerprint</code> (todo E1's shape-derived family beyond role/version); <code>execution_id</code> needs issued-context kernel state — its own decision <span class=\"at\">→ later</span>"},
+    {"id": "verify-governance-across-runs", "html": "No <b>verify-evaluator governance beyond one run</b> — evaluator freshness, allowlists, and cross-run evidence policy are the gate-library governance topic <span class=\"at\">→ L2</span>"},
+    {"id": "deferred-verify-currency", "html": "No <b>deferred verify-gate currency mechanics</b> — a deferred (async) verify gate must record and re-check its certified state across the wait; arrives with the deferred-gate lifecycle slice <span class=\"at\">→ L9</span>"}
+  ]
+}

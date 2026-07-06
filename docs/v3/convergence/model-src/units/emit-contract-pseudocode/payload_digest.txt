@@ -1,0 +1,10 @@
+
+payload_digest(envelope, contract) → digest                        # EC — the idempotency rung's digest input (todo A1): a stable, VERSIONED canonicalization
+  # digest input = the basic-valid STRUCTURED payload bytes (post valid_shape, canonical field order)
+  #                ⊕ the op kind ⊕ the contract identity (schema id + referenced vocabulary/catalog versions)
+  # NOT the schema-normalized or semantically interpreted value — by NECESSITY, not taste: the
+  # idempotency rung is the ladder's FIRST rung, the payload rung runs after selection; a
+  # normalized-value digest would depend on a step that has not run yet. This ordering argument is
+  # what makes the definition irreversible.
+  IF contract is none THEN RETURN digest_of(envelope.type ⊕ canonical(envelope.payload))   # a schema-less op still digests — collision detection never depends on a schema existing
+  RETURN digest_of(envelope.type ⊕ canonical(envelope.payload) ⊕ contract.schema_id ⊕ contract.vocabulary_versions)   # pinned to the FULL contract under which the payload is accepted

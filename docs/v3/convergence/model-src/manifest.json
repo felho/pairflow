@@ -294,6 +294,22 @@
           "new": "code/l5-template-config.new.txt"
         }
       ]
+    },
+    {
+      "id": "emit-contract",
+      "file": "sections/20-emit-contract.html",
+      "codes": [
+        {
+          "id": "emit-contract-pseudocode",
+          "baseline": "l5-pseudocode",
+          "fold": true
+        },
+        {
+          "id": "emit-contract-template-config",
+          "baseline": "l5-template-config",
+          "new": "code/emit-contract-template-config.new.txt"
+        }
+      ]
     }
   ]
 }

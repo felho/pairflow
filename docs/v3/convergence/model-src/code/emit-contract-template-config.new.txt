@@ -1,0 +1,159 @@
+
+template:
+  id: local-pair-v0
+  version: 1
+  modes: [code, doc]            # mode extension — declared workflow variants (NOT the agent_config persona `mode:` below); fail-closed
+  default_mode: code            # explicit authoring default; a StartCommand may pass mode: doc. Omit ⇒ a multi-mode start must choose one
+  roles:
+    implementer: { default_actor: codex,  default_agent_config: { mode: builder, model_ref: codex-default-engineer, prompt_profile_refs: [engineer-defaults] } }
+    reviewer:    { default_actor: claude, default_agent_config: { mode: critic } }
+    operator:    { default_actor: human }                          # L3 — the human decision-maker bound to the approval gate
+  start: implement
+  round: { advance_on_arrival_at: [implement] }   # authoring sugar — the loader expands this into explicit per-transition advances_round flags; the kernel reads only those (round always starts at 0 — a fixed convention, not configurable)
+  activation:
+    mode: immediate          # after START + runtime_context ready, activate immediately; no KICKOFF hold
+    # deferred_kickoff → start in a WAITING(kickoff_pending) hold; an operator
+    # kickoff supplies the task and releases the first dispatch (the v1 ideation bubble)
+  slots:                        # L0f — typed holes the repo's ProjectConfig fills (default | required)
+    validation.test_command:         { type: command,        default: "pnpm test" }
+    runtime.worktree.base_branch:    { type: branch,         default: main }
+    runtime.worktree.branch_pattern: { type: branch_pattern, default: "bubble/{instance_id}" }
+    runtime.worktree.bootstrap:      { type: command,        required: false }   # no default — only the repo knows
+  runtime_context:              # RuntimeContextRequirement — required(spec) here; a context-free workflow declares: runtime_context: none
+    kind: worktree
+    provider: pairflow.worktree
+    config:
+      repo: current                                            # literal — not repo-overridable here
+      base_branch:    ${slot:runtime.worktree.base_branch}     # was literal main; default now lives in slots, repo may override
+      branch_pattern: ${slot:runtime.worktree.branch_pattern}  # provider materializes the actual name from instance_id
+      work_mode: worktree                                      # literal — provider-internal variant (worktree | clone)
+      # worktree path defaults to <repo-parent>/.pairflow-worktrees/<repo>/<instance_id>
+    release:                      # LC2 — worktree is teardown-managed, so a release policy is MANDATORY (validate_release_policy at load)
+      policy: required            # required | retained | external — retained/external carry NO kernel release obligation
+      boundaries: [merge_completed]   # LC3 the merge_action's `merged` outcome emits this; LC2 releases the worktree when the merge completes
+      #   (was [terminal] at the L3 anchor; now a post-commit action exists, so the boundary moves past commit/merge — exactly the LC2 deferral)
+  vocabularies:                 # EC (E3) — versioned, template-referenced catalogs; the kernel validates STRUCTURE, packaged modules interpret meaning.
+    pairflow.findings.v1:       # versioning pins a transcript's meaning: a payload referencing v1 is read under v1 rules FOREVER; an incompatible change is v2, never a silent rewrite
+      dimensions:
+        severity: [P0, P1, P2, P3]
+        timing:   [pre_existing, introduced]
+        layer:    [code, test, docs, infra]
+  context_blocks:               # L2b — the catalog: id → { body }; the single body source for rendered packet blocks
+    reviewer-severity-ontology:
+      body: "Rate findings blocker / major / minor; converge only when no blocker or major finding remains."
+    no-converged-before-round-2:
+      body: "Do not emit CONVERGED before round 2 — the convergence gate rejects an earlier attempt and the round is not burned."
+  steps:
+    - id: implement
+      role: implementer
+      instruction: "Build the change for the task."
+      agent_config: { approach: systematic }   # overrides/extends the role default
+      help:                       # L5 — opt-in: THIS step's actor may ask for help mid-step (a HELP_REQUEST emit)
+        payload:
+          question: { required: true }    # the ask must carry a question (validate_help_config: fail at create)
+          refs:     { required: false }   # optional evidence refs (files, diffs, run output)
+      on_pass:                    # PASS → review, now gated by inline test validation (L2a)
+        target: review
+        gates:
+          - uses: external.process               # inline process gate — runs in the worktree, bounded timeout
+            family: verify                       # EC (F1) — an independent-evidence check, never the actor's claim; the semantic family, orthogonal to the process implementation
+            currency_binding: { certifies: workspace_head, recorded_on: GateDecision }   # EC (F4) — inline ⇒ current BY CONSTRUCTION (it runs now, against this state): stated, not exempted
+            modes: [code]                        # surface 1, CODE binding — the runtime test gate; the doc variant resolves without it
+            config:
+              command: "${slot:validation.test_command}"
+              output: { mode: exit_code }        # default; gate_decision_json is opt-in
+              on_exit: { "0": allow, nonzero: block }   # exit→verdict; a warning gate maps nonzero: warn
+              timeout_ms: 600000
+              on_runner_error: block_transition  # spawn / workspace-missing → not a business block (fail_instance is rejected until later)
+              on_timeout: block_transition
+          - uses: pairflow.docs_only_runtime_evidence   # surface 1, DOC binding — same on_pass point; NOT a test runner: its allow produces durable evidence for the intended skip and records its ref on the GateDecision
+            family: verify                       # EC — evidence-producing, not run-state policy
+            currency_binding: { certifies: workspace_head, recorded_on: GateDecision }
+            modes: [doc]
+            config:
+              verification_status: trusted              # the gate's allow result produces this as DURABLE evidence; its ref rides GateDecision.evidence_refs into the run record (L2/L2a; LC1 INV-3)
+              skip_full_rerun: true
+              reason_detail: "docs-only scope, runtime checks not required"   # v1 reviewerTestDirectiveResolver default for document mode
+              reject_runtime_log_refs_when_skip_claimed: true   # v1 docsOnlyRuntimeSkipGuard: a skip claim + runtime log refs is a conflict
+          # Structured-output variant: the process writes a GateDecision JSON to stdout.
+          # Invalid JSON / invalid schema is a runner outcome, not a business block:
+          #   runner_outcome(on_runner_error, malformed_gate_decision_json, log_ref)
+          # - uses: external.process
+          #   config:
+          #     command: "node .pairflow/gates/security-check.js"
+          #     output: { mode: gate_decision_json }
+          #     timeout_ms: 300000
+          #     on_runner_error: block_transition
+          #     on_timeout: block_transition
+    - id: review
+      role: reviewer
+      instruction: "Review the diff; pass back or converge."
+      # no help: declared here — a HELP_REQUEST emitted at review is Rejected(help_not_declared)
+      agent_config: { approach: thorough, prompt_concern_refs: [reviewer-severity-ontology, { ref: docs-only-edit-scope, modes: [doc] }], skill_refs: [test-runner] }   # surface 2 — the modes: tag rides the REF, not the catalog context_blocks entry
+      on_pass:                    # PASS → implement — the reviewer's findings go back to work
+        target: implement
+        payload:                  # EC (E2) — the per-op emit contract: the same per-field shape decisions/actions/help already use
+          summary:  { required: true, headline: true }              # E5 — a human headline ONLY: never parsed, counted, or authority
+          findings: { required: true,                               # the reviewer must say what it found —
+                      vocabulary: pairflow.findings.v1,             #   fields validated against the versioned catalog (E3)
+                      subset: { severity: [P0, P1, P2, P3] },       #   PASS may carry any severity
+                      evidence: { when: "severity in [P0, P1]", ref_kind: command_log } }   # E7 — a claim-scoped obligation: a P0/P1 finding needs its OWN backing ref (an envelope-level ref does not satisfy it)
+      on_converged:               # CONVERGED → perf_test (LC3b): an AUTO action runs before the human gate; the L2 converge gates still guard this transition. recommends moves to the edge that now enters the human gate (perf_test.pass)
+        target: perf_test
+        payload:                  # EC — CONVERGED's contract differs from PASS's: the per-op schema is what distinguishes them
+          summary:     { required: true, headline: true }
+          findings:    { vocabulary: pairflow.findings.v1,
+                         subset: { severity: [P2, P3] } }           # E3 — the TYPE forbids P0/P1 at convergence (a P0 finding and "converged" contradict)
+          no_findings: { assert: explicit, unless: findings }       # E4 — a clean claim is an EXPLICIT assertion, never a silent omission; contradicting both ways is invalid_field_value
+        gates:                    # ordered inline pipeline; first block stops, round not burned
+          - uses: declarative.threshold              # declarative DSL: path / op / value over allowed gate_projection fields
+            family: policy                           # EC (F1) — run-state authorization: is the transition allowed NOW
+            config: { metric: round, op: ">=", value: 2 }
+            context_block_refs: [no-converged-before-round-2]   # L2b — communicate the rule this gate enforces
+          - uses: pairflow.previous_reviewer_verdict # packaged pure pairflow policy
+            family: policy                           # EC (F-EC-1) — separation (verifier ≠ implementer exists), NOT artifact verification: a committed-POLICY-INPUT reader, not an evidence gate
+            config: { required: true }
+    - id: perf_test
+      type: action               # LC3b — an AUTO action: runs on arrival, classifies the result, routes 3 ways (why it is an action, not a gate — a gate only allows/blocks the PASS it is given)
+      trigger: auto              # no operator: arrival claims WAITING(action_running) + emits an ActionIntent; the runner runs post-commit; the ACTION_RESULT event routes
+      action:
+        key: PERF_TEST
+        uses: pairflow.perf_test  # runs the perf suite in the runtime_context workspace
+      outcomes:                  # outcome_key → { target, payload?, emits?, recommends? } | { retry }
+        pass:        { target: human_approval, recommends: approve }   # business pass → the human gate; carries the L3 recommendation (the firing edge into the gate is now perf_test.pass, not review.CONVERGED)
+        regression:  { target: implement, payload: { instruction: "optimize the regressed path" } }   # business → loop to implement (the AUTOMATED request_rework); NOT a retry
+        infra_flake: { retry: { max_attempts: 3, on_exhausted: human_approval } }   # execution flake → bounded self-retry WITHIN the episode, then escalate to the human gate
+    - id: human_approval
+      type: human_gate            # L3 — on arrival the kernel parks WAITING(human_decision); the operator decides, the kernel routes (not dispatched to an agent)
+      role: operator
+      instruction: "Approve the converged change, or request rework."
+      decisions:                  # the human_gate's decisions map IS its transition map, keyed by decision key. A decision carries no lifecycle meaning — the TARGET decides. approve/request_rework are just THIS anchor's keys; the kernel knows no decision names
+        approve:
+          target: commit_action   # → a type: action step (LC3): approve routes into the operator-triggered commit action; a different workflow could target an agent step, another gate, or done
+        request_rework:
+          target: implement       # → implement: an agent step → a new round, the operator's instruction as the handoff
+          payload:                # per-decision required fields — the generic home of the old hardcoded rework-instruction rule
+            instruction: { required: true }   # the implementer must be told exactly what to fix (v1: --message)
+            refs:        { required: false }
+    - id: commit_action
+      type: action               # LC3 — the AUTOMATED sibling of human_gate: a runner produces the outcome, the outcome routes (kernel knows no outcome meanings)
+      role: operator             # operator-triggered: parks WAITING(action_pending) until the operator sends COMMIT
+      trigger: operator_intent
+      action:
+        key: COMMIT               # the trigger event the operator sends
+        uses: pairflow.git_commit # runs `git commit` in the runtime_context workspace (the ProcessGateRunner family)
+        payload: { message: { required: true } }   # TRIGGER-VALIDATION (payload only): conventional message policy (v1 --message); missing/invalid ⇒ reject the trigger, no action runs
+      outcomes:                   # outcome_key → { target, payload?, emits? } — de-vocabularized, like a human_gate's decisions
+        committed:      { target: merge_action }    # ok (carries commit_sha)
+        nothing_staged: { target: commit_action }   # business_failure (workspace reality): nothing to commit ⇒ stay parked, operator retries
+    - id: merge_action
+      type: action
+      role: operator
+      trigger: operator_intent
+      action:
+        key: MERGE
+        uses: pairflow.git_merge  # runs `git merge --no-ff` of the bubble branch into base_branch
+      outcomes:
+        merged:   { target: done, emits: merge_completed }   # ok → done; emits the LC2 release boundary (release.boundaries: [merge_completed])
+        conflict: { target: merge_action }                   # business_failure: merge conflict ⇒ stay parked, operator resolves + re-triggers
+      # the perf_test AUTO action above (LC3b) is the realized form of a mid-flow automated decision point

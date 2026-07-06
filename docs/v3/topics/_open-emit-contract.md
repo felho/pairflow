@@ -1,13 +1,32 @@
 # Open Topic — The Emit-Contract Slice (todo Parts E/F + the A1 digest)
 
 Date: 2026-07-06
-Status: **Paper test EXECUTED (PASS, §2); review round 1 FOLDED (2026-07-07) —
-Q1–Q4 decided (§3), the behavior-delta ratify list opened (§2 verdict), finding
-F-EC-1 logged (§4).** Next: the build small-spec (exact rejection names +
-inventory deltas + the delta ratify list), then the section build. Landing
-place: section `20-emit-contract.html`, block `emit-contract-pseudocode`
-(baseline `l5-pseudocode`) — the ladder re-print lives in the NEW block, so the
-mirror check stays clean on every earlier block.
+Status: **BUILT (2026-07-07) — section EC landed; awaiting the landing review.**
+The paper test (PASS, §2) → review round 1 (Q1–Q4, §3) → review round 2 (the
+build spec's five resolutions, below) → the build. Inventories grew EXACTLY as
+pre-declared: rejections 81→85 (`op_id_collision`, `invalid_field_value`,
+`missing_evidence_ref`, `invalid_gate_config`), invariants 110→116, absent
+134→140; the mirror check is clean (only the two NEW blocks add names; the two
+L5 seam retro-touches are comment-only). Landing place as named: section
+`20-emit-contract.html`, block `emit-contract-pseudocode` (baseline
+`l5-pseudocode`), the ladder re-print in the new block.
+
+Review round 2 resolutions (folded into the build): (a) the HELP_REQUEST
+branch calls the GENERIC `validate_emit_contract` — its bespoke required-fields
+loop is gone, `step.help` IS the op's contract, resolved by the ONE lookup
+(`emit_contract_of`) the transition path and the projection also use (the
+parameterized-contract refinement); (b) gate-config violations get the 4th new
+name `invalid_gate_config` (the existing name stays process-scoped; family
+defaults to policy — zero migration; verify opt-in ⇒ mandatory currency
+binding); (c) the digest input is DEFINED in `payload_digest`: basic-valid
+payload bytes ⊕ op kind ⊕ schema id ⊕ vocabulary versions, NEVER the
+schema-normalized value — by ordering necessity (the idempotency rung runs
+first, the payload rung after selection), with the schema-less-op micro-case
+(it still digests); (d) the digest is SCOPED to the actor-emit path in this
+slice — the operator/lifecycle paths keep plain Duplicate semantics as a named
+Absent; (e) `assemble_context_blocks` deliberately stays on the narrower
+`capability ∩ transitions` intersection (gates are transition-bound; op-family
+gating is a named Absent), stated in its comment.
 
 The last open model backlog of Block A: the actor-emit contract (todo Part E),
 the policy-vs-verify gate families (Part F), and the idempotency digest
@@ -74,12 +93,15 @@ zero new primitives, zero new wait kinds.
 **Deliberate behavior deltas — the ratify list** (the hardening-touch
 discipline: pre-declared, itemized, ratified at the build review):
 
-1. **The digest delta (#11):** today a replayed `op_id` with a DIFFERENT
-   payload is a silent `Duplicate` (a no-op over a client bug); after, it is
-   a visible `Rejected(op_id_collision)`. Ordering pinned: the digest is
-   computed after the per-op schema-identity resolution (the pinned template
-   is loaded pre-admit) and checked AT the idempotency rung — first after
-   load — so key misuse surfaces as a collision, never as
+1. **The digest delta (#11) — SCOPED to the actor-emit path:** today a
+   replayed `op_id` with a DIFFERENT payload is a silent `Duplicate` (a no-op
+   over a client bug); after, on the actor-emit ingress it is a visible
+   `Rejected(op_id_collision)` — the operator/lifecycle paths keep plain
+   Duplicate semantics until their contract identity is designed (a named
+   Absent, so the two-regime state is declared, not silent). Ordering pinned:
+   the digest is computed after the per-op schema-identity resolution (the
+   pinned template is loaded pre-admit) and checked AT the idempotency rung —
+   first after load — so key misuse surfaces as a collision, never as
    `invalid_field_value` or a later stale/state reject.
 2. **The offer delta (Q4):** `available_ops` adopts the `offerable_ops`
    expression — under an authored capability profile the packet's offer
@@ -130,4 +152,7 @@ discipline: pre-declared, itemized, ratified at the build review):
   blurs the verify-family boundary exactly where Q2 sharpens it. Disposition:
   this memo's examples use a stored test/build evidence gate for the verify
   case (applied, Q2); todo F4 gets the two-concept clarification when Part F
-  folds into the section build.
+  folds into the section build. *(Disposition APPLIED 2026-07-07: F4 now
+  distinguishes evidence currency from committed-policy-input freshness, and
+  the config tags `previous_reviewer_verdict` as `family: policy` with the
+  separation-not-verification note.)*

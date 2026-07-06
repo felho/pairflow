@@ -3,7 +3,7 @@
 > GENERATED — do not edit. Regenerate: `python3 tools/v3-model/report_ledger.py`
 > (check.sh fails when this file is stale.)
 
-## 1 · Deferral ledger — 134 Absent items by pointer target
+## 1 · Deferral ledger — 140 Absent items by pointer target
 
 ### L0b (2)
 
@@ -33,13 +33,14 @@
 - `l0b` · authorization — → L1
 - `l0c` · authorization-gate — → L1 / L2
 
-### L2 (5)
+### L2 (6)
 
 - `l0a` · gate-policy — → L2
 - `l0a` · round-limit — → L2
 - `l0b` · gate-policy-round-limit — → L2
 - `l0c` · authorization-gate — → L1 / L2
 - `l1` · gate-policy — → L2
+- `emit-contract` · verify-governance-across-runs — → L2
 
 ### L2a (2)
 
@@ -134,7 +135,7 @@
 - `l5` · durable-ask-channels — → L8
 - `l5` · help-routing — → L8/L10
 
-### L9 (16)
+### L9 (17)
 
 - `l0a` · wait-correlation — → L9
 - `l0d` · human-child-timeout-external-waits — → L3 / L4 / L9
@@ -152,6 +153,7 @@
 - `l4-child` · auto-recovery-of-a-transient-spawn-dispatch-crash — → L9
 - `l5` · help-timeout-escalation — → L9
 - `l5` · deferred-rework-stash — → L6/L9
+- `emit-contract` · deferred-verify-currency — → L9
 
 ### L10 (7)
 
@@ -210,7 +212,7 @@
 - `storage-scope` · durable-write-mechanism — → impl
 - `runtime-teardown` · provider-internals — → impl
 
-### later (33)
+### later (37)
 
 - `l0c` · tool-installation-provisioning — → later
 - `l0e` · teardown-lifecycle — → later
@@ -245,6 +247,10 @@
 - `l4-child` · parent-driven-child-control — → later
 - `l5` · non-blocking-help — → later
 - `l5` · help-emit-gating — → later
+- `emit-contract` · structured-claim-model — → later
+- `emit-contract` · digest-on-operator-paths — → later
+- `emit-contract` · emit-contract-on-operator-intents — → later
+- `emit-contract` · extended-authority-fields — → later
 
 ### later (blob store) (1)
 
@@ -259,7 +265,7 @@
 - `archive-purge` · archive-query-list-cli — → ops
 - `archive-purge` · export-formats-sharing — → ops
 
-## 2 · Invariant catalog — 110 rules
+## 2 · Invariant catalog — 116 rules
 
 - `l0a` · **op-id-idempotency** — op_id idempotency
 - `l0a` · **atomic-transition-commit** — atomic transition commit
@@ -371,8 +377,14 @@
 - `l5` · **reply-rides-the-record** — the reply rides the record
 - `l5` · **undeclared-help-starts-nothing** — an undeclared or unauthorized ask starts nothing
 - `l5` · **blocking-home-one-open-help** — the wait-slot home admits one open ask
+- `emit-contract` · **offer-equals-gate** — the offer IS the gate's answer
+- `emit-contract` · **summary-is-a-headline** — the summary is a headline, never authority
+- `emit-contract` · **self-report-is-never-evidence** — self-report is never evidence
+- `emit-contract` · **no-stale-green** — no stale-green
+- `emit-contract` · **digest-pinned-to-the-contract** — idempotency is pinned to the full contract
+- `emit-contract` · **a-version-pins-meaning-forever** — a catalog version pins meaning forever
 
-## 3 · Rejection registry — 81 distinct `Rejected(...)` reasons
+## 3 · Rejection registry — 85 distinct `Rejected(...)` reasons
 
 - `action_outcome_ambiguous_route` — first appears in `auto-action-pseudocode`
 - `action_outcome_no_route` — first appears in `auto-action-pseudocode`
@@ -409,10 +421,13 @@
 - `invalid_action_step` — first appears in `action-pseudocode`
 - `invalid_decision_gate_config` — first appears in `l3-pseudocode`
 - `invalid_decision_payload_schema` — first appears in `l3-pseudocode`
+- `invalid_field_value` — first appears in `emit-contract-pseudocode`
+- `invalid_gate_config` — first appears in `emit-contract-pseudocode`
 - `invalid_process_gate_config` — first appears in `l2a-pseudocode`
 - `invalid_release_policy` — first appears in `release-pseudocode`
 - `invalid_retry_budget` — first appears in `auto-action-pseudocode`
 - `invalid_shape` — first appears in `l0a-pseudocode`
+- `missing_evidence_ref` — first appears in `emit-contract-pseudocode`
 - `missing_required_field` — first appears in `l3-pseudocode`
 - `missing_role` — first appears in `l1-pseudocode`
 - `missing_version` — first appears in `l0b-pseudocode`
@@ -430,6 +445,7 @@
 - `not_awaiting_this_child` — first appears in `l4-pseudocode`
 - `not_bare_wait` — first appears in `l3-pseudocode`
 - `not_waiting` — first appears in `l3-pseudocode`
+- `op_id_collision` — first appears in `emit-contract-pseudocode`
 - `operator_not_authorized` — first appears in `l3-pseudocode`
 - `override_not_applicable` — first appears in `l3-pseudocode`
 - `override_required` — first appears in `l3-pseudocode`

@@ -1,0 +1,6 @@
+
+emit_contract_of(step, op_type) → EmitContract | none              # EC — THE contract lookup, one source for the validator, the digest, and the packet projection (offer and gate read the same declaration)
+  IF op_type = HELP_REQUEST AND step.help is declared THEN RETURN step.help          # the op-family member's contract IS its declaration (the per-key payload pattern's 3rd instance, consumed by the 4th's machine)
+  edge ← step.transitions[op_type]
+  IF edge is present AND edge.payload is declared THEN RETURN edge.payload           # per-op schema on the transition edge — opt-in per key
+  RETURN none                                                       # an undeclared op has NO payload contract (backward compatible); it still digests — see payload_digest
