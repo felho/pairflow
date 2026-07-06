@@ -140,7 +140,9 @@ What the table itself surfaces (this is the payoff of naming the primitive):
   SPAWNED vs SPAWN_FAILED on one attempt).
 - core-model-todo cross-refs: A2 (derived vs durable marker) is the rule for
   the marker column; B2 (in-band `request_id` correlation) is the correlation
-  column; D1–D4 is the spawn/child-await pair's contract.
+  column; D1 (+ the N-child fan-in contract, since 2026-07-06 in
+  `core-model-future-topic.md` L4 #7–#10) is the spawn/child-await pair's
+  contract.
 - **Errands compose without a sixth primitive.** The LC3a step is two chained
   errands — the ask-errand's completion (`RUN_ACTION`) opens the run-errand in
   the same handler; a failure outcome that re-parks opens a fresh ask-errand;

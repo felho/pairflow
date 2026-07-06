@@ -225,9 +225,11 @@ correct single-child primitive: a parent-owned durable `ChildWorkflowLink` (`chi
 `request_id`, `child_id`, `status`), `CHILD_SPAWNED` with request-id correlation + CAS,
 and `CHILD_LIFECYCLE` correlated by `parent_ref`/`link_id`/`child_id` with fail-closed
 wait conditions — and it explicitly defers fan-out (sequential, one child link per parent
-step). Part D is not a fix for that primitive; it is the contract the real N-child fan-in
-must satisfy when fan-out lands. D1 states the invariant the single-child slot already
-meets; D2–D5 are the N-child extensions.
+step). D1 states the invariant the single-child slot already meets — that is the Block A
+contract, and it stays here. The N-child extensions that used to follow it (D2–D5: the
+fan-in barrier predicate, identity-preserving fan-in, the internal-delivery durability
+contract, and partition-then-verify) bind a Block B-era extension, so they moved to
+`core-model-future-topic.md` L4 #7–#10 together with their guardrails (2026-07-06).
 
 ### D1. The slot is the authorization, not just provenance
 
@@ -247,63 +249,11 @@ The issued per-attempt slot — not the spawn selector key — is what authorize
   never regress to a `parent_workspace_id`-style provenance-only back-ref that is recorded
   but never awaited.
 
-### D2. The fan-in barrier is a predicate over committed child-link rows
+### D2–D5 — moved to `core-model-future-topic.md` L4 #7–#10
 
-Fan-in is committed state, not an in-memory channel or a prompt injection.
-
-- The parent wakes when a declared predicate over the committed child-link rows holds:
-  wait-all, wait-any, quorum, terminal-set, etc. Because the join state is the committed
-  rows themselves, it is crash-safe and resumable by construction.
-- Scope the predicate to the current spawn generation/round, so a re-entered (looping)
-  parent step re-arms the barrier and does not count a prior round's children. This is the
-  LangGraph `consume()` reset expressed as round-scoped link selection (ties to A3
-  identity-per-attempt).
-
-### D3. Fan-in is identity-preserving where identity matters
-
-The parent must know which child produced which result.
-
-- Carry `child_key` / `link_id` → result/lifecycle identity through the join. On mixed
-  outcomes the parent must see which child reached `done` versus `failed` / `cancelled`
-  (a per-child terminal outcome, not a boolean "all done").
-- Anonymous reduction (LangGraph `Send` → `operator.add` style) is acceptable only where
-  it genuinely does not matter which child produced a result. Where it matters, identity
-  must be preserved.
-
-### D4. Internal lifecycle delivery needs an explicit durability contract
-
-`CHILD_LIFECYCLE` is a real cross-instance delivery, not a re-derivable output.
-
-- After a child reaches terminal it may be purged, so the event cannot be reconstructed
-  from the child later. By the A2 test it is a durable side effect (a real delivery), not
-  a re-derivable derived output.
-- The model is already partway: consumption is idempotent and fail-closed (a repeated
-  lifecycle after the parent has already routed is rejected as `not_awaiting_this_child`),
-  and a lost `CHILD_SPAWNED` self-heals when the lifecycle binds `child_id`. The open edge
-  is narrower — a lost terminal `CHILD_LIFECYCLE` after the child is purged.
-- The constraint, whoever owns it: the child's terminal outcome must be durably recorded
-  in a parent-correlated form before the child can wind down — otherwise "reconcile from
-  the surviving link" has nothing to reconcile from.
-- Leave the L4/L8 boundary open; Part D does not decide it. Either persist a
-  parent-correlated transfer/outbox record at terminal commit, or explicitly leave delivery
-  durability to the L8 (durable delivery) / L9 (reconciliation) contract — the model
-  already points this way ("L8 generalizes the channel to external / durable"). Wherever it
-  lands, pin down at-least-once delivery, retry, timeout, and a correlated transfer/timer
-  record.
-- Per the synthesis (§10.1), internal-delivery durability is still an open edge — confirm
-  against that section when it is reviewed.
-
-### D5. Partition-then-verify before relying on fan-in
-
-Prevent overlapping child work at spawn time; verify is the backstop.
-
-- Fan-out should declare non-overlapping work partitions / claims / fingerprints up front
-  so child results cannot collide; fan-in then runs a conflict check. The partition/claim
-  is the load-bearing prevention (no overlap at write time, the §3.1 lesson); the verify
-  is the safety net. A work fingerprint is the claim key (ties to A3 content-addressed
-  identity).
-- This is mostly orchestration / template / gate responsibility, but the L4 contract must
-  not permit the implicit "spawn a few children and let a reducer add them up" pattern.
+The N-child fan-in contract (the barrier predicate, identity-preserving fan-in,
+the internal-delivery durability contract, and partition-then-verify) lives with
+the fan-out future topics it binds, together with its guardrails (2026-07-06).
 
 ## Part E — Actor emit contract (ingress)
 
@@ -502,12 +452,9 @@ Keep the guardrails collected here, but grouped by the logical part they protect
 
 ### Part D guardrails
 
-- Do not treat context injection, anonymous reduction where child identity matters,
-  in-memory subagent handles, or a bare provenance back-ref as a fan-in mechanism.
-- Do not let a fan-in barrier live in process memory or a prompt; the join predicate must
-  be evaluable over committed child-link state.
-- Do not assume internal `CHILD_LIFECYCLE` delivery is reliable without an explicit
-  durability contract (transfer record + retry/timeout, or a declared L8/L9 boundary).
+- Moved with D2–D5 to `core-model-future-topic.md` L4 (the "Fan-in guardrails"
+  block after #10); D1's own guardrail ("never regress to a provenance-only
+  back-ref") lives inside D1 itself.
 
 ### Part E guardrails
 

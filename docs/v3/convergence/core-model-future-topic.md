@@ -630,9 +630,11 @@ held-open socket transport is the anti-pattern.
 Source: the §4 L4 matrix row and the §3.3 fan-in synthesis. The current L4 model
 is acceptable as the single-child primitive: a full child instance, a durable
 `ChildWorkflowLink`, correlated spawn write-back, and terminal
-`CHILD_LIFECYCLE` delivery. `core-model-todo.md` Part D captures the active
-contract for identity-preserving fan-in. These topics are later extensions once
-the primitive grows beyond one sequential child.
+`CHILD_LIFECYCLE` delivery. The single-child invariant the model already meets
+stays in `core-model-todo.md` Part D (D1); the N-child fan-in contract that
+used to live beside it (D2–D5) moved HERE as #7–#10 (2026-07-06), since it
+binds a Block B-era extension, not the Block A model. These topics are later
+extensions once the primitive grows beyond one sequential child.
 
 #### 1. Child cost and token roll-up
 
@@ -684,11 +686,11 @@ model.
   forms over committed child-link rows.
 - Per-generation barrier reset should be explicit; do not rely on an in-memory
   channel `consume()` or anonymous reducer.
-- This is the execution-control counterpart to Part D's fan-in contract.
+- This is the execution-control counterpart to the fan-in contract (#7–#10 below).
 
 #### 5. Internal kernel events need durability levels
 
-Part D names the `CHILD_LIFECYCLE` delivery edge. The broader future topic is
+#9 below names the `CHILD_LIFECYCLE` delivery edge. The broader future topic is
 one internal event model with explicit durability and trigger semantics, not a
 collection of ad hoc wake-up paths.
 
@@ -716,9 +718,87 @@ parallel branches merge into one parent state, the merge contract needs teeth.
   arrival order.
 - A "single writer" reference system does not prove the reducer is safe for a
   leaderless kernel.
-- This extends Part D's "anonymous reduction only where identity does not
+- This extends #8's "anonymous reduction only where identity does not
   matter" rule with a second condition: even anonymous reduction needs valid
   merge laws.
+
+#### 7. The fan-in barrier is a predicate over committed child-link rows
+
+Moved from `core-model-todo.md` Part D (D2), 2026-07-06. Fan-in is committed
+state, not an in-memory channel or a prompt injection.
+
+- The parent wakes when a declared predicate over the committed child-link rows
+  holds: wait-all, wait-any, quorum, terminal-set, etc. Because the join state is
+  the committed rows themselves, it is crash-safe and resumable by construction.
+- Scope the predicate to the current spawn generation/round, so a re-entered
+  (looping) parent step re-arms the barrier and does not count a prior round's
+  children. This is the LangGraph `consume()` reset expressed as round-scoped
+  link selection (ties to `core-model-todo.md` A3 identity-per-attempt).
+
+#### 8. Fan-in is identity-preserving where identity matters
+
+Moved from `core-model-todo.md` Part D (D3), 2026-07-06. The parent must know
+which child produced which result.
+
+- Carry `child_key` / `link_id` → result/lifecycle identity through the join. On
+  mixed outcomes the parent must see which child reached `done` versus `failed` /
+  `cancelled` (a per-child terminal outcome, not a boolean "all done").
+- Anonymous reduction (LangGraph `Send` → `operator.add` style) is acceptable
+  only where it genuinely does not matter which child produced a result. Where it
+  matters, identity must be preserved.
+
+#### 9. Internal lifecycle delivery needs an explicit durability contract
+
+Moved from `core-model-todo.md` Part D (D4), 2026-07-06. `CHILD_LIFECYCLE` is a
+real cross-instance delivery, not a re-derivable output. (The edge exists for
+the single-child model too; its RESOLUTION is the L8/L9 boundary, which is why
+the contract lives here.)
+
+- After a child reaches terminal it may be purged, so the event cannot be
+  reconstructed from the child later. By the A2 test it is a durable side effect
+  (a real delivery), not a re-derivable derived output.
+- The model is already partway: consumption is idempotent and fail-closed (a
+  repeated lifecycle after the parent has already routed is rejected as
+  `not_awaiting_this_child`), and a lost `CHILD_SPAWNED` self-heals when the
+  lifecycle binds `child_id`. The open edge is narrower — a lost terminal
+  `CHILD_LIFECYCLE` after the child is purged.
+- The constraint, whoever owns it: the child's terminal outcome must be durably
+  recorded in a parent-correlated form before the child can wind down —
+  otherwise "reconcile from the surviving link" has nothing to reconcile from.
+- Leave the L4/L8 boundary open; this contract does not decide it. Either
+  persist a parent-correlated transfer/outbox record at terminal commit, or
+  explicitly leave delivery durability to the L8 (durable delivery) / L9
+  (reconciliation) contract — the model already points this way ("L8 generalizes
+  the channel to external / durable"). Wherever it lands, pin down at-least-once
+  delivery, retry, timeout, and a correlated transfer/timer record.
+- Per the synthesis (§10.1), internal-delivery durability is still an open edge —
+  confirm against that section when it is reviewed.
+
+#### 10. Partition-then-verify before relying on fan-in
+
+Moved from `core-model-todo.md` Part D (D5), 2026-07-06. Prevent overlapping
+child work at spawn time; verify is the backstop.
+
+- Fan-out should declare non-overlapping work partitions / claims / fingerprints
+  up front so child results cannot collide; fan-in then runs a conflict check.
+  The partition/claim is the load-bearing prevention (no overlap at write time,
+  the §3.1 lesson); the verify is the safety net. A work fingerprint is the claim
+  key (ties to `core-model-todo.md` A3 content-addressed identity).
+- This is mostly orchestration / template / gate responsibility, but the L4
+  contract must not permit the implicit "spawn a few children and let a reducer
+  add them up" pattern.
+
+Fan-in guardrails (moved from `core-model-todo.md` Part D guardrails,
+2026-07-06):
+
+- Do not treat context injection, anonymous reduction where child identity
+  matters, in-memory subagent handles, or a bare provenance back-ref as a fan-in
+  mechanism.
+- Do not let a fan-in barrier live in process memory or a prompt; the join
+  predicate must be evaluable over committed child-link state.
+- Do not assume internal `CHILD_LIFECYCLE` delivery is reliable without an
+  explicit durability contract (transfer record + retry/timeout, or a declared
+  L8/L9 boundary).
 
 ### L5 — Skill surface and portable capability packaging
 
