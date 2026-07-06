@@ -781,8 +781,13 @@ Waves (each = its own small-spec + review round + commit; flips recorded here):
   LC4 as the force-opened release (hard_purge deliberately NOT an errand), L4 as spawn (full)
   + child await (open-door); the routing phase stays unlabeled until P2's birth (wave 4);
   finding F-W3-1 in the memo §9.)*
-- [ ] Wave 4 — L3: **ChoicePoint + Directive** born (`decisions` joins `transitions`;
+- [x] Wave 4 — L3: **ChoicePoint + Directive** born (`decisions` joins `transitions`;
   `HumanDecisionRequest` joins `DispatchIntent`); the entry handlers become instances.
+  *(Realized: `choice_point` + `directive` + `admit_input` declared at L3; the two operator
+  heads fold into `admit_input` (RESUME_WAIT without an authority rung); the map lookups and
+  directive builders labeled corpus-wide; the wave-3 routing retro-touch done; RUN_ACTION /
+  DELETE_REQUESTED kept conservative (F-W4-1); the one deliberate behavior delta — the
+  operator paths' `missing_version` canonicalization — is F-W4-2; both in the memo §9.)*
 - [ ] Wave 5 — closing sweep: LC3a→L4 fully instance-form; the memo's §3
   reclassification realized; the §8 findings folded in (the P1 opener dimension, the
   P2 stay route, marker-home carrying blocking/non-blocking).

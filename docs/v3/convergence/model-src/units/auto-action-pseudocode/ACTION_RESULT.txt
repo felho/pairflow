@@ -22,6 +22,6 @@ ACTION_RESULT(instance, request_id, raw_result) → Outcome           # LC3b ker
     RETURN Accepted
   COMMIT atomically at expected_version = instance.version:
     instance.transcript.append(ACTION_RESULT { episode_ref: instance.wait.episode_ref, outcome: outcome_key, outputs: raw_result.outputs, evidence_refs: raw_result.evidence_refs })   # evidence (LC1 INV-3): inline T1 + durable T3 refs
-    apply_target_entry_effects(instance, template, step.id, choice.target)   # ROUTE by the outcome — ends the episode (a later fresh entry opens a new episode_ref)
+    apply_target_entry_effects(instance, template, step.id, choice.target)   # ROUTE by the outcome — ends the episode (a later fresh entry opens a new episode_ref). CHOICEPOINT outcomes: kernel-classified (the runner's classified result)
     instance.version ← instance.version + 1
   RETURN Committed(instance.version, post_commit_output(instance, template), boundary_events: emits_of(choice))   # an outcome may emits: a release boundary → LC2

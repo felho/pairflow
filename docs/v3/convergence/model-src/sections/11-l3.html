@@ -113,6 +113,17 @@
           The decision resumes on a dedicated path guarded by <code>wait.kind</code> + request correlation +
           operator authority + <code>op_id</code> + CAS — deliberately not HANDLE’s actor gate. The override
           guard is the only place the machine’s <code>recommendation</code> and the human’s verdict meet.
+          This level is a double birth in the kernel-primitives rebaseline (wave 4): the second keyed
+          routing map (<code>decisions</code> joins <code>transitions</code>) names the <b>ChoicePoint</b> —
+          a declared key set, an authorized selector, guards, and one shared arrival — with its
+          selector-authority dimension (principal-committed / kernel-classified / <em>proposed</em>, the
+          last reserved for L9); and the second outbound ask (<code>HumanDecisionRequest</code> joins
+          <code>DispatchIntent</code>) names the <b>Directive</b> family of projected, deliverable ask
+          objects. The Admission ladder also gains its load-first companion here — <code>admit_input</code>,
+          announced at L0d — and the two operator ops fold their guard heads into it (the rungs were
+          already in canonical order); a malformed intent with no <code>expected_version</code> now gets the
+          ladder's <code>missing_version</code> entry guard instead of comparing absent-vs-current to
+          <code>Stale</code> (recorded as F-W4-2). Behavior is otherwise unchanged.
         </div>
 
         <h3 class="view-h"><span class="view-tag domain">Domain</span> What L3 adds</h3>
@@ -211,6 +222,11 @@
             <li><b>Accepted tradeoff:</b> a parked decision blocks indefinitely (no timeout) — fine for the local MVP; escalation/timeout is the L9 slice.</li>
             <li><b>Invariant coverage:</b> one-visible-transition park ✓; operator-intent not actor-envelope ✓; honest WAITING ✓; override recorded ✓; idempotency/CAS reuse ✓; all L0a–L2b invariants still hold.</li>
             <li><b>Known gaps (intended):</b> ask-human/help reply (L5), deferred rework (L5+watchdog), post-approval resume actions/mechanics (the git commit/merge <em>actions</em> LC3a, resource teardown LC2, archive LC4 — the COMMIT resume <em>contract</em> is done), human-wait timeout (L9), rich schema/channels (L8). Each is in Absent.</li>
+            <li><b>Rebaseline (wave 4):</b> the <b>ChoicePoint</b> (P2) and the <b>Directive</b> (P5) are
+              born here, and <code>admit_input</code> arrives — see the kernel-primitives memo (§6/§9);
+              the rejection/invariant registries are identical before and after; the one deliberate
+              behavior delta (the operator paths' <code>missing_version</code> canonicalization) is
+              F-W4-2.</li>
             <li><b>Decision:</b> accepted as the L3 baseline (light evidence per playbook §2.1).</li>
           </ul>
         </div>

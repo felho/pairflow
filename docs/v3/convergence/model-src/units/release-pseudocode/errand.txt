@@ -9,7 +9,7 @@
 #     → intent produced POST-COMMIT (produce-not-perform — the directive phase)
 #       → external work (provider / runner / human / child kernel-path)
 #         → correlated completion arrives (guards: our request? still current?)
-#           → keyed routing / state advance, one CAS commit
+#           → keyed routing / state advance, one CAS commit (the keyed route is a ChoicePoint)
 #
 # Declared dimensions per instance: marker slot & its home · directive + addressee class ·
 # completion event(s) · correlation rule (the warrant class you met at L1 — request

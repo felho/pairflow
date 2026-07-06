@@ -1,0 +1,14 @@
+
+# ─── DIRECTIVE (P5) — the outbound ask family: one concept, an addressee class, a projected payload ───
+# Born at L3: a second outbound ask arrives (HumanDecisionRequest joins DispatchIntent), so the family
+# gets its name. A directive is a PROJECTED, DELIVERABLE ask object — derived post-commit, never a
+# mutation; a later level (L8, durable delivery) generalizes ONE family's transport, not five
+# unrelated objects.
+# NOT a directive: a transport-direct effect (TRY provider.provision / provider.release) is another
+# realization of an errand's directive phase — an in-process call, not a projected deliverable object.
+# Members existing by L3:
+#   DispatchIntent       (L0b)   addressee: actor      the step dispatch
+#   HumanDecisionRequest (L3)    addressee: operator   the decision ask (recommendation + declared keys)
+# Later members are labeled in their own blocks: ActionRequest (LC3a, operator), ActionIntent (LC3b,
+# runner), SpawnIntent (L4, kernel CREATE_INSTANCE). Future members already anticipated by the
+# deferred levels: CapabilityIntent (L7), RememberIntent / LinkIntent (L11).

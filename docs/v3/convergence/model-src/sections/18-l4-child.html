@@ -167,6 +167,9 @@
               <code>SpawnIntent</code> directive → correlated <code>CHILD_SPAWNED</code>/<code>FAILED</code>),
               child await is open-door (marker only; the completion is the child's lifecycle). See the
               kernel-primitives memo (§6/§9); behavior unchanged.</li>
+            <li><b>Rebaseline (wave 4):</b> the <code>wait_for</code> route is labeled a <b>ChoicePoint</b>
+              (kernel-classified — the child's terminal commit) and <code>SpawnIntent</code> a
+              <b>Directive</b> member; behavior unchanged.</li>
           </ul>
         </div>
       </section>

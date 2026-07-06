@@ -3934,6 +3934,59 @@ validate_decision_gates(template) → ok | Rejected                     # L3 —
        THEN RETURN Rejected(recommends_unknown_decision)              # a recommendation must name an existing decision key of its target gate
   RETURN ok
 
+# ─── CHOICEPOINT (P2) — guarded keyed selection; the one structure behind the routing maps ───
+# Born at L3: a second keyed routing map arrives (decisions joins transitions), so the shape gets its
+# name. A position OFFERS a declared key set; an AUTHORIZED SELECTOR picks one key; guards validate;
+# the commit routes by the key through the shared arrival (apply_target_entry_effects). The kernel
+# knows no key names (de-vocabularized per map) — the ChoicePoint de-vocabularizes the map kinds
+# themselves.
+# Selector authority — who may pick (two values live today; the third is named now so a later level
+# finds its slot ready-made):
+#   principal-committed   an authorized principal picks, and the commit is theirs
+#   kernel-classified     no accountable selector: the kernel derives the key and commits — by
+#                         classifying a result, or by validating-and-routing an incoming event's
+#                         type as the key
+#   proposed              reserved (→ L9): the selector may only propose, never commit
+# Maps existing by L3 — the instances:
+#   transitions (L0b)   agent step    principal-committed (the bound actor; gates run before commit)
+#   decisions   (L3)    human_gate    principal-committed (the bound operator; the override rule is
+#                                     the instance's irreducible logic, not a ChoicePoint phase)
+#   on_resume   (L3)    wait step     kernel-classified (the event's validated-and-routed type)
+# Later maps are labeled in their own blocks: outcomes (LC3a/b — the runner's classified result),
+# wait_for (L4 — the child's terminal commit).
+
+# ─── DIRECTIVE (P5) — the outbound ask family: one concept, an addressee class, a projected payload ───
+# Born at L3: a second outbound ask arrives (HumanDecisionRequest joins DispatchIntent), so the family
+# gets its name. A directive is a PROJECTED, DELIVERABLE ask object — derived post-commit, never a
+# mutation; a later level (L8, durable delivery) generalizes ONE family's transport, not five
+# unrelated objects.
+# NOT a directive: a transport-direct effect (TRY provider.provision / provider.release) is another
+# realization of an errand's directive phase — an in-process call, not a projected deliverable object.
+# Members existing by L3:
+#   DispatchIntent       (L0b)   addressee: actor      the step dispatch
+#   HumanDecisionRequest (L3)    addressee: operator   the decision ask (recommendation + declared keys)
+# Later members are labeled in their own blocks: ActionRequest (LC3a, operator), ActionIntent (LC3b,
+# runner), SpawnIntent (L4, kernel CREATE_INSTANCE). Future members already anticipated by the
+# deferred levels: CapabilityIntent (L7), RememberIntent / LinkIntent (L11).
+
+# ─── ADMISSION gains its load-first companion (L3) — announced at L0d, arriving with the operator ops ───
+# admit_input owns the load: one call either rejects an unknown instance or runs the full ladder —
+# the loaded instance leaves this helper ONLY through Accepted.
+# Expectations are evaluated LAZILY, each at its own rung, in rung order. An expectation may read the
+# loaded instance, its pinned template (definitionStore.load — pinned immutable version), and step
+# positions — all infallible, side-effect-free reads over committed state (load-time validation
+# guarantees them); if such a read ever grows a reject/assert branch, that is a new finding, not a
+# silent property.
+# The payload rung stays key-scoped at the call sites: it runs AFTER the ChoicePoint selection, so
+# its reject names live there. HANDLE deliberately keeps its inline load: its lineage runs from L0a,
+# and folding only this level's copy would fork it — the asymmetry is chosen, not overlooked.
+admit_input(input, expect) → Accepted(instance) | Duplicate | Stale | Rejected
+  instance ← instanceStore.load(input.instance_id)
+  IF instance is none THEN RETURN Rejected(unknown_instance)
+  outcome ← admit_loaded(instance, expect, input)
+  IF outcome ≠ Accepted THEN RETURN outcome
+  RETURN Accepted(instance)
+
 RECEIVE(input) → Outcome                                               # one kernel entry; route by input source class
   MATCH input.source:
     operator_intent → dispatch to CREATE_INSTANCE / START / KICKOFF / SUBMIT_DECISION / RESUME_WAIT / CANCEL   # lifecycle + human-decision + wait-resume intents (later resume sources, e.g. child events, arrive as kernel_event on the same RESUME_WAIT)
@@ -3996,23 +4049,26 @@ KICKOFF(instance, task) → Outcome                                     # operat
   RETURN activate(instance)
 
 SUBMIT_DECISION(decision) → Outcome                                  # operator_intent — a KICKOFF sibling; resumes WAITING(human_decision). decision = { instance_id, op_id, expected_version, request_ref, verdict, override?, payload?, by }. verdict is a DECLARED decision key — the kernel knows no decision names
-  instance ← instanceStore.load(decision.instance_id)
-  IF instance is none                              THEN RETURN Rejected(unknown_instance)
-  IF instance.transcript.has(decision.op_id)       THEN RETURN Duplicate                       # idempotency — same (instance_id, op_id) scope as HANDLE
-  IF instance.kernel_status ≠ WAITING OR instance.wait.kind ≠ human_decision
-                                                   THEN RETURN Rejected(not_awaiting_decision)  # only a parked human_gate accepts a decision
-  IF decision.request_ref ≠ instance.wait.request_ref  THEN RETURN Rejected(decision_request_mismatch)   # correlation to THIS pending DECISION_REQUEST
-  IF decision.expected_version ≠ instance.version  THEN RETURN Stale(instance.version)          # CAS precheck (actor-supplied stale-intent, as in HANDLE)
+  # ADMISSION via admit_input (load-first, born at L3) — the operator-intent rungs: idempotency → lifecycle/state → correlation → staleness → authority
+  admitted ← admit_input(decision, expect: {
+    op_id:     decision.op_id,                                                                # same (instance_id, op_id) scope as HANDLE
+    state:     kernel_status = WAITING AND wait.kind = human_decision → Rejected(not_awaiting_decision),   # only a parked human_gate accepts a decision
+    correlate: wait.request_ref = decision.request_ref → Rejected(decision_request_mismatch), # correlation to THIS pending DECISION_REQUEST
+    version:   decision.expected_version,                                                     # CAS precheck (actor-supplied stale-intent, as in HANDLE)
+    authority: { claim:   decision.by,
+                 granted: instance.binding[template.step(instance.current_step).role],        # lazy positional read — evaluated only at this rung
+                 mismatch → Rejected(operator_not_authorized) } })                            # operator authority on THIS path — NOT the L1 actor-envelope gate (a human decision is a different input class)
+  IF admitted ≠ Accepted THEN RETURN admitted                       # Duplicate | Stale(v) | Rejected(…) pass through unchanged
+  instance ← admitted.instance
   template ← definitionStore.load(instance.template_ref)
   step     ← template.step(instance.current_step)                   # the human_gate
-  IF decision.by ≠ instance.binding[step.role]     THEN RETURN Rejected(operator_not_authorized)   # operator authority on THIS path — NOT the L1 actor-envelope gate (a human decision is a different input class)
-  choice   ← step.decisions[decision.verdict]                       # a human_gate's decisions map IS its transition map, keyed by decision key; the kernel routes by the key — it does not know what "approve" means
+  choice   ← step.decisions[decision.verdict]                       # a human_gate's decisions map IS its transition map, keyed by decision key; the kernel routes by the key — it does not know what "approve" means. CHOICEPOINT decisions: principal-committed selection by the bound operator
   IF choice is none                                THEN RETURN Rejected(unknown_decision)        # the verdict must be one of the gate's declared decision keys
   # required payload fields — declared per decision (the anchor's request_rework requires a non-empty instruction); generic, NO verdict name is hardcoded
   FOR field IN required_fields(choice):
     IF decision.payload[field] is absent OR empty  THEN RETURN Rejected(missing_required_field)
   request  ← pending_decision_request(instance)                     # the DECISION_REQUEST recorded on entry
-  # override (the fiduciary invariant): override is meaningful ONLY against a recorded recommendation — choosing against the machine must be explicit and recorded
+  # override (the fiduciary invariant): override is meaningful ONLY against a recorded recommendation — choosing against the machine must be explicit and recorded. The decisions instance's irreducible rule, not a ChoicePoint phase
   against_recommendation ← request.recommendation is present AND decision.verdict ≠ request.recommendation
   IF against_recommendation     AND NOT decision.override THEN RETURN Rejected(override_required)        # went against the recommendation without flagging it
   IF NOT against_recommendation AND decision.override     THEN RETURN Rejected(override_not_applicable)  # no recommendation, or agreeing with it ⇒ there is nothing to override
@@ -4028,7 +4084,7 @@ SUBMIT_DECISION(decision) → Outcome                                  # operato
 required_fields(choice) → [field]                                   # the payload fields a decision declares required (e.g. request_rework ⇒ instruction); empty when the decision needs no payload — the generic replacement for the hardcoded rework-instruction rule
   RETURN [ f FOR (f, spec) IN (choice.payload ?? {}) WHERE spec.required ]
 
-apply_target_entry_effects(instance, template, from_step_id, target) → void                # L3 — apply the kernel effects of entering the already-chosen target: position (current_step), round advancement, and the target-type lifecycle outcome below. Shared by HANDLE / SUBMIT_DECISION / RESUME_WAIT so the entry paths never drift
+apply_target_entry_effects(instance, template, from_step_id, target) → void                # L3 — apply the kernel effects of entering the already-chosen target: position (current_step), round advancement, and the target-type lifecycle outcome below. Shared by HANDLE / SUBMIT_DECISION / RESUME_WAIT so the entry paths never drift — the shared ARRIVAL every ChoicePoint routes through
   instance.current_step ← target
   IF advances_round(from_step_id, target) THEN instance.round ← instance.round + 1   # transition semantics; transcript-reconstructable
   IF target is terminal THEN COMPLETE(instance) ; RETURN            # the existing HANDLE terminal-step rule → TERMINAL(done); no new terminal semantics at L3
@@ -4061,14 +4117,14 @@ park_for_wait(instance, step) → void                               # L3 — ar
   instance.kernel_status ← WAITING
   instance.wait ← { kind: step.wait.kind, requested_by: step.id, resume_events: step.wait.resume_events }   # e.g. commit_pending ⇐ [COMMIT], merge_pending ⇐ [MERGE], process_pending ⇐ [PERF_TEST_RESULT]; RESUME_WAIT is the handler (L3) — the resume ACTION is later; the L0d terminal set (done | failed | cancelled) is untouched
 
-post_commit_output(instance, template) → DispatchIntent | HumanDecisionRequest | none   # L3 — pure derivation (NO mutation): read the post-commit kernel_status that apply_target_entry_effects just set and select the outbound effect. The read-side dual of apply_target_entry_effects (which sets the status; this returns what to deliver)
+post_commit_output(instance, template) → DispatchIntent | HumanDecisionRequest | none   # L3 — pure derivation (NO mutation): read the post-commit kernel_status that apply_target_entry_effects just set and select the outbound effect. The read-side dual of apply_target_entry_effects (which sets the status; this returns what to deliver) — selects which DIRECTIVE (if any) leaves post-commit
   IF instance.kernel_status = TERMINAL THEN RETURN none
   IF instance.kernel_status = WAITING THEN
      IF instance.wait.kind = human_decision THEN RETURN human_decision_request(instance, template)   # parked on a human_gate ⇒ the Ask
      RETURN none                                                  # parked on a bare wait (e.g. commit_pending) ⇒ no output; it waits for an inbound RESUME_WAIT event
   RETURN dispatch_intent(instance, template, instance.current_step)   # ACTIVE ⇒ agent dispatch
 
-human_decision_request(instance, template) → HumanDecisionRequest   # L3 — the human-facing analog of DispatchIntent (the Ask); local/manual delivery, durable channel L8
+human_decision_request(instance, template) → HumanDecisionRequest   # L3 — the human-facing analog of DispatchIntent (the Ask); local/manual delivery, durable channel L8. DIRECTIVE member (addressee: operator)
   step     ← template.step(instance.current_step)
   request  ← pending_decision_request(instance)
   operator ← instance.binding[step.role]                            # the human bound to the operator role
@@ -4081,16 +4137,19 @@ human_decision_request(instance, template) → HumanDecisionRequest   # L3 — t
     decision_requirements: requirements_for(step.decisions) }       # per-decision required payload fields, from the SAME declared decisions — e.g. request_rework ⇒ instruction required (the submit path rejects an empty one)
 
 RESUME_WAIT(event) → Outcome                                         # operator/kernel event resumes a type: wait step — the BARE-wait dual of SUBMIT_DECISION; generalizes KICKOFF. event = { instance_id, op_id, expected_version, type }
-  instance ← instanceStore.load(event.instance_id)
-  IF instance is none                              THEN RETURN Rejected(unknown_instance)
-  IF instance.transcript.has(event.op_id)          THEN RETURN Duplicate                       # idempotency — same (instance_id, op_id) scope as HANDLE
-  IF instance.kernel_status ≠ WAITING              THEN RETURN Rejected(not_waiting)            # only a parked instance can be resumed
-  IF event.type ∉ instance.wait.resume_events      THEN RETURN Rejected(resume_event_mismatch)  # correlation to THIS open wait's declared resume class
-  IF event.expected_version ≠ instance.version     THEN RETURN Stale(instance.version)          # CAS precheck
+  # ADMISSION via admit_input (load-first, born at L3) — no authority rung on this path today: the
+  # resume is kernel-classified (an authority hook is a later slice), so the expectation is simply absent
+  admitted ← admit_input(event, expect: {
+    op_id:     event.op_id,                                                                   # same (instance_id, op_id) scope as HANDLE
+    state:     kernel_status = WAITING → Rejected(not_waiting),                               # only a parked instance can be resumed
+    correlate: event.type ∈ wait.resume_events → Rejected(resume_event_mismatch),             # correlation to THIS open wait's declared resume class
+    version:   event.expected_version })                                                      # CAS precheck
+  IF admitted ≠ Accepted THEN RETURN admitted                       # Duplicate | Stale(v) | Rejected(…) pass through unchanged
+  instance ← admitted.instance
   template ← definitionStore.load(instance.template_ref)
-  IF NOT is_wait_step(template, instance.current_step)  THEN RETURN Rejected(not_bare_wait)     # RESUME_WAIT resumes ONLY a type: wait step; a decision wait resumes via SUBMIT_DECISION
+  IF NOT is_wait_step(template, instance.current_step)  THEN RETURN Rejected(not_bare_wait)     # wait-SHAPE guard, not a rung: RESUME_WAIT resumes ONLY a type: wait step; a decision wait resumes via SUBMIT_DECISION
   step     ← template.step(instance.current_step)
-  target   ← step.on_resume[event.type]
+  target   ← step.on_resume[event.type]                             # CHOICEPOINT on_resume: kernel-classified — the event's validated-and-routed type is the key
   IF target is none                                THEN RETURN Rejected(no_resume_transition)   # the wait step must declare this resume route
   COMMIT atomically at expected_version = instance.version:
     instance.transcript.append(WAIT_RESUMED { op_id: event.op_id, kind: instance.wait.kind, event: event.type })   # the resume rides the transcript; a result payload, an authority hook, and the actual action (e.g. running git commit) are later slices
@@ -4142,7 +4201,7 @@ HANDLE envelope → Outcome
     envelope)
   IF outcome ≠ Accepted THEN RETURN outcome                     # Duplicate | Stale(v) | Rejected(…) pass through unchanged
 
-  target ← step.transitions[envelope.type]   # navigation (L0b): does this action exist here?
+  target ← step.transitions[envelope.type]   # navigation (L0b): does this action exist here? CHOICEPOINT transitions: principal-committed selection by the bound actor
   IF target is none                       THEN RETURN Rejected(no_transition)
 
   # L1: action authorization — exists as a transition, but may this role emit it here?
@@ -4224,6 +4283,17 @@ dispatch_intent(instance, template, step_id) → DispatchIntent
           The decision resumes on a dedicated path guarded by <code>wait.kind</code> + request correlation +
           operator authority + <code>op_id</code> + CAS — deliberately not HANDLE’s actor gate. The override
           guard is the only place the machine’s <code>recommendation</code> and the human’s verdict meet.
+          This level is a double birth in the kernel-primitives rebaseline (wave 4): the second keyed
+          routing map (<code>decisions</code> joins <code>transitions</code>) names the <b>ChoicePoint</b> —
+          a declared key set, an authorized selector, guards, and one shared arrival — with its
+          selector-authority dimension (principal-committed / kernel-classified / <em>proposed</em>, the
+          last reserved for L9); and the second outbound ask (<code>HumanDecisionRequest</code> joins
+          <code>DispatchIntent</code>) names the <b>Directive</b> family of projected, deliverable ask
+          objects. The Admission ladder also gains its load-first companion here — <code>admit_input</code>,
+          announced at L0d — and the two operator ops fold their guard heads into it (the rungs were
+          already in canonical order); a malformed intent with no <code>expected_version</code> now gets the
+          ladder's <code>missing_version</code> entry guard instead of comparing absent-vs-current to
+          <code>Stale</code> (recorded as F-W4-2). Behavior is otherwise unchanged.
         </div>
 
         <h3 class="view-h"><span class="view-tag domain">Domain</span> What L3 adds</h3>
@@ -4428,6 +4498,11 @@ template:
             <li><b>Accepted tradeoff:</b> a parked decision blocks indefinitely (no timeout) — fine for the local MVP; escalation/timeout is the L9 slice.</li>
             <li><b>Invariant coverage:</b> one-visible-transition park ✓; operator-intent not actor-envelope ✓; honest WAITING ✓; override recorded ✓; idempotency/CAS reuse ✓; all L0a–L2b invariants still hold.</li>
             <li><b>Known gaps (intended):</b> ask-human/help reply (L5), deferred rework (L5+watchdog), post-approval resume actions/mechanics (the git commit/merge <em>actions</em> LC3a, resource teardown LC2, archive LC4 — the COMMIT resume <em>contract</em> is done), human-wait timeout (L9), rich schema/channels (L8). Each is in Absent.</li>
+            <li><b>Rebaseline (wave 4):</b> the <b>ChoicePoint</b> (P2) and the <b>Directive</b> (P5) are
+              born here, and <code>admit_input</code> arrives — see the kernel-primitives memo (§6/§9);
+              the rejection/invariant registries are identical before and after; the one deliberate
+              behavior delta (the operator paths' <code>missing_version</code> canonicalization) is
+              F-W4-2.</li>
             <li><b>Decision:</b> accepted as the L3 baseline (light evidence per playbook §2.1).</li>
           </ul>
         </div>
@@ -4881,7 +4956,7 @@ validate_decision_gates(template) → ok | Rejected                     # L3 —
 #     → intent produced POST-COMMIT (produce-not-perform — the directive phase)
 #       → external work (provider / runner / human / child kernel-path)
 #         → correlated completion arrives (guards: our request? still current?)
-#           → keyed routing / state advance, one CAS commit
+#           → keyed routing / state advance, one CAS commit (the keyed route is a ChoicePoint)
 #
 # Declared dimensions per instance: marker slot & its home · directive + addressee class ·
 # completion event(s) · correlation rule (the warrant class you met at L1 — request
@@ -5046,23 +5121,26 @@ KICKOFF(instance, task) → Outcome                                     # operat
   RETURN activate(instance)
 
 SUBMIT_DECISION(decision) → Outcome                                  # operator_intent — a KICKOFF sibling; resumes WAITING(human_decision). decision = { instance_id, op_id, expected_version, request_ref, verdict, override?, payload?, by }. verdict is a DECLARED decision key — the kernel knows no decision names
-  instance ← instanceStore.load(decision.instance_id)
-  IF instance is none                              THEN RETURN Rejected(unknown_instance)
-  IF instance.transcript.has(decision.op_id)       THEN RETURN Duplicate                       # idempotency — same (instance_id, op_id) scope as HANDLE
-  IF instance.kernel_status ≠ WAITING OR instance.wait.kind ≠ human_decision
-                                                   THEN RETURN Rejected(not_awaiting_decision)  # only a parked human_gate accepts a decision
-  IF decision.request_ref ≠ instance.wait.request_ref  THEN RETURN Rejected(decision_request_mismatch)   # correlation to THIS pending DECISION_REQUEST
-  IF decision.expected_version ≠ instance.version  THEN RETURN Stale(instance.version)          # CAS precheck (actor-supplied stale-intent, as in HANDLE)
+  # ADMISSION via admit_input (load-first, born at L3) — the operator-intent rungs: idempotency → lifecycle/state → correlation → staleness → authority
+  admitted ← admit_input(decision, expect: {
+    op_id:     decision.op_id,                                                                # same (instance_id, op_id) scope as HANDLE
+    state:     kernel_status = WAITING AND wait.kind = human_decision → Rejected(not_awaiting_decision),   # only a parked human_gate accepts a decision
+    correlate: wait.request_ref = decision.request_ref → Rejected(decision_request_mismatch), # correlation to THIS pending DECISION_REQUEST
+    version:   decision.expected_version,                                                     # CAS precheck (actor-supplied stale-intent, as in HANDLE)
+    authority: { claim:   decision.by,
+                 granted: instance.binding[template.step(instance.current_step).role],        # lazy positional read — evaluated only at this rung
+                 mismatch → Rejected(operator_not_authorized) } })                            # operator authority on THIS path — NOT the L1 actor-envelope gate (a human decision is a different input class)
+  IF admitted ≠ Accepted THEN RETURN admitted                       # Duplicate | Stale(v) | Rejected(…) pass through unchanged
+  instance ← admitted.instance
   template ← definitionStore.load(instance.template_ref)
   step     ← template.step(instance.current_step)                   # the human_gate
-  IF decision.by ≠ instance.binding[step.role]     THEN RETURN Rejected(operator_not_authorized)   # operator authority on THIS path — NOT the L1 actor-envelope gate (a human decision is a different input class)
-  choice   ← step.decisions[decision.verdict]                       # a human_gate's decisions map IS its transition map, keyed by decision key; the kernel routes by the key — it does not know what "approve" means
+  choice   ← step.decisions[decision.verdict]                       # a human_gate's decisions map IS its transition map, keyed by decision key; the kernel routes by the key — it does not know what "approve" means. CHOICEPOINT decisions: principal-committed selection by the bound operator
   IF choice is none                                THEN RETURN Rejected(unknown_decision)        # the verdict must be one of the gate's declared decision keys
   # required payload fields — declared per decision (the anchor's request_rework requires a non-empty instruction); generic, NO verdict name is hardcoded
   FOR field IN required_fields(choice):
     IF decision.payload[field] is absent OR empty  THEN RETURN Rejected(missing_required_field)
   request  ← pending_decision_request(instance)                     # the DECISION_REQUEST recorded on entry
-  # override (the fiduciary invariant): override is meaningful ONLY against a recorded recommendation — choosing against the machine must be explicit and recorded
+  # override (the fiduciary invariant): override is meaningful ONLY against a recorded recommendation — choosing against the machine must be explicit and recorded. The decisions instance's irreducible rule, not a ChoicePoint phase
   against_recommendation ← request.recommendation is present AND decision.verdict ≠ request.recommendation
   IF against_recommendation     AND NOT decision.override THEN RETURN Rejected(override_required)        # went against the recommendation without flagging it
   IF NOT against_recommendation AND decision.override     THEN RETURN Rejected(override_not_applicable)  # no recommendation, or agreeing with it ⇒ there is nothing to override
@@ -5078,7 +5156,7 @@ SUBMIT_DECISION(decision) → Outcome                                  # operato
 required_fields(choice) → [field]                                   # the payload fields a decision declares required (e.g. request_rework ⇒ instruction); empty when the decision needs no payload — the generic replacement for the hardcoded rework-instruction rule
   RETURN [ f FOR (f, spec) IN (choice.payload ?? {}) WHERE spec.required ]
 
-apply_target_entry_effects(instance, template, from_step_id, target) → void                # L3 — apply the kernel effects of entering the already-chosen target: position (current_step), round advancement, and the target-type lifecycle outcome below. Shared by HANDLE / SUBMIT_DECISION / RESUME_WAIT so the entry paths never drift
+apply_target_entry_effects(instance, template, from_step_id, target) → void                # L3 — apply the kernel effects of entering the already-chosen target: position (current_step), round advancement, and the target-type lifecycle outcome below. Shared by HANDLE / SUBMIT_DECISION / RESUME_WAIT so the entry paths never drift — the shared ARRIVAL every ChoicePoint routes through
   instance.current_step ← target
   IF advances_round(from_step_id, target) THEN instance.round ← instance.round + 1   # transition semantics; transcript-reconstructable
   IF target is terminal THEN COMPLETE(instance) ; RETURN            # the existing HANDLE terminal-step rule → TERMINAL(done); no new terminal semantics at L3
@@ -5111,14 +5189,14 @@ park_for_wait(instance, step) → void                               # L3 — ar
   instance.kernel_status ← WAITING
   instance.wait ← { kind: step.wait.kind, requested_by: step.id, resume_events: step.wait.resume_events }   # e.g. commit_pending ⇐ [COMMIT], merge_pending ⇐ [MERGE], process_pending ⇐ [PERF_TEST_RESULT]; RESUME_WAIT is the handler (L3) — the resume ACTION is later; the L0d terminal set (done | failed | cancelled) is untouched
 
-post_commit_output(instance, template) → DispatchIntent | HumanDecisionRequest | none   # L3 — pure derivation (NO mutation): read the post-commit kernel_status that apply_target_entry_effects just set and select the outbound effect. The read-side dual of apply_target_entry_effects (which sets the status; this returns what to deliver)
+post_commit_output(instance, template) → DispatchIntent | HumanDecisionRequest | none   # L3 — pure derivation (NO mutation): read the post-commit kernel_status that apply_target_entry_effects just set and select the outbound effect. The read-side dual of apply_target_entry_effects (which sets the status; this returns what to deliver) — selects which DIRECTIVE (if any) leaves post-commit
   IF instance.kernel_status = TERMINAL THEN RETURN none
   IF instance.kernel_status = WAITING THEN
      IF instance.wait.kind = human_decision THEN RETURN human_decision_request(instance, template)   # parked on a human_gate ⇒ the Ask
      RETURN none                                                  # parked on a bare wait (e.g. commit_pending) ⇒ no output; it waits for an inbound RESUME_WAIT event
   RETURN dispatch_intent(instance, template, instance.current_step)   # ACTIVE ⇒ agent dispatch
 
-human_decision_request(instance, template) → HumanDecisionRequest   # L3 — the human-facing analog of DispatchIntent (the Ask); local/manual delivery, durable channel L8
+human_decision_request(instance, template) → HumanDecisionRequest   # L3 — the human-facing analog of DispatchIntent (the Ask); local/manual delivery, durable channel L8. DIRECTIVE member (addressee: operator)
   step     ← template.step(instance.current_step)
   request  ← pending_decision_request(instance)
   operator ← instance.binding[step.role]                            # the human bound to the operator role
@@ -5131,16 +5209,19 @@ human_decision_request(instance, template) → HumanDecisionRequest   # L3 — t
     decision_requirements: requirements_for(step.decisions) }       # per-decision required payload fields, from the SAME declared decisions — e.g. request_rework ⇒ instruction required (the submit path rejects an empty one)
 
 RESUME_WAIT(event) → Outcome                                         # operator/kernel event resumes a type: wait step — the BARE-wait dual of SUBMIT_DECISION; generalizes KICKOFF. event = { instance_id, op_id, expected_version, type }
-  instance ← instanceStore.load(event.instance_id)
-  IF instance is none                              THEN RETURN Rejected(unknown_instance)
-  IF instance.transcript.has(event.op_id)          THEN RETURN Duplicate                       # idempotency — same (instance_id, op_id) scope as HANDLE
-  IF instance.kernel_status ≠ WAITING              THEN RETURN Rejected(not_waiting)            # only a parked instance can be resumed
-  IF event.type ∉ instance.wait.resume_events      THEN RETURN Rejected(resume_event_mismatch)  # correlation to THIS open wait's declared resume class
-  IF event.expected_version ≠ instance.version     THEN RETURN Stale(instance.version)          # CAS precheck
+  # ADMISSION via admit_input (load-first, born at L3) — no authority rung on this path today: the
+  # resume is kernel-classified (an authority hook is a later slice), so the expectation is simply absent
+  admitted ← admit_input(event, expect: {
+    op_id:     event.op_id,                                                                   # same (instance_id, op_id) scope as HANDLE
+    state:     kernel_status = WAITING → Rejected(not_waiting),                               # only a parked instance can be resumed
+    correlate: event.type ∈ wait.resume_events → Rejected(resume_event_mismatch),             # correlation to THIS open wait's declared resume class
+    version:   event.expected_version })                                                      # CAS precheck
+  IF admitted ≠ Accepted THEN RETURN admitted                       # Duplicate | Stale(v) | Rejected(…) pass through unchanged
+  instance ← admitted.instance
   template ← definitionStore.load(instance.template_ref)
-  IF NOT is_wait_step(template, instance.current_step)  THEN RETURN Rejected(not_bare_wait)     # RESUME_WAIT resumes ONLY a type: wait step; a decision wait resumes via SUBMIT_DECISION
+  IF NOT is_wait_step(template, instance.current_step)  THEN RETURN Rejected(not_bare_wait)     # wait-SHAPE guard, not a rung: RESUME_WAIT resumes ONLY a type: wait step; a decision wait resumes via SUBMIT_DECISION
   step     ← template.step(instance.current_step)
-  target   ← step.on_resume[event.type]
+  target   ← step.on_resume[event.type]                             # CHOICEPOINT on_resume: kernel-classified — the event's validated-and-routed type is the key
   IF target is none                                THEN RETURN Rejected(no_resume_transition)   # the wait step must declare this resume route
   COMMIT atomically at expected_version = instance.version:
     instance.transcript.append(WAIT_RESUMED { op_id: event.op_id, kind: instance.wait.kind, event: event.type })   # the resume rides the transcript; a result payload, an authority hook, and the actual action (e.g. running git commit) are later slices
@@ -5192,7 +5273,7 @@ HANDLE envelope → Outcome
     envelope)
   IF outcome ≠ Accepted THEN RETURN outcome                     # Duplicate | Stale(v) | Rejected(…) pass through unchanged
 
-  target ← step.transitions[envelope.type]   # navigation (L0b): does this action exist here?
+  target ← step.transitions[envelope.type]   # navigation (L0b): does this action exist here? CHOICEPOINT transitions: principal-committed selection by the bound actor
   IF target is none                       THEN RETURN Rejected(no_transition)
 
   # L1: action authorization — exists as a transition, but may this role emit it here?
@@ -5844,23 +5925,26 @@ KICKOFF(instance, task) → Outcome                                     # operat
   RETURN activate(instance)
 
 SUBMIT_DECISION(decision) → Outcome                                  # operator_intent — a KICKOFF sibling; resumes WAITING(human_decision). decision = { instance_id, op_id, expected_version, request_ref, verdict, override?, payload?, by }. verdict is a DECLARED decision key — the kernel knows no decision names
-  instance ← instanceStore.load(decision.instance_id)
-  IF instance is none                              THEN RETURN Rejected(unknown_instance)
-  IF instance.transcript.has(decision.op_id)       THEN RETURN Duplicate                       # idempotency — same (instance_id, op_id) scope as HANDLE
-  IF instance.kernel_status ≠ WAITING OR instance.wait.kind ≠ human_decision
-                                                   THEN RETURN Rejected(not_awaiting_decision)  # only a parked human_gate accepts a decision
-  IF decision.request_ref ≠ instance.wait.request_ref  THEN RETURN Rejected(decision_request_mismatch)   # correlation to THIS pending DECISION_REQUEST
-  IF decision.expected_version ≠ instance.version  THEN RETURN Stale(instance.version)          # CAS precheck (actor-supplied stale-intent, as in HANDLE)
+  # ADMISSION via admit_input (load-first, born at L3) — the operator-intent rungs: idempotency → lifecycle/state → correlation → staleness → authority
+  admitted ← admit_input(decision, expect: {
+    op_id:     decision.op_id,                                                                # same (instance_id, op_id) scope as HANDLE
+    state:     kernel_status = WAITING AND wait.kind = human_decision → Rejected(not_awaiting_decision),   # only a parked human_gate accepts a decision
+    correlate: wait.request_ref = decision.request_ref → Rejected(decision_request_mismatch), # correlation to THIS pending DECISION_REQUEST
+    version:   decision.expected_version,                                                     # CAS precheck (actor-supplied stale-intent, as in HANDLE)
+    authority: { claim:   decision.by,
+                 granted: instance.binding[template.step(instance.current_step).role],        # lazy positional read — evaluated only at this rung
+                 mismatch → Rejected(operator_not_authorized) } })                            # operator authority on THIS path — NOT the L1 actor-envelope gate (a human decision is a different input class)
+  IF admitted ≠ Accepted THEN RETURN admitted                       # Duplicate | Stale(v) | Rejected(…) pass through unchanged
+  instance ← admitted.instance
   template ← definitionStore.load(instance.template_ref)
   step     ← template.step(instance.current_step)                   # the human_gate
-  IF decision.by ≠ instance.binding[step.role]     THEN RETURN Rejected(operator_not_authorized)   # operator authority on THIS path — NOT the L1 actor-envelope gate (a human decision is a different input class)
-  choice   ← step.decisions[decision.verdict]                       # a human_gate's decisions map IS its transition map, keyed by decision key; the kernel routes by the key — it does not know what "approve" means
+  choice   ← step.decisions[decision.verdict]                       # a human_gate's decisions map IS its transition map, keyed by decision key; the kernel routes by the key — it does not know what "approve" means. CHOICEPOINT decisions: principal-committed selection by the bound operator
   IF choice is none                                THEN RETURN Rejected(unknown_decision)        # the verdict must be one of the gate's declared decision keys
   # required payload fields — declared per decision (the anchor's request_rework requires a non-empty instruction); generic, NO verdict name is hardcoded
   FOR field IN required_fields(choice):
     IF decision.payload[field] is absent OR empty  THEN RETURN Rejected(missing_required_field)
   request  ← pending_decision_request(instance)                     # the DECISION_REQUEST recorded on entry
-  # override (the fiduciary invariant): override is meaningful ONLY against a recorded recommendation — choosing against the machine must be explicit and recorded
+  # override (the fiduciary invariant): override is meaningful ONLY against a recorded recommendation — choosing against the machine must be explicit and recorded. The decisions instance's irreducible rule, not a ChoicePoint phase
   against_recommendation ← request.recommendation is present AND decision.verdict ≠ request.recommendation
   IF against_recommendation     AND NOT decision.override THEN RETURN Rejected(override_required)        # went against the recommendation without flagging it
   IF NOT against_recommendation AND decision.override     THEN RETURN Rejected(override_not_applicable)  # no recommendation, or agreeing with it ⇒ there is nothing to override
@@ -5935,7 +6019,7 @@ park_for_action(instance, template, step) → void                   # LC3 — a
   instance.kernel_status ← WAITING
   instance.wait ← { kind: action_pending, requested_by: step.id, resume_events: [step.action.key] }   # the action key (e.g. COMMIT, MERGE) is the trigger the operator sends
 
-action_request(instance, template) → ActionRequest                 # LC3 — the operator-facing surface for a parked action; the decision-less analog of HumanDecisionRequest, DERIVED from the step (no stored request). ERRAND ask, directive phase (derived)
+action_request(instance, template) → ActionRequest                 # LC3 — the operator-facing surface for a parked action; the decision-less analog of HumanDecisionRequest, DERIVED from the step (no stored request). ERRAND ask, directive phase (derived) · DIRECTIVE member (addressee: operator)
   step     ← template.step(instance.current_step)
   operator ← instance.binding[step.role]
   RETURN ActionRequest {
@@ -5973,13 +6057,13 @@ RUN_ACTION(trigger) → Outcome                                      # LC3 opera
     REQUIRE instance.wait.kind = action_running AND instance.wait.request_id = request_id   # still OUR run (defensive)
     instance.transcript.append(ACTION_RESULT { op_id: trigger.op_id, action_key: trigger.action_key, outcome: outcome_key, outputs: result.outputs, evidence_refs: result.evidence_refs })   # evidence (LC1 INV-3): commit_sha / merge_sha / exit / hash inline (T1), logs T3 — op_id makes the Duplicate check transcript-backed
     IF outcome_key ∈ keys_of(step.outcomes) THEN
-      apply_target_entry_effects(instance, template, step.id, step.outcomes[outcome_key].target)   # ROUTE by the outcome — same generic arrival; a self-target (conflict → merge_action, nothing_staged → commit_action) re-parks action_pending (operator re-triggers)
+      apply_target_entry_effects(instance, template, step.id, step.outcomes[outcome_key].target)   # ROUTE by the outcome — same generic arrival; a self-target (conflict → merge_action, nothing_staged → commit_action) re-parks action_pending (operator re-triggers). CHOICEPOINT outcomes: kernel-classified (the runner's classified result)
     ELSE
       instance.wait ← { kind: action_pending, requested_by: step.id, resume_events: [step.action.key] }   # infra_error or an undeclared outcome ⇒ stay parked for a retry (auto-retry is L9); a recurring undeclared outcome is a config smell, visible in the ACTION_RESULT
     instance.version ← instance.version + 1
   RETURN Committed(instance.version, post_commit_output(instance, template), boundary_events: emits_of(step.outcomes[outcome_key]))   # an outcome may `emits:` a release boundary (merged ⇒ merge_completed) → LC2 initiate_release; emits_of(none) = [ ]
 
-human_decision_request(instance, template) → HumanDecisionRequest   # L3 — the human-facing analog of DispatchIntent (the Ask); local/manual delivery, durable channel L8
+human_decision_request(instance, template) → HumanDecisionRequest   # L3 — the human-facing analog of DispatchIntent (the Ask); local/manual delivery, durable channel L8. DIRECTIVE member (addressee: operator)
   step     ← template.step(instance.current_step)
   request  ← pending_decision_request(instance)
   operator ← instance.binding[step.role]                            # the human bound to the operator role
@@ -5992,16 +6076,19 @@ human_decision_request(instance, template) → HumanDecisionRequest   # L3 — t
     decision_requirements: requirements_for(step.decisions) }       # per-decision required payload fields, from the SAME declared decisions — e.g. request_rework ⇒ instruction required (the submit path rejects an empty one)
 
 RESUME_WAIT(event) → Outcome                                         # operator/kernel event resumes a type: wait step — the BARE-wait dual of SUBMIT_DECISION; generalizes KICKOFF. event = { instance_id, op_id, expected_version, type }
-  instance ← instanceStore.load(event.instance_id)
-  IF instance is none                              THEN RETURN Rejected(unknown_instance)
-  IF instance.transcript.has(event.op_id)          THEN RETURN Duplicate                       # idempotency — same (instance_id, op_id) scope as HANDLE
-  IF instance.kernel_status ≠ WAITING              THEN RETURN Rejected(not_waiting)            # only a parked instance can be resumed
-  IF event.type ∉ instance.wait.resume_events      THEN RETURN Rejected(resume_event_mismatch)  # correlation to THIS open wait's declared resume class
-  IF event.expected_version ≠ instance.version     THEN RETURN Stale(instance.version)          # CAS precheck
+  # ADMISSION via admit_input (load-first, born at L3) — no authority rung on this path today: the
+  # resume is kernel-classified (an authority hook is a later slice), so the expectation is simply absent
+  admitted ← admit_input(event, expect: {
+    op_id:     event.op_id,                                                                   # same (instance_id, op_id) scope as HANDLE
+    state:     kernel_status = WAITING → Rejected(not_waiting),                               # only a parked instance can be resumed
+    correlate: event.type ∈ wait.resume_events → Rejected(resume_event_mismatch),             # correlation to THIS open wait's declared resume class
+    version:   event.expected_version })                                                      # CAS precheck
+  IF admitted ≠ Accepted THEN RETURN admitted                       # Duplicate | Stale(v) | Rejected(…) pass through unchanged
+  instance ← admitted.instance
   template ← definitionStore.load(instance.template_ref)
-  IF NOT is_wait_step(template, instance.current_step)  THEN RETURN Rejected(not_bare_wait)     # RESUME_WAIT resumes ONLY a type: wait step; a decision wait resumes via SUBMIT_DECISION
+  IF NOT is_wait_step(template, instance.current_step)  THEN RETURN Rejected(not_bare_wait)     # wait-SHAPE guard, not a rung: RESUME_WAIT resumes ONLY a type: wait step; a decision wait resumes via SUBMIT_DECISION
   step     ← template.step(instance.current_step)
-  target   ← step.on_resume[event.type]
+  target   ← step.on_resume[event.type]                             # CHOICEPOINT on_resume: kernel-classified — the event's validated-and-routed type is the key
   IF target is none                                THEN RETURN Rejected(no_resume_transition)   # the wait step must declare this resume route
   COMMIT atomically at expected_version = instance.version:
     instance.transcript.append(WAIT_RESUMED { op_id: event.op_id, kind: instance.wait.kind, event: event.type })   # the resume rides the transcript; a result payload, an authority hook, and the actual action (e.g. running git commit) are later slices
@@ -6053,7 +6140,7 @@ HANDLE envelope → Outcome
     envelope)
   IF outcome ≠ Accepted THEN RETURN outcome                     # Duplicate | Stale(v) | Rejected(…) pass through unchanged
 
-  target ← step.transitions[envelope.type]   # navigation (L0b): does this action exist here?
+  target ← step.transitions[envelope.type]   # navigation (L0b): does this action exist here? CHOICEPOINT transitions: principal-committed selection by the bound actor
   IF target is none                       THEN RETURN Rejected(no_transition)
 
   # L1: action authorization — exists as a transition, but may this role emit it here?
@@ -6334,6 +6421,9 @@ template:
               the ask (open at the park; derived directive) whose completion opens the run (the first inline-form
               instance, bracketed by the two CAS commits); trigger-validation is a pre-open guard, not part of the
               run's claim. See the kernel-primitives memo (§6/§9); behavior unchanged.</li>
+            <li><b>Rebaseline (wave 4):</b> the <code>outcomes</code> route is labeled a <b>ChoicePoint</b>
+              (kernel-classified — the runner's classified result) and <code>ActionRequest</code> a
+              <b>Directive</b> member; behavior unchanged.</li>
             <li><b>Decision:</b> accepted as the LC3a baseline (light evidence per playbook §2.1); LC3b generalizes the action library, L4 inherits action steps per child.</li>
           </ul>
         </div>
@@ -6655,23 +6745,26 @@ KICKOFF(instance, task) → Outcome                                     # operat
   RETURN activate(instance)
 
 SUBMIT_DECISION(decision) → Outcome                                  # operator_intent — a KICKOFF sibling; resumes WAITING(human_decision). decision = { instance_id, op_id, expected_version, request_ref, verdict, override?, payload?, by }. verdict is a DECLARED decision key — the kernel knows no decision names
-  instance ← instanceStore.load(decision.instance_id)
-  IF instance is none                              THEN RETURN Rejected(unknown_instance)
-  IF instance.transcript.has(decision.op_id)       THEN RETURN Duplicate                       # idempotency — same (instance_id, op_id) scope as HANDLE
-  IF instance.kernel_status ≠ WAITING OR instance.wait.kind ≠ human_decision
-                                                   THEN RETURN Rejected(not_awaiting_decision)  # only a parked human_gate accepts a decision
-  IF decision.request_ref ≠ instance.wait.request_ref  THEN RETURN Rejected(decision_request_mismatch)   # correlation to THIS pending DECISION_REQUEST
-  IF decision.expected_version ≠ instance.version  THEN RETURN Stale(instance.version)          # CAS precheck (actor-supplied stale-intent, as in HANDLE)
+  # ADMISSION via admit_input (load-first, born at L3) — the operator-intent rungs: idempotency → lifecycle/state → correlation → staleness → authority
+  admitted ← admit_input(decision, expect: {
+    op_id:     decision.op_id,                                                                # same (instance_id, op_id) scope as HANDLE
+    state:     kernel_status = WAITING AND wait.kind = human_decision → Rejected(not_awaiting_decision),   # only a parked human_gate accepts a decision
+    correlate: wait.request_ref = decision.request_ref → Rejected(decision_request_mismatch), # correlation to THIS pending DECISION_REQUEST
+    version:   decision.expected_version,                                                     # CAS precheck (actor-supplied stale-intent, as in HANDLE)
+    authority: { claim:   decision.by,
+                 granted: instance.binding[template.step(instance.current_step).role],        # lazy positional read — evaluated only at this rung
+                 mismatch → Rejected(operator_not_authorized) } })                            # operator authority on THIS path — NOT the L1 actor-envelope gate (a human decision is a different input class)
+  IF admitted ≠ Accepted THEN RETURN admitted                       # Duplicate | Stale(v) | Rejected(…) pass through unchanged
+  instance ← admitted.instance
   template ← definitionStore.load(instance.template_ref)
   step     ← template.step(instance.current_step)                   # the human_gate
-  IF decision.by ≠ instance.binding[step.role]     THEN RETURN Rejected(operator_not_authorized)   # operator authority on THIS path — NOT the L1 actor-envelope gate (a human decision is a different input class)
-  choice   ← step.decisions[decision.verdict]                       # a human_gate's decisions map IS its transition map, keyed by decision key; the kernel routes by the key — it does not know what "approve" means
+  choice   ← step.decisions[decision.verdict]                       # a human_gate's decisions map IS its transition map, keyed by decision key; the kernel routes by the key — it does not know what "approve" means. CHOICEPOINT decisions: principal-committed selection by the bound operator
   IF choice is none                                THEN RETURN Rejected(unknown_decision)        # the verdict must be one of the gate's declared decision keys
   # required payload fields — declared per decision (the anchor's request_rework requires a non-empty instruction); generic, NO verdict name is hardcoded
   FOR field IN required_fields(choice):
     IF decision.payload[field] is absent OR empty  THEN RETURN Rejected(missing_required_field)
   request  ← pending_decision_request(instance)                     # the DECISION_REQUEST recorded on entry
-  # override (the fiduciary invariant): override is meaningful ONLY against a recorded recommendation — choosing against the machine must be explicit and recorded
+  # override (the fiduciary invariant): override is meaningful ONLY against a recorded recommendation — choosing against the machine must be explicit and recorded. The decisions instance's irreducible rule, not a ChoicePoint phase
   against_recommendation ← request.recommendation is present AND decision.verdict ≠ request.recommendation
   IF against_recommendation     AND NOT decision.override THEN RETURN Rejected(override_required)        # went against the recommendation without flagging it
   IF NOT against_recommendation AND decision.override     THEN RETURN Rejected(override_not_applicable)  # no recommendation, or agreeing with it ⇒ there is nothing to override
@@ -6764,7 +6857,7 @@ park_for_action(instance, template, step) → void                   # LC3 — a
   instance.wait ← { kind: action_running, request_id, action_key: step.action.key, episode_ref: episode, requested_by: step.id }
   instance.transcript.append(ACTION_RUNNING { request_id, action_key: step.action.key, episode_ref: episode, trigger: auto })   # the marker — committed in THIS arrival commit; the side effect is post-commit
 
-action_request(instance, template) → ActionRequest                 # LC3 — the operator-facing surface for a parked action; the decision-less analog of HumanDecisionRequest, DERIVED from the step (no stored request). ERRAND ask, directive phase (derived)
+action_request(instance, template) → ActionRequest                 # LC3 — the operator-facing surface for a parked action; the decision-less analog of HumanDecisionRequest, DERIVED from the step (no stored request). ERRAND ask, directive phase (derived) · DIRECTIVE member (addressee: operator)
   step     ← template.step(instance.current_step)
   operator ← instance.binding[step.role]
   RETURN ActionRequest {
@@ -6774,7 +6867,7 @@ action_request(instance, template) → ActionRequest                 # LC3 — t
     required_payload: requirements_for(step.action.payload),       # the SAME per-field {required} shape as a decision payload — TRIGGER-validation, not workspace state
     context:          project_action_context(instance), operator }
 
-action_intent(instance, template) → ActionIntent                   # LC3b — an auto action's run effect; produce-not-perform (the DispatchIntent analog). The runner runs POST-COMMIT, NEVER inside the arrival commit. ERRAND auto action, directive phase
+action_intent(instance, template) → ActionIntent                   # LC3b — an auto action's run effect; produce-not-perform (the DispatchIntent analog). The runner runs POST-COMMIT, NEVER inside the arrival commit. ERRAND auto action, directive phase · DIRECTIVE member (addressee: runner)
   step ← template.step(instance.current_step)
   RETURN ActionIntent { instance_id, request_id: instance.wait.request_id, runner: step.action.uses, action_spec: step.action.spec, cwd: runtime_context_workspace(instance) }   # a local/driver runner runs it; the result returns as ACTION_RESULT (inline ⇒ immediately, deferred ⇒ later — same contract)
 
@@ -6804,7 +6897,7 @@ ACTION_RESULT(instance, request_id, raw_result) → Outcome           # LC3b ker
     RETURN Accepted
   COMMIT atomically at expected_version = instance.version:
     instance.transcript.append(ACTION_RESULT { episode_ref: instance.wait.episode_ref, outcome: outcome_key, outputs: raw_result.outputs, evidence_refs: raw_result.evidence_refs })   # evidence (LC1 INV-3): inline T1 + durable T3 refs
-    apply_target_entry_effects(instance, template, step.id, choice.target)   # ROUTE by the outcome — ends the episode (a later fresh entry opens a new episode_ref)
+    apply_target_entry_effects(instance, template, step.id, choice.target)   # ROUTE by the outcome — ends the episode (a later fresh entry opens a new episode_ref). CHOICEPOINT outcomes: kernel-classified (the runner's classified result)
     instance.version ← instance.version + 1
   RETURN Committed(instance.version, post_commit_output(instance, template), boundary_events: emits_of(choice))   # an outcome may emits: a release boundary → LC2
 
@@ -6836,13 +6929,13 @@ RUN_ACTION(trigger) → Outcome                                      # LC3 opera
     REQUIRE instance.wait.kind = action_running AND instance.wait.request_id = request_id   # still OUR run (defensive)
     instance.transcript.append(ACTION_RESULT { op_id: trigger.op_id, action_key: trigger.action_key, outcome: outcome_key, outputs: result.outputs, evidence_refs: result.evidence_refs })   # evidence (LC1 INV-3): commit_sha / merge_sha / exit / hash inline (T1), logs T3 — op_id makes the Duplicate check transcript-backed
     IF outcome_key ∈ keys_of(step.outcomes) THEN
-      apply_target_entry_effects(instance, template, step.id, step.outcomes[outcome_key].target)   # ROUTE by the outcome — same generic arrival; a self-target (conflict → merge_action, nothing_staged → commit_action) re-parks action_pending (operator re-triggers)
+      apply_target_entry_effects(instance, template, step.id, step.outcomes[outcome_key].target)   # ROUTE by the outcome — same generic arrival; a self-target (conflict → merge_action, nothing_staged → commit_action) re-parks action_pending (operator re-triggers). CHOICEPOINT outcomes: kernel-classified (the runner's classified result)
     ELSE
       instance.wait ← { kind: action_pending, requested_by: step.id, resume_events: [step.action.key] }   # infra_error or an undeclared outcome ⇒ stay parked for a retry (auto-retry is L9); a recurring undeclared outcome is a config smell, visible in the ACTION_RESULT
     instance.version ← instance.version + 1
   RETURN Committed(instance.version, post_commit_output(instance, template), boundary_events: emits_of(step.outcomes[outcome_key]))   # an outcome may `emits:` a release boundary (merged ⇒ merge_completed) → LC2 initiate_release; emits_of(none) = [ ]
 
-human_decision_request(instance, template) → HumanDecisionRequest   # L3 — the human-facing analog of DispatchIntent (the Ask); local/manual delivery, durable channel L8
+human_decision_request(instance, template) → HumanDecisionRequest   # L3 — the human-facing analog of DispatchIntent (the Ask); local/manual delivery, durable channel L8. DIRECTIVE member (addressee: operator)
   step     ← template.step(instance.current_step)
   request  ← pending_decision_request(instance)
   operator ← instance.binding[step.role]                            # the human bound to the operator role
@@ -6855,16 +6948,19 @@ human_decision_request(instance, template) → HumanDecisionRequest   # L3 — t
     decision_requirements: requirements_for(step.decisions) }       # per-decision required payload fields, from the SAME declared decisions — e.g. request_rework ⇒ instruction required (the submit path rejects an empty one)
 
 RESUME_WAIT(event) → Outcome                                         # operator/kernel event resumes a type: wait step — the BARE-wait dual of SUBMIT_DECISION; generalizes KICKOFF. event = { instance_id, op_id, expected_version, type }
-  instance ← instanceStore.load(event.instance_id)
-  IF instance is none                              THEN RETURN Rejected(unknown_instance)
-  IF instance.transcript.has(event.op_id)          THEN RETURN Duplicate                       # idempotency — same (instance_id, op_id) scope as HANDLE
-  IF instance.kernel_status ≠ WAITING              THEN RETURN Rejected(not_waiting)            # only a parked instance can be resumed
-  IF event.type ∉ instance.wait.resume_events      THEN RETURN Rejected(resume_event_mismatch)  # correlation to THIS open wait's declared resume class
-  IF event.expected_version ≠ instance.version     THEN RETURN Stale(instance.version)          # CAS precheck
+  # ADMISSION via admit_input (load-first, born at L3) — no authority rung on this path today: the
+  # resume is kernel-classified (an authority hook is a later slice), so the expectation is simply absent
+  admitted ← admit_input(event, expect: {
+    op_id:     event.op_id,                                                                   # same (instance_id, op_id) scope as HANDLE
+    state:     kernel_status = WAITING → Rejected(not_waiting),                               # only a parked instance can be resumed
+    correlate: event.type ∈ wait.resume_events → Rejected(resume_event_mismatch),             # correlation to THIS open wait's declared resume class
+    version:   event.expected_version })                                                      # CAS precheck
+  IF admitted ≠ Accepted THEN RETURN admitted                       # Duplicate | Stale(v) | Rejected(…) pass through unchanged
+  instance ← admitted.instance
   template ← definitionStore.load(instance.template_ref)
-  IF NOT is_wait_step(template, instance.current_step)  THEN RETURN Rejected(not_bare_wait)     # RESUME_WAIT resumes ONLY a type: wait step; a decision wait resumes via SUBMIT_DECISION
+  IF NOT is_wait_step(template, instance.current_step)  THEN RETURN Rejected(not_bare_wait)     # wait-SHAPE guard, not a rung: RESUME_WAIT resumes ONLY a type: wait step; a decision wait resumes via SUBMIT_DECISION
   step     ← template.step(instance.current_step)
-  target   ← step.on_resume[event.type]
+  target   ← step.on_resume[event.type]                             # CHOICEPOINT on_resume: kernel-classified — the event's validated-and-routed type is the key
   IF target is none                                THEN RETURN Rejected(no_resume_transition)   # the wait step must declare this resume route
   COMMIT atomically at expected_version = instance.version:
     instance.transcript.append(WAIT_RESUMED { op_id: event.op_id, kind: instance.wait.kind, event: event.type })   # the resume rides the transcript; a result payload, an authority hook, and the actual action (e.g. running git commit) are later slices
@@ -6916,7 +7012,7 @@ HANDLE envelope → Outcome
     envelope)
   IF outcome ≠ Accepted THEN RETURN outcome                     # Duplicate | Stale(v) | Rejected(…) pass through unchanged
 
-  target ← step.transitions[envelope.type]   # navigation (L0b): does this action exist here?
+  target ← step.transitions[envelope.type]   # navigation (L0b): does this action exist here? CHOICEPOINT transitions: principal-committed selection by the bound actor
   IF target is none                       THEN RETURN Rejected(no_transition)
 
   # L1: action authorization — exists as a transition, but may this role emit it here?
@@ -7193,6 +7289,9 @@ template:
               (arrival-opened claim → <code>ActionIntent</code> directive → correlated <code>ACTION_RESULT</code>);
               the episode retry budget is the instance's irreducible logic, not an errand phase. See the
               kernel-primitives memo (§6/§9); behavior unchanged.</li>
+            <li><b>Rebaseline (wave 4):</b> the <code>outcomes</code> route is labeled a <b>ChoicePoint</b>
+              (kernel-classified) and <code>ActionIntent</code> a <b>Directive</b> member; behavior
+              unchanged.</li>
             <li><b>Decision:</b> accepted as the LC3b baseline (light evidence per playbook §2.1); L4 inherits action steps per child.</li>
           </ul>
         </div>
@@ -7514,23 +7613,26 @@ KICKOFF(instance, task) → Outcome                                     # operat
   RETURN activate(instance)
 
 SUBMIT_DECISION(decision) → Outcome                                  # operator_intent — a KICKOFF sibling; resumes WAITING(human_decision). decision = { instance_id, op_id, expected_version, request_ref, verdict, override?, payload?, by }. verdict is a DECLARED decision key — the kernel knows no decision names
-  instance ← instanceStore.load(decision.instance_id)
-  IF instance is none                              THEN RETURN Rejected(unknown_instance)
-  IF instance.transcript.has(decision.op_id)       THEN RETURN Duplicate                       # idempotency — same (instance_id, op_id) scope as HANDLE
-  IF instance.kernel_status ≠ WAITING OR instance.wait.kind ≠ human_decision
-                                                   THEN RETURN Rejected(not_awaiting_decision)  # only a parked human_gate accepts a decision
-  IF decision.request_ref ≠ instance.wait.request_ref  THEN RETURN Rejected(decision_request_mismatch)   # correlation to THIS pending DECISION_REQUEST
-  IF decision.expected_version ≠ instance.version  THEN RETURN Stale(instance.version)          # CAS precheck (actor-supplied stale-intent, as in HANDLE)
+  # ADMISSION via admit_input (load-first, born at L3) — the operator-intent rungs: idempotency → lifecycle/state → correlation → staleness → authority
+  admitted ← admit_input(decision, expect: {
+    op_id:     decision.op_id,                                                                # same (instance_id, op_id) scope as HANDLE
+    state:     kernel_status = WAITING AND wait.kind = human_decision → Rejected(not_awaiting_decision),   # only a parked human_gate accepts a decision
+    correlate: wait.request_ref = decision.request_ref → Rejected(decision_request_mismatch), # correlation to THIS pending DECISION_REQUEST
+    version:   decision.expected_version,                                                     # CAS precheck (actor-supplied stale-intent, as in HANDLE)
+    authority: { claim:   decision.by,
+                 granted: instance.binding[template.step(instance.current_step).role],        # lazy positional read — evaluated only at this rung
+                 mismatch → Rejected(operator_not_authorized) } })                            # operator authority on THIS path — NOT the L1 actor-envelope gate (a human decision is a different input class)
+  IF admitted ≠ Accepted THEN RETURN admitted                       # Duplicate | Stale(v) | Rejected(…) pass through unchanged
+  instance ← admitted.instance
   template ← definitionStore.load(instance.template_ref)
   step     ← template.step(instance.current_step)                   # the human_gate
-  IF decision.by ≠ instance.binding[step.role]     THEN RETURN Rejected(operator_not_authorized)   # operator authority on THIS path — NOT the L1 actor-envelope gate (a human decision is a different input class)
-  choice   ← step.decisions[decision.verdict]                       # a human_gate's decisions map IS its transition map, keyed by decision key; the kernel routes by the key — it does not know what "approve" means
+  choice   ← step.decisions[decision.verdict]                       # a human_gate's decisions map IS its transition map, keyed by decision key; the kernel routes by the key — it does not know what "approve" means. CHOICEPOINT decisions: principal-committed selection by the bound operator
   IF choice is none                                THEN RETURN Rejected(unknown_decision)        # the verdict must be one of the gate's declared decision keys
   # required payload fields — declared per decision (the anchor's request_rework requires a non-empty instruction); generic, NO verdict name is hardcoded
   FOR field IN required_fields(choice):
     IF decision.payload[field] is absent OR empty  THEN RETURN Rejected(missing_required_field)
   request  ← pending_decision_request(instance)                     # the DECISION_REQUEST recorded on entry
-  # override (the fiduciary invariant): override is meaningful ONLY against a recorded recommendation — choosing against the machine must be explicit and recorded
+  # override (the fiduciary invariant): override is meaningful ONLY against a recorded recommendation — choosing against the machine must be explicit and recorded. The decisions instance's irreducible rule, not a ChoicePoint phase
   against_recommendation ← request.recommendation is present AND decision.verdict ≠ request.recommendation
   IF against_recommendation     AND NOT decision.override THEN RETURN Rejected(override_required)        # went against the recommendation without flagging it
   IF NOT against_recommendation AND decision.override     THEN RETURN Rejected(override_not_applicable)  # no recommendation, or agreeing with it ⇒ there is nothing to override
@@ -7623,7 +7725,7 @@ park_for_action(instance, template, step) → void                   # LC3 — a
   instance.wait ← { kind: action_running, request_id, action_key: step.action.key, episode_ref: episode, requested_by: step.id }
   instance.transcript.append(ACTION_RUNNING { request_id, action_key: step.action.key, episode_ref: episode, trigger: auto })   # the marker — committed in THIS arrival commit; the side effect is post-commit
 
-action_request(instance, template) → ActionRequest                 # LC3 — the operator-facing surface for a parked action; the decision-less analog of HumanDecisionRequest, DERIVED from the step (no stored request). ERRAND ask, directive phase (derived)
+action_request(instance, template) → ActionRequest                 # LC3 — the operator-facing surface for a parked action; the decision-less analog of HumanDecisionRequest, DERIVED from the step (no stored request). ERRAND ask, directive phase (derived) · DIRECTIVE member (addressee: operator)
   step     ← template.step(instance.current_step)
   operator ← instance.binding[step.role]
   RETURN ActionRequest {
@@ -7633,7 +7735,7 @@ action_request(instance, template) → ActionRequest                 # LC3 — t
     required_payload: requirements_for(step.action.payload),       # the SAME per-field {required} shape as a decision payload — TRIGGER-validation, not workspace state
     context:          project_action_context(instance), operator }
 
-action_intent(instance, template) → ActionIntent                   # LC3b — an auto action's run effect; produce-not-perform (the DispatchIntent analog). The runner runs POST-COMMIT, NEVER inside the arrival commit. ERRAND auto action, directive phase
+action_intent(instance, template) → ActionIntent                   # LC3b — an auto action's run effect; produce-not-perform (the DispatchIntent analog). The runner runs POST-COMMIT, NEVER inside the arrival commit. ERRAND auto action, directive phase · DIRECTIVE member (addressee: runner)
   step ← template.step(instance.current_step)
   RETURN ActionIntent { instance_id, request_id: instance.wait.request_id, runner: step.action.uses, action_spec: step.action.spec, cwd: runtime_context_workspace(instance) }   # a local/driver runner runs it; the result returns as ACTION_RESULT (inline ⇒ immediately, deferred ⇒ later — same contract)
 
@@ -7663,7 +7765,7 @@ ACTION_RESULT(instance, request_id, raw_result) → Outcome           # LC3b ker
     RETURN Accepted
   COMMIT atomically at expected_version = instance.version:
     instance.transcript.append(ACTION_RESULT { episode_ref: instance.wait.episode_ref, outcome: outcome_key, outputs: raw_result.outputs, evidence_refs: raw_result.evidence_refs })   # evidence (LC1 INV-3): inline T1 + durable T3 refs
-    apply_target_entry_effects(instance, template, step.id, choice.target)   # ROUTE by the outcome — ends the episode (a later fresh entry opens a new episode_ref)
+    apply_target_entry_effects(instance, template, step.id, choice.target)   # ROUTE by the outcome — ends the episode (a later fresh entry opens a new episode_ref). CHOICEPOINT outcomes: kernel-classified (the runner's classified result)
     instance.version ← instance.version + 1
   RETURN Committed(instance.version, post_commit_output(instance, template), boundary_events: emits_of(choice))   # an outcome may emits: a release boundary → LC2
 
@@ -7695,13 +7797,13 @@ RUN_ACTION(trigger) → Outcome                                      # LC3 opera
     REQUIRE instance.wait.kind = action_running AND instance.wait.request_id = request_id   # still OUR run (defensive)
     instance.transcript.append(ACTION_RESULT { op_id: trigger.op_id, action_key: trigger.action_key, outcome: outcome_key, outputs: result.outputs, evidence_refs: result.evidence_refs })   # evidence (LC1 INV-3): commit_sha / merge_sha / exit / hash inline (T1), logs T3 — op_id makes the Duplicate check transcript-backed
     IF outcome_key ∈ keys_of(step.outcomes) THEN
-      apply_target_entry_effects(instance, template, step.id, step.outcomes[outcome_key].target)   # ROUTE by the outcome — same generic arrival; a self-target (conflict → merge_action, nothing_staged → commit_action) re-parks action_pending (operator re-triggers)
+      apply_target_entry_effects(instance, template, step.id, step.outcomes[outcome_key].target)   # ROUTE by the outcome — same generic arrival; a self-target (conflict → merge_action, nothing_staged → commit_action) re-parks action_pending (operator re-triggers). CHOICEPOINT outcomes: kernel-classified (the runner's classified result)
     ELSE
       instance.wait ← { kind: action_pending, requested_by: step.id, resume_events: [step.action.key] }   # infra_error or an undeclared outcome ⇒ stay parked for a retry (auto-retry is L9); a recurring undeclared outcome is a config smell, visible in the ACTION_RESULT
     instance.version ← instance.version + 1
   RETURN Committed(instance.version, post_commit_output(instance, template), boundary_events: emits_of(step.outcomes[outcome_key]))   # an outcome may `emits:` a release boundary (merged ⇒ merge_completed) → LC2 initiate_release; emits_of(none) = [ ]
 
-human_decision_request(instance, template) → HumanDecisionRequest   # L3 — the human-facing analog of DispatchIntent (the Ask); local/manual delivery, durable channel L8
+human_decision_request(instance, template) → HumanDecisionRequest   # L3 — the human-facing analog of DispatchIntent (the Ask); local/manual delivery, durable channel L8. DIRECTIVE member (addressee: operator)
   step     ← template.step(instance.current_step)
   request  ← pending_decision_request(instance)
   operator ← instance.binding[step.role]                            # the human bound to the operator role
@@ -7714,16 +7816,19 @@ human_decision_request(instance, template) → HumanDecisionRequest   # L3 — t
     decision_requirements: requirements_for(step.decisions) }       # per-decision required payload fields, from the SAME declared decisions — e.g. request_rework ⇒ instruction required (the submit path rejects an empty one)
 
 RESUME_WAIT(event) → Outcome                                         # operator/kernel event resumes a type: wait step — the BARE-wait dual of SUBMIT_DECISION; generalizes KICKOFF. event = { instance_id, op_id, expected_version, type }
-  instance ← instanceStore.load(event.instance_id)
-  IF instance is none                              THEN RETURN Rejected(unknown_instance)
-  IF instance.transcript.has(event.op_id)          THEN RETURN Duplicate                       # idempotency — same (instance_id, op_id) scope as HANDLE
-  IF instance.kernel_status ≠ WAITING              THEN RETURN Rejected(not_waiting)            # only a parked instance can be resumed
-  IF event.type ∉ instance.wait.resume_events      THEN RETURN Rejected(resume_event_mismatch)  # correlation to THIS open wait's declared resume class
-  IF event.expected_version ≠ instance.version     THEN RETURN Stale(instance.version)          # CAS precheck
+  # ADMISSION via admit_input (load-first, born at L3) — no authority rung on this path today: the
+  # resume is kernel-classified (an authority hook is a later slice), so the expectation is simply absent
+  admitted ← admit_input(event, expect: {
+    op_id:     event.op_id,                                                                   # same (instance_id, op_id) scope as HANDLE
+    state:     kernel_status = WAITING → Rejected(not_waiting),                               # only a parked instance can be resumed
+    correlate: event.type ∈ wait.resume_events → Rejected(resume_event_mismatch),             # correlation to THIS open wait's declared resume class
+    version:   event.expected_version })                                                      # CAS precheck
+  IF admitted ≠ Accepted THEN RETURN admitted                       # Duplicate | Stale(v) | Rejected(…) pass through unchanged
+  instance ← admitted.instance
   template ← definitionStore.load(instance.template_ref)
-  IF NOT is_wait_step(template, instance.current_step)  THEN RETURN Rejected(not_bare_wait)     # RESUME_WAIT resumes ONLY a type: wait step; a decision wait resumes via SUBMIT_DECISION
+  IF NOT is_wait_step(template, instance.current_step)  THEN RETURN Rejected(not_bare_wait)     # wait-SHAPE guard, not a rung: RESUME_WAIT resumes ONLY a type: wait step; a decision wait resumes via SUBMIT_DECISION
   step     ← template.step(instance.current_step)
-  target   ← step.on_resume[event.type]
+  target   ← step.on_resume[event.type]                             # CHOICEPOINT on_resume: kernel-classified — the event's validated-and-routed type is the key
   IF target is none                                THEN RETURN Rejected(no_resume_transition)   # the wait step must declare this resume route
   COMMIT atomically at expected_version = instance.version:
     instance.transcript.append(WAIT_RESUMED { op_id: event.op_id, kind: instance.wait.kind, event: event.type })   # the resume rides the transcript; a result payload, an authority hook, and the actual action (e.g. running git commit) are later slices
@@ -7775,7 +7880,7 @@ HANDLE envelope → Outcome
     envelope)
   IF outcome ≠ Accepted THEN RETURN outcome                     # Duplicate | Stale(v) | Rejected(…) pass through unchanged
 
-  target ← step.transitions[envelope.type]   # navigation (L0b): does this action exist here?
+  target ← step.transitions[envelope.type]   # navigation (L0b): does this action exist here? CHOICEPOINT transitions: principal-committed selection by the bound actor
   IF target is none                       THEN RETURN Rejected(no_transition)
 
   # L1: action authorization — exists as a transition, but may this role emit it here?
@@ -8743,23 +8848,26 @@ KICKOFF(instance, task) → Outcome                                     # operat
   RETURN activate(instance)
 
 SUBMIT_DECISION(decision) → Outcome                                  # operator_intent — a KICKOFF sibling; resumes WAITING(human_decision). decision = { instance_id, op_id, expected_version, request_ref, verdict, override?, payload?, by }. verdict is a DECLARED decision key — the kernel knows no decision names
-  instance ← instanceStore.load(decision.instance_id)
-  IF instance is none                              THEN RETURN Rejected(unknown_instance)
-  IF instance.transcript.has(decision.op_id)       THEN RETURN Duplicate                       # idempotency — same (instance_id, op_id) scope as HANDLE
-  IF instance.kernel_status ≠ WAITING OR instance.wait.kind ≠ human_decision
-                                                   THEN RETURN Rejected(not_awaiting_decision)  # only a parked human_gate accepts a decision
-  IF decision.request_ref ≠ instance.wait.request_ref  THEN RETURN Rejected(decision_request_mismatch)   # correlation to THIS pending DECISION_REQUEST
-  IF decision.expected_version ≠ instance.version  THEN RETURN Stale(instance.version)          # CAS precheck (actor-supplied stale-intent, as in HANDLE)
+  # ADMISSION via admit_input (load-first, born at L3) — the operator-intent rungs: idempotency → lifecycle/state → correlation → staleness → authority
+  admitted ← admit_input(decision, expect: {
+    op_id:     decision.op_id,                                                                # same (instance_id, op_id) scope as HANDLE
+    state:     kernel_status = WAITING AND wait.kind = human_decision → Rejected(not_awaiting_decision),   # only a parked human_gate accepts a decision
+    correlate: wait.request_ref = decision.request_ref → Rejected(decision_request_mismatch), # correlation to THIS pending DECISION_REQUEST
+    version:   decision.expected_version,                                                     # CAS precheck (actor-supplied stale-intent, as in HANDLE)
+    authority: { claim:   decision.by,
+                 granted: instance.binding[template.step(instance.current_step).role],        # lazy positional read — evaluated only at this rung
+                 mismatch → Rejected(operator_not_authorized) } })                            # operator authority on THIS path — NOT the L1 actor-envelope gate (a human decision is a different input class)
+  IF admitted ≠ Accepted THEN RETURN admitted                       # Duplicate | Stale(v) | Rejected(…) pass through unchanged
+  instance ← admitted.instance
   template ← definitionStore.load(instance.template_ref)
   step     ← template.step(instance.current_step)                   # the human_gate
-  IF decision.by ≠ instance.binding[step.role]     THEN RETURN Rejected(operator_not_authorized)   # operator authority on THIS path — NOT the L1 actor-envelope gate (a human decision is a different input class)
-  choice   ← step.decisions[decision.verdict]                       # a human_gate's decisions map IS its transition map, keyed by decision key; the kernel routes by the key — it does not know what "approve" means
+  choice   ← step.decisions[decision.verdict]                       # a human_gate's decisions map IS its transition map, keyed by decision key; the kernel routes by the key — it does not know what "approve" means. CHOICEPOINT decisions: principal-committed selection by the bound operator
   IF choice is none                                THEN RETURN Rejected(unknown_decision)        # the verdict must be one of the gate's declared decision keys
   # required payload fields — declared per decision (the anchor's request_rework requires a non-empty instruction); generic, NO verdict name is hardcoded
   FOR field IN required_fields(choice):
     IF decision.payload[field] is absent OR empty  THEN RETURN Rejected(missing_required_field)
   request  ← pending_decision_request(instance)                     # the DECISION_REQUEST recorded on entry
-  # override (the fiduciary invariant): override is meaningful ONLY against a recorded recommendation — choosing against the machine must be explicit and recorded
+  # override (the fiduciary invariant): override is meaningful ONLY against a recorded recommendation — choosing against the machine must be explicit and recorded. The decisions instance's irreducible rule, not a ChoicePoint phase
   against_recommendation ← request.recommendation is present AND decision.verdict ≠ request.recommendation
   IF against_recommendation     AND NOT decision.override THEN RETURN Rejected(override_required)        # went against the recommendation without flagging it
   IF NOT against_recommendation AND decision.override     THEN RETURN Rejected(override_not_applicable)  # no recommendation, or agreeing with it ⇒ there is nothing to override
@@ -8854,7 +8962,7 @@ park_for_action(instance, template, step) → void                   # LC3 — a
   instance.wait ← { kind: action_running, request_id, action_key: step.action.key, episode_ref: episode, requested_by: step.id }
   instance.transcript.append(ACTION_RUNNING { request_id, action_key: step.action.key, episode_ref: episode, trigger: auto })   # the marker — committed in THIS arrival commit; the side effect is post-commit
 
-action_request(instance, template) → ActionRequest                 # LC3 — the operator-facing surface for a parked action; the decision-less analog of HumanDecisionRequest, DERIVED from the step (no stored request). ERRAND ask, directive phase (derived)
+action_request(instance, template) → ActionRequest                 # LC3 — the operator-facing surface for a parked action; the decision-less analog of HumanDecisionRequest, DERIVED from the step (no stored request). ERRAND ask, directive phase (derived) · DIRECTIVE member (addressee: operator)
   step     ← template.step(instance.current_step)
   operator ← instance.binding[step.role]
   RETURN ActionRequest {
@@ -8864,7 +8972,7 @@ action_request(instance, template) → ActionRequest                 # LC3 — t
     required_payload: requirements_for(step.action.payload),       # the SAME per-field {required} shape as a decision payload — TRIGGER-validation, not workspace state
     context:          project_action_context(instance), operator }
 
-action_intent(instance, template) → ActionIntent                   # LC3b — an auto action's run effect; produce-not-perform (the DispatchIntent analog). The runner runs POST-COMMIT, NEVER inside the arrival commit. ERRAND auto action, directive phase
+action_intent(instance, template) → ActionIntent                   # LC3b — an auto action's run effect; produce-not-perform (the DispatchIntent analog). The runner runs POST-COMMIT, NEVER inside the arrival commit. ERRAND auto action, directive phase · DIRECTIVE member (addressee: runner)
   step ← template.step(instance.current_step)
   RETURN ActionIntent { instance_id, request_id: instance.wait.request_id, runner: step.action.uses, action_spec: step.action.spec, cwd: runtime_context_workspace(instance) }   # a local/driver runner runs it; the result returns as ACTION_RESULT (inline ⇒ immediately, deferred ⇒ later — same contract)
 
@@ -8894,7 +9002,7 @@ ACTION_RESULT(instance, request_id, raw_result) → Outcome           # LC3b ker
     RETURN Accepted
   COMMIT atomically at expected_version = instance.version:
     instance.transcript.append(ACTION_RESULT { episode_ref: instance.wait.episode_ref, outcome: outcome_key, outputs: raw_result.outputs, evidence_refs: raw_result.evidence_refs })   # evidence (LC1 INV-3): inline T1 + durable T3 refs
-    apply_target_entry_effects(instance, template, step.id, choice.target)   # ROUTE by the outcome — ends the episode (a later fresh entry opens a new episode_ref)
+    apply_target_entry_effects(instance, template, step.id, choice.target)   # ROUTE by the outcome — ends the episode (a later fresh entry opens a new episode_ref). CHOICEPOINT outcomes: kernel-classified (the runner's classified result)
     instance.version ← instance.version + 1
   RETURN Committed(instance.version, post_commit_output(instance, template), boundary_events: emits_of(choice))   # an outcome may emits: a release boundary → LC2
 
@@ -8926,13 +9034,13 @@ RUN_ACTION(trigger) → Outcome                                      # LC3 opera
     REQUIRE instance.wait.kind = action_running AND instance.wait.request_id = request_id   # still OUR run (defensive)
     instance.transcript.append(ACTION_RESULT { op_id: trigger.op_id, action_key: trigger.action_key, outcome: outcome_key, outputs: result.outputs, evidence_refs: result.evidence_refs })   # evidence (LC1 INV-3): commit_sha / merge_sha / exit / hash inline (T1), logs T3 — op_id makes the Duplicate check transcript-backed
     IF outcome_key ∈ keys_of(step.outcomes) THEN
-      apply_target_entry_effects(instance, template, step.id, step.outcomes[outcome_key].target)   # ROUTE by the outcome — same generic arrival; a self-target (conflict → merge_action, nothing_staged → commit_action) re-parks action_pending (operator re-triggers)
+      apply_target_entry_effects(instance, template, step.id, step.outcomes[outcome_key].target)   # ROUTE by the outcome — same generic arrival; a self-target (conflict → merge_action, nothing_staged → commit_action) re-parks action_pending (operator re-triggers). CHOICEPOINT outcomes: kernel-classified (the runner's classified result)
     ELSE
       instance.wait ← { kind: action_pending, requested_by: step.id, resume_events: [step.action.key] }   # infra_error or an undeclared outcome ⇒ stay parked for a retry (auto-retry is L9); a recurring undeclared outcome is a config smell, visible in the ACTION_RESULT
     instance.version ← instance.version + 1
   RETURN Committed(instance.version, post_commit_output(instance, template), boundary_events: emits_of(step.outcomes[outcome_key]))   # an outcome may `emits:` a release boundary (merged ⇒ merge_completed) → LC2 initiate_release; emits_of(none) = [ ]
 
-human_decision_request(instance, template) → HumanDecisionRequest   # L3 — the human-facing analog of DispatchIntent (the Ask); local/manual delivery, durable channel L8
+human_decision_request(instance, template) → HumanDecisionRequest   # L3 — the human-facing analog of DispatchIntent (the Ask); local/manual delivery, durable channel L8. DIRECTIVE member (addressee: operator)
   step     ← template.step(instance.current_step)
   request  ← pending_decision_request(instance)
   operator ← instance.binding[step.role]                            # the human bound to the operator role
@@ -8945,16 +9053,19 @@ human_decision_request(instance, template) → HumanDecisionRequest   # L3 — t
     decision_requirements: requirements_for(step.decisions) }       # per-decision required payload fields, from the SAME declared decisions — e.g. request_rework ⇒ instruction required (the submit path rejects an empty one)
 
 RESUME_WAIT(event) → Outcome                                         # operator/kernel event resumes a type: wait step — the BARE-wait dual of SUBMIT_DECISION; generalizes KICKOFF. event = { instance_id, op_id, expected_version, type }
-  instance ← instanceStore.load(event.instance_id)
-  IF instance is none                              THEN RETURN Rejected(unknown_instance)
-  IF instance.transcript.has(event.op_id)          THEN RETURN Duplicate                       # idempotency — same (instance_id, op_id) scope as HANDLE
-  IF instance.kernel_status ≠ WAITING              THEN RETURN Rejected(not_waiting)            # only a parked instance can be resumed
-  IF event.type ∉ instance.wait.resume_events      THEN RETURN Rejected(resume_event_mismatch)  # correlation to THIS open wait's declared resume class
-  IF event.expected_version ≠ instance.version     THEN RETURN Stale(instance.version)          # CAS precheck
+  # ADMISSION via admit_input (load-first, born at L3) — no authority rung on this path today: the
+  # resume is kernel-classified (an authority hook is a later slice), so the expectation is simply absent
+  admitted ← admit_input(event, expect: {
+    op_id:     event.op_id,                                                                   # same (instance_id, op_id) scope as HANDLE
+    state:     kernel_status = WAITING → Rejected(not_waiting),                               # only a parked instance can be resumed
+    correlate: event.type ∈ wait.resume_events → Rejected(resume_event_mismatch),             # correlation to THIS open wait's declared resume class
+    version:   event.expected_version })                                                      # CAS precheck
+  IF admitted ≠ Accepted THEN RETURN admitted                       # Duplicate | Stale(v) | Rejected(…) pass through unchanged
+  instance ← admitted.instance
   template ← definitionStore.load(instance.template_ref)
-  IF NOT is_wait_step(template, instance.current_step)  THEN RETURN Rejected(not_bare_wait)     # RESUME_WAIT resumes ONLY a type: wait step; a decision wait resumes via SUBMIT_DECISION
+  IF NOT is_wait_step(template, instance.current_step)  THEN RETURN Rejected(not_bare_wait)     # wait-SHAPE guard, not a rung: RESUME_WAIT resumes ONLY a type: wait step; a decision wait resumes via SUBMIT_DECISION
   step     ← template.step(instance.current_step)
-  target   ← step.on_resume[event.type]
+  target   ← step.on_resume[event.type]                             # CHOICEPOINT on_resume: kernel-classified — the event's validated-and-routed type is the key
   IF target is none                                THEN RETURN Rejected(no_resume_transition)   # the wait step must declare this resume route
   COMMIT atomically at expected_version = instance.version:
     instance.transcript.append(WAIT_RESUMED { op_id: event.op_id, kind: instance.wait.kind, event: event.type })   # the resume rides the transcript; a result payload, an authority hook, and the actual action (e.g. running git commit) are later slices
@@ -9006,7 +9117,7 @@ HANDLE envelope → Outcome
     envelope)
   IF outcome ≠ Accepted THEN RETURN outcome                     # Duplicate | Stale(v) | Rejected(…) pass through unchanged
 
-  target ← step.transitions[envelope.type]   # navigation (L0b): does this action exist here?
+  target ← step.transitions[envelope.type]   # navigation (L0b): does this action exist here? CHOICEPOINT transitions: principal-committed selection by the bound actor
   IF target is none                       THEN RETURN Rejected(no_transition)
 
   # L1: action authorization — exists as a transition, but may this role emit it here?
@@ -9108,7 +9219,7 @@ park_for_child(instance, template, step) → void                  # L4 — arri
   instance.kernel_status ← WAITING
   instance.wait ← { kind: child_event, requested_by: step.id, link_id: link.link_id, resume_events: keys(step.wait_for), spawn_pending }   # park on the child's DECLARED lifecycle keys. ERRAND child await (open-door form) — marker only, no outbound directive: the completion comes from the child's lifecycle
 
-child_intent(instance, template) → SpawnIntent                   # L4 — produce-not-perform (the ActionIntent / DispatchIntent analog): the child CREATE_INSTANCE runs POST-COMMIT, never inside the arrival commit. ERRAND spawn, directive phase
+child_intent(instance, template) → SpawnIntent                   # L4 — produce-not-perform (the ActionIntent / DispatchIntent analog): the child CREATE_INSTANCE runs POST-COMMIT, never inside the arrival commit. ERRAND spawn, directive phase · DIRECTIVE member (addressee: kernel CREATE_INSTANCE)
   step ← template.step(instance.current_step) ; link ← instance.child_links.by_id(instance.wait.link_id)
   RETURN SpawnIntent {
     request_id:         link.request_id,                         # correlation: the child's CREATE_INSTANCE replies with CHILD_SPAWNED { parent_ref, child_id } — the RUNTIME_CONTEXT_READY analog
@@ -9168,7 +9279,7 @@ CHILD_LIFECYCLE(event) → Outcome                                 # L4 kernel_e
     IF link.child_id = none THEN link.child_id ← event.child_id  # SELF-HEAL a lost CHILD_SPAWNED — in the SAME atomic transaction that records the event
     link.status ← event.lifecycle
     instance.transcript.append(CHILD_LIFECYCLE_RECEIVED { link_id: link.link_id, child_id: event.child_id, lifecycle: event.lifecycle })
-    apply_target_entry_effects(instance, template, instance.current_step, step.wait_for[event.lifecycle].target)   # route per the parent template — the SAME arrive(); done ⇒ next task, failed / cancelled ⇒ recover
+    apply_target_entry_effects(instance, template, instance.current_step, step.wait_for[event.lifecycle].target)   # route per the parent template — the SAME arrive(); done ⇒ next task, failed / cancelled ⇒ recover. CHOICEPOINT wait_for: kernel-classified (the child's terminal commit)
   RETURN Committed(instance.version, post_commit_output(instance, template))
           </script>
         </div>
@@ -9325,6 +9436,9 @@ template:
               <code>SpawnIntent</code> directive → correlated <code>CHILD_SPAWNED</code>/<code>FAILED</code>),
               child await is open-door (marker only; the completion is the child's lifecycle). See the
               kernel-primitives memo (§6/§9); behavior unchanged.</li>
+            <li><b>Rebaseline (wave 4):</b> the <code>wait_for</code> route is labeled a <b>ChoicePoint</b>
+              (kernel-classified — the child's terminal commit) and <code>SpawnIntent</code> a
+              <b>Directive</b> member; behavior unchanged.</li>
           </ul>
         </div>
       </section>

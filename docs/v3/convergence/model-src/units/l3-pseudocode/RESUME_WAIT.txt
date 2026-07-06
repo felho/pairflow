@@ -1,15 +1,18 @@
 
 RESUME_WAIT(event) → Outcome                                         # operator/kernel event resumes a type: wait step — the BARE-wait dual of SUBMIT_DECISION; generalizes KICKOFF. event = { instance_id, op_id, expected_version, type }
-  instance ← instanceStore.load(event.instance_id)
-  IF instance is none                              THEN RETURN Rejected(unknown_instance)
-  IF instance.transcript.has(event.op_id)          THEN RETURN Duplicate                       # idempotency — same (instance_id, op_id) scope as HANDLE
-  IF instance.kernel_status ≠ WAITING              THEN RETURN Rejected(not_waiting)            # only a parked instance can be resumed
-  IF event.type ∉ instance.wait.resume_events      THEN RETURN Rejected(resume_event_mismatch)  # correlation to THIS open wait's declared resume class
-  IF event.expected_version ≠ instance.version     THEN RETURN Stale(instance.version)          # CAS precheck
+  # ADMISSION via admit_input (load-first, born at L3) — no authority rung on this path today: the
+  # resume is kernel-classified (an authority hook is a later slice), so the expectation is simply absent
+  admitted ← admit_input(event, expect: {
+    op_id:     event.op_id,                                                                   # same (instance_id, op_id) scope as HANDLE
+    state:     kernel_status = WAITING → Rejected(not_waiting),                               # only a parked instance can be resumed
+    correlate: event.type ∈ wait.resume_events → Rejected(resume_event_mismatch),             # correlation to THIS open wait's declared resume class
+    version:   event.expected_version })                                                      # CAS precheck
+  IF admitted ≠ Accepted THEN RETURN admitted                       # Duplicate | Stale(v) | Rejected(…) pass through unchanged
+  instance ← admitted.instance
   template ← definitionStore.load(instance.template_ref)
-  IF NOT is_wait_step(template, instance.current_step)  THEN RETURN Rejected(not_bare_wait)     # RESUME_WAIT resumes ONLY a type: wait step; a decision wait resumes via SUBMIT_DECISION
+  IF NOT is_wait_step(template, instance.current_step)  THEN RETURN Rejected(not_bare_wait)     # wait-SHAPE guard, not a rung: RESUME_WAIT resumes ONLY a type: wait step; a decision wait resumes via SUBMIT_DECISION
   step     ← template.step(instance.current_step)
-  target   ← step.on_resume[event.type]
+  target   ← step.on_resume[event.type]                             # CHOICEPOINT on_resume: kernel-classified — the event's validated-and-routed type is the key
   IF target is none                                THEN RETURN Rejected(no_resume_transition)   # the wait step must declare this resume route
   COMMIT atomically at expected_version = instance.version:
     instance.transcript.append(WAIT_RESUMED { op_id: event.op_id, kind: instance.wait.kind, event: event.type })   # the resume rides the transcript; a result payload, an authority hook, and the actual action (e.g. running git commit) are later slices

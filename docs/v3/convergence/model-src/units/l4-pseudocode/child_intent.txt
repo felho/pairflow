@@ -1,5 +1,5 @@
 
-child_intent(instance, template) → SpawnIntent                   # L4 — produce-not-perform (the ActionIntent / DispatchIntent analog): the child CREATE_INSTANCE runs POST-COMMIT, never inside the arrival commit. ERRAND spawn, directive phase
+child_intent(instance, template) → SpawnIntent                   # L4 — produce-not-perform (the ActionIntent / DispatchIntent analog): the child CREATE_INSTANCE runs POST-COMMIT, never inside the arrival commit. ERRAND spawn, directive phase · DIRECTIVE member (addressee: kernel CREATE_INSTANCE)
   step ← template.step(instance.current_step) ; link ← instance.child_links.by_id(instance.wait.link_id)
   RETURN SpawnIntent {
     request_id:         link.request_id,                         # correlation: the child's CREATE_INSTANCE replies with CHILD_SPAWNED { parent_ref, child_id } — the RUNTIME_CONTEXT_READY analog

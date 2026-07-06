@@ -1,22 +1,25 @@
 
 SUBMIT_DECISION(decision) → Outcome                                  # operator_intent — a KICKOFF sibling; resumes WAITING(human_decision). decision = { instance_id, op_id, expected_version, request_ref, verdict, override?, payload?, by }. verdict is a DECLARED decision key — the kernel knows no decision names
-  instance ← instanceStore.load(decision.instance_id)
-  IF instance is none                              THEN RETURN Rejected(unknown_instance)
-  IF instance.transcript.has(decision.op_id)       THEN RETURN Duplicate                       # idempotency — same (instance_id, op_id) scope as HANDLE
-  IF instance.kernel_status ≠ WAITING OR instance.wait.kind ≠ human_decision
-                                                   THEN RETURN Rejected(not_awaiting_decision)  # only a parked human_gate accepts a decision
-  IF decision.request_ref ≠ instance.wait.request_ref  THEN RETURN Rejected(decision_request_mismatch)   # correlation to THIS pending DECISION_REQUEST
-  IF decision.expected_version ≠ instance.version  THEN RETURN Stale(instance.version)          # CAS precheck (actor-supplied stale-intent, as in HANDLE)
+  # ADMISSION via admit_input (load-first, born at L3) — the operator-intent rungs: idempotency → lifecycle/state → correlation → staleness → authority
+  admitted ← admit_input(decision, expect: {
+    op_id:     decision.op_id,                                                                # same (instance_id, op_id) scope as HANDLE
+    state:     kernel_status = WAITING AND wait.kind = human_decision → Rejected(not_awaiting_decision),   # only a parked human_gate accepts a decision
+    correlate: wait.request_ref = decision.request_ref → Rejected(decision_request_mismatch), # correlation to THIS pending DECISION_REQUEST
+    version:   decision.expected_version,                                                     # CAS precheck (actor-supplied stale-intent, as in HANDLE)
+    authority: { claim:   decision.by,
+                 granted: instance.binding[template.step(instance.current_step).role],        # lazy positional read — evaluated only at this rung
+                 mismatch → Rejected(operator_not_authorized) } })                            # operator authority on THIS path — NOT the L1 actor-envelope gate (a human decision is a different input class)
+  IF admitted ≠ Accepted THEN RETURN admitted                       # Duplicate | Stale(v) | Rejected(…) pass through unchanged
+  instance ← admitted.instance
   template ← definitionStore.load(instance.template_ref)
   step     ← template.step(instance.current_step)                   # the human_gate
-  IF decision.by ≠ instance.binding[step.role]     THEN RETURN Rejected(operator_not_authorized)   # operator authority on THIS path — NOT the L1 actor-envelope gate (a human decision is a different input class)
-  choice   ← step.decisions[decision.verdict]                       # a human_gate's decisions map IS its transition map, keyed by decision key; the kernel routes by the key — it does not know what "approve" means
+  choice   ← step.decisions[decision.verdict]                       # a human_gate's decisions map IS its transition map, keyed by decision key; the kernel routes by the key — it does not know what "approve" means. CHOICEPOINT decisions: principal-committed selection by the bound operator
   IF choice is none                                THEN RETURN Rejected(unknown_decision)        # the verdict must be one of the gate's declared decision keys
   # required payload fields — declared per decision (the anchor's request_rework requires a non-empty instruction); generic, NO verdict name is hardcoded
   FOR field IN required_fields(choice):
     IF decision.payload[field] is absent OR empty  THEN RETURN Rejected(missing_required_field)
   request  ← pending_decision_request(instance)                     # the DECISION_REQUEST recorded on entry
-  # override (the fiduciary invariant): override is meaningful ONLY against a recorded recommendation — choosing against the machine must be explicit and recorded
+  # override (the fiduciary invariant): override is meaningful ONLY against a recorded recommendation — choosing against the machine must be explicit and recorded. The decisions instance's irreducible rule, not a ChoicePoint phase
   against_recommendation ← request.recommendation is present AND decision.verdict ≠ request.recommendation
   IF against_recommendation     AND NOT decision.override THEN RETURN Rejected(override_required)        # went against the recommendation without flagging it
   IF NOT against_recommendation AND decision.override     THEN RETURN Rejected(override_not_applicable)  # no recommendation, or agreeing with it ⇒ there is nothing to override

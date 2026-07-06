@@ -12,6 +12,6 @@ CHILD_LIFECYCLE(event) → Outcome                                 # L4 kernel_e
     IF link.child_id = none THEN link.child_id ← event.child_id  # SELF-HEAL a lost CHILD_SPAWNED — in the SAME atomic transaction that records the event
     link.status ← event.lifecycle
     instance.transcript.append(CHILD_LIFECYCLE_RECEIVED { link_id: link.link_id, child_id: event.child_id, lifecycle: event.lifecycle })
-    apply_target_entry_effects(instance, template, instance.current_step, step.wait_for[event.lifecycle].target)   # route per the parent template — the SAME arrive(); done ⇒ next task, failed / cancelled ⇒ recover
+    apply_target_entry_effects(instance, template, instance.current_step, step.wait_for[event.lifecycle].target)   # route per the parent template — the SAME arrive(); done ⇒ next task, failed / cancelled ⇒ recover. CHOICEPOINT wait_for: kernel-classified (the child's terminal commit)
   RETURN Committed(instance.version, post_commit_output(instance, template))
           

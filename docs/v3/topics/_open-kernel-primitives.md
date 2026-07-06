@@ -579,3 +579,56 @@ ratified in the wave's review.
   Checksums: ledger diff EMPTY; the per-block `Rejected(...)` multiset was
   STRICTLY unchanged this wave (declaration + comment labels only, no
   ladder re-print).
+
+### Wave 4 (L3 — ChoicePoint + Directive born) — executed, findings await review
+
+- **F-W4-1 · RUN_ACTION (and DELETE_REQUESTED) cannot fold into
+  `admit_input` without behavior change — kept conservative.** Two
+  asymmetries on `RUN_ACTION`: (1) it loads with NO `unknown_instance`
+  guard — folding would add a rejection path where today the pseudocode has
+  a gap; (2) its authority guard is a literal-less
+  `REQUIRE trigger.by = instance.binding[step.role]` — folding would force
+  inventing a reject name, a new literal and a behavior change.
+  `DELETE_REQUESTED` shares the missing-guard problem in a DIFFERENT shape:
+  as written, `run_index.status(instance.id)` dereferences a possibly-none
+  instance before the tombstone check can answer — the gap lives there too,
+  but its resolution must respect the tombstone-before-authority order, so
+  it is NOT the same disposition. Proposed disposition: both ops keep their
+  own heads this wave; the guards (and the RUN_ACTION reject-name decision)
+  land in a later, separately ratified touch — candidates: the wave-5
+  sweep if ratified as in-scope, else the dedicated ingress-idempotency
+  touch that F-W1-2 already owns for KICKOFF/START/CANCEL.
+- **F-W4-2 · the operator paths gain the ladder's `missing_version` entry
+  guard — a deliberate, ratify-me behavior delta.** Today a malformed
+  SUBMIT_DECISION / RESUME_WAIT with NO `expected_version` field falls
+  through the `≠ instance.version` comparison and reports
+  `Stale(instance.version)`. Folded into the ladder, the version rung's
+  entry guard answers `Rejected(missing_version)` instead. This is the
+  correct canonicalization (the intent envelope declares the field as
+  mandatory; an absent field is a malformed input, not a stale one) and is
+  NOT dodged with a compare-only trick — but it is a behavior change on a
+  degenerate input, so it is recorded as a finding for explicit
+  ratification, not smuggled. The multiset cannot see it (the literal lives
+  in the ladder).
+- **Wave record (not a finding).** (a) The `unknown_instance` consolidation
+  arithmetic, stated up front and verified after: the literal moved from
+  two call sites into `admit_input`'s definition (printed at L3 only, the
+  declaration-at-birth convention) — per-block deltas exactly l3 3→2 and
+  release/action/auto-action/complete/l4 3→1, nothing else moved; the
+  ledger (78 distinct, first_seen at l0a-family) is untouched. (b) The
+  lazy-expectation rule is stated in `admit_input`: rung-local evaluation,
+  infallible side-effect-free reads only (pinned template loads included);
+  a future reject branch on such a read is a finding. (c) RESUME_WAIT folds
+  WITHOUT an authority rung — the resume is kernel-classified; no hidden
+  authority check was introduced; `not_bare_wait` stays outside as a
+  wait-shape guard (the `no_transition` precedent). (d) The wave-3
+  retro-touch predicted by the wave-3 record is done: the errand schematic's
+  fifth phase now reads "(the keyed route is a ChoicePoint)" and the
+  completion handlers' route lines carry their ChoicePoint labels. (e) The
+  Directive/provider boundary is drawn in `directive.txt`: the family is
+  the projected, deliverable ask objects (L8 generalizes their transport);
+  a `TRY provider.*` call is a transport-direct effect — an errand
+  directive-phase realization, not a P5 member. (f) HANDLE deliberately
+  keeps its inline load (lineage from L0a; folding only the L3 copy would
+  fork it) — stated in `admit_input`'s header so the asymmetry reads as
+  chosen. The L0d announcement comment is untouched and simply became true.

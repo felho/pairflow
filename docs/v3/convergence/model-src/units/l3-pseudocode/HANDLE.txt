@@ -21,7 +21,7 @@ HANDLE envelope → Outcome
     envelope)
   IF outcome ≠ Accepted THEN RETURN outcome                     # Duplicate | Stale(v) | Rejected(…) pass through unchanged
 
-  target ← step.transitions[envelope.type]   # navigation (L0b): does this action exist here?
+  target ← step.transitions[envelope.type]   # navigation (L0b): does this action exist here? CHOICEPOINT transitions: principal-committed selection by the bound actor
   IF target is none                       THEN RETURN Rejected(no_transition)
 
   # L1: action authorization — exists as a transition, but may this role emit it here?

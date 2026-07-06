@@ -1,0 +1,21 @@
+
+# ─── CHOICEPOINT (P2) — guarded keyed selection; the one structure behind the routing maps ───
+# Born at L3: a second keyed routing map arrives (decisions joins transitions), so the shape gets its
+# name. A position OFFERS a declared key set; an AUTHORIZED SELECTOR picks one key; guards validate;
+# the commit routes by the key through the shared arrival (apply_target_entry_effects). The kernel
+# knows no key names (de-vocabularized per map) — the ChoicePoint de-vocabularizes the map kinds
+# themselves.
+# Selector authority — who may pick (two values live today; the third is named now so a later level
+# finds its slot ready-made):
+#   principal-committed   an authorized principal picks, and the commit is theirs
+#   kernel-classified     no accountable selector: the kernel derives the key and commits — by
+#                         classifying a result, or by validating-and-routing an incoming event's
+#                         type as the key
+#   proposed              reserved (→ L9): the selector may only propose, never commit
+# Maps existing by L3 — the instances:
+#   transitions (L0b)   agent step    principal-committed (the bound actor; gates run before commit)
+#   decisions   (L3)    human_gate    principal-committed (the bound operator; the override rule is
+#                                     the instance's irreducible logic, not a ChoicePoint phase)
+#   on_resume   (L3)    wait step     kernel-classified (the event's validated-and-routed type)
+# Later maps are labeled in their own blocks: outcomes (LC3a/b — the runner's classified result),
+# wait_for (L4 — the child's terminal commit).

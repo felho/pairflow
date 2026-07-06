@@ -1,5 +1,5 @@
 
-human_decision_request(instance, template) → HumanDecisionRequest   # L3 — the human-facing analog of DispatchIntent (the Ask); local/manual delivery, durable channel L8
+human_decision_request(instance, template) → HumanDecisionRequest   # L3 — the human-facing analog of DispatchIntent (the Ask); local/manual delivery, durable channel L8. DIRECTIVE member (addressee: operator)
   step     ← template.step(instance.current_step)
   request  ← pending_decision_request(instance)
   operator ← instance.binding[step.role]                            # the human bound to the operator role

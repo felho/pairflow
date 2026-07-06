@@ -1,0 +1,18 @@
+
+# ─── ADMISSION gains its load-first companion (L3) — announced at L0d, arriving with the operator ops ───
+# admit_input owns the load: one call either rejects an unknown instance or runs the full ladder —
+# the loaded instance leaves this helper ONLY through Accepted.
+# Expectations are evaluated LAZILY, each at its own rung, in rung order. An expectation may read the
+# loaded instance, its pinned template (definitionStore.load — pinned immutable version), and step
+# positions — all infallible, side-effect-free reads over committed state (load-time validation
+# guarantees them); if such a read ever grows a reject/assert branch, that is a new finding, not a
+# silent property.
+# The payload rung stays key-scoped at the call sites: it runs AFTER the ChoicePoint selection, so
+# its reject names live there. HANDLE deliberately keeps its inline load: its lineage runs from L0a,
+# and folding only this level's copy would fork it — the asymmetry is chosen, not overlooked.
+admit_input(input, expect) → Accepted(instance) | Duplicate | Stale | Rejected
+  instance ← instanceStore.load(input.instance_id)
+  IF instance is none THEN RETURN Rejected(unknown_instance)
+  outcome ← admit_loaded(instance, expect, input)
+  IF outcome ≠ Accepted THEN RETURN outcome
+  RETURN Accepted(instance)
