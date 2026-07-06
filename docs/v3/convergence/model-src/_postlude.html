@@ -52,13 +52,29 @@
         .replace(/\b(Rejected\([^)]+\)|Stale\([^)]+\)|Committed\([^)]+\)|Started\([^)]+\)|Created\([^)]+\)|Activated\([^)]+\)|Terminated\([^)]+\)|Accepted|Duplicate|DispatchIntent|ContextPacket|ResolvedStartRequest|GateDecision|GateEvaluator|GateInvocation|ProcessResult|ProcessGateRunner|ContextBlock|HumanDecisionRequest|DECISION_REQUEST|DECISION_MADE|APPROVAL_REQUEST|APPROVAL_DECISION|WAIT_RESUMED|RUNTIME_CONTEXT_RELEASING|RUNTIME_CONTEXT_RELEASE_FAILED|ACTION_RUNNING|ACTION_RESULT|ActionRequest|ActionResult|ActionRunner|ActionIntent|CHILD_LIFECYCLE_RECEIVED|ChildWorkflowLink|SpawnIntent|Outcome)\b/g, '<span class="out">$1</span>')
         .replace(/^(\s*-?\s*)([A-Za-z_][A-Za-z0-9_]*)(:)/, '$1<span class="k">$2</span>$3')
         .replace(/(:\s*)([0-9]+)(\b)/g, '$1<span class="n">$2</span>$3');
-      if (comment) html += '<span class="c">' + escapeHtml(comment) + '</span>';
+      if (comment) {
+        // render-side readability layer: the uppercase primitive labels (the rebaseline's
+        // labeling convention) become color-coded pills; the comment text itself is unchanged
+        var commentHtml = escapeHtml(comment).replace(
+          /\b(ADMISSION|WARRANT|ERRAND|CHOICEPOINT|DIRECTIVE)\b/g,
+          function (m) { return '<span class="prim prim-' + m.toLowerCase() + '">' + m + '</span>'; }
+        );
+        html += '<span class="c">' + commentHtml + '</span>';
+      }
       return html;
+    }
+
+    function primitiveHeadClass(line) {
+      // a `# ─── … ───` line is a contract-declaration header — render it as a band,
+      // color-keyed by the primitive it declares
+      if (typeof line !== 'string' || line.trim().indexOf('# ───') !== 0) return '';
+      var m = line.match(/\b(ADMISSION|WARRANT|ERRAND|CHOICEPOINT|DIRECTIVE)\b/);
+      return ' contract-head' + (m ? ' ch-' + m[1].toLowerCase() : '');
     }
 
     function renderLine(parent, line, index, kind) {
       var row = document.createElement('div');
-      row.className = 'diff-line ' + kind + (line === '' || line == null ? ' blank' : '');
+      row.className = 'diff-line ' + kind + (line === '' || line == null ? ' blank' : '') + primitiveHeadClass(line);
       var number = document.createElement('div');
       number.className = 'diff-ln';
       number.textContent = index == null ? '' : String(index + 1);

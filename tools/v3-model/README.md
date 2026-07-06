@@ -31,7 +31,13 @@ side was edited.
 ## What the extraction preserves
 
 - `_prelude.html` / `_postlude.html` — head+styles+nav+intro and the
-  diff-viewer JS, verbatim.
+  diff-viewer JS, verbatim. The viewer also carries a render-side
+  readability layer over the kernel-primitives labeling convention: the
+  uppercase primitive labels (`ADMISSION` / `WARRANT` / `ERRAND` /
+  `CHOICEPOINT` / `DIRECTIVE`) in comments render as color-coded pills,
+  `# ─── … ───` contract headers render as color-keyed bands, and comments
+  are dimmed (hover a line to read its full comment). Presentation only —
+  the source units and every checksum are untouched by it.
 - `sections/NN-<id>.html` — one file per level section; the bodies of the
   `diff-source` `<script>` blocks are replaced by `[[@code <relpath>]]`
   markers.
