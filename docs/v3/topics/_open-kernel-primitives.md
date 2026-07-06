@@ -550,7 +550,7 @@ ratified in the wave's review.
   slot the contract already holds open; one cross-ref line at resolution
   time suffices.
 
-### Wave 3 (LC2 — Errand born) — executed, findings await review
+### Wave 3 (LC2 — Errand born) — wave reviewed, both dispositions RATIFIED (2026-07-06)
 
 - **F-W3-1 · §6.2's "second instance" claim for P1 holds only in the
   provider-addressed reading.** The memo's placement rationale ("introduced
