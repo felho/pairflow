@@ -19,3 +19,9 @@
 #   on_resume   (L3)    wait step     kernel-classified (the event's validated-and-routed type)
 # Later maps are labeled in their own blocks: outcomes (LC3a/b — the runner's classified result),
 # wait_for (L4 — the child's terminal commit).
+# Route values: a route normally names a target entered through the shared arrival — including a
+# SELF-TARGET, which genuinely re-arrives (re-park, arrival effects run; the LC3a conflict →
+# merge_action re-park). A *stay* route is reserved (→ L5, its first load-bearing instance): same
+# position WITHOUT re-arrival — no arrival effects, no round advance; the enriched handoff belongs
+# to the next dispatch. Stay is a route value, not a selector authority, and has no live instance
+# today.

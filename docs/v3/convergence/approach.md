@@ -748,7 +748,9 @@ durable / external channel. v1 reality check (Explore): `plan watch` is external
 > validates the most important self-value without private-mailbox federation, fuzzy
 > correlation, Slack/email channels, or the dataset layer.
 
-**Kernel-primitives rebaseline (P1–P5) — a pass over Block A, not a new level. In progress.**
+**Kernel-primitives rebaseline (P1–P5) — a pass over Block A, not a new level. COMPLETE
+(waves 1–5, all ratified); remaining named debt: the dedicated F-W1-2 ingress/idempotency
+hardening touch (operator op_id + the F-W4-1 guards + the RUN_ACTION reject-name decision).**
 Source: [`../topics/_open-kernel-primitives.md`](../topics/_open-kernel-primitives.md)
 (decided + ratified; the L5 paper test passed — L5-core reduces to six declarations).
 Two independent re-reads of the finished L0a–L4 kernel converged on the same finding:
@@ -788,11 +790,15 @@ Waves (each = its own small-spec + review round + commit; flips recorded here):
   directive builders labeled corpus-wide; the wave-3 routing retro-touch done; RUN_ACTION /
   DELETE_REQUESTED kept conservative (F-W4-1); the one deliberate behavior delta — the
   operator paths' `missing_version` canonicalization — is F-W4-2; both in the memo §9.)*
-- [ ] Wave 5 — closing sweep: LC3a→L4 fully instance-form; the memo's §3
+- [x] Wave 5 — closing sweep: LC3a→L4 fully instance-form; the memo's §3
   reclassification realized; the §8 findings folded in (the P1 opener dimension, the
   P2 stay route, marker-home carrying blocking/non-blocking); the F-W4-3 one-line fix
   (pre-declared +1 multiset delta). NOT in scope (ratified F-W4-1 decision): the missing
-  ingress guards — they go to the dedicated F-W1-2 ingress-idempotency touch.
+  ingress guards — they go to the dedicated F-W1-2 ingress-idempotency touch. *(Realized:
+  the two override-chain gaps patched (apply_target_entry_effects / post_commit_output
+  tags); F1 booked as realized-in-finer-grain at wave 3; the stay route drew its boundary
+  against the live self-target; F3 folded with the permits-non-blocking precision; the
+  memo's §6.4 gate chain closed and §3 marked REALIZED; the memo §9 wave-5 record.)*
 Safety rails: **behavior does not change** — templates, traces, and the
 rejection/invariant sets are invariants of the pass (the derived registries are diffed
 as semantic checksums at every wave; rung-order divergences against todo A1/C2/E2 + the

@@ -3954,6 +3954,12 @@ validate_decision_gates(template) → ok | Rejected                     # L3 —
 #   on_resume   (L3)    wait step     kernel-classified (the event's validated-and-routed type)
 # Later maps are labeled in their own blocks: outcomes (LC3a/b — the runner's classified result),
 # wait_for (L4 — the child's terminal commit).
+# Route values: a route normally names a target entered through the shared arrival — including a
+# SELF-TARGET, which genuinely re-arrives (re-park, arrival effects run; the LC3a conflict →
+# merge_action re-park). A *stay* route is reserved (→ L5, its first load-bearing instance): same
+# position WITHOUT re-arrival — no arrival effects, no round advance; the enriched handoff belongs
+# to the next dispatch. Stay is a route value, not a selector authority, and has no live instance
+# today.
 
 # ─── DIRECTIVE (P5) — the outbound ask family: one concept, an addressee class, a projected payload ───
 # Born at L3: a second outbound ask arrives (HumanDecisionRequest joins DispatchIntent), so the family
@@ -4057,7 +4063,7 @@ SUBMIT_DECISION(decision) → Outcome                                  # operato
     version:   decision.expected_version,                                                     # CAS precheck (actor-supplied stale-intent, as in HANDLE)
     authority: { claim:   decision.by,
                  granted: instance.binding[template.step(instance.current_step).role],        # lazy rung-local read: `template` here IS the pinned-template load (definitionStore), performed at this rung — not the later textual load below
-                 mismatch → Rejected(operator_not_authorized) } })                            # operator authority on THIS path — NOT the L1 actor-envelope gate (a human decision is a different input class)
+                 missing → Rejected(operator_not_authorized), mismatch → Rejected(operator_not_authorized) } })   # both branches declared (the L1 house style); operator authority on THIS path — NOT the L1 actor-envelope gate (a human decision is a different input class)
   IF admitted ≠ Accepted THEN RETURN admitted                       # Duplicate | Stale(v) | Rejected(…) pass through unchanged
   instance ← admitted.instance
   template ← definitionStore.load(instance.template_ref)
@@ -4958,7 +4964,12 @@ validate_decision_gates(template) → ok | Rejected                     # L3 —
 #         → correlated completion arrives (guards: our request? still current?)
 #           → keyed routing / state advance, one CAS commit (the keyed route is a ChoicePoint)
 #
-# Declared dimensions per instance: marker slot & its home · directive + addressee class ·
+# Declared dimensions per instance: marker slot & its home — the home also carries blocking vs
+# non-blocking (→ L5): a wait-slot home is necessarily blocking (the "≤ 1 open wait" shape is a
+# property of wait-slot-homed errands, not of errands per se); a record-collection home PERMITS a
+# non-blocking form because the marker lives outside the single wait slot (the child links are the
+# precedent for collection-homed markers — not proof that every collection-homed errand is
+# non-blocking: the L4 parent still parks) · directive + addressee class ·
 # completion event(s) · correlation rule (the warrant class you met at L1 — request
 # correlation — is the errand's completion-matching rule) · on_ok / on_fail routes · form ·
 # opener (which committed move opens the claim: a step arrival, a lifecycle move, or a
@@ -5129,7 +5140,7 @@ SUBMIT_DECISION(decision) → Outcome                                  # operato
     version:   decision.expected_version,                                                     # CAS precheck (actor-supplied stale-intent, as in HANDLE)
     authority: { claim:   decision.by,
                  granted: instance.binding[template.step(instance.current_step).role],        # lazy rung-local read: `template` here IS the pinned-template load (definitionStore), performed at this rung — not the later textual load below
-                 mismatch → Rejected(operator_not_authorized) } })                            # operator authority on THIS path — NOT the L1 actor-envelope gate (a human decision is a different input class)
+                 missing → Rejected(operator_not_authorized), mismatch → Rejected(operator_not_authorized) } })   # both branches declared (the L1 house style); operator authority on THIS path — NOT the L1 actor-envelope gate (a human decision is a different input class)
   IF admitted ≠ Accepted THEN RETURN admitted                       # Duplicate | Stale(v) | Rejected(…) pass through unchanged
   instance ← admitted.instance
   template ← definitionStore.load(instance.template_ref)
@@ -5933,7 +5944,7 @@ SUBMIT_DECISION(decision) → Outcome                                  # operato
     version:   decision.expected_version,                                                     # CAS precheck (actor-supplied stale-intent, as in HANDLE)
     authority: { claim:   decision.by,
                  granted: instance.binding[template.step(instance.current_step).role],        # lazy rung-local read: `template` here IS the pinned-template load (definitionStore), performed at this rung — not the later textual load below
-                 mismatch → Rejected(operator_not_authorized) } })                            # operator authority on THIS path — NOT the L1 actor-envelope gate (a human decision is a different input class)
+                 missing → Rejected(operator_not_authorized), mismatch → Rejected(operator_not_authorized) } })   # both branches declared (the L1 house style); operator authority on THIS path — NOT the L1 actor-envelope gate (a human decision is a different input class)
   IF admitted ≠ Accepted THEN RETURN admitted                       # Duplicate | Stale(v) | Rejected(…) pass through unchanged
   instance ← admitted.instance
   template ← definitionStore.load(instance.template_ref)
@@ -5960,7 +5971,7 @@ SUBMIT_DECISION(decision) → Outcome                                  # operato
 required_fields(choice) → [field]                                   # the payload fields a decision declares required (e.g. request_rework ⇒ instruction); empty when the decision needs no payload — the generic replacement for the hardcoded rework-instruction rule
   RETURN [ f FOR (f, spec) IN (choice.payload ?? {}) WHERE spec.required ]
 
-apply_target_entry_effects(instance, template, from_step_id, target) → void                # L3 — apply the kernel effects of entering the already-chosen target: position (current_step), round advancement, and the target-type lifecycle outcome below. Shared by HANDLE / SUBMIT_DECISION / RESUME_WAIT so the entry paths never drift
+apply_target_entry_effects(instance, template, from_step_id, target) → void                # L3 — apply the kernel effects of entering the already-chosen target: position (current_step), round advancement, and the target-type lifecycle outcome below. Shared by HANDLE / SUBMIT_DECISION / RESUME_WAIT so the entry paths never drift — the shared ARRIVAL every ChoicePoint routes through
   instance.current_step ← target
   IF advances_round(from_step_id, target) THEN instance.round ← instance.round + 1   # transition semantics; transcript-reconstructable
   IF target is terminal THEN COMPLETE(instance) ; RETURN            # the existing HANDLE terminal-step rule → TERMINAL(done); no new terminal semantics at L3
@@ -5994,7 +6005,7 @@ park_for_wait(instance, step) → void                               # L3 — ar
   instance.kernel_status ← WAITING
   instance.wait ← { kind: step.wait.kind, requested_by: step.id, resume_events: step.wait.resume_events }   # e.g. commit_pending ⇐ [COMMIT], merge_pending ⇐ [MERGE], process_pending ⇐ [PERF_TEST_RESULT]; RESUME_WAIT is the handler (L3) — the resume ACTION is later; the L0d terminal set (done | failed | cancelled) is untouched
 
-post_commit_output(instance, template) → DispatchIntent | HumanDecisionRequest | ActionRequest | none   # L3 — pure derivation (NO mutation): read the post-commit kernel_status that apply_target_entry_effects just set and select the outbound effect. The read-side dual of apply_target_entry_effects (which sets the status; this returns what to deliver)
+post_commit_output(instance, template) → DispatchIntent | HumanDecisionRequest | ActionRequest | none   # L3 — pure derivation (NO mutation): read the post-commit kernel_status that apply_target_entry_effects just set and select the outbound effect. The read-side dual of apply_target_entry_effects (which sets the status; this returns what to deliver) — selects which DIRECTIVE (if any) leaves post-commit
   IF instance.kernel_status = TERMINAL THEN RETURN none
   IF instance.kernel_status = WAITING THEN
      IF instance.wait.kind = human_decision THEN RETURN human_decision_request(instance, template)   # parked on a human_gate ⇒ the Ask
@@ -6753,7 +6764,7 @@ SUBMIT_DECISION(decision) → Outcome                                  # operato
     version:   decision.expected_version,                                                     # CAS precheck (actor-supplied stale-intent, as in HANDLE)
     authority: { claim:   decision.by,
                  granted: instance.binding[template.step(instance.current_step).role],        # lazy rung-local read: `template` here IS the pinned-template load (definitionStore), performed at this rung — not the later textual load below
-                 mismatch → Rejected(operator_not_authorized) } })                            # operator authority on THIS path — NOT the L1 actor-envelope gate (a human decision is a different input class)
+                 missing → Rejected(operator_not_authorized), mismatch → Rejected(operator_not_authorized) } })   # both branches declared (the L1 house style); operator authority on THIS path — NOT the L1 actor-envelope gate (a human decision is a different input class)
   IF admitted ≠ Accepted THEN RETURN admitted                       # Duplicate | Stale(v) | Rejected(…) pass through unchanged
   instance ← admitted.instance
   template ← definitionStore.load(instance.template_ref)
@@ -6780,7 +6791,7 @@ SUBMIT_DECISION(decision) → Outcome                                  # operato
 required_fields(choice) → [field]                                   # the payload fields a decision declares required (e.g. request_rework ⇒ instruction); empty when the decision needs no payload — the generic replacement for the hardcoded rework-instruction rule
   RETURN [ f FOR (f, spec) IN (choice.payload ?? {}) WHERE spec.required ]
 
-apply_target_entry_effects(instance, template, from_step_id, target) → void                # L3 — apply the kernel effects of entering the already-chosen target: position (current_step), round advancement, and the target-type lifecycle outcome below. Shared by HANDLE / SUBMIT_DECISION / RESUME_WAIT so the entry paths never drift
+apply_target_entry_effects(instance, template, from_step_id, target) → void                # L3 — apply the kernel effects of entering the already-chosen target: position (current_step), round advancement, and the target-type lifecycle outcome below. Shared by HANDLE / SUBMIT_DECISION / RESUME_WAIT so the entry paths never drift — the shared ARRIVAL every ChoicePoint routes through
   instance.current_step ← target
   IF advances_round(from_step_id, target) THEN instance.round ← instance.round + 1   # transition semantics; transcript-reconstructable
   IF target is terminal THEN COMPLETE(instance) ; RETURN            # the existing HANDLE terminal-step rule → TERMINAL(done); no new terminal semantics at L3
@@ -6814,7 +6825,7 @@ park_for_wait(instance, step) → void                               # L3 — ar
   instance.kernel_status ← WAITING
   instance.wait ← { kind: step.wait.kind, requested_by: step.id, resume_events: step.wait.resume_events }   # e.g. commit_pending ⇐ [COMMIT], merge_pending ⇐ [MERGE], process_pending ⇐ [PERF_TEST_RESULT]; RESUME_WAIT is the handler (L3) — the resume ACTION is later; the L0d terminal set (done | failed | cancelled) is untouched
 
-post_commit_output(instance, template) → DispatchIntent | HumanDecisionRequest | ActionRequest | ActionIntent | none   # L3 — pure derivation (NO mutation): read the post-commit kernel_status that apply_target_entry_effects just set and select the outbound effect. The read-side dual of apply_target_entry_effects (which sets the status; this returns what to deliver)
+post_commit_output(instance, template) → DispatchIntent | HumanDecisionRequest | ActionRequest | ActionIntent | none   # L3 — pure derivation (NO mutation): read the post-commit kernel_status that apply_target_entry_effects just set and select the outbound effect. The read-side dual of apply_target_entry_effects (which sets the status; this returns what to deliver) — selects which DIRECTIVE (if any) leaves post-commit
   IF instance.kernel_status = TERMINAL THEN RETURN none
   IF instance.kernel_status = WAITING THEN
      IF instance.wait.kind = human_decision THEN RETURN human_decision_request(instance, template)   # parked on a human_gate ⇒ the Ask
@@ -7621,7 +7632,7 @@ SUBMIT_DECISION(decision) → Outcome                                  # operato
     version:   decision.expected_version,                                                     # CAS precheck (actor-supplied stale-intent, as in HANDLE)
     authority: { claim:   decision.by,
                  granted: instance.binding[template.step(instance.current_step).role],        # lazy rung-local read: `template` here IS the pinned-template load (definitionStore), performed at this rung — not the later textual load below
-                 mismatch → Rejected(operator_not_authorized) } })                            # operator authority on THIS path — NOT the L1 actor-envelope gate (a human decision is a different input class)
+                 missing → Rejected(operator_not_authorized), mismatch → Rejected(operator_not_authorized) } })   # both branches declared (the L1 house style); operator authority on THIS path — NOT the L1 actor-envelope gate (a human decision is a different input class)
   IF admitted ≠ Accepted THEN RETURN admitted                       # Duplicate | Stale(v) | Rejected(…) pass through unchanged
   instance ← admitted.instance
   template ← definitionStore.load(instance.template_ref)
@@ -7648,7 +7659,7 @@ SUBMIT_DECISION(decision) → Outcome                                  # operato
 required_fields(choice) → [field]                                   # the payload fields a decision declares required (e.g. request_rework ⇒ instruction); empty when the decision needs no payload — the generic replacement for the hardcoded rework-instruction rule
   RETURN [ f FOR (f, spec) IN (choice.payload ?? {}) WHERE spec.required ]
 
-apply_target_entry_effects(instance, template, from_step_id, target) → void                # L3 — apply the kernel effects of entering the already-chosen target: position (current_step), round advancement, and the target-type lifecycle outcome below. Shared by HANDLE / SUBMIT_DECISION / RESUME_WAIT so the entry paths never drift
+apply_target_entry_effects(instance, template, from_step_id, target) → void                # L3 — apply the kernel effects of entering the already-chosen target: position (current_step), round advancement, and the target-type lifecycle outcome below. Shared by HANDLE / SUBMIT_DECISION / RESUME_WAIT so the entry paths never drift — the shared ARRIVAL every ChoicePoint routes through
   instance.current_step ← target
   IF advances_round(from_step_id, target) THEN instance.round ← instance.round + 1   # transition semantics; transcript-reconstructable
   IF target is terminal THEN COMPLETE(instance) ; RETURN            # the existing HANDLE terminal-step rule → TERMINAL(done); no new terminal semantics at L3
@@ -7682,7 +7693,7 @@ park_for_wait(instance, step) → void                               # L3 — ar
   instance.kernel_status ← WAITING
   instance.wait ← { kind: step.wait.kind, requested_by: step.id, resume_events: step.wait.resume_events }   # e.g. commit_pending ⇐ [COMMIT], merge_pending ⇐ [MERGE], process_pending ⇐ [PERF_TEST_RESULT]; RESUME_WAIT is the handler (L3) — the resume ACTION is later; the L0d terminal set (done | failed | cancelled) is untouched
 
-post_commit_output(instance, template) → DispatchIntent | HumanDecisionRequest | ActionRequest | ActionIntent | none   # L3 — pure derivation (NO mutation): read the post-commit kernel_status that apply_target_entry_effects just set and select the outbound effect. The read-side dual of apply_target_entry_effects (which sets the status; this returns what to deliver)
+post_commit_output(instance, template) → DispatchIntent | HumanDecisionRequest | ActionRequest | ActionIntent | none   # L3 — pure derivation (NO mutation): read the post-commit kernel_status that apply_target_entry_effects just set and select the outbound effect. The read-side dual of apply_target_entry_effects (which sets the status; this returns what to deliver) — selects which DIRECTIVE (if any) leaves post-commit
   IF instance.kernel_status = TERMINAL THEN RETURN none
   IF instance.kernel_status = WAITING THEN
      IF instance.wait.kind = human_decision THEN RETURN human_decision_request(instance, template)   # parked on a human_gate ⇒ the Ask
@@ -8856,7 +8867,7 @@ SUBMIT_DECISION(decision) → Outcome                                  # operato
     version:   decision.expected_version,                                                     # CAS precheck (actor-supplied stale-intent, as in HANDLE)
     authority: { claim:   decision.by,
                  granted: instance.binding[template.step(instance.current_step).role],        # lazy rung-local read: `template` here IS the pinned-template load (definitionStore), performed at this rung — not the later textual load below
-                 mismatch → Rejected(operator_not_authorized) } })                            # operator authority on THIS path — NOT the L1 actor-envelope gate (a human decision is a different input class)
+                 missing → Rejected(operator_not_authorized), mismatch → Rejected(operator_not_authorized) } })   # both branches declared (the L1 house style); operator authority on THIS path — NOT the L1 actor-envelope gate (a human decision is a different input class)
   IF admitted ≠ Accepted THEN RETURN admitted                       # Duplicate | Stale(v) | Rejected(…) pass through unchanged
   instance ← admitted.instance
   template ← definitionStore.load(instance.template_ref)
@@ -8883,7 +8894,7 @@ SUBMIT_DECISION(decision) → Outcome                                  # operato
 required_fields(choice) → [field]                                   # the payload fields a decision declares required (e.g. request_rework ⇒ instruction); empty when the decision needs no payload — the generic replacement for the hardcoded rework-instruction rule
   RETURN [ f FOR (f, spec) IN (choice.payload ?? {}) WHERE spec.required ]
 
-apply_target_entry_effects(instance, template, from_step_id, target) → void                # L3 — apply the kernel effects of entering the already-chosen target: position (current_step), round advancement, and the target-type lifecycle outcome below. Shared by HANDLE / SUBMIT_DECISION / RESUME_WAIT so the entry paths never drift
+apply_target_entry_effects(instance, template, from_step_id, target) → void                # L3 — apply the kernel effects of entering the already-chosen target: position (current_step), round advancement, and the target-type lifecycle outcome below. Shared by HANDLE / SUBMIT_DECISION / RESUME_WAIT so the entry paths never drift — the shared ARRIVAL every ChoicePoint routes through
   instance.current_step ← target
   IF advances_round(from_step_id, target) THEN instance.round ← instance.round + 1   # transition semantics; transcript-reconstructable
   IF target is terminal THEN COMPLETE(instance) ; RETURN            # the existing HANDLE terminal-step rule → TERMINAL(done); no new terminal semantics at L3
@@ -8918,7 +8929,7 @@ park_for_wait(instance, step) → void                               # L3 — ar
   instance.kernel_status ← WAITING
   instance.wait ← { kind: step.wait.kind, requested_by: step.id, resume_events: step.wait.resume_events }   # e.g. commit_pending ⇐ [COMMIT], merge_pending ⇐ [MERGE], process_pending ⇐ [PERF_TEST_RESULT]; RESUME_WAIT is the handler (L3) — the resume ACTION is later; the L0d terminal set (done | failed | cancelled) is untouched
 
-post_commit_output(instance, template) → DispatchIntent | HumanDecisionRequest | ActionRequest | ActionIntent | SpawnIntent | none   # L3 — pure derivation (NO mutation): read the post-commit kernel_status that apply_target_entry_effects just set and select the outbound effect. The read-side dual of apply_target_entry_effects (which sets the status; this returns what to deliver)
+post_commit_output(instance, template) → DispatchIntent | HumanDecisionRequest | ActionRequest | ActionIntent | SpawnIntent | none   # L3 — pure derivation (NO mutation): read the post-commit kernel_status that apply_target_entry_effects just set and select the outbound effect. The read-side dual of apply_target_entry_effects (which sets the status; this returns what to deliver) — selects which DIRECTIVE (if any) leaves post-commit
   IF instance.kernel_status = TERMINAL THEN RETURN none
   IF instance.kernel_status = WAITING THEN
      IF instance.wait.kind = human_decision THEN RETURN human_decision_request(instance, template)   # parked on a human_gate ⇒ the Ask

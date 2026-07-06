@@ -11,7 +11,12 @@
 #         → correlated completion arrives (guards: our request? still current?)
 #           → keyed routing / state advance, one CAS commit (the keyed route is a ChoicePoint)
 #
-# Declared dimensions per instance: marker slot & its home · directive + addressee class ·
+# Declared dimensions per instance: marker slot & its home — the home also carries blocking vs
+# non-blocking (→ L5): a wait-slot home is necessarily blocking (the "≤ 1 open wait" shape is a
+# property of wait-slot-homed errands, not of errands per se); a record-collection home PERMITS a
+# non-blocking form because the marker lives outside the single wait slot (the child links are the
+# precedent for collection-homed markers — not proof that every collection-homed errand is
+# non-blocking: the L4 parent still parks) · directive + addressee class ·
 # completion event(s) · correlation rule (the warrant class you met at L1 — request
 # correlation — is the errand's completion-matching rule) · on_ok / on_fail routes · form ·
 # opener (which committed move opens the claim: a step arrival, a lifecycle move, or a

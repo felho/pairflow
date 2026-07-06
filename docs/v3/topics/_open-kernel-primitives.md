@@ -1,9 +1,14 @@
 # Open Topic — Kernel Primitives (dissolving additive complexity)
 
 Date: 2026-07-05
-Status: **DECIDED — the primitive set, the review decisions, and the L5 paper
-test (§8, PASS) are all ratified. The rebaseline is UNBLOCKED; execution
-order: the LC rename-pass, then the in-place rebaseline level by level.** Joint reading result: the
+Status: **COMPLETE (2026-07-06) — the gate chain is closed: the §6.4
+acceptance gate ran as the L5 paper test (§8, PASS), was reviewed and
+ratified, and the rebaseline executed as waves 1–5 (all ratified, §9): the
+five primitives are named contracts in the corpus at their earned birth
+points, with instance/phase labels corpus-wide. Kernel-primitives rebaseline
+complete; remaining named debt: the dedicated F-W1-2 ingress/idempotency
+hardening touch (operator op_id + the F-W4-1 guards + the RUN_ACTION
+reject-name decision).** Joint reading result: the
 core-model pseudocode (L0a–L4 complete) was re-read independently by the user and
 by the assistant; both readings converged on the same two structural observations.
 This memo names the primitives, maps every current kernel unit onto them, and
@@ -263,6 +268,12 @@ trigger-payload vs workspace-reality split; release_safe + the
 release_failed handle semantics; the kind-boundary check; the child link
 self-heal; round semantics; the gate pipeline placement.
 
+**REALIZED (waves 1–5, 2026-07-06):** this table's classifications now
+appear as in-code contracts and labels in the corpus — the declarations at
+their birth points (L0d/L1/LC2/L3) and phase/instance labels at each
+handler; the irreducible-residue list above is exactly what stayed bespoke
+and is labeled as such at its sites. See §9 for the per-wave record.
+
 ## 4. De-bias tests (does a non-anchor case fit?)
 
 - **L6 timer**: an errand {marker: durable timer row, intent: scheduler wake,
@@ -482,7 +493,9 @@ not obstruct it.
 
 **Verdict: PASS.** L5-core reduces to six declarations over P1/P2/P3/P5 with
 no new handlers beyond a parameterized completion entry. The acceptance gate
-of §6.4 is satisfied pending review of this section.
+of §6.4 is satisfied — this section was reviewed and ratified on 2026-07-06
+(the "ratify the L5 paper test" commit), and the wave-5 review re-read it
+and re-affirmed the verdict, closing the gate chain explicitly.
 
 ## 9. Rebaseline findings log
 
@@ -663,3 +676,49 @@ ratified in the wave's review.
   rendered blocks — the `…` does not match the registry regex
   (`[a-z_]`-anchored), so the ledger is untouched; informal greps should
   exclude the placeholder.
+
+### Wave 5 (closing sweep) — executed, record awaits review
+
+No new births. The wave's items and their outcomes:
+
+- **F-W4-3 fix landed** (ratified disposition): the SUBMIT_DECISION
+  authority expectation now declares BOTH branches
+  (`missing → Rejected(operator_not_authorized)` beside mismatch, the L1
+  house style). Multiset delta exactly as pre-declared: +1
+  `operator_not_authorized` in the l3 fold and its five inheritors
+  (release/action/auto-action/complete/l4); nothing else moved; the ledger
+  is untouched.
+- **§8 F1 (opener dimension) — realized at wave 3, booked now**: the
+  errand.txt opener text realizes F1 in FINER grain than the finding's two
+  values (three concrete openers — step arrival, lifecycle move, completion
+  opening the next — plus the reserved agent-emit opener the L5 help-ask
+  claims).
+- **§8 F2 (stay route) folded**: choice_point.txt names *stay* as a
+  reserved route value (→ L5, first load-bearing instance) and draws the
+  boundary against the already-live SELF-TARGET: a self-target genuinely
+  re-arrives through the shared arrival (arrival effects run — the LC3a
+  re-park), while stay does not re-arrive (no arrival effects, no round
+  advance; the enriched handoff belongs to the next dispatch). Stay is a
+  route value, not a selector authority, and has no live instance today.
+- **§8 F3 (marker-home carries blocking) folded** with the review's
+  precision: a wait-slot home is NECESSARILY blocking (the "≤ 1 open wait"
+  shape is a property of wait-slot-homed errands, not of errands per se); a
+  record-collection home PERMITS a non-blocking form — the child links are
+  the precedent for collection-homed markers, NOT proof of non-blocking
+  (the L4 parent still parks).
+- **Instance-form sweep**: method — every multi-copy unit was checked for
+  tagged-then-untagged override chains; exactly two chains surfaced
+  (apply_target_entry_effects and post_commit_output, each in the
+  action/auto-action/l4 overrides) and both now carry the L3 definition's
+  tags. Pre-birth sections deliberately carry NO retro errand labels — the
+  LC2 birth unit's retrospective instance list covers them (a label in an
+  earlier section would forward-reference a concept born later on the
+  ramp).
+- **Scope exclusion honored** (ratified F-W4-1 decision): no ingress
+  guards in this wave — they remain with the dedicated F-W1-2
+  ingress/idempotency hardening touch, together with the RUN_ACTION
+  reject-name decision.
+- **Gate chain closed**: the memo status header now records §6.4 → §8
+  (PASS, ratified, re-affirmed in this wave's review) → waves 1–5 executed;
+  the §3 reclassification table is marked REALIZED; the stale "pending
+  review" clause on the §8 verdict is resolved.
