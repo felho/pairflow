@@ -1,0 +1,35 @@
+
+# ─── ERRAND (P1) — the kernel's async request/reply shape; a named contract, NOT an engine ───
+# Born at LC2: the provider round you met at L0e literally repeats — release mirrors provision
+# (the second provider-addressed full instance), and the shape stops being a coincidence and
+# becomes a contract. The phases (the bespoke logic between them stays bespoke — the phase
+# labels on the handlers are the instances):
+#
+#   durable claim/marker committed (carries request_id)
+#     → intent produced POST-COMMIT (produce-not-perform — the directive phase)
+#       → external work (provider / runner / human / child kernel-path)
+#         → correlated completion arrives (guards: our request? still current?)
+#           → keyed routing / state advance, one CAS commit
+#
+# Declared dimensions per instance: marker slot & its home · directive + addressee class ·
+# completion event(s) · correlation rule (the warrant class you met at L1 — request
+# correlation — is the errand's completion-matching rule) · on_ok / on_fail routes · form ·
+# opener (which committed move opens the claim: a step arrival, a lifecycle move, or a
+# completion opening the next errand; an agent-emit opener is reserved — the L5 help-ask
+# claims it). Guards that run BEFORE the claim commits are pre-open guards, not errand phases.
+# Forms — an implementation must not force them onto one mechanism:
+#   full               claim + outbound directive + async correlated completion
+#   inline             claim, then work AND completion inside one handler invocation,
+#                      bracketed by two CAS commits (first instance joins at LC3a)
+#   marker-less inline no durable marker, synchronous invocation (the L2a process gate;
+#                      its deferred variant is the same errand upgraded to the full form)
+#   open-door          marker only, no outbound directive: the kernel waits for the world
+# Instances existing by LC2 — named retrospectively, like the L0d guards were:
+#   provision (L0e)      full        requested(req) → provider.provision → RUNTIME_CONTEXT_READY, by request_id
+#   release (LC2)        full        releasing(req, ref) → provider.release → RUNTIME_CONTEXT_RELEASED, by request_id + CAS
+#   human decision (L3)  full        DECISION_REQUEST + WAITING(human_decision) → operator → SUBMIT_DECISION, by request_ref
+#   kickoff (L0d)        open-door   WAITING(kickoff_pending) → KICKOFF, by wait.kind
+#   bare wait (L3)       open-door   WAITING(kind) → RESUME_WAIT, by the resume_events class
+#   process gate (L2a)   marker-less inline, synchronous under timeout
+# Later instances are labeled in their own blocks: the LC3a ask/run chained pair, the LC3b
+# auto action, the LC4 forced release, the L4 spawn and child await.

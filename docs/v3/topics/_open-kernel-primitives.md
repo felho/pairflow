@@ -549,3 +549,33 @@ ratified in the wave's review.
   `KICKOFF`/`START`/`CANCEL`), the operator intents' warrant grows into a
   slot the contract already holds open; one cross-ref line at resolution
   time suffices.
+
+### Wave 3 (LC2 — Errand born) — executed, findings await review
+
+- **F-W3-1 · §6.2's "second instance" claim for P1 holds only in the
+  provider-addressed reading.** The memo's placement rationale ("introduced
+  where its second instance historically appeared") is arithmetically loose
+  for P1: the human decision (L3) is also a full-form errand and precedes
+  LC2 in both document order and build order. Release is the second
+  *provider-addressed* full instance — the literal mirror of provision
+  (LC2 completes L0e), which is why the placement itself stands (ratified
+  §6.2; L3 is already the P2+P5 birth site and a third birth would crowd
+  it). Same prose-granularity class as F-W1-1/F-W2-1. Disposition applied
+  in this wave: the birth texts (errand.txt, the §13 note) use the
+  qualified "second provider-addressed full instance" framing and the
+  mirror-repeat rationale; the §6.2 wording gains the same qualifier when
+  the memo section is next touched.
+- **Wave record (not a finding).** (a) The schematic's fifth phase (keyed
+  routing) is deliberately UNLABELED in this wave — P2's name does not
+  exist in the corpus yet. P2 is born at L3 (wave 4), which sits *earlier*
+  in document order than LC2, so the completion handlers' routing labels
+  become cheap backward references when wave 4 lands — a small retro-touch
+  of the wave-3 labels is expected then, not a defect now. (b) `hard_purge`
+  is deliberately NOT labeled an errand: it is a preconditioned storage
+  re-drive (no request/reply, no completion event); only the forced release
+  inside the delete chain is one. (c) Errand phases open at the claim
+  commit: release_safe / provider resolution / trigger-validation are
+  pre-open guards — the labels encode this boundary explicitly. (d)
+  Checksums: ledger diff EMPTY; the per-block `Rejected(...)` multiset was
+  STRICTLY unchanged this wave (declaration + comment labels only, no
+  ladder re-print).

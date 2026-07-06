@@ -107,6 +107,13 @@
           <code>initiate_release(instance, terminal)</code>, LC3a will call
           <code>initiate_release(instance, merge_completed)</code>, and the guard is
           <code>boundary_event ∉ release_boundaries(template)</code> — so the deferral hook actually works later.
+          This mirror is the birth of the <b>Errand</b> (kernel-primitives rebaseline, wave 3): the provider
+          round you met at L0e literally repeats — release is the second provider-addressed full instance —
+          so the shape gets its name as a declared contract (claim → post-commit directive → external work →
+          correlated completion → keyed route), and the instances that already existed (kickoff, process gate,
+          human decision, bare wait) are named retrospectively as its forms. Phase labels on the handlers, no
+          mechanical reorganization; the claim phase opens at the marker commit — <code>release_safe</code> and
+          provider resolution are pre-open guards, not errand phases. Behavior is unchanged.
         </div>
 
         <h3 class="view-h"><span class="view-tag domain">Domain</span> The runtime-resource lifecycle</h3>
@@ -211,6 +218,9 @@
             <li><b>Invariant coverage:</b> obligation never dropped silently (under <code>required</code>) ✓; release_failed is a handle not a runtime ✓; release-safe precondition ✓; orthogonal to lifecycle ✓; single-winner CAS initiation ✓; correlated + idempotent ✓; teardown-managed ⇒ release policy declared ✓; boundary declared not hardcoded ✓ — and all L0a–L3 + LC1 invariants still hold.</li>
             <li><b>Accepted tradeoff:</b> no eventual-liveness (retry / timeout / watchdog) — a failed release is tracked, not re-driven; fine for the local MVP, the L9 slice adds liveness. The deferred boundary is hooked but not realized (no LC3a action yet).</li>
             <li><b>Known gaps (intended):</b> eventual-liveness retry (L9), deferred-boundary realization + the commit/merge actions (LC3a), archive/purge (LC4), provider internals (impl), remote release proofs (L8/L10), child fan-out (L4). Each is in Absent.</li>
+            <li><b>Rebaseline (wave 3):</b> the <b>Errand</b> (P1) is born here — see the kernel-primitives
+              memo (§6/§9); a declared contract + phase labels, no mechanical reorganization; behavior
+              unchanged, the rejection/invariant registries are identical before and after.</li>
             <li><b>Decision:</b> accepted as the LC2 baseline (light evidence per playbook §2.1); L4 inherits the obligation + release contract per child runtime_context.</li>
           </ul>
         </div>

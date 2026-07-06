@@ -1,5 +1,5 @@
 
-CHILD_SPAWN_FAILED(event) → Outcome                              # L4 kernel_event — the child's CREATE_INSTANCE was REJECTED past load (e.g. a dynamic binding / input invalid) — the spawn could not start (the LC2 initiation-failure analog). event = { parent_ref, request_id, reason }
+CHILD_SPAWN_FAILED(event) → Outcome                              # L4 kernel_event — the child's CREATE_INSTANCE was REJECTED past load (e.g. a dynamic binding / input invalid) — the spawn could not start (the LC2 initiation-failure analog). ERRAND spawn, completion phase (the failure completion of the same attempt). event = { parent_ref, request_id, reason }
   instance ← load(event.parent_ref.parent_id) ; template ← template_of(instance)
   link ← instance.child_links.by_id(event.parent_ref.link_id)
   IF link is none THEN RETURN Rejected(child_link_unknown)

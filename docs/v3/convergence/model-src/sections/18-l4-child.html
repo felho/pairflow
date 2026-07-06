@@ -162,6 +162,11 @@
             <li><b>The dogfooding payoff:</b> WF-7 moves orchestration out of the <code>ExecutePairflowPlan</code>
               prompt and into the kernel — the observed LLM non-adherence to that skill is direct evidence for
               "the workflow is the boss" (kernel enforcement, not advisory prompt-level).</li>
+            <li><b>Rebaseline (wave 3):</b> the child step is labeled as two <b>Errand</b> instances with
+              distinct forms — spawn is full (durable <code>spawning</code> link claim →
+              <code>SpawnIntent</code> directive → correlated <code>CHILD_SPAWNED</code>/<code>FAILED</code>),
+              child await is open-door (marker only; the completion is the child's lifecycle). See the
+              kernel-primitives memo (§6/§9); behavior unchanged.</li>
           </ul>
         </div>
       </section>

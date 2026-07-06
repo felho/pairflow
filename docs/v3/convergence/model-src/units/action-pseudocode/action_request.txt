@@ -1,5 +1,5 @@
 
-action_request(instance, template) → ActionRequest                 # LC3 — the operator-facing surface for a parked action; the decision-less analog of HumanDecisionRequest, DERIVED from the step (no stored request)
+action_request(instance, template) → ActionRequest                 # LC3 — the operator-facing surface for a parked action; the decision-less analog of HumanDecisionRequest, DERIVED from the step (no stored request). ERRAND ask, directive phase (derived)
   step     ← template.step(instance.current_step)
   operator ← instance.binding[step.role]
   RETURN ActionRequest {

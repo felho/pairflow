@@ -4871,6 +4871,41 @@ validate_decision_gates(template) → ok | Rejected                     # L3 —
        THEN RETURN Rejected(recommends_unknown_decision)              # a recommendation must name an existing decision key of its target gate
   RETURN ok
 
+# ─── ERRAND (P1) — the kernel's async request/reply shape; a named contract, NOT an engine ───
+# Born at LC2: the provider round you met at L0e literally repeats — release mirrors provision
+# (the second provider-addressed full instance), and the shape stops being a coincidence and
+# becomes a contract. The phases (the bespoke logic between them stays bespoke — the phase
+# labels on the handlers are the instances):
+#
+#   durable claim/marker committed (carries request_id)
+#     → intent produced POST-COMMIT (produce-not-perform — the directive phase)
+#       → external work (provider / runner / human / child kernel-path)
+#         → correlated completion arrives (guards: our request? still current?)
+#           → keyed routing / state advance, one CAS commit
+#
+# Declared dimensions per instance: marker slot & its home · directive + addressee class ·
+# completion event(s) · correlation rule (the warrant class you met at L1 — request
+# correlation — is the errand's completion-matching rule) · on_ok / on_fail routes · form ·
+# opener (which committed move opens the claim: a step arrival, a lifecycle move, or a
+# completion opening the next errand; an agent-emit opener is reserved — the L5 help-ask
+# claims it). Guards that run BEFORE the claim commits are pre-open guards, not errand phases.
+# Forms — an implementation must not force them onto one mechanism:
+#   full               claim + outbound directive + async correlated completion
+#   inline             claim, then work AND completion inside one handler invocation,
+#                      bracketed by two CAS commits (first instance joins at LC3a)
+#   marker-less inline no durable marker, synchronous invocation (the L2a process gate;
+#                      its deferred variant is the same errand upgraded to the full form)
+#   open-door          marker only, no outbound directive: the kernel waits for the world
+# Instances existing by LC2 — named retrospectively, like the L0d guards were:
+#   provision (L0e)      full        requested(req) → provider.provision → RUNTIME_CONTEXT_READY, by request_id
+#   release (LC2)        full        releasing(req, ref) → provider.release → RUNTIME_CONTEXT_RELEASED, by request_id + CAS
+#   human decision (L3)  full        DECISION_REQUEST + WAITING(human_decision) → operator → SUBMIT_DECISION, by request_ref
+#   kickoff (L0d)        open-door   WAITING(kickoff_pending) → KICKOFF, by wait.kind
+#   bare wait (L3)       open-door   WAITING(kind) → RESUME_WAIT, by the resume_events class
+#   process gate (L2a)   marker-less inline, synchronous under timeout
+# Later instances are labeled in their own blocks: the LC3a ask/run chained pair, the LC3b
+# auto action, the LC4 forced release, the L4 spawn and child await.
+
 RECEIVE(input) → Outcome                                               # one kernel entry; route by input source class
   outcome ← MATCH input.source:
     operator_intent → dispatch to CREATE_INSTANCE / START / KICKOFF / SUBMIT_DECISION / RESUME_WAIT / CANCEL   # lifecycle + human-decision + wait-resume intents (later resume sources, e.g. child events, arrive as kernel_event on the same RESUME_WAIT)
@@ -4977,6 +5012,8 @@ initiate_release(instance, boundary_event)                         # LC2 dischar
       instance.version ← instance.version + 1
     RETURN
   request_id ← new_request_id()
+  # ERRAND release (full form) — the claim phase opens HERE, at the marker commit; everything above
+  # (release_safe, provider resolution) is a pre-open guard / initiation failure, not an errand phase.
   # CAS SINGLE-WINNER + marker-first: only one initiation wins the move from ready(ref); the durable marker is
   # persisted BEFORE dispatch so the correlation target exists before the provider can fire. A crash in the
   # persist→dispatch window leaves a durable releasing(req, ref) the L9 watchdog reconciles (no auto-retry here).
@@ -4985,7 +5022,7 @@ initiate_release(instance, boundary_event)                         # LC2 dischar
     instance.runtime_context ← releasing(request_id, ref)          # durable IN-FLIGHT marker; carries the ref for the completion handler / retry
     instance.transcript.append(RUNTIME_CONTEXT_RELEASING { request_id })
     instance.version ← instance.version + 1
-  TRY provider.release(instance.id, request_id, ref)              # POST-COMMIT side effect → later fires RUNTIME_CONTEXT_RELEASED(request_id, result)
+  TRY provider.release(instance.id, request_id, ref)              # directive phase — POST-COMMIT side effect → later fires RUNTIME_CONTEXT_RELEASED(request_id, result)
   ON dispatch_error(reason):                                       # could not even START the release → a follow-up versioned transition records it
     COMMIT atomically at expected_version = instance.version:
       REQUIRE instance.runtime_context = releasing(request_id, ref)   # still OUR in-flight release (a racing RUNTIME_CONTEXT_RELEASED may have moved it) — else write no wrong release_failed
@@ -4993,7 +5030,7 @@ initiate_release(instance, boundary_event)                         # LC2 dischar
       instance.transcript.append(RUNTIME_CONTEXT_RELEASE_FAILED { phase: initiation, reason })
       instance.version ← instance.version + 1
 
-RUNTIME_CONTEXT_RELEASED(instance, request_id, result) → Outcome    # kernel_event — the provider finished (the RUNTIME_CONTEXT_READY mirror); ORTHOGONAL: never changes kernel_status / current_step / terminal_disposition
+RUNTIME_CONTEXT_RELEASED(instance, request_id, result) → Outcome    # kernel_event — the provider finished (the RUNTIME_CONTEXT_READY mirror); ERRAND release, completion phase. ORTHOGONAL: never changes kernel_status / current_step / terminal_disposition
   REQUIRE instance.runtime_context = releasing(request_id, ref)     # correlation: the release WE dispatched, binding the ref it carries (a stale / duplicate event ⇒ Rejected)
   IF result.kind = ok THEN
     instance.runtime_context ← released                            # tombstone — the obligation is DISCHARGED
@@ -5244,6 +5281,13 @@ dispatch_intent(instance, template, step_id) → DispatchIntent
           <code>initiate_release(instance, terminal)</code>, LC3a will call
           <code>initiate_release(instance, merge_completed)</code>, and the guard is
           <code>boundary_event ∉ release_boundaries(template)</code> — so the deferral hook actually works later.
+          This mirror is the birth of the <b>Errand</b> (kernel-primitives rebaseline, wave 3): the provider
+          round you met at L0e literally repeats — release is the second provider-addressed full instance —
+          so the shape gets its name as a declared contract (claim → post-commit directive → external work →
+          correlated completion → keyed route), and the instances that already existed (kickoff, process gate,
+          human decision, bare wait) are named retrospectively as its forms. Phase labels on the handlers, no
+          mechanical reorganization; the claim phase opens at the marker commit — <code>release_safe</code> and
+          provider resolution are pre-open guards, not errand phases. Behavior is unchanged.
         </div>
 
         <h3 class="view-h"><span class="view-tag domain">Domain</span> The runtime-resource lifecycle</h3>
@@ -5461,6 +5505,9 @@ template:
             <li><b>Invariant coverage:</b> obligation never dropped silently (under <code>required</code>) ✓; release_failed is a handle not a runtime ✓; release-safe precondition ✓; orthogonal to lifecycle ✓; single-winner CAS initiation ✓; correlated + idempotent ✓; teardown-managed ⇒ release policy declared ✓; boundary declared not hardcoded ✓ — and all L0a–L3 + LC1 invariants still hold.</li>
             <li><b>Accepted tradeoff:</b> no eventual-liveness (retry / timeout / watchdog) — a failed release is tracked, not re-driven; fine for the local MVP, the L9 slice adds liveness. The deferred boundary is hooked but not realized (no LC3a action yet).</li>
             <li><b>Known gaps (intended):</b> eventual-liveness retry (L9), deferred-boundary realization + the commit/merge actions (LC3a), archive/purge (LC4), provider internals (impl), remote release proofs (L8/L10), child fan-out (L4). Each is in Absent.</li>
+            <li><b>Rebaseline (wave 3):</b> the <b>Errand</b> (P1) is born here — see the kernel-primitives
+              memo (§6/§9); a declared contract + phase labels, no mechanical reorganization; behavior
+              unchanged, the rejection/invariant registries are identical before and after.</li>
             <li><b>Decision:</b> accepted as the LC2 baseline (light evidence per playbook §2.1); L4 inherits the obligation + release contract per child runtime_context.</li>
           </ul>
         </div>
@@ -5763,6 +5810,8 @@ initiate_release(instance, boundary_event)                         # LC2 dischar
       instance.version ← instance.version + 1
     RETURN
   request_id ← new_request_id()
+  # ERRAND release (full form) — the claim phase opens HERE, at the marker commit; everything above
+  # (release_safe, provider resolution) is a pre-open guard / initiation failure, not an errand phase.
   # CAS SINGLE-WINNER + marker-first: only one initiation wins the move from ready(ref); the durable marker is
   # persisted BEFORE dispatch so the correlation target exists before the provider can fire. A crash in the
   # persist→dispatch window leaves a durable releasing(req, ref) the L9 watchdog reconciles (no auto-retry here).
@@ -5771,7 +5820,7 @@ initiate_release(instance, boundary_event)                         # LC2 dischar
     instance.runtime_context ← releasing(request_id, ref)          # durable IN-FLIGHT marker; carries the ref for the completion handler / retry
     instance.transcript.append(RUNTIME_CONTEXT_RELEASING { request_id })
     instance.version ← instance.version + 1
-  TRY provider.release(instance.id, request_id, ref)              # POST-COMMIT side effect → later fires RUNTIME_CONTEXT_RELEASED(request_id, result)
+  TRY provider.release(instance.id, request_id, ref)              # directive phase — POST-COMMIT side effect → later fires RUNTIME_CONTEXT_RELEASED(request_id, result)
   ON dispatch_error(reason):                                       # could not even START the release → a follow-up versioned transition records it
     COMMIT atomically at expected_version = instance.version:
       REQUIRE instance.runtime_context = releasing(request_id, ref)   # still OUR in-flight release (a racing RUNTIME_CONTEXT_RELEASED may have moved it) — else write no wrong release_failed
@@ -5779,7 +5828,7 @@ initiate_release(instance, boundary_event)                         # LC2 dischar
       instance.transcript.append(RUNTIME_CONTEXT_RELEASE_FAILED { phase: initiation, reason })
       instance.version ← instance.version + 1
 
-RUNTIME_CONTEXT_RELEASED(instance, request_id, result) → Outcome    # kernel_event — the provider finished (the RUNTIME_CONTEXT_READY mirror); ORTHOGONAL: never changes kernel_status / current_step / terminal_disposition
+RUNTIME_CONTEXT_RELEASED(instance, request_id, result) → Outcome    # kernel_event — the provider finished (the RUNTIME_CONTEXT_READY mirror); ERRAND release, completion phase. ORTHOGONAL: never changes kernel_status / current_step / terminal_disposition
   REQUIRE instance.runtime_context = releasing(request_id, ref)     # correlation: the release WE dispatched, binding the ref it carries (a stale / duplicate event ⇒ Rejected)
   IF result.kind = ok THEN
     instance.runtime_context ← released                            # tombstone — the obligation is DISCHARGED
@@ -5882,11 +5931,11 @@ validate_action_steps(template) → ok | Rejected                    # LC3 defin
       IF template.step(choice.target) is none                       THEN RETURN Rejected(action_outcome_target_unresolved)
   RETURN ok
 
-park_for_action(instance, template, step) → void                   # LC3 — arrival at an operator-triggered type: action step; parks for the operator's RUN_ACTION trigger (no transcript entry — the ActionRequest is DERIVED, lighter than the human_gate's recorded DECISION_REQUEST)
+park_for_action(instance, template, step) → void                   # LC3 — arrival at an operator-triggered type: action step; parks for the operator's RUN_ACTION trigger (no transcript entry — the ActionRequest is DERIVED, lighter than the human_gate's recorded DECISION_REQUEST). ERRAND ask — the claim: this marker; the directive is derived, not stored
   instance.kernel_status ← WAITING
   instance.wait ← { kind: action_pending, requested_by: step.id, resume_events: [step.action.key] }   # the action key (e.g. COMMIT, MERGE) is the trigger the operator sends
 
-action_request(instance, template) → ActionRequest                 # LC3 — the operator-facing surface for a parked action; the decision-less analog of HumanDecisionRequest, DERIVED from the step (no stored request)
+action_request(instance, template) → ActionRequest                 # LC3 — the operator-facing surface for a parked action; the decision-less analog of HumanDecisionRequest, DERIVED from the step (no stored request). ERRAND ask, directive phase (derived)
   step     ← template.step(instance.current_step)
   operator ← instance.binding[step.role]
   RETURN ActionRequest {
@@ -5897,6 +5946,8 @@ action_request(instance, template) → ActionRequest                 # LC3 — t
     context:          project_action_context(instance), operator }
 
 RUN_ACTION(trigger) → Outcome                                      # LC3 operator_intent — the AUTOMATED sibling of SUBMIT_DECISION (the RUNNER's result picks the outcome, not a human). trigger = { instance_id, op_id, expected_version, action_key, payload, by }
+# TWO CHAINED ERRANDS meet in this handler: the ask-errand COMPLETES here (its correlation guards below),
+# and — only after trigger-validation — its completion OPENS the run-errand at the PHASE 1 claim
   instance ← load(trigger.instance_id)
   IF duplicate(trigger.op_id)                                                THEN RETURN Duplicate   # idempotency FIRST — transcript-backed (op_id rides ACTION_RUNNING / ACTION_RESULT): a replay returns Duplicate even after the first claim already moved us to action_running, never not_awaiting_action
   IF instance.kernel_status ≠ WAITING OR instance.wait.kind ≠ action_pending THEN RETURN Rejected(not_awaiting_action)   # action_running ⇒ a (different) claim already won (single-winner); a parked action is the only runnable state
@@ -5904,10 +5955,10 @@ RUN_ACTION(trigger) → Outcome                                      # LC3 opera
   IF trigger.expected_version ≠ instance.version                             THEN RETURN Stale(instance.version)   # the ActionRequest the operator holds is stale — a destructive action MUST NOT run from it (like SUBMIT_DECISION / RESUME_WAIT)
   template ← definitionStore.load(instance.template_ref) ; step ← template.step(instance.current_step)
   REQUIRE trigger.by = instance.binding[step.role]                 # operator authority on THIS path (like SUBMIT_DECISION; not the L1 actor gate)
-  # TRIGGER-VALIDATION — PAYLOAD ONLY (NOT workspace state), BEFORE the claim so a bad payload starts nothing: the human_gate missing_required_field analog
+  # TRIGGER-VALIDATION — PAYLOAD ONLY (NOT workspace state), BEFORE the claim so a bad payload starts nothing: the human_gate missing_required_field analog. A pre-open guard of the run-errand, not part of its claim
   FOR field IN required_fields(step.action.payload):
     IF trigger.payload[field] is absent OR empty THEN RETURN Rejected(missing_required_field)
-  # PHASE 1 — CAS CLAIM (marker-first, single-winner): take the action_pending EXCLUSIVELY before the runner side effect, so two concurrent RUN_ACTION never both reach the (git-mutating) runner
+  # PHASE 1 — CAS CLAIM (marker-first, single-winner): take the action_pending EXCLUSIVELY before the runner side effect, so two concurrent RUN_ACTION never both reach the (git-mutating) runner. ERRAND run (inline form) opens — claim commit #1 of the bracket
   request_id ← new_request_id()
   COMMIT atomically at expected_version = instance.version:
     REQUIRE instance.wait.kind = action_pending                  # the single-winner CAS guard (like LC2 release's REQUIRE ready(ref)): a different concurrent claim that already won loses here on reload ⇒ not_awaiting_action (same op_id ⇒ Duplicate, checked first)
@@ -5917,7 +5968,7 @@ RUN_ACTION(trigger) → Outcome                                      # LC3 opera
   # PHASE 2 — run the ACTION exclusively (the claim is committed; only this handler reaches the runner). A crash here leaves a durable action_running the L9 watchdog reconciles
   result      ← actionRunner(step.action.uses).run(step.action.spec, { cwd: runtime_context_workspace(instance), payload: trigger.payload })
   outcome_key ← classify_action_result(step, result)              # committed | merged | conflict | nothing_staged | infra_error … — the WORKSPACE reality (unlike the payload-only trigger-validation)
-  # PHASE 3 — CAS RESULT: record (with op_id) + route, or revert to action_pending for a retry; NEVER leave action_running on a handled result, NEVER Reject after the side effect ran
+  # PHASE 3 — CAS RESULT: record (with op_id) + route, or revert to action_pending for a retry; NEVER leave action_running on a handled result, NEVER Reject after the side effect ran. ERRAND run completes — commit #2 of the inline bracket; a re-park opens a fresh ask-errand
   COMMIT atomically at expected_version = instance.version:
     REQUIRE instance.wait.kind = action_running AND instance.wait.request_id = request_id   # still OUR run (defensive)
     instance.transcript.append(ACTION_RESULT { op_id: trigger.op_id, action_key: trigger.action_key, outcome: outcome_key, outputs: result.outputs, evidence_refs: result.evidence_refs })   # evidence (LC1 INV-3): commit_sha / merge_sha / exit / hash inline (T1), logs T3 — op_id makes the Duplicate check transcript-backed
@@ -6279,6 +6330,10 @@ template:
             <li><b>Invariant coverage:</b> outcome selects not the kernel ✓; trigger validates payload only ✓; self-route stays parked ✓; ACTION_RESULT evidence ✓; outcome emits the LC2 boundary ✓; action-is-select vs gate-is-filter ✓ — and all L0a–L3 + LC1 + LC2 invariants still hold.</li>
             <li><b>Accepted tradeoff:</b> a v3 semantic shift (workflow-done after merge, vs v1’s DONE-before-merge) — stated and accepted to keep merge a normal pre-terminal action; the auto trigger and a packaged action library are out.</li>
             <li><b>Known gaps (intended):</b> auto trigger (later), rich outcome predicates (later), packaged actions (LC3b), operator delete + purge (LC4), exactly-once / retry (L9), remote action proofs (L8/L10). Each is in Absent.</li>
+            <li><b>Rebaseline (wave 3):</b> the LC3a step is labeled as two chained <b>Errand</b> instances —
+              the ask (open at the park; derived directive) whose completion opens the run (the first inline-form
+              instance, bracketed by the two CAS commits); trigger-validation is a pre-open guard, not part of the
+              run's claim. See the kernel-primitives memo (§6/§9); behavior unchanged.</li>
             <li><b>Decision:</b> accepted as the LC3a baseline (light evidence per playbook §2.1); LC3b generalizes the action library, L4 inherits action steps per child.</li>
           </ul>
         </div>
@@ -6566,6 +6621,8 @@ initiate_release(instance, boundary_event)                         # LC2 dischar
       instance.version ← instance.version + 1
     RETURN
   request_id ← new_request_id()
+  # ERRAND release (full form) — the claim phase opens HERE, at the marker commit; everything above
+  # (release_safe, provider resolution) is a pre-open guard / initiation failure, not an errand phase.
   # CAS SINGLE-WINNER + marker-first: only one initiation wins the move from ready(ref); the durable marker is
   # persisted BEFORE dispatch so the correlation target exists before the provider can fire. A crash in the
   # persist→dispatch window leaves a durable releasing(req, ref) the L9 watchdog reconciles (no auto-retry here).
@@ -6574,7 +6631,7 @@ initiate_release(instance, boundary_event)                         # LC2 dischar
     instance.runtime_context ← releasing(request_id, ref)          # durable IN-FLIGHT marker; carries the ref for the completion handler / retry
     instance.transcript.append(RUNTIME_CONTEXT_RELEASING { request_id })
     instance.version ← instance.version + 1
-  TRY provider.release(instance.id, request_id, ref)              # POST-COMMIT side effect → later fires RUNTIME_CONTEXT_RELEASED(request_id, result)
+  TRY provider.release(instance.id, request_id, ref)              # directive phase — POST-COMMIT side effect → later fires RUNTIME_CONTEXT_RELEASED(request_id, result)
   ON dispatch_error(reason):                                       # could not even START the release → a follow-up versioned transition records it
     COMMIT atomically at expected_version = instance.version:
       REQUIRE instance.runtime_context = releasing(request_id, ref)   # still OUR in-flight release (a racing RUNTIME_CONTEXT_RELEASED may have moved it) — else write no wrong release_failed
@@ -6582,7 +6639,7 @@ initiate_release(instance, boundary_event)                         # LC2 dischar
       instance.transcript.append(RUNTIME_CONTEXT_RELEASE_FAILED { phase: initiation, reason })
       instance.version ← instance.version + 1
 
-RUNTIME_CONTEXT_RELEASED(instance, request_id, result) → Outcome    # kernel_event — the provider finished (the RUNTIME_CONTEXT_READY mirror); ORTHOGONAL: never changes kernel_status / current_step / terminal_disposition
+RUNTIME_CONTEXT_RELEASED(instance, request_id, result) → Outcome    # kernel_event — the provider finished (the RUNTIME_CONTEXT_READY mirror); ERRAND release, completion phase. ORTHOGONAL: never changes kernel_status / current_step / terminal_disposition
   REQUIRE instance.runtime_context = releasing(request_id, ref)     # correlation: the release WE dispatched, binding the ref it carries (a stale / duplicate event ⇒ Rejected)
   IF result.kind = ok THEN
     instance.runtime_context ← released                            # tombstone — the obligation is DISCHARGED
@@ -6697,17 +6754,17 @@ validate_action_steps(template) → ok | Rejected                    # LC3 defin
   RETURN ok
 
 park_for_action(instance, template, step) → void                   # LC3 — arrival at a type: action step; the trigger decides the park
-  IF step.trigger = operator_intent THEN                             # LC3a — wait for the operator's RUN_ACTION (no transcript entry; the ActionRequest is DERIVED)
+  IF step.trigger = operator_intent THEN                             # LC3a — wait for the operator's RUN_ACTION (no transcript entry; the ActionRequest is DERIVED). ERRAND ask — the claim: this marker
     instance.kernel_status ← WAITING
     instance.wait ← { kind: action_pending, requested_by: step.id, resume_events: [step.action.key] }
     RETURN
-  # LC3b auto — CLAIM the run AS the arrival (single auto trigger, no operator); the runner runs POST-COMMIT via the ActionIntent, NEVER inside this arrival commit
+  # LC3b auto — CLAIM the run AS the arrival (single auto trigger, no operator); the runner runs POST-COMMIT via the ActionIntent, NEVER inside this arrival commit. ERRAND auto action (full form) — arrival-opened claim
   request_id ← new_request_id() ; episode ← new_episode_ref()        # episode anchors the bounded-retry attempt count (transcript-reconstructable)
   instance.kernel_status ← WAITING
   instance.wait ← { kind: action_running, request_id, action_key: step.action.key, episode_ref: episode, requested_by: step.id }
   instance.transcript.append(ACTION_RUNNING { request_id, action_key: step.action.key, episode_ref: episode, trigger: auto })   # the marker — committed in THIS arrival commit; the side effect is post-commit
 
-action_request(instance, template) → ActionRequest                 # LC3 — the operator-facing surface for a parked action; the decision-less analog of HumanDecisionRequest, DERIVED from the step (no stored request)
+action_request(instance, template) → ActionRequest                 # LC3 — the operator-facing surface for a parked action; the decision-less analog of HumanDecisionRequest, DERIVED from the step (no stored request). ERRAND ask, directive phase (derived)
   step     ← template.step(instance.current_step)
   operator ← instance.binding[step.role]
   RETURN ActionRequest {
@@ -6717,14 +6774,14 @@ action_request(instance, template) → ActionRequest                 # LC3 — t
     required_payload: requirements_for(step.action.payload),       # the SAME per-field {required} shape as a decision payload — TRIGGER-validation, not workspace state
     context:          project_action_context(instance), operator }
 
-action_intent(instance, template) → ActionIntent                   # LC3b — an auto action's run effect; produce-not-perform (the DispatchIntent analog). The runner runs POST-COMMIT, NEVER inside the arrival commit
+action_intent(instance, template) → ActionIntent                   # LC3b — an auto action's run effect; produce-not-perform (the DispatchIntent analog). The runner runs POST-COMMIT, NEVER inside the arrival commit. ERRAND auto action, directive phase
   step ← template.step(instance.current_step)
   RETURN ActionIntent { instance_id, request_id: instance.wait.request_id, runner: step.action.uses, action_spec: step.action.spec, cwd: runtime_context_workspace(instance) }   # a local/driver runner runs it; the result returns as ACTION_RESULT (inline ⇒ immediately, deferred ⇒ later — same contract)
 
 attempt_count_in_episode(instance, episode_ref) → int               # LC3b — transcript-reconstructable: how many ACTION_RUNNING entries this auto-action EPISODE has had. A fresh entry into the step opens a NEW episode_ref, so a later round's attempts never leak in
   RETURN count of ACTION_RUNNING entries in instance.transcript WHERE entry.episode_ref = episode_ref
 
-ACTION_RESULT(instance, request_id, raw_result) → Outcome           # LC3b kernel_event — an auto action's result (the RUNTIME_CONTEXT_READY sibling); inline ⇒ it arrives immediately, deferred ⇒ later (same contract)
+ACTION_RESULT(instance, request_id, raw_result) → Outcome           # LC3b kernel_event — an auto action's result (the RUNTIME_CONTEXT_READY sibling); inline ⇒ it arrives immediately, deferred ⇒ later (same contract). ERRAND auto action, completion phase — the episode retry budget below is the instance's irreducible logic, not an errand phase
   IF instance.wait.kind ≠ action_running OR instance.wait.request_id ≠ request_id THEN RETURN Rejected(action_result_mismatch)   # correlation: the run WE issued (a stale / duplicate result ⇒ Rejected)
   template ← definitionStore.load(instance.template_ref) ; step ← template.step(instance.current_step)
   IF step.trigger ≠ auto THEN RETURN Rejected(action_result_not_auto_action)   # LC3a/LC3b boundary: an operator action_running (LC3a — its result is recorded INLINE in RUN_ACTION) is NEVER completed by a kernel-event
@@ -6752,6 +6809,8 @@ ACTION_RESULT(instance, request_id, raw_result) → Outcome           # LC3b ker
   RETURN Committed(instance.version, post_commit_output(instance, template), boundary_events: emits_of(choice))   # an outcome may emits: a release boundary → LC2
 
 RUN_ACTION(trigger) → Outcome                                      # LC3 operator_intent — the AUTOMATED sibling of SUBMIT_DECISION (the RUNNER's result picks the outcome, not a human). trigger = { instance_id, op_id, expected_version, action_key, payload, by }
+# TWO CHAINED ERRANDS meet in this handler: the ask-errand COMPLETES here (its correlation guards below),
+# and — only after trigger-validation — its completion OPENS the run-errand at the PHASE 1 claim
   instance ← load(trigger.instance_id)
   IF duplicate(trigger.op_id)                                                THEN RETURN Duplicate   # idempotency FIRST — transcript-backed (op_id rides ACTION_RUNNING / ACTION_RESULT): a replay returns Duplicate even after the first claim already moved us to action_running, never not_awaiting_action
   IF instance.kernel_status ≠ WAITING OR instance.wait.kind ≠ action_pending THEN RETURN Rejected(not_awaiting_action)   # action_running ⇒ a (different) claim already won (single-winner); a parked action is the only runnable state
@@ -6759,10 +6818,10 @@ RUN_ACTION(trigger) → Outcome                                      # LC3 opera
   IF trigger.expected_version ≠ instance.version                             THEN RETURN Stale(instance.version)   # the ActionRequest the operator holds is stale — a destructive action MUST NOT run from it (like SUBMIT_DECISION / RESUME_WAIT)
   template ← definitionStore.load(instance.template_ref) ; step ← template.step(instance.current_step)
   REQUIRE trigger.by = instance.binding[step.role]                 # operator authority on THIS path (like SUBMIT_DECISION; not the L1 actor gate)
-  # TRIGGER-VALIDATION — PAYLOAD ONLY (NOT workspace state), BEFORE the claim so a bad payload starts nothing: the human_gate missing_required_field analog
+  # TRIGGER-VALIDATION — PAYLOAD ONLY (NOT workspace state), BEFORE the claim so a bad payload starts nothing: the human_gate missing_required_field analog. A pre-open guard of the run-errand, not part of its claim
   FOR field IN required_fields(step.action.payload):
     IF trigger.payload[field] is absent OR empty THEN RETURN Rejected(missing_required_field)
-  # PHASE 1 — CAS CLAIM (marker-first, single-winner): take the action_pending EXCLUSIVELY before the runner side effect, so two concurrent RUN_ACTION never both reach the (git-mutating) runner
+  # PHASE 1 — CAS CLAIM (marker-first, single-winner): take the action_pending EXCLUSIVELY before the runner side effect, so two concurrent RUN_ACTION never both reach the (git-mutating) runner. ERRAND run (inline form) opens — claim commit #1 of the bracket
   request_id ← new_request_id()
   COMMIT atomically at expected_version = instance.version:
     REQUIRE instance.wait.kind = action_pending                  # the single-winner CAS guard (like LC2 release's REQUIRE ready(ref)): a different concurrent claim that already won loses here on reload ⇒ not_awaiting_action (same op_id ⇒ Duplicate, checked first)
@@ -6772,7 +6831,7 @@ RUN_ACTION(trigger) → Outcome                                      # LC3 opera
   # PHASE 2 — run the ACTION exclusively (the claim is committed; only this handler reaches the runner). A crash here leaves a durable action_running the L9 watchdog reconciles
   result      ← actionRunner(step.action.uses).run(step.action.spec, { cwd: runtime_context_workspace(instance), payload: trigger.payload })
   outcome_key ← classify_action_result(step, result)              # committed | merged | conflict | nothing_staged | infra_error … — the WORKSPACE reality (unlike the payload-only trigger-validation)
-  # PHASE 3 — CAS RESULT: record (with op_id) + route, or revert to action_pending for a retry; NEVER leave action_running on a handled result, NEVER Reject after the side effect ran
+  # PHASE 3 — CAS RESULT: record (with op_id) + route, or revert to action_pending for a retry; NEVER leave action_running on a handled result, NEVER Reject after the side effect ran. ERRAND run completes — commit #2 of the inline bracket; a re-park opens a fresh ask-errand
   COMMIT atomically at expected_version = instance.version:
     REQUIRE instance.wait.kind = action_running AND instance.wait.request_id = request_id   # still OUR run (defensive)
     instance.transcript.append(ACTION_RESULT { op_id: trigger.op_id, action_key: trigger.action_key, outcome: outcome_key, outputs: result.outputs, evidence_refs: result.evidence_refs })   # evidence (LC1 INV-3): commit_sha / merge_sha / exit / hash inline (T1), logs T3 — op_id makes the Duplicate check transcript-backed
@@ -7130,6 +7189,10 @@ template:
             <li><b>Invariant coverage:</b> auto is marker-first ✓; result is a correlated kernel-event ✓; retry opt-in + episode-anchored ✓; recommendation rides the firing edge ✓ — and all L0a–L3 + LC1 + LC2 + LC3a invariants still hold.</li>
             <li><b>Accepted tradeoff:</b> the deferred async driver + timeout are thin (L9); pure computed-routing, a rich predicate DSL, and a packaged library are out.</li>
             <li><b>Known gaps (intended):</b> deferred mechanics + timeout (L9), unbounded retry / watchdog (L9), pure computed-routing (later), predicate DSL (later), packaged library (later), undeclared-outcome recovery (L9). Each is in Absent.</li>
+            <li><b>Rebaseline (wave 3):</b> the auto action is labeled as a full-form <b>Errand</b> instance
+              (arrival-opened claim → <code>ActionIntent</code> directive → correlated <code>ACTION_RESULT</code>);
+              the episode retry budget is the instance's irreducible logic, not an errand phase. See the
+              kernel-primitives memo (§6/§9); behavior unchanged.</li>
             <li><b>Decision:</b> accepted as the LC3b baseline (light evidence per playbook §2.1); L4 inherits action steps per child.</li>
           </ul>
         </div>
@@ -7417,6 +7480,8 @@ initiate_release(instance, boundary_event)                         # LC2 dischar
       instance.version ← instance.version + 1
     RETURN
   request_id ← new_request_id()
+  # ERRAND release (full form) — the claim phase opens HERE, at the marker commit; everything above
+  # (release_safe, provider resolution) is a pre-open guard / initiation failure, not an errand phase.
   # CAS SINGLE-WINNER + marker-first: only one initiation wins the move from ready(ref); the durable marker is
   # persisted BEFORE dispatch so the correlation target exists before the provider can fire. A crash in the
   # persist→dispatch window leaves a durable releasing(req, ref) the L9 watchdog reconciles (no auto-retry here).
@@ -7425,7 +7490,7 @@ initiate_release(instance, boundary_event)                         # LC2 dischar
     instance.runtime_context ← releasing(request_id, ref)          # durable IN-FLIGHT marker; carries the ref for the completion handler / retry
     instance.transcript.append(RUNTIME_CONTEXT_RELEASING { request_id })
     instance.version ← instance.version + 1
-  TRY provider.release(instance.id, request_id, ref)              # POST-COMMIT side effect → later fires RUNTIME_CONTEXT_RELEASED(request_id, result)
+  TRY provider.release(instance.id, request_id, ref)              # directive phase — POST-COMMIT side effect → later fires RUNTIME_CONTEXT_RELEASED(request_id, result)
   ON dispatch_error(reason):                                       # could not even START the release → a follow-up versioned transition records it
     COMMIT atomically at expected_version = instance.version:
       REQUIRE instance.runtime_context = releasing(request_id, ref)   # still OUR in-flight release (a racing RUNTIME_CONTEXT_RELEASED may have moved it) — else write no wrong release_failed
@@ -7433,7 +7498,7 @@ initiate_release(instance, boundary_event)                         # LC2 dischar
       instance.transcript.append(RUNTIME_CONTEXT_RELEASE_FAILED { phase: initiation, reason })
       instance.version ← instance.version + 1
 
-RUNTIME_CONTEXT_RELEASED(instance, request_id, result) → Outcome    # kernel_event — the provider finished (the RUNTIME_CONTEXT_READY mirror); ORTHOGONAL: never changes kernel_status / current_step / terminal_disposition
+RUNTIME_CONTEXT_RELEASED(instance, request_id, result) → Outcome    # kernel_event — the provider finished (the RUNTIME_CONTEXT_READY mirror); ERRAND release, completion phase. ORTHOGONAL: never changes kernel_status / current_step / terminal_disposition
   REQUIRE instance.runtime_context = releasing(request_id, ref)     # correlation: the release WE dispatched, binding the ref it carries (a stale / duplicate event ⇒ Rejected)
   IF result.kind = ok THEN
     instance.runtime_context ← released                            # tombstone — the obligation is DISCHARGED
@@ -7548,17 +7613,17 @@ validate_action_steps(template) → ok | Rejected                    # LC3 defin
   RETURN ok
 
 park_for_action(instance, template, step) → void                   # LC3 — arrival at a type: action step; the trigger decides the park
-  IF step.trigger = operator_intent THEN                             # LC3a — wait for the operator's RUN_ACTION (no transcript entry; the ActionRequest is DERIVED)
+  IF step.trigger = operator_intent THEN                             # LC3a — wait for the operator's RUN_ACTION (no transcript entry; the ActionRequest is DERIVED). ERRAND ask — the claim: this marker
     instance.kernel_status ← WAITING
     instance.wait ← { kind: action_pending, requested_by: step.id, resume_events: [step.action.key] }
     RETURN
-  # LC3b auto — CLAIM the run AS the arrival (single auto trigger, no operator); the runner runs POST-COMMIT via the ActionIntent, NEVER inside this arrival commit
+  # LC3b auto — CLAIM the run AS the arrival (single auto trigger, no operator); the runner runs POST-COMMIT via the ActionIntent, NEVER inside this arrival commit. ERRAND auto action (full form) — arrival-opened claim
   request_id ← new_request_id() ; episode ← new_episode_ref()        # episode anchors the bounded-retry attempt count (transcript-reconstructable)
   instance.kernel_status ← WAITING
   instance.wait ← { kind: action_running, request_id, action_key: step.action.key, episode_ref: episode, requested_by: step.id }
   instance.transcript.append(ACTION_RUNNING { request_id, action_key: step.action.key, episode_ref: episode, trigger: auto })   # the marker — committed in THIS arrival commit; the side effect is post-commit
 
-action_request(instance, template) → ActionRequest                 # LC3 — the operator-facing surface for a parked action; the decision-less analog of HumanDecisionRequest, DERIVED from the step (no stored request)
+action_request(instance, template) → ActionRequest                 # LC3 — the operator-facing surface for a parked action; the decision-less analog of HumanDecisionRequest, DERIVED from the step (no stored request). ERRAND ask, directive phase (derived)
   step     ← template.step(instance.current_step)
   operator ← instance.binding[step.role]
   RETURN ActionRequest {
@@ -7568,14 +7633,14 @@ action_request(instance, template) → ActionRequest                 # LC3 — t
     required_payload: requirements_for(step.action.payload),       # the SAME per-field {required} shape as a decision payload — TRIGGER-validation, not workspace state
     context:          project_action_context(instance), operator }
 
-action_intent(instance, template) → ActionIntent                   # LC3b — an auto action's run effect; produce-not-perform (the DispatchIntent analog). The runner runs POST-COMMIT, NEVER inside the arrival commit
+action_intent(instance, template) → ActionIntent                   # LC3b — an auto action's run effect; produce-not-perform (the DispatchIntent analog). The runner runs POST-COMMIT, NEVER inside the arrival commit. ERRAND auto action, directive phase
   step ← template.step(instance.current_step)
   RETURN ActionIntent { instance_id, request_id: instance.wait.request_id, runner: step.action.uses, action_spec: step.action.spec, cwd: runtime_context_workspace(instance) }   # a local/driver runner runs it; the result returns as ACTION_RESULT (inline ⇒ immediately, deferred ⇒ later — same contract)
 
 attempt_count_in_episode(instance, episode_ref) → int               # LC3b — transcript-reconstructable: how many ACTION_RUNNING entries this auto-action EPISODE has had. A fresh entry into the step opens a NEW episode_ref, so a later round's attempts never leak in
   RETURN count of ACTION_RUNNING entries in instance.transcript WHERE entry.episode_ref = episode_ref
 
-ACTION_RESULT(instance, request_id, raw_result) → Outcome           # LC3b kernel_event — an auto action's result (the RUNTIME_CONTEXT_READY sibling); inline ⇒ it arrives immediately, deferred ⇒ later (same contract)
+ACTION_RESULT(instance, request_id, raw_result) → Outcome           # LC3b kernel_event — an auto action's result (the RUNTIME_CONTEXT_READY sibling); inline ⇒ it arrives immediately, deferred ⇒ later (same contract). ERRAND auto action, completion phase — the episode retry budget below is the instance's irreducible logic, not an errand phase
   IF instance.wait.kind ≠ action_running OR instance.wait.request_id ≠ request_id THEN RETURN Rejected(action_result_mismatch)   # correlation: the run WE issued (a stale / duplicate result ⇒ Rejected)
   template ← definitionStore.load(instance.template_ref) ; step ← template.step(instance.current_step)
   IF step.trigger ≠ auto THEN RETURN Rejected(action_result_not_auto_action)   # LC3a/LC3b boundary: an operator action_running (LC3a — its result is recorded INLINE in RUN_ACTION) is NEVER completed by a kernel-event
@@ -7603,6 +7668,8 @@ ACTION_RESULT(instance, request_id, raw_result) → Outcome           # LC3b ker
   RETURN Committed(instance.version, post_commit_output(instance, template), boundary_events: emits_of(choice))   # an outcome may emits: a release boundary → LC2
 
 RUN_ACTION(trigger) → Outcome                                      # LC3 operator_intent — the AUTOMATED sibling of SUBMIT_DECISION (the RUNNER's result picks the outcome, not a human). trigger = { instance_id, op_id, expected_version, action_key, payload, by }
+# TWO CHAINED ERRANDS meet in this handler: the ask-errand COMPLETES here (its correlation guards below),
+# and — only after trigger-validation — its completion OPENS the run-errand at the PHASE 1 claim
   instance ← load(trigger.instance_id)
   IF duplicate(trigger.op_id)                                                THEN RETURN Duplicate   # idempotency FIRST — transcript-backed (op_id rides ACTION_RUNNING / ACTION_RESULT): a replay returns Duplicate even after the first claim already moved us to action_running, never not_awaiting_action
   IF instance.kernel_status ≠ WAITING OR instance.wait.kind ≠ action_pending THEN RETURN Rejected(not_awaiting_action)   # action_running ⇒ a (different) claim already won (single-winner); a parked action is the only runnable state
@@ -7610,10 +7677,10 @@ RUN_ACTION(trigger) → Outcome                                      # LC3 opera
   IF trigger.expected_version ≠ instance.version                             THEN RETURN Stale(instance.version)   # the ActionRequest the operator holds is stale — a destructive action MUST NOT run from it (like SUBMIT_DECISION / RESUME_WAIT)
   template ← definitionStore.load(instance.template_ref) ; step ← template.step(instance.current_step)
   REQUIRE trigger.by = instance.binding[step.role]                 # operator authority on THIS path (like SUBMIT_DECISION; not the L1 actor gate)
-  # TRIGGER-VALIDATION — PAYLOAD ONLY (NOT workspace state), BEFORE the claim so a bad payload starts nothing: the human_gate missing_required_field analog
+  # TRIGGER-VALIDATION — PAYLOAD ONLY (NOT workspace state), BEFORE the claim so a bad payload starts nothing: the human_gate missing_required_field analog. A pre-open guard of the run-errand, not part of its claim
   FOR field IN required_fields(step.action.payload):
     IF trigger.payload[field] is absent OR empty THEN RETURN Rejected(missing_required_field)
-  # PHASE 1 — CAS CLAIM (marker-first, single-winner): take the action_pending EXCLUSIVELY before the runner side effect, so two concurrent RUN_ACTION never both reach the (git-mutating) runner
+  # PHASE 1 — CAS CLAIM (marker-first, single-winner): take the action_pending EXCLUSIVELY before the runner side effect, so two concurrent RUN_ACTION never both reach the (git-mutating) runner. ERRAND run (inline form) opens — claim commit #1 of the bracket
   request_id ← new_request_id()
   COMMIT atomically at expected_version = instance.version:
     REQUIRE instance.wait.kind = action_pending                  # the single-winner CAS guard (like LC2 release's REQUIRE ready(ref)): a different concurrent claim that already won loses here on reload ⇒ not_awaiting_action (same op_id ⇒ Duplicate, checked first)
@@ -7623,7 +7690,7 @@ RUN_ACTION(trigger) → Outcome                                      # LC3 opera
   # PHASE 2 — run the ACTION exclusively (the claim is committed; only this handler reaches the runner). A crash here leaves a durable action_running the L9 watchdog reconciles
   result      ← actionRunner(step.action.uses).run(step.action.spec, { cwd: runtime_context_workspace(instance), payload: trigger.payload })
   outcome_key ← classify_action_result(step, result)              # committed | merged | conflict | nothing_staged | infra_error … — the WORKSPACE reality (unlike the payload-only trigger-validation)
-  # PHASE 3 — CAS RESULT: record (with op_id) + route, or revert to action_pending for a retry; NEVER leave action_running on a handled result, NEVER Reject after the side effect ran
+  # PHASE 3 — CAS RESULT: record (with op_id) + route, or revert to action_pending for a retry; NEVER leave action_running on a handled result, NEVER Reject after the side effect ran. ERRAND run completes — commit #2 of the inline bracket; a re-park opens a fresh ask-errand
   COMMIT atomically at expected_version = instance.version:
     REQUIRE instance.wait.kind = action_running AND instance.wait.request_id = request_id   # still OUR run (defensive)
     instance.transcript.append(ACTION_RESULT { op_id: trigger.op_id, action_key: trigger.action_key, outcome: outcome_key, outputs: result.outputs, evidence_refs: result.evidence_refs })   # evidence (LC1 INV-3): commit_sha / merge_sha / exit / hash inline (T1), logs T3 — op_id makes the Duplicate check transcript-backed
@@ -7791,7 +7858,9 @@ dispatch_intent(instance, template, step_id) → DispatchIntent
 # ops, not kernel handlers. New instance axis: purge_state = none | purge_pending (purged is NOT an instance axis — it lives in the run_index tombstone).
 
 # kernel-adjacent — RECEIVE operator_intent dispatch gains DELETE_REQUESTED (alongside CANCEL / SUBMIT_DECISION / RUN_ACTION)
-DELETE_REQUESTED(intent) → Outcome                                  # LC4 operator intent — a CANCEL sibling; starts cancel → release → purge. NOT a workflow action
+DELETE_REQUESTED(intent) → Outcome                                  # LC4 operator intent — a CANCEL sibling; starts cancel → release → purge. NOT a workflow action.
+# The delete chain behind this one intent: a forced release ERRAND (force_release, below) followed by the
+# purge contract — hard_purge is a preconditioned storage re-drive, NOT an errand (no request/reply, no completion event)
   instance ← load(intent.instance_id)
   IF duplicate(intent.op_id) THEN RETURN Duplicate                  # idempotency-first
   IF run_index.status(instance.id) = purged THEN RETURN Rejected(already_purged)   # the run_index TOMBSTONE is the authority for purged — checked BEFORE the operator-authority REQUIRE because a purged run has no full run record (hence no binding[operator]) to authorize against; only the surviving T1-family tombstone remains to read
@@ -7807,7 +7876,7 @@ DELETE_REQUESTED(intent) → Outcome                                  # LC4 oper
   force_release(instance)                                          # LC4 post-commit operator-FORCED release (below) — NOT the membership-gated boundary hook; the runtime MUST go for purge
   RETURN Committed(instance.version, none)
 
-force_release(instance) → void                                     # LC4 — IDENTICAL to LC2 initiate_release — release_safe (LC1 INV-5), provider, the marker-first CAS-claim → provider.release → RUNTIME_CONTEXT_RELEASED — EXCEPT it skips the single guard (boundary_event ∉ release_boundaries(template)): an operator delete is the authority to release regardless of the declared boundaries. release_safe is NOT skipped — a forced release is still a safe release. Resolves the gap where delete_requested ∉ a run’s release.boundaries would otherwise no-op
+force_release(instance) → void                                     # LC4 — the same release ERRAND (full form), force-opened. IDENTICAL to LC2 initiate_release — release_safe (LC1 INV-5), provider, the marker-first CAS-claim → provider.release → RUNTIME_CONTEXT_RELEASED — EXCEPT it skips the single guard (boundary_event ∉ release_boundaries(template)): an operator delete is the authority to release regardless of the declared boundaries. release_safe is NOT skipped — a forced release is still a safe release. Resolves the gap where delete_requested ∉ a run’s release.boundaries would otherwise no-op
 
 # storage op (NOT a kernel handler) — keyed by run_id so it SURVIVES the record it removes; the precondition is HERE
 hard_purge(run_id) → ok | deferred                                  # LC4 — invoked by the delete-chain re-drive once the run winds down; a still-pending purge is re-driven by the delete-chain purge contract (baseline) — only a scheduled / automatic retention re-drive is L9/ops
@@ -7934,6 +8003,10 @@ archive_or_export(instance, sink) → ArchiveRef                      # LC4 — 
             <li><b>Invariant coverage:</b> archive not preservation ✓; purge complete + closure-scoped ✓; precondition on the purge not the intent ✓; tombstone + surviving global audit ✓; delete is an operator intent not a workflow action ✓ — and all L0a–L3 + LC1–LC3 invariants still hold.</li>
             <li><b>Accepted tradeoff:</b> retention / auto-purge, a query CLI, restore, and a multi-owner blob store are out — LC4 is the explicit operator ops + the safe purge contract.</li>
             <li><b>Known gaps (intended):</b> retention / scheduled auto-purge policy (L9/ops), archive query (ops), restore (later), shared-evidence ownership (later), export formats (ops), federation purge (L11+). Each is in Absent.</li>
+            <li><b>Rebaseline (wave 3):</b> the delete chain is labeled — behind the one operator intent sits a
+              force-opened release <b>Errand</b> (the same LC2 instance), while <code>hard_purge</code> is
+              deliberately NOT an errand (a preconditioned storage re-drive with no request/reply or completion
+              event). See the kernel-primitives memo (§6/§9); behavior unchanged.</li>
             <li><b>Decision:</b> accepted as the LC4 baseline (light evidence per playbook §2.1). This closes the lifecycle-close topic (LC1–LC4); L4 (child workflows) inherits all four per child runtime_context / record.</li>
           </ul>
         </div>
@@ -8636,6 +8709,8 @@ initiate_release(instance, boundary_event)                         # LC2 dischar
       instance.version ← instance.version + 1
     RETURN
   request_id ← new_request_id()
+  # ERRAND release (full form) — the claim phase opens HERE, at the marker commit; everything above
+  # (release_safe, provider resolution) is a pre-open guard / initiation failure, not an errand phase.
   # CAS SINGLE-WINNER + marker-first: only one initiation wins the move from ready(ref); the durable marker is
   # persisted BEFORE dispatch so the correlation target exists before the provider can fire. A crash in the
   # persist→dispatch window leaves a durable releasing(req, ref) the L9 watchdog reconciles (no auto-retry here).
@@ -8644,7 +8719,7 @@ initiate_release(instance, boundary_event)                         # LC2 dischar
     instance.runtime_context ← releasing(request_id, ref)          # durable IN-FLIGHT marker; carries the ref for the completion handler / retry
     instance.transcript.append(RUNTIME_CONTEXT_RELEASING { request_id })
     instance.version ← instance.version + 1
-  TRY provider.release(instance.id, request_id, ref)              # POST-COMMIT side effect → later fires RUNTIME_CONTEXT_RELEASED(request_id, result)
+  TRY provider.release(instance.id, request_id, ref)              # directive phase — POST-COMMIT side effect → later fires RUNTIME_CONTEXT_RELEASED(request_id, result)
   ON dispatch_error(reason):                                       # could not even START the release → a follow-up versioned transition records it
     COMMIT atomically at expected_version = instance.version:
       REQUIRE instance.runtime_context = releasing(request_id, ref)   # still OUR in-flight release (a racing RUNTIME_CONTEXT_RELEASED may have moved it) — else write no wrong release_failed
@@ -8652,7 +8727,7 @@ initiate_release(instance, boundary_event)                         # LC2 dischar
       instance.transcript.append(RUNTIME_CONTEXT_RELEASE_FAILED { phase: initiation, reason })
       instance.version ← instance.version + 1
 
-RUNTIME_CONTEXT_RELEASED(instance, request_id, result) → Outcome    # kernel_event — the provider finished (the RUNTIME_CONTEXT_READY mirror); ORTHOGONAL: never changes kernel_status / current_step / terminal_disposition
+RUNTIME_CONTEXT_RELEASED(instance, request_id, result) → Outcome    # kernel_event — the provider finished (the RUNTIME_CONTEXT_READY mirror); ERRAND release, completion phase. ORTHOGONAL: never changes kernel_status / current_step / terminal_disposition
   REQUIRE instance.runtime_context = releasing(request_id, ref)     # correlation: the release WE dispatched, binding the ref it carries (a stale / duplicate event ⇒ Rejected)
   IF result.kind = ok THEN
     instance.runtime_context ← released                            # tombstone — the obligation is DISCHARGED
@@ -8769,17 +8844,17 @@ validate_action_steps(template) → ok | Rejected                    # LC3 defin
   RETURN ok
 
 park_for_action(instance, template, step) → void                   # LC3 — arrival at a type: action step; the trigger decides the park
-  IF step.trigger = operator_intent THEN                             # LC3a — wait for the operator's RUN_ACTION (no transcript entry; the ActionRequest is DERIVED)
+  IF step.trigger = operator_intent THEN                             # LC3a — wait for the operator's RUN_ACTION (no transcript entry; the ActionRequest is DERIVED). ERRAND ask — the claim: this marker
     instance.kernel_status ← WAITING
     instance.wait ← { kind: action_pending, requested_by: step.id, resume_events: [step.action.key] }
     RETURN
-  # LC3b auto — CLAIM the run AS the arrival (single auto trigger, no operator); the runner runs POST-COMMIT via the ActionIntent, NEVER inside this arrival commit
+  # LC3b auto — CLAIM the run AS the arrival (single auto trigger, no operator); the runner runs POST-COMMIT via the ActionIntent, NEVER inside this arrival commit. ERRAND auto action (full form) — arrival-opened claim
   request_id ← new_request_id() ; episode ← new_episode_ref()        # episode anchors the bounded-retry attempt count (transcript-reconstructable)
   instance.kernel_status ← WAITING
   instance.wait ← { kind: action_running, request_id, action_key: step.action.key, episode_ref: episode, requested_by: step.id }
   instance.transcript.append(ACTION_RUNNING { request_id, action_key: step.action.key, episode_ref: episode, trigger: auto })   # the marker — committed in THIS arrival commit; the side effect is post-commit
 
-action_request(instance, template) → ActionRequest                 # LC3 — the operator-facing surface for a parked action; the decision-less analog of HumanDecisionRequest, DERIVED from the step (no stored request)
+action_request(instance, template) → ActionRequest                 # LC3 — the operator-facing surface for a parked action; the decision-less analog of HumanDecisionRequest, DERIVED from the step (no stored request). ERRAND ask, directive phase (derived)
   step     ← template.step(instance.current_step)
   operator ← instance.binding[step.role]
   RETURN ActionRequest {
@@ -8789,14 +8864,14 @@ action_request(instance, template) → ActionRequest                 # LC3 — t
     required_payload: requirements_for(step.action.payload),       # the SAME per-field {required} shape as a decision payload — TRIGGER-validation, not workspace state
     context:          project_action_context(instance), operator }
 
-action_intent(instance, template) → ActionIntent                   # LC3b — an auto action's run effect; produce-not-perform (the DispatchIntent analog). The runner runs POST-COMMIT, NEVER inside the arrival commit
+action_intent(instance, template) → ActionIntent                   # LC3b — an auto action's run effect; produce-not-perform (the DispatchIntent analog). The runner runs POST-COMMIT, NEVER inside the arrival commit. ERRAND auto action, directive phase
   step ← template.step(instance.current_step)
   RETURN ActionIntent { instance_id, request_id: instance.wait.request_id, runner: step.action.uses, action_spec: step.action.spec, cwd: runtime_context_workspace(instance) }   # a local/driver runner runs it; the result returns as ACTION_RESULT (inline ⇒ immediately, deferred ⇒ later — same contract)
 
 attempt_count_in_episode(instance, episode_ref) → int               # LC3b — transcript-reconstructable: how many ACTION_RUNNING entries this auto-action EPISODE has had. A fresh entry into the step opens a NEW episode_ref, so a later round's attempts never leak in
   RETURN count of ACTION_RUNNING entries in instance.transcript WHERE entry.episode_ref = episode_ref
 
-ACTION_RESULT(instance, request_id, raw_result) → Outcome           # LC3b kernel_event — an auto action's result (the RUNTIME_CONTEXT_READY sibling); inline ⇒ it arrives immediately, deferred ⇒ later (same contract)
+ACTION_RESULT(instance, request_id, raw_result) → Outcome           # LC3b kernel_event — an auto action's result (the RUNTIME_CONTEXT_READY sibling); inline ⇒ it arrives immediately, deferred ⇒ later (same contract). ERRAND auto action, completion phase — the episode retry budget below is the instance's irreducible logic, not an errand phase
   IF instance.wait.kind ≠ action_running OR instance.wait.request_id ≠ request_id THEN RETURN Rejected(action_result_mismatch)   # correlation: the run WE issued (a stale / duplicate result ⇒ Rejected)
   template ← definitionStore.load(instance.template_ref) ; step ← template.step(instance.current_step)
   IF step.trigger ≠ auto THEN RETURN Rejected(action_result_not_auto_action)   # LC3a/LC3b boundary: an operator action_running (LC3a — its result is recorded INLINE in RUN_ACTION) is NEVER completed by a kernel-event
@@ -8824,6 +8899,8 @@ ACTION_RESULT(instance, request_id, raw_result) → Outcome           # LC3b ker
   RETURN Committed(instance.version, post_commit_output(instance, template), boundary_events: emits_of(choice))   # an outcome may emits: a release boundary → LC2
 
 RUN_ACTION(trigger) → Outcome                                      # LC3 operator_intent — the AUTOMATED sibling of SUBMIT_DECISION (the RUNNER's result picks the outcome, not a human). trigger = { instance_id, op_id, expected_version, action_key, payload, by }
+# TWO CHAINED ERRANDS meet in this handler: the ask-errand COMPLETES here (its correlation guards below),
+# and — only after trigger-validation — its completion OPENS the run-errand at the PHASE 1 claim
   instance ← load(trigger.instance_id)
   IF duplicate(trigger.op_id)                                                THEN RETURN Duplicate   # idempotency FIRST — transcript-backed (op_id rides ACTION_RUNNING / ACTION_RESULT): a replay returns Duplicate even after the first claim already moved us to action_running, never not_awaiting_action
   IF instance.kernel_status ≠ WAITING OR instance.wait.kind ≠ action_pending THEN RETURN Rejected(not_awaiting_action)   # action_running ⇒ a (different) claim already won (single-winner); a parked action is the only runnable state
@@ -8831,10 +8908,10 @@ RUN_ACTION(trigger) → Outcome                                      # LC3 opera
   IF trigger.expected_version ≠ instance.version                             THEN RETURN Stale(instance.version)   # the ActionRequest the operator holds is stale — a destructive action MUST NOT run from it (like SUBMIT_DECISION / RESUME_WAIT)
   template ← definitionStore.load(instance.template_ref) ; step ← template.step(instance.current_step)
   REQUIRE trigger.by = instance.binding[step.role]                 # operator authority on THIS path (like SUBMIT_DECISION; not the L1 actor gate)
-  # TRIGGER-VALIDATION — PAYLOAD ONLY (NOT workspace state), BEFORE the claim so a bad payload starts nothing: the human_gate missing_required_field analog
+  # TRIGGER-VALIDATION — PAYLOAD ONLY (NOT workspace state), BEFORE the claim so a bad payload starts nothing: the human_gate missing_required_field analog. A pre-open guard of the run-errand, not part of its claim
   FOR field IN required_fields(step.action.payload):
     IF trigger.payload[field] is absent OR empty THEN RETURN Rejected(missing_required_field)
-  # PHASE 1 — CAS CLAIM (marker-first, single-winner): take the action_pending EXCLUSIVELY before the runner side effect, so two concurrent RUN_ACTION never both reach the (git-mutating) runner
+  # PHASE 1 — CAS CLAIM (marker-first, single-winner): take the action_pending EXCLUSIVELY before the runner side effect, so two concurrent RUN_ACTION never both reach the (git-mutating) runner. ERRAND run (inline form) opens — claim commit #1 of the bracket
   request_id ← new_request_id()
   COMMIT atomically at expected_version = instance.version:
     REQUIRE instance.wait.kind = action_pending                  # the single-winner CAS guard (like LC2 release's REQUIRE ready(ref)): a different concurrent claim that already won loses here on reload ⇒ not_awaiting_action (same op_id ⇒ Duplicate, checked first)
@@ -8844,7 +8921,7 @@ RUN_ACTION(trigger) → Outcome                                      # LC3 opera
   # PHASE 2 — run the ACTION exclusively (the claim is committed; only this handler reaches the runner). A crash here leaves a durable action_running the L9 watchdog reconciles
   result      ← actionRunner(step.action.uses).run(step.action.spec, { cwd: runtime_context_workspace(instance), payload: trigger.payload })
   outcome_key ← classify_action_result(step, result)              # committed | merged | conflict | nothing_staged | infra_error … — the WORKSPACE reality (unlike the payload-only trigger-validation)
-  # PHASE 3 — CAS RESULT: record (with op_id) + route, or revert to action_pending for a retry; NEVER leave action_running on a handled result, NEVER Reject after the side effect ran
+  # PHASE 3 — CAS RESULT: record (with op_id) + route, or revert to action_pending for a retry; NEVER leave action_running on a handled result, NEVER Reject after the side effect ran. ERRAND run completes — commit #2 of the inline bracket; a re-park opens a fresh ask-errand
   COMMIT atomically at expected_version = instance.version:
     REQUIRE instance.wait.kind = action_running AND instance.wait.request_id = request_id   # still OUR run (defensive)
     instance.transcript.append(ACTION_RESULT { op_id: trigger.op_id, action_key: trigger.action_key, outcome: outcome_key, outputs: result.outputs, evidence_refs: result.evidence_refs })   # evidence (LC1 INV-3): commit_sha / merge_sha / exit / hash inline (T1), logs T3 — op_id makes the Duplicate check transcript-backed
@@ -9024,14 +9101,14 @@ park_for_child(instance, template, step) → void                  # L4 — arri
   key  ← resolve_child_key(instance, step)                        # materialize the declared child_key for THIS arrival (e.g. { task_id, role })
   link ← instance.child_links.find_active(step.id, key)           # IDEMPOTENT on the ACTIVE link only (status ∈ spawning | active): a crash-replay re-entry reuses it — never a double-spawn
   IF link is none THEN                                            # no LIVE link ⇒ a FRESH ATTEMPT. A prior TERMINAL link (a done / failed / cancelled attempt) does NOT block — recovery re-entry (same child_key) spawns a new attempt, so retry is not a deadlock
-    link ← ChildWorkflowLink { link_id: fresh, request_id: fresh, step_id: step.id, child_key: key, child_id: none, status: spawning }   # CANONICAL link + the durable spawn MARKER — persisted in `spawning` BEFORE the post-commit SpawnIntent fires; child_id lands via CHILD_SPAWNED
+    link ← ChildWorkflowLink { link_id: fresh, request_id: fresh, step_id: step.id, child_key: key, child_id: none, status: spawning }   # CANONICAL link + the durable spawn MARKER — persisted in `spawning` BEFORE the post-commit SpawnIntent fires; child_id lands via CHILD_SPAWNED. ERRAND spawn (full form) — the claim
     instance.child_links.append(link) ; spawn_pending ← true       # a FRESH link ⇒ post_commit_output issues the SpawnIntent
   ELSE
     spawn_pending ← false                                         # a LIVE link (spawning / active) ⇒ just (re-)park and wait; the child already exists or is being created
   instance.kernel_status ← WAITING
-  instance.wait ← { kind: child_event, requested_by: step.id, link_id: link.link_id, resume_events: keys(step.wait_for), spawn_pending }   # park on the child's DECLARED lifecycle keys
+  instance.wait ← { kind: child_event, requested_by: step.id, link_id: link.link_id, resume_events: keys(step.wait_for), spawn_pending }   # park on the child's DECLARED lifecycle keys. ERRAND child await (open-door form) — marker only, no outbound directive: the completion comes from the child's lifecycle
 
-child_intent(instance, template) → SpawnIntent                   # L4 — produce-not-perform (the ActionIntent / DispatchIntent analog): the child CREATE_INSTANCE runs POST-COMMIT, never inside the arrival commit
+child_intent(instance, template) → SpawnIntent                   # L4 — produce-not-perform (the ActionIntent / DispatchIntent analog): the child CREATE_INSTANCE runs POST-COMMIT, never inside the arrival commit. ERRAND spawn, directive phase
   step ← template.step(instance.current_step) ; link ← instance.child_links.by_id(instance.wait.link_id)
   RETURN SpawnIntent {
     request_id:         link.request_id,                         # correlation: the child's CREATE_INSTANCE replies with CHILD_SPAWNED { parent_ref, child_id } — the RUNTIME_CONTEXT_READY analog
@@ -9039,7 +9116,7 @@ child_intent(instance, template) → SpawnIntent                   # L4 — prod
     child_template_ref: step.child.template_ref,                  # the child is a FULL instance — CREATE_INSTANCE(…, parent_ref) + its own L0f resolution / runtime_context / LC1–LC4 lifecycle
     binding:            step.child.binding, task: step.child.inputs }   # NO inline write-back: the child_id lands via the CHILD_SPAWNED handler below (CAS'd, transcript-backed) — never a lost shorthand
 
-CHILD_SPAWNED(event) → Outcome                                   # L4 kernel_event — the child's CREATE_INSTANCE finished (the RUNTIME_CONTEXT_READY analog). event = { parent_ref, request_id, child_id }: write child_id back into the parent link, CAS'd + transcript-backed
+CHILD_SPAWNED(event) → Outcome                                   # L4 kernel_event — the child's CREATE_INSTANCE finished (the RUNTIME_CONTEXT_READY analog). ERRAND spawn, completion phase. event = { parent_ref, request_id, child_id }: write child_id back into the parent link, CAS'd + transcript-backed
   instance ← load(event.parent_ref.parent_id) ; template ← template_of(instance)
   link ← instance.child_links.by_id(event.parent_ref.link_id)
   IF link is none THEN RETURN Rejected(child_link_unknown)
@@ -9053,7 +9130,7 @@ CHILD_SPAWNED(event) → Outcome                                   # L4 kernel_e
     instance.transcript.append(CHILD_SPAWNED { link_id: link.link_id, request_id: event.request_id, child_id: event.child_id })
   RETURN Committed(instance.version, none)                       # no routing — the parent stays WAITING(child_event) for the child's lifecycle
 
-CHILD_SPAWN_FAILED(event) → Outcome                              # L4 kernel_event — the child's CREATE_INSTANCE was REJECTED past load (e.g. a dynamic binding / input invalid) — the spawn could not start (the LC2 initiation-failure analog). event = { parent_ref, request_id, reason }
+CHILD_SPAWN_FAILED(event) → Outcome                              # L4 kernel_event — the child's CREATE_INSTANCE was REJECTED past load (e.g. a dynamic binding / input invalid) — the spawn could not start (the LC2 initiation-failure analog). ERRAND spawn, completion phase (the failure completion of the same attempt). event = { parent_ref, request_id, reason }
   instance ← load(event.parent_ref.parent_id) ; template ← template_of(instance)
   link ← instance.child_links.by_id(event.parent_ref.link_id)
   IF link is none THEN RETURN Rejected(child_link_unknown)
@@ -9078,7 +9155,7 @@ emit_child_lifecycle(instance, lifecycle) → void                 # L4 — POST
   IF instance.parent_ref is none THEN RETURN                      # not anyone's child — nothing to deliver
   deliver CHILD_LIFECYCLE { parent_ref: instance.parent_ref, child_id: instance.id, lifecycle }   # an INTERNAL kernel event, correlated by parent_ref / child_id (L8 generalizes the channel to external / durable)
 
-CHILD_LIFECYCLE(event) → Outcome                                 # L4 kernel_event — delivered to the PARENT (the ACTION_RESULT / RUNTIME_CONTEXT_READY sibling). event = { parent_ref, child_id, lifecycle }
+CHILD_LIFECYCLE(event) → Outcome                                 # L4 kernel_event — delivered to the PARENT (the ACTION_RESULT / RUNTIME_CONTEXT_READY sibling). ERRAND child await, completion phase. event = { parent_ref, child_id, lifecycle }
   instance ← load(event.parent_ref.parent_id) ; template ← template_of(instance)   # the PARENT instance
   link ← instance.child_links.by_id(event.parent_ref.link_id)    # PRIMARY correlation is the link_id (stable from spawn), NOT child_id
   IF link is none THEN RETURN Rejected(child_link_unknown)
@@ -9243,6 +9320,11 @@ template:
             <li><b>The dogfooding payoff:</b> WF-7 moves orchestration out of the <code>ExecutePairflowPlan</code>
               prompt and into the kernel — the observed LLM non-adherence to that skill is direct evidence for
               "the workflow is the boss" (kernel enforcement, not advisory prompt-level).</li>
+            <li><b>Rebaseline (wave 3):</b> the child step is labeled as two <b>Errand</b> instances with
+              distinct forms — spawn is full (durable <code>spawning</code> link claim →
+              <code>SpawnIntent</code> directive → correlated <code>CHILD_SPAWNED</code>/<code>FAILED</code>),
+              child await is open-door (marker only; the completion is the child's lifecycle). See the
+              kernel-primitives memo (§6/§9); behavior unchanged.</li>
           </ul>
         </div>
       </section>

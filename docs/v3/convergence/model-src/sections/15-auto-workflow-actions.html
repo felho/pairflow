@@ -124,6 +124,10 @@
             <li><b>Invariant coverage:</b> auto is marker-first ✓; result is a correlated kernel-event ✓; retry opt-in + episode-anchored ✓; recommendation rides the firing edge ✓ — and all L0a–L3 + LC1 + LC2 + LC3a invariants still hold.</li>
             <li><b>Accepted tradeoff:</b> the deferred async driver + timeout are thin (L9); pure computed-routing, a rich predicate DSL, and a packaged library are out.</li>
             <li><b>Known gaps (intended):</b> deferred mechanics + timeout (L9), unbounded retry / watchdog (L9), pure computed-routing (later), predicate DSL (later), packaged library (later), undeclared-outcome recovery (L9). Each is in Absent.</li>
+            <li><b>Rebaseline (wave 3):</b> the auto action is labeled as a full-form <b>Errand</b> instance
+              (arrival-opened claim → <code>ActionIntent</code> directive → correlated <code>ACTION_RESULT</code>);
+              the episode retry budget is the instance's irreducible logic, not an errand phase. See the
+              kernel-primitives memo (§6/§9); behavior unchanged.</li>
             <li><b>Decision:</b> accepted as the LC3b baseline (light evidence per playbook §2.1); L4 inherits action steps per child.</li>
           </ul>
         </div>

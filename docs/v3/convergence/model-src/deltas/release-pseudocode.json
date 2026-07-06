@@ -13,6 +13,7 @@
     "validate_gate_config",
     "validate_context_refs",
     "validate_decision_gates",
+    "errand",
     "RECEIVE",
     "CREATE_INSTANCE",
     "RuntimeContextProvider",

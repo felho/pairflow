@@ -1,6 +1,8 @@
 
 # kernel-adjacent — RECEIVE operator_intent dispatch gains DELETE_REQUESTED (alongside CANCEL / SUBMIT_DECISION / RUN_ACTION)
-DELETE_REQUESTED(intent) → Outcome                                  # LC4 operator intent — a CANCEL sibling; starts cancel → release → purge. NOT a workflow action
+DELETE_REQUESTED(intent) → Outcome                                  # LC4 operator intent — a CANCEL sibling; starts cancel → release → purge. NOT a workflow action.
+# The delete chain behind this one intent: a forced release ERRAND (force_release, below) followed by the
+# purge contract — hard_purge is a preconditioned storage re-drive, NOT an errand (no request/reply, no completion event)
   instance ← load(intent.instance_id)
   IF duplicate(intent.op_id) THEN RETURN Duplicate                  # idempotency-first
   IF run_index.status(instance.id) = purged THEN RETURN Rejected(already_purged)   # the run_index TOMBSTONE is the authority for purged — checked BEFORE the operator-authority REQUIRE because a purged run has no full run record (hence no binding[operator]) to authorize against; only the surviving T1-family tombstone remains to read

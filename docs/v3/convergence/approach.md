@@ -774,8 +774,13 @@ Waves (each = its own small-spec + review round + commit; flips recorded here):
   re-printed with its authority rung at L1; the role rungs fold into the expect bundle at the
   four HANDLE heads (L1/L2/L2a/L3, ten rendered blocks via inheritance); the `step` lookup
   hoisted as an infallible positional read; finding F-W2-1 in the memo §9.)*
-- [ ] Wave 3 — LC2: **Errand** born (release joins provision); LC3a/b, LC4, L4
-  re-expressed as errand instances.
+- [x] Wave 3 — LC2: **Errand** born (release joins provision); LC3a/b, LC4, L4
+  re-expressed as errand instances. *(Realized: the `errand` declaration at LC2 — a named
+  contract + phase labels, no mechanical reorganization; the claim phase opens at the marker
+  commit (guards are pre-open); LC3a labeled as the two chained instances, LC3b as full-form,
+  LC4 as the force-opened release (hard_purge deliberately NOT an errand), L4 as spawn (full)
+  + child await (open-door); the routing phase stays unlabeled until P2's birth (wave 4);
+  finding F-W3-1 in the memo §9.)*
 - [ ] Wave 4 — L3: **ChoicePoint + Directive** born (`decisions` joins `transitions`;
   `HumanDecisionRequest` joins `DispatchIntent`); the entry handlers become instances.
 - [ ] Wave 5 — closing sweep: LC3a→L4 fully instance-form; the memo's §3

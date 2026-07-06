@@ -1,5 +1,5 @@
 
-CHILD_SPAWNED(event) → Outcome                                   # L4 kernel_event — the child's CREATE_INSTANCE finished (the RUNTIME_CONTEXT_READY analog). event = { parent_ref, request_id, child_id }: write child_id back into the parent link, CAS'd + transcript-backed
+CHILD_SPAWNED(event) → Outcome                                   # L4 kernel_event — the child's CREATE_INSTANCE finished (the RUNTIME_CONTEXT_READY analog). ERRAND spawn, completion phase. event = { parent_ref, request_id, child_id }: write child_id back into the parent link, CAS'd + transcript-backed
   instance ← load(event.parent_ref.parent_id) ; template ← template_of(instance)
   link ← instance.child_links.by_id(event.parent_ref.link_id)
   IF link is none THEN RETURN Rejected(child_link_unknown)

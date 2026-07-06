@@ -21,6 +21,8 @@ initiate_release(instance, boundary_event)                         # LC2 dischar
       instance.version ← instance.version + 1
     RETURN
   request_id ← new_request_id()
+  # ERRAND release (full form) — the claim phase opens HERE, at the marker commit; everything above
+  # (release_safe, provider resolution) is a pre-open guard / initiation failure, not an errand phase.
   # CAS SINGLE-WINNER + marker-first: only one initiation wins the move from ready(ref); the durable marker is
   # persisted BEFORE dispatch so the correlation target exists before the provider can fire. A crash in the
   # persist→dispatch window leaves a durable releasing(req, ref) the L9 watchdog reconciles (no auto-retry here).
@@ -29,7 +31,7 @@ initiate_release(instance, boundary_event)                         # LC2 dischar
     instance.runtime_context ← releasing(request_id, ref)          # durable IN-FLIGHT marker; carries the ref for the completion handler / retry
     instance.transcript.append(RUNTIME_CONTEXT_RELEASING { request_id })
     instance.version ← instance.version + 1
-  TRY provider.release(instance.id, request_id, ref)              # POST-COMMIT side effect → later fires RUNTIME_CONTEXT_RELEASED(request_id, result)
+  TRY provider.release(instance.id, request_id, ref)              # directive phase — POST-COMMIT side effect → later fires RUNTIME_CONTEXT_RELEASED(request_id, result)
   ON dispatch_error(reason):                                       # could not even START the release → a follow-up versioned transition records it
     COMMIT atomically at expected_version = instance.version:
       REQUIRE instance.runtime_context = releasing(request_id, ref)   # still OUR in-flight release (a racing RUNTIME_CONTEXT_RELEASED may have moved it) — else write no wrong release_failed

@@ -1,5 +1,7 @@
 
 RUN_ACTION(trigger) → Outcome                                      # LC3 operator_intent — the AUTOMATED sibling of SUBMIT_DECISION (the RUNNER's result picks the outcome, not a human). trigger = { instance_id, op_id, expected_version, action_key, payload, by }
+# TWO CHAINED ERRANDS meet in this handler: the ask-errand COMPLETES here (its correlation guards below),
+# and — only after trigger-validation — its completion OPENS the run-errand at the PHASE 1 claim
   instance ← load(trigger.instance_id)
   IF duplicate(trigger.op_id)                                                THEN RETURN Duplicate   # idempotency FIRST — transcript-backed (op_id rides ACTION_RUNNING / ACTION_RESULT): a replay returns Duplicate even after the first claim already moved us to action_running, never not_awaiting_action
   IF instance.kernel_status ≠ WAITING OR instance.wait.kind ≠ action_pending THEN RETURN Rejected(not_awaiting_action)   # action_running ⇒ a (different) claim already won (single-winner); a parked action is the only runnable state
@@ -7,10 +9,10 @@ RUN_ACTION(trigger) → Outcome                                      # LC3 opera
   IF trigger.expected_version ≠ instance.version                             THEN RETURN Stale(instance.version)   # the ActionRequest the operator holds is stale — a destructive action MUST NOT run from it (like SUBMIT_DECISION / RESUME_WAIT)
   template ← definitionStore.load(instance.template_ref) ; step ← template.step(instance.current_step)
   REQUIRE trigger.by = instance.binding[step.role]                 # operator authority on THIS path (like SUBMIT_DECISION; not the L1 actor gate)
-  # TRIGGER-VALIDATION — PAYLOAD ONLY (NOT workspace state), BEFORE the claim so a bad payload starts nothing: the human_gate missing_required_field analog
+  # TRIGGER-VALIDATION — PAYLOAD ONLY (NOT workspace state), BEFORE the claim so a bad payload starts nothing: the human_gate missing_required_field analog. A pre-open guard of the run-errand, not part of its claim
   FOR field IN required_fields(step.action.payload):
     IF trigger.payload[field] is absent OR empty THEN RETURN Rejected(missing_required_field)
-  # PHASE 1 — CAS CLAIM (marker-first, single-winner): take the action_pending EXCLUSIVELY before the runner side effect, so two concurrent RUN_ACTION never both reach the (git-mutating) runner
+  # PHASE 1 — CAS CLAIM (marker-first, single-winner): take the action_pending EXCLUSIVELY before the runner side effect, so two concurrent RUN_ACTION never both reach the (git-mutating) runner. ERRAND run (inline form) opens — claim commit #1 of the bracket
   request_id ← new_request_id()
   COMMIT atomically at expected_version = instance.version:
     REQUIRE instance.wait.kind = action_pending                  # the single-winner CAS guard (like LC2 release's REQUIRE ready(ref)): a different concurrent claim that already won loses here on reload ⇒ not_awaiting_action (same op_id ⇒ Duplicate, checked first)
@@ -20,7 +22,7 @@ RUN_ACTION(trigger) → Outcome                                      # LC3 opera
   # PHASE 2 — run the ACTION exclusively (the claim is committed; only this handler reaches the runner). A crash here leaves a durable action_running the L9 watchdog reconciles
   result      ← actionRunner(step.action.uses).run(step.action.spec, { cwd: runtime_context_workspace(instance), payload: trigger.payload })
   outcome_key ← classify_action_result(step, result)              # committed | merged | conflict | nothing_staged | infra_error … — the WORKSPACE reality (unlike the payload-only trigger-validation)
-  # PHASE 3 — CAS RESULT: record (with op_id) + route, or revert to action_pending for a retry; NEVER leave action_running on a handled result, NEVER Reject after the side effect ran
+  # PHASE 3 — CAS RESULT: record (with op_id) + route, or revert to action_pending for a retry; NEVER leave action_running on a handled result, NEVER Reject after the side effect ran. ERRAND run completes — commit #2 of the inline bracket; a re-park opens a fresh ask-errand
   COMMIT atomically at expected_version = instance.version:
     REQUIRE instance.wait.kind = action_running AND instance.wait.request_id = request_id   # still OUR run (defensive)
     instance.transcript.append(ACTION_RESULT { op_id: trigger.op_id, action_key: trigger.action_key, outcome: outcome_key, outputs: result.outputs, evidence_refs: result.evidence_refs })   # evidence (LC1 INV-3): commit_sha / merge_sha / exit / hash inline (T1), logs T3 — op_id makes the Duplicate check transcript-backed

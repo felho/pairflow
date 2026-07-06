@@ -1,5 +1,5 @@
 
-RUNTIME_CONTEXT_RELEASED(instance, request_id, result) → Outcome    # kernel_event — the provider finished (the RUNTIME_CONTEXT_READY mirror); ORTHOGONAL: never changes kernel_status / current_step / terminal_disposition
+RUNTIME_CONTEXT_RELEASED(instance, request_id, result) → Outcome    # kernel_event — the provider finished (the RUNTIME_CONTEXT_READY mirror); ERRAND release, completion phase. ORTHOGONAL: never changes kernel_status / current_step / terminal_disposition
   REQUIRE instance.runtime_context = releasing(request_id, ref)     # correlation: the release WE dispatched, binding the ref it carries (a stale / duplicate event ⇒ Rejected)
   IF result.kind = ok THEN
     instance.runtime_context ← released                            # tombstone — the obligation is DISCHARGED

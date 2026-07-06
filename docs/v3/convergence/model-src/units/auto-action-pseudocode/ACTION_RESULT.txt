@@ -1,5 +1,5 @@
 
-ACTION_RESULT(instance, request_id, raw_result) → Outcome           # LC3b kernel_event — an auto action's result (the RUNTIME_CONTEXT_READY sibling); inline ⇒ it arrives immediately, deferred ⇒ later (same contract)
+ACTION_RESULT(instance, request_id, raw_result) → Outcome           # LC3b kernel_event — an auto action's result (the RUNTIME_CONTEXT_READY sibling); inline ⇒ it arrives immediately, deferred ⇒ later (same contract). ERRAND auto action, completion phase — the episode retry budget below is the instance's irreducible logic, not an errand phase
   IF instance.wait.kind ≠ action_running OR instance.wait.request_id ≠ request_id THEN RETURN Rejected(action_result_mismatch)   # correlation: the run WE issued (a stale / duplicate result ⇒ Rejected)
   template ← definitionStore.load(instance.template_ref) ; step ← template.step(instance.current_step)
   IF step.trigger ≠ auto THEN RETURN Rejected(action_result_not_auto_action)   # LC3a/LC3b boundary: an operator action_running (LC3a — its result is recorded INLINE in RUN_ACTION) is NEVER completed by a kernel-event

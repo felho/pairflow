@@ -145,6 +145,10 @@
             <li><b>Invariant coverage:</b> archive not preservation ✓; purge complete + closure-scoped ✓; precondition on the purge not the intent ✓; tombstone + surviving global audit ✓; delete is an operator intent not a workflow action ✓ — and all L0a–L3 + LC1–LC3 invariants still hold.</li>
             <li><b>Accepted tradeoff:</b> retention / auto-purge, a query CLI, restore, and a multi-owner blob store are out — LC4 is the explicit operator ops + the safe purge contract.</li>
             <li><b>Known gaps (intended):</b> retention / scheduled auto-purge policy (L9/ops), archive query (ops), restore (later), shared-evidence ownership (later), export formats (ops), federation purge (L11+). Each is in Absent.</li>
+            <li><b>Rebaseline (wave 3):</b> the delete chain is labeled — behind the one operator intent sits a
+              force-opened release <b>Errand</b> (the same LC2 instance), while <code>hard_purge</code> is
+              deliberately NOT an errand (a preconditioned storage re-drive with no request/reply or completion
+              event). See the kernel-primitives memo (§6/§9); behavior unchanged.</li>
             <li><b>Decision:</b> accepted as the LC4 baseline (light evidence per playbook §2.1). This closes the lifecycle-close topic (LC1–LC4); L4 (child workflows) inherits all four per child runtime_context / record.</li>
           </ul>
         </div>

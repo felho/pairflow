@@ -1,5 +1,5 @@
 
-CHILD_LIFECYCLE(event) → Outcome                                 # L4 kernel_event — delivered to the PARENT (the ACTION_RESULT / RUNTIME_CONTEXT_READY sibling). event = { parent_ref, child_id, lifecycle }
+CHILD_LIFECYCLE(event) → Outcome                                 # L4 kernel_event — delivered to the PARENT (the ACTION_RESULT / RUNTIME_CONTEXT_READY sibling). ERRAND child await, completion phase. event = { parent_ref, child_id, lifecycle }
   instance ← load(event.parent_ref.parent_id) ; template ← template_of(instance)   # the PARENT instance
   link ← instance.child_links.by_id(event.parent_ref.link_id)    # PRIMARY correlation is the link_id (stable from spawn), NOT child_id
   IF link is none THEN RETURN Rejected(child_link_unknown)
