@@ -9761,8 +9761,9 @@ resolve_agent_config(template, step, instance) → AgentConfig
 capability(template, role, step_id) → action set                       # role × step → allowed actions
   step    ← template.step(step_id)
   profile ← template.capability_profile.get((role, step_id))
-  IF profile is not none THEN RETURN profile.allowed                    # explicit restriction (none in the baseline)
-  IF role = step.role THEN RETURN event_types_of(step.transitions)      # default-derived: own role may emit the step's transitions
+  IF profile is not none THEN RETURN profile.allowed                    # explicit restriction: an authored profile must LIST HELP_REQUEST to allow the ask — the L5 default below does not override an explicit profile
+  IF role = step.role THEN                                              # default-derived: own role may emit the step's transitions…
+    RETURN event_types_of(step.transitions) ∪ ({ HELP_REQUEST } IF step.help is declared)   # …and, at L5, the ask — a declared step.help puts HELP_REQUEST into the default capability (the same condition dispatch_intent uses for available_ops, so the offer and the gate agree)
   RETURN empty_set                                                      # any other role may emit nothing here
 
 # GateEvaluator — shared gate contract; L2a adds inline external.process to L2 core's declarative/packaged
@@ -10352,7 +10353,7 @@ handle_help_request(instance, template, step, envelope) → Outcome    # L5 — 
   # moves no workflow state beyond parking (policy filters on asks are an open, deferred question)
   request_ref ← new_request_ref()
   COMMIT atomically at expected_version = instance.version:         # one visible transition — the park and the fact land together (the human_gate precedent)
-    instance.transcript.append(HELP_REQUEST { op_id: envelope.op_id, request_ref, question: envelope.payload.question, refs: envelope.payload.refs })   # THE durable fact: the one op_id-carrying entry for this emit — no separate generic envelope append (one emit, one entry)
+    instance.transcript.append(HELP_REQUEST { op_id: envelope.op_id, request_ref, step_id: step.id, round: instance.round, question: envelope.payload.question, refs: envelope.payload.refs })   # THE durable fact: the one op_id-carrying entry for this emit — no separate generic envelope append (one emit, one entry). step_id + round ride the fact so the exchange is filterable from the RECORD alone
     instance.kernel_status ← WAITING
     instance.wait ← { kind: help_pending, requested_by: step.id, request_ref }   # blocking variant: the marker homes in the wait slot — "≤ 1 open help" is THIS home's property, not the errand's
     instance.version ← instance.version + 1
@@ -10393,8 +10394,8 @@ HELP_REPLY(reply) → Outcome                                        # L5 operat
   RETURN Committed(instance.version, post_commit_output(instance, template))   # ACTIVE ⇒ the next dispatch; its handoff = original ⊕ the reply (help_exchange_for, below)
 
 help_exchange_for(instance, step_id) → [HelpExchange]              # L5 — the stay route's handoff enrichment, TRANSCRIPT-DERIVED (record, not wait-state memory)
-  RETURN instance.transcript.pairs(HELP_REQUEST → HELP_REPLIED,     # matched by request_ref
-           where requested_by = step_id AND round = instance.round) # THIS step's exchanges in THIS round; each: { question, refs, reply, by, request_ref }
+  RETURN instance.transcript.pairs(HELP_REQUEST → HELP_REPLIED,     # matched by request_ref; the reply pair needs no step/round of its own
+           where HELP_REQUEST.step_id = step_id AND HELP_REQUEST.round = instance.round)   # filtered on fields the REQUEST FACT carries — the record alone suffices; each: { question, refs, reply, by, request_ref }
   # an unanswered request never reaches a dispatch — help_pending blocks it; a loop-back that
   # advances the round drops the stale exchange with the rest of the round's context (the L3 rule)
 

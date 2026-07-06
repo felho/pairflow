@@ -1,0 +1,8 @@
+
+capability(template, role, step_id) → action set                       # role × step → allowed actions
+  step    ← template.step(step_id)
+  profile ← template.capability_profile.get((role, step_id))
+  IF profile is not none THEN RETURN profile.allowed                    # explicit restriction: an authored profile must LIST HELP_REQUEST to allow the ask — the L5 default below does not override an explicit profile
+  IF role = step.role THEN                                              # default-derived: own role may emit the step's transitions…
+    RETURN event_types_of(step.transitions) ∪ ({ HELP_REQUEST } IF step.help is declared)   # …and, at L5, the ask — a declared step.help puts HELP_REQUEST into the default capability (the same condition dispatch_intent uses for available_ops, so the offer and the gate agree)
+  RETURN empty_set                                                      # any other role may emit nothing here

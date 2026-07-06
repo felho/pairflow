@@ -826,3 +826,26 @@ the ledger diff is additions-only.
   exactly as designed. (b) The viewer's highlight vocabularies gained the
   L5 + ingress-touch tokens (HELP_REQUEST / HELP_REPLIED / HELP_REPLY /
   HelpRequest / STARTED / CANCELLED / TASK_SUPPLIED) — render-side only.
+
+Review round on the L5 landing (2026-07-06) — two findings, both FIXED in
+the follow-up commit before ratification:
+
+- **F-L5-3 (blocker, caught in review) · the capability check was
+  unsatisfiable.** `handle_help_request` required
+  `HELP_REQUEST ∈ capability(...)`, but the L1 `capability` definition
+  (inherited, no L5 override) returns only the step's transition keys — so
+  every help emit would have died on `not_authorized`, contradicting the
+  trace and the domain text. Fix: an L5 `capability` override — the
+  default-derived set gains `{ HELP_REQUEST }` when `step.help` is
+  declared (the same condition `dispatch_intent` uses for `available_ops`,
+  so the offer and the gate agree); an EXPLICIT authored profile is not
+  overridden — it must list HELP_REQUEST itself to allow the ask. Zero
+  literal movement (the reject name was already at the call site).
+- **F-L5-4 (medium, caught in review) · the exchange filter read fields
+  the facts did not carry.** `help_exchange_for` filtered by step and
+  round, but the `HELP_REQUEST` fact carried neither — the filter would
+  have leaned on an implicit projection, against the level's own
+  "record, not wait-state memory" invariant. Fix: the fact gains
+  `step_id` + `round`; the reply pair needs no copy of its own
+  (request_ref joins them), and the filter now names the request fact's
+  own fields.

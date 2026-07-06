@@ -1,6 +1,6 @@
 
 help_exchange_for(instance, step_id) → [HelpExchange]              # L5 — the stay route's handoff enrichment, TRANSCRIPT-DERIVED (record, not wait-state memory)
-  RETURN instance.transcript.pairs(HELP_REQUEST → HELP_REPLIED,     # matched by request_ref
-           where requested_by = step_id AND round = instance.round) # THIS step's exchanges in THIS round; each: { question, refs, reply, by, request_ref }
+  RETURN instance.transcript.pairs(HELP_REQUEST → HELP_REPLIED,     # matched by request_ref; the reply pair needs no step/round of its own
+           where HELP_REQUEST.step_id = step_id AND HELP_REQUEST.round = instance.round)   # filtered on fields the REQUEST FACT carries — the record alone suffices; each: { question, refs, reply, by, request_ref }
   # an unanswered request never reaches a dispatch — help_pending blocks it; a loop-back that
   # advances the round drops the stale exchange with the rest of the round's context (the L3 rule)
