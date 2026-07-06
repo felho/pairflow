@@ -7,7 +7,7 @@ SUBMIT_DECISION(decision) → Outcome                                  # operato
     correlate: wait.request_ref = decision.request_ref → Rejected(decision_request_mismatch), # correlation to THIS pending DECISION_REQUEST
     version:   decision.expected_version,                                                     # CAS precheck (actor-supplied stale-intent, as in HANDLE)
     authority: { claim:   decision.by,
-                 granted: instance.binding[template.step(instance.current_step).role],        # lazy positional read — evaluated only at this rung
+                 granted: instance.binding[template.step(instance.current_step).role],        # lazy rung-local read: `template` here IS the pinned-template load (definitionStore), performed at this rung — not the later textual load below
                  mismatch → Rejected(operator_not_authorized) } })                            # operator authority on THIS path — NOT the L1 actor-envelope gate (a human decision is a different input class)
   IF admitted ≠ Accepted THEN RETURN admitted                       # Duplicate | Stale(v) | Rejected(…) pass through unchanged
   instance ← admitted.instance

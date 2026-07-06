@@ -580,7 +580,7 @@ ratified in the wave's review.
   STRICTLY unchanged this wave (declaration + comment labels only, no
   ladder re-print).
 
-### Wave 4 (L3 — ChoicePoint + Directive born) — executed, findings await review
+### Wave 4 (L3 — ChoicePoint + Directive born) — wave reviewed, all three dispositions RATIFIED (2026-07-06)
 
 - **F-W4-1 · RUN_ACTION (and DELETE_REQUESTED) cannot fold into
   `admit_input` without behavior change — kept conservative.** Two
@@ -632,3 +632,34 @@ ratified in the wave's review.
   keeps its inline load (lineage from L0a; folding only the L3 copy would
   fork it) — stated in `admit_input`'s header so the asymmetry reads as
   chosen. The L0d announcement comment is untouched and simply became true.
+- **F-W4-3 · the folded SUBMIT_DECISION authority expectation leaves the
+  missing branch undeclared (found in the wave-4 review).** The expect
+  declares only `mismatch → Rejected(operator_not_authorized)`; the ladder's
+  authority rung also has a missing branch (`claim is missing → RETURN
+  expect.authority.missing`), so a `by`-less malformed decision now returns
+  an UNDECLARED reject name — undefined behavior — where the pre-fold `≠`
+  comparison answered `operator_not_authorized`. Same class as F-W4-2, but
+  unbooked, which the rail forbids; and F-W4-2's own argument (malformed
+  input gets a DEFINED answer) requires this branch to be defined too.
+  RATIFIED disposition: the one-line behavior-preserving fix — declare
+  `missing → Rejected(operator_not_authorized)` in the expect (the house
+  style: the L1 HANDLE declares both mappings) — lands in wave 5 with a
+  pre-declared multiset delta (+1 `operator_not_authorized` in the l3 fold
+  and its inheritors). Extending the state rung's "unnamed reject ⇒
+  bare-REQUIRE" convention to the authority rung instead was considered and
+  REJECTED: it would change behavior (named reject → bare). RESUME_WAIT is
+  unaffected (no authority expectation at all — the rung is skipped).
+- **Ratification records (2026-07-06).** F-W4-1's scoping decision:
+  the missing guards + the RUN_ACTION reject-name decision go to the
+  DEDICATED F-W1-2 ingress-idempotency touch, NOT the wave-5 sweep —
+  (1) the rebaseline's audit property ("behavior-neutral except explicitly
+  ratified deltas") stays undiluted, (2) the work family is F-W1-2's
+  (operator/lifecycle ingress hardening on one coherent review surface),
+  (3) DELETE_REQUESTED's tombstone-before-authority order needs design
+  attention, not sweep mode. F-W4-2 ratified explicitly (the old
+  `Stale(instance.version)` answer even leaked the current version to a
+  malformed request). Measurement note from review: the raw `Rejected(`
+  substring count moved 538→539 via a `Rejected(…)` ellipsis comment in the
+  rendered blocks — the `…` does not match the registry regex
+  (`[a-z_]`-anchored), so the ledger is untouched; informal greps should
+  exclude the placeholder.

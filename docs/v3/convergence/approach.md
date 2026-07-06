@@ -790,7 +790,9 @@ Waves (each = its own small-spec + review round + commit; flips recorded here):
   operator paths' `missing_version` canonicalization — is F-W4-2; both in the memo §9.)*
 - [ ] Wave 5 — closing sweep: LC3a→L4 fully instance-form; the memo's §3
   reclassification realized; the §8 findings folded in (the P1 opener dimension, the
-  P2 stay route, marker-home carrying blocking/non-blocking).
+  P2 stay route, marker-home carrying blocking/non-blocking); the F-W4-3 one-line fix
+  (pre-declared +1 multiset delta). NOT in scope (ratified F-W4-1 decision): the missing
+  ingress guards — they go to the dedicated F-W1-2 ingress-idempotency touch.
 Safety rails: **behavior does not change** — templates, traces, and the
 rejection/invariant sets are invariants of the pass (the derived registries are diffed
 as semantic checksums at every wave; rung-order divergences against todo A1/C2/E2 + the
