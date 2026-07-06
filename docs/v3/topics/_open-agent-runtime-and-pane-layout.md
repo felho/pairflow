@@ -1,6 +1,6 @@
 # Open Topic — Agent Runtime & Pane Layout (how we run agents)
 
-Date: 2026-06-20 · Updated: 2026-06-25 (resumed — studies 11–12 folded in; omnigent re-examined at the source-code level; v1 pane layer grounded)
+Date: 2026-06-20 · Updated: 2026-07-04 (2026-06-25: resumed — studies 11–12 folded in; omnigent re-examined at the source-code level; v1 pane layer grounded. 2026-07-04: §8 transport-layer read folded back into omnigent-study §5.1)
 Status: **RESUMED.** The two studies pending at parking (gastown #11, gstack #12) are in,
 omnigent was re-read at the **code** level, and the existing pairflow tmux/pane layer was read to
 ground the v1 reality (§7). The central decision (Q1) and the config-location (Q3) now have a
@@ -114,6 +114,11 @@ dev-server, shell) — vibe-kanban's unified primitive.
 ---
 
 ## 4. What the studies offer (concrete)
+
+> Dedup note (2026-07-06): the omnigent child-session-vs-`child_workflow` correction
+> below restates [`_dynamic-orchestrator-workflow.md`](_dynamic-orchestrator-workflow.md) §1
+> (kept here for this memo's self-contained live-run record); the open questions on
+> that territory — including `ActorSessionRef` (Q1) — are owned by that memo, not this one.
 
 ### omnigent — the hybrid, channel-split native runtime reference (primary)
 

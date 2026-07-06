@@ -233,6 +233,11 @@ Observable events should be typed and versioned, with durable replay offsets. Li
 may be lossy or buffered, but it must never be mistaken for the replay cursor. Terminal
 markers should be sent in-band so the UI does not infer completion from a timeout.
 
+> **Canonical home note (2026-07-06):** this contract now lives, in more detail, in
+> [`../convergence/core-model-future-topic.md`](../convergence/core-model-future-topic.md)
+> "Observe seam" §§1–5 — consume it from there; this section stays as the UI-side
+> requirement statement.
+
 ## MVP prototype target
 
 A useful learning prototype should not start with visual polish. It should start with a

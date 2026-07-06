@@ -7,9 +7,25 @@ follow-up discussion about whether Omnigent's "child session" maps to v3 `child_
 Relation to other research:
 
 - [`_open-agent-runtime-and-pane-layout.md`](_open-agent-runtime-and-pane-layout.md) covers how
-  an actor runtime is executed and observed.
+  an actor runtime is executed and observed. (Its §4 restates this memo's §1 correction
+  table for its own live-run record; this memo owns the open questions.)
 - This memo covers a different issue: whether v3 needs a first-class dynamic orchestrator
   workflow shape, where an actor plans, delegates, waits, and re-delegates at runtime.
+- This memo **owns Q1** (`ActorSessionRef` first-class or not); the storage memo's open
+  question 9 covers only its residence (T1 vs T7) once Q1 lands.
+
+> **Evidence update (2026-07-06, the BitSafe workflow simulation —
+> `../research/bitsafe-workflow-simulation.md`):** the static half of this memo's
+> territory got real-world grounding. The planner/worker split (S9 ARQ dispatcher,
+> S12 Code Factory queues) showed the *template-authored* dispatcher shape works but
+> exposed two constructs this memo's questions anticipate, now registered as
+> future-topic items: **L4 #11 detached spawn** (mint-without-parking with a durable
+> link — GAP-9) and **L4 #12 runtime-sized data-driven fan-out** (GAP-3). The
+> *dynamic* half — an actor deciding mid-performance whom to consult — landed
+> separately as the L5 help-ask (built), with the agent-addressed helper leg open as
+> future-topic **L5 #9** (GAP-12 / S14). Q2 ("workflow mode, step type, or tool
+> surface") should be re-read against those three items: they may jointly dissolve
+> it, or reduce it to the session-reuse residue (Q1/Q3).
 
 ---
 

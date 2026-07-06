@@ -912,6 +912,10 @@ WF-6-first roadmap would bring them early. Each with the scenario that drives it
 - **Cross-instance read model** (§6) — WF-3 (weekly digest aggregating many instances),
   WF-6 (digest).
 - **Dynamic fan-out over data-driven items** (§7) — WF-6 (newsletter → N article links).
+  *Promoted evidence (2026-07-06): now a named future-topic item
+  ([`core-model-future-topic.md`](core-model-future-topic.md) L4 #12), with the BitSafe
+  workflow simulation's GAP-3 (meeting → N action items; queue → N workers) as its
+  real-world witness.*
 - **Cancellation / compensation / forward recovery** (reversibility class; §18.1) —
   WF-2 (candidate withdrawal: access revoke, laptop cancel), WF-5 (let-lapse timed
   obligation). The *operational* form is scenario-driven and small-company, not
@@ -972,23 +976,29 @@ Reflected in §4.
 
 **Still open — most useful feedback now:**
 
-1. **L8 seams** — L8 almost certainly splits during implementation planning. Expected
-   seams: channel normalization; task inbox / outbound delivery; general Ask
-   schema/addressee model. The **external-token Ask** likely splits out separately —
-   security/identity-wise it is a different animal from an internal human/agent Ask
-   (§15.4). Confirm the seam set.
+1. **L8 seams — RESOLVED (2026-07-06).** The seam set is confirmed and recorded in
+   [`core-model-future-topic.md`](core-model-future-topic.md) L8 §6 (channel
+   normalization; task inbox / outbound delivery; general Ask schema/addressee model;
+   external-token Ask split toward L7/L10), refined by the nanoclaw study and
+   stress-tested by the BitSafe workflow simulation (whose event-driven workloads
+   leaned on L8 §§1–4 and found them well-aimed as written).
 2. **Misplaced under L14** — beyond compensation (now moved), which other L14 concepts
    are really scenario-driven and should be promoted above Block D? Candidates: sticky
    labels (the Acme case is small-company too, §18.3), MTP steering (the personal-domain
    "constitution" is non-enterprise, §18.2).
 3. **Deferred-primitive leveling** — once the ramp turns past the WF-7 MVP, which
    post-MVP scenario primitives become named levels (as Block B/C extensions), in what
-   order?
+   order? *(Progress note, 2026-07-06: the BitSafe workflow simulation effectively
+   prioritized inside Block B — the load-bearing set for a real fleet is L6 + L8 + L9
+   plus the creation-identity decision; L7/L10 were almost never load-bearing. And the
+   "dynamic fan-out" deferred primitive below got promoted evidence: it is now
+   future-topic L4 #12, with GAP-3 of the simulation as its concrete witness.)*
 4. **Orphaned-child recovery** — its minimal behaviour at L4 needs pinning down during
    the core-model build (what happens to a parent whose child is deleted out-of-band):
    a modelling task, not a roadmap gap.
-5. **core-model.html realignment** — rebuild the HTML to the new ramp before further
-   model work (consensus yes; the next concrete step).
+5. **core-model.html realignment — DONE.** The HTML was rebuilt to the revised ramp and
+   has since carried Block A to completion (L0a–L5 + LC1–4 + L0g + the primitives
+   rebaseline), with the source/render split and golden checks guarding it.
 
 ---
 

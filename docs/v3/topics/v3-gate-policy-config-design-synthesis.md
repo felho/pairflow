@@ -1,6 +1,12 @@
 # Pairflow v3 Gate / Policy Configuration Design Synthesis
 
 Date: 2026-06-16
+Status: captured synthesis — substantially absorbed into
+[`../convergence/core-model-future-topic.md`](../convergence/core-model-future-topic.md)
+"L2 / L2a" (#2 authoring-profile compilation, #3 v1-as-packaged-profile, #8 typed route
+reasons, #9 typed transform outputs) and the realized L2/L2a/L2b sections of
+`core-model.html`; retained as the fuller provenance record behind those items.
+(Status line added 2026-07-06.)
 
 ## Purpose
 

@@ -228,6 +228,11 @@ Properties:
 Open point: T5 may derive from T1 transcript directly at first, but the contract
 should not assume that a live WebSocket cursor is a durable replay cursor.
 
+> **Canonical home note (2026-07-06):** T5's contract content (history-plus-tail,
+> live≠replay media, typed envelopes, offsets, terminal/gap markers) now lives in
+> more detail in [`../convergence/core-model-future-topic.md`](../convergence/core-model-future-topic.md)
+> "Observe seam" §§1–5; T5 here defines only the *storage plane* that backs it.
+
 ### T6 - Ops index, tombstones, and coarse audit
 
 Owns:
@@ -428,6 +433,10 @@ never replay nondeterministic actors as recovery.
    storage schemas start moving quickly?
 9. Where do dynamic `ActorSessionRef` records belong if that model is adopted:
    T1 as kernel state, T7 as adapter-local state, or a split between the two?
+   *(Ownership note, 2026-07-06: whether `ActorSessionRef` exists as a
+   first-class object at all is owned by
+   [`_dynamic-orchestrator-workflow.md`](_dynamic-orchestrator-workflow.md) Q1;
+   this question covers only its storage residence once that decision lands.)*
 10. What storage surfaces are allowed to cross a future private-data/federation
     boundary? (Direction set by "Instance homing and multi-kernel topology"
     above: only events and durable refs cross; per-instance authority never

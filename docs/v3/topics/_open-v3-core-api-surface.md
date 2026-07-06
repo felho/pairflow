@@ -120,6 +120,14 @@ This is the API family needed by the workflow inspector UI, CLIs, dashboards, an
 external orchestrators. It should support durable replay, live tail, terminal
 markers, gap markers, and typed observable events.
 
+> **Canonical home note (2026-07-06):** the observe contract has since been
+> absorbed, in more detail, into
+> [`../convergence/core-model-future-topic.md`](../convergence/core-model-future-topic.md)
+> "Observe seam" §§1–7 (atomic history-plus-tail, three media, typed envelope,
+> addressed streams/offsets, backpressure/terminal markers, external protocol
+> adapter, control-commands-re-enter-through-ingress). That section is the
+> canonical spec surface; this section remains as the API-family framing only.
+
 ## The CLI's role
 
 The CLI should remain important, but its implementation should be a client of the
