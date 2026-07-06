@@ -35,9 +35,12 @@ side was edited.
   readability layer over the kernel-primitives labeling convention: the
   uppercase primitive labels (`ADMISSION` / `WARRANT` / `ERRAND` /
   `CHOICEPOINT` / `DIRECTIVE`) in comments render as color-coded pills,
-  `# ─── … ───` contract headers render as color-keyed bands, and comments
-  are dimmed (hover a line to read its full comment). Presentation only —
-  the source units and every checksum are untouched by it.
+  `# ─── … ───` contract headers render as color-keyed bands, comments
+  are dimmed (hover a line to read its full comment), and the viewer
+  reflows comments — a trailing comment moves ABOVE its code line and any
+  comment wraps at 100 chars, applied identically to both diff sides so
+  the pairing stays consistent (contract bands stay one-line). Presentation
+  only — the source units and every checksum are untouched by it.
 - `sections/NN-<id>.html` — one file per level section; the bodies of the
   `diff-source` `<script>` blocks are replaced by `[[@code <relpath>]]`
   markers.

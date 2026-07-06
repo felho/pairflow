@@ -9773,6 +9773,51 @@ template:
       return ' contract-head' + (m ? ' ch-' + m[1].toLowerCase() : '');
     }
 
+    var COMMENT_WRAP_WIDTH = 100;
+
+    function wrapCommentText(text, indent) {
+      // greedy word wrap of a comment's text into `indent + '# ' + …` lines of ≤ COMMENT_WRAP_WIDTH chars
+      var lines = [];
+      var cur = '';
+      text.split(/\s+/).forEach(function (word) {
+        if (!word) return;
+        var candidate = cur ? cur + ' ' + word : indent + '# ' + word;
+        if (cur && candidate.length > COMMENT_WRAP_WIDTH) {
+          lines.push(cur);
+          cur = indent + '# ' + word;
+        } else {
+          cur = candidate;
+        }
+      });
+      if (cur) lines.push(cur);
+      return lines;
+    }
+
+    function explodeComments(lines) {
+      // render-side reflow (the source units are untouched): a trailing comment moves ABOVE its
+      // code line, and any comment wraps at COMMENT_WRAP_WIDTH — so nothing overflows sideways.
+      // Applied identically to BOTH diff sides, so line pairing stays consistent.
+      var out = [];
+      lines.forEach(function (line) {
+        if (line == null || line === '') { out.push(line); return; }
+        var trimmed = line.trim();
+        if (trimmed.indexOf('# ───') === 0) { out.push(line); return; }   // contract bands stay one-line
+        var idx = line.indexOf('#');
+        if (idx < 0) { out.push(line); return; }
+        var indent = (line.match(/^\s*/) || [''])[0];
+        if (trimmed.charAt(0) === '#') {
+          if (line.length <= COMMENT_WRAP_WIDTH) { out.push(line); return; }
+          wrapCommentText(trimmed.replace(/^#\s?/, ''), indent).forEach(function (l) { out.push(l); });
+          return;
+        }
+        var code = line.slice(0, idx).replace(/\s+$/, '');
+        var text = line.slice(idx).replace(/^#\s?/, '');
+        wrapCommentText(text, indent).forEach(function (l) { out.push(l); });
+        out.push(code);
+      });
+      return out;
+    }
+
     function renderLine(parent, line, index, kind) {
       var row = document.createElement('div');
       row.className = 'diff-line ' + kind + (line === '' || line == null ? ' blank' : '') + primitiveHeadClass(line);
@@ -9938,8 +9983,8 @@ template:
     }
 
     function renderCodePanel(panel) {
-      var oldLines = readCode(panel, '[data-code-old], [data-code-old-ref]');
-      var newLines = readCode(panel, '[data-code-new], [data-code-new-ref]');
+      var oldLines = explodeComments(readCode(panel, '[data-code-old], [data-code-old-ref]'));
+      var newLines = explodeComments(readCode(panel, '[data-code-new], [data-code-new-ref]'));
       var oldLabel = panel.dataset.oldLabel || 'Previous';
       var newLabel = panel.dataset.newLabel || 'Current';
 
