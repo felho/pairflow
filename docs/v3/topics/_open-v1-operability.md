@@ -42,8 +42,8 @@ written.
 `../convergence/implementation-contract.md`: every IC-* item names concrete
 acceptance/contract tests (concurrent-duplicate race, crash-window kill tests,
 retransmission vs refresh, two-worker equivalence, purge-preserves-audit-floor)
-plus schema/lint/CI checks, and `approach.md` binds it as the implementation
-plan's mandatory first chapter. Beyond that file, verification is a
+plus schema/lint/CI checks, and [`approach.md`](../convergence/approach.md)
+binds it as the implementation plan's mandatory first chapter. Beyond that file, verification is a
 modeling-time discipline (the paper test, `check.sh` golden build, ledger
 diffs as semantic checksums) with no stated transfer to implementation.
 Fake/stub adapters, a scripted actor, fixtures, and a clock abstraction are
@@ -54,11 +54,15 @@ conformance harness, adapter golden tests) is parked at future L12/L13.
 history-plus-tail primitive, three media (live push / durable replay /
 forensic audit), typed event envelope, addressed streams — in
 `../convergence/core-model-future-topic.md` (Observe seam §§1–7), and the
-inspector-UI memo carries concrete read-model type sketches
-(`InstanceSummary`, `TimelineEvent`, `CurrentRequest`) plus named query
-signatures (`listInstances`, `getInstanceDetail`, `getTimeline`, …) in the
-core-API memo. **None of it is sequenced anywhere in `approach.md`** — the
-Block A ramp contains no observe/UI build item. The substrate is fully in
+[inspector-UI memo](_open-v3-workflow-inspector-ui.md) carries concrete
+read-model type sketches (`InstanceSummary`, `TimelineEvent`,
+`CurrentRequest`) plus named query signatures (`listInstances`,
+`getInstanceDetail`, `getTimeline`, …) in the
+[core-API memo](_open-v3-core-api-surface.md). **At survey time, none of it
+was sequenced anywhere in `approach.md`** — the Block A ramp contained no
+observe/UI build item. (This memo's Q1 changed that: the visibility floor is
+now bound into the Block A milestone via the approach.md pointer; the full
+inspector UI remains parked.) The substrate is fully in
 Block A (typed rejections, typed FAIL paths, durable transcript, one
 policy-facing read model `gate_projection`); only the surface that shows any
 of it to a human is missing.
@@ -113,8 +117,8 @@ new kernel behavior); the cost of not having it is paid daily.
 ## Q2 — The test kit: scripted actor, fake adapter, fixtures
 
 **Settled direction (2026-07-07, ratified).** The implementation plan gets a
-**"test kit" chapter as a peer of the IC chapter**, with three named
-deliverables:
+**"test kit" chapter as a peer of the IC chapter**, with four named
+deliverables (the fourth added at the second review):
 
 - a **scripted actor** — a trivial ActorAdapter implementation that replays a
   declared op sequence with controllable op_ids, versions, and timing (the
@@ -123,7 +127,12 @@ deliverables:
 - a **fake egress adapter** — records intents instead of performing effects,
   for confirmed-effect and crash-window tests;
 - a **fixture convention** — how a test declares its starting state
-  (template + instance + transcript prefix) without hand-writing store rows.
+  (template + instance + transcript prefix) without hand-writing store rows;
+- **deterministic gate/process fixtures** *(added at the second review)* — a
+  scripted gate/process runner that returns a declared outcome on demand
+  (`allow` | `warn` | `block` | timeout | runner_error | malformed), so L2/L2a
+  gate behavior and the emit-contract paths are testable without real
+  external processes.
 
 And one kernel-side contract line, stated rather than implied: **nothing in
 the ingress path may assume a particular adapter implementation.** The model
@@ -181,7 +190,10 @@ source; a drift test, not a behavior test):
   ledger's 85-name registry; code and model never speak two error languages;
 - **domain concepts** — the implementation's type layer (types, table
   schemas) is generated from / checked against the domain registry (see
-  point 4); the ubiquitous language, enforced;
+  point 4); the ubiquitous language, enforced. *Sequencing (second review):*
+  this test becomes unconditional **once the point-4 registry lift lands**;
+  until then the fallback is a hand-declared concept↔type mapping checked
+  against the Domain-lens blocks;
 - **pseudocode units** — every one of the model's pseudocode units (158
   files, one per kernel function: `RECEIVE`, `CREATE_INSTANCE`,
   `choice_point`, …) has a declared counterpart in code, and a completeness
@@ -245,11 +257,17 @@ artifact: instance state, transcript, gate decisions, actor dispatches,
 rejected inputs, payload digests, correlation/request ids, evidence refs.
 Distinct use case from the floor's queries: bug reports, post-mortems, and
 handing a stuck run to another person or agent for analysis. Same substrate,
-read-only, cheap — ships with the floor.
+read-only, cheap — ships with the floor. *Guardrail (second review):*
+"everything about one run" has a redaction boundary — the bundle carries
+structured refs and safe payloads; secret material, runtime env, and private
+artifact contents are redacted or omitted (the full L7/L10 visibility model
+comes later, but the bundle must not become the accidental secret exfil path
+in the meantime).
 
 **A2 — The operator CLI's command side ships with Block A too.** Q1 was
 deliberately read-only; but the milestone's CLI also carries the command
-verbs (already named in the core-API memo: `createInstance`, `start`,
+verbs (already named in the [core-API memo](_open-v3-core-api-surface.md):
+`createInstance`, `start`,
 `submitDecision`, `resumeWait`, …) and the dev verbs (inject a fixture emit
 via the Q2 scripted actor, replay a golden trace, dump the debug bundle).
 All writes go through normal ingress — the CLI stays the thin client the
