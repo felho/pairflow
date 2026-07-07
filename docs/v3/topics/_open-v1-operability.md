@@ -199,7 +199,8 @@ source; a drift test, not a behavior test):
   point 4); the ubiquitous language, enforced. *Sequencing (second review):*
   this test becomes unconditional **once the point-4 registry lift lands**;
   until then the fallback is a hand-declared concept↔type mapping checked
-  against the Domain-lens blocks;
+  against the Domain-lens blocks. *(The lift landed 2026-07-07 — ledger §4
+  exists; this test is now unconditional, no fallback needed.)*;
 - **pseudocode units** — every one of the model's pseudocode units (158
   files, one per kernel function: `RECEIVE`, `CREATE_INSTANCE`,
   `choice_point`, …) has a declared counterpart in code, and a completeness
@@ -236,7 +237,9 @@ repeats: extend the ledger generator with a **§4 domain registry**
 vocabulary a semantic checksum on model edits and the source for the
 implementation's type layer (point 1). This touches the model-src/ledger
 tooling owned by the model-build thread — this memo records the requirement;
-the lift itself lands there.
+the lift itself lands there. *(REALIZED 2026-07-07: ledger §4 now exists —
+51 aggregate blocks · 121 entities, derived per Domain-lens slice, guarded
+by `check.sh`; recorded as `core-model-todo.md` T1.)*
 
 **The original question and rationale (kept as record).** Do the
 modeling-time artifacts — the rejection registry, the invariant inventory,
@@ -331,6 +334,7 @@ binding, not merely recorded.
 lands there" now has a "there": a tooling-backlog entry in
 [`core-model-todo.md`](../convergence/core-model-todo.md) points back at
 this memo, so the model-build thread inherits it as an actionable item.
+*(And realized the same day — see the T1 STATUS line and Q4.4's note.)*
 
 ## Reserved implementation-plan chapters (no design decision needed now)
 

@@ -451,6 +451,13 @@ Keep the guardrails collected here, but grouped by the logical part they protect
 
 ### T1. Domain-registry lift — §4 aggregate/entity/relation inventory
 
+> STATUS: REALIZED (2026-07-07) — `report_ledger.py` now derives a §4 domain
+> registry (51 aggregate blocks · 121 entities across the 20 sections, with
+> root/kind markers and relationship prose), scoped to each section's
+> Domain-lens slice; guarded by `check.sh` freshness like the other three
+> registries. The inline HTML stays the single authority (derived, not
+> record-ified).
+
 Extend the ledger generator with a **§4 domain registry**: an aggregate / entity /
 relation inventory per level, derived from the Domain-lens blocks (already
 semi-structured — every section carries exactly one, with marked-up aggregates and

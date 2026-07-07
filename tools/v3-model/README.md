@@ -15,7 +15,7 @@ core-model document without content changes.
 | `foldlib.py` | Shared fold logic: reassembles a pseudocode block from its unit deltas along the baseline chain. |
 | `migrate_units.py` | One-shot Phase 2 migration (snapshots → unit deltas); kept for provenance, guarded no-op now. |
 | `analyze_chain.py` | Read-only report: the baseline graph of the code blocks (`data-code-old-ref`), per-block delta size, and the precise per-unit blast radius (from the `units/` layout). |
-| `report_ledger.py` | Generates `model-src/ledger.md`: the deferral ledger (Absent items bucketed by pointer target — the L9 bucket is the recovery-obligations list), the invariant catalog, and the rejection registry. |
+| `report_ledger.py` | Generates `model-src/ledger.md`: the deferral ledger (Absent items bucketed by pointer target — the L9 bucket is the recovery-obligations list), the invariant catalog, the rejection registry, and the domain registry (aggregate/entity inventory per section's Domain lens, with root/kind markers and relationship prose). |
 
 ## Editing workflow (until a later phase changes it)
 
@@ -66,8 +66,12 @@ side was edited.
   (`{id, name_html, body_html}`), grouped per `agg invariant` block; marker
   `[[@invariants <sid> <k>]]`.
 - `ledger.md` — GENERATED registries (deferral ledger / invariant catalog /
-  rejection registry); regenerate with `report_ledger.py`, guarded by
-  `check.sh`.
+  rejection registry / domain registry); regenerate with `report_ledger.py`,
+  guarded by `check.sh`. The domain registry (§4) derives from each section's
+  Domain-lens slice (the `.agg` structure is reused by other lenses, so the
+  slice boundary — Domain heading to next view heading — is the scope); it is
+  the domain vocabulary's semantic checksum and the source for the
+  implementation's type-layer drift test (v1-operability memo Q4).
 - `manifest.json` — section order + code-block inventory + baseline refs.
 
 Record fields are minimal on purpose: the `html` fragment is the single
@@ -79,6 +83,8 @@ content editing starts, replacing derivation.
 Not yet record-ified (Phase 1b, when a consumer needs them): Runtime trace
 rows, Domain entity tables, Evidence items. The pattern is established; traces
 become valuable as executable fixtures in the reference-implementation phase.
+(The Domain entity tables now have a *derived* inventory — ledger §4 — without
+being record-ified: the inline HTML stays the single authority.)
 
 ## Notes
 

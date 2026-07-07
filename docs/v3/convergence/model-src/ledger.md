@@ -471,3 +471,117 @@
 - `unresolved_context_block_ref` — first appears in `l2b-pseudocode`
 - `unsupported_action_trigger` — first appears in `action-pseudocode`
 - `workflow_definition_unavailable` — first appears in `l0f-pseudocode`
+
+## 4 · Domain registry — 51 aggregate blocks · 121 entities
+
+### `l0a` (3 blocks · 7 entities)
+
+- **Template aggregate — the definition (immutable at runtime)** — WorkflowTemplate [root] · Step · Role (name only)
+- **Instance aggregate — the run (mutable, append-only history)** — WorkflowInstance [root] · Transcript · LifecycleStatus (value)
+- **Message — crosses the boundary** — EventEnvelope
+- *relations:* a Template (id + version) defines Steps bound to Role names. A WorkflowInstance is created from a Template — snapshotting its template_ref { id, version } so the run is pinned to an immutable definition — and owns its Transcript. An EventEnvelope targets an instance and carries an actor_id as provenance (who sent it); the kernel applies it as a transition. Which concrete actor fills a role, and how the next work item is dispatched, is L0b.
+
+### `l0b` (3 blocks · 6 entities)
+
+- **Template aggregate — gains actor defaults & guidance** — Role · Step · Actor
+- **Instance aggregate — gains task & effective binding** — WorkflowInstance
+- **Kernel output — derived, not stored** — DispatchIntent · ContextPacket
+
+### `l0c` (3 blocks · 6 entities)
+
+- **Template aggregate — gains the run profile** — Role · Step · AgentConfig (value)
+- **Instance aggregate — gains run overrides** — WorkflowInstance · TranscriptEntry
+- **Kernel output — derived, not stored** — effective_agent_config
+
+### `l0d` (4 blocks · 13 entities)
+
+- **WorkflowInstance — a lifecycle axis beside the step position** — WorkflowInstance · Template
+- **Value objects** — KernelStatus (value) · TerminalDisposition (value) · WaitReason (value) · RuntimeContext (value) · RuntimeContextRef (value) · ActivationMode (value)
+- **Kernel inputs — the entry is no longer actor-only** — OperatorIntent · KernelEvent · ActorEnvelope
+- **New rejections — before any state change** — Rejected(not_active) · Rejected(task_required)
+
+### `l0e` (3 blocks · 8 entities)
+
+- **Template & packet — the runtime context becomes declared and projected** — Template · ContextPacket
+- **The provider family** — RuntimeContextProvider (contract) · ProviderRegistry · RuntimeContextProjection (value) · RuntimeContextRef (value, from L0d) · RuntimeContextRequirement (value)
+- **New rejection — before provisioning, no state change** — Rejected(runtime_context_provider_unavailable)
+
+### `l0f` (3 blocks · 13 entities)
+
+- **Template side — declared, typed holes** — Template · SlotDeclaration (value)
+- **Repo side — the resolution sources (pre-kernel)** — ProjectConfig · WorkflowSource · StartCommand (operator intent) · ResolvedDefinition (value) · ResolvedStartRequest (output)
+- **New rejections — all pre-kernel, no state change** — Rejected(no_workflow_selected) · Rejected(workflow_definition_unavailable) · Rejected(unknown_target(t)) · Rejected(unknown_slot(key)) · Rejected(unbound_required_slot(id)) · Rejected(slot_type_mismatch(id))
+
+### `l1` (3 blocks · 6 entities)
+
+- **Envelope & packet — the authority snapshot grows a role dimension** — EventEnvelope · ContextPacket
+- **Template aggregate — gains the authorization profile** — CapabilityProfile (value)
+- **New rejections — before commit, no state change** — Rejected(missing_role) · Rejected(role_not_authorized) · Rejected(not_authorized)
+
+### `l2` (4 blocks · 9 entities)
+
+- **Template aggregate — gains the gate pipeline** — GateBinding · GatePipeline
+- **Evaluation — one shared interface, two value types** — GateEvaluator · GateDecision (value)
+- **Instance & read model — a canonical round and a policy-facing view** — WorkflowInstance · gate_projection
+- **New rejections — before commit, no state change, no round burned** — Rejected(gate_blocked(reason)) · Rejected(gate_evaluator_unavailable) · Rejected(gate_execution_not_supported)
+
+### `l2a` (2 blocks · 3 entities)
+
+- **Execution contract — a named runner and its values** — ProcessGateRunner · GateInvocation (value) · ProcessResult (value)
+- **Canonical Process Gate Contract — the single source of truth for external.process** — (no entities)
+
+### `l2b` (2 blocks · 3 entities)
+
+- **Context blocks — a catalog and its rendered values** — context_blocks catalog (template) · ContextBlockRef · ContextBlock (value)
+- **Canonical Context Block Contract — the single source of truth for the render** — (no entities)
+
+### `l3` (3 blocks · 5 entities)
+
+- **Human decision — a wait, an Ask, and a transcript pair** — wait step + RESUME_WAIT (minimal shape at L3) · human_gate (step type) · apply_target_entry_effects(...) (shared rule) · HumanDecisionRequest (value) · DECISION_REQUEST / DECISION_MADE (transcript)
+- **Human Decision Contract — the single source of truth for the gate and the decision** — (no entities)
+- **Bare Wait Resume Contract — the dual of the decision contract, for a type: wait step** — (no entities)
+
+### `storage-scope` (3 blocks · 2 entities)
+
+- **The four homes** — (no entities)
+- **Canonical Home Table — the single source of truth for where each run datum lives** — (no entities)
+- **Sealed projection snapshot — a closed, verifiable projection, not a second truth** — shape · constraints
+
+### `runtime-teardown` (3 blocks · 8 entities)
+
+- **Runtime Resource Lifecycle Contract — the single source of truth for provision and release** — (no entities)
+- **Release policy — the release contract is the provision contract's declared pair** — policy: required · policy: retained · policy: external · load-time rule
+- **Release boundary — a declared event, distinct from the command that causes it** — declared, per policy · terminal is an event, not a default · deferred (later) · not the API
+
+### `workflow-actions` (2 blocks · 3 entities)
+
+- **Workflow Action Contract — the single source of truth for a type: action step** — (no entities)
+- **action ⟷ human_gate — same mechanism, different selector** — routing map · selector · ActionRequest
+
+### `auto-workflow-actions` (1 block · 0 entities)
+
+- **Auto Workflow Action — the LC3a contract + the auto trigger** — (no entities)
+
+### `archive-purge` (3 blocks · 0 entities)
+
+- **Archive / Export / Purge — three independent axes (delete-intent · release · storage)** — (no entities)
+- **State authority — which storage-lifecycle state lives where (so it is never re-derived in the wrong place)** — (no entities)
+- **Hard-purge ordering — write-ahead & crash-safe (a different kind of truth: not "what the op is" but "in what order it is safe")** — (no entities)
+
+### `l0f-mode` (2 blocks · 9 entities)
+
+- **Template side — declared variants (modes) + the membership tag** — modes / default_mode · modes: membership tag · mode-specific gate binding
+- **New rejections — all pre-kernel, fail-closed** — Rejected(no_mode_selected) · Rejected(unknown_mode(m)) · Rejected(default_mode_undeclared) · Rejected(undeclared_mode_tag(t)) · Rejected(mode_tag_on_unsupported_surface) · Rejected(mode_surface_without_modes)
+
+### `l4-child` (2 blocks · 10 entities)
+
+- **Five primitives — the canonical contract (the kernel adds only these; the rest is parent-template authoring)** — (no entities)
+- **New values + rejections** — SpawnIntent (produce, not perform) · CHILD_SPAWNED (kernel event) · CHILD_SPAWN_FAILED (kernel event) · CHILD_LIFECYCLE (kernel event) · Rejected(child_link_unknown) · Rejected(child_link_mismatch) · Rejected(not_awaiting_this_child) · Rejected(child_lifecycle_not_subscribed) · Rejected(child_template_ref_unresolved / child_key_missing / child_wait_for_empty / child_wait_for_incomplete / child_wait_target_unresolved) · Rejected(child_spawn_already_resolved)
+
+### `l5` (1 block · 5 entities)
+
+- **Help — an ask, a wait, and a transcript pair** — help_pending (wait kind) · HELP_REQUEST / HELP_REPLIED (transcript) · HelpRequest (value) · step.help (template) · stay (route)
+
+### `emit-contract` (1 block · 5 entities)
+
+- **The emit contract — a schema, a catalog, a family, a digest** — EmitContract (per op, opt-in) · vocabularies (catalog) · gate family (policy | verify) · payload_digest (identity) · op_contracts (packet)
