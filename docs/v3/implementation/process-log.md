@@ -102,3 +102,29 @@ chapter-boundary verdict by appending `→ <outcome>` at review time.
   gate's claim surface is now enumerated, not just patched. Meta-lesson
   for ch 5: an instruction in the log is not execution — the sweep
   should have run in aftermath 3, not aftermath 4
+- 2026-07-07 · ch 5 boundary · the review moved AHEAD of the build:
+  every pre-approve packet took 1–2 finding rounds BEFORE build
+  (P1: import-rule tiers + parent-plan drift + counts scope; P2:
+  terminal-sink split; P3: ReplayResult surface + checker enforcement
+  + literal trace table; P4: read surface + null encoding + public
+  binding), and the chapter accumulated ZERO post-commit aftermath
+  rounds so far — against ch 4's four same-gate rounds. The two
+  chapter rules (enumerate claim dimensions first; a logged
+  instruction is not execution) plus first-of-a-kind stops absorbed
+  the drift where it was cheap → flow mode validated; the landed
+  commits' review may still add findings, verdict extends then
+- 2026-07-07 · ch 5 boundary · a convention emerged and is adopted
+  standing: a packet decision that contradicts ratified plan text
+  flows UP into the plan IN THE SAME COMMIT, marked "aligned at PX
+  pre-approval" (used twice: P1 pending/unitMap.json; P4
+  null-encoding) — never a silent divergence, never a deferred edit
+- 2026-07-07 · ch 5 boundary · the three-way lock fired on a DRAFT
+  packet by design (P4 declared payload_digest while the manifest was
+  pending — coverage red through the whole pre-approval window) → a
+  feature, not friction: a packet cannot claim a unit without
+  code + manifest landing in the same commit; acknowledged
+  working-as-designed
+- 2026-07-07 · ch 5 boundary · tooling stumble (P1): reverting an
+  executed lint negative on an UNTRACKED file via git checkout fails —
+  caught because the protocol reruns the bridges after every revert;
+  the bridge rerun IS the guard → acknowledged non-issue
