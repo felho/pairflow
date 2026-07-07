@@ -387,3 +387,116 @@ describe("schema v1 → v2 — the first LIVE fenced wipe (packet ch5-P4, ADR-00
     check.close();
   });
 });
+
+describe("getTimeline — the ch6-P1 cursor read", () => {
+  async function seeded() {
+    const handle = openStore(":memory:", createControlledClock(0));
+    await handle.store.createInstance(instance);
+    for (const [opId, version] of [
+      ["a1", 1],
+      ["b2", 2],
+      ["c3", 3],
+    ] as const) {
+      const result = await handle.store.commitTransition({
+        instanceId: "inst-1",
+        expectedVersion: version,
+        envelope: envelope(opId, version),
+        payloadDigest: DIGEST,
+        newCurrentStep: "review",
+        newRound: 1,
+        newStatus: "RUNNING",
+      });
+      expect(result.kind).toBe("committed");
+    }
+    return handle;
+  }
+
+  it("dims 1+2 — cursor semantics, seq-ascending always", async () => {
+    const handle = await seeded();
+    const full = await handle.store.getTimeline("inst-1", 0);
+    expect(full?.map((r) => r.seq)).toEqual([1, 2, 3]);
+    expect(full?.map((r) => r.envelope.opId)).toEqual(["a1", "b2", "c3"]);
+    const suffix = await handle.store.getTimeline("inst-1", 2);
+    expect(suffix?.map((r) => r.seq)).toEqual([3]);
+    // Exact-last-seq and beyond-end are both VALID and empty — never null.
+    expect(await handle.store.getTimeline("inst-1", 3)).toEqual([]);
+    expect(await handle.store.getTimeline("inst-1", 999)).toEqual([]);
+    expect(await handle.store.getTimeline("inst-1", Number.MAX_SAFE_INTEGER)).toEqual([]);
+    handle.close();
+  });
+
+  it("dim 3 — unknown = null, known-but-empty = []", async () => {
+    const handle = openStore(":memory:", createControlledClock(0));
+    expect(await handle.store.getTimeline("ghost", 0)).toBeNull();
+    await handle.store.createInstance(instance);
+    expect(await handle.store.getTimeline("inst-1", 0)).toEqual([]);
+    handle.close();
+  });
+
+  it("dim 5 — rows deep-equal getInstanceDetail's transcript (one surface, two entrypoints)", async () => {
+    const handle = await seeded();
+    const detail = await handle.store.getInstanceDetail("inst-1");
+    expect(await handle.store.getTimeline("inst-1", 0)).toEqual(detail?.transcript);
+    handle.close();
+  });
+
+  it("dim 6 — invalid cursors fail closed with RangeError", async () => {
+    const handle = await seeded();
+    for (const bad of [
+      -1,
+      1.5,
+      Number.NaN,
+      Number.POSITIVE_INFINITY,
+      Number.NEGATIVE_INFINITY,
+      Number.MAX_SAFE_INTEGER + 1,
+    ]) {
+      await expect(handle.store.getTimeline("inst-1", bad)).rejects.toThrow(RangeError);
+    }
+    handle.close();
+  });
+
+  it("watchpoint — a rejected invalid cursor opened no transaction", async () => {
+    const handle = await seeded();
+    await expect(handle.store.getTimeline("inst-1", -1)).rejects.toThrow(RangeError);
+    // commitTransition's BEGIN IMMEDIATE would throw "within a
+    // transaction" if the rejected call had left one open.
+    const result = await handle.store.commitTransition({
+      instanceId: "inst-1",
+      expectedVersion: 4,
+      envelope: envelope("d4", 4),
+      payloadDigest: DIGEST,
+      newCurrentStep: "review",
+      newRound: 1,
+      newStatus: "RUNNING",
+    });
+    expect(result).toEqual({ kind: "committed", version: 5 });
+    handle.close();
+  });
+
+  it("watchpoint — a row-parse error surfaces AND leaves no open transaction", async () => {
+    const path = tempDbPath();
+    const handle = openStore(path, createControlledClock(0));
+    await handle.store.createInstance(instance);
+
+    const raw = new DatabaseSync(path);
+    raw
+      .prepare(
+        "INSERT INTO transcript (instance_id, seq, op_id, envelope, payload_digest, committed_at) VALUES (?, ?, ?, ?, ?, ?)",
+      )
+      .run("inst-1", 1, "bad", "not-json", "d", 0);
+    raw.close();
+
+    await expect(handle.store.getTimeline("inst-1", 0)).rejects.toThrow(SyntaxError);
+    const result = await handle.store.commitTransition({
+      instanceId: "inst-1",
+      expectedVersion: 1,
+      envelope: envelope("x9", 1),
+      payloadDigest: DIGEST,
+      newCurrentStep: "review",
+      newRound: 1,
+      newStatus: "RUNNING",
+    });
+    expect(result).toEqual({ kind: "committed", version: 2 });
+    handle.close();
+  });
+});

@@ -69,4 +69,19 @@ export interface StorePort {
   /** Committed rows only (trivially: the store holds nothing else). */
   listInstances(): Promise<readonly WorkflowInstance[]>;
   getInstanceDetail(instanceId: InstanceId): Promise<InstanceDetail | null>;
+  /**
+   * Committed rows strictly after `afterSeq`, seq-ascending — or null
+   * for an UNKNOWN instance (known-but-empty = `[]`: the caller must be
+   * able to tell "no such run" from "no new rows"). Cursor domain: a
+   * nonnegative safe integer; anything else throws `RangeError` BEFORE
+   * any query (fail-closed integrity error, never a kernel rejection —
+   * the ch-6 CLI maps it to its usage class). The null/`[]` decision
+   * and the row suffix come from ONE snapshot (packet ch6-P1).
+   * Committed-only stated wide: no diagnostic or non-committed data can
+   * ever enter this surface (the diagnostic channel is ch 7, separate).
+   */
+  getTimeline(
+    instanceId: InstanceId,
+    afterSeq: number,
+  ): Promise<readonly TranscriptEntry[] | null>;
 }

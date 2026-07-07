@@ -27,6 +27,7 @@ function fakeStore(detail: InstanceDetail, created: WorkflowInstance): StorePort
     commitTransition: () => Promise.reject(new Error("unused")),
     listInstances: () => Promise.reject(new Error("unused")),
     getInstanceDetail: () => Promise.resolve(detail),
+    getTimeline: () => Promise.reject(new Error("unused")),
   };
 }
 

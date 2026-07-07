@@ -113,12 +113,13 @@ describe("CT-A1-DUP — op_id idempotency (IC-A1)", () => {
 describe("CAS restart — never re-commit a target computed from stale state", () => {
   function unusedStoreParts(): Pick<
     StorePort,
-    "createInstance" | "listInstances" | "getInstanceDetail"
+    "createInstance" | "listInstances" | "getInstanceDetail" | "getTimeline"
   > {
     return {
       createInstance: () => Promise.reject(new Error("unused")),
       listInstances: () => Promise.reject(new Error("unused")),
       getInstanceDetail: () => Promise.reject(new Error("unused")),
+      getTimeline: () => Promise.reject(new Error("unused")),
     };
   }
 

@@ -90,6 +90,24 @@ function rowToInstance(row: InstanceRow): WorkflowInstance {
   };
 }
 
+interface TranscriptRow {
+  seq: number;
+  envelope: string;
+  payload_digest: string;
+  committed_at: number;
+}
+
+/** One mapper for BOTH read surfaces (getInstanceDetail / getTimeline) —
+ * the ch6-P1 cross-consistency dimension is structural, not incidental. */
+function toTranscriptEntry(row: TranscriptRow): TranscriptEntry {
+  return {
+    seq: row.seq,
+    envelope: JSON.parse(row.envelope) as EventEnvelope,
+    payloadDigest: row.payload_digest,
+    committedAt: row.committed_at,
+  };
+}
+
 function initSchema(db: DatabaseSync): void {
   db.exec(SCHEMA);
   const insert = db.prepare("INSERT INTO meta (key, value) VALUES (?, ?)");
@@ -284,19 +302,58 @@ export function openStore(path: string, time: TimeSource): StoreHandle {
         .prepare(
           "SELECT seq, envelope, payload_digest, committed_at FROM transcript WHERE instance_id = ? ORDER BY seq",
         )
-        .all(instanceId) as unknown as {
-        seq: number;
-        envelope: string;
-        payload_digest: string;
-        committed_at: number;
-      }[];
-      const transcript: TranscriptEntry[] = entries.map((entry) => ({
-        seq: entry.seq,
-        envelope: JSON.parse(entry.envelope) as EventEnvelope,
-        payloadDigest: entry.payload_digest,
-        committedAt: entry.committed_at,
-      }));
-      return Promise.resolve({ instance: rowToInstance(row), transcript });
+        .all(instanceId) as unknown as TranscriptRow[];
+      return Promise.resolve({
+        instance: rowToInstance(row),
+        transcript: entries.map(toTranscriptEntry),
+      });
+    },
+
+    getTimeline(
+      instanceId: InstanceId,
+      afterSeq: number,
+    ): Promise<readonly TranscriptEntry[] | null> {
+      // Watchpoint (ch6-P1): validate BEFORE any SQL — an invalid
+      // cursor never opens a transaction. Integrity-style throw, not a
+      // kernel rejection; the ch-6 CLI maps it to its usage class.
+      if (!Number.isSafeInteger(afterSeq) || afterSeq < 0) {
+        return Promise.reject(
+          new RangeError(
+            `getTimeline cursor must be a nonnegative safe integer, got ${String(afterSeq)}`,
+          ),
+        );
+      }
+      // DEFERRED read transaction (never IMMEDIATE — a reader must not
+      // take the write lock): the null/[] decision and the row suffix
+      // come from ONE snapshot. Rows are mapped AFTER the transaction
+      // closes, so a parse error can never leave it open (watchpoint).
+      db.exec("BEGIN DEFERRED");
+      let rows: TranscriptRow[] | null;
+      try {
+        const row = db
+          .prepare("SELECT instance_id FROM instances WHERE instance_id = ?")
+          .get(instanceId);
+        rows =
+          row === undefined
+            ? null
+            : (db
+                .prepare(
+                  "SELECT seq, envelope, payload_digest, committed_at FROM transcript WHERE instance_id = ? AND seq > ? ORDER BY seq",
+                )
+                .all(instanceId, afterSeq) as unknown as TranscriptRow[]);
+        db.exec("COMMIT");
+      } catch (error) {
+        db.exec("ROLLBACK");
+        return Promise.reject(error instanceof Error ? error : new Error(String(error)));
+      }
+      if (rows === null) {
+        return Promise.resolve(null);
+      }
+      try {
+        return Promise.resolve(rows.map(toTranscriptEntry));
+      } catch (error) {
+        return Promise.reject(error instanceof Error ? error : new Error(String(error)));
+      }
     },
   };
 

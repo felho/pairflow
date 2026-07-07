@@ -980,6 +980,13 @@ behind a separate entrypoint (§6.5).
 - Claim dimensions: cursor semantics (0 = full replay / mid-cursor /
   beyond-end = `[]`), ordering stability (seq-ascending, always),
   unknown vs known-empty vs beyond-end distinguished, committed-only.
+- **Cursor domain (aligned at ch6-P1 pre-approval):** `afterSeq` is a
+  nonnegative safe integer; anything else fails closed with an
+  integrity-style `RangeError` BEFORE any query — never a kernel
+  rejection. The ch-6 CLI (P4) maps it to its usage/config error
+  class; the tail (P2) inherits the same domain. The null/`[]`
+  decision and the row suffix come from ONE read-transaction snapshot
+  (`BEGIN DEFERRED` — a reader never takes the write lock).
 
 ### 6.3 The live tail: the committed floor-tail seed (P2)
 
