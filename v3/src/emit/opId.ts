@@ -52,6 +52,27 @@ function canonicalize(value: unknown): string {
       return JSON.stringify(value);
     case "object": {
       if (Array.isArray(value)) {
+        for (let i = 0; i < value.length; i += 1) {
+          if (!(i in value)) {
+            throw new Error(
+              `payload is not canonicalizable: sparse array (hole at index ${String(i)})`,
+            );
+          }
+        }
+        if (Object.getOwnPropertySymbols(value).length > 0) {
+          throw new Error("payload is not canonicalizable: symbol-keyed property on array");
+        }
+        for (const key of Object.getOwnPropertyNames(value)) {
+          if (key === "length") {
+            continue;
+          }
+          const index = Number(key);
+          if (!Number.isInteger(index) || index < 0 || index >= value.length || String(index) !== key) {
+            throw new Error(
+              `payload is not canonicalizable: non-index array property '${key}'`,
+            );
+          }
+        }
         return `[${value.map((item) => canonicalize(item)).join(",")}]`;
       }
       const proto: unknown = Object.getPrototypeOf(value);

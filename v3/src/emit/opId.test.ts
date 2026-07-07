@@ -50,6 +50,24 @@ describe("payload digest (canonical serialization)", () => {
     bare["a"] = 1;
     expect(digestPayload(bare)).toBe(digestPayload({ a: 1 }));
   });
+
+  it("rejects sparse arrays — a hole is not a value", () => {
+    expect(() => digestPayload(new Array(1))).toThrow(/canonical/);
+    const holey = new Array<number>(2);
+    holey[0] = 1;
+    expect(() => digestPayload(holey)).toThrow(/canonical/);
+    expect(() => digestPayload({ nested: new Array(1) })).toThrow(/canonical/);
+  });
+
+  it("rejects arrays carrying extra own properties — [1] with .extra must not digest like [1]", () => {
+    expect(() => digestPayload(Object.assign([1], { extra: "x" }))).toThrow(/canonical/);
+    expect(() => digestPayload(Object.assign([1], { [Symbol("s")]: 1 }))).toThrow(/canonical/);
+  });
+
+  it("still accepts dense plain arrays", () => {
+    expect(digestPayload([1, 2, 3])).toBe(digestPayload([1, 2, 3]));
+    expect(digestPayload([])).toBe(digestPayload([]));
+  });
 });
 
 describe("actor-emit family — content-addressed (ADR-004)", () => {
