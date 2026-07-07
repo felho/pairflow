@@ -435,8 +435,11 @@ never replay nondeterministic actors as recovery.
    T1 as kernel state, T7 as adapter-local state, or a split between the two?
    *(Ownership note, 2026-07-06: whether `ActorSessionRef` exists as a
    first-class object at all is owned by
-   [`_dynamic-orchestrator-workflow.md`](_dynamic-orchestrator-workflow.md) Q1;
-   this question covers only its storage residence once that decision lands.)*
+   [`_dynamic-orchestrator-workflow.md`](_dynamic-orchestrator-workflow.md) Q1.
+   **Answered 2026-07-07:** Q1 settled as NO first-class kernel session object —
+   session handles are adapter-local (**T7**), recorded kernel-side only as
+   issued intent in dispatch provenance; the durable coordination address is
+   the instance id, not a session ref.)*
 10. What storage surfaces are allowed to cross a future private-data/federation
     boundary? (Direction set by "Instance homing and multi-kernel topology"
     above: only events and durable refs cross; per-instance authority never

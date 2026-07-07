@@ -1,8 +1,10 @@
 # Open Topic - Dynamic Orchestrator Workflow
 
-Date: 2026-06-25
-Status: **OPEN.** This is a model-gap memo, extracted from the Omnigent live run and the
-follow-up discussion about whether Omnigent's "child session" maps to v3 `child_workflow`.
+Date: 2026-06-25 · Settled: 2026-07-07
+Status: **SETTLED direction (2026-07-07).** No first-class dynamic-orchestrator mode; the
+shape is a template pattern over six constructs; sessions are not kernel objects; see
+"Settled direction" at the end. Verified against the Omnigent codebase by three
+adversarial sweeps (examples 5/5, runtime source, design docs) before ratification.
 
 Relation to other research:
 
@@ -314,3 +316,76 @@ Omnigent-style dynamic actor-session orchestration
 + v3-style committed intents, emit contracts, idempotency, and wait resolution.
 ```
 
+
+---
+
+## Settled direction (2026-07-07, ratified)
+
+**No first-class dynamic-orchestrator mode.** The question dissolved: every
+dynamic-orchestration element lands in one of **six shapes**, and what remains
+of "the dynamic orchestrator" is a **template pattern** (plan → delegate →
+wait/collect → re-plan, authored as a workflow over these constructs), not a
+kernel mechanism. "Dynamic" is made precise: *the agent chooses at runtime —
+among declared possibilities*; which route it takes, how many workers it
+mints, whom it consults are its runtime decisions, and every one of them is a
+committed fact.
+
+The six shapes:
+
+1. **Declared spawn-and-await** — the built L4 child step.
+2. **Detached spawn** (mint-and-move-on with a durable link) — future-topic
+   L4 #11.
+3. **Runtime-discovered N fan-out** — future-topic L4 #12.
+4. **Mid-work help-ask** — the built L5 subflow (+ the agent-addressed leg,
+   L5 #9).
+5. **Session-internal tool calls** — below the kernel floor by the ratified
+   weight rule (`_open-kernel-floor.md`).
+6. **The multi-round child** (absorbed from the Omnigent verification): a
+   child instance that **parks between rounds** — its template loops work →
+   report → wait-for-input → resume — re-instructed through **normal ingress**,
+   addressed by its durable **instance id**. What Omnigent models as a
+   "resumable warm session", v3 models as a live parked instance: the
+   load-bearing continuity (worktree, PR, the rounds' record) is the child's
+   instance state + runtime_context — kernel-tracked; conversational warmth is
+   adapter-side optimization under issued session intent. Consequence: L4
+   future #3 (intermediate lifecycle subscriptions) is **promoted to
+   load-bearing** — the parent must learn "reported, awaiting input", not only
+   termination.
+
+Answers to this memo's open questions:
+
+- **Q1 (`ActorSessionRef` first-class?): No.** Sessions are not kernel
+  objects; only structural records are durable, and v3's durable structural
+  record is the *instance* (+ links) — strictly stronger than a session row
+  (survives restart, carries typed state). Session handles live adapter-side
+  (storage memo Q9 ⇒ T7), recorded kernel-side only as issued intent;
+  proving reuse/freshness is the attestation seam (GAP-8/GAP-13).
+- **Q2 (mode / step type / tool surface): dissolved** into the six shapes +
+  the template pattern.
+- **Q3 (session-reuse policies): adapter/presentation-owned**, declared via
+  L0c run config; the kernel records the issued intent.
+- **Q4 (session sends vs emit):** inside a performance = tool call (shape 5);
+  anything load-bearing re-enters through normal ingress as a committed fact —
+  the no-side-door rule (`_open-runtime-capability-surface.md` rule 2).
+- **Q5 (inbox):** L8 task-inbox territory. **Q6 (observe/takeover):** the
+  observe seam.
+
+**Verification record.** Before ratification, three adversarial Opus sweeps of
+the Omnigent codebase tested the decomposition: (a) all five `examples/`
+(polly, debby, scribe, sentinel, kimi_hello) — every coordination element
+classified; (b) the runtime source (spawn/session/inbox/timer/policy
+machinery); (c) the design docs (QUEUE_STEER, CUJ maps, POLICIES,
+plugin seam). Findings: **no live mid-flight steering of a running child
+exists** (queue-steer is human-to-own-session input delivered at step
+boundaries through ordinary persist-before-forward ingress); **no
+worker-to-worker mesh** ("siblings only communicate via the parent" is
+Omnigent's own stated rule); **no kernel plan object** (Polly's plan is its
+context + a registry file); **no durable cross-restart session addressing is
+exercised anywhere**; timers are unimplemented on their current path. The one
+shape the original five buckets missed — the cross-review fix loop / debate
+rounds re-instructing the same child — was absorbed as shape 6. Omnigent's
+own architecture corroborates the session split (they persist only structural
+conversation rows; liveness/inbox/wake is in-memory) and its bug history
+corroborates the no-side-door rule (the transient inbox queue is their
+documented defect source: stranded wakes, dropped completions, restart
+rebuild scaffolding).

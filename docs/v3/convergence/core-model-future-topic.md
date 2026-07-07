@@ -699,6 +699,14 @@ need parent waits on named intermediate checkpoints such as
   not a prompt convention or a child-local UI state.
 - Delivery durability and replay behavior must be specified before intermediate
   events become load-bearing.
+- **Promoted to load-bearing (2026-07-07, the dynamic-orchestrator
+  settlement):** the multi-round child pattern — a child instance that parks
+  between rounds and is re-instructed through normal ingress (Omnigent's
+  cross-review fix loop and debate rounds; the shape that dissolves
+  "resumable sessions" into parked instances) — requires exactly this: the
+  parent must learn that its child reached "reported, awaiting input", not
+  only that it terminated. See `topics/_dynamic-orchestrator-workflow.md`
+  "Settled direction".
 
 #### 4. N-child fan-out execution controls
 
