@@ -1,7 +1,7 @@
 # Open: V1 operability — testing, debugging, and the visibility floor
 
-Status: **open (2026-07-07)** — decision round in progress. **Q1 and Q2
-settled (2026-07-07, ratified)**; Q3–Q4 pending. A fifth section reserves
+Status: **open (2026-07-07)** — decision round in progress. **Q1–Q3 settled
+(2026-07-07, ratified)**; Q4 pending. A fifth section reserves
 implementation-plan chapters that need no design decision now.
 
 ## Why this memo exists
@@ -135,22 +135,30 @@ to state now, an expensive retrofit later.
 
 ## Q3 — Time as an injected dependency
 
-**The question.** Does the kernel read wall-clock time directly, or through a
-single injected time source?
+**Settled direction (2026-07-07, ratified).** One rule, stated as an
+IC-style contract line:
 
-**Why it should be answered now.** Block A already has one time bound (the
-process-gate timeout) and one timestamp write (`purged_at: now()`); L6
-(scheduling) and L9 (timeouts/watchdog) will multiply these. If wall-clock
-calls scatter through the kernel now, deterministic tests of anything
-time-dependent become impossible and L6/L9 inherit a retrofit. The corpus
-currently has no clock abstraction at all.
+> **The kernel never reads the clock directly; every timestamp and every
+> time bound comes from a single injected time source.**
 
-**Proposed direction.** One rule, stated as an IC-style contract line: **the
-kernel never reads the clock directly; every timestamp and every time bound
-comes from a single injected time source.** Production binds it to wall
-clock; tests bind it to a controlled clock. This is a one-line discipline
-today and the precondition for both the IC crash-window tests and every
-future L6/L9 test.
+Production binds it to wall clock; tests bind it to a controlled clock the
+test advances. Today this is one interface + one parameter — Block A's two
+existing time uses (the process-gate timeout and the LC4 `purged_at`
+timestamp) move onto it — and it completes the Q2 test kit (scripted actor +
+fake egress + controlled clock = every IC test writable) while handing L6
+(scheduling) and L9 (timeouts/watchdog) their foundation instead of a
+retrofit.
+
+**Scope clarification (so the rule is not over-read):** this is *not*
+deterministic replay — the plan deliberately bans replaying nondeterministic
+actor work (IC-N), and that stands. Time simply becomes a swappable
+dependency, exactly like adapters are after Q2.
+
+**The original question and rationale (kept as record).** Does the kernel
+read wall-clock time directly, or through a single injected time source? The
+corpus had no clock abstraction at all; scattered wall-clock calls would make
+every time-dependent test nondeterministic and leave L6/L9 an expensive
+cleanup.
 
 ## Q4 — The model ledger as a conformance asset
 
