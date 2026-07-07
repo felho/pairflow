@@ -1,7 +1,7 @@
 # V3 Implementation Plan
 
 Written chapter by chapter, each chapter proposed → ratified → committed
-(process: [`README.md`](README.md) §3). Chapters present: 1–3.
+(process: [`README.md`](README.md) §3). Chapters present: 1–4.
 
 **Genre note.** This is the implementation **master plan** — it is NOT a
 directly `ExecutePairflowPlan`-executable task list, and it carries no
@@ -513,3 +513,189 @@ DoD: all v3 bridges green (`v3:typecheck`, `v3:lint`, `v3:test`,
 ADR-005 `accepted` with the integrity check green; the seven ch-3 intake
 rows + the ch-3 map row flipped to `realized` (PI-1 + the PI-11 script);
 process-log review held at the boundary.
+
+---
+
+## Chapter 4 — Walking skeleton / bootstrap (ratified 2026-07-07)
+
+Autonomy stage: **calibration** (README §5.5).
+
+This chapter ships the first runtime slice — ingress → kernel commit →
+floor read, bootstrapped from a fixture-form template (MD-1), driven
+end-to-end by the chapter-3 kit — and is the packet convention's **first
+live use** (§3.7). It realizes PI-6 and the three ch-4 intake rows
+(`CT-A1-DUP`, `CHK-A1-SCHEMA`, `CHK-C-TS-SOURCE`).
+
+### 4.1 The semantic level: L0b
+
+The skeleton implements the **L0b** kernel, not L0a: bootstrap
+(`START_INSTANCE`), the mandatory `expected_version` (`Stale`), and
+post-commit `dispatch_intent` derivation are all born at L0b — and the
+ch-5 kernel-facing halves of ADR-004 (`CT-A3-RETRANS`,
+`CT-A3-EMITLIB-REFRESH`) presuppose exactly this surface.
+
+The declared ledger slice (owned by the §4.8 packets):
+
+- **Units (4):** `l0b-pseudocode/HANDLE`, `l0b-pseudocode/START_INSTANCE`,
+  `l0b-pseudocode/dispatch_intent` → `implement`;
+  `l0a-pseudocode/HANDLE` → `alias/inherited` (subsumed by the L0b HANDLE).
+- **Rejections (4, behaviorally triggered here):** `invalid_shape`,
+  `unknown_instance`, `no_transition`, `missing_version`.
+- **Invariants:** l0a `op-id-idempotency` (test),
+  `atomic-transition-commit` (test), `instance-store` /
+  `transcript-event-log` / `definition-store` (type/schema); l0b
+  `expected-version-mandatory` (test), `binding-coverage-at-start` (test),
+  `commit-deliver` (test). `l0a/artifact-refs` is NOT owned this chapter —
+  the evidence layer is later work; closure is not asserted.
+- **Trace:** `l0b-pseudocode` (golden test, §4.7). The l0a trace stays
+  with the ch-5 harness: its envelopes carry no `expected_version`, so
+  replaying it against an L0b kernel needs the level-lifting convention
+  the harness must define for all 20 traces anyway.
+- **No invented names.** The binding-coverage failure at start has NO
+  ledger §3 rejection name — it is a start-side failure (no `Started`, no
+  state change), and the test asserts exactly that. Per §1.4, a
+  code-invented rejection name is a model↔code divergence; if a named
+  start rejection turns out to be needed, that goes back to the model
+  plane (README §6).
+
+### 4.2 Store: `StorePort` + SQLite (realizing ADR-003)
+
+- **`StorePort`** lands in `ports/` (the §3.1 leftover): `loadInstance`,
+  `createInstance`, `commitTransition`, and the floor-read methods. No
+  write API accepts a timestamp (§4.3).
+- **`DefinitionStore` is a separate port** (the model: "separate store;
+  pinned immutable version"); this chapter binds it to the MD-1 fixture
+  implementation (§4.6).
+- **Schema (`CHK-A1-SCHEMA`):** `instances` (version, CAS), `transcript`
+  with `UNIQUE(instance_id, op_id)`, `meta` (schema marker: version +
+  prototype flag, ADR-003). Transcript append + instance CAS under ONE
+  IMMEDIATE transaction (`REV-A1-TXN`).
+- **Conflict precedence (ratification finding — binding store contract):**
+  inside the commit transaction the duplicate check precedes the version
+  check — if the transaction sees an existing `(instance_id, op_id)`, it
+  reports `duplicate_op` even when the instance version has since
+  advanced (the L0b HANDLE order: idempotency before stale). A "CAS
+  update first, then transcript insert" implementation that misreports a
+  retransmission as a CAS conflict violates IC-A1; a dedicated race test
+  asserts the precedence (§4.7).
+- **Store-open is fail-closed** (ADR-003's verification line): unknown /
+  missing / non-prototype marker → refuse to open; wipe-and-recreate only
+  on a known dev marker.
+
+### 4.3 Commit timestamps: store-stamped from the injected TimeSource
+
+Ratification finding. IC-C's commit-boundary authority is realized per
+IC-D's binding rule ("where the store stamps commit timestamps … that
+store binding is part of the time source's production binding; tests may
+bind both to the controlled clock"):
+
+- the `StorePort` write API accepts NO client timestamp (the type-level
+  half);
+- the SQLite store is CONSTRUCTED with a `TimeSource` and stamps
+  `committed_at` / `created_at` inside the commit transaction — NOT a
+  SQLite `DEFAULT`: with a DB default, a frozen-clock acceptance test
+  would not test what it claims;
+- `CHK-C-TS-SOURCE` = the type-level half + the claim-derived test: under
+  a frozen controlled clock, committed rows carry exactly the frozen
+  timestamp, and nothing an envelope carries can influence it.
+
+### 4.4 ADR-006 — SQLite driver: `node:sqlite` on Node ≥ 24
+
+`node:sqlite` (`DatabaseSync`): built-in — zero external dependency (the
+stdlib culture) — with a synchronous API that fits the single-writer
+IMMEDIATE-transaction shape IC-A1 needs. The cost is a Node floor bump,
+folded in EXPLICITLY (ratification finding — the driver pick cannot land
+as an engines line alone):
+
+- `v3/package.json` engines → `>=24`;
+- the validate path runs Node 24: `release.yml` setup-node 22 → 24;
+  `ci-github-local` default image `node:22-bookworm` →
+  `node:24-bookworm` (parity);
+- root engines stays `>=22` — v1's own floor is untouched (24 satisfies
+  it; the local suite already runs green on Node 26).
+
+ADR-006 (amends ADR-002, depends-on ADR-003) records the pick; a driver
+swap (better-sqlite3) stays adapter work behind the port.
+
+### 4.5 Domain first slice + the 85-name rejection type
+
+- `domain/` gains ONLY the l0a + l0b registry names (ledger §4):
+  `WorkflowTemplate` / `Step` / `Role`; `WorkflowInstance` / `Transcript`
+  / `LifecycleStatus`; `EventEnvelope`; `DispatchIntent` /
+  `ContextPacket` (derived, not stored). No L0c+ type is front-run.
+- The rejection type carries ALL 85 names from day one (§1.4), with a
+  local pre-test: the name set equals ledger §3 exactly (ratified — the
+  PI-3 rejection drift test arriving early; ch 5 formalizes/absorbs it).
+  A typo would otherwise sleep until ch 5.
+- **Slice-semantics rule (fixed here for every future packet):** the
+  85-name union is drift-test surface, not a per-packet rejection claim —
+  a packet's `rejections` list declares only the names it BEHAVIORALLY
+  triggers.
+
+### 4.6 Ingress, floor, wiring — minimal by design
+
+- **Ingress:** hand-rolled envelope shape validation (`invalid_shape`),
+  zero new dependencies → kernel. The HANDLE unit's shape-check half
+  lives here (the ch-5 unit→code mapping records the split).
+- **Floor:** `listInstances` + `getInstanceDetail`, committed rows only
+  (trivially — the store holds nothing else). `getTimeline` + live tail
+  stay ch 6 (PI-2).
+- **Kernel factory:** port-parametric — store, definitions, `TimeSource`
+  injected NOW (PI-6's injected clock: the seam is proven live even
+  though its first real consumer is the ch-5 gate timeout).
+- **MD-1:** the fixture-form template — a testkit builder shaped like the
+  model's `local-pair-v0` (implement ⇄ review, PASS / CONVERGED) + an
+  in-memory `DefinitionStore` fixture (pinned version). Marked MD-1 in
+  source; ch 8 migrates it onto the canonical format and retires the debt.
+- **Deliberately NOT this chapter:** delivery/runner (the
+  `DispatchIntent` is returned, never delivered — commit ≠ deliver; ch 9),
+  CLI (ch 6), `payload_digest` storage + `op_id_collision` (ch 5), drift
+  tests (ch 5), L0c+ semantics.
+
+### 4.7 Acceptance
+
+- **`CT-A1-DUP`** — two racing deliveries of the same
+  `(instance_id, op_id)` → exactly one commit, one `Duplicate`; plus the
+  CAS-restart rule (restart from load, re-check idempotency, never
+  re-commit a stale target) proven against a scripted `StorePort` double
+  (the kernel is port-parametric — the conflict is injectable); plus the
+  §4.2 precedence race: a retransmission after the version has advanced →
+  `duplicate_op`, never `Stale`.
+- **`CHK-A1-SCHEMA`** — claim-derived negative test: a duplicate insert
+  BYPASSING the kernel pre-check fails at the database level.
+- **`CHK-C-TS-SOURCE`** — §4.3's frozen-clock test + type-level half.
+- **Store-open fail-closed** contract test (ADR-003).
+- **The l0b golden trace:** the scripted actor plays the six-step trace
+  (including the Stale step) and the committed-row sequence matches the
+  model's.
+- All bridges green; coverage validation green with the ch-4 packets
+  parsed. Closure NOT asserted — a report showing e.g. `units 4/158
+  owned` is the expected healthy state.
+
+### 4.8 Packets — the convention's first live use
+
+Four packets, cut along constraint cohesion (template §2, executed
+manually — calibration):
+
+| Packet | Content | Slice focus |
+|---|---|---|
+| ch4-P1 | domain first slice + 85-name union + `StorePort` / `DefinitionStore` port types | invariant: `l0a/definition-store` |
+| ch4-P2 | SQLite store: schema, marker, fail-closed, txn shape | `CHK-A1-SCHEMA`, `CHK-C-TS-SOURCE`; invariants: `instance-store`, `transcript-event-log`, `atomic-transition-commit` |
+| ch4-P3 | kernel HANDLE + `dispatch_intent` + ingress | `CT-A1-DUP`; units `HANDLE` ×2, `dispatch_intent`; the four rejections; `op-id-idempotency`, `expected-version-mandatory` |
+| ch4-P4 | bootstrap `START_INSTANCE` + MD-1 fixture + floor read + golden trace | unit `START_INSTANCE`; `binding-coverage-at-start`, `commit-deliver`; trace `l0b-pseudocode` |
+
+Calibration flow (ratified): **P1 is approved BEFORE build** (the packet
+form's first live validation); P2–P4 flow and are reviewed at commit
+boundaries. One packet = packet file + code + tests in ONE commit.
+
+### 4.9 Deliverables and DoD
+
+Shipped: this section; ADR-006 + the Node-24 validate path; the four
+packets with their code and tests; the MD-1 fixture template.
+
+DoD: all §4.7 tests green; every `CHK-*` negative-tested from its
+DECLARED claim (README §4 step 2 — these are the first post-rule gates);
+ADR-006 `accepted`, integrity check green; the three ch-4 intake rows +
+the ch-4 map row flipped to `realized` (PI-6); MD-1 stays open by design
+(ch-8 debt); coverage validation green over the four packets; process-log
+review held at the boundary.

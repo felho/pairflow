@@ -20,6 +20,7 @@ Integrity check: [`check.sh`](check.sh) — root bridge `pnpm v3:adr-check`.
 | [ADR-003](ADR-003-storage-substrate-and-migration-stance.md) | Storage substrate and migration stance | accepted | 2026-07-07 |
 | [ADR-004](ADR-004-op-id-scheme-per-operation-family.md) | op_id scheme per operation family | accepted | 2026-07-07 |
 | [ADR-005](ADR-005-testkit-module.md) | testkit as a test-only support module | accepted | 2026-07-07 |
+| [ADR-006](ADR-006-sqlite-driver-node-sqlite.md) | SQLite driver — node:sqlite on Node ≥ 24 | accepted | 2026-07-07 |
 
 ## Trigger watch (dormant ADRs)
 
