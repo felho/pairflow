@@ -16,3 +16,9 @@ chapter-boundary verdict by appending `→ <outcome>` at review time.
   less than its claim (supersede validated one-way only; index status matched
   on the first word) → check hardened same day (both directions + full status
   string), negative-tested; the §5.5 measurement rule applied to a gate itself
+- 2026-07-07 · ch 3 boundary · review held — one observation: eslint flat
+  config resolves overlapping file globs by later-entry override, so the
+  kernel import boundary had to be ordered LAST to not be weakened by the
+  production-wide testkit ban → acknowledged non-issue; the ordering
+  constraint is documented in the config header, and every boundary is
+  negative-tested, which is the real guard

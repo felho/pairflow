@@ -44,6 +44,8 @@ jobs:
         run: pnpm install --frozen-lockfile
       - name: Install UI dependencies
         run: pnpm --dir ui install --frozen-lockfile
+      - name: Install v3 dependencies
+        run: pnpm --dir v3 install --frozen-lockfile
       - name: Reject incomplete explicit commit range
         env:
           VALIDATE_FROM: ${{ inputs.validate_from }}
@@ -69,6 +71,8 @@ jobs:
         run: pnpm fitness:check:ci
       - name: Test
         run: pnpm test
+      - name: V3 checks
+        run: pnpm v3:lint && pnpm v3:typecheck && pnpm v3:test && pnpm v3:adr-check && pnpm v3:coverage
       - name: Build
         run: pnpm build
 

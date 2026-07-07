@@ -300,20 +300,22 @@ run_quality_child() {
 
 run_quality_suite() {
   local step_id="check"
-  local step_label="quality suite (lint/typecheck/test)"
+  local step_label="quality suite (lint/typecheck/test/v3)"
   local started_at
   local finished_at
   local duration_s
   local lint_pid
   local typecheck_pid
   local test_pid
+  local v3_pid
   local lint_exit=0
   local typecheck_exit=0
   local test_exit=0
+  local v3_exit=0
   local failed=0
 
   echo "ci:local step: $step_label"
-  echo "ci:local log: $RUN_DIR/check-{codegen,lint,typecheck,test}.log"
+  echo "ci:local log: $RUN_DIR/check-{codegen,lint,typecheck,test,v3}.log"
   started_at="$(date +%s)"
 
   run_quality_child "lint" "ci:local lint" pnpm exec eslint . --concurrency 4 &
@@ -322,10 +324,13 @@ run_quality_suite() {
   typecheck_pid=$!
   run_quality_child "test" "ci:local test" bash -lc 'root_exit=0; ui_exit=0; pnpm exec vitest run --maxWorkers=8 & root_pid=$!; pnpm --dir ui test --maxWorkers=2 & ui_pid=$!; wait $root_pid || root_exit=$?; wait $ui_pid || ui_exit=$?; test $root_exit -eq 0 -a $ui_exit -eq 0' &
   test_pid=$!
+  run_quality_child "v3" "ci:local v3" bash -lc 'pnpm v3:lint && pnpm v3:typecheck && pnpm v3:test && pnpm v3:adr-check && pnpm v3:coverage' &
+  v3_pid=$!
 
   wait "$lint_pid" || lint_exit=$?
   wait "$typecheck_pid" || typecheck_exit=$?
   wait "$test_pid" || test_exit=$?
+  wait "$v3_pid" || v3_exit=$?
 
   if [[ "$lint_exit" -ne 0 ]]; then
     failed=1
@@ -339,11 +344,16 @@ run_quality_suite() {
     failed=1
     print_failure_summary "$step_id" "$step_label: test" "$RUN_DIR/check-test.log" "$test_exit" "pnpm test"
   fi
+  if [[ "$v3_exit" -ne 0 ]]; then
+    failed=1
+    print_failure_summary "$step_id" "$step_label: v3" "$RUN_DIR/check-v3.log" "$v3_exit" "pnpm v3:lint && pnpm v3:typecheck && pnpm v3:test && pnpm v3:adr-check && pnpm v3:coverage"
+  fi
   if [[ "$failed" -ne 0 ]]; then
     echo "ci:local quality suite failed after all parallel checks completed"
     echo "  lint_exit: $lint_exit"
     echo "  typecheck_exit: $typecheck_exit"
     echo "  test_exit: $test_exit"
+    echo "  v3_exit: $v3_exit"
     exit 1
   fi
 
@@ -473,7 +483,7 @@ else
   echo
 fi
 
-run_step "install" "dependency lock validation" bash -lc 'pnpm install --frozen-lockfile && pnpm --dir ui install --frozen-lockfile'
+run_step "install" "dependency lock validation" bash -lc 'pnpm install --frozen-lockfile && pnpm --dir ui install --frozen-lockfile && pnpm --dir v3 install --frozen-lockfile'
 run_validation_suites
 
 echo "ci:local passed"
