@@ -65,3 +65,15 @@ chapter-boundary verdict by appending `→ <outcome>` at review time.
   ("the kernel receives only envelopes the store can faithfully
   persist"); the rule holds only if the CLAIM is stated wide enough
   before deriving
+- 2026-07-07 · ch 4 aftermath 2 · the hardened predicate STILL proved
+  less than the claim: Object.entries is blind to non-enumerable own
+  props (a hidden data prop vanishes in the round-trip; a hidden toJSON
+  rewrites the persisted value behind the digest's back) and the ingress
+  unknown-key check (Object.keys) missed non-enumerable string keys →
+  descriptor-level checks same day: object own props must be enumerable
+  DATA props, array indices data props (non-enumerable indices stay
+  legal — array stringify reads by index), ingress switched to
+  getOwnPropertyNames; Proxy declared out of scope (undetectable; the
+  real trust boundary is ch-9 transport serialization). Same lesson,
+  one level deeper: "JSON round-trip" as a claim includes DESCRIPTOR
+  semantics, not just value shapes

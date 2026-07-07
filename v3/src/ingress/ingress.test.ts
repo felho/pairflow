@@ -151,6 +151,26 @@ describe("ingress — the strict claim's full surface", () => {
     });
   });
 
+  it("a NON-ENUMERABLE unknown top-level key → invalid_shape (the finding's exact repro)", async () => {
+    const { kernel } = capturingKernel();
+    const raw: Record<string, unknown> = { ...validRaw };
+    Object.defineProperty(raw, "committedAt", { value: 123, enumerable: false });
+    expect(await createIngress(kernel).submit(raw)).toEqual({
+      kind: "rejected",
+      reason: "invalid_shape",
+    });
+  });
+
+  it("a payload smuggling a hidden toJSON → invalid_shape (it would rewrite the persisted value)", async () => {
+    const { kernel } = capturingKernel();
+    const payload: Record<string, unknown> = { a: 1 };
+    Object.defineProperty(payload, "toJSON", { value: () => ({ b: 2 }), enumerable: false });
+    expect(await createIngress(kernel).submit({ ...validRaw, payload })).toEqual({
+      kind: "rejected",
+      reason: "invalid_shape",
+    });
+  });
+
   it("a non-plain raw envelope (class instance) → invalid_shape", async () => {
     class Env {
       instanceId = "inst-1";

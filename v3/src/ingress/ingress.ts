@@ -39,7 +39,10 @@ function parseEnvelope(raw: unknown): EventEnvelope | null {
     return null;
   }
   const record = raw as Record<string, unknown>;
-  for (const key of Object.keys(record)) {
+  // getOwnPropertyNames, not Object.keys: a NON-ENUMERABLE unknown key
+  // is still an unknown key (it would silently vanish from the typed
+  // envelope otherwise — the strict claim covers it).
+  for (const key of Object.getOwnPropertyNames(record)) {
     if (!KNOWN_KEYS.has(key)) {
       return null;
     }

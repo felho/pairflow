@@ -72,6 +72,16 @@ function canonicalize(value: unknown): string {
               `payload is not canonicalizable: non-index array property '${key}'`,
             );
           }
+          // Indices must be DATA properties: a getter could answer the
+          // digest read and the store's stringify read differently.
+          // (Non-enumerable indices are fine — array stringify reads by
+          // index, not by enumerability.)
+          const descriptor = Object.getOwnPropertyDescriptor(value, key);
+          if (descriptor !== undefined && !("value" in descriptor)) {
+            throw new Error(
+              `payload is not canonicalizable: accessor array index '${key}'`,
+            );
+          }
         }
         return `[${value.map((item) => canonicalize(item)).join(",")}]`;
       }
@@ -83,6 +93,26 @@ function canonicalize(value: unknown): string {
       }
       if (Object.getOwnPropertySymbols(value).length > 0) {
         throw new Error("payload is not canonicalizable: symbol-keyed property");
+      }
+      // Own string properties must be ENUMERABLE DATA properties:
+      // Object.entries (and JSON.stringify) are blind to non-enumerable
+      // props — a hidden data prop silently vanishes in the round-trip,
+      // and a hidden toJSON REWRITES the persisted value behind the
+      // digest's back; an accessor could answer the digest read and the
+      // stringify read differently.
+      for (const key of Object.getOwnPropertyNames(value)) {
+        const descriptor = Object.getOwnPropertyDescriptor(value, key);
+        if (descriptor === undefined) {
+          continue;
+        }
+        if (!descriptor.enumerable) {
+          throw new Error(
+            `payload is not canonicalizable: non-enumerable own property '${key}'`,
+          );
+        }
+        if (!("value" in descriptor)) {
+          throw new Error(`payload is not canonicalizable: accessor property '${key}'`);
+        }
       }
       const entries = Object.entries(value as Record<string, unknown>)
         .map(([k, v]) => {

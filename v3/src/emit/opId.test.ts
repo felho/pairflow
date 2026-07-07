@@ -69,6 +69,43 @@ describe("payload digest (canonical serialization)", () => {
     expect(() => digestPayload(Object.assign([1], { [Symbol("s")]: 1 }))).toThrow(/canonical/);
   });
 
+  it("rejects non-enumerable own properties — JSON.stringify drops them while the object carries them", () => {
+    const hidden = { a: 1 };
+    Object.defineProperty(hidden, "hidden", { value: 2, enumerable: false });
+    expect(() => digestPayload(hidden)).toThrow(/canonical/);
+    expect(() => digestPayload({ nested: hidden })).toThrow(/canonical/);
+  });
+
+  it("rejects a hidden toJSON — it would REWRITE the persisted value behind the digest's back", () => {
+    const trojan: Record<string, unknown> = { a: 1 };
+    Object.defineProperty(trojan, "toJSON", {
+      value: () => ({ b: 2 }),
+      enumerable: false,
+    });
+    expect(JSON.stringify(trojan)).toBe('{"b":2}'); // the attack this guards against
+    expect(() => digestPayload(trojan)).toThrow(/canonical/);
+  });
+
+  it("rejects accessor properties — a re-invoked getter cannot be pinned", () => {
+    expect(() =>
+      digestPayload({
+        get x() {
+          return 1;
+        },
+      }),
+    ).toThrow(/canonical/);
+    const arr = [1];
+    Object.defineProperty(arr, 0, { get: () => 1, enumerable: true });
+    expect(() => digestPayload(arr)).toThrow(/canonical/);
+  });
+
+  it("still accepts a non-enumerable ARRAY INDEX — stringify reads indices regardless of enumerability", () => {
+    const arr: unknown[] = [];
+    Object.defineProperty(arr, 0, { value: 7, enumerable: false });
+    expect(JSON.stringify(arr)).toBe("[7]");
+    expect(digestPayload(arr)).toBe(digestPayload([7]));
+  });
+
   it("still accepts dense plain arrays", () => {
     expect(digestPayload([1, 2, 3])).toBe(digestPayload([1, 2, 3]));
     expect(digestPayload([])).toBe(digestPayload([]));
@@ -89,6 +126,9 @@ describe("isCanonicalizable — the ingress admission predicate", () => {
     expect(isCanonicalizable(new Date("2026-01-01T00:00:00Z"))).toBe(false);
     expect(isCanonicalizable(new Array(1))).toBe(false);
     expect(isCanonicalizable(undefined)).toBe(false);
+    const trojan: Record<string, unknown> = { a: 1 };
+    Object.defineProperty(trojan, "toJSON", { value: () => ({ b: 2 }), enumerable: false });
+    expect(isCanonicalizable(trojan)).toBe(false);
   });
 });
 

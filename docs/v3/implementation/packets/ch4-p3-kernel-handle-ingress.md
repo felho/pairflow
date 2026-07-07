@@ -120,6 +120,14 @@ dispatch_intent(instance, template, step_id) → DispatchIntent
   ingress admitted", ch4-P2) and what the ch-5 digest path can pin;
   undefined props, symbol keys, sparse arrays, non-plain objects,
   non-finite numbers, functions, BigInt → `invalid_shape`.
+  *(Aftermath 2 — descriptor level:)* own string props must be
+  ENUMERABLE DATA properties (a hidden data prop vanishes in the
+  round-trip; a hidden `toJSON` REWRITES the persisted value; a getter
+  can answer the digest read and the stringify read differently); array
+  indices must be data properties. The ingress unknown-key check runs
+  on `getOwnPropertyNames` — a non-enumerable unknown key is still an
+  unknown key. Out of scope (undetectable in-process): a lying Proxy —
+  the real trust boundary is the ch-9 transport serialization.
 - **A DONE instance / terminal current step** has no Step entry →
   `transitions` lookup fails → `Rejected(no_transition)`. This is the
   model mapping (`template.step` of a terminal position has no
