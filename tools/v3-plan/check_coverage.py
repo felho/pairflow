@@ -16,10 +16,19 @@ each packet carries exactly ONE fenced ```json block whose top-level key is
 
 Modes:
   - default: VALIDATION (always-on CI gate) + coverage report. Parse
-    errors, unknown ids, bad enum tokens, and undeclared double owners are
-    hard failures even with zero packets.
+    errors, unknown ids, bad enum tokens, undeclared double owners, and
+    unit-map lock violations are hard failures even with zero packets.
   - --assert-closed: additionally require closure — the plan-is-concrete-
     enough-for-chaining criterion (README par.5.4).
+  - --selftest: prove each unit-map cross-check dimension fails red on
+    throwaway fixtures (packet ch5-P1; the v3:coverage bridge chains
+    selftest + validation).
+
+Three-way lock (packet ch5-P1): v3/src/drift/unitMap.json is the code-end
+manifest, REQUIRED and dual-read (the vitest drift test + this script).
+Validation asserts: manifest key set == units tree; packet-owned units
+are realized with the SAME disposition; realized rows have packet owners.
+--unit-map overrides the manifest path (negative-test seam).
 
 Closure axes (the par.1.4 scope rules, mechanized):
   - units: 158/158 owned, exactly one owner unless shared ownership is
@@ -48,6 +57,8 @@ MODEL_SRC = REPO_ROOT / "docs/v3/convergence/model-src"
 UNITS_DIR = MODEL_SRC / "units"
 LEDGER = MODEL_SRC / "ledger.md"
 DEFAULT_PACKETS_DIR = REPO_ROOT / "docs/v3/implementation/packets"
+DEFAULT_UNIT_MAP = REPO_ROOT / "v3/src/drift/unitMap.json"
+CODE_REF = re.compile(r"^[^#]+#[^#]+$")
 
 UNIT_DISPOSITIONS = {
     "implement",
@@ -128,7 +139,11 @@ def extract_slice(path: Path, checker: Checker) -> dict | None:
 
 
 def validate_slice(
-    packet: str, sl: dict, inventory: dict[str, set[str]], checker: Checker
+    packet: str,
+    sl: dict,
+    inventory: dict[str, set[str]],
+    checker: Checker,
+    unit_dispositions: dict[str, dict[str, str]],
 ) -> dict[str, set[str]]:
     declared: dict[str, set[str]] = {"units": set(), "invariants": set(), "traces": set()}
     if not isinstance(sl, dict):
@@ -152,6 +167,8 @@ def validate_slice(
                 f"{packet}: unit '{entry['id']}' has invalid disposition "
                 f"'{entry['disposition']}' (exact tokens: {sorted(UNIT_DISPOSITIONS)})"
             )
+        else:
+            unit_dispositions.setdefault(entry["id"], {})[packet] = entry["disposition"]
         declared["units"].add(entry["id"])
 
     for name in sl.get("rejections", []):
@@ -240,12 +257,91 @@ def check_owners(
                     )
 
 
-def main() -> int:
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--assert-closed", action="store_true", help="require full closure")
-    parser.add_argument("--packets-dir", type=Path, default=DEFAULT_PACKETS_DIR)
-    args = parser.parse_args()
+def load_unit_map(
+    path: Path, inventory: dict[str, set[str]], checker: Checker
+) -> dict[str, dict]:
+    """The drift manifest (v3/src/drift/unitMap.json) — the code end of the
+    ledger <-> manifest <-> packet three-way lock (packet ch5-P1). REQUIRED:
+    missing or unparseable is a hard failure (fail-closed). Schema and the
+    key-set equality against the units tree are validated here; the vitest
+    drift test guards the same file from the code side (dual-read)."""
+    if not path.is_file():
+        checker.error(f"unit map missing: {path} (drift manifest required from ch5-P1 on)")
+        return {}
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        checker.error(f"unit map unparseable: {path} ({exc})")
+        return {}
+    if not isinstance(data, dict):
+        checker.error("unit map: top level must be an object keyed by unit id")
+        return {}
+    for unit_id, entry in sorted(data.items()):
+        if not isinstance(entry, dict):
+            checker.error(f"unit map: '{unit_id}' entry must be an object")
+            continue
+        status = entry.get("status")
+        if status == "pending":
+            if entry.keys() != {"status"}:
+                checker.error(f"unit map: pending '{unit_id}' must be exactly {{status}}")
+        elif status == "realized":
+            if entry.keys() != {"status", "disposition", "codeRef"}:
+                checker.error(
+                    f"unit map: realized '{unit_id}' must be exactly "
+                    "{status, disposition, codeRef}"
+                )
+                continue
+            if entry["disposition"] not in UNIT_DISPOSITIONS:
+                checker.error(
+                    f"unit map: '{unit_id}' has invalid disposition "
+                    f"'{entry['disposition']}' (exact tokens: {sorted(UNIT_DISPOSITIONS)})"
+                )
+            if not isinstance(entry["codeRef"], str) or not CODE_REF.match(entry["codeRef"]):
+                checker.error(f"unit map: '{unit_id}' codeRef must be '<path>#<symbol>'")
+        else:
+            checker.error(f"unit map: '{unit_id}' status must be 'pending' or 'realized'")
+    for unit_id in sorted(inventory["units"] - data.keys()):
+        checker.error(f"unit map: missing unit id '{unit_id}' (key set == units tree)")
+    for unit_id in sorted(data.keys() - inventory["units"]):
+        checker.error(f"unit map: unknown unit id '{unit_id}' (key set == units tree)")
+    return data
 
+
+def check_unit_map_lock(
+    unit_map: dict[str, dict],
+    unit_dispositions: dict[str, dict[str, str]],
+    checker: Checker,
+) -> None:
+    """The three-way lock, both directions (packet ch5-P1): every
+    packet-owned unit is realized in the manifest with the SAME disposition
+    token; every realized manifest row has a packet owner."""
+    for unit_id, by_packet in sorted(unit_dispositions.items()):
+        entry = unit_map.get(unit_id)
+        if entry is None:
+            continue  # the key-set check already reported it
+        if entry.get("status") != "realized":
+            checker.error(
+                f"unit map lock: '{unit_id}' is packet-owned "
+                f"({', '.join(sorted(by_packet))}) but the manifest says pending"
+            )
+            continue
+        for packet, disposition in sorted(by_packet.items()):
+            if disposition != entry.get("disposition"):
+                checker.error(
+                    f"unit map lock: '{unit_id}' disposition drift — {packet} declares "
+                    f"'{disposition}', the manifest says '{entry.get('disposition')}'"
+                )
+    for unit_id, entry in sorted(unit_map.items()):
+        if entry.get("status") == "realized" and unit_id not in unit_dispositions:
+            checker.error(
+                f"unit map lock: '{unit_id}' is realized in the manifest "
+                "but no packet owns it"
+            )
+
+
+def run_validation(
+    packets_dir: Path, unit_map_path: Path
+) -> tuple[Checker, dict[str, set[str]], dict[str, dict[str, list[str]]], list[Path]]:
     checker = Checker()
     inventory = load_inventory()
     expected = {"units": 158, "invariants": 116, "rejections": 85, "traces": 20}
@@ -255,19 +351,22 @@ def main() -> int:
                 f"inventory drift: {axis} counts {len(inventory[axis])}, plan par.1.4 says {count}"
             )
 
+    unit_map = load_unit_map(unit_map_path, inventory, checker)
+
     packet_files = (
-        sorted(p for p in args.packets_dir.glob("*.md") if p.name != "README.md")
-        if args.packets_dir.is_dir()
+        sorted(p for p in packets_dir.glob("*.md") if p.name != "README.md")
+        if packets_dir.is_dir()
         else []
     )
     owners: dict[str, dict[str, list[str]]] = {"units": {}, "invariants": {}, "traces": {}}
     shares: dict[str, set[tuple[str, str]]] = {}
     declared_by: dict[str, set[str]] = {}
+    unit_dispositions: dict[str, dict[str, str]] = {}
     for path in packet_files:
         sl = extract_slice(path, checker)
         if sl is None:
             continue
-        declared = validate_slice(path.name, sl, inventory, checker)
+        declared = validate_slice(path.name, sl, inventory, checker, unit_dispositions)
         declared_by[path.name] = declared["units"] | declared["invariants"] | declared["traces"]
         for axis in owners:
             for item in declared[axis]:
@@ -283,6 +382,126 @@ def main() -> int:
     check_share_references(
         shares, declared_by, {p.name for p in packet_files}, inventory, checker
     )
+    check_unit_map_lock(unit_map, unit_dispositions, checker)
+    return checker, inventory, owners, packet_files
+
+
+def run_selftest() -> int:
+    """--selftest (packet ch5-P1; chapter rule 2 — a prescribed check is
+    EXECUTED, not logged): throwaway fixtures prove each cross-check
+    dimension actually fails red, plus one green control proving the
+    failures are not ambient. Real inventory; synthetic packets + map."""
+    import tempfile
+
+    inventory = load_inventory()
+    base_map: dict[str, dict] = {
+        unit_id: {"status": "pending"} for unit_id in sorted(inventory["units"])
+    }
+    owned_id = "l0b-pseudocode/HANDLE"
+    realized = {
+        "status": "realized",
+        "disposition": "implement",
+        "codeRef": "v3/src/kernel/kernel.ts#createKernel",
+    }
+    packet_md = (
+        "# selftest packet\n\n```json\n"
+        + json.dumps(
+            {
+                "ledger_slice": {
+                    "units": [{"id": owned_id, "disposition": "implement"}],
+                    "rejections": [],
+                    "invariants": [],
+                    "traces": [],
+                    "shared_ownership": [],
+                }
+            }
+        )
+        + "\n```\n"
+    )
+
+    failures: list[str] = []
+
+    def run_fixture(unit_map: dict | None, with_packet: bool) -> Checker:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            packets = tmp_path / "packets"
+            packets.mkdir()
+            if with_packet:
+                (packets / "selftest-packet.md").write_text(packet_md, encoding="utf-8")
+            map_path = tmp_path / "unitMap.json"
+            if unit_map is not None:
+                map_path.write_text(json.dumps(unit_map), encoding="utf-8")
+            checker, _, _, _ = run_validation(packets, map_path)
+            return checker
+
+    def expect_red(name: str, unit_map: dict | None, expect: str, with_packet: bool = True) -> None:
+        checker = run_fixture(unit_map, with_packet)
+        if any(expect in message for message in checker.errors):
+            print(f"selftest OK: {name}")
+        else:
+            failures.append(name)
+            print(
+                f"selftest FAIL: {name} — expected an error containing {expect!r}, "
+                f"got {checker.errors!r}",
+                file=sys.stderr,
+            )
+
+    expect_red("missing manifest fails closed", None, "unit map missing")
+    variant = dict(base_map)
+    del variant[owned_id]
+    expect_red("key set: missing unit id", variant, "missing unit id")
+    variant = dict(base_map)
+    variant["not-a-section/NotAUnit"] = {"status": "pending"}
+    expect_red("key set: unknown unit id", variant, "unknown unit id")
+    expect_red("owned unit left pending", dict(base_map), "manifest says pending")
+    variant = dict(base_map)
+    variant[owned_id] = {**realized, "disposition": "test-only"}
+    expect_red("disposition drift", variant, "disposition drift")
+    variant = dict(base_map)
+    variant[owned_id] = realized
+    expect_red("realized without a packet owner", variant, "no packet owns it", with_packet=False)
+    variant = dict(base_map)
+    variant[owned_id] = {**realized, "disposition": "bogus"}
+    expect_red("schema: invalid disposition token", variant, "invalid disposition")
+    variant = dict(base_map)
+    variant[owned_id] = {**realized, "extra": 1}
+    expect_red("schema: extra key", variant, "must be exactly")
+    variant = dict(base_map)
+    variant[owned_id] = {**realized, "codeRef": "no-symbol-separator"}
+    expect_red("schema: malformed codeRef", variant, "codeRef must be")
+
+    variant = dict(base_map)
+    variant[owned_id] = realized
+    green = run_fixture(variant, with_packet=True)
+    if green.errors:
+        failures.append("green control")
+        print(f"selftest FAIL: green control errored: {green.errors!r}", file=sys.stderr)
+    else:
+        print("selftest OK: green control (consistent fixture passes)")
+
+    if failures:
+        print(f"selftest: {len(failures)} FAILED", file=sys.stderr)
+        return 1
+    print("selftest OK (all cross-check dimensions fail red; green control passes)")
+    return 0
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--assert-closed", action="store_true", help="require full closure")
+    parser.add_argument("--packets-dir", type=Path, default=DEFAULT_PACKETS_DIR)
+    parser.add_argument("--unit-map", type=Path, default=DEFAULT_UNIT_MAP)
+    parser.add_argument(
+        "--selftest",
+        action="store_true",
+        help="run the cross-check selftest against throwaway fixtures, then exit",
+    )
+    args = parser.parse_args()
+
+    if args.selftest:
+        return run_selftest()
+
+    checker, inventory, owners, packet_files = run_validation(args.packets_dir, args.unit_map)
 
     if checker.errors:
         for message in checker.errors:

@@ -742,7 +742,9 @@ at test time (the ch-4 `rejectionNames.test.ts` precedent).
 2. **Domain registry (51 aggregate blocks · 121 entities).** The test
    parses ledger §4 at test time; the code-side counterpart is a
    **manifest** (`drift/domainRegistry.ts`): every ledger entity →
-   `realized(<exported type name>)` or `pending(<chapter>)`. The test
+   `realized(<exported type name>)`, `pending` (no chapter claim — the
+   plan map owns scheduling; aligned at P1 pre-approval), or
+   `contract-row` (a §4 prose/contract surface, never a type). The test
    asserts key-set equality; **existence is proven by the typecheck** —
    the manifest references realized types via `import type`, so a
    vanished type is a compile error (types are erased; no runtime trick
@@ -750,8 +752,12 @@ at test time (the ch-4 `rejectionNames.test.ts` precedent).
    constraint / policy rows) carry their own manifest dispositions; the
    normalization rule (annotation stripping: `[root]`, `(value)`, …) is
    pinned in the P1 packet with the full row table.
-3. **Unit→code mapping (158).** A manifest (`drift/unitMap.ts`): unit id
-   → `{disposition, codeRef?}`. The test asserts: key set == the
+3. **Unit→code mapping (158).** A manifest (`drift/unitMap.json` — JSON,
+   dual-read by the vitest test and the stdlib coverage script; aligned
+   at P1 pre-approval): unit id → `{"status": "pending"}` or
+   `{"status": "realized", "disposition": <§1.4 enum>, "codeRef":
+   "<path>#<symbol>"}` (the packet's canonical matrix is the schema
+   source). The test asserts: key set == the
    `model-src/units/` tree at test time; every `codeRef` resolves (file
    exists, symbol present). **Three-way lock:** the coverage script's
    validation mode gains a cross-check — a packet-owned unit's declared

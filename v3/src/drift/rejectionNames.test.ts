@@ -2,13 +2,15 @@ import { readFileSync } from "node:fs";
 
 import { describe, expect, it } from "vitest";
 
-import { REJECTION_NAMES } from "./rejections.js";
+import { REJECTION_NAMES } from "../domain/index.js";
 
 /**
- * The PI-3 rejection drift test's name axis, arriving early (plan §4.5):
- * the in-code union carries ALL 85 ledger §3 names from day one — set
- * equality against the ledger parsed at test time, so there is no second
- * hand-copied list to drift. Chapter 5 formalizes/absorbs this.
+ * The PI-3 rejection drift test's name axis (packet ch5-P1 — moved here
+ * from domain/, where it arrived early per plan §4.5): the in-code union
+ * carries ALL 85 ledger §3 names — set equality against the ledger parsed
+ * at test time, so there is no second hand-copied list to drift.
+ * ADR-007: drift TEST files may value-import domain registry values —
+ * comparing the runtime value against the ledger is the whole point.
  */
 const LEDGER_URL = new URL(
   "../../../docs/v3/convergence/model-src/ledger.md",

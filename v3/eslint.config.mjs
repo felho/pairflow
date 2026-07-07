@@ -95,7 +95,7 @@ export default tseslint.config(
     },
   },
 
-  // ADR-005: production modules never import testkit/.
+  // ADR-005 + ADR-007: production modules never import testkit/ or drift/.
   {
     files: [
       "src/domain/**",
@@ -116,6 +116,34 @@ export default tseslint.config(
             {
               group: ["**/testkit/**"],
               message: "ADR-005: production modules never import testkit/.",
+            },
+            {
+              group: ["**/drift/**"],
+              message: "ADR-007: production modules never import drift/ (test-only module).",
+            },
+          ],
+        },
+      ],
+    },
+  },
+
+  // ADR-007: non-test drift modules (the manifests / import tables) are
+  // compile-time bookkeeping — `import type` ONLY. Drift TEST files may
+  // value-import domain registry values (comparing the runtime value
+  // against the ledger is the whole point) and are exempted here.
+  {
+    files: ["src/drift/**"],
+    ignores: ["src/**/*.test.ts"],
+    rules: {
+      "@typescript-eslint/no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: ["**"],
+              allowTypeImports: true,
+              message:
+                "ADR-007: non-test drift modules are static bookkeeping — import type only; runtime coupling belongs in the drift tests.",
             },
           ],
         },

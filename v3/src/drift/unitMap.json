@@ -1,0 +1,484 @@
+{
+  "action-pseudocode/ActionRunner": {
+    "status": "pending"
+  },
+  "action-pseudocode/CREATE_INSTANCE": {
+    "status": "pending"
+  },
+  "action-pseudocode/RECEIVE": {
+    "status": "pending"
+  },
+  "action-pseudocode/RUN_ACTION": {
+    "status": "pending"
+  },
+  "action-pseudocode/action_request": {
+    "status": "pending"
+  },
+  "action-pseudocode/apply_target_entry_effects": {
+    "status": "pending"
+  },
+  "action-pseudocode/boundary_events_of": {
+    "status": "pending"
+  },
+  "action-pseudocode/dispatch_intent": {
+    "status": "pending"
+  },
+  "action-pseudocode/park_for_action": {
+    "status": "pending"
+  },
+  "action-pseudocode/post_commit_output": {
+    "status": "pending"
+  },
+  "action-pseudocode/validate_action_steps": {
+    "status": "pending"
+  },
+  "auto-action-pseudocode/ACTION_RESULT": {
+    "status": "pending"
+  },
+  "auto-action-pseudocode/RECEIVE": {
+    "status": "pending"
+  },
+  "auto-action-pseudocode/action_intent": {
+    "status": "pending"
+  },
+  "auto-action-pseudocode/apply_target_entry_effects": {
+    "status": "pending"
+  },
+  "auto-action-pseudocode/attempt_count_in_episode": {
+    "status": "pending"
+  },
+  "auto-action-pseudocode/dispatch_intent": {
+    "status": "pending"
+  },
+  "auto-action-pseudocode/incoming_recommendation": {
+    "status": "pending"
+  },
+  "auto-action-pseudocode/park_for_action": {
+    "status": "pending"
+  },
+  "auto-action-pseudocode/post_commit_output": {
+    "status": "pending"
+  },
+  "auto-action-pseudocode/validate_action_steps": {
+    "status": "pending"
+  },
+  "auto-action-pseudocode/validate_decision_gates": {
+    "status": "pending"
+  },
+  "complete-pseudocode/DELETE_REQUESTED": {
+    "status": "pending"
+  },
+  "complete-pseudocode/RECEIVE": {
+    "status": "pending"
+  },
+  "complete-pseudocode/archive_or_export": {
+    "status": "pending"
+  },
+  "complete-pseudocode/dispatch_intent": {
+    "status": "pending"
+  },
+  "complete-pseudocode/force_release": {
+    "status": "pending"
+  },
+  "complete-pseudocode/hard_purge": {
+    "status": "pending"
+  },
+  "emit-contract-pseudocode/CREATE_INSTANCE": {
+    "status": "pending"
+  },
+  "emit-contract-pseudocode/HANDLE": {
+    "status": "pending"
+  },
+  "emit-contract-pseudocode/admit_loaded": {
+    "status": "pending"
+  },
+  "emit-contract-pseudocode/assemble_context_blocks": {
+    "status": "pending"
+  },
+  "emit-contract-pseudocode/dispatch_intent": {
+    "status": "pending"
+  },
+  "emit-contract-pseudocode/emit_contract_of": {
+    "status": "pending"
+  },
+  "emit-contract-pseudocode/handle_help_request": {
+    "status": "pending"
+  },
+  "emit-contract-pseudocode/offerable_ops": {
+    "status": "pending"
+  },
+  "emit-contract-pseudocode/payload_digest": {
+    "status": "pending"
+  },
+  "emit-contract-pseudocode/validate_emit_contract": {
+    "status": "pending"
+  },
+  "emit-contract-pseudocode/validate_emit_contracts": {
+    "status": "pending"
+  },
+  "emit-contract-pseudocode/validate_gate_config": {
+    "status": "pending"
+  },
+  "l0a-pseudocode/HANDLE": {
+    "codeRef": "v3/src/kernel/kernel.ts#createKernel",
+    "disposition": "alias/inherited",
+    "status": "realized"
+  },
+  "l0b-pseudocode/HANDLE": {
+    "codeRef": "v3/src/kernel/kernel.ts#createKernel",
+    "disposition": "implement",
+    "status": "realized"
+  },
+  "l0b-pseudocode/START_INSTANCE": {
+    "codeRef": "v3/src/kernel/start.ts#startInstance",
+    "disposition": "implement",
+    "status": "realized"
+  },
+  "l0b-pseudocode/dispatch_intent": {
+    "codeRef": "v3/src/kernel/dispatchIntent.ts#deriveDispatchIntent",
+    "disposition": "implement",
+    "status": "realized"
+  },
+  "l0c-pseudocode/HANDLE": {
+    "status": "pending"
+  },
+  "l0c-pseudocode/START_INSTANCE": {
+    "status": "pending"
+  },
+  "l0c-pseudocode/dispatch_intent": {
+    "status": "pending"
+  },
+  "l0c-pseudocode/resolve_agent_config": {
+    "status": "pending"
+  },
+  "l0d-pseudocode/CANCEL": {
+    "status": "pending"
+  },
+  "l0d-pseudocode/COMPLETE": {
+    "status": "pending"
+  },
+  "l0d-pseudocode/CREATE_INSTANCE": {
+    "status": "pending"
+  },
+  "l0d-pseudocode/FAIL": {
+    "status": "pending"
+  },
+  "l0d-pseudocode/HANDLE": {
+    "status": "pending"
+  },
+  "l0d-pseudocode/KICKOFF": {
+    "status": "pending"
+  },
+  "l0d-pseudocode/RECEIVE": {
+    "status": "pending"
+  },
+  "l0d-pseudocode/RUNTIME_CONTEXT_READY": {
+    "status": "pending"
+  },
+  "l0d-pseudocode/START": {
+    "status": "pending"
+  },
+  "l0d-pseudocode/activate": {
+    "status": "pending"
+  },
+  "l0d-pseudocode/admit_loaded": {
+    "status": "pending"
+  },
+  "l0d-pseudocode/dispatch_intent": {
+    "status": "pending"
+  },
+  "l0e-pseudocode/RUNTIME_CONTEXT_READY": {
+    "status": "pending"
+  },
+  "l0e-pseudocode/RuntimeContextProvider": {
+    "status": "pending"
+  },
+  "l0e-pseudocode/START": {
+    "status": "pending"
+  },
+  "l0e-pseudocode/activate_or_hold": {
+    "status": "pending"
+  },
+  "l0e-pseudocode/dispatch_intent": {
+    "status": "pending"
+  },
+  "l0f-mode-pseudocode/RESOLVE_START": {
+    "status": "pending"
+  },
+  "l0f-mode-pseudocode/apply_mode": {
+    "status": "pending"
+  },
+  "l0f-mode-pseudocode/in_mode": {
+    "status": "pending"
+  },
+  "l0f-mode-pseudocode/resolve_slot": {
+    "status": "pending"
+  },
+  "l0f-mode-pseudocode/valid_mode_declaration": {
+    "status": "pending"
+  },
+  "l0f-pseudocode/RESOLVE_START": {
+    "status": "pending"
+  },
+  "l0f-pseudocode/__preamble__": {
+    "status": "pending"
+  },
+  "l0f-pseudocode/resolve_slot": {
+    "status": "pending"
+  },
+  "l0f-pseudocode/slot_scope": {
+    "status": "pending"
+  },
+  "l1-pseudocode/HANDLE": {
+    "status": "pending"
+  },
+  "l1-pseudocode/RECEIVE": {
+    "status": "pending"
+  },
+  "l1-pseudocode/admit_loaded": {
+    "status": "pending"
+  },
+  "l1-pseudocode/capability": {
+    "status": "pending"
+  },
+  "l1-pseudocode/dispatch_intent": {
+    "status": "pending"
+  },
+  "l1-pseudocode/warrant": {
+    "status": "pending"
+  },
+  "l2-pseudocode/CREATE_INSTANCE": {
+    "status": "pending"
+  },
+  "l2-pseudocode/GateEvaluator": {
+    "status": "pending"
+  },
+  "l2-pseudocode/HANDLE": {
+    "status": "pending"
+  },
+  "l2-pseudocode/activate": {
+    "status": "pending"
+  },
+  "l2-pseudocode/gate_projection": {
+    "status": "pending"
+  },
+  "l2a-pseudocode/CREATE_INSTANCE": {
+    "status": "pending"
+  },
+  "l2a-pseudocode/GateEvaluator": {
+    "status": "pending"
+  },
+  "l2a-pseudocode/HANDLE": {
+    "status": "pending"
+  },
+  "l2a-pseudocode/ProcessGateRunner": {
+    "status": "pending"
+  },
+  "l2a-pseudocode/classify_process_result": {
+    "status": "pending"
+  },
+  "l2a-pseudocode/run_process_gate": {
+    "status": "pending"
+  },
+  "l2a-pseudocode/runner_outcome": {
+    "status": "pending"
+  },
+  "l2a-pseudocode/validate_gate_config": {
+    "status": "pending"
+  },
+  "l2b-pseudocode/CREATE_INSTANCE": {
+    "status": "pending"
+  },
+  "l2b-pseudocode/assemble_context_blocks": {
+    "status": "pending"
+  },
+  "l2b-pseudocode/dispatch_intent": {
+    "status": "pending"
+  },
+  "l2b-pseudocode/validate_context_refs": {
+    "status": "pending"
+  },
+  "l3-pseudocode/COMPLETE": {
+    "status": "pending"
+  },
+  "l3-pseudocode/CREATE_INSTANCE": {
+    "status": "pending"
+  },
+  "l3-pseudocode/HANDLE": {
+    "status": "pending"
+  },
+  "l3-pseudocode/RECEIVE": {
+    "status": "pending"
+  },
+  "l3-pseudocode/RESUME_WAIT": {
+    "status": "pending"
+  },
+  "l3-pseudocode/SUBMIT_DECISION": {
+    "status": "pending"
+  },
+  "l3-pseudocode/admit_input": {
+    "status": "pending"
+  },
+  "l3-pseudocode/apply_target_entry_effects": {
+    "status": "pending"
+  },
+  "l3-pseudocode/choice_point": {
+    "status": "pending"
+  },
+  "l3-pseudocode/decision_keys": {
+    "status": "pending"
+  },
+  "l3-pseudocode/directive": {
+    "status": "pending"
+  },
+  "l3-pseudocode/human_decision_request": {
+    "status": "pending"
+  },
+  "l3-pseudocode/incoming_recommendation": {
+    "status": "pending"
+  },
+  "l3-pseudocode/park_for_human_decision": {
+    "status": "pending"
+  },
+  "l3-pseudocode/park_for_wait": {
+    "status": "pending"
+  },
+  "l3-pseudocode/post_commit_output": {
+    "status": "pending"
+  },
+  "l3-pseudocode/required_fields": {
+    "status": "pending"
+  },
+  "l3-pseudocode/validate_decision_gates": {
+    "status": "pending"
+  },
+  "l4-pseudocode/CHILD_LIFECYCLE": {
+    "status": "pending"
+  },
+  "l4-pseudocode/CHILD_SPAWNED": {
+    "status": "pending"
+  },
+  "l4-pseudocode/CHILD_SPAWN_FAILED": {
+    "status": "pending"
+  },
+  "l4-pseudocode/CREATE_INSTANCE": {
+    "status": "pending"
+  },
+  "l4-pseudocode/RECEIVE": {
+    "status": "pending"
+  },
+  "l4-pseudocode/apply_target_entry_effects": {
+    "status": "pending"
+  },
+  "l4-pseudocode/child_intent": {
+    "status": "pending"
+  },
+  "l4-pseudocode/child_lifecycles_of": {
+    "status": "pending"
+  },
+  "l4-pseudocode/dispatch_intent": {
+    "status": "pending"
+  },
+  "l4-pseudocode/emit_child_lifecycle": {
+    "status": "pending"
+  },
+  "l4-pseudocode/is_child_workflow_step": {
+    "status": "pending"
+  },
+  "l4-pseudocode/park_for_child": {
+    "status": "pending"
+  },
+  "l4-pseudocode/post_commit_output": {
+    "status": "pending"
+  },
+  "l4-pseudocode/validate_child_steps": {
+    "status": "pending"
+  },
+  "l5-pseudocode/CREATE_INSTANCE": {
+    "status": "pending"
+  },
+  "l5-pseudocode/HANDLE": {
+    "status": "pending"
+  },
+  "l5-pseudocode/HELP_REPLY": {
+    "status": "pending"
+  },
+  "l5-pseudocode/RECEIVE": {
+    "status": "pending"
+  },
+  "l5-pseudocode/capability": {
+    "status": "pending"
+  },
+  "l5-pseudocode/dispatch_intent": {
+    "status": "pending"
+  },
+  "l5-pseudocode/handle_help_request": {
+    "status": "pending"
+  },
+  "l5-pseudocode/help_exchange_for": {
+    "status": "pending"
+  },
+  "l5-pseudocode/help_request": {
+    "status": "pending"
+  },
+  "l5-pseudocode/post_commit_output": {
+    "status": "pending"
+  },
+  "l5-pseudocode/validate_help_config": {
+    "status": "pending"
+  },
+  "release-pseudocode/CANCEL": {
+    "status": "pending"
+  },
+  "release-pseudocode/COMPLETE": {
+    "status": "pending"
+  },
+  "release-pseudocode/CREATE_INSTANCE": {
+    "status": "pending"
+  },
+  "release-pseudocode/FAIL": {
+    "status": "pending"
+  },
+  "release-pseudocode/RECEIVE": {
+    "status": "pending"
+  },
+  "release-pseudocode/RUNTIME_CONTEXT_RELEASED": {
+    "status": "pending"
+  },
+  "release-pseudocode/RuntimeContextProvider": {
+    "status": "pending"
+  },
+  "release-pseudocode/boundary_events_of": {
+    "status": "pending"
+  },
+  "release-pseudocode/dispatch_intent": {
+    "status": "pending"
+  },
+  "release-pseudocode/errand": {
+    "status": "pending"
+  },
+  "release-pseudocode/initiate_release": {
+    "status": "pending"
+  },
+  "release-pseudocode/release_boundaries": {
+    "status": "pending"
+  },
+  "release-pseudocode/validate_release_policy": {
+    "status": "pending"
+  },
+  "storage-scope-pseudocode/StorageTier": {
+    "status": "pending"
+  },
+  "storage-scope-pseudocode/__preamble__": {
+    "status": "pending"
+  },
+  "storage-scope-pseudocode/evidence_ref_ok": {
+    "status": "pending"
+  },
+  "storage-scope-pseudocode/projection_authoritative": {
+    "status": "pending"
+  },
+  "storage-scope-pseudocode/release_safe": {
+    "status": "pending"
+  }
+}
