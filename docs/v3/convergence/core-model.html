@@ -10796,15 +10796,15 @@ template:
         <div class="trace">
           <div class="trace-row"><div class="trace-n">1</div><div class="trace-c">
             <div class="ev">the reviewer emits <code>CONVERGED</code> — summary says "all good", but <code>findings</code> carries a <code>P1</code></div>
-            <div class="meta">admission passes (op_id fresh, digest recorded); the payload rung reads the op's declared contract: <code>CONVERGED</code> permits severities <code>{P2, P3}</code> only ⇒ <b>Rejected(invalid_field_value, { field_path: findings[0].severity, rule_id: converged.subset })</b> — the diagnostics name the field AND the rule; no state change, the round is not burned</div>
+            <div class="meta">admission passes (a fresh <code>op_id</code> — nothing committed under it yet); the payload rung reads the op's declared contract: <code>CONVERGED</code> permits severities <code>{P2, P3}</code> only ⇒ <b>Rejected(invalid_field_value, { field_path: findings[0].severity, rule_id: converged.subset })</b> — the diagnostics name the field AND the rule; no state change, the round is not burned, and the <code>op_id</code> is NOT consumed (a rejected attempt never is)</div>
           </div></div>
-          <div class="trace-row idem"><div class="trace-n">2</div><div class="trace-c">
-            <div class="ev">the reviewer's client retries with a CORRECTED payload — but reuses the same <code>op_id</code></div>
-            <div class="meta">the idempotency rung compares digests: same <code>op_id</code>, different payload/contract identity ⇒ <b>Rejected(op_id_collision)</b> — key misuse is VISIBLE, never a silent drop of the second payload (before the digest, this was a silent <code>Duplicate</code>; the ratified behavior delta). A corrected re-attempt is a NEW logical operation ⇒ fresh <code>op_id</code></div>
+          <div class="trace-row"><div class="trace-n">2</div><div class="trace-c">
+            <div class="ev">the corrected <code>CONVERGED { summary, findings: [P2…] }</code> — the SAME <code>op_id</code>, legitimately reused</div>
+            <div class="meta">a corrected retry of a REJECTED attempt is the same logical operation (the op_id contract: resend reuses; only a post-<code>Stale</code> refresh renews); payload rung ✓ → the gate pipeline: <code>declarative.threshold</code> (<b>family: policy</b> — round ≥ 2 ✓) and <code>previous_reviewer_verdict</code> (<b>family: policy</b> — separation, not artifact verification) → COMMIT — the transcript fact records the <code>payload_digest</code>; route to <code>perf_test</code></div>
           </div></div>
-          <div class="trace-row"><div class="trace-n">3</div><div class="trace-c">
-            <div class="ev">fresh <code>op_id</code>: <code>CONVERGED { summary, findings: [P2…], … }</code> — well-formed</div>
-            <div class="meta">payload rung ✓ (subset ✓, no contradiction) → the gate pipeline: <code>declarative.threshold</code> (<b>family: policy</b> — round ≥ 2 ✓) and <code>previous_reviewer_verdict</code> (<b>family: policy</b> — separation, not artifact verification) → commit, route to <code>perf_test</code></div>
+          <div class="trace-row idem"><div class="trace-n">3</div><div class="trace-c">
+            <div class="ev">a buggy client fires one more emit under the now-COMMITTED <code>op_id</code> — with a different payload</div>
+            <div class="meta">the idempotency rung finds the committed entry and compares digests: different ⇒ <b>Rejected(op_id_collision)</b> — key misuse is VISIBLE, never a silent drop of the second payload (an identical replay — same digest — is a plain <code>Duplicate</code> no-op). Before the digest this was a silent <code>Duplicate</code>: the ratified behavior delta</div>
           </div></div>
           <div class="trace-row"><div class="trace-n">4</div><div class="trace-c">
             <div class="ev">meanwhile on <code>implement.on_pass</code>: the test gate runs (<b>family: verify</b>)</div>
@@ -10994,7 +10994,7 @@ offerable_ops(template, role, step_id) → op set                    # EC — th
 # operator/lifecycle paths are UNCHANGED until their digest arrives (a named Absent).
 admit_loaded(instance, expect, input?) → Accepted | Duplicate | Stale | Rejected
   IF expect.op_id     is present AND instance.transcript.has(expect.op_id)  THEN                                # idempotency rung — key scope (instance_id, op_id)
-    IF expect.digest is absent OR expect.digest = recorded_digest_of(instance, expect.op_id)
+    IF expect.digest is absent OR expect.digest = recorded_digest_of(instance, expect.op_id)                    # recorded_digest_of reads the digest the COMMITTED fact carries (appended at commit — a rejected attempt recorded nothing)
                                                                             THEN RETURN Duplicate               # same operation, same contract ⇒ a replay: no-op
     RETURN Rejected(op_id_collision)                                                                            # same op_id, DIFFERENT payload/contract ⇒ key misuse made VISIBLE (never silently dropped) — the rung's own generic reject, like missing_version below
   IF expect.state     is present AND NOT expect.state.holds(instance)       THEN RETURN expect.state.reject     # lifecycle/state rung; an unnamed reject ⇒ bare-REQUIRE semantics
@@ -11437,10 +11437,12 @@ HANDLE envelope → Outcome
                                                             # resolves in the pinned template), so hoisting it cannot
                                                             # reject or mask a rung; consumed by the authority rung
 
+  digest ← payload_digest(envelope, emit_contract_of(step, envelope.type))   # EC — computed once: the rung compares it, the commit records it
+
   # ADMISSION (born at L0d) — the actor-envelope rungs: idempotency (now digest-aware, EC) → lifecycle/state → staleness → authority (born at L1)
   outcome ← admit_loaded(instance, expect: {
     op_id:     envelope.op_id,                                  # a duplicate is a no-op, no 2nd entry
-    digest:    payload_digest(envelope, emit_contract_of(step, envelope.type)),   # EC — the actor-emit path supplies the digest: same op_id under a different payload/contract ⇒ op_id_collision, visible (the other ingress paths join later — a named Absent)
+    digest:    digest,                                          # EC — the actor-emit path supplies the digest: same COMMITTED op_id under a different payload/contract ⇒ op_id_collision, visible (the other ingress paths join later — a named Absent)
     state:     kernel_status = ACTIVE → Rejected(not_active),   # L0d lifecycle guard: actor emits only in actor-routable ACTIVE execution
     version:   envelope.expected_version,                       # actor-supplied stale-intent — mandatory at L0b
     authority: { claim:   envelope.expected_role,               # L1 role authority — mandatory at L1 (shape-derived, todo E1)
@@ -11491,7 +11493,7 @@ HANDLE envelope → Outcome
 
   # one atomic commit, CAS on instance.version
   COMMIT atomically at expected_version = instance.version:
-    instance.transcript.append(envelope, issued_agent_config: issued_config, gate_decisions: gate_decisions)   # provenance: issued config + gate verdicts / evidence refs
+    instance.transcript.append(envelope, payload_digest: digest, issued_agent_config: issued_config, gate_decisions: gate_decisions)   # provenance: issued config + gate verdicts / evidence refs. EC — the digest rides the COMMITTED fact: this is what recorded_digest_of reads (rejected attempts record nothing, so they consume nothing)
     apply_target_entry_effects(instance, template, step.id, target)                       # L3 — generic arrival: target type decides advance / park / complete (the same apply_target_entry_effects() SUBMIT_DECISION uses)
     instance.version ← instance.version + 1
   # on CAS conflict: restart HANDLE from load —
@@ -11515,7 +11517,7 @@ handle_help_request(instance, template, step, envelope) → Outcome    # L5 — 
   # moves no workflow state beyond parking (policy filters on asks are an open, deferred question)
   request_ref ← new_request_ref()
   COMMIT atomically at expected_version = instance.version:         # one visible transition — the park and the fact land together (the human_gate precedent)
-    instance.transcript.append(HELP_REQUEST { op_id: envelope.op_id, request_ref, step_id: step.id, round: instance.round, question: envelope.payload.question, refs: envelope.payload.refs })   # THE durable fact: the one op_id-carrying entry for this emit — no separate generic envelope append (one emit, one entry). step_id + round ride the fact so the exchange is filterable from the RECORD alone
+    instance.transcript.append(HELP_REQUEST { op_id: envelope.op_id, payload_digest: payload_digest(envelope, help_spec), request_ref, step_id: step.id, round: instance.round, question: envelope.payload.question, refs: envelope.payload.refs })   # THE durable fact: the one op_id-carrying entry for this emit — no separate generic envelope append (one emit, one entry). step_id + round ride the fact; the digest rides it too (EC — recorded_digest_of reads committed facts)
     instance.kernel_status ← WAITING
     instance.wait ← { kind: help_pending, requested_by: step.id, request_ref }   # blocking variant: the marker homes in the wait slot — "≤ 1 open help" is THIS home's property, not the errand's
     instance.version ← instance.version + 1

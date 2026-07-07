@@ -10,10 +10,12 @@ HANDLE envelope → Outcome
                                                             # resolves in the pinned template), so hoisting it cannot
                                                             # reject or mask a rung; consumed by the authority rung
 
+  digest ← payload_digest(envelope, emit_contract_of(step, envelope.type))   # EC — computed once: the rung compares it, the commit records it
+
   # ADMISSION (born at L0d) — the actor-envelope rungs: idempotency (now digest-aware, EC) → lifecycle/state → staleness → authority (born at L1)
   outcome ← admit_loaded(instance, expect: {
     op_id:     envelope.op_id,                                  # a duplicate is a no-op, no 2nd entry
-    digest:    payload_digest(envelope, emit_contract_of(step, envelope.type)),   # EC — the actor-emit path supplies the digest: same op_id under a different payload/contract ⇒ op_id_collision, visible (the other ingress paths join later — a named Absent)
+    digest:    digest,                                          # EC — the actor-emit path supplies the digest: same COMMITTED op_id under a different payload/contract ⇒ op_id_collision, visible (the other ingress paths join later — a named Absent)
     state:     kernel_status = ACTIVE → Rejected(not_active),   # L0d lifecycle guard: actor emits only in actor-routable ACTIVE execution
     version:   envelope.expected_version,                       # actor-supplied stale-intent — mandatory at L0b
     authority: { claim:   envelope.expected_role,               # L1 role authority — mandatory at L1 (shape-derived, todo E1)
@@ -64,7 +66,7 @@ HANDLE envelope → Outcome
 
   # one atomic commit, CAS on instance.version
   COMMIT atomically at expected_version = instance.version:
-    instance.transcript.append(envelope, issued_agent_config: issued_config, gate_decisions: gate_decisions)   # provenance: issued config + gate verdicts / evidence refs
+    instance.transcript.append(envelope, payload_digest: digest, issued_agent_config: issued_config, gate_decisions: gate_decisions)   # provenance: issued config + gate verdicts / evidence refs. EC — the digest rides the COMMITTED fact: this is what recorded_digest_of reads (rejected attempts record nothing, so they consume nothing)
     apply_target_entry_effects(instance, template, step.id, target)                       # L3 — generic arrival: target type decides advance / park / complete (the same apply_target_entry_effects() SUBMIT_DECISION uses)
     instance.version ← instance.version + 1
   # on CAS conflict: restart HANDLE from load —

@@ -81,8 +81,10 @@ type, domain, vocabulary subset, cross-field rule; diagnostics MANDATORILY
 carry the field path + the violated rule/schema id), `missing_evidence_ref`
 (an unmet claim-scoped obligation, #6); `missing_required_field` is REUSED
 both for required fields AND for a MISSING mandatory assertion (it IS a
-required field — the one-vocabulary rule). No third schema name; registry
-growth: 81 → 84.
+required field — the one-vocabulary rule). No third schema name. Review
+round 2 added the fourth, gate-config name (`invalid_gate_config` — unknown
+family / verify without a currency binding, at create); registry growth:
+81 → 85.
 
 **Verdict: PASS.** The slice reduces to config surfaces, one call-site
 validator (the announced payload rung at its declared home), one create-time
@@ -156,3 +158,21 @@ discipline: pre-declared, itemized, ratified at the build review):
   distinguishes evidence currency from committed-policy-input freshness, and
   the config tags `previous_reviewer_verdict` as `family: policy` with the
   separation-not-verification note.)*
+
+- **F-EC-2 · the landing trace told a pre-hardening idempotency story
+  (caught in the landing review, HIGH; fixed before ratification).** The
+  section's runtime trace claimed a rejected emit "recorded" its digest and
+  showed the corrected same-op_id retry as a collision — contradicting the
+  ladder itself (the digest branch fires only on a COMMITTED
+  `transcript.has(op_id)` entry) and the ingress-touch rule ("a rejected
+  attempt never consumes the op_id"). Fixed: row 1 states the op_id is NOT
+  consumed; row 2 is the corrected retry legitimately REUSING it (the op_id
+  contract: resend reuses, only a post-Stale refresh renews) and committing;
+  row 3 is the true collision — a later emit under the now-committed op_id
+  with a different payload. The same review surfaced the storage
+  under-specification: the digest now explicitly RIDES the committed fact
+  (the HANDLE append and the HELP_REQUEST fact carry `payload_digest`;
+  `recorded_digest_of` reads committed facts — rejected attempts record
+  nothing). Class lesson: a trace is a behavioral claim — it must be
+  replayed against the ladder's actual branches, not against the intuition
+  that motivated them.

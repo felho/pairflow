@@ -6,7 +6,7 @@
 # operator/lifecycle paths are UNCHANGED until their digest arrives (a named Absent).
 admit_loaded(instance, expect, input?) → Accepted | Duplicate | Stale | Rejected
   IF expect.op_id     is present AND instance.transcript.has(expect.op_id)  THEN                                # idempotency rung — key scope (instance_id, op_id)
-    IF expect.digest is absent OR expect.digest = recorded_digest_of(instance, expect.op_id)
+    IF expect.digest is absent OR expect.digest = recorded_digest_of(instance, expect.op_id)                    # recorded_digest_of reads the digest the COMMITTED fact carries (appended at commit — a rejected attempt recorded nothing)
                                                                             THEN RETURN Duplicate               # same operation, same contract ⇒ a replay: no-op
     RETURN Rejected(op_id_collision)                                                                            # same op_id, DIFFERENT payload/contract ⇒ key misuse made VISIBLE (never silently dropped) — the rung's own generic reject, like missing_version below
   IF expect.state     is present AND NOT expect.state.holds(instance)       THEN RETURN expect.state.reject     # lifecycle/state rung; an unnamed reject ⇒ bare-REQUIRE semantics

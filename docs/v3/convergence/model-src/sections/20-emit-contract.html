@@ -23,15 +23,15 @@
         <div class="trace">
           <div class="trace-row"><div class="trace-n">1</div><div class="trace-c">
             <div class="ev">the reviewer emits <code>CONVERGED</code> — summary says "all good", but <code>findings</code> carries a <code>P1</code></div>
-            <div class="meta">admission passes (op_id fresh, digest recorded); the payload rung reads the op's declared contract: <code>CONVERGED</code> permits severities <code>{P2, P3}</code> only ⇒ <b>Rejected(invalid_field_value, { field_path: findings[0].severity, rule_id: converged.subset })</b> — the diagnostics name the field AND the rule; no state change, the round is not burned</div>
+            <div class="meta">admission passes (a fresh <code>op_id</code> — nothing committed under it yet); the payload rung reads the op's declared contract: <code>CONVERGED</code> permits severities <code>{P2, P3}</code> only ⇒ <b>Rejected(invalid_field_value, { field_path: findings[0].severity, rule_id: converged.subset })</b> — the diagnostics name the field AND the rule; no state change, the round is not burned, and the <code>op_id</code> is NOT consumed (a rejected attempt never is)</div>
           </div></div>
-          <div class="trace-row idem"><div class="trace-n">2</div><div class="trace-c">
-            <div class="ev">the reviewer's client retries with a CORRECTED payload — but reuses the same <code>op_id</code></div>
-            <div class="meta">the idempotency rung compares digests: same <code>op_id</code>, different payload/contract identity ⇒ <b>Rejected(op_id_collision)</b> — key misuse is VISIBLE, never a silent drop of the second payload (before the digest, this was a silent <code>Duplicate</code>; the ratified behavior delta). A corrected re-attempt is a NEW logical operation ⇒ fresh <code>op_id</code></div>
+          <div class="trace-row"><div class="trace-n">2</div><div class="trace-c">
+            <div class="ev">the corrected <code>CONVERGED { summary, findings: [P2…] }</code> — the SAME <code>op_id</code>, legitimately reused</div>
+            <div class="meta">a corrected retry of a REJECTED attempt is the same logical operation (the op_id contract: resend reuses; only a post-<code>Stale</code> refresh renews); payload rung ✓ → the gate pipeline: <code>declarative.threshold</code> (<b>family: policy</b> — round ≥ 2 ✓) and <code>previous_reviewer_verdict</code> (<b>family: policy</b> — separation, not artifact verification) → COMMIT — the transcript fact records the <code>payload_digest</code>; route to <code>perf_test</code></div>
           </div></div>
-          <div class="trace-row"><div class="trace-n">3</div><div class="trace-c">
-            <div class="ev">fresh <code>op_id</code>: <code>CONVERGED { summary, findings: [P2…], … }</code> — well-formed</div>
-            <div class="meta">payload rung ✓ (subset ✓, no contradiction) → the gate pipeline: <code>declarative.threshold</code> (<b>family: policy</b> — round ≥ 2 ✓) and <code>previous_reviewer_verdict</code> (<b>family: policy</b> — separation, not artifact verification) → commit, route to <code>perf_test</code></div>
+          <div class="trace-row idem"><div class="trace-n">3</div><div class="trace-c">
+            <div class="ev">a buggy client fires one more emit under the now-COMMITTED <code>op_id</code> — with a different payload</div>
+            <div class="meta">the idempotency rung finds the committed entry and compares digests: different ⇒ <b>Rejected(op_id_collision)</b> — key misuse is VISIBLE, never a silent drop of the second payload (an identical replay — same digest — is a plain <code>Duplicate</code> no-op). Before the digest this was a silent <code>Duplicate</code>: the ratified behavior delta</div>
           </div></div>
           <div class="trace-row"><div class="trace-n">4</div><div class="trace-c">
             <div class="ev">meanwhile on <code>implement.on_pass</code>: the test gate runs (<b>family: verify</b>)</div>
