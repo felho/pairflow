@@ -814,6 +814,15 @@ rules, the op_id edge contract, leaderless mechanics, decision-audit mechanics, 
 kernel-shape non-goals. Process rule: it is the implementation plan's MANDATORY first
 chapter — every `IC-*` item maps to an acceptance test, a schema/lint/CI check, or an ADR.
 
+**V1 operability scope.** [`../topics/_open-v1-operability.md`](../topics/_open-v1-operability.md)
+(settled 2026-07-07) binds four scope/contract decisions the implementation plan inherits:
+the CLI-first read-only visibility floor (incl. live tail) ships WITH Block A; a test-kit
+chapter (scripted actor, fake egress, fixtures) as a peer of the IC chapter; the injected
+time source as an IC-style contract line; and the ledger as the model↔code contract surface
+(three drift-tested name-spaces, chapter traces as golden tests, invariant post-condition
+suite). It also reserves the implementation plan's practical chapters (template file format,
+bootstrap, storage pick + migration stance, runner MVP scope, operator recourse card).
+
 **L5 — Help subflow (agent-initiated Ask).**
 Concepts: `Subflow` (blocking / non-blocking); `HELP_PENDING`; the agent-initiated form
 of the Ask primitive (still local delivery). The primitives rebaseline (above) precedes
