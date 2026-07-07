@@ -171,7 +171,10 @@ Per README §5.4, "in scope" is a plan decision. The round-1 inventory:
 
 The chapter-3 coverage script asserts over the plan: union of declared packet
 slices = this inventory; no orphans; no undeclared double owners. Splits
-re-declare their slices and the union must still close.
+re-declare their slices and the union must still close. The disposition names
+are exact machine tokens — the script parses them as a fixed enum
+(`implement`, `type/schema`, `test-only`, `generated/mapped`,
+`alias/inherited`, `review-only`); no free-form variants.
 
 ### 1.5 Named deliverable: the task-packet template
 
