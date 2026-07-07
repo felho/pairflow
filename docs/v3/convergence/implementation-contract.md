@@ -10,7 +10,8 @@ failure modes the kernel-spectrum synthesis documented. Extracted from
 **Process rule (the reason this file exists):** the implementation plan's FIRST
 chapter consumes this file. Every `IC-*` item maps to one or more of: an
 acceptance/contract test, a schema/lint/CI check, or an ADR that records a
-deliberate deviation. An item with none of the three is a planning gap. Items
+deliberate deviation (ADR convention: PI-10 + the playbook §8 activation
+addendum). An item with none of the three is a planning gap. Items
 are numbered `IC-*` for referencing from the plan, tests, and ADRs. (The `PI-*`
 section at the end is different in kind — see its own rule there.)
 
@@ -210,6 +211,18 @@ item with no home in the plan is a planning gap.**
 - **PI-9. Operator recourse card** — one page: what a v1 operator can do when
   a run misbehaves (query via the floor, cancel, deleteRequested; no
   watchdog/retry until L9).
+- **PI-10. The ADR convention + compliance review step** (activated
+  2026-07-07 — the design-method playbook §8 addendum is the definition).
+  Deliverables: the ADR home directory near the code (the plan picks the
+  location), the template with lifecycle + links, the flat index, the small
+  integrity check (dangling refs / supersede cycles / status mismatches, in
+  the `check.sh` culture), and the review-time ADR compliance step (diff vs
+  accepted ADRs, incl. the unlinked-change prompt) as the third QA axis
+  beside the IC contract tests and the PI-3 drift tests. This is the
+  instrument every ADR reference in this file (process rule, IC-A2, IC-A3,
+  IC-B, IC-N) resolves to. Boundary: implementation-side decisions only —
+  model-side decisions stay in the corpus + topics memos, no retroactive
+  conversion.
 
 **Scoped OUT of the first round (deliberate, not an omission):** the
 capability-query op family (`list_my_ops` / `list_spawnable_actors` /
