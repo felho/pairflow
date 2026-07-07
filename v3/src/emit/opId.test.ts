@@ -25,6 +25,31 @@ describe("payload digest (canonical serialization)", () => {
     expect(() => digestPayload({ f: () => 1 })).toThrow(/canonical/);
     expect(() => digestPayload(Number.NaN)).toThrow(/canonical/);
   });
+
+  it("rejects undefined property values — {} and {a: undefined} must not collide silently", () => {
+    expect(() => digestPayload({ a: undefined })).toThrow(/canonical/);
+    expect(() => digestPayload({ nested: { a: undefined } })).toThrow(/canonical/);
+  });
+
+  it("rejects non-plain objects (Date/Map/Set/class instances would flatten to {})", () => {
+    expect(() => digestPayload(new Date("2026-01-01T00:00:00Z"))).toThrow(/canonical/);
+    expect(() => digestPayload(new Map([["a", 1]]))).toThrow(/canonical/);
+    expect(() => digestPayload(new Set([1]))).toThrow(/canonical/);
+    class Payload {
+      value = 1;
+    }
+    expect(() => digestPayload(new Payload())).toThrow(/canonical/);
+  });
+
+  it("rejects symbol keys (Object.entries would silently drop them)", () => {
+    expect(() => digestPayload({ [Symbol("s")]: 1, a: 2 })).toThrow(/canonical/);
+  });
+
+  it("accepts null-prototype objects as plain data", () => {
+    const bare = Object.create(null) as Record<string, unknown>;
+    bare["a"] = 1;
+    expect(digestPayload(bare)).toBe(digestPayload({ a: 1 }));
+  });
 });
 
 describe("actor-emit family — content-addressed (ADR-004)", () => {

@@ -30,10 +30,12 @@ function sha256Hex(input: string): string {
 
 /**
  * Canonical serialization: JSON with recursively sorted object keys.
- * Arrays keep their order (order is meaning); non-JSON values are an
- * error, never a silent coercion — semantically identical payloads must
- * hash identically, and anything the serialization cannot pin down would
- * break that promise quietly.
+ * Arrays keep their order (order is meaning); everything the
+ * serialization cannot pin down is an ERROR, never a silent coercion —
+ * semantically identical payloads must hash identically, and a silently
+ * dropped undefined property, symbol key, or non-plain object (Date, Map,
+ * Set, class instance — all of which Object.entries flattens toward {})
+ * would break that promise quietly.
  */
 function canonicalize(value: unknown): string {
   if (value === null) {
@@ -52,8 +54,22 @@ function canonicalize(value: unknown): string {
       if (Array.isArray(value)) {
         return `[${value.map((item) => canonicalize(item)).join(",")}]`;
       }
+      const proto: unknown = Object.getPrototypeOf(value);
+      if (proto !== Object.prototype && proto !== null) {
+        throw new Error(
+          `payload is not canonicalizable: non-plain object (${value.constructor?.name ?? "unknown"})`,
+        );
+      }
+      if (Object.getOwnPropertySymbols(value).length > 0) {
+        throw new Error("payload is not canonicalizable: symbol-keyed property");
+      }
       const entries = Object.entries(value as Record<string, unknown>)
-        .filter(([, v]) => v !== undefined)
+        .map(([k, v]) => {
+          if (v === undefined) {
+            throw new Error(`payload is not canonicalizable: undefined property '${k}'`);
+          }
+          return [k, v] as const;
+        })
         .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
         .map(([k, v]) => `${JSON.stringify(k)}:${canonicalize(v)}`);
       return `{${entries.join(",")}}`;
