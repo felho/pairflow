@@ -9,6 +9,8 @@ export { createScriptedActor } from "./scriptedActor.js";
 export type { DeliverFn, ScriptedActor } from "./scriptedActor.js";
 export { createScriptedGateRunner, createScriptedProcessRunner } from "./fixtures.js";
 export type { ScriptedGateRunner, ScriptedProcessRunner } from "./fixtures.js";
+export { createScriptedTailWait } from "./tailWait.js";
+export type { ScriptedTailWait } from "./tailWait.js";
 export { fixtureDefinitionStore, fixtureTemplate } from "./templateFixture.js";
 export {
   checkEndStateConsistency,

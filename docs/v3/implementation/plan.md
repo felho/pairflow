@@ -1016,6 +1016,19 @@ behind a separate entrypoint (§6.5).
   observe". Dimensions: no-skip across commits landing DURING the tail,
   no-duplicate across poll rounds, ordering, stop condition, unknown
   fail-closed.
+- **Factory shape + error contract (aligned at ch6-P2 pre-approval):**
+  the tail is its own floor-module factory — `createTail(store, wait)`
+  in `floor/tail.ts` — NOT a `createFloor` signature extension: the
+  request/response `Floor` stays seam-free; the CLI (P4) wires the two
+  together, and the production timer binding for `TailWait` activates
+  THERE (P2 = seam + engine foundation, not an end-to-end operator
+  tail). Stop rule: `wait()` runs only after a non-terminal POST-drain
+  status read; once terminal is observed the engine drains till empty
+  and completes. Failure surface: the factory never throws — every
+  failure lands on iteration (invalid cursor `RangeError`, startup
+  unknown `TailUnknownInstanceError`, mid-stream vanish
+  `TailIntegrityError`, `wait()` rejections propagate as-is and end
+  the tail).
 
 ### 6.4 The debug bundle + the redaction boundary (P3)
 
