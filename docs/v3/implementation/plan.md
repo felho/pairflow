@@ -1108,6 +1108,33 @@ behind a separate entrypoint (§6.5).
   2. the **JSON/exit-code contract as one canonical matrix** (success /
      usage-config error / kernel negative outcome / integrity-internal
      error as distinct classes), not scattered prose.
+- **Aligned at ch6-P4a pre-approval (two refine rounds):**
+  - **Single `start` verb — there is no `create`.** The existing
+    surface is the single-call `START_INSTANCE` bootstrap
+    (`kernel.startInstance`: template load → binding → create RUNNING
+    v1 → intent; the caller mints the id). A separate create/start op
+    pair is model territory (the open creation-identity topic); the
+    bullet above is corrected by this line.
+  - **P4 split into P4a (normal CLI + ADR-009 + lint + template copy)
+    and P4b (dev entrypoint verbs)** — the boundary is PROVEN in P4a
+    (lint entry + executed probes both directions); the dev content
+    and its own input/output/exit matrix land in P4b.
+  - **Template source (MD-1 extended):** the normal CLI graph cannot
+    import the testkit fixture, so `cli/templates.ts` carries a
+    production COPY of local-pair-v0, drift-pinned by test against
+    `fixtureTemplate()`; ch 8 retires both.
+  - **Channel + error contract:** stdout carries ONLY data documents
+    (one JSON per verb; tail = NDJSON rows; protocol outcomes incl.
+    stale/rejected are DATA); every failure is ONE canonical error
+    document on stderr — `error.{class,name,message[,details]}`,
+    keyset-tested — plus the class exit code (0 ok / 2 usage / 3
+    not-found·kernel-negative / 1 internal).
+  - **Config vs integrity split:** missing/empty `--db`/env = usage
+    (2); store-OPEN failures (ADR-003 fail-closed, IO) = internal (1).
+  - **Activation:** the ROOT bridge script `v3:cli` runs the shipped
+    entrypoint via the root-side `tsx` (zero new deps; native Node
+    type-stripping cannot resolve `.js`-specifier TS imports); proven
+    by a last-mile smoke on the real entrypoint.
 
 ### 6.6 Coverage and intake impact
 
@@ -1135,7 +1162,8 @@ back to pre-approve).
 | ch6-P1 | `getTimeline` cursor read: StorePort + sqlite + floor, null/`[]` contract | pre-approve (first-of-a-kind: cursor read surface) |
 | ch6-P2 | `tailCommittedTimeline` seed + `TailWait` seam | pre-approve (first-of-a-kind: streaming shape + wait seam) |
 | ch6-P3 | debug bundle + `RedactionPolicy` (redact default, dev pass-through) | pre-approve (first-of-a-kind: redaction boundary) |
-| ch6-P4 | `cli/` + `cli/dev/` entrypoints, command + dev verbs, nonce-family consumer, exit-code matrix + ADR-009 | pre-approve (first-of-a-kind: new module + boundary ADR) |
+| ch6-P4a | `cli/` normal entrypoint: read + command verbs, nonce-family consumer, config/exit/error matrices, ADR-009 + lint boundary, MD-1 template copy | pre-approve (first-of-a-kind: new module + boundary ADR; split at the P4 refine round) |
+| ch6-P4b | `cli/dev/` entrypoint: inject / replay / pass-through bundle dump, own input/output/exit matrix | pre-approve (first-of-a-kind: dev input contracts) |
 
 Order: P1 → P2 (the tail builds on the cursor read); P3 after P1 (the
 bundle reads detail + timeline); P4 last (consumes floor, bundle,

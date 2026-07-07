@@ -23,6 +23,7 @@ Integrity check: [`check.sh`](check.sh) — root bridge `pnpm v3:adr-check`.
 | [ADR-006](ADR-006-sqlite-driver-node-sqlite.md) | SQLite driver — node:sqlite on Node ≥ 24 | accepted | 2026-07-07 |
 | [ADR-007](ADR-007-drift-test-module.md) | drift as a test-only module — the model↔code lock's home | accepted | 2026-07-07 |
 | [ADR-008](ADR-008-transcript-digest-form.md) | the transcript digest is type-inclusive — two digest surfaces | accepted | 2026-07-07 |
+| [ADR-009](ADR-009-operator-cli-module-and-dev-boundary.md) | the operator CLI module and the dev entrypoint boundary | accepted | 2026-07-08 |
 
 ## Trigger watch (dormant ADRs)
 
