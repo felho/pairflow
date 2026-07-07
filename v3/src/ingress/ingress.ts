@@ -60,7 +60,10 @@ function parseEnvelope(raw: unknown): EventEnvelope | null {
     "expectedVersion" in record &&
     (typeof expectedVersion !== "number" ||
       !Number.isInteger(expectedVersion) ||
-      expectedVersion < 0)
+      expectedVersion < 0 ||
+      // Number.isInteger(-0) is true and -0 < 0 is false, yet the
+      // round-trip flattens it to 0 — reject like the payload does.
+      Object.is(expectedVersion, -0))
   ) {
     return null;
   }

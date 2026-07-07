@@ -131,9 +131,18 @@ dispatch_intent(instance, template, step_id) → DispatchIntent
   prototypes, and a custom array prototype smuggles the same `toJSON`
   rewrite one lane over; null-proto arrays reject too) and every index
   0..length−1 must be an OWN data property — `i in value` would let an
-  inherited index fill a hole. Out of scope (undetectable / compromised
-  runtime): a lying Proxy and polluted GLOBAL prototypes — the real
-  trust boundary is the ch-9 transport serialization.
+  inherited index fill a hole. *(Aftermath 4 — numeric identity, sweep
+  CLOSED:)* `-0` rejects everywhere (payload and `expectedVersion`) —
+  `JSON.stringify(-0)` flattens to `"0"`, so `{x:-0}` would digest and
+  persist as `{x:0}`, while `JSON.parse("-0")` CAN deliver `-0` into
+  the process. The remaining round-trip dimensions were swept and
+  test-pinned as safe: every other finite double round-trips exactly;
+  lone surrogates are escaped to ASCII by well-formed stringify
+  (SQLite-safe too); circular/over-deep payloads reject loudly by
+  throw; an own `__proto__` key round-trips as data. Out of scope
+  (undetectable / compromised runtime): a lying Proxy and polluted
+  GLOBAL prototypes — the real trust boundary is the ch-9 transport
+  serialization.
 - **A DONE instance / terminal current step** has no Step entry →
   `transitions` lookup fails → `Rejected(no_transition)`. This is the
   model mapping (`template.step` of a terminal position has no

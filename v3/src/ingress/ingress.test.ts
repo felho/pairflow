@@ -71,6 +71,15 @@ describe("ingress — valid_shape (Rejected(invalid_shape) family)", () => {
     },
   );
 
+  it("expectedVersion: -0 → invalid_shape (JSON.parse('-0') CAN deliver it; stringify would flatten it)", async () => {
+    const { kernel } = capturingKernel();
+    const negativeZero = JSON.parse("-0") as number;
+    expect(Object.is(negativeZero, -0)).toBe(true);
+    expect(
+      await createIngress(kernel).submit({ ...validRaw, expectedVersion: negativeZero }),
+    ).toEqual({ kind: "rejected", reason: "invalid_shape" });
+  });
+
   it("a non-string eventId → invalid_shape", async () => {
     const { kernel } = capturingKernel();
     expect(await createIngress(kernel).submit({ ...validRaw, eventId: 9 })).toEqual({
@@ -119,6 +128,11 @@ describe("ingress — the payload must survive the JSON round-trip (the transcri
   it("rejects non-finite numbers — stringify silently turns them into null", async () => {
     await expectPayloadRejected(Number.NaN);
     await expectPayloadRejected({ x: Number.POSITIVE_INFINITY });
+  });
+
+  it("rejects negative zero in the payload — it would flatten to 0 in the round-trip", async () => {
+    await expectPayloadRejected(-0);
+    await expectPayloadRejected({ x: -0 });
   });
 
   it("rejects non-plain objects — Date/Map/Set would mutate or flatten", async () => {

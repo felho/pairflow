@@ -31,6 +31,36 @@ describe("payload digest (canonical serialization)", () => {
     expect(() => digestPayload(Number.NaN)).toThrow(/canonical/);
   });
 
+  it("rejects negative zero — JSON.stringify flattens -0 to 0, so {x:-0} would collide with {x:0}", () => {
+    expect(JSON.stringify(-0)).toBe("0"); // the flattening this guards against
+    expect(() => digestPayload(-0)).toThrow(/canonical/);
+    expect(() => digestPayload({ x: -0 })).toThrow(/canonical/);
+    expect(() => digestPayload([1, -0])).toThrow(/canonical/);
+    expect(digestPayload({ x: 0 })).toBe(digestPayload({ x: 0 }));
+    expect(isCanonicalizable(-0)).toBe(false);
+  });
+
+  it("dimension sweep: every other finite double round-trips exactly", () => {
+    for (const n of [1e21, 5e-324, 0.1, Number.MAX_SAFE_INTEGER + 3, -1.5]) {
+      expect(JSON.parse(JSON.stringify(n))).toBe(n);
+      expect(digestPayload(n)).toBe(digestPayload(n));
+    }
+  });
+
+  it("dimension sweep: lone surrogates are SAFE — well-formed stringify escapes them to ASCII", () => {
+    const lone = "\ud800";
+    expect(JSON.parse(JSON.stringify(lone))).toBe(lone);
+    expect(digestPayload(lone)).toBe(digestPayload(lone));
+    expect(digestPayload(lone)).not.toBe(digestPayload("\ud801"));
+  });
+
+  it("dimension sweep: circular payloads reject loudly (never a coerced partial value)", () => {
+    const cyc: Record<string, unknown> = { a: 1 };
+    cyc["self"] = cyc;
+    expect(() => digestPayload(cyc)).toThrow();
+    expect(isCanonicalizable(cyc)).toBe(false);
+  });
+
   it("rejects undefined property values — {} and {a: undefined} must not collide silently", () => {
     expect(() => digestPayload({ a: undefined })).toThrow(/canonical/);
     expect(() => digestPayload({ nested: { a: undefined } })).toThrow(/canonical/);

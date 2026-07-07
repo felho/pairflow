@@ -49,6 +49,12 @@ function canonicalize(value: unknown): string {
       if (!Number.isFinite(value)) {
         throw new Error(`payload is not canonicalizable: non-finite number ${String(value)}`);
       }
+      // JSON.stringify flattens -0 to "0": {x: -0} would digest AND
+      // persist as {x: 0} — reject, never coerce. (Every other finite
+      // double round-trips exactly; JSON.parse("-0") can deliver -0.)
+      if (Object.is(value, -0)) {
+        throw new Error("payload is not canonicalizable: negative zero (flattens to 0)");
+      }
       return JSON.stringify(value);
     case "object": {
       if (Array.isArray(value)) {

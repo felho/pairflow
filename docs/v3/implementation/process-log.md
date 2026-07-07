@@ -88,3 +88,17 @@ chapter-boundary verdict by appending `→ <outcome>` at review time.
   gate: value shapes → descriptors → prototypes. When ch 5 derives
   gate tests, enumerate the claim's DIMENSIONS first — a fix scoped to
   the dimension just caught repeats this loop
+- 2026-07-07 · ch 4 aftermath 4 · fourth round, same gate: -0 passed
+  the number branch (Number.isFinite true; Number.isInteger(-0) true
+  and -0 < 0 false in the ingress) while stringify flattens it to 0 —
+  digest AND store would silently collide {x:-0} with {x:0}; review
+  caught it BEFORE the dimension-enumeration instruction was executed →
+  fixed (Object.is guards in canonicalize + ingress) AND the sweep the
+  aftermath-3 line demanded was finally RUN and test-pinned: all other
+  finite doubles round-trip exactly, lone surrogates are safe
+  (well-formed stringify escapes to ASCII), circular/over-deep payloads
+  reject loudly by throw, own __proto__ keys round-trip as data. The
+  ladder: values → descriptors → prototypes → numeric identity; the
+  gate's claim surface is now enumerated, not just patched. Meta-lesson
+  for ch 5: an instruction in the log is not execution — the sweep
+  should have run in aftermath 3, not aftermath 4
