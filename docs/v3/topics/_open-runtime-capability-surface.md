@@ -1,6 +1,20 @@
 # Open: Runtime capability surface
 
-Status: open research memo.
+Status: **settled direction (2026-07-07)** — three rules ratified; the concrete
+op list and naming deferred to the implementation plan (they depend on which
+runtime operations exist, and on the dynamic-orchestrator decision that shapes
+half the candidate list).
+
+1. **The surface exists and is visible.** The agent's context packet projects
+   which runtime operations it may call — the same visibility principle as
+   `available_ops` for emits. No hidden orchestration magic.
+2. **No side door.** Every operation that touches workflow state goes through
+   normal kernel ingress and becomes a committed fact; the "tool" is a thin
+   wrapper over the regular entry path. Dynamic never means unaudited.
+3. **Policy/definition mutation is propose-only.** An agent never edits a
+   policy or definition directly — it files a proposal into the change-control
+   channel (consistent with "no agent can edit its own instructions" and the
+   L12 definition-PR discipline).
 
 This memo records the Omnigent `sys_*` lesson for v3. The point is not the
 prefix itself. The useful pattern is that Omnigent exposes selected runtime

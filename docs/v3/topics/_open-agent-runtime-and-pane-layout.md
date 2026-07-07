@@ -1,11 +1,11 @@
 # Open Topic — Agent Runtime & Pane Layout (how we run agents)
 
 Date: 2026-06-20 · Updated: 2026-07-04 (2026-06-25: resumed — studies 11–12 folded in; omnigent re-examined at the source-code level; v1 pane layer grounded. 2026-07-04: §8 transport-layer read folded back into omnigent-study §5.1)
-Status: **RESUMED.** The two studies pending at parking (gastown #11, gstack #12) are in,
-omnigent was re-read at the **code** level, and the existing pairflow tmux/pane layer was read to
-ground the v1 reality (§7). The central decision (Q1) and the config-location (Q3) now have a
-settled direction; what stays open is the **v3 design choice** of pane-binding dimension (Q2) — now
-that v1 is known to use a fixed per-role grid — and one MVP-scope sub-decision for the user.
+Status: **SETTLED direction (2026-07-07).** Q1 (per-adapter cleanest channel; tmux =
+observe/takeover only), Q3 (layout config = presentation layer), and Q2 (pane binds
+**per-runtime-context** — one pane = one workspace/sandbox) are all settled; see §6.
+What remains is implementation-plan territory: the concrete config form and the
+MVP-scope sub-decision (local-worktree only vs headless/cloud).
 
 Relation to the rest of the research corpus: this is an **MVP-driven design topic**, not a
 reverse-engineering study. It sits at the convergence layer (mostly **L0e** runtime-context,
@@ -472,12 +472,17 @@ input fallback); the layout is a presentation detail at the edge.**
   (MVP-scope-gated):* does the MVP ship the headless/cloud provider now, or local-worktree only?
   (omnigent shows the cloud-provider shape is well-trodden if needed; the worktree provider is cheap
   either way.)
-- **Q2 — Pane-binding dimension: OPEN as a v3 design choice (no longer a grounding gap).** v1 is
-  now known to use **per-actor/role** — a fixed four-pane grid (`status` + `implementer` /
-  `reviewer` / `meta_reviewer`, role→pane-index, see §7). The choice for v3 is **keep per-role** or
-  **move to per-runtime-context** (worktree/sandbox) / per-active-dispatch. Leaning
-  per-runtime-context (fits the execution-process primitive and survives child-spawn; omnigent's
-  per-conversation resource is the same instinct).
+- **Q2 — Pane-binding dimension: SETTLED direction (2026-07-07) — per-runtime-context.** A pane
+  binds to a workspace/sandbox (one pane = one runtime context, e.g. one worktree), not to a role
+  and not to a dispatch. Rationale, ratified: per-role breaks the moment concurrency exists (two
+  live children each have an implementer — whose pane is "the implementer pane"? the v1 fixed grid
+  is a one-bubble-at-a-time legacy, see §7); per-dispatch churns (pane lifetimes in seconds);
+  per-runtime-context is stable across dispatches within an instance, multiplexes naturally across
+  parallel work (two workspaces = two panes), matches what a human actually watches ("what is
+  happening in that worktree"), and fits the ratified Identity/Sandbox/Session decomposition — a
+  pane observes a live session in a sandbox, never an abstract kernel concept. *Deferred to the
+  implementation plan:* the concrete config form (follows Q3) and the MVP-scope sub-decision
+  (local-worktree only vs headless/cloud).
 - **Q3 — Layout config location: SETTLED (runtime-adapter / presentation layer); config form open.**
   The *location* is settled — presentation config, not the workflow definition or kernel — which
   keeps the template platform-independent. (omnigent confirms: layout is the UI's job; the
