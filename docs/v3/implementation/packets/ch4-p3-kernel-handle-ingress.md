@@ -126,8 +126,14 @@ dispatch_intent(instance, template, step_id) → DispatchIntent
   can answer the digest read and the stringify read differently); array
   indices must be data properties. The ingress unknown-key check runs
   on `getOwnPropertyNames` — a non-enumerable unknown key is still an
-  unknown key. Out of scope (undetectable in-process): a lying Proxy —
-  the real trust boundary is the ch-9 transport serialization.
+  unknown key. *(Aftermath 3 — prototype level:)* arrays must carry the
+  STANDARD `Array.prototype` (`Array.isArray` is true across
+  prototypes, and a custom array prototype smuggles the same `toJSON`
+  rewrite one lane over; null-proto arrays reject too) and every index
+  0..length−1 must be an OWN data property — `i in value` would let an
+  inherited index fill a hole. Out of scope (undetectable / compromised
+  runtime): a lying Proxy and polluted GLOBAL prototypes — the real
+  trust boundary is the ch-9 transport serialization.
 - **A DONE instance / terminal current step** has no Step entry →
   `transitions` lookup fails → `Rejected(no_transition)`. This is the
   model mapping (`template.step` of a terminal position has no

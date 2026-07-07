@@ -52,8 +52,20 @@ function canonicalize(value: unknown): string {
       return JSON.stringify(value);
     case "object": {
       if (Array.isArray(value)) {
+        // Pin the prototype: Array.isArray is true across prototypes,
+        // and a custom array prototype can smuggle a toJSON that
+        // rewrites the persisted value (the object branch's hidden-
+        // toJSON attack, one lane over). Null-proto arrays reject too —
+        // only standard arrays are pinnable.
+        if (Object.getPrototypeOf(value) !== Array.prototype) {
+          throw new Error(
+            "payload is not canonicalizable: array with a non-standard prototype",
+          );
+        }
         for (let i = 0; i < value.length; i += 1) {
-          if (!(i in value)) {
+          // OWN property required: `i in value` would let an inherited
+          // index silently fill a hole of the own array.
+          if (!Object.prototype.hasOwnProperty.call(value, i)) {
             throw new Error(
               `payload is not canonicalizable: sparse array (hole at index ${String(i)})`,
             );

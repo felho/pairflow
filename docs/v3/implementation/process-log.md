@@ -77,3 +77,14 @@ chapter-boundary verdict by appending `→ <outcome>` at review time.
   real trust boundary is ch-9 transport serialization). Same lesson,
   one level deeper: "JSON round-trip" as a claim includes DESCRIPTOR
   semantics, not just value shapes
+- 2026-07-07 · ch 4 aftermath 3 · third round on the same gate: the
+  array branch left its PROTOTYPE unpinned (Array.isArray is true
+  across prototypes — a custom array proto smuggled the same toJSON
+  rewrite one lane over) and `i in value` accepted inherited indices →
+  proto pinned to Array.prototype (null-proto arrays reject), indices
+  must be OWN data props; Proxy + polluted global prototypes declared
+  out of scope (compromised runtime; ch-9 transport serialization is
+  the real boundary). The claim dimensions found so far on this ONE
+  gate: value shapes → descriptors → prototypes. When ch 5 derives
+  gate tests, enumerate the claim's DIMENSIONS first — a fix scoped to
+  the dimension just caught repeats this loop

@@ -99,6 +99,33 @@ describe("payload digest (canonical serialization)", () => {
     expect(() => digestPayload(arr)).toThrow(/canonical/);
   });
 
+  it("rejects arrays with a non-standard prototype — an array-proto toJSON rewrites the persisted value", () => {
+    const proto: unknown[] = [];
+    Object.defineProperty(proto, "toJSON", {
+      value: () => ["rewritten"],
+      enumerable: true,
+    });
+    const arr = [1];
+    Object.setPrototypeOf(arr, proto);
+    expect(JSON.stringify(arr)).toBe('["rewritten"]'); // the attack this guards against
+    expect(() => digestPayload(arr)).toThrow(/canonical/);
+    expect(() => digestPayload({ nested: arr })).toThrow(/canonical/);
+    expect(isCanonicalizable(arr)).toBe(false);
+  });
+
+  it("rejects a null-prototype array — only standard arrays are pinnable", () => {
+    const arr = Object.setPrototypeOf([1], null) as unknown;
+    expect(() => digestPayload(arr)).toThrow(/canonical/);
+  });
+
+  it("requires indices to be OWN properties — an inherited index must not fill a hole", () => {
+    const proto: unknown[] = [9];
+    const arr = new Array<number>(1);
+    Object.setPrototypeOf(arr, proto);
+    // 0 in arr is true (inherited), but the own array has a hole.
+    expect(() => digestPayload(arr)).toThrow(/canonical/);
+  });
+
   it("still accepts a non-enumerable ARRAY INDEX — stringify reads indices regardless of enumerability", () => {
     const arr: unknown[] = [];
     Object.defineProperty(arr, 0, { value: 7, enumerable: false });

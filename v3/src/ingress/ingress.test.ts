@@ -171,6 +171,18 @@ describe("ingress — the strict claim's full surface", () => {
     });
   });
 
+  it("a payload smuggling an array-prototype toJSON → invalid_shape (same attack, array branch)", async () => {
+    const { kernel } = capturingKernel();
+    const proto: unknown[] = [];
+    Object.defineProperty(proto, "toJSON", { value: () => ["rewritten"], enumerable: true });
+    const arr = [1];
+    Object.setPrototypeOf(arr, proto);
+    expect(await createIngress(kernel).submit({ ...validRaw, payload: { refs: arr } })).toEqual({
+      kind: "rejected",
+      reason: "invalid_shape",
+    });
+  });
+
   it("a non-plain raw envelope (class instance) → invalid_shape", async () => {
     class Env {
       instanceId = "inst-1";
