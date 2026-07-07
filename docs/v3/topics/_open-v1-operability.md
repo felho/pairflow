@@ -3,7 +3,9 @@
 Status: **SETTLED (2026-07-07)** — all four questions ratified one at a time
 (Q1 visibility floor incl. required live tail; Q2 test kit; Q3 injected time
 source; Q4 the ledger as the model↔code contract surface, extended at
-ratification with the pseudocode-unit mapping and the domain-registry lift).
+ratification with the pseudocode-unit mapping and the domain-registry lift),
+**plus the external-review addendum (same day, ratified): the debug bundle,
+the operator CLI's command side, and the sharpened runner-MVP chapter.**
 The final section reserves implementation-plan chapters that need no design
 decision now.
 
@@ -226,6 +228,44 @@ executable form of the same checks carries the paper-test discipline across
 the model→code boundary. Nothing in the corpus claimed this transfer, so by
 default it would not have happened.
 
+## Addendum (2026-07-07, ratified) — external-review deltas
+
+After the Q1–Q4 round settled, an independent external review of the original
+gap assessment was brought in. Its five-chapter breakdown (conformance tests /
+harness / observable run log / debug surface / operator-UI MVP) converged on
+the settled round almost item-for-item — three of its five chapters are
+exactly Q4, Q2+Q3, and Q1, and its framing ("don't push these back into the
+core model; make them first-class implementation-plan chapters") is the
+round's own formula. Independent convergence is recorded as validation. Two
+genuine additions and one sharpening were absorbed:
+
+**A1 — The debug bundle (the Q1 floor's fifth piece).** A single read-only
+operation that exports *everything about one run* as a structured diagnostic
+artifact: instance state, transcript, gate decisions, actor dispatches,
+rejected inputs, payload digests, correlation/request ids, evidence refs.
+Distinct use case from the floor's queries: bug reports, post-mortems, and
+handing a stuck run to another person or agent for analysis. Same substrate,
+read-only, cheap — ships with the floor.
+
+**A2 — The operator CLI's command side ships with Block A too.** Q1 was
+deliberately read-only; but the milestone's CLI also carries the command
+verbs (already named in the core-API memo: `createInstance`, `start`,
+`submitDecision`, `resumeWait`, …) and the dev verbs (inject a fixture emit
+via the Q2 scripted actor, replay a golden trace, dump the debug bundle).
+All writes go through normal ingress — the CLI stays the thin client the
+core-API memo settled; the addendum only states that the command side is in
+the Block A milestone, not after it. Without it the kernel is formally done
+but cannot even be driven comfortably.
+
+**A3 — The runner-MVP reserved chapter, sharpened.** The chapter's content
+is now the concrete first-decision trio: the local worktree provider
+(`pairflow.worktree`), one real actor adapter, and the process-gate runner.
+(See the updated bullet below.)
+
+Not absorbed: the review's separate "UI/read-model" item — covered by Q1 +
+the inspector-UI memo, and the review itself lands on the same sequencing
+(CLI + read model first, web UI later).
+
 ## Reserved implementation-plan chapters (no design decision needed now)
 
 Recorded so the implementation plan inherits them as chapters, not
@@ -243,6 +283,9 @@ rediscoveries:
   right answer, but it must be stated.
 - **Runner MVP scope** — local-worktree only vs headless/cloud; already named
   as implementation-plan territory in `_open-agent-runtime-and-pane-layout.md`.
+  Sharpened by addendum A3: the chapter's first-decision trio is the local
+  worktree provider (`pairflow.worktree`), one real actor adapter, and the
+  process-gate runner.
 - **Operator recourse card** — one page stating what a v1 operator can
   actually do when a run misbehaves (query the silence via Q1's floor,
   cancel, deleteRequested; no watchdog/retry until L9) — all decided, just

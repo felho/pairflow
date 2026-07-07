@@ -820,7 +820,8 @@ the CLI-first read-only visibility floor (incl. live tail) ships WITH Block A; a
 chapter (scripted actor, fake egress, fixtures) as a peer of the IC chapter; the injected
 time source as an IC-style contract line; and the ledger as the model↔code contract surface
 (three drift-tested name-spaces, chapter traces as golden tests, invariant post-condition
-suite). It also reserves the implementation plan's practical chapters (template file format,
+suite). Its ratified external-review addendum adds the debug bundle (one-run structured
+diagnostic export) and the operator CLI's command+dev verbs to the same milestone. It also reserves the implementation plan's practical chapters (template file format,
 bootstrap, storage pick + migration stance, runner MVP scope, operator recourse card).
 
 **L5 — Help subflow (agent-initiated Ask).**
