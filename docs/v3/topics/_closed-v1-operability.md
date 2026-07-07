@@ -1,6 +1,14 @@
-# Open: V1 operability — testing, debugging, and the visibility floor
+# Closed: V1 operability — testing, debugging, and the visibility floor
 
-Status: **SETTLED (2026-07-07)** — all four questions ratified one at a time
+Status: **CLOSED (2026-07-07)** — settled AND fully anchored: nothing in this
+file is pending, it is purely the record of *why*. Binding homes: IC-D/IC-E
+plus the `PI-*` plan-intake checklist in
+[`implementation-contract.md`](../convergence/implementation-contract.md),
+the "V1 operability scope" paragraph in
+[`approach.md`](../convergence/approach.md), and `core-model-todo.md` T1
+(realized: ledger §4).
+
+Settlement record: all four questions ratified one at a time
 (Q1 visibility floor incl. required live tail; Q2 test kit; Q3 injected time
 source; Q4 the ledger as the model↔code contract surface, extended at
 ratification with the pseudocode-unit mapping and the domain-registry lift),

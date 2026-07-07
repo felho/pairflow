@@ -167,7 +167,7 @@ correlation as fencing) are stated in the model (the L0a note). The mechanics:
 
 These are NOT constraints: no test/lint/ADR mapping. They are the settled
 plan-facing payload of the v1-operability round
-([`../topics/_open-v1-operability.md`](../topics/_open-v1-operability.md) —
+([`../topics/_closed-v1-operability.md`](../topics/_closed-v1-operability.md) —
 detail and rationale live there), parked here because the plan's first chapter
 consumes this file and therefore cannot miss them. **Rule: every PI item must
 appear in the implementation plan as a chapter or a named deliverable; a PI

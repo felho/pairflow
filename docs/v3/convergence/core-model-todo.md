@@ -463,5 +463,5 @@ relation inventory per level, derived from the Domain-lens blocks (already
 semi-structured — every section carries exactly one, with marked-up aggregates and
 entities). This makes the domain vocabulary a semantic checksum on model edits, and
 the source for the implementation's type-layer drift test. Requirement recorded and
-motivated in `../topics/_open-v1-operability.md` Q4.4 (v1-operability round,
+motivated in `../topics/_closed-v1-operability.md` Q4.4 (v1-operability round,
 2026-07-07); the lift itself is this thread's work.

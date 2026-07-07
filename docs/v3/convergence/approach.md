@@ -814,7 +814,7 @@ rules, the op_id edge contract, leaderless mechanics, decision-audit mechanics, 
 kernel-shape non-goals. Process rule: it is the implementation plan's MANDATORY first
 chapter — every `IC-*` item maps to an acceptance test, a schema/lint/CI check, or an ADR.
 
-**V1 operability scope.** [`../topics/_open-v1-operability.md`](../topics/_open-v1-operability.md)
+**V1 operability scope.** [`../topics/_closed-v1-operability.md`](../topics/_closed-v1-operability.md)
 (settled 2026-07-07) binds four scope/contract decisions the implementation plan inherits:
 the CLI-first read-only visibility floor (incl. live tail) ships WITH Block A; a test-kit
 chapter (scripted actor, fake egress, fixtures) as a peer of the IC chapter; the injected
