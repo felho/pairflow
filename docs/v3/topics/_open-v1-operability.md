@@ -8,7 +8,8 @@ ratification with the pseudocode-unit mapping and the domain-registry lift),
 the operator CLI's command side, and the sharpened runner-MVP chapter; plus
 Addendum 2 (third review, ratified): the rejection-visibility seam resolved
 via the diagnostic channel, the Q2/Q3 lines landed as IC-D/IC-E, and the
-domain-registry lift anchored in the model-build backlog.**
+domain-registry lift anchored in the model-build backlog — and realized
+the same day (ledger §4, `core-model-todo.md` T1).**
 The final section reserves implementation-plan chapters that need no design
 decision now.
 
