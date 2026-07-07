@@ -4,3 +4,4 @@
 export { createKernel } from "./kernel.js";
 export type { Kernel, KernelDeps } from "./kernel.js";
 export { deriveDispatchIntent } from "./dispatchIntent.js";
+export type { StartInstanceInput } from "./start.js";

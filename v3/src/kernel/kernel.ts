@@ -2,6 +2,7 @@ import type {
   EventEnvelope,
   LifecycleStatus,
   Outcome,
+  Started,
   WorkflowInstance,
   WorkflowTemplate,
 } from "../domain/index.js";
@@ -9,6 +10,8 @@ import type { DefinitionStore } from "../ports/definition.js";
 import type { StorePort } from "../ports/store.js";
 import type { TimeSource } from "../ports/time.js";
 import { deriveDispatchIntent } from "./dispatchIntent.js";
+import { startInstance } from "./start.js";
+import type { StartInstanceInput } from "./start.js";
 
 /**
  * The port-parametric L0b kernel (packet ch4-P3). The check ORDER is
@@ -29,6 +32,8 @@ export interface KernelDeps {
 
 export interface Kernel {
   handle(envelope: EventEnvelope): Promise<Outcome>;
+  /** Bootstrap (l0b START_INSTANCE, packet ch4-P4). */
+  startInstance(input: StartInstanceInput): Promise<Started>;
 }
 
 async function loadTemplate(
@@ -118,5 +123,6 @@ export function createKernel(deps: KernelDeps): Kernel {
         }
       }
     },
+    startInstance: (input) => startInstance({ store, definitions }, input),
   };
 }

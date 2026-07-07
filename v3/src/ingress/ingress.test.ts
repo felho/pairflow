@@ -12,6 +12,7 @@ function capturingKernel(): { kernel: Kernel; seen: EventEnvelope[] } {
       const outcome: Outcome = { kind: "committed", version: 2, intent: null };
       return Promise.resolve(outcome);
     },
+    startInstance: () => Promise.reject(new Error("unused in ingress tests")),
   };
   return { kernel, seen };
 }
