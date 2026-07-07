@@ -1,7 +1,12 @@
-# Open Topic — The Emit-Contract Slice (todo Parts E/F + the A1 digest)
+# Closed: The Emit-Contract Slice (todo Parts E/F + the A1 digest)
 
 Date: 2026-07-06
-Status: **BUILT (2026-07-07) — section EC landed; awaiting the landing review.**
+Status: **CLOSED (2026-07-07)** — landed AND the landing review absorbed
+(two passes; F-EC-1 applied at build time, F-EC-2 caught and fixed in
+`c468031d` + the narrative sweep `f0e82d4e`): nothing in this file is
+pending, it is purely the record of *why*. Binding homes: section EC in
+`core-model.html` (block `emit-contract-pseudocode`) and the
+`core-model-todo.md` Parts A1/E/F REALIZED statuses. Build record:
 The paper test (PASS, §2) → review round 1 (Q1–Q4, §3) → review round 2 (the
 build spec's five resolutions, below) → the build. Inventories grew EXACTLY as
 pre-declared: rejections 81→85 (`op_id_collision`, `invalid_field_value`,

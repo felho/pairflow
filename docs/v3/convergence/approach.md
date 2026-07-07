@@ -814,6 +814,13 @@ rules, the op_id edge contract, leaderless mechanics, decision-audit mechanics, 
 kernel-shape non-goals. Process rule: it is the implementation plan's MANDATORY first
 chapter — every `IC-*` item maps to an acceptance test, a schema/lint/CI check, or an ADR.
 
+**Implementation process.** [`../implementation/README.md`](../implementation/README.md)
+(ratified 2026-07-07) defines HOW the implementation plane runs: the plan written chapter
+by chapter (chapter 1 = the IC/PI intake tables), the per-step build loop, and the
+execution model on Pairflow v1 (two-layer task packets over ledger projection, the
+constraint-transformation discipline, coverage accounting, the autonomy ramp, and the
+model↔code divergence stop). Implementation ADRs live there too (playbook §8 activation).
+
 **V1 operability scope.** [`../topics/_closed-v1-operability.md`](../topics/_closed-v1-operability.md)
 (settled 2026-07-07) binds four scope/contract decisions the implementation plan inherits:
 the CLI-first read-only visibility floor (incl. live tail) ships WITH Block A; a test-kit

@@ -35,10 +35,10 @@ reachable through their pointers:
 3. **Scope** — the "V1 operability scope" paragraph and Block A boundary in
    `../convergence/approach.md`.
 
-**Sequencing dependency:** the emit-contract slice awaits its landing review
-(model-build thread). Plan chapters that reference model content freeze only
-after that review lands; the plan skeleton and chapter 1 (IC/PI intake) do not
-depend on it and may start immediately.
+**Sequencing note (resolved):** the emit-contract slice landed WITH its
+landing review absorbed (`4b79830d` + the review fixes `c468031d`,
+`f0e82d4e`; memo: `../topics/_closed-emit-contract.md`). There is no pending
+model-side dependency — the plan starts from the current corpus.
 
 ## 3. Phase 1 — writing the plan
 
@@ -185,6 +185,13 @@ asserts over the plan:
 - the union of all declared slices covers the ledger inventory in scope,
 - no orphan units/rejections/invariants,
 - no double owners (shared ownership only if declared explicitly).
+
+**"In scope" is a plan decision, not a default of "everything".** Plan
+chapter 1 must define the round-1 inventory explicitly — e.g. chapter traces
+are mandatory core while rejection-branch traces are the scoped extension
+(PI-3's own split), and the 140 named Absents are *not* implemented but
+realized as explicit rejections. Without this definition the accounting
+degrades into an unbounded cover-everything-now demand.
 
 **This is the mechanical answer to "when is the plan concrete enough for
 `ExecutePairflowPlan`": when the accounting closes.** Splits stay honest under
