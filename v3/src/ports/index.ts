@@ -19,3 +19,4 @@ export type {
 export type { DefinitionStore } from "./definition.js";
 export type { DigestSource } from "./digest.js";
 export type { TailWait } from "./tail.js";
+export type { RedactionPolicy } from "./redaction.js";

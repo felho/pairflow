@@ -1051,6 +1051,21 @@ behind a separate entrypoint (§6.5).
 - Claim-derived negative (wide claim): a marker string planted in a
   payload appears NOWHERE in the default bundle's entire serialized
   output — not merely "the payload field is missing".
+- **Foundation shape + guardrail precision (aligned at ch6-P3
+  pre-approval):** the exporter is its own factory —
+  `createDebugBundleExporter(store, policy)` in `floor/debugBundle.ts`
+  (the P2 pattern; `Floor` stays seam-free); unknown instance = `null`
+  (the §6.2 duality). P3 ships exactly TWO named policies: the
+  production default `redactPayloadsPolicy` (payloads omitted;
+  `hasPayload` + digest remain) and the testkit-only
+  `devPassthroughRedactionPolicy` — the testkit home keeps the named
+  pass-through OUT of the normal production import graph (ADR-005
+  lint); the seam itself stays public, so the binding obligation is
+  review-owned: **REV-BUNDLE-DEFAULT-POLICY** — P4's normal CLI graph
+  binds the default, pass-through only under `cli/dev/`. The packet's
+  canonical bundle schema matrix (incl. optional `eventId`) is the
+  single source for the keyset tests and the P4 JSON/dump consumer.
+  P3 is foundation only — the bundle-dump verb activates in P4.
 
 ### 6.5 The operator CLI (P4)
 
