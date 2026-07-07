@@ -167,8 +167,9 @@ discipline: pre-declared, itemized, ratified at the build review):
   `transcript.has(op_id)` entry) and the ingress-touch rule ("a rejected
   attempt never consumes the op_id"). Fixed: row 1 states the op_id is NOT
   consumed; row 2 is the corrected retry legitimately REUSING it (the op_id
-  contract: resend reuses, only a post-Stale refresh renews) and committing;
-  row 3 is the true collision — a later emit under the now-committed op_id
+  contract is CLIENT discipline: a resend reuses, a post-Stale refresh
+  should renew — the kernel only rejects, never forces a new op_id) and
+  committing; row 3 is the true collision — a later emit under the now-committed op_id
   with a different payload. The same review surfaced the storage
   under-specification: the digest now explicitly RIDES the committed fact
   (the HANDLE append and the HELP_REQUEST fact carry `payload_digest`;
