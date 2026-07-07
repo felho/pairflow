@@ -32,3 +32,11 @@ chapter-boundary verdict by appending `→ <outcome>` at review time.
   check.sh, now the kernel lint + canonicalization) → rule adopted into
   README §4 step 2: a gate's negative test derives from its DECLARED
   claim, never from its implemented rule list
+- 2026-07-07 · ch 3 aftermath 2 · a second review pass caught the same
+  class twice more: the canonicalizer's array branch still silently
+  dropped (sparse arrays digested; extra own props collided with the
+  plain array), and shared_ownership accepted a co_owner that does not
+  itself declare the item → both fixed same day, negative-tested; note
+  the claim-derived rule was adopted mid-day and these two were authored
+  BEFORE it — first post-rule gates are the real test of whether the
+  rule sticks

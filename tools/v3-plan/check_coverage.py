@@ -214,6 +214,11 @@ def check_share_references(
                     f"{packet}: shared_ownership co_owner '{co_owner}' is not an "
                     "existing packet"
                 )
+            elif item not in declared_by.get(co_owner, set()):
+                checker.error(
+                    f"{packet}: shared_ownership co_owner '{co_owner}' does not itself "
+                    f"declare '{item}' — a share needs an owner on both ends"
+                )
 
 
 def check_owners(
