@@ -1,8 +1,8 @@
 # Open: V1 operability — testing, debugging, and the visibility floor
 
-Status: **open (2026-07-07)** — decision round pending. Four questions (Q1–Q4)
-to settle one at a time; a fifth section reserves implementation-plan chapters
-that need no design decision now.
+Status: **open (2026-07-07)** — decision round in progress. **Q1 settled
+(2026-07-07, ratified)**; Q2–Q4 pending. A fifth section reserves
+implementation-plan chapters that need no design decision now.
 
 ## Why this memo exists
 
@@ -74,30 +74,36 @@ implementation-plan territory — not a gap.
 
 ## Q1 — The visibility floor: what observe/query surface ships WITH Block A?
 
-**The question.** Is a minimal query/observe surface part of the Block A
-implementation scope, or a follow-up? Today the plan implies "follow-up by
-default" simply because no build item exists.
-
-**Why it should be answered now.** Without it, even the *developer of the
-kernel* debugs by reading raw store rows; every IC acceptance test that
-asserts over outcomes would grow ad-hoc inspection helpers anyway. The
-marginal cost of shipping the floor with Block A is low (read models over the
-transcript — no new kernel behavior); the cost of not having it is paid daily.
-
-**Proposed direction.** A CLI-first visibility floor ships as part of the
-Block A implementation milestone, drawn from the already-named query family:
+**Settled direction (2026-07-07, ratified).** A CLI-first, read-only
+visibility floor ships **as part of the Block A implementation milestone** —
+the kernel is not "done" without a visible inside. The floor is the four
+pieces below, drawn from the already-named query family; all four are in
+scope (the live tail was proposed as optional and **promoted to required at
+ratification** — the user's expectation is that watching an instance live
+while it runs is precisely the most useful affordance in the early period):
 
 - `listInstances(filter)` — what is running / waiting / terminal;
 - `getInstanceDetail(id)` — status, current step, wait kind, actor, round;
 - `getTimeline(id, cursor)` — the transcript rendered as typed rows,
   including rejected / stale / duplicate diagnostics and gate outcomes;
-- one live tail (`subscribe`-shape over a single instance) — *optional*,
-  the only candidate with real implementation weight.
+- a live tail (`subscribe`-shape over a single instance) — follow a running
+  instance's committed facts as they land.
 
-Everything else in the observe seam (three-media discipline, addressed
-streams, protocol adapter, the inspector UI itself) stays parked exactly
-where it is. The floor is read-only; any operator action still re-enters
-through normal ingress — this changes scope, not the model.
+Boundaries, unchanged from the proposal: everything else in the observe seam
+(three-media discipline, addressed streams, protocol adapter, the inspector
+UI itself) stays parked exactly where it is; the live tail here is the
+single-instance seed of the seam's §1 history-plus-tail primitive, not the
+seam itself. The floor is read-only; any operator action still re-enters
+through normal ingress. This is a scope decision, not a model change.
+
+**The original question and rationale (kept as record).** Is a minimal
+query/observe surface part of the Block A implementation scope, or a
+follow-up? Today the plan implied "follow-up by default" simply because no
+build item existed. Without the floor, even the *developer of the kernel*
+debugs by reading raw store rows, and every IC acceptance test that asserts
+over outcomes grows ad-hoc inspection helpers anyway. The marginal cost of
+shipping the floor with Block A is low (read models over the transcript — no
+new kernel behavior); the cost of not having it is paid daily.
 
 ## Q2 — The test kit: scripted actor, fake adapter, fixtures
 
