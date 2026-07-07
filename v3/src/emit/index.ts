@@ -5,5 +5,6 @@ export {
   deriveActorEmitOpId,
   deriveOperatorOpId,
   digestPayload,
+  isCanonicalizable,
 } from "./opId.js";
 export type { ActorEmitIdentity, DerivedActorEmitId, NonceSource, OpId } from "./opId.js";

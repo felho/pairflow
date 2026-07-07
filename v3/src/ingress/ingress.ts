@@ -1,11 +1,15 @@
 import type { EventEnvelope, Outcome } from "../domain/index.js";
+import { isCanonicalizable } from "../emit/index.js";
 import type { Kernel } from "../kernel/index.js";
 
 /**
- * Op-envelope validation → kernel (IC-E; packet ch4-P3). Ingress owns
- * valid_shape: hand-rolled, strict/fail-closed — unknown top-level keys
- * reject (the envelope surface formalizes at the emit-contract level
- * later). The kernel receives only typed envelopes.
+ * Op-envelope validation → kernel (IC-E; packet ch4-P3, hardened in the
+ * ch-4 aftermath). Ingress owns valid_shape: hand-rolled,
+ * strict/fail-closed — the raw envelope must be a PLAIN object, unknown
+ * top-level keys (string OR symbol) reject, and the payload must be
+ * canonicalizable (the emit-lib predicate): what ingress admits is
+ * exactly what the store's JSON round-trip preserves and the ch-5
+ * digest path can pin. The kernel receives only typed envelopes.
  */
 const KNOWN_KEYS = new Set([
   "instanceId",
@@ -25,6 +29,13 @@ function isNonEmptyString(value: unknown): value is string {
 
 function parseEnvelope(raw: unknown): EventEnvelope | null {
   if (typeof raw !== "object" || raw === null || Array.isArray(raw)) {
+    return null;
+  }
+  const proto: unknown = Object.getPrototypeOf(raw);
+  if (proto !== Object.prototype && proto !== null) {
+    return null;
+  }
+  if (Object.getOwnPropertySymbols(raw).length > 0) {
     return null;
   }
   const record = raw as Record<string, unknown>;
@@ -51,6 +62,9 @@ function parseEnvelope(raw: unknown): EventEnvelope | null {
     return null;
   }
   if ("eventId" in record && !isNonEmptyString(eventId)) {
+    return null;
+  }
+  if ("payload" in record && !isCanonicalizable(payload)) {
     return null;
   }
   return {

@@ -105,6 +105,23 @@ export function digestPayload(payload: unknown): string {
 }
 
 /**
+ * The admission predicate the ingress binds (plan ch-4 aftermath): a
+ * payload is admissible exactly when it is canonicalizable — the same
+ * acceptance the digest path enforces. Admitted payloads therefore
+ * survive the store's JSON round-trip unchanged, and no committed row
+ * can ever hold a payload the emit-lib cannot digest (CHK-A1-DIGEST,
+ * ch 5).
+ */
+export function isCanonicalizable(value: unknown): boolean {
+  try {
+    canonicalize(value);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Actor-emit family: content-addressed (ADR-004). Retransmission
  * reproduces the same op_id by construction; a refresh after Stale starts
  * from a NEW context packet and therefore derives a new op_id. The

@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { deriveActorEmitOpId, deriveOperatorOpId, digestPayload } from "./opId.js";
+import {
+  deriveActorEmitOpId,
+  deriveOperatorOpId,
+  digestPayload,
+  isCanonicalizable,
+} from "./opId.js";
 
 const identity = {
   instanceId: "inst-1",
@@ -67,6 +72,23 @@ describe("payload digest (canonical serialization)", () => {
   it("still accepts dense plain arrays", () => {
     expect(digestPayload([1, 2, 3])).toBe(digestPayload([1, 2, 3]));
     expect(digestPayload([])).toBe(digestPayload([]));
+  });
+});
+
+describe("isCanonicalizable — the ingress admission predicate", () => {
+  it("accepts exactly what the canonicalizer accepts", () => {
+    expect(isCanonicalizable({ a: 1, b: [true, "x", null], c: { d: 2 } })).toBe(true);
+    expect(isCanonicalizable(null)).toBe(true);
+    expect(isCanonicalizable([])).toBe(true);
+  });
+
+  it("rejects everything the canonicalizer throws on", () => {
+    expect(isCanonicalizable({ a: undefined })).toBe(false);
+    expect(isCanonicalizable({ f: () => 1 })).toBe(false);
+    expect(isCanonicalizable(Number.NaN)).toBe(false);
+    expect(isCanonicalizable(new Date("2026-01-01T00:00:00Z"))).toBe(false);
+    expect(isCanonicalizable(new Array(1))).toBe(false);
+    expect(isCanonicalizable(undefined)).toBe(false);
   });
 });
 

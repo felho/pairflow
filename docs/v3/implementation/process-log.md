@@ -52,3 +52,16 @@ chapter-boundary verdict by appending `→ <outcome>` at review time.
   P2–P4 flowing to commit-boundary review) held; the ch-3 gates ran
   live for the first time and held (kernel import boundary, testkit
   direction, NOCLOCK, no-randomness) → no action
+- 2026-07-07 · ch 4 aftermath · post-close review caught the ingress
+  admitting non-round-trip-safe payloads (undefined props / functions
+  silently drop in the store's JSON round-trip; BigInt throws mid-store)
+  and symbol top-level keys slipping past the "strict unknown keys"
+  claim → fixed same day: payload admission bound to the emit-lib's
+  isCanonicalizable (one audited pinnability definition; ch-5 digest
+  compatibility by construction), plain-object + symbol-key guards
+  added. NOTE: this was the first POST-claim-derived-rule gate to prove
+  less than its claim — its negative tests had been derived from the
+  implemented rule list ("unknown string key"), not from the full claim
+  ("the kernel receives only envelopes the store can faithfully
+  persist"); the rule holds only if the CLAIM is stated wide enough
+  before deriving

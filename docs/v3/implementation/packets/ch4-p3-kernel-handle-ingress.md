@@ -108,12 +108,18 @@ dispatch_intent(instance, template, step_id) → DispatchIntent
   first"), stale before no_transition. Tests assert order-sensitive
   cases, do not reorder for convenience.
 - **Ingress owns `valid_shape`** (plan §4.6): `submit(raw: unknown)`
-  validates hand-rolled — object shape, non-empty string ids/type/actor,
-  `expectedVersion` optional but if present a non-negative integer,
-  `eventId` optional string, `payload` free; UNKNOWN top-level keys →
-  `invalid_shape` (strict/fail-closed; the envelope surface formalizes
-  at the emit-contract level later). The kernel receives only typed
-  envelopes.
+  validates hand-rolled — the raw envelope is a PLAIN object, non-empty
+  string ids/type/actor, `expectedVersion` optional but if present a
+  non-negative integer, `eventId` optional string; UNKNOWN top-level
+  keys — string OR symbol — → `invalid_shape` (strict/fail-closed; the
+  envelope surface formalizes at the emit-contract level later). The
+  kernel receives only typed envelopes. *(Amended, ch-4 aftermath:)*
+  `payload` is NOT free — it must be canonicalizable (the emit-lib
+  predicate `isCanonicalizable`): what ingress admits is exactly what
+  the store's JSON round-trip preserves ("the transcript stores what
+  ingress admitted", ch4-P2) and what the ch-5 digest path can pin;
+  undefined props, symbol keys, sparse arrays, non-plain objects,
+  non-finite numbers, functions, BigInt → `invalid_shape`.
 - **A DONE instance / terminal current step** has no Step entry →
   `transitions` lookup fails → `Rejected(no_transition)`. This is the
   model mapping (`template.step` of a terminal position has no

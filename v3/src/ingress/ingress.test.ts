@@ -95,6 +95,78 @@ describe("ingress — valid_shape (Rejected(invalid_shape) family)", () => {
   });
 });
 
+describe("ingress — the payload must survive the JSON round-trip (the transcript stores what ingress admitted)", () => {
+  async function expectPayloadRejected(payload: unknown): Promise<void> {
+    const { kernel, seen } = capturingKernel();
+    expect(await createIngress(kernel).submit({ ...validRaw, payload })).toEqual({
+      kind: "rejected",
+      reason: "invalid_shape",
+    });
+    expect(seen).toHaveLength(0);
+  }
+
+  it("rejects undefined property values — the key would vanish in the round-trip", async () => {
+    await expectPayloadRejected({ a: undefined });
+    await expectPayloadRejected({ nested: { a: undefined } });
+  });
+
+  it("rejects functions, symbols, and BigInt — stringify drops or throws", async () => {
+    await expectPayloadRejected({ f: () => 1 });
+    await expectPayloadRejected({ [Symbol("s")]: 1, a: 2 });
+    await expectPayloadRejected({ n: 1n });
+  });
+
+  it("rejects non-finite numbers — stringify silently turns them into null", async () => {
+    await expectPayloadRejected(Number.NaN);
+    await expectPayloadRejected({ x: Number.POSITIVE_INFINITY });
+  });
+
+  it("rejects non-plain objects — Date/Map/Set would mutate or flatten", async () => {
+    await expectPayloadRejected(new Date("2026-01-01T00:00:00Z"));
+    await expectPayloadRejected(new Map([["a", 1]]));
+  });
+
+  it("rejects sparse arrays — a hole would become null", async () => {
+    await expectPayloadRejected(new Array(1));
+  });
+
+  it("rejects an explicit payload: undefined — the key itself would vanish", async () => {
+    await expectPayloadRejected(undefined);
+  });
+
+  it("accepts a deeply nested plain-JSON payload", async () => {
+    const { kernel, seen } = capturingKernel();
+    const payload = { refs: ["a", "b"], meta: { depth: 2, ok: true, note: null } };
+    await createIngress(kernel).submit({ ...validRaw, payload });
+    expect(seen[0]?.payload).toEqual(payload);
+  });
+});
+
+describe("ingress — the strict claim's full surface", () => {
+  it("a symbol-keyed top-level property is an unknown key → invalid_shape", async () => {
+    const { kernel } = capturingKernel();
+    expect(await createIngress(kernel).submit({ ...validRaw, [Symbol("s")]: 1 })).toEqual({
+      kind: "rejected",
+      reason: "invalid_shape",
+    });
+  });
+
+  it("a non-plain raw envelope (class instance) → invalid_shape", async () => {
+    class Env {
+      instanceId = "inst-1";
+      opId = "a1";
+      type = "PASS";
+      actorId = "codex";
+      expectedVersion = 1;
+    }
+    const { kernel } = capturingKernel();
+    expect(await createIngress(kernel).submit(new Env())).toEqual({
+      kind: "rejected",
+      reason: "invalid_shape",
+    });
+  });
+});
+
 describe("ingress — pass-through of a valid envelope", () => {
   it("delivers a typed envelope with exactly the known fields", async () => {
     const { kernel, seen } = capturingKernel();
