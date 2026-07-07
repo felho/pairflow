@@ -72,7 +72,11 @@ Every plan step runs the same cycle:
    names, invariants, traces). The ledger is the *what*; it is not
    re-interpreted at build time.
 2. **TDD** — contract tests first, from the IC enforcement lines and the
-   chapter traces (golden tests).
+   chapter traces (golden tests). For a gate/check deliverable the same
+   discipline applies with a twist: its negative test derives from the
+   check's DECLARED claim, never from the list of implemented rules — a
+   blocklist passing an unlisted violation is the recurring failure class
+   (process log, 2026-07-07, twice).
 3. **Implement.**
 4. **Drift tests green** — the three unconditional name-space tests (85
    rejection names / domain registry / unit→code mapping; PI-3).

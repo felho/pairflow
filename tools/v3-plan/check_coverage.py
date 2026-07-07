@@ -184,6 +184,38 @@ def validate_slice(
     return declared
 
 
+def check_share_references(
+    shares: dict[str, set[tuple[str, str]]],
+    declared_by: dict[str, set[str]],
+    packet_names: set[str],
+    inventory: dict[str, set[str]],
+    checker: Checker,
+) -> None:
+    """shared_ownership entries are references, not free text: the item must
+    be a real ownership-axis id (unit/invariant/trace) the declaring packet
+    itself declares, and the co_owner must be another existing packet."""
+    ownable = inventory["units"] | inventory["invariants"] | inventory["traces"]
+    for packet, entries in sorted(shares.items()):
+        for item, co_owner in sorted(entries):
+            if item not in ownable:
+                checker.error(
+                    f"{packet}: shared_ownership item '{item}' is not a known "
+                    "unit/invariant/trace id"
+                )
+            elif item not in declared_by.get(packet, set()):
+                checker.error(
+                    f"{packet}: shared_ownership declares '{item}' which the packet's "
+                    "own slice does not declare"
+                )
+            if co_owner == packet:
+                checker.error(f"{packet}: shared_ownership co_owner is the packet itself")
+            elif co_owner not in packet_names:
+                checker.error(
+                    f"{packet}: shared_ownership co_owner '{co_owner}' is not an "
+                    "existing packet"
+                )
+
+
 def check_owners(
     owners: dict[str, dict[str, list[str]]],
     shares: dict[str, set[tuple[str, str]]],
@@ -225,11 +257,13 @@ def main() -> int:
     )
     owners: dict[str, dict[str, list[str]]] = {"units": {}, "invariants": {}, "traces": {}}
     shares: dict[str, set[tuple[str, str]]] = {}
+    declared_by: dict[str, set[str]] = {}
     for path in packet_files:
         sl = extract_slice(path, checker)
         if sl is None:
             continue
         declared = validate_slice(path.name, sl, inventory, checker)
+        declared_by[path.name] = declared["units"] | declared["invariants"] | declared["traces"]
         for axis in owners:
             for item in declared[axis]:
                 owners[axis].setdefault(item, []).append(path.name)
@@ -241,6 +275,9 @@ def main() -> int:
             }
 
     check_owners(owners, shares, checker)
+    check_share_references(
+        shares, declared_by, {p.name for p in packet_files}, inventory, checker
+    )
 
     if checker.errors:
         for message in checker.errors:

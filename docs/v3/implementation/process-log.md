@@ -22,3 +22,13 @@ chapter-boundary verdict by appending `→ <outcome>` at review time.
   production-wide testkit ban → acknowledged non-issue; the ordering
   constraint is documented in the config header, and every boundary is
   negative-tested, which is the real guard
+- 2026-07-07 · ch 3 aftermath · post-commit review caught four gaps: the
+  kernel import lint was blocklist-shaped (node:fs passed the "domain +
+  ports ONLY" claim), ci-github-local silently lost validate-job parity
+  (no v3 steps), emit canonicalization silently dropped undefined /
+  non-plain-object shapes, coverage shared_ownership refs were
+  shape-checked only → all four fixed same day, each negative-tested; the
+  "gate proves less than its claim" class recurred (2nd time: ch 2
+  check.sh, now the kernel lint + canonicalization) → rule adopted into
+  README §4 step 2: a gate's negative test derives from its DECLARED
+  claim, never from its implemented rule list
