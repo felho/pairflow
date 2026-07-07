@@ -223,6 +223,20 @@ item with no home in the plan is a planning gap.**
   IC-B, IC-N) resolves to. Boundary: implementation-side decisions only —
   model-side decisions stay in the corpus + topics memos, no retroactive
   conversion.
+- **PI-11. The execution-model intake** (ratified 2026-07-07 — defined in
+  [`../implementation/README.md`](../implementation/README.md) §5). The plan
+  must consume: the two-layer **task-packet convention** (ledger projection
+  as content; the v1 LLM-ergonomics gates — size/split, constraint density,
+  embedding — inherited unchanged) with the constraint-transformation
+  discipline (rule→environment / rule→data / residual in-context budget;
+  packets self-contained for their operative set, no pointer-shaped
+  constraint dumps), the **coverage-accounting script** (union of declared
+  ledger slices = the in-scope inventory; no orphans, no undeclared double
+  owners — the mechanical "plan is concrete enough for hands-off execution"
+  criterion), and the **autonomy ramp** (calibration → measurement →
+  chaining, with the standing human checkpoints incl. the model↔code
+  divergence stop). The task-packet template + projection checklist is a
+  named chapter-1 deliverable.
 
 **Scoped OUT of the first round (deliberate, not an omission):** the
 capability-query op family (`list_my_ops` / `list_spawnable_actors` /
