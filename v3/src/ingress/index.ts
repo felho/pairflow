@@ -1,2 +1,4 @@
 // Op-envelope validation -> kernel; adapter-independent (IC-E).
-export {};
+// Content: packet ch4-P3.
+export { createIngress } from "./ingress.js";
+export type { Ingress } from "./ingress.js";

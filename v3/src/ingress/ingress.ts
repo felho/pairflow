@@ -1,0 +1,81 @@
+import type { EventEnvelope, Outcome } from "../domain/index.js";
+import type { Kernel } from "../kernel/index.js";
+
+/**
+ * Op-envelope validation → kernel (IC-E; packet ch4-P3). Ingress owns
+ * valid_shape: hand-rolled, strict/fail-closed — unknown top-level keys
+ * reject (the envelope surface formalizes at the emit-contract level
+ * later). The kernel receives only typed envelopes.
+ */
+const KNOWN_KEYS = new Set([
+  "instanceId",
+  "opId",
+  "type",
+  "actorId",
+  "expectedVersion",
+  "eventId",
+  "payload",
+]);
+
+const INVALID_SHAPE: Outcome = { kind: "rejected", reason: "invalid_shape" };
+
+function isNonEmptyString(value: unknown): value is string {
+  return typeof value === "string" && value.length > 0;
+}
+
+function parseEnvelope(raw: unknown): EventEnvelope | null {
+  if (typeof raw !== "object" || raw === null || Array.isArray(raw)) {
+    return null;
+  }
+  const record = raw as Record<string, unknown>;
+  for (const key of Object.keys(record)) {
+    if (!KNOWN_KEYS.has(key)) {
+      return null;
+    }
+  }
+  const { instanceId, opId, type, actorId, expectedVersion, eventId, payload } = record;
+  if (
+    !isNonEmptyString(instanceId) ||
+    !isNonEmptyString(opId) ||
+    !isNonEmptyString(type) ||
+    !isNonEmptyString(actorId)
+  ) {
+    return null;
+  }
+  if (
+    "expectedVersion" in record &&
+    (typeof expectedVersion !== "number" ||
+      !Number.isInteger(expectedVersion) ||
+      expectedVersion < 0)
+  ) {
+    return null;
+  }
+  if ("eventId" in record && !isNonEmptyString(eventId)) {
+    return null;
+  }
+  return {
+    instanceId,
+    opId,
+    type,
+    actorId,
+    ...(typeof expectedVersion === "number" ? { expectedVersion } : {}),
+    ...(typeof eventId === "string" ? { eventId } : {}),
+    ...("payload" in record ? { payload } : {}),
+  };
+}
+
+export interface Ingress {
+  submit(raw: unknown): Promise<Outcome>;
+}
+
+export function createIngress(kernel: Kernel): Ingress {
+  return {
+    submit(raw: unknown): Promise<Outcome> {
+      const envelope = parseEnvelope(raw);
+      if (envelope === null) {
+        return Promise.resolve(INVALID_SHAPE);
+      }
+      return kernel.handle(envelope);
+    },
+  };
+}
