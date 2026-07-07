@@ -1,7 +1,7 @@
 # V3 Implementation Plan
 
 Written chapter by chapter, each chapter proposed → ratified → committed
-(process: [`README.md`](README.md) §3). Chapters present: 1–5.
+(process: [`README.md`](README.md) §3). Chapters present: 1–6.
 
 **Genre note.** This is the implementation **master plan** — it is NOT a
 directly `ExecutePairflowPlan`-executable task list, and it carries no
@@ -926,3 +926,197 @@ EXECUTED (chapter rules 1–2) — verified at the boundary review; all v3
 bridges green; ADR-007 / ADR-008 `accepted`, integrity check green; the
 five ch-5 intake rows + the ch-5 map row flipped to `realized` (PI-3);
 process-log review held at the boundary.
+
+## Chapter 6 — Visibility floor + operator CLI (ratified 2026-07-08)
+
+Autonomy stage: **calibration** (README §5.5). The ch-5 chapter rules
+remain binding: (1) enumerate a claim's DIMENSIONS before deriving its
+tests; (2) a logged instruction is not execution — prescribed checks are
+EXECUTED and test-pinned in the same commit.
+
+This chapter realizes PI-2 — the full read-only floor, the debug bundle,
+and the operator CLI's command + dev verbs. Governing principle:
+**chapter 6 adds ZERO new kernel semantics** — read models, a thin
+client, and wiring over the existing L0b surface; every write enters
+through the surfaces that already exist. The kernel, ingress, emit-lib,
+and schema (`SCHEMA_VERSION` "2") are untouched.
+
+### 6.1 Scope and boundaries
+
+**In:** `getTimeline` (committed rows only, cursor read), the live tail
+as the **committed floor-tail seed** (§6.3 — deliberately NOT the observe
+seam), the debug bundle with the redaction boundary as a seam (§6.4),
+the CLI command verbs over the existing kernel surface + the dev verbs
+behind a separate entrypoint (§6.5).
+
+**Out, stated (not silently absent):**
+
+- **The diagnostic layer** — live rejection visibility in the tail and
+  the bundle's "rejected inputs" section → ch 7 (PI-4). The ch-6
+  surfaces carry committed facts ONLY; the seams are named so ch 7 adds
+  a layer, not a rewrite.
+- **`cancel` / `deleteRequested` command verbs** — their kernel levels
+  (LC1+) are not implemented; the CLI covers the surface that exists.
+  The ch-10 recourse card resolves its own dependency when scheduled.
+- **The canonical template format** → ch 8 (MD-1 stands). The CLI
+  `create` works with the fixture-form template and says so.
+
+### 6.2 `getTimeline`: the cursor read (P1)
+
+- `StorePort` gains one read:
+  `getTimeline(instanceId, afterSeq): Promise<readonly TranscriptEntry[] | null>`
+  — **unknown instance = `null`, known-but-empty = `[]`** (ratification
+  finding: the CLI must distinguish "no such run" from "no new rows";
+  consistent with `getInstanceDetail`'s existing null contract). The
+  floor wraps it with the same duality.
+- Rows are the existing `TranscriptEntry` (seq / envelope /
+  payloadDigest / committedAt) — no new row type, no schema change.
+  `REV-C-PROJECTIONS-READONLY` stands.
+- **The committed-only claim is stated WIDE** (chapter rule 1): not
+  "trivially true because the store holds nothing else" but "no
+  diagnostic or non-committed data can EVER enter this surface" — ch 7's
+  channel is separate by construction, and the negative tests derive
+  from the wide claim.
+- Claim dimensions: cursor semantics (0 = full replay / mid-cursor /
+  beyond-end = `[]`), ordering stability (seq-ascending, always),
+  unknown vs known-empty vs beyond-end distinguished, committed-only.
+
+### 6.3 The live tail: the committed floor-tail seed (P2)
+
+- Deliverable: **`tailCommittedTimeline(instanceId, fromSeq)`** on the
+  floor — the closed memo's "single-instance seed" of the observe seam's
+  history-plus-tail primitive
+  (`../topics/_closed-v1-operability.md`), NOT the seam itself.
+- **Explicitly deferred to the observe seam's own future chapter:** live
+  push media, addressed streams, backpressure, terminal/gap MARKER
+  semantics, the diagnostic layer (ch 7). The seed's stop-at-terminal is
+  a pragmatic completion condition (a terminal instance commits no
+  further rows), not the seam's typed terminal-marker contract.
+- Shape: **cursor-polling over the shared WAL file** — the honest
+  cross-process form (the ch-5 two-worker test is the multi-handle
+  precedent); replay from the cursor first, then new rows as they land.
+- **The wait seam is floor-side**: an injected `TailWait` drives the
+  poll loop — production binds real timers; tests bind a controlled
+  wait. The kernel's `TimeSource` is untouched (IC-D unchanged). No
+  tail test may real-sleep (CHK-D-TESTCLOCK's spirit; the seam is what
+  makes the loop deterministic).
+- **Unknown instance: fail-closed at start** — an explicit error, never
+  a silent empty stream (ratification finding). V1 boundary stated: an
+  instance cannot vanish mid-tail (no purge exists), so unknown is a
+  start-time question only.
+- The claim (scoped by ratification): **the seq cursor guarantees no
+  committed row is skipped or duplicated, in order** — not "full
+  observe". Dimensions: no-skip across commits landing DURING the tail,
+  no-duplicate across poll rounds, ordering, stop condition, unknown
+  fail-closed.
+
+### 6.4 The debug bundle + the redaction boundary (P3)
+
+- One read-only export of one run, **reading from the store ONLY** —
+  env/runtime material cannot enter by construction. Content: instance
+  state, the typed transcript with digests, template ref, versions,
+  status, timestamps.
+- **The redaction boundary is a seam, not a promise:** every payload
+  passes an injected `RedactionPolicy` before entering the bundle.
+  **Default policy: redact/omit — payloads do NOT appear**; the bundle
+  carries structured metadata only (ids, types, seq, versions, status,
+  digests, timestamps). Pass-through is a separate NAMED dev/test
+  policy, explicit opt-in only (ratification finding: the closed memo's
+  secret-exfil guardrail binds the production default; a pass-through
+  default would violate it even with the policy named). The bundle
+  records which policy produced it.
+- The **"rejected inputs" section is named in the bundle schema and
+  explicitly marked absent** ("diagnostic channel lands ch 7") — a
+  stated gap, not a silent one.
+- Claim-derived negative (wide claim): a marker string planted in a
+  payload appears NOWHERE in the default bundle's entire serialized
+  output — not merely "the payload field is missing".
+
+### 6.5 The operator CLI (P4)
+
+- New top-level module **`cli/`** — a thin client (the core-API memo's
+  settled role): formatting, defaults, wiring; zero semantics.
+- **Command verbs over the existing surface only:** `create` (wraps the
+  ch-4 bootstrap seam; **production instance-id minting lands here** —
+  an injected id source: deterministic in tests, crypto in production;
+  kernel and store stay randomness-free), `start`, `submit` (through
+  `ingress.submit`).
+- **The operator nonce family's first real consumer (ADR-004):**
+  `submit` derives its op_id via `deriveOperatorOpId(nonce)` — one nonce
+  per logical invocation, reused across retries within it;
+  `NonceSource` injected.
+- **Dev verbs behind a separate entrypoint:** fixture-emit injection
+  (scripted actor), golden-trace replay (the testkit harness), bundle
+  dump under the dev/test pass-through policy. Home: **`cli/dev/` with
+  its own entrypoint** (ratification decision: a structural boundary,
+  not a lint concession — and not a lazy import, which would hide the
+  edge from the static module graph). The normal CLI graph must not
+  import testkit even transitively; the lint boundary is enforced in
+  BOTH directions and negative-tested from the declared claim. The
+  packaging split (separate bin/command) is part of the boundary.
+- **ADR-009 (amends ADR-001 AND ADR-005):** `cli/` enters the module
+  map with its import rules; ADR-005's categorical production→testkit
+  ban stays, with the dev-entrypoint exception recorded as its own
+  **"dev CLI boundary"** line. The same ADR records the tooling pick:
+  stdlib `node:util` parseArgs, zero new dependencies (the coverage
+  script's stdlib culture).
+- **Output contract: JSON-first** (deterministic, agent-friendly);
+  human formatting later or behind an explicit flag. **The exit-code
+  contract is mandatory** and lands as a canonical matrix in the P4
+  packet (see watchpoints).
+- **P4 watchpoints (carried from ratification — packet obligations,
+  binding at pre-approval):**
+  1. an explicit **write-entrypoint matrix**: which existing
+     bootstrap/kernel surface `create`/`start` call, when `submit` goes
+     through `ingress.submit`, and the proof obligation that no CLI
+     command handler EVER writes through `StorePort` directly;
+  2. the **JSON/exit-code contract as one canonical matrix** (success /
+     usage-config error / kernel negative outcome / integrity-internal
+     error as distinct classes), not scattered prose.
+
+### 6.6 Coverage and intake impact
+
+- **Ledger slices: empty or near-empty** (the ch5-P5 precedent) — the
+  floor and CLI are operability surfaces (PI-2), not model pseudocode.
+  Units 5/158, invariants 8/116, traces 2/20 unchanged on ownership
+  axes.
+- The one export-adjacent unit
+  (`complete-pseudocode/archive_or_export`) is LC4/purge territory, NOT
+  the debug bundle — stated here so it cannot silently change owner.
+- At close: the ch-6 map row + **PI-2 → realized**. No IC row reopens;
+  `REV-C-PROJECTIONS-READONLY` and all-writes-through-normal-ingress
+  bind in the P4 review rubric.
+
+### 6.7 Packets and flow mode
+
+The §5.8 first-of-a-kind rule stands. Every ch-6 packet introduces a new
+artifact or contract class — **all four are pre-approve**; nothing is
+marked flow. If a trivial extra slice emerges during build, it flows
+only under the ch-5-style guard (test-only; any production change falls
+back to pre-approve).
+
+| Packet | Content | Mode |
+|---|---|---|
+| ch6-P1 | `getTimeline` cursor read: StorePort + sqlite + floor, null/`[]` contract | pre-approve (first-of-a-kind: cursor read surface) |
+| ch6-P2 | `tailCommittedTimeline` seed + `TailWait` seam | pre-approve (first-of-a-kind: streaming shape + wait seam) |
+| ch6-P3 | debug bundle + `RedactionPolicy` (redact default, dev pass-through) | pre-approve (first-of-a-kind: redaction boundary) |
+| ch6-P4 | `cli/` + `cli/dev/` entrypoints, command + dev verbs, nonce-family consumer, exit-code matrix + ADR-009 | pre-approve (first-of-a-kind: new module + boundary ADR) |
+
+Order: P1 → P2 (the tail builds on the cursor read); P3 after P1 (the
+bundle reads detail + timeline); P4 last (consumes floor, bundle,
+emit-lib, and the dev-side testkit). One packet = packet file + code +
+tests in ONE commit.
+
+### 6.8 Deliverables and DoD
+
+Shipped: this section; the StorePort/floor cursor read; the tail seed +
+wait seam; the bundle + redaction policy pair; the `cli/` + `cli/dev/`
+modules with ADR-009; the P4 contract matrices.
+
+DoD: the four packets' contract tests green with claim-derived negatives
+EXECUTED (chapter rules 1–2, verified at the boundary review); drift
+suite green; coverage unchanged on ownership axes and validation green;
+all v3 bridges green; **the FULL local CI gate (`pnpm ci:local`) green —
+the first chapter under the README §6 rule (root suite included)**;
+ADR-009 `accepted`, integrity check green; the ch-6 map row + PI-2
+flipped to `realized`; process-log review held at the boundary.
