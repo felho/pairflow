@@ -17,3 +17,4 @@ export type {
   StorePort,
 } from "./store.js";
 export type { DefinitionStore } from "./definition.js";
+export type { DigestSource } from "./digest.js";

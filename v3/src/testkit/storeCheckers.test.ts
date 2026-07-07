@@ -23,7 +23,12 @@ function envelope(opId: string, type: string): EventEnvelope {
 }
 
 function row(seq: number, opId: string, type: string): TranscriptEntry {
-  return { seq, envelope: envelope(opId, type), committedAt: 1_000 + seq };
+  return {
+    seq,
+    envelope: envelope(opId, type),
+    payloadDigest: `digest-${opId}`,
+    committedAt: 1_000 + seq,
+  };
 }
 
 function detail(

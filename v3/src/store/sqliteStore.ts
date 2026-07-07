@@ -25,7 +25,11 @@ import type { TimeSource } from "../ports/time.js";
  * commit boundary (CHK-C-TS-SOURCE; IC-D's store binding) — deliberately
  * NOT a SQLite DEFAULT, so a frozen-clock test asserts the real path.
  */
-const SCHEMA_VERSION = "1";
+// v2 (packet ch5-P4): transcript carries the committed payload_digest.
+// The v1→v2 bump exercises the ADR-003 fenced wipe live for the first
+// time: a known PROTOTYPE marker at "1" wipes on open; anything else
+// still refuses.
+const SCHEMA_VERSION = "2";
 
 const SCHEMA = `
 CREATE TABLE meta (
@@ -45,11 +49,12 @@ CREATE TABLE instances (
   created_at       INTEGER NOT NULL
 ) STRICT;
 CREATE TABLE transcript (
-  instance_id  TEXT    NOT NULL,
-  seq          INTEGER NOT NULL,
-  op_id        TEXT    NOT NULL,
-  envelope     TEXT    NOT NULL,
-  committed_at INTEGER NOT NULL,
+  instance_id    TEXT    NOT NULL,
+  seq            INTEGER NOT NULL,
+  op_id          TEXT    NOT NULL,
+  envelope       TEXT    NOT NULL,
+  payload_digest TEXT    NOT NULL,
+  committed_at   INTEGER NOT NULL,
   PRIMARY KEY (instance_id, seq),
   UNIQUE (instance_id, op_id)
 ) STRICT;
@@ -159,11 +164,15 @@ export function openStore(path: string, time: TimeSource): StoreHandle {
       return Promise.resolve(row === undefined ? null : rowToInstance(row));
     },
 
-    hasOp(instanceId, opId): Promise<boolean> {
+    findOp(instanceId, opId): Promise<{ payloadDigest: string } | null> {
       const row = db
-        .prepare("SELECT 1 AS one FROM transcript WHERE instance_id = ? AND op_id = ?")
-        .get(instanceId, opId);
-      return Promise.resolve(row !== undefined);
+        .prepare(
+          "SELECT payload_digest FROM transcript WHERE instance_id = ? AND op_id = ?",
+        )
+        .get(instanceId, opId) as { payload_digest: string } | undefined;
+      return Promise.resolve(
+        row === undefined ? null : { payloadDigest: row.payload_digest },
+      );
     },
 
     createInstance(instance: WorkflowInstance): Promise<void> {
@@ -199,13 +208,23 @@ export function openStore(path: string, time: TimeSource): StoreHandle {
     commitTransition(input: CommitTransitionInput): Promise<CommitTransitionResult> {
       db.exec("BEGIN IMMEDIATE");
       try {
-        // Duplicate beats CAS (plan §4.2): idempotency before stale.
-        const dup = db
-          .prepare("SELECT 1 AS one FROM transcript WHERE instance_id = ? AND op_id = ?")
-          .get(input.instanceId, input.envelope.opId);
-        if (dup !== undefined) {
+        // Idempotency beats CAS (plan §4.2 + §5.4), digest-aware: a
+        // matching digest is a retransmission, a differing one is a
+        // visible collision — neither writes anything.
+        const existing = db
+          .prepare(
+            "SELECT payload_digest FROM transcript WHERE instance_id = ? AND op_id = ?",
+          )
+          .get(input.instanceId, input.envelope.opId) as
+          | { payload_digest: string }
+          | undefined;
+        if (existing !== undefined) {
           db.exec("ROLLBACK");
-          return Promise.resolve({ kind: "duplicate_op" });
+          return Promise.resolve(
+            existing.payload_digest === input.payloadDigest
+              ? { kind: "duplicate_op" }
+              : { kind: "op_id_collision" },
+          );
         }
 
         const cas = db
@@ -230,12 +249,13 @@ export function openStore(path: string, time: TimeSource): StoreHandle {
           .prepare("SELECT COALESCE(MAX(seq), 0) + 1 AS seq FROM transcript WHERE instance_id = ?")
           .get(input.instanceId) as { seq: number };
         db.prepare(
-          "INSERT INTO transcript (instance_id, seq, op_id, envelope, committed_at) VALUES (?, ?, ?, ?, ?)",
+          "INSERT INTO transcript (instance_id, seq, op_id, envelope, payload_digest, committed_at) VALUES (?, ?, ?, ?, ?, ?)",
         ).run(
           input.instanceId,
           next.seq,
           input.envelope.opId,
           JSON.stringify(input.envelope),
+          input.payloadDigest,
           time.now(),
         );
         db.exec("COMMIT");
@@ -262,12 +282,18 @@ export function openStore(path: string, time: TimeSource): StoreHandle {
       }
       const entries = db
         .prepare(
-          "SELECT seq, envelope, committed_at FROM transcript WHERE instance_id = ? ORDER BY seq",
+          "SELECT seq, envelope, payload_digest, committed_at FROM transcript WHERE instance_id = ? ORDER BY seq",
         )
-        .all(instanceId) as unknown as { seq: number; envelope: string; committed_at: number }[];
+        .all(instanceId) as unknown as {
+        seq: number;
+        envelope: string;
+        payload_digest: string;
+        committed_at: number;
+      }[];
       const transcript: TranscriptEntry[] = entries.map((entry) => ({
         seq: entry.seq,
         envelope: JSON.parse(entry.envelope) as EventEnvelope,
+        payloadDigest: entry.payload_digest,
         committedAt: entry.committed_at,
       }));
       return Promise.resolve({ instance: rowToInstance(row), transcript });

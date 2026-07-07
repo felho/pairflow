@@ -7,6 +7,7 @@ import type {
   WorkflowTemplate,
 } from "../domain/index.js";
 import type { DefinitionStore } from "../ports/definition.js";
+import type { DigestSource } from "../ports/digest.js";
 import type { StorePort } from "../ports/store.js";
 import type { TimeSource } from "../ports/time.js";
 import { deriveDispatchIntent } from "./dispatchIntent.js";
@@ -28,6 +29,8 @@ export interface KernelDeps {
   readonly store: StorePort;
   readonly definitions: DefinitionStore;
   readonly time: TimeSource;
+  /** The transcript/collision digest seam (ch5-P4; production: emit-lib). */
+  readonly digest: DigestSource;
 }
 
 export interface Kernel {
@@ -52,7 +55,7 @@ async function loadTemplate(
 }
 
 export function createKernel(deps: KernelDeps): Kernel {
-  const { store, definitions } = deps;
+  const { store, definitions, digest } = deps;
 
   async function handleOnce(envelope: EventEnvelope): Promise<Outcome | "restart"> {
     const instance = await store.loadInstance(envelope.instanceId);
@@ -61,9 +64,20 @@ export function createKernel(deps: KernelDeps): Kernel {
     }
     const template = await loadTemplate(definitions, instance);
 
-    // Idempotency first (fast path; the commit txn is the mechanism).
-    if (await store.hasOp(envelope.instanceId, envelope.opId)) {
-      return { kind: "duplicate" };
+    // Computed ONCE (the model's HANDLE: the rung compares it, the
+    // commit records it). Ingress admission == canonicalizable, so the
+    // derivation cannot throw on an admitted envelope (ch-4 aftermath).
+    const payloadDigest = digest(envelope);
+
+    // Idempotency first (fast path; the commit txn is the mechanism),
+    // digest-aware since ch5-P4: same digest = retransmission, a
+    // different digest under a committed op_id is a VISIBLE collision —
+    // and it wins over stale (the rung order stands).
+    const existing = await store.findOp(envelope.instanceId, envelope.opId);
+    if (existing !== null) {
+      return existing.payloadDigest === payloadDigest
+        ? { kind: "duplicate" }
+        : { kind: "rejected", reason: "op_id_collision" };
     }
 
     if (envelope.expectedVersion === undefined) {
@@ -88,6 +102,7 @@ export function createKernel(deps: KernelDeps): Kernel {
       instanceId: instance.instanceId,
       expectedVersion: instance.version,
       envelope,
+      payloadDigest,
       newCurrentStep: target,
       newRound,
       newStatus,
@@ -95,6 +110,10 @@ export function createKernel(deps: KernelDeps): Kernel {
     switch (result.kind) {
       case "duplicate_op":
         return { kind: "duplicate" };
+      case "op_id_collision":
+        // Content-level and version-independent: a restart cannot
+        // change the answer — return directly, no CAS-restart.
+        return { kind: "rejected", reason: "op_id_collision" };
       case "cas_conflict":
         return "restart";
       case "committed": {

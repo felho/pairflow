@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { deriveEmitDigest } from "./emit/index.js";
 import { createIngress } from "./ingress/index.js";
 import { createKernel } from "./kernel/index.js";
 import { openStore } from "./store/index.js";
@@ -27,6 +28,7 @@ function wire(): { seams: TraceSeams; handle: StoreHandle } {
     store: handle.store,
     definitions: fixtureDefinitionStore(fixtureTemplate()),
     time: createControlledClock(1_000),
+    digest: deriveEmitDigest,
   });
   const ingress = createIngress(kernel);
   return {

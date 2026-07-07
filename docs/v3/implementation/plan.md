@@ -822,7 +822,9 @@ named Absent.
     audited implementation grows, not forks) — sha256 over a
     domain-separation tag + `JSON.stringify([TAG, type,
     canonicalize(payload)])`; **absent payload encodes as `[TAG, type]`,
-    `null` as `[TAG, type, null]`** — absent ≠ null by encoding,
+    `null` as `[TAG, type, "null"]`** — the third element is ALWAYS
+    the canonical output STRING (uniform rule; aligned at P4
+    pre-approval), absence is arity; absent ≠ null by encoding,
     test-pinned.
   - **ADR-008 (amends ADR-004)** records the transcript-digest form —
     born in P4. The P4 packet carries a small **canonical contract

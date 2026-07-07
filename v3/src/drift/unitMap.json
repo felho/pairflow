@@ -108,7 +108,9 @@
     "status": "pending"
   },
   "emit-contract-pseudocode/payload_digest": {
-    "status": "pending"
+    "codeRef": "v3/src/emit/opId.ts#deriveEmitDigest",
+    "disposition": "implement",
+    "status": "realized"
   },
   "emit-contract-pseudocode/validate_emit_contract": {
     "status": "pending"

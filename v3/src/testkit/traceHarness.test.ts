@@ -22,7 +22,7 @@ function envelope(opId: string, type: string): EventEnvelope {
 function fakeStore(detail: InstanceDetail, created: WorkflowInstance): StorePort {
   return {
     loadInstance: () => Promise.resolve(created),
-    hasOp: () => Promise.reject(new Error("unused")),
+    findOp: () => Promise.reject(new Error("unused")),
     createInstance: () => Promise.reject(new Error("unused")),
     commitTransition: () => Promise.reject(new Error("unused")),
     listInstances: () => Promise.reject(new Error("unused")),
@@ -79,8 +79,8 @@ describe("trace harness — fake-seam negatives (packet ch5-P3)", () => {
         version: 3,
       },
       transcript: [
-        { seq: 1, envelope: envelope("a1", "PASS"), committedAt: 1_001 },
-        { seq: 3, envelope: envelope("b2", "CONVERGED"), committedAt: 1_002 },
+        { seq: 1, envelope: envelope("a1", "PASS"), payloadDigest: "d-a1", committedAt: 1_001 },
+        { seq: 3, envelope: envelope("b2", "CONVERGED"), payloadDigest: "d-b2", committedAt: 1_002 },
       ],
     };
     const fixture: TraceFixture = {

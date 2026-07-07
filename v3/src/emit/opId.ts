@@ -16,13 +16,19 @@ export interface ActorEmitIdentity {
 
 export interface DerivedActorEmitId {
   readonly opId: OpId;
-  /** Canonical payload digest — the CHK-A1-DIGEST input (ch 5). */
+  /**
+   * Payload-only canonical digest — an op_id-derivation COMPONENT
+   * (ADR-004: the op type rides the op_id material separately). NOT
+   * the CHK-A1-DIGEST input — that is the type-inclusive
+   * deriveEmitDigest (ADR-008 corrected this comment).
+   */
   readonly payloadDigest: string;
 }
 
-// Domain-separation tags: the two families never share an id space.
+// Domain-separation tags: the surfaces never share an id/digest space.
 const ACTOR_EMIT_TAG = "pairflow-v3/actor-emit/v1";
 const OPERATOR_TAG = "pairflow-v3/operator/v1";
+const EMIT_DIGEST_TAG = "pairflow-v3/emit-digest/v1";
 
 function sha256Hex(input: string): string {
   return createHash("sha256").update(input, "utf8").digest("hex");
@@ -150,6 +156,26 @@ function canonicalize(value: unknown): string {
 
 export function digestPayload(payload: unknown): string {
   return sha256Hex(canonicalize(payload));
+}
+
+/**
+ * The transcript/collision digest (packet ch5-P4; ADR-008 amends
+ * ADR-004) — the model's payload_digest unit, schema-less branch:
+ * digest_of(type ⊕ canonical(payload)). Material rule: the third
+ * element is ALWAYS canonicalize's output STRING; an ABSENT payload is
+ * ARITY ([TAG, type]), never a sentinel — so absent ≠ null by
+ * construction. The kernel binds this through the DigestSource port;
+ * the rung compares it, the commit records it (CHK-A1-DIGEST).
+ */
+export function deriveEmitDigest(envelope: {
+  readonly type: string;
+  readonly payload?: unknown;
+}): string {
+  const material =
+    "payload" in envelope
+      ? JSON.stringify([EMIT_DIGEST_TAG, envelope.type, canonicalize(envelope.payload)])
+      : JSON.stringify([EMIT_DIGEST_TAG, envelope.type]);
+  return sha256Hex(material);
 }
 
 /**

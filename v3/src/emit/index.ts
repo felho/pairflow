@@ -3,6 +3,7 @@
 export {
   cryptoNonceSource,
   deriveActorEmitOpId,
+  deriveEmitDigest,
   deriveOperatorOpId,
   digestPayload,
   isCanonicalizable,

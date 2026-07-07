@@ -6,6 +6,7 @@ import { DatabaseSync } from "node:sqlite";
 import { afterEach, describe, expect, it } from "vitest";
 
 import type { EventEnvelope, WorkflowInstance } from "../domain/index.js";
+import { deriveEmitDigest } from "../emit/index.js";
 import { createControlledClock } from "../testkit/index.js";
 import { openStore } from "./sqliteStore.js";
 
@@ -31,6 +32,10 @@ function envelope(opId: string, expectedVersion: number): EventEnvelope {
   };
 }
 
+// All fixture envelopes share type+payload → one digest serves them all;
+// the collision tests below derive DIFFERING digests explicitly.
+const DIGEST = deriveEmitDigest(envelope("a1", 1));
+
 const dirs: string[] = [];
 
 function tempDbPath(): string {
@@ -55,6 +60,7 @@ describe("commitTransition — atomic transition commit (l0a invariant)", () => 
       instanceId: "inst-1",
       expectedVersion: 1,
       envelope: envelope("a1", 1),
+      payloadDigest: DIGEST,
       newCurrentStep: "review",
       newRound: 1,
       newStatus: "RUNNING",
@@ -78,13 +84,14 @@ describe("commitTransition — atomic transition commit (l0a invariant)", () => 
       instanceId: "inst-1",
       expectedVersion: 7,
       envelope: envelope("b2", 7),
+      payloadDigest: DIGEST,
       newCurrentStep: "review",
       newRound: 1,
       newStatus: "RUNNING",
     });
 
     expect(result).toEqual({ kind: "cas_conflict" });
-    expect(await handle.store.hasOp("inst-1", "b2")).toBe(false);
+    expect(await handle.store.findOp("inst-1", "b2")).toBeNull();
     const detail = await handle.store.getInstanceDetail("inst-1");
     expect(detail?.instance.version).toBe(1);
     handle.close();
@@ -97,6 +104,7 @@ describe("commitTransition — atomic transition commit (l0a invariant)", () => 
       instanceId: "inst-1",
       expectedVersion: 1,
       envelope: envelope("a1", 1),
+      payloadDigest: DIGEST,
       newCurrentStep: "review",
       newRound: 1,
       newStatus: "RUNNING",
@@ -105,6 +113,7 @@ describe("commitTransition — atomic transition commit (l0a invariant)", () => 
       instanceId: "inst-1",
       expectedVersion: 2,
       envelope: envelope("b2", 2),
+      payloadDigest: DIGEST,
       newCurrentStep: "implement",
       newRound: 2,
       newStatus: "RUNNING",
@@ -115,6 +124,7 @@ describe("commitTransition — atomic transition commit (l0a invariant)", () => 
       instanceId: "inst-1",
       expectedVersion: 1,
       envelope: envelope("a1", 1),
+      payloadDigest: DIGEST,
       newCurrentStep: "review",
       newRound: 1,
       newStatus: "RUNNING",
@@ -133,6 +143,7 @@ describe("commitTransition — atomic transition commit (l0a invariant)", () => 
         instanceId: "inst-1",
         expectedVersion: i + 1,
         envelope: envelope(opId, i + 1),
+        payloadDigest: DIGEST,
         newCurrentStep: "review",
         newRound: 1,
         newStatus: "RUNNING",
@@ -160,6 +171,7 @@ describe("CHK-A1-SCHEMA — the uniqueness constraint lives in the database", ()
       instanceId: "inst-1",
       expectedVersion: 1,
       envelope: envelope("a1", 1),
+      payloadDigest: DIGEST,
       newCurrentStep: "review",
       newRound: 1,
       newStatus: "RUNNING",
@@ -170,9 +182,11 @@ describe("CHK-A1-SCHEMA — the uniqueness constraint lives in the database", ()
     expect(() =>
       raw
         .prepare(
-          "INSERT INTO transcript (instance_id, seq, op_id, envelope, committed_at) VALUES (?, ?, ?, ?, ?)",
+          // payload_digest supplied: the red must be the UNIQUE
+          // constraint, never the NOT NULL (P4 build watchpoint).
+          "INSERT INTO transcript (instance_id, seq, op_id, envelope, payload_digest, committed_at) VALUES (?, ?, ?, ?, ?, ?)",
         )
-        .run("inst-1", 99, "a1", "{}", 0),
+        .run("inst-1", 99, "a1", "{}", "d", 0),
     ).toThrow(/UNIQUE/);
     raw.close();
   });
@@ -187,6 +201,7 @@ describe("CHK-C-TS-SOURCE — timestamps come from the injected TimeSource", () 
       instanceId: "inst-1",
       expectedVersion: 1,
       envelope: envelope("a1", 1),
+      payloadDigest: DIGEST,
       newCurrentStep: "review",
       newRound: 1,
       newStatus: "RUNNING",
@@ -196,6 +211,7 @@ describe("CHK-C-TS-SOURCE — timestamps come from the injected TimeSource", () 
       instanceId: "inst-1",
       expectedVersion: 2,
       envelope: envelope("b2", 2),
+      payloadDigest: DIGEST,
       newCurrentStep: "implement",
       newRound: 2,
       newStatus: "RUNNING",
@@ -257,5 +273,117 @@ describe("store-open — fail-closed marker (ADR-003)", () => {
     const second = openStore(path, createControlledClock(0));
     expect(await second.store.listInstances()).toEqual([]);
     second.close();
+  });
+});
+
+describe("op_id_collision — the digest-aware idempotency rung (packet ch5-P4)", () => {
+  function differingEnvelope(opId: string, expectedVersion: number): EventEnvelope {
+    return { ...envelope(opId, expectedVersion), payload: { ref: "SOMETHING-ELSE" } };
+  }
+
+  it("an existing op with a DIFFERING digest → op_id_collision, nothing written", async () => {
+    const handle = openStore(":memory:", createControlledClock(0));
+    await handle.store.createInstance(instance);
+    await handle.store.commitTransition({
+      instanceId: "inst-1",
+      expectedVersion: 1,
+      envelope: envelope("a1", 1),
+      payloadDigest: DIGEST,
+      newCurrentStep: "review",
+      newRound: 1,
+      newStatus: "RUNNING",
+    });
+
+    const collided = await handle.store.commitTransition({
+      instanceId: "inst-1",
+      expectedVersion: 2,
+      envelope: differingEnvelope("a1", 2),
+      payloadDigest: deriveEmitDigest(differingEnvelope("a1", 2)),
+      newCurrentStep: "review",
+      newRound: 1,
+      newStatus: "RUNNING",
+    });
+    expect(collided).toEqual({ kind: "op_id_collision" });
+    const detail = await handle.store.getInstanceDetail("inst-1");
+    expect(detail?.transcript).toHaveLength(1);
+    expect(detail?.instance.version).toBe(2);
+    handle.close();
+  });
+
+  it("collision beats CAS: a differing digest under an ADVANCED version → op_id_collision, never cas_conflict", async () => {
+    const handle = openStore(":memory:", createControlledClock(0));
+    await handle.store.createInstance(instance);
+    await handle.store.commitTransition({
+      instanceId: "inst-1",
+      expectedVersion: 1,
+      envelope: envelope("a1", 1),
+      payloadDigest: DIGEST,
+      newCurrentStep: "review",
+      newRound: 1,
+      newStatus: "RUNNING",
+    });
+    await handle.store.commitTransition({
+      instanceId: "inst-1",
+      expectedVersion: 2,
+      envelope: envelope("b2", 2),
+      payloadDigest: DIGEST,
+      newCurrentStep: "implement",
+      newRound: 2,
+      newStatus: "RUNNING",
+    });
+
+    const collided = await handle.store.commitTransition({
+      instanceId: "inst-1",
+      expectedVersion: 1, // stale on purpose — the rung must answer first
+      envelope: differingEnvelope("a1", 1),
+      payloadDigest: deriveEmitDigest(differingEnvelope("a1", 1)),
+      newCurrentStep: "review",
+      newRound: 1,
+      newStatus: "RUNNING",
+    });
+    expect(collided).toEqual({ kind: "op_id_collision" });
+    handle.close();
+  });
+
+  it("committed rows carry their digest; findOp reads the same stored value", async () => {
+    const handle = openStore(":memory:", createControlledClock(0));
+    await handle.store.createInstance(instance);
+    await handle.store.commitTransition({
+      instanceId: "inst-1",
+      expectedVersion: 1,
+      envelope: envelope("a1", 1),
+      payloadDigest: DIGEST,
+      newCurrentStep: "review",
+      newRound: 1,
+      newStatus: "RUNNING",
+    });
+    const detail = await handle.store.getInstanceDetail("inst-1");
+    expect(detail?.transcript[0]?.payloadDigest).toBe(DIGEST);
+    expect(await handle.store.findOp("inst-1", "a1")).toEqual({ payloadDigest: DIGEST });
+    handle.close();
+  });
+});
+
+describe("schema v1 → v2 — the first LIVE fenced wipe (packet ch5-P4, ADR-003)", () => {
+  it("a known PROTOTYPE store at marker '1' wipes on open and re-marks as '2'", async () => {
+    const path = tempDbPath();
+    const first = openStore(path, createControlledClock(0));
+    await first.store.createInstance(instance);
+    first.close();
+
+    const raw = new DatabaseSync(path);
+    raw.prepare("UPDATE meta SET value = '1' WHERE key = 'schema_version'").run();
+    raw.close();
+
+    const second = openStore(path, createControlledClock(0));
+    expect(await second.store.listInstances()).toEqual([]);
+    second.close();
+
+    const check = new DatabaseSync(path);
+    const marker = check
+      .prepare("SELECT value FROM meta WHERE key = 'schema_version'")
+      .get() as { value: string };
+    expect(marker.value).toBe("2");
+    check.close();
   });
 });

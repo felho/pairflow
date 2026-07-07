@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   deriveActorEmitOpId,
+  deriveEmitDigest,
   deriveOperatorOpId,
   digestPayload,
   isCanonicalizable,
@@ -253,5 +254,49 @@ describe("family separation", () => {
     const operator = deriveOperatorOpId("x|y|z|null");
     expect(operator).not.toBe(actor);
     expect(operator).toMatch(/^op_[0-9a-f]{64}$/);
+  });
+});
+
+describe("deriveEmitDigest — the transcript/collision digest (packet ch5-P4, ADR-008)", () => {
+  it("is deterministic and key-order-insensitive", () => {
+    expect(deriveEmitDigest({ type: "PASS", payload: { a: 1, b: 2 } })).toBe(
+      deriveEmitDigest({ type: "PASS", payload: { b: 2, a: 1 } }),
+    );
+  });
+
+  it("is TYPE-inclusive — same payload under a different type digests differently", () => {
+    expect(deriveEmitDigest({ type: "PASS", payload: { x: 1 } })).not.toBe(
+      deriveEmitDigest({ type: "CONVERGED", payload: { x: 1 } }),
+    );
+  });
+
+  it("absence is arity: absent payload ≠ null payload, absent == absent", () => {
+    const absent = deriveEmitDigest({ type: "PASS" });
+    expect(absent).not.toBe(deriveEmitDigest({ type: "PASS", payload: null }));
+    expect(absent).toBe(deriveEmitDigest({ type: "PASS" }));
+  });
+
+  it("the string \"null\" payload is distinct from the null payload (canonical string rule)", () => {
+    expect(deriveEmitDigest({ type: "PASS", payload: "null" })).not.toBe(
+      deriveEmitDigest({ type: "PASS", payload: null }),
+    );
+  });
+
+  it("is payload-sensitive", () => {
+    expect(deriveEmitDigest({ type: "PASS", payload: { x: 1 } })).not.toBe(
+      deriveEmitDigest({ type: "PASS", payload: { x: 2 } }),
+    );
+  });
+
+  it("never shares a digest space with the payload-only op_id component", () => {
+    const payload = { x: 1 };
+    expect(deriveEmitDigest({ type: "PASS", payload })).not.toBe(digestPayload(payload));
+  });
+
+  it("throws loudly on a non-canonicalizable payload (the ingress regression guard)", () => {
+    expect(() => deriveEmitDigest({ type: "PASS", payload: undefined })).toThrow(
+      /not canonicalizable|undefined/,
+    );
+    expect(() => deriveEmitDigest({ type: "PASS", payload: -0 })).toThrow(/negative zero/);
   });
 });

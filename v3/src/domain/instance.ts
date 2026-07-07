@@ -24,9 +24,16 @@ export interface WorkflowInstance {
   readonly version: number;
 }
 
-/** A committed transcript row; `committedAt` is store-stamped (CHK-C-TS-SOURCE). */
+/**
+ * A committed transcript row; `committedAt` is store-stamped
+ * (CHK-C-TS-SOURCE). `payloadDigest` rides the COMMITTED fact (packet
+ * ch5-P4, the model's "recorded_digest_of reads the committed row") —
+ * the type-inclusive emit digest the collision rung compares
+ * (CHK-A1-DIGEST); rejected attempts record nothing.
+ */
 export interface TranscriptEntry {
   readonly seq: number;
   readonly envelope: EventEnvelope;
+  readonly payloadDigest: string;
   readonly committedAt: EpochMillis;
 }

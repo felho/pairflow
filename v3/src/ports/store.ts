@@ -20,22 +20,28 @@ export interface CommitTransitionInput {
   readonly instanceId: InstanceId;
   readonly expectedVersion: number;
   readonly envelope: EventEnvelope;
+  /** The type-inclusive emit digest (DigestSource; packet ch5-P4). */
+  readonly payloadDigest: string;
   readonly newCurrentStep: StepId;
   readonly newRound: number;
   readonly newStatus: LifecycleStatus;
 }
 
 /**
- * Conflict precedence (plan §4.2, binding): inside the commit
- * transaction the duplicate check PRECEDES the version check — an
- * existing (instance_id, op_id) reports duplicate_op even when the
- * version has since advanced. Misreporting a retransmission as a CAS
- * conflict violates IC-A1.
+ * Conflict precedence (plan §4.2 extended by §5.4, binding): inside
+ * the commit transaction the idempotency check PRECEDES the version
+ * check, and it is DIGEST-AWARE — an existing (instance_id, op_id) row
+ * with a MATCHING digest reports duplicate_op, a DIFFERING digest
+ * reports op_id_collision; both even when the version has since
+ * advanced. Misreporting a retransmission as a CAS conflict — or a
+ * collision as Stale — violates IC-A1. A collision writes NOTHING
+ * (rejected attempts never consume the idempotency key).
  */
 export type CommitTransitionResult =
   | { readonly kind: "committed"; readonly version: number }
   | { readonly kind: "cas_conflict" }
-  | { readonly kind: "duplicate_op" };
+  | { readonly kind: "duplicate_op" }
+  | { readonly kind: "op_id_collision" };
 
 export interface InstanceDetail {
   readonly instance: WorkflowInstance;
@@ -48,9 +54,11 @@ export interface StorePort {
   loadInstance(instanceId: InstanceId): Promise<WorkflowInstance | null>;
   /**
    * Transcript pre-check FAST PATH only; correctness comes from the
-   * commit transaction (REV-A1-TXN).
+   * commit transaction (REV-A1-TXN). Returns the committed row's
+   * digest so the rung can answer the collision question — a boolean
+   * cannot (packet ch5-P4; replaces ch-4's hasOp).
    */
-  hasOp(instanceId: InstanceId, opId: OpId): Promise<boolean>;
+  findOp(instanceId: InstanceId, opId: OpId): Promise<{ readonly payloadDigest: string } | null>;
   /**
    * The caller mints instanceId (tests: deterministic ids; production
    * minting lands with the ch-6 CLI — no randomness in kernel or store).
