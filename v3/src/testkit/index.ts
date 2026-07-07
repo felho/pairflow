@@ -10,3 +10,11 @@ export type { DeliverFn, ScriptedActor } from "./scriptedActor.js";
 export { createScriptedGateRunner, createScriptedProcessRunner } from "./fixtures.js";
 export type { ScriptedGateRunner, ScriptedProcessRunner } from "./fixtures.js";
 export { fixtureDefinitionStore, fixtureTemplate } from "./templateFixture.js";
+export {
+  checkEndStateConsistency,
+  checkOpUniqueness,
+  checkSeqContinuity,
+  checkTerminalSink,
+  checkVersionArithmetic,
+  runAllCheckers,
+} from "./storeCheckers.js";

@@ -30,6 +30,12 @@ Validation asserts: manifest key set == units tree; packet-owned units
 are realized with the SAME disposition; realized rows have packet owners.
 --unit-map overrides the manifest path (negative-test seam).
 
+Disposition lock (packet ch5-P2): docs/v3/implementation/
+invariant-disposition-map.md is REQUIRED — one machine block classing
+ALL 116 invariants (checker/type-schema/test/review). One-way lock by
+design: packets declare only their slices and may not contradict the
+map. --disposition-map overrides the path (negative-test seam).
+
 Closure axes (the par.1.4 scope rules, mechanized):
   - units: 158/158 owned, exactly one owner unless shared ownership is
     declared by EVERY co-owner;
@@ -58,6 +64,7 @@ UNITS_DIR = MODEL_SRC / "units"
 LEDGER = MODEL_SRC / "ledger.md"
 DEFAULT_PACKETS_DIR = REPO_ROOT / "docs/v3/implementation/packets"
 DEFAULT_UNIT_MAP = REPO_ROOT / "v3/src/drift/unitMap.json"
+DEFAULT_DISPOSITION_MAP = REPO_ROOT / "docs/v3/implementation/invariant-disposition-map.md"
 CODE_REF = re.compile(r"^[^#]+#[^#]+$")
 
 UNIT_DISPOSITIONS = {
@@ -144,6 +151,7 @@ def validate_slice(
     inventory: dict[str, set[str]],
     checker: Checker,
     unit_dispositions: dict[str, dict[str, str]],
+    invariant_dispositions: dict[str, dict[str, str]],
 ) -> dict[str, set[str]]:
     declared: dict[str, set[str]] = {"units": set(), "invariants": set(), "traces": set()}
     if not isinstance(sl, dict):
@@ -186,6 +194,8 @@ def validate_slice(
                 f"{packet}: invariant '{entry['id']}' has invalid disposition "
                 f"'{entry['disposition']}' (exact tokens: {sorted(INVARIANT_DISPOSITIONS)})"
             )
+        else:
+            invariant_dispositions.setdefault(entry["id"], {})[packet] = entry["disposition"]
         declared["invariants"].add(entry["id"])
 
     for trace in sl.get("traces", []):
@@ -307,6 +317,71 @@ def load_unit_map(
     return data
 
 
+def load_disposition_map(
+    path: Path, inventory: dict[str, set[str]], checker: Checker
+) -> dict[str, str]:
+    """The invariant disposition map (docs/v3/implementation/
+    invariant-disposition-map.md) — REQUIRED from packet ch5-P2 on
+    (fail-closed). Exactly ONE fenced json block with the top-level key
+    'invariant_disposition_map'; key set == ledger par.2; values are the
+    exact INVARIANT_DISPOSITIONS tokens."""
+    if not path.is_file():
+        checker.error(
+            f"disposition map missing: {path} (invariant map required from ch5-P2 on)"
+        )
+        return {}
+    text = path.read_text(encoding="utf-8")
+    blocks = []
+    for match in JSON_FENCE.finditer(text):
+        try:
+            data = json.loads(match.group(1))
+        except json.JSONDecodeError as exc:
+            checker.error(f"disposition map: unparseable json block ({exc})")
+            return {}
+        if isinstance(data, dict) and "invariant_disposition_map" in data:
+            blocks.append(data["invariant_disposition_map"])
+    if len(blocks) != 1:
+        checker.error(
+            f"disposition map: exactly one invariant_disposition_map block required, "
+            f"found {len(blocks)}"
+        )
+        return {}
+    mapping = blocks[0]
+    if not isinstance(mapping, dict):
+        checker.error("disposition map: invariant_disposition_map must be an object")
+        return {}
+    for invariant_id, disposition in sorted(mapping.items()):
+        if disposition not in INVARIANT_DISPOSITIONS:
+            checker.error(
+                f"disposition map: '{invariant_id}' has invalid disposition "
+                f"'{disposition}' (exact tokens: {sorted(INVARIANT_DISPOSITIONS)})"
+            )
+    for invariant_id in sorted(inventory["invariants"] - mapping.keys()):
+        checker.error(f"disposition map: missing invariant id '{invariant_id}'")
+    for invariant_id in sorted(mapping.keys() - inventory["invariants"]):
+        checker.error(f"disposition map: unknown invariant id '{invariant_id}'")
+    return mapping
+
+
+def check_disposition_lock(
+    disposition_map: dict[str, str],
+    invariant_dispositions: dict[str, dict[str, str]],
+    checker: Checker,
+) -> None:
+    """One-way by design (packet ch5-P2): the map classes ALL 116;
+    packets declare only their slices — and may not contradict the map."""
+    for invariant_id, by_packet in sorted(invariant_dispositions.items()):
+        mapped = disposition_map.get(invariant_id)
+        if mapped is None:
+            continue  # the key-set check already reported it
+        for packet, disposition in sorted(by_packet.items()):
+            if disposition != mapped:
+                checker.error(
+                    f"disposition lock: '{invariant_id}' — {packet} declares "
+                    f"'{disposition}', the map says '{mapped}'"
+                )
+
+
 def check_unit_map_lock(
     unit_map: dict[str, dict],
     unit_dispositions: dict[str, dict[str, str]],
@@ -340,7 +415,7 @@ def check_unit_map_lock(
 
 
 def run_validation(
-    packets_dir: Path, unit_map_path: Path
+    packets_dir: Path, unit_map_path: Path, disposition_map_path: Path
 ) -> tuple[Checker, dict[str, set[str]], dict[str, dict[str, list[str]]], list[Path]]:
     checker = Checker()
     inventory = load_inventory()
@@ -352,6 +427,7 @@ def run_validation(
             )
 
     unit_map = load_unit_map(unit_map_path, inventory, checker)
+    disposition_map = load_disposition_map(disposition_map_path, inventory, checker)
 
     packet_files = (
         sorted(p for p in packets_dir.glob("*.md") if p.name != "README.md")
@@ -362,11 +438,14 @@ def run_validation(
     shares: dict[str, set[tuple[str, str]]] = {}
     declared_by: dict[str, set[str]] = {}
     unit_dispositions: dict[str, dict[str, str]] = {}
+    invariant_dispositions: dict[str, dict[str, str]] = {}
     for path in packet_files:
         sl = extract_slice(path, checker)
         if sl is None:
             continue
-        declared = validate_slice(path.name, sl, inventory, checker, unit_dispositions)
+        declared = validate_slice(
+            path.name, sl, inventory, checker, unit_dispositions, invariant_dispositions
+        )
         declared_by[path.name] = declared["units"] | declared["invariants"] | declared["traces"]
         for axis in owners:
             for item in declared[axis]:
@@ -383,6 +462,7 @@ def run_validation(
         shares, declared_by, {p.name for p in packet_files}, inventory, checker
     )
     check_unit_map_lock(unit_map, unit_dispositions, checker)
+    check_disposition_lock(disposition_map, invariant_dispositions, checker)
     return checker, inventory, owners, packet_files
 
 
@@ -398,11 +478,16 @@ def run_selftest() -> int:
         unit_id: {"status": "pending"} for unit_id in sorted(inventory["units"])
     }
     owned_id = "l0b-pseudocode/HANDLE"
+    owned_invariant = "l0a/op-id-idempotency"
     realized = {
         "status": "realized",
         "disposition": "implement",
         "codeRef": "v3/src/kernel/kernel.ts#createKernel",
     }
+    base_dispo: dict[str, str] = {
+        invariant_id: "review" for invariant_id in sorted(inventory["invariants"])
+    }
+    base_dispo[owned_invariant] = "test"
     packet_md = (
         "# selftest packet\n\n```json\n"
         + json.dumps(
@@ -410,7 +495,7 @@ def run_selftest() -> int:
                 "ledger_slice": {
                     "units": [{"id": owned_id, "disposition": "implement"}],
                     "rejections": [],
-                    "invariants": [],
+                    "invariants": [{"id": owned_invariant, "disposition": "test"}],
                     "traces": [],
                     "shared_ownership": [],
                 }
@@ -421,7 +506,14 @@ def run_selftest() -> int:
 
     failures: list[str] = []
 
-    def run_fixture(unit_map: dict | None, with_packet: bool) -> Checker:
+    def run_fixture(
+        unit_map: dict | None,
+        with_packet: bool,
+        dispo_map: dict | None = None,
+        dispo_blocks: int = 1,
+    ) -> Checker:
+        if dispo_map is None:
+            dispo_map = base_dispo
         with tempfile.TemporaryDirectory() as tmp:
             tmp_path = Path(tmp)
             packets = tmp_path / "packets"
@@ -431,11 +523,26 @@ def run_selftest() -> int:
             map_path = tmp_path / "unitMap.json"
             if unit_map is not None:
                 map_path.write_text(json.dumps(unit_map), encoding="utf-8")
-            checker, _, _, _ = run_validation(packets, map_path)
+            dispo_path = tmp_path / "invariant-disposition-map.md"
+            if dispo_blocks > 0:
+                block = (
+                    "```json\n"
+                    + json.dumps({"invariant_disposition_map": dispo_map})
+                    + "\n```\n"
+                )
+                dispo_path.write_text("# selftest map\n\n" + block * dispo_blocks, encoding="utf-8")
+            checker, _, _, _ = run_validation(packets, map_path, dispo_path)
             return checker
 
-    def expect_red(name: str, unit_map: dict | None, expect: str, with_packet: bool = True) -> None:
-        checker = run_fixture(unit_map, with_packet)
+    def expect_red(
+        name: str,
+        unit_map: dict | None,
+        expect: str,
+        with_packet: bool = True,
+        dispo_map: dict | None = None,
+        dispo_blocks: int = 1,
+    ) -> None:
+        checker = run_fixture(unit_map, with_packet, dispo_map, dispo_blocks)
         if any(expect in message for message in checker.errors):
             print(f"selftest OK: {name}")
         else:
@@ -470,9 +577,54 @@ def run_selftest() -> int:
     variant[owned_id] = {**realized, "codeRef": "no-symbol-separator"}
     expect_red("schema: malformed codeRef", variant, "codeRef must be")
 
-    variant = dict(base_map)
-    variant[owned_id] = realized
-    green = run_fixture(variant, with_packet=True)
+    good_units = dict(base_map)
+    good_units[owned_id] = realized
+    expect_red(
+        "disposition map: missing file fails closed",
+        good_units,
+        "disposition map missing",
+        dispo_blocks=0,
+    )
+    dispo_variant = dict(base_dispo)
+    del dispo_variant[owned_invariant]
+    expect_red(
+        "disposition map: missing invariant id",
+        good_units,
+        "missing invariant id",
+        dispo_map=dispo_variant,
+    )
+    dispo_variant = dict(base_dispo)
+    dispo_variant["not-a-section/not-an-invariant"] = "review"
+    expect_red(
+        "disposition map: unknown invariant id",
+        good_units,
+        "unknown invariant id",
+        dispo_map=dispo_variant,
+    )
+    dispo_variant = dict(base_dispo)
+    dispo_variant[owned_invariant] = "vibes"
+    expect_red(
+        "disposition map: invalid disposition token",
+        good_units,
+        "invalid disposition",
+        dispo_map=dispo_variant,
+    )
+    dispo_variant = dict(base_dispo)
+    dispo_variant[owned_invariant] = "checker"
+    expect_red(
+        "disposition lock: packet contradicts the map",
+        good_units,
+        "disposition lock",
+        dispo_map=dispo_variant,
+    )
+    expect_red(
+        "disposition map: two machine blocks",
+        good_units,
+        "exactly one invariant_disposition_map block",
+        dispo_blocks=2,
+    )
+
+    green = run_fixture(good_units, with_packet=True)
     if green.errors:
         failures.append("green control")
         print(f"selftest FAIL: green control errored: {green.errors!r}", file=sys.stderr)
@@ -491,6 +643,7 @@ def main() -> int:
     parser.add_argument("--assert-closed", action="store_true", help="require full closure")
     parser.add_argument("--packets-dir", type=Path, default=DEFAULT_PACKETS_DIR)
     parser.add_argument("--unit-map", type=Path, default=DEFAULT_UNIT_MAP)
+    parser.add_argument("--disposition-map", type=Path, default=DEFAULT_DISPOSITION_MAP)
     parser.add_argument(
         "--selftest",
         action="store_true",
@@ -501,7 +654,9 @@ def main() -> int:
     if args.selftest:
         return run_selftest()
 
-    checker, inventory, owners, packet_files = run_validation(args.packets_dir, args.unit_map)
+    checker, inventory, owners, packet_files = run_validation(
+        args.packets_dir, args.unit_map, args.disposition_map
+    )
 
     if checker.errors:
         for message in checker.errors:
