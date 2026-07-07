@@ -1,8 +1,11 @@
 # Open: V1 operability — testing, debugging, and the visibility floor
 
-Status: **open (2026-07-07)** — decision round in progress. **Q1–Q3 settled
-(2026-07-07, ratified)**; Q4 pending. A fifth section reserves
-implementation-plan chapters that need no design decision now.
+Status: **SETTLED (2026-07-07)** — all four questions ratified one at a time
+(Q1 visibility floor incl. required live tail; Q2 test kit; Q3 injected time
+source; Q4 the ledger as the model↔code contract surface, extended at
+ratification with the pseudocode-unit mapping and the domain-registry lift).
+The final section reserves implementation-plan chapters that need no design
+decision now.
 
 ## Why this memo exists
 
@@ -160,35 +163,68 @@ corpus had no clock abstraction at all; scattered wall-clock calls would make
 every time-dependent test nondeterministic and leave L6/L9 an expensive
 cleanup.
 
-## Q4 — The model ledger as a conformance asset
+## Q4 — The model ledger as the model↔code contract surface
 
-**The question.** Do the modeling-time artifacts — the rejection registry,
-the invariant inventory, the scenario traces — become implementation-time
-test artifacts, and in what form?
+**Settled direction (2026-07-07, ratified — extended at ratification with
+the pseudocode and DDD questions the user raised).** The organizing frame:
+**the derived ledger becomes the contract surface between the model and the
+implementation** — names unconditionally, behavior scoped, internal laws as
+post-conditions.
 
-**Why it should be answered now.** This is the project's highest-leverage
-testing opportunity: the model was built with machine-checked
-behavior-neutrality, so an executable form of the same checks would carry the
-paper-test discipline across the model→code boundary. Nothing in the corpus
-currently claims this transfer, so by default it won't happen.
+**1. Name-space drift tests — unconditional.** Three name-spaces, all
+checked the same cheap way (generated from, or asserted against, the model
+source; a drift test, not a behavior test):
 
-**Proposed direction (three graded commitments, cheapest first).**
+- **rejection names** — the implementation's rejection type matches the
+  ledger's 85-name registry; code and model never speak two error languages;
+- **domain concepts** — the implementation's type layer (types, table
+  schemas) is generated from / checked against the domain registry (see
+  point 4); the ubiquitous language, enforced;
+- **pseudocode units** — every one of the model's pseudocode units (158
+  files, one per kernel function: `RECEIVE`, `CREATE_INSTANCE`,
+  `choice_point`, …) has a declared counterpart in code, and a completeness
+  check asserts the mapping covers all units. Behavior is tested by the
+  traces (point 2); the mapping keeps the *structure* legible — "where is
+  `choice_point` implemented?" always has one answer.
 
-1. **Rejection names as the shared error vocabulary.** The implementation's
-   rejection type is generated from (or checked against) the ledger's
-   85-name registry — a drift test, not a behavior test. Near-zero cost.
-2. **Model scenario traces as golden tests.** The traces used in level
-   ratifications become executable: feed the trace's ingress sequence to the
-   real kernel via the Q2 scripted actor, assert the committed transcript
-   and outcomes match. This is the direct heir of the paper test.
-3. **Invariant checks as a post-condition suite.** A reusable checker that
-   any test can run over a store after acting on it (idempotency ledger
-   consistency, CAS monotonicity, audit-floor presence) — the executable
-   form of the ledger's invariant inventory.
+**2. Model traces as golden tests — mandatory core + scoped extension.**
+Ratification clarified exactly which traces: the **"A concrete trace" block
+at the head of each level section** (numbered ingress→commit→outcome rows;
+several already include skew rows such as L0a's 3′ duplicate delivery).
+These become executable: the Q2 scripted actor plays the trace's ingress
+sequence against the real kernel; the test asserts the committed transcript
+and outcomes match the model's rows. The chapter traces are the mandatory
+core. They deliberately show the typical path — the corpus itself notes the
+pseudocode states branches "the trace never exercises" — so the **scoped
+extension** is rejection-branch traces, with the 85-name registry as the
+coverage checklist (over time, each named rejection gets a trace that
+triggers it). The extension is scheduled by the implementation plan, not
+sized now.
 
-Commitment 1 should be unconditional; 2 and 3 can be scoped in the
-implementation plan (e.g. traces for the primitives and the emit contract
-first).
+**3. Invariant checks as a post-condition suite — scoped.** A reusable
+checker any test can run over a store after acting on it (idempotency ledger
+consistency, CAS monotonicity, audit-floor presence) — the executable form
+of the ledger's invariant inventory; runs as a free extra assertion at the
+end of every trace test.
+
+**4. The domain-registry lift — a model-side tooling touch (coordinate with
+the model-build thread).** The DDD layer is already semi-structured (every
+section carries exactly one Domain-lens block with marked-up aggregates and
+entities) but is absent from the derived ledger. The invariant pattern
+repeats: extend the ledger generator with a **§4 domain registry**
+(aggregate / entity / relation inventory per level), making the domain
+vocabulary a semantic checksum on model edits and the source for the
+implementation's type layer (point 1). This touches the model-src/ledger
+tooling owned by the model-build thread — this memo records the requirement;
+the lift itself lands there.
+
+**The original question and rationale (kept as record).** Do the
+modeling-time artifacts — the rejection registry, the invariant inventory,
+the scenario traces — become implementation-time test artifacts, and in what
+form? The model was built with machine-checked behavior-neutrality; an
+executable form of the same checks carries the paper-test discipline across
+the model→code boundary. Nothing in the corpus claimed this transfer, so by
+default it would not have happened.
 
 ## Reserved implementation-plan chapters (no design decision needed now)
 
