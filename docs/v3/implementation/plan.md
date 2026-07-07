@@ -1,7 +1,7 @@
 # V3 Implementation Plan
 
 Written chapter by chapter, each chapter proposed → ratified → committed
-(process: [`README.md`](README.md) §3). Chapters present: 1–4.
+(process: [`README.md`](README.md) §3). Chapters present: 1–5.
 
 **Genre note.** This is the implementation **master plan** — it is NOT a
 directly `ExecutePairflowPlan`-executable task list, and it carries no
@@ -69,7 +69,7 @@ definition of done, README §6):
 | IC-B | `REV-B-LOCAL-NOT-AUTHORITY` — no code path treats a local lock/cache as authority; claiming (`SKIP LOCKED` etc.) is scheduling only | review rubric | realized |
 | IC-B | `ADR-B-FENCE` — fencing-token watch: fires only if a future shape adds a lease-holding worker writing out-of-band to a shared external resource | ADR machinery | deferred(trigger) |
 | IC-C | `CHK-C-TS-SOURCE` — `DECISION_MADE` timestamps come from the commit/append boundary (DB default / commit metadata), never client-supplied | ch 4 | realized |
-| IC-C | `CT-C-PURGE-AUDIT` — the LC4 purge contract test: the decision audit floor survives a purge | ch 5 | planned(ch 5) |
+| IC-C | `CT-C-PURGE-AUDIT` — the LC4 purge contract test: the decision audit floor survives a purge | purge chapter (map extension; re-homed at ch-5 ratification, §5.6) | planned(purge chapter) |
 | IC-C | `REV-C-PROJECTIONS-READONLY` — analytics/metrics/UI readers consume projections, never write audit tables | review rubric | realized |
 | IC-D | `CHK-D-NOCLOCK` — lint: kernel code contains no direct wall-clock read; all time flows through the injected `TimeSource` | ch 3 | realized |
 | IC-D | `CHK-D-TESTCLOCK` — every time-dependent contract test runs on the controlled clock; a test needing a real sleep fails this check | ch 3 | realized |
@@ -103,6 +103,13 @@ convention is itself a chapter-1 rule.
 | 8 | Template file-format spec: the canonical authoring format; **migrates MD-1** | PI-5 | planned(ch 8) |
 | 9 | Runner MVP: local worktree provider, one real actor adapter, process-gate runner, attach channel (tmux observe/takeover); sub-decision: local-worktree only vs headless/cloud | PI-8 | planned(ch 9) |
 | 10 | Operator recourse card: one page (query via the floor, cancel, deleteRequested; no watchdog/retry until L9) | PI-9 | planned(ch 10) |
+
+**Map extension note (added at ch-5 ratification, §5.6).** The 10-chapter
+map is the Block A core sequence, not a closed list: semantic surfaces the
+model ladder carries beyond it enter as APPENDED chapters when their
+prerequisites exist — first candidate: the archive-purge / LC4 surface,
+the re-homed `CT-C-PURGE-AUDIT`'s owner. A re-home is recorded in both the
+intake row and the ratifying chapter; it is never a silent drop.
 
 **Ordering note (walking-skeleton-first, README §3.4).** Chapter 3 before
 chapter 4 does not contradict the principle: ch 3 is the constraint-sink /
@@ -699,3 +706,215 @@ ADR-006 `accepted`, integrity check green; the three ch-4 intake rows +
 the ch-4 map row flipped to `realized` (PI-6); MD-1 stays open by design
 (ch-8 debt); coverage validation green over the four packets; process-log
 review held at the boundary.
+
+---
+
+## Chapter 5 — Ledger→test transfer (ratified 2026-07-07)
+
+Autonomy stage: **calibration** (README §5.5).
+
+This chapter builds the transfer machinery PI-3 names — the three
+unconditional drift tests, the chapter-trace golden harness, the invariant
+disposition map + post-condition suite — and realizes five of the six
+ch-5 intake rows (`CT-A1-COLLISION`, `CHK-A1-DIGEST`, `CT-A3-RETRANS`,
+`CT-A3-EMITLIB-REFRESH`, `CT-B-TWOWORKER`); the sixth is re-homed (§5.6).
+
+**Chapter rules (binding, from the ch-4 aftermath — process log):**
+
+1. **Enumerate claim dimensions first.** Every gate/check packet lists
+   its claim's DIMENSIONS before deriving tests (the ch-4 ladder — value
+   shapes → descriptors → prototypes → numeric identity — is the
+   precedent for what "wide enough" means).
+2. **A logged instruction is not execution.** A sweep or check a packet
+   prescribes is EXECUTED and test-pinned in the same commit; it is part
+   of the packet's acceptance, never a note for later.
+
+### 5.1 The three unconditional drift tests (PI-3)
+
+Home: **`v3/src/drift/`** — a NEW test-only module; **ADR-007 (amends
+ADR-001)** adds it to the module map with the binding rule: production
+modules never import `drift/`; drift tests read the `model-src` documents
+at test time (the ch-4 `rejectionNames.test.ts` precedent).
+
+1. **Rejection names (85).** The ch-4 pre-test moves here unchanged
+   (`git mv` from `domain/`) — ch 5 formally absorbs it, closing §4.5's
+   forward reference.
+2. **Domain registry (51 aggregate blocks · 121 entities).** The test
+   parses ledger §4 at test time; the code-side counterpart is a
+   **manifest** (`drift/domainRegistry.ts`): every ledger entity →
+   `realized(<exported type name>)` or `pending(<chapter>)`. The test
+   asserts key-set equality; **existence is proven by the typecheck** —
+   the manifest references realized types via `import type`, so a
+   vanished type is a compile error (types are erased; no runtime trick
+   can check them). Non-type §4 tokens (e.g. storage-scope shape /
+   constraint / policy rows) carry their own manifest dispositions; the
+   normalization rule (annotation stripping: `[root]`, `(value)`, …) is
+   pinned in the P1 packet with the full row table.
+3. **Unit→code mapping (158).** A manifest (`drift/unitMap.ts`): unit id
+   → `{disposition, codeRef?}`. The test asserts: key set == the
+   `model-src/units/` tree at test time; every `codeRef` resolves (file
+   exists, symbol present). **Three-way lock:** the coverage script's
+   validation mode gains a cross-check — a packet-owned unit's declared
+   disposition must equal the manifest's; ledger ↔ manifest ↔ packet
+   cannot shear pairwise. (Negative-tested through the script's
+   `--packets-dir` seam, derived from the widened claim.)
+
+### 5.2 The chapter-trace golden harness + level-lifting
+
+- **Declarative trace fixture** (testkit): a step list (`start` /
+  `emit` with expected outcome + state assertions) plus a final
+  transcript expectation (`[seq, opId]` sequence). The engine replays it
+  scripted-actor → ingress → kernel → REAL store, then runs the §5.3
+  post-condition checkers over the final store state.
+- **Level-lifting convention — declared data, not ad-hoc:** a level-Lx
+  trace replays against the CURRENT kernel; a lift may only ADD fields
+  the kernel's present level makes mandatory (now: `expectedVersion`,
+  tracked from the running version in a declared way), and it may
+  **never weaken a trace assertion** (the l0a 3′ redelivery step's
+  `Duplicate` expectation stands). The convention lives here; each
+  trace's lift rule lives in its fixture.
+- **Ch-5 transfer: the l0a trace** (lifted — traces 2/20). The ch-4 l0b
+  golden test is REFACTORED onto the harness; trace ownership stays with
+  ch4-P4 (no slice change, no double owner).
+- **Trace-status table** (P3 packet): all 20 traces — level, lift need,
+  expected owner chapter. The storage-scope row is stated precisely
+  (ratification finding): the section HAS a runtime-shaped block, but
+  the model itself says **"Not a handler trace"** — a non-handler /
+  placement-contract trace, not harness-replayable; its realization
+  stays a documentation/review disposition with its owner chapter.
+
+### 5.3 The invariant disposition map + post-condition suite
+
+- **The map dispositions ALL 116 invariants now**:
+  `invariant-disposition-map.md` (this directory), with a machine JSON
+  block. Exactly one disposition each — `checker` / `type/schema` /
+  `test` / `review` (§1.4). The coverage script validates: key set ==
+  ledger §2, enum validity, and **packet-declared invariant dispositions
+  == the map** (the ch-4 packets' 8 rows are already bound — the map
+  conforms to them, not the reverse).
+- **Post-condition checker kit** (testkit): store-state checkers — seq
+  continuity, version arithmetic (version == 1 + committed
+  transitions), terminal-is-a-sink, uniqueness consistency. The harness
+  runs them after every trace replay. Accounting: harness
+  INFRASTRUCTURE, not a disposition owner — the ch-4 `CT-*` rows keep
+  their invariants; the `checker` disposition mostly awaits later
+  levels' store-surfaced invariants.
+
+### 5.4 The digest slice: `CT-A1-COLLISION` + `CHK-A1-DIGEST` (actor-emit scope)
+
+Realizes the emit-contract HANDLE's digest rung in its **schema-less
+branch** (`contract is none → digest_of(type ⊕ canonical(payload))`) —
+exactly the EC memo's scope decision; operator/lifecycle digests stay a
+named Absent.
+
+- **Two digest surfaces (ratification finding — binding contract):**
+  - `digestPayload` (payload-only) REMAINS the op_id-derivation
+    component (ADR-004's material is unchanged); its "CHK-A1-DIGEST
+    input" source comment was WRONG and is corrected in P4.
+  - The **transcript/collision digest is type-inclusive**, per the
+    model's `payload_digest` unit: a NEW emit-lib function (the one
+    audited implementation grows, not forks) — sha256 over a
+    domain-separation tag + `JSON.stringify([TAG, type,
+    canonicalize(payload)])`; **absent payload encodes as `[TAG, type]`,
+    `null` as `[TAG, type, null]`** — absent ≠ null by encoding,
+    test-pinned.
+  - **ADR-008 (amends ADR-004)** records the transcript-digest form —
+    born in P4. The P4 packet carries a small **canonical contract
+    matrix for the two digest surfaces** (ratification finding).
+- **`DigestSource` port** — the kernel's import boundary stays intact
+  (domain + ports ONLY); the production binding is the emit-lib
+  function. The kernel computes the digest ONCE in HANDLE; the rung
+  compares, the commit records — the model's order.
+- **Store schema v2:** the transcript gains a `payload_digest` column;
+  `SCHEMA_VERSION` "1" → "2" — the ADR-003 **fenced wipe path runs live
+  for the first time** (known dev marker → wipe-and-recreate;
+  non-prototype → still fail-closed).
+- **Precedence extension (continues §4.2's binding contract):** the
+  in-transaction duplicate check becomes digest-aware — an existing
+  `(instance_id, op_id)` row with a MATCHING digest → `duplicate_op`; a
+  DIFFERING digest → a new result arm `op_id_collision` (a ledger §3
+  registry name, not invented). Both precede the CAS check.
+- **`CHK-A1-DIGEST`** claim-derived: a committed actor-emit row carries
+  its digest; rejected / duplicate / collision attempts write NOTHING
+  and consume no idempotency key.
+
+### 5.5 The emit⇄kernel loop + two workers
+
+- **`CT-A3-RETRANS`** — scripted actor + emit-lib against the REAL
+  kernel: a retransmission (same context-packet identity) reproduces the
+  same `op_id` → `Duplicate`, one transcript row.
+- **`CT-A3-EMITLIB-REFRESH`** — a stale emit → `Stale(v)`; a refresh
+  from a FRESH context packet derives a new `op_id` by construction →
+  commit; and the rejected attempt consumed no key.
+- **`CT-B-TWOWORKER`** — the deterministic **op-level interleave form**:
+  two kernels over two real store handles on ONE WAL file, permuted
+  submission orders — the semantic race is real (cross-handle staleness
+  → `cas_conflict` → restart-from-load across handles; `duplicate` after
+  the other worker's commit); the final state and transcript are
+  schedule-independent, every op committed exactly once.
+- **Contention boundary (stated narrowly — ratification edit):** under
+  THIS chapter's test topology — one process, one JS event loop,
+  synchronous `node:sqlite` calls — no two `BEGIN IMMEDIATE`
+  transactions can be in flight at once, so `SQLITE_BUSY` does not arise
+  *here*. This is a property of the ch-5 topology, NOT a general
+  SQLite/`node:sqlite` claim. Process-level contention (BUSY taxonomy,
+  `busy_timeout`, retry ownership) is an EXPLICIT ch-9 contract, where
+  the intake row already schedules `CT-B-TWOWORKER`'s real-runner
+  re-run.
+- **P5 flow guard (ratification edit):** P5 stays flow ONLY while it is
+  test-only — if `CT-B-TWOWORKER` turns out to require ANY production
+  change (StorePort taxonomy, retry/busy handling, kernel contract), P5
+  falls back to pre-approve/refine BEFORE that change is made.
+
+### 5.6 Intake amendment: `CT-C-PURGE-AUDIT` re-homed
+
+The L0b surface has neither decision-audit rows nor a purge; the test's
+prerequisites land nowhere on the ch-1–10 map, and front-running a purge
+surface would violate scope. The §1.2 row is EDITED (re-homed at this
+ratification): Home → *purge chapter (map extension)*, Status →
+`planned(purge chapter)`; §1.3 gains the map-extension note. A visible
+`planned(...)` was chosen over `deferred(trigger)` deliberately — this is
+sequencing, not dormant-by-design.
+
+### 5.7 Correction note: the gate-timeout forward reference
+
+Ch 3 §3.2 / ch4-P3 said the `TimeSource`'s "first real consumer is the
+ch-5 gate timeout" — that forward reference was WRONG: no gate semantics
+(L2a) live in ch 5. Ratified texts stay as ratified; this note is the
+correction of record: the first time consumer beyond store timestamps is
+the L2a chapter's gate timeout.
+
+### 5.8 Packets and the flow mode
+
+**Flow-mode rule (fixed here for this and later chapters): first-of-a-kind
+stop** — a packet introducing a NEW artifact or contract class stops for
+approval BEFORE build; a packet of an already-validated class flows to
+commit-boundary review.
+
+| Packet | Content | Mode |
+|---|---|---|
+| ch5-P1 | drift suite (3 tests + manifests + script cross-check) + ADR-007 | pre-approve (first-of-a-kind: manifest) |
+| ch5-P2 | invariant disposition map (116 rows) + checker kit + script validation | pre-approve (first-of-a-kind: map) |
+| ch5-P3 | trace harness + level-lifting + l0a trace + l0b migration | pre-approve (first-of-a-kind: harness) |
+| ch5-P4 | digest slice: ADR-008 + schema v2 + `DigestSource` + collision + `CHK-A1-DIGEST` | pre-approve (first-of-a-kind: schema bump, new result arm, digest contract — ratification finding) |
+| ch5-P5 | `CT-A3-RETRANS` + `CT-A3-EMITLIB-REFRESH` + `CT-B-TWOWORKER` (interleave form) | flow (test-only; §5.5 flow guard applies) |
+
+Order: P1; P2 → P3 (the harness calls the checker kit); P4 → P5 (the
+digest precedence is a prerequisite). One packet = packet file + code +
+tests in ONE commit.
+
+### 5.9 Deliverables and DoD
+
+Shipped: this section; the §1.2/§1.3 intake amendment (§5.6); the drift
+module + manifests + script cross-check; the disposition map + checker
+kit; the trace harness + the lifted l0a trace + the l0b migration; the
+digest slice with ADR-007/ADR-008; the three §5.5 contract tests.
+
+DoD: drift suite green (3/3); the map validated (116/116,
+packet-consistent); traces 2/20; `CT-A1-COLLISION`, `CHK-A1-DIGEST`,
+`CT-A3-RETRANS`, `CT-A3-EMITLIB-REFRESH`, `CT-B-TWOWORKER` green; every
+gate packet's claim dimensions enumerated and its prescribed checks
+EXECUTED (chapter rules 1–2) — verified at the boundary review; all v3
+bridges green; ADR-007 / ADR-008 `accepted`, integrity check green; the
+five ch-5 intake rows + the ch-5 map row flipped to `realized` (PI-3);
+process-log review held at the boundary.
